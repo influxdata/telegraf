@@ -895,7 +895,7 @@ func TestGenerateTopicName(t *testing.T) {
 		},
 		{
 			name:    "allows the use of tags",
-			pattern: "{{ .TopicPrefix }}/{{ .Tag \"tag1\" }}",
+			pattern: "prefix/{{ .Tag \"tag1\" }}",
 			want:    "prefix/value1",
 		},
 		{
@@ -905,7 +905,7 @@ func TestGenerateTopicName(t *testing.T) {
 		},
 		{
 			name:    "ignores tag when tag does not exists",
-			pattern: "{{ .TopicPrefix }}/{{ .Tag \"not-a-tag\" }}",
+			pattern: "prefix/{{ .Tag \"not-a-tag\" }}",
 			want:    "prefix",
 		},
 		{
@@ -922,7 +922,6 @@ func TestGenerateTopicName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m.Topic = tt.pattern
-			m.TopicPrefix = "prefix"
 			met := metric.New(
 				"metric-name",
 				map[string]string{"tag1": "value1", "host": "hostname"},

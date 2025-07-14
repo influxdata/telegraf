@@ -1,6 +1,6 @@
 package kibana
 
-const kibanaStatusResponse6_3 = `
+const kibanastatusresponse63 = `
 {
 	"name": "my-kibana",
 	"uuid": "00000000-0000-0000-0000-000000000000",
@@ -187,7 +187,7 @@ const kibanaStatusResponse6_3 = `
 }
 `
 
-var kibanaStatusExpected6_3 = map[string]interface{}{
+var kibanastatusexpected63 = map[string]interface{}{
 	"status_code":            1,
 	"heap_total_bytes":       int64(149954560),
 	"heap_max_bytes":         int64(149954560),

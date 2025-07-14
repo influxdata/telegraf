@@ -1,114 +1,20 @@
-# SQL Server Input Plugin
+# Microsoft SQL Server Input Plugin
 
-The `sqlserver` plugin provides metrics for your SQL Server instance.
-Recorded metrics are lightweight and use Dynamic Management Views
-supplied by SQL Server.
+This plugin provides metrics for your [SQL Server][sqlserver] instance. Recorded
+metrics are lightweight and use Dynamic Management Views supplied by SQL Server.
 
-## The SQL Server plugin supports the following editions/versions of SQL Server
+> [!NOTE]
+> This plugin supports SQL server versions supported by Microsoft (see
+> [lifecycle dates][lifecycle]), Azure SQL Databases (Single), Azure SQL Managed
+> Instances, Azure SQL Elastic Pools and Azure Arc-enabled SQL Managed
+> Instances.
 
-- SQL Server
-  - 2012 or newer (Plugin support aligned with the [official Microsoft SQL Server support](https://docs.microsoft.com/en-us/sql/sql-server/end-of-support/sql-server-end-of-life-overview?view=sql-server-ver15#lifecycle-dates))
-  - End-of-life SQL Server versions are not guaranteed to be supported by Telegraf. Any issues with the SQL Server plugin for these EOL versions will need to be addressed by the community.
-- Azure SQL Database (Single)
-- Azure SQL Managed Instance
-- Azure SQL Elastic Pool
-- Azure Arc-enabled SQL Managed Instance
+⭐ Telegraf v0.10.1
+🏷️ datastore
+💻 all
 
-## Additional Setup
-
-You have to create a login on every SQL Server instance or Azure SQL
-Managed instance you want to monitor, with following script:
-
-```sql
-USE master;
-GO
-CREATE LOGIN [telegraf] WITH PASSWORD = N'mystrongpassword';
-GO
-GRANT VIEW SERVER STATE TO [telegraf];
-GO
-GRANT VIEW ANY DEFINITION TO [telegraf];
-GO
-```
-
-For Azure SQL Database, you require the View Database State permission
-and can create a user with a password directly in the database.
-
-```sql
-CREATE USER [telegraf] WITH PASSWORD = N'mystrongpassword';
-GO
-GRANT VIEW DATABASE STATE TO [telegraf];
-GO
-```
-
-For Azure SQL Elastic Pool, please follow the following instructions
-to collect metrics.
-
-On master logical database, create an SQL login 'telegraf' and assign
-it to the server-level role ##MS_ServerStateReader##.
-
-```sql
-CREATE LOGIN [telegraf] WITH PASSWORD = N'mystrongpassword';
-GO
-ALTER SERVER ROLE ##MS_ServerStateReader##
-  ADD MEMBER [telegraf];
-GO
-```
-
-Elastic pool metrics can be collected from any database in the pool if a user
-for the `telegraf` login is created in that database. For collection to work,
-this database must remain in the pool, and must not be renamed. If you plan
-to add/remove databases from this pool, create a separate database for
-monitoring purposes that will remain in the pool.
-
-> Note: To avoid duplicate monitoring data, do not collect elastic pool metrics
-from more than one database in the same pool.
-
-```sql
-GO
-CREATE USER [telegraf] FOR LOGIN telegraf;
-```
-
-For Service SID authentication to SQL Server (Windows service installations
-only).
-
-- [More information about using service SIDs to grant permissions in SQL Server](https://docs.microsoft.com/en-us/sql/relational-databases/security/using-service-sids-to-grant-permissions-to-services-in-sql-server)
-
-In an administrative command prompt configure the telegraf service for use
-with a service SID
-
-```Batchfile
-sc.exe sidtype "telegraf" unrestricted
-```
-
-To create the login for the telegraf service run the following script:
-
-```sql
-USE master;
-GO
-CREATE LOGIN [NT SERVICE\telegraf] FROM WINDOWS;
-GO
-GRANT VIEW SERVER STATE TO [NT SERVICE\telegraf];
-GO
-GRANT VIEW ANY DEFINITION TO [NT SERVICE\telegraf];
-GO
-```
-
-Remove User Id and Password keywords from the connection string in your
-config file to use windows authentication.
-
-```toml
-[[inputs.sqlserver]]
-  servers = ["Server=192.168.1.10;Port=1433;app name=telegraf;log=1;",]
-```
-
-To set up a configurable timeout, add timeout to the connections string
-in your config file.
-
-```toml
-servers = [
-  "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;app name=telegraf;log=1;dial timeout=30",
-]
-```
+[sqlserver]: https://docs.microsoft.com/en-us/sql/sql-server
+[lifecycle]: https://docs.microsoft.com/en-us/sql/sql-server/end-of-support/sql-server-end-of-life-overview?view=sql-server-ver15#lifecycle-dates
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -263,33 +169,129 @@ to use them.
   ## - SQLServerDatabaseReplicaStates
 ```
 
-## Support for Azure Active Directory (AAD) authentication using [Managed Identity](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview)
+### Additional Setup
 
-- Azure SQL Database supports 2 main methods of authentication: [SQL authentication and AAD authentication](https://docs.microsoft.com/en-us/azure/azure-sql/database/security-overview#authentication).
-- The recommended practice is to [use AAD authentication when possible](https://docs.microsoft.com/en-us/azure/azure-sql/database/authentication-aad-overview).
+You have to create a login on every SQL Server instance or Azure SQL Managed
+instance you want to monitor, with following script:
 
-AAD is a more modern authentication protocol, allows for easier
-credential/role management, and can eliminate the need to include passwords
-in a connection string.
+```sql
+USE master;
+GO
+CREATE LOGIN [telegraf] WITH PASSWORD = N'mystrongpassword';
+GO
+GRANT VIEW SERVER STATE TO [telegraf];
+GO
+GRANT VIEW ANY DEFINITION TO [telegraf];
+GO
+```
 
-To enable support for AAD authentication, we leverage the existing AAD
-authentication support.
+For Azure SQL Database, you require the View Database State permission
+and can create a user with a password directly in the database.
 
-If more then one managed identity is assigned to the VM. You need specify the
-client_id of the identity you wish to use to authenticate with the SQL Server.
-If only one is assigned you don't need so specify this value.
+```sql
+CREATE USER [telegraf] WITH PASSWORD = N'mystrongpassword';
+GO
+GRANT VIEW DATABASE STATE TO [telegraf];
+GO
+```
 
-- Please see [SQL Server driver for Go](https://github.com/microsoft/go-mssqldb#azure-active-directory-authentication)
+For Azure SQL Elastic Pool, please follow the following instructions to collect
+metrics. On master logical database, create an SQL login 'telegraf' and assign
+it to the server-level role ##MS_ServerStateReader##.
 
-### How to use AAD Auth with MSI
+```sql
+CREATE LOGIN [telegraf] WITH PASSWORD = N'mystrongpassword';
+GO
+ALTER SERVER ROLE ##MS_ServerStateReader##
+  ADD MEMBER [telegraf];
+GO
+```
 
-- Please note AAD based auth is currently only supported for Azure SQL Database and Azure SQL Managed Instance (but not for SQL Server), as described [here](https://docs.microsoft.com/en-us/azure/azure-sql/database/security-overview#authentication).
+Elastic pool metrics can be collected from any database in the pool if a user
+for the `telegraf` login is created in that database. For collection to work,
+this database must remain in the pool, and must not be renamed. If you plan
+to add/remove databases from this pool, create a separate database for
+monitoring purposes that will remain in the pool.
 
-- Configure "system-assigned managed identity" for Azure resources on the Monitoring VM (the VM that'd connect to the SQL server/database) [using the Azure portal](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/qs-configure-portal-windows-vm).
-- On the database being monitored, create/update a USER with the name of the Monitoring VM as the principal using the below script. This might require allow-listing the client machine's IP address (from where the below SQL script is being run) on the SQL Server resource.
+> [!NOTE]
+> To avoid duplicate monitoring data, do not collect elastic pool metrics
+> from more than one database in the same pool.
+
+```sql
+GO
+CREATE USER [telegraf] FOR LOGIN telegraf;
+```
+
+For Service SID authentication to SQL Server (Windows service installations
+only) check the [howto document][sid_howto]. In an administrative command prompt
+configure the telegraf service for use with a service SID
+
+```Batchfile
+sc.exe sidtype "telegraf" unrestricted
+```
+
+To create the login for the telegraf service run the following script:
+
+```sql
+USE master;
+GO
+CREATE LOGIN [NT SERVICE\telegraf] FROM WINDOWS;
+GO
+GRANT VIEW SERVER STATE TO [NT SERVICE\telegraf];
+GO
+GRANT VIEW ANY DEFINITION TO [NT SERVICE\telegraf];
+GO
+```
+
+Remove User Id and Password keywords from the connection string in your
+config file to use windows authentication.
+
+```toml
+[[inputs.sqlserver]]
+  servers = ["Server=192.168.1.10;Port=1433;app name=telegraf;log=1;",]
+```
+
+To set up a configurable timeout, add timeout to the connections string
+in your config file.
+
+```toml
+servers = [
+  "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;app name=telegraf;log=1;dial timeout=30",
+]
+```
+
+[sid_howto]: https://docs.microsoft.com/en-us/sql/relational-databases/security/using-service-sids-to-grant-permissions-to-services-in-sql-server
+
+### Azure Active Directory (AAD) authentication using Managed Identity
+
+Azure SQL Database instances support two main methods of
+[authentication][auth_methods]: SQL authentication and AAD authentication. The
+recommended practice is to use [AAD authentication][auth_aad] when possible as
+it is a more modern authentication protocol, allows for easier credential and
+role management and can eliminate the need to include passwords in connection
+strings.
+
+If more then one managed identity is assigned to the VM, you need specify the
+`client_id` of the identity you wish to use to authenticate with the SQL Server.
+Please check [SQL Server driver][driver] documentation for available options.
+
+[auth_methods]: https://docs.microsoft.com/en-us/azure/azure-sql/database/security-overview#authentication
+[auth_aad]: https://docs.microsoft.com/en-us/azure/azure-sql/database/authentication-aad-overview
+[driver]: https://github.com/microsoft/go-mssqldb#azure-active-directory-authentication
+
+### Azure Active Directory (AAD) authentication using MSI
+
+AAD based auth is currently only supported for Azure SQL Database and Azure SQL
+Managed Instance but not for SQL Server. To use MSI configure
+"system-assigned managed identity" for Azure resources on the Monitoring VM
+(the VM connecting to the SQL server/database) [using the Azure portal][portal].
+Create a user with the name of the Monitoring VM as the principal on the
+database being monitored using the below script. This might require
+allow-listing the client machine's IP address (from where the below SQL script
+is being run) on the SQL Server resource.
 
 In case of multiple assigned identities on one VM you can use the parameter
-user_assigned_id to specify the client_id.
+user_assigned_id to specify the `client_id`.
 
 ```sql
 EXECUTE ('IF EXISTS(SELECT * FROM sys.database_principals WHERE name = ''<Monitoring_VM_Name>'')
@@ -300,8 +302,13 @@ EXECUTE ('CREATE USER [<Monitoring_VM_Name>] FROM EXTERNAL PROVIDER')
 EXECUTE ('GRANT VIEW DATABASE STATE TO [<Monitoring_VM_Name>]')
 ```
 
-- On the SQL Server resource of the database(s) being monitored, go to "Firewalls and Virtual Networks" tab and allowlist the monitoring VM IP address.
-- On the Monitoring VM, update the telegraf config file with the database connection string in the following format. The connection string only provides the server and database name, but no password (since the VM's system-assigned managed identity would be used for authentication). The auth method must be set to "AAD"
+On the SQL Server resource of the database(s) being monitored, go to
+"Firewalls and Virtual Networks" tab and allowlist the monitoring VM IP address.
+On the Monitoring VM, update the telegraf config file with the database
+connection string in the following format. The connection string only provides
+the server and database name, but no password (since the VM's system-assigned
+managed identity would be used for authentication). The auth method must be
+set to "AAD"
 
 ```toml
   servers = [
@@ -310,18 +317,25 @@ EXECUTE ('GRANT VIEW DATABASE STATE TO [<Monitoring_VM_Name>]')
   auth_method = "AAD"
 ```
 
+[portal]: https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/qs-configure-portal-windows-vm
+
 ## Metrics
 
 To provide backwards compatibility, this plugin support two versions of
 metrics queries.
 
-**Note**: Version 2 queries are not backwards compatible with the old queries.
-Any dashboards or queries based on the old query format will not work with
-the new format. The version 2 queries only report raw metrics, no math has
-been done to calculate deltas. To graph this data you must calculate deltas
-in your dashboarding software.
+> [!NOTE]
+> Version 2 queries are not backwards compatible with the old queries. Any
+> dashboards or queries based on the old query format will not work with the new
+> format. The version 2 queries only report raw metrics, no math has been done
+> to calculate deltas. To graph this data you must calculate deltas in your
+> dashboarding software.
 
-### Version 1 (query_version=1): This is Deprecated in 1.16, all future development will be under configuration option database_type
+### Query Version 1
+
+> [!CAUTION]
+> The `query_version` option was **deprecated** in Telegraf v1.16. All future
+> development will be under configuration option`database_type`.
 
 The original metrics queries provide:
 
@@ -341,7 +355,11 @@ If you are using the original queries all stats have the following tags:
 - `servername`:  hostname:instance
 - `type`: type of stats to easily filter measurements
 
-### Version 2 (query_version=2): This is Deprecated in 1.16, all future development will be under configuration option database_type
+### Query Version 2
+
+> [!CAUTION]
+> The `query_version` option was **deprecated** in Telegraf v1.16. All future
+> development will be under configuration option`database_type`.
 
 The new (version 2) metrics provide:
 
@@ -375,7 +393,7 @@ The new (version 2) metrics provide:
   - Resource governance stats from `sys.dm_user_db_resource_governance`
   - Stats from `sys.dm_db_resource_stats`
 
-### database_type = "AzureSQLDB"
+### Database Type "AzureSQLDB"
 
 These are metrics for Azure SQL Database (single database) and are very
 similar to version 2 but split out for maintenance reasons, better ability
@@ -391,7 +409,7 @@ to test,differences in DMVs:
 - *AzureSQLDBRequests*: Requests which are blocked or have a wait type from `sys.dm_exec_sessions` and `sys.dm_exec_requests`. Telegraf's monitoring request is omitted unless it is a heading blocker
 - *AzureSQLDBSchedulers* - This captures `sys.dm_os_schedulers` snapshots.
 
-### database_type = "AzureSQLManagedInstance"
+### Database Type "AzureSQLManagedInstance"
 
 These are metrics for Azure SQL Managed instance, are very similar to version
 2 but split out for maintenance reasons, better ability to test, differences
@@ -406,7 +424,7 @@ in DMVs:
 - *AzureSQLMIRequests*: Requests which are blocked or have a wait type from `sys.dm_exec_sessions` and `sys.dm_exec_requests`. Telegraf's monitoring request is omitted unless it is a heading blocker
 - *AzureSQLMISchedulers*: This captures `sys.dm_os_schedulers` snapshots.
 
-### database_type = "AzureSQLPool"
+### Database Type "AzureSQLPool"
 
 These are metrics for Azure SQL to monitor resources usage at Elastic Pool
 level. These metrics require additional permissions to be collected, please
@@ -420,7 +438,7 @@ ensure to check additional setup section in this documentation.
 - *AzureSQLPoolPerformanceCounters*: A selected list of performance counters from `sys.dm_os_performance_counters`. Note: Performance counters where the cntr_type column value is 537003264 are already returned with a percentage format between 0 and 100. For other counters, please check [sys.dm_os_performance_counters](https://docs.microsoft.com/en-us/sql/relational-databases/system-dynamic-management-views/sys-dm-os-performance-counters-transact-sql?view=azuresqldb-current) documentation.
 - *AzureSQLPoolSchedulers*: This captures `sys.dm_os_schedulers` snapshots.
 
-### database_type = "SQLServer"
+### Database Type "SQLServer"
 
 - *SQLServerDatabaseIO*: IO stats from `sys.dm_io_virtual_file_stats`
 - *SQLServerMemoryClerks*: Memory clerk breakdown from `sys.dm_os_memory_clerks`, most clerks have been given a friendly name.

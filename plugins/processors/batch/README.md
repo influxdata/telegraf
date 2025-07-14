@@ -1,10 +1,14 @@
 # Batch Processor Plugin
 
-This processor groups metrics into batches by adding a batch tag. This is
-useful for parallel processing of metrics where downstream processors,
-aggregators or outputs can then select a batch using `tagpass` or `metricpass`.
+This plugin groups metrics into batches by adding a batch tag. This is useful
+for parallel processing of metrics where downstream processors, aggregators or
+outputs can then select a batch using `tagpass` or `metricpass`.
 
 Metrics are distributed across batches using the round-robin scheme.
+
+⭐ Telegraf v1.33.0
+🏷️ grouping
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -27,7 +31,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   batches = 16
 
   ## Do not assign metrics with an existing batch assignment to a
-  ## different batch. 
+  ## different batch.
   # skip_existing = false
 ```
 
@@ -39,7 +43,7 @@ The example below uses these settings:
 [[processors.batch]]
   ## The tag key to use for batching
   batch_tag = "batch"
-  
+
   ## The number of batches to create
   batches = 3
 ```

@@ -37,7 +37,6 @@ const (
 )
 
 type HTTPResponse struct {
-	Address         string              `toml:"address" deprecated:"1.12.0;1.35.0;use 'urls' instead"`
 	URLs            []string            `toml:"urls"`
 	HTTPProxy       string              `toml:"http_proxy"`
 	Body            string              `toml:"body"`
@@ -99,11 +98,7 @@ func (h *HTTPResponse) Init() error {
 	}
 
 	if len(h.URLs) == 0 {
-		if h.Address == "" {
-			h.URLs = []string{"http://localhost"}
-		} else {
-			h.URLs = []string{h.Address}
-		}
+		h.URLs = []string{"http://localhost"}
 	}
 
 	h.clients = make([]client, 0, len(h.URLs))

@@ -29,13 +29,12 @@ const (
 )
 
 type InternetSpeed struct {
-	ServerIDInclude    []string `toml:"server_id_include"`
-	ServerIDExclude    []string `toml:"server_id_exclude"`
-	EnableFileDownload bool     `toml:"enable_file_download" deprecated:"1.25.0;1.35.0;use 'memory_saving_mode' instead"`
-	MemorySavingMode   bool     `toml:"memory_saving_mode"`
-	Cache              bool     `toml:"cache"`
-	Connections        int      `toml:"connections"`
-	TestMode           string   `toml:"test_mode"`
+	ServerIDInclude  []string `toml:"server_id_include"`
+	ServerIDExclude  []string `toml:"server_id_exclude"`
+	MemorySavingMode bool     `toml:"memory_saving_mode"`
+	Cache            bool     `toml:"cache"`
+	Connections      int      `toml:"connections"`
+	TestMode         string   `toml:"test_mode"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -56,8 +55,6 @@ func (is *InternetSpeed) Init() error {
 	default:
 		return fmt.Errorf("unrecognized test mode: %q", is.TestMode)
 	}
-
-	is.MemorySavingMode = is.MemorySavingMode || is.EnableFileDownload
 
 	var err error
 	is.serverFilter, err = filter.NewIncludeExcludeFilterDefaults(is.ServerIDInclude, is.ServerIDExclude, false, false)

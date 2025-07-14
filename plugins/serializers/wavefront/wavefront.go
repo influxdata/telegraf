@@ -19,12 +19,33 @@ type Serializer struct {
 	mu      sync.Mutex // buffer mutex
 }
 
+// MetricPoint represents a single metric point.
 type MetricPoint struct {
 	Metric    string
 	Value     float64
 	Timestamp int64
 	Source    string
 	Tags      map[string]string
+}
+
+func (s *Serializer) Serialize(m telegraf.Metric) ([]byte, error) {
+	s.mu.Lock()
+	s.scratch.Reset()
+	s.serializeMetric(m)
+	out := s.scratch.copy()
+	s.mu.Unlock()
+	return out, nil
+}
+
+func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
+	s.mu.Lock()
+	s.scratch.Reset()
+	for _, m := range metrics {
+		s.serializeMetric(m)
+	}
+	out := s.scratch.copy()
+	s.mu.Unlock()
+	return out, nil
 }
 
 func (s *Serializer) serializeMetric(m telegraf.Metric) {
@@ -60,27 +81,6 @@ func (s *Serializer) serializeMetric(m telegraf.Metric) {
 		}
 		formatMetricPoint(&s.scratch, &metric, s)
 	}
-}
-
-// Serialize : Serialize based on Wavefront format
-func (s *Serializer) Serialize(m telegraf.Metric) ([]byte, error) {
-	s.mu.Lock()
-	s.scratch.Reset()
-	s.serializeMetric(m)
-	out := s.scratch.Copy()
-	s.mu.Unlock()
-	return out, nil
-}
-
-func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
-	s.mu.Lock()
-	s.scratch.Reset()
-	for _, m := range metrics {
-		s.serializeMetric(m)
-	}
-	out := s.scratch.Copy()
-	s.mu.Unlock()
-	return out, nil
 }
 
 func (s *Serializer) findSourceTag(mTags map[string]string) string {
@@ -135,55 +135,52 @@ func buildValue(v interface{}, name string) (val float64, valid bool) {
 }
 
 func formatMetricPoint(b *buffer, metricPoint *MetricPoint, s *Serializer) []byte {
-	b.WriteChar('"')
-	b.WriteString(metricPoint.Metric)
-	b.WriteString(`" `)
-	b.WriteFloat64(metricPoint.Value)
-	b.WriteChar(' ')
-	b.WriteUint64(uint64(metricPoint.Timestamp))
-	b.WriteString(` source="`)
-	b.WriteString(metricPoint.Source)
-	b.WriteChar('"')
+	b.writeChar('"')
+	b.writeString(metricPoint.Metric)
+	b.writeString(`" `)
+	b.writeFloat64(metricPoint.Value)
+	b.writeChar(' ')
+	b.writeUint64(uint64(metricPoint.Timestamp))
+	b.writeString(` source="`)
+	b.writeString(metricPoint.Source)
+	b.writeChar('"')
 
 	for k, v := range metricPoint.Tags {
-		b.WriteString(` "`)
-		b.WriteString(Sanitize(s.UseStrict, k))
-		b.WriteString(`"="`)
-		b.WriteString(tagValueReplacer.Replace(v))
-		b.WriteChar('"')
+		b.writeString(` "`)
+		b.writeString(Sanitize(s.UseStrict, k))
+		b.writeString(`"="`)
+		b.writeString(tagValueReplacer.Replace(v))
+		b.writeChar('"')
 	}
 
-	b.WriteChar('\n')
+	b.writeChar('\n')
 
 	return *b
 }
 
 type buffer []byte
 
+// Reset clears the buffer.
 func (b *buffer) Reset() { *b = (*b)[:0] }
 
-func (b *buffer) Copy() []byte {
+func (b *buffer) copy() []byte {
 	p := make([]byte, 0, len(*b))
 	return append(p, *b...)
 }
 
-func (b *buffer) WriteString(s string) {
+func (b *buffer) writeString(s string) {
 	*b = append(*b, s...)
 }
 
-// WriteChar has this name instead of WriteByte because the 'stdmethods' check
-// of 'go vet' wants WriteByte to have the signature:
-//
-//	func (b *buffer) WriteByte(c byte) error { ... }
-func (b *buffer) WriteChar(c byte) {
+func (b *buffer) writeChar(c byte) {
 	*b = append(*b, c)
 }
 
-func (b *buffer) WriteUint64(val uint64) {
+func (b *buffer) writeUint64(val uint64) {
 	*b = strconv.AppendUint(*b, val, 10)
 }
 
-func (b *buffer) WriteFloat64(val float64) {
+func (b *buffer) writeFloat64(val float64) {
 	*b = strconv.AppendFloat(*b, val, 'f', 6, 64)
 }
 

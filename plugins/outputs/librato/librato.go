@@ -23,13 +23,12 @@ var sampleConfig string
 
 // Librato structure for configuration and client
 type Librato struct {
-	APIUser   config.Secret   `toml:"api_user"`
-	APIToken  config.Secret   `toml:"api_token"`
-	Debug     bool            `toml:"debug"`
-	SourceTag string          `toml:"source_tag" deprecated:"1.0.0;1.35.0;use 'template' instead"`
-	Timeout   config.Duration `toml:"timeout"`
-	Template  string          `toml:"template"`
-	Log       telegraf.Logger `toml:"-"`
+	APIUser  config.Secret   `toml:"api_user"`
+	APIToken config.Secret   `toml:"api_token"`
+	Debug    bool            `toml:"debug"`
+	Timeout  config.Duration `toml:"timeout"`
+	Template string          `toml:"template"`
+	Log      telegraf.Logger `toml:"-"`
 
 	APIUrl string
 	client *http.Client
@@ -86,9 +85,6 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 	}
 	if l.Template == "" {
 		l.Template = "host"
-	}
-	if l.SourceTag != "" {
-		l.Template = l.SourceTag
 	}
 
 	var tempGauges []*Gauge

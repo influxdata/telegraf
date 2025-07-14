@@ -24,11 +24,9 @@ const maxRecordsPerRequest uint32 = 500
 
 type (
 	KinesisOutput struct {
-		StreamName         string     `toml:"streamname"`
-		PartitionKey       string     `toml:"partitionkey" deprecated:"1.5.0;1.35.0;use 'partition.key' instead"`
-		RandomPartitionKey bool       `toml:"use_random_partitionkey" deprecated:"1.5.0;1.35.0;use 'partition.method' instead"`
-		Partition          *Partition `toml:"partition"`
-		Debug              bool       `toml:"debug"`
+		StreamName string     `toml:"streamname"`
+		Partition  *Partition `toml:"partition"`
+		Debug      bool       `toml:"debug"`
 
 		Log        telegraf.Logger `toml:"-"`
 		serializer telegraf.Serializer
@@ -115,38 +113,29 @@ func (k *KinesisOutput) writeKinesis(r []types.PutRecordsRequestEntry) time.Dura
 }
 
 func (k *KinesisOutput) getPartitionKey(metric telegraf.Metric) string {
-	if k.Partition != nil {
-		switch k.Partition.Method {
-		case "static":
-			return k.Partition.Key
-		case "random":
-			u, err := uuid.NewV4()
-			if err != nil {
-				return k.Partition.Default
-			}
-			return u.String()
-		case "measurement":
-			return metric.Name()
-		case "tag":
-			if t, ok := metric.GetTag(k.Partition.Key); ok {
-				return t
-			} else if len(k.Partition.Default) > 0 {
-				return k.Partition.Default
-			}
-			// Default partition name if default is not set
-			return "telegraf"
-		default:
-			k.Log.Errorf("You have configured a Partition method of %q which is not supported", k.Partition.Method)
-		}
-	}
-	if k.RandomPartitionKey {
+	switch k.Partition.Method {
+	case "static":
+		return k.Partition.Key
+	case "random":
 		u, err := uuid.NewV4()
 		if err != nil {
 			return k.Partition.Default
 		}
 		return u.String()
+	case "measurement":
+		return metric.Name()
+	case "tag":
+		if t, ok := metric.GetTag(k.Partition.Key); ok {
+			return t
+		} else if len(k.Partition.Default) > 0 {
+			return k.Partition.Default
+		}
+		// Default partition name if default is not set
+		return "telegraf"
+	default:
+		k.Log.Errorf("You have configured a Partition method of %q which is not supported", k.Partition.Method)
+		return ""
 	}
-	return k.PartitionKey
 }
 
 func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {

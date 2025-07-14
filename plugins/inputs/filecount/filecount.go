@@ -21,7 +21,6 @@ import (
 var sampleConfig string
 
 type FileCount struct {
-	Directory      string          `toml:"directory" deprecated:"1.9.0;1.35.0;use 'directories' instead"`
 	Directories    []string        `toml:"directories"`
 	Name           string          `toml:"name"`
 	Recursive      bool            `toml:"recursive"`
@@ -277,10 +276,6 @@ func (fc *FileCount) getDirs() []string {
 		dirs = append(dirs, filepath.Clean(dir))
 	}
 
-	if fc.Directory != "" {
-		dirs = append(dirs, filepath.Clean(fc.Directory))
-	}
-
 	return dirs
 }
 
@@ -299,7 +294,6 @@ func (fc *FileCount) initGlobPaths(acc telegraf.Accumulator) {
 
 func newFileCount() *FileCount {
 	return &FileCount{
-		Directory:      "",
 		Name:           "*",
 		Recursive:      true,
 		RegularOnly:    true,

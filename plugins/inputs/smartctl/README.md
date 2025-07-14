@@ -1,27 +1,24 @@
 # smartctl JSON Input Plugin
 
-Get metrics using the command line utility `smartctl` for S.M.A.R.T.
-(Self-Monitoring, Analysis and Reporting Technology) storage devices. SMART is a
-monitoring system included in computer hard disk drives (HDDs), solid-state
-drives (SSDs), and nVME drives that detects and reports on various indicators of
-drive reliability, with the intent of enabling the anticipation of hardware
-failures.
+This plugin collects [Self-Monitoring, Analysis and Reporting Technology][smart]
+information for storage devices information using the
+[`smartmontools`][smartmon] package. Contrary to the
+[smart plugin][smart_plugin], this plugin does not use the [`nvme-cli`][nvmecli]
+package to collect additional information about NVMe devices.
 
-This version of the plugin requires support of the JSON flag from the `smartctl`
-command. This flag was added in 7.0 (2019) and further enhanced in subsequent
-releases.
+> [!NOTE]
+> This plugin requires [`smartmontools`][smartmon] to be installed on your
+> system. The `smartctl` command must to be executable by Telegraf and must
+> supporting JSON output. JSON output was added in v7.0 and improved in
+> subsequent releases
 
-See smartmontools (<https://www.smartmontools.org/>) for more information.
+⭐ Telegraf v1.31.0
+🏷️ hardware, system
+💻 all
 
-## smart vs smartctl
-
-The smartctl plugin is an alternative to the smart plugin. The biggest
-difference is that the smart plugin can also call `nvmectl` to collect
-additional details about NVMe devices as well as some vendor specific device
-information.
-
-This plugin will also require a version of the `smartctl` command that supports
-JSON output versus the smart plugin will parse the raw output.
+[smart]: https://en.wikipedia.org/wiki/Self-Monitoring,_Analysis_and_Reporting_Technology
+[smart_plugin]: /plugins/inputs/smart/README.md
+[nvmecli]: https://github.com/linux-nvme/nvme-cli
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -67,7 +64,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     # timeout = "30s"
 ```
 
-## Permissions
+### Permissions
 
 It is important to note that this plugin references `smartctl`, which may
 require additional permissions to execute successfully.  Depending on the
@@ -91,20 +88,57 @@ telegraf  ALL=(ALL) NOPASSWD: SMARTCTL
 Defaults!SMARTCTL !logfile, !syslog, !pam_session
 ```
 
-## Debugging Issues
+## Troubleshooting
 
 This plugin uses the following commands to determine devices and collect
 metrics:
 
-* `smartctl --json --scan-open`
-* `smartctl --json --all $DEVICE --device $TYPE --nocheck=$NOCHECK`
+- `smartctl --json --scan-open`
+- `smartctl --json --all $DEVICE --device $TYPE --nocheck=$NOCHECK`
 
 Please include the output of the above two commands for all devices that are
 having issues.
 
 ## Metrics
 
+- smartctl
+  - tags
+    - model (model name of the storage device)
+    - name (device id in the system)
+    - serial (serial number of the device)
+    - type (device type like SATA etc)
+    - wwn (world wide number of the device)
+  - fields
+    - depending on the device information
+
+- smartctl_attributes
+  - tags
+    - model (model name of the storage device)
+    - name (name of the attribute)
+    - serial (serial number of the device)
+    - type (device type like SATA etc)
+    - wwn (world wide number of the device)
+  - fields
+    - raw_value (integer)
+    - threshold (integer)
+    - value (integer)
+    - worst (integer)
+
 ## Example Output
 
 ```text
+smartctl,model=SanDisk\ pSSD,name=/dev/sda,serial=06c9f4c44,type=sat,wwn=5001b4409f6c444c capacity=15693664256i,firmware="3",health_ok=true,logical_block_size=512i,power_on_hours=11i,temperature=0i 1711480345675066854
+smartctl_attributes,model=SanDisk\ pSSD,name=Reallocated_Sector_Ct,serial=06c9f4c44,type=sat,wwn=5001b4409f6c444c raw_value=0i,threshold=0i,value=100i,worst=100i 1711480345675066854
+smartctl_attributes,model=SanDisk\ pSSD,name=Power_On_Hours,serial=06c9f4c44,type=sat,wwn=5001b4409f6c444c raw_value=11i,threshold=0i,value=100i,worst=100i 1711480345675066854
+smartctl_attributes,model=SanDisk\ pSSD,name=Power_Cycle_Count,serial=06c9f4c44,type=sat,wwn=5001b4409f6c444c raw_value=223i,threshold=0i,value=100i,worst=100i 1711480345675066854
+smartctl_attributes,model=SanDisk\ pSSD,name=Program_Fail_Count,serial=06c9f4c44,type=sat,wwn=5001b4409f6c444c raw_value=0i,threshold=0i,value=100i,worst=100i 1711480345675066854
+smartctl_attributes,model=SanDisk\ pSSD,name=Erase_Fail_Count,serial=06c9f4c44,type=sat,wwn=5001b4409f6c444c raw_value=0i,threshold=0i,value=100i,worst=100i 1711480345675066854
+smartctl_attributes,model=SanDisk\ pSSD,name=Avg_Write/Erase_Count,serial=06c9f4c44,type=sat,wwn=5001b4409f6c444c raw_value=3i,threshold=0i,value=100i,worst=100i 1711480345675066854
+smartctl_attributes,model=SanDisk\ pSSD,name=Unexpect_Power_Loss_Ct,serial=06c9f4c44,type=sat,wwn=5001b4409f6c444c raw_value=114i,threshold=0i,value=100i,worst=100i 1711480345675066854
+smartctl_attributes,model=SanDisk\ pSSD,name=Reported_Uncorrect,serial=06c9f4c44,type=sat,wwn=5001b4409f6c444c raw_value=0i,threshold=0i,value=100i,worst=100i 1711480345675066854
+smartctl_attributes,model=SanDisk\ pSSD,name=Perc_Write/Erase_Count,serial=06c9f4c44,type=sat,wwn=5001b4409f6c444c raw_value=10i,threshold=0i,value=100i,worst=100i 1711480345675066854
+smartctl_attributes,model=SanDisk\ pSSD,name=Perc_Avail_Resrvd_Space,serial=06c9f4c44,type=sat,wwn=5001b4409f6c444c raw_value=0i,threshold=5i,value=100i,worst=100i 1711480345675066854
+smartctl_attributes,model=SanDisk\ pSSD,name=Perc_Write/Erase_Ct_BC,serial=06c9f4c44,type=sat,wwn=5001b4409f6c444c raw_value=0i,threshold=0i,value=100i,worst=100i 1711480345675066854
+smartctl_attributes,model=SanDisk\ pSSD,name=Total_LBAs_Written,serial=06c9f4c44,type=sat,wwn=5001b4409f6c444c raw_value=10171055i,threshold=0i,value=100i,worst=100i 1711480345675066854
+smartctl_attributes,model=SanDisk\ pSSD,name=Total_LBAs_Read,serial=06c9f4c44,type=sat,wwn=5001b4409f6c444c raw_value=94845144i,threshold=0i,value=100i,worst=100i 1711480345675066854
 ```

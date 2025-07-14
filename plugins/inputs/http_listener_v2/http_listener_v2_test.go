@@ -58,7 +58,7 @@ func newTestHTTPListenerV2() (*HTTPListenerV2, error) {
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
-		Path:           "/write",
+		Paths:          []string{"/write"},
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		timeFunc:       time.Now,
@@ -88,7 +88,7 @@ func newTestHTTPSListenerV2() (*HTTPListenerV2, error) {
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
-		Path:           "/write",
+		Paths:          []string{"/write"},
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		ServerConfig:   *pki.TLSServerConfig(),
@@ -132,7 +132,7 @@ func TestInvalidListenerConfig(t *testing.T) {
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
 		ServiceAddress: "address_without_port",
-		Path:           "/write",
+		Paths:          []string{"/write"},
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		timeFunc:       time.Now,
@@ -307,7 +307,7 @@ func TestWriteHTTPWithReturnCode(t *testing.T) {
 func TestWriteHTTPWithMultiplePaths(t *testing.T) {
 	listener, err := newTestHTTPListenerV2()
 	require.NoError(t, err)
-	listener.Paths = []string{"/alternative_write"}
+	listener.Paths = append(listener.Paths, "/alternative_write")
 	listener.PathTag = true
 
 	acc := &testutil.Accumulator{}
@@ -369,7 +369,7 @@ func TestWriteHTTPExactMaxBodySize(t *testing.T) {
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
-		Path:           "/write",
+		Paths:          []string{"/write"},
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		MaxBodySize:    config.Size(len(hugeMetric)),
@@ -395,7 +395,7 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
-		Path:           "/write",
+		Paths:          []string{"/write"},
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		MaxBodySize:    config.Size(4096),

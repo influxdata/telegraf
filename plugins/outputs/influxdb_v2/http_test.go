@@ -3,14 +3,22 @@ package influxdb_v2
 import (
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"path"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/common/ratelimiter"
+	"github.com/influxdata/telegraf/plugins/serializers/influx"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestHTTPClientInit(t *testing.T) {
@@ -138,9 +146,8 @@ func TestMakeWriteURLFail(t *testing.T) {
 }
 
 func TestExponentialBackoffCalculation(t *testing.T) {
-	c := &httpClient{}
 	tests := []struct {
-		retryCount int
+		retryCount int64
 		expected   time.Duration
 	}{
 		{retryCount: 0, expected: 0},
@@ -155,16 +162,14 @@ func TestExponentialBackoffCalculation(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("%d_retries", test.retryCount), func(t *testing.T) {
-			c.retryCount = test.retryCount
-			require.EqualValues(t, test.expected, c.getRetryDuration(http.Header{}))
+			require.EqualValues(t, test.expected, getRetryDuration(http.Header{}, test.retryCount))
 		})
 	}
 }
 
 func TestExponentialBackoffCalculationWithRetryAfter(t *testing.T) {
-	c := &httpClient{}
 	tests := []struct {
-		retryCount int
+		retryCount int64
 		retryAfter string
 		expected   time.Duration
 	}{
@@ -179,12 +184,101 @@ func TestExponentialBackoffCalculationWithRetryAfter(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("%d_retries", test.retryCount), func(t *testing.T) {
-			c.retryCount = test.retryCount
 			hdr := http.Header{}
 			hdr.Add("Retry-After", test.retryAfter)
-			require.EqualValues(t, test.expected, c.getRetryDuration(hdr))
+			require.EqualValues(t, test.expected, getRetryDuration(hdr, test.retryCount))
 		})
 	}
+}
+
+func TestRetryLaterEarlyExit(t *testing.T) {
+	var received atomic.Int64
+
+	// Setup a test server
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			received.Add(1)
+			w.Header().Add("Retry-After", "120")
+			w.WriteHeader(http.StatusTooManyRequests)
+		}),
+	)
+	defer ts.Close()
+
+	// Prepare the serializer etc
+	serializer := &influx.Serializer{}
+	require.NoError(t, serializer.Init())
+	var limiterCfg ratelimiter.RateLimitConfig
+	limiter, err := limiterCfg.CreateRateLimiter()
+	require.NoError(t, err)
+
+	// Setup client
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
+	require.NoError(t, err)
+
+	c := &httpClient{
+		url:             u,
+		bucketTag:       "bucket",
+		contentEncoding: "identity",
+		serializer:      ratelimiter.NewIndividualSerializer(serializer),
+		rateLimiter:     limiter,
+		log:             &testutil.Logger{},
+	}
+	require.NoError(t, c.Init())
+
+	// Together the metric batch size is too big, split up, we get success
+	metrics := []telegraf.Metric{
+		metric.New(
+			"cpu",
+			map[string]string{
+				"bucket": "foo",
+			},
+			map[string]interface{}{
+				"value": 0.0,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"cpu",
+			map[string]string{
+				"bucket": "my_bucket",
+			},
+			map[string]interface{}{
+				"value": 42.0,
+			},
+			time.Unix(0, 1),
+		),
+		metric.New(
+			"cpu",
+			map[string]string{
+				"bucket": "my_bucket",
+			},
+			map[string]interface{}{
+				"value": 43.0,
+			},
+			time.Unix(0, 2),
+		),
+		metric.New(
+			"cpu",
+			map[string]string{
+				"bucket": "foo",
+			},
+			map[string]interface{}{
+				"value": 0.0,
+			},
+			time.Unix(0, 3),
+		),
+	}
+
+	// Write the metrics the first time and check for the expected errors
+	err = c.Write(t.Context(), metrics)
+	require.ErrorContains(t, err, "waiting 2m0s for server before sending metrics again")
+
+	var writeErr *internal.PartialWriteError
+	require.ErrorAs(t, err, &writeErr)
+	require.Empty(t, writeErr.MetricsReject, "rejected metrics")
+	require.LessOrEqual(t, len(writeErr.MetricsAccept), 2, "accepted metrics")
+	require.InDelta(t, 120*time.Second, time.Until(c.retryTime), float64(time.Second))
+	require.EqualValues(t, int64(1), received.Load(), "unexpected number of posts")
 }
 
 func TestHeadersDoNotOverrideConfig(t *testing.T) {

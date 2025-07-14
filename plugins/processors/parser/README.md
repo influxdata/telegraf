@@ -1,7 +1,14 @@
 # Parser Processor Plugin
 
-This plugin parses defined fields or tags containing the specified data format
-and creates new metrics based on the contents of the field or tag.
+This plugin parses defined fields or tags containing the specified
+[data format][data_formats] and creates new metrics based on the resulting
+fields and tags.
+
+⭐ Telegraf v1.8.0
+🏷️ transformation
+💻 all
+
+[data_formats]: /docs/DATA_FORMATS_INPUT.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

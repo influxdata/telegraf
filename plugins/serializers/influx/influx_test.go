@@ -83,7 +83,7 @@ var tests = []struct {
 			},
 			time.Unix(0, 0),
 		),
-		errReason: NoFields,
+		errReason: noFields,
 	},
 	{
 		name: "float Inf",
@@ -387,7 +387,7 @@ var tests = []struct {
 			time.Unix(1519194109, 42),
 		),
 		output:    nil,
-		errReason: NeedMoreSpace,
+		errReason: needMoreSpace,
 	},
 	{
 		name: "no fields",
@@ -397,7 +397,7 @@ var tests = []struct {
 			map[string]interface{}{},
 			time.Unix(0, 0),
 		),
-		errReason: NoFields,
+		errReason: noFields,
 	},
 	{
 		name: "procstat",

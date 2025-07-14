@@ -1,10 +1,15 @@
 # Hashicorp Vault Input Plugin
 
-The Vault plugin could grab metrics from every Vault agent of the
-cluster. Telegraf may be present in every node and connect to the agent
-locally. In this case should be something like `http://127.0.0.1:8200`.
+This plugin collects metrics from every [Vault][vault] agent of a cluster.
 
-> Tested on vault 1.8.5
+> [!NOTE]
+> This plugin requires Vault v1.8.5+
+
+⭐ Telegraf v1.22.0
+🏷️ server
+💻 all
+
+[vault]: https://www.hashicorp.com/de/products/vault
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -42,9 +47,16 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Metrics
 
 For a more deep understanding of Vault monitoring, please have a look at the
-following Vault documentation:
+following Vault [telemetry][telemetry] and [monitoring][monitoring]
+documentation.
 
-- [https://www.vaultproject.io/docs/internals/telemetry](https://www.vaultproject.io/docs/internals/telemetry)
-- [https://learn.hashicorp.com/tutorials/vault/monitor-telemetry-audit-splunk?in=vault/monitoring](https://learn.hashicorp.com/tutorials/vault/monitor-telemetry-audit-splunk?in=vault/monitoring)
+[telemetry]: https://www.vaultproject.io/docs/internals/telemetry
+[monitoring]: https://learn.hashicorp.com/tutorials/vault/monitor-telemetry-audit-splunk?in=vault/monitoring
 
 ## Example Output
+
+```text
+vault.raft.replication.appendEntries.logs,peer_id=clustnode-02 count=130i,max=1i,mean=0.015384615384615385,min=0i,rate=0.2,stddev=0.12355304447984486,sum=2i 1638287340000000000
+vault.core.unsealed,cluster=vault-cluster-23b671c7 value=1i 1638287340000000000
+vault.token.lookup count=5135i,max=16.22449493408203,mean=0.1698389152269865,min=0.06690400093793869,rate=87.21228296905755,stddev=0.24637634000854705,sum=872.1228296905756 1638287340000000000
+```

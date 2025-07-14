@@ -6,56 +6,52 @@ import (
 	"container/list"
 )
 
-type LRUValType = TTLValType
+type lruValType = ttlValType
 
 type hashType map[keyType]*list.Element
 
-type LRUCache struct {
+type lruCache struct {
 	cap uint       // capacity
 	l   *list.List // doubly linked list
 	m   hashType   // hash table for checking if list node exists
 }
 
-// Pair is the value of a list node.
-type Pair struct {
+type pair struct {
 	key   keyType
-	value LRUValType
+	value lruValType
 }
 
-// initializes a new LRUCache.
-func NewLRUCache(capacity uint) LRUCache {
-	return LRUCache{
+func newLRUCache(capacity uint) lruCache {
+	return lruCache{
 		cap: capacity,
 		l:   new(list.List),
 		m:   make(hashType, capacity),
 	}
 }
 
-// Get a list node from the hash map.
-func (c *LRUCache) Get(key keyType) (LRUValType, bool) {
+func (c *lruCache) get(key keyType) (lruValType, bool) {
 	// check if list node exists
 	if node, ok := c.m[key]; ok {
-		val := node.Value.(*list.Element).Value.(Pair).value
+		val := node.Value.(*list.Element).Value.(pair).value
 		// move node to front
 		c.l.MoveToFront(node)
 		return val, true
 	}
-	return LRUValType{}, false
+	return lruValType{}, false
 }
 
-// Put key and value in the LRUCache
-func (c *LRUCache) Put(key keyType, value LRUValType) {
+func (c *lruCache) put(key keyType, value lruValType) {
 	// check if list node exists
 	if node, ok := c.m[key]; ok {
 		// move the node to front
 		c.l.MoveToFront(node)
 		// update the value of a list node
-		node.Value.(*list.Element).Value = Pair{key: key, value: value}
+		node.Value.(*list.Element).Value = pair{key: key, value: value}
 	} else {
 		// delete the last list node if the list is full
 		if uint(c.l.Len()) == c.cap {
 			// get the key that we want to delete
-			idx := c.l.Back().Value.(*list.Element).Value.(Pair).key
+			idx := c.l.Back().Value.(*list.Element).Value.(pair).key
 			// delete the node pointer in the hash map by key
 			delete(c.m, idx)
 			// remove the last list node
@@ -63,7 +59,7 @@ func (c *LRUCache) Put(key keyType, value LRUValType) {
 		}
 		// initialize a list node
 		node := &list.Element{
-			Value: Pair{
+			Value: pair{
 				key:   key,
 				value: value,
 			},
@@ -75,7 +71,7 @@ func (c *LRUCache) Put(key keyType, value LRUValType) {
 	}
 }
 
-func (c *LRUCache) Delete(key keyType) {
+func (c *lruCache) delete(key keyType) {
 	if node, ok := c.m[key]; ok {
 		c.l.Remove(node)
 		delete(c.m, key)

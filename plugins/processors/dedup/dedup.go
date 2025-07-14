@@ -18,43 +18,21 @@ var sampleConfig string
 
 type Dedup struct {
 	DedupInterval config.Duration `toml:"dedup_interval"`
-	FlushTime     time.Time
-	Cache         map[uint64]telegraf.Metric
 	Log           telegraf.Logger `toml:"-"`
-}
 
-// Remove expired items from cache
-func (d *Dedup) cleanup() {
-	// No need to cleanup cache too often. Lets save some CPU
-	if time.Since(d.FlushTime) < time.Duration(d.DedupInterval) {
-		return
-	}
-	d.FlushTime = time.Now()
-	keep := make(map[uint64]telegraf.Metric)
-	for id, metric := range d.Cache {
-		if time.Since(metric.Time()) < time.Duration(d.DedupInterval) {
-			keep[id] = metric
-		}
-	}
-	d.Cache = keep
-}
-
-// Save item to cache
-func (d *Dedup) save(metric telegraf.Metric, id uint64) {
-	d.Cache[id] = metric.Copy()
-	d.Cache[id].Accept()
+	flushTime time.Time
+	cache     map[uint64]telegraf.Metric
 }
 
 func (*Dedup) SampleConfig() string {
 	return sampleConfig
 }
 
-// main processing method
 func (d *Dedup) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	idx := 0
 	for _, metric := range metrics {
 		id := metric.HashID()
-		m, ok := d.Cache[id]
+		m, ok := d.cache[id]
 
 		// If not in cache then just save it
 		if !ok {
@@ -123,8 +101,8 @@ func (d *Dedup) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 
 func (d *Dedup) GetState() interface{} {
 	s := &serializers_influx.Serializer{}
-	v := make([]telegraf.Metric, 0, len(d.Cache))
-	for _, value := range d.Cache {
+	v := make([]telegraf.Metric, 0, len(d.cache))
+	for _, value := range d.cache {
 		v = append(v, value)
 	}
 	state, err := s.SerializeBatch(v)
@@ -150,12 +128,34 @@ func (d *Dedup) SetState(state interface{}) error {
 	return nil
 }
 
+// Remove expired items from cache
+func (d *Dedup) cleanup() {
+	// No need to cleanup cache too often. Lets save some CPU
+	if time.Since(d.flushTime) < time.Duration(d.DedupInterval) {
+		return
+	}
+	d.flushTime = time.Now()
+	keep := make(map[uint64]telegraf.Metric)
+	for id, metric := range d.cache {
+		if time.Since(metric.Time()) < time.Duration(d.DedupInterval) {
+			keep[id] = metric
+		}
+	}
+	d.cache = keep
+}
+
+// Save item to cache
+func (d *Dedup) save(metric telegraf.Metric, id uint64) {
+	d.cache[id] = metric.Copy()
+	d.cache[id].Accept()
+}
+
 func init() {
 	processors.Add("dedup", func() telegraf.Processor {
 		return &Dedup{
 			DedupInterval: config.Duration(10 * time.Minute),
-			FlushTime:     time.Now(),
-			Cache:         make(map[uint64]telegraf.Metric),
+			flushTime:     time.Now(),
+			cache:         make(map[uint64]telegraf.Metric),
 		}
 	})
 }

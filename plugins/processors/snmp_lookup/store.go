@@ -1,7 +1,6 @@
 package snmp_lookup
 
 import (
-	"errors"
 	"sync"
 	"time"
 
@@ -10,8 +9,6 @@ import (
 
 	"github.com/influxdata/telegraf/config"
 )
-
-var ErrNotYetAvailable = errors.New("data not yet available")
 
 type store struct {
 	cache                *expirable.LRU[string, *tagMap]

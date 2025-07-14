@@ -1,10 +1,17 @@
 # Suricata Input Plugin
 
-This plugin reports internal performance counters of the Suricata IDS/IPS
-engine, such as captured traffic volume, memory usage, uptime, flow counters,
-and much more. It provides a socket for the Suricata log output to write JSON
-stats output to, and processes the incoming data to fit Telegraf's format.
-It can also report for triggered Suricata IDS/IPS alerts.
+This service plugin reports internal performance counters of the
+[Suricata IDS/IPS][suricata] engine, such as captured traffic volume, memory
+usage, uptime, flow counters, and much more. This plugin provides a socket for
+the Suricata log output to write JSON stats output to, and processes the
+incoming data to fit Telegraf's format. It can also report for triggered
+Suricata IDS/IPS alerts.
+
+⭐ Telegraf v1.13.0
+🏷️ applications, network
+💻 all
+
+[suricata]: https://suricata.io/
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
@@ -57,12 +64,39 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # alerts = false
 ```
 
+### Suricata configuration
+
+Suricata needs to deliver the 'stats' event type to a given unix socket for
+this plugin to pick up. This can be done, for example, by creating an additional
+output in the Suricata configuration file:
+
+```yaml
+- eve-log:
+    enabled: yes
+    filetype: unix_stream
+    filename: /tmp/suricata-stats.sock
+    types:
+      - stats:
+         threads: yes
+```
+
+### FreeBSD tuning
+
+Under FreeBSD it is necessary to increase the localhost buffer space to at least
+16384, default is 8192 otherwise messages from Suricata are truncated as they
+exceed the default available buffer space, consequently no statistics are
+processed by the plugin.
+
+```text
+sysctl -w net.local.stream.recvspace=16384
+sysctl -w net.local.stream.sendspace=16384
+```
+
 ## Metrics
 
 Fields in the 'suricata' measurement follow the JSON format used by Suricata's
-stats output.
-See <http://suricata.readthedocs.io/en/latest/performance/statistics.html> for
-more information.
+stats output. See the [statistics documentation][stats_doc] for more
+information.
 
 All fields for Suricata stats are numeric.
 
@@ -134,7 +168,7 @@ All fields for Suricata stats are numeric.
     - ...
 
 Some fields of the Suricata alerts are strings, for example the signatures. See
-the Suricata [event docs][1] for more information.
+the Suricata [event documentation][events_doc] for more information.
 
 - suricata_alert
   - fields:
@@ -148,35 +182,8 @@ the Suricata [event docs][1] for more information.
     - target_port
     - ...
 
-[1]: https://suricata.readthedocs.io/en/suricata-6.0.0/output/eve/eve-json-format.html?highlight=priority#event-type-alert
-
-### Suricata configuration
-
-Suricata needs to deliver the 'stats' event type to a given unix socket for
-this plugin to pick up. This can be done, for example, by creating an additional
-output in the Suricata configuration file:
-
-```yaml
-- eve-log:
-    enabled: yes
-    filetype: unix_stream
-    filename: /tmp/suricata-stats.sock
-    types:
-      - stats:
-         threads: yes
-```
-
-### FreeBSD tuning
-
-Under FreeBSD it is necessary to increase the localhost buffer space to at least
-16384, default is 8192 otherwise messages from Suricata are truncated as they
-exceed the default available buffer space, consequently no statistics are
-processed by the plugin.
-
-```text
-sysctl -w net.local.stream.recvspace=16384
-sysctl -w net.local.stream.sendspace=16384
-```
+[stats_doc]: http://suricata.readthedocs.io/en/latest/performance/statistics.html
+[events_doc]: https://suricata.readthedocs.io/en/suricata-6.0.0/output/eve/eve-json-format.html?highlight=priority#event-type-alert
 
 ## Example Output
 

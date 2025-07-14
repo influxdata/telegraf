@@ -14,7 +14,7 @@ type Serializer struct {
 	OmitEventTag bool `toml:"splunkmetric_omit_event_tag"`
 }
 
-type CommonTags struct {
+type commonTags struct {
 	Time   float64
 	Host   string
 	Index  string
@@ -22,7 +22,7 @@ type CommonTags struct {
 	Fields map[string]interface{}
 }
 
-type HECTimeSeries struct {
+type hecTimeSeries struct {
 	Time   float64                `json:"time"`
 	Event  string                 `json:"event,omitempty"`
 	Host   string                 `json:"host,omitempty"`
@@ -51,7 +51,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	return serialized, nil
 }
 
-func (s *Serializer) createMulti(metric telegraf.Metric, dataGroup HECTimeSeries, commonTags CommonTags) (metricGroup []byte, err error) {
+func (s *Serializer) createMulti(metric telegraf.Metric, dataGroup hecTimeSeries, commonTags commonTags) (metricGroup []byte, err error) {
 	/* When splunkmetric_multimetric is true, then we can write out multiple name=value pairs as part of the same
 	** event payload. This only works when the time, host, and dimensions are the same for every name=value pair
 	** in the timeseries data.
@@ -101,7 +101,7 @@ func (s *Serializer) createMulti(metric telegraf.Metric, dataGroup HECTimeSeries
 	return metricGroup, nil
 }
 
-func (s *Serializer) createSingle(metric telegraf.Metric, dataGroup HECTimeSeries, commonTags CommonTags) (metricGroup []byte, err error) {
+func (s *Serializer) createSingle(metric telegraf.Metric, dataGroup hecTimeSeries, commonTags commonTags) (metricGroup []byte, err error) {
 	/* The default mode is to generate one JSON entity per metric (required for pre-8.0 Splunks)
 	**
 	** The format for single metric is 'nameOfMetric = valueOfMetric'
@@ -160,10 +160,10 @@ func (s *Serializer) createObject(metric telegraf.Metric) ([]byte, error) {
 		 ** All other index fields become dimensions.
 	*/
 
-	dataGroup := HECTimeSeries{}
+	dataGroup := hecTimeSeries{}
 
 	// The tags are common to all events in this timeseries
-	commonTags := CommonTags{}
+	commonTags := commonTags{}
 
 	commonTags.Fields = make(map[string]interface{}, len(metric.Tags()))
 

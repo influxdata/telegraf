@@ -60,9 +60,7 @@ type GNMI struct {
 	CanonicalFieldNames           bool              `toml:"canonical_field_names"`
 	TrimFieldNames                bool              `toml:"trim_field_names"`
 	PrefixTagKeyWithPath          bool              `toml:"prefix_tag_key_with_path"`
-	GuessPathTag                  bool              `toml:"guess_path_tag" deprecated:"1.30.0;1.35.0;use 'path_guessing_strategy' instead"`
 	GuessPathStrategy             string            `toml:"path_guessing_strategy"`
-	EnableTLS                     bool              `toml:"enable_tls" deprecated:"1.27.0;1.35.0;use 'tls_enable' instead"`
 	KeepaliveTime                 config.Duration   `toml:"keepalive_time"`
 	KeepaliveTimeout              config.Duration   `toml:"keepalive_timeout"`
 	YangModelPaths                []string          `toml:"yang_model_paths"`
@@ -121,14 +119,6 @@ func (c *GNMI) Init() error {
 	}
 
 	// Check path guessing and handle deprecated option
-	if c.GuessPathTag {
-		if c.GuessPathStrategy == "" {
-			c.GuessPathStrategy = "common path"
-		}
-		if c.GuessPathStrategy != "common path" {
-			return errors.New("conflicting settings between 'guess_path_tag' and 'path_guessing_strategy'")
-		}
-	}
 	switch c.GuessPathStrategy {
 	case "", "none", "common path", "subscription":
 	default:
@@ -137,7 +127,7 @@ func (c *GNMI) Init() error {
 
 	// Use the new TLS option for enabling
 	// Honor deprecated option
-	enable := (c.ClientConfig.Enable != nil && *c.ClientConfig.Enable) || c.EnableTLS
+	enable := c.ClientConfig.Enable != nil && *c.ClientConfig.Enable
 	c.ClientConfig.Enable = &enable
 
 	// Split the subscriptions into "normal" and "tag" subscription
@@ -475,13 +465,6 @@ func (s *subscription) buildAlias(aliases map[*pathInfo]string, enforceFirstName
 
 func init() {
 	inputs.Add("gnmi", func() telegraf.Input {
-		return &GNMI{
-			Redial:                        config.Duration(10 * time.Second),
-			EnforceFirstNamespaceAsOrigin: true,
-		}
-	})
-	// Backwards compatible alias:
-	inputs.Add("cisco_telemetry_gnmi", func() telegraf.Input {
 		return &GNMI{
 			Redial:                        config.Duration(10 * time.Second),
 			EnforceFirstNamespaceAsOrigin: true,

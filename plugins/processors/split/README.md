@@ -1,19 +1,18 @@
 # Split Processor Plugin
 
-This plugin splits a metric up into one or more metrics based on a template
-the user provides. The timestamp of the new metric is based on the source
+This plugin splits a metric up into one or more metrics based on a configured
+template. The resulting metrics will be timestamped according to the source
 metric. Templates can overlap, where a field or tag, is used across templates
 and as a result end up in multiple metrics.
 
-**NOTE**: If drop original is changed to true, then the plugin can result in
-dropping all metrics when no match is found! Please ensure to test
-templates before putting into production *and* use metric filtering to
-avoid data loss.
+> [!NOTE]
+> If drop original is changed to true, then the plugin can result in dropping
+> all metrics when no match is found! Please ensure to test templates before
+> putting into production *and* use metric filtering to avoid data loss.
 
-Some outputs are sensitive to the number of metric series that are produced.
-Multiple metrics of the same series (i.e. identical name, tag key-values and
-field name) with the same timestamp might result in squashing those points
-to the latest metric produced.
+⭐ Telegraf v1.28.0
+🏷️ transformation
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -45,6 +44,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## List of field keys for this metric template, accepts globs, e.g. "*"
     fields = []
 ```
+
+> [!NOTE]
+> Some outputs are sensitive to the number of metric series that are produced.
+> Multiple metrics of the same series (i.e. identical name, tag key-values and
+> field name) with the same timestamp might result in squashing those points
+> to the latest metric produced.
 
 ## Example
 

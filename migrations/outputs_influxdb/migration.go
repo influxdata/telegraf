@@ -20,6 +20,8 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 
 	// Check for deprecated option(s) and migrate them
 	var applied bool
+
+	// Migrate url -> urls
 	if oldURL, found := plugin["url"]; found {
 		applied = true
 
@@ -44,6 +46,13 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 		// Update replacement and remove the deprecated setting
 		plugin["urls"] = urls
 		delete(plugin, "url")
+	}
+
+	// Remove the deprecated precision option (it has been ignored since 1.0.0)
+	if _, found := plugin["precision"]; found {
+		applied = true
+		// Remove the deprecated setting
+		delete(plugin, "precision")
 	}
 
 	// No options migrated so we can exit early
