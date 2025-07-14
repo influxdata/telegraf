@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -176,7 +175,7 @@ func TestJSONV2StringTypeEdgeCases(t *testing.T) {
 			for fieldName, expectedValue := range tt.expectedFields {
 				actualValue, ok := metric.GetField(fieldName)
 				require.True(t, ok, "Field %s should exist", fieldName)
-				assert.Equal(t, expectedValue, actualValue, "Field %s value mismatch", fieldName)
+				require.Equal(t, expectedValue, actualValue, "Field %s value mismatch", fieldName)
 			}
 		})
 	}
@@ -223,36 +222,36 @@ func TestJSONV2StringTypeFieldsIntegration(t *testing.T) {
 	require.True(t, ok, "metadata field should exist")
 	metadataStr, ok := metadataField.(string)
 	require.True(t, ok, "metadata should be a string, got %T", metadataField)
-	assert.Contains(t, metadataStr, "failures", "metadata should contain the JSON content")
-	assert.Contains(t, metadataStr, "failureRate", "metadata should contain the JSON content")
+	require.Contains(t, metadataStr, "failures", "metadata should contain the JSON content")
+	require.Contains(t, metadataStr, "failureRate", "metadata should contain the JSON content")
 
 	activeIssuesField, ok := metric.GetField("active_issues")
 	require.True(t, ok, "active_issues field should exist")
 	activeIssuesStr, ok := activeIssuesField.(string)
 	require.True(t, ok, "active_issues should be a string, got %T", activeIssuesField)
-	assert.Contains(t, activeIssuesStr, "METER_CONNECTION_QUALITY", "active_issues should contain the array content")
-	assert.Contains(t, activeIssuesStr, "since", "active_issues should contain the array content")
+	require.Contains(t, activeIssuesStr, "METER_CONNECTION_QUALITY", "active_issues should contain the array content")
+	require.Contains(t, activeIssuesStr, "since", "active_issues should contain the array content")
 
 	// Verify no flattened fields exist (this was the bug)
 	_, hasMetadataFailures := metric.GetField("metadata_failures")
-	assert.False(t, hasMetadataFailures, "Should not have flattened metadata_failures field")
+	require.False(t, hasMetadataFailures, "Should not have flattened metadata_failures field")
 
 	_, hasActiveIssuesType := metric.GetField("active_issues_type")
-	assert.False(t, hasActiveIssuesType, "Should not have flattened active_issues_type field")
+	require.False(t, hasActiveIssuesType, "Should not have flattened active_issues_type field")
 
 	// Check that simple fields work normally
 	eventType, ok := metric.GetField("event_type")
 	require.True(t, ok)
-	assert.Equal(t, "METER_CONNECTION_QUALITY", eventType)
+	require.Equal(t, "METER_CONNECTION_QUALITY", eventType)
 
 	state, ok := metric.GetField("state")
 	require.True(t, ok)
-	assert.Equal(t, "BAD", state)
+	require.Equal(t, "BAD", state)
 
 	// Check tag
 	controllerID, ok := metric.GetTag("controller_id")
 	require.True(t, ok)
-	assert.Equal(t, "C_abcd1234", controllerID)
+	require.Equal(t, "C_abcd1234", controllerID)
 }
 
 func BenchmarkParsingSequential(b *testing.B) {
