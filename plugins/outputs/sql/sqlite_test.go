@@ -135,6 +135,114 @@ func TestSqlite(t *testing.T) {
 	require.False(t, rows4.Next())
 }
 
+func TestSqliteTimestampInteger(t *testing.T) {
+	dbfile := filepath.Join(t.TempDir(), "db")
+	defer os.Remove(dbfile)
+
+	// Use the plugin to write to the database address :=
+	// fmt.Sprintf("file:%v", dbfile)
+	address := dbfile // accepts a path or a file: URI
+	p := &SQL{
+		Driver:            "sqlite",
+		DataSourceName:    config.NewSecret([]byte(address + "?_time_format=sqlite")),
+		Convert:           defaultConvert,
+		TimestampColumn:   "timestamp",
+		ConnectionMaxIdle: 2,
+		Log:               testutil.Logger{},
+	}
+	p.Convert.Timestamp = "INTEGER"
+	require.NoError(t, p.Init())
+
+	require.NoError(t, p.Connect())
+	defer p.Close()
+	require.NoError(t, p.Write(testMetrics))
+
+	// read directly from the database
+	db, err := gosql.Open("sqlite", address)
+	require.NoError(t, err)
+	defer db.Close()
+
+	var countMetricOne int
+	require.NoError(t, db.QueryRow("select count(*) from metric_one").Scan(&countMetricOne))
+	require.Equal(t, 1, countMetricOne)
+
+	var countMetricTwo int
+	require.NoError(t, db.QueryRow("select count(*) from metric_two").Scan(&countMetricTwo))
+	require.Equal(t, 1, countMetricTwo)
+
+	var rows *gosql.Rows
+
+	// Check that tables were created as expected
+	rows, err = db.Query("select sql from sqlite_master")
+	require.NoError(t, err)
+	defer rows.Close()
+	var sql string
+	require.True(t, rows.Next())
+	require.NoError(t, rows.Scan(&sql))
+	require.Equal(t,
+		`CREATE TABLE "metric_one"("timestamp" INTEGER,"tag_one" TEXT,"tag_two" TEXT,"int64_one" INT,`+
+			`"int64_two" INT,"bool_one" BOOL,"bool_two" BOOL,"uint64_one" INT UNSIGNED,"float64_one" DOUBLE)`,
+		sql,
+	)
+	require.True(t, rows.Next())
+	require.NoError(t, rows.Scan(&sql))
+	require.Equal(t,
+		`CREATE TABLE "metric_two"("timestamp" INTEGER,"tag_three" TEXT,"string_one" TEXT)`,
+		sql,
+	)
+	require.True(t, rows.Next())
+	require.NoError(t, rows.Scan(&sql))
+	require.Equal(t,
+		`CREATE TABLE "metric three"("timestamp" INTEGER,"tag four" TEXT,"string two" TEXT)`,
+		sql,
+	)
+	require.False(t, rows.Next())
+
+	// Check contents of tables
+	rows2, err := db.Query("select unixepoch(timestamp), tag_one, tag_two, int64_one, int64_two from metric_one")
+	require.NoError(t, err)
+	defer rows2.Close()
+	require.True(t, rows2.Next())
+	var (
+		a    int64
+		b, c string
+		d, e int64
+	)
+	require.NoError(t, rows2.Scan(&a, &b, &c, &d, &e))
+	require.Equal(t, ts.Unix(), a)
+	require.Equal(t, "tag1", b)
+	require.Equal(t, "tag2", c)
+	require.Equal(t, int64(1234), d)
+	require.Equal(t, int64(2345), e)
+	require.False(t, rows2.Next())
+
+	rows3, err := db.Query("select unixepoch(timestamp), tag_three, string_one from metric_two")
+	require.NoError(t, err)
+	defer rows3.Close()
+	require.True(t, rows3.Next())
+	var (
+		f, g, h string
+	)
+	require.NoError(t, rows3.Scan(&f, &g, &h))
+	require.Equal(t, ts.Unix(), a)
+	require.Equal(t, "tag3", g)
+	require.Equal(t, "string1", h)
+	require.False(t, rows3.Next())
+
+	rows4, err := db.Query(`select unixepoch(timestamp), "tag four", "string two" from "metric three"`)
+	require.NoError(t, err)
+	defer rows4.Close()
+	require.True(t, rows4.Next())
+	var (
+		i, j, k string
+	)
+	require.NoError(t, rows4.Scan(&i, &j, &k))
+	require.Equal(t, ts.Unix(), a)
+	require.Equal(t, "tag4", j)
+	require.Equal(t, "string2", k)
+	require.False(t, rows4.Next())
+}
+
 func TestSqliteUpdateScheme(t *testing.T) {
 	dbfile := filepath.Join(t.TempDir(), "db")
 	defer os.Remove(dbfile)
