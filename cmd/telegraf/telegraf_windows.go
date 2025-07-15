@@ -5,10 +5,12 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -246,7 +248,7 @@ func installService(name string, cfg *serviceConfig) error {
 
 	// Register the event as a source of eventlog events
 	events := uint32(eventlog.Error | eventlog.Warning | eventlog.Info)
-	if err := eventlog.InstallAsEventCreate(name, events); err != nil {
+	if err := eventlog.InstallAsEventCreate(name, events); err != nil && !strings.Contains(err.Error(), "key already exists") {
 		//nolint:errcheck // Try to remove the service on best effort basis as we cannot handle any error here
 		service.Delete()
 		return fmt.Errorf("setting up eventlog source failed: %w", err)
@@ -266,16 +268,20 @@ func uninstallService(name string) error {
 
 	service, err := svcmgr.OpenService(name)
 	if err != nil {
-		return fmt.Errorf("opening service failed: %w", err)
-	}
-	defer service.Close()
+		if !errors.Is(err, windows.ERROR_SERVICE_DOES_NOT_EXIST) {
+			return fmt.Errorf("opening service failed: %w", err)
+		}
+	} else {
+		defer service.Close()
 
-	// Uninstall the service and remove the eventlog source
-	if err := service.Delete(); err != nil {
-		return fmt.Errorf("uninstalling service failed: %w", err)
+		// Uninstall the service
+		if err := service.Delete(); err != nil {
+			return fmt.Errorf("uninstalling service failed: %w", err)
+		}
 	}
 
-	if err := eventlog.Remove(name); err != nil {
+	// Remove the eventlog source if there is any
+	if err := eventlog.Remove(name); err != nil && !errors.Is(err, syscall.ERROR_FILE_NOT_FOUND) {
 		return fmt.Errorf("removing eventlog source failed: %w", err)
 	}
 
