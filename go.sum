@@ -2052,8 +2052,8 @@ github.com/openconfig/gnmi v0.14.1/go.mod h1:whr6zVq9PCU8mV1D0K9v7Ajd3+swoN6Yam9
 github.com/openconfig/goyang v0.0.0-20200115183954-d0a48929f0ea/go.mod h1:dhXaV0JgHJzdrHi2l+w0fZrwArtXL7jEFoiqLEdmkvU=
 github.com/openconfig/goyang v0.2.2/go.mod h1:vX61x01Q46AzbZUzG617vWqh/cB+aisc+RrNkXRd3W8=
 github.com/openconfig/goyang v1.0.0/go.mod h1:vX61x01Q46AzbZUzG617vWqh/cB+aisc+RrNkXRd3W8=
-github.com/openconfig/goyang v1.6.2 h1:LVwwlVIIt4nmwacW67yBsxzP5DhDM94SOEMWod1hEA0=
-github.com/openconfig/goyang v1.6.2/go.mod h1:jzlGg+yjRpOcq1Kg6q6cSiLGQK5hrNNMsUx0fFxm4U0=
+github.com/openconfig/goyang v1.6.3 h1:9nWXBwd6b4+nZr8ni7O4zUXVhrVMXCLFz8os5YWFuo4=
+github.com/openconfig/goyang v1.6.3/go.mod h1:5WolITjek1NF8yrNERyVZ7jqjOClJTpO8p/+OwmETM4=
 github.com/openconfig/gribi v0.1.1-0.20210423184541-ce37eb4ba92f/go.mod h1:OoH46A2kV42cIXGyviYmAlGmn6cHjGduyC2+I9d/iVs=
 github.com/openconfig/grpctunnel v0.0.0-20210610163803-fde4a9dc048d/go.mod h1:x9tAZ4EwqCQ0jI8D6S8Yhw9Z0ee7/BxWQX0k0Uib5Q8=
 github.com/openconfig/ygot v0.6.0/go.mod h1:o30svNf7O0xK+R35tlx95odkDmZWS9JyWWQSmIhqwAs=
