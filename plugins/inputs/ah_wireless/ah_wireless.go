@@ -56,8 +56,8 @@ type Ah_wireless struct {
 	last_clt_stat		[4][50]ah_ieee80211_sta_stats_item
 	last_sq			map[string]map[int]map[int]ah_signal_quality_stats
 	wg			sync.WaitGroup
-	if_stats		[AH_MAX_ETH]stats_interface_data
-	ethx_stats		[AH_MAX_ETH]stats_ethx_data
+	if_stats		[AH_MAX_WIRED]stats_interface_data
+	ethx_stats		[AH_MAX_WIRED]stats_ethx_data
 	nw_health		network_health_data
 	nw_service		network_service_data
 }
@@ -733,6 +733,24 @@ func getProcNetDev(ifname string) ah_dcd_dev_stats {
   }
 
 	return stats
+}
+
+func getIfStatus(fd int, ifname string) int {
+        ifr, err := unix.NewIfreq(ifname)
+        if err != nil {
+                log.Printf("failed to create ifreq for flags: %v", err)
+                return -1
+        }
+
+        offsetsMutex.Lock()
+        defer offsetsMutex.Unlock()
+
+        if err := unix.IoctlIfreq(fd, unix.SIOCGIFFLAGS, ifr); err != nil {
+                log.Printf("getIfStatus ioctl error: %s", err)
+                return -1
+        }
+
+        return int(ifr.Uint16())
 }
 
 func getIfIndex(fd int, ifname string) int {
@@ -2953,54 +2971,108 @@ func Gather_EthernetInterfaceStats(t *Ah_wireless) error {
 
 	var ethdevstats ah_dcd_dev_stats
 
-    for i := 0; i < (AH_MAX_ETH); i++{
+	interfaces := []string{}
 
-		ethName := fmt.Sprintf("%s%d", "eth", i)
-		ethdevstats = getProcNetDev(ethName)
+        for i := 0; i < AH_MAX_ETH; i++ {
+                interfaces = append(interfaces, fmt.Sprintf("eth%d", i))
+        }
 
-		t.if_stats[i].ifname 			= ethName
+        interfaces = append(interfaces, "agg0", "red0")
+
+
+        for i, ifName := range interfaces{
+
+		ethdevstats = getProcNetDev(ifName)
+
+		t.if_stats[i].ifname 			= ifName
 
 		t.if_stats[i].rx_unicast		= reportGetDiff64(uint64(ethdevstats.rx_unicast), t.if_stats[i].rx_unicast)
 		t.if_stats[i].rx_broadcast		= reportGetDiff64(uint64(ethdevstats.rx_broadcast), t.if_stats[i].rx_broadcast)
 		t.if_stats[i].rx_multicast		= reportGetDiff64(uint64(ethdevstats.rx_multicast), t.if_stats[i].rx_multicast)
+		t.if_stats[i].rx_bytes                  = reportGetDiff64(uint64(ethdevstats.rx_bytes), t.if_stats[i].rx_bytes)
+		t.if_stats[i].rx_errors                 = reportGetDiff64(uint64(ethdevstats.rx_errors), t.if_stats[i].rx_errors)
+		t.if_stats[i].rx_dropped                = reportGetDiff64(uint64(ethdevstats.rx_dropped), t.if_stats[i].rx_dropped)
 		t.if_stats[i].tx_unicast		= reportGetDiff64(uint64(ethdevstats.tx_unicast), t.if_stats[i].tx_unicast)
 		t.if_stats[i].tx_broadcast		= reportGetDiff64(uint64(ethdevstats.tx_broadcast), t.if_stats[i].tx_broadcast)
 		t.if_stats[i].tx_multicast		= reportGetDiff64(uint64(ethdevstats.tx_multicast), t.if_stats[i].tx_multicast)
+		t.if_stats[i].tx_bytes                  = reportGetDiff64(uint64(ethdevstats.tx_bytes), t.if_stats[i].tx_bytes)
+		t.if_stats[i].tx_errors                 = reportGetDiff64(uint64(ethdevstats.tx_errors), t.if_stats[i].tx_errors)
+		t.if_stats[i].tx_dropped                = reportGetDiff64(uint64(ethdevstats.tx_dropped), t.if_stats[i].tx_dropped)
+		t.ethx_stats[i].ifname                  = ifName
 
-		f := init_ethf()
-		link_status := getEthLink(t, f.Fd(), ethName)
-		eth_status := getEthStatus(t, f.Fd(), ethName)
-		f.Close();
 
-		t.ethx_stats[i].ifname = ethName
+                var link_status, eth_status, speed, duplex int32
 
-		if (link_status == ETH_SET_MII_LINK_DOWN) {
-			t.ethx_stats[i].duplex = "LINK_DOWN"
-			t.ethx_stats[i].speed = "LINK_DOWN"
+                if ifName == "agg0" || ifName == "red0" {
+                        var memberIfstatus int32
+                        var maxMemberSpeed int32  = ETH_MII_LINK_DOWN
+                        var maxMemberDuplex int32 = ETH_MII_LINK_DOWN
+
+                        ifStatus := getIfStatus(t.fd, ifName)
+
+                        if (ifStatus & IFF_UP) != 0 && (ifStatus & IFF_RUNNING) != 0 {
+                                link_status = ETH_SET_MII_LINK_UP
+				memberIfstatus = AH_IF_STATUS
+                        } else {
+                                link_status = ETH_SET_MII_LINK_DOWN
+				memberIfstatus = ETH_MII_LINK_DOWN
+                        }
+
+                        if ( link_status == ETH_SET_MII_LINK_DOWN){
+                            t.ethx_stats[i].duplex = "LINK_DOWN"
+                            t.ethx_stats[i].speed = "LINK_DOWN"
+                            continue
+                        }
+
+                        if memberIfstatus != ETH_MII_LINK_DOWN {
+                            speed := memberIfstatus & ETH_MII_SPEED_MASK
+                            duplex := memberIfstatus & ETH_MII_DUPLEX_MASK
+
+                            if maxMemberSpeed < speed {
+                                maxMemberSpeed = speed
+                            }
+                            if maxMemberDuplex < duplex {
+                                maxMemberDuplex = duplex
+                            }
+                        }
+                        speed = maxMemberSpeed | maxMemberDuplex
+                        duplex = speed
+
+	        } else{
+			f := init_ethf()
+                        link_status = getEthLink(t, f.Fd(), ifName)
+                        eth_status = getEthStatus(t, f.Fd(), ifName)
+                        f.Close()
+                        if link_status == ETH_SET_MII_LINK_DOWN {
+                                t.ethx_stats[i].duplex = "LINK_DOWN"
+                                t.ethx_stats[i].speed = "LINK_DOWN"
+                                continue
+                        }
+
+                        speed = eth_status
+                        duplex = eth_status
+                }
+
+		if((duplex & ETH_MII_DUPLEX_FULL) > 0) {
+			t.ethx_stats[i].duplex = "FULL"
 		} else {
-			duplex := eth_status
-			speed := eth_status
-
-			if((duplex & ETH_MII_DUPLEX_FULL) > 0) {
-				t.ethx_stats[i].duplex = "FULL"
-			} else {
-				t.ethx_stats[i].duplex = "HALF"
-			}
-
-			if((speed & ETH_MII_SPEED_10000M) > 0) {
-				t.ethx_stats[i].speed = "10000M"
-			} else if ((speed & ETH_MII_SPEED_5000M) > 0) {
-				t.ethx_stats[i].speed = "5000M"
-			} else if ((speed & ETH_MII_SPEED_2500M) > 0) {
-				t.ethx_stats[i].speed = "2500M"
-			} else if ((speed & ETH_MII_SPEED_1000M) > 0) {
-				t.ethx_stats[i].speed = "1000M"
-			} else if ((speed & ETH_MII_SPEED_100M) > 0) {
-				t.ethx_stats[i].speed = "100M"
-			} else {
-				t.ethx_stats[i].speed = "10M"
-			}
+			t.ethx_stats[i].duplex = "HALF"
 		}
+
+		if((speed & ETH_MII_SPEED_10000M) > 0) {
+			t.ethx_stats[i].speed = "10000M"
+		} else if ((speed & ETH_MII_SPEED_5000M) > 0) {
+			t.ethx_stats[i].speed = "5000M"
+		} else if ((speed & ETH_MII_SPEED_2500M) > 0) {
+			t.ethx_stats[i].speed = "2500M"
+		} else if ((speed & ETH_MII_SPEED_1000M) > 0) {
+			t.ethx_stats[i].speed = "1000M"
+		} else if ((speed & ETH_MII_SPEED_100M) > 0) {
+			t.ethx_stats[i].speed = "100M"
+		} else {
+			t.ethx_stats[i].speed = "10M"
+		}
+
 
 	}
 
@@ -3013,7 +3085,7 @@ func Send_NetworkStats(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 	id = 0
 
-	for i := 0; i < (AH_MAX_ETH); i++{
+	for i := 0; i < (AH_MAX_WIRED); i++{
 
 		if ( i >= NETWORK_MAX_COUNT ) {
 			return nil
@@ -3041,9 +3113,15 @@ func Send_NetworkStats(t *Ah_wireless, acc telegraf.Accumulator) error {
 		fields["rxUnicastPackets"]		= t.if_stats[i].rx_unicast
 		fields["rxMulticastPackets"]	= t.if_stats[i].rx_multicast
 		fields["rxBcastPackets"]		= t.if_stats[i].rx_broadcast
+		fields["rxBytes"]	                = t.if_stats[i].rx_bytes
+		fields["rxErrors"]                      = t.if_stats[i].rx_errors
+		fields["rxDropped"]                     = t.if_stats[i].rx_dropped
 		fields["txUnicastPackets"]		= t.if_stats[i].tx_unicast
 		fields["txMulticastPackets"]	= t.if_stats[i].tx_multicast
 		fields["txBcastPackets"]		= t.if_stats[i].tx_broadcast
+		fields["txBytes"]                       = t.if_stats[i].tx_bytes
+		fields["txErrors"]                      = t.if_stats[i].tx_errors
+		fields["txDropped"]                     = t.if_stats[i].tx_dropped
 
 		if len(strings.TrimSpace(t.ethx_stats[i].duplex)) > 0 {
 			fields["duplex"]				= t.ethx_stats[i].duplex
@@ -3408,8 +3486,8 @@ func (t *Ah_wireless) Start(acc telegraf.Accumulator) error {
 		t.entity[intfName] = make(map[string]unsafe.Pointer)
 	}
 
-	t.if_stats	=	[AH_MAX_ETH]stats_interface_data{}
-	t.ethx_stats =	[AH_MAX_ETH]stats_ethx_data{}
+	t.if_stats	=	[AH_MAX_WIRED]stats_interface_data{}
+	t.ethx_stats =	[AH_MAX_WIRED]stats_ethx_data{}
 
 	t.nw_health =	network_health_data{}
 	t.nw_service =  network_service_data{}

@@ -34,7 +34,8 @@ const (
 	NW_STAT_OUT_FILE =		"/tmp/NetworkStatOut"
 	DEV_STAT_OUT_FILE =		"/tmp/DeviceStatOut"
 	EVT_SOCK =			"/tmp/ah_telegraf.sock"
-	AH_MAX_ETH =			2
+	AH_MAX_ETH = 			2
+	AH_MAX_WIRED =			AH_MAX_ETH + 2
 	AH_MAX_WLAN =			4
 	ETH_IOCTL_FILE = 		"/dev/ah_ethif_ctl"
 	AH_ETHIF_IOCTL_MAGIC =	'E'
@@ -44,6 +45,9 @@ const (
 	AH_MAX_RADIUS_NUM =		128
 	AH_MAX_ACCESS_VIF_PER_RADIO = 15
 	AH_MAX_LOG_SERVER =		4
+	IFF_UP =                0x1
+	IFF_RUNNING =           0x40
+	AH_IF_STATUS =          40
 )
 
 const (
@@ -59,6 +63,9 @@ const (
 	ETH_MII_SPEED_2500M =	0x40
 	ETH_MII_SPEED_5000M =	0x80
 	ETH_MII_SPEED_10000M =	0x100
+	ETH_MII_SPEED_MASK = ( ETH_MII_SPEED_10M | ETH_MII_SPEED_100M | ETH_MII_SPEED_1000M | ETH_MII_SPEED_2500M | ETH_MII_SPEED_5000M | ETH_MII_SPEED_10000M )
+	ETH_MII_DUPLEX_MASK = (ETH_MII_DUPLEX_HALF | ETH_MII_DUPLEX_FULL)
+
 )
 
 const (
@@ -1073,9 +1080,15 @@ type stats_interface_data struct {
 	rx_unicast			uint64
 	rx_broadcast		uint64
 	rx_multicast		uint64
+	rx_bytes                uint64
+	rx_errors               uint64
+	rx_dropped              uint64
 	tx_unicast			uint64
 	tx_broadcast		uint64
 	tx_multicast		uint64
+	tx_bytes                uint64
+	tx_errors               uint64
+	tx_dropped              uint64
 }
 
 
