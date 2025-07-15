@@ -60,43 +60,60 @@ func (p *Round) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 func (p *Round) round(value interface{}) interface{} {
 	switch v := value.(type) {
 	case int:
-		return round(v, p.factor)
+		return roundInt(v, int64(p.factor))
 	case int8:
-		return round(v, p.factor)
+		return roundInt(v, int64(p.factor))
 	case int16:
-		return round(v, p.factor)
+		return roundInt(v, int64(p.factor))
 	case int32:
-		return round(v, p.factor)
+		return roundInt(v, int64(p.factor))
 	case int64:
-		return round(v, p.factor)
+		return roundInt(v, int64(p.factor))
 	case uint:
-		return round(v, p.factor)
+		return roundInt(v, int64(p.factor))
 	case uint8:
-		return round(v, p.factor)
+		return roundInt(v, int64(p.factor))
 	case uint16:
-		return round(v, p.factor)
+		return roundInt(v, int64(p.factor))
 	case uint32:
-		return round(v, p.factor)
+		return roundInt(v, int64(p.factor))
 	case uint64:
-		return round(v, p.factor)
+		return roundInt(v, int64(p.factor))
 	case float32:
-		return round(v, p.factor)
+		return roundFloat(v, p.factor)
 	case float64:
-		return round(v, p.factor)
+		return roundFloat(v, p.factor)
 	default:
 		p.Log.Debugf("Value (%v) type invalid: [%v] is not an int, uint or float", v, reflect.TypeOf(value))
 	}
 	return value
 }
 
-func round[V constraints.Integer | constraints.Float](value V, factor float64) V {
+func roundInt[V constraints.Integer](value V, factor int64) V {
+	f := V(factor)
+
+	if factor < 10 {
+		return value
+	}
+
+	v := value / f // -12.55
+
+	remainder := (value / (f / 10)) % 10
+	if remainder < 5 {
+		return v * f
+	}
+
+	return (v + 1) * f
+}
+
+func roundFloat[V constraints.Integer | constraints.Float](value V, factor float64) V {
 	return V(math.Round(float64(value)/factor) * factor)
 }
 
 func init() {
 	processors.Add("round", func() telegraf.Processor {
 		return &Round{
-			Precision: 3,
+			Precision: 0,
 		}
 	})
 }

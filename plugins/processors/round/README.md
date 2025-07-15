@@ -28,7 +28,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Precision to round to.
   ## A positive number indicates rounding to the right of the decimal separator (i.e. the fractional part).
   ## A negative number indicates rounding to the left of the decimal separator.
-  # precision = 1
+  # precision = 0
 
   ## Round only numeric fields matching the filter criteria below.
   ## Excludes takes precedence over includes.
@@ -39,7 +39,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Example
 
 Round each value the _inputs.cpu_ plugin generates, except for the
-_usage\_steal_, _usage\_user_, _uptime\_format_, _usage\_idle_ field:
+`usage_steal`, `usage_user`, `uptime_format`, `usage_idle` field:
 
 ```toml
 [[inputs.cpu]]

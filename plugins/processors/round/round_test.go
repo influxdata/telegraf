@@ -13,14 +13,16 @@ import (
 )
 
 // Verifies that values are rounded correctly
-func TestRound_PositivePrecision(t *testing.T) {
+func TestRound(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    []telegraf.Metric
-		expected []telegraf.Metric
+		name      string
+		precision int
+		input     []telegraf.Metric
+		expected  []telegraf.Metric
 	}{
 		{
-			name: "float64",
+			name:      "float64 positive precision",
+			precision: 2,
 			input: []telegraf.Metric{
 				metric.New("cpu",
 					map[string]string{},
@@ -47,7 +49,8 @@ func TestRound_PositivePrecision(t *testing.T) {
 			},
 		},
 		{
-			name: "uint64",
+			name:      "uint64 positive precision",
+			precision: 2,
 			input: []telegraf.Metric{
 				metric.New("cpu",
 					map[string]string{},
@@ -56,7 +59,7 @@ func TestRound_PositivePrecision(t *testing.T) {
 				),
 				metric.New("cpu",
 					map[string]string{},
-					map[string]interface{}{"value": uint64(0)},
+					map[string]interface{}{"value": uint64(12)},
 					time.Unix(0, 0),
 				),
 			},
@@ -68,13 +71,14 @@ func TestRound_PositivePrecision(t *testing.T) {
 				),
 				metric.New("cpu",
 					map[string]string{},
-					map[string]interface{}{"value": uint64(0)},
+					map[string]interface{}{"value": uint64(12)},
 					time.Unix(0, 0),
 				),
 			},
 		},
 		{
-			name: "int64",
+			name:      "int64 positive precision",
+			precision: 2,
 			input: []telegraf.Metric{
 				metric.New("cpu",
 					map[string]string{},
@@ -100,30 +104,9 @@ func TestRound_PositivePrecision(t *testing.T) {
 				),
 			},
 		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			plugin := Round{
-				Precision: 2,
-				Log:       testutil.Logger{},
-			}
-			require.NoError(t, plugin.Init())
-
-			actual := plugin.Apply(tt.input...)
-			testutil.RequireMetricsEqual(t, tt.expected, actual)
-		})
-	}
-}
-
-// Verifies that values are rounded correctly
-func TestRound_NegativePrecision(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    []telegraf.Metric
-		expected []telegraf.Metric
-	}{
 		{
-			name: "float64",
+			name:      "float64 negative precision",
+			precision: -2,
 			input: []telegraf.Metric{
 				metric.New("cpu",
 					map[string]string{},
@@ -133,6 +116,11 @@ func TestRound_NegativePrecision(t *testing.T) {
 				metric.New("cpu",
 					map[string]string{},
 					map[string]interface{}{"value": float64(-1043.245956459)},
+					time.Unix(0, 0),
+				),
+				metric.New("cpu",
+					map[string]string{},
+					map[string]interface{}{"value": float64(-1255.75)},
 					time.Unix(0, 0),
 				),
 			},
@@ -147,10 +135,16 @@ func TestRound_NegativePrecision(t *testing.T) {
 					map[string]interface{}{"value": float64(-1000)},
 					time.Unix(0, 0),
 				),
+				metric.New("cpu",
+					map[string]string{},
+					map[string]interface{}{"value": float64(-1300)},
+					time.Unix(0, 0),
+				),
 			},
 		},
 		{
-			name: "uint64",
+			name:      "uint64 negative precision",
+			precision: -2,
 			input: []telegraf.Metric{
 				metric.New("cpu",
 					map[string]string{},
@@ -159,7 +153,7 @@ func TestRound_NegativePrecision(t *testing.T) {
 				),
 				metric.New("cpu",
 					map[string]string{},
-					map[string]interface{}{"value": uint64(0)},
+					map[string]interface{}{"value": uint64(12)},
 					time.Unix(0, 0),
 				),
 			},
@@ -177,7 +171,8 @@ func TestRound_NegativePrecision(t *testing.T) {
 			},
 		},
 		{
-			name: "int64",
+			name:      "int64 negative precision",
+			precision: -2,
 			input: []telegraf.Metric{
 				metric.New("cpu",
 					map[string]string{},
@@ -186,7 +181,7 @@ func TestRound_NegativePrecision(t *testing.T) {
 				),
 				metric.New("cpu",
 					map[string]string{},
-					map[string]interface{}{"value": int64(-34437)},
+					map[string]interface{}{"value": int64(-34457)},
 					time.Unix(0, 0),
 				),
 			},
@@ -198,16 +193,17 @@ func TestRound_NegativePrecision(t *testing.T) {
 				),
 				metric.New("cpu",
 					map[string]string{},
-					map[string]interface{}{"value": int64(-34400)},
+					map[string]interface{}{"value": int64(-34500)},
 					time.Unix(0, 0),
 				),
 			},
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := Round{
-				Precision: -2,
+				Precision: tt.precision,
 				Log:       testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
