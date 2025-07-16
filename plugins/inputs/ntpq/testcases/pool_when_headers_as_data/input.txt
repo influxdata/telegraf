@@ -1,0 +1,4 @@
+     remote           refid      st t when poll reach   delay   offset  jitter
+==============================================================================
+     remote           refid      st t when poll reach   delay   offset  jitter
+ hostname            .POOL.     16 p    -   64    0    0.000   0.000   0.000

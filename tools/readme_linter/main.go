@@ -47,13 +47,15 @@ func init() {
 	// Rules for all plugin types
 	all := []ruleFunc{
 		firstSection,
-		metadata,
 		configSection,
 		relativeTelegrafLinks,
 		noLongLinesInParagraphs(80),
 	}
 	for i := pluginInput; i <= pluginParser; i++ {
 		rules[i] = all
+		if i != pluginParser {
+			rules[i] = append(rules[i], metadata)
+		}
 	}
 
 	// Rules for input plugins

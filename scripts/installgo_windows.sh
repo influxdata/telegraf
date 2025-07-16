@@ -2,7 +2,7 @@
 
 set -eux
 
-GO_VERSION="1.24.3"
+GO_VERSION="1.24.4"
 
 setup_go () {
     choco upgrade golang --allow-downgrade --version=${GO_VERSION}

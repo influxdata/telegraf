@@ -1,8 +1,7 @@
 # Scale Processor Plugin
 
-The scale processor filters for a set of fields,
-and scales the respective values from an input range into
-the given output range according to this formula:
+This plugin allows to scale field-values from an input range into the given
+output range according to this formula:
 
 ```math
 \text{result}=(\text{value}-\text{input\_minimum})\cdot\frac{(\text{output\_maximum}-\text{output\_minimum})}
@@ -20,8 +19,12 @@ this formula
 Input fields are converted to floating point values if possible. Otherwise,
 fields that cannot be converted are ignored and keep their original value.
 
-**Please note:** Neither the input nor the output values are clipped to their
-                 respective ranges!
+> [!NOTE]
+> Neither the input nor output values are clipped to their respective ranges!
+
+⭐ Telegraf v1.27.0
+🏷️ transformation
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

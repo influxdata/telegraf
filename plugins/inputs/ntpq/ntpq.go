@@ -41,7 +41,6 @@ const (
 )
 
 type NTPQ struct {
-	DNSLookup   bool     `toml:"dns_lookup" deprecated:"1.24.0;1.35.0;add '-n' to 'options' instead to skip DNS lookup"`
 	Options     string   `toml:"options"`
 	Servers     []string `toml:"servers"`
 	ReachFormat string   `toml:"reach_format"`
@@ -85,11 +84,6 @@ func (n *NTPQ) Init() error {
 		options, err := shellquote.Split(n.Options)
 		if err != nil {
 			return fmt.Errorf("splitting options failed: %w", err)
-		}
-		if !n.DNSLookup {
-			if !slices.Contains(options, "-n") {
-				options = append(options, "-n")
-			}
 		}
 		if !slices.Contains(options, "-p") {
 			options = append(options, "-p")
@@ -220,11 +214,29 @@ func (n *NTPQ) gatherServer(acc telegraf.Accumulator, server string) {
 		for i, raw := range elements {
 			col := columns[i]
 
+			// Handle tags, empty or invalid entries
 			switch col.etype {
 			case none:
 				continue
 			case tag:
 				tags[col.name] = raw
+				continue
+			default:
+				// Common validation for all field types to detect misalignment
+				if raw == col.name {
+					// Field misalignment detected - skip this field
+					acc.AddError(fmt.Errorf("%sfield misalignment detected: got column name %q instead of value", msgPrefix, raw))
+					continue
+				}
+			}
+
+			// Handle empty or whitespace-only values
+			if strings.TrimSpace(raw) == "" {
+				continue
+			}
+
+			// Type-specific parsing
+			switch col.etype {
 			case fieldFloat:
 				value, err := strconv.ParseFloat(raw, 64)
 				if err != nil {
@@ -260,28 +272,32 @@ func (n *NTPQ) gatherServer(acc telegraf.Accumulator, server string) {
 			case fieldIntDecimal:
 				value, err := strconv.ParseInt(raw, 10, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("parsing %q (%v) as int failed: %w", col.name, raw, err))
+					msg := fmt.Sprintf("%sparsing %q (%v) as int failed", msgPrefix, col.name, raw)
+					acc.AddError(fmt.Errorf("%s: %w", msg, err))
 					continue
 				}
 				fields[col.name] = value
 			case fieldIntOctal:
 				value, err := strconv.ParseInt(raw, 8, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("parsing %q (%v) as int failed: %w", col.name, raw, err))
+					msg := fmt.Sprintf("%sparsing %q (%v) as int failed", msgPrefix, col.name, raw)
+					acc.AddError(fmt.Errorf("%s: %w", msg, err))
 					continue
 				}
 				fields[col.name] = value
 			case fieldIntBits:
 				value, err := strconv.ParseUint(raw, 8, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("parsing %q (%v) as int failed: %w", col.name, raw, err))
+					msg := fmt.Sprintf("%sparsing %q (%v) as int failed", msgPrefix, col.name, raw)
+					acc.AddError(fmt.Errorf("%s: %w", msg, err))
 					continue
 				}
 				fields[col.name] = bits.OnesCount64(value)
 			case fieldIntRatio8:
 				value, err := strconv.ParseUint(raw, 8, 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("parsing %q (%v) as int failed: %w", col.name, raw, err))
+					msg := fmt.Sprintf("%sparsing %q (%v) as int failed", msgPrefix, col.name, raw)
+					acc.AddError(fmt.Errorf("%s: %w", msg, err))
 					continue
 				}
 				fields[col.name] = float64(bits.OnesCount64(value)) / float64(8)
@@ -307,8 +323,6 @@ func processLine(line string) (string, []string) {
 
 func init() {
 	inputs.Add("ntpq", func() telegraf.Input {
-		return &NTPQ{
-			DNSLookup: true,
-		}
+		return &NTPQ{}
 	})
 }

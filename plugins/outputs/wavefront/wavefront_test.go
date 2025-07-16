@@ -19,8 +19,7 @@ import (
 // default config used by Tests
 func defaultWavefront() *Wavefront {
 	return &Wavefront{
-		Host:            "localhost",
-		Port:            2878,
+		URL:             "http://localhost:2878",
 		Prefix:          "testWF.",
 		SimpleFields:    false,
 		MetricSeparator: ".",
@@ -299,36 +298,6 @@ func TestBuildValue(t *testing.T) {
 	}
 }
 
-func TestBuildValueString(t *testing.T) {
-	w := defaultWavefront()
-	w.StringToNumber = map[string][]map[string]float64{
-		"test1": {{"green": 1, "red": 10}},
-		"test2": {{"active": 1, "hidden": 2}},
-	}
-
-	var valuetests = []struct {
-		value interface{}
-		name  string
-		out   float64
-		isErr bool
-	}{
-		{value: int64(123), name: "", out: 123},
-		{value: "green", name: "test1", out: 1},
-		{value: "red", name: "test1", out: 10},
-		{value: "hidden", name: "test2", out: 2},
-		{value: "bad", name: "test1", out: 0, isErr: true},
-	}
-
-	for _, vt := range valuetests {
-		value, err := buildValue(vt.value, vt.name, w)
-		if vt.isErr && err == nil {
-			t.Errorf("\nexpected error with\t%+v\nreceived\t%+v\n", vt.out, value)
-		} else if value != vt.out {
-			t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", vt.out, value)
-		}
-	}
-}
-
 func TestTagLimits(t *testing.T) {
 	w := defaultWavefront()
 	w.TruncateTags = true
@@ -386,9 +355,8 @@ func TestParseConnectionUrlReturnsAllowsTokensInUrl(t *testing.T) {
 
 func TestParseConnectionUrlUsesHostAndPortWhenUrlIsOmitted(t *testing.T) {
 	w := &Wavefront{
-		Host: "surf.wavefront.com",
-		Port: 8080,
-		Log:  testutil.Logger{},
+		URL: "http://surf.wavefront.com:8080",
+		Log: testutil.Logger{},
 	}
 
 	url, err := w.parseConnectionURL()

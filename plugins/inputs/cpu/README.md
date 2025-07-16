@@ -1,6 +1,6 @@
 # CPU Input Plugin
 
-This plugin gather metrics on the system's CPUs.
+This plugin gathers metrics about the system's CPUs.
 
 ⭐ Telegraf v0.1.5
 🏷️ system

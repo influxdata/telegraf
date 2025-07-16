@@ -10,4 +10,5 @@ CREATE TABLE `metric_one` (
   `float64_one` double DEFAULT NULL
 );
 /*!40101 SET character_set_client = @saved_cs_client */;
+set autocommit=0;
 INSERT INTO `metric_one` VALUES ('tag1','tag2',1234,2345,1,0,1000000000,3.1415);

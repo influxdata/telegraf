@@ -44,40 +44,41 @@ type NATS struct {
 // StreamConfig is the configuration for creating stream
 // Almost a mirror of https://pkg.go.dev/github.com/nats-io/nats.go/jetstream#StreamConfig but with TOML tags
 type StreamConfig struct {
-	Name                 string                            `toml:"name"`
-	Description          string                            `toml:"description"`
-	Subjects             []string                          `toml:"subjects"`
-	Retention            string                            `toml:"retention"`
-	MaxConsumers         int                               `toml:"max_consumers"`
-	MaxMsgs              int64                             `toml:"max_msgs"`
-	MaxBytes             int64                             `toml:"max_bytes"`
-	Discard              string                            `toml:"discard"`
-	DiscardNewPerSubject bool                              `toml:"discard_new_per_subject"`
-	MaxAge               config.Duration                   `toml:"max_age"`
-	MaxMsgsPerSubject    int64                             `toml:"max_msgs_per_subject"`
-	MaxMsgSize           int32                             `toml:"max_msg_size"`
-	Storage              string                            `toml:"storage"`
-	Replicas             int                               `toml:"num_replicas"`
-	NoAck                bool                              `toml:"no_ack"`
-	Template             string                            `toml:"template_owner"`
-	Duplicates           config.Duration                   `toml:"duplicate_window"`
-	Placement            *jetstream.Placement              `toml:"placement"`
-	Mirror               *jetstream.StreamSource           `toml:"mirror"`
-	Sources              []*jetstream.StreamSource         `toml:"sources"`
-	Sealed               bool                              `toml:"sealed"`
-	DenyDelete           bool                              `toml:"deny_delete"`
-	DenyPurge            bool                              `toml:"deny_purge"`
-	AllowRollup          bool                              `toml:"allow_rollup_hdrs"`
-	Compression          string                            `toml:"compression"`
-	FirstSeq             uint64                            `toml:"first_seq"`
-	SubjectTransform     *jetstream.SubjectTransformConfig `toml:"subject_transform"`
-	RePublish            *jetstream.RePublish              `toml:"republish"`
-	AllowDirect          bool                              `toml:"allow_direct"`
-	MirrorDirect         bool                              `toml:"mirror_direct"`
-	ConsumerLimits       jetstream.StreamConsumerLimits    `toml:"consumer_limits"`
-	Metadata             map[string]string                 `toml:"metadata"`
-	AsyncPublish         bool                              `toml:"async_publish"`
-	AsyncAckTimeout      config.Duration                   `toml:"async_ack_timeout"`
+	Name                  string                            `toml:"name"`
+	Description           string                            `toml:"description"`
+	Subjects              []string                          `toml:"subjects"`
+	Retention             string                            `toml:"retention"`
+	MaxConsumers          int                               `toml:"max_consumers"`
+	MaxMsgs               int64                             `toml:"max_msgs"`
+	MaxBytes              int64                             `toml:"max_bytes"`
+	Discard               string                            `toml:"discard"`
+	DiscardNewPerSubject  bool                              `toml:"discard_new_per_subject"`
+	MaxAge                config.Duration                   `toml:"max_age"`
+	MaxMsgsPerSubject     int64                             `toml:"max_msgs_per_subject"`
+	MaxMsgSize            int32                             `toml:"max_msg_size"`
+	Storage               string                            `toml:"storage"`
+	Replicas              int                               `toml:"num_replicas"`
+	NoAck                 bool                              `toml:"no_ack"`
+	Template              string                            `toml:"template_owner"`
+	Duplicates            config.Duration                   `toml:"duplicate_window"`
+	Placement             *jetstream.Placement              `toml:"placement"`
+	Mirror                *jetstream.StreamSource           `toml:"mirror"`
+	Sources               []*jetstream.StreamSource         `toml:"sources"`
+	Sealed                bool                              `toml:"sealed"`
+	DenyDelete            bool                              `toml:"deny_delete"`
+	DenyPurge             bool                              `toml:"deny_purge"`
+	AllowRollup           bool                              `toml:"allow_rollup_hdrs"`
+	Compression           string                            `toml:"compression"`
+	FirstSeq              uint64                            `toml:"first_seq"`
+	SubjectTransform      *jetstream.SubjectTransformConfig `toml:"subject_transform"`
+	RePublish             *jetstream.RePublish              `toml:"republish"`
+	AllowDirect           bool                              `toml:"allow_direct"`
+	MirrorDirect          bool                              `toml:"mirror_direct"`
+	ConsumerLimits        jetstream.StreamConsumerLimits    `toml:"consumer_limits"`
+	Metadata              map[string]string                 `toml:"metadata"`
+	AsyncPublish          bool                              `toml:"async_publish"`
+	AsyncAckTimeout       *config.Duration                  `toml:"async_ack_timeout"`
+	DisableStreamCreation bool                              `toml:"disable_stream_creation"`
 }
 
 func (*NATS) SampleConfig() string {
@@ -139,11 +140,24 @@ func (n *NATS) Connect() error {
 		if err != nil {
 			return fmt.Errorf("failed to connect to jetstream: %w", err)
 		}
+
+		if n.Jetstream.DisableStreamCreation {
+			stream, err := n.jetstreamClient.Stream(context.Background(), n.Jetstream.Name)
+			if err != nil {
+				if errors.Is(err, nats.ErrStreamNotFound) {
+					return fmt.Errorf("stream %q does not exist and disable_stream_creation is true", n.Jetstream.Name)
+				}
+				return fmt.Errorf("failed to get stream info, name: %s, err: %w", n.Jetstream.Name, err)
+			}
+			subjects := stream.CachedInfo().Config.Subjects
+			n.Log.Infof("Connected to existing stream %q with subjects: %v", n.Jetstream.Name, subjects)
+			return nil
+		}
 		_, err = n.jetstreamClient.CreateOrUpdateStream(context.Background(), *n.jetstreamStreamConfig)
 		if err != nil {
 			return fmt.Errorf("failed to create or update stream: %w", err)
 		}
-		n.Log.Infof("Stream (%s) successfully created or updated", n.Jetstream.Name)
+		n.Log.Infof("Stream %q successfully created or updated", n.Jetstream.Name)
 	}
 	return nil
 }
@@ -234,6 +248,11 @@ func (n *NATS) Init() error {
 			return errors.New("stream cannot be empty")
 		}
 
+		if n.Jetstream.AsyncAckTimeout == nil {
+			to := config.Duration(5 * time.Second)
+			n.Jetstream.AsyncAckTimeout = &to
+		}
+
 		if len(n.Jetstream.Subjects) == 0 {
 			n.Jetstream.Subjects = []string{n.Subject}
 		}
@@ -298,7 +317,7 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 					return fmt.Errorf("publish acknowledgement is an error: %w (retrying)", err)
 				}
 			}
-		case <-time.After(time.Duration(n.Jetstream.AsyncAckTimeout)):
+		case <-time.After(time.Duration(*n.Jetstream.AsyncAckTimeout)):
 			return fmt.Errorf("waiting for acknowledgement timed out, %d messages pending", n.jetstreamClient.PublishAsyncPending())
 		}
 	}
@@ -307,10 +326,6 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 
 func init() {
 	outputs.Add("nats", func() telegraf.Output {
-		return &NATS{
-			Jetstream: &StreamConfig{
-				AsyncAckTimeout: config.Duration(time.Second * 5),
-			},
-		}
+		return &NATS{}
 	})
 }

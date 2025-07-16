@@ -39,7 +39,6 @@ type Elasticsearch struct {
 	Local                      bool              `toml:"local"`
 	Servers                    []string          `toml:"servers"`
 	HTTPHeaders                map[string]string `toml:"headers"`
-	HTTPTimeout                config.Duration   `toml:"http_timeout" deprecated:"1.29.0;1.35.0;use 'timeout' instead"`
 	ClusterHealth              bool              `toml:"cluster_health"`
 	ClusterHealthLevel         string            `toml:"cluster_health_level"`
 	ClusterStats               bool              `toml:"cluster_stats"`
@@ -273,10 +272,6 @@ func (e *Elasticsearch) Stop() {
 
 func (e *Elasticsearch) createHTTPClient() (*http.Client, error) {
 	ctx := context.Background()
-	if e.HTTPTimeout != 0 {
-		e.HTTPClientConfig.Timeout = e.HTTPTimeout
-		e.HTTPClientConfig.ResponseHeaderTimeout = e.HTTPTimeout
-	}
 	return e.HTTPClientConfig.CreateClient(ctx, e.Log)
 }
 

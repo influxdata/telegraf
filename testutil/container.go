@@ -193,6 +193,29 @@ func (c *Container) GetInfo() (string, error) {
 		return "", fmt.Errorf("getting provider failed: %w", err)
 	}
 
+	// Try direct inspection first - much more efficient than listing all images
+	imageInfo, err := provider.Client().ImageInspect(c.ctx, ci.ContainerJSONBase.Image)
+	if err == nil {
+		// Process imageInfo.RepoDigests directly
+		var digests []string
+		for _, repoDigest := range imageInfo.RepoDigests {
+			if _, suffix, found := strings.Cut(repoDigest, "@"); found {
+				digests = append(digests, suffix)
+			} else {
+				digests = append(digests, repoDigest)
+			}
+		}
+
+		digestStr := "unknown"
+		if len(digests) > 0 {
+			digestStr = strings.Join(digests, ",")
+		}
+
+		return fmt.Sprintf("%s (%s)", dc.Image, digestStr), nil
+	}
+
+	// Fallback to original method if direct inspection fails
+	// This preserves backward compatibility in case the direct method fails
 	summaries, err := provider.Client().ImageList(c.ctx, image.ListOptions{})
 	if err != nil {
 		return "", fmt.Errorf("listing images failed: %w", err)

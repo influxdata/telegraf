@@ -24,6 +24,29 @@ func TestNoMigration(t *testing.T) {
 	require.Equal(t, string(defaultCfg), string(output))
 }
 
+func TestEnableTLSConflict(t *testing.T) {
+	cfg := []byte(`
+		[[inputs.gnmi]]
+		addresses = ["10.49.234.114:57777"]
+		username = "cisco"
+		password = "cisco"
+		enable_tls = true
+		tls_enable = false
+		[[inputs.gnmi.subscription]]
+			name = "ifcounters"
+			origin = "openconfig-interfaces"
+			path = "/interfaces/interface/state/counters"
+			subscription_mode = "sample"
+			sample_interval = "10s"
+	`)
+
+	// Migrate and check that nothing changed
+	output, n, err := config.ApplyMigrations(cfg)
+	require.ErrorContains(t, err, "contradicting setting for 'enable_tls' and 'tls_enable'")
+	require.Empty(t, output)
+	require.Zero(t, n)
+}
+
 func TestCases(t *testing.T) {
 	// Get all directories in testdata
 	folders, err := os.ReadDir("testcases")

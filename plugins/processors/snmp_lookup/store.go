@@ -1,7 +1,6 @@
 package snmp_lookup
 
 import (
-	"errors"
 	"sync"
 	"time"
 
@@ -10,8 +9,6 @@ import (
 
 	"github.com/influxdata/telegraf/config"
 )
-
-var ErrNotYetAvailable = errors.New("data not yet available")
 
 type store struct {
 	cache                *expirable.LRU[string, *tagMap]
@@ -71,7 +68,7 @@ func (s *store) refreshTimer() {
 }
 
 func (s *store) enqueue(agent string) {
-	if _, inflight := s.inflight.LoadOrStore(agent, true); inflight {
+	if _, inflight := s.inflight.LoadOrStore(agent, true); inflight || s.pool.Stopped() {
 		return
 	}
 	s.pool.Submit(func() {
@@ -114,6 +111,11 @@ func (s *store) lookup(agent, index string) {
 }
 
 func (s *store) destroy() {
+	s.Lock()
+	defer s.Unlock()
+	s.deferredUpdates = make(map[string]time.Time)
+	s.refreshTimer()
+
 	s.pool.StopAndWait()
 }
 

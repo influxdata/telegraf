@@ -1,84 +1,21 @@
 # S.M.A.R.T. Input Plugin
 
-Get metrics using the command line utility `smartctl` for
-S.M.A.R.T. (Self-Monitoring, Analysis and Reporting Technology) storage
-devices. SMART is a monitoring system included in computer hard disk drives
-(HDDs) and solid-state drives (SSDs) that detects and reports on various
-indicators of drive reliability, with the intent of enabling the anticipation of
-hardware failures.  See smartmontools (<https://www.smartmontools.org/>).
+This plugin collects [Self-Monitoring, Analysis and Reporting Technology][smart]
+information for storage devices information using the
+[`smartmontools`][smartmon] package. This plugin also supports NVMe devices by
+using the [`nvme-cli`][nvmecli] package.
 
-SMART information is separated between different measurements: `smart_device` is
-used for general information, while `smart_attribute` stores the detailed
-attribute information if `attributes = true` is enabled in the plugin
-configuration.
+> [!NOTE]
+> This plugin requires the [`smartmontools`][smartmon] and, for NVMe devices,
+> the [`nvme-cli`][nvmecli] packages to be installed on your system. The
+> `smartctl` and `nvme` commands must to be executable by Telegraf.
 
-If no devices are specified, the plugin will scan for SMART devices via the
-following command:
+⭐ Telegraf v1.5.0
+🏷️ hardware, system
+💻 all
 
-```sh
-smartctl --scan
-```
-
-Metrics will be reported from the following `smartctl` command:
-
-```sh
-smartctl --info --attributes --health -n <nocheck> --format=brief <device>
-```
-
-This plugin supports _smartmontools_ version 5.41 and above, but v. 5.41 and
-v. 5.42 might require setting `nocheck`, see the comment in the sample
-configuration.  Also, NVMe capabilities were introduced in version 6.5.
-
-To enable SMART on a storage device run:
-
-```sh
-smartctl -s on <device>
-```
-
-## NVMe vendor specific attributes
-
-For NVMe disk type, plugin can use command line utility `nvme-cli`. It has a
-feature to easy access a vendor specific attributes.  This plugin supports
-nmve-cli version 1.5 and above (<https://github.com/linux-nvme/nvme-cli>).  In
-case of `nvme-cli` absence NVMe vendor specific metrics will not be obtained.
-
-Vendor specific SMART metrics for NVMe disks may be reported from the following
-`nvme` command:
-
-```sh
-nvme <vendor> smart-log-add <device>
-```
-
-Note that vendor plugins for `nvme-cli` could require different naming
-convention and report format.
-
-To see installed plugin extensions, depended on the nvme-cli version, look at
-the bottom of:
-
-```sh
-nvme help
-```
-
-To gather disk vendor id (vid) `id-ctrl` could be used:
-
-```sh
-nvme id-ctrl <device>
-```
-
-Association between a vid and company can be found there:
-<https://pcisig.com/membership/member-companies>.
-
-Devices affiliation to being NVMe or non NVMe will be determined thanks to:
-
-```sh
-smartctl --scan
-```
-
-and:
-
-```sh
-smartctl --scan -d nvme
-```
+[smart]: https://en.wikipedia.org/wiki/Self-Monitoring,_Analysis_and_Reporting_Technology
+[nvmecli]: https://github.com/linux-nvme/nvme-cli
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -147,7 +84,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     # read_method = "concurrent"
 ```
 
-## Permissions
+### Permissions
 
 It's important to note that this plugin references smartctl and nvme-cli, which
 may require additional permissions to execute successfully.  Depending on the
@@ -179,6 +116,88 @@ Defaults!NVME !logfile, !syslog, !pam_session
 To run smartctl or nvme with `sudo` wrapper script can be
 created. `path_smartctl` or `path_nvme` in the configuration should be set to
 execute this script.
+
+### SMART specific attributes
+
+SMART is a monitoring system included in computer hard disk drives
+(HDDs) and solid-state drives (SSDs) that detects and reports on various
+indicators of drive reliability, with the intent of enabling the anticipation of
+hardware failures.
+
+SMART information is separated between different measurements: `smart_device` is
+used for general information, while `smart_attribute` stores the detailed
+attribute information if `attributes = true` is enabled in the plugin
+configuration.
+
+If no devices are specified, the plugin will scan for SMART devices via the
+following command:
+
+```sh
+smartctl --scan
+```
+
+Metrics will be reported from the following `smartctl` command:
+
+```sh
+smartctl --info --attributes --health -n <nocheck> --format=brief <device>
+```
+
+This plugin supports`smartmontools` version 5.41 and above, but v. 5.41 and
+v. 5.42 might require setting `nocheck`. See the comment in the sample
+configuration. Also, NVMe capabilities were introduced in version 6.5.
+
+To enable SMART on a storage device run:
+
+```sh
+smartctl -s on <device>
+```
+
+### NVMe vendor specific attributes
+
+For NVMe disk type, plugin can use command line utility `nvme-cli`. It has a
+feature to easy access a vendor specific attributes. This plugin supports
+nmve-cli version 1.5 and above. In case of `nvme-cli` absence NVMe vendor
+specific metrics will not be obtained.
+
+Vendor specific SMART metrics for NVMe disks may be reported from the following
+`nvme` command:
+
+```sh
+nvme <vendor> smart-log-add <device>
+```
+
+Note that vendor plugins for `nvme-cli` could require different naming
+convention and report format.
+
+To see installed plugin extensions, depended on the nvme-cli version, look at
+the bottom of:
+
+```sh
+nvme help
+```
+
+To gather disk vendor id (vid) `id-ctrl` could be used:
+
+```sh
+nvme id-ctrl <device>
+```
+
+Association between a vid and company can be found in the
+[membership list][members].
+
+Devices affiliation to being NVMe or non NVMe will be determined thanks to:
+
+```sh
+smartctl --scan
+```
+
+and:
+
+```sh
+smartctl --scan -d nvme
+```
+
+[members]: https://pcisig.com/membership/member-companies
 
 ## Metrics
 

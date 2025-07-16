@@ -1,9 +1,11 @@
 # Reverse DNS Processor Plugin
 
-The `reverse_dns` processor does a reverse-dns lookup on tags (or fields) with
-IPs in them.
+This plugin does a reverse-dns lookup on tags or fields containing IPs and
+creates a tag or field containing the corresponding DNS name.
 
-Telegraf minimum version: Telegraf 1.15.0
+⭐ Telegraf v1.15.0
+🏷️ annotation
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

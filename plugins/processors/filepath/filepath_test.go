@@ -46,8 +46,8 @@ func TestOptions_Apply(t *testing.T) {
 		},
 		{
 			name: "Test Dest Option",
-			o: &Options{
-				BaseName: []BaseOpts{
+			o: &Filepath{
+				BaseName: []baseOpts{
 					{
 						Field: "sourcePath",
 						Tag:   "sourcePath",
@@ -106,8 +106,8 @@ func TestTracking(t *testing.T) {
 		input = append(input, tm)
 	}
 
-	plugin := &Options{
-		BaseName: []BaseOpts{
+	plugin := &Filepath{
+		BaseName: []baseOpts{
 			{
 				Field: "sourcePath",
 				Tag:   "sourcePath",

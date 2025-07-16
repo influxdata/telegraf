@@ -590,8 +590,20 @@ func TestMaxConnections(t *testing.T) {
 		require.Empty(t, errs)
 	}()
 
-	// Close the first client and check if we can connect now
+	// Get the actual stream listener for introspection
+	listener, ok := sock.listener.(*streamListener)
+	require.True(t, ok)
+
+	// Close the first client and wait for the plugin to realize the socket was
+	// actually closed
 	require.NoError(t, clients[0].Close())
+	require.Eventually(t, func() bool {
+		listener.Lock()
+		defer listener.Unlock()
+		return listener.connections < listener.MaxConnections
+	}, 3*time.Second, 100*time.Millisecond)
+
+	// Attempt a new connection which should succeed now
 	client, err = net.DialTCP("tcp", nil, addr.(*net.TCPAddr))
 	require.NoError(t, err)
 	require.NoError(t, client.SetWriteBuffer(0))
@@ -606,8 +618,6 @@ func TestMaxConnections(t *testing.T) {
 	}
 
 	// Close the clients and check the connection counter
-	listener, ok := sock.listener.(*streamListener)
-	require.True(t, ok)
 	require.Eventually(t, func() bool {
 		listener.Lock()
 		conns := listener.connections

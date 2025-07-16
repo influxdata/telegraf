@@ -1,18 +1,22 @@
 # Starlark Processor Plugin
 
-The `starlark` processor calls a Starlark function for each matched metric,
+This plugin calls the provided Starlark function for each matched metric,
 allowing for custom programmatic metric processing.
 
 The Starlark language is a dialect of Python, and will be familiar to those who
 have experience with the Python language. However, there are major
-[differences](#python-differences).  Existing Python code is unlikely to work
-unmodified.  The execution environment is sandboxed, and it is not possible to
+[differences](#python-differences). Existing Python code is unlikely to work
+unmodified. The execution environment is sandboxed, and it is not possible to
 do I/O operations such as reading from files or sockets.
 
-The **[Starlark specification][]** has details about the syntax and available
-functions.
+The **[Starlark specification][spec]** has details about the syntax and
+available functions.
 
-Telegraf minimum version: Telegraf 1.15.0
+⭐ Telegraf v1.15.0
+🏷️ general purpose
+💻 all
+
+[spec]: https://github.com/google/starlark-go/blob/d1966c6b9fcd/doc/spec.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -61,7 +65,7 @@ def apply(metric):
 ```
 
 For a list of available types and functions that can be used in the code, see
-the [Starlark specification][].
+the [Starlark specification][spec].
 
 In addition to these, the following InfluxDB-specific
 types and functions are exposed to the script.
@@ -71,7 +75,7 @@ Create a new metric with the given measurement name.  The metric will have no
 tags or fields and defaults to the current time.
 
 - **name**:
-The name is a [string][] containing the metric measurement name.
+The name is a [string][string] containing the metric measurement name.
 
 - **tags**:
 A [dict-like][dict] object containing the metric's tags.
@@ -286,6 +290,5 @@ or return the value as a floating-point number.
 
 Open a Pull Request to add any other useful Starlark examples.
 
-[Starlark specification]: https://github.com/google/starlark-go/blob/d1966c6b9fcd/doc/spec.md
 [string]: https://github.com/google/starlark-go/blob/d1966c6b9fcd/doc/spec.md#strings
 [dict]: https://github.com/google/starlark-go/blob/d1966c6b9fcd/doc/spec.md#dictionaries

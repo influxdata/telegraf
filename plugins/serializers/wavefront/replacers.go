@@ -23,6 +23,7 @@ var tagValueReplacer = strings.NewReplacer("\"", "\\\"", "*", "-")
 
 var pathReplacer = strings.NewReplacer("_", ".")
 
+// Sanitize replaces invalid characters in metric and tag names with '-'
 func Sanitize(strict bool, val string) string {
 	if strict {
 		return strictSanitizedChars.Replace(val)

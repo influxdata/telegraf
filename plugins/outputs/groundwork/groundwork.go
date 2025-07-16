@@ -17,6 +17,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/slog"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -95,7 +96,7 @@ func (g *Groundwork) Init() error {
 	password.Destroy()
 
 	/* adapt SDK logger */
-	log.Logger = newLogger(g.Log).WithGroup("tcg.sdk")
+	log.Logger = slog.NewLogger(g.Log).WithGroup("tcg.sdk")
 
 	return nil
 }

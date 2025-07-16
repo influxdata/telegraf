@@ -54,28 +54,28 @@ func (*testSNMPConnection) Reconnect() error {
 
 func TestRegistry(t *testing.T) {
 	require.Contains(t, processors.Processors, "snmp_lookup")
-	require.IsType(t, &Lookup{}, processors.Processors["snmp_lookup"]())
+	require.IsType(t, &SNMPLookup{}, processors.Processors["snmp_lookup"]())
 }
 
 func TestSampleConfig(t *testing.T) {
 	cfg := config.NewConfig()
 
-	require.NoError(t, cfg.LoadConfigData(testutil.DefaultSampleConfig((&Lookup{}).SampleConfig()), config.EmptySourcePath))
+	require.NoError(t, cfg.LoadConfigData(testutil.DefaultSampleConfig((&SNMPLookup{}).SampleConfig()), config.EmptySourcePath))
 }
 
 func TestInit(t *testing.T) {
 	tests := []struct {
 		name     string
-		plugin   *Lookup
+		plugin   *SNMPLookup
 		expected string
 	}{
 		{
 			name:   "empty",
-			plugin: &Lookup{},
+			plugin: &SNMPLookup{},
 		},
 		{
 			name: "defaults",
-			plugin: &Lookup{
+			plugin: &SNMPLookup{
 				AgentTag:        "source",
 				IndexTag:        "index",
 				ClientConfig:    *snmp.DefaultClientConfig(),
@@ -86,7 +86,7 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name: "wrong SNMP client config",
-			plugin: &Lookup{
+			plugin: &SNMPLookup{
 				ClientConfig: snmp.ClientConfig{
 					Version: 99,
 				},
@@ -95,7 +95,7 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name: "table init",
-			plugin: &Lookup{
+			plugin: &SNMPLookup{
 				Tags: []snmp.Field{
 					{
 						Name: "ifName",
@@ -120,7 +120,7 @@ func TestInit(t *testing.T) {
 }
 
 func TestStart(t *testing.T) {
-	plugin := Lookup{}
+	plugin := SNMPLookup{}
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.NopAccumulator
@@ -161,7 +161,7 @@ func TestGetConnection(t *testing.T) {
 		},
 	}
 
-	p := Lookup{
+	p := SNMPLookup{
 		AgentTag:     "source",
 		ClientConfig: *snmp.DefaultClientConfig(),
 		Log:          testutil.Logger{Name: "processors.snmp_lookup"},
@@ -185,7 +185,7 @@ func TestGetConnection(t *testing.T) {
 }
 
 func TestUpdateAgent(t *testing.T) {
-	p := Lookup{
+	p := SNMPLookup{
 		ClientConfig: *snmp.DefaultClientConfig(),
 		CacheSize:    defaultCacheSize,
 		CacheTTL:     defaultCacheTTL,
@@ -339,7 +339,7 @@ func TestAdd(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			plugin := Lookup{
+			plugin := SNMPLookup{
 				AgentTag:        "source",
 				IndexTag:        "index",
 				ClientConfig:    *snmp.DefaultClientConfig(),
@@ -376,7 +376,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestExpiry(t *testing.T) {
-	p := Lookup{
+	p := SNMPLookup{
 		AgentTag:        "source",
 		IndexTag:        "index",
 		CacheSize:       defaultCacheSize,
@@ -488,7 +488,7 @@ func TestExpiry(t *testing.T) {
 }
 
 func TestOrdered(t *testing.T) {
-	plugin := Lookup{
+	plugin := SNMPLookup{
 		AgentTag:        "source",
 		IndexTag:        "index",
 		CacheSize:       defaultCacheSize,
@@ -629,4 +629,61 @@ func TestOrdered(t *testing.T) {
 	}, 3*time.Second, 100*time.Millisecond)
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 	require.EqualValues(t, len(input), tsc.calls.Load())
+}
+
+// TestNoReenqueAfterStop makes sure we do not try to add new tasks to the
+// worker pool _after_ the plugin has stopped, e.g. after shutting down Telegraf.
+// See https://github.com/influxdata/telegraf/issues/17289
+func TestNoReenqueAfterStop(t *testing.T) {
+	plugin := &SNMPLookup{
+		AgentTag:              "source",
+		IndexTag:              "index",
+		CacheSize:             10,
+		CacheTTL:              config.Duration(1 * time.Minute),
+		ParallelLookups:       1,
+		MinTimeBetweenUpdates: config.Duration(500 * time.Millisecond),
+		Tags: []snmp.Field{
+			{
+				Name: "ifName",
+				Oid:  ".1.3.6.1.2.1.31.1.1.1.1",
+			},
+		},
+		Log: testutil.Logger{Name: "processors.snmp_lookup"},
+	}
+	require.NoError(t, plugin.Init())
+
+	// Setup the connection factory
+	tsc := &testSNMPConnection{values: make(map[string]string)}
+	plugin.getConnectionFunc = func(string) (snmp.Connection, error) { return tsc, nil }
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+
+	// Send two metrics for the
+	for range 2 {
+		m := testutil.MustMetric(
+			"test",
+			map[string]string{
+				"source": "127.0.0.1",
+				"index":  "0",
+			},
+			map[string]interface{}{"value": 1},
+			time.Now(),
+		)
+		require.NoError(t, plugin.Add(m, &acc))
+
+		// Wait until the first metric is resolved,
+		// so that the 2nd metric is deferred by MinTimeBetweenUpdates
+		require.Eventually(t, func() bool {
+			return acc.NMetrics() > 0
+		}, 3*time.Second, 100*time.Millisecond)
+	}
+
+	// Stop the plugin to simulate a telegraf reload or shutdown
+	plugin.Stop()
+
+	// Wait for the delayed update much longer than the deferred timer to
+	// make sure all deferred tasks were executed. In issue #17289 this caused
+	// a panic...
+	time.Sleep(2 * time.Duration(plugin.MinTimeBetweenUpdates))
 }

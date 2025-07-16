@@ -23,7 +23,7 @@ func TestConverter(t *testing.T) {
 		{
 			name: "from tag",
 			converter: &Converter{
-				Tags: &Conversion{
+				Tags: &conversion{
 					String:   []string{"string"},
 					Integer:  []string{"int"},
 					Unsigned: []string{"uint"},
@@ -65,7 +65,7 @@ func TestConverter(t *testing.T) {
 		{
 			name: "from tag unconvertible",
 			converter: &Converter{
-				Tags: &Conversion{
+				Tags: &conversion{
 					Integer:  []string{"int"},
 					Unsigned: []string{"uint"},
 					Boolean:  []string{"bool"},
@@ -95,7 +95,7 @@ func TestConverter(t *testing.T) {
 		{
 			name: "from string field",
 			converter: &Converter{
-				Fields: &Conversion{
+				Fields: &conversion{
 					String:   []string{"a"},
 					Integer:  []string{"b", "b1", "b2", "b3"},
 					Unsigned: []string{"c", "c1", "c2", "c3"},
@@ -150,7 +150,7 @@ func TestConverter(t *testing.T) {
 		{
 			name: "from string field unconvertible",
 			converter: &Converter{
-				Fields: &Conversion{
+				Fields: &conversion{
 					Integer:  []string{"a"},
 					Unsigned: []string{"b"},
 					Boolean:  []string{"c"},
@@ -180,7 +180,7 @@ func TestConverter(t *testing.T) {
 		{
 			name: "from integer field",
 			converter: &Converter{
-				Fields: &Conversion{
+				Fields: &conversion{
 					String:   []string{"a"},
 					Integer:  []string{"b"},
 					Unsigned: []string{"c", "negative_uint"},
@@ -226,7 +226,7 @@ func TestConverter(t *testing.T) {
 		{
 			name: "from unsigned field",
 			converter: &Converter{
-				Fields: &Conversion{
+				Fields: &conversion{
 					String:   []string{"a"},
 					Integer:  []string{"b", "overflow_int"},
 					Unsigned: []string{"c"},
@@ -272,7 +272,7 @@ func TestConverter(t *testing.T) {
 		{
 			name: "out of range for unsigned",
 			converter: &Converter{
-				Fields: &Conversion{
+				Fields: &conversion{
 					Unsigned: []string{"a", "b"},
 				},
 			},
@@ -300,7 +300,7 @@ func TestConverter(t *testing.T) {
 		{
 			name: "boolean field",
 			converter: &Converter{
-				Fields: &Conversion{
+				Fields: &conversion{
 					String:   []string{"a", "af"},
 					Integer:  []string{"b", "bf"},
 					Unsigned: []string{"c", "cf"},
@@ -354,7 +354,7 @@ func TestConverter(t *testing.T) {
 		{
 			name: "from float field",
 			converter: &Converter{
-				Fields: &Conversion{
+				Fields: &conversion{
 					String:   []string{"a"},
 					Integer:  []string{"b", "too_large_int", "too_small_int"},
 					Unsigned: []string{"c", "negative_uint", "too_large_uint", "too_small_uint"},
@@ -408,7 +408,7 @@ func TestConverter(t *testing.T) {
 		{
 			name: "globbing",
 			converter: &Converter{
-				Fields: &Conversion{
+				Fields: &conversion{
 					Integer: []string{"int_*"},
 				},
 			},
@@ -438,7 +438,7 @@ func TestConverter(t *testing.T) {
 		{
 			name: "from string field hexadecimal",
 			converter: &Converter{
-				Fields: &Conversion{
+				Fields: &conversion{
 					Integer:  []string{"a"},
 					Unsigned: []string{"b"},
 					Float:    []string{"c"},
@@ -470,7 +470,7 @@ func TestConverter(t *testing.T) {
 		{
 			name: "from unix timestamp field",
 			converter: &Converter{
-				Fields: &Conversion{
+				Fields: &conversion{
 					Timestamp:       []string{"time"},
 					TimestampFormat: "unix",
 				},
@@ -498,7 +498,7 @@ func TestConverter(t *testing.T) {
 		{
 			name: "from unix timestamp tag",
 			converter: &Converter{
-				Tags: &Conversion{
+				Tags: &conversion{
 					Timestamp:       []string{"time"},
 					TimestampFormat: "unix",
 				},
@@ -527,7 +527,7 @@ func TestConverter(t *testing.T) {
 		{
 			name: "from invalid timestamp tag",
 			converter: &Converter{
-				Tags: &Conversion{
+				Tags: &conversion{
 					Timestamp:       []string{"time"},
 					TimestampFormat: "blah",
 				},
@@ -558,7 +558,7 @@ func TestConverter(t *testing.T) {
 		{
 			name: "from rfc3339 timestamp field",
 			converter: &Converter{
-				Fields: &Conversion{
+				Fields: &conversion{
 					Timestamp:       []string{"time"},
 					TimestampFormat: "rfc3339",
 				},
@@ -586,7 +586,7 @@ func TestConverter(t *testing.T) {
 		{
 			name: "from custom timestamp field",
 			converter: &Converter{
-				Fields: &Conversion{
+				Fields: &conversion{
 					Timestamp:       []string{"time"},
 					TimestampFormat: "2006-01-02 15:04:05 MST",
 				},
@@ -614,7 +614,7 @@ func TestConverter(t *testing.T) {
 		{
 			name: "invalid timestamp format",
 			converter: &Converter{
-				Fields: &Conversion{
+				Fields: &conversion{
 					Timestamp:       []string{"time"},
 					TimestampFormat: "2006-01-0",
 				},
@@ -643,7 +643,7 @@ func TestConverter(t *testing.T) {
 		{
 			name: "no timestamp format",
 			converter: &Converter{
-				Fields: &Conversion{
+				Fields: &conversion{
 					Timestamp: []string{"time"},
 				},
 			},
@@ -683,7 +683,7 @@ func TestConverter(t *testing.T) {
 
 func TestMultipleTimestamps(t *testing.T) {
 	c := &Converter{
-		Fields: &Conversion{
+		Fields: &conversion{
 			Timestamp:       []string{"time", "date"},
 			TimestampFormat: "2006-01-02 15:04:05 MST",
 		},
@@ -718,7 +718,7 @@ func TestMeasurement(t *testing.T) {
 		{
 			name: "measurement from tag",
 			converter: &Converter{
-				Tags: &Conversion{
+				Tags: &conversion{
 					Measurement: []string{"filepath"},
 				},
 			},
@@ -746,7 +746,7 @@ func TestMeasurement(t *testing.T) {
 		{
 			name: "measurement from field",
 			converter: &Converter{
-				Fields: &Conversion{
+				Fields: &conversion{
 					Measurement: []string{"topic"},
 				},
 			},
@@ -773,7 +773,7 @@ func TestMeasurement(t *testing.T) {
 		{
 			name: "float32 from ieee754 float32 encoded as base64",
 			converter: &Converter{
-				Fields: &Conversion{
+				Fields: &conversion{
 					Base64IEEEFloat32: []string{"a", "b"},
 				},
 			},
@@ -845,7 +845,7 @@ func TestTracking(t *testing.T) {
 	}
 
 	plugin := &Converter{
-		Fields: &Conversion{
+		Fields: &conversion{
 			Measurement: []string{"topic"},
 		},
 	}

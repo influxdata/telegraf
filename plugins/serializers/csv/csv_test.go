@@ -213,9 +213,7 @@ func TestSerializeTransformationBatch(t *testing.T) {
 	}
 }
 
-type Config Serializer
-
-func loadTestConfiguration(filename string) (*Config, []string, error) {
+func loadTestConfiguration(filename string) (*Serializer, []string, error) {
 	buf, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, nil, err
@@ -228,7 +226,7 @@ func loadTestConfiguration(filename string) (*Config, []string, error) {
 			header = append(header, line)
 		}
 	}
-	var cfg Config
+	var cfg Serializer
 	err = toml.Unmarshal(buf, &cfg)
 	return &cfg, header, err
 }

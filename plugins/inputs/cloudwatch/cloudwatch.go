@@ -40,7 +40,6 @@ type CloudWatch struct {
 
 	Period                config.Duration     `toml:"period"`
 	Delay                 config.Duration     `toml:"delay"`
-	Namespace             string              `toml:"namespace" deprecated:"1.25.0;1.35.0;use 'namespaces' instead"`
 	Namespaces            []string            `toml:"namespaces"`
 	Metrics               []*cloudwatchMetric `toml:"metrics"`
 	CacheTTL              config.Duration     `toml:"cache_ttl"`
@@ -97,11 +96,6 @@ func (*CloudWatch) SampleConfig() string {
 }
 
 func (c *CloudWatch) Init() error {
-	// For backward compatibility
-	if len(c.Namespace) != 0 {
-		c.Namespaces = append(c.Namespaces, c.Namespace)
-	}
-
 	// Check user settings
 	switch c.MetricFormat {
 	case "":

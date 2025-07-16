@@ -17,21 +17,23 @@ func TestSqlServer_QueriesInclusionExclusion(t *testing.T) {
 	cases := []map[string]interface{}{
 		{
 			"IncludeQuery": make([]string, 0),
-			"ExcludeQuery": []string{"WaitStatsCategorized", "DatabaseIO", "ServerProperties", "MemoryClerk", "Schedulers", "VolumeSpace", "Cpu"},
-			"queries":      []string{"PerformanceCounters", "SqlRequests"},
+			"ExcludeQuery": []string{"SQLServerWaitStatsCategorized", "SQLServerDatabaseIO", "SQLServerProperties", "SQLServerMemoryClerks",
+				"SQLServerSchedulers", "SQLServerVolumeSpace", "SQLServerCpu", "SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates",
+				"SQLServerRecentBackups", "SQLServerPersistentVersionStore"},
+			"queries":      []string{"SQLServerPerformanceCounters", "SQLServerRequests"},
 			"queriesTotal": 2,
 		},
 		{
-			"IncludeQuery": []string{"PerformanceCounters", "SqlRequests"},
-			"ExcludeQuery": []string{"SqlRequests", "WaitStatsCategorized", "DatabaseIO", "VolumeSpace", "Cpu"},
-			"queries":      []string{"PerformanceCounters"},
+			"IncludeQuery": []string{"SQLServerPerformanceCounters", "SQLServerRequests"},
+			"ExcludeQuery": []string{"SQLServerRequests", "SQLServerWaitStatsCategorized", "SQLServerDatabaseIO", "SQLServerVolumeSpace", "SQLServerCpu"},
+			"queries":      []string{"SQLServerPerformanceCounters"},
 			"queriesTotal": 1,
 		},
 	}
 
 	for _, test := range cases {
 		s := SQLServer{
-			QueryVersion: 2,
+			DatabaseType: "SQLServer",
 			IncludeQuery: test["IncludeQuery"].([]string),
 			ExcludeQuery: test["ExcludeQuery"].([]string),
 			Log:          testutil.Logger{},
@@ -158,14 +160,16 @@ func TestSqlServerIntegration_MultipleInstanceWithHealthMetric(t *testing.T) {
 	sl := config.NewSecret([]byte(testServer))
 	s := &SQLServer{
 		Servers:      []*config.Secret{&sl},
-		ExcludeQuery: []string{"MemoryClerk"},
+		DatabaseType: "SQLServer",
+		ExcludeQuery: []string{"SQLServerMemoryClerks"},
 		Log:          testutil.Logger{},
 	}
 
 	sl2 := config.NewSecret([]byte(testServer))
 	s2 := &SQLServer{
 		Servers:      []*config.Secret{&sl2},
-		ExcludeQuery: []string{"DatabaseSize"},
+		DatabaseType: "SQLServer",
+		ExcludeQuery: []string{"SQLServerDatabaseIO"},
 		HealthMetric: true,
 		Log:          testutil.Logger{},
 	}
@@ -175,7 +179,7 @@ func TestSqlServerIntegration_MultipleInstanceWithHealthMetric(t *testing.T) {
 	err := s.Gather(&acc)
 	require.NoError(t, err)
 
-	require.NoError(t, s2.Start(&acc))
+	require.NoError(t, s2.Start(&acc2))
 	err = s2.Gather(&acc2)
 	require.NoError(t, err)
 
@@ -204,7 +208,8 @@ func TestSqlServer_HealthMetric(t *testing.T) {
 
 	s1 := &SQLServer{
 		Servers:      []*config.Secret{&fs1, &fs2},
-		IncludeQuery: []string{"DatabaseSize", "MemoryClerk"},
+		DatabaseType: "SQLServer",
+		IncludeQuery: []string{"SQLServerDatabaseIO", "SQLServerMemoryClerks"},
 		HealthMetric: true,
 		AuthMethod:   "connection_string",
 		Log:          testutil.Logger{},
@@ -213,7 +218,8 @@ func TestSqlServer_HealthMetric(t *testing.T) {
 	sl2 := config.NewSecret([]byte(fakeServer1))
 	s2 := &SQLServer{
 		Servers:      []*config.Secret{&sl2},
-		IncludeQuery: []string{"DatabaseSize"},
+		DatabaseType: "SQLServer",
+		IncludeQuery: []string{"SQLServerDatabaseIO"},
 		AuthMethod:   "connection_string",
 		Log:          testutil.Logger{},
 	}
@@ -238,23 +244,28 @@ func TestSqlServer_HealthMetric(t *testing.T) {
 
 	// acc2 should not have the health metric because it is not specified in the config
 	var acc2 testutil.Accumulator
+	require.NoError(t, s2.Start(&acc2))
 	require.NoError(t, s2.Gather(&acc2))
 	require.False(t, acc2.HasMeasurement(healthMetricName))
 }
 
 func TestSqlServer_MultipleInit(t *testing.T) {
-	s := &SQLServer{Log: testutil.Logger{}}
+	s := &SQLServer{
+		DatabaseType: "SQLServer",
+		Log:          testutil.Logger{},
+	}
 	s2 := &SQLServer{
-		ExcludeQuery: []string{"DatabaseSize"},
+		DatabaseType: "SQLServer",
+		ExcludeQuery: []string{"SQLServerDatabaseIO"},
 		Log:          testutil.Logger{},
 	}
 
 	require.NoError(t, s.initQueries())
-	_, ok := s.queries["DatabaseSize"]
+	_, ok := s.queries["SQLServerDatabaseIO"]
 	require.True(t, ok)
 
-	require.NoError(t, s.initQueries())
-	_, ok = s2.queries["DatabaseSize"]
+	require.NoError(t, s2.initQueries())
+	_, ok = s2.queries["SQLServerDatabaseIO"]
 	require.False(t, ok)
 	s.Stop()
 	s2.Stop()
@@ -374,8 +385,8 @@ func TestSqlServerIntegration_AGQueriesApplicableForDatabaseTypeSQLServer(t *tes
 	err := s.Gather(&acc)
 	require.NoError(t, err)
 
+	require.NoError(t, s2.Start(&acc2))
 	err = s2.Gather(&acc2)
-	require.NoError(t, s2.Start(&acc))
 	require.NoError(t, err)
 
 	// acc includes size metrics, and excludes memory metrics
@@ -428,8 +439,8 @@ func TestSqlServerIntegration_AGQueryFieldsOutputBasedOnSQLServerVersion(t *test
 	err := s2019.Gather(&acc2019)
 	require.NoError(t, err)
 
-	err = s2012.Gather(&acc2012)
 	require.NoError(t, s2012.Start(&acc2012))
+	err = s2012.Gather(&acc2012)
 	require.NoError(t, err)
 
 	// acc2019 includes new HADR query fields
