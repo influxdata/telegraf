@@ -1090,3 +1090,13 @@ func TestMysqlEmptyTimestampColumnIntegration(t *testing.T) {
 		}, 10*time.Second, 500*time.Millisecond, fn)
 	}
 }
+
+func TestTimestampOnUpdateSchema(t *testing.T) {
+	p := &SQL{
+		Log:     testutil.Logger{},
+		Convert: defaultConvert,
+	}
+	expected := defaultConvert.Timestamp
+	results := p.deriveDatatype(ts)
+	require.Equal(t, expected, results)
+}
