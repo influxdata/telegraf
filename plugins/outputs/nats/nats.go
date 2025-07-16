@@ -23,14 +23,15 @@ import (
 var sampleConfig string
 
 type NATS struct {
-	Servers     []string      `toml:"servers"`
-	Secure      bool          `toml:"secure"`
-	Name        string        `toml:"name"`
-	Username    config.Secret `toml:"username"`
-	Password    config.Secret `toml:"password"`
-	Credentials string        `toml:"credentials"`
-	Subject     string        `toml:"subject"`
-	Jetstream   *StreamConfig `toml:"jetstream"`
+	Servers        []string      `toml:"servers"`
+	Secure         bool          `toml:"secure"`
+	Name           string        `toml:"name"`
+	Username       config.Secret `toml:"username"`
+	Password       config.Secret `toml:"password"`
+	Credentials    string        `toml:"credentials"`
+	Subject        string        `toml:"subject"`
+	UseBatchFormat bool          `toml:"use_batch_format"`
+	Jetstream      *StreamConfig `toml:"jetstream"`
 	tls.ClientConfig
 
 	Log telegraf.Logger `toml:"-"`
@@ -280,20 +281,24 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	var pafs []jetstream.PubAckFuture
-	if n.Jetstream != nil && n.Jetstream.AsyncPublish {
-		pafs = make([]jetstream.PubAckFuture, len(metrics))
+	msgCount := len(metrics)
+	if n.UseBatchFormat {
+		msgCount = 1
 	}
 
-	for i, metric := range metrics {
-		buf, err := n.serializer.Serialize(metric)
+	var pafs []jetstream.PubAckFuture
+	if n.Jetstream != nil && n.Jetstream.AsyncPublish {
+		pafs = make([]jetstream.PubAckFuture, msgCount)
+	}
+
+	if n.UseBatchFormat {
+		buf, err := n.serializer.SerializeBatch(metrics)
 		if err != nil {
-			n.Log.Debugf("Could not serialize metric: %v", err)
-			continue
+			return fmt.Errorf("Could not serialize metrics: %v", err)
 		}
 		if n.Jetstream != nil {
 			if n.Jetstream.AsyncPublish {
-				pafs[i], err = n.jetstreamClient.PublishAsync(n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+				pafs[0], err = n.jetstreamClient.PublishAsync(n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
 			} else {
 				_, err = n.jetstreamClient.Publish(context.Background(), n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
 			}
@@ -302,6 +307,26 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 		}
 		if err != nil {
 			return fmt.Errorf("failed to send NATS message: %w", err)
+		}
+	} else {
+		for i, metric := range metrics {
+			buf, err := n.serializer.Serialize(metric)
+			if err != nil {
+				n.Log.Debugf("Could not serialize metric: %v", err)
+				continue
+			}
+			if n.Jetstream != nil {
+				if n.Jetstream.AsyncPublish {
+					pafs[i], err = n.jetstreamClient.PublishAsync(n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+				} else {
+					_, err = n.jetstreamClient.Publish(context.Background(), n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+				}
+			} else {
+				err = n.conn.Publish(n.Subject, buf)
+			}
+			if err != nil {
+				return fmt.Errorf("failed to send NATS message: %w", err)
+			}
 		}
 	}
 

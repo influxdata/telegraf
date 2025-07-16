@@ -63,6 +63,12 @@ func MockMetrics() []telegraf.Metric {
 	return []telegraf.Metric{TestMetric(1.0)}
 }
 
+// MockMultipleMetrics returns a mock []telegraf.Metric object with multiple
+// metrics for using in unit tests of telegraf output sinks.
+func MockMultipleMetrics() []telegraf.Metric {
+	return []telegraf.Metric{TestMetric(1.0), TestMetric(2.0)}
+}
+
 func MockMetricsWithValue(value float64) []telegraf.Metric {
 	return []telegraf.Metric{TestMetric(value)}
 }
