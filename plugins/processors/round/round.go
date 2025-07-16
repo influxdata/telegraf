@@ -30,7 +30,6 @@ func (*Round) SampleConfig() string {
 	return sampleConfig
 }
 
-// Creates a filter for Include and Exclude fields
 func (p *Round) Init() error {
 	fieldFilter, err := filter.NewIncludeExcludeFilter(p.IncludeFields, p.ExcludeFields)
 	if err != nil {
