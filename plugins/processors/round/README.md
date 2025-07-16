@@ -6,7 +6,7 @@ to reduce the number of metrics sent to the output if only a lower precision
 is required for the values.
 
 ⭐ Telegraf v1.36.0
-🏷️ math
+🏷️ math, transformation
 💻 all
 
 [dedup]: /plugins/processors/dedup/README.md

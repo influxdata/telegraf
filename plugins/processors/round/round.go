@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"fmt"
 	"math"
-	"reflect"
 
 	"golang.org/x/exp/constraints"
 
@@ -84,26 +83,39 @@ func (p *Round) round(value interface{}) interface{} {
 	case float64:
 		return roundFloat(v, p.factor)
 	default:
-		p.Log.Debugf("Value (%v) type invalid: [%v] is not an int, uint or float", v, reflect.TypeOf(value))
+		p.Log.Tracef("Invalid type %T for value '%v'", value, value)
 	}
 	return value
 }
 
 func roundInt[V constraints.Integer](value V, factor int64) V {
-	f := V(factor)
-
+	// Rounding to the full integer or a fraction will result
+	// in the integer itself, so skip the computation.
 	if factor < 10 {
 		return value
 	}
 
-	v := value / f // -12.55
+	// Compute relevant operators. As we need to round we
+	// use an effective factor of one order of magnitude
+	// less to keep the fractional part in the resulting
+	// integer.
+	f := factor / 10
+	v := int64(value) / f
+	r := v % 10
 
-	remainder := (value / (f / 10)) % 10
-	if remainder < 5 {
-		return v * f
+	// Round away from zero for positive and negative
+	// values with an absolute fraction greater or
+	// equal 1/2.
+	if r <= -5 {
+		return V((v - r - 10) * f)
+	}
+	if r >= 5 {
+		return V((v - r + 10) * f)
 	}
 
-	return (v + 1) * f
+	// Floor the value as the absolute fraction is less
+	// than 1/2.
+	return V((v - r) * f)
 }
 
 func roundFloat[V constraints.Integer | constraints.Float](value V, factor float64) V {
@@ -112,8 +124,6 @@ func roundFloat[V constraints.Integer | constraints.Float](value V, factor float
 
 func init() {
 	processors.Add("round", func() telegraf.Processor {
-		return &Round{
-			Precision: 0,
-		}
+		return &Round{}
 	})
 }
