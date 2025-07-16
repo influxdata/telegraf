@@ -12,13 +12,13 @@ type Collector struct {
 }
 
 func NewCollector(tags map[string]string) *Collector {
-	var cap int
+	var capacity int
 	if tags != nil {
-		cap += len(tags)
+		capacity += len(tags)
 	}
 
 	s := &Collector{
-		tags:       make(map[string]string, cap),
+		tags:       make(map[string]string, capacity),
 		statistics: make(map[string]Stat),
 	}
 
@@ -31,12 +31,12 @@ func NewCollector(tags map[string]string) *Collector {
 }
 
 func (s *Collector) Register(measurement, field string, tags map[string]string) {
-	cap := len(s.tags)
+	capacity := len(s.tags)
 	if tags != nil {
-		cap += len(tags)
+		capacity += len(tags)
 	}
 
-	t := make(map[string]string, cap)
+	t := make(map[string]string, capacity)
 	maps.Copy(t, s.tags)
 	if tags != nil {
 		maps.Copy(t, tags)
@@ -47,12 +47,12 @@ func (s *Collector) Register(measurement, field string, tags map[string]string) 
 }
 
 func (s *Collector) RegisterTiming(measurement, field string, tags map[string]string) {
-	cap := len(s.tags)
+	capacity := len(s.tags)
 	if tags != nil {
-		cap += len(tags)
+		capacity += len(tags)
 	}
 
-	t := make(map[string]string, cap)
+	t := make(map[string]string, capacity)
 	maps.Copy(t, s.tags)
 	if tags != nil {
 		maps.Copy(t, tags)
@@ -63,12 +63,12 @@ func (s *Collector) RegisterTiming(measurement, field string, tags map[string]st
 }
 
 func (s *Collector) Unregister(measurement, field string, tags map[string]string) {
-	cap := len(s.tags)
+	capacity := len(s.tags)
 	if tags != nil {
-		cap += len(tags)
+		capacity += len(tags)
 	}
 
-	t := make(map[string]string, cap)
+	t := make(map[string]string, capacity)
 	maps.Copy(t, s.tags)
 	if tags != nil {
 		maps.Copy(t, tags)
