@@ -223,6 +223,7 @@ require (
 	go.starlark.net v0.0.0-20250417143717-f57e51f710eb
 	go.step.sm/crypto v0.64.0
 	golang.org/x/crypto v0.38.0
+	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0
 	golang.org/x/mod v0.24.0
 	golang.org/x/net v0.40.0
 	golang.org/x/oauth2 v0.30.0
@@ -535,7 +536,6 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0
 	golang.org/x/time v0.11.0 // indirect
 	golang.org/x/tools v0.32.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
