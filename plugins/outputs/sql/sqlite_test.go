@@ -221,7 +221,8 @@ func TestSqliteTimestampInteger(t *testing.T) {
 	defer rows3.Close()
 	require.True(t, rows3.Next())
 	var (
-		f, g, h string
+		f    int64
+		g, h string
 	)
 	require.NoError(t, rows3.Scan(&f, &g, &h))
 	require.Equal(t, ts.Unix(), f)
@@ -234,7 +235,8 @@ func TestSqliteTimestampInteger(t *testing.T) {
 	defer rows4.Close()
 	require.True(t, rows4.Next())
 	var (
-		i, j, k string
+		i    int64
+		j, k string
 	)
 	require.NoError(t, rows4.Scan(&i, &j, &k))
 	require.Equal(t, ts.Unix(), i)
