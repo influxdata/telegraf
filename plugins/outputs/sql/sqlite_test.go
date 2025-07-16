@@ -224,7 +224,7 @@ func TestSqliteTimestampInteger(t *testing.T) {
 		f, g, h string
 	)
 	require.NoError(t, rows3.Scan(&f, &g, &h))
-	require.Equal(t, ts.Unix(), a)
+	require.Equal(t, ts.Unix(), f)
 	require.Equal(t, "tag3", g)
 	require.Equal(t, "string1", h)
 	require.False(t, rows3.Next())
