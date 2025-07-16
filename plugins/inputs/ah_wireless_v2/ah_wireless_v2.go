@@ -1309,7 +1309,6 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 	for _, intfName := range t.Ifname {
 
 		var rfstat awestats
-		var devstats ah_dcd_dev_stats
 		var ifindex int
 		var chann int32
 		var atrSt ieee80211req_cfg_atr
@@ -1335,7 +1334,6 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 		if (ifindex <= 0) {
 			continue
 		}
-		devstats = getProcNetDev(intfName)
 
 		atrStat = getAtrTbl(t.fd, intfName, atrSt)
 
@@ -1935,12 +1933,12 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			fields["crcErrorRate_avg"]					= t.last_ut_data[ii].crc_err_rate_avg
 
 
-			fields["txPackets"]						= devstats.tx_packets
-			fields["txErrors"]						= devstats.tx_errors
-			fields["txDropped"]						= devstats.tx_dropped
+			fields["txPackets"]						= rfstat.ast_as.ast_tx_packets
+			fields["txErrors"] 						= rfstat.ast_as.ast_tx_xretries + rfstat.ast_as.ast_tx_fifoerr
+			fields["txDropped"]						= rfstat.ast_as.ast_tx_nobuf +  rfstat.ast_as.ast_tx_nobufmgt
 			fields["txHwDropped"]						= rfstat.ast_as.ast_tx_shortpre + rfstat.ast_as.ast_tx_xretries + rfstat.ast_as.ast_tx_fifoerr
-			fields["txSwDropped"]						= devstats.tx_dropped
-			fields["txBytes"]						= devstats.tx_bytes
+			fields["txSwDropped"]						= rfstat.ast_tx_blckd_drops
+			fields["txBytes"]						 = rfstat.ast_as.ast_tx_bytes;
 			fields["txRetryCount"]						= rfstat.phy_stats.ast_tx_shortretry + rfstat.phy_stats.ast_tx_longretry
 
 			fields["txRate_min"]						= rfstat.ast_tx_rate_stats[0].ns_rateKbps
@@ -1953,10 +1951,10 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			fields["txBcastBytes"]						= rfstat.ast_as.ast_tx_bcast_bytes
 			fields["txBcastPackets"]					= rfstat.ast_as.ast_tx_bcast
 
-			fields["rxPackets"]						= devstats.rx_packets
-			fields["rxErrors"]						= devstats.rx_errors
-			fields["rxDropped"]						= devstats.rx_dropped
-			fields["rxBytes"]						= devstats.rx_bytes
+			fields["rxPackets"]						= rfstat.ast_as.ast_rx_num_data + rfstat.ast_as.ast_rx_num_mgmt + rfstat.ast_as.ast_rx_num_ctl
+			fields["rxErrors"]						= rfstat.phy_stats.ast_rx_phyerr + rfstat.phy_stats.ast_rx_fifoerr + uint64(rfstat.ast_as.ast_rx_badcrypt) + uint64(rfstat.ast_as.ast_rx_badmic)
+			fields["rxDropped"]						= rfstat.phy_stats.ast_rx_tooshort + uint64(rfstat.ast_as.ast_rx_nobuf) + rfstat.phy_stats.ast_rx_toobig
+			fields["rxBytes"]						= rfstat.ast_as.ast_rx_bytes
 			fields["rxRetryCount"]						= rfstat.ast_rx_retry
 
 			fields["rxRate_min"]						= rfstat.ast_rx_rate_stats[0].ns_rateKbps
@@ -2011,7 +2009,6 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			fields["clientCount"]						= t.numclient[ii]
 			fields["lbSpCnt"]							= hddStat.lb_sp_cnt
 			fields["rxProbeSup"]						= rfstat.is_rx_hdd_probe_sup
-			fields["rxSwDropped"]						= devstats.rx_dropped
 			fields["rxUnicastPackets"]					= rfstat.ast_rx_rate_stats[0].ns_unicasts
 			fields["channel"]							= chann
 
