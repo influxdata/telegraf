@@ -15,9 +15,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 )
 
-var (
-	registry *Registry
-)
+var registry *Registry
 
 // Stat is an interface for dealing with telegraf statistics collected
 // on itself.
