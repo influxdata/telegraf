@@ -17,6 +17,9 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+// Converts /cpu/classes/gc/mark/assist:cpu-seconds to cpu_classes_gc_mark_assist_cpu_seconds
+var replacer = strings.NewReplacer("/", "_", ":", "_", "-", "_")
+
 type Internal struct {
 	CollectMemstats bool `toml:"collect_memstats"`
 	CollectGostats  bool `toml:"collect_gostats"`
@@ -106,13 +109,8 @@ func collectGoStat(acc telegraf.Accumulator) {
 	acc.AddFields("internal_gostats", fields, tags)
 }
 
-// Converts /cpu/classes/gc/mark/assist:cpu-seconds to cpu_classes_gc_mark_assist_cpu_seconds
 func sanitizeName(name string) string {
-	name = strings.TrimPrefix(name, "/")
-	name = strings.ReplaceAll(name, "/", "_")
-	name = strings.ReplaceAll(name, ":", "_")
-	name = strings.ReplaceAll(name, "-", "_")
-	return name
+	return replacer.Replace(strings.TrimPrefix(name, "/"))
 }
 
 func medianBucket(h *metrics.Float64Histogram) float64 {
