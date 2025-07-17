@@ -59,7 +59,7 @@ However, the same `key` can be used in _different_ `--select` statements.
 Telegraf must implement a new optional `labels` configuration setting. This
 setting must be available in all input, output, aggregator and processor plugins.
 The `labels` configuration setting must accept a map where each entry is a single
-key-value pair in the form `<key>=<value>`.
+key-value pair.
 
 The `key` part must not contain any wildcard characters but only
 alpha-numerical values (`[A-Za-z0-9]`), dots (`.`), dashes (`-`) or underscores (`_`).
@@ -77,19 +77,20 @@ alpha-numerical values (`[A-Za-z0-9]`), dots (`.`), dashes (`-`) or underscores 
 
 Telegraf must provide the setting without changes to existing or new plugins.
 
-Note: Order matters; the `inputs.cpu.labels` must be defined at the end of plugin definition,
-similar to how `tags` are defined.
+> [!NOTE]
+> Due to limitations in the TOML format, maps must be defined _after_ top-level plugin-settings
+> e.g. at the end of the plugin configuration!
 
 ## Selection matching
 
 Telegraf must match command-line selectors against the plugin labels to
 determine if a plugin should be enabled. The matching behavior is as follows:
 
-Multiple selectors (strings provided via command line) are treated as a logical **OR** condition.
-If any selector string matches, the plugin will be enabled.
-Within each selector string, multiple key-value pairs separated by commas are
-treated as a logical **AND** condition - all conditions within that selector
-must match for it to be considered successful.
+Multiple `--select` command-line parameters are treated as a logical **OR** condition.
+If any select statement matches, the plugin will be enabled.
+Within each `--select` command-line parameter, multiple key-value pairs, separated by
+comma, are treated as a logical **AND** condition. All conditions within that select
+statement must match for a plugin to be selected.
 
 Selectors support exact matching as well as wildcard matching
 using `*` (multiple characters) and `?` (single character) in the selector values.
@@ -123,7 +124,7 @@ The key part does not support wildcards.
 | `app=web,env=prod`, `app=api,env=prod`               | `app="api", env="prod"`                   | Second selector requires `app=api` AND `env=prod`; both are present in plugin labels                                     | Selected |
 | `app=web,env=test*,region=eu-west`, `app=*,env=test` | `app="web", env="test"`                   | First selector requires `app=web` AND `env=test*` AND `region=eu-west`, but `region` is missing; second selector matches | Selected |
 
-## Previous Issues
+## Related Issues
 
 - [issue #1317](https://github.com/influxdata/telegraf/issues/1317) for allowing to enable/disable plugin instances
 - [issue #9304](https://github.com/influxdata/telegraf/issues/9304) for partially enabling a config file
