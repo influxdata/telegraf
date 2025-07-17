@@ -1,10 +1,13 @@
 # Microsoft Fabric Output Plugin
 
-This plugin writes metrics to [Fabric Eventhouse][eventhouse] and [Fabric Eventstream][eventstream]
- artifacts of [Real-Time Intelligence in Microsoft Fabric][fabric].
+This plugin writes metrics to [Fabric Eventhouse][eventhouse] and
+[Fabric Eventstream][eventstream] artifacts of
+ [Real-Time Intelligence in Microsoft Fabric][fabric].
 
-Real-Time Intelligence is a SaaS service in Microsoft Fabric that allows you to extract insights and visualize data in motion.
-It offers an end-to-end solution for event-driven scenarios, streaming data, and data logs.
+Real-Time Intelligence is a SaaS service in Microsoft Fabric
+that allows you to extract insights and visualize data in motion.
+It offers an end-to-end solution for event-driven scenarios,
+ streaming data, and data logs.
 
 ⭐ Telegraf v1.35.0
 🏷️ datastore
