@@ -13,9 +13,12 @@ It offers an end-to-end solution for event-driven scenarios,
 🏷️ datastore
 💻 all
 
-[eventhouse]: https://learn.microsoft.com/fabric/real-time-intelligence/eventhouse
-[eventstream]: https://learn.microsoft.com/fabric/real-time-intelligence/event-streams/overview?tabs=enhancedcapabilities
-[fabric]: https://learn.microsoft.com/fabric/real-time-intelligence/overview
+[eventhouse]:
+ https://learn.microsoft.com/fabric/real-time-intelligence/eventhouse
+[eventstream]:
+ https://learn.microsoft.com/fabric/real-time-intelligence/event-streams/overview?tabs=enhancedcapabilities
+[fabric]:
+ https://learn.microsoft.com/fabric/real-time-intelligence/overview
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
