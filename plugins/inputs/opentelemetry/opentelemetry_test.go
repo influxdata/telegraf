@@ -19,7 +19,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	otlplogs "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	otlpmetrics "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
-	otlpprofiles "go.opentelemetry.io/proto/otlp/collector/profiles/v1experimental"
+	otlpprofiles "go.opentelemetry.io/proto/otlp/collector/profiles/v1development"
 	otlptrace "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
