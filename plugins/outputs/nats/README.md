@@ -121,13 +121,13 @@ routing and filtering across NATS or JetStream subscribers.
 Routing based on tags and metric name:
 
 ```toml
-subject = "{{ .Tag \"region\" }}.{{ .Tag \"datacenter\" }}.{{ .Tag \"host\" }}.{{ .Name }}"
+subject = '{{ .Tag "region" }}.{{ .Tag "datacenter" }}.{{ .Tag "host" }}.{{ .Name }}'
 ```
 
 Routing based on tags, metric name and field name:
 
 ```toml
-subject = "telegraf.metrics.{{ .Tag \"datacenter\" }}.{{ .Tag \"host\" }}.{{ .Name }}.{{ .Field \"Value1\" }}"
+subject = 'telegraf.metrics.{{ .Tag "datacenter" }}.{{ .Tag "host" }}.{{ .Name }}.{{ .Field "Value1" }}'
 ```
 
 If you’re using JetStream the value of subject determines where messages are published.
