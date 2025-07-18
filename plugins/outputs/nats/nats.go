@@ -255,7 +255,6 @@ func (n *NATS) Init() error {
 	n.tplSubject = *tpl
 
 	n.subjectIsDynamic = isSubjectDynamic(n.tplSubject, n.Subject)
-	n.Log.Info("subject is dynamic: ", n.subjectIsDynamic)
 
 	if n.Jetstream == nil {
 		return nil
