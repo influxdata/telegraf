@@ -42,7 +42,7 @@ type NATS struct {
 	jetstreamClient       jetstream.JetStream
 	jetstreamStreamConfig *jetstream.StreamConfig
 	serializer            telegraf.Serializer
-	tplSubject            template.Template
+	tplSubject            *template.Template
 	subjectIsDynamic      bool
 }
 
@@ -252,7 +252,7 @@ func (n *NATS) Init() error {
 	if err != nil {
 		return fmt.Errorf("failed to parse subject template: %w", err)
 	}
-	n.tplSubject = *tpl
+	n.tplSubject = tpl
 
 	n.subjectIsDynamic = isSubjectDynamic(n.tplSubject, n.Subject)
 
@@ -372,23 +372,13 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func isSubjectDynamic(tpl template.Template, subject string) bool {
+func isSubjectDynamic(tpl *template.Template, subject string) bool {
 	var buf bytes.Buffer
 	err := tpl.Execute(&buf, nil)
 	if err != nil || buf.String() != subject {
 		return true
 	}
 	return false
-}
-
-func validateSubject(subject string) error {
-	if strings.Contains(subject, "..") {
-		return fmt.Errorf("invalid subject: %s, incorrect template", subject)
-	}
-	if strings.HasSuffix(subject, ".") {
-		return fmt.Errorf("invalid subject: %s, incorrect template", subject)
-	}
-	return nil
 }
 
 func init() {
