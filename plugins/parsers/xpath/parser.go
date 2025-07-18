@@ -62,6 +62,7 @@ type Parser struct {
 
 type Config struct {
 	MetricQuery  string            `toml:"metric_name"`
+	SensorName   string            `toml:"sensor_name"`
 	Selection    string            `toml:"metric_selection"`
 	Timestamp    string            `toml:"timestamp"`
 	TimestampFmt string            `toml:"timestamp_format"`
@@ -211,7 +212,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	// Queries
 	metrics := make([]telegraf.Metric, 0)
 	p.Log.Debugf("Number of configs: %d", len(p.Configs))
-	for _, cfg := range p.Configs {
+	for i, cfg := range p.Configs {
 		selectedNodes, err := p.document.QueryAll(doc, cfg.Selection)
 		if err != nil {
 			return nil, err
@@ -227,8 +228,12 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			if err != nil {
 				return metrics, err
 			}
-
-			metrics = append(metrics, m)
+			sensor := m.Tags()
+			p.Log.Debugf("SensorName of Streams is : %s", strings.Split(sensor["sensor"], ":")[1])
+			p.Log.Debugf("SensorName of Configs is : %s", p.Configs[i].SensorName)
+			if p.Configs[i].SensorName == (strings.Split(sensor["sensor"], ":")[1]) {
+				metrics = append(metrics, m)
+			}
 		}
 	}
 
