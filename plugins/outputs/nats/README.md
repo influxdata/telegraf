@@ -130,10 +130,12 @@ Routing based on tags, metric name and field name:
 subject = "telegraf.metrics.{{ .Tag \"datacenter\" }}.{{ .Tag \"host\" }}.{{ .Name }}.{{ .Field \"Value1\" }}"
 ```
 
-If you’re using JetStream:
-• The value of subject determines where messages are published.
-• Important: When using a dynamic subject template, Telegraf does not
-automatically register the generated subjects with the JetStream
-stream. You must explicitly define matching subjects in
-outputs.nats.jetstream.subjects to ensure your stream can receive and
+If you’re using JetStream the value of subject determines where messages are published.
+
+> [!IMPORTANT]
+> When using a dynamic subject template, Telegraf does not automatically register the
+> generated subjects with the JetStream stream.
+
+For dynamic `subject`s you must explicitly define matching subjects in
+`outputs.nats.jetstream.subjects` to ensure your stream can receive and
 retain those messages correctly.
