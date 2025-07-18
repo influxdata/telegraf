@@ -387,25 +387,3 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 		}) // end of test case
 	}
 }
-
-func Test_validateSubject(t *testing.T) {
-	tests := []struct {
-		name    string
-		subject string
-		wantErr bool
-	}{
-		{"SubjectOK", "telegraf", false},
-		{"SubjectOKMultiple", "telegraf.>", false},
-		{"SubjectOKMultiple2", "telegraf.*", false},
-		{"SubjectOKMultiple3", "telegraf.metrics", false},
-		{"MissingTag", "telegraf..metrics", true},
-		{"MissingTag2", "telegraf.metrics..", true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := validateSubject(tt.subject); (err != nil) != tt.wantErr {
-				t.Errorf("validateSubject() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
