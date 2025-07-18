@@ -67,14 +67,6 @@ func MockMetricsWithValue(value float64) []telegraf.Metric {
 	return []telegraf.Metric{TestMetric(value)}
 }
 
-func MockMetricsWithTags(tags map[string]string) []telegraf.Metric {
-	m := TestMetric(1.0)
-	for k, v := range tags {
-		m.AddTag(k, v)
-	}
-	return []telegraf.Metric{m}
-}
-
 // TestMetric Returns a simple test point:
 //
 //	measurement -> "test1" or name
