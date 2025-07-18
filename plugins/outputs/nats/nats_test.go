@@ -16,6 +16,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
@@ -277,7 +278,7 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 		container               testutil.Container
 		nats                    *NATS
 		streamConfigCompareFunc func(*testing.T, *jetstream.StreamInfo)
-		sendMmetrics            []telegraf.Metric
+		sendMetrics             []telegraf.Metric
 		expectedSubjects        []string
 	}
 	testCases := []testConfig{
@@ -303,10 +304,12 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 				require.Equal(t, "my-telegraf-stream", si.Config.Name)
 				require.Equal(t, []string{"my-subject.>"}, si.Config.Subjects)
 			},
-			sendMmetrics: testutil.MockMetricsWithTags(map[string]string{
-				"tag1": "foo",
-				"tag2": "bar",
-			}),
+			sendMetrics: []telegraf.Metric{metric.New(
+				"test1",
+				map[string]string{"tag1": "foo", "tag2": "bar"},
+				map[string]interface{}{"value": 1.0},
+				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+			)},
 			expectedSubjects: []string{
 				"my-subject.metrics.test1.foo.bar",
 			},
@@ -333,10 +336,12 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 				require.Equal(t, "my-telegraf-stream", si.Config.Name)
 				require.Equal(t, []string{"my-subject.>"}, si.Config.Subjects)
 			},
-			sendMmetrics: testutil.MockMetricsWithTags(map[string]string{
-				"tag1": "foo",
-				"tag2": "bar",
-			}),
+			sendMetrics: []telegraf.Metric{metric.New(
+				"test1",
+				map[string]string{"tag1": "foo", "tag2": "bar"},
+				map[string]interface{}{"value": 1.0},
+				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+			)},
 			expectedSubjects: []string{
 				"my-subject.metrics.foo.bar.test1.1",
 			},
@@ -359,8 +364,8 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			require.NoError(t, err)
 
 			tc.streamConfigCompareFunc(t, si)
-			require.NoError(t, tc.nats.Write(tc.sendMmetrics))
-			metricCound := len(tc.sendMmetrics)
+			require.NoError(t, tc.nats.Write(tc.sendMetrics))
+			metricCound := len(tc.sendMetrics)
 
 			foundSubjects := make([]string, 0, metricCound)
 			if tc.nats.Jetstream != nil {
