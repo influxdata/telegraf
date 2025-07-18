@@ -108,7 +108,7 @@ to use them.
 
 ### Subject Configuration
 
-The subject setting determines where producer messages will be published
+The `subject` setting determines where producer messages will be published
 in NATS. This can be a static subject (e.g., "telegraf"), or a dynamic
 subject template using Go’s text/template syntax.
 
