@@ -312,49 +312,45 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 	}
 
 	var subject bytes.Buffer
-	var err error
 	var ack jetstream.PubAckFuture
-
-	subjectMetricMap := make(map[string][]telegraf.Metric)
-	for _, m := range metrics {
-		subject.Reset()
-		if err = n.tplSubject.Execute(&subject, m.(telegraf.TemplateMetric)); err != nil {
-			return fmt.Errorf("failed to execute subject template: %w", err)
-		}
-		if err := validateSubject(subject.String()); err != nil {
-			return err
-		}
-		subjectMetricMap[subject.String()] = append(subjectMetricMap[subject.String()], m)
-	}
-
 	var pafs []jetstream.PubAckFuture
+
 	if n.Jetstream != nil && n.Jetstream.AsyncPublish {
 		pafs = make([]jetstream.PubAckFuture, 0, len(metrics))
 	}
 
-	for sub, metrics := range subjectMetricMap {
-		for _, m := range metrics {
-			buf, err := n.serializer.Serialize(m)
-			if err != nil {
-				n.Log.Warnf("Could not serialize metric: %v", err)
-				continue
-			}
-
-			n.Log.Debugf("Publishing on Subject: %s, Metrics: %s", sub, string(buf))
-			if n.Jetstream != nil {
-				if n.Jetstream.AsyncPublish {
-					ack, err = n.jetstreamClient.PublishAsync(sub, buf, jetstream.WithExpectStream(n.Jetstream.Name))
-					pafs = append(pafs, ack)
-				} else {
-					_, err = n.jetstreamClient.Publish(context.Background(), sub, buf, jetstream.WithExpectStream(n.Jetstream.Name))
-				}
-			} else {
-				err = n.conn.Publish(sub, buf)
-			}
-			if err != nil {
-				return fmt.Errorf("failed to send NATS message: %w, subject: %s, metric: %s", err, sub, string(buf))
-			}
+	for _, m := range metrics {
+		subject.Reset()
+		if err := n.tplSubject.Execute(&subject, m.(telegraf.TemplateMetric)); err != nil {
+			return fmt.Errorf("failed to execute subject template: %w", err)
 		}
+		sub := subject.String()
+		if strings.Contains(sub, "..") || strings.HasSuffix(sub, ".") {
+			n.Log.Errorf("invalid subject %q for metric %v", sub, m)
+			continue
+		}
+
+		buf, err := n.serializer.Serialize(m)
+		if err != nil {
+			n.Log.Warnf("Could not serialize metric: %v", err)
+			continue
+		}
+
+		// Use JetStream specific publishing methods
+		if n.Jetstream != nil {
+			if n.Jetstream.AsyncPublish {
+				ack, err = n.jetstreamClient.PublishAsync(sub, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+				pafs = append(pafs, ack)
+			} else {
+				_, err = n.jetstreamClient.Publish(context.Background(), sub, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+			}
+		} else {
+			err = n.conn.Publish(sub, buf)
+		}
+		if err != nil {
+			return fmt.Errorf("failed to send NATS message to subject %q: %w", sub, err)
+		}
+
 	}
 
 	if pafs != nil {
