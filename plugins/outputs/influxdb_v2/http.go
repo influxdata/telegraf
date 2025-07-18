@@ -28,6 +28,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/ratelimiter"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
 const (
@@ -314,13 +315,24 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 		return fmt.Errorf("adding headers failed: %w", err)
 	}
 
+	selfstatTags := map[string]string{
+		"bucket": b.bucket,
+		"url":    c.url.String(),
+	}
 	// Execute the request
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
+		var urlErr *url.Error
+		if errors.As(err, &urlErr) && urlErr.Timeout() {
+			selfstat.Register("influxdb_v2", "timeout_errors_total", selfstatTags).Incr(1)
+		}
+
 		internal.OnClientError(c.client, err)
 		return err
 	}
 	defer resp.Body.Close()
+
+	selfstat.Register("influxdb_v2", "sent_bytes", selfstatTags).Incr(int64(len(b.payload)))
 
 	// Check for success
 	switch resp.StatusCode {
@@ -334,10 +346,12 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 		http.StatusPartialContent,
 		http.StatusMultiStatus,
 		http.StatusAlreadyReported:
+		selfstat.Register("influxdb2", "successful_writes_total", selfstatTags).Incr(1)
 		c.retryCount.Store(0)
 		return nil
 	}
 
+	selfstat.Register("influxdb2", "failed_writes_total", selfstatTags).Incr(1)
 	// We got an error and now try to decode further
 	var desc string
 	writeResp := &genericRespError{}
@@ -345,9 +359,12 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 		desc = ": " + writeResp.Error()
 	}
 
+	nonRetryableStat := selfstat.Register("influxdb2", "non_retryable_errors_total", selfstatTags)
+	retryableStat := selfstat.Register("influxdb2", "retryable_errors_total", selfstatTags)
 	switch resp.StatusCode {
 	// request was too large, send back to try again
 	case http.StatusRequestEntityTooLarge:
+		retryableStat.Incr(1)
 		c.log.Errorf("Failed to write metrics with size %d bytes to %s, request was too large (413)", len(b.payload), b.bucket)
 		return &ThrottleError{
 			Err:        fmt.Errorf("%s: %s", resp.Status, desc),
@@ -360,19 +377,21 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 		// for example, submitting metrics outside the retention period.
 		http.StatusUnprocessableEntity,
 		http.StatusNotAcceptable:
-
+		nonRetryableStat.Incr(1)
 		// Clients should *not* repeat the request and the metrics should be rejected.
 		return &APIError{
 			Err:        fmt.Errorf("failed to write metrics to %s (will be dropped: %s)%s", b.bucket, resp.Status, desc),
 			StatusCode: resp.StatusCode,
 		}
 	case http.StatusUnauthorized, http.StatusForbidden:
+		retryableStat.Incr(1)
 		return fmt.Errorf("failed to write metrics to %s (%s)%s", b.bucket, resp.Status, desc)
 	case http.StatusTooManyRequests,
 		http.StatusServiceUnavailable,
 		http.StatusBadGateway,
 		http.StatusGatewayTimeout:
 		// ^ these handle the cases where the server is likely overloaded, and may not be able to say so.
+		retryableStat.Incr(1)
 		retryDuration := getRetryDuration(resp.Header, c.retryCount.Add(1))
 		c.log.Warnf("Failed to write to %s; will retry in %s. (%s)\n", b.bucket, retryDuration, resp.Status)
 		return &ThrottleError{
@@ -385,6 +404,7 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 	// if it's any other 4xx code, the client should not retry as it's the client's mistake.
 	// retrying will not make the request magically work.
 	if len(resp.Status) > 0 && resp.Status[0] == '4' {
+		nonRetryableStat.Incr(1)
 		return &APIError{
 			Err:        fmt.Errorf("failed to write metrics to %s (will be dropped: %s)%s", b.bucket, resp.Status, desc),
 			StatusCode: resp.StatusCode,
@@ -397,6 +417,7 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 		desc = fmt.Sprintf(": %s; %s", desc, xErr)
 	}
 
+	retryableStat.Incr(1)
 	return &APIError{
 		Err:        fmt.Errorf("failed to write metrics to bucket %q: %s%s", b.bucket, resp.Status, desc),
 		StatusCode: resp.StatusCode,
