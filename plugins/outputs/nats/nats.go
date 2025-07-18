@@ -2,11 +2,13 @@
 package nats
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"errors"
 	"fmt"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/nats-io/nats.go"
@@ -31,6 +33,7 @@ type NATS struct {
 	Credentials string        `toml:"credentials"`
 	Subject     string        `toml:"subject"`
 	Jetstream   *StreamConfig `toml:"jetstream"`
+
 	tls.ClientConfig
 
 	Log telegraf.Logger `toml:"-"`
@@ -39,6 +42,8 @@ type NATS struct {
 	jetstreamClient       jetstream.JetStream
 	jetstreamStreamConfig *jetstream.StreamConfig
 	serializer            telegraf.Serializer
+	tplSubject            *template.Template
+	subjectIsDynamic      bool
 }
 
 // StreamConfig is the configuration for creating stream
@@ -243,30 +248,56 @@ func (n *NATS) getJetstreamConfig() (*jetstream.StreamConfig, error) {
 }
 
 func (n *NATS) Init() error {
-	if n.Jetstream != nil {
-		if strings.TrimSpace(n.Jetstream.Name) == "" {
-			return errors.New("stream cannot be empty")
-		}
-
-		if n.Jetstream.AsyncAckTimeout == nil {
-			to := config.Duration(5 * time.Second)
-			n.Jetstream.AsyncAckTimeout = &to
-		}
-
-		if len(n.Jetstream.Subjects) == 0 {
-			n.Jetstream.Subjects = []string{n.Subject}
-		}
-		// If the overall-subject is already present anywhere in the Jetstream subject we go from there,
-		// otherwise we should append the overall-subject as the last element.
-		if !choice.Contains(n.Subject, n.Jetstream.Subjects) {
-			n.Jetstream.Subjects = append(n.Jetstream.Subjects, n.Subject)
-		}
-		var err error
-		n.jetstreamStreamConfig, err = n.getJetstreamConfig()
-		if err != nil {
-			return fmt.Errorf("failed to parse jetstream config: %w", err)
-		}
+	tpl, err := template.New("nats").Parse(n.Subject)
+	if err != nil {
+		return fmt.Errorf("failed to parse subject template: %w", err)
 	}
+	n.tplSubject = tpl
+
+	n.subjectIsDynamic = isSubjectDynamic(n.tplSubject, n.Subject)
+
+	if n.Jetstream == nil {
+		return nil
+	}
+
+	// JETSTREAM-ONLY code beyond this line
+	// Validate stream name
+	if strings.TrimSpace(n.Jetstream.Name) == "" {
+		return errors.New("stream cannot be empty")
+	}
+
+	if n.Jetstream.AsyncAckTimeout == nil {
+		to := config.Duration(5 * time.Second)
+		n.Jetstream.AsyncAckTimeout = &to
+	}
+	// Handle dynamic subject case
+	if n.subjectIsDynamic {
+		if len(n.Jetstream.Subjects) > 0 {
+			n.Log.Info("skip adding subject to Jetstream subjects because it is dynamic")
+			var err error
+			n.jetstreamStreamConfig, err = n.getJetstreamConfig()
+			return err
+		}
+		return errors.New("jetstream subjects must be set when using a dynamic subject")
+	}
+
+	// JETSTREAM-ONLY and STATIC SUBJECT code beyond this line
+	// Set default subject if none provided
+	if len(n.Jetstream.Subjects) == 0 {
+		n.Jetstream.Subjects = []string{n.Subject}
+	}
+
+	// Append subject if not already included
+	if !choice.Contains(n.Subject, n.Jetstream.Subjects) {
+		n.Jetstream.Subjects = append(n.Jetstream.Subjects, n.Subject)
+	}
+
+	// Generate Jetstream config
+	cfg, err := n.getJetstreamConfig()
+	if err != nil {
+		return fmt.Errorf("failed to parse jetstream config: %w", err)
+	}
+	n.jetstreamStreamConfig = cfg
 	return nil
 }
 
@@ -280,28 +311,44 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
+	var subject bytes.Buffer
+	var ack jetstream.PubAckFuture
 	var pafs []jetstream.PubAckFuture
+
 	if n.Jetstream != nil && n.Jetstream.AsyncPublish {
-		pafs = make([]jetstream.PubAckFuture, len(metrics))
+		pafs = make([]jetstream.PubAckFuture, 0, len(metrics))
 	}
 
-	for i, metric := range metrics {
-		buf, err := n.serializer.Serialize(metric)
-		if err != nil {
-			n.Log.Debugf("Could not serialize metric: %v", err)
+	for _, m := range metrics {
+		subject.Reset()
+		if err := n.tplSubject.Execute(&subject, m.(telegraf.TemplateMetric)); err != nil {
+			return fmt.Errorf("failed to execute subject template: %w", err)
+		}
+		sub := subject.String()
+		if strings.Contains(sub, "..") || strings.HasSuffix(sub, ".") {
+			n.Log.Errorf("invalid subject %q for metric %v", sub, m)
 			continue
 		}
+
+		buf, err := n.serializer.Serialize(m)
+		if err != nil {
+			n.Log.Warnf("Could not serialize metric: %v", err)
+			continue
+		}
+
+		// Use JetStream specific publishing methods
 		if n.Jetstream != nil {
 			if n.Jetstream.AsyncPublish {
-				pafs[i], err = n.jetstreamClient.PublishAsync(n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+				ack, err = n.jetstreamClient.PublishAsync(sub, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+				pafs = append(pafs, ack)
 			} else {
-				_, err = n.jetstreamClient.Publish(context.Background(), n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+				_, err = n.jetstreamClient.Publish(context.Background(), sub, buf, jetstream.WithExpectStream(n.Jetstream.Name))
 			}
 		} else {
-			err = n.conn.Publish(n.Subject, buf)
+			err = n.conn.Publish(sub, buf)
 		}
 		if err != nil {
-			return fmt.Errorf("failed to send NATS message: %w", err)
+			return fmt.Errorf("failed to send NATS message to subject %q: %w", sub, err)
 		}
 	}
 
@@ -322,6 +369,15 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 		}
 	}
 	return nil
+}
+
+func isSubjectDynamic(tpl *template.Template, subject string) bool {
+	var buf bytes.Buffer
+	err := tpl.Execute(&buf, nil)
+	if err != nil || buf.String() != subject {
+		return true
+	}
+	return false
 }
 
 func init() {
