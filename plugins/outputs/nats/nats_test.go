@@ -243,7 +243,8 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 			require.NoError(t, err)
 
 			// Verify that we can successfully write multiple metrics to the NATS daemon
-			err = tc.nats.Write(testutil.MockMultipleMetrics())
+			twoMetrics := []telegraf.Metric{testutil.TestMetric(1.0), testutil.TestMetric(2.0)}
+			err = tc.nats.Write(twoMetrics)
 			require.NoError(t, err)
 		})
 	}
