@@ -309,7 +309,8 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 	if n.UseBatchFormat {
 		buf, err := n.serializer.SerializeBatch(metrics)
 		if err != nil {
-			return fmt.Errorf("could not serialize metrics: %w", err)
+			n.Log.Debugf("Could not serialize batch of metrics: %v", err)
+			return nil
 		}
 		paf, err := n.publishMessage(buf)
 		if err != nil {
