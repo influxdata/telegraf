@@ -60,6 +60,10 @@ to use them.
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Use batch serialization instead of per metric. The batch format allows for the
+  ## production of batch output formats and may more efficiently encode and write metrics.
+  # use_batch_format = false
+
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
