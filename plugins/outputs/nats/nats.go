@@ -276,6 +276,21 @@ func (n *NATS) Close() error {
 	return nil
 }
 
+func (n *NATS) publishMessage(buf []byte) (jetstream.PubAckFuture, error) {
+	if n.Jetstream != nil {
+		if n.Jetstream.AsyncPublish {
+			paf, err := n.jetstreamClient.PublishAsync(n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+			return paf, err
+		} else {
+			_, err := n.jetstreamClient.Publish(context.Background(), n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+			return nil, err
+		}
+	} else {
+		err := n.conn.Publish(n.Subject, buf)
+		return nil, err
+	}
+}
+
 func (n *NATS) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
@@ -296,17 +311,12 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 		if err != nil {
 			return fmt.Errorf("could not serialize metrics: %w", err)
 		}
-		if n.Jetstream != nil {
-			if n.Jetstream.AsyncPublish {
-				pafs[0], err = n.jetstreamClient.PublishAsync(n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
-			} else {
-				_, err = n.jetstreamClient.Publish(context.Background(), n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
-			}
-		} else {
-			err = n.conn.Publish(n.Subject, buf)
-		}
+		paf, err := n.publishMessage(buf)
 		if err != nil {
 			return fmt.Errorf("failed to send NATS message: %w", err)
+		}
+		if n.Jetstream != nil && n.Jetstream.AsyncPublish {
+			pafs[0] = paf
 		}
 	} else {
 		for i, metric := range metrics {
@@ -315,17 +325,14 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 				n.Log.Debugf("Could not serialize metric: %v", err)
 				continue
 			}
-			if n.Jetstream != nil {
-				if n.Jetstream.AsyncPublish {
-					pafs[i], err = n.jetstreamClient.PublishAsync(n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
-				} else {
-					_, err = n.jetstreamClient.Publish(context.Background(), n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
-				}
-			} else {
-				err = n.conn.Publish(n.Subject, buf)
-			}
+
+			paf, err := n.publishMessage(buf)
 			if err != nil {
 				return fmt.Errorf("failed to send NATS message: %w", err)
+			}
+
+			if n.Jetstream != nil && n.Jetstream.AsyncPublish {
+				pafs[i] = paf
 			}
 		}
 	}
