@@ -281,14 +281,12 @@ func (n *NATS) publishMessage(buf []byte) (jetstream.PubAckFuture, error) {
 		if n.Jetstream.AsyncPublish {
 			paf, err := n.jetstreamClient.PublishAsync(n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
 			return paf, err
-		} else {
-			_, err := n.jetstreamClient.Publish(context.Background(), n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
-			return nil, err
 		}
-	} else {
-		err := n.conn.Publish(n.Subject, buf)
+		_, err := n.jetstreamClient.Publish(context.Background(), n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
 		return nil, err
 	}
+	err := n.conn.Publish(n.Subject, buf)
+	return nil, err
 }
 
 func (n *NATS) Write(metrics []telegraf.Metric) error {
