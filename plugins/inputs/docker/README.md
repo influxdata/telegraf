@@ -37,11 +37,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## configuring in multiple Swarm managers results in duplication of metrics.
   gather_services = false
 
-  ## Only collect metrics for these containers. Values will be appended to
-  ## container_name_include.
-  ## Deprecated (1.4.0), use container_name_include
-  container_names = []
-
   ## Set the source tag for the metrics to the container ID hostname, eg first 12 chars
   source_tag = false
 
