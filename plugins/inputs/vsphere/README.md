@@ -428,7 +428,6 @@ instance. For example:
   password = "secret"
 
   insecure_skip_verify = true
-  force_discover_on_init = true
 
   # Exclude all historical metrics
   datastore_metric_exclude = ["*"]
@@ -450,7 +449,6 @@ instance. For example:
   password = "secret"
 
   insecure_skip_verify = true
-  force_discover_on_init = true
   host_metric_exclude = ["*"] # Exclude realtime metrics
   vm_metric_exclude = ["*"] # Exclude realtime metrics
 
@@ -1210,7 +1208,6 @@ For example:
   password = "secret"
 
   insecure_skip_verify = true
-  force_discover_on_init = true
 
   # Exclude all other metrics
   vm_metric_exclude = ["*"]
@@ -1235,7 +1232,6 @@ For example:
   password = "secret"
 
   insecure_skip_verify = true
-  force_discover_on_init = true
 
   # Exclude all other metrics
   vm_metric_exclude = ["*"]
