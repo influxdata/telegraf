@@ -242,7 +242,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			once:                    cCtx.Bool("once"),
 			quiet:                   cCtx.Bool("quiet"),
 			unprotected:             cCtx.Bool("unprotected"),
-			label:                  cCtx.StringSlice("label"),
+			selectors:               cCtx.StringSlice("select"),
 		}
 
 		w := WindowFlags{
@@ -255,7 +255,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		}
 
 		m.Init(pprof.ErrChan(), filters, g, w)
-		if err := config.SetupLabels(); err != nil {
+		if err := config.ParseSelectors(); err != nil {
 			return err
 		}
 		return m.Run()
@@ -346,11 +346,11 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 						"Note: Test mode only runs inputs, processors, and aggregators, but not outputs",
 				},
 				&cli.StringSliceFlag{
-					Name: "label",
-					Usage: "Labels for the running telegraf instance. Plugins with matching " +
-						"selectors on labels will run. If no labels are provided, all plugins will " +
-						"be selected and enabled. Use in conjunction with plugin selector configuration field " +
-						"to enable or disable a plugin. Use '--label=key:value' syntax",
+					Name: "select",
+					Usage: "Selectors for this running instance of Telegraf. " +
+						"If no selectors are provided, all plugins will " +
+						"be selected and enabled. Use in conjunction with plugin labels configuration field " +
+						"to enable or disable a plugin. Use '--select=\"key=value;key=value\"' syntax",
 					DefaultText: "[]",
 				},
 				//
