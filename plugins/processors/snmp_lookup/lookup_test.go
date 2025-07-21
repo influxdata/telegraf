@@ -694,7 +694,7 @@ func TestNoReenqueAfterStop(t *testing.T) {
 // This test prevents regression of the deadlock issue described in #17359.
 func TestStopWithTaskInWorkerPool(t *testing.T) {
 	// Set a reasonable timeout for the entire test
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
 
 	plugin := &SNMPLookup{
