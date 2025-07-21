@@ -89,7 +89,15 @@ func (s *SnmpTrap) Init() error {
 	}
 
 	// Setup the SNMP parameters
-	params := *gosnmp.Default
+	params := gosnmp.GoSNMP{
+		Port:               gosnmp.Default.Port,
+		Transport:          gosnmp.Default.Transport,
+		Community:          gosnmp.Default.Community,
+		Timeout:            gosnmp.Default.Timeout,
+		Retries:            gosnmp.Default.Retries,
+		ExponentialTimeout: gosnmp.Default.ExponentialTimeout,
+		MaxOids:            gosnmp.Default.MaxOids,
+	}
 	if s.Log.Level().Includes(telegraf.Trace) {
 		params.Logger = gosnmp.NewLogger(&logger{s.Log})
 	}
