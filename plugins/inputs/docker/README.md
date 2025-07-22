@@ -37,11 +37,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## configuring in multiple Swarm managers results in duplication of metrics.
   gather_services = false
 
-  ## Only collect metrics for these containers. Values will be appended to
-  ## container_name_include.
-  ## Deprecated (1.4.0), use container_name_include
-  container_names = []
-
   ## Set the source tag for the metrics to the container ID hostname, eg first 12 chars
   source_tag = false
 
@@ -66,13 +61,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Specifies for which classes a per-device metric should be issued
   ## Possible values are 'cpu' (cpu0, cpu1, ...), 'blkio' (8:0, 8:1, ...) and 'network' (eth0, eth1, ...)
-  ## Please note that this setting has no effect if 'perdevice' is set to 'true'
   # perdevice_include = ["cpu"]
 
-  ## Specifies for which classes a total metric should be issued. Total is an aggregated of the 'perdevice' values.
+  ## Specifies for which classes a total metric should be issued. Total is an aggregated of the 'perdevice_include' values.
   ## Possible values are 'cpu', 'blkio' and 'network'
   ## Total 'cpu' is reported directly by Docker daemon, and 'network' and 'blkio' totals are aggregated by this plugin.
-  ## Please note that this setting has no effect if 'total' is set to 'false'
   # total_include = ["cpu", "blkio", "network"]
 
   ## docker labels to include and exclude as tags.  Globs accepted.
