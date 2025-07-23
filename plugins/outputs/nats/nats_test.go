@@ -268,42 +268,45 @@ func createStream(t *testing.T, server string, cfg *nats.StreamConfig) {
 	_, err = js.AddStream(cfg)
 	require.NoError(t, err)
 }
+
 func TestWriteWithLayoutIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 	natsServicePort := "4222"
+
+	container := testutil.Container{
+		Image:        "nats:latest",
+		ExposedPorts: []string{natsServicePort},
+		Cmd:          []string{"--js"},
+		WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
+	}
+
+	natsInstance := &NATS{
+		Name: "telegraf",
+		Jetstream: &StreamConfig{
+			Name:     "my-telegraf-stream",
+			Subjects: []string{"my-subject.>"},
+		},
+		serializer: &influx.Serializer{},
+		Log:        testutil.Logger{},
+	}
+
+	streamConfigCompareFunc := func(t *testing.T, si *jetstream.StreamInfo) {
+		require.Equal(t, "my-telegraf-stream", si.Config.Name)
+		require.Equal(t, []string{"my-subject.>"}, si.Config.Subjects)
+	}
+
 	type testConfig struct {
-		name                    string
-		container               testutil.Container
-		nats                    *NATS
-		streamConfigCompareFunc func(*testing.T, *jetstream.StreamInfo)
-		sendMetrics             []telegraf.Metric
-		expectedSubjects        []string
+		name             string
+		subject          string
+		sendMetrics      []telegraf.Metric
+		expectedSubjects []string
 	}
 	testCases := []testConfig{
 		{
-			name: "subject layout with tags",
-			container: testutil.Container{
-				Image:        "nats:latest",
-				ExposedPorts: []string{natsServicePort},
-				Cmd:          []string{"--js"},
-				WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
-			},
-			nats: &NATS{
-				Name:    "telegraf",
-				Subject: "my-subject.metrics.{{ .Name }}.{{ .Tag \"tag1\" }}.{{ .Tag \"tag2\" }}",
-				Jetstream: &StreamConfig{
-					Name:     "my-telegraf-stream",
-					Subjects: []string{"my-subject.>"},
-				},
-				serializer: &influx.Serializer{},
-				Log:        testutil.Logger{},
-			},
-			streamConfigCompareFunc: func(t *testing.T, si *jetstream.StreamInfo) {
-				require.Equal(t, "my-telegraf-stream", si.Config.Name)
-				require.Equal(t, []string{"my-subject.>"}, si.Config.Subjects)
-			},
+			name:    "subject layout with tags",
+			subject: "my-subject.metrics.{{ .Name }}.{{ .Tag \"tag1\" }}.{{ .Tag \"tag2\" }}",
 			sendMetrics: []telegraf.Metric{metric.New(
 				"test1",
 				map[string]string{"tag1": "foo", "tag2": "bar"},
@@ -315,27 +318,8 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			},
 		},
 		{
-			name: "subject layout with field name",
-			container: testutil.Container{
-				Image:        "nats:latest",
-				ExposedPorts: []string{natsServicePort},
-				Cmd:          []string{"--js"},
-				WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
-			},
-			nats: &NATS{
-				Name:    "telegraf",
-				Subject: "my-subject.metrics.{{ .Tag \"tag1\" }}.{{ .Tag \"tag2\" }}.{{ .Name }}.{{ .Field \"value\" }}",
-				Jetstream: &StreamConfig{
-					Name:     "my-telegraf-stream",
-					Subjects: []string{"my-subject.>"},
-				},
-				serializer: &influx.Serializer{},
-				Log:        testutil.Logger{},
-			},
-			streamConfigCompareFunc: func(t *testing.T, si *jetstream.StreamInfo) {
-				require.Equal(t, "my-telegraf-stream", si.Config.Name)
-				require.Equal(t, []string{"my-subject.>"}, si.Config.Subjects)
-			},
+			name:    "subject layout with field name",
+			subject: "my-subject.metrics.{{ .Tag \"tag1\" }}.{{ .Tag \"tag2\" }}.{{ .Name }}.{{ .Field \"value\" }}",
 			sendMetrics: []telegraf.Metric{metric.New(
 				"test1",
 				map[string]string{"tag1": "foo", "tag2": "bar"},
@@ -348,41 +332,41 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 		},
 	}
 
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			require.NoError(t, tc.container.Start(), "failed to start container")
-			defer tc.container.Terminate()
+			natsInstance.Subject = tc.subject
+			server := []string{fmt.Sprintf("nats://%s:%s", container.Address, container.Ports[natsServicePort])}
+			natsInstance.Servers = server
+			require.NoError(t, natsInstance.Init())
+			require.NoError(t, natsInstance.Connect())
 
-			server := []string{fmt.Sprintf("nats://%s:%s", tc.container.Address, tc.container.Ports[natsServicePort])}
-			tc.nats.Servers = server
-			require.NoError(t, tc.nats.Init())
-			require.NoError(t, tc.nats.Connect())
-
-			stream, err := tc.nats.jetstreamClient.Stream(t.Context(), tc.nats.Jetstream.Name)
+			stream, err := natsInstance.jetstreamClient.Stream(t.Context(), natsInstance.Jetstream.Name)
 			require.NoError(t, err)
 			si, err := stream.Info(t.Context())
 			require.NoError(t, err)
 
-			tc.streamConfigCompareFunc(t, si)
-			require.NoError(t, tc.nats.Write(tc.sendMetrics))
-			metricCound := len(tc.sendMetrics)
+			streamConfigCompareFunc(t, si)
+			require.NoError(t, natsInstance.Write(tc.sendMetrics))
+			metricCount := len(tc.sendMetrics)
 
-			foundSubjects := make([]string, 0, metricCound)
-			if tc.nats.Jetstream != nil {
-				js, err := tc.nats.conn.JetStream()
+			foundSubjects := make([]string, 0, metricCount)
+			if natsInstance.Jetstream != nil {
+				js, err := natsInstance.conn.JetStream()
 				require.NoError(t, err)
-				sub, err := js.PullSubscribe(tc.nats.Jetstream.Subjects[0], "")
-				require.NoError(t, err)
-
-				msgs, err := sub.Fetch(metricCound, nats.MaxWait(1*time.Second))
+				sub, err := js.PullSubscribe(natsInstance.Jetstream.Subjects[0], "")
 				require.NoError(t, err)
 
-				require.Len(t, msgs, metricCound, "unexpected number of messages")
+				msgs, err := sub.Fetch(metricCount, nats.MaxWait(1*time.Second))
+				require.NoError(t, err)
+
+				require.Len(t, msgs, metricCount, "unexpected number of messages")
 				for _, msg := range msgs {
 					foundSubjects = append(foundSubjects, msg.Subject)
 				}
+				require.NoError(t, js.PurgeStream(natsInstance.Jetstream.Name))
 			}
-
 			assert.Equal(t, tc.expectedSubjects, foundSubjects)
 		}) // end of test case
 	}
