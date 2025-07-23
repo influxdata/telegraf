@@ -117,7 +117,7 @@ func roundInt[V constraints.Integer](value V, factor int64) V {
 	return V((v - r) * f)
 }
 
-func roundFloat[V constraints.Integer | constraints.Float](value V, factor float64) V {
+func roundFloat[V constraints.Float](value V, factor float64) V {
 	return V(math.Round(float64(value)/factor) * factor)
 }
 

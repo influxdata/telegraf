@@ -32,8 +32,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Round only numeric fields matching the filter criteria below.
   ## Excludes takes precedence over includes.
-  # fields_include = ["*"]
-  # fields_exclude = []
+  # include_fields = ["*"]
+  # exclude_fields = []
 ```
 
 ## Example
