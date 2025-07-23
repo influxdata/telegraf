@@ -43,7 +43,6 @@ type NATS struct {
 	jetstreamStreamConfig *jetstream.StreamConfig
 	serializer            telegraf.Serializer
 	tplSubject            *template.Template
-	subjectIsDynamic      bool
 }
 
 // StreamConfig is the configuration for creating stream
@@ -254,8 +253,6 @@ func (n *NATS) Init() error {
 	}
 	n.tplSubject = tpl
 
-	n.subjectIsDynamic = isSubjectDynamic(n.tplSubject, n.Subject)
-
 	if n.Jetstream == nil {
 		return nil
 	}
@@ -271,7 +268,7 @@ func (n *NATS) Init() error {
 		n.Jetstream.AsyncAckTimeout = &to
 	}
 	// Handle dynamic subject case
-	if n.subjectIsDynamic {
+	if isSubjectDynamic(n.tplSubject, n.Subject) {
 		if len(n.Jetstream.Subjects) > 0 {
 			n.Log.Info("skip adding subject to Jetstream subjects because it is dynamic")
 			var err error
