@@ -327,7 +327,9 @@ func (t *Telegraf) watchLocalConfig(ctx context.Context, signals chan os.Signal,
 			}
 
 		case <-mytomb.Dying():
-			reloadTimer.Stop()
+			if reloadTimer != nil {
+				reloadTimer.Stop()
+			}
 			log.Printf("I! Config watcher %q ended\n", fConfig)
 			return
 		}
