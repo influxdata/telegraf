@@ -36,7 +36,7 @@ require (
 	github.com/aerospike/aerospike-client-go/v5 v5.11.0
 	github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b
 	github.com/alitto/pond v1.9.2
-	github.com/alitto/pond/v2 v2.5.0
+	github.com/alitto/pond/v2 v2.4.0
 	github.com/aliyun/alibaba-cloud-sdk-go v1.63.107
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
 	github.com/antchfx/jsonquery v1.3.6
@@ -114,7 +114,7 @@ require (
 	github.com/gorcon/rcon v1.4.0
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
-	github.com/gosnmp/gosnmp v1.42.1
+	github.com/gosnmp/gosnmp v1.41.0
 	github.com/grid-x/modbus v0.0.0-20240503115206-582f2ab60a18
 	github.com/gwos/tcg/sdk v0.0.0-20240830123415-f8a34bba6358
 	github.com/hashicorp/consul/api v1.32.4
@@ -161,7 +161,7 @@ require (
 	github.com/nwaples/tacplus v0.0.3
 	github.com/olivere/elastic v6.2.37+incompatible
 	github.com/openconfig/gnmi v0.14.1
-	github.com/openconfig/goyang v1.6.3
+	github.com/openconfig/goyang v1.6.2
 	github.com/opensearch-project/opensearch-go/v2 v2.3.0
 	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b
 	github.com/openzipkin-contrib/zipkin-go-opentracing v0.5.0
@@ -259,6 +259,11 @@ require (
 	cel.dev/expr v0.24.0 // indirect
 	cloud.google.com/go v0.121.6 // indirect
 	cloud.google.com/go/auth v0.16.5 // indirect
+	github.com/elastic/go-sysinfo v1.8.1 // indirect
+	github.com/elastic/go-windows v1.0.0 // indirect
+	github.com/joeshaw/multierror v0.0.0-20140124173710-69b34d4ec901 // indirect
+	github.com/vertica/vertica-sql-go v1.3.3 // indirect
+	howett.net/plist v0.0.0-20181124034731-591f970eefbb // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	cloud.google.com/go/iam v1.5.2 // indirect
