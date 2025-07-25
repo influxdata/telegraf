@@ -462,7 +462,6 @@ func TestRunningOutputBufferFullyDrained(t *testing.T) {
 			case <-cctx.Done():
 				return
 			case <-ro.BatchReady:
-				t.Log("triggered batch ready")
 				if modelWriteErr = ro.Write(); modelWriteErr != nil {
 					return
 				}
@@ -575,6 +574,141 @@ func TestRunningOutputBufferImmediateRestartOnContinuousWrite(t *testing.T) {
 	require.NoError(t, ro.Write())
 	require.Len(t, plugin.Metrics(), totalMetrics)
 }
+
+func TestRunningOutputNoRetriggerOnError(t *testing.T) {
+	// Setup output with a post-write hook to be able to block write until
+	// we added more metrics
+	conf := &OutputConfig{
+		Filter: Filter{},
+	}
+
+	plugin := &mockOutput{
+		batchAcceptSize: 0,
+		preWriteHook: func([]telegraf.Metric) error {
+			// In this test we are handling a failing output
+			return errors.New("writing failed")
+		},
+	}
+	const batchSize = 5
+	ro := NewRunningOutput(plugin, conf, batchSize, 100)
+
+	// Create a multiple of batch size many metrics beyond the batch size
+	const totalMetrics = 10 * batchSize
+	inputs := make([]telegraf.Metric, 0, totalMetrics)
+	for i := range totalMetrics {
+		inputs = append(inputs, testutil.TestMetric(i, "test"))
+	}
+
+	// Add the metrics
+	for _, m := range inputs {
+		ro.AddMetric(m)
+	}
+
+	// Setup a event based writing loop similar to what the agent code does.
+	// Remember the first write will block to allow us adding more metrics.
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+	defer cancel()
+
+	var errCount atomic.Uint32
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func(cctx context.Context) {
+		defer wg.Done()
+		for {
+			select {
+			case <-cctx.Done():
+				return
+			case <-ro.BatchReady:
+				if err := ro.Write(); err != nil {
+					errCount.Add(1)
+				}
+			}
+		}
+	}(ctx)
+
+	// Wait for the trigger loop to exit. This should happen latest after the
+	// defined timeout.
+	wg.Wait()
+
+	// Check for writing errors and make sure all metrics were written,
+	// including the ones added while writing took place
+	require.Equal(t, errCount.Load(), plugin.writes.Load())
+	require.Equal(t, 1, int(plugin.writes.Load()))
+	require.Equal(t, totalMetrics, ro.buffer.Len())
+}
+
+func TestRunningOutputNoRetriggerOnPartialWriteError(t *testing.T) {
+	// Setup output with a post-write hook to be able to block write until
+	// we added more metrics
+	conf := &OutputConfig{
+		Filter: Filter{},
+	}
+
+	plugin := &mockOutput{
+		batchAcceptSize: 0,
+		preWriteHook: func(m []telegraf.Metric) error {
+			// In this test we are handling a failing output
+			drop := make([]int, 0, len(m)-1)
+			for i := range len(m) - 1 {
+				drop = append(drop, i+1)
+			}
+			return &internal.PartialWriteError{
+				Err:           errors.New("writing failed"),
+				MetricsAccept: []int{0},
+				MetricsReject: drop,
+			}
+		},
+	}
+	const batchSize = 5
+	ro := NewRunningOutput(plugin, conf, batchSize, 100)
+
+	// Create a multiple of batch size many metrics beyond the batch size
+	const batchCount = 10
+	const totalMetrics = batchCount * batchSize
+	inputs := make([]telegraf.Metric, 0, totalMetrics)
+	for i := range totalMetrics {
+		inputs = append(inputs, testutil.TestMetric(i, "test"))
+	}
+
+	// Add the metrics
+	for _, m := range inputs {
+		ro.AddMetric(m)
+	}
+
+	// Setup a event based writing loop similar to what the agent code does.
+	// Remember the first write will block to allow us adding more metrics.
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	var errCount atomic.Uint32
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func(cctx context.Context) {
+		defer wg.Done()
+		for {
+			select {
+			case <-cctx.Done():
+				return
+			case <-ro.BatchReady:
+				if err := ro.Write(); err != nil {
+					errCount.Add(1)
+				}
+			}
+		}
+	}(ctx)
+
+	// Wait for the trigger loop to exit. This should happen latest after the
+	// defined timeout.
+	require.Eventually(t, func() bool { return ro.buffer.Len() == 0 }, 3*time.Second, 100*time.Millisecond)
+	cancel()
+	wg.Wait()
+
+	// Check for writing errors and make sure all metrics were written,
+	// including the ones added while writing took place
+	require.Equal(t, errCount.Load(), plugin.writes.Load())
+	require.Equal(t, batchCount, int(plugin.writes.Load()))
+}
+
 func TestRunningOutputInternalMetrics(t *testing.T) {
 	_ = NewRunningOutput(
 		&mockOutput{},
