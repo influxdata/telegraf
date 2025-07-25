@@ -50,6 +50,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Preferred unit system for temperature and wind speed. Can be one of
   ## "metric", "imperial", or "standard".
+  ## The default is "metric" if not specified.
   # units = "metric"
 
   ## Style to query the current weather; available options
