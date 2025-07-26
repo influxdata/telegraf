@@ -21,14 +21,17 @@ type diskInfoCache struct {
 }
 
 func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
+	// Normalize NVMe device names if needed
+	normalizedDevName := normalizeNVMeDeviceName(devName)
+
 	// Check if the device exists
-	path := "/dev/" + devName
+	path := "/dev/" + normalizedDevName
 	var stat unix.Stat_t
 	if err := unix.Stat(path, &stat); err != nil {
 		return nil, fmt.Errorf("error reading %s: %w", path, err)
 	}
 
-	// Check if we already got a cached and valid entry
+	// Check if we already got a cached and valid entry using original devName as key
 	ic, ok := d.infoCache[devName]
 	if ok && stat.Mtim.Nano() == ic.modifiedAt {
 		return ic.values, nil
@@ -46,7 +49,7 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		udevDataPath = fmt.Sprintf("/run/udev/data/b%d:%d", major, minor)
 		if _, err := os.Stat(udevDataPath); err != nil {
 			// This path failed, try the fallback .udev style (non-systemd)
-			udevDataPath = "/dev/.udev/db/block:" + devName
+			udevDataPath = "/dev/.udev/db/block:" + normalizedDevName
 			if _, err := os.Stat(udevDataPath); err != nil {
 				// Giving up, cannot retrieve disk info
 				return nil, fmt.Errorf("error reading %s: %w", udevDataPath, err)
@@ -66,7 +69,7 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		// This allows us to also "poison" it during test scenarios
 		sysBlockPath = ic.sysBlockPath
 	} else {
-		sysBlockPath = "/sys/class/block/" + devName
+		sysBlockPath = "/sys/class/block/" + normalizedDevName
 	}
 
 	devInfo, err := readDevData(sysBlockPath)
@@ -78,9 +81,11 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		return nil, err
 	}
 
+	// Cache using original devName as key to maintain consistency
 	d.infoCache[devName] = diskInfoCache{
 		modifiedAt:   stat.Mtim.Nano(),
 		udevDataPath: udevDataPath,
+		sysBlockPath: sysBlockPath,
 		values:       info,
 	}
 
@@ -189,4 +194,30 @@ func getDeviceWWID(name string) string {
 		return ""
 	}
 	return strings.TrimSuffix(string(buf), "\n")
+}
+
+// normalizeNVMeDeviceName converts NVMe device names from controller notation
+// (e.g., nvme0c0n1) to standard notation (e.g., nvme0n1) if the controller
+// notation device doesn't exist but the standard notation does.
+func normalizeNVMeDeviceName(devName string) string {
+	// Check if this is an NVMe device with controller notation
+	if strings.HasPrefix(devName, "nvme") && strings.Contains(devName, "c") {
+		// Try to extract the standard notation
+		// nvme0c0n1 -> nvme0n1
+		parts := strings.Split(devName, "c")
+		if len(parts) >= 2 {
+			// Find the 'n' in the last part
+			nIndex := strings.Index(parts[len(parts)-1], "n")
+			if nIndex >= 0 {
+				standardName := parts[0] + parts[len(parts)-1][nIndex:]
+
+				// Check if the standard notation device exists
+				if _, err := os.Stat("/dev/" + standardName); err == nil {
+					// Standard device exists, use it instead
+					return standardName
+				}
+			}
+		}
+	}
+	return devName
 }
