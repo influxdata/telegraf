@@ -939,6 +939,9 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 }
 
 func (c *Config) addAggregator(name, source string, table *ast.Table) error {
+	if !c.evaluatePluginSelection("aggregators", name, table) {
+		return nil
+	}
 	creator, ok := aggregators.Aggregators[name]
 	if !ok {
 		// Handle removed, deprecated plugins
@@ -968,7 +971,7 @@ func (c *Config) addAggregator(name, source string, table *ast.Table) error {
 }
 
 func (c *Config) addSecretStore(name, source string, table *ast.Table) error {
-	if len(c.SecretStoreFilters) > 0 && !sliceContains(name, c.SecretStoreFilters) {
+	if (len(c.SecretStoreFilters) > 0 && !sliceContains(name, c.SecretStoreFilters)) || !c.evaluatePluginSelection("secretstores", name, table) {
 		return nil
 	}
 
@@ -1144,6 +1147,9 @@ func (c *Config) addSerializer(parentname string, table *ast.Table) (*models.Run
 }
 
 func (c *Config) addProcessor(name, source string, table *ast.Table) error {
+	if !c.evaluatePluginSelection("processors", name, table) {
+		return nil
+	}
 	creator, ok := processors.Processors[name]
 	if !ok {
 		// Handle removed, deprecated plugins
@@ -1267,7 +1273,7 @@ func (c *Config) setupProcessor(name string, creator processors.StreamingCreator
 }
 
 func (c *Config) addOutput(name, source string, table *ast.Table) error {
-	if len(c.OutputFilters) > 0 && !sliceContains(name, c.OutputFilters) {
+	if (len(c.OutputFilters) > 0 && !sliceContains(name, c.OutputFilters)) || !c.evaluatePluginSelection("outputs", name, table) {
 		return nil
 	}
 
@@ -1350,7 +1356,7 @@ func (c *Config) addOutput(name, source string, table *ast.Table) error {
 }
 
 func (c *Config) addInput(name, source string, table *ast.Table) error {
-	if len(c.InputFilters) > 0 && !sliceContains(name, c.InputFilters) {
+	if (len(c.InputFilters) > 0 && !sliceContains(name, c.InputFilters)) || !c.evaluatePluginSelection("inputs", name, table) {
 		return nil
 	}
 
@@ -1706,7 +1712,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"name_override", "name_prefix", "name_suffix", "namedrop", "namedrop_separator", "namepass", "namepass_separator",
 		"order",
 		"pass", "period", "precision",
-		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "startup_error_behavior":
+		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "startup_error_behavior", "labels":
 
 	// Secret-store options to ignore
 	case "id":
@@ -1894,6 +1900,40 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string) []models.Ta
 	}
 
 	return target
+}
+
+func (c *Config) getFieldMap(tbl *ast.Table, fieldName string) map[string]string {
+	target := make(map[string]string)
+	if node, ok := tbl.Fields[fieldName]; ok {
+		if subTbl, ok := node.(*ast.Table); ok {
+			for _, val := range subTbl.Fields {
+				if kv, ok := val.(*ast.KeyValue); ok {
+					if str, ok := kv.Value.(*ast.String); ok {
+						target[kv.Key] = str.Value
+					}
+				}
+			}
+		}
+	}
+
+	return target
+}
+
+func (c *Config) evaluatePluginSelection(pluginType, name string, tbl *ast.Table) bool {
+	if len(SelectorFlags) == 0 {
+		// No selectors provided => Nothing to compare the selector against
+		log.Printf("I! No Selectors provided, hence including the plugin `%s.%s` by default", pluginType, name)
+		return true
+	}
+
+	pluginLabels := c.getFieldMap(tbl, "labels")
+	if len(pluginLabels) == 0 {
+		// No label provided => "always applicable"
+		log.Printf("I! Plugin `%s.%s` has no label, including it by default", pluginType, name)
+		return true
+	}
+
+	return shouldPluginRun(parsedSelectors, pluginLabels)
 }
 
 func keys(m map[string]bool) []string {
