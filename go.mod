@@ -7,7 +7,7 @@ godebug x509negativeserial=1
 require (
 	cloud.google.com/go/bigquery v1.69.0
 	cloud.google.com/go/monitoring v1.24.2
-	cloud.google.com/go/pubsub v1.49.0
+	cloud.google.com/go/pubsub v1.50.0
 	cloud.google.com/go/storage v1.56.0
 	collectd.org v0.6.0
 	github.com/99designs/keyring v1.2.2
@@ -248,6 +248,8 @@ require (
 	modernc.org/sqlite v1.38.0
 	software.sslmate.com/src/go-pkcs12 v0.6.0
 )
+
+require cloud.google.com/go/pubsub/v2 v2.0.0 // indirect
 
 require (
 	cel.dev/expr v0.24.0 // indirect
