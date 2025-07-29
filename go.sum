@@ -2365,10 +2365,10 @@ github.com/tdrn-org/go-nsdp v0.5.0/go.mod h1:zp7CxiCPcyXHo+s6tn+wrNBr1qQe1G/hOh/
 github.com/tdrn-org/go-tr064 v0.2.2 h1:rDybEK1m2xfV5QPWHtnIJOt+xG4GFSkQSwA6FS2bQC4=
 github.com/tdrn-org/go-tr064 v0.2.2/go.mod h1:P2WWUiBcXDGOo+sqJ4hWn4YXYH9kWaYjZo74EdFDSS0=
 github.com/tedsuo/ifrit v0.0.0-20180802180643-bea94bb476cc/go.mod h1:eyZnKCc955uh98WQvzOm0dgAeLnf2O0Rz0LPoC5ze+0=
-github.com/testcontainers/testcontainers-go v0.37.0 h1:L2Qc0vkTw2EHWQ08djon0D2uw7Z/PtHS/QzZZ5Ra/hg=
-github.com/testcontainers/testcontainers-go v0.37.0/go.mod h1:QPzbxZhQ6Bclip9igjLFj6z0hs01bU8lrl2dHQmgFGM=
-github.com/testcontainers/testcontainers-go/modules/azure v0.37.0 h1:pOqYnDvd2rkBb+ON0ikJgI3PzIslWlbR+y+czw5tWF0=
-github.com/testcontainers/testcontainers-go/modules/azure v0.37.0/go.mod h1:h4/DPyIHUxdnnpTGhKkHUT/lYOYhjtQExiFCGdHOl+A=
+github.com/testcontainers/testcontainers-go v0.38.0 h1:d7uEapLcv2P8AvH8ahLqDMMxda2W9gQN1nRbHS28HBw=
+github.com/testcontainers/testcontainers-go v0.38.0/go.mod h1:C52c9MoHpWO+C4aqmgSU+hxlR5jlEayWtgYrb8Pzz1w=
+github.com/testcontainers/testcontainers-go/modules/azure v0.38.0 h1:Q4tMGPeouK03fh87L67GSqp1MIzlOvAcacV0Q5Zf8r0=
+github.com/testcontainers/testcontainers-go/modules/azure v0.38.0/go.mod h1:GLj4b0vVBw4uZosOfTVganxIlJTSo6U9rNL9BsyxCPw=
 github.com/testcontainers/testcontainers-go/modules/kafka v0.37.0 h1:ZkYNKqhqvKm+aZk9C1fxw/fpNNOK+Nm/wHPjmJdN3Ko=
 github.com/testcontainers/testcontainers-go/modules/kafka v0.37.0/go.mod h1:+LvaFfSFW5PMiJTxTQlV6TBpXH1Ktk1h0FTVRZfqSxY=
 github.com/thomasklein94/packer-plugin-libvirt v0.5.0 h1:aj2HLHZZM/ClGLIwVp9rrgh+2TOU/w4EiaZHAwCpOgs=
