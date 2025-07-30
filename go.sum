@@ -2369,8 +2369,8 @@ github.com/testcontainers/testcontainers-go v0.38.0 h1:d7uEapLcv2P8AvH8ahLqDMMxd
 github.com/testcontainers/testcontainers-go v0.38.0/go.mod h1:C52c9MoHpWO+C4aqmgSU+hxlR5jlEayWtgYrb8Pzz1w=
 github.com/testcontainers/testcontainers-go/modules/azure v0.38.0 h1:Q4tMGPeouK03fh87L67GSqp1MIzlOvAcacV0Q5Zf8r0=
 github.com/testcontainers/testcontainers-go/modules/azure v0.38.0/go.mod h1:GLj4b0vVBw4uZosOfTVganxIlJTSo6U9rNL9BsyxCPw=
-github.com/testcontainers/testcontainers-go/modules/kafka v0.37.0 h1:ZkYNKqhqvKm+aZk9C1fxw/fpNNOK+Nm/wHPjmJdN3Ko=
-github.com/testcontainers/testcontainers-go/modules/kafka v0.37.0/go.mod h1:+LvaFfSFW5PMiJTxTQlV6TBpXH1Ktk1h0FTVRZfqSxY=
+github.com/testcontainers/testcontainers-go/modules/kafka v0.38.0 h1:ZZpiVK2V2sArn0fv2s/jaQdGwOgNf8JvVxnLQL1JEPY=
+github.com/testcontainers/testcontainers-go/modules/kafka v0.38.0/go.mod h1:XB6IGYbw+KqegO10jqLe5NoxIe1aW9FKdj2f+G8fUcQ=
 github.com/thomasklein94/packer-plugin-libvirt v0.5.0 h1:aj2HLHZZM/ClGLIwVp9rrgh+2TOU/w4EiaZHAwCpOgs=
 github.com/thomasklein94/packer-plugin-libvirt v0.5.0/go.mod h1:GwN82FQ6KxCNKtS8LNUgLbwTZs90GGhBzCmTNkrTCrY=
 github.com/tidwall/gjson v1.10.2/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
