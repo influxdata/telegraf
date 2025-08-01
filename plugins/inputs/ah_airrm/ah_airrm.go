@@ -1,0 +1,191 @@
+package ah_airrm
+
+import (
+	"log"
+	"os"
+	"sync"
+	"time"
+	"fmt"
+	"net"
+	"unsafe"
+	"runtime/debug"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/common/ahutil"
+	"golang.org/x/sys/unix"
+)
+
+var (
+	aiMutex = new(sync.Mutex)
+)
+
+type Ah_airrm struct {
+	fd			int
+	Ifname		[]string	`toml:"ifname"`
+	Log			telegraf.Logger `toml:"-"`
+	wg			sync.WaitGroup
+}
+
+const sampleConfig = `
+[[inputs.ah_airrm]]
+  interval = "5s"
+  ifname = ["wifi0","wifi1"]
+`
+func NewAh_airrm(id int) *Ah_airrm {
+	var err error
+	// Create RAW  Socket.
+	fd, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, 0)
+	if err != nil {
+		return nil
+	}
+	if id != -1 {
+		open(fd, id)
+	}
+
+	return &Ah_airrm{
+        fd:	fd,
+	}
+
+}
+
+
+func getAirrmNbrTbl(fd int, ifname string, cfg ieee80211req_cfg_nbr) unsafe.Pointer {
+
+	var size int
+
+	/* first 4 bytes is subcmd */
+	cfg.cmd = AH_IEEE80211_GET_AIRRM_TBL
+
+	iwp := iw_point{pointer: unsafe.Pointer(&cfg)}
+	s := ah_ieee80211_airrm_nbr_tbl_t{}
+	size = int(unsafe.Sizeof(s))
+
+    request := iwreq{data: iwp}
+
+	if size > AH_USHORT_MAX {
+		request.data.length  = AH_USHORT_MAX
+		request.data.flags = uint16(size - AH_USHORT_MAX)
+	} else {
+		request.data.length  = uint16(size)
+		request.data.flags = 9
+	}
+
+	copy(request.ifrn_name[:], ahutil.Ah_ifname_radio2vap(ifname))
+
+	aiMutex.Lock()
+
+	if err := ahutil.Ah_ioctl(uintptr(fd), ahutil.IEEE80211_IOCTL_GENERIC_PARAM, uintptr(unsafe.Pointer(&request))); err != nil {
+		log.Printf("getAirrmNbrTbl ioctl data error %s",err)
+		aiMutex.Unlock()
+		return request.data.pointer
+	}
+	aiMutex.Unlock()
+
+	return request.data.pointer
+}
+
+func open(fd, id int) *Ah_airrm {
+	return &Ah_airrm{fd: fd}
+}
+
+func (ai *Ah_airrm) SampleConfig() string {
+	return sampleConfig
+}
+
+func (ai *Ah_airrm) Description() string {
+	return "Hive OS wireless stat"
+}
+
+func (ai *Ah_airrm) Init() error {
+	return nil
+}
+
+func Gather_acs_nbr(ai *Ah_airrm, acc telegraf.Accumulator) error {
+
+	var count int
+	count = 0
+	for _, intfName := range ai.Ifname {
+
+		var i uint32
+		var nbr ieee80211req_cfg_nbr
+		cfgptr := getAirrmNbrTbl(ai.fd, intfName, nbr)
+		if(cfgptr == nil) {
+			return nil
+		}
+		var nbrtbl *ah_ieee80211_airrm_nbr_tbl_t = (*ah_ieee80211_airrm_nbr_tbl_t)(cfgptr)
+
+		iface, err := net.InterfaceByName(intfName)
+		if err != nil {
+			log.Printf("Error getting index\n")
+			iface.Index = 0
+		}
+
+		for i = 0; i < nbrtbl.num_nbrs; i++ {
+			if i >= MAX_NEIGHBOR_NUM {
+				continue
+			}
+
+			if nbrtbl.nbr_tbl[i].bssid[0] == 0 && nbrtbl.nbr_tbl[i].bssid[1] == 0 && nbrtbl.nbr_tbl[i].bssid[2] == 0 {
+				continue
+			}
+
+			fields := map[string]interface{}{
+				"name_keys":					intfName,
+				"ifIndex_keys":					iface.Index,
+			}
+
+			fields["rrmId"] =						nbrtbl.nbr_tbl[i].rrmId
+			fields["channel"] = 					ahutil.FreqToChan(uint16(nbrtbl.nbr_tbl[i].frequency))
+			fields["channelWidth"] =				nbrtbl.nbr_tbl[i].channelWidth
+			fields["channelUtilization"] =			nbrtbl.nbr_tbl[i].channelUtilization
+			fields["interferenceUtilization"] =		nbrtbl.nbr_tbl[i].interferenceUtilization
+			fields["rxObssUtilization"] =			nbrtbl.nbr_tbl[i].obssUtilization
+			fields["wifinterferenceUtilization"] =	nbrtbl.nbr_tbl[i].wifiInterferenceUtilization
+			fields["packetErrorRate"] =				nbrtbl.nbr_tbl[i].packetErrorRate
+			fields["aggregationSize"] =				nbrtbl.nbr_tbl[i].aggregationSize
+			fields["clientCount"] =					nbrtbl.nbr_tbl[i].clientCount
+
+			acc.AddGauge("NbrStats", fields, nil)
+			count++
+		}
+	}
+	log.Printf("ah_airrm: NbrStats is processed with %d entries\n", count)
+
+	return nil
+}
+
+
+
+func (ai *Ah_airrm) Gather(acc telegraf.Accumulator) error {
+
+	defer func() {
+		if r := recover(); r != nil {
+			currentTime := time.Now()
+			crash_file := fmt.Sprintf("/tmp/telegraf_crash_%s.txt", currentTime.Format("2006_01_02_15_04_05"))
+			ss := string(debug.Stack())
+			log.Printf("telegraf crash: %s\n",ss)
+			os.WriteFile(crash_file, debug.Stack(), 0644)
+			os.Exit(128)
+		}
+	}()
+	Gather_acs_nbr(ai, acc)
+
+	return nil
+}
+
+func (ai *Ah_airrm) Start(acc telegraf.Accumulator) error {
+
+	return nil
+}
+
+
+func (ai *Ah_airrm) Stop() {
+	unix.Close(ai.fd)
+}
+
+
+func init() {
+	inputs.Add("ah_airrm", func() telegraf.Input {
+		return NewAh_airrm(1)
+	})
+}
