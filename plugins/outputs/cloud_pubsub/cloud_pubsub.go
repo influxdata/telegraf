@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"cloud.google.com/go/pubsub"
+	"cloud.google.com/go/pubsub/v2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 
@@ -127,7 +127,7 @@ func (ps *PubSub) refreshTopic() {
 	if ps.stubTopic != nil {
 		ps.t = ps.stubTopic(ps.Topic)
 	} else {
-		t := ps.c.Topic(ps.Topic)
+		t := ps.c.Publisher(ps.Topic)
 		ps.t = &topicWrapper{t}
 	}
 	ps.t.SetPublishSettings(ps.publishSettings())
