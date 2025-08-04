@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"cloud.google.com/go/pubsub"
+	"cloud.google.com/go/pubsub/v2"
 )
 
 type (
@@ -31,7 +31,7 @@ type (
 	}
 
 	gcpSubscription struct {
-		sub *pubsub.Subscription
+		sub *pubsub.Subscriber
 	}
 
 	gcpMessage struct {

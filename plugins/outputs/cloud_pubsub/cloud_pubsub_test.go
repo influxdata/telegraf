@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"testing"
 
-	"cloud.google.com/go/pubsub"
+	"cloud.google.com/go/pubsub/v2"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"

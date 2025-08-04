@@ -78,7 +78,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## The following are optional Subscription ReceiveSettings in PubSub.
   ## Read more about these values:
-  ## https://godoc.org/cloud.google.com/go/pubsub#ReceiveSettings
+  ## https://godoc.org/cloud.google.com/go/pubsub/v2#ReceiveSettings
 
   ## Optional. Maximum number of seconds for which a PubSub subscription
   ## should auto-extend the PubSub ACK deadline for each message. If less than
