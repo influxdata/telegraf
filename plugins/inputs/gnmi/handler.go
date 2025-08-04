@@ -176,6 +176,14 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 	// add all available tags to the metrics later.
 	var valueFields []updateField
 	for _, update := range response.Update.Update {
+		if update.Path == nil {
+			continue
+		}
+
+		if len(update.Path.Elem) == 0 && prefix.empty() {
+			continue
+		}
+
 		fullPath := prefix.append(update.Path)
 		if h.enforceFirstNamespaceAsOrigin {
 			prefix.enforceFirstNamespaceAsOrigin()
