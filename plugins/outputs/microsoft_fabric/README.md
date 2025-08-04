@@ -1,12 +1,24 @@
 # Microsoft Fabric Output Plugin
 
-This plugin writes metrics to [Real time analytics in Fabric][fabric] services.
+This plugin writes metrics to [Fabric Eventhouse][eventhouse] and
+[Fabric Eventstream][eventstream] artifacts of
+ [Real-Time Intelligence in Microsoft Fabric][fabric].
+
+Real-Time Intelligence is a SaaS service in Microsoft Fabric
+that allows you to extract insights and visualize data in motion.
+It offers an end-to-end solution for event-driven scenarios,
+ streaming data, and data logs.
 
 ⭐ Telegraf v1.35.0
 🏷️ datastore
 💻 all
 
-[fabric]: https://learn.microsoft.com/en-us/fabric/real-time-analytics/overview
+[eventhouse]:
+ https://learn.microsoft.com/fabric/real-time-intelligence/eventhouse
+[eventstream]:
+ https://learn.microsoft.com/fabric/real-time-intelligence/event-streams/overview?tabs=enhancedcapabilities
+[fabric]:
+ https://learn.microsoft.com/fabric/real-time-intelligence/overview
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -22,7 +34,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Sends metrics to Microsoft Fabric
 [[outputs.microsoft_fabric]]
-  ## The URI property of the resource on Azure
+  ## The URI property of the resource on Microsoft Fabric
   connection_string = "https://trd-abcd.xx.kusto.fabric.microsoft.com;Database=kusto_eh;Table Name=telegraf_dump;Key=value"
 
   ## Client timeout
@@ -52,7 +64,7 @@ connection string and provide alias names for each property.
 | Property name | Aliases | Description |
 |---|---|---|
 | Client Version for Tracing | | The property used when tracing the client version. |
-| Data Source | Addr, Address, Network Address, Server | The URI specifying the Kusto service endpoint. For example, `https://mycluster.fabric.windows.net`. |
+| Data Source | Addr, Address, Network Address, Server | The URI specifying the Eventhouse service endpoint. For example, `https://mycluster.fabric.windows.net`. |
 | Initial Catalog | Database | The default database name. For example, `MyDatabase`. |
 | Ingestion Type | IngestionType | Values can be set to `managed` for streaming ingestion with fallback to batched ingestion or the `queued` method for queuing up metrics and process sequentially |
 | Table Name | TableName | Name of the single table to store all the metrics; only needed if `metrics_grouping_type` is `singletable` |
@@ -63,7 +75,7 @@ connection string and provide alias names for each property.
 
 #### Metrics Grouping
 
-Metrics can be grouped in two ways to be sent to Azure Data Explorer. To specify
+Metrics can be grouped in two ways to be sent to Eventhouse. To specify
 which metric grouping type the plugin should use, the respective value should be
 given to the `Metrics Grouping Type` in the connection string. If no value is
 given, by default, the metrics will be grouped using `tablepermetric`.
@@ -71,20 +83,20 @@ given, by default, the metrics will be grouped using `tablepermetric`.
 #### TablePerMetric
 
 The plugin will group the metrics by the metric name and will send each group
-of metrics to an Azure Data Explorer table. If the table doesn't exist the
+of metrics to an Eventhouse KQL DB table. If the table doesn't exist the
 plugin will create the table, if the table exists then the plugin will try to
 merge the Telegraf metric schema to the existing table. For more information
 about the merge process check the [`.create-merge` documentation][create-merge].
 
 The table name will match the metric name, i.e. the name of the metric must
-comply with the Azure Data Explorer table naming constraints in case you plan
+comply with the Eventhouse KQL DB table naming constraints in case you plan
 to add a prefix to the metric name.
 
-[create-merge]: https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/create-merge-table-command
+[create-merge]: https://learn.microsoft.com/kusto/management/create-merge-tables-command?view=microsoft-fabric
 
 #### SingleTable
 
-The plugin will send all the metrics received to a single Azure Data Explorer
+The plugin will send all the metrics received to a single Eventhouse KQL DB
 table. The name of the table must be supplied via `table_name` parameter in the
 `connection_string`. If the table doesn't exist the plugin will create the
 table, if the table exists then the plugin will try to merge the Telegraf metric
@@ -113,7 +125,7 @@ The corresponding table mapping would be like the following:
 #### Ingestion type
 
 > [!NOTE]
-> [Streaming ingestion][streaming] has to be enabled on ADX in case of
+> [Streaming ingestion][streaming] has to be enabled on Eventhouse in case of
 > `managed` operation.
 
 Refer to the following query below to check if streaming is enabled:
@@ -125,7 +137,7 @@ Refer to the following query below to check if streaming is enabled:
 To learn more about configuration, supported authentication methods and querying
 ingested data, check the [documentation][ethdocs].
 
-[streaming]: https://learn.microsoft.com/en-us/azure/data-explorer/ingest-data-streaming?tabs=azure-portal%2Ccsharp
+[streaming]: https://learn.microsoft.com/azure/data-explorer/ingest-data-streaming?tabs=azure-portal%2Ccsharp
 [ethdocs]: https://learn.microsoft.com/azure/data-explorer/ingest-data-telegraf
 
 ### Eventstream
@@ -141,7 +153,7 @@ standard [Eventstream connection string][ecs] using key-value pairs:
 | Property name | Aliases | Description |
 |---|---|---|
 | Partition Key | PartitionKey | Metric tag or field name to use for the event partition key if it exists. If both, tag and field, exist the tag is takes precedence, otherwise the value `<default>` is used |
-| Max Message Size| MaxMessageSize | Maximum batch message size in bytes The allowable size depends on the Event Hub tier, see [tier information][tiers] for details. If unset the default size defined by Azure Event Hubs is used (currently 1,000,000 bytes) |
+| Max Message Size| MaxMessageSize | Maximum batch message size in bytes The allowable size depends on the Event Hub tier, see [tier information][tiers] for details. If unset the default size defined by Eventstream is used (currently 1,000,000 bytes) |
 
 [eventstream_docs]: https://learn.microsoft.com/fabric/real-time-intelligence/event-streams/overview?tabs=enhancedcapabilities
 [ecs]: https://learn.microsoft.com/azure/event-hubs/event-hubs-get-connection-string
