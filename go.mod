@@ -58,7 +58,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.54.0
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.44.0
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.231.0
-	github.com/aws/aws-sdk-go-v2/service/kinesis v1.36.0
+	github.com/aws/aws-sdk-go-v2/service/kinesis v1.37.0
 	github.com/aws/aws-sdk-go-v2/service/sts v1.35.0
 	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.32.0
 	github.com/aws/smithy-go v1.22.5
@@ -299,8 +299,8 @@ require (
 	github.com/awnumar/memcall v0.3.0 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.0 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.43 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.0 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.0 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.2 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.2 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.3 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.25 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.0 // indirect
