@@ -3,6 +3,9 @@ package ahutil
 import (
 	"golang.org/x/sys/unix"
 	"syscall"
+	"os"
+	"strings"
+	"bufio"
 )
 
 func Mystr() string {
@@ -355,4 +358,27 @@ func FreqToChan(freq uint16) uint16 {
 			return 2
 		}
 		return (freq -5950)/5
+}
+
+func GetAPName() string {
+    file, err := os.Open("/f/system_info/hw_info")
+    if err != nil {
+        return "NA"
+    }
+    defer file.Close()
+
+    scanner := bufio.NewScanner(file)
+    for scanner.Scan() {
+        if strings.Contains(scanner.Text(), "Product name:") {
+            pl := scanner.Text()
+            fields := strings.Fields(pl)
+            APN := fields[2][:6]
+            return APN
+        }
+    }
+
+    if err := scanner.Err(); err != nil {
+        return "NA"
+    }
+    return "NA"
 }
