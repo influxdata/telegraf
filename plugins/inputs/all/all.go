@@ -209,6 +209,8 @@ import (
 // 	_ "github.com/influxdata/telegraf/plugins/inputs/zipkin"
 // 	_ "github.com/influxdata/telegraf/plugins/inputs/zookeeper"
 //	_ "github.com/influxdata/telegraf/plugins/inputs/ah_wireless"
-//      _ "github.com/influxdata/telegraf/plugins/inputs/ah_wireless_v2"
+//  _ "github.com/influxdata/telegraf/plugins/inputs/ah_wireless_v2"
+//  _ "github.com/influxdata/telegraf/plugins/inputs/ah_trap"
 //	_ "github.com/influxdata/telegraf/plugins/inputs/ah_airrm"
+
  )
