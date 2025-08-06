@@ -2,6 +2,7 @@ package nats
 
 import (
 	_ "embed"
+	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -9,11 +10,13 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
@@ -220,6 +223,8 @@ func TestConfigParsing(t *testing.T) {
 		{name: "Valid JS Async Publish", path: filepath.Join("testcases", "js-async-pub.conf")},
 		{name: "Subjects warning", path: filepath.Join("testcases", "js-subjects.conf")},
 		{name: "Invalid JS", path: filepath.Join("testcases", "js-no-stream.conf"), wantErr: true},
+		{name: "JS with layout", path: filepath.Join("testcases", "js-layout.conf")},
+		{name: "Invalid JS with layout", path: filepath.Join("testcases", "js-layout-nosub.conf"), wantErr: true},
 	}
 
 	// Register the plugin
@@ -262,4 +267,107 @@ func createStream(t *testing.T, server string, cfg *nats.StreamConfig) {
 	require.NoError(t, err)
 	_, err = js.AddStream(cfg)
 	require.NoError(t, err)
+}
+
+func TestWriteWithLayoutIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	natsServicePort := "4222"
+
+	container := testutil.Container{
+		Image:        "nats:latest",
+		ExposedPorts: []string{natsServicePort},
+		Cmd:          []string{"--js"},
+		WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
+	}
+
+	natsInstance := &NATS{
+		Name: "telegraf",
+		Jetstream: &StreamConfig{
+			Name:     "my-telegraf-stream",
+			Subjects: []string{"my-subject.>"},
+		},
+		serializer: &influx.Serializer{},
+		Log:        testutil.Logger{},
+	}
+
+	streamConfigCompareFunc := func(t *testing.T, si *jetstream.StreamInfo) {
+		require.Equal(t, "my-telegraf-stream", si.Config.Name)
+		require.Equal(t, []string{"my-subject.>"}, si.Config.Subjects)
+	}
+
+	type testConfig struct {
+		name             string
+		subject          string
+		sendMetrics      []telegraf.Metric
+		expectedSubjects []string
+	}
+	testCases := []testConfig{
+		{
+			name:    "subject layout with tags",
+			subject: "my-subject.metrics.{{ .Name }}.{{ .Tag \"tag1\" }}.{{ .Tag \"tag2\" }}",
+			sendMetrics: []telegraf.Metric{metric.New(
+				"test1",
+				map[string]string{"tag1": "foo", "tag2": "bar"},
+				map[string]interface{}{"value": 1.0},
+				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+			)},
+			expectedSubjects: []string{
+				"my-subject.metrics.test1.foo.bar",
+			},
+		},
+		{
+			name:    "subject layout with field name",
+			subject: "my-subject.metrics.{{ .Tag \"tag1\" }}.{{ .Tag \"tag2\" }}.{{ .Name }}.{{ .Field \"value\" }}",
+			sendMetrics: []telegraf.Metric{metric.New(
+				"test1",
+				map[string]string{"tag1": "foo", "tag2": "bar"},
+				map[string]interface{}{"value": 1.0},
+				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+			)},
+			expectedSubjects: []string{
+				"my-subject.metrics.foo.bar.test1.1",
+			},
+		},
+	}
+
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			natsInstance.Subject = tc.subject
+			server := []string{fmt.Sprintf("nats://%s:%s", container.Address, container.Ports[natsServicePort])}
+			natsInstance.Servers = server
+			require.NoError(t, natsInstance.Init())
+			require.NoError(t, natsInstance.Connect())
+
+			stream, err := natsInstance.jetstreamClient.Stream(t.Context(), natsInstance.Jetstream.Name)
+			require.NoError(t, err)
+			si, err := stream.Info(t.Context())
+			require.NoError(t, err)
+
+			streamConfigCompareFunc(t, si)
+			require.NoError(t, natsInstance.Write(tc.sendMetrics))
+			metricCount := len(tc.sendMetrics)
+
+			foundSubjects := make([]string, 0, metricCount)
+			if natsInstance.Jetstream != nil {
+				js, err := natsInstance.conn.JetStream()
+				require.NoError(t, err)
+				sub, err := js.PullSubscribe(natsInstance.Jetstream.Subjects[0], "")
+				require.NoError(t, err)
+
+				msgs, err := sub.Fetch(metricCount, nats.MaxWait(1*time.Second))
+				require.NoError(t, err)
+
+				require.Len(t, msgs, metricCount, "unexpected number of messages")
+				for _, msg := range msgs {
+					foundSubjects = append(foundSubjects, msg.Subject)
+				}
+				require.NoError(t, js.PurgeStream(natsInstance.Jetstream.Name))
+			}
+			assert.Equal(t, tc.expectedSubjects, foundSubjects)
+		}) // end of test case
+	}
 }
