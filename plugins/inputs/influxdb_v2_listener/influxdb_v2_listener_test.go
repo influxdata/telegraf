@@ -545,12 +545,53 @@ func TestReady(t *testing.T) {
 	// post ping to listener
 	resp, err := http.Get(createURL(listener, "http", "/api/v2/ready", ""))
 	require.NoError(t, err)
-	require.Equal(t, "application/json", resp.Header["Content-Type"][0])
+	require.Equal(t, 200, resp.StatusCode)
+	require.Contains(t, resp.Header["Content-Type"], "application/json")
 	bodyBytes, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	require.Contains(t, string(bodyBytes), "\"status\":\"ready\"")
 	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 200, resp.StatusCode)
+
+	require.Equal(t, int64(1), listener.readysServed.Get())
+}
+
+func TestHealth(t *testing.T) {
+	listener := newTestListener()
+	listener.timeFunc = func() time.Time {
+		return time.Unix(42, 123456789)
+	}
+	listener.MaxUndeliveredMetrics = 1
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	// post ping to listener
+	resp, err := http.Get(createURL(listener, "http", "/api/v2/health", ""))
+	require.NoError(t, err)
+	require.Equal(t, 200, resp.StatusCode)
+	require.Contains(t, resp.Header["Content-Type"], "application/json")
+	bodyBytes, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Contains(t, string(bodyBytes), "\"status\":\"pass\"")
+	require.Contains(t, string(bodyBytes), "\"message\":\"ready for writes\"")
+	require.NoError(t, resp.Body.Close())
+
+	require.Equal(t, int64(1), listener.healthServed.Get())
+
+	// post ping to busy listener
+	listener.totalUndeliveredMetrics.Add(1)
+	resp, err = http.Get(createURL(listener, "http", "/api/v2/health", ""))
+	require.NoError(t, err)
+	require.Equal(t, 503, resp.StatusCode)
+	require.Contains(t, resp.Header["Content-Type"], "application/json")
+	bodyBytes, err = io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Contains(t, string(bodyBytes), "\"status\":\"fail\"")
+	require.Contains(t, string(bodyBytes), "\"message\":\"too many undelivered metrics: 1\"")
+	require.NoError(t, resp.Body.Close())
+
+	require.Equal(t, int64(2), listener.healthServed.Get())
 }
 
 func TestWriteWithPrecision(t *testing.T) {
