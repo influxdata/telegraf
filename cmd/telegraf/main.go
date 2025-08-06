@@ -242,6 +242,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			once:                    cCtx.Bool("once"),
 			quiet:                   cCtx.Bool("quiet"),
 			unprotected:             cCtx.Bool("unprotected"),
+			selectors:               cCtx.StringSlice("select"),
 		}
 
 		w := WindowFlags{
@@ -254,6 +255,9 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		}
 
 		m.Init(pprof.ErrChan(), filters, g, w)
+		if err := config.ParseSelectors(); err != nil {
+			return err
+		}
 		return m.Run()
 	}
 
@@ -340,6 +344,14 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 					Name: "test",
 					Usage: "enable test mode: gather metrics, print them out, and exit. " +
 						"Note: Test mode only runs inputs, not processors, aggregators, or outputs",
+				},
+				&cli.StringSliceFlag{
+					Name: "select",
+					Usage: "Selectors for this running instance of Telegraf. " +
+						"If no selectors are provided, all plugins will " +
+						"be selected and enabled. Use in conjunction with plugin labels configuration field " +
+						"to enable or disable a plugin. Use '--select=\"key=value;key=value\"' syntax",
+					DefaultText: "[]",
 				},
 				//
 				// Duration flags
