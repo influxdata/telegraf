@@ -73,6 +73,7 @@ type InfluxDBV2Listener struct {
 	requestsServed  selfstat.Stat
 	writesServed    selfstat.Stat
 	readysServed    selfstat.Stat
+	healthServed    selfstat.Stat
 	requestsRecv    selfstat.Stat
 	notFoundsServed selfstat.Stat
 
@@ -99,6 +100,7 @@ func (h *InfluxDBV2Listener) Init() error {
 	h.requestsServed = selfstat.Register("influxdb_v2_listener", "requests_served", tags)
 	h.writesServed = selfstat.Register("influxdb_v2_listener", "writes_served", tags)
 	h.readysServed = selfstat.Register("influxdb_v2_listener", "readys_served", tags)
+	h.healthServed = selfstat.Register("influxdb_v2_listener", "health_served", tags)
 	h.requestsRecv = selfstat.Register("influxdb_v2_listener", "requests_received", tags)
 	h.notFoundsServed = selfstat.Register("influxdb_v2_listener", "not_founds_served", tags)
 	h.authFailures = selfstat.Register("influxdb_v2_listener", "auth_failures", tags)
@@ -223,6 +225,7 @@ func (h *InfluxDBV2Listener) routes() error {
 
 	h.mux.Handle("/api/v2/write", authHandler(h.handleWrite()))
 	h.mux.Handle("/api/v2/ready", h.handleReady())
+	h.mux.Handle("/api/v2/health", h.handleHealth())
 	h.mux.Handle("/", authHandler(h.handleDefault()))
 
 	return nil
@@ -244,6 +247,36 @@ func (h *InfluxDBV2Listener) handleReady() http.HandlerFunc {
 		}
 		if _, err := res.Write(b); err != nil {
 			h.Log.Debugf("error writing in handleReady: %v", err)
+		}
+	}
+}
+
+func (h *InfluxDBV2Listener) handleHealth() http.HandlerFunc {
+	return func(res http.ResponseWriter, _ *http.Request) {
+		defer h.healthServed.Incr(1)
+
+		res.Header().Set("Content-Type", "application/json")
+		responseContent := map[string]string{
+			"commit":  internal.Commit,
+			"message": "ready for writes",
+			"name":    "telegraf",
+			"status":  "pass",
+			"version": internal.Version,
+		}
+
+		pending := h.totalUndeliveredMetrics.Load()
+		if h.MaxUndeliveredMetrics > 0 && pending >= int64(h.MaxUndeliveredMetrics) {
+			res.WriteHeader(http.StatusServiceUnavailable)
+			responseContent["status"] = "fail"
+			responseContent["message"] = fmt.Sprintf("too many undelivered metrics: %d", pending)
+		}
+
+		b, err := json.Marshal(responseContent)
+		if err != nil {
+			h.Log.Debugf("error marshalling json in handleHealth: %v", err)
+		}
+		if _, err := res.Write(b); err != nil {
+			h.Log.Debugf("error writing in handleHealth: %v", err)
 		}
 	}
 }
