@@ -170,9 +170,25 @@ type redisFieldTypes struct {
 	UsedMemoryStartup           int64   `json:"used_memory_startup"`
 }
 
+type redisClusterFieldTypes struct {
+	ClusterState                         string `json:"cluster_state"`
+	ClusterSlotsAssigned                 int64  `json:"cluster_slots_assigned"`
+	ClusterSlotsOk                       int64  `json:"cluster_slots_ok"`
+	ClusterSlotsPfail                    int64  `json:"cluster_slots_pfail"`
+	ClusterSlotsFail                     int64  `json:"cluster_slots_fail"`
+	ClusterKnownNodes                    int64  `json:"cluster_known_nodes"`
+	ClusterSize                          int64  `json:"cluster_size"`
+	ClusterCurrentEpoch                  int64  `json:"cluster_current_epoch"`
+	ClusterMyEpoch                       int64  `json:"cluster_my_epoch"`
+	ClusterStatsMessagesSent             int64  `json:"cluster_stats_messages_sent"`
+	ClusterStatsMessagesReceived         int64  `json:"cluster_stats_messages_received"`
+	TotalClusterLinksBufferLimitExceeded int64  `json:"total_cluster_links_buffer_limit_exceeded"`
+}
+
 type client interface {
 	do(returnType string, args ...interface{}) (interface{}, error)
 	info() *redis.StringCmd
+	clusterInfo() *redis.StringCmd
 	baseTags() map[string]string
 	close() error
 }
@@ -345,6 +361,10 @@ func (r *redisClient) info() *redis.StringCmd {
 	return r.client.Info(context.Background(), "ALL")
 }
 
+func (r *redisClient) clusterInfo() *redis.StringCmd {
+	return r.client.ClusterInfo(context.Background())
+}
+
 func (r *redisClient) baseTags() map[string]string {
 	tags := make(map[string]string)
 	for k, v := range r.tags {
@@ -364,7 +384,22 @@ func gatherServer(client client, acc telegraf.Accumulator) error {
 	}
 
 	rdr := strings.NewReader(info)
-	return gatherInfoOutput(rdr, acc, client.baseTags())
+	err = gatherInfoOutput(rdr, acc, client.baseTags())
+	if err != nil {
+		return err
+	}
+
+	// Check if cluster is enabled by looking for cluster_enabled:1 in the INFO output
+	if strings.Contains(info, "cluster_enabled:1") {
+		clusterInfo, err := client.clusterInfo().Result()
+		if err != nil {
+			return err
+		}
+		clusterRdr := strings.NewReader(clusterInfo)
+		return gatherClusterInfoOutput(clusterRdr, acc, client.baseTags())
+	}
+
+	return nil
 }
 
 func gatherInfoOutput(rdr io.Reader, acc telegraf.Accumulator, tags map[string]string) error {
@@ -484,9 +519,8 @@ func gatherInfoOutput(rdr io.Reader, acc telegraf.Accumulator, tags map[string]s
 	fields["keyspace_hitrate"] = keyspaceHitrate
 
 	o := redisFieldTypes{}
-
-	setStructFieldsFromObject(fields, &o)
-	setExistingFieldsFromStruct(fields, &o)
+	setStructFieldsFromObject[redisFieldTypes](fields, &o)
+	setExistingFieldsFromStruct[redisFieldTypes](fields, &o)
 
 	acc.AddFields("redis", fields, tags)
 	return nil
@@ -662,7 +696,26 @@ func gatherErrorStatsLine(name, line string, acc telegraf.Accumulator, globalTag
 	acc.AddFields("redis_errorstat", fields, tags)
 }
 
-func setExistingFieldsFromStruct(fields map[string]interface{}, o *redisFieldTypes) {
+func gatherClusterInfoOutput(rdr io.Reader, acc telegraf.Accumulator, tags map[string]string) error {
+	fields := make(map[string]interface{})
+	scanner := bufio.NewScanner(rdr)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		parts := strings.SplitN(line, ":", 2)
+		name := strings.TrimSpace(parts[0])
+		val := strings.TrimSpace(parts[1])
+		fields[name] = val
+	}
+
+	o := redisClusterFieldTypes{}
+	setStructFieldsFromObject[redisClusterFieldTypes](fields, &o)
+	setExistingFieldsFromStruct[redisClusterFieldTypes](fields, &o)
+
+	acc.AddFields("redis_cluster_info", fields, tags)
+	return nil
+}
+
+func setExistingFieldsFromStruct[T redisFieldTypes | redisClusterFieldTypes](fields map[string]interface{}, o *T) {
 	val := reflect.ValueOf(o).Elem()
 	typ := val.Type()
 
@@ -680,7 +733,7 @@ func setExistingFieldsFromStruct(fields map[string]interface{}, o *redisFieldTyp
 	}
 }
 
-func setStructFieldsFromObject(fields map[string]interface{}, o *redisFieldTypes) {
+func setStructFieldsFromObject[T redisFieldTypes | redisClusterFieldTypes](fields map[string]interface{}, o *T) {
 	val := reflect.ValueOf(o).Elem()
 	typ := val.Type()
 
