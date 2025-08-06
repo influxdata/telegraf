@@ -39,6 +39,8 @@ type httpClient struct {
 	url              *url.URL
 	localAddr        *net.TCPAddr
 	token            config.Secret
+	tokenStr         string // Original token string for recovery
+	tokenMutex       sync.RWMutex
 	organization     string
 	bucket           string
 	bucketTag        string
@@ -75,6 +77,17 @@ func (c *httpClient) Init() error {
 	if _, ok := c.headers["User-Agent"]; !ok {
 		sec := config.NewSecret([]byte(c.userAgent))
 		c.headers["User-Agent"] = &sec
+	}
+
+	// Store the original token string for recovery
+	if originalToken, err := c.token.Get(); err == nil {
+		c.tokenMutex.Lock()
+		c.tokenStr = originalToken.String()
+		c.tokenMutex.Unlock()
+		originalToken.Destroy()
+	} else {
+		// Log warning but don't fail - token might be set later
+		c.log.Warnf("Could not retrieve token during init for recovery backup: %v", err)
 	}
 
 	var proxy func(*http.Request) (*url.URL, error)
@@ -290,6 +303,23 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	return nil
 }
 
+// Add a token recovery method
+func (c *httpClient) recoverToken() error {
+	c.tokenMutex.Lock()
+	defer c.tokenMutex.Unlock()
+
+	if c.tokenStr == "" {
+		return errors.New("no token string available for recovery")
+	}
+
+	// Recreate the secret token
+	newSecret := config.NewSecret([]byte(c.tokenStr))
+	c.token = newSecret
+
+	c.log.Warn("Token recovered after memguard decryption failure")
+	return nil
+}
+
 func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 	// Setup the request
 	address := makeWriteURL(*c.url, c.params, b.bucket)
@@ -302,11 +332,35 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 	}
 	req.Header.Set("Content-Type", "text/plain; charset=utf-8")
 
-	// Set authorization
+	// Set authorization with recovery logic
+	c.tokenMutex.RLock()
 	token, err := c.token.Get()
+	c.tokenMutex.RUnlock()
+
 	if err != nil {
-		return fmt.Errorf("getting token failed: %w", err)
+		// For non-memguard errors, return immediately
+		if !strings.Contains(err.Error(), "ErrDecryptionFailed") &&
+			!strings.Contains(err.Error(), "decryption failed") {
+			return fmt.Errorf("getting token failed: %w", err)
+		}
+
+		// Handle memguard decryption error with recovery
+		c.log.Warnf("Memguard token decryption failed, attempting recovery: %v", err)
+
+		if recoverErr := c.recoverToken(); recoverErr != nil {
+			return fmt.Errorf("token decryption failed and recovery failed: %w (original: %w)", recoverErr, err)
+		}
+
+		// Try again with recovered token
+		c.tokenMutex.RLock()
+		token, err = c.token.Get()
+		c.tokenMutex.RUnlock()
+
+		if err != nil {
+			return fmt.Errorf("token decryption still failed after recovery: %w", err)
+		}
 	}
+
 	req.Header.Set("Authorization", "Token "+token.String())
 	token.Destroy()
 
