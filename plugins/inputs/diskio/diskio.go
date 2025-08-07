@@ -131,7 +131,6 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 			if !isCounterWraparound(io.ReadCount+io.WriteCount, lastValue.ReadCount+lastValue.WriteCount) &&
 				!isCounterWraparound(io.ReadTime+io.WriteTime, lastValue.ReadTime+lastValue.WriteTime) &&
 				!isCounterWraparound(io.IoTime, lastValue.IoTime) {
-
 				deltaRWCount := float64(io.ReadCount + io.WriteCount - lastValue.ReadCount - lastValue.WriteCount)
 				deltaRWTime := float64(io.ReadTime + io.WriteTime - lastValue.ReadTime - lastValue.WriteTime)
 				deltaIOTime := float64(io.IoTime - lastValue.IoTime)
