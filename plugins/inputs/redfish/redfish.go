@@ -290,7 +290,7 @@ func (r *Redfish) getData(address string, payload interface{}) error {
 		return fmt.Errorf("received status code %d (%s) for address %s, expected 200",
 			resp.StatusCode,
 			http.StatusText(resp.StatusCode),
-			r.Address)
+			address)
 	}
 
 	body, err := io.ReadAll(resp.Body)

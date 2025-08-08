@@ -751,7 +751,7 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 	u, err := url.Parse(ts.URL)
 	require.NoError(t, err)
 	err = r.Gather(&acc)
-	require.EqualError(t, err, "received status code 401 (Unauthorized) for address http://"+u.Host+", expected 200")
+	require.EqualError(t, err, "received status code 401 (Unauthorized) for address http://"+u.Host+"/redfish/v1/Systems/System.Embedded.1, expected 200")
 }
 func TestNoUsernameorPasswordConfiguration(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
