@@ -339,7 +339,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				&cli.BoolFlag{
 					Name: "test",
 					Usage: "enable test mode: gather metrics, print them out, and exit. " +
-						"Note: Test mode only runs inputs, not processors, aggregators, or outputs",
+						"Note: Test mode only runs inputs, processors, and aggregators, but not outputs",
 				},
 				//
 				// Duration flags
