@@ -72,6 +72,7 @@ type InfluxDBV2Listener struct {
 	bytesRecv       selfstat.Stat
 	requestsServed  selfstat.Stat
 	writesServed    selfstat.Stat
+	healthsServed   selfstat.Stat
 	readysServed    selfstat.Stat
 	requestsRecv    selfstat.Stat
 	notFoundsServed selfstat.Stat
@@ -98,6 +99,7 @@ func (h *InfluxDBV2Listener) Init() error {
 	h.bytesRecv = selfstat.Register("influxdb_v2_listener", "bytes_received", tags)
 	h.requestsServed = selfstat.Register("influxdb_v2_listener", "requests_served", tags)
 	h.writesServed = selfstat.Register("influxdb_v2_listener", "writes_served", tags)
+	h.healthsServed = selfstat.Register("influxdb_v2_listener", "healths_served", tags)
 	h.readysServed = selfstat.Register("influxdb_v2_listener", "readys_served", tags)
 	h.requestsRecv = selfstat.Register("influxdb_v2_listener", "requests_received", tags)
 	h.notFoundsServed = selfstat.Register("influxdb_v2_listener", "not_founds_served", tags)
@@ -222,10 +224,36 @@ func (h *InfluxDBV2Listener) routes() error {
 	)
 
 	h.mux.Handle("/api/v2/write", authHandler(h.handleWrite()))
+	h.mux.Handle("/api/v2/health", h.handleHealth())
 	h.mux.Handle("/api/v2/ready", h.handleReady())
+	h.mux.Handle("/health", h.handleHealth())
+	h.mux.Handle("/ready", h.handleReady())
 	h.mux.Handle("/", authHandler(h.handleDefault()))
 
 	return nil
+}
+
+func (h *InfluxDBV2Listener) handleHealth() http.HandlerFunc {
+	return func(res http.ResponseWriter, _ *http.Request) {
+		defer h.healthsServed.Incr(1)
+
+		// respond to health requests
+		res.Header().Set("Content-Type", "application/json")
+		res.WriteHeader(http.StatusOK)
+		b, err := json.Marshal(map[string]any{
+			"name": "telegraf-influxdb-v2-listener",
+			"commit": "v0.0.0-telegraf-influxdb-v2-listener",
+			"message":  "ready for writes",
+			"checks": []int{},
+			"status": "pass",
+			"version":  "v0.0.0-telegraf-influxdb-v2-listener"})
+		if err != nil {
+			h.Log.Debugf("error marshalling json in handleReady: %v", err)
+		}
+		if _, err := res.Write(b); err != nil {
+			h.Log.Debugf("error writing in handleHealth: %v", err)
+		}
+	}
 }
 
 func (h *InfluxDBV2Listener) handleReady() http.HandlerFunc {
