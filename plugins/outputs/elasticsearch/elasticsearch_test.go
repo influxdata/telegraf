@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -839,6 +840,164 @@ func TestDifferentIndexSettings(t *testing.T) {
 	require.Equal(t, "20s", index["refresh_interval"])
 	require.InDelta(t, float64(1000), index["mapping.total_fields.limit"], testutil.DefaultDelta)
 	require.Equal(t, "best_compression", index["codec"])
+}
+
+func TestProcessHeaders(t *testing.T) {
+	tests := []struct {
+		name           string
+		headers        map[string]interface{}
+		expectedResult map[string][]string
+		description    string
+	}{
+		{
+			name:           "nil and empty headers",
+			headers:        nil,
+			expectedResult: map[string][]string{},
+			description:    "Nil headers should return empty http.Header",
+		},
+		{
+			name:           "empty headers map",
+			headers:        map[string]interface{}{},
+			expectedResult: map[string][]string{},
+			description:    "Empty headers map should return empty http.Header",
+		},
+		{
+			name: "single strings - basic and with commas",
+			headers: map[string]interface{}{
+				"Content-Type":        "application/json",
+				"Authorization":       "Bearer token123",
+				"VL-Stream-Fields":    "tag.Source,tag.Channel,tag.EventID",
+				"VL-Msg-Field":        "win_eventlog.Message",
+				"CSV-Data":            "col1,col2,col3,col4",
+				"Content-Disposition": `attachment; filename="file,with,commas.csv"`,
+				"X-Special-Chars":     "value with spaces, commas, and \"quotes\"",
+				"X-Unicode":           "测试值",
+				"X-JSON-Like":         `{"key": "value", "array": [1,2,3]}`,
+			},
+			expectedResult: map[string][]string{
+				"Content-Type":        {"application/json"},
+				"Authorization":       {"Bearer token123"},
+				"Vl-Stream-Fields":    {"tag.Source,tag.Channel,tag.EventID"}, // Canonicalized
+				"Vl-Msg-Field":        {"win_eventlog.Message"},               // Canonicalized
+				"Csv-Data":            {"col1,col2,col3,col4"},                // Canonicalized
+				"Content-Disposition": {`attachment; filename="file,with,commas.csv"`},
+				"X-Special-Chars":     {"value with spaces, commas, and \"quotes\""},
+				"X-Unicode":           {"测试值"},
+				"X-Json-Like":         {`{"key": "value", "array": [1,2,3]}`}, // Canonicalized
+			},
+			description: "Single string values including commas, special chars, and unicode should be preserved as-is",
+		},
+		{
+			name: "string arrays - basic and with whitespace",
+			headers: map[string]interface{}{
+				"Accept":        []string{"application/json", "application/xml", "text/plain"},
+				"Cache-Control": []string{"no-cache", "must-revalidate"},
+				"X-Debug-Tags":  []string{"performance", "security", "monitoring"},
+				"X-With-Spaces": []string{" application/json ", "  application/xml  ", "text/plain"},
+				"X-Empty-Array": []string{},
+			},
+			expectedResult: map[string][]string{
+				"Accept":        {"application/json", "application/xml", "text/plain"},
+				"Cache-Control": {"no-cache", "must-revalidate"},
+				"X-Debug-Tags":  {"performance", "security", "monitoring"},
+				"X-With-Spaces": {"application/json", "application/xml", "text/plain"}, // Trimmed
+				// X-Empty-Array is not included - empty arrays don't create headers
+			},
+			description: "String arrays should create multiple header values with whitespace trimmed, empty arrays ignored",
+		},
+		{
+			name: "interface arrays - TOML parsing and mixed types",
+			headers: map[string]interface{}{
+				"X-Forwarded-For":   []interface{}{"192.168.1.1", "10.0.0.1", "172.16.0.1"},
+				"X-Mixed-Types":     []interface{}{"string-value", 123, true, "another-string"},
+				"X-Empty-Interface": []interface{}{},
+			},
+			expectedResult: map[string][]string{
+				"X-Forwarded-For": {"192.168.1.1", "10.0.0.1", "172.16.0.1"},
+				"X-Mixed-Types":   {"string-value", "another-string"}, // Only strings processed
+				// X-Empty-Interface is not included - empty arrays don't create headers
+			},
+			description: "Interface arrays should convert strings and ignore non-string types, empty arrays ignored",
+		},
+		{
+			name: "default type conversion",
+			headers: map[string]interface{}{
+				"X-Numeric": 123,
+				"X-Boolean": true,
+				"X-Float":   45.67,
+				"X-Nil":     nil,
+			},
+			expectedResult: map[string][]string{
+				"X-Numeric": {"123"},
+				"X-Boolean": {"true"},
+				"X-Float":   {"45.67"},
+				"X-Nil":     {"<nil>"},
+			},
+			description: "Non-string, non-array types should be converted to strings using fmt.Sprintf",
+		},
+		{
+			name: "comprehensive mixed scenario",
+			headers: map[string]interface{}{
+				// VictoriaLogs use case - strings with commas
+				"VL-Stream-Fields": "tag.Source,tag.Channel,tag.EventID",
+				"VL-Time-Field":    "@timestamp",
+				"Authorization":    "Bearer token123",
+				"Accept":           []string{"application/json", "text/plain"},
+				"X-Debug-Tags":     []string{"performance", "security"},
+				"X-Version":        2,
+				"X-IPs":            []interface{}{"1.1.1.1", "2.2.2.2"},
+				"X-Empty-String":   "",
+				"X-Empty-Array":    []string{},
+			},
+			expectedResult: map[string][]string{
+				"Vl-Stream-Fields": {"tag.Source,tag.Channel,tag.EventID"}, // Canonicalized
+				"Vl-Time-Field":    {"@timestamp"},                         // Canonicalized
+				"Authorization":    {"Bearer token123"},
+				"Accept":           {"application/json", "text/plain"},
+				"X-Debug-Tags":     {"performance", "security"},
+				"X-Version":        {"2"},
+				"X-Ips":            {"1.1.1.1", "2.2.2.2"}, // Canonicalized
+				"X-Empty-String":   {""},
+			},
+			description: "All header types should work together correctly, empty arrays ignored",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := &Elasticsearch{
+				Headers: tt.headers,
+				Log:     testutil.Logger{},
+			}
+
+			result := e.processHeaders()
+			resultMap := map[string][]string(result)
+
+			require.Equal(t, tt.expectedResult, resultMap, tt.description)
+
+			// Additional verification for critical cases
+			if strings.Contains(tt.name, "original issue") {
+				vlStreamFields := result.Get("VL-Stream-Fields") // Get handles canonicalization
+				require.Equal(t, "tag.Source,tag.Channel,tag.EventID", vlStreamFields,
+					"Comma-containing values should NOT be split")
+				require.Len(t, result.Values("VL-Stream-Fields"), 1,
+					"Should have exactly one value, not multiple")
+			}
+
+			if strings.Contains(tt.name, "string arrays") {
+				acceptValues := result.Values("Accept")
+				if len(acceptValues) > 0 {
+					require.Contains(t, acceptValues, "application/json")
+					require.Contains(t, acceptValues, "application/xml")
+					require.Contains(t, acceptValues, "text/plain")
+				}
+
+				// Verify empty arrays don't create headers
+				emptyArrayValues := result.Values("X-Empty-Array")
+				require.Empty(t, emptyArrayValues, "Empty arrays should not create any header entries")
+			}
+		})
+	}
 }
 
 type esTemplate struct {

@@ -334,10 +334,15 @@ to use them.
   # use_pipeline = "{{es_pipeline}}"
   # default_pipeline = "my_pipeline"
   #
-  # Custom HTTP headers
-  # To pass custom HTTP headers please define it in a given below section
+  ## Custom HTTP headers
+  ## To pass custom HTTP headers please define it in a given below section
   # [outputs.elasticsearch.headers]
-  #    "X-Custom-Header" = "custom-value"
+  ##  Single values - commas are preserved as part of the value
+  #   "X-Custom-Header1" = "custom-value1"
+  #   "X-Custom-Header2" = "custom-value2,with,commas,preserved"
+  #
+  ##   Multiple values - creates multiple headers with same name
+  #   "X-Custom-Header3" = ["custom-value3a", "custom-value3b"]
 
   ## Template Index Settings
   ## Overrides the template settings.index section with any provided options.

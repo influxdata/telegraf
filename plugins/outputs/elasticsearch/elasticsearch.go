@@ -50,7 +50,7 @@ type Elasticsearch struct {
 	Timeout             config.Duration        `toml:"timeout"`
 	URLs                []string               `toml:"urls"`
 	UsePipeline         string                 `toml:"use_pipeline"`
-	Headers             map[string]string      `toml:"headers"`
+	Headers             map[string]interface{} `toml:"headers"`
 	Log                 telegraf.Logger        `toml:"-"`
 	majorReleaseNumber  int
 	pipelineName        string
@@ -192,12 +192,7 @@ func (a *Elasticsearch) Connect() error {
 	)
 
 	if len(a.Headers) > 0 {
-		headers := http.Header{}
-		for k, vals := range a.Headers {
-			for _, v := range strings.Split(vals, ",") {
-				headers.Add(k, v)
-			}
-		}
+		headers := a.processHeaders()
 		clientOptions = append(clientOptions, elastic.SetHeaders(headers))
 	}
 
@@ -249,6 +244,42 @@ func (a *Elasticsearch) Connect() error {
 	a.pipelineName, a.pipelineTagKeys = GetTagKeys(a.UsePipeline)
 
 	return nil
+}
+
+func (a *Elasticsearch) processHeaders() http.Header {
+	headers := http.Header{}
+
+	if len(a.Headers) == 0 {
+		return headers
+	}
+
+	for key, value := range a.Headers {
+		switch v := value.(type) {
+		case string:
+			// Single string value - set directly
+			headers.Set(key, v)
+
+		case []string:
+			// Array of strings - add each value
+			for _, headerValue := range v {
+				headers.Add(key, strings.TrimSpace(headerValue))
+			}
+
+		case []interface{}:
+			// TOML might parse arrays as []interface{}
+			for _, headerValue := range v {
+				if strVal, ok := headerValue.(string); ok {
+					headers.Add(key, strings.TrimSpace(strVal))
+				}
+			}
+
+		default:
+			// Fallback: convert to string
+			headers.Set(key, fmt.Sprintf("%v", v))
+		}
+	}
+
+	return headers
 }
 
 // GetPointID generates a unique ID for a Metric Point
