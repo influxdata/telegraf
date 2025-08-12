@@ -1031,8 +1031,8 @@ github.com/circonus-labs/circonus-gometrics v2.3.1+incompatible/go.mod h1:nmEj6D
 github.com/circonus-labs/circonusllhist v0.1.3/go.mod h1:kMXHVDlOchFAehlya5ePtbp5jckzBHf4XRpQvBOLI+I=
 github.com/cisco-ie/nx-telemetry-proto v0.0.0-20230117155933-f64c045c77df h1:GmrltUp5Qf5XhT+LmqMDizsgm/6VHTSxPWRdrq21yRo=
 github.com/cisco-ie/nx-telemetry-proto v0.0.0-20230117155933-f64c045c77df/go.mod h1:rJDd05J5hqWVU9MjJ+5jw1CuLn/jRhvU0xtFEzzqjwM=
-github.com/clarify/clarify-go v0.4.0 h1:t03lAE1fs6IBtrLhSC5ED/rJt0N4cDYhEfdcfSsfkf8=
-github.com/clarify/clarify-go v0.4.0/go.mod h1:OTg3S1qDSzKnFG2igTQTZ5xiDUlGj6NmQJV15SMOmQY=
+github.com/clarify/clarify-go v0.4.1 h1:T0ba573qXp4dkM1CbPimvku1lJKNyIC27bcGEOTGVfw=
+github.com/clarify/clarify-go v0.4.1/go.mod h1:iTdVABQ3Qu7JK9xhg+oOfhvxS4I5AP0bt9HJTlG/PPU=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cloudevents/sdk-go/v2 v2.16.1 h1:G91iUdqvl88BZ1GYYr9vScTj5zzXSyEuqbfE63gbu9Q=
 github.com/cloudevents/sdk-go/v2 v2.16.1/go.mod h1:v/kVOaWjNfbvc6tkhhlkhvLapj8Aa8kvXiH5GiOHCKI=
