@@ -894,7 +894,7 @@ func TestProcessHeaders(t *testing.T) {
 				"Cache-Control": []string{"no-cache", "must-revalidate"},
 				"X-Debug-Tags":  []string{"performance", "security", "monitoring"},
 				"X-With-Spaces": []string{" application/json ", "  application/xml  ", "text/plain"},
-				"X-Empty-Array": []string{},
+				"X-Empty-Array": make([]string, 0),
 			},
 			expectedResult: map[string][]string{
 				"Accept":        {"application/json", "application/xml", "text/plain"},
@@ -910,7 +910,7 @@ func TestProcessHeaders(t *testing.T) {
 			headers: map[string]interface{}{
 				"X-Forwarded-For":   []interface{}{"192.168.1.1", "10.0.0.1", "172.16.0.1"},
 				"X-Mixed-Types":     []interface{}{"string-value", 123, true, "another-string"},
-				"X-Empty-Interface": []interface{}{},
+				"X-Empty-Interface": make([]interface{}, 0),
 			},
 			expectedResult: map[string][]string{
 				"X-Forwarded-For": {"192.168.1.1", "10.0.0.1", "172.16.0.1"},
@@ -947,7 +947,7 @@ func TestProcessHeaders(t *testing.T) {
 				"X-Version":        2,
 				"X-IPs":            []interface{}{"1.1.1.1", "2.2.2.2"},
 				"X-Empty-String":   "",
-				"X-Empty-Array":    []string{},
+				"X-Empty-Array":    make([]string, 0),
 			},
 			expectedResult: map[string][]string{
 				"Vl-Stream-Fields": {"tag.Source,tag.Channel,tag.EventID"}, // Canonicalized
