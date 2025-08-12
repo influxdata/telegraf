@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"bufio"
+	"strconv"
 )
 
 func Mystr() string {
@@ -381,4 +382,18 @@ func GetAPName() string {
         return "NA"
     }
     return "NA"
+}
+
+func GetRrmId() int {
+	var ret int
+	ret = 0
+	content, err := os.ReadFile("/tmp/rrmid")
+	if err != nil {
+		return 0
+	}
+	ret, err = strconv.Atoi(string(content))
+	if err != nil {
+		return 0
+	}
+	return ret
 }

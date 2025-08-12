@@ -17,12 +17,14 @@ import (
 	"runtime/debug"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/common/ahutil"
 	"golang.org/x/sys/unix"
 )
 
 var (
 	offsetsMutex = new(sync.Mutex)
 	newLineByte  = []byte("\n")
+	rrmid int = 0
 )
 
 
@@ -1765,6 +1767,7 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 		}
 
 			fields["band"] = get_radio_band(t, intfName)
+			fields["rrmId"] = rrmid
 
 			if (t.last_ut_data[ii].noise_min == 0) || (t.last_ut_data[ii].noise_min >= rfstat.ast_noise_floor) {
 				t.last_ut_data[ii].noise_min = rfstat.ast_noise_floor
@@ -2669,6 +2672,7 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 			fields2["ifName"]			= intfName2
 			fields2["ifIndex"]			= ifindex2
+			fields2["rrmId"]                        = rrmid
 			fields2["channel"]			= freqToChan(onesta.isi_freq)
 			fields2["channelWidth"]		= getChannelWidth(onesta.isi_phymode)
 
@@ -3452,6 +3456,8 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
 		}
 
 		Gather_EthernetInterfaceStats(t)
+
+		rrmid = ahutil.GetRrmId()
 
 		Gather_Client_Stat(t, acc)
 		Gather_Rf_Stat(t, acc)

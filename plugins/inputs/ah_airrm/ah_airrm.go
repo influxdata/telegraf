@@ -146,8 +146,10 @@ func Gather_acs_nbr(ai *Ah_airrm, acc telegraf.Accumulator) error {
 			}
 
 			fields["rrmId"] =						nbrtbl.nbr_tbl[i].rrmId
-			fields["channel"] = 					ahutil.FreqToChan(uint16(nbrtbl.nbr_tbl[i].frequency))
+			fields["channel"] =					ahutil.FreqToChan(uint16(nbrtbl.nbr_tbl[i].frequency))
 			fields["channelWidth"] =				nbrtbl.nbr_tbl[i].channelWidth
+			fields["rssi"] =					nbrtbl.nbr_tbl[i].rssi
+			fields["extremeAP"] =					nbrtbl.nbr_tbl[i].extremeAP == 1
 			fields["channelUtilization"] =			nbrtbl.nbr_tbl[i].channelUtilization
 			fields["interferenceUtilization"] =		nbrtbl.nbr_tbl[i].interferenceUtilization
 			fields["rxObssUtilization"] =			nbrtbl.nbr_tbl[i].obssUtilization
