@@ -33,6 +33,7 @@ type LDAP struct {
 	mode     string
 	host     string
 	port     string
+	tags := map[string]string{
 }
 
 type request struct {
@@ -57,27 +58,29 @@ func (l *LDAP) Init() error {
 	// Verify the server setting and set the defaults
 	var tlsEnable bool
 	switch u.Scheme {
-	case "ldap":
-		if u.Port() == "" {
-			u.Host = u.Host + ":389"
-		}
+	case "ldap", "ldapi":
 		tlsEnable = false
 	case "starttls":
-		if u.Port() == "" {
-			u.Host = u.Host + ":389"
-		}
+		u.Scheme = "ldap"
 		tlsEnable = true
 	case "ldaps":
-		if u.Port() == "" {
-			u.Host = u.Host + ":636"
-		}
 		tlsEnable = true
 	default:
 		return fmt.Errorf("invalid scheme: %q", u.Scheme)
 	}
 	l.mode = u.Scheme
-	l.Server = u.Host
-	l.host, l.port = u.Hostname(), u.Port()
+	l.Server = u.String()
+
+	if u.Scheme == "ldapi" {
+		l.tags := map[string]string{
+			"path": u.Path,
+		}
+	} else {
+		l.tags := map[string]string{
+			"server": u.Host,
+			"port":   u.Port,
+		}
+	}
 
 	// Force TLS depending on the selected mode
 	l.ClientConfig.Enable = &tlsEnable
@@ -131,29 +134,37 @@ func (l *LDAP) Gather(acc telegraf.Accumulator) error {
 func (l *LDAP) connect() (*ldap.Conn, error) {
 	var conn *ldap.Conn
 	switch l.mode {
-	case "ldap":
+	case "ldap", "ldapi":
 		var err error
-		conn, err = ldap.DialURL("ldap://" + l.Server)
+		conn, err = ldap.DialURL(l.Server)
 		if err != nil {
 			return nil, err
+		}
+		if l.tlsEnable {
+			if err := conn.StartTLS(l.tlsCfg); err != nil {
+				return nil, err
+			}
 		}
 	case "ldaps":
 		var err error
-		conn, err = ldap.DialURL("ldaps://"+l.Server, ldap.DialWithTLSConfig(l.tlsCfg))
+		conn, err = ldap.DialURL(l.Server, ldap.DialWithTLSConfig(l.tlsCfg))
 		if err != nil {
-			return nil, err
-		}
-	case "starttls":
-		var err error
-		conn, err = ldap.DialURL("ldap://" + l.Server)
-		if err != nil {
-			return nil, err
-		}
-		if err := conn.StartTLS(l.tlsCfg); err != nil {
 			return nil, err
 		}
 	default:
 		return nil, fmt.Errorf("invalid tls_mode: %s", l.mode)
+	}
+
+	switch l.BindMech {
+	case "", "simple":
+		// simple bind, handled below
+	case "external":
+		if err := conn.ExternalBind(); err != nil {
+			return nil, fmt.Errorf("external bind failed: %w", err)
+		}
+		return conn, nil
+	default:
+		return nil, fmt.Errorf("unsupported bind type: %s", l.mode)
 	}
 
 	if l.BindDn == "" && l.BindPassword.Empty() {
