@@ -368,6 +368,6 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 				require.NoError(t, js.PurgeStream(natsInstance.Jetstream.Name))
 			}
 			assert.Equal(t, tc.expectedSubjects, foundSubjects)
-		}) // end of test case
+		})
 	}
 }
