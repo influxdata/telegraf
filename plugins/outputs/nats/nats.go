@@ -33,7 +33,6 @@ type NATS struct {
 	Credentials string        `toml:"credentials"`
 	Subject     string        `toml:"subject"`
 	Jetstream   *StreamConfig `toml:"jetstream"`
-
 	tls.ClientConfig
 
 	Log telegraf.Logger `toml:"-"`
