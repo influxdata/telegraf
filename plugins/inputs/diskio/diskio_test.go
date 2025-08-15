@@ -190,3 +190,12 @@ func TestDiskIOUtil(t *testing.T) {
 	require.True(t, acc.HasFloatField("diskio", "io_svctm"), "io_svctm not have value")
 	require.True(t, acc.HasFloatField("diskio", "io_await"), "io_await not have value")
 }
+
+func TestCounterWraparound(t *testing.T) {
+	// Test normal case
+	require.False(t, isCounterWraparound(200, 100))
+	// Test wraparound case
+	require.True(t, isCounterWraparound(100, 4294967290))
+	// Test small decrease (should not trigger)
+	require.False(t, isCounterWraparound(950, 1000))
+}
