@@ -533,6 +533,61 @@ func TestRunningInputProbingSuccess(t *testing.T) {
 	}
 }
 
+func TestRunningInputMakeMetricAlwaysIncludeGlobalTagsWithOverrideFiltered(t *testing.T) {
+	// This test reproduces the bug described in issue #17476
+	// When a global tag is overridden in input tags but filtered out by taginclude,
+	// the local override should be preserved (matching processor behavior),
+	// but currently the global value overwrites the local override.
+
+	now := time.Now()
+	ri := NewRunningInput(&mockInput{}, &InputConfig{
+		Name: "TestRunningInput",
+		Tags: map[string]string{
+			"myglobaltag": "mylocalvalue", // This should override the global tag
+			"ltag":        "myvalue",      // This should pass the filter
+		},
+		Filter: Filter{
+			TagInclude: []string{"ltag"}, // This excludes myglobaltag from normal filtering
+		},
+		AlwaysIncludeGlobalTags: true, // This forces global tags to be included
+	})
+
+	// Set global tags
+	ri.SetDefaultTags(map[string]string{
+		"myglobaltag": "myglobalvalue",
+	})
+
+	require.NoError(t, ri.Config.Filter.Compile())
+
+	m := testutil.MustMetric("http_response",
+		map[string]string{},
+		map[string]interface{}{
+			"result_code": int64(3),
+			"result_type": "connection_failed",
+		},
+		now,
+		telegraf.Untyped)
+
+	actual := ri.MakeMetric(m)
+	require.NotNil(t, actual)
+
+	// Expected behavior: The local override value should be preserved
+	// to match processor behavior where local overrides win
+	expected := metric.New("http_response",
+		map[string]string{
+			"ltag":        "myvalue",      // Local tag that passes filter
+			"myglobaltag": "mylocalvalue", // Local override should win, not global value
+		},
+		map[string]interface{}{
+			"result_code": 3,
+			"result_type": "connection_failed",
+		},
+		now,
+	)
+
+	testutil.RequireMetricEqual(t, expected, actual)
+}
+
 type mockInput struct {
 	probeReturn error
 }

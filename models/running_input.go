@@ -204,6 +204,15 @@ func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 		return nil
 	}
 
+	// Store original local tags ONLY when we need them for global tag override preservation
+	var originalLocalTags map[string]string
+	if r.Config.AlwaysIncludeGlobalTags {
+		originalLocalTags = make(map[string]string)
+		for k, v := range r.Config.Tags {
+			originalLocalTags[k] = v
+		}
+	}
+
 	makeMetric(
 		metric,
 		r.Config.NameOverride,
@@ -220,13 +229,25 @@ func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 
 	if r.Config.AlwaysIncludeLocalTags || r.Config.AlwaysIncludeGlobalTags {
 		var local, global map[string]string
+
 		if r.Config.AlwaysIncludeLocalTags {
 			local = r.Config.Tags
 		}
+
 		if r.Config.AlwaysIncludeGlobalTags {
-			global = r.defaultTags
+			// Build the global tags map, preserving local overrides
+			global = make(map[string]string)
+			for k, v := range r.defaultTags {
+				// If there was a local override for this global tag, use the local value
+				if localValue, hasLocalOverride := originalLocalTags[k]; hasLocalOverride {
+					global[k] = localValue // Use local override, not global value
+				} else {
+					global[k] = v // Use global value only if no local override existed
+				}
+			}
 		}
-		makeMetric(metric, "", "", "", local, global)
+
+		makeMetricWithOverwrite(metric, "", "", "", local, global)
 	}
 
 	switch r.Config.TimeSource {
@@ -240,6 +261,34 @@ func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 	r.MetricsGathered.Incr(1)
 	GlobalMetricsGathered.Incr(1)
 	return metric
+}
+
+// makeMetricWithOverwrite applies tags with overwrite semantics for always_include behavior.
+// Unlike the standard makeMetric function which preserves existing tags, this function
+// will overwrite existing tags with new values.
+// This is specifically needed for always_include_global_tags behavior where filtered-out
+// local overrides should be restored.
+func makeMetricWithOverwrite(metric telegraf.Metric, nameOverride, namePrefix, nameSuffix string, tags, globalTags map[string]string) {
+	if len(nameOverride) != 0 {
+		metric.SetName(nameOverride)
+	}
+
+	if len(namePrefix) != 0 {
+		metric.AddPrefix(namePrefix)
+	}
+	if len(nameSuffix) != 0 {
+		metric.AddSuffix(nameSuffix)
+	}
+
+	// Apply plugin-wide tags - overwrite existing for always_include behavior
+	for k, v := range tags {
+		metric.AddTag(k, v) // AddTag overwrites if tag exists
+	}
+
+	// Apply global tags - overwrite existing for always_include behavior
+	for k, v := range globalTags {
+		metric.AddTag(k, v) // AddTag overwrites if tag exists
+	}
 }
 
 func (r *RunningInput) Gather(acc telegraf.Accumulator) error {
