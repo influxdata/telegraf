@@ -48,6 +48,7 @@ to use them.
 
   ## NATS subject for producer messages.
   ## This field can be a static string or a Go template, see README for details.
+  ## Incompatible with `use_batch_format
   subject = "telegraf"
 
   ## Use Transport Layer Security
@@ -118,6 +119,8 @@ subject template using Go’s text/template syntax.
 Dynamic templates allow you to construct subjects based on properties of
 each metric, such as tags, name and fields. This enables fine-grained
 routing and filtering across NATS or JetStream subscribers.
+
+This feature is incompatible with `use_batch_format`
 
 #### Examples
 
