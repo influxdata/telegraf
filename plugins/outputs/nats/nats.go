@@ -277,13 +277,8 @@ func (n *NATS) Init() error {
 	}
 
 	// JETSTREAM-ONLY and STATIC SUBJECT code beyond this line
-	// Set default subject if none provided
-	if len(n.Jetstream.Subjects) == 0 {
-		n.Jetstream.Subjects = []string{n.Subject}
-	}
-
 	// Append subject if not already included
-	if !choice.Contains(n.Subject, n.Jetstream.Subjects) {
+	if !slices.Contains(n.Jetstream.Subjects, n.Subject) {
 		n.Jetstream.Subjects = append(n.Jetstream.Subjects, n.Subject)
 	}
 
