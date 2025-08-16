@@ -323,7 +323,7 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 
 		buf, err := n.serializer.Serialize(m)
 		if err != nil {
-			n.Log.Warnf("Could not serialize metric: %v", err)
+			n.Log.Debugf("Could not serialize metric: %v", err)
 			continue
 		}
 

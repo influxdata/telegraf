@@ -262,29 +262,15 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 		Cmd:          []string{"--js"},
 		WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
 	}
+	defer container.Terminate()
 
-	natsInstance := &NATS{
-		Name: "telegraf",
-		Jetstream: &StreamConfig{
-			Name:     "my-telegraf-stream",
-			Subjects: []string{"my-subject.>"},
-		},
-		serializer: &influx.Serializer{},
-		Log:        testutil.Logger{},
-	}
-
-	streamConfigCompareFunc := func(t *testing.T, si *jetstream.StreamInfo) {
-		require.Equal(t, "my-telegraf-stream", si.Config.Name)
-		require.Equal(t, []string{"my-subject.>"}, si.Config.Subjects)
-	}
-
-	type testConfig struct {
+	type test struct {
 		name             string
 		subject          string
 		sendMetrics      []telegraf.Metric
 		expectedSubjects []string
 	}
-	testCases := []testConfig{
+	tests := []test{
 		{
 			name:    "subject layout with tags",
 			subject: "my-subject.metrics.{{ .Name }}.{{ .Tag \"tag1\" }}.{{ .Tag \"tag2\" }}",
@@ -314,28 +300,38 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 	}
 
 	require.NoError(t, container.Start(), "failed to start container")
-	defer container.Terminate()
-	for _, tc := range testCases {
+	server := []string{fmt.Sprintf("nats://%s:%s", container.Address, container.Ports[natsServicePort])}
+	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			natsInstance.Subject = tc.subject
-			server := []string{fmt.Sprintf("nats://%s:%s", container.Address, container.Ports[natsServicePort])}
-			natsInstance.Servers = server
-			require.NoError(t, natsInstance.Init())
-			require.NoError(t, natsInstance.Connect())
+			plugin := &NATS{
+				Name: "telegraf",
+				Jetstream: &StreamConfig{
+					Name:     "my-telegraf-stream",
+					Subjects: []string{"my-subject.>"},
+				},
+				serializer: &influx.Serializer{},
+				Log:        testutil.Logger{},
+				Subject:    tc.subject,
+				Servers:    server,
+			}
 
-			stream, err := natsInstance.jetstreamClient.Stream(t.Context(), natsInstance.Jetstream.Name)
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Connect())
+
+			stream, err := plugin.jetstreamClient.Stream(t.Context(), plugin.Jetstream.Name)
 			require.NoError(t, err)
 			si, err := stream.Info(t.Context())
 			require.NoError(t, err)
+			require.Equal(t, "my-telegraf-stream", si.Config.Name)
+			require.Equal(t, []string{"my-subject.>"}, si.Config.Subjects)
 
-			streamConfigCompareFunc(t, si)
-			require.NoError(t, natsInstance.Write(tc.sendMetrics))
+			require.NoError(t, plugin.Write(tc.sendMetrics))
 			metricCount := len(tc.sendMetrics)
 
 			foundSubjects := make([]string, 0, metricCount)
-			js, err := natsInstance.conn.JetStream()
+			js, err := plugin.conn.JetStream()
 			require.NoError(t, err)
-			sub, err := js.PullSubscribe(natsInstance.Jetstream.Subjects[0], "")
+			sub, err := js.PullSubscribe(plugin.Jetstream.Subjects[0], "")
 			require.NoError(t, err)
 
 			msgs, err := sub.Fetch(metricCount, nats.MaxWait(1*time.Second))
@@ -345,7 +341,7 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			for _, msg := range msgs {
 				foundSubjects = append(foundSubjects, msg.Subject)
 			}
-			require.NoError(t, js.PurgeStream(natsInstance.Jetstream.Name))
+			require.NoError(t, js.PurgeStream(plugin.Jetstream.Name))
 			require.Equal(t, tc.expectedSubjects, foundSubjects)
 		})
 	}
