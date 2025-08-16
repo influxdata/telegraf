@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"text/template"
 	"time"
@@ -16,7 +17,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
