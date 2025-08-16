@@ -10,7 +10,6 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -251,24 +250,6 @@ func TestConfigParsing(t *testing.T) {
 	}
 }
 
-func createStream(t *testing.T, server string, cfg *nats.StreamConfig) {
-	t.Helper()
-
-	// Connect to NATS server
-	conn, err := nats.Connect(server)
-	require.NoError(t, err)
-
-	defer func() {
-		require.NoError(t, conn.Drain(), "draining failed")
-	}()
-
-	// Create the stream in the JetStream context
-	js, err := conn.JetStream()
-	require.NoError(t, err)
-	_, err = js.AddStream(cfg)
-	require.NoError(t, err)
-}
-
 func TestWriteWithLayoutIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -352,22 +333,38 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			metricCount := len(tc.sendMetrics)
 
 			foundSubjects := make([]string, 0, metricCount)
-			if natsInstance.Jetstream != nil {
-				js, err := natsInstance.conn.JetStream()
-				require.NoError(t, err)
-				sub, err := js.PullSubscribe(natsInstance.Jetstream.Subjects[0], "")
-				require.NoError(t, err)
+			js, err := natsInstance.conn.JetStream()
+			require.NoError(t, err)
+			sub, err := js.PullSubscribe(natsInstance.Jetstream.Subjects[0], "")
+			require.NoError(t, err)
 
-				msgs, err := sub.Fetch(metricCount, nats.MaxWait(1*time.Second))
-				require.NoError(t, err)
+			msgs, err := sub.Fetch(metricCount, nats.MaxWait(1*time.Second))
+			require.NoError(t, err)
 
-				require.Len(t, msgs, metricCount, "unexpected number of messages")
-				for _, msg := range msgs {
-					foundSubjects = append(foundSubjects, msg.Subject)
-				}
-				require.NoError(t, js.PurgeStream(natsInstance.Jetstream.Name))
+			require.Len(t, msgs, metricCount, "unexpected number of messages")
+			for _, msg := range msgs {
+				foundSubjects = append(foundSubjects, msg.Subject)
 			}
-			assert.Equal(t, tc.expectedSubjects, foundSubjects)
+			require.NoError(t, js.PurgeStream(natsInstance.Jetstream.Name))
+			require.Equal(t, tc.expectedSubjects, foundSubjects)
 		})
 	}
+}
+
+func createStream(t *testing.T, server string, cfg *nats.StreamConfig) {
+	t.Helper()
+
+	// Connect to NATS server
+	conn, err := nats.Connect(server)
+	require.NoError(t, err)
+
+	defer func() {
+		require.NoError(t, conn.Drain(), "draining failed")
+	}()
+
+	// Create the stream in the JetStream context
+	js, err := conn.JetStream()
+	require.NoError(t, err)
+	_, err = js.AddStream(cfg)
+	require.NoError(t, err)
 }

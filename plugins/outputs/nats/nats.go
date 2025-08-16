@@ -269,7 +269,6 @@ func (n *NATS) Init() error {
 	// Handle dynamic subject case
 	if isSubjectDynamic(n.tplSubject, n.Subject) {
 		if len(n.Jetstream.Subjects) > 0 {
-			n.Log.Info("skip adding subject to Jetstream subjects because it is dynamic")
 			var err error
 			n.jetstreamStreamConfig, err = n.getJetstreamConfig()
 			return err
