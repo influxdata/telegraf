@@ -267,7 +267,8 @@ func (n *NATS) Init() error {
 		n.Jetstream.AsyncAckTimeout = &to
 	}
 	// Handle dynamic subject case
-	if isSubjectDynamic(n.tplSubject, n.Subject) {
+	var buf bytes.Buffer
+	if err := tpl.Execute(&buf, nil); err != nil || buf.String() != n.Subject {
 		if len(n.Jetstream.Subjects) > 0 {
 			var err error
 			n.jetstreamStreamConfig, err = n.getJetstreamConfig()
@@ -359,15 +360,6 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 		}
 	}
 	return nil
-}
-
-func isSubjectDynamic(tpl *template.Template, subject string) bool {
-	var buf bytes.Buffer
-	err := tpl.Execute(&buf, nil)
-	if err != nil || buf.String() != subject {
-		return true
-	}
-	return false
 }
 
 func init() {
