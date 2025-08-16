@@ -46,8 +46,9 @@ to use them.
   ## Optional NATS 2.0 and NATS NGS compatible user credentials
   # credentials = "/etc/telegraf/nats.creds"
 
-  ## NATS subject for producer messages
-  ## For jetstream this is also the subject where messages will be published
+  ## NATS subject for producer messages.
+  ## This field can be a static string or a Go template, see README for details.
+  ## Incompatible with `use_batch_format
   subject = "telegraf"
 
   ## Use Transport Layer Security
@@ -73,9 +74,9 @@ to use them.
   ## Jetstream specific configuration. If not nil, it will assume Jetstream context.
   ## Since this is a table, it should be present at the end of the plugin section. Else you can use inline table format.
   # [outputs.nats.jetstream]
-    ## Name of the stream, required when using jetstream. Telegraf will
-    ## use the union of the above subject and below the subjects array.
+    ## Name of the stream, required when using jetstream.
     # name = ""
+    ## List of subjects to register on the stream
     # subjects = []
 
     ## Use asynchronous publishing for higher throughput, but note that it does not guarantee order within batches.
@@ -108,3 +109,40 @@ to use them.
     ## and already exists. This will make the plugin fail if the steam does not exist.
     # disable_stream_creation = false
 ```
+
+### Subject Configuration
+
+The `subject` setting determines where producer messages will be published
+in NATS. This can be a static subject (e.g., "telegraf"), or a dynamic
+subject template using Go’s text/template syntax.
+
+Dynamic templates allow you to construct subjects based on properties of
+each metric, such as tags, name and fields. This enables fine-grained
+routing and filtering across NATS or JetStream subscribers.
+
+This feature is incompatible with `use_batch_format`
+
+#### Examples
+
+Routing based on tags and metric name:
+
+```toml
+subject = '{{ .Tag "region" }}.{{ .Tag "datacenter" }}.{{ .Tag "host" }}.{{ .Name }}'
+```
+
+Routing based on tags, metric name and field name:
+
+```toml
+subject = 'telegraf.metrics.{{ .Tag "datacenter" }}.{{ .Tag "host" }}.{{ .Name }}.{{ .Field "Value1" }}'
+```
+
+If you’re using JetStream the value of subject determines where messages
+are published.
+
+> [!IMPORTANT]
+> When using a dynamic subject template, Telegraf does not automatically register the
+> generated subjects with the JetStream stream.
+
+For dynamic `subject`s you must explicitly define matching subjects in
+`outputs.nats.jetstream.subjects` to ensure your stream can receive and
+retain those messages correctly.
