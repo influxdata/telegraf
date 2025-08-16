@@ -11,8 +11,8 @@ jobs:
     steps:
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.24.4'
-      - uses: actions/checkout@v4
+          go-version: '1.24.5'
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Get changed files

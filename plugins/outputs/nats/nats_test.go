@@ -50,6 +50,21 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 			},
 		},
 		{
+			name: "valid without jetstream and with batch",
+			container: testutil.Container{
+				Image:        "nats:latest",
+				ExposedPorts: []string{natsServicePort},
+				WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
+			},
+			nats: &NATS{
+				Name:           "telegraf",
+				Subject:        "telegraf",
+				serializer:     &influx.Serializer{},
+				Log:            testutil.Logger{},
+				UseBatchFormat: true,
+			},
+		},
+		{
 			name: "valid with jetstream",
 			container: testutil.Container{
 				Image:        "nats:latest",
@@ -65,6 +80,29 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 				},
 				serializer: &influx.Serializer{},
 				Log:        testutil.Logger{},
+			},
+			streamConfigCompareFunc: func(t *testing.T, si *jetstream.StreamInfo) {
+				require.Equal(t, "my-telegraf-stream", si.Config.Name)
+				require.Equal(t, []string{"telegraf"}, si.Config.Subjects)
+			},
+		},
+		{
+			name: "valid with jetstream and batch",
+			container: testutil.Container{
+				Image:        "nats:latest",
+				ExposedPorts: []string{natsServicePort},
+				Cmd:          []string{"--js"},
+				WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
+			},
+			nats: &NATS{
+				Name:    "telegraf",
+				Subject: "telegraf",
+				Jetstream: &StreamConfig{
+					Name: "my-telegraf-stream",
+				},
+				serializer:     &influx.Serializer{},
+				Log:            testutil.Logger{},
+				UseBatchFormat: true,
 			},
 			streamConfigCompareFunc: func(t *testing.T, si *jetstream.StreamInfo) {
 				require.Equal(t, "my-telegraf-stream", si.Config.Name)
@@ -202,8 +240,13 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 
 				tc.streamConfigCompareFunc(t, si)
 			}
-			// Verify that we can successfully write data to the NATS daemon
+			// Verify that we can successfully write a single metric to the NATS daemon
 			err = tc.nats.Write(testutil.MockMetrics())
+			require.NoError(t, err)
+
+			// Verify that we can successfully write multiple metrics to the NATS daemon
+			twoMetrics := []telegraf.Metric{testutil.TestMetric(1.0), testutil.TestMetric(2.0)}
+			err = tc.nats.Write(twoMetrics)
 			require.NoError(t, err)
 		})
 	}
@@ -217,6 +260,7 @@ func TestConfigParsing(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "Valid Default", path: filepath.Join("testcases", "no-js.conf")},
+		{name: "Valid Default with Batch", path: filepath.Join("testcases", "no-js-batch.conf")},
 		{name: "Valid JS", path: filepath.Join("testcases", "js-default.conf")},
 		{name: "Valid JS Config", path: filepath.Join("testcases", "js-config.conf")},
 		{name: "Valid JS Async Publish", path: filepath.Join("testcases", "js-async-pub.conf")},

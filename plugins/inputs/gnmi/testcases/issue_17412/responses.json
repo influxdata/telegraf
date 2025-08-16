@@ -1,0 +1,71 @@
+[
+  {
+    "update": {
+      "timestamp": "1753972805570000000",
+      "update": [
+        {}
+      ],
+      "delete": [
+        {
+          "elem": [
+            {
+              "name": "huawei-ifm:ifm"
+            },
+            {
+              "name": "interfaces"
+            },
+            {
+              "name": "interface",
+              "key": {
+                "name": "Eth-Trunk5.1234"
+              }
+            },
+            {
+              "name": "dynamic"
+            },
+            {
+              "name": "oper-status"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "update": {
+      "timestamp": "1753972839609000000",
+      "update": [
+        {
+          "path": {
+            "elem": [
+              {
+                "name": "huawei-ifm:ifm"
+              },
+              {
+                "name": "interfaces"
+              },
+              {
+                "name": "interface",
+                "key": {
+                  "name": "Eth-Trunk5.1234"
+                }
+              },
+              {
+                "name": "dynamic"
+              },
+              {
+                "name": "oper-status"
+              }
+            ]
+          },
+          "val": {
+            "jsonVal": "ImRvd24i"
+          }
+        }
+      ],
+      "delete": [
+        {}
+      ]
+    }
+  }
+]

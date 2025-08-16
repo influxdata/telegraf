@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"cloud.google.com/go/pubsub"
+	"cloud.google.com/go/pubsub/v2"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/api/support/bundler"
 

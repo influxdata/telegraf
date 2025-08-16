@@ -25,14 +25,15 @@ import (
 var sampleConfig string
 
 type NATS struct {
-	Servers     []string      `toml:"servers"`
-	Secure      bool          `toml:"secure"`
-	Name        string        `toml:"name"`
-	Username    config.Secret `toml:"username"`
-	Password    config.Secret `toml:"password"`
-	Credentials string        `toml:"credentials"`
-	Subject     string        `toml:"subject"`
-	Jetstream   *StreamConfig `toml:"jetstream"`
+	Servers        []string      `toml:"servers"`
+	Secure         bool          `toml:"secure"`
+	Name           string        `toml:"name"`
+	Username       config.Secret `toml:"username"`
+	Password       config.Secret `toml:"password"`
+	Credentials    string        `toml:"credentials"`
+	Subject        string        `toml:"subject"`
+	UseBatchFormat bool          `toml:"use_batch_format"`
+	Jetstream      *StreamConfig `toml:"jetstream"`
 	tls.ClientConfig
 
 	Log telegraf.Logger `toml:"-"`
@@ -297,49 +298,74 @@ func (n *NATS) Close() error {
 	return nil
 }
 
+func (n *NATS) publishMessage(sub string, buf []byte) (jetstream.PubAckFuture, error) {
+	if n.Jetstream != nil {
+		if n.Jetstream.AsyncPublish {
+			paf, err := n.jetstreamClient.PublishAsync(sub, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+			return paf, err
+		}
+		_, err := n.jetstreamClient.Publish(context.Background(), sub, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+		return nil, err
+	}
+	err := n.conn.Publish(sub, buf)
+	return nil, err
+}
+
 func (n *NATS) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
 
-	var subject bytes.Buffer
-	var ack jetstream.PubAckFuture
-	var pafs []jetstream.PubAckFuture
-
-	if n.Jetstream != nil && n.Jetstream.AsyncPublish {
-		pafs = make([]jetstream.PubAckFuture, 0, len(metrics))
+	msgCount := len(metrics)
+	if n.UseBatchFormat {
+		msgCount = 1
 	}
 
-	for _, m := range metrics {
-		subject.Reset()
-		if err := n.tplSubject.Execute(&subject, m.(telegraf.TemplateMetric)); err != nil {
-			return fmt.Errorf("failed to execute subject template: %w", err)
-		}
-		sub := subject.String()
-		if strings.Contains(sub, "..") || strings.HasSuffix(sub, ".") {
-			n.Log.Errorf("invalid subject %q for metric %v", sub, m)
-			continue
-		}
+	var pafs []jetstream.PubAckFuture
+	if n.Jetstream != nil && n.Jetstream.AsyncPublish {
+		pafs = make([]jetstream.PubAckFuture, msgCount)
+	}
 
-		buf, err := n.serializer.Serialize(m)
+	if n.UseBatchFormat {
+		buf, err := n.serializer.SerializeBatch(metrics)
 		if err != nil {
-			n.Log.Debugf("Could not serialize metric: %v", err)
-			continue
+			n.Log.Debugf("Could not serialize batch of metrics: %v", err)
+			return nil
 		}
-
-		// Use JetStream specific publishing methods
-		if n.Jetstream != nil {
-			if n.Jetstream.AsyncPublish {
-				ack, err = n.jetstreamClient.PublishAsync(sub, buf, jetstream.WithExpectStream(n.Jetstream.Name))
-				pafs = append(pafs, ack)
-			} else {
-				_, err = n.jetstreamClient.Publish(context.Background(), sub, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+		paf, err := n.publishMessage(n.Subject, buf)
+		if err != nil {
+			return fmt.Errorf("failed to send NATS message to subject %q: %w", n.Subject, err)
+		}
+		if n.Jetstream != nil && n.Jetstream.AsyncPublish {
+			pafs[0] = paf
+		}
+	} else {
+		var subject bytes.Buffer
+		for i, m := range metrics {
+			subject.Reset()
+			if err := n.tplSubject.Execute(&subject, m.(telegraf.TemplateMetric)); err != nil {
+				return fmt.Errorf("failed to execute subject template: %w", err)
 			}
-		} else {
-			err = n.conn.Publish(sub, buf)
-		}
-		if err != nil {
-			return fmt.Errorf("failed to send NATS message to subject %q: %w", sub, err)
+			sub := subject.String()
+			if strings.Contains(sub, "..") || strings.HasSuffix(sub, ".") {
+				n.Log.Errorf("invalid subject %q for metric %v", sub, m)
+				continue
+			}
+
+			buf, err := n.serializer.Serialize(m)
+			if err != nil {
+				n.Log.Debugf("Could not serialize metric: %v", err)
+				continue
+			}
+
+			paf, err := n.publishMessage(sub, buf)
+			if err != nil {
+				return fmt.Errorf("failed to send NATS message: %w", err)
+			}
+
+			if n.Jetstream != nil && n.Jetstream.AsyncPublish {
+				pafs[i] = paf
+			}
 		}
 	}
 

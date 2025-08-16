@@ -3,6 +3,7 @@ package snmp
 import (
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 )
 
@@ -12,6 +13,7 @@ type ClientConfig struct {
 	Retries              int             `toml:"retries"`
 	Version              uint8           `toml:"version"`
 	UnconnectedUDPSocket bool            `toml:"unconnected_udp_socket"`
+	GosnmpDebugLogger    telegraf.Logger `toml:"-"`
 
 	// Parameters for Version 1 & 2
 	Community string `toml:"community"`
