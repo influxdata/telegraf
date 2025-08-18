@@ -1,6 +1,73 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.35.4 [2025-08-18]
+
+### Bugfixes
+
+- [#17451](https://github.com/influxdata/telegraf/pull/17451) `agent` Update help message for CLI flag --test
+- [#17413](https://github.com/influxdata/telegraf/pull/17413) `inputs.gnmi` Handle empty updates in gnmi notification response
+- [#17445](https://github.com/influxdata/telegraf/pull/17445) `inputs.redfish` Log correct address on HTTP error
+
+### Dependency Updates
+
+- [#17454](https://github.com/influxdata/telegraf/pull/17454) `deps` Bump actions/checkout from 4 to 5
+- [#17404](https://github.com/influxdata/telegraf/pull/17404) `deps` Bump cloud.google.com/go/storage from 1.55.0 to 1.56.0
+- [#17428](https://github.com/influxdata/telegraf/pull/17428) `deps` Bump github.com/Azure/azure-sdk-for-go/sdk/azcore from 1.18.1 to 1.18.2
+- [#17455](https://github.com/influxdata/telegraf/pull/17455) `deps` Bump github.com/Azure/azure-sdk-for-go/sdk/azidentity from 1.10.1 to 1.11.0
+- [#17383](https://github.com/influxdata/telegraf/pull/17383) `deps` Bump github.com/ClickHouse/clickhouse-go/v2 from 2.37.2 to 2.39.0
+- [#17435](https://github.com/influxdata/telegraf/pull/17435) `deps` Bump github.com/ClickHouse/clickhouse-go/v2 from 2.39.0 to 2.40.1
+- [#17393](https://github.com/influxdata/telegraf/pull/17393) `deps` Bump github.com/apache/arrow-go/v18 from 18.3.1 to 18.4.0
+- [#17439](https://github.com/influxdata/telegraf/pull/17439) `deps` Bump github.com/apache/inlong/inlong-sdk/dataproxy-sdk-twins/dataproxy-sdk-golang from 1.0.3 to 1.0.5
+- [#17437](https://github.com/influxdata/telegraf/pull/17437) `deps` Bump github.com/aws/aws-sdk-go-v2 from 1.37.0 to 1.37.2
+- [#17402](https://github.com/influxdata/telegraf/pull/17402) `deps` Bump github.com/aws/aws-sdk-go-v2/config from 1.29.17 to 1.30.0
+- [#17458](https://github.com/influxdata/telegraf/pull/17458) `deps` Bump github.com/aws/aws-sdk-go-v2/config from 1.30.1 to 1.31.0
+- [#17391](https://github.com/influxdata/telegraf/pull/17391) `deps` Bump github.com/aws/aws-sdk-go-v2/credentials from 1.17.70 to 1.18.0
+- [#17436](https://github.com/influxdata/telegraf/pull/17436) `deps` Bump github.com/aws/aws-sdk-go-v2/credentials from 1.18.1 to 1.18.3
+- [#17434](https://github.com/influxdata/telegraf/pull/17434) `deps` Bump github.com/aws/aws-sdk-go-v2/feature/ec2/imds from 1.18.0 to 1.18.2
+- [#17461](https://github.com/influxdata/telegraf/pull/17461) `deps` Bump github.com/aws/aws-sdk-go-v2/service/cloudwatch from 1.45.3 to 1.48.0
+- [#17392](https://github.com/influxdata/telegraf/pull/17392) `deps` Bump github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs from 1.51.0 to 1.54.0
+- [#17440](https://github.com/influxdata/telegraf/pull/17440) `deps` Bump github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs from 1.54.0 to 1.55.0
+- [#17473](https://github.com/influxdata/telegraf/pull/17473) `deps` Bump github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs from 1.55.0 to 1.56.0
+- [#17431](https://github.com/influxdata/telegraf/pull/17431) `deps` Bump github.com/aws/aws-sdk-go-v2/service/dynamodb from 1.44.0 to 1.46.0
+- [#17470](https://github.com/influxdata/telegraf/pull/17470) `deps` Bump github.com/aws/aws-sdk-go-v2/service/ec2 from 1.231.0 to 1.242.0
+- [#17397](https://github.com/influxdata/telegraf/pull/17397) `deps` Bump github.com/aws/aws-sdk-go-v2/service/kinesis from 1.35.3 to 1.36.0
+- [#17430](https://github.com/influxdata/telegraf/pull/17430) `deps` Bump github.com/aws/aws-sdk-go-v2/service/kinesis from 1.36.0 to 1.37.0
+- [#17469](https://github.com/influxdata/telegraf/pull/17469) `deps` Bump github.com/aws/aws-sdk-go-v2/service/kinesis from 1.37.0 to 1.38.0
+- [#17432](https://github.com/influxdata/telegraf/pull/17432) `deps` Bump github.com/aws/aws-sdk-go-v2/service/sts from 1.35.0 to 1.36.0
+- [#17401](https://github.com/influxdata/telegraf/pull/17401) `deps` Bump github.com/aws/aws-sdk-go-v2/service/timestreamwrite from 1.31.2 to 1.32.0
+- [#17421](https://github.com/influxdata/telegraf/pull/17421) `deps` Bump github.com/aws/aws-sdk-go-v2/service/timestreamwrite from 1.32.0 to 1.33.0
+- [#17464](https://github.com/influxdata/telegraf/pull/17464) `deps` Bump github.com/aws/aws-sdk-go-v2/service/timestreamwrite from 1.33.0 to 1.34.0
+- [#17457](https://github.com/influxdata/telegraf/pull/17457) `deps` Bump github.com/clarify/clarify-go from 0.4.0 to 0.4.1
+- [#17407](https://github.com/influxdata/telegraf/pull/17407) `deps` Bump github.com/docker/docker from 28.3.2+incompatible to 28.3.3+incompatible
+- [#17463](https://github.com/influxdata/telegraf/pull/17463) `deps` Bump github.com/docker/go-connections from 0.5.0 to 0.6.0
+- [#17394](https://github.com/influxdata/telegraf/pull/17394) `deps` Bump github.com/golang-jwt/jwt/v5 from 5.2.2 to 5.2.3
+- [#17423](https://github.com/influxdata/telegraf/pull/17423) `deps` Bump github.com/gopacket/gopacket from 1.3.1 to 1.4.0
+- [#17399](https://github.com/influxdata/telegraf/pull/17399) `deps` Bump github.com/jedib0t/go-pretty/v6 from 6.6.7 to 6.6.8
+- [#17422](https://github.com/influxdata/telegraf/pull/17422) `deps` Bump github.com/lxc/incus/v6 from 6.14.0 to 6.15.0
+- [#17429](https://github.com/influxdata/telegraf/pull/17429) `deps` Bump github.com/miekg/dns from 1.1.67 to 1.1.68
+- [#17433](https://github.com/influxdata/telegraf/pull/17433) `deps` Bump github.com/nats-io/nats-server/v2 from 2.11.6 to 2.11.7
+- [#17426](https://github.com/influxdata/telegraf/pull/17426) `deps` Bump github.com/nats-io/nats.go from 1.43.0 to 1.44.0
+- [#17456](https://github.com/influxdata/telegraf/pull/17456) `deps` Bump github.com/redis/go-redis/v9 from 9.11.0 to 9.12.1
+- [#17420](https://github.com/influxdata/telegraf/pull/17420) `deps` Bump github.com/shirou/gopsutil/v4 from 4.25.6 to 4.25.7
+- [#17388](https://github.com/influxdata/telegraf/pull/17388) `deps` Bump github.com/testcontainers/testcontainers-go/modules/azure from 0.37.0 to 0.38.0
+- [#17382](https://github.com/influxdata/telegraf/pull/17382) `deps` Bump github.com/testcontainers/testcontainers-go/modules/kafka from 0.37.0 to 0.38.0
+- [#17427](https://github.com/influxdata/telegraf/pull/17427) `deps` Bump github.com/yuin/goldmark from 1.7.12 to 1.7.13
+- [#17386](https://github.com/influxdata/telegraf/pull/17386) `deps` Bump go.opentelemetry.io/collector/pdata from 1.36.0 to 1.36.1
+- [#17425](https://github.com/influxdata/telegraf/pull/17425) `deps` Bump go.step.sm/crypto from 0.67.0 to 0.68.0
+- [#17462](https://github.com/influxdata/telegraf/pull/17462) `deps` Bump go.step.sm/crypto from 0.68.0 to 0.69.0
+- [#17460](https://github.com/influxdata/telegraf/pull/17460) `deps` Bump golang.org/x/crypto from 0.40.0 to 0.41.0
+- [#17424](https://github.com/influxdata/telegraf/pull/17424) `deps` Bump google.golang.org/api from 0.243.0 to 0.244.0
+- [#17459](https://github.com/influxdata/telegraf/pull/17459) `deps` Bump google.golang.org/api from 0.244.0 to 0.246.0
+- [#17465](https://github.com/influxdata/telegraf/pull/17465) `deps` Bump google.golang.org/protobuf from 1.36.6 to 1.36.7
+- [#17384](https://github.com/influxdata/telegraf/pull/17384) `deps` Bump k8s.io/apimachinery from 0.33.2 to 0.33.3
+- [#17389](https://github.com/influxdata/telegraf/pull/17389) `deps` Bump k8s.io/client-go from 0.33.2 to 0.33.3
+- [#17396](https://github.com/influxdata/telegraf/pull/17396) `deps` Bump modernc.org/sqlite from 1.38.0 to 1.38.1
+- [#17385](https://github.com/influxdata/telegraf/pull/17385) `deps` Bump software.sslmate.com/src/go-pkcs12 from 0.5.0 to 0.6.0
+- [#17390](https://github.com/influxdata/telegraf/pull/17390) `deps` Bump super-linter/super-linter from 7.4.0 to 8.0.0
+- [#17448](https://github.com/influxdata/telegraf/pull/17448) `deps` Fix collectd dependency not resolving
+- [#17410](https://github.com/influxdata/telegraf/pull/17410) `deps` Migrate from cloud.google.com/go/pubsub to v2
+
 ## v1.35.3 [2025-07-28]
 
 ### Bugfixes
