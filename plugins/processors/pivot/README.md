@@ -1,12 +1,17 @@
 # Pivot Processor Plugin
 
-You can use the `pivot` processor to rotate single valued metrics into a multi
-field metric.  This transformation often results in data that is more easily
-to apply mathematical operators and comparisons between, and flatten into a
-more compact representation for write operations with some output data
-formats.
+This plugin rotates single-valued metrics into a multi-field metric. The result
+is a more compact representation for applying mathematical operators to or do
+comparisons between metrics or flatten fields.
 
-To perform the reverse operation use the [unpivot] processor.
+> [!TIP]
+> To perform the reverse operation use the [unpivot][unpivot] processor.
+
+⭐ Telegraf v1.12.0
+🏷️ transformation
+💻 all
+
+[unpivot]: /plugins/processors/unpivot/README.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -36,5 +41,3 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 + cpu,cpu=cpu0 time_idle=42i
 + cpu,cpu=cpu0 time_user=43i
 ```
-
-[unpivot]: /plugins/processors/unpivot/README.md

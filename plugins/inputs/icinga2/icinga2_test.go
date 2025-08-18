@@ -27,24 +27,6 @@ func TestIcinga2Default(t *testing.T) {
 	require.Equal(t, []string{"services"}, icinga2.Objects)
 }
 
-func TestIcinga2DeprecatedHostConfig(t *testing.T) {
-	icinga2 := &Icinga2{
-		ObjectType: "hosts", // deprecated
-	}
-	require.NoError(t, icinga2.Init())
-
-	require.Equal(t, []string{"hosts"}, icinga2.Objects)
-}
-
-func TestIcinga2DeprecatedServicesConfig(t *testing.T) {
-	icinga2 := &Icinga2{
-		ObjectType: "services", // deprecated
-	}
-	require.NoError(t, icinga2.Init())
-
-	require.Equal(t, []string{"services"}, icinga2.Objects)
-}
-
 const icinga2ServiceResponse = `{
 	"results": [
 		{

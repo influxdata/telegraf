@@ -23,7 +23,6 @@ type Consul struct {
 	Token         string `toml:"token"`
 	Username      string `toml:"username"`
 	Password      string `toml:"password"`
-	Datacentre    string `toml:"datacentre" deprecated:"1.10.0;1.35.0;use 'datacenter' instead"`
 	Datacenter    string `toml:"datacenter"`
 	TagDelimiter  string `toml:"tag_delimiter"`
 	MetricVersion int    `toml:"metric_version"`
@@ -57,10 +56,6 @@ func (c *Consul) Init() error {
 
 	if c.Scheme != "" {
 		config.Scheme = c.Scheme
-	}
-
-	if c.Datacentre != "" {
-		config.Datacenter = c.Datacentre
 	}
 
 	if c.Datacenter != "" {

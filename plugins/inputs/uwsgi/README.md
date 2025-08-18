@@ -1,7 +1,14 @@
 # uWSGI Input Plugin
 
-The uWSGI input plugin gathers metrics about uWSGI using its [Stats
-Server](https://uwsgi-docs.readthedocs.io/en/latest/StatsServer.html).
+This plugin gathers metrics about [uWSGI][uwsgi] using its
+[Stats Server][stats_server].
+
+⭐ Telegraf v1.12.0
+🏷️ cloud
+💻 all
+
+[uwsgi]: https://uwsgi-docs.readthedocs.io/en/latest/
+[stats_server]: https://uwsgi-docs.readthedocs.io/en/latest/StatsServer.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

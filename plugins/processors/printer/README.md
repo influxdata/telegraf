@@ -1,6 +1,10 @@
 # Printer Processor Plugin
 
-The printer processor plugin simple prints every metric passing through it.
+This plugin prints every metric passing through it to the standard output.
+
+⭐ Telegraf v1.1.0
+🏷️ testing
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -36,7 +40,3 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## getting omitted due to similar data.
   # influx_omit_timestamp = false
 ```
-
-## Tags
-
-No tags are applied by this processor.

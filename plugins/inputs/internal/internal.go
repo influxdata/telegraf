@@ -17,9 +17,13 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+// Converts /cpu/classes/gc/mark/assist:cpu-seconds to cpu_classes_gc_mark_assist_cpu_seconds
+var replacer = strings.NewReplacer("/", "_", ":", "_", "-", "_")
+
 type Internal struct {
 	CollectMemstats bool `toml:"collect_memstats"`
 	CollectGostats  bool `toml:"collect_gostats"`
+	PerInstance     bool `toml:"per_instance"`
 }
 
 func (*Internal) SampleConfig() string {
@@ -27,12 +31,10 @@ func (*Internal) SampleConfig() string {
 }
 
 func (s *Internal) Gather(acc telegraf.Accumulator) error {
-	for _, m := range selfstat.Metrics() {
-		if m.Name() == "internal_agent" {
-			m.AddTag("go_version", strings.TrimPrefix(runtime.Version(), "go"))
-		}
-		m.AddTag("version", inter.Version)
-		acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+	if s.PerInstance {
+		collectIndividualPluginStat(acc)
+	} else {
+		collectAccumulatedPluginStat(acc)
 	}
 
 	if s.CollectMemstats {
@@ -44,6 +46,44 @@ func (s *Internal) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return nil
+}
+
+func collectIndividualPluginStat(acc telegraf.Accumulator) {
+	for _, m := range selfstat.Metrics() {
+		if m.Name() == "internal_agent" {
+			m.AddTag("go_version", strings.TrimPrefix(runtime.Version(), "go"))
+		}
+		m.AddTag("version", inter.Version)
+		acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+	}
+}
+
+func collectAccumulatedPluginStat(acc telegraf.Accumulator) {
+	accumulated := make(map[uint64]telegraf.Metric)
+	for _, m := range selfstat.Metrics() {
+		if m.Name() == "internal_agent" {
+			m.AddTag("go_version", strings.TrimPrefix(runtime.Version(), "go"))
+		}
+		m.AddTag("version", inter.Version)
+		key := m.HashIDWithFieldsFiltered([]string{"_id"}, nil)
+		am, found := accumulated[key]
+		if !found {
+			accumulated[key] = m.Copy()
+			accumulated[key].RemoveTag("_id")
+			continue
+		}
+		for _, f := range m.FieldList() {
+			var av int64
+			if af, found := am.GetField(f.Key); found {
+				av = af.(int64)
+			}
+			am.AddField(f.Key, av+f.Value.(int64))
+		}
+	}
+
+	for _, m := range accumulated {
+		acc.AddMetric(m)
+	}
 }
 
 func collectMemStat(acc telegraf.Accumulator) {
@@ -106,13 +146,8 @@ func collectGoStat(acc telegraf.Accumulator) {
 	acc.AddFields("internal_gostats", fields, tags)
 }
 
-// Converts /cpu/classes/gc/mark/assist:cpu-seconds to cpu_classes_gc_mark_assist_cpu_seconds
 func sanitizeName(name string) string {
-	name = strings.TrimPrefix(name, "/")
-	name = strings.ReplaceAll(name, "/", "_")
-	name = strings.ReplaceAll(name, ":", "_")
-	name = strings.ReplaceAll(name, "-", "_")
-	return name
+	return replacer.Replace(strings.TrimPrefix(name, "/"))
 }
 
 func medianBucket(h *metrics.Float64Histogram) float64 {

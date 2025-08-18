@@ -1,6 +1,12 @@
 # Riak Input Plugin
 
-The Riak plugin gathers metrics from one or more riak instances.
+This plugin gathers metrics from [Riak][riak] instances.
+
+⭐ Telegraf v0.10.4
+🏷️ server
+💻 all
+
+[riak]: https://riak.com/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -22,63 +28,58 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Metrics
 
-Riak provides one measurement named "riak", with the following fields:
+- riak:
+  - tags:
+    - server   (host:port of the given server address)
+    - nodename (internal node name received)
+  - fields
+    - cpu_avg1
+    - cpu_avg15
+    - cpu_avg5
+    - memory_code
+    - memory_ets
+    - memory_processes
+    - memory_system
+    - memory_total
+    - node_get_fsm_objsize_100
+    - node_get_fsm_objsize_95
+    - node_get_fsm_objsize_99
+    - node_get_fsm_objsize_mean
+    - node_get_fsm_objsize_median
+    - node_get_fsm_siblings_100
+    - node_get_fsm_siblings_95
+    - node_get_fsm_siblings_99
+    - node_get_fsm_siblings_mean
+    - node_get_fsm_siblings_median
+    - node_get_fsm_time_100
+    - node_get_fsm_time_95
+    - node_get_fsm_time_99
+    - node_get_fsm_time_mean
+    - node_get_fsm_time_median
+    - node_gets
+    - node_gets_total
+    - node_put_fsm_time_100
+    - node_put_fsm_time_95
+    - node_put_fsm_time_99
+    - node_put_fsm_time_mean
+    - node_put_fsm_time_median
+    - node_puts
+    - node_puts_total
+    - pbc_active
+    - pbc_connects
+    - pbc_connects_total
+    - vnode_gets
+    - vnode_gets_total
+    - vnode_index_reads
+    - vnode_index_reads_total
+    - vnode_index_writes
+    - vnode_index_writes_total
+    - vnode_puts
+    - vnode_puts_total
+    - read_repairs
+    - read_repairs_total
 
-- cpu_avg1
-- cpu_avg15
-- cpu_avg5
-- memory_code
-- memory_ets
-- memory_processes
-- memory_system
-- memory_total
-- node_get_fsm_objsize_100
-- node_get_fsm_objsize_95
-- node_get_fsm_objsize_99
-- node_get_fsm_objsize_mean
-- node_get_fsm_objsize_median
-- node_get_fsm_siblings_100
-- node_get_fsm_siblings_95
-- node_get_fsm_siblings_99
-- node_get_fsm_siblings_mean
-- node_get_fsm_siblings_median
-- node_get_fsm_time_100
-- node_get_fsm_time_95
-- node_get_fsm_time_99
-- node_get_fsm_time_mean
-- node_get_fsm_time_median
-- node_gets
-- node_gets_total
-- node_put_fsm_time_100
-- node_put_fsm_time_95
-- node_put_fsm_time_99
-- node_put_fsm_time_mean
-- node_put_fsm_time_median
-- node_puts
-- node_puts_total
-- pbc_active
-- pbc_connects
-- pbc_connects_total
-- vnode_gets
-- vnode_gets_total
-- vnode_index_reads
-- vnode_index_reads_total
-- vnode_index_writes
-- vnode_index_writes_total
-- vnode_puts
-- vnode_puts_total
-- read_repairs
-- read_repairs_total
-
-Measurements of time (such as node_get_fsm_time_mean) are measured in
-nanoseconds.
-
-### Tags
-
-All measurements have the following tags:
-
-- server (the host:port of the given server address, ex. `127.0.0.1:8087`)
-- nodename (the internal node name received, ex. `riak@127.0.0.1`)
+Time fields such as `node_get_fsm_time_mean` are measured in nanoseconds.
 
 ## Example Output
 

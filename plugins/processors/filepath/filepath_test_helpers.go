@@ -12,47 +12,47 @@ const smokeMetricName = "testmetric"
 
 type testCase struct {
 	name            string
-	o               *Options
+	o               *Filepath
 	inputMetrics    []telegraf.Metric
 	expectedMetrics []telegraf.Metric
 }
 
-func newOptions(basePath string) *Options {
-	return &Options{
-		BaseName: []BaseOpts{
+func newOptions(basePath string) *Filepath {
+	return &Filepath{
+		BaseName: []baseOpts{
 			{
 				Field: "baseField",
 				Tag:   "baseTag",
 			},
 		},
-		DirName: []BaseOpts{
+		DirName: []baseOpts{
 			{
 				Field: "dirField",
 				Tag:   "dirTag",
 			},
 		},
-		Stem: []BaseOpts{
+		Stem: []baseOpts{
 			{
 				Field: "stemField",
 				Tag:   "stemTag",
 			},
 		},
-		Clean: []BaseOpts{
+		Clean: []baseOpts{
 			{
 				Field: "cleanField",
 				Tag:   "cleanTag",
 			},
 		},
-		Rel: []RelOpts{
+		Rel: []relOpts{
 			{
-				BaseOpts: BaseOpts{
+				baseOpts: baseOpts{
 					Field: "relField",
 					Tag:   "relTag",
 				},
 				BasePath: basePath,
 			},
 		},
-		ToSlash: []BaseOpts{
+		ToSlash: []baseOpts{
 			{
 				Field: "slashField",
 				Tag:   "slashTag",

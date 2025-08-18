@@ -135,7 +135,6 @@ func defaultVSphere() *VSphere {
 		MaxQueryMetrics:         256,
 		ObjectDiscoveryInterval: config.Duration(time.Second * 300),
 		Timeout:                 config.Duration(time.Second * 20),
-		ForceDiscoverOnInit:     true,
 		DiscoverConcurrency:     1,
 		CollectConcurrency:      1,
 		Separator:               ".",

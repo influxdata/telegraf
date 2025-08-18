@@ -138,10 +138,10 @@ func TestTracking(t *testing.T) {
 
 	// Prepare and start the plugin
 	plugin := &AwsEc2Processor{
-		MaxParallelCalls: DefaultMaxParallelCalls,
-		TagCacheSize:     DefaultCacheSize,
-		Timeout:          config.Duration(DefaultTimeout),
-		CacheTTL:         config.Duration(DefaultCacheTTL),
+		MaxParallelCalls: defaultMaxParallelCalls,
+		TagCacheSize:     defaultCacheSize,
+		Timeout:          config.Duration(defaultTimeout),
+		CacheTTL:         config.Duration(defaultCacheTTL),
 		ImdsTags:         []string{"accountId", "instanceId"},
 		Log:              &testutil.Logger{},
 	}
@@ -150,7 +150,7 @@ func TestTracking(t *testing.T) {
 	// Instead of starting the plugin which tries to connect to the remote
 	// service, we just fill the cache and start the minimum mechanics to
 	// process the metrics.
-	plugin.tagCache = freecache.NewCache(DefaultCacheSize)
+	plugin.tagCache = freecache.NewCache(defaultCacheSize)
 	require.NoError(t, plugin.tagCache.Set([]byte("accountId"), []byte("123456789"), -1))
 	require.NoError(t, plugin.tagCache.Set([]byte("instanceId"), []byte("i-123456789123"), -1))
 

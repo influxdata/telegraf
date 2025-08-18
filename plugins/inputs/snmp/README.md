@@ -1,13 +1,16 @@
 # SNMP Input Plugin
 
-The `snmp` input plugin uses polling to gather metrics from SNMP agents.
-Support for gathering individual OIDs as well as complete SNMP tables is
-included.
+This plugin gathers metrics by polling [SNMP][snmp] agents with individual OIDs
+or complete SNMP tables.
 
-## Note about Paths
+> [!NOTE]
+> The path setting is shared between all instances of all SNMP plugin types!
 
-Path is a global variable, separate snmp instances will append the specified
-path onto the global path variable
+⭐ Telegraf v0.10.1
+🏷️ hardware, network
+💻 all
+
+[snmp]: https://datatracker.ietf.org/doc/html/rfc1157
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -26,20 +29,6 @@ See the [secret-store documentation][SECRETSTORE] for more details on how
 to use them.
 
 [SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
-
-## SNMP backend: gosmi and netsnmp
-
-Telegraf has two backends to translate SNMP objects. By default, Telegraf will
-use `netsnmp`, however, this option is deprecated and it is encouraged that
-users migrate to `gosmi`. If users find issues with `gosmi` that do not occur
-with `netsnmp` please open a project issue on GitHub.
-
-The SNMP backend setting is a global-level setting that applies to all use of
-SNMP in Telegraf. Users can set this option in the `[agent]` configuration via
-the `snmp_translator` option. See the [agent configuration][AGENT] for more
-details.
-
-[AGENT]: ../../../docs/CONFIGURATION.md#agent
 
 ## Configuration
 
@@ -133,6 +122,20 @@ details.
       is_tag = true
 ```
 
+### SNMP backend: `gosmi` vs `netsnmp`
+
+This plugin supports two backends to translate SNMP objects. By default,
+Telegraf will use `netsnmp`, however, this option is deprecated and it is
+encouraged to migrate to `gosmi`. If users find issues with `gosmi` that do not
+occur with `netsnmp` please open a project issue on GitHub.
+
+The SNMP backend setting is a global-level setting that applies to all use of
+SNMP in Telegraf. Users can set this option in the `[agent]` configuration via
+the `snmp_translator` option. See the [agent configuration][agent] for more
+details.
+
+[agent]: /docs/CONFIGURATION.md#agent
+
 ### Configure SNMP Requests
 
 This plugin provides two methods for configuring the SNMP requests: `fields`
@@ -174,7 +177,7 @@ option operate similar to the `snmpget` utility.
     ##   hextoint:X:Y Convert bytes to integer, where X is the endian and Y the
     ##                bit size. For example: hextoint:LittleEndian:uint64 or
     ##                hextoint:BigEndian:uint32. Valid options for the endian
-    ##                are: BigEndian and LittleEndian. For the bit size: 
+    ##                are: BigEndian and LittleEndian. For the bit size:
     ##                uint16, uint32 and uint64.
     ##   enum:        Convert the value according to its syntax in the MIB.
     ##                (Only supported with gosmi translator)
@@ -196,9 +199,9 @@ By default all columns of the SNMP table will be collected - it is not required
 to add a nested field for each column, only those which you wish to modify. To
 *only* collect certain columns, omit the `oid` from the `table` section and only
 include `oid` settings in `field` sections. For more complex include/exclude
-cases for columns use [metric filtering][].
+cases for columns use [metric filtering][filtering].
 
-One [metric][] is created for each row of the SNMP table.
+One metric is created for each row of the SNMP table.
 
 ```toml
 [[inputs.snmp]]
@@ -265,6 +268,8 @@ One [metric][] is created for each row of the SNMP table.
       ## globally with SecondaryIndexTable, global true overrides per field false.
       # secondary_outer_join = false
 ```
+
+[filtering]: /docs/CONFIGURATION.md#metric-filtering
 
 #### Two Table Join
 
@@ -413,6 +418,3 @@ interface,agent_host=127.0.0.1,ifDescr=wlan0,ifIndex=3,sysName=example.org ifAdm
 interface,agent_host=127.0.0.1,ifDescr=eth0,ifIndex=2,sysName=example.org ifAdminStatus=1i,ifInDiscards=0i,ifInErrors=0i,ifInNUcastPkts=21i,ifInOctets=3852386380i,ifInUcastPkts=3634004i,ifInUnknownProtos=0i,ifLastChange=9088763i,ifMtu=1500i,ifOperStatus=1i,ifOutDiscards=0i,ifOutErrors=0i,ifOutNUcastPkts=0i,ifOutOctets=434865441i,ifOutQLen=0i,ifOutUcastPkts=2110394i,ifPhysAddress="c8:5b:76:c9:e6:8c",ifSpecific=".0.0",ifSpeed=1000000000i,ifType=6i 1575509815000000000
 interface,agent_host=127.0.0.1,ifDescr=lo,ifIndex=1,sysName=example.org ifAdminStatus=1i,ifInDiscards=0i,ifInErrors=0i,ifInNUcastPkts=0i,ifInOctets=51555569i,ifInUcastPkts=339097i,ifInUnknownProtos=0i,ifLastChange=0i,ifMtu=65536i,ifOperStatus=1i,ifOutDiscards=0i,ifOutErrors=0i,ifOutNUcastPkts=0i,ifOutOctets=51555569i,ifOutQLen=0i,ifOutUcastPkts=339097i,ifSpecific=".0.0",ifSpeed=10000000i,ifType=24i 1575509815000000000
 ```
-
-[metric filtering]: /docs/CONFIGURATION.md#metric-filtering
-[metric]: /docs/METRICS.md

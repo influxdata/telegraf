@@ -25,6 +25,7 @@ func newExactR7(_ float64) (algorithm, error) {
 	return &exactAlgorithmR7{xs: make([]float64, 0, 100), sorted: false}, nil
 }
 
+// Add adds a value to the algorithm.
 func (e *exactAlgorithmR7) Add(value float64) error {
 	e.xs = append(e.xs, value)
 	e.sorted = false
@@ -32,6 +33,7 @@ func (e *exactAlgorithmR7) Add(value float64) error {
 	return nil
 }
 
+// Quantile returns the quantile value for the given q.
 func (e *exactAlgorithmR7) Quantile(q float64) float64 {
 	size := len(e.xs)
 
@@ -71,6 +73,7 @@ func newExactR8(_ float64) (algorithm, error) {
 	return &exactAlgorithmR8{xs: make([]float64, 0, 100), sorted: false}, nil
 }
 
+// Add adds a value to the algorithm.
 func (e *exactAlgorithmR8) Add(value float64) error {
 	e.xs = append(e.xs, value)
 	e.sorted = false
@@ -78,6 +81,7 @@ func (e *exactAlgorithmR8) Add(value float64) error {
 	return nil
 }
 
+// Quantile returns the quantile value for the given q.
 func (e *exactAlgorithmR8) Quantile(q float64) float64 {
 	size := len(e.xs)
 

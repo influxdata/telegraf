@@ -36,24 +36,40 @@ type Strings struct {
 	init       bool
 }
 
-type ConvertFunc func(s string) string
+type convertFunc func(s string) string
 
 type converter struct {
-	Field       string
-	FieldKey    string
-	Tag         string
-	TagKey      string
-	Measurement string
-	Dest        string
-	Cutset      string
-	Suffix      string
-	Prefix      string
-	Old         string
-	New         string
-	Width       int
-	Replacement string
+	Field       string `toml:"field"`
+	FieldKey    string `toml:"field_key"`
+	Tag         string `toml:"tag"`
+	TagKey      string `toml:"tag_key"`
+	Measurement string `toml:"measurement"`
+	Dest        string `toml:"dest"`
+	Cutset      string `toml:"cutset"`
+	Suffix      string `toml:"suffix"`
+	Prefix      string `toml:"prefix"`
+	Old         string `toml:"old"`
+	New         string `toml:"new"`
+	Width       int    `toml:"width"`
+	Replacement string `toml:"replacement"`
 
-	fn ConvertFunc
+	fn convertFunc
+}
+
+func (*Strings) SampleConfig() string {
+	return sampleConfig
+}
+
+func (s *Strings) Apply(in ...telegraf.Metric) []telegraf.Metric {
+	s.initOnce()
+
+	for _, metric := range in {
+		for _, converter := range s.converters {
+			converter.convert(metric)
+		}
+	}
+
+	return in
 }
 
 func (c *converter) convertTag(metric telegraf.Metric) {
@@ -264,22 +280,6 @@ func (s *Strings) initOnce() {
 	}
 
 	s.init = true
-}
-
-func (*Strings) SampleConfig() string {
-	return sampleConfig
-}
-
-func (s *Strings) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	s.initOnce()
-
-	for _, metric := range in {
-		for _, converter := range s.converters {
-			converter.convert(metric)
-		}
-	}
-
-	return in
 }
 
 func init() {

@@ -1,6 +1,7 @@
 package snmp_lookup
 
 import (
+	"context"
 	"errors"
 	"sync/atomic"
 	"testing"
@@ -54,28 +55,28 @@ func (*testSNMPConnection) Reconnect() error {
 
 func TestRegistry(t *testing.T) {
 	require.Contains(t, processors.Processors, "snmp_lookup")
-	require.IsType(t, &Lookup{}, processors.Processors["snmp_lookup"]())
+	require.IsType(t, &SNMPLookup{}, processors.Processors["snmp_lookup"]())
 }
 
 func TestSampleConfig(t *testing.T) {
 	cfg := config.NewConfig()
 
-	require.NoError(t, cfg.LoadConfigData(testutil.DefaultSampleConfig((&Lookup{}).SampleConfig()), config.EmptySourcePath))
+	require.NoError(t, cfg.LoadConfigData(testutil.DefaultSampleConfig((&SNMPLookup{}).SampleConfig()), config.EmptySourcePath))
 }
 
 func TestInit(t *testing.T) {
 	tests := []struct {
 		name     string
-		plugin   *Lookup
+		plugin   *SNMPLookup
 		expected string
 	}{
 		{
 			name:   "empty",
-			plugin: &Lookup{},
+			plugin: &SNMPLookup{},
 		},
 		{
 			name: "defaults",
-			plugin: &Lookup{
+			plugin: &SNMPLookup{
 				AgentTag:        "source",
 				IndexTag:        "index",
 				ClientConfig:    *snmp.DefaultClientConfig(),
@@ -86,7 +87,7 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name: "wrong SNMP client config",
-			plugin: &Lookup{
+			plugin: &SNMPLookup{
 				ClientConfig: snmp.ClientConfig{
 					Version: 99,
 				},
@@ -95,7 +96,7 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name: "table init",
-			plugin: &Lookup{
+			plugin: &SNMPLookup{
 				Tags: []snmp.Field{
 					{
 						Name: "ifName",
@@ -120,7 +121,7 @@ func TestInit(t *testing.T) {
 }
 
 func TestStart(t *testing.T) {
-	plugin := Lookup{}
+	plugin := SNMPLookup{}
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.NopAccumulator
@@ -161,7 +162,7 @@ func TestGetConnection(t *testing.T) {
 		},
 	}
 
-	p := Lookup{
+	p := SNMPLookup{
 		AgentTag:     "source",
 		ClientConfig: *snmp.DefaultClientConfig(),
 		Log:          testutil.Logger{Name: "processors.snmp_lookup"},
@@ -185,7 +186,7 @@ func TestGetConnection(t *testing.T) {
 }
 
 func TestUpdateAgent(t *testing.T) {
-	p := Lookup{
+	p := SNMPLookup{
 		ClientConfig: *snmp.DefaultClientConfig(),
 		CacheSize:    defaultCacheSize,
 		CacheTTL:     defaultCacheTTL,
@@ -339,7 +340,7 @@ func TestAdd(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			plugin := Lookup{
+			plugin := SNMPLookup{
 				AgentTag:        "source",
 				IndexTag:        "index",
 				ClientConfig:    *snmp.DefaultClientConfig(),
@@ -376,7 +377,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestExpiry(t *testing.T) {
-	p := Lookup{
+	p := SNMPLookup{
 		AgentTag:        "source",
 		IndexTag:        "index",
 		CacheSize:       defaultCacheSize,
@@ -488,7 +489,7 @@ func TestExpiry(t *testing.T) {
 }
 
 func TestOrdered(t *testing.T) {
-	plugin := Lookup{
+	plugin := SNMPLookup{
 		AgentTag:        "source",
 		IndexTag:        "index",
 		CacheSize:       defaultCacheSize,
@@ -629,4 +630,230 @@ func TestOrdered(t *testing.T) {
 	}, 3*time.Second, 100*time.Millisecond)
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 	require.EqualValues(t, len(input), tsc.calls.Load())
+}
+
+// TestNoReenqueAfterStop makes sure we do not try to add new tasks to the
+// worker pool _after_ the plugin has stopped, e.g. after shutting down Telegraf.
+// See https://github.com/influxdata/telegraf/issues/17289
+func TestNoReenqueAfterStop(t *testing.T) {
+	plugin := &SNMPLookup{
+		AgentTag:              "source",
+		IndexTag:              "index",
+		CacheSize:             10,
+		CacheTTL:              config.Duration(1 * time.Minute),
+		ParallelLookups:       1,
+		MinTimeBetweenUpdates: config.Duration(500 * time.Millisecond),
+		Tags: []snmp.Field{
+			{
+				Name: "ifName",
+				Oid:  ".1.3.6.1.2.1.31.1.1.1.1",
+			},
+		},
+		Log: testutil.Logger{Name: "processors.snmp_lookup"},
+	}
+	require.NoError(t, plugin.Init())
+
+	// Setup the connection factory
+	tsc := &testSNMPConnection{values: make(map[string]string)}
+	plugin.getConnectionFunc = func(string) (snmp.Connection, error) { return tsc, nil }
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+
+	// Send two metrics for the
+	for range 2 {
+		m := testutil.MustMetric(
+			"test",
+			map[string]string{
+				"source": "127.0.0.1",
+				"index":  "0",
+			},
+			map[string]interface{}{"value": 1},
+			time.Now(),
+		)
+		require.NoError(t, plugin.Add(m, &acc))
+
+		// Wait until the first metric is resolved,
+		// so that the 2nd metric is deferred by MinTimeBetweenUpdates
+		require.Eventually(t, func() bool {
+			return acc.NMetrics() > 0
+		}, 3*time.Second, 100*time.Millisecond)
+	}
+
+	// Stop the plugin to simulate a telegraf reload or shutdown
+	plugin.Stop()
+
+	// Wait for the delayed update much longer than the deferred timer to
+	// make sure all deferred tasks were executed. In issue #17289 this caused
+	// a panic...
+	time.Sleep(2 * time.Duration(plugin.MinTimeBetweenUpdates))
+}
+
+// TestStopWithTaskInWorkerPool tests that stopping the plugin doesn't cause
+// a deadlock when there are tasks still running in the worker pool.
+// This test prevents regression of the deadlock issue described in #17359.
+func TestStopWithTaskInWorkerPool(t *testing.T) {
+	// Set a reasonable timeout for the entire test
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	plugin := &SNMPLookup{
+		AgentTag:              "source",
+		IndexTag:              "index",
+		CacheSize:             10,
+		CacheTTL:              config.Duration(1 * time.Minute),
+		ParallelLookups:       1,
+		MinTimeBetweenUpdates: config.Duration(500 * time.Millisecond),
+		Tags: []snmp.Field{
+			{
+				Name: "ifName",
+				Oid:  ".1.3.6.1.2.1.31.1.1.1.1",
+			},
+		},
+		Log: testutil.Logger{Name: "processors.snmp_lookup"},
+	}
+	require.NoError(t, plugin.Init())
+
+	// Use a buffered channel to prevent goroutine leaks
+	blocker := make(chan struct{}, 1)
+	taskStarted := make(chan struct{}, 1)
+
+	// Set up the connection factory
+	tsc := &testSNMPConnection{values: make(map[string]string)}
+	plugin.getConnectionFunc = func(string) (snmp.Connection, error) {
+		// Signal that the task has started
+		select {
+		case taskStarted <- struct{}{}:
+		default:
+		}
+
+		// This function is part of a worker pool task.
+		// Block here to ensure .Stop() is called while this task is running,
+		// which would previously cause a deadlock in removeBacklog().
+		select {
+		case <-blocker:
+			return tsc, nil
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+
+	m := testutil.MustMetric(
+		"test",
+		map[string]string{
+			"source": "127.0.0.1",
+			"index":  "0",
+		},
+		map[string]interface{}{"value": 1},
+		time.Now(),
+	)
+
+	// Add the metric which will trigger a worker pool task
+	require.NoError(t, plugin.Add(m, &acc))
+
+	// Wait for the task to start and be blocked
+	select {
+	case <-taskStarted:
+		// The Task has started and is now blocked
+	case <-ctx.Done():
+		t.Fatal("Task didn't start within timeout")
+	}
+
+	// Give the task a moment to get blocked
+	time.Sleep(50 * time.Millisecond)
+
+	// Create a channel to track when Stop() completes
+	stopDone := make(chan struct{})
+
+	// Start Stop() in a goroutine so we can monitor for deadlock
+	go func() {
+		defer close(stopDone)
+		// Unblock the worker pool task to create the potential deadlock condition:
+		// s.pool.StopAndWait() waiting for task completion while
+		// task waits for lock in s.removeBacklog()
+		select {
+		case blocker <- struct{}{}:
+		default:
+		}
+
+		// This call would previously deadlock
+		plugin.Stop()
+	}()
+
+	// Wait for Stop() to complete or timeout
+	select {
+	case <-stopDone:
+		// Success! Stop() completed without deadlock
+		t.Log("Stop() completed successfully without deadlock")
+	case <-ctx.Done():
+		t.Fatal("Deadlock detected: Stop() didn't complete within timeout")
+	}
+}
+
+// Run the test with Go's built-in timeout
+func TestStopWithTaskInWorkerPoolWithGoTimeout(t *testing.T) {
+	// This test should complete quickly if the deadlock is fixed
+	if testing.Short() {
+		t.Skip("Skipping deadlock test in short mode")
+	}
+
+	plugin := &SNMPLookup{
+		AgentTag:              "source",
+		IndexTag:              "index",
+		CacheSize:             10,
+		CacheTTL:              config.Duration(1 * time.Minute),
+		ParallelLookups:       1,
+		MinTimeBetweenUpdates: config.Duration(500 * time.Millisecond),
+		Tags: []snmp.Field{
+			{
+				Name: "ifName",
+				Oid:  ".1.3.6.1.2.1.31.1.1.1.1",
+			},
+		},
+		Log: testutil.Logger{Name: "processors.snmp_lookup"},
+	}
+	require.NoError(t, plugin.Init())
+
+	blocker := make(chan struct{})
+	taskReady := make(chan struct{})
+
+	// Set up the connection factory
+	tsc := &testSNMPConnection{values: make(map[string]string)}
+	plugin.getConnectionFunc = func(string) (snmp.Connection, error) {
+		// Signal that we're about to block
+		close(taskReady)
+		// Block until Stop() starts
+		<-blocker
+		return tsc, nil
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+
+	m := testutil.MustMetric(
+		"test",
+		map[string]string{
+			"source": "127.0.0.1",
+			"index":  "0",
+		},
+		map[string]interface{}{"value": 1},
+		time.Now(),
+	)
+	require.NoError(t, plugin.Add(m, &acc))
+
+	// Wait for the task to be ready
+	<-taskReady
+
+	// Small delay to ensure the task is blocked
+	time.Sleep(10 * time.Millisecond)
+
+	// Unblock the task and immediately stop - this creates the race condition
+	close(blocker)
+	plugin.Stop() // This should not deadlock
+
+	// If we reach here, the test passed
+	t.Log("Successfully avoided deadlock during Stop()")
 }

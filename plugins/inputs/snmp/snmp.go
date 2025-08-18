@@ -88,6 +88,10 @@ func (s *Snmp) Init() error {
 		})
 	}
 
+	if s.Log != nil && s.Log.Level().Includes(telegraf.Debug) {
+		s.GosnmpDebugLogger = s.Log
+	}
+
 	return nil
 }
 

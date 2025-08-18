@@ -28,10 +28,6 @@ type ClientConfig struct {
 	ServerName          string   `toml:"tls_server_name"`
 	RenegotiationMethod string   `toml:"tls_renegotiation_method"`
 	Enable              *bool    `toml:"tls_enable"`
-
-	SSLCA   string `toml:"ssl_ca" deprecated:"1.7.0;1.35.0;use 'tls_ca' instead"`
-	SSLCert string `toml:"ssl_cert" deprecated:"1.7.0;1.35.0;use 'tls_cert' instead"`
-	SSLKey  string `toml:"ssl_key" deprecated:"1.7.0;1.35.0;use 'tls_key' instead"`
 }
 
 // ServerConfig represents the standard server TLS config.
@@ -52,17 +48,6 @@ func (c *ClientConfig) TLSConfig() (*tls.Config, error) {
 	// Check if TLS config is forcefully disabled
 	if c.Enable != nil && !*c.Enable {
 		return nil, nil
-	}
-
-	// Support deprecated variable names
-	if c.TLSCA == "" && c.SSLCA != "" {
-		c.TLSCA = c.SSLCA
-	}
-	if c.TLSCert == "" && c.SSLCert != "" {
-		c.TLSCert = c.SSLCert
-	}
-	if c.TLSKey == "" && c.SSLKey != "" {
-		c.TLSKey = c.SSLKey
 	}
 
 	// This check returns a nil (aka "disabled") or an empty config

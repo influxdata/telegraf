@@ -1,7 +1,6 @@
 package snmp_lookup
 
 import (
-	"errors"
 	"sync"
 	"time"
 
@@ -10,8 +9,6 @@ import (
 
 	"github.com/influxdata/telegraf/config"
 )
-
-var ErrNotYetAvailable = errors.New("data not yet available")
 
 type store struct {
 	cache                *expirable.LRU[string, *tagMap]
@@ -22,6 +19,7 @@ type store struct {
 	deferredUpdatesTimer *time.Timer
 	notify               func(string, *tagMap)
 	update               func(string) *tagMap
+	stopped              bool // Add flag to track if store is being destroyed
 
 	sync.Mutex
 }
@@ -32,12 +30,19 @@ func newStore(size int, ttl config.Duration, workers int, minUpdateInterval conf
 		pool:              pond.New(workers, 0, pond.MinWorkers(workers/2+1)),
 		deferredUpdates:   make(map[string]time.Time),
 		minUpdateInterval: time.Duration(minUpdateInterval),
+		stopped:           false,
 	}
 }
 
 func (s *store) addBacklog(agent string, earliest time.Time) {
 	s.Lock()
 	defer s.Unlock()
+
+	// Don't add to the backlog if store is being destroyed
+	if s.stopped {
+		return
+	}
+
 	t, found := s.deferredUpdates[agent]
 	if !found || t.After(earliest) {
 		s.deferredUpdates[agent] = earliest
@@ -48,15 +53,19 @@ func (s *store) addBacklog(agent string, earliest time.Time) {
 func (s *store) removeBacklog(agent string) {
 	s.Lock()
 	defer s.Unlock()
+
+	// Still allow removal even if stopped to prevent deadlocks
 	delete(s.deferredUpdates, agent)
-	s.refreshTimer()
+	if !s.stopped {
+		s.refreshTimer()
+	}
 }
 
 func (s *store) refreshTimer() {
 	if s.deferredUpdatesTimer != nil {
 		s.deferredUpdatesTimer.Stop()
 	}
-	if len(s.deferredUpdates) == 0 {
+	if len(s.deferredUpdates) == 0 || s.stopped {
 		return
 	}
 	var agent string
@@ -71,7 +80,7 @@ func (s *store) refreshTimer() {
 }
 
 func (s *store) enqueue(agent string) {
-	if _, inflight := s.inflight.LoadOrStore(agent, true); inflight {
+	if _, inflight := s.inflight.LoadOrStore(agent, true); inflight || s.pool.Stopped() {
 		return
 	}
 	s.pool.Submit(func() {
@@ -114,6 +123,20 @@ func (s *store) lookup(agent, index string) {
 }
 
 func (s *store) destroy() {
+	// First, acquire lock and stop accepting new work
+	s.Lock()
+	s.stopped = true
+
+	// Clear deferred updates and stop timer
+	s.deferredUpdates = make(map[string]time.Time)
+	if s.deferredUpdatesTimer != nil {
+		s.deferredUpdatesTimer.Stop()
+		s.deferredUpdatesTimer = nil
+	}
+	s.Unlock()
+
+	// Now wait for worker pool to finish WITHOUT holding the lock
+	// This prevents the deadlock where workers need the lock in removeBacklog()
 	s.pool.StopAndWait()
 }
 

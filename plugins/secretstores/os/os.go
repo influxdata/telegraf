@@ -32,7 +32,6 @@ func (*OS) SampleConfig() string {
 	return sampleConfig
 }
 
-// Init initializes all internals of the secret-store
 func (o *OS) Init() error {
 	defer o.Password.Destroy()
 
@@ -59,7 +58,6 @@ func (o *OS) Init() error {
 	return nil
 }
 
-// Get searches for the given key and return the secret
 func (o *OS) Get(key string) ([]byte, error) {
 	item, err := o.ring.Get(key)
 	if err != nil {
@@ -69,7 +67,6 @@ func (o *OS) Get(key string) ([]byte, error) {
 	return item.Data, nil
 }
 
-// Set sets the given secret for the given key
 func (o *OS) Set(key, value string) error {
 	item := keyring.Item{
 		Key:  key,
@@ -79,12 +76,10 @@ func (o *OS) Set(key, value string) error {
 	return o.ring.Set(item)
 }
 
-// List lists all known secret keys
 func (o *OS) List() ([]string, error) {
 	return o.ring.Keys()
 }
 
-// GetResolver returns a function to resolve the given key.
 func (o *OS) GetResolver(key string) (telegraf.ResolveFunc, error) {
 	resolver := func() ([]byte, bool, error) {
 		s, err := o.Get(key)
@@ -93,7 +88,6 @@ func (o *OS) GetResolver(key string) (telegraf.ResolveFunc, error) {
 	return resolver, nil
 }
 
-// Register the secret-store on load.
 func init() {
 	secretstores.Add("os", func(id string) telegraf.SecretStore {
 		return &OS{ID: id}

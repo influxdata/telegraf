@@ -1,7 +1,7 @@
 # Dovecot Input Plugin
 
 This plugin uses the Dovecot [v2.1 stats protocol][stats] to gather
-metrics on configured domains of [Dovecot][dovecot] servers. You can use this
+metrics about configured domains of [Dovecot][dovecot] servers. You can use this
 plugin on Dovecot up to and including version v2.3.x.
 
 > [!IMPORTANT]

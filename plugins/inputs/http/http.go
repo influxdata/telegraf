@@ -36,9 +36,8 @@ type HTTP struct {
 	Password config.Secret `toml:"password"`
 
 	// Bearer authentication
-	BearerToken string        `toml:"bearer_token" deprecated:"1.28.0;1.35.0;use 'token_file' instead"`
-	Token       config.Secret `toml:"token"`
-	TokenFile   string        `toml:"token_file"`
+	Token     config.Secret `toml:"token"`
+	TokenFile string        `toml:"token_file"`
 
 	Headers            map[string]*config.Secret `toml:"headers"`
 	SuccessStatusCodes []int                     `toml:"success_status_codes"`
@@ -55,13 +54,6 @@ func (*HTTP) SampleConfig() string {
 }
 
 func (h *HTTP) Init() error {
-	// For backward compatibility
-	if h.TokenFile != "" && h.BearerToken != "" && h.TokenFile != h.BearerToken {
-		return errors.New("conflicting settings for 'bearer_token' and 'token_file'")
-	} else if h.TokenFile == "" && h.BearerToken != "" {
-		h.TokenFile = h.BearerToken
-	}
-
 	// We cannot use multiple sources for tokens
 	if h.TokenFile != "" && !h.Token.Empty() {
 		return errors.New("either use 'token_file' or 'token' not both")

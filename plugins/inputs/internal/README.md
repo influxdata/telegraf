@@ -29,6 +29,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## If true, collect metrics from Go's runtime.metrics. For a full list see:
   ##   https://pkg.go.dev/runtime/metrics
   # collect_gostats = false
+
+  ## Collect statistics per plugin instance and not per plugin type
+  # per_instance = false
 ```
 
 ## Metrics

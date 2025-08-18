@@ -1,12 +1,16 @@
 # Tag Limit Processor Plugin
 
-Use the `tag_limit` processor to ensure that only a certain number of tags are
-preserved for any given metric, and to choose the tags to preserve when the
-number of tags appended by the data source is over the limit.
+This plugin ensures that only a certain number of tags are preserved for any
+given metric, and to choose the tags to preserve when the number of tags
+appended  by the data source is over the limit.
 
 This can be useful when dealing with output systems (e.g. Stackdriver) that
 impose hard limits on the number of tags/labels per metric or where high
 levels of cardinality are computationally and/or financially expensive.
+
+⭐ Telegraf v1.12.0
+🏷️ filtering
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

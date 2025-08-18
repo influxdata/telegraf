@@ -112,6 +112,8 @@ following works:
 - github.com/cloudevents/sdk-go [Apache License 2.0](https://github.com/cloudevents/sdk-go/blob/main/LICENSE)
 - github.com/cncf/xds/go [Apache License 2.0](https://github.com/cncf/xds/blob/main/LICENSE)
 - github.com/compose-spec/compose-go [Apache License 2.0](https://github.com/compose-spec/compose-go/blob/master/LICENSE)
+- github.com/containerd/errdefs [Apache License 2.0](https://github.com/containerd/errdefs/blob/main/LICENSE)
+- github.com/containerd/errdefs/pkg [Apache License 2.0](https://github.com/containerd/errdefs/blob/main/LICENSE)
 - github.com/containerd/log [Apache License 2.0](https://github.com/containerd/log/blob/main/LICENSE)
 - github.com/containerd/platforms [Apache License 2.0](https://github.com/containerd/platforms/blob/main/LICENSE)
 - github.com/coocood/freecache [MIT License](https://github.com/coocood/freecache/blob/master/LICENSE)

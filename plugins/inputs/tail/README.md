@@ -1,23 +1,15 @@
 # Tail Input Plugin
 
-The tail plugin "tails" a logfile and parses each log message.
+This service plugin continuously reads a file and parses new data as it arrives
+similar to the [tail -f command][tail]. The incoming messages are expected to be
+in one of the supported [data formats][data_formats].
 
-By default, the tail plugin acts like the following unix tail command:
+⭐ Telegraf v1.1.2
+🏷️ logging
+💻 all
 
-```shell
-tail -F --lines=0 myfile.log
-```
-
-- `-F` means that it will follow the _name_ of the given file, so
-that it will be compatible with log-rotated files, and that it will retry on
-inaccessible files.
-- `--lines=0` means that it will start at the end of the file (unless
-the `initial_read_offset` option is set).
-
-see <http://man7.org/linux/man-pages/man1/tail.1.html> for more details.
-
-The plugin expects messages in one of the [Telegraf Input Data
-Formats](../../../docs/DATA_FORMATS_INPUT.md).
+[tail]: https://man7.org/linux/man-pages/man1/tail.1.html
+[data_formats]: /docs/DATA_FORMATS_INPUT.md
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 

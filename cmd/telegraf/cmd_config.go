@@ -143,12 +143,12 @@ To migrate the file 'mysettings.conf' use
 
 > telegraf config migrate --config mysettings.conf
 `,
-					Flags: []cli.Flag{
+					Flags: append(configHandlingFlags,
 						&cli.BoolFlag{
 							Name:  "force",
 							Usage: "forces overwriting of an existing migration file",
 						},
-					},
+					),
 					Action: func(cCtx *cli.Context) error {
 						// Setup logging
 						logConfig := &logger.Config{Debug: cCtx.Bool("debug")}
@@ -159,10 +159,16 @@ To migrate the file 'mysettings.conf' use
 						// Check if we have migrations at all. There might be
 						// none if you run a custom build without migrations
 						// enabled.
-						if len(migrations.PluginMigrations) == 0 {
+						migrationsGeneral := len(migrations.GeneralMigrations) + len(migrations.GlobalMigrations)
+						migrationsPlugins := len(migrations.PluginMigrations)
+						migrationsOptions := len(migrations.PluginOptionMigrations)
+						if migrationsGeneral+migrationsPlugins+migrationsOptions == 0 {
 							return errors.New("no migrations available")
 						}
-						log.Printf("%d plugin migration(s) available", len(migrations.PluginMigrations))
+						log.Printf(
+							"%d general, %d plugin and %d plugin-option migrations available",
+							migrationsGeneral, migrationsPlugins, migrationsOptions,
+						)
 
 						// Collect the given configuration files
 						configFiles := cCtx.StringSlice("config")

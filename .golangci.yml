@@ -337,13 +337,9 @@ linters:
             - "**/metric.go"
             - "**/parser.go"
             - "**/plugin.go"
-            - "**/plugins/aggregators/**"
             - "**/plugins/common/**"
             - "**/plugins/outputs/**"
             - "**/plugins/parsers/**"
-            - "**/plugins/processors/**"
-            - "**/plugins/secretstores/**"
-            - "**/plugins/serializers/**"
             - "**/selfstat/**"
             - "**/serializer.go"
             - "**/testutil/**"
@@ -522,9 +518,13 @@ linters:
       - path: (.+)\.go$
         text: don't use an underscore in package name
 
+      # revive:var-naming: Exclude mixed-caps packages in migrations, as these migrations are fixing the issues from before.
+      - path: migrations/.*\.go$
+        text: don't use MixedCaps in package name
+
       # revive:exported
       - path: (.+)\.go$
-        text: exported method .*\.(Init |SampleConfig |Gather |Start |Stop |GetState |SetState |SetParser |SetParserFunc |SetTranslator |Probe )should have comment or be unexported
+        text: exported method .*\.(Init |SampleConfig |Gather |Start |Stop |GetState |SetState |SetParser |SetParserFunc |SetTranslator |Probe |Add |Push |Reset |Serialize |SerializeBatch |Get |Set |List |GetResolver |Apply |SetSerializer )should have comment or be unexported
 
       # EXC0001 errcheck: Almost all programs ignore errors on these functions, and in most cases it's ok
       - path: (.+)\.go$

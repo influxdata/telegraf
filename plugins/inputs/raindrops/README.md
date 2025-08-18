@@ -1,8 +1,12 @@
-# Raindrops Input Plugin
+# Raindrops Middleware Input Plugin
 
-The [raindrops](http://raindrops.bogomips.org/) plugin reads from specified
-raindops [middleware](http://raindrops.bogomips.org/Raindrops/Middleware.html)
-URI and adds stats to InfluxDB.
+This plugin collects statistics for [Raindrops middleware][raindrops] instances.
+
+⭐ Telegraf v0.10.3
+🏷️ server
+💻 all
+
+[raindrops]: http://raindrops.bogomips.org/Raindrops/Middleware.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -25,24 +29,20 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Metrics
 
 - raindrops
-  - calling (integer, count)
-  - writing (integer, count)
+  - tags:
+    - server
+    - port
+  - fields:
+    - calling (integer, count)
+    - writing (integer, count)
 - raindrops_listen
-  - active (integer, bytes)
-  - queued (integer, bytes)
-
-### Tags
-
-- Raindops calling/writing of all the workers:
-  - server
-  - port
-
-- raindrops_listen (ip:port):
-  - ip
-  - port
-
-- raindrops_listen (Unix Socket):
-  - socket
+  - tags:
+    - ip   (IP only)
+    - port (IP only)
+    - socket (unix socket only)
+  - fields:
+    - active (integer, bytes)
+    - queued (integer, bytes)
 
 ## Example Output
 

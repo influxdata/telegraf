@@ -231,6 +231,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			configURLWatchInterval:  cCtx.Duration("config-url-watch-interval"),
 			watchConfig:             cCtx.String("watch-config"),
 			watchInterval:           cCtx.Duration("watch-interval"),
+			watchDebounceInterval:   cCtx.Duration("watch-debounce-interval"),
 			pidFile:                 cCtx.String("pidfile"),
 			plugindDir:              cCtx.String("plugin-directory"),
 			password:                cCtx.String("password"),
@@ -295,6 +296,12 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 					Usage: "monitoring config changes [notify, poll] of --config and --config-directory options. " +
 						"Notify supports linux, *bsd, and macOS. Poll is required for Windows and checks every 250ms.",
 				},
+				&cli.DurationFlag{
+					Name:        "watch-debounce-interval",
+					Usage:       "Time duration to wait after a config change before reloading",
+					DefaultText: "0s",
+					Value:       0,
+				},
 				&cli.StringFlag{
 					Name:  "pidfile",
 					Usage: "file to write our pid to",
@@ -332,7 +339,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				&cli.BoolFlag{
 					Name: "test",
 					Usage: "enable test mode: gather metrics, print them out, and exit. " +
-						"Note: Test mode only runs inputs, not processors, aggregators, or outputs",
+						"Note: Test mode only runs inputs, processors, and aggregators, but not outputs",
 				},
 				//
 				// Duration flags

@@ -353,7 +353,7 @@ func TestFieldKeyConversions(t *testing.T) {
 				//   Trim
 				//   TrimLeft
 				//   TrimRight
-				//   TrimPrefix
+				//   Trimprefix
 				//   TrimSuffix
 				//   Replace
 				Lowercase: []converter{

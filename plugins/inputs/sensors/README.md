@@ -1,10 +1,17 @@
 # LM Sensors Input Plugin
 
-Collect [lm-sensors](https://en.wikipedia.org/wiki/Lm_sensors) metrics -
-requires the lm-sensors package installed.
+This plugin collects metrics from hardware sensors using
+[lm-sensors][lmsensors].
 
-This plugin collects sensor metrics with the `sensors` executable from the
-lm-sensor package.
+> [!NOTE]
+> This plugin requires the lm-sensors package to be installed on the system
+> and `sensors` to be executable from Telegraf.
+
+⭐ Telegraf v0.10.1
+🏷️ hardware, system
+💻 linux
+
+[lmsensors]: https://en.wikipedia.org/wiki/Lm_sensors
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -33,11 +40,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 Fields are created dynamically depending on the sensors. All fields are float.
 
-### Tags
-
-- All measurements have the following tags:
-  - chip
-  - feature
+- sensors:
+  - tags:
+    - chip
+    - feature
+  - fields:
+    - depending on the available sensor information (float)
 
 ## Example Output
 

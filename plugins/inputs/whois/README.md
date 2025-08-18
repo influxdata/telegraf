@@ -1,9 +1,8 @@
 # WHOIS Input Plugin
 
-This plugin queries [WHOIS information][whois] for configured
-domains and provides metrics such as expiration timestamps, registrar
-details and domain status from e.g. [IANA][iana] or [ICANN][icann]
-servers.
+This plugin queries [WHOIS information][whois] for configured domains and
+provides metrics such as expiration timestamps, registrar details and domain
+status from e.g. [IANA][iana] or [ICANN][icann] servers.
 
 ⭐ Telegraf v1.35.0
 🏷️ network, web

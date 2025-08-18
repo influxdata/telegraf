@@ -25,7 +25,10 @@ type RunningAggregator struct {
 }
 
 func NewRunningAggregator(aggregator telegraf.Aggregator, config *AggregatorConfig) *RunningAggregator {
-	tags := map[string]string{"aggregator": config.Name}
+	tags := map[string]string{
+		"_id":        config.ID,
+		"aggregator": config.Name,
+	}
 	if config.Alias != "" {
 		tags["alias"] = config.Alias
 	}

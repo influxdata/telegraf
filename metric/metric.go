@@ -3,7 +3,9 @@ package metric
 import (
 	"fmt"
 	"hash/fnv"
+	"slices"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -275,6 +277,32 @@ func (m *metric) HashID() uint64 {
 		h.Write([]byte(tag.Value))
 		h.Write([]byte("\n"))
 	}
+	return h.Sum64()
+}
+
+func (m *metric) HashIDWithFieldsFiltered(excludedTags, excludedFields []string) uint64 {
+	h := fnv.New64a()
+	h.Write([]byte(m.MetricName))
+	h.Write([]byte("\n"))
+	for _, tag := range m.MetricTags {
+		if slices.Contains(excludedTags, tag.Key) {
+			continue
+		}
+		h.Write([]byte(tag.Key))
+		h.Write([]byte("\n"))
+		h.Write([]byte(tag.Value))
+		h.Write([]byte("\n"))
+	}
+	keys := make([]string, 0, len(m.MetricFields))
+	for _, field := range m.MetricFields {
+		if slices.Contains(excludedFields, field.Key) {
+			continue
+		}
+		keys = append(keys, field.Key)
+	}
+	slices.Sort(keys)
+	h.Write([]byte(strings.Join(keys, "\n")))
+
 	return h.Sum64()
 }
 

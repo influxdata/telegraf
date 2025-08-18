@@ -1,9 +1,13 @@
 # AWS EC2 Metadata Processor Plugin
 
-AWS EC2 Metadata processor plugin appends metadata gathered from [AWS IMDS][]
+This plugin appends metadata gathered from [AWS IMDS][aws_imds]
 to metrics associated with EC2 instances.
 
-[AWS IMDS]: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html
+⭐ Telegraf v1.18.0
+🏷️ annotation, cloud
+💻 all
+
+[aws_imds]: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
