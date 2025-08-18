@@ -338,14 +338,6 @@ func parseUnix(format string, timestamp interface{}, separator []string) (time.T
 	return zero, errors.New("unsupported type")
 }
 
-func offsetTime(t time.Time, loc *time.Location) time.Time {
-	t = t.In(loc)
-	_, offset := t.Zone()
-	t = t.Add(-time.Second * time.Duration(offset))
-
-	return t
-}
-
 func timeFromFraction(f *big.Rat, factor int64) time.Time {
 	// Extract the numerator and denominator and scale to nanoseconds
 	num := f.Num()
