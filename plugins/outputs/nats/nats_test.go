@@ -308,13 +308,12 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 	}
 	defer container.Terminate()
 
-	type test struct {
+	tests := []struct {
 		name             string
 		subject          string
 		sendMetrics      []telegraf.Metric
 		expectedSubjects []string
-	}
-	tests := []test{
+	}{
 		{
 			name:    "subject layout with tags",
 			subject: "my-subject.metrics.{{ .Name }}.{{ .Tag \"tag1\" }}.{{ .Tag \"tag2\" }}",
