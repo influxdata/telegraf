@@ -361,34 +361,44 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
 			defer plugin.Close()
+			// Get the stream to check for subjects and messages
 			stream, err := plugin.jetstreamClient.Stream(t.Context(), plugin.Jetstream.Name)
 			require.NoError(t, err)
-			si, err := stream.Info(t.Context())
+			
+			// Validate the stream properties
+			info, err := stream.Info(t.Context())
 			require.NoError(t, err)
-			require.Equal(t, "my-telegraf-stream", si.Config.Name)
-			require.Equal(t, []string{"my-subject.>"}, si.Config.Subjects)
+			require.Equal(t, "my-telegraf-stream", info.Config.Name)
+			require.Len(t, info.Config.Subjects, 1)
+			require.Equal(t, "my-subject.>", info.Config.Subjects[0])
 
+			// Write the metrics
 			require.NoError(t, plugin.Write(tc.sendMetrics))
 			metricCount := len(tc.sendMetrics)
 
-			foundSubjects := make([]string, 0, metricCount)
+			// Access the JetStream and validate the number of messages
+			// as well as the created subjects
 			js, err := plugin.conn.JetStream()
 			require.NoError(t, err)
+			
+			// Make sure to erase all streams created by the plugin for the
+			// next run to avoid side effects
+			defer js.PurgeStream(plugin.Jetstream.Name)
+			
+			require.Len(t, plugin.Jetstream.Subjects, 1)
 			sub, err := js.PullSubscribe(plugin.Jetstream.Subjects[0], "")
 			require.NoError(t, err)
-
-			defer func() {
-				require.NoError(t, js.PurgeStream(plugin.Jetstream.Name))
-			}()
 
 			msgs, err := sub.Fetch(metricCount, nats.MaxWait(1*time.Second))
 			require.NoError(t, err)
 
 			require.Len(t, msgs, metricCount, "unexpected number of messages")
+
+			actual := make([]string, 0, metricCount)
 			for _, msg := range msgs {
-				foundSubjects = append(foundSubjects, msg.Subject)
+				actual = append(actual, msg.Subject)
 			}
-			require.Equal(t, tc.expectedSubjects, foundSubjects)
+			require.Equal(t, tc.expectedSubjects, actual)
 		})
 	}
 }
