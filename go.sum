@@ -1963,8 +1963,9 @@ github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd h1:TRLaZ9cD/w
 github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
 github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3RllmbCylyMrvgv0=
 github.com/modern-go/reflect2 v1.0.1/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3RllmbCylyMrvgv0=
-github.com/modern-go/reflect2 v1.0.2 h1:xBagoLtFs94CBntxluKeaWgTMpvLxC4ur3nMaC9Gz0M=
 github.com/modern-go/reflect2 v1.0.2/go.mod h1:yWuevngMOJpCy52FWWMvUC8ws7m/LJsjYzDa0/r8luk=
+github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee h1:W5t00kpgFdJifH4BDsTlE89Zl93FEloxaWZfGcifgq8=
+github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee/go.mod h1:yWuevngMOJpCy52FWWMvUC8ws7m/LJsjYzDa0/r8luk=
 github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 h1:RWengNIwukTxcDr9M+97sNutRR1RKhG96O6jWumTTnw=
 github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826/go.mod h1:TaXosZuwdSHYgviHp1DAtfrULt5eUgsSMsZf+YrPgl8=
 github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe/go.mod h1:wL8QJuTMNUDYhXwkmfOly8iTdp5TEcJFWZD2D7SIkUc=
@@ -2519,8 +2520,8 @@ go.opentelemetry.io/auto/sdk v1.1.0/go.mod h1:3wSPjt5PWp2RhlCcmmOial7AvC4DQqZb7a
 go.opentelemetry.io/collector v0.81.0 h1:pF+sB8xNXlg/W0a0QTLz4mUWyool1a9toVj8LmLoFqg=
 go.opentelemetry.io/collector/consumer v0.101.0 h1:9tDxaeHe1+Uovf3fhdx7T4pV5mo/Dc0hniH7O5H3RBA=
 go.opentelemetry.io/collector/consumer v0.101.0/go.mod h1:ud5k64on9m7hHTrhjEeLhWbLkd8+Gp06rDt3p86TKNs=
-go.opentelemetry.io/collector/pdata v1.36.1 h1:aE8TWqjrVbJE8ExayBwJrNaLejYKDjsYs1uG4zSRPWc=
-go.opentelemetry.io/collector/pdata v1.36.1/go.mod h1:pttpb089864qG1k0DMeXLgwwTFLk+o3fAW9I6MF9tzw=
+go.opentelemetry.io/collector/pdata v1.38.0 h1:94LzVKMQM8R7RFJ8Z1+sL51IkI90TDfTc/ipH3mPUro=
+go.opentelemetry.io/collector/pdata v1.38.0/go.mod h1:DSvnwj37IKyQj2hpB97cGITyauR8tvAauJ6/gsxg8mg=
 go.opentelemetry.io/collector/pdata/testdata v0.101.0 h1:JzeUtg5RN1iIFgY8DakGlqBkGxOTJlkaYlLausnEGKY=
 go.opentelemetry.io/collector/pdata/testdata v0.101.0/go.mod h1:ZGobfCus4fWo5RduZ7ENI0+HD9BewgKuO6qU2rBVnUg=
 go.opentelemetry.io/collector/semconv v0.105.0 h1:8p6dZ3JfxFTjbY38d8xlQGB1TQ3nPUvs+D0RERniZ1g=
