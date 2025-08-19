@@ -306,6 +306,7 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 		Cmd:          []string{"--js"},
 		WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
 	}
+	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
 	tests := []struct {
@@ -342,7 +343,6 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 		},
 	}
 
-	require.NoError(t, container.Start(), "failed to start container")
 	server := []string{fmt.Sprintf("nats://%s:%s", container.Address, container.Ports[natsServicePort])}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -377,6 +377,10 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			sub, err := js.PullSubscribe(plugin.Jetstream.Subjects[0], "")
 			require.NoError(t, err)
 
+			defer func() {
+				require.NoError(t, js.PurgeStream(plugin.Jetstream.Name))
+			}()
+
 			msgs, err := sub.Fetch(metricCount, nats.MaxWait(1*time.Second))
 			require.NoError(t, err)
 
@@ -384,7 +388,6 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			for _, msg := range msgs {
 				foundSubjects = append(foundSubjects, msg.Subject)
 			}
-			require.NoError(t, js.PurgeStream(plugin.Jetstream.Name))
 			require.Equal(t, tc.expectedSubjects, foundSubjects)
 		})
 	}
