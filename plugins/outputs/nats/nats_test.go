@@ -383,7 +383,9 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 
 			// Make sure to erase all streams created by the plugin for the
 			// next run to avoid side effects
-			defer js.PurgeStream(plugin.Jetstream.Name)
+			defer func() {
+				require.NoError(t, js.PurgeStream(plugin.Jetstream.Name))
+			}()
 
 			require.Len(t, plugin.Jetstream.Subjects, 1)
 			sub, err := js.PullSubscribe(plugin.Jetstream.Subjects[0], "")
