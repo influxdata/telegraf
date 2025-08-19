@@ -364,7 +364,7 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			// Get the stream to check for subjects and messages
 			stream, err := plugin.jetstreamClient.Stream(t.Context(), plugin.Jetstream.Name)
 			require.NoError(t, err)
-			
+
 			// Validate the stream properties
 			info, err := stream.Info(t.Context())
 			require.NoError(t, err)
@@ -380,11 +380,11 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			// as well as the created subjects
 			js, err := plugin.conn.JetStream()
 			require.NoError(t, err)
-			
+
 			// Make sure to erase all streams created by the plugin for the
 			// next run to avoid side effects
 			defer js.PurgeStream(plugin.Jetstream.Name)
-			
+
 			require.Len(t, plugin.Jetstream.Subjects, 1)
 			sub, err := js.PullSubscribe(plugin.Jetstream.Subjects[0], "")
 			require.NoError(t, err)
