@@ -360,7 +360,7 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
-
+			defer plugin.Close()
 			stream, err := plugin.jetstreamClient.Stream(t.Context(), plugin.Jetstream.Name)
 			require.NoError(t, err)
 			si, err := stream.Info(t.Context())
