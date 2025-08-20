@@ -34,10 +34,11 @@ member in the plugin structure. This member must be a pointer type
 `*selfstat.Collector`. It is strongly recommended to define a `"-"` TOML tag
 in order to avoid collisions with setting the member through user configuration.
 
-The model code then must inject a `selfstat.Collector` instance into the
-plugin's `Statistics` member _before_ calling the `Init` function. The injected
-collector instance must add all relevant model-level information such as an
-optional `alias` setting or `tags` settings.
+The Telegraf model code then must inject a `selfstat.Collector` instance into
+the plugin's `Statistics` member _after_ instantiating the plugin but _before_
+calling the plugin's `Init` function. The injected collector instance must add
+all relevant model-level information such as an optional `alias` setting or
+`tags` settings.
 The plugin must use the collector as proxy to register, unregister, reset and
 access statistics.
 
