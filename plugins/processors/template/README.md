@@ -1,6 +1,6 @@
 # Template Processor Plugin
 
-This plugin applies templates to metrics for generatuing a new tag. The primary
+This plugin applies templates to metrics for generating a new tag. The primary
 use case of this plugin is to create a tag that can be used for dynamic routing
 to multiple output plugins or using an output specific routing option.
 
