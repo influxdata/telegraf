@@ -2,6 +2,7 @@ package nats
 
 import (
 	_ "embed"
+	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
@@ -264,6 +266,8 @@ func TestConfigParsing(t *testing.T) {
 		{name: "Valid JS Async Publish", path: filepath.Join("testcases", "js-async-pub.conf")},
 		{name: "Subjects warning", path: filepath.Join("testcases", "js-subjects.conf")},
 		{name: "Invalid JS", path: filepath.Join("testcases", "js-no-stream.conf"), wantErr: true},
+		{name: "JS with layout", path: filepath.Join("testcases", "js-layout.conf")},
+		{name: "Invalid JS with layout", path: filepath.Join("testcases", "js-layout-nosub.conf"), wantErr: true},
 	}
 
 	// Register the plugin
@@ -286,6 +290,115 @@ func TestConfigParsing(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
+		})
+	}
+}
+
+func TestWriteWithLayoutIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	natsServicePort := "4222"
+
+	container := testutil.Container{
+		Image:        "nats:latest",
+		ExposedPorts: []string{natsServicePort},
+		Cmd:          []string{"--js"},
+		WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	tests := []struct {
+		name             string
+		subject          string
+		sendMetrics      []telegraf.Metric
+		expectedSubjects []string
+	}{
+		{
+			name:    "subject layout with tags",
+			subject: "my-subject.metrics.{{ .Name }}.{{ .Tag \"tag1\" }}.{{ .Tag \"tag2\" }}",
+			sendMetrics: []telegraf.Metric{metric.New(
+				"test1",
+				map[string]string{"tag1": "foo", "tag2": "bar"},
+				map[string]interface{}{"value": 1.0},
+				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+			)},
+			expectedSubjects: []string{
+				"my-subject.metrics.test1.foo.bar",
+			},
+		},
+		{
+			name:    "subject layout with field name",
+			subject: "my-subject.metrics.{{ .Tag \"tag1\" }}.{{ .Tag \"tag2\" }}.{{ .Name }}.{{ .Field \"value\" }}",
+			sendMetrics: []telegraf.Metric{metric.New(
+				"test1",
+				map[string]string{"tag1": "foo", "tag2": "bar"},
+				map[string]interface{}{"value": 1.0},
+				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+			)},
+			expectedSubjects: []string{
+				"my-subject.metrics.foo.bar.test1.1",
+			},
+		},
+	}
+
+	server := []string{fmt.Sprintf("nats://%s:%s", container.Address, container.Ports[natsServicePort])}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			plugin := &NATS{
+				Name: "telegraf",
+				Jetstream: &StreamConfig{
+					Name:     "my-telegraf-stream",
+					Subjects: []string{"my-subject.>"},
+				},
+				serializer: &influx.Serializer{},
+				Log:        testutil.Logger{},
+				Subject:    tc.subject,
+				Servers:    server,
+			}
+
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
+			// Get the stream to check for subjects and messages
+			stream, err := plugin.jetstreamClient.Stream(t.Context(), plugin.Jetstream.Name)
+			require.NoError(t, err)
+
+			// Validate the stream properties
+			info, err := stream.Info(t.Context())
+			require.NoError(t, err)
+			require.Equal(t, "my-telegraf-stream", info.Config.Name)
+			require.Len(t, info.Config.Subjects, 1)
+			require.Equal(t, "my-subject.>", info.Config.Subjects[0])
+
+			// Write the metrics
+			require.NoError(t, plugin.Write(tc.sendMetrics))
+			metricCount := len(tc.sendMetrics)
+
+			// Access the JetStream and validate the number of messages
+			// as well as the created subjects
+			js, err := plugin.conn.JetStream()
+			require.NoError(t, err)
+
+			// Make sure to erase all streams created by the plugin for the
+			// next run to avoid side effects
+			defer js.PurgeStream(plugin.Jetstream.Name) //nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
+
+			require.Len(t, plugin.Jetstream.Subjects, 1)
+			sub, err := js.PullSubscribe(plugin.Jetstream.Subjects[0], "")
+			require.NoError(t, err)
+
+			msgs, err := sub.Fetch(metricCount, nats.MaxWait(1*time.Second))
+			require.NoError(t, err)
+
+			require.Len(t, msgs, metricCount, "unexpected number of messages")
+
+			actual := make([]string, 0, metricCount)
+			for _, msg := range msgs {
+				actual = append(actual, msg.Subject)
+			}
+			require.Equal(t, tc.expectedSubjects, actual)
 		})
 	}
 }
