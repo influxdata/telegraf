@@ -1,21 +1,22 @@
 # Prometheus Text-Based Format Parser Plugin
 
-Parser for [Prometheus Text-Based Format][]. The metrics are parsed directly into Telegraf metrics.
-This parser (v1) is used internally in [prometheus input](/plugins/inputs/prometheus) or can be used in
+Parser for [Prometheus Text-Based Format][]. The metrics are parsed directly
+into Telegraf metrics. This parser (v1) is used internally in
+[prometheus input](/plugins/inputs/prometheus) or can be used in
 [http_listener_v2](/plugins/inputs/http_listener_v2) to simulate Pushgateway.
 
-The parser comes in two versions. The version can be selected using `prometheus_metric_version`.
-By default, version 2 is used.
-In version 1, you will get one telegraf metric with one field per prometheus metric
-for "simple" types like Gauge and Counter but a telegraf metric with
+The parser comes in two versions. The version can be selected using
+`prometheus_metric_version`. By default, version 2 is used.
+In version 1, you will get one Telegraf metric with one field per Prometheus
+metric for "simple" types like Gauge and Counter but a Telegraf metric with
 multiple fields for "complex" types like Summary or Histogram.
 
-Version 2 converts each prometheus metric to a corresponding telegraf metric
+Version 2 converts each Prometheus metric to a corresponding Telegraf metric
 with one field each. The process will filter NaNs in values and skip
 the corresponding metrics. Notably, the name of the generated telegraf metrics
-will be set to prometheus.
+will be set to "prometheus".
 
-For example, consider this prometheus metric:
+For example, consider this Prometheus metric:
 
 ```
 # HELP my_awesome_gauge Some gauge
