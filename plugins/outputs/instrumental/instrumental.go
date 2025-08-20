@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -72,7 +73,7 @@ func (i *Instrumental) Init() error {
 }
 
 func (i *Instrumental) Connect() error {
-	addr := fmt.Sprintf("%s:%d", i.Host, i.Port)
+	addr := net.JoinHostPort(i.Host, strconv.Itoa(i.Port))
 	connection, err := net.DialTimeout("tcp", addr, time.Duration(i.Timeout))
 
 	if err != nil {

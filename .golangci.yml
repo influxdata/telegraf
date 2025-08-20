@@ -518,6 +518,10 @@ linters:
       - path: (.+)\.go$
         text: don't use an underscore in package name
 
+      # revive:var-naming
+      - path: (.*)\.go$
+        text: avoid meaningless package names
+
       # revive:var-naming: Exclude mixed-caps packages in migrations, as these migrations are fixing the issues from before.
       - path: migrations/.*\.go$
         text: don't use MixedCaps in package name
