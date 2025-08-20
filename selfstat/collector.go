@@ -30,7 +30,14 @@ func NewCollector(tags map[string]string) *Collector {
 	return s
 }
 
-func (s *Collector) Register(measurement, field string, tags map[string]string) {
+func (s *Collector) Register(measurement, field string, tags map[string]string) Stat {
+	// Compute the stats-key and exit early if the stat was already registered
+	key := collectorKey(measurement, field, tags)
+	if stat, found := s.statistics[key]; found {
+		return stat
+	}
+
+	// Merge the tags of the statistic with the collector tags
 	capacity := len(s.tags)
 	if tags != nil {
 		capacity += len(tags)
@@ -42,11 +49,21 @@ func (s *Collector) Register(measurement, field string, tags map[string]string) 
 		maps.Copy(t, tags)
 	}
 
-	key := collectorKey(measurement, field, tags)
-	s.statistics[key] = Register(measurement, field, t)
+	// Register the new stat and return it
+	stat := Register(measurement, field, t)
+	s.statistics[key] = stat
+
+	return stat
 }
 
-func (s *Collector) RegisterTiming(measurement, field string, tags map[string]string) {
+func (s *Collector) RegisterTiming(measurement, field string, tags map[string]string) Stat {
+	// Compute the stats-key and exit early if the stat was already registered
+	key := collectorKey(measurement, field, tags)
+	if stat, found := s.statistics[key]; found {
+		return stat
+	}
+
+	// Merge the tags of the statistic with the collector tags
 	capacity := len(s.tags)
 	if tags != nil {
 		capacity += len(tags)
@@ -58,8 +75,11 @@ func (s *Collector) RegisterTiming(measurement, field string, tags map[string]st
 		maps.Copy(t, tags)
 	}
 
-	key := collectorKey(measurement, field, tags)
-	s.statistics[key] = RegisterTiming(measurement, field, t)
+	// Register the new stat and return it
+	stat := RegisterTiming(measurement, field, t)
+	s.statistics[key] = stat
+
+	return stat
 }
 
 func (s *Collector) Unregister(measurement, field string, tags map[string]string) {
