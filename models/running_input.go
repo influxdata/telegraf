@@ -87,7 +87,6 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 type InputConfig struct {
 	Name                 string
 	Source               string
-	Selector             map[string]string
 	Alias                string
 	ID                   string
 	Interval             time.Duration

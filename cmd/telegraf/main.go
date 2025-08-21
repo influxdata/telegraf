@@ -221,6 +221,10 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			pprof.Start(cCtx.String("pprof-addr"))
 		}
 
+		if err := config.SetPluginLabelSelections(cCtx.StringSlice("select")); err != nil {
+			return err
+		}
+
 		filters := processFilterFlags(cCtx)
 
 		g := GlobalFlags{
@@ -242,7 +246,6 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			once:                    cCtx.Bool("once"),
 			quiet:                   cCtx.Bool("quiet"),
 			unprotected:             cCtx.Bool("unprotected"),
-			selectors:               cCtx.StringSlice("select"),
 		}
 
 		w := WindowFlags{
@@ -255,9 +258,6 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		}
 
 		m.Init(pprof.ErrChan(), filters, g, w)
-		if err := config.ParseSelectors(); err != nil {
-			return err
-		}
 		return m.Run()
 	}
 
@@ -347,11 +347,11 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				},
 				&cli.StringSliceFlag{
 					Name: "select",
-					Usage: "Selectors for this running instance of Telegraf. " +
-						"If no selectors are provided, all plugins will " +
-						"be selected and enabled. Use in conjunction with plugin labels configuration field " +
-						"to enable or disable a plugin. Use '--select=\"key=value;key=value\"' syntax",
-					DefaultText: "[]",
+					Usage: "enable only plugins with labels matching the given key-value selection. " +
+						"If no selectors are provided, all plugins are enabled. Multiple key-value pairs " +
+						"in an option will be combined by AND, multiple options are combined by OR. " +
+						"Key and value are separated by an equal sign, multiple pairs are separated by " +
+						"semi-colon, values do accept wildcards.",
 				},
 				//
 				// Duration flags
