@@ -256,26 +256,27 @@ func (a *Elasticsearch) processHeaders() http.Header {
 	for key, value := range a.Headers {
 		switch v := value.(type) {
 		case string:
-			// Single string value - set directly
-			headers.Set(key, v)
-
+			// Single string value - split on comma for backward compatibility
+			a.Log.Warnf("Header %q uses comma-separated values which is deprecated. Use array syntax instead: [\"value1\", \"value2\"]", key)
+			for _, headerValue := range strings.Split(v, ",") {
+				headers.Add(key, strings.TrimSpace(headerValue))
+			}
 		case []string:
 			// Array of strings - add each value
 			for _, headerValue := range v {
 				headers.Add(key, strings.TrimSpace(headerValue))
 			}
-
 		case []interface{}:
 			// TOML might parse arrays as []interface{}
 			for _, headerValue := range v {
 				if strVal, ok := headerValue.(string); ok {
 					headers.Add(key, strings.TrimSpace(strVal))
+				} else {
+					a.Log.Errorf("Header %q contains non-string value in array: %v (type: %T)", key, headerValue, headerValue)
 				}
 			}
-
 		default:
-			// Fallback: convert to string
-			headers.Set(key, fmt.Sprintf("%v", v))
+			a.Log.Errorf("Header %q has invalid type %T, expected string or []string", key, value)
 		}
 	}
 

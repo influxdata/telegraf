@@ -862,7 +862,7 @@ func TestProcessHeaders(t *testing.T) {
 			description:    "Empty headers map should return empty http.Header",
 		},
 		{
-			name: "single strings - basic and with commas",
+			name: "single strings - basic and with commas (deprecated behavior)",
 			headers: map[string]interface{}{
 				"Content-Type":        "application/json",
 				"Authorization":       "Bearer token123",
@@ -877,15 +877,15 @@ func TestProcessHeaders(t *testing.T) {
 			expectedResult: map[string][]string{
 				"Content-Type":        {"application/json"},
 				"Authorization":       {"Bearer token123"},
-				"Vl-Stream-Fields":    {"tag.Source,tag.Channel,tag.EventID"}, // Canonicalized
-				"Vl-Msg-Field":        {"win_eventlog.Message"},               // Canonicalized
-				"Csv-Data":            {"col1,col2,col3,col4"},                // Canonicalized
-				"Content-Disposition": {`attachment; filename="file,with,commas.csv"`},
-				"X-Special-Chars":     {"value with spaces, commas, and \"quotes\""},
+				"Vl-Stream-Fields":    {"tag.Source", "tag.Channel", "tag.EventID"}, // Split on commas
+				"Vl-Msg-Field":        {"win_eventlog.Message"},
+				"Csv-Data":            {"col1", "col2", "col3", "col4"},                      // Split on commas
+				"Content-Disposition": {`attachment; filename="file`, `with`, `commas.csv"`}, // Split on commas
+				"X-Special-Chars":     {"value with spaces", "commas", `and "quotes"`},       // Split on commas
 				"X-Unicode":           {"测试值"},
-				"X-Json-Like":         {`{"key": "value", "array": [1,2,3]}`}, // Canonicalized
+				"X-Json-Like":         {`{"key": "value"`, `"array": [1`, `2`, `3]}`}, // Split on commas
 			},
-			description: "Single string values including commas, special chars, and unicode should be preserved as-is",
+			description: "Single string values are split on commas (deprecated behavior with warnings)",
 		},
 		{
 			name: "string arrays - basic and with whitespace",
@@ -917,10 +917,10 @@ func TestProcessHeaders(t *testing.T) {
 				"X-Mixed-Types":   {"string-value", "another-string"}, // Only strings processed
 				// X-Empty-Interface is not included - empty arrays don't create headers
 			},
-			description: "Interface arrays should convert strings and ignore non-string types, empty arrays ignored",
+			description: "Interface arrays should convert strings and log errors for non-string types, empty arrays ignored",
 		},
 		{
-			name: "default type conversion",
+			name: "invalid types",
 			headers: map[string]interface{}{
 				"X-Numeric": 123,
 				"X-Boolean": true,
@@ -928,38 +928,34 @@ func TestProcessHeaders(t *testing.T) {
 				"X-Nil":     nil,
 			},
 			expectedResult: map[string][]string{
-				"X-Numeric": {"123"},
-				"X-Boolean": {"true"},
-				"X-Float":   {"45.67"},
-				"X-Nil":     {"<nil>"},
+				// All invalid types should be rejected and logged as errors
 			},
-			description: "Non-string, non-array types should be converted to strings using fmt.Sprintf",
+			description: "Invalid types should be rejected with error logging",
 		},
 		{
 			name: "comprehensive mixed scenario",
 			headers: map[string]interface{}{
-				// VictoriaLogs use case - strings with commas
+				// VictoriaLogs use case - strings with commas (deprecated behavior)
 				"VL-Stream-Fields": "tag.Source,tag.Channel,tag.EventID",
 				"VL-Time-Field":    "@timestamp",
 				"Authorization":    "Bearer token123",
 				"Accept":           []string{"application/json", "text/plain"},
 				"X-Debug-Tags":     []string{"performance", "security"},
-				"X-Version":        2,
 				"X-IPs":            []interface{}{"1.1.1.1", "2.2.2.2"},
 				"X-Empty-String":   "",
 				"X-Empty-Array":    make([]string, 0),
 			},
 			expectedResult: map[string][]string{
-				"Vl-Stream-Fields": {"tag.Source,tag.Channel,tag.EventID"}, // Canonicalized
-				"Vl-Time-Field":    {"@timestamp"},                         // Canonicalized
+				"Vl-Stream-Fields": {"tag.Source", "tag.Channel", "tag.EventID"}, // Split on commas (deprecated)
+				"Vl-Time-Field":    {"@timestamp"},
 				"Authorization":    {"Bearer token123"},
 				"Accept":           {"application/json", "text/plain"},
 				"X-Debug-Tags":     {"performance", "security"},
-				"X-Version":        {"2"},
-				"X-Ips":            {"1.1.1.1", "2.2.2.2"}, // Canonicalized
+				"X-Ips":            {"1.1.1.1", "2.2.2.2"},
 				"X-Empty-String":   {""},
+				// X-Empty-Array is not included - empty arrays don't create headers
 			},
-			description: "All header types should work together correctly, empty arrays ignored",
+			description: "Mixed header types work correctly with comma-splitting for strings (deprecated behavior)",
 		},
 	}
 
@@ -976,12 +972,12 @@ func TestProcessHeaders(t *testing.T) {
 			require.Equal(t, tt.expectedResult, resultMap, tt.description)
 
 			// Additional verification for critical cases
-			if strings.Contains(tt.name, "original issue") {
-				vlStreamFields := result.Get("VL-Stream-Fields") // Get handles canonicalization
-				require.Equal(t, "tag.Source,tag.Channel,tag.EventID", vlStreamFields,
-					"Comma-containing values should NOT be split")
-				require.Len(t, result.Values("VL-Stream-Fields"), 1,
-					"Should have exactly one value, not multiple")
+			if strings.Contains(tt.name, "deprecated behavior") {
+				vlStreamFields := result.Values("VL-Stream-Fields") // Get all values
+				require.Len(t, vlStreamFields, 3, "Should have 3 values from comma splitting")
+				require.Contains(t, vlStreamFields, "tag.Source")
+				require.Contains(t, vlStreamFields, "tag.Channel")
+				require.Contains(t, vlStreamFields, "tag.EventID")
 			}
 
 			if strings.Contains(tt.name, "string arrays") {
