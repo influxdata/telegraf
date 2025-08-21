@@ -127,12 +127,12 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 			"merged_writes":    io.MergedWriteCount,
 		}
 		if lastValue, exists := d.lastIOCounterStat[k]; exists {
-			// Check for counter wraparound before calculating deltas
-			rwWrapped := isCounterWraparound(io.ReadCount+io.WriteCount, lastValue.ReadCount+lastValue.WriteCount)
-			timeWrapped := isCounterWraparound(io.ReadTime+io.WriteTime, lastValue.ReadTime+lastValue.WriteTime)
-			ioTimeWrapped := isCounterWraparound(io.IoTime, lastValue.IoTime)
+			// Check for wrap around
+			wrap := io.ReadCount < lastValue.ReadCount || io.WriteCount < lastValue.WriteCount
+			wrap = wrap || io.ReadTime < lastValue.ReadTime || io.WriteTime < lastValue.WriteTime
+			wrap = wrap || io.IoTime < lastValue.IoTime
 
-			if rwWrapped || timeWrapped || ioTimeWrapped {
+			if wrap {
 				// Provide zero values instead of omitting fields to avoid sparse metrics
 				fields["io_await"] = 0.0
 				fields["io_svctm"] = 0.0
@@ -140,8 +140,8 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 
 				d.Log.Debugf("Counter wraparound detected for %s, providing zero values", io.Name)
 			} else {
-				deltaRWCount := float64(io.ReadCount + io.WriteCount - lastValue.ReadCount - lastValue.WriteCount)
-				deltaRWTime := float64(io.ReadTime + io.WriteTime - lastValue.ReadTime - lastValue.WriteTime)
+				deltaRWCount := float64(io.ReadCount-lastValue.ReadCount) + float64(io.WriteCount-lastValue.WriteCount)
+				deltaRWTime := float64(io.ReadTime-lastValue.ReadTime) + float64(io.WriteTime-lastValue.WriteTime)
 				deltaIOTime := float64(io.IoTime - lastValue.IoTime)
 
 				if deltaRWCount > 0 {
@@ -231,21 +231,6 @@ func (d *DiskIO) diskTags(devName string) map[string]string {
 	}
 
 	return tags
-}
-
-func isCounterWraparound(current, previous uint64) bool {
-	// Detect potential counter wraparound
-	// If current < previous and the difference is significant, it's likely wraparound
-	if current >= previous {
-		return false
-	}
-
-	// Allow for small decreases (might be normal counter fluctuations)
-	// but flag large decreases as potential wraparounds
-	diff := previous - current
-	threshold := previous / 2 // If decrease is more than 50% of previous value
-
-	return diff > threshold
 }
 
 func init() {

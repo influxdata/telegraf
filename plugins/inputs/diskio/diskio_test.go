@@ -192,10 +192,58 @@ func TestDiskIOUtil(t *testing.T) {
 }
 
 func TestCounterWraparound(t *testing.T) {
-	// Test normal case
-	require.False(t, isCounterWraparound(200, 100))
-	// Test wraparound case
-	require.True(t, isCounterWraparound(100, 4294967290))
-	// Test small decrease (should not trigger)
-	require.False(t, isCounterWraparound(950, 1000))
+	cts := map[string]disk.IOCountersStat{
+		"sda": {
+			ReadCount:  1000,
+			WriteCount: 2000,
+			ReadTime:   8000,
+			WriteTime:  9000,
+			IoTime:     30000,
+			Name:       "sda",
+		},
+	}
+
+	// Simulate wraparound - counters decrease significantly
+	cts2 := map[string]disk.IOCountersStat{
+		"sda": {
+			ReadCount:  100,  // wrapped around
+			WriteCount: 200,  // wrapped around
+			ReadTime:   1000, // wrapped around
+			WriteTime:  1500, // wrapped around
+			IoTime:     3000, // wrapped around
+			Name:       "sda",
+		},
+	}
+
+	var acc testutil.Accumulator
+	var mps psutil.MockPS
+	mps.On("DiskIO").Return(cts, nil)
+	diskio := &DiskIO{
+		Log:     testutil.Logger{},
+		Devices: []string{"sda"},
+		ps:      &mps,
+	}
+	require.NoError(t, diskio.Init())
+
+	// First gather to establish baseline
+	require.NoError(t, diskio.Gather(&acc))
+
+	// Second gather with wrapped counters
+	mps2 := psutil.MockPS{}
+	mps2.On("DiskIO").Return(cts2, nil)
+	diskio.ps = &mps2
+
+	require.NoError(t, diskio.Gather(&acc))
+
+	// Should have zero values for calculated fields due to wraparound
+	require.True(t, acc.HasFloatField("diskio", "io_util"))
+	require.True(t, acc.HasFloatField("diskio", "io_svctm"))
+	require.True(t, acc.HasFloatField("diskio", "io_await"))
+
+	// Get the latest metric and verify zero values
+	metrics := acc.GetTelegrafMetrics()
+	lastMetric := metrics[len(metrics)-1]
+	require.InDelta(t, float64(0), lastMetric.Fields()["io_util"], 0.001)
+	require.InDelta(t, float64(0), lastMetric.Fields()["io_svctm"], 0.001)
+	require.InDelta(t, float64(0), lastMetric.Fields()["io_await"], 0.001)
 }
