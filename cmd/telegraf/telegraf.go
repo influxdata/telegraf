@@ -52,7 +52,6 @@ type GlobalFlags struct {
 	once                    bool
 	quiet                   bool
 	unprotected             bool
-	selectors               []string
 }
 
 type WindowFlags struct {
@@ -108,8 +107,6 @@ func (t *Telegraf) Init(pprofErr <-chan error, f Filters, g GlobalFlags, w Windo
 
 	// Set environment replacement behavior
 	config.OldEnvVarReplacement = g.oldEnvBehavior
-
-	config.SelectorFlags = g.selectors
 
 	config.PrintPluginConfigSource = g.printPluginConfigSource
 }

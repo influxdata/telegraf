@@ -6,73 +6,79 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParseSelectors(t *testing.T) {
+func TestSetPluginLabelSelections(t *testing.T) {
 	tests := []struct {
-		name      string
-		selectors []string
-		want      [][]string
-		wantErr   bool
+		name           string
+		selections     []string
+		expectedGroups []int // denotes the length of each group
+		wantErr        bool
 	}{
 		{
-			name:      "Valid selectors",
-			selectors: []string{"env=prod;app=api;kind=metrics", "region=dc-23;node=host-1;service=web"},
-			want:      [][]string{{"env=prod", "app=api", "kind=metrics"}, {"region=dc-23", "node=host-1", "service=web"}},
+			name:           "single selectors",
+			selections:     []string{"env=prod", "region=dc-23"},
+			expectedGroups: []int{1, 1}, // two groups, each with one selector
 		},
 		{
-			name:      "Empty selector",
-			selectors: []string{""},
-			wantErr:   true,
+			name:           "multiple selectors",
+			selections:     []string{"env=prod;region=dc-23", "env=dev;app=backend;policy=web"},
+			expectedGroups: []int{2, 3}, // two groups, one with two selectors and one with three
 		},
 		{
-			name:      "empty key",
-			selectors: []string{"=prod", "region=dc-23"},
-			wantErr:   true,
+			name:       "invalid selector syntax",
+			selections: []string{"env=prod;region=dc-23", "invalid-selector"},
+			wantErr:    true,
 		},
 		{
-			name:      "empty value",
-			selectors: []string{"env=", "region=dc-23"},
-			wantErr:   true,
+			name:           "nil selectors",
+			selections:     nil,
+			expectedGroups: []int{0},
 		},
 		{
-			name:      "Invalid format",
-			selectors: []string{"envprod"}, // missing '='
-			wantErr:   true,
+			name:           "empty selector",
+			selections:     []string{""},
+			expectedGroups: []int{0},
 		},
 		{
-			name:      "Duplicate key",
-			selectors: []string{"env=prod;app=api;env=staging"}, // duplicate 'env'
-			wantErr:   true,
+			name:           "multiple empty selectors",
+			selections:     []string{"", "app=web;env=prod*", ""},
+			expectedGroups: []int{2}, // only one valid group with 2 selectors
 		},
 		{
-			name:      "duplicate keys but in different selectors",
-			selectors: []string{"env=prod", "env=staging"}, // different selectors but same key
-			want:      [][]string{{"env=prod"}, {"env=staging"}},
+			name:       "duplicate within group",
+			selections: []string{"env=prod;app=web;env=staging"},
+			wantErr:    true,
+		},
+		{
+			name:       "invalid key",
+			selections: []string{"invalid$key=prod", "region=dc-23"},
+			wantErr:    true,
+		},
+		{
+			name:       "invalid value",
+			selections: []string{"env=prod;app=web;invalid=value&()"},
+			wantErr:    true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			originalSelectorFlags := SelectorFlags
-			defer func() {
-				SelectorFlags = originalSelectorFlags
-				parsedSelectors = nil // Reset parsedSelectors after each test
-			}()
-			SelectorFlags = tt.selectors
-			err := ParseSelectors()
+			var pluginSelector labelSelector
+			err := pluginSelector.setSelections(tt.selections)
 			if tt.wantErr {
 				require.Error(t, err)
 				return
 			}
 			require.NoError(t, err)
-			require.ElementsMatch(t, tt.want, parsedSelectors)
+			for i, group := range pluginSelector.groups {
+				require.Equal(t, len(group), tt.expectedGroups[i])
+			}
 		})
 	}
 }
 
-func TestShouldPluginRun(t *testing.T) {
+func TestMatches(t *testing.T) {
 	tests := []struct {
 		name      string
-		selectors [][]string
+		selectors []string
 		labels    map[string]string
 		want      bool
 	}{
@@ -84,87 +90,87 @@ func TestShouldPluginRun(t *testing.T) {
 		},
 		{
 			name:      "[Backward Compatibility] No labels, should run",
-			selectors: [][]string{{"env=prod"}},
+			selectors: []string{"env=prod"},
 			labels:    nil,
 			want:      true,
 		},
 		{
 			name:      "Simple exact match",
-			selectors: [][]string{{"env=prod"}},
+			selectors: []string{"env=prod"},
 			labels:    map[string]string{"env": "prod"},
 			want:      true,
 		},
 		{
 			name:      "Simple mismatch",
-			selectors: [][]string{{"env=prod"}},
+			selectors: []string{"env=prod"},
 			labels:    map[string]string{"env": "dev"},
 			want:      false,
 		},
 		{
 			name:      "extra labels ignored",
-			selectors: [][]string{{"env=prod"}},
+			selectors: []string{"env=prod"},
 			labels:    map[string]string{"env": "prod", "region": "us-east"},
 			want:      true,
 		},
 		{
 			name:      "AND inside selector (all match)",
-			selectors: [][]string{{"env=prod", "region=dc-23"}},
+			selectors: []string{"env=prod;region=dc-23"},
 			labels:    map[string]string{"env": "prod", "region": "dc-23"},
 			want:      true,
 		},
 		{
 			name:      "AND inside selector (partial match fail)",
-			selectors: [][]string{{"env=prod", "region=dc-23"}},
+			selectors: []string{"env=prod;region=dc-23"},
 			labels:    map[string]string{"env": "prod", "region": "dc-24"},
 			want:      false,
 		},
 		{
 			name:      "Simple Wildcard match",
-			selectors: [][]string{{"region=dc-*"}},
+			selectors: []string{"region=dc-*"},
 			labels:    map[string]string{"region": "dc-23"},
 			want:      true,
 		},
 		{
 			name:      "Simple Wildcard no match",
-			selectors: [][]string{{"region=us-*"}},
+			selectors: []string{"region=us-*"},
 			labels:    map[string]string{"region": "eu-1"},
 			want:      false,
 		},
 		{
 			name:      "Simple Wildcard match with ?",
-			selectors: [][]string{{"region=eu-dc-?-north"}},
+			selectors: []string{"region=eu-dc-?-north"},
 			labels:    map[string]string{"region": "eu-dc-1-north"},
 			want:      true,
 		},
 		{
 			name:      "Simple Wildcard mismatch with ?",
-			selectors: [][]string{{"region=eu-dc-?-north"}},
+			selectors: []string{"region=eu-dc-?-north"},
 			labels:    map[string]string{"region": "eu-dc-fail-north"},
 			want:      false,
 		},
 		{
 			name:      "Multiple selectors (OR logic) - First matches",
-			selectors: [][]string{{"app=web", "env=prod"}, {"region=eu-*"}},
+			selectors: []string{"app=web;env=prod", "region=eu-*"},
 			labels:    map[string]string{"app": "web", "env": "prod"},
 			want:      true,
 		},
 		{
 			name:      "Multiple selectors (OR logic) - Second matches",
-			selectors: [][]string{{"app=web", "env=prod"}, {"region=eu-*"}},
+			selectors: []string{"app=web;env=prod", "region=eu-*"},
 			labels:    map[string]string{"app": "web", "env": "staging", "region": "eu-west"},
 			want:      true,
 		},
 		{
 			name:      "Multiple selectors (OR logic) - None matches",
-			selectors: [][]string{{"app=web", "env=prod"}, {"region=eu-*", "app=api"}},
+			selectors: []string{"app=web;env=prod", "region=eu-*", "app=not-web"},
 			labels:    map[string]string{"app": "api", "env": "staging", "region": "us-east"},
 			want:      false,
 		},
 		{
 			name: "Multiple labels and multiple selectors (AND logic)",
-			selectors: [][]string{
-				{"env=prod-*-dc-*", "region=eu-*456"}, // this one should not match
-				{"simple=match"},                      // this one should match
+			selectors: []string{
+				"env=prod-*-dc-*;region=eu-*456", // this one should not match
+				"simple=match",                   // this one should match
 			}, // OR logic
 			labels: map[string]string{
 				"env":    "prod-23-dc-1something",
@@ -175,7 +181,7 @@ func TestShouldPluginRun(t *testing.T) {
 		},
 		{
 			name:      "Multiple labels and single selector(Selective AND)",
-			selectors: [][]string{{"env=prod"}},
+			selectors: []string{"env=prod"},
 			labels: map[string]string{
 				"env":    "prod",
 				"region": "dc-23",
@@ -188,8 +194,10 @@ func TestShouldPluginRun(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			shouldRun := shouldPluginRun(tt.selectors, tt.labels)
-			require.Equal(t, tt.want, shouldRun)
+			pls := labelSelector{}
+			err := pls.setSelections(tt.selectors)
+			require.NoError(t, err)
+			require.Equal(t, tt.want, pls.matches(tt.labels))
 		})
 	}
 }

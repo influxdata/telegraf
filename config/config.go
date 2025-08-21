@@ -939,9 +939,14 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 }
 
 func (c *Config) addAggregator(name, source string, table *ast.Table) error {
-	if !c.evaluatePluginSelection("aggregators", name, table) {
+	enabled, err := c.matchesLabelSelection("aggregators", name, table)
+	if err != nil {
+		return err
+	}
+	if !enabled {
 		return nil
 	}
+
 	creator, ok := aggregators.Aggregators[name]
 	if !ok {
 		// Handle removed, deprecated plugins
@@ -971,7 +976,15 @@ func (c *Config) addAggregator(name, source string, table *ast.Table) error {
 }
 
 func (c *Config) addSecretStore(name, source string, table *ast.Table) error {
-	if (len(c.SecretStoreFilters) > 0 && !sliceContains(name, c.SecretStoreFilters)) || !c.evaluatePluginSelection("secretstores", name, table) {
+	if len(c.SecretStoreFilters) > 0 && !sliceContains(name, c.SecretStoreFilters) {
+		return nil
+	}
+
+	enabled, err := c.matchesLabelSelection("secretstores", name, table)
+	if err != nil {
+		return err
+	}
+	if !enabled {
 		return nil
 	}
 
@@ -1147,7 +1160,11 @@ func (c *Config) addSerializer(parentname string, table *ast.Table) (*models.Run
 }
 
 func (c *Config) addProcessor(name, source string, table *ast.Table) error {
-	if !c.evaluatePluginSelection("processors", name, table) {
+	enabled, err := c.matchesLabelSelection("processors", name, table)
+	if err != nil {
+		return err
+	}
+	if !enabled {
 		return nil
 	}
 	creator, ok := processors.Processors[name]
@@ -1273,7 +1290,15 @@ func (c *Config) setupProcessor(name string, creator processors.StreamingCreator
 }
 
 func (c *Config) addOutput(name, source string, table *ast.Table) error {
-	if (len(c.OutputFilters) > 0 && !sliceContains(name, c.OutputFilters)) || !c.evaluatePluginSelection("outputs", name, table) {
+	if len(c.OutputFilters) > 0 && !sliceContains(name, c.OutputFilters) {
+		return nil
+	}
+
+	enabled, err := c.matchesLabelSelection("outputs", name, table)
+	if err != nil {
+		return err
+	}
+	if !enabled {
 		return nil
 	}
 
@@ -1356,7 +1381,15 @@ func (c *Config) addOutput(name, source string, table *ast.Table) error {
 }
 
 func (c *Config) addInput(name, source string, table *ast.Table) error {
-	if (len(c.InputFilters) > 0 && !sliceContains(name, c.InputFilters)) || !c.evaluatePluginSelection("inputs", name, table) {
+	if len(c.InputFilters) > 0 && !sliceContains(name, c.InputFilters) {
+		return nil
+	}
+
+	enabled, err := c.matchesLabelSelection("inputs", name, table)
+	if err != nil {
+		return err
+	}
+	if !enabled {
 		return nil
 	}
 
@@ -1902,7 +1935,7 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string) []models.Ta
 	return target
 }
 
-func (c *Config) getFieldMap(tbl *ast.Table, fieldName string) map[string]string {
+func (*Config) getFieldMap(tbl *ast.Table, fieldName string) map[string]string {
 	target := make(map[string]string)
 	if node, ok := tbl.Fields[fieldName]; ok {
 		if subTbl, ok := node.(*ast.Table); ok {
@@ -1919,21 +1952,17 @@ func (c *Config) getFieldMap(tbl *ast.Table, fieldName string) map[string]string
 	return target
 }
 
-func (c *Config) evaluatePluginSelection(pluginType, name string, tbl *ast.Table) bool {
-	if len(SelectorFlags) == 0 {
-		// No selectors provided => Nothing to compare the selector against
-		log.Printf("I! No Selectors provided, hence including the plugin `%s.%s` by default", pluginType, name)
-		return true
+func (c *Config) matchesLabelSelection(pluginType, name string, tbl *ast.Table) (bool, error) {
+	// Get the label definitions for the plugin and check them
+	labels := c.getFieldMap(tbl, "labels")
+	for k, v := range labels {
+		if err := CheckSelectionKeyValuePairs(k, v); err != nil {
+			return false, fmt.Errorf("invalid label in plugin %s.%s: %s=%q: %w", pluginType, name, k, v, err)
+		}
 	}
 
-	pluginLabels := c.getFieldMap(tbl, "labels")
-	if len(pluginLabels) == 0 {
-		// No label provided => "always applicable"
-		log.Printf("I! Plugin `%s.%s` has no label, including it by default", pluginType, name)
-		return true
-	}
-
-	return shouldPluginRun(parsedSelectors, pluginLabels)
+	// Match the selection statement against the labels
+	return pluginLabelSelector.matches(labels), nil
 }
 
 func keys(m map[string]bool) []string {
