@@ -80,91 +80,91 @@ func TestMatches(t *testing.T) {
 		name      string
 		selectors []string
 		labels    map[string]string
-		want      bool
+		expected  bool
 	}{
 		{
 			name:      "[Backward Compatibility] No selectors, should run",
 			selectors: nil,
 			labels:    map[string]string{"env": "prod"},
-			want:      true,
+			expected:  true,
 		},
 		{
 			name:      "[Backward Compatibility] No labels, should run",
 			selectors: []string{"env=prod"},
 			labels:    nil,
-			want:      true,
+			expected:  true,
 		},
 		{
 			name:      "Simple exact match",
 			selectors: []string{"env=prod"},
 			labels:    map[string]string{"env": "prod"},
-			want:      true,
+			expected:  true,
 		},
 		{
 			name:      "Simple mismatch",
 			selectors: []string{"env=prod"},
 			labels:    map[string]string{"env": "dev"},
-			want:      false,
+			expected:  false,
 		},
 		{
 			name:      "extra labels ignored",
 			selectors: []string{"env=prod"},
 			labels:    map[string]string{"env": "prod", "region": "us-east"},
-			want:      true,
+			expected:  true,
 		},
 		{
 			name:      "AND inside selector (all match)",
 			selectors: []string{"env=prod;region=dc-23"},
 			labels:    map[string]string{"env": "prod", "region": "dc-23"},
-			want:      true,
+			expected:  true,
 		},
 		{
 			name:      "AND inside selector (partial match fail)",
 			selectors: []string{"env=prod;region=dc-23"},
 			labels:    map[string]string{"env": "prod", "region": "dc-24"},
-			want:      false,
+			expected:  false,
 		},
 		{
 			name:      "Simple Wildcard match",
 			selectors: []string{"region=dc-*"},
 			labels:    map[string]string{"region": "dc-23"},
-			want:      true,
+			expected:  true,
 		},
 		{
 			name:      "Simple Wildcard no match",
 			selectors: []string{"region=us-*"},
 			labels:    map[string]string{"region": "eu-1"},
-			want:      false,
+			expected:  false,
 		},
 		{
 			name:      "Simple Wildcard match with ?",
 			selectors: []string{"region=eu-dc-?-north"},
 			labels:    map[string]string{"region": "eu-dc-1-north"},
-			want:      true,
+			expected:  true,
 		},
 		{
 			name:      "Simple Wildcard mismatch with ?",
 			selectors: []string{"region=eu-dc-?-north"},
 			labels:    map[string]string{"region": "eu-dc-fail-north"},
-			want:      false,
+			expected:  false,
 		},
 		{
 			name:      "Multiple selectors (OR logic) - First matches",
 			selectors: []string{"app=web;env=prod", "region=eu-*"},
 			labels:    map[string]string{"app": "web", "env": "prod"},
-			want:      true,
+			expected:  true,
 		},
 		{
 			name:      "Multiple selectors (OR logic) - Second matches",
 			selectors: []string{"app=web;env=prod", "region=eu-*"},
 			labels:    map[string]string{"app": "web", "env": "staging", "region": "eu-west"},
-			want:      true,
+			expected:  true,
 		},
 		{
 			name:      "Multiple selectors (OR logic) - None matches",
 			selectors: []string{"app=web;env=prod", "region=eu-*", "app=not-web"},
 			labels:    map[string]string{"app": "api", "env": "staging", "region": "us-east"},
-			want:      false,
+			expected:  false,
 		},
 		{
 			name: "Multiple labels and multiple selectors (AND logic)",
@@ -177,7 +177,7 @@ func TestMatches(t *testing.T) {
 				"region": "eu-central-123",
 				"simple": "match",
 			},
-			want: true,
+			expected: true,
 		},
 		{
 			name:      "Multiple labels and single selector(Selective AND)",
@@ -188,16 +188,15 @@ func TestMatches(t *testing.T) {
 				"extra":  "value",
 				"extra2": "value2",
 			},
-			want: true,
+			expected: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			pls := labelSelector{}
-			err := pls.setSelections(tt.selectors)
-			require.NoError(t, err)
-			require.Equal(t, tt.want, pls.matches(tt.labels))
+			require.NoError(t, pls.setSelections(tt.selectors))
+			require.Equal(t, tt.expected, pls.matches(tt.labels))
 		})
 	}
 }
