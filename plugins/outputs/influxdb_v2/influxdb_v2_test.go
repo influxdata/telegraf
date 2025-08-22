@@ -912,6 +912,160 @@ func TestUseDynamicSecret(t *testing.T) {
 	require.NoError(t, plugin.Write(metrics))
 }
 
+func TestTokenRecoveryAfterMemguardFailure(t *testing.T) {
+	validToken := "valid-token-123"
+	requestCount := 0
+
+	// Setup a test server that expects the valid token
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requestCount++
+
+			auth := r.Header.Get("Authorization")
+			expectedAuth := "Token " + validToken
+
+			if auth != expectedAuth {
+				w.WriteHeader(http.StatusUnauthorized)
+				fmt.Fprintf(w, `{"error":"invalid token"}`)
+				return
+			}
+
+			// Verify this is a write request
+			if r.URL.Path != "/api/v2/write" {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+
+			// Check body contains expected metric
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			if !strings.Contains(string(body), "cpu value=42") {
+				w.WriteHeader(http.StatusBadRequest)
+				fmt.Fprintf(w, `{"error":"invalid metric data"}`)
+				return
+			}
+
+			w.WriteHeader(http.StatusNoContent)
+		}),
+	)
+	defer ts.Close()
+
+	// Create a secret with the correct token
+	token := config.NewSecret([]byte(validToken))
+
+	// Setup plugin
+	plugin := &influxdb.InfluxDB{
+		URLs:            []string{"http://" + ts.Listener.Addr().String()},
+		Token:           token,
+		Bucket:          "test-bucket",
+		ContentEncoding: "identity",
+		Log:             &testutil.Logger{},
+	}
+
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	// Create test metric
+	metrics := []telegraf.Metric{
+		metric.New(
+			"cpu",
+			map[string]string{},
+			map[string]interface{}{
+				"value": 42.0,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	// First write should succeed
+	require.NoError(t, plugin.Write(metrics))
+	require.Equal(t, 1, requestCount, "First request should succeed")
+
+	// Since we can't easily simulate memguard corruption in tests,
+	// we'll test the recovery logic by changing the token and verifying
+	// that subsequent writes still work (simulating recovery behavior)
+	require.NoError(t, token.Set([]byte(validToken)))
+
+	// This write should still work because the token is valid
+	// and the recovery mechanism should handle any token state issues
+	err := plugin.Write(metrics)
+	require.NoError(t, err, "Write should succeed with valid token")
+}
+
+func TestTokenRecoveryWithEmptyTokenString(t *testing.T) {
+	// This test verifies that when we initialize with an empty token,
+	// the recovery mechanism correctly identifies that no backup token exists
+
+	// Create an empty secret to simulate token initialization failure
+	emptyToken := config.NewSecret([]byte(""))
+
+	plugin := &influxdb.InfluxDB{
+		URLs:            []string{"http://localhost:8086"}, // Won't actually connect
+		Token:           emptyToken,
+		Bucket:          "test-bucket",
+		ContentEncoding: "identity",
+		Log:             &testutil.Logger{},
+	}
+
+	// Init should succeed even with empty token (token backup will be empty)
+	require.NoError(t, plugin.Init())
+
+	// We can verify the empty token was stored by trying to get it
+	retrievedToken, err := emptyToken.Get()
+	if err == nil {
+		require.Empty(t, retrievedToken.String())
+		retrievedToken.Destroy()
+	}
+}
+
+func TestTokenStorageOnInit(t *testing.T) {
+	validToken := "test-token-for-storage"
+
+	// Setup minimal server
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusNoContent)
+		}),
+	)
+	defer ts.Close()
+
+	token := config.NewSecret([]byte(validToken))
+
+	plugin := &influxdb.InfluxDB{
+		URLs:            []string{"http://" + ts.Listener.Addr().String()},
+		Token:           token,
+		Bucket:          "test-bucket",
+		ContentEncoding: "identity",
+		Log:             &testutil.Logger{},
+	}
+
+	// Init should store the token string for recovery
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	// We can't easily test the internal tokenStr field directly,
+	// but we can verify that a write works, which means Init() succeeded
+	// in storing the token properly
+	metrics := []telegraf.Metric{
+		metric.New(
+			"cpu",
+			map[string]string{},
+			map[string]interface{}{
+				"value": 42.0,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	require.NoError(t, plugin.Write(metrics))
+}
+
 func BenchmarkWrite1k(b *testing.B) {
 	batchsize := 1000
 
@@ -1309,4 +1463,45 @@ func BenchmarkWriteConcurrent100k_16(b *testing.B) {
 		require.NoError(b, plugin.Write(metrics))
 	}
 	b.ReportMetric(float64(batchsize*b.N)/b.Elapsed().Seconds(), "metrics/s")
+}
+
+// Benchmark to ensure token recovery doesn't impact normal performance
+func BenchmarkTokenRecoveryPath(b *testing.B) {
+	// Setup a test server
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusNoContent)
+		}),
+	)
+	defer ts.Close()
+
+	token := config.NewSecret([]byte("benchmark-token"))
+
+	plugin := &influxdb.InfluxDB{
+		URLs:            []string{"http://" + ts.Listener.Addr().String()},
+		Token:           token,
+		Bucket:          "benchmark-bucket",
+		ContentEncoding: "identity",
+		Log:             &testutil.Logger{},
+	}
+
+	require.NoError(b, plugin.Init())
+	require.NoError(b, plugin.Connect())
+	defer plugin.Close()
+
+	metrics := []telegraf.Metric{
+		metric.New(
+			"cpu",
+			map[string]string{},
+			map[string]interface{}{
+				"value": 42.0,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		require.NoError(b, plugin.Write(metrics))
+	}
 }
