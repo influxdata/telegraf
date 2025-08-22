@@ -295,7 +295,7 @@ mipsel += mipsel.deb linux_mipsel.tar.gz
 .PHONY: mipsel
 mipsel:
 	@ echo $(mipsel)
-loong64 += linux_loong64.tar.gz loong64.deb loong64.rpm
+loong64 += linux_loong64.tar.gz loong64.deb loongarch64.rpm
 .PHONY: loong64
 loong64:
 	@ echo $(loong64)
@@ -441,8 +441,8 @@ mipsel.deb linux_mipsel.tar.gz: export GOARCH := mipsle
 riscv64.deb riscv64.rpm linux_riscv64.tar.gz: export GOOS := linux
 riscv64.deb riscv64.rpm linux_riscv64.tar.gz: export GOARCH := riscv64
 
-loong64.deb loong64.rpm linux_loong64.tar.gz: export GOOS := linux
-loong64.deb loong64.rpm linux_loong64.tar.gz: export GOARCH := loong64
+loong64.deb loongarch64.rpm linux_loong64.tar.gz: export GOOS := linux
+loong64.deb loongarch64.rpm linux_loong64.tar.gz: export GOARCH := loong64
 
 s390x.deb s390x.rpm linux_s390x.tar.gz: export GOOS := linux
 s390x.deb s390x.rpm linux_s390x.tar.gz: export GOARCH := s390x
