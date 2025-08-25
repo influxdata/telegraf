@@ -21,7 +21,7 @@ import (
 // If SchemaRegistry is set, we assume that our input will be in
 // Confluent Wire Format
 // (https://docs.confluent.io/platform/current/schema-registry/serdes-develop/index.html#wire-format) and we will load the schema from the registry.
-//
+
 // If Schema is set, we assume the input will be Avro binary format, without
 // an attached schema or schema fingerprint
 
@@ -50,7 +50,7 @@ func (p *Parser) Init() error {
 	case "":
 		p.Format = "binary"
 	case "binary", "json":
-		// valid
+		// Do nothing as those are valid settings
 	default:
 		return fmt.Errorf("unknown 'avro_format' %q", p.Format)
 	}
@@ -58,7 +58,7 @@ func (p *Parser) Init() error {
 	case "":
 		p.UnionMode = "flatten"
 	case "flatten", "nullable", "any":
-		// valid
+		// Do nothing as those are valid settings
 	default:
 		return fmt.Errorf("unknown avro_union_mode %q", p.Format)
 	}
@@ -70,7 +70,7 @@ func (p *Parser) Init() error {
 	case "":
 		p.TimestampFormat = "unix"
 	case "unix", "unix_ns", "unix_us", "unix_ms":
-		// valid
+		// Valid values
 	default:
 		return fmt.Errorf("invalid timestamp format '%v'", p.TimestampFormat)
 	}
@@ -90,11 +90,12 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	var schema string
 	var codec *goavro.Codec
 	var err error
-	message := buf[:]
+	var message []byte
+	message = buf[:]
 
 	if p.registryObj != nil {
 		// The input must be Confluent Wire Protocol
-		if len(buf) < 5 || buf[0] != 0 {
+		if buf[0] != 0 {
 			return nil, errors.New("first byte is not 0: not Confluent Wire Protocol")
 		}
 		schemaID := int(binary.BigEndian.Uint32(buf[1:5]))
@@ -107,13 +108,14 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		message = buf[5:]
 	} else {
 		// Check for single-object encoding
-		if len(buf) >= 2 {
-			magicBytes := int(binary.BigEndian.Uint16(buf[:2]))
-			expectedMagic := int(binary.BigEndian.Uint16([]byte("c301")))
-			if magicBytes == expectedMagic && len(buf) > 10 {
-				message = buf[10:]
-			}
-		}
+		magicBytes := int(binary.BigEndian.Uint16(buf[:2]))
+		expectedMagic := int(binary.BigEndian.Uint16([]byte("c301")))
+		if magicBytes == expectedMagic {
+			message = buf[10:]
+			// We could in theory validate the fingerprint against
+			// the schema.  Maybe later.
+			// We would get the fingerprint as int(binary.LittleEndian.Uint64(buf[2:10]))
+		} // Otherwise we assume bare Avro binary
 		schema = p.Schema
 		codec, err = goavro.NewCodec(schema)
 		if err != nil {
@@ -159,14 +161,16 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 
 	// Single record at root
-	record, ok := native.(map[string]interface{})
+	// Cast to string-to-interface
+	codecSchema, ok := native.(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("native is of unsupported type %T", native)
 	}
-	m, err := p.createMetric(record, schema)
+	m, err := p.createMetric(codecSchema, schema)
 	if err != nil {
 		return nil, err
 	}
+	
 	return []telegraf.Metric{m}, nil
 }
 
@@ -175,6 +179,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	if err != nil {
 		return nil, err
 	}
+	
 	if len(metrics) != 1 {
 		return nil, errors.New("line contains multiple metrics")
 	}
@@ -186,16 +191,20 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 }
 
 func (p *Parser) flattenField(fldName string, fldVal map[string]interface{}) map[string]interface{} {
-	// Helper for "nullable" and "any" union modes.
+	// Helper function for the "nullable" and "any" p.UnionModes
+	// fldVal is a one-item map of string-to-something
 	ret := make(map[string]interface{})
 	if p.UnionMode == "nullable" {
-		if _, ok := fldVal["null"]; ok {
-			return ret
+		_, ok := fldVal["null"]
+		if ok {
+			return ret // Return the empty map
 		}
 	}
+	// Otherwise, we just return the value in the fieldname.
+	// See README.md for an important warning about "any" and "nullable".
 	for _, v := range fldVal {
 		ret[fldName] = v
-		break
+		break // Not really needed, since it's a one-item map
 	}
 	return ret
 }
@@ -206,10 +215,14 @@ func (p *Parser) flattenItem(fld string, fldVal interface{}) (map[string]interfa
 		Middle: p.FieldSeparator,
 		After:  "",
 	}
-	candidate := map[string]interface{}{fld: fldVal}
+	candidate := make(map[string]interface{})
+	candidate[fld] = fldVal
 
+	var flat map[string]interface{}
+	var err error
+	// Exactly how we flatten is decided by p.UnionMode
 	if p.UnionMode == "flatten" {
-		flat, err := flatten.Flatten(candidate, "", sep)
+		flat, err = flatten.Flatten(candidate, "", sep)
 		if err != nil {
 			return nil, fmt.Errorf("flatten candidate %q failed: %w", candidate, err)
 		}
