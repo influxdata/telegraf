@@ -729,11 +729,14 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 	outStr := string(out)
 
 	// Ignore all exit statuses except if it is a command line parse error
-	exitStatus, er := exitStatus(e)
+	cmdExitStatus, er := exitStatus(e)
 	if er != nil {
 		acc.AddError(fmt.Errorf("failed to run command '%s %s': %w - %s", m.PathSmartctl, strings.Join(args, " "), e, outStr))
 		return
 	}
+
+	// Initialize device exit status to 0 (assume active)
+	deviceExitStatus := 0
 
 	deviceTags := make(map[string]string)
 	if m.TagWithDeviceType {
@@ -746,8 +749,8 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 		deviceNode := strings.Split(device, " ")[0]
 		deviceTags["device"] = path.Base(deviceNode)
 	}
+
 	deviceFields := make(map[string]interface{})
-	deviceFields["exit_status"] = exitStatus
 
 	scanner := bufio.NewScanner(strings.NewReader(outStr))
 
@@ -791,8 +794,13 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 		if power := powermodeInfo.FindStringSubmatch(line); len(power) > 1 {
 			deviceTags["power"] = power[1]
 		} else {
+			// Check for explicit standby message
 			if power := standbyInfo.FindStringSubmatch(line); len(power) > 1 {
 				deviceTags["power"] = power[1]
+				// If we detect "STANDBY" in the output, use the command's exit status
+				if power[1] == "STANDBY" {
+					deviceExitStatus = cmdExitStatus
+				}
 			}
 		}
 
@@ -817,7 +825,7 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 				tags["name"] = attr[2]
 				tags["flags"] = attr[3]
 
-				fields["exit_status"] = exitStatus
+				fields["exit_status"] = deviceExitStatus
 				if i, err := strconv.ParseInt(attr[4], 10, 64); err == nil {
 					fields["value"] = i
 				}
@@ -879,6 +887,9 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 			}
 		}
 	}
+
+	// Set the device exit status (0 for active, cmdExitStatus for standby)
+	deviceFields["exit_status"] = deviceExitStatus
 	acc.AddFields("smart_device", deviceFields, deviceTags)
 }
 
