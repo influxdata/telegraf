@@ -1,0 +1,14 @@
+[
+    {
+        "timestamp": 1682509200,
+        "value": 25.5,
+        "sensor_id": "sensor-001",
+        "location": "room-101"
+    },
+    {
+        "timestamp": 1682509201,
+        "value": 26.7,
+        "sensor_id": "sensor-002",
+        "location": "room-102"
+    }
+]

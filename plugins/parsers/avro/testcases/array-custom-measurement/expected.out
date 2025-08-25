@@ -1,0 +1,2 @@
+temperature,array_index=0 value=25.5,timestamp=1682509200i 1682509200000000000
+humidity,array_index=1 value=26.7,timestamp=1682509201i 1682509201000000000
