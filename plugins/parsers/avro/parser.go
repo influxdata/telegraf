@@ -75,11 +75,6 @@ func (p *Parser) Init() error {
 		return fmt.Errorf("invalid timestamp format '%v'", p.TimestampFormat)
 	}
 
-	// Default behavior: include array index as a tag.
-	if !p.IncludeIndexTag {
-		p.IncludeIndexTag = true
-	}
-
 	if p.SchemaRegistry != "" {
 		registry, err := newSchemaRegistry(p.SchemaRegistry, p.CaCertPath)
 		if err != nil {
