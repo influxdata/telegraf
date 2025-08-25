@@ -19,12 +19,7 @@ const sampleConfig = `
   interval = "10s"
 `
 type TrapPlugin struct {
-	lastTrap            AhTrapMsg
-	trapHandled         bool
-	lastSpecialTrapBuf  [256]byte
-	specialTrapType     uint32
-	specialTrapHandled  bool
-	mu                  sync.Mutex
+	acc		   telegraf.Accumulator
 	wg                  sync.WaitGroup
 }
 
@@ -59,6 +54,7 @@ func (t *TrapPlugin) Start(acc telegraf.Accumulator) error {
 
 	_ = os.Chmod(EVT_SOCK, 0666)
 
+	t.acc = acc
 	t.wg.Add(1)
 	go func() {
 		defer t.wg.Done()
@@ -399,7 +395,7 @@ func (t *TrapPlugin) Gather_Ah_send_trap(trapType uint32, trapBuf [256]byte, acc
 			"mgmtVlan_faMvlanTrapType":           mvlan.MgmtVlan,
 			"nativeVlan_faMvlanTrapType":         mvlan.NativeVlan,
 			"nativeTagged_faMvlanTrapType":       mvlan.NativeTagged,
-			"systemId_faMvlanTrapType":           mvlan.SystemID[:],
+			"systemId_faMvlanTrapType":           fmt.Sprintf("%X", mvlan.SystemID),
 		}, nil)
 
 	case AH_MSG_TRAP_DFS_BANG:
@@ -453,10 +449,9 @@ func (t *TrapPlugin) trapListener(conn net.PacketConn) {
 			}
 			copy((*[unsafe.Sizeof(AhTrapMsg{})]byte)(unsafe.Pointer(&trap))[:], payload)
 
-			t.mu.Lock()
-			t.lastTrap = trap
-			t.trapHandled = false
-			t.mu.Unlock()
+			if err := t.Gather_Ah_Logen(trap, t.acc); err != nil {
+				log.Printf("[ah_trap] Error gathering trap: %v", err)
+			}
 
 		case AH_FA_MVLAN_TRAP_TYPE:
 			var mvlan AhFaMvlanChangeTrap
@@ -465,13 +460,13 @@ func (t *TrapPlugin) trapListener(conn net.PacketConn) {
 				log.Printf("[ah_trap] Invalid FA_MVLAN size: got %d, expected %d", len(payload), expected)
 				continue
 			}
-			copy((*[unsafe.Sizeof(AhFaMvlanChangeTrap{})]byte)(unsafe.Pointer(&mvlan))[:], payload)
 
-			t.mu.Lock()
-			copy(t.lastSpecialTrapBuf[:expected], payload)
-			t.specialTrapType = trapType
-			t.specialTrapHandled = false
-			t.mu.Unlock()
+			var trapBuf [256]byte
+			copy(trapBuf[:expected], payload)
+			if err := t.Gather_Ah_send_trap(trapType, trapBuf, t.acc); err != nil {
+				log.Printf("[ah_trap] Error gathering mvlan trap: %v", err)
+			}
+
 		case AH_MSG_TRAP_DFS_BANG:
 			var dfs AhTgrafDfsTrap
 			expected := int(unsafe.Sizeof(dfs))
@@ -479,53 +474,25 @@ func (t *TrapPlugin) trapListener(conn net.PacketConn) {
 				log.Printf("[ah_trap] Invalid DFS BANG size: got %d, expected %d", len(payload), expected)
 				continue
 			}
-			copy((*[unsafe.Sizeof(dfs)]byte)(unsafe.Pointer(&dfs))[:], payload)
-
-			t.mu.Lock()
-			copy(t.lastSpecialTrapBuf[:expected], payload)
-			t.specialTrapType = trapType
-			t.specialTrapHandled = false
-			t.mu.Unlock()
+			var trapBuf [256]byte
+			copy(trapBuf[:expected], payload)
+			if err := t.Gather_Ah_send_trap(trapType, trapBuf, t.acc); err != nil {
+				log.Printf("[ah_trap] Error gathering DFS trap: %v", err)
+			}
 
 		}
 	}
 }
 
 func (t *TrapPlugin) Gather(acc telegraf.Accumulator) error {
+	// No-op: event-driven mode
 	defer func() {
-		if r := recover(); r != nil {
-			stack := debug.Stack()
-			log.Printf("telegraf crash recovered: %s\n", stack)
-			panic(fmt.Sprintf("Trap plugin crashed: %s", stack))
-		}
-	}()
-
-	t.mu.Lock()
-	trap := t.lastTrap
-	handled := t.trapHandled
-	specialHandled := t.specialTrapHandled
-
-	t.mu.Unlock()
-
-       if !handled {
-		if err := t.Gather_Ah_Logen(trap, acc); err != nil {
-			log.Printf("[ah_trap] Error gathering generic trap data: %v", err)
-			return err
-		}
-		t.mu.Lock()
-		t.trapHandled = true
-		t.mu.Unlock()
-	}
-
-	if !specialHandled {
-		if err := t.Gather_Ah_send_trap(t.specialTrapType, t.lastSpecialTrapBuf, acc); err != nil {
-			return err
-		}
-		t.mu.Lock()
-		t.specialTrapHandled = true
-		t.mu.Unlock()
-	}
-	return nil
+               if r := recover(); r != nil {
+                       stack := debug.Stack()
+                       log.Printf("[ah_trap] telegraf crash recovered: %s\n", stack)
+               }
+       }()
+       return nil
 }
 
 func init() {

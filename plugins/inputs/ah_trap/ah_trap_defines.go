@@ -46,8 +46,8 @@ const (
 
 type AhFaMvlanChangeTrap struct {
 	TrapType      uint8
-	NativeTagged  uint8
 	SystemID      [10]uint8
+	NativeTagged uint8
 	MgmtVlan      uint16
 	NativeVlan    uint16
 }
