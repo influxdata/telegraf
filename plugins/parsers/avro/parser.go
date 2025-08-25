@@ -76,10 +76,6 @@ func (p *Parser) Init() error {
 	}
 
 	// Default behavior: include array index as a tag.
-	// Tests expect an array_index tag by default for array-at-root parsing.
-	// Note: because Go bool zero value is false, we set true here to provide
-	// the expected default. If you need an explicit disable by config, a
-	// pointer-bool would be required; keeping minimal change for PR acceptance.
 	if !p.IncludeIndexTag {
 		p.IncludeIndexTag = true
 	}
