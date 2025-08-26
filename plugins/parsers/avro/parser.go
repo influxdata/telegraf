@@ -183,6 +183,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	if len(metrics) != 1 {
 		return nil, errors.New("line contains multiple metrics")
 	}
+
 	return metrics[0], nil
 }
 
@@ -226,19 +227,20 @@ func (p *Parser) flattenItem(fld string, fldVal interface{}) (map[string]interfa
 		if err != nil {
 			return nil, fmt.Errorf("flatten candidate %q failed: %w", candidate, err)
 		}
-		return flat, nil
-	}
-
-	// "nullable" or "any"
-	if typedVal, ok := candidate[fld].(map[string]interface{}); ok {
-		return p.flattenField(fld, typedVal), nil
-	}
-	// the "key" is not a string, so ...
-	// most likely an array?  Do the default thing
-	// and flatten the candidate.
-	flat, err = flatten.Flatten(candidate, "", sep)
-	if err != nil {
-		return nil, fmt.Errorf("flatten candidate %q failed: %w", candidate, err)
+	} else {
+		// "nullable" or "any"
+		typedVal, ok := candidate[fld].(map[string]interface{})
+		if !ok {
+			// the "key" is not a string, so ...
+			// most likely an array?  Do the default thing
+			// and flatten the candidate.
+			flat, err = flatten.Flatten(candidate, "", sep)
+			if err != nil {
+				return nil, fmt.Errorf("flatten candidate %q failed: %w", candidate, err)
+			}
+		} else {
+			flat = p.flattenField(fld, typedVal)
+		}
 	}
 	return flat, nil
 }
