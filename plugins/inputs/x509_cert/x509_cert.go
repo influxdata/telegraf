@@ -137,14 +137,13 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 			tags := c.getTags(cert, location.String())
 
 			// Extract the verification result
-			err := results[i]
-			if err == nil {
+			if err := results[i]; err == nil {
 				tags["verification"] = "valid"
 				fields["verification_code"] = 0
 			} else {
 				tags["verification"] = "invalid"
 				fields["verification_code"] = 1
-				fields["verification_error"] = err.Error()
+				fields["verification_error"] = strings.Trim(strings.TrimSpace(err.Error()), ":")
 			}
 			// OCSPResponse only for leaf cert
 			if i == 0 && ocspresp != nil && len(*ocspresp) > 0 {
@@ -229,18 +228,17 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 			}
 
 			// Do the processing
-			err := c.processCertificate(cert, opts)
 			fields := getFields(cert, now)
-			tags := getTags(cert, store.source)
+			tags := c.getTags(cert, store.source)
 
 			// Extract the verification result
-			if err == nil {
+			if err := c.processCertificate(cert, opts); err == nil {
 				tags["verification"] = "valid"
 				fields["verification_code"] = 0
 			} else {
 				tags["verification"] = "invalid"
 				fields["verification_code"] = 1
-				fields["verification_error"] = err.Error()
+				fields["verification_error"] = strings.Trim(strings.TrimSpace(err.Error()), ":")
 			}
 			tags["ocsp_stapled"] = "no"
 
