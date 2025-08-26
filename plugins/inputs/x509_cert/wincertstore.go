@@ -3,6 +3,7 @@
 package x509_cert
 
 import (
+	"bytes"
 	"crypto/x509"
 	"errors"
 	"fmt"
@@ -78,21 +79,21 @@ func (s *wincertstore) read() ([]*x509.Certificate, error) {
 				return certificates, nil
 			}
 			if err := windows.CertFreeCertificateContext(certctx); err != nil {
-				s.log.Errorf("Freeing context failed: %v", err)
+				s.log.Errorf("Freeing context for store %q failed: %v", s.source, err)
 			}
-			return nil, fmt.Errorf("enumerating certificates in store failed: %w", err)
+			return nil, fmt.Errorf("enumerating certificates failed: %w", err)
 		}
 
 		// Convert the returned byte pointer into an usable byte-slice and parse
 		// the certificate. We need to copy the byte-slice to avoid
 		// modifications during processing...
 		buf := unsafe.Slice(certctx.EncodedCert, certctx.Length) //nolint:gosec // G103: Valid use of unsafe call to extract cert data
-		cert, err := x509.ParseCertificate(append([]byte{}, buf...))
+		cert, err := x509.ParseCertificate(bytes.Clone(buf))
 		if err != nil {
 			name := make([]uint16, 256)
 			n := windows.CertGetNameString(certctx, windows.CERT_NAME_SIMPLE_DISPLAY_TYPE, 0, nil, &name[0], uint32(len(name)))
 			subject := windows.UTF16ToString(name[:n])
-			s.log.Errorf("parsing certificate for %q failed: %v", subject, err)
+			s.log.Errorf("parsing certificate for %q in store %q failed: %v", subject, s.source, err)
 			continue
 		}
 		certificates = append(certificates, cert)
