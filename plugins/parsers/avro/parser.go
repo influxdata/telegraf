@@ -229,11 +229,14 @@ func (p *Parser) flattenItem(fld string, fldVal interface{}) (map[string]interfa
 		return flat, nil
 	}
 
-	// nullable or any
+	// "nullable" or "any"
 	if typedVal, ok := candidate[fld].(map[string]interface{}); ok {
 		return p.flattenField(fld, typedVal), nil
 	}
-	flat, err := flatten.Flatten(candidate, "", sep)
+	// the "key" is not a string, so ...
+	// most likely an array?  Do the default thing
+	// and flatten the candidate.
+	flat, err = flatten.Flatten(candidate, "", sep)
 	if err != nil {
 		return nil, fmt.Errorf("flatten candidate %q failed: %w", candidate, err)
 	}
