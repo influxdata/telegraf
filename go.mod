@@ -222,7 +222,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.36.0
 	go.opentelemetry.io/proto/otlp v1.3.1
 	go.starlark.net v0.0.0-20250717191651-336a4b3a6d1d
-	go.step.sm/crypto v0.69.0
+	go.step.sm/crypto v0.70.0
 	golang.org/x/crypto v0.41.0
 	golang.org/x/exp v0.0.0-20250718183923-645b1fa84792
 	golang.org/x/mod v0.27.0
