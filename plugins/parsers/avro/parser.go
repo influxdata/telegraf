@@ -74,7 +74,6 @@ func (p *Parser) Init() error {
 	default:
 		return fmt.Errorf("invalid timestamp format '%v'", p.TimestampFormat)
 	}
-
 	if p.SchemaRegistry != "" {
 		registry, err := newSchemaRegistry(p.SchemaRegistry, p.CaCertPath)
 		if err != nil {
@@ -245,56 +244,47 @@ func (p *Parser) flattenItem(fld string, fldVal interface{}) (map[string]interfa
 	return flat, nil
 }
 
-func containsString(slice []string, s string) bool {
-	for _, v := range slice {
-		if v == s {
-			return true
-		}
-	}
-	return false
-}
-
 func (p *Parser) createMetric(data map[string]interface{}, schema string) (telegraf.Metric, error) {
-	// fields can be any type; tags must be strings
+	// Tags differ from fields, in that tags are inherently strings.
+	// fields can be of any type.
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
 
-	// default tags
+	// Set default tag values
 	for k, v := range p.DefaultTags {
 		tags[k] = v
 	}
-
-	// Collect tags from configured avro_tags and remove them from fields
+	// Avro doesn't have a Tag/Field distinction, so we have to tell
+	// Telegraf which items are our tags.
 	for _, tag := range p.Tags {
-		flat, err := p.flattenItem(tag, data[tag])
-		if err != nil {
-			return nil, fmt.Errorf("flatten tag %q failed: %w", tag, err)
+		flat, flattenErr := p.flattenItem(tag, data[tag])
+		if flattenErr != nil {
+			return nil, fmt.Errorf("flatten tag %q failed: %w", tag, flattenErr)
 		}
 		for k, v := range flat {
-			sTag, err := internal.ToString(v)
-			if err != nil {
-				p.Log.Warnf("Could not convert %v to string for tag %q: %v", data[tag], tag, err)
+			sTag, stringErr := internal.ToString(v)
+			if stringErr != nil {
+				p.Log.Warnf("Could not convert %v to string for tag %q: %v", data[tag], tag, stringErr)
 				continue
 			}
 			tags[k] = sTag
 		}
 	}
-
-	// Determine fields list.
 	var fieldList []string
 	if len(p.Fields) != 0 {
+		// If you have specified your fields in the config, you
+		// get what you asked for.
 		fieldList = p.Fields
 	} else {
 		for k := range data {
-			// exclude plain tag field names
-			if containsString(p.Tags, k) {
-				continue
+			// Otherwise, that which is not a tag is a field
+			if _, ok := tags[k]; !ok {
+				fieldList = append(fieldList, k)
 			}
-			fieldList = append(fieldList, k)
 		}
 	}
-
-	// Flatten and collect fields
+	// We need to flatten out our fields.  The default (the separator
+	// string is empty) is equivalent to what streamreactor does.
 	for _, fld := range fieldList {
 		flat, err := p.flattenItem(fld, data[fld])
 		if err != nil {
@@ -304,84 +294,76 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 			fields[k] = v
 		}
 	}
-
-	// Must have at least one field
+	var schemaObj map[string]interface{}
+	if err := json.Unmarshal([]byte(schema), &schemaObj); err != nil {
+		return nil, fmt.Errorf("unmarshalling schema failed: %w", err)
+	}
 	if len(fields) == 0 {
+		// A telegraf metric needs at least one field.
 		return nil, errors.New("number of fields is 0; unable to create metric")
 	}
 
-	// Measurement name resolution
+	// If measurement field name is specified in the configuration
+	// take value from that field and do not include it into fields or tags
 	name := ""
-	// If MeasurementField specified, use it (and remove its flattened entries from fields/tags)
 	if p.MeasurementField != "" {
-		if val, ok := data[p.MeasurementField]; ok {
-			if sMetric, err := internal.ToString(val); err == nil {
-				name = sMetric
-			} else {
-				p.Log.Warnf("Could not convert %v to string for metric name %q: %s", data[p.MeasurementField], p.MeasurementField, err.Error())
-			}
-			// remove flattened keys originating from measurement field
-			for fk := range fields {
-				if fk == p.MeasurementField || strings.HasPrefix(fk, p.MeasurementField+p.FieldSeparator) {
-					delete(fields, fk)
-				}
-			}
-			for tk := range tags {
-				if tk == p.MeasurementField || strings.HasPrefix(tk, p.MeasurementField+p.FieldSeparator) {
-					delete(tags, tk)
-				}
-			}
+		sField := p.MeasurementField
+		sMetric, err := internal.ToString(data[sField])
+		if err != nil {
+			p.Log.Warnf("Could not convert %v to string for metric name %q: %s", data[sField], sField, err.Error())
+		} else {
+			name = sMetric
 		}
 	}
+	// Now some fancy stuff to extract the measurement.
+	// If it's set in the configuration, use that.
 	if name == "" {
+		// If field name is not specified or field does not exist and
+		// metric name set in the configuration, use that.
 		name = p.Measurement
 	}
+	separator := "."
 	if name == "" {
-		// try schema namespace/name
-		var schemaObj map[string]interface{}
-		if err := json.Unmarshal([]byte(schema), &schemaObj); err == nil {
-			nsStr, _ := schemaObj["namespace"].(string)
-			nStr, _ := schemaObj["name"].(string)
-			sep := "."
-			if nsStr == "" {
-				sep = ""
-			}
-			name = nsStr + sep + nStr
+		// Try using the namespace defined in the schema. In case there
+		// is none, just use the schema's name definition.
+		nsStr, ok := schemaObj["namespace"].(string)
+		// namespace is optional
+		if !ok {
+			separator = ""
 		}
+
+		nStr, ok := schemaObj["name"].(string)
+		if !ok {
+			return nil, fmt.Errorf("could not determine name from schema %s", schema)
+		}
+		name = nsStr + separator + nStr
 	}
+	// Still don't have a name?  Guess we should use the metric name if
+	// it's set.
 	if name == "" {
 		name = p.MetricName
 	}
+	// Nothing?  Give up.
 	if name == "" {
 		return nil, errors.New("could not determine measurement name")
 	}
-
-	// Timestamp handling:
 	var timestamp time.Time
 	if p.Timestamp != "" {
-		// If timestamp field is present, parse and use it
-		if rawVal, ok := data[p.Timestamp]; ok {
-			rawTime := fmt.Sprintf("%v", rawVal)
-			var err error
-			timestamp, err = internal.ParseTimestamp(p.TimestampFormat, rawTime, nil)
-			if err != nil {
-				return nil, fmt.Errorf("could not parse '%s' to '%s': %w", rawTime, p.TimestampFormat, err)
-			}
-			// Retain timestamp field as a normal field (no deletion here)
-		} else {
-			// timestamp config set but not present in data -> fallback to now
-			timestamp = time.Now()
+		rawTime := fmt.Sprintf("%v", data[p.Timestamp])
+		var err error
+		timestamp, err = internal.ParseTimestamp(p.TimestampFormat, rawTime, nil)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse '%s' to '%s'", rawTime, p.TimestampFormat)
 		}
 	} else {
-		// No timestamp configured -> use now
 		timestamp = time.Now()
 	}
-
 	return metric.New(name, tags, fields, timestamp), nil
 }
 
 func init() {
-	parsers.Add("avro", func(defaultMetricName string) telegraf.Parser {
-		return &Parser{MetricName: defaultMetricName}
-	})
+	parsers.Add("avro",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{MetricName: defaultMetricName}
+		})
 }
