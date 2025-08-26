@@ -109,7 +109,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gopacket/gopacket v1.4.0
 	github.com/gopcua/opcua v0.8.0
-	github.com/gophercloud/gophercloud/v2 v2.7.0
+	github.com/gophercloud/gophercloud/v2 v2.8.0
 	github.com/gorcon/rcon v1.4.0
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
