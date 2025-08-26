@@ -170,7 +170,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return []telegraf.Metric{m}, nil
 }
 
@@ -179,7 +179,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if len(metrics) != 1 {
 		return nil, errors.New("line contains multiple metrics")
 	}
