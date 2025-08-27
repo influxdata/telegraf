@@ -143,7 +143,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			return nil, err
 		}
 		return []telegraf.Metric{m}, nil
-	
+
 	case []interface{}:
 		// array
 		metrics := make([]telegraf.Metric, 0, len(v)) // preallocate
