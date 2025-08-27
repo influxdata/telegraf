@@ -134,10 +134,20 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		return nil, err
 	}
 
-	// Handle array at root level -> produce multiple metrics
-	if arrayData, ok := native.([]interface{}); ok {
-		var metrics []telegraf.Metric
-		for idx, item := range arrayData {
+	// Handle single records and arrays at root level
+	switch v := native.(type) {
+	case map[string]interface{}:
+		// Single record
+		m, err := p.createMetric(v, schema)
+		if err != nil {
+			return nil, err
+		}
+		return []telegraf.Metric{m}, nil
+	
+	case []interface{}:
+		// array
+		metrics := make([]telegraf.Metric, 0, len(v)) // preallocate
+		for idx, item := range v {
 			record, ok := item.(map[string]interface{})
 			if !ok {
 				// skip non-record elements
@@ -149,27 +159,22 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 				continue
 			}
 			if p.IncludeIndexTag {
-				tags := m.Tags()
-				tags["array_index"] = strconv.Itoa(idx)
-				m = metric.New(m.Name(), tags, m.Fields(), m.Time())
+				// Defensive clone of tags to avoid accidental mutation/sharing.
+				origTags := m.Tags()
+				newTags := make(map[string]string, len(origTags)+1)
+				for k, val := range origTags {
+					newTags[k] = val
+				}
+				newTags["array_index"] = strconv.Itoa(idx)
+				m = metric.New(m.Name(), newTags, m.Fields(), m.Time())
 			}
 			metrics = append(metrics, m)
 		}
 		return metrics, nil
-	}
 
-	// Single record at root
-	// Cast to string-to-interface
-	codecSchema, ok := native.(map[string]interface{})
-	if !ok {
+	default:
 		return nil, fmt.Errorf("native is of unsupported type %T", native)
 	}
-	m, err := p.createMetric(codecSchema, schema)
-	if err != nil {
-		return nil, err
-	}
-
-	return []telegraf.Metric{m}, nil
 }
 
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
