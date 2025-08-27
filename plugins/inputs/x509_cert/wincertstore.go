@@ -11,58 +11,57 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/windows"
-
-	"github.com/influxdata/telegraf"
 )
 
 type wincertstore struct {
 	store  *uint16
 	flags  uint32
 	source string
-	log    telegraf.Logger
 }
 
-func newWincertStore(path string, log telegraf.Logger) (*wincertstore, error) {
+func getWincertStore(path string) (*wincertstore, error) {
 	var flags uint32 = windows.CERT_STORE_READONLY_FLAG | windows.CERT_STORE_OPEN_EXISTING_FLAG
 
 	// Accept store names containing locations of the forms [<location>:]name
-	var source string
-	before, name, found := strings.Cut(path, ":")
+	location, folder, found := strings.Cut(path, ":")
 	if !found {
-		flags |= windows.CERT_SYSTEM_STORE_LOCAL_MACHINE
-		name = path
-		source = "HKEY_LOCAL_MACHINE:" + name
-	} else {
-		switch before {
-		case "HKLM", "HKEY_LOCAL_MACHINE":
-			flags |= windows.CERT_SYSTEM_STORE_LOCAL_MACHINE
-			source = "HKEY_LOCAL_MACHINE:" + name
-		case "HKCU", "HKEY_CURRENT_USER":
-			flags |= windows.CERT_SYSTEM_STORE_CURRENT_USER
-			source = "HKEY_CURRENT_USER:" + name
-		default:
-			return nil, fmt.Errorf("unknown store location %q", before)
-		}
+		location = "machine"
+		folder = path
 	}
-	store, err := windows.UTF16PtrFromString(name)
+	source := location + ":" + folder
+	switch location {
+	case "machine":
+		flags |= windows.CERT_SYSTEM_STORE_LOCAL_MACHINE
+	case "user":
+		flags |= windows.CERT_SYSTEM_STORE_CURRENT_USER
+	default:
+		return nil, fmt.Errorf("unknown store location %q", location)
+	}
+	store, err := windows.UTF16PtrFromString(folder)
 	if err != nil {
-		return nil, fmt.Errorf("converting store name %q failed: %w", name, err)
+		return nil, fmt.Errorf("converting store folder %q failed: %w", folder, err)
 	}
 
-	return &wincertstore{store: store, flags: flags, source: source, log: log}, nil
+	return &wincertstore{store: store, flags: flags, source: source}, nil
 }
 
-func (s *wincertstore) read() ([]*x509.Certificate, error) {
+func (c *X509Cert) processWinCertStore(path string) ([]*x509.Certificate, error) {
+	// Get the store parameters
+	store, err := getWincertStore(path)
+	if err != nil {
+		return nil, fmt.Errorf("configuring store %q failed: %w", path, err)
+	}
+
 	// Open the actual store for reading
 	handle, err := windows.CertOpenStore(
 		windows.CERT_STORE_PROV_SYSTEM_W,
 		0,
 		0,
-		s.flags,
-		uintptr(unsafe.Pointer(s.store)), //nolint:gosec // G103: Valid use of unsafe call to pass store to API
+		store.flags,
+		uintptr(unsafe.Pointer(store.store)), //nolint:gosec // G103: Valid use of unsafe call to pass store to API
 	)
 	if err != nil {
-		return nil, fmt.Errorf("opening store failed: %w", err)
+		return nil, fmt.Errorf("opening store %q failed: %w", store.source, err)
 	}
 	defer windows.CertCloseStore(handle, 0)
 
@@ -79,9 +78,9 @@ func (s *wincertstore) read() ([]*x509.Certificate, error) {
 				return certificates, nil
 			}
 			if err := windows.CertFreeCertificateContext(certctx); err != nil {
-				s.log.Errorf("Freeing context for store %q failed: %v", s.source, err)
+				c.Log.Errorf("Freeing context for store %q failed: %v", store.source, err)
 			}
-			return nil, fmt.Errorf("enumerating certificates failed: %w", err)
+			return nil, fmt.Errorf("enumerating certificates in %q failed: %w", store.source, err)
 		}
 
 		// Convert the returned byte pointer into an usable byte-slice and parse
@@ -93,7 +92,7 @@ func (s *wincertstore) read() ([]*x509.Certificate, error) {
 			name := make([]uint16, 256)
 			n := windows.CertGetNameString(certctx, windows.CERT_NAME_SIMPLE_DISPLAY_TYPE, 0, nil, &name[0], uint32(len(name)))
 			subject := windows.UTF16ToString(name[:n])
-			s.log.Errorf("parsing certificate for %q in store %q failed: %v", subject, s.source, err)
+			c.Log.Errorf("parsing certificate for %q in store %q failed: %v", subject, store.source, err)
 			continue
 		}
 		certificates = append(certificates, cert)

@@ -52,7 +52,6 @@ type X509Cert struct {
 	tlsCfg    *tls.Config
 	locations []*url.URL
 	globpaths []*globpath.GlobPath
-	stores    []*wincertstore
 
 	classification map[string]string
 }
@@ -210,53 +209,6 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	// Handle all certificates in the Windows certificate store
-	for _, store := range c.stores {
-		certs, err := store.read()
-		if err != nil {
-			acc.AddError(fmt.Errorf("in certificate store %q: %w", store.source, err))
-			continue
-		}
-
-		c.classification = make(map[string]string)
-		for _, cert := range certs {
-			// The first certificate is the leaf/end-entity certificate which
-			// needs DNS name validation against the URL hostname.
-			opts := x509.VerifyOptions{
-				KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
-				Roots:     c.tlsCfg.RootCAs,
-			}
-
-			// Do the processing
-			fields := getFields(cert, now)
-			tags := c.getTags(cert, store.source)
-
-			// Extract the verification result
-			if err := c.processCertificate(cert, opts); err == nil {
-				tags["verification"] = "valid"
-				fields["verification_code"] = 0
-			} else {
-				tags["verification"] = "invalid"
-				fields["verification_code"] = 1
-				fields["verification_error"] = strings.Trim(strings.TrimSpace(err.Error()), ":")
-			}
-			tags["ocsp_stapled"] = "no"
-
-			// Determine the classification
-			sig := hex.EncodeToString(cert.Signature)
-			if class, found := c.classification[sig]; found {
-				tags["type"] = class
-			} else {
-				tags["type"] = "leaf"
-			}
-
-			acc.AddFields("x509_cert", fields, tags)
-			if c.ExcludeRootCerts {
-				break
-			}
-		}
-	}
-
 	return nil
 }
 
@@ -341,11 +293,7 @@ func (c *X509Cert) sourcesToURLs() error {
 			c.globpaths = append(c.globpaths, g)
 		case strings.HasPrefix(source, "wincertstore://"):
 			path := strings.TrimPrefix(source, "wincertstore://")
-			store, err := newWincertStore(path, c.Log)
-			if err != nil {
-				return fmt.Errorf("accessing Windows Certificate Store %q failed: %w", path, err)
-			}
-			c.stores = append(c.stores, store)
+			c.locations = append(c.locations, &url.URL{Scheme: "wincertstore", Path: path})
 		default:
 			if strings.Index(source, ":\\") == 1 {
 				source = "file://" + filepath.ToSlash(source)
@@ -512,6 +460,9 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		return certs, nil, err
 	case "pkcs12":
 		certs, err := c.processPKCS12(u.Path)
+		return certs, nil, err
+	case "wincertstore":
+		certs, err := c.processWinCertStore(u.Path)
 		return certs, nil, err
 	default:
 		return nil, nil, fmt.Errorf("unsupported scheme %q in location %s", u.Scheme, u.String())

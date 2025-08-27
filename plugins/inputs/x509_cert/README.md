@@ -39,7 +39,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
             "/etc/mycerts/*.mydomain.org.pem", "file:///path/to/*.pem",
             "jks:///etc/mycerts/keystore.jks",
             "pkcs12:///etc/mycerts/keystore.p12",
-            "wincertstore://ROOT", "wincertstore://HKCU:CA"]
+            "wincertstore://machine:ROOT", "wincertstore://user:CA"]
 
   ## Timeout for SSL connection
   # timeout = "5s"
