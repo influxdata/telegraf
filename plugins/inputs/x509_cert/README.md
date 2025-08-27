@@ -1,10 +1,8 @@
 # x509 Certificate Input Plugin
 
 This plugin provides information about [X.509][x509] certificates accessible
-e.g. via local file, tcp, udp, https or smtp protocols.
-This plugin provides information about X509 certificate accessible via local
-file, tcp, udp, https or smtp protocol. Furthermore, this plugin allows do get
-certificates from the Windows Certificate Store on Windows.
+e.g. via local file, tcp, udp, https or smtp protocols and the Windows
+Certificate Store.
 
 > [!NOTE]
 > When using a UDP address as a certificate source, the server must support
@@ -69,6 +67,24 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # use_proxy = true
   # proxy_url = "http://localhost:8888"
 ```
+
+### Windows Certificate Store
+
+When accessing certificates on the local Windows Certificate Store you have to
+select the certificate folder by using a URI or the form
+
+```text
+wincertstore://<location>:<folder>
+```
+
+With the `location` being either the local `machine` or local `user` store. The
+`folder` has to be the non-translated, English folder name as can be found under
+the registry keys
+`HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\SystemCertificates` for the
+`machine` location or `HKEY_CURRENT_USER\SOFTWARE\Microsoft\SystemCertificates`
+for the `user` location. See the [documentation][wincert_docs] for details.
+
+[wincert_docs]: https://learn.microsoft.com/en-us/windows/win32/seccrypto/system-store-locations
 
 ## Metrics
 
