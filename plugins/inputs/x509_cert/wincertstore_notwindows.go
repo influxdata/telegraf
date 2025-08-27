@@ -7,6 +7,6 @@ import (
 	"errors"
 )
 
-func (c *X509Cert) processWinCertStore(string) ([]*x509.Certificate, error) {
+func (*X509Cert) processWinCertStore(string) ([]*x509.Certificate, error) {
 	return nil, errors.New("not supported on this platform")
 }
