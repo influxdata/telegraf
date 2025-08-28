@@ -140,7 +140,6 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			return nil, err
 		}
 		return []telegraf.Metric{m}, nil
-
 	case []interface{}:
 		metrics := make([]telegraf.Metric, 0, len(v))
 		for idx, item := range v {
