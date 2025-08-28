@@ -159,7 +159,6 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 				continue
 			}
 			if p.IncludeIndexTag {
-				// Defensive clone of tags to avoid accidental mutation/sharing.
 				origTags := m.Tags()
 				newTags := make(map[string]string, len(origTags)+1)
 				for k, val := range origTags {
