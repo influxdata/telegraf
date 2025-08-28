@@ -115,6 +115,7 @@ the error will be raised and the message will not be parsed.
 
   ## Default values for given tags: optional
   # tags = { "application": "hermes", "region": "central" }
+
 ```
 
 ### `avro_format`
