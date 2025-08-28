@@ -38,7 +38,6 @@ type Parser struct {
 	TimestampFormat  string            `toml:"avro_timestamp_format"`
 	FieldSeparator   string            `toml:"avro_field_separator"`
 	UnionMode        string            `toml:"avro_union_mode"`
-	IncludeIndexTag  bool              `toml:"avro_include_index_tag"`
 	DefaultTags      map[string]string `toml:"tags"`
 	Log              telegraf.Logger   `toml:"-"`
 	registryObj      *schemaRegistry
@@ -137,7 +136,6 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	// Handle single records and arrays at root level
 	switch v := native.(type) {
 	case map[string]interface{}:
-		// Single record
 		m, err := p.createMetric(v, schema)
 		if err != nil {
 			return nil, err
@@ -145,8 +143,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		return []telegraf.Metric{m}, nil
 
 	case []interface{}:
-		// array
-		metrics := make([]telegraf.Metric, 0, len(v)) // preallocate
+		metrics := make([]telegraf.Metric, 0, len(v))
 		for idx, item := range v {
 			record, ok := item.(map[string]interface{})
 			if !ok {
@@ -157,15 +154,6 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			if err != nil {
 				// skip items that cannot be converted
 				continue
-			}
-			if p.IncludeIndexTag {
-				origTags := m.Tags()
-				newTags := make(map[string]string, len(origTags)+1)
-				for k, val := range origTags {
-					newTags[k] = val
-				}
-				newTags["avro_array_index"] = strconv.Itoa(idx)
-				m = metric.New(m.Name(), newTags, m.Fields(), m.Time())
 			}
 			metrics = append(metrics, m)
 		}
