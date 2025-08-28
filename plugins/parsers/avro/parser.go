@@ -147,12 +147,12 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		for idx, item := range v {
 			record, ok := item.(map[string]interface{})
 			if !ok {
-				// skip non-record elements
+				p.Log.Warnf("Skipping non-record array element at index %d (type %T)", idx, item)
 				continue
 			}
 			m, err := p.createMetric(record, schema)
 			if err != nil {
-				// skip items that cannot be converted
+				p.Log.Warnf("Skipping array element at index %d due to error during metric creation: %v", idx, err)
 				continue
 			}
 			metrics = append(metrics, m)

@@ -113,9 +113,6 @@ the error will be raised and the message will not be parsed.
   ##   any      -- do not modify field name and set field value to the received type
   # avro_union_mode = "flatten"
 
-  ## Include array index as a tag if the root of the message is an array
-  # avro_include_index_tag = true
-
   ## Default values for given tags: optional
   # tags = { "application": "hermes", "region": "central" }
 ```
