@@ -164,7 +164,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 				for k, val := range origTags {
 					newTags[k] = val
 				}
-				newTags["array_index"] = strconv.Itoa(idx)
+				newTags["avro_array_index"] = strconv.Itoa(idx)
 				m = metric.New(m.Name(), newTags, m.Fields(), m.Time())
 			}
 			metrics = append(metrics, m)
