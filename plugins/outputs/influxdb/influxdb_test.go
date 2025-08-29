@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs/influxdb"
+	"github.com/influxdata/telegraf/selfstat"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -59,12 +60,11 @@ func TestDeprecatedURLSupport(t *testing.T) {
 			actual = config
 			return &MockClient{}, nil
 		},
+		Log:       testutil.Logger{},
+		Collector: selfstat.NewCollector(nil),
 	}
 
-	output.Log = testutil.Logger{}
-
-	err := output.Connect()
-	require.NoError(t, err)
+	require.NoError(t, output.Connect())
 	require.Equal(t, "udp://localhost:8089", actual.URL.String())
 }
 
@@ -82,12 +82,12 @@ func TestDefaultURL(t *testing.T) {
 				},
 			}, nil
 		},
+		Log:       testutil.Logger{},
+		Collector: selfstat.NewCollector(nil),
 	}
 
-	output.Log = testutil.Logger{}
-
-	err := output.Connect()
-	require.NoError(t, err)
+	require.NoError(t, output.Init())
+	require.NoError(t, output.Connect())
 	require.Equal(t, "http://localhost:8086", actual.URL.String())
 }
 
@@ -102,11 +102,12 @@ func TestConnectUDPConfig(t *testing.T) {
 			actual = config
 			return &MockClient{}, nil
 		},
+		Log:       testutil.Logger{},
+		Collector: selfstat.NewCollector(nil),
 	}
-	output.Log = testutil.Logger{}
 
-	err := output.Connect()
-	require.NoError(t, err)
+	require.NoError(t, output.Init())
+	require.NoError(t, output.Connect())
 
 	require.Equal(t, "udp://localhost:8089", actual.URL.String())
 	require.Equal(t, 42, actual.MaxPayloadSize)
@@ -145,12 +146,12 @@ func TestConnectHTTPConfig(t *testing.T) {
 				},
 			}, nil
 		},
+		Log:       testutil.Logger{},
+		Collector: selfstat.NewCollector(nil),
 	}
 
-	output.Log = testutil.Logger{}
-
-	err := output.Connect()
-	require.NoError(t, err)
+	require.NoError(t, output.Init())
+	require.NoError(t, output.Connect())
 
 	require.Equal(t, output.URLs[0], actual.URL.String())
 	require.Equal(t, output.UserAgent, actual.UserAgent)
@@ -194,12 +195,12 @@ func TestWriteRecreateDatabaseIfDatabaseNotFound(t *testing.T) {
 				},
 			}, nil
 		},
+		Log:       testutil.Logger{},
+		Collector: selfstat.NewCollector(nil),
 	}
 
-	output.Log = testutil.Logger{}
-
-	err := output.Connect()
-	require.NoError(t, err)
+	require.NoError(t, output.Init())
+	require.NoError(t, output.Connect())
 
 	m := metric.New(
 		"cpu",
@@ -211,9 +212,8 @@ func TestWriteRecreateDatabaseIfDatabaseNotFound(t *testing.T) {
 	)
 	metrics := []telegraf.Metric{m}
 
-	err = output.Write(metrics)
 	// We only have one URL, so we expect an error
-	require.Error(t, err)
+	require.Error(t, output.Write(metrics))
 }
 
 func TestInfluxDBLocalAddress(t *testing.T) {
@@ -231,8 +231,11 @@ func TestInfluxDBLocalAddress(t *testing.T) {
 				},
 			}, nil
 		},
+		Log:       testutil.Logger{},
+		Collector: selfstat.NewCollector(nil),
 	}
 
+	require.NoError(t, output.Init())
 	require.NoError(t, output.Connect())
 }
 
@@ -249,12 +252,13 @@ func BenchmarkWrite1k(b *testing.B) {
 
 	// Setup plugin and connect
 	plugin := &influxdb.InfluxDB{
-		URLs:     []string{"http://" + ts.Listener.Addr().String()},
-		Username: config.NewSecret([]byte("user")),
-		Password: config.NewSecret([]byte("secret")),
-		Database: "my_database",
-		Timeout:  config.Duration(time.Second * 5),
-		Log:      &testutil.Logger{},
+		URLs:      []string{"http://" + ts.Listener.Addr().String()},
+		Username:  config.NewSecret([]byte("user")),
+		Password:  config.NewSecret([]byte("secret")),
+		Database:  "my_database",
+		Timeout:   config.Duration(time.Second * 5),
+		Log:       &testutil.Logger{},
+		Collector: selfstat.NewCollector(nil),
 		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
 			return influxdb.NewHTTPClient(*config)
 		},
@@ -264,6 +268,7 @@ func BenchmarkWrite1k(b *testing.B) {
 		ContentEncoding:      "gzip",
 		SkipDatabaseCreation: true,
 	}
+	require.NoError(b, plugin.Init())
 	require.NoError(b, plugin.Connect())
 	defer plugin.Close()
 
@@ -302,12 +307,13 @@ func BenchmarkWrite5k(b *testing.B) {
 
 	// Setup plugin and connect
 	plugin := &influxdb.InfluxDB{
-		URLs:     []string{"http://" + ts.Listener.Addr().String()},
-		Username: config.NewSecret([]byte("user")),
-		Password: config.NewSecret([]byte("secret")),
-		Database: "my_database",
-		Timeout:  config.Duration(time.Second * 5),
-		Log:      &testutil.Logger{},
+		URLs:      []string{"http://" + ts.Listener.Addr().String()},
+		Username:  config.NewSecret([]byte("user")),
+		Password:  config.NewSecret([]byte("secret")),
+		Database:  "my_database",
+		Timeout:   config.Duration(time.Second * 5),
+		Log:       &testutil.Logger{},
+		Collector: selfstat.NewCollector(nil),
 		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
 			return influxdb.NewHTTPClient(*config)
 		},
@@ -317,6 +323,7 @@ func BenchmarkWrite5k(b *testing.B) {
 		ContentEncoding:      "gzip",
 		SkipDatabaseCreation: true,
 	}
+	require.NoError(b, plugin.Init())
 	require.NoError(b, plugin.Connect())
 	defer plugin.Close()
 
@@ -355,12 +362,13 @@ func BenchmarkWrite10k(b *testing.B) {
 
 	// Setup plugin and connect
 	plugin := &influxdb.InfluxDB{
-		URLs:     []string{"http://" + ts.Listener.Addr().String()},
-		Username: config.NewSecret([]byte("user")),
-		Password: config.NewSecret([]byte("secret")),
-		Database: "my_database",
-		Timeout:  config.Duration(time.Second * 5),
-		Log:      &testutil.Logger{},
+		URLs:      []string{"http://" + ts.Listener.Addr().String()},
+		Username:  config.NewSecret([]byte("user")),
+		Password:  config.NewSecret([]byte("secret")),
+		Database:  "my_database",
+		Timeout:   config.Duration(time.Second * 5),
+		Log:       &testutil.Logger{},
+		Collector: selfstat.NewCollector(nil),
 		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
 			return influxdb.NewHTTPClient(*config)
 		},
@@ -370,6 +378,7 @@ func BenchmarkWrite10k(b *testing.B) {
 		ContentEncoding:      "gzip",
 		SkipDatabaseCreation: true,
 	}
+	require.NoError(b, plugin.Init())
 	require.NoError(b, plugin.Connect())
 	defer plugin.Close()
 
@@ -408,12 +417,13 @@ func BenchmarkWrite25k(b *testing.B) {
 
 	// Setup plugin and connect
 	plugin := &influxdb.InfluxDB{
-		URLs:     []string{"http://" + ts.Listener.Addr().String()},
-		Username: config.NewSecret([]byte("user")),
-		Password: config.NewSecret([]byte("secret")),
-		Database: "my_database",
-		Timeout:  config.Duration(time.Second * 5),
-		Log:      &testutil.Logger{},
+		URLs:      []string{"http://" + ts.Listener.Addr().String()},
+		Username:  config.NewSecret([]byte("user")),
+		Password:  config.NewSecret([]byte("secret")),
+		Database:  "my_database",
+		Timeout:   config.Duration(time.Second * 5),
+		Log:       &testutil.Logger{},
+		Collector: selfstat.NewCollector(nil),
 		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
 			return influxdb.NewHTTPClient(*config)
 		},
@@ -423,6 +433,7 @@ func BenchmarkWrite25k(b *testing.B) {
 		ContentEncoding:      "gzip",
 		SkipDatabaseCreation: true,
 	}
+	require.NoError(b, plugin.Init())
 	require.NoError(b, plugin.Connect())
 	defer plugin.Close()
 
@@ -461,12 +472,13 @@ func BenchmarkWrite50k(b *testing.B) {
 
 	// Setup plugin and connect
 	plugin := &influxdb.InfluxDB{
-		URLs:     []string{"http://" + ts.Listener.Addr().String()},
-		Username: config.NewSecret([]byte("user")),
-		Password: config.NewSecret([]byte("secret")),
-		Database: "my_database",
-		Timeout:  config.Duration(time.Second * 5),
-		Log:      &testutil.Logger{},
+		URLs:      []string{"http://" + ts.Listener.Addr().String()},
+		Username:  config.NewSecret([]byte("user")),
+		Password:  config.NewSecret([]byte("secret")),
+		Database:  "my_database",
+		Timeout:   config.Duration(time.Second * 5),
+		Log:       &testutil.Logger{},
+		Collector: selfstat.NewCollector(nil),
 		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
 			return influxdb.NewHTTPClient(*config)
 		},
@@ -476,6 +488,7 @@ func BenchmarkWrite50k(b *testing.B) {
 		ContentEncoding:      "gzip",
 		SkipDatabaseCreation: true,
 	}
+	require.NoError(b, plugin.Init())
 	require.NoError(b, plugin.Connect())
 	defer plugin.Close()
 
@@ -514,12 +527,13 @@ func BenchmarkWrite100k(b *testing.B) {
 
 	// Setup plugin and connect
 	plugin := &influxdb.InfluxDB{
-		URLs:     []string{"http://" + ts.Listener.Addr().String()},
-		Username: config.NewSecret([]byte("user")),
-		Password: config.NewSecret([]byte("secret")),
-		Database: "my_database",
-		Timeout:  config.Duration(time.Second * 5),
-		Log:      &testutil.Logger{},
+		URLs:      []string{"http://" + ts.Listener.Addr().String()},
+		Username:  config.NewSecret([]byte("user")),
+		Password:  config.NewSecret([]byte("secret")),
+		Database:  "my_database",
+		Timeout:   config.Duration(time.Second * 5),
+		Log:       &testutil.Logger{},
+		Collector: selfstat.NewCollector(nil),
 		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
 			return influxdb.NewHTTPClient(*config)
 		},
@@ -529,6 +543,7 @@ func BenchmarkWrite100k(b *testing.B) {
 		ContentEncoding:      "gzip",
 		SkipDatabaseCreation: true,
 	}
+	require.NoError(b, plugin.Init())
 	require.NoError(b, plugin.Connect())
 	defer plugin.Close()
 
