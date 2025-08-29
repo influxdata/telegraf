@@ -40,3 +40,7 @@ func (s *stat) Tags() map[string]string {
 	}
 	return m
 }
+
+func (s *stat) Unregister() {
+	registry.remove(s.measurement, s.field, s.tags)
+}
