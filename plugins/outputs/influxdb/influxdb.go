@@ -18,16 +18,13 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
 //go:embed sample.conf
 var sampleConfig string
 
-var (
-	defaultURL = "http://localhost:8086"
-
-	ErrMissingURL = errors.New("missing URL")
-)
+var ErrMissingURL = errors.New("missing URL")
 
 type Client interface {
 	Write(context.Context, []telegraf.Metric) error
@@ -39,30 +36,34 @@ type Client interface {
 
 // InfluxDB struct is the primary data structure for the plugin
 type InfluxDB struct {
-	URLs                      []string          `toml:"urls"`
-	LocalAddr                 string            `toml:"local_address"`
-	Username                  config.Secret     `toml:"username"`
-	Password                  config.Secret     `toml:"password"`
-	Database                  string            `toml:"database"`
-	DatabaseTag               string            `toml:"database_tag"`
-	ExcludeDatabaseTag        bool              `toml:"exclude_database_tag"`
-	RetentionPolicy           string            `toml:"retention_policy"`
-	RetentionPolicyTag        string            `toml:"retention_policy_tag"`
-	ExcludeRetentionPolicyTag bool              `toml:"exclude_retention_policy_tag"`
-	UserAgent                 string            `toml:"user_agent"`
-	WriteConsistency          string            `toml:"write_consistency"`
-	Timeout                   config.Duration   `toml:"timeout"`
-	UDPPayload                config.Size       `toml:"udp_payload"`
-	HTTPProxy                 string            `toml:"http_proxy"`
-	HTTPHeaders               map[string]string `toml:"http_headers"`
-	ContentEncoding           string            `toml:"content_encoding"`
-	SkipDatabaseCreation      bool              `toml:"skip_database_creation"`
-	InfluxUintSupport         bool              `toml:"influx_uint_support"`
-	OmitTimestamp             bool              `toml:"influx_omit_timestamp"`
-	Log                       telegraf.Logger   `toml:"-"`
+	URLs                      []string            `toml:"urls"`
+	LocalAddr                 string              `toml:"local_address"`
+	Username                  config.Secret       `toml:"username"`
+	Password                  config.Secret       `toml:"password"`
+	Database                  string              `toml:"database"`
+	DatabaseTag               string              `toml:"database_tag"`
+	ExcludeDatabaseTag        bool                `toml:"exclude_database_tag"`
+	RetentionPolicy           string              `toml:"retention_policy"`
+	RetentionPolicyTag        string              `toml:"retention_policy_tag"`
+	ExcludeRetentionPolicyTag bool                `toml:"exclude_retention_policy_tag"`
+	UserAgent                 string              `toml:"user_agent"`
+	WriteConsistency          string              `toml:"write_consistency"`
+	Timeout                   config.Duration     `toml:"timeout"`
+	UDPPayload                config.Size         `toml:"udp_payload"`
+	HTTPProxy                 string              `toml:"http_proxy"`
+	HTTPHeaders               map[string]string   `toml:"http_headers"`
+	ContentEncoding           string              `toml:"content_encoding"`
+	SkipDatabaseCreation      bool                `toml:"skip_database_creation"`
+	InfluxUintSupport         bool                `toml:"influx_uint_support"`
+	OmitTimestamp             bool                `toml:"influx_omit_timestamp"`
+	Log                       telegraf.Logger     `toml:"-"`
+	Collector                 *selfstat.Collector `toml:"-"`
 	tls.ClientConfig
 
-	clients []Client
+	clients    []Client
+	serializer *influx.Serializer
+
+	bytesWritten selfstat.Stat
 
 	CreateHTTPClientF func(config *HTTPConfig) (Client, error)
 	CreateUDPClientF  func(config *UDPConfig) (Client, error)
@@ -72,12 +73,33 @@ func (*InfluxDB) SampleConfig() string {
 	return sampleConfig
 }
 
-func (i *InfluxDB) Connect() error {
-	ctx := context.Background()
+func (i *InfluxDB) Init() error {
+	// Set default values
+	if i.ContentEncoding == "" {
+		i.ContentEncoding = "gzip"
+	}
 
 	if len(i.URLs) == 0 {
-		i.URLs = []string{defaultURL}
+		i.URLs = append(i.URLs, "http://localhost:8086")
 	}
+
+	// Setup serializer
+	i.serializer = &influx.Serializer{
+		UintSupport:   i.InfluxUintSupport,
+		OmitTimestamp: i.OmitTimestamp,
+	}
+	if err := i.serializer.Init(); err != nil {
+		return fmt.Errorf("initializing serializer failed: %w", err)
+	}
+
+	// Register internal metrics
+	i.bytesWritten = i.Collector.Register("write", "bytes_written", nil)
+
+	return nil
+}
+
+func (i *InfluxDB) Connect() error {
+	ctx := context.Background()
 
 	for _, u := range i.URLs {
 		parts, err := url.Parse(u)
@@ -158,6 +180,11 @@ func (i *InfluxDB) Close() error {
 	for _, client := range i.clients {
 		client.Close()
 	}
+
+	// Unregister internal statistics
+	i.Collector.Unregister("write", "bytes_written", nil)
+	i.bytesWritten = nil
+
 	return nil
 }
 
@@ -202,20 +229,13 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 }
 
 func (i *InfluxDB) udpClient(address *url.URL, localAddr *net.UDPAddr) (Client, error) {
-	serializer := &influx.Serializer{
-		UintSupport:   i.InfluxUintSupport,
-		OmitTimestamp: i.OmitTimestamp,
-	}
-	if err := serializer.Init(); err != nil {
-		return nil, err
-	}
-
 	udpConfig := &UDPConfig{
 		URL:            address,
 		LocalAddr:      localAddr,
 		MaxPayloadSize: int(i.UDPPayload),
-		Serializer:     serializer,
+		Serializer:     i.serializer,
 		Log:            i.Log,
+		BytesWritten:   i.bytesWritten,
 	}
 
 	c, err := i.CreateUDPClientF(udpConfig)
@@ -261,6 +281,7 @@ func (i *InfluxDB) httpClient(ctx context.Context, address *url.URL, localAddr *
 		Consistency:               i.WriteConsistency,
 		Serializer:                serializer,
 		Log:                       i.Log,
+		BytesWritten:              i.bytesWritten,
 	}
 
 	c, err := i.CreateHTTPClientF(httpConfig)
@@ -289,7 +310,6 @@ func init() {
 			CreateUDPClientF: func(config *UDPConfig) (Client, error) {
 				return NewUDPClient(*config)
 			},
-			ContentEncoding: "gzip",
 		}
 	})
 }
