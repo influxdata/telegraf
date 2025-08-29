@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/selfstat"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -24,6 +23,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	influxdb "github.com/influxdata/telegraf/plugins/outputs/influxdb_v2"
+	"github.com/influxdata/telegraf/selfstat"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -228,7 +228,6 @@ func TestWrite(t *testing.T) {
 	})
 	require.NotNil(t, stat)
 	require.Equal(t, int64(38), stat.Get())
-
 }
 
 func TestWriteBucketTagWorksOnRetry(t *testing.T) {

@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/selfstat"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -19,6 +18,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/ratelimiter"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
+	"github.com/influxdata/telegraf/selfstat"
 	"github.com/influxdata/telegraf/testutil"
 )
 
