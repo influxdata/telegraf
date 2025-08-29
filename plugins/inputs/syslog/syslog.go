@@ -180,7 +180,7 @@ func (s *Syslog) createStreamDataHandler(acc telegraf.Accumulator) socket.Callba
 
 	if s.MaxMessageLength > 0 {
 		// go-syslog handles this option as no-op under non-transparent
-		opts = append(opts, syslog.WithMaxMessageLength(s.MaxMessageLength))
+		opts = append(opts, syslog.WithMaxMessageLength(int(s.MaxMessageLength)))
 	}
 
 	return func(src net.Addr, reader io.ReadCloser) {

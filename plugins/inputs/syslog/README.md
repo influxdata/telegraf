@@ -117,9 +117,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Its name is created concatenating identifier, sdparam_separator, and parameter name.
   # sdparam_separator = "_"
 
-  ## Maximum length allowed for a single message in bytes.
+  ## Maximum length allowed for a single message (in bytes when no unit specified)
   ## Only applies to octet-counting framing.
-  # max_message_length = 8192
+  # max_message_length = "8KiB"
 ```
 
 ### Message transport
