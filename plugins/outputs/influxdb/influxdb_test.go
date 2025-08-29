@@ -2,6 +2,7 @@ package influxdb_test
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -45,7 +46,9 @@ func (c *MockClient) Database() string {
 }
 
 func (c *MockClient) Close() {
-	c.CloseF()
+	if c.CloseF != nil {
+		c.CloseF()
+	}
 }
 
 func (c *MockClient) SetLogger(log telegraf.Logger) {
@@ -63,8 +66,12 @@ func TestDeprecatedURLSupport(t *testing.T) {
 		Log:       testutil.Logger{},
 		Collector: selfstat.NewCollector(nil),
 	}
+	defer output.Collector.UnregisterAll()
 
+	require.NoError(t, output.Init())
 	require.NoError(t, output.Connect())
+	defer output.Close()
+
 	require.Equal(t, "udp://localhost:8089", actual.URL.String())
 }
 
@@ -85,9 +92,12 @@ func TestDefaultURL(t *testing.T) {
 		Log:       testutil.Logger{},
 		Collector: selfstat.NewCollector(nil),
 	}
+	defer output.Collector.UnregisterAll()
 
 	require.NoError(t, output.Init())
 	require.NoError(t, output.Connect())
+	defer output.Close()
+
 	require.Equal(t, "http://localhost:8086", actual.URL.String())
 }
 
@@ -105,9 +115,11 @@ func TestConnectUDPConfig(t *testing.T) {
 		Log:       testutil.Logger{},
 		Collector: selfstat.NewCollector(nil),
 	}
+	defer output.Collector.UnregisterAll()
 
 	require.NoError(t, output.Init())
 	require.NoError(t, output.Connect())
+	defer output.Close()
 
 	require.Equal(t, "udp://localhost:8089", actual.URL.String())
 	require.Equal(t, 42, actual.MaxPayloadSize)
@@ -149,9 +161,11 @@ func TestConnectHTTPConfig(t *testing.T) {
 		Log:       testutil.Logger{},
 		Collector: selfstat.NewCollector(nil),
 	}
+	defer output.Collector.UnregisterAll()
 
 	require.NoError(t, output.Init())
 	require.NoError(t, output.Connect())
+	defer output.Close()
 
 	require.Equal(t, output.URLs[0], actual.URL.String())
 	require.Equal(t, output.UserAgent, actual.UserAgent)
@@ -198,9 +212,11 @@ func TestWriteRecreateDatabaseIfDatabaseNotFound(t *testing.T) {
 		Log:       testutil.Logger{},
 		Collector: selfstat.NewCollector(nil),
 	}
+	defer output.Collector.UnregisterAll()
 
 	require.NoError(t, output.Init())
 	require.NoError(t, output.Connect())
+	defer output.Close()
 
 	m := metric.New(
 		"cpu",
@@ -234,9 +250,174 @@ func TestInfluxDBLocalAddress(t *testing.T) {
 		Log:       testutil.Logger{},
 		Collector: selfstat.NewCollector(nil),
 	}
+	defer output.Collector.UnregisterAll()
 
 	require.NoError(t, output.Init())
 	require.NoError(t, output.Connect())
+	defer output.Close()
+}
+
+func TestBytesWrittenHTTP(t *testing.T) {
+	// Setup a test server
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusNoContent)
+		}),
+	)
+	defer ts.Close()
+
+	// Setup plugin and connect
+	plugin := &influxdb.InfluxDB{
+		URLs:      []string{"http://" + ts.Listener.Addr().String()},
+		Username:  config.NewSecret([]byte("user")),
+		Password:  config.NewSecret([]byte("secret")),
+		Database:  "my_database",
+		Timeout:   config.Duration(time.Second * 5),
+		Log:       &testutil.Logger{},
+		Collector: selfstat.NewCollector(nil),
+		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
+			return influxdb.NewHTTPClient(*config)
+		},
+		CreateUDPClientF: func(config *influxdb.UDPConfig) (influxdb.Client, error) {
+			return influxdb.NewUDPClient(*config)
+		},
+		ContentEncoding:      "none",
+		SkipDatabaseCreation: true,
+	}
+	defer plugin.Collector.UnregisterAll()
+
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	// Check that we start with a zero counter
+	stat := plugin.Collector.Get("write", "bytes_written", nil)
+	require.Zero(t, stat.Get())
+
+	// Write data
+	input := []telegraf.Metric{
+		metric.New(
+			"cpu",
+			map[string]string{
+				"database": "foo",
+			},
+			map[string]interface{}{
+				"value": float64(42),
+			},
+			time.Unix(0, 0),
+		),
+	}
+	require.NoError(t, plugin.Write(input))
+
+	require.Equal(t, int64(28), stat.Get())
+}
+
+func TestBytesWrittenHTTPGzip(t *testing.T) {
+	// Setup a test server
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusNoContent)
+		}),
+	)
+	defer ts.Close()
+
+	// Setup plugin and connect
+	plugin := &influxdb.InfluxDB{
+		URLs:      []string{"http://" + ts.Listener.Addr().String()},
+		Username:  config.NewSecret([]byte("user")),
+		Password:  config.NewSecret([]byte("secret")),
+		Database:  "my_database",
+		Timeout:   config.Duration(time.Second * 5),
+		Log:       &testutil.Logger{},
+		Collector: selfstat.NewCollector(nil),
+		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
+			return influxdb.NewHTTPClient(*config)
+		},
+		CreateUDPClientF: func(config *influxdb.UDPConfig) (influxdb.Client, error) {
+			return influxdb.NewUDPClient(*config)
+		},
+		ContentEncoding:      "gzip",
+		SkipDatabaseCreation: true,
+	}
+	defer plugin.Collector.UnregisterAll()
+
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	// Check that we start with a zero counter
+	stat := plugin.Collector.Get("write", "bytes_written", nil)
+	require.Zero(t, stat.Get())
+
+	// Write data
+	input := []telegraf.Metric{
+		metric.New(
+			"cpu",
+			map[string]string{
+				"database": "foo",
+			},
+			map[string]interface{}{
+				"value": float64(42),
+			},
+			time.Unix(0, 0),
+		),
+	}
+	require.NoError(t, plugin.Write(input))
+
+	require.Equal(t, int64(52), stat.Get())
+}
+
+func TestBytesWrittenUDP(t *testing.T) {
+	// Setup a test server
+	conn, err := net.ListenPacket("udp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer conn.Close()
+
+	addr := conn.LocalAddr()
+
+	// Setup plugin and connect
+	plugin := &influxdb.InfluxDB{
+		URLs:      []string{addr.Network() + "://" + addr.String()},
+		Username:  config.NewSecret([]byte("user")),
+		Password:  config.NewSecret([]byte("secret")),
+		Database:  "my_database",
+		Timeout:   config.Duration(time.Second * 5),
+		Log:       &testutil.Logger{},
+		Collector: selfstat.NewCollector(nil),
+		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
+			return influxdb.NewHTTPClient(*config)
+		},
+		CreateUDPClientF: func(config *influxdb.UDPConfig) (influxdb.Client, error) {
+			return influxdb.NewUDPClient(*config)
+		},
+		SkipDatabaseCreation: true,
+	}
+	defer plugin.Collector.UnregisterAll()
+
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	// Check that we start with a zero counter
+	stat := plugin.Collector.Get("write", "bytes_written", nil)
+	require.Zero(t, stat.Get())
+
+	// Write data
+	input := []telegraf.Metric{
+		metric.New(
+			"cpu",
+			map[string]string{
+				"database": "foo",
+			},
+			map[string]interface{}{
+				"value": float64(42),
+			},
+			time.Unix(0, 0),
+		),
+	}
+	require.NoError(t, plugin.Write(input))
+
+	require.Equal(t, int64(28), stat.Get())
 }
 
 func BenchmarkWrite1k(b *testing.B) {
@@ -268,6 +449,8 @@ func BenchmarkWrite1k(b *testing.B) {
 		ContentEncoding:      "gzip",
 		SkipDatabaseCreation: true,
 	}
+	defer plugin.Collector.UnregisterAll()
+
 	require.NoError(b, plugin.Init())
 	require.NoError(b, plugin.Connect())
 	defer plugin.Close()
@@ -323,6 +506,8 @@ func BenchmarkWrite5k(b *testing.B) {
 		ContentEncoding:      "gzip",
 		SkipDatabaseCreation: true,
 	}
+	defer plugin.Collector.UnregisterAll()
+
 	require.NoError(b, plugin.Init())
 	require.NoError(b, plugin.Connect())
 	defer plugin.Close()
@@ -378,6 +563,8 @@ func BenchmarkWrite10k(b *testing.B) {
 		ContentEncoding:      "gzip",
 		SkipDatabaseCreation: true,
 	}
+	defer plugin.Collector.UnregisterAll()
+
 	require.NoError(b, plugin.Init())
 	require.NoError(b, plugin.Connect())
 	defer plugin.Close()
@@ -433,6 +620,8 @@ func BenchmarkWrite25k(b *testing.B) {
 		ContentEncoding:      "gzip",
 		SkipDatabaseCreation: true,
 	}
+	defer plugin.Collector.UnregisterAll()
+
 	require.NoError(b, plugin.Init())
 	require.NoError(b, plugin.Connect())
 	defer plugin.Close()
@@ -488,6 +677,8 @@ func BenchmarkWrite50k(b *testing.B) {
 		ContentEncoding:      "gzip",
 		SkipDatabaseCreation: true,
 	}
+	defer plugin.Collector.UnregisterAll()
+
 	require.NoError(b, plugin.Init())
 	require.NoError(b, plugin.Connect())
 	defer plugin.Close()
@@ -543,6 +734,8 @@ func BenchmarkWrite100k(b *testing.B) {
 		ContentEncoding:      "gzip",
 		SkipDatabaseCreation: true,
 	}
+	defer plugin.Collector.UnregisterAll()
+
 	require.NoError(b, plugin.Init())
 	require.NoError(b, plugin.Connect())
 	defer plugin.Close()

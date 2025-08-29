@@ -47,7 +47,7 @@ func TestHTTP_MinimalConfig(t *testing.T) {
 		URL:          getHTTPURL(),
 		BytesWritten: selfstat.Register("write", "bytes_written", nil),
 	}
-	defer selfstat.Unregister("write", "bytes_written", nil)
+	defer cfg.BytesWritten.Unregister()
 
 	_, err := influxdb.NewHTTPClient(cfg)
 	require.NoError(t, err)
@@ -61,7 +61,7 @@ func TestHTTP_UnsupportedScheme(t *testing.T) {
 		},
 		BytesWritten: selfstat.Register("write", "bytes_written", nil),
 	}
-	defer selfstat.Unregister("write", "bytes_written", nil)
+	defer cfg.BytesWritten.Unregister()
 
 	_, err := influxdb.NewHTTPClient(cfg)
 	require.Error(t, err)
@@ -263,7 +263,7 @@ func TestHTTP_CreateDatabase(t *testing.T) {
 				}
 			})
 			tt.config.BytesWritten = selfstat.Register("write", "bytes_written", nil)
-			defer selfstat.Unregister("write", "bytes_written", nil)
+			defer tt.config.BytesWritten.Unregister()
 
 			client, err := influxdb.NewHTTPClient(tt.config)
 			require.NoError(t, err)
@@ -503,7 +503,7 @@ func TestHTTP_Write(t *testing.T) {
 				}
 			})
 			tt.config.BytesWritten = selfstat.Register("write", "bytes_written", nil)
-			defer selfstat.Unregister("write", "bytes_written", nil)
+			defer tt.config.BytesWritten.Unregister()
 
 			var b bytes.Buffer
 			if tt.logFunc != nil {
@@ -574,7 +574,7 @@ func TestHTTP_WritePathPrefix(t *testing.T) {
 		Log:          testutil.Logger{},
 		BytesWritten: selfstat.Register("write", "bytes_written", nil),
 	}
-	defer selfstat.Unregister("write", "bytes_written", nil)
+	defer cfg.BytesWritten.Unregister()
 
 	client, err := influxdb.NewHTTPClient(cfg)
 	require.NoError(t, err)
@@ -645,7 +645,7 @@ func TestHTTP_WriteContentEncodingGzip(t *testing.T) {
 		Log:             testutil.Logger{},
 		BytesWritten:    selfstat.Register("write", "bytes_written", nil),
 	}
-	defer selfstat.Unregister("write", "bytes_written", nil)
+	defer cfg.BytesWritten.Unregister()
 
 	client, err := influxdb.NewHTTPClient(cfg)
 	require.NoError(t, err)
@@ -712,7 +712,7 @@ func TestHTTP_UnixSocket(t *testing.T) {
 				}
 			})
 			tt.config.BytesWritten = selfstat.Register("write", "bytes_written", nil)
-			defer selfstat.Unregister("write", "bytes_written", nil)
+			defer tt.config.BytesWritten.Unregister()
 
 			client, err := influxdb.NewHTTPClient(tt.config)
 			require.NoError(t, err)
@@ -777,7 +777,7 @@ func TestHTTP_WriteDatabaseTagWorksOnRetry(t *testing.T) {
 		Log:                testutil.Logger{},
 		BytesWritten:       selfstat.Register("write", "bytes_written", nil),
 	}
-	defer selfstat.Unregister("write", "bytes_written", nil)
+	defer cfg.BytesWritten.Unregister()
 
 	client, err := influxdb.NewHTTPClient(cfg)
 	require.NoError(t, err)
@@ -1019,7 +1019,7 @@ func TestDBRPTags(t *testing.T) {
 				}
 			})
 			tt.config.BytesWritten = selfstat.Register("write", "bytes_written", nil)
-			defer selfstat.Unregister("write", "bytes_written", nil)
+			defer tt.config.BytesWritten.Unregister()
 
 			client, err := influxdb.NewHTTPClient(tt.config)
 			require.NoError(t, err)
@@ -1115,8 +1115,12 @@ func TestDBRPTagsCreateDatabaseNotCalledOnRetryAfterForbidden(t *testing.T) {
 		Log:       testutil.Logger{},
 		Collector: selfstat.NewCollector(nil),
 	}
+	defer output.Collector.UnregisterAll()
+
 	require.NoError(t, output.Init())
 	require.NoError(t, output.Connect())
+	defer output.Close()
+
 	require.NoError(t, output.Write(metrics))
 	require.NoError(t, output.Write(metrics))
 
@@ -1207,9 +1211,11 @@ func TestDBRPTagsCreateDatabaseCalledOnDatabaseNotFound(t *testing.T) {
 		},
 		Collector: selfstat.NewCollector(nil),
 	}
+	defer output.Collector.UnregisterAll()
 
 	require.NoError(t, output.Init())
 	require.NoError(t, output.Connect())
+	defer output.Close()
 
 	// this write fails, but we're expecting it to drop the metrics and not retry, so no error.
 	require.NoError(t, output.Write(metrics))
@@ -1265,9 +1271,12 @@ func TestDBNotFoundShouldDropMetricWhenSkipDatabaseCreateIsTrue(t *testing.T) {
 		Log:       logger,
 		Collector: selfstat.NewCollector(nil),
 	}
+	defer output.Collector.UnregisterAll()
 
 	require.NoError(t, output.Init())
 	require.NoError(t, output.Connect())
+	defer output.Close()
+
 	err = output.Write(metrics)
 	require.Contains(t, logger.LastError(), "database not found")
 	require.NoError(t, err)

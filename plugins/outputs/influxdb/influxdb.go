@@ -100,6 +100,7 @@ func (i *InfluxDB) Init() error {
 
 func (i *InfluxDB) Connect() error {
 	ctx := context.Background()
+	i.clients = make([]Client, 0, len(i.URLs))
 
 	for _, u := range i.URLs {
 		parts, err := url.Parse(u)
@@ -180,10 +181,7 @@ func (i *InfluxDB) Close() error {
 	for _, client := range i.clients {
 		client.Close()
 	}
-
-	// Unregister internal statistics
-	i.Collector.Unregister("write", "bytes_written", nil)
-	i.bytesWritten = nil
+	i.clients = make([]Client, 0)
 
 	return nil
 }
