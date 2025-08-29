@@ -20,6 +20,7 @@ import (
 	"github.com/leodido/go-syslog/v4/rfc5424"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/socket"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -30,13 +31,14 @@ var sampleConfig string
 const readTimeoutMsg = "Read timeout set! Connections, inactive for the set duration, will be closed!"
 
 type Syslog struct {
-	Address        string                     `toml:"server"`
-	Framing        string                     `toml:"framing"`
-	SyslogStandard string                     `toml:"syslog_standard"`
-	Trailer        nontransparent.TrailerType `toml:"trailer"`
-	BestEffort     bool                       `toml:"best_effort"`
-	Separator      string                     `toml:"sdparam_separator"`
-	Log            telegraf.Logger            `toml:"-"`
+	Address          string                     `toml:"server"`
+	Framing          string                     `toml:"framing"`
+	SyslogStandard   string                     `toml:"syslog_standard"`
+	Trailer          nontransparent.TrailerType `toml:"trailer"`
+	BestEffort       bool                       `toml:"best_effort"`
+	Separator        string                     `toml:"sdparam_separator"`
+	MaxMessageLength config.Size                `toml:"max_message_length"`
+	Log              telegraf.Logger            `toml:"-"`
 	socket.Config
 
 	mu sync.Mutex
@@ -175,6 +177,11 @@ func (s *Syslog) createStreamDataHandler(acc telegraf.Accumulator) socket.Callba
 	}
 	if len(machineOpts) > 0 {
 		opts = append(opts, syslog.WithMachineOptions(machineOpts...))
+	}
+
+	if s.MaxMessageLength > 0 {
+		// go-syslog handles this option as no-op under non-transparent
+		opts = append(opts, syslog.WithMaxMessageLength(int(s.MaxMessageLength)))
 	}
 
 	return func(src net.Addr, reader io.ReadCloser) {
