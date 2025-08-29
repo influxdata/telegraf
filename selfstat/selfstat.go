@@ -41,6 +41,9 @@ type Stat interface {
 	// an average value of all timings received since the last call to Get().
 	// If no timings were received, it returns the previous value.
 	Get() int64
+
+	// Unregister will remove the stat from the registry
+	Unregister()
 }
 
 // Register registers the given measurement, field, and tags in the selfstat
