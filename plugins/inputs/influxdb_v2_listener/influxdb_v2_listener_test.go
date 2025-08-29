@@ -558,12 +558,14 @@ func TestHealth(t *testing.T) {
 	listener.MaxUndeliveredMetrics = 1
 	resp, err = http.Get(createURL(listener, "http", "/api/v2/health", ""))
 	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 200, resp.StatusCode)
 	require.EqualValues(t, 2, listener.healthsServed.Get())
 
 	// and on the documented base endpoint
 	resp, err = http.Get(createURL(listener, "http", "/health", ""))
 	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 200, resp.StatusCode)
 	require.EqualValues(t, 3, listener.healthsServed.Get())
 
@@ -605,6 +607,7 @@ func TestReady(t *testing.T) {
 	// and on the documented base endpoint
 	resp, err = http.Get(createURL(listener, "http", "/ready", ""))
 	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 200, resp.StatusCode)
 	require.EqualValues(t, 2, listener.readysServed.Get())
 }
