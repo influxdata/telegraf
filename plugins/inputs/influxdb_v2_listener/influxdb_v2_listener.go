@@ -238,13 +238,24 @@ func (h *InfluxDBV2Listener) handleHealth() http.HandlerFunc {
 		defer h.healthsServed.Incr(1)
 
 		res.Header().Set("Content-Type", "application/json")
-		res.WriteHeader(http.StatusOK)
-		b, err := json.Marshal(map[string]string{
+		body := map[string]string{
 			"name":    "telegraf",
 			"commit":  internal.Commit,
 			"message": "ready for queries and writes",
 			"status":  "pass",
-			"version": internal.Version})
+			"version": internal.Version,
+		}
+
+		pendingMetrics := h.totalUndeliveredMetrics.Load()
+		if h.MaxUndeliveredMetrics > 0 && pendingMetrics >= int64(h.MaxUndeliveredMetrics) {
+			res.WriteHeader(http.StatusServiceUnavailable)
+			body["status"] = "fail"
+			body["message"] = fmt.Sprintf("pending undelivered metrics (%d) is above limit", pendingMetrics)
+		} else {
+			res.WriteHeader(http.StatusOK)
+		}
+
+		b, err := json.Marshal(body)
 		if err != nil {
 			h.Log.Debugf("error marshalling json in handleHealth: %v", err)
 		}
