@@ -20,6 +20,7 @@ import (
 	"github.com/leodido/go-syslog/v4/rfc5424"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/socket"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -36,7 +37,7 @@ type Syslog struct {
 	Trailer          nontransparent.TrailerType `toml:"trailer"`
 	BestEffort       bool                       `toml:"best_effort"`
 	Separator        string                     `toml:"sdparam_separator"`
-	MaxMessageLength int                        `toml:"max_message_length"`
+	MaxMessageLength config.Size                `toml:"max_message_length"`
 	Log              telegraf.Logger            `toml:"-"`
 	socket.Config
 
