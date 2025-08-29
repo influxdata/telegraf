@@ -132,14 +132,7 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 			wrap = wrap || io.ReadTime < lastValue.ReadTime || io.WriteTime < lastValue.WriteTime
 			wrap = wrap || io.IoTime < lastValue.IoTime
 
-			if wrap {
-				// Provide zero values instead of omitting fields to avoid sparse metrics
-				fields["io_await"] = 0.0
-				fields["io_svctm"] = 0.0
-				fields["io_util"] = 0.0
-
-				d.Log.Debugf("Counter wraparound detected for %s, providing zero values", io.Name)
-			} else {
+			if !wrap {
 				deltaRWCount := float64(io.ReadCount-lastValue.ReadCount) + float64(io.WriteCount-lastValue.WriteCount)
 				deltaRWTime := float64(io.ReadTime-lastValue.ReadTime) + float64(io.WriteTime-lastValue.WriteTime)
 				deltaIOTime := float64(io.IoTime - lastValue.IoTime)

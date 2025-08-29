@@ -235,15 +235,12 @@ func TestCounterWraparound(t *testing.T) {
 
 	require.NoError(t, diskio.Gather(&acc))
 
-	// Should have zero values for calculated fields due to wraparound
-	require.True(t, acc.HasFloatField("diskio", "io_util"))
-	require.True(t, acc.HasFloatField("diskio", "io_svctm"))
-	require.True(t, acc.HasFloatField("diskio", "io_await"))
+	// Should NOT have calculated fields due to wraparound detection
+	require.False(t, acc.HasFloatField("diskio", "io_util"), "io_util should not be present on wraparound")
+	require.False(t, acc.HasFloatField("diskio", "io_svctm"), "io_svctm should not be present on wraparound")
+	require.False(t, acc.HasFloatField("diskio", "io_await"), "io_await should not be present on wraparound")
 
-	// Get the latest metric and verify zero values
-	metrics := acc.GetTelegrafMetrics()
-	lastMetric := metrics[len(metrics)-1]
-	require.InDelta(t, float64(0), lastMetric.Fields()["io_util"], 0.001)
-	require.InDelta(t, float64(0), lastMetric.Fields()["io_svctm"], 0.001)
-	require.InDelta(t, float64(0), lastMetric.Fields()["io_await"], 0.001)
+	// But basic counter fields should still be present
+	require.True(t, acc.HasField("diskio", "reads"), "reads should be present")
+	require.True(t, acc.HasField("diskio", "writes"), "writes should be present")
 }
