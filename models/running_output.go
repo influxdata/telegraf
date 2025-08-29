@@ -90,6 +90,7 @@ func NewRunningOutput(output telegraf.Output, config *OutputConfig, batchSize, b
 		logger.Error(err)
 	}
 	SetLoggerOnPlugin(output, logger)
+	SetStatisticsOnPlugin(output, logger, tags)
 
 	if config.MetricBufferLimit > 0 {
 		bufferLimit = config.MetricBufferLimit

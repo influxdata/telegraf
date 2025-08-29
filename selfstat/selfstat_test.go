@@ -1,7 +1,6 @@
 package selfstat
 
 import (
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -9,45 +8,34 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-var (
-	// only allow one test at a time
-	// this is because we are dealing with a global registry
-	testLock sync.Mutex
-	a        int64
-)
-
 // testCleanup resets the global registry for test cleanup & unlocks the test lock
 func testCleanup() {
 	registry = &Registry{
 		stats: make(map[uint64]map[string]Stat),
 	}
-	testLock.Unlock()
 }
 
 func BenchmarkStats(b *testing.B) {
-	testLock.Lock()
 	defer testCleanup()
 	b1 := Register("benchmark1", "test_field1", map[string]string{"test": "foo"})
 	for n := 0; n < b.N; n++ {
 		b1.Incr(1)
 		b1.Incr(3)
-		a = b1.Get()
+		b1.Get()
 	}
 }
 
 func BenchmarkTimingStats(b *testing.B) {
-	testLock.Lock()
 	defer testCleanup()
 	b2 := RegisterTiming("benchmark2", "test_field1", map[string]string{"test": "foo"})
 	for n := 0; n < b.N; n++ {
 		b2.Incr(1)
 		b2.Incr(3)
-		a = b2.Get()
+		b2.Get()
 	}
 }
 
 func TestRegisterAndIncrAndSet(t *testing.T) {
-	testLock.Lock()
 	defer testCleanup()
 	s1 := Register("test", "test_field1", map[string]string{"test": "foo"})
 	s2 := Register("test", "test_field2", map[string]string{"test": "foo"})
@@ -77,7 +65,6 @@ func TestRegisterAndIncrAndSet(t *testing.T) {
 }
 
 func TestRegisterTimingAndIncrAndSet(t *testing.T) {
-	testLock.Lock()
 	defer testCleanup()
 	s1 := RegisterTiming("test", "test_field1_ns", map[string]string{"test": "foo"})
 	s2 := RegisterTiming("test", "test_field2_ns", map[string]string{"test": "foo"})
@@ -123,7 +110,6 @@ func TestStatKeyConsistency(t *testing.T) {
 }
 
 func TestRegisterMetricsAndVerify(t *testing.T) {
-	testLock.Lock()
 	defer testCleanup()
 
 	// register two metrics with the same key
