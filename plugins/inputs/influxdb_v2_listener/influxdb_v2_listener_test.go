@@ -551,6 +551,16 @@ func TestReady(t *testing.T) {
 	require.Contains(t, string(bodyBytes), "\"status\":\"ready\"")
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 200, resp.StatusCode)
+
+	// and on the documented base endpoint
+	resp, err = http.Get(createURL(listener, "http", "/ready", ""))
+	require.NoError(t, err)
+	require.Equal(t, "application/json", resp.Header["Content-Type"][0])
+	bodyBytes, err = io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Contains(t, string(bodyBytes), "\"status\":\"ready\"")
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 200, resp.StatusCode)
 }
 
 func TestWriteWithPrecision(t *testing.T) {
