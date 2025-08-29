@@ -237,18 +237,16 @@ func (h *InfluxDBV2Listener) handleHealth() http.HandlerFunc {
 	return func(res http.ResponseWriter, _ *http.Request) {
 		defer h.healthsServed.Incr(1)
 
-		// respond to health requests
 		res.Header().Set("Content-Type", "application/json")
 		res.WriteHeader(http.StatusOK)
-		b, err := json.Marshal(map[string]any{
-			"name": "telegraf-influxdb-v2-listener",
-			"commit": "v0.0.0-telegraf-influxdb-v2-listener",
-			"message":  "ready for writes",
-			"checks": []int{},
-			"status": "pass",
-			"version":  "v0.0.0-telegraf-influxdb-v2-listener"})
+		b, err := json.Marshal(map[string]string{
+			"name":    "telegraf",
+			"commit":  internal.Commit,
+			"message": "ready for queries and writes",
+			"status":  "pass",
+			"version": internal.Version})
 		if err != nil {
-			h.Log.Debugf("error marshalling json in handleReady: %v", err)
+			h.Log.Debugf("error marshalling json in handleHealth: %v", err)
 		}
 		if _, err := res.Write(b); err != nil {
 			h.Log.Debugf("error writing in handleHealth: %v", err)
