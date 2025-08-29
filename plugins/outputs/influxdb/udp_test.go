@@ -103,7 +103,7 @@ func TestUDP_Simple(t *testing.T) {
 		},
 		BytesWritten: selfstat.Register("write", "bytes_written", nil),
 	}
-	defer selfstat.Unregister("write", "bytes_written", nil)
+	defer config.BytesWritten.Unregister()
 
 	client, err := influxdb.NewUDPClient(config)
 	require.NoError(t, err)
@@ -130,7 +130,7 @@ func TestUDP_DialError(t *testing.T) {
 		},
 		BytesWritten: selfstat.Register("write", "bytes_written", nil),
 	}
-	defer selfstat.Unregister("write", "bytes_written", nil)
+	defer config.BytesWritten.Unregister()
 
 	client, err := influxdb.NewUDPClient(config)
 	require.NoError(t, err)
@@ -159,7 +159,7 @@ func TestUDP_WriteError(t *testing.T) {
 		},
 		BytesWritten: selfstat.Register("write", "bytes_written", nil),
 	}
-	defer selfstat.Unregister("write", "bytes_written", nil)
+	defer config.BytesWritten.Unregister()
 
 	client, err := influxdb.NewUDPClient(config)
 	require.NoError(t, err)
@@ -225,7 +225,7 @@ func TestUDP_ErrorLogging(t *testing.T) {
 			log.SetOutput(&b)
 
 			tt.config.BytesWritten = selfstat.Register("write", "bytes_written", nil)
-			defer selfstat.Unregister("write", "bytes_written", nil)
+			defer tt.config.BytesWritten.Unregister()
 
 			client, err := influxdb.NewUDPClient(tt.config)
 			require.NoError(t, err)
@@ -269,7 +269,7 @@ func TestUDP_WriteWithRealConn(t *testing.T) {
 		URL:          u,
 		BytesWritten: selfstat.Register("write", "bytes_written", nil),
 	}
-	defer selfstat.Unregister("write", "bytes_written", nil)
+	defer config.BytesWritten.Unregister()
 
 	client, err := influxdb.NewUDPClient(config)
 	require.NoError(t, err)
