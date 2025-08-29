@@ -254,7 +254,7 @@ func TestInfluxDBLocalAddress(t *testing.T) {
 
 	require.NoError(t, output.Init())
 	require.NoError(t, output.Connect())
-	defer output.Close()
+	output.Close()
 }
 
 func TestBytesWrittenHTTP(t *testing.T) {
