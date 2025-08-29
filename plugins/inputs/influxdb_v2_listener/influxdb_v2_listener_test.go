@@ -532,6 +532,57 @@ func TestWriteEmpty(t *testing.T) {
 	}
 }
 
+func TestHealth(t *testing.T) {
+	listener := newTestListener()
+	listener.timeFunc = func() time.Time {
+		return time.Unix(42, 123456789)
+	}
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	// post ping to listener
+	resp, err := http.Get(createURL(listener, "http", "/api/v2/health", ""))
+	require.NoError(t, err)
+	require.Equal(t, "application/json", resp.Header["Content-Type"][0])
+	bodyBytes, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Contains(t, string(bodyBytes), "\"status\":\"pass\"")
+	require.Contains(t, string(bodyBytes), "\"message\":\"ready for queries and writes\"")
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 200, resp.StatusCode)
+	require.EqualValues(t, 1, listener.healthsServed.Get())
+
+	// check when max undelivered is set, but not reached
+	listener.MaxUndeliveredMetrics = 1
+	resp, err = http.Get(createURL(listener, "http", "/api/v2/health", ""))
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 200, resp.StatusCode)
+	require.EqualValues(t, 2, listener.healthsServed.Get())
+
+	// and on the documented base endpoint
+	resp, err = http.Get(createURL(listener, "http", "/health", ""))
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 200, resp.StatusCode)
+	require.EqualValues(t, 3, listener.healthsServed.Get())
+
+	// post ping to listener with too many pending metrics
+	listener.totalUndeliveredMetrics.Add(1)
+	resp, err = http.Get(createURL(listener, "http", "/api/v2/health", ""))
+	require.NoError(t, err)
+	require.Equal(t, "application/json", resp.Header["Content-Type"][0])
+	bodyBytes, err = io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Contains(t, string(bodyBytes), "\"status\":\"fail\"")
+	require.Contains(t, string(bodyBytes), "\"message\":\"pending undelivered metrics (1) is above limit\"")
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 503, resp.StatusCode)
+	require.EqualValues(t, 4, listener.healthsServed.Get())
+}
+
 func TestReady(t *testing.T) {
 	listener := newTestListener()
 	listener.timeFunc = func() time.Time {
@@ -551,6 +602,14 @@ func TestReady(t *testing.T) {
 	require.Contains(t, string(bodyBytes), "\"status\":\"ready\"")
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 200, resp.StatusCode)
+	require.EqualValues(t, 1, listener.readysServed.Get())
+
+	// and on the documented base endpoint
+	resp, err = http.Get(createURL(listener, "http", "/ready", ""))
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 200, resp.StatusCode)
+	require.EqualValues(t, 2, listener.readysServed.Get())
 }
 
 func TestWriteWithPrecision(t *testing.T) {
