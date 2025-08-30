@@ -18,6 +18,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/ratelimiter"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
+	"github.com/influxdata/telegraf/selfstat"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -222,6 +223,7 @@ func TestRetryLaterEarlyExit(t *testing.T) {
 		serializer:      ratelimiter.NewIndividualSerializer(serializer),
 		rateLimiter:     limiter,
 		log:             &testutil.Logger{},
+		statistics:      selfstat.NewCollector(make(map[string]string)),
 	}
 	require.NoError(t, c.Init())
 
