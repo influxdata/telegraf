@@ -30,13 +30,14 @@ var sampleConfig string
 const readTimeoutMsg = "Read timeout set! Connections, inactive for the set duration, will be closed!"
 
 type Syslog struct {
-	Address        string                     `toml:"server"`
-	Framing        string                     `toml:"framing"`
-	SyslogStandard string                     `toml:"syslog_standard"`
-	Trailer        nontransparent.TrailerType `toml:"trailer"`
-	BestEffort     bool                       `toml:"best_effort"`
-	Separator      string                     `toml:"sdparam_separator"`
-	Log            telegraf.Logger            `toml:"-"`
+	Address              string                     `toml:"server"`
+	Framing              string                     `toml:"framing"`
+	SyslogStandard       string                     `toml:"syslog_standard"`
+	SyslogMaxMessageSize int                        `toml:"syslog_max_message_size"`
+	Trailer              nontransparent.TrailerType `toml:"trailer"`
+	BestEffort           bool                       `toml:"best_effort"`
+	Separator            string                     `toml:"sdparam_separator"`
+	Log                  telegraf.Logger            `toml:"-"`
 	socket.Config
 
 	mu sync.Mutex
@@ -66,6 +67,11 @@ func (s *Syslog) Init() error {
 	case "RFC3164", "RFC5424":
 	default:
 		return fmt.Errorf("invalid 'syslog_standard' %q", s.SyslogStandard)
+	}
+
+	// Default Syslog max message size for RFC5424 and RFC3164 if wasn't set or invalid
+	if s.SyslogMaxMessageSize <= 0 {
+		s.SyslogMaxMessageSize = 8192
 	}
 
 	if s.Separator == "" {
@@ -157,6 +163,7 @@ func (s *Syslog) createStreamDataHandler(acc telegraf.Accumulator) socket.Callba
 	// Create parser options
 	var opts []syslog.ParserOption
 	var machineOpts []syslog.MachineOption
+	maxMessageLength := s.SyslogMaxMessageSize
 	switch s.SyslogStandard {
 	case "RFC3164":
 		if s.BestEffort {
@@ -175,6 +182,10 @@ func (s *Syslog) createStreamDataHandler(acc telegraf.Accumulator) socket.Callba
 	}
 	if len(machineOpts) > 0 {
 		opts = append(opts, syslog.WithMachineOptions(machineOpts...))
+	}
+
+	if maxMessageLength > 0 {
+		opts = append(opts, syslog.WithMaxMessageLength(maxMessageLength))
 	}
 
 	return func(src net.Addr, reader io.ReadCloser) {
