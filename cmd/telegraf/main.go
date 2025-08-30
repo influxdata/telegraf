@@ -221,6 +221,10 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			pprof.Start(cCtx.String("pprof-addr"))
 		}
 
+		if err := config.SetPluginLabelSelections(cCtx.StringSlice("select")); err != nil {
+			return err
+		}
+
 		filters := processFilterFlags(cCtx)
 
 		g := GlobalFlags{
@@ -340,6 +344,14 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 					Name: "test",
 					Usage: "enable test mode: gather metrics, print them out, and exit. " +
 						"Note: Test mode only runs inputs, processors, and aggregators, but not outputs",
+				},
+				&cli.StringSliceFlag{
+					Name: "select",
+					Usage: "enable only plugins with labels matching the given key-value selection. " +
+						"If no selectors are provided, all plugins are enabled. Multiple key-value pairs " +
+						"in an option will be combined by AND, multiple options are combined by OR. " +
+						"Key and value are separated by an equal sign, multiple pairs are separated by " +
+						"semi-colon, values do accept wildcards.",
 				},
 				//
 				// Duration flags
