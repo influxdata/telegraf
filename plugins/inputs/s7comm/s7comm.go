@@ -368,9 +368,9 @@ func handleFieldAddress(address string) (*gos7.S7DataItem, converterFunc, error)
 	case "DT": // 7-byte
 		buflen = 7
 	case "S":
-		amount = extra
 		// Extra bytes as the first byte is the max-length of the string and
 		// the second byte is the actual length of the string.
+		amount = extra + 2
 		buflen = extra + 2
 	default:
 		return nil, nil, errors.New("invalid data type")
