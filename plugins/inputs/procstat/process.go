@@ -112,8 +112,8 @@ func (p *proc) metrics(prefix string, cfg *collectionConfig, t time.Time) ([]tel
 	if rc, wc, err := collectTotalReadWrite(p); err == nil {
 		fields[prefix+"read_bytes"] = rc
 		fields[prefix+"write_bytes"] = wc
-		fields[prefix+"disk_read_bytes"] = io.ReadBytes
-		fields[prefix+"disk_write_bytes"] = io.WriteBytes
+		fields[prefix+"disk_read_bytes"] = io.DiskReadBytes
+		fields[prefix+"disk_write_bytes"] = io.DiskWriteBytes
 	}
 
 	createdAt, err := p.CreateTime() // returns epoch in ms
