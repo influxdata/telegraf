@@ -1,6 +1,7 @@
 package kafka
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -13,11 +14,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
-
-type topicSuffixTestpair struct {
-	topicSuffix   TopicSuffix
-	expectedTopic string
-}
 
 func TestConnectAndWriteIntegration(t *testing.T) {
 	if testing.Short() {
@@ -61,252 +57,241 @@ func TestTopicSuffixes(t *testing.T) {
 	metricTagValue := m.Tags()[metricTagName]
 	metricName := m.Name()
 
-	var testcases = []topicSuffixTestpair{
-		// This ensures empty separator is okay
-		{TopicSuffix{Method: "measurement"},
-			topic + metricName},
-		{TopicSuffix{Method: "measurement", Separator: "sep"},
-			topic + "sep" + metricName},
-		{TopicSuffix{Method: "tags", Keys: []string{metricTagName}, Separator: "_"},
-			topic + "_" + metricTagValue},
-		{TopicSuffix{Method: "tags", Keys: []string{metricTagName, metricTagName, metricTagName}, Separator: "___"},
-			topic + "___" + metricTagValue + "___" + metricTagValue + "___" + metricTagValue},
-		{TopicSuffix{Method: "tags", Keys: []string{metricTagName, metricTagName, metricTagName}},
-			topic + metricTagValue + metricTagValue + metricTagValue},
-		// This ensures non-existing tags are ignored
-		{TopicSuffix{Method: "tags", Keys: []string{"non_existing_tag", "non_existing_tag"}, Separator: "___"},
-			topic},
-		{TopicSuffix{Method: "tags", Keys: []string{metricTagName, "non_existing_tag"}, Separator: "___"},
-			topic + "___" + metricTagValue},
-		// This ensures backward compatibility
-		{TopicSuffix{},
-			topic},
-	}
-
-	for _, testcase := range testcases {
-		topicSuffix := testcase.topicSuffix
-		expectedTopic := testcase.expectedTopic
-		k := &Kafka{
-			Topic:       topic,
-			TopicSuffix: topicSuffix,
-			Log:         testutil.Logger{},
-		}
-
-		_, topic := k.GetTopicName(m)
-		require.Equal(t, expectedTopic, topic)
-	}
-}
-
-func TestValidateTopicSuffixMethod(t *testing.T) {
-	err := ValidateTopicSuffixMethod("invalid_topic_suffix_method")
-	require.Error(t, err, "Topic suffix method used should be invalid.")
-
-	for _, method := range ValidTopicSuffixMethods {
-		err := ValidateTopicSuffixMethod(method)
-		require.NoError(t, err, "Topic suffix method used should be valid.")
-	}
-}
-
-func TestRoutingKey(t *testing.T) {
-	tests := []struct {
-		name   string
-		kafka  *Kafka
-		metric telegraf.Metric
-		check  func(t *testing.T, routingKey string)
+	var tests = []struct {
+		suffix   TopicSuffix
+		expected string
 	}{
+		// This ensures empty separator is okay
 		{
-			name: "static routing key",
-			kafka: &Kafka{
-				RoutingKey: "static",
-			},
-			metric: func() telegraf.Metric {
-				m := metric.New(
-					"cpu",
-					map[string]string{},
-					map[string]interface{}{
-						"value": 42.0,
-					},
-					time.Unix(0, 0),
-				)
-				return m
-			}(),
-			check: func(t *testing.T, routingKey string) {
-				require.Equal(t, "static", routingKey)
-			},
+			TopicSuffix{Method: "measurement"},
+			topic + metricName,
 		},
 		{
-			name: "random routing key",
-			kafka: &Kafka{
-				RoutingKey: "random",
-			},
-			metric: func() telegraf.Metric {
-				m := metric.New(
-					"cpu",
-					map[string]string{},
-					map[string]interface{}{
-						"value": 42.0,
-					},
-					time.Unix(0, 0),
-				)
-				return m
-			}(),
-			check: func(t *testing.T, routingKey string) {
-				require.Len(t, routingKey, 36)
-			},
+			TopicSuffix{Method: "measurement", Separator: "sep"},
+			topic + "sep" + metricName,
+		},
+		{
+			TopicSuffix{Method: "tags", Keys: []string{metricTagName}, Separator: "_"},
+			topic + "_" + metricTagValue,
+		},
+		{
+			TopicSuffix{Method: "tags", Keys: []string{metricTagName, metricTagName, metricTagName}, Separator: "___"},
+			topic + "___" + metricTagValue + "___" + metricTagValue + "___" + metricTagValue,
+		},
+		{
+			TopicSuffix{Method: "tags", Keys: []string{metricTagName, metricTagName, metricTagName}},
+			topic + metricTagValue + metricTagValue + metricTagValue,
+		},
+		{
+			// Ensure non-existing tags are ignored
+			TopicSuffix{Method: "tags", Keys: []string{"non_existing_tag", "non_existing_tag"}, Separator: "___"},
+			topic,
+		},
+		{
+			TopicSuffix{Method: "tags", Keys: []string{metricTagName, "non_existing_tag"}, Separator: "___"},
+			topic + "___" + metricTagValue,
+		},
+		{
+			// Ensure backward compatibility
+			TopicSuffix{},
+			topic,
 		},
 	}
+
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.kafka.Log = testutil.Logger{}
-			key, err := tt.kafka.routingKey(tt.metric)
-			require.NoError(t, err)
-			tt.check(t, key)
+		t.Run(tt.expected, func(t *testing.T) {
+			topicSuffix := tt.suffix
+			expectedTopic := tt.expected
+			k := &Kafka{
+				Topic:       topic,
+				TopicSuffix: topicSuffix,
+				Log:         testutil.Logger{},
+			}
+
+			_, topic := k.getTopicName(m)
+			require.Equal(t, expectedTopic, topic)
 		})
 	}
 }
 
-type MockProducer struct {
-	sent []*sarama.ProducerMessage
-	sarama.SyncProducer
+func TestValidTopicSuffixMethod(t *testing.T) {
+	for _, method := range []string{"", "measurement", "tags"} {
+		name := method
+		if method == "" {
+			name = "empty"
+		}
+		t.Run(name, func(t *testing.T) {
+			plugin := &Kafka{
+				TopicSuffix: TopicSuffix{
+					Method: method,
+				},
+				Log: testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+		})
+	}
 }
 
-func (p *MockProducer) SendMessage(msg *sarama.ProducerMessage) (partition int32, offset int64, err error) {
-	p.sent = append(p.sent, msg)
-	return 0, 0, nil
+func TestInvalidTopicSuffixMethod(t *testing.T) {
+	plugin := &Kafka{
+		TopicSuffix: TopicSuffix{
+			Method: "invalid_topic_suffix_method",
+		},
+		Log: testutil.Logger{},
+	}
+	require.ErrorContains(t, plugin.Init(), "unknown topic suffix method provided")
 }
 
-func (p *MockProducer) SendMessages(msgs []*sarama.ProducerMessage) error {
-	p.sent = append(p.sent, msgs...)
-	return nil
+func TestRoutingKeyStatic(t *testing.T) {
+	plugin := &Kafka{
+		RoutingKey: "static",
+		Log:        testutil.Logger{},
+	}
+
+	m := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"value": 42.0,
+		},
+		time.Unix(0, 0),
+	)
+
+	key, err := plugin.routingKey(m)
+	require.NoError(t, err)
+	require.Equal(t, "static", key)
 }
 
-func (*MockProducer) Close() error {
-	return nil
-}
+func TestRoutingKeyRandom(t *testing.T) {
+	plugin := &Kafka{
+		RoutingKey: "random",
+		Log:        testutil.Logger{},
+	}
 
-func NewMockProducer(_ []string, _ *sarama.Config) (sarama.SyncProducer, error) {
-	return &MockProducer{}, nil
+	m := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"value": 42.0,
+		},
+		time.Unix(0, 0),
+	)
+
+	key, err := plugin.routingKey(m)
+	require.NoError(t, err)
+	require.Len(t, key, 36)
 }
 
 func TestTopicTag(t *testing.T) {
 	tests := []struct {
-		name   string
-		plugin *Kafka
-		input  []telegraf.Metric
-		topic  string
-		value  string
+		name            string
+		topicTag        string
+		excludeTopicTag bool
+		expectedTopic   string
+		expectedContent string
 	}{
 		{
-			name: "static topic",
-			plugin: &Kafka{
-				Brokers:      []string{"127.0.0.1"},
-				Topic:        "telegraf",
-				producerFunc: NewMockProducer,
-			},
-			input: []telegraf.Metric{
-				testutil.MustMetric(
-					"cpu",
-					map[string]string{},
-					map[string]interface{}{
-						"time_idle": 42.0,
-					},
-					time.Unix(0, 0),
-				),
-			},
-			topic: "telegraf",
-			value: "cpu time_idle=42 0\n",
+			name:            "static topic",
+			expectedTopic:   "telegraf",
+			expectedContent: "cpu,topic=xyzzy time_idle=42 0\n",
 		},
 		{
-			name: "topic tag overrides static topic",
-			plugin: &Kafka{
-				Brokers:      []string{"127.0.0.1"},
-				Topic:        "telegraf",
-				TopicTag:     "topic",
-				producerFunc: NewMockProducer,
-			},
-			input: []telegraf.Metric{
-				testutil.MustMetric(
-					"cpu",
-					map[string]string{
-						"topic": "xyzzy",
-					},
-					map[string]interface{}{
-						"time_idle": 42.0,
-					},
-					time.Unix(0, 0),
-				),
-			},
-			topic: "xyzzy",
-			value: "cpu,topic=xyzzy time_idle=42 0\n",
+			name:            "topic tag overrides static topic",
+			topicTag:        "topic",
+			expectedTopic:   "xyzzy",
+			expectedContent: "cpu,topic=xyzzy time_idle=42 0\n",
 		},
 		{
-			name: "missing topic tag falls back to  static topic",
-			plugin: &Kafka{
-				Brokers:      []string{"127.0.0.1"},
-				Topic:        "telegraf",
-				TopicTag:     "topic",
-				producerFunc: NewMockProducer,
-			},
-			input: []telegraf.Metric{
-				testutil.MustMetric(
-					"cpu",
-					map[string]string{},
-					map[string]interface{}{
-						"time_idle": 42.0,
-					},
-					time.Unix(0, 0),
-				),
-			},
-			topic: "telegraf",
-			value: "cpu time_idle=42 0\n",
+			name:            "missing topic tag falls back to  static topic",
+			topicTag:        "non-existant",
+			expectedTopic:   "telegraf",
+			expectedContent: "cpu,topic=xyzzy time_idle=42 0\n",
 		},
 		{
-			name: "exclude topic tag removes tag",
-			plugin: &Kafka{
-				Brokers:         []string{"127.0.0.1"},
-				Topic:           "telegraf",
-				TopicTag:        "topic",
-				ExcludeTopicTag: true,
-				producerFunc:    NewMockProducer,
-			},
-			input: []telegraf.Metric{
-				testutil.MustMetric(
-					"cpu",
-					map[string]string{
-						"topic": "xyzzy",
-					},
-					map[string]interface{}{
-						"time_idle": 42.0,
-					},
-					time.Unix(0, 0),
-				),
-			},
-			topic: "xyzzy",
-			value: "cpu time_idle=42 0\n",
+			name:            "exclude topic tag removes tag",
+			topicTag:        "topic",
+			excludeTopicTag: true,
+			expectedTopic:   "xyzzy",
+			expectedContent: "cpu time_idle=42 0\n",
 		},
 	}
+
+	// Define an input metric for writing
+	input := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{
+				"topic": "xyzzy",
+			},
+			map[string]interface{}{
+				"time_idle": 42.0,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.plugin.Log = testutil.Logger{}
-
+			// Setup the serializer
 			s := &influx.Serializer{}
 			require.NoError(t, s.Init())
-			tt.plugin.SetSerializer(s)
 
-			err := tt.plugin.Connect()
+			// Setup the plugin under test
+			plugin := &Kafka{
+				Brokers:         []string{"127.0.0.1"},
+				Topic:           "telegraf",
+				TopicTag:        tt.topicTag,
+				ExcludeTopicTag: tt.excludeTopicTag,
+				Log:             testutil.Logger{},
+				producerFunc:    newMockProducer,
+			}
+			plugin.SetSerializer(s)
+			require.NoError(t, plugin.Init())
+
+			// Connect and write a metric
+			require.NoError(t, plugin.Connect())
+			require.NoError(t, plugin.Write(input))
+
+			// Check the content that would be sent by the producer
+			producer, ok := plugin.producer.(*mockProducer)
+			require.True(t, ok, "invalid producer type")
+
+			producer.Lock()
+			message := producer.sent[0]
+			producer.Unlock()
+
+			require.Equal(t, tt.expectedTopic, message.Topic)
+			encoded, err := message.Value.Encode()
 			require.NoError(t, err)
-
-			producer := &MockProducer{}
-			tt.plugin.producer = producer
-
-			err = tt.plugin.Write(tt.input)
-			require.NoError(t, err)
-
-			require.Equal(t, tt.topic, producer.sent[0].Topic)
-
-			encoded, err := producer.sent[0].Value.Encode()
-			require.NoError(t, err)
-			require.Equal(t, tt.value, string(encoded))
+			require.Equal(t, tt.expectedContent, string(encoded))
 		})
 	}
+}
+
+type mockProducer struct {
+	sent []*sarama.ProducerMessage
+	sarama.SyncProducer
+	sync.Mutex
+}
+
+func newMockProducer(_ []string, _ *sarama.Config) (sarama.SyncProducer, error) {
+	return &mockProducer{}, nil
+}
+
+func (p *mockProducer) SendMessage(msg *sarama.ProducerMessage) (partition int32, offset int64, err error) {
+	p.Lock()
+	defer p.Unlock()
+	p.sent = append(p.sent, msg)
+	return 0, 0, nil
+}
+
+func (p *mockProducer) SendMessages(msgs []*sarama.ProducerMessage) error {
+	p.Lock()
+	defer p.Unlock()
+	p.sent = append(p.sent, msgs...)
+	return nil
+}
+
+func (*mockProducer) Close() error {
+	return nil
 }
