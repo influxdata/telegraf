@@ -95,6 +95,17 @@ func (s *Collector) Unregister(measurement, field string, tags map[string]string
 	}
 
 	Unregister(measurement, field, t)
+
+	// Compute the stats-key and delete the entry
+	key := collectorKey(measurement, field, tags)
+	delete(s.statistics, key)
+}
+
+func (s *Collector) UnregisterAll() {
+	for _, s := range s.statistics {
+		s.Unregister()
+	}
+	s.statistics = make(map[string]Stat)
 }
 
 func (s *Collector) Get(measurement, field string, tags map[string]string) Stat {
