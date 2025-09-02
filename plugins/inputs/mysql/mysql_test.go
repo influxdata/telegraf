@@ -157,7 +157,7 @@ func TestGaleraIntegration(t *testing.T) {
 	}
 
 	container := testutil.Container{
-		Image:        "bitnami/mariadb-galera",
+		Image:        "bitnamilegacy/mariadb-galera",
 		Env:          map[string]string{"ALLOW_EMPTY_PASSWORD": "yes"},
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
