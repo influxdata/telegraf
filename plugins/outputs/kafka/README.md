@@ -58,7 +58,7 @@ to use them.
   topic = "telegraf"
 
   ## Tag value to be used as the topic. If not set or the tag does not exist,
-  # the 'topic' option is used.
+  ## the 'topic' option is used.
   # topic_tag = ""
 
   ## If true, the 'topic_tag' will be removed from to the metric.
