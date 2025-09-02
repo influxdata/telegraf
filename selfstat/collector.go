@@ -105,7 +105,7 @@ func (s *Collector) UnregisterAll() {
 	for _, s := range s.statistics {
 		s.Unregister()
 	}
-	s.statistics = make(map[string]Stat)
+	clear(s.statistics)
 }
 
 func (s *Collector) Get(measurement, field string, tags map[string]string) Stat {
