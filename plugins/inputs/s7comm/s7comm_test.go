@@ -375,7 +375,7 @@ func TestFieldMappings(t *testing.T) {
 							WordLen:  0x03,
 							DBNumber: 5,
 							Start:    3,
-							Amount:   10,
+							Amount:   12,
 							Data:     make([]byte, 12),
 						},
 					},
@@ -383,7 +383,9 @@ func TestFieldMappings(t *testing.T) {
 						{
 							measurement: "test",
 							field:       "foo",
-							convert:     func([]byte) interface{} { return "" },
+							convert: func(b []byte) interface{} {
+								return string(b[2 : 2+b[1]])
+							},
 						},
 					},
 				},
