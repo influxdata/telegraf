@@ -21,12 +21,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-var ValidTopicSuffixMethods = []string{
-	"",
-	"measurement",
-	"tags",
-}
-
 var zeroTime = time.Unix(0, 0)
 
 type Kafka struct {
@@ -44,12 +38,9 @@ type Kafka struct {
 	kafka.WriteConfig
 
 	// Legacy TLS config options
-	// TLS client certificate
-	Certificate string
-	// TLS client key
-	Key string
-	// TLS certificate authority
-	CA string
+	Certificate string `toml:"certificate" deprecated:"1.36.0;1.40.0;please use 'tls_cert' instead"`
+	Key         string `toml:"key" deprecated:"1.36.0;1.40.0;please use 'tls_cert' instead"`
+	CA          string `toml:"ca" deprecated:"1.36.0;1.40.0;please use 'tls_ca' instead"`
 
 	saramaConfig *sarama.Config
 	producerFunc func(addrs []string, config *sarama.Config) (sarama.SyncProducer, error)
@@ -64,53 +55,8 @@ type TopicSuffix struct {
 	Separator string   `toml:"separator"`
 }
 
-func ValidateTopicSuffixMethod(method string) error {
-	for _, validMethod := range ValidTopicSuffixMethods {
-		if method == validMethod {
-			return nil
-		}
-	}
-	return fmt.Errorf("unknown topic suffix method provided: %s", method)
-}
-
 func (*Kafka) SampleConfig() string {
 	return sampleConfig
-}
-
-func (k *Kafka) GetTopicName(metric telegraf.Metric) (telegraf.Metric, string) {
-	topic := k.Topic
-	if k.TopicTag != "" {
-		if t, ok := metric.GetTag(k.TopicTag); ok {
-			topic = t
-
-			// If excluding the topic tag, a copy is required to avoid modifying
-			// the metric buffer.
-			if k.ExcludeTopicTag {
-				metric = metric.Copy()
-				metric.Accept()
-				metric.RemoveTag(k.TopicTag)
-			}
-		}
-	}
-
-	var topicName string
-	switch k.TopicSuffix.Method {
-	case "measurement":
-		topicName = topic + k.TopicSuffix.Separator + metric.Name()
-	case "tags":
-		var topicNameComponents []string
-		topicNameComponents = append(topicNameComponents, topic)
-		for _, tag := range k.TopicSuffix.Keys {
-			tagValue := metric.Tags()[tag]
-			if tagValue != "" {
-				topicNameComponents = append(topicNameComponents, tagValue)
-			}
-		}
-		topicName = strings.Join(topicNameComponents, k.TopicSuffix.Separator)
-	default:
-		topicName = topic
-	}
-	return metric, topicName
 }
 
 func (k *Kafka) SetSerializer(serializer telegraf.Serializer) {
@@ -120,11 +66,15 @@ func (k *Kafka) SetSerializer(serializer telegraf.Serializer) {
 func (k *Kafka) Init() error {
 	kafka.SetLogger(k.Log.Level())
 
-	if err := ValidateTopicSuffixMethod(k.TopicSuffix.Method); err != nil {
-		return err
+	// Validate the topic-suffix method
+	switch k.TopicSuffix.Method {
+	case "", "measurement", "tags":
+		// Do nothing, those are valid
+	default:
+		return fmt.Errorf("unknown topic suffix method provided: %s", k.TopicSuffix.Method)
 	}
-	config := sarama.NewConfig()
 
+	config := sarama.NewConfig()
 	if err := k.SetConfig(config, k.Log); err != nil {
 		return err
 	}
@@ -174,29 +124,10 @@ func (k *Kafka) Close() error {
 	return k.producer.Close()
 }
 
-func (k *Kafka) routingKey(metric telegraf.Metric) (string, error) {
-	if k.RoutingTag != "" {
-		key, ok := metric.GetTag(k.RoutingTag)
-		if ok {
-			return key, nil
-		}
-	}
-
-	if k.RoutingKey == "random" {
-		u, err := uuid.NewV4()
-		if err != nil {
-			return "", err
-		}
-		return u.String(), nil
-	}
-
-	return k.RoutingKey, nil
-}
-
 func (k *Kafka) Write(metrics []telegraf.Metric) error {
 	msgs := make([]*sarama.ProducerMessage, 0, len(metrics))
 	for _, metric := range metrics {
-		metric, topic := k.GetTopicName(metric)
+		metric, topic := k.getTopicName(metric)
 
 		buf, err := k.serializer.Serialize(metric)
 		if err != nil {
@@ -234,8 +165,7 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 		msgs = append(msgs, m)
 	}
 
-	err := k.producer.SendMessages(msgs)
-	if err != nil {
+	if err := k.producer.SendMessages(msgs); err != nil {
 		// We could have many errors, return only the first encountered.
 		var errs sarama.ProducerErrors
 		if errors.As(err, &errs) && len(errs) > 0 {
@@ -258,6 +188,60 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 	}
 
 	return nil
+}
+
+func (k *Kafka) getTopicName(metric telegraf.Metric) (telegraf.Metric, string) {
+	topic := k.Topic
+	if k.TopicTag != "" {
+		if t, ok := metric.GetTag(k.TopicTag); ok {
+			topic = t
+
+			// If excluding the topic tag, a copy is required to avoid modifying
+			// the metric buffer.
+			if k.ExcludeTopicTag {
+				metric = metric.Copy()
+				metric.Accept()
+				metric.RemoveTag(k.TopicTag)
+			}
+		}
+	}
+
+	var topicName string
+	switch k.TopicSuffix.Method {
+	case "measurement":
+		topicName = topic + k.TopicSuffix.Separator + metric.Name()
+	case "tags":
+		topicNameComponents := []string{topic}
+		for _, tag := range k.TopicSuffix.Keys {
+			tagValue := metric.Tags()[tag]
+			if tagValue != "" {
+				topicNameComponents = append(topicNameComponents, tagValue)
+			}
+		}
+		topicName = strings.Join(topicNameComponents, k.TopicSuffix.Separator)
+	default:
+		topicName = topic
+	}
+	return metric, topicName
+}
+
+func (k *Kafka) routingKey(metric telegraf.Metric) (string, error) {
+	if k.RoutingTag != "" {
+		key, ok := metric.GetTag(k.RoutingTag)
+		if ok {
+			return key, nil
+		}
+	}
+
+	if k.RoutingKey == "random" {
+		u, err := uuid.NewV4()
+		if err != nil {
+			return "", err
+		}
+		return u.String(), nil
+	}
+
+	return k.RoutingKey, nil
 }
 
 func init() {

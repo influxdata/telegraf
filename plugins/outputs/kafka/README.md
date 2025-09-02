@@ -57,8 +57,8 @@ to use them.
   ## Kafka topic for producer messages
   topic = "telegraf"
 
-  ## The value of this tag will be used as the topic.  If not set the 'topic'
-  ## option is used.
+  ## Tag value to be used as the topic. If not set or the tag does not exist,
+  ## the 'topic' option is used.
   # topic_tag = ""
 
   ## If true, the 'topic_tag' will be removed from to the metric.
@@ -164,7 +164,7 @@ to use them.
   ##   OAUTHBEARER, PLAIN, SCRAM-SHA-256, SCRAM-SHA-512, GSSAPI, AWS-MSK-IAM
   # sasl_mechanism = ""
 
-  ## used if sasl_mechanism is GSSAPI
+  ## Used if sasl_mechanism is GSSAPI
   # sasl_gssapi_service_name = ""
   # ## One of: KRB5_USER_AUTH and KRB5_KEYTAB_AUTH
   # sasl_gssapi_auth_type = "KRB5_USER_AUTH"
@@ -176,7 +176,7 @@ to use them.
   ## Access token used if sasl_mechanism is OAUTHBEARER
   # sasl_access_token = ""
 
-  ## used if sasl_mechanism is AWS-MSK-IAM
+  ## Used if sasl_mechanism is AWS-MSK-IAM
   # sasl_aws_msk_iam_region = ""
   ## for profile based auth
   ## sasl_aws_msk_iam_profile = ""
@@ -191,7 +191,7 @@ to use them.
   ## SASL protocol version.  When connecting to Azure EventHub set to 0.
   # sasl_version = 1
 
-  # Disable Kafka metadata full fetch
+  ## Disable Kafka metadata full fetch
   # metadata_full = false
 
   ## Maximum number of retries for metadata operations including
