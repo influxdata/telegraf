@@ -72,6 +72,7 @@ type InfluxDBV2Listener struct {
 	bytesRecv       selfstat.Stat
 	requestsServed  selfstat.Stat
 	writesServed    selfstat.Stat
+	healthsServed   selfstat.Stat
 	readysServed    selfstat.Stat
 	requestsRecv    selfstat.Stat
 	notFoundsServed selfstat.Stat
@@ -98,6 +99,7 @@ func (h *InfluxDBV2Listener) Init() error {
 	h.bytesRecv = selfstat.Register("influxdb_v2_listener", "bytes_received", tags)
 	h.requestsServed = selfstat.Register("influxdb_v2_listener", "requests_served", tags)
 	h.writesServed = selfstat.Register("influxdb_v2_listener", "writes_served", tags)
+	h.healthsServed = selfstat.Register("influxdb_v2_listener", "healths_served", tags)
 	h.readysServed = selfstat.Register("influxdb_v2_listener", "readys_served", tags)
 	h.requestsRecv = selfstat.Register("influxdb_v2_listener", "requests_received", tags)
 	h.notFoundsServed = selfstat.Register("influxdb_v2_listener", "not_founds_served", tags)
@@ -222,10 +224,46 @@ func (h *InfluxDBV2Listener) routes() error {
 	)
 
 	h.mux.Handle("/api/v2/write", authHandler(h.handleWrite()))
+	h.mux.Handle("/api/v2/health", h.handleHealth())
 	h.mux.Handle("/api/v2/ready", h.handleReady())
+	h.mux.Handle("/health", h.handleHealth())
+	h.mux.Handle("/ready", h.handleReady())
 	h.mux.Handle("/", authHandler(h.handleDefault()))
 
 	return nil
+}
+
+func (h *InfluxDBV2Listener) handleHealth() http.HandlerFunc {
+	return func(res http.ResponseWriter, _ *http.Request) {
+		defer h.healthsServed.Incr(1)
+
+		res.Header().Set("Content-Type", "application/json")
+		body := map[string]string{
+			"name":    "telegraf",
+			"commit":  internal.Commit,
+			"message": "ready for queries and writes",
+			"status":  "pass",
+			"version": internal.Version,
+		}
+
+		pendingMetrics := h.totalUndeliveredMetrics.Load()
+		if h.MaxUndeliveredMetrics > 0 && pendingMetrics >= int64(h.MaxUndeliveredMetrics) {
+			res.WriteHeader(http.StatusServiceUnavailable)
+			body["status"] = "fail"
+			body["message"] = fmt.Sprintf("pending undelivered metrics (%d) is above limit", pendingMetrics)
+		} else {
+			res.WriteHeader(http.StatusOK)
+		}
+
+		b, err := json.Marshal(body)
+		if err != nil {
+			h.Log.Debugf("error marshalling json in handleHealth: %v", err)
+			return
+		}
+		if _, err := res.Write(b); err != nil {
+			h.Log.Debugf("error writing in handleHealth: %v", err)
+		}
+	}
 }
 
 func (h *InfluxDBV2Listener) handleReady() http.HandlerFunc {
@@ -241,6 +279,7 @@ func (h *InfluxDBV2Listener) handleReady() http.HandlerFunc {
 			"up":      h.timeFunc().Sub(h.startTime).String()})
 		if err != nil {
 			h.Log.Debugf("error marshalling json in handleReady: %v", err)
+			return
 		}
 		if _, err := res.Write(b); err != nil {
 			h.Log.Debugf("error writing in handleReady: %v", err)
