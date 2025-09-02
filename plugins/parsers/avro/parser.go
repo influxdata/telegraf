@@ -131,17 +131,35 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Cast to string-to-interface
-	codecSchema, ok := native.(map[string]interface{})
-	if !ok {
+
+	// Handle single records and arrays at root level
+	switch v := native.(type) {
+	case map[string]interface{}:
+		m, err := p.createMetric(v, schema)
+		if err != nil {
+			return nil, err
+		}
+		return []telegraf.Metric{m}, nil
+	case []interface{}:
+		metrics := make([]telegraf.Metric, 0, len(v))
+		for idx, item := range v {
+			record, ok := item.(map[string]interface{})
+			if !ok {
+				p.Log.Warnf("Skipping non-record array element at index %d (type %T)", idx, item)
+				continue
+			}
+			m, err := p.createMetric(record, schema)
+			if err != nil {
+				p.Log.Warnf("Skipping array element at index %d due to error during metric creation: %v", idx, err)
+				continue
+			}
+			metrics = append(metrics, m)
+		}
+		return metrics, nil
+
+	default:
 		return nil, fmt.Errorf("native is of unsupported type %T", native)
 	}
-	m, err := p.createMetric(codecSchema, schema)
-	if err != nil {
-		return nil, err
-	}
-
-	return []telegraf.Metric{m}, nil
 }
 
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {

@@ -144,5 +144,7 @@ as well.
 
 ## Metrics
 
-One metric is created for each message.  The type of each field is
-automatically determined based on the schema.
+If the root of the schema is a record, one metric is created for each message.
+If the root of the schema is an array containing records as elements,
+the array elements are parsed as separate metrics.
+Nested data structures within records are flattened.
