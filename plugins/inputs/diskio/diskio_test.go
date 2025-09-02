@@ -190,3 +190,57 @@ func TestDiskIOUtil(t *testing.T) {
 	require.True(t, acc.HasFloatField("diskio", "io_svctm"), "io_svctm not have value")
 	require.True(t, acc.HasFloatField("diskio", "io_await"), "io_await not have value")
 }
+
+func TestCounterWraparound(t *testing.T) {
+	cts := map[string]disk.IOCountersStat{
+		"sda": {
+			ReadCount:  1000,
+			WriteCount: 2000,
+			ReadTime:   8000,
+			WriteTime:  9000,
+			IoTime:     30000,
+			Name:       "sda",
+		},
+	}
+
+	// Simulate wraparound - counters decrease significantly
+	cts2 := map[string]disk.IOCountersStat{
+		"sda": {
+			ReadCount:  100,  // wrapped around
+			WriteCount: 200,  // wrapped around
+			ReadTime:   1000, // wrapped around
+			WriteTime:  1500, // wrapped around
+			IoTime:     3000, // wrapped around
+			Name:       "sda",
+		},
+	}
+
+	var acc testutil.Accumulator
+	var mps psutil.MockPS
+	mps.On("DiskIO").Return(cts, nil)
+	diskio := &DiskIO{
+		Log:     testutil.Logger{},
+		Devices: []string{"sda"},
+		ps:      &mps,
+	}
+	require.NoError(t, diskio.Init())
+
+	// First gather to establish baseline
+	require.NoError(t, diskio.Gather(&acc))
+
+	// Second gather with wrapped counters
+	mps2 := psutil.MockPS{}
+	mps2.On("DiskIO").Return(cts2, nil)
+	diskio.ps = &mps2
+
+	require.NoError(t, diskio.Gather(&acc))
+
+	// Should NOT have calculated fields due to wraparound detection
+	require.False(t, acc.HasFloatField("diskio", "io_util"), "io_util should not be present on wraparound")
+	require.False(t, acc.HasFloatField("diskio", "io_svctm"), "io_svctm should not be present on wraparound")
+	require.False(t, acc.HasFloatField("diskio", "io_await"), "io_await should not be present on wraparound")
+
+	// But basic counter fields should still be present
+	require.True(t, acc.HasField("diskio", "reads"), "reads should be present")
+	require.True(t, acc.HasField("diskio", "writes"), "writes should be present")
+}
