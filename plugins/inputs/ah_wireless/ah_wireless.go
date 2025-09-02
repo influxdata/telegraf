@@ -37,19 +37,10 @@ type Ah_wireless struct {
 	Ifname			[]string	`toml:"ifname"`
 	Eth_ioctl		uint64		`toml:"eth_ioctl"`
 	Scount			uint8		`toml:"scount"`
-/*	Tx_drop_int             int	        `toml:"tx_drop_int"`
-	Rx_drop_int             int             `toml:"rx_drop_int"`
-	Tx_retry_int            int             `toml:"tx_retry_int"`
-	Crc_error_int           int             `toml:"crc_error_int"`
-	Airtime_int             int             `toml:"airtime_int"`
-	Tx_drop_clt             int             `toml:"tx_drop_clt"`
-        Rx_drop_clt             int             `toml:"rx_drop_clt"`
-        Tx_retry_clt            int             `toml:"tx_retry_clt"`
-        Airtime_clt             int             `toml:"airtime_clt"` */
 	closed			chan		struct{}
 	numclient		[4]int
 	timer_count		uint8
-	entity			map[string]map[string]unsafe.Pointer
+	entity			map[string]map[string]saved_stats
 	Log			telegraf.Logger `toml:"-"`
 	last_rf_stat		[4]awestats
 	last_alarm_int          [4]alarm_int
@@ -221,240 +212,6 @@ func NewAh_wireless(id int) *Ah_wireless {
 				Scount: 10,
         }
 
-}
-
-func  Send_Trap(t *Ah_wireless, trap *AhTrapData,acc telegraf.Accumulator) error {
-    if trap == nil {
-        return fmt.Errorf("trap data is nil")
-    }
-
-    // Collect trap data into fields
-    fields := map[string]interface{}{
-        "name":       trap.AlarmAlertTrap.Name,
-        "ifIndex":    trap.AlarmAlertTrap.IfIndex,
-        "clientMac":  trap.AlarmAlertTrap.ClientMac,
-        "level":      trap.AlarmAlertTrap.Level,
-        "ssid":       trap.AlarmAlertTrap.Ssid,
-        "alertType":  trap.AlarmAlertTrap.AlertType,
-        "threshold":  trap.AlarmAlertTrap.ThresInterference,
-        "current":    trap.AlarmAlertTrap.ShortInterference,
-        "snapshot":   trap.AlarmAlertTrap.SnapInterference,
-        "set":        trap.AlarmAlertTrap.Set,
-    }
-
-    // Add the trap data to the Telegraf accumulator
-    acc.AddGauge("WirelessTrap", fields, nil)
-
-    log.Printf("Wireless Trap is processed")
-
-    return nil
-}
-
-func ahTrapConvert(trap *AhTrapData, logID uint, buf []byte) (int, error) {
-
-    if trap == nil || buf == nil {
-        return 0, fmt.Errorf("trap or buf cannot be nil")
-    }
-
-    startPos := 0
-
-    // Initial Trap Message
-    ret := copy(buf[startPos:], fmt.Sprintf(":TRAP:T%d:", trap.TrapType))
-    if ret >= len(buf) {
-        return ret, fmt.Errorf("buffer overflow")
-    }
-
-    startPos += ret
-
-    switch trap.TrapType {
-    case AH_ALARM_ALERT_TRAP_TYPE:
-        ret = copy(buf[startPos:], fmt.Sprintf("\"%s\":%d:\"%s\":%d:\"%s\":%d:%d:%d:%d:%d:%d:",
-            trap.AlarmAlertTrap.Name,
-            trap.AlarmAlertTrap.IfIndex,
-            trap.AlarmAlertTrap.ClientMac,
-            trap.AlarmAlertTrap.Level,
-            trap.AlarmAlertTrap.Ssid,
-            trap.AlarmAlertTrap.AlertType,
-            trap.AlarmAlertTrap.ThresInterference,
-            trap.AlarmAlertTrap.ShortInterference,
-            trap.AlarmAlertTrap.SnapInterference,
-            trap.AlarmAlertTrap.Set,
-            logID))
-        if ret >= len(buf)-startPos {
-            return ret, fmt.Errorf("buffer overflow")
-        }
-        startPos += ret
-     default:
-        return 0, fmt.Errorf("unknown trap type")
-    }
-
-    return startPos, nil
-}
-
-func ahLogGen(trap *AhTrapData, logID uint, format string, a ...interface{}) int {
-	var buf [768]byte
-	ret := 0
-
-	if trap != nil {
-		var err error
-		ret, err = ahTrapConvert(trap, logID, buf[:])
-		if err != nil || ret >= len(buf) {
-			return -1
-		}
-	}
-
-	n := copy(buf[ret:], fmt.Sprintf(format, a...))
-	if n >= len(buf)-ret {
-		return -1
-	}
-
-	return 0
-}
-
-func ahDcdStatsReportAlarmTrapSnd(t *Ah_wireless, acc telegraf.Accumulator, level, trapType, optType int, threshold, current, snapshot uint32, ifindex int, cltMac string, ssidName string, ifName string, alarmState *int)  {
-	if alarmState == nil {
-		log.Printf("alarmState cannot be nil")
-	}
-
-
-	tmp := *alarmState
-
-	trap := AhTrapData{
-		TrapType: AH_ALARM_ALERT_TRAP_TYPE,
-		AlarmAlertTrap: AlarmAlertTrap{
-			Level:             level,
-			AlertType:         trapType,
-			IfIndex:           ifindex,
-			ThresInterference: threshold,
-			ShortInterference: current,
-			SnapInterference:  snapshot,
-			Set:               optType,
-		},
-	}
-
-	if level == AH_TRAP_CLIENT_LEVEL_ALERT {
-		trap.AlarmAlertTrap.ClientMac = cltMac
-		trap.AlarmAlertTrap.Ssid = ssidName
-	}
-
-
-	trap.AlarmAlertTrap.Name = ifName
-
-
-	var buf strings.Builder
-	switch trapType {
-	case AH_TRAP_CRC_ERROR_RATE:
-		if level == AH_TRAP_CLIENT_LEVEL_ALERT {
-			fmt.Fprintf(&buf, "%s: The CRC error rate for client %s %s threshold (%d) and is now at %d.",
-				ifName, cltMac, getAlarmStatus(optType), threshold, current)
-
-		} else {
-			fmt.Fprintf(&buf, "The CRC error rate for %s %s threshold (%d) and is now at %d.",
-				ifName, getAlarmStatus(optType), threshold, current)
-		}
-	case AH_TRAP_TX_DROP_RATE:
-                if level == AH_TRAP_CLIENT_LEVEL_ALERT {
-                        fmt.Fprintf(&buf, "%s: The Tx drop rate for client %s %s threshold (%d) and is now at %d.",
-                                ifName, cltMac, getAlarmStatus(optType), threshold, current)
-                } else {
-                        fmt.Fprintf(&buf, "The Tx drop rate for %s %s threshold (%d) and is now at %d.",
-                                ifName, getAlarmStatus(optType), threshold, current)
-                }
-
-	case AH_TRAP_RX_DROP_RATE:
-                if level == AH_TRAP_CLIENT_LEVEL_ALERT {
-                        fmt.Fprintf(&buf, "%s: The Rx drop rate for client %s %s threshold (%d) and is now at %d.",
-                                ifName, cltMac, getAlarmStatus(optType), threshold, current)
-                } else {
-                        fmt.Fprintf(&buf, "The Rx drop rate for %s %s threshold (%d) and is now at %d.",
-                                ifName, getAlarmStatus(optType), threshold, current)
-                }
-
-	case AH_TRAP_TX_RETRY_RATE:
-                if level == AH_TRAP_CLIENT_LEVEL_ALERT {
-                        fmt.Fprintf(&buf, "%s: The Tx retry rate for client %s %s threshold (%d) and is now at %d.",
-                                ifName, cltMac, getAlarmStatus(optType), threshold, current)
-                } else {
-                        fmt.Fprintf(&buf, "The Tx retry rate for %s %s threshold (%d) and is now at %d.",
-                                ifName, getAlarmStatus(optType), threshold, current)
-                }
-
-	case AH_TRAP_AIRTIME_PERCENTAGE:
-                if level == AH_TRAP_CLIENT_LEVEL_ALERT {
-                        fmt.Fprintf(&buf, "%s: The Air Time Percentage rate for client %s %s threshold (%d) and is now at %d.",
-                                ifName, cltMac, getAlarmStatus(optType), threshold, current)
-                } else {
-                        fmt.Fprintf(&buf, "The Air time percenatgerate for %s %s threshold (%d) and is now at %d.",
-                                ifName, getAlarmStatus(optType), threshold, current)
-                }
-
-
-	default:
-		log.Printf("Unknown trap type")
-	}
-
-	rc := ahLogGen(&trap, AH_LOG_INFO, buf.String())
-
-	if rc < 0 {
-		log.Printf("Stats report send trap level %d type %d opt_type %d failed.\n", level, trapType, optType)
-		return
-	}
-
-	switch trapType {
-	case AH_TRAP_CRC_ERROR_RATE:
-		if optType == AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_SET {
-			SetStatsReportAlarmCRCErr(&tmp)
-		} else {
-			ClrStatsReportAlarmCRCErr(&tmp)
-		}
-		break
-
-	case AH_TRAP_TX_DROP_RATE:
-                if optType == AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_SET {
-                        SetStatsReportAlarmTxDrop(&tmp)
-                } else {
-                        ClrStatsReportAlarmTxDrop(&tmp)
-                }
-                break
-	case AH_TRAP_RX_DROP_RATE:
-                if optType == AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_SET {
-                        SetStatsReportAlarmRxDrop(&tmp)
-                } else {
-                        ClrStatsReportAlarmRxDrop(&tmp)
-                }
-                break
-
-	case AH_TRAP_TX_RETRY_RATE:
-                if optType == AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_SET {
-                        SetStatsReportAlarmTxRetry(&tmp)
-                } else {
-                        ClrStatsReportAlarmTxRetry(&tmp)
-                }
-                break
-	case AH_TRAP_AIRTIME_PERCENTAGE:
-                if optType == AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_SET {
-                        SetStatsReportAlarmAirCon(&tmp)
-                } else {
-                        ClrStatsReportAlarmAirCon(&tmp)
-                }
-                break
-
-	default:
-		log.Printf("Unknown trap type: %d", trapType)
-		break
-	}
-
-	*alarmState = tmp
-       // Call Send_Trap with the trap data
-        Send_Trap(t,&trap,acc)
-	return
-}
-
-func getAlarmStatus(optType int) string {
-	if optType == AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_SET {
-		return "exceeded the alarm"
-	}
-	return "returned below the alarm"
 }
 
 func get_rt_sta_info(t *Ah_wireless, mac_adrs string, upid int, data rt_sta_data) rt_sta_data {
@@ -862,55 +619,35 @@ func get_radio_band(t *Ah_wireless, ifname string)  string {
 }
 
 func load_ssid(t *Ah_wireless, ifname string) {
-
-	for i := 1; i < 1024; i++ {
-		vifname := ifname + "." + strconv.Itoa(i)
-
-		app := "wl"
-
-		arg0 := "-i"
-		arg1 := vifname
-		arg2 := "status"
-		//  arg3 := "| grep \"SSID: \"\\\""
-		//log.Printf(app + " " + arg0 + " " + arg1 + " " + arg2)
-
-		cmd := exec.Command(app, arg0, arg1, arg2)
-		output, err := cmd.Output()
-
-		if err != nil {
-			log.Printf(err.Error())
-			return
-		}
-
-		lines := strings.Split(string(output),"\n")
-
-		temp  := strings.Split(lines[0]," ")
-
-		ssid := strings.Trim(temp[1], "\"")
-		t.intf_m[ifname][ssid] = vifname
-	}
-}
-
-func load_arp_table(t *Ah_wireless) {
-
-	app := "arp"
-	arg := "-v"
-
-	cmd := exec.Command(app, arg)
-
-	arp_str, err := cmd.Output()
-
+	// Get a list of all network interfaces
+	interfaces, err := net.Interfaces()
 	if err != nil {
-		log.Printf(err.Error())
-		return
+		log.Printf("Error getting network interfaces: %v", err)
 	}
 
-	arp_lines := strings.Split(string(arp_str),"\n")
+	// Iterate through the interfaces and print their details
+//	log.Printf("Network Interfaces:")
+	for _, iface := range interfaces {
+		// Check if the interface is a wireless interface (contains "wifi." in its name)
+		if strings.Contains(iface.Name, ifname + ".") {
 
-	for i :=0; i<len(arp_lines); i++ {
-		if len(arp_lines[i]) > 1 {
-			arp_eliments := strings.Split(arp_lines[i]," ")
-			t.arp_m[arp_eliments[3]] = arp_eliments[1]
+			app := "wl"
+			arg0 := "-i"
+			arg1 := iface.Name
+			arg2 := "status"
+
+			cmd := exec.Command(app, arg0, arg1, arg2)
+			output, err := cmd.Output()
+
+			if err != nil {
+				continue
+			}
+
+			lines := strings.Split(string(output),"\n")
+			temp  := strings.Split(lines[0]," ")
+
+			ssid := strings.Trim(temp[1], "\"")
+			t.intf_m[ifname][ssid] = iface.Name
 		}
 	}
 
@@ -984,9 +721,6 @@ func getFeServerIp(fd uintptr, clmac [MACADDR_LEN]uint8, dev_msg ah_fw_dev_ip_ms
 }
 
 func open(fd, id int) *Ah_wireless {
-
-	//getProcNetDev("wifi1")
-	//defer unix.Close(fd)
 
 	return &Ah_wireless{fd: fd, closed: make(chan struct{})}
 }
@@ -1438,327 +1172,7 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 		rf_report.rx_bit_rate[idx].kbps = rfstat.ast_rx_rate_stats[idx].ns_rateKbps;
 	}
 
-/*              Disabling all the trap changes for rf stats, uncomment when required 
 
-		// AH_TRAP_TX_DROP_RATE implementation as per DCD
-
-
-
-                trap_type := AH_DCD_STATS_REPORT_TRAP_BUTT
-                var opt_type int
-                var tmp_count7 uint32 = 0
-                level := AH_TRAP_INTERFACE_LEVEL_ALERT
-                var cltMac [6]byte
-		shouldTriggerTxDropTrap := false
-		shouldClearTxDropTrap := false
-
-		tmp_count6 := devstats.tx_dropped
-
-		txTotal := uint32(tx_total)
-
-		if (txTotal > AH_DCD_PARSE_MIN_PACKAT) {
-	                tmp_count7 = (devstats.tx_dropped * 100) / txTotal;
-                }
-
-		if tmp_count7 > AH_DCD_STATS_TX_DROP_RATE_THRESHOLD {
-                        if !isSetStatsReportAlarmTxDrop(t.last_alarm_int[ii].alarm) {
-				shouldTriggerTxDropTrap = true
-                        }
-                } else {
-                        if isSetStatsReportAlarmTxDrop(t.last_alarm_int[ii].alarm) && t.Tx_drop_int != 1{
-			       shouldClearTxDropTrap = true
-                        }
-                }
-
-		if t.Tx_drop_int == 1 {
-			if trap_type == AH_DCD_STATS_REPORT_TRAP_BUTT {
-				shouldTriggerTxDropTrap = true
-			}
-                }else if t.Tx_drop_int == 0 {
-			   // Only clear test-initiated traps, not real ones
-			   if isSetStatsReportAlarmTxDrop(t.last_alarm_int[ii].alarm) {
-				if tmp_count7 <= AH_DCD_STATS_TX_DROP_RATE_THRESHOLD {
-					shouldClearTxDropTrap = true
-				 }
-			}
-		}
-
-
-
-		if shouldTriggerTxDropTrap {
-		   trap_type = AH_TRAP_TX_DROP_RATE
-		   opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_SET
-		} else if shouldClearTxDropTrap {
-		   trap_type = AH_TRAP_TX_DROP_RATE
-		   opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_CLR
-		}
-
-                cltMacStr := fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", cltMac[0], cltMac[1], cltMac[2], cltMac[3], cltMac[4], cltMac[5])
-
-
-                if trap_type != AH_DCD_STATS_REPORT_TRAP_BUTT {
-                        ahDcdStatsReportAlarmTrapSnd(t, acc, level, trap_type, opt_type,  AH_DCD_STATS_TX_DROP_RATE_THRESHOLD, tmp_count7, devstats.tx_dropped, ifindex, cltMacStr, " ", intfName, &t.last_alarm_int[ii].alarm)
-                }
-
-
-		//AH_TRAP_RX_DROP IMPLEMENTATION as per DCD
-
-		//tmp_count8 := devstats.rx_dropped
-		trap_type = AH_DCD_STATS_REPORT_TRAP_BUTT
-
-		tmp_count7 = 0
-                rxTotal := uint32(rx_total)
-
-		shouldTriggerRxDropTrap := false
-                shouldClearRxDropTrap := false
-
-                if (rxTotal > AH_DCD_PARSE_MIN_PACKAT) {
-                        tmp_count7 = (devstats.rx_dropped * 100) / (rxTotal + devstats.rx_dropped);
-                }
-
-
-                if tmp_count7 >  AH_DCD_STATS_RX_DROP_RATE_THRESHOLD {
-                        if !isSetStatsReportAlarmRxDrop(t.last_alarm_int[ii].alarm) {
-				shouldTriggerRxDropTrap = true
-                        }
-                } else {
-                        if isSetStatsReportAlarmRxDrop(t.last_alarm_int[ii].alarm) && t.Rx_drop_int != 1 {
-				shouldClearRxDropTrap = true
-                        }
-		}
-
-
-		if t.Rx_drop_int == 1 {
-                        if trap_type == AH_DCD_STATS_REPORT_TRAP_BUTT {
-                                shouldTriggerRxDropTrap = true
-                        }
-                }else if t.Rx_drop_int == 0 {
-                           // Only clear test-initiated traps, not real ones
-                           if isSetStatsReportAlarmRxDrop(t.last_alarm_int[ii].alarm) {
-                                if tmp_count7 <= AH_DCD_STATS_RX_DROP_RATE_THRESHOLD {
-                                        shouldClearRxDropTrap = true
-                                 }
-                        }
-		} 
-
-
-
-                if shouldTriggerRxDropTrap {
-                   trap_type = AH_TRAP_RX_DROP_RATE
-                   opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_SET
-                } else if shouldClearRxDropTrap {
-                   trap_type = AH_TRAP_RX_DROP_RATE
-                   opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_CLR
-                }
-
-
-
-                if trap_type != AH_DCD_STATS_REPORT_TRAP_BUTT {
-                        ahDcdStatsReportAlarmTrapSnd(t, acc, level, trap_type, opt_type,  AH_DCD_STATS_RX_DROP_RATE_THRESHOLD, tmp_count7, devstats.rx_dropped, ifindex, cltMacStr, " ", intfName, &t.last_alarm_int[ii].alarm)
-                }
-
-
-		// AH_TRAP_CRC_ERROR_RATE IMPLEMENTATION as per DCD
-		trap_type = AH_DCD_STATS_REPORT_TRAP_BUTT
-
-		tmp_count5 := reportGetDiff64(rfstat.ast_crcerr_airtime, t.last_rf_stat[ii].ast_crcerr_airtime)
-
-		shouldTriggerCrcTrap := false
-                shouldClearCrcTrap := false
-
-		crc_error_rate := tmp_count5 / (AH_DCD_STATS_REPORT_INTERVAL_DFT * 10000)
-
-		if crc_error_rate > 100 {
-			crc_error_rate = 100
-		}
-
-
-
-		if crc_error_rate >  AH_DCD_STATS_CRC_ERROR_RATE_THRESHOLD {
-			if !isSetStatsReportAlarmCRCERR(t.last_alarm_int[ii].alarm) {
-				shouldTriggerCrcTrap = true
-
-			}
-		} else {
-			if isSetStatsReportAlarmCRCERR(t.last_alarm_int[ii].alarm) && t.Crc_error_int != 1{
-				shouldClearCrcTrap =  true
-			}
-		}
-
-
-
-		if t.Crc_error_int == 1 {
-                        if trap_type == AH_DCD_STATS_REPORT_TRAP_BUTT {
-                                shouldTriggerCrcTrap = true
-                        }
-                }else if t.Crc_error_int == 0 {
-                           // Only clear test-initiated traps, not real ones
-                           if isSetStatsReportAlarmCRCERR(t.last_alarm_int[ii].alarm) {
-                                if crc_error_rate <= AH_DCD_STATS_CRC_ERROR_RATE_THRESHOLD {
-                                        shouldClearCrcTrap = true
-                                 }
-                        }
-                }
-
-
-
-                if shouldTriggerCrcTrap {
-                   trap_type = AH_TRAP_CRC_ERROR_RATE
-                   opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_SET
-                } else if shouldClearCrcTrap {
-                   trap_type = AH_TRAP_CRC_ERROR_RATE
-                   opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_CLR
-                }
-
-
-		if trap_type != AH_DCD_STATS_REPORT_TRAP_BUTT {
-			ahDcdStatsReportAlarmTrapSnd(t, acc, level, trap_type, opt_type,  AH_DCD_STATS_CRC_ERROR_RATE_THRESHOLD, uint32(crc_error_rate), devstats.rx_crc_errors, ifindex, cltMacStr, " ", intfName, &t.last_alarm_int[ii].alarm)
-		}
-
-
-		//AH_TRAP_TX_RETRY_RATE TRAP Implementation as per DCD
-
-		var tmp_count9 uint32 = 0
-
-		shouldTriggerTxRetryTrap := false
-                shouldClearTxRetryTrap := false
-
-		if intfName == "wifi1" {
-			tmp_count9 = tot_tx_bitrate_retries
-		} else {
-
-			if rfstat.ast_as.ast_11n_stats.tx_retries  >  t.last_rf_stat[ii].ast_as.ast_11n_stats.tx_retries {
-				tmp_count9 = (rfstat.ast_as.ast_11n_stats.tx_retries -  t.last_rf_stat[ii].ast_as.ast_11n_stats.tx_retries)
-			} else {
-				 tmp_count9 = 0
-			}
-		}
-
-		tx_ok := uint32(tx_total)
-
-		tmp_count10 := tmp_count9 + tx_ok
-
-		tmp_count7=0
-
-		if (tx_ok > AH_DCD_PARSE_MIN_PACKAT * 3 && tmp_count9 > 0) {
-			tmp_count7 := (tmp_count9 * 100) / tmp_count10
-			if (tmp_count7 > 100) {
-				tmp_count7 = 100
-                }
-	        } else {
-		       tmp_count7 = 0;
-		}
-
-                trap_type = AH_DCD_STATS_REPORT_TRAP_BUTT
-
-                if tmp_count7 >  AH_DCD_STATS_TX_RETRY_RATE_THRESHOLD {
-                        if !isSetStatsReportAlarmTxRetry(t.last_alarm_int[ii].alarm) {
-			       shouldTriggerTxRetryTrap = true
-                        }
-                } else {
-                        if isSetStatsReportAlarmTxRetry(t.last_alarm_int[ii].alarm)  && t.Tx_retry_int != 1{
-				shouldClearTxRetryTrap = true
-                        }
-                }
-
-
-	       if t.Tx_retry_int == 1 {
-                        if trap_type == AH_DCD_STATS_REPORT_TRAP_BUTT {
-                                shouldTriggerTxRetryTrap = true
-                        }
-                }else if t.Tx_retry_int == 0 {
-                           // Only clear test-initiated traps, not real ones
-                           if isSetStatsReportAlarmTxRetry(t.last_alarm_int[ii].alarm) {
-                                if tmp_count7 <= AH_DCD_STATS_TX_RETRY_RATE_THRESHOLD {
-                                        shouldClearTxRetryTrap = true
-                                 }
-                        }
-                }
-
-
-
-                if shouldTriggerTxRetryTrap {
-                   trap_type = AH_TRAP_TX_RETRY_RATE
-                   opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_SET
-                } else if shouldClearTxRetryTrap {
-                   trap_type = AH_TRAP_TX_RETRY_RATE
-                   opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_CLR
-                }
-
-
-                if trap_type != AH_DCD_STATS_REPORT_TRAP_BUTT {
-                        ahDcdStatsReportAlarmTrapSnd(t, acc, level, trap_type, opt_type,  AH_DCD_STATS_TX_RETRY_RATE_THRESHOLD, tmp_count7, rfstat.ast_as.ast_11n_stats.tx_retries, ifindex, cltMacStr, " ", intfName, &t.last_alarm_int[ii].alarm)
-                }
-
-
-		//AH_TRAP_AIRTIME_PERCENTAGE
-                trap_type = AH_DCD_STATS_REPORT_TRAP_BUTT
-
-		var tmp_count11 uint32
-		var tmp_count12 uint32
-		var tmp_count13 uint32
-
-		shouldTriggerAirConTrap := false
-                shouldClearAirConTrap := false
-
-                tmp_count11 = reportGetDiff(uint32(rfstat.ast_tx_airtime),uint32(t.last_rf_stat[ii].ast_tx_airtime))
-
-		tmp_count13 = ( tmp_count11 ) / (600 * 1000)
-		if (tmp_count13 > 100) {
-                        tmp_count4 = 100
-                }
-
-
-		tmp_count12 = reportGetDiff(uint32(rfstat.ast_rx_airtime), uint32(t.last_rf_stat[ii].ast_rx_airtime))
-                tmp_count6 =  (tmp_count12 ) / (600 * 1000)
-                if (tmp_count6 > 100) {
-                        tmp_count6 = 100
-
-                }
-
-		tmp_count7 = tmp_count13 + tmp_count6
-
-                if tmp_count7 > AH_DCD_STATS_AIRTIME_THRESHOLD {
-                        if !isSetStatsReportAlarmAirCon(t.last_alarm_int[ii].alarm) {
-				shouldTriggerAirConTrap = true
-                        }
-                } else {
-                        if isSetStatsReportAlarmAirCon(t.last_alarm_int[ii].alarm)  && t.Airtime_int != 1{
-			       shouldClearAirConTrap = true
-                        }
-                }
-
-
-		if t.Airtime_int == 1 {
-                        if trap_type == AH_DCD_STATS_REPORT_TRAP_BUTT {
-                                shouldTriggerAirConTrap = true
-                        }
-                }else if t.Airtime_int == 0 {
-                           // Only clear test-initiated traps, not real ones
-                           if isSetStatsReportAlarmAirCon(t.last_alarm_int[ii].alarm) {
-                                if tmp_count7 <= AH_DCD_STATS_AIRTIME_THRESHOLD {
-                                        shouldClearAirConTrap = true
-                                 }
-                        }
-                }
-
-
-
-                if shouldTriggerAirConTrap {
-                   trap_type = AH_TRAP_AIRTIME_PERCENTAGE
-                   opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_SET
-                } else if shouldClearAirConTrap {
-                   trap_type = AH_TRAP_AIRTIME_PERCENTAGE
-                   opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_CLR
-                }
-
-
-
-                if trap_type != AH_DCD_STATS_REPORT_TRAP_BUTT {
-                        ahDcdStatsReportAlarmTrapSnd(t, acc, level, trap_type, opt_type, AH_DCD_STATS_AIRTIME_THRESHOLD, tmp_count7, uint32(rfstat.ast_tx_airtime+rfstat.ast_rx_airtime), ifindex, cltMacStr, " ", intfName, &t.last_alarm_int[ii].alarm)
-               }
-
-	      */
 /* Rate calculation copied from DCD code */
 
 		fields := map[string]interface{}{
@@ -2212,7 +1626,7 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 			var onesta *ieee80211req_sta_info = (*ieee80211req_sta_info)(cfgptr)
 
-			var clt_last_stats *saved_stats = (*saved_stats)(t.entity[intfName2][client_mac])
+			var clt_last_stats saved_stats = t.entity[intfName2][client_mac]
 
 			/* We need check and aggregation Tx/Rx bit rate distribution
  			* prcentage, if the bit rate equal in radio interface or client reporting.
@@ -2377,293 +1791,7 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 				}
 			}
 
-			/*   Disabling all the trap changes for client stats, uncomment when required
 
-			// AH_TRAP_TX_DROP_RATE implementation as per DCD
-			trap_type := AH_DCD_STATS_REPORT_TRAP_BUTT
-			var opt_type int
-			var tmp_count3 uint32 = 0
-			level := AH_TRAP_CLIENT_LEVEL_ALERT
-			shouldTriggerTxDropTrap := false
-	                shouldClearTxDropTrap := false
-
-			tmp_count6 :=  clt_item[cn].ns_tx_drops
-
-
-			txTotal := uint32(tx_total)
-
-			if (txTotal > AH_DCD_PARSE_MIN_PACKAT) {
-				tmp_count3 = (clt_item[cn].ns_tx_drops * 100) / (txTotal + clt_item[cn].ns_tx_drops)
-			}
-
-
-			if tmp_count3 > AH_DCD_STATS_TX_DROP_RATE_THRESHOLD {
-				if !isSetStatsReportAlarmTxDrop(t.last_alarm[ii].alarm) {
-					shouldTriggerTxDropTrap = true
-				}
-			} else {
-				if isSetStatsReportAlarmTxDrop(t.last_alarm[ii].alarm) && t.Tx_drop_clt != 1{
-					shouldClearTxDropTrap = true
-				}
-			}
-
-			if t.Tx_drop_clt == 1 {
-                                if trap_type == AH_DCD_STATS_REPORT_TRAP_BUTT {
-                                      shouldTriggerTxDropTrap = true
-                                 }
-	                }else if t.Tx_drop_clt == 0 {
-
-                                // Only clear test-initiated traps, not real ones
-                                if isSetStatsReportAlarmTxDrop(t.last_alarm[ii].alarm) {
-                                        if tmp_count3 <= AH_DCD_STATS_TX_DROP_RATE_THRESHOLD {
-                                                shouldClearTxDropTrap = true
-                                        }
-                                }
-                        }
-
-                        
-
-			if shouldTriggerTxDropTrap {
-				trap_type = AH_TRAP_TX_DROP_RATE
-                                opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_SET
-                        } else if shouldClearTxDropTrap {
-                                trap_type = AH_TRAP_TX_DROP_RATE
-                                opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_CLR
-                        }
-
-
-
-
-			if trap_type != AH_DCD_STATS_REPORT_TRAP_BUTT  {
-			         ahDcdStatsReportAlarmTrapSnd(t, acc, level, trap_type, opt_type, AH_DCD_STATS_TX_DROP_RATE_THRESHOLD, tmp_count3, clt_item[cn].ns_tx_drops, ifindex2, client_mac, client_ssid, intfName2, &t.last_alarm[ii].alarm)
-	                }
-
-
-			//AH_TRAP_RX_DROP_RATE 
-			tmp_count8 :=  clt_item[cn].ns_rx_drops
-		        trap_type = AH_DCD_STATS_REPORT_TRAP_BUTT
-
-
-			var tmp_count7 uint32 = 0
-			var tmp_count9 uint32 =  0
-
-			shouldTriggerRxDropTrap := false
-	                shouldClearRxDropTrap := false
-
-			rxTotal := uint32(rx_total)
-			if (clt_item[cn].ns_rx_drops > t.last_clt_stat[ii][cn].ns_rx_drops) {
-                                        tmp_count9 = clt_item[cn].ns_rx_drops - t.last_clt_stat[ii][cn].ns_rx_drops
-                        }else{
-				 tmp_count9 = 0
-			}
-
-
-			if (rxTotal > AH_DCD_PARSE_MIN_PACKAT) {
-				tmp_count7 = (tmp_count9 * 100) / (rxTotal + tmp_count9)
-			}
-
-
-			if tmp_count7 > AH_DCD_STATS_RX_DROP_RATE_THRESHOLD {
-				if !isSetStatsReportAlarmRxDrop(t.last_alarm[ii].alarm) {
-					shouldTriggerRxDropTrap = true
-				}
-			} else {
-				if isSetStatsReportAlarmRxDrop(t.last_alarm[ii].alarm) && t.Rx_drop_clt != 1{
-				        shouldClearRxDropTrap = true
-				}
-			}
-
-
-			if t.Rx_drop_clt == 1 {
-                                if trap_type == AH_DCD_STATS_REPORT_TRAP_BUTT {
-                                      shouldTriggerRxDropTrap = true
-                                 }
-                        }else if t.Rx_drop_clt == 0 {
-                                // Only clear test-initiated traps, not real ones
-                                if isSetStatsReportAlarmRxDrop(t.last_alarm[ii].alarm) {
-                                        if tmp_count7 <= AH_DCD_STATS_RX_DROP_RATE_THRESHOLD {
-                                                shouldClearRxDropTrap = true
-                                        }
-                                }
-                        }
-
-
-
-                        if shouldTriggerRxDropTrap {
-                                trap_type = AH_TRAP_RX_DROP_RATE
-                                opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_SET
-                        } else if shouldClearRxDropTrap {
-                                trap_type = AH_TRAP_RX_DROP_RATE
-                                opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_CLR
-                        }
-
-
-
-
-			if trap_type != AH_DCD_STATS_REPORT_TRAP_BUTT {
-				ahDcdStatsReportAlarmTrapSnd(t,acc, level, trap_type, opt_type, AH_DCD_STATS_RX_DROP_RATE_THRESHOLD, tmp_count7, clt_item[cn].ns_rx_drops, ifindex2, client_mac, client_ssid, intfName2, &t.last_alarm[ii].alarm)
-			}
-
-
-			//AH_TRAP_TX_RETRY_RATE
-			tx_okie := uint32(tx_ok)
-			tmp_count6 = tx_retries + tx_okie
-			tmp_count7 = 0
-			shouldTriggerTxRetryTrap := false
-                        shouldClearTxRetryTrap := false
-
-		        if (tmp_count6 > AH_DCD_PARSE_MIN_PACKAT) {
-				tmp_count7 = (tx_retries * 100) / tmp_count6
-			}
-
-			trap_type = AH_DCD_STATS_REPORT_TRAP_BUTT
-
-			if tmp_count7 > AH_DCD_STATS_TX_RETRY_RATE_THRESHOLD {
-				if !isSetStatsReportAlarmTxRetry(t.last_alarm[ii].alarm) {
-                                        shouldTriggerTxRetryTrap  = true
-			        }
-			} else {
-				if isSetStatsReportAlarmTxRetry(t.last_alarm[ii].alarm) && t.Tx_retry_clt != 1{
-					shouldClearTxRetryTrap = true
-				}
-			}
-
-
-
-			if t.Tx_retry_clt == 1 {
-                                if trap_type == AH_DCD_STATS_REPORT_TRAP_BUTT {
-                                      shouldTriggerTxRetryTrap = true
-                                 }
-                        }else if t.Tx_retry_clt == 0 {
-
-                                // Only clear test-initiated traps, not real ones
-                                if isSetStatsReportAlarmTxRetry(t.last_alarm[ii].alarm) {
-                                        if tmp_count7 <= AH_DCD_STATS_TX_RETRY_RATE_THRESHOLD {
-                                                shouldClearTxRetryTrap = true
-                                        }
-                                }
-                        }
-
-
-
-                        if shouldTriggerTxRetryTrap {
-                                trap_type = AH_TRAP_TX_RETRY_RATE
-                                opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_SET
-                        } else if shouldClearTxRetryTrap {
-                                trap_type = AH_TRAP_TX_RETRY_RATE
-                                opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_CLR
-                        }
-
-
-			if trap_type != AH_DCD_STATS_REPORT_TRAP_BUTT {
-				ahDcdStatsReportAlarmTrapSnd(t, acc, level, trap_type, opt_type, AH_DCD_STATS_TX_RETRY_RATE_THRESHOLD, tmp_count7, tx_retries, ifindex2, client_mac, client_ssid, intfName2, &t.last_alarm[ii].alarm)
-			}
-
-
-
-			//AH_TRAP_AIRTIME_PERCENTAGE
-			var tmp_count5 uint32 = 0
-
-			shouldTriggerAirConTrap := false
-                        shouldClearAirConTrap := false
-
-			if  clt_last_stats.tx_airtime < clt_item[cn].ns_tx_airtime {
-				 tmp_count5 = uint32(clt_item[cn].ns_tx_airtime - clt_last_stats.tx_airtime)
-			}else{
-				tmp_count5 = uint32(clt_item[cn].ns_tx_airtime)
-			}
-
-			tmp_count6 = (tmp_count5 / 10) / (600 * 1000)
-			if tmp_count6 > 100 {
-				tmp_count6 = 100
-			}
-
-			if (clt_last_stats.tx_airtime_min > 100) {
-                                        clt_last_stats.tx_airtime_min = 100
-                        }
-
-                        if (clt_last_stats.tx_airtime_max > 100) {
-                                        clt_last_stats.tx_airtime_max = 100
-                        }
-
-                        if (clt_last_stats.tx_airtime_average > 100) {
-                                        clt_last_stats.tx_airtime_average = 100
-                        }
-
-
-			tmp_count7 =0
-                        if  clt_last_stats.rx_airtime < clt_item[cn].ns_rx_airtime {
-                                 tmp_count7 = uint32(clt_item[cn].ns_rx_airtime - clt_last_stats.rx_airtime)
-                        }else{
-                                tmp_count7 = uint32(clt_item[cn].ns_rx_airtime)
-                        }
-
-                        tmp_count8 = (tmp_count7 / 10) / (600 * 1000)
-			if tmp_count8 > 100 {
-                                tmp_count8 =100
-                        }
-
-
-                        if (clt_last_stats.rx_airtime_min > 100) {
-                                        clt_last_stats.rx_airtime_min = 100
-                        }
-
-                        if (clt_last_stats.rx_airtime_max > 100) {
-                                        clt_last_stats.rx_airtime_max = 100
-                        }
-
-                        if (clt_last_stats.rx_airtime_average > 100) {
-                                        clt_last_stats.rx_airtime_average = 100
-                        }
-
-			trap_type = AH_DCD_STATS_REPORT_TRAP_BUTT
-			tmp_count10 :=  tmp_count6 + tmp_count8
-
-
-			if (tmp_count10 > 100) {
-		                tmp_count10 = 100
-			}
-
-                        if tmp_count10 > AH_DCD_STATS_AIRTIME_THRESHOLD {
-                                if !isSetStatsReportAlarmAirCon(t.last_alarm[ii].alarm) {
-					shouldTriggerAirConTrap = true
-                                }
-                        } else {
-                                if isSetStatsReportAlarmAirCon(t.last_alarm[ii].alarm) && t.Airtime_clt != 1{
-				        shouldClearAirConTrap = true
-                                }
-                        }
-
-
-			if t.Airtime_clt == 1 {
-                                if trap_type == AH_DCD_STATS_REPORT_TRAP_BUTT {
-                                      shouldTriggerAirConTrap = true
-                                 }
-                        }else if t.Airtime_clt == 0 {
-                                // Only clear test-initiated traps, not real ones
-                                if isSetStatsReportAlarmAirCon(t.last_alarm[ii].alarm) {
-                                        if tmp_count10 <= AH_DCD_STATS_AIRTIME_THRESHOLD {
-                                                shouldClearAirConTrap = true
-                                        }
-                                }
-                        }
-
-
-
-                        if shouldTriggerAirConTrap {
-                                trap_type = AH_TRAP_AIRTIME_PERCENTAGE
-                                opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_SET
-                        } else if shouldClearAirConTrap {
-                                trap_type = AH_TRAP_AIRTIME_PERCENTAGE
-                                opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_CLR
-                        }
-
-
-                        if trap_type != AH_DCD_STATS_REPORT_TRAP_BUTT {
-                                ahDcdStatsReportAlarmTrapSnd(t,acc,level, trap_type, opt_type, AH_DCD_STATS_AIRTIME_THRESHOLD, tmp_count10, uint32(clt_item[cn].ns_tx_airtime + clt_item[cn].ns_rx_airtime), ifindex2, client_mac, client_ssid, intfName2, &t.last_alarm[ii].alarm)
-                        }
-
-                        */
 
 			t.last_clt_stat[ii][cn] = clt_item[cn]
 
@@ -2752,19 +1880,18 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 				}
 			}
 
-			if (clt_last_stats != nil) {
-				fields2["txAirtime_min"]				= clt_last_stats.tx_airtime_min 
-				fields2["txAirtime_max"]				= clt_last_stats.tx_airtime_max 
-				fields2["txAirtime_avg"]				= clt_last_stats.tx_airtime_average
 
-				fields2["rxAirtime_min"]				= clt_last_stats.rx_airtime_min
-				fields2["rxAirtime_max"]				= clt_last_stats.rx_airtime_max
-				fields2["rxAirtime_avg"]				= clt_last_stats.rx_airtime_average
+			fields2["txAirtime_min"]				= clt_last_stats.tx_airtime_min 
+			fields2["txAirtime_max"]				= clt_last_stats.tx_airtime_max 
+			fields2["txAirtime_avg"]				= clt_last_stats.tx_airtime_average
 
-				fields2["bwUsage_min"]					= clt_last_stats.bw_usage_min
-				fields2["bwUsage_max"]					= clt_last_stats.bw_usage_max
-				fields2["bwUsage_avg"]					= clt_last_stats.bw_usage_average
-			}
+			fields2["rxAirtime_min"]				= clt_last_stats.rx_airtime_min
+			fields2["rxAirtime_max"]				= clt_last_stats.rx_airtime_max
+			fields2["rxAirtime_avg"]				= clt_last_stats.rx_airtime_average
+
+			fields2["bwUsage_min"]					= clt_last_stats.bw_usage_min
+			fields2["bwUsage_max"]					= clt_last_stats.bw_usage_max
+			fields2["bwUsage_avg"]					= clt_last_stats.bw_usage_average
 
 			for i := 0; i < AH_SQ_GROUP_MAX; i++{
 				rangeMin	:=	fmt.Sprintf("rangeMin_@%d_sqRssi",i)
@@ -2805,7 +1932,7 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			clt_new_stats := saved_stats{}
 			clt_new_stats.tx_airtime = clt_item[cn].ns_tx_airtime
 			clt_new_stats.rx_airtime = clt_item[cn].ns_rx_airtime
-			t.entity[intfName2][client_mac] = unsafe.Pointer(&clt_new_stats)
+			t.entity[intfName2][client_mac] = clt_new_stats
 
 
 			var s string
@@ -2837,6 +1964,7 @@ func Gather_AirTime(t *Ah_wireless, acc telegraf.Accumulator) error {
 			continue
 		}
 
+		log.Printf("ah_wireless: calculating airtime for %d sta\n",numassoc1)
 
 		clt_item := make([]ah_ieee80211_sta_stats_item, numassoc1)
 
@@ -2854,24 +1982,7 @@ func Gather_AirTime(t *Ah_wireless, acc telegraf.Accumulator) error {
 				continue
 			}
 
-			var clt_last_stats *saved_stats = (*saved_stats)(t.entity[intfName2][client_mac1])
-
-			if(clt_last_stats == nil) {
-				clt_new_stats := saved_stats{
-								tx_airtime_min:0,
-								tx_airtime_max:0,
-								tx_airtime_average:0,
-								rx_airtime_min:0,
-								rx_airtime_max:0,
-								rx_airtime_average:0,
-								bw_usage_min:0,
-								bw_usage_max:0,
-								bw_usage_average:0,
-								tx_airtime:0,
-								rx_airtime:0}
-				t.entity[intfName2][client_mac1] = unsafe.Pointer(&clt_new_stats)
-				return nil
-			}
+			var clt_last_stats saved_stats = t.entity[intfName2][client_mac1]
 
 			clt_new_stats := saved_stats{}
 
@@ -2960,16 +2071,14 @@ func Gather_AirTime(t *Ah_wireless, acc telegraf.Accumulator) error {
 			clt_new_stats.rx_airtime = clt_last_stats.rx_airtime
 
 			clt_new_stats.bw_usage_average = ((clt_last_stats.bw_usage_average + clt_new_stats.bw_usage_min + clt_new_stats.bw_usage_max)/3)
-			t.entity[intfName2][client_mac1] = unsafe.Pointer(&clt_new_stats)
+			t.entity[intfName2][client_mac1] = clt_new_stats
 		}
 
 	}
+	log.Printf("telegraf ah_wireless calculated airtime avg!\n")
 
 	return nil
 }
-
-
-
 
 func Gather_EthernetInterfaceStats(t *Ah_wireless) error {
 
@@ -3431,65 +2540,75 @@ func Gather_Network_Service(t *Ah_wireless) error {
 	return nil
 }
 
+func Gather_deffer_end(t *Ah_wireless) {
+	t.wg.Done()
+	if r := recover(); r != nil {
+		currentTime := time.Now()
+		crash_file := fmt.Sprintf("/tmp/telegraf_crash_%s.txt", currentTime.Format("2006_01_02_15_04_05"))
+		ss := string(debug.Stack())
+		log.Printf("telegraf crash: %s\n",ss)
+		os.WriteFile(crash_file, debug.Stack(), 0644)
+		os.Exit(128)
+	}
+}
+
 func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
 
-	defer func() {
-		if r := recover(); r != nil {
-			currentTime := time.Now()
-			crash_file := fmt.Sprintf("/tmp/telegraf_crash_%s.txt", currentTime.Format("2006_01_02_15_04_05"))
-			ss := string(debug.Stack())
-			log.Printf("telegraf crash: %s\n",ss)
-			os.WriteFile(crash_file, debug.Stack(), 0644)
-			os.Exit(128)
+	t.wg.Add(1)
+
+	go func() {
+
+		defer Gather_deffer_end(t)
+
+		if t.timer_count == (t.Scount - 1) {
+			dumpOutput(RF_STAT_OUT_FILE, "RF Stat Input Plugin Output", 0)
+			dumpOutput(CLT_STAT_OUT_FILE, "Client Stat Input Plugin Output", 0)
+			dumpOutput(NW_STAT_OUT_FILE, "Network Stat Input Plugin Output",0)
+			dumpOutput(DEV_STAT_OUT_FILE, "Device Stat Input Plugin Output",0)
+			for _, intfName := range t.Ifname {
+				t.intf_m[intfName] = make(map[string]string)
+				load_ssid(t, intfName)
+			}
+
+			Gather_EthernetInterfaceStats(t)
+
+			rrmid = ahutil.GetRrmId()
+
+			Gather_Client_Stat(t, acc)
+			Gather_Rf_Stat(t, acc)
+
+
+			Gather_Network_Health(t)
+			Gather_Network_Service(t)
+
+			Send_NetworkStats(t,acc)
+			Send_DeviceStats(t,acc)
+
+			t.timer_count = 0
+
+			t.last_rf_stat =  [4]awestats{}
+			t.last_ut_data  = [4]utilization_data{}
+			t.last_clt_stat = [4][50]ah_ieee80211_sta_stats_item{}
+
+		} else {
+			Gather_AirTime(t,acc)
+			Gather_Rf_Avg(t,acc)
+			t.timer_count++
 		}
 	}()
 
-	if t.timer_count == (t.Scount - 1) {
-		dumpOutput(RF_STAT_OUT_FILE, "RF Stat Input Plugin Output", 0)
-		dumpOutput(CLT_STAT_OUT_FILE, "Client Stat Input Plugin Output", 0)
-		dumpOutput(NW_STAT_OUT_FILE, "Network Stat Input Plugin Output",0)
-		dumpOutput(DEV_STAT_OUT_FILE, "Device Stat Input Plugin Output",0)
-		for _, intfName := range t.Ifname {
-			t.intf_m[intfName] = make(map[string]string)
-			load_ssid(t, intfName)
-		}
-
-		Gather_EthernetInterfaceStats(t)
-
-		rrmid = ahutil.GetRrmId()
-
-		Gather_Client_Stat(t, acc)
-		Gather_Rf_Stat(t, acc)
-
-
-		Gather_Network_Health(t)
-		Gather_Network_Service(t)
-
-		Send_NetworkStats(t,acc)
-		Send_DeviceStats(t,acc)
-
-		t.timer_count = 0
-
-		t.last_rf_stat =  [4]awestats{}
-		t.last_ut_data  = [4]utilization_data{}
-		t.last_clt_stat = [4][50]ah_ieee80211_sta_stats_item{}
-
-	} else {
-		Gather_AirTime(t,acc)
-		Gather_Rf_Avg(t,acc)
-		t.timer_count++
-	}
+	t.wg.Wait()
 
 	return nil
 }
 
 func (t *Ah_wireless) Start(acc telegraf.Accumulator) error {
 	t.intf_m	=	make(map[string]map[string]string)
-	t.entity	=	make(map[string]map[string]unsafe.Pointer)
+	t.entity	=	make(map[string]map[string]saved_stats)
 	t.last_sq	=	make(map[string]map[int]map[int]ah_signal_quality_stats)
 
 	for _, intfName := range t.Ifname {
-		t.entity[intfName] = make(map[string]unsafe.Pointer)
+		t.entity[intfName] = make(map[string]saved_stats)
 	}
 
 	t.if_stats	=	[AH_MAX_WIRED]stats_interface_data{}
