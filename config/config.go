@@ -939,9 +939,9 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 }
 
 func (c *Config) addAggregator(name, source string, table *ast.Table) error {
-	enabled, err := c.matchesLabelSelection("aggregators", name, table)
+	enabled, err := c.matchesLabelSelection(table)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid label in plugin aggregators.%s: %w", name, err)
 	}
 	if !enabled {
 		return nil
@@ -980,9 +980,9 @@ func (c *Config) addSecretStore(name, source string, table *ast.Table) error {
 		return nil
 	}
 
-	enabled, err := c.matchesLabelSelection("secretstores", name, table)
+	enabled, err := c.matchesLabelSelection(table)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid label in plugin secretstores.%s: %w", name, err)
 	}
 	if !enabled {
 		return nil
@@ -1160,9 +1160,9 @@ func (c *Config) addSerializer(parentname string, table *ast.Table) (*models.Run
 }
 
 func (c *Config) addProcessor(name, source string, table *ast.Table) error {
-	enabled, err := c.matchesLabelSelection("processors", name, table)
+	enabled, err := c.matchesLabelSelection(table)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid label in plugin processors.%s: %w", name, err)
 	}
 	if !enabled {
 		return nil
@@ -1294,9 +1294,9 @@ func (c *Config) addOutput(name, source string, table *ast.Table) error {
 		return nil
 	}
 
-	enabled, err := c.matchesLabelSelection("outputs", name, table)
+	enabled, err := c.matchesLabelSelection(table)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid label in plugin outputs.%s: %w", name, err)
 	}
 	if !enabled {
 		return nil
@@ -1385,9 +1385,9 @@ func (c *Config) addInput(name, source string, table *ast.Table) error {
 		return nil
 	}
 
-	enabled, err := c.matchesLabelSelection("inputs", name, table)
+	enabled, err := c.matchesLabelSelection(table)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid label in plugin inputs.%s: %w", name, err)
 	}
 	if !enabled {
 		return nil
@@ -1952,12 +1952,12 @@ func (*Config) getFieldMap(tbl *ast.Table, fieldName string) map[string]string {
 	return target
 }
 
-func (c *Config) matchesLabelSelection(pluginType, name string, tbl *ast.Table) (bool, error) {
+func (c *Config) matchesLabelSelection(tbl *ast.Table) (bool, error) {
 	// Get the label definitions for the plugin and check them
 	labels := c.getFieldMap(tbl, "labels")
 	for k, v := range labels {
 		if err := CheckSelectionKeyValuePairs(k, v); err != nil {
-			return false, fmt.Errorf("invalid label in plugin %s.%s: %s=%q: %w", pluginType, name, k, v, err)
+			return false, err
 		}
 	}
 
