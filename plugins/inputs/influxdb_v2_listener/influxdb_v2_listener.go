@@ -258,6 +258,7 @@ func (h *InfluxDBV2Listener) handleHealth() http.HandlerFunc {
 		b, err := json.Marshal(body)
 		if err != nil {
 			h.Log.Debugf("error marshalling json in handleHealth: %v", err)
+			return
 		}
 		if _, err := res.Write(b); err != nil {
 			h.Log.Debugf("error writing in handleHealth: %v", err)
@@ -278,6 +279,7 @@ func (h *InfluxDBV2Listener) handleReady() http.HandlerFunc {
 			"up":      h.timeFunc().Sub(h.startTime).String()})
 		if err != nil {
 			h.Log.Debugf("error marshalling json in handleReady: %v", err)
+			return
 		}
 		if _, err := res.Write(b); err != nil {
 			h.Log.Debugf("error writing in handleReady: %v", err)
