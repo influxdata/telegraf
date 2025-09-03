@@ -41,6 +41,7 @@ func (s *stat) Tags() map[string]string {
 	return m
 }
 
+// Unregister removes this stat from the registry only
 func (s *stat) Unregister() {
 	registry.remove(s.measurement, s.field, s.tags)
 }
