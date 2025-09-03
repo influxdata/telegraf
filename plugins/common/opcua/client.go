@@ -14,7 +14,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal/choice"
 )
 
 type OpcUAWorkarounds struct {
@@ -62,8 +61,15 @@ func (o *OpcUAClientConfig) Validate() error {
 }
 
 func (o *OpcUAClientConfig) validateOptionalFields() error {
-	validFields := []string{"DataType"}
-	return choice.CheckSlice(o.OptionalFields, validFields)
+	for i, field := range o.OptionalFields {
+		switch field {
+		case "DataType":
+			// Valid optional field
+		default:
+			return fmt.Errorf("invalid optional field %q at index %d, expected one of: [DataType]", field, i)
+		}
+	}
+	return nil
 }
 
 func (o *OpcUAClientConfig) validateEndpoint() error {
@@ -82,19 +88,24 @@ func (o *OpcUAClientConfig) validateEndpoint() error {
 		}
 	}
 
-	validSecurityPolicies := []string{"None", "Basic128Rsa15", "Basic256", "Basic256Sha256", "auto"}
-	if err := choice.Check(o.SecurityPolicy, validSecurityPolicies); err != nil {
+	switch o.SecurityPolicy {
+	case "None", "Basic128Rsa15", "Basic256", "Basic256Sha256", "Aes128_Sha256_RsaOaep", "Aes256_Sha256_RsaPss", "auto":
+		// Valid security policy
+	default:
 		return &SecurityError{
 			Policy: o.SecurityPolicy,
-			Err:    fmt.Errorf("%w: %w", ErrInvalidSecurityPolicy, err),
+			Err: fmt.Errorf("%w: unknown security policy %q, expected one of: [None, Basic128Rsa15, Basic256, Basic256Sha256, Aes128_Sha256_RsaOaep, Aes256_Sha256_RsaPss, auto]",
+				ErrInvalidSecurityPolicy, o.SecurityPolicy),
 		}
 	}
 
-	validSecurityModes := []string{"None", "Sign", "SignAndEncrypt", "auto"}
-	if err := choice.Check(o.SecurityMode, validSecurityModes); err != nil {
+	switch o.SecurityMode {
+	case "None", "Sign", "SignAndEncrypt", "auto":
+		// Valid security mode
+	default:
 		return &SecurityError{
 			Mode: o.SecurityMode,
-			Err:  fmt.Errorf("%w: %w", ErrInvalidSecurityMode, err),
+			Err:  fmt.Errorf("%w: unknown security mode %q, expected one of: [None, Sign, SignAndEncrypt, auto]", ErrInvalidSecurityMode, o.SecurityMode),
 		}
 	}
 
@@ -170,8 +181,7 @@ func (o *OpcUAClient) setupWorkarounds() error {
 	for i, c := range o.Config.Workarounds.AdditionalValidStatusCodes {
 		val, err := strconv.ParseUint(c, 0, 32) // setting 32 bits to allow for safe conversion
 		if err != nil {
-			return fmt.Errorf("%w: invalid status code %q at index %d: %w",
-				ErrStatusCodeParsing, c, i, err)
+			return fmt.Errorf("%w: invalid status code %q at index %d: %w", ErrStatusCodeParsing, c, i, err)
 		}
 		o.codes = append(o.codes, ua.StatusCode(val))
 	}
