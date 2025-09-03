@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
@@ -970,30 +969,50 @@ func TestProcessHeaders(t *testing.T) {
 			resultMap := map[string][]string(result)
 
 			require.Equal(t, tt.expectedResult, resultMap, tt.description)
-
-			// Additional verification for critical cases
-			if strings.Contains(tt.name, "deprecated behavior") {
-				vlStreamFields := result.Values("VL-Stream-Fields") // Get all values
-				require.Len(t, vlStreamFields, 3, "Should have 3 values from comma splitting")
-				require.Contains(t, vlStreamFields, "tag.Source")
-				require.Contains(t, vlStreamFields, "tag.Channel")
-				require.Contains(t, vlStreamFields, "tag.EventID")
-			}
-
-			if strings.Contains(tt.name, "string arrays") {
-				acceptValues := result.Values("Accept")
-				if len(acceptValues) > 0 {
-					require.Contains(t, acceptValues, "application/json")
-					require.Contains(t, acceptValues, "application/xml")
-					require.Contains(t, acceptValues, "text/plain")
-				}
-
-				// Verify empty arrays don't create headers
-				emptyArrayValues := result.Values("X-Empty-Array")
-				require.Empty(t, emptyArrayValues, "Empty arrays should not create any header entries")
-			}
 		})
 	}
+}
+
+func TestProcessHeaders_DeprecatedCommaSplitting(t *testing.T) {
+	// Test the deprecated behavior of comma-splitting single string values
+	e := &Elasticsearch{
+		Headers: map[string]interface{}{
+			"VL-Stream-Fields": "tag.Source,tag.Channel,tag.EventID",
+		},
+		Log: testutil.Logger{},
+	}
+
+	result := e.processHeaders()
+	vlStreamFields := result.Values("VL-Stream-Fields") // Get all values
+
+	require.Len(t, vlStreamFields, 3, "Should have 3 values from comma splitting")
+	require.Contains(t, vlStreamFields, "tag.Source")
+	require.Contains(t, vlStreamFields, "tag.Channel")
+	require.Contains(t, vlStreamFields, "tag.EventID")
+}
+
+func TestProcessHeaders_StringArraysWithEmptyArrays(t *testing.T) {
+	// Test string array handling including empty arrays
+	e := &Elasticsearch{
+		Headers: map[string]interface{}{
+			"Accept":        []string{"application/json", "application/xml", "text/plain"},
+			"X-Empty-Array": make([]string, 0),
+		},
+		Log: testutil.Logger{},
+	}
+
+	result := e.processHeaders()
+
+	// Verify Accept header values
+	acceptValues := result.Values("Accept")
+	require.Len(t, acceptValues, 3)
+	require.Contains(t, acceptValues, "application/json")
+	require.Contains(t, acceptValues, "application/xml")
+	require.Contains(t, acceptValues, "text/plain")
+
+	// Verify empty arrays don't create headers
+	emptyArrayValues := result.Values("X-Empty-Array")
+	require.Empty(t, emptyArrayValues, "Empty arrays should not create any header entries")
 }
 
 type esTemplate struct {

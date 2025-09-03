@@ -257,13 +257,12 @@ func (a *Elasticsearch) processHeaders() http.Header {
 		switch v := value.(type) {
 		case string:
 			// Single string value - split on comma for backward compatibility
-			a.Log.Warnf("Header %q uses comma-separated values which is deprecated. Use array syntax instead: [\"value1\", \"value2\"]", key)
+			config.PrintOptionValueDeprecationNotice("outputs.elasticsearch", "headers."+key, v, telegraf.DeprecationInfo{
+				Since:     "1.32.0",
+				RemovalIn: "1.45.0",
+				Notice:    "Use array syntax instead: [\"value1\", \"value2\"]",
+			})
 			for _, headerValue := range strings.Split(v, ",") {
-				headers.Add(key, strings.TrimSpace(headerValue))
-			}
-		case []string:
-			// Array of strings - add each value
-			for _, headerValue := range v {
 				headers.Add(key, strings.TrimSpace(headerValue))
 			}
 		case []interface{}:
