@@ -186,7 +186,7 @@ func TestPgBouncerGeneratesMetricsIntegrationShowCommands(t *testing.T) {
 	intMetricsPgBouncerDatabases := []string{
 		"pool_size",
 		"min_pool_size",
-		"reserve_pool",
+		"reserve_pool_size",
 		"max_connections",
 		"current_connections",
 		"paused",
