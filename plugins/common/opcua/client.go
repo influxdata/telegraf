@@ -144,7 +144,7 @@ type OpcUAClient struct {
 	codes []ua.StatusCode
 }
 
-// setupOptions reads the endpoints from the specified server and sets up all authentication
+// SetupOptions reads the endpoints from the specified server and sets up all authentication
 func (o *OpcUAClient) SetupOptions() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Config.ConnectTimeout))
 	defer cancel()
