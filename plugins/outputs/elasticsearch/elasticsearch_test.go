@@ -889,11 +889,11 @@ func TestProcessHeaders(t *testing.T) {
 		{
 			name: "string arrays - basic and with whitespace",
 			headers: map[string]interface{}{
-				"Accept":        []string{"application/json", "application/xml", "text/plain"},
-				"Cache-Control": []string{"no-cache", "must-revalidate"},
-				"X-Debug-Tags":  []string{"performance", "security", "monitoring"},
-				"X-With-Spaces": []string{" application/json ", "  application/xml  ", "text/plain"},
-				"X-Empty-Array": make([]string, 0),
+				"Accept":        []interface{}{"application/json", "application/xml", "text/plain"},
+				"Cache-Control": []interface{}{"no-cache", "must-revalidate"},
+				"X-Debug-Tags":  []interface{}{"performance", "security", "monitoring"},
+				"X-With-Spaces": []interface{}{" application/json ", "  application/xml  ", "text/plain"},
+				"X-Empty-Array": make([]interface{}, 0),
 			},
 			expectedResult: map[string][]string{
 				"Accept":        {"application/json", "application/xml", "text/plain"},
@@ -902,7 +902,7 @@ func TestProcessHeaders(t *testing.T) {
 				"X-With-Spaces": {"application/json", "application/xml", "text/plain"}, // Trimmed
 				// X-Empty-Array is not included - empty arrays don't create headers
 			},
-			description: "String arrays should create multiple header values with whitespace trimmed, empty arrays ignored",
+			description: "Interface arrays should create multiple header values with whitespace trimmed, empty arrays ignored",
 		},
 		{
 			name: "interface arrays - TOML parsing and mixed types",
@@ -938,11 +938,11 @@ func TestProcessHeaders(t *testing.T) {
 				"VL-Stream-Fields": "tag.Source,tag.Channel,tag.EventID",
 				"VL-Time-Field":    "@timestamp",
 				"Authorization":    "Bearer token123",
-				"Accept":           []string{"application/json", "text/plain"},
-				"X-Debug-Tags":     []string{"performance", "security"},
+				"Accept":           []interface{}{"application/json", "text/plain"},
+				"X-Debug-Tags":     []interface{}{"performance", "security"},
 				"X-IPs":            []interface{}{"1.1.1.1", "2.2.2.2"},
 				"X-Empty-String":   "",
-				"X-Empty-Array":    make([]string, 0),
+				"X-Empty-Array":    make([]interface{}, 0),
 			},
 			expectedResult: map[string][]string{
 				"Vl-Stream-Fields": {"tag.Source", "tag.Channel", "tag.EventID"}, // Split on commas (deprecated)
@@ -971,48 +971,6 @@ func TestProcessHeaders(t *testing.T) {
 			require.Equal(t, tt.expectedResult, resultMap, tt.description)
 		})
 	}
-}
-
-func TestProcessHeaders_DeprecatedCommaSplitting(t *testing.T) {
-	// Test the deprecated behavior of comma-splitting single string values
-	e := &Elasticsearch{
-		Headers: map[string]interface{}{
-			"VL-Stream-Fields": "tag.Source,tag.Channel,tag.EventID",
-		},
-		Log: testutil.Logger{},
-	}
-
-	result := e.processHeaders()
-	vlStreamFields := result.Values("VL-Stream-Fields") // Get all values
-
-	require.Len(t, vlStreamFields, 3, "Should have 3 values from comma splitting")
-	require.Contains(t, vlStreamFields, "tag.Source")
-	require.Contains(t, vlStreamFields, "tag.Channel")
-	require.Contains(t, vlStreamFields, "tag.EventID")
-}
-
-func TestProcessHeaders_StringArraysWithEmptyArrays(t *testing.T) {
-	// Test string array handling including empty arrays
-	e := &Elasticsearch{
-		Headers: map[string]interface{}{
-			"Accept":        []string{"application/json", "application/xml", "text/plain"},
-			"X-Empty-Array": make([]string, 0),
-		},
-		Log: testutil.Logger{},
-	}
-
-	result := e.processHeaders()
-
-	// Verify Accept header values
-	acceptValues := result.Values("Accept")
-	require.Len(t, acceptValues, 3)
-	require.Contains(t, acceptValues, "application/json")
-	require.Contains(t, acceptValues, "application/xml")
-	require.Contains(t, acceptValues, "text/plain")
-
-	// Verify empty arrays don't create headers
-	emptyArrayValues := result.Values("X-Empty-Array")
-	require.Empty(t, emptyArrayValues, "Empty arrays should not create any header entries")
 }
 
 type esTemplate struct {
