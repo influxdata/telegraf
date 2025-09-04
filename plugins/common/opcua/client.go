@@ -86,13 +86,12 @@ func (o *OpcUAClientConfig) validateEndpoint() error {
 	}
 
 	switch o.SecurityPolicy {
-	case "None", "Basic128Rsa15", "Basic256", "Basic256Sha256", "Aes128_Sha256_RsaOaep", "Aes256_Sha256_RsaPss", "auto":
+	case "None", "Basic128Rsa15", "Basic256", "Basic256Sha256", "auto":
 		// Valid security policy
 	default:
-		validPolicies := []string{"None", "Basic128Rsa15", "Basic256", "Basic256Sha256", "Aes128_Sha256_RsaOaep", "Aes256_Sha256_RsaPss", "auto"}
 		return &SecurityError{
 			Policy: o.SecurityPolicy,
-			Err:    fmt.Errorf("%w: unknown security policy %q, expected one of: %v", ErrInvalidSecurityPolicy, o.SecurityPolicy, validPolicies),
+			Err:    fmt.Errorf("%w: unknown security policy %q", ErrInvalidSecurityPolicy, o.SecurityPolicy),
 		}
 	}
 
@@ -100,10 +99,9 @@ func (o *OpcUAClientConfig) validateEndpoint() error {
 	case "None", "Sign", "SignAndEncrypt", "auto":
 		// Valid security mode
 	default:
-		validModes := []string{"None", "Sign", "SignAndEncrypt", "auto"}
 		return &SecurityError{
 			Mode: o.SecurityMode,
-			Err:  fmt.Errorf("%w: unknown security mode %q, expected one of: %v", ErrInvalidSecurityMode, o.SecurityMode, validModes),
+			Err:  fmt.Errorf("%w: unknown security mode %q", ErrInvalidSecurityMode, o.SecurityMode),
 		}
 	}
 
