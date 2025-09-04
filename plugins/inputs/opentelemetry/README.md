@@ -3,6 +3,10 @@
 This service plugin receives traces, metrics, logs and profiles from
 [OpenTelemetry][opentelemetry] clients and compatible agents via gRPC.
 
+> [!NOTE]
+> Telegraf 1.32 through 1.35 support the Profiles signal using the v1 experimental API.
+> Telegraf 1.36+ supports the Profiles signal using the v1 development API.
+
 ⭐ Telegraf v1.19.0
 🏷️ logging, messaging
 💻 all

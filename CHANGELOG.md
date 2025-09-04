@@ -1,6 +1,14 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+### BREAKING CHANGES
+
+- [#17355](https://github.com/influxdata/telegraf/pull/17355): `inputs.opentelemetry` Changes the `profiles` support
+  from the `v1 experimental` to the `v1 development` as this experimental API is updated upstream. Will change
+  some metric fields, notably the removal of the `frame_type`, `stack_trace_id`, `build_id`, and `build_id_type` fields,
+  though other changes may also exist. Please refer to the OpenTelemetry documentation for more details:
+  https://opentelemetry.io/docs/
+
 ## v1.35.4 [2025-08-18]
 
 ### Bugfixes
