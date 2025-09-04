@@ -33,7 +33,7 @@ func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
 	defer backend.Terminate()
 
 	container := testutil.Container{
-		Image:        "z9pascal/pgbouncer-container:1.23.1-latest",
+		Image:        "z9pascal/pgbouncer-container:1.24.1-latest",
 		ExposedPorts: []string{pgBouncerServicePort},
 		Env: map[string]string{
 			"PG_ENV_POSTGRESQL_USER": "pgbouncer",
@@ -123,7 +123,7 @@ func TestPgBouncerGeneratesMetricsIntegrationShowCommands(t *testing.T) {
 	defer backend.Terminate()
 
 	container := testutil.Container{
-		Image:        "z9pascal/pgbouncer-container:1.23.1-latest",
+		Image:        "z9pascal/pgbouncer-container:1.24.1-latest",
 		ExposedPorts: []string{pgBouncerServicePort},
 		Env: map[string]string{
 			"PG_ENV_POSTGRESQL_USER": "pgbouncer",
@@ -186,7 +186,7 @@ func TestPgBouncerGeneratesMetricsIntegrationShowCommands(t *testing.T) {
 	intMetricsPgBouncerDatabases := []string{
 		"pool_size",
 		"min_pool_size",
-		"reserve_pool",
+		"reserve_pool_size",
 		"max_connections",
 		"current_connections",
 		"paused",
