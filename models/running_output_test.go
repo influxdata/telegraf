@@ -721,7 +721,7 @@ func TestRunningOutputNoRetriggerOnUnsuccessfulPartialWriteError(t *testing.T) {
 
 	plugin := &mockOutput{
 		batchAcceptSize: 0,
-		preWriteHook: func(m []telegraf.Metric) error {
+		preWriteHook: func([]telegraf.Metric) error {
 			return &internal.PartialWriteError{
 				Err: errors.New("unable to connect"),
 			}
