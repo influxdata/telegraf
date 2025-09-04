@@ -62,10 +62,7 @@ func (o *OpcUAClientConfig) Validate() error {
 
 func (o *OpcUAClientConfig) validateOptionalFields() error {
 	for i, field := range o.OptionalFields {
-		switch field {
-		case "DataType":
-			// Valid optional field
-		default:
+		if field != "DataType" {
 			return fmt.Errorf("invalid optional field %q at index %d, expected one of: [DataType]", field, i)
 		}
 	}
