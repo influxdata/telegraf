@@ -939,6 +939,14 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 }
 
 func (c *Config) addAggregator(name, source string, table *ast.Table) error {
+	enabled, err := c.matchesLabelSelection(table)
+	if err != nil {
+		return fmt.Errorf("invalid label in plugin aggregators.%s: %w", name, err)
+	}
+	if !enabled {
+		return nil
+	}
+
 	creator, ok := aggregators.Aggregators[name]
 	if !ok {
 		// Handle removed, deprecated plugins
@@ -969,6 +977,14 @@ func (c *Config) addAggregator(name, source string, table *ast.Table) error {
 
 func (c *Config) addSecretStore(name, source string, table *ast.Table) error {
 	if len(c.SecretStoreFilters) > 0 && !sliceContains(name, c.SecretStoreFilters) {
+		return nil
+	}
+
+	enabled, err := c.matchesLabelSelection(table)
+	if err != nil {
+		return fmt.Errorf("invalid label in plugin secretstores.%s: %w", name, err)
+	}
+	if !enabled {
 		return nil
 	}
 
@@ -1144,6 +1160,13 @@ func (c *Config) addSerializer(parentname string, table *ast.Table) (*models.Run
 }
 
 func (c *Config) addProcessor(name, source string, table *ast.Table) error {
+	enabled, err := c.matchesLabelSelection(table)
+	if err != nil {
+		return fmt.Errorf("invalid label in plugin processors.%s: %w", name, err)
+	}
+	if !enabled {
+		return nil
+	}
 	creator, ok := processors.Processors[name]
 	if !ok {
 		// Handle removed, deprecated plugins
@@ -1271,6 +1294,14 @@ func (c *Config) addOutput(name, source string, table *ast.Table) error {
 		return nil
 	}
 
+	enabled, err := c.matchesLabelSelection(table)
+	if err != nil {
+		return fmt.Errorf("invalid label in plugin outputs.%s: %w", name, err)
+	}
+	if !enabled {
+		return nil
+	}
+
 	// For outputs with serializers we need to compute the set of
 	// options that is not covered by both, the serializer and the input.
 	// We achieve this by keeping a local book of missing entries
@@ -1351,6 +1382,14 @@ func (c *Config) addOutput(name, source string, table *ast.Table) error {
 
 func (c *Config) addInput(name, source string, table *ast.Table) error {
 	if len(c.InputFilters) > 0 && !sliceContains(name, c.InputFilters) {
+		return nil
+	}
+
+	enabled, err := c.matchesLabelSelection(table)
+	if err != nil {
+		return fmt.Errorf("invalid label in plugin inputs.%s: %w", name, err)
+	}
+	if !enabled {
 		return nil
 	}
 
@@ -1706,7 +1745,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"name_override", "name_prefix", "name_suffix", "namedrop", "namedrop_separator", "namepass", "namepass_separator",
 		"order",
 		"pass", "period", "precision",
-		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "startup_error_behavior":
+		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "startup_error_behavior", "labels":
 
 	// Secret-store options to ignore
 	case "id":
@@ -1894,6 +1933,36 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string) []models.Ta
 	}
 
 	return target
+}
+
+func (*Config) getFieldMap(tbl *ast.Table, fieldName string) map[string]string {
+	target := make(map[string]string)
+	if node, ok := tbl.Fields[fieldName]; ok {
+		if subTbl, ok := node.(*ast.Table); ok {
+			for _, val := range subTbl.Fields {
+				if kv, ok := val.(*ast.KeyValue); ok {
+					if str, ok := kv.Value.(*ast.String); ok {
+						target[kv.Key] = str.Value
+					}
+				}
+			}
+		}
+	}
+
+	return target
+}
+
+func (c *Config) matchesLabelSelection(tbl *ast.Table) (bool, error) {
+	// Get the label definitions for the plugin and check them
+	labels := c.getFieldMap(tbl, "labels")
+	for k, v := range labels {
+		if err := CheckSelectionKeyValuePairs(k, v); err != nil {
+			return false, err
+		}
+	}
+
+	// Match the selection statement against the labels
+	return pluginLabelSelector.matches(labels), nil
 }
 
 func keys(m map[string]bool) []string {
