@@ -406,8 +406,10 @@ func (r *RunningOutput) updateTransaction(tx *Transaction, err error) {
 		return
 	}
 
-	// Transfer the accepted and rejected indices based on the write error values
-	r.lastWriteFailed.Store(false)
+	// Transfer the accepted and rejected indices based on the write error
+	// values. Only allow to retrigger before the flush interval if at least
+	// one metric was accepted in order to avoid
+	r.lastWriteFailed.Store(len(writeErr.MetricsAccept) == 0)
 	tx.Accept = writeErr.MetricsAccept
 	tx.Reject = writeErr.MetricsReject
 }
