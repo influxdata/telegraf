@@ -14,7 +14,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/opcua"
 )
@@ -174,9 +173,11 @@ func (o *InputClientConfig) Validate() error {
 		return errors.New("metric name is empty")
 	}
 
-	err := choice.Check(string(o.Timestamp), []string{"", "gather", "server", "source"})
-	if err != nil {
-		return err
+	switch string(o.Timestamp) {
+	case "", "gather", "server", "source":
+		// Valid timestamp source
+	default:
+		return fmt.Errorf("unknown timestamp source %q, expected one of: [\"\", \"gather\", \"server\", \"source\"]", o.Timestamp)
 	}
 
 	if o.TimestampFormat == "" {
@@ -592,8 +593,11 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 	}
 
 	fields["Quality"] = strings.TrimSpace(o.LastReceivedData[nodeIdx].Quality.Error())
-	if choice.Contains("DataType", o.Config.OptionalFields) {
-		fields["DataType"] = strings.Replace(o.LastReceivedData[nodeIdx].DataType.String(), "TypeID", "", 1)
+	for _, field := range o.Config.OptionalFields {
+		if field == "DataType" {
+			fields["DataType"] = strings.Replace(o.LastReceivedData[nodeIdx].DataType.String(), "TypeID", "", 1)
+			break
+		}
 	}
 	if !o.StatusCodeOK(o.LastReceivedData[nodeIdx].Quality) {
 		mp := newMP(nmm)
