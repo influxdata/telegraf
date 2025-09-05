@@ -30,12 +30,19 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##    ldap://...      -- unencrypted (non-TLS) connection
   ##    ldaps://...     -- TLS connection
   ##    starttls://...  --  StartTLS connection
+  ##    ldapi://...     -- UNIX socket connection
   ## If no port is given, the default ports, 389 for ldap and starttls and
-  ## 636 for ldaps, are used.
+  ## 636 for ldaps, are used, there is no port on UNIX sockets.
   server = "ldap://localhost"
 
   ## Server dialect, can be "openldap" or "389ds"
   # dialect = "openldap"
+
+  # What sort of Bind to use
+  ## Empty or "simple" means to use a simple LDAP bind, otherwise use a
+  ## specified SASL mechanism (only EXTERNAL currently supported - for TLS
+  ## client certs or UNIX credentials)
+  bind_mechanism = "simple"
 
   # DN and password to bind with
   ## If bind_dn is empty an anonymous bind is performed.
@@ -87,6 +94,10 @@ are usually named according to the selected dialect.
 
 - server -- Server name or IP
 - port   -- Port used for connecting
+
+Or with the ldapi scheme:
+
+- path -- Path used to connect
 
 ## Example Output
 
