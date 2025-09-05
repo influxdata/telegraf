@@ -99,7 +99,7 @@ func TestOpcUAClientConfig_ValidateEndpoint(t *testing.T) {
 	}
 }
 
-func TestOpcUAClient_SetupWorkarounds(t *testing.T) {
+func TestOpcUAClientSetupWorkarounds(t *testing.T) {
 	tests := []struct {
 		name        string
 		statusCodes []string
