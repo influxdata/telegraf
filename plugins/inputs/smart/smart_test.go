@@ -3,6 +3,7 @@ package smart
 import (
 	"errors"
 	"fmt"
+	"os/exec"
 	"sync"
 	"testing"
 	"time"
@@ -458,6 +459,58 @@ func Test_difference(t *testing.T) {
 	expected := []string{"/dev/nvme2"}
 	result := difference(devices, secondDevices)
 	require.Equal(t, expected, result)
+}
+
+func TestExitStatusForActiveVsStandbyDrives(t *testing.T) {
+	s := newSmart()
+	s.Attributes = true
+	s.PathSmartctl = "smartctl"
+	s.Nocheck = "standby"
+
+	runCmd = func(_ config.Duration, _ bool, _ string, args ...string) ([]byte, error) {
+		deviceArg := args[len(args)-1]
+
+		if deviceArg == "/dev/sdb" {
+			// Active drive - smartctl exits with 2 but drive shows as ACTIVE
+			cmd := exec.Command("sh", "-c", "exit 2")
+			err := cmd.Run()
+			return []byte(`Device Model: ST18000NT001-3NF101
+Power mode is: ACTIVE or IDLE
+SMART overall-health self-assessment test result: PASSED`), err
+		} else if deviceArg == "/dev/sdc" {
+			// Standby drive - smartctl exits with 2 and drive shows as STANDBY
+			cmd := exec.Command("sh", "-c", "exit 2")
+			err := cmd.Run()
+			return []byte(mockStandbyData), err
+		}
+		return nil, errors.New("unexpected device")
+	}
+
+	t.Run("Exit status should reflect drive state not command exit code", func(t *testing.T) {
+		s.Devices = []string{"/dev/sdb", "/dev/sdc"}
+		var acc testutil.Accumulator
+
+		err := s.Gather(&acc)
+		require.NoError(t, err)
+
+		deviceMetrics := acc.GetTelegrafMetrics()
+
+		for _, metric := range deviceMetrics {
+			if metric.Name() == "smart_device" {
+				device, _ := metric.GetTag("device")
+				exitStatus, ok := metric.GetField("exit_status")
+				require.True(t, ok, "exit_status field should exist")
+
+				if device == "sdb" {
+					// Active drive should have exit_status=0 regardless of command exit code
+					require.Equal(t, int64(0), exitStatus, "Active drive should have exit_status=0")
+				} else if device == "sdc" {
+					// Standby drive should have exit_status=2
+					require.Equal(t, int64(2), exitStatus, "Standby drive should have exit_status=2")
+				}
+			}
+		}
+	})
 }
 
 func Test_integerOverflow(t *testing.T) {
@@ -2620,5 +2673,11 @@ ctrattr : 0
 msdbd   : 0
 ps    0 : mp:25.00W operational enlat:0 exlat:0 rrt:0 rrl:0
           rwt:0 rwl:0 idle_power:- active_power:-
+`
+	// Mock data for standby drive
+	mockStandbyData = `smartctl 7.4 2023-08-01 r5530 [x86_64-linux-6.12.24-Unraid] (local build)
+Copyright (C) 2002-23, Bruce Allen, Christian Franke, www.smartmontools.org
+
+Device is in STANDBY mode, exit(2)
 `
 )
