@@ -32,37 +32,36 @@ func TestCheckStatusCode(t *testing.T) {
 	require.True(t, o.StatusCodeOK(ua.StatusCode(192)))
 }
 
-func TestOpcUAClientConfig_ValidateEndpoint(t *testing.T) {
+func TestOpcUAClientConfigValidateEndpointSuccess(t *testing.T) {
+	config := OpcUAClientConfig{
+		Endpoint:       "opc.tcp://localhost:4840",
+		SecurityPolicy: "None",
+		SecurityMode:   "None",
+	}
+
+	err := config.validateEndpoint()
+	require.NoError(t, err)
+}
+
+func TestOpcUAClientConfigValidateEndpointFail(t *testing.T) {
 	tests := []struct {
-		name      string
-		config    OpcUAClientConfig
-		expectErr bool
-		errType   error
+		name    string
+		config  OpcUAClientConfig
+		errType error
 	}{
-		{
-			name: "valid configuration",
-			config: OpcUAClientConfig{
-				Endpoint:       "opc.tcp://localhost:4840",
-				SecurityPolicy: "None",
-				SecurityMode:   "None",
-			},
-			expectErr: false,
-		},
 		{
 			name: "empty endpoint",
 			config: OpcUAClientConfig{
 				Endpoint: "",
 			},
-			expectErr: true,
-			errType:   ErrInvalidEndpoint,
+			errType: ErrInvalidEndpoint,
 		},
 		{
 			name: "invalid endpoint URL",
 			config: OpcUAClientConfig{
 				Endpoint: "://invalid-url",
 			},
-			expectErr: true,
-			errType:   ErrInvalidEndpoint,
+			errType: ErrInvalidEndpoint,
 		},
 		{
 			name: "invalid security policy",
@@ -71,8 +70,7 @@ func TestOpcUAClientConfig_ValidateEndpoint(t *testing.T) {
 				SecurityPolicy: "InvalidPolicy",
 				SecurityMode:   "None",
 			},
-			expectErr: true,
-			errType:   ErrInvalidSecurityPolicy,
+			errType: ErrInvalidSecurityPolicy,
 		},
 		{
 			name: "invalid security mode",
@@ -81,20 +79,15 @@ func TestOpcUAClientConfig_ValidateEndpoint(t *testing.T) {
 				SecurityPolicy: "None",
 				SecurityMode:   "InvalidMode",
 			},
-			expectErr: true,
-			errType:   ErrInvalidSecurityMode,
+			errType: ErrInvalidSecurityMode,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.config.validateEndpoint()
-			if tt.expectErr {
-				require.Error(t, err)
-				require.ErrorIs(t, err, tt.errType)
-			} else {
-				require.NoError(t, err)
-			}
+			require.Error(t, err)
+			require.ErrorIs(t, err, tt.errType)
 		})
 	}
 }
