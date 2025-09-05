@@ -50,7 +50,7 @@ type Elasticsearch struct {
 	Timeout             config.Duration        `toml:"timeout"`
 	URLs                []string               `toml:"urls"`
 	UsePipeline         string                 `toml:"use_pipeline"`
-	Headers             map[string]string      `toml:"headers"`
+	Headers             map[string]interface{} `toml:"headers"`
 	Log                 telegraf.Logger        `toml:"-"`
 	majorReleaseNumber  int
 	pipelineName        string
@@ -192,12 +192,7 @@ func (a *Elasticsearch) Connect() error {
 	)
 
 	if len(a.Headers) > 0 {
-		headers := http.Header{}
-		for k, vals := range a.Headers {
-			for _, v := range strings.Split(vals, ",") {
-				headers.Add(k, v)
-			}
-		}
+		headers := a.processHeaders()
 		clientOptions = append(clientOptions, elastic.SetHeaders(headers))
 	}
 
@@ -249,6 +244,42 @@ func (a *Elasticsearch) Connect() error {
 	a.pipelineName, a.pipelineTagKeys = GetTagKeys(a.UsePipeline)
 
 	return nil
+}
+
+func (a *Elasticsearch) processHeaders() http.Header {
+	headers := http.Header{}
+
+	if len(a.Headers) == 0 {
+		return headers
+	}
+
+	for key, value := range a.Headers {
+		switch v := value.(type) {
+		case string:
+			// Single string value - split on comma for backward compatibility
+			config.PrintOptionValueDeprecationNotice("outputs.elasticsearch", "headers."+key, v, telegraf.DeprecationInfo{
+				Since:     "1.32.0",
+				RemovalIn: "1.45.0",
+				Notice:    "Use array syntax instead: [\"value1\", \"value2\"]",
+			})
+			for _, headerValue := range strings.Split(v, ",") {
+				headers.Add(key, strings.TrimSpace(headerValue))
+			}
+		case []interface{}:
+			// TOML might parse arrays as []interface{}
+			for _, headerValue := range v {
+				if strVal, ok := headerValue.(string); ok {
+					headers.Add(key, strings.TrimSpace(strVal))
+				} else {
+					a.Log.Errorf("Header %q contains non-string value in array: %v (type: %T)", key, headerValue, headerValue)
+				}
+			}
+		default:
+			a.Log.Errorf("Header %q has invalid type %T, expected string or []string", key, value)
+		}
+	}
+
+	return headers
 }
 
 // GetPointID generates a unique ID for a Metric Point
