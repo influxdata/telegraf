@@ -233,6 +233,27 @@ func TestGatherSATAInfo65(t *testing.T) {
 	require.Equal(t, uint64(18), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
+func TestGatherSATAInfo75(t *testing.T) {
+	runCmd = func(config.Duration, bool, string, ...string) ([]byte, error) {
+		return []byte(seagateSATAInfoData75), nil
+	}
+
+	var (
+		acc = &testutil.Accumulator{}
+		wg  = &sync.WaitGroup{}
+	)
+
+	wg.Add(1)
+	sampleSmart.gatherDisk(acc, "", wg)
+
+	require.Equal(t, 135, acc.NFields(), "Wrong number of fields gathered")
+	require.Equal(t, uint64(25), acc.NMetrics(), "Wrong number of metrics gathered")
+
+	for _, test := range testsSeagateSATADevice {
+		acc.AssertContainsTaggedFields(t, "smart_device", test.fields, test.tags)
+	}
+}
+
 func TestGatherHgstSAS(t *testing.T) {
 	runCmd = func(config.Duration, bool, string, ...string) ([]byte, error) {
 		return []byte(hgstSASInfoData), nil
@@ -1506,6 +1527,40 @@ var (
 		},
 	}
 
+	testsSeagateSATADevice = []struct {
+		fields map[string]interface{}
+		tags   map[string]string
+	}{
+		{
+			map[string]interface{}{
+				"command_timeout":            int64(0),
+				"end_to_end_error":           int64(0),
+				"exit_status":                int(0),
+				"health_ok":                  bool(true),
+				"pending_sector_count":       int64(0),
+				"power_cycle_count":          int64(2202),
+				"power_on_hours":             int64(28379),
+				"read_error_rate":            int64(2765),
+				"reallocated_sectors_count":  int64(0),
+				"seek_error_rate":            int64(38895),
+				"spin_retry_count":           int64(0),
+				"temp_c":                     int64(33),
+				"udma_crc_errors":            int64(0),
+				"uncorrectable_errors":       int64(8),
+				"uncorrectable_sector_count": int64(0),
+			},
+			map[string]string{
+				"capacity":  "2000398934016",
+				"device":    ".",
+				"enabled":   "Enabled",
+				"model":     "ST2000DM006-2DM164",
+				"power":     "ACTIVE",
+				"serial_no": "XXXXXXXX",
+				"wwn":       "XXXXXXXX",
+			},
+		},
+	}
+
 	testNVMeDevice = []struct {
 		fields map[string]interface{}
 		tags   map[string]string
@@ -2133,6 +2188,66 @@ ID# ATTRIBUTE_NAME          FLAGS    VALUE WORST THRESH FAIL RAW_VALUE
                             |||____ S speed/performance
                             ||_____ O updated online
                             |______ P prefailure warning
+`
+
+	seagateSATAInfoData75 = `smartctl 7.5 2025-04-30 r5714 [x86_64-linux-6.16.4-arch1-1] (local build)
+Copyright (C) 2002-25, Bruce Allen, Christian Franke, www.smartmontools.org
+
+=== START OF INFORMATION SECTION ===
+Model Family:     Seagate BarraCuda 3.5 (CMR)
+Device Model:     ST2000DM006-2DM164
+Serial Number:    XXXXXXXX
+LU WWN Device Id: XXXXXXXX
+Firmware Version: XXXXXXXX
+User Capacity:    2,000,398,934,016 bytes [2.00 TB]
+Sector Sizes:     512 bytes logical, 4096 bytes physical
+Rotation Rate:    7200 rpm
+Form Factor:      3.5 inches
+Device is:        In smartctl database
+ATA Version is:   ACS-2, ACS-3 T13/2161-D revision 3b
+SATA Version is:  SATA 3.1, 6.0 Gb/s (current: 6.0 Gb/s)
+Local Time is:    Sun Aug 31 13:47:37 2025 IST
+SMART support is: Available - device has SMART capability.
+SMART support is: Enabled
+Power mode is:    ACTIVE or IDLE
+
+=== START OF READ SMART DATA SECTION ===
+SMART overall-health self-assessment test result: PASSED
+
+SMART Attributes Data Structure revision number: 10
+Vendor Specific SMART Attributes with Thresholds:
+ID# ATTRIBUTE_NAME          FLAGS    VALUE WORST THRESH FAIL RAW_VALUE
+  1 Raw_Read_Error_Rate     POSR--   107   099   006    -    2765/13191816
+  3 Spin_Up_Time            PO----   096   095   000    -    0
+  4 Start_Stop_Count        -O--CK   098   098   020    -    2195
+  5 Reallocated_Sector_Ct   PO--CK   100   100   010    -    0
+  7 Seek_Error_Rate         POSR--   074   060   030    -    38895/25278716
+  9 Power_On_Hours          -O--CK   068   068   000    -    28379
+ 10 Spin_Retry_Count        PO--C-   100   100   097    -    0
+ 12 Power_Cycle_Count       -O--CK   098   098   020    -    2202
+183 Runtime_Bad_Block       -O--CK   100   100   000    -    0
+184 End-to-End_Error        -O--CK   100   100   099    -    0
+187 Reported_Uncorrect      -O--CK   092   092   000    -    8
+188 Command_Timeout         -O--CK   100   099   000    -    0 0 1
+189 High_Fly_Writes         -O-RCK   097   097   000    -    3
+190 Airflow_Temperature_Cel -O---K   067   057   045    -    33 (Min/Max 24/34)
+191 G-Sense_Error_Rate      -O--CK   100   100   000    -    0
+192 Power-Off_Retract_Count -O--CK   100   100   000    -    130
+193 Load_Cycle_Count        -O--CK   001   001   000    -    837543
+194 Temperature_Celsius     -O---K   033   043   000    -    33 (0 20 0 0 0)
+197 Current_Pending_Sector  -O--C-   100   100   000    -    0
+198 Offline_Uncorrectable   ----C-   100   100   000    -    0
+199 UDMA_CRC_Error_Count    -OSRCK   200   200   000    -    0
+240 Head_Flying_Hours       ------   100   253   000    -    25597h+17m+05.460s
+241 Total_LBAs_Written      ------   100   253   000    -    69019629695
+242 Total_LBAs_Read         ------   100   253   000    -    11937226159010
+                            ||||||_ K auto-keep
+                            |||||__ C event count
+                            ||||___ R error rate
+                            |||____ S speed/performance
+                            ||_____ O updated online
+                            |______ P prefailure warning
+
 `
 
 	ssdInfoData = `smartctl 6.6 2016-05-31 r4324 [x86_64-linux-4.15.0-33-generic] (local build)
