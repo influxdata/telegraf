@@ -70,6 +70,11 @@ func (s *Syslog) Init() error {
 		return fmt.Errorf("invalid 'syslog_standard' %q", s.SyslogStandard)
 	}
 
+	// Default Syslog max message size for RFC5424 and RFC3164 if wasn't set or invalid
+	if s.MaxMessageLength <= 0 {
+		s.MaxMessageLength = config.Size(8192)
+	}
+
 	if s.Separator == "" {
 		s.Separator = "_"
 	}
