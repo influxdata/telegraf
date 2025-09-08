@@ -17,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs/influxdb"
+	"github.com/influxdata/telegraf/selfstat"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -100,7 +101,10 @@ func TestUDP_Simple(t *testing.T) {
 				return conn, nil
 			},
 		},
+		BytesWritten: selfstat.Register("write", "bytes_written", nil),
 	}
+	defer config.BytesWritten.Unregister()
+
 	client, err := influxdb.NewUDPClient(config)
 	require.NoError(t, err)
 
@@ -124,12 +128,14 @@ func TestUDP_DialError(t *testing.T) {
 				return nil, errors.New(`unsupported scheme [invalid://localhost:9999]: "invalid"`)
 			},
 		},
+		BytesWritten: selfstat.Register("write", "bytes_written", nil),
 	}
+	defer config.BytesWritten.Unregister()
+
 	client, err := influxdb.NewUDPClient(config)
 	require.NoError(t, err)
 
-	err = client.Write(t.Context(), []telegraf.Metric{getMetric()})
-	require.Error(t, err)
+	require.Error(t, client.Write(t.Context(), []telegraf.Metric{getMetric()}))
 }
 
 func TestUDP_WriteError(t *testing.T) {
@@ -151,12 +157,14 @@ func TestUDP_WriteError(t *testing.T) {
 				return conn, nil
 			},
 		},
+		BytesWritten: selfstat.Register("write", "bytes_written", nil),
 	}
+	defer config.BytesWritten.Unregister()
+
 	client, err := influxdb.NewUDPClient(config)
 	require.NoError(t, err)
 
-	err = client.Write(t.Context(), []telegraf.Metric{getMetric()})
-	require.Error(t, err)
+	require.Error(t, client.Write(t.Context(), []telegraf.Metric{getMetric()}))
 	require.True(t, closed)
 }
 
@@ -216,11 +224,13 @@ func TestUDP_ErrorLogging(t *testing.T) {
 			var b bytes.Buffer
 			log.SetOutput(&b)
 
+			tt.config.BytesWritten = selfstat.Register("write", "bytes_written", nil)
+			defer tt.config.BytesWritten.Unregister()
+
 			client, err := influxdb.NewUDPClient(tt.config)
 			require.NoError(t, err)
 
-			err = client.Write(t.Context(), tt.metrics)
-			require.NoError(t, err)
+			require.NoError(t, client.Write(t.Context(), tt.metrics))
 			require.Contains(t, b.String(), tt.logContains)
 		})
 	}
@@ -256,13 +266,14 @@ func TestUDP_WriteWithRealConn(t *testing.T) {
 	require.NoError(t, err)
 
 	config := influxdb.UDPConfig{
-		URL: u,
+		URL:          u,
+		BytesWritten: selfstat.Register("write", "bytes_written", nil),
 	}
+	defer config.BytesWritten.Unregister()
+
 	client, err := influxdb.NewUDPClient(config)
 	require.NoError(t, err)
-
-	err = client.Write(t.Context(), metrics)
-	require.NoError(t, err)
+	require.NoError(t, client.Write(t.Context(), metrics))
 
 	wg.Wait()
 

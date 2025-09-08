@@ -13,12 +13,14 @@ import (
 	"net/url"
 	"path"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
 const (
@@ -108,6 +110,8 @@ type HTTPConfig struct {
 	InfluxUintSupport bool `toml:"influx_uint_support"`
 	Serializer        *influx.Serializer
 	Log               telegraf.Logger
+
+	BytesWritten selfstat.Stat
 }
 
 type httpClient struct {
@@ -346,6 +350,7 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 
 	reader := c.requestBodyReader(metrics)
 	defer reader.Close()
+	defer func() { c.config.BytesWritten.Incr(reader.bytesWritten.Load()) }()
 
 	req, err := c.makeWriteRequest(loc, reader)
 	if err != nil {
@@ -489,14 +494,14 @@ func (c *httpClient) makeWriteRequest(address string, body io.Reader) (*http.Req
 
 // requestBodyReader warp io.Reader from influx.NewReader to io.ReadCloser, which is useful to fast close the write
 // side of the connection in case of error
-func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) io.ReadCloser {
+func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) *wrappedReader {
 	reader := influx.NewReader(metrics, c.config.Serializer)
-
 	if c.config.ContentEncoding == "gzip" {
-		return internal.CompressWithGzip(reader)
+		reader = internal.CompressWithGzip(reader)
 	}
 
-	return io.NopCloser(reader)
+	// Create a wrapper to be able to able to extract the number of bytes written
+	return &wrappedReader{r: io.NopCloser(reader)}
 }
 
 func (c *httpClient) addHeaders(req *http.Request) error {
@@ -591,4 +596,23 @@ func makeQueryURL(loc *url.URL) (string, error) {
 
 func (c *httpClient) Close() {
 	c.client.CloseIdleConnections()
+}
+
+type wrappedReader struct {
+	r            io.ReadCloser
+	bytesWritten atomic.Int64
+}
+
+func (r *wrappedReader) Read(p []byte) (int, error) {
+	n, err := r.r.Read(p)
+
+	// Atomically update bytesWritten to ensure thread-safe tracking during
+	// concurrent reads
+	r.bytesWritten.Add(int64(n))
+
+	return n, err
+}
+
+func (r *wrappedReader) Close() error {
+	return r.r.Close()
 }
