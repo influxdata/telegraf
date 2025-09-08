@@ -11,16 +11,18 @@ import (
 
 const measurement = "nftables"
 
-type NFTables struct {
+type Nftables struct {
+	UseSudo bool     `toml:"use_sudo"`
+	Binary  string   `toml:"binary"`
 	Tables []string
 }
 
-var NFTableConfig = `
+var NftableConfig = `
   ## Configuration for nftables
   tables = [ "filter" ]
 `
 
-type NFTable struct {
+type Nftable struct {
 	Metainfo *Metainfo
 	Rules    []*Rule
 }
@@ -28,7 +30,7 @@ type NFTable struct {
 // The nftable JSON output is designed in a generic way so
 // just handle it via some custom unmarshalling to keep our
 // interface clean
-func (nftable *NFTable) UnmarshalJSON(b []byte) error {
+func (nftable *Nftable) UnmarshalJSON(b []byte) error {
 	var aTable map[string][]map[string]json.RawMessage
 	if err := json.Unmarshal(b, &aTable); err != nil {
 		return fmt.Errorf("Unable to Unmarshal: %s", b)
@@ -107,20 +109,20 @@ type Counter struct {
 	Bytes   int64 `json:"bytes"`
 }
 
-func (s *NFTables) SampleConfig() string {
-	return NFTableConfig
+func (nft *Nftables) SampleConfig() string {
+	return NftableConfig
 }
 
-func (s *NFTables) Description() string {
+func (nft *Nftables) Description() string {
 	return "Gather chain data from an nftable table"
 }
 
-func (self *NFTables) Gather(acc telegraf.Accumulator) error {
-	if len(self.Tables) == 0 {
+func (nft *Nftables) Gather(acc telegraf.Accumulator) error {
+	if len(nft.Tables) == 0 {
 		return errors.New("Invalid Configuration. Expected a `Tables` entry with list of nftables to monitor")
 	}
-	for _, table := range self.Tables {
-		err := getTableData(table, acc)
+	for _, table := range nft.Tables {
+		err := nft.getTableData(table, acc)
 		if err != nil {
 			return err
 		}
@@ -129,25 +131,34 @@ func (self *NFTables) Gather(acc telegraf.Accumulator) error {
 }
 
 // List a specific table and add to Accumulator
-func getTableData(tableName string, acc telegraf.Accumulator) error {
-	nftablePath, err := exec.LookPath("nft")
+func (nft *Nftables) getTableData(tableName string, acc telegraf.Accumulator) error {
+	var binary string
+	if nft.Binary != "" {
+		binary = nft.Binary
+	} else {
+		binary = "nft"
+	}
+	nftablePath, err := exec.LookPath(binary)
 	if err != nil {
 		return errors.New("failed to find nft command ")
 	}
 	var args []string
-	name := "sudo"
-	args = append(args, nftablePath, "--json")
-	args = append(args, "list", "table", tableName)
+	name := nftablePath
+	if nft.UseSudo {
+		name = "sudo"
+		args = append(args, nftablePath)
+	}
+	args = append(args, "--json", "list", "table", tableName)
 	c := exec.Command(name, args...)
 	out, err := c.Output()
 	if err != nil {
 		return errors.New(fmt.Sprintf("Error Executing %s, error: %s", c, err))
 	}
-	return parseNFTableOutput(out, acc)
+	return parseNftableOutput(out, acc)
 }
 
-func parseNFTableOutput(out []byte, acc telegraf.Accumulator) error {
-	var nftable NFTable
+func parseNftableOutput(out []byte, acc telegraf.Accumulator) error {
+	var nftable Nftable
 	err := json.Unmarshal(out, &nftable)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Error Parsing: %s, Error: %v", out, err))
@@ -165,6 +176,6 @@ func parseNFTableOutput(out []byte, acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("nftables", func() telegraf.Input {
-		return &NFTables{}
+		return &Nftables{}
 	})
 }

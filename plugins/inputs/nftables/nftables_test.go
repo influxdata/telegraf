@@ -152,7 +152,7 @@ var singleton_table = `{
   ]
 }`
 
-func TestParseNFTableBadRule(t *testing.T) {
+func TestParseNftableBadRule(t *testing.T) {
 	bad_rules := []string{
 		`{ "nftables": [
   {
@@ -177,16 +177,16 @@ func TestParseNFTableBadRule(t *testing.T) {
 	}
 	for i, v := range bad_rules {
 		acc := new(testutil.Accumulator)
-		err := parseNFTableOutput([]byte(v), acc)
+		err := parseNftableOutput([]byte(v), acc)
 		if err.Error() != bad_errors[i] {
 			t.Errorf("Expected Error %#v, but got %#v", bad_errors[i], err.Error())
 		}
 	}
 }
 
-func TestParseNFTableOutput(t *testing.T) {
+func TestParseNftableOutput(t *testing.T) {
 	acc := new(testutil.Accumulator)
-	err := parseNFTableOutput([]byte(singleton_table), acc)
+	err := parseNftableOutput([]byte(singleton_table), acc)
 	if err != nil {
 		t.Errorf("No Error Expected: %#v", err)
 	}
@@ -205,18 +205,18 @@ func TestParseNFTableOutput(t *testing.T) {
 	}
 }
 
-func TestParseNFTableBadOutput(t *testing.T) {
+func TestParseNftableBadOutput(t *testing.T) {
 	errFoo := errors.New("Error Parsing: I am not JSON, Error: invalid character 'I' looking for beginning of value")
 	acc := new(testutil.Accumulator)
-	err := parseNFTableOutput([]byte("I am not JSON"), acc)
+	err := parseNftableOutput([]byte("I am not JSON"), acc)
 	if !reflect.DeepEqual(err, errFoo) {
 		t.Errorf("Expected error %#v got\n%#v\n", errFoo, err)
 	}
 }
 
-func TestNFTableBadConfig(t *testing.T) {
+func TestNftableBadConfig(t *testing.T) {
 	errFoo := errors.New("Invalid Configuration. Expected a `Tables` entry with list of nftables to monitor")
-	ft := NFTables{}
+	ft := Nftables{}
 	acc := new(testutil.Accumulator)
 	err := acc.GatherError(ft.Gather)
 	if !reflect.DeepEqual(err, errFoo) {
