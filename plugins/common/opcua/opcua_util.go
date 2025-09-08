@@ -34,11 +34,17 @@ func newTempDir() (string, error) {
 func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.Duration) (cert, key string, err error) {
 	dir, err := newTempDir()
 	if err != nil {
-		return "", "", fmt.Errorf("failed to create certificate: %w", err)
+		return "", "", &CertificateError{
+			Operation: "directory creation",
+			Err:       fmt.Errorf("%w: %w", ErrCertificateGeneration, err),
+		}
 	}
 
 	if len(host) == 0 {
-		return "", "", errors.New("missing required host parameter")
+		return "", "", &CertificateError{
+			Operation: "validation",
+			Err:       fmt.Errorf("%w: missing required host parameter", ErrCertificateGeneration),
+		}
 	}
 	if rsaBits == 0 {
 		rsaBits = 2048
@@ -52,7 +58,10 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 
 	priv, err := rsa.GenerateKey(rand.Reader, rsaBits)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to generate private key: %w", err)
+		return "", "", &CertificateError{
+			Operation: "private key generation",
+			Err:       fmt.Errorf("%w: %w", ErrCertificateGeneration, err),
+		}
 	}
 
 	notBefore := time.Now()
@@ -61,7 +70,10 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to generate serial number: %w", err)
+		return "", "", &CertificateError{
+			Operation: "serial number generation",
+			Err:       fmt.Errorf("%w: %w", ErrCertificateGeneration, err),
+		}
 	}
 
 	template := x509.Certificate{
@@ -92,33 +104,63 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, publicKey(priv), priv)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to create certificate: %w", err)
+		return "", "", &CertificateError{
+			Operation: "certificate creation",
+			Err:       fmt.Errorf("%w: %w", ErrCertificateGeneration, err),
+		}
 	}
 
 	certOut, err := os.Create(certFile)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to open %s for writing: %w", certFile, err)
+		return "", "", &CertificateError{
+			Operation: "file creation",
+			Path:      certFile,
+			Err:       fmt.Errorf("%w: %w", ErrCertificateGeneration, err),
+		}
 	}
+	defer func() {
+		if closeErr := certOut.Close(); closeErr != nil {
+			// Log the close error but don't override the main error
+			_ = closeErr // Acknowledge that we're intentionally ignoring this error
+		}
+	}()
+
 	if err := pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes}); err != nil {
-		return "", "", fmt.Errorf("failed to write data to %s: %w", certFile, err)
-	}
-	if err := certOut.Close(); err != nil {
-		return "", "", fmt.Errorf("error closing %s: %w", certFile, err)
+		return "", "", &CertificateError{
+			Operation: "encoding",
+			Path:      certFile,
+			Err:       fmt.Errorf("%w: %w", ErrCertificateGeneration, err),
+		}
 	}
 
 	keyOut, err := os.OpenFile(keyFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to open %s for writing: %w", keyFile, err)
+		return "", "", &CertificateError{
+			Operation: "file creation",
+			Path:      keyFile,
+			Err:       fmt.Errorf("%w: %w", ErrCertificateGeneration, err),
+		}
 	}
+	defer func() {
+		if closeErr := keyOut.Close(); closeErr != nil {
+			// Log the close error but don't override the main error
+			_ = closeErr // Acknowledge that we're intentionally ignoring this error
+		}
+	}()
+
 	keyBlock, err := pemBlockForKey(priv)
 	if err != nil {
-		return "", "", fmt.Errorf("error generating block: %w", err)
+		return "", "", &CertificateError{
+			Operation: "key block generation",
+			Err:       fmt.Errorf("%w: %w", ErrCertificateGeneration, err),
+		}
 	}
 	if err := pem.Encode(keyOut, keyBlock); err != nil {
-		return "", "", fmt.Errorf("failed to write data to %s: %w", keyFile, err)
-	}
-	if err := keyOut.Close(); err != nil {
-		return "", "", fmt.Errorf("error closing %s: %w", keyFile, err)
+		return "", "", &CertificateError{
+			Operation: "encoding",
+			Path:      keyFile,
+			Err:       fmt.Errorf("%w: %w", ErrCertificateGeneration, err),
+		}
 	}
 
 	return certFile, keyFile, nil
@@ -207,7 +249,10 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 		secPolicy = ua.SecurityPolicyURIPrefix + policy
 		policy = ""
 	default:
-		return nil, fmt.Errorf("invalid security policy: %s", policy)
+		return nil, &SecurityError{
+			Policy: policy,
+			Err:    fmt.Errorf("%w: %s", ErrInvalidSecurityPolicy, policy),
+		}
 	}
 
 	o.Log.Debugf("security policy from configuration %s", secPolicy)
@@ -233,7 +278,10 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 		secMode = ua.MessageSecurityModeSignAndEncrypt
 		mode = ""
 	default:
-		return nil, fmt.Errorf("invalid security mode: %s", mode)
+		return nil, &SecurityError{
+			Mode: mode,
+			Err:  fmt.Errorf("%w: %s", ErrInvalidSecurityMode, mode),
+		}
 	}
 
 	// Allow input of only one of sec-mode,sec-policy when choosing 'None'
@@ -283,7 +331,11 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 	}
 
 	if serverEndpoint == nil { // Didn't find an endpoint with matching policy and mode.
-		return nil, errors.New("unable to find suitable server endpoint with selected sec-policy and sec-mode")
+		return nil, &SecurityError{
+			Policy: secPolicy,
+			Mode:   mode,
+			Err:    fmt.Errorf("%w: no suitable server endpoint found", ErrEndpointNotFound),
+		}
 	}
 
 	secPolicy = serverEndpoint.SecurityPolicyURI
@@ -292,7 +344,7 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 	// Check that the selected endpoint is a valid combo
 	err = validateEndpointConfig(endpoints, secPolicy, secMode, authMode)
 	if err != nil {
-		return nil, fmt.Errorf("error validating input: %w", err)
+		return nil, fmt.Errorf("endpoint validation failed: %w", err)
 	}
 
 	opts = append(opts, opcua.SecurityFromEndpoint(serverEndpoint, authMode))
@@ -313,7 +365,10 @@ func (o *OpcUAClient) generateAuth(a string, cert []byte, user, passwd config.Se
 		if !user.Empty() {
 			usecret, err := user.Get()
 			if err != nil {
-				return 0, nil, fmt.Errorf("error reading the username input: %w", err)
+				return 0, nil, &AuthenticationError{
+					Method: a,
+					Err:    fmt.Errorf("error reading username: %w", err),
+				}
 			}
 			defer usecret.Destroy()
 			username = usecret.Bytes()
@@ -322,7 +377,10 @@ func (o *OpcUAClient) generateAuth(a string, cert []byte, user, passwd config.Se
 		if !passwd.Empty() {
 			psecret, err := passwd.Get()
 			if err != nil {
-				return 0, nil, fmt.Errorf("error reading the password input: %w", err)
+				return 0, nil, &AuthenticationError{
+					Method: a,
+					Err:    fmt.Errorf("error reading password: %w", err),
+				}
 			}
 			defer psecret.Destroy()
 			password = psecret.Bytes()
@@ -332,11 +390,15 @@ func (o *OpcUAClient) generateAuth(a string, cert []byte, user, passwd config.Se
 		authMode = ua.UserTokenTypeCertificate
 		authOption = opcua.AuthCertificate(cert)
 	case "issuedtoken":
-		// todo: this is unsupported, fail here or fail in the opcua package?
+		// TODO: this is unsupported, should we fail here or let the opcua package handle it?
 		authMode = ua.UserTokenTypeIssuedToken
 		authOption = opcua.AuthIssuedToken([]byte(nil))
+	case "":
+		// Default to anonymous when auth method is not specified
+		authMode = ua.UserTokenTypeAnonymous
+		authOption = opcua.AuthAnonymous()
 	default:
-		o.Log.Warnf("unknown auth-mode, defaulting to Anonymous")
+		o.Log.Warnf("unknown auth method %q, defaulting to Anonymous", a)
 		authMode = ua.UserTokenTypeAnonymous
 		authOption = opcua.AuthAnonymous()
 	}
@@ -355,5 +417,9 @@ func validateEndpointConfig(endpoints []*ua.EndpointDescription, secPolicy strin
 		}
 	}
 
-	return fmt.Errorf("server does not support an endpoint with security: %q, %q", secPolicy, secMode)
+	return &SecurityError{
+		Policy: secPolicy,
+		Mode:   secMode.String(),
+		Err:    fmt.Errorf("%w: server does not support the specified security configuration", ErrEndpointNotFound),
+	}
 }
