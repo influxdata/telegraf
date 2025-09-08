@@ -57,7 +57,7 @@ type InfluxDB struct {
 	InfluxUintSupport         bool                `toml:"influx_uint_support"`
 	OmitTimestamp             bool                `toml:"influx_omit_timestamp"`
 	Log                       telegraf.Logger     `toml:"-"`
-	Collector                 *selfstat.Collector `toml:"-"`
+	Statistics                *selfstat.Collector `toml:"-"`
 	tls.ClientConfig
 
 	clients    []Client
@@ -93,7 +93,7 @@ func (i *InfluxDB) Init() error {
 	}
 
 	// Register internal metrics
-	i.bytesWritten = i.Collector.Register("write", "bytes_written", nil)
+	i.bytesWritten = i.Statistics.Register("write", "bytes_written", nil)
 
 	return nil
 }
