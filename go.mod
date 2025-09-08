@@ -187,7 +187,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/seancfoley/ipaddress-go v1.7.1
 	github.com/sensu/sensu-go/api/core/v2 v2.16.0
-	github.com/shirou/gopsutil/v4 v4.25.7
+	github.com/shirou/gopsutil/v4 v4.25.8
 	github.com/showwin/speedtest-go v1.7.10
 	github.com/signalfx/golib/v3 v3.3.54
 	github.com/sijms/go-ora/v2 v2.9.0
@@ -196,7 +196,7 @@ require (
 	github.com/snowflakedb/gosnowflake v1.16.0
 	github.com/srebhan/cborquery v1.0.4
 	github.com/srebhan/protobufquery v1.0.4
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
 	github.com/tdrn-org/go-hue v0.3.0
 	github.com/testcontainers/testcontainers-go v0.38.0
