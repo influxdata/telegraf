@@ -95,6 +95,7 @@ func (c *X509Cert) Init() error {
 func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
 
+	// Handle all certificates in files and/or URLs
 	collectedUrls := append(c.locations, c.collectCertURLs()...)
 	for _, location := range collectedUrls {
 		certs, ocspresp, err := c.getCert(location, time.Duration(c.Timeout))
@@ -135,14 +136,13 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 			tags := c.getTags(cert, location.String())
 
 			// Extract the verification result
-			err := results[i]
-			if err == nil {
+			if err := results[i]; err == nil {
 				tags["verification"] = "valid"
 				fields["verification_code"] = 0
 			} else {
 				tags["verification"] = "invalid"
 				fields["verification_code"] = 1
-				fields["verification_error"] = err.Error()
+				fields["verification_error"] = strings.Trim(strings.TrimSpace(err.Error()), ":")
 			}
 			// OCSPResponse only for leaf cert
 			if i == 0 && ocspresp != nil && len(*ocspresp) > 0 {
@@ -220,6 +220,8 @@ func (c *X509Cert) processCertificate(certificate *x509.Certificate, opts x509.V
 		c.Log.Debugf("  cert IP addresses: %v", certificate.IPAddresses)
 		c.Log.Debugf("  cert subject:      %v", certificate.Subject)
 		c.Log.Debugf("  cert issuer:       %v", certificate.Issuer)
+		c.Log.Debugf("  cert not before:   %v", certificate.NotBefore)
+		c.Log.Debugf("  cert not after:    %v", certificate.NotAfter)
 		c.Log.Debugf("  opts.DNSName:      %v", opts.DNSName)
 		c.Log.Debugf("  verify options:    %v", opts)
 		c.Log.Debugf("  verify error:      %v", err)
@@ -231,10 +233,12 @@ func (c *X509Cert) processCertificate(certificate *x509.Certificate, opts x509.V
 	// The only reliable way to distinguish root certificates from
 	// intermediates is the fact that root certificates are self-signed,
 	// i.e. you can verify the certificate with its own public key.
-	rootErr := certificate.CheckSignature(certificate.SignatureAlgorithm, certificate.RawTBSCertificate, certificate.Signature)
-	if rootErr == nil {
-		sig := hex.EncodeToString(certificate.Signature)
-		c.classification[sig] = "root"
+	if certificate.RawTBSCertificate != nil {
+		rootErr := certificate.CheckSignature(certificate.SignatureAlgorithm, certificate.RawTBSCertificate, certificate.Signature)
+		if rootErr == nil {
+			sig := hex.EncodeToString(certificate.Signature)
+			c.classification[sig] = "root"
+		}
 	}
 
 	// Identify intermediate certificates
@@ -260,11 +264,13 @@ func (c *X509Cert) processCertificate(certificate *x509.Certificate, opts x509.V
 			// The only reliable way to distinguish root certificates from
 			// intermediates is the fact that root certificates are self-signed,
 			// i.e. you can verify the certificate with its own public key.
-			rootErr := cert.CheckSignature(cert.SignatureAlgorithm, cert.RawTBSCertificate, cert.Signature)
-			if rootErr != nil {
-				c.classification[sig] = "intermediate"
-			} else {
-				c.classification[sig] = "root"
+			if cert.RawTBSCertificate != nil {
+				rootErr := cert.CheckSignature(cert.SignatureAlgorithm, cert.RawTBSCertificate, cert.Signature)
+				if rootErr != nil {
+					c.classification[sig] = "intermediate"
+				} else {
+					c.classification[sig] = "root"
+				}
 			}
 		}
 	}
@@ -274,7 +280,8 @@ func (c *X509Cert) processCertificate(certificate *x509.Certificate, opts x509.V
 
 func (c *X509Cert) sourcesToURLs() error {
 	for _, source := range c.Sources {
-		if strings.HasPrefix(source, "file://") || strings.HasPrefix(source, "/") {
+		switch {
+		case strings.HasPrefix(source, "file://") || strings.HasPrefix(source, "/"):
 			source = filepath.ToSlash(strings.TrimPrefix(source, "file://"))
 			// Removing leading slash in Windows path containing a drive-letter
 			// like "file:///C:/Windows/..."
@@ -284,7 +291,10 @@ func (c *X509Cert) sourcesToURLs() error {
 				return fmt.Errorf("could not compile glob %q: %w", source, err)
 			}
 			c.globpaths = append(c.globpaths, g)
-		} else {
+		case strings.HasPrefix(source, "wincertstore://"):
+			path := strings.TrimPrefix(source, "wincertstore://")
+			c.locations = append(c.locations, &url.URL{Scheme: "wincertstore", Path: path})
+		default:
 			if strings.Index(source, ":\\") == 1 {
 				source = "file://" + filepath.ToSlash(source)
 			}
@@ -450,6 +460,9 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		return certs, nil, err
 	case "pkcs12":
 		certs, err := c.processPKCS12(u.Path)
+		return certs, nil, err
+	case "wincertstore":
+		certs, err := c.processWinCertStore(u.Path)
 		return certs, nil, err
 	default:
 		return nil, nil, fmt.Errorf("unsupported scheme %q in location %s", u.Scheme, u.String())
