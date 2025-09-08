@@ -605,7 +605,11 @@ type wrappedReader struct {
 
 func (r *wrappedReader) Read(p []byte) (int, error) {
 	n, err := r.r.Read(p)
+
+	// Atomically update bytesWritten to ensure thread-safe tracking during
+	// concurrent reads
 	r.bytesWritten.Add(int64(n))
+
 	return n, err
 }
 
