@@ -60,7 +60,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.246.0
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.40.2
 	github.com/aws/aws-sdk-go-v2/service/sts v1.38.1
-	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.34.2
+	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.35.2
 	github.com/aws/smithy-go v1.23.0
 	github.com/benbjohnson/clock v1.3.5
 	github.com/bluenviron/gomavlib/v3 v3.2.1
@@ -305,7 +305,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.25 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.4.6 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.11.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.11.7 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.5 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.6 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.71.0 // indirect
