@@ -76,9 +76,9 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 		for _, sp := range rp.ScopeProfiles {
 			for _, p := range sp.Profiles {
 				for i, sample := range p.Sample {
-					for j := sample.LocationsStartIndex; j < sample.LocationsStartIndex+sample.LocationsLength; j++ {
-						for validx, value := range sample.Value {
-							locIdx := p.LocationIndices[j]
+					stack := pd.StackTable[sample.StackIndex]
+					for _, locIdx := range stack.LocationIndices {
+						for validx, value := range sample.Values {
 							loc := pd.LocationTable[locIdx]
 							locations := make([]string, 0, len(loc.Line))
 							for _, line := range loc.Line {
@@ -97,24 +97,24 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 								locations = append(locations, l)
 							}
 							mapping := &otlp.Mapping{}
-							if loc.MappingIndex != nil {
-								mapping = pd.MappingTable[*loc.MappingIndex]
+							if loc.MappingIndex != 0 {
+								mapping = pd.MappingTable[loc.MappingIndex]
 							}
 							tags := map[string]string{
 								"profile_id":       hex.EncodeToString(p.ProfileId),
 								"sample":           strconv.Itoa(i),
 								"sample_name":      pd.StringTable[p.PeriodType.TypeStrindex],
 								"sample_unit":      pd.StringTable[p.PeriodType.UnitStrindex],
-								"sample_type":      pd.StringTable[p.SampleType[validx].TypeStrindex],
-								"sample_type_unit": pd.StringTable[p.SampleType[validx].UnitStrindex],
+								"sample_type":      pd.StringTable[p.SampleType.TypeStrindex],
+								"sample_type_unit": pd.StringTable[p.SampleType.UnitStrindex],
 								"address":          "0x" + strconv.FormatUint(loc.Address, 16),
 							}
 							for k, v := range attrtags {
 								tags[k] = v
 							}
 							fields := map[string]interface{}{
-								"start_time_unix_nano": p.TimeNanos,
-								"end_time_unix_nano":   p.TimeNanos + p.DurationNanos,
+								"start_time_unix_nano": p.TimeUnixNano,
+								"end_time_unix_nano":   p.TimeUnixNano + p.DurationNano,
 								"location":             strings.Join(locations, ","),
 								"memory_start":         mapping.MemoryStart,
 								"memory_limit":         mapping.MemoryLimit,
@@ -124,7 +124,8 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 							}
 							for _, idx := range sample.AttributeIndices {
 								attr := pd.AttributeTable[idx]
-								fields[attr.Key] = attr.GetValue().Value
+								key := pd.StringTable[attr.KeyStrindex]
+								fields[key] = attr.GetValue().Value
 							}
 							ts := sample.TimestampsUnixNano[validx]
 							s.acc.AddFields("profiles", fields, tags, time.Unix(0, int64(ts)))
