@@ -61,6 +61,9 @@ var (
 
 	// telegrafVersion contains the parsed semantic Telegraf version
 	telegrafVersion *semver.Version = semver.New("0.0.0-unknown")
+
+	// List of (redacted) configuration Sources
+	Sources []string
 )
 
 const EmptySourcePath string = ""
@@ -543,6 +546,7 @@ func (c *Config) LoadConfig(path string) error {
 }
 
 func (c *Config) LoadAll(configFiles ...string) error {
+	Sources = make([]string, 0, len(configFiles))
 	for _, fConfig := range configFiles {
 		if err := c.LoadConfig(fConfig); err != nil {
 			return err
@@ -831,6 +835,7 @@ func LoadConfigFileWithRetries(config string, urlRetryAttempts int) ([]byte, boo
 		switch u.Scheme {
 		case "https", "http":
 			data, err := fetchConfig(u, urlRetryAttempts)
+			Sources = append(Sources, u.Redacted())
 			return data, true, err
 		default:
 			return nil, true, fmt.Errorf("scheme %q not supported", u.Scheme)
@@ -842,6 +847,7 @@ func LoadConfigFileWithRetries(config string, urlRetryAttempts int) ([]byte, boo
 	if err != nil {
 		return nil, false, err
 	}
+	Sources = append(Sources, config)
 
 	mimeType := http.DetectContentType(buffer)
 	if !strings.Contains(mimeType, "text/plain") {
