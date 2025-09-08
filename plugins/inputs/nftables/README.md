@@ -37,14 +37,11 @@ telegraf ALL=(root) NOPASSWD: /usr/bin/nft *
 ```toml
   # use sudo to run nftables
   use_sudo = false
-  # run nftables with the lock option
-  use_lock = false
   # defines the table to monitor:
   tables = ["filter"]
 ```
 
 ### Measurements & Fields:
-
 
 - nftables
     - pkts (integer, count)
