@@ -82,7 +82,7 @@ store. The `folder` has to be the non-translated, English folder name as can be
 found under the registry keys
 `HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\SystemCertificates` for the
 `machine` location or `HKEY_CURRENT_USER\SOFTWARE\Microsoft\SystemCertificates`
-for the `user` location. See the [Windoes documentation][wincert_docs] for
+for the `user` location. See the [Windows documentation][wincert_docs] for
 details.
 
 [wincert_docs]: https://learn.microsoft.com/en-us/windows/win32/seccrypto/system-store-locations
