@@ -216,6 +216,10 @@ func TestRetryLaterEarlyExit(t *testing.T) {
 	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
+	collector := selfstat.NewCollector(make(map[string]string))
+	defer func() {
+		collector.UnregisterAll()
+	}()
 	c := &httpClient{
 		url:             u,
 		bucketTag:       "bucket",

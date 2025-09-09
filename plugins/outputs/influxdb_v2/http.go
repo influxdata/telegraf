@@ -64,6 +64,15 @@ type httpClient struct {
 	log              telegraf.Logger
 	statistics       *selfstat.Collector
 
+	statBytesWritten              selfstat.Stat
+	statSuccessfulWrites          selfstat.Stat
+	statFailedWrites              selfstat.Stat
+	statTimeout                   selfstat.Stat
+	statRetryableErrorCounters    selfstat.Stat
+	statNonRetryableErrorCounters selfstat.Stat
+	statSuccessfulWriteDuration   selfstat.Stat
+	statFailedWriteDuration       selfstat.Stat
+
 	// Mutex to protect the retry-time field
 	sync.Mutex
 
@@ -138,6 +147,20 @@ func (c *httpClient) Init() error {
 		c.concurrent = 1
 	}
 	c.pool = pond.NewPool(int(c.concurrent))
+
+	// setup observability
+	tags := map[string]string{
+		"url": c.url.String(),
+	}
+
+	c.statBytesWritten = c.statistics.Register("write", "bytes_total", tags)
+	c.statSuccessfulWrites = c.statistics.Register(selfstatMeasurement, "successful_writes_total", tags)
+	c.statFailedWrites = c.statistics.Register(selfstatMeasurement, "failed_writes_total", tags)
+	c.statTimeout = c.statistics.Register(selfstatMeasurement, "timeouts_total", tags)
+	c.statRetryableErrorCounters = c.statistics.Register(selfstatMeasurement, "retryable_errors_total", tags)
+	c.statNonRetryableErrorCounters = c.statistics.Register(selfstatMeasurement, "non_retryable_errors_total", tags)
+	c.statSuccessfulWriteDuration = c.statistics.RegisterTiming(selfstatMeasurement, "successful_write_duration_ms", tags)
+	c.statFailedWriteDuration = c.statistics.RegisterTiming(selfstatMeasurement, "failed_write_duration_ms", tags)
 	return nil
 }
 
@@ -317,17 +340,19 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 		return fmt.Errorf("adding headers failed: %w", err)
 	}
 
-	selfstatTags := map[string]string{
-		"bucket": b.bucket,
-		"url":    c.url.String(),
-	}
-
 	// Execute the request
+	start := time.Now()
 	resp, err := c.client.Do(req.WithContext(ctx))
+	durationMs := time.Since(start).Milliseconds()
 	if err != nil {
+		c.statFailedWriteDuration.Set(durationMs)
+		c.statFailedWrites.Incr(1)
 		var urlErr *url.Error
 		if errors.As(err, &urlErr) && urlErr.Timeout() {
-			c.statistics.Register(selfstatMeasurement, "timeout_errors_total", selfstatTags).Incr(1)
+			c.statTimeout.Incr(1)
+			c.statRetryableErrorCounters.Incr(1)
+		} else {
+			c.statNonRetryableErrorCounters.Incr(1)
 		}
 
 		internal.OnClientError(c.client, err)
@@ -335,7 +360,7 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 	}
 	defer resp.Body.Close()
 
-	c.statistics.Register(selfstatMeasurement, "sent_bytes", selfstatTags).Incr(int64(len(b.payload)))
+	c.statBytesWritten.Incr(int64(len(b.payload)))
 
 	// Check for success
 	switch resp.StatusCode {
@@ -349,12 +374,15 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 		http.StatusPartialContent,
 		http.StatusMultiStatus,
 		http.StatusAlreadyReported:
-		c.statistics.Register(selfstatMeasurement, "successful_writes_total", selfstatTags).Incr(1)
+		c.statSuccessfulWriteDuration.Set(durationMs)
+		c.statSuccessfulWrites.Incr(1)
 		c.retryCount.Store(0)
 		return nil
 	}
 
-	c.statistics.Register(selfstatMeasurement, "failed_writes_total", selfstatTags).Incr(1)
+	c.statFailedWriteDuration.Set(durationMs)
+	c.statFailedWrites.Incr(1)
+
 	// We got an error and now try to decode further
 	var desc string
 	writeResp := &genericRespError{}
@@ -362,13 +390,10 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 		desc = ": " + writeResp.Error()
 	}
 
-	selfstatTags["status_code"] = strconv.Itoa(resp.StatusCode)
-	nonRetryableStat := c.statistics.Register(selfstatMeasurement, "non_retryable_errors_total", selfstatTags)
-	retryableStat := c.statistics.Register(selfstatMeasurement, "retryable_errors_total", selfstatTags)
 	switch resp.StatusCode {
 	// request was too large, send back to try again
 	case http.StatusRequestEntityTooLarge:
-		retryableStat.Incr(1)
+		c.statRetryableErrorCounters.Incr(1)
 		c.log.Errorf("Failed to write metrics with size %d bytes to %s, request was too large (413)", len(b.payload), b.bucket)
 		return &ThrottleError{
 			Err:        fmt.Errorf("%s: %s", resp.Status, desc),
@@ -381,21 +406,21 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 		// for example, submitting metrics outside the retention period.
 		http.StatusUnprocessableEntity,
 		http.StatusNotAcceptable:
-		nonRetryableStat.Incr(1)
+		c.statNonRetryableErrorCounters.Incr(1)
 		// Clients should *not* repeat the request and the metrics should be rejected.
 		return &APIError{
 			Err:        fmt.Errorf("failed to write metrics to %s (will be dropped: %s)%s", b.bucket, resp.Status, desc),
 			StatusCode: resp.StatusCode,
 		}
 	case http.StatusUnauthorized, http.StatusForbidden:
-		retryableStat.Incr(1)
+		c.statRetryableErrorCounters.Incr(1)
 		return fmt.Errorf("failed to write metrics to %s (%s)%s", b.bucket, resp.Status, desc)
 	case http.StatusTooManyRequests,
 		http.StatusServiceUnavailable,
 		http.StatusBadGateway,
 		http.StatusGatewayTimeout:
 		// ^ these handle the cases where the server is likely overloaded, and may not be able to say so.
-		retryableStat.Incr(1)
+		c.statRetryableErrorCounters.Incr(1)
 		retryDuration := getRetryDuration(resp.Header, c.retryCount.Add(1))
 		c.log.Warnf("Failed to write to %s; will retry in %s. (%s)\n", b.bucket, retryDuration, resp.Status)
 		return &ThrottleError{
@@ -408,7 +433,7 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 	// if it's any other 4xx code, the client should not retry as it's the client's mistake.
 	// retrying will not make the request magically work.
 	if len(resp.Status) > 0 && resp.Status[0] == '4' {
-		nonRetryableStat.Incr(1)
+		c.statNonRetryableErrorCounters.Incr(1)
 		return &APIError{
 			Err:        fmt.Errorf("failed to write metrics to %s (will be dropped: %s)%s", b.bucket, resp.Status, desc),
 			StatusCode: resp.StatusCode,
@@ -421,7 +446,7 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 		desc = fmt.Sprintf(": %s; %s", desc, xErr)
 	}
 
-	retryableStat.Incr(1)
+	c.statRetryableErrorCounters.Incr(1)
 	return &APIError{
 		Err:        fmt.Errorf("failed to write metrics to bucket %q: %s%s", b.bucket, resp.Status, desc),
 		StatusCode: resp.StatusCode,
