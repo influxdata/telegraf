@@ -448,6 +448,7 @@ following works:
 - go.uber.org/atomic [MIT License](https://pkg.go.dev/go.uber.org/atomic?tab=licenses)
 - go.uber.org/multierr [MIT License](https://pkg.go.dev/go.uber.org/multierr?tab=licenses)
 - go.uber.org/zap [MIT License](https://pkg.go.dev/go.uber.org/zap?tab=licenses)
+- go.yaml.in/yaml [Apache License 2.0](https://github.com/yaml/go-yaml/blob/main/LICENSE)
 - golang.org/x/crypto [BSD 3-Clause Clear License](https://github.com/golang/crypto/blob/master/LICENSE)
 - golang.org/x/exp [BSD 3-Clause Clear License](https://github.com/golang/exp/blob/master/LICENSE)
 - golang.org/x/net [BSD 3-Clause Clear License](https://github.com/golang/net/blob/master/LICENSE)
