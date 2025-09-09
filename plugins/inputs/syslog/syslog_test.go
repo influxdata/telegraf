@@ -82,6 +82,23 @@ func TestReadTimeoutWarning(t *testing.T) {
 	require.Contains(t, warnings, "W! [] "+readTimeoutMsg)
 }
 
+func TestMessageSizeDefault(t *testing.T) {
+	plugin := &Syslog{Log: testutil.Logger{}}
+	require.NoError(t, plugin.Init())
+
+	require.Equal(t, config.Size(0), plugin.MaxMessageLength)
+}
+
+func TestMessageSizeCustom(t *testing.T) {
+	plugin := &Syslog{
+		MaxMessageLength: config.Size(16384),
+		Log:              testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	require.Equal(t, config.Size(16384), plugin.MaxMessageLength)
+}
+
 func TestUnixgram(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping test as unixgram is not supported on Windows")
