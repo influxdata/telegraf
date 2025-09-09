@@ -1,6 +1,12 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.36.1 [2025-09-08]
+
+### Bugfixes
+
+- [#17605](https://github.com/influxdata/telegraf/pull/17605) `outputs.influxdb` Fix crash on init
+
 ## v1.36.0 [2025-09-08]
 
 ### Important Changes
