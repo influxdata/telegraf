@@ -1152,7 +1152,6 @@ func TestTailNoLeak(t *testing.T) {
 // TestTailCleanupUnusedTailers tests the fix for file descriptor leaks
 // by ensuring tailers for files that no longer match the glob pattern are cleaned up
 func TestTailCleanupUnusedTailers(t *testing.T) {
-	t.Skip("Test disabled due to data race - see issue #[17571] for fix progress")
 	// Create a temp directory for our test files
 	tempDir := t.TempDir()
 
