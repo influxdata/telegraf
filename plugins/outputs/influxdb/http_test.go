@@ -1112,10 +1112,10 @@ func TestDBRPTagsCreateDatabaseNotCalledOnRetryAfterForbidden(t *testing.T) {
 		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
 			return influxdb.NewHTTPClient(*config)
 		},
-		Log:       testutil.Logger{},
-		Collector: selfstat.NewCollector(nil),
+		Log:        testutil.Logger{},
+		Statistics: selfstat.NewCollector(nil),
 	}
-	defer output.Collector.UnregisterAll()
+	defer output.Statistics.UnregisterAll()
 
 	require.NoError(t, output.Init())
 	require.NoError(t, output.Connect())
@@ -1209,9 +1209,9 @@ func TestDBRPTagsCreateDatabaseCalledOnDatabaseNotFound(t *testing.T) {
 		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
 			return influxdb.NewHTTPClient(*config)
 		},
-		Collector: selfstat.NewCollector(nil),
+		Statistics: selfstat.NewCollector(nil),
 	}
-	defer output.Collector.UnregisterAll()
+	defer output.Statistics.UnregisterAll()
 
 	require.NoError(t, output.Init())
 	require.NoError(t, output.Connect())
@@ -1268,10 +1268,10 @@ func TestDBNotFoundShouldDropMetricWhenSkipDatabaseCreateIsTrue(t *testing.T) {
 		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
 			return influxdb.NewHTTPClient(*config)
 		},
-		Log:       logger,
-		Collector: selfstat.NewCollector(nil),
+		Log:        logger,
+		Statistics: selfstat.NewCollector(nil),
 	}
-	defer output.Collector.UnregisterAll()
+	defer output.Statistics.UnregisterAll()
 
 	require.NoError(t, output.Init())
 	require.NoError(t, output.Connect())
