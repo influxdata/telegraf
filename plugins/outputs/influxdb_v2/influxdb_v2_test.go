@@ -125,10 +125,13 @@ func TestConnect(t *testing.T) {
 	}
 
 	for _, plugin := range tests {
+		collector := selfstat.NewCollector(make(map[string]string))
+		plugin.Statistics = collector
 		t.Run(plugin.URLs[0], func(t *testing.T) {
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
 		})
+		collector.UnregisterAll()
 	}
 }
 
@@ -219,17 +222,13 @@ func TestWrite(t *testing.T) {
 	require.NoError(t, plugin.Write(metrics))
 	require.NoError(t, plugin.Write(metrics))
 
-	stat := plugin.Statistics.Get("outputs.influxdb_v2", "successful_writes_total", map[string]string{
-		"url":    url + "/api/v2/write",
-		"bucket": "foobar",
+	stat := collector.Get("outputs.influxdb_v2", "successful_writes_total", map[string]string{
+		"url": url + "/api/v2/write",
 	})
 	require.NotNil(t, stat)
 	require.Equal(t, int64(2), stat.Get())
 
-	stat = plugin.Statistics.Get("outputs.influxdb_v2", "sent_bytes", map[string]string{
-		"url":    url + "/api/v2/write",
-		"bucket": "foobar",
-	})
+	stat = collector.Get("write", "bytes_total", map[string]string{})
 	require.NotNil(t, stat)
 	require.Equal(t, int64(38), stat.Get())
 }
@@ -308,9 +307,8 @@ func TestWriteBucketTagWorksOnRetry(t *testing.T) {
 	require.NoError(t, plugin.Write(metrics))
 	require.NoError(t, plugin.Write(metrics))
 
-	stat := plugin.Statistics.Get("outputs.influxdb_v2", "successful_writes_total", map[string]string{
-		"url":    url + "/api/v2/write",
-		"bucket": "foo",
+	stat := collector.Get("outputs.influxdb_v2", "successful_writes_total", map[string]string{
+		"url": url + "/api/v2/write",
 	})
 	require.NotNil(t, stat)
 	require.Equal(t, int64(2), stat.Get())
@@ -636,16 +634,13 @@ func TestStatusCodeNonRetryable4xx(t *testing.T) {
 			require.ErrorAs(t, err, &writeErr)
 			require.Len(t, writeErr.MetricsReject, 2, "rejected metrics")
 
-			stat := plugin.Statistics.Get("outputs.influxdb_v2", "failed_writes_total", map[string]string{
-				"url":    url + "/api/v2/write",
-				"bucket": "my_bucket",
+			stat := collector.Get("outputs.influxdb_v2", "failed_writes_total", map[string]string{
+				"url": url + "/api/v2/write",
 			})
 			require.NotNil(t, stat)
 			require.Equal(t, int64(1), stat.Get())
-			stat = plugin.Statistics.Get("outputs.influxdb_v2", "non_retryable_errors_total", map[string]string{
-				"url":         url + "/api/v2/write",
-				"bucket":      "my_bucket",
-				"status_code": strconv.Itoa(code),
+			stat = collector.Get("outputs.influxdb_v2", "non_retryable_errors_total", map[string]string{
+				"url": url + "/api/v2/write",
 			})
 			require.NotNil(t, stat)
 			require.Equal(t, int64(1), stat.Get())
@@ -846,16 +841,13 @@ func TestStatusCodeServiceUnavailable(t *testing.T) {
 			require.Empty(t, writeErr.MetricsReject, "rejected metrics")
 			require.LessOrEqual(t, len(writeErr.MetricsAccept), 2, "accepted metrics")
 
-			stat := plugin.Statistics.Get("outputs.influxdb_v2", "failed_writes_total", map[string]string{
-				"url":    url + "/api/v2/write",
-				"bucket": "my_bucket",
+			stat := collector.Get("outputs.influxdb_v2", "failed_writes_total", map[string]string{
+				"url": url + "/api/v2/write",
 			})
 			require.NotNil(t, stat)
 			require.Equal(t, int64(1), stat.Get())
-			stat = plugin.Statistics.Get("outputs.influxdb_v2", "retryable_errors_total", map[string]string{
-				"url":         url + "/api/v2/write",
-				"bucket":      "my_bucket",
-				"status_code": strconv.Itoa(code),
+			stat = collector.Get("outputs.influxdb_v2", "retryable_errors_total", map[string]string{
+				"url": url + "/api/v2/write",
 			})
 			require.NotNil(t, stat)
 			require.Equal(t, int64(1), stat.Get())
@@ -957,16 +949,13 @@ func TestStatusCodeUnexpected(t *testing.T) {
 			require.Empty(t, writeErr.MetricsReject, "rejected metrics")
 			require.LessOrEqual(t, len(writeErr.MetricsAccept), 2, "accepted metrics")
 
-			stat := plugin.Statistics.Get("outputs.influxdb_v2", "failed_writes_total", map[string]string{
-				"url":    url + "/api/v2/write",
-				"bucket": "my_bucket",
+			stat := collector.Get("outputs.influxdb_v2", "failed_writes_total", map[string]string{
+				"url": url + "/api/v2/write",
 			})
 			require.NotNil(t, stat)
 			require.Equal(t, int64(1), stat.Get())
-			stat = plugin.Statistics.Get("outputs.influxdb_v2", "retryable_errors_total", map[string]string{
-				"url":         url + "/api/v2/write",
-				"bucket":      "my_bucket",
-				"status_code": strconv.Itoa(code),
+			stat = collector.Get("outputs.influxdb_v2", "retryable_errors_total", map[string]string{
+				"url": url + "/api/v2/write",
 			})
 			require.NotNil(t, stat)
 			require.Equal(t, int64(1), stat.Get())

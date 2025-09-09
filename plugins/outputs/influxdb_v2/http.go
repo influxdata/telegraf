@@ -153,7 +153,7 @@ func (c *httpClient) Init() error {
 		"url": c.url.String(),
 	}
 
-	c.statBytesWritten = c.statistics.Register("write", "bytes_total", tags)
+	c.statBytesWritten = c.statistics.Register("write", "bytes_total", make(map[string]string))
 	c.statSuccessfulWrites = c.statistics.Register(selfstatMeasurement, "successful_writes_total", tags)
 	c.statFailedWrites = c.statistics.Register(selfstatMeasurement, "failed_writes_total", tags)
 	c.statTimeout = c.statistics.Register(selfstatMeasurement, "timeouts_total", tags)
