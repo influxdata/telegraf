@@ -113,8 +113,8 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 								tags[k] = v
 							}
 							fields := map[string]interface{}{
-								"start_time_unix_nano": p.TimeUnixNano,
-								"end_time_unix_nano":   p.TimeUnixNano + p.DurationNano,
+								"start_time_unix_nano": int64(p.TimeUnixNano),
+								"end_time_unix_nano":   int64(p.TimeUnixNano + p.DurationNano),
 								"location":             strings.Join(locations, ","),
 								"memory_start":         mapping.MemoryStart,
 								"memory_limit":         mapping.MemoryLimit,
