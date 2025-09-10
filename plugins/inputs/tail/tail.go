@@ -220,12 +220,12 @@ func (t *Tail) Stop() {
 				t.Log.Debugf("Recording offset %d for %q", offset, tailer.Filename)
 				t.offsets[tailer.Filename] = offset
 			} else {
-				t.Log.Errorf("Recording offset for %q: %s", tailer.Filename, err.Error())
+				t.Log.Errorf("Recording offset for %q: %v", tailer.Filename, err)
 			}
 		}
 		err := tailer.Stop()
 		if err != nil {
-			t.Log.Errorf("Stopping tail on %q: %s", tailer.Filename, err.Error())
+			t.Log.Errorf("Stopping tail on %q: %v", tailer.Filename, err)
 		}
 
 		// Explicitly delete the tailer from the map to avoid memory leaks
@@ -256,7 +256,7 @@ func (t *Tail) tailNewFiles() error {
 	for _, filepath := range t.Files {
 		g, err := globpath.Compile(filepath)
 		if err != nil {
-			t.Log.Errorf("Glob %q failed to compile: %s", filepath, err.Error())
+			t.Log.Errorf("Glob %q failed to compile: %v", filepath, err)
 			continue
 		}
 
@@ -303,7 +303,7 @@ func (t *Tail) tailNewFiles() error {
 
 			parser, err := t.parserFunc()
 			if err != nil {
-				t.Log.Errorf("Creating parser: %s", err.Error())
+				t.Log.Errorf("Creating parser: %v", err)
 				continue
 			}
 
@@ -328,7 +328,7 @@ func (t *Tail) tailNewFiles() error {
 						delete(t.tailers, tl.Filename)
 						t.tailersMutex.Unlock()
 					} else {
-						t.Log.Errorf("Tailing %q: %s", tl.Filename, err.Error())
+						t.Log.Errorf("Tailing %q: %v", tl.Filename, err)
 					}
 				}
 			}(tailer)
@@ -365,7 +365,7 @@ func (t *Tail) cleanupUnusedTailers(currentFiles map[string]bool) error {
 					t.offsets[tailer.Filename] = offset
 				} else {
 					// This can happen if the file was already removed or closed
-					t.Log.Debugf("Could not get offset for %q: %s", tailer.Filename, err.Error())
+					t.Log.Debugf("Could not get offset for %q: %v", tailer.Filename, err)
 				}
 			}
 
@@ -448,7 +448,7 @@ func (t *Tail) receiver(parser telegraf.Parser, tailer *tail.Tail) {
 		}
 
 		if line != nil && line.Err != nil {
-			t.Log.Errorf("Tailing %q: %s", tailer.Filename, line.Err.Error())
+			t.Log.Errorf("Tailing %q: %v", tailer.Filename, line.Err)
 			continue
 		}
 
@@ -462,8 +462,8 @@ func (t *Tail) receiver(parser telegraf.Parser, tailer *tail.Tail) {
 
 		metrics, err := parseLine(parser, text)
 		if err != nil {
-			t.Log.Errorf("Malformed log line in %q: [%q]: %s",
-				tailer.Filename, text, err.Error())
+			t.Log.Errorf("Malformed log line in %q: [%q]: %v",
+				tailer.Filename, text, err)
 			continue
 		}
 		if len(metrics) == 0 {
