@@ -353,8 +353,7 @@ func (t *Tail) cleanupUnusedTailers(currentFiles map[string]bool) error {
 
 			// Stop the tailer first to avoid race conditions
 			// This ensures the tail goroutine is no longer running when we call Tell()
-			err := tailer.Stop()
-			if err != nil {
+			if err := tailer.Stop(); err != nil {
 				t.Log.Errorf("Stopping tail on %q: %s", tailer.Filename, err.Error())
 			}
 
