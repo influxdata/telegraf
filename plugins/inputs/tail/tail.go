@@ -354,7 +354,7 @@ func (t *Tail) cleanupUnusedTailers(currentFiles map[string]bool) error {
 			// Stop the tailer first to avoid race conditions
 			// This ensures the tail goroutine is no longer running when we call Tell()
 			if err := tailer.Stop(); err != nil {
-				t.Log.Errorf("Stopping tail on %q: %s", tailer.Filename, err.Error())
+				t.Log.Errorf("Stopping tail on %q: %v", tailer.Filename, err)
 			}
 
 			// Now it's safe to get and save the offset since the tailer is stopped
