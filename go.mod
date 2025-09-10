@@ -67,6 +67,7 @@ require (
 	github.com/blues/jsonata-go v1.5.4
 	github.com/bmatcuk/doublestar/v3 v3.0.0
 	github.com/boschrexroth/ctrlx-datalayer-golang v1.3.1
+	github.com/bufbuild/protocompile v0.14.1
 	github.com/caio/go-tdigest v3.1.0+incompatible
 	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20230117155933-f64c045c77df
 	github.com/clarify/clarify-go v0.4.1
@@ -199,6 +200,8 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
 	github.com/tdrn-org/go-hue v0.3.0
+	github.com/tdrn-org/go-nsdp v0.5.0
+	github.com/tdrn-org/go-tr064 v0.2.2
 	github.com/testcontainers/testcontainers-go v0.38.0
 	github.com/testcontainers/testcontainers-go/modules/azure v0.38.0
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.38.0
@@ -316,7 +319,6 @@ require (
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/brutella/dnssd v1.2.14 // indirect
-	github.com/bufbuild/protocompile v0.14.1
 	github.com/bwmarrin/snowflake v0.3.0 // indirect
 	github.com/caio/go-tdigest/v4 v4.0.1 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
@@ -504,8 +506,6 @@ require (
 	github.com/spiffe/go-spiffe/v2 v2.5.0 // indirect
 	github.com/stoewer/go-strcase v1.3.1 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
-	github.com/tdrn-org/go-nsdp v0.5.0
-	github.com/tdrn-org/go-tr064 v0.2.2
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/tinylru v1.2.1 // indirect
