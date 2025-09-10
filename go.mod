@@ -251,11 +251,6 @@ require (
 )
 
 require (
-	go.opentelemetry.io/collector/consumer/consumererror v0.135.0 // indirect
-	go.opentelemetry.io/collector/pdata/pprofile v0.135.0 // indirect
-)
-
-require (
 	cel.dev/expr v0.24.0 // indirect
 	cloud.google.com/go v0.121.6 // indirect
 	cloud.google.com/go/auth v0.16.5 // indirect
@@ -542,7 +537,9 @@ require (
 	go.etcd.io/etcd/api/v3 v3.5.4 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
+	go.opentelemetry.io/collector/consumer/consumererror v0.135.0 // indirect
 	go.opentelemetry.io/collector/featuregate v1.41.0 // indirect
+	go.opentelemetry.io/collector/pdata/pprofile v0.135.0 // indirect
 	go.opentelemetry.io/collector/semconv v0.128.0 // indirect
 	go.opentelemetry.io/contrib/detectors/gcp v1.36.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.61.0 // indirect
