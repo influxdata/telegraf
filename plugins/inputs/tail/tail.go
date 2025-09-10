@@ -351,19 +351,23 @@ func (t *Tail) cleanupUnusedTailers(currentFiles map[string]bool) error {
 			// We need to stop tailing it and remove it from our list
 			t.Log.Debugf("Removing tailer for %q as it's no longer in the glob pattern", file)
 
-			// NOTE: We intentionally do NOT save the offset here because:
-			// 1. There's a data race in the tail library between Tell() and reopen()
-			//    that could cause undefined behavior or incorrect offsets
-			// 2. Files removed from glob patterns are typically rotated logs that
-			//    won't return with the same name
-			// 3. The Stop() method will save offsets safely when the plugin stops
-			// This trade-off prioritizes stability over rare edge cases where a
-			// file temporarily doesn't match the glob and returns later.
-
-			// Stop the tailer
+			// Stop the tailer first to avoid race conditions
+			// This ensures the tail goroutine is no longer running when we call Tell()
 			err := tailer.Stop()
 			if err != nil {
 				t.Log.Errorf("Stopping tail on %q: %s", tailer.Filename, err.Error())
+			}
+
+			// Now it's safe to get and save the offset since the tailer is stopped
+			if !t.Pipe {
+				offset, err := tailer.Tell()
+				if err == nil {
+					t.Log.Debugf("Recording offset %d for %q", offset, tailer.Filename)
+					t.offsets[tailer.Filename] = offset
+				} else {
+					// This can happen if the file was already removed or closed
+					t.Log.Debugf("Could not get offset for %q: %s", tailer.Filename, err.Error())
+				}
 			}
 
 			// Remove from our map
