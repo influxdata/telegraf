@@ -11,11 +11,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestInitSuccess(t *testing.T) {
@@ -87,7 +88,7 @@ func TestIncludes(t *testing.T) {
 		URL:        u,
 		InstanceID: "telegraf",
 		Interval:   config.Duration(10 * time.Second),
-		Include:    []string{"configs", "hostname" /*logs,*/, "metrics", "status"},
+		Include:    []string{"configs", "hostname" /* , logs */, "metrics", "status"},
 		Log:        &testutil.Logger{},
 	}
 
@@ -118,8 +119,8 @@ func TestIncludedExtraData(t *testing.T) {
 	}
 	cfg := config.NewConfig()
 	for _, c := range cfgs {
-		// Ignore the error on purpose as the endpoints won't be loadable
-		_ = cfg.LoadConfig(c)
+		//nolint:errcheck // Ignore error on purpose as some endpoints won't be loadable
+		cfg.LoadConfig(c)
 	}
 	cfgServer.Close()
 
@@ -146,8 +147,7 @@ func TestIncludedExtraData(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "minimal",
-			includes: []string{},
+			name: "minimal",
 			expected: `{
 			  "id": "telegraf",
 			  "version": "$VERSION"
@@ -191,7 +191,7 @@ func TestIncludedExtraData(t *testing.T) {
 		},
 		{
 			name:     "all",
-			includes: []string{"configs", "hostname" /*logs,*/, "metrics", "status"},
+			includes: []string{"configs", "hostname" /* , logs */, "metrics", "status"},
 			expected: `{
 			  "id": "telegraf",
 			  "version": "$VERSION",
