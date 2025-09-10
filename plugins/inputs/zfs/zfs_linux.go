@@ -234,7 +234,7 @@ func (z *Zfs) gatherV2(lines []string, tags map[string]string) (map[string]inter
 		if z.PoolMetricsUint {
 			fields[fieldName] = value
 		} else if value > math.MaxInt64 {
-			fields[fieldName] = math.MaxInt64
+			fields[fieldName] = int64(math.MaxInt64)
 		} else {
 			fields[fieldName] = int64(value)
 		}
