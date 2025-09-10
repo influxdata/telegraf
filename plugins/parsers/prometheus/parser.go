@@ -43,8 +43,10 @@ func (p *Parser) Parse(data []byte) ([]telegraf.Metric, error) {
 			if !bytes.HasSuffix(data, []byte("\n")) {
 				data = append(data, []byte("\n")...)
 			}
-			// As of prometheus common 0.66.0, ProtoText is disallowed from the decoder. Before this version, it used
-			// to fall back to TextPlain, so we do that here instead to mimic the old behavior.
+			fallthrough
+		case expfmt.TypeProtoCompact:
+			// As of prometheus common 0.66.0, ProtoText and ProtoCompact are disallowed from the decoder. Before this
+			// version, it used to fall back to TextPlain, so we do that here instead to mimic the old behavior.
 			format = expfmt.NewFormat(expfmt.TypeTextPlain)
 		case expfmt.TypeUnknown:
 			p.Log.Debugf("Unknown format %q... Trying to continue...", p.Header.Get("Content-Type"))
