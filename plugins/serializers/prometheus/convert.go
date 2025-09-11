@@ -86,7 +86,7 @@ func sanitize(name string, table table) (string, bool) {
 // SanitizeMetricName checks if the name is a valid Prometheus metric name.
 // If not, it attempts to replace invalid runes with an underscore to create a valid name.
 func SanitizeMetricName(name string) (string, bool) {
-	if model.IsValidLegacyMetricName(name) {
+	if model.LegacyValidation.IsValidMetricName(name) {
 		return name, true
 	}
 	return sanitize(name, metricNameTable)
@@ -95,7 +95,7 @@ func SanitizeMetricName(name string) (string, bool) {
 // SanitizeLabelName checks if the name is a valid Prometheus label name.
 // If not, it attempts to replace invalid runes with an underscore to create a valid name.
 func SanitizeLabelName(name string) (string, bool) {
-	if model.LabelName(name).IsValidLegacy() {
+	if model.LegacyValidation.IsValidLabelName(name) {
 		return name, true
 	}
 	return sanitize(name, labelNameTable)
