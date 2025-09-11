@@ -117,7 +117,10 @@ Tags:
   - serverexport - The full server export, for instance: "nfsserver.example.org:/export"
 
 - Measurements nfsstat and nfs_ops will also include:
-  - operation - the NFS operation in question.  `READ` or `WRITE` for nfsstat, but potentially one of ~20 or ~50, depending on NFS version.  A complete list of operations supported is visible in `/proc/self/mountstats`.
+  - operation - the NFS operation in question.  `READ` or `WRITE` for nfsstat,
+                but potentially one of ~20 or ~50, depending on NFS version. A
+                complete list of operations supported is visible in
+                `/proc/self/mountstats`.
 
 ### Additional metrics
 
@@ -145,61 +148,104 @@ as it changes occasionally.
 
 - nfs_events (Per-event metrics)
   - fields:
-    - inoderevalidates (int, count): How many times cached inode attributes have to be re-validated from the server.
-    - dentryrevalidates (int, count): How many times cached dentry nodes have to be re-validated.
-    - datainvalidates (int, count): How many times an inode had its cached data thrown out.
-    - attrinvalidates (int, count): How many times an inode has had cached inode attributes invalidated.
-    - vfsopen (int, count): How many times files or directories have been `open()`'d.
-    - vfslookup (int, count): How many name lookups in directories there have been.
-    - vfsaccess (int, count): Number of calls to `access()`. (formerly called "vfspermission")
-    - vfsupdatepage (int, count): Count of updates (and potential writes) to pages.
-    - vfsreadpage (int, count): Number of pages read.
-    - vfsreadpages (int, count): Count of how many times a _group_ of pages was read (possibly via `mmap()`?).
-    - vfswritepage (int, count): Number of pages written.
-    - vfswritepages (int, count): Count of how many times a _group_ of pages was written (possibly via `mmap()`?)
-    - vfsgetdents (int, count): Count of directory entry reads with getdents(). These reads can be served from cache and don't necessarily imply actual NFS requests. (formerly called "vfsreaddir")
-    - vfssetattr (int, count): How many times we've set attributes on inodes.
-    - vfsflush (int, count): Count of times pending writes have been forcibly flushed to the server.
-    - vfsfsync (int, count): Count of calls to `fsync()` on directories and files.
-    - vfslock (int, count): Number of times a lock was attempted on a file (regardless of success or not).
-    - vfsrelease (int, count): Number of calls to `close()`.
-    - congestionwait (int, count): Believe unused by the Linux kernel, but it is part of the NFS spec.
-    - setattrtrunc (int, count): How many times files have had their size truncated.
-    - extendwrite (int, count): How many times a file has been grown because you're writing beyond the existing end of the file.
-    - sillyrenames (int, count): Number of times an in-use file was removed (thus creating a temporary ".nfsXXXXXX" file)
-    - shortreads (int, count): Number of times the NFS server returned less data than requested.
-    - shortwrites (int, count): Number of times NFS server reports it wrote less data than requested.
-    - delay (int, count): Occurrences of EJUKEBOX ("Jukebox Delay", probably unused)
-    - pnfsreads (int, count): Count of NFS v4.1+ pNFS reads.
-    - pnfswrites (int, count): Count of NFS v4.1+ pNFS writes.
+    - inoderevalidates (int, count):  How many times cached inode attributes have
+                                      to be re-validated from the server.
+    - dentryrevalidates (int, count): How many times cached dentry nodes have to
+                                      be re-validated.
+    - datainvalidates (int, count):   How many times an inode had its cached
+                                      data thrown out.
+    - attrinvalidates (int, count):   How many times an inode has had cached
+                                      inode attributes invalidated.
+    - vfsopen (int, count):           How many times files or directories have
+                                      been `open()`'d.
+    - vfslookup (int, count):         How many name lookups in directories there
+                                      have been.
+    - vfsaccess (int, count):         Number of calls to `access()`. (formerly
+                                      called "vfspermission")
+    - vfsupdatepage (int, count):     Count of updates (and potential writes) to
+                                      pages.
+    - vfsreadpage (int, count):       Number of pages read.
+    - vfsreadpages (int, count):      Count of how many times a _group_ of pages
+                                      was read (possibly via `mmap()`?).
+    - vfswritepage (int, count):      Number of pages written.
+    - vfswritepages (int, count):     Count of how many times a _group_ of pages
+                                      was written (possibly via `mmap()`?)
+    - vfsgetdents (int, count):       Count of directory entry reads with
+                                      getdents(). These reads can be served from
+                                      cache and don't necessarily imply actual
+                                      NFS requests. (formerly called "vfsreaddir")
+    - vfssetattr (int, count):        How many times we've set attributes on inodes.
+    - vfsflush (int, count):          Count of times pending writes have been
+                                      forcibly flushed to the server.
+    - vfsfsync (int, count):          Count of calls to `fsync()` on directories
+                                      and files.
+    - vfslock (int, count):           Number of times a lock was attempted on a
+                                      file (regardless of success or not).
+    - vfsrelease (int, count):        Number of calls to `close()`.
+    - congestionwait (int, count):    Believe unused by the Linux kernel, but it
+                                      is part of the NFS spec.
+    - setattrtrunc (int, count):      How many times files have had their size truncated.
+    - extendwrite (int, count):       How many times a file has been grown
+                                      because you're writing beyond the existing
+                                      end of the file.
+    - sillyrenames (int, count):      Number of times an in-use file was removed
+                                      (thus creating a temporary ".nfsXXXXXX" file)
+    - shortreads (int, count):        Number of times the NFS server returned
+                                      less data than requested.
+    - shortwrites (int, count):       Number of times NFS server reports it
+                                      wrote less data than requested.
+    - delay (int, count):             Occurrences of EJUKEBOX ("Jukebox Delay",
+                                      probably unused)
+    - pnfsreads (int, count):         Count of NFS v4.1+ pNFS reads.
+    - pnfswrites (int, count):        Count of NFS v4.1+ pNFS writes.
 
 - nfs_xprt_tcp
   - fields:
-    - bind_count (int, count): Number of_completely new_ mounts to this server (sometimes 0?)
-    - connect_count (int, count): How many times the client has connected to the server in question
-    - connect_time (int, jiffies): How long the NFS client has spent waiting for its connection(s) to the server to be established.
-    - idle_time (int, seconds): How long (in seconds) since the NFS mount saw any RPC traffic.
-    - rpcsends (int, count): How many RPC requests this mount has sent to the server.
-    - rpcreceives (int, count): How many RPC replies this mount has received from the server.
-    - badxids (int, count): Count of XIDs sent by the server that the client doesn't know about.
-    - inflightsends (int, count): Number of outstanding requests; always >1. (See reference #4 for comment on this field)
-    - backlogutil (int, count): Cumulative backlog count
+    - bind_count (int, count):     Number of_completely new_ mounts to this
+                                   server (sometimes 0?)
+    - connect_count (int, count):  How many times the client has connected to
+                                   the server in question
+    - connect_time (int, jiffies): How long the NFS client has spent waiting for
+                                   its connection(s) to the server to be established.
+    - idle_time (int, seconds):    How long (in seconds) since the NFS mount saw
+                                   any RPC traffic.
+    - rpcsends (int, count):       How many RPC requests this mount has sent to
+                                   the server.
+    - rpcreceives (int, count):    How many RPC replies this mount has received
+                                   from the server.
+    - badxids (int, count):        Count of XIDs sent by the server that the
+                                   client doesn't know about.
+    - inflightsends (int, count):  Number of outstanding requests; always >1.
+                                   (See reference #4 for comment on this field)
+    - backlogutil (int, count):    Cumulative backlog count
 
 - nfs_xprt_udp
   - fields:
     - [same as nfs_xprt_tcp, except for connect_count, connect_time, and idle_time]
 
 - nfs_ops
-  - fields (In all cases, the `operations` tag is set to the uppercase name of the NFS operation, _e.g._ "READ", "FSINFO", _etc_.  See /proc/self/mountstats for a full list):
-    - ops (int, count): Total operations of this type.
-    - trans (int, count): Total transmissions of this type, including retransmissions: `OP_ops - OP_trans = total_retransmissions` (lower is better).
-    - timeouts (int, count): Number of major timeouts.
-    - bytes_sent (int, count): Bytes sent, including headers (should also be close to on-wire size).
-    - bytes_recv (int, count): Bytes received, including headers (should be close to on-wire size).
-    - queue_time (int, milliseconds): Cumulative time a request waited in the queue before sending this OP type.
-    - response_time (int, milliseconds): Cumulative time waiting for a response for this OP type.
-    - total_time (int, milliseconds): Cumulative time a request waited in the queue before sending.
-    - errors (int, count): Total number operations that complete with tk_status < 0 (usually errors).  This is a new field, present in kernel >=5.3, mountstats version 1.1
+  - fields with the `operations` tag being set to the uppercase name of the NFS
+    operation in all cases , _e.g._ "READ", "FSINFO", _etc_. See
+    `/proc/self/mountstats` for a full list:
+    - ops (int, count):                  Total operations of this type.
+    - trans (int, count):                Total transmissions of this type,
+                                         including retransmissions (lower is better):
+                                         `OP_ops - OP_trans = total_retransmissions`.
+    - timeouts (int, count):             Number of major timeouts.
+    - bytes_sent (int, count):           Bytes sent, including headers (should
+                                         also be close to on-wire size).
+    - bytes_recv (int, count):           Bytes received, including headers
+                                         (should be close to on-wire size).
+    - queue_time (int, milliseconds):    Cumulative time a request waited in the
+                                         queue before sending this OP type.
+    - response_time (int, milliseconds): Cumulative time waiting for a response
+                                         for this OP type.
+    - total_time (int, milliseconds):    Cumulative time a request waited in the
+                                         queue before sending.
+    - errors (int, count):               Total number operations that complete
+                                         with tk_status < 0 (usually errors).
+                                         This is a new field, present in
+                                         kernel >=5.3, mountstats version 1.1
 
 [ref]: https://utcc.utoronto.ca/~cks/space/blog/linux/NFSMountstatsIndex
 

@@ -59,49 +59,55 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 - sflow
   - tags:
-    - agent_address (IP address of the agent that obtained the sflow sample and sent it to this collector)
-    - source_id_type(source_id_type field of flow_sample or flow_sample_expanded structures)
-    - source_id_index(source_id_index field of flow_sample or flow_sample_expanded structures)
-    - input_ifindex (value (input) field of flow_sample or flow_sample_expanded structures)
-    - output_ifindex (value (output) field of flow_sample or flow_sample_expanded structures)
-    - sample_direction (source_id_index, netif_index_in and netif_index_out)
-    - header_protocol (header_protocol field of sampled_header structures)
-    - ether_type (eth_type field of an ETHERNET-ISO88023 header)
-    - src_ip (source_ipaddr field of IPv4 or IPv6 structures)
-    - src_port (src_port field of TCP or UDP structures)
-    - src_port_name (src_port)
-    - src_mac (source_mac_addr field of an ETHERNET-ISO88023 header)
-    - src_vlan (src_vlan field of extended_switch structure)
-    - src_priority (src_priority field of extended_switch structure)
-    - src_mask_len (src_mask_len field of extended_router structure)
-    - dst_ip (destination_ipaddr field of IPv4 or IPv6 structures)
-    - dst_port (dst_port field of TCP or UDP structures)
-    - dst_port_name (dst_port)
-    - dst_mac (destination_mac_addr field of an ETHERNET-ISO88023 header)
-    - dst_vlan (dst_vlan field of extended_switch structure)
-    - dst_priority (dst_priority field of extended_switch structure)
-    - dst_mask_len (dst_mask_len field of extended_router structure)
-    - next_hop (next_hop field of extended_router structure)
-    - ip_version (ip_ver field of IPv4 or IPv6 structures)
-    - ip_protocol (ip_protocol field of IPv4 or IPv6 structures)
-    - ip_dscp (ip_dscp field of IPv4 or IPv6 structures)
-    - ip_ecn (ecn field of IPv4 or IPv6 structures)
-    - tcp_urgent_pointer (urgent_pointer field of TCP structure)
+    - agent_address      - IP address of the agent obtaining the sflow sample and
+                           sent it to this collector
+    - source_id_type     - type of flow_sample or flow_sample_expanded structures
+    - source_id_index    - index of flow_sample or flow_sample_expanded structures
+    - input_ifindex      - input value of flow_sample or flow_sample_expanded structures
+    - output_ifindex     - output value of flow_sample or flow_sample_expanded structures
+    - sample_direction   - source_id_index, netif_index_in and netif_index_out
+    - header_protocol    - header_protocol field of sampled_header structures
+    - ether_type         - ethernet type of an ETHERNET-ISO88023 header
+    - src_ip             - source IP address of IPv4 or IPv6 structures
+    - src_port           - source port of TCP or UDP structures
+    - src_port_name      - name of the source port
+    - src_mac            - source MAC address of an ETHERNET-ISO88023 header
+    - src_vlan           - source VLAN of extended_switch structure
+    - src_priority       - source priority of extended_switch structure
+    - src_mask_len       - length of source mask of extended_router structure
+    - dst_ip             - destination IP address of IPv4 or IPv6 structures
+    - dst_port           - destination port of TCP or UDP structures
+    - dst_port_name      - name of the destination port
+    - dst_mac            - destination MAC address of an ETHERNET-ISO88023 header
+    - dst_vlan           - destination VLAN of extended_switch structure
+    - dst_priority       - destination priority extended_switch structure
+    - dst_mask_len       - length of destinationd mask of extended_router structure
+    - next_hop           - next hop of extended_router structure
+    - ip_version         - IP version of IPv4 or IPv6 structures
+    - ip_protocol        - IP protocol of IPv4 or IPv6 structures
+    - ip_dscp            - IP DSCP of IPv4 or IPv6 structures
+    - ip_ecn             - IP ECN of IPv4 or IPv6 structures
+    - tcp_urgent_pointer - urgent pointer of TCP structure
   - fields:
-    - bytes (integer, the product of frame_length and packets)
-    - drops (integer, drops field of flow_sample or flow_sample_expanded structures)
-    - packets (integer, sampling_rate field of flow_sample or flow_sample_expanded structures)
-    - frame_length (integer, frame_length field of sampled_header structures)
-    - header_size (integer, header_size field of sampled_header structures)
-    - ip_fragment_offset (integer, ip_ver field of IPv4 structures)
-    - ip_header_length (integer, ip_ver field of IPv4 structures)
-    - ip_total_length (integer, ip_total_len field of IPv4 structures)
-    - ip_ttl (integer, ip_ttl field of IPv4 structures or ip_hop_limit field IPv6 structures)
-    - tcp_header_length (integer, size field of TCP structure. This value is specified in 32-bit words. It must be multiplied by 4 to produce a value in bytes.)
-    - tcp_window_size (integer, window_size field of TCP structure)
-    - udp_length (integer, length field of UDP structures)
-    - ip_flags (integer, ip_ver field of IPv4 structures)
-    - tcp_flags (integer, TCP flags of TCP IP header (IPv4 or IPv6))
+    - bytes              (int) - product of frame length and packets
+    - drops              (int) - drops field of flow_sample or
+                                 flow_sample_expanded structures
+    - packets            (int) - sampling_rate field of flow_sample or
+                                 flow_sample_expanded structures
+    - frame_length       (int) - frame_length field of sampled_header structures
+    - header_size        (int) - header_size field of sampled_header structures
+    - ip_fragment_offset (int) - ip_ver field of IPv4 structures
+    - ip_header_length   (int) - ip_ver field of IPv4 structures
+    - ip_total_length    (int) - ip_total_len field of IPv4 structures
+    - ip_ttl             (int) - ip_ttl field of IPv4 structures or
+                                 ip_hop_limit field IPv6 structures
+    - tcp_header_length  (int) - size field of TCP structure. This value is
+                                 specified in 32-bit words. It must be multiplied
+                                 by 4 to produce a valuein bytes.
+    - tcp_window_size    (int) - window_size field of TCP structure
+    - udp_length         (int) - length field of UDP structures
+    - ip_flags           (int) - ip_ver field of IPv4 structures
+    - tcp_flags          (int) - TCP flags of TCP IP header (IPv4 or IPv6)
 
 ## Troubleshooting
 

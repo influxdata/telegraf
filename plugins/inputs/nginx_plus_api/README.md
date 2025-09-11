@@ -233,7 +233,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   - source
   - port
 
-- nginx_plus_api_http_server_zones, nginx_plus_api_upstream_server_zones, nginx_plus_api_http_location_zones, nginx_plus_api_resolver_zones, nginx_plus_api_slabs_pages
+- nginx_plus_api_http_server_zones, nginx_plus_api_upstream_server_zones,
+  nginx_plus_api_http_location_zones, nginx_plus_api_resolver_zones,
+  nginx_plus_api_slabs_pages
   - source
   - port
   - zone
