@@ -899,6 +899,50 @@ select the output.  The tag is removed in the outputs before writing with `tagex
     influxdb_database = "other"
 ```
 
+## Plugin selection via labels and selectors
+
+You can control which plugin instances are enabled by decorating plugins with labels in their config and passing one or more selectors on the command line.
+
+### Selectors
+
+Provide selectors with one or more `--select` flags when starting Telegraf. Each `--select` value is a semicolon-separated list of key=value pairs:
+
+```text
+<key>=<value>[;<key>=<value>]
+```
+
+- Pairs in a single `--select` value are combined with logical AND (all must match).
+- Multiple `--select` flags are combined with logical OR (a plugin is enabled if it matches any selector set).
+
+Selectors support simple glob patterns in values (for example `region=us-*`).
+
+Example:
+
+```console
+telegraf --config config.conf --config-directory directory/ \
+  --select="app=payments;region=us-*" \
+  --select="env=prod" \
+  --watch-config --print-plugin-config-source=true
+```
+
+### Labels
+
+Add an optional `labels` table to a plugin, similar to `tags`. Keys and values are plain strings.
+
+Example:
+
+```toml
+[[inputs.cpu]]
+  [inputs.cpu.labels]
+    app = "payments"
+    region = "us-east"
+    env = "prod"
+```
+
+Telegraf matches the command-line selectors against a plugin's labels to decide whether that plugin instance should be enabled. For details on supported syntax and matching rules, see the labels selectors spec.
+
+For more details on the syntax and matching criteria refer, [labels selectors spec][].
+
 ## Transport Layer Security (TLS)
 
 Reference the detailed [TLS][] documentation.
@@ -916,3 +960,4 @@ Reference the detailed [TLS][] documentation.
 [TLS]: /docs/TLS.md
 [glob pattern]: https://github.com/gobwas/glob#syntax
 [flags]: /docs/COMMANDS_AND_FLAGS.md
+[labels selectors spec]: /docs/specs/tsd-010-labels-and-selectors.md
