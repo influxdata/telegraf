@@ -560,10 +560,17 @@ func TestTracking(t *testing.T) {
 	plugin.Reset()
 
 	// Process expected metrics and compare with resulting metrics
-	var actual []telegraf.Metric
+	// We need to retrigger 'Apply' as the processor will only emit data after
+	// the configured period. The follow-up 'Apply' calls are without metrics
+	// to avoid situations where a metric is accumulated multiple time and
+	// situations where a tracking metric is acknowledged multiple times leading
+	// to a panic.
+	actual := plugin.Apply(input...)
 	require.Eventuallyf(t, func() bool {
-		actual = plugin.Apply(input...)
-		return len(actual) > 0
+		if len(actual) < len(expected) {
+			actual = plugin.Apply()
+		}
+		return len(actual) >= len(expected)
 	}, time.Second, 100*time.Millisecond, "never got any metrics")
 	testutil.RequireMetricsEqual(t, expected, actual)
 
