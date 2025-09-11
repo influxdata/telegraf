@@ -96,11 +96,17 @@ with the corresponding name and data-type.
 
 Currently the following `data-type`s are supported:
 
-- `uint`   unsigned integer with 8, 16, 32 or 64 bit
-- `hex`    hex-encoding of the raw byte sequence with `0x` prefix
-- `string` string interpretation of the raw byte sequence
-- `ip`     IPv4 or IPv6 address
-- `proto`  mapping of layer-4 protocol numbers to names
+- `bool`    TruthValue according to [RFC5101][RFC5101]
+- `int`     signed integer with 8, 16, 32 or 64 bit
+- `uint`    unsigned integer with 8, 16, 32 or 64 bit
+- `float64` double-precision floating-point number
+- `hex`     hex-encoding of the raw byte sequence with `0x` prefix
+- `string`  string interpretation of the raw byte sequence
+- `mac`     MAC address
+- `ip`      IPv4 or IPv6 address
+- `proto`   mapping of layer-4 protocol numbers to names
+
+[RFC5101]: https://www.rfc-editor.org/rfc/rfc5101#section-6.1.5
 
 ## Troubleshooting
 
