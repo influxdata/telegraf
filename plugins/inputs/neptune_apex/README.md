@@ -77,34 +77,60 @@ considered a convenience rather than authoritative.
 
 - neptune_apex (All metrics have this measurement name)
   - tags:
-    - host (mandatory, string) is the host on which telegraf runs.
-    - source (mandatory, string) contains the hostname of the apex device. This can be used to differentiate between
-    different units. By using the source instead of the serial number, replacements units won't disturb graphs.
-    - type (mandatory, string) maps to the different types of data. Values can be "controller" (The Apex controller
-    itself), "probe" for the different input probes, or "output" for any physical or virtual outputs. The Watt and Amp
-    probes attached to the physical 120V outlets are aggregated under the output type.
-    - hardware (mandatory, string) controller hardware version
-    - software (mandatory, string) software version
-    - probe_type (optional, string) contains the probe type as reported by the Apex.
-    - name (optional, string) contains the name of the probe or output.
-    - output_id (optional, string) represents the internal unique output ID. This is different from the device_id.
-    - device_id (optional, string) maps to either the aquabus address or the internal reference.
-    - output_type (optional, string) categorizes the output into different categories. This tag is DERIVED from the
-    device_id. Possible values are: "variable" for the 0-10V signal ports, "outlet" for physical 120V sockets, "alert"
-    for alarms (email, sound), "virtual" for user-defined outputs, and "unknown" for everything else.
+    - host        (mandatory, string) - host on which telegraf runs
+    - source      (mandatory, string) - contains the hostname of the apex device
+                                        This can be used to differentiate between
+                                        different units. By using the source
+                                        instead of the serial number, replacements
+                                        units won't disturb graphs.
+    - type        (mandatory, string) - maps to the different data types
+                                        Values can be "controller" (The Apex
+                                        controller itself), "probe" for the
+                                        different input probes, or "output" for any
+                                        physical or virtual outputs. The Watt and
+                                        Amp probes attached to the physical 120V
+                                        outlets are aggregated under the output type.
+    - hardware    (mandatory, string) - controller hardware version
+    - software    (mandatory, string) - software version
+    - probe_type  (optional, string)  - contains the probe type as reported by Apex
+    - name        (optional, string)  - contains the name of the probe or output
+    - output_id   (optional, string)  - represents the internal unique output ID
+                                        This is different from the device_id.
+    - device_id   (optional, string)  - maps to either the aquabus address or
+                                        internal reference
+    - output_type (optional, string)  - categorizes the output into different
+                                        categories. This tag is DERIVED from the
+                                        device_id. Possible values are:
+                                        "variable" for the 0-10V signal ports,
+                                        "outlet" for physical 120V sockets,
+                                        "alert" for alarms (email, sound),
+                                        "virtual" for user-defined outputs, and
+                                        "unknown" for everything else
   - fields:
-    - value (float, various unit) represents the probe reading.
-    - state (string) represents the output state as defined by the Apex. Examples include "AOF" for Auto (OFF), "TBL"
-    for operating according to a table, and "PF*" for different programs.
-    - amp (float, Ampere) is the amount of current flowing through the 120V outlet.
-    - watt (float, Watt) represents the amount of energy flowing through the 120V outlet.
-    - xstatus (string) indicates the xstatus of an outlet. Found on wireless Vortech devices.
-    - power_failed (int64, Unix epoch in ns) when the controller last lost power. Omitted if the apex reports it as "none"
-    - power_restored (int64, Unix epoch in ns) when the controller last powered on. Omitted if the apex reports it as "none"
-    - serial (string, serial number)
+    - value          (float, various unit)     - represents the probe reading.
+    - state          (string)                  - represents the output state as
+                                                 defined by the Apex. Examples
+                                                 include "AOF" for Auto (OFF),
+                                                 "TBL" for operating according
+                                                 to a table, and "PF*" for
+                                                 different programs
+    - amp            (float, Ampere)           - amount of current flowing
+                                                 through the 120V outlet
+    - watt           (float, Watt)             - amount of energy flowing
+                                                 through the 120V outlet
+    - xstatus        (string)                  - xstatus of an outlet, found on
+                                                 wireless Vortech devices
+    - power_failed   (int64, Unix epoch in ns) - last power loss of the controller
+                                                 Omitted if the apex reports it
+                                                 as "none".
+    - power_restored (int64, Unix epoch in ns) - last powered on of the controller
+                                                 Omitted if the apex reports it
+                                                 as "none"
+    - serial         (string, serial number)
   - time:
-    - The time used for the metric is parsed from the status.xml page. This helps when cross-referencing events with
-     the local system of Apex Fusion. Since the Apex uses NTP, this should not matter in most scenarios.
+    - metric time as parsed from the status.xml page. This helps when
+      cross-referencing events with the local system of Apex Fusion. Since the
+      Apex uses NTP, this should not matter in most scenarios.
 
 ## Example Output
 

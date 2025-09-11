@@ -102,7 +102,8 @@ All fields for Suricata stats are numeric.
 
 - suricata
   - tags:
-    - thread: `Global` for global statistics (if enabled), thread IDs (e.g. `W#03-enp0s31f6`) for thread-specific statistics
+    - thread: `Global` for global statistics (if enabled), thread IDs
+              (e.g. `W#03-enp0s31f6`) for thread-specific statistics
   - fields:
     - app_layer_flow_dcerpc_udp
     - app_layer_flow_dns_tcp

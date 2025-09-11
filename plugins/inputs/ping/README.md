@@ -183,7 +183,8 @@ executable ping program for your OS.
     - minimum_response_ms (float)
     - maximum_response_ms (float)
     - standard_deviation_ms (float, Available on Windows only with method = "native")
-    - percentile\<N\>_ms (float, Where `<N>` is the percentile specified in `percentiles`. Available with method = "native" only)
+    - percentile\<N\>_ms (float, Where `<N>` is the percentile specified in
+     `percentiles`. Available with method = "native" only)
     - errors (float, Windows only)
     - reply_received (integer, Windows with method = "exec" only)
     - percent_reply_loss (float, Windows with method = "exec" only)

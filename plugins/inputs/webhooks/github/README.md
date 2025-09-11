@@ -432,8 +432,10 @@ where the data is sourced from.
 **Fields:**
 
 * 'run_attempt' = `event.workflow_job.run_attempt` int
-* 'queue_time' = `event.workflow_job.started_at - event.workflow_job.created_at at event.action = in_progress in milliseconds` int
-* 'run_time' = `event.workflow_job.completed_at - event.workflow_job.started_at at event.action = completed in milliseconds` int
+* 'queue_time' = `event.workflow_job.started_at - event.workflow_job.created_at`
+                 at `event.action = in_progress in milliseconds` int
+* 'run_time' = `event.workflow_job.completed_at - event.workflow_job.started_at`
+                at `event.action = completed in milliseconds` int
 * 'head_branch' = `event.workflow_job.head_branch` string
 
 ### [`workflow_run` event](https://docs.github.com/en/webhooks/webhook-events-and-payloads#workflow_run)
@@ -452,5 +454,6 @@ where the data is sourced from.
 **Fields:**
 
 * 'run_attempt' = `event.workflow_run.run_attempt` int
-* 'run_time' = `event.workflow_run.completed_at - event.workflow_run.run_started_at at event.action = completed in milliseconds` int
+* 'run_time' = `event.workflow_run.completed_at - event.workflow_run.run_started_at`
+                at `event.action = completed in milliseconds` int
 * 'head_branch' = `event.workflow_run.head_branch` string

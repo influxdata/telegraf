@@ -189,9 +189,12 @@ to use them.
 An OPC UA node ID may resemble: "ns=3;s=Temperature". In this example:
 
 - ns=3 is indicating the `namespace` is 3
-- s=Temperature is indicting that the `identifier_type` is a string and `identifier` value is 'Temperature'
+- s=Temperature is indicting that the `identifier_type` is a string and
+  `identifier` value is 'Temperature'
 - This example temperature node has a value of 79.0
-To gather data from this node enter the following line into the 'nodes' property above:
+
+To gather data from this node enter the following line into the 'nodes'
+property above:
 
 ```text
 {field_name="temp", namespace="3", identifier_type="s", identifier="Temperature"},

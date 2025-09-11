@@ -417,7 +417,8 @@ This is the original style used by this plugin. It allows a per-register
 configuration for a single slave-device.
 
 > [!NOTE]
-> For legacy reasons this configuration style is not completely consistent with the other styles.
+> For legacy reasons this configuration style is not completely consistent with
+> the other styles.
 
 #### Usage of `data_type`
 
