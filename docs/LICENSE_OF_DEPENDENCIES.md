@@ -443,6 +443,8 @@ following works:
 - go.opentelemetry.io/otel/sdk/metric [Apache License 2.0](https://github.com/open-telemetry/opentelemetry-go/blob/main/LICENSE)
 - go.opentelemetry.io/otel/trace [Apache License 2.0](https://github.com/open-telemetry/opentelemetry-go/blob/main/LICENSE)
 - go.opentelemetry.io/proto/otlp [Apache License 2.0](https://github.com/open-telemetry/opentelemetry-proto-go/blob/main/LICENSE)
+- go.opentelemetry.io/proto/otlp/collector/profiles/v1development [Apache License 2.0](https://github.com/open-telemetry/opentelemetry-proto-go/blob/main/LICENSE)
+- go.opentelemetry.io/proto/otlp/profiles/v1development [Apache License 2.0](https://github.com/open-telemetry/opentelemetry-proto-go/blob/main/LICENSE)
 - go.starlark.net [BSD 3-Clause "New" or "Revised" License](https://github.com/google/starlark-go/blob/master/LICENSE)
 - go.step.sm/crypto [Apache License 2.0](https://github.com/smallstep/crypto/blob/master/LICENSE)
 - go.uber.org/atomic [MIT License](https://pkg.go.dev/go.uber.org/atomic?tab=licenses)
