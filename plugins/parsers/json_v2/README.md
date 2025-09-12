@@ -1,6 +1,6 @@
 # JSON Parser Version 2 Plugin
 
-This parser takes valid JSON input and turns it into line protocol. The query
+This parser takes valid JSON input and turns it into [line protocol][lp-ref]. The query
 syntax supported is [GJSON Path
 Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md), you can go to
 this playground to test out your GJSON path here:
@@ -98,8 +98,7 @@ tag to a line protocol from data stored anywhere in your JSON. If you define the
 GJSON path to return a single value then you will get a single resulting line
 protocol that contains the field/tag. If you define the GJSON path to return an
 array of values, then each field/tag will be put into a separate line protocol
-(you use the # character to retrieve JSON arrays, find examples
-[here](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md#arrays)).
+(you use the # character to retrieve JSON arrays, see [GJSON array syntax examples](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md#arrays)).
 
 Note that objects are handled separately, therefore if you provide a path that
 returns a object it will be ignored. You will need use the `object` config table
@@ -116,9 +115,9 @@ type of `field` to be any [type that line protocol supports][types], which are:
 * string
 * bool
 
-[lp-ref]: https://docs.influxdata.com/influxdb/v2.0/reference/syntax/line-protocol/
+[lp-ref]: https://docs.influxdata.com/influxdb3/core/reference/line-protocol/
 
-[types]: https://docs.influxdata.com/influxdb/v2.0/reference/syntax/line-protocol/#data-types-and-format
+[types]: https://docs.influxdata.com/influxdb3/core/reference/line-protocol/#data-types-and-format
 
 #### **field**
 
