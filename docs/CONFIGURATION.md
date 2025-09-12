@@ -901,18 +901,22 @@ select the output.  The tag is removed in the outputs before writing with `tagex
 
 ## Plugin selection via labels and selectors
 
-You can control which plugin instances are enabled by decorating plugins with labels in their config and passing one or more selectors on the command line.
+You can control which plugin instances are enabled by decorating plugins with
+labels in their config and passing one or more selectors on the command line.
 
 ### Selectors
 
-Provide selectors with one or more `--select` flags when starting Telegraf. Each `--select` value is a semicolon-separated list of key=value pairs:
+Provide selectors with one or more `--select` flags when starting Telegraf. Each
+`--select` value is a semicolon-separated list of key=value pairs:
 
 ```text
 <key>=<value>[;<key>=<value>]
 ```
 
-- Pairs in a single `--select` value are combined with logical AND (all must match).
-- Multiple `--select` flags are combined with logical OR (a plugin is enabled if it matches any selector set).
+- Pairs in a single `--select` value are combined with logical AND (all must
+match).
+- Multiple `--select` flags are combined with logical OR (a plugin is enabled if
+it matches any selector set).
 
 Selectors support simple glob patterns in values (for example `region=us-*`).
 
@@ -927,7 +931,8 @@ telegraf --config config.conf --config-directory directory/ \
 
 ### Labels
 
-Add an optional `labels` table to a plugin, similar to `tags`. Keys and values are plain strings.
+Add an optional `labels` table to a plugin, similar to `tags`. Keys and values
+are plain strings.
 
 Example:
 
@@ -939,7 +944,9 @@ Example:
     env = "prod"
 ```
 
-Telegraf matches the command-line selectors against a plugin's labels to decide whether that plugin instance should be enabled. For details on supported syntax and matching rules, see the labels selectors spec.
+Telegraf matches the command-line selectors against a plugin's labels to decide
+whether that plugin instance should be enabled. For details on supported syntax
+and matching rules, see the labels selectors spec.
 
 For more details on the syntax and matching criteria refer, [labels selectors spec][].
 
