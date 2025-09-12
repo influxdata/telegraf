@@ -94,7 +94,8 @@ how to use them.
 [[outputs.sql]]
   ## Database driver
   ## Valid options: mssql (Microsoft SQL Server), mysql (MySQL), pgx (Postgres),
-  ##  sqlite (SQLite3), snowflake (snowflake.com) clickhouse (ClickHouse)
+  ##  sqlite (SQLite3), snowflake (snowflake.com), clickhouse (ClickHouse),
+  ##  kaiwudb-lite (kaiwudb.com)
   driver = ""
 
   ## Data source name
@@ -104,6 +105,15 @@ how to use them.
 
   ## Timestamp column name, set to empty to ignore the timestamp
   # timestamp_column = "timestamp"
+
+  ## When enabled:
+  ## - Tags are stored as a JSON object/MAP in a single column
+  ## - Fields are stored as a JSON object in a single column
+  # enable_compact_schema = false
+
+  ## If enable_compact_schema = true, the default tags column name and fileds column name
+  # tags_column_name   = "tags"
+  # fileds_column_name = "fields"
 
   ## Table creation template
   ## Available template variables:
@@ -153,6 +163,10 @@ how to use them.
   ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
   ## plugin definition, otherwise additional config options are read as part of
   ## the table
+
+  ## Multi-row INSERT optimization, only for kaiwudb-lite
+  ## When enabled, uses batch insert format: INSERT INTO "tbl" col1, col2... VALUES (), (), ...
+  # multi_row_insert = false
 
   ## Metric type to SQL type conversion
   ## The values on the left are the data types Telegraf has and the values on
