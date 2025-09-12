@@ -7,6 +7,7 @@ import (
 	"strings"
 	"bufio"
 	"strconv"
+	"os/exec"
 )
 
 func Mystr() string {
@@ -397,3 +398,44 @@ func GetRrmId() int {
 	}
 	return ret
 }
+
+// Utility function to get tx power using 'wl -i ifname txpwr' command
+func GetTxPower(ifname string) int8 {
+
+	// Validation: check if ifname is not blank and contains "wifi"
+	if ifname == "" || !strings.Contains(ifname, "wifi") {
+		return -1
+	}
+
+	app := "wl"
+
+	arg0 := "-i"
+	arg1 := ifname
+	arg2 := "txpwr"
+
+	cmd := exec.Command(app, arg0, arg1, arg2)
+	output, err := cmd.Output()
+	if err != nil {
+		return -1
+	}
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "dBm") && strings.Contains(line, "mw") {
+			// Example line: "18.0 dBm = 63 mw." or "0.0 dBm = 1 mw"
+			fields := strings.Fields(line)
+			for i, f := range fields {
+				if f == "dBm" && i > 0 {
+					// Get the dBm value (before "dBm")
+					dBmStr := fields[i-1]
+					// Parse as float first to handle decimal values like "18.0"
+					dBmFloat, err := strconv.ParseFloat(dBmStr, 64)
+					if err == nil {
+						return int8(dBmFloat)
+					}
+				}
+			}
+		}
+	}
+	return -1
+}
+
