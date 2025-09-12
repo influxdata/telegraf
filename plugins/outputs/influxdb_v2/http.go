@@ -350,9 +350,6 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 		var urlErr *url.Error
 		if errors.As(err, &urlErr) && urlErr.Timeout() {
 			c.statTimeout.Incr(1)
-			c.statRetryableErrorCounters.Incr(1)
-		} else {
-			c.statNonRetryableErrorCounters.Incr(1)
 		}
 
 		internal.OnClientError(c.client, err)
