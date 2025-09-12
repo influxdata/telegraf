@@ -32,36 +32,36 @@ func TestCheckStatusCode(t *testing.T) {
 	require.True(t, o.StatusCodeOK(ua.StatusCode(192)))
 }
 
-func TestOpcUAClientConfigValidateEndpointSuccess(t *testing.T) {
+func TestOpcUAClientConfigValidateSuccess(t *testing.T) {
 	config := OpcUAClientConfig{
 		Endpoint:       "opc.tcp://localhost:4840",
 		SecurityPolicy: "None",
 		SecurityMode:   "None",
 	}
 
-	err := config.validateEndpoint()
+	err := config.Validate()
 	require.NoError(t, err)
 }
 
-func TestOpcUAClientConfigValidateEndpointFail(t *testing.T) {
+func TestOpcUAClientConfigValidateFail(t *testing.T) {
 	tests := []struct {
-		name    string
-		config  OpcUAClientConfig
-		errType error
+		name        string
+		config      OpcUAClientConfig
+		expectedErr error
 	}{
 		{
 			name: "empty endpoint",
 			config: OpcUAClientConfig{
 				Endpoint: "",
 			},
-			errType: ErrInvalidEndpoint,
+			expectedErr: ErrInvalidEndpoint,
 		},
 		{
 			name: "invalid endpoint URL",
 			config: OpcUAClientConfig{
 				Endpoint: "://invalid-url",
 			},
-			errType: ErrInvalidEndpoint,
+			expectedErr: ErrInvalidEndpoint,
 		},
 		{
 			name: "invalid security policy",
@@ -70,7 +70,7 @@ func TestOpcUAClientConfigValidateEndpointFail(t *testing.T) {
 				SecurityPolicy: "InvalidPolicy",
 				SecurityMode:   "None",
 			},
-			errType: ErrInvalidSecurityPolicy,
+			expectedErr: ErrInvalidConfiguration,
 		},
 		{
 			name: "invalid security mode",
@@ -79,15 +79,54 @@ func TestOpcUAClientConfigValidateEndpointFail(t *testing.T) {
 				SecurityPolicy: "None",
 				SecurityMode:   "InvalidMode",
 			},
-			errType: ErrInvalidSecurityMode,
+			expectedErr: ErrInvalidConfiguration,
+		},
+		{
+			name: "certificate without private key",
+			config: OpcUAClientConfig{
+				Endpoint:       "opc.tcp://localhost:4840",
+				SecurityPolicy: "Basic256",
+				SecurityMode:   "SignAndEncrypt",
+				Certificate:    "cert.pem",
+				PrivateKey:     "",
+			},
+			expectedErr: ErrInvalidConfiguration,
+		},
+		{
+			name: "private key without certificate",
+			config: OpcUAClientConfig{
+				Endpoint:       "opc.tcp://localhost:4840",
+				SecurityPolicy: "Basic256",
+				SecurityMode:   "SignAndEncrypt",
+				Certificate:    "",
+				PrivateKey:     "key.pem",
+			},
+			expectedErr: ErrInvalidConfiguration,
+		},
+		{
+			name: "invalid auth method",
+			config: OpcUAClientConfig{
+				Endpoint:   "opc.tcp://localhost:4840",
+				AuthMethod: "InvalidAuth",
+			},
+			expectedErr: ErrInvalidConfiguration,
+		},
+		{
+			name: "invalid optional field",
+			config: OpcUAClientConfig{
+				Endpoint:       "opc.tcp://localhost:4840",
+				OptionalFields: []string{"InvalidField"},
+			},
+			expectedErr: ErrInvalidConfiguration,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.config.validateEndpoint()
+			err := tt.config.Validate()
 			require.Error(t, err)
-			require.ErrorIs(t, err, tt.errType)
+			// Check that the error chain contains the expected error type
+			require.ErrorIs(t, err, tt.expectedErr)
 		})
 	}
 }
