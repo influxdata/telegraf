@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"log/slog" //nolint:depguard // needed to set the rclone logger to use telegraf's logger
 	"os"
 	"path/filepath"
 	"text/template"
@@ -15,6 +16,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/rclone/rclone/fs"
 	"github.com/rclone/rclone/fs/fspath"
+	"github.com/rclone/rclone/fs/log"
 	"github.com/rclone/rclone/vfs"
 	"github.com/rclone/rclone/vfs/vfscommon"
 
@@ -80,9 +82,9 @@ func (f *File) Init() error {
 		f.vfsopts.CacheMaxSize = fs.SizeSuffix(f.MaxCacheSize)
 	}
 
-	fs.LogOutput = func(level fs.LogLevel, text string) {
+	log.Handler.SetOutput(func(level slog.Level, text string) {
 		f.Log.Tracef("[%s] %s", level.String(), text)
-	}
+	})
 
 	// Setup custom template functions
 	funcs := template.FuncMap{"now": time.Now}
