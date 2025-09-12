@@ -14,14 +14,14 @@ type Filter interface {
 // for matching a given string against the filter list. The filter list
 // supports glob matching with separators too, ie:
 //
-//	f, _ := Compile([]string{"cpu", "mem", "net*"})
+//	f, err := Compile([]string{"cpu", "mem", "net*"})
 //	f.Match("cpu")     // true
 //	f.Match("network") // true
 //	f.Match("memory")  // false
 //
 // separators are only to be used for globbing filters, ie:
 //
-//	f, _ := Compile([]string{"cpu.*.count"}, '.')
+//	f, err := Compile([]string{"cpu.*.count"}, '.')
 //	f.Match("cpu.count")     // false
 //	f.Match("cpu.measurement.count") // true
 //	f.Match("cpu.field.measurement.count")  // false
@@ -34,22 +34,23 @@ func Compile(filters []string, separators ...rune) (Filter, error) {
 	}
 
 	// check if we can compile a non-glob filter
-	noGlob := len(separators) == 0
+	wildcards := len(separators) != 0
 	for _, filter := range filters {
-		if hasMeta(filter) {
-			noGlob = false
+		if strings.ContainsAny(filter, "*?[") {
+			wildcards = true
 			break
 		}
 	}
 
 	switch {
-	case noGlob:
-		// return non-globbing filter if not needed.
-		return compileFilterNoGlob(filters), nil
-	case len(filters) == 1:
+	case !wildcards && len(filters) == 1:
+		return &filterSingle{s: filters[0]}, nil
+	case !wildcards && len(filters) != 1:
+		return newFilterNoGlob(filters), nil
+	case wildcards && len(filters) == 1:
 		return glob.Compile(filters[0], separators...)
 	default:
-		return glob.Compile("{"+strings.Join(filters, ",")+"}", separators...)
+		return newFilterGlobMultiple(filters, separators...)
 	}
 }
 
@@ -59,39 +60,6 @@ func MustCompile(filters []string, separators ...rune) Filter {
 		panic(err)
 	}
 	return f
-}
-
-// hasMeta reports whether path contains any magic glob characters.
-func hasMeta(s string) bool {
-	return strings.ContainsAny(s, "*?[")
-}
-
-type filter struct {
-	m map[string]struct{}
-}
-
-func (f *filter) Match(s string) bool {
-	_, ok := f.m[s]
-	return ok
-}
-
-type filtersingle struct {
-	s string
-}
-
-func (f *filtersingle) Match(s string) bool {
-	return f.s == s
-}
-
-func compileFilterNoGlob(filters []string) Filter {
-	if len(filters) == 1 {
-		return &filtersingle{s: filters[0]}
-	}
-	out := filter{m: make(map[string]struct{})}
-	for _, filter := range filters {
-		out.m[filter] = struct{}{}
-	}
-	return &out
 }
 
 type IncludeExcludeFilter struct {
