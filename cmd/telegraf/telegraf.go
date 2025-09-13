@@ -21,6 +21,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
+	cd "github.com/influxdata/telegraf/config/diff"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/plugins/aggregators"
@@ -52,6 +53,7 @@ type GlobalFlags struct {
 	once                    bool
 	quiet                   bool
 	unprotected             bool
+	watchInputsOnly         bool
 }
 
 type WindowFlags struct {
@@ -81,6 +83,7 @@ type Telegraf struct {
 	secretstoreFilters []string
 
 	cfg *config.Config
+	ag  *agent.Agent
 
 	GlobalFlags
 	WindowFlags
@@ -93,6 +96,7 @@ func (t *Telegraf) Init(pprofErr <-chan error, f Filters, g GlobalFlags, w Windo
 	t.secretstoreFilters = f.secretstore
 	t.GlobalFlags = g
 	t.WindowFlags = w
+	t.ag = &agent.Agent{}
 
 	// Disable secret protection before performing any other operation
 	if g.unprotected {
@@ -139,6 +143,41 @@ func (t *Telegraf) GetSecretStore(id string) (telegraf.SecretStore, error) {
 	return store, nil
 }
 
+func (t *Telegraf) startConfigWatchers(ctx context.Context, signals chan os.Signal) error {
+	if t.watchConfig != "" {
+		for _, fConfig := range t.configFiles {
+			if isURL(fConfig) {
+				continue
+			}
+
+			if _, err := os.Stat(fConfig); err != nil {
+				log.Printf("W! Cannot watch config %s: %s", fConfig, err)
+			} else {
+				go t.watchLocalConfig(ctx, signals, fConfig)
+			}
+		}
+		for _, fConfigDirectory := range t.configDir {
+			if _, err := os.Stat(fConfigDirectory); err != nil {
+				log.Printf("W! Cannot watch config directory %s: %s", fConfigDirectory, err)
+			} else {
+				go t.watchLocalConfig(ctx, signals, fConfigDirectory)
+			}
+		}
+	}
+	if t.configURLWatchInterval > 0 {
+		remoteConfigs := make([]string, 0)
+		for _, fConfig := range t.configFiles {
+			if isURL(fConfig) {
+				remoteConfigs = append(remoteConfigs, fConfig)
+			}
+		}
+		if len(remoteConfigs) > 0 {
+			go t.watchRemoteConfigs(ctx, signals, t.configURLWatchInterval, remoteConfigs)
+		}
+	}
+	return nil
+}
+
 func (t *Telegraf) reloadLoop() error {
 	reloadConfig := false
 	reload := make(chan bool, 1)
@@ -150,57 +189,51 @@ func (t *Telegraf) reloadLoop() error {
 		signals := make(chan os.Signal, 1)
 		signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
 			syscall.SIGTERM, syscall.SIGINT)
-		if t.watchConfig != "" {
-			for _, fConfig := range t.configFiles {
-				if isURL(fConfig) {
-					continue
-				}
-
-				if _, err := os.Stat(fConfig); err != nil {
-					log.Printf("W! Cannot watch config %s: %s", fConfig, err)
-				} else {
-					go t.watchLocalConfig(ctx, signals, fConfig)
-				}
-			}
-			for _, fConfigDirectory := range t.configDir {
-				if _, err := os.Stat(fConfigDirectory); err != nil {
-					log.Printf("W! Cannot watch config directory %s: %s", fConfigDirectory, err)
-				} else {
-					go t.watchLocalConfig(ctx, signals, fConfigDirectory)
-				}
-			}
-		}
-		if t.configURLWatchInterval > 0 {
-			remoteConfigs := make([]string, 0)
-			for _, fConfig := range t.configFiles {
-				if isURL(fConfig) {
-					remoteConfigs = append(remoteConfigs, fConfig)
-				}
-			}
-			if len(remoteConfigs) > 0 {
-				go t.watchRemoteConfigs(ctx, signals, t.configURLWatchInterval, remoteConfigs)
-			}
-		}
+		// start config watchers if set
+		t.startConfigWatchers(ctx, signals)
 		go func() {
-			select {
-			case sig := <-signals:
-				if sig == syscall.SIGHUP {
-					log.Println("I! Reloading Telegraf config")
-					// May need to update the list of known config files
-					// if a delete or create occured. That way on the reload
-					// we ensure we watch the correct files.
-					if err := t.getConfigFiles(); err != nil {
-						log.Println("E! Error loading config files: ", err)
+			for { // the loop is infinite as long as the watchInputsUpdateOnly is set and context is not canceled
+				select {
+				case sig := <-signals:
+					if sig == syscall.SIGHUP {
+						log.Println("I! Reloading Telegraf config")
+						// May need to update the list of known config files
+						// if a delete or create occurred. That way on the reload
+						// we ensure we watch the correct files.
+						if err := t.getConfigFiles(); err != nil {
+							log.Println("E! Error loading config files: ", err)
+						}
+						<-reload
+						reload <- true
+
+						if t.watchInputsOnly {
+							er := t.runAgent(ctx, true)
+							if er != nil && !errors.Is(er, context.Canceled) {
+								log.Printf("E! [telegraf] Error reloading agent inputs: %v", er)
+								// Continue retrying without canceling the context
+								// TODO is it make sense to stop the agent since this config has issue??
+							}
+							// i have updated the inputs, let's continue watching for changes for next iteration
+							// add delay to git rid of duplicate signals
+							time.Sleep(2 * time.Second)
+							t.startConfigWatchers(ctx, signals)
+						} else { // retain exisitng flow
+							cancel()
+							return
+						}
+					} else {
+						log.Printf("E! Recived Signal: '%v' - Stopping Telegraf", sig)
+						cancel()
+						return
 					}
-					<-reload
-					reload <- true
+				case err := <-t.pprofErr:
+					log.Printf("E! pprof server failed: %v", err)
+					cancel()
+					return
+				case <-stop:
+					cancel()
+					return
 				}
-				cancel()
-			case err := <-t.pprofErr:
-				log.Printf("E! pprof server failed: %v", err)
-				cancel()
-			case <-stop:
-				cancel()
 			}
 		}()
 
@@ -434,6 +467,20 @@ func (t *Telegraf) getConfigFiles() error {
 func (t *Telegraf) runAgent(ctx context.Context, reloadConfig bool) error {
 	c := t.cfg
 	var err error
+
+	if reloadConfig && t.watchInputsOnly {
+		// load the new configuration to get the latest inputs
+		nC, err := t.loadConfiguration()
+		if err != nil {
+			return err
+		}
+
+		// i am going to worry only about the inputs
+		// lets compare the new config inputs with the old config inputs, if changes are found then act on that
+		dif := cd.Diff(c.Inputs, nC.Inputs)
+		return t.ag.UpdateRunningInputs(ctx, dif)
+	}
+
 	if reloadConfig {
 		if c, err = t.loadConfiguration(); err != nil {
 			return err
@@ -523,6 +570,7 @@ func (t *Telegraf) runAgent(ctx context.Context, reloadConfig bool) error {
 		}
 	}
 	ag := agent.NewAgent(c)
+	t.ag = ag
 
 	// Notify systemd that telegraf is ready
 	// SdNotify() only tries to notify if the NOTIFY_SOCKET environment is set, so it's safe to call when systemd isn't present.

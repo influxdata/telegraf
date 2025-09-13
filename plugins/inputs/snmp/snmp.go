@@ -18,6 +18,7 @@ import (
 var sampleConfig string
 
 type Snmp struct {
+	PluginID string `toml:"id"`
 	// The SNMP agent to query. Format is [SCHEME://]ADDR[:PORT] (e.g.
 	// udp://1.2.3.4:161).  If the scheme is not specified then "udp" is used.
 	Agents []string `toml:"agents"`
@@ -48,6 +49,11 @@ func (*Snmp) SampleConfig() string {
 
 func (s *Snmp) SetTranslator(name string) {
 	s.Translator = name
+}
+
+// let's support pluginWithID interface
+func (s *Snmp) ID() string {
+	return s.PluginID
 }
 
 func (s *Snmp) Init() error {
