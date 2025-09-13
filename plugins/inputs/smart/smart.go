@@ -923,6 +923,14 @@ func parseRawValue(rawVal string) (int64, error) {
 		return i, nil
 	}
 
+	// raw attribute with two values, e.g. error rate: error_count/total_count
+	attrParts := strings.Split(rawVal, "/")
+	if len(attrParts) == 2 {
+		if count, err := strconv.ParseInt(attrParts[0], 10, 64); err == nil {
+			return count, nil
+		}
+	}
+
 	// Duration: 65h+33m+09.259s
 	unit := regexp.MustCompile("^(.*)([hms])$")
 	parts := strings.Split(rawVal, "+")
