@@ -400,8 +400,8 @@ func TestMetric_AddFieldAndNew_ScalarSlices(t *testing.T) {
 
 func TestMetric_AddField_ScalarSlices(t *testing.T) {
 	m := baseMetric()
-	m.AddField("mixed", []interface{}{int(5), float64(6.6), "c"})
+	m.AddField("mixed", []any{int(5), float64(6.6), "c"})
 	outFields := m.Fields()
-	require.IsType(t, []interface{}{}, outFields["mixed"])
-	require.Equal(t, []interface{}{int64(5), float64(6.6), "c"}, outFields["mixed"])
+	require.IsType(t, make([]any, 0), outFields["mixed"])
+	require.Equal(t, []any{int64(5), float64(6.6), "c"}, outFields["mixed"])
 }

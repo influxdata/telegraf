@@ -133,15 +133,15 @@ func TestSerializeNestedFieldKeys(t *testing.T) {
 	require.True(t, ok, "missing system field")
 	cpu, ok := system["cpu"].(map[string]interface{})
 	require.True(t, ok)
-	require.Equal(t, 55.5, cpu["usage"])
+	require.InDelta(t, 55.5, cpu["usage"], 1e-9)
 
 	// Check nested mem usage
 	mem, ok := system["mem"].(map[string]interface{})
 	require.True(t, ok)
-	require.Equal(t, 70.1, mem["usage"])
+	require.InDelta(t, 70.1, mem["usage"], 1e-9)
 
 	// Check flat field
-	require.Equal(t, float64(123), fieldsOut["flat_field"])
+	require.InDelta(t, 123.0, fieldsOut["flat_field"], 1e-9)
 }
 
 func TestSerializeMetricInt(t *testing.T) {
