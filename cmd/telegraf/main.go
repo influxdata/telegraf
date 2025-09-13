@@ -133,6 +133,12 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			Name:  "secretstore-filter",
 			Usage: "filter the secret-stores to enable, separator is ':'",
 		},
+		&cli.BoolFlag{
+			Name: "watch-inputs-only",
+			Usage: "When set, only inputs diff will be (re)loaded when a config changes keeping the other plugins running" +
+				" (unchanged inputs, processors, aggregators, outputs) as is. use this along with --watch-config or --config-url-watch-interval otherwise this has no effect",
+			DefaultText: "disabled",
+		},
 	}
 
 	mainFlags := append(configHandlingFlags, cliFlags()...)
@@ -345,12 +351,6 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 					Name: "test",
 					Usage: "enable test mode: gather metrics, print them out, and exit. " +
 						"Note: Test mode only runs inputs, processors, and aggregators, but not outputs",
-				},
-				&cli.BoolFlag{
-					Name: "watch-inputs-only",
-					Usage: "When set, only inputs diff will be (re)loaded when a config changes keeping the other plugins running" +
-						" (unchanged inputs, processors, aggregators, outputs) as is. use this along with --watch-config or --config-url-watch-interval otherwise this has no effect",
-					DefaultText: "disabled",
 				},
 				&cli.StringSliceFlag{
 					Name: "select",

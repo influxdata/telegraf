@@ -143,7 +143,7 @@ func (t *Telegraf) GetSecretStore(id string) (telegraf.SecretStore, error) {
 	return store, nil
 }
 
-func (t *Telegraf) startConfigWatchers(ctx context.Context, signals chan os.Signal) error {
+func (t *Telegraf) startConfigWatchers(ctx context.Context, signals chan os.Signal) {
 	if t.watchConfig != "" {
 		for _, fConfig := range t.configFiles {
 			if isURL(fConfig) {
@@ -175,7 +175,6 @@ func (t *Telegraf) startConfigWatchers(ctx context.Context, signals chan os.Sign
 			go t.watchRemoteConfigs(ctx, signals, t.configURLWatchInterval, remoteConfigs)
 		}
 	}
-	return nil
 }
 
 func (t *Telegraf) reloadLoop() error {
@@ -221,11 +220,10 @@ func (t *Telegraf) reloadLoop() error {
 							cancel()
 							return
 						}
-					} else {
-						log.Printf("E! Recived Signal: '%v' - Stopping Telegraf", sig)
-						cancel()
-						return
 					}
+					log.Printf("E! Recived Signal: '%v' - Stopping Telegraf", sig)
+					cancel()
+					return
 				case err := <-t.pprofErr:
 					log.Printf("E! pprof server failed: %v", err)
 					cancel()

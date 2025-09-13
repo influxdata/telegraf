@@ -51,7 +51,6 @@ func (s *Snmp) SetTranslator(name string) {
 	s.Translator = name
 }
 
-// let's support pluginWithID interface
 func (s *Snmp) ID() string {
 	return s.PluginID
 }
