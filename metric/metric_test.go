@@ -326,3 +326,82 @@ func TestValueType(t *testing.T) {
 
 	require.Equal(t, telegraf.Gauge, m.Type())
 }
+
+func TestConvertField_ScalarSlices(t *testing.T) {
+	// []interface{} with mixed types
+	in := []interface{}{int(1), int64(2), float32(3.5), float64(4.5), "foo", true}
+	out := convertField(in)
+	require.Equal(t, []interface{}{int64(1), int64(2), float64(3.5), float64(4.5), "foo", true}, out)
+
+	// []int
+	in2 := []int{1, 2, 3}
+	out2 := convertField(in2)
+	require.Equal(t, []int64{1, 2, 3}, out2)
+
+	// []float64
+	in3 := []float64{1.1, 2.2}
+	out3 := convertField(in3)
+	require.Equal(t, in3, out3)
+
+	// []string
+	in4 := []string{"a", "b"}
+	out4 := convertField(in4)
+	require.Equal(t, in4, out4)
+
+	// []bool
+	in5 := []bool{true, false}
+	out5 := convertField(in5)
+	require.Equal(t, in5, out5)
+
+	// []int64
+	in6 := []int64{10, 20}
+	out6 := convertField(in6)
+	require.Equal(t, in6, out6)
+
+	// []uint
+	in7 := []uint{1, 2}
+	out7 := convertField(in7)
+	require.Equal(t, []uint64{1, 2}, out7)
+
+	// []uint64
+	in8 := []uint64{100, 200}
+	out8 := convertField(in8)
+	require.Equal(t, in8, out8)
+
+	// []float32
+	in9 := []float32{1.5, 2.5}
+	out9 := convertField(in9)
+	require.Equal(t, []float64{1.5, 2.5}, out9)
+}
+
+func TestMetric_AddFieldAndNew_ScalarSlices(t *testing.T) {
+	now := time.Now()
+	tags := map[string]string{"host": "test"}
+	fields := map[string]interface{}{
+		"ints":   []int{1, 2},
+		"floats": []float64{1.1, 2.2},
+		"strs":   []string{"a", "b"},
+		"bools":  []bool{true, false},
+	}
+	m := New("testmetric", tags, fields, now)
+	outFields := m.Fields()
+	require.Equal(t, []int64{1, 2}, outFields["ints"])
+	require.Equal(t, []float64{1.1, 2.2}, outFields["floats"])
+	require.Equal(t, []string{"a", "b"}, outFields["strs"])
+	require.Equal(t, []bool{true, false}, outFields["bools"])
+
+	// Now test AddField
+	m.AddField("uints", []uint{3, 4})
+	m.AddField("mixed", []interface{}{int(5), float64(6.6), "c"})
+	outFields = m.Fields()
+	require.Equal(t, []uint64{3, 4}, outFields["uints"])
+	require.Equal(t, []interface{}{int64(5), float64(6.6), "c"}, outFields["mixed"])
+}
+
+func TestMetric_AddField_ScalarSlices(t *testing.T) {
+	m := baseMetric()
+	m.AddField("mixed", []interface{}{int(5), float64(6.6), "c"})
+	outFields := m.Fields()
+	require.IsType(t, []interface{}{}, outFields["mixed"])
+	require.Equal(t, []interface{}{int64(5), float64(6.6), "c"}, outFields["mixed"])
+}
