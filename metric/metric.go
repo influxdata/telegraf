@@ -408,6 +408,42 @@ func convertField(v interface{}) interface{} {
 		if v != nil {
 			return float64(*v)
 		}
+	// Handle scalar lists (slices/arrays), we should not skip here it's serializer job to skip unsupported types or error out
+	case []interface{}:
+		// Process each element recursively using convertField
+		result := make([]interface{}, len(v))
+		for i, elem := range v {
+			result[i] = convertField(elem)
+		}
+		return result
+	case []int:
+		result := make([]int64, len(v))
+		for i, elem := range v {
+			result[i] = int64(elem)
+		}
+		return result
+	case []float64:
+		return v
+	case []string:
+		return v
+	case []bool:
+		return v
+	case []int64:
+		return v
+	case []uint:
+		result := make([]uint64, len(v))
+		for i, elem := range v {
+			result[i] = uint64(elem)
+		}
+		return result
+	case []uint64:
+		return v
+	case []float32:
+		result := make([]float64, len(v))
+		for i, elem := range v {
+			result[i] = float64(elem)
+		}
+		return result
 	default:
 		return nil
 	}
