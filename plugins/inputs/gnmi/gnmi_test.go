@@ -1227,3 +1227,20 @@ func TestCases(t *testing.T) {
 		})
 	}
 }
+
+func TestFlatten_ScalarArray(t *testing.T) {
+	result := flatten([]interface{}{1, 2, 3})
+	require.Len(t, result, 1)
+	require.Nil(t, result[0].key)
+	require.Equal(t, []interface{}{1, 2, 3}, result[0].value)
+
+	resultStr := flatten([]interface{}{"a", "b"})
+	require.Len(t, resultStr, 1)
+	require.Nil(t, resultStr[0].key)
+	require.Equal(t, []interface{}{"a", "b"}, resultStr[0].value)
+
+	resultBool := flatten([]interface{}{true, false})
+	require.Len(t, resultBool, 1)
+	require.Nil(t, resultBool[0].key)
+	require.Equal(t, []interface{}{true, false}, resultBool[0].value)
+}

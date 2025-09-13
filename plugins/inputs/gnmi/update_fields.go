@@ -160,13 +160,28 @@ func flatten(nested interface{}) []keyValuePair {
 			}
 		}
 	case []interface{}:
-		for i, child := range n {
-			k := strconv.Itoa(i)
-			for _, c := range flatten(child) {
-				values = append(values, keyValuePair{
-					key:   append([]string{k}, c.key...),
-					value: c.value,
-				})
+		allNonNested := true
+		for _, child := range n {
+			switch child.(type) {
+			case map[string]interface{}, []interface{}:
+				allNonNested = false
+			}
+			if !allNonNested {
+				break
+			}
+		}
+		if allNonNested {
+			// send as it is, let serializer handle it
+			values = append(values, keyValuePair{value: n})
+		} else {
+			for i, child := range n {
+				k := strconv.Itoa(i)
+				for _, c := range flatten(child) {
+					values = append(values, keyValuePair{
+						key:   append([]string{k}, c.key...),
+						value: c.value,
+					})
+				}
 			}
 		}
 	default:
