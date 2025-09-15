@@ -97,6 +97,8 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 								locations = append(locations, l)
 							}
 							mapping := &otlp.Mapping{}
+							// MappingIndex of 0 means unknown or unapplicable mapping, as the
+							// first entry in the  mapping table is always a null mapping.
 							if loc.MappingIndex != 0 {
 								mapping = pd.MappingTable[loc.MappingIndex]
 							}
