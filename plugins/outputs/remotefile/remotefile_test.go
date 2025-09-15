@@ -13,6 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/serializers/csv"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
@@ -30,37 +31,82 @@ func TestStaticFileCreation(t *testing.T) {
 	}
 	expected := "test,source=localhost value=42i 1719410485000000000\n"
 
-	tmpdir := t.TempDir()
-
-	// Setup the plugin including the serializer
-	plugin := &File{
-		Remote:            config.NewSecret([]byte("local:" + tmpdir)),
-		Files:             []string{"test"},
-		WriteBackInterval: config.Duration(100 * time.Millisecond),
-		Log:               &testutil.Logger{},
+	tests := []struct {
+		name                 string
+		compressionAlgorithm string
+		compressionLevel     int
+	}{
+		{
+			name:             "without compression",
+			compressionLevel: -1,
+		},
+		{
+			name:                 "with gzip compression-level 1",
+			compressionAlgorithm: "gzip",
+			compressionLevel:     1,
+		},
+		{
+			name:                 "with gzip compression-level 9",
+			compressionAlgorithm: "gzip",
+			compressionLevel:     9,
+		},
+		{
+			name:                 "with zstd compression",
+			compressionAlgorithm: "zstd",
+			compressionLevel:     1,
+		},
+		{
+			name:                 "with zlib compression",
+			compressionAlgorithm: "zlib",
+			compressionLevel:     1,
+		},
 	}
 
-	plugin.SetSerializerFunc(func() (telegraf.Serializer, error) {
-		serializer := &influx.Serializer{}
-		err := serializer.Init()
-		return serializer, err
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpdir := t.TempDir()
 
-	require.NoError(t, plugin.Init())
-	require.NoError(t, plugin.Connect())
-	defer plugin.Close()
+			// Setup the plugin including the serializer
+			plugin := &File{
+				Remote:               config.NewSecret([]byte("local:" + tmpdir)),
+				Files:                []string{"test"},
+				WriteBackInterval:    config.Duration(100 * time.Millisecond),
+				Log:                  &testutil.Logger{},
+				CompressionAlgorithm: tt.compressionAlgorithm,
+				CompressionLevel:     tt.compressionLevel,
+			}
 
-	// Write the input metrics and close the plugin. This is required to
-	// actually flush the data to disk
-	require.NoError(t, plugin.Write(input))
-	plugin.Close()
+			plugin.SetSerializerFunc(func() (telegraf.Serializer, error) {
+				serializer := &influx.Serializer{}
+				err := serializer.Init()
+				return serializer, err
+			})
 
-	// Check the result
-	require.FileExists(t, filepath.Join(tmpdir, "test"))
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
 
-	actual, err := os.ReadFile(filepath.Join(tmpdir, "test"))
-	require.NoError(t, err)
-	require.Equal(t, expected, string(actual))
+			// Write the input metrics and close the plugin. This is required to
+			// actually flush the data to disk
+			require.NoError(t, plugin.Write(input))
+			plugin.Close()
+
+			// Check the result
+			require.FileExists(t, filepath.Join(tmpdir, "test"))
+
+			actual, err := os.ReadFile(filepath.Join(tmpdir, "test"))
+			require.NoError(t, err)
+
+			// Decompress if compression is enabled
+			if tt.compressionAlgorithm != "" {
+				decompressed, err := internal.NewContentDecoder(tt.compressionAlgorithm)
+				require.NoError(t, err)
+				actual, err = decompressed.Decode(actual)
+				require.NoError(t, err)
+			}
+			require.Equal(t, expected, string(actual))
+		})
+	}
 }
 
 func TestStaticFileAppend(t *testing.T) {
@@ -91,6 +137,7 @@ func TestStaticFileAppend(t *testing.T) {
 		Files:             []string{"test"},
 		WriteBackInterval: config.Duration(100 * time.Millisecond),
 		Log:               &testutil.Logger{},
+		CompressionLevel:  -1,
 	}
 
 	plugin.SetSerializerFunc(func() (telegraf.Serializer, error) {
@@ -178,6 +225,7 @@ func TestDynamicFiles(t *testing.T) {
 		Files:             []string{`{{.Tag "source"}}-{{.Time.Format "2006-01-02"}}`},
 		WriteBackInterval: config.Duration(100 * time.Millisecond),
 		Log:               &testutil.Logger{},
+		CompressionLevel:  -1,
 	}
 
 	plugin.SetSerializerFunc(func() (telegraf.Serializer, error) {
@@ -244,6 +292,7 @@ func TestCustomTemplateFunctions(t *testing.T) {
 		Files:             []string{"test-{{now.Year}}"},
 		WriteBackInterval: config.Duration(100 * time.Millisecond),
 		Log:               &testutil.Logger{},
+		CompressionLevel:  -1,
 	}
 
 	plugin.SetSerializerFunc(func() (telegraf.Serializer, error) {
@@ -297,6 +346,7 @@ func TestCSVSerialization(t *testing.T) {
 		Files:             []string{`test-{{.Tag "source"}}.csv`},
 		WriteBackInterval: config.Duration(100 * time.Millisecond),
 		Log:               &testutil.Logger{},
+		CompressionLevel:  -1,
 	}
 
 	plugin.SetSerializerFunc(func() (telegraf.Serializer, error) {
@@ -356,6 +406,7 @@ func TestForgettingFiles(t *testing.T) {
 		WriteBackInterval: config.Duration(100 * time.Millisecond),
 		ForgetFiles:       config.Duration(10 * time.Millisecond),
 		Log:               &testutil.Logger{},
+		CompressionLevel:  -1,
 	}
 
 	plugin.SetSerializerFunc(func() (telegraf.Serializer, error) {
@@ -463,6 +514,7 @@ func TestTrackingMetrics(t *testing.T) {
 		Files:             []string{`{{.Tag "source"}}-{{.Time.Format "2006-01-02"}}`},
 		WriteBackInterval: config.Duration(100 * time.Millisecond),
 		Log:               &testutil.Logger{},
+		CompressionLevel:  -1,
 	}
 
 	plugin.SetSerializerFunc(func() (telegraf.Serializer, error) {
