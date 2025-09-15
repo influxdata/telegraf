@@ -122,7 +122,7 @@ func TextToMetricFamilies(data []byte) ([]*MetricFamily, error) {
 			sampleName := string(dn)
 
 			var metricLabels labels.Labels
-			parser.Metric(&metricLabels)
+			parser.Labels(&metricLabels)
 
 			// There might be metrics without meta-information, however in this
 			// case the metric is of type UNKNOWN according to the spec and do
@@ -150,13 +150,13 @@ func TextToMetricFamilies(data []byte) ([]*MetricFamily, error) {
 				mfMetric = &Metric{}
 				mfMetricKey = key
 				mfMetricPoint = &MetricPoint{}
-				mfMetric.Labels = make([]*Label, 0, len(*seriesLabels))
-				for _, l := range *seriesLabels {
+				mfMetric.Labels = make([]*Label, 0, seriesLabels.Len())
+				seriesLabels.Range(func(l labels.Label) {
 					mfMetric.Labels = append(mfMetric.Labels, &Label{
 						Name:  l.Name,
 						Value: l.Value,
 					})
-				}
+				})
 			}
 
 			// Check if we are still in the same metric-point
@@ -216,10 +216,10 @@ func TextToMetricFamilies(data []byte) ([]*MetricFamily, error) {
 }
 
 func getSeriesKey(seriesLabels *labels.Labels, seed maphash.Seed) uint64 {
-	sorted := make([]string, 0, len(*seriesLabels))
-	for _, l := range *seriesLabels {
+	sorted := make([]string, 0, seriesLabels.Len())
+	seriesLabels.Range(func(l labels.Label) {
 		sorted = append(sorted, l.Name+"="+l.Value)
-	}
+	})
 	slices.Sort(sorted)
 
 	var h maphash.Hash
@@ -233,8 +233,8 @@ func getSeriesKey(seriesLabels *labels.Labels, seed maphash.Seed) uint64 {
 
 func extractSampleType(raw, name string, mtype MetricType, metricLabels *labels.Labels) (string, *labels.Labels) {
 	suffix := strings.TrimLeft(strings.TrimPrefix(raw, name), "_")
-	var seriesLabels labels.Labels
-	for _, l := range *metricLabels {
+	var seriesLabelArray []labels.Label
+	metricLabels.Range(func(l labels.Label) {
 		// filter out special labels
 		switch {
 		case l.Name == "__name__":
@@ -243,9 +243,10 @@ func extractSampleType(raw, name string, mtype MetricType, metricLabels *labels.
 		case mtype == MetricType_GAUGE_HISTOGRAM && l.Name == "le":
 		case mtype == MetricType_SUMMARY && l.Name == "quantile":
 		default:
-			seriesLabels = append(seriesLabels, labels.Label{Name: l.Name, Value: l.Value})
+			seriesLabelArray = append(seriesLabelArray, labels.Label{Name: l.Name, Value: l.Value})
 		}
-	}
+	})
+	seriesLabels := labels.New(seriesLabelArray...)
 	return suffix, &seriesLabels
 }
 
@@ -291,12 +292,11 @@ func (mp *MetricPoint) set(mname string, mtype MetricType, stype string, value f
 		}
 
 		var name string
-		for _, l := range *mlabels {
-			if l.Name == mname {
+		mlabels.Range(func(l labels.Label) {
+			if l.Name == mname && name == "" {
 				name = l.Value
-				break
 			}
-		}
+		})
 		v.StateSetValue.States = append(v.StateSetValue.States, &StateSetValue_State{
 			Enabled: value > 0,
 			Name:    name,
@@ -326,12 +326,11 @@ func (mp *MetricPoint) set(mname string, mtype MetricType, stype string, value f
 			v.HistogramValue.Created = timestamppb.New(t)
 		case "bucket":
 			var boundLabel string
-			for _, l := range *mlabels {
-				if l.Name == "le" {
+			mlabels.Range(func(l labels.Label) {
+				if l.Name == "le" && boundLabel == "" {
 					boundLabel = l.Value
-					break
 				}
-			}
+			})
 			var bound float64
 			if boundLabel == "+Inf" {
 				bound = math.Inf(1)
@@ -368,12 +367,11 @@ func (mp *MetricPoint) set(mname string, mtype MetricType, stype string, value f
 			v.SummaryValue.Created = timestamppb.New(t)
 		default:
 			var quantileLabel string
-			for _, l := range *mlabels {
-				if l.Name == "quantile" {
+			mlabels.Range(func(l labels.Label) {
+				if l.Name == "quantile" && quantileLabel == "" {
 					quantileLabel = l.Value
-					break
 				}
-			}
+			})
 			var quantile float64
 			if quantileLabel == "+Inf" {
 				quantile = math.MaxFloat64
