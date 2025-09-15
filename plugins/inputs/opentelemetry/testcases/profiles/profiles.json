@@ -454,16 +454,14 @@
           "scope": {},
           "profiles": [
             {
-              "sampleType": [
-                {
-                  "typeStrindex": 1,
-                  "unitStrindex": 2
-                }
-              ],
+              "sampleType": {
+                "typeStrindex": 1,
+                "unitStrindex": 2
+              },
               "sample": [
                 {
-                  "locationsLength": 1,
-                  "value": [
+                  "stackIndex": 0,
+                  "values": [
                     "1"
                   ],
                   "timestampsUnixNano": [
@@ -471,9 +469,8 @@
                   ]
                 },
                 {
-                  "locationsStartIndex": 1,
-                  "locationsLength": 4,
-                  "value": [
+                  "stackIndex": 1,
+                  "values": [
                     "1"
                   ],
                   "timestampsUnixNano": [
@@ -481,9 +478,8 @@
                   ]
                 },
                 {
-                  "locationsStartIndex": 5,
-                  "locationsLength": 6,
-                  "value": [
+                  "stackIndex": 2,
+                  "values": [
                     "1"
                   ],
                   "timestampsUnixNano": [
@@ -491,20 +487,7 @@
                   ]
                 }
               ],
-              "locationIndices": [
-                0,
-                1,
-                2,
-                3,
-                4,
-                5,
-                6,
-                7,
-                8,
-                9,
-                10
-              ],
-              "timeNanos": "1721306050081621681",
+              "timeUnixNano": "1721306050081621681",
               "periodType": {
                 "typeStrindex": 3,
                 "unitStrindex": 4
@@ -519,6 +502,7 @@
   ],
   "dictionary": {
     "mappingTable": [
+      {},
       {
         "memoryStart": "18698240",
         "memoryLimit": "250413056",
@@ -541,27 +525,27 @@
     ],
     "locationTable": [
       {
-        "mappingIndex": 0,
+        "mappingIndex": 1,
         "address": "95210353"
       },
       {
-        "mappingIndex": 1,
+        "mappingIndex": 2,
         "address": "15945263"
       },
       {
-        "mappingIndex": 1,
+        "mappingIndex": 2,
         "address": "15952400"
       },
       {
-        "mappingIndex": 1,
+        "mappingIndex": 2,
         "address": "15953899"
       },
       {
-        "mappingIndex": 1,
+        "mappingIndex": 2,
         "address": "16148175"
       },
       {
-        "mappingIndex": 2,
+        "mappingIndex": 3,
         "address": "4770577",
         "line": [
           {
@@ -570,7 +554,7 @@
         ]
       },
       {
-        "mappingIndex": 2,
+        "mappingIndex": 3,
         "address": "4773632",
         "line": [
           {
@@ -579,7 +563,7 @@
         ]
       },
       {
-        "mappingIndex": 2,
+        "mappingIndex": 3,
         "address": "14783666",
         "line": [
           {
@@ -588,7 +572,7 @@
         ]
       },
       {
-        "mappingIndex": 2,
+        "mappingIndex": 3,
         "address": "16777518",
         "line": [
           {
@@ -597,11 +581,11 @@
         ]
       },
       {
-        "mappingIndex": 3,
+        "mappingIndex": 4,
         "address": "1139937"
       },
       {
-        "mappingIndex": 0,
+        "mappingIndex": 1,
         "address": "117834912"
       }
     ],
@@ -641,26 +625,52 @@
       "__x64_sys_epoll_wait",
       "do_syscall_64",
       "entry_SYSCALL_64_after_hwframe",
-      "do_epoll_wait"
+      "do_epoll_wait",
+      "thread.name"
     ],
     "attributeTable": [
       {
-        "key": "thread.name",
+        "keyStrindex": 21,
         "value": {
           "stringValue": "chromium"
         }
       },
       {
-        "key": "thread.name",
+        "keyStrindex": 21,
         "value": {
           "stringValue": "dockerd"
         }
       },
       {
-        "key": "thread.name",
+        "keyStrindex": 21,
         "value": {
           "stringValue": "ThreadPoolServi"
         }
+      }
+    ],
+    "stackTable": [
+      {
+        "locationIndices": [
+          0
+        ]
+      },
+      {
+        "locationIndices": [
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      {
+        "locationIndices": [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ]
       }
     ]
   }
