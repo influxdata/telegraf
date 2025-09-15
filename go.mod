@@ -228,7 +228,7 @@ require (
 	go.opentelemetry.io/proto/otlp/profiles/v1development v0.1.0
 	go.starlark.net v0.0.0-20250717191651-336a4b3a6d1d
 	go.step.sm/crypto v0.70.0
-	golang.org/x/crypto v0.41.0
+	golang.org/x/crypto v0.42.0
 	golang.org/x/exp v0.0.0-20250718183923-645b1fa84792
 	golang.org/x/mod v0.27.0
 	golang.org/x/net v0.43.0
@@ -236,7 +236,7 @@ require (
 	golang.org/x/sync v0.17.0
 	golang.org/x/sys v0.36.0
 	golang.org/x/term v0.35.0
-	golang.org/x/text v0.28.0
+	golang.org/x/text v0.29.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	gonum.org/v1/gonum v0.16.0
 	google.golang.org/api v0.248.0
@@ -556,7 +556,7 @@ require (
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/time v0.12.0 // indirect
-	golang.org/x/tools v0.35.0 // indirect
+	golang.org/x/tools v0.36.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20211209221555-9c9e7e272434 // indirect
 	google.golang.org/genproto v0.0.0-20250603155806-513f23925822 // indirect
