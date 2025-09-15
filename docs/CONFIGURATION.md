@@ -948,7 +948,7 @@ Telegraf matches the command-line selectors against a plugin's labels to decide
 whether that plugin instance should be enabled. For details on supported syntax
 and matching rules, see the labels selectors spec.
 
-For more details on the syntax and matching criteria refer, [labels selectors spec][].
+For more details on the syntax and matching criteria refer, [labels selectors spec][tsd010].
 
 ## Transport Layer Security (TLS)
 
@@ -967,4 +967,4 @@ Reference the detailed [TLS][] documentation.
 [TLS]: /docs/TLS.md
 [glob pattern]: https://github.com/gobwas/glob#syntax
 [flags]: /docs/COMMANDS_AND_FLAGS.md
-[labels selectors spec]: /docs/specs/tsd-010-labels-and-selectors.md
+[tsd010]: /docs/specs/tsd-010-labels-and-selectors.md
