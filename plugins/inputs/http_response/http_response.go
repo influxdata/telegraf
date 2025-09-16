@@ -434,7 +434,7 @@ func (h *HTTPResponse) httpGather(cl client) (map[string]interface{}, map[string
 			fields["response_status_code_match"] = 0
 		}
 	}
-	
+
 	for _, tagMap := range h.AdditionalTags {
 		for tagName, tagValue := range tagMap {
 			tags[tagName] = tagValue
