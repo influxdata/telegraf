@@ -46,6 +46,7 @@ type HTTPResponse struct {
 	HTTPHeaderTags  map[string]string   `toml:"http_header_tags"`
 	Headers         map[string]string   `toml:"headers"`
 	FollowRedirects bool                `toml:"follow_redirects"`
+	AdditionalTags  []map[string]string `toml:"additional_tags"`
 	// Absolute path to file with Bearer token
 	BearerToken         string      `toml:"bearer_token"`
 	ResponseBodyField   string      `toml:"response_body_field"`
@@ -431,6 +432,12 @@ func (h *HTTPResponse) httpGather(cl client) (map[string]interface{}, map[string
 			success = false
 			setResult("response_status_code_mismatch", fields, tags)
 			fields["response_status_code_match"] = 0
+		}
+	}
+	
+	for _, tagMap := range h.AdditionalTags {
+		for tagName, tagValue := range tagMap {
+			tags[tagName] = tagValue
 		}
 	}
 

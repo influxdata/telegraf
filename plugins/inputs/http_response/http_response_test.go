@@ -1473,6 +1473,81 @@ func Test_isIPNetInIPv6(t *testing.T) {
 	}
 }
 
+func TestAdditionalTags(t *testing.T) {
+	mux := setUpTestMux()
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	h := &HTTPResponse{
+		Log:             testutil.Logger{},
+		URLs:            []string{ts.URL + "/good"},
+		Method:          "GET",
+		ResponseTimeout: config.Duration(time.Second * 20),
+		AdditionalTags: []map[string]string{
+			{"environment": "production"},
+			{"datacenter": "us-east-1"},
+		},
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
+
+	expectedFields := map[string]interface{}{
+		"http_response_code": http.StatusOK,
+		"result_type":        "success",
+		"result_code":        0,
+		"response_time":      nil,
+		"content_length":     nil,
+	}
+	expectedTags := map[string]interface{}{
+		"server":      nil,
+		"method":      "GET",
+		"status_code": "200",
+		"result":      "success",
+		"environment": "production",
+		"datacenter":  "us-east-1",
+	}
+	absentFields := []string{"response_string_match"}
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
+
+	// Test with empty additional tags
+	h = &HTTPResponse{
+		Log:             testutil.Logger{},
+		URLs:            []string{ts.URL + "/good"},
+		Method:          "GET",
+		ResponseTimeout: config.Duration(time.Second * 20),
+		AdditionalTags: []map[string]string{},
+	}
+
+	acc = testutil.Accumulator{}
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
+
+	expectedTags = map[string]interface{}{
+		"server":      nil,
+		"method":      "GET",
+		"status_code": "200",
+		"result":      "success",
+	}
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
+
+	// Test with nil additional tags
+	h = &HTTPResponse{
+		Log:             testutil.Logger{},
+		URLs:            []string{ts.URL + "/good"},
+		Method:          "GET",
+		ResponseTimeout: config.Duration(time.Second * 20),
+		AdditionalTags: nil,
+	}
+
+	acc = testutil.Accumulator{}
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
+
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
+}
+
 func parseURL(t *testing.T, address string) url.URL {
 	u, err := url.Parse(address)
 	require.NoError(t, err)
