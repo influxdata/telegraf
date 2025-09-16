@@ -49,6 +49,54 @@ func TestCompile(t *testing.T) {
 	require.False(t, f.Match("cpu.field,measurement.count"))
 }
 
+func TestMultiple(t *testing.T) {
+	tests := []struct {
+		name     string
+		pattern  []string
+		value    string
+		expected bool
+	}{
+		{
+			name:     "issue 9265",
+			pattern:  []string{"*process32:*.exe:*.*", "otherWantedMetric*"},
+			value:    "cpu.process32:testcase.exe:caserunner.2222",
+			expected: true,
+		},
+		{
+			name:     "issue 9265",
+			pattern:  []string{"*process32:*.exe:*.*", "otherWantedMetric*"},
+			value:    "process32:testcase.exe:caserunner.2222",
+			expected: true,
+		},
+		{
+			name:     "issue 9265",
+			pattern:  []string{"*process32:*.exe:*.*", "otherWantedMetric*"},
+			value:    "otherWantedMetric",
+			expected: true,
+		},
+		{
+			name:     "issue 9265",
+			pattern:  []string{"*process32:*.exe:*.*", "otherWantedMetric*"},
+			value:    "otherWantedMetric.ABC",
+			expected: true,
+		},
+		{
+			name:     "issue 9265",
+			pattern:  []string{"*process32:*.exe:*.*", "otherWantedMetric*"},
+			value:    "unwantedMetric",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name+"-"+tt.value, func(t *testing.T) {
+			f, err := Compile(tt.pattern)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, f.Match(tt.value))
+		})
+	}
+}
+
 func TestIncludeExclude(t *testing.T) {
 	labels := []string{"best", "com_influxdata", "timeseries", "com_influxdata_telegraf", "ever"}
 	tags := make([]string, 0, len(labels))

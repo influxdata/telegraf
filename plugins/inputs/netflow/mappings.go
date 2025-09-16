@@ -7,11 +7,15 @@ import (
 )
 
 var funcMapping = map[string]decoderFunc{
-	"uint":   decodeUint,
-	"hex":    decodeHex,
-	"string": decodeString,
-	"ip":     decodeIP,
-	"proto":  decodeL4Proto,
+	"bool":    decodeBool,
+	"int":     decodeInt,
+	"uint":    decodeUint,
+	"float64": decodeFloat64,
+	"hex":     decodeHex,
+	"string":  decodeString,
+	"mac":     decodeMAC,
+	"ip":      decodeIP,
+	"proto":   decodeL4Proto,
 }
 
 func loadMapping(filename string) (map[string]fieldMapping, error) {
