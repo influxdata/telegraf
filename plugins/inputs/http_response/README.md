@@ -112,6 +112,12 @@ to use them.
   ## Interface to use when dialing an address
   # interface = "eth0"
 
+  ## Additional tags to be added to all metrics for this plugin instance
+  # additional_tags = [
+  #   {"environment" = "production"},
+  #   {"datacenter" = "us-east-1"}
+  # ]
+
   ## Optional Cookie authentication
   # cookie_auth_url = "https://localhost/authMe"
   # cookie_auth_method = "POST"
