@@ -180,7 +180,6 @@ following works:
 - github.com/go-stack/stack [MIT License](https://github.com/go-stack/stack/blob/master/LICENSE.md)
 - github.com/go-stomp/stomp [Apache License 2.0](https://github.com/go-stomp/stomp/blob/master/LICENSE.txt)
 - github.com/go-viper/mapstructure [MIT License](https://github.com/go-viper/mapstructure/blob/main/LICENSE)
-- github.com/gobwas/glob [MIT License](https://github.com/gobwas/glob/blob/master/LICENSE)
 - github.com/goccy/go-json [MIT License](https://github.com/goccy/go-json/blob/master/LICENSE)
 - github.com/godbus/dbus [BSD 2-Clause "Simplified" License](https://github.com/godbus/dbus/blob/master/LICENSE)
 - github.com/gofrs/uuid [MIT License](https://github.com/gofrs/uuid/blob/master/LICENSE)
