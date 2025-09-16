@@ -145,7 +145,7 @@ require (
 	github.com/likexian/whois-parser v1.24.20
 	github.com/linkedin/goavro/v2 v2.14.0
 	github.com/logzio/azure-monitor-metrics-receiver v1.1.0
-	github.com/lxc/incus/v6 v6.15.0
+	github.com/lxc/incus/v6 v6.16.0
 	github.com/mdlayher/apcupsd v0.0.0-20220319200143-473c7b5f3c6a
 	github.com/mdlayher/vsock v1.2.1
 	github.com/microsoft/ApplicationInsights-Go v0.4.4
@@ -226,10 +226,10 @@ require (
 	go.opentelemetry.io/proto/otlp v1.8.0
 	go.opentelemetry.io/proto/otlp/collector/profiles/v1development v0.1.0
 	go.opentelemetry.io/proto/otlp/profiles/v1development v0.1.0
-	go.starlark.net v0.0.0-20250717191651-336a4b3a6d1d
+	go.starlark.net v0.0.0-20250826212936-2a4f36945129
 	go.step.sm/crypto v0.70.0
 	golang.org/x/crypto v0.42.0
-	golang.org/x/exp v0.0.0-20250718183923-645b1fa84792
+	golang.org/x/exp v0.0.0-20250819193227-8b4c13bb791b
 	golang.org/x/mod v0.27.0
 	golang.org/x/net v0.43.0
 	golang.org/x/oauth2 v0.31.0
@@ -356,7 +356,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.7 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667 // indirect
-	github.com/go-chi/chi/v5 v5.2.2 // indirect
+	github.com/go-chi/chi/v5 v5.2.3 // indirect
 	github.com/go-darwin/apfs v0.0.0-20211011131704-f84b94dbf348 // indirect
 	github.com/go-faster/city v1.0.1 // indirect
 	github.com/go-faster/errors v0.7.1 // indirect
@@ -533,7 +533,7 @@ require (
 	github.com/zeebo/xxh3 v1.0.2 // indirect
 	github.com/zentures/cityhash v0.0.0-20131128155616-cdd6a94144ab // indirect
 	github.com/zitadel/logging v0.6.2 // indirect
-	github.com/zitadel/oidc/v3 v3.43.0 // indirect
+	github.com/zitadel/oidc/v3 v3.44.0 // indirect
 	github.com/zitadel/schema v1.3.1 // indirect
 	go.bug.st/serial v1.6.2 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.4 // indirect
@@ -560,7 +560,7 @@ require (
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20211209221555-9c9e7e272434 // indirect
 	google.golang.org/genproto v0.0.0-20250603155806-513f23925822 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250825161204-c5933d9347a5 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250826171959-ef028d996bc1 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
 	gopkg.in/fsnotify.v1 v1.4.7 // indirect
@@ -573,7 +573,7 @@ require (
 	honnef.co/go/tools v0.2.2 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b // indirect
-	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397 // indirect
+	k8s.io/utils v0.0.0-20250820121507-0af2bda4dd1d // indirect
 	modernc.org/libc v1.66.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
