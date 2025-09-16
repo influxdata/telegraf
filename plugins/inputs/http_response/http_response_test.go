@@ -1517,7 +1517,7 @@ func TestAdditionalTags(t *testing.T) {
 		URLs:            []string{ts.URL + "/good"},
 		Method:          "GET",
 		ResponseTimeout: config.Duration(time.Second * 20),
-		AdditionalTags:  []map[string]string{},
+		AdditionalTags:  make([]map[string]string, 0),
 	}
 
 	acc = testutil.Accumulator{}
