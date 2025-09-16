@@ -89,7 +89,7 @@ Please include the output of this command if opening an GitHub issue.
   - tags
     - `name` (type of GPU e.g. `GeForce GTX 1070 Ti`)
     - `compute_mode` (The compute mode of the GPU e.g. `Default`)
-    - `index` (The port index where the GPU is connected to the motherboard e.g. `1`)
+    - `index` (Port index where the GPU is connected to the motherboard e.g. `1`)
     - `pstate` (Overclocking state for the GPU e.g. `P0`)
     - `uuid` (A unique identifier for the GPU e.g. `GPU-f9ba66fc-a7f5-94c5-da19-019ef2f9c665`)
   - fields

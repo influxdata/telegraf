@@ -84,18 +84,20 @@ Language identifiers can be found in the [API documentation][languages].
     - condition_id
     - condition_main
   - fields:
-    - cloudiness (int, percent)
-    - humidity (int, percent)
-    - pressure (float, atmospheric pressure hPa)
-    - rain (float, rain volume for the last 1-3 hours (depending on API response) in mm)
-    - snow (float, snow volume for the last 1-3 hours (depending on API response) in mm)
-    - sunrise (int, nanoseconds since unix epoch)
-    - sunset (int, nanoseconds since unix epoch)
-    - temperature (float, degrees)
-    - feels_like (float, degrees)
-    - visibility (int, meters, not available on forecast data)
-    - wind_degrees (float, wind direction in degrees)
-    - wind_speed (float, wind speed in meters/sec or miles/sec)
+    - cloudiness            (int, percent)
+    - humidity              (int, percent)
+    - pressure              (float)       - atmospheric pressure hPa
+    - rain                  (float)       - rain volume in mm for the last 1-3h
+                                            (depending on API response)
+    - snow                  (float)       - snow volume in mm for the last 1-3h
+                                            (depending on API response)
+    - sunrise               (int)         - nanoseconds since unix epoch
+    - sunset                (int)         - nanoseconds since unix epoch
+    - temperature           (float, degrees)
+    - feels_like            (float, degrees)
+    - visibility            (int, meters) - not available on forecast data
+    - wind_degrees          (float)       - wind direction in degrees
+    - wind_speed            (float)       - wind speed in meters/sec or miles/sec
     - condition_description (string, localized long description)
     - condition_icon
 

@@ -177,7 +177,7 @@ to use them.
     - consumer_utilisation (float, percent)
     - consumers (int, int)
     - idle_since (string, time - e.g., "2006-01-02 15:04:05")
-    - head_message_timestamp (int, unix timestamp - only emitted if available from API)
+    - head_message_timestamp (int, unix timestamp - only emitted if available)
     - memory (int, bytes)
     - message_bytes (int, bytes)
     - message_bytes_persist (int, bytes)
