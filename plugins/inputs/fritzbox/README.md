@@ -24,7 +24,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Gather fritzbox status
 [[inputs.fritzbox]]
-  ## URLs of the devices to query including login credentials  
+  ## URLs of the devices to query including login credentials
   urls = [ "http://user:password@fritz.box:49000/" ]
 
   ## The information to collect (see README for further details).
@@ -96,76 +96,86 @@ specification][tr064].
     - `source` - The name of the device (this metric has been queried from)
     - `service` - The service id used to query this metric
   - fields
-    - `layer1_upstream_max_bit_rate` (uint) - The WAN interface's maximum upstream bit rate (bits/sec)
-    - `layer1_downstream_max_bit_rate` (uint) - The WAN interface's maximum downstream bit rate (bits/sec)
-    - `upstream_current_max_speed` (uint) - The WAN interface's current maximum upstream transfer rate (bytes/sec)
-    - `downstream_current_max_speed` (uint) - The WAN interface's current maximum downstream data rate (bytes/sec)
-    - `total_bytes_sent` (uint) - The total number of bytes sent via the WAN interface (bytes)
-    - `total_bytes_received` (uint) - The total number of bytes received via the WAN interface (bytes)
+    - `layer1_upstream_max_bit_rate`   (uint) - WAN interface's maximum upstream
+                                                bit rate (bits/sec)
+    - `layer1_downstream_max_bit_rate` (uint) - WAN interface's maximum
+                                                downstream bit rate (bits/sec)
+    - `upstream_current_max_speed`     (uint) - WAN interface's current maximum
+                                                upstream transfer rate (bytes/sec)
+    - `downstream_current_max_speed`   (uint) - WAN interface's current maximum
+                                                downstream data rate (bytes/sec)
+    - `total_bytes_sent`               (uint) - Total number of bytes sent via
+                                                the WAN interface (bytes)
+    - `total_bytes_received`           (uint) - Total number of bytes received
+                                                via the WAN interface (bytes)
 - `fritzbox_ppp`
   - tags
-    - `source` - The name of the device (this metric has been queried from)
+    - `source`  - The name of the device (this metric has been queried from)
     - `service` - The service id used to query this metric
   - fields
-    - `uptime` (uint) - The current uptime of the PPP connection in seconds
-    - `upstream_max_bit_rate` (uint) - The current maximum upstream bit rate negotiated for the PPP connection (bits/sec)
-    - `downstream_max_bit_rate` (uint) - The current maximum downstream bit rate negotiated for the PPP connection (bits/sec)
+    - `uptime`                  (uint) - Uptime of the PPP connection in seconds
+    - `upstream_max_bit_rate`   (uint) - Maximum upstream bit rate negotiated
+                                         for the PPP connection (bits/sec)
+    - `downstream_max_bit_rate` (uint) - Maximum downstream bit rate negotiated
+                                         for the PPP connection (bits/sec)
 - `fritzbox_dsl`
   - tags
-    - `source` - The name of the device (this metric has been queried from)
+    - `source`  - The name of the device (this metric has been queried from)
     - `service` - The service id used to query this metric
-    - `status` - The status of the DLS line (Up or Down)
+    - `status`  - The status of the DLS line (Up or Down)
   - fields
-    - `upstream_curr_rate` (uint) - Current DSL upstream rate (kilobits/sec)
-    - `downstream_curr_rate` (uint) - Current DSL downstream rate (kilobits/sec)
-    - `upstream_max_rate` (uint) - Maximum DSL upstream rate (kilobits/sec)
-    - `downstream_max_rate` (uint) - Maximum DSL downstream rate (kilobits/sec)
-    - `upstream_noise_margin` (uint) - Upstream noise margin (db)
+    - `upstream_curr_rate`      (uint) - Current DSL upstream rate (kbits/sec)
+    - `downstream_curr_rate`    (uint) - Current DSL downstream rate (kbits/sec)
+    - `upstream_max_rate`       (uint) - Maximum DSL upstream rate (kbits/sec)
+    - `downstream_max_rate`     (uint) - Maximum DSL downstream rate (kbits/sec)
+    - `upstream_noise_margin`   (uint) - Upstream noise margin (db)
     - `downstream_noise_margin` (uint) - Downstream noise margin (db)
-    - `upstream_attenuation` (uint) - Upstream attenuation (db)
-    - `downstream_attenuation` (uint) - Downstream attenuation (db)
-    - `upstream_power` (uint) - Upstream power
-    - `downstream_power` (uint) - Downstream power
-    - `receive_blocks` (uint) - Received blocks
-    - `transmit_blocks` (uint) - Transmitted blocks
-    - `cell_delin` (uint) - Cell delineation count
-    - `link_retrain` (uint) - Link retrains
-    - `init_errors` (uint) - Initialization errors
-    - `init_timeouts` (uint) - Initialization timeouts
-    - `loss_of_framing` (uint) - Loss of frame errors
-    - `errored_secs` (uint) - Continuous seconds with errors
-    - `severly_errored_secs` (uint) - Continuous seconds with severe errors
-    - `fec_errors` (uint) - Local (Modem) FEC (Forward Error Correction) errors
-    - `atuc_fec_errors` (uint) - Remote (DSLAM) FEC (Forward Error Correction) errors
-    - `hec_errors` (uint) - Local (Modem) HEC (Header Error Control) errors
-    - `atuc_hec_errors` (uint) - Remote (DSLAM) HEC (Header Error Control) errors
-    - `crc_errors` (uint) - Local (Modem) CRC (Cyclic Redundancy Check) error
-    - `atuc_crc_errors` (uint) - Remote (DSLAM) CRC (Cyclic Redundancy Check) errors
+    - `upstream_attenuation`    (uint) - Upstream attenuation (db)
+    - `downstream_attenuation`  (uint) - Downstream attenuation (db)
+    - `upstream_power`          (uint) - Upstream power
+    - `downstream_power`        (uint) - Downstream power
+    - `receive_blocks`          (uint) - Received blocks
+    - `transmit_blocks`         (uint) - Transmitted blocks
+    - `cell_delin`              (uint) - Cell delineation count
+    - `link_retrain`            (uint) - Link retrains
+    - `init_errors`             (uint) - Initialization errors
+    - `init_timeouts`           (uint) - Initialization timeouts
+    - `loss_of_framing`         (uint) - Loss of frame errors
+    - `errored_secs`            (uint) - Continuous seconds with errors
+    - `severly_errored_secs`    (uint) - Continuous seconds with severe errors
+    - `fec_errors`              (uint) - Local Modem Forward Error Correction errors
+    - `atuc_fec_errors`         (uint) - Remote DSLAM Forward Error Correction errors
+    - `hec_errors`              (uint) - Local Modem Header Error Control errors
+    - `atuc_hec_errors`         (uint) - Remote DSLAM Header Error Control errors
+    - `crc_errors`              (uint) - Local Modem Cyclic Redundancy Check error
+    - `atuc_crc_errors`         (uint) - Remote DSLAM Cyclic Redundancy Check errors
 - `fritzbox_wlan`
   - tags
-    - `source` - The name of the device (this metric has been queried from)
+    - `source`  - The name of the device (this metric has been queried from)
     - `service` - The service id used to query this metric
-    - `wlan` - The WLAN SSID (name)
+    - `wlan`    - The WLAN SSID (name)
     - `channel` - The channel used by this WLAN
-    - `band` - The band (in MHz) used by this WLAN
-    - `status` - The status of the WLAN line (Up or Down)
+    - `band`    - The band (in MHz) used by this WLAN
+    - `status`  - The status of the WLAN line (Up or Down)
   - fields
     - `total_associations` (uint) - The number of devices connected to this WLAN.
 - `fritzbox_hosts`
   - tags
-    - `source` - The name of the device (this metric has been queried from)
-    - `service` - The service id used to query this metric
-    - `node` - The name of the node connected to the mesh network
-    - `node_role` - The node's role ("master" = mesh master, "slave" = mesh slave, "client") in the network
-    - `node_ap` - The name of the access point this node is connected to
-    - `node_ap_role` - The access point's role ("master" = mesh master, "slave" = mesh slave, never "client") in the network
-    - `link_type` - The link type ("WLAN" or "LAN") of the peer connection
-    - `link_name` - The link name of the connection
+    - `source`       - Device name this metric has been queried from
+    - `service`      - Service ID used to query this metric
+    - `node`         - Node name connected to the mesh network
+    - `node_role`    - Node role in the network
+                       ("master" = mesh master, "slave" = mesh slave, "client")
+    - `node_ap`      - Name of the access point this node is connected to
+    - `node_ap_role` - Access point's role  in the network
+                       ("master" = mesh master, "slave" = mesh slave)
+    - `link_type`    - Link type ("WLAN" or "LAN") of the peer connection
+    - `link_name`    - Link name of the connection
   - fields
-    - `max_data_rate_tx` (uint) - The connection's maximum transmit rate (kilobits/sec)
-    - `max_data_rate_rx` (uint) - The connection's maximum receive rate (kilobits/sec)
-    - `cur_data_rate_tx` (uint) - The connection's maximum transmit rate (kilobits/sec)
-    - `cur_data_rate_rx` (uint) - The connection's current receive rate (kilobits/sec)
+    - `max_data_rate_tx` (uint) - The connection's maximum transmit rate (kbits/sec)
+    - `max_data_rate_rx` (uint) - The connection's maximum receive rate (kbits/sec)
+    - `cur_data_rate_tx` (uint) - The connection's maximum transmit rate (kbits/sec)
+    - `cur_data_rate_rx` (uint) - The connection's current receive rate (kbits/sec)
 
 ## Example Output
 

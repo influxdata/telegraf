@@ -262,9 +262,12 @@ cluster, or we use the kubeconfig file to determine where to monitor.  Currently
 the following annotation are supported:
 
 * `prometheus.io/scrape` Enable scraping for this pod.
-* `prometheus.io/scheme` If the metrics endpoint is secured then you will need to set this to `https` & most likely set the tls config. (default 'http')
-* `prometheus.io/path` Override the path for the metrics endpoint on the service. (default '/metrics')
-* `prometheus.io/port` Used to override the port. (default 9102)
+* `prometheus.io/scheme` If the metrics endpoint is secured then you will need
+                         to set this to `https` & most likely set the tls config.
+                        (default 'http')
+* `prometheus.io/path`  Override the path for the metrics endpoint on the service.
+                        (default '/metrics')
+* `prometheus.io/port`  Used to override the port. (default 9102)
 
 Using the `monitor_kubernetes_pods_namespace` option allows you to limit which
 pods you are scraping.
@@ -364,8 +367,10 @@ query a given http service discovery endpoint for available hosts. Using
 and refresh the list of scraped urls.  It can use the information from the
 response to build the scraped url and additional tags.
 
-More information on the format of http service discovery is found
-[here](https://prometheus.io/docs/prometheus/latest/http_sd/).
+More information on the format of http service discovery is found in the
+[prometheus documentation][http_sd].
+
+[http_sd]: https://prometheus.io/docs/prometheus/latest/http_sd
 
 ### Bearer Token
 
