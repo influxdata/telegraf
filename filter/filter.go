@@ -2,8 +2,6 @@ package filter
 
 import (
 	"strings"
-
-	"github.com/gobwas/glob"
 )
 
 type Filter interface {
@@ -47,10 +45,8 @@ func Compile(filters []string, separators ...rune) (Filter, error) {
 		return &filterSingle{s: filters[0]}, nil
 	case !wildcards && len(filters) != 1:
 		return newFilterNoGlob(filters), nil
-	case wildcards && len(filters) == 1:
-		return glob.Compile(filters[0], separators...)
 	default:
-		return newFilterGlobMultiple(filters, separators...)
+		return newFilterGlob(filters, separators...)
 	}
 }
 

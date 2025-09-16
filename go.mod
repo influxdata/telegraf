@@ -65,7 +65,7 @@ require (
 	github.com/benbjohnson/clock v1.3.5
 	github.com/bluenviron/gomavlib/v3 v3.3.0
 	github.com/blues/jsonata-go v1.5.4
-	github.com/bmatcuk/doublestar/v3 v3.0.0
+	github.com/bmatcuk/doublestar/v4 v4.9.1
 	github.com/boschrexroth/ctrlx-datalayer-golang v1.3.1
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/caio/go-tdigest v3.1.0+incompatible
@@ -96,7 +96,6 @@ require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/go-stomp/stomp v2.1.4+incompatible
-	github.com/gobwas/glob v0.2.3
 	github.com/gofrs/uuid/v5 v5.4.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang-jwt/jwt/v5 v5.3.0
