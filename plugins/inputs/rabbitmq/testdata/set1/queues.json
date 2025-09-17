@@ -102,6 +102,7 @@
       "max_heap_size": 0
     },
     "state": "running",
+    "type": "quorum",
     "recoverable_slaves": null,
     "memory": 143776,
     "consumer_utilisation": 1.0,
@@ -110,11 +111,352 @@
     "effective_policy_definition": [],
     "operator_policy": null,
     "policy": null,
-    "slave_nodes":[
+    "slave_nodes": [
       "rabbit@ip-10-1-2-118"
     ],
-    "synchronised_slave_nodes":[
+    "synchronised_slave_nodes": [
       "rabbit@ip-10-1-2-118"
     ]
+  },
+  {
+    "messages_details": {
+      "rate": 0.0
+    },
+    "messages": 25,
+    "messages_unacknowledged_details": {
+      "rate": 0.0
+    },
+    "messages_unacknowledged": 25,
+    "messages_ready_details": {
+      "rate": 0.0
+    },
+    "messages_ready": 20,
+    "reductions_details": {
+      "rate": 150.0
+    },
+    "reductions": 8000000,
+    "message_stats": {
+      "deliver_get_details": {
+        "rate": 0.1
+      },
+      "deliver_get": 1500,
+      "ack_details": {
+        "rate": 5.5
+      },
+      "ack": 1500,
+      "redeliver_details": {
+        "rate": 1.2
+      },
+      "redeliver": 15,
+      "deliver_no_ack_details": {
+        "rate": 0.0
+      },
+      "deliver_no_ack": 0,
+      "deliver_details": {
+        "rate": 200.0
+      },
+      "deliver": 10000,
+      "get_no_ack_details": {
+        "rate": 0.0
+      },
+      "get_no_ack": 0,
+      "get_details": {
+        "rate": 0.0
+      },
+      "get": 0,
+      "publish_details": {
+        "rate": 8.5
+      },
+      "publish": 1500
+    },
+    "node": "rabbit@rmqlocal-0.rmqlocal.ankorabbitstatefulset3.svc.cluster.local",
+    "arguments": {
+      "x-expires": 1800000
+    },
+    "exclusive": false,
+    "auto_delete": false,
+    "durable": true,
+    "vhost": "sorandomsorandom",
+    "name": "stream_queue_example",
+    "message_bytes_paged_out": 0,
+    "messages_paged_out": 0,
+    "idle_since": "2015-11-01 9:15:30",
+    "backing_queue_status": {
+      "avg_ack_egress_rate": 0.1,
+      "avg_ack_ingress_rate": 0.1,
+      "avg_egress_rate": 0.1,
+      "avg_ingress_rate": 0.1,
+      "delta": [
+        "delta",
+        "undefined",
+        0,
+        0,
+        "undefined"
+      ],
+      "len": 0,
+      "mode": "default",
+      "next_seq_id": 1500,
+      "q1": 0,
+      "q2": 0,
+      "q3": 0,
+      "q4": 0,
+      "target_ram_count": 0
+    },
+    "head_message_timestamp": 1446366000,
+    "message_bytes_persistent": 5,
+    "message_bytes_ram": 4,
+    "message_bytes_unacknowledged": 3,
+    "message_bytes_ready": 2,
+    "message_bytes": 1,
+    "messages_persistent": 0,
+    "messages_unacknowledged_ram": 0,
+    "messages_ready_ram": 0,
+    "messages_ram": 0,
+    "garbage_collection": {
+      "minor_gcs": 200,
+      "fullsweep_after": 65535,
+      "min_heap_size": 233,
+      "min_bin_vheap_size": 46422,
+      "max_heap_size": 0
+    },
+    "state": "running",
+    "type": "stream",
+    "recoverable_slaves": null,
+    "memory": 95000,
+    "consumer_utilisation": 0.8,
+    "consumers": 2,
+    "exclusive_consumer_tag": null,
+    "effective_policy_definition": [],
+    "operator_policy": null,
+    "policy": null,
+    "slave_nodes": [],
+    "synchronised_slave_nodes": []
+  },
+  {
+    "messages_details": {
+      "rate": 0.0
+    },
+    "messages": 10,
+    "messages_unacknowledged_details": {
+      "rate": 0.0
+    },
+    "messages_unacknowledged": 10,
+    "messages_ready_details": {
+      "rate": 0.0
+    },
+    "messages_ready": 8,
+    "reductions_details": {
+      "rate": 50.0
+    },
+    "reductions": 2000000,
+    "message_stats": {
+      "deliver_get_details": {
+        "rate": 0.1
+      },
+      "deliver_get": 500,
+      "ack_details": {
+        "rate": 2.0
+      },
+      "ack": 500,
+      "redeliver_details": {
+        "rate": 0.5
+      },
+      "redeliver": 5,
+      "deliver_no_ack_details": {
+        "rate": 0.0
+      },
+      "deliver_no_ack": 0,
+      "deliver_details": {
+        "rate": 50.0
+      },
+      "deliver": 2000,
+      "get_no_ack_details": {
+        "rate": 0.0
+      },
+      "get_no_ack": 0,
+      "get_details": {
+        "rate": 0.0
+      },
+      "get": 0,
+      "publish_details": {
+        "rate": 3.0
+      },
+      "publish": 500
+    },
+    "node": "rabbit@rmqlocal-0.rmqlocal.ankorabbitstatefulset3.svc.cluster.local",
+    "arguments": {
+      "x-expires": 1800000
+    },
+    "exclusive": false,
+    "auto_delete": false,
+    "durable": true,
+    "vhost": "sorandomsorandom",
+    "name": "no-type-queue",
+    "message_bytes_paged_out": 0,
+    "messages_paged_out": 0,
+    "idle_since": "2015-11-01 10:30:00",
+    "backing_queue_status": {
+      "avg_ack_egress_rate": 0.05,
+      "avg_ack_ingress_rate": 0.05,
+      "avg_egress_rate": 0.05,
+      "avg_ingress_rate": 0.05,
+      "delta": [
+        "delta",
+        "undefined",
+        0,
+        0,
+        "undefined"
+      ],
+      "len": 0,
+      "mode": "default",
+      "next_seq_id": 500,
+      "q1": 0,
+      "q2": 0,
+      "q3": 0,
+      "q4": 0,
+      "target_ram_count": 0
+    },
+    "head_message_timestamp": 1446372000,
+    "message_bytes_persistent": 2,
+    "message_bytes_ram": 1,
+    "message_bytes_unacknowledged": 1,
+    "message_bytes_ready": 1,
+    "message_bytes": 1,
+    "messages_persistent": 0,
+    "messages_unacknowledged_ram": 0,
+    "messages_ready_ram": 0,
+    "messages_ram": 0,
+    "garbage_collection": {
+      "minor_gcs": 100,
+      "fullsweep_after": 65535,
+      "min_heap_size": 233,
+      "min_bin_vheap_size": 46422,
+      "max_heap_size": 0
+    },
+    "state": "running",
+    "recoverable_slaves": null,
+    "memory": 50000,
+    "consumer_utilisation": 0.9,
+    "consumers": 1,
+    "exclusive_consumer_tag": null,
+    "effective_policy_definition": [],
+    "operator_policy": null,
+    "policy": null,
+    "slave_nodes": [],
+    "synchronised_slave_nodes": []
+  },
+  {
+    "messages_details": {
+      "rate": 0.0
+    },
+    "messages": 15,
+    "messages_unacknowledged_details": {
+      "rate": 0.0
+    },
+    "messages_unacknowledged": 15,
+    "messages_ready_details": {
+      "rate": 0.0
+    },
+    "messages_ready": 12,
+    "reductions_details": {
+      "rate": 75.0
+    },
+    "reductions": 3000000,
+    "message_stats": {
+      "deliver_get_details": {
+        "rate": 0.1
+      },
+      "deliver_get": 750,
+      "ack_details": {
+        "rate": 3.0
+      },
+      "ack": 750,
+      "redeliver_details": {
+        "rate": 0.8
+      },
+      "redeliver": 8,
+      "deliver_no_ack_details": {
+        "rate": 0.0
+      },
+      "deliver_no_ack": 0,
+      "deliver_details": {
+        "rate": 75.0
+      },
+      "deliver": 3000,
+      "get_no_ack_details": {
+        "rate": 0.0
+      },
+      "get_no_ack": 0,
+      "get_details": {
+        "rate": 0.0
+      },
+      "get": 0,
+      "publish_details": {
+        "rate": 4.5
+      },
+      "publish": 750
+    },
+    "node": "rabbit@rmqlocal-0.rmqlocal.ankorabbitstatefulset3.svc.cluster.local",
+    "arguments": {
+      "x-expires": 1800000
+    },
+    "exclusive": false,
+    "auto_delete": false,
+    "durable": true,
+    "vhost": "sorandomsorandom",
+    "name": "invalid-type-queue",
+    "message_bytes_paged_out": 0,
+    "messages_paged_out": 0,
+    "idle_since": "2015-11-01 11:45:00",
+    "backing_queue_status": {
+      "avg_ack_egress_rate": 0.08,
+      "avg_ack_ingress_rate": 0.08,
+      "avg_egress_rate": 0.08,
+      "avg_ingress_rate": 0.08,
+      "delta": [
+        "delta",
+        "undefined",
+        0,
+        0,
+        "undefined"
+      ],
+      "len": 0,
+      "mode": "default",
+      "next_seq_id": 750,
+      "q1": 0,
+      "q2": 0,
+      "q3": 0,
+      "q4": 0,
+      "target_ram_count": 0
+    },
+    "head_message_timestamp": 1446375000,
+    "message_bytes_persistent": 3,
+    "message_bytes_ram": 2,
+    "message_bytes_unacknowledged": 2,
+    "message_bytes_ready": 1,
+    "message_bytes": 1,
+    "messages_persistent": 0,
+    "messages_unacknowledged_ram": 0,
+    "messages_ready_ram": 0,
+    "messages_ram": 0,
+    "garbage_collection": {
+      "minor_gcs": 150,
+      "fullsweep_after": 65535,
+      "min_heap_size": 233,
+      "min_bin_vheap_size": 46422,
+      "max_heap_size": 0
+    },
+    "state": "running",
+    "type": "invalid_type",
+    "recoverable_slaves": null,
+    "memory": 75000,
+    "consumer_utilisation": 0.85,
+    "consumers": 2,
+    "exclusive_consumer_tag": null,
+    "effective_policy_definition": [],
+    "operator_policy": null,
+    "policy": null,
+    "slave_nodes": [],
+    "synchronised_slave_nodes": []
   }
 ]
