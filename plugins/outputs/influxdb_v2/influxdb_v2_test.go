@@ -23,6 +23,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	influxdb "github.com/influxdata/telegraf/plugins/outputs/influxdb_v2"
+	"github.com/influxdata/telegraf/selfstat"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -124,10 +125,13 @@ func TestConnect(t *testing.T) {
 	}
 
 	for _, plugin := range tests {
+		collector := selfstat.NewCollector(make(map[string]string))
+		plugin.Statistics = collector
 		t.Run(plugin.URLs[0], func(t *testing.T) {
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
 		})
+		collector.UnregisterAll()
 	}
 }
 
@@ -181,9 +185,14 @@ func TestWrite(t *testing.T) {
 	)
 	defer ts.Close()
 
+	url := "http://" + ts.Listener.Addr().String()
+	collector := selfstat.NewCollector(make(map[string]string))
+	defer func() {
+		collector.UnregisterAll()
+	}()
 	// Setup plugin and connect
 	plugin := &influxdb.InfluxDB{
-		URLs:             []string{"http://" + ts.Listener.Addr().String()},
+		URLs:             []string{url},
 		Bucket:           "telegraf",
 		BucketTag:        "bucket",
 		ExcludeBucketTag: true,
@@ -191,6 +200,7 @@ func TestWrite(t *testing.T) {
 		PingTimeout:      config.Duration(15 * time.Second),
 		ReadIdleTimeout:  config.Duration(30 * time.Second),
 		Log:              &testutil.Logger{},
+		Statistics:       collector,
 	}
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -211,6 +221,16 @@ func TestWrite(t *testing.T) {
 	}
 	require.NoError(t, plugin.Write(metrics))
 	require.NoError(t, plugin.Write(metrics))
+
+	stat := collector.Get("outputs.influxdb_v2", "successful_writes_total", map[string]string{
+		"url": url + "/api/v2/write",
+	})
+	require.NotNil(t, stat)
+	require.Equal(t, int64(2), stat.Get())
+
+	stat = collector.Get("write", "bytes_total", map[string]string{})
+	require.NotNil(t, stat)
+	require.Equal(t, int64(38), stat.Get())
 }
 
 func TestWriteBucketTagWorksOnRetry(t *testing.T) {
@@ -253,13 +273,19 @@ func TestWriteBucketTagWorksOnRetry(t *testing.T) {
 	defer ts.Close()
 
 	// Setup plugin and connect
+	url := "http://" + ts.Listener.Addr().String()
+	collector := selfstat.NewCollector(make(map[string]string))
+	defer func() {
+		collector.UnregisterAll()
+	}()
 	plugin := &influxdb.InfluxDB{
-		URLs:             []string{"http://" + ts.Listener.Addr().String()},
+		URLs:             []string{url},
 		Bucket:           "telegraf",
 		BucketTag:        "bucket",
 		ExcludeBucketTag: true,
 		ContentEncoding:  "identity",
 		Log:              &testutil.Logger{},
+		Statistics:       collector,
 	}
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -280,6 +306,12 @@ func TestWriteBucketTagWorksOnRetry(t *testing.T) {
 	}
 	require.NoError(t, plugin.Write(metrics))
 	require.NoError(t, plugin.Write(metrics))
+
+	stat := collector.Get("outputs.influxdb_v2", "successful_writes_total", map[string]string{
+		"url": url + "/api/v2/write",
+	})
+	require.NotNil(t, stat)
+	require.Equal(t, int64(2), stat.Get())
 }
 
 func TestTooLargeWriteRetry(t *testing.T) {
@@ -318,6 +350,10 @@ func TestTooLargeWriteRetry(t *testing.T) {
 	defer ts.Close()
 
 	// Setup plugin and connect
+	collector := selfstat.NewCollector(make(map[string]string))
+	defer func() {
+		collector.UnregisterAll()
+	}()
 	plugin := &influxdb.InfluxDB{
 		URLs:             []string{"http://" + ts.Listener.Addr().String()},
 		Bucket:           "telegraf",
@@ -325,6 +361,7 @@ func TestTooLargeWriteRetry(t *testing.T) {
 		ExcludeBucketTag: true,
 		ContentEncoding:  "identity",
 		Log:              &testutil.Logger{},
+		Statistics:       collector,
 	}
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -412,6 +449,10 @@ func TestRateLimit(t *testing.T) {
 	defer ts.Close()
 
 	// Setup plugin and connect
+	collector := selfstat.NewCollector(make(map[string]string))
+	defer func() {
+		collector.UnregisterAll()
+	}()
 	plugin := &influxdb.InfluxDB{
 		URLs:            []string{"http://" + ts.Listener.Addr().String()},
 		Bucket:          "telegraf",
@@ -420,7 +461,8 @@ func TestRateLimit(t *testing.T) {
 			Limit:  50,
 			Period: config.Duration(time.Second),
 		},
-		Log: &testutil.Logger{},
+		Log:        &testutil.Logger{},
+		Statistics: collector,
 	}
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -520,11 +562,17 @@ func TestStatusCodeNonRetryable4xx(t *testing.T) {
 			defer ts.Close()
 
 			// Setup plugin and connect
+			url := "http://" + ts.Listener.Addr().String()
+			collector := selfstat.NewCollector(make(map[string]string))
+			defer func() {
+				collector.UnregisterAll()
+			}()
 			plugin := &influxdb.InfluxDB{
-				URLs:            []string{"http://" + ts.Listener.Addr().String()},
+				URLs:            []string{url},
 				BucketTag:       "bucket",
 				ContentEncoding: "identity",
 				Log:             &testutil.Logger{},
+				Statistics:      collector,
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -585,6 +633,17 @@ func TestStatusCodeNonRetryable4xx(t *testing.T) {
 			var writeErr *internal.PartialWriteError
 			require.ErrorAs(t, err, &writeErr)
 			require.Len(t, writeErr.MetricsReject, 2, "rejected metrics")
+
+			stat := collector.Get("outputs.influxdb_v2", "failed_writes_total", map[string]string{
+				"url": url + "/api/v2/write",
+			})
+			require.NotNil(t, stat)
+			require.Equal(t, int64(1), stat.Get())
+			stat = collector.Get("outputs.influxdb_v2", "non_retryable_errors_total", map[string]string{
+				"url": url + "/api/v2/write",
+			})
+			require.NotNil(t, stat)
+			require.Equal(t, int64(1), stat.Get())
 		})
 	}
 }
@@ -613,10 +672,15 @@ func TestStatusCodeInvalidAuthentication(t *testing.T) {
 			defer ts.Close()
 
 			// Setup plugin and connect
+			collector := selfstat.NewCollector(make(map[string]string))
+			defer func() {
+				collector.UnregisterAll()
+			}()
 			plugin := &influxdb.InfluxDB{
-				URLs:      []string{"http://" + ts.Listener.Addr().String()},
-				BucketTag: "bucket",
-				Log:       &testutil.Logger{},
+				URLs:       []string{"http://" + ts.Listener.Addr().String()},
+				BucketTag:  "bucket",
+				Log:        &testutil.Logger{},
+				Statistics: collector,
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -708,11 +772,17 @@ func TestStatusCodeServiceUnavailable(t *testing.T) {
 			defer ts.Close()
 
 			// Setup plugin and connect
+			url := "http://" + ts.Listener.Addr().String()
+			collector := selfstat.NewCollector(make(map[string]string))
+			defer func() {
+				collector.UnregisterAll()
+			}()
 			plugin := &influxdb.InfluxDB{
-				URLs:            []string{"http://" + ts.Listener.Addr().String()},
+				URLs:            []string{url},
 				BucketTag:       "bucket",
 				ContentEncoding: "identity",
 				Log:             &testutil.Logger{},
+				Statistics:      collector,
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -770,6 +840,17 @@ func TestStatusCodeServiceUnavailable(t *testing.T) {
 			require.ErrorAs(t, err, &writeErr)
 			require.Empty(t, writeErr.MetricsReject, "rejected metrics")
 			require.LessOrEqual(t, len(writeErr.MetricsAccept), 2, "accepted metrics")
+
+			stat := collector.Get("outputs.influxdb_v2", "failed_writes_total", map[string]string{
+				"url": url + "/api/v2/write",
+			})
+			require.NotNil(t, stat)
+			require.Equal(t, int64(1), stat.Get())
+			stat = collector.Get("outputs.influxdb_v2", "retryable_errors_total", map[string]string{
+				"url": url + "/api/v2/write",
+			})
+			require.NotNil(t, stat)
+			require.Equal(t, int64(1), stat.Get())
 		})
 	}
 }
@@ -798,11 +879,17 @@ func TestStatusCodeUnexpected(t *testing.T) {
 			defer ts.Close()
 
 			// Setup plugin and connect
+			url := "http://" + ts.Listener.Addr().String()
+			collector := selfstat.NewCollector(make(map[string]string))
+			defer func() {
+				collector.UnregisterAll()
+			}()
 			plugin := &influxdb.InfluxDB{
-				URLs:            []string{"http://" + ts.Listener.Addr().String()},
+				URLs:            []string{url},
 				BucketTag:       "bucket",
 				ContentEncoding: "identity",
 				Log:             &testutil.Logger{},
+				Statistics:      collector,
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -861,6 +948,17 @@ func TestStatusCodeUnexpected(t *testing.T) {
 			require.ErrorAs(t, err, &writeErr)
 			require.Empty(t, writeErr.MetricsReject, "rejected metrics")
 			require.LessOrEqual(t, len(writeErr.MetricsAccept), 2, "accepted metrics")
+
+			stat := collector.Get("outputs.influxdb_v2", "failed_writes_total", map[string]string{
+				"url": url + "/api/v2/write",
+			})
+			require.NotNil(t, stat)
+			require.Equal(t, int64(1), stat.Get())
+			stat = collector.Get("outputs.influxdb_v2", "retryable_errors_total", map[string]string{
+				"url": url + "/api/v2/write",
+			})
+			require.NotNil(t, stat)
+			require.Equal(t, int64(1), stat.Get())
 		})
 	}
 }
@@ -880,12 +978,17 @@ func TestUseDynamicSecret(t *testing.T) {
 	defer ts.Close()
 
 	secretToken := config.NewSecret([]byte("wrongtk"))
+	collector := selfstat.NewCollector(make(map[string]string))
+	defer func() {
+		collector.UnregisterAll()
+	}()
 	// Setup plugin and connect
 	plugin := &influxdb.InfluxDB{
-		URLs:   []string{"http://" + ts.Listener.Addr().String()},
-		Log:    &testutil.Logger{},
-		Bucket: "my_bucket",
-		Token:  secretToken,
+		URLs:       []string{"http://" + ts.Listener.Addr().String()},
+		Log:        &testutil.Logger{},
+		Statistics: collector,
+		Bucket:     "my_bucket",
+		Token:      secretToken,
 	}
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -924,11 +1027,16 @@ func BenchmarkWrite1k(b *testing.B) {
 	defer ts.Close()
 
 	// Setup plugin and connect
+	collector := selfstat.NewCollector(make(map[string]string))
+	defer func() {
+		collector.UnregisterAll()
+	}()
 	plugin := &influxdb.InfluxDB{
-		URLs:   []string{"http://" + ts.Listener.Addr().String()},
-		Token:  config.NewSecret([]byte("sometoken")),
-		Bucket: "my_bucket",
-		Log:    &testutil.Logger{},
+		URLs:       []string{"http://" + ts.Listener.Addr().String()},
+		Token:      config.NewSecret([]byte("sometoken")),
+		Bucket:     "my_bucket",
+		Log:        &testutil.Logger{},
+		Statistics: collector,
 	}
 	require.NoError(b, plugin.Init())
 	require.NoError(b, plugin.Connect())
@@ -968,11 +1076,16 @@ func BenchmarkWrite5k(b *testing.B) {
 	defer ts.Close()
 
 	// Setup plugin and connect
+	collector := selfstat.NewCollector(make(map[string]string))
+	defer func() {
+		collector.UnregisterAll()
+	}()
 	plugin := &influxdb.InfluxDB{
-		URLs:   []string{"http://" + ts.Listener.Addr().String()},
-		Token:  config.NewSecret([]byte("sometoken")),
-		Bucket: "my_bucket",
-		Log:    &testutil.Logger{},
+		URLs:       []string{"http://" + ts.Listener.Addr().String()},
+		Token:      config.NewSecret([]byte("sometoken")),
+		Bucket:     "my_bucket",
+		Log:        &testutil.Logger{},
+		Statistics: collector,
 	}
 	require.NoError(b, plugin.Init())
 	require.NoError(b, plugin.Connect())
@@ -1012,11 +1125,16 @@ func BenchmarkWrite10k(b *testing.B) {
 	defer ts.Close()
 
 	// Setup plugin and connect
+	collector := selfstat.NewCollector(make(map[string]string))
+	defer func() {
+		collector.UnregisterAll()
+	}()
 	plugin := &influxdb.InfluxDB{
-		URLs:   []string{"http://" + ts.Listener.Addr().String()},
-		Token:  config.NewSecret([]byte("sometoken")),
-		Bucket: "my_bucket",
-		Log:    &testutil.Logger{},
+		URLs:       []string{"http://" + ts.Listener.Addr().String()},
+		Token:      config.NewSecret([]byte("sometoken")),
+		Bucket:     "my_bucket",
+		Log:        &testutil.Logger{},
+		Statistics: collector,
 	}
 	require.NoError(b, plugin.Init())
 	require.NoError(b, plugin.Connect())
@@ -1056,11 +1174,16 @@ func BenchmarkWrite25k(b *testing.B) {
 	defer ts.Close()
 
 	// Setup plugin and connect
+	collector := selfstat.NewCollector(make(map[string]string))
+	defer func() {
+		collector.UnregisterAll()
+	}()
 	plugin := &influxdb.InfluxDB{
-		URLs:   []string{"http://" + ts.Listener.Addr().String()},
-		Token:  config.NewSecret([]byte("sometoken")),
-		Bucket: "my_bucket",
-		Log:    &testutil.Logger{},
+		URLs:       []string{"http://" + ts.Listener.Addr().String()},
+		Token:      config.NewSecret([]byte("sometoken")),
+		Bucket:     "my_bucket",
+		Log:        &testutil.Logger{},
+		Statistics: collector,
 	}
 	require.NoError(b, plugin.Init())
 	require.NoError(b, plugin.Connect())
@@ -1100,11 +1223,16 @@ func BenchmarkWrite50k(b *testing.B) {
 	defer ts.Close()
 
 	// Setup plugin and connect
+	collector := selfstat.NewCollector(make(map[string]string))
+	defer func() {
+		collector.UnregisterAll()
+	}()
 	plugin := &influxdb.InfluxDB{
-		URLs:   []string{"http://" + ts.Listener.Addr().String()},
-		Token:  config.NewSecret([]byte("sometoken")),
-		Bucket: "my_bucket",
-		Log:    &testutil.Logger{},
+		URLs:       []string{"http://" + ts.Listener.Addr().String()},
+		Token:      config.NewSecret([]byte("sometoken")),
+		Bucket:     "my_bucket",
+		Log:        &testutil.Logger{},
+		Statistics: collector,
 	}
 	require.NoError(b, plugin.Init())
 	require.NoError(b, plugin.Connect())
@@ -1144,11 +1272,16 @@ func BenchmarkWrite100k(b *testing.B) {
 	defer ts.Close()
 
 	// Setup plugin and connect
+	collector := selfstat.NewCollector(make(map[string]string))
+	defer func() {
+		collector.UnregisterAll()
+	}()
 	plugin := &influxdb.InfluxDB{
-		URLs:   []string{"http://" + ts.Listener.Addr().String()},
-		Token:  config.NewSecret([]byte("sometoken")),
-		Bucket: "my_bucket",
-		Log:    &testutil.Logger{},
+		URLs:       []string{"http://" + ts.Listener.Addr().String()},
+		Token:      config.NewSecret([]byte("sometoken")),
+		Bucket:     "my_bucket",
+		Log:        &testutil.Logger{},
+		Statistics: collector,
 	}
 	require.NoError(b, plugin.Init())
 	require.NoError(b, plugin.Connect())
@@ -1188,12 +1321,17 @@ func BenchmarkWriteConcurrent100k_4(b *testing.B) {
 	defer ts.Close()
 
 	// Setup plugin and connect
+	collector := selfstat.NewCollector(make(map[string]string))
+	defer func() {
+		collector.UnregisterAll()
+	}()
 	plugin := &influxdb.InfluxDB{
 		URLs:             []string{"http://" + ts.Listener.Addr().String()},
 		Token:            config.NewSecret([]byte("sometoken")),
 		Bucket:           "my_bucket",
 		ConcurrentWrites: 4,
 		Log:              &testutil.Logger{},
+		Statistics:       collector,
 	}
 	require.NoError(b, plugin.Init())
 	require.NoError(b, plugin.Connect())
@@ -1233,12 +1371,17 @@ func BenchmarkWriteConcurrent100k_8(b *testing.B) {
 	defer ts.Close()
 
 	// Setup plugin and connect
+	collector := selfstat.NewCollector(make(map[string]string))
+	defer func() {
+		collector.UnregisterAll()
+	}()
 	plugin := &influxdb.InfluxDB{
 		URLs:             []string{"http://" + ts.Listener.Addr().String()},
 		Token:            config.NewSecret([]byte("sometoken")),
 		Bucket:           "my_bucket",
 		ConcurrentWrites: 8,
 		Log:              &testutil.Logger{},
+		Statistics:       collector,
 	}
 	require.NoError(b, plugin.Init())
 	require.NoError(b, plugin.Connect())
@@ -1278,12 +1421,17 @@ func BenchmarkWriteConcurrent100k_16(b *testing.B) {
 	defer ts.Close()
 
 	// Setup plugin and connect
+	collector := selfstat.NewCollector(make(map[string]string))
+	defer func() {
+		collector.UnregisterAll()
+	}()
 	plugin := &influxdb.InfluxDB{
 		URLs:             []string{"http://" + ts.Listener.Addr().String()},
 		Token:            config.NewSecret([]byte("sometoken")),
 		Bucket:           "my_bucket",
 		ConcurrentWrites: 16,
 		Log:              &testutil.Logger{},
+		Statistics:       collector,
 	}
 	require.NoError(b, plugin.Init())
 	require.NoError(b, plugin.Connect())
