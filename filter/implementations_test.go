@@ -21,7 +21,7 @@ func TestNormalizePattern(t *testing.T) {
 		{
 			name:       "no separators",
 			pattern:    "foo.bar/baz",
-			separators: []rune{},
+			separators: nil,
 			expected:   "foo.bar/baz",
 		},
 		{
@@ -171,7 +171,7 @@ func TestFilterGlobWithSeparators(t *testing.T) {
 		{
 			name:        "no separators standard glob",
 			patterns:    []string{"cpu.*"},
-			separators:  []rune{},
+			separators:  nil,
 			input:       "cpu.user",
 			shouldMatch: true,
 		},
@@ -210,7 +210,7 @@ func TestFilterGlobEdgeCases(t *testing.T) {
 	})
 
 	t.Run("empty pattern list", func(t *testing.T) {
-		filter, err := newFilterGlob([]string{})
+		filter, err := newFilterGlob(nil)
 		require.NoError(t, err)
 		require.False(t, filter.Match("anything"), "Empty pattern list should match nothing")
 	})
@@ -254,7 +254,8 @@ func BenchmarkNormalizePattern(b *testing.B) {
 
 func BenchmarkFilterGlobMatch(b *testing.B) {
 	b.Run("without separators", func(b *testing.B) {
-		filter, _ := newFilterGlob([]string{"cpu*", "mem*", "disk*"})
+		filter, err := newFilterGlob([]string{"cpu*", "mem*", "disk*"})
+		require.NoError(b, err)
 		input := "cpu.user.count"
 
 		b.ResetTimer()
@@ -264,7 +265,8 @@ func BenchmarkFilterGlobMatch(b *testing.B) {
 	})
 
 	b.Run("with separators", func(b *testing.B) {
-		filter, _ := newFilterGlobWithSeparators([]string{"cpu.*.count", "mem.*.used", "disk.*.free"}, []rune{'.'})
+		filter, err := newFilterGlobWithSeparators([]string{"cpu.*.count", "mem.*.used", "disk.*.free"}, []rune{'.'})
+		require.NoError(b, err)
 		input := "cpu.user.count"
 
 		b.ResetTimer()
