@@ -5,6 +5,8 @@ import (
 	"cmp"
 	gosql "database/sql"
 	_ "embed"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"iter"
 	"net/url"
@@ -65,11 +67,51 @@ type SQL struct {
 	ConnectionMaxIdle     int             `toml:"connection_max_idle"`
 	ConnectionMaxOpen     int             `toml:"connection_max_open"`
 	Log                   telegraf.Logger `toml:"-"`
+	EnableCompactSchema   bool            `toml:"enable_compact_schema"`
+	TagsColumnName        string          `toml:"tags_column_name"`
+	FiledsColumnName      string          `toml:"fileds_column_name"`
+	// only for kaiwudb-lite to speed up:
+	MultiRowInsert bool `toml:"multi_row_insert"`
 
 	db                       *gosql.DB
 	queryCache               map[string]string
 	tables                   map[string]map[string]bool
 	tableListColumnsTemplate string
+}
+
+func TagListToJSON(tagList []*telegraf.Tag) ([]byte, error) {
+	tags := make(map[string]interface{}, len(tagList))
+	for _, tag := range tagList {
+		tags[tag.Key] = tag.Value
+	}
+	return json.Marshal(tags)
+}
+
+func FieldListToJSON(fieldList []*telegraf.Field) ([]byte, error) {
+	fields := make(map[string]interface{}, len(fieldList))
+	for _, field := range fieldList {
+		fields[field.Key] = field.Value
+	}
+	return json.Marshal(fields)
+}
+
+func TagToMapString(tagList []*telegraf.Tag) string {
+	var builder strings.Builder
+	builder.WriteString("MAP{")
+
+	for i, tag := range tagList {
+		if i != 0 {
+			builder.WriteString(", ")
+		}
+		valStrkey := tag.Key
+		valStr := tag.Value
+		escapedKey := strings.ReplaceAll(valStrkey, `'`, `''`)
+		escapedVal := strings.ReplaceAll(valStr, `'`, `''`)
+		builder.WriteString(fmt.Sprintf("'%s':'%s'", escapedKey, escapedVal))
+	}
+
+	builder.WriteString("}")
+	return builder.String()
 }
 
 func (*SQL) SampleConfig() string {
@@ -95,12 +137,19 @@ func (p *SQL) Init() error {
 		p.tableListColumnsTemplate = "SELECT name AS column_name FROM pragma_table_info({TABLE})"
 	}
 
+	if p.Driver != "kaiwudb-lite" && p.MultiRowInsert {
+		return errors.New("multiRowInsert is only supported for kaiwudb-lite")
+	}
+	if p.BatchTx && p.MultiRowInsert {
+		return errors.New("batchTx and MultiRowInsert are mutually exclusive")
+	}
+
 	// Check for a valid driver
 	switch p.Driver {
 	case "clickhouse":
 		// Convert v1-style Clickhouse DSN to v2-style
 		p.convertClickHouseDsn()
-	case "mssql", "mysql", "pgx", "snowflake", "sqlite":
+	case "mssql", "mysql", "pgx", "snowflake", "sqlite", "kaiwudb-lite":
 		// Do nothing, those are valid
 	default:
 		return fmt.Errorf("unknown driver %q", p.Driver)
@@ -117,7 +166,11 @@ func (p *SQL) Connect() error {
 	dsn := dsnBuffer.String()
 	dsnBuffer.Destroy()
 
-	db, err := gosql.Open(p.Driver, dsn)
+	driverName := p.Driver
+	if driverName == "kaiwudb-lite" {
+		driverName = "pgx"
+	}
+	db, err := gosql.Open(driverName, dsn)
 	if err != nil {
 		return fmt.Errorf("creating database client failed: %w", err)
 	}
@@ -203,22 +256,50 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 }
 
 func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
-	columns := make([]string, 0, len(metric.TagList())+len(metric.FieldList())+1)
-	tagColumnNames := make([]string, 0, len(metric.TagList()))
+	columnsLen := 0
+	columnsLenTag := 0
+	columnsLenField := 0
+
+	if p.TimestampColumn != "" {
+		columnsLen++
+	}
+	if p.EnableCompactSchema {
+		columnsLenTag++
+		columnsLenField++
+	} else {
+		columnsLenTag = len(metric.TagList())
+		columnsLenField = len(metric.FieldList())
+	}
+	columnsLen += (columnsLenTag + columnsLenField)
+	columns := make([]string, 0, columnsLen)
+	tagColumnNames := make([]string, 0, columnsLenTag)
 
 	if p.TimestampColumn != "" {
 		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(p.TimestampColumn), p.Convert.Timestamp))
 	}
 
-	for _, tag := range metric.TagList() {
-		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(tag.Key), p.Convert.Text))
-		tagColumnNames = append(tagColumnNames, quoteIdent(tag.Key))
+	if p.EnableCompactSchema {
+		if p.Driver == "kaiwudb-lite" {
+			columns = append(columns, fmt.Sprintf("%s MAP(%s, %s)", quoteIdent(p.TagsColumnName), p.Convert.Text, p.Convert.Text))
+		} else {
+			columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(p.TagsColumnName), "JSON"))
+		}
+		tagColumnNames = append(tagColumnNames, quoteIdent(p.TagsColumnName))
+	} else {
+		for _, tag := range metric.TagList() {
+			columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(tag.Key), p.Convert.Text))
+			tagColumnNames = append(tagColumnNames, quoteIdent(tag.Key))
+		}
 	}
 
-	var datatype string
-	for _, field := range metric.FieldList() {
-		datatype = p.deriveDatatype(field.Value)
-		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(field.Key), datatype))
+	if p.EnableCompactSchema {
+		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(p.FiledsColumnName), "JSON"))
+	} else {
+		var datatype string
+		for _, field := range metric.FieldList() {
+			datatype = p.deriveDatatype(field.Value)
+			columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(field.Key), datatype))
+		}
 	}
 
 	query := p.TableTemplate
@@ -245,6 +326,13 @@ func (p *SQL) generateInsert(tablename string, columns []string) string {
 	for _, column := range columns {
 		quotedColumns = append(quotedColumns, quoteIdent(column))
 	}
+
+	if p.Driver == "kaiwudb-lite" && p.MultiRowInsert {
+		return fmt.Sprintf("INSERT INTO %s (%s) VALUES ",
+			quoteIdent(tablename),
+			strings.Join(quotedColumns, ","))
+	}
+
 	if p.Driver == "pgx" {
 		// Postgres uses $1 $2 $3 as placeholders
 		for i := 0; i < len(columns); i++ {
@@ -253,7 +341,11 @@ func (p *SQL) generateInsert(tablename string, columns []string) string {
 	} else {
 		// Everything else uses ? ? ? as placeholders
 		for i := 0; i < len(columns); i++ {
-			placeholders = append(placeholders, "?")
+			if p.Driver == "kaiwudb-lite" && p.EnableCompactSchema && columns[i] == p.TagsColumnName {
+				placeholders = append(placeholders, "%s")
+			} else {
+				placeholders = append(placeholders, "?")
+			}
 		}
 	}
 
@@ -344,26 +436,62 @@ func (p *SQL) updateTableCache(tablename string) error {
 func (p *SQL) processMetric(metric telegraf.Metric) (string, []string, []interface{}) {
 	// Preallocate the columns and values. Note we always allocate for the
 	// timestamp column even if we don't need it but that's not an issue.
-	entries := len(metric.TagList()) + len(metric.FieldList()) + 1
+	entries := 0
+	if p.EnableCompactSchema {
+		entries = 2 + 1
+	} else {
+		entries = len(metric.TagList()) + len(metric.FieldList()) + 1
+	}
 	columns := make([]string, 0, entries)
 	values := make([]interface{}, 0, entries)
 	if p.TimestampColumn != "" {
 		columns = append(columns, p.TimestampColumn)
 		values = append(values, metric.Time())
 	}
-	// Tags are already sorted so we can add them without modification
-	for _, tag := range metric.TagList() {
-		columns = append(columns, tag.Key)
-		values = append(values, tag.Value)
+
+	var valueTagStr string
+	if p.EnableCompactSchema {
+		columns = append(columns, p.TagsColumnName)
+		if p.Driver == "kaiwudb-lite" {
+			valueTagStr = TagToMapString(metric.TagList())
+			values = append(values, valueTagStr)
+		} else {
+			valueTag, err := TagListToJSON(metric.TagList())
+			if err != nil {
+				p.Log.Errorf("convert tagLists to JSON failed: %s", err)
+				return "", nil, nil
+			}
+			values = append(values, valueTag)
+		}
+	} else {
+		// Tags are already sorted so we can add them without modification
+		for _, tag := range metric.TagList() {
+			columns = append(columns, tag.Key)
+			values = append(values, tag.Value)
+		}
 	}
 	// Fields are not sorted so sort them
 	fields := slices.SortedFunc(
 		iterSlice(metric.FieldList()),
 		func(a, b *telegraf.Field) int { return cmp.Compare(a.Key, b.Key) },
 	)
-	for _, field := range fields {
-		columns = append(columns, field.Key)
-		values = append(values, field.Value)
+	if p.EnableCompactSchema {
+		columns = append(columns, p.FiledsColumnName)
+		valueFieldStr, err := FieldListToJSON(fields)
+		if err != nil {
+			p.Log.Errorf("convert fieldLists to JSON failed: %s", err)
+			return "", nil, nil
+		}
+		values = append(values, valueFieldStr)
+	} else {
+		for _, field := range fields {
+			columns = append(columns, field.Key)
+			values = append(values, field.Value)
+		}
+	}
+
+	if p.Driver == "kaiwudb-lite" && p.EnableCompactSchema && !p.MultiRowInsert {
+		return strings.Join(append(append([]string{metric.Name()}, columns...), valueTagStr), "\n"), columns, values
 	}
 	return strings.Join(append([]string{metric.Name()}, columns...), "\n"), columns, values
 }
@@ -428,6 +556,53 @@ func (p *SQL) sendBatch(sql string, values [][]interface{}) error {
 	return nil
 }
 
+func (p *SQL) sendMultiRows(sql string, multipleRows [][]interface{}) error {
+	if len(multipleRows) == 0 {
+		return nil
+	}
+
+	var builder strings.Builder
+	builder.WriteString(sql)
+	for i, row := range multipleRows {
+		builder.WriteString("(")
+		for j, val := range row {
+			switch v := val.(type) {
+			case time.Time:
+				formatedV := v.Format("2006-01-02 15:04:05.000000")
+				builder.WriteString(quoteStr(formatedV))
+			case string:
+				if p.Driver == "kaiwudb-lite" && p.EnableCompactSchema {
+					if (p.TimestampColumn == "" && j == 0) || (p.TimestampColumn != "" && j == 1) {
+						// MAP does not require quotation marks like quoteStr(v).
+						builder.WriteString(v)
+					}
+				} else {
+					builder.WriteString(quoteStr(v))
+				}
+			case []byte:
+				builder.WriteString(quoteStr(string(v)))
+			default:
+				builder.WriteString(fmt.Sprintf("%v", v)) // any other types
+			}
+			if j < len(row)-1 {
+				builder.WriteString(", ")
+			}
+		}
+		builder.WriteString(")")
+		if i < len(multipleRows)-1 {
+			builder.WriteString(", ")
+		}
+	}
+
+	builder.WriteString(";")
+	_, err := p.db.Exec(builder.String())
+	if err != nil {
+		return fmt.Errorf("execution failed: %w", err)
+	}
+
+	return nil
+}
+
 func (p *SQL) Write(metrics []telegraf.Metric) error {
 	batchedQueries := make(map[string][][]interface{})
 
@@ -440,9 +615,24 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 			}
 		}
 		cacheKey, columns, values := p.processMetric(metric)
+		var valueTagStr string
+		if p.Driver == "kaiwudb-lite" && p.EnableCompactSchema && !p.MultiRowInsert {
+			if p.TimestampColumn == "" {
+				valueTagStr = values[0].(string)
+				values = removeIndexInPlace(values, 0)
+			} else {
+				valueTagStr = values[1].(string)
+				values = removeIndexInPlace(values, 1)
+			}
+		}
+
 		sql, found := p.queryCache[cacheKey]
 		if !found {
 			sql = p.generateInsert(tablename, columns)
+			if p.Driver == "kaiwudb-lite" && p.EnableCompactSchema && !p.MultiRowInsert {
+				// repalce '%s' by tagValues which like 'MAP{'host':'node', 'tags':'host1'}'
+				sql = fmt.Sprintf(sql, valueTagStr)
+			}
 			p.queryCache[cacheKey] = sql
 		}
 		// Modifying the table schema is opt-in
@@ -454,7 +644,7 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 			}
 		}
 		// Using BatchTx is opt-in
-		if p.BatchTx {
+		if p.BatchTx || p.MultiRowInsert {
 			batchedQueries[sql] = append(batchedQueries[sql], values)
 		} else {
 			if err := p.sendIndividual(sql, values); err != nil {
@@ -467,6 +657,12 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 		for query, queryParams := range batchedQueries {
 			if err := p.sendBatch(query, queryParams); err != nil {
 				return fmt.Errorf("failed to send a batched tx: %w", err)
+			}
+		}
+	} else if p.MultiRowInsert {
+		for query, queryParams := range batchedQueries {
+			if err := p.sendMultiRows(query, queryParams); err != nil {
+				return fmt.Errorf("failed to send a multiple values tx: %w", err)
 			}
 		}
 	}
@@ -544,7 +740,10 @@ func init() {
 			// mirror the golang defaults. As of go 1.18 all of them default to 0
 			// except max idle connections which is 2. See
 			// https://pkg.go.dev/database/sql#DB.SetMaxIdleConns
-			ConnectionMaxIdle: 2,
+			ConnectionMaxIdle:   2,
+			EnableCompactSchema: false,
+			TagsColumnName:      "tags",
+			FiledsColumnName:    "fields",
 		}
 	})
 }
@@ -557,4 +756,9 @@ func iterSlice[E any](slice []E) iter.Seq[E] {
 			}
 		}
 	}
+}
+
+func removeIndexInPlace(slice []interface{}, index int) []interface{} {
+	copy(slice[index:], slice[index+1:])
+	return slice[:len(slice)-1]
 }
