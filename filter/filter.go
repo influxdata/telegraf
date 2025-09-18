@@ -45,8 +45,12 @@ func Compile(filters []string, separators ...rune) (Filter, error) {
 		return &filterSingle{s: filters[0]}, nil
 	case !wildcards && len(filters) != 1:
 		return newFilterNoGlob(filters), nil
+	case len(separators) == 0:
+		// Use fast path for common case without separators
+		return newFilterGlob(filters)
 	default:
-		return newFilterGlob(filters, separators...)
+		// Use separator-aware implementation
+		return newFilterGlobWithSeparators(filters, separators)
 	}
 }
 

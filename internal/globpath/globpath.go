@@ -42,9 +42,7 @@ func (g *GlobPath) Match() []string {
 
 	// Convert old-style ** patterns to doublestar v4 format
 	// Old: **.txt -> New: **/*.txt
-	if strings.Contains(pattern, "**") && !strings.Contains(pattern, "**/") {
-		pattern = strings.ReplaceAll(pattern, "**.", "**/*.")
-	}
+	pattern = strings.ReplaceAll(pattern, "**.", "**/*.")
 
 	files, err := doublestar.FilepathGlob(pattern)
 	if err != nil {

@@ -31,15 +31,13 @@ func (f *filterNoGlob) Match(s string) bool {
 	return ok
 }
 
-// filterGlob handles both single and multiple glob patterns with optional separators
+// filterGlob handles glob patterns WITHOUT separators
+// This is optimized for the common case where no separators are specified
 type filterGlob struct {
-	patterns           []string
-	normalizedPatterns []string // Pre-computed normalized patterns for performance
-	separators         []rune
-	hasSeparators      bool
+	patterns []string
 }
 
-func newFilterGlob(filters []string, separators ...rune) (Filter, error) {
+func newFilterGlob(filters []string) (Filter, error) {
 	// Validate all patterns
 	for _, pattern := range filters {
 		if _, err := doublestar.Match(pattern, ""); err != nil {
@@ -47,47 +45,17 @@ func newFilterGlob(filters []string, separators ...rune) (Filter, error) {
 		}
 	}
 
-	filter := &filterGlob{
-		patterns:      filters,
-		separators:    separators,
-		hasSeparators: len(separators) > 0,
-	}
-
-	// Pre-compute normalized patterns if separators are present
-	if filter.hasSeparators {
-		filter.normalizedPatterns = make([]string, len(filters))
-		for i, pattern := range filters {
-			filter.normalizedPatterns[i] = normalizePattern(pattern, separators)
-		}
-	}
-
-	return filter, nil
+	return &filterGlob{
+		patterns: filters,
+	}, nil
 }
 
 func (f *filterGlob) Match(s string) bool {
-	// Pre-normalize the input string once if we have separators
-	var normalizedStr string
-	if f.hasSeparators {
-		normalizedStr = normalizePattern(s, f.separators)
-	}
-
-	for i, pattern := range f.patterns {
-		var matched bool
-		var err error
-
-		if f.hasSeparators {
-			// Use pre-computed normalized pattern
-			matched, err = doublestar.PathMatch(f.normalizedPatterns[i], normalizedStr)
-		} else {
-			// Standard glob matching without path semantics
-			matched, err = doublestar.Match(pattern, s)
-		}
-
-		// Continue on error but don't match
+	for _, pattern := range f.patterns {
+		matched, err := doublestar.Match(pattern, s)
 		if err != nil {
 			continue
 		}
-
 		if matched {
 			return true
 		}
@@ -95,8 +63,64 @@ func (f *filterGlob) Match(s string) bool {
 	return false
 }
 
-// normalizePattern converts all separators to '/' for path matching
-// This allows doublestar.PathMatch to treat them as path separators
+// filterGlobWithSeparators handles glob patterns WITH separators
+// This is a separate implementation to avoid the performance cost of checking
+// for separators in the hot path
+type filterGlobWithSeparators struct {
+	normalizedPatterns []string
+	separators         []rune
+}
+
+func newFilterGlobWithSeparators(filters []string, separators []rune) (Filter, error) {
+	// Validate all patterns
+	for _, pattern := range filters {
+		if _, err := doublestar.Match(pattern, ""); err != nil {
+			return nil, err
+		}
+	}
+
+	// Pre-compute normalized patterns
+	normalizedPatterns := make([]string, len(filters))
+	for i, pattern := range filters {
+		normalizedPatterns[i] = normalizePattern(pattern, separators)
+	}
+
+	return &filterGlobWithSeparators{
+		normalizedPatterns: normalizedPatterns,
+		separators:         separators,
+	}, nil
+}
+
+func (f *filterGlobWithSeparators) Match(s string) bool {
+	// Normalize the input string once
+	normalizedStr := normalizePattern(s, f.separators)
+
+	for _, pattern := range f.normalizedPatterns {
+		// Use PathMatch which treats '/' as a separator
+		matched, err := doublestar.PathMatch(pattern, normalizedStr)
+		if err != nil {
+			continue
+		}
+		if matched {
+			return true
+		}
+	}
+	return false
+}
+
+// normalizePattern converts all separators to '/' for path matching.
+// This allows doublestar.PathMatch to treat them as path separators.
+//
+// IMPORTANT LIMITATION: This function cannot distinguish between literal
+// separator characters and actual separators. For example, with separator '.',
+// the pattern "foo.bar/baz.qux" will have ALL dots replaced with '/',
+// even if some dots were meant to be literal characters in the pattern.
+//
+// This is an acceptable trade-off because:
+//  1. The original gobwas/glob had the same limitation
+//  2. It maintains backward compatibility with existing Telegraf configs
+//  3. Users can work around this by using glob patterns like "foo?bar" instead of "foo.bar"
+//     when they need to match a literal separator character
 func normalizePattern(s string, separators []rune) string {
 	if len(separators) == 0 {
 		return s
