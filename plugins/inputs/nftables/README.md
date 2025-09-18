@@ -1,18 +1,30 @@
 # Nftables Plugin
 
-The nftables plugin gathers packets and bytes counters for rules within Linux's nftables firewall.
+The nftables plugin gathers packets and bytes counters for rules within 
+Linux's nftables firewall.
 
-Rules are identified through associated comment. **Rules without comment are ignored**.
 
-Before using this plugin **you must ensure that the rules you want to monitor are named with a unique comment**. Comments are added using the "comment "my comment"` nftables options.
+Rules are identified through associated comment. 
+**Rules without comment are ignored**.
 
-The nftables command requires CAP_NET_ADMIN and CAP_NET_RAW capabilities. You have several options to grant telegraf to run nftables:
+Before using this plugin **you must ensure that the rules you want to monitor 
+are named with a unique comment**. Comments are added using the 'comment 
+"my comment"' nftables options.
+
+The nftables command requires CAP_NET_ADMIN and CAP_NET_RAW capabilities. 
+You have several options to grant telegraf to run nftables:
 
 * Run telegraf as root. This is strongly discouraged.
-* Configure systemd to run telegraf with CAP_NET_ADMIN and CAP_NET_RAW. This is the simplest and recommended option.
-* Configure sudo to grant telegraf to run nftables. This is the most restrictive option, but require sudo setup.
+* Configure systemd to run telegraf with CAP_NET_ADMIN and CAP_NET_RAW. 
+This is the simplest and recommended option.
+* Configure sudo to grant telegraf to run nftables. This is the most restrictive
+ option, but require sudo setup.
 
-### Using systemd capabilities
+⭐ Telegraf v1.1.0
+🏷️  network, system
+💻 linux
+
+## Using systemd capabilities
 
 You may run `systemctl edit telegraf.service` and add the following:
 
@@ -22,9 +34,10 @@ CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN
 AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
 ```
 
-Since telegraf will fork a process to run nftables, `AmbientCapabilities` is required to transmit the capabilities bounding set to the forked process.
+Since telegraf will fork a process to run nftables, `AmbientCapabilities` is 
+required to transmit the capabilities bounding set to the forked process.
 
-### Using sudo
+## Using sudo
 
 You may edit your sudo configuration with the following:
 
@@ -32,7 +45,16 @@ You may edit your sudo configuration with the following:
 telegraf ALL=(root) NOPASSWD: /usr/bin/nft *
 ```
 
-### Configuration:
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## Configuration
 
 ```toml
   # use sudo to run nftables
@@ -41,13 +63,7 @@ telegraf ALL=(root) NOPASSWD: /usr/bin/nft *
   tables = ["filter"]
 ```
 
-### Measurements & Fields:
-
-- nftables
-    - pkts (integer, count)
-    - bytes (integer, bytes)
-
-### Tags:
+## Tags
 
 - All measurements have the following tags:
     - table
@@ -56,7 +72,13 @@ telegraf ALL=(root) NOPASSWD: /usr/bin/nft *
 
 The `ruleid` is the comment associated to the rule.
 
-### Example Output:
+## Metrics
+
+- nftables
+    - pkts (integer, count)
+    - bytes (integer, bytes)
+
+## Example Output
 
 ```
 > nftables,chain=incoming,host=my_hostname,ruleid=comment_val_1,table=filter bytes=66435845i,pkts=133882i 1757367516000000000
