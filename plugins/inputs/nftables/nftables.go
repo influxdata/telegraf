@@ -12,9 +12,9 @@ import (
 const measurement = "nftables"
 
 type Nftables struct {
-	UseSudo bool     `toml:"use_sudo"`
-	Binary  string   `toml:"binary"`
-	Tables []string
+	UseSudo bool   `toml:"use_sudo"`
+	Binary  string `toml:"binary"`
+	Tables  []string
 }
 
 var NftableConfig = `
