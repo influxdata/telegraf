@@ -59,6 +59,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Timeout for docker list, info, and stats commands
   timeout = "5s"
 
+  ## Podman compatibility settings (auto-enabled when Podman detected)
+  ## Cache TTL for accurate CPU percentage calculation
+  # podman_cache_ttl = "60s"
+
   ## Specifies for which classes a per-device metric should be issued
   ## Possible values are 'cpu' (cpu0, cpu1, ...), 'blkio' (8:0, 8:1, ...) and 'network' (eth0, eth1, ...)
   # perdevice_include = ["cpu"]
@@ -98,6 +102,25 @@ could result in an attacker gaining root access to a machine. This is especially
 relevant if the telegraf configuration can be changed by untrusted users.
 
 [4]: https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface
+
+### Podman Compatibility
+
+This plugin is compatible with Podman through its Docker-compatible API. When connected to Podman:
+
+- The plugin automatically detects Podman by examining the server version and endpoint
+- Uses an intelligent caching mechanism to calculate accurate CPU percentages
+- Configure Podman socket endpoint, for example: `endpoint = "unix:///run/podman/podman.sock"`
+
+**How it works**: Podman's stats API returns cumulative CPU values since container start. To calculate accurate current CPU usage, this plugin caches previous stats readings and calculates the difference between consecutive measurements.
+
+**Configuration options**:
+```toml
+## Cache TTL for accurate CPU percentage calculation (default: 60s)
+## Stats caching is automatically enabled when Podman is detected
+# podman_cache_ttl = "60s"
+```
+
+**Performance**: The caching approach scales efficiently to hundreds of containers without adding delays, unlike streaming approaches that would add latency per container.
 
 ### Docker Daemon Permissions
 
