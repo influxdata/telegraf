@@ -151,6 +151,7 @@ func TestCases(t *testing.T) {
 type server struct {
 	responses map[string][]byte
 	listener  net.Listener
+	wg        sync.WaitGroup
 
 	errors []error
 	sync.Mutex
@@ -185,7 +186,9 @@ func (s *server) start() (string, error) {
 	s.listener = listener
 
 	addr := listener.Addr().String()
+	s.wg.Add(1)
 	go func() {
+		defer s.wg.Done()
 		for {
 			conn, err := s.listener.Accept()
 			if err != nil {
@@ -222,6 +225,7 @@ func (s *server) start() (string, error) {
 func (s *server) stop() {
 	if s.listener != nil {
 		s.listener.Close()
+		s.wg.Wait()
 		s.listener = nil
 	}
 }
