@@ -30,6 +30,22 @@ const (
 	defaultClientTimeout         = 4
 )
 
+const (
+	queueTypeClassic = "classic"
+	queueTypeQuorum  = "quorum"
+	queueTypeStream  = "stream"
+)
+
+// isValidQueueType checks if the given queue type is supported
+func isValidQueueType(queueType string) bool {
+	switch queueType {
+	case queueTypeClassic, queueTypeQuorum, queueTypeStream:
+		return true
+	default:
+		return false
+	}
+}
+
 // RabbitMQ defines the configuration necessary for gathering metrics,
 // see the sample config for further details
 type RabbitMQ struct {
@@ -122,6 +138,7 @@ type queue struct {
 	Name                   string
 	Node                   string
 	Vhost                  string
+	Type                   string
 	Durable                bool
 	AutoDelete             bool     `json:"auto_delete"`
 	IdleSince              string   `json:"idle_since"`
@@ -556,6 +573,17 @@ func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator) {
 		if !r.queueFilter.Match(queue.Name) {
 			continue
 		}
+
+		queueType := queue.Type
+		if queueType == "" {
+			queueType = queueTypeClassic // default to classic for backward compatibility
+		}
+
+		if !isValidQueueType(queueType) {
+			r.Log.Warnf("Queue %q has unknown type '%s', defaulting to 'classic'", queue.Name, queueType)
+			queueType = queueTypeClassic
+		}
+
 		tags := map[string]string{
 			"url":         r.URL,
 			"queue":       queue.Name,
@@ -563,6 +591,7 @@ func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator) {
 			"node":        queue.Node,
 			"durable":     strconv.FormatBool(queue.Durable),
 			"auto_delete": strconv.FormatBool(queue.AutoDelete),
+			"type":        queueType,
 		}
 
 		fields := map[string]interface{}{
