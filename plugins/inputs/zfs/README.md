@@ -39,6 +39,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## By default, don't gather zpool stats
   # poolMetrics = false
 
+  ## Report pool metrics as UINT64 as defined by ZFS (Linux only)
+  ## This is disabled for backward compatibility but is STRONGLY RECOMMENDED
+  ## to be enabled to avoid overflows. This requires UINT support on the output.
+  ## poolMetricsUint = false
+
   ## By default, don't gather dataset stats
   # datasetMetrics = false
 ```
