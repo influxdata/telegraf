@@ -1911,6 +1911,10 @@ func (c *Config) getFieldStringSlice(tbl *ast.Table, fieldName string) []string 
 func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string) []models.TagFilter {
 	var target []models.TagFilter
 	if node, ok := tbl.Fields[fieldName]; ok {
+		if _, ok := node.(*ast.Table); !ok {
+			c.addError(tbl, fmt.Errorf("invalid syntax for %q: expected a table of key=[values]", fieldName))
+			return nil
+		}
 		if subTbl, ok := node.(*ast.Table); ok {
 			for name, val := range subTbl.Fields {
 				if kv, ok := val.(*ast.KeyValue); ok {
@@ -1919,7 +1923,7 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string) []models.Ta
 						c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting string array/slice format on each entry", fieldName))
 						return nil
 					}
-
+					
 					tagFilter := models.TagFilter{Name: name}
 					for _, elem := range ary.Value {
 						if str, ok := elem.(*ast.String); ok {
