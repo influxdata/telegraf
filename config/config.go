@@ -1911,6 +1911,10 @@ func (c *Config) getFieldStringSlice(tbl *ast.Table, fieldName string) []string 
 func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string) []models.TagFilter {
 	var target []models.TagFilter
 	if node, ok := tbl.Fields[fieldName]; ok {
+		if _, ok := node.(*ast.Table); !ok {
+			c.addError(tbl, fmt.Errorf("invalid syntax for %q: expected a table of key=[values]", fieldName))
+			return nil
+		}
 		if subTbl, ok := node.(*ast.Table); ok {
 			for name, val := range subTbl.Fields {
 				if kv, ok := val.(*ast.KeyValue); ok {
