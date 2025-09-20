@@ -1480,6 +1480,29 @@ func TestConfigEnvVarsNonStrictMalicious(t *testing.T) {
 
 	// We expect too plugins due to malicious environment setting
 	require.Len(t, c.Inputs, 2)
+
+func TestInvalidTagpassSyntaxFromFile(t *testing.T) {
+	c := config.NewConfig()
+	err := c.LoadConfig("testdata/tagfilter_invalid.toml")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), `invalid syntax for "tagpass"`)
+}
+
+func TestValidTagpassAndTagdropSyntaxFromFile(t *testing.T) {
+	c := config.NewConfig()
+	require.NoError(t, c.LoadConfig("testdata/tagfilter_valid.toml"))
+
+	require.NotEmpty(t, c.Inputs)
+
+	plugin := c.Inputs[0].Config
+	require.Len(t, plugin.Filter.TagPassFilters, 1)
+	require.Len(t, plugin.Filter.TagDropFilters, 1)
+
+	require.Equal(t, "host", plugin.Filter.TagPassFilters[0].Name)
+	require.Equal(t, []string{"server1", "server2"}, plugin.Filter.TagPassFilters[0].Values)
+
+	require.Equal(t, "region", plugin.Filter.TagDropFilters[0].Name)
+	require.Equal(t, []string{"us-west"}, plugin.Filter.TagDropFilters[0].Values)
 }
 
 // Mockup INPUT plugin for (new) parser testing to avoid cyclic dependencies
