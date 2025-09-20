@@ -1923,7 +1923,7 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string) []models.Ta
 						c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting string array/slice format on each entry", fieldName))
 						return nil
 					}
-					
+
 					tagFilter := models.TagFilter{Name: name}
 					for _, elem := range ary.Value {
 						if str, ok := elem.(*ast.String); ok {
