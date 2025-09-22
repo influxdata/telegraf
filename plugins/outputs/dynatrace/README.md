@@ -94,9 +94,9 @@ The endpoint for the Dynatrace Metrics API v2 is
   api_token = "your API token here" // hard-coded for illustration only, should be read from environment
 ```
 
-You can learn more about how to use the Dynatrace API
-[here](https://docs.dynatrace.com/docs/shortlink/section-api).
+You can learn more about how to use the [Dynatrace API][api].
 
+[api]: https://docs.dynatrace.com/docs/shortlink/section-api
 [api-auth]: https://docs.dynatrace.com/docs/shortlink/api-authentication
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
