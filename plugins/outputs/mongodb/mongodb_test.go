@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -24,10 +23,7 @@ func TestConnectAndWriteIntegrationNoAuth(t *testing.T) {
 	container := testutil.Container{
 		Image:        "mongo",
 		ExposedPorts: []string{servicePort},
-		WaitingFor: wait.ForAll(
-			wait.NewHTTPStrategy("/").WithPort(nat.Port(servicePort)),
-			wait.ForLog("Waiting for connections"),
-		),
+		WaitingFor:   wait.ForLog("Waiting for connections"),
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
@@ -66,10 +62,7 @@ func TestConnectAndWriteIntegrationSCRAMAuth(t *testing.T) {
 		Files: map[string]string{
 			"/docker-entrypoint-initdb.d/setup.js": initdb,
 		},
-		WaitingFor: wait.ForAll(
-			wait.NewHTTPStrategy("/").WithPort(nat.Port(servicePort)),
-			wait.ForLog("Waiting for connections").WithOccurrence(2),
-		),
+		WaitingFor: wait.ForLog("Waiting for connections").WithOccurrence(2),
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
@@ -169,10 +162,7 @@ func TestConnectAndWriteIntegrationX509Auth(t *testing.T) {
 			"--tlsCAFile", "/cacert.pem",
 			"--tlsCertificateKeyFile", "/server.pem",
 		},
-		WaitingFor: wait.ForAll(
-			wait.NewHTTPStrategy("/").WithPort(nat.Port(servicePort)),
-			wait.ForLog("Waiting for connections").WithOccurrence(2),
-		),
+		WaitingFor: wait.ForLog("Waiting for connections").WithOccurrence(2),
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
