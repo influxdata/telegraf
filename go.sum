@@ -1034,8 +1034,8 @@ github.com/cisco-ie/nx-telemetry-proto v0.0.0-20230117155933-f64c045c77df/go.mod
 github.com/clarify/clarify-go v0.4.1 h1:T0ba573qXp4dkM1CbPimvku1lJKNyIC27bcGEOTGVfw=
 github.com/clarify/clarify-go v0.4.1/go.mod h1:iTdVABQ3Qu7JK9xhg+oOfhvxS4I5AP0bt9HJTlG/PPU=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
-github.com/cloudevents/sdk-go/v2 v2.16.1 h1:G91iUdqvl88BZ1GYYr9vScTj5zzXSyEuqbfE63gbu9Q=
-github.com/cloudevents/sdk-go/v2 v2.16.1/go.mod h1:v/kVOaWjNfbvc6tkhhlkhvLapj8Aa8kvXiH5GiOHCKI=
+github.com/cloudevents/sdk-go/v2 v2.16.2 h1:ZYDFrYke4FD+jM8TZTJJO6JhKHzOQl2oqpFK1D+NnQM=
+github.com/cloudevents/sdk-go/v2 v2.16.2/go.mod h1:laOcGImm4nVJEU+PHnUrKL56CKmRL65RlQF0kRmW/kg=
 github.com/cloudflare/circl v1.3.7 h1:qlCDlTPz2n9fu58M0Nh1J/JzcFpfgkFHHX3O35r5vcU=
 github.com/cloudflare/circl v1.3.7/go.mod h1:sRTcRWXGLrKw6yIGJ+l7amYJFfAXbZG0kBSc8r4zxgA=
 github.com/cloudinary/cloudinary-go/v2 v2.9.0 h1:8C76QklmuV4qmKAC7cUnu9D68X9kCkFMuLspPikECCo=
