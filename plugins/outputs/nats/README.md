@@ -140,8 +140,8 @@ If you’re using JetStream the value of subject determines where messages
 are published.
 
 > [!IMPORTANT]
-> When using a dynamic subject template, Telegraf does not automatically register the
-> generated subjects with the JetStream stream.
+> When using a dynamic subject template, Telegraf does not automatically
+> register the generated subjects with the JetStream stream.
 
 For dynamic `subject`s you must explicitly define matching subjects in
 `outputs.nats.jetstream.subjects` to ensure your stream can receive and
