@@ -52,7 +52,7 @@ require (
 	github.com/aws/aws-msk-iam-sasl-signer-go v1.0.4
 	github.com/aws/aws-sdk-go-v2 v1.39.0
 	github.com/aws/aws-sdk-go-v2/config v1.31.4
-	github.com/aws/aws-sdk-go-v2/credentials v1.18.8
+	github.com/aws/aws-sdk-go-v2/credentials v1.18.13
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.7
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.50.1
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.57.4
@@ -315,8 +315,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.7 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.6 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.71.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.28.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.34.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.29.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.34.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bitly/go-hostpool v0.1.0 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
