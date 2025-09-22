@@ -2112,8 +2112,8 @@ github.com/pelletier/go-toml v1.9.5/go.mod h1:u1nR/EPcESfeI/szUZKdtJ0xRNbUoANCko
 github.com/pengsrc/go-shared v0.2.1-0.20190131101655-1999055a4a14 h1:XeOYlK9W1uCmhjJSsY78Mcuh7MVkNjTzmHx1yBzizSU=
 github.com/pengsrc/go-shared v0.2.1-0.20190131101655-1999055a4a14/go.mod h1:jVblp62SafmidSkvWrXyxAme3gaTfEtWwRPGz5cpvHg=
 github.com/peterbourgon/ff/v3 v3.3.1/go.mod h1:zjJVUhx+twciwfDl0zBcFzl4dW8axCRyXE/eKY9RztQ=
-github.com/peterbourgon/unixtransport v0.0.6 h1:sWIViDoRIg2MeyRbWTUDdvvY5XbKaaSr9ionmzNGXWY=
-github.com/peterbourgon/unixtransport v0.0.6/go.mod h1:o8aUkOCa8W/BIXpi15uKvbSabjtBh0JhSOJGSfoOhAU=
+github.com/peterbourgon/unixtransport v0.0.7 h1:HhN7nydIDwlXWFzB6mbzQLcl46UdZLHrmF2lFfAgvnY=
+github.com/peterbourgon/unixtransport v0.0.7/go.mod h1:o8aUkOCa8W/BIXpi15uKvbSabjtBh0JhSOJGSfoOhAU=
 github.com/philhofer/fwd v1.2.0 h1:e6DnBTl7vGY+Gz322/ASL4Gyp1FspeMvx1RNDoToZuM=
 github.com/philhofer/fwd v1.2.0/go.mod h1:RqIHx9QI14HlwKwm98g9Re5prTQ6LdeRQn+gXJFxsJM=
 github.com/phpdave11/gofpdf v1.4.2/go.mod h1:zpO6xFn9yxo3YLyMvW8HcKWVdbNqgIfOOp2dXMnm1mY=
