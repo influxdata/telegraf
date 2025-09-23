@@ -1170,8 +1170,8 @@ github.com/echlebek/timeproxy v1.0.0 h1:V41/v8tmmMDNMA2GrBPI45nlXb3F7+OY+nJz1BqK
 github.com/echlebek/timeproxy v1.0.0/go.mod h1:0dg2Lnb8no/jFwoMQKMTU6iAivgoMptGqSTprhnrRtk=
 github.com/eclipse/paho.golang v0.23.0 h1:KHgl2wz6EJo7cMBmkuhpt7C576vP+kpPv7jjvSyR6Mk=
 github.com/eclipse/paho.golang v0.23.0/go.mod h1:nQRhTkoZv8EAiNs5UU0/WdQIx2NrnWUpL9nsGJTQN04=
-github.com/eclipse/paho.mqtt.golang v1.5.0 h1:EH+bUVJNgttidWFkLLVKaQPGmkTUfQQqjOsyvMGvD6o=
-github.com/eclipse/paho.mqtt.golang v1.5.0/go.mod h1:du/2qNQVqJf/Sqs4MEL77kR8QTqANF7XU7Fk0aOTAgk=
+github.com/eclipse/paho.mqtt.golang v1.5.1 h1:/VSOv3oDLlpqR2Epjn1Q7b2bSTplJIeV2ISgCl2W7nE=
+github.com/eclipse/paho.mqtt.golang v1.5.1/go.mod h1:1/yJCneuyOoCOzKSsOTUc0AJfpsItBGWvYpBLimhArU=
 github.com/emersion/go-message v0.18.0 h1:7LxAXHRpSeoO/Wom3ZApVZYG7c3d17yCScYce8WiXA8=
 github.com/emersion/go-message v0.18.0/go.mod h1:Zi69ACvzaoV/MBnrxfVBPV3xWEuCmC2nEN39oJF4B8A=
 github.com/emersion/go-textwrapper v0.0.0-20200911093747-65d896831594 h1:IbFBtwoTQyw0fIM5xv1HF+Y+3ZijDR839WMulgxCcUY=
