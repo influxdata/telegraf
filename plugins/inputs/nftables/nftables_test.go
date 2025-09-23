@@ -153,9 +153,9 @@ var singletontable = `{
 func TestParseNftableBadRule(t *testing.T) {
 	badrules := []string{
 		`{ "nftables": [
-  {
-    "rule": "I am a weird rule"
-  }
+    {
+      "rule": "bad"
+    }
   ]
 }`,
 		`{ "nftables": [
@@ -168,16 +168,16 @@ func TestParseNftableBadRule(t *testing.T) {
       "rule": []
     },
 }`}
-	baderrors := []string{
-		"error parsing: { \"nftables\": [\n  {\n    \"rule\": \"I am a weird rule\"\n  }\n  ]\n}, Error: unable to parse rule: unable to unmarshal: \"I am a weird rule\"",
+	baderrs := []string{
+		"error parsing: { \"nftables\": [\n    {\n      \"rule\": \"bad\"\n    }\n  ]\n}, Error: unable to parse rule: unable to unmarshal: \"bad\"",
 		"error parsing: { \"nftables\": [\n    {\n      \"rule\": {}\n    },\n}, Error: invalid character '}' looking for beginning of value",
 		"error parsing: { \"nftables\": [\n    {\n      \"rule\": []\n    },\n}, Error: invalid character '}' looking for beginning of value",
 	}
 	for i, v := range badrules {
 		acc := new(testutil.Accumulator)
 		err := parseNftableOutput([]byte(v), acc)
-		if err.Error() != baderrors[i] {
-			t.Errorf("Expected Error %#v, but got %#v", baderrors[i], err.Error())
+		if err.Error() != baderrs[i] {
+			t.Errorf("Expected Error %#v, but got %#v", baderrs[i], err.Error())
 		}
 	}
 }
