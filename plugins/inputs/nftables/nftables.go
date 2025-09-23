@@ -1,12 +1,16 @@
+//go:generate ../../../tools/readme_config_includer/generator
+//go:build linux
+
 package nftables
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os/exec"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"os/exec"
 )
 
 const measurement = "nftables"
@@ -17,43 +21,43 @@ type Nftables struct {
 	Tables  []string
 }
 
-var NftableConfig = `
+var nftableConfig = `
   ## Configuration for nftables
   tables = [ "filter" ]
 `
 
 type Nftable struct {
-	Metainfo *Metainfo
-	Rules    []*Rule
+	Metainfo          *Metainfo
+	Rules             []*Rule
+	JSONSchemaVersion int `json:"json_schema_version"`
 }
 
-// The nftable JSON output is designed in a generic way so
-// just handle it via some custom unmarshalling to keep our
-// interface clean
+// UnmarshalJSON handles custom parsing of the nftable output which is
+// designed in a generic that is not compatible with the generic parser.
 func (nftable *Nftable) UnmarshalJSON(b []byte) error {
-	var aTable map[string][]map[string]json.RawMessage
-	if err := json.Unmarshal(b, &aTable); err != nil {
-		return fmt.Errorf("Unable to Unmarshal: %s", b)
+	var atable map[string][]map[string]json.RawMessage
+	if err := json.Unmarshal(b, &atable); err != nil {
+		return fmt.Errorf("unable to unmarshal: %s", b)
 	}
 	// []map[string]interface
-	nfthings := aTable["nftables"]
+	nfthings := atable["nftables"]
 	for _, nfthing := range nfthings {
 		hasKey := func(key string) bool { _, ok := nfthing[key]; return ok }
 		switch {
 		case hasKey("metainfo"):
 			var mi Metainfo
-			if err := json.Unmarshal(nfthing["metainfo"], &mi); err == nil {
-				nftable.Metainfo = &mi
-			} else {
-				return fmt.Errorf("Unable to parse Metadata: %v", err)
+			err := json.Unmarshal(nfthing["metainfo"], &mi)
+			if err != nil {
+				return fmt.Errorf("unable to parse metadata: %w", err)
 			}
+			nftable.Metainfo = &mi
 		case hasKey("rule"):
 			var r Rule
-			if err := json.Unmarshal(nfthing["rule"], &r); err == nil {
-				nftable.Rules = append(nftable.Rules, &r)
-			} else {
-				return fmt.Errorf("Unable to parse Rule: %v", err)
+			err := json.Unmarshal(nfthing["rule"], &r)
+			if err != nil {
+				return fmt.Errorf("unable to parse rule: %w", err)
 			}
+			nftable.Rules = append(nftable.Rules, &r)
 		default:
 			// something we are not parsing
 		}
@@ -64,7 +68,7 @@ func (nftable *Nftable) UnmarshalJSON(b []byte) error {
 type Metainfo struct {
 	Version           string `json:"version"`
 	ReleaseName       string `json:"release_name"`
-	JsonSchemaVersion int    `json:"json_schema_version"`
+	JSONSchemaVersion int    `json:"json_schema_version"`
 }
 
 type Rule struct {
@@ -75,30 +79,34 @@ type Rule struct {
 	Counter *Counter
 }
 
+// UnmarshalJSON handles properly extracing the counter expression from
+// the Exprs array input
 func (rule *Rule) UnmarshalJSON(b []byte) error {
 	var raw struct {
 		Family  string                       `json:"family"`
 		Table   string                       `json:"table"`
 		Chain   string                       `json:"chain"`
-		Comment string                       `json:comment"`
+		Comment string                       `json:"comment"`
 		Exprs   []map[string]json.RawMessage `json:"expr"`
 	}
 	if err := json.Unmarshal(b, &raw); err != nil {
-		return fmt.Errorf("Unable to Unmarshal: %s", b)
+		return fmt.Errorf("unable to unmarshal: %s", b)
 	}
 	rule.Family = raw.Family
 	rule.Table = raw.Table
 	rule.Chain = raw.Chain
 	rule.Comment = raw.Comment
 
+	// iterate rule expressions looking for the single counter
 	for _, expr := range raw.Exprs {
 		hasKey := func(key string) bool { _, ok := expr[key]; return ok }
-		switch {
-		case hasKey("counter"):
+		if hasKey("counter") {
 			rule.Counter = &Counter{}
 			if err := json.Unmarshal(expr["counter"], rule.Counter); err != nil {
-				return fmt.Errorf("Unable to parse Metadata: %v", err)
+				return fmt.Errorf("unable to parse metadata: %w", err)
 			}
+			// we can return early since we are not looking for anything else
+			return nil
 		}
 	}
 	return nil
@@ -109,17 +117,13 @@ type Counter struct {
 	Bytes   int64 `json:"bytes"`
 }
 
-func (nft *Nftables) SampleConfig() string {
-	return NftableConfig
-}
-
-func (nft *Nftables) Description() string {
-	return "Gather chain data from an nftable table"
+func (*Nftables) SampleConfig() string {
+	return nftableConfig
 }
 
 func (nft *Nftables) Gather(acc telegraf.Accumulator) error {
 	if len(nft.Tables) == 0 {
-		return errors.New("Invalid Configuration. Expected a `Tables` entry with list of nftables to monitor")
+		return errors.New("invalid configuration - expected a `Tables` entry with list of nftables to monitor")
 	}
 	for _, table := range nft.Tables {
 		err := nft.getTableData(table, acc)
@@ -152,7 +156,7 @@ func (nft *Nftables) getTableData(tableName string, acc telegraf.Accumulator) er
 	c := exec.Command(name, args...)
 	out, err := c.Output()
 	if err != nil {
-		return errors.New(fmt.Sprintf("Error Executing %s, error: %s", c, err))
+		return fmt.Errorf("error executing %s, error: %w", c, err)
 	}
 	return parseNftableOutput(out, acc)
 }
@@ -161,7 +165,7 @@ func parseNftableOutput(out []byte, acc telegraf.Accumulator) error {
 	var nftable Nftable
 	err := json.Unmarshal(out, &nftable)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Error Parsing: %s, Error: %v", out, err))
+		return fmt.Errorf("error parsing: %s, Error: %w", out, err)
 	}
 	for _, rule := range nftable.Rules {
 		// Rule must have a Counter and a Comment

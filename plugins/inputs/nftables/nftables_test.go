@@ -1,14 +1,12 @@
 package nftables
 
 import (
-	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
 )
 
-var singleton_table = `{
+var singletontable = `{
   "nftables": [
     {
       "metainfo": {
@@ -153,7 +151,7 @@ var singleton_table = `{
 }`
 
 func TestParseNftableBadRule(t *testing.T) {
-	bad_rules := []string{
+	badrules := []string{
 		`{ "nftables": [
   {
     "rule": "I am a weird rule"
@@ -170,23 +168,23 @@ func TestParseNftableBadRule(t *testing.T) {
       "rule": []
     },
 }`}
-	bad_errors := []string{
-		"Error Parsing: { \"nftables\": [\n  {\n    \"rule\": \"I am a weird rule\"\n  }\n  ]\n}, Error: Unable to parse Rule: Unable to Unmarshal: \"I am a weird rule\"",
-		"Error Parsing: { \"nftables\": [\n    {\n      \"rule\": {}\n    },\n}, Error: invalid character '}' looking for beginning of value",
-		"Error Parsing: { \"nftables\": [\n    {\n      \"rule\": []\n    },\n}, Error: invalid character '}' looking for beginning of value",
+	baderrors := []string{
+		"error parsing: { \"nftables\": [\n  {\n    \"rule\": \"I am a weird rule\"\n  }\n  ]\n}, Error: unable to parse rule: unable to unmarshal: \"I am a weird rule\"",
+		"error parsing: { \"nftables\": [\n    {\n      \"rule\": {}\n    },\n}, Error: invalid character '}' looking for beginning of value",
+		"error parsing: { \"nftables\": [\n    {\n      \"rule\": []\n    },\n}, Error: invalid character '}' looking for beginning of value",
 	}
-	for i, v := range bad_rules {
+	for i, v := range badrules {
 		acc := new(testutil.Accumulator)
 		err := parseNftableOutput([]byte(v), acc)
-		if err.Error() != bad_errors[i] {
-			t.Errorf("Expected Error %#v, but got %#v", bad_errors[i], err.Error())
+		if err.Error() != baderrors[i] {
+			t.Errorf("Expected Error %#v, but got %#v", baderrors[i], err.Error())
 		}
 	}
 }
 
 func TestParseNftableOutput(t *testing.T) {
 	acc := new(testutil.Accumulator)
-	err := parseNftableOutput([]byte(singleton_table), acc)
+	err := parseNftableOutput([]byte(singletontable), acc)
 	if err != nil {
 		t.Errorf("No Error Expected: %#v", err)
 	}
@@ -206,20 +204,20 @@ func TestParseNftableOutput(t *testing.T) {
 }
 
 func TestParseNftableBadOutput(t *testing.T) {
-	errFoo := errors.New("Error Parsing: I am not JSON, Error: invalid character 'I' looking for beginning of value")
+	expected := "error parsing: I am not JSON, Error: invalid character 'I' looking for beginning of value"
 	acc := new(testutil.Accumulator)
 	err := parseNftableOutput([]byte("I am not JSON"), acc)
-	if !reflect.DeepEqual(err, errFoo) {
-		t.Errorf("Expected error %#v got\n%#v\n", errFoo, err)
+	if err.Error() != expected {
+		t.Errorf("Expected error %#v got\n%#v\n", expected, err)
 	}
 }
 
 func TestNftableBadConfig(t *testing.T) {
-	errFoo := errors.New("Invalid Configuration. Expected a `Tables` entry with list of nftables to monitor")
+	expected := "invalid configuration - expected a `Tables` entry with list of nftables to monitor"
 	ft := Nftables{}
 	acc := new(testutil.Accumulator)
 	err := acc.GatherError(ft.Gather)
-	if !reflect.DeepEqual(err, errFoo) {
-		t.Errorf("Expected error %#v got\n%#v\n", errFoo, err)
+	if err.Error() != expected {
+		t.Errorf("Expected error %#v got\n%#v\n", expected, err)
 	}
 }
