@@ -24,20 +24,20 @@
   "object_totals": {
     "channels": 44,
     "connections": 44,
-    "consumers": 65,
+    "consumers": 70,
     "exchanges": 43,
-    "queues": 62
+    "queues": 66
   },
   "queue_totals": {
-    "messages": 5,
+    "messages": 50,
     "messages_details": {
       "rate": 0.0
     },
-    "messages_ready": 32,
+    "messages_ready": 72,
     "messages_ready_details": {
       "rate": 0.0
     },
-    "messages_unacknowledged": 27,
+    "messages_unacknowledged": 94,
     "messages_unacknowledged_details": {
       "rate": 0.0
     }
