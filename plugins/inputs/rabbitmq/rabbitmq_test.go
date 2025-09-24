@@ -60,18 +60,18 @@ func TestRabbitMQGeneratesMetricsSet1(t *testing.T) {
 				"url": ts.URL,
 			},
 			map[string]interface{}{
-				"messages":               int64(5),
-				"messages_ready":         int64(32),
-				"messages_unacked":       int64(27),
+				"messages":               int64(50),
+				"messages_ready":         int64(72),
+				"messages_unacked":       int64(94),
 				"messages_acked":         int64(5246),
 				"messages_delivered":     int64(5234),
 				"messages_delivered_get": int64(3333),
 				"messages_published":     int64(5258),
 				"channels":               int64(44),
 				"connections":            int64(44),
-				"consumers":              int64(65),
+				"consumers":              int64(70),
 				"exchanges":              int64(43),
-				"queues":                 int64(62),
+				"queues":                 int64(66),
 				"clustering_listeners":   int64(2),
 				"amqp_listeners":         int64(2),
 				"return_unroutable":      int64(10),
@@ -114,6 +114,120 @@ func TestRabbitMQGeneratesMetricsSet1(t *testing.T) {
 				"idle_since":                "2015-11-01 8:22:14",
 				"slave_nodes":               int64(1),
 				"synchronised_slave_nodes":  int64(1),
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric("rabbitmq_queue",
+			map[string]string{
+				"auto_delete": "false",
+				"durable":     "true",
+				"node":        "rabbit@rmqlocal-0.rmqlocal.ankorabbitstatefulset3.svc.cluster.local",
+				"queue":       "stream_queue_example",
+				"url":         ts.URL,
+				"vhost":       "sorandomsorandom",
+			},
+			map[string]interface{}{
+				"consumers":                 int64(2),
+				"consumer_utilisation":      float64(0.8),
+				"head_message_timestamp":    int64(1446366000),
+				"memory":                    int64(95000),
+				"message_bytes":             int64(1),
+				"message_bytes_ready":       int64(2),
+				"message_bytes_unacked":     int64(3),
+				"message_bytes_ram":         int64(4),
+				"message_bytes_persist":     int64(5),
+				"messages":                  int64(25),
+				"messages_ready":            int64(20),
+				"messages_unack":            int64(25),
+				"messages_ack":              int64(1500),
+				"messages_ack_rate":         float64(5.5),
+				"messages_deliver":          int64(10000),
+				"messages_deliver_rate":     float64(200.0),
+				"messages_deliver_get":      int64(1500),
+				"messages_deliver_get_rate": float64(0.1),
+				"messages_publish":          int64(1500),
+				"messages_publish_rate":     float64(8.5),
+				"messages_redeliver":        int64(15),
+				"messages_redeliver_rate":   float64(1.2),
+				"idle_since":                "2015-11-01 9:15:30",
+				"slave_nodes":               int64(0),
+				"synchronised_slave_nodes":  int64(0),
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric("rabbitmq_queue",
+			map[string]string{
+				"auto_delete": "false",
+				"durable":     "true",
+				"node":        "rabbit@rmqlocal-0.rmqlocal.ankorabbitstatefulset3.svc.cluster.local",
+				"queue":       "no-type-queue",
+				"url":         ts.URL,
+				"vhost":       "sorandomsorandom",
+			},
+			map[string]interface{}{
+				"consumers":                 int64(1),
+				"consumer_utilisation":      float64(0.9),
+				"head_message_timestamp":    int64(1446372000),
+				"memory":                    int64(50000),
+				"message_bytes":             int64(1),
+				"message_bytes_ready":       int64(1),
+				"message_bytes_unacked":     int64(1),
+				"message_bytes_ram":         int64(1),
+				"message_bytes_persist":     int64(2),
+				"messages":                  int64(10),
+				"messages_ready":            int64(8),
+				"messages_unack":            int64(10),
+				"messages_ack":              int64(500),
+				"messages_ack_rate":         float64(2.0),
+				"messages_deliver":          int64(2000),
+				"messages_deliver_rate":     float64(50.0),
+				"messages_deliver_get":      int64(500),
+				"messages_deliver_get_rate": float64(0.1),
+				"messages_publish":          int64(500),
+				"messages_publish_rate":     float64(3.0),
+				"messages_redeliver":        int64(5),
+				"messages_redeliver_rate":   float64(0.5),
+				"idle_since":                "2015-11-01 10:30:00",
+				"slave_nodes":               int64(0),
+				"synchronised_slave_nodes":  int64(0),
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric("rabbitmq_queue",
+			map[string]string{
+				"auto_delete": "false",
+				"durable":     "true",
+				"node":        "rabbit@rmqlocal-0.rmqlocal.ankorabbitstatefulset3.svc.cluster.local",
+				"queue":       "invalid-type-queue",
+				"url":         ts.URL,
+				"vhost":       "sorandomsorandom",
+			},
+			map[string]interface{}{
+				"consumers":                 int64(2),
+				"consumer_utilisation":      float64(0.85),
+				"head_message_timestamp":    int64(1446375000),
+				"memory":                    int64(75000),
+				"message_bytes":             int64(1),
+				"message_bytes_ready":       int64(1),
+				"message_bytes_unacked":     int64(2),
+				"message_bytes_ram":         int64(2),
+				"message_bytes_persist":     int64(3),
+				"messages":                  int64(15),
+				"messages_ready":            int64(12),
+				"messages_unack":            int64(15),
+				"messages_ack":              int64(750),
+				"messages_ack_rate":         float64(3.0),
+				"messages_deliver":          int64(3000),
+				"messages_deliver_rate":     float64(75.0),
+				"messages_deliver_get":      int64(750),
+				"messages_deliver_get_rate": float64(0.1),
+				"messages_publish":          int64(750),
+				"messages_publish_rate":     float64(4.5),
+				"messages_redeliver":        int64(8),
+				"messages_redeliver_rate":   float64(0.8),
+				"idle_since":                "2015-11-01 11:45:00",
+				"slave_nodes":               int64(0),
+				"synchronised_slave_nodes":  int64(0),
 			},
 			time.Unix(0, 0),
 		),
@@ -288,9 +402,9 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 				"messages_published":     int64(770025),
 				"channels":               int64(43),
 				"connections":            int64(43),
-				"consumers":              int64(37),
+				"consumers":              int64(40),
 				"exchanges":              int64(8),
-				"queues":                 int64(34),
+				"queues":                 int64(37),
 				"clustering_listeners":   int64(1),
 				"amqp_listeners":         int64(2),
 				"return_unroutable":      int64(0),
@@ -466,6 +580,80 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 				"mem_allocated_unused":      int64(61026048),
 				"mem_reserved_unallocated":  int64(0),
 				"mem_total":                 int64(385548288),
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric("rabbitmq_queue",
+			map[string]string{
+				"auto_delete": "false",
+				"durable":     "false",
+				"node":        "rabbit@rmqserver",
+				"queue":       "no-type-queue-set2",
+				"url":         ts.URL,
+				"vhost":       "/",
+			},
+			map[string]interface{}{
+				"consumers":                 int64(1),
+				"consumer_utilisation":      float64(1.0),
+				"memory":                    int64(12000),
+				"message_bytes":             int64(0),
+				"message_bytes_ready":       int64(0),
+				"message_bytes_unacked":     int64(0),
+				"message_bytes_ram":         int64(0),
+				"message_bytes_persist":     int64(0),
+				"messages":                  int64(0),
+				"messages_ready":            int64(0),
+				"messages_unack":            int64(0),
+				"messages_ack":              int64(100),
+				"messages_ack_rate":         float64(0.0),
+				"messages_deliver":          int64(100),
+				"messages_deliver_rate":     float64(0.0),
+				"messages_deliver_get":      int64(100),
+				"messages_deliver_get_rate": float64(0.0),
+				"messages_publish":          int64(100),
+				"messages_publish_rate":     float64(0.0),
+				"messages_redeliver":        int64(0),
+				"messages_redeliver_rate":   float64(0.0),
+				"idle_since":                "2021-06-28 15:54:17",
+				"slave_nodes":               int64(0),
+				"synchronised_slave_nodes":  int64(0),
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric("rabbitmq_queue",
+			map[string]string{
+				"auto_delete": "false",
+				"durable":     "false",
+				"node":        "rabbit@rmqserver",
+				"queue":       "invalid-type-queue-set2",
+				"url":         ts.URL,
+				"vhost":       "/",
+			},
+			map[string]interface{}{
+				"consumers":                 int64(1),
+				"consumer_utilisation":      float64(1.0),
+				"memory":                    int64(15000),
+				"message_bytes":             int64(0),
+				"message_bytes_ready":       int64(0),
+				"message_bytes_unacked":     int64(0),
+				"message_bytes_ram":         int64(0),
+				"message_bytes_persist":     int64(0),
+				"messages":                  int64(0),
+				"messages_ready":            int64(0),
+				"messages_unack":            int64(0),
+				"messages_ack":              int64(200),
+				"messages_ack_rate":         float64(0.0),
+				"messages_deliver":          int64(200),
+				"messages_deliver_rate":     float64(0.0),
+				"messages_deliver_get":      int64(200),
+				"messages_deliver_get_rate": float64(0.0),
+				"messages_publish":          int64(200),
+				"messages_publish_rate":     float64(0.0),
+				"messages_redeliver":        int64(0),
+				"messages_redeliver_rate":   float64(0.0),
+				"idle_since":                "2021-06-28 16:30:45",
+				"slave_nodes":               int64(0),
+				"synchronised_slave_nodes":  int64(0),
 			},
 			time.Unix(0, 0),
 		),
@@ -685,4 +873,98 @@ func TestRabbitMQMetricFilerts(t *testing.T) {
 		require.Len(t, acc.Errors, len(expected))
 		require.ElementsMatch(t, expected, acc.Errors)
 	}
+}
+
+func TestRabbitMQQueueTypeTag(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var jsonFilePath string
+
+		switch r.URL.Path {
+		case "/api/overview":
+			jsonFilePath = "testdata/set1/overview.json"
+		case "/api/nodes":
+			jsonFilePath = "testdata/set1/nodes.json"
+		case "/api/queues":
+			jsonFilePath = "testdata/set1/queues.json"
+		case "/api/exchanges":
+			jsonFilePath = "testdata/set1/exchanges.json"
+		case "/api/federation-links":
+			jsonFilePath = "testdata/set1/federation-links.json"
+		case "/api/nodes/rabbit@vagrant-ubuntu-trusty-64/memory":
+			jsonFilePath = "testdata/set1/memory.json"
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("unknown path %q", r.URL.Path)
+			return
+		}
+
+		data, err := os.ReadFile(jsonFilePath)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Could not read from data file %q: %v", jsonFilePath, err)
+			return
+		}
+
+		if _, err = w.Write(data); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
+	}))
+	defer ts.Close()
+
+	// Test with IncludeQueueTypeTag = false (default)
+	plugin := &RabbitMQ{
+		URL: ts.URL,
+		Log: testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, plugin.Gather(acc))
+
+	acc.Wait(4)
+	require.Empty(t, acc.Errors)
+
+	// Check that queue metrics don't have type tag when disabled
+	queueMetrics := acc.GetTelegrafMetrics()
+	for _, metric := range queueMetrics {
+		if metric.Name() == "rabbitmq_queue" {
+			require.False(t, metric.HasTag("type"), "Queue metric should not have type tag when IncludeQueueTypeTag is false")
+		}
+	}
+
+	// Test with IncludeQueueTypeTag = true
+	pluginWithType := &RabbitMQ{
+		URL:                 ts.URL,
+		IncludeQueueTypeTag: true,
+		Log:                 testutil.Logger{},
+	}
+	require.NoError(t, pluginWithType.Init())
+
+	accWithType := &testutil.Accumulator{}
+	require.NoError(t, pluginWithType.Gather(accWithType))
+
+	accWithType.Wait(4)
+	require.Empty(t, accWithType.Errors)
+
+	// Check that queue metrics have type tag when enabled and verify specific queue types
+	queueMetricsWithType := accWithType.GetTelegrafMetrics()
+	queueTypeMap := make(map[string]string) // queue name -> queue type
+
+	for _, metric := range queueMetricsWithType {
+		if metric.Name() == "rabbitmq_queue" {
+			require.True(t, metric.HasTag("type"), "Queue metric should have type tag when IncludeQueueTypeTag is true")
+
+			queueName, _ := metric.GetTag("queue")
+			queueType, _ := metric.GetTag("type")
+			queueTypeMap[queueName] = queueType
+		}
+	}
+
+	require.Len(t, queueTypeMap, 4, "Should have metrics for all 4 queues in test data")
+	require.Equal(t, "quorum", queueTypeMap["reply_a716f0523cd44941ad2ea6ce4a3869c3"], "Quorum queue should have type 'quorum'")
+	require.Equal(t, "stream", queueTypeMap["stream_queue_example"], "Stream queue should have type 'stream'")
+	require.Equal(t, "classic", queueTypeMap["no-type-queue"], "Queue without type field should default to 'classic'")
+	require.Equal(t, "invalid_type", queueTypeMap["invalid-type-queue"], "Queue with invalid type should preserve the invalid type")
 }
