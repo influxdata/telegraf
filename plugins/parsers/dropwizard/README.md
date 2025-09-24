@@ -2,7 +2,7 @@
 
 The `dropwizard` data format can parse the [JSON Dropwizard][dropwizard]
 representation of a single dropwizard metric registry. By default, tags are
-parsed from metric names as if they were actual [line protocol] keys
+parsed from metric names as if they were actual [line protocol][line_protocol] keys
 (`measurement<,tag_set>`) which can be overridden by defining a custom [template
 pattern][templates]. All field value types are supported, `string`, `number` and
 `boolean`.
