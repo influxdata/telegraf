@@ -104,6 +104,46 @@ func TestSerialize_TimestampUnits(t *testing.T) {
 	}
 }
 
+func TestSerializeNestedFieldKeys(t *testing.T) {
+	now := time.Now()
+	tags := map[string]string{
+		"host": "server1",
+	}
+	fields := map[string]interface{}{
+		"system/cpu/usage": 55.5,
+		"system/mem/usage": 70.1,
+		"flat_field":       123,
+	}
+	m := metric.New("sysmetrics", tags, fields, now)
+
+	s := Serializer{}
+	require.NoError(t, s.Init())
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
+
+	// Unmarshal and check nested structure
+	var out map[string]interface{}
+	require.NoError(t, json.Unmarshal(buf, &out))
+
+	fieldsOut, ok := out["fields"].(map[string]interface{})
+	require.True(t, ok)
+
+	// Check nested cpu usage
+	system, ok := fieldsOut["system"].(map[string]interface{})
+	require.True(t, ok, "missing system field")
+	cpu, ok := system["cpu"].(map[string]interface{})
+	require.True(t, ok)
+	require.InDelta(t, 55.5, cpu["usage"], 1e-9)
+
+	// Check nested mem usage
+	mem, ok := system["mem"].(map[string]interface{})
+	require.True(t, ok)
+	require.InDelta(t, 70.1, mem["usage"], 1e-9)
+
+	// Check flat field
+	require.InDelta(t, 123.0, fieldsOut["flat_field"], 1e-9)
+}
+
 func TestSerializeMetricInt(t *testing.T) {
 	now := time.Now()
 	tags := map[string]string{
