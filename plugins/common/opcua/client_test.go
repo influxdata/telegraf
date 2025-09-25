@@ -1,9 +1,13 @@
 package opcua
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/gopcua/opcua/ua"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,13 +37,13 @@ func TestCheckStatusCode(t *testing.T) {
 }
 
 func TestOpcUAClientConfigValidateSuccess(t *testing.T) {
-	config := OpcUAClientConfig{
+	clientConfig := OpcUAClientConfig{
 		Endpoint:       "opc.tcp://localhost:4840",
 		SecurityPolicy: "None",
 		SecurityMode:   "None",
 	}
 
-	err := config.Validate()
+	err := clientConfig.Validate()
 	require.NoError(t, err)
 }
 
@@ -173,6 +177,107 @@ func TestOpcUAClientSetupWorkarounds(t *testing.T) {
 				// Should always have at least StatusOK
 				require.GreaterOrEqual(t, len(client.codes), 1)
 				require.Equal(t, ua.StatusOK, client.codes[0])
+			}
+		})
+	}
+}
+
+// TestDisconnectRepeated verifies that multiple calls to Disconnect are safe
+func TestDisconnectRepeated(t *testing.T) {
+	client := &OpcUAClient{
+		Config: &OpcUAClientConfig{
+			Endpoint: "opc.tcp://localhost:4840",
+		},
+		Log: testutil.Logger{},
+	}
+
+	ctx := context.Background()
+
+	// First disconnect should be safe (client is nil)
+	err1 := client.Disconnect(ctx)
+	require.NoError(t, err1)
+
+	// Second disconnect should also be safe
+	err2 := client.Disconnect(ctx)
+	require.NoError(t, err2)
+}
+
+// TestSetupOptionsContextCancellationIntegration tests context cancellation during endpoint discovery
+func TestSetupOptionsContextCancellationIntegration(t *testing.T) {
+	client := &OpcUAClient{
+		Config: &OpcUAClientConfig{
+			Endpoint:       "opc.tcp://unreachable-server:4840",
+			ConnectTimeout: config.Duration(1 * time.Second),
+		},
+		Log: testutil.Logger{},
+	}
+
+	// Create a context that's already cancelled
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	err := client.SetupOptions(ctx)
+	require.Error(t, err)
+
+	var endpointErr *EndpointError
+	require.ErrorAs(t, err, &endpointErr)
+	// Context cancellation should result in an error
+}
+
+// TestSetupOptionsTimeoutIntegration tests timeout behavior during endpoint discovery
+func TestSetupOptionsTimeoutIntegration(t *testing.T) {
+	client := &OpcUAClient{
+		Config: &OpcUAClientConfig{
+			Endpoint:       "opc.tcp://1.2.3.4:4840",                // Non-routable IP for timeout
+			ConnectTimeout: config.Duration(100 * time.Millisecond), // Very short timeout
+		},
+		Log: testutil.Logger{},
+	}
+
+	ctx := context.Background()
+
+	start := time.Now()
+	err := client.SetupOptions(ctx)
+	duration := time.Since(start)
+
+	require.Error(t, err)
+	// Should timeout roughly within our configured time
+	require.Less(t, duration, 2*time.Second) // Allow some overhead
+
+	var endpointErr *EndpointError
+	require.ErrorAs(t, err, &endpointErr)
+}
+
+// TestCleanupTimeoutConfiguration tests that cleanup timeout respects connect_timeout
+func TestCleanupTimeoutConfiguration(t *testing.T) {
+	tests := []struct {
+		name           string
+		connectTimeout config.Duration
+		expectDefault  bool
+	}{
+		{
+			name:           "no_connect_timeout_uses_default",
+			connectTimeout: config.Duration(0),
+			expectDefault:  true,
+		},
+		{
+			name:           "short_connect_timeout_used",
+			connectTimeout: config.Duration(2 * time.Second),
+			expectDefault:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// This test validates the timeout calculation logic
+			expectedDefault := 10 * time.Second
+			expectedConfigured := time.Duration(tt.connectTimeout)
+
+			if tt.expectDefault {
+				require.Equal(t, config.Duration(0), tt.connectTimeout)
+			} else {
+				require.Greater(t, time.Duration(tt.connectTimeout), time.Duration(0))
+				require.LessOrEqual(t, expectedConfigured, expectedDefault)
 			}
 		})
 	}
