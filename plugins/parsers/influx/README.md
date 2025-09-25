@@ -2,7 +2,7 @@
 
 Parses metrics using the [Influx Line Protocol][].
 
-[Influx Line Protocol]: https://docs.influxdata.com/influxdb3/core/reference/line-protocol/
+[Influx Line Protocol]: https://docs.influxdata.com/influxdb/latest/reference/syntax/line-protocol/
 
 ## Configuration
 
