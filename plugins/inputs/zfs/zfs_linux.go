@@ -5,6 +5,7 @@ package zfs
 import (
 	"errors"
 	"fmt"
+	"math"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -50,8 +51,7 @@ func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 
 	if z.PoolMetrics && err == nil {
 		for _, pool := range pools {
-			err := gatherPoolStats(pool, acc)
-			if err != nil {
+			if err := z.gatherPoolStats(pool, acc); err != nil {
 				return err
 			}
 		}
@@ -142,7 +142,7 @@ func getTags(pools []poolInfo) map[string]string {
 	return map[string]string{"pools": poolNames}
 }
 
-func gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
+func (z *Zfs) gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
 	lines, err := internal.ReadLines(pool.ioFilename)
 	if err != nil {
 		return err
@@ -155,7 +155,7 @@ func gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
 	case v1:
 		fields, gatherErr = gatherV1(lines)
 	case v2:
-		fields, gatherErr = gatherV2(lines, tags)
+		fields, gatherErr = z.gatherV2(lines, tags)
 	case unknown:
 		return errors.New("unknown metrics version detected")
 	}
@@ -214,7 +214,7 @@ func gather(lines []string, fileLines int) (keys, values []string, err error) {
 // nunlinked                       4    13848
 //
 // For explanation of the first line's values see https://github.com/openzfs/zfs/blob/master/module/os/linux/spl/spl-kstat.c#L61
-func gatherV2(lines []string, tags map[string]string) (map[string]interface{}, error) {
+func (z *Zfs) gatherV2(lines []string, tags map[string]string) (map[string]interface{}, error) {
 	fileLines := 9
 	_, _, err := gather(lines, fileLines)
 	if err != nil {
@@ -227,12 +227,17 @@ func gatherV2(lines []string, tags map[string]string) (map[string]interface{}, e
 		lineFields := strings.Fields(lines[i])
 		fieldName := lineFields[0]
 		fieldData := lineFields[2]
-		value, err := strconv.ParseInt(fieldData, 10, 64)
+		value, err := strconv.ParseUint(fieldData, 10, 64)
 		if err != nil {
 			return nil, err
 		}
-
-		fields[fieldName] = value
+		if z.PoolMetricsUint {
+			fields[fieldName] = value
+		} else if value > math.MaxInt64 {
+			fields[fieldName] = int64(math.MaxInt64)
+		} else {
+			fields[fieldName] = int64(value)
+		}
 	}
 
 	return fields, nil

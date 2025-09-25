@@ -11,11 +11,12 @@ import (
 var sampleConfig string
 
 type Zfs struct {
-	KstatPath      string          `toml:"kstatPath"`
-	KstatMetrics   []string        `toml:"kstatMetrics"`
-	PoolMetrics    bool            `toml:"poolMetrics"`
-	DatasetMetrics bool            `toml:"datasetMetrics"`
-	Log            telegraf.Logger `toml:"-"`
+	KstatPath       string          `toml:"kstatPath"`
+	KstatMetrics    []string        `toml:"kstatMetrics"`
+	PoolMetrics     bool            `toml:"poolMetrics"`
+	PoolMetricsUint bool            `toml:"poolMetricsUint"`
+	DatasetMetrics  bool            `toml:"datasetMetrics"`
+	Log             telegraf.Logger `toml:"-"`
 
 	helper //nolint:unused // for OS-specific usage
 }
