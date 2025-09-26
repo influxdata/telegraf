@@ -1044,6 +1044,11 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 	for _, intfName := range t.Ifname {
 
+		if !ahutil.Check_Vap_Status(intfName) {
+			log.Printf("VAP %s is not up, rfStat not collected\n", intfName)
+			continue
+		}
+
 		var rfstat awestats
 		var ifindex int
 		var chann int32
@@ -2551,6 +2556,7 @@ func Gather_deffer_end(t *Ah_wireless) {
 		os.Exit(128)
 	}
 }
+
 
 func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
 
