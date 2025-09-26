@@ -1,6 +1,10 @@
 package filter
 
-import "github.com/gobwas/glob"
+import (
+	"strings"
+
+	"github.com/bmatcuk/doublestar/v4"
+)
 
 type filterSingle struct {
 	s string
@@ -27,30 +31,106 @@ func (f *filterNoGlob) Match(s string) bool {
 	return ok
 }
 
-type filterGlobMultiple struct {
-	set []glob.Glob
+// filterGlob handles glob patterns WITHOUT separators
+// This is optimized for the common case where no separators are specified
+type filterGlob struct {
+	patterns []string
 }
 
-func newFilterGlobMultiple(filters []string, separators ...rune) (Filter, error) {
-	f := &filterGlobMultiple{set: make([]glob.Glob, 0, len(filters))}
-
+func newFilterGlob(filters []string) (Filter, error) {
+	// Validate all patterns
 	for _, pattern := range filters {
-		g, err := glob.Compile(pattern, separators...)
-		if err != nil {
+		if _, err := doublestar.Match(pattern, ""); err != nil {
 			return nil, err
 		}
-		f.set = append(f.set, g)
 	}
 
-	return f, nil
+	return &filterGlob{
+		patterns: filters,
+	}, nil
 }
 
-func (f *filterGlobMultiple) Match(s string) bool {
-	for _, g := range f.set {
-		if g.Match(s) {
+func (f *filterGlob) Match(s string) bool {
+	for _, pattern := range f.patterns {
+		matched, err := doublestar.Match(pattern, s)
+		if err != nil {
+			continue
+		}
+		if matched {
 			return true
 		}
 	}
-
 	return false
+}
+
+// filterGlobWithSeparators handles glob patterns WITH separators
+// This is a separate implementation to avoid the performance cost of checking
+// for separators in the hot path
+type filterGlobWithSeparators struct {
+	normalizedPatterns []string
+	separators         []rune
+}
+
+func newFilterGlobWithSeparators(filters []string, separators []rune) (Filter, error) {
+	// Validate all patterns
+	for _, pattern := range filters {
+		if _, err := doublestar.Match(pattern, ""); err != nil {
+			return nil, err
+		}
+	}
+
+	// Pre-compute normalized patterns
+	normalizedPatterns := make([]string, len(filters))
+	for i, pattern := range filters {
+		normalizedPatterns[i] = normalizePattern(pattern, separators)
+	}
+
+	return &filterGlobWithSeparators{
+		normalizedPatterns: normalizedPatterns,
+		separators:         separators,
+	}, nil
+}
+
+func (f *filterGlobWithSeparators) Match(s string) bool {
+	// Normalize the input string once
+	normalizedStr := normalizePattern(s, f.separators)
+
+	for _, pattern := range f.normalizedPatterns {
+		// Use PathMatch which treats '/' as a separator
+		matched, err := doublestar.PathMatch(pattern, normalizedStr)
+		if err != nil {
+			continue
+		}
+		if matched {
+			return true
+		}
+	}
+	return false
+}
+
+// normalizePattern converts all separators to '/' for path matching.
+// This allows doublestar.PathMatch to treat them as path separators.
+//
+// IMPORTANT LIMITATION: This function cannot distinguish between literal
+// separator characters and actual separators. For example, with separator '.',
+// the pattern "foo.bar/baz.qux" will have ALL dots replaced with '/',
+// even if some dots were meant to be literal characters in the pattern.
+//
+// This is an acceptable trade-off because:
+//  1. The original gobwas/glob had the same limitation
+//  2. It maintains backward compatibility with existing Telegraf configs
+//  3. Users can work around this by using glob patterns like "foo?bar" instead of "foo.bar"
+//     when they need to match a literal separator character
+func normalizePattern(s string, separators []rune) string {
+	if len(separators) == 0 {
+		return s
+	}
+
+	result := s
+	for _, sep := range separators {
+		if sep != '/' {
+			result = strings.ReplaceAll(result, string(sep), "/")
+		}
+	}
+	return result
 }
