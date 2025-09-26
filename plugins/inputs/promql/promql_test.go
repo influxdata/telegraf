@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
-	model "github.com/prometheus/common/model"
+	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -94,7 +94,7 @@ func TestInitFail(t *testing.T) {
 		{
 			name:     "all empty",
 			plugin:   &PromQL{},
-			expected: "URL cannot be empty",
+			expected: "'url' cannot be empty",
 		},
 		{
 			name: "no queries",
@@ -2089,7 +2089,7 @@ func TestWarnings(t *testing.T) {
 	require.NoError(t, err, "marshalling response")
 
 	// Setup the mocked Prometheus endpoint
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		if _, err := w.Write(buf); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			t.Errorf("Writing response failed: %v", err)

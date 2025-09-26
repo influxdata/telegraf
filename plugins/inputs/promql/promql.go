@@ -41,7 +41,7 @@ func (*PromQL) SampleConfig() string {
 func (p *PromQL) Init() error {
 	// Check settings
 	if p.URL == "" {
-		return errors.New("URL cannot be empty")
+		return errors.New("'url' cannot be empty")
 	}
 
 	if p.Username.Empty() && !p.Password.Empty() {
