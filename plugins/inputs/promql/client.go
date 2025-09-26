@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
-	common_http "github.com/influxdata/telegraf/plugins/common/http"
-
 	"github.com/prometheus/client_golang/api"
 	apiv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	promcfg "github.com/prometheus/common/config"
+
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 )
 
 type client struct {
@@ -72,7 +72,8 @@ type secretReader struct {
 	secret *config.Secret
 }
 
-func (r *secretReader) Fetch(ctx context.Context) (string, error) {
+// Fetch implements the Prometheus secret-reader API
+func (r *secretReader) Fetch(context.Context) (string, error) {
 	raw, err := r.secret.Get()
 	if err != nil {
 		return "", fmt.Errorf("getting %s failed: %w", r.desc, err)
@@ -83,10 +84,12 @@ func (r *secretReader) Fetch(ctx context.Context) (string, error) {
 	return s, nil
 }
 
+// Description implements the Prometheus secret-reader API
 func (r *secretReader) Description() string {
 	return r.desc
 }
 
+// Immutable implements the Prometheus secret-reader API
 func (*secretReader) Immutable() bool {
 	return true
 }

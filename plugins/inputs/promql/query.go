@@ -7,7 +7,7 @@ import (
 	"time"
 
 	apiv1 "github.com/prometheus/client_golang/api/prometheus/v1"
-	model "github.com/prometheus/common/model"
+	"github.com/prometheus/common/model"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
