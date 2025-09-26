@@ -190,9 +190,13 @@ type OpcUAClient struct {
 }
 
 // SetupOptions reads the endpoints from the specified server and sets up all authentication
-func (o *OpcUAClient) SetupOptions() error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Config.ConnectTimeout))
-	defer cancel()
+func (o *OpcUAClient) SetupOptions(ctx context.Context) error {
+	// Create a timeout context if needed
+	if o.Config.ConnectTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(o.Config.ConnectTimeout))
+		defer cancel()
+	}
 	// Get a list of the endpoints for our target server
 	endpoints, err := opcua.GetEndpoints(ctx, o.Config.Endpoint)
 	if err != nil {
@@ -254,13 +258,21 @@ func (o *OpcUAClient) Connect(ctx context.Context) error {
 
 	switch u.Scheme {
 	case "opc.tcp":
-		if err := o.SetupOptions(); err != nil {
+		if err := o.SetupOptions(ctx); err != nil {
 			return err
 		}
 
 		if o.Client != nil {
 			o.Log.Warnf("Closing connection to %q as already connected", u)
-			if err := o.Client.Close(ctx); err != nil {
+			// Create a separate context for cleanup to ensure we always attempt cleanup
+			// Use configured timeout or reasonable default
+			cleanupTimeout := 10 * time.Second // default
+			if o.Config.ConnectTimeout > 0 {
+				cleanupTimeout = time.Duration(o.Config.ConnectTimeout)
+			}
+			cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), cleanupTimeout)
+			defer cleanupCancel()
+			if err := o.Client.Close(cleanupCtx); err != nil {
 				// Only log the error but do not bail-out here as this prevents
 				// reconnections for multiple parties (see e.g. #9523).
 				o.Log.Errorf("Closing connection to %s failed: %v", o.Config.Endpoint, err)
@@ -274,9 +286,18 @@ func (o *OpcUAClient) Connect(ctx context.Context) error {
 				Err:      fmt.Errorf("%w: failed to create client: %w", ErrConnectionFailed, err),
 			}
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Config.ConnectTimeout))
-		defer cancel()
-		if err := o.Client.Connect(ctx); err != nil {
+
+		// Create a connection context with timeout if configured
+		connectCtx := ctx
+		if o.Config.ConnectTimeout > 0 {
+			var cancel context.CancelFunc
+			connectCtx, cancel = context.WithTimeout(ctx, time.Duration(o.Config.ConnectTimeout))
+			defer cancel()
+		}
+
+		if err := o.Client.Connect(connectCtx); err != nil {
+			// Clean up the client on connection failure
+			o.Client = nil
 			return &EndpointError{
 				Endpoint: o.Config.Endpoint,
 				Err:      fmt.Errorf("%w: %w", ErrConnectionFailed, err),
@@ -295,6 +316,12 @@ func (o *OpcUAClient) Connect(ctx context.Context) error {
 
 func (o *OpcUAClient) Disconnect(ctx context.Context) error {
 	o.Log.Debug("Disconnecting from OPC UA Server")
+
+	// Nothing to disconnect if client is nil
+	if o.Client == nil {
+		return nil
+	}
+
 	u, err := url.Parse(o.Config.Endpoint)
 	if err != nil {
 		return &EndpointError{
@@ -305,7 +332,6 @@ func (o *OpcUAClient) Disconnect(ctx context.Context) error {
 
 	switch u.Scheme {
 	case "opc.tcp":
-		// We can't do anything about failing to close a connection
 		err := o.Client.Close(ctx)
 		o.Client = nil
 		if err != nil {
