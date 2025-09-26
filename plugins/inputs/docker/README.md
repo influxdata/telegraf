@@ -60,7 +60,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   timeout = "5s"
 
   ## Podman compatibility settings (auto-enabled when Podman detected)
-  ## Cache TTL for accurate CPU percentage calculation
+  ## Cache TTL for accurate CPU percentage calculation (default: 60s)
+  ## Set higher than your collection interval for accurate measurements
+  ## Set to 0 to keep cache entries forever (not recommended for dynamic environments)
   # podman_cache_ttl = "60s"
 
   ## Specifies for which classes a per-device metric should be issued
@@ -117,6 +119,8 @@ This plugin is compatible with Podman through its Docker-compatible API. When co
 ```toml
 ## Cache TTL for accurate CPU percentage calculation (default: 60s)
 ## Stats caching is automatically enabled when Podman is detected
+## Set higher than your collection interval for accurate measurements
+## Set to 0 to keep cache entries forever (not recommended for dynamic environments)
 # podman_cache_ttl = "60s"
 ```
 

@@ -1707,7 +1707,7 @@ func TestPodmanDetection(t *testing.T) {
 			}
 
 			require.NoError(t, d.Init())
-			require.NoError(t, d.Gather(&acc))
+			require.NoError(t, d.Start(&acc))
 			require.Equal(t, tt.expectPodman, d.isPodman, "Podman detection mismatch")
 		})
 	}

@@ -100,7 +100,7 @@ type Docker struct {
 
 	// Stats cache for Podman CPU calculation
 	statsCache      map[string]*cachedContainerStats
-	statsCacheMutex sync.RWMutex
+	statsCacheMutex sync.Mutex
 }
 
 // cachedContainerStats holds cached stats and metadata for a container
@@ -139,11 +139,37 @@ func (d *Docker) Init() error {
 		}
 	}
 
-	// Set sensible defaults for Podman support
-	if d.PodmanCacheTTL == 0 {
-		d.PodmanCacheTTL = config.Duration(60 * time.Second)
+	return nil
+}
+
+func (d *Docker) Start(_ telegraf.Accumulator) error {
+	// Get client
+	c, err := d.getNewClient()
+	if err != nil {
+		return err
 	}
-	// Stats cache will be initialized only when Podman is detected
+	d.client = c
+
+	// Get info from docker daemon for Podman detection
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
+	defer cancel()
+
+	info, err := d.client.Info(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get Docker info: %w", err)
+	}
+
+	d.engineHost = info.Name
+	d.serverVersion = info.ServerVersion
+
+	// Detect if we're connected to Podman
+	d.isPodman = d.detectPodman(&info)
+
+	if d.isPodman {
+		// Initialize stats cache only for Podman to save memory for Docker users
+		d.statsCache = make(map[string]*cachedContainerStats)
+		d.Log.Infof("Detected Podman engine (version: %s, name: %s), using stats caching for accurate CPU measurements", info.ServerVersion, info.Name)
+	}
 
 	return nil
 }
@@ -243,14 +269,14 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	}
 	wg.Wait()
 
-	// Clean up stale cache entries for Podman
-	if d.isPodman {
-		d.cleanupStaleCache()
-	}
-
 	// Get disk usage data
 	if len(d.objectTypes) > 0 {
 		d.gatherDiskUsage(acc, types.DiskUsageOptions{Types: d.objectTypes})
+	}
+
+	// Clean up stale cache entries for Podman
+	if d.isPodman {
+		d.cleanupStaleCache()
 	}
 
 	return nil
@@ -358,17 +384,6 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 
 	d.engineHost = info.Name
 	d.serverVersion = info.ServerVersion
-
-	// Detect if we're connected to Podman
-	d.isPodman = d.detectPodman(&info)
-
-	if d.isPodman {
-		// Initialize stats cache only for Podman to save memory for Docker users
-		if d.statsCache == nil {
-			d.statsCache = make(map[string]*cachedContainerStats)
-		}
-		d.Log.Infof("Detected Podman engine (version: %s, name: %s), using stats caching for accurate CPU measurements", info.ServerVersion, info.Name)
-	}
 
 	tags := map[string]string{
 		"engine_host":    d.engineHost,
@@ -1142,12 +1157,12 @@ func (d *Docker) fixPodmanCPUStats(containerID string, current *container.StatsR
 		if age <= ttl {
 			// Use cached stats as PreCPUStats for accurate CPU calculation
 			current.PreCPUStats = cached.stats.CPUStats
-			d.Log.Debugf("Podman stats cache hit for container %s (age: %v)", hostnameFromID(containerID), age)
+			d.Log.Tracef("Podman stats cache hit for container %s (age: %v)", hostnameFromID(containerID), age)
 		} else {
-			d.Log.Debugf("Podman stats cache expired for container %s (age: %v)", hostnameFromID(containerID), age)
+			d.Log.Tracef("Podman stats cache expired for container %s (age: %v)", hostnameFromID(containerID), age)
 		}
 	} else {
-		d.Log.Debugf("Podman stats cache miss for container %s (first collection)", hostnameFromID(containerID))
+		d.Log.Tracef("Podman stats cache miss for container %s (first collection)", hostnameFromID(containerID))
 	}
 
 	// Update cache with current stats (reuse timestamp)
@@ -1166,7 +1181,7 @@ func (d *Docker) cleanupStaleCache() {
 	d.statsCacheMutex.Lock()
 	defer d.statsCacheMutex.Unlock()
 
-	cutoff := time.Now().Add(-time.Duration(d.PodmanCacheTTL) * 2) // 2x TTL for safety
+	cutoff := time.Now().Add(-time.Duration(d.PodmanCacheTTL))
 	expiredCount := 0
 
 	for id, cached := range d.statsCache {
@@ -1176,9 +1191,7 @@ func (d *Docker) cleanupStaleCache() {
 		}
 	}
 
-	if expiredCount > 0 {
-		d.Log.Debugf("Cleaned up %d expired entries from Podman stats cache", expiredCount)
-	}
+	d.Log.Tracef("Cleaned up %d expired entries from Podman stats cache", expiredCount)
 }
 
 func init() {
@@ -1188,6 +1201,7 @@ func init() {
 			TotalInclude:     []string{"cpu", "blkio", "network"},
 			Timeout:          config.Duration(time.Second * 5),
 			Endpoint:         defaultEndpoint,
+			PodmanCacheTTL:   config.Duration(60 * time.Second),
 			newEnvClient:     newEnvClient,
 			newClient:        newClient,
 			filtersCreated:   false,
