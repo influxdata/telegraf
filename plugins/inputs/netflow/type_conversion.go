@@ -117,7 +117,7 @@ func decodeUint(b []byte) (interface{}, error) {
 
 func decodeFloat32(b []byte) (interface{}, error) {
 	raw := binary.BigEndian.Uint32(b)
-	 return math.Float32frombits(raw), nil
+	return math.Float32frombits(raw), nil
 }
 
 func decodeFloat64(b []byte) (interface{}, error) {
