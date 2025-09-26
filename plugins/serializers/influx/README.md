@@ -48,4 +48,4 @@ format:
 - Tags with a key or value that is the empty string are skipped.
 - When not using `influx_uint_support`, unsigned integers are capped at the max int64.
 
-[line protocol]: https://docs.influxdata.com/influxdb/latest/write_protocols/line_protocol_tutorial/
+[line protocol]: https://docs.influxdata.com/influxdb3/core/reference/line-protocol/
