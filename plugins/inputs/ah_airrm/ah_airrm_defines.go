@@ -50,6 +50,7 @@ type ah_ieee80211_airrm_nbr_t struct {
 	timestamp				uint64			// Date and timestamp
 	extremeAP				uint8			// Is AP managed by Extreme?
 	rssi					int8			// RSS value in dBm
+	txPower                                 int8                    // Transmit power in dBm
 	bssid					[MACADDR_LEN]byte		// BSSID
 	radioMode				uint8			// Radio mode: 0=Access, 1=Sensor, 2=Backhaul, 3=Dual
     ssid					[32]byte		// SSID

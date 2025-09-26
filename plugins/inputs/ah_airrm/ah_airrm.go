@@ -4,6 +4,8 @@ import (
 	"log"
 	"os"
 	"sync"
+	"strings"
+	"bytes"
 	"time"
 	"fmt"
 	"net"
@@ -114,6 +116,7 @@ func (ai *Ah_airrm) Init() error {
 func Gather_acs_nbr(ai *Ah_airrm, acc telegraf.Accumulator) error {
 
 	var count int
+	var nbr_ssid string
 	count = 0
 	for _, intfName := range ai.Ifname {
 
@@ -140,15 +143,24 @@ func Gather_acs_nbr(ai *Ah_airrm, acc telegraf.Accumulator) error {
 				continue
 			}
 
+			nbr_ssid = strings.TrimSpace(string(bytes.Trim(nbrtbl.nbr_tbl[i].ssid[:], "\u0000")))
+
+			if idx := strings.IndexByte(nbr_ssid, '\u0000'); idx >= 0 {
+				nbr_ssid = nbr_ssid[:idx]
+			}
+
 			fields := map[string]interface{}{
 				"name_keys":					intfName,
 				"ifIndex_keys":					iface.Index,
 			}
 
 			fields["rrmId"] =						nbrtbl.nbr_tbl[i].rrmId
+			fields["bssid"] =						ahutil.MacToString(nbrtbl.nbr_tbl[i].bssid)
+			fields["ssid"] =						nbr_ssid
 			fields["channel"] =					ahutil.FreqToChan(uint16(nbrtbl.nbr_tbl[i].frequency))
 			fields["channelWidth"] =				nbrtbl.nbr_tbl[i].channelWidth
 			fields["rssi"] =					nbrtbl.nbr_tbl[i].rssi
+			fields["txPower"] =                                        nbrtbl.nbr_tbl[i].txPower
 			fields["extremeAP"] =					nbrtbl.nbr_tbl[i].extremeAP == 1
 			fields["channelUtilization"] =			nbrtbl.nbr_tbl[i].channelUtilization
 			fields["interferenceUtilization"] =		nbrtbl.nbr_tbl[i].interferenceUtilization
@@ -158,11 +170,11 @@ func Gather_acs_nbr(ai *Ah_airrm, acc telegraf.Accumulator) error {
 			fields["aggregationSize"] =				nbrtbl.nbr_tbl[i].aggregationSize
 			fields["clientCount"] =					nbrtbl.nbr_tbl[i].clientCount
 
-			acc.AddGauge("NbrStats", fields, nil)
+			acc.AddGauge("rfNbrStats", fields, nil)
 			count++
 		}
 	}
-	log.Printf("ah_airrm: NbrStats is processed with %d entries\n", count)
+	log.Printf("ah_airrm: rfNbrStats(ai-rrm) is processed with %d entries\n", count)
 
 	return nil
 }

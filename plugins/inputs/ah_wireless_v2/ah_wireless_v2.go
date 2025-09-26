@@ -1187,6 +1187,7 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 			fields["band"] = get_radio_band(t, intfName)
 			fields["rrmId"] = rrmid
+			fields["txPower"] = ahutil.GetTxPower(intfName)
 
 			if (t.last_ut_data[ii].noise_min == 0) || (t.last_ut_data[ii].noise_min >= rfstat.ast_noise_floor) {
 				t.last_ut_data[ii].noise_min = rfstat.ast_noise_floor
