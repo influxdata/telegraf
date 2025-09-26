@@ -6,9 +6,10 @@ import (
 	"time"
 
 	"github.com/gopcua/opcua/ua"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSetupWorkarounds(t *testing.T) {
@@ -191,7 +192,7 @@ func TestDisconnectRepeated(t *testing.T) {
 		Log: testutil.Logger{},
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// First disconnect should be safe (client is nil)
 	err1 := client.Disconnect(ctx)
@@ -213,7 +214,7 @@ func TestSetupOptionsContextCancellationIntegration(t *testing.T) {
 	}
 
 	// Create a context that's already cancelled
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	cancel() // Cancel immediately
 
 	err := client.SetupOptions(ctx)
@@ -234,7 +235,7 @@ func TestSetupOptionsTimeoutIntegration(t *testing.T) {
 		Log: testutil.Logger{},
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	start := time.Now()
 	err := client.SetupOptions(ctx)
