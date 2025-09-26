@@ -1044,7 +1044,7 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 	for _, intfName := range t.Ifname {
 
-		if !Check_Vap_Status(t.fd, intfName) {
+		if !ahutil.Check_Vap_Status(intfName) {
 			log.Printf("VAP %s is not up, rfStat not collected\n", intfName)
 			continue
 		}
@@ -2557,39 +2557,6 @@ func Gather_deffer_end(t *Ah_wireless) {
 	}
 }
 
-func Check_Vap_Status(fd int, ifname string) bool {
-
-	ird := iwreq_data{}
-
-	/* first 4 bytes is subcmd */
-	ird.data = IEEE80211_PARAM_BSS_UP_CNT
-
-	request := iwreq_clt{u: ird}
-
-	copy(request.ifr_name[:], ah_ifname_radio2vap(ifname))
-
-
-	offsetsMutex.Lock()
-
-	if err := ah_ioctl(uintptr(fd), IEEE80211_IOCTL_GETPARAM, uintptr(unsafe.Pointer(&request))); err != nil {
-			log.Printf("get bss up cnt ioctl failed %s",err)
-	offsetsMutex.Unlock()
-			return false
-	}
-
-	offsetsMutex.Unlock()
-
-	count := uint32(request.u.data)
-
-	if count > 0 {
-		return true
-	} else {
-		return false
-	}
-
-	return false
-
-}
 
 func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
 

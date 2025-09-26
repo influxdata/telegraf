@@ -7,6 +7,8 @@ import (
 	"strings"
 	"bufio"
 	"strconv"
+	"log"
+	"net"
 )
 
 func Mystr() string {
@@ -396,4 +398,25 @@ func GetRrmId() int {
 		return 0
 	}
 	return ret
+}
+
+func Check_Vap_Status(ifname string) bool {
+	vapName := Ah_ifname_radio2vap(ifname)
+	if vapName == "invalid" {
+		return false
+	}
+
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		log.Printf("ahutil: net.Interfaces failed: %v", err)
+		return false
+	}
+	for _, iface := range ifaces {
+		if iface.Name == vapName {
+			up := iface.Flags&net.FlagUp != 0
+			return up
+		}
+	}
+
+	return false
 }
