@@ -115,6 +115,11 @@ func decodeUint(b []byte) (interface{}, error) {
 	return nil, fmt.Errorf("invalid length for uint buffer %v", b)
 }
 
+func decodeFloat32(b []byte) (interface{}, error) {
+	raw := binary.BigEndian.Uint32(b)
+	return math.Float32frombits(raw), nil
+}
+
 func decodeFloat64(b []byte) (interface{}, error) {
 	raw := binary.BigEndian.Uint64(b)
 	return math.Float64frombits(raw), nil
