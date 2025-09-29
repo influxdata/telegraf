@@ -14,8 +14,8 @@ type Zfs struct {
 	KstatPath      string          `toml:"kstatPath"`
 	KstatMetrics   []string        `toml:"kstatMetrics"`
 	PoolMetrics    bool            `toml:"poolMetrics"`
-	UseNativTypes  bool            `toml:"useNativeTypes"`
 	DatasetMetrics bool            `toml:"datasetMetrics"`
+	UseNativTypes  bool            `toml:"useNativeTypes"`
 	Log            telegraf.Logger `toml:"-"`
 
 	helper //nolint:unused // for OS-specific usage
