@@ -1,8 +1,10 @@
 # Prometheus Remote Write Parser Plugin
 
 Converts prometheus remote write samples directly into Telegraf metrics. It can
-be used with [http_listener_v2](/plugins/inputs/http_listener_v2). There are no
-additional configuration options for Prometheus Remote Write Samples.
+be used with [http_listener_v2][http_listener_v2]. There are no additional
+configuration options for Prometheus Remote Write Samples.
+
+[http_listener_v2]: /plugins/inputs/http_listener_v2
 
 ## Configuration
 
@@ -54,7 +56,16 @@ go_gc_duration_seconds,instance=localhost:9090,job=prometheus,quantile=0.99 valu
 prometheus_remote_write,instance=localhost:9090,job=prometheus,quantile=0.99 go_gc_duration_seconds=4.63 1614889298859000000
 ```
 
-## For alignment with the [InfluxDB v1.x Prometheus Remote Write Spec](https://docs.influxdata.com/influxdb/v1.8/supported_protocols/prometheus/#how-prometheus-metrics-are-parsed-in-influxdb)
+## Alignment with Prometheus Remote Write Specification
 
-- V1: already aligned, it parses metrics according to the spec.
-- V2: Use the [Starlark processor rename prometheus remote write script](https://github.com/influxdata/telegraf/blob/master/plugins/processors/starlark/testdata/rename_prometheus_remote_write.star) to rename the measurement name to the fieldname and rename the fieldname to value.
+To align the output with the [InfluxDB v1.x Prometheus Remote Write Specification][spec]
+use
+
+- V1: already aligned, it parses metrics according to the spec
+- V2: use the [Starlark processor][starlark] with the
+      [rename prometheus remote write script][rename_script] to rename the
+      measurement to the field-name and rename the field-name to value
+
+[spec]: https://docs.influxdata.com/influxdb/v1.8/supported_protocols/prometheus/#how-prometheus-metrics-are-parsed-in-influxdb
+[starlark]: /plugins/processors/starlark/README.md
+[rename_script]: https://github.com/influxdata/telegraf/blob/master/plugins/processors/starlark/testdata/rename_prometheus_remote_write.star
