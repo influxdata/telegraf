@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD013 -->
 # Licenses of dependencies
 
 When distributed in a binary form, Telegraf may contain portions of the
