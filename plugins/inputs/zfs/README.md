@@ -39,6 +39,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## By default, don't gather zpool stats
   # poolMetrics = false
 
+  ## Report fields as the type defined by ZFS (Linux only)
+  ## This is disabled for backward compatibility but is STRONGLY RECOMMENDED
+  ## to be enabled to avoid overflows. This requires UINT support on the output
+  ## for most fields.
+  ## use_native_types = false
+
   ## By default, don't gather dataset stats
   # datasetMetrics = false
 ```

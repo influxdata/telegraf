@@ -18,6 +18,17 @@ const (
 	unknown metricsVersion = iota
 	v1
 	v2
+
+	// Procstat type-column values according to
+	// https://github.com/openzfs/zfs/blob/master/include/os/linux/spl/sys/kstat.h#L54
+	kstatDataChar   = 0
+	kstatDataInt32  = 1
+	kstatDataUint32 = 2
+	kstatDataInt64  = 3
+	kstatDataUint64 = 4
+	kstatDataLong   = 5
+	kstatDataULong  = 6
+	kstatDataString = 7
 )
 
 type metricsVersion uint8
@@ -50,8 +61,7 @@ func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 
 	if z.PoolMetrics && err == nil {
 		for _, pool := range pools {
-			err := gatherPoolStats(pool, acc)
-			if err != nil {
+			if err := z.gatherPoolStats(pool, acc); err != nil {
 				return err
 			}
 		}
@@ -142,7 +152,7 @@ func getTags(pools []poolInfo) map[string]string {
 	return map[string]string{"pools": poolNames}
 }
 
-func gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
+func (z *Zfs) gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
 	lines, err := internal.ReadLines(pool.ioFilename)
 	if err != nil {
 		return err
@@ -155,7 +165,7 @@ func gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
 	case v1:
 		fields, gatherErr = gatherV1(lines)
 	case v2:
-		fields, gatherErr = gatherV2(lines, tags)
+		fields, gatherErr = z.gatherV2(lines, tags)
 	case unknown:
 		return errors.New("unknown metrics version detected")
 	}
@@ -214,7 +224,7 @@ func gather(lines []string, fileLines int) (keys, values []string, err error) {
 // nunlinked                       4    13848
 //
 // For explanation of the first line's values see https://github.com/openzfs/zfs/blob/master/module/os/linux/spl/spl-kstat.c#L61
-func gatherV2(lines []string, tags map[string]string) (map[string]interface{}, error) {
+func (z *Zfs) gatherV2(lines []string, tags map[string]string) (map[string]interface{}, error) {
 	fileLines := 9
 	_, _, err := gather(lines, fileLines)
 	if err != nil {
@@ -226,13 +236,42 @@ func gatherV2(lines []string, tags map[string]string) (map[string]interface{}, e
 	for i := 3; i < len(lines); i++ {
 		lineFields := strings.Fields(lines[i])
 		fieldName := lineFields[0]
-		fieldData := lineFields[2]
-		value, err := strconv.ParseInt(fieldData, 10, 64)
+		fieldType, err := strconv.Atoi(lineFields[1])
 		if err != nil {
-			return nil, err
+			z.Log.Warnf("cannot parse type %q for field %q; falling back to integer", lineFields[1], fieldName)
+			fieldType = kstatDataInt64
 		}
+		fieldData := lineFields[2]
 
-		fields[fieldName] = value
+		switch fieldType {
+		case kstatDataChar, kstatDataString:
+			fields[fieldName] = fieldData
+		case kstatDataInt32, kstatDataInt64:
+			value, err := strconv.ParseInt(fieldData, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("parsing field %q with %q failed: %w", fieldName, fieldData, err)
+			}
+			fields[fieldName] = value
+		case kstatDataUint32, kstatDataUint64:
+			value, err := strconv.ParseUint(fieldData, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("parsing field %q with %q failed: %w", fieldName, fieldData, err)
+			}
+			// For backward compatibility in the metric field-types
+			if z.UseNativTypes {
+				fields[fieldName] = value
+			} else {
+				fields[fieldName] = int64(value)
+			}
+		case kstatDataLong, kstatDataULong:
+			value, err := strconv.ParseFloat(fieldData, 64)
+			if err != nil {
+				return nil, fmt.Errorf("parsing field %q with %q failed: %w", fieldName, fieldData, err)
+			}
+			fields[fieldName] = value
+		default:
+			z.Log.Errorf("field %q with %q has unknown type %d", fieldName, fieldData, fieldType)
+		}
 	}
 
 	return fields, nil
