@@ -43,7 +43,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## This is disabled for backward compatibility but is STRONGLY RECOMMENDED
   ## to be enabled to avoid overflows. This requires UINT support on the output
   ## for most fields.
-  ## use_native_types = false
+  ## useNativeTypes = false
 
   ## By default, don't gather dataset stats
   # datasetMetrics = false
