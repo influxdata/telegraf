@@ -14,7 +14,7 @@ import (
 func newListener() *InfluxDBV2Listener {
 	listener := newTestListener()
 	listener.acc = &testutil.NopAccumulator{}
-	listener.Init()
+	listener.Init() //nolint:errcheck // skip checking err for benchmark tests
 	return listener
 }
 
