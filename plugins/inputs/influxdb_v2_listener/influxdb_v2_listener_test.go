@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/selfstat"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -53,8 +54,10 @@ var (
 )
 
 func newTestListener() *InfluxDBV2Listener {
+	collector := selfstat.NewCollector(make(map[string]string))
 	listener := &InfluxDBV2Listener{
 		Log:            testutil.Logger{},
+		Statistics:     collector,
 		ServiceAddress: "localhost:0",
 		timeFunc:       time.Now,
 	}
@@ -74,13 +77,8 @@ func newRateLimitedTestListener(maxUndeliveredMetrics int) *InfluxDBV2Listener {
 }
 
 func newTestSecureListener() *InfluxDBV2Listener {
-	listener := &InfluxDBV2Listener{
-		Log:            testutil.Logger{},
-		ServiceAddress: "localhost:0",
-		ServerConfig:   *pki.TLSServerConfig(),
-		timeFunc:       time.Now,
-	}
-
+	listener := newTestListener()
+	listener.ServerConfig = *pki.TLSServerConfig()
 	return listener
 }
 
@@ -271,12 +269,8 @@ func TestWriteMaxLineSizeIncrease(t *testing.T) {
 
 	for _, tc := range parserTestCases {
 		t.Run("parser "+tc.parser, func(t *testing.T) {
-			listener := &InfluxDBV2Listener{
-				Log:            testutil.Logger{},
-				ServiceAddress: "localhost:0",
-				timeFunc:       time.Now,
-				ParserType:     tc.parser,
-			}
+			listener := newTestListener()
+			listener.ParserType = tc.parser
 
 			acc := &testutil.Accumulator{}
 			require.NoError(t, listener.Init())
@@ -299,13 +293,9 @@ func TestWriteVerySmallMaxBody(t *testing.T) {
 
 	for _, tc := range parserTestCases {
 		t.Run("parser "+tc.parser, func(t *testing.T) {
-			listener := &InfluxDBV2Listener{
-				Log:            testutil.Logger{},
-				ServiceAddress: "localhost:0",
-				MaxBodySize:    config.Size(4096),
-				timeFunc:       time.Now,
-				ParserType:     tc.parser,
-			}
+			listener := newTestListener()
+			listener.MaxBodySize = config.Size(4096)
+			listener.ParserType = tc.parser
 
 			acc := &testutil.Accumulator{}
 			require.NoError(t, listener.Init())
@@ -326,12 +316,9 @@ func TestWriteLargeLine(t *testing.T) {
 	require.NoError(t, err)
 	hugeMetricString := string(hugeMetric)
 
-	listener := &InfluxDBV2Listener{
-		Log:            testutil.Logger{},
-		ServiceAddress: "localhost:0",
-		timeFunc: func() time.Time {
-			return time.Unix(123456789, 0)
-		},
+	listener := newTestListener()
+	listener.timeFunc = func() time.Time {
+		return time.Unix(123456789, 0)
 	}
 
 	acc := &testutil.Accumulator{}

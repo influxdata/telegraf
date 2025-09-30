@@ -68,6 +68,7 @@ type InfluxDBV2Listener struct {
 	server http.Server
 	acc    telegraf.Accumulator
 
+	Statistics      *selfstat.Collector
 	trackingAcc     telegraf.TrackingAccumulator
 	bytesRecv       selfstat.Stat
 	requestsServed  selfstat.Stat
@@ -96,14 +97,14 @@ func (h *InfluxDBV2Listener) Init() error {
 	tags := map[string]string{
 		"address": h.ServiceAddress,
 	}
-	h.bytesRecv = selfstat.Register("influxdb_v2_listener", "bytes_received", tags)
-	h.requestsServed = selfstat.Register("influxdb_v2_listener", "requests_served", tags)
-	h.writesServed = selfstat.Register("influxdb_v2_listener", "writes_served", tags)
-	h.healthsServed = selfstat.Register("influxdb_v2_listener", "healths_served", tags)
-	h.readysServed = selfstat.Register("influxdb_v2_listener", "readys_served", tags)
-	h.requestsRecv = selfstat.Register("influxdb_v2_listener", "requests_received", tags)
-	h.notFoundsServed = selfstat.Register("influxdb_v2_listener", "not_founds_served", tags)
-	h.authFailures = selfstat.Register("influxdb_v2_listener", "auth_failures", tags)
+	h.bytesRecv = h.Statistics.Register("influxdb_v2_listener", "bytes_received", tags)
+	h.requestsServed = h.Statistics.Register("influxdb_v2_listener", "requests_served", tags)
+	h.writesServed = h.Statistics.Register("influxdb_v2_listener", "writes_served", tags)
+	h.healthsServed = h.Statistics.Register("influxdb_v2_listener", "healths_served", tags)
+	h.readysServed = h.Statistics.Register("influxdb_v2_listener", "readys_served", tags)
+	h.requestsRecv = h.Statistics.Register("influxdb_v2_listener", "requests_received", tags)
+	h.notFoundsServed = h.Statistics.Register("influxdb_v2_listener", "not_founds_served", tags)
+	h.authFailures = h.Statistics.Register("influxdb_v2_listener", "auth_failures", tags)
 	if err := h.routes(); err != nil {
 		return err
 	}
