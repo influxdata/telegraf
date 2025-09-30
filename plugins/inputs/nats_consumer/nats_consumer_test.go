@@ -368,7 +368,7 @@ func TestJetStreamSourcedStreamFound(t *testing.T) {
 	// Startup the plugin
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
-	defer plugin.Stop()
+	plugin.Stop()
 }
 
 type sender struct {
