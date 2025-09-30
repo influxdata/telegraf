@@ -229,7 +229,7 @@ func (h *InfluxDBV2Listener) routes() error {
 	h.mux.Handle("/health", h.handleHealth())
 	h.mux.Handle("/ready", h.handleReady())
 	h.mux.Handle("/", authHandler(h.handleDefault()))
-	h.mux.Handle("/ping", http.HandlerFunc(h.handlePing()))
+	h.mux.Handle("/ping", http.HandlerFunc(handlePing()))
 
 	return nil
 }
@@ -295,7 +295,7 @@ func (h *InfluxDBV2Listener) handleDefault() http.HandlerFunc {
 	}
 }
 
-func (_ *InfluxDBV2Listener) handlePing() http.HandlerFunc {
+func handlePing() http.HandlerFunc {
 	return func(res http.ResponseWriter, _ *http.Request) {
 		res.WriteHeader(http.StatusNoContent)
 	}
