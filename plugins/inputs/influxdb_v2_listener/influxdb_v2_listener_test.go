@@ -583,6 +583,19 @@ func TestHealth(t *testing.T) {
 	require.EqualValues(t, 4, listener.healthsServed.Get())
 }
 
+func TestPing(t *testing.T) {
+	listener := newTestListener()
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	resp, err := http.Get(createURL(listener, "http", "/ping", ""))
+	require.NoError(t, err)
+	require.EqualValues(t, 204, resp.StatusCode)
+	require.NoError(t, resp.Body.Close())
+}
+
 func TestReady(t *testing.T) {
 	listener := newTestListener()
 	listener.timeFunc = func() time.Time {
