@@ -295,8 +295,8 @@ func (h *InfluxDBV2Listener) handleDefault() http.HandlerFunc {
 	}
 }
 
-func (h *InfluxDBV2Listener) handlePing() http.HandlerFunc {
-	return func(res http.ResponseWriter, req *http.Request) {
+func (_ *InfluxDBV2Listener) handlePing() http.HandlerFunc {
+	return func(res http.ResponseWriter, _ *http.Request) {
 		res.WriteHeader(http.StatusNoContent)
 	}
 }
