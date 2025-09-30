@@ -107,24 +107,30 @@ relevant if the telegraf configuration can be changed by untrusted users.
 
 ### Podman Compatibility
 
-This plugin is compatible with Podman through its Docker-compatible API. When connected to Podman:
+This plugin is compatible with Podman through its Docker-compatible API.
+When connected to Podman:
 
-- The plugin automatically detects Podman by examining the server version and endpoint
+- The plugin automatically detects Podman by examining the server version and
+  endpoint
 - Uses an intelligent caching mechanism to calculate accurate CPU percentages
-- Configure Podman socket endpoint, for example: `endpoint = "unix:///run/podman/podman.sock"`
+- Configure Podman socket endpoint, for example:
+  `endpoint = "unix:///run/podman/podman.sock"`
 
-**How it works**: Podman's stats API returns cumulative CPU values since container start. To calculate accurate current CPU usage, this plugin caches previous stats readings and calculates the difference between consecutive measurements.
+> [!NOTE]
+> **How it works**: Podman's stats API returns cumulative CPU values since
+> container start, not interval-based values like Docker. To calculate
+> accurate current CPU usage, this plugin caches previous stats readings and
+> calculates the difference between consecutive measurements.
 
 **Configuration options**:
+
 ```toml
 ## Cache TTL for accurate CPU percentage calculation (default: 60s)
 ## Stats caching is automatically enabled when Podman is detected
 ## Set higher than your collection interval for accurate measurements
-## Set to 0 to keep cache entries forever (not recommended for dynamic environments)
+## Set to 0 to keep cache entries forever (not recommended)
 # podman_cache_ttl = "60s"
 ```
-
-**Performance**: The caching approach scales efficiently to hundreds of containers without adding delays, unlike streaming approaches that would add latency per container.
 
 ### Docker Daemon Permissions
 

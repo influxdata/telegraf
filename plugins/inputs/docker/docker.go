@@ -142,13 +142,27 @@ func (d *Docker) Init() error {
 	return nil
 }
 
-func (d *Docker) Start(_ telegraf.Accumulator) error {
+func (d *Docker) Start(telegraf.Accumulator) error {
 	// Get client
 	c, err := d.getNewClient()
 	if err != nil {
 		return err
 	}
 	d.client = c
+
+	// Check API version compatibility
+	version, err := semver.NewVersion(d.client.ClientVersion())
+	if err != nil {
+		return fmt.Errorf("failed to parse client version: %w", err)
+	}
+
+	if version.LessThan(minVersion) {
+		d.Log.Warnf("Unsupported api version (%v.%v), upgrade to docker engine 1.12 or later (api version 1.24)",
+			version.Major(), version.Minor())
+	} else if version.LessThan(minDiskUsageVersion) && len(d.objectTypes) > 0 {
+		d.Log.Warnf("Unsupported api version for disk usage (%v.%v), upgrade to docker engine 23.0 or later (api version 1.42)",
+			version.Major(), version.Minor())
+	}
 
 	// Get info from docker daemon for Podman detection
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
@@ -174,30 +188,30 @@ func (d *Docker) Start(_ telegraf.Accumulator) error {
 	return nil
 }
 
+func (d *Docker) Stop() {
+	// Close client connection if exists
+	if d.client != nil {
+		d.client.Close()
+		d.client = nil
+	}
+
+	// Clear stats cache
+	if d.statsCache != nil {
+		d.statsCacheMutex.Lock()
+		d.statsCache = nil
+		d.statsCacheMutex.Unlock()
+	}
+}
+
 func (d *Docker) Gather(acc telegraf.Accumulator) error {
+	// Ensure client is initialized (backward compatibility with tests)
 	if d.client == nil {
 		c, err := d.getNewClient()
 		if err != nil {
 			return err
 		}
 		d.client = c
-
-		version, err := semver.NewVersion(d.client.ClientVersion())
-		if err != nil {
-			return err
-		}
-
-		if version.LessThan(minVersion) {
-			d.Log.Warnf("Unsupported api version (%v.%v), upgrade to docker engine 1.12 or later (api version 1.24)",
-				version.Major(), version.Minor())
-		} else if version.LessThan(minDiskUsageVersion) && len(d.objectTypes) > 0 {
-			d.Log.Warnf("Unsupported api version for disk usage (%v.%v), upgrade to docker engine 23.0 or later (api version 1.42)",
-				version.Major(), version.Minor())
-		}
 	}
-
-	// Close any idle connections in the end of gathering
-	defer d.client.Close()
 
 	// Create label filters if not already created
 	if !d.filtersCreated {
@@ -1140,10 +1154,6 @@ func (d *Docker) detectPodman(info *system.Info) bool {
 
 // fixPodmanCPUStats fixes Podman's CPU stats using cached previous stats
 func (d *Docker) fixPodmanCPUStats(containerID string, current *container.StatsResponse) {
-	if current == nil || d.statsCache == nil {
-		return // Safety check
-	}
-
 	now := time.Now()
 	ttl := time.Duration(d.PodmanCacheTTL)
 
