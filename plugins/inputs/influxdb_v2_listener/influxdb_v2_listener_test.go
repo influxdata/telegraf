@@ -55,6 +55,7 @@ var (
 
 func newTestListener() *InfluxDBV2Listener {
 	collector := selfstat.NewCollector(make(map[string]string))
+	defer collector.UnregisterAll()
 	listener := &InfluxDBV2Listener{
 		Log:            testutil.Logger{},
 		Statistics:     collector,
