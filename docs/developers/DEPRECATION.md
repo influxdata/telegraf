@@ -13,8 +13,9 @@ decided based on the impact.
 
 ## Deprecate plugins
 
-Add an entry to the plugins deprecation list (e.g. in `plugins/inputs/deprecations.go`). Include the deprecation version
-and any replacement, e.g.
+Add an entry to the plugins deprecation list (e.g. in
+`plugins/inputs/deprecations.go`). Include the deprecation version and any
+replacement, e.g.
 
 ```golang
   "logparser": {
@@ -23,7 +24,8 @@ and any replacement, e.g.
   },
 ```
 
-The entry can contain an optional `RemovalIn` field specifying the planned version for removal of the plugin.
+The entry can contain an optional `RemovalIn` field specifying the planned
+version for removal of the plugin.
 
 Also add the deprecation warning to the plugin's README:
 
@@ -37,7 +39,8 @@ Also add the deprecation warning to the plugin's README:
 [data formats]: /docs/DATA_FORMATS_INPUT.md
 ```
 
-Telegraf will automatically check if a deprecated plugin is configured and print a warning
+Telegraf will automatically check if a deprecated plugin is configured and print
+a warning
 
 ```text
 2022-01-26T20:08:15Z W! DeprecationWarning: Plugin "inputs.logparser" deprecated since version 1.15.0 and will be removed in 2.0.0: use 'inputs.tail' with 'grok' data format instead
@@ -63,7 +66,9 @@ type AMQP struct {
 }
 ```
 
-The `deprecated` tag has the format `<since version>[;removal version];<notice>` where the `removal version` is optional. The specified deprecation info will automatically displayed by Telegraf if the option is used in the config
+The `deprecated` tag has the format `<since version>[;removal version];<notice>`
+where the `removal version` is optional. The specified deprecation info will
+automatically displayed by Telegraf if the option is used in the config
 
 ```text
 2022-01-26T20:08:15Z W! DeprecationWarning: Option "url" of plugin "outputs.amqp" deprecated since version 1.7.0 and will be removed in 2.0.0: use 'brokers' instead
@@ -71,12 +76,14 @@ The `deprecated` tag has the format `<since version>[;removal version];<notice>`
 
 ### Option value
 
-In the case a specific option value is being deprecated, the method `models.PrintOptionValueDeprecationNotice` needs to be called in the plugin's `Init` method.
+In the case a specific option value is being deprecated, the method
+`models.PrintOptionValueDeprecationNotice` needs to be called in the plugin's
+`Init` method.
 
 ## Deprecate metrics
 
-In the README document the metric as deprecated.  If there is a replacement field,
-tag, or measurement then mention it.
+In the README document the metric as deprecated.  If there is a replacement
+field, tag, or measurement then mention it.
 
 ```markdown
 - system

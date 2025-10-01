@@ -1,7 +1,8 @@
 # Available SQL drivers for the SQL input plugin
 
-This is a list of available drivers for the SQL input plugin. The data-source-name (DSN) is driver specific and
-might change between versions. Please check the driver documentation for available options and the format.
+This is a list of available drivers for the SQL input plugin. The
+data-source-name (DSN) is driver specific and might change between versions.
+Please check the driver documentation for available options and the format.
 
 | database             | driver                                                    | aliases         | example DSN                                                                                                      | comment                                                                                                               |
 | -------------------- | --------------------------------------------------------- | --------------- |------------------------------------------------------------------------------------------------------------------| --------------------------------------------------------------------------------------------------------------------- |
@@ -22,24 +23,26 @@ might change between versions. Please check the driver documentation for availab
 
 ### Driver aliases
 
-Some database drivers are supported though another driver (e.g. CockroachDB). For other databases we provide a more
-obvious name (e.g. postgres) compared to the driver name. For all of those drivers you might use an _alias_ name
-during configuration.
+Some database drivers are supported though another driver (e.g. CockroachDB).
+For other databases we provide a more obvious name (e.g. postgres) compared to
+the driver name. For all of those drivers you might use an _alias_ name during
+configuration.
 
 ### Example data-source-name DSN
 
-The given examples are just that, so please check the driver documentation for the exact format
-and available options and parameters. Please note that the format of a DSN might also change
-between driver version.
+The given examples are just that, so please check the driver documentation for
+the exact format and available options and parameters. Please note that the
+format of a DSN might also change between driver version.
 
 ### Type conversions
 
-Telegraf relies on type conversion of the database driver and/or the golang sql framework. In case you find
-any problem, please open an issue!
+Telegraf relies on type conversion of the database driver and/or the golang sql
+framework. In case you find any problem, please open an issue!
 
 ## Help
 
-If nothing seems to work, you might find help in the telegraf forum or in the chat.
+If nothing seems to work, you might find help in the telegraf forum or in the
+chat.
 
 ### The documentation is wrong
 
@@ -51,5 +54,9 @@ Please open an issue or even better send a pull-request!
 
 ### My database is not supported
 
-We currently cannot support CGO drivers in telegraf! Please check if a **pure Go** driver for the [golang sql framework](https://golang.org/pkg/database/sql/) exists.
-If you found such a driver, please let us know by opening an issue or even better by sending a pull-request!
+We currently cannot support CGO drivers in telegraf! Please check if a
+**pure Go** driver for the [golang sql framework][go_sql] exists. If you found
+such a driver, please let us know by opening an issue or even better by sending
+a pull-request!
+
+[go_sql]: https://golang.org/pkg/database/sql/
