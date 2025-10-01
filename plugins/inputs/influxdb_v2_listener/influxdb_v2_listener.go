@@ -53,7 +53,8 @@ type InfluxDBV2Listener struct {
 	BucketTag             string          `toml:"bucket_tag"`
 	ParserType            string          `toml:"parser_type"`
 
-	Log telegraf.Logger `toml:"-"`
+	Log        telegraf.Logger     `toml:"-"`
+	Statistics *selfstat.Collector `toml:"-"`
 
 	ctx                 context.Context
 	cancel              context.CancelFunc
@@ -68,7 +69,6 @@ type InfluxDBV2Listener struct {
 	server http.Server
 	acc    telegraf.Accumulator
 
-	Statistics      *selfstat.Collector
 	trackingAcc     telegraf.TrackingAccumulator
 	bytesRecv       selfstat.Stat
 	requestsServed  selfstat.Stat
