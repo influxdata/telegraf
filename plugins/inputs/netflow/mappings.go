@@ -10,6 +10,7 @@ var funcMapping = map[string]decoderFunc{
 	"bool":    decodeBool,
 	"int":     decodeInt,
 	"uint":    decodeUint,
+	"float32": decodeFloat32,
 	"float64": decodeFloat64,
 	"hex":     decodeHex,
 	"string":  decodeString,
