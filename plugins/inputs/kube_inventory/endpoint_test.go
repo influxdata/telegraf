@@ -267,7 +267,7 @@ func TestEndpoint(t *testing.T) {
 					},
 				},
 			},
-			output:   []telegraf.Metric{},
+			output:   make([]telegraf.Metric, 0),
 			hasError: false,
 		},
 		{
@@ -370,7 +370,7 @@ func TestEndpoint(t *testing.T) {
 					},
 				},
 			},
-			output:   []telegraf.Metric{},
+			output:   make([]telegraf.Metric, 0),
 			hasError: false,
 		},
 		{
@@ -393,7 +393,7 @@ func TestEndpoint(t *testing.T) {
 					},
 				},
 			},
-			output:   []telegraf.Metric{},
+			output:   make([]telegraf.Metric, 0),
 			hasError: false,
 		},
 		{
