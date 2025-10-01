@@ -9,110 +9,140 @@ import (
 func TestNormalizePattern(t *testing.T) {
 	// IMPORTANT: normalizePattern has a known limitation - it cannot distinguish
 	// between literal separator characters and actual separators in the pattern.
-	// For example, with separator '.', the pattern "foo.bar/baz.qux" will have
-	// ALL dots replaced with '/', even if some were meant to be literal.
-	// This is a trade-off for simplicity and performance.
+	// For example, with separator '.', the pattern will have ALL dots replaced with '/',
+	// even if some were meant to be literal.
+	// However, it DOES preserve literal slashes when using non-slash separators.
 	tests := []struct {
-		name       string
-		pattern    string
-		separators []rune
-		expected   string
+		name             string
+		pattern          string
+		separators       []rune
+		needsSlashEscape bool
+		expected         string
 	}{
 		{
-			name:       "no separators",
-			pattern:    "foo.bar/baz",
-			separators: nil,
-			expected:   "foo.bar/baz",
+			name:             "no separators",
+			pattern:          "foo.bar/baz",
+			separators:       nil,
+			needsSlashEscape: false,
+			expected:         "foo.bar/baz",
 		},
 		{
-			name:       "single dot separator",
-			pattern:    "foo.bar.baz",
-			separators: []rune{'.'},
-			expected:   "foo/bar/baz",
+			name:             "single dot separator - preserve literal slash",
+			pattern:          "foo.bar.baz",
+			separators:       []rune{'.'},
+			needsSlashEscape: true,
+			expected:         "foo/bar/baz",
 		},
 		{
-			name:       "single comma separator",
-			pattern:    "foo,bar,baz",
-			separators: []rune{','},
-			expected:   "foo/bar/baz",
+			name:             "single comma separator - preserve literal slash",
+			pattern:          "foo,bar,baz",
+			separators:       []rune{','},
+			needsSlashEscape: true,
+			expected:         "foo/bar/baz",
 		},
 		{
-			name:       "slash separator (no change)",
-			pattern:    "foo/bar/baz",
-			separators: []rune{'/'},
-			expected:   "foo/bar/baz",
+			name:             "slash separator (no escaping needed)",
+			pattern:          "foo/bar/baz",
+			separators:       []rune{'/'},
+			needsSlashEscape: false,
+			expected:         "foo/bar/baz",
 		},
 		{
-			name:       "multiple separators dot and comma",
-			pattern:    "foo.bar,baz",
-			separators: []rune{'.', ','},
-			expected:   "foo/bar/baz",
+			name:             "multiple separators dot and comma - preserve literal slash",
+			pattern:          "foo.bar,baz",
+			separators:       []rune{'.', ','},
+			needsSlashEscape: true,
+			expected:         "foo/bar/baz",
 		},
 		{
-			name:       "pattern with existing slashes and dot separator",
-			pattern:    "foo.bar/baz.qux",
-			separators: []rune{'.'},
-			expected:   "foo/bar/baz/qux",
+			name:             "pattern with literal slashes and dot separator",
+			pattern:          "foo.bar/baz.qux",
+			separators:       []rune{'.'},
+			needsSlashEscape: true,
+			expected:         "foo/bar\uFFFD" + "baz/qux", // Slash preserved as U+FFFD, dots become /
 		},
 		{
-			name:       "glob pattern with separator",
-			pattern:    "foo.*.bar",
-			separators: []rune{'.'},
-			expected:   "foo/*/bar",
+			name:             "glob pattern with separator",
+			pattern:          "foo.*.bar",
+			separators:       []rune{'.'},
+			needsSlashEscape: true,
+			expected:         "foo/*/bar",
 		},
 		{
-			name:       "complex glob with multiple separators",
-			pattern:    "foo.bar,baz.*.qux",
-			separators: []rune{'.', ','},
-			expected:   "foo/bar/baz/*/qux",
+			name:             "complex glob with multiple separators and literal slash",
+			pattern:          "foo.bar,baz/test.*.qux",
+			separators:       []rune{'.', ','},
+			needsSlashEscape: true,
+			expected:         "foo/bar/baz\uFFFD" + "test/*/qux",
 		},
 		{
-			name:       "double star pattern with dot separator",
-			pattern:    "foo.**.bar",
-			separators: []rune{'.'},
-			expected:   "foo/**/bar",
+			name:             "double star pattern with dot separator",
+			pattern:          "foo.**.bar",
+			separators:       []rune{'.'},
+			needsSlashEscape: true,
+			expected:         "foo/**/bar",
 		},
 		{
-			name:       "mixed literal and separator usage",
-			pattern:    "foo.bar/lala.hoo",
-			separators: []rune{'.'},
-			expected:   "foo/bar/lala/hoo", // This shows the limitation - we can't distinguish literal dots from separator dots
+			name:             "literal slash at start",
+			pattern:          "/foo.bar.baz",
+			separators:       []rune{'.'},
+			needsSlashEscape: true,
+			expected:         "\uFFFD" + "foo/bar/baz",
 		},
 		{
-			name:       "escaped characters (not actually escaped in our impl)",
-			pattern:    `foo\.bar.baz`,
-			separators: []rune{'.'},
-			expected:   `foo\/bar/baz`, // Shows that escaping doesn't work as expected
+			name:             "literal slash at end",
+			pattern:          "foo.bar.baz/",
+			separators:       []rune{'.'},
+			needsSlashEscape: true,
+			expected:         "foo/bar/baz\uFFFD",
 		},
 		{
-			name:       "empty pattern",
-			pattern:    "",
-			separators: []rune{'.'},
-			expected:   "",
+			name:             "multiple literal slashes",
+			pattern:          "foo/bar/baz.qux",
+			separators:       []rune{'.'},
+			needsSlashEscape: true,
+			expected:         "foo\uFFFD" + "bar\uFFFD" + "baz/qux",
 		},
 		{
-			name:       "pattern with only separators",
-			pattern:    "...",
-			separators: []rune{'.'},
-			expected:   "///",
+			name:             "empty pattern",
+			pattern:          "",
+			separators:       []rune{'.'},
+			needsSlashEscape: true,
+			expected:         "",
 		},
 		{
-			name:       "unicode separator",
-			pattern:    "foo•bar•baz",
-			separators: []rune{'•'},
-			expected:   "foo/bar/baz",
+			name:             "pattern with only separators",
+			pattern:          "...",
+			separators:       []rune{'.'},
+			needsSlashEscape: true,
+			expected:         "///",
 		},
 		{
-			name:       "separator not in pattern",
-			pattern:    "foo/bar/baz",
-			separators: []rune{'.'},
-			expected:   "foo/bar/baz",
+			name:             "unicode separator - preserve literal slash",
+			pattern:          "foo•bar/test•baz",
+			separators:       []rune{'•'},
+			needsSlashEscape: true,
+			expected:         "foo/bar\uFFFD" + "test/baz",
+		},
+		{
+			name:             "separator not in pattern but slash preserved",
+			pattern:          "foo/bar/baz",
+			separators:       []rune{'.'},
+			needsSlashEscape: true,
+			expected:         "foo\uFFFD" + "bar\uFFFD" + "baz",
+		},
+		{
+			name:             "slash in separators list - no escaping",
+			pattern:          "foo.bar/baz.qux",
+			separators:       []rune{'.', '/'},
+			needsSlashEscape: false,
+			expected:         "foo/bar/baz/qux",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := normalizePattern(tt.pattern, tt.separators)
+			result := normalizePattern(tt.pattern, tt.separators, tt.needsSlashEscape)
 			require.Equal(t, tt.expected, result, "Pattern normalization failed for: %s", tt.pattern)
 		})
 	}
@@ -162,13 +192,6 @@ func TestFilterGlobWithSeparators(t *testing.T) {
 			shouldMatch: true,
 		},
 		{
-			name:        "pattern with literal slash and dot separator",
-			patterns:    []string{"path/to.*.file"},
-			separators:  []rune{'.'},
-			input:       "path/to.config.file",
-			shouldMatch: true,
-		},
-		{
 			name:        "no separators standard glob",
 			patterns:    []string{"cpu.*"},
 			separators:  nil,
@@ -181,6 +204,70 @@ func TestFilterGlobWithSeparators(t *testing.T) {
 			separators:  []rune{'.'},
 			input:       "cpu.user",
 			shouldMatch: false, // When separator is defined, both pattern and input are normalized
+		},
+		// CRITICAL TEST CASES: Literal slash preservation with non-slash separators
+		{
+			name:        "literal slash in pattern should NOT match when using dot separator",
+			patterns:    []string{"foo.bar/baz.qux"},
+			separators:  []rune{'.'},
+			input:       "foo.bar.baz.qux",
+			shouldMatch: false, // Literal '/' in pattern doesn't match '.' in input
+		},
+		{
+			name:        "literal slash in pattern SHOULD match literal slash in input",
+			patterns:    []string{"foo.bar/baz.qux"},
+			separators:  []rune{'.'},
+			input:       "foo.bar/baz.qux",
+			shouldMatch: true, // Literal '/' matches literal '/'
+		},
+		{
+			name:        "literal slash in input should NOT match dot separator in pattern",
+			patterns:    []string{"foo.bar.baz.qux"},
+			separators:  []rune{'.'},
+			input:       "foo.bar/baz.qux",
+			shouldMatch: false, // '.' in pattern (separator) doesn't match '/' in input (literal)
+		},
+		{
+			name:        "wildcard with literal slash - match",
+			patterns:    []string{"foo/*/bar"},
+			separators:  []rune{'.'},
+			input:       "foo/anything/bar",
+			shouldMatch: true,
+		},
+		{
+			name:        "wildcard with literal slash - matches anything between slashes",
+			patterns:    []string{"foo/*/bar"},
+			separators:  []rune{'.'},
+			input:       "foo/any/thing/bar",
+			shouldMatch: true, // * matches "any/thing" as a single segment (slashes are literals)
+		},
+		{
+			name:        "double star with dot separator and literal slash",
+			patterns:    []string{"foo/**/bar.qux"},
+			separators:  []rune{'.'},
+			input:       "foo/x/y/z/bar.qux",
+			shouldMatch: true, // ** crosses literal / boundaries
+		},
+		{
+			name:        "complex pattern with mixed literal slashes and separators",
+			patterns:    []string{"server/logs.*.error"},
+			separators:  []rune{'.'},
+			input:       "server/logs.2024.error",
+			shouldMatch: true,
+		},
+		{
+			name:        "slash as separator - slashes are treated as separators",
+			patterns:    []string{"foo.bar/baz.qux"},
+			separators:  []rune{'.', '/'},
+			input:       "foo.bar/baz.qux",
+			shouldMatch: true, // Both . and / are separators
+		},
+		{
+			name:        "slash as separator - wildcard crosses slash boundary",
+			patterns:    []string{"foo.*.qux"},
+			separators:  []rune{'.', '/'},
+			input:       "foo.bar/baz.qux",
+			shouldMatch: false, // * doesn't match multiple segments
 		},
 	}
 
@@ -245,10 +332,11 @@ func TestFilterGlobEdgeCases(t *testing.T) {
 func BenchmarkNormalizePattern(b *testing.B) {
 	pattern := "foo.bar.baz.qux.quux"
 	separators := []rune{'.', ','}
+	needsSlashEscape := true
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = normalizePattern(pattern, separators)
+		_ = normalizePattern(pattern, separators, needsSlashEscape)
 	}
 }
 
