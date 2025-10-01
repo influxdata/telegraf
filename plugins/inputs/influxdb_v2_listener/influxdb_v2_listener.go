@@ -52,6 +52,7 @@ type InfluxDBV2Listener struct {
 	Token                 config.Secret   `toml:"token"`
 	BucketTag             string          `toml:"bucket_tag"`
 	ParserType            string          `toml:"parser_type"`
+	StatisticsVersion     int             `toml:"internal_statistics_version"`
 
 	Log        telegraf.Logger     `toml:"-"`
 	Statistics *selfstat.Collector `toml:"-"`
@@ -97,14 +98,34 @@ func (h *InfluxDBV2Listener) Init() error {
 	tags := map[string]string{
 		"address": h.ServiceAddress,
 	}
-	h.bytesRecv = h.Statistics.Register("influxdb_v2_listener", "bytes_received", tags)
-	h.requestsServed = h.Statistics.Register("influxdb_v2_listener", "requests_served", tags)
-	h.writesServed = h.Statistics.Register("influxdb_v2_listener", "writes_served", tags)
-	h.healthsServed = h.Statistics.Register("influxdb_v2_listener", "healths_served", tags)
-	h.readysServed = h.Statistics.Register("influxdb_v2_listener", "readys_served", tags)
-	h.requestsRecv = h.Statistics.Register("influxdb_v2_listener", "requests_received", tags)
-	h.notFoundsServed = h.Statistics.Register("influxdb_v2_listener", "not_founds_served", tags)
-	h.authFailures = h.Statistics.Register("influxdb_v2_listener", "auth_failures", tags)
+	switch h.StatisticsVersion {
+	case 0, 1:
+		h.bytesRecv = selfstat.Register("influxdb_v2_listener", "bytes_received", tags)
+		h.requestsServed = selfstat.Register("influxdb_v2_listener", "requests_served", tags)
+		h.writesServed = selfstat.Register("influxdb_v2_listener", "writes_served", tags)
+		h.healthsServed = selfstat.Register("influxdb_v2_listener", "healths_served", tags)
+		h.readysServed = selfstat.Register("influxdb_v2_listener", "readys_served", tags)
+		h.requestsRecv = selfstat.Register("influxdb_v2_listener", "requests_received", tags)
+		h.notFoundsServed = selfstat.Register("influxdb_v2_listener", "not_founds_served", tags)
+		h.authFailures = selfstat.Register("influxdb_v2_listener", "auth_failures", tags)
+		config.PrintOptionValueDeprecationNotice("inputs.influxdb_v2_listener", "internal_statistics_version", 1, telegraf.DeprecationInfo{
+			Since:     "1.36.3",
+			RemovalIn: "1.45.0",
+			Notice:    "please update to 'internal_statistics_version = 2'",
+		})
+	case 2:
+		h.bytesRecv = h.Statistics.Register("influxdb_v2_listener", "bytes_received", tags)
+		h.requestsServed = h.Statistics.Register("influxdb_v2_listener", "requests_served", tags)
+		h.writesServed = h.Statistics.Register("influxdb_v2_listener", "writes_served", tags)
+		h.healthsServed = h.Statistics.Register("influxdb_v2_listener", "healths_served", tags)
+		h.readysServed = h.Statistics.Register("influxdb_v2_listener", "readys_served", tags)
+		h.requestsRecv = h.Statistics.Register("influxdb_v2_listener", "requests_received", tags)
+		h.notFoundsServed = h.Statistics.Register("influxdb_v2_listener", "not_founds_served", tags)
+		h.authFailures = h.Statistics.Register("influxdb_v2_listener", "auth_failures", tags)
+	default:
+		return fmt.Errorf("unknown internal_statistics_version %d", h.StatisticsVersion)
+	}
+
 	if err := h.routes(); err != nil {
 		return err
 	}
