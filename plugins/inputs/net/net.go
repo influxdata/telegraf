@@ -22,7 +22,7 @@ var sampleConfig string
 
 type Net struct {
 	Interfaces          []string `toml:"interfaces"`
-	IgnoreProtocolStats bool     `toml:"ignore_protocol_stats" deprecated:"1.37.0;1.45.0;use the 'inputs.nstat' plugin instead for protocol stats"`
+	IgnoreProtocolStats bool     `toml:"ignore_protocol_stats" deprecated:"1.37.0;1.45.0;option is ignored"`
 
 	filter     filter.Filter
 	ps         psutil.PS
