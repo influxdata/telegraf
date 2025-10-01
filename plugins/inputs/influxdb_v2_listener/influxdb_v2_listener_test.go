@@ -594,6 +594,7 @@ func TestPing(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, 204, resp.StatusCode)
 	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 1, listener.pingServed.Get())
 }
 
 func TestReady(t *testing.T) {
