@@ -69,28 +69,25 @@ func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 
 	fields := make(map[string]interface{})
 	for _, metric := range kstatMetrics {
-		lines, err := internal.ReadLines(kstatPath + "/" + metric)
+		fn := filepath.Join(kstatPath, metric)
+		lines, err := internal.ReadLines(fn)
 		if err != nil {
 			continue
 		}
-		for i, line := range lines {
-			if i == 0 || i == 1 {
-				continue
+
+		data, err := z.processProcFile(lines)
+		if err != nil {
+			return fmt.Errorf("gathering metric %q from %q failed: %w", metric, fn, err)
+		}
+		for k, v := range data {
+			switch metric {
+			case "zil", "dmu_tx", "dnodestats":
+				// Keep key as is
+			default:
+				// Prefix key with metric name
+				k = metric + "_" + k
 			}
-			if len(line) < 1 {
-				continue
-			}
-			rawData := strings.Split(line, " ")
-			key := metric + "_" + rawData[0]
-			if metric == "zil" || metric == "dmu_tx" || metric == "dnodestats" {
-				key = rawData[0]
-			}
-			rawValue := rawData[len(rawData)-1]
-			value, err := strconv.ParseInt(rawValue, 10, 64)
-			if err != nil {
-				return err
-			}
-			fields[key] = value
+			fields[k] = v
 		}
 	}
 	acc.AddFields("zfs", fields, tags)
@@ -171,7 +168,7 @@ func (z *Zfs) gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
 	}
 
 	if gatherErr != nil {
-		return gatherErr
+		return fmt.Errorf("collecting pool stats from %q failed: %w", pool.ioFilename, gatherErr)
 	}
 
 	acc.AddFields("zfs_pool", fields, tags)
@@ -225,58 +222,85 @@ func gather(lines []string, fileLines int) (keys, values []string, err error) {
 //
 // For explanation of the first line's values see https://github.com/openzfs/zfs/blob/master/module/os/linux/spl/spl-kstat.c#L61
 func (z *Zfs) gatherV2(lines []string, tags map[string]string) (map[string]interface{}, error) {
-	fileLines := 9
-	_, _, err := gather(lines, fileLines)
+	fields, err := z.processProcFile(lines)
 	if err != nil {
 		return nil, err
 	}
-
-	tags["dataset"] = strings.Fields(lines[2])[2]
-	fields := make(map[string]interface{})
-	for i := 3; i < len(lines); i++ {
-		lineFields := strings.Fields(lines[i])
-		fieldName := lineFields[0]
-		fieldType, err := strconv.Atoi(lineFields[1])
-		if err != nil {
-			z.Log.Warnf("cannot parse type %q for field %q; falling back to integer", lineFields[1], fieldName)
-			fieldType = kstatDataInt64
-		}
-		fieldData := lineFields[2]
-
-		switch fieldType {
-		case kstatDataChar, kstatDataString:
-			fields[fieldName] = fieldData
-		case kstatDataInt32, kstatDataInt64:
-			value, err := strconv.ParseInt(fieldData, 10, 64)
-			if err != nil {
-				return nil, fmt.Errorf("parsing field %q with %q failed: %w", fieldName, fieldData, err)
-			}
-			fields[fieldName] = value
-		case kstatDataUint32, kstatDataUint64:
-			value, err := strconv.ParseUint(fieldData, 10, 64)
-			if err != nil {
-				return nil, fmt.Errorf("parsing field %q with %q failed: %w", fieldName, fieldData, err)
-			}
-			// For backward compatibility in the metric field-types
-			if z.UseNativTypes {
-				fields[fieldName] = value
-			} else {
-				fields[fieldName] = int64(value)
-			}
-		case kstatDataLong, kstatDataULong:
-			value, err := strconv.ParseFloat(fieldData, 64)
-			if err != nil {
-				return nil, fmt.Errorf("parsing field %q with %q failed: %w", fieldName, fieldData, err)
-			}
-			fields[fieldName] = value
-		default:
-			z.Log.Errorf("field %q with %q has unknown type %d", fieldName, fieldData, fieldType)
-		}
+	if len(fields) < 7 {
+		return nil, fmt.Errorf("expected 7 lines but got %d", len(fields))
 	}
+
+	// Extract the dataset name as a tag and remove it from the fields
+	dsnRaw, found := fields["dataset_name"]
+	if !found {
+		return nil, errors.New("dataset name not found in data")
+	}
+	dsn, ok := dsnRaw.(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid type %T for dataset name %v", dsnRaw, dsnRaw)
+	}
+	tags["dataset"] = dsn
+	delete(fields, "dataset_name")
 
 	return fields, nil
 }
 
+func (z *Zfs) processProcFile(lines []string) (map[string]interface{}, error) {
+	// Ignore the first lines as it contains data in a different format
+	// The second line (index 1) does contain the column header and should read
+	// name				type	data
+	header := strings.Fields(lines[1])
+	if len(header) != 3 || header[0] != "name" || header[1] != "type" || header[2] != "data" {
+		return nil, fmt.Errorf("invalid header %q", lines[1])
+	}
+
+	// Extract the data
+	data := make(map[string]interface{}, len(lines)-2)
+	for i, line := range lines[2:] {
+		fields := strings.Fields(line)
+		if len(fields) != 3 {
+			return data, fmt.Errorf("invalid data in line %d: %s", i+3, line)
+		}
+		name := fields[0]
+		ftype, err := strconv.Atoi(fields[1])
+		if err != nil {
+			z.Log.Warnf("cannot parse type %q for field %q; falling back to integer", fields[1], name)
+			ftype = kstatDataInt64
+		}
+
+		switch ftype {
+		case kstatDataChar, kstatDataString:
+			data[name] = fields[2]
+		case kstatDataInt32, kstatDataInt64:
+			value, err := strconv.ParseInt(fields[2], 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("parsing field %q with %q failed: %w", name, fields[2], err)
+			}
+			data[name] = value
+		case kstatDataUint32, kstatDataUint64:
+			value, err := strconv.ParseUint(fields[2], 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("parsing field %q with %q failed: %w", name, fields[2], err)
+			}
+			// For backward compatibility in the metric field-types
+			if z.UseNativTypes {
+				data[name] = value
+			} else {
+				data[name] = int64(value)
+			}
+		case kstatDataLong, kstatDataULong:
+			value, err := strconv.ParseFloat(fields[2], 64)
+			if err != nil {
+				return nil, fmt.Errorf("parsing field %q with %q failed: %w", name, fields[2], err)
+			}
+			data[name] = value
+		default:
+			z.Log.Errorf("field %q with %q has unknown type %d", name, fields[2], ftype)
+		}
+	}
+
+	return data, nil
+}
 func init() {
 	inputs.Add("zfs", func() telegraf.Input {
 		return &Zfs{}
