@@ -49,9 +49,7 @@ func TestHTTPClientInit(t *testing.T) {
 			require.NoError(t, err)
 
 			collector := selfstat.NewCollector(make(map[string]string))
-			defer func() {
-				collector.UnregisterAll()
-			}()
+			defer collector.UnregisterAll()
 			tt.client.statistics = collector
 			tt.client.url = u
 
@@ -223,9 +221,7 @@ func TestRetryLaterEarlyExit(t *testing.T) {
 	require.NoError(t, err)
 
 	collector := selfstat.NewCollector(make(map[string]string))
-	defer func() {
-		collector.UnregisterAll()
-	}()
+	defer collector.UnregisterAll()
 	c := &httpClient{
 		url:             u,
 		bucketTag:       "bucket",
@@ -299,9 +295,7 @@ func TestHeadersDoNotOverrideConfig(t *testing.T) {
 	authHeader := config.NewSecret([]byte("Bearer foo"))
 	userAgentHeader := config.NewSecret([]byte("foo"))
 	collector := selfstat.NewCollector(make(map[string]string))
-	defer func() {
-		collector.UnregisterAll()
-	}()
+	defer collector.UnregisterAll()
 	c := &httpClient{
 		headers: map[string]*config.Secret{
 			"Authorization": &authHeader,
