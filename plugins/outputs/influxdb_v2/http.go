@@ -34,7 +34,6 @@ import (
 const (
 	defaultMaxWaitSeconds           = 60
 	defaultMaxWaitRetryAfterSeconds = 10 * 60
-	selfstatMeasurement             = "outputs.influxdb_v2"
 )
 
 type httpClient struct {
@@ -154,13 +153,13 @@ func (c *httpClient) Init() error {
 	}
 
 	c.statBytesWritten = c.statistics.Register("write", "bytes_total", make(map[string]string))
-	c.statSuccessfulWrites = c.statistics.Register(selfstatMeasurement, "successful_writes_total", tags)
-	c.statFailedWrites = c.statistics.Register(selfstatMeasurement, "failed_writes_total", tags)
-	c.statTimeout = c.statistics.Register(selfstatMeasurement, "timeouts_total", tags)
-	c.statRetryableErrorCounters = c.statistics.Register(selfstatMeasurement, "retryable_errors_total", tags)
-	c.statNonRetryableErrorCounters = c.statistics.Register(selfstatMeasurement, "non_retryable_errors_total", tags)
-	c.statSuccessfulWriteDuration = c.statistics.RegisterTiming(selfstatMeasurement, "successful_write_duration_ms", tags)
-	c.statFailedWriteDuration = c.statistics.RegisterTiming(selfstatMeasurement, "failed_write_duration_ms", tags)
+	c.statSuccessfulWrites = c.statistics.Register("write", "writes", tags)
+	c.statFailedWrites = c.statistics.Register("write", "errors", tags)
+	c.statRetryableErrorCounters = c.statistics.Register("write", "errors_retryable", tags)
+	c.statNonRetryableErrorCounters = c.statistics.Register("write", "errors_non_retryable", tags)
+	c.statTimeout = c.statistics.Register("write", "request_timeouts", tags)
+	c.statSuccessfulWriteDuration = c.statistics.RegisterTiming("write", "request_success_time_ns", tags)
+	c.statFailedWriteDuration = c.statistics.RegisterTiming("write", "request_fail_time_ns", tags)
 	return nil
 }
 
@@ -343,9 +342,9 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 	// Execute the request
 	start := time.Now()
 	resp, err := c.client.Do(req.WithContext(ctx))
-	durationMs := time.Since(start).Milliseconds()
+	durationNs := time.Since(start).Nanoseconds()
 	if err != nil {
-		c.statFailedWriteDuration.Set(durationMs)
+		c.statFailedWriteDuration.Set(durationNs)
 		c.statFailedWrites.Incr(1)
 		var urlErr *url.Error
 		if errors.As(err, &urlErr) && urlErr.Timeout() {
@@ -371,13 +370,13 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 		http.StatusPartialContent,
 		http.StatusMultiStatus,
 		http.StatusAlreadyReported:
-		c.statSuccessfulWriteDuration.Set(durationMs)
+		c.statSuccessfulWriteDuration.Set(durationNs)
 		c.statSuccessfulWrites.Incr(1)
 		c.retryCount.Store(0)
 		return nil
 	}
 
-	c.statFailedWriteDuration.Set(durationMs)
+	c.statFailedWriteDuration.Set(durationNs)
 	c.statFailedWrites.Incr(1)
 
 	// We got an error and now try to decode further
