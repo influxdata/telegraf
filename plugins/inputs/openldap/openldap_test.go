@@ -62,7 +62,7 @@ func TestOpenldapGeneratesMetricsIntegration(t *testing.T) {
 	}
 
 	container := testutil.Container{
-		Image:        "bitnami/openldap",
+		Image:        "bitnamilegacy/openldap",
 		ExposedPorts: []string{servicePort},
 		Env: map[string]string{
 			"LDAP_ADMIN_USERNAME": "manager",
@@ -108,7 +108,7 @@ func TestOpenldapStartTLSIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	container := testutil.Container{
-		Image:        "bitnami/openldap",
+		Image:        "bitnamilegacy/openldap",
 		ExposedPorts: []string{servicePort},
 		Env: map[string]string{
 			"LDAP_ADMIN_USERNAME": "manager",
@@ -169,7 +169,7 @@ func TestOpenldapLDAPSIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	container := testutil.Container{
-		Image:        "bitnami/openldap",
+		Image:        "bitnamilegacy/openldap",
 		ExposedPorts: []string{servicePortSecure},
 		Env: map[string]string{
 			"LDAP_ADMIN_USERNAME": "manager",
@@ -225,7 +225,7 @@ func TestOpenldapInvalidTLSIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	container := testutil.Container{
-		Image:        "bitnami/openldap",
+		Image:        "bitnamilegacy/openldap",
 		ExposedPorts: []string{servicePortSecure},
 		Env: map[string]string{
 			"LDAP_ADMIN_USERNAME": "manager",
@@ -272,7 +272,7 @@ func TestOpenldapBindIntegration(t *testing.T) {
 	}
 
 	container := testutil.Container{
-		Image:        "bitnami/openldap",
+		Image:        "bitnamilegacy/openldap",
 		ExposedPorts: []string{servicePort},
 		Env: map[string]string{
 			"LDAP_ADMIN_USERNAME": "manager",
@@ -322,7 +322,7 @@ func TestOpenldapReverseMetricsIntegration(t *testing.T) {
 	}
 
 	container := testutil.Container{
-		Image:        "bitnami/openldap",
+		Image:        "bitnamilegacy/openldap",
 		ExposedPorts: []string{servicePort},
 		Env: map[string]string{
 			"LDAP_ADMIN_USERNAME": "manager",
