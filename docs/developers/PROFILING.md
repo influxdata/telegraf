@@ -24,8 +24,8 @@ telegraf --version > version.txt
 go env GOOS GOARCH >> version.txt
 ```
 
-The `trace.bin` and `version.txt` files can be sent in for analysis or, if desired, you can
-analyze the trace with:
+The `trace.bin` and `version.txt` files can be sent in for analysis or, if
+desired, you can analyze the trace with:
 
 ```shell
 go tool trace trace.bin
