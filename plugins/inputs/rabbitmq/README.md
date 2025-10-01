@@ -178,7 +178,8 @@ to use them.
     - node
     - durable
     - auto_delete
-    - type (queue type as returned by RabbitMQ, if empty it defaults to "classic"; only included when include_queue_type_tag = true)
+    - type (queue type as returned by RabbitMQ, if empty it defaults to
+      "classic"; only included when include_queue_type_tag = true)
   - fields:
     - consumer_utilisation (float, percent)
     - consumers (int, int)
