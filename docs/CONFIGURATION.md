@@ -716,7 +716,7 @@ evaluation is aborted, an error is logged, and the expression is reported as
 `true`, so the metric passes.
 
 > [!NOTE]
-> As CEL is an *interpreted* languguage, this type of filtering is much slower
+> As CEL is an *interpreted* language, this type of filtering is much slower
 > compared to `namepass`/`namedrop` and friends. So consider to use the more
 > restricted filter options where possible in case of high-throughput scenarios.
 
