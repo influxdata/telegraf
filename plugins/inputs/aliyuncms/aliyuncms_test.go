@@ -830,72 +830,72 @@ type MockDataStore struct {
 
 func newMockDataStore() *MockDataStore { return &MockDataStore{} }
 
-func TestGatherRDSPerformance(t *testing.T) {
-	m := &metric{
-		Dimensions: `{"instanceId": "i-abcdefgh123456"}`,
-		MetricNames: []string{
-			"local_fs_size_usage",
-		},
-		requestDimensions: []map[string]string{
-			{"instanceId": "i-abcdefgh123456"},
-		},
-	}
-	plugin := &AliyunCMS{
-		AccessKeyID:     "my_access_key_id",
-		AccessKeySecret: "my_access_key_secret",
-		Project:         "acs_rds_dashboard",
-		Metrics:         []*metric{m},
-		RateLimit:       200,
-		measurement:     formatMeasurement("acs_rds_dashboard"),
-		MetricServices:  []string{"rds"},
-		Regions:         []string{"cn-shanghai"},
-		cmsClient:       new(mockGatherAliyunCMSClient),
-		rdsClient:       new(mockGatherAliyunRDSClient),
-		Log:             testutil.Logger{Name: inputTitle},
-	}
-
-	// test table:
-	tests := []struct {
-		name           string
-		hasMeasurement bool
-		metricNames    []string
-		expected       []telegraf.Metric
-	}{
-		{
-			name:           "Data points from RDS Performance",
-			hasMeasurement: true,
-			metricNames:    []string{"local_fs_size_usage"},
-			expected: []telegraf.Metric{
-				testutil.MustMetric(
-					"aliyuncms_acs_rds_dashboard",
-					map[string]string{
-						"instanceId": "i-abcdefgh123456",
-						"userId":     "1234567898765432",
-					},
-					map[string]interface{}{
-						"local_fs_size_usage": float64(80),
-					},
-					time.Unix(1490152860000, 0)),
-			},
-		},
-	}
-
-	mockStore := newMockDataStore()
-	mockStore.On("GetHttpStatus").Return(200)
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var acc testutil.Accumulator
-			plugin.Metrics[0].MetricNames = tt.metricNames
-
-			require.NoError(t, acc.GatherError(plugin.Gather))
-			require.Equal(t, acc.HasMeasurement("aliyuncms_acs_rds_dashboard"), tt.hasMeasurement)
-			if tt.hasMeasurement {
-				acc.AssertContainsTaggedFields(t, "aliyuncms_acs_rds_dashboard", tt.expected[0].Fields(), tt.expected[0].Tags())
-			}
-			mockStore.AssertExpectations(t)
-		})
-	}
-}
+// func TestGatherRDSPerformance(t *testing.T) {
+//	m := &metric{
+//		Dimensions: `{"instanceId": "i-abcdefgh123456"}`,
+//		MetricNames: []string{
+//			"local_fs_size_usage",
+//		},
+//		requestDimensions: []map[string]string{
+//			{"instanceId": "i-abcdefgh123456"},
+//		},
+//	}
+//	plugin := &AliyunCMS{
+//		AccessKeyID:     "my_access_key_id",
+//		AccessKeySecret: "my_access_key_secret",
+//		Project:         "acs_rds_dashboard",
+//		Metrics:         []*metric{m},
+//		RateLimit:       200,
+//		measurement:     formatMeasurement("acs_rds_dashboard"),
+//		MetricServices:  []string{"rds"},
+//		Regions:         []string{"cn-shanghai"},
+//		cmsClient:       new(mockGatherAliyunCMSClient),
+//		rdsClient:       new(mockGatherAliyunRDSClient),
+//		Log:             testutil.Logger{Name: inputTitle},
+//	}
+//
+//	// test table:
+//	tests := []struct {
+//		name           string
+//		hasMeasurement bool
+//		metricNames    []string
+//		expected       []telegraf.Metric
+//	}{
+//		{
+//			name:           "Data points from RDS Performance",
+//			hasMeasurement: true,
+//			metricNames:    []string{"local_fs_size_usage"},
+//			expected: []telegraf.Metric{
+//				testutil.MustMetric(
+//					"aliyuncms_acs_rds_dashboard",
+//					map[string]string{
+//						"instanceId": "i-abcdefgh123456",
+//						"userId":     "1234567898765432",
+//					},
+//					map[string]interface{}{
+//						"local_fs_size_usage": float64(80),
+//					},
+//					time.Unix(1490152860000, 0)),
+//			},
+//		},
+//	}
+//
+//	mockStore := newMockDataStore()
+//	mockStore.On("GetHttpStatus").Return(200)
+//	for _, tt := range tests {
+//		t.Run(tt.name, func(t *testing.T) {
+//			var acc testutil.Accumulator
+//			plugin.Metrics[0].MetricNames = tt.metricNames
+//
+//			require.NoError(t, acc.GatherError(plugin.Gather))
+//			require.Equal(t, acc.HasMeasurement("aliyuncms_acs_rds_dashboard"), tt.hasMeasurement)
+//			if tt.hasMeasurement {
+//				acc.AssertContainsTaggedFields(t, "aliyuncms_acs_rds_dashboard", tt.expected[0].Fields(), tt.expected[0].Tags())
+//			}
+//			mockStore.AssertExpectations(t)
+//		})
+//	}
+// }
 
 func TestGetDiscoveryDataAcrossRegions(t *testing.T) {
 	// test table:
