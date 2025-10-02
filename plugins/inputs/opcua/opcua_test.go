@@ -76,10 +76,8 @@ func TestGetDataBadNodeContainerIntegration(t *testing.T) {
 	}
 
 	g := input.NodeGroupSettings{
-		MetricName: "anodic_current",
-		TagsSlice: [][]string{
-			{"pot", "2002"},
-		},
+		MetricName:  "anodic_current",
+		DefaultTags: map[string]string{"pot": "2002"},
 	}
 
 	for _, tags := range testopctags {
@@ -320,32 +318,33 @@ optional_fields = ["DataType"]
   namespace = "1"
   identifier_type = "s"
   identifier="one"
-  tags=[["tag0", "val0"]]
+  default_tags = { tag0 = "val0" }
 
 [[inputs.opcua.nodes]]
   name="name2"
   namespace="2"
   identifier_type="s"
   identifier="two"
-  tags=[["tag0", "val0"], ["tag00", "val00"]]
-  default_tags = {tag6 = "val6"}
+  default_tags={tag6="val6"}
 
 [[inputs.opcua.group]]
 name = "foo"
 namespace = "3"
 identifier_type = "i"
-tags = [["tag1", "val1"], ["tag2", "val2"]]
-nodes = [{name="name3", identifier="3000", tags=[["tag3", "val3"]]}]
+default_tags = { tag1 = "val1", tag2 = "val2"}
+[[inputs.opcua.group.nodes]]
+  name = "name3"
+  identifier = "3000"
+  default_tags = { tag3 = "val3" }
 
 [[inputs.opcua.group]]
 name = "bar"
 namespace = "0"
 identifier_type = "i"
-tags = [["tag1", "val1"], ["tag2", "val2"]]
+default_tags = { tag1 = "val1", tag2 = "val2"}
 [[inputs.opcua.group.nodes]]
   name = "name4"
   identifier = "4000"
-  tags=[["tag4", "val4"]]
   default_tags = { tag1 = "override" }
 
 [[inputs.opcua.group.nodes]]
@@ -386,14 +385,13 @@ use_unregistered_reads = true
 			Namespace:      "1",
 			IdentifierType: "s",
 			Identifier:     "one",
-			TagsSlice:      [][]string{{"tag0", "val0"}},
+			DefaultTags:    map[string]string{"tag0": "val0"},
 		},
 		{
 			FieldName:      "name2",
 			Namespace:      "2",
 			IdentifierType: "s",
 			Identifier:     "two",
-			TagsSlice:      [][]string{{"tag0", "val0"}, {"tag00", "val00"}},
 			DefaultTags:    map[string]string{"tag6": "val6"},
 		},
 	}, o.readClientConfig.RootNodes)
@@ -402,22 +400,21 @@ use_unregistered_reads = true
 			MetricName:     "foo",
 			Namespace:      "3",
 			IdentifierType: "i",
-			TagsSlice:      [][]string{{"tag1", "val1"}, {"tag2", "val2"}},
+			DefaultTags:    map[string]string{"tag1": "val1", "tag2": "val2"},
 			Nodes: []input.NodeSettings{{
-				FieldName:  "name3",
-				Identifier: "3000",
-				TagsSlice:  [][]string{{"tag3", "val3"}},
+				FieldName:   "name3",
+				Identifier:  "3000",
+				DefaultTags: map[string]string{"tag3": "val3"},
 			}},
 		},
 		{
 			MetricName:     "bar",
 			Namespace:      "0",
 			IdentifierType: "i",
-			TagsSlice:      [][]string{{"tag1", "val1"}, {"tag2", "val2"}},
+			DefaultTags:    map[string]string{"tag1": "val1", "tag2": "val2"},
 			Nodes: []input.NodeSettings{{
 				FieldName:   "name4",
 				Identifier:  "4000",
-				TagsSlice:   [][]string{{"tag4", "val4"}},
 				DefaultTags: map[string]string{"tag1": "override"},
 			}, {
 				FieldName:  "name5",
