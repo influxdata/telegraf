@@ -104,7 +104,7 @@ func (h *InfluxDBV2Listener) Init() error {
 	h.readysServed = selfstat.Register("influxdb_v2_listener", "readys_served", tags)
 	h.requestsRecv = selfstat.Register("influxdb_v2_listener", "requests_received", tags)
 	h.notFoundsServed = selfstat.Register("influxdb_v2_listener", "not_founds_served", tags)
-	h.pingServed = selfstat.Register("influxdb_v2_listener", "ping_served", tags)
+	h.pingsServed = selfstat.Register("influxdb_v2_listener", "pings_served", tags)
 	h.authFailures = selfstat.Register("influxdb_v2_listener", "auth_failures", tags)
 	if err := h.routes(); err != nil {
 		return err
