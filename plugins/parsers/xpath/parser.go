@@ -17,7 +17,6 @@ import (
 	"github.com/srebhan/protobufquery"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
@@ -45,17 +44,11 @@ type Parser struct {
 	PrintDocument        bool              `toml:"xpath_print_document"`
 	AllowEmptySelection  bool              `toml:"xpath_allow_empty_selection"`
 	NativeTypes          bool              `toml:"xpath_native_types"`
-	Trace                bool              `toml:"xpath_trace" deprecated:"1.35.0;use 'log_level' 'trace' instead"`
+	Trace                bool              `toml:"xpath_trace" deprecated:"1.35.0;1.40.0;use 'log_level' 'trace' instead"`
 	Configs              []Config          `toml:"xpath"`
 	DefaultMetricName    string            `toml:"-"`
 	DefaultTags          map[string]string `toml:"-"`
 	Log                  telegraf.Logger   `toml:"-"`
-
-	// Required for backward compatibility
-	ConfigsXML     []Config `toml:"xml" deprecated:"1.23.1;1.35.0;use 'xpath' instead"`
-	ConfigsJSON    []Config `toml:"xpath_json" deprecated:"1.23.1;1.35.0;use 'xpath' instead"`
-	ConfigsMsgPack []Config `toml:"xpath_msgpack" deprecated:"1.23.1;1.35.0;use 'xpath' instead"`
-	ConfigsProto   []Config `toml:"xpath_protobuf" deprecated:"1.23.1;1.35.0;use 'xpath' instead"`
 
 	document dataDocument
 }
@@ -91,42 +84,12 @@ func (p *Parser) Init() error {
 	switch p.Format {
 	case "", "xml":
 		p.document = &xmlDocument{}
-
-		// Required for backward compatibility
-		if len(p.ConfigsXML) > 0 {
-			p.Configs = append(p.Configs, p.ConfigsXML...)
-			config.PrintOptionDeprecationNotice("parsers.xpath", "xml", telegraf.DeprecationInfo{
-				Since:     "1.23.1",
-				RemovalIn: "1.35.0",
-				Notice:    "use 'xpath' instead",
-			})
-		}
 	case "xpath_cbor":
 		p.document = &cborDocument{}
 	case "xpath_json":
 		p.document = &jsonDocument{}
-
-		// Required for backward compatibility
-		if len(p.ConfigsJSON) > 0 {
-			p.Configs = append(p.Configs, p.ConfigsJSON...)
-			config.PrintOptionDeprecationNotice("parsers.xpath", "xpath_json", telegraf.DeprecationInfo{
-				Since:     "1.23.1",
-				RemovalIn: "1.35.0",
-				Notice:    "use 'xpath' instead",
-			})
-		}
 	case "xpath_msgpack":
 		p.document = &msgpackDocument{}
-
-		// Required for backward compatibility
-		if len(p.ConfigsMsgPack) > 0 {
-			p.Configs = append(p.Configs, p.ConfigsMsgPack...)
-			config.PrintOptionDeprecationNotice("parsers.xpath", "xpath_msgpack", telegraf.DeprecationInfo{
-				Since:     "1.23.1",
-				RemovalIn: "1.35.0",
-				Notice:    "use 'xpath' instead",
-			})
-		}
 	case "xpath_protobuf":
 		if p.ProtobufMessageDef != "" && !slices.Contains(p.ProtobufMessageFiles, p.ProtobufMessageDef) {
 			p.ProtobufMessageFiles = append(p.ProtobufMessageFiles, p.ProtobufMessageDef)
@@ -142,16 +105,6 @@ func (p *Parser) Init() error {
 			return err
 		}
 		p.document = &pbdoc
-
-		// Required for backward compatibility
-		if len(p.ConfigsProto) > 0 {
-			p.Configs = append(p.Configs, p.ConfigsProto...)
-			config.PrintOptionDeprecationNotice("parsers.xpath", "xpath_proto", telegraf.DeprecationInfo{
-				Since:     "1.23.1",
-				RemovalIn: "1.35.0",
-				Notice:    "use 'xpath' instead",
-			})
-		}
 	default:
 		return fmt.Errorf("unknown data-format %q for xpath parser", p.Format)
 	}
