@@ -185,7 +185,7 @@ func TestSubscribeClientIntegration(t *testing.T) {
 	// give initial setup a couple extra attempts, as on CircleCI this can be
 	// attempted to soon
 	require.Eventually(t, func() bool {
-		return o.SetupOptions() == nil
+		return o.SetupOptions(t.Context()) == nil
 	}, 5*time.Second, 10*time.Millisecond)
 
 	err = o.connect()
@@ -329,7 +329,7 @@ func TestSubscribeClientIntegrationAdditionalFields(t *testing.T) {
 	// give initial setup a couple extra attempts, as on CircleCI this can be
 	// attempted to soon
 	require.Eventually(t, func() bool {
-		return o.SetupOptions() == nil
+		return o.SetupOptions(t.Context()) == nil
 	}, 5*time.Second, 10*time.Millisecond)
 
 	require.NoError(t, o.connect(), "Connection failed")
