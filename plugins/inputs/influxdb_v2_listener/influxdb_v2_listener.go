@@ -300,7 +300,7 @@ func (h *InfluxDBV2Listener) handleDefault() http.HandlerFunc {
 func (h *InfluxDBV2Listener) handlePing() http.HandlerFunc {
 	return func(res http.ResponseWriter, _ *http.Request) {
 		defer h.pingServed.Incr(1)
-		res.Header().Set("X-Influxdb-Build", "Telegraf")
+		res.Header().Set("X-Influxdb-Build", "telegraf")
 		res.Header().Set("X-Influxdb-Version", internal.FormatFullVersion())
 		res.WriteHeader(http.StatusNoContent)
 	}
