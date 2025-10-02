@@ -37,7 +37,11 @@ func gatherEndpoint(e discoveryv1.EndpointSlice, acc telegraf.Accumulator) {
 	}
 
 	for _, endpoint := range e.Endpoints {
-		fields["ready"] = *endpoint.Conditions.Ready
+		if endpoint.Conditions.Ready == nil {
+			fields["ready"] = true
+		} else {
+			fields["ready"] = *endpoint.Conditions.Ready
+		}
 
 		if endpoint.Hostname != nil {
 			tags["hostname"] = *endpoint.Hostname
