@@ -276,7 +276,6 @@ func validateFieldDefinitions(fieldDefs []fieldDefinition, registerType string) 
 }
 
 func (*configurationOriginal) normalizeInputDatatype(dataType string, words int) (string, error) {
-
 	// Handle our special types
 	switch dataType {
 	case "FIXED":
