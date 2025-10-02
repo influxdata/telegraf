@@ -56,6 +56,8 @@ func TestZookeeperGeneratesMetricsIntegration(t *testing.T) {
 	}
 	for _, tt := range testset {
 		t.Run(tt.name, func(t *testing.T) {
+			require.NoError(t, tt.zookeeper.Init())
+
 			var acc testutil.Accumulator
 			require.NoError(t, acc.GatherError(tt.zookeeper.Gather))
 
