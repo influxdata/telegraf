@@ -293,7 +293,6 @@ func (h *InfluxDBV2Listener) handleReady() http.HandlerFunc {
 func (h *InfluxDBV2Listener) handleDefault() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 		defer h.notFoundsServed.Incr(1)
-		res.Header().Set("X-Telegraf-Version", internal.FormatFullVersion())
 		http.NotFound(res, req)
 	}
 }
