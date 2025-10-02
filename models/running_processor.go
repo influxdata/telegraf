@@ -50,6 +50,7 @@ func NewRunningProcessor(processor telegraf.StreamingProcessor, config *Processo
 		logger.Error(err)
 	}
 	SetLoggerOnPlugin(processor, logger)
+	SetStatisticsOnPlugin(processor, logger, tags)
 
 	return &RunningProcessor{
 		Processor: processor,

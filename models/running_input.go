@@ -3,6 +3,7 @@ package models
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -45,6 +46,8 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 		tags["alias"] = config.Alias
 	}
 
+	maps.Copy(tags, config.Tags)
+
 	inputErrorsRegister := selfstat.Register("gather", "errors", tags)
 	logger := logging.New("inputs", config.Name, config.Alias)
 	logger.RegisterErrorCallback(func() {
@@ -55,6 +58,7 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 		logger.Error(err)
 	}
 	SetLoggerOnPlugin(input, logger)
+	SetStatisticsOnPlugin(input, logger, tags)
 
 	return &RunningInput{
 		Input:  input,
