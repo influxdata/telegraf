@@ -15,12 +15,13 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/responses"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/cms"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/rds"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 )
 
 const inputTitle = "inputs.aliyuncms"
@@ -75,20 +76,17 @@ func (*mockGatherAliyunCMSClient) DescribeMetricList(request *cms.DescribeMetric
 
 type mockGatherAliyunRDSClient struct{}
 
-func (m *mockGatherAliyunRDSClient) DescribeDBInstancePerformance(request *rds.DescribeDBInstancePerformanceRequest) (
+func (s *mockGatherAliyunRDSClient) DescribeDBInstancePerformance(request *rds.DescribeDBInstancePerformanceRequest) ( //nolint:revive // Valid case
 	*rds.DescribeDBInstancePerformanceResponse, error) {
 	resp := new(rds.DescribeDBInstancePerformanceResponse)
 
 	switch request.Key {
 	case "PolarDBLocalIOSTAT":
-		resp.PerformanceKeys.PerformanceKey = []rds.PerformanceKey{}
-
+		resp.PerformanceKeys.PerformanceKey = make([]rds.PerformanceKey, 0)
 	case "ErrorDatapoint":
-		resp.PerformanceKeys.PerformanceKey = []rds.PerformanceKey{}
-
+		resp.PerformanceKeys.PerformanceKey = make([]rds.PerformanceKey, 0)
 	case "EmptyDatapoint":
-		resp.PerformanceKeys.PerformanceKey = []rds.PerformanceKey{}
-
+		resp.PerformanceKeys.PerformanceKey = make([]rds.PerformanceKey, 0)
 	case "ErrorResp":
 		return nil, errors.New("error response")
 	case "SingleMetric":
@@ -163,8 +161,7 @@ func (m *mockGatherAliyunRDSClient) DescribeDBInstancePerformance(request *rds.D
 		}
 	default:
 		// default to 200 with empty data
-		resp.PerformanceKeys.PerformanceKey = []rds.PerformanceKey{}
-
+		resp.PerformanceKeys.PerformanceKey = make([]rds.PerformanceKey, 0)
 	}
 
 	return resp, nil
@@ -351,7 +348,7 @@ func TestPluginMetricsInitialize(t *testing.T) {
 			accessKeySecret: "dummy",
 			metrics: []*metric{
 				{
-					MetricNames: []string{},
+					MetricNames: make([]string, 0),
 					Dimensions:  `{"instanceId": "i-abcdefgh123456"}`,
 				},
 			},
@@ -364,7 +361,7 @@ func TestPluginMetricsInitialize(t *testing.T) {
 			accessKeySecret: "dummy",
 			metrics: []*metric{
 				{
-					MetricNames: []string{},
+					MetricNames: make([]string, 0),
 					Dimensions:  `[{"instanceId": "p-example"},{"instanceId": "q-example"}]`,
 				},
 			},
@@ -378,8 +375,8 @@ func TestPluginMetricsInitialize(t *testing.T) {
 			expectedErrorString: `cannot parse dimensions (neither obj, nor array) "[": unexpected end of JSON input`,
 			metrics: []*metric{
 				{
-					MetricNames: []string{},
-					Dimensions:  `[`,
+					MetricNames: make([]string, 0),
+					Dimensions:  `test`,
 				},
 			},
 		},
@@ -454,7 +451,7 @@ func TestPluginMetricsRDSServiceInitialize(t *testing.T) {
 		accessKeySecret: "dummy",
 		metrics: []*metric{
 			{
-				MetricNames: []string{},
+				MetricNames: make([]string, 0),
 				Dimensions:  `{"instanceId": "i-abcdefgh123456"}`,
 			},
 		},
@@ -560,7 +557,7 @@ func TestGatherRDSMetric(t *testing.T) {
 	}
 
 	metricPoint := &metric{
-		MetricNames: []string{},
+		MetricNames: make([]string, 0),
 		Dimensions:  `"instanceId": "i-abcdefgh123456"`,
 	}
 
@@ -828,7 +825,7 @@ type MockDataStore struct {
 	mock.Mock
 }
 
-func newMockDataStore() *MockDataStore { return &MockDataStore{} }
+// func newMockDataStore() *MockDataStore { return &MockDataStore{} }
 
 // func TestGatherRDSPerformance(t *testing.T) {
 //	m := &metric{

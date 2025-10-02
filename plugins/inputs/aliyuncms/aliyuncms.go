@@ -12,12 +12,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jmespath/go-jmespath"
-
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/providers"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/cms"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/rds"
+	"github.com/jmespath/go-jmespath"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
@@ -311,7 +311,7 @@ func (s *AliyunCMS) getDataPoints(region, metricName string, m *metric) (points 
 }
 
 // parseTimestamp normalizes various timestamp representations into seconds since epoch.
-func (s *AliyunCMS) parseTimestamp(v interface{}) (int64, bool) {
+func (s *AliyunCMS) parseTimestamp(v interface{}) (int64, bool) { //nolint:revive // Valid case
 	switch t := v.(type) {
 	case int64:
 		return t, true
