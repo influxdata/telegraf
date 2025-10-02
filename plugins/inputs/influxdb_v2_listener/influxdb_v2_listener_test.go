@@ -594,10 +594,13 @@ func TestPing(t *testing.T) {
 	resp, err := http.Get(createURL(listener, "http", "/ping", ""))
 	require.NoError(t, err)
 	require.EqualValues(t, 204, resp.StatusCode)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 1, listener.pingServed.Get())
 	require.EqualValues(t, internal.FormatFullVersion(), resp.Header.Get("X-Influxdb-Version"))
-	require.EqualValues(t, "Telegraf", resp.Header.Get("X-Influxdb-Build"))
+	require.EqualValues(t, "telegraf", resp.Header.Get("X-Influxdb-Build"))
+	require.EqualValues(t, 1, listener.pingsServed.Get())
+	bodyBytes, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.Equal(t, 0, len(bodyBytes))
 }
 
 func TestReady(t *testing.T) {

@@ -76,7 +76,7 @@ type InfluxDBV2Listener struct {
 	readysServed    selfstat.Stat
 	requestsRecv    selfstat.Stat
 	notFoundsServed selfstat.Stat
-	pingServed      selfstat.Stat
+	pingsServed     selfstat.Stat
 
 	authFailures selfstat.Stat
 
@@ -230,8 +230,8 @@ func (h *InfluxDBV2Listener) routes() error {
 	h.mux.Handle("/api/v2/ready", h.handleReady())
 	h.mux.Handle("/health", h.handleHealth())
 	h.mux.Handle("/ready", h.handleReady())
-	h.mux.Handle("/", authHandler(h.handleDefault()))
 	h.mux.Handle("/ping", h.handlePing())
+	h.mux.Handle("/", authHandler(h.handleDefault()))
 
 	return nil
 }
@@ -299,7 +299,7 @@ func (h *InfluxDBV2Listener) handleDefault() http.HandlerFunc {
 
 func (h *InfluxDBV2Listener) handlePing() http.HandlerFunc {
 	return func(res http.ResponseWriter, _ *http.Request) {
-		defer h.pingServed.Incr(1)
+		defer h.pingsServed.Incr(1)
 		res.Header().Set("X-Influxdb-Build", "telegraf")
 		res.Header().Set("X-Influxdb-Version", internal.FormatFullVersion())
 		res.WriteHeader(http.StatusNoContent)
