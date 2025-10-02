@@ -32,24 +32,21 @@ func TestRedisSentinelConnectIntegration(t *testing.T) {
 	}()
 
 	redis := createRedisContainer(net.Name)
-	err = redis.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, redis.Start(), "failed to start container")
 	defer redis.Terminate()
 
 	firstSentinel := createSentinelContainer(redis.Name, net.Name, wait.ForAll(
 		wait.ForLog("+monitor master"),
 		wait.ForListeningPort(nat.Port(sentinelServicePort)),
 	))
-	err = firstSentinel.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, firstSentinel.Start(), "failed to start container")
 	defer firstSentinel.Terminate()
 
 	secondSentinel := createSentinelContainer(redis.Name, net.Name, wait.ForAll(
 		wait.ForLog("+sentinel sentinel"),
 		wait.ForListeningPort(nat.Port(sentinelServicePort)),
 	))
-	err = secondSentinel.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, secondSentinel.Start(), "failed to start container")
 	defer secondSentinel.Terminate()
 
 	addr := fmt.Sprintf("tcp://%s:%s", secondSentinel.Address, secondSentinel.Ports[sentinelServicePort])
@@ -57,13 +54,10 @@ func TestRedisSentinelConnectIntegration(t *testing.T) {
 	r := &RedisSentinel{
 		Servers: []string{addr},
 	}
-	err = r.Init()
-	require.NoError(t, err, "failed to run Init function")
+	require.NoError(t, r.Init(), "failed to run Init function")
 
 	var acc testutil.Accumulator
-
-	err = acc.GatherError(r.Gather)
-	require.NoError(t, err)
+	require.NoError(t, acc.GatherError(r.Gather))
 
 	require.True(t, acc.HasMeasurement("redis_sentinel_masters"), "redis_sentinel_masters measurement is missing")
 	require.True(t, acc.HasMeasurement("redis_sentinel_sentinels"), "redis_sentinel_sentinels measurement is missing")
@@ -362,7 +356,7 @@ func createRedisContainer(networkName string) testutil.Container {
 
 func createSentinelContainer(redisAddress, networkName string, waitingFor wait.Strategy) testutil.Container {
 	return testutil.Container{
-		Image:        "bitnami/redis-sentinel:7.0",
+		Image:        "bitnamilegacy/redis-sentinel:7.0",
 		ExposedPorts: []string{sentinelServicePort},
 		Networks:     []string{networkName},
 		Env: map[string]string{
