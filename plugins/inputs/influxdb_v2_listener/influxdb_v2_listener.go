@@ -293,6 +293,7 @@ func (h *InfluxDBV2Listener) handleReady() http.HandlerFunc {
 func (h *InfluxDBV2Listener) handleDefault() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 		defer h.notFoundsServed.Incr(1)
+		res.Header().Set("X-Telegraf-Version", internal.FormatFullVersion())
 		http.NotFound(res, req)
 	}
 }
@@ -300,6 +301,8 @@ func (h *InfluxDBV2Listener) handleDefault() http.HandlerFunc {
 func (h *InfluxDBV2Listener) handlePing() http.HandlerFunc {
 	return func(res http.ResponseWriter, _ *http.Request) {
 		defer h.pingServed.Incr(1)
+		res.Header().Set("X-Influxdb-Build", "Telegraf")
+		res.Header().Set("X-Influxdb-Version", internal.FormatFullVersion())
 		res.WriteHeader(http.StatusNoContent)
 	}
 }

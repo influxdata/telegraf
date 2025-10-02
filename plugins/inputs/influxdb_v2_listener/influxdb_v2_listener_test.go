@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -595,6 +596,8 @@ func TestPing(t *testing.T) {
 	require.EqualValues(t, 204, resp.StatusCode)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 1, listener.pingServed.Get())
+	require.EqualValues(t, internal.FormatFullVersion(), resp.Header.Get("X-Influxdb-Version"))
+	require.EqualValues(t, "Telegraf", resp.Header.Get("X-Influxdb-Build"))
 }
 
 func TestReady(t *testing.T) {
