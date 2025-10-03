@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/psutil"
@@ -23,7 +22,7 @@ var sampleConfig string
 
 type Net struct {
 	Interfaces          []string `toml:"interfaces"`
-	IgnoreProtocolStats bool     `toml:"ignore_protocol_stats"`
+	IgnoreProtocolStats bool     `toml:"ignore_protocol_stats" deprecated:"1.37.0;1.45.0;option is ignored"`
 
 	filter     filter.Filter
 	ps         psutil.PS
@@ -35,16 +34,6 @@ func (*Net) SampleConfig() string {
 }
 
 func (n *Net) Init() error {
-	if !n.IgnoreProtocolStats {
-		config.PrintOptionValueDeprecationNotice("inputs.net", "ignore_protocol_stats", "false",
-			telegraf.DeprecationInfo{
-				Since:     "1.27.3",
-				RemovalIn: "1.36.0",
-				Notice:    "use the 'inputs.nstat' plugin instead for protocol stats",
-			},
-		)
-	}
-
 	// So not use the interface list of the system if the HOST_PROC variable is
 	// set as the interfaces are determined by a syscall and therefore might
 	// differ especially in container environments.
@@ -116,25 +105,6 @@ func (n *Net) Gather(acc telegraf.Accumulator) error {
 			"speed":        getInterfaceSpeed(io.Name),
 		}
 		acc.AddCounter("net", fields, tags)
-	}
-
-	// Get system wide stats for different network protocols
-	// (ignore these stats if the call fails)
-	if !n.IgnoreProtocolStats {
-		//nolint:errcheck // stats ignored on fail
-		netprotos, _ := n.ps.NetProto()
-		fields := make(map[string]interface{})
-		for _, proto := range netprotos {
-			for stat, value := range proto.Stats {
-				name := fmt.Sprintf("%s_%s", strings.ToLower(proto.Protocol),
-					strings.ToLower(stat))
-				fields[name] = value
-			}
-		}
-		tags := map[string]string{
-			"interface": "all",
-		}
-		acc.AddFields("net", fields, tags)
 	}
 
 	return nil
