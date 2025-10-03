@@ -8,7 +8,6 @@ import (
 	"math"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
 )
 
 //go:embed sample_request.conf
@@ -81,17 +80,6 @@ func (c *configurationPerRequest) check() error {
 		// Check for valid optimization
 		switch def.Optimization {
 		case "", "none", "shrink", "rearrange":
-		case "aggressive":
-			config.PrintOptionValueDeprecationNotice(
-				"inputs.modbus",
-				"optimization",
-				"aggressive",
-				telegraf.DeprecationInfo{
-					Since:     "1.28.2",
-					RemovalIn: "1.30.0",
-					Notice:    `use "max_insert" instead`,
-				},
-			)
 		case "max_insert":
 			switch def.RegisterType {
 			case "coil":
