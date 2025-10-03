@@ -845,6 +845,7 @@ func TestMQTTTopicGenerationTemplateIsValid(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := &MQTT{
+				Log:   testutil.Logger{},
 				Topic: tt.topic,
 				MqttConfig: mqtt.MqttConfig{
 					Servers: []string{"tcp://localhost:1883"},
