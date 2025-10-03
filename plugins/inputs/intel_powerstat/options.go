@@ -85,7 +85,6 @@ func needsMsrCPU(metrics []cpuMetricType) bool {
 		case cpuC3StateResidency:
 		case cpuC6StateResidency:
 		case cpuC7StateResidency:
-		case cpuBusyCycles:
 		case cpuBusyFrequency:
 		default:
 			continue
@@ -124,7 +123,6 @@ func needsTimeRelatedMsr(metrics []cpuMetricType) bool {
 		case cpuC3StateResidency:
 		case cpuC6StateResidency:
 		case cpuC7StateResidency:
-		case cpuBusyCycles:
 		case cpuBusyFrequency:
 		default:
 			continue
