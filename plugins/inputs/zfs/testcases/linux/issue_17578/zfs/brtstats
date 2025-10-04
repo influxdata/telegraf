@@ -1,0 +1,12 @@
+13 1 0x01 10 2720 2742619344 1351143840335709
+name                            type data
+addref_entry_not_on_disk        4    800
+addref_entry_on_disk            4    11
+decref_entry_in_memory          4    398
+decref_entry_loaded_from_disk   4    73347
+decref_entry_not_in_memory      4    99677
+decref_entry_read_lost_race     4    4
+decref_entry_still_referenced   4    11
+decref_free_data_later          4    73343
+decref_free_data_now            4    395
+decref_no_entry                 4    26326

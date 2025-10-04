@@ -1,0 +1,15 @@
+18 1 0x01 13 3536 2743356034 1351143854108050
+name                            type data
+dmu_tx_assigned                 4    588581682
+dmu_tx_delay                    4    0
+dmu_tx_error                    4    0
+dmu_tx_suspended                4    0
+dmu_tx_group                    4    16
+dmu_tx_memory_reserve           4    0
+dmu_tx_memory_reclaim           4    0
+dmu_tx_dirty_throttle           4    1
+dmu_tx_dirty_delay              4    1834959
+dmu_tx_dirty_over_max           4    0
+dmu_tx_dirty_frees_delay        4    0
+dmu_tx_wrlog_delay              4    0
+dmu_tx_quota                    4    0
