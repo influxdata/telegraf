@@ -1357,12 +1357,12 @@ func TestTestCases(t *testing.T) {
 				metricName = fileformat
 			}
 			parser := &Parser{
-				DefaultMetricName:   metricName,
-				Format:              fileformat,
-				ProtobufMessageDef:  pbmsgdef,
-				ProtobufMessageType: pbmsgtype,
-				Configs:             []Config{*cfg},
-				Log:                 testutil.Logger{Name: "parsers.xml"},
+				DefaultMetricName:    metricName,
+				Format:               fileformat,
+				ProtobufMessageFiles: []string{pbmsgdef},
+				ProtobufMessageType:  pbmsgtype,
+				Configs:              []Config{*cfg},
+				Log:                  testutil.Logger{Name: "parsers.xml"},
 			}
 			require.NoError(t, parser.Init())
 			outputs, err := parser.Parse(content)
@@ -1383,12 +1383,12 @@ func TestTestCases(t *testing.T) {
 func TestProtobufImporting(t *testing.T) {
 	// Setup the parser and run it.
 	parser := &Parser{
-		DefaultMetricName:   "xpath_protobuf",
-		Format:              "xpath_protobuf",
-		ProtobufMessageDef:  "person.proto",
-		ProtobufMessageType: "importtest.Person",
-		ProtobufImportPaths: []string{"testcases/protos"},
-		Log:                 testutil.Logger{Name: "parsers.protobuf"},
+		DefaultMetricName:    "xpath_protobuf",
+		Format:               "xpath_protobuf",
+		ProtobufMessageFiles: []string{"person.proto"},
+		ProtobufMessageType:  "importtest.Person",
+		ProtobufImportPaths:  []string{"testcases/protos"},
+		Log:                  testutil.Logger{Name: "parsers.protobuf"},
 	}
 	require.NoError(t, parser.Init())
 }
@@ -1648,12 +1648,12 @@ func BenchmarkParsingJSON(b *testing.B) {
 
 func BenchmarkParsingProtobuf(b *testing.B) {
 	plugin := &Parser{
-		DefaultMetricName:   "benchmark",
-		Format:              "xpath_protobuf",
-		ProtobufMessageDef:  "benchmark.proto",
-		ProtobufMessageType: "benchmark.BenchmarkData",
-		ProtobufImportPaths: []string{".", "./testcases/protobuf_benchmark"},
-		NativeTypes:         true,
+		DefaultMetricName:    "benchmark",
+		Format:               "xpath_protobuf",
+		ProtobufMessageFiles: []string{"benchmark.proto"},
+		ProtobufMessageType:  "benchmark.BenchmarkData",
+		ProtobufImportPaths:  []string{".", "./testcases/protobuf_benchmark"},
+		NativeTypes:          true,
 		Configs: []Config{
 			{
 				Selection:    "//data",
