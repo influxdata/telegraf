@@ -4,6 +4,7 @@
 package nftables
 
 import (
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,10 +22,8 @@ type Nftables struct {
 	Tables  []string
 }
 
-var nftableConfig = `
-  ## Configuration for nftables
-  tables = [ "filter" ]
-`
+//go:embed sample.conf
+var sampleConfig string
 
 type Nftable struct {
 	Metainfo          *Metainfo
@@ -79,7 +78,7 @@ type Rule struct {
 	Counter *Counter
 }
 
-// UnmarshalJSON handles properly extracing the counter expression from
+// UnmarshalJSON handles properly extracting the counter expression from
 // the Exprs array input
 func (rule *Rule) UnmarshalJSON(b []byte) error {
 	var raw struct {
@@ -103,7 +102,7 @@ func (rule *Rule) UnmarshalJSON(b []byte) error {
 		if hasKey("counter") {
 			rule.Counter = &Counter{}
 			if err := json.Unmarshal(expr["counter"], rule.Counter); err != nil {
-				return fmt.Errorf("unable to parse metadata: %w", err)
+				return fmt.Errorf("unable to parse counter: %w", err)
 			}
 			// we can return early since we are not looking for anything else
 			return nil
@@ -118,12 +117,16 @@ type Counter struct {
 }
 
 func (*Nftables) SampleConfig() string {
-	return nftableConfig
+	return sampleConfig
+}
+
+func (*Nftables) Init() error {
+	return nil
 }
 
 func (nft *Nftables) Gather(acc telegraf.Accumulator) error {
 	if len(nft.Tables) == 0 {
-		return errors.New("invalid configuration - expected a `Tables` entry with list of nftables to monitor")
+		return errors.New("invalid configuration - expected a 'Tables' entry with list of nftables to monitor")
 	}
 	for _, table := range nft.Tables {
 		err := nft.getTableData(table, acc)

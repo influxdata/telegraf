@@ -17,9 +17,8 @@ You have several options to grant telegraf to run nftables:
 * Configure systemd to run telegraf with CAP_NET_ADMIN and CAP_NET_RAW.
 This is the simplest and recommended option.
 * Configure sudo to grant telegraf to run nftables. This is the most restrictive
- option, but require sudo setup.
+ option, but requires sudo setup.
 
-⭐ Telegraf v1.1.0
 🏷️  network, system
 💻 linux
 

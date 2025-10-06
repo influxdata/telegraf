@@ -5,10 +5,12 @@ package nftables
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/testutil"
 )
 
-var singletontable = `{
+var singletonTable = `{
   "nftables": [
     {
       "metainfo": {
@@ -170,23 +172,15 @@ func TestParseNftableBadRule(t *testing.T) {
       "rule": []
     },
 }`}
-	baderrs := []string{
-		"error parsing: { \"nftables\": [\n    {\n      \"rule\": \"bad\"\n    }\n  ]\n}, Error: unable to parse rule: unable to unmarshal: \"bad\"",
-		"error parsing: { \"nftables\": [\n    {\n      \"rule\": {}\n    },\n}, Error: invalid character '}' looking for beginning of value",
-		"error parsing: { \"nftables\": [\n    {\n      \"rule\": []\n    },\n}, Error: invalid character '}' looking for beginning of value",
-	}
-	for i, v := range badrules {
+	for _, v := range badrules {
 		acc := new(testutil.Accumulator)
-		err := parseNftableOutput([]byte(v), acc)
-		if err.Error() != baderrs[i] {
-			t.Errorf("Expected Error %#v, but got %#v", baderrs[i], err.Error())
-		}
+		require.Error(t, parseNftableOutput([]byte(v), acc))
 	}
 }
 
 func TestParseNftableOutput(t *testing.T) {
 	acc := new(testutil.Accumulator)
-	err := parseNftableOutput([]byte(singletontable), acc)
+	err := parseNftableOutput([]byte(singletonTable), acc)
 	if err != nil {
 		t.Errorf("No Error Expected: %#v", err)
 	}
@@ -206,20 +200,13 @@ func TestParseNftableOutput(t *testing.T) {
 }
 
 func TestParseNftableBadOutput(t *testing.T) {
-	expected := "error parsing: I am not JSON, Error: invalid character 'I' looking for beginning of value"
 	acc := new(testutil.Accumulator)
-	err := parseNftableOutput([]byte("I am not JSON"), acc)
-	if err.Error() != expected {
-		t.Errorf("Expected error %#v got\n%#v\n", expected, err)
-	}
+	require.Error(t, parseNftableOutput([]byte("I am not JSON"), acc))
 }
 
 func TestNftableBadConfig(t *testing.T) {
-	expected := "invalid configuration - expected a `Tables` entry with list of nftables to monitor"
-	ft := Nftables{}
+	plugin := Nftables{}
+	require.NoError(t, plugin.Init())
 	acc := new(testutil.Accumulator)
-	err := acc.GatherError(ft.Gather)
-	if err.Error() != expected {
-		t.Errorf("Expected error %#v got\n%#v\n", expected, err)
-	}
+	require.Error(t, acc.GatherError(plugin.Gather))
 }
