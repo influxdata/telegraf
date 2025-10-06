@@ -377,8 +377,9 @@ is set to `true`.
 
 ##### Sources (Object) (Optional)
 
-Overrides the [Sources](#sources-optional) global parameter for current performance
-object. See [Sources](#sources-optional) description for more details.
+Overrides the [Sources](#sources-optional) global parameter for current
+performance object. See [Sources](#sources-optional) description for more
+details.
 
 ##### Measurement (Optional)
 
