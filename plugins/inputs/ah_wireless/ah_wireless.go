@@ -37,7 +37,7 @@ type Ah_wireless struct {
 	Ifname			[]string	`toml:"ifname"`
 	Eth_ioctl		uint64		`toml:"eth_ioctl"`
 	Scount			uint8		`toml:"scount"`
-	Test_rf_enable	    uint8		`toml:"test_rf_enable"`
+	Test_rfstats_enable	uint8		`toml:"test_rfstats_enable"`
 	Test_client_enable  uint8		`toml:"test_client_enable"`
 	Test_device_enable  uint8		`toml:"test_device_enable"`
 	Test_network_enable uint8		`toml:"test_network_enable"`
@@ -195,7 +195,7 @@ const sampleConfig = `
   scount = 10
   ifname = ["wifi0","wifi1"]
   eth_ioctl = -6767123671
-  Test_rf_enable = 0
+  Test_rfstats_enable = 0
   Test_client_enable = 0
   Test_device_enable = 0
   Test_network_enable = 0
@@ -218,7 +218,7 @@ func NewAh_wireless(id int) *Ah_wireless {
 				timer_count: 0,
 				Eth_ioctl: 0,
 				Scount: 10,
-				Test_rf_enable: 0,
+				Test_rfstats_enable: 0,
 				Test_client_enable: 0,
 				Test_device_enable: 0,
 				Test_network_enable: 0,
@@ -2581,12 +2581,15 @@ func (t *Ah_wireless) runWirelessStats(
     if *enableWirelessStat != 1 {
         return
     }
-    dumpOutput(wirelessStatOutFile, wirelessStatTitle, 0)
+	
     if preWirelessStat != nil {
         preWirelessStat()
     }
-    collectWirelessStat()
+	if collectWirelessStat != nil {
+        collectWirelessStat()
+    }
     *enableWirelessStat = 0
+
 }
 
 
@@ -2598,19 +2601,18 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
         defer Gather_deffer_end(t)
 
         // If ANY test flag set, do shared interface + ssid prep once.
-        if t.Test_rf_enable == 1 || t.Test_client_enable == 1 ||
+        if t.Test_rfstats_enable == 1 || t.Test_client_enable == 1 ||
             t.Test_device_enable == 1 || t.Test_network_enable == 1 {
             for _, ifn := range t.Ifname {
                 t.intf_m[ifn] = make(map[string]string)
                 load_ssid(t, ifn)
             }
-        }
 
         // RF one-shot (set rrmid only here)
-        if t.Test_rf_enable == 1 {
+        if t.Test_rfstats_enable == 1 {
             rrmid = ahutil.GetRrmId()
         }
-        t.runWirelessStats(&t.Test_rf_enable,
+        t.runWirelessStats(&t.Test_rfstats_enable,
             RF_STAT_OUT_FILE,
             "RF Stat Input Plugin Output",
             nil,
@@ -2643,6 +2645,7 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
             func() { Gather_EthernetInterfaceStats(t) },
             func() { Send_NetworkStats(t, acc) },
         )
+	}
 
         // Periodic / aggregated path
 		if t.timer_count == (t.Scount - 1) {
