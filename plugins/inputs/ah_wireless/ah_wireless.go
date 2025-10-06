@@ -1056,6 +1056,11 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 	for _, intfName := range t.Ifname {
 
+		if !ahutil.Check_Vap_Status(intfName) {
+			log.Printf("VAP %s is not up, rfStat not collected\n", intfName)
+			continue
+		}
+
 		var rfstat awestats
 		var devstats ah_dcd_dev_stats
 		var ifindex int
@@ -1196,6 +1201,7 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 			fields["band"] = get_radio_band(t, intfName)
 			fields["rrmId"] = rrmid
+			fields["txPower"] = ahutil.GetTxPower(intfName)
 
 			if (t.last_ut_data[ii].noise_min == 0) || (t.last_ut_data[ii].noise_min >= rfstat.ast_noise_floor) {
 				t.last_ut_data[ii].noise_min = rfstat.ast_noise_floor
@@ -2564,6 +2570,7 @@ func Gather_deffer_end(t *Ah_wireless) {
 	}
 }
 
+
 func (t *Ah_wireless) runWirelessStats(
     enableWirelessStat *uint8,
     wirelessStatOutFile string,
@@ -2582,10 +2589,10 @@ func (t *Ah_wireless) runWirelessStats(
     *enableWirelessStat = 0
 }
 
+
+
 func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
     t.wg.Add(1)
-    log.Printf("ah_wireless: Gather Rf stat mode=%d Client=%d Device=%d Network=%d\n",
-        t.Test_rf_enable, t.Test_client_enable, t.Test_device_enable, t.Test_network_enable)
 
     go func() {
         defer Gather_deffer_end(t)

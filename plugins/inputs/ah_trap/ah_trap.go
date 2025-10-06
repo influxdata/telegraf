@@ -78,13 +78,13 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
 		rawSize := int(unsafe.Sizeof(failure))
 		copy((*[1 << 10]byte)(unsafe.Pointer(&failure))[:rawSize], trap.Union[:rawSize])
 
-		acc.AddFields("TrapType", map[string]interface{}{
-			"name_failureTrapType":              cleanCString(failure.Name[:]),
-			"cause_failureTrapType":             failure.Cause,
-			"set_failureTrapType":               failure.Set,
-			"level_trapMessage_failureTrapType": trap.Level,
-			"msgId_trapMessage_failureTrapType": trap.MsgID,
-			"desc_trapMessage_failureTrapType":  cleanCString(trap.Desc[:]),
+		acc.AddFields("TrapEvent", map[string]interface{}{
+			"trapName_failureTrap":          cleanCString(failure.Name[:]),
+			"cause_failureTrap":             failure.Cause,
+			"set_failureTrap":               failure.Set,
+			"level_trapMessage_failureTrap": trap.Level,
+			"msgId_trapMessage_failureTrap": trap.MsgID,
+			"desc_trapMessage_failureTrap":  cleanCString(trap.Desc[:]),
 		}, nil)
 
 	case AH_THRESHOLD_TRAP_TYPE:
@@ -92,14 +92,14 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
 		rawSize := int(unsafe.Sizeof(ahthreshold))
 		copy((*[1 << 10]byte)(unsafe.Pointer(&ahthreshold))[:rawSize], trap.Union[:rawSize])
 
-		acc.AddFields("TrapType", map[string]interface{}{
-			"name_thresholdTrapType":              cleanCString(ahthreshold.Name[:]),
-			"curVal_thresholdTrapType":            ahthreshold.CurVal,
-			"thresholdHigh_thresholdTrapType":     ahthreshold.ThresholdHigh,
-			"thresholdLow_thresholdTrapType":      ahthreshold.ThresholdLow,
-			"level_trapMessage_thresholdTrapType": trap.Level,
-			"msgId_trapMessage_thresholdTrapType": trap.MsgID,
-			"desc_trapMessage_thresholdTrapType":  cleanCString(trap.Desc[:]),
+		acc.AddFields("TrapEvent", map[string]interface{}{
+			"trapName_thresholdTrap":          cleanCString(ahthreshold.Name[:]),
+			"curVal_thresholdTrap":            ahthreshold.CurVal,
+			"thresholdHigh_thresholdTrap":     ahthreshold.ThresholdHigh,
+			"thresholdLow_thresholdTrap":      ahthreshold.ThresholdLow,
+			"level_trapMessage_thresholdTrap": trap.Level,
+			"msgId_trapMessage_thresholdTrap": trap.MsgID,
+			"desc_trapMessage_thresholdTrap":  cleanCString(trap.Desc[:]),
 		}, nil)
 
         case AH_STATE_CHANGE_TRAP_TYPE:
@@ -107,14 +107,14 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                 rawSize := int(unsafe.Sizeof(ahstatechange))
                 copy((*[1 << 10]byte)(unsafe.Pointer(&ahstatechange))[:rawSize], trap.Union[:rawSize])
 
-                acc.AddFields("TrapType", map[string]interface{}{
-                        "name_stateChangeTrapType":              cleanCString(ahstatechange.Name[:]),
-                        "preState_stateChangeTrapType":          ahstatechange.PreState,
-                        "curState_stateChangeTrapType":          ahstatechange.CurState,
-                        "opMode_stateChangeTrapType":            ahstatechange.OperationMode,
-                        "level_trapMessage_stateChangeTrapType": trap.Level,
-                        "msgId_trapMessage_stateChangeTrapType": trap.MsgID,
-                        "desc_trapMessage_stateChangeTrapType":  cleanCString(trap.Desc[:]),
+                acc.AddFields("TrapEvent", map[string]interface{}{
+                        "trapName_stateChangeTrap":          cleanCString(ahstatechange.Name[:]),
+                        "preState_stateChangeTrap":          ahstatechange.PreState,
+                        "curState_stateChangeTrap":          ahstatechange.CurState,
+                        "opMode_stateChangeTrap":            ahstatechange.OperationMode,
+                        "level_trapMessage_stateChangeTrap": trap.Level,
+                        "msgId_trapMessage_stateChangeTrap": trap.MsgID,
+                        "desc_trapMessage_stateChangeTrap":  cleanCString(trap.Desc[:]),
                 }, nil)
 
 	 case AH_CONNECTION_CHANGE_TRAP_TYPE:
@@ -122,43 +122,44 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                 rawSize := int(unsafe.Sizeof(ahconnectionchange))
                 copy((*[1 << 10]byte)(unsafe.Pointer(&ahconnectionchange))[:rawSize], trap.Union[:rawSize])
 
-                acc.AddFields("TrapType", map[string]interface{}{
-                        "name_connectionChangeTrapType":              cleanCString(ahconnectionchange.Name[:]),
-                        "ssid_connectionChangeTrapType":              ahconnectionchange.Ssid,
-                        "hostName_connectionChangeTrapType":          ahconnectionchange.HostName,
-                        "userName_connectionChangeTrapType":          ahconnectionchange.UserName,
-			"objectType_connectionChangeTrapType":        ahconnectionchange.ObjectType,
-			"remoteId_connectionChangeTrapType":          formatMac(ahconnectionchange.RemoteID),
-			"bssid_connectionChangeTrapType":             formatMac(ahconnectionchange.BSSID),
-			"curState_connectionChangeTrapType":          ahconnectionchange.CurState,
-			"clientIp_connectionChangeTrapType":          intToIPv4(ahconnectionchange.ClientIP),
-			"clientAuthMethod_connectionChangeTrapType":  ahconnectionchange.ClientAuthMethod,
-			"clientEncryptMethod_connectionChangeTrapType": ahconnectionchange.ClientEncryptMethod,
-			"clientMacProto_connectionChangeTrapType":    ahconnectionchange.ClientMacProto,
-			"clientVlan_connectionChangeTrapType":        ahconnectionchange.ClientVLAN,
-			"clientUpId_connectionChangeTrapType":        ahconnectionchange.ClientUPID,
-			"clientChannel_connectionChangeTrapType":     ahconnectionchange.ClientChannel,
-			"clientCwpUsed_connectionChangeTrapType":     ahconnectionchange.ClientCWPUsed,
-			"assocTime_connectionChangeTrapType":         ahconnectionchange.AssociationTime,
-			"ifIndex_keys_connectionChangeTrapType":      ahconnectionchange.IfIndex,
-                        "name_keys_connectionChangeTrapType":         cleanCString(ahconnectionchange.IfName[:]),
-			"rssi_connectionChangeTrapType":              ahconnectionchange.RSSI,
-			"snr_connectionChangeTrapType":               ahconnectionchange.SNR,
-			"profile_connectionChangeTrapType":           cleanCString(ahconnectionchange.ProfName[:]),
-			"authUsed_connectionChangeTrapType":          ahconnectionchange.ClientMacBasedAuthUsed,
-			"os_connectionChangeTrapType":                cleanCString(ahconnectionchange.OS[:]),
-			"option55_connectionChangeTrapType":          cleanCString(ahconnectionchange.Option55[:]),
-			"mgtStatus_connectionChangeTrapType":         ahconnectionchange.MgtStus,
-			"staAddr6Num_connectionChangeTrapType":       ahconnectionchange.StaAddr6Num,
-			"staAddr6_connectionChangeTrapType":          intToIPv6(ahconnectionchange.StaAddr6[:], int(ahconnectionchange.StaAddr6Num)),
-			"deauthReason_connectionChangeTrapType":      ahconnectionchange.DeauthReason,
-			"roamTime_connectionChangeTrapType":          ahconnectionchange.RoamTime,
-			"authTime_connectionChangeTrapType":          ahconnectionchange.AuthTime,
-			"radioProfile_connectionChangeTrapType":      cleanCString(ahconnectionchange.RadioProf[:]),
-			"negotiateKbps_connectionChangeTrapType":     ahconnectionchange.NegotiateKbps,
-                        "level_trapMessage_connectionChangeTrapType": trap.Level,
-                        "msgId_trapMessage_connectionChangeTrapType": trap.MsgID,
-                        "desc_trapMessage_connectionChangeTrapType":  cleanCString(trap.Desc[:]),
+                acc.AddFields("TrapEvent", map[string]interface{}{
+                        "trapName_connectionChangeTrap":          cleanCString(ahconnectionchange.Name[:]),
+			"ssid_connectionChangeTrap":              cleanCString(ahconnectionchange.Ssid[:]),
+			"hostName_connectionChangeTrap":          cleanCString(ahconnectionchange.HostName[:]),
+			"userName_connectionChangeTrap":          cleanCString(ahconnectionchange.UserName[:]),
+			"objectType_connectionChangeTrap":        ahconnectionchange.ObjectType,
+			"remoteId_connectionChangeTrap":          formatMac(ahconnectionchange.RemoteID),
+			"bssid_connectionChangeTrap":             formatMac(ahconnectionchange.BSSID),
+			"curState_connectionChangeTrap":          ahconnectionchange.CurState,
+			"clientIp_connectionChangeTrap":          intToIPv4(ahconnectionchange.ClientIP),
+			"clientAuthMethod_connectionChangeTrap":  ahconnectionchange.ClientAuthMethod,
+			"clientEncryptMethod_connectionChangeTrap": ahconnectionchange.ClientEncryptMethod,
+			"clientMacProto_connectionChangeTrap":    ahconnectionchange.ClientMacProto,
+			"clientVlan_connectionChangeTrap":        ahconnectionchange.ClientVLAN,
+			"clientUpId_connectionChangeTrap":        ahconnectionchange.ClientUPID,
+			"clientChannel_connectionChangeTrap":     ahconnectionchange.ClientChannel,
+			"clientCwpUsed_connectionChangeTrap":     ahconnectionchange.ClientCWPUsed,
+			"associationTime_connectionChangeTrap":   ahconnectionchange.AssociationTime,
+			"ifIndex_keys_connectionChangeTrap":      ahconnectionchange.IfIndex,
+                        "name_keys_connectionChangeTrap":         cleanCString(ahconnectionchange.IfName[:]),
+			"rssi_connectionChangeTrap":              ahconnectionchange.RSSI,
+			"snr_connectionChangeTrap":               ahconnectionchange.SNR,
+			"profile_connectionChangeTrap":           cleanCString(ahconnectionchange.ProfName[:]),
+			"authUsed_connectionChangeTrap":          ahconnectionchange.ClientMacBasedAuthUsed,
+			"os_connectionChangeTrap":                cleanCString(ahconnectionchange.OS[:]),
+			"option55_connectionChangeTrap":          cleanCString(ahconnectionchange.Option55[:]),
+			"mgtStatus_connectionChangeTrap":         ahconnectionchange.MgtStus,
+			"staAddr6Num_connectionChangeTrap":       ahconnectionchange.StaAddr6Num,
+			"staAddr6_connectionChangeTrap":          intToIPv6(ahconnectionchange.StaAddr6[:], int(ahconnectionchange.StaAddr6Num)),
+			"deauthReason_connectionChangeTrap":      ahconnectionchange.DeauthReason,
+			"roamTime_connectionChangeTrap":          ahconnectionchange.RoamTime,
+			"assocTime_connectionChangeTrap":         ahconnectionchange.AssocTime,
+			"authTime_connectionChangeTrap":          ahconnectionchange.AuthTime,
+			"radioProfile_connectionChangeTrap":      cleanCString(ahconnectionchange.RadioProf[:]),
+			"negotiateKbps_connectionChangeTrap":     ahconnectionchange.NegotiateKbps,
+                        "level_trapMessage_connectionChangeTrap": trap.Level,
+                        "msgId_trapMessage_connectionChangeTrap": trap.MsgID,
+                        "desc_trapMessage_connectionChangeTrap":  cleanCString(trap.Desc[:]),
                 }, nil)
 
 	case AH_IDP_AP_EVENT_TRAP_TYPE:
@@ -166,22 +167,22 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                 rawSize := int(unsafe.Sizeof(ahidpapevent))
                 copy((*[1 << 10]byte)(unsafe.Pointer(&ahidpapevent))[:rawSize], trap.Union[:rawSize])
 
-                acc.AddFields("TrapType", map[string]interface{}{
-                        "name_idpApEventTrapType":              cleanCString(ahidpapevent.Name[:]),
-                        "ifIndex_idpApEventTrapType":           ahidpapevent.IfIndex,
-                        "remoteId_idpApEventTrapType":          formatMac(ahidpapevent.RemoteID),
-                        "idpType_idpApEventTrapType":           ahidpapevent.IdpType,
-			"idpChannel_idpApEventTrapType":        ahidpapevent.IdpChannel,
-			"idpRssi_idpApEventTrapType":           ahidpapevent.IdpRSSI,
-			"idpCompliance_idpApEventTrapType":     ahidpapevent.IdpCompliance,
-			"ssid_idpApEventTrapType":              cleanCString(ahidpapevent.SSID[:]),
-			"stationType_idpApEventTrapType":       ahidpapevent.StationType,
-			"stationData_idpApEventTrapType":       ahidpapevent.StationData,
-			"idpRemoved_idpApEventTrapType":        ahidpapevent.IdpRemoved,
-			"idpInnet_idpApEventTrapType":          ahidpapevent.IdpInNet,
-                        "level_trapMessage_idpApEventTrapType": trap.Level,
-                        "msgId_trapMessage_idpApEventTrapType": trap.MsgID,
-                        "desc_trapMessage_idpApEventTrapType":  cleanCString(trap.Desc[:]),
+                acc.AddFields("TrapEvent", map[string]interface{}{
+                        "trapName_idpApEventTrap":          cleanCString(ahidpapevent.Name[:]),
+                        "ifIndex_idpApEventTrap":           ahidpapevent.IfIndex,
+                        "remoteId_idpApEventTrap":          formatMac(ahidpapevent.RemoteID),
+                        "idpType_idpApEventTrap":           ahidpapevent.IdpType,
+			"idpChannel_idpApEventTrap":        ahidpapevent.IdpChannel,
+			"idpRssi_idpApEventTrap":           ahidpapevent.IdpRSSI,
+			"idpCompliance_idpApEventTrap":     ahidpapevent.IdpCompliance,
+			"ssid_idpApEventTrap":              cleanCString(ahidpapevent.SSID[:]),
+			"stationType_idpApEventTrap":       ahidpapevent.StationType,
+			"stationData_idpApEventTrap":       ahidpapevent.StationData,
+			"idpRemoved_idpApEventTrap":        ahidpapevent.IdpRemoved,
+			"idpInnet_idpApEventTrap":          ahidpapevent.IdpInNet,
+                        "level_trapMessage_idpApEventTrap": trap.Level,
+                        "msgId_trapMessage_idpApEventTrap": trap.MsgID,
+                        "desc_trapMessage_idpApEventTrap":  cleanCString(trap.Desc[:]),
                 }, nil)
 
 	case AH_CLIENT_INFO_TRAP_TYPE:
@@ -189,19 +190,19 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                 rawSize := int(unsafe.Sizeof(ahclientinfo))
                 copy((*[1 << 10]byte)(unsafe.Pointer(&ahclientinfo))[:rawSize], trap.Union[:rawSize])
 
-                acc.AddFields("TrapType", map[string]interface{}{
-                        "name_clientInfoTrapType":              cleanCString(ahclientinfo.Name[:]),
-                        "ssid_clientInfoTrapType":              ahclientinfo.Ssid,
-			"clientMac_clientInfoTrapType":         formatMac(ahclientinfo.ClientMac),
-                        "hostName_clientInfoTrapType":          cleanCString(ahclientinfo.HostName[:]),
-			"userName_clientInfoTrapType":          cleanCString(ahclientinfo.UserName[:]),
-			"clientIp_clientInfoTrapType":          intToIPv4(ahclientinfo.ClientIP),
-			"mgtStatus_clientInfoTrapType":         ahclientinfo.MgtStus,
-			"staAddr6Num_clientInfoTrapType":       ahclientinfo.StaAddr6Num,
-			"staAddr6_clientInfoTrapType":          intToIPv6(ahclientinfo.StaAddr6[:], int(ahclientinfo.StaAddr6Num)),
-                        "level_trapMessage_clientInfoTrapType": trap.Level,
-                        "msgId_trapMessage_clientInfoTrapType": trap.MsgID,
-                        "desc_trapMessage_clientInfoTrapType":  cleanCString(trap.Desc[:]),
+                acc.AddFields("TrapEvent", map[string]interface{}{
+                        "trapName_clientInfoTrap":          cleanCString(ahclientinfo.Name[:]),
+                        "ssid_clientInfoTrap":              ahclientinfo.Ssid,
+			"clientMac_clientInfoTrap":         formatMac(ahclientinfo.ClientMac),
+                        "hostName_clientInfoTrap":          cleanCString(ahclientinfo.HostName[:]),
+			"userName_clientInfoTrap":          cleanCString(ahclientinfo.UserName[:]),
+			"clientIp_clientInfoTrap":          intToIPv4(ahclientinfo.ClientIP),
+			"mgtStatus_clientInfoTrap":         ahclientinfo.MgtStus,
+			"staAddr6Num_clientInfoTrap":       ahclientinfo.StaAddr6Num,
+			"staAddr6_clientInfoTrap":          intToIPv6(ahclientinfo.StaAddr6[:], int(ahclientinfo.StaAddr6Num)),
+                        "level_trapMessage_clientInfoTrap": trap.Level,
+                        "msgId_trapMessage_clientInfoTrap": trap.MsgID,
+                        "desc_trapMessage_clientInfoTrap":  cleanCString(trap.Desc[:]),
                 }, nil)
 
          case AH_POWER_INFO_TRAP_TYPE:
@@ -209,21 +210,21 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                 rawSize := int(unsafe.Sizeof(ahpowerinfo))
                 copy((*[1 << 10]byte)(unsafe.Pointer(&ahpowerinfo))[:rawSize], trap.Union[:rawSize])
 
-                acc.AddFields("TrapType", map[string]interface{}{
-                        "name_powerInfoTrapType":               cleanCString(ahpowerinfo.Name[:]),
-                        "powerSrc_powerInfoTrapType":           ahpowerinfo.PowerSrc,
-                        "eth0On_powerInfoTrapType":             ahpowerinfo.Eth0On,
-                        "eth1On_powerInfoTrapType":             ahpowerinfo.Eth1On,
-                        "eth0Pwr_powerInfoTrapType":            ahpowerinfo.Eth0Pwr,
-                        "eth1Pwr_powerInfoTrapType":            ahpowerinfo.Eth1Pwr,
-                        "eth0Speed_powerInfoTrapType":          ahpowerinfo.Eth0Speed,
-                        "eth1Speed_powerInfoTrapType":          ahpowerinfo.Eth1Speed,
-                        "wifi0Setting_powerInfoTrapType":       ahpowerinfo.Wifi0Setting,
-                        "wifi1Setting_powerInfoTrapType":       ahpowerinfo.Wifi1Setting,
-                        "wifi2Setting_powerInfoTrapType":       ahpowerinfo.Wifi2Setting,
-			"level_trapMessage_powerInfoTrapType":  trap.Level,
-                        "msgId_trapMessage_powerInfoTrapType":  trap.MsgID,
-			"desc_trapMessage_powerInfoTrapType":   cleanCString(trap.Desc[:]),
+                acc.AddFields("TrapEvent", map[string]interface{}{
+                        "trapName_powerInfoTrap":           cleanCString(ahpowerinfo.Name[:]),
+                        "powerSrc_powerInfoTrap":           ahpowerinfo.PowerSrc,
+                        "eth0On_powerInfoTrap":             ahpowerinfo.Eth0On,
+                        "eth1On_powerInfoTrap":             ahpowerinfo.Eth1On,
+                        "eth0Pwr_powerInfoTrap":            ahpowerinfo.Eth0Pwr,
+                        "eth1Pwr_powerInfoTrap":            ahpowerinfo.Eth1Pwr,
+                        "eth0Speed_powerInfoTrap":          ahpowerinfo.Eth0Speed,
+                        "eth1Speed_powerInfoTrap":          ahpowerinfo.Eth1Speed,
+                        "wifi0Setting_powerInfoTrap":       ahpowerinfo.Wifi0Setting,
+                        "wifi1Setting_powerInfoTrap":       ahpowerinfo.Wifi1Setting,
+                        "wifi2Setting_powerInfoTrap":       ahpowerinfo.Wifi2Setting,
+			"level_trapMessage_powerInfoTrap":  trap.Level,
+                        "msgId_trapMessage_powerInfoTrap":  trap.MsgID,
+			"desc_trapMessage_powerInfoTrap":   cleanCString(trap.Desc[:]),
 			}, nil)
 
 	case AH_CHANNEL_POWER_TRAP_TYPE:
@@ -232,19 +233,19 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                 copy((*[1 << 10]byte)(unsafe.Pointer(&ahchannelpowerinfo))[:rawSize], trap.Union[:rawSize])
 
 
-                acc.AddFields("TrapType", map[string]interface{}{
-                        "name_channelPowerTrapType":              cleanCString(ahchannelpowerinfo.Name[:]),
-                        "ifIndex_channelPowerTrapType":           ahchannelpowerinfo.IfIndex,
-                        "channel_channelPowerTrapType":           ahchannelpowerinfo.RadioChannel,
-                        "txPwr_channelPowerTrapType":             ahchannelpowerinfo.RadioTxPower,
-                        "beaconInterval_channelPowerTrapType":    ahchannelpowerinfo.BeaconInterval,
-                        "channelStrfmt_channelPowerTrapType":     ahchannelpowerinfo.ChnlStrfmt,
-                        "powerStrfmt_channelPowerTrapType":       ahchannelpowerinfo.PwrStrfmt,
-			"radioEirp_channelPowerTrapType":         cleanCString(ahchannelpowerinfo.RadioEirp[:]),
-                        "reason_channelPowerTrapType":            ahchannelpowerinfo.Reason,
-                        "level_trapMessage_channelPowerTrapType":  trap.Level,
-                        "msgId_trapMessage_channelPowerTrapType":  trap.MsgID,
-                        "desc_trapMessage_channelPowerTrapType":   cleanCString(trap.Desc[:]),
+                acc.AddFields("TrapEvent", map[string]interface{}{
+                        "trapName_channelPowerTrap":          cleanCString(ahchannelpowerinfo.Name[:]),
+                        "ifIndex_channelPowerTrap":           ahchannelpowerinfo.IfIndex,
+                        "channel_channelPowerTrap":           ahchannelpowerinfo.RadioChannel,
+                        "txPwr_channelPowerTrap":             ahchannelpowerinfo.RadioTxPower,
+                        "beaconInterval_channelPowerTrap":    ahchannelpowerinfo.BeaconInterval,
+                        "channelStrfmt_channelPowerTrap":     ahchannelpowerinfo.ChnlStrfmt,
+                        "powerStrfmt_channelPowerTrap":       ahchannelpowerinfo.PwrStrfmt,
+			"radioEirp_channelPowerTrap":         cleanCString(ahchannelpowerinfo.RadioEirp[:]),
+                        "reason_channelPowerTrap":            ahchannelpowerinfo.Reason,
+                        "level_trapMessage_channelPowerTrap":  trap.Level,
+                        "msgId_trapMessage_channelPowerTrap":  trap.MsgID,
+                        "desc_trapMessage_channelPowerTrap":   cleanCString(trap.Desc[:]),
                         }, nil)
 
 	case AH_IDP_MITIGATE_TRAP_TYPE:
@@ -252,17 +253,17 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                 rawSize := int(unsafe.Sizeof(ahidpmitigate))
                 copy((*[1 << 10]byte)(unsafe.Pointer(&ahidpmitigate))[:rawSize], trap.Union[:rawSize])
 
-                acc.AddFields("TrapType", map[string]interface{}{
-                        "name_idpMitigateTrapType":               cleanCString(ahidpmitigate.Name[:]),
-                        "ifIndex_idpMitigateTrapType":            ahidpmitigate.IfIndex,
-			"remoteId_idpMitigateTrapType":           formatMac(ahidpmitigate.RemoteID),
-                        "bssid_idpMitigateTrapType":              formatMac(ahidpmitigate.BSSID),
-                        "removed_idpMitigateTrapType":            ahidpmitigate.Removed,
-                        "discoverAge_idpMitigateTrapType":        ahidpmitigate.DiscoverAge,
-                        "updateAge_idpMitigateTrapType":          ahidpmitigate.UpdateAge,
-                        "level_trapMessage_idpMitigateTrapType":  trap.Level,
-                        "msgId_trapMessage_idpMitigateTrapType":  trap.MsgID,
-                        "desc_trapMessage_idpMitigateTrapType":   cleanCString(trap.Desc[:]),
+                acc.AddFields("TrapEvent", map[string]interface{}{
+                        "trapName_idpMitigateTrap":           cleanCString(ahidpmitigate.Name[:]),
+                        "ifIndex_idpMitigateTrap":            ahidpmitigate.IfIndex,
+			"remoteId_idpMitigateTrap":           formatMac(ahidpmitigate.RemoteID),
+                        "bssid_idpMitigateTrap":              formatMac(ahidpmitigate.BSSID),
+                        "removed_idpMitigateTrap":            ahidpmitigate.Removed,
+                        "discoverAge_idpMitigateTrap":        ahidpmitigate.DiscoverAge,
+                        "updateAge_idpMitigateTrap":          ahidpmitigate.UpdateAge,
+                        "level_trapMessage_idpMitigateTrap":  trap.Level,
+                        "msgId_trapMessage_idpMitigateTrap":  trap.MsgID,
+                        "desc_trapMessage_idpMitigateTrap":   cleanCString(trap.Desc[:]),
                         }, nil)
 
 	case AH_INTERFERENCE_ALERT_TRAP_TYPE:
@@ -270,42 +271,41 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                 rawSize := int(unsafe.Sizeof(ahinterference))
                 copy((*[1 << 10]byte)(unsafe.Pointer(&ahinterference))[:rawSize], trap.Union[:rawSize])
 
-                acc.AddFields("TrapType", map[string]interface{}{
-                        "name_interferenceAlertTrapType":                cleanCString(ahinterference.Name[:]),
-                        "ifIndex_interferenceAlertTrapType":             ahinterference.IfIndex,
-                        "interferenceThres_interferenceAlertTrapType":   ahinterference.InterferenceThres,
-                        "aveInterference_interferenceAlertTrapType":     ahinterference.AveInterference,
-                        "shortInterference_interferenceAlertTrapType":   ahinterference.ShortInterference,
-                        "snapInterference_interferenceAlertTrapType":    ahinterference.SnapInterference,
-                        "crcErrRateThreshold_interferenceAlertTrapType": ahinterference.CRCErrRateThres,
-			"crcErrRate_interferenceAlertTrapType":          ahinterference.CRCErrRate,
-			"set_interferenceAlertTrapType":                 ahinterference.Set,
-                        "level_trapMessage_interferenceAlertTrapType":   trap.Level,
-                        "msgId_trapMessage_interferenceAlertTrapType":   trap.MsgID,
-                        "desc_trapMessage_interferenceAlertTrapType":    cleanCString(trap.Desc[:]),
+                acc.AddFields("TrapEvent", map[string]interface{}{
+                        "trapName_interferenceAlertTrap":            cleanCString(ahinterference.Name[:]),
+                        "ifIndex_interferenceAlertTrap":             ahinterference.IfIndex,
+                        "interferenceThres_interferenceAlertTrap":   ahinterference.InterferenceThres,
+                        "aveInterference_interferenceAlertTrap":     ahinterference.AveInterference,
+                        "shortInterference_interferenceAlertTrap":   ahinterference.ShortInterference,
+                        "snapInterference_interferenceAlertTrap":    ahinterference.SnapInterference,
+                        "crcErrRateThreshold_interferenceAlertTrap": ahinterference.CRCErrRateThres,
+			"crcErrRate_interferenceAlertTrap":          ahinterference.CRCErrRate,
+			"set_interferenceAlertTrap":                 ahinterference.Set,
+                        "level_trapMessage_interferenceAlertTrap":   trap.Level,
+                        "msgId_trapMessage_interferenceAlertTrap":   trap.MsgID,
+                        "desc_trapMessage_interferenceAlertTrap":    cleanCString(trap.Desc[:]),
                         }, nil)
 
 	case AH_BW_SENTINEL_TRAP_TYPE:
-		log.Printf("[ah_trap] Bw sentinel trap 2")
                 var ahbwsentinel AhBwSentinelTrap
                 rawSize := int(unsafe.Sizeof(ahbwsentinel))
                 copy((*[1 << 10]byte)(unsafe.Pointer(&ahbwsentinel))[:rawSize], trap.Union[:rawSize])
 
-                acc.AddFields("TrapType", map[string]interface{}{
-                        "name_bwSentinelTrapType":                cleanCString(ahbwsentinel.Name[:]),
-                        "ifIndex_bwSentinelTrapType":             ahbwsentinel.IfIndex,
-                        "clientMac_bwSentinelTrapType":           formatMac(ahbwsentinel.ClientMac),
-                        "bwSentinelStatus_bwSentinelTrapType":    ahbwsentinel.BwSentinelStatus,
-                        "gbw_bwSentinelTrapType":		  ahbwsentinel.GBW,
-                        "actualBw_bwSentinelTrapType":            ahbwsentinel.ActualBW,
-                        "actionTaken_bwSentinelTrapType":         ahbwsentinel.ActionTaken,
-                        "channelUtil_bwSentinelTrapType":         ahbwsentinel.ChnlUtil,
-                        "interferenceUtil_bwSentinelTrapType":    ahbwsentinel.InterferenceUtil,
-			"txUtil_bwSentinelTrapType":              ahbwsentinel.TxUtil,
-			"rxUtil_bwSentinelTrapType":              ahbwsentinel.RxUtil,
-                        "level_trapMessage_bwSentinelTrapType":   trap.Level,
-                        "msgId_trapMessage_bwSentinelTrapType":   trap.MsgID,
-                        "desc_trapMessage_bwSentinelTrapType":    cleanCString(trap.Desc[:]),
+                acc.AddFields("TrapEvent", map[string]interface{}{
+                        "trapName_bwSentinelTrap":            cleanCString(ahbwsentinel.Name[:]),
+                        "ifIndex_bwSentinelTrap":             ahbwsentinel.IfIndex,
+                        "clientMac_bwSentinelTrap":           formatMac(ahbwsentinel.ClientMac),
+                        "bwSentinelStatus_bwSentinelTrap":    ahbwsentinel.BwSentinelStatus,
+                        "gbw_bwSentinelTrap":		      ahbwsentinel.GBW,
+                        "actualBw_bwSentinelTrap":            ahbwsentinel.ActualBW,
+                        "actionTaken_bwSentinelTrap":         ahbwsentinel.ActionTaken,
+                        "channelUtil_bwSentinelTrap":         ahbwsentinel.ChnlUtil,
+                        "interferenceUtil_bwSentinelTrap":    ahbwsentinel.InterferenceUtil,
+			"txUtil_bwSentinelTrap":              ahbwsentinel.TxUtil,
+			"rxUtil_bwSentinelTrap":              ahbwsentinel.RxUtil,
+                        "level_trapMessage_bwSentinelTrap":   trap.Level,
+                        "msgId_trapMessage_bwSentinelTrap":   trap.MsgID,
+                        "desc_trapMessage_bwSentinelTrap":    cleanCString(trap.Desc[:]),
                         }, nil)
 
 	case AH_ALARM_ALRT_TRAP_TYPE:
@@ -313,20 +313,20 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                 rawSize := int(unsafe.Sizeof(ahalarmalert))
                 copy((*[1 << 10]byte)(unsafe.Pointer(&ahalarmalert))[:rawSize], trap.Union[:rawSize])
 
-                acc.AddFields("TrapType", map[string]interface{}{
-                        "name_alarmAlertTrapType":                cleanCString(ahalarmalert.Name[:]),
-                        "ifIndex_alarmAlertTrapType":             ahalarmalert.IfIndex,
-                        "clientMac_alarmAlertTrapType":           formatMac(ahalarmalert.ClientMac),
-                        "level_alarmAlertTrapType":               ahalarmalert.Level,
-			"ssid_alarmAlertTrapType":                cleanCString(ahalarmalert.SSID[:]),
-                        "alertType_alarmAlertTrapType":           ahalarmalert.AlertType,
-                        "threshold_alarmAlertTrapType":           ahalarmalert.ThresInterference,
-                        "current_alarmAlertTrapType":             ahalarmalert.ShortInterference,
-                        "snap_alarmAlertTrapType":                ahalarmalert.SnapInterference,
-                        "set_alarmAlertTrapType":                 ahalarmalert.Set,
-                        "level_trapMessage_alarmAlertTrapType":   trap.Level,
-                        "msgId_trapMessage_alarmAlertTrapType":   trap.MsgID,
-                        "desc_trapMessage_alarmAlertTrapType":    cleanCString(trap.Desc[:]),
+                acc.AddFields("TrapEvent", map[string]interface{}{
+                        "trapName_alarmAlertTrap":            cleanCString(ahalarmalert.Name[:]),
+                        "ifIndex_alarmAlertTrap":             ahalarmalert.IfIndex,
+                        "clientMac_alarmAlertTrap":           formatMac(ahalarmalert.ClientMac),
+                        "level_alarmAlertTrap":               ahalarmalert.Level,
+			"ssid_alarmAlertTrap":                cleanCString(ahalarmalert.SSID[:]),
+                        "alertType_alarmAlertTrap":           ahalarmalert.AlertType,
+                        "threshold_alarmAlertTrap":           ahalarmalert.ThresInterference,
+                        "current_alarmAlertTrap":             ahalarmalert.ShortInterference,
+                        "snap_alarmAlertTrap":                ahalarmalert.SnapInterference,
+                        "set_alarmAlertTrap":                 ahalarmalert.Set,
+                        "level_trapMessage_alarmAlertTrap":   trap.Level,
+                        "msgId_trapMessage_alarmAlertTrap":   trap.MsgID,
+                        "desc_trapMessage_alarmAlertTrap":    cleanCString(trap.Desc[:]),
                         }, nil)
 
 	case AH_MESH_MGT0_VLAN_CHANGE_TRAP_TYPE:
@@ -334,15 +334,15 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                 rawSize := int(unsafe.Sizeof(ahmeshmgtvlan))
                 copy((*[1 << 10]byte)(unsafe.Pointer(&ahmeshmgtvlan))[:rawSize], trap.Union[:rawSize])
 
-                acc.AddFields("TrapType", map[string]interface{}{
-                        "name_meshMgt0vlanChangeTrapType":                cleanCString(ahmeshmgtvlan.Name[:]),
-                        "oldVlan_meshMgt0vlanChangeTrapType":             ahmeshmgtvlan.OldVlan,
-                        "newVlan_meshMgt0vlanChangeTrapType":             ahmeshmgtvlan.NewVlan,
-                        "oldNativeVlan_meshMgt0vlanChangeTrapType":       ahmeshmgtvlan.OldNativeVlan,
-                        "newNativeVlan_meshMgt0vlanChangeTrapType":       ahmeshmgtvlan.NewNativeVlan,
-                        "level_trapMessage_meshMgt0vlanChangeTrapType":   trap.Level,
-                        "msgId_trapMessage_meshMgt0vlanChangeTrapType":   trap.MsgID,
-                        "desc_trapMessage_meshMgt0vlanChangeTrapType":    cleanCString(trap.Desc[:]),
+                acc.AddFields("TrapEvent", map[string]interface{}{
+                        "trapName_meshMgt0vlanChangeTrap":            cleanCString(ahmeshmgtvlan.Name[:]),
+                        "oldVlan_meshMgt0vlanChangeTrap":             ahmeshmgtvlan.OldVlan,
+                        "newVlan_meshMgt0vlanChangeTrap":             ahmeshmgtvlan.NewVlan,
+                        "oldNativeVlan_meshMgt0vlanChangeTrap":       ahmeshmgtvlan.OldNativeVlan,
+                        "newNativeVlan_meshMgt0vlanChangeTrap":       ahmeshmgtvlan.NewNativeVlan,
+                        "level_trapMessage_meshMgt0vlanChangeTrap":   trap.Level,
+                        "msgId_trapMessage_meshMgt0vlanChangeTrap":   trap.MsgID,
+                        "desc_trapMessage_meshMgt0vlanChangeTrap":    cleanCString(trap.Desc[:]),
                         }, nil)
 
 	case AH_MESH_STABLE_STAGE_TRAP_TYPE:
@@ -350,13 +350,13 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                 rawSize := int(unsafe.Sizeof(ahmeshstable))
                 copy((*[1 << 10]byte)(unsafe.Pointer(&ahmeshstable))[:rawSize], trap.Union[:rawSize])
 
-                acc.AddFields("TrapType", map[string]interface{}{
-                        "name_meshStableStageTrapType":                cleanCString(ahmeshstable.Name[:]),
-                        "meshStableStage_meshStableStageTrapType":     ahmeshstable. MeshStableStage,
-                        "meshDataRate_meshStableStageTrapType":        ahmeshstable.MeshDataRate,
-                        "level_trapMessage_meshStableStageTrapType":   trap.Level,
-                        "msgId_trapMessage_meshStableStageTrapType":   trap.MsgID,
-                        "desc_trapMessage_meshStableStageTrapType":    cleanCString(trap.Desc[:]),
+                acc.AddFields("TrapEvent", map[string]interface{}{
+                        "trapName_meshStableStageTrap":            cleanCString(ahmeshstable.Name[:]),
+                        "meshStableStage_meshStableStageTrap":     ahmeshstable. MeshStableStage,
+                        "meshDataRate_meshStableStageTrap":        ahmeshstable.MeshDataRate,
+                        "level_trapMessage_meshStableStageTrap":   trap.Level,
+                        "msgId_trapMessage_meshStableStageTrap":   trap.MsgID,
+                        "desc_trapMessage_meshStableStageTrap":    cleanCString(trap.Desc[:]),
                         }, nil)
 
 	case AH_KEY_FULL_ALARM_TRAP_TYPE:
@@ -364,15 +364,15 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                 rawSize := int(unsafe.Sizeof(ahkeyfullalarm))
                 copy((*[1 << 10]byte)(unsafe.Pointer(&ahkeyfullalarm))[:rawSize], trap.Union[:rawSize])
 
-                acc.AddFields("TrapType", map[string]interface{}{
-                        "name_keyFullAlarmTrapType":                cleanCString(ahkeyfullalarm.Name[:]),
-                        "ifIndex_keyFullAlarmTrapType":             ahkeyfullalarm.IfIndex,
-                        "bssid_keyFullAlarmTrapType":               ahkeyfullalarm.BSSID,
-			"clientMac_keyFullAlarmTrapType":           ahkeyfullalarm.ClientMAC,
-			"gtkVlan_keyFullAlarmTrapType":             ahkeyfullalarm.GtkVLAN,
-                        "level_trapMessage_keyFullAlarmTrapType":   trap.Level,
-                        "msgId_trapMessage_keyFullAlarmTrapType":   trap.MsgID,
-                        "desc_trapMessage_keyFullAlarmTrapType":    cleanCString(trap.Desc[:]),
+                acc.AddFields("TrapEvent", map[string]interface{}{
+                        "trapName_keyFullAlarmTrap":            cleanCString(ahkeyfullalarm.Name[:]),
+                        "ifIndex_keyFullAlarmTrap":             ahkeyfullalarm.IfIndex,
+                        "bssid_keyFullAlarmTrap":               ahkeyfullalarm.BSSID,
+			"clientMac_keyFullAlarmTrap":           ahkeyfullalarm.ClientMAC,
+			"gtkVlan_keyFullAlarmTrap":             ahkeyfullalarm.GtkVLAN,
+                        "level_trapMessage_keyFullAlarmTrap":   trap.Level,
+                        "msgId_trapMessage_keyFullAlarmTrap":   trap.MsgID,
+                        "desc_trapMessage_keyFullAlarmTrap":    cleanCString(trap.Desc[:]),
                         }, nil)
 
 	}
@@ -390,22 +390,22 @@ func (t *TrapPlugin) Gather_Ah_send_trap(trapType uint32, trapBuf [256]byte, acc
 		var mvlan AhFaMvlanChangeTrap
 		copy((*[unsafe.Sizeof(mvlan)]byte)(unsafe.Pointer(&mvlan))[:], trapBuf[:unsafe.Sizeof(mvlan)])
 
-		acc.AddFields("TrapType", map[string]interface{}{
-			"trapType_faMvlanTrapType":           mvlan.TrapType,
-			"mgmtVlan_faMvlanTrapType":           mvlan.MgmtVlan,
-			"nativeVlan_faMvlanTrapType":         mvlan.NativeVlan,
-			"nativeTagged_faMvlanTrapType":       mvlan.NativeTagged,
-			"systemId_faMvlanTrapType":           fmt.Sprintf("%X", mvlan.SystemID),
+		acc.AddFields("TrapEvent", map[string]interface{}{
+			"trapType_faMvlanTrap":           mvlan.TrapType,
+			"mgmtVlan_faMvlanTrap":           mvlan.MgmtVlan,
+			"nativeVlan_faMvlanTrap":         mvlan.NativeVlan,
+			"nativeTagged_faMvlanTrap":       mvlan.NativeTagged,
+			"systemId_faMvlanTrap":           fmt.Sprintf("%X", mvlan.SystemID),
 		}, nil)
 
 	case AH_MSG_TRAP_DFS_BANG:
 		var dfs AhTgrafDfsTrap
 		copy((*[unsafe.Sizeof(dfs)]byte)(unsafe.Pointer(&dfs))[:], trapBuf[:unsafe.Sizeof(dfs)])
 
-		acc.AddFields("TrapType", map[string]interface{}{
-			"trapType_dfsBangTrapType":    dfs.TrapType,
-			"name_dfsBangTrapType":        cleanCString(dfs.IfName[:]),
-			"desc_dfsBangTrapType":        cleanCString(dfs.Desc[:]),
+		acc.AddFields("TrapEvent", map[string]interface{}{
+			"trapType_dfsBangTrap":    dfs.TrapType,
+			"name_dfsBangTrap":        cleanCString(dfs.IfName[:]),
+			"desc_dfsBangTrap":        cleanCString(dfs.Desc[:]),
 		}, nil)
 
 	}
