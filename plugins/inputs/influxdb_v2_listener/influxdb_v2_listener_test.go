@@ -600,7 +600,7 @@ func TestPing(t *testing.T) {
 	bodyBytes, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
-	require.Len(t, bodyBytes, 0)
+	require.Empty(t, bodyBytes)
 }
 
 func TestReady(t *testing.T) {
