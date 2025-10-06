@@ -83,7 +83,6 @@ type subscription struct {
 	SampleInterval    config.Duration `toml:"sample_interval"`
 	SuppressRedundant bool            `toml:"suppress_redundant"`
 	HeartbeatInterval config.Duration `toml:"heartbeat_interval"`
-	TagOnly           bool            `toml:"tag_only" deprecated:"1.25.0;1.35.0;please use 'tag_subscription's instead"`
 
 	fullPath *gnmi.Path
 }
@@ -143,17 +142,6 @@ func (c *GNMI) Init() error {
 			return fmt.Errorf("empty 'path' found for subscription %d", i+1)
 		}
 
-		// Support and convert legacy TagOnly subscriptions
-		if subscription.TagOnly {
-			tagSub := tagSubscription{
-				subscription: subscription,
-				Match:        "name",
-			}
-			c.TagSubscriptions = append(c.TagSubscriptions, tagSub)
-			// Remove from the original subscriptions list
-			c.Subscriptions = append(c.Subscriptions[:i], c.Subscriptions[i+1:]...)
-			continue
-		}
 		if err := subscription.buildFullPath(c); err != nil {
 			return err
 		}
@@ -161,9 +149,6 @@ func (c *GNMI) Init() error {
 	for idx := range c.TagSubscriptions {
 		if err := c.TagSubscriptions[idx].buildFullPath(c); err != nil {
 			return err
-		}
-		if c.TagSubscriptions[idx].TagOnly != c.TagSubscriptions[0].TagOnly {
-			return errors.New("do not mix legacy tag_only subscriptions and tag subscriptions")
 		}
 		switch c.TagSubscriptions[idx].Match {
 		case "":
