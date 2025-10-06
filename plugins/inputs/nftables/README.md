@@ -19,6 +19,7 @@ This is the simplest and recommended option.
 * Configure sudo to grant telegraf to run nftables. This is the most restrictive
  option, but requires sudo setup.
 
+⭐ Telegraf v1.37.0
 🏷️  network, system
 💻 linux
 
