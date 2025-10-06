@@ -79,7 +79,6 @@ func (a *Aerospike) Init() error {
 }
 
 func (a *Aerospike) Gather(acc telegraf.Accumulator) error {
-
 	if len(a.Servers) == 0 {
 		return a.gatherServer(acc, "127.0.0.1:3000")
 	}
