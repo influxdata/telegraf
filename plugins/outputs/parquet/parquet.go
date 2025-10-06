@@ -117,7 +117,7 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 			}
 		}
 
-		record, err := p.createRecord(metrics, p.metricGroups[name].builder, p.metricGroups[name].schema)
+		record, err := p.createRecordBatch(metrics, p.metricGroups[name].builder, p.metricGroups[name].schema)
 		if err != nil {
 			return fmt.Errorf("failed to create record for file %q: %w", p.metricGroups[name].filename, err)
 		}
@@ -154,7 +154,7 @@ func (p *Parquet) rotateIfNeeded(name string) error {
 	return nil
 }
 
-func (p *Parquet) createRecord(metrics []telegraf.Metric, builder *array.RecordBuilder, schema *arrow.Schema) (arrow.Record, error) {
+func (p *Parquet) createRecordBatch(metrics []telegraf.Metric, builder *array.RecordBuilder, schema *arrow.Schema) (arrow.RecordBatch, error) {
 	for index, col := range schema.Fields() {
 		for _, m := range metrics {
 			if p.TimestampFieldName != "" && col.Name == p.TimestampFieldName {
@@ -235,7 +235,7 @@ func (p *Parquet) createRecord(metrics []telegraf.Metric, builder *array.RecordB
 		}
 	}
 
-	record := builder.NewRecord()
+	record := builder.NewRecordBatch()
 	return record, nil
 }
 

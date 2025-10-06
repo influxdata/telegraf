@@ -1,13 +1,17 @@
 # Datadog Output Plugin
 
 This plugin writes metrics to the [Datadog Metrics API][metrics] and requires an
-`apikey` which can be obtained [here][apikey] for the account.
+`apikey` which can be obtained on the [website][apikey] for the account.
+
 > [!NOTE]
 > This plugin supports the v1 API.
 
 ⭐ Telegraf v0.1.6
 🏷️ applications, cloud, datastore
 💻 all
+
+[metrics]: https://docs.datadoghq.com/api/v1/metrics/#submit-metrics
+[apikey]: https://app.datadoghq.com/account/settings#api
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -65,6 +69,3 @@ intervals are the same (Datadog defaults to `10s`).
 Note that this only supports metrics ingested via `inputs.statsd` given
 the dependency on the `metric_type` tag it creates. There is only support for
 `counter` metrics, and `count` values from `timing` and `histogram` metrics.
-
-[metrics]: https://docs.datadoghq.com/api/v1/metrics/#submit-metrics
-[apikey]: https://app.datadoghq.com/account/settings#api

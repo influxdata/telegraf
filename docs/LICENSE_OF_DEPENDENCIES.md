@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD013 -->
 # Licenses of dependencies
 
 When distributed in a binary form, Telegraf may contain portions of the
@@ -56,6 +57,7 @@ following works:
 - github.com/antchfx/jsonquery [MIT License](https://github.com/antchfx/jsonquery/blob/master/LICENSE)
 - github.com/antchfx/xmlquery [MIT License](https://github.com/antchfx/xmlquery/blob/master/LICENSE)
 - github.com/antchfx/xpath [MIT License](https://github.com/antchfx/xpath/blob/master/LICENSE)
+- github.com/antithesishq/antithesis-sdk-go [MIT License](https://github.com/antithesishq/antithesis-sdk-go/blob/main/LICENSE)
 - github.com/antlr4-go/antlr [BSD 3-Clause "New" or "Revised" License](https://github.com/antlr/antlr4/blob/master/LICENSE.txt)
 - github.com/apache/arrow-go [Apache License 2.0](https://github.com/apache/arrow-go/blob/main/LICENSE.txt)
 - github.com/apache/arrow/go [Apache License 2.0](https://github.com/apache/arrow/blob/master/LICENSE.txt)
@@ -173,6 +175,7 @@ following works:
 - github.com/go-sql-driver/mysql [Mozilla Public License 2.0](https://github.com/go-sql-driver/mysql/blob/master/LICENSE)
 - github.com/go-stack/stack [MIT License](https://github.com/go-stack/stack/blob/master/LICENSE.md)
 - github.com/go-stomp/stomp [Apache License 2.0](https://github.com/go-stomp/stomp/blob/master/LICENSE.txt)
+- github.com/go-viper/mapstructure [MIT License](https://github.com/go-viper/mapstructure/blob/main/LICENSE)
 - github.com/goccy/go-json [MIT License](https://github.com/goccy/go-json/blob/master/LICENSE)
 - github.com/godbus/dbus [BSD 2-Clause "Simplified" License](https://github.com/godbus/dbus/blob/master/LICENSE)
 - github.com/gofrs/uuid [MIT License](https://github.com/gofrs/uuid/blob/master/LICENSE)

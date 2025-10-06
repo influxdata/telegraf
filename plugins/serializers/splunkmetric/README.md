@@ -1,9 +1,12 @@
 # Splunk Metrics serializer
 
-The Splunk Metrics serializer outputs metrics in the [Splunk metric HEC JSON format][splunk-format].
+The Splunk Metrics serializer outputs metrics in the
+[Splunk metric HEC JSON format][splunk-format].
 
-It can be used to write to a file using the file output, or for sending metrics to a HEC using the standard telegraf HTTP output.
-If you're using the HTTP output, this serializer knows how to batch the metrics so you don't end up with an HTTP POST per metric.
+It can be used to write to a file using the file output, or for sending metrics
+to a HEC using the standard telegraf HTTP output. If you're using the HTTP
+output, this serializer knows how to batch the metrics so you don't end up with
+an HTTP POST per metric.
 
 [splunk-format]: http://dev.splunk.com/view/event-collector/SP-CAAAFDN#json
 
@@ -32,8 +35,9 @@ In the above snippet, the following keys are dimensions:
 
 ## Using Multimetric output
 
-Starting with Splunk Enterprise and Splunk Cloud 8.0, you can now send multiple metric values in one payload. This means, for example, that
-you can send all of your CPU stats in one JSON struct, an example event looks like:
+Starting with Splunk Enterprise and Splunk Cloud 8.0, you can now send multiple
+metric values in one payload. This means, for example, that you can send all of
+your CPU stats in one JSON struct, an example event looks like:
 
 ```javascript
 {
@@ -57,12 +61,14 @@ you can send all of your CPU stats in one JSON struct, an example event looks li
 }
 ```
 
-In order to enable this mode, there's a new option `splunkmetric_multimetric` that you set in the appropriate output module you plan on using.
+In order to enable this mode, there's a new option `splunkmetric_multimetric`
+that you set in the appropriate output module you plan on using.
 
 ## Using with the HTTP output
 
-To send this data to a Splunk HEC, you can use the HTTP output, there are some custom headers that you need to add
-to manage the HEC authorization, here's a sample config for an HTTP output:
+To send this data to a Splunk HEC, you can use the HTTP output, there are some
+custom headers that you need to add to manage the HEC authorization, here's a
+sample config for an HTTP output:
 
 ```toml
 [[outputs.http]]
@@ -107,14 +113,16 @@ to manage the HEC authorization, here's a sample config for an HTTP output:
 
 ## Overrides
 
-You can override the default values for the HEC token you are using by adding additional tags to the config file.
+You can override the default values for the HEC token you are using by adding
+additional tags to the config file.
 
 The following aspects of the token can be overridden with tags:
 
 * index
 * source
 
-You can either use `[global_tags]` or using a more advanced configuration as documented [here](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md).
+You can either use `[global_tags]` or using a more advanced configuration
+[as documented][global_options].
 
 Such as this example which overrides the index just on the cpu metric:
 
@@ -126,9 +134,12 @@ Such as this example which overrides the index just on the cpu metric:
     index = "cpu_metrics"
 ```
 
+[global_options]: /docs/CONFIGURATION.md
+
 ## Using with the File output
 
-You can use the file output when running telegraf on a machine with a Splunk forwarder.
+You can use the file output when running telegraf on a machine with a Splunk
+forwarder.
 
 A sample event when `hec_routing` is false (or unset) looks like:
 
@@ -143,8 +154,8 @@ A sample event when `hec_routing` is false (or unset) looks like:
 }
 ```
 
-Data formatted in this manner can be ingested with a simple `props.conf` file that
-looks like this:
+Data formatted in this manner can be ingested with a simple `props.conf` file
+that looks like this:
 
 ```ini
 [telegraf]
@@ -180,7 +191,10 @@ An example configuration of a file based output is:
 
 ## Non-numeric metric values
 
-Splunk supports only numeric field values, so serializer would silently drop metrics with the string values. For some cases it is possible to workaround using ENUM processor. Example, provided below doing this for the `docker_container_health.health_status` metric:
+Splunk supports only numeric field values, so serializer would silently drop
+metrics with the string values. For some cases it is possible to workaround
+using the [enum processor][enum_plugin]. Example, provided below doing this for
+the `docker_container_health.health_status` metric:
 
 ```toml
 # splunkmetric does not support string values
@@ -195,3 +209,5 @@ Splunk supports only numeric field values, so serializer would silently drop met
     unhealthy = 2
     none = 3
 ```
+
+[enum_plugin]: /plugins/processors/enum/README.md

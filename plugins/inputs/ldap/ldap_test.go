@@ -94,7 +94,7 @@ func TestOpenLDAPIntegration(t *testing.T) {
 
 	// Start the docker container
 	container := testutil.Container{
-		Image:        "bitnami/openldap",
+		Image:        "bitnamilegacy/openldap",
 		ExposedPorts: []string{servicePortOpenLDAP},
 		Env: map[string]string{
 			"LDAP_ADMIN_USERNAME": "manager",
@@ -185,7 +185,7 @@ func TestOpenLDAPReverseDNIntegration(t *testing.T) {
 
 	// Start the docker container
 	container := testutil.Container{
-		Image:        "bitnami/openldap",
+		Image:        "bitnamilegacy/openldap",
 		ExposedPorts: []string{servicePortOpenLDAP},
 		Env: map[string]string{
 			"LDAP_ADMIN_USERNAME": "manager",
@@ -281,7 +281,7 @@ func TestOpenLDAPStartTLSIntegration(t *testing.T) {
 
 	// Start the docker container
 	container := testutil.Container{
-		Image:        "bitnami/openldap",
+		Image:        "bitnamilegacy/openldap",
 		ExposedPorts: []string{servicePortOpenLDAP},
 		Env: map[string]string{
 			"LDAP_ADMIN_USERNAME": "manager",
@@ -389,7 +389,7 @@ func TestOpenLDAPLDAPSIntegration(t *testing.T) {
 
 	// Start the docker container
 	container := testutil.Container{
-		Image:        "bitnami/openldap",
+		Image:        "bitnamilegacy/openldap",
 		ExposedPorts: []string{servicePortOpenLDAPSecure},
 		Env: map[string]string{
 			"LDAP_ADMIN_USERNAME": "manager",

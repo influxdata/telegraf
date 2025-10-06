@@ -32,17 +32,6 @@ func TestNetIOStats(t *testing.T) {
 
 	mps.On("NetIO").Return([]net.IOCountersStat{netio}, nil)
 
-	netprotos := []net.ProtoCountersStat{
-		{
-			Protocol: "Udp",
-			Stats: map[string]int64{
-				"InDatagrams": 4655,
-				"NoPorts":     892592,
-			},
-		},
-	}
-	mps.On("NetProto").Return(netprotos, nil)
-
 	t.Setenv("HOST_SYS", filepath.Join("testdata", "general", "sys"))
 
 	plugin := &Net{ps: &mps, skipChecks: true}
@@ -68,15 +57,6 @@ func TestNetIOStats(t *testing.T) {
 			time.Unix(0, 0),
 			telegraf.Counter,
 		),
-		metric.New(
-			"net",
-			map[string]string{"interface": "all"},
-			map[string]interface{}{
-				"udp_noports":     int64(892592),
-				"udp_indatagrams": int64(4655),
-			},
-			time.Unix(0, 0),
-		),
 	}
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
@@ -98,17 +78,6 @@ func TestNetIOStatsSpeedUnsupported(t *testing.T) {
 	}
 
 	mps.On("NetIO").Return([]net.IOCountersStat{netio}, nil)
-
-	netprotos := []net.ProtoCountersStat{
-		{
-			Protocol: "Udp",
-			Stats: map[string]int64{
-				"InDatagrams": 4655,
-				"NoPorts":     892592,
-			},
-		},
-	}
-	mps.On("NetProto").Return(netprotos, nil)
 
 	t.Setenv("HOST_SYS", filepath.Join("testdata", "general", "sys"))
 
@@ -135,15 +104,6 @@ func TestNetIOStatsSpeedUnsupported(t *testing.T) {
 			time.Unix(0, 0),
 			telegraf.Counter,
 		),
-		metric.New(
-			"net",
-			map[string]string{"interface": "all"},
-			map[string]interface{}{
-				"udp_noports":     int64(892592),
-				"udp_indatagrams": int64(4655),
-			},
-			time.Unix(0, 0),
-		),
 	}
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
@@ -165,17 +125,6 @@ func TestNetIOStatsNoSpeedFile(t *testing.T) {
 	}
 
 	mps.On("NetIO").Return([]net.IOCountersStat{netio}, nil)
-
-	netprotos := []net.ProtoCountersStat{
-		{
-			Protocol: "Udp",
-			Stats: map[string]int64{
-				"InDatagrams": 4655,
-				"NoPorts":     892592,
-			},
-		},
-	}
-	mps.On("NetProto").Return(netprotos, nil)
 
 	t.Setenv("HOST_SYS", filepath.Join("testdata", "general", "sys"))
 
@@ -201,15 +150,6 @@ func TestNetIOStatsNoSpeedFile(t *testing.T) {
 			},
 			time.Unix(0, 0),
 			telegraf.Counter,
-		),
-		metric.New(
-			"net",
-			map[string]string{"interface": "all"},
-			map[string]interface{}{
-				"udp_noports":     int64(892592),
-				"udp_indatagrams": int64(4655),
-			},
-			time.Unix(0, 0),
 		),
 	}
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())

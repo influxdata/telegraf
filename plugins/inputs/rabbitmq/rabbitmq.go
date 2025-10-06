@@ -51,6 +51,8 @@ type RabbitMQ struct {
 	FederationUpstreamInclude []string `toml:"federation_upstream_include"`
 	FederationUpstreamExclude []string `toml:"federation_upstream_exclude"`
 
+	IncludeQueueTypeTag bool `toml:"include_queue_type_tag"`
+
 	Log telegraf.Logger `toml:"-"`
 
 	client            *http.Client
@@ -122,6 +124,7 @@ type queue struct {
 	Name                   string
 	Node                   string
 	Vhost                  string
+	Type                   string
 	Durable                bool
 	AutoDelete             bool     `json:"auto_delete"`
 	IdleSince              string   `json:"idle_since"`
@@ -556,6 +559,7 @@ func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator) {
 		if !r.queueFilter.Match(queue.Name) {
 			continue
 		}
+
 		tags := map[string]string{
 			"url":         r.URL,
 			"queue":       queue.Name,
@@ -563,6 +567,14 @@ func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator) {
 			"node":        queue.Node,
 			"durable":     strconv.FormatBool(queue.Durable),
 			"auto_delete": strconv.FormatBool(queue.AutoDelete),
+		}
+
+		if r.IncludeQueueTypeTag {
+			if queue.Type == "" {
+				tags["type"] = "classic"
+			} else {
+				tags["type"] = queue.Type
+			}
 		}
 
 		fields := map[string]interface{}{

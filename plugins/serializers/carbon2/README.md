@@ -1,6 +1,9 @@
 # Carbon2
 
-The `carbon2` serializer translates the Telegraf metric format to the [Carbon2 format](http://metrics20.org/implementations/).
+The `carbon2` serializer translates the Telegraf metric format to the
+[Carbon2 format][carbon].
+
+[carbon]: http://metrics20.org/implementations/
 
 ## Configuration
 
@@ -38,16 +41,16 @@ metric=name field=field_N host=foo  59 1234567890
 
 ### Metrics format
 
-`Carbon2` serializer has a configuration option - `carbon2_format` - to change how
-metrics names are being constructed.
+`Carbon2` serializer has a configuration option - `carbon2_format` - to change
+how metrics names are being constructed.
 
-By default `metric` will only include the metric name and a separate field `field`
-will contain the field name.
+By default `metric` will only include the metric name and a separate field
+`field` will contain the field name.
 This is the behavior of `carbon2_format = "field_separate"` which is the default
 behavior (even if unspecified).
 
-Optionally user can opt in to change this to make the metric include the field name
-after the `_`.
+Optionally user can opt in to change this to make the metric include the field
+name after the `_`.
 This is the behavior of `carbon2_format = "metric_includes_field"` which would
 make the above example look like:
 
@@ -59,8 +62,9 @@ metric=name_field_N host=foo  59 1234567890
 
 ### Metric name sanitization
 
-In order to sanitize the metric name one can specify `carbon2_sanitize_replace_char`
-in order to replace the following characters in the metric name:
+In order to sanitize the metric name one can specify
+`carbon2_sanitize_replace_char` in order to replace the following characters in
+the metric name:
 
 ```text
 !@#$%^&*()+`'\"[]{};<>,?/\\|=
@@ -70,9 +74,10 @@ By default they will be replaced with `:`.
 
 ## Metrics
 
-The serializer converts the metrics by creating `intrinsic_tags` using the combination of metric name and fields.
-So, if one Telegraf metric has 4 fields, the `carbon2` output will be 4 separate metrics.
-There will be a `metric` tag that represents the name of the metric and a `field` tag to represent the field.
+The serializer converts the metrics by creating `intrinsic_tags` using the
+combination of metric name and fields. So, if one Telegraf metric has 4 fields,
+the `carbon2` output will be 4 separate metrics. There will be a `metric` tag
+that represents the name of the metric and a `field` tag to represent the field.
 
 ## Example
 

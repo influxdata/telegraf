@@ -1,10 +1,12 @@
 # MessagePack
 
-[MessagePack](https://msgpack.org) is an efficient binary serialization format. It lets you exchange data among multiple languages like JSON.
+[MessagePack](https://msgpack.org) is an efficient binary serialization format.
+It lets you exchange data among multiple languages like JSON.
 
 ## Format Definitions
 
-Output of this format is MessagePack binary representation of metrics that have identical structure of the below JSON.
+Output of this format is MessagePack binary representation of metrics that have
+identical structure of the below JSON.
 
 ```json
 {
@@ -24,7 +26,10 @@ Output of this format is MessagePack binary representation of metrics that have 
 }
 ```
 
-MessagePack has it's own timestamp representation. You can find additional information from [MessagePack specification](https://github.com/msgpack/msgpack/blob/master/spec.md#timestamp-extension-type).
+MessagePack has it's own timestamp representation. You can find additional
+information from [MessagePack specification][spec].
+
+[spec]: https://github.com/msgpack/msgpack/blob/master/spec.md#timestamp-extension-type
 
 ## MessagePack Configuration
 

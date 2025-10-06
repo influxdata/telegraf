@@ -172,8 +172,10 @@ The expected input for Wavefront is specified in the following way:
 <metric> <value> [<timestamp>] <source|host>=<sourceTagValue> [tagk1=tagv1 ...tagkN=tagvN]
 ```
 
-More information about the Wavefront data format is available
-[here](https://community.wavefront.com/docs/DOC-1031)
+More information about the Wavefront data format is available in the
+[documentation][docs].
+
+[docs]: https://community.wavefront.com/docs/DOC-1031
 
 ### Allowed values for metrics
 

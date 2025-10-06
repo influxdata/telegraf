@@ -63,11 +63,7 @@ selecting an image from DockerHub, please use the following priority order:
 2. Publisher produced: not all software has an entry in the above Official
   Images. This may be due to the project being smaller or moving faster. In
   this case, pull directly from the publisher's DockerHub whenever possible.
-3. [Bitnami][4]: If neither of the above images exist, look at the images
-  produced and maintained by Bitnami. They go to great efforts to create images
-  for the most popular software, produce great documentation, and ensure that
-  images are maintained.
-4. Other images: If, and only if, none of the above images will work for a
+3. Other images: If, and only if, none of the above images will work for a
   particular use-case, then another image can be used. Be prepared to justify,
   the use of these types of images.
 
@@ -119,7 +115,6 @@ configuration of the test containers:
 [1]: <https://golang.testcontainers.org/> "testcontainers-go"
 [2]: <https://hub.docker.com/> "DockerHub"
 [3]: <https://hub.docker.com/search?q=&type=image&image_filter=official> "DockerHub Official Images"
-[4]: <https://hub.docker.com/u/bitnami> "Bitnami Images"
 
 ## Network
 

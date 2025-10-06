@@ -1131,10 +1131,10 @@ func TestTailNoLeak(t *testing.T) {
 	// Call Gather to pick up the new content
 	require.NoError(t, acc.GatherError(tt.Gather))
 
-	// Wait for the new metric
+	// Wait for the new metric (increased timeout for slower environments like ARM64 CircleCI)
 	require.Eventually(t, func() bool {
 		return acc.NMetrics() >= 1
-	}, time.Second, 100*time.Millisecond, "Did not receive metric after appending to file")
+	}, 3*time.Second, 100*time.Millisecond, "Did not receive metric after appending to file")
 
 	// Verify we got the new metric
 	acc.AssertContainsFields(t, "cpu",

@@ -101,9 +101,9 @@ reference the documentation for the specific plugin.
 
 ## Transformations
 
-Transformations using the [JSONata standard](https://jsonata.org/) can be specified with
-the `json_transformation` parameter. The input to the transformation is the serialized
-metric in the standard-form above.
+Transformations using the [JSONata standard](https://jsonata.org/) can be
+specified with the `json_transformation` parameter. The input to the
+transformation is the serialized metric in the standard-form above.
 
 **Note**: There is a difference in batch and non-batch serialization mode!
 The former adds a `metrics` field containing the metric array, while the later
@@ -114,8 +114,8 @@ to the underlying library used by Telegraf. When using the online playground
 below ensure that you have selected 1.5.4 when trying examples or building
 transformations.
 
-In the following sections, some rudimentary examples for transformations are shown.
-For more elaborated JSONata expressions please consult the
+In the following sections, some rudimentary examples for transformations are
+shown. For more elaborated JSONata expressions please consult the
 [documentation](https://docs.jsonata.org) or the
 [online playground](https://try.jsonata.org).
 
@@ -183,9 +183,9 @@ will result in
 
 ### Batch mode
 
-When an output plugin emits multiple metrics in a batch fashion it might be useful
-to restructure and/or combine the metric elements. We will use the following input
-example in this section
+When an output plugin emits multiple metrics in a batch fashion it might be
+useful to restructure and/or combine the metric elements. We will use the
+following input example in this section
 
 ```json
 {
@@ -272,7 +272,8 @@ resulting in
 ]
 ```
 
-However, the more interesting use-case is to restructure and **combine** the metrics, e.g. by grouping by `host`
+However, the more interesting use-case is to restructure and **combine** the
+metrics, e.g. by grouping by `host`
 
 ```json
 {

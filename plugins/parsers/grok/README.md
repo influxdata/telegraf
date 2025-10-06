@@ -1,10 +1,8 @@
 # Grok Parser Plugin
 
 The grok data format parses line delimited data using a regular expression like
-language.
-
-The best way to get acquainted with grok patterns is to read the logstash docs,
-which are available [here][1].
+language. The best way to get acquainted with grok patterns is to read the
+[logstash documentation][logstash].
 
 The grok parser uses a slightly modified version of logstash "grok"
 patterns, with the format:
@@ -58,24 +56,26 @@ CUSTOM time layouts must be within quotes and be the representation of the
 comma decimal point you can use a period.  For example
 `%{TIMESTAMP:timestamp:ts-"2006-01-02 15:04:05.000"}` can be used to match
 `"2018-01-02 15:04:05,000"` To match a comma decimal point you can use a period
-in the pattern string.  See [Goloang Time
-docs](https://golang.org/pkg/time/#Parse) for more details.
+in the pattern string. See the [Golang Time documentation][gotime] for more
+details.
 
-Telegraf has many of its own [built-in patterns][] as well as support for most
-of the Logstash builtin patterns using [these Go compatible
-patterns][grok-patterns].
+Telegraf has many of its own [built-in patterns][builtin] as well as support for
+most of the Logstash builtin patterns using
+[these Go-compatible patterns][gopatterns].
 
-**Note:** Golang regular expressions do not support lookahead or lookbehind.
-Logstash patterns that use these features may not be supported, or may use a Go
-friendly pattern that is not fully compatible with the Logstash pattern.
+> [!NOTE]
+> Golang regular expressions do not support lookahead or lookbehind.
+> Logstash patterns that use these features may not be supported, or may use a
+> Go friendly pattern that is not fully compatible with the Logstash pattern.
 
-[built-in patterns]: /plugins/parsers/grok/influx_patterns.go
-[grok-patterns]: https://github.com/vjeantet/grok/blob/master/patterns/grok-patterns
+If you need help building patterns to match your logs, you will find the
+[Grok Debug application][debugger] quite useful!
 
-If you need help building patterns to match your logs, you will find the [Grok
-Debug](https://grokdebug.herokuapp.com) application quite useful!
-
-[1]: https://www.elastic.co/guide/en/logstash/current/plugins-filters-grok.html
+[logstash]: https://www.elastic.co/guide/en/logstash/current/plugins-filters-grok.html
+[gotime]: https://golang.org/pkg/time/#Parse
+[builtin]: /plugins/parsers/grok/influx_patterns.go
+[gopatterns]: https://github.com/vjeantet/grok/blob/master/patterns/grok-patterns
+[debugger]: https://grokdebug.herokuapp.com
 
 ## Configuration
 

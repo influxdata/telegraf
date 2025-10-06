@@ -1,6 +1,9 @@
 # Wavefront
 
-The `wavefront` serializer translates the Telegraf metric format to the [Wavefront Data Format](https://docs.wavefront.com/wavefront_data_format.html).
+The `wavefront` serializer translates the Telegraf metric format to the
+[Wavefront Data Format][wavefront].
+
+[wavefront]: https://docs.wavefront.com/wavefront_data_format.html
 
 ## Configuration
 
@@ -28,11 +31,11 @@ The `wavefront` serializer translates the Telegraf metric format to the [Wavefro
 
 ## Metrics
 
-A Wavefront metric is equivalent to a single field value of a Telegraf measurement.
-The Wavefront metric name will be: `<measurement_name>.<field_name>`
-If a prefix is specified it will be honored.
-Only boolean and numeric metrics will be serialized, all other types will generate
-an error.
+A Wavefront metric is equivalent to a single field value of a Telegraf
+measurement. The Wavefront metric name will be:
+`<measurement_name>.<field_name>` If a prefix is specified it will be honored.
+Only boolean and numeric metrics will be serialized, all other types will
+generate an error.
 
 ## Example
 

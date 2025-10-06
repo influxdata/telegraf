@@ -55,7 +55,9 @@ distribution functions are available.
 ### Laplacian
 
 - `noise_type = laplacian`
-- `scale`: also referred to as _diversity_ parameter, regulates the width & height of the function, a bigger `scale` value means a higher probability of larger noise, default set to 1.0
+- `scale`: also referred to as _diversity_ parameter, regulates the width and
+           height of the function, a bigger `scale` value means a higher
+           probability of larger noise, default set to 1.0
 - `mu`: location of the curve, default set to 0.0
 
 ### Gaussian

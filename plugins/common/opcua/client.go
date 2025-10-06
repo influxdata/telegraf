@@ -53,56 +53,106 @@ type OpcUAClientConfig struct {
 }
 
 func (o *OpcUAClientConfig) Validate() error {
-	if err := o.validateOptionalFields(); err != nil {
-		return fmt.Errorf("invalid 'optional_fields': %w", err)
+	// Validate endpoint
+	if o.Endpoint == "" {
+		return fmt.Errorf("%w: endpoint cannot be empty", ErrInvalidEndpoint)
+	}
+	u, err := url.Parse(o.Endpoint)
+	if err != nil {
+		return fmt.Errorf("%w: invalid endpoint URL %q: %w", ErrInvalidEndpoint, o.Endpoint, err)
+	}
+	if u.Scheme != "opc.tcp" {
+		return fmt.Errorf("%w: invalid endpoint scheme %q, expected 'opc.tcp'", ErrInvalidEndpoint, u.Scheme)
 	}
 
-	return o.validateEndpoint()
-}
+	// Validate security policy
+	switch o.SecurityPolicy {
+	case "", "None", "Basic128Rsa15", "Basic256", "Basic256Sha256", "auto":
+		// valid
+	default:
+		return fmt.Errorf("%w: %q, valid options: None, Basic128Rsa15, Basic256, Basic256Sha256, auto", ErrInvalidSecurityPolicy, o.SecurityPolicy)
+	}
 
-func (o *OpcUAClientConfig) validateOptionalFields() error {
-	for i, field := range o.OptionalFields {
-		if field != "DataType" {
-			return fmt.Errorf("invalid optional field %q at index %d, expected one of: [DataType]", field, i)
+	// Validate security mode
+	switch o.SecurityMode {
+	case "", "None", "Sign", "SignAndEncrypt", "auto":
+		// valid
+	default:
+		return fmt.Errorf("%w: %q, valid options: None, Sign, SignAndEncrypt, auto", ErrInvalidSecurityMode, o.SecurityMode)
+	}
+
+	// Validate authentication method
+	switch o.AuthMethod {
+	case "", "Anonymous", "UserName", "Certificate", "auto":
+		// valid
+	default:
+		return fmt.Errorf("%w: %q, valid options: Anonymous, UserName, Certificate, auto", ErrInvalidAuthMethod, o.AuthMethod)
+	}
+
+	// Validate certificate configuration
+	if err := o.validateCertificateConfiguration(); err != nil {
+		return err
+	}
+
+	// Validate credentials based on auth method
+	if o.AuthMethod == "UserName" {
+		if o.Username.Empty() {
+			return fmt.Errorf("%w: username required for UserName authentication", ErrInvalidConfiguration)
+		}
+		if o.Password.Empty() {
+			return fmt.Errorf("%w: password required for UserName authentication", ErrInvalidConfiguration)
 		}
 	}
+
+	// Validate optional fields
+	for i, field := range o.OptionalFields {
+		if field != "DataType" {
+			return fmt.Errorf("%w: unknown optional_fields[%d] value %q, valid options: DataType", ErrInvalidConfiguration, i, field)
+		}
+	}
+
+	// Validate timeouts
+	if o.ConnectTimeout < 0 {
+		return fmt.Errorf("%w: connect_timeout must be non-negative, got %v", ErrInvalidConfiguration, o.ConnectTimeout)
+	}
+	if o.ConnectTimeout != 0 && time.Duration(o.ConnectTimeout) < 100*time.Millisecond {
+		return fmt.Errorf("%w: connect_timeout too short (%v), minimum recommended is 100ms", ErrInvalidConfiguration, o.ConnectTimeout)
+	}
+
+	if o.RequestTimeout < 0 {
+		return fmt.Errorf("%w: request_timeout must be non-negative, got %v", ErrInvalidConfiguration, o.RequestTimeout)
+	}
+	if o.RequestTimeout != 0 && time.Duration(o.RequestTimeout) < 100*time.Millisecond {
+		return fmt.Errorf("%w: request_timeout too short (%v), minimum recommended is 100ms", ErrInvalidConfiguration, o.RequestTimeout)
+	}
+
+	if o.SessionTimeout < 0 {
+		return fmt.Errorf("%w: session_timeout must be non-negative, got %v", ErrInvalidConfiguration, o.SessionTimeout)
+	}
+	if o.SessionTimeout != 0 && time.Duration(o.SessionTimeout) < 1*time.Second {
+		return fmt.Errorf("%w: session_timeout too short (%v), minimum recommended is 1s", ErrInvalidConfiguration, o.SessionTimeout)
+	}
+
 	return nil
 }
 
-func (o *OpcUAClientConfig) validateEndpoint() error {
-	if o.Endpoint == "" {
-		return &EndpointError{
-			Endpoint: o.Endpoint,
-			Err:      fmt.Errorf("%w: endpoint URL is empty", ErrInvalidEndpoint),
-		}
+func (o *OpcUAClientConfig) validateCertificateConfiguration() error {
+	// If using None/None security, certificates are optional
+	if o.SecurityPolicy == "None" && o.SecurityMode == "None" {
+		return nil
 	}
 
-	_, err := url.Parse(o.Endpoint)
-	if err != nil {
-		return &EndpointError{
-			Endpoint: o.Endpoint,
-			Err:      fmt.Errorf("%w: %w", ErrInvalidEndpoint, err),
-		}
+	// Both empty is valid (will generate self-signed)
+	if o.Certificate == "" && o.PrivateKey == "" {
+		return nil
 	}
 
-	switch o.SecurityPolicy {
-	case "None", "Basic128Rsa15", "Basic256", "Basic256Sha256", "auto":
-		// Valid security policy
-	default:
-		return &SecurityError{
-			Policy: o.SecurityPolicy,
-			Err:    fmt.Errorf("%w: unknown security policy %q", ErrInvalidSecurityPolicy, o.SecurityPolicy),
-		}
+	// Both must be provided if one is provided
+	if o.Certificate == "" {
+		return fmt.Errorf("%w: private key provided without certificate", ErrInvalidConfiguration)
 	}
-
-	switch o.SecurityMode {
-	case "None", "Sign", "SignAndEncrypt", "auto":
-		// Valid security mode
-	default:
-		return &SecurityError{
-			Mode: o.SecurityMode,
-			Err:  fmt.Errorf("%w: unknown security mode %q", ErrInvalidSecurityMode, o.SecurityMode),
-		}
+	if o.PrivateKey == "" {
+		return fmt.Errorf("%w: certificate provided without private key", ErrInvalidConfiguration)
 	}
 
 	return nil
