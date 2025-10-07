@@ -4,9 +4,11 @@ package nftables
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -184,18 +186,35 @@ func TestParseNftableOutput(t *testing.T) {
 	if err != nil {
 		t.Errorf("No Error Expected: %#v", err)
 	}
-	metrics := acc.Metrics
+	metrics := acc.GetTelegrafMetrics()
 	if len(metrics) != 2 {
-		t.Errorf("Expected 2 measurments. Got: %#v", len(metrics))
+		t.Errorf("Expected 2 measurements. Got: %#v", len(metrics))
 	}
-	expected := []string{
-		"nftables map[chain:test-chain ruleid:test1 table:test] map[bytes:2 pkts:1]",
-		"nftables map[chain:test-chain ruleid:test2 table:test] map[bytes:1412296 pkts:24468]",
+	defaultTime := time.Unix(0, 0)
+	expected := []telegraf.Metric{
+		testutil.MustMetric("nftables",
+			map[string]string{
+				"chain":  "test-chain",
+				"ruleid": "test1",
+				"table":  "test",
+			},
+			map[string]interface{}{
+				"bytes": 2,
+				"pkts":  1,
+			}, defaultTime),
+		testutil.MustMetric("nftables",
+			map[string]string{
+				"chain":  "test-chain",
+				"ruleid": "test2",
+				"table":  "test",
+			},
+			map[string]interface{}{
+				"bytes": 1412296,
+				"pkts":  24468,
+			}, defaultTime),
 	}
 	for i, v := range metrics {
-		if v.String() != expected[i] {
-			t.Errorf("Expected measurments to be equal. Expected: %#v, Got: %#v", expected[i], v)
-		}
+		testutil.RequireMetricEqual(t, expected[i], v, testutil.IgnoreTime())
 	}
 }
 

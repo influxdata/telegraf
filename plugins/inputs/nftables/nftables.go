@@ -17,9 +17,9 @@ import (
 const measurement = "nftables"
 
 type Nftables struct {
-	UseSudo bool   `toml:"use_sudo"`
-	Binary  string `toml:"binary"`
-	Tables  []string
+	UseSudo bool     `toml:"use_sudo"`
+	Binary  string   `toml:"binary"`
+	Tables  []string `toml:"tables"`
 }
 
 //go:embed sample.conf
@@ -31,15 +31,15 @@ type Nftable struct {
 	JSONSchemaVersion int `json:"json_schema_version"`
 }
 
-// UnmarshalJSON handles custom parsing of the nftable output which is
-// designed in a generic that is not compatible with the generic parser.
+// UnmarshalJSON handles custom parsing of the nftables JSON output which uses
+// a generic structure incompatible that standard JSON unmarshaling.
 func (nftable *Nftable) UnmarshalJSON(b []byte) error {
-	var atable map[string][]map[string]json.RawMessage
-	if err := json.Unmarshal(b, &atable); err != nil {
+	var rawTable map[string][]map[string]json.RawMessage
+	if err := json.Unmarshal(b, &rawTable); err != nil {
 		return fmt.Errorf("unable to unmarshal: %s", b)
 	}
 	// []map[string]interface
-	nfthings := atable["nftables"]
+	nfthings := rawTable["nftables"]
 	for _, nfthing := range nfthings {
 		hasKey := func(key string) bool { _, ok := nfthing[key]; return ok }
 		switch {
@@ -65,9 +65,8 @@ func (nftable *Nftable) UnmarshalJSON(b []byte) error {
 }
 
 type Metainfo struct {
-	Version           string `json:"version"`
-	ReleaseName       string `json:"release_name"`
-	JSONSchemaVersion int    `json:"json_schema_version"`
+	Version     string `json:"version"`
+	ReleaseName string `json:"release_name"`
 }
 
 type Rule struct {
@@ -104,7 +103,9 @@ func (rule *Rule) UnmarshalJSON(b []byte) error {
 			if err := json.Unmarshal(expr["counter"], rule.Counter); err != nil {
 				return fmt.Errorf("unable to parse counter: %w", err)
 			}
-			// we can return early since we are not looking for anything else
+			// we can return early since we are not looking for
+			// any further data. From testing, multiple counters
+			// were never seen attached to a single rule.
 			return nil
 		}
 	}
@@ -131,7 +132,7 @@ func (nft *Nftables) Gather(acc telegraf.Accumulator) error {
 	for _, table := range nft.Tables {
 		err := nft.getTableData(table, acc)
 		if err != nil {
-			return err
+			acc.AddError(err) // Continue through all tables
 		}
 	}
 	return nil
@@ -159,7 +160,7 @@ func (nft *Nftables) getTableData(tableName string, acc telegraf.Accumulator) er
 	c := exec.Command(name, args...)
 	out, err := c.Output()
 	if err != nil {
-		return fmt.Errorf("error executing %s, error: %w", c, err)
+		return fmt.Errorf("error executing nft command: %w", err)
 	}
 	return parseNftableOutput(out, acc)
 }
