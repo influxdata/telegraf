@@ -82,13 +82,7 @@ func newFilterGlobWithSeparators(filters []string, separators []rune) (Filter, e
 
 	// Pre-compute whether we need to escape slashes
 	// This is needed when '/' is NOT one of the separators
-	needsSlashEscape := true
-	for _, sep := range separators {
-		if sep == '/' {
-			needsSlashEscape = false
-			break
-		}
-	}
+	needsSlashEscape := !slices.Contains(separators, '/')
 
 	// Pre-compute normalized patterns
 	normalizedPatterns := make([]string, len(filters))
