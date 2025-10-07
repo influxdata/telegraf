@@ -37,10 +37,10 @@ type Ah_wireless struct {
 	Ifname			[]string	`toml:"ifname"`
 	Eth_ioctl		uint64		`toml:"eth_ioctl"`
 	Scount			uint8		`toml:"scount"`
-	Test_rfstats_enable	uint8		`toml:"test_rfstats_enable"`
-	Test_client_enable  uint8		`toml:"test_client_enable"`
-	Test_device_enable  uint8		`toml:"test_device_enable"`
-	Test_network_enable uint8		`toml:"test_network_enable"`
+	Test_rf_stats_enable	  uint8		`toml:"test_rf_stats_enable"`
+	Test_client_stats_enable  uint8		`toml:"test_client_stats_enable"`
+	Test_device_stats_enable  uint8		`toml:"test_device_stats_enable"`
+	Test_network_stats_enable uint8		`toml:"test_network_stats_enable"`
 	closed			chan		struct{}
 	numclient		[4]int
 	timer_count		uint8
@@ -195,10 +195,10 @@ const sampleConfig = `
   scount = 10
   ifname = ["wifi0","wifi1"]
   eth_ioctl = -6767123671
-  Test_rfstats_enable = 0
-  Test_client_enable = 0
-  Test_device_enable = 0
-  Test_network_enable = 0
+  Test_rf_stats_enable = 0
+  Test_client_stats_enable = 0
+  Test_device_stats_enable = 0
+  Test_network_stats_enable = 0
 `
 func NewAh_wireless(id int) *Ah_wireless {
 	var err error
@@ -218,10 +218,10 @@ func NewAh_wireless(id int) *Ah_wireless {
 				timer_count: 0,
 				Eth_ioctl: 0,
 				Scount: 10,
-				Test_rfstats_enable: 0,
-				Test_client_enable: 0,
-				Test_device_enable: 0,
-				Test_network_enable: 0,
+				Test_rf_stats_enable: 0,
+				Test_client_stats_enable: 0,
+				Test_device_stats_enable: 0,
+				Test_network_stats_enable: 0,
         }
 
 }
@@ -2599,18 +2599,18 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
         defer Gather_deffer_end(t)
 
         // If ANY test flag set, do shared interface + ssid prep once.
-        if t.Test_rfstats_enable == 1 || t.Test_client_enable == 1 ||
-            t.Test_device_enable == 1 || t.Test_network_enable == 1 {
+        if t.Test_rf_stats_enable == 1 || t.Test_client_stats_enable == 1 ||
+            t.Test_device_stats_enable == 1 || t.Test_network_stats_enable == 1 {
             for _, ifn := range t.Ifname {
                 t.intf_m[ifn] = make(map[string]string)
                 load_ssid(t, ifn)
             }
         
 		// RF one-shot (set rrmid only here)
-        if t.Test_rfstats_enable == 1 {
+        if t.Test_rf_stats_enable == 1 {
             rrmid = ahutil.GetRrmId()
         }
-        t.runWirelessStats(&t.Test_rfstats_enable,
+        t.runWirelessStats(&t.Test_rf_stats_enable,
             RF_STAT_OUT_FILE,
             "RF Stat Input Plugin Output",
             nil,
@@ -2618,7 +2618,7 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
         )
 
         // Client one-shot
-        t.runWirelessStats(&t.Test_client_enable,
+        t.runWirelessStats(&t.Test_client_stats_enable,
             CLT_STAT_OUT_FILE,
             "Client Stat Input Plugin Output",
             nil,
@@ -2626,7 +2626,7 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
         )
 
         // Device one-shot (needs health + service first)
-        t.runWirelessStats(&t.Test_device_enable,
+        t.runWirelessStats(&t.Test_device_stats_enable,
             DEV_STAT_OUT_FILE,
             "Device Stat Input Plugin Output",
             func() {
@@ -2637,7 +2637,7 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
         )
 
         // Network one-shot (needs ethernet interface stats first)
-        t.runWirelessStats(&t.Test_network_enable,
+        t.runWirelessStats(&t.Test_network_stats_enable,
             NW_STAT_OUT_FILE,
             "Network Stat Input Plugin Output",
             func() { Gather_EthernetInterfaceStats(t) },
