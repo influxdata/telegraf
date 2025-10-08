@@ -671,7 +671,7 @@ func TestGatherLabels(t *testing.T) {
 
 	// Setup test server
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Lookup the reponse using the URI
+		// Lookup the response using the URI
 		response, ok := response[r.URL.RequestURI()]
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
