@@ -997,6 +997,53 @@ func TestInstantQueries(t *testing.T) {
 				),
 			},
 		},
+		{
+			name: "result without name property",
+			data: &model.Matrix{
+				&model.SampleStream{
+					Metric: model.Metric{
+						"job": "testing",
+					},
+					Values: []model.SamplePair{
+						{
+							Value:     model.SampleValue(1.1),
+							Timestamp: model.TimeFromUnix(ts),
+						},
+						{
+							Value:     model.SampleValue(2.2),
+							Timestamp: model.TimeFromUnix(ts).Add(1 * time.Second),
+						},
+						{
+							Value:     model.SampleValue(3.3),
+							Timestamp: model.TimeFromUnix(ts).Add(2 * time.Second),
+						},
+					},
+				},
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"promql",
+					map[string]string{"job": "testing"},
+					map[string]interface{}{"value": float64(1.1)},
+					time.Unix(ts, 0),
+					telegraf.Gauge,
+				),
+				metric.New(
+					"promql",
+					map[string]string{"job": "testing"},
+					map[string]interface{}{"value": float64(2.2)},
+					time.Unix(ts, 0).Add(1*time.Second),
+					telegraf.Gauge,
+				),
+				metric.New(
+					"promql",
+					map[string]string{"job": "testing"},
+					map[string]interface{}{"value": float64(3.3)},
+					time.Unix(ts, 0).Add(2*time.Second),
+					telegraf.Gauge,
+				),
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -2047,6 +2094,408 @@ func TestRangeQueries(t *testing.T) {
 						Start: config.Duration(6 * time.Minute),
 						End:   config.Duration(1 * time.Minute),
 						Step:  config.Duration(1 * time.Minute),
+					},
+				},
+				Timeout: config.Duration(1 * time.Second),
+				Log:     testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(nil))
+			defer plugin.Stop()
+
+			// Call gather and check for errors and metrics
+			require.NoError(t, plugin.Gather(&acc))
+			require.Empty(t, acc.Errors, "found accumulated errors")
+			require.Eventually(t, func() bool {
+				return acc.NMetrics() >= uint64(len(tt.expected))
+			}, 3*time.Second, 100*time.Millisecond)
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
+		})
+	}
+}
+
+func TestMetricNameOverride(t *testing.T) {
+	ts := int64(1758808909)
+
+	tests := []struct {
+		name      string
+		queryName string
+		data      model.Value
+		expected  []telegraf.Metric
+	}{
+		{
+			name: "scalar with default query name",
+			data: &model.Scalar{
+				Value:     model.SampleValue(3.14),
+				Timestamp: model.TimeFromUnix(ts),
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"promql",
+					map[string]string{},
+					map[string]interface{}{"value": float64(3.14)},
+					time.Unix(ts, 0),
+					telegraf.Gauge,
+				),
+			},
+		},
+		{
+			name:      "scalar with query name",
+			queryName: "foobar",
+			data: &model.Scalar{
+				Value:     model.SampleValue(3.14),
+				Timestamp: model.TimeFromUnix(ts),
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"foobar",
+					map[string]string{},
+					map[string]interface{}{"value": float64(3.14)},
+					time.Unix(ts, 0),
+					telegraf.Gauge,
+				),
+			},
+		},
+		{
+			name: "vector with default query name and result name",
+			data: &model.Vector{
+				&model.Sample{
+					Metric: model.Metric{
+						"__name__": model.LabelValue("vector_metric"),
+						"job":      "testing",
+					},
+					Value:     model.SampleValue(3.14),
+					Timestamp: model.TimeFromUnix(ts),
+				},
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"vector_metric",
+					map[string]string{"job": "testing"},
+					map[string]interface{}{"value": float64(3.14)},
+					time.Unix(ts, 0),
+					telegraf.Gauge,
+				),
+			},
+		},
+		{
+			name: "vector with default query name and no result name",
+			data: &model.Vector{
+				&model.Sample{
+					Metric: model.Metric{
+						"job": "testing",
+					},
+					Value:     model.SampleValue(3.14),
+					Timestamp: model.TimeFromUnix(ts),
+				},
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"promql",
+					map[string]string{"job": "testing"},
+					map[string]interface{}{"value": float64(3.14)},
+					time.Unix(ts, 0),
+					telegraf.Gauge,
+				),
+			},
+		},
+		{
+			name:      "vector with query name and result name",
+			queryName: "foobar",
+			data: &model.Vector{
+				&model.Sample{
+					Metric: model.Metric{
+						"__name__": model.LabelValue("vector_metric"),
+						"job":      "testing",
+					},
+					Value:     model.SampleValue(3.14),
+					Timestamp: model.TimeFromUnix(ts),
+				},
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"vector_metric",
+					map[string]string{"job": "testing"},
+					map[string]interface{}{"value": float64(3.14)},
+					time.Unix(ts, 0),
+					telegraf.Gauge,
+				),
+			},
+		},
+		{
+			name:      "vector with query name and no result name",
+			queryName: "foobar",
+			data: &model.Vector{
+				&model.Sample{
+					Metric: model.Metric{
+						"job": "testing",
+					},
+					Value:     model.SampleValue(3.14),
+					Timestamp: model.TimeFromUnix(ts),
+				},
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"foobar",
+					map[string]string{"job": "testing"},
+					map[string]interface{}{"value": float64(3.14)},
+					time.Unix(ts, 0),
+					telegraf.Gauge,
+				),
+			},
+		},
+		{
+			name: "matrix with default query name and result name",
+			data: &model.Matrix{
+				&model.SampleStream{
+					Metric: model.Metric{
+						"__name__": model.LabelValue("matrix_metric"),
+						"job":      "testing",
+					},
+					Values: []model.SamplePair{
+						{
+							Value:     model.SampleValue(1.1),
+							Timestamp: model.TimeFromUnix(ts),
+						},
+						{
+							Value:     model.SampleValue(2.2),
+							Timestamp: model.TimeFromUnix(ts).Add(1 * time.Second),
+						},
+						{
+							Value:     model.SampleValue(3.3),
+							Timestamp: model.TimeFromUnix(ts).Add(2 * time.Second),
+						},
+					},
+				},
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"matrix_metric",
+					map[string]string{"job": "testing"},
+					map[string]interface{}{"value": float64(1.1)},
+					time.Unix(ts, 0),
+					telegraf.Gauge,
+				),
+				metric.New(
+					"matrix_metric",
+					map[string]string{"job": "testing"},
+					map[string]interface{}{"value": float64(2.2)},
+					time.Unix(ts, 0).Add(1*time.Second),
+					telegraf.Gauge,
+				),
+				metric.New(
+					"matrix_metric",
+					map[string]string{"job": "testing"},
+					map[string]interface{}{"value": float64(3.3)},
+					time.Unix(ts, 0).Add(2*time.Second),
+					telegraf.Gauge,
+				),
+			},
+		},
+		{
+			name: "matrix with default query name and no result name",
+			data: &model.Matrix{
+				&model.SampleStream{
+					Metric: model.Metric{
+						"job": "testing",
+					},
+					Values: []model.SamplePair{
+						{
+							Value:     model.SampleValue(1.1),
+							Timestamp: model.TimeFromUnix(ts),
+						},
+						{
+							Value:     model.SampleValue(2.2),
+							Timestamp: model.TimeFromUnix(ts).Add(1 * time.Second),
+						},
+						{
+							Value:     model.SampleValue(3.3),
+							Timestamp: model.TimeFromUnix(ts).Add(2 * time.Second),
+						},
+					},
+				},
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"promql",
+					map[string]string{"job": "testing"},
+					map[string]interface{}{"value": float64(1.1)},
+					time.Unix(ts, 0),
+					telegraf.Gauge,
+				),
+				metric.New(
+					"promql",
+					map[string]string{"job": "testing"},
+					map[string]interface{}{"value": float64(2.2)},
+					time.Unix(ts, 0).Add(1*time.Second),
+					telegraf.Gauge,
+				),
+				metric.New(
+					"promql",
+					map[string]string{"job": "testing"},
+					map[string]interface{}{"value": float64(3.3)},
+					time.Unix(ts, 0).Add(2*time.Second),
+					telegraf.Gauge,
+				),
+			},
+		},
+		{
+			name:      "matrix with query name and result name",
+			queryName: "foobar",
+			data: &model.Matrix{
+				&model.SampleStream{
+					Metric: model.Metric{
+						"__name__": model.LabelValue("matrix_metric"),
+						"job":      "testing",
+					},
+					Values: []model.SamplePair{
+						{
+							Value:     model.SampleValue(1.1),
+							Timestamp: model.TimeFromUnix(ts),
+						},
+						{
+							Value:     model.SampleValue(2.2),
+							Timestamp: model.TimeFromUnix(ts).Add(1 * time.Second),
+						},
+						{
+							Value:     model.SampleValue(3.3),
+							Timestamp: model.TimeFromUnix(ts).Add(2 * time.Second),
+						},
+					},
+				},
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"matrix_metric",
+					map[string]string{"job": "testing"},
+					map[string]interface{}{"value": float64(1.1)},
+					time.Unix(ts, 0),
+					telegraf.Gauge,
+				),
+				metric.New(
+					"matrix_metric",
+					map[string]string{"job": "testing"},
+					map[string]interface{}{"value": float64(2.2)},
+					time.Unix(ts, 0).Add(1*time.Second),
+					telegraf.Gauge,
+				),
+				metric.New(
+					"matrix_metric",
+					map[string]string{"job": "testing"},
+					map[string]interface{}{"value": float64(3.3)},
+					time.Unix(ts, 0).Add(2*time.Second),
+					telegraf.Gauge,
+				),
+			},
+		},
+		{
+			name:      "matrix with query name and no result name",
+			queryName: "foobar",
+			data: &model.Matrix{
+				&model.SampleStream{
+					Metric: model.Metric{
+						"job": "testing",
+					},
+					Values: []model.SamplePair{
+						{
+							Value:     model.SampleValue(1.1),
+							Timestamp: model.TimeFromUnix(ts),
+						},
+						{
+							Value:     model.SampleValue(2.2),
+							Timestamp: model.TimeFromUnix(ts).Add(1 * time.Second),
+						},
+						{
+							Value:     model.SampleValue(3.3),
+							Timestamp: model.TimeFromUnix(ts).Add(2 * time.Second),
+						},
+					},
+				},
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"foobar",
+					map[string]string{"job": "testing"},
+					map[string]interface{}{"value": float64(1.1)},
+					time.Unix(ts, 0),
+					telegraf.Gauge,
+				),
+				metric.New(
+					"foobar",
+					map[string]string{"job": "testing"},
+					map[string]interface{}{"value": float64(2.2)},
+					time.Unix(ts, 0).Add(1*time.Second),
+					telegraf.Gauge,
+				),
+				metric.New(
+					"foobar",
+					map[string]string{"job": "testing"},
+					map[string]interface{}{"value": float64(3.3)},
+					time.Unix(ts, 0).Add(2*time.Second),
+					telegraf.Gauge,
+				),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Construct the response
+			response := map[string]interface{}{
+				"status": "success",
+				"data": map[string]interface{}{
+					"resultType": tt.data.Type().String(),
+					"result":     tt.data,
+				},
+			}
+			buf, err := json.Marshal(response)
+			require.NoError(t, err, "marshalling response")
+
+			// Setup the mocked Prometheus endpoint
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Check the expected request properties
+				if r.Method != http.MethodPost {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					t.Errorf("Unexpected method %q", r.Method)
+					return
+				}
+				if h := r.Header.Get("User-Agent"); h != internal.ProductToken() {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Errorf("Unexpected user agent %q", h)
+					return
+				}
+				if h := r.Header.Get("Content-Type"); h != "application/x-www-form-urlencoded" {
+					w.WriteHeader(http.StatusUnsupportedMediaType)
+					t.Errorf("Unexpected content type %q", h)
+					return
+				}
+
+				// Only support queries
+				if r.URL.Path != "/api/v1/query" {
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
+
+				// Construct the response and write it
+				if _, err := w.Write(buf); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Errorf("Writing response failed: %v", err)
+					return
+				}
+			}))
+			defer server.Close()
+
+			// Setup the plugin and start it
+			plugin := &PromQL{
+				URL: server.URL,
+				InstantQueries: []InstantQuery{
+					{
+						query: query{
+							Query: "dummy",
+							Name:  tt.queryName,
+						},
 					},
 				},
 				Timeout: config.Duration(1 * time.Second),

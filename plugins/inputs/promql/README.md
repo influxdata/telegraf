@@ -84,6 +84,10 @@ more details on how to use them.
 
   ## Instant queries, multiple instances are allowed
   # [[inputs.promql.instant]]
+  #   ## Fallback name of the resulting metrics to use as metric name in case
+  #   ## the __name__ property of the query results is empty.
+  #   # name = "promql"
+  #
   #   ## Query to execute
   #   query = 'prometheus_http_requests_total'
   #
@@ -93,8 +97,13 @@ more details on how to use them.
 
   ## Rangequeries, multiple instances are allowed
   # [[inputs.promql.range]]
+  #   ## Fallback name of the resulting metrics to use as metric name in case
+  #   ## the __name__ property of the query results is empty.
+  #   # name = "promql"
+  #
   #   ## Query to execute
   #   query = 'prometheus_http_requests_total{job="prometheus"}'
+  #
   #   ## Range parameters relative to the gathering time with positive values
   #   ## refer to BEFORE and negative to AFTER the gathering time
   #   start = "5m"
