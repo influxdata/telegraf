@@ -254,7 +254,7 @@ func TestGatherFail(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup test server
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				// Lookup the reponse using the URI
+				// Lookup the response using the URI
 				response, ok := tt.response[r.URL.RequestURI()]
 				if !ok {
 					w.WriteHeader(http.StatusNotFound)
