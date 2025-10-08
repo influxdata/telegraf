@@ -52,8 +52,16 @@ commands:
             equal: [ darwin, << parameters.os >> ]
           steps:
             - run: echo 'export RACE="$RACE -ldflags=-extldflags=-Wl,-ld_classic"' >> $BASH_ENV
-      - run: |
-          GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short "$(./scripts/check-plugin-changes.sh)"
+      - unless:
+          condition:
+            equal: [ windows, << parameters.os >> ]
+          steps:
+            - run: GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short "$(./scripts/check-plugin-changes.sh)"
+      - when:
+          condition:
+            equal: [ windows, << parameters.os >> ]
+          steps:
+            - run: GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short ./...
   package-build:
     parameters:
       type:
