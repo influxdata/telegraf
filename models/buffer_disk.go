@@ -81,7 +81,7 @@ func (b *DiskBuffer) entries() int {
 func (b *DiskBuffer) readIndex() uint64 {
 	index, err := b.file.FirstIndex()
 	if err != nil {
-		panic(err) // can only occur with a corrupt wal file
+		panic(err) // can only occur with a corrupt or closed wal file
 	}
 	return index
 }
@@ -90,7 +90,7 @@ func (b *DiskBuffer) readIndex() uint64 {
 func (b *DiskBuffer) writeIndex() uint64 {
 	index, err := b.file.LastIndex()
 	if err != nil {
-		panic(err) // can only occur with a corrupt wal file
+		panic(err) // can only occur with a corrupt or closed wal file
 	}
 	return index + 1
 }
@@ -98,7 +98,7 @@ func (b *DiskBuffer) writeIndex() uint64 {
 func (b *DiskBuffer) isEmpty() bool {
 	isEmpty, err := b.file.IsEmpty()
 	if err != nil {
-		panic(err)
+		panic(err) // can only occur with a corrupt or closed wal file
 	}
 	return isEmpty
 }
