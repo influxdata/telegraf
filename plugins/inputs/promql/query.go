@@ -14,6 +14,7 @@ import (
 )
 
 type query struct {
+	Name  string `toml:"name"`
 	Query string `toml:"query"`
 	Limit uint64 `toml:"limit"`
 
@@ -76,22 +77,27 @@ func (q *RangeQuery) execute(ctx context.Context, acc telegraf.Accumulator, t ti
 }
 
 func (q *query) convertModelValue(acc telegraf.Accumulator, results model.Value) error {
+	// Determine the default name
+	name := "promql"
+	if q.Name != "" {
+		name = q.Name
+	}
+
 	switch result := results.(type) {
 	case *model.Scalar:
 		tags := make(map[string]string)
 		fields := map[string]interface{}{"value": float64(result.Value)}
-		acc.AddGauge("promql", fields, tags, result.Timestamp.Time())
+		acc.AddGauge(name, fields, tags, result.Timestamp.Time())
 	case *model.String:
 		tags := make(map[string]string)
 		fields := map[string]interface{}{"value": result.Value}
-		acc.AddFields("promql", fields, tags, result.Timestamp.Time())
+		acc.AddFields(name, fields, tags, result.Timestamp.Time())
 	case model.Vector:
 		if result.Len() == 0 {
 			q.log.Debugf("Query %q returned no result", q.Query)
 			return nil
 		}
 		for _, sample := range result {
-			var name string
 			tags := make(map[string]string, len(sample.Metric))
 			for k, v := range sample.Metric {
 				if k == "__name__" {
@@ -120,7 +126,6 @@ func (q *query) convertModelValue(acc telegraf.Accumulator, results model.Value)
 			return nil
 		}
 		for _, stream := range result {
-			var name string
 			tags := make(map[string]string, len(stream.Metric))
 			for k, v := range stream.Metric {
 				if k == "__name__" {
