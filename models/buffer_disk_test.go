@@ -64,7 +64,7 @@ func TestDiskBufferTruncate(t *testing.T) {
 
 	// Ensure the buffer was fully truncated on disk and the mask is consistent with that
 	require.Equal(t, 0, diskBuf.entries())
-	require.Equal(t, []int{}, diskBuf.mask)
+	require.Empty(t, diskBuf.mask)
 
 	// We shouldn't get any metric when requesting a new batch
 	tx = buf.BeginTransaction(4)
@@ -100,7 +100,7 @@ func TestDiskBufferEmptyReuse(t *testing.T) {
 	require.True(t, diskBuf.isEmpty())
 	require.Equal(t, 0, diskBuf.Len())
 	require.Equal(t, 0, diskBuf.entries())
-	require.Len(t, diskBuf.mask, 0)
+	require.Empty(t, diskBuf.mask)
 
 	// Try to read the buffer again. This should return an empty transaction...
 	tx = buf.BeginTransaction(5)
