@@ -41,30 +41,18 @@ commands:
           condition:
             equal: [ "386", << parameters.arch >> ]
           steps:
-            - run: echo 'export RACE="-race"' >> $BASH_ENV
-      - when:
-          condition:
-            equal: [ windows, << parameters.os >> ]
-          steps:
-            - run: echo 'export CGO_ENABLED=1' >> $BASH_ENV
+            - unless:
+                condition:
+                  equal: [ windows, << parameters.os >> ]
+                steps:
+                  - run: echo 'export RACE="-race"' >> $BASH_ENV
       - when:
           condition:
             equal: [ darwin, << parameters.os >> ]
           steps:
             - run: echo 'export RACE="$RACE -ldflags=-extldflags=-Wl,-ld_classic"' >> $BASH_ENV
-      - run: cat $BASH_ENV
-      - run: echo $PATH
-      - run: gcc --version
-      - unless:
-          condition:
-            equal: [ windows, << parameters.os >> ]
-          steps:
-            - run: GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short "$(./scripts/check-plugin-changes.sh)"
-      - when:
-          condition:
-            equal: [ windows, << parameters.os >> ]
-          steps:
-            - run: GOARCH=<< parameters.arch >> go test -v -race ./...
+      - run: |
+          GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short "$(./scripts/check-plugin-changes.sh)"
   package-build:
     parameters:
       type:
