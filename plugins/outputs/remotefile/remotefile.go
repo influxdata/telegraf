@@ -85,6 +85,10 @@ func (f *File) Init() error {
 	log.Handler.SetOutput(func(level slog.Level, text string) {
 		f.Log.Tracef("[%s] %s", level.String(), text)
 	})
+	// We also need to reset the slog default logger as rclone overrides it, causing a recursive loop over
+	// the standard go log package and resulting in a double mutex lock.
+	defaultHandler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})
+	slog.SetDefault(slog.New(defaultHandler))
 
 	// Setup custom template functions
 	funcs := template.FuncMap{"now": time.Now}
