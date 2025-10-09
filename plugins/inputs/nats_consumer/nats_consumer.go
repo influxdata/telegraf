@@ -47,7 +47,8 @@ type NatsConsumer struct {
 
 	parser telegraf.Parser
 	// channel for all incoming NATS messages
-	in chan *nats.Msg
+	in          chan *nats.Msg
+	undelivered map[telegraf.TrackingID]*nats.Msg
 	// channel for all NATS read errors
 	errs   chan error
 	acc    telegraf.TrackingAccumulator
@@ -144,22 +145,14 @@ func (n *NatsConsumer) Start(acc telegraf.Accumulator) error {
 
 		if len(n.JsSubjects) > 0 {
 			var connErr error
-			n.jsConn, connErr = n.conn.JetStream(nats.PublishAsyncMaxPending(256))
+			n.jsConn, connErr = n.conn.JetStream(nats.PublishAsyncMaxPending(n.PendingMessageLimit))
 			if connErr != nil {
 				return connErr
 			}
 
 			if n.jsConn != nil {
 				for _, jsSub := range n.JsSubjects {
-					sub, err := n.jsConn.QueueSubscribe(jsSub, n.QueueGroup, func(m *nats.Msg) {
-						n.in <- m
-					})
-					if err != nil {
-						return err
-					}
-
-					// set the subscription pending limits
-					err = sub.SetPendingLimits(n.PendingMessageLimit, n.PendingBytesLimit)
+					sub, err := n.jsConn.ChanQueueSubscribe(jsSub, n.QueueGroup, n.in, nats.ManualAck())
 					if err != nil {
 						return err
 					}
@@ -207,14 +200,17 @@ func (n *NatsConsumer) natsErrHandler(c *nats.Conn, s *nats.Subscription, e erro
 // receiver() reads all incoming messages from NATS, and parses them into
 // telegraf metrics.
 func (n *NatsConsumer) receiver(ctx context.Context) {
+	n.undelivered = make(map[telegraf.TrackingID]*nats.Msg)
 	sem := make(semaphore, n.MaxUndeliveredMessages)
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-n.acc.Delivered():
-			<-sem
+		case track := <-n.acc.Delivered():
+			if n.onDelivery(track) {
+				<-sem
+			}
 		case err := <-n.errs:
 			n.Log.Error(err)
 		case sem <- empty{}:
@@ -224,13 +220,15 @@ func (n *NatsConsumer) receiver(ctx context.Context) {
 			case err := <-n.errs:
 				<-sem
 				n.Log.Error(err)
-			case <-n.acc.Delivered():
-				<-sem
-				<-sem
+			case track := <-n.acc.Delivered():
+				if n.onDelivery(track) {
+					<-sem
+					<-sem
+				}
 			case msg := <-n.in:
 				metrics, err := n.parser.Parse(msg.Data)
 				if err != nil {
-					n.Log.Errorf("Subject: %s, error: %s", msg.Subject, err.Error())
+					n.Log.Errorf("Failed to parse message in subject %s: %s", msg.Subject, err.Error())
 					<-sem
 					continue
 				}
@@ -246,6 +244,29 @@ func (n *NatsConsumer) receiver(ctx context.Context) {
 			}
 		}
 	}
+}
+
+func (n *NatsConsumer) onDelivery(track telegraf.DeliveryInfo) bool {
+	msg, ok := n.undelivered[track.ID()]
+	if !ok {
+		// Added by a previous connection
+		return false
+	}
+
+	if track.Delivered() {
+		err := msg.Ack()
+		if err != nil {
+			n.Log.Errorf("Failed to Ack message on subject %s: %s", msg.Subject, msg.Sub.Queue, err.Error())
+		}
+	} else {
+		err := msg.Nak()
+		if err != nil {
+			n.Log.Errorf("Failed to Nak message on subject %s: %s", msg.Subject, err.Error())
+		}
+	}
+
+	delete(n.undelivered, track.ID())
+	return true
 }
 
 func (n *NatsConsumer) clean() {
