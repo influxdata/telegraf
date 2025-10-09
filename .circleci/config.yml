@@ -37,11 +37,11 @@ commands:
         default: "gotestsum"
     steps:
       - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
-      #- unless:
-      #    condition:
-      #      equal: [ "386", << parameters.arch >> ]
-      #    steps:
-      #      - run: echo 'export RACE="-race"' >> $BASH_ENV
+      - unless:
+          condition:
+            equal: [ "386", << parameters.arch >> ]
+          steps:
+            - run: echo 'export RACE="-race"' >> $BASH_ENV
       - when:
           condition:
             equal: [ windows, << parameters.os >> ]
@@ -54,16 +54,9 @@ commands:
             - run: echo 'export RACE="$RACE -ldflags=-extldflags=-Wl,-ld_classic"' >> $BASH_ENV
       - run: cat $BASH_ENV
       - run: echo $PATH
-      - unless:
-          condition:
-            equal: [ windows, << parameters.os >> ]
-          steps:
-            - run: GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short "$(./scripts/check-plugin-changes.sh)"
-      - when:
-          condition:
-            equal: [ windows, << parameters.os >> ]
-          steps:
-            - run: GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> --format standard-verbose -- ${RACE} -v -short ./...
+      - run: gcc --version
+      - run: |
+          GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short "$(./scripts/check-plugin-changes.sh)"
   package-build:
     parameters:
       type:
@@ -203,7 +196,6 @@ jobs:
       - run: 'sh ./scripts/installgo_windows.sh'
       - run: choco install mingw
       - run: echo 'export PATH="$PATH:/c/ProgramData/mingw64/mingw64/bin"' >> $BASH_ENV
-      - run: echo $BASH_ENV
       - test-go:
           os: windows
           gotestsum: "gotestsum.exe"
