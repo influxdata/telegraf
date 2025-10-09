@@ -184,7 +184,7 @@ func TestSendReceive(t *testing.T) {
 	}
 }
 
-func TestJetStreamSendReceive(t *testing.T) {
+func TestJetStreamIntegrationSendReceive(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -197,9 +197,9 @@ func TestJetStreamSendReceive(t *testing.T) {
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
-	addr := fmt.Sprintf("nats://%s:%s", container.Address, container.Ports["4222"])
+	addr := "nats://" + container.Address + ":" + container.Ports["4222"]
 
-	// Connect to NATS and enable JetStream
+	// Add a JetStream stream for testing
 	nc, err := nats.Connect(addr)
 	require.NoError(t, err)
 	defer nc.Close()
@@ -261,7 +261,7 @@ func TestJetStreamSendReceive(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
-func TestJetStreamSourcedStreamNotFound(t *testing.T) {
+func TestJetStreamIntegrationSourcedStreamNotFound(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -274,9 +274,9 @@ func TestJetStreamSourcedStreamNotFound(t *testing.T) {
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
-	addr := fmt.Sprintf("nats://%s:%s", container.Address, container.Ports["4222"])
+	addr := "nats://" + container.Address + ":" + container.Ports["4222"]
 
-	// Connect to NATS and enable JetStream
+	// Add a JetStream stream for testing
 	nc, err := nats.Connect(addr)
 	require.NoError(t, err)
 	defer nc.Close()
@@ -316,7 +316,7 @@ func TestJetStreamSourcedStreamNotFound(t *testing.T) {
 	require.Contains(t, err.Error(), "no stream matches subject")
 }
 
-func TestJetStreamSourcedStreamFound(t *testing.T) {
+func TestJetStreamIntegrationSourcedStreamFound(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -329,9 +329,9 @@ func TestJetStreamSourcedStreamFound(t *testing.T) {
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
-	addr := fmt.Sprintf("nats://%s:%s", container.Address, container.Ports["4222"])
+	addr := "nats://" + container.Address + ":" + container.Ports["4222"]
 
-	// Connect to NATS and enable JetStream
+	// Add a JetStream stream for testing
 	nc, err := nats.Connect(addr)
 	require.NoError(t, err)
 	defer nc.Close()
