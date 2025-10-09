@@ -52,7 +52,8 @@ commands:
             equal: [ darwin, << parameters.os >> ]
           steps:
             - run: echo 'export RACE="$RACE -ldflags=-extldflags=-Wl,-ld_classic"' >> $BASH_ENV
-      - run: echo $BASH_ENV
+      - run: cat $BASH_ENV
+      - run: echo $PATH
       - unless:
           condition:
             equal: [ windows, << parameters.os >> ]
