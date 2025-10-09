@@ -45,7 +45,7 @@ type Chrony struct {
 	// clientMu protects concurrent access to the chrony client.
 	// This prevents race conditions when multiple Gather() calls
 	// access the same client instance concurrently.
-	clientMu sync.Mutex
+	sync.Mutex
 }
 
 func (*Chrony) SampleConfig() string {
@@ -155,8 +155,8 @@ func (c *Chrony) Gather(acc telegraf.Accumulator) error {
 	// Protect concurrent access to the chrony client to prevent race conditions
 	// when multiple Gather() calls occur simultaneously (e.g., when a previous
 	// gather hasn't completed before the next interval triggers).
-	c.clientMu.Lock()
-	defer c.clientMu.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
 	for _, m := range c.Metrics {
 		switch m {
