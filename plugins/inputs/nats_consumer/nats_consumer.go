@@ -248,7 +248,7 @@ func (n *NatsConsumer) onDelivery(track telegraf.DeliveryInfo) bool {
 	if track.Delivered() {
 		err := msg.Ack()
 		if err != nil {
-			n.Log.Errorf("Failed to Ack message on subject %s: %s", msg.Subject, msg.Sub.Queue, err.Error())
+			n.Log.Errorf("Failed to Ack message on subject %s: %s", msg.Subject, err.Error())
 		}
 	} else {
 		err := msg.Nak()
