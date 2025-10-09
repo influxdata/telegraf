@@ -88,11 +88,8 @@ to use them.
   ## and more memory efficient.
   # parser_type = "internal"
 
-  ## Internal metrics version to use. Version 2 added tags for alias if set.
-  ##
-  ##   example: internal_statistics_version = 1; deprecated in 1.36.3
-  ##            internal_statistics_version = 2; recommended version
-  # internal_statistics_version = 1
+  ## Use new internal metrics. When true, it adds tag for alias if set.
+  # use_internal_statistics = false
 ```
 
 ## Metrics

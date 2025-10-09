@@ -52,7 +52,7 @@ type InfluxDBV2Listener struct {
 	Token                 config.Secret   `toml:"token"`
 	BucketTag             string          `toml:"bucket_tag"`
 	ParserType            string          `toml:"parser_type"`
-	StatisticsVersion     int             `toml:"internal_statistics_version"`
+	UseInternalStatistics bool            `toml:"use_internal_statistics"`
 
 	Log        telegraf.Logger     `toml:"-"`
 	Statistics *selfstat.Collector `toml:"-"`
@@ -98,8 +98,7 @@ func (h *InfluxDBV2Listener) Init() error {
 	tags := map[string]string{
 		"address": h.ServiceAddress,
 	}
-	switch h.StatisticsVersion {
-	case 0, 1:
+	if !h.UseInternalStatistics {
 		h.bytesRecv = selfstat.Register("influxdb_v2_listener", "bytes_received", tags)
 		h.requestsServed = selfstat.Register("influxdb_v2_listener", "requests_served", tags)
 		h.writesServed = selfstat.Register("influxdb_v2_listener", "writes_served", tags)
@@ -108,12 +107,12 @@ func (h *InfluxDBV2Listener) Init() error {
 		h.requestsRecv = selfstat.Register("influxdb_v2_listener", "requests_received", tags)
 		h.notFoundsServed = selfstat.Register("influxdb_v2_listener", "not_founds_served", tags)
 		h.authFailures = selfstat.Register("influxdb_v2_listener", "auth_failures", tags)
-		config.PrintOptionValueDeprecationNotice("inputs.influxdb_v2_listener", "internal_statistics_version", 1, telegraf.DeprecationInfo{
+		config.PrintOptionValueDeprecationNotice("inputs.influxdb_v2_listener", "use_internal_statistics", false, telegraf.DeprecationInfo{
 			Since:     "1.36.3",
 			RemovalIn: "1.45.0",
-			Notice:    "please update to 'internal_statistics_version = 2'",
+			Notice:    "please update to 'use_internal_statistics = true'",
 		})
-	case 2:
+	} else {
 		h.bytesRecv = h.Statistics.Register("influxdb_v2_listener", "bytes_received", tags)
 		h.requestsServed = h.Statistics.Register("influxdb_v2_listener", "requests_served", tags)
 		h.writesServed = h.Statistics.Register("influxdb_v2_listener", "writes_served", tags)
@@ -122,8 +121,6 @@ func (h *InfluxDBV2Listener) Init() error {
 		h.requestsRecv = h.Statistics.Register("influxdb_v2_listener", "requests_received", tags)
 		h.notFoundsServed = h.Statistics.Register("influxdb_v2_listener", "not_founds_served", tags)
 		h.authFailures = h.Statistics.Register("influxdb_v2_listener", "auth_failures", tags)
-	default:
-		return fmt.Errorf("unknown internal_statistics_version %d", h.StatisticsVersion)
 	}
 
 	if err := h.routes(); err != nil {
