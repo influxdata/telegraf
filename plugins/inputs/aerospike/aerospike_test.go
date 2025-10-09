@@ -16,7 +16,7 @@ const servicePort = "3000"
 
 func launchTestServer(t *testing.T) *testutil.Container {
 	container := testutil.Container{
-		Image:        "aerospike:ce-6.0.0.1",
+		Image:        "aerospike:ce-8.1.0.1",
 		ExposedPorts: []string{servicePort},
 		WaitingFor:   wait.ForLog("migrations: complete"),
 	}
@@ -306,6 +306,15 @@ func TestDisableObjectSizeLinearHistogramIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	require.False(t, acc.HasMeasurement("aerospike_histogram_object_size_linear"))
+}
+
+func TestInit(t *testing.T) {
+	a := &Aerospike{}
+
+	require.NoError(t, a.Init())
+
+	require.Equal(t, 10, a.NumberHistogramBuckets)
+	require.Nil(t, a.tlsConfig)
 }
 
 func TestParseNodeInfo(t *testing.T) {
