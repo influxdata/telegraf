@@ -52,6 +52,7 @@ commands:
             equal: [ darwin, << parameters.os >> ]
           steps:
             - run: echo 'export RACE="$RACE -ldflags=-extldflags=-Wl,-ld_classic"' >> $BASH_ENV
+      - run: echo $BASH_ENV
       - unless:
           condition:
             equal: [ windows, << parameters.os >> ]
@@ -201,6 +202,7 @@ jobs:
       - run: 'sh ./scripts/installgo_windows.sh'
       - run: choco install mingw
       - run: echo 'export PATH="$PATH:/c/ProgramData/mingw64/mingw64/bin"' >> $BASH_ENV
+      - run: echo $BASH_ENV
       - test-go:
           os: windows
           gotestsum: "gotestsum.exe"
