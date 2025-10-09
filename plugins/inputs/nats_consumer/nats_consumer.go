@@ -35,7 +35,7 @@ type NatsConsumer struct {
 	NkeySeed               string          `toml:"nkey_seed"`
 	JsSubjects             []string        `toml:"jetstream_subjects"`
 	PendingMessageLimit    int             `toml:"pending_message_limit"`
-	PendingBytesLimit      int             `toml:"pending_bytes_limit"`
+	PendingBytesLimit      int             `toml:"pending_bytes_limit" deprecated:"1.37.0;1.40.0;unused"`
 	MaxUndeliveredMessages int             `toml:"max_undelivered_messages"`
 	Log                    telegraf.Logger `toml:"-"`
 	tls.ClientConfig
@@ -125,17 +125,9 @@ func (n *NatsConsumer) Start(acc telegraf.Accumulator) error {
 		// Setup message and error channels
 		n.errs = make(chan error)
 
-		n.in = make(chan *nats.Msg, 1000)
+		n.in = make(chan *nats.Msg, n.PendingMessageLimit)
 		for _, subj := range n.Subjects {
-			sub, err := n.conn.QueueSubscribe(subj, n.QueueGroup, func(m *nats.Msg) {
-				n.in <- m
-			})
-			if err != nil {
-				return err
-			}
-
-			// set the subscription pending limits
-			err = sub.SetPendingLimits(n.PendingMessageLimit, n.PendingBytesLimit)
+			sub, err := n.conn.ChanQueueSubscribe(subj, n.QueueGroup, n.in)
 			if err != nil {
 				return err
 			}
@@ -295,7 +287,6 @@ func init() {
 			Servers:                []string{"nats://localhost:4222"},
 			Subjects:               []string{"telegraf"},
 			QueueGroup:             "telegraf_consumers",
-			PendingBytesLimit:      nats.DefaultSubPendingBytesLimit,
 			PendingMessageLimit:    nats.DefaultSubPendingMsgsLimit,
 			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		}
