@@ -30,7 +30,6 @@ const (
 	cpuC3StateResidency
 	cpuC6StateResidency
 	cpuC7StateResidency
-	cpuBusyCycles // alias of cpuC0StateResidency
 	cpuBusyFrequency
 
 	// metrics relying on perf
@@ -58,8 +57,6 @@ func (m cpuMetricType) String() string {
 		return "cpu_c6_state_residency"
 	case cpuC7StateResidency:
 		return "cpu_c7_state_residency"
-	case cpuBusyCycles:
-		return "cpu_busy_cycles"
 	case cpuC0SubstateC01Percent:
 		return "cpu_c0_substate_c01"
 	case cpuC0SubstateC02Percent:
@@ -98,8 +95,6 @@ func cpuMetricTypeFromString(metric string) (cpuMetricType, error) {
 		return cpuC6StateResidency, nil
 	case "cpu_c7_state_residency":
 		return cpuC7StateResidency, nil
-	case "cpu_busy_cycles":
-		return cpuBusyCycles, nil
 	case "cpu_c0_substate_c01":
 		return cpuC0SubstateC01Percent, nil
 	case "cpu_c0_substate_c02":

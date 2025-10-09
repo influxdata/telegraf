@@ -155,7 +155,6 @@ func TestParseCPUTimeRelatedMsrMetrics(t *testing.T) {
 				cpuC3StateResidency,
 				cpuC6StateResidency,
 				cpuC7StateResidency,
-				cpuBusyCycles,
 				cpuBusyFrequency,
 
 				// Metrics relying on perf events.
@@ -168,7 +167,6 @@ func TestParseCPUTimeRelatedMsrMetrics(t *testing.T) {
 				cpuC3StateResidency,
 				cpuC6StateResidency,
 				cpuC7StateResidency,
-				cpuBusyCycles,
 				cpuBusyFrequency,
 			},
 		},
@@ -1232,7 +1230,6 @@ func TestDisableUnsupportedMetrics(t *testing.T) {
 				cpuC1StateResidency,
 				cpuC6StateResidency,
 				cpuBusyFrequency,
-				cpuBusyCycles,
 				cpuTemperature,
 			},
 			PackageMetrics: []packageMetricType{
@@ -1269,7 +1266,6 @@ func TestDisableUnsupportedMetrics(t *testing.T) {
 				cpuC0StateResidency,
 				cpuC1StateResidency,
 				cpuBusyFrequency,
-				cpuBusyCycles,
 
 				// Metrics not relying on aperfmperf flag
 				cpuTemperature,
@@ -2231,7 +2227,6 @@ func TestAddCPUTimeRelatedMsrMetrics(t *testing.T) {
 			cpuC1StateResidency,
 			cpuC3StateResidency,
 			cpuC6StateResidency,
-			cpuBusyCycles,
 		},
 		PackageMetrics:   make([]packageMetricType, 0),
 		EventDefinitions: "./testdata/sapphirerapids_core.json",
@@ -2395,7 +2390,6 @@ func TestAddCPUPerfMetrics(t *testing.T) {
 				// Metrics which do not rely on perf.
 				cpuFrequency,
 				cpuTemperature,
-				cpuBusyCycles,
 
 				// Metrics which rely on perf.
 				cpuC0SubstateC01Percent,
@@ -2442,7 +2436,6 @@ func TestAddCPUPerfMetrics(t *testing.T) {
 					// Metrics which do not rely on perf.
 					cpuFrequency,
 					cpuTemperature,
-					cpuBusyCycles,
 
 					// Metrics which rely on perf.
 					cpuC0SubstateC01Percent,
@@ -3900,76 +3893,6 @@ func TestAddCPUBusyFrequency(t *testing.T) {
 			// fields
 			map[string]interface{}{
 				"cpu_busy_frequency_mhz": cpuBusyFreqExp,
-			},
-			// tags
-			map[string]string{
-				"cpu_id":     strconv.Itoa(cpuID),
-				"core_id":    strconv.Itoa(coreID),
-				"package_id": strconv.Itoa(packageID),
-			},
-		)
-		mFetcher.AssertExpectations(t)
-	})
-}
-
-func TestAddCPUBusyCycles(t *testing.T) {
-	t.Run("FailedToGetMetric", func(t *testing.T) {
-		acc := &testutil.Accumulator{}
-
-		cpuID := 0
-		coreID := 1
-		packageID := 0
-
-		mFetcher := &fetcherMock{}
-
-		// mock getting CPU busy cycles metric.
-		mFetcher.On("GetCPUC0StateResidency", cpuID).Return(0.0, errors.New("mock error")).Once()
-
-		p := &PowerStat{
-			fetcher: mFetcher,
-		}
-
-		require.Empty(t, acc.GetTelegrafMetrics())
-
-		p.addCPUBusyCycles(acc, cpuID, coreID, packageID)
-
-		require.Empty(t, acc.GetTelegrafMetrics())
-		require.Len(t, acc.Errors, 1)
-		require.ErrorContains(t, acc.FirstError(), fmt.Sprintf("failed to get %q for CPU ID %v", cpuBusyCycles, cpuID))
-		mFetcher.AssertExpectations(t)
-	})
-
-	t.Run("Rounded", func(t *testing.T) {
-		acc := &testutil.Accumulator{}
-
-		cpuID := 0
-		coreID := 1
-		packageID := 0
-		cpuBusyCycles := 10.1149
-		cpuBusyCyclesExp := 10.11
-
-		mFetcher := &fetcherMock{}
-
-		// mock getting CPU C0 state residency metric.
-		mFetcher.On("GetCPUC0StateResidency", cpuID).Return(cpuBusyCycles, nil).Once()
-
-		p := &PowerStat{
-			fetcher: mFetcher,
-		}
-
-		require.Empty(t, acc.GetTelegrafMetrics())
-
-		p.addCPUBusyCycles(acc, cpuID, coreID, packageID)
-
-		require.Len(t, acc.GetTelegrafMetrics(), 1)
-		require.True(t, acc.HasFloatField("powerstat_core", "cpu_busy_cycles_percent"))
-		acc.AssertContainsTaggedFields(
-			t,
-			// measurement
-			"powerstat_core",
-			// fields
-			map[string]interface{}{
-				"cpu_busy_cycles_percent": cpuBusyCyclesExp,
 			},
 			// tags
 			map[string]string{

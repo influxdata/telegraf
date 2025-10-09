@@ -231,16 +231,7 @@ func (p *PowerStat) parsePackageMetrics() error {
 }
 
 // parseCPUMetrics ensures there are no duplicates in 'cpu_metrics'.
-// Also, it warns if deprecated metric has been set.
 func (p *PowerStat) parseCPUMetrics() error {
-	if slices.Contains(p.CPUMetrics, cpuBusyCycles) {
-		config.PrintOptionValueDeprecationNotice("inputs.intel_powerstat", "cpu_metrics", cpuBusyCycles, telegraf.DeprecationInfo{
-			Since:     "1.23.0",
-			RemovalIn: "1.35.0",
-			Notice:    "'cpu_c0_state_residency' metric name should be used instead.",
-		})
-	}
-
 	if hasDuplicate(p.CPUMetrics) {
 		return errors.New("cpu metrics contains duplicates")
 	}
@@ -258,7 +249,6 @@ func (p *PowerStat) parseCPUTimeRelatedMsrMetrics() {
 		case cpuC3StateResidency:
 		case cpuC6StateResidency:
 		case cpuC7StateResidency:
-		case cpuBusyCycles:
 		case cpuBusyFrequency:
 		default:
 			continue
@@ -478,8 +468,6 @@ func (p *PowerStat) addCPUTimeRelatedMsrMetrics(acc telegraf.Accumulator, cpuID,
 			p.addCPUC7StateResidency(acc, cpuID, coreID, packageID)
 		case cpuBusyFrequency:
 			p.addCPUBusyFrequency(acc, cpuID, coreID, packageID)
-		case cpuBusyCycles:
-			p.addCPUBusyCycles(acc, cpuID, coreID, packageID)
 		}
 	}
 }
@@ -732,24 +720,6 @@ func (p *PowerStat) addCPUBusyFrequency(acc telegraf.Accumulator, cpuID, coreID,
 			coreID:    coreID,
 			packageID: packageID,
 			fetchFn:   p.fetcher.GetCPUBusyFrequencyMhz,
-		},
-		p.logOnce,
-	)
-}
-
-// addCPUBusyCycles fetches CPU busy cycles metric for a given CPU ID, and adds it to the accumulator.
-func (p *PowerStat) addCPUBusyCycles(acc telegraf.Accumulator, cpuID, coreID, packageID int) {
-	addMetric(
-		acc,
-		&cpuMetric[float64]{
-			metricCommon: metricCommon{
-				metric: cpuBusyCycles,
-				units:  "percent",
-			},
-			cpuID:     cpuID,
-			coreID:    coreID,
-			packageID: packageID,
-			fetchFn:   p.fetcher.GetCPUC0StateResidency,
 		},
 		p.logOnce,
 	)
@@ -1140,7 +1110,6 @@ func (p *PowerStat) disableUnsupportedMetrics() error {
 		p.disableCPUMetric(cpuC3StateResidency)
 		p.disableCPUMetric(cpuC6StateResidency)
 		p.disableCPUMetric(cpuC7StateResidency)
-		p.disableCPUMetric(cpuBusyCycles)
 		p.disableCPUMetric(cpuBusyFrequency)
 		p.disableCPUMetric(cpuTemperature)
 		p.disablePackageMetric(packageCPUBaseFrequency)
@@ -1150,7 +1119,6 @@ func (p *PowerStat) disableUnsupportedMetrics() error {
 	if !slices.Contains(firstCPU.Flags, "aperfmperf") {
 		p.disableCPUMetric(cpuC0StateResidency)
 		p.disableCPUMetric(cpuC1StateResidency)
-		p.disableCPUMetric(cpuBusyCycles)
 		p.disableCPUMetric(cpuBusyFrequency)
 	}
 
