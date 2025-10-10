@@ -93,7 +93,6 @@ func (cfg *Config) NewClient(app string, log telegraf.Logger) (*Client, error) {
 	}, nil
 }
 
-// Clean up and close the ingestor
 func (adx *Client) Close() error {
 	var errs []error
 	for _, v := range adx.ingestors {
