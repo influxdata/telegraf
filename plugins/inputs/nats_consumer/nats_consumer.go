@@ -25,6 +25,8 @@ var (
 )
 
 type NatsConsumer struct {
+	sync.Mutex
+
 	QueueGroup             string          `toml:"queue_group"`
 	Subjects               []string        `toml:"subjects"`
 	Servers                []string        `toml:"servers"`
@@ -36,7 +38,7 @@ type NatsConsumer struct {
 	JsSubjects             []string        `toml:"jetstream_subjects"`
 	JsStream               string          `toml:"jetstream_stream"`
 	PendingMessageLimit    int             `toml:"pending_message_limit"`
-	PendingBytesLimit      int             `toml:"pending_bytes_limit"`
+	PendingBytesLimit      int             `toml:"pending_bytes_limit" deprecated:"1.37.0;1.40.0;unused"`
 	MaxUndeliveredMessages int             `toml:"max_undelivered_messages"`
 	Log                    telegraf.Logger `toml:"-"`
 	tls.ClientConfig
@@ -48,10 +50,12 @@ type NatsConsumer struct {
 
 	parser telegraf.Parser
 	// channel for all incoming NATS messages
-	in chan *nats.Msg
+	in          chan *nats.Msg
+	undelivered map[telegraf.TrackingID]*nats.Msg
 	// channel for all NATS read errors
 	errs   chan error
 	acc    telegraf.TrackingAccumulator
+	sem    semaphore
 	wg     sync.WaitGroup
 	cancel context.CancelFunc
 }
@@ -82,7 +86,9 @@ func (n *NatsConsumer) SetParser(parser telegraf.Parser) {
 
 // Start the nats consumer. Caller must call *NatsConsumer.Stop() to clean up.
 func (n *NatsConsumer) Start(acc telegraf.Accumulator) error {
+	n.sem = make(semaphore, n.MaxUndeliveredMessages)
 	n.acc = acc.WithTracking(n.MaxUndeliveredMessages)
+	n.undelivered = make(map[telegraf.TrackingID]*nats.Msg)
 
 	options := []nats.Option{
 		nats.MaxReconnects(-1),
@@ -125,17 +131,9 @@ func (n *NatsConsumer) Start(acc telegraf.Accumulator) error {
 		// Setup message and error channels
 		n.errs = make(chan error)
 
-		n.in = make(chan *nats.Msg, 1000)
+		n.in = make(chan *nats.Msg, n.PendingMessageLimit)
 		for _, subj := range n.Subjects {
-			sub, err := n.conn.QueueSubscribe(subj, n.QueueGroup, func(m *nats.Msg) {
-				n.in <- m
-			})
-			if err != nil {
-				return err
-			}
-
-			// set the subscription pending limits
-			err = sub.SetPendingLimits(n.PendingMessageLimit, n.PendingBytesLimit)
+			sub, err := n.conn.ChanQueueSubscribe(subj, n.QueueGroup, n.in)
 			if err != nil {
 				return err
 			}
@@ -145,7 +143,9 @@ func (n *NatsConsumer) Start(acc telegraf.Accumulator) error {
 
 		if len(n.JsSubjects) > 0 {
 			var connErr error
-			var subOptions []nats.SubOpt
+			subOptions := []nats.SubOpt{
+				nats.ManualAck(),
+			}
 			if n.JsStream != "" {
 				subOptions = append(subOptions, nats.BindStream(n.JsStream))
 			}
@@ -156,15 +156,7 @@ func (n *NatsConsumer) Start(acc telegraf.Accumulator) error {
 
 			if n.jsConn != nil {
 				for _, jsSub := range n.JsSubjects {
-					sub, err := n.jsConn.QueueSubscribe(jsSub, n.QueueGroup, func(m *nats.Msg) {
-						n.in <- m
-					}, subOptions...)
-					if err != nil {
-						return err
-					}
-
-					// set the subscription pending limits
-					err = sub.SetPendingLimits(n.PendingMessageLimit, n.PendingBytesLimit)
+					sub, err := n.jsConn.ChanQueueSubscribe(jsSub, n.QueueGroup, n.in, subOptions...)
 					if err != nil {
 						return err
 					}
@@ -177,6 +169,13 @@ func (n *NatsConsumer) Start(acc telegraf.Accumulator) error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	n.cancel = cancel
+
+	// Start goroutine to handle delivery notifications from accumulator.
+	n.wg.Add(1)
+	go func() {
+		defer n.wg.Done()
+		n.waitForDelivery(ctx)
+	}()
 
 	// Start the message reader
 	n.wg.Add(1)
@@ -212,31 +211,24 @@ func (n *NatsConsumer) natsErrHandler(c *nats.Conn, s *nats.Subscription, e erro
 // receiver() reads all incoming messages from NATS, and parses them into
 // telegraf metrics.
 func (n *NatsConsumer) receiver(ctx context.Context) {
-	sem := make(semaphore, n.MaxUndeliveredMessages)
-
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-n.acc.Delivered():
-			<-sem
 		case err := <-n.errs:
 			n.Log.Error(err)
-		case sem <- empty{}:
+		case n.sem <- empty{}:
 			select {
 			case <-ctx.Done():
 				return
 			case err := <-n.errs:
-				<-sem
+				<-n.sem
 				n.Log.Error(err)
-			case <-n.acc.Delivered():
-				<-sem
-				<-sem
 			case msg := <-n.in:
 				metrics, err := n.parser.Parse(msg.Data)
 				if err != nil {
-					n.Log.Errorf("Subject: %s, error: %s", msg.Subject, err.Error())
-					<-sem
+					n.Log.Errorf("Failed to parse message in subject %s: %v", msg.Subject, err)
+					<-n.sem
 					continue
 				}
 				if len(metrics) == 0 {
@@ -247,10 +239,56 @@ func (n *NatsConsumer) receiver(ctx context.Context) {
 				for _, m := range metrics {
 					m.AddTag("subject", msg.Subject)
 				}
-				n.acc.AddTrackingMetricGroup(metrics)
+				id := n.acc.AddTrackingMetricGroup(metrics)
+				for _, s := range n.jsSubs {
+					if msg.Sub == s {
+						n.Lock()
+						n.undelivered[id] = msg
+						n.Unlock()
+						break
+					}
+				}
 			}
 		}
 	}
+}
+
+func (n *NatsConsumer) waitForDelivery(parentCtx context.Context) {
+	for {
+		select {
+		case <-parentCtx.Done():
+			return
+		case track := <-n.acc.Delivered():
+			<-n.sem
+			msg := n.removeDelivered(track.ID())
+
+			if msg != nil {
+				if track.Delivered() {
+					err := msg.Ack()
+					if err != nil {
+						n.Log.Errorf("Failed to Ack message on subject %s: %v", msg.Subject, err)
+					}
+				} else {
+					err := msg.Nak()
+					if err != nil {
+						n.Log.Errorf("Failed to Nak message on subject %s: %v", msg.Subject, err)
+					}
+				}
+			}
+		}
+	}
+}
+
+func (n *NatsConsumer) removeDelivered(id telegraf.TrackingID) *nats.Msg {
+	n.Lock()
+	defer n.Unlock()
+
+	msg, ok := n.undelivered[id]
+	if !ok {
+		return nil
+	}
+	delete(n.undelivered, id)
+	return msg
 }
 
 func (n *NatsConsumer) clean() {
@@ -279,7 +317,6 @@ func init() {
 			Servers:                []string{"nats://localhost:4222"},
 			Subjects:               []string{"telegraf"},
 			QueueGroup:             "telegraf_consumers",
-			PendingBytesLimit:      nats.DefaultSubPendingBytesLimit,
 			PendingMessageLimit:    nats.DefaultSubPendingMsgsLimit,
 			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		}

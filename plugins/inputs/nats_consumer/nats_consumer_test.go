@@ -31,7 +31,6 @@ func TestIntegrationStartStop(t *testing.T) {
 		Servers:                []string{"nats://" + container.Address + ":" + container.Ports["4222"]},
 		Subjects:               []string{"telegraf"},
 		QueueGroup:             "telegraf_consumers",
-		PendingBytesLimit:      nats.DefaultSubPendingBytesLimit,
 		PendingMessageLimit:    nats.DefaultSubPendingMsgsLimit,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		Log:                    testutil.Logger{},
@@ -143,7 +142,6 @@ func TestIntegrationSendReceive(t *testing.T) {
 				Servers:                []string{addr},
 				Subjects:               subjects,
 				QueueGroup:             "telegraf_consumers",
-				PendingBytesLimit:      nats.DefaultSubPendingBytesLimit,
 				PendingMessageLimit:    nats.DefaultSubPendingMsgsLimit,
 				MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 				Log:                    testutil.Logger{},
@@ -179,6 +177,10 @@ func TestIntegrationSendReceive(t *testing.T) {
 
 			actual := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
+
+			plugin.Lock()
+			defer plugin.Unlock()
+			require.Empty(t, plugin.undelivered)
 		})
 	}
 }
@@ -214,15 +216,15 @@ func TestJetStreamIntegrationSendReceive(t *testing.T) {
 	require.NoError(t, err)
 
 	// Setup the plugin for JetStream
+	log := testutil.CaptureLogger{}
 	plugin := &NatsConsumer{
 		Servers:                []string{addr},
 		JsSubjects:             []string{subject},
 		JsStream:               streamName,
 		QueueGroup:             "telegraf_consumers",
-		PendingBytesLimit:      nats.DefaultSubPendingBytesLimit,
 		PendingMessageLimit:    nats.DefaultSubPendingMsgsLimit,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
-		Log:                    testutil.Logger{},
+		Log:                    &log,
 	}
 
 	parser := &influx.Parser{}
@@ -258,6 +260,23 @@ func TestJetStreamIntegrationSendReceive(t *testing.T) {
 		),
 	}
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
+
+	// Acknowledge the message and check undelivered tracking
+	log.Clear()
+	plugin.Lock()
+	require.Len(t, plugin.undelivered, 1)
+	plugin.Unlock()
+	for _, m := range actual {
+		m.Accept()
+	}
+
+	require.Eventually(t, func() bool {
+		plugin.Lock()
+		defer plugin.Unlock()
+		return len(plugin.undelivered) == 0
+	}, time.Second, 100*time.Millisecond, "undelivered messages not cleared")
+
+	require.Empty(t, log.Messages(), "no warnings or errors should be logged")
 }
 
 func TestJetStreamIntegrationSourcedStreamNotFound(t *testing.T) {
@@ -297,7 +316,6 @@ func TestJetStreamIntegrationSourcedStreamNotFound(t *testing.T) {
 		Servers:                []string{addr},
 		JsSubjects:             []string{"TESTSTREAM"},
 		QueueGroup:             "telegraf_consumers",
-		PendingBytesLimit:      nats.DefaultSubPendingBytesLimit,
 		PendingMessageLimit:    nats.DefaultSubPendingMsgsLimit,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		Log:                    testutil.Logger{},
@@ -353,7 +371,6 @@ func TestJetStreamIntegrationSourcedStreamFound(t *testing.T) {
 		JsSubjects:             []string{"TESTSTREAM"},
 		JsStream:               streamName,
 		QueueGroup:             "telegraf_consumers",
-		PendingBytesLimit:      nats.DefaultSubPendingBytesLimit,
 		PendingMessageLimit:    nats.DefaultSubPendingMsgsLimit,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		Log:                    testutil.Logger{},
