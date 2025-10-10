@@ -179,12 +179,16 @@ func TestSendReceive(t *testing.T) {
 			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
 
 			// Acknowledge the message and check undelivered tracking
+			plugin.Lock()
 			require.Len(t, plugin.undelivered, int(publisher.conn.Stats().OutMsgs))
+			plugin.Unlock()
 			for _, m := range actual {
 				m.Accept()
 			}
 
 			require.Eventually(t, func() bool {
+				plugin.Lock()
+				defer plugin.Unlock()
 				return len(plugin.undelivered) == 0
 			}, time.Second, 100*time.Millisecond, "undelivered messages not cleared")
 		})
@@ -269,12 +273,16 @@ func TestJetStreamIntegrationSendReceive(t *testing.T) {
 
 	// Acknowledge the message and check undelivered tracking
 	log.Clear()
+	plugin.Lock()
 	require.Len(t, plugin.undelivered, 1)
+	plugin.Unlock()
 	for _, m := range actual {
 		m.Accept()
 	}
 
 	require.Eventually(t, func() bool {
+		plugin.Lock()
+		defer plugin.Unlock()
 		return len(plugin.undelivered) == 0
 	}, time.Second, 100*time.Millisecond, "undelivered messages not cleared")
 

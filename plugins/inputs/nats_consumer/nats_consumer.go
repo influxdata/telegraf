@@ -239,8 +239,10 @@ func (n *NatsConsumer) receiver(ctx context.Context) {
 				for _, m := range metrics {
 					m.AddTag("subject", msg.Subject)
 				}
+				n.Lock()
 				id := n.acc.AddTrackingMetricGroup(metrics)
 				n.undelivered[id] = msg
+				n.Unlock()
 			}
 		}
 	}
