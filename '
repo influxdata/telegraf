@@ -13,6 +13,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+
 	// Legacy ADAL package - kept for backward compatibility
 	"github.com/Azure/go-autorest/autorest/adal"
 	mssql "github.com/microsoft/go-mssqldb"
@@ -170,19 +171,18 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 			return fmt.Errorf("unknown auth method: %v", s.AuthMethod)
 		}
 
-		// Use max_open_connections if any
+		// Set max open connection
 		if s.MaxOpenConnections > 0 {
 			pool.SetMaxOpenConns(s.MaxOpenConnections)
 		} else {
 			pool.SetMaxOpenConns(0)
 		}
 
-		// Use max_idle_connections if any
 		if s.MaxIdleConnections > 0 {
 			pool.SetMaxIdleConns(s.MaxIdleConnections)
 		} else {
 
-			pool.SetMaxIdleConns(2)
+			pool.SetMaxOpenConns(0)
 		}
 
 		s.pools = append(s.pools, pool)
@@ -696,7 +696,9 @@ func (s *SQLServer) refreshAzureToken() (*azureToken, error) {
 func init() {
 	inputs.Add("sqlserver", func() telegraf.Input {
 		return &SQLServer{
-			AuthMethod: "connection_string",
+			AuthMethod:         "connection_string",
+			MaxOpenConnections: 0,
+			MaxIdleConnections: 2,
 		}
 	})
 }
