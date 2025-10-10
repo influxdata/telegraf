@@ -181,7 +181,6 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 		if s.MaxIdleConnections > 0 {
 			pool.SetMaxIdleConns(s.MaxIdleConnections)
 		} else {
-
 			pool.SetMaxIdleConns(2)
 		}
 
