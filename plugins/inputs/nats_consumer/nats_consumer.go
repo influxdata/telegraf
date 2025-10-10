@@ -156,12 +156,6 @@ func (n *NatsConsumer) Start(acc telegraf.Accumulator) error {
 						return err
 					}
 
-					// set the subscription pending limits
-					err = sub.SetPendingLimits(n.PendingMessageLimit, n.PendingBytesLimit)
-					if err != nil {
-						return err
-					}
-
 					n.jsSubs = append(n.jsSubs, sub)
 				}
 			}
