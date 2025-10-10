@@ -10,7 +10,7 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-// Builds a module that defines all the supported logging functions which will log using the provided logger
+// LogModule builds a module that defines all the supported logging functions which will log using the provided logger
 func LogModule(logger telegraf.Logger) *starlarkstruct.Module {
 	var logFunc = func(_ *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 		return log(b, args, kwargs, logger)

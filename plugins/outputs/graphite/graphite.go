@@ -210,7 +210,7 @@ func (g *Graphite) checkEOF(conn net.Conn) error {
 	return nil
 }
 
-// Choose a random server in the cluster to write to until a successful write
+// Write chooses a random server in the cluster to write to until a successful write
 // occurs, logging each unsuccessful. If all servers fail, return error.
 func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// Prepare data

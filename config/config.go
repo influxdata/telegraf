@@ -468,7 +468,7 @@ func WalkDirectory(path string) ([]string, error) {
 	return files, filepath.Walk(path, walkfn)
 }
 
-// Try to find a default config file at these locations (in order):
+// GetDefaultConfigPath will try to find a default config file at these locations (in order):
 //  1. $TELEGRAF_CONFIG_PATH
 //  2. $HOME/.telegraf/telegraf.conf
 //  3. /etc/telegraf/telegraf.conf and /etc/telegraf/telegraf.d/*.conf
