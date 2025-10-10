@@ -105,7 +105,7 @@ type Config struct {
 	seenAgentTableOnce sync.Once
 }
 
-// Ordered plugins used to keep the order in which they appear in a file
+// OrderedPlugin is used to keep the order in which they appear in a file
 type OrderedPlugin struct {
 	Line   int
 	plugin any
