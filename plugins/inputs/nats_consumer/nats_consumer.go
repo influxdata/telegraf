@@ -25,6 +25,8 @@ var (
 )
 
 type NatsConsumer struct {
+	sync.Mutex
+
 	QueueGroup             string          `toml:"queue_group"`
 	Subjects               []string        `toml:"subjects"`
 	Servers                []string        `toml:"servers"`
@@ -247,6 +249,9 @@ func (n *NatsConsumer) receiver(ctx context.Context) {
 }
 
 func (n *NatsConsumer) onDelivery(track telegraf.DeliveryInfo) bool {
+	n.Lock()
+	defer n.Unlock()
+
 	msg, ok := n.undelivered[track.ID()]
 	if !ok {
 		// Added by a previous connection
