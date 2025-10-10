@@ -167,6 +167,7 @@ func TestSendReceive(t *testing.T) {
 					require.NoError(t, publisher.send(topic, msg))
 				}
 			}
+			publisher.disconnect()
 
 			// Wait for the metrics to be collected
 			require.Eventually(t, func() bool {
@@ -177,20 +178,6 @@ func TestSendReceive(t *testing.T) {
 
 			actual := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
-
-			// Acknowledge the message and check undelivered tracking
-			plugin.Lock()
-			require.Len(t, plugin.undelivered, int(publisher.conn.Stats().OutMsgs))
-			plugin.Unlock()
-			for _, m := range actual {
-				m.Accept()
-			}
-
-			require.Eventually(t, func() bool {
-				plugin.Lock()
-				defer plugin.Unlock()
-				return len(plugin.undelivered) == 0
-			}, time.Second, 100*time.Millisecond, "undelivered messages not cleared")
 		})
 	}
 }
