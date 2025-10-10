@@ -65,6 +65,48 @@ func TestMockResult(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, actual)
 }
 
+func TestMockLDAPI(t *testing.T) {
+	// mock a query result
+	mockSearchResult := &ldap.SearchResult{
+		Entries: []*ldap.Entry{
+			{
+				DN:         "cn=Total,cn=Connections,cn=Monitor",
+				Attributes: []*ldap.EntryAttribute{{Name: "monitorCounter", Values: []string{"1"}}},
+			},
+		},
+	}
+
+	// Setup the plugin
+	plugin := &LDAP{
+		Server: "ldapi://%2ftmp%2fsocket",
+	}
+	require.NoError(t, plugin.Init())
+
+	// Setup the expectations
+	expected := []telegraf.Metric{
+		metric.New(
+			"openldap",
+			map[string]string{
+				"path": "/tmp/socket",
+			},
+			map[string]interface{}{
+				"total_connections": int64(1),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	// Retrieve the converter
+	requests := plugin.newOpenLDAPConfig()
+	require.Len(t, requests, 1)
+	converter := requests[0].convert
+	require.NotNil(t, converter)
+
+	// Test metric conversion
+	actual := converter(mockSearchResult, time.Unix(0, 0))
+	testutil.RequireMetricsEqual(t, expected, actual)
+}
+
 func TestInvalidTLSMode(t *testing.T) {
 	plugin := &LDAP{
 		Server: "foo://localhost",
