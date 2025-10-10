@@ -55,6 +55,7 @@ type NatsConsumer struct {
 	// channel for all NATS read errors
 	errs   chan error
 	acc    telegraf.TrackingAccumulator
+	sem    semaphore
 	wg     sync.WaitGroup
 	cancel context.CancelFunc
 }
@@ -85,7 +86,9 @@ func (n *NatsConsumer) SetParser(parser telegraf.Parser) {
 
 // Start the nats consumer. Caller must call *NatsConsumer.Stop() to clean up.
 func (n *NatsConsumer) Start(acc telegraf.Accumulator) error {
+	n.sem = make(semaphore, n.MaxUndeliveredMessages)
 	n.acc = acc.WithTracking(n.MaxUndeliveredMessages)
+	n.undelivered = make(map[telegraf.TrackingID]*nats.Msg)
 
 	options := []nats.Option{
 		nats.MaxReconnects(-1),
@@ -167,6 +170,13 @@ func (n *NatsConsumer) Start(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	n.cancel = cancel
 
+	// Start goroutine to handle delivery notifications from accumulator.
+	n.wg.Add(1)
+	go func() {
+		defer n.wg.Done()
+		n.waitForDelivery(ctx)
+	}()
+
 	// Start the message reader
 	n.wg.Add(1)
 	go func() {
@@ -201,36 +211,24 @@ func (n *NatsConsumer) natsErrHandler(c *nats.Conn, s *nats.Subscription, e erro
 // receiver() reads all incoming messages from NATS, and parses them into
 // telegraf metrics.
 func (n *NatsConsumer) receiver(ctx context.Context) {
-	n.undelivered = make(map[telegraf.TrackingID]*nats.Msg)
-	sem := make(semaphore, n.MaxUndeliveredMessages)
-
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case track := <-n.acc.Delivered():
-			if n.onDelivery(track) {
-				<-sem
-			}
 		case err := <-n.errs:
 			n.Log.Error(err)
-		case sem <- empty{}:
+		case n.sem <- empty{}:
 			select {
 			case <-ctx.Done():
 				return
 			case err := <-n.errs:
-				<-sem
+				<-n.sem
 				n.Log.Error(err)
-			case track := <-n.acc.Delivered():
-				if n.onDelivery(track) {
-					<-sem
-					<-sem
-				}
 			case msg := <-n.in:
 				metrics, err := n.parser.Parse(msg.Data)
 				if err != nil {
 					n.Log.Errorf("Failed to parse message in subject %s: %v", msg.Subject, err)
-					<-sem
+					<-n.sem
 					continue
 				}
 				if len(metrics) == 0 {
@@ -248,30 +246,42 @@ func (n *NatsConsumer) receiver(ctx context.Context) {
 	}
 }
 
-func (n *NatsConsumer) onDelivery(track telegraf.DeliveryInfo) bool {
+func (n *NatsConsumer) waitForDelivery(parentCtx context.Context) {
+	for {
+		select {
+		case <-parentCtx.Done():
+			return
+		case track := <-n.acc.Delivered():
+			<-n.sem
+			msg := n.removeDelivered(track.ID())
+
+			if msg != nil {
+				if track.Delivered() {
+					err := msg.Ack()
+					if err != nil {
+						n.Log.Errorf("Failed to Ack message on subject %s: %v", msg.Subject, err)
+					}
+				} else {
+					err := msg.Nak()
+					if err != nil {
+						n.Log.Errorf("Failed to Nak message on subject %s: %v", msg.Subject, err)
+					}
+				}
+			}
+		}
+	}
+}
+
+func (n *NatsConsumer) removeDelivered(id telegraf.TrackingID) *nats.Msg {
 	n.Lock()
 	defer n.Unlock()
 
-	msg, ok := n.undelivered[track.ID()]
+	msg, ok := n.undelivered[id]
 	if !ok {
-		// Added by a previous connection
-		return false
+		return nil
 	}
-
-	if track.Delivered() {
-		err := msg.Ack()
-		if err != nil {
-			n.Log.Errorf("Failed to Ack message on subject %s: %s", msg.Subject, err.Error())
-		}
-	} else {
-		err := msg.Nak()
-		if err != nil {
-			n.Log.Errorf("Failed to Nak message on subject %s: %s", msg.Subject, err.Error())
-		}
-	}
-
-	delete(n.undelivered, track.ID())
-	return true
+	delete(n.undelivered, id)
+	return msg
 }
 
 func (n *NatsConsumer) clean() {
