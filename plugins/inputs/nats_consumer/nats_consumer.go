@@ -233,7 +233,7 @@ func (n *NatsConsumer) receiver(ctx context.Context) {
 			case msg := <-n.in:
 				metrics, err := n.parser.Parse(msg.Data)
 				if err != nil {
-					n.Log.Errorf("Failed to parse message in subject %s: %s", msg.Subject, err.Error())
+					n.Log.Errorf("Failed to parse message in subject %s: %v", msg.Subject, err)
 					<-sem
 					continue
 				}
