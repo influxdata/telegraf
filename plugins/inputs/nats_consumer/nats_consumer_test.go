@@ -1,7 +1,6 @@
 package nats_consumer
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -15,7 +14,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestStartStop(t *testing.T) {
+func TestIntegrationStartStop(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -29,7 +28,7 @@ func TestStartStop(t *testing.T) {
 	defer container.Terminate()
 
 	plugin := &NatsConsumer{
-		Servers:                []string{fmt.Sprintf("nats://%s:%s", container.Address, container.Ports["4222"])},
+		Servers:                []string{"nats://" + container.Address + ":" + container.Ports["4222"]},
 		Subjects:               []string{"telegraf"},
 		QueueGroup:             "telegraf_consumers",
 		PendingMessageLimit:    nats.DefaultSubPendingMsgsLimit,
@@ -42,7 +41,7 @@ func TestStartStop(t *testing.T) {
 	plugin.Stop()
 }
 
-func TestSendReceive(t *testing.T) {
+func TestIntegrationSendReceive(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -54,7 +53,7 @@ func TestSendReceive(t *testing.T) {
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
-	addr := fmt.Sprintf("nats://%s:%s", container.Address, container.Ports["4222"])
+	addr := "nats://" + container.Address + ":" + container.Ports["4222"]
 
 	tests := []struct {
 		name     string
