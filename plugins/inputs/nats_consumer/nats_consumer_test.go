@@ -167,7 +167,6 @@ func TestSendReceive(t *testing.T) {
 					require.NoError(t, publisher.send(topic, msg))
 				}
 			}
-			publisher.disconnect()
 
 			// Wait for the metrics to be collected
 			require.Eventually(t, func() bool {
@@ -178,6 +177,16 @@ func TestSendReceive(t *testing.T) {
 
 			actual := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
+
+			// Acknowledge the message and check undelivered tracking
+			require.Len(t, plugin.undelivered, int(publisher.conn.Stats().OutMsgs))
+			for _, m := range actual {
+				m.Accept()
+			}
+
+			require.Eventually(t, func() bool {
+				return len(plugin.undelivered) == 0
+			}, time.Second, 100*time.Millisecond, "undelivered messages not cleared")
 		})
 	}
 }
@@ -213,6 +222,7 @@ func TestJetStreamIntegrationSendReceive(t *testing.T) {
 	require.NoError(t, err)
 
 	// Setup the plugin for JetStream
+	log := testutil.CaptureLogger{}
 	plugin := &NatsConsumer{
 		Servers:                []string{addr},
 		JsSubjects:             []string{subject},
@@ -220,7 +230,7 @@ func TestJetStreamIntegrationSendReceive(t *testing.T) {
 		QueueGroup:             "telegraf_consumers",
 		PendingMessageLimit:    nats.DefaultSubPendingMsgsLimit,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
-		Log:                    testutil.Logger{},
+		Log:                    &log,
 	}
 
 	parser := &influx.Parser{}
@@ -256,6 +266,19 @@ func TestJetStreamIntegrationSendReceive(t *testing.T) {
 		),
 	}
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
+
+	// Acknowledge the message and check undelivered tracking
+	log.Clear()
+	require.Len(t, plugin.undelivered, 1)
+	for _, m := range actual {
+		m.Accept()
+	}
+
+	require.Eventually(t, func() bool {
+		return len(plugin.undelivered) == 0
+	}, time.Second, 100*time.Millisecond, "undelivered messages not cleared")
+
+	require.Empty(t, log.Messages(), "no warnings or errors should be logged")
 }
 
 func TestJetStreamIntegrationSourcedStreamNotFound(t *testing.T) {
