@@ -41,11 +41,21 @@ commands:
           condition:
             equal: [ "386", << parameters.arch >> ]
           steps:
+      # Disable -race on Windows due to issues with CGO in the test-go-windows CI job.
+      # See https://github.com/influxdata/telegraf/pull/17789
+      #      - run: echo 'export RACE="-race"' >> $BASH_ENV
             - unless:
                 condition:
                   equal: [ windows, << parameters.os >> ]
                 steps:
                   - run: echo 'export RACE="-race"' >> $BASH_ENV
+
+      # Disable CGO on Windows for the same reason as above.
+      #- when:
+      #    condition:
+      #      equal: [ windows, << parameters.os >> ]
+      #    steps:
+      #      - run: echo 'export CGO_ENABLED=1' >> $BASH_ENV
       - when:
           condition:
             equal: [ darwin, << parameters.os >> ]
