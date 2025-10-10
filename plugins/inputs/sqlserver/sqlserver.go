@@ -13,6 +13,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+
 	// Legacy ADAL package - kept for backward compatibility
 	"github.com/Azure/go-autorest/autorest/adal"
 	mssql "github.com/microsoft/go-mssqldb"
@@ -54,6 +55,7 @@ type SQLServer struct {
 	IncludeQuery []string         `toml:"include_query"`
 	ExcludeQuery []string         `toml:"exclude_query"`
 	HealthMetric bool             `toml:"health_metric"`
+	MaxLifeTime  time.Duration    `toml:"max_lifetime"`
 	Log          telegraf.Logger  `toml:"-"`
 
 	pools   []*sql.DB
@@ -129,6 +131,10 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 			// empty username/password causes use of Windows
 			// integrated authentication.
 			pool, err = sql.Open("mssql", dsn.String())
+			pool.SetMaxOpenConns(1)
+			pool.SetMaxIdleConns(1)
+			pool.SetConnMaxLifetime(s.MaxLifeTime)
+
 			dsn.Destroy()
 			if err != nil {
 				acc.AddError(err)
@@ -164,6 +170,9 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 			}
 
 			pool = sql.OpenDB(connector)
+			pool.SetMaxOpenConns(1)
+			pool.SetMaxIdleConns(1)
+			pool.SetConnMaxLifetime(s.MaxLifeTime)
 		default:
 			return fmt.Errorf("unknown auth method: %v", s.AuthMethod)
 		}
