@@ -178,6 +178,10 @@ func TestSendReceive(t *testing.T) {
 
 			actual := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
+
+			plugin.Lock()
+			defer plugin.Unlock()
+			require.Empty(t, plugin.undelivered)
 		})
 	}
 }

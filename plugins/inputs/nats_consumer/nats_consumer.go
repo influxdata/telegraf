@@ -12,7 +12,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -241,10 +240,13 @@ func (n *NatsConsumer) receiver(ctx context.Context) {
 					m.AddTag("subject", msg.Subject)
 				}
 				id := n.acc.AddTrackingMetricGroup(metrics)
-				if !choice.Contains(msg.Subject, n.Subjects) {
-					n.Lock()
-					n.undelivered[id] = msg
-					n.Unlock()
+				for _, s := range n.jsSubs {
+					if msg.Sub == s {
+						n.Lock()
+						n.undelivered[id] = msg
+						n.Unlock()
+						break
+					}
 				}
 			}
 		}
