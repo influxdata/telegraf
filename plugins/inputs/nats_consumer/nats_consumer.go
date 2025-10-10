@@ -144,7 +144,7 @@ func (n *NatsConsumer) Start(acc telegraf.Accumulator) error {
 			if n.JsStream != "" {
 				subOptions = append(subOptions, nats.BindStream(n.JsStream))
 			}
-			n.jsConn, connErr = n.conn.JetStream(nats.PublishAsyncMaxPending(n.PendingMessageLimit))
+			n.jsConn, connErr = n.conn.JetStream(nats.PublishAsyncMaxPending(256))
 			if connErr != nil {
 				return connErr
 			}
