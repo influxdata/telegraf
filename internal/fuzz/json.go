@@ -1,6 +1,6 @@
 package fuzz
 
-// https://github.com/google/AFL/blob/master/dictionaries/json.dict
+// JSONDictionary from https://github.com/google/AFL/blob/master/dictionaries/json.dict
 var JSONDictionary = []string{
 	"0",
 	",0",
