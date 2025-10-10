@@ -17,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 )
 
-// Common HTTP client struct.
+// HTTPClientConfig is a common HTTP client struct.
 type HTTPClientConfig struct {
 	Timeout               config.Duration `toml:"timeout"`
 	IdleConnTimeout       config.Duration `toml:"idle_conn_timeout"`
