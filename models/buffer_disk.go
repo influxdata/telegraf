@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -63,10 +62,6 @@ func (b *DiskBuffer) Len() int {
 }
 
 func (b *DiskBuffer) length() int {
-	if b.isEmpty() {
-		return 0
-	}
-
 	return b.entries() - len(b.mask)
 }
 
@@ -93,14 +88,6 @@ func (b *DiskBuffer) writeIndex() uint64 {
 		panic(err) // can only occur with a corrupt or closed wal file
 	}
 	return index + 1
-}
-
-func (b *DiskBuffer) isEmpty() bool {
-	isEmpty, err := b.file.IsEmpty()
-	if err != nil {
-		panic(err) // can only occur with a corrupt or closed wal file
-	}
-	return isEmpty
 }
 
 func (b *DiskBuffer) Add(metrics ...telegraf.Metric) int {
@@ -269,21 +256,9 @@ func (b *DiskBuffer) Stats() BufferStats {
 }
 
 func (b *DiskBuffer) Close() error {
-	// Check this before the close as it will panic if we check after closing
-	empty := b.isEmpty()
 	if err := b.file.Close(); err != nil {
 		return fmt.Errorf("closing buffer failed: %w", err)
 	}
-
-	// Remove all remaining data on disk to make sure we won't get any metric
-	// in cases where the buffer is empty. This is required because we cannot
-	// truncate all metrics from the buffer.
-	b.Lock()
-	defer b.Unlock()
-	if empty {
-		return os.RemoveAll(b.path)
-	}
-
 	return nil
 }
 

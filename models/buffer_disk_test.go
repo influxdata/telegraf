@@ -97,7 +97,6 @@ func TestDiskBufferEmptyReuse(t *testing.T) {
 	buf.EndTransaction(tx)
 
 	// Ensure all storage elements of the buffer are consistent with it being empty
-	require.True(t, diskBuf.isEmpty())
 	require.Equal(t, 0, diskBuf.Len())
 	require.Equal(t, 0, diskBuf.entries())
 	require.Empty(t, diskBuf.mask)
@@ -147,8 +146,8 @@ func TestDiskBufferEmptyClose(t *testing.T) {
 	buf.EndTransaction(tx)
 
 	// Make sure the buffer was fully emptied
-	require.True(t, diskBuf.isEmpty())
 	require.Equal(t, 0, diskBuf.Len())
+	require.Empty(t, diskBuf.entries())
 
 	// Close the buffer to simulate stopping Telegraf in a normal shutdown
 	require.NoError(t, diskBuf.Close())
@@ -308,7 +307,6 @@ func TestDiskBufferTrackingOnOutputOutage(t *testing.T) {
 	// Make sure the new buffer is fully empty
 	require.Zero(t, diskBuf.length())
 	require.Zero(t, diskBuf.entries())
-	require.True(t, diskBuf.isEmpty())
 
 	// Add a first metric and make sure we get it on transaction. Accept the
 	// metric simulating that the buffer is up.
