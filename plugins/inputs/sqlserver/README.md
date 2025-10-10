@@ -67,6 +67,9 @@ to use them.
   ## Possible values for database_type are - "SQLServer" or "AzureSQLDB" or "AzureSQLManagedInstance" or "AzureSQLPool"
   database_type = "SQLServer"
 
+  ## Sets the maximum amount of time (second) a connection may be reused.
+  max_lifetime = 300
+
   ## A list of queries to include. If not specified, all the below listed queries are used.
   include_query = []
 
