@@ -171,11 +171,11 @@ to use them.
   ## Connection pool configuration.
   ## Set the maximum number of open connections to the database.
   ## Default is 0 (unlimited)
-  max_open_connections = 0
+  # max_open_connections = 0
 
   ## Set the maximum number of connections in the idle connection pool.
   ## Default is 2
-  max_idle_connections = 2
+  # max_idle_connections = 2
 ```
 
 ### Additional Setup
