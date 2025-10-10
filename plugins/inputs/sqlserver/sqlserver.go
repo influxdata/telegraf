@@ -46,16 +46,17 @@ const (
 )
 
 type SQLServer struct {
-	Servers      []*config.Secret `toml:"servers"`
-	QueryTimeout config.Duration  `toml:"query_timeout"`
-	AuthMethod   string           `toml:"auth_method"`
-	ClientID     string           `toml:"client_id"`
-	DatabaseType string           `toml:"database_type"`
-	IncludeQuery []string         `toml:"include_query"`
-	ExcludeQuery []string         `toml:"exclude_query"`
-	HealthMetric bool             `toml:"health_metric"`
-	MaxLifeTime  time.Duration    `toml:"max_lifetime"`
-	Log          telegraf.Logger  `toml:"-"`
+	Servers            []*config.Secret `toml:"servers"`
+	QueryTimeout       config.Duration  `toml:"query_timeout"`
+	AuthMethod         string           `toml:"auth_method"`
+	ClientID           string           `toml:"client_id"`
+	DatabaseType       string           `toml:"database_type"`
+	IncludeQuery       []string         `toml:"include_query"`
+	ExcludeQuery       []string         `toml:"exclude_query"`
+	HealthMetric       bool             `toml:"health_metric"`
+	MaxOpenConnections int              `toml:"max_open_connections"`
+	MaxIdleConnections int              `toml:"max_idle_connections"`
+	Log                telegraf.Logger  `toml:"-"`
 
 	pools   []*sql.DB
 	queries mapQuery
@@ -130,10 +131,6 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 			// empty username/password causes use of Windows
 			// integrated authentication.
 			pool, err = sql.Open("mssql", dsn.String())
-			pool.SetMaxOpenConns(1)
-			pool.SetMaxIdleConns(1)
-			pool.SetConnMaxLifetime(s.MaxLifeTime)
-
 			dsn.Destroy()
 			if err != nil {
 				acc.AddError(err)
@@ -169,12 +166,12 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 			}
 
 			pool = sql.OpenDB(connector)
-			pool.SetMaxOpenConns(1)
-			pool.SetMaxIdleConns(1)
-			pool.SetConnMaxLifetime(s.MaxLifeTime)
 		default:
 			return fmt.Errorf("unknown auth method: %v", s.AuthMethod)
 		}
+
+		pool.SetMaxOpenConns(s.MaxOpenConnections)
+		pool.SetMaxIdleConns(s.MaxIdleConnections)
 
 		s.pools = append(s.pools, pool)
 	}

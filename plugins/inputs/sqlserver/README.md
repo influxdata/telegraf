@@ -67,9 +67,6 @@ to use them.
   ## Possible values for database_type are - "SQLServer" or "AzureSQLDB" or "AzureSQLManagedInstance" or "AzureSQLPool"
   database_type = "SQLServer"
 
-  ## Sets the maximum amount of time (second) a connection may be reused.
-  max_lifetime = 300
-
   ## A list of queries to include. If not specified, all the below listed queries are used.
   include_query = []
 
@@ -170,6 +167,15 @@ to use them.
   ## and following as optional (if mentioned in the include_query list)
   ## - SQLServerAvailabilityReplicaStates
   ## - SQLServerDatabaseReplicaStates
+
+  ## Connection pool configuration.
+  ## Set the maximum number of open connections to the database.
+  ## Default is 0 (unlimited)
+  max_open_connections = 0
+
+  ## Set the maximum number of connections in the idle connection pool.
+  ## Default is 2
+  max_idle_connections = 2
 ```
 
 ### Additional Setup
