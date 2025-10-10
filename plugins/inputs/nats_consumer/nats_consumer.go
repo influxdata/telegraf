@@ -34,6 +34,7 @@ type NatsConsumer struct {
 	Credentials            string          `toml:"credentials"`
 	NkeySeed               string          `toml:"nkey_seed"`
 	JsSubjects             []string        `toml:"jetstream_subjects"`
+	JsStream               string          `toml:"jetstream_stream"`
 	PendingMessageLimit    int             `toml:"pending_message_limit"`
 	PendingBytesLimit      int             `toml:"pending_bytes_limit" deprecated:"1.37.0;1.40.0;unused"`
 	MaxUndeliveredMessages int             `toml:"max_undelivered_messages"`
@@ -137,6 +138,12 @@ func (n *NatsConsumer) Start(acc telegraf.Accumulator) error {
 
 		if len(n.JsSubjects) > 0 {
 			var connErr error
+			subOptions := []nats.SubOpt{
+				nats.ManualAck(),
+			}
+			if n.JsStream != "" {
+				subOptions = append(subOptions, nats.BindStream(n.JsStream))
+			}
 			n.jsConn, connErr = n.conn.JetStream(nats.PublishAsyncMaxPending(n.PendingMessageLimit))
 			if connErr != nil {
 				return connErr
@@ -144,7 +151,13 @@ func (n *NatsConsumer) Start(acc telegraf.Accumulator) error {
 
 			if n.jsConn != nil {
 				for _, jsSub := range n.JsSubjects {
-					sub, err := n.jsConn.ChanQueueSubscribe(jsSub, n.QueueGroup, n.in, nats.ManualAck())
+					sub, err := n.jsConn.ChanQueueSubscribe(jsSub, n.QueueGroup, n.in, subOptions...)
+					if err != nil {
+						return err
+					}
+
+					// set the subscription pending limits
+					err = sub.SetPendingLimits(n.PendingMessageLimit, n.PendingBytesLimit)
 					if err != nil {
 						return err
 					}
