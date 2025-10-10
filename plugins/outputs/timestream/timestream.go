@@ -71,8 +71,9 @@ const (
 // MaxRecordsPerCall reflects Timestream limit of WriteRecords API call
 const MaxRecordsPerCall = 100
 
-// Default value for maximum number of parallel go routines to ingest/write data
-// when max_write_go_routines is not specified in the config
+// MaxWriteRoutinesDefault is the default value for maximum
+// number of parallel go routines to ingest/write data when
+// max_write_go_routines is not specified in the config
 const MaxWriteRoutinesDefault = 1
 
 // WriteFactory function provides a way to mock the client instantiation for testing purposes.
