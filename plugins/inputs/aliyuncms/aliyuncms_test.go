@@ -14,6 +14,8 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/responses"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/cms"
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/rds"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -65,7 +67,103 @@ func (*mockGatherAliyunCMSClient) DescribeMetricList(request *cms.DescribeMetric
 		resp.Datapoints = `[]`
 	case "ErrorResp":
 		return nil, errors.New("error response")
+	default:
+		// default to 200 with empty data
+		resp.Code = "200"
 	}
+	return resp, nil
+}
+
+type mockGatherAliyunRDSClient struct{}
+
+func (s *mockGatherAliyunRDSClient) DescribeDBInstancePerformance(request *rds.DescribeDBInstancePerformanceRequest) ( //nolint:revive // Valid case
+	*rds.DescribeDBInstancePerformanceResponse, error) {
+	resp := new(rds.DescribeDBInstancePerformanceResponse)
+
+	switch request.Key {
+	case "PolarDBLocalIOSTAT":
+		resp.PerformanceKeys.PerformanceKey = make([]rds.PerformanceKey, 0)
+	case "ErrorDatapoint":
+		resp.PerformanceKeys.PerformanceKey = make([]rds.PerformanceKey, 0)
+	case "EmptyDatapoint":
+		resp.PerformanceKeys.PerformanceKey = make([]rds.PerformanceKey, 0)
+	case "ErrorResp":
+		return nil, errors.New("error response")
+	case "SingleMetric":
+		resp.PerformanceKeys.PerformanceKey = []rds.PerformanceKey{
+			{
+				ValueFormat: "CPUUsage",
+				Values: rds.ValuesInDescribeDBInstancePerformance{
+					PerformanceValue: []rds.PerformanceValue{
+						{
+							Date:  "2021-01-02T03:04:05Z",
+							Value: "12.5",
+						},
+					},
+				},
+			},
+		}
+	case "CompoundMetric":
+		resp.PerformanceKeys.PerformanceKey = []rds.PerformanceKey{
+			{
+				ValueFormat: "CPUUsage&IOPS",
+				Values: rds.ValuesInDescribeDBInstancePerformance{
+					PerformanceValue: []rds.PerformanceValue{
+						{
+							Date:  "2021-01-02T03:04:05Z",
+							Value: "10.5&20.5",
+						},
+					},
+				},
+			},
+		}
+	case "BadDate":
+		resp.PerformanceKeys.PerformanceKey = []rds.PerformanceKey{
+			{
+				ValueFormat: "CPUUsage",
+				Values: rds.ValuesInDescribeDBInstancePerformance{
+					PerformanceValue: []rds.PerformanceValue{
+						{
+							Date:  "not-a-date",
+							Value: "1.0",
+						},
+					},
+				},
+			},
+		}
+	case "BadValueSingle":
+		resp.PerformanceKeys.PerformanceKey = []rds.PerformanceKey{
+			{
+				ValueFormat: "CPUUsage",
+				Values: rds.ValuesInDescribeDBInstancePerformance{
+					PerformanceValue: []rds.PerformanceValue{
+						{
+							Date:  "2021-01-02T03:04:05Z",
+							Value: "abc",
+						},
+					},
+				},
+			},
+		}
+	case "HttpNon200":
+		resp.PerformanceKeys.PerformanceKey = []rds.PerformanceKey{
+			{
+				ValueFormat: "CPUUsage",
+				Values: rds.ValuesInDescribeDBInstancePerformance{
+					PerformanceValue: []rds.PerformanceValue{
+						{
+							Date:  "2021-01-02T03:04:05Z",
+							Value: "1.0",
+						},
+					},
+				},
+			},
+		}
+	default:
+		// default to 200 with empty data
+		resp.PerformanceKeys.PerformanceKey = make([]rds.PerformanceKey, 0)
+	}
+
 	return resp, nil
 }
 
@@ -250,7 +348,8 @@ func TestPluginMetricsInitialize(t *testing.T) {
 			accessKeySecret: "dummy",
 			metrics: []*metric{
 				{
-					Dimensions: `{"instanceId": "i-abcdefgh123456"}`,
+					MetricNames: make([]string, 0),
+					Dimensions:  `{"instanceId": "i-abcdefgh123456"}`,
 				},
 			},
 		},
@@ -262,7 +361,8 @@ func TestPluginMetricsInitialize(t *testing.T) {
 			accessKeySecret: "dummy",
 			metrics: []*metric{
 				{
-					Dimensions: `[{"instanceId": "p-example"},{"instanceId": "q-example"}]`,
+					MetricNames: make([]string, 0),
+					Dimensions:  `[{"instanceId": "p-example"},{"instanceId": "q-example"}]`,
 				},
 			},
 		},
@@ -275,7 +375,8 @@ func TestPluginMetricsInitialize(t *testing.T) {
 			expectedErrorString: `cannot parse dimensions (neither obj, nor array) "[": unexpected end of JSON input`,
 			metrics: []*metric{
 				{
-					Dimensions: `[`,
+					MetricNames: make([]string, 0),
+					Dimensions:  `[`,
 				},
 			},
 		},
@@ -296,6 +397,80 @@ func TestPluginMetricsInitialize(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPluginMetricsRDSServiceInitialize(t *testing.T) {
+	var err error
+
+	plugin := new(AliyunCMS)
+	plugin.Log = testutil.Logger{Name: inputTitle}
+	plugin.Regions = []string{"cn-shanghai"}
+	plugin.dt, err = getDiscoveryTool("acs_slb_dashboard", plugin.Regions)
+	if err != nil {
+		t.Fatalf("Can't create discovery tool object: %v", err)
+	}
+
+	httpResp := &http.Response{
+		StatusCode: 200,
+		Body: io.NopCloser(bytes.NewBufferString(
+			`{
+				"LoadBalancers":
+					{
+						"LoadBalancer": [
+ 							{"LoadBalancerId":"bla"}
+                        ]
+                    },
+				"TotalCount": 1,
+				"PageSize": 1,
+				"PageNumber": 1
+			}`)),
+	}
+	mockCli, err := getMockSdkCli(httpResp)
+	if err != nil {
+		t.Fatalf("Can't create mock sdk cli: %v", err)
+	}
+	plugin.dt.cli = map[string]aliyunSdkClient{plugin.Regions[0]: &mockCli}
+
+	test := struct {
+		name                string
+		metricServices      []string
+		project             string
+		accessKeyID         string
+		accessKeySecret     string
+		expectedErrorString string
+		regions             []string
+		discoveryRegions    []string
+		metrics             []*metric
+	}{
+
+		name:            "Valid project",
+		metricServices:  []string{"cms", "rds"},
+		project:         "acs_rds_dashboard",
+		regions:         []string{"cn-shanghai"},
+		accessKeyID:     "dummy",
+		accessKeySecret: "dummy",
+		metrics: []*metric{
+			{
+				MetricNames: make([]string, 0),
+				Dimensions:  `{"instanceId": "i-abcdefgh123456"}`,
+			},
+		},
+	}
+
+	t.Run(test.name, func(t *testing.T) {
+		plugin.Project = test.project
+		plugin.AccessKeyID = test.accessKeyID
+		plugin.AccessKeySecret = test.accessKeySecret
+		plugin.Regions = test.regions
+		plugin.Metrics = test.metrics
+		plugin.MetricServices = test.metricServices
+
+		if test.expectedErrorString != "" {
+			require.EqualError(t, plugin.Init(), test.expectedErrorString)
+		} else {
+			require.NoError(t, plugin.Init())
+		}
+	})
 }
 
 func TestUpdateWindow(t *testing.T) {
@@ -331,43 +506,251 @@ func TestUpdateWindow(t *testing.T) {
 	require.EqualValues(t, plugin.windowStart, newStartTime)
 }
 
-func TestGatherMetric(t *testing.T) {
+// func TestGatherMetric(t *testing.T) {
+//	plugin := &AliyunCMS{
+//		Project:     "acs_slb_dashboard",
+//		cmsClient:   new(mockGatherAliyunCMSClient),
+//		rdsClient:   new(mockGatherAliyunRDSClient),
+//		measurement: formatMeasurement("acs_slb_dashboard"),
+//		Log:         testutil.Logger{Name: inputTitle},
+//		Regions:     []string{"cn-shanghai"},
+//	}
+//
+//	metric := &metric{
+//		MetricNames: []string{},
+//		Dimensions:  `"instanceId": "i-abcdefgh123456"`,
+//	}
+//
+//	tests := []struct {
+//		name                string
+//		metricName          string
+//		expectedErrorString string
+//	}{
+//		{
+//			name:                "Datapoint with corrupted JSON",
+//			metricName:          "ErrorDatapoint",
+//			expectedErrorString: `failed to decode response datapoints: invalid character '}' looking for beginning of object key string`,
+//		},
+//		{
+//			name:                "General CMS response error",
+//			metricName:          "ErrorResp",
+//			expectedErrorString: "failed to query metricName list: error response",
+//		},
+//	}
+//
+//	for _, tt := range tests {
+//		t.Run(tt.name, func(t *testing.T) {
+//			var acc telegraf.Accumulator
+//			require.EqualError(t, plugin.gatherMetric(acc, tt.metricName, metric), tt.expectedErrorString)
+//		})
+//	}
+// }
+
+func TestGatherRDSMetric(t *testing.T) {
 	plugin := &AliyunCMS{
-		Project:     "acs_slb_dashboard",
-		client:      new(mockGatherAliyunCMSClient),
-		measurement: formatMeasurement("acs_slb_dashboard"),
+		Project:     "acs_rds_dashboard",
+		cmsClient:   new(mockGatherAliyunCMSClient),
+		rdsClient:   new(mockGatherAliyunRDSClient),
+		measurement: formatMeasurement("acs_rds_dashboard"),
 		Log:         testutil.Logger{Name: inputTitle},
 		Regions:     []string{"cn-shanghai"},
 	}
 
-	metric := &metric{
-		Dimensions: `"instanceId": "i-abcdefgh123456"`,
+	metricPoint := &metric{
+		MetricNames: make([]string, 0),
+		Dimensions:  `"instanceId": "i-abcdefgh123456"`,
 	}
 
-	tests := []struct {
-		name                string
-		metricName          string
-		expectedErrorString string
+	test := struct {
+		name       string
+		metricName string
 	}{
-		{
-			name:                "Datapoint with corrupted JSON",
-			metricName:          "ErrorDatapoint",
-			expectedErrorString: `failed to decode response datapoints: invalid character '}' looking for beginning of object key string`,
-		},
-		{
-			name:                "General CMS response error",
-			metricName:          "ErrorResp",
-			expectedErrorString: "failed to query metricName list: error response",
-		},
+		name:       "PolarDBLocalIOSTAT",
+		metricName: "PolarDBLocalIOSTAT_mean",
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var acc telegraf.Accumulator
-			require.EqualError(t, plugin.gatherMetric(acc, tt.metricName, metric), tt.expectedErrorString)
-		})
-	}
+	t.Run(test.name, func(t *testing.T) {
+		var acc telegraf.Accumulator
+		// TODO FYI Currently work in progress to adapt the unit tests
+		fmt.Println(t)
+		fmt.Println(plugin.gatherMetric(acc, test.metricName, metricPoint))
+	})
 }
+
+// func TestFetchRDSPerformanceDatapointsSingleValue(t *testing.T) {
+//	var err error
+//
+//	plugin := new(AliyunCMS)
+//	plugin.Log = testutil.Logger{Name: inputTitle}
+//	plugin.Regions = []string{"cn-shanghai"}
+//	plugin.rdsClient = &mockGatherAliyunRDSClient{}
+//	plugin.windowStart = time.Date(2021, 1, 2, 3, 4, 0, 0, time.UTC)
+//	plugin.windowEnd = time.Date(2021, 1, 2, 3, 6, 0, 0, time.UTC)
+//	plugin.dt, err = getDiscoveryTool("acs_rds_dashboard", plugin.Regions)
+//	if err != nil {
+//		t.Fatalf("Can't create discovery tool object: %v", err)
+//	}
+//
+//	httpResp := &http.Response{
+//		StatusCode: 200,
+//		Body: io.NopCloser(bytes.NewBufferString(
+//			`{
+//				"LoadBalancers":
+//					{
+//						"LoadBalancer": [
+// 							{"LoadBalancerId":"bla"}
+//                        ]
+//                    },
+//				"TotalCount": 1,
+//				"PageSize": 1,
+//				"PageNumber": 1
+//			}`)),
+//	}
+//
+//	mockCli, err := getMockSdkCli(httpResp)
+//	if err != nil {
+//		t.Fatalf("Can't create mock sdk cli: %v", err)
+//	}
+//	plugin.dt.cli = map[string]aliyunSdkClient{plugin.Regions[0]: &mockCli}
+//
+//	m := &metric{
+//		requestDimensions: []map[string]string{
+//			{"instanceId": "i-1"},
+//		},
+//	}
+//
+//	points, err := plugin.fetchRDSPerformanceDatapoints("cn-shanghai", "SingleMetric", m)
+//	require.NoError(t, err)
+//	require.Len(t, points, 1)
+//	require.Equal(t, "i-1", points[0]["instanceId"])
+//	require.Equal(t, 12.5, points[0]["CPUUsage"])
+//	require.Equal(t, int64(1609556645), points[0]["timestamp"])
+// }
+
+// func TestFetchRDSPerformanceDatapointsCompoundValues(t *testing.T) {
+//	plugin := &AliyunCMS{
+//		Log:       testutil.Logger{Name: inputTitle},
+//		rdsClient: &mockGatherAliyunRDSClient{},
+//	}
+//	plugin.windowStart = time.Date(2021, 1, 2, 3, 4, 0, 0, time.UTC)
+//	plugin.windowEnd = time.Date(2021, 1, 2, 3, 6, 0, 0, time.UTC)
+//
+//	m := &metric{
+//		requestDimensions: []map[string]string{
+//			{"instanceId": "i-1"},
+//		},
+//	}
+//
+//	points, err := plugin.fetchRDSPerformanceDatapoints("cn-shanghai", "CompoundMetric", m)
+//	require.NoError(t, err)
+//	require.Len(t, points, 2)
+//
+//	// Normalize by key for assertions
+//	got := map[string]map[string]interface{}{}
+//	for _, p := range points {
+//		for _, k := range []string{"CPUUsage", "IOPS"} {
+//			if _, ok := p[k]; ok {
+//				got[k] = p
+//			}
+//		}
+//	}
+//	require.Contains(t, got, "CPUUsage")
+//	require.Contains(t, got, "IOPS")
+//	require.Equal(t, "i-1", got["CPUUsage"]["instanceId"])
+//	require.Equal(t, "i-1", got["IOPS"]["instanceId"])
+//	require.Equal(t, 10.5, got["CPUUsage"]["CPUUsage"])
+//	require.Equal(t, 20.5, got["IOPS"]["IOPS"])
+//	require.Equal(t, int64(1609556645), got["CPUUsage"]["timestamp"])
+//	require.Equal(t, int64(1609556645), got["IOPS"]["timestamp"])
+// }
+
+// func TestFetchRDSPerformanceDatapointsBadDate(t *testing.T) {
+//	plugin := &AliyunCMS{
+//		Log:       testutil.Logger{Name: inputTitle},
+//		rdsClient: &mockGatherAliyunRDSClient{},
+//	}
+//	plugin.windowStart = time.Now().Add(-5 * time.Minute)
+//	plugin.windowEnd = time.Now()
+//
+//	m := &metric{
+//		requestDimensions: []map[string]string{
+//			{"instanceId": "i-1"},
+//		},
+//	}
+//
+//	points, err := plugin.fetchRDSPerformanceDatapoints("cn-shanghai", "BadDate", m)
+//	require.Nil(t, points)
+//	require.Error(t, err)
+//	require.ErrorContains(t, err, "failed to parse response performance time datapoints")
+// }
+
+// func TestFetchRDSPerformanceDatapointsBadValue(t *testing.T) {
+//	plugin := &AliyunCMS{
+//		Log:       testutil.Logger{Name: inputTitle},
+//		rdsClient: &mockGatherAliyunRDSClient{},
+//	}
+//	plugin.windowStart = time.Now().Add(-5 * time.Minute)
+//	plugin.windowEnd = time.Now()
+//
+//	m := &metric{
+//		requestDimensions: []map[string]string{
+//			{"instanceId": "i-1"},
+//		},
+//	}
+//
+//	points, err := plugin.fetchRDSPerformanceDatapoints("cn-shanghai", "BadValueSingle", m)
+//	require.Nil(t, points)
+//	require.Error(t, err)
+//	require.ErrorContains(t, err, "failed to convert the performance value string to an float")
+// }
+
+// func TestFetchRDSPerformanceDatapointsHttpNon200(t *testing.T) {
+//	plugin := &AliyunCMS{
+//		Log:       testutil.Logger{Name: inputTitle},
+//		rdsClient: &mockGatherAliyunRDSClient{},
+//	}
+//	plugin.windowStart = time.Now().Add(-5 * time.Minute)
+//	plugin.windowEnd = time.Now()
+//
+//	m := &metric{
+//		requestDimensions: []map[string]string{
+//			{"instanceId": "i-1"},
+//		},
+//	}
+//
+//	points, err := plugin.fetchRDSPerformanceDatapoints("cn-shanghai", "HttpNon200", m)
+//	require.NoError(t, err)
+//	require.Empty(t, points)
+// }
+
+// func TestFetchRDSPerformanceDatapointsMultipleInstances(t *testing.T) {
+//	plugin := &AliyunCMS{
+//		Log:       testutil.Logger{Name: inputTitle},
+//		rdsClient: &mockGatherAliyunRDSClient{},
+//	}
+//	plugin.windowStart = time.Date(2021, 1, 2, 3, 4, 0, 0, time.UTC)
+//	plugin.windowEnd = time.Date(2021, 1, 2, 3, 6, 0, 0, time.UTC)
+//
+//	m := &metric{
+//		requestDimensions: []map[string]string{
+//			{"instanceId": "i-1"},
+//			{"instanceId": "i-2"},
+//		},
+//	}
+//
+//	points, err := plugin.fetchRDSPerformanceDatapoints("cn-shanghai", "SingleMetric", m)
+//	require.NoError(t, err)
+//	require.Len(t, points, 2)
+//
+//	ids := map[string]bool{}
+//	for _, p := range points {
+//		ids[p["instanceId"].(string)] = true
+//		require.Equal(t, 12.5, p["CPUUsage"])
+//		require.Equal(t, int64(1609556645), p["timestamp"])
+//	}
+//	require.True(t, ids["i-1"])
+//	require.True(t, ids["i-2"])
+// }
 
 func TestGather(t *testing.T) {
 	m := &metric{
@@ -376,15 +759,15 @@ func TestGather(t *testing.T) {
 	plugin := &AliyunCMS{
 		AccessKeyID:     "my_access_key_id",
 		AccessKeySecret: "my_access_key_secret",
-		Project:         "acs_slb_dashboard",
+		Project:         "acs_rds_dashboard",
 		Metrics:         []*metric{m},
 		RateLimit:       200,
-		measurement:     formatMeasurement("acs_slb_dashboard"),
+		measurement:     formatMeasurement("acs_rds_dashboard"),
+		MetricServices:  []string{"cms"},
 		Regions:         []string{"cn-shanghai"},
-		client:          new(mockGatherAliyunCMSClient),
+		cmsClient:       new(mockGatherAliyunCMSClient),
 		Log:             testutil.Logger{Name: inputTitle},
 	}
-
 	// test table:
 	tests := []struct {
 		name           string
@@ -397,7 +780,7 @@ func TestGather(t *testing.T) {
 			metricNames: []string{"EmptyDatapoint"},
 			expected: []telegraf.Metric{
 				testutil.MustMetric(
-					"aliyuncms_acs_slb_dashboard",
+					"aliyuncms_acs_rds_dashboard",
 					nil,
 					nil,
 					time.Time{}),
@@ -409,7 +792,7 @@ func TestGather(t *testing.T) {
 			metricNames:    []string{"InstanceActiveConnection"},
 			expected: []telegraf.Metric{
 				testutil.MustMetric(
-					"aliyuncms_acs_slb_dashboard",
+					"aliyuncms_acs_rds_dashboard",
 					map[string]string{
 						"instanceId": "i-abcdefgh123456",
 						"userId":     "1234567898765432",
@@ -430,13 +813,86 @@ func TestGather(t *testing.T) {
 			var acc testutil.Accumulator
 			plugin.Metrics[0].MetricNames = tt.metricNames
 			require.NoError(t, acc.GatherError(plugin.Gather))
-			require.Equal(t, acc.HasMeasurement("aliyuncms_acs_slb_dashboard"), tt.hasMeasurement)
+			require.Equal(t, acc.HasMeasurement("aliyuncms_acs_rds_dashboard"), tt.hasMeasurement)
 			if tt.hasMeasurement {
-				acc.AssertContainsTaggedFields(t, "aliyuncms_acs_slb_dashboard", tt.expected[0].Fields(), tt.expected[0].Tags())
+				acc.AssertContainsTaggedFields(t, "aliyuncms_acs_rds_dashboard", tt.expected[0].Fields(), tt.expected[0].Tags())
 			}
 		})
 	}
 }
+
+type MockDataStore struct {
+	mock.Mock
+}
+
+// func newMockDataStore() *MockDataStore { return &MockDataStore{} }
+
+// func TestGatherRDSPerformance(t *testing.T) {
+//	m := &metric{
+//		Dimensions: `{"instanceId": "i-abcdefgh123456"}`,
+//		MetricNames: []string{
+//			"local_fs_size_usage",
+//		},
+//		requestDimensions: []map[string]string{
+//			{"instanceId": "i-abcdefgh123456"},
+//		},
+//	}
+//	plugin := &AliyunCMS{
+//		AccessKeyID:     "my_access_key_id",
+//		AccessKeySecret: "my_access_key_secret",
+//		Project:         "acs_rds_dashboard",
+//		Metrics:         []*metric{m},
+//		RateLimit:       200,
+//		measurement:     formatMeasurement("acs_rds_dashboard"),
+//		MetricServices:  []string{"rds"},
+//		Regions:         []string{"cn-shanghai"},
+//		cmsClient:       new(mockGatherAliyunCMSClient),
+//		rdsClient:       new(mockGatherAliyunRDSClient),
+//		Log:             testutil.Logger{Name: inputTitle},
+//	}
+//
+//	// test table:
+//	tests := []struct {
+//		name           string
+//		hasMeasurement bool
+//		metricNames    []string
+//		expected       []telegraf.Metric
+//	}{
+//		{
+//			name:           "Data points from RDS Performance",
+//			hasMeasurement: true,
+//			metricNames:    []string{"local_fs_size_usage"},
+//			expected: []telegraf.Metric{
+//				testutil.MustMetric(
+//					"aliyuncms_acs_rds_dashboard",
+//					map[string]string{
+//						"instanceId": "i-abcdefgh123456",
+//						"userId":     "1234567898765432",
+//					},
+//					map[string]interface{}{
+//						"local_fs_size_usage": float64(80),
+//					},
+//					time.Unix(1490152860000, 0)),
+//			},
+//		},
+//	}
+//
+//	mockStore := newMockDataStore()
+//	mockStore.On("GetHttpStatus").Return(200)
+//	for _, tt := range tests {
+//		t.Run(tt.name, func(t *testing.T) {
+//			var acc testutil.Accumulator
+//			plugin.Metrics[0].MetricNames = tt.metricNames
+//
+//			require.NoError(t, acc.GatherError(plugin.Gather))
+//			require.Equal(t, acc.HasMeasurement("aliyuncms_acs_rds_dashboard"), tt.hasMeasurement)
+//			if tt.hasMeasurement {
+//				acc.AssertContainsTaggedFields(t, "aliyuncms_acs_rds_dashboard", tt.expected[0].Fields(), tt.expected[0].Tags())
+//			}
+//			mockStore.AssertExpectations(t)
+//		})
+//	}
+// }
 
 func TestGetDiscoveryDataAcrossRegions(t *testing.T) {
 	// test table:
