@@ -1245,14 +1245,12 @@ func TestDisableUnsupportedMetrics(t *testing.T) {
 			Log: logger,
 		}
 
-		err := p.disableUnsupportedMetrics()
-
-		require.NoError(t, err)
+		require.NoError(t, p.disableUnsupportedMetrics())
 		require.Empty(t, p.CPUMetrics)
 		require.Len(t, p.PackageMetrics, 2)
 		require.Contains(t, p.PackageMetrics, packageCurrentPowerConsumption)
 		require.Contains(t, p.PackageMetrics, packageThermalDesignPower)
-		require.Len(t, logger.Warnings(), 8)
+		require.Len(t, logger.Warnings(), 7)
 	})
 
 	t.Run("AperfMperfFlagNotFound", func(t *testing.T) {
@@ -1274,12 +1272,10 @@ func TestDisableUnsupportedMetrics(t *testing.T) {
 			Log: logger,
 		}
 
-		err := p.disableUnsupportedMetrics()
-
-		require.NoError(t, err)
+		require.NoError(t, p.disableUnsupportedMetrics())
 		require.Len(t, p.CPUMetrics, 1)
 		require.Contains(t, p.CPUMetrics, cpuTemperature)
-		require.Len(t, logger.Warnings(), 4)
+		require.Len(t, logger.Warnings(), 3)
 	})
 
 	t.Run("DtsFlagNotFound", func(t *testing.T) {
@@ -2240,7 +2236,7 @@ func TestAddCPUTimeRelatedMsrMetrics(t *testing.T) {
 	p.addCPUTimeRelatedMsrMetrics(acc, cpuID, coreID, packageID)
 
 	require.Empty(t, acc.Errors)
-	require.Len(t, acc.GetTelegrafMetrics(), 5)
+	require.Len(t, acc.GetTelegrafMetrics(), 4)
 	acc.AssertContainsTaggedFields(
 		t,
 		// measurement
@@ -2293,21 +2289,6 @@ func TestAddCPUTimeRelatedMsrMetrics(t *testing.T) {
 		// fields
 		map[string]interface{}{
 			"cpu_c3_state_residency_percent": c3State,
-		},
-		// tags
-		map[string]string{
-			"cpu_id":     strconv.Itoa(cpuID),
-			"core_id":    strconv.Itoa(coreID),
-			"package_id": strconv.Itoa(packageID),
-		},
-	)
-	acc.AssertContainsTaggedFields(
-		t,
-		// measurement
-		"powerstat_core",
-		// fields
-		map[string]interface{}{
-			"cpu_busy_cycles_percent": busyCycles,
 		},
 		// tags
 		map[string]string{
