@@ -65,6 +65,10 @@ func getAirrmNbrTbl(ai *Ah_airrm, ifname string, cfg ieee80211req_cfg_nbr) unsaf
                         cfg.cmd = AH_IEEE80211_GET_AIRRM_TBL_AP4020
                 case "AP5020":
                         cfg.cmd = AH_IEEE80211_GET_AIRRM_TBL_AP5020
+                case "AP5000","AP5010":
+                        cfg.cmd = AH_IEEE80211_GET_AIRRM_TBL_AP5000
+                case "AP3000":
+                        cfg.cmd = AH_IEEE80211_GET_AIRRM_TBL_AP3000
                 default:
                         cfg.cmd = AH_IEEE80211_GET_AIRRM_TBL
         }
