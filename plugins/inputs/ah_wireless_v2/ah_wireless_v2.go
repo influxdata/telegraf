@@ -831,17 +831,11 @@ func Gather_Rf_Avg(t *Ah_wireless, acc telegraf.Accumulator) error {
 		var atrStat ah_ieee80211_atr_user
 
 		var idx			int
-		var tmp_count1	int64
-		var tmp_count2	int64
 
 		var tx_total	int64
 		var rx_total	int64
-		var tmp_count3	int32
-		var tmp_count4	int32
 		var tot_tx_bitrate_retries uint32
 		var tot_rx_bitrate_retries uint32
-
-		var rf_report	ah_dcd_stats_report_int_data
 
 		rfstat  = getRFStat(t.fd, intfName, rfstat)
 
@@ -893,51 +887,6 @@ func Gather_Rf_Avg(t *Ah_wireless, acc telegraf.Accumulator) error {
 		tot_rx_bitrate_retries += reportGetDiff(rfstat.ast_rx_rate_stats[idx].ns_retries,
 			t.last_rf_stat[ii].ast_rx_rate_stats[idx].ns_retries)
 
-	}
-
-
-	for idx = 0; idx < NS_HW_RATE_SIZE; idx++ {
-
-		tmp_count3 = int32(rfstat.ast_tx_rate_stats[idx].ns_unicasts - t.last_rf_stat[ii].ast_tx_rate_stats[idx].ns_unicasts)
-		if (tx_total > 0 && tmp_count3 > 0) {
-			rf_report.tx_bit_rate[idx].rate_dtn = uint8((int64(tmp_count3) * 100) / tx_total)
-		} else {
-			rf_report.tx_bit_rate[idx].rate_dtn = 0;
-		}
-		tmp_count4 = int32(rfstat.ast_rx_rate_stats[idx].ns_unicasts - t.last_rf_stat[ii].ast_rx_rate_stats[idx].ns_unicasts)
-		if (rx_total > 0 && tmp_count4 > 0) {
-			rf_report.rx_bit_rate[idx].rate_dtn = uint8((int64(tmp_count4) * 100) / rx_total)
-		} else {
-			rf_report.rx_bit_rate[idx].rate_dtn = 0;
-		}
-
-		/* Tx/Rx bit rate success distribution */
-		tmp_count1 = int64(rfstat.ast_tx_rate_stats[idx].ns_retries - t.last_rf_stat[ii].ast_tx_rate_stats[idx].ns_retries)
-		tmp_count2 = tmp_count1 + int64(tmp_count3)
-		if (tmp_count2 > 0 && rf_report.tx_bit_rate[idx].rate_dtn > 0) {
-			rf_report.tx_bit_rate[idx].rate_suc_dtn = uint8((int64(tmp_count3) * 100) / tmp_count2)
-			if (rf_report.tx_bit_rate[idx].rate_suc_dtn > 100) {
-				rf_report.tx_bit_rate[idx].rate_suc_dtn  = 100
-				log.Printf("stats report int data process: rate_suc_dtn1 is more than 100%\n")
-			}
-		} else {
-			rf_report.tx_bit_rate[idx].rate_suc_dtn = 0;
-		}
-
-		tmp_count1 = int64(rfstat.ast_rx_rate_stats[idx].ns_retries - t.last_rf_stat[ii].ast_rx_rate_stats[idx].ns_retries)
-		tmp_count2 = tmp_count1 + int64(tmp_count4)
-		if (tmp_count2 > 0 && rf_report.rx_bit_rate[idx].rate_dtn > 0) {
-			rf_report.rx_bit_rate[idx].rate_suc_dtn = uint8((int64(tmp_count4) * 100) / tmp_count2)
-			if (rf_report.rx_bit_rate[idx].rate_suc_dtn > 100) {
-				rf_report.rx_bit_rate[idx].rate_suc_dtn = 100;
-				log.Printf("stats report int data process: rate_suc_dtn2 is more than 100%\n");
-			}
-
-		} else {
-			rf_report.rx_bit_rate[idx].rate_suc_dtn = 0;
-		}
-		rf_report.tx_bit_rate[idx].kbps = rfstat.ast_tx_rate_stats[idx].ns_rateKbps;
-		rf_report.rx_bit_rate[idx].kbps = rfstat.ast_rx_rate_stats[idx].ns_rateKbps;
 	}
 
 /* Rate calculation copied from DCD code */
@@ -2675,7 +2624,6 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
 
 			t.last_rf_stat =  [4]awestats{}
 			t.last_ut_data  = [4]utilization_data{}
-			t.last_clt_stat = [4][50]ah_ieee80211_sta_stats_item{}
 
 		} else {
 			Gather_AirTime(t,acc)
@@ -2703,6 +2651,8 @@ func (t *Ah_wireless) Start(acc telegraf.Accumulator) error {
 
 	t.nw_health =	network_health_data{}
 	t.nw_service =  network_service_data{}
+
+	t.last_clt_stat = [4][50]ah_ieee80211_sta_stats_item{}
 
 	return nil
 }
