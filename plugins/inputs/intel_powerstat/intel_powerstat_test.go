@@ -2190,7 +2190,6 @@ func TestAddCPUTimeRelatedMsrMetrics(t *testing.T) {
 	c1State := 2.0
 	c3State := 1.5
 	c6State := 1.0
-	busyCycles := 0.5
 
 	acc := &testutil.Accumulator{}
 
@@ -2207,9 +2206,6 @@ func TestAddCPUTimeRelatedMsrMetrics(t *testing.T) {
 
 	// mock getting CPU C6 state residency value.
 	mFetcher.On("GetCPUC6StateResidency", cpuID).Return(c6State, nil).Once()
-
-	// mock getting CPU C0 state residency value, triggered when calling add CPU busy cycle metric.
-	mFetcher.On("GetCPUC0StateResidency", cpuID).Return(busyCycles, nil).Once()
 
 	p := &PowerStat{
 		CPUMetrics: []cpuMetricType{
