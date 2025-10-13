@@ -1,7 +1,6 @@
 package nftables
 
 import (
-	_ "embed"
 	"encoding/json"
 	"fmt"
 )

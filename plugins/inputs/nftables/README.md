@@ -20,25 +20,17 @@ are named with a unique comment**. Comments are added using the 'comment
 ## Configuration
 
 ```toml @sample.conf
+[[inputs.nftables]]
+  ## Use sudo for command execution, can be restricted to "nft --json list table"
+  # use_sudo = false
 
-> [!IMPORTANT]
-> The nftables command requires CAP_NET_ADMIN and CAP_NET_RAW capabilities.
-> You have several options to grant telegraf to run nftables:
+  ## Use this alternative binary
+  ## By default the nft command in PATH is used
+  # binary = "nft"
 
-* Run telegraf as root. This is strongly discouraged.
-* Configure systemd to run telegraf with CAP_NET_ADMIN and CAP_NET_RAW.
-This is the simplest and recommended option.
-* Configure sudo to grant telegraf to run nftables. This is the most restrictive
- option, but requires sudo setup.
-
-### Using systemd capabilities
-
-You may run `systemctl edit telegraf.service` and add the following:
-
-```text
-[Service]
-CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN
-AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+  ## A List of nftables to monitor. 
+  ## have a counter and comment declared on it.
+  # tables = [ "filter" ]
 ```
 
 Since telegraf will fork a process to run nftables, `AmbientCapabilities` is
@@ -52,7 +44,7 @@ You may edit your sudo configuration with the following:
 telegraf ALL=(root) NOPASSWD: /usr/bin/nft *
 ```
 
-### Global configuration options <!-- @/docs/includes/plugin_config.md -->
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
 additional global and plugin configuration settings. These settings are used to
@@ -60,7 +52,6 @@ modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
-
 
 ## Metrics
 
