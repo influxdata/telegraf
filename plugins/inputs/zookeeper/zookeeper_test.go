@@ -3,13 +3,28 @@ package zookeeper
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
+
+func TestInit(t *testing.T) {
+	plugin := &Zookeeper{}
+
+	require.NoError(t, plugin.Init())
+
+	require.Len(t, plugin.Servers, 1)
+	require.Equal(t, ":2181", plugin.Servers[0])
+
+	require.Equal(t, config.Duration(5*time.Second), plugin.Timeout)
+
+	require.Nil(t, plugin.tlsConfig)
+}
 
 func TestZookeeperGeneratesMetricsIntegration(t *testing.T) {
 	if testing.Short() {
@@ -56,6 +71,8 @@ func TestZookeeperGeneratesMetricsIntegration(t *testing.T) {
 	}
 	for _, tt := range testset {
 		t.Run(tt.name, func(t *testing.T) {
+			require.NoError(t, tt.zookeeper.Init())
+
 			var acc testutil.Accumulator
 			require.NoError(t, acc.GatherError(tt.zookeeper.Gather))
 

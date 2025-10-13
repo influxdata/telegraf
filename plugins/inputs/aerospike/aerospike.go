@@ -1,3 +1,4 @@
+//go:generate ../../../tools/config_includer/generator
 //go:generate ../../../tools/readme_config_includer/generator
 package aerospike
 
@@ -27,13 +28,11 @@ type Aerospike struct {
 	Username string `toml:"username"`
 	Password string `toml:"password"`
 
-	EnableTLS bool   `toml:"enable_tls"`
-	EnableSSL bool   `toml:"enable_ssl" deprecated:"1.7.0;1.35.0;use 'enable_tls' instead"`
-	TLSName   string `toml:"tls_name"`
+	EnableTLS bool   `toml:"enable_tls" deprecated:"1.37.0;1.40.0;use 'tls_enable' instead"`
+	TLSName   string `toml:"tls_name" deprecated:"1.37.0;1.40.0;use 'tls_server_name' instead"`
 	common_tls.ClientConfig
 
-	initialized bool
-	tlsConfig   *tls.Config
+	tlsConfig *tls.Config
 
 	DisableQueryNamespaces bool     `toml:"disable_query_namespaces"`
 	Namespaces             []string `toml:"namespaces"`
@@ -59,18 +58,14 @@ func (*Aerospike) SampleConfig() string {
 	return sampleConfig
 }
 
-func (a *Aerospike) Gather(acc telegraf.Accumulator) error {
-	if !a.initialized {
-		tlsConfig, err := a.ClientConfig.TLSConfig()
-		if err != nil {
-			return err
-		}
-		if tlsConfig == nil && (a.EnableTLS || a.EnableSSL) {
-			tlsConfig = &tls.Config{}
-		}
-		a.tlsConfig = tlsConfig
-		a.initialized = true
+func (a *Aerospike) Init() error {
+	a.ClientConfig.Enable = &a.EnableTLS
+	a.ClientConfig.ServerName = a.TLSName
+	tlsConfig, err := a.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
 	}
+	a.tlsConfig = tlsConfig
 
 	if a.NumberHistogramBuckets == 0 {
 		a.NumberHistogramBuckets = 10
@@ -80,6 +75,10 @@ func (a *Aerospike) Gather(acc telegraf.Accumulator) error {
 		a.NumberHistogramBuckets = 10
 	}
 
+	return nil
+}
+
+func (a *Aerospike) Gather(acc telegraf.Accumulator) error {
 	if len(a.Servers) == 0 {
 		return a.gatherServer(acc, "127.0.0.1:3000")
 	}
@@ -106,10 +105,8 @@ func (a *Aerospike) gatherServer(acc telegraf.Accumulator, hostPort string) erro
 	if err != nil {
 		return err
 	}
-	if a.TLSName != "" && (a.EnableTLS || a.EnableSSL) {
-		for _, asHost := range asHosts {
-			asHost.TLSName = a.TLSName
-		}
+	if a.tlsConfig != nil {
+		policy.ClusterName = a.tlsConfig.ServerName
 	}
 	c, err := as.NewClientWithPolicyAndHost(policy, asHosts...)
 	if err != nil {
