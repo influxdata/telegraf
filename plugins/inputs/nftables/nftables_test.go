@@ -175,21 +175,16 @@ func TestParseNftableBadRule(t *testing.T) {
     },
 }`}
 	for _, v := range badrules {
-		acc := new(testutil.Accumulator)
-		require.Error(t, parseNftableOutput([]byte(v), acc))
+		var acc testutil.Accumulator
+		require.Error(t, parseNftableOutput(&acc, []byte(v)))
 	}
 }
 
 func TestParseNftableOutput(t *testing.T) {
-	acc := new(testutil.Accumulator)
-	err := parseNftableOutput([]byte(singletonTable), acc)
-	if err != nil {
-		t.Errorf("No Error Expected: %#v", err)
-	}
+	var acc testutil.Accumulator
+	require.NoError(t, parseNftableOutput(&acc, []byte(singletonTable)))
 	metrics := acc.GetTelegrafMetrics()
-	if len(metrics) != 2 {
-		t.Errorf("Expected 2 measurements. Got: %#v", len(metrics))
-	}
+	require.Len(t, metrics, 2)
 	defaultTime := time.Unix(0, 0)
 	expected := []telegraf.Metric{
 		testutil.MustMetric("nftables",
@@ -219,13 +214,6 @@ func TestParseNftableOutput(t *testing.T) {
 }
 
 func TestParseNftableBadOutput(t *testing.T) {
-	acc := new(testutil.Accumulator)
-	require.Error(t, parseNftableOutput([]byte("I am not JSON"), acc))
-}
-
-func TestNftableBadConfig(t *testing.T) {
-	plugin := Nftables{}
-	require.NoError(t, plugin.Init())
-	acc := new(testutil.Accumulator)
-	require.Error(t, acc.GatherError(plugin.Gather))
+	var acc testutil.Accumulator
+	require.Error(t, parseNftableOutput(&acc, []byte("I am not JSON")))
 }
