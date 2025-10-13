@@ -60,6 +60,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## https://docs.nats.io/nats-concepts/jetstream.
   jetstream_subjects = ["js_telegraf"]
 
+  ## explicitly specify the jetstream stream name
+  ## useful for sourced streams where there is no subject defined and
+  ## thus jetstream_subjects won't work
+  jetstream_stream = ""
+
   ## name a queue group
   queue_group = "telegraf_consumers"
 
