@@ -175,7 +175,7 @@ func (h *HTTP) Connect() error {
 				return ctrlErr
 			}
 		} else {
-			h.Log.Warnf("interface option is not supported on %s", runtime.GOOS)
+			h.Log.Warnf("source_interface option is not supported on %s", runtime.GOOS)
 		}
 	}
 
