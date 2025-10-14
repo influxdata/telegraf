@@ -641,7 +641,6 @@ func TestIntegration(t *testing.T) {
 		}
 		var foundFoo, foundBar bool
 		for _, m := range actual {
-			t.Logf("metric: %s", m)
 			switch m {
 			case "test.bar":
 				foundBar = true
@@ -653,9 +652,6 @@ func TestIntegration(t *testing.T) {
 			if foundBar && foundFoo {
 				return true
 			}
-		}
-		if len(actual) == 0 {
-			t.Log("no metrics")
 		}
 		return false
 	}, 10*time.Second, 100*time.Millisecond)
