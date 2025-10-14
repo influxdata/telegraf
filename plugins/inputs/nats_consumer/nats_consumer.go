@@ -25,8 +25,6 @@ var (
 )
 
 type NatsConsumer struct {
-	sync.Mutex
-
 	QueueGroup             string          `toml:"queue_group"`
 	Subjects               []string        `toml:"subjects"`
 	Servers                []string        `toml:"servers"`
@@ -58,6 +56,7 @@ type NatsConsumer struct {
 	sem    semaphore
 	wg     sync.WaitGroup
 	cancel context.CancelFunc
+	sync.Mutex
 }
 
 type (
