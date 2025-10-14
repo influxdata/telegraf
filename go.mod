@@ -227,7 +227,7 @@ require (
 	go.opentelemetry.io/proto/otlp/collector/profiles/v1development v0.1.0
 	go.opentelemetry.io/proto/otlp/profiles/v1development v0.1.0
 	go.starlark.net v0.0.0-20250906160240-bf296ed553ea
-	go.step.sm/crypto v0.70.0
+	go.step.sm/crypto v0.71.0
 	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/crypto v0.42.0
 	golang.org/x/exp v0.0.0-20250911091902-df9299821621
@@ -385,7 +385,7 @@ require (
 	github.com/google/flatbuffers v25.2.10+incompatible // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
-	github.com/google/go-tpm v0.9.5 // indirect
+	github.com/google/go-tpm v0.9.6 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
 	github.com/googleapis/gax-go/v2 v2.15.0 // indirect
