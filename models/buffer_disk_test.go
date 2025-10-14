@@ -63,7 +63,7 @@ func TestDiskBufferTruncate(t *testing.T) {
 	buf.EndTransaction(tx)
 
 	// Ensure the buffer was fully truncated on disk and the mask is consistent with that
-	require.Equal(t, 0, diskBuf.entries())
+	require.Zero(t, diskBuf.entries())
 	require.Empty(t, diskBuf.mask)
 
 	// We shouldn't get any metric when requesting a new batch
@@ -97,8 +97,8 @@ func TestDiskBufferEmptyReuse(t *testing.T) {
 	buf.EndTransaction(tx)
 
 	// Ensure all storage elements of the buffer are consistent with it being empty
-	require.Equal(t, 0, diskBuf.Len())
-	require.Equal(t, 0, diskBuf.entries())
+	require.Zero(t, diskBuf.length())
+	require.Zero(t, diskBuf.entries())
 	require.Empty(t, diskBuf.mask)
 
 	// Try to read the buffer again. This should return an empty transaction...
@@ -146,8 +146,8 @@ func TestDiskBufferEmptyClose(t *testing.T) {
 	buf.EndTransaction(tx)
 
 	// Make sure the buffer was fully emptied
-	require.Equal(t, 0, diskBuf.Len())
-	require.Equal(t, 0, diskBuf.entries())
+	require.Zero(t, diskBuf.length())
+	require.Zero(t, diskBuf.entries())
 
 	// Close the buffer to simulate stopping Telegraf in a normal shutdown
 	require.NoError(t, diskBuf.Close())
