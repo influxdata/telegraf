@@ -219,9 +219,6 @@ func (h *InfluxDBV2Listener) Stop() {
 	if err != nil {
 		h.Log.Infof("Error shutting down HTTP server: %v", err.Error())
 	}
-	if h.Statistics != nil {
-		h.Statistics.UnregisterAll()
-	}
 }
 
 func (h *InfluxDBV2Listener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
