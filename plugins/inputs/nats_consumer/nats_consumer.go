@@ -231,7 +231,9 @@ func (n *NatsConsumer) receiver(ctx context.Context) {
 						break L
 					}
 				}
-				n.handleMessage(msg)
+				if _, err := n.handleMessage(msg); err != nil {
+					n.Log.Errorf("Failed to handle message on subject %s: %v", msg.Subject, err)
+				}
 			}
 		}
 	}
@@ -240,9 +242,8 @@ func (n *NatsConsumer) receiver(ctx context.Context) {
 func (n *NatsConsumer) handleMessage(msg *nats.Msg) (telegraf.TrackingID, error) {
 	metrics, err := n.parser.Parse(msg.Data)
 	if err != nil {
-		n.Log.Errorf("Failed to parse message in subject %s: %v", msg.Subject, err)
 		<-n.sem
-		return 0, err
+		return 0, fmt.Errorf("failed to parse: %w", err)
 	}
 	if len(metrics) == 0 {
 		once.Do(func() {
@@ -260,13 +261,14 @@ func (n *NatsConsumer) handleJetstreamMessage(msg *nats.Msg) {
 	defer n.Unlock()
 
 	if err := msg.InProgress(); err != nil {
-		n.Log.Warnf("Failed to mark message as in progress on subject %s: %v", msg.Subject, err)
+		n.Log.Warnf("Failed to mark JetStream message as in progress on subject %s: %v", msg.Subject, err)
 	}
 
 	id, err := n.handleMessage(msg)
 	if err != nil {
+		n.Log.Errorf("Failed to handle JetStream message on subject %s: %v", msg.Subject, err)
 		if err := msg.Term(); err != nil {
-			n.Log.Errorf("Failed to terminate message on subject %s: %v", msg.Subject, err)
+			n.Log.Errorf("Failed to terminate JetStream message on subject %s: %v", msg.Subject, err)
 		}
 		return
 	}
@@ -287,12 +289,12 @@ func (n *NatsConsumer) waitForDelivery(ctx context.Context) {
 				if track.Delivered() {
 					err := msg.Ack()
 					if err != nil {
-						n.Log.Errorf("Failed to Ack message on subject %s: %v", msg.Subject, err)
+						n.Log.Errorf("Failed to Ack JetStream message on subject %s: %v", msg.Subject, err)
 					}
 				} else {
 					err := msg.Nak()
 					if err != nil {
-						n.Log.Errorf("Failed to Nak message on subject %s: %v", msg.Subject, err)
+						n.Log.Errorf("Failed to Nak JetStream message on subject %s: %v", msg.Subject, err)
 					}
 				}
 			}
