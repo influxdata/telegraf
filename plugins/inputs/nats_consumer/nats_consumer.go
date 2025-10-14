@@ -275,10 +275,10 @@ func (n *NatsConsumer) handleJetstreamMessage(msg *nats.Msg) {
 	n.undelivered[id] = msg
 }
 
-func (n *NatsConsumer) waitForDelivery(parentCtx context.Context) {
+func (n *NatsConsumer) waitForDelivery(ctx context.Context) {
 	for {
 		select {
-		case <-parentCtx.Done():
+		case <-ctx.Done():
 			return
 		case track := <-n.acc.Delivered():
 			<-n.sem
