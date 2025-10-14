@@ -55,11 +55,10 @@ var (
 )
 
 func newTestListener() *InfluxDBV2Listener {
-	collector := selfstat.NewCollector(make(map[string]string))
 	listener := &InfluxDBV2Listener{
 		Log:            testutil.Logger{},
-		Statistics:     collector,
 		ServiceAddress: "localhost:0",
+		Statistics:     selfstat.NewCollector(nil),
 		timeFunc:       time.Now,
 	}
 	return listener
@@ -111,6 +110,7 @@ func TestWriteSecureNoClientAuth(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Init())
+	defer listener.Statistics.UnregisterAll()
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -136,6 +136,7 @@ func TestWriteSecureWithClientAuth(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Init())
+	defer listener.Statistics.UnregisterAll()
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -151,6 +152,7 @@ func TestWriteTokenAuth(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Init())
+	defer listener.Statistics.UnregisterAll()
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -173,6 +175,7 @@ func TestWriteKeepBucket(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Init())
+	defer listener.Statistics.UnregisterAll()
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -226,6 +229,7 @@ func TestWriteNoNewline(t *testing.T) {
 
 			acc := &testutil.Accumulator{}
 			require.NoError(t, listener.Init())
+			defer listener.Statistics.UnregisterAll()
 			require.NoError(t, listener.Start(acc))
 			defer listener.Stop()
 
@@ -252,6 +256,7 @@ func TestAllOrNothing(t *testing.T) {
 
 			acc := &testutil.Accumulator{}
 			require.NoError(t, listener.Init())
+			defer listener.Statistics.UnregisterAll()
 			require.NoError(t, listener.Start(acc))
 			defer listener.Stop()
 
@@ -275,6 +280,7 @@ func TestWriteMaxLineSizeIncrease(t *testing.T) {
 
 			acc := &testutil.Accumulator{}
 			require.NoError(t, listener.Init())
+			defer listener.Statistics.UnregisterAll()
 			require.NoError(t, listener.Start(acc))
 			defer listener.Stop()
 
@@ -300,6 +306,7 @@ func TestWriteVerySmallMaxBody(t *testing.T) {
 
 			acc := &testutil.Accumulator{}
 			require.NoError(t, listener.Init())
+			defer listener.Statistics.UnregisterAll()
 			require.NoError(t, listener.Start(acc))
 			defer listener.Stop()
 
@@ -324,6 +331,7 @@ func TestWriteLargeLine(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Init())
+	defer listener.Statistics.UnregisterAll()
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -393,6 +401,7 @@ func TestWriteGzippedData(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Init())
+	defer listener.Statistics.UnregisterAll()
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -429,6 +438,7 @@ func TestWriteHighTraffic(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Init())
+	defer listener.Statistics.UnregisterAll()
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -468,6 +478,7 @@ func TestReceive404ForInvalidEndpoint(t *testing.T) {
 
 			acc := &testutil.Accumulator{}
 			require.NoError(t, listener.Init())
+			defer listener.Statistics.UnregisterAll()
 			require.NoError(t, listener.Start(acc))
 			defer listener.Stop()
 
@@ -488,6 +499,7 @@ func TestWriteInvalid(t *testing.T) {
 
 			acc := &testutil.Accumulator{}
 			require.NoError(t, listener.Init())
+			defer listener.Statistics.UnregisterAll()
 			require.NoError(t, listener.Start(acc))
 			defer listener.Stop()
 
@@ -508,6 +520,7 @@ func TestWriteEmpty(t *testing.T) {
 
 			acc := &testutil.Accumulator{}
 			require.NoError(t, listener.Init())
+			defer listener.Statistics.UnregisterAll()
 			require.NoError(t, listener.Start(acc))
 			defer listener.Stop()
 
@@ -527,6 +540,7 @@ func TestHealth(t *testing.T) {
 	}
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Init())
+	defer listener.Statistics.UnregisterAll()
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -575,6 +589,7 @@ func TestPing(t *testing.T) {
 	listener := newTestListener()
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Init())
+	defer listener.Statistics.UnregisterAll()
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -597,6 +612,7 @@ func TestReady(t *testing.T) {
 	}
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Init())
+	defer listener.Statistics.UnregisterAll()
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -627,6 +643,7 @@ func TestWriteWithPrecision(t *testing.T) {
 
 			acc := &testutil.Accumulator{}
 			require.NoError(t, listener.Init())
+			defer listener.Statistics.UnregisterAll()
 			require.NoError(t, listener.Start(acc))
 			defer listener.Stop()
 
@@ -653,6 +670,7 @@ func TestWriteWithPrecisionNoTimestamp(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Init())
+	defer listener.Statistics.UnregisterAll()
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -675,6 +693,7 @@ func TestRateLimitedConnectionDropsSecondRequest(t *testing.T) {
 	listener := newRateLimitedTestListener(1)
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Init())
+	defer listener.Statistics.UnregisterAll()
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -695,6 +714,7 @@ func TestRateLimitedConnectionAcceptsNewRequestOnDelivery(t *testing.T) {
 	listener := newRateLimitedTestListener(1)
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Init())
+	defer listener.Statistics.UnregisterAll()
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -720,6 +740,7 @@ func TestRateLimitedConnectionRejectsBatchesLargerThanMaxUndeliveredMetrics(t *t
 	listener := newRateLimitedTestListener(1)
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Init())
+	defer listener.Statistics.UnregisterAll()
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
