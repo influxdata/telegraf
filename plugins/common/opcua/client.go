@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log" //nolint:depguard // just for debug
 	"net/url"
+	"os"
 	"strconv"
 	"time"
 
@@ -35,17 +36,18 @@ func (c ConnectionState) String() string {
 }
 
 type OpcUAClientConfig struct {
-	Endpoint       string          `toml:"endpoint"`
-	SecurityPolicy string          `toml:"security_policy"`
-	SecurityMode   string          `toml:"security_mode"`
-	Certificate    string          `toml:"certificate"`
-	PrivateKey     string          `toml:"private_key"`
-	Username       config.Secret   `toml:"username"`
-	Password       config.Secret   `toml:"password"`
-	AuthMethod     string          `toml:"auth_method"`
-	ConnectTimeout config.Duration `toml:"connect_timeout"`
-	RequestTimeout config.Duration `toml:"request_timeout"`
-	ClientTrace    bool            `toml:"client_trace"`
+	Endpoint          string          `toml:"endpoint"`
+	SecurityPolicy    string          `toml:"security_policy"`
+	SecurityMode      string          `toml:"security_mode"`
+	Certificate       string          `toml:"certificate"`
+	PrivateKey        string          `toml:"private_key"`
+	ServerCertificate string          `toml:"server_certificate"`
+	Username          config.Secret   `toml:"username"`
+	Password          config.Secret   `toml:"password"`
+	AuthMethod        string          `toml:"auth_method"`
+	ConnectTimeout    config.Duration `toml:"connect_timeout"`
+	RequestTimeout    config.Duration `toml:"request_timeout"`
+	ClientTrace       bool            `toml:"client_trace"`
 
 	OptionalFields []string         `toml:"optional_fields"`
 	Workarounds    OpcUAWorkarounds `toml:"workarounds"`
@@ -137,7 +139,17 @@ func (o *OpcUAClientConfig) Validate() error {
 }
 
 func (o *OpcUAClientConfig) validateCertificateConfiguration() error {
-	// If using None/None security, certificates are optional
+	// Validate server certificate file exists if provided (regardless of security mode)
+	if o.ServerCertificate != "" {
+		if _, err := os.Stat(o.ServerCertificate); err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("%w: server certificate file does not exist: %s", ErrInvalidConfiguration, o.ServerCertificate)
+			}
+			return fmt.Errorf("%w: cannot access server certificate file: %s: %w", ErrInvalidConfiguration, o.ServerCertificate, err)
+		}
+	}
+
+	// If using None/None security, client certificates are optional
 	if o.SecurityPolicy == "None" && o.SecurityMode == "None" {
 		return nil
 	}
