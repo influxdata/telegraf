@@ -9,12 +9,15 @@
 # a particular telegraf branch.
 #
 
+arch_list=("arm" "arm64" "x86_64" "mips")
+
 show_usage()
 {
-    echo "usage: ${0} <arch> {build | upload}"
-    echo " . arch   : valid architectures: arm, arm64, x86_64, mips"
-    echo " . build  : build and tar utility for specified architecture"
-    echo " . upload : upload specified architecture's tar to Artifactory"
+    echo "usage: ${0} <arch|all> {build | upload}"
+    echo " . arch   : valid architectures: ${arch_list[*]}"
+    echo " . all    : build or upload for all supported architectures"
+    echo " . build  : build and tar utility for specified architecture(s)"
+    echo " . upload : upload specified architecture(s)' tar to Artifactory"
 }
 
 do_build()
@@ -115,10 +118,11 @@ do_upload()
     if [[ ! -f "${_target_tarball}" ]]; then
         echo "info: ${_target_tarball} not found; building first..."
         do_build "${_extr_arch}" "${_target_tarball}"
-        if [[ ! -f "${_target_tarball}" ]]; then
-            echo "error: could not find or build '${_target_tarball}' tarball"
-            exit 1
-        fi
+    fi
+    
+    if [[ ! -f "${_target_tarball}" ]]; then
+        echo "error: could not find or build '${_target_tarball}' tarball"
+        exit 1
     fi
 
     # make sure jfrog config is set up
@@ -146,6 +150,15 @@ main()
     afy_server_name="Salem"
     afy_server_url="http://engartifacts1.extremenetworks.com:8081"
     aft_repo="xos-binaries-local-release/telegraf"
+ 
+    # Help option
+    case "${1}" in
+        --help | -h | -?)
+            show_usage
+            exit 0
+            ;;
+        *)
+    esac
 
     local _extr_arch="${1}"
     local _script_action="${2}"
@@ -156,21 +169,6 @@ main()
         show_usage
         exit 1
     fi
-
-    # verify inputs - architecture
-    case "${_extr_arch}" in
-        arm64 | mips | x86_64 | arm)
-            :
-            ;;
-        --help | -h | -?)
-            show_usage
-            exit 0
-            ;;
-        *)
-            echo "error: invalid architecture '${1}'"
-            show_usage
-            exit 1
-    esac
 
     # verify inputs - action
     case "${_script_action}" in
@@ -190,6 +188,36 @@ main()
     # grab version strings and set the name of the target tarball
     local _telegraf_version="$(< build_version.txt)"
     local _extr_version="$(< extr_version.txt)"
+
+    # handle "all"
+    if [[ "${_extr_arch}" == "all" ]]; then
+        for arch in "${arch_list[@]}"; do
+            local tarball="telegraf_${arch}_${_telegraf_version}.${_extr_version}.tar"
+            echo "=============================="
+            echo "Processing architecture: ${arch}"
+            echo "=============================="
+            "do_${_script_action}" "${arch}" "${tarball}"
+            echo
+        done
+        exit 0
+    fi
+
+    # verify single architecture
+    local found=0
+    local archtarget="$(printf '%s' "$_extr_arch" | tr -d '\r')"
+    for a in "${arch_list[@]}"; do
+        if [[ "$archtarget" == "$a" ]]; then
+            found=1
+            break
+        fi
+    done
+
+    if (( ! found )); then
+        echo "error: invalid architecture '${1}'"
+        show_usage
+        exit 1
+    fi
+
     local _target_tarball="telegraf_${_extr_arch}_${_telegraf_version}.${_extr_version}.tar"
 
     "do_${_script_action}" "${_extr_arch}" "${_target_tarball}"

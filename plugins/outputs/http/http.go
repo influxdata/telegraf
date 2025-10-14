@@ -9,6 +9,10 @@ import (
 	"net/http"
 	"strings"
 	"sync/atomic"
+	"time"
+	"net"
+	"syscall"
+	"runtime"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -83,6 +87,12 @@ var sampleConfig = `
   ## Zero means no limit.
   # idle_conn_timeout = 0
 
+  ## Specify a source IP Address
+  # source_ip = "10.1.1.1"
+
+  ## Specify a source interface name
+  # source_interface = "eth0"
+
   ## For status codes not in non_retryable_statuscodes list, number of times to retry
   ## before metric buffer is discarded.
   ## max_retries = 0, NEVER retry and discard the metric buffer for (<200 or >300); negates 
@@ -116,6 +126,8 @@ type HTTP struct {
 	NonRetryableStatusCodes []int     `toml:"non_retryable_statuscodes"` // Port 1.22.0
 	RetryableStatusCodes []int        `toml:"retryable_statuscodes"`     // EXTR Specific
 	MaxRetries         int32          `toml:"max_retries"`               // EXTR Specific
+	SourceIP           string         `toml:"source_ip"`                 // EXTR Specific
+	Interface          string         `toml:"source_interface"`          // EXTR Specific
 	httpconfig.HTTPClientConfig
 	Log telegraf.Logger               `toml:"-"`
 
@@ -129,18 +141,62 @@ func (h *HTTP) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (h *HTTP) Connect() error {
+		
+	dialer := net.Dialer{
+		Timeout:   time.Duration(h.Timeout),
+		KeepAlive: 30 * time.Second,
+	}
+
+	if h.SourceIP != "" {
+	 	localAddr, err := net.ResolveIPAddr("ip", h.SourceIP)
+	 	if err != nil {
+	 		return fmt.Errorf("unable to resolve source_ip %s: %v", h.SourceIP, err)
+	 	}
+	 	dialer.LocalAddr = &net.TCPAddr{
+	 		IP: localAddr.IP,
+	 	}
+	}
+
+	if h.Interface != "" {
+		if runtime.GOOS == "linux" {
+			dialer.Control = func(network, address string, c syscall.RawConn) error {
+				var ctrlErr error
+				err := c.Control(func(fd uintptr) {
+					ctrlErr = syscall.SetsockoptString(
+						int(fd),
+						syscall.SOL_SOCKET,
+						syscall.SO_BINDTODEVICE,
+						h.Interface,
+					)
+				})
+				if err != nil {
+					return err
+				}
+				return ctrlErr
+			}
+		} else {
+			h.Log.Warnf("source_interface option is not supported on %s", runtime.GOOS)
+		}
+	}
+
 	if h.Method == "" {
 		h.Method = http.MethodPost
 	}
 	h.Method = strings.ToUpper(h.Method)
 	if h.Method != http.MethodPost && h.Method != http.MethodPut {
-		return fmt.Errorf("invalid method [%s] %s", h.URL, h.Method)
+		return fmt.Errorf("invalid HTTP method %s for URL %s", h.Method, h.URL)
 	}
 
 	ctx := context.Background()
 	client, err := h.HTTPClientConfig.CreateClient(ctx, h.Log)
 	if err != nil {
 		return err
+	}
+
+	if transport, ok := client.Transport.(*http.Transport); ok {
+		transport.DialContext = dialer.DialContext
+	} else {
+		h.Log.Errorf("Unable to set custom dialer: client transport is not *http.Transport (type: %T). Source IP and interface binding will be ignored.", client.Transport)
 	}
 
 	h.client = client

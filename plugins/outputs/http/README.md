@@ -82,6 +82,13 @@ batch format by default.
   ## Specific set of status codes (<200 or >300) to retry.  All other status codes will cause
   ## metric buffer to be discarded.
   # retryable_statuscodes = [402, 503, 504]
+
+  ## Specify a source IP Address
+  # source_ip = "10.1.1.1"
+
+  ## Specify a source interface name
+  # source_interface = "eth0"
+
 ```
 
 ### Optional Cookie Authentication Settings
