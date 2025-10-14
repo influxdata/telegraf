@@ -218,6 +218,7 @@ func (n *NatsConsumer) receiver(ctx context.Context) {
 		case err := <-n.errs:
 			n.Log.Error(err)
 		case n.sem <- empty{}:
+		L:
 			select {
 			case <-ctx.Done():
 				return
@@ -225,32 +226,53 @@ func (n *NatsConsumer) receiver(ctx context.Context) {
 				<-n.sem
 				n.Log.Error(err)
 			case msg := <-n.in:
-				metrics, err := n.parser.Parse(msg.Data)
-				if err != nil {
-					n.Log.Errorf("Failed to parse message in subject %s: %v", msg.Subject, err)
-					<-n.sem
-					continue
-				}
-				if len(metrics) == 0 {
-					once.Do(func() {
-						n.Log.Debug(internal.NoMetricsCreatedMsg)
-					})
-				}
-				for _, m := range metrics {
-					m.AddTag("subject", msg.Subject)
-				}
-				id := n.acc.AddTrackingMetricGroup(metrics)
 				for _, s := range n.jsSubs {
 					if msg.Sub == s {
-						n.Lock()
-						n.undelivered[id] = msg
-						n.Unlock()
-						break
+						n.handleJetstreamMessage(msg)
+						break L
 					}
 				}
+				n.handleMessage(msg)
 			}
 		}
 	}
+}
+
+func (n *NatsConsumer) handleMessage(msg *nats.Msg) (telegraf.TrackingID, error) {
+	metrics, err := n.parser.Parse(msg.Data)
+	if err != nil {
+		n.Log.Errorf("Failed to parse message in subject %s: %v", msg.Subject, err)
+		<-n.sem
+		return 0, err
+	}
+	if len(metrics) == 0 {
+		once.Do(func() {
+			n.Log.Debug(internal.NoMetricsCreatedMsg)
+		})
+	}
+	for _, m := range metrics {
+		m.AddTag("subject", msg.Subject)
+	}
+	return n.acc.AddTrackingMetricGroup(metrics), nil
+}
+
+func (n *NatsConsumer) handleJetstreamMessage(msg *nats.Msg) {
+	n.Lock()
+	defer n.Unlock()
+
+	if err := msg.InProgress(); err != nil {
+		n.Log.Warnf("Failed to mark message as in progress on subject %s: %v", msg.Subject, err)
+	}
+
+	id, err := n.handleMessage(msg)
+	if err != nil {
+		if err := msg.Term(); err != nil {
+			n.Log.Errorf("Failed to terminate message on subject %s: %v", msg.Subject, err)
+		}
+		return
+	}
+
+	n.undelivered[id] = msg
 }
 
 func (n *NatsConsumer) waitForDelivery(parentCtx context.Context) {
