@@ -43,12 +43,14 @@ type iwreq struct
 // AIRRM neighbor table structure
 type ah_ieee80211_airrm_nbr_tbl_t struct {
 	num_nbrs		uint32							// Number of neighbors
+	_pad0			[4]byte							// Padding for 64bit alignment
 	nbr_tbl			[MAX_NEIGHBOR_NUM + 1]ah_ieee80211_airrm_nbr_t		// Variable length array
 }
 
 // AIRRM neighbor information structure
 type ah_ieee80211_airrm_nbr_t struct {
 	rrmId					uint32			// unique identifier for RRM
+	_pad0					[4]byte			// pad to align timestamp (was implicit)
 	timestamp				uint64			// Date and timestamp
 	extremeAP				uint8			// Is AP managed by Extreme?
 	rssi					int8			// RSS value in dBm
@@ -62,8 +64,10 @@ type ah_ieee80211_airrm_nbr_t struct {
 	wifiInterferenceUtilization	uint8		// WiFi interference utilization
 	aggregationSize			uint16			// Aggregation size
 	packetErrorRate			uint8			// Packet error rate
+	_pad1					[1]byte			// pad for 2-byte alignment of clientCount
 	clientCount				uint16			// Client count
 	frequency				uint32			// Frequency in MHz
 	channelWidth			uint16			// Channel width in MHz
+	_pad2					[6]byte			// padding to make total size 80 bytes (multiple of 8)
 }
 
