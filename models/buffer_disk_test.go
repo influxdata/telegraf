@@ -147,7 +147,7 @@ func TestDiskBufferEmptyClose(t *testing.T) {
 
 	// Make sure the buffer was fully emptied
 	require.Equal(t, 0, diskBuf.Len())
-	require.Empty(t, diskBuf.entries())
+	require.Equal(t, 0, diskBuf.entries())
 
 	// Close the buffer to simulate stopping Telegraf in a normal shutdown
 	require.NoError(t, diskBuf.Close())
