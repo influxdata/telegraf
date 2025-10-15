@@ -23,7 +23,7 @@ if [[ -n "${MODIFIED_NONPLUGINS}" ]]; then
 fi
 
 # Get the plugins modified and selectively run that plugin if only one is touched
-MODIFIED_PLUGINS=$(IFS='' git diff origin/master --name-only | grep -E "${PLUGINS}" | xargs dirname | sort -u)
+MODIFIED_PLUGINS=$(IFS='' git diff --name-only "$(git merge-base HEAD origin/master)" | grep -E "${PLUGINS}" | awk -F'/' '{print $1"/"$2"/"$3}' | sort -u)
 echo "=== Changed plugins ===" >&2
 echo "${MODIFIED_PLUGINS}" >&2
 echo "=====================" >&2
