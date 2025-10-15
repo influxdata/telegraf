@@ -197,7 +197,7 @@ func (c *HuaweiTelemetryDialout) DataPublish(stream dialout.GRPCDataservice_Data
 	parseGpb, err := huawei_gpb.New()
 	parseJson, err := huawei_json.New()
 	if err != nil {
-		c.acc.AddError(fmt.Errorf("Dialout Parser Init error: %s, %v", err))
+		c.acc.AddError(fmt.Errorf("Dialout Parser Init error: %s", err))
 		return err
 	}
 	//var chunkBuffer bytes.Buffer
