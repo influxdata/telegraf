@@ -140,7 +140,7 @@ value of the Prometheus `__name__` label for each element of the vector. Other
 labels will be kept as tags. All metrics will use the Prometheus timestamp.
 
 Non-histogram results will have the value stored in a `value` field. Histogram
-results will contain multiple fields with the fieldname being the upper bound
+results will contain multiple fields with the field name being the upper bound
 of the bin and a value with the bin count. Additionally, the metric will have a
 `count` and a `sum` field.
 
