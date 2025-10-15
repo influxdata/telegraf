@@ -313,6 +313,7 @@ following works:
 - github.com/mtibben/percent [MIT License](https://github.com/mtibben/percent/blob/master/LICENSE)
 - github.com/multiplay/go-ts3 [BSD 2-Clause "Simplified" License](https://github.com/multiplay/go-ts3/blob/master/LICENSE)
 - github.com/munnerz/goautoneg [BSD 3-Clause Clear License](https://github.com/munnerz/goautoneg/blob/master/LICENSE)
+- github.com/mwitkow/go-conntrack [Apache License 2.0](https://github.com/mwitkow/go-conntrack/blob/master/LICENSE)
 - github.com/naoina/go-stringutil [MIT License](https://github.com/naoina/go-stringutil/blob/master/LICENSE)
 - github.com/nats-io/jwt [Apache License 2.0](https://github.com/nats-io/jwt/blob/master/LICENSE)
 - github.com/nats-io/nats-server [Apache License 2.0](https://github.com/nats-io/nats-server/blob/master/LICENSE)
