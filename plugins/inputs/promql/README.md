@@ -128,7 +128,7 @@ returned results.
 
 ### Scalar and String Results
 
-A scalar or string result will produce a single metrics named after the value of
+A scalar or string result will produce single metrics named after the value of
 the Prometheus `__name__` label. Other labels will be kept as tags. The
 resulting metric used the Prometheus timestamp and will have the value stored in
 a `value` field.
