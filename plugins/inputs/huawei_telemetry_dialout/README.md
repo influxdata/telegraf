@@ -85,8 +85,8 @@ Dial-out shares the same data schema as Dial-in. Reuse the same processors:
 
 ## Notes
 
-- Parsers are self-registered in `huawei_grpc_gpb` and `huawei_grpc_json`; no manual registration required.
-- When adding new business sensors, extend `plugins/parsers/huawei_grpc_gpb/telemetry_proto/HuaweiTelemetry.go` with the appropriate `ProtoPath → Go type` mapping and rebuild.
-
-
-
+- Parsers are self-registered in `huawei_grpc_gpb` and `huawei_grpc_json`; no
+  manual registration required.
+- When adding new business sensors, extend
+  `plugins/parsers/huawei_grpc_gpb/telemetry_proto/HuaweiTelemetry.go` with the
+  appropriate `ProtoPath → Go type` mapping and rebuild.

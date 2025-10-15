@@ -59,6 +59,3 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   header fields and avoid `*_current_period` metrics.
 - With `processors.rename`: rename measurement and fields for shorter
   identifiers (e.g., `huawei_ifm_ifstats_rx_bytes_total`).
-
-
-

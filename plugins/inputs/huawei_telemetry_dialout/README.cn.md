@@ -47,5 +47,8 @@ Dialout 与 Dialin 的数据结构一致，可复用相同的处理器链：
 
 ## 说明
 
-- 解析器已在 `huawei_grpc_gpb` 与 `huawei_grpc_json` 包内自注册，无需手动注册。
-- 若新增业务传感器，请在 `plugins/parsers/huawei_grpc_gpb/telemetry_proto/HuaweiTelemetry.go` 中增加 `ProtoPath → Go 类型` 映射并重新构建。
+- 解析器已在 `huawei_grpc_gpb` 与 `huawei_grpc_json` 包内自注册，
+  无需手动注册。
+- 若新增业务传感器，请在
+  `plugins/parsers/huawei_grpc_gpb/telemetry_proto/HuaweiTelemetry.go`
+  中增加 `ProtoPath → Go 类型` 映射并重新构建。
