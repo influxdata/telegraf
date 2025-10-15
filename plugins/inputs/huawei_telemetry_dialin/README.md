@@ -4,7 +4,7 @@ This input plugin subscribes Huawei Model-Driven Telemetry (MDT) data from
 devices via gRPC Dial-in.
 
 ⭐ Telegraf v1.37.0
-🏷️ networking
+🏷️ network
 💻 all
 
 ## Service Input <!-- @/docs/includes/service_input.md -->

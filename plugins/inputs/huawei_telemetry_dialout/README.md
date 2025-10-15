@@ -4,7 +4,7 @@ This input plugin passively receives Huawei MDT data pushed by devices via gRPC
 Dial-out.
 
 ⭐ Telegraf v1.37.0
-🏷️ networking
+🏷️ network
 💻 all
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
