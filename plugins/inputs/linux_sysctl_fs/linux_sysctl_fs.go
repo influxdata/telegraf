@@ -17,7 +17,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// https://www.kernel.org/doc/Documentation/sysctl/fs.txt
 type SysctlFS struct {
 	path string
 }

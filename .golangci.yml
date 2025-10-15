@@ -411,9 +411,6 @@ linters:
         # Poorly chosen identifier.
         # https://staticcheck.dev/docs/checks/#ST1003
         - -ST1003
-        # The documentation of an exported type should start with type's name.
-        # https://staticcheck.dev/docs/checks/#ST1021
-        - -ST1021
         # Apply De Morgan's law.
         # https://staticcheck.dev/docs/checks/#QF1001
         - -QF1001
