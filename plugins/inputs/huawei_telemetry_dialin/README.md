@@ -190,12 +190,9 @@ payload). This is not an error but noisy. Two options:
 2. Or drop the header `data_gpb` in the parser. In
    `plugins/parsers/huawei_grpc_gpb/parser.go`, after creating `headerMap`
    inside `Parse`, add:
-   
+
    ```go
    delete(headerMap, GpbMsgKeyName) // i.e. delete(headerMap, "data_gpb")
    ```
-   
+
    This prevents merging raw `data_gpb.*` into fields.
-
-
-
