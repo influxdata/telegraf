@@ -226,6 +226,8 @@ test-all: fmtcheck vet
 .PHONY: check-deps
 check-deps:
 	./scripts/check-deps.sh
+	$(HOSTGO) build -o ./tools/license_checker/license_checker$(EXEEXT) ./tools/license_checker
+	./tools/license_checker/license_checker -whitelist ./tools/license_checker/data/whitelist
 
 .PHONY: clean
 clean:
