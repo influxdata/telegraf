@@ -1,0 +1,39 @@
+syntax = "proto3";                           //The .proto file version is defined as v3.
+package huawei_dialin;                     //The package name is huawei_dialin.
+service gRPCConfigOper {                   //The service name is gRPCConfigOper.
+    rpc Subscribe (SubsArgs) returns (stream SubsReply) {}; //The method is Subscribe, and the server stream mode is used, providing the dynamic subscription method. The input parameter SubsArgs contains subscribing parameters.
+    rpc Cancel (CancelArgs) returns (CancelReply) {}; //The method is Cancel, and the query and response mode is used, providing the method of canceling dynamic subscription. The input parameter CancelArgs contains unsubscribing parameters.
+}
+message Path {                //Path message structure.
+    string path = 1;          //Subscribed sensor-path.
+    uint32 depth = 2;         //Sampling depth of the subscribed sensor-path. The value 1 indicates the current level, and the value 2 indicates the current level and its sub-level, and so on.
+}
+message SubsArgs {            //Subscribing request parameter.
+    uint64 request_id = 1;    //Request ID, which is transferred by the invoker.
+    uint32 encoding = 2;      //Encoding type. Currently, the value can only be 0,indicating GPB encoding. 1 : json    
+    repeated Path path = 5;   //Subscribed path structure.
+    uint64 sample_interval = 6; //Sampling interval.
+    uint64 heartbeat_interval = 7; //Redundancy suppression interval. This parameter is valid only when suppress_redundant is set to 1.
+    oneof Suppress {
+        bool suppress_redundant = 8;  //Redundancy suppression. The sampled data is not reported if the data content remains unchanged. 0: disabled, 1: enabled.
+        uint64 delay_time = 9;        //Delay time, which ranges from 100 to 60000, in ms. After data changes, the new data is reported after a specified delay. The new changes during the delay are accumulated. This parameter is used to prevent a large amount of data from being reported during service flapping.
+    }
+}
+message SubsReply {            //Subscribing response parameter.
+    uint32 subscription_id = 1; //If the subscribing is successful, the subscription ID is returned. If the subscribing fails, 0 is returned.
+    uint64 request_id = 2;        //ID of the subscribing request.
+    string response_code = 3; //Return code. The value 200 indicates a success.
+    oneof MessageData {
+        bytes message = 4;        //Sampled data in GPB encoding format is carried.
+        string message_json = 5;  //Sampled data in JSON encoding format is carried.
+    }
+}
+message CancelArgs {            //Unsubscribing request parameter.
+    uint64 request_id = 1;    //Request ID, which is transferred by the invoker.
+    uint32 subscription_id = 2;   //ID of the subscription to be canceled.
+}
+message CancelReply {            //Unsubscribing response parameter.
+    uint64 request_id = 1;    //Request ID, which is transferred by the invoker.
+    string response_code = 2; //Return code. The value 200 indicates a success.
+    string message = 3;            //Error description.
+}
