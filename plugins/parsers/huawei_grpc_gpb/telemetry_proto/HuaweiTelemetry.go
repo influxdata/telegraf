@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"reflect"
 
+	"google.golang.org/protobuf/proto"
+
 	"github.com/influxdata/telegraf/plugins/parsers/huawei_grpc_gpb/telemetry_proto/huawei_devm"
 	"github.com/influxdata/telegraf/plugins/parsers/huawei_grpc_gpb/telemetry_proto/huawei_ifm"
-	"google.golang.org/protobuf/proto"
 )
 
 // ProtoTypes holds a set of reflect.Type

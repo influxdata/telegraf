@@ -9,18 +9,19 @@ import (
 	"net"
 	"sync"
 
-	"github.com/influxdata/telegraf"
-	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	dialout "github.com/influxdata/telegraf/plugins/inputs/huawei_telemetry_dialout/huawei_dialout"
-	huawei_gpb "github.com/influxdata/telegraf/plugins/parsers/huawei_grpc_gpb"
-	huawei_json "github.com/influxdata/telegraf/plugins/parsers/huawei_grpc_json"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
 	// Register GRPC gzip decoder to support compressed telemetry
 	_ "google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/peer"
+
+	"github.com/influxdata/telegraf"
+	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	dialout "github.com/influxdata/telegraf/plugins/inputs/huawei_telemetry_dialout/huawei_dialout"
+	huawei_gpb "github.com/influxdata/telegraf/plugins/parsers/huawei_grpc_gpb"
+	huawei_json "github.com/influxdata/telegraf/plugins/parsers/huawei_grpc_json"
 )
 
 // HuaweiTelemetryDialout plugin VRPs

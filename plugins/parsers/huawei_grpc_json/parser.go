@@ -127,7 +127,6 @@ func (kv *KVStruct) FullFlattenStruct(fieldname string,
 	if kv.Fields == nil {
 		kv.Fields = make(map[string]interface{})
 	}
-
 	switch t := v.(type) {
 	case map[string]interface{}:
 		for k, v := range t {

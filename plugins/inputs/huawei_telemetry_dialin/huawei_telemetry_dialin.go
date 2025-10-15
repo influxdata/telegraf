@@ -6,16 +6,17 @@ import (
 	"fmt"
 	"sync"
 
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
+
 	"github.com/influxdata/telegraf"
 	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	dialin "github.com/influxdata/telegraf/plugins/inputs/huawei_telemetry_dialin/huawei_dialin"
 	huawei_gpb "github.com/influxdata/telegraf/plugins/parsers/huawei_grpc_gpb"
 	huawei_json "github.com/influxdata/telegraf/plugins/parsers/huawei_grpc_json"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/metadata"
 )
 
 type Path struct {

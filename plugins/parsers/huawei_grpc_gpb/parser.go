@@ -9,13 +9,14 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	telemetry "github.com/influxdata/telegraf/plugins/parsers/huawei_grpc_gpb/telemetry_proto"
-	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -162,7 +163,6 @@ func (kv *KVStruct) FullFlattenStruct(fieldname string,
 	if kv.Fields == nil {
 		kv.Fields = make(map[string]interface{})
 	}
-
 	switch t := v.(type) {
 	case map[string]interface{}:
 		for k, v := range t {
