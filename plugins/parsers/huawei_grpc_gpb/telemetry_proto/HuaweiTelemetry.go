@@ -2,12 +2,11 @@ package telemetry
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/influxdata/telegraf/plugins/parsers/huawei_grpc_gpb/telemetry_proto/huawei_devm"
 	"github.com/influxdata/telegraf/plugins/parsers/huawei_grpc_gpb/telemetry_proto/huawei_ifm"
 	"google.golang.org/protobuf/proto"
-
-	"reflect"
 )
 
 // struct reflect.Type set
