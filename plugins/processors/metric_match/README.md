@@ -1,6 +1,7 @@
 # Metric Match Processor Plugin
 
-`metric_match` filters fields and converts selected fields to tags for Huawei MDT metrics.
+`metric_match` filters fields and converts selected fields to tags for Huawei
+MDT metrics.
 
 ⭐ Telegraf v1.37.0
 🏷️ transformation
@@ -33,7 +34,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   [processors.metric_match.tag]
   "huawei-ifm:ifm/interfaces/interface/ifStatistics" = ["node_id_str"]
 
-  # Field filtering (match by field-name suffix; top-level fields without dots are kept by default)
+  # Field filtering (match by field-name suffix; top-level fields without dots
+  # are kept by default)
   [processors.metric_match.field_filter]
   "huawei-ifm:ifm/interfaces/interface/ifStatistics" = [
     "receiveByte",

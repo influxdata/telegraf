@@ -1,6 +1,7 @@
 # Huawei Telemetry Dialout Input Plugin
 
-This input plugin passively receives Huawei MDT data pushed by devices via gRPC Dial-out.
+This input plugin passively receives Huawei MDT data pushed by devices via gRPC
+Dial-out.
 
 ⭐ Telegraf v1.37.0
 🏷️ networking
@@ -36,15 +37,16 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Metrics
 
-See the Dialin plugin for a list of typical measurements and fields. Dial-out
-shares the same data schema as Dial-in.
+See the Dialin plugin for a list of typical measurements and fields.
+Dial-out shares the same data schema as Dial-in.
 
 ## Example Output
 
 Example (Influx Line Protocol):
 
 ```text
-huawei-ifm:ifm/interfaces/interface/ifStatistics,node_id_str=Switch interfaces.interface.0.ifStatistics.receiveByte="0" 1760450787711000000
+huawei-ifm:ifm/interfaces/interface/ifStatistics,node_id_str=Switch \
+interfaces.interface.0.ifStatistics.receiveByte="0" 1760450787711000000
 ```
 
 ## Prometheus Integration (recommended chain)
