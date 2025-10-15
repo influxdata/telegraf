@@ -53,9 +53,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Typical combinations
 
-- With `processors.converter`: convert stringified numbers to numeric so Prometheus exports them as metrics instead of labels.
-- With `processors.filter`: e.g., `fieldexclude = ["current_period"]` to drop header fields and avoid `*_current_period` metrics.
-- With `processors.rename`: rename measurement and fields for shorter identifiers (e.g., `huawei_ifm_ifstats_rx_bytes_total`).
+- With `processors.converter`: convert stringified numbers to numeric so
+  Prometheus exports them as metrics instead of labels.
+- With `processors.filter`: e.g., `fieldexclude = ["current_period"]` to drop
+  header fields and avoid `*_current_period` metrics.
+- With `processors.rename`: rename measurement and fields for shorter
+  identifiers (e.g., `huawei_ifm_ifstats_rx_bytes_total`).
 
 
 
