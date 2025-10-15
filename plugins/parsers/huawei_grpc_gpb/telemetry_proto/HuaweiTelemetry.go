@@ -59,7 +59,7 @@ func GetProtoTypeSetByKey(p *PathKey) *ProtoTypes {
 }
 
 // GetTypeByProtoPath returns proto.Message with protoPath and version
-func GetTypeByProtoPath(protoPath string, version string) (proto.Message, error) {
+func GetTypeByProtoPath(protoPath, version string) (proto.Message, error) {
 	if version == "" {
 		version = DefaultVersion
 	}

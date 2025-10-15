@@ -27,17 +27,18 @@ type MetricMatch struct {
 	Log         telegraf.Logger
 }
 
-func (m *MetricMatch) SampleConfig() string {
+func (*MetricMatch) SampleConfig() string {
 	return sampleConfig
 }
 
-func (m *MetricMatch) Description() string {
+// Description returns the description of the processor
+func (*MetricMatch) Description() string {
 	return "metric match"
 }
 
 func (m *MetricMatch) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	// get telemetry header field_filter and tag
-	var res []telegraf.Metric
+	res := make([]telegraf.Metric, 0, len(in))
 	headerFilter := m.FieldFilter[TelemetryKey]
 	headerTag := m.Tag[TelemetryKey]
 	headerWay := m.Approach
@@ -47,9 +48,7 @@ func (m *MetricMatch) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	}
 
 	if approach == "include" {
-
 		// include filter field
-
 		for _, eachMetric := range in {
 			sensorPath, ok := eachMetric.GetField(SensorPathKey)
 			if ok {
@@ -68,13 +67,8 @@ func (m *MetricMatch) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 				fieldFilters = append(fieldFilters, headerFilter...)
 				for _, filter := range fieldFilters {
-
 					if ok, matchKeys := matchField(filter, eachMetric.FieldList()); ok {
-
-						for _, realKey := range matchKeys {
-							needKeys = append(needKeys, realKey)
-							//eachMetric.AddField(realKey,eachMetric)
-						}
+						needKeys = append(needKeys, matchKeys...)
 					}
 				}
 
@@ -83,9 +77,7 @@ func (m *MetricMatch) Apply(in ...telegraf.Metric) []telegraf.Metric {
 				tagsToKeep = append(tagsToKeep, headerTag...)
 				for _, tagKey := range tagsToKeep {
 					if ok, matchKeys := matchField(tagKey, eachMetric.FieldList()); ok {
-						for _, realKey := range matchKeys {
-							needKeys = append(needKeys, realKey)
-						}
+						needKeys = append(needKeys, matchKeys...)
 					}
 				}
 

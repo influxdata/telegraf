@@ -86,7 +86,6 @@ func (d *HuaweiTelemetryDialin) Start(acc telegraf.Accumulator) error {
 
 // create subscribe args from config of huawei_telemetry_dialin in telegraf.conf
 func createSubArgs(router router) *dialin.SubsArgs {
-
 	paths := make([]*dialin.Path, 0, len(router.Paths))
 
 	if len(router.Paths) == 0 {
@@ -129,12 +128,12 @@ func (d *HuaweiTelemetryDialin) singleSubscribe(dialinConfig router, parserGPB, 
 		// No TLS
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
-	conn, err := grpc.Dial(dialinConfig.Address, opts...)
+	conn, err := grpc.NewClient(dialinConfig.Address, opts...)
 	if err != nil {
-		d.Log.Errorf("[single subscribe] invalid Huawei Dialin remoteServer: TLS PEM %s, device address: %s, request_id: %d", d.Transport, dialinConfig.Address, dialinConfig.RequestID)
+		d.Log.Errorf("[single subscribe] invalid Huawei Dialin remoteServer: device address: %s, request_id: %d", dialinConfig.Address, dialinConfig.RequestID)
 		return
 	}
-	// defer conn.Close()
+	defer conn.Close()
 	client := dialin.NewGRPCConfigOperClient(conn)
 	var cancel context.CancelFunc
 	var ctx context.Context
@@ -143,12 +142,14 @@ func (d *HuaweiTelemetryDialin) singleSubscribe(dialinConfig router, parserGPB, 
 		// Input AAA as context
 		ctx = metadata.AppendToOutgoingContext(context.TODO(), "username", dialinConfig.Aaa.Username, "password", dialinConfig.Aaa.Password)
 	} else {
-		d.Log.Errorf("[single subscribe] no AAA configuration checked, device address: %s, request_id: %d", dialinConfig.Address, dialinConfig.RequestID)
+		d.Log.Errorf("[single subscribe] no AAA configuration checked, device address: %s, request_id: %d",
+			dialinConfig.Address, dialinConfig.RequestID)
 	}
 	stream, err := client.Subscribe(ctx, createSubArgs(dialinConfig))
 	if err != nil {
 		cancel()
-		d.Log.Errorf("[single subscribe] Huawei Dialin connection failed %s request_id %d, connection error %v", dialinConfig.Address, dialinConfig.RequestID, err)
+		d.Log.Errorf("[single subscribe] Huawei Dialin connection failed %s request_id %d, connection error %v",
+			dialinConfig.Address, dialinConfig.RequestID, err)
 		return
 	}
 	defer cancel() // 确保context被正确取消
@@ -156,7 +157,8 @@ func (d *HuaweiTelemetryDialin) singleSubscribe(dialinConfig router, parserGPB, 
 		for {
 			packet, err := stream.Recv()
 			if err != nil || packet == nil {
-				d.Log.Errorf("[single subscribe] Huawei Dialin device address %s, request_id %d, stream recv() %v", dialinConfig.Address, dialinConfig.RequestID, err)
+				d.Log.Errorf("[single subscribe] Huawei Dialin device address %s, request_id %d, stream recv() %v",
+					dialinConfig.Address, dialinConfig.RequestID, err)
 				return
 			}
 			isData := checkValidData(packet)
@@ -167,7 +169,8 @@ func (d *HuaweiTelemetryDialin) singleSubscribe(dialinConfig router, parserGPB, 
 					d.Log.Debugf("data gpb %s", hex.EncodeToString(packet.GetMessage()))
 					metrics, errParse = parserGPB.Parse(packet.GetMessage())
 					if errParse != nil {
-						d.Log.Errorf("[huawei dialin] device address %s, request_id %d, packet parse error: %v", dialinConfig.Address, dialinConfig.RequestID, errParse)
+						d.Log.Errorf("[huawei dialin] device address %s, request_id %d, packet parse error: %v",
+							dialinConfig.Address, dialinConfig.RequestID, errParse)
 						return
 					}
 				}
@@ -175,7 +178,8 @@ func (d *HuaweiTelemetryDialin) singleSubscribe(dialinConfig router, parserGPB, 
 					d.Log.Debugf("data str %s", packet.GetMessageJson())
 					metrics, errParse = parserJSON.Parse([]byte(packet.GetMessageJson()))
 					if errParse != nil {
-						d.Log.Errorf("[huawei dialin] device address %s, request_id %d, packet JSON parse error: %v", dialinConfig.Address, dialinConfig.RequestID, errParse)
+						d.Log.Errorf("[huawei dialin] device address %s, request_id %d, packet JSON parse error: %v",
+							dialinConfig.Address, dialinConfig.RequestID, errParse)
 						return
 					}
 				}
@@ -213,17 +217,17 @@ const sampleConfig = `
  `
 
 // SampleConfig of plugin
-func (d *HuaweiTelemetryDialin) SampleConfig() string {
+func (*HuaweiTelemetryDialin) SampleConfig() string {
 	return sampleConfig
 }
 
 // Description of plugin
-func (d *HuaweiTelemetryDialin) Description() string {
+func (*HuaweiTelemetryDialin) Description() string {
 	return "Huawei model-driven telemetry (MDT) input plugin for dialin"
 }
 
 // Gather plugin measurements (unused)
-func (d *HuaweiTelemetryDialin) Gather(_ telegraf.Accumulator) error {
+func (*HuaweiTelemetryDialin) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
@@ -248,9 +252,4 @@ func init() {
 	inputs.Add("huawei_telemetry_dialin", func() telegraf.Input {
 		return &HuaweiTelemetryDialin{}
 	})
-}
-
-// Stop gracefully
-func (d *HuaweiTelemetryDialin) stop() {
-	d.Log.Error("telegraf stopped because of error")
 }

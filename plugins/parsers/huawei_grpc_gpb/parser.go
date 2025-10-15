@@ -125,11 +125,11 @@ func protoMsgToMap(protoMsg proto.Message) (map[string]interface{}, error) {
 	return msgMap, nil
 }
 
-func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
-	return nil, errors.New("ParseLine not implemented")
+func (*Parser) ParseLine(_ string) (telegraf.Metric, error) {
+	return nil, errors.New("parseLineNotImplemented")
 }
 
-func (p *Parser) SetDefaultTags(tags map[string]string) {
+func (*Parser) SetDefaultTags(_ map[string]string) {
 	// Not implemented
 }
 
@@ -141,7 +141,7 @@ func New() (*Parser, error) {
 
 func init() {
 	parsers.Add("huawei_grpc_gpb",
-		func(defaultMetricName string) telegraf.Parser {
+		func(_ string) telegraf.Parser {
 			parser, _ := New()
 			return parser
 		},
@@ -155,8 +155,7 @@ type KVStruct struct {
 // FullFlattenStruct flattens nested structures into a flat map
 func (kv *KVStruct) FullFlattenStruct(fieldname string,
 	v interface{},
-	convertString bool,
-	convertBool bool) error {
+	convertString, convertBool bool) error {
 	if kv.Fields == nil {
 		kv.Fields = make(map[string]interface{})
 	}
@@ -178,9 +177,8 @@ func (kv *KVStruct) FullFlattenStruct(fieldname string,
 			if fieldname != "" {
 				fieldKey = fieldname + KeySeparator + fieldKey
 			}
-			err := kv.FullFlattenStruct(fieldKey, v, convertString, convertBool)
-			if err != nil {
-				return nil
+			if err := kv.FullFlattenStruct(fieldKey, v, convertString, convertBool); err != nil {
+				return err
 			}
 		}
 	case float64:
@@ -196,17 +194,15 @@ func (kv *KVStruct) FullFlattenStruct(fieldname string,
 	case int32:
 		kv.Fields[fieldname] = v.(int32)
 	case string:
-		if convertString {
-			kv.Fields[fieldname] = v.(string)
-		} else {
+		if !convertString {
 			return nil
 		}
+		kv.Fields[fieldname] = v.(string)
 	case bool:
-		if convertBool {
-			kv.Fields[fieldname] = v.(bool)
-		} else {
+		if !convertBool {
 			return nil
 		}
+		kv.Fields[fieldname] = v.(bool)
 	case nil:
 		return nil
 	default:
@@ -230,20 +226,15 @@ func convertToNum(str string) (bool, int64) {
 */
 
 func (p *Parser) flattenProtoMsg(telemetryHeader map[string]interface{}, rowsDecodec []map[string]interface{}, startFieldName string) ([]telegraf.Metric, error) {
+	metrics := make([]telegraf.Metric, 0, len(rowsDecodec))
 	kvHeader := KVStruct{}
 	errHeader := kvHeader.FullFlattenStruct("", telemetryHeader, true, true)
 	if errHeader != nil {
 		return nil, errHeader
 	}
 
-	// Debug code commented out
-	// p.Log.Debugf("-------------------------------------Header START-----------------------------------------\n")
-	// for k, v := range kvHeader.Fields {
-	//     p.Log.Debugf("k: %s, v: %v ", k, v)
-	// }
-	// p.Log.Debugf("------------------------------------- Header END -----------------------------------------\n")
-
-	var metrics []telegraf.Metric
+	// Remove noisy data_gpb content from header
+	delete(kvHeader.Fields, GPBMsgKeyName)
 	// one row into one metric
 	for _, rowDecodec := range rowsDecodec {
 		kvWithRow := KVStruct{}
@@ -255,18 +246,8 @@ func (p *Parser) flattenProtoMsg(telemetryHeader map[string]interface{}, rowsDec
 		if errMerge != nil {
 			return nil, errMerge
 		}
-		metric := metric.New(telemetryHeader[SensorPathKey].(string), nil, fields, tm)
-		// if err != nil {
-		// return nil, err
-		// }
-		// Debug code commented out
-		// p.Log.Debugf("-------------------------------------Fields START time is %v-----------------------------------------\n", metric.Time())
-		// for k, v := range metric.Fields() {
-		//     p.Log.Debugf("k: %s, v: %v ", k, v)
-		// }
-		// p.Log.Debugf("------------------------------------- Fields END -----------------------------------------\n")
-
-		metrics = append(metrics, metric)
+		metricInstance := metric.New(telemetryHeader[SensorPathKey].(string), nil, fields, tm)
+		metrics = append(metrics, metricInstance)
 	}
 	return metrics, nil
 }
@@ -303,9 +284,9 @@ func (p *Parser) mergeMaps(maps ...map[string]interface{}) (map[string]interface
 func calTimeByStamp(v interface{}) (time.Time, string, error) {
 	var sec int64
 	var nsec int64
-	switch v.(type) {
+	switch vTyped := v.(type) {
 	case float64:
-		vInFloat64 := v.(float64)
+		vInFloat64 := vTyped
 		if vInFloat64 < math.Pow10(11) {
 			sec = int64(vInFloat64)
 			nsec = 0
@@ -315,7 +296,7 @@ func calTimeByStamp(v interface{}) (time.Time, string, error) {
 			nsec = (int64(vInFloat64) % 1000) * 1000 * 1000
 		}
 	case int64:
-		vInInt64 := v.(int64)
+		vInInt64 := vTyped
 		if float64(vInInt64) < math.Pow10(11) {
 			sec = vInInt64
 			nsec = 0
@@ -325,7 +306,7 @@ func calTimeByStamp(v interface{}) (time.Time, string, error) {
 			nsec = (vInInt64 % 1000) * 1000 * 1000
 		}
 	case uint64:
-		vInUint64 := v.(uint64)
+		vInUint64 := vTyped
 		if float64(vInUint64) < math.Pow10(11) {
 			sec = int64(vInUint64)
 			nsec = 0
@@ -335,27 +316,26 @@ func calTimeByStamp(v interface{}) (time.Time, string, error) {
 			nsec = int64((vInUint64 % 1000) * 1000 * 1000)
 		}
 	case string:
-		if strings.Index(v.(string), ":") > -1 {
-			return time.Time{}, v.(string), nil
+		if strings.Contains(vTyped, ":") {
+			return time.Time{}, vTyped, nil
 		}
-		timeInNum, errToNum := strconv.ParseUint(v.(string), 10, 64)
+		timeInNum, errToNum := strconv.ParseUint(vTyped, 10, 64)
 		if errToNum != nil {
 			return time.Time{}, "", fmt.Errorf("failed to parse time: %w", errToNum)
-		} else {
-			if float64(timeInNum) < math.Pow10(11) {
-				sec = int64(timeInNum)
-				nsec = 0
-			}
-			if float64(timeInNum) > math.Pow10(12) {
-				sec = int64(timeInNum / 1000)
-				nsec = int64((timeInNum % 1000) * 1000 * 1000)
-			}
+		}
+		if float64(timeInNum) < math.Pow10(11) {
+			sec = int64(timeInNum)
+			nsec = 0
+		}
+		if float64(timeInNum) > math.Pow10(12) {
+			sec = int64(timeInNum / 1000)
+			nsec = int64((timeInNum % 1000) * 1000 * 1000)
 		}
 	}
 
 	if sec == 0 {
 		return time.Time{}, "", errors.New("calculate error")
 	}
-	time := time.Unix(sec, nsec)
-	return time, time.Format(TimeFormat), nil
+	timeResult := time.Unix(sec, nsec)
+	return timeResult, timeResult.Format(TimeFormat), nil
 }
