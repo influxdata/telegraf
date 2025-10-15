@@ -42,10 +42,6 @@ func TestCoreMetric_String(t *testing.T) {
 			metricName: "cpu_c7_state_residency",
 		},
 		{
-			name:       "CPUBusyCycles",
-			metricName: "cpu_busy_cycles",
-		},
-		{
 			name:       "CPUBusyFrequency",
 			metricName: "cpu_busy_frequency",
 		},
