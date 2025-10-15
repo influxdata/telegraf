@@ -11,7 +11,6 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-
 	// Register GRPC gzip decoder to support compressed telemetry
 	_ "google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/peer"
