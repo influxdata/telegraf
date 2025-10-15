@@ -99,8 +99,12 @@ func (p *PromQL) Stop() {
 }
 
 func (p *PromQL) Gather(acc telegraf.Accumulator) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(p.Timeout))
-	defer cancel()
+	ctx := context.Background()
+	if p.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(p.Timeout))
+		defer cancel()
+	}
 
 	t := time.Now()
 
