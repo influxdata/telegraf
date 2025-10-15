@@ -90,6 +90,6 @@ func (p *ProtoTypes) GetTypesByProtoOrg(orgType ProtoOrganizeType) reflect.Type 
 // one map key: protoPath + version, value : reflect[]
 var pathTypeMap = map[PathKey][]reflect.Type{
 
-	PathKey{ProtoPath: "huawei_ifm.Ifm", Version: "1.0"}:   []reflect.Type{reflect.TypeOf((*huawei_ifm.Ifm)(nil))},
-	PathKey{ProtoPath: "huawei_devm.Devm", Version: "1.0"}: []reflect.Type{reflect.TypeOf((*huawei_devm.Devm)(nil))},
+	{ProtoPath: "huawei_ifm.Ifm", Version: "1.0"}:   {reflect.TypeOf((*huawei_ifm.Ifm)(nil))},
+	{ProtoPath: "huawei_devm.Devm", Version: "1.0"}: {reflect.TypeOf((*huawei_devm.Devm)(nil))},
 }
