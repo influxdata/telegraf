@@ -109,10 +109,10 @@ func (f *File) Init() error {
 		f.CompressionAlgorithm = "identity"
 	}
 
-	var err error
 	if f.CompressionLevel >= 0 {
 		options = append(options, internal.WithCompressionLevel(f.CompressionLevel))
 	}
+	var err error
 	f.encoder, err = internal.NewContentEncoder(f.CompressionAlgorithm, options...)
 
 	return err
@@ -230,12 +230,12 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 			for _, m := range fnMetrics {
 				serialized, err := serializer.Serialize(m)
 				if err != nil {
-					f.Log.Debugf("Could not serialize metric: %v", err)
+					f.Log.Errorf("Could not serialize metric: %v", err)
 					continue
 				}
 				octets, err := f.encoder.Encode(serialized)
 				if err != nil {
-					f.Log.Debugf("Could not compress metric: %v", err)
+					f.Log.Errorf("Could not compress metric: %v", err)
 					continue
 				}
 				groupBuffer[fn] = append(groupBuffer[fn], octets...)
