@@ -1,8 +1,8 @@
-# Huawei Telemetry Dialout Input (Huawei MDT Dial-out)
+# Huawei Telemetry Dialout Input（华为 MDT 被动推送）
 
-This input plugin passively receives Huawei MDT data pushed by devices via gRPC Dial-out.
+该输入插件通过 gRPC Dialout 被动接收设备推送的华为 MDT 数据。
 
-## Basic Configuration (example)
+## 基本配置（示例）
 
 ```toml
 [[inputs.huawei_telemetry_dialout]]
@@ -11,12 +11,12 @@ This input plugin passively receives Huawei MDT data pushed by devices via gRPC 
   # max_msg_size = 4194304
 ```
 
-## Prometheus Integration (recommended chain)
+## 与 Prometheus 集成（推荐处理链）
 
-Dial-out shares the same data schema as Dial-in. Reuse the same processors:
+Dialout 与 Dialin 的数据结构一致，可复用相同的处理器链：
 
 ```toml
-# Example: only key fragments shown. See Dialin README for the full chain.
+# 示例，仅展示关键片段（详见 Dialin README 中的完整处理链）
 [[processors.converter]]
   namepass = ["huawei-ifm:ifm/interfaces/interface/ifStatistics"]
   [processors.converter.fields]
@@ -45,10 +45,7 @@ Dial-out shares the same data schema as Dial-in. Reuse the same processors:
   export_timestamp = true
 ```
 
-## Notes
+## 说明
 
-- Parsers are self-registered in `huawei_grpc_gpb` and `huawei_grpc_json`; no manual registration required.
-- When adding new business sensors, extend `plugins/parsers/huawei_grpc_gpb/telemetry_proto/HuaweiTelemetry.go` with the appropriate `ProtoPath → Go type` mapping and rebuild.
-
-
-
+- 解析器已在 `huawei_grpc_gpb` 与 `huawei_grpc_json` 包内自注册，无需手动注册。
+- 若新增业务传感器，请在 `plugins/parsers/huawei_grpc_gpb/telemetry_proto/HuaweiTelemetry.go` 中增加 `ProtoPath → Go 类型` 映射并重新构建。
