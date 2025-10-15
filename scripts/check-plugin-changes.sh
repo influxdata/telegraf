@@ -14,7 +14,7 @@ if [[ -z "${CIRCLE_PULL_REQUEST##*/}" ]]; then
 fi
 
 # If anything outside the supported plugins changed we need to test everything
-MODIFIED_NONPLUGINS=$(git diff origin/master --name-only | grep -v -E "${PLUGINS}")
+MODIFIED_NONPLUGINS=$(git diff --name-only "$(git merge-base HEAD origin/master)" | grep -v -E "${PLUGINS}")
 echo "modified: ${MODIFIED_NONPLUGINS}">&2
 if [[ -n "${MODIFIED_NONPLUGINS}" ]]; then
     echo "Modified files outside plugins detected, running all tests" >&2
