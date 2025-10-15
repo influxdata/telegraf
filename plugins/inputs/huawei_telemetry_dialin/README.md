@@ -1,6 +1,24 @@
-# Huawei Telemetry Dialin Input (Huawei MDT Dial-in)
+# Huawei Telemetry Dialin Input Plugin
 
 This input plugin subscribes Huawei Model-Driven Telemetry (MDT) data from devices via gRPC Dial-in.
+
+⭐ Telegraf v1.37.0
+🏷️ networking
+💻 all
+
+## Service Input <!-- @/docs/includes/service_input.md -->
+
+This plugin runs as a long-lived service that establishes a gRPC session to the
+device and receives streaming telemetry updates.
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Prerequisites
 
@@ -13,7 +31,12 @@ This input plugin subscribes Huawei Model-Driven Telemetry (MDT) data from devic
 
 > Note: The repository already contains the above files and mappings. For new sensors, add a `PathKey → []reflect.Type` mapping and rebuild.
 
-## Basic Configuration (example)
+## Configuration
+
+```toml @sample.conf
+```
+
+### Example configuration
 
 ```toml
 [[inputs.huawei_telemetry_dialin]]
@@ -42,6 +65,33 @@ This input plugin subscribes Huawei Model-Driven Telemetry (MDT) data from devic
     [[inputs.huawei_telemetry_dialin.routers.Paths]]
       depth = 1
       path = 'huawei-devm:devm/memoryInfos/memoryInfo'
+```
+
+## Metrics
+
+The plugin emits measurements derived from Huawei MDT sensors. Typical
+measurements include but are not limited to:
+
+- huawei-ifm:ifm/interfaces/interface/ifStatistics
+  - tags: node_id_str, interfaces.interface.0.ifName, host
+  - fields: receiveByte, receivePacket, rcvUniPacket, rcvMutiPacket,
+    rcvBroadPacket, rcvErrorPacket, sendByte, sendPacket,
+    in_realtime_bit_rate, out_realtime_bit_rate
+- huawei-devm:devm/cpuInfos/cpuInfo
+  - tags: node_id_str, host
+  - fields: systemCpuUsage
+- huawei-devm:devm/memoryInfos/memoryInfo
+  - tags: node_id_str, host
+  - fields: osMemoryTotal, osMemoryFree, osMemoryUsage
+
+## Example Output
+
+Example (Influx Line Protocol) before any processors are applied:
+
+```text
+huawei-ifm:ifm/interfaces/interface/ifStatistics,node_id_str=Switch interfaces.interface.0.ifStatistics.receiveByte="0",interfaces.interface.0.ifStatistics.sendByte="0" 1760450787711000000
+huawei-devm:devm/cpuInfos/cpuInfo,node_id_str=Switch cpuInfos.cpuInfo.0.systemCpuUsage=13i 1760450787730000000
+huawei-devm:devm/memoryInfos/memoryInfo,node_id_str=Switch memoryInfos.memoryInfo.0.osMemoryTotal=3913872i,memoryInfos.memoryInfo.0.osMemoryFree=2316916i 1760450787632000000
 ```
 
 ## Prometheus Integration (recommended chain)
