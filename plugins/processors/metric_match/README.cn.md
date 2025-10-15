@@ -33,6 +33,9 @@
 
 ## 典型组合
 
-- 与 `processors.converter` 配合：把字符串型数值先转为数值，Prometheus 才会导出为 metric 而非 label。
-- 与 `processors.filter` 配合：例如 `fieldexclude = ["current_period"]` 丢弃头部字段，避免导出 `*_current_period` 指标。
-- 与 `processors.rename` 配合：重命名测量和字段，得到更短的指标名（如 `huawei_ifm_ifstats_rx_bytes_total`）。
+- 与 `processors.converter` 配合：把字符串型数值先转为数值，Prometheus
+  才会导出为 metric 而非 label。
+- 与 `processors.filter` 配合：例如 `fieldexclude = ["current_period"]`
+  丢弃头部字段，避免导出 `*_current_period` 指标。
+- 与 `processors.rename` 配合：重命名测量和字段，得到更短的指标名
+  （如 `huawei_ifm_ifstats_rx_bytes_total`）。
