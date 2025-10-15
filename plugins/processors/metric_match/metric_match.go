@@ -46,7 +46,6 @@ func (m *MetricMatch) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, v := range headerWay {
 		approach = v
 	}
-
 	if approach == "include" {
 		// include filter field
 		for _, eachMetric := range in {
@@ -95,7 +94,6 @@ func (m *MetricMatch) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 			}
 		}
-
 	} else {
 		// exclude filter field
 		for _, eachMetric := range in {
@@ -115,7 +113,6 @@ func (m *MetricMatch) Apply(in ...telegraf.Metric) []telegraf.Metric {
 				}
 			}
 		}
-
 	}
 
 	// field to tag
@@ -138,9 +135,8 @@ func (m *MetricMatch) Apply(in ...telegraf.Metric) []telegraf.Metric {
 									m.Log.Errorf("wrong with metric tag [%s %s], it's type is %s", sensorPath.(string), tag, typeOfV.Name())
 									m.Log.Error("telegraf stopped because of error")
 									return nil
-								} else {
-									value = strconv.FormatInt(value.(int64), 10)
 								}
+								value = strconv.FormatInt(value.(int64), 10)
 							} else {
 								// 默认标签占位：空字符串时填充为 "N/A"，避免被序列化时丢弃
 								if strings.TrimSpace(value.(string)) == "" {

@@ -62,7 +62,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 	// remove key : data_str
 	delete(msgMap, JSONMsgKeyName)
-	metrics, err := p.flattenProtoMsg(msgMap, msgsInMaps, "") // JSONMsgKeyName+KeySeparator+RowKeyName="data_str.json"
+	metrics, err := p.flattenProtoMsg(msgMap, msgsInMaps, "")
 	return metrics, err
 }
 
@@ -107,7 +107,10 @@ func New() (*Parser, error) {
 func init() {
 	parsers.Add("huawei_grpc_json",
 		func(_ string) telegraf.Parser {
-			parser, _ := New()
+			parser, err := New()
+			if err != nil {
+				panic(err)
+			}
 			return parser
 		},
 	)
@@ -124,6 +127,7 @@ func (kv *KVStruct) FullFlattenStruct(fieldname string,
 	if kv.Fields == nil {
 		kv.Fields = make(map[string]interface{})
 	}
+
 	switch t := v.(type) {
 	case map[string]interface{}:
 		for k, v := range t {
@@ -177,7 +181,8 @@ func (kv *KVStruct) FullFlattenStruct(fieldname string,
 	return nil
 }
 
-func (p *Parser) flattenProtoMsg(telemetryHeader map[string]interface{}, rowsDecodec []map[string]interface{}, startFieldName string) ([]telegraf.Metric, error) {
+func (p *Parser) flattenProtoMsg(telemetryHeader map[string]interface{}, rowsDecodec []map[string]interface{},
+	startFieldName string) ([]telegraf.Metric, error) {
 	metrics := make([]telegraf.Metric, 0, len(rowsDecodec))
 	kvHeader := KVStruct{}
 	errHeader := kvHeader.FullFlattenStruct("", telemetryHeader, true, true)

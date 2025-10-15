@@ -66,7 +66,7 @@ func GetTypeByProtoPath(protoPath, version string) (proto.Message, error) {
 	mapping := GetProtoTypeSetByKey(
 		&PathKey{
 			ProtoPath: protoPath,
-			Version:   DefaultVersion})
+			Version:   version})
 	if mapping == nil {
 		return nil, fmt.Errorf("the proto type is nil, protoPath is %s", protoPath)
 	}
