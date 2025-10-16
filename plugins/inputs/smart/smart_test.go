@@ -2,7 +2,9 @@ package smart
 
 import (
 	"errors"
+	"flag"
 	"fmt"
+	"os"
 	"os/exec"
 	"sync"
 	"testing"
@@ -461,6 +463,20 @@ func Test_difference(t *testing.T) {
 	require.Equal(t, expected, result)
 }
 
+// mockExitError creates an exec.ExitError with the given exit status.
+// This uses the test binary itself to generate a real ExitError, avoiding platform-specific
+// shell commands.
+func mockExitError(exitStatus int) error {
+	exe, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("failed to get executable: %w", err)
+	}
+
+	cmd := exec.Command(exe, "-test.run=^$", fmt.Sprintf("-exit-status=%d", exitStatus))
+	cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
+	return cmd.Run()
+}
+
 func TestExitStatusForActiveVsStandbyDrives(t *testing.T) {
 	s := newSmart()
 	s.Attributes = true
@@ -472,16 +488,12 @@ func TestExitStatusForActiveVsStandbyDrives(t *testing.T) {
 
 		if deviceArg == "/dev/sdb" {
 			// Active drive - smartctl exits with 2 but drive shows as ACTIVE
-			cmd := exec.Command("sh", "-c", "exit 2")
-			err := cmd.Run()
 			return []byte(`Device Model: ST18000NT001-3NF101
 Power mode is: ACTIVE or IDLE
-SMART overall-health self-assessment test result: PASSED`), err
+SMART overall-health self-assessment test result: PASSED`), mockExitError(2)
 		} else if deviceArg == "/dev/sdc" {
 			// Standby drive - smartctl exits with 2 and drive shows as STANDBY
-			cmd := exec.Command("sh", "-c", "exit 2")
-			err := cmd.Run()
-			return []byte(mockStandbyData), err
+			return []byte(mockStandbyData), mockExitError(2)
 		}
 		return nil, errors.New("unexpected device")
 	}
@@ -2681,3 +2693,20 @@ Copyright (C) 2002-23, Bruce Allen, Christian Franke, www.smartmontools.org
 Device is in STANDBY mode, exit(2)
 `
 )
+
+// TestMain handles the test helper process for mockExitError.
+// This allows us to generate proper exec.ExitError instances with specific exit codes
+// using the test binary itself, which works cross-platform (unlike shell-specific commands).
+func TestMain(m *testing.M) {
+	var exitStatusFlag int
+	flag.IntVar(&exitStatusFlag, "exit-status", 0, "exit status for test helper")
+	flag.Parse()
+
+	// If this is being run as a helper process, exit with the requested status
+	if os.Getenv("GO_WANT_HELPER_PROCESS") == "1" {
+		os.Exit(exitStatusFlag)
+	}
+
+	// Otherwise, run the tests normally
+	os.Exit(m.Run())
+}
