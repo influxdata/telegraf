@@ -38,8 +38,7 @@ func (*Timex) Gather(acc telegraf.Accumulator) error {
 
 	// https://man7.org/linux/man-pages/man2/adjtimex.2.html
 	// Notes for frequency adjustment ppm
-	microseconds := float64(1 * time.Second.Microseconds())
-	ppm16 := float64(microseconds * 65536)
+	ppm16 := float64(65536 * time.Second / time.Microsecond)
 
 	// https://man7.org/linux/man-pages/man2/adjtimex.2.html
 	// validate the status to determine if the time is in nanoseconds or microseconds
@@ -47,12 +46,12 @@ func (*Timex) Gather(acc telegraf.Accumulator) error {
 	// STA_MICRO (0x4000): time is in microseconds
 	multiplier := int64(1000)
 	if (timex.Status & unix.STA_NANO) != 0 {
-		multiplier = int64(0)
+		multiplier = int64(1)
 	}
 
 	fields := map[string]interface{}{
 		"offset_ns":                    timex.Offset * multiplier,
-		"frequency_adjustment_ratio":   1 + float64(timex.Freq)/ppm16,
+		"frequency":                    timex.Freq,
 		"maxerror_ns":                  timex.Maxerror * 1000,
 		"estimated_error_ns":           timex.Esterror * 1000,
 		"status":                       timex.Status,

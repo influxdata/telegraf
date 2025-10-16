@@ -13,16 +13,6 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestDefaultMetricFormat(t *testing.T) {
-	plugin := &Timex{
-		Log: &testutil.Logger{},
-	}
-
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Gather(&acc))
-	require.Len(t, acc.GetTelegrafMetrics(), 1)
-}
-
 func TestMetricStructure(t *testing.T) {
 	plugin := &Timex{
 		Log: &testutil.Logger{},
@@ -34,7 +24,7 @@ func TestMetricStructure(t *testing.T) {
 			map[string]string{},
 			map[string]interface{}{
 				"offset_ns":                    int64(0),
-				"frequency_adjustment_ratio":   float64(0),
+				"frequency":                    int64(0),
 				"maxerror_ns":                  int64(0),
 				"estimated_error_ns":           int64(0),
 				"status":                       int64(0),
@@ -52,7 +42,7 @@ func TestMetricStructure(t *testing.T) {
 				"sync_status":                  bool(false),
 			},
 			time.Unix(0, 0),
-			2,
+			telegraf.Gauge,
 		),
 	}
 
@@ -60,5 +50,5 @@ func TestMetricStructure(t *testing.T) {
 	require.NoError(t, plugin.Gather(&acc))
 	actual := acc.GetTelegrafMetrics()
 
-	testutil.RequireMetricsStructureEqual(t, expected, actual, testutil.IgnoreTime(), testutil.IgnoreType())
+	testutil.RequireMetricsStructureEqual(t, expected, actual, testutil.IgnoreTime())
 }
