@@ -39,7 +39,11 @@ func TestInvalidTimeoutConfig(t *testing.T) {
 	require.EqualError(t, plugin.Init(), "timeout must be greater than zero")
 }
 
-func TestGather(t *testing.T) {
+func TestGatherIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	// Setup and start test responder
 	responder, err := nsdp.NewTestResponder("localhost:0")
 	require.NoError(t, err)
@@ -91,7 +95,7 @@ func TestGather(t *testing.T) {
 	// Verify successful Init
 	require.NoError(t, plugin.Init())
 
-	// Verify successfull Gather
+	// Verify successful Gather
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(plugin.Gather))
 
