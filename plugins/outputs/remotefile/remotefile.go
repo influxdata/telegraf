@@ -20,6 +20,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -27,14 +28,16 @@ import (
 var sampleConfig string
 
 type File struct {
-	Remote            config.Secret   `toml:"remote"`
-	Files             []string        `toml:"files"`
-	FinalWriteTimeout config.Duration `toml:"final_write_timeout"`
-	WriteBackInterval config.Duration `toml:"cache_write_back"`
-	MaxCacheSize      config.Size     `toml:"cache_max_size"`
-	UseBatchFormat    bool            `toml:"use_batch_format"`
-	ForgetFiles       config.Duration `toml:"forget_files_after"`
-	Log               telegraf.Logger `toml:"-"`
+	Remote               config.Secret   `toml:"remote"`
+	Files                []string        `toml:"files"`
+	FinalWriteTimeout    config.Duration `toml:"final_write_timeout"`
+	WriteBackInterval    config.Duration `toml:"cache_write_back"`
+	MaxCacheSize         config.Size     `toml:"cache_max_size"`
+	UseBatchFormat       bool            `toml:"use_batch_format"`
+	ForgetFiles          config.Duration `toml:"forget_files_after"`
+	CompressionAlgorithm string          `toml:"compression_algorithm"`
+	CompressionLevel     int             `toml:"compression_level"`
+	Log                  telegraf.Logger `toml:"-"`
 
 	root     *vfs.VFS
 	fscancel context.CancelFunc
@@ -44,6 +47,7 @@ type File struct {
 	serializerFunc telegraf.SerializerFunc
 	serializers    map[string]telegraf.Serializer
 	modified       map[string]time.Time
+	encoder        internal.ContentEncoder
 }
 
 func (*File) SampleConfig() string {
@@ -100,7 +104,18 @@ func (f *File) Init() error {
 	f.serializers = make(map[string]telegraf.Serializer)
 	f.modified = make(map[string]time.Time)
 
-	return nil
+	var options []internal.EncodingOption
+	if f.CompressionAlgorithm == "" {
+		f.CompressionAlgorithm = "identity"
+	}
+
+	if f.CompressionLevel >= 0 {
+		options = append(options, internal.WithCompressionLevel(f.CompressionLevel))
+	}
+	var err error
+	f.encoder, err = internal.NewContentEncoder(f.CompressionAlgorithm, options...)
+
+	return err
 }
 
 func (f *File) Connect() error {
@@ -205,15 +220,25 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 				f.Log.Errorf("Could not serialize metrics: %v", err)
 				continue
 			}
-			groupBuffer[fn] = serialized
+			octets, err := f.encoder.Encode(serialized)
+			if err != nil {
+				f.Log.Errorf("Could not compress metrics: %v", err)
+				continue
+			}
+			groupBuffer[fn] = octets
 		} else {
 			for _, m := range fnMetrics {
 				serialized, err := serializer.Serialize(m)
 				if err != nil {
-					f.Log.Debugf("Could not serialize metric: %v", err)
+					f.Log.Errorf("Could not serialize metric: %v", err)
 					continue
 				}
-				groupBuffer[fn] = append(groupBuffer[fn], serialized...)
+				octets, err := f.encoder.Encode(serialized)
+				if err != nil {
+					f.Log.Errorf("Could not compress metric: %v", err)
+					continue
+				}
+				groupBuffer[fn] = append(groupBuffer[fn], octets...)
 			}
 		}
 	}
@@ -263,5 +288,9 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 }
 
 func init() {
-	outputs.Add("remotefile", func() telegraf.Output { return &File{} })
+	outputs.Add("remotefile", func() telegraf.Output {
+		return &File{
+			CompressionLevel: -1,
+		}
+	})
 }
