@@ -1,6 +1,10 @@
 # Timex Input Plugin
 
-This plugin gathers metrics on system time.
+This plugin gathers metrics on system time using a Linux Kernel syscall
+([adjtimex](https://man7.org/linux/man-pages/man2/adjtimex.2.html)).
+
+The call gets the information of the kernel time variables that are controlled
+ by the ntpd, systemd-timesyncd, chrony or other time synchronization services.
 
 ⭐ Telegraf v1.37.0
 🏷️ hardware, system
@@ -18,7 +22,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
-# Read metrics about temperature
+# Read time metrics from linux timex interface.
 [[inputs.timex]]
   ## No input configuration
 ```
@@ -27,48 +31,31 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 - timex
   - fields:
-    - offset_seconds (float)
-    - frequency_adjustment_ratio (float)
-    - maxerror_seconds (float)
-    - estimated_error_seconds (float)
-    - loop_time_constant (float)
-    - tick_seconds (float)
-    - pps_frequency_hertz (float)
-    - pps_jitter_seconds (float)
-    - pps_shift_seconds (float)
-    - pps_stability_hertz (float)
-    - pps_jitter_total (float)
-    - pps_calibration_total (float)
-    - pps_error_total (float)
-    - pps_stability_exceeded_total (float)
-    - tai_offset_seconds (float)
-    - sync_status (int)
-    - status (float)
-
-**Fields**
-- offset_seconds - The offset from local and reference clock.
-- frequency_adjustment_ratio - Local clock frequency adjustment ratio.
-- maxerror_seconds - The maximum error in seconds.
-- estimated_error_seconds - The estimated error in seconds.
-- loop_time_constant - Phase-locked loop time constant.
-- tick_seconds - Seconds between clock ticks.
-- pps_frequency_hertz - Pulse-per-second frequency in hertz.
-- pps_jitter_seconds - Pulse-per-second jitter in seconds.
-- pps_shift_seconds - Pulse-per-second interval duration in seconds.
-- pps_stability_hertz - Pulse-per-second stability, average of relative
-frequency changes.
-- pps_jitter_total - Pulse-per-second per second count of jitter limit
- exceeded events.
-- pps_calibration_total - Pulse-per-second count of calibration intervals.
-- pps_error_total - Pulse-per-second count of calibration errors.
-- pps_stability_exceeded_total - Pulse-per-second total stability
-exceeded in seconds.
-- tai_offset_seconds - TAI offset in seconds.
-- sync_status - Is clock synchronized with a server (1 = yes, 0 = no).
-- status - Clock command/status
+    - offset_seconds (float) - The offset from local and reference clock.
+    - frequency_adjustment_ratio (float) - Local clock frequency adjustment
+     ratio.
+    - maxerror_seconds (float) - The maximum error in seconds.
+    - estimated_error_seconds (float) - The estimated error in seconds.
+    - loop_time_constant (float) - Phase-locked loop time constant.
+    - tick_seconds (float) - Seconds between clock ticks.
+    - pps_frequency_hertz (float) - Pulse-per-second frequency in hertz.
+    - pps_jitter_seconds (float) - Pulse-per-second jitter in seconds.
+    - pps_shift_seconds (float) - Pulse-per-second interval duration in
+    seconds.
+    - pps_stability_hertz (float) - Pulse-per-second stability, average of
+    relative.
+    - pps_jitter_total (float) - Pulse-per-second per second count of jitter
+    limit.
+    - pps_calibration_total (float) - Pulse-per-second count of calibration
+    intervals.
+    - pps_error_total (float) - Pulse-per-second count of calibration errors.
+    - pps_stability_exceeded_total (float) - Pulse-per-second total stability.
+    - tai_offset_seconds (float) - TAI offset in seconds.
+    - sync_status (boolean) - Is clock synchronized with a server.
+    - status (float) - Clock command/status.
 
 ## Example Output
 
 ```text
-timex,host=testvm pps_error_total=0,sync_status=1i,estimated_error_seconds=0.000006,loop_time_constant=2,pps_jitter_seconds=0,pps_shift_seconds=0,pps_jitter_total=0,pps_calibration_total=0,maxerror_seconds=0.004021,pps_frequency_hertz=0,pps_stability_exceeded_total=0,tai_offset_seconds=37,offset_seconds=0,frequency_adjustment_ratio=1.0000166235961914,status=0,tick_seconds=0.01,pps_stability_hertz=0 1760440880000000000
+timex,host=testvm tick_ns=10000000i,loop_time_constant=2i,pps_stability_hertz=0,pps_stability_exceeded_total=0i,maxerror_ns=2014000i,pps_jitter_ns=0i,pps_shift_seconds=0i,pps_jitter_total=0i,estimated_error_ns=5000i,pps_frequency_hertz=0,pps_calibration_total=0i,pps_error_total=0i,tai_offset_seconds=37i,sync_status=true,offset_ns=0i,frequency_adjustment_ratio=1.0000130641326905,status=0i 1760609100000000000
 ```
