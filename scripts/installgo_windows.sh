@@ -5,7 +5,7 @@ set -eux
 GO_VERSION="1.25.3"
 
 setup_go () {
-    choco upgrade golang --allow-downgrade --version=${GO_VERSION}
+    choco upgrade golang -d --allow-downgrade --version=${GO_VERSION}
 }
 
 if command -v go >/dev/null 2>&1; then
