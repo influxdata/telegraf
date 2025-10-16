@@ -1,7 +1,6 @@
 # Timex Input Plugin
 
-This plugin gathers metrics on system time using a Linux Kernel syscall
-([adjtimex](https://man7.org/linux/man-pages/man2/adjtimex.2.html)).
+This plugin gathers metrics on system time using the Linux Kernel [adjtimex syscall][timex].
 
 The call gets the information of the kernel time variables that are controlled
  by the ntpd, systemd-timesyncd, chrony or other time synchronization services.
@@ -9,6 +8,8 @@ The call gets the information of the kernel time variables that are controlled
 ⭐ Telegraf v1.37.0
 🏷️ hardware, system
 💻 linux
+
+[timex]: https://man7.org/linux/man-pages/man2/adjtimex.2.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
