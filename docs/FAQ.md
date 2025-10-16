@@ -8,7 +8,7 @@ releases that happen every 3 weeks.
 
 This [Google Calendar][] is kept up to date for upcoming releases dates.
 Additionally, users can look at the [GitHub milestones][] for the next minor
-and bug fix release.
+and bug fix release
 
 PRs that resolves issues are released in the next release. PRs that introduce
 new features are held for the next minor release. Users can view what
