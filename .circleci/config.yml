@@ -122,6 +122,8 @@ jobs:
           # (the OS may report the number of CPUs on the host instead of the number of CPUs available to the guest).
           command: GOGC=80 GOMEMLIMIT=6144MiB /go/bin/golangci-lint run --verbose --timeout=30m --concurrency 4
           no_output_timeout: 30m
+      - run: 'make vuln-install'
+      - run: 'make vuln'
   lint-macos:
     executor: telegraf-ci
     steps:
