@@ -616,7 +616,7 @@ func (o *OpcUAInputClient) MetricForEvent(nodeIdx int, event *ua.EventFieldList)
 	return metric.New("opcua_event", tags, fields, t)
 }
 
-// Creation of event filter for event streaming
+// CreateEventFilter creates a new event filter for event streaming
 func (node *EventNodeMetricMapping) CreateEventFilter() (*ua.ExtensionObject, error) {
 	selects, err := node.createSelectClauses()
 	if err != nil {

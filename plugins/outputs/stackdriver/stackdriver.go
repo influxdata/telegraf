@@ -196,7 +196,6 @@ func (tsb timeSeriesBuckets) Add(m telegraf.Metric, f []*telegraf.Field, ts *mon
 	tsb[k] = s
 }
 
-// Split metrics up by timestamp and send to Google Cloud Stackdriver
 func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 	metricBatch := make(map[int64][]telegraf.Metric)
 	timestamps := make([]int64, 0, len(metrics))

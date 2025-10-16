@@ -206,7 +206,7 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 	return mibName, oidNum, oidText, conversion, out, nil
 }
 
-// The following is for snmp_trap
+// MibEntry is for snmp_trap
 type MibEntry struct {
 	MibName string
 	OidText string
