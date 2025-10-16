@@ -91,7 +91,6 @@ func (m *MetricMatch) Apply(in ...telegraf.Metric) []telegraf.Metric {
 				for _, v := range allKeys {
 					eachMetric.RemoveField(v)
 				}
-
 			}
 		}
 	} else {

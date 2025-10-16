@@ -211,7 +211,6 @@ func (kv *KVStruct) FullFlattenStruct(fieldname string,
 		return nil
 	default:
 		return fmt.Errorf("key value flattener: got unexpected type %T with value %v (%s)", t, t, fieldname)
-
 	}
 	return nil
 }
