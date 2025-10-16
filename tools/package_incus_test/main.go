@@ -12,7 +12,7 @@ import (
 var imagesRPM = []string{
 	"fedora/42",
 	"fedora/41",
-	"centos/9-Stream",
+	"centos/10-Stream",
 }
 
 var imagesDEB = []string{
@@ -23,7 +23,7 @@ var imagesDEB = []string{
 	// LTS
 	"ubuntu/noble",
 	// Latest
-	"ubuntu/questing",
+	"ubuntu/plucky",
 }
 
 func main() {
