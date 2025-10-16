@@ -171,6 +171,9 @@ func main() {
 				ignored++
 				continue
 			}
+			if info.spdx == "" {
+				info.spdx = strings.ReplaceAll(info.license, " ", "")
+			}
 			debugf("adding %q with license %q (%s) and version %q at %q...", info.name, info.license, info.spdx, info.version, info.url)
 			packageInfos = append(packageInfos, info)
 		}
