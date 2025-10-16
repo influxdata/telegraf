@@ -212,7 +212,7 @@ vuln-install:
 	@echo "Installing govulncheck"
 	go install golang.org/x/vuln/cmd/govulncheck@latest
 
-.PhoNY: vuln
+.PHONY: vuln
 vuln:
 	@which govulncheck >/dev/null 2>&1 || { \
 		echo "govulncheck not found, please run: make vuln-install"; \
