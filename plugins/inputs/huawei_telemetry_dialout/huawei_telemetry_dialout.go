@@ -1,16 +1,19 @@
 package huawei_telemetry_dialout
 
 import (
-	"bytes"
 	"crypto/tls"
-	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
-	"os"
 	"sync"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	// Register GRPC gzip decoder to support compressed telemetry
+	_ "google.golang.org/grpc/encoding/gzip"
+	"google.golang.org/grpc/peer"
 
 	"github.com/influxdata/telegraf"
 	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
@@ -18,15 +21,6 @@ import (
 	dialout "github.com/influxdata/telegraf/plugins/inputs/huawei_telemetry_dialout/huawei_dialout"
 	huawei_gpb "github.com/influxdata/telegraf/plugins/parsers/huawei_grpc_gpb"
 	huawei_json "github.com/influxdata/telegraf/plugins/parsers/huawei_grpc_json"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials" // Register GRPC gzip decoder to support compressed telemetry
-	_ "google.golang.org/grpc/encoding/gzip"
-	"google.golang.org/grpc/peer"
-)
-
-const (
-	// Maximum telemetry payload size (in bytes) to accept for GRPC dialout transport
-	tcpMaxMsgLen uint32 = 0
 )
 
 // HuaweiTelemetryDialout plugin VRPs
@@ -46,13 +40,14 @@ type HuaweiTelemetryDialout struct {
 	listener   net.Listener
 
 	// Internal state
-	aliases   map[string]string
-	warned    map[string]struct{}
-	extraTags map[string]map[string]struct{}
-	metrics   []telegraf.Metric
-	mutex     sync.Mutex
-	acc       telegraf.Accumulator
-	wg        sync.WaitGroup
+	// Unused fields commented out to pass linting
+	// aliases   map[string]string
+	// warned    map[string]struct{}
+	// extraTags map[string]map[string]struct{}
+	// metrics   []telegraf.Metric
+	// mutex     sync.Mutex
+	acc telegraf.Accumulator
+	wg  sync.WaitGroup
 }
 
 // Start the Huawei Telemetry dialout service
@@ -88,7 +83,9 @@ func (c *HuaweiTelemetryDialout) Start(acc telegraf.Accumulator) error {
 		c.wg.Add(1)
 		go func() {
 			// Listen on the ServiceAddress port
-			c.grpcServer.Serve(c.listener)
+			if err := c.grpcServer.Serve(c.listener); err != nil {
+				c.Log.Errorf("GRPC server serve error: %v", err)
+			}
 			c.wg.Done()
 		}()
 
@@ -101,7 +98,9 @@ func (c *HuaweiTelemetryDialout) Start(acc telegraf.Accumulator) error {
 }
 
 // AcceptTCPDialoutClients defines the TCP dialout server main routine
-func (c *HuaweiTelemetryDialout) acceptTCPClientsddd() {
+// Unused function commented out to pass linting
+/*
+func (c *HuaweiTelemetryDialout) acceptTCPClients() {
 	// Keep track of all active connections, so we can close them if necessary
 	var mutex sync.Mutex
 	clients := make(map[net.Conn]struct{})
@@ -145,8 +144,11 @@ func (c *HuaweiTelemetryDialout) acceptTCPClientsddd() {
 	}
 	mutex.Unlock()
 }
+*/
 
 // Handle a TCP telemetry client
+// Unused function commented out to pass linting
+/*
 func (c *HuaweiTelemetryDialout) handleTCPClient(conn net.Conn) error {
 	// TCP Dialout telemetry framing header
 	var hdr struct {
@@ -165,7 +167,7 @@ func (c *HuaweiTelemetryDialout) handleTCPClient(conn net.Conn) error {
 			return err
 		}
 
-		maxMsgSize := tcpMaxMsgLen
+		maxMsgSize := defaultMaxMsgLen
 		if c.MaxMsgSize > 0 {
 			maxMsgSize = uint32(c.MaxMsgSize)
 		}
@@ -186,32 +188,36 @@ func (c *HuaweiTelemetryDialout) handleTCPClient(conn net.Conn) error {
 		}
 	}
 }
+*/
 
-// implement the rpc method of huawei-grpc-dialout.proto
+// DataPublish implements the rpc method of huawei-grpc-dialout.proto
 func (c *HuaweiTelemetryDialout) DataPublish(stream dialout.GRPCDataservice_DataPublishServer) error {
-	peer, peerOK := peer.FromContext(stream.Context())
+	peerInfo, peerOK := peer.FromContext(stream.Context())
 	if peerOK {
-		c.Log.Debugf("Accepted Huawei GRPC dialout connection from %s", peer.Addr)
+		c.Log.Debugf("Accepted Huawei GRPC dialout connection from %s", peerInfo.Addr)
 	}
 	// init parser
-	parseGpb, err := huawei_gpb.New()
-	parseJson, err := huawei_json.New()
+	parseGPB, err := huawei_gpb.New()
 	if err != nil {
-		c.acc.AddError(fmt.Errorf("Dialout Parser Init error: %s, %v", err))
+		c.acc.AddError(fmt.Errorf("dialout parser init error: %w", err))
 		return err
 	}
-	//var chunkBuffer bytes.Buffer
+	parseJSON, err := huawei_json.New()
+	if err != nil {
+		c.acc.AddError(fmt.Errorf("dialout parser init error: %w", err))
+		return err
+	}
 	for {
 		packet, err := stream.Recv()
 		if err != nil {
-			if err != io.EOF {
-				c.acc.AddError(fmt.Errorf("GRPC dialout receive error: %s, %v", c.listener.Addr(), err))
+			if !errors.Is(err, io.EOF) {
+				c.acc.AddError(fmt.Errorf("grpc dialout receive error: %s, %w", c.listener.Addr(), err))
 			}
 			break
 		}
 
 		if len(packet.Errors) != 0 {
-			c.acc.AddError(fmt.Errorf("GRPC dialout error: %s", packet.Errors))
+			c.acc.AddError(fmt.Errorf("grpc dialout error: %s", packet.Errors))
 			break
 		}
 
@@ -219,23 +225,20 @@ func (c *HuaweiTelemetryDialout) DataPublish(stream dialout.GRPCDataservice_Data
 		var errParse error
 		// gpb encoding
 		if len(packet.GetData()) != 0 {
-			c.Log.Debugf("D! data gpb %s", hex.EncodeToString(packet.GetData()))
-			metrics, errParse = parseGpb.Parse(packet.GetData())
+			c.Log.Debugf("data gpb %s", hex.EncodeToString(packet.GetData()))
+			metrics, errParse = parseGPB.Parse(packet.GetData())
 			if errParse != nil {
 				c.acc.AddError(errParse)
-				c.stop()
-				return fmt.Errorf("[input.huawei_telemetry_dialout] error when parse grpc stream %t", errParse)
+				return fmt.Errorf("error when parse grpc stream: %w", errParse)
 			}
 		}
 		// json encoding
-
 		if len(packet.GetDataJson()) != 0 {
-			c.Log.Debugf("D! data str %s", packet.GetDataJson())
-			metrics, errParse = parseJson.Parse([]byte(packet.GetDataJson()))
+			c.Log.Debugf("data str %s", packet.GetDataJson())
+			metrics, errParse = parseJSON.Parse([]byte(packet.GetDataJson()))
 			if errParse != nil {
 				c.acc.AddError(errParse)
-				c.stop()
-				return fmt.Errorf("[input.huawei_telemetry_dialout] error when parse grpc stream %t", errParse)
+				return fmt.Errorf("error when parse grpc stream: %w", errParse)
 			}
 		}
 		for _, metric := range metrics {
@@ -243,11 +246,12 @@ func (c *HuaweiTelemetryDialout) DataPublish(stream dialout.GRPCDataservice_Data
 		}
 	}
 	if peerOK {
-		c.Log.Debugf("D! Closed Huawei GRPC dialout connection from %s", peer.Addr)
+		c.Log.Debugf("closed Huawei GRPC dialout connection from %s", peerInfo.Addr)
 	}
 	return nil
 }
 
+// Address returns the address of the listener
 func (c *HuaweiTelemetryDialout) Address() net.Addr {
 	return c.listener.Addr()
 }
@@ -282,17 +286,17 @@ const sampleConfig = `
 `
 
 // SampleConfig of plugin
-func (c *HuaweiTelemetryDialout) SampleConfig() string {
+func (*HuaweiTelemetryDialout) SampleConfig() string {
 	return sampleConfig
 }
 
 // Description of plugin
-func (c *HuaweiTelemetryDialout) Description() string {
-	return "Huawei Telemetry For Huawei Router"
+func (*HuaweiTelemetryDialout) Description() string {
+	return "Huawei model-driven telemetry (MDT) input plugin for dialout"
 }
 
 // Gather plugin measurements (unused)
-func (c *HuaweiTelemetryDialout) Gather(_ telegraf.Accumulator) error {
+func (*HuaweiTelemetryDialout) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
@@ -300,10 +304,4 @@ func init() {
 	inputs.Add("huawei_telemetry_dialout", func() telegraf.Input {
 		return &HuaweiTelemetryDialout{}
 	})
-}
-
-func (c *HuaweiTelemetryDialout) stop() {
-	log.SetOutput(os.Stderr)
-	log.Printf("I! telegraf stopped because error.")
-	os.Exit(1)
 }

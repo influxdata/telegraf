@@ -5,30 +5,35 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 	"time"
+
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	telemetry "github.com/influxdata/telegraf/plugins/parsers/huawei_grpc_gpb/telemetry_proto"
-	"google.golang.org/protobuf/encoding/protojson"
-
-	"log"
-	"strconv"
-
-	"google.golang.org/protobuf/proto"
 )
 
 const (
-	KeySeperator        = "." // A nested delimiter for Tag or Field
+	// KeySeparator is a nested delimiter for Tag or Field
+	KeySeparator = "."
+	// MsgTimeStampKeyName is the key for timestamp
 	MsgTimeStampKeyName = "timestamp"
-	JsonMsgKeyName      = "data_str"
-	GpbMsgKeyName       = "data_gpb"
-	RowKeyName          = "row"
-	TimeFormat          = "2006-01-02 15:04:05" // time.RFC3339
-	SensorPathKey       = "sensor_path"
+	// JSONMsgKeyName is the key for JSON data
+	JSONMsgKeyName = "data_str"
+	// GPBMsgKeyName is the key for GPB data
+	GPBMsgKeyName = "data_gpb"
+	// RowKeyName is the key for row data
+	RowKeyName = "row"
+	// TimeFormat is the format for time (RFC3339)
+	TimeFormat = "2006-01-02 15:04:05"
+	// SensorPathKey is the key for sensor path
+	SensorPathKey = "sensor_path"
 )
 
 type Parser struct {
@@ -36,29 +41,29 @@ type Parser struct {
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	telem_header := &telemetry.HuaweiTelemetry{}
-	p.Log.Debugf("telemetry header : %s \n", telem_header)
-	errParse := proto.Unmarshal(buf, telem_header)
+	telemHeader := &telemetry.HuaweiTelemetry{}
+	p.Log.Debugf("telemetry header : %s \n", telemHeader)
+	errParse := proto.Unmarshal(buf, telemHeader)
 	if errParse != nil {
 		return nil, errParse
 	}
-	dataGpb := telem_header.GetDataGpb()
-	if dataGpb != nil {
+	dataGPB := telemHeader.GetDataGpb()
+	if dataGPB != nil {
 		// get protoPath
-		protoPath := telem_header.ProtoPath
+		protoPath := telemHeader.ProtoPath
 		// trans telemetry header into map[string]interface{}
-		headerMap, errToMap := protoMsgToMap(telem_header)
+		headerMap, errToMap := protoMsgToMap(telemHeader)
 		if errToMap != nil {
 			return nil, errToMap
 		}
-		rows := dataGpb.GetRow()
+		rows := dataGPB.GetRow()
 		var rowsInMaps []map[string]interface{}
 		var rowMsgs []proto.Message
 		// Service layer decoding
 		for _, row := range rows {
-			contentMsg, errGetType := telemetry.GetTypeByProtoPath(protoPath, telemetry.DEFAULT_VERSION)
+			contentMsg, errGetType := telemetry.GetTypeByProtoPath(protoPath, telemetry.DefaultVersion)
 			if errGetType != nil {
-				p.Log.Errorf("E! [grpc parser] get type according protoPath: %v", errGetType)
+				p.Log.Errorf("get type according to protoPath: %v", errGetType)
 				return nil, errGetType
 			}
 			errDecode := proto.Unmarshal(row.Content, contentMsg)
@@ -74,7 +79,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 				return nil, errDecode
 			}
 		}
-		p.debugLog(telem_header, rowMsgs)
+		p.debugLog(telemHeader, rowMsgs)
 		metrics, err := p.flattenProtoMsg(headerMap, rowsInMaps, "")
 		return metrics, err
 	}
@@ -87,7 +92,7 @@ func (p *Parser) debugLog(header *telemetry.HuaweiTelemetry, rows []proto.Messag
 		p.Log.Debugf("==================================== data start msg_timestamp: %v================================\n", header.MsgTimestamp)
 		p.Log.Debugf("header is : \n%s", headerStr)
 	} else {
-		p.Log.Debugf("error when log header")
+		p.Log.Debugf("error when logging header: %v", err)
 	}
 	p.Log.Debugf("rows are : \n")
 	for _, row := range rows {
@@ -95,38 +100,38 @@ func (p *Parser) debugLog(header *telemetry.HuaweiTelemetry, rows []proto.Messag
 		if err == nil {
 			p.Log.Debugf("%s", rowStr)
 		} else {
-			p.Log.Debugf("error when log rows")
+			p.Log.Debugf("error when logging rows: %v", err)
 		}
 	}
 	p.Log.Debugf("==================================== data end ================================\n")
 }
 
-// Convert the Proto Message to a Map
+// protoMsgToMap converts the Proto Message to a Map
 func protoMsgToMap(protoMsg proto.Message) (map[string]interface{}, error) {
 	// trans proto.Message into map[string]interface{}]
-	protoToJson := protojson.MarshalOptions{
+	protoToJSON := protojson.MarshalOptions{
 		UseEnumNumbers:  false,
 		UseProtoNames:   true,
 		EmitUnpopulated: true,
 	}
-	pb, errToJson := protoToJson.Marshal(protoMsg)
-	if errToJson != nil {
-		return nil, fmt.Errorf("[grpc parser] proto message decode to json: %v", errToJson)
+	pb, errToJSON := protoToJSON.Marshal(protoMsg)
+	if errToJSON != nil {
+		return nil, fmt.Errorf("proto message decode to json: %w", errToJSON)
 	}
 	var msgMap map[string]interface{}
 	errToMap := json.Unmarshal(pb, &msgMap)
 	if errToMap != nil {
-		return nil, fmt.Errorf("[grpc parser] proto message decodec to json: %v", errToMap)
+		return nil, fmt.Errorf("proto message decoded to json: %w", errToMap)
 	}
 	return msgMap, nil
 }
 
-func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
-	panic("implement me")
+func (*Parser) ParseLine(_ string) (telegraf.Metric, error) {
+	return nil, errors.New("parseLineNotImplemented")
 }
 
-func (p *Parser) SetDefaultTags(tags map[string]string) {
-	panic("implement me")
+func (*Parser) SetDefaultTags(_ map[string]string) {
+	// Not implemented
 }
 
 func New() (*Parser, error) {
@@ -137,8 +142,11 @@ func New() (*Parser, error) {
 
 func init() {
 	parsers.Add("huawei_grpc_gpb",
-		func(defaultMetricName string) telegraf.Parser {
-			parser, _ := New()
+		func(_ string) telegraf.Parser {
+			parser, err := New()
+			if err != nil {
+				panic(err)
+			}
 			return parser
 		},
 	)
@@ -148,10 +156,10 @@ type KVStruct struct {
 	Fields map[string]interface{}
 }
 
+// FullFlattenStruct flattens nested structures into a flat map
 func (kv *KVStruct) FullFlattenStruct(fieldname string,
 	v interface{},
-	convertString bool,
-	convertBool bool) error {
+	convertString, convertBool bool) error {
 	if kv.Fields == nil {
 		kv.Fields = make(map[string]interface{})
 	}
@@ -160,7 +168,7 @@ func (kv *KVStruct) FullFlattenStruct(fieldname string,
 		for k, v := range t {
 			fieldKey := k
 			if fieldname != "" {
-				fieldKey = fieldname + KeySeperator + fieldKey
+				fieldKey = fieldname + KeySeparator + fieldKey
 			}
 			err := kv.FullFlattenStruct(fieldKey, v, convertString, convertBool)
 			if err != nil {
@@ -171,11 +179,10 @@ func (kv *KVStruct) FullFlattenStruct(fieldname string,
 		for i, v := range t {
 			fieldKey := strconv.Itoa(i)
 			if fieldname != "" {
-				fieldKey = fieldname + KeySeperator + fieldKey
+				fieldKey = fieldname + KeySeparator + fieldKey
 			}
-			err := kv.FullFlattenStruct(fieldKey, v, convertString, convertBool)
-			if err != nil {
-				return nil
+			if err := kv.FullFlattenStruct(fieldKey, v, convertString, convertBool); err != nil {
+				return err
 			}
 		}
 	case float64:
@@ -191,27 +198,26 @@ func (kv *KVStruct) FullFlattenStruct(fieldname string,
 	case int32:
 		kv.Fields[fieldname] = v.(int32)
 	case string:
-		if convertString {
-			kv.Fields[fieldname] = v.(string)
-		} else {
+		if !convertString {
 			return nil
 		}
+		kv.Fields[fieldname] = v.(string)
 	case bool:
-		if convertBool {
-			kv.Fields[fieldname] = v.(bool)
-		} else {
+		if !convertBool {
 			return nil
 		}
+		kv.Fields[fieldname] = v.(bool)
 	case nil:
 		return nil
 	default:
-		return fmt.Errorf("key Value Flattener : got unexpected type %T with value %v (%s)", t, t, fieldname)
-
+		return fmt.Errorf("key value flattener: got unexpected type %T with value %v (%s)", t, t, fieldname)
 	}
 	return nil
 }
 
-// check if the data is num and return as
+// convertToNum checks if the data is a number and returns it
+// Unused function commented out to pass linting
+/*
 func convertToNum(str string) (bool, int64) {
 	num, err := strconv.ParseInt(str, 10, 64)
 	if err != nil {
@@ -220,23 +226,19 @@ func convertToNum(str string) (bool, int64) {
 		return true, num
 	}
 }
+*/
 
-func (p *Parser) flattenProtoMsg(telemetryHeader map[string]interface{}, rowsDecodec []map[string]interface{}, startFieldName string) ([]telegraf.Metric, error) {
+func (p *Parser) flattenProtoMsg(telemetryHeader map[string]interface{}, rowsDecodec []map[string]interface{},
+	startFieldName string) ([]telegraf.Metric, error) {
+	metrics := make([]telegraf.Metric, 0, len(rowsDecodec))
 	kvHeader := KVStruct{}
 	errHeader := kvHeader.FullFlattenStruct("", telemetryHeader, true, true)
 	if errHeader != nil {
 		return nil, errHeader
 	}
 
-	//// debug start
-	//p.Log.Debugf("D! -------------------------------------Header START-----------------------------------------\n")
-	//for k, v := range kvHeader.Fields {
-	//    p.Log.Debugf("D! k: %s, v: %v ", k, v)
-	//}
-	//p.Log.Debugf("D! ------------------------------------- Header END -----------------------------------------\n")
-	//// debug end
-
-	var metrics []telegraf.Metric
+	// Remove noisy data_gpb content from header
+	delete(kvHeader.Fields, GPBMsgKeyName)
 	// one row into one metric
 	for _, rowDecodec := range rowsDecodec {
 		kvWithRow := KVStruct{}
@@ -248,19 +250,8 @@ func (p *Parser) flattenProtoMsg(telemetryHeader map[string]interface{}, rowsDec
 		if errMerge != nil {
 			return nil, errMerge
 		}
-		metric := metric.New(telemetryHeader[SensorPathKey].(string), nil, fields, tm)
-		// if err != nil {
-		// return nil, err
-		// }
-		// debug start
-		//p.Log.Debugf("D! -------------------------------------Fields START time is %v-----------------------------------------\n", metric.Time())
-		//for k, v := range metric.Fields() {
-		//    p.Log.Debugf("k: %s, v: %v ", k, v)
-		//}
-		//p.Log.Debugf("D! ------------------------------------- Fields END -----------------------------------------\n")
-		// debug end
-
-		metrics = append(metrics, metric)
+		metricInstance := metric.New(telemetryHeader[SensorPathKey].(string), nil, fields, tm)
+		metrics = append(metrics, metricInstance)
 	}
 	return metrics, nil
 }
@@ -273,11 +264,11 @@ func (p *Parser) mergeMaps(maps ...map[string]interface{}) (map[string]interface
 			if strings.HasSuffix(k, "_time") || strings.HasSuffix(k, MsgTimeStampKeyName) {
 				timeStruct, timeStr, errCal := calTimeByStamp(v)
 				if errCal != nil {
-					return nil, time.Time{}, fmt.Errorf("E! [grpc parser] when calculate time, key name is %s, time is %t, error is %v", k, v, errCal)
+					return nil, time.Time{}, fmt.Errorf("when calculating time, key name is %s, time value is %v, error is %w", k, v, errCal)
 				}
 				if k == MsgTimeStampKeyName {
 					timestamp = timeStruct
-					p.Log.Debugf("D! the row timestamp is %s\n", timestamp.Format(TimeFormat))
+					p.Log.Debugf("the row timestamp is %s\n", timestamp.Format(TimeFormat))
 					continue
 				}
 				if timeStr != "" {
@@ -297,9 +288,9 @@ func (p *Parser) mergeMaps(maps ...map[string]interface{}) (map[string]interface
 func calTimeByStamp(v interface{}) (time.Time, string, error) {
 	var sec int64
 	var nsec int64
-	switch v.(type) {
+	switch vTyped := v.(type) {
 	case float64:
-		vInFloat64 := v.(float64)
+		vInFloat64 := vTyped
 		if vInFloat64 < math.Pow10(11) {
 			sec = int64(vInFloat64)
 			nsec = 0
@@ -309,7 +300,7 @@ func calTimeByStamp(v interface{}) (time.Time, string, error) {
 			nsec = (int64(vInFloat64) % 1000) * 1000 * 1000
 		}
 	case int64:
-		vInInt64 := v.(int64)
+		vInInt64 := vTyped
 		if float64(vInInt64) < math.Pow10(11) {
 			sec = vInInt64
 			nsec = 0
@@ -319,7 +310,7 @@ func calTimeByStamp(v interface{}) (time.Time, string, error) {
 			nsec = (vInInt64 % 1000) * 1000 * 1000
 		}
 	case uint64:
-		vInUint64 := v.(uint64)
+		vInUint64 := vTyped
 		if float64(vInUint64) < math.Pow10(11) {
 			sec = int64(vInUint64)
 			nsec = 0
@@ -329,27 +320,26 @@ func calTimeByStamp(v interface{}) (time.Time, string, error) {
 			nsec = int64((vInUint64 % 1000) * 1000 * 1000)
 		}
 	case string:
-		if strings.Index(v.(string), ":") > -1 {
-			return time.Time{}, v.(string), nil
+		if strings.Contains(vTyped, ":") {
+			return time.Time{}, vTyped, nil
 		}
-		timeInNum, errToNum := strconv.ParseUint(v.(string), 10, 64)
+		timeInNum, errToNum := strconv.ParseUint(vTyped, 10, 64)
 		if errToNum != nil {
-			log.Printf("E! [grpc.parser.calTimeByStamp] v: %t , error : %v", v, errToNum)
-		} else {
-			if float64(timeInNum) < math.Pow10(11) {
-				sec = int64(timeInNum)
-				nsec = 0
-			}
-			if float64(timeInNum) > math.Pow10(12) {
-				sec = int64(timeInNum / 1000)
-				nsec = int64((timeInNum % 1000) * 1000 * 1000)
-			}
+			return time.Time{}, "", fmt.Errorf("failed to parse time: %w", errToNum)
+		}
+		if float64(timeInNum) < math.Pow10(11) {
+			sec = int64(timeInNum)
+			nsec = 0
+		}
+		if float64(timeInNum) > math.Pow10(12) {
+			sec = int64(timeInNum / 1000)
+			nsec = int64((timeInNum % 1000) * 1000 * 1000)
 		}
 	}
 
 	if sec == 0 {
 		return time.Time{}, "", errors.New("calculate error")
 	}
-	time := time.Unix(sec, nsec)
-	return time, time.Format(TimeFormat), nil
+	timeResult := time.Unix(sec, nsec)
+	return timeResult, timeResult.Format(TimeFormat), nil
 }
