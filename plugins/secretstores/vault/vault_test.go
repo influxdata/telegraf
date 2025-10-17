@@ -62,12 +62,8 @@ func getRoleID(t *testing.T, container *vault.VaultContainer) string {
 	output, err := io.ReadAll(reader)
 	require.NoError(t, err)
 
-	// Trim some junk characters in the response first. "raw" format may still contain some non-JSON prefix/suffix
-	startIndex := bytes.IndexByte(output, byte('{'))
-	endIndex := bytes.LastIndexByte(output, byte('}'))
-
 	var resp RoleIDResponse
-	require.NoError(t, json.Unmarshal(output[startIndex:endIndex], &resp))
+	require.NoError(t, json.Unmarshal(sanitizeVaultResponse(t, output), &resp))
 	return resp.Data.RoleID
 }
 
@@ -89,12 +85,8 @@ func getSecretID(t *testing.T, container *vault.VaultContainer) string {
 	output, err := io.ReadAll(reader)
 	require.NoError(t, err)
 
-	// Trim some junk characters in the response first. "json" format may still contain some non-JSON prefix/suffix
-	startIndex := bytes.IndexByte(output, byte('{'))
-	endIndex := bytes.LastIndexByte(output, byte('}'))
-
 	var resp SecretIDResponse
-	require.NoError(t, json.Unmarshal(output[startIndex:endIndex], &resp))
+	require.NoError(t, json.Unmarshal(sanitizeVaultResponse(t, output), &resp))
 	return resp.Data.SecretID
 }
 
@@ -116,12 +108,8 @@ func getWrappedSecretID(t *testing.T, container *vault.VaultContainer) string {
 	output, err := io.ReadAll(reader)
 	require.NoError(t, err)
 
-	// Trim some junk characters in the response first. "json" format may still contain some non-JSON prefix/suffix
-	startIndex := bytes.IndexByte(output, byte('{'))
-	endIndex := bytes.LastIndexByte(output, byte('}'))
-
 	var resp WrappedSecretIDResponse
-	require.NoError(t, json.Unmarshal(output[startIndex:endIndex], &resp))
+	require.NoError(t, json.Unmarshal(sanitizeVaultResponse(t, output), &resp))
 	return resp.WrapInfo.Token
 }
 
@@ -129,6 +117,16 @@ type WrappedSecretIDResponse struct {
 	WrapInfo struct {
 		Token string `json:"token"`
 	} `json:"wrap_info"`
+}
+
+func sanitizeVaultResponse(t *testing.T, resp []byte) []byte {
+	t.Helper()
+
+	// Trim some junk characters in the response first.
+	// "json"/"raw" format may still contain some non-JSON prefix/suffix
+	startIndex := bytes.IndexByte(resp, byte('{'))
+	endIndex := bytes.LastIndexByte(resp, byte('}'))
+	return resp[startIndex : endIndex+1]
 }
 
 func TestIntegrationKVv1(t *testing.T) {
