@@ -173,15 +173,11 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 		// Use max_open_connections if any
 		if s.MaxOpenConnections > 0 {
 			pool.SetMaxOpenConns(s.MaxOpenConnections)
-		} else {
-			pool.SetMaxOpenConns(0)
 		}
 
 		// Use max_idle_connections if any
 		if s.MaxIdleConnections > 0 {
 			pool.SetMaxIdleConns(s.MaxIdleConnections)
-		} else {
-			pool.SetMaxIdleConns(2)
 		}
 
 		s.pools = append(s.pools, pool)
