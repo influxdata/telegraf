@@ -62,11 +62,12 @@ func getRoleID(t *testing.T, container *vault.VaultContainer) string {
 	output, err := io.ReadAll(reader)
 	require.NoError(t, err)
 
-	// Trim some junk characters in the response first. "raw" format may still contain some non-JSON prefix
+	// Trim some junk characters in the response first. "raw" format may still contain some non-JSON prefix/suffix
 	startIndex := bytes.IndexByte(output, byte('{'))
+	endIndex := bytes.LastIndexByte(output, byte('}'))
 
 	var resp RoleIDResponse
-	require.NoError(t, json.Unmarshal(output[startIndex:], &resp))
+	require.NoError(t, json.Unmarshal(output[startIndex:endIndex], &resp))
 	return resp.Data.RoleID
 }
 
@@ -88,11 +89,12 @@ func getSecretID(t *testing.T, container *vault.VaultContainer) string {
 	output, err := io.ReadAll(reader)
 	require.NoError(t, err)
 
-	// Trim some junk characters in the response first. "json" format may still contain some non-JSON prefix
+	// Trim some junk characters in the response first. "json" format may still contain some non-JSON prefix/suffix
 	startIndex := bytes.IndexByte(output, byte('{'))
+	endIndex := bytes.LastIndexByte(output, byte('}'))
 
 	var resp SecretIDResponse
-	require.NoError(t, json.Unmarshal(output[startIndex:], &resp))
+	require.NoError(t, json.Unmarshal(output[startIndex:endIndex], &resp))
 	return resp.Data.SecretID
 }
 
@@ -114,11 +116,12 @@ func getWrappedSecretID(t *testing.T, container *vault.VaultContainer) string {
 	output, err := io.ReadAll(reader)
 	require.NoError(t, err)
 
-	// Trim some junk characters in the response first. "json" format may still contain some non-JSON prefix
+	// Trim some junk characters in the response first. "json" format may still contain some non-JSON prefix/suffix
 	startIndex := bytes.IndexByte(output, byte('{'))
+	endIndex := bytes.LastIndexByte(output, byte('}'))
 
 	var resp WrappedSecretIDResponse
-	require.NoError(t, json.Unmarshal(output[startIndex:], &resp))
+	require.NoError(t, json.Unmarshal(output[startIndex:endIndex], &resp))
 	return resp.WrapInfo.Token
 }
 
