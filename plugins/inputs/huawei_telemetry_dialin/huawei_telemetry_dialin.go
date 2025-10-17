@@ -4,20 +4,19 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"log"
-	"net"
-	"os"
 	"sync"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/influxdata/telegraf"
 	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	huawei_dialin "github.com/influxdata/telegraf/plugins/inputs/huawei_telemetry_dialin/huawei_dialin"
+	dialin "github.com/influxdata/telegraf/plugins/inputs/huawei_telemetry_dialin/huawei_dialin"
 	huawei_gpb "github.com/influxdata/telegraf/plugins/parsers/huawei_grpc_gpb"
 	huawei_json "github.com/influxdata/telegraf/plugins/parsers/huawei_grpc_json"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/metadata"
 )
 
 type Path struct {
@@ -31,13 +30,13 @@ type aaa struct {
 }
 
 type router struct {
-	Paths              []Path
-	Aaa                aaa
-	Address            string
-	Encoding           string
-	Sample_interval    int
-	Request_id         int
-	Suppress_redundant bool
+	Paths             []Path
+	Aaa               aaa
+	Address           string
+	Encoding          string
+	SampleInterval    int
+	RequestID         int
+	SuppressRedundant bool
 	// GRPC TLS settings
 	internaltls.ClientConfig
 }
@@ -53,46 +52,49 @@ type HuaweiTelemetryDialin struct {
 	Log          telegraf.Logger
 
 	// Internal listener / client handle
-	grpcServer *grpc.Server
-	listener   net.Listener
+	// grpcServer *grpc.Server
+	// listener   net.Listener
 
 	// Internal state
-	aliases   map[string]string
-	warned    map[string]struct{}
-	extraTags map[string]map[string]struct{}
-	mutex     sync.Mutex
-	acc       telegraf.Accumulator
-	wg        sync.WaitGroup
+	// aliases   map[string]string
+	// warned    map[string]struct{}
+	// extraTags map[string]map[string]struct{}
+	// mutex     sync.Mutex
+	acc telegraf.Accumulator
+	wg  sync.WaitGroup
 }
 
-// Start the Huawei Dialin service wt git
-func (dialin *HuaweiTelemetryDialin) Start(acc telegraf.Accumulator) error {
-	dialin.acc = acc
+// Start the Huawei Dialin service
+func (d *HuaweiTelemetryDialin) Start(acc telegraf.Accumulator) error {
+	d.acc = acc
 	// init parser
-	parseGpb, err := huawei_gpb.New()
-	parseJson, err := huawei_json.New()
+	parseGPB, err := huawei_gpb.New()
 	if err != nil {
-		dialin.acc.AddError(fmt.Errorf("DialIn Parser Init error: %s", err))
+		d.acc.AddError(fmt.Errorf("dialin parser init error: %w", err))
 		return err
 	}
-	for _, routerDialinConfig := range dialin.Routers {
-		dialin.wg.Add(1)
-		go dialin.singleSubscribe(routerDialinConfig, parseGpb, parseJson)
+	parseJSON, err := huawei_json.New()
+	if err != nil {
+		d.acc.AddError(fmt.Errorf("dialin parser init error: %w", err))
+		return err
+	}
+	for _, routerDialinConfig := range d.Routers {
+		d.wg.Add(1)
+		go d.singleSubscribe(routerDialinConfig, parseGPB, parseJSON)
 	}
 	return nil
 }
 
 // create subscribe args from config of huawei_telemetry_dialin in telegraf.conf
-func createSubArgs(router router) *huawei_dialin.SubsArgs {
+func createSubArgs(router router) *dialin.SubsArgs {
+	paths := make([]*dialin.Path, 0, len(router.Paths))
 
-	var paths []*huawei_dialin.Path
-
-	if len(router.Paths) <= 0 {
+	if len(router.Paths) == 0 {
 		return nil
 	}
 
 	for _, path := range router.Paths {
-		paths = append(paths, &huawei_dialin.Path{
+		paths = append(paths, &dialin.Path{
 			Path:  path.Path,
 			Depth: uint32(path.Depth),
 		})
@@ -102,53 +104,53 @@ func createSubArgs(router router) *huawei_dialin.SubsArgs {
 	if router.Encoding == "json" {
 		encoding = 1
 	}
-	return &huawei_dialin.SubsArgs{
-		RequestId:         uint64(router.Request_id),
+	return &dialin.SubsArgs{
+		RequestId:         uint64(router.RequestID),
 		Encoding:          uint32(encoding),
 		Path:              paths,
-		SampleInterval:    uint64(router.Sample_interval),
+		SampleInterval:    uint64(router.SampleInterval),
 		HeartbeatInterval: 60,
-		Suppress:          &huawei_dialin.SubsArgs_SuppressRedundant{SuppressRedundant: router.Suppress_redundant},
+		Suppress:          &dialin.SubsArgs_SuppressRedundant{SuppressRedundant: router.SuppressRedundant},
 	}
 }
 
-func (dialin *HuaweiTelemetryDialin) singleSubscribe(dialinConfig router, parserGpb, parserJson telegraf.Parser) {
+func (d *HuaweiTelemetryDialin) singleSubscribe(dialinConfig router, parserGPB, parserJSON telegraf.Parser) {
 	var opts []grpc.DialOption
-	tlsConfig, errTls := dialinConfig.ClientConfig.TLSConfig()
-	if errTls != nil {
-		dialin.Log.Errorf("E! [single Subscribe] tlsConfig %s", errTls)
-		//dialin.stop()
+	tlsConfig, errTLS := dialinConfig.ClientConfig.TLSConfig()
+	if errTLS != nil {
+		d.Log.Errorf("[single subscribe] tlsConfig error: %s", errTLS)
+		// d.stop()
 	} else if tlsConfig != nil {
-		// tls
+		// TLS
 		tlsConfig.ServerName = dialinConfig.ServerName
 		creds := credentials.NewTLS(tlsConfig)
 		opts = append(opts, grpc.WithTransportCredentials(creds))
 	} else {
-		// no tls
-		opts = append(opts, grpc.WithInsecure())
+		// No TLS
+		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
-	conn, err := grpc.Dial(dialinConfig.Address, opts...)
+	conn, err := grpc.NewClient(dialinConfig.Address, opts...)
 	if err != nil {
-		dialin.Log.Errorf("E! [single Subscribe] invalid Huawei Dialin remoteServer:ng TLS PEM %s,device address : %s, request_id:%s", dialin.Transport, dialinConfig.Address, dialinConfig.Request_id)
+		d.Log.Errorf("[single subscribe] invalid Huawei Dialin remoteServer: device address: %s, request_id: %d", dialinConfig.Address, dialinConfig.RequestID)
 		return
 	}
-	//defer conn.Close()
-	client := huawei_dialin.NewGRPCConfigOperClient(conn)
+	defer conn.Close()
+	client := dialin.NewGRPCConfigOperClient(conn)
 	var cancel context.CancelFunc
 	var ctx context.Context
 	ctx, cancel = context.WithCancel(context.Background())
 	if dialinConfig.Aaa.Username != "" && dialinConfig.Aaa.Password != "" {
-		// input aaa as context
-		//dec_password, _ := base64.URLEncoding.DecodeString(dialinConfig.Aaa.Password)
-		//ctx = metadata.AppendToOutgoingContext(context.TODO(), "username", dialinConfig.Aaa.Username, "password", string(dec_password))
+		// Input AAA as context
 		ctx = metadata.AppendToOutgoingContext(context.TODO(), "username", dialinConfig.Aaa.Username, "password", dialinConfig.Aaa.Password)
 	} else {
-		dialin.Log.Errorf("E! [single Subscribe] no aaa configuration checked , device address : %s, request_id:%s", dialinConfig.Address, dialinConfig.Request_id)
+		d.Log.Errorf("[single subscribe] no AAA configuration checked, device address: %s, request_id: %d",
+			dialinConfig.Address, dialinConfig.RequestID)
 	}
 	stream, err := client.Subscribe(ctx, createSubArgs(dialinConfig))
 	if err != nil {
 		cancel()
-		dialin.Log.Errorf("E! [single Subscribe] Huawei Dialin connection failed %s request_id %s, connection error %v", dialinConfig.Address, dialinConfig.Request_id, err)
+		d.Log.Errorf("[single subscribe] Huawei Dialin connection failed %s request_id %d, connection error %v",
+			dialinConfig.Address, dialinConfig.RequestID, err)
 		return
 	}
 	defer cancel() // 确保context被正确取消
@@ -156,7 +158,8 @@ func (dialin *HuaweiTelemetryDialin) singleSubscribe(dialinConfig router, parser
 		for {
 			packet, err := stream.Recv()
 			if err != nil || packet == nil {
-				dialin.Log.Errorf("E! [single Subscribe] Huawei Dialin device address %s, request_id %s, stream recv() %t", dialinConfig.Address, dialinConfig.Request_id, err)
+				d.Log.Errorf("[single subscribe] Huawei Dialin device address %s, request_id %d, stream recv() %v",
+					dialinConfig.Address, dialinConfig.RequestID, err)
 				return
 			}
 			isData := checkValidData(packet)
@@ -164,35 +167,37 @@ func (dialin *HuaweiTelemetryDialin) singleSubscribe(dialinConfig router, parser
 				var metrics []telegraf.Metric
 				var errParse error
 				if len(packet.GetMessage()) != 0 {
-					dialin.Log.Debugf("D! data gpb %s", hex.EncodeToString(packet.GetMessage()))
-					metrics, errParse = parserGpb.Parse(packet.GetMessage())
+					d.Log.Debugf("data gpb %s", hex.EncodeToString(packet.GetMessage()))
+					metrics, errParse = parserGPB.Parse(packet.GetMessage())
 					if errParse != nil {
-						dialin.Log.Errorf("E! [Huawei Dialin] device address %s , request_id %s,Packet Parse%t", dialinConfig.Address, dialinConfig.Request_id, errParse)
+						d.Log.Errorf("[huawei dialin] device address %s, request_id %d, packet parse error: %v",
+							dialinConfig.Address, dialinConfig.RequestID, errParse)
 						return
 					}
 				}
 				if len(packet.GetMessageJson()) != 0 {
-					dialin.Log.Debugf("D! data str %s", packet.GetMessageJson())
-					metrics, errParse = parserJson.Parse([]byte(packet.GetMessageJson()))
+					d.Log.Debugf("data str %s", packet.GetMessageJson())
+					metrics, errParse = parserJSON.Parse([]byte(packet.GetMessageJson()))
 					if errParse != nil {
-						dialin.Log.Errorf("E! [Huawei Dialin] device address %s ,request_id %s, Packet Json Parse %t", dialinConfig.Address, dialinConfig.Request_id, errParse)
+						d.Log.Errorf("[huawei dialin] device address %s, request_id %d, packet JSON parse error: %v",
+							dialinConfig.Address, dialinConfig.RequestID, errParse)
 						return
 					}
 				}
 				for _, metric := range metrics {
-					dialin.acc.AddMetric(metric)
+					d.acc.AddMetric(metric)
 				}
 			} else {
-				dialin.Log.Errorf("the %s [request_id %s] reply with packet :\n %s ", dialinConfig.Address, dialinConfig.Request_id, packet)
+				d.Log.Errorf("device %s [request_id %d] reply with packet: %v", dialinConfig.Address, dialinConfig.RequestID, packet)
 			}
 		}
 	}
-	dialin.wg.Done()
+	d.wg.Done()
 }
 
 // Stop Client Subscribe, Close connection
-func (dialin *HuaweiTelemetryDialin) Stop() {
-	dialin.wg.Wait()
+func (d *HuaweiTelemetryDialin) Stop() {
+	d.wg.Wait()
 }
 
 const sampleConfig = `
@@ -213,22 +218,22 @@ const sampleConfig = `
  `
 
 // SampleConfig of plugin
-func (dialin *HuaweiTelemetryDialin) SampleConfig() string {
+func (*HuaweiTelemetryDialin) SampleConfig() string {
 	return sampleConfig
 }
 
 // Description of plugin
-func (dialin *HuaweiTelemetryDialin) Description() string {
+func (*HuaweiTelemetryDialin) Description() string {
 	return "Huawei model-driven telemetry (MDT) input plugin for dialin"
 }
 
 // Gather plugin measurements (unused)
-func (dialin *HuaweiTelemetryDialin) Gather(_ telegraf.Accumulator) error {
+func (*HuaweiTelemetryDialin) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
 // check if the telemetry is valid
-func checkValidData(reply *huawei_dialin.SubsReply) bool {
+func checkValidData(reply *dialin.SubsReply) bool {
 	respCode := reply.ResponseCode
 	if respCode == "" {
 		return true
@@ -248,10 +253,4 @@ func init() {
 	inputs.Add("huawei_telemetry_dialin", func() telegraf.Input {
 		return &HuaweiTelemetryDialin{}
 	})
-}
-
-func (dialin *HuaweiTelemetryDialin) stop() {
-	log.SetOutput(os.Stderr)
-	log.Printf("I! telegraf stopped because error.")
-	os.Exit(1)
 }
