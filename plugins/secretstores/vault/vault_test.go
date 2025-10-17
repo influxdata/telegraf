@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -44,6 +45,7 @@ func createContainer(t *testing.T, initCommands []string) (*vault.VaultContainer
 	require.True(t, state.Running)
 
 	return container, func() {
+		//nolint:errcheck // No need to check error on cleanup
 		_ = container.Terminate(context.Background())
 	}
 }
@@ -51,7 +53,9 @@ func createContainer(t *testing.T, initCommands []string) (*vault.VaultContainer
 func getRoleID(t *testing.T, container *vault.VaultContainer) string {
 	t.Helper()
 
-	exitCode, reader, err := container.Exec(context.Background(), []string{"vault", "read", "-format=raw", "auth/approle/role/my-role/role-id"})
+	exitCode, reader, err := container.Exec(context.Background(), []string{
+		"vault", "read", "-format=raw", "auth/approle/role/my-role/role-id",
+	})
 	require.NoError(t, err)
 	require.Zero(t, exitCode)
 
@@ -75,7 +79,9 @@ type RoleIDResponse struct {
 func getSecretID(t *testing.T, container *vault.VaultContainer) string {
 	t.Helper()
 
-	exitCode, reader, err := container.Exec(context.Background(), []string{"vault", "write", "-f", "-format=json", "auth/approle/role/my-role/secret-id"})
+	exitCode, reader, err := container.Exec(context.Background(), []string{
+		"vault", "write", "-f", "-format=json", "auth/approle/role/my-role/secret-id",
+	})
 	require.NoError(t, err)
 	require.Zero(t, exitCode)
 
@@ -94,6 +100,32 @@ type SecretIDResponse struct {
 	Data struct {
 		SecretID string `json:"secret_id"`
 	} `json:"data"`
+}
+
+func getWrappedSecretID(t *testing.T, container *vault.VaultContainer) string {
+	t.Helper()
+
+	exitCode, reader, err := container.Exec(context.Background(), []string{
+		"vault", "write", "-wrap-ttl=60s", "-f", "-format=json", "auth/approle/role/my-role/secret-id",
+	})
+	require.NoError(t, err)
+	require.Zero(t, exitCode)
+
+	output, err := io.ReadAll(reader)
+	require.NoError(t, err)
+
+	// Trim some junk characters in the response first. "json" format may still contain some non-JSON prefix
+	startIndex := bytes.IndexByte(output, byte('{'))
+
+	var resp WrappedSecretIDResponse
+	require.NoError(t, json.Unmarshal(output[startIndex:], &resp))
+	return resp.WrapInfo.Token
+}
+
+type WrappedSecretIDResponse struct {
+	WrapInfo struct {
+		Token string `json:"token"`
+	} `json:"wrap_info"`
 }
 
 func TestIntegrationKVv1(t *testing.T) {
@@ -161,6 +193,130 @@ func TestIntegrationKVv2(t *testing.T) {
 		AppRole: &appRole{
 			RoleID:   getRoleID(t, container),
 			SecretID: getSecretID(t, container),
+		},
+	}
+
+	require.NoError(t, plugin.Init())
+
+	secret, err := plugin.Get(secretName)
+	require.NoError(t, err)
+	require.Equal(t, []byte(secretValue), secret)
+}
+
+func TestIntegrationAppRoleSecretEnv(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	mountPath := "my-mount-path"
+	secretPath := "my-secret-path"
+	secretName := "secret-some-name"
+	secretValue := "secret-some-value"
+
+	container, closer := createContainer(t, []string{
+		fmt.Sprintf("secrets enable -path=%s kv-v2", mountPath),
+		fmt.Sprintf("kv put -mount=%s %s %s=%s", mountPath, secretPath, secretName, secretValue),
+	})
+	defer closer()
+
+	addr, err := container.HttpHostAddress(context.Background())
+	require.NoError(t, err)
+
+	t.Setenv("VAULT_SECRET_ID", getSecretID(t, container))
+
+	plugin := &Vault{
+		ID:         "test_integration_kv_v2",
+		Address:    addr,
+		MountPath:  mountPath,
+		SecretPath: secretPath,
+		AppRole: &appRole{
+			RoleID:    getRoleID(t, container),
+			SecretEnv: "VAULT_SECRET_ID",
+		},
+	}
+
+	require.NoError(t, plugin.Init())
+
+	secret, err := plugin.Get(secretName)
+	require.NoError(t, err)
+	require.Equal(t, []byte(secretValue), secret)
+}
+
+func TestIntegrationAppRoleSecretFile(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	mountPath := "my-mount-path"
+	secretPath := "my-secret-path"
+	secretName := "secret-some-name"
+	secretValue := "secret-some-value"
+
+	container, closer := createContainer(t, []string{
+		fmt.Sprintf("secrets enable -path=%s kv-v2", mountPath),
+		fmt.Sprintf("kv put -mount=%s %s %s=%s", mountPath, secretPath, secretName, secretValue),
+	})
+	defer closer()
+
+	addr, err := container.HttpHostAddress(context.Background())
+	require.NoError(t, err)
+
+	secretID := getSecretID(t, container)
+
+	// Write the secret ID to a temporary file
+	tmpFile, err := os.CreateTemp(t.TempDir(), "secret-*.txt")
+	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
+
+	_, err = tmpFile.WriteString(secretID)
+	require.NoError(t, err)
+
+	plugin := &Vault{
+		ID:         "test_integration_kv_v2",
+		Address:    addr,
+		MountPath:  mountPath,
+		SecretPath: secretPath,
+		AppRole: &appRole{
+			RoleID:     getRoleID(t, container),
+			SecretFile: tmpFile.Name(),
+		},
+	}
+
+	require.NoError(t, plugin.Init())
+
+	secret, err := plugin.Get(secretName)
+	require.NoError(t, err)
+	require.Equal(t, []byte(secretValue), secret)
+}
+
+func TestIntegrationAppRoleSecretWrapped(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	mountPath := "my-mount-path"
+	secretPath := "my-secret-path"
+	secretName := "secret-some-name"
+	secretValue := "secret-some-value"
+
+	container, closer := createContainer(t, []string{
+		fmt.Sprintf("secrets enable -path=%s kv-v2", mountPath),
+		fmt.Sprintf("kv put -mount=%s %s %s=%s", mountPath, secretPath, secretName, secretValue),
+	})
+	defer closer()
+
+	addr, err := container.HttpHostAddress(context.Background())
+	require.NoError(t, err)
+
+	plugin := &Vault{
+		ID:         "test_integration_kv_v2",
+		Address:    addr,
+		MountPath:  mountPath,
+		SecretPath: secretPath,
+		AppRole: &appRole{
+			RoleID:          getRoleID(t, container),
+			SecretID:        getWrappedSecretID(t, container),
+			ResponseWrapped: true,
 		},
 	}
 
