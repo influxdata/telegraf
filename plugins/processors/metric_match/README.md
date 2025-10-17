@@ -34,8 +34,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   [processors.metric_match.tag]
   "huawei-ifm:ifm/interfaces/interface/ifStatistics" = ["node_id_str"]
 
-  # Field filtering (match by field-name suffix; top-level fields without dots
-  # are kept by default)
+  # Field filtering (match by field-name suffix; top-level fields without
+  # dots are kept by default)
   [processors.metric_match.field_filter]
   "huawei-ifm:ifm/interfaces/interface/ifStatistics" = [
     "receiveByte",

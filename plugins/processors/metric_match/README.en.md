@@ -1,6 +1,7 @@
 # Metric Match Processor (Field filtering and field-to-tag)
 
-`metric_match` filters fields and converts selected fields to tags for Huawei MDT metrics.
+`metric_match` filters fields and converts selected fields to tags for Huawei
+MDT metrics.
 
 ## Usage
 
@@ -33,9 +34,9 @@
 
 ## Typical combinations
 
-- With `processors.converter`: convert stringified numbers to numeric so Prometheus exports them as metrics instead of labels.
-- With `processors.filter`: e.g., `fieldexclude = ["current_period"]` to drop header fields and avoid `*_current_period` metrics.
-- With `processors.rename`: rename measurement and fields for shorter identifiers (e.g., `huawei_ifm_ifstats_rx_bytes_total`).
-
-
-
+- With `processors.converter`: convert stringified numbers to numeric so
+  Prometheus exports them as metrics instead of labels.
+- With `processors.filter`: e.g., `fieldexclude = ["current_period"]` to drop
+  header fields and avoid `*_current_period` metrics.
+- With `processors.rename`: rename measurement and fields for shorter
+  identifiers (e.g., `huawei_ifm_ifstats_rx_bytes_total`).
