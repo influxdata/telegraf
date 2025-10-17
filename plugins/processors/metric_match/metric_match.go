@@ -1,8 +1,6 @@
-package grpc
+package metric_match
 
 import (
-	"log"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -11,10 +9,16 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
-const sampleConfig = ``
-const sensorPathKey = "sensor_path"
+// SensorPathKey is the key for sensor path
+const SensorPathKey = "sensor_path"
+
+// TelemetryKey is the key for telemetry
 const TelemetryKey = "telemetry"
-const pointConfig = "."
+
+// PointConfig is the delimiter for nested fields
+const PointConfig = "."
+
+const sampleConfig = ``
 
 type MetricMatch struct {
 	Tag         map[string][]string `toml:"tag"`
@@ -23,19 +27,18 @@ type MetricMatch struct {
 	Log         telegraf.Logger
 }
 
-func (m *MetricMatch) SampleConfig() string {
+func (*MetricMatch) SampleConfig() string {
 	return sampleConfig
 }
 
-func (m *MetricMatch) Description() string {
+// Description returns the description of the processor
+func (*MetricMatch) Description() string {
 	return "metric match"
 }
 
 func (m *MetricMatch) Apply(in ...telegraf.Metric) []telegraf.Metric {
-
 	// get telemetry header field_filter and tag
-	//var useWay string
-	var res []telegraf.Metric
+	res := make([]telegraf.Metric, 0, len(in))
 	headerFilter := m.FieldFilter[TelemetryKey]
 	headerTag := m.Tag[TelemetryKey]
 	headerWay := m.Approach
@@ -43,13 +46,10 @@ func (m *MetricMatch) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, v := range headerWay {
 		approach = v
 	}
-
 	if approach == "include" {
-
 		// include filter field
-
 		for _, eachMetric := range in {
-			sensorPath, ok := eachMetric.GetField(sensorPathKey)
+			sensorPath, ok := eachMetric.GetField(SensorPathKey)
 			if ok {
 				fieldFilters := m.FieldFilter[sensorPath.(string)]
 				if len(fieldFilters) == 0 {
@@ -58,7 +58,7 @@ func (m *MetricMatch) Apply(in ...telegraf.Metric) []telegraf.Metric {
 				allKeys := make([]string, 0)
 				needKeys := make([]string, 0)
 				for _, v := range eachMetric.FieldList() {
-					if !strings.Contains(v.Key, pointConfig) {
+					if !strings.Contains(v.Key, PointConfig) {
 						needKeys = append(needKeys, v.Key)
 					}
 					allKeys = append(allKeys, v.Key)
@@ -66,13 +66,8 @@ func (m *MetricMatch) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 				fieldFilters = append(fieldFilters, headerFilter...)
 				for _, filter := range fieldFilters {
-
 					if ok, matchKeys := matchField(filter, eachMetric.FieldList()); ok {
-
-						for _, realKey := range matchKeys {
-							needKeys = append(needKeys, realKey)
-							//eachMetric.AddField(realKey,eachMetric)
-						}
+						needKeys = append(needKeys, matchKeys...)
 					}
 				}
 
@@ -81,9 +76,7 @@ func (m *MetricMatch) Apply(in ...telegraf.Metric) []telegraf.Metric {
 				tagsToKeep = append(tagsToKeep, headerTag...)
 				for _, tagKey := range tagsToKeep {
 					if ok, matchKeys := matchField(tagKey, eachMetric.FieldList()); ok {
-						for _, realKey := range matchKeys {
-							needKeys = append(needKeys, realKey)
-						}
+						needKeys = append(needKeys, matchKeys...)
 					}
 				}
 
@@ -98,14 +91,12 @@ func (m *MetricMatch) Apply(in ...telegraf.Metric) []telegraf.Metric {
 				for _, v := range allKeys {
 					eachMetric.RemoveField(v)
 				}
-
 			}
 		}
-
 	} else {
 		// exclude filter field
 		for _, eachMetric := range in {
-			sensorPath, ok := eachMetric.GetField(sensorPathKey)
+			sensorPath, ok := eachMetric.GetField(SensorPathKey)
 			if ok {
 				fieldFilters := m.FieldFilter[sensorPath.(string)]
 				if len(fieldFilters) == 0 {
@@ -121,12 +112,11 @@ func (m *MetricMatch) Apply(in ...telegraf.Metric) []telegraf.Metric {
 				}
 			}
 		}
-
 	}
 
 	// field to tag
 	for _, eachMetric := range in {
-		sensorPath, ok := eachMetric.GetField(sensorPathKey)
+		sensorPath, ok := eachMetric.GetField(SensorPathKey)
 		if ok {
 			tags := m.Tag[sensorPath.(string)]
 			if len(tags) == 0 {
@@ -142,10 +132,10 @@ func (m *MetricMatch) Apply(in ...telegraf.Metric) []telegraf.Metric {
 							if typeOfV.Name() != "string" {
 								if typeOfV.Name() != "int64" {
 									m.Log.Errorf("wrong with metric tag [%s %s], it's type is %s", sensorPath.(string), tag, typeOfV.Name())
-									m.stop()
-								} else {
-									value = strconv.FormatInt(value.(int64), 10)
+									m.Log.Error("telegraf stopped because of error")
+									return nil
 								}
+								value = strconv.FormatInt(value.(int64), 10)
 							} else {
 								// 默认标签占位：空字符串时填充为 "N/A"，避免被序列化时丢弃
 								if strings.TrimSpace(value.(string)) == "" {
@@ -187,10 +177,4 @@ func init() {
 	processors.Add("metric_match", func() telegraf.Processor {
 		return &MetricMatch{}
 	})
-}
-
-func (c *MetricMatch) stop() {
-	log.SetOutput(os.Stderr)
-	log.Printf("I! telegraf stopped because error.")
-	os.Exit(1)
 }
