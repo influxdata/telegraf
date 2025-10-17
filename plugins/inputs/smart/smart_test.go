@@ -2,7 +2,10 @@ package smart
 
 import (
 	"errors"
+	"flag"
 	"fmt"
+	"os"
+	"os/exec"
 	"sync"
 	"testing"
 	"time"
@@ -479,6 +482,68 @@ func Test_difference(t *testing.T) {
 	expected := []string{"/dev/nvme2"}
 	result := difference(devices, secondDevices)
 	require.Equal(t, expected, result)
+}
+
+// mockExitError creates an exec.ExitError with the given exit status.
+// This uses the test binary itself to generate a real ExitError, avoiding platform-specific
+// shell commands.
+func mockExitError(exitStatus int) error {
+	exe, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("failed to get executable: %w", err)
+	}
+
+	cmd := exec.Command(exe, "-test.run=^$", fmt.Sprintf("-exit-status=%d", exitStatus))
+	cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
+	return cmd.Run()
+}
+
+func TestExitStatusForActiveVsStandbyDrives(t *testing.T) {
+	s := newSmart()
+	s.Attributes = true
+	s.PathSmartctl = "smartctl"
+	s.Nocheck = "standby"
+
+	runCmd = func(_ config.Duration, _ bool, _ string, args ...string) ([]byte, error) {
+		deviceArg := args[len(args)-1]
+
+		if deviceArg == "/dev/sdb" {
+			// Active drive - smartctl exits with 2 but drive shows as ACTIVE
+			return []byte(`Device Model: ST18000NT001-3NF101
+Power mode is: ACTIVE or IDLE
+SMART overall-health self-assessment test result: PASSED`), mockExitError(2)
+		} else if deviceArg == "/dev/sdc" {
+			// Standby drive - smartctl exits with 2 and drive shows as STANDBY
+			return []byte(mockStandbyData), mockExitError(2)
+		}
+		return nil, errors.New("unexpected device")
+	}
+
+	t.Run("Exit status should reflect drive state not command exit code", func(t *testing.T) {
+		s.Devices = []string{"/dev/sdb", "/dev/sdc"}
+		var acc testutil.Accumulator
+
+		err := s.Gather(&acc)
+		require.NoError(t, err)
+
+		deviceMetrics := acc.GetTelegrafMetrics()
+
+		for _, metric := range deviceMetrics {
+			if metric.Name() == "smart_device" {
+				device, _ := metric.GetTag("device")
+				exitStatus, ok := metric.GetField("exit_status")
+				require.True(t, ok, "exit_status field should exist")
+
+				if device == "sdb" {
+					// Active drive should have exit_status=0 regardless of command exit code
+					require.Equal(t, int64(0), exitStatus, "Active drive should have exit_status=0")
+				} else if device == "sdc" {
+					// Standby drive should have exit_status=2
+					require.Equal(t, int64(2), exitStatus, "Standby drive should have exit_status=2")
+				}
+			}
+		}
+	})
 }
 
 func Test_integerOverflow(t *testing.T) {
@@ -2736,4 +2801,27 @@ msdbd   : 0
 ps    0 : mp:25.00W operational enlat:0 exlat:0 rrt:0 rrl:0
           rwt:0 rwl:0 idle_power:- active_power:-
 `
+	// Mock data for standby drive
+	mockStandbyData = `smartctl 7.4 2023-08-01 r5530 [x86_64-linux-6.12.24-Unraid] (local build)
+Copyright (C) 2002-23, Bruce Allen, Christian Franke, www.smartmontools.org
+
+Device is in STANDBY mode, exit(2)
+`
 )
+
+// TestMain handles the test helper process for mockExitError.
+// This allows us to generate proper exec.ExitError instances with specific exit codes
+// using the test binary itself, which works cross-platform (unlike shell-specific commands).
+func TestMain(m *testing.M) {
+	var exitStatusFlag int
+	flag.IntVar(&exitStatusFlag, "exit-status", 0, "exit status for test helper")
+	flag.Parse()
+
+	// If this is being run as a helper process, exit with the requested status
+	if os.Getenv("GO_WANT_HELPER_PROCESS") == "1" {
+		os.Exit(exitStatusFlag)
+	}
+
+	// Otherwise, run the tests normally
+	os.Exit(m.Run())
+}
