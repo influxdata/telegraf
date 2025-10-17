@@ -207,6 +207,19 @@ lint-branch:
 	}
 	golangci-lint run
 
+.PHONY: vuln-install
+vuln-install:
+	@echo "Installing govulncheck"
+	go install golang.org/x/vuln/cmd/govulncheck@latest
+
+.PHONY: vuln
+vuln:
+	@which govulncheck >/dev/null 2>&1 || { \
+		echo "govulncheck not found, please run: make vuln-install"; \
+		exit 1; \
+	}
+	govulncheck ./...
+
 .PHONY: tidy
 tidy:
 	go mod verify
