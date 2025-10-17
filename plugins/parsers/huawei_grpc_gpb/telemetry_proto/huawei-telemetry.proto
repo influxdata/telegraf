@@ -1,0 +1,82 @@
+syntax = "proto3";                           //The .proto file version is defined as v3. 
+package telemetry;//The package name is HuaweiTelemetry.
+option go_package="/";
+message HuaweiTelemetry {                         //HuaweiTelemetry message structure definition. 
+   string node_id_str = 1;                     //Device name.
+   string subscription_id_str = 2;             //Subscription name during static subscription configuration. 
+   string sensor_path = 3;                     //Subscription path. 
+   string proto_path = 13;                    //Message path for the sampling path in the proto file.
+   uint64 collection_id = 4;                   //Sampling round. 
+   uint64 collection_start_time = 5;           //Start time of a sampling round. 
+   uint64 msg_timestamp = 6;                   //Timestamp when the current message is generated. 
+   HuaweiTelemetryGPBTable data_gpb = 7;             //Indicates that the data carried is defined in HuaweiTelemetryGPBTable. 
+   uint64 collection_end_time = 8;                   //End time of a sampling round. 
+   uint32 current_period = 9;                  //Sampling precision, in milliseconds. 
+   string except_desc = 10;        //Exception description. It is used to report exception information when a sampling exception occurs. 
+   string product_name = 11;       //Product name.
+   enum Encoding {
+    Encoding_GPB = 0;        //GPB encoding format.
+    Encoding_JSON = 1;       //JSON encoding format.
+  };
+  Encoding encoding =12;    //Data encoding format. If the GPB encoding format is used, the data_gpb field is valid. Otherwise, the data_str field is valid.
+  string data_str = 14;   //This field is valid only when a non-GPB encoding format is used.
+  string ne_id = 15;               //Unique ID of an NE. In the gateway scenario, this parameter is used to identify the NE to which data belongs.
+  string software_version = 16;    //Software version number.
+}
+message HuaweiTelemetryGPBTable {                 //HuaweiTelemetryGPBTable message structure definition. 
+  repeated HuaweiTelemetryRowGPB row = 1;           //Array definition. Its member is HuaweiTelemetryRowGPB structure. 
+  repeated DataPath delete = 2;      //Delete the data path.  
+  Generator generator = 3;           //Data source description. This applies to the OnChange+ service that requires high reliability.
+} 
+message Generator {
+   uint64 generator_id = 1;         //Data source ID. Multiple data sources can provide data concurrently and maintain their own reliability.
+   uint32 generator_sn = 2;         //Message sequence number. The sequence numbers of messages sent by each data source must be consecutive. If the sequence numbers are not consecutive, data out-of-synchronization occurs, the collector should support automatic disconnection and reconnection in this case. The value ranges from 0 to 0xFFFFFFFF and can be reversed.
+   bool generator_sync = 3;         //Data source synchronization Indicates whether to perform OnChange full data synchronization. In addition, if the value is true and no data is contained, the synchronization is complete.
+}
+message HuaweiTelemetryRowGPB { 
+   uint64 timestamp = 1;                       //Timestamp of the current sampling instance. 
+   bytes content = 11;                         //Sampling instance data carried. The sensor_path field must be considered to determine which .proto file is used for encoding. 
+}
+message DataPath {
+   uint64 timestamp = 1;                //Timestamp of the current sampling instance. 
+   Path path = 2;                       //A data tree node that contains only the data path and key field information.
+}
+message Path {
+   repeated PathElem node = 1;          //A data tree node that contains only the data path and key field information.
+}                                       
+message PathElem {                      
+  string name = 1;                      //Data tree node name
+  map<string, string> key = 2;          //Key field name and value mapping table of the data tree node
+}
+
+message HuaweiTelemetrySelfDefinedEvent {
+  string path = 1;         //Sampling path that triggers the customized event, which describes the method of parsing the content.
+  string proto_path = 13;  //Message path for the sampling path in the proto file.
+  uint32 level = 2;        //Level of the user-defined event.
+  string description = 3;  //Description of the user-defined event.
+  string fieldName = 4; //Name of the field that triggers the customized event.
+  uint32 fieldValue = 5;   //Value of the field that triggers the customized event.
+  HuaweiTelemetrySelfDefineThresTable data_threshold = 6; //Threshold filter criteria when the customized event is triggered.
+  enum ThresholdRelation {
+      ThresholdRelation_INVALID = 0; //The relationship between thresholds is not configured.
+      ThresholdRelation_AND = 1; //The relationship between thresholds is And.
+      ThresholdRelation_OR = 2; //The relationship between thresholds is Or.
+  }
+  ThresholdRelation thresholdRelation = 7; //Relationship between threshold filter criteria when the customized event is triggered.
+  bytes content = 8; //Sampled data that triggers the customized event.
+}
+message HuaweiTelemetrySelfDefineThresTable {
+  repeated HuaweiTelemetryThreshold row = 1; //Multiple thresholds are included.
+}
+message HuaweiTelemetryThreshold {
+  uint32 thresholdValue = 1; //Delivered threshold.
+  enum ThresholdOpType {
+      ThresholdOpType_EQ = 0; //The actual value in the data sent equals to the configured data threshold.
+      ThresholdOpType_GT = 1; //The actual value in the data sent is greater than the configured data threshold.
+      ThresholdOpType_GE = 2; //The actual value in the data sent is greater than or equals to the configured data threshold.
+      ThresholdOpType_LT = 3; //The actual value in the data sent is less than the configured data threshold.
+      ThresholdOpType_LE = 4; //The actual value in the data sent is less than or equals to the configured data threshold.
+  }
+  ThresholdOpType thresholdOpType = 2; //Threshold on the device.
+
+}
