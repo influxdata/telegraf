@@ -46,15 +46,17 @@ const (
 )
 
 type SQLServer struct {
-	Servers      []*config.Secret `toml:"servers"`
-	QueryTimeout config.Duration  `toml:"query_timeout"`
-	AuthMethod   string           `toml:"auth_method"`
-	ClientID     string           `toml:"client_id"`
-	DatabaseType string           `toml:"database_type"`
-	IncludeQuery []string         `toml:"include_query"`
-	ExcludeQuery []string         `toml:"exclude_query"`
-	HealthMetric bool             `toml:"health_metric"`
-	Log          telegraf.Logger  `toml:"-"`
+	Servers            []*config.Secret `toml:"servers"`
+	QueryTimeout       config.Duration  `toml:"query_timeout"`
+	AuthMethod         string           `toml:"auth_method"`
+	ClientID           string           `toml:"client_id"`
+	DatabaseType       string           `toml:"database_type"`
+	IncludeQuery       []string         `toml:"include_query"`
+	ExcludeQuery       []string         `toml:"exclude_query"`
+	HealthMetric       bool             `toml:"health_metric"`
+	MaxOpenConnections int              `toml:"max_open_connections"`
+	MaxIdleConnections int              `toml:"max_idle_connections"`
+	Log                telegraf.Logger  `toml:"-"`
 
 	pools   []*sql.DB
 	queries mapQuery
@@ -166,6 +168,16 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 			pool = sql.OpenDB(connector)
 		default:
 			return fmt.Errorf("unknown auth method: %v", s.AuthMethod)
+		}
+
+		// Use max_open_connections if any
+		if s.MaxOpenConnections > 0 {
+			pool.SetMaxOpenConns(s.MaxOpenConnections)
+		}
+
+		// Use max_idle_connections if any
+		if s.MaxIdleConnections > 0 {
+			pool.SetMaxIdleConns(s.MaxIdleConnections)
 		}
 
 		s.pools = append(s.pools, pool)
