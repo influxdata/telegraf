@@ -19,7 +19,7 @@ type whitelistEntry struct {
 	License  string
 }
 
-var re = regexp.MustCompile(`^([<=>]+\s*)?([-\.\/\w]+)(@v[\d\.]+)?\s+([-\.\w]+)$`)
+var re = regexp.MustCompile(`^([<=>]+\s*)?([-\.\/\w]+)(@v[\d\.]+)?\s+([-\.,\w]+)$`)
 
 func (w *whitelist) Parse(filename string) error {
 	file, err := os.Open(filename)

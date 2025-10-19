@@ -207,6 +207,19 @@ lint-branch:
 	}
 	golangci-lint run
 
+.PHONY: vuln-install
+vuln-install:
+	@echo "Installing govulncheck"
+	go install golang.org/x/vuln/cmd/govulncheck@latest
+
+.PHONY: vuln
+vuln:
+	@which govulncheck >/dev/null 2>&1 || { \
+		echo "govulncheck not found, please run: make vuln-install"; \
+		exit 1; \
+	}
+	govulncheck ./...
+
 .PHONY: tidy
 tidy:
 	go mod verify
@@ -257,8 +270,8 @@ plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 
 .PHONY: ci
 ci:
-	docker build -t quay.io/influxdb/telegraf-ci:1.25.2 - < scripts/ci.docker
-	docker push quay.io/influxdb/telegraf-ci:1.25.2
+	docker build -t quay.io/influxdb/telegraf-ci:1.25.3 - < scripts/ci.docker
+	docker push quay.io/influxdb/telegraf-ci:1.25.3
 
 .PHONY: install
 install: $(buildbin)

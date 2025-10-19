@@ -23,7 +23,7 @@ type Container struct {
 	packageManager string
 }
 
-// create container with given name and image
+// Create a container with given name and image
 func (c *Container) Create(image string) error {
 	if c.Name == "" {
 		return errors.New("unable to create container: no name given")
@@ -66,7 +66,7 @@ func (c *Container) Create(image string) error {
 	return nil
 }
 
-// delete the container
+// Delete the container
 func (c *Container) Delete() {
 	//nolint:errcheck // cleaning up state so no need to check for error
 	c.client.Stop(c.Name)
@@ -74,7 +74,7 @@ func (c *Container) Delete() {
 	c.client.Delete(c.Name)
 }
 
-// installs the package from configured repos
+// Install the package from configured repos
 func (c *Container) Install(packageName ...string) error {
 	var cmd []string
 	switch c.packageManager {
