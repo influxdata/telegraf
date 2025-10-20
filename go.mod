@@ -153,7 +153,7 @@ require (
 	github.com/miekg/dns v1.1.68
 	github.com/moby/ipvs v1.1.0
 	github.com/multiplay/go-ts3 v1.2.0
-	github.com/nats-io/nats-server/v2 v2.12.0
+	github.com/nats-io/nats-server/v2 v2.12.1
 	github.com/nats-io/nats.go v1.46.1
 	github.com/netsampler/goflow2/v2 v2.2.3
 	github.com/newrelic/newrelic-telemetry-sdk-go v0.8.1
@@ -562,7 +562,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	golang.org/x/telemetry v0.0.0-20250908211612-aef8a434d053 // indirect
-	golang.org/x/time v0.13.0 // indirect
+	golang.org/x/time v0.14.0 // indirect
 	golang.org/x/tools v0.37.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20211209221555-9c9e7e272434 // indirect
