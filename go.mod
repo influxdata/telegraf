@@ -63,7 +63,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.35.5
 	github.com/aws/smithy-go v1.23.1
 	github.com/benbjohnson/clock v1.3.5
-	github.com/bluenviron/gomavlib/v3 v3.2.1
+	github.com/bluenviron/gomavlib/v3 v3.3.0
 	github.com/blues/jsonata-go v1.5.4
 	github.com/bmatcuk/doublestar/v3 v3.0.0
 	github.com/boschrexroth/ctrlx-datalayer-golang v1.3.1
@@ -537,7 +537,7 @@ require (
 	github.com/zitadel/logging v0.6.2 // indirect
 	github.com/zitadel/oidc/v3 v3.44.0 // indirect
 	github.com/zitadel/schema v1.3.1 // indirect
-	go.bug.st/serial v1.6.2 // indirect
+	go.bug.st/serial v1.6.4 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.4 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
