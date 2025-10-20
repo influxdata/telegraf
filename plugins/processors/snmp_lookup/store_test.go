@@ -57,10 +57,7 @@ func TestLookup(t *testing.T) {
 	// Initial lookup should cache entries
 	s.lookup("127.0.0.1", "999")
 	require.Eventually(t, func() bool {
-		return s.cache.Contains("127.0.0.1")
-	}, time.Second, time.Millisecond)
-	require.Eventually(t, func() bool {
-		return notifyCount.Load() == 1
+		return s.cache.Contains("127.0.0.1") && notifyCount.Load() == 1
 	}, time.Second, time.Millisecond)
 
 	entries, _ := s.cache.Get("127.0.0.1")
