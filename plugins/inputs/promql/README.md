@@ -50,7 +50,7 @@ more details on how to use them.
   # idle_conn_timeout = "0s"
   # max_idle_conn = 0
   # max_idle_conn_per_host = 0
-  # response_timeout ="0s"
+  # response_timeout = "0s"
 
   ## Optional proxy settings
   # use_system_proxy = false
