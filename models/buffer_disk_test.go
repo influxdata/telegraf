@@ -128,6 +128,7 @@ func TestDiskBufferEmptyClose(t *testing.T) {
 	// Create a disk buffer
 	buf, err := NewBuffer("test", "id123", "", 0, "disk_write_through", tmpdir)
 	require.NoError(t, err)
+	defer buf.Close()
 	diskBuf, ok := buf.(*DiskBuffer)
 	require.True(t, ok, "buffer is not a disk buffer")
 
