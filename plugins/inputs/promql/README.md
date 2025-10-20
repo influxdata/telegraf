@@ -95,7 +95,7 @@ more details on how to use them.
   #   ## meaning no limit
   #   # limit = 0
 
-  ## Rangequeries, multiple instances are allowed
+  ## Range queries, multiple instances are allowed
   # [[inputs.promql.range]]
   #   ## Fallback name of the resulting metrics to use as metric name in case
   #   ## the __name__ property of the query results is empty.
