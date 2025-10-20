@@ -130,7 +130,7 @@ returned results.
 
 A scalar or string result will produce single metrics named after the value of
 the Prometheus `__name__` label. Other labels will be kept as tags. The
-resulting metric used the Prometheus timestamp and will have the value stored in
+resulting metric uses the Prometheus timestamp and will have the value stored in
 a `value` field.
 
 ### Vector and Matrix Results
