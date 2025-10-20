@@ -62,7 +62,9 @@ func (c *client) init() (*client, error) {
 
 func (c *client) close() {
 	if c.client != nil {
-		c.client.(api.CloseIdler).CloseIdleConnections()
+		if c, ok := c.client.(api.CloseIdler); ok {
+			c.CloseIdleConnections()
+		}
 	}
 }
 
