@@ -968,8 +968,8 @@ github.com/bitly/go-hostpool v0.1.0/go.mod h1:4gOCgp6+NZnVqlKyZ/iBZFTAJKembaVENU
 github.com/bketelsen/crypt v0.0.3-0.20200106085610-5cbc8cc4026c/go.mod h1:MKsuJmJgSg28kpZDP6UIiPt0e0Oz0kqKNGyRaWEPv84=
 github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM=
 github.com/blang/semver/v4 v4.0.0/go.mod h1:IbckMUScFkM3pff0VJDNKRiT6TG/YpiHIM2yvyW5YoQ=
-github.com/bluenviron/gomavlib/v3 v3.2.1 h1:UOmuFuwXD2o/y1hyew4D842IRp4dDV5N0DNAYtDWGIM=
-github.com/bluenviron/gomavlib/v3 v3.2.1/go.mod h1:rjhY8gU5jvTHl40RcUe0ZBD78aIzj+qQ/gZI7IQo3aQ=
+github.com/bluenviron/gomavlib/v3 v3.3.0 h1:ul1yiDslfvsqCjLs+by1eSdU8Oud5qwemoO5ZBpX/fs=
+github.com/bluenviron/gomavlib/v3 v3.3.0/go.mod h1:pPrXt2HspzeIKNlvSDCrPzwPSLPDXORfhWJ8vT8zEKk=
 github.com/blues/jsonata-go v1.5.4 h1:XCsXaVVMrt4lcpKeJw6mNJHqQpWU751cnHdCFUq3xd8=
 github.com/blues/jsonata-go v1.5.4/go.mod h1:uns2jymDrnI7y+UFYCqsRTEiAH22GyHnNXrkupAVFWI=
 github.com/bmatcuk/doublestar v1.1.1 h1:YroD6BJCZBYx06yYFEWvUuKVWQn3vLLQAVmDmvTSaiQ=
@@ -2515,8 +2515,8 @@ github.com/zitadel/oidc/v3 v3.44.0 h1:wxpZm/VNQrWHGSB4Ld1rMcjpZvExHz+ikbNhzKyJOc
 github.com/zitadel/oidc/v3 v3.44.0/go.mod h1:5ki8s9CWoB4iGmtULndiVxwM8xt7IylZIaudro7jEq4=
 github.com/zitadel/schema v1.3.1 h1:QT3kwiRIRXXLVAs6gCK/u044WmUVh6IlbLXUsn6yRQU=
 github.com/zitadel/schema v1.3.1/go.mod h1:071u7D2LQacy1HAN+YnMd/mx1qVE2isb0Mjeqg46xnU=
-go.bug.st/serial v1.6.2 h1:kn9LRX3sdm+WxWKufMlIRndwGfPWsH1/9lCWXQCasq8=
-go.bug.st/serial v1.6.2/go.mod h1:UABfsluHAiaNI+La2iESysd9Vetq7VRdpxvjx7CmmOE=
+go.bug.st/serial v1.6.4 h1:7FmqNPgVp3pu2Jz5PoPtbZ9jJO5gnEnZIvnI1lzve8A=
+go.bug.st/serial v1.6.4/go.mod h1:nofMJxTeNVny/m6+KaafC6vJGj3miwQZ6vW4BZUGJPI=
 go.einride.tech/aip v0.73.0 h1:bPo4oqBo2ZQeBKo4ZzLb1kxYXTY1ysJhpvQyfuGzvps=
 go.einride.tech/aip v0.73.0/go.mod h1:Mj7rFbmXEgw0dq1dqJ7JGMvYCZZVxmGOR3S4ZcV5LvQ=
 go.etcd.io/bbolt v1.3.2/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
