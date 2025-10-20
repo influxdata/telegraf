@@ -228,7 +228,7 @@ require (
 	go.opentelemetry.io/proto/otlp/collector/profiles/v1development v0.1.0
 	go.opentelemetry.io/proto/otlp/profiles/v1development v0.1.0
 	go.starlark.net v0.0.0-20250906160240-bf296ed553ea
-	go.step.sm/crypto v0.71.0
+	go.step.sm/crypto v0.72.0
 	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/crypto v0.43.0
 	golang.org/x/exp v0.0.0-20250911091902-df9299821621
