@@ -283,7 +283,7 @@ func (z *Zfs) processProcFile(lines []string) (map[string]interface{}, error) {
 				return nil, fmt.Errorf("parsing field %q with %q failed: %w", name, fields[2], err)
 			}
 			// For backward compatibility in the metric field-types
-			if z.UseNativTypes {
+			if z.UseNativeTypes {
 				data[name] = value
 			} else {
 				data[name] = int64(value)
@@ -301,6 +301,7 @@ func (z *Zfs) processProcFile(lines []string) (map[string]interface{}, error) {
 
 	return data, nil
 }
+
 func init() {
 	inputs.Add("zfs", func() telegraf.Input {
 		return &Zfs{}
