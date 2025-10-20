@@ -23,18 +23,26 @@ type query struct {
 	log     telegraf.Logger
 }
 
-func (q *query) init(c *client, log telegraf.Logger, options ...apiv1.Option) {
+func (q *query) init(c *client, log telegraf.Logger, options ...apiv1.Option) error {
+	if q.Query == "" {
+		return fmt.Errorf("'query' cannot be empty for %q", q.client.url)
+	}
+
 	q.client = c
-	q.options = append(options, apiv1.WithLimit(q.Limit))
+	if q.Limit > 0 {
+		q.options = append(options, apiv1.WithLimit(q.Limit))
+	}
 	q.log = log
+
+	return nil
 }
 
 type InstantQuery struct {
 	query
 }
 
-func (q *InstantQuery) init(c *client, log telegraf.Logger, options ...apiv1.Option) {
-	q.query.init(c, log, options...)
+func (q *InstantQuery) init(c *client, log telegraf.Logger, options ...apiv1.Option) error {
+	return q.query.init(c, log, options...)
 }
 
 func (q *InstantQuery) execute(ctx context.Context, acc telegraf.Accumulator, t time.Time) error {
@@ -56,8 +64,22 @@ type RangeQuery struct {
 	Step  config.Duration `toml:"step"`
 }
 
-func (q *RangeQuery) init(c *client, log telegraf.Logger, options ...apiv1.Option) {
-	q.query.init(c, log, options...)
+func (q *RangeQuery) init(c *client, log telegraf.Logger, options ...apiv1.Option) error {
+	if err := q.query.init(c, log, options...); err != nil {
+		return err
+	}
+
+	if q.Start >= 0 && q.Start <= q.End {
+		return fmt.Errorf("invalid range %v to %v for query %q", q.Start, q.End, q.Query)
+	}
+	if q.Start < 0 && q.Start >= q.End {
+		return fmt.Errorf("invalid range %v to %v for query %q", q.Start, q.End, q.Query)
+	}
+
+	if q.Step <= 0 {
+		return fmt.Errorf("'step' must be positive for query %q", q.query.Query)
+	}
+	return nil
 }
 
 func (q *RangeQuery) execute(ctx context.Context, acc telegraf.Accumulator, t time.Time) error {

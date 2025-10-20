@@ -72,10 +72,14 @@ func (p *PromQL) Init() error {
 
 	// Setup queries
 	for i := range p.InstantQueries {
-		p.InstantQueries[i].init(p.client, p.Log, opts...)
+		if err := p.InstantQueries[i].init(p.client, p.Log, opts...); err != nil {
+			return err
+		}
 	}
 	for i := range p.RangeQueries {
-		p.RangeQueries[i].init(p.client, p.Log, opts...)
+		if err := p.RangeQueries[i].init(p.client, p.Log, opts...); err != nil {
+			return err
+		}
 	}
 
 	return nil
