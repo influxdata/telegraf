@@ -18,6 +18,17 @@ const (
 	unknown metricsVersion = iota
 	v1
 	v2
+
+	// Procstat type-column values according to
+	// https://github.com/openzfs/zfs/blob/master/include/os/linux/spl/sys/kstat.h#L54
+	kstatDataChar   = 0
+	kstatDataInt32  = 1
+	kstatDataUint32 = 2
+	kstatDataInt64  = 3
+	kstatDataUint64 = 4
+	kstatDataLong   = 5
+	kstatDataULong  = 6
+	kstatDataString = 7
 )
 
 type metricsVersion uint8
@@ -50,8 +61,7 @@ func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 
 	if z.PoolMetrics && err == nil {
 		for _, pool := range pools {
-			err := gatherPoolStats(pool, acc)
-			if err != nil {
+			if err := z.gatherPoolStats(pool, acc); err != nil {
 				return err
 			}
 		}
@@ -59,28 +69,25 @@ func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 
 	fields := make(map[string]interface{})
 	for _, metric := range kstatMetrics {
-		lines, err := internal.ReadLines(kstatPath + "/" + metric)
+		fn := filepath.Join(kstatPath, metric)
+		lines, err := internal.ReadLines(fn)
 		if err != nil {
 			continue
 		}
-		for i, line := range lines {
-			if i == 0 || i == 1 {
-				continue
+
+		data, err := z.processProcFile(lines)
+		if err != nil {
+			return fmt.Errorf("gathering metric %q from %q failed: %w", metric, fn, err)
+		}
+		for k, v := range data {
+			switch metric {
+			case "zil", "dmu_tx", "dnodestats":
+				// Keep key as is
+			default:
+				// Prefix key with metric name
+				k = metric + "_" + k
 			}
-			if len(line) < 1 {
-				continue
-			}
-			rawData := strings.Split(line, " ")
-			key := metric + "_" + rawData[0]
-			if metric == "zil" || metric == "dmu_tx" || metric == "dnodestats" {
-				key = rawData[0]
-			}
-			rawValue := rawData[len(rawData)-1]
-			value, err := strconv.ParseInt(rawValue, 10, 64)
-			if err != nil {
-				return err
-			}
-			fields[key] = value
+			fields[k] = v
 		}
 	}
 	acc.AddFields("zfs", fields, tags)
@@ -142,7 +149,7 @@ func getTags(pools []poolInfo) map[string]string {
 	return map[string]string{"pools": poolNames}
 }
 
-func gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
+func (z *Zfs) gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
 	lines, err := internal.ReadLines(pool.ioFilename)
 	if err != nil {
 		return err
@@ -155,13 +162,13 @@ func gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
 	case v1:
 		fields, gatherErr = gatherV1(lines)
 	case v2:
-		fields, gatherErr = gatherV2(lines, tags)
+		fields, gatherErr = z.gatherV2(lines, tags)
 	case unknown:
 		return errors.New("unknown metrics version detected")
 	}
 
 	if gatherErr != nil {
-		return gatherErr
+		return fmt.Errorf("collecting pool stats from %q failed: %w", pool.ioFilename, gatherErr)
 	}
 
 	acc.AddFields("zfs_pool", fields, tags)
@@ -214,28 +221,85 @@ func gather(lines []string, fileLines int) (keys, values []string, err error) {
 // nunlinked                       4    13848
 //
 // For explanation of the first line's values see https://github.com/openzfs/zfs/blob/master/module/os/linux/spl/spl-kstat.c#L61
-func gatherV2(lines []string, tags map[string]string) (map[string]interface{}, error) {
-	fileLines := 9
-	_, _, err := gather(lines, fileLines)
+func (z *Zfs) gatherV2(lines []string, tags map[string]string) (map[string]interface{}, error) {
+	fields, err := z.processProcFile(lines)
 	if err != nil {
 		return nil, err
 	}
-
-	tags["dataset"] = strings.Fields(lines[2])[2]
-	fields := make(map[string]interface{})
-	for i := 3; i < len(lines); i++ {
-		lineFields := strings.Fields(lines[i])
-		fieldName := lineFields[0]
-		fieldData := lineFields[2]
-		value, err := strconv.ParseInt(fieldData, 10, 64)
-		if err != nil {
-			return nil, err
-		}
-
-		fields[fieldName] = value
+	if len(fields) < 7 {
+		return nil, fmt.Errorf("expected 7 lines but got %d", len(fields))
 	}
 
+	// Extract the dataset name as a tag and remove it from the fields
+	dsnRaw, found := fields["dataset_name"]
+	if !found {
+		return nil, errors.New("dataset name not found in data")
+	}
+	dsn, ok := dsnRaw.(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid type %T for dataset name %v", dsnRaw, dsnRaw)
+	}
+	tags["dataset"] = dsn
+	delete(fields, "dataset_name")
+
 	return fields, nil
+}
+
+func (z *Zfs) processProcFile(lines []string) (map[string]interface{}, error) {
+	// Ignore the first lines as it contains data in a different format
+	// The second line (index 1) does contain the column header and should read
+	// name				type	data
+	header := strings.Fields(lines[1])
+	if len(header) != 3 || header[0] != "name" || header[1] != "type" || header[2] != "data" {
+		return nil, fmt.Errorf("invalid header %q", lines[1])
+	}
+
+	// Extract the data
+	data := make(map[string]interface{}, len(lines)-2)
+	for i, line := range lines[2:] {
+		fields := strings.Fields(line)
+		if len(fields) != 3 {
+			return data, fmt.Errorf("invalid data in line %d: %s", i+3, line)
+		}
+		name := fields[0]
+		ftype, err := strconv.Atoi(fields[1])
+		if err != nil {
+			z.Log.Warnf("cannot parse type %q for field %q; falling back to integer", fields[1], name)
+			ftype = kstatDataInt64
+		}
+
+		switch ftype {
+		case kstatDataChar, kstatDataString:
+			data[name] = fields[2]
+		case kstatDataInt32, kstatDataInt64:
+			value, err := strconv.ParseInt(fields[2], 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("parsing field %q with %q failed: %w", name, fields[2], err)
+			}
+			data[name] = value
+		case kstatDataUint32, kstatDataUint64:
+			value, err := strconv.ParseUint(fields[2], 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("parsing field %q with %q failed: %w", name, fields[2], err)
+			}
+			// For backward compatibility in the metric field-types
+			if z.UseNativeTypes {
+				data[name] = value
+			} else {
+				data[name] = int64(value)
+			}
+		case kstatDataLong, kstatDataULong:
+			value, err := strconv.ParseFloat(fields[2], 64)
+			if err != nil {
+				return nil, fmt.Errorf("parsing field %q with %q failed: %w", name, fields[2], err)
+			}
+			data[name] = value
+		default:
+			z.Log.Errorf("field %q with %q has unknown type %d", name, fields[2], ftype)
+		}
+	}
+
+	return data, nil
 }
 
 func init() {

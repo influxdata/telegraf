@@ -1,0 +1,19 @@
+182 1 0x01 17 4624 2995347336 1351144218825397
+name                            type data
+lookup                          4    0
+lookup_new                      4    0
+lookup_existing                 4    0
+lookup_live_hit                 4    0
+lookup_live_wait                4    0
+lookup_live_miss                4    0
+lookup_log_hit                  4    0
+lookup_log_active_hit           4    0
+lookup_log_flushing_hit         4    0
+lookup_log_miss                 4    0
+lookup_stored_hit               4    0
+lookup_stored_miss              4    0
+log_active_entries              4    0
+log_flushing_entries            4    0
+log_ingest_rate                 2    0
+log_flush_rate                  2    0
+log_flush_time_rate             2    0
