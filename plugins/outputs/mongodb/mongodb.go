@@ -178,7 +178,7 @@ func (s *MongoDB) Init() error {
 		}
 		s.clientOptions.SetAuth(credential)
 	default:
-		return fmt.Errorf("unsupported authentication type %q; supported types are: SCRAM, PLAIN, X509", s.AuthenticationType)
+		return fmt.Errorf("unsupported authentication type %q", s.AuthenticationType)
 	}
 
 	if s.ServerSelectTimeout != 0 {
