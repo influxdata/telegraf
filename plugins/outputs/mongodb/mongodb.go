@@ -95,6 +95,8 @@ func (s *MongoDB) Init() error {
 	s.clientOptions = options.Client().SetServerAPIOptions(serverAPIOptions)
 
 	switch s.AuthenticationType {
+	case "", "NONE":
+		// No authentication
 	case "SCRAM":
 		if s.Username.Empty() {
 			return errors.New("authentication for SCRAM must specify a username")
@@ -119,6 +121,36 @@ func (s *MongoDB) Init() error {
 		username.Destroy()
 		password.Destroy()
 		s.clientOptions.SetAuth(credential)
+	case "PLAIN":
+		if s.Username.Empty() {
+			return errors.New("authentication for PLAIN must specify a username")
+		}
+		if s.Password.Empty() {
+			return errors.New("authentication for PLAIN must specify a password")
+		}
+		username, err := s.Username.Get()
+		if err != nil {
+			return fmt.Errorf("getting username failed: %w", err)
+		}
+		password, err := s.Password.Get()
+		if err != nil {
+			username.Destroy()
+			return fmt.Errorf("getting password failed: %w", err)
+		}
+		credential := options.Credential{
+			AuthMechanism: "PLAIN",
+			AuthSource:    "$external",
+			Username:      username.String(),
+			Password:      password.String(),
+		}
+		username.Destroy()
+		password.Destroy()
+		s.clientOptions.SetAuth(credential)
+
+		// Warn if TLS is not explicitly enabled in the DSN
+		if !strings.Contains(s.Dsn, "tls=true") && !strings.HasPrefix(s.Dsn, "mongodb+srv://") {
+			s.Log.Warn("PLAIN authentication sends credentials in plaintext. Ensure TLS is enabled for secure transmission.")
+		}
 	case "X509":
 		// format connection string to include tls/x509 options
 		newConnectionString, err := url.Parse(s.Dsn)
@@ -145,6 +177,8 @@ func (s *MongoDB) Init() error {
 			AuthMechanism: "MONGODB-X509",
 		}
 		s.clientOptions.SetAuth(credential)
+	default:
+		return fmt.Errorf("unsupported authentication type %q; supported types are: SCRAM, PLAIN, X509", s.AuthenticationType)
 	}
 
 	if s.ServerSelectTimeout != 0 {
