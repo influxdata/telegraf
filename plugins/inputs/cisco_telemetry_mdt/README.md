@@ -14,8 +14,7 @@ later.
 🏷️ applications
 💻 all
 
-[cisco_mdt]: https://www.cisco.com/c/en/us/products/collateral/switches/\
-catalyst-9300-series-switches/model-driven-telemetry-wp.html
+[cisco_mdt]: https://www.cisco.com/c/en/us/products/collateral/switches/catalyst-9300-series-switches/model-driven-telemetry-wp.html
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
