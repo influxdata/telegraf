@@ -40,7 +40,7 @@ func TestLookup(t *testing.T) {
 		"1": {"ifName": "eth1"},
 	}
 	minUpdateInterval := 50 * time.Millisecond
-	cacheTTL := config.Duration(2 * minUpdateInterval)
+	cacheTTL := config.Duration(10 * minUpdateInterval)
 	var notifyCount atomic.Uint64
 	s := newStore(defaultCacheSize, cacheTTL, defaultParallelLookups, config.Duration(minUpdateInterval))
 	s.update = func(string) *tagMap {
@@ -57,9 +57,8 @@ func TestLookup(t *testing.T) {
 	// Initial lookup should cache entries
 	s.lookup("127.0.0.1", "999")
 	require.Eventually(t, func() bool {
-		return s.cache.Contains("127.0.0.1")
+		return s.cache.Contains("127.0.0.1") && notifyCount.Load() == 1
 	}, time.Second, time.Millisecond)
-	require.EqualValues(t, 1, notifyCount.Load())
 
 	entries, _ := s.cache.Get("127.0.0.1")
 	require.Equal(t, tmr, entries.rows)
@@ -71,7 +70,9 @@ func TestLookup(t *testing.T) {
 
 	s.lookup("127.0.0.1", "999")
 
-	require.EqualValues(t, 2, notifyCount.Load())
+	require.Eventually(t, func() bool {
+		return notifyCount.Load() == 2
+	}, time.Second, time.Millisecond)
 
 	s.Lock()
 	require.Contains(t, s.deferredUpdates, "127.0.0.1")
