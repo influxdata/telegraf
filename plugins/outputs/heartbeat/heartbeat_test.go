@@ -1117,7 +1117,9 @@ func TestDetailedLogging(t *testing.T) {
 			expected := replacer.Replace(tt.expected)
 
 			// Create a test server to validate the data sent
-			var actual string
+			var receivedMessage string
+			var receivedMu sync.Mutex
+			var snapshot atomic.Bool
 			var done atomic.Bool
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.Method != http.MethodPost {
@@ -1126,13 +1128,17 @@ func TestDetailedLogging(t *testing.T) {
 				}
 
 				// Decode the body
-				body, err := io.ReadAll(r.Body)
-				if err != nil {
-					t.Fail()
-					w.WriteHeader(http.StatusInternalServerError)
+				if snapshot.Swap(false) {
+					body, err := io.ReadAll(r.Body)
+					if err != nil {
+						t.Fail()
+						w.WriteHeader(http.StatusInternalServerError)
+					}
+					receivedMu.Lock()
+					receivedMessage = string(body)
+					receivedMu.Unlock()
+					done.Store(true)
 				}
-				actual = string(body)
-				done.Store(true)
 				w.WriteHeader(http.StatusOK)
 			}))
 			defer ts.Close()
@@ -1144,7 +1150,7 @@ func TestDetailedLogging(t *testing.T) {
 			plugin := &Heartbeat{
 				URL:        u,
 				InstanceID: "telegraf",
-				Interval:   config.Duration(time.Second),
+				Interval:   config.Duration(100 * time.Millisecond),
 				Include:    []string{"log-details"},
 				Logs:       tt.logcfg,
 				Log:        &testutil.Logger{},
@@ -1175,6 +1181,7 @@ func TestDetailedLogging(t *testing.T) {
 			}
 
 			// Start processing
+			snapshot.Store(true)
 			require.NoError(t, plugin.Connect())
 			defer plugin.Close()
 
@@ -1183,6 +1190,10 @@ func TestDetailedLogging(t *testing.T) {
 			require.Eventually(t, func() bool {
 				return done.Load()
 			}, 3*time.Second, 100*time.Millisecond)
+
+			receivedMu.Lock()
+			actual := receivedMessage
+			receivedMu.Unlock()
 			require.JSONEq(t, expected, actual, actual)
 		})
 	}
