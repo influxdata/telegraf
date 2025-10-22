@@ -21,11 +21,11 @@ import (
 var sampleConfig string
 
 const (
-	defaultURL           = "http://localhost:8000/api/v1/write/msgpack"
-	defaultTimeout       = 5 * time.Second
-	defaultContentType   = "application/msgpack"
-	defaultUserAgent     = "Telegraf-Arc-Output-Plugin"
-	defaultBatchSize     = 1000
+	defaultURL         = "http://localhost:8000/api/v1/write/msgpack"
+	defaultTimeout     = 5 * time.Second
+	defaultContentType = "application/msgpack"
+	defaultUserAgent   = "Telegraf-Arc-Output-Plugin"
+	defaultBatchSize   = 1000
 )
 
 // Arc output plugin for writing metrics to Arc time-series database using MessagePack binary protocol
@@ -63,8 +63,8 @@ type Arc struct {
 
 // ArcColumnarData represents columnar format data for Arc's MessagePack format
 type ArcColumnarData struct {
-	Measurement string                   `msgpack:"m"`
-	Columns     map[string]interface{}   `msgpack:"columns"`
+	Measurement string                 `msgpack:"m"`
+	Columns     map[string]interface{} `msgpack:"columns"`
 }
 
 func (*Arc) SampleConfig() string {
@@ -157,7 +157,7 @@ func (a *Arc) Write(metrics []telegraf.Metric) error {
 	}
 
 	// Convert each measurement group to columnar format
-	var columnarData []ArcColumnarData
+	columnarData := make([]ArcColumnarData, 0, len(measurementGroups))
 
 	for measurementName, metricsGroup := range measurementGroups {
 		if len(metricsGroup) == 0 {
@@ -320,7 +320,10 @@ func (a *Arc) Write(metrics []telegraf.Metric) error {
 
 	// Check response (Arc returns 204 No Content on success)
 	if resp.StatusCode != 204 && (resp.StatusCode < 200 || resp.StatusCode >= 300) {
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("arc returned status %d (failed to read body: %w)", resp.StatusCode, err)
+		}
 		return fmt.Errorf("arc returned status %d: %s", resp.StatusCode, string(body))
 	}
 

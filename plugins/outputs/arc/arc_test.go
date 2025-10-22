@@ -11,6 +11,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/vmihailenco/msgpack/v5"
 )
@@ -83,25 +84,25 @@ func TestWrite(t *testing.T) {
 			// Create test server
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				// Verify HTTP method
-				require.Equal(t, "POST", r.Method)
+				assert.Equal(t, "POST", r.Method)
 
 				// Verify Content-Type
-				require.Equal(t, "application/msgpack", r.Header.Get("Content-Type"))
+				assert.Equal(t, "application/msgpack", r.Header.Get("Content-Type"))
 
 				// Verify User-Agent
-				require.Contains(t, r.Header.Get("User-Agent"), "Telegraf")
+				assert.Contains(t, r.Header.Get("User-Agent"), "Telegraf")
 
 				// Read body
 				var body io.Reader = r.Body
 				if r.Header.Get("Content-Encoding") == "gzip" {
 					gz, err := gzip.NewReader(r.Body)
-					require.NoError(t, err)
+					assert.NoError(t, err)
 					defer gz.Close()
 					body = gz
 				}
 
 				data, err := io.ReadAll(body)
-				require.NoError(t, err)
+				assert.NoError(t, err)
 
 				// Decode MessagePack - handle both single and array format
 				var columnarData ArcColumnarData
@@ -111,25 +112,25 @@ func TestWrite(t *testing.T) {
 				if err != nil {
 					var columnarDataArray []ArcColumnarData
 					err = msgpack.Unmarshal(data, &columnarDataArray)
-					require.NoError(t, err)
-					require.NotEmpty(t, columnarDataArray)
+					assert.NoError(t, err)
+					assert.NotEmpty(t, columnarDataArray)
 					columnarData = columnarDataArray[0]
 				} else {
-					require.NoError(t, err)
+					assert.NoError(t, err)
 				}
 
 				// Verify columnar structure
-				require.NotEmpty(t, columnarData.Measurement)
-				require.NotEmpty(t, columnarData.Columns)
+				assert.NotEmpty(t, columnarData.Measurement)
+				assert.NotEmpty(t, columnarData.Columns)
 
 				// Verify time column exists
 				timeCol, ok := columnarData.Columns["time"]
-				require.True(t, ok, "time column should exist")
+				assert.True(t, ok, "time column should exist")
 
 				// Verify time column length matches expected records
 				timeArray, ok := timeCol.([]interface{})
-				require.True(t, ok, "time should be an array")
-				require.Len(t, timeArray, tt.expectedRecords)
+				assert.True(t, ok, "time should be an array")
+				assert.Len(t, timeArray, tt.expectedRecords)
 
 				// Return success
 				w.WriteHeader(http.StatusNoContent)
@@ -171,7 +172,7 @@ func TestWriteWithAPIKey(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Verify API key header
 		apiKey := r.Header.Get("x-api-key")
-		require.Equal(t, expectedAPIKey, apiKey)
+		assert.Equal(t, expectedAPIKey, apiKey)
 
 		w.WriteHeader(http.StatusNoContent)
 	}))
@@ -204,9 +205,9 @@ func TestWriteWithAPIKey(t *testing.T) {
 }
 
 func TestWriteServerError(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal Server Error"))
+		_, _ = w.Write([]byte("Internal Server Error"))
 	}))
 	defer ts.Close()
 
@@ -316,8 +317,8 @@ func TestMessagePackEncoding(t *testing.T) {
 	require.True(t, ok)
 	usageIdleArray, ok := usageIdleCol.([]interface{})
 	require.True(t, ok)
-	require.Equal(t, float64(95.5), usageIdleArray[0])
-	require.Equal(t, float64(85.0), usageIdleArray[1])
+	require.InDelta(t, 95.5, usageIdleArray[0], 0.01)
+	require.InDelta(t, 85.0, usageIdleArray[1], 0.01)
 }
 
 func TestMultipleMeasurements(t *testing.T) {
@@ -327,29 +328,29 @@ func TestMultipleMeasurements(t *testing.T) {
 		var body io.Reader = r.Body
 		if r.Header.Get("Content-Encoding") == "gzip" {
 			gz, err := gzip.NewReader(r.Body)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			defer gz.Close()
 			body = gz
 		}
 
 		data, err := io.ReadAll(body)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		// Try to decode as array of columnar data (multiple measurements)
 		var columnarDataArray []ArcColumnarData
 		err = msgpack.Unmarshal(data, &columnarDataArray)
-		require.NoError(t, err)
-		require.Len(t, columnarDataArray, 2, "should have 2 measurements")
+		assert.NoError(t, err)
+		assert.Len(t, columnarDataArray, 2, "should have 2 measurements")
 
 		// Verify we have both cpu and mem measurements
 		measurementNames := make(map[string]bool)
-		for _, data := range columnarDataArray {
-			measurementNames[data.Measurement] = true
-			require.NotEmpty(t, data.Columns)
+		for _, colData := range columnarDataArray {
+			measurementNames[colData.Measurement] = true
+			assert.NotEmpty(t, colData.Columns)
 		}
 
-		require.True(t, measurementNames["cpu"], "should have cpu measurement")
-		require.True(t, measurementNames["mem"], "should have mem measurement")
+		assert.True(t, measurementNames["cpu"], "should have cpu measurement")
+		assert.True(t, measurementNames["mem"], "should have mem measurement")
 
 		w.WriteHeader(http.StatusNoContent)
 	}))
