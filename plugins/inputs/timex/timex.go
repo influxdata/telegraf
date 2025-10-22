@@ -49,8 +49,28 @@ func (*Timex) Gather(acc telegraf.Accumulator) error {
 		multiplier = int64(1)
 	}
 
+	statusOutput := ""
+	switch status {
+	case unix.TIME_OK:
+		statusOutput = "ok"
+	case unix.TIME_INS:
+		statusOutput = "insert"
+	case unix.TIME_DEL:
+		statusOutput = "delete"
+	case unix.TIME_OOP:
+		statusOutput = "progress"
+	case unix.TIME_WAIT:
+		statusOutput = "wait"
+	case unix.TIME_ERROR:
+		statusOutput = "error"
+	}
+
+	tags := map[string]string{
+		"status": statusOutput,
+	}
+
 	fields := map[string]interface{}{
-		"offset_ns":                    timex.Offset * multiplier,
+		"offset_ns":                    int64(timex.Offset) * multiplier, //nolint:unconvert // Conversion needed for some architectures
 		"frequency":                    timex.Freq,
 		"maxerror_ns":                  timex.Maxerror * 1000,
 		"estimated_error_ns":           timex.Esterror * 1000,
@@ -58,7 +78,7 @@ func (*Timex) Gather(acc telegraf.Accumulator) error {
 		"loop_time_constant":           timex.Constant,
 		"tick_ns":                      timex.Tick * 1000,
 		"pps_frequency_hertz":          float64(timex.Ppsfreq) / ppm16,
-		"pps_jitter_ns":                timex.Jitter * multiplier,
+		"pps_jitter_ns":                int64(timex.Jitter) * multiplier, //nolint:unconvert // Conversion needed for some architectures
 		"pps_shift_seconds":            timex.Shift,
 		"pps_stability_hertz":          float64(timex.Stabil) / ppm16,
 		"pps_jitter_total":             timex.Jitcnt,
@@ -69,7 +89,7 @@ func (*Timex) Gather(acc telegraf.Accumulator) error {
 		"sync_status":                  synced,
 	}
 
-	acc.AddGauge("timex", fields, make(map[string]string, 0))
+	acc.AddGauge("timex", fields, tags)
 
 	return nil
 }

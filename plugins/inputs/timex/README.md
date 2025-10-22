@@ -31,6 +31,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Metrics
 
 - timex
+  - tags:
+    - status (string) - Clock command/status.
   - fields:
     - offset_seconds (int64) - The offset from local and reference clock.
     - frequency (int64) - Local clock frequency offset.
@@ -57,5 +59,5 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Example Output
 
 ```text
-timex,host=testvm offset_ns=0i,loop_time_constant=2i,pps_frequency_hertz=0,pps_jitter_ns=0i,pps_jitter_total=0i,pps_calibration_total=0i,pps_stability_exceeded_total=0i,tai_offset_seconds=37i,pps_shift_seconds=0i,maxerror_ns=522000i,estimated_error_ns=9000i,status=0i,pps_stability_hertz=0,pps_error_total=0i,frequency=890113i,tick_ns=10000000i,sync_status=true 1760629900000000000
+timex,host=testvm,status=ok maxerror_ns=1516000i,estimated_error_ns=4000i,tick_ns=10000000i,loop_time_constant=2i,pps_jitter_total=0i,sync_status=true,offset_ns=0i,frequency=885043i,pps_shift_seconds=0i,pps_stability_hertz=0,tai_offset_seconds=37i,status=0i,pps_frequency_hertz=0,pps_jitter_ns=0i,pps_calibration_total=0i,pps_error_total=0i,pps_stability_exceeded_total=0i 1761121800000000000
 ```

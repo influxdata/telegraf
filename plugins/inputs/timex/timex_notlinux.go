@@ -17,16 +17,16 @@ type Timex struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
-func (tx *Timex) SampleConfig() string {
+func (*Timex) SampleConfig() string {
 	return sampleConfig
 }
 
-func (tx *Timex) Init() error {
+func (*Timex) Init() error {
 	tx.Log.Warn("Current platform is not supported")
 	return nil
 }
 
-func (tx *Timex) Gather(acc telegraf.Accumulator) error { return nil }
+func (*Timex) Gather(acc telegraf.Accumulator) error { return nil }
 
 func init() {
 	inputs.Add("timex", func() telegraf.Input {
