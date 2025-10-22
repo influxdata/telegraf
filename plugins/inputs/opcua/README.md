@@ -289,36 +289,9 @@ path to the server's certificate file.
 #### Obtaining the Server Certificate
 
 Most OPC UA servers provide their certificate through their management interface
-or configuration directory. Common locations include:
-
-- Prosys OPC UA Simulation Server: `PKI/CA/certs/` directory
-- Kepware: `%ProgramData%\Kepware\KEPServerEX 6\OPC UA\PKI\trust\certs\`
-- Other servers: Check the server's PKI (Public Key Infrastructure) directory
-
-Alternatively, you can export the certificate using OPC UA client tools like
-UA Expert or opcua-client.
-
-#### Example Configuration for Self-Signed Certificates
-
-```toml
-[[inputs.opcua]]
-  endpoint = "opc.tcp://192.168.1.100:4840"
-  security_policy = "Basic256Sha256"
-  security_mode = "SignAndEncrypt"
-
-  # Client certificate for mutual TLS
-  certificate = "/etc/telegraf/opcua_client_cert.pem"
-  private_key = "/etc/telegraf/opcua_client_key.pem"
-
-  # Server certificate to trust
-  remote_certificate = "/etc/telegraf/opcua_server_cert.pem"
-
-  auth_method = "Anonymous"
-
-  nodes = [
-    {name="Temperature", namespace="2", identifier_type="s", identifier="Temperature"},
-  ]
-```
+or configuration directory. Consult your OPC UA server's documentation to locate
+the certificate, typically found in the server's PKI (Public Key Infrastructure)
+directory. Alternatively, you can export the certificate using OPC UA client tools.
 
 ## Connection Service
 

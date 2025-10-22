@@ -187,6 +187,16 @@ func (o *OpcUAClientConfig) CreateClient(telegrafLogger telegraf.Logger) (*OpcUA
 	}
 	c.Log.Debug("Initialising OpcUAClient")
 
+	// Read the remote certificate file if configured to avoid race conditions
+	// between validation and use
+	if o.RemoteCertificate != "" {
+		cert, err := os.ReadFile(o.RemoteCertificate)
+		if err != nil {
+			return nil, fmt.Errorf("%w: failed to read remote certificate file %s: %w", ErrInvalidConfiguration, o.RemoteCertificate, err)
+		}
+		c.remoteCertificate = cert
+	}
+
 	err = c.setupWorkarounds()
 	return c, err
 }
@@ -197,8 +207,9 @@ type OpcUAClient struct {
 
 	Client *opcua.Client
 
-	opts  []opcua.Option
-	codes []ua.StatusCode
+	opts              []opcua.Option
+	codes             []ua.StatusCode
+	remoteCertificate []byte
 }
 
 // SetupOptions reads the endpoints from the specified server and sets up all authentication

@@ -228,8 +228,7 @@ func TestRemoteCertificateValidationSuccess(t *testing.T) {
 				RemoteCertificate: tt.remoteCertificate,
 			}
 
-			err := config.Validate()
-			require.NoError(t, err)
+			require.NoError(t, config.Validate())
 		})
 	}
 }
@@ -261,9 +260,7 @@ func TestRemoteCertificateValidationFailure(t *testing.T) {
 				RemoteCertificate: tt.remoteCertificate,
 			}
 
-			err := config.Validate()
-			require.Error(t, err)
-			require.ErrorIs(t, err, tt.expectedErr)
+			require.ErrorIs(t, config.Validate(), tt.expectedErr)
 		})
 	}
 }
