@@ -21,7 +21,7 @@ func (*Timex) SampleConfig() string {
 	return sampleConfig
 }
 
-func (*Timex) Init() error {
+func (tx *Timex) Init() error {
 	tx.Log.Warn("Current platform is not supported")
 	return nil
 }

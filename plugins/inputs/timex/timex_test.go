@@ -52,5 +52,8 @@ func TestMetricStructure(t *testing.T) {
 	require.NoError(t, plugin.Gather(&acc))
 	actual := acc.GetTelegrafMetrics()
 
-	testutil.RequireMetricsStructureEqual(t, expected, actual, testutil.IgnoreTime())
+	testutil.RequireMetricsStructureEqual(t, expected, actual, testutil.IgnoreTime(), testutil.IgnoreTags("status"))
+
+	// validate the status tag separately bacause the value could be different based on the system.
+	require.NotEmpty(t, actual[0].Tags()["status"])
 }
