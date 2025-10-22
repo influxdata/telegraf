@@ -1,0 +1,7 @@
+11 1 0x01 5 1360 2742556064 1351143840229379
+name                            type data
+erpt-dropped                    4    0
+erpt-set-failed                 4    0
+fmri-set-failed                 4    0
+payload-set-failed              4    0
+erpt-duplicates                 4    0

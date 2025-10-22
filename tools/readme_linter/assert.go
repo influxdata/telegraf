@@ -9,7 +9,7 @@ import (
 	"github.com/yuin/goldmark/ast"
 )
 
-// type for all linter assert methods
+// T is the type for all linter assert methods
 type T struct {
 	filename       string
 	markdown       []byte
@@ -30,7 +30,10 @@ func (t *T) printFailedAssertf(n ast.Node, format string, args ...interface{}) {
 
 // Assert function that doesnt involve a node, for example if something is missing
 func (t *T) assertf(format string, args ...interface{}) {
-	t.assertLine2f(0, format, args...) // There's no line number associated, so use the first
+	t.printFileLine(0) // There's no line number associated, so use the first
+	fmt.Printf(format+"\n", args...)
+	t.printRule(3)
+	t.fails++
 }
 
 func (t *T) assertNodef(n ast.Node, format string, args ...interface{}) {
@@ -39,20 +42,6 @@ func (t *T) assertNodef(n ast.Node, format string, args ...interface{}) {
 
 func (t *T) assertNodeLineOffsetf(n ast.Node, offset int, format string, args ...interface{}) {
 	t.printFileOffset(n, offset)
-	fmt.Printf(format+"\n", args...)
-	t.printRule(3)
-	t.fails++
-}
-
-func (t *T) assertLinef(line int, format string, args ...interface{}) {
-	// this func only exists to make the call stack to t.printRule the same depth
-	// as when called through assertf
-
-	t.assertLine2f(line, format, args...)
-}
-
-func (t *T) assertLine2f(line int, format string, args ...interface{}) {
-	t.printFileLine(line)
 	fmt.Printf(format+"\n", args...)
 	t.printRule(3)
 	t.fails++

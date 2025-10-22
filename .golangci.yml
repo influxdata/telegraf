@@ -411,15 +411,6 @@ linters:
         # Poorly chosen identifier.
         # https://staticcheck.dev/docs/checks/#ST1003
         - -ST1003
-        # The documentation of an exported function should start with the function's name.
-        # https://staticcheck.dev/docs/checks/#ST1020
-        - -ST1020
-        # The documentation of an exported type should start with type's name.
-        # https://staticcheck.dev/docs/checks/#ST1021
-        - -ST1021
-        # The documentation of an exported variable or constant should start with variable's name.
-        # https://staticcheck.dev/docs/checks/#ST1022
-        - -ST1022
         # Apply De Morgan's law.
         # https://staticcheck.dev/docs/checks/#QF1001
         - -QF1001

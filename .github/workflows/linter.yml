@@ -54,12 +54,12 @@ jobs:
       # Run Linter against code base #
       ################################
       - name: Lint Code Base
-        uses: super-linter/super-linter@v8.1.0
+        uses: super-linter/super-linter@v8.2.1
         env:
           VALIDATE_ALL_CODEBASE: false
           DEFAULT_BRANCH: master
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LINTER_RULES_PATH: '.'
-          MARKDOWN_CONFIG_FILE: .markdownlint.yml
+          MARKDOWN_CONFIG_FILE: .markdownlint.jsonc
           VALIDATE_MARKDOWN: true
           VALIDATE_BASH: true

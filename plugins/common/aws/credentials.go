@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 )
 
-// The endpoint_url supplied here is used for specific AWS service (Cloudwatch / Timestream / etc.)
 type CredentialConfig struct {
 	Region               string `toml:"region"`
 	AccessKey            string `toml:"access_key"`

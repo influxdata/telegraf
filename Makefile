@@ -131,7 +131,7 @@ config:
 	go run ./cmd/telegraf config > etc/telegraf.conf
 
 .PHONY: docs
-docs: build_tools embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators embed_readme_secretstores
+docs: build_tools embed_readme_common embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators embed_readme_secretstores
 
 .PHONY: build
 build:
@@ -180,7 +180,7 @@ vet:
 .PHONY: lint-install
 lint-install:
 	@echo "Installing golangci-lint"
-	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.4.0
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.5.0
 
 	@echo "Installing markdownlint"
 	npm install -g markdownlint-cli
@@ -206,6 +206,19 @@ lint-branch:
 		exit 1; \
 	}
 	golangci-lint run
+
+.PHONY: vuln-install
+vuln-install:
+	@echo "Installing govulncheck"
+	go install golang.org/x/vuln/cmd/govulncheck@latest
+
+.PHONY: vuln
+vuln:
+	@which govulncheck >/dev/null 2>&1 || { \
+		echo "govulncheck not found, please run: make vuln-install"; \
+		exit 1; \
+	}
+	govulncheck ./...
 
 .PHONY: tidy
 tidy:
@@ -257,8 +270,8 @@ plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 
 .PHONY: ci
 ci:
-	docker build -t quay.io/influxdb/telegraf-ci:1.25.1 - < scripts/ci.docker
-	docker push quay.io/influxdb/telegraf-ci:1.25.1
+	docker build -t quay.io/influxdb/telegraf-ci:1.25.3 - < scripts/ci.docker
+	docker push quay.io/influxdb/telegraf-ci:1.25.3
 
 .PHONY: install
 install: $(buildbin)

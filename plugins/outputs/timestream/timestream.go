@@ -69,11 +69,11 @@ const (
 )
 
 // MaxRecordsPerCall reflects Timestream limit of WriteRecords API call
-const MaxRecordsPerCall = 100
+const maxRecordsPerCall = 100
 
 // Default value for maximum number of parallel go routines to ingest/write data
 // when max_write_go_routines is not specified in the config
-const MaxWriteRoutinesDefault = 1
+const maxWriteRoutinesDefault = 1
 
 // WriteFactory function provides a way to mock the client instantiation for testing purposes.
 var WriteFactory = func(credentialConfig *common_aws.CredentialConfig) (WriteClient, error) {
@@ -171,7 +171,7 @@ func (t *Timestream) Connect() error {
 	}
 
 	if t.MaxWriteGoRoutinesCount <= 0 {
-		t.MaxWriteGoRoutinesCount = MaxWriteRoutinesDefault
+		t.MaxWriteGoRoutinesCount = maxWriteRoutinesDefault
 	}
 
 	t.Log.Infof("Constructing Timestream client for %q mode", t.MappingMode)
@@ -408,8 +408,8 @@ func (t *Timestream) TransformMetrics(metrics []telegraf.Metric) []*timestreamwr
 	// Create result as array of WriteRecordsInput. Split requests over records count limit to smaller requests.
 	var result []*timestreamwrite.WriteRecordsInput
 	for _, writeRequest := range writeRequests {
-		if len(writeRequest.Records) > MaxRecordsPerCall {
-			for _, recordsPartition := range partitionRecords(MaxRecordsPerCall, writeRequest.Records) {
+		if len(writeRequest.Records) > maxRecordsPerCall {
+			for _, recordsPartition := range partitionRecords(maxRecordsPerCall, writeRequest.Records) {
 				newWriteRecord := &timestreamwrite.WriteRecordsInput{
 					DatabaseName:     writeRequest.DatabaseName,
 					TableName:        writeRequest.TableName,

@@ -200,11 +200,6 @@ func TestNeedsMsrCPU(t *testing.T) {
 			require.True(t, needsMsrCPU(cpuMetrics))
 		})
 
-		t.Run("CPUBusyCycles", func(t *testing.T) {
-			cpuMetrics[len(cpuMetrics)-1] = cpuBusyCycles
-			require.True(t, needsMsrCPU(cpuMetrics))
-		})
-
 		t.Run("CPUBusyFrequency", func(t *testing.T) {
 			cpuMetrics[len(cpuMetrics)-1] = cpuBusyFrequency
 			require.True(t, needsMsrCPU(cpuMetrics))

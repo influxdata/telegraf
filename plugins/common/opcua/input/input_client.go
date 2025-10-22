@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"sort"
 	"strconv"
 	"strings"
@@ -52,9 +53,6 @@ type NodeSettings struct {
 	Namespace        string               `toml:"namespace"`
 	IdentifierType   string               `toml:"identifier_type"`
 	Identifier       string               `toml:"identifier"`
-	DataType         string               `toml:"data_type" deprecated:"1.17.0;1.35.0;option is ignored"`
-	Description      string               `toml:"description" deprecated:"1.17.0;1.35.0;option is ignored"`
-	TagsSlice        [][]string           `toml:"tags" deprecated:"1.25.0;1.35.0;use 'default_tags' instead"`
 	DefaultTags      map[string]string    `toml:"default_tags"`
 	MonitoringParams MonitoringParameters `toml:"monitoring_params"`
 }
@@ -70,7 +68,6 @@ type NodeGroupSettings struct {
 	Namespace        string            `toml:"namespace"`       // Can be overridden by node setting
 	IdentifierType   string            `toml:"identifier_type"` // Can be overridden by node setting
 	Nodes            []NodeSettings    `toml:"nodes"`
-	TagsSlice        [][]string        `toml:"tags" deprecated:"1.26.0;1.35.0;use default_tags"`
 	DefaultTags      map[string]string `toml:"default_tags"`
 	SamplingInterval config.Duration   `toml:"sampling_interval"` // Can be overridden by monitoring parameters
 }
@@ -244,25 +241,8 @@ type NodeMetricMapping struct {
 // NewNodeMetricMapping builds a new NodeMetricMapping from the given argument
 func NewNodeMetricMapping(metricName string, node NodeSettings, groupTags map[string]string) (*NodeMetricMapping, error) {
 	mergedTags := make(map[string]string)
-	for n, t := range groupTags {
-		mergedTags[n] = t
-	}
-
-	nodeTags := make(map[string]string)
-	if len(node.DefaultTags) > 0 {
-		nodeTags = node.DefaultTags
-	} else if len(node.TagsSlice) > 0 {
-		// fixme: once the TagsSlice has been removed (after deprecation), remove this if else logic
-		var err error
-		nodeTags, err = tagsSliceToMap(node.TagsSlice)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	for n, t := range nodeTags {
-		mergedTags[n] = t
-	}
+	maps.Copy(mergedTags, groupTags)
+	maps.Copy(mergedTags, node.DefaultTags)
 
 	return &NodeMetricMapping{
 		Tag:        node,
@@ -349,28 +329,6 @@ func newMP(n *NodeMetricMapping) metricParts {
 	return x
 }
 
-// fixme: once the TagsSlice has been removed (after deprecation), remove this
-// tagsSliceToMap takes an array of pairs of strings and creates a map from it
-func tagsSliceToMap(tags [][]string) (map[string]string, error) {
-	m := make(map[string]string)
-	for i, tag := range tags {
-		if len(tag) != 2 {
-			return nil, fmt.Errorf("tag %d needs 2 values, has %d: %v", i+1, len(tag), tag)
-		}
-		if tag[0] == "" {
-			return nil, fmt.Errorf("tag %d has empty name", i+1)
-		}
-		if tag[1] == "" {
-			return nil, fmt.Errorf("tag %d has empty value", i+1)
-		}
-		if _, ok := m[tag[0]]; ok {
-			return nil, fmt.Errorf("tag %d has duplicate key: %v", i+1, tag[0])
-		}
-		m[tag[0]] = tag[1]
-	}
-	return m, nil
-}
-
 func validateNodeToAdd(existing map[metricParts]struct{}, nmm *NodeMetricMapping) error {
 	if nmm.Tag.FieldName == "" {
 		return fmt.Errorf("empty name in %q", nmm.Tag.FieldName)
@@ -382,6 +340,15 @@ func validateNodeToAdd(existing map[metricParts]struct{}, nmm *NodeMetricMapping
 
 	if len(nmm.Tag.Identifier) == 0 {
 		return errors.New("empty node identifier not allowed")
+	}
+
+	for k, v := range nmm.MetricTags {
+		if k == "" {
+			return fmt.Errorf("empty tag name in tags for %q", nmm.Tag.FieldName)
+		}
+		if v == "" {
+			return fmt.Errorf("empty tag value for tag %q in %q", k, nmm.Tag.FieldName)
+		}
 	}
 
 	mp := newMP(nmm)
@@ -425,22 +392,6 @@ func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 			group.MetricName = o.Config.MetricName
 		}
 
-		if len(group.DefaultTags) > 0 && len(group.TagsSlice) > 0 {
-			o.Log.Warn("Tags found in both `tags` and `default_tags`, only using tags defined in `default_tags`")
-		}
-
-		groupTags := make(map[string]string)
-		if len(group.DefaultTags) > 0 {
-			groupTags = group.DefaultTags
-		} else if len(group.TagsSlice) > 0 {
-			// fixme: once the TagsSlice has been removed (after deprecation), remove this if else logic
-			var err error
-			groupTags, err = tagsSliceToMap(group.TagsSlice)
-			if err != nil {
-				return err
-			}
-		}
-
 		for _, node := range group.Nodes {
 			if node.Namespace == "" {
 				node.Namespace = group.Namespace
@@ -452,7 +403,7 @@ func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 				node.MonitoringParams.SamplingInterval = group.SamplingInterval
 			}
 
-			nmm, err := NewNodeMetricMapping(group.MetricName, node, groupTags)
+			nmm, err := NewNodeMetricMapping(group.MetricName, node, group.DefaultTags)
 			if err != nil {
 				return err
 			}
@@ -665,7 +616,7 @@ func (o *OpcUAInputClient) MetricForEvent(nodeIdx int, event *ua.EventFieldList)
 	return metric.New("opcua_event", tags, fields, t)
 }
 
-// Creation of event filter for event streaming
+// CreateEventFilter creates a new event filter for event streaming
 func (node *EventNodeMetricMapping) CreateEventFilter() (*ua.ExtensionObject, error) {
 	selects, err := node.createSelectClauses()
 	if err != nil {
