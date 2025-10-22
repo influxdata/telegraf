@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"maps"
 	"net/http"
 	"os"
 	"slices"
@@ -20,6 +19,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/logger"
 	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -33,16 +33,32 @@ type Heartbeat struct {
 	Token      config.Secret             `toml:"token"`
 	Interval   config.Duration           `toml:"interval"`
 	Include    []string                  `toml:"include"`
+	Logs       LogsConfig                `toml:"logs"`
 	Headers    map[string]*config.Secret `toml:"headers"`
 	Log        telegraf.Logger           `toml:"-"`
 	common_http.HTTPClientConfig
 
-	client *http.Client
-	cancel context.CancelFunc
-	wg     sync.WaitGroup
+	client        *http.Client
+	logCallbackID string
+	cancel        context.CancelFunc
+	wg            sync.WaitGroup
 
-	message map[string]interface{}
-	metrics atomic.Uint64
+	// Output message parts
+	message   message
+	logEvents []*logEvent
+	sync.Mutex
+
+	// Statistics
+	metrics     atomic.Uint64
+	logErrors   atomic.Uint64
+	logWarnings atomic.Uint64
+}
+
+type LogsConfig struct {
+	Limit    uint64 `toml:"limit"`
+	LogLevel string `toml:"level"`
+
+	level telegraf.LogLevel
 }
 
 func (*Heartbeat) SampleConfig() string {
@@ -63,36 +79,47 @@ func (h *Heartbeat) Init() error {
 		return errors.New("invalid interval")
 	}
 
+	// Construct the fixed part of the message
+	h.message = message{
+		ID:      h.InstanceID,
+		Version: internal.FormatFullVersion(),
+	}
+
 	for _, inc := range h.Include {
 		switch inc {
-		case "configs", "hostname", "metrics":
+		case "configs", "metrics", "logs":
 			// Do nothing, those are valid
-		case "logs":
-			return fmt.Errorf("'include' setting %q not implemented yet", inc)
+		case "hostname":
+			host, err := os.Hostname()
+			if err != nil {
+				return fmt.Errorf("getting hostname failed: %w", err)
+			}
+			h.message.Hostname = host
+		case "log-details":
+			// Set default log level if necessary
+			if h.Logs.LogLevel == "" {
+				h.Logs.LogLevel = "error"
+			}
+			h.Logs.level = telegraf.LogLevelFromString(h.Logs.LogLevel)
+			if h.Logs.level == telegraf.None && h.Logs.LogLevel != "" && h.Logs.LogLevel != "none" {
+				return fmt.Errorf("invalid log-level %q", h.Logs.LogLevel)
+			}
 		case "status":
-			h.Log.Warn("'include' setting 'status' currently only return 'OK'")
+			//			h.Log.Warn("'include' setting 'status' currently only return 'OK'")
 		default:
 			return fmt.Errorf("invalid 'include' setting %q", inc)
 		}
-	}
-
-	// Construct the fixed part of the message
-	h.message = map[string]interface{}{
-		"id":      h.InstanceID,
-		"version": internal.FormatFullVersion(),
-	}
-	if slices.Contains(h.Include, "hostname") {
-		host, err := os.Hostname()
-		if err != nil {
-			return fmt.Errorf("getting hostname failed: %w", err)
-		}
-		h.message["hostname"] = host
 	}
 
 	return nil
 }
 
 func (h *Heartbeat) Connect() error {
+	// Make sure we register a logging callback if we need to collect logs
+	if (slices.Contains(h.Include, "logs") || slices.Contains(h.Include, "log-details")) && h.logCallbackID == "" {
+		h.logCallbackID = logger.AddCallback(h.handleLogEvent)
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	h.cancel = cancel
 
@@ -126,6 +153,10 @@ func (h *Heartbeat) Connect() error {
 }
 
 func (h *Heartbeat) Close() error {
+	if h.logCallbackID != "" {
+		logger.RemoveCallback(h.logCallbackID)
+	}
+
 	if h.cancel != nil {
 		h.cancel()
 	}
@@ -146,27 +177,43 @@ func (h *Heartbeat) Write(metrics []telegraf.Metric) error {
 func (h *Heartbeat) send() error {
 	// Get the number of metrics for optional sending
 	count := h.metrics.Swap(0)
+	logErrs := h.logErrors.Swap(0)
+	logWarns := h.logWarnings.Swap(0)
 
 	// Construct the message
-	message := maps.Clone(h.message)
-	if slices.Contains(h.Include, "metrics") {
-		message["metrics"] = count
-	}
-	if slices.Contains(h.Include, "configs") {
-		message["configurations"] = config.Sources
-	}
-	if slices.Contains(h.Include, "logs") {
-		// TODO: Retrive this information from the agent
-		return errors.New("not supported yet")
-	}
-	if slices.Contains(h.Include, "status") {
-		// TODO: Evaluate the status condition
-		message["status"] = "OK"
+	for _, item := range h.Include {
+		switch item {
+		case "metrics":
+			h.message.Metrics = &count
+		case "configs":
+			h.message.ConfigSources = &config.Sources
+		case "logs":
+			if h.message.Logs == nil {
+				h.message.Logs = &logsMessage{}
+			}
+			h.message.Logs.Errors = &logErrs
+			h.message.Logs.Warnings = &logWarns
+		case "log-details":
+			if h.message.Logs == nil {
+				h.message.Logs = &logsMessage{}
+			}
+
+			var entries []logEntry
+			if h.Logs.Limit == 0 || h.Logs.Limit > uint64(len(h.logEvents)) {
+				entries = h.getLogEntriesUnlimited()
+			} else {
+				entries = h.getLogEntriesLimited()
+			}
+			h.message.Logs.Entries = &entries
+		case "status":
+			// TODO: Evaluate the status condition
+			h.message.Status = "OK"
+		}
 	}
 
 	// Create the message body
 	var body bytes.Buffer
-	data, err := json.Marshal(message)
+	data, err := json.Marshal(h.message)
 	if err != nil {
 		return fmt.Errorf("encoding message failed: %w", err)
 	}
