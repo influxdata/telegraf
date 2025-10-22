@@ -27,6 +27,9 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+// jsonSchemaVersion is the version of the JSON schema to be used for any data sent
+const jsonSchemaVersion = 1
+
 type Heartbeat struct {
 	URL        config.Secret             `toml:"url"`
 	InstanceID string                    `toml:"instance_id"`
@@ -83,6 +86,7 @@ func (h *Heartbeat) Init() error {
 	h.message = message{
 		ID:      h.InstanceID,
 		Version: internal.FormatFullVersion(),
+		Schema:  jsonSchemaVersion,
 	}
 
 	for _, inc := range h.Include {

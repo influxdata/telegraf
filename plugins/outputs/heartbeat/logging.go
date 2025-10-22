@@ -86,6 +86,7 @@ func (h *Heartbeat) getLogEntriesLimited() []logEntry {
 			index:      i,
 		}
 	}
+	clear(h.logEvents)
 
 	// Define log-level with priorities
 	loglevels := []telegraf.LogLevel{

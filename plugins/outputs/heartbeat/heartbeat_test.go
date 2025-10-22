@@ -1,17 +1,21 @@
 package heartbeat
 
 import (
+	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/santhosh-tekuri/jsonschema/v5"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -141,6 +145,7 @@ func TestIncludedExtraData(t *testing.T) {
 	replacer := strings.NewReplacer(
 		"$HOSTNAME", hostname,
 		"$VERSION", internal.FormatFullVersion(),
+		"$SCHEMA", strconv.Itoa(jsonSchemaVersion),
 		"$CONFIGS", cfgsExpected,
 		"$LOGTIME", logtime.UTC().Format(time.RFC3339Nano),
 	)
@@ -154,7 +159,8 @@ func TestIncludedExtraData(t *testing.T) {
 			name: "minimal",
 			expected: `{
 			  "id": "telegraf",
-			  "version": "$VERSION"
+			  "version": "$VERSION",
+			  "schema": $SCHEMA
 			}`,
 		},
 		{
@@ -163,6 +169,7 @@ func TestIncludedExtraData(t *testing.T) {
 			expected: `{
 			  "id": "telegraf",
 			  "version": "$VERSION",
+			  "schema": $SCHEMA,
 			  "hostname": "$HOSTNAME"
 			}`,
 		},
@@ -172,6 +179,7 @@ func TestIncludedExtraData(t *testing.T) {
 			expected: `{
 			  "id": "telegraf",
 			  "version": "$VERSION",
+			  "schema": $SCHEMA,
 			  "metrics": 5
 			}`,
 		},
@@ -181,6 +189,7 @@ func TestIncludedExtraData(t *testing.T) {
 			expected: `{
 			  "id": "telegraf",
 			  "version": "$VERSION",
+			  "schema": $SCHEMA,
 			  "status": "OK"
 			}`,
 		},
@@ -190,6 +199,7 @@ func TestIncludedExtraData(t *testing.T) {
 			expected: `{
 			  "id": "telegraf",
 			  "version": "$VERSION",
+			  "schema": $SCHEMA,
 			  "configurations": [$CONFIGS]
 			}`,
 		},
@@ -199,6 +209,7 @@ func TestIncludedExtraData(t *testing.T) {
 			expected: `{
 			  "id": "telegraf",
 			  "version": "$VERSION",
+			  "schema": $SCHEMA,
 			  "logs": {
 				"errors": 1,
 				"warnings": 2
@@ -212,6 +223,7 @@ func TestIncludedExtraData(t *testing.T) {
 			expected: `{
 				"id": "telegraf",
 				"version": "$VERSION",
+				"schema": $SCHEMA,
 				"logs": {
 					"entries": [
 						{
@@ -237,6 +249,7 @@ func TestIncludedExtraData(t *testing.T) {
 			expected: `{
 			  "id": "telegraf",
 			  "version": "$VERSION",
+			  "schema": $SCHEMA,
 			  "hostname": "$HOSTNAME",
 			  "metrics": 5,
 			  "status": "OK",
@@ -342,6 +355,14 @@ func TestIncludedExtraData(t *testing.T) {
 				return done.Load()
 			}, 3*time.Second, 100*time.Millisecond)
 			require.JSONEq(t, expected, actual, actual)
+
+			// Check heartbeat message against the JSON schema
+			schema, err := jsonschema.Compile(fmt.Sprintf("schema_v%d.json", jsonSchemaVersion))
+			require.NoError(t, err)
+
+			var v interface{}
+			require.NoError(t, json.Unmarshal([]byte(actual), &v))
+			require.NoError(t, schema.Validate(v))
 		})
 	}
 }
@@ -356,6 +377,7 @@ func TestDetailedLogging(t *testing.T) {
 	replacer := strings.NewReplacer(
 		"$HOSTNAME", hostname,
 		"$VERSION", internal.FormatFullVersion(),
+		"$SCHEMA", strconv.Itoa(jsonSchemaVersion),
 	)
 
 	// Prepare the logging time reference
@@ -408,6 +430,7 @@ func TestDetailedLogging(t *testing.T) {
 			expected: `{
 				"id": "telegraf",
 				"version": "$VERSION",
+				"schema": $SCHEMA,
 				"logs": {
 					"entries": [
 						{
@@ -466,6 +489,7 @@ func TestDetailedLogging(t *testing.T) {
 			expected: `{
 				"id": "telegraf",
 				"version": "$VERSION",
+				"schema": $SCHEMA,
 				"logs": {
 					"entries": [
 						{
@@ -546,6 +570,7 @@ func TestDetailedLogging(t *testing.T) {
 			expected: `{
 				"id": "telegraf",
 				"version": "$VERSION",
+				"schema": $SCHEMA,
 				"logs": {
 					"entries": [
 						{
@@ -637,6 +662,7 @@ func TestDetailedLogging(t *testing.T) {
 			expected: `{
 				"id": "telegraf",
 				"version": "$VERSION",
+				"schema": $SCHEMA,
 				"logs": {
 					"entries": [
 						{
@@ -739,6 +765,7 @@ func TestDetailedLogging(t *testing.T) {
 			expected: `{
 				"id": "telegraf",
 				"version": "$VERSION",
+				"schema": $SCHEMA,
 				"logs": {
 					"entries": [
 						{
@@ -853,6 +880,7 @@ func TestDetailedLogging(t *testing.T) {
 			expected: `{
 				"id": "telegraf",
 				"version": "$VERSION",
+				"schema": $SCHEMA,
 				"logs": {
 					"entries": [
 						{
@@ -934,6 +962,7 @@ func TestDetailedLogging(t *testing.T) {
 			expected: `{
 				"id": "telegraf",
 				"version": "$VERSION",
+				"schema": $SCHEMA,
 				"logs": {
 					"entries": [
 						{
@@ -1015,6 +1044,7 @@ func TestDetailedLogging(t *testing.T) {
 			expected: `{
 				"id": "telegraf",
 				"version": "$VERSION",
+				"schema": $SCHEMA,
 				"logs": {
 					"entries": [
 						{
