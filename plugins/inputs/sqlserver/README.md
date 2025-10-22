@@ -167,6 +167,12 @@ to use them.
   ## and following as optional (if mentioned in the include_query list)
   ## - SQLServerAvailabilityReplicaStates
   ## - SQLServerDatabaseReplicaStates
+
+  ## Maximum number of open connections to the database, 0 allows the driver to decide.
+  # max_open_connections = 0
+
+  ## Maximum number of idle connections in the connection pool, 0 allows the driver to decide.
+  # max_idle_connections = 0
 ```
 
 ### Additional Setup
