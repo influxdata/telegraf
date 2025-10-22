@@ -1,8 +1,11 @@
 # Arc Output Plugin
 
-This plugin writes metrics to [Arc](https://github.com/basekick-labs/arc), a high-performance time-series database, using the MessagePack binary protocol.
+This plugin writes metrics to [Arc](https://github.com/basekick-labs/arc),
+a high-performance time-series database, using the MessagePack binary protocol.
 
-Arc's MessagePack protocol provides **3-5x better performance** than traditional line protocol formats through binary serialization and direct Arrow/Parquet writes.
+Arc's MessagePack protocol provides **3-5x better performance** than traditional
+line protocol formats through binary serialization and direct Arrow/Parquet
+writes.
 
 ⭐ Telegraf v1.32.0
 🏷️ datastore
@@ -10,7 +13,10 @@ Arc's MessagePack protocol provides **3-5x better performance** than traditional
 
 ## Global configuration options
 
-In addition to the plugin-specific configuration settings, plugins support additional global and plugin configuration settings. These settings are used to modify metrics, tags, and field or create aliases and configure ordering, etc. See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
@@ -70,43 +76,52 @@ In addition to the plugin-specific configuration settings, plugins support addit
 
 ## Performance
 
-Arc's MessagePack binary protocol with columnar format provides exceptional write performance:
+Arc's MessagePack binary protocol with columnar format provides exceptional
+write performance:
 
 - **Columnar Format:** 2.66x faster than row format (2.42M records/sec throughput)
-- **Compression:** Gzip reduces bandwidth by ~10x with minimal CPU overhead
+- **Compression:** Gzip reduces bandwidth by ~10x with minimal CPU
+  overhead
 - **Batching:** Default batch size of 1000 provides optimal throughput
-- **Efficiency:** Columnar format enables direct Arrow/Parquet writes for maximum performance
+- **Efficiency:** Columnar format enables direct Arrow/Parquet writes for
+  maximum performance
 
 ### Performance Tuning
 
 For maximum throughput:
 
-1. Use `content_encoding = "gzip"` (default) to reduce network bandwidth
+1. Use `content_encoding = "gzip"` (default) to reduce network
+   bandwidth
 2. Increase `batch_size` to 5000-10000 for high-volume scenarios
-3. Adjust Telegraf's `flush_interval` to match your latency requirements
+3. Adjust Telegraf's `flush_interval` to match your latency
+   requirements
 4. Use multiple Telegraf instances for >1M RPS workloads
 
 ## Multi-Database Support
 
-Arc supports multiple databases (namespaces) within a single instance, allowing you to organize and isolate metrics by environment, tenant, or application.
+Arc supports multiple databases (namespaces) within a single instance, allowing
+you to organize and isolate metrics by environment, tenant, or application.
 
 ### Use Cases
 
-1. **Environment Separation**: Route production, staging, and development metrics to separate databases
+1. **Environment Separation**: Route production, staging, and development
+   metrics to separate databases
 2. **Multi-Tenancy**: Isolate metrics for different customers or teams
 3. **Data Lifecycle**: Separate hot, warm, and cold data storage
 
-### Configuration
+### Database Configuration
 
 ```toml
-# Route metrics to a specific database using the database parameter
+# Route metrics to a specific database using the database
+# parameter
 [[outputs.arc]]
   url = "http://arc:8000/api/v1/write/msgpack"
   api_key = "$ARC_API_KEY"
   database = "production"
 ```
 
-If no database is specified, metrics are written to the default database configured in Arc's `arc.conf`.
+If no database is specified, metrics are written to the default database
+configured in Arc's `arc.conf`.
 
 ### Cross-Database Queries
 
@@ -124,7 +139,8 @@ JOIN staging.cpu s ON p.time = s.time AND p.host = s.host
 
 ## Authentication
 
-Arc uses API key authentication via the `x-api-key` header. Generate a token with write permissions:
+Arc uses API key authentication via the `x-api-key` header. Generate a token
+with write permissions:
 
 ```bash
 # Using Arc CLI
@@ -141,9 +157,12 @@ Add the generated token to your Telegraf configuration:
 
 ## MessagePack Format
 
-Arc uses a columnar MessagePack binary format optimized for time-series data. The columnar format provides 2.66x better performance than traditional row-based formats by organizing data as arrays instead of individual records.
+Arc uses a columnar MessagePack binary format optimized for time-series data.
+The columnar format provides 2.66x better performance than traditional
+row-based formats by organizing data as arrays instead of individual records.
 
 ### Columnar Format (Recommended)
+
 All data is organized as columns (arrays), not rows:
 
 ```json
@@ -165,12 +184,15 @@ All data is organized as columns (arrays), not rows:
 
 1. **Grouping:** Metrics are automatically grouped by measurement name
 2. **Column Creation:** Each field and tag becomes a column (array)
-3. **Alignment:** All columns have the same length, with values aligned by index
-4. **Performance:** Enables direct Arrow/Parquet writes for 2.66x faster throughput
+3. **Alignment:** All columns have the same length, with values aligned by
+   index
+4. **Performance:** Enables direct Arrow/Parquet writes for 2.66x faster
+   throughput
 
 ### Multiple Measurements
 
-When sending metrics from multiple measurements, the plugin sends an array of columnar data structures:
+When sending metrics from multiple measurements, the plugin sends an array of
+columnar data structures:
 
 ```json
 [
@@ -188,6 +210,7 @@ When sending metrics from multiple measurements, the plugin sends an array of co
 ## Example Configuration
 
 ### Basic Configuration
+
 ```toml
 [[outputs.arc]]
   url = "http://localhost:8000/api/v1/write/msgpack"
@@ -195,6 +218,7 @@ When sending metrics from multiple measurements, the plugin sends an array of co
 ```
 
 ### High-Performance Configuration
+
 ```toml
 [[outputs.arc]]
   url = "http://arc-production:8000/api/v1/write/msgpack"
@@ -208,6 +232,7 @@ When sending metrics from multiple measurements, the plugin sends an array of co
 ```
 
 ### Multi-Database Configuration
+
 ```toml
 # Route metrics to different databases based on environment
 [[outputs.arc]]
@@ -225,6 +250,7 @@ When sending metrics from multiple measurements, the plugin sends an array of co
 ```
 
 ### Load-Balanced Configuration
+
 ```toml
 # Use multiple Arc instances for >1M RPS
 [[outputs.arc]]
@@ -247,7 +273,8 @@ The Arc output plugin does not produce any metrics.
 ### Connection Issues
 
 1. Verify Arc is running: `curl http://localhost:8000/health`
-2. Test authentication: `curl -H "x-api-key: YOUR_KEY" http://localhost:8000/health`
+2. Test authentication:
+   `curl -H "x-api-key: YOUR_KEY" http://localhost:8000/health`
 3. Check Telegraf logs: `telegraf --config telegraf.conf --debug`
 
 ### Performance Issues
@@ -259,11 +286,12 @@ The Arc output plugin does not produce any metrics.
 
 ### Authentication Errors
 
-```
+```text
 Error: arc returned status 401: Unauthorized
 ```
 
 Solution: Generate a valid API key and add it to your configuration:
+
 ```bash
 python3 cli.py auth create-token --name telegraf --permissions write
 ```
@@ -272,4 +300,5 @@ python3 cli.py auth create-token --name telegraf --permissions write
 
 - [Arc GitHub Repository](https://github.com/basekick-labs/arc)
 - [Arc Documentation](https://docs.basekick.net/arc)
-- [ClickBench Results](https://benchmark.clickhouse.com) - Arc ranks #3 on analytical queries
+- [ClickBench Results](https://benchmark.clickhouse.com) - Arc ranks #3
+  on analytical queries
