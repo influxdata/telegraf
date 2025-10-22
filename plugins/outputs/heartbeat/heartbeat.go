@@ -49,12 +49,11 @@ type Heartbeat struct {
 	// Output message parts
 	message   message
 	logEvents []*logEvent
-	sync.Mutex
 
 	// Statistics
-	metrics     atomic.Uint64
-	logErrors   atomic.Uint64
-	logWarnings atomic.Uint64
+	stats statistics
+
+	sync.Mutex
 }
 
 type LogsConfig struct {
@@ -62,6 +61,15 @@ type LogsConfig struct {
 	LogLevel string `toml:"level"`
 
 	level telegraf.LogLevel
+}
+
+type statistics struct {
+	metrics     atomic.Uint64
+	logErrors   atomic.Uint64
+	logWarnings atomic.Uint64
+
+	lastUpdate       time.Time
+	lastUpdateFailed bool
 }
 
 func (*Heartbeat) SampleConfig() string {
@@ -123,6 +131,7 @@ func (h *Heartbeat) Connect() error {
 	if (slices.Contains(h.Include, "logs") || slices.Contains(h.Include, "log-details")) && h.logCallbackID == "" {
 		h.logCallbackID = logger.AddCallback(h.handleLogEvent)
 	}
+	h.stats.lastUpdate = time.Now()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	h.cancel = cancel
@@ -143,12 +152,14 @@ func (h *Heartbeat) Connect() error {
 		ticker := time.NewTicker(time.Duration(h.Interval))
 		defer ticker.Stop()
 
-		select {
-		case <-cctx.Done():
-			return
-		case <-ticker.C:
-			if err := h.send(); err != nil {
-				h.Log.Error(err)
+		for {
+			select {
+			case <-cctx.Done():
+				return
+			case <-ticker.C:
+				if err := h.send(); err != nil {
+					h.Log.Error(err)
+				}
 			}
 		}
 	}(ctx)
@@ -173,16 +184,30 @@ func (h *Heartbeat) Close() error {
 }
 
 func (h *Heartbeat) Write(metrics []telegraf.Metric) error {
-	h.metrics.Add(uint64(len(metrics)))
+	h.stats.metrics.Add(uint64(len(metrics)))
 
 	return nil
 }
 
 func (h *Heartbeat) send() error {
-	// Get the number of metrics for optional sending
-	count := h.metrics.Swap(0)
-	logErrs := h.logErrors.Swap(0)
-	logWarns := h.logWarnings.Swap(0)
+	// Snapshot the current information state for sending the message
+	h.Lock()
+	count := h.stats.metrics.Load()
+	logErrs := h.stats.logErrors.Load()
+	logWarns := h.stats.logWarnings.Load()
+	logEvents := h.logEvents
+	var lastUpdate int64
+	if h.stats.lastUpdateFailed {
+		lastUpdate = h.stats.lastUpdate.Unix()
+	}
+	h.Unlock()
+
+	// Add the last successful update timestamp if any previous update failed
+	if lastUpdate > 0 {
+		h.message.LastSuccessfulUpdate = &lastUpdate
+	} else {
+		h.message.LastSuccessfulUpdate = nil
+	}
 
 	// Construct the message
 	for _, item := range h.Include {
@@ -204,9 +229,9 @@ func (h *Heartbeat) send() error {
 
 			var entries []logEntry
 			if h.Logs.Limit == 0 || h.Logs.Limit > uint64(len(h.logEvents)) {
-				entries = h.getLogEntriesUnlimited()
+				entries = getLogEntriesUnlimited(logEvents)
 			} else {
-				entries = h.getLogEntriesLimited()
+				entries = getLogEntriesLimited(logEvents, int(h.Logs.Limit))
 			}
 			h.message.Logs.Entries = &entries
 		case "status":
@@ -268,15 +293,26 @@ func (h *Heartbeat) send() error {
 	}
 	defer resp.Body.Close()
 
-	// Read the response body in case of any error
-	response, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("writing to %q failed: %w", url, err)
-	}
-
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		h.stats.lastUpdateFailed = true
+
+		// Read the response body in case of any error
+		response, rerr := io.ReadAll(resp.Body)
+		if rerr != nil {
+			return fmt.Errorf("received status %d (%s) with decoding message failed: %w", resp.StatusCode, resp.Status, rerr)
+		}
 		return fmt.Errorf("received status %d (%s) with message %s", resp.StatusCode, resp.Status, response)
 	}
+
+	// Update statistics on successful sent
+	h.Lock()
+	h.stats.lastUpdate = time.Now()
+	h.stats.lastUpdateFailed = false
+	h.stats.metrics.Add(-count)
+	h.stats.logErrors.Add(-logErrs)
+	h.stats.logWarnings.Add(-logWarns)
+	h.logEvents = h.logEvents[len(logEvents):]
+	h.Unlock()
 
 	return nil
 }

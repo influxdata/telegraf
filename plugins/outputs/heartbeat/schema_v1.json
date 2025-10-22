@@ -101,6 +101,10 @@
             "description": "Version of the JSON schema for this heartbeat message",
             "default": 1
         },
+        "last": {
+            "type": "integer",
+            "description": "Unix epoch in seconds of the last successful data update, only present if the previous heartbeat faileds (optional)"
+        },
         "hostname": {
             "type": "string",
             "description": "Hostname hosting the Telegraf instance (optional)"

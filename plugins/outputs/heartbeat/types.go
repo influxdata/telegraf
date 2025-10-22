@@ -1,14 +1,15 @@
 package heartbeat
 
 type message struct {
-	ID            string       `json:"id"`
-	Version       string       `json:"version"`
-	Schema        int          `json:"schema"`
-	Hostname      string       `json:"hostname,omitempty"`
-	Metrics       *uint64      `json:"metrics,omitempty"`
-	ConfigSources *[]string    `json:"configurations,omitempty"`
-	Logs          *logsMessage `json:"logs,omitempty"`
-	Status        string       `json:"status,omitempty"`
+	ID                   string       `json:"id"`
+	Version              string       `json:"version"`
+	Schema               int          `json:"schema"`
+	LastSuccessfulUpdate *int64       `json:"last,omitempty"`
+	Hostname             string       `json:"hostname,omitempty"`
+	Metrics              *uint64      `json:"metrics,omitempty"`
+	ConfigSources        *[]string    `json:"configurations,omitempty"`
+	Logs                 *logsMessage `json:"logs,omitempty"`
+	Status               string       `json:"status,omitempty"`
 }
 
 type logsMessage struct {

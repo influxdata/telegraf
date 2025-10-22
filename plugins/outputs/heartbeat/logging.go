@@ -23,9 +23,9 @@ func (h *Heartbeat) handleLogEvent(level telegraf.LogLevel, ts time.Time, source
 	// Fill the statistics
 	switch level {
 	case telegraf.Error:
-		h.logErrors.Add(1)
+		h.stats.logErrors.Add(1)
 	case telegraf.Warn:
-		h.logWarnings.Add(1)
+		h.stats.logWarnings.Add(1)
 	}
 
 	// Only save events if the logging configuration requests us to do so
@@ -45,12 +45,9 @@ func (h *Heartbeat) handleLogEvent(level telegraf.LogLevel, ts time.Time, source
 	h.Unlock()
 }
 
-func (h *Heartbeat) getLogEntriesUnlimited() []logEntry {
-	h.Lock()
-	defer h.Unlock()
-
-	entries := make([]logEntry, 0, len(h.logEvents))
-	for _, e := range h.logEvents {
+func getLogEntriesUnlimited(events []*logEvent) []logEntry {
+	entries := make([]logEntry, 0, len(events))
+	for _, e := range events {
 		entries = append(entries, logEntry{
 			Timestamp:  e.timestamp.Format(time.RFC3339Nano),
 			Level:      e.level.String(),
@@ -59,19 +56,14 @@ func (h *Heartbeat) getLogEntriesUnlimited() []logEntry {
 			Messsage:   e.msg,
 		})
 	}
-	clear(h.logEvents)
+
 	return entries
 }
 
-func (h *Heartbeat) getLogEntriesLimited() []logEntry {
-	h.Lock()
-	defer h.Unlock()
-
-	limit := int(h.Logs.Limit)
-
+func getLogEntriesLimited(events []*logEvent, limit int) []logEntry {
 	// Collect all events per log level for filtering
 	tracker := make(map[telegraf.LogLevel]*ring.Ring)
-	for i, e := range h.logEvents {
+	for i, e := range events {
 		if tracker[e.level] == nil {
 			tracker[e.level] = ring.New(limit)
 		} else {
@@ -86,7 +78,6 @@ func (h *Heartbeat) getLogEntriesLimited() []logEntry {
 			index:      i,
 		}
 	}
-	clear(h.logEvents)
 
 	// Define log-level with priorities
 	loglevels := []telegraf.LogLevel{
@@ -99,15 +90,15 @@ func (h *Heartbeat) getLogEntriesLimited() []logEntry {
 
 	// Unroll the ringbuffers until the limit is reached. Start from the most
 	// severe log-level to the least severe one.
-	var count uint64
+	var count int
 	entries := make([]logEntry, 0, limit)
 	for _, level := range loglevels {
-		for r := tracker[level]; r.Value != nil && count < h.Logs.Limit; r = r.Prev() {
+		for r := tracker[level]; r.Value != nil && count < limit; r = r.Prev() {
 			count++
 			entries = append(entries, r.Value.(logEntry))
 		}
 
-		if count >= h.Logs.Limit {
+		if count >= limit {
 			break
 		}
 	}
