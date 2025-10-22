@@ -41,7 +41,7 @@ type OpcUAClientConfig struct {
 	SecurityMode      string          `toml:"security_mode"`
 	Certificate       string          `toml:"certificate"`
 	PrivateKey        string          `toml:"private_key"`
-	ServerCertificate string          `toml:"server_certificate"`
+	RemoteCertificate string          `toml:"remote_certificate"`
 	Username          config.Secret   `toml:"username"`
 	Password          config.Secret   `toml:"password"`
 	AuthMethod        string          `toml:"auth_method"`
@@ -139,13 +139,13 @@ func (o *OpcUAClientConfig) Validate() error {
 }
 
 func (o *OpcUAClientConfig) validateCertificateConfiguration() error {
-	// Validate server certificate file exists if provided (regardless of security mode)
-	if o.ServerCertificate != "" {
-		if _, err := os.Stat(o.ServerCertificate); err != nil {
+	// Validate remote certificate file exists if provided (regardless of security mode)
+	if o.RemoteCertificate != "" {
+		if _, err := os.Stat(o.RemoteCertificate); err != nil {
 			if os.IsNotExist(err) {
-				return fmt.Errorf("%w: server certificate file does not exist: %s", ErrInvalidConfiguration, o.ServerCertificate)
+				return fmt.Errorf("%w: remote certificate file does not exist: %s", ErrInvalidConfiguration, o.RemoteCertificate)
 			}
-			return fmt.Errorf("%w: cannot access server certificate file: %s: %w", ErrInvalidConfiguration, o.ServerCertificate, err)
+			return fmt.Errorf("%w: cannot access remote certificate file: %s: %w", ErrInvalidConfiguration, o.RemoteCertificate, err)
 		}
 	}
 

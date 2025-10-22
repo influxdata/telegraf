@@ -180,10 +180,10 @@ func TestOpcUAClientSetupWorkarounds(t *testing.T) {
 	}
 }
 
-func TestServerCertificateValidationSuccess(t *testing.T) {
+func TestRemoteCertificateValidationSuccess(t *testing.T) {
 	// Create a temporary directory and file for testing
 	tempDir := t.TempDir()
-	validCertPath := filepath.Join(tempDir, "server_cert.pem")
+	validCertPath := filepath.Join(tempDir, "remote_cert.pem")
 	err := os.WriteFile(validCertPath, []byte("fake certificate content"), 0600)
 	require.NoError(t, err)
 
@@ -191,31 +191,31 @@ func TestServerCertificateValidationSuccess(t *testing.T) {
 		name              string
 		securityPolicy    string
 		securityMode      string
-		serverCertificate string
+		remoteCertificate string
 	}{
 		{
-			name:              "no server certificate configured",
+			name:              "no remote certificate configured",
 			securityPolicy:    "None",
 			securityMode:      "None",
-			serverCertificate: "",
+			remoteCertificate: "",
 		},
 		{
-			name:              "valid server certificate with None security",
+			name:              "valid remote certificate with None security",
 			securityPolicy:    "None",
 			securityMode:      "None",
-			serverCertificate: validCertPath,
+			remoteCertificate: validCertPath,
 		},
 		{
-			name:              "valid server certificate with SignAndEncrypt",
+			name:              "valid remote certificate with SignAndEncrypt",
 			securityPolicy:    "Basic256Sha256",
 			securityMode:      "SignAndEncrypt",
-			serverCertificate: validCertPath,
+			remoteCertificate: validCertPath,
 		},
 		{
-			name:              "valid server certificate with auto security",
+			name:              "valid remote certificate with auto security",
 			securityPolicy:    "auto",
 			securityMode:      "auto",
-			serverCertificate: validCertPath,
+			remoteCertificate: validCertPath,
 		},
 	}
 
@@ -225,7 +225,7 @@ func TestServerCertificateValidationSuccess(t *testing.T) {
 				Endpoint:          "opc.tcp://localhost:4840",
 				SecurityPolicy:    tt.securityPolicy,
 				SecurityMode:      tt.securityMode,
-				ServerCertificate: tt.serverCertificate,
+				RemoteCertificate: tt.remoteCertificate,
 			}
 
 			err := config.Validate()
@@ -234,20 +234,20 @@ func TestServerCertificateValidationSuccess(t *testing.T) {
 	}
 }
 
-func TestServerCertificateValidationFailure(t *testing.T) {
+func TestRemoteCertificateValidationFailure(t *testing.T) {
 	tests := []struct {
 		name              string
-		serverCertificate string
+		remoteCertificate string
 		expectedErr       error
 	}{
 		{
-			name:              "nonexistent server certificate file",
-			serverCertificate: "/nonexistent/path/to/cert.pem",
+			name:              "nonexistent remote certificate file",
+			remoteCertificate: "/nonexistent/path/to/cert.pem",
 			expectedErr:       ErrInvalidConfiguration,
 		},
 		{
 			name:              "invalid path with special characters",
-			serverCertificate: "/path/with\x00null/cert.pem",
+			remoteCertificate: "/path/with\x00null/cert.pem",
 			expectedErr:       ErrInvalidConfiguration,
 		},
 	}
@@ -258,7 +258,7 @@ func TestServerCertificateValidationFailure(t *testing.T) {
 				Endpoint:          "opc.tcp://localhost:4840",
 				SecurityPolicy:    "None",
 				SecurityMode:      "None",
-				ServerCertificate: tt.serverCertificate,
+				RemoteCertificate: tt.remoteCertificate,
 			}
 
 			err := config.Validate()

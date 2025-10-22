@@ -349,11 +349,11 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 
 	opts = append(opts, opcua.SecurityFromEndpoint(serverEndpoint, authMode))
 
-	// If a server certificate file is explicitly configured, use it to override
+	// If a remote certificate file is explicitly configured, use it to override
 	// the certificate from the endpoint. This allows trusting self-signed certificates.
-	if o.Config.ServerCertificate != "" {
-		o.Log.Debugf("Using explicitly configured server certificate from %s", o.Config.ServerCertificate)
-		opts = append(opts, opcua.RemoteCertificateFile(o.Config.ServerCertificate))
+	if o.Config.RemoteCertificate != "" {
+		o.Log.Debugf("Using explicitly configured remote certificate from %s", o.Config.RemoteCertificate)
+		opts = append(opts, opcua.RemoteCertificateFile(o.Config.RemoteCertificate))
 	}
 
 	return opts, nil

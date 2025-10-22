@@ -71,11 +71,8 @@ to use them.
   ## If key path is not supplied, self-signed cert and key will be generated.
   # private_key = "/etc/telegraf/key.pem"
 
-  ## Path to the server's certificate file to explicitly trust (optional).
-  ## Use this when connecting to servers with self-signed certificates.
-  ## The certificate should be in PEM or DER format.
-  ## If not specified, the server certificate from the endpoint will be used.
-  # server_certificate = "/etc/telegraf/opcua_server_cert.pem"
+  ## Path to additional, explicitly trusted certificate for the remote endpoint
+  # remote_certificate = "/etc/telegraf/opcua_server_cert.pem"
 
   ## Authentication Method, one of "Certificate", "UserName", or "Anonymous".  To
   ## authenticate using a specific ID, select 'Certificate' or 'UserName'
@@ -282,14 +279,14 @@ This example group configuration has three groups with two nodes each:
     ]
 ```
 
-## Server Certificate Trust
+### Server Certificate Trust
 
 When connecting to OPC UA servers with self-signed certificates using
 secure modes (Sign or SignAndEncrypt), you need to explicitly trust the
-server's certificate. Use the `server_certificate` option to specify the
+server's certificate. Use the `remote_certificate` option to specify the
 path to the server's certificate file.
 
-### Obtaining the Server Certificate
+#### Obtaining the Server Certificate
 
 Most OPC UA servers provide their certificate through their management interface
 or configuration directory. Common locations include:
@@ -301,7 +298,7 @@ or configuration directory. Common locations include:
 Alternatively, you can export the certificate using OPC UA client tools like
 UA Expert or opcua-client.
 
-### Example Configuration for Self-Signed Certificates
+#### Example Configuration for Self-Signed Certificates
 
 ```toml
 [[inputs.opcua]]
@@ -314,7 +311,7 @@ UA Expert or opcua-client.
   private_key = "/etc/telegraf/opcua_client_key.pem"
 
   # Server certificate to trust
-  server_certificate = "/etc/telegraf/opcua_server_cert.pem"
+  remote_certificate = "/etc/telegraf/opcua_server_cert.pem"
 
   auth_method = "Anonymous"
 
