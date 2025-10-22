@@ -4,6 +4,10 @@ This plugin writes metrics to [Arc](https://github.com/basekick-labs/arc), a hig
 
 Arc's MessagePack protocol provides **3-5x better performance** than traditional line protocol formats through binary serialization and direct Arrow/Parquet writes.
 
+⭐ Telegraf v1.32.0
+🏷️ datastore
+💻 all
+
 ## Global configuration options
 
 In addition to the plugin-specific configuration settings, plugins support additional global and plugin configuration settings. These settings are used to modify metrics, tags, and field or create aliases and configure ordering, etc. See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
@@ -94,9 +98,8 @@ Arc supports multiple databases (namespaces) within a single instance, allowing 
 
 ### Configuration
 
-Use the `database` parameter to route metrics to a specific database:
-
 ```toml
+# Route metrics to a specific database using the database parameter
 [[outputs.arc]]
   url = "http://arc:8000/api/v1/write/msgpack"
   api_key = "$ARC_API_KEY"
