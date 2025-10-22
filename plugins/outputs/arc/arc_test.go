@@ -391,10 +391,10 @@ func TestMultipleMeasurements(t *testing.T) {
 
 func TestSampleConfig(t *testing.T) {
 	a := &Arc{}
-	config := a.SampleConfig()
-	require.NotEmpty(t, config)
-	require.Contains(t, config, "url")
-	require.Contains(t, config, "api_key")
+	cfg := a.SampleConfig()
+	require.NotEmpty(t, cfg)
+	require.Contains(t, cfg, "url")
+	require.Contains(t, cfg, "api_key")
 }
 
 func TestInit(t *testing.T) {
