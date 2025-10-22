@@ -162,6 +162,9 @@ func NewConfig() *Config {
 	}
 	c.toml = tomlCfg
 
+	// Initialize the configuration source list
+	Sources = make([]string, 0)
+
 	return c
 }
 
@@ -546,7 +549,6 @@ func (c *Config) LoadConfig(path string) error {
 }
 
 func (c *Config) LoadAll(configFiles ...string) error {
-	Sources = make([]string, 0, len(configFiles))
 	for _, fConfig := range configFiles {
 		if err := c.LoadConfig(fConfig); err != nil {
 			return err
@@ -835,8 +837,11 @@ func LoadConfigFileWithRetries(config string, urlRetryAttempts int) ([]byte, boo
 		switch u.Scheme {
 		case "https", "http":
 			data, err := fetchConfig(u, urlRetryAttempts)
+			if err != nil {
+				return nil, true, err
+			}
 			Sources = append(Sources, u.Redacted())
-			return data, true, err
+			return data, true, nil
 		default:
 			return nil, true, fmt.Errorf("scheme %q not supported", u.Scheme)
 		}

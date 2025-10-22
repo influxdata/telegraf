@@ -131,7 +131,6 @@ func (h *Heartbeat) Connect() error {
 	if (slices.Contains(h.Include, "logs") || slices.Contains(h.Include, "log-details")) && h.logCallbackID == "" {
 		h.logCallbackID = logger.AddCallback(h.handleLogEvent)
 	}
-	h.stats.lastUpdate = time.Now()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	h.cancel = cancel
@@ -196,14 +195,12 @@ func (h *Heartbeat) send() error {
 	logErrs := h.stats.logErrors.Load()
 	logWarns := h.stats.logWarnings.Load()
 	logEvents := h.logEvents
-	var lastUpdate int64
-	if h.stats.lastUpdateFailed {
-		lastUpdate = h.stats.lastUpdate.Unix()
-	}
+	lastUpdate := h.stats.lastUpdate.Unix()
+	lastUpdateFailed := h.stats.lastUpdateFailed
 	h.Unlock()
 
 	// Add the last successful update timestamp if any previous update failed
-	if lastUpdate > 0 {
+	if lastUpdateFailed {
 		h.message.LastSuccessfulUpdate = &lastUpdate
 	} else {
 		h.message.LastSuccessfulUpdate = nil

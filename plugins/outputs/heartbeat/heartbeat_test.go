@@ -124,11 +124,13 @@ func TestIncludedExtraData(t *testing.T) {
 		"http://" + cfgServer.Listener.Addr().String() + "/myconfigs",
 		"testdata/non_existing.conf",
 	}
+
 	cfg := config.NewConfig()
 	for _, c := range cfgs {
 		//nolint:errcheck // Ignore error on purpose as some endpoints won't be loadable
 		cfg.LoadConfig(c)
 	}
+	defer clear(config.Sources)
 	cfgServer.Close()
 
 	// Expected configs
