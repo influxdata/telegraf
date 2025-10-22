@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/testutil"
 )
 
