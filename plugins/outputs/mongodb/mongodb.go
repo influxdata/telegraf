@@ -147,9 +147,21 @@ func (s *MongoDB) Init() error {
 		password.Destroy()
 		s.clientOptions.SetAuth(credential)
 
-		// Warn if TLS is not explicitly enabled in the DSN
-		if !strings.Contains(s.Dsn, "tls=true") && !strings.HasPrefix(s.Dsn, "mongodb+srv://") {
-			s.Log.Warn("PLAIN authentication sends credentials in plaintext. Ensure TLS is enabled for secure transmission.")
+		// Check if TLS is enabled (via mongodb+srv:// or tls/ssl query params) and warn if not
+		parsedDSN, err := url.Parse(s.Dsn)
+		if err != nil {
+			return err
+		}
+
+		// mongodb+srv:// implies TLS, so only warn for mongodb:// without TLS
+		if parsedDSN.Scheme != "mongodb+srv" {
+			q := parsedDSN.Query()
+			tlsEnabled := q.Get("tls") == "true" || q.Get("tls") == "1"
+			sslEnabled := q.Get("ssl") == "true" || q.Get("ssl") == "1"
+
+			if !tlsEnabled && !sslEnabled {
+				s.Log.Warn("PLAIN authentication should be used with TLS enabled for security reasons!")
+			}
 		}
 	case "X509":
 		// format connection string to include tls/x509 options
