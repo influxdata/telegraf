@@ -71,22 +71,22 @@ func (*Timex) Gather(acc telegraf.Accumulator) error {
 
 	fields := map[string]interface{}{
 		"offset_ns":                    int64(timex.Offset) * multiplier, //nolint:unconvert // Conversion needed for some architectures
-		"frequency":                    timex.Freq,
+		"frequency_hz":                 float64(timex.Freq) / ppm16,
 		"maxerror_ns":                  timex.Maxerror * 1000,
 		"estimated_error_ns":           timex.Esterror * 1000,
 		"status":                       timex.Status,
 		"loop_time_constant":           timex.Constant,
 		"tick_ns":                      timex.Tick * 1000,
-		"pps_frequency_hertz":          float64(timex.Ppsfreq) / ppm16,
+		"pps_frequency_hz":             float64(timex.Ppsfreq) / ppm16,
 		"pps_jitter_ns":                int64(timex.Jitter) * multiplier, //nolint:unconvert // Conversion needed for some architectures
-		"pps_shift_seconds":            timex.Shift,
-		"pps_stability_hertz":          float64(timex.Stabil) / ppm16,
+		"pps_shift_sec":                timex.Shift,
+		"pps_stability_hz":             float64(timex.Stabil) / ppm16,
 		"pps_jitter_total":             timex.Jitcnt,
 		"pps_calibration_total":        timex.Calcnt,
 		"pps_error_total":              timex.Errcnt,
 		"pps_stability_exceeded_total": timex.Stbcnt,
-		"tai_offset_seconds":           timex.Tai,
-		"sync_status":                  synced,
+		"tai_offset_sec":               timex.Tai,
+		"synchronized":                 synced,
 	}
 
 	acc.AddGauge("timex", fields, tags)

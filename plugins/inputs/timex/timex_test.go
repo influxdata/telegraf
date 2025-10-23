@@ -26,22 +26,22 @@ func TestMetricStructure(t *testing.T) {
 			},
 			map[string]interface{}{
 				"offset_ns":                    int64(0),
-				"frequency":                    int64(0),
+				"frequency_hz":                 float64(0),
 				"maxerror_ns":                  int64(0),
 				"estimated_error_ns":           int64(0),
 				"status":                       int32(0),
 				"loop_time_constant":           int64(0),
 				"tick_ns":                      int64(0),
-				"pps_frequency_hertz":          float64(0),
+				"pps_frequency_hz":             float64(0),
 				"pps_jitter_ns":                int64(0),
 				"pps_shift_seconds":            int32(0),
-				"pps_stability_hertz":          float64(0),
+				"pps_stability_hz":             float64(0),
 				"pps_jitter_total":             int64(0),
 				"pps_calibration_total":        int64(0),
 				"pps_error_total":              int64(0),
 				"pps_stability_exceeded_total": int64(0),
 				"tai_offset_seconds":           int32(0),
-				"sync_status":                  bool(false),
+				"synchronized":                 bool(false),
 			},
 			time.Unix(0, 0),
 			telegraf.Gauge,
@@ -50,10 +50,9 @@ func TestMetricStructure(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
-	actual := acc.GetTelegrafMetrics()
-
-	testutil.RequireMetricsStructureEqual(t, expected, actual, testutil.IgnoreTime(), testutil.IgnoreTags("status"))
 
 	// validate the status tag separately bacause the value could be different based on the system.
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsStructureEqual(t, expected, actual, testutil.IgnoreTime(), testutil.IgnoreTags("status"))
 	require.NotEmpty(t, actual[0].Tags()["status"])
 }
