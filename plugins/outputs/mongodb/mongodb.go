@@ -132,16 +132,16 @@ func (s *MongoDB) Init() error {
 		if err != nil {
 			return fmt.Errorf("getting username failed: %w", err)
 		}
-		username := usernameRaw.String(),
-		username.Destroy()
-		
+		username := usernameRaw.String()
+		usernameRaw.Destroy()
+
 		passwordRaw, err := s.Password.Get()
 		if err != nil {
 			return fmt.Errorf("getting password failed: %w", err)
 		}
 		password := passwordRaw.String()
-		password.Destroy()
-		
+		passwordRaw.Destroy()
+
 		credential := options.Credential{
 			AuthMechanism: "PLAIN",
 			AuthSource:    "$external",
@@ -153,7 +153,7 @@ func (s *MongoDB) Init() error {
 		// Check if TLS is enabled (via mongodb+srv:// or tls/ssl query params) and warn if not
 		parsedDSN, err := url.Parse(s.Dsn)
 		if err != nil {
-			return fmt.Errorf("parsing DSN %q failed: %w", s.DSN, err)
+			return fmt.Errorf("parsing DSN %q failed: %w", s.Dsn, err)
 		}
 
 		// mongodb+srv:// implies TLS, so only warn for mongodb:// without TLS
