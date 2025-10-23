@@ -150,7 +150,7 @@ func (s *MongoDB) Init() error {
 		// Check if TLS is enabled (via mongodb+srv:// or tls/ssl query params) and warn if not
 		parsedDSN, err := url.Parse(s.Dsn)
 		if err != nil {
-			return err
+			return fmt.Errorf("parsing DSN %q failed: %w", s.DSN, err)
 		}
 
 		// mongodb+srv:// implies TLS, so only warn for mongodb:// without TLS
