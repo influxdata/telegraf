@@ -117,7 +117,6 @@ func (h *Heartbeat) Init() error {
 				return fmt.Errorf("invalid log-level %q", h.Logs.LogLevel)
 			}
 		case "status":
-			//			h.Log.Warn("'include' setting 'status' currently only return 'OK'")
 		default:
 			return fmt.Errorf("invalid 'include' setting %q", inc)
 		}
@@ -232,7 +231,6 @@ func (h *Heartbeat) send() error {
 			}
 			h.message.Logs.Entries = &entries
 		case "status":
-			// TODO: Evaluate the status condition
 			h.message.Status = "OK"
 		}
 	}
