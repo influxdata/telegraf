@@ -174,6 +174,9 @@ func (h *Heartbeat) Close() error {
 		h.cancel()
 	}
 
+	// Wait for the heartbeat goroutine to finish before closing connections
+	h.wg.Wait()
+
 	if h.client != nil {
 		h.client.CloseIdleConnections()
 	}
