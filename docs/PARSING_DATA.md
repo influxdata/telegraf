@@ -53,16 +53,16 @@ reference time.
 For Unix timestamps Telegraf understands the following settings:
 
 | Timestamp             | Timestamp Format |
-|-----------------------|------------------|
-| `1709572232`          | `unix`    |
-| `1709572232123`       | `unix_ms` |
-| `1709572232123456`    | `unix_us` |
-| `1709572232123456789` | `unix_ns` |
+| --------------------- | ---------------- |
+| `1709572232`          | `unix`           |
+| `1709572232123`       | `unix_ms`        |
+| `1709572232123456`    | `unix_us`        |
+| `1709572232123456789` | `unix_ns`        |
 
 There are some named formats available as well:
 
 | Timestamp                             | Named Format  |
-|---------------------------------------|---------------|
+| ------------------------------------- | ------------- |
 | `Mon Jan _2 15:04:05 2006`            | `ANSIC`       |
 | `Mon Jan _2 15:04:05 MST 2006`        | `UnixDate`    |
 | `Mon Jan 02 15:04:05 -0700 2006`      | `RubyDate`    |
@@ -83,13 +83,13 @@ a custom timestamp format, in which the user must provide the timestamp in
 [Go reference time][] notation. Here are a few example timestamps and their Go
 reference time equivalent:
 
-| Timestamp                     | Go reference time             |
-|-------------------------------|-------------------------------|
-| `2024-03-04T17:10:32`         | `2006-01-02T15:04:05` |
-| `04 Mar 24 10:10 -0700`       | `02 Jan 06 15:04 -0700` |
-| `2024-03-04T10:10:32Z07:00`   | `2006-01-02T15:04:05Z07:00` |
-| `2024-03-04 17:10:32.123+00`  | `2006-01-02 15:04:05.999+00` |
-| `2024-03-04T10:10:32.123456Z` | `2006-01-02T15:04:05.000000Z` |
+| Timestamp                     | Go reference time                |
+| ----------------------------- | -------------------------------- |
+| `2024-03-04T17:10:32`         | `2006-01-02T15:04:05`            |
+| `04 Mar 24 10:10 -0700`       | `02 Jan 06 15:04 -0700`          |
+| `2024-03-04T10:10:32Z07:00`   | `2006-01-02T15:04:05Z07:00`      |
+| `2024-03-04 17:10:32.123+00`  | `2006-01-02 15:04:05.999+00`     |
+| `2024-03-04T10:10:32.123456Z` | `2006-01-02T15:04:05.000000Z`    |
 | `2024-03-04T10:10:32.123456Z` | `2006-01-02T15:04:05.999999999Z` |
 
 Note for fractional second values, the user can use either a `9` or `0`. Using a
@@ -100,6 +100,18 @@ stand for either Mountain Standard Time (UTC-07) or Malaysia Standard Time
 (UTC+08). As such, avoid abbreviated timezones if possible.
 
 Unix timestamps use UTC, there is no concept of a timezone for a Unix timestamp.
+
+Some devices report timestamp as a number, similar to Unix timestamp format,
+but in local timezone not UTC.
+The formats below provide support for these cases by means of computing
+offset between local time and UTC:
+
+| Timestamp             | Timestamp Format  |
+| --------------------- | ----------------- |
+| `1709572232`          | `timestamp_tz`    |
+| `1709572232123`       | `timestamp_tz_ms` |
+| `1709572232123456`    | `timestamp_tz_us` |
+| `1709572232123456789` | `timestamp_tz_ns` |
 
 [Go reference time]: https://pkg.go.dev/time#pkg-constants
 
@@ -137,6 +149,40 @@ file,node=node1 temp=32.3,humidity=23i,alarm=false 1678121543000000000
 file,node=node2 temp=22.6,humidity=44i,alarm=false 1678121543000000000
 file,node=node3 temp=17.9,humidity=56i,alarm=true 1678121543000000000
 ```
+
+### CSV with Local Timestamp
+
+Given the following data:
+
+```csv
+node,temp,humidity,alarm,time
+node1,32.3,23,false,1568338208
+node2,22.6,44,false,1568338208
+```
+
+Here is corresponding parser configuration and result:
+
+```toml
+[[inputs.file]]
+files = ["test.csv"]
+data_format = "csv"
+
+csv_header_row_count = 1
+csv_column_names = ["node","temp","humidity","alarm","time"]
+csv_tag_columns = ["node"]
+csv_timestamp_column = "time"
+csv_timestamp_format = "timestamp_tz"
+csv_timezone = "Pacific/Fiji"
+```
+
+```text
+file,node=node1 temp=32.3,humidity=23i,alarm=false 1568295008000000000
+file,node=node2 temp=22.6,humidity=44i,alarm=false 1568295008000000000
+file,node=node3 temp=17.9,humidity=56i,alarm=true 1568295008000000000
+```
+
+Pay attention that the timestamp in CSV is 12 hours later than the metrics timestamp
+because `Pacific/Fiji` is +12:00 Timezone.
 
 ### JSON flat data
 
