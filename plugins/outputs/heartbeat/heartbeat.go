@@ -292,13 +292,16 @@ func (h *Heartbeat) send() error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		h.stats.lastUpdateFailed = true
-
 		// Read the response body in case of any error
 		response, rerr := io.ReadAll(resp.Body)
 		if rerr != nil {
 			return fmt.Errorf("received status %d (%s) with decoding message failed: %w", resp.StatusCode, resp.Status, rerr)
 		}
+
+		h.Lock()
+		h.stats.lastUpdateFailed = true
+		h.Unlock()
+
 		return fmt.Errorf("received status %d (%s) with message %s", resp.StatusCode, resp.Status, response)
 	}
 
