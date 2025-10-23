@@ -128,23 +128,26 @@ func (s *MongoDB) Init() error {
 		if s.Password.Empty() {
 			return errors.New("authentication for PLAIN must specify a password")
 		}
-		username, err := s.Username.Get()
+		usernameRaw, err := s.Username.Get()
 		if err != nil {
 			return fmt.Errorf("getting username failed: %w", err)
 		}
-		password, err := s.Password.Get()
+		username := usernameRaw.String(),
+		username.Destroy()
+		
+		passwordRaw, err := s.Password.Get()
 		if err != nil {
-			username.Destroy()
 			return fmt.Errorf("getting password failed: %w", err)
 		}
+		password := passwordRaw.String()
+		password.Destroy()
+		
 		credential := options.Credential{
 			AuthMechanism: "PLAIN",
 			AuthSource:    "$external",
-			Username:      username.String(),
-			Password:      password.String(),
+			Username:      username,
+			Password:      password,
 		}
-		username.Destroy()
-		password.Destroy()
 		s.clientOptions.SetAuth(credential)
 
 		// Check if TLS is enabled (via mongodb+srv:// or tls/ssl query params) and warn if not
