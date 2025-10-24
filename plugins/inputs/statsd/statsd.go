@@ -567,8 +567,7 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 // packet into statsd strings and then calls parseStatsdLine, which parses a
 // single statsd metric into a struct.
 func (s *Statsd) parser() error {
-	p := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := p.Init()
+	p, err := newGraphiteParser(s)
 	if err != nil {
 		return err
 	}
@@ -1053,6 +1052,17 @@ func (s *Statsd) expireCachedMetrics() {
 			delete(s.counters, key)
 		}
 	}
+}
+
+// newGraphiteParser initializes and returns a new graphite.Parser. graphite.Parser returned is not safe to be used in
+// multiple goroutines.
+func newGraphiteParser(s *Statsd) (*graphite.Parser, error) {
+	p := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
+	err := p.Init()
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
 }
 
 func init() {

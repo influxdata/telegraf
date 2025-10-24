@@ -11,7 +11,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -134,8 +133,7 @@ func BenchmarkParser(b *testing.B) {
 		AllowedPendingMessages: 250000,
 		NumberWorkerThreads:    5,
 	}
-	parser := &graphite.Parser{Separator: plugin.MetricSeparator, Templates: plugin.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(&plugin)
 	require.NoError(b, err)
 
 	acc := &testutil.Accumulator{Discard: true}
@@ -345,8 +343,7 @@ func BenchmarkTCP(b *testing.B) {
 // Valid lines should be parsed and their values should be cached
 func TestParse_ValidLines(t *testing.T) {
 	s := newTestStatsd()
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	validLines := []string{
@@ -365,8 +362,7 @@ func TestParse_ValidLines(t *testing.T) {
 // Tests low-level functionality of gauges
 func TestParse_Gauges(t *testing.T) {
 	s := newTestStatsd()
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	// Test that gauge +- values work
@@ -438,8 +434,7 @@ func TestParse_Gauges(t *testing.T) {
 // Tests low-level functionality of sets
 func TestParse_Sets(t *testing.T) {
 	s := newTestStatsd()
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	// Test that sets work
@@ -498,8 +493,7 @@ func TestParse_Sets_SetsAsFloat(t *testing.T) {
 	s := newTestStatsd()
 	s.FloatSets = true
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	// Test that sets work
@@ -546,8 +540,7 @@ func TestParse_Sets_SetsAsFloat(t *testing.T) {
 // Tests low-level functionality of counters
 func TestParse_Counters(t *testing.T) {
 	s := newTestStatsd()
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	// Test that counters work
@@ -609,8 +602,7 @@ func TestParse_CountersAsFloat(t *testing.T) {
 	s := newTestStatsd()
 	s.FloatCounters = true
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	// Test that counters work
@@ -723,8 +715,7 @@ func TestParse_Timings(t *testing.T) {
 	s := newTestStatsd()
 	s.Percentiles = []number{90.0}
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
@@ -763,8 +754,7 @@ func TestParse_Timings_TimingsAsFloat(t *testing.T) {
 	s.FloatTimings = true
 	s.Percentiles = []number{90.0}
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
@@ -798,8 +788,7 @@ func TestParse_Timings_TimingsAsFloat(t *testing.T) {
 func TestParse_Distributions(t *testing.T) {
 	s := newTestStatsd()
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
@@ -856,8 +845,7 @@ func TestParse_Distributions(t *testing.T) {
 func TestParseScientificNotation(t *testing.T) {
 	s := newTestStatsd()
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	sciNotationLines := []string{
@@ -875,8 +863,7 @@ func TestParseScientificNotation(t *testing.T) {
 func TestParse_InvalidLines(t *testing.T) {
 	s := newTestStatsd()
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	invalidLines := []string{
@@ -899,8 +886,7 @@ func TestParse_InvalidLines(t *testing.T) {
 func TestParse_InvalidSampleRate(t *testing.T) {
 	s := newTestStatsd()
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	invalidLines := []string{
@@ -944,8 +930,7 @@ func TestParse_InvalidSampleRate(t *testing.T) {
 func TestParse_DefaultNameParsing(t *testing.T) {
 	s := newTestStatsd()
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	validLines := []string{
@@ -983,8 +968,7 @@ func TestParse_Template(t *testing.T) {
 		"measurement.measurement.host.service",
 	}
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	lines := []string{
@@ -1023,8 +1007,7 @@ func TestParse_TemplateFilter(t *testing.T) {
 		"cpu.idle.* measurement.measurement.host",
 	}
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	lines := []string{
@@ -1064,8 +1047,7 @@ func TestParse_TemplateSpecificity(t *testing.T) {
 		"cpu.idle.* measurement.measurement.host",
 	}
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	lines := []string{
@@ -1099,8 +1081,7 @@ func TestParse_TemplateFields(t *testing.T) {
 		"* measurement.measurement.field",
 	}
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	lines := []string{
@@ -1202,8 +1183,7 @@ func TestParse_Fields(t *testing.T) {
 func TestParse_Tags(t *testing.T) {
 	s := newTestStatsd()
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -1360,8 +1340,7 @@ func TestParse_DataDogTags(t *testing.T) {
 			s := newTestStatsd()
 			s.DataDogExtensions = true
 
-			parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-			err := parser.Init()
+			parser, err := newGraphiteParser(s)
 			require.NoError(t, err)
 
 			require.NoError(t, s.parseStatsdLine(parser, tt.line))
@@ -1515,8 +1494,7 @@ func TestParse_DataDogContainerID(t *testing.T) {
 			s.DataDogExtensions = true
 			s.DataDogKeepContainerTag = tt.keep
 
-			parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-			err := parser.Init()
+			parser, err := newGraphiteParser(s)
 			require.NoError(t, err)
 
 			require.NoError(t, s.parseStatsdLine(parser, tt.line))
@@ -1532,8 +1510,7 @@ func TestParse_DataDogContainerID(t *testing.T) {
 func TestParseName(t *testing.T) {
 	s := newTestStatsd()
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -1562,8 +1539,7 @@ func TestParseName(t *testing.T) {
 	// Test with separator == "."
 	s.MetricSeparator = "."
 
-	parser = &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err = parser.Init()
+	parser, err = newGraphiteParser(s)
 	require.NoError(t, err)
 
 	tests = []struct {
@@ -1595,8 +1571,7 @@ func TestParseName(t *testing.T) {
 func TestParse_MeasurementsWithSameName(t *testing.T) {
 	s := newTestStatsd()
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	// Test that counters work
@@ -1617,8 +1592,7 @@ func TestCachesExpireAfterMaxTTL(t *testing.T) {
 	s := newTestStatsd()
 	s.MaxTTL = config.Duration(10 * time.Millisecond)
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
@@ -1717,13 +1691,11 @@ func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
 	}
 
 	sSingle := newTestStatsd()
-	sParser := &graphite.Parser{Separator: sSingle.MetricSeparator, Templates: sSingle.Templates}
-	err := sParser.Init()
+	sParser, err := newGraphiteParser(sSingle)
 	require.NoError(t, err)
 
 	sMultiple := newTestStatsd()
-	mParser := &graphite.Parser{Separator: sMultiple.MetricSeparator, Templates: sMultiple.Templates}
-	err = mParser.Init()
+	mParser, err := newGraphiteParser(sMultiple)
 	require.NoError(t, err)
 
 	for _, line := range singleLines {
@@ -1782,8 +1754,7 @@ func TestParse_TimingsMultipleFieldsWithTemplate(t *testing.T) {
 	s.Templates = []string{"measurement.field"}
 	s.Percentiles = []number{90.0}
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
@@ -1837,8 +1808,7 @@ func TestParse_TimingsMultipleFieldsWithoutTemplate(t *testing.T) {
 	s.Templates = make([]string, 0)
 	s.Percentiles = []number{90.0}
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
@@ -1889,8 +1859,7 @@ func TestParse_TimingsMultipleFieldsWithoutTemplate(t *testing.T) {
 func BenchmarkParse(b *testing.B) {
 	s := newTestStatsd()
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	if err != nil {
 		b.Errorf("Error initializing parser: %v", err)
 	}
@@ -1920,8 +1889,7 @@ func BenchmarkParse(b *testing.B) {
 func BenchmarkParseWithTemplate(b *testing.B) {
 	s := newTestStatsd()
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	if err != nil {
 		b.Errorf("Error initializing parser: %v", err)
 	}
@@ -1952,8 +1920,7 @@ func BenchmarkParseWithTemplate(b *testing.B) {
 func BenchmarkParseWithTemplateAndFilter(b *testing.B) {
 	s := newTestStatsd()
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	if err != nil {
 		b.Errorf("Error initializing parser: %v", err)
 	}
@@ -1984,8 +1951,7 @@ func BenchmarkParseWithTemplateAndFilter(b *testing.B) {
 func BenchmarkParseWith2TemplatesAndFilter(b *testing.B) {
 	s := newTestStatsd()
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	if err != nil {
 		b.Errorf("Error initializing parser: %v", err)
 	}
@@ -2019,8 +1985,7 @@ func BenchmarkParseWith2TemplatesAndFilter(b *testing.B) {
 func BenchmarkParseWith2Templates3TagsAndFilter(b *testing.B) {
 	s := newTestStatsd()
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	if err != nil {
 		b.Errorf("Error initializing parser: %v", err)
 	}
@@ -2055,8 +2020,7 @@ func TestParse_Timings_Delete(t *testing.T) {
 	s := newTestStatsd()
 	s.DeleteTimings = true
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	fakeacc := &testutil.Accumulator{}
@@ -2076,10 +2040,8 @@ func TestParse_Gauges_Delete(t *testing.T) {
 	s := newTestStatsd()
 	s.DeleteGauges = true
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
-
 	fakeacc := &testutil.Accumulator{}
 
 	line := "current.users:100|g"
@@ -2097,8 +2059,7 @@ func TestParse_Sets_Delete(t *testing.T) {
 	s := newTestStatsd()
 	s.DeleteSets = true
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	fakeacc := &testutil.Accumulator{}
@@ -2118,8 +2079,7 @@ func TestParse_Counters_Delete(t *testing.T) {
 	s := newTestStatsd()
 	s.DeleteCounters = true
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	fakeacc := &testutil.Accumulator{}
@@ -2402,8 +2362,7 @@ func TestParseSanitize(t *testing.T) {
 	s := newTestStatsd()
 	s.SanitizeNamesMethod = "upstream"
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -2438,8 +2397,7 @@ func TestParseNoSanitize(t *testing.T) {
 	s := newTestStatsd()
 	s.SanitizeNamesMethod = ""
 
-	parser := &graphite.Parser{Separator: s.MetricSeparator, Templates: s.Templates}
-	err := parser.Init()
+	parser, err := newGraphiteParser(s)
 	require.NoError(t, err)
 
 	tests := []struct {
