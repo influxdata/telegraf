@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log" //nolint:depguard // just for debug
 	"net/url"
+	"os"
 	"strconv"
 	"time"
 
@@ -35,17 +36,18 @@ func (c ConnectionState) String() string {
 }
 
 type OpcUAClientConfig struct {
-	Endpoint       string          `toml:"endpoint"`
-	SecurityPolicy string          `toml:"security_policy"`
-	SecurityMode   string          `toml:"security_mode"`
-	Certificate    string          `toml:"certificate"`
-	PrivateKey     string          `toml:"private_key"`
-	Username       config.Secret   `toml:"username"`
-	Password       config.Secret   `toml:"password"`
-	AuthMethod     string          `toml:"auth_method"`
-	ConnectTimeout config.Duration `toml:"connect_timeout"`
-	RequestTimeout config.Duration `toml:"request_timeout"`
-	ClientTrace    bool            `toml:"client_trace"`
+	Endpoint          string          `toml:"endpoint"`
+	SecurityPolicy    string          `toml:"security_policy"`
+	SecurityMode      string          `toml:"security_mode"`
+	Certificate       string          `toml:"certificate"`
+	PrivateKey        string          `toml:"private_key"`
+	RemoteCertificate string          `toml:"remote_certificate"`
+	Username          config.Secret   `toml:"username"`
+	Password          config.Secret   `toml:"password"`
+	AuthMethod        string          `toml:"auth_method"`
+	ConnectTimeout    config.Duration `toml:"connect_timeout"`
+	RequestTimeout    config.Duration `toml:"request_timeout"`
+	ClientTrace       bool            `toml:"client_trace"`
 
 	OptionalFields []string         `toml:"optional_fields"`
 	Workarounds    OpcUAWorkarounds `toml:"workarounds"`
@@ -137,7 +139,17 @@ func (o *OpcUAClientConfig) Validate() error {
 }
 
 func (o *OpcUAClientConfig) validateCertificateConfiguration() error {
-	// If using None/None security, certificates are optional
+	// Validate remote certificate file exists if provided (regardless of security mode)
+	if o.RemoteCertificate != "" {
+		if _, err := os.Stat(o.RemoteCertificate); err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("%w: remote certificate file does not exist: %s", ErrInvalidConfiguration, o.RemoteCertificate)
+			}
+			return fmt.Errorf("%w: cannot access remote certificate file: %s: %w", ErrInvalidConfiguration, o.RemoteCertificate, err)
+		}
+	}
+
+	// If using None/None security, client certificates are optional
 	if o.SecurityPolicy == "None" && o.SecurityMode == "None" {
 		return nil
 	}
@@ -175,6 +187,16 @@ func (o *OpcUAClientConfig) CreateClient(telegrafLogger telegraf.Logger) (*OpcUA
 	}
 	c.Log.Debug("Initialising OpcUAClient")
 
+	// Read the remote certificate file if configured to avoid race conditions
+	// between validation and use
+	if o.RemoteCertificate != "" {
+		cert, err := os.ReadFile(o.RemoteCertificate)
+		if err != nil {
+			return nil, fmt.Errorf("%w: failed to read remote certificate file %s: %w", ErrInvalidConfiguration, o.RemoteCertificate, err)
+		}
+		c.remoteCertificate = cert
+	}
+
 	err = c.setupWorkarounds()
 	return c, err
 }
@@ -185,8 +207,9 @@ type OpcUAClient struct {
 
 	Client *opcua.Client
 
-	opts  []opcua.Option
-	codes []ua.StatusCode
+	opts              []opcua.Option
+	codes             []ua.StatusCode
+	remoteCertificate []byte
 }
 
 // SetupOptions reads the endpoints from the specified server and sets up all authentication

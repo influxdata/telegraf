@@ -1,6 +1,8 @@
 package opcua
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/gopcua/opcua/ua"
@@ -174,6 +176,91 @@ func TestOpcUAClientSetupWorkarounds(t *testing.T) {
 				require.GreaterOrEqual(t, len(client.codes), 1)
 				require.Equal(t, ua.StatusOK, client.codes[0])
 			}
+		})
+	}
+}
+
+func TestRemoteCertificateValidationSuccess(t *testing.T) {
+	// Create a temporary directory and file for testing
+	tempDir := t.TempDir()
+	validCertPath := filepath.Join(tempDir, "remote_cert.pem")
+	err := os.WriteFile(validCertPath, []byte("fake certificate content"), 0600)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name              string
+		securityPolicy    string
+		securityMode      string
+		remoteCertificate string
+	}{
+		{
+			name:              "no remote certificate configured",
+			securityPolicy:    "None",
+			securityMode:      "None",
+			remoteCertificate: "",
+		},
+		{
+			name:              "valid remote certificate with None security",
+			securityPolicy:    "None",
+			securityMode:      "None",
+			remoteCertificate: validCertPath,
+		},
+		{
+			name:              "valid remote certificate with SignAndEncrypt",
+			securityPolicy:    "Basic256Sha256",
+			securityMode:      "SignAndEncrypt",
+			remoteCertificate: validCertPath,
+		},
+		{
+			name:              "valid remote certificate with auto security",
+			securityPolicy:    "auto",
+			securityMode:      "auto",
+			remoteCertificate: validCertPath,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := OpcUAClientConfig{
+				Endpoint:          "opc.tcp://localhost:4840",
+				SecurityPolicy:    tt.securityPolicy,
+				SecurityMode:      tt.securityMode,
+				RemoteCertificate: tt.remoteCertificate,
+			}
+
+			require.NoError(t, config.Validate())
+		})
+	}
+}
+
+func TestRemoteCertificateValidationFailure(t *testing.T) {
+	tests := []struct {
+		name              string
+		remoteCertificate string
+		expectedErr       error
+	}{
+		{
+			name:              "nonexistent remote certificate file",
+			remoteCertificate: "/nonexistent/path/to/cert.pem",
+			expectedErr:       ErrInvalidConfiguration,
+		},
+		{
+			name:              "invalid path with special characters",
+			remoteCertificate: "/path/with\x00null/cert.pem",
+			expectedErr:       ErrInvalidConfiguration,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := OpcUAClientConfig{
+				Endpoint:          "opc.tcp://localhost:4840",
+				SecurityPolicy:    "None",
+				SecurityMode:      "None",
+				RemoteCertificate: tt.remoteCertificate,
+			}
+
+			require.ErrorIs(t, config.Validate(), tt.expectedErr)
 		})
 	}
 }
