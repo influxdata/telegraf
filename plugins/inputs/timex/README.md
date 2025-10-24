@@ -28,6 +28,24 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## No input configuration
 ```
 
+### Notes
+
+Metrics types:
+- `ns` = nanoseconds,
+- `ppm` = parts per million
+- `sec` = seconds.
+
+PPM Parts Per Million is a unit of measurement used to describe the frequency.
+
+Definition:
+1 PPM = 1 * 10^-6 = 0.000001
+or
+1 PPM = 0.0001 %
+
+The [adjtimex](https://man7.org/linux/man-pages/man2/adjtimex.2.html#NOTES) syscall delivers fields `frequency` and `pps_frequency` and `stabil` in PPM.
+There the frequency is represented as a fixed-point number with a scaling factor of 2^16 (65536).
+
+
 ## Metrics
 
 - timex
@@ -35,17 +53,17 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - status (string) - Clock command/status.
   - fields:
     - offset_ns (int64) - The offset from local and reference clock.
-    - frequency_hz (float) - Local clock frequency offset.
+    - frequency_offset_ppm (float) - Local clock frequency offset in parts per million.
     - maxerror_ns (int64) - The maximum error in nanoseconds.
     - estimated_error_ns (int64) - The estimated error in nanoseconds.
     - loop_time_constant (int64) - Phase-locked loop time constant.
     - tick_ns (int64) - Nanoseconds between clock ticks.
-    - pps_frequency_hz (float) - Pulse-per-second frequency in hertz.
+    - pps_frequency_ppm (float) - Pulse-per-second frequency in parts per million.
     - pps_jitter_ns (int64) - Pulse-per-second jitter in nanoseconds.
     - pps_shift_sec (int64) - Pulse-per-second interval duration in
     seconds.
-    - pps_stability_hz (float) - Pulse-per-second stability, average of
-    relative.
+    - pps_stability_ppm (float) - Pulse-per-second stability, average of
+    relative in parts per million.
     - pps_jitter_total (int64) - Pulse-per-second per second count of jitter
     limit.
     - pps_calibration_total (int64) - Pulse-per-second count of calibration
@@ -59,5 +77,5 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Example Output
 
 ```text
-timex,host=testvm,status=ok maxerror_ns=1516000i,estimated_error_ns=4000i,tick_ns=10000000i,loop_time_constant=2i,pps_jitter_total=0i,synchronized=true,offset_ns=0i,frequency_hz=55.05543,pps_shift_sec=0i,pps_stability_hz=0,tai_offset_sec=37i,status=0i,pps_frequency_hz=0,pps_jitter_ns=0i,pps_calibration_total=0i,pps_error_total=0i,pps_stability_exceeded_total=0i 1761121800000000000
+timex,host=testvm,status=ok maxerror_ns=1516000i,estimated_error_ns=4000i,tick_ns=10000000i,loop_time_constant=2i,pps_jitter_total=0i,synchronized=true,offset_ns=0i,frequency_offset_ppm=55.05543,pps_shift_sec=0i,pps_stability_ppm=0,tai_offset_sec=37i,status=0i,pps_frequency_ppm=0,pps_jitter_ns=0i,pps_calibration_total=0i,pps_error_total=0i,pps_stability_exceeded_total=0i 1761121800000000000
 ```
