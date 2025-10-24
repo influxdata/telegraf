@@ -385,6 +385,35 @@ func TestConfiguration(t *testing.T) {
 				MetricGranularity:  "seconds",
 			},
 		},
+		{
+			name: "fail with plain authentication missing username field",
+			plugin: &MongoDB{
+				Dsn:                "mongodb://localhost:27017",
+				AuthenticationType: "PLAIN",
+				Password:           config.NewSecret([]byte("somerandompasswordthatwontwork")),
+				MetricDatabase:     "telegraf_test",
+				MetricGranularity:  "seconds",
+			},
+		},
+		{
+			name: "fail with plain authentication missing password field",
+			plugin: &MongoDB{
+				Dsn:                "mongodb://localhost:27017",
+				AuthenticationType: "PLAIN",
+				Username:           config.NewSecret([]byte("somerandomusernamethatwontwork")),
+				MetricDatabase:     "telegraf_test",
+				MetricGranularity:  "seconds",
+			},
+		},
+		{
+			name: "fail with unsupported authentication type",
+			plugin: &MongoDB{
+				Dsn:                "mongodb://localhost:27017",
+				AuthenticationType: "UNSUPPORTED",
+				MetricDatabase:     "telegraf_test",
+				MetricGranularity:  "seconds",
+			},
+		},
 	}
 
 	for _, tt := range tests {

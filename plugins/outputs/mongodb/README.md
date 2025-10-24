@@ -50,6 +50,13 @@ to use them.
   # username = "root"
   # password = "***"
 
+  ## for PLAIN authentication (e.g., LDAP)
+  ## IMPORTANT: PLAIN authentication sends credentials in plaintext during the
+  ## authentication handshake. Always use TLS to encrypt credentials in transit.
+  # authentication = "PLAIN"
+  # username = "myuser"
+  # password = "***"
+
   # for x509 certificate authentication
   # authentication = "X509"
   # tls_ca = "ca.pem"

@@ -95,6 +95,8 @@ func (s *MongoDB) Init() error {
 	s.clientOptions = options.Client().SetServerAPIOptions(serverAPIOptions)
 
 	switch s.AuthenticationType {
+	case "", "NONE":
+		// No authentication
 	case "SCRAM":
 		if s.Username.Empty() {
 			return errors.New("authentication for SCRAM must specify a username")
@@ -119,6 +121,51 @@ func (s *MongoDB) Init() error {
 		username.Destroy()
 		password.Destroy()
 		s.clientOptions.SetAuth(credential)
+	case "PLAIN":
+		if s.Username.Empty() {
+			return errors.New("authentication for PLAIN must specify a username")
+		}
+		if s.Password.Empty() {
+			return errors.New("authentication for PLAIN must specify a password")
+		}
+		usernameRaw, err := s.Username.Get()
+		if err != nil {
+			return fmt.Errorf("getting username failed: %w", err)
+		}
+		username := usernameRaw.String()
+		usernameRaw.Destroy()
+
+		passwordRaw, err := s.Password.Get()
+		if err != nil {
+			return fmt.Errorf("getting password failed: %w", err)
+		}
+		password := passwordRaw.String()
+		passwordRaw.Destroy()
+
+		credential := options.Credential{
+			AuthMechanism: "PLAIN",
+			AuthSource:    "$external",
+			Username:      username,
+			Password:      password,
+		}
+		s.clientOptions.SetAuth(credential)
+
+		// Check if TLS is enabled (via mongodb+srv:// or tls/ssl query params) and warn if not
+		parsedDSN, err := url.Parse(s.Dsn)
+		if err != nil {
+			return fmt.Errorf("parsing DSN %q failed: %w", s.Dsn, err)
+		}
+
+		// mongodb+srv:// implies TLS, so only warn for mongodb:// without TLS
+		if parsedDSN.Scheme != "mongodb+srv" {
+			q := parsedDSN.Query()
+			tlsEnabled := q.Get("tls") == "true" || q.Get("tls") == "1"
+			sslEnabled := q.Get("ssl") == "true" || q.Get("ssl") == "1"
+
+			if !tlsEnabled && !sslEnabled {
+				s.Log.Warn("PLAIN authentication should be used with TLS enabled for security reasons!")
+			}
+		}
 	case "X509":
 		// format connection string to include tls/x509 options
 		newConnectionString, err := url.Parse(s.Dsn)
@@ -145,6 +192,8 @@ func (s *MongoDB) Init() error {
 			AuthMechanism: "MONGODB-X509",
 		}
 		s.clientOptions.SetAuth(credential)
+	default:
+		return fmt.Errorf("unsupported authentication type %q", s.AuthenticationType)
 	}
 
 	if s.ServerSelectTimeout != 0 {
