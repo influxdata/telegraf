@@ -32,6 +32,7 @@ func NewRunningParser(parser telegraf.Parser, config *ParserConfig) *RunningPars
 		logger.Error(err)
 	}
 	SetLoggerOnPlugin(parser, logger)
+	SetStatisticsOnPlugin(parser, logger, tags)
 
 	return &RunningParser{
 		Parser: parser,
