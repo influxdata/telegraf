@@ -11,6 +11,13 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
+type LogsConfig struct {
+	Limit    uint64 `toml:"limit"`
+	LogLevel string `toml:"level"`
+
+	level telegraf.LogLevel
+}
+
 type logEvent struct {
 	timestamp  time.Time
 	level      telegraf.LogLevel
@@ -21,12 +28,14 @@ type logEvent struct {
 
 func (h *Heartbeat) handleLogEvent(level telegraf.LogLevel, ts time.Time, source string, attr map[string]interface{}, args ...interface{}) {
 	// Fill the statistics
+	h.stats.Lock()
 	switch level {
 	case telegraf.Error:
-		h.stats.logErrors.Add(1)
+		h.stats.logErrors++
 	case telegraf.Warn:
-		h.stats.logWarnings.Add(1)
+		h.stats.logWarnings++
 	}
+	h.stats.Unlock()
 
 	// Only save events if the logging configuration requests us to do so
 	if !h.Logs.level.Includes(level) {

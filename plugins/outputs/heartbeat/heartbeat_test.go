@@ -34,6 +34,7 @@ func TestInitSuccess(t *testing.T) {
 		URL:        u,
 		InstanceID: "telegraf",
 		Interval:   config.Duration(10 * time.Second),
+		Log:        &testutil.Logger{},
 	}
 
 	require.NoError(t, plugin.Init())
@@ -78,13 +79,107 @@ func TestInitFail(t *testing.T) {
 			},
 			expected: "invalid 'include' setting",
 		},
+		{
+			name: "invalid log level",
+			plugin: &Heartbeat{
+				URL:        u,
+				InstanceID: "telegraf",
+				Interval:   config.Duration(10 * time.Second),
+				Logs: LogsConfig{
+					LogLevel: "foo",
+				},
+				Include: []string{"log-details"},
+			},
+			expected: "invalid log-level",
+		},
+		{
+			name: "invalid initial status",
+			plugin: &Heartbeat{
+				URL:        u,
+				InstanceID: "telegraf",
+				Interval:   config.Duration(10 * time.Second),
+				Status: StatusConfig{
+					Initial: "foo",
+				},
+				Include: []string{"status"},
+			},
+			expected: "invalid status 'initial' value",
+		},
+		{
+			name: "invalid default status",
+			plugin: &Heartbeat{
+				URL:        u,
+				InstanceID: "telegraf",
+				Interval:   config.Duration(10 * time.Second),
+				Status: StatusConfig{
+					Default: "foo",
+				},
+				Include: []string{"status"},
+			},
+			expected: "invalid status 'default' value",
+		},
+		{
+			name: "invalid status in order",
+			plugin: &Heartbeat{
+				URL:        u,
+				InstanceID: "telegraf",
+				Interval:   config.Duration(10 * time.Second),
+				Status: StatusConfig{
+					Order: []string{"foo"},
+				},
+				Include: []string{"status"},
+			},
+			expected: "invalid status 'order' value",
+		},
+		{
+			name: "duplicate status in order",
+			plugin: &Heartbeat{
+				URL:        u,
+				InstanceID: "telegraf",
+				Interval:   config.Duration(10 * time.Second),
+				Status: StatusConfig{
+					Order: []string{"ok", "warn", "ok", "fail"},
+				},
+				Include: []string{"status"},
+			},
+			expected: "duplicate value \"ok\" in status 'order'",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tt.plugin.Log = &testutil.Logger{}
 			require.ErrorContains(t, tt.plugin.Init(), tt.expected)
 		})
 	}
+}
+
+func TestInitStatusWarning(t *testing.T) {
+	u := config.NewSecret([]byte("http://localhost/heartbeat"))
+	t.Cleanup(u.Destroy)
+
+	log := &testutil.CaptureLogger{Name: "outputs.heartbeat"}
+	plugin := &Heartbeat{
+		URL:        u,
+		InstanceID: "telegraf",
+		Interval:   config.Duration(10 * time.Second),
+		Status: StatusConfig{
+			Ok:    "true",
+			Warn:  "true",
+			Fail:  "true",
+			Order: []string{"ok", "warn"},
+		},
+		Include: []string{"status"},
+		Log:     log,
+	}
+	require.NoError(t, plugin.Init())
+
+	require.Eventually(t, func() bool {
+		return len(log.Warnings()) > 0
+	}, 3*time.Second, 100*time.Millisecond)
+
+	expected := `W! [outputs.heartbeat] condition for status "fail" will be ignored as it is not in the 'order' list`
+	require.Contains(t, log.Warnings(), expected)
 }
 
 func TestIncludes(t *testing.T) {
@@ -1194,6 +1289,407 @@ func TestDetailedLogging(t *testing.T) {
 			receivedMu.Lock()
 			actual := receivedMessage
 			receivedMu.Unlock()
+			require.JSONEq(t, expected, actual, actual)
+		})
+	}
+}
+
+func TestStatusComputation(t *testing.T) {
+	// Get the hostname for test-data construction
+	hostname, err := os.Hostname()
+	require.NoError(t, err)
+
+	// Prepare a string replacer to replace dynamic content such as the hostname
+	// in the expected strings
+	replacer := strings.NewReplacer(
+		"$HOSTNAME", hostname,
+		"$VERSION", internal.FormatFullVersion(),
+		"$SCHEMA", strconv.Itoa(jsonSchemaVersion),
+	)
+
+	// Compile the JSON schema for evaluation
+	schema, err := jsonschema.Compile(fmt.Sprintf("schema_v%d.json", jsonSchemaVersion))
+	require.NoError(t, err)
+
+	tests := []struct {
+		name     string
+		stats    *statistics
+		cfg      StatusConfig
+		expected string
+	}{
+		{
+			name: "default config",
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "OK"
+			}`,
+		},
+		{
+			name: "initial undefined",
+			cfg: StatusConfig{
+				Initial: "undefined",
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "UNDEFINED"
+			}`,
+		},
+		{
+			name: "default undefined",
+			cfg: StatusConfig{
+				Default: "undefined",
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "UNDEFINED"
+			}`,
+		},
+		{
+			name: "default with order",
+			cfg: StatusConfig{
+				Default: "undefined",
+				Order:   []string{"ok", "warn", "fail"},
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "UNDEFINED"
+			}`,
+		},
+		{
+			name: "matching ok",
+			cfg: StatusConfig{
+				Ok:    "true",
+				Order: []string{"ok", "warn", "fail"},
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "OK"
+			}`,
+		},
+		{
+			name: "matching warn",
+			cfg: StatusConfig{
+				Warn:  "true",
+				Order: []string{"ok", "warn", "fail"},
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "WARN"
+			}`,
+		},
+		{
+			name: "matching fail",
+			cfg: StatusConfig{
+				Fail:  "true",
+				Order: []string{"ok", "warn", "fail"},
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "FAIL"
+			}`,
+		},
+		{
+			name: "none matching",
+			cfg: StatusConfig{
+				Ok:      "false",
+				Warn:    "false",
+				Fail:    "false",
+				Order:   []string{"ok", "warn", "fail"},
+				Default: "undefined",
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "UNDEFINED"
+			}`,
+		},
+		{
+			name: "matching all ascending order",
+			cfg: StatusConfig{
+				Ok:      "true",
+				Warn:    "true",
+				Fail:    "true",
+				Order:   []string{"ok", "warn", "fail"},
+				Default: "undefined",
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "OK"
+			}`,
+		},
+		{
+			name: "matching all descending order",
+			cfg: StatusConfig{
+				Ok:      "true",
+				Warn:    "true",
+				Fail:    "true",
+				Order:   []string{"fail", "warn", "ok"},
+				Default: "undefined",
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "FAIL"
+			}`,
+		},
+		{
+			name: "no logs and received enough metrics",
+			cfg: StatusConfig{
+				Ok:      "metrics >= 5 && log_errors == 0 && log_warnings == 0",
+				Warn:    "(metrics > 0 && metrics < 5) || (log_warnings > 0 && log_errors == 0)",
+				Fail:    "metrics == 0 || log_errors > 0",
+				Order:   []string{"ok", "warn", "fail"},
+				Default: "undefined",
+			},
+			stats: &statistics{
+				metrics:     10,
+				logErrors:   0,
+				logWarnings: 0,
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "OK"
+			}`,
+		},
+		{
+			name: "warning logs and received enough metrics",
+			cfg: StatusConfig{
+				Ok:      "metrics >= 5 && log_errors == 0 && log_warnings == 0",
+				Warn:    "(metrics > 0 && metrics < 5) || (log_warnings > 0 && log_errors == 0)",
+				Fail:    "metrics == 0 || log_errors > 0",
+				Order:   []string{"ok", "warn", "fail"},
+				Default: "undefined",
+			},
+			stats: &statistics{
+				metrics:     10,
+				logErrors:   0,
+				logWarnings: 4,
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "WARN"
+			}`,
+		},
+		{
+			name: "error logs and received enough metrics",
+			cfg: StatusConfig{
+				Ok:      "metrics >= 5 && log_errors == 0 && log_warnings == 0",
+				Warn:    "(metrics > 0 && metrics < 5) || (log_warnings > 0 && log_errors == 0)",
+				Fail:    "metrics == 0 || log_errors > 0",
+				Order:   []string{"ok", "warn", "fail"},
+				Default: "undefined",
+			},
+			stats: &statistics{
+				metrics:     10,
+				logErrors:   2,
+				logWarnings: 4,
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "FAIL"
+			}`,
+		},
+		{
+			name: "not enough metrics",
+			cfg: StatusConfig{
+				Ok:      "metrics >= 5 && log_errors == 0 && log_warnings == 0",
+				Warn:    "(metrics > 0 && metrics < 5) || (log_warnings > 0 && log_errors == 0)",
+				Fail:    "metrics == 0 || log_errors > 0",
+				Order:   []string{"ok", "warn", "fail"},
+				Default: "undefined",
+			},
+			stats: &statistics{
+				metrics:     2,
+				logErrors:   0,
+				logWarnings: 0,
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "WARN"
+			}`,
+		},
+		{
+			name: "no metrics",
+			cfg: StatusConfig{
+				Ok:      "metrics >= 5 && log_errors == 0 && log_warnings == 0",
+				Warn:    "(metrics > 0 && metrics < 5) || (log_warnings > 0 && log_errors == 0)",
+				Fail:    "metrics == 0 || log_errors > 0",
+				Order:   []string{"ok", "warn", "fail"},
+				Default: "undefined",
+			},
+			stats: &statistics{
+				metrics:     0,
+				logErrors:   0,
+				logWarnings: 0,
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "FAIL"
+			}`,
+		},
+		{
+			name: "ambiguous conditions ascending",
+			cfg: StatusConfig{
+				Ok:      "metrics > 5",
+				Warn:    "metrics > 2",
+				Order:   []string{"ok", "warn", "fail"},
+				Default: "undefined",
+			},
+			stats: &statistics{
+				metrics:     6,
+				logErrors:   0,
+				logWarnings: 0,
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "OK"
+			}`,
+		},
+		{
+			name: "ambiguous conditions descending",
+			cfg: StatusConfig{
+				Ok:      "metrics > 5",
+				Warn:    "metrics > 2",
+				Order:   []string{"fail", "warn", "ok"},
+				Default: "undefined",
+			},
+			stats: &statistics{
+				metrics:     6,
+				logErrors:   0,
+				logWarnings: 0,
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "WARN"
+			}`,
+		},
+		{
+			name: "ambiguous conditions descending to default",
+			cfg: StatusConfig{
+				Ok:      "metrics > 5",
+				Warn:    "metrics > 2",
+				Order:   []string{"fail", "warn", "ok"},
+				Default: "fail",
+			},
+			stats: &statistics{
+				metrics:     1,
+				logErrors:   0,
+				logWarnings: 0,
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "FAIL"
+			}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Inject dynamic content into the expectation
+			expected := replacer.Replace(tt.expected)
+
+			// Create a test server to validate the data sent
+			var actual string
+			var actualMu sync.Mutex
+			var snapshot atomic.Bool
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPost {
+					t.Fail()
+					w.WriteHeader(http.StatusMethodNotAllowed)
+				}
+
+				// Decode the body
+				if snapshot.Swap(false) {
+					body, err := io.ReadAll(r.Body)
+					if err != nil {
+						t.Fail()
+						w.WriteHeader(http.StatusInternalServerError)
+					}
+					actualMu.Lock()
+					actual = string(body)
+					actualMu.Unlock()
+				}
+				w.WriteHeader(http.StatusOK)
+			}))
+			defer ts.Close()
+
+			// Initialize the plugin
+			u := config.NewSecret([]byte("http://" + ts.Listener.Addr().String()))
+			defer u.Destroy()
+
+			plugin := &Heartbeat{
+				URL:        u,
+				InstanceID: "telegraf",
+				Interval:   config.Duration(100 * time.Millisecond),
+				Include:    []string{"status"},
+				Status:     tt.cfg,
+				Log:        &testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			// Override the statistics for the computation
+			if tt.stats != nil {
+				plugin.stats.metrics = tt.stats.metrics
+				plugin.stats.logErrors = tt.stats.logErrors
+				plugin.stats.logWarnings = tt.stats.logWarnings
+				plugin.stats.lastUpdate = tt.stats.lastUpdate
+				plugin.stats.lastUpdateFailed = tt.stats.lastUpdateFailed
+			}
+
+			// Start processing
+			snapshot.Store(true)
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
+
+			// Wait for the data to arrive at the test-server and check the
+			// payload we got.
+			require.Eventually(t, func() bool {
+				actualMu.Lock()
+				defer actualMu.Unlock()
+				return actual != ""
+			}, 3*time.Second, 100*time.Millisecond)
+
+			actualMu.Lock()
+			defer actualMu.Unlock()
+
+			// Check heartbeat message against the JSON schema
+			var v interface{}
+			require.NoError(t, json.Unmarshal([]byte(actual), &v))
+			require.NoError(t, schema.Validate(v))
 			require.JSONEq(t, expected, actual, actual)
 		})
 	}
