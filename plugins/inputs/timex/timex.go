@@ -35,8 +35,8 @@ func (*Timex) Gather(acc telegraf.Accumulator) error {
 	// https://github.com/torvalds/linux/blob/master/include/uapi/linux/timex.h
 	synced := status != unix.TIME_ERROR
 
-	// https://man7.org/linux/man-pages/man2/adjtimex.2.html
-	// Notes for frequency adjustment ppm
+	// https://man7.org/linux/man-pages/man2/adjtimex.2.html#NOTES.
+	// There the frequency is represented as a fixed-point number with a scaling factor of 2^16 (65536).
 	ppm16 := float64(65536)
 
 	// https://man7.org/linux/man-pages/man2/adjtimex.2.html

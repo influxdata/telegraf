@@ -1,6 +1,7 @@
 # Timex Input Plugin
 
-This plugin gathers metrics on system time using the Linux Kernel [adjtimex syscall][timex].
+This plugin gathers metrics on system time using the Linux Kernel
+[adjtimex syscall][timex].
 
 The call gets the information of the kernel time variables that are controlled
 by the ntpd, systemd-timesyncd, chrony or other time synchronization services.
@@ -28,37 +29,26 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## No input configuration
 ```
 
-### Notes
-
-Metrics types:
-- `ns` = nanoseconds,
-- `ppm` = parts per million
-- `sec` = seconds.
-
-PPM Parts Per Million is a unit of measurement used to describe the frequency.
-
-Definition:
-1 PPM = 1 * 10^-6 = 0.000001
-or
-1 PPM = 0.0001 %
-
-The [adjtimex](https://man7.org/linux/man-pages/man2/adjtimex.2.html#NOTES) syscall delivers fields `frequency` and `pps_frequency` and `stabil` in PPM.
-There the frequency is represented as a fixed-point number with a scaling factor of 2^16 (65536).
-
-
 ## Metrics
+
+Metric fields usually have a suffix denoting the unit of the field with
+`ns` being nanoseconds, `sec` being seconds and `ppm` being parts-per-million.
+The parts-per-million unit is defined as
+`1 ppm` corresponds to `10^-6` or `0.0001 %`.
 
 - timex
   - tags:
     - status (string) - Clock command/status.
   - fields:
     - offset_ns (int64) - The offset from local and reference clock.
-    - frequency_offset_ppm (float) - Local clock frequency offset in parts per million.
+    - frequency_offset_ppm (float) - Local clock frequency offset in parts per
+    million.
     - maxerror_ns (int64) - The maximum error in nanoseconds.
     - estimated_error_ns (int64) - The estimated error in nanoseconds.
     - loop_time_constant (int64) - Phase-locked loop time constant.
     - tick_ns (int64) - Nanoseconds between clock ticks.
-    - pps_frequency_ppm (float) - Pulse-per-second frequency in parts per million.
+    - pps_frequency_ppm (float) - Pulse-per-second frequency in parts per
+    million.
     - pps_jitter_ns (int64) - Pulse-per-second jitter in nanoseconds.
     - pps_shift_sec (int64) - Pulse-per-second interval duration in
     seconds.
