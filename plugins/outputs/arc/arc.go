@@ -187,7 +187,10 @@ func (a *Arc) Write(metrics []telegraf.Metric) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("arc returned status %d (failed to read response body: %w)", resp.StatusCode, err)
+		}
 		return fmt.Errorf("arc returned status %d: %s", resp.StatusCode, string(body))
 	}
 

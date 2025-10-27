@@ -9,21 +9,21 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/tinylib/msgp/msgp"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestConnect(t *testing.T) {
 	a := &Arc{
-		URL:     "http://localhost:8000/api/v1/write/msgpack",
+		URL:              "http://localhost:8000/api/v1/write/msgpack",
 		HTTPClientConfig: httpconfig.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
-		Log:     testutil.Logger{},
+		Log:              testutil.Logger{},
 	}
 
 	err := a.Init()
@@ -145,11 +145,11 @@ func TestWrite(t *testing.T) {
 
 			// Configure Arc plugin
 			a := &Arc{
-				URL:       ts.URL,
+				URL:              ts.URL,
 				HTTPClientConfig: httpconfig.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
-				APIKey:    config.NewSecret([]byte("test-api-key")),
-				Headers:   make(map[string]string),
-				Log:       testutil.Logger{},
+				APIKey:           config.NewSecret([]byte("test-api-key")),
+				Headers:          make(map[string]string),
+				Log:              testutil.Logger{},
 			}
 
 			if tt.gzipEnabled {
@@ -184,10 +184,10 @@ func TestWriteWithAPIKey(t *testing.T) {
 	defer ts.Close()
 
 	a := &Arc{
-		URL:     ts.URL,
+		URL:              ts.URL,
 		HTTPClientConfig: httpconfig.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
-		APIKey:  config.NewSecret([]byte(expectedAPIKey)),
-		Log:     testutil.Logger{},
+		APIKey:           config.NewSecret([]byte(expectedAPIKey)),
+		Log:              testutil.Logger{},
 	}
 
 	err := a.Init()
@@ -212,14 +212,16 @@ func TestWriteWithAPIKey(t *testing.T) {
 func TestWriteServerError(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = w.Write([]byte("Internal Server Error"))
+		if _, err := w.Write([]byte("Internal Server Error")); err != nil {
+			t.Errorf("failed to write response: %v", err)
+		}
 	}))
 	defer ts.Close()
 
 	a := &Arc{
-		URL:     ts.URL,
+		URL:              ts.URL,
 		HTTPClientConfig: httpconfig.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
-		Log:     testutil.Logger{},
+		Log:              testutil.Logger{},
 	}
 
 	err := a.Init()
@@ -375,10 +377,10 @@ func TestMultipleMeasurements(t *testing.T) {
 	defer ts.Close()
 
 	a := &Arc{
-		URL:             ts.URL,
+		URL:              ts.URL,
 		HTTPClientConfig: httpconfig.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
-		ContentEncoding: "identity",
-		Log:             testutil.Logger{},
+		ContentEncoding:  "identity",
+		Log:              testutil.Logger{},
 	}
 
 	err := a.Init()
@@ -424,7 +426,7 @@ func TestInit(t *testing.T) {
 		{
 			name: "valid config",
 			arc: &Arc{
-				URL:     "http://localhost:8000/api/v1/write/msgpack",
+				URL:              "http://localhost:8000/api/v1/write/msgpack",
 				HTTPClientConfig: httpconfig.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
 			},
 			expectError: false,
