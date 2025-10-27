@@ -26,7 +26,7 @@ func (tx *Timex) Init() error {
 	return nil
 }
 
-func (*Timex) Gather(_ telegraf.Accumulator) error { return nil }
+func (*Timex) Gather(telegraf.Accumulator) error { return nil }
 
 func init() {
 	inputs.Add("timex", func() telegraf.Input {

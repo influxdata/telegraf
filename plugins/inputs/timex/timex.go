@@ -16,6 +16,12 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+const (
+	// https://man7.org/linux/man-pages/man2/adjtimex.2.html#NOTES.
+	// There the frequency is represented as a fixed-point number with a scaling factor of 2^16 (65536).
+	ppm16 = float64(65536)
+)
+
 type Timex struct {
 	Log telegraf.Logger `toml:"-"`
 }
@@ -35,10 +41,6 @@ func (*Timex) Gather(acc telegraf.Accumulator) error {
 	// https://github.com/torvalds/linux/blob/master/include/uapi/linux/timex.h
 	synced := status != unix.TIME_ERROR
 
-	// https://man7.org/linux/man-pages/man2/adjtimex.2.html#NOTES.
-	// There the frequency is represented as a fixed-point number with a scaling factor of 2^16 (65536).
-	ppm16 := float64(65536)
-
 	// https://man7.org/linux/man-pages/man2/adjtimex.2.html
 	// validate the status to determine if the time is in nanoseconds or microseconds
 	// STA_NANO (0x2000): time is in nanoseconds
@@ -48,7 +50,7 @@ func (*Timex) Gather(acc telegraf.Accumulator) error {
 		multiplier = int64(1)
 	}
 
-	statusOutput := ""
+	var statusOutput string
 	switch status {
 	case unix.TIME_OK:
 		statusOutput = "ok"
@@ -62,6 +64,8 @@ func (*Timex) Gather(acc telegraf.Accumulator) error {
 		statusOutput = "wait"
 	case unix.TIME_ERROR:
 		statusOutput = "error"
+	default:
+		statusOutput = fmt.Sprintf("unknown-%d", status)
 	}
 
 	tags := map[string]string{
