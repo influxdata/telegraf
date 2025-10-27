@@ -418,8 +418,6 @@ following works:
 - github.com/vishvananda/netlink [Apache License 2.0](https://github.com/vishvananda/netlink/blob/master/LICENSE)
 - github.com/vishvananda/netns [Apache License 2.0](https://github.com/vishvananda/netns/blob/master/LICENSE)
 - github.com/vjeantet/grok [Apache License 2.0](https://github.com/vjeantet/grok/blob/master/LICENSE)
-- github.com/vmihailenco/msgpack [BSD 2-Clause License](https://github.com/vmihailenco/msgpack/blob/v5/LICENSE)
-- github.com/vmihailenco/tagparser [BSD 2-Clause License](https://github.com/vmihailenco/tagparser/blob/master/LICENSE)
 - github.com/vmware/govmomi [Apache License 2.0](https://github.com/vmware/govmomi/blob/master/LICENSE.txt)
 - github.com/wavefronthq/wavefront-sdk-go [Apache License 2.0](https://github.com/wavefrontHQ/wavefront-sdk-go/blob/master/LICENSE)
 - github.com/x448/float16 [MIT License](https://github.com/x448/float16/blob/master/LICENSE)
