@@ -286,8 +286,6 @@ secure modes (Sign or SignAndEncrypt), you need to explicitly trust the
 server's certificate. Use the `remote_certificate` option to specify the
 path to the server's certificate file.
 
-#### Obtaining the Server Certificate
-
 Most OPC UA servers provide their certificate through their management interface
 or configuration directory. Consult your OPC UA server's documentation to locate
 the certificate, typically found in the server's PKI (Public Key Infrastructure)
