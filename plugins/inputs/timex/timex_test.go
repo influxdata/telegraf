@@ -14,9 +14,7 @@ import (
 )
 
 func TestMetricStructure(t *testing.T) {
-	plugin := &Timex{
-		Log: &testutil.Logger{},
-	}
+	plugin := &Timex{}
 
 	expected := []telegraf.Metric{
 		metric.New(

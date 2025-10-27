@@ -22,9 +22,7 @@ const (
 	ppm16 = float64(65536)
 )
 
-type Timex struct {
-	Log telegraf.Logger `toml:"-"`
-}
+type Timex struct{}
 
 func (*Timex) SampleConfig() string {
 	return sampleConfig
