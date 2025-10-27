@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"strings"
 	"time"
@@ -86,7 +87,7 @@ func (k *Config) SetConfig(cfg *sarama.Config, log telegraf.Logger) error {
 	if k.Version != "" {
 		version, err := sarama.ParseKafkaVersion(k.Version)
 		if err != nil {
-			return err
+			return fmt.Errorf("parsing kafka version failed: %w", err)
 		}
 
 		cfg.Version = version
@@ -106,7 +107,7 @@ func (k *Config) SetConfig(cfg *sarama.Config, log telegraf.Logger) error {
 
 	tlsConfig, err := k.ClientConfig.TLSConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("configuring TLS failed: %w", err)
 	}
 
 	if tlsConfig != nil {
@@ -154,5 +155,14 @@ func (k *Config) SetConfig(cfg *sarama.Config, log telegraf.Logger) error {
 	case "constant", "":
 	}
 
-	return k.SetSASLConfig(cfg)
+	if err := k.SetSASLConfig(cfg); err != nil {
+		return fmt.Errorf("configuring SASL failed: %w", err)
+	}
+
+	// SASLv0 cannot be used with API requests so disable API requests in this case
+	if cfg.Net.SASL.Version == sarama.SASLHandshakeV0 {
+		cfg.ApiVersionsRequest = false
+	}
+
+	return nil
 }
