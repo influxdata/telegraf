@@ -1,6 +1,7 @@
 package arc
 
 import (
+	"bytes"
 	"compress/gzip"
 	"io"
 	"net/http"
@@ -8,18 +9,20 @@ import (
 	"testing"
 	"time"
 
+	"github.com/tinylib/msgp/msgp"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/vmihailenco/msgpack/v5"
 )
 
 func TestConnect(t *testing.T) {
 	a := &Arc{
 		URL:     "http://localhost:8000/api/v1/write/msgpack",
-		Timeout: config.Duration(5 * time.Second),
+		HTTPClientConfig: httpconfig.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
 		Log:     testutil.Logger{},
 	}
 
@@ -105,18 +108,21 @@ func TestWrite(t *testing.T) {
 				assert.NoError(t, err)
 
 				// Decode MessagePack - handle both single and array format
-				var columnarData ArcColumnarData
-				err = msgpack.Unmarshal(data, &columnarData)
+				reader := msgp.NewReader(bytes.NewReader(data))
+				decoded, err := reader.ReadIntf()
+				assert.NoError(t, err)
 
-				// If unmarshal fails, try as array
-				if err != nil {
-					var columnarDataArray []ArcColumnarData
-					err = msgpack.Unmarshal(data, &columnarDataArray)
-					assert.NoError(t, err)
-					assert.NotEmpty(t, columnarDataArray)
-					columnarData = columnarDataArray[0]
-				} else {
-					assert.NoError(t, err)
+				var columnarData arcColumnarData
+				// Check if it's a map (single measurement) or array (multiple measurements)
+				if decodedMap, ok := decoded.(map[string]interface{}); ok {
+					// Single measurement
+					columnarData.Measurement = decodedMap["m"].(string)
+					columnarData.Columns = decodedMap["columns"].(map[string]interface{})
+				} else if decodedArray, ok := decoded.([]interface{}); ok {
+					// Multiple measurements - take the first one
+					firstItem := decodedArray[0].(map[string]interface{})
+					columnarData.Measurement = firstItem["m"].(string)
+					columnarData.Columns = firstItem["columns"].(map[string]interface{})
 				}
 
 				// Verify columnar structure
@@ -140,10 +146,9 @@ func TestWrite(t *testing.T) {
 			// Configure Arc plugin
 			a := &Arc{
 				URL:       ts.URL,
-				Timeout:   config.Duration(5 * time.Second),
+				HTTPClientConfig: httpconfig.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
 				APIKey:    config.NewSecret([]byte("test-api-key")),
 				Headers:   make(map[string]string),
-				BatchSize: defaultBatchSize,
 				Log:       testutil.Logger{},
 			}
 
@@ -180,7 +185,7 @@ func TestWriteWithAPIKey(t *testing.T) {
 
 	a := &Arc{
 		URL:     ts.URL,
-		Timeout: config.Duration(5 * time.Second),
+		HTTPClientConfig: httpconfig.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
 		APIKey:  config.NewSecret([]byte(expectedAPIKey)),
 		Log:     testutil.Logger{},
 	}
@@ -213,7 +218,7 @@ func TestWriteServerError(t *testing.T) {
 
 	a := &Arc{
 		URL:     ts.URL,
-		Timeout: config.Duration(5 * time.Second),
+		HTTPClientConfig: httpconfig.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
 		Log:     testutil.Logger{},
 	}
 
@@ -288,32 +293,42 @@ func TestMessagePackEncoding(t *testing.T) {
 	columns["usage_system"] = []interface{}{float64(2.5), float64(4.5)}
 	columns["usage_user"] = []interface{}{float64(2.0), float64(10.5)}
 
-	columnarData := ArcColumnarData{
-		Measurement: "cpu",
-		Columns:     columns,
+	// Create data as map[string]interface{} for msgp
+	dataMap := map[string]interface{}{
+		"m":       "cpu",
+		"columns": columns,
 	}
 
-	// Marshal to MessagePack
-	data, err := msgpack.Marshal(columnarData)
+	// Marshal to MessagePack using tinylib/msgp
+	var buf bytes.Buffer
+	writer := msgp.NewWriter(&buf)
+	err := writer.WriteIntf(dataMap)
 	require.NoError(t, err)
+	err = writer.Flush()
+	require.NoError(t, err)
+
+	data := buf.Bytes()
 	require.NotEmpty(t, data)
 
 	// Verify it can be unmarshaled
-	var decoded ArcColumnarData
-	err = msgpack.Unmarshal(data, &decoded)
+	reader := msgp.NewReader(bytes.NewReader(data))
+	decodedIntf, err := reader.ReadIntf()
 	require.NoError(t, err)
-	require.Equal(t, "cpu", decoded.Measurement)
-	require.NotEmpty(t, decoded.Columns)
+
+	decoded := decodedIntf.(map[string]interface{})
+	require.Equal(t, "cpu", decoded["m"])
+	require.NotEmpty(t, decoded["columns"])
 
 	// Verify time column
-	timeCol, ok := decoded.Columns["time"]
+	columnsMap := decoded["columns"].(map[string]interface{})
+	timeCol, ok := columnsMap["time"]
 	require.True(t, ok)
 	timeArray, ok := timeCol.([]interface{})
 	require.True(t, ok)
 	require.Len(t, timeArray, 2)
 
 	// Verify field columns
-	usageIdleCol, ok := decoded.Columns["usage_idle"]
+	usageIdleCol, ok := columnsMap["usage_idle"]
 	require.True(t, ok)
 	usageIdleArray, ok := usageIdleCol.([]interface{})
 	require.True(t, ok)
@@ -337,16 +352,19 @@ func TestMultipleMeasurements(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Try to decode as array of columnar data (multiple measurements)
-		var columnarDataArray []ArcColumnarData
-		err = msgpack.Unmarshal(data, &columnarDataArray)
+		reader := msgp.NewReader(bytes.NewReader(data))
+		decoded, err := reader.ReadIntf()
 		assert.NoError(t, err)
+
+		columnarDataArray := decoded.([]interface{})
 		assert.Len(t, columnarDataArray, 2, "should have 2 measurements")
 
 		// Verify we have both cpu and mem measurements
 		measurementNames := make(map[string]bool)
-		for _, colData := range columnarDataArray {
-			measurementNames[colData.Measurement] = true
-			assert.NotEmpty(t, colData.Columns)
+		for _, item := range columnarDataArray {
+			colData := item.(map[string]interface{})
+			measurementNames[colData["m"].(string)] = true
+			assert.NotEmpty(t, colData["columns"])
 		}
 
 		assert.True(t, measurementNames["cpu"], "should have cpu measurement")
@@ -358,7 +376,7 @@ func TestMultipleMeasurements(t *testing.T) {
 
 	a := &Arc{
 		URL:             ts.URL,
-		Timeout:         config.Duration(5 * time.Second),
+		HTTPClientConfig: httpconfig.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
 		ContentEncoding: "identity",
 		Log:             testutil.Logger{},
 	}
@@ -407,7 +425,7 @@ func TestInit(t *testing.T) {
 			name: "valid config",
 			arc: &Arc{
 				URL:     "http://localhost:8000/api/v1/write/msgpack",
-				Timeout: config.Duration(5 * time.Second),
+				HTTPClientConfig: httpconfig.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
 			},
 			expectError: false,
 		},

@@ -11,58 +11,31 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/tinylib/msgp/msgp"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/vmihailenco/msgpack/v5"
 )
 
 //go:embed sample.conf
 var sampleConfig string
 
-const (
-	defaultURL         = "http://localhost:8000/api/v1/write/msgpack"
-	defaultTimeout     = 5 * time.Second
-	defaultContentType = "application/msgpack"
-	defaultUserAgent   = "Telegraf-Arc-Output-Plugin"
-	defaultBatchSize   = 1000
-)
-
-// Arc output plugin for writing metrics to Arc time-series database using MessagePack binary protocol
 type Arc struct {
-	// Arc MessagePack API URL
-	URL string `toml:"url"`
-
-	// HTTP timeout
-	Timeout config.Duration `toml:"timeout"`
-
-	// API Key for authentication
-	APIKey config.Secret `toml:"api_key"`
-
-	// Database name for multi-database architecture
-	// Routes metrics to a specific database namespace (e.g., "production", "staging", "default")
-	Database string `toml:"database"`
-
-	// HTTP Headers
-	Headers map[string]string `toml:"headers"`
-
-	// Content encoding: "gzip" or "identity" (default: gzip)
-	ContentEncoding string `toml:"content_encoding"`
-
-	// User agent string
-	UserAgent string `toml:"user_agent"`
-
-	// Batch size for MessagePack writes
-	BatchSize int `toml:"batch_size"`
-
-	// Log
+	URL             string            `toml:"url"`
+	APIKey          config.Secret     `toml:"api_key"`
+	Database        string            `toml:"database"`
+	Headers         map[string]string `toml:"headers"`
+	ContentEncoding string            `toml:"content_encoding"`
+	httpconfig.HTTPClientConfig
 	Log telegraf.Logger `toml:"-"`
 
 	client *http.Client
 }
 
-// ArcColumnarData represents columnar format data for Arc's MessagePack format
-type ArcColumnarData struct {
+type arcColumnarData struct {
 	Measurement string                 `msgpack:"m"`
 	Columns     map[string]interface{} `msgpack:"columns"`
 }
@@ -72,67 +45,28 @@ func (*Arc) SampleConfig() string {
 }
 
 func (a *Arc) Init() error {
-	// Set defaults
 	if a.URL == "" {
-		a.URL = defaultURL
-	}
-
-	if a.Timeout == 0 {
-		a.Timeout = config.Duration(defaultTimeout)
-	}
-
-	if a.UserAgent == "" {
-		a.UserAgent = defaultUserAgent
+		a.URL = "http://localhost:8000/api/v1/write/msgpack"
 	}
 
 	if a.ContentEncoding == "" {
 		a.ContentEncoding = "gzip"
 	}
 
-	if a.BatchSize == 0 {
-		a.BatchSize = defaultBatchSize
+	if a.Timeout == 0 {
+		a.Timeout = config.Duration(5 * time.Second)
 	}
 
 	return nil
 }
 
 func (a *Arc) Connect() error {
-	a.client = &http.Client{
-		Timeout: time.Duration(a.Timeout),
-		Transport: &http.Transport{
-			MaxIdleConns:        100,
-			MaxIdleConnsPerHost: 20,
-			IdleConnTimeout:     90 * time.Second,
-		},
-	}
-
-	// Test connection
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
-	defer cancel()
-
-	// Try to construct health endpoint
-	healthURL := "http://localhost:8000/health"
-	if a.URL != "" {
-		// Parse URL and construct health endpoint
-		healthURL = a.URL[:len(a.URL)-len("/api/v1/write/msgpack")] + "/health"
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "GET", healthURL, nil)
+	ctx := context.Background()
+	client, err := a.HTTPClientConfig.CreateClient(ctx, a.Log)
 	if err != nil {
-		a.Log.Warnf("Unable to check Arc health endpoint: %v", err)
-		return nil // Don't fail on health check
+		return fmt.Errorf("failed to create HTTP client: %w", err)
 	}
-
-	resp, err := a.client.Do(req)
-	if err != nil {
-		a.Log.Warnf("Arc health check failed: %v (continuing anyway)", err)
-		return nil // Don't fail connection if health check fails
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == 200 {
-		a.Log.Info("Successfully connected to Arc (MessagePack binary protocol)")
-	}
+	a.client = client
 
 	return nil
 }
@@ -149,119 +83,59 @@ func (a *Arc) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	// Group metrics by measurement name for columnar format
-	measurementGroups := make(map[string][]telegraf.Metric)
-	for _, metric := range metrics {
-		name := metric.Name()
-		measurementGroups[name] = append(measurementGroups[name], metric)
+	groups := make(map[string]*group)
+	for _, m := range metrics {
+		name := m.Name()
+		if _, found := groups[name]; !found {
+			numCols := len(m.FieldList()) + len(m.TagList()) + 1
+			groups[name] = &group{name: name, columns: make(map[string][]interface{}, numCols)}
+		}
+		groups[name].add(m)
 	}
 
-	// Convert each measurement group to columnar format
-	columnarData := make([]ArcColumnarData, 0, len(measurementGroups))
-
-	for measurementName, metricsGroup := range measurementGroups {
-		if len(metricsGroup) == 0 {
+	messages := make([]*arcColumnarData, 0, len(groups))
+	for _, g := range groups {
+		msg, err := g.produceMessage()
+		if err != nil {
+			a.Log.Error(err)
 			continue
 		}
-
-		// Initialize columns map
-		columns := make(map[string]interface{})
-
-		// Create slices for each column
-		timestamps := make([]int64, len(metricsGroup))
-
-		// Track all unique field and tag keys
-		fieldKeys := make(map[string]bool)
-		tagKeys := make(map[string]bool)
-
-		// First pass: collect all unique keys
-		for _, metric := range metricsGroup {
-			for _, field := range metric.FieldList() {
-				fieldKeys[field.Key] = true
-			}
-			for _, tag := range metric.TagList() {
-				tagKeys[tag.Key] = true
-			}
-		}
-
-		// Initialize field and tag columns
-		fieldColumns := make(map[string][]interface{})
-		for key := range fieldKeys {
-			fieldColumns[key] = make([]interface{}, len(metricsGroup))
-		}
-
-		tagColumns := make(map[string][]string)
-		for key := range tagKeys {
-			tagColumns[key] = make([]string, len(metricsGroup))
-		}
-
-		// Second pass: populate columns
-		for i, metric := range metricsGroup {
-			// Add timestamp
-			timestamps[i] = metric.Time().UnixMilli()
-
-			// Add fields
-			fieldMap := make(map[string]interface{})
-			for _, field := range metric.FieldList() {
-				fieldMap[field.Key] = field.Value
-			}
-			for key := range fieldKeys {
-				if val, ok := fieldMap[key]; ok {
-					fieldColumns[key][i] = val
-				} else {
-					fieldColumns[key][i] = nil
-				}
-			}
-
-			// Add tags
-			tagMap := make(map[string]string)
-			for _, tag := range metric.TagList() {
-				tagMap[tag.Key] = tag.Value
-			}
-			for key := range tagKeys {
-				if val, ok := tagMap[key]; ok {
-					tagColumns[key][i] = val
-				} else {
-					tagColumns[key][i] = ""
-				}
-			}
-		}
-
-		// Build columns map
-		columns["time"] = timestamps
-
-		// Add all field columns
-		for key, values := range fieldColumns {
-			columns[key] = values
-		}
-
-		// Add all tag columns
-		for key, values := range tagColumns {
-			columns[key] = values
-		}
-
-		columnarData = append(columnarData, ArcColumnarData{
-			Measurement: measurementName,
-			Columns:     columns,
-		})
+		messages = append(messages, msg)
 	}
 
-	// Serialize with MessagePack
-	// If there's only one measurement, send it directly; otherwise send as array
-	var payload []byte
-	var err error
-
-	if len(columnarData) == 1 {
-		payload, err = msgpack.Marshal(columnarData[0])
-	} else {
-		payload, err = msgpack.Marshal(columnarData)
+	var data interface{}
+	switch len(messages) {
+	case 0:
+		return nil
+	case 1:
+		data = map[string]interface{}{
+			"m":       messages[0].Measurement,
+			"columns": messages[0].Columns,
+		}
+	default:
+		dataArray := make([]interface{}, len(messages))
+		for i, msg := range messages {
+			dataArray[i] = map[string]interface{}{
+				"m":       msg.Measurement,
+				"columns": msg.Columns,
+			}
+		}
+		data = dataArray
 	}
 
+	var buf bytes.Buffer
+	writer := msgp.NewWriter(&buf)
+	err := writer.WriteIntf(data)
 	if err != nil {
-		return fmt.Errorf("failed to marshal MessagePack: %w", err)
+		return fmt.Errorf("marshalling message failed: %w", err)
+	}
+	err = writer.Flush()
+	if err != nil {
+		return fmt.Errorf("failed to flush MessagePack writer: %w", err)
 	}
 
-	// Compress if enabled
+	payload := buf.Bytes()
+
 	if a.ContentEncoding == "gzip" {
 		var buf bytes.Buffer
 		gzipWriter := gzip.NewWriter(&buf)
@@ -274,7 +148,6 @@ func (a *Arc) Write(metrics []telegraf.Metric) error {
 		payload = buf.Bytes()
 	}
 
-	// Prepare request
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
 	defer cancel()
 
@@ -283,60 +156,48 @@ func (a *Arc) Write(metrics []telegraf.Metric) error {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	// Set headers
-	req.Header.Set("Content-Type", defaultContentType)
-	req.Header.Set("User-Agent", a.UserAgent)
+	req.Header.Set("Content-Type", "application/msgpack")
+	req.Header.Set("User-Agent", internal.ProductToken())
 
-	// Add API key if provided
 	if !a.APIKey.Empty() {
 		apiKey, err := a.APIKey.Get()
-		if err == nil {
-			req.Header.Set("x-api-key", apiKey.String())
-			apiKey.Destroy()
+		if err != nil {
+			return fmt.Errorf("failed to get API key: %w", err)
 		}
+		req.Header.Set("x-api-key", apiKey.String())
+		apiKey.Destroy()
 	}
 
-	// Add database header for multi-database routing
 	if a.Database != "" {
 		req.Header.Set("x-arc-database", a.Database)
 	}
 
-	// Content encoding
 	if a.ContentEncoding == "gzip" {
 		req.Header.Set("Content-Encoding", "gzip")
 	}
 
-	// Add custom headers
 	for k, v := range a.Headers {
 		req.Header.Set(k, v)
 	}
 
-	// Execute request
 	resp, err := a.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to write to Arc: %w", err)
 	}
 	defer resp.Body.Close()
 
-	// Check response (Arc returns 204 No Content on success)
-	if resp.StatusCode != 204 && (resp.StatusCode < 200 || resp.StatusCode >= 300) {
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return fmt.Errorf("arc returned status %d (failed to read body: %w)", resp.StatusCode, err)
-		}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("arc returned status %d: %s", resp.StatusCode, string(body))
 	}
 
-	a.Log.Debugf("Successfully wrote %d metrics to Arc via MessagePack", len(metrics))
 	return nil
 }
 
 func init() {
 	outputs.Add("arc", func() telegraf.Output {
 		return &Arc{
-			Timeout:         config.Duration(defaultTimeout),
 			ContentEncoding: "gzip",
-			BatchSize:       defaultBatchSize,
 		}
 	})
 }
