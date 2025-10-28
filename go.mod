@@ -143,7 +143,7 @@ require (
 	github.com/leodido/go-syslog/v4 v4.3.0
 	github.com/likexian/whois v1.15.6
 	github.com/likexian/whois-parser v1.24.20
-	github.com/linkedin/goavro/v2 v2.14.0
+	github.com/linkedin/goavro/v2 v2.14.1
 	github.com/logzio/azure-monitor-metrics-receiver v1.1.0
 	github.com/lxc/incus/v6 v6.17.0
 	github.com/mdlayher/apcupsd v0.0.0-20220319200143-473c7b5f3c6a
