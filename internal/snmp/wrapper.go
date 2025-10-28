@@ -42,15 +42,15 @@ func (gs GosnmpWrapper) Walk(oid string, fn gosnmp.WalkFunc) error {
 	return gs.GoSNMP.BulkWalk(oid, fn)
 }
 
-type debugLogger struct {
+type Logger struct {
 	telegraf.Logger
 }
 
-func (l *debugLogger) Print(v ...interface{}) {
-	l.Debug(v...)
+func (l *Logger) Print(args ...interface{}) {
+	l.Trace(args...)
 }
-func (l *debugLogger) Printf(format string, v ...interface{}) {
-	l.Debugf(format, v...)
+func (l *Logger) Printf(format string, args ...interface{}) {
+	l.Tracef(format, args...)
 }
 
 func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
@@ -63,7 +63,7 @@ func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 	gs.UseUnconnectedUDPSocket = s.UnconnectedUDPSocket
 
 	if s.GosnmpDebugLogger != nil {
-		gs.Logger = gosnmp.NewLogger(&debugLogger{s.GosnmpDebugLogger})
+		gs.Logger = gosnmp.NewLogger(&Logger{s.GosnmpDebugLogger})
 	}
 
 	switch s.Version {
