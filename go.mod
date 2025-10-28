@@ -176,7 +176,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
 	github.com/prometheus/common v0.67.1
-	github.com/prometheus/procfs v0.17.0
+	github.com/prometheus/procfs v0.19.1
 	github.com/prometheus/prometheus v0.307.1
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/rclone/rclone v1.69.3
