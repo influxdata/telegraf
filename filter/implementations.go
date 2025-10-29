@@ -1,6 +1,11 @@
 package filter
 
-import "github.com/gobwas/glob"
+import (
+	"slices"
+	"strings"
+
+	"github.com/bmatcuk/doublestar/v4"
+)
 
 type filterSingle struct {
 	s string
@@ -27,30 +32,192 @@ func (f *filterNoGlob) Match(s string) bool {
 	return ok
 }
 
-type filterGlobMultiple struct {
-	set []glob.Glob
+// filterGlob handles glob patterns WITHOUT separators
+// This is optimized for the common case where no separators are specified
+type filterGlob struct {
+	patterns []string
 }
 
-func newFilterGlobMultiple(filters []string, separators ...rune) (Filter, error) {
-	f := &filterGlobMultiple{set: make([]glob.Glob, 0, len(filters))}
-
+func newFilterGlob(filters []string) (Filter, error) {
+	// Validate all patterns
 	for _, pattern := range filters {
-		g, err := glob.Compile(pattern, separators...)
-		if err != nil {
+		if _, err := doublestar.Match(pattern, ""); err != nil {
 			return nil, err
 		}
-		f.set = append(f.set, g)
 	}
 
-	return f, nil
+	return &filterGlob{
+		patterns: filters,
+	}, nil
 }
 
-func (f *filterGlobMultiple) Match(s string) bool {
-	for _, g := range f.set {
-		if g.Match(s) {
+func (f *filterGlob) Match(s string) bool {
+	for _, pattern := range f.patterns {
+		matched, err := doublestar.Match(pattern, s)
+		if err != nil {
+			continue
+		}
+		if matched {
 			return true
 		}
 	}
-
 	return false
+}
+
+// filterGlobWithSeparators handles glob patterns WITH separators where '/' is also a separator.
+// This is a separate implementation optimized for the case where slashes don't need escaping.
+type filterGlobWithSeparators struct {
+	normalizedPatterns []string
+	separators         []rune
+}
+
+// filterGlobWithSeparatorsAndSlashEscape handles glob patterns WITH separators where '/' is NOT a separator.
+// This requires escaping literal slashes to preserve them during path matching.
+type filterGlobWithSeparatorsAndSlashEscape struct {
+	normalizedPatterns []string
+	separators         []rune
+}
+
+func newFilterGlobWithSeparators(filters []string, separators []rune) (Filter, error) {
+	// Validate all patterns
+	for _, pattern := range filters {
+		if _, err := doublestar.Match(pattern, ""); err != nil {
+			return nil, err
+		}
+	}
+
+	// Determine which filter type to create based on whether slash escaping is needed
+	// Slash escaping is needed when '/' is NOT one of the separators
+	needsSlashEscape := !slices.Contains(separators, '/')
+
+	if needsSlashEscape {
+		// Pre-compute normalized patterns with slash escaping
+		normalizedPatterns := make([]string, len(filters))
+		for i, pattern := range filters {
+			normalizedPatterns[i] = normalizePatternWithSlashEscape(pattern, separators)
+		}
+
+		return &filterGlobWithSeparatorsAndSlashEscape{
+			normalizedPatterns: normalizedPatterns,
+			separators:         separators,
+		}, nil
+	}
+
+	// Pre-compute normalized patterns without slash escaping
+	normalizedPatterns := make([]string, len(filters))
+	for i, pattern := range filters {
+		normalizedPatterns[i] = normalizePatternNoSlashEscape(pattern, separators)
+	}
+
+	return &filterGlobWithSeparators{
+		normalizedPatterns: normalizedPatterns,
+		separators:         separators,
+	}, nil
+}
+
+func (f *filterGlobWithSeparators) Match(s string) bool {
+	// Normalize the input string without slash escaping
+	normalizedStr := normalizePatternNoSlashEscape(s, f.separators)
+
+	for _, pattern := range f.normalizedPatterns {
+		// Use PathMatch which treats '/' as a separator
+		matched, err := doublestar.PathMatch(pattern, normalizedStr)
+		if err != nil {
+			continue
+		}
+		if matched {
+			return true
+		}
+	}
+	return false
+}
+
+func (f *filterGlobWithSeparatorsAndSlashEscape) Match(s string) bool {
+	// Normalize the input string with slash escaping
+	normalizedStr := normalizePatternWithSlashEscape(s, f.separators)
+
+	for _, pattern := range f.normalizedPatterns {
+		// Use PathMatch which treats '/' as a separator
+		matched, err := doublestar.PathMatch(pattern, normalizedStr)
+		if err != nil {
+			continue
+		}
+		if matched {
+			return true
+		}
+	}
+	return false
+}
+
+// normalizePatternWithSlashEscape converts all separators to '/' while preserving literal slashes.
+// Used when '/' is NOT in the separators list.
+//
+// This allows doublestar.PathMatch to treat custom separators as path separators while
+// keeping literal slashes as regular characters.
+//
+// The normalization process:
+//  1. Replace all literal '/' with U+FFFD (replacement character �) to preserve them
+//  2. Replace all custom separators with '/' so doublestar treats them as path separators
+//
+// Example with separator '.':
+//
+//	Input:  "foo.bar/baz.qux"
+//	Step 1: "foo.bar�baz.qux"  (preserve literal /)
+//	Step 2: "foo/bar�baz/qux"  (convert dots to separators)
+//	Result: Only dots are path separators, slashes remain as literals (�)
+//
+// IMPORTANT LIMITATIONS:
+//  1. Cannot distinguish between literal separator characters and actual separators.
+//     For example, with separator '.', ALL dots will be replaced with '/', even if
+//     some were meant to be literal. This matches gobwas/glob behavior.
+//  2. If input legitimately contains U+FFFD (�), it could be incorrectly matched.
+//     This is acceptable because U+FFFD is a replacement character for invalid/undecodable
+//     Unicode and should not appear in normal metric names.
+func normalizePatternWithSlashEscape(s string, separators []rune) string {
+	if len(separators) == 0 {
+		return s
+	}
+
+	result := s
+
+	// Step 1: Preserve literal slashes by replacing with U+FFFD
+	result = strings.ReplaceAll(result, "/", "\uFFFD")
+
+	// Step 2: Replace all custom separators with '/'
+	for _, sep := range separators {
+		// No need to check 'sep != /' since we know '/' is not in separators
+		result = strings.ReplaceAll(result, string(sep), "/")
+	}
+
+	return result
+}
+
+// normalizePatternNoSlashEscape converts all separators to '/' without escaping.
+// Used when '/' IS in the separators list (or equals the only separator).
+//
+// This allows doublestar.PathMatch to treat custom separators as path separators.
+//
+// Example with separators '.' and '/':
+//
+//	Input:  "foo.bar/baz.qux"
+//	Result: "foo/bar/baz/qux"  (both . and / become separators)
+//
+// IMPORTANT LIMITATION: Cannot distinguish between literal separator characters
+// and actual separators. With separator '.', ALL dots will be replaced with '/',
+// even if some were meant to be literal. This matches gobwas/glob behavior.
+func normalizePatternNoSlashEscape(s string, separators []rune) string {
+	if len(separators) == 0 {
+		return s
+	}
+
+	result := s
+
+	// Replace all custom separators with '/'
+	for _, sep := range separators {
+		if sep != '/' {
+			result = strings.ReplaceAll(result, string(sep), "/")
+		}
+	}
+
+	return result
 }
