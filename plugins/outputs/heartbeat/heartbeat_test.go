@@ -23,6 +23,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/logger"
+	"github.com/influxdata/telegraf/selfstat"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -1314,6 +1315,8 @@ func TestStatusComputation(t *testing.T) {
 	tests := []struct {
 		name     string
 		stats    *statistics
+		inputs   []*inputStats
+		outputs  []*outputStats
 		cfg      StatusConfig
 		expected string
 	}{
@@ -1615,6 +1618,125 @@ func TestStatusComputation(t *testing.T) {
 				"status": "FAIL"
 			}`,
 		},
+		{
+			name: "single plugin statistic",
+			cfg: StatusConfig{
+				Warn:    `outputs["file"][0].buffer_fullness > 60`,
+				Fail:    `outputs["file"][0].buffer_fullness > 80`,
+				Order:   []string{"fail", "warn", "ok"},
+				Default: "ok",
+			},
+			stats: &statistics{
+				metrics:     1,
+				logErrors:   0,
+				logWarnings: 0,
+			},
+			outputs: []*outputStats{
+				{
+					name:        "influxdb",
+					alias:       "server1",
+					id:          "0xabc",
+					bufferSize:  1234,
+					bufferLimit: 10000,
+				},
+				{
+					name:        "influxdb",
+					alias:       "server2",
+					id:          "0x123",
+					bufferSize:  9999,
+					bufferLimit: 10000,
+				},
+				{
+					name:        "file",
+					id:          "0xdeadc0de",
+					bufferSize:  0,
+					bufferLimit: 5000,
+				},
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "OK"
+			}`,
+		},
+		{
+			name: "total buffer fullness",
+			cfg: StatusConfig{
+				Warn:    `outputs.exists(k, outputs[k].exists(p, p.buffer_fullness > 0.6))`,
+				Fail:    `outputs.exists(k, outputs[k].exists(p, p.buffer_fullness > 0.8))`,
+				Order:   []string{"fail", "warn", "ok"},
+				Default: "ok",
+			},
+			stats: &statistics{
+				metrics:     1,
+				logErrors:   0,
+				logWarnings: 0,
+			},
+			outputs: []*outputStats{
+				{
+					name:        "influxdb",
+					alias:       "server1",
+					id:          "0xabc",
+					bufferSize:  1234,
+					bufferLimit: 10000,
+				},
+				{
+					name:        "influxdb",
+					alias:       "server2",
+					id:          "0x123",
+					bufferSize:  9999,
+					bufferLimit: 10000,
+				},
+				{
+					name:        "file",
+					id:          "0xdeadc0de",
+					bufferSize:  0,
+					bufferLimit: 5000,
+				},
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "FAIL"
+			}`,
+		},
+		{
+			name: "inputs collection errors",
+			cfg: StatusConfig{
+				Warn:    `inputs.exists(k, inputs[k].exists(p, p.errors > 0))`,
+				Fail:    `inputs.exists(k, inputs[k].exists(p, p.errors > 5))`,
+				Order:   []string{"fail", "warn", "ok"},
+				Default: "ok",
+			},
+			stats: &statistics{
+				metrics:     1,
+				logErrors:   0,
+				logWarnings: 0,
+			},
+			inputs: []*inputStats{
+				{
+					name: "cpu",
+					id:   "0xabc",
+				},
+				{
+					name: "mem",
+					id:   "0x123",
+				},
+				{
+					name:   "file",
+					id:     "0xdeadc0de",
+					errors: 3,
+				},
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "WARN"
+			}`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1669,6 +1791,24 @@ func TestStatusComputation(t *testing.T) {
 				plugin.stats.lastUpdate = tt.stats.lastUpdate
 				plugin.stats.lastUpdateFailed = tt.stats.lastUpdateFailed
 			}
+
+			// Register plugin statistics of any
+			for _, s := range tt.inputs {
+				s.register()
+			}
+			defer func() {
+				for _, s := range tt.inputs {
+					s.unregister()
+				}
+			}()
+			for _, s := range tt.outputs {
+				s.register()
+			}
+			defer func() {
+				for _, s := range tt.outputs {
+					s.unregister()
+				}
+			}()
 
 			// Start processing
 			snapshot.Store(true)
@@ -1972,4 +2112,119 @@ func TestSendingFail(t *testing.T) {
 	}
 	require.Contains(t, logmsg, "An error message logged during failing sends")
 	require.Contains(t, logmsg, "Another error message logged during failing sends")
+}
+
+type inputStats struct {
+	name  string
+	id    string
+	alias string
+
+	// Model stats
+	errors          int64
+	metricsGathered int64
+	gatherTime      int64
+	gatherTimeouts  int64
+	startupErrors   int64
+}
+
+func (s *inputStats) register() {
+	tags := map[string]string{
+		"_id":   s.id,
+		"input": s.name,
+	}
+	if s.alias != "" {
+		tags["alias"] = s.alias
+	}
+
+	// Register and set model stats
+	selfstat.Register("gather", "errors", tags).Set(s.errors)
+	selfstat.Register("gather", "metrics_gathered", tags).Set(s.metricsGathered)
+	selfstat.RegisterTiming("gather", "gather_time_ns", tags).Set(s.gatherTime)
+	selfstat.Register("gather", "gather_timeouts", tags).Set(s.gatherTimeouts)
+	selfstat.Register("gather", "startup_errors", tags).Set(s.startupErrors)
+}
+
+func (s *inputStats) unregister() {
+	tags := map[string]string{
+		"_id":   s.id,
+		"input": s.name,
+	}
+	if s.alias != "" {
+		tags["alias"] = s.alias
+	}
+
+	// Register and set model stats
+	selfstat.Unregister("gather", "errors", tags)
+	selfstat.Unregister("gather", "metrics_gathered", tags)
+	selfstat.Unregister("gather", "gather_time_ns", tags)
+	selfstat.Unregister("gather", "gather_timeouts", tags)
+	selfstat.Unregister("gather", "startup_errors", tags)
+}
+
+type outputStats struct {
+	name  string
+	id    string
+	alias string
+
+	// Model stats
+	errors          int64
+	metricsFiltered int64
+	writeTime       int64
+	startupErrors   int64
+
+	// Buffer stats
+	metricsAdded    int64
+	metricsWritten  int64
+	metricsRejected int64
+	metricsDropped  int64
+	bufferSize      int64
+	bufferLimit     int64
+}
+
+func (s *outputStats) register() {
+	tags := map[string]string{
+		"_id":    s.id,
+		"output": s.name,
+	}
+	if s.alias != "" {
+		tags["alias"] = s.alias
+	}
+
+	// Register and set model stats
+	selfstat.Register("write", "errors", tags).Set(s.errors)
+	selfstat.Register("write", "metrics_filtered", tags).Set(s.metricsFiltered)
+	selfstat.RegisterTiming("write", "write_time_ns", tags).Set(s.writeTime)
+	selfstat.Register("write", "startup_errors", tags).Set(s.startupErrors)
+
+	// Register and set buffer stats
+	selfstat.Register("write", "metrics_added", tags).Set(s.metricsAdded)
+	selfstat.Register("write", "metrics_written", tags).Set(s.metricsWritten)
+	selfstat.Register("write", "metrics_rejected", tags).Set(s.metricsRejected)
+	selfstat.Register("write", "metrics_dropped", tags).Set(s.metricsDropped)
+	selfstat.Register("write", "buffer_size", tags).Set(s.bufferSize)
+	selfstat.Register("write", "buffer_limit", tags).Set(s.bufferLimit)
+}
+
+func (s *outputStats) unregister() {
+	tags := map[string]string{
+		"_id":    s.id,
+		"output": s.name,
+	}
+	if s.alias != "" {
+		tags["alias"] = s.alias
+	}
+
+	// Register and set model stats
+	selfstat.Unregister("write", "errors", tags)
+	selfstat.Unregister("write", "metrics_filtered", tags)
+	selfstat.Unregister("write", "write_time_ns", tags)
+	selfstat.Unregister("write", "startup_errors", tags)
+
+	// Register and set buffer stats
+	selfstat.Unregister("write", "metrics_added", tags)
+	selfstat.Unregister("write", "metrics_written", tags)
+	selfstat.Unregister("write", "metrics_rejected", tags)
+	selfstat.Unregister("write", "metrics_dropped", tags)
+	selfstat.Unregister("write", "buffer_size", tags)
+	selfstat.Unregister("write", "buffer_limit", tags)
 }

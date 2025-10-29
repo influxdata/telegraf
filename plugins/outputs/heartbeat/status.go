@@ -21,6 +21,11 @@ type StatusConfig struct {
 }
 
 func environment() (*cel.Env, error) {
+	pluginStatisticsType := types.NewMapType(
+		types.StringType,
+		types.NewListType(types.NewMapType(types.StringType, types.DynType)),
+	)
+
 	// Declare the computation environment for the programs
 	return cel.NewEnv(
 		cel.VariableDecls(
@@ -28,7 +33,8 @@ func environment() (*cel.Env, error) {
 			decls.NewVariable("log_errors", types.IntType),
 			decls.NewVariable("log_warnings", types.IntType),
 			decls.NewVariable("last_update", types.TimestampType),
-			decls.NewVariable("fields", types.NewMapType(types.StringType, types.DynType)),
+			decls.NewVariable("inputs", pluginStatisticsType),
+			decls.NewVariable("outputs", types.NewMapType(types.StringType, types.DynType)),
 		),
 		cel.Function(
 			"now",
