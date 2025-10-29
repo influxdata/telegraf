@@ -10,7 +10,7 @@ performance** than the line-protocol format.
 
 [arc]: https://github.com/basekick-labs/arc
 
-## Global configuration options
+## Global configuration options  <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
 additional global and plugin configuration settings. These settings are used to

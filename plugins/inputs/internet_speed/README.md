@@ -41,7 +41,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # connections = 0
 
   ## Test mode
-  ## By default, a single sever is used for testing. This may work for most,
+  ## By default, a single server is used for testing. This may work for most,
   ## however, setting to "multi" will reach out to multiple servers in an
   ## attempt to get closer to ideal internet speeds.
   ## And "multi" will use all available servers to calculate average packet loss.
