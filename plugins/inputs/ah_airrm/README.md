@@ -60,8 +60,10 @@ properties:
     description: Number of connected clients.
     type: integer
     format: int32
-required:
-  - keys
+
+  required:
+    keys
+
 example:
   keys:
     name: "wifi0"
