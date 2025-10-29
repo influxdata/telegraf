@@ -74,7 +74,7 @@ import (
 // 	_ "github.com/influxdata/telegraf/plugins/inputs/intel_pmu"
 // 	_ "github.com/influxdata/telegraf/plugins/inputs/intel_powerstat"
 // 	_ "github.com/influxdata/telegraf/plugins/inputs/intel_rdt"
-// 	_ "github.com/influxdata/telegraf/plugins/inputs/internal"
+ 	_ "github.com/influxdata/telegraf/plugins/inputs/internal"
 // 	_ "github.com/influxdata/telegraf/plugins/inputs/internet_speed"
 // 	_ "github.com/influxdata/telegraf/plugins/inputs/interrupts"
 // 	_ "github.com/influxdata/telegraf/plugins/inputs/ipmi_sensor"
