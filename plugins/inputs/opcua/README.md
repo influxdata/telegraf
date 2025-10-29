@@ -223,13 +223,55 @@ using indexed keys. For example:
 opcua,id=ns\=3;s\=Temperature temp[0]=79.0,temp[1]=38.9,Quality="OK (0x0)",DataType="Float" 1597820490000000000
 ```
 
+### Namespace Index vs Namespace URI
+
+OPC UA supports two ways to specify namespaces:
+
+1. **Namespace Index** (`namespace`): An integer (0-3 or higher) that references
+   a position in the server's namespace array. This is simpler but can change if
+   the server is restarted or reconfigured.
+
+2. **Namespace URI** (`namespace_uri`): A string URI that uniquely identifies
+   the namespace. This is more stable across server restarts but requires the
+   plugin to fetch the namespace array from the server to resolve the URI to an index.
+
+**When to use namespace index:**
+- For standard OPC UA namespaces (0 = OPC UA, 1 = Local Server)
+- When namespace stability is not a concern
+- For simpler configuration
+
+**When to use namespace URI:**
+- When you need consistent node references across server restarts
+- For production environments where namespace indices might change
+- When working with vendor-specific namespaces
+
+**Example using namespace URI:**
+```toml
+[[inputs.opcua.nodes]]
+  name = "ServerStatus"
+  namespace_uri = "http://opcfoundation.org/UA/"
+  identifier_type = "i"
+  identifier = "2256"
+```
+
+This produces the same node ID internally as:
+```toml
+[[inputs.opcua.nodes]]
+  name = "ServerStatus"
+  namespace = "0"
+  identifier_type = "i"
+  identifier = "2256"
+```
+
+Note: You must specify either `namespace` or `namespace_uri`, not both.
+
 ## Group Configuration
 
-Groups can set default values for the namespace, identifier type, and
-tags settings.  The default values apply to all the nodes in the
-group.  If a default is set, a node may omit the setting altogether.
-This simplifies node configuration, especially when many nodes share
-the same namespace or identifier type.
+Groups can set default values for the namespace (index or URI), identifier type,
+and tags settings. The default values apply to all the nodes in the group. If a
+default is set, a node may omit the setting altogether. This simplifies node
+configuration, especially when many nodes share the same namespace or identifier
+type.
 
 The output metric will include tags set in the group and the node.  If
 a tag with the same name is set in both places, the tag value from the

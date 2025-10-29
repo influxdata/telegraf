@@ -88,6 +88,12 @@ func (o *readClient) connect() error {
 		return fmt.Errorf("connect failed: %w", err)
 	}
 
+	// Fetch namespace array for namespace URI support
+	if err := o.OpcUAClient.UpdateNamespaceArray(o.ctx); err != nil {
+		o.Log.Warnf("Failed to fetch namespace array: %v", err)
+		// Continue anyway - this is only needed if using namespace URIs
+	}
+
 	// Make sure we setup the node-ids correctly after reconnect
 	// as the server might be restarted and IDs changed
 	if err := o.OpcUAInputClient.InitNodeIDs(); err != nil {

@@ -2,6 +2,7 @@ package opcua
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log" //nolint:depguard // just for debug
 	"net/url"
@@ -184,7 +185,8 @@ type OpcUAClient struct {
 	Config *OpcUAClientConfig
 	Log    telegraf.Logger
 
-	Client *opcua.Client
+	Client         *opcua.Client
+	namespaceArray []string
 
 	opts  []opcua.Option
 	codes []ua.StatusCode
@@ -326,4 +328,54 @@ func (o *OpcUAClient) State() ConnectionState {
 		return Disconnected
 	}
 	return ConnectionState(o.Client.State())
+}
+
+// UpdateNamespaceArray fetches the namespace array from the OPC UA server
+// The namespace array is stored at the well-known node ns=0;i=2255
+func (o *OpcUAClient) UpdateNamespaceArray(ctx context.Context) error {
+	if o.Client == nil {
+		return errors.New("client not connected")
+	}
+
+	nodeID := ua.NewNumericNodeID(0, 2255)
+	req := &ua.ReadRequest{
+		MaxAge: 2000,
+		NodesToRead: []*ua.ReadValueID{
+			{NodeID: nodeID},
+		},
+		TimestampsToReturn: ua.TimestampsToReturnBoth,
+	}
+
+	resp, err := o.Client.Read(ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to read namespace array: %w", err)
+	}
+
+	if len(resp.Results) == 0 {
+		return errors.New("no results returned when reading namespace array")
+	}
+
+	result := resp.Results[0]
+	if result.Status != ua.StatusOK {
+		return fmt.Errorf("failed to read namespace array, status: %w", result.Status)
+	}
+
+	if result.Value == nil {
+		return errors.New("namespace array value is nil")
+	}
+
+	// The namespace array is an array of strings
+	namespaces, ok := result.Value.Value().([]string)
+	if !ok {
+		return fmt.Errorf("namespace array is not a string array, got type: %T", result.Value.Value())
+	}
+
+	o.namespaceArray = namespaces
+	o.Log.Debugf("Fetched namespace array with %d entries", len(namespaces))
+	return nil
+}
+
+// NamespaceArray returns the cached namespace array
+func (o *OpcUAClient) NamespaceArray() []string {
+	return o.namespaceArray
 }
