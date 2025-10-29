@@ -16,7 +16,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -29,15 +29,11 @@ type Arc struct {
 	Database        string            `toml:"database"`
 	Headers         map[string]string `toml:"headers"`
 	ContentEncoding string            `toml:"content_encoding"`
-	httpconfig.HTTPClientConfig
-	Log telegraf.Logger `toml:"-"`
+	Log             telegraf.Logger   `toml:"-"`
+	common_http.HTTPClientConfig
 
 	client *http.Client
-}
-
-type arcColumnarData struct {
-	Measurement string                 `msgpack:"m"`
-	Columns     map[string]interface{} `msgpack:"columns"`
+	cancel context.CancelFunc
 }
 
 func (*Arc) SampleConfig() string {
@@ -53,25 +49,26 @@ func (a *Arc) Init() error {
 		a.ContentEncoding = "gzip"
 	}
 
-	if a.Timeout == 0 {
-		a.Timeout = config.Duration(5 * time.Second)
-	}
-
 	return nil
 }
 
 func (a *Arc) Connect() error {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	client, err := a.HTTPClientConfig.CreateClient(ctx, a.Log)
 	if err != nil {
+		cancel()
 		return fmt.Errorf("failed to create HTTP client: %w", err)
 	}
 	a.client = client
+	a.cancel = cancel
 
 	return nil
 }
 
 func (a *Arc) Close() error {
+	if a.cancel != nil {
+		a.cancel()
+	}
 	if a.client != nil {
 		a.client.CloseIdleConnections()
 	}
@@ -83,6 +80,7 @@ func (a *Arc) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
+	// Group metrics by measurement name for columnar format
 	groups := make(map[string]*group)
 	for _, m := range metrics {
 		name := m.Name()
@@ -93,7 +91,8 @@ func (a *Arc) Write(metrics []telegraf.Metric) error {
 		groups[name].add(m)
 	}
 
-	messages := make([]*arcColumnarData, 0, len(groups))
+	// Extract the output messages from the groups
+	messages := make([]map[string]interface{}, 0, len(groups))
 	for _, g := range groups {
 		msg, err := g.produceMessage()
 		if err != nil {
@@ -103,50 +102,47 @@ func (a *Arc) Write(metrics []telegraf.Metric) error {
 		messages = append(messages, msg)
 	}
 
+	// Prepare the data for serialization
 	var data interface{}
 	switch len(messages) {
 	case 0:
+		// If no valid message was produced, drop all metrics
 		return nil
 	case 1:
-		data = map[string]interface{}{
-			"m":       messages[0].Measurement,
-			"columns": messages[0].Columns,
-		}
+		// Single measurement should be sent directly as a map
+		data = messages[0]
 	default:
-		dataArray := make([]interface{}, len(messages))
-		for i, msg := range messages {
-			dataArray[i] = map[string]interface{}{
-				"m":       msg.Measurement,
-				"columns": msg.Columns,
-			}
-		}
-		data = dataArray
+		// Multiple measurements should be sent as an array
+		data = messages
 	}
 
 	var buf bytes.Buffer
-	writer := msgp.NewWriter(&buf)
-	err := writer.WriteIntf(data)
-	if err != nil {
+	var writer io.Writer = &buf
+
+	// Wrap with gzip writer if compression is enabled
+	var gzipWriter *gzip.Writer
+	if a.ContentEncoding == "gzip" {
+		gzipWriter = gzip.NewWriter(&buf)
+		writer = gzipWriter
+	}
+
+	// Write MessagePack data directly to the writer (gzipped or not)
+	msgpWriter := msgp.NewWriter(writer)
+	if err := msgpWriter.WriteIntf(data); err != nil {
 		return fmt.Errorf("marshalling message failed: %w", err)
 	}
-	err = writer.Flush()
-	if err != nil {
+	if err := msgpWriter.Flush(); err != nil {
 		return fmt.Errorf("failed to flush MessagePack writer: %w", err)
 	}
 
-	payload := buf.Bytes()
-
-	if a.ContentEncoding == "gzip" {
-		var buf bytes.Buffer
-		gzipWriter := gzip.NewWriter(&buf)
-		if _, err := gzipWriter.Write(payload); err != nil {
-			return fmt.Errorf("failed to gzip payload: %w", err)
-		}
+	// Close gzip writer if used
+	if gzipWriter != nil {
 		if err := gzipWriter.Close(); err != nil {
 			return fmt.Errorf("failed to close gzip writer: %w", err)
 		}
-		payload = buf.Bytes()
 	}
+
+	payload := buf.Bytes()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
 	defer cancel()
@@ -200,7 +196,9 @@ func (a *Arc) Write(metrics []telegraf.Metric) error {
 func init() {
 	outputs.Add("arc", func() telegraf.Output {
 		return &Arc{
-			ContentEncoding: "gzip",
+			HTTPClientConfig: common_http.HTTPClientConfig{
+				Timeout: config.Duration(5 * time.Second),
+			},
 		}
 	})
 }

@@ -46,10 +46,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #   X-Custom-Header = "custom-value"
 ```
 
-## Metrics
-
-The Arc output plugin does not produce any metrics.
-
 ## Troubleshooting
 
 For authentication issues, ensure you have generated a valid API key with write
@@ -57,5 +53,4 @@ permissions. See the [Arc documentation](https://docs.basekick.net/arc) for
 details on authentication and configuration.
 
 For connection or performance issues, check that Arc is running and accessible,
-and review the Telegraf debug logs with
-`telegraf --config telegraf.conf --debug`.
+and review the Telegraf debug logs.
