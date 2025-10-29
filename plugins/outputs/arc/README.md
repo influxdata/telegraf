@@ -27,8 +27,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Arc MessagePack API URL
   url = "http://localhost:8000/api/v1/write/msgpack"
 
-  ## API Key for authentication
-  # api_key = ""
+  ## API Key for authentication (required, auth is enabled by default)
+  api_key = ""
 
   ## Database name for multi-database architecture
   ## Defaults to the server configured DB if not specified or empty
