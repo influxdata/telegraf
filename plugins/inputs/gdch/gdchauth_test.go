@@ -1,6 +1,7 @@
-package gdchhttp
+package gdch
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -11,11 +12,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf/config"
-	http_plugin "github.com/influxdata/telegraf/plugins/inputs/http"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -32,7 +33,7 @@ const (
 // --- Test Helper Functions ---
 
 // generateTestKeyFile creates a temporary service account JSON file for testing.
-func generateTestKeyFile(t *testing.T, tokenURI string) (string, *ecdsa.PrivateKey) {
+func generateTestKeyFile(t *testing.T, tokenURI string) string {
 	t.Helper()
 
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -56,36 +57,35 @@ func generateTestKeyFile(t *testing.T, tokenURI string) (string, *ecdsa.PrivateK
 
 	tmpfile, err := os.CreateTemp("", "test-sa-key-*.json")
 	require.NoError(t, err)
+	defer tmpfile.Close()
 
 	_, err = tmpfile.Write(keyData)
 	require.NoError(t, err)
-	require.NoError(t, tmpfile.Close())
 
-	return tmpfile.Name(), privateKey
+	return tmpfile.Name()
 }
 
 // --- Test Cases ---
 
-func TestInit(t *testing.T) {
+func TestGdchAuth_Init(t *testing.T) {
 	t.Run("missing service account file should fail", func(t *testing.T) {
-		plugin := &GdchHttp{
-			Http: &http_plugin.HTTP{},
-		}
-		err := plugin.Init()
+		g := &GdchAuth{Log: testutil.Logger{}}
+		err := g.Init()
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "service_account_file is required")
+		require.EqualError(t, err, "service_account_file is required")
 	})
 
-	t.Run("missing http config should fail", func(t *testing.T) {
-		plugin := &GdchHttp{
-			ServiceAccountFile: "dummy.json",
+	t.Run("non-existent service account file should fail", func(t *testing.T) {
+		g := &GdchAuth{
+			ServiceAccountFile: "non-existent-file.json",
+			Log:                testutil.Logger{},
 		}
-		err := plugin.Init()
+		err := g.Init()
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "http plugin configuration is missing")
+		require.Contains(t, err.Error(), "failed to read service account file")
 	})
 
-	t.Run("invalid service account file should fail", func(t *testing.T) {
+	t.Run("invalid service account file json should fail", func(t *testing.T) {
 		tmpfile, err := os.CreateTemp("", "invalid-sa-key-*.json")
 		require.NoError(t, err)
 		defer os.Remove(tmpfile.Name())
@@ -93,34 +93,55 @@ func TestInit(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, tmpfile.Close())
 
-		plugin := &GdchHttp{
+		g := &GdchAuth{
 			ServiceAccountFile: tmpfile.Name(),
-			Http:               &http_plugin.HTTP{},
 			Log:                testutil.Logger{},
 		}
-		err = plugin.Init()
+		err = g.Init()
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to parse service account JSON")
 	})
 
-	t.Run("successful init", func(t *testing.T) {
-		keyFile, _ := generateTestKeyFile(t, "http://localhost/token")
-		defer os.Remove(keyFile)
+	t.Run("invalid private key pem should fail", func(t *testing.T) {
+		saKey := serviceAccountKey{
+			PrivateKey: "this is not a pem",
+		}
+		keyData, err := json.Marshal(saKey)
+		require.NoError(t, err)
 
-		plugin := &GdchHttp{
-			ServiceAccountFile: keyFile,
-			Http:               &http_plugin.HTTP{},
+		tmpfile, err := os.CreateTemp("", "test-sa-key-*.json")
+		require.NoError(t, err)
+		defer os.Remove(tmpfile.Name())
+		_, err = tmpfile.Write(keyData)
+		require.NoError(t, err)
+		require.NoError(t, tmpfile.Close())
+
+		g := &GdchAuth{
+			ServiceAccountFile: tmpfile.Name(),
 			Log:                testutil.Logger{},
 		}
-		err := plugin.Init()
+		err = g.Init()
+		require.Error(t, err)
+		require.EqualError(t, err, "failed to decode PEM block from private key")
+	})
+
+	t.Run("successful init should set defaults", func(t *testing.T) {
+		keyFile := generateTestKeyFile(t, "http://localhost/token")
+		defer os.Remove(keyFile)
+
+		g := &GdchAuth{
+			ServiceAccountFile: keyFile,
+			Log:                testutil.Logger{},
+		}
+		err := g.Init()
 		require.NoError(t, err)
-		require.NotNil(t, plugin.saKey)
-		require.NotNil(t, plugin.httpClient)
-		require.Equal(t, config.Duration(5*time.Minute), plugin.TokenExpiryBuffer)
+		require.NotNil(t, g.saKey)
+		require.NotNil(t, g.httpClient)
+		require.Equal(t, config.Duration(5*time.Minute), g.TokenExpiryBuffer)
 	})
 }
 
-func TestGetToken(t *testing.T) {
+func TestGdchAuth_GetToken(t *testing.T) {
 	// --- Setup Mock Token Server ---
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Check request method and content type
@@ -142,71 +163,70 @@ func TestGetToken(t *testing.T) {
 	defer server.Close()
 
 	// --- Setup Plugin for Tests ---
-	keyFile, _ := generateTestKeyFile(t, server.URL)
+	keyFile := generateTestKeyFile(t, server.URL)
 	defer os.Remove(keyFile)
 
-	plugin := &GdchHttp{
+	g := &GdchAuth{
 		ServiceAccountFile: keyFile,
 		Audience:           testAudience,
-		Http:               &http_plugin.HTTP{},
 		Log:                testutil.Logger{},
 	}
-	err := plugin.Init()
+	err := g.Init()
 	require.NoError(t, err)
 
 	// --- Run Tests ---
 
 	t.Run("fetches new token successfully", func(t *testing.T) {
-		token, err := plugin.getToken(t.Context())
+		token, err := g.GetToken(context.Background())
 		require.NoError(t, err)
 		require.Equal(t, testAccessToken, token)
-		require.Equal(t, testAccessToken, plugin.token) // Check internal state
-		require.WithinDuration(t, time.Now().Add(testAccessTokenExpiry*time.Second), plugin.tokenExpiry, 5*time.Second)
+		require.Equal(t, testAccessToken, g.token) // Check internal state
+		require.WithinDuration(t, time.Now().Add(testAccessTokenExpiry*time.Second), g.tokenExpiry, 5*time.Second)
 	})
 
 	t.Run("uses cached token", func(t *testing.T) {
 		// Ensure token is already cached from previous test
-		require.Equal(t, testAccessToken, plugin.token)
+		require.Equal(t, testAccessToken, g.token)
 
 		// This call should not hit the server, it should return the cached token
-		token, err := plugin.getToken(t.Context())
+		token, err := g.GetToken(context.Background())
 		require.NoError(t, err)
 		require.Equal(t, testAccessToken, token)
 	})
 
 	t.Run("refreshes expired token", func(t *testing.T) {
 		// Manually expire the token by setting its expiry time to the past
-		plugin.tokenExpiry = time.Now().Add(-1 * time.Hour)
+		g.tokenExpiry = time.Now().Add(-1 * time.Hour)
 
 		// This call should detect the expiry and fetch a new token
-		token, err := plugin.getToken(t.Context())
+		token, err := g.GetToken(context.Background())
 		require.NoError(t, err)
 		require.Equal(t, testAccessToken, token)
 
 		// Verify the expiry has been updated to a future time
-		require.True(t, plugin.tokenExpiry.After(time.Now()))
+		require.True(t, g.tokenExpiry.After(time.Now()))
 	})
 
 	t.Run("refreshes token within expiry buffer", func(t *testing.T) {
 		// Set a long buffer
-		plugin.TokenExpiryBuffer = config.Duration(2 * time.Hour)
+		g.TokenExpiryBuffer = config.Duration(2 * time.Hour)
 		// Set the token to expire in less time than the buffer (e.g., 1 hour)
-		plugin.tokenExpiry = time.Now().Add(1 * time.Hour)
+		g.tokenExpiry = time.Now().Add(1 * time.Hour)
 
 		// This call should detect the token is inside the buffer window and fetch a new one
-		token, err := plugin.getToken(t.Context())
+		token, err := g.GetToken(context.Background())
 		require.NoError(t, err)
 		require.Equal(t, testAccessToken, token)
 
 		// Verify the expiry has been updated to a future time
-		require.True(t, plugin.tokenExpiry.After(time.Now()))
+		require.True(t, g.tokenExpiry.After(time.Now()))
 
 		// Reset buffer for other tests
-		plugin.TokenExpiryBuffer = config.Duration(5 * time.Minute)
+		g.TokenExpiryBuffer = config.Duration(5 * time.Minute)
 	})
 }
 
-func TestGetToken_ServerError(t *testing.T) {
+func TestGdchAuth_GetToken_ServerError(t *testing.T) {
 	// --- Setup Mock Server that always fails ---
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -216,33 +236,33 @@ func TestGetToken_ServerError(t *testing.T) {
 	defer server.Close()
 
 	// --- Setup Plugin ---
-	keyFile, _ := generateTestKeyFile(t, server.URL)
+	keyFile := generateTestKeyFile(t, server.URL)
 	defer os.Remove(keyFile)
 
-	plugin := &GdchHttp{
+	g := &GdchAuth{
 		ServiceAccountFile: keyFile,
 		Audience:           testAudience,
-		Http:               &http_plugin.HTTP{},
 		Log:                testutil.Logger{},
 	}
-	err := plugin.Init()
+	err := g.Init()
 	require.NoError(t, err)
 
 	// --- Run Test ---
 	t.Run("handles token fetch error", func(t *testing.T) {
-		token, err := plugin.getToken(t.Context())
+		token, err := g.GetToken(context.Background())
 		require.Error(t, err)
 		require.Empty(t, token)
 		require.Contains(t, err.Error(), "token request returned non-200 status 500")
 
 		// Ensure internal token state was not updated on error
-		require.Empty(t, plugin.token)
+		require.Empty(t, g.token)
 	})
 }
 
-func TestGather(t *testing.T) {
-	// --- Setup Mock Token Server ---
+func TestGdchAuth_GetToken_Concurrent(t *testing.T) {
+	callCount := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, err := fmt.Fprintf(w, `{"access_token": "%s", "expires_in": %d}`, testAccessToken, testAccessTokenExpiry)
@@ -250,30 +270,29 @@ func TestGather(t *testing.T) {
 	}))
 	defer server.Close()
 
-	// --- Setup Plugin for Test ---
-	keyFile, _ := generateTestKeyFile(t, server.URL)
+	keyFile := generateTestKeyFile(t, server.URL)
 	defer os.Remove(keyFile)
 
-	// Use the real http plugin, but we won't actually call its Gather method.
-	// We just need to check that the token is set on it.
-	httpPlugin := &http_plugin.HTTP{}
-
-	plugin := &GdchHttp{
+	g := &GdchAuth{
 		ServiceAccountFile: keyFile,
 		Audience:           testAudience,
-		Http:               httpPlugin,
 		Log:                testutil.Logger{},
 	}
-	err := plugin.Init()
+	err := g.Init()
 	require.NoError(t, err)
 
-	// --- Run Test ---
-	var acc testutil.Accumulator
-	// We do not care about the return value
-	plugin.Gather(&acc)
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			token, err := g.GetToken(context.Background())
+			require.NoError(t, err)
+			require.Equal(t, testAccessToken, token)
+		}()
+	}
+	wg.Wait()
 
-	// Verify that the token was set on the embedded http plugin
-	token, err := httpPlugin.Token.Get()
-	require.NoError(t, err)
-	require.Equal(t, testAccessToken, string(token.Bytes()))
+	// The mock server should only be called once due to the lock.
+	require.Equal(t, 1, callCount)
 }
