@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -65,6 +66,8 @@ type Tail struct {
 	cancel  context.CancelFunc
 	sem     semaphore
 	decoder *encoding.Decoder
+
+	nomatch map[string]bool
 }
 
 type empty struct{}
@@ -116,6 +119,10 @@ func (t *Tail) Init() error {
 		return fmt.Errorf("creating decoder failed: %w", err)
 	}
 	t.decoder = dec
+
+	// Initialize the map to keep track of patterns that did not produce any
+	// matching files to warn about potential permission issues only once.
+	t.nomatch = make(map[string]bool)
 
 	return nil
 }
@@ -260,7 +267,22 @@ func (t *Tail) tailNewFiles() error {
 			continue
 		}
 
-		for _, file := range g.Match() {
+		// Work around an issue in the doublestar library that requires read
+		// permissions on the directory to glob files (see
+		// https://github.com/bmatcuk/doublestar/issues/103).
+		// However, if the given file does not require globbing we can try to
+		// keep the file directly.
+		matches := g.Match()
+		if len(matches) == 0 {
+			if _, err := os.Lstat(filepath); err == nil {
+				matches = append(matches, filepath)
+			} else if !t.nomatch[filepath] {
+				t.Log.Warnf("No file(s) matching pattern %q! Make sure Telegraf has read permissions on directories followed by wildcards!", filepath)
+				t.nomatch[filepath] = true
+			}
+		}
+
+		for _, file := range matches {
 			// Mark this file as currently being processed
 			currentFiles[file] = true
 
