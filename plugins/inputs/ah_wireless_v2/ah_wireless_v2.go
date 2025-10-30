@@ -1480,6 +1480,9 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 		for cn := 0; cn < numassoc; cn++ {
 
+			/* Declare clt_sq at the beginning of client loop to ensure it's in scope */
+			var clt_sq [AH_SQ_TYPE_MAX][AH_SQ_GROUP_MAX]ah_signal_quality_stats
+
 			//Re initialiing all the temp variable for the next iteration
 			tot_rx_tx		= 0
 			tot_rate_frame		= 0
@@ -1536,7 +1539,6 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 			/* Calculation for Signal Quality as per DCD stats */
 			var changed bool
-			var clt_sq [AH_SQ_TYPE_MAX][AH_SQ_GROUP_MAX]ah_signal_quality_stats
 			changed = false
 
 			if(t.last_sq[client_mac] == nil) {
