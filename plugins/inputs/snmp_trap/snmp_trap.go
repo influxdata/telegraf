@@ -97,9 +97,7 @@ func (s *SnmpTrap) Init() error {
 		Retries:            gosnmp.Default.Retries,
 		ExponentialTimeout: gosnmp.Default.ExponentialTimeout,
 		MaxOids:            gosnmp.Default.MaxOids,
-	}
-	if s.Log.Level().Includes(telegraf.Trace) {
-		params.Logger = gosnmp.NewLogger(&logger{s.Log})
+		Logger:             gosnmp.NewLogger(&snmp.Logger{Logger: s.Log}),
 	}
 
 	switch s.Version {
