@@ -174,7 +174,7 @@ func Gather_acs_nbr(ai *Ah_airrm, acc telegraf.Accumulator) error {
 			fields["aggregationSize"] =				nbrtbl.nbr_tbl[i].aggregationSize
 			fields["clientCount"] =					nbrtbl.nbr_tbl[i].clientCount
 
-			acc.AddGauge("rfNbrStats", fields, nil)
+			acc.AddGauge("RfNbrStats", fields, nil)
 			count++
 		}
 	}
