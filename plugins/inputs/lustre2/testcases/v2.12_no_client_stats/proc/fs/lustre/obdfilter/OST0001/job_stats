@@ -1,0 +1,29 @@
+job_stats:
+- job_id:          cluster-testjob1
+  snapshot_time:   1461772761
+  read_bytes:      { samples:           1, unit: bytes, min:    4096, max:    4096, sum:            4096 }
+  write_bytes:     { samples:          25, unit: bytes, min: 1048576, max:16777216, sum:        26214400 }
+  getattr:         { samples:           0, unit:  reqs }
+  setattr:         { samples:           0, unit:  reqs }
+  punch:           { samples:           1, unit:  reqs }
+  sync:            { samples:           0, unit:  reqs }
+  destroy:         { samples:           0, unit:  reqs }
+  create:          { samples:           0, unit:  reqs }
+  statfs:          { samples:           0, unit:  reqs }
+  get_info:        { samples:           0, unit:  reqs }
+  set_info:        { samples:           0, unit:  reqs }
+  quotactl:        { samples:           0, unit:  reqs }
+- job_id:          testjob2
+  snapshot_time:   1461772761
+  read_bytes:      { samples:           1, unit: bytes, min:    1024, max:    1024, sum:            1024 }
+  write_bytes:     { samples:          25, unit: bytes, min:    2048, max:    2048, sum:           51200 }
+  getattr:         { samples:           0, unit:  reqs }
+  setattr:         { samples:           0, unit:  reqs }
+  punch:           { samples:           1, unit:  reqs }
+  sync:            { samples:           0, unit:  reqs }
+  destroy:         { samples:           0, unit:  reqs }
+  create:          { samples:           0, unit:  reqs }
+  statfs:          { samples:           0, unit:  reqs }
+  get_info:        { samples:           0, unit:  reqs }
+  set_info:        { samples:           0, unit:  reqs }
+  quotactl:        { samples:           0, unit:  reqs }
