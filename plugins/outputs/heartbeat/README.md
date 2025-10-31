@@ -132,7 +132,7 @@ _all_ log messages of all plugins and the agent itself logged _after_ the
 initialization or configuration errors in the heartbeat messages!
 
 For getting the actual log _messages_ you can include `log-details`. Via the
-optional `outputs.heartbeat.status` you can limit the messages by log-`level`
+optional `outputs.heartbeat.logs` you can limit the messages by log-`level`
 or limit the number included using the `limit` setting.
 
 > [!WARNING]
