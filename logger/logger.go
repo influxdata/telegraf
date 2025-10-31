@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/influxdata/telegraf"
 )
 
@@ -17,8 +19,19 @@ import (
 // This is necessary to be able to dynamically switch the sink even though
 // plugins already instantiated a logger _before_ the final sink is set up.
 var (
-	instance *handler  // handler for the actual output
-	once     sync.Once // once token to initialize the handler only once
+	instance   *handler                // handler for the actual output
+	callbacks  map[string]CallbackFunc // logging callback registry
+	callbackMu sync.Mutex
+	once       sync.Once // once token to initialize the handler only once
+)
+
+// CallbackFunc is a function to be called when printing messages
+type CallbackFunc func(
+	level telegraf.LogLevel,
+	timestamp time.Time,
+	source string,
+	attributes map[string]interface{},
+	arguments ...interface{},
 )
 
 // sink interface that has to be implemented by a logging sink
@@ -33,6 +46,7 @@ type logger struct {
 	name     string
 	alias    string
 
+	source     string
 	prefix     string
 	onError    []func()
 	attributes map[string]interface{}
@@ -51,17 +65,18 @@ func New(category, name, alias string) *logger {
 	}
 
 	// Format the prefix
-	l.prefix = l.category
+	l.source = l.category
 
-	if l.prefix != "" && l.name != "" {
-		l.prefix += "."
+	if l.source != "" && l.name != "" {
+		l.source += "."
 	}
-	l.prefix += l.name
+	l.source += l.name
 
-	if l.prefix != "" && l.alias != "" {
-		l.prefix += "::"
+	if l.source != "" && l.alias != "" {
+		l.source += "::"
 	}
-	l.prefix += l.alias
+	l.source += l.alias
+	l.prefix = l.source
 
 	if l.prefix != "" {
 		l.prefix = "[" + l.prefix + "] "
@@ -141,6 +156,13 @@ func (l *logger) Print(level telegraf.LogLevel, ts time.Time, args ...interface{
 	if instance.impl == nil {
 		instance.add(level, ts, l.prefix, l.attributes, args...)
 	}
+
+	// Serve all registered callbacks
+	callbackMu.Lock()
+	for _, cb := range callbacks {
+		cb(level, ts.UTC(), l.source, l.attributes, args...)
+	}
+	callbackMu.Unlock()
 
 	// Skip all messages with insufficient log-levels
 	if l.level != nil && !l.level.Includes(level) || l.level == nil && !instance.level.Includes(level) {
@@ -301,11 +323,40 @@ func CloseLogging() error {
 	return nil
 }
 
+// AddCallback adds the given callback function to the registry and returns an
+// ID that can be used for removing the callback later
+func AddCallback(callback CallbackFunc) string {
+	// Create a cookie to be returned to the caller in order to be able to
+	// remove the callback later
+	rawid, err := uuid.NewRandom()
+	if err != nil {
+		// This call can never return anything except nil, check anyway
+		panic(err)
+	}
+	id := rawid.String()
+
+	callbackMu.Lock()
+	callbacks[id] = callback
+	callbackMu.Unlock()
+
+	return id
+}
+
+// RemoveCallback removes the callback function with the given ID from the registry
+func RemoveCallback(id string) {
+	callbackMu.Lock()
+	defer callbackMu.Unlock()
+	delete(callbacks, id)
+}
+
 func init() {
 	once.Do(func() {
 		// Create a special logging instance that additionally buffers all
 		// messages logged before the final logger is up.
 		instance = defaultHandler()
+
+		// Setup callback registry
+		callbacks = make(map[string]CallbackFunc)
 
 		// Redirect the standard logger output to our logger instance
 		log.SetFlags(0)
