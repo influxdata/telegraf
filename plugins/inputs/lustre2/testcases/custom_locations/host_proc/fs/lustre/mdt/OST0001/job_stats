@@ -1,0 +1,37 @@
+job_stats:
+- job_id:          cluster-testjob1
+  snapshot_time:   1461772761
+  open:            { samples:           5, unit:  reqs }
+  close:           { samples:           4, unit:  reqs }
+  mknod:           { samples:           6, unit:  reqs }
+  link:            { samples:           8, unit:  reqs }
+  unlink:          { samples:          90, unit:  reqs }
+  mkdir:           { samples:         521, unit:  reqs }
+  rmdir:           { samples:         520, unit:  reqs }
+  rename:          { samples:           9, unit:  reqs }
+  getattr:         { samples:          11, unit:  reqs }
+  setattr:         { samples:           1, unit:  reqs }
+  getxattr:        { samples:           3, unit:  reqs }
+  setxattr:        { samples:           4, unit:  reqs }
+  statfs:          { samples:        1205, unit:  reqs }
+  sync:            { samples:           2, unit:  reqs }
+  samedir_rename:  { samples:         705, unit:  reqs }
+  crossdir_rename: { samples:         200, unit:  reqs }
+- job_id:          testjob2
+  snapshot_time:   1461772761
+  open:            { samples:           6, unit:  reqs }
+  close:           { samples:           7, unit:  reqs }
+  mknod:           { samples:           8, unit:  reqs }
+  link:            { samples:           9, unit:  reqs }
+  unlink:          { samples:          20, unit:  reqs }
+  mkdir:           { samples:         200, unit:  reqs }
+  rmdir:           { samples:         210, unit:  reqs }
+  rename:          { samples:           8, unit:  reqs }
+  getattr:         { samples:          10, unit:  reqs }
+  setattr:         { samples:           2, unit:  reqs }
+  getxattr:        { samples:           4, unit:  reqs }
+  setxattr:        { samples:           5, unit:  reqs }
+  statfs:          { samples:        1207, unit:  reqs }
+  sync:            { samples:           3, unit:  reqs }
+  samedir_rename:  { samples:         706, unit:  reqs }
+  crossdir_rename: { samples:         201, unit:  reqs }
