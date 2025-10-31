@@ -160,7 +160,7 @@ expressions are evaluated also before the first flush.
 The `ok`, `warn` and `fail` settings allow to specify [CEL expressions][cel]
 evaluating to a boolean value. Available information for the expressions are
 listed below. The first expression evaluating to `true` defines the status.
-The `order` parameter allows to customize the evaluation order.
+The `order` parameter customizes the evaluation order.
 
 > [!NOTE]
 > If an expression is omitted in the `order` setting it will __not__ be
