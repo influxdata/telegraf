@@ -166,62 +166,6 @@ func requiredSectionsClose(headings []string) func(*T, ast.Node) error {
 	}
 }
 
-func noLongLinesInParagraphs(threshold int) func(*T, ast.Node) error {
-	return func(t *T, root ast.Node) error {
-		// We're looking for long lines in paragraphs. Find paragraphs
-		// first, then which lines are in paragraphs
-		paraLines := make([]int, 0)
-		for n := root.FirstChild(); n != nil; n = n.NextSibling() {
-			var p *ast.Paragraph
-			var ok bool
-			if p, ok = n.(*ast.Paragraph); !ok {
-				continue // only looking for paragraphs
-			}
-
-			segs := p.Lines()
-			for _, seg := range segs.Sliced(0, segs.Len()) {
-				line := t.line(seg.Start)
-				paraLines = append(paraLines, line)
-			}
-		}
-
-		// Find long lines in the whole file
-		longLines := make([]int, 0, len(t.newlineOffsets))
-		last := 0
-		for i, cur := range t.newlineOffsets {
-			length := cur - last - 1 // -1 to exclude the newline
-			if length > threshold {
-				longLines = append(longLines, i)
-			}
-			last = cur
-		}
-
-		// Merge both lists
-		p := 0
-		l := 0
-		bads := make([]int, 0, max(len(paraLines), len(longLines)))
-		for p < len(paraLines) && l < len(longLines) {
-			long := longLines[l]
-			para := paraLines[p]
-			switch {
-			case long == para:
-				bads = append(bads, long)
-				p++
-				l++
-			case long < para:
-				l++
-			case long > para:
-				p++
-			}
-		}
-
-		for _, bad := range bads {
-			t.assertLinef(bad, "long line in paragraph")
-		}
-		return nil
-	}
-}
-
 func configSection(t *T, root ast.Node) error {
 	var config *ast.Heading
 	config = nil

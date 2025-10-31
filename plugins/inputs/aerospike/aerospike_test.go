@@ -16,7 +16,7 @@ const servicePort = "3000"
 
 func launchTestServer(t *testing.T) *testutil.Container {
 	container := testutil.Container{
-		Image:        "aerospike:ce-6.0.0.1",
+		Image:        "aerospike:ce-8.1.0.1",
 		ExposedPorts: []string{servicePort},
 		WaitingFor:   wait.ForLog("migrations: complete"),
 	}
@@ -114,7 +114,7 @@ func TestSelectNamespacesIntegration(t *testing.T) {
 	require.Equal(t, 1, count)
 
 	// expect namespace to have no fields as nonexistent
-	require.False(t, acc.HasInt64Field("aerospke_namespace", "appeals_tx_remaining"))
+	require.False(t, acc.HasInt64Field("aerospike_namespace", "appeals_tx_remaining"))
 }
 
 func TestDisableQueryNamespacesIntegration(t *testing.T) {
@@ -199,7 +199,7 @@ func TestQuerySetsIntegration(t *testing.T) {
 
 	require.True(t, acc.HasMeasurement("aerospike_set"))
 	require.True(t, acc.HasTag("aerospike_set", "set"))
-	require.True(t, acc.HasInt64Field("aerospike_set", "memory_data_bytes"))
+	require.True(t, acc.HasInt64Field("aerospike_set", "data_used_bytes"))
 }
 
 func TestSelectQuerySetsIntegration(t *testing.T) {
@@ -255,7 +255,7 @@ func TestSelectQuerySetsIntegration(t *testing.T) {
 
 	require.True(t, acc.HasMeasurement("aerospike_set"))
 	require.True(t, acc.HasTag("aerospike_set", "set"))
-	require.True(t, acc.HasInt64Field("aerospike_set", "memory_data_bytes"))
+	require.True(t, acc.HasInt64Field("aerospike_set", "data_used_bytes"))
 }
 
 func TestDisableTTLHistogramIntegration(t *testing.T) {
@@ -306,6 +306,15 @@ func TestDisableObjectSizeLinearHistogramIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	require.False(t, acc.HasMeasurement("aerospike_histogram_object_size_linear"))
+}
+
+func TestInit(t *testing.T) {
+	a := &Aerospike{}
+
+	require.NoError(t, a.Init())
+
+	require.Equal(t, 10, a.NumberHistogramBuckets)
+	require.Nil(t, a.tlsConfig)
 }
 
 func TestParseNodeInfo(t *testing.T) {

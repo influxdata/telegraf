@@ -30,7 +30,6 @@ const emptyInstance = "------"
 
 type WinPerfCounters struct {
 	PrintValid                 bool            `toml:"PrintValid"`
-	PreVistaSupport            bool            `toml:"PreVistaSupport" deprecated:"1.7.0;1.35.0;determined dynamically"`
 	UsePerfCounterTime         bool            `toml:"UsePerfCounterTime"`
 	Object                     []perfObject    `toml:"object"`
 	CountersRefreshInterval    config.Duration `toml:"CountersRefreshInterval"`

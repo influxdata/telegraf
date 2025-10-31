@@ -99,7 +99,8 @@ Currently the following `data-type`s are supported:
 - `bool`    TruthValue according to [RFC5101][RFC5101]
 - `int`     signed integer with 8, 16, 32 or 64 bit
 - `uint`    unsigned integer with 8, 16, 32 or 64 bit
-- `float64` double-precision floating-point number
+- `float32` double-precision floating-point number (32 bit)
+- `float64` double-precision floating-point number (64 bit)
 - `hex`     hex-encoding of the raw byte sequence with `0x` prefix
 - `string`  string interpretation of the raw byte sequence
 - `mac`     MAC address

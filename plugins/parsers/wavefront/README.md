@@ -1,8 +1,9 @@
 # Wavefront Parser Plugin
 
 Wavefront Data Format is metrics are parsed directly into Telegraf metrics.
-For more information about the Wavefront Data Format see
-[here](https://docs.wavefront.com/wavefront_data_format.html).
+For more information check the [Wavefront Data Format documentation][docs].
+
+[docs]: https://docs.wavefront.com/wavefront_data_format.html
 
 ## Configuration
 

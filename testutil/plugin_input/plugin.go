@@ -16,7 +16,7 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// Example struct should be named the same as the Plugin
+// Plugin struct should be named the same as the plugin
 type Plugin struct {
 	Files            []string               `toml:"files"`
 	DefaultTags      map[string]string      `toml:"default_tag_defs"`

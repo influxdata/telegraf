@@ -122,7 +122,6 @@ func (o *OpenTelemetry) Close() error {
 	return nil
 }
 
-// Split metrics up by timestamp and send to Google Cloud Stackdriver
 func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 	metricBatch := make(map[int64][]telegraf.Metric)
 	timestamps := make([]int64, 0, len(metrics))

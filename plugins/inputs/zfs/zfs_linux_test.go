@@ -4,10 +4,15 @@ package zfs
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -387,6 +392,53 @@ func TestGetTags(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tags := getTags(tc.pools)
 			require.Equal(t, tc.expected, tags)
+		})
+	}
+}
+
+func TestCases(t *testing.T) {
+	// Get all testcase directories
+	testpath := filepath.Join("testcases", "linux")
+	folders, err := os.ReadDir(testpath)
+	require.NoError(t, err)
+
+	// Register the plugin
+	inputs.Add("zfs", func() telegraf.Input { return &Zfs{} })
+
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
+		}
+
+		t.Run(f.Name(), func(t *testing.T) {
+			testcasePath := filepath.Join(testpath, f.Name())
+			configFilename := filepath.Join(testcasePath, "telegraf.conf")
+			expectedFilename := filepath.Join(testcasePath, "expected.out")
+			procPath := filepath.Join(testcasePath, "zfs") // contents of /proc/spl/kstat/zfs
+
+			// Read the expected output
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+			expected, err := testutil.ParseMetricsFromFile(expectedFilename, parser)
+			require.NoError(t, err)
+
+			// Configure the plugin
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Inputs, 1)
+
+			// Setup the plugin
+			plugin := cfg.Inputs[0].Input.(*Zfs)
+			plugin.KstatPath = procPath
+			plugin.Log = testutil.Logger{}
+
+			// Gather and test
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Gather(&acc))
+
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 		})
 	}
 }

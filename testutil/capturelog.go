@@ -54,7 +54,7 @@ func (*CaptureLogger) Level() telegraf.LogLevel {
 	return telegraf.Trace
 }
 
-// Adding attributes is not supported by the test-logger
+// AddAttribute is not supported by the test-logger
 func (*CaptureLogger) AddAttribute(string, interface{}) {}
 
 func (l *CaptureLogger) Errorf(format string, args ...interface{}) {

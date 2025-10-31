@@ -38,9 +38,9 @@ The [Dockerfiles][] for these images are available for users to use as well.
 
 ## Lockable Memory
 
-Telegraf does require the ability to use lockable memory when running by default. In some
-deployments for Docker a container may not have enough lockable memory, which
-results in the following warning:
+Telegraf does require the ability to use lockable memory when running by
+default. In some deployments for Docker a container may not have enough lockable
+memory, which results in the following warning:
 
 ```text
 W! Insufficient lockable memory 64kb when 72kb is required. Please increase the limit for Telegraf in your Operating System!

@@ -49,7 +49,6 @@ func init() {
 		firstSection,
 		configSection,
 		relativeTelegrafLinks,
-		noLongLinesInParagraphs(80),
 	}
 	for i := pluginInput; i <= pluginParser; i++ {
 		rules[i] = all

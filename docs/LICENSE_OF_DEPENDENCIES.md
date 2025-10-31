@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD013 -->
 # Licenses of dependencies
 
 When distributed in a binary form, Telegraf may contain portions of the
@@ -147,6 +148,8 @@ following works:
 - github.com/ebitengine/purego [Apache License 2.0](https://github.com/ebitengine/purego/blob/main/LICENSE)
 - github.com/eclipse/paho.golang [Eclipse Public License - v 2.0](https://github.com/eclipse/paho.golang/blob/master/LICENSE)
 - github.com/eclipse/paho.mqtt.golang [Eclipse Public License - v 2.0](https://github.com/eclipse/paho.mqtt.golang/blob/master/LICENSE)
+- github.com/elastic/go-sysinfo [Apache License 2.0](https://github.com/elastic/go-sysinfo/blob/main/LICENSE.txt)
+- github.com/elastic/go-windows [Apache License 2.0](https://github.com/elastic/go-windows/blob/main/LICENSE.txt)
 - github.com/emicklei/go-restful [MIT License](https://github.com/emicklei/go-restful/blob/v3/LICENSE)
 - github.com/envoyproxy/go-control-plane/envoy [Apache License 2.0](https://github.com/envoyproxy/go-control-plane/blob/main/LICENSE)
 - github.com/envoyproxy/protoc-gen-validate [Apache License 2.0](https://github.com/bufbuild/protoc-gen-validate/blob/main/LICENSE)
@@ -174,6 +177,7 @@ following works:
 - github.com/go-sql-driver/mysql [Mozilla Public License 2.0](https://github.com/go-sql-driver/mysql/blob/master/LICENSE)
 - github.com/go-stack/stack [MIT License](https://github.com/go-stack/stack/blob/master/LICENSE.md)
 - github.com/go-stomp/stomp [Apache License 2.0](https://github.com/go-stomp/stomp/blob/master/LICENSE.txt)
+- github.com/go-viper/mapstructure [MIT License](https://github.com/go-viper/mapstructure/blob/main/LICENSE)
 - github.com/gobwas/glob [MIT License](https://github.com/gobwas/glob/blob/master/LICENSE)
 - github.com/goccy/go-json [MIT License](https://github.com/goccy/go-json/blob/master/LICENSE)
 - github.com/godbus/dbus [BSD 2-Clause "Simplified" License](https://github.com/godbus/dbus/blob/master/LICENSE)
@@ -254,6 +258,7 @@ following works:
 - github.com/jeremywohl/flatten [MIT License](https://github.com/jeremywohl/flatten/blob/master/LICENSE)
 - github.com/jmespath/go-jmespath [Apache License 2.0](https://github.com/jmespath/go-jmespath/blob/master/LICENSE)
 - github.com/jmhodges/clock [MIT License](https://github.com/jmhodges/clock/blob/main/LICENSE)
+- github.com/joeshaw/multierror [MIT License](https://github.com/joeshaw/multierror/blob/master/LICENSE)
 - github.com/josharian/intern [MIT License](https://github.com/josharian/intern/blob/master/LICENSE.md)
 - github.com/josharian/native [MIT License](https://github.com/josharian/native/blob/main/license)
 - github.com/jpillora/backoff [MIT License](https://github.com/jpillora/backoff/blob/master/LICENSE)
@@ -308,6 +313,7 @@ following works:
 - github.com/mtibben/percent [MIT License](https://github.com/mtibben/percent/blob/master/LICENSE)
 - github.com/multiplay/go-ts3 [BSD 2-Clause "Simplified" License](https://github.com/multiplay/go-ts3/blob/master/LICENSE)
 - github.com/munnerz/goautoneg [BSD 3-Clause Clear License](https://github.com/munnerz/goautoneg/blob/master/LICENSE)
+- github.com/mwitkow/go-conntrack [Apache License 2.0](https://github.com/mwitkow/go-conntrack/blob/master/LICENSE)
 - github.com/naoina/go-stringutil [MIT License](https://github.com/naoina/go-stringutil/blob/master/LICENSE)
 - github.com/nats-io/jwt [Apache License 2.0](https://github.com/nats-io/jwt/blob/master/LICENSE)
 - github.com/nats-io/nats-server [Apache License 2.0](https://github.com/nats-io/nats-server/blob/master/LICENSE)
@@ -408,6 +414,7 @@ following works:
 - github.com/urfave/cli [MIT License](https://github.com/urfave/cli/blob/main/LICENSE)
 - github.com/valyala/bytebufferpool [MIT License](https://github.com/valyala/bytebufferpool/blob/master/LICENSE)
 - github.com/vapourismo/knx-go [MIT License](https://github.com/vapourismo/knx-go/blob/master/LICENSE)
+- github.com/vertica/vertica-sql-go [Apache License 2.0](https://github.com/vertica/vertica-sql-go/blob/master/LICENSE)
 - github.com/vishvananda/netlink [Apache License 2.0](https://github.com/vishvananda/netlink/blob/master/LICENSE)
 - github.com/vishvananda/netns [Apache License 2.0](https://github.com/vishvananda/netns/blob/master/LICENSE)
 - github.com/vjeantet/grok [Apache License 2.0](https://github.com/vjeantet/grok/blob/master/LICENSE)
@@ -484,6 +491,7 @@ following works:
 - gopkg.in/tomb.v2 [BSD 3-Clause Clear License](https://github.com/go-tomb/tomb/blob/v2/LICENSE)
 - gopkg.in/yaml.v2 [Apache License 2.0](https://github.com/go-yaml/yaml/blob/v2.2.2/LICENSE)
 - gopkg.in/yaml.v3 [MIT License](https://github.com/go-yaml/yaml/blob/v3/LICENSE)
+- howett.net/plist [BSD-2-Clause-Views, BSD-3-Clause](https://github.com/DHowett/go-plist/blob/main/LICENSE)
 - k8s.io/api [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 - k8s.io/apimachinery [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 - k8s.io/client-go [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)

@@ -1,12 +1,11 @@
+//go:generate ../../../tools/config_includer/generator
 //go:generate ../../../tools/readme_config_includer/generator
 package mongodb
 
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	_ "embed"
-	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -37,17 +36,11 @@ type MongoDB struct {
 	DisconnectedServersBehavior string   `toml:"disconnected_servers_behavior"`
 	ColStatsDBs                 []string `toml:"col_stats_dbs"`
 	common_tls.ClientConfig
-	Ssl ssl
 
 	Log telegraf.Logger `toml:"-"`
 
 	clients   []*server
 	tlsConfig *tls.Config
-}
-
-type ssl struct {
-	Enabled bool     `toml:"ssl_enabled" deprecated:"1.3.0;1.35.0;use 'tls_*' options instead"`
-	CaCerts []string `toml:"cacerts" deprecated:"1.3.0;1.35.0;use 'tls_ca' instead"`
 }
 
 func (*MongoDB) SampleConfig() string {
@@ -63,29 +56,11 @@ func (m *MongoDB) Init() error {
 		return fmt.Errorf("disconnected_servers_behavior: %w", err)
 	}
 
-	if m.Ssl.Enabled {
-		// Deprecated TLS config
-		m.tlsConfig = &tls.Config{
-			InsecureSkipVerify: m.ClientConfig.InsecureSkipVerify,
-		}
-		if len(m.Ssl.CaCerts) == 0 {
-			return errors.New("you must explicitly set insecure_skip_verify to skip certificate validation")
-		}
-
-		roots := x509.NewCertPool()
-		for _, caCert := range m.Ssl.CaCerts {
-			if ok := roots.AppendCertsFromPEM([]byte(caCert)); !ok {
-				return errors.New("failed to parse root certificate")
-			}
-		}
-		m.tlsConfig.RootCAs = roots
-	} else {
-		var err error
-		m.tlsConfig, err = m.ClientConfig.TLSConfig()
-		if err != nil {
-			return err
-		}
+	tlsConfig, err := m.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
 	}
+	m.tlsConfig = tlsConfig
 
 	if len(m.Servers) == 0 {
 		m.Servers = []string{"mongodb://127.0.0.1:27017"}
@@ -157,9 +132,7 @@ func (m *MongoDB) setupConnection(connURL string) error {
 	defer cancel()
 
 	opts := options.Client().ApplyURI(connURL)
-	if m.tlsConfig != nil {
-		opts.TLSConfig = m.tlsConfig
-	}
+	opts.TLSConfig = m.tlsConfig
 	if opts.ReadPreference == nil {
 		opts.ReadPreference = readpref.Nearest()
 	}

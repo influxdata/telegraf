@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
 )
 
 //go:embed sample_register.conf
@@ -277,14 +276,6 @@ func validateFieldDefinitions(fieldDefs []fieldDefinition, registerType string) 
 }
 
 func (*configurationOriginal) normalizeInputDatatype(dataType string, words int) (string, error) {
-	if dataType == "FLOAT32" {
-		config.PrintOptionValueDeprecationNotice("input.modbus", "data_type", "FLOAT32", telegraf.DeprecationInfo{
-			Since:     "1.16.0",
-			RemovalIn: "1.35.0",
-			Notice:    "Use 'UFIXED' instead",
-		})
-	}
-
 	// Handle our special types
 	switch dataType {
 	case "FIXED":
@@ -298,7 +289,7 @@ func (*configurationOriginal) normalizeInputDatatype(dataType string, words int)
 		default:
 			return "unknown", fmt.Errorf("invalid length %d for type %q", words, dataType)
 		}
-	case "FLOAT32", "UFIXED":
+	case "UFIXED":
 		switch words {
 		case 1:
 			return "UINT16", nil

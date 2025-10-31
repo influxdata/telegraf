@@ -610,7 +610,8 @@ Parameters that can be used with any aggregator plugin:
   the name of the input).
 - **name_prefix**: Specifies a prefix to attach to the measurement name.
 - **name_suffix**: Specifies a suffix to attach to the measurement name.
-- **tags**: A map of tags to apply to the measurement - behavior varies based on aggregator.
+- **tags**: A map of tags to apply to the measurement - behavior varies based on
+            aggregator.
 - **log_level**: Override the log-level for this plugin. Possible values are
   `error`, `warn`, `info` and `debug`.
 
@@ -703,21 +704,21 @@ is tested on metrics after they have passed the `tagpass` test.
 A ["Common Expression Language"][CEL] (CEL) expression with boolean result where
 `true` will allow the metric to pass, otherwise the metric is discarded. This
 filter expression is more general compared to e.g. `namepass` and also allows
-for time-based filtering. An introduction to the CEL language can be found
-[here][CEL intro]. Further details, such as available functions and expressions,
-are provided in the [language definition][CEL lang] as well as in the
-[extension documentation][CEL ext].
+for time-based filtering. Further details, such as available functions and
+expressions, are provided in the [language definition][CEL lang] as well as in
+the [extension documentation][CEL ext] or the
+[CEL language introduction][CEL intro].
 
-**NOTE:** Expressions that may be valid and compile, but fail at runtime will
-result in the expression reporting as `true`. The metrics will pass through
-as a result. An example is when reading a non-existing field. If this happens,
-the evaluation is aborted, an error is logged, and the expression is reported as
+Expressions that may be valid and compile, but fail at runtime will result in
+the expression reporting as `true`. The metrics will pass through as a result.
+An example is when reading a non-existing field. If this happens, the
+evaluation is aborted, an error is logged, and the expression is reported as
 `true`, so the metric passes.
 
-> NOTE: As CEL is an *interpreted* languguage, this type of filtering is much
-> slower compared to `namepass`/`namedrop` and friends. So consider to use the
-> more restricted filter options where possible in case of high-throughput
-> scenarios.
+> [!NOTE]
+> As CEL is an *interpreted* language, this type of filtering is much slower
+> compared to `namepass`/`namedrop` and friends. So consider to use the more
+> restricted filter options where possible in case of high-throughput scenarios.
 
 [CEL]:https://github.com/google/cel-go/tree/master
 [CEL intro]: https://codelabs.developers.google.com/codelabs/cel-go

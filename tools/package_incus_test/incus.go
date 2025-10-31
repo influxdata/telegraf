@@ -100,7 +100,7 @@ func (c *IncusClient) Delete(name string) error {
 	return op.Wait()
 }
 
-// Run a command returning result struct. Will kill commands that take longer
+// Exec runs a command returning result struct. Will kill commands that take longer
 // than 120 seconds.
 func (c *IncusClient) Exec(name string, command ...string) error {
 	fmt.Printf("$ %s\n", strings.Join(command, " "))

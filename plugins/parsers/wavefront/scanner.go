@@ -5,7 +5,6 @@ import (
 	"io"
 )
 
-// Lexical Point Scanner
 type PointScanner struct {
 	r *bufio.Reader
 }

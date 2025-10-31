@@ -1,14 +1,19 @@
 # JSON Parser Version 2 Plugin
 
 This parser takes valid JSON input and turns it into line protocol. The query
-syntax supported is [GJSON Path
-Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md), you can go to
-this playground to test out your GJSON path here:
-[gjson.dev/](https://gjson.dev). You can find multiple examples under the
-[`testdata`][] folder.
+syntax supported is [GJSON Path Syntax][gjson], you can go to the
+[GJSON playground][playground] to test out your GJSON path expressions. You can
+find multiple examples under the [`testdata` folder][testdata].
 
 > [!WARNING]
-> In the current state of the implementation, the json_v2 parser should be avoided in favor of the [XPath Parser](../xpath), especially when working with arrays.
+> In the current state of the implementation, the json_v2 parser should be
+> avoided in favor of the [XPath parser][xpath], especially when working with
+> arrays.
+
+[gjson]: https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md
+[playground]: https://gjson.dev
+[testdata]: /plugins/parsers/json_v2/testdata
+[xpath]: /plugins/parsers/xpath/README.md
 
 ## Configuration
 
@@ -73,33 +78,42 @@ sub-tables called `field`, `tag`, and `object`. In the example below you can see
 all the possible configuration keys you can define for each config table. In the
 sections that follow these configuration keys are defined in more detail.
 
----
+### General options
 
-### root config options
+The optional `measurement_name` sets the name of emitted metrics to the provided
+string.
 
-* **measurement_name (OPTIONAL)**:  Will set the measurement name to the provided string.
-* **measurement_name_path (OPTIONAL)**: You can define a query with [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md) to set a measurement name from the JSON input. The query must return a single data value or it will use the default measurement name. This takes precedence over `measurement_name`.
-* **timestamp_path (OPTIONAL)**: You can define a query with [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md) to set a timestamp from the JSON input. The query must return a single data value or it will default to the current time.
-* **timestamp_format (OPTIONAL, but REQUIRED when timestamp_path is defined**: Must be set to `unix`, `unix_ms`, `unix_us`, `unix_ns`, or
-the Go "reference time" which is defined to be the specific time:
+The optional `measurement_name_path` defines a GJSON query to set a metric name
+from the JSON input. The query must return a single data value otherwise the
+parser will use the default measurement name. This option takes precedence over
+`measurement_name`.
+
+The optional `timestamp_path` defines a GJSON query to set the metric timestamp
+from the JSON input. The query must return a single data value otherwise the
+parser will default to the current time.
+
+The optional `timestamp_format` is **required** in case `timestamp_path` is
+defined. The option can take the values `unix`, `unix_ms`, `unix_us`, `unix_ns`,
+or a Go "reference time" which is defined to be the specific time
 `Mon Jan 2 15:04:05 MST 2006`
-* **timestamp_timezone (OPTIONAL, but REQUIRES timestamp_path**: This option should be set to a
-[Unix TZ value](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones),
-such as `America/New_York`, to `Local` to utilize the system timezone, or to `UTC`. Defaults to `UTC`
 
----
+The optional `timestamp_timezone` defaults to `UTC` but is **required** in case
+`timestamp_path` is defined. This option should be set to a
+[Unix TZ value][unix_tz], such as `America/New_York`, to `Local` to utilize the
+system timezone or to `UTC`.
 
-### `field` and `tag` config options
+[unix_tz]: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 
-`field` and `tag` represent the elements of [line protocol][lp-ref]. You can use
+### `field` and `tag` options
+
+`field` and `tag` represent the elements of [line protocol][lpref]. You can use
 the `field` and `tag` config tables to gather a single value or an array of
 values that all share the same type and name. With this you can add a field or
 tag to a line protocol from data stored anywhere in your JSON. If you define the
 GJSON path to return a single value then you will get a single resulting line
 protocol that contains the field/tag. If you define the GJSON path to return an
 array of values, then each field/tag will be put into a separate line protocol
-(you use the # character to retrieve JSON arrays, find examples
-[here](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md#arrays)).
+(you use the # character to retrieve JSON arrays, see [examples][examples]).
 
 Note that objects are handled separately, therefore if you provide a path that
 returns a object it will be ignored. You will need use the `object` config table
@@ -116,23 +130,33 @@ type of `field` to be any [type that line protocol supports][types], which are:
 * string
 * bool
 
-[lp-ref]: https://docs.influxdata.com/influxdb/v2.0/reference/syntax/line-protocol/
-
+[lpref]: https://docs.influxdata.com/influxdb/v2.0/reference/syntax/line-protocol/
 [types]: https://docs.influxdata.com/influxdb/v2.0/reference/syntax/line-protocol/#data-types-and-format
+[examples]: https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md#arrays
 
 #### **field**
 
-Using this field configuration you can gather a non-array/non-object
-values. Note this acts as a global field when used with the `object`
-configuration, if you gather an array of values using `object` then the field
-gathered will be added to each resulting line protocol without acknowledging its
-location in the original JSON. This is defined in TOML as an array table using
-double brackets.
+Using this field configuration you can gather a non-array/non-object values.
+Note this acts as a global field when used with the `object` configuration, if
+you gather an array of values using `object` then the field gathered will be
+added to each resulting line protocol without acknowledging its location in the
+original JSON. This is defined in TOML as an array table using double brackets.
 
-* **path (REQUIRED)**: A string with valid GJSON path syntax to a non-array/non-object value
-* **name (OPTIONAL)**: You can define a string value to set the field name. If not defined it will use the trailing word from the provided query.
-* **type (OPTIONAL)**: You can define a string value to set the desired type (float, int, uint, string, bool). If not defined it won't enforce a type and default to using the original type defined in the JSON (bool, float, or string).
-* **optional (OPTIONAL)**: Setting optional to true will suppress errors if the configured Path doesn't match the JSON. This should be used with caution because it removes the safety net of verifying the provided path. An example case to use this is with the `inputs.mqtt_consumer` plugin when you are expecting multiple JSON files.
+The required `path` setting contains a string with valid GJSON path syntax to a
+non-array/non-object value.
+
+The optional `name` defines a string value to set the field name. If not defined
+it will use the trailing word from the provided query.
+
+The optional `type` defines a string value to set the desired type (float, int,
+uint, string, bool). If not defined it won't enforce a type and default to using
+the original type defined in the JSON (bool, float, or string).
+
+The optional `optional` setting can suppress errors if the configured path
+doesn't match the JSON data. This should be used with caution because it removes
+the safety net of verifying the provided path. An example case to use this is
+with the `inputs.mqtt_consumer` plugin when you are expecting multiple JSON
+files.
 
 #### **tag**
 
@@ -142,14 +166,20 @@ gather an array of values using `object` then the tag gathered will be added to
 each resulting line protocol without acknowledging its location in the original
 JSON. This is defined in TOML as an array table using double brackets.
 
-* **path (REQUIRED)**: A string with valid GJSON path syntax to a non-array/non-object value
-* **name (OPTIONAL)**: You can define a string value to set the field name. If not defined it will use the trailing word from the provided query.
-* **optional (OPTIONAL)**: Setting optional to true will suppress errors if the configured Path doesn't match the JSON. This should be used with caution because it removes the safety net of verifying the provided path. An example case to use this is with the `inputs.mqtt_consumer` plugin when you are expecting multiple JSON files.
+The required `path` setting contains a string with valid GJSON path syntax to a
+non-array/non-object value.
+
+The optional `name` defines a string value to set the field name. If not defined
+it will use the trailing word from the provided query.
+
+The optional `optional` setting can suppress errors if the configured path
+doesn't match the JSON data. This should be used with caution because it removes
+the safety net of verifying the provided path. An example case to use this is
+with the `inputs.mqtt_consumer` plugin when you are expecting multiple JSON
+files.
 
 For good examples in using `field` and `tag` you can reference the following
 example configs:
-
----
 
 ### object
 
@@ -159,34 +189,70 @@ TOML as an array table using double brackets.
 
 #### The following keys can be set for `object`
 
-* **path (REQUIRED)**: You must define the path query that gathers the object with [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md)
-* **optional (OPTIONAL)**: Setting optional to true will suppress errors if the configured Path doesn't match the JSON. This should be used with caution because it removes the safety net of verifying the provided path. An example case to use this is with the `inputs.mqtt_consumer` plugin when you are expecting multiple JSON files.
+The required `path` must define the GJSON path query that gathers the object.
 
-*Keys to define what JSON keys should be used as timestamps:*
+The optional `optional` setting can suppress errors if the configured path
+doesn't match the JSON data. This should be used with caution because it removes
+the safety net of verifying the provided path. An example case to use this is
+with the `inputs.mqtt_consumer` plugin when you are expecting multiple JSON
+files.
 
-* **timestamp_key(OPTIONAL)**: You can define a json key (for a nested key, prepend the parent keys with underscores) for the value to be set as the timestamp from the JSON input.
-* **timestamp_format (OPTIONAL, but REQUIRED when timestamp_key is defined**: Must be set to `unix`, `unix_ms`, `unix_us`, `unix_ns`, or
-the Go "reference time" which is defined to be the specific time:
+#### Keys to define what JSON keys should be used as timestamps
+
+The optional `timestamp_key` defines a JSON key (for a nested key, prepend the
+parent keys with underscores) for the value to be set as the timestamp from the
+JSON input.
+
+The optional `timestamp_format` is required if `timestamp_key` is defined and
+must be set to `unix`, `unix_ms`, `unix_us`, `unix_ns`, or the Go
+"reference time" which is defined to be the specific time
 `Mon Jan 2 15:04:05 MST 2006`
-* **timestamp_timezone (OPTIONAL, but REQUIRES timestamp_key**: This option should be set to a
-[Unix TZ value](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones),
-such as `America/New_York`, to `Local` to utilize the system timezone, or to `UTC`. Defaults to `UTC`
 
-*Configuration to define what JSON keys should be included and how (field/tag):*
+The optional `timestamp_timezone` defaults to `UTC` but is **required** if
+`timestamp_key` is set. This option should be set to a [Unix TZ value][unix_tz],
+such as `America/New_York`, to `Local` to utilize the system timezone or to
+`UTC`.
 
-* **included_keys (OPTIONAL)**: You can define a list of key's that should be the only data included in the line protocol, by default it will include everything.
-* **excluded_keys (OPTIONAL)**: You can define json keys to be excluded in the line protocol, for a nested key, prepend the parent keys with underscores
-* **tags (OPTIONAL)**: You can define json keys to be set as tags instead of fields, if you define a key that is an array or object then all nested values will become a tag
-* **field (OPTIONAL, defined in TOML as an array table using double brackets)**: Identical to the [field](#field) table you can define, but with two key differences. The path supports arrays and objects and is defined under the object table and therefore will adhere to how the JSON is structured. You want to use this if you want the field/tag to be added as it would if it were in the included_key list, but then use the GJSON path syntax.
-* **tag (OPTIONAL, defined in TOML as an array table using double brackets)**: Identical to the [tag](#tag) table you can define, but with two key differences. The path supports arrays and objects and is defined under the object table and therefore will adhere to how the JSON is structured. You want to use this if you want the field/tag to be added as it would if it were in the included_key list, but then use the GJSON path syntax.
+#### Configuration to define what JSON keys should be included and how (field/tag)
 
-*Configuration to modify the resulting line protocol:*
+The optional `included_keys` define a list of key's that should be the only data
+included in the line protocol, by default it will include everything.
 
-* **disable_prepend_keys (OPTIONAL)**: Set to true to prevent resulting nested data to contain the parent key prepended to its key **NOTE**: duplicate names can overwrite each other when this is enabled
-* **renames (OPTIONAL, defined in TOML as a table using single bracket)**: A table matching the json key with the desired name (opposed to defaulting to using the key), use names that include the prepended keys of its parent keys for nested results
-* **fields (OPTIONAL, defined in TOML as a table using single bracket)**: A table matching the json key with the desired type (int,string,bool,float), if you define a key that is an array or object then all nested values will become that type
+The optional `excluded_keys` define JSON keys to be excluded in the
+line protocol, for a nested key, prepend the parent keys with underscores
 
-## Arrays and Objects
+The optional `tags` define JSON keys to be set as tags instead of fields, if you
+define a key that is an array or object then all nested values will become a tag
+
+The optional `field` defines an array table identical to the [field](#field)
+table with two key differences. The path supports arrays and objects and is
+defined under the object table and therefore will adhere to how the JSON is
+structured. You want to use this if you want the field/tag to be added as it
+would if it were in the included_key list, but then use the GJSON path syntax.
+
+The optional `tag` defines an array table identical to the [tag](#tag) table but
+with two key differences. The path supports arrays and objects and is defined
+under the object table and therefore will adhere to how the JSON is structured.
+You want to use this if you want the field/tag to be added as it would if it
+were in the included_key list, but then use the GJSON path syntax.
+
+#### Configuration to modify the resulting line protocol
+
+The optional `disable_prepend_keys` prevents resulting nested data to contain
+the parent key prepended to its key.
+
+> [!NOTE]
+> Duplicate names can overwrite each other when this is enabled.
+
+The optional `renames` table matches the JSON key with the desired name (opposed
+to defaulting to using the key), use names that include the prepended keys of
+its parent keys for nested results
+
+The optional `fields` table matches the JSON key with the desired type (int,
+string, bool, float), if you define a key that is an array or object then all
+nested values will become that type
+
+### Arrays and Objects
 
 The following describes the high-level approach when parsing arrays and objects:
 
@@ -255,22 +321,24 @@ file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",random=2
 
 ```
 
-You can find more complicated examples under the folder [`testdata`][].
-
-[`testdata`]: https://github.com/influxdata/telegraf/tree/master/plugins/parsers/json_v2/testdata
+You can find more complicated examples under the [`testdata` folder][testdata].
 
 ## Types
 
 For each field you have the option to define the types. The following rules are
 in place for this configuration:
 
-* If a type is explicitly defined, the parser will enforce this type and convert the data to the defined type if possible. If the type can't be converted then the parser will fail.
-* If a type isn't defined, the parser will use the default type defined in the JSON (int, float, string)
+* If a type is explicitly defined, the parser will enforce this type and convert
+  the data to the defined type if possible. If the type can't be converted then
+  the parser will fail.
+* If a type isn't defined, the parser will use the default type defined in the
+  JSON (int, float, string)
 
 The type values you can set:
 
-* `int`, bool, floats or strings (with valid numbers) can be converted to a int.
-* `uint`, bool, floats or strings (with valid numbers) can be converted to a uint.
-* `string`, any data can be formatted as a string.
-* `float`, string values (with valid numbers) or integers can be converted to a float.
-* `bool`, the string values "true" or "false" (regardless of capitalization) or the integer values `0` or `1`  can be turned to a bool.
+* `int`, bool, floats or strings (with valid numbers) can be converted to int
+* `uint`, bool, floats or strings (with valid numbers) can be converted to uint
+* `string`, any data can be formatted as a string
+* `float`, string values (with valid numbers) or integers can be converted to float
+* `bool`, the string values "true" or "false" (regardless of capitalization) or
+          the integer values `0` or `1`  can be turned to a bool

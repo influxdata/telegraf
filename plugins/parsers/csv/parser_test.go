@@ -3,6 +3,7 @@ package csv
 import (
 	"errors"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -1559,6 +1560,229 @@ func TestBenchmarkData(t *testing.T) {
 	actual, err := plugin.Parse([]byte(benchmarkData))
 	require.NoError(t, err)
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
+}
+
+func TestConcurrentParsing(t *testing.T) {
+	// Test concurrent access to ensure the parser is thread-safe
+	plugin := &Parser{
+		MetricName:      "benchmark",
+		HeaderRowCount:  1,
+		TimestampColumn: "timestamp",
+		TimestampFormat: "unix",
+		TagColumns:      []string{"tags_host", "tags_platform", "tags_sdkver"},
+		ResetMode:       "always", // Reset parser state on each Parse() call
+	}
+	require.NoError(t, plugin.Init())
+
+	const numGoroutines = 5
+	const numIterations = 10
+
+	// Use the same test data for all goroutines to ensure consistency
+	testData := benchmarkData
+
+	// WaitGroup to wait for all goroutines to complete
+	var wg sync.WaitGroup
+
+	// Start multiple goroutines to parse concurrently
+	for i := range numGoroutines {
+		wg.Add(1)
+		go func(goroutineID int) {
+			defer wg.Done()
+			for j := range numIterations {
+				metrics, err := plugin.Parse([]byte(testData))
+				if err != nil {
+					t.Logf("goroutine %d iteration %d: %v", goroutineID, j, err)
+					t.Fail()
+					return
+				}
+
+				// Verify we got the expected number of metrics
+				if len(metrics) != 2 {
+					t.Logf("goroutine %d iteration %d: expected 2 metrics, got %d", goroutineID, j, len(metrics))
+					t.Fail()
+					return
+				}
+
+				// Verify basic metric structure
+				for k, metric := range metrics {
+					if metric.Name() != "benchmark" {
+						t.Logf("goroutine %d iteration %d metric %d: expected name 'benchmark', got '%s'", goroutineID, j, k, metric.Name())
+						t.Fail()
+						return
+					}
+					if len(metric.Tags()) != 3 {
+						t.Logf("goroutine %d iteration %d metric %d: expected 3 tags, got %d", goroutineID, j, k, len(metric.Tags()))
+						t.Fail()
+						return
+					}
+					if len(metric.Fields()) != 1 {
+						t.Logf("goroutine %d iteration %d metric %d: expected 1 field, got %d", goroutineID, j, k, len(metric.Fields()))
+						t.Fail()
+						return
+					}
+				}
+			}
+		}(i)
+	}
+
+	// Wait for all goroutines to complete
+	wg.Wait()
+
+	// Check for any errors
+	require.False(t, t.Failed(), "Concurrent parsing failed with errors")
+}
+
+func TestConcurrentParseLineWithReset(t *testing.T) {
+	// Test concurrent access with ParseLine which has more complex state management
+	plugin := &Parser{
+		MetricName:      "benchmark",
+		HeaderRowCount:  1,
+		TimestampColumn: "timestamp",
+		TimestampFormat: "unix",
+		TagColumns:      []string{"tags_host", "tags_platform", "tags_sdkver"},
+		ResetMode:       "always",
+	}
+	require.NoError(t, plugin.Init())
+
+	const numGoroutines = 5
+	const numIterations = 10
+
+	// Test data - each goroutine will use the same CSV format
+	testCSV := `tags_host,tags_platform,tags_sdkver,value,timestamp
+myhost,python,3.11.5,5,1653643420`
+
+	// WaitGroup to wait for all goroutines to complete
+	var wg sync.WaitGroup
+
+	// Start multiple goroutines to parse concurrently
+	for i := range numGoroutines {
+		wg.Add(1)
+		go func(goroutineID int) {
+			defer wg.Done()
+			for j := range numIterations {
+				// Parse complete CSV (with header)
+				metrics, err := plugin.Parse([]byte(testCSV))
+				if err != nil {
+					t.Logf("goroutine %d iteration %d: %v", goroutineID, j, err)
+					t.Fail()
+					return
+				}
+
+				if len(metrics) != 1 {
+					t.Logf("goroutine %d iteration %d: expected 1 metric, got %d", goroutineID, j, len(metrics))
+					t.Fail()
+					return
+				}
+
+				// Verify basic metric structure
+				metric := metrics[0]
+				if metric.Name() != "benchmark" {
+					t.Logf("goroutine %d iteration %d: expected name 'benchmark', got '%s'", goroutineID, j, metric.Name())
+					t.Fail()
+					return
+				}
+			}
+		}(i)
+	}
+
+	// Wait for all goroutines to complete
+	wg.Wait()
+
+	// Check for any errors
+	require.False(t, t.Failed(), "Concurrent parsing failed with errors")
+}
+
+func TestConcurrentParsingStress(t *testing.T) {
+	// Stress test with more goroutines and iterations to ensure robust thread safety
+	plugin := &Parser{
+		MetricName:      "stress_test",
+		HeaderRowCount:  1,
+		TimestampColumn: "timestamp",
+		TimestampFormat: "unix",
+		TagColumns:      []string{"host", "service"},
+		ResetMode:       "always",
+	}
+	require.NoError(t, plugin.Init())
+
+	const numGoroutines = 20
+	const numIterations = 100
+
+	// Different CSV data to test various parsing scenarios
+	testDataVariants := []string{
+		`host,service,value,timestamp
+server1,web,100,1653643420
+server1,db,200,1653643421`,
+		`host,service,value,timestamp
+server2,api,150,1653643430
+server2,cache,50,1653643431`,
+		`host,service,value,timestamp
+server3,worker,75,1653643440`,
+	}
+
+	// WaitGroup to wait for all goroutines to complete
+	var wg sync.WaitGroup
+
+	// Start multiple goroutines to parse concurrently
+	for i := range numGoroutines {
+		wg.Add(1)
+		go func(goroutineID int) {
+			defer wg.Done()
+			for j := range numIterations {
+				// Use different data variants to test different scenarios
+				testData := testDataVariants[j%len(testDataVariants)]
+
+				metrics, err := plugin.Parse([]byte(testData))
+				if err != nil {
+					t.Logf("goroutine %d iteration %d: %v", goroutineID, j, err)
+					t.Fail()
+					return
+				}
+
+				// Verify we got some metrics (different variants have different counts)
+				if len(metrics) == 0 {
+					t.Logf("goroutine %d iteration %d: expected at least 1 metric, got 0", goroutineID, j)
+					t.Fail()
+					return
+				}
+
+				// Verify all metrics have the correct name and required fields
+				for k, metric := range metrics {
+					if metric.Name() != "stress_test" {
+						t.Logf("goroutine %d iteration %d metric %d: expected name 'stress_test', got '%s'", goroutineID, j, k, metric.Name())
+						t.Fail()
+						return
+					}
+
+					// Should have host and service tags
+					tags := metric.Tags()
+					if _, exists := tags["host"]; !exists {
+						t.Logf("goroutine %d iteration %d metric %d: missing 'host' tag", goroutineID, j, k)
+						t.Fail()
+						return
+					}
+					if _, exists := tags["service"]; !exists {
+						t.Logf("goroutine %d iteration %d metric %d: missing 'service' tag", goroutineID, j, k)
+						t.Fail()
+						return
+					}
+
+					// Should have value field
+					fields := metric.Fields()
+					if _, exists := fields["value"]; !exists {
+						t.Logf("goroutine %d iteration %d metric %d: missing 'value' field", goroutineID, j, k)
+						t.Fail()
+						return
+					}
+				}
+			}
+		}(i)
+	}
+
+	// Wait for all goroutines to complete
+	wg.Wait()
+
+	// Check for any errors
+	require.False(t, t.Failed(), "Concurrent parsing failed with errors")
 }
 
 func BenchmarkParsing(b *testing.B) {

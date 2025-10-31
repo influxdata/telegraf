@@ -1,7 +1,6 @@
 package nats_consumer
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -15,7 +14,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestStartStop(t *testing.T) {
+func TestIntegrationStartStop(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -29,7 +28,7 @@ func TestStartStop(t *testing.T) {
 	defer container.Terminate()
 
 	plugin := &NatsConsumer{
-		Servers:                []string{fmt.Sprintf("nats://%s:%s", container.Address, container.Ports["4222"])},
+		Servers:                []string{"nats://" + container.Address + ":" + container.Ports["4222"]},
 		Subjects:               []string{"telegraf"},
 		QueueGroup:             "telegraf_consumers",
 		PendingBytesLimit:      nats.DefaultSubPendingBytesLimit,
@@ -43,7 +42,7 @@ func TestStartStop(t *testing.T) {
 	plugin.Stop()
 }
 
-func TestSendReceive(t *testing.T) {
+func TestIntegrationSendReceive(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -55,7 +54,7 @@ func TestSendReceive(t *testing.T) {
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
-	addr := fmt.Sprintf("nats://%s:%s", container.Address, container.Ports["4222"])
+	addr := "nats://" + container.Address + ":" + container.Ports["4222"]
 
 	tests := []struct {
 		name     string
@@ -182,6 +181,193 @@ func TestSendReceive(t *testing.T) {
 			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
 		})
 	}
+}
+
+func TestJetStreamIntegrationSendReceive(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "nats",
+		ExposedPorts: []string{"4222"},
+		Cmd:          []string{"-js"},
+		WaitingFor:   wait.ForLog("Server is ready"),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+	addr := "nats://" + container.Address + ":" + container.Ports["4222"]
+
+	// Add a JetStream stream for testing
+	nc, err := nats.Connect(addr)
+	require.NoError(t, err)
+	defer nc.Close()
+	js, err := nc.JetStream()
+	require.NoError(t, err)
+
+	streamName := "TESTSTREAM"
+	subject := "telegraf"
+	_, err = js.AddStream(&nats.StreamConfig{
+		Name:     streamName,
+		Subjects: []string{subject},
+	})
+	require.NoError(t, err)
+
+	// Setup the plugin for JetStream
+	plugin := &NatsConsumer{
+		Servers:                []string{addr},
+		JsSubjects:             []string{subject},
+		JsStream:               streamName,
+		QueueGroup:             "telegraf_consumers",
+		PendingBytesLimit:      nats.DefaultSubPendingBytesLimit,
+		PendingMessageLimit:    nats.DefaultSubPendingMsgsLimit,
+		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		Log:                    testutil.Logger{},
+	}
+
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Publish a message to JetStream
+	msg := "test,source=js value=99i"
+	_, err = js.Publish(subject, []byte(msg))
+	require.NoError(t, err)
+
+	// Wait for the metric to be collected
+	require.Eventually(t, func() bool {
+		acc.Lock()
+		defer acc.Unlock()
+		return acc.NMetrics() >= 1
+	}, time.Second, 100*time.Millisecond)
+
+	actual := acc.GetTelegrafMetrics()
+	expected := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{
+				"source":  "js",
+				"subject": subject,
+			},
+			map[string]interface{}{"value": int64(99)},
+			time.Unix(0, 0),
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
+func TestJetStreamIntegrationSourcedStreamNotFound(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "nats",
+		ExposedPorts: []string{"4222"},
+		Cmd:          []string{"-js"},
+		WaitingFor:   wait.ForLog("Server is ready"),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+	addr := "nats://" + container.Address + ":" + container.Ports["4222"]
+
+	// Add a JetStream stream for testing
+	nc, err := nats.Connect(addr)
+	require.NoError(t, err)
+	defer nc.Close()
+	js, err := nc.JetStream()
+	require.NoError(t, err)
+
+	// Create a stream with no subject
+	streamName := "TESTSTREAM"
+	_, err = js.AddStream(&nats.StreamConfig{
+		Name: streamName,
+		Sources: []*nats.StreamSource{
+			{Name: "NONEXISTENT"},
+		},
+	})
+	require.NoError(t, err)
+
+	// Setup the plugin for JetStream
+	plugin := &NatsConsumer{
+		Servers:                []string{addr},
+		JsSubjects:             []string{"TESTSTREAM"},
+		QueueGroup:             "telegraf_consumers",
+		PendingBytesLimit:      nats.DefaultSubPendingBytesLimit,
+		PendingMessageLimit:    nats.DefaultSubPendingMsgsLimit,
+		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		Log:                    testutil.Logger{},
+	}
+
+	// Add a line-protocol parser
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+
+	// Startup the plugin
+	var acc testutil.Accumulator
+	err = plugin.Start(&acc)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "no stream matches subject")
+}
+
+func TestJetStreamIntegrationSourcedStreamFound(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "nats",
+		ExposedPorts: []string{"4222"},
+		Cmd:          []string{"-js"},
+		WaitingFor:   wait.ForLog("Server is ready"),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+	addr := "nats://" + container.Address + ":" + container.Ports["4222"]
+
+	// Add a JetStream stream for testing
+	nc, err := nats.Connect(addr)
+	require.NoError(t, err)
+	defer nc.Close()
+	js, err := nc.JetStream()
+	require.NoError(t, err)
+
+	// Create a stream with no subject
+	streamName := "TESTSTREAM"
+	_, err = js.AddStream(&nats.StreamConfig{
+		Name: streamName,
+		Sources: []*nats.StreamSource{
+			{Name: "NONEXISTENT"},
+		},
+	})
+	require.NoError(t, err)
+
+	// Setup the plugin for JetStream
+	plugin := &NatsConsumer{
+		Servers:                []string{addr},
+		JsSubjects:             []string{"TESTSTREAM"},
+		JsStream:               streamName,
+		QueueGroup:             "telegraf_consumers",
+		PendingBytesLimit:      nats.DefaultSubPendingBytesLimit,
+		PendingMessageLimit:    nats.DefaultSubPendingMsgsLimit,
+		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		Log:                    testutil.Logger{},
+	}
+
+	// Add a line-protocol parser
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+
+	// Startup the plugin
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	plugin.Stop()
 }
 
 type sender struct {

@@ -1,8 +1,28 @@
 # Packaging
 
-Building the packages for Telegraf is automated using [Make](https://en.wikipedia.org/wiki/Make_(software)). Just running `make` will build a Telegraf binary for the operating system and architecture you are using (if it is supported). If you need to build a different package then you can run `make package` which will build all the supported packages. You will most likely only want a subset, you can define a subset of packages to be built by overriding the `include_packages` variable like so `make package include_packages="amd64.deb"`. You can also build all packages for a specific architecture like so `make package include_packages="$(make amd64)"`.
+Building the packages for Telegraf is automated using [Make][make]. Just running
+`make` will build a Telegraf binary for the operating system and architecture
+you are using (if it is supported). If you need to build a different package
+then you can run `make package` which will build all the supported packages. You
+will most likely only want a subset, you can define a subset of packages to be
+built by overriding the `include_packages` variable like so
 
-The packaging steps require certain tools to be setup before hand to work. These dependencies are listed in the ci.docker file which you can find in the scripts directory. Therefore it is recommended to use Docker to build the artifacts, see more details below.
+```shell
+make package include_packages="amd64.deb"
+```
+
+You can also build all packages for a specific architecture like so
+
+```shell
+make package include_packages="$(make amd64)"
+```
+
+The packaging steps require certain tools to be setup before hand to work.
+These dependencies are listed in the ci.docker file which you can find in the
+scripts directory. Therefore it is recommended to use Docker to build the
+artifacts, see more details below.
+
+[make]: https://en.wikipedia.org/wiki/Make_(software)
 
 ## Go Version
 
@@ -10,7 +30,9 @@ Telegraf will be built using the latest version of Go whenever possible.
 
 ### Update CI image
 
-Incrementing the version is maintained by the core Telegraf team because it requires access to an internal docker repository that hosts the docker CI images. When a new version is released, the following process is followed:
+Incrementing the version is maintained by the core Telegraf team because it
+requires access to an internal docker repository that hosts the docker CI
+images. When a new version is released, the following process is followed:
 
 1. Within the `Makefile`, `.circleci\config.yml`, and `scripts/ci.docker` files
   update the Go versions to the new version number
@@ -21,7 +43,8 @@ Incrementing the version is maintained by the core Telegraf team because it requ
 4. Create a pull request with these new changes, and verify the CI passes and
   uses the new docker image
 
-See the [previous PRs](https://github.com/influxdata/telegraf/search?q=chore+update+go&type=commits) as examples.
+See the [previous PRs](https://github.com/influxdata/telegraf/search?q=chore+update+go&type=commits)
+as examples.
 
 ### Access to quay.io
 
@@ -57,11 +80,13 @@ From within the container:
 1. `go get -d github.com/influxdata/telegraf`
 2. `cd /go/src/github.com/influxdata/telegraf`
 3. `git checkout release-1.10`
-   * Replace tag `release-1.10` with the version of Telegraf you would like to build
+   * Replace tag `release-1.10` with the version of Telegraf you would like to
+   build
 4. `git reset --hard 1.10.2`
 5. `make deps`
 6. `make package include_packages="amd64.deb"`
-    * Change `include_packages` to change what package you want, run `make help` to see possible values
+    * Change `include_packages` to change what package you want, run `make help`
+    to see possible values
 
 From the host system, copy the build artifacts out of the container:
 

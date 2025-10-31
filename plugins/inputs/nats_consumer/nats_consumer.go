@@ -34,6 +34,7 @@ type NatsConsumer struct {
 	Credentials            string          `toml:"credentials"`
 	NkeySeed               string          `toml:"nkey_seed"`
 	JsSubjects             []string        `toml:"jetstream_subjects"`
+	JsStream               string          `toml:"jetstream_stream"`
 	PendingMessageLimit    int             `toml:"pending_message_limit"`
 	PendingBytesLimit      int             `toml:"pending_bytes_limit"`
 	MaxUndeliveredMessages int             `toml:"max_undelivered_messages"`
@@ -144,6 +145,10 @@ func (n *NatsConsumer) Start(acc telegraf.Accumulator) error {
 
 		if len(n.JsSubjects) > 0 {
 			var connErr error
+			var subOptions []nats.SubOpt
+			if n.JsStream != "" {
+				subOptions = append(subOptions, nats.BindStream(n.JsStream))
+			}
 			n.jsConn, connErr = n.conn.JetStream(nats.PublishAsyncMaxPending(256))
 			if connErr != nil {
 				return connErr
@@ -153,7 +158,7 @@ func (n *NatsConsumer) Start(acc telegraf.Accumulator) error {
 				for _, jsSub := range n.JsSubjects {
 					sub, err := n.jsConn.QueueSubscribe(jsSub, n.QueueGroup, func(m *nats.Msg) {
 						n.in <- m
-					})
+					}, subOptions...)
 					if err != nil {
 						return err
 					}

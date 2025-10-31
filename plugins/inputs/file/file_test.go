@@ -189,7 +189,7 @@ func TestCharacterEncoding(t *testing.T) {
 	tests := []struct {
 		name   string
 		plugin *File
-		csv    csv.Parser
+		csv    *csv.Parser
 		file   string
 	}{
 		{
@@ -199,7 +199,7 @@ func TestCharacterEncoding(t *testing.T) {
 				CharacterEncoding: "",
 				Log:               testutil.Logger{},
 			},
-			csv: csv.Parser{
+			csv: &csv.Parser{
 				MetricName:  "file",
 				SkipRows:    1,
 				ColumnNames: []string{"", "", "status", "dest", "hop", "ip", "loss", "snt", "", "", "avg", "best", "worst", "stdev"},
@@ -213,7 +213,7 @@ func TestCharacterEncoding(t *testing.T) {
 				CharacterEncoding: "utf-8",
 				Log:               testutil.Logger{},
 			},
-			csv: csv.Parser{
+			csv: &csv.Parser{
 				MetricName:  "file",
 				SkipRows:    1,
 				ColumnNames: []string{"", "", "status", "dest", "hop", "ip", "loss", "snt", "", "", "avg", "best", "worst", "stdev"},
@@ -227,7 +227,7 @@ func TestCharacterEncoding(t *testing.T) {
 				CharacterEncoding: "utf-16le",
 				Log:               testutil.Logger{},
 			},
-			csv: csv.Parser{
+			csv: &csv.Parser{
 				MetricName:  "file",
 				SkipRows:    1,
 				ColumnNames: []string{"", "", "status", "dest", "hop", "ip", "loss", "snt", "", "", "avg", "best", "worst", "stdev"},
@@ -241,7 +241,7 @@ func TestCharacterEncoding(t *testing.T) {
 				CharacterEncoding: "utf-16be",
 				Log:               testutil.Logger{},
 			},
-			csv: csv.Parser{
+			csv: &csv.Parser{
 				MetricName:  "file",
 				SkipRows:    1,
 				ColumnNames: []string{"", "", "status", "dest", "hop", "ip", "loss", "snt", "", "", "avg", "best", "worst", "stdev"},
@@ -255,9 +255,14 @@ func TestCharacterEncoding(t *testing.T) {
 			require.NoError(t, err)
 
 			tt.plugin.SetParserFunc(func() (telegraf.Parser, error) {
-				parser := tt.csv
+				parser := &csv.Parser{
+					MetricName:  tt.csv.MetricName,
+					SkipRows:    tt.csv.SkipRows,
+					ColumnNames: tt.csv.ColumnNames,
+					TagColumns:  tt.csv.TagColumns,
+				}
 				err := parser.Init()
-				return &parser, err
+				return parser, err
 			})
 
 			var acc testutil.Accumulator
@@ -344,7 +349,7 @@ func TestStatefulParsers(t *testing.T) {
 	tests := []struct {
 		name   string
 		plugin *File
-		csv    csv.Parser
+		csv    *csv.Parser
 		file   string
 		count  int
 	}{
@@ -355,7 +360,7 @@ func TestStatefulParsers(t *testing.T) {
 				CharacterEncoding: "",
 				Log:               testutil.Logger{},
 			},
-			csv: csv.Parser{
+			csv: &csv.Parser{
 				MetricName:  "file",
 				SkipRows:    1,
 				ColumnNames: []string{"", "", "status", "dest", "hop", "ip", "loss", "snt", "", "", "avg", "best", "worst", "stdev"},
@@ -371,9 +376,14 @@ func TestStatefulParsers(t *testing.T) {
 			require.NoError(t, err)
 
 			tt.plugin.SetParserFunc(func() (telegraf.Parser, error) {
-				parser := tt.csv
+				parser := &csv.Parser{
+					MetricName:  tt.csv.MetricName,
+					SkipRows:    tt.csv.SkipRows,
+					ColumnNames: tt.csv.ColumnNames,
+					TagColumns:  tt.csv.TagColumns,
+				}
 				err := parser.Init()
-				return &parser, err
+				return parser, err
 			})
 
 			var acc testutil.Accumulator

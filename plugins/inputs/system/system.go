@@ -35,16 +35,22 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	numCPUs, err := cpu.Counts(true)
+	numLogicalCPUs, err := cpu.Counts(true)
+	if err != nil {
+		return err
+	}
+
+	numPhysicalCPUs, err := cpu.Counts(false)
 	if err != nil {
 		return err
 	}
 
 	fields := map[string]interface{}{
-		"load1":  loadavg.Load1,
-		"load5":  loadavg.Load5,
-		"load15": loadavg.Load15,
-		"n_cpus": numCPUs,
+		"load1":           loadavg.Load1,
+		"load5":           loadavg.Load5,
+		"load15":          loadavg.Load15,
+		"n_cpus":          numLogicalCPUs,
+		"n_physical_cpus": numPhysicalCPUs,
 	}
 
 	users, err := host.Users()

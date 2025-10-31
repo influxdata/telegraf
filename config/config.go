@@ -105,7 +105,7 @@ type Config struct {
 	seenAgentTableOnce sync.Once
 }
 
-// Ordered plugins used to keep the order in which they appear in a file
+// OrderedPlugin is used to keep the order in which they appear in a file
 type OrderedPlugin struct {
 	Line   int
 	plugin any
@@ -214,16 +214,6 @@ type AgentConfig struct {
 	// multiple of MetricBatchSize. Due to current implementation, this could
 	// not be less than 2 times MetricBatchSize.
 	MetricBufferLimit int
-
-	// FlushBufferWhenFull tells Telegraf to flush the metric buffer whenever
-	// it fills up, regardless of FlushInterval. Setting this option to true
-	// does _not_ deactivate FlushInterval.
-	FlushBufferWhenFull bool `toml:"flush_buffer_when_full" deprecated:"0.13.0;1.35.0;option is ignored"`
-
-	// TODO(cam): Remove UTC and parameter, they are no longer
-	// valid for the agent config. Leaving them here for now for backwards-
-	// compatibility
-	UTC bool `toml:"utc" deprecated:"1.0.0;1.35.0;option is ignored"`
 
 	// Debug is the option for running in debug mode
 	Debug bool `toml:"debug"`
@@ -478,7 +468,7 @@ func WalkDirectory(path string) ([]string, error) {
 	return files, filepath.Walk(path, walkfn)
 }
 
-// Try to find a default config file at these locations (in order):
+// GetDefaultConfigPath will try to find a default config file at these locations (in order):
 //  1. $TELEGRAF_CONFIG_PATH
 //  2. $HOME/.telegraf/telegraf.conf
 //  3. /etc/telegraf/telegraf.conf and /etc/telegraf/telegraf.d/*.conf

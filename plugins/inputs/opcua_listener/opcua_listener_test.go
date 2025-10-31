@@ -411,15 +411,21 @@ nodes = [
 name = "foo"
 namespace = "3"
 identifier_type = "i"
-tags = [["tag1", "val1"], ["tag2", "val2"]]
-nodes = [{name="name3", identifier="3000", tags=[["tag3", "val3"]]}]
+default_tags = {tag1="val1", tag2="val2"}
+[[inputs.opcua_listener.group.nodes]]
+  name = "name3"
+  identifier = "3000"
+  default_tags = {tag3="val3"}
 
 [[inputs.opcua_listener.group]]
 name = "bar"
 namespace = "0"
 identifier_type = "i"
-tags = [["tag1", "val1"], ["tag2", "val2"]]
-nodes = [{name="name4", identifier="4000", tags=[["tag1", "override"]]}]
+default_tags = {tag1="val1", tag2="val2"}
+[[inputs.opcua_listener.group.nodes]]
+  name = "name4"
+  identifier = "4000"
+  default_tags = {tag1="override"}
 
 [inputs.opcua_listener.workarounds]
 additional_valid_status_codes = ["0xC0"]
@@ -466,22 +472,22 @@ additional_valid_status_codes = ["0xC0"]
 			MetricName:     "foo",
 			Namespace:      "3",
 			IdentifierType: "i",
-			TagsSlice:      [][]string{{"tag1", "val1"}, {"tag2", "val2"}},
+			DefaultTags:    map[string]string{"tag1": "val1", "tag2": "val2"},
 			Nodes: []input.NodeSettings{{
-				FieldName:  "name3",
-				Identifier: "3000",
-				TagsSlice:  [][]string{{"tag3", "val3"}},
+				FieldName:   "name3",
+				Identifier:  "3000",
+				DefaultTags: map[string]string{"tag3": "val3"},
 			}},
 		},
 		{
 			MetricName:     "bar",
 			Namespace:      "0",
 			IdentifierType: "i",
-			TagsSlice:      [][]string{{"tag1", "val1"}, {"tag2", "val2"}},
+			DefaultTags:    map[string]string{"tag1": "val1", "tag2": "val2"},
 			Nodes: []input.NodeSettings{{
-				FieldName:  "name4",
-				Identifier: "4000",
-				TagsSlice:  [][]string{{"tag1", "override"}},
+				FieldName:   "name4",
+				Identifier:  "4000",
+				DefaultTags: map[string]string{"tag1": "override"},
 			}},
 		},
 	}, o.subscribeClientConfig.Groups)
@@ -500,8 +506,11 @@ subscription_interval = "200ms"
 name = "foo"
 namespace = "3"
 identifier_type = "i"
-tags = [["tag1", "val1"], ["tag2", "val2"]]
-nodes = [{name="name3", identifier="3000", tags=[["tag3", "val3"]]}]
+default_tags = {tag1="val1", tag2="val2"}
+[[inputs.opcua_listener.group.nodes]]
+  name = "name3"
+  identifier = "3000"
+  default_tags = {tag3="val3"}
 
 [inputs.opcua_listener.group.nodes.monitoring_params]
 sampling_interval = "50ms"
@@ -531,11 +540,11 @@ deadband_value = 100.0
 			MetricName:     "foo",
 			Namespace:      "3",
 			IdentifierType: "i",
-			TagsSlice:      [][]string{{"tag1", "val1"}, {"tag2", "val2"}},
+			DefaultTags:    map[string]string{"tag1": "val1", "tag2": "val2"},
 			Nodes: []input.NodeSettings{{
-				FieldName:  "name3",
-				Identifier: "3000",
-				TagsSlice:  [][]string{{"tag3", "val3"}},
+				FieldName:   "name3",
+				Identifier:  "3000",
+				DefaultTags: map[string]string{"tag3": "val3"},
 				MonitoringParams: input.MonitoringParameters{
 					SamplingInterval: 50000000,
 					QueueSize:        &queueSize,

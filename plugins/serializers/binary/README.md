@@ -1,7 +1,7 @@
 # Binary Serializer Plugin
 
-The `binary` data format serializer serializes metrics into binary protocols using
-user-specified configurations.
+The `binary` data format serializer serializes metrics into binary protocols
+using user-specified configurations.
 
 ## Configuration
 
@@ -15,18 +15,18 @@ user-specified configurations.
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "binary"
-  
+
   ## Specify the endianness of the data.
   ## Available values are "little" (little-endian), "big" (big-endian) and "host",
   ## where "host" means the same endianness as the machine running Telegraf.
   # endianness = "host"
-  
+
   ## Definition of the message format and the serialized data.
   ## Please note that you need to define all elements of the data in the
   ## correct order.
   ## An entry can have the following properties:
-  ##  read_from         --  Source of the data. 
-  ##                        Can be "field", "tag", "time" or "name". 
+  ##  read_from         --  Source of the data.
+  ##                        Can be "field", "tag", "time" or "name".
   ##                        If omitted "field" is assumed.
   ##  name              --  Name of the element (e.g. field or tag).
   ##                        Can be omitted for "time" and "name".
@@ -35,11 +35,11 @@ user-specified configurations.
   ##                        In case of time, this can be any of "unix" (default), "unix_ms", "unix_us",
   ##                        "unix_ns".
   ##                        If original field type is different from the target type, the field will be converted
-  ##                        If loss of precision is possible, warning will be logged. 
+  ##                        If loss of precision is possible, warning will be logged.
   ##  string_length     --  Length of the string in bytes. Only used for "string" type.
   ##  string_terminator --  Terminator for strings. Only used for "string" type.
   ##                        Valid values are "null", "0x00", "00", "0x01", etc.
-  ##                        If original string length is greater than "string_length" the string will 
+  ##                        If original string length is greater than "string_length" the string will
   ##                        be truncated to have length of the `string + terminator = string_length`.
   ##                        If original string length is smaller than "string_length" the string
   ##                        will be padded with terminator to have length of "string_length". (e.g. "abcd\0\0\0\0\0")
@@ -58,13 +58,16 @@ user-specified configurations.
 
 #### Value conversion
 
-The plugin will try to convert the value of the field to the target data type. If the conversion is not possible without precision loss value is converted and warning is logged.
+The plugin will try to convert the value of the field to the target data type.
+If the conversion is not possible without precision loss value is converted and
+a warning is logged.
 
 Conversions are allowed between all supported data types.
 
 ### Examples
 
-In the following example, we read some registers from a Modbus device and serialize them into a binary protocol.
+In the following example, we read some registers from a Modbus device and
+serialize them into a binary protocol.
 
 ```toml
 # Retrieve data from MODBUS slave devices

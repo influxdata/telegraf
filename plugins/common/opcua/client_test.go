@@ -177,3 +177,50 @@ func TestOpcUAClientSetupWorkarounds(t *testing.T) {
 		})
 	}
 }
+
+func TestRemoteCertificateValidation(t *testing.T) {
+	tests := []struct {
+		name              string
+		securityPolicy    string
+		securityMode      string
+		remoteCertificate string
+	}{
+		{
+			name:              "no remote certificate configured",
+			securityPolicy:    "None",
+			securityMode:      "None",
+			remoteCertificate: "",
+		},
+		{
+			name:              "remote certificate path provided with None security",
+			securityPolicy:    "None",
+			securityMode:      "None",
+			remoteCertificate: "/etc/telegraf/server_cert.pem",
+		},
+		{
+			name:              "remote certificate path provided with SignAndEncrypt",
+			securityPolicy:    "Basic256Sha256",
+			securityMode:      "SignAndEncrypt",
+			remoteCertificate: "/etc/telegraf/server_cert.pem",
+		},
+		{
+			name:              "remote certificate path provided with auto security",
+			securityPolicy:    "auto",
+			securityMode:      "auto",
+			remoteCertificate: "/etc/telegraf/server_cert.pem",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := OpcUAClientConfig{
+				Endpoint:          "opc.tcp://localhost:4840",
+				SecurityPolicy:    tt.securityPolicy,
+				SecurityMode:      tt.securityMode,
+				RemoteCertificate: tt.remoteCertificate,
+			}
+
+			require.NoError(t, config.Validate())
+		})
+	}
+}

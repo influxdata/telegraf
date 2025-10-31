@@ -56,17 +56,16 @@ func (r *Template) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			r.Log.Errorf("metric of type %T is not a template metric", raw)
 			continue
 		}
-		newM := templateMetric{tm}
 
 		var b strings.Builder
-		if err := r.tmplTag.Execute(&b, &newM); err != nil {
+		if err := r.tmplTag.Execute(&b, &tm); err != nil {
 			r.Log.Errorf("failed to execute tag name template: %v", err)
 			continue
 		}
 		tag := b.String()
 
 		b.Reset()
-		if err := r.tmplValue.Execute(&b, &newM); err != nil {
+		if err := r.tmplValue.Execute(&b, &tm); err != nil {
 			r.Log.Errorf("failed to execute value template: %v", err)
 			continue
 		}

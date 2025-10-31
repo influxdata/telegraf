@@ -52,7 +52,10 @@ An example of the JSONv2 format even looks like:
 
 ## Using with the HTTP output
 
-To send this data to a ServiceNow MID Server with Web Server extension activated, you can use the HTTP output, there are some custom headers that you need to add to manage the MID Web Server authorization, here's a sample config for an HTTP output:
+To send this data to a ServiceNow MID Server with Web Server extension
+activated, you can use the HTTP output, there are some custom headers that you
+need to add to manage the MID Web Server authorization, here's a configuration
+example for an HTTP output:
 
 ```toml
 [[outputs.http]]
@@ -96,9 +99,10 @@ To send this data to a ServiceNow MID Server with Web Server extension activated
   Accept = "application/json"
 ```
 
-Starting with the [London release](https://docs.servicenow.com/bundle/london-it-operations-management/page/product/event-management/task/event-rule-bind-metrics-to-host.html
-),
-you also need to explicitly create event rule to allow binding of metric events to host CIs.
+Starting with the [London release][london_release], you also need to explicitly
+create event rule to allow binding of metric events to host CIs.
+
+[london_release]: https://docs.servicenow.com/bundle/london-it-operations-management/page/product/event-management/task/event-rule-bind-metrics-to-host.html
 
 ## Metric Format
 

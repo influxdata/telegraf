@@ -164,36 +164,6 @@ func TestTagAndFieldConcatenate(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, actual)
 }
 
-func TestFieldList(t *testing.T) {
-	// Prepare
-	plugin := Template{Tag: "fields", Template: "{{.FieldList}}"}
-	require.NoError(t, plugin.Init())
-
-	// Run
-	m := testutil.TestMetric(1.23)
-	actual := plugin.Apply(m)
-
-	// Verify
-	expected := m.Copy()
-	expected.AddTag("fields", "map[value:1.23]")
-	testutil.RequireMetricsEqual(t, []telegraf.Metric{expected}, actual)
-}
-
-func TestTagList(t *testing.T) {
-	// Prepare
-	plugin := Template{Tag: "tags", Template: "{{.TagList}}"}
-	require.NoError(t, plugin.Init())
-
-	// Run
-	m := testutil.TestMetric(1.23)
-	actual := plugin.Apply(m)
-
-	// Verify
-	expected := m.Copy()
-	expected.AddTag("tags", "map[tag1:value1]")
-	testutil.RequireMetricsEqual(t, []telegraf.Metric{expected}, actual)
-}
-
 func TestFields(t *testing.T) {
 	// Prepare
 	plugin := Template{
