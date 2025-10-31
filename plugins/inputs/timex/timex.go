@@ -22,6 +22,7 @@ const (
 	ppm16 = float64(65536)
 )
 
+// Timex gathers system time metrics using the Linux kernel adjtimex syscall.
 type Timex struct{}
 
 func (*Timex) SampleConfig() string {
