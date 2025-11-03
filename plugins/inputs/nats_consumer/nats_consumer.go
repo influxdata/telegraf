@@ -87,7 +87,7 @@ func (n *NatsConsumer) SetParser(parser telegraf.Parser) {
 func (n *NatsConsumer) Start(acc telegraf.Accumulator) error {
 	n.sem = make(semaphore, n.MaxUndeliveredMessages)
 	n.acc = acc.WithTracking(n.MaxUndeliveredMessages)
-	n.undelivered = make(map[telegraf.TrackingID]*nats.Msg)
+	n.undelivered = make(map[telegraf.TrackingID]*nats.Msg, n.MaxUndeliveredMessages)
 
 	options := []nats.Option{
 		nats.MaxReconnects(-1),
