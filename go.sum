@@ -2592,8 +2592,8 @@ go.opentelemetry.io/proto/slim/otlp/profiles/v1development v0.1.0 h1:i8YpvWGm/Uq
 go.opentelemetry.io/proto/slim/otlp/profiles/v1development v0.1.0/go.mod h1:pQ70xHY/ZVxNUBPn+qUWPl8nwai87eWdqL3M37lNi9A=
 go.starlark.net v0.0.0-20250906160240-bf296ed553ea h1:Rq4H4YdaOlmkqVGG+COlYFyrG/FwfB8tQa5i6mtcSe4=
 go.starlark.net v0.0.0-20250906160240-bf296ed553ea/go.mod h1:YKMCv9b1WrfWmeqdV5MAuEHWsu5iC+fe6kYl2sQjdI8=
-go.step.sm/crypto v0.72.0 h1:cwkxbmnN8jj8YWmoXdoGhaac81d2SwXguwmHN9KJxHw=
-go.step.sm/crypto v0.72.0/go.mod h1:EAy7MSOXxCvCaDAKJqz0bLdTSDdhpEM9xqye8XsfrM4=
+go.step.sm/crypto v0.73.0 h1:SNFpslZJa+kTNADpWYJJeMsQqzwDiuxFq0ei5OPLIUg=
+go.step.sm/crypto v0.73.0/go.mod h1:pw2MKw7aPgx3bVjVwYrKbpMIawLRwth/5cyhZf6QnBM=
 go.uber.org/atomic v1.3.2/go.mod h1:gD2HeocX3+yG+ygLZcrzQJaqmWj9AIm7n08wl/qW/PE=
 go.uber.org/atomic v1.4.0/go.mod h1:gD2HeocX3+yG+ygLZcrzQJaqmWj9AIm7n08wl/qW/PE=
 go.uber.org/atomic v1.5.0/go.mod h1:sABNBOSYdrvTF6hTgEIbc7YasKWGhgEQZyfxyTvoXHQ=
