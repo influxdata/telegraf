@@ -5,6 +5,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 
@@ -227,69 +228,54 @@ func (n *NatsConsumer) natsErrHandler(c *nats.Conn, s *nats.Subscription, e erro
 // telegraf metrics.
 func (n *NatsConsumer) receiver(ctx context.Context) {
 	for {
+		// Acquire a semaphore to block consumption if the number of undelivered messages
+		// reached it's limit
+		select {
+		case <-ctx.Done():
+			return
+		case n.sem <- empty{}:
+		}
+
+		// Consume messages and errors
 		select {
 		case <-ctx.Done():
 			return
 		case err := <-n.errs:
 			n.Log.Error(err)
-		case n.sem <- empty{}:
-		L:
-			select {
-			case <-ctx.Done():
-				return
-			case err := <-n.errs:
-				<-n.sem
-				n.Log.Error(err)
-			case msg := <-n.in:
-				for _, s := range n.jsSubs {
-					if msg.Sub == s {
-						n.handleJetstreamMessage(msg)
-						break L
-					}
+		case msg := <-n.in:
+			jetstreamMsg := slices.Contains(n.jsSubs, msg.Sub)
+
+			if jetstreamMsg {
+				if err := msg.InProgress(); err != nil {
+					n.Log.Warnf("Failed to mark JetStream message as in progress on subject %s: %v", msg.Subject, err)
 				}
-				if _, err := n.handleMessage(msg); err != nil {
-					n.Log.Errorf("Failed to handle message on subject %s: %v", msg.Subject, err)
+			}
+
+			// Parse the metric and add it to the accumulator
+			metrics, err := n.parser.Parse(msg.Data)
+			if err != nil {
+				<-n.sem
+				n.acc.AddError(fmt.Errorf("Failed to handle message on subject %s: %v", msg.Subject, err))
+			}
+			if len(metrics) == 0 {
+				once.Do(func() {
+					n.Log.Debug(internal.NoMetricsCreatedMsg)
+				})
+			} else {
+				for _, m := range metrics {
+					m.AddTag("subject", msg.Subject)
+				}
+				id := n.acc.AddTrackingMetricGroup(metrics)
+
+				// Make sure we manually acknowledge the messages later on delivery to Telegraf output(s)
+				if jetstreamMsg {
+					n.Lock()
+					n.undelivered[id] = msg
+					n.Unlock()
 				}
 			}
 		}
 	}
-}
-
-func (n *NatsConsumer) handleMessage(msg *nats.Msg) (telegraf.TrackingID, error) {
-	metrics, err := n.parser.Parse(msg.Data)
-	if err != nil {
-		<-n.sem
-		return 0, fmt.Errorf("failed to parse: %w", err)
-	}
-	if len(metrics) == 0 {
-		once.Do(func() {
-			n.Log.Debug(internal.NoMetricsCreatedMsg)
-		})
-	}
-	for _, m := range metrics {
-		m.AddTag("subject", msg.Subject)
-	}
-	return n.acc.AddTrackingMetricGroup(metrics), nil
-}
-
-func (n *NatsConsumer) handleJetstreamMessage(msg *nats.Msg) {
-	n.Lock()
-	defer n.Unlock()
-
-	if err := msg.InProgress(); err != nil {
-		n.Log.Warnf("Failed to mark JetStream message as in progress on subject %s: %v", msg.Subject, err)
-	}
-
-	id, err := n.handleMessage(msg)
-	if err != nil {
-		n.Log.Errorf("Failed to handle JetStream message on subject %s: %v", msg.Subject, err)
-		if err := msg.Term(); err != nil {
-			n.Log.Errorf("Failed to terminate JetStream message on subject %s: %v", msg.Subject, err)
-		}
-		return
-	}
-
-	n.undelivered[id] = msg
 }
 
 func (n *NatsConsumer) waitForDelivery(ctx context.Context) {
@@ -298,36 +284,29 @@ func (n *NatsConsumer) waitForDelivery(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case track := <-n.acc.Delivered():
-			<-n.sem
-			msg := n.removeDelivered(track.ID())
+			// Get the tracked metric if any. Please remember, only Jetstream messages support a manual ACK
+			n.Lock()
+			msg, ok := n.undelivered[track.ID()]
+			delete(n.undelivered, track.ID())
+			n.Unlock()
 
-			if msg != nil {
-				if track.Delivered() {
-					err := msg.Ack()
-					if err != nil {
-						n.Log.Errorf("Failed to acknowledge JetStream message on subject %s: %v", msg.Subject, err)
-					}
-				} else {
-					err := msg.Term()
-					if err != nil {
-						n.Log.Errorf("Failed to terminate JetStream message on subject %s: %v", msg.Subject, err)
-					}
+			if !ok {
+				<-n.sem
+				continue
+			}
+			if track.Delivered() {
+				if err := msg.Ack(); err != nil {
+					n.Log.Errorf("Failed to acknowledge JetStream message on subject %s: %v", msg.Subject, err)
+				}
+			} else {
+				err := msg.Term()
+				if err != nil {
+					n.Log.Errorf("Failed to terminate JetStream message on subject %s: %v", msg.Subject, err)
 				}
 			}
+			<-n.sem
 		}
 	}
-}
-
-func (n *NatsConsumer) removeDelivered(id telegraf.TrackingID) *nats.Msg {
-	n.Lock()
-	defer n.Unlock()
-
-	msg, ok := n.undelivered[id]
-	if !ok {
-		return nil
-	}
-	delete(n.undelivered, id)
-	return msg
 }
 
 func (n *NatsConsumer) clean() {
