@@ -335,6 +335,7 @@ func init() {
 			Servers:                []string{"nats://localhost:4222"},
 			Subjects:               []string{"telegraf"},
 			QueueGroup:             "telegraf_consumers",
+			PendingBytesLimit:      nats.DefaultSubPendingBytesLimit,
 			PendingMessageLimit:    nats.DefaultSubPendingMsgsLimit,
 			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		}
