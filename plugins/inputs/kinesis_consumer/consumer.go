@@ -283,7 +283,7 @@ func (c *consumer) updateShardConsumers(ctx context.Context) error {
 				c.log.Tracef("shard %s has parent %s which is expired...", id, pid)
 			}
 		}
-		if shard.AdjacentParentShardId != nil && *shard.AdjacentParentShardId != "" && availableShardIDs[*shard.AdjacentParentShardId] {
+		if shard.AdjacentParentShardId != nil && *shard.AdjacentParentShardId != "" {
 			pid := *shard.AdjacentParentShardId
 			// The parent shard might be expired and thus not available anymore.
 			// In those cases, we need to start consuming the child shard
