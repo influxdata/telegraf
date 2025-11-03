@@ -16,10 +16,10 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// GdchHttp is the main plugin struct
-type GdchHttp struct {
-	Http *http_plugin.HTTP `toml:"http"` // Embedded http plugin
-	Auth *gdchauth.GdchAuth    `toml:"auth"` // GDCH authenticator
+// GdchHTTP is the main plugin struct
+type GdchHTTP struct {
+	HTTP *http_plugin.HTTP  `toml:"http"` // Embedded http plugin
+	Auth *gdchauth.GdchAuth `toml:"auth"` // GDCH authenticator
 
 	Log telegraf.Logger `toml:"-"`
 }
@@ -27,18 +27,18 @@ type GdchHttp struct {
 // --- Telegraf Plugin Interface Methods ---
 
 // Description returns a one-sentence description of the plugin
-func (g *GdchHttp) Description() string {
+func (g *GdchHTTP) Description() string {
 	return "Wraps the http input plugin to add GDCH service account auth"
 }
 
-func (g *GdchHttp) SampleConfig() string {
+func (g *GdchHTTP) SampleConfig() string {
 	return sampleConfig
 }
 
 // Init is called once when the plugin starts.
 // This is where we load the key file and initialize the embedded http plugin.
-func (g *GdchHttp) Init() error {
-	if g.Http == nil {
+func (g *GdchHTTP) Init() error {
+	if g.HTTP == nil {
 		return errors.New("http plugin configuration is missing")
 	}
 	if g.Auth == nil {
@@ -51,25 +51,25 @@ func (g *GdchHttp) Init() error {
 	}
 
 	g.Log.Info("GDCH HTTP plugin initialized. Calling Init() on embedded http plugin.")
-	return g.Http.Init()
+	return g.HTTP.Init()
 }
 
 // Gather is the main method called by Telegraf at each interval
-func (g *GdchHttp) Gather(acc telegraf.Accumulator) error {
+func (g *GdchHTTP) Gather(acc telegraf.Accumulator) error {
 	ctx := context.Background()
 
 	token, err := g.Auth.GetToken(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get auth token: %w", err)
 	}
-	g.Http.Token = config.NewSecret([]byte(token))
+	g.HTTP.Token = config.NewSecret([]byte(token))
 
-	return g.Http.Gather(acc)
+	return g.HTTP.Gather(acc)
 }
 
 // SetParserFunc passes the parser function to the embedded http plugin.
-func (g *GdchHttp) SetParserFunc(fn telegraf.ParserFunc) {
-	g.Http.SetParserFunc(fn)
+func (g *GdchHTTP) SetParserFunc(fn telegraf.ParserFunc) {
+	g.HTTP.SetParserFunc(fn)
 }
 
 // --- Telegraf Plugin Registration ---
@@ -78,8 +78,8 @@ func (g *GdchHttp) SetParserFunc(fn telegraf.ParserFunc) {
 func init() {
 	inputs.Add("gdch_http",
 		func() telegraf.Input {
-			return &GdchHttp{ //nolint:staticcheck // Setting HTTP is required for the plugin to function.
-				Http: &http_plugin.HTTP{},
+			return &GdchHTTP{
+				HTTP: &http_plugin.HTTP{},
 				Auth: &gdchauth.GdchAuth{},
 			}
 		})

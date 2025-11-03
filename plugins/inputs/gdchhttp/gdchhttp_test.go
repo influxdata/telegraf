@@ -17,6 +17,7 @@ import (
 	http_plugin "github.com/influxdata/telegraf/plugins/inputs/http"
 	"github.com/influxdata/telegraf/plugins/secretstores/gdchauth"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -52,7 +53,7 @@ func generateTestKeyFile(t *testing.T, tokenURI string) string {
 	keyData, err := json.Marshal(saKey)
 	require.NoError(t, err)
 
-	tmpfile, err := os.CreateTemp("", "test-sa-key-*.json")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "test-sa-key-*.json")
 	require.NoError(t, err)
 	defer tmpfile.Close()
 
@@ -65,15 +66,15 @@ func generateTestKeyFile(t *testing.T, tokenURI string) string {
 // --- Test Cases ---
 
 func TestInit(t *testing.T) {
-	t.Run("missing service account file should fail", func(t *testing.T) {
-		plugin := &GdchHttp{
-			Http: &http_plugin.HTTP{Log: &testutil.Logger{}},
+	t.Run("missing auth config should fail", func(t *testing.T) {
+		plugin := &GdchHTTP{
+			HTTP: &http_plugin.HTTP{Log: &testutil.Logger{}},
 		}
 		require.ErrorContains(t, plugin.Init(), "auth configuration is missing")
 	})
 
 	t.Run("missing http config should fail", func(t *testing.T) {
-		plugin := &GdchHttp{ //nolint:staticcheck // We are testing the error case where Auth is nil
+		plugin := &GdchHTTP{
 			Auth: &gdchauth.GdchAuth{},
 		}
 		err := plugin.Init()
@@ -81,10 +82,10 @@ func TestInit(t *testing.T) {
 		require.Contains(t, err.Error(), "http plugin configuration is missing")
 	})
 
-	t.Run("auth init fails", func(t *testing.T) {
-		plugin := &GdchHttp{ //nolint:staticcheck // We are testing the error case where Auth is nil
+	t.Run("missing service account file should fail", func(t *testing.T) {
+		plugin := &GdchHTTP{
 			Auth: &gdchauth.GdchAuth{},
-			Http: &http_plugin.HTTP{Log: &testutil.Logger{}},
+			HTTP: &http_plugin.HTTP{Log: &testutil.Logger{}},
 			Log:  testutil.Logger{},
 		}
 		err := plugin.Init()
@@ -93,11 +94,11 @@ func TestInit(t *testing.T) {
 	})
 
 	t.Run("successful init", func(t *testing.T) {
-		plugin := &GdchHttp{
+		plugin := &GdchHTTP{
 			Auth: &gdchauth.GdchAuth{
 				ServiceAccountFile: generateTestKeyFile(t, "http://localhost/token"),
 			},
-			Http: &http_plugin.HTTP{Log: &testutil.Logger{}},
+			HTTP: &http_plugin.HTTP{Log: &testutil.Logger{}},
 			Log:  &testutil.Logger{},
 		}
 		err := plugin.Init()
@@ -109,13 +110,13 @@ func TestInit(t *testing.T) {
 
 func TestGather(t *testing.T) {
 	// --- Setup Mock Server ---
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"access_token": testAccessToken,
 			"expire_time":  "2025-01-01T00:00:00Z",
 		})
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}))
 	defer server.Close()
 
@@ -126,13 +127,13 @@ func TestGather(t *testing.T) {
 	keyFile := generateTestKeyFile(t, server.URL)
 	defer os.Remove(keyFile)
 
-	plugin := &GdchHttp{
+	plugin := &GdchHTTP{
 		Auth: &gdchauth.GdchAuth{
 			ServiceAccountFile: keyFile,
 			Audience:           testAudience,
 			Log:                &testutil.Logger{},
 		},
-		Http: httpPlugin,
+		HTTP: httpPlugin,
 		Log:  &testutil.Logger{},
 	}
 	err := plugin.Init()

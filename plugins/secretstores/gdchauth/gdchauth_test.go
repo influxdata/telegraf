@@ -18,6 +18,7 @@ import (
 
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -55,7 +56,7 @@ func generateTestKeyFile(t *testing.T, tokenURI string) string {
 	keyData, err := json.Marshal(saKey)
 	require.NoError(t, err)
 
-	tmpfile, err := os.CreateTemp("", "test-sa-key-*.json")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "test-sa-key-*.json")
 	require.NoError(t, err)
 	defer tmpfile.Close()
 
@@ -86,7 +87,7 @@ func TestGdchAuth_Init(t *testing.T) {
 	})
 
 	t.Run("invalid service account file json should fail", func(t *testing.T) {
-		tmpfile, err := os.CreateTemp("", "invalid-sa-key-*.json")
+		tmpfile, err := os.CreateTemp(t.TempDir(), "invalid-sa-key-*.json")
 		require.NoError(t, err)
 		defer os.Remove(tmpfile.Name())
 		_, err = tmpfile.WriteString("this is not json")
@@ -109,7 +110,7 @@ func TestGdchAuth_Init(t *testing.T) {
 		keyData, err := json.Marshal(saKey)
 		require.NoError(t, err)
 
-		tmpfile, err := os.CreateTemp("", "test-sa-key-*.json")
+		tmpfile, err := os.CreateTemp(t.TempDir(), "test-sa-key-*.json")
 		require.NoError(t, err)
 		defer os.Remove(tmpfile.Name())
 		_, err = tmpfile.Write(keyData)
@@ -145,20 +146,32 @@ func TestGdchAuth_GetToken(t *testing.T) {
 	// --- Setup Mock Token Server ---
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Check request method and content type
-		require.Equal(t, "POST", r.Method)
-		require.Equal(t, "application/json", r.Header.Get("Content-Type"))
+		if !assert.Equal(t, "POST", r.Method) {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if !assert.Equal(t, "application/json", r.Header.Get("Content-Type")) {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 
 		// Decode request body to verify claims
 		var reqBody map[string]string
 		err := json.NewDecoder(r.Body).Decode(&reqBody)
-		require.NoError(t, err)
-		require.Equal(t, testAudience, reqBody["audience"])
+		if !assert.NoError(t, err) {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if !assert.Equal(t, testAudience, reqBody["audience"]) {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 
 		// Send back a successful token response
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, err = fmt.Fprintf(w, `{"access_token": "%s", "expires_in": %d}`, testAccessToken, testAccessTokenExpiry)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}))
 	defer server.Close()
 
@@ -228,10 +241,11 @@ func TestGdchAuth_GetToken(t *testing.T) {
 
 func TestGdchAuth_GetToken_ServerError(t *testing.T) {
 	// --- Setup Mock Server that always fails ---
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		_, err := w.Write([]byte("internal server error"))
-		require.NoError(t, err)
+		if _, err := w.Write([]byte("internal server error")); err != nil {
+			t.Logf("error writing response: %v", err)
+		}
 	}))
 	defer server.Close()
 
@@ -261,12 +275,13 @@ func TestGdchAuth_GetToken_ServerError(t *testing.T) {
 
 func TestGdchAuth_GetToken_Concurrent(t *testing.T) {
 	callCount := 0
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		callCount++
+		var err error
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, err := fmt.Fprintf(w, `{"access_token": "%s", "expires_in": %d}`, testAccessToken, testAccessTokenExpiry)
-		require.NoError(t, err)
+		_, err = fmt.Fprintf(w, `{"access_token": "%s", "expires_in": %d}`, testAccessToken, testAccessTokenExpiry)
+		assert.NoError(t, err, "error writing response in mock server")
 	}))
 	defer server.Close()
 
@@ -287,8 +302,8 @@ func TestGdchAuth_GetToken_Concurrent(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			token, err := g.GetToken(context.Background())
-			require.NoError(t, err)
-			require.Equal(t, testAccessToken, token)
+			assert.NoError(t, err)
+			assert.Equal(t, testAccessToken, token)
 		}()
 	}
 	wg.Wait()

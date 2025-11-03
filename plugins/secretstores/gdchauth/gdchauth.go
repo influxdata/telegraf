@@ -120,6 +120,8 @@ func (g *GdchAuth) SetLogger(log telegraf.Logger) {
 	g.Log = log
 }
 
+// GetToken retrieves a GDCH auth token. It caches the token and reuses it
+// until it is within the 'token_expiry_buffer' of its expiry time.
 func (g *GdchAuth) GetToken(ctx context.Context) (string, error) {
 	g.tokenMutex.RLock()
 
