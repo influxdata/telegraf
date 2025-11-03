@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/gosnmp/gosnmp"
-
-	"github.com/influxdata/telegraf"
 )
 
 // Connection is an interface which wraps a *gosnmp.GoSNMP object.
@@ -40,25 +38,6 @@ func (gs GosnmpWrapper) Walk(oid string, fn gosnmp.WalkFunc) error {
 		return gs.GoSNMP.Walk(oid, fn)
 	}
 	return gs.GoSNMP.BulkWalk(oid, fn)
-}
-
-type Logger struct {
-	gs Connection
-	telegraf.Logger
-}
-
-func (l *Logger) Print(args ...interface{}) {
-	message := fmt.Sprint(args...)
-	if l.gs != nil && l.gs.Host() != "" {
-		message = fmt.Sprintf("agent %s: %s", l.gs.Host(), message)
-	}
-	l.Trace(message)
-}
-func (l *Logger) Printf(format string, args ...interface{}) {
-	if l.gs != nil && l.gs.Host() != "" {
-		format = fmt.Sprintf("agent %s: %s", l.gs.Host(), format)
-	}
-	l.Tracef(format, args...)
 }
 
 func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
