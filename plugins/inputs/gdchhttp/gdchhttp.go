@@ -27,11 +27,11 @@ type GdchHTTP struct {
 // --- Telegraf Plugin Interface Methods ---
 
 // Description returns a one-sentence description of the plugin
-func (g *GdchHTTP) Description() string {
+func (*GdchHTTP) Description() string {
 	return "Wraps the http input plugin to add GDCH service account auth"
 }
 
-func (g *GdchHTTP) SampleConfig() string {
+func (*GdchHTTP) SampleConfig() string {
 	return sampleConfig
 }
 

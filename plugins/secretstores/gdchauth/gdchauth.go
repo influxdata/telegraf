@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -26,6 +27,7 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+/* #nosec G101 */
 const (
 	tokenExchangeType       = "urn:ietf:params:oauth:token-type:token-exchange"
 	accessTokenTokenType    = "urn:ietf:params:oauth:token-type:access_token"
@@ -89,7 +91,7 @@ func (g *GdchAuth) Init() error {
 }
 
 // Get retrieves the token. The key is ignored as this secret store only provides one secret.
-func (g *GdchAuth) Get(key string) ([]byte, error) {
+func (g *GdchAuth) Get(_ string) ([]byte, error) {
 	token, err := g.GetToken(context.Background())
 	if err != nil {
 		return nil, err
@@ -98,12 +100,12 @@ func (g *GdchAuth) Get(key string) ([]byte, error) {
 }
 
 // List returns the list of secrets provided by this store.
-func (g *GdchAuth) List() ([]string, error) {
+func (*GdchAuth) List() ([]string, error) {
 	return []string{"token"}, nil
 }
 
 // Set is not supported for the gdchauth secret store.
-func (g *GdchAuth) Set(key, value string) error {
+func (*GdchAuth) Set(_, _ string) error {
 	return errors.New("setting secrets is not supported")
 }
 

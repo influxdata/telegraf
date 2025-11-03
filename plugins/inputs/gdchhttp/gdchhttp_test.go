@@ -13,12 +13,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/config"
 	http_plugin "github.com/influxdata/telegraf/plugins/inputs/http"
 	"github.com/influxdata/telegraf/plugins/secretstores/gdchauth"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -142,8 +143,7 @@ func TestGather(t *testing.T) {
 
 	// --- Run Test ---
 	var acc testutil.Accumulator
-	// We do not care about the return value
-	plugin.Gather(&acc)
+	require.NoError(t, plugin.Gather(&acc))
 
 	// Verify that the token was set on the embedded http plugin.
 	// The token is a secret, so we need to get it to check its value.
