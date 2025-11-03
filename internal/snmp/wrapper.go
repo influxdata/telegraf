@@ -43,13 +43,21 @@ func (gs GosnmpWrapper) Walk(oid string, fn gosnmp.WalkFunc) error {
 }
 
 type Logger struct {
+	gs Connection
 	telegraf.Logger
 }
 
 func (l *Logger) Print(args ...interface{}) {
-	l.Trace(args...)
+	message := fmt.Sprint(args...)
+	if l.gs != nil && l.gs.Host() != "" {
+		message = fmt.Sprintf("agent %s: %s", l.gs.Host(), message)
+	}
+	l.Trace(message)
 }
 func (l *Logger) Printf(format string, args ...interface{}) {
+	if l.gs != nil && l.gs.Host() != "" {
+		format = fmt.Sprintf("agent %s: %s", l.gs.Host(), format)
+	}
 	l.Tracef(format, args...)
 }
 
@@ -63,7 +71,7 @@ func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 	gs.UseUnconnectedUDPSocket = s.UnconnectedUDPSocket
 
 	if s.GosnmpDebugLogger != nil {
-		gs.Logger = gosnmp.NewLogger(&Logger{s.GosnmpDebugLogger})
+		gs.Logger = gosnmp.NewLogger(&Logger{gs: &gs, Logger: s.GosnmpDebugLogger})
 	}
 
 	switch s.Version {
