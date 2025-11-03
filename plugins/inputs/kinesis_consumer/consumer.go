@@ -280,7 +280,7 @@ func (c *consumer) updateShardConsumers(ctx context.Context) error {
 					continue
 				}
 			} else {
-				c.log.Tracef("shard %s has parent %s which is is expired...", id, pid)
+				c.log.Tracef("shard %s has parent %s which is expired...", id, pid)
 			}
 		}
 		if shard.AdjacentParentShardId != nil && *shard.AdjacentParentShardId != "" && availableShardIDs[*shard.AdjacentParentShardId] {
