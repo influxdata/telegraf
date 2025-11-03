@@ -299,8 +299,7 @@ func (n *NatsConsumer) waitForDelivery(ctx context.Context) {
 					n.Log.Errorf("Failed to acknowledge JetStream message on subject %s: %v", msg.Subject, err)
 				}
 			} else {
-				err := msg.Term()
-				if err != nil {
+				if err := msg.Term(); err != nil {
 					n.Log.Errorf("Failed to terminate JetStream message on subject %s: %v", msg.Subject, err)
 				}
 			}
