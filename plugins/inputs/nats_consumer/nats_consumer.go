@@ -291,11 +291,6 @@ func (n *NatsConsumer) waitForDelivery(ctx context.Context) {
 					if err != nil {
 						n.Log.Errorf("Failed to Ack JetStream message on subject %s: %v", msg.Subject, err)
 					}
-				} else {
-					err := msg.Nak()
-					if err != nil {
-						n.Log.Errorf("Failed to Nak JetStream message on subject %s: %v", msg.Subject, err)
-					}
 				}
 			}
 		}
