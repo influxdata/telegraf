@@ -76,10 +76,8 @@ func New(category, name, alias string) *logger {
 		l.source += "::"
 	}
 	l.source += l.alias
-	l.prefix = l.source
-
-	if l.prefix != "" {
-		l.prefix = "[" + l.prefix + "] "
+	if l.source != "" {
+		l.prefix = "[" + l.source + "] "
 	}
 
 	return l
