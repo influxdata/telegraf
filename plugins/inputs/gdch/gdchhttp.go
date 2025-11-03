@@ -2,19 +2,24 @@ package gdch
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	http_plugin "github.com/influxdata/telegraf/plugins/inputs/http" // Alias the http plugin
+	http_plugin "github.com/influxdata/telegraf/plugins/inputs/http"
+	"github.com/influxdata/telegraf/plugins/secretstores/gdch"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 // GdchHttp is the main plugin struct
 type GdchHttp struct {
 	Http *http_plugin.HTTP `toml:"http"` // Embedded http plugin
-	Auth *GdchAuth         `toml:"auth"` // GDCH authenticator
+	Auth *gdch.GdchAuth    `toml:"auth"` // GDCH authenticator
 
 	Log telegraf.Logger `toml:"-"`
 }
@@ -27,30 +32,7 @@ func (g *GdchHttp) Description() string {
 }
 
 func (g *GdchHttp) SampleConfig() string {
-	return `
-  [[inputs.gdch_http]]
-  data_format = "json_v2"
-
-  [inputs.gdch_http.auth]
-    ## Path to the GDCH service account JSON key file
-    service_account_file = "/etc/telegraf/gdch-key.json"
-    audience = "https://{GDCH_URL}"
-	## Time before token expiry to fetch a new one.
-	# token_expiry_buffer = "5m"
-
-    [inputs.gdch_http.auth.tls]
-      insecure_skip_verify = true
-	  ## Optional TLS configuration for the token endpoint.
-  	  # tls_ca = "/etc/telegraf/ca.pem"
-  
-  ## Embedded HTTP Input Plugin Configuration.
-  [inputs.gdch_http.http] 
-    ## A list of URLs to pull data from.
-    urls = [
-      "https://{GDCH_URL}/{PROJECT}/metrics"
-    ]
-    ## ... other http plugin options ...
-`
+	return sampleConfig
 }
 
 // Init is called once when the plugin starts.
@@ -63,7 +45,7 @@ func (g *GdchHttp) Init() error {
 		return errors.New("auth configuration is missing")
 	}
 
-	g.Auth.Log = g.Log
+	g.Auth.SetLogger(g.Log)
 	if err := g.Auth.Init(); err != nil {
 		return fmt.Errorf("failed to initialize auth module: %w", err)
 	}
@@ -96,9 +78,9 @@ func (g *GdchHttp) SetParserFunc(fn telegraf.ParserFunc) {
 func init() {
 	inputs.Add("gdch_http",
 		func() telegraf.Input {
-			return &GdchHttp{
+			return &GdchHttp{ //nolint:staticcheck // Setting HTTP is required for the plugin to function.
 				Http: &http_plugin.HTTP{},
-				Auth: &GdchAuth{},
+				Auth: &gdch.GdchAuth{},
 			}
 		})
 }

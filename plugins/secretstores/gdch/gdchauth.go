@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
+	_ "embed"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -19,13 +20,21 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/plugins/secretstores"
 )
+
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	tokenExchangeType       = "urn:ietf:params:oauth:token-type:token-exchange"
 	accessTokenTokenType    = "urn:ietf:params:oauth:token-type:access_token"
 	serviceAccountTokenType = "urn:k8s:params:oauth:token-type:serviceaccount"
 )
+
+func (*GdchAuth) SampleConfig() string {
+	return sampleConfig
+}
 
 // GdchAuth is the main authenticator struct
 type GdchAuth struct {
@@ -39,8 +48,19 @@ type GdchAuth struct {
 	token       string
 	tokenExpiry time.Time
 	tokenMutex  sync.RWMutex
-	saKey       *serviceAccountKey
+	saKey       *ServiceAccountKey
 	httpClient  *http.Client
+}
+
+type ServiceAccountKey struct {
+	PrivateKeyID        string `json:"private_key_id"`
+	PrivateKey          string `json:"private_key"`
+	ServiceIdentityName string `json:"name"`
+	TokenURI            string `json:"token_uri"`
+	Project             string `json:"project"`
+
+	parsedKey     crypto.Signer
+	signingMethod jwt.SigningMethod
 }
 
 func (g *GdchAuth) Init() error {
@@ -56,7 +76,7 @@ func (g *GdchAuth) Init() error {
 		return fmt.Errorf("failed to read service account file: %w", err)
 	}
 
-	g.saKey = &serviceAccountKey{}
+	g.saKey = &ServiceAccountKey{}
 	if err := json.Unmarshal(keyData, g.saKey); err != nil {
 		return fmt.Errorf("failed to parse service account JSON: %w", err)
 	}
@@ -66,6 +86,38 @@ func (g *GdchAuth) Init() error {
 	}
 
 	return g.buildHTTPClient()
+}
+
+// Get retrieves the token. The key is ignored as this secret store only provides one secret.
+func (g *GdchAuth) Get(key string) ([]byte, error) {
+	token, err := g.GetToken(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return []byte(token), nil
+}
+
+// List returns the list of secrets provided by this store.
+func (g *GdchAuth) List() ([]string, error) {
+	return []string{"token"}, nil
+}
+
+// Set is not supported for the gdchauth secret store.
+func (g *GdchAuth) Set(key, value string) error {
+	return errors.New("setting secrets is not supported")
+}
+
+// GetResolver returns a resolver function for the secret.
+func (g *GdchAuth) GetResolver(key string) (telegraf.ResolveFunc, error) {
+	return func() ([]byte, bool, error) {
+		s, err := g.Get(key)
+		return s, true, err
+	}, nil
+}
+
+// SetLogger sets the logger for the authenticator.
+func (g *GdchAuth) SetLogger(log telegraf.Logger) {
+	g.Log = log
 }
 
 func (g *GdchAuth) GetToken(ctx context.Context) (string, error) {
@@ -95,17 +147,6 @@ func (g *GdchAuth) GetToken(ctx context.Context) (string, error) {
 	g.tokenExpiry = expiry
 	g.Log.Info("Successfully fetched new auth token")
 	return g.token, nil
-}
-
-type serviceAccountKey struct {
-	PrivateKeyID        string `json:"private_key_id"`
-	PrivateKey          string `json:"private_key"`
-	ServiceIdentityName string `json:"name"`
-	TokenURI            string `json:"token_uri"`
-	Project             string `json:"project"`
-
-	parsedKey     crypto.Signer
-	signingMethod jwt.SigningMethod
 }
 
 func (g *GdchAuth) buildHTTPClient() error {
@@ -225,6 +266,7 @@ func (g *GdchAuth) fetchNewToken(ctx context.Context) (string, time.Time, error)
 }
 
 func init() {
-	// The authenticator is not a plugin, so it doesn't need to be registered.
-	// It will be initialized and used by other plugins directly.
+	secretstores.Add("gdchauth", func(_ string) telegraf.SecretStore {
+		return &GdchAuth{}
+	})
 }

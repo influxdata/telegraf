@@ -44,7 +44,7 @@ func generateTestKeyFile(t *testing.T, tokenURI string) string {
 
 	pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: x509Encoded})
 
-	saKey := serviceAccountKey{
+	saKey := ServiceAccountKey{
 		PrivateKeyID:        testPrivateKeyID,
 		PrivateKey:          string(pemEncoded),
 		ServiceIdentityName: testServiceIdentity,
@@ -103,7 +103,7 @@ func TestGdchAuth_Init(t *testing.T) {
 	})
 
 	t.Run("invalid private key pem should fail", func(t *testing.T) {
-		saKey := serviceAccountKey{
+		saKey := ServiceAccountKey{
 			PrivateKey: "this is not a pem",
 		}
 		keyData, err := json.Marshal(saKey)
