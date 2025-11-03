@@ -1,4 +1,4 @@
-package gdch
+package gdchauth
 
 import (
 	"bytes"

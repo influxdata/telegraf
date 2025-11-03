@@ -1,4 +1,4 @@
-package gdch
+package gdchhttp
 
 import (
 	"crypto/ecdsa"
@@ -15,7 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf/config"
 	http_plugin "github.com/influxdata/telegraf/plugins/inputs/http"
-	"github.com/influxdata/telegraf/plugins/secretstores/gdch"
+	"github.com/influxdata/telegraf/plugins/secretstores/gdchauth"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -41,7 +41,7 @@ func generateTestKeyFile(t *testing.T, tokenURI string) string {
 
 	pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: x509Encoded})
 
-	saKey := gdch.ServiceAccountKey{
+	saKey := gdchauth.ServiceAccountKey{
 		PrivateKeyID:        testPrivateKeyID,
 		PrivateKey:          string(pemEncoded),
 		ServiceIdentityName: testServiceIdentity,
@@ -74,7 +74,7 @@ func TestInit(t *testing.T) {
 
 	t.Run("missing http config should fail", func(t *testing.T) {
 		plugin := &GdchHttp{ //nolint:staticcheck // We are testing the error case where Auth is nil
-			Auth: &gdch.GdchAuth{},
+			Auth: &gdchauth.GdchAuth{},
 		}
 		err := plugin.Init()
 		require.Error(t, err)
@@ -83,7 +83,7 @@ func TestInit(t *testing.T) {
 
 	t.Run("auth init fails", func(t *testing.T) {
 		plugin := &GdchHttp{ //nolint:staticcheck // We are testing the error case where Auth is nil
-			Auth: &gdch.GdchAuth{},
+			Auth: &gdchauth.GdchAuth{},
 			Http: &http_plugin.HTTP{Log: &testutil.Logger{}},
 			Log:  testutil.Logger{},
 		}
@@ -94,7 +94,7 @@ func TestInit(t *testing.T) {
 
 	t.Run("successful init", func(t *testing.T) {
 		plugin := &GdchHttp{
-			Auth: &gdch.GdchAuth{
+			Auth: &gdchauth.GdchAuth{
 				ServiceAccountFile: generateTestKeyFile(t, "http://localhost/token"),
 			},
 			Http: &http_plugin.HTTP{Log: &testutil.Logger{}},
@@ -127,7 +127,7 @@ func TestGather(t *testing.T) {
 	defer os.Remove(keyFile)
 
 	plugin := &GdchHttp{
-		Auth: &gdch.GdchAuth{
+		Auth: &gdchauth.GdchAuth{
 			ServiceAccountFile: keyFile,
 			Audience:           testAudience,
 			Log:                &testutil.Logger{},

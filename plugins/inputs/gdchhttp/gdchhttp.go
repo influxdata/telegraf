@@ -1,4 +1,4 @@
-package gdch
+package gdchhttp
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	http_plugin "github.com/influxdata/telegraf/plugins/inputs/http"
-	"github.com/influxdata/telegraf/plugins/secretstores/gdch"
+	"github.com/influxdata/telegraf/plugins/secretstores/gdchauth"
 )
 
 //go:embed sample.conf
@@ -19,7 +19,7 @@ var sampleConfig string
 // GdchHttp is the main plugin struct
 type GdchHttp struct {
 	Http *http_plugin.HTTP `toml:"http"` // Embedded http plugin
-	Auth *gdch.GdchAuth    `toml:"auth"` // GDCH authenticator
+	Auth *gdchauth.GdchAuth    `toml:"auth"` // GDCH authenticator
 
 	Log telegraf.Logger `toml:"-"`
 }
@@ -80,7 +80,7 @@ func init() {
 		func() telegraf.Input {
 			return &GdchHttp{ //nolint:staticcheck // Setting HTTP is required for the plugin to function.
 				Http: &http_plugin.HTTP{},
-				Auth: &gdch.GdchAuth{},
+				Auth: &gdchauth.GdchAuth{},
 			}
 		})
 }
