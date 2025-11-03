@@ -255,7 +255,7 @@ func (n *NatsConsumer) receiver(ctx context.Context) {
 			metrics, err := n.parser.Parse(msg.Data)
 			if err != nil {
 				<-n.sem
-				n.acc.AddError(fmt.Errorf("Failed to handle message on subject %s: %v", msg.Subject, err))
+				n.acc.AddError(fmt.Errorf("failed to handle message on subject %s: %w", msg.Subject, err))
 			}
 			if len(metrics) == 0 {
 				once.Do(func() {
