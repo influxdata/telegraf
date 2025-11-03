@@ -36,7 +36,7 @@ type NatsConsumer struct {
 	JsSubjects             []string        `toml:"jetstream_subjects"`
 	JsStream               string          `toml:"jetstream_stream"`
 	PendingMessageLimit    int             `toml:"pending_message_limit"`
-	PendingBytesLimit      int             `toml:"pending_bytes_limit" deprecated:"1.37.0;1.40.0;unused"`
+	PendingBytesLimit      int             `toml:"pending_bytes_limit"`
 	MaxUndeliveredMessages int             `toml:"max_undelivered_messages"`
 	Log                    telegraf.Logger `toml:"-"`
 	tls.ClientConfig
@@ -132,7 +132,15 @@ func (n *NatsConsumer) Start(acc telegraf.Accumulator) error {
 
 		n.in = make(chan *nats.Msg, n.PendingMessageLimit)
 		for _, subj := range n.Subjects {
-			sub, err := n.conn.ChanQueueSubscribe(subj, n.QueueGroup, n.in)
+			sub, err := n.conn.QueueSubscribe(subj, n.QueueGroup, func(m *nats.Msg) {
+				n.in <- m
+			})
+			if err != nil {
+				return err
+			}
+
+			// set the subscription pending limits
+			err = sub.SetPendingLimits(n.PendingMessageLimit, n.PendingBytesLimit)
 			if err != nil {
 				return err
 			}
@@ -155,7 +163,15 @@ func (n *NatsConsumer) Start(acc telegraf.Accumulator) error {
 
 			if n.jsConn != nil {
 				for _, jsSub := range n.JsSubjects {
-					sub, err := n.jsConn.ChanQueueSubscribe(jsSub, n.QueueGroup, n.in, subOptions...)
+					sub, err := n.jsConn.QueueSubscribe(jsSub, n.QueueGroup, func(m *nats.Msg) {
+						n.in <- m
+					}, subOptions...)
+					if err != nil {
+						return err
+					}
+
+					// set the subscription pending limits
+					err = sub.SetPendingLimits(n.PendingMessageLimit, n.PendingBytesLimit)
 					if err != nil {
 						return err
 					}
