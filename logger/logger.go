@@ -21,7 +21,7 @@ import (
 var (
 	instance   *handler                // handler for the actual output
 	callbacks  map[string]CallbackFunc // logging callback registry
-	callbackMu sync.Mutex
+	callbackMu sync.RWMutex
 	once       sync.Once // once token to initialize the handler only once
 )
 
@@ -155,12 +155,13 @@ func (l *logger) Print(level telegraf.LogLevel, ts time.Time, args ...interface{
 		instance.add(level, ts, l.prefix, l.attributes, args...)
 	}
 
-	// Serve all registered callbacks
-	callbackMu.Lock()
+	// Serve all registered callbacks before checking the log-level. This is
+	// intentional to allow the callback to apply its own log-level filtering.
+	callbackMu.RLock()
 	for _, cb := range callbacks {
 		cb(level, ts.UTC(), l.source, l.attributes, args...)
 	}
-	callbackMu.Unlock()
+	callbackMu.RUnlock()
 
 	// Skip all messages with insufficient log-levels
 	if l.level != nil && !l.level.Includes(level) || l.level == nil && !instance.level.Includes(level) {
@@ -322,14 +323,14 @@ func CloseLogging() error {
 }
 
 // AddCallback adds the given callback function to the registry and returns an
-// ID that can be used for removing the callback later
-func AddCallback(callback CallbackFunc) string {
+// ID that can be used for removing the callback later. Callback functions must
+// not block or take a lot of time!
+func AddCallback(callback CallbackFunc) (string, error) {
 	// Create a cookie to be returned to the caller in order to be able to
 	// remove the callback later
 	rawid, err := uuid.NewRandom()
 	if err != nil {
-		// This call can never return anything except nil, check anyway
-		panic(err)
+		return "", err
 	}
 	id := rawid.String()
 
@@ -337,7 +338,7 @@ func AddCallback(callback CallbackFunc) string {
 	callbacks[id] = callback
 	callbackMu.Unlock()
 
-	return id
+	return id, nil
 }
 
 // RemoveCallback removes the callback function with the given ID from the registry
