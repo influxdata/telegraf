@@ -3,13 +3,9 @@
 This plugin gathers packets and bytes counters for rules within
 Linux's [nftables][nftables] firewall.
 
-Rules are identified through associated comment.
-**Rules without comment are ignored**.
-
-Before using this plugin **you must ensure that the rules you want to monitor
-are named with a unique comment**. Comments are added using the 'comment
-"my comment"' nftables options.
-
+> [!IMPORTANT]
+> Rules are identified by the associated comment so those **comments have to be unique**!
+> Rules without comment are ignored.
 
 ⭐ Telegraf v1.37.0
 🏷️ network, system
@@ -17,16 +13,23 @@ are named with a unique comment**. Comments are added using the 'comment
 
 [nftables]: https://wiki.nftables.org/wiki-nftables/index.php/Main_Page
 
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
 ## Configuration
 
 ```toml @sample.conf
 [[inputs.nftables]]
-  ## Use sudo for command execution, can be restricted to "nft --json list table"
-  # use_sudo = false
-
-  ## Use this alternative binary
-  ## By default the nft command in PATH is used
+  ## Use the specified binary which will be looked-up in PATH
   # binary = "nft"
+   ## Use sudo for command execution, can be restricted to "nft --json list table"
+  # use_sudo = false
 
   ## A List of nftables to monitor. 
   ## have a counter and comment declared on it.
@@ -43,15 +46,6 @@ You may edit your sudo configuration with the following:
 ```sudo
 telegraf ALL=(root) NOPASSWD: /usr/bin/nft *
 ```
-
-## Global configuration options <!-- @/docs/includes/plugin_config.md -->
-
-In addition to the plugin-specific configuration settings, plugins support
-additional global and plugin configuration settings. These settings are used to
-modify metrics, tags, and field or create aliases and configure ordering, etc.
-See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
-
-[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Metrics
 

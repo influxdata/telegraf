@@ -6,7 +6,6 @@ package nftables
 import (
 	_ "embed"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os/exec"
 
@@ -26,6 +25,7 @@ type Nftables struct {
 	UseSudo bool     `toml:"use_sudo"`
 	Binary  string   `toml:"binary"`
 	Tables  []string `toml:"tables"`
+	args    []string
 }
 
 func (*Nftables) SampleConfig() string {
@@ -33,42 +33,35 @@ func (*Nftables) SampleConfig() string {
 }
 
 func (nft *Nftables) Init() error {
+	// Set defaults
 	if len(nft.Tables) == 0 {
-		return errors.New("invalid configuration - expected a 'Tables' entry with list of nftables to monitor")
+		nft.Tables = []string{"filter"}
 	}
+	if nft.Binary == "" {
+		nft.Binary = "nft"
+	}
+
+	// Construct the command
+	nft.args = make([]string, 0, 3)
+	if nft.UseSudo {
+		nft.args = append(nft.args, nft.Binary)
+		nft.Binary = "sudo"
+	}
+	nft.args = append(nft.args, "--json", "list", "table")
 	return nil
 }
 
 func (nft *Nftables) Gather(acc telegraf.Accumulator) error {
 	for _, table := range nft.Tables {
-		err := nft.getTableData(table, acc)
-		if err != nil {
-			acc.AddError(err) // Continue through all tables
-		}
+		acc.AddError(nft.getTableData(table, acc))
 	}
 	return nil
 }
 
 // List a specific table and add to Accumulator
 func (nft *Nftables) getTableData(tableName string, acc telegraf.Accumulator) error {
-	var binary string
-	if nft.Binary != "" {
-		binary = nft.Binary
-	} else {
-		binary = "nft"
-	}
-	nftablePath, err := exec.LookPath(binary)
-	if err != nil {
-		return errors.New("failed to find nft command ")
-	}
-	var args []string
-	name := nftablePath
-	if nft.UseSudo {
-		name = "sudo"
-		args = append(args, nftablePath)
-	}
-	args = append(args, "--json", "list", "table", tableName)
-	c := exec.Command(name, args...)
+	args := append(nft.args, tableName)
+	c := exec.Command(nft.Binary, args...)
 	out, err := c.Output()
 	if err != nil {
 		return fmt.Errorf("error executing nft command: %w", err)
@@ -77,15 +70,20 @@ func (nft *Nftables) getTableData(tableName string, acc telegraf.Accumulator) er
 }
 
 func parseNftableOutput(acc telegraf.Accumulator, out []byte) error {
-	var nftable nftable
+	var nftable table
 	err := json.Unmarshal(out, &nftable)
 	if err != nil {
 		return fmt.Errorf("error parsing: %s, Error: %w", out, err)
 	}
 	for _, rule := range nftable.Rules {
-		// Rule must have a Counter and a Comment
-		if rule.Counter != nil && len(rule.Comment) > 0 {
-			fields := map[string]interface{}{"bytes": rule.Counter.Bytes, "pkts": rule.Counter.Packets}
+		if len(rule.Comment) == 0 {
+			continue
+		}
+		for _, expr := range rule.Exprs {
+			if expr.Cntr == nil {
+				continue
+			}
+			fields := map[string]interface{}{"bytes": expr.Cntr.Bytes, "pkts": expr.Cntr.Packets}
 			tags := map[string]string{"table": rule.Table, "chain": rule.Chain, "ruleid": rule.Comment}
 			acc.AddFields("nftables", fields, tags)
 		}
