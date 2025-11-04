@@ -45,17 +45,16 @@ type InfluxDBV2Listener struct {
 	port           int
 	common_tls.ServerConfig
 
-	MaxUndeliveredMetrics int             `toml:"max_undelivered_metrics"`
-	ReadTimeout           config.Duration `toml:"read_timeout"`
-	WriteTimeout          config.Duration `toml:"write_timeout"`
-	MaxBodySize           config.Size     `toml:"max_body_size"`
-	Token                 config.Secret   `toml:"token"`
-	BucketTag             string          `toml:"bucket_tag"`
-	ParserType            string          `toml:"parser_type"`
-	UseInternalStatistics bool            `toml:"use_internal_statistics"`
-
-	Log        telegraf.Logger     `toml:"-"`
-	Statistics *selfstat.Collector `toml:"-"`
+	MaxUndeliveredMetrics int                 `toml:"max_undelivered_metrics"`
+	ReadTimeout           config.Duration     `toml:"read_timeout"`
+	WriteTimeout          config.Duration     `toml:"write_timeout"`
+	MaxBodySize           config.Size         `toml:"max_body_size"`
+	Token                 config.Secret       `toml:"token"`
+	BucketTag             string              `toml:"bucket_tag"`
+	ParserType            string              `toml:"parser_type"`
+	UseInternalStatistics bool                `toml:"use_internal_statistics"`
+	Log                   telegraf.Logger     `toml:"-"`
+	Statistics            *selfstat.Collector `toml:"-"`
 
 	ctx                 context.Context
 	cancel              context.CancelFunc
