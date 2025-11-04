@@ -2578,8 +2578,8 @@ go.opentelemetry.io/otel/trace v1.38.0/go.mod h1:j1P9ivuFsTceSWe1oY+EeW3sc+Pp42s
 go.opentelemetry.io/proto/otlp v0.7.0/go.mod h1:PqfVotwruBrMGOCsRd/89rSnXhoiJIqeYNgFYFoEGnI=
 go.opentelemetry.io/proto/otlp v0.15.0/go.mod h1:H7XAot3MsfNsj7EXtrA2q5xSNQ10UqI405h3+duxN4U=
 go.opentelemetry.io/proto/otlp v0.19.0/go.mod h1:H7XAot3MsfNsj7EXtrA2q5xSNQ10UqI405h3+duxN4U=
-go.opentelemetry.io/proto/otlp v1.8.0 h1:fRAZQDcAFHySxpJ1TwlA1cJ4tvcrw7nXl9xWWC8N5CE=
-go.opentelemetry.io/proto/otlp v1.8.0/go.mod h1:tIeYOeNBU4cvmPqpaji1P+KbB4Oloai8wN4rWzRrFF0=
+go.opentelemetry.io/proto/otlp v1.9.0 h1:l706jCMITVouPOqEnii2fIAuO3IVGBRPV5ICjceRb/A=
+go.opentelemetry.io/proto/otlp v1.9.0/go.mod h1:xE+Cx5E/eEHw+ISFkwPLwCZefwVjY+pqKg1qcK03+/4=
 go.opentelemetry.io/proto/otlp/collector/profiles/v1development v0.2.0 h1:40vBjolEOioNBl8zPj1wxqlA7kJ82RxR4HnUv7W8zRI=
 go.opentelemetry.io/proto/otlp/collector/profiles/v1development v0.2.0/go.mod h1:4wAsc1dEVb4D1ZykBNC9AriTU9uLYtmziLrB+7G4lb4=
 go.opentelemetry.io/proto/otlp/profiles/v1development v0.1.0 h1:2SRSI1tq9ShNZDTDdawabG2rvibKNZukZbgptYPDYY4=
