@@ -17,12 +17,6 @@ func TestNormalizePatternWithSlashEscape(t *testing.T) {
 		expected   string
 	}{
 		{
-			name:       "no separators",
-			pattern:    "foo.bar/baz",
-			separators: nil,
-			expected:   "foo.bar/baz",
-		},
-		{
 			name:       "single dot separator - preserve literal slash",
 			pattern:    "foo.bar.baz",
 			separators: []rune{'.'},
@@ -124,12 +118,6 @@ func TestNormalizePatternNoSlashEscape(t *testing.T) {
 		separators []rune
 		expected   string
 	}{
-		{
-			name:       "no separators",
-			pattern:    "foo.bar/baz",
-			separators: nil,
-			expected:   "foo.bar/baz",
-		},
 		{
 			name:       "slash separator only",
 			pattern:    "foo/bar/baz",

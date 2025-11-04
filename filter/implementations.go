@@ -185,11 +185,6 @@ func (f *filterGlobWithSeparatorsAndSlashEscape) Match(s string) bool {
 //     This is acceptable because U+FFFD is a replacement character for invalid/undecodable
 //     Unicode and should not appear in normal metric names.
 func normalizePatternWithSlashEscape(s string, separators []rune) string {
-	// Early return for edge case (should not happen in normal usage)
-	if len(separators) == 0 {
-		return s
-	}
-
 	// Step 1: Preserve literal slashes by replacing with U+FFFD
 	result := strings.ReplaceAll(s, "/", "\uFFFD")
 
@@ -211,11 +206,6 @@ func normalizePatternWithSlashEscape(s string, separators []rune) string {
 // and actual separators. With separator '.', ALL dots will be replaced with '/',
 // even if some were meant to be literal. This matches gobwas/glob behavior.
 func normalizePatternNoSlashEscape(s string, separators []rune) string {
-	// Early return for edge case (should not happen in normal usage)
-	if len(separators) == 0 {
-		return s
-	}
-
 	result := s
 
 	// Replace all custom separators with '/'
