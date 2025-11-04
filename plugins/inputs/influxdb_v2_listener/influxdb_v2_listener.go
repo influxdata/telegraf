@@ -53,8 +53,8 @@ type InfluxDBV2Listener struct {
 	BucketTag             string              `toml:"bucket_tag"`
 	ParserType            string              `toml:"parser_type"`
 	UseInternalStatistics bool                `toml:"use_internal_statistics"`
-	Log                   telegraf.Logger     `toml:"-"`
 	Statistics            *selfstat.Collector `toml:"-"`
+	Log                   telegraf.Logger     `toml:"-"`
 
 	ctx                 context.Context
 	cancel              context.CancelFunc
