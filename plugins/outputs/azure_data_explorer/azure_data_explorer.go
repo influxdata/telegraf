@@ -30,7 +30,6 @@ func (*AzureDataExplorer) SampleConfig() string {
 	return sampleConfig
 }
 
-// Initialize the client and the ingestor
 func (adx *AzureDataExplorer) Init() error {
 	serializer := &json.Serializer{
 		TimestampUnits:  config.Duration(time.Nanosecond),
@@ -51,7 +50,6 @@ func (adx *AzureDataExplorer) Connect() error {
 	return nil
 }
 
-// Clean up and close the ingestor
 func (adx *AzureDataExplorer) Close() error {
 	return adx.client.Close()
 }

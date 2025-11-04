@@ -13,12 +13,12 @@ type Logger struct {
 	Quiet bool
 }
 
-// We always want to output at debug level during testing to find issues easier
 func (Logger) Level() telegraf.LogLevel {
+	// We always want to output at debug level during testing to find issues easier
 	return telegraf.Debug
 }
 
-// Adding attributes is not supported by the test-logger
+// AddAttribute is not supported by the test-logger
 func (Logger) AddAttribute(string, interface{}) {}
 
 func (l Logger) Errorf(format string, args ...interface{}) {

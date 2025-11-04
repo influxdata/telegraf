@@ -276,6 +276,14 @@ func ParseTimestamp(format string, timestamp interface{}, location *time.Locatio
 			sep = separator
 		}
 		return parseUnix(format, timestamp, sep)
+	case "timestamp_tz", "timestamp_tz_ms", "timestamp_tz_us", "timestamp_tz_ns":
+		fmtUnix := "unix" + strings.TrimPrefix(format, "timestamp_tz")
+		t, err := ParseTimestamp(fmtUnix, timestamp, location, separator...)
+		if err != nil {
+			return t, err
+		}
+		_, offset := t.In(location).Zone()
+		return t.Add(-time.Duration(offset) * time.Second), nil
 	default:
 		v, ok := timestamp.(string)
 		if !ok {

@@ -12,7 +12,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 )
 
-// mqtt v5-specific publish properties.
+// PublishProperties for mqtt v5-specific properties.
 // See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109
 type PublishProperties struct {
 	ContentType    string            `toml:"content_type"`

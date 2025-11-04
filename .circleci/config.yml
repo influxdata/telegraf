@@ -8,12 +8,12 @@ executors:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     resource_class: large
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.25.2'
+      - image: 'quay.io/influxdb/telegraf-ci:1.25.3'
     environment:
       GOFLAGS: -p=4
   mac:
     working_directory: '~/go/src/github.com/influxdata/telegraf'
-    resource_class: macos.m1.medium.gen1
+    resource_class: m4pro.medium
     macos:
       xcode: 15.4.0
     environment:
@@ -212,6 +212,13 @@ jobs:
       - check-changed-files-or-halt
       - run: 'make build_tools'
       - run: './tools/license_checker/license_checker -whitelist ./tools/license_checker/data/whitelist'
+  test-govulncheck:
+    executor: telegraf-ci
+    steps:
+      - checkout
+      - check-changed-files-or-halt
+      - run: 'make vuln-install'
+      - run: 'make vuln'
   windows-package:
     parameters:
       nightly:
@@ -793,6 +800,7 @@ workflows:
       - 'test-go-mac'
       - 'test-go-windows'
       - 'test-licenses'
+      - 'test-govulncheck'
       - 'windows-package':
           name: 'windows-package-nightly'
           nightly: true

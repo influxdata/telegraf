@@ -1,0 +1,11 @@
+  ## HTTP connection settings
+  # idle_conn_timeout = "0s"
+  # max_idle_conn = 0
+  # max_idle_conn_per_host = 0
+  # response_timeout = "0s"
+
+  ## Optional proxy settings
+{{template "/plugins/common/proxy/proxy.conf"}}
+
+  ## Optional TLS settings
+{{template "/plugins/common/tls/client.conf"}}
