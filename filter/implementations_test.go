@@ -289,14 +289,7 @@ func TestFilterGlobWithSeparators(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var filter Filter
-			var err error
-
-			if len(tt.separators) == 0 {
-				filter, err = newFilterGlob(tt.patterns)
-			} else {
-				filter, err = newFilterGlobWithSeparators(tt.patterns, tt.separators)
-			}
+			filter, err := Compile(tt.patterns, tt.separators...)
 			require.NoError(t, err, "Failed to create filter")
 
 			result := filter.Match(tt.input)

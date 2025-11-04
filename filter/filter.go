@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"slices"
 	"strings"
 )
 
@@ -48,8 +49,11 @@ func Compile(filters []string, separators ...rune) (Filter, error) {
 	case len(separators) == 0:
 		// Use fast path for common case without separators
 		return newFilterGlob(filters)
+	case !slices.Contains(separators, '/'):
+		// Use separator-aware implementation with slash escaping
+		return newFilterGlobWithSeparatorsAndSlashEscape(filters, separators)
 	default:
-		// Use separator-aware implementation
+		// Use separator-aware implementation without slash escaping
 		return newFilterGlobWithSeparators(filters, separators)
 	}
 }
