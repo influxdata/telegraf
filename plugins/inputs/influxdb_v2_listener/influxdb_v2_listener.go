@@ -110,7 +110,7 @@ func (h *InfluxDBV2Listener) Init() error {
 		h.pingsServed = selfstat.Register("influxdb_v2_listener", "pings_served", tags)
 		h.authFailures = selfstat.Register("influxdb_v2_listener", "auth_failures", tags)
 		config.PrintOptionValueDeprecationNotice("inputs.influxdb_v2_listener", "use_internal_statistics", false, telegraf.DeprecationInfo{
-			Since:     "1.36.3",
+			Since:     "1.37.0",
 			RemovalIn: "1.45.0",
 			Notice:    "please update to 'use_internal_statistics = true'",
 		})
