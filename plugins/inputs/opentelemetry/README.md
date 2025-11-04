@@ -9,7 +9,7 @@ This service plugin receives traces, metrics, logs and profiles from
 > Telegraf v1.36 supports the Profiles signal using the v1 development API
 > before v0.1.0.
 > Telegraf v1.37+ supports the Profiles signal using the v1 development API
-> v0.1.0.
+> v0.2.0.
 
 ⭐ Telegraf v1.19.0
 🏷️ logging, messaging
