@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -61,6 +62,10 @@ var (
 
 	// telegrafVersion contains the parsed semantic Telegraf version
 	telegrafVersion *semver.Version = semver.New("0.0.0-unknown")
+
+	// List of (redacted) configuration Sources
+	sources   []string
+	sourcesMu sync.Mutex
 )
 
 const EmptySourcePath string = ""
@@ -158,6 +163,11 @@ func NewConfig() *Config {
 		MissingField:  c.missingTomlField,
 	}
 	c.toml = tomlCfg
+
+	// Initialize the configuration source list
+	sourcesMu.Lock()
+	sources = make([]string, 0)
+	sourcesMu.Unlock()
 
 	return c
 }
@@ -831,7 +841,13 @@ func LoadConfigFileWithRetries(config string, urlRetryAttempts int) ([]byte, boo
 		switch u.Scheme {
 		case "https", "http":
 			data, err := fetchConfig(u, urlRetryAttempts)
-			return data, true, err
+			if err != nil {
+				return nil, true, err
+			}
+			sourcesMu.Lock()
+			sources = append(sources, u.Redacted())
+			sourcesMu.Unlock()
+			return data, true, nil
 		default:
 			return nil, true, fmt.Errorf("scheme %q not supported", u.Scheme)
 		}
@@ -842,6 +858,9 @@ func LoadConfigFileWithRetries(config string, urlRetryAttempts int) ([]byte, boo
 	if err != nil {
 		return nil, false, err
 	}
+	sourcesMu.Lock()
+	sources = append(sources, config)
+	sourcesMu.Unlock()
 
 	mimeType := http.DetectContentType(buffer)
 	if !strings.Contains(mimeType, "text/plain") {
@@ -849,6 +868,13 @@ func LoadConfigFileWithRetries(config string, urlRetryAttempts int) ([]byte, boo
 	}
 
 	return buffer, false, nil
+}
+
+// GetSources returns the redacted list of configuration sources
+func GetSources() []string {
+	sourcesMu.Lock()
+	defer sourcesMu.Unlock()
+	return slices.Clone(sources)
 }
 
 func fetchConfig(u *url.URL, urlRetryAttempts int) ([]byte, error) {

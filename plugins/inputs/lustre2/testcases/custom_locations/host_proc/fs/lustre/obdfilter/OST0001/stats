@@ -1,0 +1,18 @@
+snapshot_time             1438693064.430544 secs.usecs
+read_bytes                203238095 samples [bytes] 4096 1048576 78026117632000
+write_bytes               71893382 samples [bytes] 1 1048576 15201500833981
+get_info                  1182008495 samples [reqs]
+set_info_async            2 samples [reqs]
+connect                   1117 samples [reqs]
+reconnect                 1160 samples [reqs]
+disconnect                1084 samples [reqs]
+statfs                    3575885 samples [reqs]
+create                    698 samples [reqs]
+destroy                   3190060 samples [reqs]
+setattr                   605647 samples [reqs]
+punch                     805187 samples [reqs]
+sync                      6608753 samples [reqs]
+preprw                    275131477 samples [reqs]
+commitrw                  275131477 samples [reqs]
+quotactl                  229231 samples [reqs]
+ping                      78020757 samples [reqs]
