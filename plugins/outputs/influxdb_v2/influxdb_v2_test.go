@@ -947,7 +947,7 @@ func TestStatusCodeServiceUnavailable(t *testing.T) {
 
 			// Write the metrics the first time and check for the expected errors
 			err := plugin.Write(metrics)
-			require.ErrorContains(t, err, "waiting 25ms for server before sending metrics again")
+			require.ErrorContains(t, err, http.StatusText(code))
 
 			var writeErr *internal.PartialWriteError
 			require.ErrorAs(t, err, &writeErr)
