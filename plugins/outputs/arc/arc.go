@@ -45,8 +45,13 @@ func (a *Arc) Init() error {
 		a.URL = "http://localhost:8000/api/v1/write/msgpack"
 	}
 
-	if a.ContentEncoding == "" {
+	switch a.ContentEncoding {
+	case "":
 		a.ContentEncoding = "gzip"
+	case "none", "identity", "gzip":
+		// Do nothing, those are valid
+	default:
+		return fmt.Errorf("unknown content encoding %q", a.ContentEncoding)
 	}
 
 	return nil
@@ -120,9 +125,9 @@ func (a *Arc) Write(metrics []telegraf.Metric) error {
 	var writer io.Writer = &buf
 
 	// Wrap with gzip writer if compression is enabled
-	var gzipWriter *gzip.Writer
 	if a.ContentEncoding == "gzip" {
-		gzipWriter = gzip.NewWriter(&buf)
+		gzipWriter := gzip.NewWriter(&buf)
+		defer  gzipWriter.Close()
 		writer = gzipWriter
 	}
 
@@ -133,13 +138,6 @@ func (a *Arc) Write(metrics []telegraf.Metric) error {
 	}
 	if err := msgpWriter.Flush(); err != nil {
 		return fmt.Errorf("failed to flush MessagePack writer: %w", err)
-	}
-
-	// Close gzip writer if used
-	if gzipWriter != nil {
-		if err := gzipWriter.Close(); err != nil {
-			return fmt.Errorf("failed to close gzip writer: %w", err)
-		}
 	}
 
 	payload := buf.Bytes()

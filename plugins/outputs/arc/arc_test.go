@@ -27,37 +27,27 @@ func TestSampleConfig(t *testing.T) {
 	require.Contains(t, cfg, "api_key")
 }
 
-func TestInit(t *testing.T) {
+func TestInitSuccess(t *testing.T) {
 	tests := []struct {
 		name        string
 		arc         *Arc
-		expectError bool
 	}{
+		{
+			name: "default values",
+			arc: &Arc{},
+		},
 		{
 			name: "valid config",
 			arc: &Arc{
 				URL:              "http://localhost:8000/api/v1/write/msgpack",
 				HTTPClientConfig: common_http.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
 			},
-			expectError: false,
-		},
-		{
-			name: "default values",
-			arc: &Arc{
-				URL: "",
-			},
-			expectError: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.arc.Init()
-			if tt.expectError {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
+			require.NoError(t, tt.arc.Init())
 		})
 	}
 }
@@ -117,9 +107,14 @@ func TestWrite(t *testing.T) {
 			var receivedUserAgent string
 			var receivedContentEncoding string
 			var receivedBody []byte
+			var receivedMu sync.Mutex
+			var done atomic.Bool
 
 			// Create test server
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				receivedMu.Lock()
+				defer receivedMu.Unlock()
+				
 				receivedMethod = r.Method
 				receivedContentType = r.Header.Get("Content-Type")
 				receivedUserAgent = r.Header.Get("User-Agent")
@@ -131,6 +126,7 @@ func TestWrite(t *testing.T) {
 					gz, err := gzip.NewReader(r.Body)
 					if err != nil {
 						t.Fail()
+						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}
 					defer gz.Close()
@@ -140,9 +136,11 @@ func TestWrite(t *testing.T) {
 				data, err := io.ReadAll(body)
 				if err != nil {
 					t.Fail()
+					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
 				receivedBody = data
+				done.Store(true)
 
 				w.WriteHeader(http.StatusNoContent)
 			}))
@@ -164,7 +162,14 @@ func TestWrite(t *testing.T) {
 			// Write metrics
 			require.NoError(t, plugin.Write(tt.metrics))
 
+			// Wait for the data to arrive
+			require.Eventually(t, func() bool {
+				return done.Load()
+			}, 1*time.Second, 100*time.Millisecond)			
+
 			// Verify HTTP request
+			receivedMu.Lock()
+			defer receivedMu.Unlock()
 			require.Equal(t, "POST", receivedMethod)
 			require.Equal(t, "application/msgpack", receivedContentType)
 			require.Contains(t, receivedUserAgent, "Telegraf")
@@ -177,29 +182,7 @@ func TestWrite(t *testing.T) {
 			decoded, err := reader.ReadIntf()
 			require.NoError(t, err)
 
-			// Extract columnar data
-			var columnarData map[string]interface{}
-			if decodedMap, ok := decoded.(map[string]interface{}); ok {
-				// Single measurement
-				columnarData = decodedMap
-			} else if decodedArray, ok := decoded.([]interface{}); ok {
-				// Multiple measurements - take the first one
-				columnarData = decodedArray[0].(map[string]interface{})
-			}
-
-			// Verify columnar structure
-			require.NotEmpty(t, columnarData["m"])
-			require.NotEmpty(t, columnarData["columns"])
-
-			// Verify time column
-			columns := columnarData["columns"].(map[string]interface{})
-			timeCol, ok := columns["time"]
-			require.True(t, ok, "time column should exist")
-
-			// Verify time column length
-			timeArray, ok := timeCol.([]interface{})
-			require.True(t, ok, "time should be an array")
-			require.Len(t, timeArray, tt.expectedRecords)
+			require.EqualValues(t, tt.expected, decoded)
 		})
 	}
 }

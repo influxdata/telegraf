@@ -208,12 +208,12 @@ func (l *Loki) writeMetrics(s Streams) error {
 	return nil
 }
 
-// Verify the label name matches the regex [a-zA-Z_:][a-zA-Z0-9_:]*
+// Verify the label name matches the regex [a-zA-Z_][a-zA-Z0-9_]*
 func sanitizeLabelName(name string) string {
-	re := regexp.MustCompile(`^[^a-zA-Z_:]`)
+	re := regexp.MustCompile(`^[^a-zA-Z_]`)
 	result := re.ReplaceAllString(name, "_")
 
-	re = regexp.MustCompile(`[^a-zA-Z0-9_:]`)
+	re = regexp.MustCompile(`[^a-zA-Z0-9_]`)
 	return re.ReplaceAllString(result, "_")
 }
 

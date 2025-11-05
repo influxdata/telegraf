@@ -71,6 +71,9 @@ to use them.
   ## If key path is not supplied, self-signed cert and key will be generated.
   # private_key = "/etc/telegraf/key.pem"
 
+  ## Path to additional, explicitly trusted certificate for the remote endpoint
+  # remote_certificate = "/etc/telegraf/opcua_server_cert.pem"
+
   ## Authentication Method, one of "Certificate", "UserName", or "Anonymous".  To
   ## authenticate using a specific ID, select 'Certificate' or 'UserName'
   # auth_method = "Anonymous"
@@ -275,6 +278,18 @@ This example group configuration has three groups with two nodes each:
       {name="name", identifier="1002"},
     ]
 ```
+
+### Server Certificate Trust
+
+When connecting to OPC UA servers with self-signed certificates using
+secure modes (Sign or SignAndEncrypt), you need to explicitly trust the
+server's certificate. Use the `remote_certificate` option to specify the
+path to the server's certificate file.
+
+Most OPC UA servers provide their certificate through their management interface
+or configuration directory. Consult your OPC UA server's documentation to locate
+the certificate, typically found in the server's PKI (Public Key Infrastructure)
+directory. Alternatively, you can export the certificate using OPC UA client tools.
 
 ## Connection Service
 
