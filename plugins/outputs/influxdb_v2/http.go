@@ -178,7 +178,6 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 				writeErr.Err = err
 				batch.err = err
 			}
-
 		}
 		c.rateLimiter.Reserve(used)
 
