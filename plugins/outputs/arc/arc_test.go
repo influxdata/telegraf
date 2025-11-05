@@ -119,9 +119,14 @@ func TestWrite(t *testing.T) {
 			var receivedUserAgent string
 			var receivedContentEncoding string
 			var receivedBody []byte
+			var receivedMu sync.Mutex
+			var done atomic.Bool
 
 			// Create test server
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				receivedMu.Lock()
+				defer receivedMu.Unlock()
+				
 				receivedMethod = r.Method
 				receivedContentType = r.Header.Get("Content-Type")
 				receivedUserAgent = r.Header.Get("User-Agent")
@@ -145,6 +150,7 @@ func TestWrite(t *testing.T) {
 					return
 				}
 				receivedBody = data
+				done.Store(true)
 
 				w.WriteHeader(http.StatusNoContent)
 			}))
