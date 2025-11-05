@@ -33,6 +33,12 @@ func newListener(b *testing.B) *InfluxDBV2Listener {
 		}),
 		MaxBodySize: config.Size(defaultMaxBodySize),
 	}
+
+	b.Cleanup(func() {
+		listener.bytesRecv.Unregister()
+		listener.writesServed.Unregister()
+	})
+
 	return listener
 }
 
