@@ -185,29 +185,7 @@ func TestWrite(t *testing.T) {
 			decoded, err := reader.ReadIntf()
 			require.NoError(t, err)
 
-			// Extract columnar data
-			var columnarData map[string]interface{}
-			if decodedMap, ok := decoded.(map[string]interface{}); ok {
-				// Single measurement
-				columnarData = decodedMap
-			} else if decodedArray, ok := decoded.([]interface{}); ok {
-				// Multiple measurements - take the first one
-				columnarData = decodedArray[0].(map[string]interface{})
-			}
-
-			// Verify columnar structure
-			require.NotEmpty(t, columnarData["m"])
-			require.NotEmpty(t, columnarData["columns"])
-
-			// Verify time column
-			columns := columnarData["columns"].(map[string]interface{})
-			timeCol, ok := columns["time"]
-			require.True(t, ok, "time column should exist")
-
-			// Verify time column length
-			timeArray, ok := timeCol.([]interface{})
-			require.True(t, ok, "time should be an array")
-			require.Len(t, timeArray, tt.expectedRecords)
+			require.EqualValues(t, tt.expected, decoded)
 		})
 	}
 }
