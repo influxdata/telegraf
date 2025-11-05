@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<!-- Example DDS configuration for Telegraf DDS Consumer Plugin -->
+<dds>
+    <types>
+        <!-- Example shape data type -->
+        <struct name="ShapeType">
+            <member name="color" stringMaxLength="128" type="string" key="true"/>
+            <member name="x" type="long"/>
+            <member name="y" type="long"/>
+            <member name="shapesize" type="long"/>
+        </struct>
+    </types>
+
+    <!-- Domain Library Configuration -->
+    <domain_library name="MyDomainLibrary">
+        <domain name="MyDomain" domain_id="0">
+            <register_type name="ShapeType" type_ref="ShapeType"/>
+            <topic name="Square" register_type_ref="ShapeType"/>
+            <topic name="Circle" register_type_ref="ShapeType"/>
+            <topic name="Triangle" register_type_ref="ShapeType"/>
+        </domain>
+    </domain_library>
+
+    <!-- Participant Library Configuration -->
+    <domain_participant_library name="MyParticipantLibrary">
+        <domain_participant name="Zero" domain_ref="MyDomainLibrary::MyDomain">
+            <subscriber name="MySubscriber">
+                <data_reader name="MySquareReader" topic_ref="Square">
+                    <!-- Optional QoS settings -->
+                    <datareader_qos>
+                        <reliability>
+                            <kind>RELIABLE_RELIABILITY_QOS</kind>
+                        </reliability>
+                        <durability>
+                            <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind>
+                        </durability>
+                        <history>
+                            <kind>KEEP_LAST_HISTORY_QOS</kind>
+                            <depth>10</depth>
+                        </history>
+                    </datareader_qos>
+                </data_reader>
+                
+                <data_reader name="MyCircleReader" topic_ref="Circle">
+                    <datareader_qos>
+                        <reliability>
+                            <kind>RELIABLE_RELIABILITY_QOS</kind>
+                        </reliability>
+                    </datareader_qos>
+                </data_reader>
+            </subscriber>
+        </domain_participant>
+    </domain_participant_library>
+</dds>
