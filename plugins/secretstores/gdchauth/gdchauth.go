@@ -20,7 +20,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/secretstores"
 )
 
@@ -37,7 +37,7 @@ type GdchAuth struct {
 	Log                telegraf.Logger `toml:"-"`
 	ServiceAccountFile string          `toml:"service_account_file"`
 	TokenExpiryBuffer  config.Duration `toml:"token_expiry_buffer"`
-	HTTPClientConfig   httpconfig.HTTPClientConfig
+	HTTPClientConfig   common_http.HTTPClientConfig
 
 	account *serviceAccountKey
 	client  *http.Client
