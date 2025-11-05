@@ -45,8 +45,13 @@ func (a *Arc) Init() error {
 		a.URL = "http://localhost:8000/api/v1/write/msgpack"
 	}
 
-	if a.ContentEncoding == "" {
+	switch a.ContentEncoding {
+	case "":
 		a.ContentEncoding = "gzip"
+	case "none", "identity", "gzip":
+		// Do nothing, those are valid
+	default:
+		return fmt.Errorf("unknown content encoding %q", a.ContentEncoding)
 	}
 
 	return nil
