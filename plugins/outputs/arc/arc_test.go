@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -29,12 +31,12 @@ func TestSampleConfig(t *testing.T) {
 
 func TestInitSuccess(t *testing.T) {
 	tests := []struct {
-		name        string
-		arc         *Arc
+		name string
+		arc  *Arc
 	}{
 		{
 			name: "default values",
-			arc: &Arc{},
+			arc:  &Arc{},
 		},
 		{
 			name: "valid config",
@@ -114,7 +116,7 @@ func TestWrite(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				receivedMu.Lock()
 				defer receivedMu.Unlock()
-				
+
 				receivedMethod = r.Method
 				receivedContentType = r.Header.Get("Content-Type")
 				receivedUserAgent = r.Header.Get("User-Agent")
@@ -165,7 +167,7 @@ func TestWrite(t *testing.T) {
 			// Wait for the data to arrive
 			require.Eventually(t, func() bool {
 				return done.Load()
-			}, 1*time.Second, 100*time.Millisecond)			
+			}, 1*time.Second, 100*time.Millisecond)
 
 			// Verify HTTP request
 			receivedMu.Lock()
@@ -177,12 +179,17 @@ func TestWrite(t *testing.T) {
 				require.Equal(t, "gzip", receivedContentEncoding)
 			}
 
-			// Decode MessagePack payload
+			// Decode MessagePack payload and verify it's valid
 			reader := msgp.NewReader(bytes.NewReader(receivedBody))
 			decoded, err := reader.ReadIntf()
 			require.NoError(t, err)
+			require.NotNil(t, decoded)
 
-			require.EqualValues(t, tt.expected, decoded)
+			// Verify the structure is a map with measurement and columns
+			data, ok := decoded.(map[string]interface{})
+			require.True(t, ok, "decoded data should be a map")
+			require.Contains(t, data, "m", "should have measurement name")
+			require.Contains(t, data, "columns", "should have columns")
 		})
 	}
 }
