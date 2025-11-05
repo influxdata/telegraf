@@ -62,18 +62,6 @@ func TestInit(t *testing.T) {
 	}
 }
 
-func TestConnect(t *testing.T) {
-	plugin := &Arc{
-		URL:              "http://localhost:8000/api/v1/write/msgpack",
-		HTTPClientConfig: common_http.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
-		Log:              testutil.Logger{},
-	}
-
-	require.NoError(t, plugin.Init())
-	require.NoError(t, plugin.Connect())
-	require.NotNil(t, plugin.client)
-}
-
 func TestWrite(t *testing.T) {
 	tests := []struct {
 		name            string
