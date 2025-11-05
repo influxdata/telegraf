@@ -133,13 +133,16 @@ func BenchmarkParser(b *testing.B) {
 		AllowedPendingMessages: 250000,
 		NumberWorkerThreads:    5,
 	}
+	parser, err := plugin.newGraphiteParser()
+	require.NoError(b, err)
+
 	acc := &testutil.Accumulator{Discard: true}
 
 	require.NoError(b, plugin.Start(acc))
 
 	// send multiple messages to socket
 	for n := 0; n < b.N; n++ {
-		require.NoError(b, plugin.parseStatsdLine(testMsg))
+		require.NoError(b, plugin.parseStatsdLine(parser, testMsg))
 	}
 
 	plugin.Stop()
@@ -340,6 +343,9 @@ func BenchmarkTCP(b *testing.B) {
 // Valid lines should be parsed and their values should be cached
 func TestParse_ValidLines(t *testing.T) {
 	s := newTestStatsd()
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
+
 	validLines := []string{
 		"valid:45|c",
 		"valid:45|s",
@@ -349,13 +355,15 @@ func TestParse_ValidLines(t *testing.T) {
 	}
 
 	for _, line := range validLines {
-		require.NoError(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+		require.NoError(t, s.parseStatsdLine(parser, line), "Parsing line %s should not have resulted in an error", line)
 	}
 }
 
 // Tests low-level functionality of gauges
 func TestParse_Gauges(t *testing.T) {
 	s := newTestStatsd()
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
 
 	// Test that gauge +- values work
 	validLines := []string{
@@ -377,7 +385,7 @@ func TestParse_Gauges(t *testing.T) {
 	}
 
 	for _, line := range validLines {
-		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+		require.NoErrorf(t, s.parseStatsdLine(parser, line), "Parsing line %s should not have resulted in an error", line)
 	}
 
 	validations := []struct {
@@ -426,6 +434,8 @@ func TestParse_Gauges(t *testing.T) {
 // Tests low-level functionality of sets
 func TestParse_Sets(t *testing.T) {
 	s := newTestStatsd()
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
 
 	// Test that sets work
 	validLines := []string{
@@ -449,7 +459,7 @@ func TestParse_Sets(t *testing.T) {
 	}
 
 	for _, line := range validLines {
-		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+		require.NoErrorf(t, s.parseStatsdLine(parser, line), "Parsing line %s should not have resulted in an error", line)
 	}
 
 	validations := []struct {
@@ -483,6 +493,9 @@ func TestParse_Sets_SetsAsFloat(t *testing.T) {
 	s := newTestStatsd()
 	s.FloatSets = true
 
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
+
 	// Test that sets work
 	validLines := []string{
 		"unique.user.ids:100|s",
@@ -491,7 +504,7 @@ func TestParse_Sets_SetsAsFloat(t *testing.T) {
 	}
 
 	for _, line := range validLines {
-		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+		require.NoErrorf(t, s.parseStatsdLine(parser, line), "Parsing line %s should not have resulted in an error", line)
 	}
 
 	validations := []struct {
@@ -527,6 +540,8 @@ func TestParse_Sets_SetsAsFloat(t *testing.T) {
 // Tests low-level functionality of counters
 func TestParse_Counters(t *testing.T) {
 	s := newTestStatsd()
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
 
 	// Test that counters work
 	validLines := []string{
@@ -545,7 +560,7 @@ func TestParse_Counters(t *testing.T) {
 	}
 
 	for _, line := range validLines {
-		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+		require.NoErrorf(t, s.parseStatsdLine(parser, line), "Parsing line %s should not have resulted in an error", line)
 	}
 
 	validations := []struct {
@@ -587,6 +602,9 @@ func TestParse_CountersAsFloat(t *testing.T) {
 	s := newTestStatsd()
 	s.FloatCounters = true
 
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
+
 	// Test that counters work
 	validLines := []string{
 		"small.inc:1|c",
@@ -604,7 +622,7 @@ func TestParse_CountersAsFloat(t *testing.T) {
 	}
 
 	for _, line := range validLines {
-		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+		require.NoErrorf(t, s.parseStatsdLine(parser, line), "Parsing line %s should not have resulted in an error", line)
 	}
 
 	validations := []struct {
@@ -696,6 +714,10 @@ func TestParse_CountersAsFloat(t *testing.T) {
 func TestParse_Timings(t *testing.T) {
 	s := newTestStatsd()
 	s.Percentiles = []number{90.0}
+
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
+
 	acc := &testutil.Accumulator{}
 
 	// Test that timings work
@@ -708,7 +730,7 @@ func TestParse_Timings(t *testing.T) {
 	}
 
 	for _, line := range validLines {
-		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+		require.NoErrorf(t, s.parseStatsdLine(parser, line), "Parsing line %s should not have resulted in an error", line)
 	}
 
 	require.NoError(t, s.Gather(acc))
@@ -731,6 +753,10 @@ func TestParse_Timings_TimingsAsFloat(t *testing.T) {
 	s := newTestStatsd()
 	s.FloatTimings = true
 	s.Percentiles = []number{90.0}
+
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
+
 	acc := &testutil.Accumulator{}
 
 	// Test that timings work
@@ -739,7 +765,7 @@ func TestParse_Timings_TimingsAsFloat(t *testing.T) {
 	}
 
 	for _, line := range validLines {
-		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+		require.NoErrorf(t, s.parseStatsdLine(parser, line), "Parsing line %s should not have resulted in an error", line)
 	}
 
 	require.NoError(t, s.Gather(acc))
@@ -761,6 +787,10 @@ func TestParse_Timings_TimingsAsFloat(t *testing.T) {
 // Tests low-level functionality of distributions
 func TestParse_Distributions(t *testing.T) {
 	s := newTestStatsd()
+
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
+
 	acc := &testutil.Accumulator{}
 
 	parseMetrics := func() {
@@ -774,7 +804,7 @@ func TestParse_Distributions(t *testing.T) {
 		}
 
 		for _, line := range validLines {
-			require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+			require.NoErrorf(t, s.parseStatsdLine(parser, line), "Parsing line %s should not have resulted in an error", line)
 		}
 
 		require.NoError(t, s.Gather(acc))
@@ -814,6 +844,10 @@ func TestParse_Distributions(t *testing.T) {
 
 func TestParseScientificNotation(t *testing.T) {
 	s := newTestStatsd()
+
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
+
 	sciNotationLines := []string{
 		"scientific.notation:4.6968460083008E-5|ms",
 		"scientific.notation:4.6968460083008E-5|g",
@@ -821,13 +855,17 @@ func TestParseScientificNotation(t *testing.T) {
 		"scientific.notation:4.6968460083008E-5|h",
 	}
 	for _, line := range sciNotationLines {
-		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line [%s] should not have resulted in error", line)
+		require.NoErrorf(t, s.parseStatsdLine(parser, line), "Parsing line [%s] should not have resulted in error", line)
 	}
 }
 
 // Invalid lines should return an error
 func TestParse_InvalidLines(t *testing.T) {
 	s := newTestStatsd()
+
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
+
 	invalidLines := []string{
 		"i.dont.have.a.pipe:45g",
 		"i.dont.have.a.colon45|c",
@@ -840,13 +878,17 @@ func TestParse_InvalidLines(t *testing.T) {
 		"invalid.value:1d1|c",
 	}
 	for _, line := range invalidLines {
-		require.Errorf(t, s.parseStatsdLine(line), "Parsing line %s should have resulted in an error", line)
+		require.Errorf(t, s.parseStatsdLine(parser, line), "Parsing line %s should have resulted in an error", line)
 	}
 }
 
 // Invalid sample rates should be ignored and not applied
 func TestParse_InvalidSampleRate(t *testing.T) {
 	s := newTestStatsd()
+
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
+
 	invalidLines := []string{
 		"invalid.sample.rate:45|c|0.1",
 		"invalid.sample.rate.2:45|c|@foo",
@@ -855,7 +897,7 @@ func TestParse_InvalidSampleRate(t *testing.T) {
 	}
 
 	for _, line := range invalidLines {
-		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+		require.NoErrorf(t, s.parseStatsdLine(parser, line), "Parsing line %s should not have resulted in an error", line)
 	}
 
 	counterValidations := []struct {
@@ -887,13 +929,17 @@ func TestParse_InvalidSampleRate(t *testing.T) {
 // Names should be parsed like . -> _
 func TestParse_DefaultNameParsing(t *testing.T) {
 	s := newTestStatsd()
+
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
+
 	validLines := []string{
 		"valid:1|c",
 		"valid.foo-bar:11|c",
 	}
 
 	for _, line := range validLines {
-		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+		require.NoErrorf(t, s.parseStatsdLine(parser, line), "Parsing line %s should not have resulted in an error", line)
 	}
 
 	validations := []struct {
@@ -922,13 +968,16 @@ func TestParse_Template(t *testing.T) {
 		"measurement.measurement.host.service",
 	}
 
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
+
 	lines := []string{
 		"cpu.idle.localhost:1|c",
 		"cpu.busy.host01.myservice:11|c",
 	}
 
 	for _, line := range lines {
-		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+		require.NoErrorf(t, s.parseStatsdLine(parser, line), "Parsing line %s should not have resulted in an error", line)
 	}
 
 	validations := []struct {
@@ -958,13 +1007,16 @@ func TestParse_TemplateFilter(t *testing.T) {
 		"cpu.idle.* measurement.measurement.host",
 	}
 
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
+
 	lines := []string{
 		"cpu.idle.localhost:1|c",
 		"cpu.busy.host01.myservice:11|c",
 	}
 
 	for _, line := range lines {
-		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+		require.NoErrorf(t, s.parseStatsdLine(parser, line), "Parsing line %s should not have resulted in an error", line)
 	}
 
 	validations := []struct {
@@ -995,12 +1047,15 @@ func TestParse_TemplateSpecificity(t *testing.T) {
 		"cpu.idle.* measurement.measurement.host",
 	}
 
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
+
 	lines := []string{
 		"cpu.idle.localhost:1|c",
 	}
 
 	for _, line := range lines {
-		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+		require.NoErrorf(t, s.parseStatsdLine(parser, line), "Parsing line %s should not have resulted in an error", line)
 	}
 
 	validations := []struct {
@@ -1026,6 +1081,9 @@ func TestParse_TemplateFields(t *testing.T) {
 		"* measurement.measurement.field",
 	}
 
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
+
 	lines := []string{
 		"my.counter.f1:1|c",
 		"my.counter.f1:1|c",
@@ -1042,7 +1100,7 @@ func TestParse_TemplateFields(t *testing.T) {
 	}
 
 	for _, line := range lines {
-		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+		require.NoErrorf(t, s.parseStatsdLine(parser, line), "Parsing line %s should not have resulted in an error", line)
 	}
 
 	counterTests := []struct {
@@ -1125,6 +1183,9 @@ func TestParse_Fields(t *testing.T) {
 func TestParse_Tags(t *testing.T) {
 	s := newTestStatsd()
 
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
+
 	tests := []struct {
 		bucket string
 		name   string
@@ -1157,7 +1218,7 @@ func TestParse_Tags(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		name, _, tags := s.parseName(test.bucket)
+		name, _, tags := s.parseName(parser, test.bucket)
 		require.Equalf(t, name, test.name, "Expected: %s, got %s", test.name, name)
 
 		for k, v := range test.tags {
@@ -1279,7 +1340,10 @@ func TestParse_DataDogTags(t *testing.T) {
 			s := newTestStatsd()
 			s.DataDogExtensions = true
 
-			require.NoError(t, s.parseStatsdLine(tt.line))
+			parser, err := s.newGraphiteParser()
+			require.NoError(t, err)
+
+			require.NoError(t, s.parseStatsdLine(parser, tt.line))
 			require.NoError(t, s.Gather(&acc))
 
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(),
@@ -1430,7 +1494,10 @@ func TestParse_DataDogContainerID(t *testing.T) {
 			s.DataDogExtensions = true
 			s.DataDogKeepContainerTag = tt.keep
 
-			require.NoError(t, s.parseStatsdLine(tt.line))
+			parser, err := s.newGraphiteParser()
+			require.NoError(t, err)
+
+			require.NoError(t, s.parseStatsdLine(parser, tt.line))
 			require.NoError(t, s.Gather(&acc))
 
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(),
@@ -1442,6 +1509,9 @@ func TestParse_DataDogContainerID(t *testing.T) {
 // Test that statsd buckets are parsed to measurement names properly
 func TestParseName(t *testing.T) {
 	s := newTestStatsd()
+
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
 
 	tests := []struct {
 		inName  string
@@ -1462,12 +1532,15 @@ func TestParseName(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		name, _, _ := s.parseName(test.inName)
+		name, _, _ := s.parseName(parser, test.inName)
 		require.Equalf(t, name, test.outName, "Expected: %s, got %s", test.outName, name)
 	}
 
 	// Test with separator == "."
 	s.MetricSeparator = "."
+
+	parser, err = s.newGraphiteParser()
+	require.NoError(t, err)
 
 	tests = []struct {
 		inName  string
@@ -1488,7 +1561,7 @@ func TestParseName(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		name, _, _ := s.parseName(test.inName)
+		name, _, _ := s.parseName(parser, test.inName)
 		require.Equalf(t, name, test.outName, "Expected: %s, got %s", test.outName, name)
 	}
 }
@@ -1498,6 +1571,9 @@ func TestParseName(t *testing.T) {
 func TestParse_MeasurementsWithSameName(t *testing.T) {
 	s := newTestStatsd()
 
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
+
 	// Test that counters work
 	validLines := []string{
 		"test.counter,host=localhost:1|c",
@@ -1505,7 +1581,7 @@ func TestParse_MeasurementsWithSameName(t *testing.T) {
 	}
 
 	for _, line := range validLines {
-		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+		require.NoErrorf(t, s.parseStatsdLine(parser, line), "Parsing line %s should not have resulted in an error", line)
 	}
 
 	require.Lenf(t, s.counters, 2, "Expected 2 separate measurements, found %d", len(s.counters))
@@ -1516,9 +1592,12 @@ func TestCachesExpireAfterMaxTTL(t *testing.T) {
 	s := newTestStatsd()
 	s.MaxTTL = config.Duration(10 * time.Millisecond)
 
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
+
 	acc := &testutil.Accumulator{}
-	require.NoError(t, s.parseStatsdLine("valid:45|c"))
-	require.NoError(t, s.parseStatsdLine("valid:45|c"))
+	require.NoError(t, s.parseStatsdLine(parser, "valid:45|c"))
+	require.NoError(t, s.parseStatsdLine(parser, "valid:45|c"))
 	require.NoError(t, s.Gather(acc))
 
 	// Max TTL goes by, our 'valid' entry is cleared.
@@ -1526,7 +1605,7 @@ func TestCachesExpireAfterMaxTTL(t *testing.T) {
 	require.NoError(t, s.Gather(acc))
 
 	// Now when we gather, we should have a counter that is reset to zero.
-	require.NoError(t, s.parseStatsdLine("valid:45|c"))
+	require.NoError(t, s.parseStatsdLine(parser, "valid:45|c"))
 	require.NoError(t, s.Gather(acc))
 
 	// Wait for the metrics to arrive
@@ -1612,14 +1691,19 @@ func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
 	}
 
 	sSingle := newTestStatsd()
+	sParser, err := sSingle.newGraphiteParser()
+	require.NoError(t, err)
+
 	sMultiple := newTestStatsd()
+	mParser, err := sMultiple.newGraphiteParser()
+	require.NoError(t, err)
 
 	for _, line := range singleLines {
-		require.NoErrorf(t, sSingle.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+		require.NoErrorf(t, sSingle.parseStatsdLine(sParser, line), "Parsing line %s should not have resulted in an error", line)
 	}
 
 	for _, line := range multipleLines {
-		require.NoErrorf(t, sMultiple.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+		require.NoErrorf(t, sMultiple.parseStatsdLine(mParser, line), "Parsing line %s should not have resulted in an error", line)
 	}
 
 	require.Lenf(t, sSingle.timings, 3, "Expected 3 measurement, found %d", len(sSingle.timings))
@@ -1669,6 +1753,10 @@ func TestParse_TimingsMultipleFieldsWithTemplate(t *testing.T) {
 	s := newTestStatsd()
 	s.Templates = []string{"measurement.field"}
 	s.Percentiles = []number{90.0}
+
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
+
 	acc := &testutil.Accumulator{}
 
 	validLines := []string{
@@ -1685,7 +1773,7 @@ func TestParse_TimingsMultipleFieldsWithTemplate(t *testing.T) {
 	}
 
 	for _, line := range validLines {
-		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+		require.NoErrorf(t, s.parseStatsdLine(parser, line), "Parsing line %s should not have resulted in an error", line)
 	}
 	require.NoError(t, s.Gather(acc))
 
@@ -1719,6 +1807,10 @@ func TestParse_TimingsMultipleFieldsWithoutTemplate(t *testing.T) {
 	s := newTestStatsd()
 	s.Templates = make([]string, 0)
 	s.Percentiles = []number{90.0}
+
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
+
 	acc := &testutil.Accumulator{}
 
 	validLines := []string{
@@ -1735,7 +1827,7 @@ func TestParse_TimingsMultipleFieldsWithoutTemplate(t *testing.T) {
 	}
 
 	for _, line := range validLines {
-		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+		require.NoErrorf(t, s.parseStatsdLine(parser, line), "Parsing line %s should not have resulted in an error", line)
 	}
 	require.NoError(t, s.Gather(acc))
 
@@ -1766,6 +1858,12 @@ func TestParse_TimingsMultipleFieldsWithoutTemplate(t *testing.T) {
 
 func BenchmarkParse(b *testing.B) {
 	s := newTestStatsd()
+
+	parser, err := s.newGraphiteParser()
+	if err != nil {
+		b.Errorf("Error initializing parser: %v", err)
+	}
+
 	validLines := []string{
 		"test.timing.success:1|ms",
 		"test.timing.success:11|ms",
@@ -1780,7 +1878,7 @@ func BenchmarkParse(b *testing.B) {
 	}
 	for n := 0; n < b.N; n++ {
 		for _, line := range validLines {
-			err := s.parseStatsdLine(line)
+			err := s.parseStatsdLine(parser, line)
 			if err != nil {
 				b.Errorf("Parsing line %s should not have resulted in an error\n", line)
 			}
@@ -1790,6 +1888,12 @@ func BenchmarkParse(b *testing.B) {
 
 func BenchmarkParseWithTemplate(b *testing.B) {
 	s := newTestStatsd()
+
+	parser, err := s.newGraphiteParser()
+	if err != nil {
+		b.Errorf("Error initializing parser: %v", err)
+	}
+
 	s.Templates = []string{"measurement.measurement.field"}
 	validLines := []string{
 		"test.timing.success:1|ms",
@@ -1805,7 +1909,7 @@ func BenchmarkParseWithTemplate(b *testing.B) {
 	}
 	for n := 0; n < b.N; n++ {
 		for _, line := range validLines {
-			err := s.parseStatsdLine(line)
+			err := s.parseStatsdLine(parser, line)
 			if err != nil {
 				b.Errorf("Parsing line %s should not have resulted in an error\n", line)
 			}
@@ -1815,6 +1919,12 @@ func BenchmarkParseWithTemplate(b *testing.B) {
 
 func BenchmarkParseWithTemplateAndFilter(b *testing.B) {
 	s := newTestStatsd()
+
+	parser, err := s.newGraphiteParser()
+	if err != nil {
+		b.Errorf("Error initializing parser: %v", err)
+	}
+
 	s.Templates = []string{"cpu* measurement.measurement.field"}
 	validLines := []string{
 		"test.timing.success:1|ms",
@@ -1830,7 +1940,7 @@ func BenchmarkParseWithTemplateAndFilter(b *testing.B) {
 	}
 	for n := 0; n < b.N; n++ {
 		for _, line := range validLines {
-			err := s.parseStatsdLine(line)
+			err := s.parseStatsdLine(parser, line)
 			if err != nil {
 				b.Errorf("Parsing line %s should not have resulted in an error\n", line)
 			}
@@ -1840,6 +1950,12 @@ func BenchmarkParseWithTemplateAndFilter(b *testing.B) {
 
 func BenchmarkParseWith2TemplatesAndFilter(b *testing.B) {
 	s := newTestStatsd()
+
+	parser, err := s.newGraphiteParser()
+	if err != nil {
+		b.Errorf("Error initializing parser: %v", err)
+	}
+
 	s.Templates = []string{
 		"cpu1* measurement.measurement.field",
 		"cpu2* measurement.measurement.field",
@@ -1858,7 +1974,7 @@ func BenchmarkParseWith2TemplatesAndFilter(b *testing.B) {
 	}
 	for n := 0; n < b.N; n++ {
 		for _, line := range validLines {
-			err := s.parseStatsdLine(line)
+			err := s.parseStatsdLine(parser, line)
 			if err != nil {
 				b.Errorf("Parsing line %s should not have resulted in an error\n", line)
 			}
@@ -1868,6 +1984,12 @@ func BenchmarkParseWith2TemplatesAndFilter(b *testing.B) {
 
 func BenchmarkParseWith2Templates3TagsAndFilter(b *testing.B) {
 	s := newTestStatsd()
+
+	parser, err := s.newGraphiteParser()
+	if err != nil {
+		b.Errorf("Error initializing parser: %v", err)
+	}
+
 	s.Templates = []string{
 		"cpu1* measurement.measurement.region.city.rack.field",
 		"cpu2* measurement.measurement.region.city.rack.field",
@@ -1886,7 +2008,7 @@ func BenchmarkParseWith2Templates3TagsAndFilter(b *testing.B) {
 	}
 	for n := 0; n < b.N; n++ {
 		for _, line := range validLines {
-			err := s.parseStatsdLine(line)
+			err := s.parseStatsdLine(parser, line)
 			if err != nil {
 				b.Errorf("Parsing line %s should not have resulted in an error\n", line)
 			}
@@ -1897,10 +2019,14 @@ func BenchmarkParseWith2Templates3TagsAndFilter(b *testing.B) {
 func TestParse_Timings_Delete(t *testing.T) {
 	s := newTestStatsd()
 	s.DeleteTimings = true
+
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
+
 	fakeacc := &testutil.Accumulator{}
 
 	line := "timing:100|ms"
-	require.NoError(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+	require.NoError(t, s.parseStatsdLine(parser, line), "Parsing line %s should not have resulted in an error", line)
 
 	require.Lenf(t, s.timings, 1, "Should be 1 timing, found %d", len(s.timings))
 
@@ -1913,10 +2039,13 @@ func TestParse_Timings_Delete(t *testing.T) {
 func TestParse_Gauges_Delete(t *testing.T) {
 	s := newTestStatsd()
 	s.DeleteGauges = true
+
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
 	fakeacc := &testutil.Accumulator{}
 
 	line := "current.users:100|g"
-	require.NoError(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+	require.NoError(t, s.parseStatsdLine(parser, line), "Parsing line %s should not have resulted in an error", line)
 
 	require.NoError(t, testValidateGauge("current_users", 100, s.gauges))
 
@@ -1929,10 +2058,14 @@ func TestParse_Gauges_Delete(t *testing.T) {
 func TestParse_Sets_Delete(t *testing.T) {
 	s := newTestStatsd()
 	s.DeleteSets = true
+
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
+
 	fakeacc := &testutil.Accumulator{}
 
 	line := "unique.user.ids:100|s"
-	require.NoError(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+	require.NoError(t, s.parseStatsdLine(parser, line), "Parsing line %s should not have resulted in an error", line)
 
 	require.NoError(t, testValidateSet("unique_user_ids", 1, s.sets))
 
@@ -1945,10 +2078,14 @@ func TestParse_Sets_Delete(t *testing.T) {
 func TestParse_Counters_Delete(t *testing.T) {
 	s := newTestStatsd()
 	s.DeleteCounters = true
+
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
+
 	fakeacc := &testutil.Accumulator{}
 
 	line := "total.users:100|c"
-	require.NoError(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error\n", line)
+	require.NoError(t, s.parseStatsdLine(parser, line), "Parsing line %s should not have resulted in an error\n", line)
 
 	require.NoError(t, testValidateCounter("total_users", 100, s.counters))
 
@@ -2225,6 +2362,9 @@ func TestParseSanitize(t *testing.T) {
 	s := newTestStatsd()
 	s.SanitizeNamesMethod = "upstream"
 
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
+
 	tests := []struct {
 		inName  string
 		outName string
@@ -2248,7 +2388,7 @@ func TestParseSanitize(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		name, _, _ := s.parseName(test.inName)
+		name, _, _ := s.parseName(parser, test.inName)
 		require.Equalf(t, name, test.outName, "Expected: %s, got %s", test.outName, name)
 	}
 }
@@ -2256,6 +2396,9 @@ func TestParseSanitize(t *testing.T) {
 func TestParseNoSanitize(t *testing.T) {
 	s := newTestStatsd()
 	s.SanitizeNamesMethod = ""
+
+	parser, err := s.newGraphiteParser()
+	require.NoError(t, err)
 
 	tests := []struct {
 		inName  string
@@ -2280,7 +2423,7 @@ func TestParseNoSanitize(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		name, _, _ := s.parseName(test.inName)
+		name, _, _ := s.parseName(parser, test.inName)
 		require.Equalf(t, name, test.outName, "Expected: %s, got %s", test.outName, name)
 	}
 }
