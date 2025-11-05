@@ -71,9 +71,8 @@ func (nft *Nftables) getTableData(tableName string, acc telegraf.Accumulator) er
 
 func parseNftableOutput(acc telegraf.Accumulator, out []byte) error {
 	var nftable table
-	err := json.Unmarshal(out, &nftable)
-	if err != nil {
-		return fmt.Errorf("error parsing: %s, Error: %w", out, err)
+	if err := json.Unmarshal(out, &nftable); err != nil {
+		return fmt.Errorf("parsing command output failed: %w", err)
 	}
 	for _, rule := range nftable.Rules {
 		if len(rule.Comment) == 0 {
