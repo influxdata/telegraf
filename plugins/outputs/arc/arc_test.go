@@ -138,6 +138,7 @@ func TestWrite(t *testing.T) {
 					gz, err := gzip.NewReader(r.Body)
 					if err != nil {
 						t.Fail()
+						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}
 					defer gz.Close()
@@ -147,6 +148,7 @@ func TestWrite(t *testing.T) {
 				data, err := io.ReadAll(body)
 				if err != nil {
 					t.Fail()
+					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
 				receivedBody = data
@@ -172,7 +174,14 @@ func TestWrite(t *testing.T) {
 			// Write metrics
 			require.NoError(t, plugin.Write(tt.metrics))
 
+			// Wait for the data to arrive
+			require.Eventually(t, func() bool {
+				return done.Load()
+			}, 1*time.Second, 100*time.Millisecond)			
+
 			// Verify HTTP request
+			receivedMu.Lock()
+			defer receivedMu.Unlock()
 			require.Equal(t, "POST", receivedMethod)
 			require.Equal(t, "application/msgpack", receivedContentType)
 			require.Contains(t, receivedUserAgent, "Telegraf")
