@@ -83,7 +83,10 @@ to use them.
   ## Path to private key.pem. Required when security mode or policy isn't "None".
   ## If key path is not supplied, self-signed cert and key will be generated.
   # private_key = "/etc/telegraf/key.pem"
-  #
+
+  ## Path to additional, explicitly trusted certificate for the remote endpoint
+  # remote_certificate = "/etc/telegraf/opcua_server_cert.pem"
+
   ## Authentication Method, one of "Certificate", "UserName", or "Anonymous".  To
   ## authenticate using a specific ID, select 'Certificate' or 'UserName'
   # auth_method = "Anonymous"

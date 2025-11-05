@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	_ "time/tzdata" // needed to bundle timezone info into the binary for Windows
 	"unicode/utf8"
@@ -65,6 +66,8 @@ type Parser struct {
 	remainingSkipRows     int
 	remainingHeaderRows   int
 	remainingMetadataRows int
+
+	sync.Mutex
 }
 
 type metadataPattern []string
@@ -218,6 +221,9 @@ func validDelim(r rune) bool {
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
+	p.Lock()
+	defer p.Unlock()
+
 	// Reset the parser according to the specified mode
 	if p.ResetMode == "always" {
 		p.Reset()
@@ -237,6 +243,9 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 }
 
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
+	p.Lock()
+	defer p.Unlock()
+
 	if len(line) == 0 {
 		if p.remainingSkipRows > 0 {
 			p.remainingSkipRows--

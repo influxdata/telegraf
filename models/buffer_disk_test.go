@@ -62,11 +62,9 @@ func TestDiskBufferTruncate(t *testing.T) {
 	tx.AcceptAll()
 	buf.EndTransaction(tx)
 
-	// The buffer should be truncated completely, however due to the WAL
-	// implementation the file cannot be completely empty. So we expect one
-	// entry left on disk but this one being masked...
-	require.Equal(t, 1, diskBuf.entries())
-	require.Equal(t, []int{0}, diskBuf.mask)
+	// Ensure the buffer was fully truncated on disk and the mask is consistent with that
+	require.Zero(t, diskBuf.entries())
+	require.Empty(t, diskBuf.mask)
 
 	// We shouldn't get any metric when requesting a new batch
 	tx = buf.BeginTransaction(4)
@@ -98,13 +96,10 @@ func TestDiskBufferEmptyReuse(t *testing.T) {
 	tx.AcceptAll()
 	buf.EndTransaction(tx)
 
-	// The buffer must have been truncated on disk and should be empty now.
-	// Due to the special way an empty buffer is treated, it will still contain
-	// an entry as we cannot fully truncate it up to now.
-	require.True(t, diskBuf.isEmpty)
-	require.Equal(t, 0, diskBuf.Len())
-	require.Equal(t, 1, diskBuf.entries())
-	require.Len(t, diskBuf.mask, 1)
+	// Ensure all storage elements of the buffer are consistent with it being empty
+	require.Zero(t, diskBuf.length())
+	require.Zero(t, diskBuf.entries())
+	require.Empty(t, diskBuf.mask)
 
 	// Try to read the buffer again. This should return an empty transaction...
 	tx = buf.BeginTransaction(5)
@@ -152,8 +147,8 @@ func TestDiskBufferEmptyClose(t *testing.T) {
 	buf.EndTransaction(tx)
 
 	// Make sure the buffer was fully emptied
-	require.True(t, diskBuf.isEmpty)
-	require.Equal(t, 0, diskBuf.Len())
+	require.Zero(t, diskBuf.length())
+	require.Zero(t, diskBuf.entries())
 
 	// Close the buffer to simulate stopping Telegraf in a normal shutdown
 	require.NoError(t, diskBuf.Close())
@@ -236,7 +231,9 @@ func TestDiskBufferTrackingDroppedFromOldWal(t *testing.T) {
 
 	// Prefill the WAL file
 	path := t.TempDir()
-	walfile, err := wal.Open(filepath.Join(path, "123"), nil)
+	walfile, err := wal.Open(filepath.Join(path, "123"), &wal.Options{
+		AllowEmpty: true,
+	})
 	require.NoError(t, err)
 	defer walfile.Close()
 	for i, m := range metrics {
@@ -311,7 +308,6 @@ func TestDiskBufferTrackingOnOutputOutage(t *testing.T) {
 	// Make sure the new buffer is fully empty
 	require.Zero(t, diskBuf.length())
 	require.Zero(t, diskBuf.entries())
-	require.False(t, diskBuf.isEmpty, "disk-buffer empty flag should not be set on truely empty WAL")
 
 	// Add a first metric and make sure we get it on transaction. Accept the
 	// metric simulating that the buffer is up.

@@ -15,34 +15,6 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestTagsSliceToMap(t *testing.T) {
-	m, err := tagsSliceToMap([][]string{{"foo", "bar"}, {"baz", "bat"}})
-	require.NoError(t, err)
-	require.Len(t, m, 2)
-	require.Equal(t, "bar", m["foo"])
-	require.Equal(t, "bat", m["baz"])
-}
-
-func TestTagsSliceToMap_twoStrings(t *testing.T) {
-	var err error
-	_, err = tagsSliceToMap([][]string{{"foo", "bar", "baz"}})
-	require.Error(t, err)
-	_, err = tagsSliceToMap([][]string{{"foo"}})
-	require.Error(t, err)
-}
-
-func TestTagsSliceToMap_dupeKey(t *testing.T) {
-	_, err := tagsSliceToMap([][]string{{"foo", "bar"}, {"foo", "bat"}})
-	require.Error(t, err)
-}
-
-func TestTagsSliceToMap_empty(t *testing.T) {
-	_, err := tagsSliceToMap([][]string{{"foo", ""}})
-	require.Equal(t, errors.New("tag 1 has empty value"), err)
-	_, err = tagsSliceToMap([][]string{{"", "bar"}})
-	require.Equal(t, errors.New("tag 1 has empty name"), err)
-}
-
 func TestValidateOPCTags(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -59,7 +31,7 @@ func TestValidateOPCTags(t *testing.T) {
 						Namespace:      "2",
 						IdentifierType: "s",
 						Identifier:     "i1",
-						TagsSlice:      [][]string{{"t1", "v1"}, {"t2", "v2"}},
+						DefaultTags:    map[string]string{"t1": "v1", "t2": "v2"},
 					},
 				},
 				Groups: []NodeGroupSettings{
@@ -72,7 +44,7 @@ func TestValidateOPCTags(t *testing.T) {
 								Identifier:     "i1",
 							},
 						},
-						TagsSlice: [][]string{{"t1", "v1"}, {"t2", "v2"}},
+						DefaultTags: map[string]string{"t1": "v1", "t2": "v2"},
 					},
 				},
 			},
@@ -85,12 +57,14 @@ func TestValidateOPCTags(t *testing.T) {
 				RootNodes: []NodeSettings{
 					{
 						FieldName:      "fn",
+						Namespace:      "2",
 						IdentifierType: "s",
-						TagsSlice:      [][]string{{"t1", ""}},
+						Identifier:     "i1",
+						DefaultTags:    map[string]string{"t1": ""},
 					},
 				},
 			},
-			errors.New("tag 1 has empty value"),
+			errors.New(`empty tag value for tag "t1" in "fn"`),
 		},
 		{
 			"empty tag name not allowed",
@@ -99,12 +73,14 @@ func TestValidateOPCTags(t *testing.T) {
 				RootNodes: []NodeSettings{
 					{
 						FieldName:      "fn",
+						Namespace:      "2",
 						IdentifierType: "s",
-						TagsSlice:      [][]string{{"", "1"}},
+						Identifier:     "i1",
+						DefaultTags:    map[string]string{"": "1"},
 					},
 				},
 			},
-			errors.New("tag 1 has empty name"),
+			errors.New(`empty tag name in tags for "fn"`),
 		},
 		{
 			"different metric tag names",
@@ -116,14 +92,14 @@ func TestValidateOPCTags(t *testing.T) {
 						Namespace:      "2",
 						IdentifierType: "s",
 						Identifier:     "i1",
-						TagsSlice:      [][]string{{"t1", "v1"}, {"t2", "v2"}},
+						DefaultTags:    map[string]string{"t1": "v1", "t2": "v2"},
 					},
 					{
 						FieldName:      "fn",
 						Namespace:      "2",
 						IdentifierType: "s",
 						Identifier:     "i1",
-						TagsSlice:      [][]string{{"t1", "v1"}, {"t3", "v2"}},
+						DefaultTags:    map[string]string{"t1": "v1", "t3": "v2"},
 					},
 				},
 			},
@@ -139,14 +115,14 @@ func TestValidateOPCTags(t *testing.T) {
 						Namespace:      "2",
 						IdentifierType: "s",
 						Identifier:     "i1",
-						TagsSlice:      [][]string{{"t1", "foo"}, {"t2", "v2"}},
+						DefaultTags:    map[string]string{"t1": "foo", "t2": "v2"},
 					},
 					{
 						FieldName:      "fn",
 						Namespace:      "2",
 						IdentifierType: "s",
 						Identifier:     "i1",
-						TagsSlice:      [][]string{{"t1", "bar"}, {"t2", "v2"}},
+						DefaultTags:    map[string]string{"t1": "bar", "t2": "v2"},
 					},
 				},
 			},
@@ -165,7 +141,7 @@ func TestValidateOPCTags(t *testing.T) {
 								FieldName:      "fn",
 								IdentifierType: "s",
 								Identifier:     "i1",
-								TagsSlice:      [][]string{{"t1", "v1"}, {"t2", "v2"}},
+								DefaultTags:    map[string]string{"t1": "v1", "t2": "v2"},
 							},
 						},
 					},
@@ -177,7 +153,7 @@ func TestValidateOPCTags(t *testing.T) {
 								FieldName:      "fn",
 								IdentifierType: "s",
 								Identifier:     "i1",
-								TagsSlice:      [][]string{{"t1", "v1"}, {"t2", "v2"}},
+								DefaultTags:    map[string]string{"t1": "v1", "t2": "v2"},
 							},
 						},
 					},
@@ -195,14 +171,14 @@ func TestValidateOPCTags(t *testing.T) {
 						Namespace:      "2",
 						IdentifierType: "s",
 						Identifier:     "i1",
-						TagsSlice:      [][]string{{"t1", "v1"}, {"t2", "v2"}},
+						DefaultTags:    map[string]string{"t1": "v1", "t2": "v2"},
 					},
 					{
 						FieldName:      "fn2",
 						Namespace:      "2",
 						IdentifierType: "s",
 						Identifier:     "i1",
-						TagsSlice:      [][]string{{"t1", "v1"}, {"t2", "v2"}},
+						DefaultTags:    map[string]string{"t1": "v1", "t2": "v2"},
 					},
 				},
 			},
@@ -247,7 +223,7 @@ func TestNewNodeMetricMappingTags(t *testing.T) {
 				Namespace:      "2",
 				IdentifierType: "s",
 				Identifier:     "h",
-				TagsSlice:      [][]string{{"t1", "v1"}},
+				DefaultTags:    map[string]string{"t1": "v1"},
 			},
 			groupTags:    map[string]string{},
 			expectedTags: map[string]string{"t1": "v1"},
@@ -272,7 +248,7 @@ func TestNewNodeMetricMappingTags(t *testing.T) {
 				Namespace:      "2",
 				IdentifierType: "s",
 				Identifier:     "h",
-				TagsSlice:      [][]string{{"t1", "v2"}},
+				DefaultTags:    map[string]string{"t1": "v2"},
 			},
 			groupTags:    map[string]string{"t1": "v1"},
 			expectedTags: map[string]string{"t1": "v2"},
@@ -285,7 +261,7 @@ func TestNewNodeMetricMappingTags(t *testing.T) {
 				Namespace:      "2",
 				IdentifierType: "s",
 				Identifier:     "h",
-				TagsSlice:      [][]string{{"t2", "v2"}},
+				DefaultTags:    map[string]string{"t2": "v2"},
 			},
 			groupTags:    map[string]string{"t1": "v1"},
 			expectedTags: map[string]string{"t1": "v1", "t2": "v2"},
@@ -405,7 +381,7 @@ func TestValidateNodeToAdd(t *testing.T) {
 					Namespace:      "2",
 					IdentifierType: "s",
 					Identifier:     "hf",
-					TagsSlice:      [][]string{{"t1", "v1"}, {"t2", "v2"}},
+					DefaultTags:    map[string]string{"t1": "v1", "t2": "v2"},
 				}, map[string]string{})
 				require.NoError(t, err)
 				return nmm
@@ -482,7 +458,7 @@ func TestInitNodeMetricMapping(t *testing.T) {
 						Namespace:      "2",
 						IdentifierType: "s",
 						Identifier:     "id1",
-						TagsSlice:      [][]string{{"t1", "v1"}},
+						DefaultTags:    map[string]string{"t1": "v1"},
 					},
 				},
 			},
@@ -493,7 +469,7 @@ func TestInitNodeMetricMapping(t *testing.T) {
 						Namespace:      "2",
 						IdentifierType: "s",
 						Identifier:     "id1",
-						TagsSlice:      [][]string{{"t1", "v1"}},
+						DefaultTags:    map[string]string{"t1": "v1"},
 					},
 					idStr:      "ns=2;s=id1",
 					metricName: "testmetric",
@@ -513,7 +489,7 @@ func TestInitNodeMetricMapping(t *testing.T) {
 						Namespace:      "2",
 						IdentifierType: "s",
 						Identifier:     "id1",
-						TagsSlice:      [][]string{{"t1", "v1"}},
+						DefaultTags:    map[string]string{"t1": "v1"},
 					},
 				},
 				Groups: []NodeGroupSettings{
@@ -523,9 +499,9 @@ func TestInitNodeMetricMapping(t *testing.T) {
 						IdentifierType: "s",
 						Nodes: []NodeSettings{
 							{
-								FieldName:  "f",
-								Identifier: "id2",
-								TagsSlice:  [][]string{{"t2", "v2"}},
+								FieldName:   "f",
+								Identifier:  "id2",
+								DefaultTags: map[string]string{"t2": "v2"},
 							},
 						},
 					},
@@ -538,7 +514,7 @@ func TestInitNodeMetricMapping(t *testing.T) {
 						Namespace:      "2",
 						IdentifierType: "s",
 						Identifier:     "id1",
-						TagsSlice:      [][]string{{"t1", "v1"}},
+						DefaultTags:    map[string]string{"t1": "v1"},
 					},
 					idStr:      "ns=2;s=id1",
 					metricName: "testmetric",
@@ -550,7 +526,7 @@ func TestInitNodeMetricMapping(t *testing.T) {
 						Namespace:      "3",
 						IdentifierType: "s",
 						Identifier:     "id2",
-						TagsSlice:      [][]string{{"t2", "v2"}},
+						DefaultTags:    map[string]string{"t2": "v2"},
 					},
 					idStr:      "ns=3;s=id2",
 					metricName: "groupmetric",
@@ -571,9 +547,9 @@ func TestInitNodeMetricMapping(t *testing.T) {
 						IdentifierType: "s",
 						Nodes: []NodeSettings{
 							{
-								FieldName:  "f",
-								Identifier: "id2",
-								TagsSlice:  [][]string{{"t2", "v2"}},
+								FieldName:   "f",
+								Identifier:  "id2",
+								DefaultTags: map[string]string{"t2": "v2"},
 							},
 						},
 					},
@@ -586,82 +562,11 @@ func TestInitNodeMetricMapping(t *testing.T) {
 						Namespace:      "3",
 						IdentifierType: "s",
 						Identifier:     "id2",
-						TagsSlice:      [][]string{{"t2", "v2"}},
+						DefaultTags:    map[string]string{"t2": "v2"},
 					},
 					idStr:      "ns=3;s=id2",
 					metricName: "groupmetric",
 					MetricTags: map[string]string{"t2": "v2"},
-				},
-			},
-			err: nil,
-		},
-		{
-			testname: "tags and default only default tags used",
-			config: InputClientConfig{
-				MetricName: "testmetric",
-				Timestamp:  TimestampSourceTelegraf,
-				Groups: []NodeGroupSettings{
-					{
-						MetricName:     "groupmetric",
-						Namespace:      "3",
-						IdentifierType: "s",
-						Nodes: []NodeSettings{
-							{
-								FieldName:   "f",
-								Identifier:  "id2",
-								TagsSlice:   [][]string{{"t2", "v2"}},
-								DefaultTags: map[string]string{"t3": "v3"},
-							},
-						},
-					},
-				},
-			},
-			expected: []NodeMetricMapping{
-				{
-					Tag: NodeSettings{
-						FieldName:      "f",
-						Namespace:      "3",
-						IdentifierType: "s",
-						Identifier:     "id2",
-						TagsSlice:      [][]string{{"t2", "v2"}},
-						DefaultTags:    map[string]string{"t3": "v3"},
-					},
-					idStr:      "ns=3;s=id2",
-					metricName: "groupmetric",
-					MetricTags: map[string]string{"t3": "v3"},
-				},
-			},
-			err: nil,
-		},
-		{
-			testname: "only root node default overrides slice",
-			config: InputClientConfig{
-				MetricName: "testmetric",
-				Timestamp:  TimestampSourceTelegraf,
-				RootNodes: []NodeSettings{
-					{
-						FieldName:      "f",
-						Namespace:      "2",
-						IdentifierType: "s",
-						Identifier:     "id1",
-						TagsSlice:      [][]string{{"t1", "v1"}},
-						DefaultTags:    map[string]string{"t3": "v3"},
-					},
-				},
-			},
-			expected: []NodeMetricMapping{
-				{
-					Tag: NodeSettings{
-						FieldName:      "f",
-						Namespace:      "2",
-						IdentifierType: "s",
-						Identifier:     "id1",
-						TagsSlice:      [][]string{{"t1", "v1"}},
-						DefaultTags:    map[string]string{"t3": "v3"},
-					},
-					idStr:      "ns=2;s=id1",
-					metricName: "testmetric",
-					MetricTags: map[string]string{"t3": "v3"},
 				},
 			},
 			err: nil,

@@ -1,0 +1,48 @@
+# Query prometheus endpoints using PromQL
+[[inputs.promql]]
+  ## URL of the prometheus endpoint
+  url = "http://localhost:9090"
+
+  ## Basic authentication properties
+  # username = ""
+  # password = ""
+
+  ## Bearer token based authentication
+  # token = ""
+
+  ## Timeout for executing queries with zero meaning no timeout
+  # timeout = "5s"
+
+{{template "/plugins/common/http/transport.conf"}}
+
+  ## Instant queries, multiple instances are allowed
+  # [[inputs.promql.instant]]
+  #   ## Fallback name of the resulting metrics to use as metric name in case
+  #   ## the __name__ property of the query results is empty.
+  #   # name = "promql"
+  #
+  #   ## Query to execute
+  #   query = 'prometheus_http_requests_total'
+  #
+  #   ## Limit for the number of results returned by the server with zero
+  #   ## meaning no limit
+  #   # limit = 0
+
+  ## Range queries, multiple instances are allowed
+  # [[inputs.promql.range]]
+  #   ## Fallback name of the resulting metrics to use as metric name in case
+  #   ## the __name__ property of the query results is empty.
+  #   # name = "promql"
+  #
+  #   ## Query to execute
+  #   query = 'prometheus_http_requests_total{job="prometheus"}'
+  #
+  #   ## Range parameters relative to the gathering time with positive values
+  #   ## refer to BEFORE and negative to AFTER the gathering time
+  #   start = "5m"
+  #   # end = "0s"
+  #   step = "1m"
+  #
+  #   ## Limit for the number of results returned by the server with zero
+  #   ## meaning no limit
+  #   # limit = 0

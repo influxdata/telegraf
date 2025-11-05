@@ -96,7 +96,7 @@ func (t *Telegraf) Run() error {
 	return t.reloadLoop()
 }
 
-// Handler for the Windows service framework
+// Execute is the handler for the Windows service framework
 func (t *Telegraf) Execute(_ []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (bool, uint32) {
 	// Mark the status as startup pending until we are fully started
 	const accepted = svc.AcceptStop | svc.AcceptShutdown

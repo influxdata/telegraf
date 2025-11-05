@@ -341,9 +341,13 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 		}
 	} else {
 		var subject bytes.Buffer
-		for i, m := range metrics {
+		for i, raw := range metrics {
+			m := raw
+			if wm, ok := m.(telegraf.UnwrappableMetric); ok {
+				m = wm.Unwrap()
+			}
 			subject.Reset()
-			if err := n.tplSubject.Execute(&subject, m.(telegraf.TemplateMetric)); err != nil {
+			if err := n.tplSubject.Execute(&subject, m); err != nil {
 				return fmt.Errorf("failed to execute subject template: %w", err)
 			}
 			sub := subject.String()

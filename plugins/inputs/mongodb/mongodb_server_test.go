@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -18,13 +17,9 @@ func createTestServer(t *testing.T) *testutil.Container {
 	container := testutil.Container{
 		Image:        "mongo",
 		ExposedPorts: []string{servicePort},
-		WaitingFor: wait.ForAll(
-			wait.NewHTTPStrategy("/").WithPort(nat.Port(servicePort)),
-			wait.ForLog("Waiting for connections"),
-		),
+		WaitingFor:   wait.ForLog("Waiting for connections"),
 	}
-	err := container.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, container.Start(), "failed to start container")
 
 	return &container
 }

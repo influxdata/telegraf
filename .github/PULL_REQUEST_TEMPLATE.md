@@ -5,10 +5,14 @@ Explain here the why, the rationale and motivation, for the changes.
 
 ## Checklist
 <!-- Mandatory
-Please confirm the following by replacing the space with an "x" between the []:
+Please confirm at least ONE of the following by replacing the space with an "x"
+between the []:
 -->
 
 - [ ] No AI generated code was used in this PR
+- [ ] AI generated code used in this PR follows the [InfluxData Policy on AI-Generated Code Contributions][policy]
+
+[policy]: https://www.influxdata.com/ai-generated-code-contributions-policy
 
 ## Related issues
 <!-- Mandatory

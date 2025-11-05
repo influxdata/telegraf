@@ -43,7 +43,7 @@ func (*GosmiMibLoader) loadModule(path string) error {
 	return err
 }
 
-// will give all found folders to gosmi and load in all modules found in the folders
+// LoadMibsFromPath will give all found folders to gosmi and load in all modules found in the folders
 func LoadMibsFromPath(paths []string, log telegraf.Logger, loader MibLoader) error {
 	folders, err := walkPaths(paths, log)
 	if err != nil {

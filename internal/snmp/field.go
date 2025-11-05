@@ -61,7 +61,7 @@ type Field struct {
 	translator  Translator
 }
 
-// init() converts OID names to numbers, and sets the .Name attribute if unset.
+// Init converts OID names to numbers, and sets the .Name attribute if unset.
 func (f *Field) Init(tr Translator) error {
 	if f.initialized {
 		return nil
@@ -104,7 +104,7 @@ func (f *Field) Init(tr Translator) error {
 	return nil
 }
 
-// fieldConvert converts from any type according to the conv specification
+// Convert converts from any type according to the conv specification
 func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 	v := ent.Value
 

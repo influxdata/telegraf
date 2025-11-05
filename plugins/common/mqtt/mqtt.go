@@ -12,7 +12,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 )
 
-// mqtt v5-specific publish properties.
+// PublishProperties for mqtt v5-specific properties.
 // See https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901109
 type PublishProperties struct {
 	ContentType    string            `toml:"content_type"`
@@ -35,7 +35,7 @@ type MqttConfig struct {
 	KeepAlive           int64              `toml:"keep_alive"`
 	PersistentSession   bool               `toml:"persistent_session"`
 	PublishPropertiesV5 *PublishProperties `toml:"v5"`
-	ClientTrace         bool               `toml:"client_trace"`
+	ClientTrace         bool               `toml:"client_trace" deprecated:"1.37.0;1.45.0;use 'log_level' 'trace' instead"`
 
 	tls.ClientConfig
 

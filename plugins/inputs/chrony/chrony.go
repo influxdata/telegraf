@@ -13,6 +13,7 @@ import (
 	"os/user"
 	"path"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
@@ -40,6 +41,11 @@ type Chrony struct {
 	client *fbchrony.Client
 	source string
 	local  string
+
+	// clientMu protects concurrent access to the chrony client.
+	// This prevents race conditions when multiple Gather() calls
+	// access the same client instance concurrently.
+	sync.Mutex
 }
 
 func (*Chrony) SampleConfig() string {
@@ -146,6 +152,12 @@ func (c *Chrony) Start(_ telegraf.Accumulator) error {
 }
 
 func (c *Chrony) Gather(acc telegraf.Accumulator) error {
+	// Protect concurrent access to the chrony client to prevent race conditions
+	// when multiple Gather() calls occur simultaneously (e.g., when a previous
+	// gather hasn't completed before the next interval triggers).
+	c.Lock()
+	defer c.Unlock()
+
 	for _, m := range c.Metrics {
 		switch m {
 		case "activity":

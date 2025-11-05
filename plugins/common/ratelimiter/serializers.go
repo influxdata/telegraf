@@ -15,7 +15,7 @@ type Serializer interface {
 	SerializeBatch(metrics []telegraf.Metric, limit int64) ([]byte, error)
 }
 
-// Individual serializers do serialize each metric individually using the
+// IndividualSerializer instances serialize each metric individually using the
 // serializer's Serialize() function and add the resulting output to the buffer
 // until the limit is reached. This only works for serializers NOT requiring
 // the serialization of a batch as-a-whole.

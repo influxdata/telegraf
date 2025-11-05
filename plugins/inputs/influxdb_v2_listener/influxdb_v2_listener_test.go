@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -581,6 +582,25 @@ func TestHealth(t *testing.T) {
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 503, resp.StatusCode)
 	require.EqualValues(t, 4, listener.healthsServed.Get())
+}
+
+func TestPing(t *testing.T) {
+	listener := newTestListener()
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	resp, err := http.Get(createURL(listener, "http", "/ping", ""))
+	require.NoError(t, err)
+	require.EqualValues(t, 204, resp.StatusCode)
+	require.EqualValues(t, internal.FormatFullVersion(), resp.Header.Get("X-Influxdb-Version"))
+	require.EqualValues(t, "telegraf", resp.Header.Get("X-Influxdb-Build"))
+	require.EqualValues(t, 1, listener.pingsServed.Get())
+	bodyBytes, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.Empty(t, bodyBytes)
 }
 
 func TestReady(t *testing.T) {

@@ -20,6 +20,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
+	"github.com/docker/docker/api/types/system"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -77,6 +78,9 @@ type Docker struct {
 
 	IncludeSourceTag bool `toml:"source_tag"`
 
+	// Podman-specific configuration
+	PodmanCacheTTL config.Duration `toml:"podman_cache_ttl"`
+
 	Log telegraf.Logger `toml:"-"`
 
 	common_tls.ClientConfig
@@ -87,11 +91,22 @@ type Docker struct {
 	client          dockerClient
 	engineHost      string
 	serverVersion   string
+	isPodman        bool
 	filtersCreated  bool
 	labelFilter     filter.Filter
 	containerFilter filter.Filter
 	stateFilter     filter.Filter
 	objectTypes     []types.DiskUsageObject
+
+	// Stats cache for Podman CPU calculation
+	statsCache      map[string]*cachedContainerStats
+	statsCacheMutex sync.Mutex
+}
+
+// cachedContainerStats holds cached stats and metadata for a container
+type cachedContainerStats struct {
+	stats     *container.StatsResponse
+	timestamp time.Time
 }
 
 func (*Docker) SampleConfig() string {
@@ -127,31 +142,61 @@ func (d *Docker) Init() error {
 	return nil
 }
 
-func (d *Docker) Gather(acc telegraf.Accumulator) error {
-	if d.client == nil {
-		c, err := d.getNewClient()
-		if err != nil {
-			return err
-		}
-		d.client = c
+func (d *Docker) Start(telegraf.Accumulator) error {
+	// Get client
+	c, err := d.getNewClient()
+	if err != nil {
+		return err
+	}
+	d.client = c
 
-		version, err := semver.NewVersion(d.client.ClientVersion())
-		if err != nil {
-			return err
-		}
-
-		if version.LessThan(minVersion) {
-			d.Log.Warnf("Unsupported api version (%v.%v), upgrade to docker engine 1.12 or later (api version 1.24)",
-				version.Major(), version.Minor())
-		} else if version.LessThan(minDiskUsageVersion) && len(d.objectTypes) > 0 {
-			d.Log.Warnf("Unsupported api version for disk usage (%v.%v), upgrade to docker engine 23.0 or later (api version 1.42)",
-				version.Major(), version.Minor())
-		}
+	// Check API version compatibility
+	version, err := semver.NewVersion(d.client.ClientVersion())
+	if err != nil {
+		return fmt.Errorf("failed to parse client version: %w", err)
 	}
 
-	// Close any idle connections in the end of gathering
-	defer d.client.Close()
+	if version.LessThan(minVersion) {
+		d.Log.Warnf("Unsupported api version (%v.%v), upgrade to docker engine 1.12 or later (api version 1.24)",
+			version.Major(), version.Minor())
+	} else if version.LessThan(minDiskUsageVersion) && len(d.objectTypes) > 0 {
+		d.Log.Warnf("Unsupported api version for disk usage (%v.%v), upgrade to docker engine 23.0 or later (api version 1.42)",
+			version.Major(), version.Minor())
+	}
 
+	// Get info from docker daemon for Podman detection
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
+	defer cancel()
+
+	info, err := d.client.Info(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get Docker info: %w", err)
+	}
+
+	d.engineHost = info.Name
+	d.serverVersion = info.ServerVersion
+
+	// Detect if we're connected to Podman
+	d.isPodman = d.detectPodman(&info)
+
+	if d.isPodman {
+		// Initialize stats cache only for Podman to save memory for Docker users
+		d.statsCache = make(map[string]*cachedContainerStats)
+		d.Log.Debugf("Detected Podman engine (version: %s, name: %s), using stats caching for accurate CPU measurements", info.ServerVersion, info.Name)
+	}
+
+	return nil
+}
+
+func (d *Docker) Stop() {
+	// Close client connection if exists
+	if d.client != nil {
+		d.client.Close()
+		d.client = nil
+	}
+}
+
+func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	// Create label filters if not already created
 	if !d.filtersCreated {
 		err := d.createLabelFilters()
@@ -225,6 +270,11 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	// Get disk usage data
 	if len(d.objectTypes) > 0 {
 		d.gatherDiskUsage(acc, types.DiskUsageOptions{Types: d.objectTypes})
+	}
+
+	// Clean up stale cache entries for Podman
+	if d.isPodman {
+		d.cleanupStaleCache()
 	}
 
 	return nil
@@ -488,6 +538,7 @@ func (d *Docker) gatherContainer(
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancel()
 
+	// Get container stats
 	r, err := d.client.ContainerStats(ctx, cntnr.ID, false)
 	if errors.Is(err, context.DeadlineExceeded) {
 		return errStatsTimeout
@@ -495,8 +546,9 @@ func (d *Docker) gatherContainer(
 	if err != nil {
 		return fmt.Errorf("error getting docker stats: %w", err)
 	}
-
 	defer r.Body.Close()
+
+	daemonOSType := r.OSType
 	dec := json.NewDecoder(r.Body)
 	if err = dec.Decode(&v); err != nil {
 		if errors.Is(err, io.EOF) {
@@ -504,7 +556,11 @@ func (d *Docker) gatherContainer(
 		}
 		return fmt.Errorf("error decoding: %w", err)
 	}
-	daemonOSType := r.OSType
+
+	// For Podman, fix the CPU stats using cache if available
+	if d.isPodman && v != nil {
+		d.fixPodmanCPUStats(cntnr.ID, v)
+	}
 
 	// Add labels to tags
 	for k, label := range cntnr.Labels {
@@ -1042,6 +1098,96 @@ func (d *Docker) getNewClient() (dockerClient, error) {
 	return d.newClient(d.Endpoint, tlsConfig)
 }
 
+// detectPodman detects if we're connected to Podman by checking Docker info response.
+// Uses a conservative approach prioritizing explicit indicators over heuristics.
+func (d *Docker) detectPodman(info *system.Info) bool {
+	sv := strings.ToLower(info.ServerVersion)
+	name := strings.ToLower(info.Name)
+	endpoint := strings.ToLower(d.Endpoint)
+
+	// 1. Explicit Docker indicators (highest confidence)
+	if strings.Contains(sv, "docker") || strings.Contains(name, "docker") ||
+		strings.Contains(info.InitBinary, "docker") {
+		return false
+	}
+
+	// 2. Explicit Podman indicators (highest confidence)
+	if strings.Contains(sv, "podman") || strings.Contains(name, "podman") ||
+		strings.Contains(endpoint, "podman") {
+		return true
+	}
+
+	// 3. Exclude other known container runtimes
+	if strings.Contains(name, "kubernetes") || strings.Contains(name, "containerd") ||
+		strings.Contains(endpoint, "containerd") {
+		return false
+	}
+
+	// 4. Podman heuristics - conservative approach
+	// Common Podman patterns: crun runtime, localhost domains, short names, container sockets
+	if info.InitBinary == "crun" ||
+		strings.Contains(name, "localhost") ||
+		strings.Contains(endpoint, "container.sock") ||
+		(len(name) <= 4 && name != "") {
+		return true
+	}
+
+	// 5. Default to Docker for safety
+	return false
+}
+
+// fixPodmanCPUStats fixes Podman's CPU stats using cached previous stats
+func (d *Docker) fixPodmanCPUStats(containerID string, current *container.StatsResponse) {
+	now := time.Now()
+	ttl := time.Duration(d.PodmanCacheTTL)
+
+	// Single lock for read-check-update operation
+	d.statsCacheMutex.Lock()
+	defer d.statsCacheMutex.Unlock()
+
+	if cached, exists := d.statsCache[containerID]; exists && cached != nil && cached.stats != nil {
+		// Check if cached stats are recent enough
+		age := now.Sub(cached.timestamp)
+		if age <= ttl {
+			// Use cached stats as PreCPUStats for accurate CPU calculation
+			current.PreCPUStats = cached.stats.CPUStats
+			d.Log.Tracef("Podman stats cache hit for container %s (age: %v)", hostnameFromID(containerID), age)
+		} else {
+			d.Log.Tracef("Podman stats cache expired for container %s (age: %v)", hostnameFromID(containerID), age)
+		}
+	} else {
+		d.Log.Tracef("Podman stats cache miss for container %s (first collection)", hostnameFromID(containerID))
+	}
+
+	// Update cache with current stats (reuse timestamp)
+	d.statsCache[containerID] = &cachedContainerStats{
+		stats:     current,
+		timestamp: now,
+	}
+}
+
+// cleanupStaleCache removes expired entries from the stats cache
+func (d *Docker) cleanupStaleCache() {
+	if len(d.statsCache) == 0 {
+		return // Early exit if cache is empty
+	}
+
+	d.statsCacheMutex.Lock()
+	defer d.statsCacheMutex.Unlock()
+
+	cutoff := time.Now().Add(-time.Duration(d.PodmanCacheTTL))
+	expiredCount := 0
+
+	for id, cached := range d.statsCache {
+		if cached.timestamp.Before(cutoff) {
+			delete(d.statsCache, id)
+			expiredCount++
+		}
+	}
+
+	d.Log.Tracef("Cleaned up %d expired entries from Podman stats cache", expiredCount)
+}
+
 func init() {
 	inputs.Add("docker", func() telegraf.Input {
 		return &Docker{
@@ -1049,6 +1195,7 @@ func init() {
 			TotalInclude:     []string{"cpu", "blkio", "network"},
 			Timeout:          config.Duration(time.Second * 5),
 			Endpoint:         defaultEndpoint,
+			PodmanCacheTTL:   config.Duration(60 * time.Second),
 			newEnvClient:     newEnvClient,
 			newClient:        newClient,
 			filtersCreated:   false,
