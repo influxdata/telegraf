@@ -1,0 +1,9 @@
+{
+    "format_version":"1",
+    "project":"itia-test",
+    "private_key_id":"b02a10dd-a1c8-4d39-aeca-00d8791d6fc1",
+    "PrivateKey": "this is not a pem",
+    "name":"itia-test-sa",
+    "ca_cert_path": "./testdata/cert.pem",
+    "token_uri":"https://service-account/authenticate"
+}

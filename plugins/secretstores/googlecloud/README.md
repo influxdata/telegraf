@@ -1,6 +1,6 @@
-# GDCHAuth Secrets Secret-Store Plugin
+# GoogleCloud Secrets Secret-Store Plugin
 
-The `gdchauth` plugin allows to fetch token for a service account file and STS audience.
+The `googlecloud` plugin allows to fetch token from google cloud auth library
 
 ## Usage <!-- @/docs/includes/secret_usage.md -->
 
@@ -12,18 +12,19 @@ secrets, see their respective documentation (e.g.
 `Secret-store support` section, it will detail which options support secret
 store usage.
 
+This plugin currently supports parameters required for getting GDCH credentials.
+More parameters can be added based on [GoogleCloud Auth DetectOptions](https://github.com/googleapis/google-cloud-go/blob/main/auth/credentials/detect.go#L154)
+
 ## Configuration
 
 ```toml @sample.conf
 # Secret-store to retrieve secrets from Google Cloud Authenticator
-[[secretstores.gdchauth]]
-  id = "gdchauth_secret"
-  ## Path to the GDCH service account JSON key file
-  service_account_file = "/etc/telegraf/service-account.json"
-  audience = "https://{SERVICE_URL}"
-  
-  ## Time before token expiry to fetch a new one.
-  # token_expiry_buffer = "5m"
+[[secretstores.googlecloud]]
+  id = "googlecloud_secret"
+
+  ## Path to the service account JSON key file
+  service_account_file = "./testdata/gdch.json"
+  sts_audience = "https://{AUDIENCE_URL}"
 ```
 
 ### Referencing Secret within a Plugin
@@ -32,15 +33,15 @@ Referencing the secret within a plugin occurs by:
 
 ```toml
 [[inputs.http]]
-  token = "@{gdchauth_secret:token}"
+  token = "@{googlecloud_secret:token}"
 ```
 
 ## Additional Information
 
-[How to generate service account file][1]
+[How to generate GDCH service account file][1]
 
-[Learn about audience option][2]
+[Learn about Google Cloud Detect Options][2]
 
 [1]: https://docs.cloud.google.com/distributed-cloud/hosted/docs/latest/gdch/application/ao-user/iam/service-identities
 
-[2]: https://docs.cloud.google.com/distributed-cloud/hosted/docs/latest/gdch/resources/gdcloud-reference/gdcloud-auth-print-identity-token
+[2]: https://github.com/googleapis/google-cloud-go/blob/main/auth/credentials/detect.go
