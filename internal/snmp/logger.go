@@ -7,7 +7,7 @@ import (
 )
 
 type Logger struct {
-	gs Connection
+	gs Connection // Reference to the SNMP connection as the host is not available initially
 	telegraf.Logger
 }
 
