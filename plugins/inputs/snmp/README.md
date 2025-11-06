@@ -48,8 +48,8 @@ to use them.
   ## Timeout for each request.
   # timeout = "5s"
 
-  ## Continue polling tables if polling fails on the same agent
-  # continue_on_error = true
+  ## Stop polling tables if polling fails on the same agent
+  # stop_on_error = false
 
   ## SNMP version; can be 1, 2, or 3.
   # version = 2

@@ -25,8 +25,8 @@ type Snmp struct {
 	// The tag used to name the agent host
 	AgentHostTag string `toml:"agent_host_tag"`
 
-	// Continue collection when recieving errors from an agent
-	ContinueOnError bool `toml:"continue_on_error"`
+	// Stop collection when recieving errors from an agent
+	StopOnError bool `toml:"stop_on_error"`
 
 	snmp.ClientConfig
 
@@ -118,7 +118,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			topTags := make(map[string]string)
 			if err := s.gatherTable(acc, gs, t, topTags, false); err != nil {
 				acc.AddError(fmt.Errorf("agent %s: %w", agent, err))
-				if !s.ContinueOnError {
+				if s.StopOnError {
 					return
 				}
 			}
@@ -127,7 +127,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			for _, t := range s.Tables {
 				if err := s.gatherTable(acc, gs, t, topTags, true); err != nil {
 					acc.AddError(fmt.Errorf("agent %s: gathering table %s: %w", agent, t.Name, err))
-					if !s.ContinueOnError {
+					if s.StopOnError {
 						return
 					}
 				}
@@ -214,7 +214,6 @@ func init() {
 				Path:           []string{"/usr/share/snmp/mibs"},
 				Community:      "public",
 			},
-			ContinueOnError: true,
 		}
 	})
 }
