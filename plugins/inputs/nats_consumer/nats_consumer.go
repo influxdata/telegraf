@@ -263,7 +263,7 @@ func (n *NatsConsumer) receiver(ctx context.Context) {
 				<-n.sem
 				if jetstreamMsg {
 					if err := msg.Ack(); err != nil {
-						n.acc.AddError(fmt.Errorf("failed to acknowledge JetStream message on subject %s: %v", msg.Subject, err))
+						n.acc.AddError(fmt.Errorf("failed to acknowledge JetStream message on subject %s: %w", msg.Subject, err))
 					}
 				}
 			} else {
