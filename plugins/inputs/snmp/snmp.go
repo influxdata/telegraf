@@ -25,7 +25,7 @@ type Snmp struct {
 	// The tag used to name the agent host
 	AgentHostTag string `toml:"agent_host_tag"`
 
-	// Stop collection when recieving errors from an agent
+	// Stop collection when receiving errors from an agent
 	StopOnError bool `toml:"stop_on_error"`
 
 	snmp.ClientConfig
