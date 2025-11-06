@@ -14,9 +14,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gofrs/uuid/v5"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/selfstat"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -542,6 +544,15 @@ func TestHealth(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
+	// Make sure we do have a unique stats for this instance to avoid side effects
+	id, err := uuid.NewV4()
+	require.NoError(t, err)
+	listener.healthsServed = selfstat.Register("influxdb_v2_listener", "healths_served", map[string]string{
+		"address": listener.ServiceAddress,
+		"id":      id.String(),
+	})
+	defer listener.healthsServed.Unregister()
+
 	// post ping to listener
 	resp, err := http.Get(createURL(listener, "http", "/api/v2/health", ""))
 	require.NoError(t, err)
@@ -592,6 +603,15 @@ func TestReady(t *testing.T) {
 	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
+
+	// Make sure we do have a unique stats for this instance to avoid side effects
+	id, err := uuid.NewV4()
+	require.NoError(t, err)
+	listener.readysServed = selfstat.Register("influxdb_v2_listener", "readys_served", map[string]string{
+		"address": listener.ServiceAddress,
+		"id":      id.String(),
+	})
+	defer listener.readysServed.Unregister()
 
 	// post ping to listener
 	resp, err := http.Get(createURL(listener, "http", "/api/v2/ready", ""))
@@ -702,6 +722,9 @@ func TestRateLimitedConnectionAcceptsNewRequestOnDelivery(t *testing.T) {
 	for _, m := range ms {
 		m.Accept()
 	}
+	require.Eventually(t, func() bool {
+		return listener.totalUndeliveredMetrics.Load() == 0
+	}, 3*time.Second, 100*time.Millisecond)
 
 	resp, err = http.Post(postURL, "", bytes.NewBufferString(msg)) // #nosec G107 -- url has to be dynamic due to dynamic port number
 	require.NoError(t, err)

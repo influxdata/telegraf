@@ -8,20 +8,37 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gofrs/uuid/v5"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/selfstat"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 // newListener is the minimal InfluxDBV2Listener construction to serve writes.
-func newListener() *InfluxDBV2Listener {
+func newListener(b *testing.B) *InfluxDBV2Listener {
+	// Make sure we do have a unique stats for this instance to avoid side effects
+	id, err := uuid.NewV4()
+	require.NoError(b, err)
+
 	listener := &InfluxDBV2Listener{
-		timeFunc:     time.Now,
-		acc:          &testutil.NopAccumulator{},
-		bytesRecv:    selfstat.Register("influxdb_v2_listener", "bytes_received", map[string]string{}),
-		writesServed: selfstat.Register("influxdb_v2_listener", "writes_served", map[string]string{}),
-		MaxBodySize:  config.Size(defaultMaxBodySize),
+		timeFunc: time.Now,
+		acc:      &testutil.NopAccumulator{},
+		bytesRecv: selfstat.Register("influxdb_v2_listener", "bytes_received", map[string]string{
+			"id": id.String(),
+		}),
+		writesServed: selfstat.Register("influxdb_v2_listener", "writes_served", map[string]string{
+			"id": id.String(),
+		}),
+		MaxBodySize: config.Size(defaultMaxBodySize),
 	}
+
+	b.Cleanup(func() {
+		listener.bytesRecv.Unregister()
+		listener.writesServed.Unregister()
+	})
+
 	return listener
 }
 
@@ -65,18 +82,14 @@ func BenchmarkInfluxDBV2Listener_serveWrite(b *testing.B) {
 
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
-			listener := newListener()
+			listener := newListener(b)
 
 			b.ResetTimer()
 			for n := 0; n < b.N; n++ {
 				req, err := http.NewRequest("POST", addr, strings.NewReader(bm.lines))
-				if err != nil {
-					b.Error(err)
-				}
+				require.NoError(b, err)
 				listener.handleWrite()(res, req)
-				if res.Code != http.StatusNoContent {
-					b.Errorf("unexpected status %d", res.Code)
-				}
+				require.Equal(b, http.StatusNoContent, res.Code, "unexpected status")
 			}
 		})
 	}
