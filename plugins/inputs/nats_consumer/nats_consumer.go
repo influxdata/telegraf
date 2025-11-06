@@ -254,13 +254,18 @@ func (n *NatsConsumer) receiver(ctx context.Context) {
 			// Parse the metric and add it to the accumulator
 			metrics, err := n.parser.Parse(msg.Data)
 			if err != nil {
-				<-n.sem
 				n.acc.AddError(fmt.Errorf("failed to handle message on subject %s: %w", msg.Subject, err))
 			}
 			if len(metrics) == 0 {
 				once.Do(func() {
 					n.Log.Debug(internal.NoMetricsCreatedMsg)
 				})
+				<-n.sem
+				if jetstreamMsg {
+					if err := msg.Ack(); err != nil {
+						n.acc.AddError(fmt.Errorf("failed to acknowledge JetStream message on subject %s: %v", msg.Subject, err))
+					}
+				}
 			} else {
 				for _, m := range metrics {
 					m.AddTag("subject", msg.Subject)
