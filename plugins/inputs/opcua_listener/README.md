@@ -354,16 +354,19 @@ OPC UA supports two ways to specify namespaces:
    plugin to fetch the namespace array from the server to resolve the URI to an index.
 
 **When to use namespace index:**
+
 - For standard OPC UA namespaces (0 = OPC UA, 1 = Local Server)
 - When namespace stability is not a concern
 - For simpler configuration
 
 **When to use namespace URI:**
+
 - When you need consistent node references across server restarts
 - For production environments where namespace indices might change
 - When working with vendor-specific namespaces
 
 **Example using namespace URI:**
+
 ```toml
 [[inputs.opcua_listener.nodes]]
   name = "ServerStatus"
@@ -373,6 +376,7 @@ OPC UA supports two ways to specify namespaces:
 ```
 
 This produces the same node ID internally as:
+
 ```toml
 [[inputs.opcua_listener.nodes]]
   name = "ServerStatus"
