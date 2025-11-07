@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -41,22 +42,49 @@ type poolInfo struct {
 
 type helper struct{} //nolint:unused // not used for "linux" OS, needed for Zfs struct
 
-func (z *Zfs) Gather(acc telegraf.Accumulator) error {
-	kstatMetrics := z.KstatMetrics
-	if len(kstatMetrics) == 0 {
+func (z *Zfs) Init() error {
+	// Set defaults
+	if z.KstatPath == "" {
+		z.KstatPath = "/proc/spl/kstat/zfs"
+	}
+
+	if len(z.KstatMetrics) == 0 {
 		// vdev_cache_stats is deprecated
 		// xuio_stats are ignored because as of Sep-2016, no known
 		// consumers of xuio exist on Linux
-		kstatMetrics = []string{"abdstats", "arcstats", "dnodestats", "dbufcachestats",
-			"dmu_tx", "fm", "vdev_mirror_stats", "zfetchstats", "zil"}
+		z.KstatMetrics = []string{
+			"abdstats",
+			"arcstats",
+			"dnodestats",
+			"dbufcachestats",
+			"dmu_tx",
+			"fm",
+			"vdev_mirror_stats",
+			"zfetchstats",
+			"zil",
+		}
 	}
 
-	kstatPath := z.KstatPath
-	if len(kstatPath) == 0 {
-		kstatPath = "/proc/spl/kstat/zfs"
+	// Check settings
+	// We need to check the kstat metrics _after_ assigning the default to
+	// allow explicitly disabling the kstat metrics via an empty string. For
+	// processing we need to remove the empty string to not confuse the code.
+	z.KstatMetrics = slices.DeleteFunc(z.KstatMetrics, func(m string) bool { return m == "" })
+	for _, m := range z.KstatMetrics {
+		switch m {
+		case "abdstats", "arcstats", "dnodestats", "dbufcachestats", "dmu_tx",
+			"fm", "vdev_mirror_stats", "zfetchstats", "zil":
+			// Do nothing, those are valid
+		default:
+			return fmt.Errorf("invalid kstat metric %q", m)
+		}
 	}
 
-	pools, err := getPools(kstatPath)
+	return nil
+}
+
+func (z *Zfs) Gather(acc telegraf.Accumulator) error {
+	pools, err := getPools(z.KstatPath)
 	tags := getTags(pools)
 
 	if z.PoolMetrics && err == nil {
@@ -68,8 +96,8 @@ func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 	}
 
 	fields := make(map[string]interface{})
-	for _, metric := range kstatMetrics {
-		fn := filepath.Join(kstatPath, metric)
+	for _, metric := range z.KstatMetrics {
+		fn := filepath.Join(z.KstatPath, metric)
 		lines, err := internal.ReadLines(fn)
 		if err != nil {
 			continue
@@ -94,9 +122,9 @@ func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func getPools(kstatPath string) ([]poolInfo, error) {
+func getPools(path string) ([]poolInfo, error) {
 	pools := make([]poolInfo, 0)
-	version, poolsDirs, err := probeVersion(kstatPath)
+	version, poolsDirs, err := probeVersion(path)
 	if err != nil {
 		return nil, err
 	}
@@ -110,8 +138,8 @@ func getPools(kstatPath string) ([]poolInfo, error) {
 	return pools, nil
 }
 
-func probeVersion(kstatPath string) (metricsVersion, []string, error) {
-	poolsDirs, err := filepath.Glob(kstatPath + "/*/objset-*")
+func probeVersion(path string) (metricsVersion, []string, error) {
+	poolsDirs, err := filepath.Glob(path + "/*/objset-*")
 
 	// From the docs: the only possible returned error is ErrBadPattern, when pattern is malformed.
 	// Because of this we need to determine how to fallback differently.
@@ -124,7 +152,7 @@ func probeVersion(kstatPath string) (metricsVersion, []string, error) {
 	}
 
 	// Fallback to the old kstat in case of an older ZFS version.
-	poolsDirs, err = filepath.Glob(kstatPath + "/*/io")
+	poolsDirs, err = filepath.Glob(path + "/*/io")
 	if err != nil {
 		return unknown, poolsDirs, err
 	}
