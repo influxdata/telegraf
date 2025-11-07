@@ -240,6 +240,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			plugindDir:              cCtx.String("plugin-directory"),
 			password:                cCtx.String("password"),
 			oldEnvBehavior:          cCtx.Bool("old-env-behavior"),
+			nonStrictEnvVars:        !cCtx.Bool("strict-env-handling"),
 			printPluginConfigSource: cCtx.Bool("print-plugin-config-source"),
 			test:                    cCtx.Bool("test"),
 			debug:                   cCtx.Bool("debug"),
@@ -319,6 +320,10 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				&cli.BoolFlag{
 					Name:  "old-env-behavior",
 					Usage: "switch back to pre v1.27 environment replacement behavior",
+				},
+				&cli.BoolFlag{
+					Name:  "strict-env-handling",
+					Usage: "enforces strict and secure handling of environment variables; will not work with non-string settings",
 				},
 				&cli.BoolFlag{
 					Name:  "print-plugin-config-source",
