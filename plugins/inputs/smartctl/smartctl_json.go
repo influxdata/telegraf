@@ -112,7 +112,7 @@ type smartctlDeviceJSON struct {
 			ErrorsCorrectedByRereadsRewrites int    `json:"errors_corrected_by_rereads_rewrites"`
 			TotalErrorsCorrected             int    `json:"total_errors_corrected"`
 			CorrectionAlgorithmInvocations   int    `json:"correction_algorithm_invocations"`
-			GigabytesProcessed               string `json:"gigabytes_processed"`
+			GigabytesProcessed               float64 `json:"gigabytes_processed,string"`
 			TotalUncorrectedErrors           int    `json:"total_uncorrected_errors"`
 		} `json:"read"`
 		Write struct {
@@ -121,7 +121,7 @@ type smartctlDeviceJSON struct {
 			ErrorsCorrectedByRereadsRewrites int    `json:"errors_corrected_by_rereads_rewrites"`
 			TotalErrorsCorrected             int    `json:"total_errors_corrected"`
 			CorrectionAlgorithmInvocations   int    `json:"correction_algorithm_invocations"`
-			GigabytesProcessed               string `json:"gigabytes_processed"`
+			GigabytesProcessed               float64 `json:"gigabytes_processed,string"`
 			TotalUncorrectedErrors           int    `json:"total_uncorrected_errors"`
 		} `json:"write"`
 		Verify struct {
@@ -130,7 +130,7 @@ type smartctlDeviceJSON struct {
 			ErrorsCorrectedByRereadsRewrites int    `json:"errors_corrected_by_rereads_rewrites"`
 			TotalErrorsCorrected             int    `json:"total_errors_corrected"`
 			CorrectionAlgorithmInvocations   int    `json:"correction_algorithm_invocations"`
-			GigabytesProcessed               string `json:"gigabytes_processed"`
+			GigabytesProcessed               float64 `json:"gigabytes_processed,string"`
 			TotalUncorrectedErrors           int    `json:"total_uncorrected_errors"`
 		} `json:"verify"`
 	} `json:"scsi_error_counter_log"`
