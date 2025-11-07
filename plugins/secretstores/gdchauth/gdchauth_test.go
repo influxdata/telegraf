@@ -21,10 +21,9 @@ func TestSampleConfig(t *testing.T) {
 
 func TestInit(t *testing.T) {
 	tests := []struct {
-		name        string
-		plugin      *GdchAuth
-		wantErr     bool
-		errContains string
+		name          string
+		plugin        *GdchAuth
+		expectedError string
 	}{
 		{
 			name: "missing service account file should fail",
@@ -32,8 +31,7 @@ func TestInit(t *testing.T) {
 				Audience: "https://localhost",
 				Log:      testutil.Logger{},
 			},
-			wantErr:     true,
-			errContains: "service_account_file is required",
+			expectedError: "service_account_file is required",
 		},
 		{
 			name: "non-existent service account file should fail",
@@ -42,8 +40,7 @@ func TestInit(t *testing.T) {
 				Log:                testutil.Logger{},
 				ServiceAccountFile: "non-existent-file.json",
 			},
-			wantErr:     true,
-			errContains: "failed to read service account file",
+			expectedError: "failed to read service account file",
 		},
 		{
 			name: "invalid service account file json should fail",
@@ -52,8 +49,7 @@ func TestInit(t *testing.T) {
 				Log:                testutil.Logger{},
 				ServiceAccountFile: "./testdata/invalid-json-sa-key.json",
 			},
-			wantErr:     true,
-			errContains: "failed to parse service account JSON",
+			expectedError: "failed to parse service account JSON",
 		},
 		{
 			name: "invalid private key pem should fail",
@@ -62,8 +58,7 @@ func TestInit(t *testing.T) {
 				Log:                testutil.Logger{},
 				ServiceAccountFile: "./testdata/invalid-pem-sa-key.json",
 			},
-			wantErr:     true,
-			errContains: "failed to decode PEM block from private key",
+			expectedError: "failed to decode PEM block from private key",
 		},
 		{
 			name: "missing audience should fail",
@@ -71,8 +66,7 @@ func TestInit(t *testing.T) {
 				Log:                testutil.Logger{},
 				ServiceAccountFile: "./testdata/valid-sa-key.json",
 			},
-			wantErr:     true,
-			errContains: "audience is required",
+			expectedError: "audience is required",
 		},
 		{
 			name: "successful init",
@@ -81,15 +75,14 @@ func TestInit(t *testing.T) {
 				Log:                testutil.Logger{},
 				ServiceAccountFile: "./testdata/valid-sa-key.json",
 			},
-			wantErr: false,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			err := tc.plugin.Init()
-			if tc.wantErr {
-				require.ErrorContains(t, err, tc.errContains, "error mismatch")
+			if tc.expectedError != "" {
+				require.ErrorContains(t, err, tc.expectedError, "error mismatch")
 			} else {
 				require.NoError(t, err)
 				require.NotNil(t, tc.plugin.account)
@@ -181,7 +174,7 @@ func TestGet(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			g := &GdchAuth{
+			plugin := &GdchAuth{
 				Audience:           tc.audience,
 				ServiceAccountFile: tc.serviceAccountFile,
 				TokenExpiryBuffer:  tc.tokenExpiryBuffer,
@@ -190,10 +183,10 @@ func TestGet(t *testing.T) {
 				expiry:             tc.expiry,
 			}
 
-			require.NoError(t, g.Init())
-			g.client = tc.httpClient // set mock after Init()
+			require.NoError(t, plugin.Init())
+			plugin.client = tc.httpClient // set mock after Init()
 
-			token, err := g.Get("token")
+			token, err := plugin.Get("token")
 
 			if tc.expectedError != "" {
 				require.ErrorContains(t, err, tc.expectedError, "error mismatch")

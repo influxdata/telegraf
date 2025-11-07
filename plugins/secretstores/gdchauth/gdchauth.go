@@ -3,7 +3,6 @@ package gdchauth
 import (
 	"bytes"
 	"context"
-
 	"crypto/x509"
 	_ "embed"
 	"encoding/json"
@@ -108,10 +107,7 @@ func (g *GdchAuth) getToken(ctx context.Context) error {
 		return nil
 	}
 
-	if err := g.fetchNewToken(ctx); err != nil {
-		return err
-	}
-	return nil
+	return g.fetchNewToken(ctx)
 }
 
 func (g *GdchAuth) buildHTTPClient() error {
