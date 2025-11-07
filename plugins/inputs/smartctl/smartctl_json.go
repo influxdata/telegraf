@@ -107,31 +107,31 @@ type smartctlDeviceJSON struct {
 	} `json:"ata_smart_attributes"`
 	ScsiErrorCounterLog struct {
 		Read struct {
-			ErrorsCorrectedByEccfast         int    `json:"errors_corrected_by_eccfast"`
-			ErrorsCorrectedByEccdelayed      int    `json:"errors_corrected_by_eccdelayed"`
-			ErrorsCorrectedByRereadsRewrites int    `json:"errors_corrected_by_rereads_rewrites"`
-			TotalErrorsCorrected             int    `json:"total_errors_corrected"`
-			CorrectionAlgorithmInvocations   int    `json:"correction_algorithm_invocations"`
+			ErrorsCorrectedByEccfast         int     `json:"errors_corrected_by_eccfast"`
+			ErrorsCorrectedByEccdelayed      int     `json:"errors_corrected_by_eccdelayed"`
+			ErrorsCorrectedByRereadsRewrites int     `json:"errors_corrected_by_rereads_rewrites"`
+			TotalErrorsCorrected             int     `json:"total_errors_corrected"`
+			CorrectionAlgorithmInvocations   int     `json:"correction_algorithm_invocations"`
 			GigabytesProcessed               float64 `json:"gigabytes_processed,string"`
-			TotalUncorrectedErrors           int    `json:"total_uncorrected_errors"`
+			TotalUncorrectedErrors           int     `json:"total_uncorrected_errors"`
 		} `json:"read"`
 		Write struct {
-			ErrorsCorrectedByEccfast         int    `json:"errors_corrected_by_eccfast"`
-			ErrorsCorrectedByEccdelayed      int    `json:"errors_corrected_by_eccdelayed"`
-			ErrorsCorrectedByRereadsRewrites int    `json:"errors_corrected_by_rereads_rewrites"`
-			TotalErrorsCorrected             int    `json:"total_errors_corrected"`
-			CorrectionAlgorithmInvocations   int    `json:"correction_algorithm_invocations"`
+			ErrorsCorrectedByEccfast         int     `json:"errors_corrected_by_eccfast"`
+			ErrorsCorrectedByEccdelayed      int     `json:"errors_corrected_by_eccdelayed"`
+			ErrorsCorrectedByRereadsRewrites int     `json:"errors_corrected_by_rereads_rewrites"`
+			TotalErrorsCorrected             int     `json:"total_errors_corrected"`
+			CorrectionAlgorithmInvocations   int     `json:"correction_algorithm_invocations"`
 			GigabytesProcessed               float64 `json:"gigabytes_processed,string"`
-			TotalUncorrectedErrors           int    `json:"total_uncorrected_errors"`
+			TotalUncorrectedErrors           int     `json:"total_uncorrected_errors"`
 		} `json:"write"`
 		Verify struct {
-			ErrorsCorrectedByEccfast         int    `json:"errors_corrected_by_eccfast"`
-			ErrorsCorrectedByEccdelayed      int    `json:"errors_corrected_by_eccdelayed"`
-			ErrorsCorrectedByRereadsRewrites int    `json:"errors_corrected_by_rereads_rewrites"`
-			TotalErrorsCorrected             int    `json:"total_errors_corrected"`
-			CorrectionAlgorithmInvocations   int    `json:"correction_algorithm_invocations"`
+			ErrorsCorrectedByEccfast         int     `json:"errors_corrected_by_eccfast"`
+			ErrorsCorrectedByEccdelayed      int     `json:"errors_corrected_by_eccdelayed"`
+			ErrorsCorrectedByRereadsRewrites int     `json:"errors_corrected_by_rereads_rewrites"`
+			TotalErrorsCorrected             int     `json:"total_errors_corrected"`
+			CorrectionAlgorithmInvocations   int     `json:"correction_algorithm_invocations"`
 			GigabytesProcessed               float64 `json:"gigabytes_processed,string"`
-			TotalUncorrectedErrors           int    `json:"total_uncorrected_errors"`
+			TotalUncorrectedErrors           int     `json:"total_uncorrected_errors"`
 		} `json:"verify"`
 	} `json:"scsi_error_counter_log"`
 }
