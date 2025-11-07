@@ -33,6 +33,8 @@ func (f *filterNoGlob) Match(s string) bool {
 
 // filterGlob handles glob patterns WITHOUT separators
 // This is optimized for the common case where no separators are specified
+// To maintain backward compatibility with gobwas/glob, we treat '/' as a regular
+// character that can be matched by '*' and '?', unlike doublestar's default behavior.
 type filterGlob struct {
 	patterns []string
 }
@@ -51,8 +53,13 @@ func newFilterGlob(filters []string) (Filter, error) {
 }
 
 func (f *filterGlob) Match(s string) bool {
+	// Replace '/' with U+FFFD in both string and patterns to make '/' matchable by wildcards.
+	// This maintains backward compatibility with gobwas/glob where '*' matched across '/'.
+	normalizedStr := strings.ReplaceAll(s, "/", "\uFFFD")
+
 	for _, pattern := range f.patterns {
-		matched, err := doublestar.Match(pattern, s)
+		normalizedPattern := strings.ReplaceAll(pattern, "/", "\uFFFD")
+		matched, err := doublestar.Match(normalizedPattern, normalizedStr)
 		if err != nil {
 			continue
 		}
