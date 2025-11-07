@@ -1,6 +1,19 @@
 <!-- markdownlint-disable MD013 MD024 -->
 # Changelog
 
+## Unreleased
+
+### Important Changes
+
+- PR [#17966](https://github.com/influxdata/telegraf/pull/17966) introduced the strict handling of environment variables
+  to prevent security issues. However, strict handling prevents using environment variables for non-string settings as
+  the configuration before replacing the variables must be TOML conform. To provide security-by-default, we will change
+  the **default behavior of Telegraf to the strict environment variable handling with v1.38.0**!
+  Please make sure your configuration works in the now conditions by using the `--strict-env-handling` flag! If your
+  configuration works in strict mode or you are not using environment variables, **do not** add the flag as it will be
+  removed later and ignore the new warning at startup. In case you need the current behavior please add
+  `--non-strict-env-handling` when starting Telegraf to prepare for the upcoming change!
+
 ## v1.36.4 [2025-11-17]
 
 ### Bugfixes
