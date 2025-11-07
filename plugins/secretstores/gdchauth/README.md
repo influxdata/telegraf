@@ -34,5 +34,3 @@ Referencing the secret within a plugin occurs by:
 [[inputs.http]]
   token = "@{gdchauth_secret:token}"
 ```
-
-## Additional Information
