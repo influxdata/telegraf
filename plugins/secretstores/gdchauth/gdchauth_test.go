@@ -15,8 +15,7 @@ import (
 )
 
 func TestSampleConfig(t *testing.T) {
-	plugin := &GdchAuth{}
-	require.NotEmpty(t, plugin.SampleConfig())
+	require.NoError(t, config.NewConfig().LoadConfigData(testutil.DefaultSampleConfig((&GdchAuth{}).SampleConfig()), config.EmptySourcePath))
 }
 
 func TestInit(t *testing.T) {
@@ -110,7 +109,7 @@ func TestGet(t *testing.T) {
 			audience:           "https://localhost",
 			serviceAccountFile: "testdata/valid-sa-key.json",
 			httpClient: &http.Client{
-				Transport: &MockRoundTripper{
+				Transport: &mockRoundTripper{
 					Response: &http.Response{
 						StatusCode: http.StatusOK,
 						Body:       io.NopCloser(strings.NewReader(`{"access_token": "test_token", "expires_in": 3600}`)),
@@ -136,7 +135,7 @@ func TestGet(t *testing.T) {
 			tokenExpiryBuffer:  config.Duration(5 * time.Minute),
 			expiry:             time.Now().Add(1 * time.Minute),
 			httpClient: &http.Client{
-				Transport: &MockRoundTripper{
+				Transport: &mockRoundTripper{
 					Response: &http.Response{
 						StatusCode: http.StatusOK,
 						Body:       io.NopCloser(strings.NewReader(`{"access_token": "refreshed_token", "expires_in": 3600}`)),
@@ -150,7 +149,7 @@ func TestGet(t *testing.T) {
 			audience:           "https://localhost",
 			serviceAccountFile: "testdata/valid-sa-key.json",
 			httpClient: &http.Client{
-				Transport: &MockRoundTripper{
+				Transport: &mockRoundTripper{
 					Err: errors.New("http request failed"),
 				},
 			},
@@ -161,7 +160,7 @@ func TestGet(t *testing.T) {
 			audience:           "https://localhost",
 			serviceAccountFile: "testdata/valid-sa-key.json",
 			httpClient: &http.Client{
-				Transport: &MockRoundTripper{
+				Transport: &mockRoundTripper{
 					Response: &http.Response{
 						StatusCode: http.StatusOK,
 						Body:       io.NopCloser(strings.NewReader(`{"invalid_response": "oops"}`)),
@@ -199,12 +198,12 @@ func TestGet(t *testing.T) {
 	}
 }
 
-type MockRoundTripper struct {
+type mockRoundTripper struct {
 	Response *http.Response
 	Err      error
 }
 
 // RoundTrip provides the mock response or error.
-func (m *MockRoundTripper) RoundTrip(*http.Request) (*http.Response, error) {
+func (m *mockRoundTripper) RoundTrip(*http.Request) (*http.Response, error) {
 	return m.Response, m.Err
 }

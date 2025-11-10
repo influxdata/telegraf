@@ -73,8 +73,13 @@ func (g *GdchAuth) Init() error {
 
 // Get retrieves the token. The key is ignored as this secret store only provides one secret.
 func (g *GdchAuth) Get(_ string) ([]byte, error) {
-	if err := g.getToken(context.Background()); err != nil {
-		return nil, err
+	g.Mutex.Lock()
+	defer g.Mutex.Unlock()
+
+	if g.token == "" || time.Now().After(g.expiry.Add(-time.Duration(g.TokenExpiryBuffer))) {
+		if err := g.fetchNewToken(context.Background()); err != nil {
+			return nil, err
+		}
 	}
 	return []byte(g.token), nil
 }
@@ -97,19 +102,6 @@ func (g *GdchAuth) GetResolver(key string) (telegraf.ResolveFunc, error) {
 	}, nil
 }
 
-// getToken retrieves a GDCH auth token. It caches the token and reuses it
-// until it is within the 'token_expiry_buffer' of its expiry time.
-func (g *GdchAuth) getToken(ctx context.Context) error {
-	g.Mutex.Lock()
-	defer g.Mutex.Unlock()
-
-	if g.token != "" && time.Now().Before(g.expiry.Add(-time.Duration(g.TokenExpiryBuffer))) {
-		return nil
-	}
-
-	return g.fetchNewToken(ctx)
-}
-
 func (g *GdchAuth) buildHTTPClient() error {
 	client, err := g.HTTPClientConfig.CreateClient(context.Background(), g.Log)
 	if err != nil {
@@ -127,7 +119,7 @@ func (g *GdchAuth) parsePrivateKey() error {
 
 	key, err := x509.ParseECPrivateKey(block.Bytes)
 	if err != nil || key == nil {
-		return fmt.Errorf("private key could not be parsed %w", err)
+		return fmt.Errorf("private key could not be parsed: %w", err)
 	}
 
 	g.account.parsedKey = key
@@ -204,7 +196,7 @@ func (g *GdchAuth) fetchNewToken(ctx context.Context) error {
 	if response.ExpiresIn > 0 {
 		g.expiry = time.Now().Add(time.Duration(response.ExpiresIn) * time.Second)
 	} else {
-		g.expiry = now.Add(time.Hour)
+		g.expiry = time.Now().Add(time.Hour)
 	}
 
 	return nil
