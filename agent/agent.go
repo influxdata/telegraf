@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	cd "github.com/influxdata/telegraf/config/diff"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/models"
@@ -24,12 +26,21 @@ import (
 // Agent runs a set of plugins.
 type Agent struct {
 	Config *config.Config
+
+	// internal
+	dst       chan<- telegraf.Metric // destination for all metrics, i can reuse at any point of time to add new inputs :)
+	iwg       sync.WaitGroup         // internal wait group to handle inputs
+	itickers  []Ticker               // input tickers
+	mu        sync.Mutex
+	cancelMap map[string]context.CancelFunc // map of service inputs to their cancel functions so that they can be stopped individually
 }
 
 // NewAgent returns an Agent for the given Config.
 func NewAgent(cfg *config.Config) *Agent {
 	a := &Agent{
-		Config: cfg,
+		Config:    cfg,
+		cancelMap: make(map[string]context.CancelFunc),
+		itickers:  make([]Ticker, 0),
 	}
 	return a
 }
@@ -143,6 +154,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		return err
 	}
 
+	a.dst = next // store the output channel for later use
 	var apu []*processorUnit
 	var au *aggregatorUnit
 	if len(a.Config.Aggregators) != 0 {
@@ -203,6 +215,19 @@ func (a *Agent) Run(ctx context.Context) error {
 	go func() {
 		defer wg.Done()
 		a.runInputs(ctx, startTime, iu)
+
+		// let's move the input waits here to avoid calling wg.wait multiple times
+		// tough it's creating a tight coupling between runInputs and Run funcs, it should be fine since now
+		// runInputs can be called multiple times to update inputs based on diff
+		// i can wait  for all inputs to finish here only to keep the plugin alive and functional
+		a.iwg.Wait()
+		defer stopTickers(a.itickers)
+		log.Printf("D! [agent] Stopping service inputs")
+		// not just iu, stop entire input list
+		stopRunningInputs(a.Config.Inputs)
+
+		close(iu.dst)
+		log.Printf("D! [agent] Input channel closed")
 	}()
 
 	wg.Wait()
@@ -216,6 +241,68 @@ func (a *Agent) Run(ctx context.Context) error {
 
 	log.Printf("D! [agent] Stopped Successfully")
 	return err
+}
+
+// Update the running Agent inputs based on diff.
+func (a *Agent) UpdateRunningInputs(ctx context.Context, inpDifs *cd.InputPluginDiff) error {
+	if inpDifs.IsEmpty() {
+		log.Println("I! [agent] No input plugin changes to update")
+		return nil
+	}
+	log.Println("I! [agent] Updating inputs based on reloaded configuration diff")
+	if len(inpDifs.Del) == len(a.Config.Inputs) {
+		if len(inpDifs.Add) > 0 {
+			a.iwg.Add(1) // hack to avoid closing inputs since we are deleting all loaded inputs and adding new ones
+			defer a.iwg.Done()
+		}
+	}
+	for _, ni := range inpDifs.Del {
+		key := ni.Config.ID
+		log.Printf("I! [agent] Deleting Input : %s", cd.GetPluginUniqueName(ni))
+		if ic, ok := a.cancelMap[key]; ok {
+			ic()
+			delete(a.cancelMap, key)
+			// Remove the input from the list of master inputs safely
+			for i, mi := range a.Config.Inputs {
+				if mi.Config.ID == key {
+					a.mu.Lock()
+					a.Config.Inputs = append(a.Config.Inputs[:i], a.Config.Inputs[i+1:]...)
+					a.mu.Unlock()
+					break
+				}
+			}
+		}
+	}
+	if len(inpDifs.Add) > 0 {
+		log.Printf("I! [agent] Adding new inputs: %s", strings.Join(cd.GetPluginNames(inpDifs.Add), ", "))
+		for _, input := range inpDifs.Add {
+			// Share the snmp translator setting with plugins that need it.
+			if tp, ok := input.Input.(snmp.TranslatorPlugin); ok {
+				tp.SetTranslator(a.Config.Agent.SnmpTranslator)
+			}
+			err := input.Init()
+			if err != nil {
+				return fmt.Errorf("could not initialize input %s: %w", input.LogName(), err)
+			}
+		}
+		startTime := time.Now()
+		iu, err := a.startInputs(a.dst, inpDifs.Add)
+		if err != nil {
+			return err
+		}
+
+		// i don't need to add any wg here since that is handled by `runInputs` section in Run func
+		a.runInputs(ctx, startTime, iu)
+
+		// Add the new inputs to the master list safely
+		a.mu.Lock()
+		a.Config.Inputs = append(a.Config.Inputs, inpDifs.Add...)
+		a.mu.Unlock()
+	}
+
+	// i don't need to wait here since i am hacking and need room for furher hacks
+	// all waits are handled by Run func
+	return nil
 }
 
 // InitPlugins runs the Init function on plugins.
@@ -397,8 +484,6 @@ func (a *Agent) runInputs(
 	startTime time.Time,
 	unit *inputUnit,
 ) {
-	var wg sync.WaitGroup
-	tickers := make([]Ticker, 0, len(unit.inputs))
 	for _, input := range unit.inputs {
 		// Overwrite agent interval if this plugin has its own.
 		interval := time.Duration(a.Config.Agent.Interval)
@@ -430,25 +515,28 @@ func (a *Agent) runInputs(
 		} else {
 			ticker = NewUnalignedTicker(interval, jitter, offset)
 		}
-		tickers = append(tickers, ticker)
+		a.itickers = append(a.itickers, ticker)
 
 		acc := NewAccumulator(input, unit.dst)
 		acc.SetPrecision(getPrecision(precision, interval))
 
-		wg.Add(1)
+		a.iwg.Add(1)
 		go func(input *models.RunningInput) {
-			defer wg.Done()
-			a.gatherLoop(ctx, acc, input, ticker, interval)
+			defer a.iwg.Done()
+			cancelKey := input.Config.ID
+			if _, exists := a.cancelMap[cancelKey]; !exists {
+				subCtx, cancel := context.WithCancel(ctx)
+				defer cancel()
+
+				a.mu.Lock()
+				a.cancelMap[cancelKey] = cancel
+				a.mu.Unlock()
+				a.gatherLoop(subCtx, acc, input, ticker, interval)
+			} else { // duplicate input
+				log.Printf("I! [agent] Service input %s with id '%s' is already running, skipping...", input.LogName(), cd.GetPluginUniqueName(input))
+			}
 		}(input)
 	}
-	defer stopTickers(tickers)
-	wg.Wait()
-
-	log.Printf("D! [agent] Stopping service inputs")
-	stopRunningInputs(unit.inputs)
-
-	close(unit.dst)
-	log.Printf("D! [agent] Input channel closed")
 }
 
 // testStartInputs is a variation of startInputs for use in --test and --once mode.
