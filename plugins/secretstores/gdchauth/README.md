@@ -34,7 +34,9 @@ Referencing the secret within a plugin occurs by:
 [[inputs.http]]
   token = "@{gdchauth_secret:token}"
 ```
+
 ## Additional Information
+
 [How to generate service account file][1]
 
 [Learn about audience option][2]
