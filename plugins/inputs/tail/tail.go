@@ -276,8 +276,27 @@ func (t *Tail) tailNewFiles() error {
 		if len(matches) == 0 {
 			if _, err := os.Lstat(filepath); err == nil {
 				matches = append(matches, filepath)
-			} else if !t.nomatch[filepath] {
-				t.Log.Warnf("No file(s) matching pattern %q! Make sure Telegraf has read permissions on directories followed by wildcards!", filepath)
+			} else if !t.nomatch[filepath] && strings.ContainsAny(filepath, "*?[") {
+				// Read permissions are required to expand wildcards so find all
+				// directories followed by wildcards and check if they are readable
+				parts := strings.Split(filepath, string(os.PathSeparator))
+				for i, e := range parts {
+					if e == "" || !strings.ContainsAny(e, "*?[") {
+						continue
+					}
+					partialPath := strings.Join(parts[:i], string(os.PathSeparator))
+					if stat, err := os.Stat(partialPath); err != nil || !stat.IsDir() {
+						break
+					}
+					if _, err := os.ReadDir(partialPath); errors.Is(err, os.ErrPermission) {
+						t.Log.Warnf(
+							"Directory %q is not readable but is followed by wildcards,"+
+								"make sure you set read permissions or globbing will not work!", partialPath,
+						)
+						break
+					}
+				}
+
 				t.nomatch[filepath] = true
 			}
 		}
