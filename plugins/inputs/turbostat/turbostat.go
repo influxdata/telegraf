@@ -207,7 +207,7 @@ func createColumn(s string) column {
 	switch name {
 	case "time_of_day_seconds":
 		return column{name: name, isTime: true}
-	case "package", "node", "die", "core", "cpu", "apic", "x2apic":
+	case "package", "node", "die", "core", "cpu", "apic", "x2apic", "l3":
 		return column{name: name, isTag: true}
 	default:
 		return column{name: name}
