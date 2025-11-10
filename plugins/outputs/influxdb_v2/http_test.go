@@ -271,7 +271,7 @@ func TestRetryLaterEarlyExit(t *testing.T) {
 
 	// Write the metrics the first time and check for the expected errors
 	err = c.Write(t.Context(), metrics)
-	require.ErrorContains(t, err, "waiting 2m0s for server before sending metrics again")
+	require.ErrorContains(t, err, "will retry in 2m0s")
 
 	var writeErr *internal.PartialWriteError
 	require.ErrorAs(t, err, &writeErr)
