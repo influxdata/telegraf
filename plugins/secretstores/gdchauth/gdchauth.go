@@ -71,8 +71,11 @@ func (g *GdchAuth) Init() error {
 	return g.buildHTTPClient()
 }
 
-// Get retrieves the token. The key is ignored as this secret store only provides one secret.
-func (g *GdchAuth) Get(_ string) ([]byte, error) {
+// Get retrieves the token. The key must be "token" as this secret store only provides one secret.
+func (g *GdchAuth) Get(key string) ([]byte, error) {
+	if key != "token" {
+		return nil, fmt.Errorf("invalid key %q, only 'token' is supported", key)
+	}
 	g.Mutex.Lock()
 	defer g.Mutex.Unlock()
 

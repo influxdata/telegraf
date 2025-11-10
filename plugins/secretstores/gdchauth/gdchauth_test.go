@@ -100,6 +100,7 @@ func TestGet(t *testing.T) {
 		tokenExpiryBuffer  config.Duration
 		token              string
 		expiry             time.Time
+		key                string
 		httpClient         *http.Client
 		expectedToken      string
 		expectedError      string
@@ -108,6 +109,7 @@ func TestGet(t *testing.T) {
 			name:               "successful token retrieval",
 			audience:           "https://localhost",
 			serviceAccountFile: "testdata/valid-sa-key.json",
+			key:                "token",
 			httpClient: &http.Client{
 				Transport: &mockRoundTripper{
 					Response: &http.Response{
@@ -124,6 +126,7 @@ func TestGet(t *testing.T) {
 			serviceAccountFile: "testdata/valid-sa-key.json",
 			tokenExpiryBuffer:  config.Duration(5 * time.Minute),
 			token:              "cached_token",
+			key:                "token",
 			expiry:             time.Now().Add(1 * time.Hour),
 			httpClient:         &http.Client{}, // No HTTP call expected
 			expectedToken:      "cached_token",
@@ -134,6 +137,7 @@ func TestGet(t *testing.T) {
 			serviceAccountFile: "testdata/valid-sa-key.json",
 			tokenExpiryBuffer:  config.Duration(5 * time.Minute),
 			expiry:             time.Now().Add(1 * time.Minute),
+			key:                "token",
 			httpClient: &http.Client{
 				Transport: &mockRoundTripper{
 					Response: &http.Response{
@@ -148,6 +152,7 @@ func TestGet(t *testing.T) {
 			name:               "http request fails",
 			audience:           "https://localhost",
 			serviceAccountFile: "testdata/valid-sa-key.json",
+			key:                "token",
 			httpClient: &http.Client{
 				Transport: &mockRoundTripper{
 					Err: errors.New("http request failed"),
@@ -159,6 +164,7 @@ func TestGet(t *testing.T) {
 			name:               "invalid token response",
 			audience:           "https://localhost",
 			serviceAccountFile: "testdata/valid-sa-key.json",
+			key:                "token",
 			httpClient: &http.Client{
 				Transport: &mockRoundTripper{
 					Response: &http.Response{
@@ -168,6 +174,13 @@ func TestGet(t *testing.T) {
 				},
 			},
 			expectedError: "token response did not contain 'access_token'",
+		},
+		{
+			name:               "invalid key",
+			audience:           "https://localhost",
+			serviceAccountFile: "testdata/valid-sa-key.json",
+			key:                "invalid_key",
+			expectedError:      "invalid key \"invalid_key\", only 'token' is supported",
 		},
 	}
 
@@ -185,7 +198,7 @@ func TestGet(t *testing.T) {
 			require.NoError(t, plugin.Init())
 			plugin.client = tc.httpClient // set mock after Init()
 
-			token, err := plugin.Get("token")
+			token, err := plugin.Get(tc.key)
 
 			if tc.expectedError != "" {
 				require.ErrorContains(t, err, tc.expectedError, "error mismatch")
