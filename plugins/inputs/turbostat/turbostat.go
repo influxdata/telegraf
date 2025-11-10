@@ -92,9 +92,8 @@ func (t *Turbostat) Init() error {
 	if t.UseSudo {
 		t.command = append(t.command, "sudo")
 	}
-	intervalSeconds := time.Duration(t.Interval).Seconds()
-	intervalStr := strconv.FormatFloat(intervalSeconds, 'f', -1, 64)
-	t.command = append(t.command, t.Path, "--quiet", "--interval", intervalStr, "--show", "all")
+	s := int(time.Duration(t.Interval).Seconds())
+	t.command = append(t.command, t.Path, "--quiet", "--interval", strconv.Itoa(s), "--show", "all")
 
 	return nil
 }
@@ -208,7 +207,7 @@ func createColumn(s string) column {
 	switch name {
 	case "time_of_day_seconds":
 		return column{name: name, isTime: true}
-	case "package", "node", "die", "core", "cpu", "apic", "x2apic", "l3":
+	case "package", "node", "die", "core", "cpu", "apic", "x2apic":
 		return column{name: name, isTag: true}
 	default:
 		return column{name: name}
