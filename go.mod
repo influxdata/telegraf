@@ -125,7 +125,7 @@ require (
 	github.com/influxdata/influxdb-observability/otel2influx v0.5.12
 	github.com/influxdata/line-protocol/v2 v2.2.1
 	github.com/influxdata/tail v1.0.1-0.20241014115250-3e0015cb677a
-	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
+	github.com/influxdata/toml v0.0.0-20251106153700-c381e153d076
 	github.com/intel/iaevents v1.1.0
 	github.com/intel/powertelemetry v1.0.2
 	github.com/jackc/pgconn v1.14.3
