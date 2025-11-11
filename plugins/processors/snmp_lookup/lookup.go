@@ -56,6 +56,7 @@ func (*SNMPLookup) SampleConfig() string {
 
 func (l *SNMPLookup) Init() (err error) {
 	// Check the SNMP configuration
+	l.GosnmpDebugLogger = l.Log
 	if _, err = snmp.NewWrapper(l.ClientConfig); err != nil {
 		return fmt.Errorf("parsing SNMP client config: %w", err)
 	}
