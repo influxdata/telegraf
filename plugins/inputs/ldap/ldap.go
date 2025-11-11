@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/go-ldap/ldap/v3"
@@ -49,8 +50,27 @@ func (l *LDAP) Init() error {
 	if l.Server == "" {
 		l.Server = "ldap://localhost:389"
 	}
+	dialURL := l.Server
 
-	u, err := url.Parse(l.Server)
+	var hostname string
+	// Work around net/url not accepting %2f in the "host" part
+	// https://github.com/go-ldap/ldap/issues/564
+	ldapiChunk, isLdapi := strings.CutPrefix(l.Server, "ldapi://")
+	if isLdapi {
+		var err error
+		host, rest, _ := strings.Cut(ldapiChunk, "/")
+		if rest != "" {
+			return fmt.Errorf("extra parameters in LDAP URI: %q", l.Server)
+		}
+
+		hostname, err = url.PathUnescape(host)
+		if err != nil {
+			return fmt.Errorf("parsing server failed: %w", err)
+		}
+		dialURL = "ldapi://"
+	}
+
+	u, err := url.Parse(dialURL)
 	if err != nil {
 		return fmt.Errorf("parsing server failed: %w", err)
 	}
@@ -63,6 +83,10 @@ func (l *LDAP) Init() error {
 			u.Host = u.Host + ":389"
 		}
 		tlsEnable = false
+	case "ldapi":
+		// Prepare a form that can be appended to an ldapi:// string for now
+		u.Path = hostname
+		u.Host = u.EscapedPath()
 	case "starttls":
 		if u.Port() == "" {
 			u.Host = u.Host + ":389"
@@ -100,9 +124,15 @@ func (l *LDAP) Init() error {
 		return fmt.Errorf("invalid dialect %q", l.Dialect)
 	}
 
-	l.tags = map[string]string{
-		"server": l.host,
-		"port":   l.port,
+	if l.mode == "ldapi" {
+		l.tags = map[string]string{
+			"path": hostname,
+		}
+	} else {
+		l.tags = map[string]string{
+			"server": l.host,
+			"port":   l.port,
+		}
 	}
 
 	return nil
@@ -140,6 +170,12 @@ func (l *LDAP) connect() (*ldap.Conn, error) {
 	case "ldap":
 		var err error
 		conn, err = ldap.DialURL("ldap://" + l.Server)
+		if err != nil {
+			return nil, err
+		}
+	case "ldapi":
+		var err error
+		conn, err = ldap.DialURL("ldapi://" + l.Server)
 		if err != nil {
 			return nil, err
 		}
