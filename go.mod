@@ -202,7 +202,7 @@ require (
 	github.com/tdrn-org/go-hue v0.3.0
 	github.com/tdrn-org/go-nsdp v0.5.0
 	github.com/tdrn-org/go-tr064 v0.2.2
-	github.com/testcontainers/testcontainers-go v0.39.0
+	github.com/testcontainers/testcontainers-go v0.40.0
 	github.com/testcontainers/testcontainers-go/modules/azure v0.39.0
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.39.0
 	github.com/thomasklein94/packer-plugin-libvirt v0.5.0
