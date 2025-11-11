@@ -33,6 +33,7 @@ type LDAP struct {
 	mode     string
 	host     string
 	port     string
+	tags     map[string]string
 }
 
 type request struct {
@@ -97,6 +98,11 @@ func (l *LDAP) Init() error {
 		l.requests = l.new389dsConfig()
 	default:
 		return fmt.Errorf("invalid dialect %q", l.Dialect)
+	}
+
+	l.tags = map[string]string{
+		"server": l.host,
+		"port":   l.port,
 	}
 
 	return nil
