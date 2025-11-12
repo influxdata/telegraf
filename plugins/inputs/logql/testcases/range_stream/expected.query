@@ -1,0 +1,1 @@
+/loki/api/v1/query_range?direction=forward&end=&limit=5&query=%7Bjob%3D%22varlogs%22%2C+filename%3D%22%2Fvar%2Flog%2FXorg.0.log%22%7D&start=

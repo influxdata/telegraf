@@ -1,0 +1,1 @@
+/loki/api/v1/query_range?end=&query=count+by%28detected_level%29+%28rate%28%7Bjob%3D%22varlogs%22%2C+filename%3D%22%2Fvar%2Flog%2FXorg.0.log%22%7D+%5B10m%5D%29%29&start=&step=10m0s
