@@ -409,6 +409,61 @@ func TestSignalFx_SignalFx(t *testing.T) {
 				events:     make([]*event.Event, 0),
 			},
 		},
+		{
+			name: "add event for value field",
+			fields: fields{
+				IncludedEvents: []string{"event.value", "event"},
+			},
+			measurements: []*measurement{
+				{
+					name:   "event",
+					tags:   map[string]string{"host": "192.168.0.1"},
+					fields: map[string]interface{}{"value": "hello world"},
+					time:   time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+					tp:     telegraf.Untyped,
+				},
+			},
+			want: errorsink{
+				datapoints: make([]*datapoint.Datapoint, 0),
+				events: []*event.Event{
+					event.NewWithProperties(
+						"event",
+						event.AGENT,
+						map[string]string{
+							"host": "192.168.0.1",
+						},
+						map[string]interface{}{
+							"message": "hello world",
+						},
+						time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC)),
+				},
+			},
+		},
+		{
+			name:   "add datapoint for value field",
+			fields: fields{},
+			measurements: []*measurement{
+				{
+					name:   "data",
+					tags:   map[string]string{"host": "192.168.0.1"},
+					fields: map[string]interface{}{"value": 3.14},
+					time:   time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+					tp:     telegraf.Untyped,
+				},
+			},
+			want: errorsink{
+				datapoints: []*datapoint.Datapoint{
+					datapoint.New(
+						"data",
+						map[string]string{"host": "192.168.0.1"},
+						datapoint.NewFloatValue(3.14),
+						datapoint.Gauge,
+						time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+					),
+				},
+				events: make([]*event.Event, 0),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

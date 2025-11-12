@@ -1012,6 +1012,11 @@ func (c *Config) addSecretStore(name, source string, table *ast.Table) error {
 		return fmt.Errorf("invalid secret-store ID %q, must only contain letters, numbers or underscore", storeID)
 	}
 
+	tags := map[string]string{
+		"_id":         storeID,
+		"secretstore": name,
+	}
+
 	creator, ok := secretstores.SecretStores[name]
 	if !ok {
 		// Handle removed, deprecated plugins
@@ -1033,6 +1038,7 @@ func (c *Config) addSecretStore(name, source string, table *ast.Table) error {
 
 	logger := logging.New("secretstores", name, "")
 	models.SetLoggerOnPlugin(store, logger)
+	models.SetStatisticsOnPlugin(store, logger, tags)
 
 	if err := store.Init(); err != nil {
 		return fmt.Errorf("error initializing secret-store %q: %w", storeID, err)

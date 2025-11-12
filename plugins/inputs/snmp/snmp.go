@@ -25,6 +25,9 @@ type Snmp struct {
 	// The tag used to name the agent host
 	AgentHostTag string `toml:"agent_host_tag"`
 
+	// Stop collection when receiving errors from an agent
+	StopOnError bool `toml:"stop_on_error"`
+
 	snmp.ClientConfig
 
 	Tables []snmp.Table `toml:"table"`
@@ -88,9 +91,7 @@ func (s *Snmp) Init() error {
 		})
 	}
 
-	if s.Log != nil && s.Log.Level().Includes(telegraf.Debug) {
-		s.GosnmpDebugLogger = s.Log
-	}
+	s.GosnmpDebugLogger = s.Log
 
 	return nil
 }
@@ -115,12 +116,18 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			topTags := make(map[string]string)
 			if err := s.gatherTable(acc, gs, t, topTags, false); err != nil {
 				acc.AddError(fmt.Errorf("agent %s: %w", agent, err))
+				if s.StopOnError {
+					return
+				}
 			}
 
 			// Now is the real tables.
 			for _, t := range s.Tables {
 				if err := s.gatherTable(acc, gs, t, topTags, true); err != nil {
 					acc.AddError(fmt.Errorf("agent %s: gathering table %s: %w", agent, t.Name, err))
+					if s.StopOnError {
+						return
+					}
 				}
 			}
 		}(i, agent)

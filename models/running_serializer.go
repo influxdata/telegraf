@@ -42,6 +42,7 @@ func NewRunningSerializer(serializer telegraf.Serializer, config *SerializerConf
 		logger.Error(err)
 	}
 	SetLoggerOnPlugin(serializer, logger)
+	SetStatisticsOnPlugin(serializer, logger, tags)
 
 	return &RunningSerializer{
 		Serializer: serializer,

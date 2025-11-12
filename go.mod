@@ -13,8 +13,8 @@ require (
 	github.com/99designs/keyring v1.2.2
 	github.com/Azure/azure-event-hubs-go/v3 v3.6.2
 	github.com/Azure/azure-kusto-go v0.16.1
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.19.1
-	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.13.0
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.20.0
+	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.13.1
 	github.com/Azure/azure-sdk-for-go/sdk/messaging/azeventhubs/v2 v2.0.1
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor v0.11.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.2.0
@@ -32,7 +32,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/Mellanox/rdmamap v1.1.0
 	github.com/PaesslerAG/gval v1.2.4
-	github.com/SAP/go-hdb v1.14.9
+	github.com/SAP/go-hdb v1.14.12
 	github.com/aerospike/aerospike-client-go/v5 v5.11.0
 	github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b
 	github.com/alitto/pond v1.9.2
@@ -44,23 +44,23 @@ require (
 	github.com/antchfx/xpath v1.3.5
 	github.com/apache/arrow-go/v18 v18.4.1
 	github.com/apache/inlong/inlong-sdk/dataproxy-sdk-twins/dataproxy-sdk-golang v1.0.6
-	github.com/apache/iotdb-client-go v1.3.4
+	github.com/apache/iotdb-client-go v1.3.5
 	github.com/apache/thrift v0.22.0
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
 	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
 	github.com/awnumar/memguard v0.23.0
 	github.com/aws/aws-msk-iam-sasl-signer-go v1.0.4
-	github.com/aws/aws-sdk-go-v2 v1.39.5
-	github.com/aws/aws-sdk-go-v2/config v1.31.16
-	github.com/aws/aws-sdk-go-v2/credentials v1.18.20
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.12
-	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.52.0
-	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.58.6
-	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.52.3
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.260.0
-	github.com/aws/aws-sdk-go-v2/service/kinesis v1.41.1
-	github.com/aws/aws-sdk-go-v2/service/sts v1.39.0
-	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.35.8
+	github.com/aws/aws-sdk-go-v2 v1.39.6
+	github.com/aws/aws-sdk-go-v2/config v1.31.18
+	github.com/aws/aws-sdk-go-v2/credentials v1.18.22
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.13
+	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.52.1
+	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.58.7
+	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.52.4
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.265.0
+	github.com/aws/aws-sdk-go-v2/service/kinesis v1.42.1
+	github.com/aws/aws-sdk-go-v2/service/sts v1.40.0
+	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.35.9
 	github.com/aws/smithy-go v1.23.2
 	github.com/benbjohnson/clock v1.3.5
 	github.com/bluenviron/gomavlib/v3 v3.3.0
@@ -81,7 +81,7 @@ require (
 	github.com/digitalocean/go-libvirt v0.0.0-20250417173424-a6a66ef779d6
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/djherbis/times v1.6.0
-	github.com/docker/docker v28.5.1+incompatible
+	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-connections v0.6.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/dynatrace-oss/dynatrace-metric-utils-go v0.5.0
@@ -125,14 +125,14 @@ require (
 	github.com/influxdata/influxdb-observability/otel2influx v0.5.12
 	github.com/influxdata/line-protocol/v2 v2.2.1
 	github.com/influxdata/tail v1.0.1-0.20241014115250-3e0015cb677a
-	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
+	github.com/influxdata/toml v0.0.0-20251106153700-c381e153d076
 	github.com/intel/iaevents v1.1.0
 	github.com/intel/powertelemetry v1.0.2
 	github.com/jackc/pgconn v1.14.3
 	github.com/jackc/pgio v1.0.0
 	github.com/jackc/pgtype v1.14.4
 	github.com/jackc/pgx/v4 v4.18.3
-	github.com/jedib0t/go-pretty/v6 v6.6.9
+	github.com/jedib0t/go-pretty/v6 v6.7.1
 	github.com/jeremywohl/flatten/v2 v2.0.0-20211013061545-07e4a09fb8e4
 	github.com/jmespath/go-jmespath v0.4.0
 	github.com/karrick/godirwalk v1.16.2
@@ -202,9 +202,9 @@ require (
 	github.com/tdrn-org/go-hue v0.3.0
 	github.com/tdrn-org/go-nsdp v0.5.0
 	github.com/tdrn-org/go-tr064 v0.2.2
-	github.com/testcontainers/testcontainers-go v0.39.0
-	github.com/testcontainers/testcontainers-go/modules/azure v0.39.0
-	github.com/testcontainers/testcontainers-go/modules/kafka v0.39.0
+	github.com/testcontainers/testcontainers-go v0.40.0
+	github.com/testcontainers/testcontainers-go/modules/azure v0.40.0
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.40.0
 	github.com/thomasklein94/packer-plugin-libvirt v0.5.0
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/wal v1.2.1
@@ -228,20 +228,20 @@ require (
 	go.opentelemetry.io/proto/otlp/collector/profiles/v1development v0.2.0
 	go.opentelemetry.io/proto/otlp/profiles/v1development v0.1.0
 	go.starlark.net v0.0.0-20251029211736-7849196f18cf
-	go.step.sm/crypto v0.73.0
+	go.step.sm/crypto v0.74.0
 	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/crypto v0.43.0
 	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546
 	golang.org/x/mod v0.29.0
 	golang.org/x/net v0.46.0
-	golang.org/x/oauth2 v0.32.0
-	golang.org/x/sync v0.17.0
-	golang.org/x/sys v0.37.0
+	golang.org/x/oauth2 v0.33.0
+	golang.org/x/sync v0.18.0
+	golang.org/x/sys v0.38.0
 	golang.org/x/term v0.36.0
 	golang.org/x/text v0.30.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	gonum.org/v1/gonum v0.16.0
-	google.golang.org/api v0.254.0
+	google.golang.org/api v0.255.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250929231259-57b25ae835d4
 	google.golang.org/grpc v1.76.0
 	google.golang.org/protobuf v1.36.10
@@ -284,7 +284,7 @@ require (
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358 // indirect
-	github.com/AzureAD/microsoft-authentication-library-for-go v1.5.0 // indirect
+	github.com/AzureAD/microsoft-authentication-library-for-go v1.6.0 // indirect
 	github.com/ClickHouse/ch-go v0.68.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.29.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.53.0 // indirect
@@ -304,20 +304,20 @@ require (
 	github.com/aristanetworks/glog v0.0.0-20191112221043-67e8567f59f3 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/awnumar/memcall v0.4.0 // indirect
-	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.2 // indirect
+	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.3 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.43 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.12 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.12 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.13 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.13 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.4 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.25 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.4.6 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.11.12 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.12 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.11.13 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.13 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.6 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.71.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.30.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.30.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bitly/go-hostpool v0.1.0 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
