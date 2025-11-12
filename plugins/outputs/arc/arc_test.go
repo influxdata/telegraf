@@ -29,27 +29,36 @@ func TestSampleConfig(t *testing.T) {
 	require.Contains(t, cfg, "api_key")
 }
 
-func TestInitSuccess(t *testing.T) {
+func TestInit(t *testing.T) {
 	tests := []struct {
-		name string
-		arc  *Arc
+		name        string
+		arc         *Arc
+		expectError bool
 	}{
-		{
-			name: "default values",
-			arc:  &Arc{},
-		},
 		{
 			name: "valid config",
 			arc: &Arc{
 				URL:              "http://localhost:8000/api/v1/write/msgpack",
 				HTTPClientConfig: common_http.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
 			},
+			expectError: false,
+		},
+		{
+			name:        "missing url",
+			arc:         &Arc{},
+			expectError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.NoError(t, tt.arc.Init())
+			err := tt.arc.Init()
+			if tt.expectError {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "url is required")
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }

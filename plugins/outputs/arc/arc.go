@@ -42,7 +42,7 @@ func (*Arc) SampleConfig() string {
 
 func (a *Arc) Init() error {
 	if a.URL == "" {
-		a.URL = "http://localhost:8000/api/v1/write/msgpack"
+		return fmt.Errorf("url is required")
 	}
 
 	switch a.ContentEncoding {
