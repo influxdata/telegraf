@@ -64,6 +64,7 @@ func (d *IfName) Init() error {
 
 	d.sigs = make(sigMap)
 
+	d.GosnmpDebugLogger = d.Log
 	if _, err := snmp.NewWrapper(d.ClientConfig); err != nil {
 		return fmt.Errorf("parsing SNMP client config: %w", err)
 	}

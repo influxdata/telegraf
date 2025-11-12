@@ -42,6 +42,7 @@ func NewRunningAggregator(aggregator telegraf.Aggregator, config *AggregatorConf
 		logger.Error(err)
 	}
 	SetLoggerOnPlugin(aggregator, logger)
+	SetStatisticsOnPlugin(aggregator, logger, tags)
 
 	return &RunningAggregator{
 		Aggregator: aggregator,
