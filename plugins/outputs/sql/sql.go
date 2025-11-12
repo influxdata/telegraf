@@ -271,9 +271,11 @@ func (p *SQL) createTable(metric telegraf.Metric) error {
 	}
 	// Ensure compatibility: set the table cache to an empty map
 	p.tables[tablename] = make(map[string]bool)
-	// Update cache
-	if err := p.updateTableCache(tablename); err != nil {
-		return fmt.Errorf("updating table cache failed: %w", err)
+	// Modifying the table schema is opt-in
+	if p.TableUpdateTemplate != "" {
+		if err := p.updateTableCache(tablename); err != nil {
+			return fmt.Errorf("updating table cache failed: %w", err)
+		}
 	}
 	return nil
 }
@@ -305,25 +307,19 @@ func (p *SQL) createColumn(tablename, column, columnType string) error {
 	return nil
 }
 
-func (p *SQL) ensureTable(metric telegraf.Metric) error {
-	tableName := metric.Name()
-
-	if _, found := p.tables[tableName]; found {
-		return nil
-	}
-
-	if !p.tableExists(tableName) {
-		return p.createTable(metric)
-	}
-
-	return p.updateTableCache(tableName)
-}
-
 func (p *SQL) tableExists(tableName string) bool {
 	stmt := strings.ReplaceAll(p.TableExistsTemplate, "{TABLE}", quoteIdent(tableName))
 
 	_, err := p.db.Exec(stmt)
-	return err == nil
+
+	// Make sure to update the table cache to not query the table existence in
+	// every write cycle
+	exists := err == nil
+	if _, found := p.tables[tableName]; exists && !found {
+		p.tables[tableName] = make(map[string]bool)
+	}
+
+	return exists
 }
 
 func (p *SQL) updateTableCache(tablename string) error {
@@ -446,8 +442,10 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
 		tablename := metric.Name()
 		// create table if needed
-		if err := p.ensureTable(metric); err != nil {
-			return err
+		if _, found := p.tables[tablename]; !found && !p.tableExists(tablename) {
+			if err := p.createTable(metric); err != nil {
+				return err
+			}
 		}
 		cacheKey, columns, values := p.processMetric(metric)
 		sql, found := p.queryCache[cacheKey]
