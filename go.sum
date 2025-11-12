@@ -1643,8 +1643,8 @@ github.com/influxdata/line-protocol/v2 v2.2.1 h1:EAPkqJ9Km4uAxtMRgUubJyqAr6zgWM0
 github.com/influxdata/line-protocol/v2 v2.2.1/go.mod h1:DmB3Cnh+3oxmG6LOBIxce4oaL4CPj3OmMPgvauXh+tM=
 github.com/influxdata/tail v1.0.1-0.20241014115250-3e0015cb677a h1:IJBVizlP2eArwAurfli2Em5N7pTK1YCbDsdDtnou024=
 github.com/influxdata/tail v1.0.1-0.20241014115250-3e0015cb677a/go.mod h1:VeiWgI3qaGdJWust2fP27a6J+koITo/1c/UhxeOxgaM=
-github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65 h1:vvyMtD5LTJc1W9sQKjDkAWdcg0478CszSdzlHtiAXCY=
-github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65/go.mod h1:zApaNFpP/bTpQItGZNNUMISDMDAnTXu9UqJ4yT3ocz8=
+github.com/influxdata/toml v0.0.0-20251106153700-c381e153d076 h1:FqEkdokbxeBpCtZix3tLcIu2/OClDLCoKlbKXFLOEwo=
+github.com/influxdata/toml v0.0.0-20251106153700-c381e153d076/go.mod h1:zApaNFpP/bTpQItGZNNUMISDMDAnTXu9UqJ4yT3ocz8=
 github.com/intel/iaevents v1.1.0 h1:FzxMBfXk/apG2EUXUCfaq3gUQ+q+TgZ1HNMjjUILUGE=
 github.com/intel/iaevents v1.1.0/go.mod h1:CyUUzXw0lHRCsmyyF7Pwco9Y7NiTNQUUlcJ7RJAazKs=
 github.com/intel/powertelemetry v1.0.2 h1:092xOflYu+YXzY3c/fQ2DpK1ePy9q9ulbm5yiNYrVkc=
