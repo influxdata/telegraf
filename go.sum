@@ -2386,8 +2386,8 @@ github.com/tdrn-org/go-tr064 v0.2.2/go.mod h1:P2WWUiBcXDGOo+sqJ4hWn4YXYH9kWaYjZo
 github.com/tedsuo/ifrit v0.0.0-20180802180643-bea94bb476cc/go.mod h1:eyZnKCc955uh98WQvzOm0dgAeLnf2O0Rz0LPoC5ze+0=
 github.com/testcontainers/testcontainers-go v0.40.0 h1:pSdJYLOVgLE8YdUY2FHQ1Fxu+aMnb6JfVz1mxk7OeMU=
 github.com/testcontainers/testcontainers-go v0.40.0/go.mod h1:FSXV5KQtX2HAMlm7U3APNyLkkap35zNLxukw9oBi/MY=
-github.com/testcontainers/testcontainers-go/modules/azure v0.39.0 h1:jBNEP6QdGs5w1fair4N1W9AlXM7wpbNZqBYbtyVCGvI=
-github.com/testcontainers/testcontainers-go/modules/azure v0.39.0/go.mod h1:98b1kjnNoVYd/CdOWcResAlSm2zWHt49s9jfSoj20fs=
+github.com/testcontainers/testcontainers-go/modules/azure v0.40.0 h1:a4Qn4UEgL3uzpY1Hhuzh2c87u/CuSoTaV12timQfHQU=
+github.com/testcontainers/testcontainers-go/modules/azure v0.40.0/go.mod h1:047cjSoIxghqTQt8OVeLwLO918jOTrRnKYSEG5L6paQ=
 github.com/testcontainers/testcontainers-go/modules/kafka v0.40.0 h1:BW4CMO6rYLvJRC7UF4l0rudnwm7IX/kJPvGd9MCJM6I=
 github.com/testcontainers/testcontainers-go/modules/kafka v0.40.0/go.mod h1:O4U0SUR8blhkRLLfIFHQqNRKzee7fOxzya2H+rnl4OY=
 github.com/thomasklein94/packer-plugin-libvirt v0.5.0 h1:aj2HLHZZM/ClGLIwVp9rrgh+2TOU/w4EiaZHAwCpOgs=
