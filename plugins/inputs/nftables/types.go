@@ -20,7 +20,8 @@ func (nftable *table) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &rawTable); err != nil {
 		return fmt.Errorf("unable to unmarshal: %s", b)
 	}
-	// []map[string]interface
+
+	// Get the top-level structure which should be of type []map[string]interface
 	nfthings := rawTable["nftables"]
 	for _, nfthing := range nfthings {
 		if _, found := nfthing["metainfo"]; found {
