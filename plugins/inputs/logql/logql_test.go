@@ -367,7 +367,6 @@ func TestCases(t *testing.T) {
 					t.Logf("writing 'ready' response failed: %v", err)
 					t.Fail()
 				}
-				w.WriteHeader(http.StatusOK)
 			}))
 			defer ts.Close()
 
