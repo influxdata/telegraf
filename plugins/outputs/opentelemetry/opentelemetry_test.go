@@ -52,7 +52,7 @@ func TestOpenTelemetry(t *testing.T) {
 		Headers:          map[string]string{"test": "header1"},
 		Attributes:       map[string]string{"attr-key": "attr-val"},
 		metricsConverter: metricsConverter,
-		gRPCClient: &gRPCClient{
+		otlpMetricClient: &gRPCClient{
 			grpcClientConn:       m.GrpcClient(),
 			metricsServiceClient: pmetricotlp.NewGRPCClient(m.GrpcClient()),
 		},
@@ -147,11 +147,10 @@ func TestOpenTelemetryHTTPProtobuf(t *testing.T) {
 		Attributes:       map[string]string{"attr-key": "attr-val"},
 		Compression:      "none",
 		metricsConverter: metricsConverter,
-		httpClient: &httpClient{
-			httpClient: server.Client(),
-		},
-		Log: testutil.Logger{},
+		Log:              testutil.Logger{},
 	}
+	err = plugin.connectHTTP()
+	require.NoError(t, err)
 
 	input := testutil.MustMetric(
 		"cpu_temp",
@@ -241,11 +240,10 @@ func TestOpenTelemetryHTTPJSON(t *testing.T) {
 		Attributes:       map[string]string{"attr-key": "attr-val"},
 		Compression:      "none",
 		metricsConverter: metricsConverter,
-		httpClient: &httpClient{
-			httpClient: server.Client(),
-		},
-		Log: testutil.Logger{},
+		Log:              testutil.Logger{},
 	}
+	err = plugin.connectHTTP()
+	require.NoError(t, err)
 
 	input := testutil.MustMetric(
 		"cpu_temp",
