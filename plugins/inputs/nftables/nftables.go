@@ -49,12 +49,12 @@ func (n *Nftables) Init() error {
 
 func (n *Nftables) Gather(acc telegraf.Accumulator) error {
 	for _, table := range n.Tables {
-		acc.AddError(n.getTableData(acc, table))
+		acc.AddError(n.gatherTable(acc, table))
 	}
 	return nil
 }
 
-func (n *Nftables) getTableData(acc telegraf.Accumulator, name string) error {
+func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 	// Run the nft command
 	args := append(n.args, name)
 	c := exec.Command(n.Binary, args...)
@@ -62,10 +62,7 @@ func (n *Nftables) getTableData(acc telegraf.Accumulator, name string) error {
 	if err != nil {
 		return fmt.Errorf("error executing nft command: %w", err)
 	}
-	return parseNftableOutput(acc, out)
-}
 
-func parseNftableOutput(acc telegraf.Accumulator, out []byte) error {
 	// Parse the result into metrics and add them to the accumulator
 	var nftable table
 	if err := json.Unmarshal(out, &nftable); err != nil {
