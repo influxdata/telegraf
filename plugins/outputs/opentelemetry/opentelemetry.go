@@ -2,10 +2,14 @@
 package opentelemetry
 
 import (
+	"bytes"
 	"context"
 	ntls "crypto/tls"
 	_ "embed"
+	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"sort"
 	"time"
 
@@ -34,7 +38,13 @@ type OpenTelemetry struct {
 	// Protocol is the protocol to use for sending data to the OpenTelemetry Collector.
 	// Supported protocols are "grpc" & "http". Defaults to "grpc".
 	Protocol string `toml:"protocol"`
-
+	// EncodingType is the encoding type to use for sending data to the OpenTelemetry Collector.
+	// It is used only when Protocol is set to "http".
+	// Supported encoding types are "application/x-protobuf" & "application/json". Defaults to "application/x-protobuf".
+	EncodingType string `toml:"encoding_type"`
+	// ServiceAddress is the address of the OpenTelemetry Collector.
+	// It must include the port number.
+	// Example: "localhost:4317" for gRPC protocol, "http://localhost:4318/v1/metrics" for HTTP protocol.
 	ServiceAddress string `toml:"service_address"`
 
 	tls.ClientConfig
@@ -48,12 +58,17 @@ type OpenTelemetry struct {
 
 	metricsConverter *influx2otel.LineProtocolToOtelMetrics
 	gRPCClient       *gRPCClient
+	httpClient       *httpClient
 }
 
 type gRPCClient struct {
 	grpcClientConn       *grpc.ClientConn
 	metricsServiceClient pmetricotlp.GRPCClient
 	callOptions          []grpc.CallOption
+}
+
+type httpClient struct {
+	httpClient *http.Client
 }
 type CoralogixConfig struct {
 	AppName    string `toml:"application"`
@@ -191,8 +206,16 @@ func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 		ctx = metadata.NewOutgoingContext(ctx, metadata.New(o.Headers))
 	}
 	defer cancel()
-	_, err := o.gRPCClient.metricsServiceClient.Export(ctx, md, o.gRPCClient.callOptions...)
-	return err
+	switch o.Protocol { // TODO: use interface instead of switch
+	case "", "grpc":
+		_, err := o.gRPCClient.metricsServiceClient.Export(ctx, md, o.gRPCClient.callOptions...)
+		return err
+	case "http":
+		_, err := o.httpClient.Export(ctx, md, o.ServiceAddress, o.EncodingType, o.Compression)
+		return err
+	default:
+		return fmt.Errorf("unsupported protocol '%s'", o.Protocol)
+	}
 }
 
 func (o *OpenTelemetry) connectGRPC() error {
@@ -225,8 +248,132 @@ func (o *OpenTelemetry) connectGRPC() error {
 }
 
 func (o *OpenTelemetry) connectHTTP() error {
-	return fmt.Errorf("HTTP protocol is not yet implemented")
+	o.httpClient.httpClient = &http.Client{}
+	if tlsConfig, err := o.ClientConfig.TLSConfig(); err != nil {
+		return err
+	} else if tlsConfig != nil {
+		o.httpClient.httpClient.Transport = &http.Transport{
+			TLSClientConfig: tlsConfig,
+		}
+	} else if o.Coralogix != nil {
+		// For coralogix, we enforce HTTP connection with TLS
+		o.httpClient.httpClient.Transport = &http.Transport{
+			TLSClientConfig: &ntls.Config{},
+		}
+	} else {
+		o.httpClient.httpClient.Transport = &http.Transport{
+			TLSClientConfig: &ntls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+	}
+	return nil
 }
+
+func (h *httpClient) Export(ctx context.Context, request pmetricotlp.ExportRequest, url, contentType, compress string) (pmetricotlp.ExportResponse, error) {
+	var err error
+	var requestBytes []byte
+
+	switch contentType {
+	case "application/x-protobuf":
+		requestBytes, err = request.MarshalProto()
+		if err != nil {
+			return pmetricotlp.ExportResponse{}, err
+		}
+	case "application/json":
+		requestBytes, err = request.MarshalJSON()
+		if err != nil {
+			return pmetricotlp.ExportResponse{}, err
+		}
+	default:
+		return pmetricotlp.ExportResponse{}, fmt.Errorf("unsupported content type '%s'", contentType)
+	}
+	var reader io.Reader
+	reader = bytes.NewReader(requestBytes)
+
+	if compress != "" && compress != "none" {
+		reader = internal.CompressWithGzip(reader)
+	}
+
+	httpRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, url, reader)
+	if err != nil {
+		return pmetricotlp.ExportResponse{}, err
+	}
+
+	httpRequest.Header.Set("Content-Type", contentType)
+	httpRequest.Header.Set("User-Agent", userAgent)
+
+	httpResponse, err := h.httpClient.Do(httpRequest)
+	if err != nil {
+		return pmetricotlp.ExportResponse{}, err
+	}
+	defer func() {
+		_, _ = io.CopyN(io.Discard, httpResponse.Body, maxHTTPResponseReadBytes)
+		_ = httpResponse.Body.Close()
+	}()
+
+	if httpResponse.StatusCode < 200 || httpResponse.StatusCode >= 300 {
+		return pmetricotlp.ExportResponse{}, fmt.Errorf("received non-2xx HTTP response code: %d", httpResponse.StatusCode)
+	}
+
+	responseBytes, err := readResponseBody(httpResponse)
+	if err != nil {
+		return pmetricotlp.ExportResponse{}, err
+	}
+
+	exportResponse := pmetricotlp.NewExportResponse()
+	switch httpResponse.Header.Get("Content-Type") {
+	case "application/x-protobuf":
+		err = exportResponse.UnmarshalProto(responseBytes)
+		if err != nil {
+			return pmetricotlp.ExportResponse{}, err
+		}
+	case "application/json":
+		err = exportResponse.UnmarshalJSON(responseBytes)
+		if err != nil {
+			return pmetricotlp.ExportResponse{}, err
+		}
+	}
+
+	return exportResponse, nil
+}
+
+func readResponseBody(resp *http.Response) ([]byte, error) {
+	if resp.ContentLength == 0 {
+		return nil, nil
+	}
+
+	maxRead := resp.ContentLength
+
+	// if maxRead == -1, the ContentLength header has not been sent, so read up to
+	// the maximum permitted body size. If it is larger than the permitted body
+	// size, still try to read from the body in case the value is an error. If the
+	// body is larger than the maximum size, proto unmarshaling will likely fail.
+	if maxRead == -1 || maxRead > maxHTTPResponseReadBytes {
+		maxRead = maxHTTPResponseReadBytes
+	}
+	protoBytes := make([]byte, maxRead)
+	n, err := io.ReadFull(resp.Body, protoBytes)
+
+	// No bytes read and an EOF error indicates there is no body to read.
+	if n == 0 && (err == nil || errors.Is(err, io.EOF)) {
+		return nil, nil
+	}
+
+	// io.ReadFull will return io.ErrorUnexpectedEOF if the Content-Length header
+	// wasn't set, since we will try to read past the length of the body. If this
+	// is the case, the body will still have the full message in it, so we want to
+	// ignore the error and parse the message.
+	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) {
+		return nil, err
+	}
+
+	return protoBytes[:n], nil
+}
+
+const (
+	maxHTTPResponseReadBytes = 64 * 1024 // 64 KB
+)
 
 const (
 	defaultServiceAddress = "localhost:4317"
