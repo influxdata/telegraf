@@ -1063,7 +1063,7 @@ func TestSubscribeClientConfigEventMissingEventTypeNamespace(t *testing.T) {
 	})
 
 	_, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
-	require.ErrorContains(t, err, "namespace must be set")
+	require.ErrorContains(t, err, "must specify either 'namespace' or 'namespace_uri'")
 }
 
 func TestSubscribeClientConfigEventMissingEventTypeIdentifierType(t *testing.T) {

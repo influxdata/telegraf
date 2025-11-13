@@ -88,6 +88,7 @@ func (sc *subscribeClientConfig) createSubscribeClient(log telegraf.Logger) (*su
 		return nil, err
 	}
 
+	// Initialize node IDs (namespace URI resolution will happen during connect if needed)
 	if err := client.InitNodeIDs(); err != nil {
 		return nil, err
 	}
@@ -146,6 +147,13 @@ func (o *subscribeClient) connect() error {
 	err := o.OpcUAClient.Connect(o.ctx)
 	if err != nil {
 		return err
+	}
+
+	// Fetch namespace array for namespace URI support
+	// This is needed if any nodes use nsu= format instead of ns= format
+	if err := o.OpcUAClient.UpdateNamespaceArray(o.ctx); err != nil {
+		o.Log.Warnf("Failed to fetch namespace array: %v", err)
+		// Continue anyway - this is only needed if using namespace URIs
 	}
 
 	o.Log.Debugf("Creating OPC UA subscription")

@@ -338,7 +338,7 @@ func TestValidateNodeToAdd(t *testing.T) {
 				require.NoError(t, err)
 				return nmm
 			}(),
-			err: errors.New("empty node namespace not allowed"),
+			err: errors.New("node \"f\": must specify either 'namespace' or 'namespace_uri'"),
 		},
 		{
 			name:     "empty identifier type not allowed",
@@ -792,4 +792,227 @@ func TestMetricForNode(t *testing.T) {
 			require.Equal(t, tt.expected.Time(), actual.Time())
 		})
 	}
+}
+
+// TestNodeIDGeneration tests that NodeID() generates correct node ID strings
+func TestNodeIDGeneration(t *testing.T) {
+	tests := []struct {
+		name     string
+		node     NodeSettings
+		expected string
+	}{
+		{
+			name: "namespace index format",
+			node: NodeSettings{
+				Namespace:      "3",
+				IdentifierType: "s",
+				Identifier:     "Temperature",
+			},
+			expected: "ns=3;s=Temperature",
+		},
+		{
+			name: "namespace URI format",
+			node: NodeSettings{
+				NamespaceURI:   "http://opcfoundation.org/UA/",
+				IdentifierType: "i",
+				Identifier:     "2255",
+			},
+			expected: "nsu=http://opcfoundation.org/UA/;i=2255",
+		},
+		{
+			name: "namespace index with numeric identifier",
+			node: NodeSettings{
+				Namespace:      "0",
+				IdentifierType: "i",
+				Identifier:     "2256",
+			},
+			expected: "ns=0;i=2256",
+		},
+		{
+			name: "namespace URI with string identifier",
+			node: NodeSettings{
+				NamespaceURI:   "http://example.com/MyNamespace",
+				IdentifierType: "s",
+				Identifier:     "MyVariable",
+			},
+			expected: "nsu=http://example.com/MyNamespace;s=MyVariable",
+		},
+		{
+			name: "namespace URI with GUID identifier",
+			node: NodeSettings{
+				NamespaceURI:   "http://vendor.com/",
+				IdentifierType: "g",
+				Identifier:     "12345678-1234-1234-1234-123456789012",
+			},
+			expected: "nsu=http://vendor.com/;g=12345678-1234-1234-1234-123456789012",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := tt.node.NodeID()
+			require.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
+// TestEventNodeIDGeneration tests that EventNodeSettings.NodeID() generates correct node ID strings
+func TestEventNodeIDGeneration(t *testing.T) {
+	tests := []struct {
+		name     string
+		node     EventNodeSettings
+		expected string
+	}{
+		{
+			name: "event node with namespace index",
+			node: EventNodeSettings{
+				Namespace:      "1",
+				IdentifierType: "i",
+				Identifier:     "2041",
+			},
+			expected: "ns=1;i=2041",
+		},
+		{
+			name: "event node with namespace URI",
+			node: EventNodeSettings{
+				NamespaceURI:   "http://opcfoundation.org/UA/",
+				IdentifierType: "i",
+				Identifier:     "2253",
+			},
+			expected: "nsu=http://opcfoundation.org/UA/;i=2253",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := tt.node.NodeID()
+			require.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
+// TestNodeValidationBothNamespaces tests that validation fails when both namespace and namespace_uri are set
+func TestNodeValidationBothNamespaces(t *testing.T) {
+	existing := make(map[metricParts]struct{})
+	nmm, err := NewNodeMetricMapping("testmetric", NodeSettings{
+		FieldName:      "test",
+		Namespace:      "3",
+		NamespaceURI:   "http://opcfoundation.org/UA/",
+		IdentifierType: "s",
+		Identifier:     "Temperature",
+	}, map[string]string{})
+	require.NoError(t, err)
+
+	err = validateNodeToAdd(existing, nmm)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "cannot specify both 'namespace' and 'namespace_uri'")
+}
+
+// TestNodeValidationNeitherNamespace tests that validation fails when neither namespace nor namespace_uri is set
+func TestNodeValidationNeitherNamespace(t *testing.T) {
+	existing := make(map[metricParts]struct{})
+	nmm, err := NewNodeMetricMapping("testmetric", NodeSettings{
+		FieldName:      "test",
+		IdentifierType: "s",
+		Identifier:     "Temperature",
+	}, map[string]string{})
+	require.NoError(t, err)
+
+	err = validateNodeToAdd(existing, nmm)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "must specify either 'namespace' or 'namespace_uri'")
+}
+
+// TestEventNodeValidationBothNamespaces tests event node validation with both namespace types
+func TestEventNodeValidationBothNamespaces(t *testing.T) {
+	node := EventNodeSettings{
+		Namespace:      "1",
+		NamespaceURI:   "http://opcfoundation.org/UA/",
+		IdentifierType: "i",
+		Identifier:     "2041",
+	}
+
+	err := node.validateEventNodeSettings()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "cannot specify both 'namespace' and 'namespace_uri'")
+}
+
+// TestEventNodeValidationNeitherNamespace tests event node validation with neither namespace type
+func TestEventNodeValidationNeitherNamespace(t *testing.T) {
+	node := EventNodeSettings{
+		IdentifierType: "i",
+		Identifier:     "2041",
+	}
+
+	err := node.validateEventNodeSettings()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "must specify either 'namespace' or 'namespace_uri'")
+}
+
+// TestGroupNamespaceURIInheritance tests that nodes inherit namespace_uri from groups
+func TestGroupNamespaceURIInheritance(t *testing.T) {
+	client := &OpcUAInputClient{
+		Config: InputClientConfig{
+			MetricName: "opcua",
+			Groups: []NodeGroupSettings{
+				{
+					Namespace:      "",
+					NamespaceURI:   "http://opcfoundation.org/UA/",
+					IdentifierType: "i",
+					Nodes: []NodeSettings{
+						{
+							FieldName:  "node1",
+							Identifier: "2255",
+							// Should inherit namespace_uri from group
+						},
+						{
+							FieldName:    "node2",
+							Identifier:   "2256",
+							NamespaceURI: "http://custom.org/UA/", // Override group default
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := client.InitNodeMetricMapping()
+	require.NoError(t, err)
+	require.Len(t, client.NodeMetricMapping, 2)
+
+	// First node should inherit from group
+	require.Equal(t, "http://opcfoundation.org/UA/", client.NodeMetricMapping[0].Tag.NamespaceURI)
+	require.Equal(t, "nsu=http://opcfoundation.org/UA/;i=2255", client.NodeMetricMapping[0].Tag.NodeID())
+
+	// Second node should use its own namespace_uri
+	require.Equal(t, "http://custom.org/UA/", client.NodeMetricMapping[1].Tag.NamespaceURI)
+	require.Equal(t, "nsu=http://custom.org/UA/;i=2256", client.NodeMetricMapping[1].Tag.NodeID())
+}
+
+// TestEventGroupNamespaceURIInheritance tests that event nodes inherit namespace_uri from event groups
+func TestEventGroupNamespaceURIInheritance(t *testing.T) {
+	eventGroup := EventGroupSettings{
+		NamespaceURI:   "http://opcfoundation.org/UA/",
+		IdentifierType: "i",
+		NodeIDSettings: []EventNodeSettings{
+			{
+				Identifier: "2253",
+				// Should inherit namespace_uri from group
+			},
+			{
+				Identifier:   "2254",
+				NamespaceURI: "http://custom.org/UA/", // Override group default
+			},
+		},
+	}
+
+	eventGroup.UpdateNodeIDSettings()
+
+	// First node should inherit from group
+	require.Equal(t, "http://opcfoundation.org/UA/", eventGroup.NodeIDSettings[0].NamespaceURI)
+	require.Equal(t, "nsu=http://opcfoundation.org/UA/;i=2253", eventGroup.NodeIDSettings[0].NodeID())
+
+	// Second node should use its own namespace_uri
+	require.Equal(t, "http://custom.org/UA/", eventGroup.NodeIDSettings[1].NamespaceURI)
+	require.Equal(t, "nsu=http://custom.org/UA/;i=2254", eventGroup.NodeIDSettings[1].NodeID())
 }
