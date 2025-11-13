@@ -22,6 +22,7 @@ import (
 )
 
 type packetListener struct {
+	AllowedSources       []string
 	Encoding             string
 	MaxDecompressionSize int64
 	SocketMode           string
@@ -35,8 +36,9 @@ type packetListener struct {
 	parsePool *pond.WorkerPool
 }
 
-func newPacketListener(encoding string, maxDecompressionSize config.Size, maxWorkers int) *packetListener {
+func newPacketListener(encoding string, maxDecompressionSize config.Size, maxWorkers int, allowedSources []string) *packetListener {
 	return &packetListener{
+		AllowedSources:       allowedSources,
 		Encoding:             encoding,
 		MaxDecompressionSize: int64(maxDecompressionSize),
 		parsePool:            pond.New(maxWorkers, 0, pond.MinWorkers(maxWorkers/2+1)),
@@ -60,6 +62,26 @@ func (l *packetListener) listenData(onData CallbackData, onError CallbackError) 
 					}
 				}
 				break
+			}
+
+			if len(l.AllowedSources) > 0 {
+				allowed := false
+				srcIP := ""
+				if udpAddr, ok := src.(*net.UDPAddr); ok {
+					srcIP = udpAddr.IP.String()
+				}
+
+				for _, allowedSrc := range l.AllowedSources {
+					if srcIP == allowedSrc {
+						allowed = true
+						break
+					}
+				}
+
+				if !allowed {
+					// Drop message if it is not from an allowed ip source
+					continue
+				}
 			}
 
 			d := make([]byte, n)
