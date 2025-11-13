@@ -397,6 +397,8 @@ const (
 func init() {
 	outputs.Add("opentelemetry", func() telegraf.Output {
 		return &OpenTelemetry{
+			Protocol:       defaultProtocol,
+			EncodingType:   defaultEncodingType,
 			ServiceAddress: defaultServiceAddress,
 			Timeout:        defaultTimeout,
 			Compression:    defaultCompression,
