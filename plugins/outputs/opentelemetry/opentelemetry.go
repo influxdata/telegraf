@@ -57,8 +57,17 @@ type OpenTelemetry struct {
 	Log telegraf.Logger `toml:"-"`
 
 	metricsConverter *influx2otel.LineProtocolToOtelMetrics
-	gRPCClient       *gRPCClient
-	httpClient       *httpClient
+	otlpMetricClient otlpMetricClient
+}
+
+var (
+	_ otlpMetricClient = (*gRPCClient)(nil)
+	_ otlpMetricClient = (*httpClient)(nil)
+)
+
+type otlpMetricClient interface {
+	Export(ctx context.Context, request pmetricotlp.ExportRequest) (pmetricotlp.ExportResponse, error)
+	Close() error
 }
 
 type gRPCClient struct {
@@ -68,8 +77,12 @@ type gRPCClient struct {
 }
 
 type httpClient struct {
-	httpClient *http.Client
+	httpClient   *http.Client
+	url          string
+	encodingType string
+	compress     string
 }
+
 type CoralogixConfig struct {
 	AppName    string `toml:"application"`
 	SubSystem  string `toml:"subsystem"`
@@ -114,17 +127,11 @@ func (o *OpenTelemetry) Connect() error {
 
 	switch o.Protocol {
 	case "", "grpc":
-		if o.gRPCClient == nil {
-			o.gRPCClient = &gRPCClient{}
-		}
 		err = o.connectGRPC()
 		if err != nil {
 			return err
 		}
 	case "http":
-		if o.httpClient == nil {
-			o.httpClient = &httpClient{}
-		}
 		err = o.connectHTTP()
 		if err != nil {
 			return err
@@ -138,10 +145,8 @@ func (o *OpenTelemetry) Connect() error {
 }
 
 func (o *OpenTelemetry) Close() error {
-	if o.gRPCClient != nil && o.gRPCClient.grpcClientConn != nil {
-		err := o.gRPCClient.grpcClientConn.Close()
-		o.gRPCClient.grpcClientConn = nil
-		return err
+	if o.otlpMetricClient != nil {
+		return o.otlpMetricClient.Close()
 	}
 	return nil
 }
@@ -217,19 +222,12 @@ func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 		ctx = metadata.NewOutgoingContext(ctx, metadata.New(o.Headers))
 	}
 	defer cancel()
-	switch o.Protocol { // TODO: use interface instead of switch
-	case "", "grpc":
-		_, err := o.gRPCClient.metricsServiceClient.Export(ctx, md, o.gRPCClient.callOptions...)
-		return err
-	case "http":
-		_, err := o.httpClient.Export(ctx, md, o.ServiceAddress, o.EncodingType, o.Compression)
-		return err
-	default:
-		return fmt.Errorf("unsupported protocol '%s'", o.Protocol)
-	}
+	_, err := o.otlpMetricClient.Export(ctx, md)
+	return err
 }
 
 func (o *OpenTelemetry) connectGRPC() error {
+	gRPCClient := &gRPCClient{}
 	var grpcTLSDialOption grpc.DialOption
 	if tlsConfig, err := o.ClientConfig.TLSConfig(); err != nil {
 		return err
@@ -249,43 +247,65 @@ func (o *OpenTelemetry) connectGRPC() error {
 
 	metricsServiceClient := pmetricotlp.NewGRPCClient(grpcClientConn)
 
-	o.gRPCClient.grpcClientConn = grpcClientConn
-	o.gRPCClient.metricsServiceClient = metricsServiceClient
+	gRPCClient.grpcClientConn = grpcClientConn
+	gRPCClient.metricsServiceClient = metricsServiceClient
 
 	if o.Compression != "" && o.Compression != "none" {
-		o.gRPCClient.callOptions = append(o.gRPCClient.callOptions, grpc.UseCompressor(o.Compression))
+		gRPCClient.callOptions = append(gRPCClient.callOptions, grpc.UseCompressor(o.Compression))
 	}
+
+	o.otlpMetricClient = gRPCClient
 	return nil
 }
 
 func (o *OpenTelemetry) connectHTTP() error {
-	o.httpClient.httpClient = &http.Client{}
+	httpClient := &httpClient{
+		httpClient:   &http.Client{},
+		url:          o.ServiceAddress,
+		encodingType: o.EncodingType,
+		compress:     o.Compression,
+	}
 	if tlsConfig, err := o.ClientConfig.TLSConfig(); err != nil {
 		return err
 	} else if tlsConfig != nil {
-		o.httpClient.httpClient.Transport = &http.Transport{
+		httpClient.httpClient.Transport = &http.Transport{
 			TLSClientConfig: tlsConfig,
 		}
 	} else if o.Coralogix != nil {
 		// For coralogix, we enforce HTTP connection with TLS
-		o.httpClient.httpClient.Transport = &http.Transport{
+		httpClient.httpClient.Transport = &http.Transport{
 			TLSClientConfig: &ntls.Config{},
 		}
 	} else {
-		o.httpClient.httpClient.Transport = &http.Transport{
+		httpClient.httpClient.Transport = &http.Transport{
 			TLSClientConfig: &ntls.Config{
 				InsecureSkipVerify: true,
 			},
 		}
 	}
+
+	o.otlpMetricClient = httpClient
 	return nil
 }
 
-func (h *httpClient) Export(ctx context.Context, request pmetricotlp.ExportRequest, url, contentType, compress string) (pmetricotlp.ExportResponse, error) {
+func (g *gRPCClient) Export(ctx context.Context, request pmetricotlp.ExportRequest) (pmetricotlp.ExportResponse, error) {
+	return g.metricsServiceClient.Export(ctx, request, g.callOptions...)
+}
+
+func (g *gRPCClient) Close() error {
+	if g.grpcClientConn != nil {
+		err := g.grpcClientConn.Close()
+		g.grpcClientConn = nil
+		return err
+	}
+	return nil
+}
+
+func (h *httpClient) Export(ctx context.Context, request pmetricotlp.ExportRequest) (pmetricotlp.ExportResponse, error) {
 	var err error
 	var requestBytes []byte
 
-	switch contentType {
+	switch h.encodingType {
 	case "application/x-protobuf":
 		requestBytes, err = request.MarshalProto()
 		if err != nil {
@@ -297,21 +317,21 @@ func (h *httpClient) Export(ctx context.Context, request pmetricotlp.ExportReque
 			return pmetricotlp.ExportResponse{}, err
 		}
 	default:
-		return pmetricotlp.ExportResponse{}, fmt.Errorf("unsupported content type '%s'", contentType)
+		return pmetricotlp.ExportResponse{}, fmt.Errorf("unsupported content type '%s'", h.encodingType)
 	}
 	var reader io.Reader
 	reader = bytes.NewReader(requestBytes)
 
-	if compress != "" && compress != "none" {
+	if h.compress != "" && h.compress != "none" {
 		reader = internal.CompressWithGzip(reader)
 	}
 
-	httpRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, url, reader)
+	httpRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, h.url, reader)
 	if err != nil {
 		return pmetricotlp.ExportResponse{}, err
 	}
 
-	httpRequest.Header.Set("Content-Type", contentType)
+	httpRequest.Header.Set("Content-Type", h.encodingType)
 	httpRequest.Header.Set("User-Agent", userAgent)
 
 	httpResponse, err := h.httpClient.Do(httpRequest)
@@ -348,6 +368,11 @@ func (h *httpClient) Export(ctx context.Context, request pmetricotlp.ExportReque
 	}
 
 	return exportResponse, nil
+}
+
+func (*httpClient) Close() error {
+	// No persistent connections to close for HTTP client
+	return nil
 }
 
 // ref. https://github.com/open-telemetry/opentelemetry-collector/blob/7258150320ae4c3b489aa58bd2939ba358b23ae1/exporter/otlphttpexporter/otlp.go#L271
