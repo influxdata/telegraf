@@ -82,9 +82,14 @@ func (*OpenTelemetry) SampleConfig() string {
 
 func (o *OpenTelemetry) Connect() error {
 	logger := &otelLogger{o.Log}
-
+	if o.Protocol == "" {
+		o.Protocol = defaultProtocol
+	}
 	if o.ServiceAddress == "" {
 		o.ServiceAddress = defaultServiceAddress
+	}
+	if o.EncodingType == "" {
+		o.EncodingType = defaultEncodingType
 	}
 	if o.Timeout <= 0 {
 		o.Timeout = defaultTimeout
@@ -376,6 +381,8 @@ const (
 )
 
 const (
+	defaultProtocol       = "grpc"
+	defaultEncodingType   = "application/x-protobuf"
 	defaultServiceAddress = "localhost:4317"
 	defaultTimeout        = config.Duration(5 * time.Second)
 	defaultCompression    = "gzip"
