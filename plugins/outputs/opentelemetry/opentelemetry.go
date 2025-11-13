@@ -349,6 +349,7 @@ func (h *httpClient) Export(ctx context.Context, request pmetricotlp.ExportReque
 	return exportResponse, nil
 }
 
+// ref. https://github.com/open-telemetry/opentelemetry-collector/blob/7258150320ae4c3b489aa58bd2939ba358b23ae1/exporter/otlphttpexporter/otlp.go#L271
 func readResponseBody(resp *http.Response) ([]byte, error) {
 	if resp.ContentLength == 0 {
 		return nil, nil
