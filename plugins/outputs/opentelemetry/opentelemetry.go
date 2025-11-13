@@ -114,11 +114,17 @@ func (o *OpenTelemetry) Connect() error {
 
 	switch o.Protocol {
 	case "", "grpc":
+		if o.gRPCClient == nil {
+			o.gRPCClient = &gRPCClient{}
+		}
 		err = o.connectGRPC()
 		if err != nil {
 			return err
 		}
 	case "http":
+		if o.httpClient == nil {
+			o.httpClient = &httpClient{}
+		}
 		err = o.connectHTTP()
 		if err != nil {
 			return err
@@ -132,7 +138,7 @@ func (o *OpenTelemetry) Connect() error {
 }
 
 func (o *OpenTelemetry) Close() error {
-	if o.gRPCClient.grpcClientConn != nil {
+	if o.gRPCClient != nil && o.gRPCClient.grpcClientConn != nil {
 		err := o.gRPCClient.grpcClientConn.Close()
 		o.gRPCClient.grpcClientConn = nil
 		return err
