@@ -41,12 +41,15 @@ type OpenTelemetry struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	metricsConverter     *influx2otel.LineProtocolToOtelMetrics
+	metricsConverter *influx2otel.LineProtocolToOtelMetrics
+	gRPCClient       *gRPCClient
+}
+
+type gRPCClient struct {
 	grpcClientConn       *grpc.ClientConn
 	metricsServiceClient pmetricotlp.GRPCClient
 	callOptions          []grpc.CallOption
 }
-
 type CoralogixConfig struct {
 	AppName    string `toml:"application"`
 	SubSystem  string `toml:"subsystem"`
@@ -103,20 +106,20 @@ func (o *OpenTelemetry) Connect() error {
 	metricsServiceClient := pmetricotlp.NewGRPCClient(grpcClientConn)
 
 	o.metricsConverter = metricsConverter
-	o.grpcClientConn = grpcClientConn
-	o.metricsServiceClient = metricsServiceClient
+	o.gRPCClient.grpcClientConn = grpcClientConn
+	o.gRPCClient.metricsServiceClient = metricsServiceClient
 
 	if o.Compression != "" && o.Compression != "none" {
-		o.callOptions = append(o.callOptions, grpc.UseCompressor(o.Compression))
+		o.gRPCClient.callOptions = append(o.gRPCClient.callOptions, grpc.UseCompressor(o.Compression))
 	}
 
 	return nil
 }
 
 func (o *OpenTelemetry) Close() error {
-	if o.grpcClientConn != nil {
-		err := o.grpcClientConn.Close()
-		o.grpcClientConn = nil
+	if o.gRPCClient.grpcClientConn != nil {
+		err := o.gRPCClient.grpcClientConn.Close()
+		o.gRPCClient.grpcClientConn = nil
 		return err
 	}
 	return nil
@@ -193,7 +196,7 @@ func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 		ctx = metadata.NewOutgoingContext(ctx, metadata.New(o.Headers))
 	}
 	defer cancel()
-	_, err := o.metricsServiceClient.Export(ctx, md, o.callOptions...)
+	_, err := o.gRPCClient.metricsServiceClient.Export(ctx, md, o.gRPCClient.callOptions...)
 	return err
 }
 
