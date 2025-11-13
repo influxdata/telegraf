@@ -121,13 +121,13 @@ func (a *Arc) Write(metrics []telegraf.Metric) error {
 		data = messages
 	}
 
-	var buf bytes.Buffer
-	var writer io.Writer = &buf
+	var payload bytes.Buffer
+	var writer io.Writer = &payload
 
 	// Wrap with gzip writer if compression is enabled
 	var gzipWriter *gzip.Writer
 	if a.ContentEncoding == "gzip" {
-		gzipWriter = gzip.NewWriter(&buf)
+		gzipWriter = gzip.NewWriter(&payload)
 		writer = gzipWriter
 	}
 
@@ -147,12 +147,10 @@ func (a *Arc) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	payload := buf.Bytes()
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "POST", a.URL, bytes.NewReader(payload))
+	req, err := http.NewRequestWithContext(ctx, "POST", a.URL, &payload)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
