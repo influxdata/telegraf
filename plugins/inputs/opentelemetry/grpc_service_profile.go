@@ -75,13 +75,13 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 
 		for _, sp := range rp.ScopeProfiles {
 			for _, p := range sp.Profiles {
-				for i, sample := range p.Sample {
+				for i, sample := range p.Samples {
 					stack := pd.StackTable[sample.StackIndex]
 					for _, locIdx := range stack.LocationIndices {
 						for validx, value := range sample.Values {
 							loc := pd.LocationTable[locIdx]
-							locations := make([]string, 0, len(loc.Line))
-							for _, line := range loc.Line {
+							locations := make([]string, 0, len(loc.Lines))
+							for _, line := range loc.Lines {
 								f := pd.FunctionTable[line.FunctionIndex]
 								fileloc := pd.StringTable[f.FilenameStrindex]
 								if f.StartLine > 0 {
