@@ -3,6 +3,7 @@
 This plugin sends a heartbeat signal via POST to a HTTP endpoint on a regular
 interval. This is useful to keep track of existing Telegraf instances in a large
 deployment.
+deploayment.
 
 ⭐ Telegraf v1.37.0
 🏷️ applications
@@ -30,6 +31,7 @@ to use them.
 
 ```toml @sample.conf
 # A plugin that can transmit heartbeats over HTTP
+# A plugin that can transmit metrics over HTTP
 [[outputs.heartbeat]]
   ## URL of heartbeat endpoint
   url = "http://monitoring.example.com/heartbeat"
@@ -41,6 +43,7 @@ to use them.
   # token = ""
 
   ## Interval for sending heartbeat messages
+  ## Interval for sending heartbeart messages
   # interval = "1m"
 
   ## Information to include in the message, available options are
@@ -74,6 +77,12 @@ All information in the messages are accumulated until a message was sent
 _successfully_. The case of failed messages can be identified by messages
 containing the `last` field indicating the last time the plugin sent a message
 sucessfully.
+> [!NOTE]
+> Some information, e.g. the number of metrics, is only updated after the first
+> flush cycle, this must be considered when interpreting the messages.
+
+All information in the messages are accumulated until a message was sent
+_successfully_.
 
 ### Configuration information
 
