@@ -319,7 +319,8 @@ func (h *httpClient) Export(ctx context.Context, request pmetricotlp.ExportReque
 		return pmetricotlp.ExportResponse{}, err
 	}
 	defer func() {
-		_, _ = io.CopyN(io.Discard, httpResponse.Body, maxHTTPResponseReadBytes)
+		//nolint:errcheck // cannot fail with io.Discard
+		io.CopyN(io.Discard, httpResponse.Body, maxHTTPResponseReadBytes)
 		_ = httpResponse.Body.Close()
 	}()
 
