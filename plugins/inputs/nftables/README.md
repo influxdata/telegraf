@@ -28,11 +28,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [[inputs.nftables]]
   ## Use the specified binary which will be looked-up in PATH
   # binary = "nft"
-   ## Use sudo for command execution, can be restricted to "nft --json list table"
+
+  ## Use sudo for command execution, can be restricted to "nft --json list table"
   # use_sudo = false
 
-  ## A List of nftables to monitor. 
-  ## have a counter and comment declared on it.
+  ## Tables to monitor containing both a counter and comment declaration
   # tables = [ "filter" ]
 ```
 
