@@ -4,8 +4,10 @@
 package nftables
 
 import (
+	"bytes"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os/exec"
 
@@ -60,6 +62,15 @@ func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 	c := exec.Command(n.Binary, args...)
 	out, err := c.Output()
 	if err != nil {
+		var oserr *exec.ExitError
+		if errors.As(err, &oserr) {
+			buf, _, _ := bytes.Cut(oserr.Stderr, []byte("\n"))
+			msg := string(bytes.TrimSpace(buf))
+			if msg == "Error: No such file or directory" {
+				return fmt.Errorf("table %q does not exist", name)
+			}
+			return fmt.Errorf("error executing nft command: %w (%s)", err, msg)
+		}
 		return fmt.Errorf("error executing nft command: %w", err)
 	}
 
