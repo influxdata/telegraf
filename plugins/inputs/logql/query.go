@@ -27,7 +27,7 @@ type query struct {
 
 func (q *query) init(c *client, log telegraf.Logger) error {
 	if q.Query == "" {
-		return fmt.Errorf("'query' cannot be empty for %q", q.client.url)
+		return fmt.Errorf("'query' cannot be empty for %q", c.url)
 	}
 
 	switch q.Sorting {
