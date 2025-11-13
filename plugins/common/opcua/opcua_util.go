@@ -32,71 +32,6 @@ func newTempDir() (string, error) {
 	return dir, err
 }
 
-// fileExists checks if a file exists at the given path
-func fileExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
-}
-
-// validateCertificatePaths validates that the parent directories for certificate and key files exist
-func validateCertificatePaths(certFile, keyFile string) error {
-	// Check certificate parent directory
-	certDir := filepath.Dir(certFile)
-	if certDir != "" && certDir != "." {
-		info, err := os.Stat(certDir)
-		if err != nil {
-			if os.IsNotExist(err) {
-				return &CertificateError{
-					Operation: "validation",
-					Path:      certFile,
-					Err:       fmt.Errorf("%w: parent directory %q does not exist", ErrCertificateGeneration, certDir),
-				}
-			}
-			return &CertificateError{
-				Operation: "validation",
-				Path:      certFile,
-				Err:       fmt.Errorf("%w: cannot access parent directory %q: %w", ErrCertificateGeneration, certDir, err),
-			}
-		}
-		if !info.IsDir() {
-			return &CertificateError{
-				Operation: "validation",
-				Path:      certFile,
-				Err:       fmt.Errorf("%w: parent path %q is not a directory", ErrCertificateGeneration, certDir),
-			}
-		}
-	}
-
-	// Check key parent directory
-	keyDir := filepath.Dir(keyFile)
-	if keyDir != "" && keyDir != "." {
-		info, err := os.Stat(keyDir)
-		if err != nil {
-			if os.IsNotExist(err) {
-				return &CertificateError{
-					Operation: "validation",
-					Path:      keyFile,
-					Err:       fmt.Errorf("%w: parent directory %q does not exist", ErrCertificateGeneration, keyDir),
-				}
-			}
-			return &CertificateError{
-				Operation: "validation",
-				Path:      keyFile,
-				Err:       fmt.Errorf("%w: cannot access parent directory %q: %w", ErrCertificateGeneration, keyDir, err),
-			}
-		}
-		if !info.IsDir() {
-			return &CertificateError{
-				Operation: "validation",
-				Path:      keyFile,
-				Err:       fmt.Errorf("%w: parent path %q is not a directory", ErrCertificateGeneration, keyDir),
-			}
-		}
-	}
-
-	return nil
-}
-
 func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.Duration) (cert, key string, err error) {
 	if len(host) == 0 {
 		return "", "", &CertificateError{
@@ -120,9 +55,27 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 		certFile = dir + "/cert.pem"
 		keyFile = dir + "/key.pem"
 	} else {
-		// If paths are provided, validate parent directories exist and are writable
-		if err := validateCertificatePaths(certFile, keyFile); err != nil {
-			return "", "", err
+		// If paths are provided, create parent directories if they don't exist
+		certDir := filepath.Dir(certFile)
+		if certDir != "" && certDir != "." {
+			if err := os.MkdirAll(certDir, 0750); err != nil {
+				return "", "", &CertificateError{
+					Operation: "directory creation",
+					Path:      certFile,
+					Err:       fmt.Errorf("%w: failed to create parent directory %q: %w", ErrCertificateGeneration, certDir, err),
+				}
+			}
+		}
+
+		keyDir := filepath.Dir(keyFile)
+		if keyDir != "" && keyDir != "." && keyDir != certDir {
+			if err := os.MkdirAll(keyDir, 0750); err != nil {
+				return "", "", &CertificateError{
+					Operation: "directory creation",
+					Path:      keyFile,
+					Err:       fmt.Errorf("%w: failed to create parent directory %q: %w", ErrCertificateGeneration, keyDir, err),
+				}
+			}
 		}
 	}
 
