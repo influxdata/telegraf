@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -23,6 +24,7 @@ type LogQL struct {
 	Username       config.Secret   `toml:"username"`
 	Password       config.Secret   `toml:"password"`
 	Token          config.Secret   `toml:"token"`
+	Organizations  []string        `toml:"organizations"`
 	Timeout        config.Duration `toml:"timeout"`
 	InstantQueries []InstantQuery  `toml:"instant"`
 	RangeQueries   []RangeQuery    `toml:"range"`
@@ -60,6 +62,7 @@ func (l *LogQL) Init() error {
 		username: l.Username,
 		password: l.Password,
 		token:    l.Token,
+		org:      strings.Join(l.Organizations, "|"), // see https://grafana.com/docs/loki/latest/operations/multi-tenancy
 		cfg:      l.TransportConfig,
 		timeout:  time.Duration(l.Timeout),
 	}

@@ -43,6 +43,9 @@ more details on how to use them.
   ## Bearer token based authentication
   # token = ""
 
+  ## Organization IDs for the queries in multi-tenant setups
+  # organizations = []
+
   ## Timeout for executing queries with zero meaning no timeout
   # timeout = "5s"
 

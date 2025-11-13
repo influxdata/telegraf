@@ -197,6 +197,95 @@ func TestInitFail(t *testing.T) {
 	}
 }
 
+func TestSigleTenant(t *testing.T) {
+	// Start a mock server
+	var orgs []string
+	var orgMu sync.Mutex
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Mark the server as ready
+		if r.URL.Path == "/ready" {
+			if _, err := w.Write([]byte("ready")); err != nil {
+				t.Logf("writing 'ready' response failed: %v", err)
+				t.Fail()
+			}
+			return
+		}
+
+		// Store the query
+		orgMu.Lock()
+		orgs = r.Header.Values("X-Scope-OrgID")
+		orgMu.Unlock()
+
+		// Send the response
+		w.WriteHeader(http.StatusTooManyRequests)
+	}))
+	defer ts.Close()
+
+	// Configure and initialize the plugin
+	plugin := &LogQL{
+		URL:            ts.URL,
+		InstantQueries: []InstantQuery{{query: query{Query: `{job="varlogs"}`}}},
+		Log:            &testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	// Start the plugin and collect data
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+	require.NoError(t, plugin.Gather(&acc))
+
+	// Check the query including the parameters
+	orgMu.Lock()
+	defer orgMu.Unlock()
+	require.Empty(t, orgs)
+}
+
+func TestMultiTenant(t *testing.T) {
+	// Start a mock server
+	var orgs []string
+	var orgMu sync.Mutex
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Mark the server as ready
+		if r.URL.Path == "/ready" {
+			if _, err := w.Write([]byte("ready")); err != nil {
+				t.Logf("writing 'ready' response failed: %v", err)
+				t.Fail()
+			}
+			return
+		}
+
+		// Store the query
+		orgMu.Lock()
+		orgs = r.Header.Values("X-Scope-OrgID")
+		orgMu.Unlock()
+
+		// Send the response
+		w.WriteHeader(http.StatusTooManyRequests)
+	}))
+	defer ts.Close()
+
+	// Configure and initialize the plugin
+	plugin := &LogQL{
+		URL:            ts.URL,
+		Organizations:  []string{"CompanyA", "CompanyB"},
+		InstantQueries: []InstantQuery{{query: query{Query: `{job="varlogs"}`}}},
+		Log:            &testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	// Start the plugin and collect data
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+	require.NoError(t, plugin.Gather(&acc))
+
+	// Check the query including the parameters
+	orgMu.Lock()
+	defer orgMu.Unlock()
+	require.Equal(t, []string{"CompanyA|CompanyB"}, orgs)
+}
+
 func TestCases(t *testing.T) {
 	// Get all directories in testdata
 	folders, err := os.ReadDir("testcases")
@@ -293,6 +382,7 @@ func TestCases(t *testing.T) {
 			// Start the plugin and collect data
 			var acc testutil.Accumulator
 			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
 			require.NoError(t, plugin.Gather(&acc))
 
 			// Check the query including the parameters
