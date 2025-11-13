@@ -108,22 +108,31 @@ func TestOpenTelemetryHTTPProtobuf(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		receivedContentType = r.Header.Get("Content-Type")
 		body, err := io.ReadAll(r.Body)
-		require.NoError(t, err)
+		if err != nil {
+			t.Error(err)
+		}
 
 		req := pmetricotlp.NewExportRequest()
 		err = req.UnmarshalProto(body)
-		require.NoError(t, err)
+		if err != nil {
+			t.Error(err)
+		}
 
 		receivedMetrics = pmetric.NewMetrics()
 		req.Metrics().CopyTo(receivedMetrics)
 
 		resp := pmetricotlp.NewExportResponse()
 		respBytes, err := resp.MarshalProto()
-		require.NoError(t, err)
+		if err != nil {
+			t.Error(err)
+		}
 
 		w.Header().Set("Content-Type", "application/x-protobuf")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write(respBytes)
+		_, err = w.Write(respBytes)
+		if err != nil {
+			t.Error(err)
+		}
 	}))
 	defer server.Close()
 
@@ -193,22 +202,31 @@ func TestOpenTelemetryHTTPJSON(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		receivedContentType = r.Header.Get("Content-Type")
 		body, err := io.ReadAll(r.Body)
-		require.NoError(t, err)
+		if err != nil {
+			t.Error(err)
+		}
 
 		req := pmetricotlp.NewExportRequest()
 		err = req.UnmarshalJSON(body)
-		require.NoError(t, err)
+		if err != nil {
+			t.Error(err)
+		}
 
 		receivedMetrics = pmetric.NewMetrics()
 		req.Metrics().CopyTo(receivedMetrics)
 
 		resp := pmetricotlp.NewExportResponse()
 		respBytes, err := resp.MarshalJSON()
-		require.NoError(t, err)
+		if err != nil {
+			t.Error(err)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write(respBytes)
+		_, err = w.Write(respBytes)
+		if err != nil {
+			t.Error(err)
+		}
 	}))
 	defer server.Close()
 
