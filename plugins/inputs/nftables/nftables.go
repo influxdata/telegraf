@@ -92,8 +92,6 @@ func parseNftableOutput(acc telegraf.Accumulator, out []byte) error {
 
 func init() {
 	inputs.Add("nftables", func() telegraf.Input {
-		return &Nftables{
-			Tables: defaultTables,
-		}
+		return &Nftables{}
 	})
 }
