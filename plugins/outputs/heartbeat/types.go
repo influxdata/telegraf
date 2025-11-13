@@ -24,4 +24,7 @@ type logEntry struct {
 	Source     string                 `json:"source"`
 	Attributes map[string]interface{} `json:"attributes,omitempty"`
 	Messsage   string                 `json:"message"`
+
+	// Internal
+	index int
 }
