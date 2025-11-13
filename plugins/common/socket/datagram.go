@@ -66,13 +66,19 @@ func (l *packetListener) listenData(onData CallbackData, onError CallbackError) 
 
 			if len(l.AllowedSources) > 0 {
 				allowed := false
-				srcIP := ""
-				if udpAddr, ok := src.(*net.UDPAddr); ok {
-					srcIP = udpAddr.IP.String()
+				sourceIP := ""
+
+				switch addr := src.(type) {
+				case *net.UDPAddr:
+					sourceIP = addr.IP.String()
+				case *net.TCPAddr:
+					sourceIP = addr.IP.String()
+				case *net.IPAddr:
+					sourceIP = addr.IP.String()
 				}
 
 				for _, allowedSrc := range l.AllowedSources {
-					if srcIP == allowedSrc {
+					if sourceIP == allowedSrc {
 						allowed = true
 						break
 					}
