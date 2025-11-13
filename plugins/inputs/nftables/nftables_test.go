@@ -87,7 +87,7 @@ var singletonTable = `{
           {
             "counter": {
               "packets": 1,
-              "bytes": 2 
+              "bytes": 2
             }
           },
           {
@@ -189,9 +189,9 @@ func TestParseNftableOutput(t *testing.T) {
 	expected := []telegraf.Metric{
 		testutil.MustMetric("nftables",
 			map[string]string{
-				"chain":  "test-chain",
-				"ruleid": "test1",
-				"table":  "test",
+				"chain": "test-chain",
+				"rule":  "test1",
+				"table": "test",
 			},
 			map[string]interface{}{
 				"bytes": 2,
@@ -199,9 +199,9 @@ func TestParseNftableOutput(t *testing.T) {
 			}, defaultTime),
 		testutil.MustMetric("nftables",
 			map[string]string{
-				"chain":  "test-chain",
-				"ruleid": "test2",
-				"table":  "test",
+				"chain": "test-chain",
+				"rule":  "test2",
+				"table": "test",
 			},
 			map[string]interface{}{
 				"bytes": 1412296,
