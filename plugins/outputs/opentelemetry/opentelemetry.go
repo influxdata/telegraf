@@ -5,6 +5,7 @@ import (
 	"context"
 	ntls "crypto/tls"
 	_ "embed"
+	"fmt"
 	"sort"
 	"time"
 
@@ -30,6 +31,10 @@ var userAgent = internal.ProductToken()
 var sampleConfig string
 
 type OpenTelemetry struct {
+	// Protocol is the protocol to use for sending data to the OpenTelemetry Collector.
+	// Supported protocols are "grpc" & "http". Defaults to "grpc".
+	Protocol string `toml:"protocol"`
+
 	ServiceAddress string `toml:"service_address"`
 
 	tls.ClientConfig
@@ -85,32 +90,22 @@ func (o *OpenTelemetry) Connect() error {
 	if err != nil {
 		return err
 	}
-
-	var grpcTLSDialOption grpc.DialOption
-	if tlsConfig, err := o.ClientConfig.TLSConfig(); err != nil {
-		return err
-	} else if tlsConfig != nil {
-		grpcTLSDialOption = grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig))
-	} else if o.Coralogix != nil {
-		// For coralogix, we enforce GRPC connection with TLS
-		grpcTLSDialOption = grpc.WithTransportCredentials(credentials.NewTLS(&ntls.Config{}))
-	} else {
-		grpcTLSDialOption = grpc.WithTransportCredentials(insecure.NewCredentials())
-	}
-
-	grpcClientConn, err := grpc.NewClient(o.ServiceAddress, grpcTLSDialOption, grpc.WithUserAgent(userAgent))
-	if err != nil {
-		return err
-	}
-
-	metricsServiceClient := pmetricotlp.NewGRPCClient(grpcClientConn)
-
 	o.metricsConverter = metricsConverter
-	o.gRPCClient.grpcClientConn = grpcClientConn
-	o.gRPCClient.metricsServiceClient = metricsServiceClient
 
-	if o.Compression != "" && o.Compression != "none" {
-		o.gRPCClient.callOptions = append(o.gRPCClient.callOptions, grpc.UseCompressor(o.Compression))
+	switch o.Protocol {
+	case "", "grpc":
+		err = o.connectGRPC()
+		if err != nil {
+			return err
+		}
+	case "http":
+		err = o.connectHTTP()
+		if err != nil {
+			return err
+		}
+		return nil
+	default:
+		return fmt.Errorf("unsupported protocol '%s'", o.Protocol)
 	}
 
 	return nil
@@ -198,6 +193,39 @@ func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 	defer cancel()
 	_, err := o.gRPCClient.metricsServiceClient.Export(ctx, md, o.gRPCClient.callOptions...)
 	return err
+}
+
+func (o *OpenTelemetry) connectGRPC() error {
+	var grpcTLSDialOption grpc.DialOption
+	if tlsConfig, err := o.ClientConfig.TLSConfig(); err != nil {
+		return err
+	} else if tlsConfig != nil {
+		grpcTLSDialOption = grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig))
+	} else if o.Coralogix != nil {
+		// For coralogix, we enforce GRPC connection with TLS
+		grpcTLSDialOption = grpc.WithTransportCredentials(credentials.NewTLS(&ntls.Config{}))
+	} else {
+		grpcTLSDialOption = grpc.WithTransportCredentials(insecure.NewCredentials())
+	}
+
+	grpcClientConn, err := grpc.NewClient(o.ServiceAddress, grpcTLSDialOption, grpc.WithUserAgent(userAgent))
+	if err != nil {
+		return err
+	}
+
+	metricsServiceClient := pmetricotlp.NewGRPCClient(grpcClientConn)
+
+	o.gRPCClient.grpcClientConn = grpcClientConn
+	o.gRPCClient.metricsServiceClient = metricsServiceClient
+
+	if o.Compression != "" && o.Compression != "none" {
+		o.gRPCClient.callOptions = append(o.gRPCClient.callOptions, grpc.UseCompressor(o.Compression))
+	}
+	return nil
+}
+
+func (o *OpenTelemetry) connectHTTP() error {
+	return fmt.Errorf("HTTP protocol is not yet implemented")
 }
 
 const (
