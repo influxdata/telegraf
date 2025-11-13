@@ -333,6 +333,9 @@ func (h *httpClient) Export(ctx context.Context, request pmetricotlp.ExportReque
 
 	httpRequest.Header.Set("Content-Type", h.encodingType)
 	httpRequest.Header.Set("User-Agent", userAgent)
+	if h.compress != "" && h.compress != "none" {
+		httpRequest.Header.Set("Content-Encoding", "gzip")
+	}
 
 	httpResponse, err := h.httpClient.Do(httpRequest)
 	if err != nil {
