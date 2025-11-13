@@ -311,7 +311,15 @@ func (p *SQL) tableExists(tableName string) bool {
 	stmt := strings.ReplaceAll(p.TableExistsTemplate, "{TABLE}", quoteIdent(tableName))
 
 	_, err := p.db.Exec(stmt)
-	return err == nil
+
+	// Make sure to update the table cache to not query the table existence in
+	// every write cycle
+	exists := err == nil
+	if _, found := p.tables[tableName]; exists && !found {
+		p.tables[tableName] = make(map[string]bool)
+	}
+
+	return exists
 }
 
 func (p *SQL) updateTableCache(tablename string) error {
