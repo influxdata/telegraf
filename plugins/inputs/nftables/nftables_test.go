@@ -134,7 +134,6 @@ func TestMain(m *testing.M) {
 	}
 
 	filename := filepath.Join(testcase, "table_"+args[2]+".json")
-	fmt.Fprintln(os.Stderr, "outputting file", filename)
 	buf, err := os.ReadFile(filename)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
