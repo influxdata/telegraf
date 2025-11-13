@@ -44,14 +44,16 @@ func TestOpenTelemetry(t *testing.T) {
 	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(common.NoopLogger{})
 	require.NoError(t, err)
 	plugin := &OpenTelemetry{
-		ServiceAddress:       m.Address(),
-		Timeout:              config.Duration(time.Second),
-		Headers:              map[string]string{"test": "header1"},
-		Attributes:           map[string]string{"attr-key": "attr-val"},
-		metricsConverter:     metricsConverter,
-		grpcClientConn:       m.GrpcClient(),
-		metricsServiceClient: pmetricotlp.NewGRPCClient(m.GrpcClient()),
-		Log:                  testutil.Logger{},
+		ServiceAddress:   m.Address(),
+		Timeout:          config.Duration(time.Second),
+		Headers:          map[string]string{"test": "header1"},
+		Attributes:       map[string]string{"attr-key": "attr-val"},
+		metricsConverter: metricsConverter,
+		gRPCClient: &gRPCClient{
+			grpcClientConn:       m.GrpcClient(),
+			metricsServiceClient: pmetricotlp.NewGRPCClient(m.GrpcClient()),
+		},
+		Log: testutil.Logger{},
 	}
 
 	input := testutil.MustMetric(
