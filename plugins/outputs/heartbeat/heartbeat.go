@@ -136,7 +136,7 @@ func (h *Heartbeat) Close() error {
 	return nil
 }
 
-func (h *Heartbeat) Write([]telegraf.Metric) error {
+func (*Heartbeat) Write([]telegraf.Metric) error {
 	return nil
 }
 
