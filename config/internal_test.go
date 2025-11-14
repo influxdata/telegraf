@@ -101,7 +101,7 @@ func TestEnvironmentSubstitution(t *testing.T) {
 			if tt.setEnv != nil {
 				tt.setEnv(t)
 			}
-			actual, err := substituteEnvironment([]byte(tt.contents), false)
+			actual, err := substituteEnvironmentNonStrict([]byte(tt.contents), false)
 			if tt.wantErr {
 				require.ErrorContains(t, err, tt.errSubstring)
 				return
@@ -204,7 +204,7 @@ func TestEnvironmentSubstitutionOldBehavior(t *testing.T) {
 			t.Setenv("VAR", "foobar")
 			t.Setenv("FALLBACK", "default")
 			t.Setenv("EMPTY", "")
-			actual, err := substituteEnvironment([]byte(tt.contents), true)
+			actual, err := substituteEnvironmentNonStrict([]byte(tt.contents), true)
 			require.NoError(t, err)
 			require.EqualValues(t, tt.expected, string(actual))
 		})
@@ -298,7 +298,7 @@ func TestEnvironmentSubstitutionNewBehavior(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("VAR", "foobar")
 			t.Setenv("FALLBACK", "default")
-			actual, err := substituteEnvironment([]byte(tt.contents), false)
+			actual, err := substituteEnvironmentNonStrict([]byte(tt.contents), false)
 			require.NoError(t, err)
 			require.EqualValues(t, tt.expected, string(actual))
 		})

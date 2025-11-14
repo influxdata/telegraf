@@ -46,6 +46,7 @@ type GlobalFlags struct {
 	plugindDir              string
 	password                string
 	oldEnvBehavior          bool
+	nonStrictEnvVars        bool
 	printPluginConfigSource bool
 	test                    bool
 	debug                   bool
@@ -107,7 +108,7 @@ func (t *Telegraf) Init(pprofErr <-chan error, f Filters, g GlobalFlags, w Windo
 
 	// Set environment replacement behavior
 	config.OldEnvVarReplacement = g.oldEnvBehavior
-
+	config.NonStrictEnvVarHandling = g.nonStrictEnvVars
 	config.PrintPluginConfigSource = g.printPluginConfigSource
 }
 
