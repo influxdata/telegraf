@@ -29,6 +29,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## An URL where Nginx Upstream check module is enabled
   ## It should be set to return a JSON formatted response
   url = "http://127.0.0.1/status?format=json"
+  ## You can also point it at a unix socket too
+  # url = "http+unix:///var/run/nginx.sock:/status?format=json"
 
   ## HTTP method
   # method = "GET"

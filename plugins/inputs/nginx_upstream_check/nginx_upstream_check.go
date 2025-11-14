@@ -2,6 +2,7 @@
 package nginx_upstream_check
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -13,7 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/tls"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -28,9 +29,10 @@ type NginxUpstreamCheck struct {
 	Method     string            `toml:"method"`
 	Headers    map[string]string `toml:"headers"`
 	HostHeader string            `toml:"host_header"`
-	Timeout    config.Duration   `toml:"timeout"`
 
-	tls.ClientConfig
+	Log telegraf.Logger `toml:"-"`
+	common_http.HTTPClientConfig
+
 	client *http.Client
 }
 
@@ -82,16 +84,11 @@ func (check *NginxUpstreamCheck) Gather(accumulator telegraf.Accumulator) error 
 
 // createHTTPClient create a clients to access API
 func (check *NginxUpstreamCheck) createHTTPClient() (*http.Client, error) {
-	tlsConfig, err := check.ClientConfig.TLSConfig()
+	// Create the client
+	ctx := context.Background()
+	client, err := check.HTTPClientConfig.CreateClient(ctx, check.Log)
 	if err != nil {
-		return nil, err
-	}
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsConfig,
-		},
-		Timeout: time.Duration(check.Timeout),
+		return nil, fmt.Errorf("creating client failed: %w", err)
 	}
 
 	return client, nil
@@ -188,7 +185,9 @@ func newNginxUpstreamCheck() *NginxUpstreamCheck {
 		Method:     "GET",
 		Headers:    make(map[string]string),
 		HostHeader: "",
-		Timeout:    config.Duration(time.Second * 5),
+		HTTPClientConfig: common_http.HTTPClientConfig{
+			Timeout: config.Duration(time.Second * 5),
+		},
 	}
 }
 
