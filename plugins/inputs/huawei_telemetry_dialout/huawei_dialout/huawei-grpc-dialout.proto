@@ -1,0 +1,13 @@
+syntax = "proto3";                          //The .proto file version is defined as v3.
+package huawei_dialout;                     //The package name is huawei_dialout.
+service gRPCDataservice {                   //The service name is gRPCDataservice.
+    rpc dataPublish(stream serviceArgs) returns(stream serviceArgs) {};                 //The method name is dataPublish, providing the data push method. The working mode is bidirectional stream mode. The input parameter is the serviceArgs data flow.
+}
+message serviceArgs {                       //Message format description.
+    int64 ReqId = 1;                        //Request ID.
+    oneof MessageData {
+        bytes data = 2;         //Sampled data in GPB encoding format is carried.
+        string data_json = 4;   //Sampled data in JSON encoding format is carried.
+    }
+    string errors = 3;         //Error description.
+}
