@@ -1,0 +1,1 @@
+{"private_key_id":"test-key-id","private_key":"-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIPvWtMOUURoTD9vmN9FXmnR2nAdUlXcetu8s2JlChfzMoAoGCCqGSM49\nAwEHoUQDQgAEUAizeNgzX/cUxVKQQTIdpE7mqe1/ffrRJ05DpaXYRgV69d1toW+4\nFVblTzZXA9cDNCUKuv8FtVclS3usDZkFRw==\n-----END EC PRIVATE KEY-----\n","project":"test-project","name":"test-identity","token_uri":"http://localhost/token"}
