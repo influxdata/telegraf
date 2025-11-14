@@ -40,7 +40,7 @@ func (q *query) init(c *client, log telegraf.Logger) error {
 	// Prepare the query information from the URL and given parameters
 	u, err := url.Parse(c.url)
 	if err != nil {
-		return fmt.Errorf("parsing URL %q failed: %w", q.client.url, err)
+		return fmt.Errorf("parsing URL %q failed: %w", c.url, err)
 	}
 
 	q.client = c
