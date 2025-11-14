@@ -1,0 +1,1 @@
+/loki/api/v1/query?query=sum%28rate%28%7Bjob%3D%22varlogs%22%7D%5B5m%5D%29%29+by+%28detected_level%29&time=

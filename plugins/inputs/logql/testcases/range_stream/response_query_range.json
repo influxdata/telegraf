@@ -1,0 +1,190 @@
+{
+    "status": "success",
+    "data": {
+        "resultType": "streams",
+        "result": [
+            {
+                "stream": {
+                    "detected_level": "unknown",
+                    "filename": "/var/log/Xorg.0.log",
+                    "job": "varlogs",
+                    "service_name": "varlogs"
+                },
+                "values": [
+                    [
+                        "1762943172891887962",
+                        "[     6.806] (--) Log file renamed from \"/var/log/Xorg.pid-693.log\" to \"/var/log/Xorg.0.log\""
+                    ],
+                    [
+                        "1762943172891890282",
+                        "[     6.807] "
+                    ],
+                    [
+                        "1762943172891896732",
+                        "X.Org X Server 1.21.1.14"
+                    ],
+                    [
+                        "1762943172892086695",
+                        "X Protocol Version 11, Revision 0"
+                    ],
+                    [
+                        "1762943172892116545",
+                        "[     6.807] Current Operating System: Linux Hugin 6.12.1-arch1-1 #1 SMP PREEMPT_DYNAMIC Fri, 22 Nov 2024 16:04:27 +0000 x86_64"
+                    ]
+                ]
+            }
+        ],
+        "stats": {
+            "summary": {
+                "bytesProcessedPerSecond": 105996,
+                "linesProcessedPerSecond": 873,
+                "totalBytesProcessed": 728,
+                "totalLinesProcessed": 6,
+                "execTime": 0.006868,
+                "queueTime": 0.00136,
+                "subqueries": 0,
+                "totalEntriesReturned": 5,
+                "splits": 9,
+                "shards": 9,
+                "totalPostFilterLines": 6,
+                "totalStructuredMetadataBytesProcessed": 180
+            },
+            "querier": {
+                "store": {
+                    "totalChunksRef": 1,
+                    "totalChunksDownloaded": 1,
+                    "chunksDownloadTime": 80819,
+                    "queryReferencedStructuredMetadata": false,
+                    "chunk": {
+                        "headChunkBytes": 0,
+                        "headChunkLines": 0,
+                        "decompressedBytes": 728,
+                        "decompressedLines": 6,
+                        "compressedBytes": 9647,
+                        "totalDuplicates": 0,
+                        "postFilterLines": 6,
+                        "headChunkStructuredMetadataBytes": 0,
+                        "decompressedStructuredMetadataBytes": 180
+                    },
+                    "chunkRefsFetchTime": 450513,
+                    "congestionControlLatency": 0,
+                    "pipelineWrapperFilteredLines": 0
+                }
+            },
+            "ingester": {
+                "totalReached": 0,
+                "totalChunksMatched": 0,
+                "totalBatches": 0,
+                "totalLinesSent": 0,
+                "store": {
+                    "totalChunksRef": 0,
+                    "totalChunksDownloaded": 0,
+                    "chunksDownloadTime": 0,
+                    "queryReferencedStructuredMetadata": false,
+                    "chunk": {
+                        "headChunkBytes": 0,
+                        "headChunkLines": 0,
+                        "decompressedBytes": 0,
+                        "decompressedLines": 0,
+                        "compressedBytes": 0,
+                        "totalDuplicates": 0,
+                        "postFilterLines": 0,
+                        "headChunkStructuredMetadataBytes": 0,
+                        "decompressedStructuredMetadataBytes": 0
+                    },
+                    "chunkRefsFetchTime": 0,
+                    "congestionControlLatency": 0,
+                    "pipelineWrapperFilteredLines": 0
+                }
+            },
+            "cache": {
+                "chunk": {
+                    "entriesFound": 1,
+                    "entriesRequested": 1,
+                    "entriesStored": 0,
+                    "bytesReceived": 10027,
+                    "bytesSent": 0,
+                    "requests": 2,
+                    "downloadTime": 17010,
+                    "queryLengthServed": 0
+                },
+                "index": {
+                    "entriesFound": 0,
+                    "entriesRequested": 0,
+                    "entriesStored": 0,
+                    "bytesReceived": 0,
+                    "bytesSent": 0,
+                    "requests": 0,
+                    "downloadTime": 0,
+                    "queryLengthServed": 0
+                },
+                "result": {
+                    "entriesFound": 0,
+                    "entriesRequested": 0,
+                    "entriesStored": 0,
+                    "bytesReceived": 0,
+                    "bytesSent": 0,
+                    "requests": 0,
+                    "downloadTime": 0,
+                    "queryLengthServed": 0
+                },
+                "statsResult": {
+                    "entriesFound": 9,
+                    "entriesRequested": 9,
+                    "entriesStored": 0,
+                    "bytesReceived": 2160,
+                    "bytesSent": 0,
+                    "requests": 9,
+                    "downloadTime": 59339,
+                    "queryLengthServed": 30122000000000
+                },
+                "volumeResult": {
+                    "entriesFound": 0,
+                    "entriesRequested": 0,
+                    "entriesStored": 0,
+                    "bytesReceived": 0,
+                    "bytesSent": 0,
+                    "requests": 0,
+                    "downloadTime": 0,
+                    "queryLengthServed": 0
+                },
+                "seriesResult": {
+                    "entriesFound": 0,
+                    "entriesRequested": 0,
+                    "entriesStored": 0,
+                    "bytesReceived": 0,
+                    "bytesSent": 0,
+                    "requests": 0,
+                    "downloadTime": 0,
+                    "queryLengthServed": 0
+                },
+                "labelResult": {
+                    "entriesFound": 0,
+                    "entriesRequested": 0,
+                    "entriesStored": 0,
+                    "bytesReceived": 0,
+                    "bytesSent": 0,
+                    "requests": 0,
+                    "downloadTime": 0,
+                    "queryLengthServed": 0
+                },
+                "instantMetricResult": {
+                    "entriesFound": 0,
+                    "entriesRequested": 0,
+                    "entriesStored": 0,
+                    "bytesReceived": 0,
+                    "bytesSent": 0,
+                    "requests": 0,
+                    "downloadTime": 0,
+                    "queryLengthServed": 0
+                }
+            },
+            "index": {
+                "totalChunks": 0,
+                "postFilterChunks": 0,
+                "shardsDuration": 0,
+                "usedBloomFilters": false
+            }
+        }
+    }
+}
