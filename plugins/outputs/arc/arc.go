@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -42,7 +43,7 @@ func (*Arc) SampleConfig() string {
 
 func (a *Arc) Init() error {
 	if a.URL == "" {
-		return fmt.Errorf("url is required")
+		return errors.New("url is required")
 	}
 
 	switch a.ContentEncoding {
