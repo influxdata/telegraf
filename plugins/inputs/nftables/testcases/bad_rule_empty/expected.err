@@ -1,0 +1,1 @@
+parsing command output failed: unable to parse rule: json: cannot unmarshal string into Go value of type nftables.rule
