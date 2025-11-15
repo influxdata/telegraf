@@ -38,6 +38,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Server dialect, can be "openldap" or "389ds"
   # dialect = "openldap"
 
+  # What sort of Bind to use
+  ## Empty or "simple" means to use a simple LDAP bind, otherwise use a
+  ## specified SASL mechanism (only EXTERNAL currently supported - for TLS
+  ## client certs or UNIX credentials)
+  # bind_mechanism = "simple"
+
   # DN and password to bind with
   ## If bind_dn is empty an anonymous bind is performed.
   bind_dn = ""
