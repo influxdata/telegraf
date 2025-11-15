@@ -53,6 +53,11 @@ var (
 	// environment variable replacement behavior
 	OldEnvVarReplacement = false
 
+	// NonStrictEnvVarHandling allows to disable strict and safe environment
+	// variables handling. Strict handling cannot replace non-string settings
+	// so this option must be used in those use-cases.
+	NonStrictEnvVarHandling = true
+
 	// PrintPluginConfigSource is a switch to enable printing of plugin sources
 	PrintPluginConfigSource = false
 
@@ -931,11 +936,18 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 	if err != nil {
 		return nil, err
 	}
-	outputBytes, err := substituteEnvironment(contents, OldEnvVarReplacement)
-	if err != nil {
-		return nil, err
+
+	// Use non-strict mode
+	if NonStrictEnvVarHandling {
+		output, err := substituteEnvironmentNonStrict(contents, OldEnvVarReplacement)
+		if err != nil {
+			return nil, err
+		}
+		return toml.Parse(output)
 	}
-	return toml.Parse(outputBytes)
+
+	// Use strict mode (default)
+	return substituteEnvironmentStrict(contents, OldEnvVarReplacement)
 }
 
 func (c *Config) addAggregator(name, source string, table *ast.Table) error {
