@@ -31,6 +31,7 @@ type NATS struct {
 	Username       config.Secret `toml:"username"`
 	Password       config.Secret `toml:"password"`
 	Credentials    string        `toml:"credentials"`
+	NkeySeed       string        `toml:"nkey_seed"`
 	Subject        string        `toml:"subject"`
 	UseBatchFormat bool          `toml:"use_batch_format"`
 	Jetstream      *StreamConfig `toml:"jetstream"`
@@ -118,6 +119,14 @@ func (n *NATS) Connect() error {
 
 	if n.Credentials != "" {
 		opts = append(opts, nats.UserCredentials(n.Credentials))
+	}
+
+	if n.NkeySeed != "" {
+		opt, err := nats.NkeyOptionFromSeed(n.NkeySeed)
+		if err != nil {
+			return err
+		}
+		opts = append(opts, opt)
 	}
 
 	if n.Name != "" {
