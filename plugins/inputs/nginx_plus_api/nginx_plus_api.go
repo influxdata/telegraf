@@ -2,6 +2,7 @@
 package nginx_plus_api
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"net/http"
@@ -11,7 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/tls"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -41,10 +42,10 @@ const (
 )
 
 type NginxPlusAPI struct {
-	Urls            []string        `toml:"urls"`
-	APIVersion      int64           `toml:"api_version"`
-	ResponseTimeout config.Duration `toml:"response_timeout"`
-	tls.ClientConfig
+	Urls       []string        `toml:"urls"`
+	APIVersion int64           `toml:"api_version"`
+	Log        telegraf.Logger `toml:"-"`
+	common_http.HTTPClientConfig
 
 	client *http.Client
 }
@@ -90,20 +91,15 @@ func (n *NginxPlusAPI) Gather(acc telegraf.Accumulator) error {
 }
 
 func (n *NginxPlusAPI) createHTTPClient() (*http.Client, error) {
-	if n.ResponseTimeout < config.Duration(time.Second) {
-		n.ResponseTimeout = config.Duration(time.Second * 5)
+	if n.HTTPClientConfig.ResponseHeaderTimeout < config.Duration(time.Second) {
+		n.HTTPClientConfig.ResponseHeaderTimeout = config.Duration(time.Second * 5)
 	}
 
-	tlsConfig, err := n.ClientConfig.TLSConfig()
+	// Create the client
+	ctx := context.Background()
+	client, err := n.HTTPClientConfig.CreateClient(ctx, n.Log)
 	if err != nil {
-		return nil, err
-	}
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsConfig,
-		},
-		Timeout: time.Duration(n.ResponseTimeout),
+		return nil, fmt.Errorf("creating client failed: %w", err)
 	}
 
 	return client, nil

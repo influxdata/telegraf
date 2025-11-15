@@ -32,7 +32,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Read Nginx Plus API advanced status information
 [[inputs.nginx_plus_api]]
   ## An array of Nginx API URIs to gather stats.
-  urls = ["http://localhost/api"]
+  urls = ["http://localhost/api", "http+unix:///var/run/nginx.sock:/api"]
   # Nginx API version, default: 3
   # api_version = 3
 
