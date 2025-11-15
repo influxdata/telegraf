@@ -3,6 +3,7 @@ package nginx
 
 import (
 	"bufio"
+	"context"
 	_ "embed"
 	"fmt"
 	"net"
@@ -15,7 +16,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/tls"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -23,9 +24,9 @@ import (
 var sampleConfig string
 
 type Nginx struct {
-	Urls            []string        `toml:"urls"`
-	ResponseTimeout config.Duration `toml:"response_timeout"`
-	tls.ClientConfig
+	Urls []string        `toml:"urls"`
+	Log  telegraf.Logger `toml:"-"`
+	common_http.HTTPClientConfig
 
 	// HTTP client
 	client *http.Client
@@ -67,20 +68,15 @@ func (n *Nginx) Gather(acc telegraf.Accumulator) error {
 }
 
 func (n *Nginx) createHTTPClient() (*http.Client, error) {
-	tlsCfg, err := n.ClientConfig.TLSConfig()
+	if n.HTTPClientConfig.ResponseHeaderTimeout < config.Duration(time.Second) {
+		n.HTTPClientConfig.ResponseHeaderTimeout = config.Duration(time.Second * 5)
+	}
+
+	// Create the client
+	ctx := context.Background()
+	client, err := n.HTTPClientConfig.CreateClient(ctx, n.Log)
 	if err != nil {
-		return nil, err
-	}
-
-	if n.ResponseTimeout < config.Duration(time.Second) {
-		n.ResponseTimeout = config.Duration(time.Second * 5)
-	}
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsCfg,
-		},
-		Timeout: time.Duration(n.ResponseTimeout),
+		return nil, fmt.Errorf("creating client failed: %w", err)
 	}
 
 	return client, nil

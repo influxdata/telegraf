@@ -28,7 +28,7 @@ Reading: 8 Writing: 125 Waiting: 946
 
 // Verify that nginx tags are properly parsed based on the server
 func TestNginxTags(t *testing.T) {
-	urls := []string{"http://localhost/endpoint", "http://localhost:80/endpoint"}
+	urls := []string{"http://localhost/endpoint", "http://localhost:80/endpoint", "http+unix://localhost/endpoint"}
 	for _, url1 := range urls {
 		addr, err := url.Parse(url1)
 		require.NoError(t, err)
