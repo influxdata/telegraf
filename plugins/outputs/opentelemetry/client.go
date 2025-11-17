@@ -3,14 +3,18 @@ package opentelemetry
 import (
 	"bytes"
 	"context"
+	ntls "crypto/tls"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type gRPCClient struct {
@@ -24,6 +28,77 @@ type httpClient struct {
 	url          string
 	encodingType string
 	compress     string
+}
+
+func (g *gRPCClient) Connect(
+	serviceAddress string,
+	clientConfig *tls.ClientConfig,
+	compression string,
+	coralogixConfig *CoralogixConfig,
+	encoding string,
+) error {
+	gRPCClient := &gRPCClient{}
+	var grpcTLSDialOption grpc.DialOption
+	if tlsConfig, err := clientConfig.TLSConfig(); err != nil {
+		return err
+	} else if tlsConfig != nil {
+		grpcTLSDialOption = grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig))
+	} else if coralogixConfig != nil {
+		// For coralogix, we enforce GRPC connection with TLS
+		grpcTLSDialOption = grpc.WithTransportCredentials(credentials.NewTLS(&ntls.Config{}))
+	} else {
+		grpcTLSDialOption = grpc.WithTransportCredentials(insecure.NewCredentials())
+	}
+
+	grpcClientConn, err := grpc.NewClient(serviceAddress, grpcTLSDialOption, grpc.WithUserAgent(userAgent))
+	if err != nil {
+		return err
+	}
+
+	metricsServiceClient := pmetricotlp.NewGRPCClient(grpcClientConn)
+
+	gRPCClient.grpcClientConn = grpcClientConn
+	gRPCClient.metricsServiceClient = metricsServiceClient
+
+	if compression != "" && compression != "none" {
+		gRPCClient.callOptions = append(gRPCClient.callOptions, grpc.UseCompressor(compression))
+	}
+
+	return nil
+}
+
+func (h *httpClient) Connect(
+	serviceAddress string,
+	clientConfig *tls.ClientConfig,
+	compression string,
+	coralogixConfig *CoralogixConfig,
+	encoding string,
+) error {
+	httpClient := &httpClient{
+		httpClient:   &http.Client{},
+		url:          serviceAddress,
+		encodingType: encoding,
+		compress:     compression,
+	}
+	if tlsConfig, err := clientConfig.TLSConfig(); err != nil {
+		return err
+	} else if tlsConfig != nil {
+		httpClient.httpClient.Transport = &http.Transport{
+			TLSClientConfig: tlsConfig,
+		}
+	} else if coralogixConfig != nil {
+		// For coralogix, we enforce HTTP connection with TLS
+		httpClient.httpClient.Transport = &http.Transport{
+			TLSClientConfig: &ntls.Config{},
+		}
+	} else {
+		httpClient.httpClient.Transport = &http.Transport{
+			TLSClientConfig: &ntls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+	}
+	return nil
 }
 
 func (g *gRPCClient) Export(ctx context.Context, request pmetricotlp.ExportRequest) (pmetricotlp.ExportResponse, error) {
