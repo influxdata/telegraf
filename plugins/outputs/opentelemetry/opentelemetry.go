@@ -132,9 +132,7 @@ func (o *OpenTelemetry) Connect() error {
 }
 
 func (o *OpenTelemetry) Close() error {
-	if o.otlpMetricClient != nil {
-		return o.otlpMetricClient.Close()
-	}
+	o.otlpMetricClient.Close()
 	return nil
 }
 
@@ -280,6 +278,10 @@ func (g *gRPCClient) Export(ctx context.Context, request pmetricotlp.ExportReque
 }
 
 func (g *gRPCClient) Close() error {
+	if g == nil {
+		return nil
+	}
+
 	if g.grpcClientConn != nil {
 		err := g.grpcClientConn.Close()
 		g.grpcClientConn = nil
