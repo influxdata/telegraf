@@ -36,16 +36,9 @@ type packetListener struct {
 	parsePool *pond.WorkerPool
 }
 
-func newPacketListener(encoding string, maxDecompressionSize config.Size, maxWorkers int, allowedSources []string) *packetListener {
-	var parsedIPs []net.IP
-	for _, ipStr := range allowedSources {
-		if ip := net.ParseIP(ipStr); ip != nil {
-			parsedIPs = append(parsedIPs, ip)
-		}
-	}
-
+func newPacketListener(encoding string, maxDecompressionSize config.Size, maxWorkers int, allowedSources []net.IP) *packetListener {
 	return &packetListener{
-		AllowedSources:       parsedIPs,
+		AllowedSources:       allowedSources,
 		Encoding:             encoding,
 		MaxDecompressionSize: int64(maxDecompressionSize),
 		parsePool:            pond.New(maxWorkers, 0, pond.MinWorkers(maxWorkers/2+1)),

@@ -36,7 +36,7 @@ type Config struct {
 	ContentEncoding      string           `toml:"content_encoding"`
 	MaxDecompressionSize config.Size      `toml:"max_decompression_size"`
 	MaxParallelParsers   int              `toml:"max_parallel_parsers"`
-	AllowedSources       []string         `toml:"allowed_sources"`
+	AllowedSources       []net.IP         `toml:"allowed_sources"`
 	common_tls.ServerConfig
 }
 
