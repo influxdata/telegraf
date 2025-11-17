@@ -60,11 +60,6 @@ type OpenTelemetry struct {
 	otlpMetricClient otlpMetricClient
 }
 
-var (
-	_ otlpMetricClient = (*gRPCClient)(nil)
-	_ otlpMetricClient = (*httpClient)(nil)
-)
-
 type otlpMetricClient interface {
 	Export(ctx context.Context, request pmetricotlp.ExportRequest) (pmetricotlp.ExportResponse, error)
 	Close() error
