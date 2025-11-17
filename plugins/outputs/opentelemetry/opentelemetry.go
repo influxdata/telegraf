@@ -35,17 +35,9 @@ var userAgent = internal.ProductToken()
 var sampleConfig string
 
 type OpenTelemetry struct {
-	// Protocol is the protocol to use for sending data to the OpenTelemetry Collector.
-	// Supported protocols are "grpc" & "http". Defaults to "grpc".
-	Protocol string `toml:"protocol"`
-	// EncodingType is the encoding type to use for sending data to the OpenTelemetry Collector.
-	// It is used only when Protocol is set to "http".
-	// Supported encoding types are "application/x-protobuf" & "application/json". Defaults to "application/x-protobuf".
-	EncodingType string `toml:"encoding_type"`
-	// ServiceAddress is the address of the OpenTelemetry Collector.
-	// It must include the port number.
-	// Example: "localhost:4317" for gRPC protocol, "http://localhost:4318/v1/metrics" for HTTP protocol.
 	ServiceAddress string `toml:"service_address"`
+	Protocol       string `toml:"protocol"`
+	EncodingType   string `toml:"encoding_type"`
 
 	tls.ClientConfig
 	Timeout     config.Duration   `toml:"timeout"`
