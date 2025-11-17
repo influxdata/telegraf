@@ -3,19 +3,14 @@ package opentelemetry
 
 import (
 	"context"
-	ntls "crypto/tls"
 	_ "embed"
 	"fmt"
-	"net/http"
 	"sort"
 	"time"
 
 	"github.com/influxdata/influxdb-observability/common"
 	"github.com/influxdata/influxdb-observability/influx2otel"
 	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
 	_ "google.golang.org/grpc/encoding/gzip" // Blank import to allow gzip encoding
 	"google.golang.org/grpc/metadata"
 
@@ -50,6 +45,13 @@ type OpenTelemetry struct {
 }
 
 type otlpMetricClient interface {
+	Connect(
+		serviceAddress string,
+		clientConfig *tls.ClientConfig,
+		compression string,
+		coralogixConfig *CoralogixConfig,
+		encoding string, // TODO: remove encoding from interface
+	) error
 	Export(ctx context.Context, request pmetricotlp.ExportRequest) (pmetricotlp.ExportResponse, error)
 	Close() error
 }
@@ -98,26 +100,28 @@ func (o *OpenTelemetry) Connect() error {
 
 	switch o.Protocol {
 	case "", "grpc":
-		err = o.connectGRPC()
-		if err != nil {
-			return err
-		}
+		o.otlpMetricClient = &gRPCClient{}
 	case "http":
-		err = o.connectHTTP()
-		if err != nil {
-			return err
-		}
-		return nil
+		o.otlpMetricClient = &httpClient{}
 	default:
 		return fmt.Errorf("unsupported protocol '%s'", o.Protocol)
+	}
+	err = o.otlpMetricClient.Connect(
+		o.ServiceAddress,
+		&o.ClientConfig,
+		o.Compression,
+		o.Coralogix,
+		o.EncodingType,
+	)
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
 
 func (o *OpenTelemetry) Close() error {
-	o.otlpMetricClient.Close()
-	return nil
+	return o.otlpMetricClient.Close()
 }
 
 func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
@@ -193,68 +197,6 @@ func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 	defer cancel()
 	_, err := o.otlpMetricClient.Export(ctx, md)
 	return err
-}
-
-func (o *OpenTelemetry) connectGRPC() error {
-	gRPCClient := &gRPCClient{}
-	var grpcTLSDialOption grpc.DialOption
-	if tlsConfig, err := o.ClientConfig.TLSConfig(); err != nil {
-		return err
-	} else if tlsConfig != nil {
-		grpcTLSDialOption = grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig))
-	} else if o.Coralogix != nil {
-		// For coralogix, we enforce GRPC connection with TLS
-		grpcTLSDialOption = grpc.WithTransportCredentials(credentials.NewTLS(&ntls.Config{}))
-	} else {
-		grpcTLSDialOption = grpc.WithTransportCredentials(insecure.NewCredentials())
-	}
-
-	grpcClientConn, err := grpc.NewClient(o.ServiceAddress, grpcTLSDialOption, grpc.WithUserAgent(userAgent))
-	if err != nil {
-		return err
-	}
-
-	metricsServiceClient := pmetricotlp.NewGRPCClient(grpcClientConn)
-
-	gRPCClient.grpcClientConn = grpcClientConn
-	gRPCClient.metricsServiceClient = metricsServiceClient
-
-	if o.Compression != "" && o.Compression != "none" {
-		gRPCClient.callOptions = append(gRPCClient.callOptions, grpc.UseCompressor(o.Compression))
-	}
-
-	o.otlpMetricClient = gRPCClient
-	return nil
-}
-
-func (o *OpenTelemetry) connectHTTP() error {
-	httpClient := &httpClient{
-		httpClient:   &http.Client{},
-		url:          o.ServiceAddress,
-		encodingType: o.EncodingType,
-		compress:     o.Compression,
-	}
-	if tlsConfig, err := o.ClientConfig.TLSConfig(); err != nil {
-		return err
-	} else if tlsConfig != nil {
-		httpClient.httpClient.Transport = &http.Transport{
-			TLSClientConfig: tlsConfig,
-		}
-	} else if o.Coralogix != nil {
-		// For coralogix, we enforce HTTP connection with TLS
-		httpClient.httpClient.Transport = &http.Transport{
-			TLSClientConfig: &ntls.Config{},
-		}
-	} else {
-		httpClient.httpClient.Transport = &http.Transport{
-			TLSClientConfig: &ntls.Config{
-				InsecureSkipVerify: true,
-			},
-		}
-	}
-
-	o.otlpMetricClient = httpClient
-	return nil
 }
 
 const (
