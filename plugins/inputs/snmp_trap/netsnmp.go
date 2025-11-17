@@ -11,7 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/snmp"
+	"github.com/influxdata/telegraf/plugins/common/snmp"
 )
 
 type execer func(config.Duration, string, ...string) ([]byte, error)
