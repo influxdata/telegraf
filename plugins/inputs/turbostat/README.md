@@ -68,7 +68,7 @@ times, or with a comma-separated list of column names.
 times, or with a comma-separated list of column names. Be careful not to hide
 CPU, Core, Package, and Die, or the output may lose much of its meaning.
 
-To discover the list of available columns, run `sudo tubostat --list`.
+To discover the list of available columns, run `sudo turbostat --list`.
 
 For further information, run `man turbostat`. If the man page is not installed,
 download [turbostat.8][turbostat.8] and browse it with `man ./turbostat.8`.
