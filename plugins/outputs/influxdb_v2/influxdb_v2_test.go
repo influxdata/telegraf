@@ -1,6 +1,8 @@
 package influxdb_v2_test
 
 import (
+	"bytes"
+	"compress/gzip"
 	"fmt"
 	"io"
 	"math"
@@ -1093,6 +1095,70 @@ func TestUseDynamicSecret(t *testing.T) {
 
 	require.NoError(t, secretToken.Set([]byte(token)))
 	require.NoError(t, plugin.Write(metrics))
+}
+
+func TestConcurrentWrites(t *testing.T) {
+	totalMetrics := 100001
+
+	var received atomic.Int32
+	// Setup a test server
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch r.URL.Path {
+			case "/api/v2/write":
+				reader, err := gzip.NewReader(r.Body)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
+				defer reader.Close()
+				body, err := io.ReadAll(reader)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
+				lineCount := bytes.Count(body, []byte("\n"))
+				if len(body) > 0 && body[len(body)-1] != '\n' {
+					lineCount++
+				}
+				received.Add(int32(lineCount))
+				w.WriteHeader(http.StatusNoContent)
+			default:
+				w.WriteHeader(http.StatusNotFound)
+			}
+		}),
+	)
+	defer ts.Close()
+
+	// Setup plugin and connect
+	plugin := &influxdb.InfluxDB{
+		URLs:             []string{"http://" + ts.Listener.Addr().String()},
+		Token:            config.NewSecret([]byte("sometoken")),
+		Bucket:           "my_bucket",
+		ConcurrentWrites: 4,
+		Log:              &testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	metrics := make([]telegraf.Metric, 0, totalMetrics)
+	for i := range totalMetrics {
+		metrics = append(metrics, metric.New(
+			"cpu",
+			map[string]string{
+				"bucket": "foo",
+			},
+			map[string]interface{}{
+				"value": float64(i),
+			},
+			time.Unix(0, 0),
+		))
+	}
+	require.NoError(t, plugin.Write(metrics))
+	require.Equal(t, int32(totalMetrics), received.Load(), "unexpected received metrics count")
 }
 
 func BenchmarkWrite1k(b *testing.B) {
