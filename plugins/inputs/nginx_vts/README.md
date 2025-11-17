@@ -30,7 +30,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Read Nginx virtual host traffic status module information (nginx-module-vts)
 [[inputs.nginx_vts]]
   ## An array of ngx_http_status_module or status URI to gather stats.
-  urls = ["http://localhost/status"]
+  urls = ["http://localhost/status", "http+unix:///var/run/nginx.sock:/status"]
 
   ## HTTP response timeout (default: 5s)
   response_timeout = "5s"
