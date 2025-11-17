@@ -32,7 +32,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Read Nginx Plus' advanced status information
 [[inputs.nginx_plus]]
   ## An array of Nginx status URIs to gather stats.
-  urls = ["http://localhost/status"]
+  urls = ["http://localhost/status", "http+unix:///var/run/nginx.sock:/status"]
 
   # HTTP response timeout (default: 5s)
   response_timeout = "5s"
