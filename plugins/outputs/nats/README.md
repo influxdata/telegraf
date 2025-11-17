@@ -46,6 +46,9 @@ to use them.
   ## Optional NATS 2.0 and NATS NGS compatible user credentials
   # credentials = "/etc/telegraf/nats.creds"
 
+  ## Optional authentication with nkey seed file (NATS 2.0)
+  # nkey_seed = "/etc/telegraf/seed.txt"
+
   ## NATS subject for producer messages.
   ## This field can be a static string or a Go template, see README for details.
   ## Incompatible with `use_batch_format
