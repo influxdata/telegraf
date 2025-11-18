@@ -55,6 +55,7 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 		logger.Error(err)
 	}
 	SetLoggerOnPlugin(input, logger)
+	SetStatisticsOnPlugin(input, logger, tags)
 
 	return &RunningInput{
 		Input:  input,

@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal/snmp"
+	"github.com/influxdata/telegraf/plugins/common/snmp"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -621,7 +621,7 @@ func TestGather_host(t *testing.T) {
 }
 
 func TestSnmpInitGosmi(t *testing.T) {
-	testDataPath, err := filepath.Abs("../../../internal/snmp/testdata/gosmi")
+	testDataPath, err := filepath.Abs("../../common/snmp/testdata/gosmi")
 	require.NoError(t, err)
 
 	s := &Snmp{

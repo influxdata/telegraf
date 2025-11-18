@@ -1194,6 +1194,255 @@ func TestPersisterProcessorRegistration(t *testing.T) {
 	}
 }
 
+func TestConfigEnvVarsStrict(t *testing.T) {
+	tests := []struct {
+		name     string
+		file     string
+		envvars  map[string]string
+		expected *MockupInputPlugin
+	}{
+		{
+			name: "valid",
+			file: "envvar_valid.conf",
+			envvars: map[string]string{
+				"MY_TEST_SERVER": "192.168.1.1",
+			},
+			expected: &MockupInputPlugin{
+				Servers: []string{"192.168.1.1"},
+				Port:    8080,
+				Command: `Raw command which may or may not contain # in it
+# is unique`,
+			},
+		},
+		{
+			name: "valid multiline",
+			file: "envvar_valid_multiline.conf",
+			envvars: map[string]string{
+				"MY_TEST_SERVER": "192.168.1.1",
+				"COMMAND": `
+					Raw command potentially
+					with multiple
+					lines in it
+				`,
+			},
+			expected: &MockupInputPlugin{
+				Servers: []string{"192.168.1.1"},
+				Port:    8080,
+				Command: "    " + `
+					Raw command potentially
+					with multiple
+					lines in it
+				` + "\n  ",
+			},
+		},
+
+		{
+			name: "malicious envvar",
+			file: "envvar_malicious.conf",
+			envvars: map[string]string{
+				"PORT": "8080",
+				"PIDFILE": `a pid"
+
+			[[inputs.memcached]]
+			  command = "evil`,
+			},
+			expected: &MockupInputPlugin{
+				Servers: []string{"my.server.com"},
+				Port:    8080,
+				Command: `Raw command which may or may not contain # in it
+# is unique`,
+				PidFile: `a pid"
+
+			[[inputs.memcached]]
+			  command = "evil`,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config.NonStrictEnvVarHandling = false
+
+			// Export the environment variables
+			for k, v := range tt.envvars {
+				t.Setenv(k, v)
+			}
+
+			// Load the config
+			c := config.NewConfig()
+			confFile := filepath.Join("testdata", tt.file)
+			require.NoError(t, c.LoadConfig(confFile))
+
+			// Validate the loaded data
+			require.Len(t, c.Inputs, 1)
+			plugin, ok := c.Inputs[0].Input.(*MockupInputPlugin)
+			require.Truef(t, ok, "plugin is of wrong type %T", c.Inputs[0].Input)
+
+			// Ignore Log, Parser and ID
+			plugin.Log = nil
+			plugin.parser = nil
+			require.Equal(t, tt.expected, plugin)
+		})
+	}
+}
+
+func TestConfigEnvVarsStrictFailNonString(t *testing.T) {
+	config.NonStrictEnvVarHandling = false
+
+	envvars := map[string]string{
+		"MY_TEST_SERVER": "192.168.1.1",
+		"PORT":           "443",
+	}
+
+	// Export the environment variables
+	for k, v := range envvars {
+		t.Setenv(k, v)
+	}
+
+	// Load the config
+	c := config.NewConfig()
+	confFile := filepath.Join("testdata", "envvar_non_string.conf")
+	require.ErrorContains(t, c.LoadConfig(confFile), "invalid TOML syntax")
+}
+
+func TestConfigEnvVarsNonStrict(t *testing.T) {
+	tests := []struct {
+		name     string
+		file     string
+		envvars  map[string]string
+		expected *MockupInputPlugin
+	}{
+		{
+			name: "valid",
+			file: "envvar_valid.conf",
+			envvars: map[string]string{
+				"MY_TEST_SERVER": "192.168.1.1",
+			},
+			expected: &MockupInputPlugin{
+				Servers: []string{"192.168.1.1"},
+				Command: `Raw command which may or may not contain # in it
+# is unique`,
+				Port: 8080,
+			},
+		},
+		{
+			name: "non-string",
+			file: "envvar_non_string.conf",
+			envvars: map[string]string{
+				"MY_TEST_SERVER": "192.168.1.1",
+				"PORT":           "443",
+			},
+			expected: &MockupInputPlugin{
+				Servers: []string{"192.168.1.1"},
+				Port:    443,
+				Command: `Raw command which may or may not contain # in it
+# is unique`,
+			},
+		},
+		{
+			name: "valid multiline",
+			file: "envvar_valid_multiline.conf",
+			envvars: map[string]string{
+				"MY_TEST_SERVER": "192.168.1.1",
+				"COMMAND": `
+					Raw command potentially
+					with multiple
+					lines in it
+				`,
+			},
+			expected: &MockupInputPlugin{
+				Servers: []string{"192.168.1.1"},
+				Port:    8080,
+				Command: "    " + `
+					Raw command potentially
+					with multiple
+					lines in it
+				` + "\n  ",
+			},
+		},
+
+		{
+			name: "non-string multiline",
+			file: "envvar_non_string_multiline.conf",
+			envvars: map[string]string{
+				"MY_TEST_SERVER": "192.168.1.1",
+				"PORT":           "443",
+				"COMMAND": `
+					Raw command potentially
+					with multiple
+					lines in it
+				`,
+			},
+			expected: &MockupInputPlugin{
+				Servers: []string{"192.168.1.1"},
+				Port:    443,
+				Command: "    " + `
+					Raw command potentially
+					with multiple
+					lines in it
+				` + "\n  ",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config.NonStrictEnvVarHandling = true
+			t.Cleanup(func() {
+				config.NonStrictEnvVarHandling = false
+			})
+
+			// Export the environment variables
+			for k, v := range tt.envvars {
+				t.Setenv(k, v)
+			}
+
+			// Load the config
+			c := config.NewConfig()
+			confFile := filepath.Join("testdata", tt.file)
+			require.NoError(t, c.LoadConfig(confFile))
+
+			// Validate the loaded data
+			require.Len(t, c.Inputs, 1)
+			plugin, ok := c.Inputs[0].Input.(*MockupInputPlugin)
+			require.Truef(t, ok, "plugin is of wrong type %T", c.Inputs[0].Input)
+
+			// Ignore Log, Parser and ID
+			plugin.Log = nil
+			plugin.parser = nil
+			require.Equal(t, tt.expected, plugin)
+		})
+	}
+}
+
+func TestConfigEnvVarsNonStrictMalicious(t *testing.T) {
+	envvars := map[string]string{
+		"PORT": "8080",
+		"PIDFILE": `a pid"
+
+			[[inputs.memcached]]
+			  command = "evil`,
+	}
+
+	config.NonStrictEnvVarHandling = true
+	t.Cleanup(func() {
+		config.NonStrictEnvVarHandling = false
+	})
+
+	// Export the environment variables
+	for k, v := range envvars {
+		t.Setenv(k, v)
+	}
+
+	// Load the config
+	c := config.NewConfig()
+	confFile := filepath.Join("testdata", "envvar_malicious.conf")
+	require.NoError(t, c.LoadConfig(confFile))
+
+	// We expect too plugins due to malicious environment setting
+	require.Len(t, c.Inputs, 2)
+}
+
 // Mockup INPUT plugin for (new) parser testing to avoid cyclic dependencies
 type MockupInputPluginParserNew struct {
 	Parser     telegraf.Parser

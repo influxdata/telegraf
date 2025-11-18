@@ -620,6 +620,11 @@ func TestSanitizeLabelName(t *testing.T) {
 			input:    "foobar.foobar.2002",
 			expected: "foobar_foobar_2002",
 		},
+		{
+			name:     "replace colon",
+			input:    "foo:bar",
+			expected: "foo_bar",
+		},
 	}
 
 	for _, tt := range tests {

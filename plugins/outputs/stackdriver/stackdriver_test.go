@@ -761,7 +761,7 @@ func TestIntervalEndpoints(t *testing.T) {
 					// times are backdated 1ms from the end time.
 					require.GreaterOrEqual(t, startTime.AsTime().UTC().Unix(), earlier.UTC().Unix())
 				} else {
-					require.GreaterOrEqual(t, startTime.AsTime().UTC().Unix(), later.UTC().Unix())
+					require.LessOrEqual(t, startTime.AsTime().UTC().Unix(), later.UTC().Unix())
 				}
 			}
 

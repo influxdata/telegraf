@@ -169,20 +169,30 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 		// Serialize the metrics with the remaining limit, exit early if nothing was serialized
 		used, err := batch.serialize(c.serializer, limit, c.encoder)
 		if err != nil {
-			writeErr.Err = err
-			batch.err = err
-		}
-		if used == 0 {
-			limitReached = i
-			break
+			var werr *internal.PartialWriteError
+			if errors.As(err, &werr) {
+				writeErr.MetricsReject = append(writeErr.MetricsReject, werr.MetricsReject...)
+				writeErr.MetricsRejectErrors = append(writeErr.MetricsRejectErrors, werr.MetricsRejectErrors...)
+				writeErr.Err = werr.Err
+			} else {
+				writeErr.Err = err
+				batch.err = err
+			}
 		}
 		c.rateLimiter.Reserve(used)
 
 		if errors.Is(batch.err, internal.ErrSizeLimitReached) {
-			limitReached = i + 1
+			limitReached = i
+			// If we serialized at least one metric in this batch the limit
+			// should include the current batch, otherwise we stop before this
+			// batch.
+			if used > 0 {
+				limitReached++
+			}
 			break
 		}
 	}
+
 	// Skip all non-serialized batches
 	if limitReached > 0 && limitReached < len(batches) {
 		batches = batches[:limitReached]
@@ -374,9 +384,8 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 		http.StatusGatewayTimeout:
 		// ^ these handle the cases where the server is likely overloaded, and may not be able to say so.
 		retryDuration := getRetryDuration(resp.Header, c.retryCount.Add(1))
-		c.log.Warnf("Failed to write to %s; will retry in %s. (%s)\n", b.bucket, retryDuration, resp.Status)
 		return &ThrottleError{
-			Err:        fmt.Errorf("waiting %s for server before sending metrics again", retryDuration),
+			Err:        fmt.Errorf("failed to write to %s; will retry in %s. (%s)", b.bucket, retryDuration, resp.Status),
 			StatusCode: resp.StatusCode,
 			RetryAfter: retryDuration,
 		}

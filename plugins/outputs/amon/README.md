@@ -9,6 +9,8 @@ This plugin writes metrics to [Amon monitoring platform][amon]. It requires a
 > skipped.
 
 ⭐ Telegraf v0.2.1
+🚩 Telegraf v1.37.0
+🔥 Telegraf v1.40.0
 🏷️ datastore
 💻 all
 
