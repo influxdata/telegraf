@@ -23,5 +23,5 @@ type logEntry struct {
 	Level      string                 `json:"level"`
 	Source     string                 `json:"source"`
 	Attributes map[string]interface{} `json:"attributes,omitempty"`
-	Messsage   string                 `json:"message"`
+	Message    string                 `json:"message"`
 }
