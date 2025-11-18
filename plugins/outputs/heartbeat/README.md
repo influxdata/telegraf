@@ -29,7 +29,7 @@ to use them.
 ## Configuration
 
 ```toml @sample.conf
-# A plugin that can transmit metrics over HTTP
+# A plugin that can transmit heartbeats over HTTP
 [[outputs.heartbeat]]
   ## URL of heartbeat endpoint
   url = "http://monitoring.example.com/heartbeat"
@@ -40,7 +40,7 @@ to use them.
   ## Token for bearer authentication
   # token = ""
 
-  ## Interval for sending heartbeart messages
+  ## Interval for sending heartbeat messages
   # interval = "1m"
 
   ## Information to include in the message, available options are
