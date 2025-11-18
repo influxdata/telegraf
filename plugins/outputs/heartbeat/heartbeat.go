@@ -137,9 +137,9 @@ func (h *Heartbeat) Close() error {
 }
 
 func (*Heartbeat) Write([]telegraf.Metric) error {
-        // Heartbeat plugin does not process metrics; it sends heartbeats independently
-        return nil
-  }
+	// Heartbeat plugin does not process metrics; it sends heartbeats independently
+	return nil
+}
 
 func (h *Heartbeat) send() error {
 	// Create the message body
