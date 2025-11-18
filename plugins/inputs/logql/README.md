@@ -177,7 +177,7 @@ The example range-query
 count by(detected_level) (rate({job="varlogs", filename="/var/log/Xorg.0.log"} [5m]))
 ```
 
-with a range of 30 mintes ago to now and one minute stepping results in
+with a range of 30 minutes ago to now and one minute stepping results in
 
 ```text
 logql,detected_level=error,host=Hugin value=1 1762943220000000000
