@@ -207,7 +207,7 @@ func (h *Heartbeat) send() error {
 }
 
 func init() {
-	outputs.Add("http", func() telegraf.Output {
+	outputs.Add("heartbeat", func() telegraf.Output {
 		return &Heartbeat{
 			Include:  []string{"hostname"},
 			Interval: config.Duration(time.Minute),
