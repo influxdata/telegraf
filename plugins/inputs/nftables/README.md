@@ -61,6 +61,6 @@ telegraf ALL=(root) NOPASSWD: /usr/bin/nft *
 ## Example Output
 
 ```text
-> nftables,chain=incoming,host=my_hostname,ruleid=comment_val_1,table=filter bytes=66435845i,pkts=133882i 1757367516000000000
-> nftables,chain=outgoing,host=my_hostname,ruleid=comment_val2,table=filter bytes=25596512i,pkts=145129i 1757367516000000000
+> nftables,chain=incoming,host=my_hostname,rule=comment_val_1,table=filter bytes=66435845i,pkts=133882i 1757367516000000000
+> nftables,chain=outgoing,host=my_hostname,rule=comment_val2,table=filter bytes=25596512i,pkts=145129i 1757367516000000000
 ```
