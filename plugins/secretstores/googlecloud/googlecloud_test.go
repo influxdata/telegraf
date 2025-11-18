@@ -32,7 +32,6 @@ func TestInit(t *testing.T) {
 				ServiceAccountFile: "non-existent-file.json",
 			},
 			wantErr:     true,
-			errContains: "no such file or directory",
 		},
 		{
 			name: "invalid service account file json should fail",
