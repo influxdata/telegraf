@@ -2,10 +2,9 @@ package googlecloud
 
 import (
 	"context"
-	"fmt"
-
 	_ "embed"
 	"errors"
+	"fmt"
 
 	"cloud.google.com/go/auth"
 	"cloud.google.com/go/auth/credentials"
@@ -37,7 +36,7 @@ func (g *GoogleCloud) Init() error {
 	if err != nil {
 		return err
 	}
-	credentials, err := credentials.DetectDefault(&credentials.DetectOptions{
+	creds, err := credentials.DetectDefault(&credentials.DetectOptions{
 		STSAudience:     g.STSAudience,
 		CredentialsFile: g.ServiceAccountFile,
 		Client:          httpClient,
@@ -46,7 +45,7 @@ func (g *GoogleCloud) Init() error {
 	if err != nil {
 		return err
 	}
-	g.credentials = credentials
+	g.credentials = creds
 	return nil
 }
 
