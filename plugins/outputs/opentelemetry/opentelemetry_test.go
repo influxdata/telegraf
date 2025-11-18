@@ -140,7 +140,6 @@ func TestOpenTelemetryHTTPProtobuf(t *testing.T) {
 	require.NoError(t, err)
 
 	plugin := &OpenTelemetry{
-		Protocol:         "http",
 		ServiceAddress:   server.URL,
 		EncodingType:     "application/x-protobuf",
 		Timeout:          config.Duration(time.Second),
@@ -149,7 +148,7 @@ func TestOpenTelemetryHTTPProtobuf(t *testing.T) {
 		metricsConverter: metricsConverter,
 		Log:              testutil.Logger{},
 	}
-	err = plugin.connectHTTP()
+	err = plugin.Connect()
 	require.NoError(t, err)
 
 	input := testutil.MustMetric(
@@ -233,7 +232,6 @@ func TestOpenTelemetryHTTPJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	plugin := &OpenTelemetry{
-		Protocol:         "http",
 		ServiceAddress:   server.URL,
 		EncodingType:     "application/json",
 		Timeout:          config.Duration(time.Second),
@@ -242,7 +240,7 @@ func TestOpenTelemetryHTTPJSON(t *testing.T) {
 		metricsConverter: metricsConverter,
 		Log:              testutil.Logger{},
 	}
-	err = plugin.connectHTTP()
+	err = plugin.Connect()
 	require.NoError(t, err)
 
 	input := testutil.MustMetric(

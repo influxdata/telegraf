@@ -4,8 +4,8 @@ package opentelemetry
 import (
 	"context"
 	_ "embed"
-	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/influxdata/influxdb-observability/common"
@@ -28,7 +28,6 @@ var sampleConfig string
 
 type OpenTelemetry struct {
 	ServiceAddress string `toml:"service_address"`
-	Protocol       string `toml:"protocol"`
 	EncodingType   string `toml:"encoding_type"`
 
 	tls.ClientConfig
@@ -68,9 +67,6 @@ func (*OpenTelemetry) SampleConfig() string {
 
 func (o *OpenTelemetry) Connect() error {
 	logger := &otelLogger{o.Log}
-	if o.Protocol == "" {
-		o.Protocol = defaultProtocol
-	}
 	if o.ServiceAddress == "" {
 		o.ServiceAddress = defaultServiceAddress
 	}
@@ -98,13 +94,15 @@ func (o *OpenTelemetry) Connect() error {
 	}
 	o.metricsConverter = metricsConverter
 
-	switch o.Protocol {
+	protocol := "grpc"
+	if strings.HasPrefix(o.ServiceAddress, "http://") || strings.HasPrefix(o.ServiceAddress, "https://") {
+		protocol = "http"
+	}
+	switch protocol {
 	case "", "grpc":
 		o.otlpMetricClient = &gRPCClient{}
 	case "http":
 		o.otlpMetricClient = &httpClient{}
-	default:
-		return fmt.Errorf("unsupported protocol '%s'", o.Protocol)
 	}
 	err = o.otlpMetricClient.Connect(
 		o.ServiceAddress,
@@ -200,7 +198,6 @@ func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 }
 
 const (
-	defaultProtocol       = "grpc"
 	defaultEncodingType   = "application/x-protobuf"
 	defaultServiceAddress = "localhost:4317"
 	defaultTimeout        = config.Duration(5 * time.Second)
@@ -210,7 +207,6 @@ const (
 func init() {
 	outputs.Add("opentelemetry", func() telegraf.Output {
 		return &OpenTelemetry{
-			Protocol:       defaultProtocol,
 			EncodingType:   defaultEncodingType,
 			ServiceAddress: defaultServiceAddress,
 			Timeout:        defaultTimeout,
