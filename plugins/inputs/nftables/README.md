@@ -53,7 +53,7 @@ telegraf ALL=(root) NOPASSWD: /usr/bin/nft *
   * tags:
     * table
     * chain
-    * ruleid -- comment associated to the rule
+    * rule -- comment associated to the rule
   * fields:
     * pkts (integer, count)
     * bytes (integer, bytes)
