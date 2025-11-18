@@ -111,7 +111,7 @@ func (l *LogQL) Gather(acc telegraf.Accumulator) error {
 	if ready, msg, err := l.client.ready(ctx); err != nil {
 		return fmt.Errorf("checking readiness failed: %w", err)
 	} else if !ready {
-		l.Log.Infof("Loki server at %q not ready: %s", l.URL, msg)
+		return fmt.Errorf("server at %q is not ready: %s", l.URL, msg)
 	}
 
 	t := time.Now()
