@@ -794,8 +794,8 @@ github.com/ProtonMail/gopenpgp/v2 v2.7.4/go.mod h1:IhkNEDaxec6NyzSI0PlxapinnwPVI
 github.com/PuerkitoBio/goquery v1.8.1 h1:uQxhNlArOIdbrH1tr0UXwdVFgDcZDrZVdcpygAcwmWM=
 github.com/PuerkitoBio/goquery v1.8.1/go.mod h1:Q8ICL1kNUJ2sXGoAhPGUdYDJvgQgHzJsnnd3H7Ho5jQ=
 github.com/RaveNoX/go-jsoncommentstrip v1.0.0/go.mod h1:78ihd09MekBnJnxpICcwzCMzGrKSKYe4AqU6PDYYpjk=
-github.com/SAP/go-hdb v1.14.12 h1:p27lokVKko3LY2hl2jz2lOremNiwzJAVddT2xo7oGu8=
-github.com/SAP/go-hdb v1.14.12/go.mod h1:4dvn/UQZj+By5HFhgZNJFKe01F/f7XO3vZHtLtmETo4=
+github.com/SAP/go-hdb v1.14.13 h1:wHq0Px0+omlXpj6jxQG2e8QLaSb5TeHIUCbg1hnWCmk=
+github.com/SAP/go-hdb v1.14.13/go.mod h1:p6N5zhGECK/7oE7l+DVp23QWhr11e09AorFo/Ps6nOk=
 github.com/aalpar/deheap v0.0.0-20210914013432-0cc84d79dec3 h1:hhdWprfSpFbN7lz3W1gM40vOgvSh1WCSMxYD6gGB4Hs=
 github.com/aalpar/deheap v0.0.0-20210914013432-0cc84d79dec3/go.mod h1:XaUnRxSCYgL3kkgX0QHIV0D+znljPIDImxlv2kbGv0Y=
 github.com/abbot/go-http-auth v0.4.0 h1:QjmvZ5gSC7jm3Zg54DqWE/T5m1t2AfDu6QlXJT0EVT0=
