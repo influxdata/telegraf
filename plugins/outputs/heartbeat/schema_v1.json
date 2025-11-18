@@ -105,7 +105,7 @@
         },
         "last": {
             "type": "integer",
-            "description": "Unix epoch in seconds of the last successful data update, only present if the previous heartbeat faileds (optional)"
+            "description": "Unix epoch in seconds of the last successful data update, only present if the previous heartbeat failed (optional)"
         },
         "hostname": {
             "type": "string",

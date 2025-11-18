@@ -2,7 +2,7 @@
 
 This plugin sends a heartbeat signal via POST to a HTTP endpoint on a regular
 interval. This is useful to keep track of existing Telegraf instances in a large
-deploayment.
+deployment.
 
 ⭐ Telegraf v1.37.0
 🏷️ applications
