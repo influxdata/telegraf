@@ -7,37 +7,37 @@ import (
 	_ "embed"
 	"errors"
 
+	"cloud.google.com/go/auth"
+	"cloud.google.com/go/auth/credentials"
+
 	"github.com/influxdata/telegraf"
 	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/common/slog"
 	"github.com/influxdata/telegraf/plugins/secretstores"
-
-	"cloud.google.com/go/auth"
-	creds "cloud.google.com/go/auth/credentials"
 )
 
 //go:embed sample.conf
 var sampleConfig string
 
-func (*GoogleCloudOptions) SampleConfig() string {
+func (*GoogleCloud) SampleConfig() string {
 	return sampleConfig
 }
 
-type GoogleCloudOptions struct {
+type GoogleCloud struct {
 	STSAudience        string `toml:"sts_audience"`
 	ServiceAccountFile string `toml:"service_account_file"`
 	common_http.HTTPClientConfig
 
-	creds *auth.Credentials
-	Log   telegraf.Logger `toml:"-"`
+	credentials *auth.Credentials
+	Log         telegraf.Logger `toml:"-"`
 }
 
-func (g *GoogleCloudOptions) Init() error {
+func (g *GoogleCloud) Init() error {
 	httpClient, err := g.HTTPClientConfig.CreateClient(context.Background(), g.Log)
 	if err != nil {
 		return err
 	}
-	creds, err := creds.DetectDefault(&creds.DetectOptions{
+	credentials, err := credentials.DetectDefault(&credentials.DetectOptions{
 		STSAudience:     g.STSAudience,
 		CredentialsFile: g.ServiceAccountFile,
 		Client:          httpClient,
@@ -46,16 +46,16 @@ func (g *GoogleCloudOptions) Init() error {
 	if err != nil {
 		return err
 	}
-	g.creds = creds
+	g.credentials = credentials
 	return nil
 }
 
 // Get retrieves the token. The key is ignored as this secret store only provides one secret.
-func (g *GoogleCloudOptions) Get(key string) ([]byte, error) {
+func (g *GoogleCloud) Get(key string) ([]byte, error) {
 	if key != "token" {
 		return nil, fmt.Errorf("invalid key %q, only 'token' is supported", key)
 	}
-	token, err := g.creds.Token(context.Background())
+	token, err := g.credentials.Token(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -63,17 +63,17 @@ func (g *GoogleCloudOptions) Get(key string) ([]byte, error) {
 }
 
 // List returns the list of secrets provided by this store.
-func (*GoogleCloudOptions) List() ([]string, error) {
+func (*GoogleCloud) List() ([]string, error) {
 	return []string{"token"}, nil
 }
 
 // Set is not supported for the gcloud secret store.
-func (*GoogleCloudOptions) Set(_, _ string) error {
+func (*GoogleCloud) Set(_, _ string) error {
 	return errors.New("setting secrets is not supported")
 }
 
 // GetResolver returns a resolver function for the secret.
-func (g *GoogleCloudOptions) GetResolver(key string) (telegraf.ResolveFunc, error) {
+func (g *GoogleCloud) GetResolver(key string) (telegraf.ResolveFunc, error) {
 	return func() ([]byte, bool, error) {
 		s, err := g.Get(key)
 		return s, true, err
@@ -82,6 +82,6 @@ func (g *GoogleCloudOptions) GetResolver(key string) (telegraf.ResolveFunc, erro
 
 func init() {
 	secretstores.Add("googlecloud", func(_ string) telegraf.SecretStore {
-		return &GoogleCloudOptions{}
+		return &GoogleCloud{}
 	})
 }

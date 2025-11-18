@@ -6,27 +6,27 @@ import (
 	"testing"
 	"time"
 
+	"cloud.google.com/go/auth"
 	"github.com/stretchr/testify/require"
 
-	"cloud.google.com/go/auth"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestSampleConfig(t *testing.T) {
-	require.NoError(t, config.NewConfig().LoadConfigData(testutil.DefaultSampleConfig((&GoogleCloudOptions{}).SampleConfig()), config.EmptySourcePath))
+	require.NoError(t, config.NewConfig().LoadConfigData(testutil.DefaultSampleConfig((&GoogleCloud{}).SampleConfig()), config.EmptySourcePath))
 }
 
 func TestInit(t *testing.T) {
 	tests := []struct {
 		name        string
-		plugin      *GoogleCloudOptions
+		plugin      *GoogleCloud
 		wantErr     bool
 		errContains string
 	}{
 		{
 			name: "non-existent service account file should fail",
-			plugin: &GoogleCloudOptions{
+			plugin: &GoogleCloud{
 				STSAudience:        "https://localhost",
 				Log:                testutil.Logger{},
 				ServiceAccountFile: "non-existent-file.json",
@@ -36,7 +36,7 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name: "invalid service account file json should fail",
-			plugin: &GoogleCloudOptions{
+			plugin: &GoogleCloud{
 				STSAudience:        "https://localhost",
 				Log:                testutil.Logger{},
 				ServiceAccountFile: "./testdata/invalid-json-sa-key.json",
@@ -46,7 +46,7 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name: "missing service account type should fail",
-			plugin: &GoogleCloudOptions{
+			plugin: &GoogleCloud{
 				STSAudience:        "https://localhost",
 				Log:                testutil.Logger{},
 				ServiceAccountFile: "./testdata/missing-type-sa-key.json",
@@ -56,7 +56,7 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name: "missing audience should fail",
-			plugin: &GoogleCloudOptions{
+			plugin: &GoogleCloud{
 				Log:                testutil.Logger{},
 				ServiceAccountFile: "./testdata/gdch.json",
 			},
@@ -65,7 +65,7 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name: "successful init",
-			plugin: &GoogleCloudOptions{
+			plugin: &GoogleCloud{
 				STSAudience:        "https://localhost",
 				Log:                testutil.Logger{},
 				ServiceAccountFile: "./testdata/gdch.json",
@@ -81,7 +81,7 @@ func TestInit(t *testing.T) {
 				require.ErrorContains(t, err, tc.errContains, "error mismatch")
 			} else {
 				require.NoError(t, err)
-				require.NotNil(t, tc.plugin.creds)
+				require.NotNil(t, tc.plugin.credentials)
 			}
 		})
 	}
@@ -115,8 +115,8 @@ func TestGet(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			plugin := &GoogleCloudOptions{
-				creds: auth.NewCredentials(&auth.CredentialsOptions{
+			plugin := &GoogleCloud{
+				credentials: auth.NewCredentials(&auth.CredentialsOptions{
 					TokenProvider: tt.provider,
 				}),
 			}
