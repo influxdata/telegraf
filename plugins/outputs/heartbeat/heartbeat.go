@@ -183,7 +183,7 @@ func (h *Heartbeat) send() error {
 		if err != nil {
 			return fmt.Errorf("getting token secret failed: %w", err)
 		}
-		req.Header.Add("Authentication", "Bearer "+token.String())
+		req.Header.Add("Authorization", "Bearer "+token.String())
 		token.Destroy()
 	}
 
