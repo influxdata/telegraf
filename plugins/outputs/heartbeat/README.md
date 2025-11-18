@@ -59,11 +59,4 @@ used for the message. The latest schema can be found in the
 
 Additional information can be included in the message via the `include` setting.
 
-> [!NOTE]
-> Some information, e.g. the number of metrics, is only updated after the first
-> flush cycle, this must be considered when interpreting the messages.
-
-All information in the messages are accumulated until a message was sent
-_successfully_.
-
 [schema]: /plugins/outputs/heartbeat/schema_v1.json
