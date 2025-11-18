@@ -1,6 +1,6 @@
 # GoogleCloud Secrets Secret-Store Plugin
 
-The `googlecloud` plugin allows to fetch token from google cloud auth library
+This plugin allows to fetch token from google cloud auth library
 
 ## Usage <!-- @/docs/includes/secret_usage.md -->
 
