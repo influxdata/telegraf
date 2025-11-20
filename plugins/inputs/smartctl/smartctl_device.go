@@ -149,7 +149,7 @@ func (s *Smartctl) scanDevice(acc telegraf.Accumulator, deviceName, deviceType s
 	}
 
 	// Check for SCSI error counter entries
-	if device.Device.Type == "scsi" {
+	if device.Device.Protocol == "SCSI" {
 		counterTags := make(map[string]string, len(tags)+1)
 		for k, v := range tags {
 			counterTags[k] = v
