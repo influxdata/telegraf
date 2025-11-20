@@ -1,0 +1,5 @@
+table test {
+        chain output {
+                ip daddr 8.8.8.8 counter packets 0 bytes 0
+        }
+}

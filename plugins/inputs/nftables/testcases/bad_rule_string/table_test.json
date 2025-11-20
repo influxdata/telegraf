@@ -1,0 +1,6 @@
+{ "nftables": [
+    {
+      "rule": "bad"
+    }
+  ]
+}
