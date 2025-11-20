@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log" //nolint:depguard // just for debug
 	"net/url"
+	"os"
 	"strconv"
 	"time"
 
@@ -192,6 +193,75 @@ type OpcUAClient struct {
 	codes []ua.StatusCode
 }
 
+// determineOrCreateCertificates handles certificate determination and generation logic
+func (o *OpcUAClient) determineOrCreateCertificates() error {
+	// Skip certificate handling if using None/None security
+	if o.Config.SecurityPolicy == "None" && o.Config.SecurityMode == "None" {
+		return nil
+	}
+
+	certFile := o.Config.Certificate
+	keyFile := o.Config.PrivateKey
+
+	// Determine if we need to generate certificates
+	// Case 1: Both empty - generate temporary certificate
+	// Case 2: Both specified but don't exist - generate at specified paths
+	// Case 3: Both specified and exist - load them (handled later in generateClientOpts)
+	shouldGenerate := false
+	if certFile == "" && keyFile == "" {
+		// Case 1: Both empty
+		shouldGenerate = true
+	} else if certFile != "" && keyFile != "" {
+		// Case 2 or 3: Both specified - check if they exist
+		_, certErr := os.Stat(certFile)
+		certExists := certErr == nil
+		_, keyErr := os.Stat(keyFile)
+		keyExists := keyErr == nil
+
+		if !certExists && !keyExists {
+			// Neither exists, generate them at specified paths
+			shouldGenerate = true
+		} else if certExists && keyExists {
+			// Both exist, will be loaded later
+			o.Log.Debugf("Using existing certificates from %s and %s", certFile, keyFile)
+			return nil
+		} else {
+			// Mismatched state - one exists but not the other
+			if certExists {
+				return &CertificateError{
+					Operation: "validation",
+					Path:      keyFile,
+					Err:       fmt.Errorf("certificate exists at %s but private key missing at %s", certFile, keyFile),
+				}
+			}
+			return &CertificateError{
+				Operation: "validation",
+				Path:      certFile,
+				Err:       fmt.Errorf("private key exists at %s but certificate missing at %s", keyFile, certFile),
+			}
+		}
+	}
+
+	if shouldGenerate {
+		if certFile != "" && keyFile != "" {
+			o.Log.Infof("Generating self-signed certificate at %s and %s", certFile, keyFile)
+		} else {
+			o.Log.Debug("Generating temporary self-signed certificate")
+		}
+
+		cert, privateKey, err := generateCert("urn:telegraf:gopcua:client", 2048,
+			certFile, keyFile, 365*24*time.Hour)
+		if err != nil {
+			return err
+		}
+
+		o.Config.Certificate = cert
+		o.Config.PrivateKey = privateKey
+	}
+
+	return nil
+}
+
 // SetupOptions reads the endpoints from the specified server and sets up all authentication
 func (o *OpcUAClient) SetupOptions() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Config.ConnectTimeout))
@@ -205,18 +275,8 @@ func (o *OpcUAClient) SetupOptions() error {
 		}
 	}
 
-	if o.Config.Certificate == "" && o.Config.PrivateKey == "" {
-		if o.Config.SecurityPolicy != "None" || o.Config.SecurityMode != "None" {
-			o.Log.Debug("Generating self-signed certificate")
-			cert, privateKey, err := generateCert("urn:telegraf:gopcua:client", 2048,
-				o.Config.Certificate, o.Config.PrivateKey, 365*24*time.Hour)
-			if err != nil {
-				return err
-			}
-
-			o.Config.Certificate = cert
-			o.Config.PrivateKey = privateKey
-		}
+	if err := o.determineOrCreateCertificates(); err != nil {
+		return err
 	}
 
 	o.Log.Debug("Configuring OPC UA connection options")
