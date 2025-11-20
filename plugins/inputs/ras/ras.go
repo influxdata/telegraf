@@ -8,6 +8,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -29,6 +30,12 @@ const (
 		FROM mce_record
 		WHERE timestamp > ?
 		`
+	diskErrorQuery = `
+	SELECT
+		id, timestamp, dev, error
+	FROM disk_errors 
+	WHERE timestamp > ?
+	`
 	defaultDBPath          = "/var/lib/rasdaemon/ras-mc_event.db"
 	dateLayout             = "2006-01-02 15:04:05 -0700"
 	memoryReadCorrected    = "memory_read_corrected_errors"
@@ -54,10 +61,12 @@ type Ras struct {
 	DBPath string          `toml:"db_path"`
 	Log    telegraf.Logger `toml:"-"`
 
-	db                *sql.DB
-	latestTimestamp   time.Time
-	cpuSocketCounters map[int]metricCounters
-	serverCounters    metricCounters
+	db                  *sql.DB
+	latestTimestamp     time.Time
+	latestDiskTimestamp time.Time
+	cpuSocketCounters   map[int]metricCounters
+	serverCounters      metricCounters
+	diskCounters        metricCounters
 }
 
 type machineCheckError struct {
@@ -66,6 +75,18 @@ type machineCheckError struct {
 	socketID     int
 	errorMsg     string
 	mciStatusMsg string
+}
+
+// CREATE TABLE disk_errors (id INTEGER PRIMARY KEY, timestamp TEXT, dev TEXT, sector INTEGER, nr_sector INTEGER, error TEXT, rwbs TEXT, cmd TEXT);
+type diskError struct {
+	id        int
+	timestamp string
+	dev       string
+	// sector    int
+	// nr_sector int
+	error string
+	// rwbs      string
+	// cmd       string
 }
 
 type metricCounters map[string]int64
@@ -112,7 +133,67 @@ func (r *Ras) Gather(acc telegraf.Accumulator) error {
 	addCPUSocketMetrics(acc, r.cpuSocketCounters)
 	addServerMetrics(acc, r.serverCounters)
 
+	// collect disk errors
+	rows, err = r.db.Query(diskErrorQuery, r.latestTimestamp)
+	if err != nil {
+		return err
+	}
+
+	for rows.Next() {
+		dError, err := fetchDiskError(rows)
+		if err != nil {
+			return err
+		}
+
+		tsErr := r.updateLatestDiskTimestamp(dError.timestamp)
+		if tsErr != nil {
+			return err
+		}
+
+		xs := strings.SplitN(dError.dev, ":", 2)
+
+		maj, err := strconv.Atoi(xs[0])
+		if err != nil {
+			return err
+		}
+
+		min, err := strconv.Atoi(xs[1])
+		if err != nil {
+			return err
+		}
+
+		dev, err := getDeviceName(maj, min)
+		if err != nil {
+			return err
+		}
+
+		if _, found := r.diskCounters[dev]; found {
+			r.diskCounters[dev]++
+		} else {
+			r.diskCounters[dev] = 1
+		}
+	}
+
+	for dev, count := range r.diskCounters {
+		tags := map[string]string{
+			"device": dev,
+		}
+		fields := make(map[string]interface{})
+		fields["disk_errors"] = count
+    acc.AddCounter("ras", fields, tags)
+	}
+
 	return nil
+}
+
+func fetchDiskError(rows *sql.Rows) (*diskError, error) {
+	dError := &diskError{}
+	err := rows.Scan(&dError.id, &dError.timestamp, &dError.dev, &dError.error)
+	if err != nil {
+		return nil, err
+	}
+
+	return dError, nil
 }
 
 // Stop closes any existing DB connection
@@ -132,6 +213,18 @@ func (r *Ras) updateLatestTimestamp(timestamp string) error {
 	}
 	if ts.After(r.latestTimestamp) {
 		r.latestTimestamp = ts
+	}
+
+	return nil
+}
+
+func (r *Ras) updateLatestDiskTimestamp(timestamp string) error {
+	ts, err := parseDate(timestamp)
+	if err != nil {
+		return err
+	}
+	if ts.After(r.latestDiskTimestamp) {
+		r.latestDiskTimestamp = ts
 	}
 
 	return nil
@@ -304,7 +397,6 @@ func addServerMetrics(acc telegraf.Accumulator, counters map[string]int64) {
 func fetchMachineCheckError(rows *sql.Rows) (*machineCheckError, error) {
 	mcError := &machineCheckError{}
 	err := rows.Scan(&mcError.id, &mcError.timestamp, &mcError.errorMsg, &mcError.mciStatusMsg, &mcError.socketID)
-
 	if err != nil {
 		return nil, err
 	}
@@ -314,6 +406,19 @@ func fetchMachineCheckError(rows *sql.Rows) (*machineCheckError, error) {
 
 func parseDate(date string) (time.Time, error) {
 	return time.Parse(dateLayout, date)
+}
+
+func getDeviceName(maj, min int) (string, error) {
+	sysPath := fmt.Sprintf("/sys/dev/block/%d:%d", maj, min)
+
+	dest, err := os.Readlink(sysPath)
+	if err != nil {
+		return "", fmt.Errorf("device with maj=%d, min=%d not found: %v", maj, min, err)
+	}
+
+	deviceName := filepath.Base(dest)
+
+	return deviceName, nil
 }
 
 func init() {
@@ -330,6 +435,7 @@ func init() {
 				levelTwoCache: 0,
 				upi:           0,
 			},
+			diskCounters: make(metricCounters),
 		}
 	})
 }
