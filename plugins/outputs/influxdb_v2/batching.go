@@ -22,6 +22,9 @@ type batch struct {
 
 func createBatches(metrics []telegraf.Metric, bucket string, size int) []*batch {
 	number := len(metrics) / size
+	if len(metrics)%size > 0 {
+		number++
+	}
 	batches := make([]*batch, 0, number)
 	for i := range number {
 		begin := i * size
