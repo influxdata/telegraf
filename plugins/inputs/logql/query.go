@@ -96,12 +96,9 @@ type RangeQuery struct {
 
 func (q *RangeQuery) init(c *client, log telegraf.Logger) error {
 	// Check the parameters
-	if q.Start >= 0 && q.Start <= q.End {
-		return fmt.Errorf("invalid range %v to %v for query %q", q.Start, q.End, q.Query)
-	}
-	if q.Start < 0 && q.Start <= q.End {
-		return fmt.Errorf("invalid range %v to %v for query %q", q.Start, q.End, q.Query)
-	}
+	if q.Start <= q.End {
+      return fmt.Errorf("invalid range %v to %v for query %q", q.Start, q.End, q.Query)
+  }
 	if q.Step < 0 {
 		return fmt.Errorf("'step' must be non-negative for query %q", q.query.Query)
 	}
