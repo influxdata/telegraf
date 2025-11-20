@@ -28,12 +28,12 @@ type client struct {
 	client *http.Client
 }
 
-func (c *client) init() (*client, error) {
+func (c *client) init() error {
 	// Create a round-tripper suitable for the given configuration based on the
 	// http-client transport...
 	transport, err := c.cfg.CreateTransport()
 	if err != nil {
-		return nil, fmt.Errorf("creating transport failed: %w", err)
+		return fmt.Errorf("creating transport failed: %w", err)
 	}
 	rt := promcfg.NewUserAgentRoundTripper(internal.ProductToken(), transport)
 	if !c.username.Empty() {
@@ -53,7 +53,7 @@ func (c *client) init() (*client, error) {
 	// Create HTTP client for API requests
 	c.client = &http.Client{Transport: rt, Timeout: c.timeout}
 
-	return c, nil
+	return nil
 }
 
 func (c *client) ready(ctx context.Context) (bool, string, error) {

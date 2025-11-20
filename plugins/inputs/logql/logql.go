@@ -84,11 +84,9 @@ func (l *LogQL) Init() error {
 
 func (l *LogQL) Start(telegraf.Accumulator) error {
 	// Initialize the API client
-	c, err := l.client.init()
-	if err != nil {
+	if err := l.client.init(); err != nil {
 		return fmt.Errorf("initializing API client failed: %w", err)
 	}
-	l.client = c
 
 	return nil
 }
