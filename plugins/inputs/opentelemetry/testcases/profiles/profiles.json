@@ -458,7 +458,7 @@
                 "typeStrindex": 1,
                 "unitStrindex": 2
               },
-              "sample": [
+              "samples": [
                 {
                   "stackIndex": 0,
                   "values": [
@@ -547,7 +547,7 @@
       {
         "mappingIndex": 3,
         "address": "4770577",
-        "line": [
+        "lines": [
           {
             "functionIndex": 1
           }
@@ -556,7 +556,7 @@
       {
         "mappingIndex": 3,
         "address": "4773632",
-        "line": [
+        "lines": [
           {
             "functionIndex": 2
           }
@@ -565,7 +565,7 @@
       {
         "mappingIndex": 3,
         "address": "14783666",
-        "line": [
+        "lines": [
           {
             "functionIndex": 3
           }
@@ -574,7 +574,7 @@
       {
         "mappingIndex": 3,
         "address": "16777518",
-        "line": [
+        "lines": [
           {
             "functionIndex": 4
           }
