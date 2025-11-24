@@ -8,25 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fileExists checks if a file exists at the given path (test helper)
-func fileExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
-}
-
-func TestFileExists(t *testing.T) {
-	// Create a temporary file
-	tmpDir := t.TempDir()
-	tmpFile := filepath.Join(tmpDir, "test.txt")
-	require.NoError(t, os.WriteFile(tmpFile, []byte("test"), 0600))
-
-	// Test file exists
-	require.True(t, fileExists(tmpFile))
-
-	// Test file doesn't exist
-	require.False(t, fileExists(filepath.Join(tmpDir, "nonexistent.txt")))
-}
-
 func TestGenerateCertEmptyPaths(t *testing.T) {
 	// Case 1: Both paths empty - should generate in temp directory
 	certPath, keyPath, err := generateCert("urn:test:client", 2048, "", "", 24*365*3600)
@@ -35,8 +16,8 @@ func TestGenerateCertEmptyPaths(t *testing.T) {
 	require.NotEmpty(t, keyPath)
 
 	// Verify files were created
-	require.True(t, fileExists(certPath))
-	require.True(t, fileExists(keyPath))
+	require.FileExists(t, certPath)
+	require.FileExists(t, keyPath)
 
 	// Verify they're in a temp directory (check they start with /tmp or similar)
 	require.True(t, filepath.IsAbs(certPath))
@@ -50,8 +31,8 @@ func TestGenerateCertPersistentPaths(t *testing.T) {
 	keyPath := filepath.Join(tmpDir, "key.pem")
 
 	// Verify files don't exist yet
-	require.False(t, fileExists(certPath))
-	require.False(t, fileExists(keyPath))
+	require.NoFileExists(t, certPath)
+	require.NoFileExists(t, keyPath)
 
 	// Generate certificates
 	returnedCertPath, returnedKeyPath, err := generateCert("urn:test:client", 2048, certPath, keyPath, 24*365*3600)
@@ -60,8 +41,8 @@ func TestGenerateCertPersistentPaths(t *testing.T) {
 	require.Equal(t, keyPath, returnedKeyPath)
 
 	// Verify files were created at specified paths
-	require.True(t, fileExists(certPath))
-	require.True(t, fileExists(keyPath))
+	require.FileExists(t, certPath)
+	require.FileExists(t, keyPath)
 
 	// Verify file permissions (key should be 0600)
 	info, err := os.Stat(keyPath)
@@ -82,8 +63,8 @@ func TestGenerateCertCreatesParentDirectory(t *testing.T) {
 	require.Equal(t, keyPath, keyPathResult)
 
 	// Verify files were created
-	require.True(t, fileExists(certPath))
-	require.True(t, fileExists(keyPath))
+	require.FileExists(t, certPath)
+	require.FileExists(t, keyPath)
 
 	// Verify parent directory was created
 	info, err := os.Stat(parentDir)
@@ -113,6 +94,6 @@ func TestGenerateCertDifferentKeySize(t *testing.T) {
 	require.Equal(t, keyPath, returnedKeyPath)
 
 	// Verify files were created
-	require.True(t, fileExists(certPath))
-	require.True(t, fileExists(keyPath))
+	require.FileExists(t, certPath)
+	require.FileExists(t, keyPath)
 }
