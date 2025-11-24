@@ -18,8 +18,7 @@ func TestFileExists(t *testing.T) {
 	// Create a temporary file
 	tmpDir := t.TempDir()
 	tmpFile := filepath.Join(tmpDir, "test.txt")
-	err := os.WriteFile(tmpFile, []byte("test"), 0600)
-	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(tmpFile, []byte("test"), 0600))
 
 	// Test file exists
 	require.True(t, fileExists(tmpFile))
