@@ -23,27 +23,27 @@ func (*GoogleCloud) SampleConfig() string {
 }
 
 type GoogleCloud struct {
-	STSAudience        string `toml:"sts_audience"`
-	ServiceAccountFile string `toml:"service_account_file"`
+	STSAudience        string          `toml:"sts_audience"`
+	ServiceAccountFile string          `toml:"service_account_file"`
+	Log                telegraf.Logger `toml:"-"`
 	common_http.HTTPClientConfig
 
 	credentials *auth.Credentials
-	Log         telegraf.Logger `toml:"-"`
 }
 
 func (g *GoogleCloud) Init() error {
-	httpClient, err := g.HTTPClientConfig.CreateClient(context.Background(), g.Log)
+	client, err := g.HTTPClientConfig.CreateClient(context.Background(), g.Log)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating HTTP client failed: %w", err)
 	}
 	creds, err := credentials.DetectDefault(&credentials.DetectOptions{
 		STSAudience:     g.STSAudience,
 		CredentialsFile: g.ServiceAccountFile,
-		Client:          httpClient,
+		Client:          client,
 		Logger:          slog.NewLogger(g.Log),
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("credentials search failed: %w", err)
 	}
 	g.credentials = creds
 	return nil
@@ -56,7 +56,7 @@ func (g *GoogleCloud) Get(key string) ([]byte, error) {
 	}
 	token, err := g.credentials.Token(context.Background())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("token retrieval failed: %w", err)
 	}
 	return []byte(token.Value), nil
 }
@@ -80,7 +80,7 @@ func (g *GoogleCloud) GetResolver(key string) (telegraf.ResolveFunc, error) {
 }
 
 func init() {
-	secretstores.Add("googlecloud", func(_ string) telegraf.SecretStore {
+	secretstores.Add("googlecloud", func(string) telegraf.SecretStore {
 		return &GoogleCloud{}
 	})
 }
