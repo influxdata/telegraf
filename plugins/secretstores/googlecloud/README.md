@@ -12,16 +12,11 @@ secrets, see their respective documentation (e.g.
 `Secret-store support` section, it will detail which options support secret
 store usage.
 
-This plugin currently supports parameters required for getting GDCH credentials.
-More parameters can be added based on [GoogleCloud Auth DetectOptions](https://github.com/googleapis/google-cloud-go/blob/main/auth/credentials/detect.go#L154)
-
 ## Configuration
 
 ```toml @sample.conf
-# Secret-store to retrieve secrets from Google Cloud Authenticator
 [[secretstores.googlecloud]]
   id = "googlecloud_secret"
-
   ## Path to the service account JSON key file
   service_account_file = "./testdata/gdch.json"
   sts_audience = "https://{AUDIENCE_URL}"

@@ -17,7 +17,18 @@ func TestSampleConfig(t *testing.T) {
 	require.NoError(t, config.NewConfig().LoadConfigData(testutil.DefaultSampleConfig((&GoogleCloud{}).SampleConfig()), config.EmptySourcePath))
 }
 
-func TestInit(t *testing.T) {
+func TestInitSuccess(t *testing.T) {
+	plugin := &GoogleCloud{
+		STSAudience:        "https://localhost",
+		Log:                testutil.Logger{},
+		ServiceAccountFile: "./testdata/gdch.json",
+	}
+	err := plugin.Init()
+	require.NoError(t, err)
+	require.NotNil(t, plugin.credentials)
+}
+
+func TestInitFail(t *testing.T) {
 	tests := []struct {
 		name        string
 		plugin      *GoogleCloud
@@ -31,7 +42,7 @@ func TestInit(t *testing.T) {
 				Log:                testutil.Logger{},
 				ServiceAccountFile: "non-existent-file.json",
 			},
-			wantErr: true,
+			errContains: "credentials search failed:",
 		},
 		{
 			name: "invalid service account file json should fail",
@@ -41,7 +52,7 @@ func TestInit(t *testing.T) {
 				ServiceAccountFile: "./testdata/invalid-json-sa-key.json",
 			},
 			wantErr:     true,
-			errContains: "invalid character",
+			errContains: "credentials search failed: invalid character",
 		},
 		{
 			name: "missing service account type should fail",
@@ -51,7 +62,7 @@ func TestInit(t *testing.T) {
 				ServiceAccountFile: "./testdata/missing-type-sa-key.json",
 			},
 			wantErr:     true,
-			errContains: "unsupported unidentified file type",
+			errContains: "credentials search failed: credentials: unsupported unidentified file type",
 		},
 		{
 			name: "missing audience should fail",
@@ -59,56 +70,56 @@ func TestInit(t *testing.T) {
 				Log:                testutil.Logger{},
 				ServiceAccountFile: "./testdata/gdch.json",
 			},
-			wantErr:     true,
-			errContains: "STSAudience must be set for the GDCH auth flows",
-		},
-		{
-			name: "successful init",
-			plugin: &GoogleCloud{
-				STSAudience:        "https://localhost",
-				Log:                testutil.Logger{},
-				ServiceAccountFile: "./testdata/gdch.json",
-			},
-			wantErr: false,
+			errContains: "credentials search failed: credentials: STSAudience must be set for the GDCH auth flows",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			err := tc.plugin.Init()
-			if tc.wantErr {
-				require.ErrorContains(t, err, tc.errContains, "error mismatch")
-			} else {
-				require.NoError(t, err)
-				require.NotNil(t, tc.plugin.credentials)
-			}
+			require.Error(t, err)
+			require.ErrorContains(t, err, tc.errContains, "error mismatch")
+			require.Nil(t, tc.plugin.credentials)
 		})
 	}
 }
 
-func TestGet(t *testing.T) {
+func TestGetSuccess(t *testing.T) {
+	plugin := &GoogleCloud{
+		credentials: auth.NewCredentials(&auth.CredentialsOptions{
+			TokenProvider: mockTokenProvider{
+				token: &auth.Token{Value: "token", Expiry: time.Now().Add(time.Hour)},
+			},
+		}),
+	}
+	token, err := plugin.Get("token")
+	require.NoError(t, err)
+	require.Equal(t, []byte("token"), token)
+}
+
+func TestGetFail(t *testing.T) {
 	tests := []struct {
 		name        string
+		key         string
 		provider    auth.TokenProvider
 		wantToken   []byte
-		wantErr     bool
 		errContains string
 	}{
 		{
-			name: "successful get",
-			provider: mockTokenProvider{
-				token: &auth.Token{Value: "token", Expiry: time.Now().Add(time.Hour)},
-			},
-			wantToken: []byte("token"),
-			wantErr:   false,
-		},
-		{
-			name: "error getting token",
+			name: "token provider error",
+			key:  "token",
 			provider: mockTokenProvider{
 				err: errors.New("token provider error"),
 			},
-			wantErr:     true,
 			errContains: "token provider error",
+		},
+		{
+			name: "unsupported key",
+			key:  "invalid_key",
+			provider: mockTokenProvider{
+				token: &auth.Token{Value: "token", Expiry: time.Now().Add(time.Hour)},
+			},
+			errContains: "invalid key",
 		},
 	}
 
@@ -119,15 +130,10 @@ func TestGet(t *testing.T) {
 					TokenProvider: tt.provider,
 				}),
 			}
-
-			token, err := plugin.Get("token")
-			if tt.wantErr {
-				require.ErrorContains(t, err, tt.errContains)
-				require.Nil(t, token)
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tt.wantToken, token)
-			}
+			token, err := plugin.Get(tt.key)
+			require.Error(t, err)
+			require.ErrorContains(t, err, tt.errContains)
+			require.Nil(t, token)
 		})
 	}
 }
