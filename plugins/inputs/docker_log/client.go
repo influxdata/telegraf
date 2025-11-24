@@ -35,6 +35,7 @@ func newClient(host string, tlsConfig *tls.Config) (dockerClient, error) {
 	client, err := docker.NewClientWithOpts(
 		docker.WithHTTPHeaders(map[string]string{"User-Agent": "engine-api-cli-1.0"}),
 		docker.WithHTTPClient(httpClient),
+		docker.WithAPIVersionNegotiation(),
 		docker.WithHost(host))
 
 	if err != nil {
