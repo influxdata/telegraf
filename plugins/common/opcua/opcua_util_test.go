@@ -97,7 +97,6 @@ func TestGenerateCertMissingHost(t *testing.T) {
 	keyPath := filepath.Join(tmpDir, "key.pem")
 
 	_, _, err := generateCert("", 2048, certPath, keyPath, 24*365*3600)
-	require.Error(t, err)
 	require.ErrorIs(t, err, ErrCertificateGeneration)
 }
 
