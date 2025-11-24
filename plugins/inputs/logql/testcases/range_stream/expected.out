@@ -1,0 +1,5 @@
+logql,detected_level=unknown,filename=/var/log/Xorg.0.log,job=varlogs,service_name=varlogs message="[     6.806] (--) Log file renamed from \"/var/log/Xorg.pid-693.log\" to \"/var/log/Xorg.0.log\"" 1762943173000000000
+logql,detected_level=unknown,filename=/var/log/Xorg.0.log,job=varlogs,service_name=varlogs message="[     6.807] " 1762943173000000000
+logql,detected_level=unknown,filename=/var/log/Xorg.0.log,job=varlogs,service_name=varlogs message="X.Org X Server 1.21.1.14" 1762943173000000000
+logql,detected_level=unknown,filename=/var/log/Xorg.0.log,job=varlogs,service_name=varlogs message="X Protocol Version 11, Revision 0" 1762943173000000000
+logql,detected_level=unknown,filename=/var/log/Xorg.0.log,job=varlogs,service_name=varlogs message="[     6.807] Current Operating System: Linux Hugin 6.12.1-arch1-1 #1 SMP PREEMPT_DYNAMIC Fri, 22 Nov 2024 16:04:27 +0000 x86_64"

@@ -1,0 +1,58 @@
+# Query Loki endpoints using LogQL
+[[inputs.logql]]
+  ## URL of the Loki endpoint
+  # url = "http://localhost:3100"
+
+  ## Basic authentication properties
+  # username = ""
+  # password = ""
+
+  ## Bearer token based authentication
+  # token = ""
+
+  ## Organization IDs for the queries in multi-tenant setups
+  # organizations = []
+
+  ## Timeout for executing queries with zero meaning no timeout
+  # timeout = "5s"
+
+{{template "/plugins/common/http/transport.conf"}}
+
+  ## Instant queries, multiple instances are allowed
+  # [[inputs.logql.instant]]
+  #   ## Fallback name of the resulting metrics to use as metric name in case
+  #   ## the __name__ property of the query results is empty.
+  #   # name = "logql"
+  #
+  #   ## Query to execute
+  #   query = 'count_over_time({job="varlogs"}[24h])'
+  #
+  #   ## Sorting direction of logs, either "forward" or "backward"
+  #   # sorting = "backward"
+  #
+  #   ## Limit for the number of results returned by the server with zero
+  #   ## meaning no limit
+  #   # limit = 0
+
+  ## Range queries, multiple instances are allowed
+  # [[inputs.logql.range]]
+  #   ## Fallback name of the resulting metrics to use as metric name in case
+  #   ## the __name__ property of the query results is empty.
+  #   # name = "logql"
+  #
+  #   ## Query to execute
+  #   query = '{job="varlogs"}'
+  #
+  #   ## Range parameters relative to the gathering time with positive values
+  #   ## refer to BEFORE and negative to AFTER the gathering time
+  #   start = "5m"
+  #   # end = "0s"
+  #   # step = "0s"
+  #   # interval = "0s"
+  #
+  #   ## Sorting direction of logs, either "forward" or "backward"
+  #   # sorting = "backward"
+  #
+  #   ## Limit for the number of results returned by the server with zero
+  #   ## meaning no limit
+  #   # limit = 0
