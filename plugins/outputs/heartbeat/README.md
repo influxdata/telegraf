@@ -44,7 +44,8 @@ to use them.
   # interval = "1m"
 
   ## Information to include in the message, available options are
-  ##   hostname -- hostname of the instance running Telegraf
+  ##   hostname   -- hostname of the instance running Telegraf
+  ##   statistics -- number of metrics, logged errors and warnings, etc
   # include = ["hostname"]
 
   ## Additional HTTP headers
@@ -58,5 +59,10 @@ used for the message. The latest schema can be found in the
 [plugin directory][schema].
 
 Additional information can be included in the message via the `include` setting.
+
+All information in the messages are accumulated until a message was sent
+_successfully_. The case of failed messages can be identified by messages
+containing the `last` field indicating the last time the plugin sent a message
+sucessfully.
 
 [schema]: /plugins/outputs/heartbeat/schema_v1.json

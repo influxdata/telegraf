@@ -11,12 +11,14 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"slices"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/logger"
 	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -37,12 +39,16 @@ type Heartbeat struct {
 	Log        telegraf.Logger           `toml:"-"`
 	common_http.HTTPClientConfig
 
-	client *http.Client
-	cancel context.CancelFunc
-	wg     sync.WaitGroup
+	client        *http.Client
+	logCallbackID string
+	cancel        context.CancelFunc
+	wg            sync.WaitGroup
 
 	// Output message parts
 	message message
+
+	// Statistics
+	stats statistics
 }
 
 func (*Heartbeat) SampleConfig() string {
@@ -72,6 +78,8 @@ func (h *Heartbeat) Init() error {
 
 	for _, inc := range h.Include {
 		switch inc {
+		case "statistics":
+			// Do nothing, those are valid
 		case "hostname":
 			host, err := os.Hostname()
 			if err != nil {
@@ -87,6 +95,15 @@ func (h *Heartbeat) Init() error {
 }
 
 func (h *Heartbeat) Connect() error {
+	// Make sure we register a logging callback if we need to collect logs
+	if slices.Contains(h.Include, "statistics") && h.logCallbackID == "" {
+		id, err := logger.AddCallback(h.handleLogEvent)
+		if err != nil {
+			return fmt.Errorf("registering logging callback failed: %w", err)
+		}
+		h.logCallbackID = id
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	h.cancel = cancel
 
@@ -122,6 +139,10 @@ func (h *Heartbeat) Connect() error {
 }
 
 func (h *Heartbeat) Close() error {
+	if h.logCallbackID != "" {
+		logger.RemoveCallback(h.logCallbackID)
+	}
+
 	if h.cancel != nil {
 		h.cancel()
 	}
@@ -136,12 +157,39 @@ func (h *Heartbeat) Close() error {
 	return nil
 }
 
-func (*Heartbeat) Write([]telegraf.Metric) error {
+func (h *Heartbeat) Write(metrics []telegraf.Metric) error {
+	h.stats.Lock()
+	defer h.stats.Unlock()
+
+	h.stats.metrics += uint64(len(metrics))
+
 	// Heartbeat plugin does not process metrics; it sends heartbeats independently
 	return nil
 }
 
 func (h *Heartbeat) send() error {
+	// Snapshot the current information state for sending the message
+	snapshot := h.stats.snapshot()
+
+	// Add the last successful update timestamp if any previous update failed
+	if snapshot.lastUpdateFailed {
+		ts := snapshot.lastUpdate.Unix()
+		h.message.LastSuccessfulUpdate = &ts
+	} else {
+		h.message.LastSuccessfulUpdate = nil
+	}
+
+	// Construct the message
+	for _, item := range h.Include {
+		if item == "statistics" {
+			h.message.Statistics = &statsEntry{
+				Errors:   snapshot.logErrors,
+				Warnings: snapshot.logWarnings,
+				Metrics:  snapshot.metrics,
+			}
+		}
+	}
+
 	// Create the message body
 	var body bytes.Buffer
 	data, err := json.Marshal(h.message)
@@ -201,8 +249,17 @@ func (h *Heartbeat) send() error {
 		if rerr != nil {
 			return fmt.Errorf("received status %d (%s) with decoding message failed: %w", resp.StatusCode, resp.Status, rerr)
 		}
+
+		// Mark the statistics as not sent
+		h.stats.Lock()
+		h.stats.lastUpdateFailed = true
+		h.stats.Unlock()
+
 		return fmt.Errorf("received status %d (%s) with message %s", resp.StatusCode, resp.Status, response)
 	}
+
+	// Update statistics on successful sent
+	h.stats.remove(snapshot, time.Now())
 
 	return nil
 }
