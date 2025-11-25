@@ -15,28 +15,29 @@ store usage.
 ## Configuration
 
 ```toml @sample.conf
+## Fetch tokens from Google Cloud Authentication
 [[secretstores.googlecloud]]
+  ## Unique identifier for the secret-store.
+  ## This id can later be used in plugins to reference the secrets
+  ## in this secret-store via @{<id>:token}(mandatory)
   id = "googlecloud_secret"
-  ## Path to the service account JSON key file
-  service_account_file = "./testdata/gdch.json"
+
+  ## Path to the service account credentials file
+  credentials_file = "./testdata/gdch.json"
+
+  ## Audience sent to when retrieving an STS token.
+  ## Currently only used for GDCH auth flow
   sts_audience = "https://{AUDIENCE_URL}"
 ```
 
-### Referencing Secret within a Plugin
-
-Referencing the secret within a plugin occurs by:
-
-```toml
-[[inputs.http]]
-  token = "@{googlecloud_secret:token}"
-```
+> [!IMPORTANT] This plugin only provides one secret with the key `token`, other keys lead to errors.
 
 ## Additional Information
 
-[How to generate GDCH service account file][1]
+To generate a Google-Distributed-Cloud-Hosted service account credentials file check the documentation on [gdch_service_docs].
 
-[Learn about Google Cloud Detect Options][2]
+To extend support for other google-cloud auth methods refer to [google_credentials].
 
-[1]: https://docs.cloud.google.com/distributed-cloud/hosted/docs/latest/gdch/application/ao-user/iam/service-identities
+[gdch_service_docs]: https://docs.cloud.google.com/distributed-cloud/hosted/docs/latest/gdch/application/ao-user/iam/service-identities
 
-[2]: https://github.com/googleapis/google-cloud-go/blob/main/auth/credentials/detect.go
+[google_credentials]: https://pkg.go.dev/cloud.google.com/go/auth/credentials

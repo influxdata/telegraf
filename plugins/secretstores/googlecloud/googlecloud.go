@@ -24,9 +24,9 @@ func (*GoogleCloud) SampleConfig() string {
 }
 
 type GoogleCloud struct {
-	STSAudience        string          `toml:"sts_audience"`
-	ServiceAccountFile string          `toml:"service_account_file"`
-	Log                telegraf.Logger `toml:"-"`
+	STSAudience     string          `toml:"sts_audience"`
+	CredentialsFile string          `toml:"credentials_file"`
+	Log             telegraf.Logger `toml:"-"`
 	common_http.HTTPClientConfig
 
 	credentials *auth.Credentials
@@ -39,7 +39,7 @@ func (g *GoogleCloud) Init() error {
 	}
 	creds, err := credentials.DetectDefault(&credentials.DetectOptions{
 		STSAudience:     g.STSAudience,
-		CredentialsFile: g.ServiceAccountFile,
+		CredentialsFile: g.CredentialsFile,
 		Client:          client,
 		Logger:          slog.NewLogger(g.Log),
 	})
