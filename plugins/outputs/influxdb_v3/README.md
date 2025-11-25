@@ -1,8 +1,9 @@
 # InfluxDB v3.x Output Plugin
 
-This plugin writes metrics to a [InfluxDB v3.x][influxdb_v3] instance via HTTP.
+This plugin writes metrics to a [InfluxDB v3.x][influxdb_v3] Core or Enterprise
+instance via the HTTP API.
 
-⭐ Telegraf v1.33.2
+⭐ Telegraf v1.38.0
 🏷️ datastore
 💻 all
 
@@ -106,8 +107,3 @@ to use them.
   # rate_limit_period = "0s"
 ```
 
-## Metrics
-
-Reference the [influx serializer][] for details about metric production.
-
-[influx serializer]: /plugins/serializers/influx/README.md#Metrics
