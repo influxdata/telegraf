@@ -41,9 +41,4 @@ store usage.
 To generate a Google-Distributed-Cloud-Hosted service account credentials file
 check the [Manage service accounts][gdch_service_docs].
 
-To extend support for other google-cloud auth methods
-refer to [Google Auth Library][google_credentials].
-
 [gdch_service_docs]: https://docs.cloud.google.com/distributed-cloud/hosted/docs/latest/gdch/application/ao-user/iam/service-identities
-
-[google_credentials]: https://pkg.go.dev/cloud.google.com/go/auth/credentials
