@@ -32,7 +32,7 @@ store usage.
   sts_audience = "https://{AUDIENCE_URL}"
 ```
 
-> [!IMPORTANT] This plugin only provides one secret with the key `token`, 
+> [!IMPORTANT] This plugin only provides one secret with the key `token`,
 other keys lead to errors.
 
 ## Additional Information
