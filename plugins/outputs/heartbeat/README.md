@@ -60,9 +60,10 @@ used for the message. The latest schema can be found in the
 
 Additional information can be included in the message via the `include` setting.
 
-All information in the messages are accumulated until a message was sent
-_successfully_. The case of failed messages can be identified by messages
-containing the `last` field indicating the last time the plugin sent a message
-sucessfully.
+Statistics included in heartbeat messages are accumulated since the last
+successful heartbeat. If a heartbeat cannot be sent, accumulation of data
+continues until the next successful send. Additionally, message after a failed
+send the `last` field contains the Unix timestamp of the last successful
+heartbeat, allowing you to identify gaps in reporting and to calculate rates.
 
 [schema]: /plugins/outputs/heartbeat/schema_v1.json
