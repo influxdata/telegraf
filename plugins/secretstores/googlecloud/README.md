@@ -1,6 +1,8 @@
 # GoogleCloud Secrets Secret-Store Plugin
 
-This plugin allows to fetch token from google cloud auth library
+This plugin allows to retrieve token-based [Google Cloud Credentials][gc_auth].
+
+[gc_auth]: https://docs.cloud.google.com/docs/authentication
 
 ## Usage <!-- @/docs/includes/secret_usage.md -->
 
@@ -34,9 +36,9 @@ store usage.
 
 ## Additional Information
 
-To generate a Google-Distributed-Cloud-Hosted service account credentials file check the documentation on [gdch_service_docs].
+To generate a Google-Distributed-Cloud-Hosted service account credentials file check the [Manage service accounts][gdch_service_docs].
 
-To extend support for other google-cloud auth methods refer to [google_credentials].
+To extend support for other google-cloud auth methods refer to [Google Auth Library][google_credentials].
 
 [gdch_service_docs]: https://docs.cloud.google.com/distributed-cloud/hosted/docs/latest/gdch/application/ao-user/iam/service-identities
 
