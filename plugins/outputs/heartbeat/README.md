@@ -47,8 +47,6 @@ to use them.
   ##   hostname   -- hostname of the instance running Telegraf
   ##   statistics -- number of metrics, logged errors and warnings, etc
   ##   configs    -- redacted list of configs loaded by this instance
-  # include = ["hostname"]
-  ##   configs    -- redacted list of configs loaded by this instance
   ##   logs       -- detailed log-entries for this instance
   ##   status     -- result of the status condition evaluation
   # include = ["hostname", "status"]
@@ -233,24 +231,6 @@ information matching the `internal_write` metric of the
 
 If not stated otherwise, all variables are accumulated since the last successful
 heartbeat message.
-
-### Configuration information
-
-When including `configs` in the message the heartbeat message will contain the
-configuration sources used to setup the currently running Telegraf instance.
-
-> [!WARNING]
-> As the configuration sources contains path or the URL the resulting heartbeat
-> messages might be large. Use this option with care if network traffic is a
-> limiting factor!
-
-The configuration information can potentially change when watching e.g. the
-configuration directory while a new configuration is added or removed.
-
-> [!IMPORTANT]
-> Configuration URLs are redacted to remove the username and password
-> information. However, sensitive information might still be contained in the
-> URL or the path sent. Use with care!
 
 [schema]: /plugins/outputs/heartbeat/schema_v1.json
 [cel]: https://cel.dev
