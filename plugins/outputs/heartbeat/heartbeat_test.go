@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -96,7 +97,7 @@ func TestIncludes(t *testing.T) {
 		URL:        u,
 		InstanceID: "telegraf",
 		Interval:   config.Duration(10 * time.Second),
-		Include:    []string{"hostname", "statistics"},
+		Include:    []string{"configs", "hostname", "statistics"},
 		Log:        &testutil.Logger{},
 	}
 
@@ -108,6 +109,40 @@ func TestIncludedExtraData(t *testing.T) {
 	hostname, err := os.Hostname()
 	require.NoError(t, err)
 
+	// Add a dummy http server for configs
+	cfgServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer cfgServer.Close()
+
+	// Add some dummy configuration files
+	absdir, err := filepath.Abs("testdata")
+	require.NoError(t, err)
+	cfgs := []string{
+		"testdata/telegraf.conf",
+		absdir + "/telegraf.d/inputs.conf",
+		"http://user:password@" + cfgServer.Listener.Addr().String(),
+		absdir + "/telegraf.d/outputs.conf",
+		"http://" + cfgServer.Listener.Addr().String() + "/myconfigs",
+		"testdata/non_existing.conf",
+	}
+
+	cfg := config.NewConfig()
+	for _, c := range cfgs {
+		//nolint:errcheck // Ignore error on purpose as some endpoints won't be loadable
+		cfg.LoadConfig(c)
+	}
+	cfgServer.Close()
+
+	// Expected configs
+	cfgsExpected := strings.Join([]string{
+		`"testdata/telegraf.conf"`,
+		`"` + absdir + `/telegraf.d/inputs.conf"`,
+		`"http://user:xxxxx@` + cfgServer.Listener.Addr().String() + `"`,
+		`"` + absdir + `/telegraf.d/outputs.conf"`,
+		`"http://` + cfgServer.Listener.Addr().String() + `/myconfigs"`,
+	}, ",")
+
 	// Prepare a string replacer to replace dynamic content such as the hostname
 	// in the expected strings
 	logtime := time.Now()
@@ -115,6 +150,7 @@ func TestIncludedExtraData(t *testing.T) {
 		"$HOSTNAME", hostname,
 		"$VERSION", internal.FormatFullVersion(),
 		"$SCHEMA", strconv.Itoa(jsonSchemaVersion),
+		"$CONFIGS", cfgsExpected,
 	)
 
 	tests := []struct {
@@ -155,8 +191,18 @@ func TestIncludedExtraData(t *testing.T) {
 			}`,
 		},
 		{
+			name:     "configurations",
+			includes: []string{"configs"},
+			expected: `{
+			  "id": "telegraf",
+			  "version": "$VERSION",
+			  "schema": $SCHEMA,
+			  "configurations": [$CONFIGS]
+			}`,
+		},
+		{
 			name:     "all",
-			includes: []string{"hostname", "statistics"},
+			includes: []string{"configs", "hostname", "statistics"},
 			expected: `{
 			  "id": "telegraf",
 			  "version": "$VERSION",
@@ -166,7 +212,8 @@ func TestIncludedExtraData(t *testing.T) {
 				"errors": 1,
 				"warnings": 2,
 				"metrics": 5
-			  }
+			  },
+			  "configurations": [$CONFIGS]
 			}`,
 		},
 	}
