@@ -44,7 +44,8 @@ to use them.
   # interval = "1m"
 
   ## Information to include in the message, available options are
-  ##   hostname -- hostname of the instance running Telegraf
+  ##   hostname   -- hostname of the instance running Telegraf
+  ##   statistics -- number of metrics, logged errors and warnings, etc
   # include = ["hostname"]
 
   ## Additional HTTP headers
@@ -58,5 +59,11 @@ used for the message. The latest schema can be found in the
 [plugin directory][schema].
 
 Additional information can be included in the message via the `include` setting.
+
+Statistics included in heartbeat messages are accumulated since the last
+successful heartbeat. If a heartbeat cannot be sent, accumulation of data
+continues until the next successful send. Additionally, message after a failed
+send the `last` field contains the Unix timestamp of the last successful
+heartbeat, allowing you to identify gaps in reporting and to calculate rates.
 
 [schema]: /plugins/outputs/heartbeat/schema_v1.json

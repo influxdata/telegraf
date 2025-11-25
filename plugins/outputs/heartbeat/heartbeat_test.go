@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,8 +18,10 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v5"
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -94,7 +96,7 @@ func TestIncludes(t *testing.T) {
 		URL:        u,
 		InstanceID: "telegraf",
 		Interval:   config.Duration(10 * time.Second),
-		Include:    []string{"hostname"},
+		Include:    []string{"hostname", "statistics"},
 		Log:        &testutil.Logger{},
 	}
 
@@ -106,40 +108,6 @@ func TestIncludedExtraData(t *testing.T) {
 	hostname, err := os.Hostname()
 	require.NoError(t, err)
 
-	// Add a dummy http server for configs
-	cfgServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer cfgServer.Close()
-
-	// Add some dummy configuration files
-	absdir, err := filepath.Abs("testdata")
-	require.NoError(t, err)
-	cfgs := []string{
-		"testdata/telegraf.conf",
-		absdir + "/telegraf.d/inputs.conf",
-		"http://user:password@" + cfgServer.Listener.Addr().String(),
-		absdir + "/telegraf.d/outputs.conf",
-		"http://" + cfgServer.Listener.Addr().String() + "/myconfigs",
-		"testdata/non_existing.conf",
-	}
-
-	cfg := config.NewConfig()
-	for _, c := range cfgs {
-		//nolint:errcheck // Ignore error on purpose as some endpoints won't be loadable
-		cfg.LoadConfig(c)
-	}
-	cfgServer.Close()
-
-	// Expected configs
-	cfgsExpected := strings.Join([]string{
-		`"testdata/telegraf.conf"`,
-		`"` + absdir + `/telegraf.d/inputs.conf"`,
-		`"http://user:xxxxx@` + cfgServer.Listener.Addr().String() + `"`,
-		`"` + absdir + `/telegraf.d/outputs.conf"`,
-		`"http://` + cfgServer.Listener.Addr().String() + `/myconfigs"`,
-	}, ",")
-
 	// Prepare a string replacer to replace dynamic content such as the hostname
 	// in the expected strings
 	logtime := time.Now()
@@ -147,8 +115,6 @@ func TestIncludedExtraData(t *testing.T) {
 		"$HOSTNAME", hostname,
 		"$VERSION", internal.FormatFullVersion(),
 		"$SCHEMA", strconv.Itoa(jsonSchemaVersion),
-		"$CONFIGS", cfgsExpected,
-		"$LOGTIME", logtime.UTC().Format(time.RFC3339Nano),
 	)
 
 	tests := []struct {
@@ -175,13 +141,32 @@ func TestIncludedExtraData(t *testing.T) {
 			}`,
 		},
 		{
-			name:     "all",
-			includes: []string{"hostname"},
+			name:     "statistics",
+			includes: []string{"statistics"},
 			expected: `{
 			  "id": "telegraf",
 			  "version": "$VERSION",
 			  "schema": $SCHEMA,
-			  "hostname": "$HOSTNAME"
+			  "statistics": {
+				"errors": 1,
+				"warnings": 2,
+				"metrics": 5
+			  }
+			}`,
+		},
+		{
+			name:     "all",
+			includes: []string{"hostname", "statistics"},
+			expected: `{
+			  "id": "telegraf",
+			  "version": "$VERSION",
+			  "schema": $SCHEMA,
+			  "hostname": "$HOSTNAME",
+			  "statistics": {
+				"errors": 1,
+				"warnings": 2,
+				"metrics": 5
+			  }
 			}`,
 		},
 	}
@@ -224,6 +209,40 @@ func TestIncludedExtraData(t *testing.T) {
 				Log:        &testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
+
+			// Register the logging handler early to avoid race conditions
+			// during testing. This is not ideal but the only way to get
+			// reliable tests without a race between the Connect call,
+			// registering the callback and the actual logging.
+			id, err := logger.AddCallback(plugin.handleLogEvent)
+			require.NoError(t, err)
+			defer logger.RemoveCallback(id)
+			plugin.logCallbackID = id
+
+			// Write 5 metrics to be able to test the metric count. This has to
+			// be done before "connecting" to avoid race conditions between
+			// the Write function and the heartbeat ticker.
+			require.NoError(t, plugin.Write([]telegraf.Metric{
+				testutil.TestMetric(0),
+				testutil.TestMetric(1),
+				testutil.TestMetric(2),
+				testutil.TestMetric(3),
+				testutil.TestMetric(4),
+			}))
+
+			// Log a few messages to be able to test the log-handling
+			if slices.Contains(tt.includes, "logs") || slices.Contains(tt.includes, "statistics") {
+				logger := logger.New("inputs", "test", "hbt")
+				logger.AddAttribute("source", "heartbeat")
+				logger.AddAttribute("type", "testing")
+				logger.Print(telegraf.Error, logtime, "An error message")
+				logger.Print(telegraf.Warn, logtime, "A first warning")
+				logger.Print(telegraf.Info, logtime, "An information")
+				logger.Print(telegraf.Debug, logtime, "A debug information")
+				logger.Print(telegraf.Trace, logtime, "A trace information")
+				logger.Print(telegraf.Warn, logtime, "A second warning")
+			}
+
 			require.NoError(t, plugin.Connect())
 			defer plugin.Close()
 
@@ -381,10 +400,42 @@ func TestSendingFail(t *testing.T) {
 		URL:        u,
 		InstanceID: "telegraf",
 		Interval:   config.Duration(250 * time.Millisecond),
-		Include:    make([]string, 0),
+		Include:    []string{"statistics"},
 		Log:        &log,
 	}
 	require.NoError(t, plugin.Init())
+
+	// Register the logging handler early to avoid race conditions
+	// during testing. This is not ideal but the only way to get
+	// reliable tests without a race between the Connect call,
+	// registering the callback and the actual logging.
+	id, err := logger.AddCallback(plugin.handleLogEvent)
+	require.NoError(t, err)
+	defer logger.RemoveCallback(id)
+	plugin.logCallbackID = id
+
+	// Write 5 metrics to be able to test the metric count. This has to
+	// be done before "connecting" to avoid race conditions between
+	// the Write function and the heartbeat ticker.
+	require.NoError(t, plugin.Write([]telegraf.Metric{
+		testutil.TestMetric(0),
+		testutil.TestMetric(1),
+		testutil.TestMetric(2),
+		testutil.TestMetric(3),
+		testutil.TestMetric(4),
+	}))
+
+	// Log a few messages to be able to test the log-handling
+	logProducer := logger.New("inputs", "test", "hbt")
+	logProducer.AddAttribute("source", "heartbeat")
+	logProducer.AddAttribute("type", "testing")
+	logProducer.Print(telegraf.Error, logtime, "An error message")
+	logProducer.Print(telegraf.Warn, logtime, "A first warning")
+	logProducer.Print(telegraf.Info, logtime, "An information")
+	logProducer.Print(telegraf.Debug, logtime, "A debug information")
+	logProducer.Print(telegraf.Trace, logtime, "A trace information")
+	logProducer.Print(telegraf.Warn, logtime, "A second warning")
+
 	require.NoError(t, plugin.Connect())
 	defer plugin.Close()
 
@@ -399,7 +450,12 @@ func TestSendingFail(t *testing.T) {
 	{
 		"id": "telegraf",
 		"version": "$VERSION",
-		"schema": $SCHEMA
+		"schema": $SCHEMA,
+		"statistics": {
+			"errors": 1,
+			"warnings": 2,
+			"metrics": 5
+		}
 	}`)
 
 	receivedMu.Lock()
@@ -423,6 +479,26 @@ func TestSendingFail(t *testing.T) {
 		return false
 	}, time.Second, 100*time.Millisecond)
 
+	// Add some more log messages and metrics
+	logProducer.Print(telegraf.Error, logtime, "An error message logged during failing sends")
+	require.NoError(t, plugin.Write([]telegraf.Metric{testutil.TestMetric(5)}))
+	received.Store(0)
+	require.Eventually(t, func() bool {
+		return received.Swap(0) > 0
+	}, time.Second, 100*time.Millisecond)
+	logProducer.Print(telegraf.Error, logtime, "Another error message logged during failing sends")
+	require.NoError(t, plugin.Write([]telegraf.Metric{testutil.TestMetric(6)}))
+	require.Eventually(t, func() bool {
+		return received.Swap(0) > 0
+	}, time.Second, 100*time.Millisecond)
+
+	// Check the update is marked as failed
+	plugin.stats.Lock()
+	lastUpdate := plugin.stats.lastUpdate.Unix()
+	lastUpdateFailed := plugin.stats.lastUpdateFailed
+	plugin.stats.Unlock()
+	require.True(t, lastUpdateFailed, "last update not marked as failed")
+
 	// Reset server to receive successfully and wait for the next update
 	receivedUpdate.Store(0)
 	snapshot.Store(true)
@@ -438,4 +514,14 @@ func TestSendingFail(t *testing.T) {
 	// Check the message against the schema
 	require.NoError(t, json.Unmarshal([]byte(actual), &v))
 	require.NoError(t, schema.Validate(v))
+
+	// Decode the received message for evaluation
+	var msg message
+	require.NoError(t, json.Unmarshal([]byte(actual), &msg))
+	require.NotNil(t, msg.LastSuccessfulUpdate)
+	require.Equal(t, *msg.LastSuccessfulUpdate, lastUpdate)
+	require.NotNil(t, msg.Statistics)
+	require.Equal(t, uint64(2), msg.Statistics.Metrics)
+	require.Equal(t, uint64(5), msg.Statistics.Errors)
+	require.Equal(t, uint64(0), msg.Statistics.Warnings)
 }
