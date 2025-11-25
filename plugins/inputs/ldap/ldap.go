@@ -24,6 +24,7 @@ var sampleConfig string
 type LDAP struct {
 	Server            string        `toml:"server"`
 	Dialect           string        `toml:"dialect"`
+	BindMech          string        `toml:"bind_mechanism"`
 	BindDn            string        `toml:"bind_dn"`
 	BindPassword      config.Secret `toml:"bind_password"`
 	ReverseFieldNames bool          `toml:"reverse_field_names"`
@@ -103,6 +104,15 @@ func (l *LDAP) Init() error {
 	l.mode = u.Scheme
 	l.Server = u.Host
 	l.host, l.port = u.Hostname(), u.Port()
+
+	switch l.BindMech {
+	case "", "simple":
+		l.BindMech = "SIMPLE"
+	case "SIMPLE", "EXTERNAL":
+		// Pass: Valid and implemented
+	default:
+		return fmt.Errorf("unsupported bind type: %s", l.BindMech)
+	}
 
 	// Force TLS depending on the selected mode
 	l.ClientConfig.Enable = &tlsEnable
@@ -196,6 +206,13 @@ func (l *LDAP) connect() (*ldap.Conn, error) {
 		}
 	default:
 		return nil, fmt.Errorf("invalid tls_mode: %s", l.mode)
+	}
+
+	if l.BindMech == "EXTERNAL" {
+		if err := conn.ExternalBind(); err != nil {
+			return nil, fmt.Errorf("binding with EXTERNAL mech failed: %w", err)
+		}
+		return conn, nil
 	}
 
 	if l.BindDn == "" && l.BindPassword.Empty() {
