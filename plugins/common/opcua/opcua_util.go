@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -32,14 +33,6 @@ func newTempDir() (string, error) {
 }
 
 func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.Duration) (cert, key string, err error) {
-	dir, err := newTempDir()
-	if err != nil {
-		return "", "", &CertificateError{
-			Operation: "directory creation",
-			Err:       fmt.Errorf("%w: %w", ErrCertificateGeneration, err),
-		}
-	}
-
 	if len(host) == 0 {
 		return "", "", &CertificateError{
 			Operation: "validation",
@@ -49,11 +42,35 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 	if rsaBits == 0 {
 		rsaBits = 2048
 	}
-	if len(certFile) == 0 {
+
+	// If both paths are empty, use temporary directory (backward compatible behavior)
+	if certFile == "" && keyFile == "" {
+		dir, err := newTempDir()
+		if err != nil {
+			return "", "", &CertificateError{
+				Operation: "directory creation",
+				Err:       fmt.Errorf("%w: %w", ErrCertificateGeneration, err),
+			}
+		}
 		certFile = dir + "/cert.pem"
-	}
-	if len(keyFile) == 0 {
 		keyFile = dir + "/key.pem"
+	} else {
+		// If paths are provided, create parent directories if they don't exist
+		if err := os.MkdirAll(filepath.Dir(certFile), 0750); err != nil {
+			return "", "", &CertificateError{
+				Operation: "directory creation",
+				Path:      certFile,
+				Err:       fmt.Errorf("%w: failed to create parent directory: %w", ErrCertificateGeneration, err),
+			}
+		}
+
+		if err := os.MkdirAll(filepath.Dir(keyFile), 0750); err != nil {
+			return "", "", &CertificateError{
+				Operation: "directory creation",
+				Path:      keyFile,
+				Err:       fmt.Errorf("%w: failed to create parent directory: %w", ErrCertificateGeneration, err),
+			}
+		}
 	}
 
 	priv, err := rsa.GenerateKey(rand.Reader, rsaBits)

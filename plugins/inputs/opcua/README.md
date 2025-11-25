@@ -63,12 +63,12 @@ to use them.
   ## Security mode, one of "None", "Sign", "SignAndEncrypt", or "auto"
   # security_mode = "auto"
 
-  ## Path to cert.pem. Required when security mode or policy isn't "None".
-  ## If cert path is not supplied, self-signed cert and key will be generated.
+  ## Path to client certificate and private key files, must be specified together.
+  ## If none of the options are specified, a temporary self-signed certificate
+  ## will be created. If the options are specified but the files do not exist, a
+  ## self-signed certificate will be created and stored permanently at the
+  ## given locations.
   # certificate = "/etc/telegraf/cert.pem"
-
-  ## Path to private key.pem. Required when security mode or policy isn't "None".
-  ## If key path is not supplied, self-signed cert and key will be generated.
   # private_key = "/etc/telegraf/key.pem"
 
   ## Path to additional, explicitly trusted certificate for the remote endpoint
@@ -198,6 +198,48 @@ to use them.
   #   ## Use unregistered reads instead of registered reads
   #   # use_unregistered_reads = false
 ```
+
+### Client Certificate Configuration
+
+When using security modes other than "None", Telegraf acts as an OPC UA client
+and requires a client certificate to authenticate itself to the server. The
+plugin supports three certificate management approaches:
+
+#### Temporary Self-Signed Certificates (Default)
+
+If both `certificate` and `private_key` options are left empty or commented
+out, Telegraf will automatically generate a self-signed certificate in a
+temporary directory on each startup.
+
+> [!NOTE]
+> These certificates are recreated on every Telegraf restart, requiring
+> re-authorization by the OPC UA server each time. This is suitable for testing
+> but not recommended for production environments.
+
+#### Persistent Self-Signed Certificates (Recommended for Testing)
+
+To maintain the same client identity across restarts, specify paths for both
+`certificate` and `private_key`. If the files don't exist, Telegraf will
+generate them at the specified locations and reuse them on subsequent restarts.
+
+> [!IMPORTANT]
+> Ensure Telegraf has write permissions to the specified paths. On first run,
+> Telegraf will generate the certificates and log their locations. On subsequent
+> restarts, Telegraf will reuse the existing certificates, preventing the need
+> to re-authorize the client in the server's trust store.
+
+#### Manual Certificate Management (Production)
+
+For production environments, manually generate and deploy certificates using
+your organization's PKI infrastructure. Place the certificate and private key
+files at the configured paths before starting Telegraf. If both files exist,
+Telegraf will use them without modification.
+
+#### Certificate Validation Rules
+
+- Both `certificate` and `private_key` must be specified together, or both
+  must be empty
+- If one file exists but the other doesn't, Telegraf will return an error
 
 ## Node Configuration
 
