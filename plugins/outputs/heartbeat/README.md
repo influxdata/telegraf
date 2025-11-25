@@ -106,18 +106,6 @@ successful heartbeat. If a heartbeat cannot be sent, accumulation of data
 continues until the next successful send. Additionally, message after a failed
 send the `last` field contains the Unix timestamp of the last successful
 heartbeat, allowing you to identify gaps in reporting and to calculate rates.
-All information in the messages are accumulated until a message was sent
-_successfully_. The case of failed messages can be identified by messages
-containing the `last` field indicating the last time the plugin sent a message
-sucessfully.
-> [!NOTE]
-> Some information, e.g. the number of metrics, is only updated after the first
-> flush cycle, this must be considered when interpreting the messages.
-
-All information in the messages are accumulated until a message was sent
-_successfully_. The case of failed messages can be identified by messages
-containing the `last` field indicating the last time the plugin sent a message
-sucessfully.
 
 ### Configuration information
 
