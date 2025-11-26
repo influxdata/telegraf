@@ -9,7 +9,7 @@ datapoint-types can be found at the underlying [`knx-go` project][knxgo].
 💻 all
 
 [knx]: https://www.knx.org
-[knxgo]: https://github.com/vapourismo/knx-go>
+[knxgo]: https://github.com/vapourismo/knx-go
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
