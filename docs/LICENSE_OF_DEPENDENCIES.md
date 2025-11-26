@@ -432,7 +432,6 @@ following works:
 - github.com/youmark/pkcs8 [MIT License](https://github.com/youmark/pkcs8/blob/master/LICENSE)
 - github.com/yuin/gopher-lua [MIT License](https://github.com/yuin/gopher-lua/blob/master/LICENSE)
 - github.com/yusufpapurcu/wmi [MIT License](https://github.com/yusufpapurcu/wmi/blob/master/LICENSE)
-- github.com/zeebo/errs [MIT License](https://github.com/zeebo/errs/blob/master/LICENSE)
 - github.com/zeebo/xxh3 [BSD 2-Clause "Simplified" License](https://github.com/zeebo/xxh3/blob/master/LICENSE)
 - github.com/zentures/cityhash [MIT License](https://github.com/zentures/cityhash/blob/master/LICENSE)
 - go.bug.st/serial [BSD 3-Clause License](https://github.com/bugst/go-serial/blob/master/LICENSE)
