@@ -43,14 +43,16 @@ type OpenTelemetry struct {
 	otlpMetricClient otlpMetricClient
 }
 
+type clientConfig struct {
+	ServiceAddress  string
+	TLSConfig       *tls.ClientConfig
+	Compression     string
+	CoralogixConfig *CoralogixConfig
+	Encoding        string
+}
+
 type otlpMetricClient interface {
-	Connect(
-		serviceAddress string,
-		clientConfig *tls.ClientConfig,
-		compression string,
-		coralogixConfig *CoralogixConfig,
-		encoding string, // TODO: remove encoding from interface
-	) error
+	Connect(cfg *clientConfig) error
 	Export(ctx context.Context, request pmetricotlp.ExportRequest) (pmetricotlp.ExportResponse, error)
 	Close() error
 }
@@ -104,13 +106,14 @@ func (o *OpenTelemetry) Connect() error {
 	case "http":
 		o.otlpMetricClient = &httpClient{}
 	}
-	err = o.otlpMetricClient.Connect(
-		o.ServiceAddress,
-		&o.ClientConfig,
-		o.Compression,
-		o.Coralogix,
-		o.EncodingType,
-	)
+	clientCfg := &clientConfig{
+		ServiceAddress:  o.ServiceAddress,
+		TLSConfig:       &o.ClientConfig,
+		Compression:     o.Compression,
+		CoralogixConfig: o.Coralogix,
+		Encoding:        o.EncodingType,
+	}
+	err = o.otlpMetricClient.Connect(clientCfg)
 	if err != nil {
 		return err
 	}
