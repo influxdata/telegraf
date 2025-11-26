@@ -10,7 +10,6 @@ import (
 	"net/http"
 
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/common/tls"
 	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -30,69 +29,53 @@ type httpClient struct {
 	compress     string
 }
 
-func (g *gRPCClient) Connect(
-	serviceAddress string,
-	clientConfig *tls.ClientConfig,
-	compression string,
-	coralogixConfig *CoralogixConfig,
-	encoding string,
-) error {
-	gRPCClient := &gRPCClient{}
+func (g *gRPCClient) Connect(cfg *clientConfig) error {
 	var grpcTLSDialOption grpc.DialOption
-	if tlsConfig, err := clientConfig.TLSConfig(); err != nil {
+	if tlsConfig, err := cfg.TLSConfig.TLSConfig(); err != nil {
 		return err
 	} else if tlsConfig != nil {
 		grpcTLSDialOption = grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig))
-	} else if coralogixConfig != nil {
+	} else if cfg.CoralogixConfig != nil {
 		// For coralogix, we enforce GRPC connection with TLS
 		grpcTLSDialOption = grpc.WithTransportCredentials(credentials.NewTLS(&ntls.Config{}))
 	} else {
 		grpcTLSDialOption = grpc.WithTransportCredentials(insecure.NewCredentials())
 	}
 
-	grpcClientConn, err := grpc.NewClient(serviceAddress, grpcTLSDialOption, grpc.WithUserAgent(userAgent))
+	grpcClientConn, err := grpc.NewClient(cfg.ServiceAddress, grpcTLSDialOption, grpc.WithUserAgent(userAgent))
 	if err != nil {
 		return err
 	}
 
-	metricsServiceClient := pmetricotlp.NewGRPCClient(grpcClientConn)
+	g.grpcClientConn = grpcClientConn
+	g.metricsServiceClient = pmetricotlp.NewGRPCClient(grpcClientConn)
 
-	gRPCClient.grpcClientConn = grpcClientConn
-	gRPCClient.metricsServiceClient = metricsServiceClient
-
-	if compression != "" && compression != "none" {
-		gRPCClient.callOptions = append(gRPCClient.callOptions, grpc.UseCompressor(compression))
+	if cfg.Compression != "" && cfg.Compression != "none" {
+		g.callOptions = append(g.callOptions, grpc.UseCompressor(cfg.Compression))
 	}
 
 	return nil
 }
 
-func (h *httpClient) Connect(
-	serviceAddress string,
-	clientConfig *tls.ClientConfig,
-	compression string,
-	coralogixConfig *CoralogixConfig,
-	encoding string,
-) error {
-	httpClient := &httpClient{
-		httpClient:   &http.Client{},
-		url:          serviceAddress,
-		encodingType: encoding,
-		compress:     compression,
-	}
-	if tlsConfig, err := clientConfig.TLSConfig(); err != nil {
+func (h *httpClient) Connect(cfg *clientConfig) error {
+	h.httpClient = &http.Client{}
+	h.url = cfg.ServiceAddress
+	h.encodingType = cfg.Encoding
+	h.compress = cfg.Compression
+
+	if tlsConfig, err := cfg.TLSConfig.TLSConfig(); err != nil {
 		return err
 	} else if tlsConfig != nil {
-		httpClient.httpClient.Transport = &http.Transport{
+		h.httpClient.Transport = &http.Transport{
 			TLSClientConfig: tlsConfig,
 		}
-	} else if coralogixConfig != nil {
+	} else if cfg.CoralogixConfig != nil {
 		// For coralogix, we enforce HTTP connection with TLS
-		httpClient.httpClient.Transport = &http.Transport{
+		h.httpClient.Transport = &http.Transport{
 			TLSClientConfig: &ntls.Config{},
 		}
 	} else {
-		httpClient.httpClient.Transport = &http.Transport{
+		h.httpClient.Transport = &http.Transport{
 			TLSClientConfig: &ntls.Config{
 				InsecureSkipVerify: true,
 			},
