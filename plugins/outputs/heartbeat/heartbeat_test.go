@@ -118,6 +118,7 @@ func TestIncludedExtraData(t *testing.T) {
 	// Add some dummy configuration files
 	absdir, err := filepath.Abs("testdata")
 	require.NoError(t, err)
+	absdir = filepath.ToSlash(absdir)
 	cfgs := []string{
 		"testdata/telegraf.conf",
 		absdir + "/telegraf.d/inputs.conf",
@@ -125,6 +126,13 @@ func TestIncludedExtraData(t *testing.T) {
 		absdir + "/telegraf.d/outputs.conf",
 		"http://" + cfgServer.Listener.Addr().String() + "/myconfigs",
 		"testdata/non_existing.conf",
+	}
+
+	// Make sure the configuration part also works on Windows
+	for i, cfg := range cfgs {
+		if !strings.HasPrefix(cfg, "http://") {
+			cfgs[i] = filepath.FromSlash(cfg)
+		}
 	}
 
 	cfg := config.NewConfig()
@@ -135,13 +143,20 @@ func TestIncludedExtraData(t *testing.T) {
 	cfgServer.Close()
 
 	// Expected configs
-	cfgsExpected := strings.Join([]string{
+	cfgsExpected := []string{
 		`"testdata/telegraf.conf"`,
 		`"` + absdir + `/telegraf.d/inputs.conf"`,
 		`"http://user:xxxxx@` + cfgServer.Listener.Addr().String() + `"`,
 		`"` + absdir + `/telegraf.d/outputs.conf"`,
 		`"http://` + cfgServer.Listener.Addr().String() + `/myconfigs"`,
-	}, ",")
+	}
+
+	// Make sure the configuration part also works on Windows
+	for i, cfg := range cfgsExpected {
+		if !strings.HasPrefix(cfg, `"http://`) {
+			cfgsExpected[i] = strings.ReplaceAll(filepath.FromSlash(cfg), `\`, `\\`)
+		}
+	}
 
 	// Prepare a string replacer to replace dynamic content such as the hostname
 	// in the expected strings
@@ -150,7 +165,7 @@ func TestIncludedExtraData(t *testing.T) {
 		"$HOSTNAME", hostname,
 		"$VERSION", internal.FormatFullVersion(),
 		"$SCHEMA", strconv.Itoa(jsonSchemaVersion),
-		"$CONFIGS", cfgsExpected,
+		"$CONFIGS", strings.Join(cfgsExpected, ","),
 	)
 
 	tests := []struct {
