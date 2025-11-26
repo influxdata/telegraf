@@ -869,7 +869,8 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, servtag string, acc telegraf.Ac
 			if err != nil {
 				acc.AddError(fmt.Errorf("error parsing mysql global status %q=%q: %w", key, string(val), err))
 			} else {
-				fields[key] = value
+				// v2.ConvertGlobalStatus can parse "complex" multi-value fields, e.g. wsrep_evs_repl_latency
+				parseKeyValues(fields, key, value)
 			}
 		}
 
@@ -1011,6 +1012,17 @@ func (m *Mysql) gatherUserStatisticsStatuses(db *sql.DB, servtag string, acc tel
 		acc.AddFields("mysql_user_stats", fields, tags)
 	}
 	return nil
+}
+
+// parseKeyValues converts multi-value maps to a per-value entry in fields
+func parseKeyValues(fields map[string]interface{}, key string, value interface{}) {
+	if valueToMap, ok := value.(map[string]interface{}); ok {
+		for mapKey, mapValue := range valueToMap {
+			fields[key+"_"+mapKey] = mapValue
+		}
+	} else {
+		fields[key] = value
+	}
 }
 
 // columnsToLower converts selected column names to lowercase.
