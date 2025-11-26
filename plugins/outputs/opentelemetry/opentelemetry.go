@@ -73,7 +73,7 @@ func (o *OpenTelemetry) Connect() error {
 		o.ServiceAddress = defaultServiceAddress
 	}
 	if o.EncodingType == "" {
-		o.EncodingType = defaultEncodingType
+		o.EncodingType = "application/x-protobuf"
 	}
 	if o.Timeout <= 0 {
 		o.Timeout = defaultTimeout
@@ -201,7 +201,6 @@ func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 }
 
 const (
-	defaultEncodingType   = "application/x-protobuf"
 	defaultServiceAddress = "localhost:4317"
 	defaultTimeout        = config.Duration(5 * time.Second)
 	defaultCompression    = "gzip"
@@ -210,7 +209,6 @@ const (
 func init() {
 	outputs.Add("opentelemetry", func() telegraf.Output {
 		return &OpenTelemetry{
-			EncodingType:   defaultEncodingType,
 			ServiceAddress: defaultServiceAddress,
 			Timeout:        defaultTimeout,
 			Compression:    defaultCompression,
