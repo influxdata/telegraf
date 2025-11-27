@@ -154,7 +154,7 @@ func TestIntegrationKVv1(t *testing.T) {
 		Address:    addr,
 		MountPath:  mountPath,
 		SecretPath: secretPath,
-		Engine:     "kv_v1",
+		Engine:     "kv-v1",
 		AppRole: &appRole{
 			RoleID: getRoleID(t, container),
 			Secret: config.NewSecret([]byte(getSecretID(t, container))),

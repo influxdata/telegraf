@@ -38,9 +38,9 @@ store usage.
   secret_path = ""
 
   ## Secret store engine to use.
-  ## Supports 'kv_v1' and 'kv_v2' engines.
-  ## By default will use the kv_v2 engine.
-  # engine = "kv_v2"
+  ## Supports 'kv-v1' and 'kv-v2' engines.
+  ## By default will use the kv-v2 engine.
+  # engine = "kv-v2"
 
   [secretstores.vault.approle]
     ## The Role ID for AppRole Authentication, a UUID string
@@ -50,11 +50,7 @@ store usage.
     # response_wrapped = false
 
     ## The Secret ID for AppRole Authentication
-    ## Only one of the following three options should be set. If multiple
-    ## are set, the precedence is: secret_file > secret_env > secret_id
-    # secret_file = ""
-    # secret_env = ""
-    # secret_id = ""
+    secret = ""
 ```
 
 [vault]: https://www.hashicorp.com/en/products/vault

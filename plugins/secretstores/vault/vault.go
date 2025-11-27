@@ -157,6 +157,12 @@ func (v *Vault) authenticate() error {
 		return errors.New("no auth info was returned after login")
 	}
 
+	watcher, err := v.client.NewLifetimeWatcher(&vault.LifetimeWatcherInput{Secret: authInfo})
+	if err != nil {
+		return fmt.Errorf("unable to initialize Vault lifetime watcher: %w", err)
+	}
+	watcher.Start()
+
 	return nil
 }
 
