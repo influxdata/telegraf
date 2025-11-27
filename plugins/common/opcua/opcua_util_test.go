@@ -3,6 +3,7 @@ package opcua
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -45,9 +46,12 @@ func TestGenerateCertPersistentPaths(t *testing.T) {
 	require.FileExists(t, keyPath)
 
 	// Verify file permissions (key should be 0600)
-	info, err := os.Stat(keyPath)
-	require.NoError(t, err)
-	require.Equal(t, os.FileMode(0600), info.Mode().Perm())
+	// Skip permission check on Windows as Unix-style permissions don't apply
+	if runtime.GOOS != "windows" {
+		info, err := os.Stat(keyPath)
+		require.NoError(t, err)
+		require.Equal(t, os.FileMode(0600), info.Mode().Perm())
+	}
 }
 
 func TestGenerateCertCreatesParentDirectory(t *testing.T) {
