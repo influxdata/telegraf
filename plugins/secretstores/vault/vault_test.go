@@ -6,13 +6,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/vault"
+
+	"github.com/influxdata/telegraf/config"
 )
 
 func createContainer(t *testing.T, initCommands []string) (*vault.VaultContainer, func()) {
@@ -62,12 +63,12 @@ func getRoleID(t *testing.T, container *vault.VaultContainer) string {
 	output, err := io.ReadAll(reader)
 	require.NoError(t, err)
 
-	var resp RoleIDResponse
+	var resp roleIDResponse
 	require.NoError(t, json.Unmarshal(sanitizeVaultResponse(t, output), &resp))
 	return resp.Data.RoleID
 }
 
-type RoleIDResponse struct {
+type roleIDResponse struct {
 	Data struct {
 		RoleID string `json:"role_id"`
 	} `json:"data"`
@@ -153,10 +154,10 @@ func TestIntegrationKVv1(t *testing.T) {
 		Address:    addr,
 		MountPath:  mountPath,
 		SecretPath: secretPath,
-		UseKVv1:    true,
+		Engine:     "kv_v1",
 		AppRole: &appRole{
-			RoleID:   getRoleID(t, container),
-			SecretID: getSecretID(t, container),
+			RoleID: getRoleID(t, container),
+			Secret: config.NewSecret([]byte(getSecretID(t, container))),
 		},
 	}
 
@@ -192,94 +193,8 @@ func TestIntegrationKVv2(t *testing.T) {
 		MountPath:  mountPath,
 		SecretPath: secretPath,
 		AppRole: &appRole{
-			RoleID:   getRoleID(t, container),
-			SecretID: getSecretID(t, container),
-		},
-	}
-
-	require.NoError(t, plugin.Init())
-
-	secret, err := plugin.Get(secretName)
-	require.NoError(t, err)
-	require.Equal(t, []byte(secretValue), secret)
-}
-
-func TestIntegrationAppRoleSecretEnv(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	mountPath := "my-mount-path"
-	secretPath := "my-secret-path"
-	secretName := "secret-some-name"
-	secretValue := "secret-some-value"
-
-	container, closer := createContainer(t, []string{
-		fmt.Sprintf("secrets enable -path=%s kv-v2", mountPath),
-		fmt.Sprintf("kv put -mount=%s %s %s=%s", mountPath, secretPath, secretName, secretValue),
-	})
-	defer closer()
-
-	addr, err := container.HttpHostAddress(context.Background())
-	require.NoError(t, err)
-
-	t.Setenv("VAULT_SECRET_ID", getSecretID(t, container))
-
-	plugin := &Vault{
-		ID:         "test_integration_kv_v2",
-		Address:    addr,
-		MountPath:  mountPath,
-		SecretPath: secretPath,
-		AppRole: &appRole{
-			RoleID:    getRoleID(t, container),
-			SecretEnv: "VAULT_SECRET_ID",
-		},
-	}
-
-	require.NoError(t, plugin.Init())
-
-	secret, err := plugin.Get(secretName)
-	require.NoError(t, err)
-	require.Equal(t, []byte(secretValue), secret)
-}
-
-func TestIntegrationAppRoleSecretFile(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	mountPath := "my-mount-path"
-	secretPath := "my-secret-path"
-	secretName := "secret-some-name"
-	secretValue := "secret-some-value"
-
-	container, closer := createContainer(t, []string{
-		fmt.Sprintf("secrets enable -path=%s kv-v2", mountPath),
-		fmt.Sprintf("kv put -mount=%s %s %s=%s", mountPath, secretPath, secretName, secretValue),
-	})
-	defer closer()
-
-	addr, err := container.HttpHostAddress(context.Background())
-	require.NoError(t, err)
-
-	secretID := getSecretID(t, container)
-
-	// Write the secret ID to a temporary file
-	tmpFile, err := os.CreateTemp(t.TempDir(), "secret-*.txt")
-	require.NoError(t, err)
-	defer os.Remove(tmpFile.Name())
-
-	_, err = tmpFile.WriteString(secretID)
-	require.NoError(t, err)
-
-	plugin := &Vault{
-		ID:         "test_integration_kv_v2",
-		Address:    addr,
-		MountPath:  mountPath,
-		SecretPath: secretPath,
-		AppRole: &appRole{
-			RoleID:     getRoleID(t, container),
-			SecretFile: tmpFile.Name(),
+			RoleID: getRoleID(t, container),
+			Secret: config.NewSecret([]byte(getSecretID(t, container))),
 		},
 	}
 
@@ -316,7 +231,7 @@ func TestIntegrationAppRoleSecretWrapped(t *testing.T) {
 		SecretPath: secretPath,
 		AppRole: &appRole{
 			RoleID:          getRoleID(t, container),
-			SecretID:        getWrappedSecretID(t, container),
+			Secret:          config.NewSecret([]byte(getWrappedSecretID(t, container))),
 			ResponseWrapped: true,
 		},
 	}

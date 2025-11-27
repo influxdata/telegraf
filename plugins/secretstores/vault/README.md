@@ -1,7 +1,8 @@
 # HashiCorp Vault Secret-Store Plugin
 
-The `vault` plugin allows to utilize secrets stored in a HashiCorp
-vault server via the Vault API. It supports authentication via AppRole.
+The `vault` plugin allows to utilize secrets stored in a
+[HashiCorp Vault][vault] server via the Vault API. It supports authentication
+via AppRole.
 
 ⭐ Telegraf v1.37.0
 🏷️ secrets
@@ -36,11 +37,12 @@ store usage.
   ## Path to the desired secrets within the KV secrets engine
   secret_path = ""
 
-  ## Whether to use the older KV v1 secrets engine.
-  ## By default will use the v2 engine.
-  # use_kv_v1 = false
+  ## Secret store engine to use.
+  ## Supports 'kv_v1' and 'kv_v2' engines.
+  ## By default will use the kv_v2 engine.
+  # engine = "kv_v2"
 
-  [[secretstores.vault.approle]]
+  [secretstores.vault.approle]
     ## The Role ID for AppRole Authentication, a UUID string
     role_id = ""
 
@@ -54,3 +56,5 @@ store usage.
     # secret_env = ""
     # secret_id = ""
 ```
+
+[vault]: https://www.hashicorp.com/en/products/vault
