@@ -161,7 +161,7 @@ func (v *Vault) authenticate() error {
 	if err != nil {
 		return fmt.Errorf("unable to initialize Vault lifetime watcher: %w", err)
 	}
-	watcher.Start()
+	go watcher.Start()
 
 	return nil
 }
