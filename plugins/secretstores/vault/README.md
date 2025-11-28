@@ -31,10 +31,17 @@ store usage.
   ## Address of the Vault server
   address = "localhost:8200"
 
-  ## Mount Path of the KV secrets engine
+  ## Mount path of the KV secrets engine.
+  ## This is the path where the KV secrets engine is enabled. For example, if
+  ## your full secret path in the Vault CLI is "secret/data/myapp/database",
+  ## then mount_path = "secret".
   mount_path = ""
 
-  ## Path to the desired secrets within the KV secrets engine
+  ## Path to the secret within the KV secrets engine.
+  ## This is the path to your specific secret under the mount point. For example,
+  ## if your full secret path is "secret/data/myapp/database", then
+  ## secret_path = "myapp/database". Note that the "/data/" segment in KV v2
+  ## paths is handled automatically and should not be included.
   secret_path = ""
 
   ## Secret store engine to use.
