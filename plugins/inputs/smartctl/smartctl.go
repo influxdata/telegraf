@@ -25,6 +25,7 @@ type Smartctl struct {
 	Path           string          `toml:"path"`
 	NoCheck        string          `toml:"no_check"`
 	UseSudo        bool            `toml:"use_sudo"`
+	FixCounters    bool            `toml:"fix_counters"`
 	Timeout        config.Duration `toml:"timeout"`
 	DevicesInclude []string        `toml:"devices_include"`
 	DevicesExclude []string        `toml:"devices_exclude"`

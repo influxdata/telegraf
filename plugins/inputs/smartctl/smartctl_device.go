@@ -3,6 +3,7 @@ package smartctl
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -149,10 +150,40 @@ func (s *Smartctl) scanDevice(acc telegraf.Accumulator, deviceName, deviceType s
 	}
 
 	// Check for SCSI error counter entries
-	if device.Device.Protocol == "SCSI" {
+	if device.Device.Type == "scsi" || device.Device.Protocol == "SCSI" {
 		counterTags := make(map[string]string, len(tags)+1)
 		for k, v := range tags {
 			counterTags[k] = v
+		}
+
+		readGigabytesProcessed := 0.0
+		writeGigabytesProcessed := 0.0
+		verifyGigabytesProcessed := 0.0
+
+		if s.FixCounters {
+			readGigabytesProcessed, err = strconv.ParseFloat(device.ScsiErrorCounterLog.Read.GigabytesProcessed, 64)
+			if err != nil {
+				return fmt.Errorf("error cast ScsiErrorCounterLog.Read.GigabytesProcessed (%s) to float: %w",
+					device.ScsiErrorCounterLog.Read.GigabytesProcessed,
+					err,
+				)
+			}
+
+			writeGigabytesProcessed, err = strconv.ParseFloat(device.ScsiErrorCounterLog.Write.GigabytesProcessed, 64)
+			if err != nil {
+				return fmt.Errorf("error cast ScsiErrorCounterLog.Write.GigabytesProcessed (%s) to float: %w",
+					device.ScsiErrorCounterLog.Write.GigabytesProcessed,
+					err,
+				)
+			}
+
+			verifyGigabytesProcessed, err = strconv.ParseFloat(device.ScsiErrorCounterLog.Verify.GigabytesProcessed, 64)
+			if err != nil {
+				return fmt.Errorf("error cast ScsiErrorCounterLog.Verify.GigabytesProcessed (%s) to float: %w",
+					device.ScsiErrorCounterLog.Verify.GigabytesProcessed,
+					err,
+				)
+			}
 		}
 
 		counterTags["page"] = "read"
@@ -162,8 +193,12 @@ func (s *Smartctl) scanDevice(acc telegraf.Accumulator, deviceName, deviceType s
 			"errors_corrected_by_rereads_rewrites": device.ScsiErrorCounterLog.Read.ErrorsCorrectedByRereadsRewrites,
 			"total_errors_corrected":               device.ScsiErrorCounterLog.Read.TotalErrorsCorrected,
 			"correction_algorithm_invocations":     device.ScsiErrorCounterLog.Read.CorrectionAlgorithmInvocations,
-			"gigabytes_processed":                  device.ScsiErrorCounterLog.Read.GigabytesProcessed,
 			"total_uncorrected_errors":             device.ScsiErrorCounterLog.Read.TotalUncorrectedErrors,
+		}
+		if s.FixCounters {
+			fields["gigabytes_processed"] = readGigabytesProcessed
+		} else {
+			fields["gigabytes_processed"] = device.ScsiErrorCounterLog.Read.GigabytesProcessed
 		}
 		acc.AddFields("smartctl_scsi_error_counter_log", fields, counterTags, t)
 
@@ -174,8 +209,12 @@ func (s *Smartctl) scanDevice(acc telegraf.Accumulator, deviceName, deviceType s
 			"errors_corrected_by_rereads_rewrites": device.ScsiErrorCounterLog.Write.ErrorsCorrectedByRereadsRewrites,
 			"total_errors_corrected":               device.ScsiErrorCounterLog.Write.TotalErrorsCorrected,
 			"correction_algorithm_invocations":     device.ScsiErrorCounterLog.Write.CorrectionAlgorithmInvocations,
-			"gigabytes_processed":                  device.ScsiErrorCounterLog.Write.GigabytesProcessed,
 			"total_uncorrected_errors":             device.ScsiErrorCounterLog.Write.TotalUncorrectedErrors,
+		}
+		if s.FixCounters {
+			fields["gigabytes_processed"] = writeGigabytesProcessed
+		} else {
+			fields["gigabytes_processed"] = device.ScsiErrorCounterLog.Write.GigabytesProcessed
 		}
 		acc.AddFields("smartctl_scsi_error_counter_log", fields, counterTags, t)
 
@@ -186,8 +225,12 @@ func (s *Smartctl) scanDevice(acc telegraf.Accumulator, deviceName, deviceType s
 			"errors_corrected_by_rereads_rewrites": device.ScsiErrorCounterLog.Verify.ErrorsCorrectedByRereadsRewrites,
 			"total_errors_corrected":               device.ScsiErrorCounterLog.Verify.TotalErrorsCorrected,
 			"correction_algorithm_invocations":     device.ScsiErrorCounterLog.Verify.CorrectionAlgorithmInvocations,
-			"gigabytes_processed":                  device.ScsiErrorCounterLog.Verify.GigabytesProcessed,
 			"total_uncorrected_errors":             device.ScsiErrorCounterLog.Verify.TotalUncorrectedErrors,
+		}
+		if s.FixCounters {
+			fields["gigabytes_processed"] = verifyGigabytesProcessed
+		} else {
+			fields["gigabytes_processed"] = device.ScsiErrorCounterLog.Verify.GigabytesProcessed
 		}
 		acc.AddFields("smartctl_scsi_error_counter_log", fields, counterTags, t)
 	}
