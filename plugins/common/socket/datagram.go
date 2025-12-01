@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -64,23 +65,15 @@ func (l *packetListener) listenData(onData CallbackData, onError CallbackError) 
 				break
 			}
 
-			if len(l.AllowedSources) > 0 {
-				sourceIP := extractIP(src)
-
-				allowed := false
-				if sourceIP != nil {
-					for _, allowedIP := range l.AllowedSources {
-						if sourceIP.Equal(allowedIP) {
-							allowed = true
-							break
-						}
-					}
+			if allowed, err := isSourceAllowed(l.AllowedSources, src); err != nil {
+				// Drop message if the check failed as security-by-default
+				if onError != nil {
+					onError(err)
 				}
-
-				if !allowed {
-					// Drop message if it is not from an allowed ip source
-					continue
-				}
+				continue
+			} else if !allowed {
+				// Drop message if it is not from an allowed IP source
+				continue
 			}
 
 			d := make([]byte, n)
@@ -287,15 +280,23 @@ func (l *packetListener) close() error {
 	return nil
 }
 
-func extractIP(addr net.Addr) net.IP {
+func isSourceAllowed(allowed []net.IP, addr net.Addr) (bool, error) {
+	if len(allowed) == 0 {
+		// No filtering, allow all
+		return true, nil
+	}
+	var src net.IP
 	switch a := addr.(type) {
 	case *net.UDPAddr:
-		return a.IP
+		src = a.IP
 	case *net.TCPAddr:
-		return a.IP
+		src = a.IP
 	case *net.IPAddr:
-		return a.IP
+		src = a.IP
 	default:
-		return nil
+		return false, fmt.Errorf("source address %q (%T) has no IP", addr, addr)
 	}
+	return slices.ContainsFunc(allowed, func(allowedIP net.IP) bool {
+		return src.Equal(allowedIP)
+	}), nil
 }

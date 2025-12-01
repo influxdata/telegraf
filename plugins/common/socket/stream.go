@@ -32,6 +32,7 @@ type hasSetReadBuffer interface {
 }
 
 type streamListener struct {
+	AllowedSources  []net.IP
 	Encoding        string
 	ReadBufferSize  int
 	MaxConnections  uint64
@@ -52,6 +53,7 @@ type streamListener struct {
 
 func newStreamListener(conf Config, splitter bufio.SplitFunc, log telegraf.Logger) *streamListener {
 	return &streamListener{
+		AllowedSources:  conf.AllowedSources,
 		ReadBufferSize:  int(conf.ReadBufferSize),
 		ReadTimeout:     conf.ReadTimeout,
 		KeepAlivePeriod: conf.KeepAlivePeriod,
@@ -258,6 +260,17 @@ func (l *streamListener) listenData(onData CallbackData, onError CallbackError) 
 				break
 			}
 
+			if allowed, err := isSourceAllowed(l.AllowedSources, conn.RemoteAddr()); err != nil {
+				if onError != nil {
+					onError(err)
+				}
+				_ = conn.Close()
+				continue
+			} else if !allowed {
+				_ = conn.Close()
+				continue
+			}
+
 			if err := l.setupConnection(conn); err != nil && onError != nil {
 				onError(err)
 				continue
@@ -307,6 +320,18 @@ func (l *streamListener) listenConnection(onConnection CallbackConnection, onErr
 				}
 				break
 			}
+
+			if allowed, err := isSourceAllowed(l.AllowedSources, conn.RemoteAddr()); err != nil {
+				if onError != nil {
+					onError(err)
+				}
+				_ = conn.Close()
+				continue
+			} else if !allowed {
+				_ = conn.Close()
+				continue
+			}
+
 			if err := l.setupConnection(conn); err != nil && onError != nil {
 				onError(err)
 				continue
