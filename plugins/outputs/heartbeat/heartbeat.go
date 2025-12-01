@@ -12,8 +12,12 @@ import (
 	"net/http"
 	"os"
 	"slices"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
+
+	"github.com/google/cel-go/cel"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -35,6 +39,8 @@ type Heartbeat struct {
 	Token      config.Secret             `toml:"token"`
 	Interval   config.Duration           `toml:"interval"`
 	Include    []string                  `toml:"include"`
+	Logs       LogsConfig                `toml:"logs"`
+	Status     StatusConfig              `toml:"status"`
 	Headers    map[string]*config.Secret `toml:"headers"`
 	Log        telegraf.Logger           `toml:"-"`
 	common_http.HTTPClientConfig
@@ -45,10 +51,15 @@ type Heartbeat struct {
 	wg            sync.WaitGroup
 
 	// Output message parts
-	message message
+	message   message
+	logEvents []*logEvent
+	statuses  []program
 
 	// Statistics
-	stats statistics
+	stats             statistics
+	statusInitialized atomic.Bool
+
+	sync.Mutex
 }
 
 func (*Heartbeat) SampleConfig() string {
@@ -78,7 +89,7 @@ func (h *Heartbeat) Init() error {
 
 	for _, inc := range h.Include {
 		switch inc {
-		case "statistics":
+		case "configs", "statistics":
 			// Do nothing, those are valid
 		case "hostname":
 			host, err := os.Hostname()
@@ -86,6 +97,63 @@ func (h *Heartbeat) Init() error {
 				return fmt.Errorf("getting hostname failed: %w", err)
 			}
 			h.message.Hostname = host
+		case "logs":
+			// Set default log level if necessary
+			if h.Logs.LogLevel == "" {
+				h.Logs.LogLevel = "error"
+			}
+			h.Logs.level = telegraf.LogLevelFromString(h.Logs.LogLevel)
+			if h.Logs.level == telegraf.None && h.Logs.LogLevel != "" && h.Logs.LogLevel != "none" {
+				return fmt.Errorf("invalid log-level %q", h.Logs.LogLevel)
+			}
+		case "status":
+			// Check the default value
+			switch h.Status.Default {
+			case "":
+				h.Status.Default = "ok"
+			case "ok", "warn", "fail", "undefined":
+				// Do nothing, those are valid
+			default:
+				return fmt.Errorf("invalid status 'default' value %q", h.Status.Default)
+			}
+			h.Status.Default = strings.ToUpper(h.Status.Default)
+
+			// Check the initial value
+			switch h.Status.Initial {
+			case "":
+				h.statusInitialized.Store(true)
+			case "ok", "warn", "fail", "undefined":
+				// Do nothing, those are valid
+			default:
+				return fmt.Errorf("invalid status 'initial' value %q", h.Status.Initial)
+			}
+			h.Status.Initial = strings.ToUpper(h.Status.Initial)
+
+			// Make sure the order is valid
+			if len(h.Status.Order) == 0 {
+				h.Status.Order = []string{"ok", "warn", "fail"}
+			}
+			seen := make(map[string]bool, 3)
+			for _, o := range h.Status.Order {
+				if seen[o] {
+					return fmt.Errorf("duplicate value %q in status 'order'", o)
+				}
+				seen[o] = true
+			}
+			if h.Status.Ok != "" && !seen["ok"] {
+				h.Log.Warn("condition for status \"ok\" will be ignored as it is not in the 'order' list")
+			}
+			if h.Status.Warn != "" && !seen["warn"] {
+				h.Log.Warn("condition for status \"warn\" will be ignored as it is not in the 'order' list")
+			}
+			if h.Status.Fail != "" && !seen["fail"] {
+				h.Log.Warn("condition for status \"fail\" will be ignored as it is not in the 'order' list")
+			}
+
+			// Compile the status programs
+			if err := h.compileStatuses(); err != nil {
+				return err
+			}
 		default:
 			return fmt.Errorf("invalid 'include' setting %q", inc)
 		}
@@ -96,7 +164,7 @@ func (h *Heartbeat) Init() error {
 
 func (h *Heartbeat) Connect() error {
 	// Make sure we register a logging callback if we need to collect logs
-	if slices.Contains(h.Include, "statistics") && h.logCallbackID == "" {
+	if (slices.Contains(h.Include, "logs") || slices.Contains(h.Include, "statistics")) && h.logCallbackID == "" {
 		id, err := logger.AddCallback(h.handleLogEvent)
 		if err != nil {
 			return fmt.Errorf("registering logging callback failed: %w", err)
@@ -162,6 +230,7 @@ func (h *Heartbeat) Write(metrics []telegraf.Metric) error {
 	defer h.stats.Unlock()
 
 	h.stats.metrics += uint64(len(metrics))
+	h.statusInitialized.Store(true)
 
 	// Heartbeat plugin does not process metrics; it sends heartbeats independently
 	return nil
@@ -170,6 +239,9 @@ func (h *Heartbeat) Write(metrics []telegraf.Metric) error {
 func (h *Heartbeat) send() error {
 	// Snapshot the current information state for sending the message
 	snapshot := h.stats.snapshot()
+	h.Lock()
+	logEvents := h.logEvents
+	h.Unlock()
 
 	// Add the last successful update timestamp if any previous update failed
 	if snapshot.lastUpdateFailed {
@@ -181,11 +253,40 @@ func (h *Heartbeat) send() error {
 
 	// Construct the message
 	for _, item := range h.Include {
-		if item == "statistics" {
+		switch item {
+		case "statistics":
 			h.message.Statistics = &statsEntry{
 				Errors:   snapshot.logErrors,
 				Warnings: snapshot.logWarnings,
 				Metrics:  snapshot.metrics,
+			}
+		case "configs":
+			sources := config.GetSources()
+			h.message.ConfigSources = &sources
+		case "logs":
+			var entries []logEntry
+			if h.Logs.Limit == 0 || h.Logs.Limit > uint64(len(h.logEvents)) {
+				entries = getLogEntriesUnlimited(logEvents)
+			} else {
+				entries = getLogEntriesLimited(logEvents, int(h.Logs.Limit))
+			}
+			h.message.Logs = &entries
+		case "status":
+			if !h.statusInitialized.Load() {
+				h.message.Status = h.Status.Initial
+				continue
+			}
+			vars := snapshot.variables()
+			h.message.Status = h.Status.Default
+			for _, p := range h.statuses {
+				match, err := p.eval(vars)
+				if err != nil {
+					return fmt.Errorf("evaluating status %q failed: %w", p.status, err)
+				}
+				if match {
+					h.message.Status = p.status
+					break
+				}
 			}
 		}
 	}
@@ -260,7 +361,58 @@ func (h *Heartbeat) send() error {
 
 	// Update statistics on successful sent
 	h.stats.remove(snapshot, time.Now())
+	h.Lock()
+	h.logEvents = h.logEvents[len(logEvents):]
+	h.Unlock()
 
+	return nil
+}
+
+func (h *Heartbeat) compileStatuses() error {
+	env, err := environment()
+	if err != nil {
+		return fmt.Errorf("creating status program environment failed: %w", err)
+	}
+
+	// Compile the programs
+	h.statuses = make([]program, 0, len(h.Status.Order))
+	for _, s := range h.Status.Order {
+		// Get the expression
+		var expression string
+		switch s {
+		case "ok":
+			expression = h.Status.Ok
+		case "warn":
+			expression = h.Status.Warn
+		case "fail":
+			expression = h.Status.Fail
+		default:
+			return fmt.Errorf("invalid status 'order' value %q", s)
+		}
+
+		// Skip all empty expressions assuming they do not match
+		if expression == "" {
+			continue
+		}
+
+		// Compile the expression
+		ast, issues := env.Compile(expression)
+		if issues.Err() != nil {
+			return fmt.Errorf("compiling expression for status %q failed: %w", s, issues.Err())
+		}
+
+		// Check if we got a boolean expression needed for filtering
+		if ast.OutputType() != cel.BoolType {
+			return fmt.Errorf("expression for status %q needs to return a boolean", s)
+		}
+
+		// Get the final program
+		p, err := env.Program(ast, cel.EvalOptions(cel.OptOptimize))
+		if err != nil {
+			return fmt.Errorf("creating program for status %q failed: %w", s, err)
+		}
+		h.statuses = append(h.statuses, program{status: strings.ToUpper(s), prog: p})
+	}
 	return nil
 }
 
