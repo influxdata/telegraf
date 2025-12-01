@@ -37,7 +37,7 @@ require (
 	github.com/aerospike/aerospike-client-go/v5 v5.11.0
 	github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b
 	github.com/alitto/pond v1.9.2
-	github.com/alitto/pond/v2 v2.5.0
+	github.com/alitto/pond/v2 v2.6.0
 	github.com/aliyun/alibaba-cloud-sdk-go v1.63.107
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
 	github.com/antchfx/jsonquery v1.3.6
