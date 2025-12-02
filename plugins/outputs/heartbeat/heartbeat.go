@@ -78,7 +78,7 @@ func (h *Heartbeat) Init() error {
 
 	for _, inc := range h.Include {
 		switch inc {
-		case "statistics":
+		case "configs", "statistics":
 			// Do nothing, those are valid
 		case "hostname":
 			host, err := os.Hostname()
@@ -181,12 +181,16 @@ func (h *Heartbeat) send() error {
 
 	// Construct the message
 	for _, item := range h.Include {
-		if item == "statistics" {
+		switch item {
+		case "statistics":
 			h.message.Statistics = &statsEntry{
 				Errors:   snapshot.logErrors,
 				Warnings: snapshot.logWarnings,
 				Metrics:  snapshot.metrics,
 			}
+		case "configs":
+			sources := config.GetSources()
+			h.message.ConfigSources = &sources
 		}
 	}
 
