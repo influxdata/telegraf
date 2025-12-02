@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -9,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/awnumar/memguard"
+	"github.com/fatih/color"
 	"github.com/urfave/cli/v2"
 
 	"github.com/influxdata/telegraf/config"
@@ -221,6 +223,16 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			pprof.Start(cCtx.String("pprof-addr"))
 		}
 
+		if cCtx.Bool("strict-env-handling") && cCtx.Bool("non-strict-env-handling") {
+			return errors.New("flags --strict-env-handling and --non-strict-env-handling cannot be used together")
+		}
+		if !cCtx.Bool("strict-env-handling") && !cCtx.Bool("non-strict-env-handling") {
+			msg := "Strict environment variable handling will be the new default starting with v1.38.0! " +
+				"If your configuration works with strict handling or you don't use environment variables it is safe " +
+				"to ignore this warning. Otherwise please explicitly add the --non-strict-env-handling flag!"
+			log.Println("W! " + color.YellowString(msg))
+		}
+
 		if err := config.SetPluginLabelSelections(cCtx.StringSlice("select")); err != nil {
 			return err
 		}
@@ -324,6 +336,10 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				&cli.BoolFlag{
 					Name:  "strict-env-handling",
 					Usage: "enforces strict and secure handling of environment variables; will not work with non-string settings",
+				},
+				&cli.BoolFlag{
+					Name:  "non-strict-env-handling",
+					Usage: "allow unsafe non-strict handling of environment variables to replace non-string settings",
 				},
 				&cli.BoolFlag{
 					Name:  "print-plugin-config-source",
