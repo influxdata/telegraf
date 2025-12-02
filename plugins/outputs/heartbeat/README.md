@@ -77,9 +77,9 @@ When including `configs` in the message, the heartbeat message will contain the
 configuration sources used to setup the currently running Telegraf instance.
 
 > [!WARNING]
-> As the configuration sources contains path or the URL the resulting heartbeat
-> messages might be large. Use this option with care if network traffic is a
-> limiting factor!
+> As the configuration sources contains the path or the URL, the resulting
+> heartbeat messages may be large. Use this option with care if network
+> traffic is a limiting factor!
 
 The configuration information can potentially change when watching e.g. the
 configuration directory while a new configuration is added or removed.
