@@ -73,7 +73,7 @@ heartbeat, allowing you to identify gaps in reporting and to calculate rates.
 
 ### Configuration information
 
-When including `configs` in the message the heartbeat message will contain the
+When including `configs` in the message, the heartbeat message will contain the
 configuration sources used to setup the currently running Telegraf instance.
 
 > [!WARNING]
