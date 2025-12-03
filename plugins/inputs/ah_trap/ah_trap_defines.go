@@ -109,7 +109,7 @@ type AhConnectionChangeTrap struct {
 	Option55               [AH_UCHAR_MAX + 1]byte
 	MgtStus                uint16
 	StaAddr6Num            uint8
-        magic                  byte
+	_                      [3]byte  // Padding for 4-byte alignment
 	StaAddr6               [AH_MAX_NUM_STA_ADDRS6][16]byte
 	DeauthReason           int32
 	RoamTime               int32
@@ -261,13 +261,13 @@ func intToIPv4(num uint32) string {
 	return ip.String()
 }
 
-func intToIPv6(addrs [][16]byte, count int) []string {
-	var result []string
-	for i := 0; i < count && i < len(addrs); i++ {
-		ip := net.IP(addrs[i][:])
-		result = append(result, ip.String())
+func intToIPv6(addrs [][16]byte, count int) string {
+	if count > 0 && count <= len(addrs) {
+		ip := net.IP(addrs[0][:])
+		ipStr := ip.String()
+		return ipStr
 	}
-	return result
+	return ""
 }
 
 func formatMac(mac [6]byte) string {

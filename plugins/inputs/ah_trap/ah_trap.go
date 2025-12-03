@@ -192,7 +192,7 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
 
                 acc.AddFields("TrapEvent", map[string]interface{}{
                         "trapObjName_clientInfoTrap":       cleanCString(ahclientinfo.Name[:]),
-                        "ssid_clientInfoTrap":              ahclientinfo.Ssid,
+			"ssid_clientInfoTrap":              cleanCString(ahclientinfo.Ssid[:]),
 			"clientMac_clientInfoTrap":         formatMac(ahclientinfo.ClientMac),
                         "hostName_clientInfoTrap":          cleanCString(ahclientinfo.HostName[:]),
 			"userName_clientInfoTrap":          cleanCString(ahclientinfo.UserName[:]),
