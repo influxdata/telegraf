@@ -264,7 +264,9 @@ func (l *streamListener) listenData(onData CallbackData, onError CallbackError) 
 				if onError != nil {
 					onError(err)
 				}
-				_ = conn.Close()
+				if err := conn.Close(); err != nil {
+					onError(fmt.Errorf("closing connection from %q failed: %w", conn.RemoteAddr(), err))
+				}
 				continue
 			} else if !allowed {
 				_ = conn.Close()
