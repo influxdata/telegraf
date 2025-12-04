@@ -87,9 +87,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # max_decompression_size = "500MB"
 
   ## List of allowed source IP addresses for incoming packets/messages.
-  ## Only packets/messages from these IPs will be accepted.
   ## If not specified or empty, all sources are allowed.
-  # allowed_sources = [""192.168.1.100", "10.0.0.50""]
+  # allowed_sources = []
 
   ## Message splitting strategy and corresponding settings for stream sockets
   ## (tcp, tcp4, tcp6, unix or unixpacket). The setting is ignored for packet
