@@ -120,22 +120,22 @@ func (n *NATS) Connect() error {
 	}
 
 	if !n.Credentials.Empty() {
-		credentials, secretsErr := n.Credentials.Get()
+		credentialsRaw, secretsErr := n.Credentials.Get()
 		if secretsErr != nil {
 			return fmt.Errorf("getting credentials secret failed: %w", secretsErr)
 		}
+		credentials := credentialsRaw.String()
+		credentialsRaw.Destroy()
 
-		credentialsSecret := credentials.String()
-
-		_, statsErr := os.Stat(credentialsSecret)
+		_, statsErr := os.Stat(credentials)
 		if errors.Is(statsErr, os.ErrNotExist) || errors.Is(statsErr, syscall.ENAMETOOLONG) {
-			opts = append(opts, nats.UserCredentialBytes([]byte(credentialsSecret)))
+			opts = append(opts, nats.UserCredentialBytes([]byte(credentials)))
 		} else {
 			n.Log.Warn(
 				"Using a file for 'credentials' is deprecated since v1.37.0 and will be removed with v1.40.0! " +
 					"Use a secret-store instead to securely handle your credentials.",
 			)
-			opts = append(opts, nats.UserCredentials(credentialsSecret))
+			opts = append(opts, nats.UserCredentials(credentials))
 		}
 	}
 
