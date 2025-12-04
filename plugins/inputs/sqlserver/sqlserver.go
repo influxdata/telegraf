@@ -13,9 +13,10 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	// Legacy ADAL package - kept for backward compatibility
-	"github.com/Azure/go-autorest/autorest/adal"
+	"github.com/Azure/go-autorest/autorest/adal" // legacy ADAL package for backward compatibility
 	mssql "github.com/microsoft/go-mssqldb"
+	_ "github.com/microsoft/go-mssqldb/namedpipe"    // required to support NP protocol
+	_ "github.com/microsoft/go-mssqldb/sharedmemory" // required to support LPC protocol
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
