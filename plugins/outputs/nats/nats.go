@@ -7,8 +7,10 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"os"
 	"slices"
 	"strings"
+	"syscall"
 	"text/template"
 	"time"
 
@@ -30,7 +32,7 @@ type NATS struct {
 	Name           string        `toml:"name"`
 	Username       config.Secret `toml:"username"`
 	Password       config.Secret `toml:"password"`
-	Credentials    string        `toml:"credentials"`
+	Credentials    config.Secret `toml:"credentials"`
 	NkeySeed       string        `toml:"nkey_seed"`
 	Subject        string        `toml:"subject"`
 	UseBatchFormat bool          `toml:"use_batch_format"`
@@ -117,8 +119,24 @@ func (n *NATS) Connect() error {
 		password.Destroy()
 	}
 
-	if n.Credentials != "" {
-		opts = append(opts, nats.UserCredentials(n.Credentials))
+	if !n.Credentials.Empty() {
+		credentialsRaw, secretsErr := n.Credentials.Get()
+		if secretsErr != nil {
+			return fmt.Errorf("getting credentials secret failed: %w", secretsErr)
+		}
+		credentials := credentialsRaw.String()
+		credentialsRaw.Destroy()
+
+		_, statsErr := os.Stat(credentials)
+		if errors.Is(statsErr, os.ErrNotExist) || errors.Is(statsErr, syscall.ENAMETOOLONG) {
+			opts = append(opts, nats.UserCredentialBytes([]byte(credentials)))
+		} else {
+			n.Log.Warn(
+				"Using a file for 'credentials' is deprecated since v1.37.0 and will be removed with v1.40.0! " +
+					"Use a secret-store instead to securely handle your credentials.",
+			)
+			opts = append(opts, nats.UserCredentials(credentials))
+		}
 	}
 
 	if n.NkeySeed != "" {

@@ -21,10 +21,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Secret-store support
 
-This plugin supports secrets from secret-stores for the `username` and
-`password` option.
-See the [secret-store documentation][SECRETSTORE] for more details on how
-to use them.
+This plugin supports secrets from secret-stores for the `username`, `password`
+and `credential` option. See the [secret-store documentation][SECRETSTORE] for
+more details on how to use them.
 
 [SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
 
@@ -44,7 +43,7 @@ to use them.
   # password = ""
 
   ## Optional NATS 2.0 and NATS NGS compatible user credentials
-  # credentials = "/etc/telegraf/nats.creds"
+  # credentials = ""
 
   ## Optional authentication with nkey seed file (NATS 2.0)
   # nkey_seed = "/etc/telegraf/seed.txt"
