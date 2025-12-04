@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -37,10 +36,11 @@ type packetListener struct {
 	parsePool *pond.WorkerPool
 }
 
-func newPacketListener(encoding string, maxDecompressionSize config.Size, maxWorkers int, allowedSources []net.IP) *packetListener {
+func newPacketListener(encoding string, maxDecompressionSize config.Size, maxWorkers int, allowedSources []net.IP, logger telegraf.Logger) *packetListener {
 	return &packetListener{
 		AllowedSources:       allowedSources,
 		Encoding:             encoding,
+		Log:                  logger,
 		MaxDecompressionSize: int64(maxDecompressionSize),
 		parsePool:            pond.New(maxWorkers, 0, pond.MinWorkers(maxWorkers/2+1)),
 	}
@@ -72,6 +72,7 @@ func (l *packetListener) listenData(onData CallbackData, onError CallbackError) 
 				}
 				continue
 			} else if !allowed {
+				l.Log.Debugf("Received message from blocked IP: %s", src)
 				// Drop message if it is not from an allowed IP source
 				continue
 			}
@@ -278,25 +279,4 @@ func (l *packetListener) close() error {
 	l.parsePool.StopAndWait()
 
 	return nil
-}
-
-func isSourceAllowed(allowed []net.IP, addr net.Addr) (bool, error) {
-	if len(allowed) == 0 {
-		// No filtering, allow all
-		return true, nil
-	}
-	var src net.IP
-	switch a := addr.(type) {
-	case *net.UDPAddr:
-		src = a.IP
-	case *net.TCPAddr:
-		src = a.IP
-	case *net.IPAddr:
-		src = a.IP
-	default:
-		return false, fmt.Errorf("source address %q (%T) has no IP", addr, addr)
-	}
-	return slices.ContainsFunc(allowed, func(allowedIP net.IP) bool {
-		return src.Equal(allowedIP)
-	}), nil
 }

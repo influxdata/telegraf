@@ -331,6 +331,7 @@ func (l *streamListener) listenConnection(onConnection CallbackConnection, onErr
 				continue
 			} else if !allowed {
 				_ = conn.Close()
+				l.Log.Debugf("Received message from blocked IP: %s", conn.RemoteAddr())
 				continue
 			}
 
