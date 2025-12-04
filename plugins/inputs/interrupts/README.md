@@ -28,7 +28,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## deployments.
   # cpu_as_tag = false
 
-  ## To filter which IRQs to collect, make use of tagpass / tagdrop, i.e.
+  ## To filter which IRQs to collect, make use of tagpass / tagdrop:
   # [inputs.interrupts.tagdrop]
   #   irq = [ "NET_RX", "TASKLET" ]
 ```

@@ -310,7 +310,7 @@ telegraf/modbus/device-2/supplied/$datatype       boolean
 It is important to notice that the __"devices" and "nodes" are dynamically
 changing__ in Telegraf as the metrics and their structure is not known a-priori.
 As a consequence, the content of both `$nodes` and `$properties` topics are
-changing as new `device-id`s, `node-id`s and `properties` (i.e. tags and fields)
+changing as new `device-id`s, `node-id`s, and `properties` (tags and fields)
 appear. Best effort is made to limit the number of changes by keeping a
 superset of all devices and nodes seen, however especially during startup those
 topics will change more often. Both `topic` and `homie_node_id` should be chosen

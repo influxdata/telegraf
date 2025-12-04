@@ -170,8 +170,8 @@ amount of events you log.
 
 You can send any field, *System*, *Computed* or *XML* as tag field. List of
 those fields is in the `event_tags` config array. Globbing is supported in this
-array, i.e. `Level*` for all fields beginning with `Level`, or `L?vel` for all
-fields where the name is `Level`, `L3vel`, `L@vel` and so on. Tag fields are
+array. For example, `Level*` matches all fields beginning with `Level`, and `L?vel` matches all
+fields where the name is `Level`, `L3vel`, `L@vel`, and so on. Tag fields are
 converted to strings automatically.
 
 By default, all other fields are sent, but you can limit that either by listing
