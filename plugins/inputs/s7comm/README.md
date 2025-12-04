@@ -54,6 +54,9 @@ using the `startup_error_behavior` setting. Available values are:
   ## Timeout for requests
   # timeout = "10s"
 
+  ## Idle timeout for requests
+  # idle_timeout = "60s"
+
   ## Log detailed connection messages for tracing issues
   # log_level = "trace"
 
