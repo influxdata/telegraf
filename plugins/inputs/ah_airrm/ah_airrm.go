@@ -27,12 +27,14 @@ type Ah_airrm struct {
 	Ifname		[]string	`toml:"ifname"`
 	Log			telegraf.Logger `toml:"-"`
 	wg			sync.WaitGroup
+	Test_airrm_enable  uint8	`toml:"test_airrm_enable"`
 }
 
 const sampleConfig = `
 [[inputs.ah_airrm]]
   interval = "5s"
   ifname = ["wifi0","wifi1"]
+  test_airrm_enable = 0
 `
 func NewAh_airrm(id int) *Ah_airrm {
 	var err error
@@ -50,10 +52,20 @@ func NewAh_airrm(id int) *Ah_airrm {
 	return &Ah_airrm{
         fd:	fd,
 	apn:	apn,
+	Test_airrm_enable: 0,
 	}
 
 }
 
+func (ai *Ah_airrm) runAirrmOneShot(flag *uint8, collect func()) {
+    if flag == nil || *flag != 1 {
+        return
+    }
+    if collect != nil {
+        collect()
+    }
+    *flag = 0
+}
 
 func getAirrmNbrTbl(ai *Ah_airrm, ifname string, cfg ieee80211req_cfg_nbr) unsafe.Pointer {
 
@@ -197,7 +209,12 @@ func (ai *Ah_airrm) Gather(acc telegraf.Accumulator) error {
 			os.Exit(128)
 		}
 	}()
-	Gather_acs_nbr(ai, acc)
+	
+	if ai.Test_airrm_enable == 1 {
+      ai.runAirrmOneShot(&ai.Test_airrm_enable, func() {
+            Gather_acs_nbr(ai, acc)
+        })
+	}
 
 	return nil
 }
