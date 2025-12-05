@@ -135,6 +135,14 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			Name:  "secretstore-filter",
 			Usage: "filter the secret-stores to enable, separator is ':'",
 		},
+		&cli.BoolFlag{
+			Name:  "strict-env-handling",
+			Usage: "enforces strict and secure handling of environment variables; will not work with non-string settings",
+		},
+		&cli.BoolFlag{
+			Name:  "non-strict-env-handling",
+			Usage: "allow unsafe non-strict handling of environment variables to replace non-string settings",
+		},
 	}
 
 	mainFlags := append(configHandlingFlags, cliFlags()...)
@@ -332,14 +340,6 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				&cli.BoolFlag{
 					Name:  "old-env-behavior",
 					Usage: "switch back to pre v1.27 environment replacement behavior",
-				},
-				&cli.BoolFlag{
-					Name:  "strict-env-handling",
-					Usage: "enforces strict and secure handling of environment variables; will not work with non-string settings",
-				},
-				&cli.BoolFlag{
-					Name:  "non-strict-env-handling",
-					Usage: "allow unsafe non-strict handling of environment variables to replace non-string settings",
 				},
 				&cli.BoolFlag{
 					Name:  "print-plugin-config-source",

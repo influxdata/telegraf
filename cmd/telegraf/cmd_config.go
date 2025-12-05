@@ -57,6 +57,18 @@ func getConfigCommands(configHandlingFlags []cli.Flag, outputBuffer io.Writer) [
 							return err
 						}
 
+						// Set the environment variables handling mode
+						if cCtx.Bool("strict-env-handling") && cCtx.Bool("non-strict-env-handling") {
+							return errors.New("flags --strict-env-handling and --non-strict-env-handling cannot be used together")
+						}
+						if !cCtx.Bool("strict-env-handling") && !cCtx.Bool("non-strict-env-handling") {
+							msg := "Strict environment variable handling will be the new default starting with v1.38.0! " +
+								"If your configuration works with strict handling or you don't use environment variables it is safe " +
+								"to ignore this warning. Otherwise please explicitly add the --non-strict-env-handling flag!"
+							log.Println("W! " + color.YellowString(msg))
+						}
+						config.NonStrictEnvVarHandling = !cCtx.Bool("strict-env-handling")
+
 						// Collect the given configuration files
 						configFiles := cCtx.StringSlice("config")
 						configDir := cCtx.StringSlice("config-directory")
