@@ -39,7 +39,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##  ex: scope = "user"
   # scope = "system"
 
-  ## Collect also units not loaded by systemd, i.e. disabled or static units
+  ## Collect also units not loaded by systemd (disabled or static units)
   ## Enabling this feature might introduce significant load when used with
   ## unspecific patterns (such as '*') as systemd will need to load all
   ## matching unit files.

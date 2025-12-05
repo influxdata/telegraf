@@ -70,7 +70,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # buffer_size = "64Kib"
 
   ## Disable automatic restart of the program and stop if the program exits
-  ## with an error (i.e. non-zero error code)
+  ## with an error (non-zero error code)
   # stop_on_error = false
 
   ## Data format to consume.

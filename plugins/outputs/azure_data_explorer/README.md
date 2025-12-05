@@ -57,7 +57,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # table_name = ""
 
   ## Creates tables and relevant mapping if set to true(default).
-  ## Skips table and mapping creation if set to false, this is useful for running Telegraf with the lowest possible permissions i.e. table ingestor role.
+  ## Skips table and mapping creation if set to false, this is useful for running Telegraf with the lowest possible permissions (table ingestor role).
   # create_tables = true
 
   ##  Ingestion method to use.

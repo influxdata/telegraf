@@ -46,7 +46,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 > [!NOTE]
 > Some outputs are sensitive to the number of metric series that are produced.
-> Multiple metrics of the same series (i.e. identical name, tag key-values and
+> Multiple metrics of the same series (identical name, tag key-values, and
 > field name) with the same timestamp might result in squashing those points
 > to the latest metric produced.
 

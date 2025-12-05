@@ -23,7 +23,7 @@ need **systemd version 254+** otherwise you need to specify the credentials
 using `LoadCredentialEncrypted` in a service-override.
 
 In the default setup, Telegraf expects credential files to be prefixed with
-`telegraf.` and without a custom name setting (i.e. no `--name`).
+`telegraf.` and without a custom name setting (no `--name`).
 
 It is important to note that when TPM2 sealing is available on the host,
 credentials can only be created and used on the **same machine** as decrypting
@@ -199,8 +199,8 @@ to fill sensitive data such as usernames, passwords or tokens.
 
 ### Troubleshooting
 
-Please always make sure your systemd version matches Telegraf's requirements,
-i.e. you do have version 254 or later.
+Please always make sure your systemd version matches Telegraf's requirements.
+You must have version 254 or later.
 
 When not being able to start the service please check the logs. A common issue
 is using the `--name` option which does not work with systemd's

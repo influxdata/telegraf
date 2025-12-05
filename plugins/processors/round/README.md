@@ -25,7 +25,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Round numerical fields
 [[processors.round]]
   ## Precision to round to.
-  ## A positive number indicates rounding to the right of the decimal separator (i.e. the fractional part).
+  ## A positive number indicates rounding to the right of the decimal separator (the fractional part).
   ## A negative number indicates rounding to the left of the decimal separator.
   # precision = 0
 
