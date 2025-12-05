@@ -404,6 +404,7 @@ func (t *TrapPlugin) Gather_Ah_send_trap(trapType uint32, trapBuf [256]byte, acc
 
 		acc.AddFields("TrapEvent", map[string]interface{}{
 			"trapType_dfsBangTrap":    dfs.TrapType,
+			"trapId_dfsBangTrap":      dfs.TrapId,
 			"name_dfsBangTrap":        cleanCString(dfs.IfName[:]),
 			"desc_dfsBangTrap":        cleanCString(dfs.Desc[:]),
 		}, nil)

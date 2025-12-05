@@ -54,6 +54,7 @@ type AhFaMvlanChangeTrap struct {
 
 type AhTgrafDfsTrap struct {
 	TrapType  uint8
+	TrapId    uint8
 //	DataLen   uint16
 //	IfNameLen uint8
 	IfName    [AH_MAX_TRAP_IF_NAME + 1]byte
