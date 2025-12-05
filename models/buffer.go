@@ -158,6 +158,10 @@ func (b *BufferStats) metricAdded() {
 	b.MetricsAdded.Incr(1)
 }
 
+func (b *BufferStats) metricAddedCount(count int64) {
+	b.MetricsAdded.Incr(count)
+}
+
 func (b *BufferStats) metricWritten(m telegraf.Metric) {
 	AgentMetricsWritten.Incr(1)
 	b.MetricsWritten.Incr(1)
