@@ -37,6 +37,19 @@ func TestConvertGlobalStatus(t *testing.T) {
 			expected:    nil,
 			expectedErr: nil,
 		},
+		{
+			name:  "multiple values in one metric converted to a map",
+			key:   "wsrep_evs_repl_latency",
+			value: []byte("0.000160108/0.000386178/0.00964884/0.000488261/816"),
+			expected: map[string]interface{}{
+				"min":         0.000160108,
+				"avg":         0.000386178,
+				"max":         0.00964884,
+				"stdev":       0.000488261,
+				"sample_size": 816.0,
+			},
+			expectedErr: nil,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -110,6 +123,7 @@ func TestParseValue(t *testing.T) {
 		{sql.RawBytes("18446744073709551616"), float64(18446744073709552000), ""}, // too big for uint64
 		{sql.RawBytes("18446744073709552333"), float64(18446744073709552000), ""}, // too big for uint64
 		{sql.RawBytes(""), nil, "unconvertible value"},
+		{sql.RawBytes("0/0/0"), nil, "unsupported amount of values in wsrep_evs_repl_latency, got 3, should be 5"}, // too few values
 	}
 	for _, cases := range testCases {
 		got, err := ParseValue(cases.rawByte)

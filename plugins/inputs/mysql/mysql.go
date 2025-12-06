@@ -869,7 +869,14 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, servtag string, acc telegraf.Ac
 			if err != nil {
 				acc.AddError(fmt.Errorf("error parsing mysql global status %q=%q: %w", key, string(val), err))
 			} else {
-				fields[key] = value
+				// v2.ConvertGlobalStatus can parse "complex" multi-value fields, e.g. wsrep_evs_repl_latency
+				if valueToMap, ok := value.(map[string]interface{}); ok {
+					for mapKey, mapValue := range valueToMap {
+						fields[key+"_"+mapKey] = mapValue
+					}
+				} else {
+					fields[key] = value
+				}
 			}
 		}
 
