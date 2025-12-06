@@ -22,6 +22,7 @@ import (
 )
 
 type packetListener struct {
+	AllowedSources       []net.IP
 	Encoding             string
 	MaxDecompressionSize int64
 	SocketMode           string
@@ -35,9 +36,11 @@ type packetListener struct {
 	parsePool *pond.WorkerPool
 }
 
-func newPacketListener(encoding string, maxDecompressionSize config.Size, maxWorkers int) *packetListener {
+func newPacketListener(encoding string, maxDecompressionSize config.Size, maxWorkers int, allowedSources []net.IP, logger telegraf.Logger) *packetListener {
 	return &packetListener{
+		AllowedSources:       allowedSources,
 		Encoding:             encoding,
+		Log:                  logger,
 		MaxDecompressionSize: int64(maxDecompressionSize),
 		parsePool:            pond.New(maxWorkers, 0, pond.MinWorkers(maxWorkers/2+1)),
 	}
@@ -60,6 +63,18 @@ func (l *packetListener) listenData(onData CallbackData, onError CallbackError) 
 					}
 				}
 				break
+			}
+
+			if allowed, err := isSourceAllowed(l.AllowedSources, src); err != nil {
+				// Drop message if the check failed as security-by-default
+				if onError != nil {
+					onError(err)
+				}
+				continue
+			} else if !allowed {
+				l.Log.Debugf("Received message from blocked IP: %s", src)
+				// Drop message if it is not from an allowed IP source
+				continue
 			}
 
 			d := make([]byte, n)
