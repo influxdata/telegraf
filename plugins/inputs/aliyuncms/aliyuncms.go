@@ -28,17 +28,7 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// Key and service constants extracted for readability.
-const (
-	tagInstanceID  = "instanceId"
-	tagBucketName  = "BucketName"
-	tagUserID      = "userId"
-	fieldTimestamp = "timestamp"
-	serviceRDS     = "rds"
-)
-
 type (
-	// AliyunCMS is Aliyun cms config info.
 	AliyunCMS struct {
 		AccessKeyID       string `toml:"access_key_id"`
 		AccessKeySecret   string `toml:"access_key_secret"`
@@ -70,8 +60,6 @@ type (
 		discoveryData map[string]interface{}
 		measurement   string
 	}
-
-	// Metric describes what metrics to get
 	metric struct {
 		ObjectsFilter                 string   `toml:"objects_filter"`
 		MetricNames                   []string `toml:"names"`
@@ -87,12 +75,6 @@ type (
 		requestDimensionsStr string              // String representation of the above
 
 	}
-
-	// Dimension describes how to get metrics
-	Dimension struct {
-		Value string `toml:"value"`
-	}
-
 	aliyuncmsClient interface {
 		DescribeMetricList(request *cms.DescribeMetricListRequest) (response *cms.DescribeMetricListResponse, err error)
 	}
@@ -251,8 +233,6 @@ func (s *AliyunCMS) Start(telegraf.Accumulator) error {
 // Gather implements telegraf.Inputs interface
 func (s *AliyunCMS) Gather(acc telegraf.Accumulator) error {
 	s.updateWindow(time.Now())
-
-	// limit concurrency, or we can easily exhaust the user connection limit
 	lmtr := limiter.NewRateLimiter(s.RateLimit, time.Second)
 	defer lmtr.Stop()
 
@@ -293,7 +273,7 @@ func (s *AliyunCMS) updateWindow(relativeTo time.Time) {
 		// this is the first run, no window info, so just get a single period
 		s.windowStart = windowEnd.Add(-time.Duration(s.Period))
 	} else {
-		// subsequent window, start where last window left off
+		// subsequent window, start where the last window left off
 		s.windowStart = s.windowEnd
 	}
 
@@ -354,7 +334,7 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, m 
 				return err
 			}
 			if len(dataPoints) == 0 {
-				if s.rdsClient != nil && slices.Contains(s.MetricServices, serviceRDS) {
+				if s.rdsClient != nil && slices.Contains(s.MetricServices, "rds") {
 					s.Log.Debug("No rds performance metrics returned from RDS")
 				} else {
 					s.Log.Debug("No metrics returned from CMS")
@@ -369,7 +349,7 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, m 
 
 				for key, value := range dp {
 					switch key {
-					case tagInstanceID, tagBucketName:
+					case "instanceId", "BucketName":
 						strVal, ok := value.(string)
 						if !ok {
 							s.Log.Warnf("Unexpected non-string %q value in datapoint, skipping...", key)
@@ -379,11 +359,11 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, m 
 						if keep := s.enrichTagsWithDiscovery(tags, m, strVal); !keep {
 							continue NextDataPoint
 						}
-					case tagUserID:
+					case "userId":
 						if str, ok := value.(string); ok {
 							tags[key] = str
 						}
-					case fieldTimestamp:
+					case "timestamp":
 						parsed, ok := s.parseTimestamp(value)
 						if !ok {
 							s.Log.Warnf("Unexpected timestamp type %T, skipping datapoint", value)
@@ -422,7 +402,7 @@ func (s *AliyunCMS) fetchCMSDatapoints(region, metricName string, metric *metric
 	}
 	if cmsResp.Code != "200" {
 		s.Log.Errorf("failed to query metricName list: %v", cmsResp.Message)
-		return nil, "", nil
+		return nil, cmsResp.NextToken, nil
 	}
 
 	var dataPoints []map[string]interface{}
@@ -444,8 +424,8 @@ func (s *AliyunCMS) fetchRDSPerformanceDatapoints(region, metricName string, met
 		req := rds.CreateDescribeDBInstancePerformanceRequest()
 		req.DBInstanceId = instanceID["instanceId"]
 		req.Key = metricName
-		req.StartTime = formatTimeUTC(s.windowStart)
-		req.EndTime = formatTimeUTC(s.windowEnd)
+		req.StartTime = s.windowStart.UTC().Format("2006-01-02T15:04Z")
+		req.EndTime = s.windowEnd.UTC().Format("2006-01-02T15:04Z")
 		req.RegionId = region
 
 		resp, err := s.rdsClient.DescribeDBInstancePerformance(req)
@@ -502,11 +482,6 @@ func (s *AliyunCMS) fetchRDSPerformanceDatapoints(region, metricName string, met
 	return dataPoints, nil
 }
 
-// formatTimeUTC formats time in the RFC3339 minute-precision expected by RDS API.
-func formatTimeUTC(t time.Time) string {
-	return t.UTC().Format("2006-01-02T15:04Z")
-}
-
 // tag helper
 func parseTag(tagSpec string, data interface{}) (tagKey, tagValue string, err error) {
 	var (
@@ -547,8 +522,6 @@ func (s *AliyunCMS) prepareTagsAndDimensions(metric *metric) {
 	if s.dt == nil { // Discovery is not activated
 		return
 	}
-
-	// Reading all data from a buffered channel
 L:
 	for {
 		select {
