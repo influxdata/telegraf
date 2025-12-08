@@ -269,7 +269,9 @@ func (l *streamListener) listenData(onData CallbackData, onError CallbackError) 
 				}
 				continue
 			} else if !allowed {
-				_ = conn.Close()
+				if err = conn.Close(); err != nil {
+					onError(fmt.Errorf("closing connection from %q failed: %w", conn.RemoteAddr(), err))
+				}
 				continue
 			}
 
@@ -327,10 +329,14 @@ func (l *streamListener) listenConnection(onConnection CallbackConnection, onErr
 				if onError != nil {
 					onError(err)
 				}
-				_ = conn.Close()
+				if err = conn.Close(); err != nil {
+					onError(fmt.Errorf("closing connection from %q failed: %w", conn.RemoteAddr(), err))
+				}
 				continue
 			} else if !allowed {
-				_ = conn.Close()
+				if err = conn.Close(); err != nil {
+					onError(fmt.Errorf("closing connection from %q failed: %w", conn.RemoteAddr(), err))
+				}
 				l.Log.Debugf("Received message from blocked IP: %s", conn.RemoteAddr())
 				continue
 			}
