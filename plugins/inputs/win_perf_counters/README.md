@@ -399,7 +399,7 @@ as seen in the Windows Performance Monitor.
 A field representing raw counter value has the `_Raw` suffix. Raw values should
 be further used in a calculation,
 e.g. `100-(non_negative_derivative("Percent_Processor_Time_Raw",1s)/100000`
-Note: Time based counters (i.e. *% Processor Time*) are reported in hundredths
+Note: Time based counters (for example, *% Processor Time*) are reported in hundredths
 of nanoseconds.
 This key is optional. It is a simple bool.
 If set to `true`, counter values will be provided in the raw, integer, form.
@@ -408,7 +408,7 @@ formatted, displayable, form as seen in the Windows Performance Monitor.
 A field representing raw counter value has the `_Raw` suffix.
 Raw values should be further used in a calculation,
 e.g. `100-(non_negative_derivative("Percent_Processor_Time_Raw",1s)/100000`
-Note: Time based counters (i.e. `% Processor Time`)
+Note: Time based counters (for example, `% Processor Time`)
 are reported in hundredths of nanoseconds.
 
 Example: `UseRawValues = true`

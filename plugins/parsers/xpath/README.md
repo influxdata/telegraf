@@ -39,10 +39,10 @@ name>.<message name>`.
 #### `xpath_protobuf_import_paths` (optional)
 
 In case you import other protocol-buffer definitions within your `.proto` file
-(i.e. you use the `import` statement) you can use this option to specify paths
+(with the `import` statement), you can use this option to specify paths
 to search for the imported definition file(s). By default the imports are only
-searched in `.` which is the current-working-directory, i.e. usually the
-directory you are in when starting telegraf.
+searched in `.` which is the current working directory (usually the
+directory you are in when starting telegraf).
 
 Imagine you do have multiple protocol-buffer definitions (e.g. `A.proto`,
 `B.proto` and `C.proto`) in a directory (e.g. `/data/my_proto_files`) where your
