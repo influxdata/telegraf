@@ -3,179 +3,153 @@ package influxdb_v3
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"math"
-	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
-	"golang.org/x/net/http2"
-
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/ratelimiter"
+	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
-
-type APIError struct {
-	Err        error
-	StatusCode int
-	Retryable  bool
-}
-
-func (e APIError) Error() string {
-	return e.Err.Error()
-}
-
-func (e APIError) Unwrap() error {
-	return e.Err
-}
-
-type returnedErrorBody struct {
-	ErrorMsg string `json:"error"`
-	Data     []struct {
-		Metric  string `json:"original_line"`
-		Line    int    `json:"line_number"`
-		Message string `json:"error_message"`
-	} `json:"data"`
-}
-
-func (r *returnedErrorBody) String() string {
-	return r.ErrorMsg
-}
 
 const (
 	defaultMaxWaitSeconds           = 60
 	defaultMaxWaitRetryAfterSeconds = 10 * 60
 )
 
-type httpClient struct {
-	url                *url.URL
-	localAddr          *net.TCPAddr
-	token              config.Secret
-	database           string
-	databaseTag        string
-	excludeDatabaseTag bool
-	timeout            time.Duration
-	headers            map[string]string
-	proxy              *url.URL
-	userAgent          string
-	contentEncoding    string
-	pingTimeout        config.Duration
-	readIdleTimeout    config.Duration
-	tlsConfig          *tls.Config
-	encoder            internal.ContentEncoder
-	serializer         ratelimiter.Serializer
-	rateLimiter        *ratelimiter.RateLimiter
-	client             *http.Client
-	retryTime          time.Time
-	retryCount         int
-	log                telegraf.Logger
+type client struct {
+	url *url.URL
+	cfg *clientConfig
+	log telegraf.Logger
+
+	client      *http.Client
+	headers     map[string]string
+	encoder     internal.ContentEncoder
+	serializer  ratelimiter.Serializer
+	rateLimiter *ratelimiter.RateLimiter
+	retryTime   time.Time
+	retryCount  int
+
+	cancel context.CancelFunc
 }
 
-func (c *httpClient) Init() error {
-	if c.headers == nil {
-		c.headers = make(map[string]string, 2)
+func newClient(addr string, cfg *clientConfig, log telegraf.Logger) (*client, error) {
+	// Parse the URL
+	u, err := url.Parse(addr)
+	if err != nil {
+		return nil, fmt.Errorf("parsing URL %q failed: %w", addr, err)
 	}
 
-	if _, ok := c.headers["Authorization"]; !ok && !c.token.Empty() {
-		token, err := c.token.Get()
+	switch u.Scheme {
+	case "http", "https":
+	default:
+		return nil, fmt.Errorf("invalid scheme in URL %q", addr)
+	}
+
+	c := &client{
+		url: u.JoinPath("api", "v3", "write_lp"),
+		cfg: cfg,
+		log: log,
+	}
+
+	// Prepare the headers including authorization
+	c.headers = map[string]string{
+		"User-Agent": cfg.UserAgent,
+	}
+
+	if _, ok := c.headers["Authorization"]; !ok && !cfg.Token.Empty() {
+		token, err := cfg.Token.Get()
 		if err != nil {
-			return fmt.Errorf("getting token failed: %w", err)
+			return nil, fmt.Errorf("getting token failed: %w", err)
 		}
 		c.headers["Authorization"] = "Bearer " + token.String()
 		token.Destroy()
 	}
-	if _, ok := c.headers["User-Agent"]; !ok {
-		c.headers["User-Agent"] = c.userAgent
-	}
 
-	var proxy func(*http.Request) (*url.URL, error)
-	if c.proxy != nil {
-		proxy = http.ProxyURL(c.proxy)
-	} else {
-		proxy = http.ProxyFromEnvironment
-	}
-
-	var transport *http.Transport
-	switch c.url.Scheme {
-	case "http", "https":
-		var dialerFunc func(ctx context.Context, network, addr string) (net.Conn, error)
-		if c.localAddr != nil {
-			dialer := &net.Dialer{LocalAddr: c.localAddr}
-			dialerFunc = dialer.DialContext
+	// Init encoding if configured
+	switch cfg.ContentEncoding {
+	case "gzip":
+		enc, err := internal.NewGzipEncoder()
+		if err != nil {
+			return nil, fmt.Errorf("setting up gzip encoder failed: %w", err)
 		}
-		transport = &http.Transport{
-			Proxy:           proxy,
-			TLSClientConfig: c.tlsConfig,
-			DialContext:     dialerFunc,
-		}
-		if c.readIdleTimeout != 0 || c.pingTimeout != 0 {
-			http2Trans, err := http2.ConfigureTransports(transport)
-			if err == nil {
-				http2Trans.ReadIdleTimeout = time.Duration(c.readIdleTimeout)
-				http2Trans.PingTimeout = time.Duration(c.pingTimeout)
-			}
-		}
-	case "unix":
-		transport = &http.Transport{
-			Dial: func(_, _ string) (net.Conn, error) {
-				return net.DialTimeout(
-					c.url.Scheme,
-					c.url.Path,
-					c.timeout,
-				)
-			},
-		}
+		c.encoder = enc
+		c.headers["Content-Encoding"] = "gzip"
+	case "none", "identity":
 	default:
-		return fmt.Errorf("unsupported scheme %q", c.url.Scheme)
+		return nil, fmt.Errorf("invalid content encoding %q", cfg.ContentEncoding)
 	}
 
-	switch c.url.Scheme {
-	case "http", "https":
-		c.url = c.url.JoinPath("api", "v3", "write_lp")
-	default:
-		return fmt.Errorf("unsupported scheme: %q", c.url.Scheme)
+	// Setup the limited serializer
+	serializer := &influx.Serializer{
+		UintSupport:   cfg.UintSupport,
+		OmitTimestamp: cfg.OmitTimestamp,
 	}
+	if err := serializer.Init(); err != nil {
+		return nil, fmt.Errorf("setting up serializer failed: %w", err)
+	}
+	c.serializer = ratelimiter.NewIndividualSerializer(serializer)
 
-	c.client = &http.Client{
-		Timeout:   c.timeout,
-		Transport: transport,
+	// Create ratelimiter
+	limiter, err := cfg.RateLimitConfig.CreateRateLimiter()
+	if err != nil {
+		return nil, fmt.Errorf("creating rate-limiter failed: %w", err)
 	}
+	c.rateLimiter = limiter
+
+	return c, nil
+}
+
+func (c *client) connect() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	c.cancel = cancel
+
+	// Setup the HTTP client
+	httpClient, err := c.cfg.HTTPClientConfig.CreateClient(ctx, c.log)
+	if err != nil {
+		return fmt.Errorf("creating HTTP client failed: %w", err)
+	}
+	c.client = httpClient
 
 	return nil
 }
 
-func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error {
+func (c *client) close() {
+	c.cancel()
+	c.client.CloseIdleConnections()
+}
+
+func (c *client) write(ctx context.Context, metrics []telegraf.Metric) error {
 	if c.retryTime.After(time.Now()) {
 		return errors.New("retry time has not elapsed")
 	}
 
 	batches := make(map[string][]telegraf.Metric)
 	batchIndices := make(map[string][]int)
-	if c.databaseTag == "" {
-		batches[c.database] = metrics
-		batchIndices[c.database] = make([]int, len(metrics))
+	if c.cfg.DatabaseTag == "" {
+		batches[c.cfg.Database] = metrics
+		batchIndices[c.cfg.Database] = make([]int, len(metrics))
 		for i := range metrics {
-			batchIndices[c.database][i] = i
+			batchIndices[c.cfg.Database][i] = i
 		}
 	} else {
 		for i, metric := range metrics {
-			database, ok := metric.GetTag(c.databaseTag)
+			database, ok := metric.GetTag(c.cfg.DatabaseTag)
 			if !ok {
-				database = c.database
-			} else if c.excludeDatabaseTag {
+				database = c.cfg.Database
+			} else if c.cfg.ExcludeDatabaseTag {
 				// Avoid modifying the metric if we do remove the tag
 				metric = metric.Copy()
 				metric.Accept()
-				metric.RemoveTag(c.databaseTag)
+				metric.RemoveTag(c.cfg.DatabaseTag)
 			}
 
 			batches[database] = append(batches[database], metric)
@@ -196,7 +170,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 		if errors.As(err, &apiErr) {
 			if apiErr.StatusCode == http.StatusRequestEntityTooLarge {
 				// TODO: Need a testcase to verify rejected metrics are not retried...
-				return c.splitAndWriteBatch(ctx, c.database, metrics)
+				return c.splitAndWriteBatch(ctx, c.cfg.Database, metrics)
 			}
 			wErr.Err = err
 			if !apiErr.Retryable {
@@ -231,7 +205,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	return nil
 }
 
-func (c *httpClient) splitAndWriteBatch(ctx context.Context, database string, metrics []telegraf.Metric) error {
+func (c *client) splitAndWriteBatch(ctx context.Context, database string, metrics []telegraf.Metric) error {
 	c.log.Warnf("Retrying write after splitting metric payload in half to reduce batch size")
 	midpoint := len(metrics) / 2
 
@@ -242,7 +216,7 @@ func (c *httpClient) splitAndWriteBatch(ctx context.Context, database string, me
 	return c.writeBatch(ctx, database, metrics[midpoint:])
 }
 
-func (c *httpClient) writeBatch(ctx context.Context, database string, metrics []telegraf.Metric) error {
+func (c *client) writeBatch(ctx context.Context, database string, metrics []telegraf.Metric) error {
 	// Get the current limit for the outbound data
 	ratets := time.Now()
 	limit := c.rateLimiter.Remaining(ratets)
@@ -271,9 +245,6 @@ func (c *httpClient) writeBatch(ctx context.Context, database string, metrics []
 		return fmt.Errorf("creating request failed: %w", err)
 	}
 
-	if c.encoder != nil {
-		req.Header.Set("Content-Encoding", c.contentEncoding)
-	}
 	req.Header.Set("Content-Type", "text/plain; charset=utf-8")
 	for header, value := range c.headers {
 		if strings.EqualFold(header, "host") {
@@ -311,10 +282,10 @@ func (c *httpClient) writeBatch(ctx context.Context, database string, metrics []
 	// We got an error and now try to decode further
 	var desc string
 	if responseBody, err := io.ReadAll(resp.Body); err == nil && len(responseBody) > 0 {
-		var respErr returnedErrorBody
+		var respErr apiErrorBody
 		if json.Unmarshal(responseBody, &respErr) == nil {
-			if respErr.String() != "" {
-				desc = respErr.String()
+			if respErr.ErrorMsg != "" {
+				desc = respErr.ErrorMsg
 			}
 			if c.log.Level().Includes(telegraf.Debug) {
 				for _, d := range respErr.Data {
@@ -379,7 +350,7 @@ func (c *httpClient) writeBatch(ctx context.Context, database string, metrics []
 }
 
 // retryDuration takes the longer of the Retry-After header and our own back-off calculation
-func (c *httpClient) getRetryDuration(headers http.Header) time.Duration {
+func (c *client) getRetryDuration(headers http.Header) time.Duration {
 	// basic exponential backoff (x^2)/40 (denominator to widen the slope)
 	// at 40 denominator, it'll take 49 retries to hit the max defaultMaxWait of 60s
 	backoff := math.Pow(float64(c.retryCount), 2) / 40
@@ -401,8 +372,4 @@ func (c *httpClient) getRetryDuration(headers http.Header) time.Duration {
 	// take the highest value of backoff and retry-after.
 	retry := math.Max(backoff, retryAfterHeader)
 	return time.Duration(retry*1000) * time.Millisecond
-}
-
-func (c *httpClient) Close() {
-	c.client.CloseIdleConnections()
 }
