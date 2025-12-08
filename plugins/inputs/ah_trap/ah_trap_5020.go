@@ -3,12 +3,8 @@
 package ah_trap
 
 import (
-	"log"
 	"unsafe"
 	"fmt"
-	"strings"
-	"strconv"
-	"os/exec"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/ahutil"
 )
