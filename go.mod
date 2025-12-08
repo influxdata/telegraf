@@ -212,7 +212,7 @@ require (
 	github.com/thomasklein94/packer-plugin-libvirt v0.5.0
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/wal v1.2.1
-	github.com/tinylib/msgp v1.5.0
+	github.com/tinylib/msgp v1.6.1
 	github.com/urfave/cli/v2 v2.27.7
 	github.com/vapourismo/knx-go v0.0.0-20240915133544-a6ab43471c11
 	github.com/vertica/vertica-sql-go v1.3.4
