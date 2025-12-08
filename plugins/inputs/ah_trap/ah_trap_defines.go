@@ -2,7 +2,6 @@ package ah_trap
 
 
 import (
-        "fmt"
 	"net"
 )
 
@@ -23,7 +22,11 @@ const (
 	AH_FA_MVLAN_TRAP_TYPE    = 124
 	TRAP_DCRPT_LEN           = 96
 	AH_MSG_TRAP_DFS_BANG     = 12
-	MACADDR_LEN		 = 6 
+	AH_MSG_TRAP_STA_LEAVE_STATS = 6
+	MACADDR_LEN		 = 6
+	MAX_DESCRIBLE_LEN	 = 128
+	AH_CAPWAP_STAT_NAME_MAX_LEN = 32
+	MAX_OBJ_NAME_LEN		 = 4
 )
 
 const (
@@ -271,8 +274,16 @@ func intToIPv6(addrs [][16]byte, count int) string {
 	return ""
 }
 
-func formatMac(mac [6]byte) string {
-	return fmt.Sprintf("%02X:%02X:%02X:%02X:%02X:%02X",
-		mac[0], mac[1], mac[2], mac[3], mac[4], mac[5])
+func IntToIPv6_1(addrs []AhStaAddr6, count int) []string {
+	var result []string
+	for i := 0; i < count && i < len(addrs); i++ {
+		ip := net.IP(addrs[i].StaAddr6[:])
+		result = append(result, ip.String())
+	}
+	return result
 }
 
+type AhStaAddr6 struct {
+    AddrType byte      // char addr_type
+    StaAddr6 [16]byte  // struct in6_addr (IPv6 address is 16 bytes)
+}

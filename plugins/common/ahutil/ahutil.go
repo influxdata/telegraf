@@ -11,6 +11,7 @@ import (
 	"log"
 	"net"
 	"os/exec"
+	"bytes"
 )
 
 func Mystr() string {
@@ -467,3 +468,77 @@ func MacToString(mac [6]byte) string {
 	return fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x",mac[0],mac[1],mac[2],mac[3],mac[4],mac[5])
 }
 
+func GetBSSIDbyIfName(ifName string) (bssid [MACADDR_LEN]uint8, err error) {
+
+	var ret [MACADDR_LEN]uint8
+	app := "wl"
+	arg0 := "-i"
+	arg1 := ifName
+	arg2 := "bssid"
+
+	cmd := exec.Command(app, arg0, arg1, arg2)
+	out, err := cmd.Output()
+	if err != nil {
+		return ret, err
+	}
+
+	bssid_str := string(out)
+
+	bssid_str = strings.TrimSpace(bssid_str)
+	split_text := strings.Split(bssid_str, ":")
+
+	for i := 0; i < MACADDR_LEN; i++ {
+		val,err := strconv.ParseUint(split_text[i], 16, 8)
+		if err != nil {
+			return ret, err
+		}
+		ret[i] = uint8(val)
+	}
+
+	return ret, nil
+}
+
+func GetSSIDbyIfName(ifName string) (ssid string, err error) {
+
+	app := "wl"
+	arg0 := "-i"
+	arg1 := ifName
+	arg2 := "ssid"
+
+	cmd := exec.Command(app, arg0, arg1, arg2)
+	out, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	outstring := string(out)
+
+	ssid_text := strings.Split(outstring, ":")
+	ssid_ret := strings.TrimSpace(ssid_text[1])[1 : len(strings.TrimSpace(ssid_text[1]))-1]
+
+	return ssid_ret, nil
+}
+
+func IntToIpv4(num uint32) string {
+
+    b := make([]byte, 4)
+    b[0] = byte(num)
+    b[1] = byte(num >> 8)
+    b[2] = byte(num >> 16)
+    b[3] = byte(num >> 24)
+    return fmt.Sprintf("%d.%d.%d.%d",b[0],b[1],b[2],b[3])
+}
+
+
+func CleanCString(b []byte) string {
+    if i := bytes.IndexByte(b, 0); i != -1 {
+        return string(b[:i])
+    }
+    return string(b)
+}
+
+
+func FormatMac(mac [6]byte) string {
+	return fmt.Sprintf("%02X:%02X:%02X:%02X:%02X:%02X",
+		mac[0], mac[1], mac[2], mac[3], mac[4], mac[5])
+}
