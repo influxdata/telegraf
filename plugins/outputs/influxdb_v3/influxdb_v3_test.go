@@ -1,4 +1,4 @@
-package influxdb_v3_test
+package influxdb_v3
 
 import (
 	"fmt"
@@ -19,15 +19,15 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/common/ratelimiter"
-	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	influxdb "github.com/influxdata/telegraf/plugins/outputs/influxdb_v3"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestSampleConfig(t *testing.T) {
-	plugin := influxdb.InfluxDB{}
+	plugin := InfluxDB{}
 	require.NotEmpty(t, plugin.SampleConfig())
 }
 
@@ -36,97 +36,74 @@ func TestPluginRegistered(t *testing.T) {
 }
 
 func TestCloseWithoutConnect(t *testing.T) {
-	plugin := influxdb.InfluxDB{}
+	plugin := InfluxDB{}
 	require.NoError(t, plugin.Close())
 }
 
 func TestDefaultURL(t *testing.T) {
-	plugin := influxdb.InfluxDB{}
+	plugin := InfluxDB{}
 	require.NoError(t, plugin.Init())
 	require.Len(t, plugin.URLs, 1)
 	require.Equal(t, "http://localhost:8181", plugin.URLs[0])
 }
 
-func TestInit(t *testing.T) {
-	tests := []*influxdb.InfluxDB{
+func TestURLFail(t *testing.T) {
+	tests := []struct {
+		name     string
+		url      string
+		proxy    string
+		expected string
+	}{
 		{
-			URLs: []string{"https://localhost:8181"},
-			ClientConfig: tls.ClientConfig{
-				TLSCA: "thing",
-			},
+			name:     "invalid URL scheme",
+			url:      "!@#$qwert",
+			proxy:    "http://localhost:8181",
+			expected: "invalid scheme in URL",
+		},
+		{
+			name:     "invalid escape sequence in URL",
+			url:      "!@#$%^&*()_+",
+			proxy:    "http://localhost:8181",
+			expected: "invalid URL escape",
+		},
+		{
+			name:     "missing scheme IPv6 like",
+			url:      ":::@#$qwert",
+			proxy:    "http://localhost:8181",
+			expected: "missing protocol scheme",
 		},
 	}
 
-	for _, plugin := range tests {
-		t.Run(plugin.URLs[0], func(t *testing.T) {
-			require.Error(t, plugin.Init())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &InfluxDB{
+				URLs: []string{tt.url},
+				clientConfig: clientConfig{
+					HTTPClientConfig: httpconfig.HTTPClientConfig{
+						HTTPProxy: proxy.HTTPProxy{
+							HTTPProxyURL: tt.proxy,
+						},
+					},
+				},
+			}
+			require.ErrorContains(t, plugin.Init(), tt.expected)
 		})
 	}
 }
 
-func TestConnectFail(t *testing.T) {
-	tests := []*influxdb.InfluxDB{
-		{
-			URLs:      []string{"!@#$qwert"},
-			HTTPProxy: "http://localhost:8181",
-			HTTPHeaders: map[string]string{
-				"x": "y",
-			},
-		},
-
-		{
-
-			URLs:      []string{"http://localhost:1234"},
-			HTTPProxy: "!@#$%^&*()_+",
-			HTTPHeaders: map[string]string{
-				"x": "y",
-			},
-		},
-
-		{
-
-			URLs:      []string{"!@#$%^&*()_+"},
-			HTTPProxy: "http://localhost:8181",
-			HTTPHeaders: map[string]string{
-				"x": "y",
-			},
-		},
-
-		{
-
-			URLs:      []string{":::@#$qwert"},
-			HTTPProxy: "http://localhost:8181",
-			HTTPHeaders: map[string]string{
-				"x": "y",
+func TestURLSuccess(t *testing.T) {
+	plugin := &InfluxDB{
+		URLs: []string{"http://localhost:1234"},
+		clientConfig: clientConfig{
+			HTTPClientConfig: httpconfig.HTTPClientConfig{
+				HTTPProxy: proxy.HTTPProxy{
+					HTTPProxyURL: "http://localhost:8181",
+				},
 			},
 		},
 	}
-
-	for _, plugin := range tests {
-		t.Run(plugin.URLs[0], func(t *testing.T) {
-			require.NoError(t, plugin.Init())
-			require.Error(t, plugin.Connect())
-		})
-	}
-}
-
-func TestConnect(t *testing.T) {
-	tests := []*influxdb.InfluxDB{
-		{
-			URLs:      []string{"http://localhost:1234"},
-			HTTPProxy: "http://localhost:8181",
-			HTTPHeaders: map[string]string{
-				"x": "y",
-			},
-		},
-	}
-
-	for _, plugin := range tests {
-		t.Run(plugin.URLs[0], func(t *testing.T) {
-			require.NoError(t, plugin.Init())
-			require.NoError(t, plugin.Connect())
-		})
-	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
 }
 
 func TestInfluxDBLocalAddress(t *testing.T) {
@@ -135,7 +112,13 @@ func TestInfluxDBLocalAddress(t *testing.T) {
 	require.NoError(t, err)
 	defer server.Close()
 
-	output := influxdb.InfluxDB{LocalAddr: "localhost"}
+	output := InfluxDB{
+		clientConfig: clientConfig{
+			HTTPClientConfig: httpconfig.HTTPClientConfig{
+				LocalAddress: "localhost",
+			},
+		},
+	}
 	require.NoError(t, output.Connect())
 	require.NoError(t, output.Close())
 }
@@ -180,15 +163,15 @@ func TestWrite(t *testing.T) {
 	defer ts.Close()
 
 	// Setup plugin and connect
-	plugin := &influxdb.InfluxDB{
-		URLs:               []string{"http://" + ts.Listener.Addr().String()},
-		Database:           "telegraf",
-		DatabaseTag:        "database",
-		ExcludeDatabaseTag: true,
-		ContentEncoding:    "identity",
-		PingTimeout:        config.Duration(15 * time.Second),
-		ReadIdleTimeout:    config.Duration(30 * time.Second),
-		Log:                &testutil.Logger{},
+	plugin := &InfluxDB{
+		URLs: []string{"http://" + ts.Listener.Addr().String()},
+		clientConfig: clientConfig{
+			Database:           "telegraf",
+			DatabaseTag:        "database",
+			ExcludeDatabaseTag: true,
+			ContentEncoding:    "identity",
+		},
+		Log: &testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -251,13 +234,15 @@ func TestWriteDatabaseTagWorksOnRetry(t *testing.T) {
 	defer ts.Close()
 
 	// Setup plugin and connect
-	plugin := &influxdb.InfluxDB{
-		URLs:               []string{"http://" + ts.Listener.Addr().String()},
-		Database:           "telegraf",
-		DatabaseTag:        "database",
-		ExcludeDatabaseTag: true,
-		ContentEncoding:    "identity",
-		Log:                &testutil.Logger{},
+	plugin := &InfluxDB{
+		URLs: []string{"http://" + ts.Listener.Addr().String()},
+		clientConfig: clientConfig{
+			Database:           "telegraf",
+			DatabaseTag:        "database",
+			ExcludeDatabaseTag: true,
+			ContentEncoding:    "identity",
+		},
+		Log: &testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -316,13 +301,15 @@ func TestTooLargeWriteRetry(t *testing.T) {
 	defer ts.Close()
 
 	// Setup plugin and connect
-	plugin := &influxdb.InfluxDB{
-		URLs:               []string{"http://" + ts.Listener.Addr().String()},
-		Database:           "telegraf",
-		DatabaseTag:        "database",
-		ExcludeDatabaseTag: true,
-		ContentEncoding:    "identity",
-		Log:                &testutil.Logger{},
+	plugin := &InfluxDB{
+		URLs: []string{"http://" + ts.Listener.Addr().String()},
+		clientConfig: clientConfig{
+			Database:           "telegraf",
+			DatabaseTag:        "database",
+			ExcludeDatabaseTag: true,
+			ContentEncoding:    "identity",
+		},
+		Log: &testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -410,13 +397,15 @@ func TestRateLimit(t *testing.T) {
 	defer ts.Close()
 
 	// Setup plugin and connect
-	plugin := &influxdb.InfluxDB{
-		URLs:            []string{"http://" + ts.Listener.Addr().String()},
-		Database:        "telegraf",
-		ContentEncoding: "identity",
-		RateLimitConfig: ratelimiter.RateLimitConfig{
-			Limit:  50,
-			Period: config.Duration(time.Second),
+	plugin := &InfluxDB{
+		URLs: []string{"http://" + ts.Listener.Addr().String()},
+		clientConfig: clientConfig{
+			Database:        "telegraf",
+			ContentEncoding: "identity",
+			RateLimitConfig: ratelimiter.RateLimitConfig{
+				Limit:  50,
+				Period: config.Duration(time.Second),
+			},
 		},
 		Log: &testutil.Logger{},
 	}
@@ -518,10 +507,12 @@ func TestStatusCodeNonRetryable4xx(t *testing.T) {
 			defer ts.Close()
 
 			// Setup plugin and connect
-			plugin := &influxdb.InfluxDB{
-				URLs:        []string{"http://" + ts.Listener.Addr().String()},
-				DatabaseTag: "database",
-				Log:         &testutil.Logger{},
+			plugin := &InfluxDB{
+				URLs: []string{"http://" + ts.Listener.Addr().String()},
+				clientConfig: clientConfig{
+					DatabaseTag: "database",
+				},
+				Log: &testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -575,7 +566,7 @@ func TestStatusCodeNonRetryable4xx(t *testing.T) {
 			err := plugin.Write(metrics)
 			require.ErrorContains(t, err, "failed to write metric to my_database (will be dropped:")
 
-			var apiErr *influxdb.APIError
+			var apiErr *APIError
 			require.ErrorAs(t, err, &apiErr)
 			require.Equal(t, code, apiErr.StatusCode)
 
@@ -610,10 +601,12 @@ func TestStatusCodeInvalidAuthentication(t *testing.T) {
 			defer ts.Close()
 
 			// Setup plugin and connect
-			plugin := &influxdb.InfluxDB{
-				URLs:        []string{"http://" + ts.Listener.Addr().String()},
-				DatabaseTag: "database",
-				Log:         &testutil.Logger{},
+			plugin := &InfluxDB{
+				URLs: []string{"http://" + ts.Listener.Addr().String()},
+				clientConfig: clientConfig{
+					DatabaseTag: "database",
+				},
+				Log: &testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -705,10 +698,12 @@ func TestStatusCodeServiceUnavailable(t *testing.T) {
 			defer ts.Close()
 
 			// Setup plugin and connect
-			plugin := &influxdb.InfluxDB{
-				URLs:        []string{"http://" + ts.Listener.Addr().String()},
-				DatabaseTag: "database",
-				Log:         &testutil.Logger{},
+			plugin := &InfluxDB{
+				URLs: []string{"http://" + ts.Listener.Addr().String()},
+				clientConfig: clientConfig{
+					DatabaseTag: "database",
+				},
+				Log: &testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -794,10 +789,12 @@ func TestStatusCodeUnexpected(t *testing.T) {
 			defer ts.Close()
 
 			// Setup plugin and connect
-			plugin := &influxdb.InfluxDB{
-				URLs:        []string{"http://" + ts.Listener.Addr().String()},
-				DatabaseTag: "database",
-				Log:         &testutil.Logger{},
+			plugin := &InfluxDB{
+				URLs: []string{"http://" + ts.Listener.Addr().String()},
+				clientConfig: clientConfig{
+					DatabaseTag: "database",
+				},
+				Log: &testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
