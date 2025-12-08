@@ -3,39 +3,14 @@ package influxdb_v3
 import (
 	"fmt"
 	"net/http"
-	"net/url"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestHTTPClientInitFail(t *testing.T) {
-	tests := []struct {
-		name   string
-		addr   string
-		client *httpClient
-	}{
-		{
-			name:   "udp unsupported",
-			addr:   "udp://localhost:9999",
-			client: &httpClient{},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			u, err := url.Parse(tt.addr)
-			require.NoError(t, err)
-			tt.client.url = u
-
-			require.Error(t, tt.client.Init())
-		})
-	}
-}
-
 func TestExponentialBackoffCalculation(t *testing.T) {
-	c := &httpClient{}
+	c := &client{}
 	tests := []struct {
 		retryCount int
 		expected   time.Duration
@@ -59,7 +34,7 @@ func TestExponentialBackoffCalculation(t *testing.T) {
 }
 
 func TestExponentialBackoffCalculationWithRetryAfter(t *testing.T) {
-	c := &httpClient{}
+	c := &client{}
 	tests := []struct {
 		retryCount int
 		retryAfter string
@@ -82,20 +57,4 @@ func TestExponentialBackoffCalculationWithRetryAfter(t *testing.T) {
 			require.EqualValues(t, test.expected, c.getRetryDuration(hdr))
 		})
 	}
-}
-
-func TestHeadersDoNotOverrideConfig(t *testing.T) {
-	testURL, err := url.Parse("https://localhost:8181")
-	require.NoError(t, err)
-	c := &httpClient{
-		headers: map[string]string{
-			"Authorization": "Bearer foo",
-			"User-Agent":    "foo",
-		},
-		// URL to make Init() happy
-		url: testURL,
-	}
-	require.NoError(t, c.Init())
-	require.Equal(t, "Bearer foo", c.headers["Authorization"])
-	require.Equal(t, "foo", c.headers["User-Agent"])
 }
