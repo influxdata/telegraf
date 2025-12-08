@@ -154,11 +154,7 @@ func NewBufferStats(tags map[string]string, capacity int) BufferStats {
 	return bs
 }
 
-func (b *BufferStats) metricAdded() {
-	b.MetricsAdded.Incr(1)
-}
-
-func (b *BufferStats) metricAddedCount(count int64) {
+func (b *BufferStats) metricAdded(count int64) {
 	b.MetricsAdded.Incr(count)
 }
 

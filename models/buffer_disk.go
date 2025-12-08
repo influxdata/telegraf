@@ -39,6 +39,7 @@ func NewDiskBuffer(id, path string, stats BufferStats) (*DiskBuffer, error) {
 	filePath := filepath.Join(path, id)
 	walFile, err := wal.Open(filePath, &wal.Options{
 		AllowEmpty: true,
+		NoSync:     true,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to open wal file: %w", err)
@@ -111,7 +112,7 @@ func (b *DiskBuffer) Add(metrics ...telegraf.Metric) int {
 		return int(dropped)
 	}
 
-	b.metricAddedCount(int64(len(metrics)))
+	b.metricAdded(int64(len(metrics)))
 	b.BufferSize.Set(int64(b.length()))
 	return 0
 }
