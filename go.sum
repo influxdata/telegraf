@@ -2426,8 +2426,8 @@ github.com/tidwall/tinylru v1.2.1 h1:VgBr72c2IEr+V+pCdkPZUwiQ0KJknnWIYbhxAVkYfQk
 github.com/tidwall/tinylru v1.2.1/go.mod h1:9bQnEduwB6inr2Y7AkBP7JPgCkyrhTV/ZpX0oOOpBI4=
 github.com/tidwall/wal v1.2.1 h1:xQvwnRF3e+xBC4NvFvl1mPGJHU0aH5zNzlUKnKGIImA=
 github.com/tidwall/wal v1.2.1/go.mod h1:r6lR1j27W9EPalgHiB7zLJDYu3mzW5BQP5KrzBpYY/E=
-github.com/tinylib/msgp v1.5.0 h1:GWnqAE54wmnlFazjq2+vgr736Akg58iiHImh+kPY2pc=
-github.com/tinylib/msgp v1.5.0/go.mod h1:cvjFkb4RiC8qSBOPMGPSzSAx47nAsfhLVTCZZNuHv5o=
+github.com/tinylib/msgp v1.6.1 h1:ESRv8eL3u+DNHUoSAAQRE50Hm162zqAnBoGv9PzScPY=
+github.com/tinylib/msgp v1.6.1/go.mod h1:RSp0LW9oSxFut3KzESt5Voq4GVWyS+PSulT77roAqEA=
 github.com/tj/assert v0.0.0-20171129193455-018094318fb0/go.mod h1:mZ9/Rh9oLWpLLDRpvE+3b7gP/C2YyLFYxNmcLnPTMe0=
 github.com/tj/assert v0.0.3 h1:Df/BlaZ20mq6kuai7f5z2TvPFiwC3xaWJSDQNiIS3Rk=
 github.com/tj/assert v0.0.3/go.mod h1:Ne6X72Q+TB1AteidzQncjw9PabbMp4PBMZ1k+vd1Pvk=
