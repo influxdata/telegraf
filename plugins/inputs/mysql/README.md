@@ -255,6 +255,9 @@ measurement name.
     * wsrep_evs_repl_latency_stdev(float, seconds)
     * wsrep_evs_repl_latency_sample_size(float, number)
 * Global variables - all numeric and boolean values of `SHOW GLOBAL VARIABLES`
+  * wsrep_provider_options - a complex field containing multiple values is split
+      into separate fields
+    * gcache_size(int, bytes)
 * Slave status - metrics from `SHOW SLAVE STATUS` the metrics are gathered when
 the single-source replication is on. If the multi-source replication is set,
 then everything works differently, this metric does not work with multi-source
