@@ -365,8 +365,15 @@ func (r *RunningOutput) doTransaction() error {
 	if len(tx.Batch) == 0 {
 		return nil
 	}
+	r.Log().Tracef("(SDD) start writing batch with %d metrics", len(tx.Batch))
+
 	err := r.writeMetrics(tx.Batch)
+	r.Log().Tracef("(SDD) got error for writing batch: %v (%T)", err, err)
 	r.updateTransaction(tx, err)
+	r.Log().Tracef(
+		"(SDD) updating buffer with %d accepted and %d rejected metrics -> %d to keep",
+		len(tx.Accept), len(tx.Reject), len(tx.Batch)-len(tx.Accept)-len(tx.Reject),
+	)
 	r.buffer.EndTransaction(tx)
 
 	return err

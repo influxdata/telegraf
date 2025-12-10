@@ -197,6 +197,7 @@ func (tsb timeSeriesBuckets) Add(m telegraf.Metric, f []*telegraf.Field, ts *mon
 }
 
 func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
+	s.Log.Tracef("(SDD) writing %d metrics in stackdriver", len(metrics))
 	metricBatch := make(map[int64][]telegraf.Metric)
 	timestamps := make([]int64, 0, len(metrics))
 	for _, metric := range sorted(metrics) {
@@ -214,11 +215,19 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 
 	s.Log.Debugf("received %d metrics\n", len(metrics))
 	s.Log.Debugf("split into %d groups by timestamp\n", len(metricBatch))
-	for _, timestamp := range timestamps {
+	var written int
+	for i, timestamp := range timestamps {
+		s.Log.Tracef(
+			"(SDD) writing batch %d / %d with %d metrics for timestamp %d",
+			i+1, len(timestamps), len(metricBatch[timestamp]), timestamp,
+		)
 		if err := s.sendBatch(metricBatch[timestamp]); err != nil {
+			s.Log.Tracef("(SDD) stopping write due to error after %d metrics", written)
 			return err
 		}
+		written += len(metricBatch[timestamp])
 	}
+	s.Log.Tracef("(SDD) all %d metrics written successfully", written)
 
 	return nil
 }
@@ -414,14 +423,17 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 			if errStatus, ok := status.FromError(err); ok {
 				if errStatus.Code().String() == "InvalidArgument" {
 					s.Log.Warnf("Unable to write to Stackdriver - dropping metrics: %s", err)
+					s.Log.Tracef("(SDD) dropping batch with %d metrics", len(batch))
 					return nil
 				}
 			}
 
 			s.Log.Errorf("Unable to write to Stackdriver: %s", err)
+			s.Log.Tracef("(SDD) requeuing batch with %d metrics", len(batch))
 			return err
 		}
 	}
+	s.Log.Tracef("(SDD) wrote batch with %d metrics", len(batch))
 
 	return nil
 }
