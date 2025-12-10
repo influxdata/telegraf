@@ -14,19 +14,33 @@ const (
 )
 
 var (
-	reKey   = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
-	reValue = regexp.MustCompile(`^[a-z0-9\*\?]([-a-z0-9\*\?]*[a-z0-9\*\?])?$`)
+	// keyRegex matches a non empty string with A-Z, a-z, 0-9, -, _, .
+	keyRegex = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
+	// selectorValueRegex matches a non empty string A-Z, a-z, 0-9, -, _, ., *, ?
+	selectorValueRegex = regexp.MustCompile(`^[A-Za-z0-9._\-*?]+$`)
+	// labelValueRegex matches a non empty string with A-Z, a-z, 0-9, -, _, .
+	labelValueRegex = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
 
 	pluginLabelSelector labelSelector
 )
 
-// CheckSelectionKeyValuePairs checks the key and value of a selector or
-// label pair
+// CheckSelectionKeyValuePairs checks the key and value of a selector.
 func CheckSelectionKeyValuePairs(k, v string) error {
-	if !reKey.MatchString(k) {
+	if !keyRegex.MatchString(k) {
 		return fmt.Errorf("invalid key %q", k)
 	}
-	if !reValue.MatchString(v) {
+	if !selectorValueRegex.MatchString(v) {
+		return fmt.Errorf("invalid value %q", v)
+	}
+	return nil
+}
+
+// CheckLabelKeyValuePairs checks the key and value of a label.
+func CheckLabelKeyValuePairs(k, v string) error {
+	if !keyRegex.MatchString(k) {
+		return fmt.Errorf("invalid key %q", k)
+	}
+	if !labelValueRegex.MatchString(v) {
 		return fmt.Errorf("invalid value %q", v)
 	}
 	return nil
