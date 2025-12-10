@@ -946,10 +946,8 @@ Example:
 ```
 
 Telegraf matches the command-line selectors against a plugin's labels to decide
-whether that plugin instance should be enabled. For details on supported syntax
-and matching rules, see the labels selectors spec.
-
-For more details on the syntax and matching criteria refer, [labels selectors spec][tsd010].
+whether that plugin instance should be enabled. For more details on the syntax
+and matching criteria refer, [labels selectors spec][tsd010].
 
 ## Transport Layer Security (TLS)
 
