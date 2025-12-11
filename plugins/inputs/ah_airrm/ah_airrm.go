@@ -61,7 +61,7 @@ func getAirrmNbrTbl(ai *Ah_airrm, ifname string, cfg ieee80211req_cfg_nbr) unsaf
 
 	/* first 4 bytes is subcmd */
         switch ai.apn {
-                case "AP4020":
+                case "AP4020","AP4060":
                         cfg.cmd = AH_IEEE80211_GET_AIRRM_TBL_AP4020
                 case "AP5020":
                         cfg.cmd = AH_IEEE80211_GET_AIRRM_TBL_AP5020
