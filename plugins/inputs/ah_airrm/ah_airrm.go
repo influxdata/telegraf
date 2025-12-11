@@ -28,7 +28,7 @@ type Ah_airrm struct {
 	Log			telegraf.Logger `toml:"-"`
 	wg			sync.WaitGroup
 	Test_airrm_enable  uint8	`toml:"test_airrm_enable"`
-	Enable_periodic    bool     `toml:"enable_periodic"`
+	Enable_periodic    bool     `toml:"-"`
 }
 
 const sampleConfig = `
@@ -36,7 +36,6 @@ const sampleConfig = `
   interval = "5s"
   ifname = ["wifi0","wifi1"]
   test_airrm_enable = 0
-  enable_periodic = false
 `
 func NewAh_airrm(id int) *Ah_airrm {
 	var err error
