@@ -247,6 +247,13 @@ measurement name.
 ## Metrics
 
 * Global statuses - all numeric and boolean values of `SHOW GLOBAL STATUSES`
+  * wsrep_evs_repl_latency - a complex field containing multiple values is split
+      into separate fields
+    * wsrep_evs_repl_latency_min(float, seconds)
+    * wsrep_evs_repl_latency_avg(float, seconds)
+    * wsrep_evs_repl_latency_max(float, seconds)
+    * wsrep_evs_repl_latency_stdev(float, seconds)
+    * wsrep_evs_repl_latency_sample_size(float, number)
 * Global variables - all numeric and boolean values of `SHOW GLOBAL VARIABLES`
 * Slave status - metrics from `SHOW SLAVE STATUS` the metrics are gathered when
 the single-source replication is on. If the multi-source replication is set,
