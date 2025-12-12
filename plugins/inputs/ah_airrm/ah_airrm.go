@@ -28,7 +28,7 @@ type Ah_airrm struct {
 	Log			telegraf.Logger `toml:"-"`
 	wg			sync.WaitGroup
 	Test_airrm_enable  uint8	`toml:"test_airrm_enable"`
-	Enable_periodic    bool     `toml:"-"`
+	test_mode_completed bool
 }
 
 const sampleConfig = `
@@ -54,7 +54,7 @@ func NewAh_airrm(id int) *Ah_airrm {
         fd:	fd,
 	apn:	apn,
 	Test_airrm_enable: 0,
-	Enable_periodic: false,
+	test_mode_completed: false,
 	}
 
 }
@@ -212,17 +212,20 @@ func (ai *Ah_airrm) Gather(acc telegraf.Accumulator) error {
 		}
 	}()
 	
-    if ai.Test_airrm_enable == 1 {
-        ai.runAirrmOneShot(&ai.Test_airrm_enable, func() {
-            Gather_acs_nbr(ai, acc)
-        })
-        return nil
-    }
+    if ai.test_mode_completed {
+		return nil
+	}
 
-    if ai.Enable_periodic && ai.Test_airrm_enable == 0 {
-        Gather_acs_nbr(ai, acc)
-    }
-    return nil
+	if ai.Test_airrm_enable == 1 {
+		ai.runAirrmOneShot(&ai.Test_airrm_enable, func() {
+			Gather_acs_nbr(ai, acc)
+		})
+		ai.test_mode_completed = true
+		return nil
+	}
+
+	Gather_acs_nbr(ai, acc)
+	return nil
 }
 
 func (ai *Ah_airrm) Start(acc telegraf.Accumulator) error {
