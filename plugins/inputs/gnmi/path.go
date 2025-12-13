@@ -268,20 +268,25 @@ func (pi *pathInfo) relative(path *pathInfo, withNamespace bool) string {
 	}
 
 	segments := path.segments[len(pi.segments):len(path.segments)]
-	var r string
+	var b strings.Builder
 	if withNamespace && segments[0].namespace != "" {
-		r = segments[0].namespace + ":" + segments[0].id
+		b.WriteString(segments[0].namespace)
+		b.WriteString(":")
+		b.WriteString(segments[0].id)
 	} else {
-		r = segments[0].id
+		b.WriteString(segments[0].id)
 	}
 	for _, s := range segments[1:] {
+		b.WriteString("/")
 		if withNamespace && s.namespace != "" {
-			r += "/" + s.namespace + ":" + s.id
+			b.WriteString(s.namespace)
+			b.WriteString(":")
+			b.WriteString(s.id)
 		} else {
-			r += "/" + s.id
+			b.WriteString(s.id)
 		}
 	}
-	return r
+	return b.String()
 }
 
 func (pi *pathInfo) keepCommonPart(path *pathInfo) {
@@ -310,18 +315,22 @@ func (pi *pathInfo) dir() string {
 		return ""
 	}
 
-	var dir string
+	var b strings.Builder
 	if pi.origin != "" {
-		dir = pi.origin + ":"
+		b.WriteString(pi.origin)
+		b.WriteString(":")
 	}
 	for _, s := range pi.segments[:len(pi.segments)-1] {
+		b.WriteString("/")
 		if s.namespace != "" {
-			dir += "/" + s.namespace + ":" + s.id
+			b.WriteString(s.namespace)
+			b.WriteString(":")
+			b.WriteString(s.id)
 		} else {
-			dir += "/" + s.id
+			b.WriteString(s.id)
 		}
 	}
-	return dir
+	return b.String()
 }
 
 func (pi *pathInfo) base() string {
@@ -341,31 +350,37 @@ func (pi *pathInfo) path() (origin, path string) {
 		return pi.origin, "/"
 	}
 
+	var b strings.Builder
 	for _, s := range pi.segments {
-		path += "/" + s.id
+		b.WriteString("/")
+		b.WriteString(s.id)
 	}
 
-	return pi.origin, path
+	return pi.origin, b.String()
 }
 
 func (pi *pathInfo) fullPath() string {
-	var path string
+	var b strings.Builder
 	if pi.origin != "" {
-		path = pi.origin + ":"
+		b.WriteString(pi.origin)
+		b.WriteString(":")
 	}
 	if len(pi.segments) == 0 {
-		return path
+		return b.String()
 	}
 
 	for _, s := range pi.segments {
+		b.WriteString("/")
 		if s.namespace != "" {
-			path += "/" + s.namespace + ":" + s.id
+			b.WriteString(s.namespace)
+			b.WriteString(":")
+			b.WriteString(s.id)
 		} else {
-			path += "/" + s.id
+			b.WriteString(s.id)
 		}
 	}
 
-	return path
+	return b.String()
 }
 
 func (pi *pathInfo) String() string {
@@ -374,10 +389,13 @@ func (pi *pathInfo) String() string {
 	}
 
 	origin, path := pi.path()
+	var b strings.Builder
 	if origin != "" {
-		return origin + ":" + path
+		b.WriteString(origin)
+		b.WriteString(":")
 	}
-	return path
+	b.WriteString(path)
+	return b.String()
 }
 
 func (pi *pathInfo) tags(pathPrefix bool) map[string]string {
@@ -387,15 +405,26 @@ func (pi *pathInfo) tags(pathPrefix bool) map[string]string {
 		if pathPrefix && s.name != "" {
 			prefix = s.name + "_"
 		}
+		// precompute constant path prefix for this keySegment
+		pathPrefixStr := s.path + "/"
+
 		for k, v := range s.kv {
-			key := strings.ReplaceAll(prefix+k, "-", "_")
+			// build the key (prefix + k) and sanitize in one builder
+			var kb strings.Builder
+			kb.WriteString(prefix)
+			kb.WriteString(k)
+			key := strings.ReplaceAll(kb.String(), "-", "_")
 
 			// Use short-form of key if possible
 			if _, exists := tags[key]; !exists {
 				tags[key] = v
 				continue
 			}
-			tags[s.path+"/"+key] = v
+			// build full path/key only when needed
+			var fb strings.Builder
+			fb.WriteString(pathPrefixStr)
+			fb.WriteString(key)
+			tags[fb.String()] = v
 		}
 	}
 

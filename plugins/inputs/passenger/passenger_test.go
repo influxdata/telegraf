@@ -17,10 +17,14 @@ func fakePassengerStatus(stat string) (string, error) {
 	var fileExtension, content string
 	if runtime.GOOS == "windows" {
 		fileExtension = ".bat"
-		content = "@echo off\n"
+		var sb strings.Builder
+		sb.WriteString("@echo off\n")
 		for _, line := range strings.Split(strings.TrimSuffix(stat, "\n"), "\n") {
-			content += "for /f \"delims=\" %%A in (\"" + line + "\") do echo %%~A\n" // my eyes are bleeding
+			sb.WriteString("for /f \"delims=\" %%A in (\"")
+			sb.WriteString(line)
+			sb.WriteString("\") do echo %%~A\n")
 		}
+		content = sb.String()
 	} else {
 		content = fmt.Sprintf("#!/bin/sh\ncat << EOF\n%s\nEOF", stat)
 	}
