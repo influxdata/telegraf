@@ -304,6 +304,11 @@ type AgentConfig struct {
 	// BufferDirectory is the directory to store buffer files for serialized
 	// to disk metrics when using the "disk_write_through" buffer strategy.
 	BufferDirectory string `toml:"buffer_directory"`
+
+	// BufferDiskSync controls writes durability when "disk" buffer strategy is used.
+	// No sync offers better write performance at the risk of losing metrics buffered in
+	// the last `flush_interval` in the event of a power cut.
+	BufferDiskSync *bool `toml:"buffer_disk_sync"`
 }
 
 // InputNames returns a list of strings of the configured inputs.
@@ -1730,12 +1735,18 @@ func (c *Config) buildOutput(name, source string, tbl *ast.Table) (*models.Outpu
 	if bufferStrategy == "disk" {
 		bufferStrategy = "disk_write_through"
 	}
+	bufferDiskSync := true
+	if c.Agent.BufferDiskSync != nil {
+		bufferDiskSync = *c.Agent.BufferDiskSync
+	}
+
 	oc := &models.OutputConfig{
 		Name:            name,
 		Source:          source,
 		Filter:          filter,
 		BufferStrategy:  bufferStrategy,
 		BufferDirectory: c.Agent.BufferDirectory,
+		BufferDiskSync:  bufferDiskSync,
 	}
 
 	// TODO: support FieldPass/FieldDrop on outputs
@@ -1768,7 +1779,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	switch key {
 	// General options to ignore
 	case "alias", "always_include_local_tags",
-		"buffer_strategy", "buffer_directory",
+		"buffer_strategy", "buffer_directory", "buffer_disk_sync",
 		"collection_jitter", "collection_offset",
 		"data_format", "delay", "drop", "drop_original",
 		"fielddrop", "fieldexclude", "fieldinclude", "fieldpass", "flush_interval", "flush_jitter",

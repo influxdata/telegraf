@@ -41,6 +41,7 @@ type OutputConfig struct {
 
 	BufferStrategy  string
 	BufferDirectory string
+	BufferDiskSync  bool
 
 	LogLevel string
 }
@@ -105,7 +106,7 @@ func NewRunningOutput(output telegraf.Output, config *OutputConfig, batchSize, b
 		batchSize = DefaultMetricBatchSize
 	}
 
-	b, err := NewBuffer(config.Name, config.ID, config.Alias, bufferLimit, config.BufferStrategy, config.BufferDirectory)
+	b, err := NewBuffer(config.Name, config.ID, config.Alias, bufferLimit, config.BufferStrategy, config.BufferDirectory, config.BufferDiskSync)
 	if err != nil {
 		panic(err)
 	}

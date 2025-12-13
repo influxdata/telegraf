@@ -49,7 +49,7 @@ func TestDiskBufferSuite(t *testing.T) {
 
 func (s *BufferSuiteTest) newTestBuffer(capacity int) Buffer {
 	s.T().Helper()
-	buf, err := NewBuffer("test", "123", "", capacity, s.bufferType, s.bufferPath)
+	buf, err := NewBuffer("test", "123", "", capacity, s.bufferType, s.bufferPath, true)
 	s.Require().NoError(err)
 	buf.Stats().MetricsAdded.Set(0)
 	buf.Stats().MetricsWritten.Set(0)
