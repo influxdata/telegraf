@@ -95,7 +95,7 @@ type BufferStats struct {
 }
 
 // NewBuffer returns a new empty Buffer with the given capacity.
-func NewBuffer(name, id, alias string, capacity int, strategy, path string) (Buffer, error) {
+func NewBuffer(name, id, alias string, capacity int, strategy, path string, diskSync bool) (Buffer, error) {
 	registerGob()
 
 	tags := map[string]string{
@@ -111,7 +111,7 @@ func NewBuffer(name, id, alias string, capacity int, strategy, path string) (Buf
 	case "", "memory":
 		return NewMemoryBuffer(capacity, bs)
 	case "disk_write_through":
-		return NewDiskBuffer(id, path, bs)
+		return NewDiskBuffer(id, path, bs, diskSync)
 	}
 	return nil, fmt.Errorf("invalid buffer strategy %q", strategy)
 }

@@ -35,11 +35,11 @@ type DiskBuffer struct {
 	mask []int
 }
 
-func NewDiskBuffer(id, path string, stats BufferStats) (*DiskBuffer, error) {
+func NewDiskBuffer(id, path string, stats BufferStats, diskSync bool) (*DiskBuffer, error) {
 	filePath := filepath.Join(path, id)
 	walFile, err := wal.Open(filePath, &wal.Options{
 		AllowEmpty: true,
-		NoSync:     true,
+		NoSync:     !diskSync,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to open wal file: %w", err)
