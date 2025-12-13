@@ -135,10 +135,11 @@ func (l *Loki) Write(metrics []telegraf.Metric) error {
 			}
 		}
 
-		var line string
+		var lineBuilder strings.Builder
 		for _, f := range m.FieldList() {
-			line += fmt.Sprintf("%s=\"%v\" ", f.Key, f.Value)
+			lineBuilder.WriteString(fmt.Sprintf("%s=\"%v\" ", f.Key, f.Value))
 		}
+		line := lineBuilder.String()
 
 		s.insertLog(tags, Log{strconv.FormatInt(m.Time().UnixNano(), 10), line})
 	}
