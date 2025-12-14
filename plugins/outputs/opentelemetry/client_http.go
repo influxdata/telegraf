@@ -89,7 +89,8 @@ func (h *httpClient) Export(ctx context.Context, request pmetricotlp.ExportReque
 	}
 	defer func() {
 		//nolint:errcheck // cannot fail with io.Discard
-		io.CopyN(io.Discard, httpResponse.Body, maxHTTPResponseReadBytes)
+		// 64KB is a not specific limit. But, opentelemetry-collector also uses 64KB for safety.
+		io.CopyN(io.Discard, httpResponse.Body, 64*1024)
 		_ = httpResponse.Body.Close()
 	}()
 
@@ -157,7 +158,3 @@ func readResponseBody(resp *http.Response) ([]byte, error) {
 
 	return protoBytes[:n], nil
 }
-
-const (
-	maxHTTPResponseReadBytes = 64 * 1024 // 64 KB
-)
