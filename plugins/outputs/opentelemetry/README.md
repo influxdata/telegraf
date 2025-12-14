@@ -22,9 +22,6 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Send OpenTelemetry metrics over gRPC
 [[outputs.opentelemetry]]
-  ## Override the default (grpc) protocol
-  ## grpc, http
-  # protocol = "grpc"
   ## Override the default (localhost:4317) OpenTelemetry gRPC service
   ## When the protocol is grpc, address:port
   ## When the protocol is http, http(s)://address:port/path
