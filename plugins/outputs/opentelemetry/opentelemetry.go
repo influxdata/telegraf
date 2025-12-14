@@ -4,6 +4,7 @@ package opentelemetry
 import (
 	"context"
 	_ "embed"
+	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -72,8 +73,13 @@ func (o *OpenTelemetry) Connect() error {
 	if o.ServiceAddress == "" {
 		o.ServiceAddress = defaultServiceAddress
 	}
-	if o.EncodingType == "" {
+	switch o.EncodingType {
+	case "", "protobuf":
 		o.EncodingType = "application/x-protobuf"
+	case "json":
+		o.EncodingType = "application/json"
+	default:
+		return fmt.Errorf("invalid encoding %q", o.EncodingType)
 	}
 	if o.Timeout <= 0 {
 		o.Timeout = defaultTimeout

@@ -148,7 +148,7 @@ func TestOpenTelemetryHTTPProtobuf(t *testing.T) {
 
 	plugin := &OpenTelemetry{
 		ServiceAddress:   server.URL,
-		EncodingType:     "application/x-protobuf",
+		EncodingType:     "protobuf",
 		Timeout:          config.Duration(time.Second),
 		Attributes:       map[string]string{"attr-key": "attr-val"},
 		Compression:      "none",
@@ -245,7 +245,7 @@ func TestOpenTelemetryHTTPJSON(t *testing.T) {
 
 	plugin := &OpenTelemetry{
 		ServiceAddress:   server.URL,
-		EncodingType:     "application/json",
+		EncodingType:     "json",
 		Timeout:          config.Duration(time.Second),
 		Attributes:       map[string]string{"attr-key": "attr-val"},
 		Compression:      "none",
