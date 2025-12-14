@@ -9,8 +9,9 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/influxdata/telegraf/internal"
 	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
+
+	"github.com/influxdata/telegraf/internal"
 )
 
 type httpClient struct {
