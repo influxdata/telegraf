@@ -119,8 +119,8 @@ func (h *httpClient) Export(ctx context.Context, request pmetricotlp.ExportReque
 	return exportResponse, nil
 }
 
-func (*httpClient) Close() error {
-	// No persistent connections to close for HTTP client
+func (h *httpClient) Close() error {
+	h.httpClient.CloseIdleConnections()
 	return nil
 }
 
