@@ -71,8 +71,7 @@ func TestOpenTelemetry(t *testing.T) {
 		},
 		time.Unix(0, 1622848686000000000))
 
-	err = plugin.Write([]telegraf.Metric{input})
-	require.NoError(t, err)
+	require.NoError(t, plugin.Write([]telegraf.Metric{input}))
 
 	got := m.GotMetrics()
 
@@ -110,12 +109,16 @@ func TestOpenTelemetryHTTPProtobuf(t *testing.T) {
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			t.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 
 		req := pmetricotlp.NewExportRequest()
 		err = req.UnmarshalProto(body)
 		if err != nil {
 			t.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 
 		receivedMetrics = pmetric.NewMetrics()
@@ -125,6 +128,8 @@ func TestOpenTelemetryHTTPProtobuf(t *testing.T) {
 		respBytes, err := resp.MarshalProto()
 		if err != nil {
 			t.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 
 		w.Header().Set("Content-Type", "application/x-protobuf")
@@ -132,6 +137,8 @@ func TestOpenTelemetryHTTPProtobuf(t *testing.T) {
 		_, err = w.Write(respBytes)
 		if err != nil {
 			t.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 	}))
 	defer server.Close()
@@ -148,8 +155,7 @@ func TestOpenTelemetryHTTPProtobuf(t *testing.T) {
 		metricsConverter: metricsConverter,
 		Log:              testutil.Logger{},
 	}
-	err = plugin.Connect()
-	require.NoError(t, err)
+	require.NoError(t, plugin.Connect())
 
 	input := testutil.MustMetric(
 		"cpu_temp",
@@ -161,10 +167,10 @@ func TestOpenTelemetryHTTPProtobuf(t *testing.T) {
 		map[string]interface{}{
 			"gauge": 87.332,
 		},
-		time.Unix(0, 1622848686000000000))
+		time.Unix(0, 1622848686000000000),
+	)
 
-	err = plugin.Write([]telegraf.Metric{input})
-	require.NoError(t, err)
+	require.NoError(t, plugin.Write([]telegraf.Metric{input}))
 
 	require.Equal(t, "application/x-protobuf", receivedContentType)
 
@@ -208,6 +214,8 @@ func TestOpenTelemetryHTTPJSON(t *testing.T) {
 		err = req.UnmarshalJSON(body)
 		if err != nil {
 			t.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 
 		receivedMetrics = pmetric.NewMetrics()
@@ -217,6 +225,8 @@ func TestOpenTelemetryHTTPJSON(t *testing.T) {
 		respBytes, err := resp.MarshalJSON()
 		if err != nil {
 			t.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -224,6 +234,8 @@ func TestOpenTelemetryHTTPJSON(t *testing.T) {
 		_, err = w.Write(respBytes)
 		if err != nil {
 			t.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 	}))
 	defer server.Close()
