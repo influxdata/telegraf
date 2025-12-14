@@ -137,8 +137,9 @@ func readResponseBody(resp *http.Response) ([]byte, error) {
 	// the maximum permitted body size. If it is larger than the permitted body
 	// size, still try to read from the body in case the value is an error. If the
 	// body is larger than the maximum size, proto unmarshaling will likely fail.
-	if maxRead == -1 || maxRead > maxHTTPResponseReadBytes {
-		maxRead = maxHTTPResponseReadBytes
+	// 64KB is a not specific limit. But, opentelemetry-collector also uses 64KB for safety.
+	if maxRead == -1 || maxRead > 64*1024 {
+		maxRead = 64 * 1024
 	}
 	protoBytes := make([]byte, maxRead)
 	n, err := io.ReadFull(resp.Body, protoBytes)
