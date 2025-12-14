@@ -69,7 +69,8 @@ func TestOpenTelemetry(t *testing.T) {
 		map[string]interface{}{
 			"gauge": 87.332,
 		},
-		time.Unix(0, 1622848686000000000))
+		time.Unix(0, 1622848686000000000),
+	)
 
 	require.NoError(t, plugin.Write([]telegraf.Metric{input}))
 
@@ -265,7 +266,8 @@ func TestOpenTelemetryHTTPJSON(t *testing.T) {
 		map[string]interface{}{
 			"gauge": 87.332,
 		},
-		time.Unix(0, 1622848686000000000))
+		time.Unix(0, 1622848686000000000),
+	)
 
 	err = plugin.Write([]telegraf.Metric{input})
 	require.NoError(t, err)
