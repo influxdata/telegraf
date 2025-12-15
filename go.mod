@@ -43,7 +43,7 @@ require (
 	github.com/antchfx/jsonquery v1.3.6
 	github.com/antchfx/xmlquery v1.5.0
 	github.com/antchfx/xpath v1.3.5
-	github.com/apache/arrow-go/v18 v18.4.1
+	github.com/apache/arrow-go/v18 v18.5.0
 	github.com/apache/inlong/inlong-sdk/dataproxy-sdk-twins/dataproxy-sdk-golang v1.0.6
 	github.com/apache/iotdb-client-go v1.3.5
 	github.com/apache/thrift v0.22.0
@@ -391,7 +391,7 @@ require (
 	github.com/golang-sql/sqlexp v0.1.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/google/flatbuffers v25.2.10+incompatible // indirect
+	github.com/google/flatbuffers v25.9.23+incompatible // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/go-tpm v0.9.6 // indirect
