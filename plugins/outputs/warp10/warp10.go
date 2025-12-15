@@ -17,6 +17,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -141,17 +142,26 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		if w.PrintErrorBody {
-			//nolint:errcheck // err can be ignored since it is just for logging
-			body, _ := io.ReadAll(resp.Body)
-			return errors.New(w.WarpURL + ": " + HandleError(string(body), w.MaxStringErrorSize))
+		//nolint:errcheck // err can be ignored since it is just for logging
+		body, _ := io.ReadAll(resp.Body)
+		werr := HandleError(string(body), w.MaxStringErrorSize)
+		fullErr := fmt.Errorf("%s: %w", w.WarpURL, werr)
+
+		if !werr.Retryable {
+			w.Log.Errorf("Non-retryable error, metrics will be dropped: %s", werr.Error())
+			// Return PartialWriteError with all metrics rejected
+			indices := make([]int, len(metrics))
+			for i := range metrics {
+				indices[i] = i
+			}
+			return &internal.PartialWriteError{
+				Err:           fullErr,
+				MetricsReject: indices,
+			}
 		}
 
-		if len(resp.Status) < w.MaxStringErrorSize {
-			return errors.New(w.WarpURL + ": " + resp.Status)
-		}
-
-		return errors.New(w.WarpURL + ": " + resp.Status[0:w.MaxStringErrorSize])
+		// Retryable error - return plain error, metrics stay in buffer for retry
+		return fullErr
 	}
 
 	return nil
@@ -254,46 +264,52 @@ func init() {
 	})
 }
 
-// HandleError read http error body and return a corresponding error
-func HandleError(body string, maxStringSize int) string {
+// HandleError read http error body and return a corresponding HTTPError with retry information.
+// Note: Warp10 doesn't follow REST conventions - it returns 200/500 status codes, so error type
+// is determined by parsing the response body rather than the HTTP status code.
+func HandleError(body string, maxStringSize int) *internal.HTTPError {
 	if body == "" {
-		return "Empty return"
+		return &internal.HTTPError{Err: errors.New("empty return"), Retryable: true}
 	}
 
+	// Non-retryable authentication/authorization errors
 	if strings.Contains(body, "Invalid token") {
-		return "Invalid token"
+		return &internal.HTTPError{Err: errors.New("invalid token"), Retryable: false}
 	}
 
 	if strings.Contains(body, "Write token missing") {
-		return "Write token missing"
+		return &internal.HTTPError{Err: errors.New("write token missing"), Retryable: false}
 	}
 
 	if strings.Contains(body, "Token Expired") {
-		return "Token Expired"
+		return &internal.HTTPError{Err: errors.New("token expired"), Retryable: false}
 	}
 
 	if strings.Contains(body, "Token revoked") {
-		return "Token revoked"
-	}
-
-	if strings.Contains(body, "exceed your Monthly Active Data Streams limit") || strings.Contains(body, "exceed the Monthly Active Data Streams limit") {
-		return "Exceeded Monthly Active Data Streams limit"
-	}
-
-	if strings.Contains(body, "Daily Data Points limit being already exceeded") {
-		return "Exceeded Daily Data Points limit"
+		return &internal.HTTPError{Err: errors.New("token revoked"), Retryable: false}
 	}
 
 	if strings.Contains(body, "Application suspended or closed") {
-		return "Application suspended or closed"
+		return &internal.HTTPError{Err: errors.New("application suspended or closed"), Retryable: false}
+	}
+
+	// Retryable errors (rate limits, temporary issues)
+	if strings.Contains(body, "exceed your Monthly Active Data Streams limit") || strings.Contains(body, "exceed the Monthly Active Data Streams limit") {
+		return &internal.HTTPError{Err: errors.New("exceeded Monthly Active Data Streams limit"), Retryable: true}
+	}
+
+	if strings.Contains(body, "Daily Data Points limit being already exceeded") {
+		return &internal.HTTPError{Err: errors.New("exceeded Daily Data Points limit"), Retryable: true}
 	}
 
 	if strings.Contains(body, "broken pipe") {
-		return "broken pipe"
+		return &internal.HTTPError{Err: errors.New("broken pipe"), Retryable: true}
 	}
 
-	if len(body) < maxStringSize {
-		return body
+	// Unknown errors - retryable by default
+	msg := body
+	if len(body) >= maxStringSize {
+		msg = body[0:maxStringSize]
 	}
-	return body[0:maxStringSize]
+	return &internal.HTTPError{Err: errors.New(msg), Retryable: true}
 }

@@ -377,7 +377,11 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 			StatusCode: resp.StatusCode,
 		}
 	case http.StatusUnauthorized, http.StatusForbidden:
-		return fmt.Errorf("failed to write metrics to %s (%s)%s", b.bucket, resp.Status, desc)
+		return &APIError{
+			Err:        fmt.Errorf("failed to write metrics to %s (will be dropped: %s)%s", b.bucket, resp.Status, desc),
+			StatusCode: resp.StatusCode,
+			Retryable:  false,
+		}
 	case http.StatusTooManyRequests,
 		http.StatusServiceUnavailable,
 		http.StatusBadGateway,

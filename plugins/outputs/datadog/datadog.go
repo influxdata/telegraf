@@ -189,7 +189,20 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	if resp.StatusCode < 200 || resp.StatusCode > 209 {
 		//nolint:errcheck // err can be ignored since it is just for logging
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("received bad status code, %d: %s", resp.StatusCode, string(body))
+		// 4xx client errors are not retryable - the request itself is invalid
+		if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+			d.Log.Errorf("Client error %d, metrics will be dropped: %s", resp.StatusCode, string(body))
+			return &internal.HTTPError{
+				Err:        fmt.Errorf("client error %d: metrics dropped", resp.StatusCode),
+				StatusCode: resp.StatusCode,
+				Retryable:  false,
+			}
+		}
+		return &internal.HTTPError{
+			Err:        fmt.Errorf("received bad status code, %d: %s", resp.StatusCode, string(body)),
+			StatusCode: resp.StatusCode,
+			Retryable:  true,
+		}
 	}
 
 	return nil
