@@ -99,6 +99,16 @@ func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 			acc.AddFields("nftables", fields, tags)
 		}
 	}
+	for _, set := range nftable.Sets {
+		fields := map[string]interface{}{
+			"count": len(set.Elem),
+		}
+		tags := map[string]string{
+			"table": set.Table,
+			"set":   set.Name,
+		}
+		acc.AddFields("nftables", fields, tags)
+	}
 	return nil
 }
 
