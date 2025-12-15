@@ -1,2 +1,4 @@
 nftables,chain=test-chain,rule=test1,table=test bytes=2i,pkts=1i 1763040447356073265
 nftables,chain=test-chain,rule=test2,table=test bytes=1412296i,pkts=24468i 1763040447356078375
+nftables,set=non_empty_set,table=test count=5i 1763040447356078375
+nftables,set=empty_set,table=test count=0i 1763040447356078375
