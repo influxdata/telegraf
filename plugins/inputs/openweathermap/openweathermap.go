@@ -217,7 +217,7 @@ func (n *OpenWeatherMap) gatherWeather(acc telegraf.Accumulator, city string) er
 
 func (n *OpenWeatherMap) gatherWeatherBatch(acc telegraf.Accumulator, cities string) error {
 	// Query the data and decode the response
-	addr := n.formatURL("/data/2.5/group", cities)
+	addr := n.formatURL("/data/2.5/weather", cities)
 	buf, err := n.gatherURL(addr)
 	if err != nil {
 		return fmt.Errorf("querying %q failed: %w", addr, err)
