@@ -169,6 +169,8 @@ func TestSelectorValueRegex(t *testing.T) {
 			err := CheckSelectionKeyValuePairs("key", tt.input)
 			if tt.wantErr {
 				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -212,6 +214,8 @@ func TestLabelValueRegex(t *testing.T) {
 			err := CheckLabelKeyValuePairs("key", tt.input)
 			if tt.wantErr {
 				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}
