@@ -213,6 +213,7 @@ func encodeSize(b []byte, size uint32) int {
 		binary.BigEndian.PutUint32(b, size)
 		return 4
 	}
+	//nolint:gosec // G602: False positive — all callers allocate b with length >= 1 (e.g., make([]byte,4) or make([]byte,8)), so indexing b[0] is safe.
 	b[0] = byte(size)
 	return 1
 }

@@ -3,6 +3,7 @@ package opcua_listener
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -230,12 +231,12 @@ func TestSubscribeClientIntegration(t *testing.T) {
 			}
 
 		case <-ctx.Done():
-			msg := ""
+			var sb strings.Builder
 			for _, tag := range tagsRemaining {
-				msg += tag + ", "
+				sb.WriteString(tag)
+				sb.WriteString(", ")
 			}
-
-			t.Errorf("Tags %s are remaining without a received value", msg)
+			t.Errorf("Tags %s are remaining without a received value", sb.String())
 			return
 		}
 	}
@@ -371,12 +372,12 @@ func TestSubscribeClientIntegrationAdditionalFields(t *testing.T) {
 			}
 
 		case <-ctx.Done():
-			msg := ""
+			var sb strings.Builder
 			for _, tag := range tagsRemaining {
-				msg += tag + ", "
+				sb.WriteString(tag)
+				sb.WriteString(", ")
 			}
-
-			t.Errorf("Tags %s are remaining without a received value", msg)
+			t.Errorf("Tags %s are remaining without a received value", sb.String())
 			return
 		}
 	}

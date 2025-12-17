@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/newrelic/newrelic-telemetry-sdk-go/cumulative"
@@ -58,12 +59,12 @@ func (nr *NewRelic) Connect() error {
 			cfg.HarvestTimeout = time.Duration(nr.Timeout)
 			cfg.Client = &nr.client
 			cfg.ErrorLogger = func(e map[string]interface{}) {
-				var errorString string
+				var b strings.Builder
 				for k, v := range e {
-					errorString += fmt.Sprintf("%s = %s ", k, v)
+					b.WriteString(fmt.Sprintf("%s = %s ", k, v))
 				}
 				nr.errorCount++
-				nr.savedErrors[nr.errorCount] = errorString
+				nr.savedErrors[nr.errorCount] = b.String()
 			}
 			if nr.MetricURL != "" {
 				cfg.MetricsURLOverride = nr.MetricURL

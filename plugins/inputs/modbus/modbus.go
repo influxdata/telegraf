@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	mb "github.com/grid-x/modbus"
@@ -118,13 +119,15 @@ func (m *Modbus) SampleConfig() string {
 		&m.configurationPerMetric,
 	}
 
-	totalConfig := sampleConfigStart
+	var b strings.Builder
+	b.WriteString(sampleConfigStart)
 	for _, c := range configs {
-		totalConfig += c.sampleConfigPart() + "\n"
+		b.WriteString(c.sampleConfigPart())
+		b.WriteString("\n")
 	}
-	totalConfig += "\n"
-	totalConfig += sampleConfigEnd
-	return totalConfig
+	b.WriteString("\n")
+	b.WriteString(sampleConfigEnd)
+	return b.String()
 }
 
 func (m *Modbus) Init() error {

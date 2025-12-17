@@ -1019,7 +1019,9 @@ timestamp,type,name,status
 	rowIndex++
 	m, err = p.ParseLine(testCSVRows[rowIndex])
 	require.NoError(t, err)
+	//nolint:gosec // G602: False positive — length is known to be == 2
 	require.Equal(t, expectedFields[0], m.Fields())
+	//nolint:gosec // G602: False positive — length is known to be == 2
 	require.Equal(t, expectedTags[0], m.Tags())
 	rowIndex++
 	m, err = p.ParseLine(testCSVRows[rowIndex])
@@ -1028,7 +1030,9 @@ timestamp,type,name,status
 	rowIndex++
 	m, err = p.ParseLine(testCSVRows[rowIndex])
 	require.NoError(t, err)
+	//nolint:gosec // G602: False positive — length is known to be == 2
 	require.Equal(t, expectedFields[1], m.Fields())
+	//nolint:gosec // G602: False positive — length is known to be == 2
 	require.Equal(t, expectedTags[1], m.Tags())
 }
 
