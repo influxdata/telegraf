@@ -1990,7 +1990,7 @@ func (c *Config) matchesLabelSelection(tbl *ast.Table) (bool, error) {
 	// Get the label definitions for the plugin and check them
 	labels := c.getFieldMap(tbl, "labels")
 	for k, v := range labels {
-		if err := CheckSelectionKeyValuePairs(k, v); err != nil {
+		if err := CheckLabelKeyValuePairs(k, v); err != nil {
 			return false, err
 		}
 	}
