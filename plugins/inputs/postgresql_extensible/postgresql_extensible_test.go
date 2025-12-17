@@ -106,6 +106,7 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 		metricsCounted++
 	}
 
+	//nolint:gosec // G602: False positive — this is a safe range iteration over a slice (it may be empty)
 	for _, metric := range int32Metrics {
 		require.True(t, acc.HasInt32Field("postgresql", metric))
 		metricsCounted++
@@ -221,6 +222,7 @@ func TestPostgresqlFieldOutputIntegration(t *testing.T) {
 		require.Truef(t, found, "expected %s to be an integer", field)
 	}
 
+	//nolint:gosec // G602: False positive — this is a safe range iteration over a slice (it may be empty)
 	for _, field := range int32Metrics {
 		_, found := acc.Int32Field(measurement, field)
 		require.Truef(t, found, "expected %s to be an int32", field)

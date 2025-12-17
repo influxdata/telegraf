@@ -225,6 +225,7 @@ func (n *netsnmpTranslator) snmpTranslateCall(oid string) (mibName string, oidNu
 		oidText = oidText[i+2:]
 	}
 
+	var b strings.Builder
 	for scanner.Scan() {
 		line := scanner.Text()
 
@@ -247,18 +248,21 @@ func (n *netsnmpTranslator) snmpTranslateCall(oid string) (mibName string, oidNu
 				if i := strings.Index(obj, "("); i != -1 {
 					obj = obj[i+1:]
 					if j := strings.Index(obj, ")"); j != -1 {
-						oidNum += "." + obj[:j]
+						b.WriteString(".")
+						b.WriteString(obj[:j])
 					} else {
 						return "", "", "", "", fmt.Errorf("getting OID number from: %s", obj)
 					}
 
 				} else {
-					oidNum += "." + obj
+					b.WriteString(".")
+					b.WriteString(obj)
 				}
 			}
 			break
 		}
 	}
+	oidNum = b.String()
 
 	return mibName, oidNum, oidText, conversion, nil
 }
