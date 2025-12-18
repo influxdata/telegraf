@@ -27,24 +27,22 @@ func (h *httpClient) Connect(cfg *clientConfig) error {
 	h.encodingType = cfg.Encoding
 	h.compress = cfg.Compression
 
-	if tlsConfig, err := cfg.TLSConfig.TLSConfig(); err != nil {
+	tlsConfig, err := cfg.TLSConfig.TLSConfig()
+	if err != nil {
 		return err
-	} else if tlsConfig != nil {
+	}
+
+	// For coralogix, we enforce HTTP connection with TLS
+	if tlsConfig != nil && cfg.CoralogixConfig != nil {
+		tlsConfig = &tls.Config{}
+	}
+
+	if tlsConfig != nil {
 		h.httpClient.Transport = &http.Transport{
 			TLSClientConfig: tlsConfig,
 		}
-	} else if cfg.CoralogixConfig != nil {
-		// For coralogix, we enforce HTTP connection with TLS
-		h.httpClient.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{},
-		}
-	} else {
-		h.httpClient.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		}
 	}
+
 	return nil
 }
 
