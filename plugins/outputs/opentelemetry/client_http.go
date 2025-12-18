@@ -97,7 +97,7 @@ func (h *httpClient) Export(ctx context.Context, request pmetricotlp.ExportReque
 	}()
 
 	if httpResponse.StatusCode < 200 || httpResponse.StatusCode >= 300 {
-		return pmetricotlp.ExportResponse{}, fmt.Errorf("received non-2xx HTTP response code: %d", httpResponse.StatusCode)
+		return pmetricotlp.ExportResponse{}, fmt.Errorf("received unexpected status: %s (%d)", http.StatusText(httpResponse.StatusCode), httpResponse.StatusCode)
 	}
 
 	responseBytes, err := readResponseBody(httpResponse)
