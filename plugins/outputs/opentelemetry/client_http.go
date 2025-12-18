@@ -3,7 +3,7 @@ package opentelemetry
 import (
 	"bytes"
 	"context"
-	ntls "crypto/tls"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -36,11 +36,11 @@ func (h *httpClient) Connect(cfg *clientConfig) error {
 	} else if cfg.CoralogixConfig != nil {
 		// For coralogix, we enforce HTTP connection with TLS
 		h.httpClient.Transport = &http.Transport{
-			TLSClientConfig: &ntls.Config{},
+			TLSClientConfig: &tls.Config{},
 		}
 	} else {
 		h.httpClient.Transport = &http.Transport{
-			TLSClientConfig: &ntls.Config{
+			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
 			},
 		}
