@@ -51,18 +51,21 @@ func (h *httpClient) Connect(cfg *clientConfig) error {
 func (h *httpClient) Export(ctx context.Context, request pmetricotlp.ExportRequest) (pmetricotlp.ExportResponse, error) {
 	var err error
 	var requestBytes []byte
+	var encoding string
 
 	switch h.encodingType {
-	case "application/x-protobuf":
+	case "protobuf":
 		requestBytes, err = request.MarshalProto()
 		if err != nil {
 			return pmetricotlp.ExportResponse{}, err
 		}
-	case "application/json":
+		encoding = "application/x-protobuf"
+	case "json":
 		requestBytes, err = request.MarshalJSON()
 		if err != nil {
 			return pmetricotlp.ExportResponse{}, err
 		}
+		encoding = "application/json"
 	default:
 		return pmetricotlp.ExportResponse{}, fmt.Errorf("unsupported content type '%s'", h.encodingType)
 	}
@@ -78,7 +81,7 @@ func (h *httpClient) Export(ctx context.Context, request pmetricotlp.ExportReque
 		return pmetricotlp.ExportResponse{}, err
 	}
 
-	httpRequest.Header.Set("Content-Type", h.encodingType)
+	httpRequest.Header.Set("Content-Type", encoding)
 	httpRequest.Header.Set("User-Agent", userAgent)
 	if h.compress != "" && h.compress != "none" {
 		httpRequest.Header.Set("Content-Encoding", "gzip")
