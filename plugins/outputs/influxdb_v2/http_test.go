@@ -18,6 +18,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/ratelimiter"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
+	"github.com/influxdata/telegraf/selfstat"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -46,6 +47,10 @@ func TestHTTPClientInit(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			u, err := url.Parse(tt.addr)
 			require.NoError(t, err)
+
+			collector := selfstat.NewCollector(make(map[string]string))
+			defer collector.UnregisterAll()
+			tt.client.statistics = collector
 			tt.client.url = u
 
 			require.NoError(t, tt.client.Init())
@@ -215,6 +220,8 @@ func TestRetryLaterEarlyExit(t *testing.T) {
 	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
+	collector := selfstat.NewCollector(make(map[string]string))
+	defer collector.UnregisterAll()
 	c := &httpClient{
 		url:             u,
 		bucketTag:       "bucket",
@@ -222,6 +229,7 @@ func TestRetryLaterEarlyExit(t *testing.T) {
 		serializer:      ratelimiter.NewIndividualSerializer(serializer),
 		rateLimiter:     limiter,
 		log:             &testutil.Logger{},
+		statistics:      selfstat.NewCollector(make(map[string]string)),
 	}
 	require.NoError(t, c.Init())
 
@@ -286,13 +294,16 @@ func TestHeadersDoNotOverrideConfig(t *testing.T) {
 	require.NoError(t, err)
 	authHeader := config.NewSecret([]byte("Bearer foo"))
 	userAgentHeader := config.NewSecret([]byte("foo"))
+	collector := selfstat.NewCollector(make(map[string]string))
+	defer collector.UnregisterAll()
 	c := &httpClient{
 		headers: map[string]*config.Secret{
 			"Authorization": &authHeader,
 			"User-Agent":    &userAgentHeader,
 		},
 		// URL to make Init() happy
-		url: testURL,
+		url:        testURL,
+		statistics: collector,
 	}
 	require.NoError(t, c.Init())
 	require.Equal(t, &authHeader, c.headers["Authorization"])
