@@ -53,6 +53,11 @@ to use them.
   ## If true, the database tag will not be added to the metric
   # exclude_database_tag = false
 
+  ## Wait for WAL persistence to complete synchronization
+  ## Setting this to false reduces latency but increases the risk of data loss.
+  ## See https://docs.influxdata.com/influxdb3/enterprise/write-data/http-api/v3-write-lp/#use-no_sync-for-immediate-write-responses
+  # sync = true
+
   ## Timeout for HTTP messages
   # timeout = "5s"
 
@@ -64,6 +69,13 @@ to use them.
   ## to submit the metric timestamp
   # influx_omit_timestamp = false
 
+  ## HTTP User-Agent
+  # user_agent = "telegraf"
+
+  ## Content-Encoding for write request body, available values are "gzip",
+  ## "none" and "identity"
+  # content_encoding = "gzip"
+
 
   ## Additional HTTP headers
   # http_headers = {"X-Special-Header" = "Special-Value"}
@@ -71,13 +83,6 @@ to use them.
   ## HTTP Proxy override, if unset values the standard proxy environment
   ## variables are consulted to determine which proxy, if any, should be used.
   # http_proxy = "http://corporate.proxy:3128"
-
-  ## HTTP User-Agent
-  # user_agent = "telegraf"
-
-  ## Content-Encoding for write request body, can be set to "gzip" to
-  ## compress body or "identity" to apply no encoding.
-  # content_encoding = "gzip"
 
   ## HTTP/2 Timeouts
   ## The following values control the HTTP/2 client's timeouts. These settings
