@@ -30,6 +30,10 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Optional path to RASDaemon sqlite3 database.
   ## Default: /var/lib/rasdaemon/ras-mc_event.db
   # db_path = ""
+  #
+  ## Add metrics that relate to disk errors.
+  ## Default: false
+  # disk_errors = true
 ```
 
 In addition `RASDaemon` runs, by default, with `--enable-sqlite3` flag. In case
