@@ -17,6 +17,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -26,6 +27,10 @@ var sampleConfig string
 
 const (
 	defaultClientTimeout = 15 * time.Second
+	// maxAuthFailures is the maximum number of consecutive authentication failures
+	// with the same token before dropping metrics. Prevents unbounded buffer growth
+	// when using static tokens that will never change.
+	maxAuthFailures = 3
 )
 
 // Warp10 output plugin
@@ -39,6 +44,11 @@ type Warp10 struct {
 	client             *http.Client
 	tls.ClientConfig
 	Log telegraf.Logger `toml:"-"`
+
+	// lastFailedToken stores the token value that caused an authentication error.
+	// Used to detect when the token has been refreshed by a secret-store.
+	lastFailedToken  string
+	authFailureCount int
 }
 
 // MetricLine Warp 10 metrics
@@ -87,7 +97,13 @@ func (w *Warp10) Connect() error {
 
 // GenWarp10Payload compute Warp 10 metrics payload
 func (w *Warp10) GenWarp10Payload(metrics []telegraf.Metric) string {
-	collectString := make([]string, 0)
+	// Count total fields for preallocation
+	totalFields := 0
+	for _, mm := range metrics {
+		totalFields += len(mm.FieldList())
+	}
+
+	collectString := make([]string, 0, totalFields)
 	for _, mm := range metrics {
 		for _, field := range mm.FieldList() {
 			metric := &MetricLine{
@@ -113,11 +129,75 @@ func (w *Warp10) GenWarp10Payload(metrics []telegraf.Metric) string {
 	return strings.Join(collectString, "")
 }
 
+// checkAuthFailureState checks if we're in an authentication failure state and determines
+// whether to proceed with the write, skip it, or drop the metrics.
+// Returns:
+//   - proceed: true if the write should proceed, false otherwise
+//   - err: non-nil if metrics should be skipped (plain error) or dropped (PartialWriteError)
+func (w *Warp10) checkAuthFailureState(currentToken string, metricCount int) (proceed bool, err error) {
+	if w.lastFailedToken == "" {
+		return true, nil
+	}
+
+	if currentToken != w.lastFailedToken {
+		// Token changed - clear failure state and proceed
+		w.Log.Infof("Token changed, resuming writes after previous authentication failure")
+		w.clearAuthFailureState()
+		return true, nil
+	}
+
+	// Same token as the one that failed
+	w.authFailureCount++
+	if w.authFailureCount >= maxAuthFailures {
+		// Max retries reached - drop metrics
+		w.Log.Errorf("Authentication failure persists after %d attempts with same token, dropping metrics", w.authFailureCount)
+		w.clearAuthFailureState()
+		indices := make([]int, metricCount)
+		for i := range indices {
+			indices[i] = i
+		}
+		return false, &internal.PartialWriteError{
+			Err:           errors.New("authentication failure: max retries exceeded"),
+			MetricsReject: indices,
+		}
+	}
+
+	// Same token, not yet at max - skip write to wait for token refresh
+	w.Log.Debugf("Skipping write, waiting for token refresh (attempt %d/%d)", w.authFailureCount, maxAuthFailures)
+	return false, fmt.Errorf("authentication failure pending token refresh (attempt %d/%d)", w.authFailureCount, maxAuthFailures)
+}
+
+// recordAuthFailure records an authentication failure with the given token.
+func (w *Warp10) recordAuthFailure(token string) {
+	w.lastFailedToken = token
+	w.authFailureCount = 1
+}
+
+// clearAuthFailureState clears the authentication failure tracking state.
+func (w *Warp10) clearAuthFailureState() {
+	w.lastFailedToken = ""
+	w.authFailureCount = 0
+}
+
 // Write metrics to Warp10
 func (w *Warp10) Write(metrics []telegraf.Metric) error {
 	payload := w.GenWarp10Payload(metrics)
 	if payload == "" {
 		return nil
+	}
+
+	// Get token once at the beginning for both auth failure check and request
+	token, err := w.Token.Get()
+	if err != nil {
+		return fmt.Errorf("getting token failed: %w", err)
+	}
+	currentTokenValue := token.String()
+	token.Destroy()
+
+	// Check if we should proceed based on auth failure state
+	proceed, err := w.checkAuthFailureState(currentTokenValue, len(metrics))
+	if !proceed {
+		return err
 	}
 
 	addr := w.WarpURL + "/api/v0/update"
@@ -127,12 +207,7 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 	}
 
 	req.Header.Set("Content-Type", "text/plain")
-	token, err := w.Token.Get()
-	if err != nil {
-		return fmt.Errorf("getting token failed: %w", err)
-	}
-	req.Header.Set("X-Warp10-Token", token.String())
-	token.Destroy()
+	req.Header.Set("X-Warp10-Token", currentTokenValue)
 
 	resp, err := w.client.Do(req)
 	if err != nil {
@@ -141,19 +216,28 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		if w.PrintErrorBody {
-			//nolint:errcheck // err can be ignored since it is just for logging
-			body, _ := io.ReadAll(resp.Body)
-			return errors.New(w.WarpURL + ": " + HandleError(string(body), w.MaxStringErrorSize))
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			w.Log.Debugf("Failed to read response body: %v", err)
+		}
+		werr := HandleError(string(body), w.MaxStringErrorSize)
+		fullErr := fmt.Errorf("%s: %w", w.WarpURL, werr)
+
+		if !werr.Retryable {
+			// Authentication error - record failure and return error for retry
+			w.recordAuthFailure(currentTokenValue)
+			w.Log.Warnf("Authentication error, will retry if token changes: %s", werr.Error())
+			// Return plain error (not PartialWriteError) to keep metrics in buffer
+			return fullErr
 		}
 
-		if len(resp.Status) < w.MaxStringErrorSize {
-			return errors.New(w.WarpURL + ": " + resp.Status)
-		}
-
-		return errors.New(w.WarpURL + ": " + resp.Status[0:w.MaxStringErrorSize])
+		// Retryable error - clear auth failure state, return plain error for normal retry
+		w.clearAuthFailureState()
+		return fullErr
 	}
 
+	// Success - clear any failure state
+	w.clearAuthFailureState()
 	return nil
 }
 
@@ -254,46 +338,52 @@ func init() {
 	})
 }
 
-// HandleError read http error body and return a corresponding error
-func HandleError(body string, maxStringSize int) string {
+// HandleError read http error body and return a corresponding HTTPError with retry information.
+// Note: Warp10 doesn't follow REST conventions - it returns 200/500 status codes, so error type
+// is determined by parsing the response body rather than the HTTP status code.
+func HandleError(body string, maxStringSize int) *internal.HTTPError {
 	if body == "" {
-		return "Empty return"
+		return &internal.HTTPError{Err: errors.New("empty return"), Retryable: true}
 	}
 
+	// Non-retryable authentication/authorization errors
 	if strings.Contains(body, "Invalid token") {
-		return "Invalid token"
+		return &internal.HTTPError{Err: errors.New("invalid token"), Retryable: false}
 	}
 
 	if strings.Contains(body, "Write token missing") {
-		return "Write token missing"
+		return &internal.HTTPError{Err: errors.New("write token missing"), Retryable: false}
 	}
 
 	if strings.Contains(body, "Token Expired") {
-		return "Token Expired"
+		return &internal.HTTPError{Err: errors.New("token expired"), Retryable: false}
 	}
 
 	if strings.Contains(body, "Token revoked") {
-		return "Token revoked"
-	}
-
-	if strings.Contains(body, "exceed your Monthly Active Data Streams limit") || strings.Contains(body, "exceed the Monthly Active Data Streams limit") {
-		return "Exceeded Monthly Active Data Streams limit"
-	}
-
-	if strings.Contains(body, "Daily Data Points limit being already exceeded") {
-		return "Exceeded Daily Data Points limit"
+		return &internal.HTTPError{Err: errors.New("token revoked"), Retryable: false}
 	}
 
 	if strings.Contains(body, "Application suspended or closed") {
-		return "Application suspended or closed"
+		return &internal.HTTPError{Err: errors.New("application suspended or closed"), Retryable: false}
+	}
+
+	// Retryable errors (rate limits, temporary issues)
+	if strings.Contains(body, "exceed your Monthly Active Data Streams limit") || strings.Contains(body, "exceed the Monthly Active Data Streams limit") {
+		return &internal.HTTPError{Err: errors.New("exceeded Monthly Active Data Streams limit"), Retryable: true}
+	}
+
+	if strings.Contains(body, "Daily Data Points limit being already exceeded") {
+		return &internal.HTTPError{Err: errors.New("exceeded Daily Data Points limit"), Retryable: true}
 	}
 
 	if strings.Contains(body, "broken pipe") {
-		return "broken pipe"
+		return &internal.HTTPError{Err: errors.New("broken pipe"), Retryable: true}
 	}
 
-	if len(body) < maxStringSize {
-		return body
+	// Unknown errors - retryable by default
+	msg := body
+	if len(body) >= maxStringSize {
+		msg = body[0:maxStringSize]
 	}
-	return body[0:maxStringSize]
+	return &internal.HTTPError{Err: errors.New(msg), Retryable: true}
 }
