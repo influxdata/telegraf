@@ -197,35 +197,43 @@ func Gather_acs_nbr(ai *Ah_airrm, acc telegraf.Accumulator) error {
 	return nil
 }
 
+func Gather_deffer_end(ai *Ah_airrm) {
+	ai.wg.Done()
+	if r := recover(); r != nil {
+		currentTime := time.Now()
+		crash_file := fmt.Sprintf("/tmp/telegraf_crash_%s.txt", currentTime.Format("2006_01_02_15_04_05"))
+		ss := string(debug.Stack())
+		log.Printf("telegraf crash: %s\n",ss)
+		os.WriteFile(crash_file, debug.Stack(), 0644)
+		os.Exit(128)
+	}
+}
 
 
 func (ai *Ah_airrm) Gather(acc telegraf.Accumulator) error {
 
-	defer func() {
-		if r := recover(); r != nil {
-			currentTime := time.Now()
-			crash_file := fmt.Sprintf("/tmp/telegraf_crash_%s.txt", currentTime.Format("2006_01_02_15_04_05"))
-			ss := string(debug.Stack())
-			log.Printf("telegraf crash: %s\n",ss)
-			os.WriteFile(crash_file, debug.Stack(), 0644)
-			os.Exit(128)
+	ai.wg.Add(1)
+
+	go func() {
+		defer Gather_deffer_end(ai)
+
+		if ai.Test_airrm_enable == 1 {
+			if ai.test_mode_completed {
+				return
+			}
+			ai.runAirrmOneShot(&ai.Test_airrm_enable, func() {
+				Gather_acs_nbr(ai, acc)
+			})
+			ai.test_mode_completed = true
+			return
+		} else {
+			Gather_acs_nbr(ai, acc)
 		}
 	}()
-	
-    if ai.test_mode_completed {
-		return nil
-	}
 
-	if ai.Test_airrm_enable == 1 {
-		ai.runAirrmOneShot(&ai.Test_airrm_enable, func() {
-			Gather_acs_nbr(ai, acc)
-		})
-		ai.test_mode_completed = true
-		return nil
-	}
-
-	Gather_acs_nbr(ai, acc)
+	ai.wg.Wait()
 	return nil
+
 }
 
 func (ai *Ah_airrm) Start(acc telegraf.Accumulator) error {
