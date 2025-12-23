@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -135,7 +137,7 @@ func TestMissingAPIToken(t *testing.T) {
 }
 
 func TestSendMetrics(t *testing.T) {
-	var expected []string
+	expected := make([]string, 0, 10)
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// check the encoded result
@@ -230,7 +232,7 @@ func TestSendMetrics(t *testing.T) {
 }
 
 func TestSendMetricsWithPatterns(t *testing.T) {
-	var expected []string
+	expected := make([]string, 0, 14)
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// check the encoded result
@@ -898,4 +900,135 @@ func TestSendUnsupportedMetric(t *testing.T) {
 	require.NoError(t, err)
 	// Warnf skipped for more invalid exports with the same name
 	require.Equal(t, 2, warnfCalledTimes)
+}
+
+func TestHTTPStatusCodeHandling(t *testing.T) {
+	tests := []struct {
+		name        string
+		statusCode  int
+		expectRetry bool
+		expectError bool
+	}{
+		// 2xx - Success (no error)
+		{name: "200 OK", statusCode: 200, expectRetry: false, expectError: false},
+		{name: "201 Created", statusCode: 201, expectRetry: false, expectError: false},
+		{name: "202 Accepted", statusCode: 202, expectRetry: false, expectError: false},
+
+		// 4xx - Client errors (non-retryable, dropped)
+		{name: "400 Bad Request", statusCode: 400, expectRetry: false, expectError: true},
+		{name: "401 Unauthorized", statusCode: 401, expectRetry: false, expectError: true},
+		{name: "403 Forbidden", statusCode: 403, expectRetry: false, expectError: true},
+		{name: "404 Not Found", statusCode: 404, expectRetry: false, expectError: true},
+
+		// 429 - Too Many Requests (retryable)
+		{name: "429 Too Many Requests", statusCode: 429, expectRetry: true, expectError: true},
+
+		// 5xx - Server errors (only specific codes are retryable)
+		{name: "500 Internal Server Error", statusCode: 500, expectRetry: true, expectError: true},
+		{name: "501 Not Implemented", statusCode: 501, expectRetry: false, expectError: true},
+		{name: "502 Bad Gateway", statusCode: 502, expectRetry: true, expectError: true},
+		{name: "503 Service Unavailable", statusCode: 503, expectRetry: true, expectError: true},
+		{name: "504 Gateway Timeout", statusCode: 504, expectRetry: true, expectError: true},
+		{name: "505 HTTP Version Not Supported", statusCode: 505, expectRetry: false, expectError: true},
+		{name: "507 Insufficient Storage", statusCode: 507, expectRetry: false, expectError: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tc.statusCode)
+				if tc.statusCode >= 200 && tc.statusCode < 300 {
+					if err := json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`); err != nil {
+						t.Error(err)
+					}
+				}
+			}))
+			defer ts.Close()
+
+			d := &Dynatrace{
+				URL:      ts.URL,
+				APIToken: config.NewSecret([]byte("123")),
+				Log:      testutil.Logger{},
+			}
+
+			err := d.Init()
+			require.NoError(t, err)
+			err = d.Connect()
+			require.NoError(t, err)
+
+			m := metric.New(
+				"test_metric",
+				map[string]string{},
+				map[string]interface{}{"value": 1.0},
+				time.Now(),
+			)
+
+			err = d.Write([]telegraf.Metric{m})
+
+			if tc.expectError {
+				require.Error(t, err)
+				// Check that the error contains the expected retryable flag
+				var httpErr interface{ Unwrap() error }
+				require.ErrorAs(t, err, &httpErr)
+				// The error is wrapped in "error processing data: %w"
+				innerErr := httpErr.Unwrap()
+				var actualHTTPErr interface {
+					Error() string
+				}
+				require.ErrorAs(t, innerErr, &actualHTTPErr)
+				require.Contains(t, actualHTTPErr.Error(), strconv.Itoa(tc.statusCode))
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestHTTPStatusCodeRetryFlag(t *testing.T) {
+	// Test that the Retryable flag is correctly set in the HTTPError
+	tests := []struct {
+		name        string
+		statusCode  int
+		expectRetry bool
+	}{
+		{"429 retryable", 429, true},
+		{"500 retryable", 500, true},
+		{"502 retryable", 502, true},
+		{"503 retryable", 503, true},
+		{"504 retryable", 504, true},
+		{"400 non-retryable", 400, false},
+		{"401 non-retryable", 401, false},
+		{"501 non-retryable", 501, false},
+		{"505 non-retryable", 505, false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tc.statusCode)
+			}))
+			defer ts.Close()
+
+			d := &Dynatrace{
+				URL:      ts.URL,
+				APIToken: config.NewSecret([]byte("123")),
+				Log:      testutil.Logger{},
+			}
+
+			err := d.Init()
+			require.NoError(t, err)
+
+			// Call send directly to check the HTTPError
+			sendErr := d.send("test_metric,dt.metrics.source=telegraf gauge,1.0 1234567890000")
+			require.Error(t, sendErr)
+
+			// Verify the error is an HTTPError with the correct Retryable flag
+			var httpErr *internal.HTTPError
+			require.ErrorAs(t, sendErr, &httpErr)
+			require.Equal(t, tc.statusCode, httpErr.StatusCode)
+			require.Equal(t, tc.expectRetry, httpErr.Retryable,
+				"status %d: expected Retryable=%v, got %v",
+				tc.statusCode, tc.expectRetry, httpErr.Retryable)
+		})
+	}
 }
