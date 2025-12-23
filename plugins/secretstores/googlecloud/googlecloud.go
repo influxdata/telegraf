@@ -4,8 +4,10 @@ package googlecloud
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 
 	"cloud.google.com/go/auth"
 	"cloud.google.com/go/auth/credentials"
@@ -37,11 +39,22 @@ func (g *GoogleCloud) Init() error {
 	if err != nil {
 		return fmt.Errorf("creating HTTP client failed: %w", err)
 	}
-	creds, err := credentials.DetectDefault(&credentials.DetectOptions{
-		STSAudience:     g.STSAudience,
-		CredentialsFile: g.CredentialsFile,
-		Client:          client,
-		Logger:          slog.NewLogger(g.Log),
+
+	serviceAccount, err := os.ReadFile(g.CredentialsFile)
+	if err != nil {
+		return fmt.Errorf("cannot load the credential file: %w", err)
+	}
+
+	fileType, err := parseFileType(serviceAccount)
+	if err != nil {
+		return err
+	}
+	saType := credentials.CredType(fileType)
+
+	creds, err := credentials.NewCredentialsFromJSON(saType, serviceAccount, &credentials.DetectOptions{
+		STSAudience: g.STSAudience,
+		Client:      client,
+		Logger:      slog.NewLogger(g.Log),
 	})
 	if err != nil {
 		return fmt.Errorf("credentials search failed: %w", err)
@@ -78,6 +91,17 @@ func (g *GoogleCloud) GetResolver(key string) (telegraf.ResolveFunc, error) {
 		s, err := g.Get(key)
 		return s, true, err
 	}, nil
+}
+
+func parseFileType(b []byte) (string, error) {
+	type fileTypeChecker struct {
+		Type string `json:"type"`
+	}
+	var f fileTypeChecker
+	if err := json.Unmarshal(b, &f); err != nil {
+		return "", fmt.Errorf("cannot parse the credential file: %w", err)
+	}
+	return f.Type, nil
 }
 
 func init() {
