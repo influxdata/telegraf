@@ -674,3 +674,113 @@ func TestGather_MoresupervisorUnitPIDs(t *testing.T) {
 		}
 	}
 }
+
+func TestGather_MultipleFiltersMatchingSameProcess(t *testing.T) {
+	// This test verifies that when multiple filters match the same process (PID),
+	// each filter produces metrics with its own unique filter tag.
+	// This is a regression test for https://github.com/influxdata/telegraf/issues/18041
+	processID := pid(os.Getpid())
+	processName, err := gopsprocess.NewProcess(int32(processID))
+	require.NoError(t, err)
+	name, err := processName.Name()
+	require.NoError(t, err)
+
+	p := Procstat{
+		Properties: []string{"cpu", "memory", "mmap"},
+		Log:        testutil.Logger{},
+		Filter: []filter{
+			{
+				Name:         "filter_one",
+				ProcessNames: []string{"*" + name}, // Match current process
+			},
+			{
+				Name:         "filter_two",
+				ProcessNames: []string{"*" + name}, // Same pattern matches same process
+			},
+		},
+	}
+	require.NoError(t, p.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, p.Gather(&acc))
+
+	// Collect all procstat metrics and their filter tags
+	filterTagsFound := make(map[string]int)
+	for _, m := range acc.GetTelegrafMetrics() {
+		if m.Name() == "procstat" {
+			filterTag, ok := m.GetTag("filter")
+			require.True(t, ok, "procstat metric should have a filter tag")
+			filterTagsFound[filterTag]++
+		}
+	}
+
+	// Verify that we got metrics from both filters with their respective tags
+	require.Contains(t, filterTagsFound, "filter_one", "should have metrics with filter=filter_one")
+	require.Contains(t, filterTagsFound, "filter_two", "should have metrics with filter=filter_two")
+
+	// Both filters should produce at least one metric for the matching process
+	require.GreaterOrEqual(t, filterTagsFound["filter_one"], 1, "filter_one should produce at least 1 metric")
+	require.GreaterOrEqual(t, filterTagsFound["filter_two"], 1, "filter_two should produce at least 1 metric")
+}
+
+func TestGather_MultipleFiltersProcessCacheIsolation(t *testing.T) {
+	// This test verifies that the process cache is correctly isolated per filter.
+	// Each filter should maintain its own process cache for CPU usage calculations.
+	// This is a regression test for https://github.com/influxdata/telegraf/issues/18041
+	processID := pid(os.Getpid())
+	processName, err := gopsprocess.NewProcess(int32(processID))
+	require.NoError(t, err)
+	name, err := processName.Name()
+	require.NoError(t, err)
+
+	p := Procstat{
+		Properties: []string{"cpu", "memory", "mmap"},
+		Log:        testutil.Logger{},
+		Filter: []filter{
+			{
+				Name:         "first",
+				ProcessNames: []string{"*" + name},
+			},
+			{
+				Name:         "second",
+				ProcessNames: []string{"*" + name},
+			},
+		},
+	}
+	require.NoError(t, p.Init())
+
+	// First gather - should create process entries for both filters
+	var acc1 testutil.Accumulator
+	require.NoError(t, p.Gather(&acc1))
+
+	// Verify process cache has entries for both filters
+	require.Contains(t, p.processes, "first", "process cache should have 'first' filter")
+	require.Contains(t, p.processes, "second", "process cache should have 'second' filter")
+
+	// Both filters should have the same PID in their cache
+	require.Contains(t, p.processes["first"], processID, "first filter should cache current process")
+	require.Contains(t, p.processes["second"], processID, "second filter should cache current process")
+
+	// The cached process objects should be different instances
+	proc1 := p.processes["first"][processID]
+	proc2 := p.processes["second"][processID]
+	require.NotSame(t, proc1, proc2, "each filter should have its own process instance")
+
+	// Second gather - should reuse cached processes for delta calculations
+	var acc2 testutil.Accumulator
+	require.NoError(t, p.Gather(&acc2))
+
+	// Count metrics per filter
+	filterCounts := make(map[string]int)
+	for _, m := range acc2.GetTelegrafMetrics() {
+		if m.Name() == "procstat" {
+			if filterTag, ok := m.GetTag("filter"); ok {
+				filterCounts[filterTag]++
+			}
+		}
+	}
+
+	// Both filters should still produce metrics
+	require.GreaterOrEqual(t, filterCounts["first"], 1, "first filter should produce metrics on second gather")
+	require.GreaterOrEqual(t, filterCounts["second"], 1, "second filter should produce metrics on second gather")
+}
