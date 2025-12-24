@@ -7,12 +7,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 type ErrorTest struct {
-	Message  string
-	Expected string
+	Message           string
+	Expected          string
+	ExpectedRetryable bool
 }
 
 func TestWriteWarp10(t *testing.T) {
@@ -90,7 +92,8 @@ func TestHandleWarp10Error(t *testing.T) {
 			</body>
 			</html>
 			`,
-			Expected: "Invalid token",
+			Expected:          "invalid token",
+			ExpectedRetryable: false, // Authentication error
 		},
 		{
 			Message: `
@@ -105,7 +108,8 @@ func TestHandleWarp10Error(t *testing.T) {
 			</body>
 			</html>
 			`,
-			Expected: "Token Expired",
+			Expected:          "token expired",
+			ExpectedRetryable: false, // Authentication error
 		},
 		{
 			Message: `
@@ -120,7 +124,8 @@ func TestHandleWarp10Error(t *testing.T) {
 			</body>
 			</html>
 			`,
-			Expected: "Token revoked",
+			Expected:          "token revoked",
+			ExpectedRetryable: false, // Authentication error
 		},
 		{
 			Message: `
@@ -135,16 +140,20 @@ func TestHandleWarp10Error(t *testing.T) {
 			</body>
 			</html>
 			`,
-			Expected: "Write token missing",
+			Expected:          "write token missing",
+			ExpectedRetryable: false, // Authentication error
 		},
 		{
-			Message:  `<title>Error 503: server unavailable</title>`,
-			Expected: "<title>Error 503: server unavailable</title>",
+			Message:           `<title>Error 503: server unavailable</title>`,
+			Expected:          "<title>Error 503: server unavailable</title>",
+			ExpectedRetryable: true, // Temporary server error, retryable
 		},
 	}
 
 	for _, handledError := range tests {
-		payload := HandleError(handledError.Message, 511)
-		require.Exactly(t, handledError.Expected, payload)
+		werr := HandleError(handledError.Message, 511)
+		require.IsType(t, &internal.HTTPError{}, werr)
+		require.Equal(t, handledError.Expected, werr.Error())
+		require.Equal(t, handledError.ExpectedRetryable, werr.Retryable, "retryable mismatch for: %s", handledError.Expected)
 	}
 }
