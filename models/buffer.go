@@ -95,6 +95,8 @@ type BufferStats struct {
 }
 
 // NewBuffer returns a new empty Buffer with the given capacity.
+//
+//nolint:revive //will move to structs later
 func NewBuffer(name, id, alias string, capacity int, strategy, path string, diskSync bool) (Buffer, error) {
 	registerGob()
 
