@@ -144,7 +144,7 @@ func (b *MemoryBuffer) addMetric(m telegraf.Metric) int {
 		}
 	}
 
-	b.metricAdded()
+	b.metricAdded(1)
 
 	b.buf[b.last] = m
 	b.last = b.next(b.last)
