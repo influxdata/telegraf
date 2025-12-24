@@ -185,11 +185,25 @@ func (s *SumoLogic) writeRequestChunk(reqBody []byte) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("sumologic: when writing to %q received status code: %d", s.URL, resp.StatusCode)
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		return nil
 	}
-
-	return nil
+	// 4xx client errors are not retryable - the request itself is invalid
+	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+		if s.Log != nil {
+			s.Log.Errorf("Client error %d, metrics will be dropped", resp.StatusCode)
+		}
+		return &internal.HTTPError{
+			Err:        fmt.Errorf("sumologic: client error %d: metrics dropped", resp.StatusCode),
+			StatusCode: resp.StatusCode,
+			Retryable:  false,
+		}
+	}
+	return &internal.HTTPError{
+		Err:        fmt.Errorf("sumologic: when writing to %q received status code: %d", s.URL, resp.StatusCode),
+		StatusCode: resp.StatusCode,
+		Retryable:  true,
+	}
 }
 
 // splitIntoChunks splits metrics to be sent into chunks so that every request
