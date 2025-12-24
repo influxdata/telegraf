@@ -799,9 +799,10 @@ func TestStatusCodeInvalidAuthentication(t *testing.T) {
 
 			// Setup plugin and connect
 			plugin := &influxdb.InfluxDB{
-				URLs:      []string{"http://" + ts.Listener.Addr().String()},
-				BucketTag: "bucket",
-				Log:       &testutil.Logger{},
+				URLs:            []string{"http://" + ts.Listener.Addr().String()},
+				BucketTag:       "bucket",
+				ContentEncoding: "identity",
+				Log:             &testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -852,14 +853,19 @@ func TestStatusCodeInvalidAuthentication(t *testing.T) {
 			}
 
 			// Write the metrics the first time and check for the expected errors
+			// 401/403 errors are non-retryable, so metrics should be rejected (dropped)
 			err := plugin.Write(metrics)
-			require.ErrorContains(t, err, "failed to write metrics to my_bucket")
+			require.ErrorContains(t, err, "failed to write metrics to my_bucket (will be dropped:")
 			require.ErrorContains(t, err, strconv.Itoa(code))
+
+			var apiErr *influxdb.APIError
+			require.ErrorAs(t, err, &apiErr)
+			require.Equal(t, code, apiErr.StatusCode)
+			require.False(t, apiErr.Retryable, "401/403 errors should not be retryable")
 
 			var writeErr *internal.PartialWriteError
 			require.ErrorAs(t, err, &writeErr)
-			require.Empty(t, writeErr.MetricsReject, "rejected metrics")
-			require.LessOrEqual(t, len(writeErr.MetricsAccept), 2, "accepted metrics")
+			require.Len(t, writeErr.MetricsReject, 2, "rejected metrics")
 		})
 	}
 }
