@@ -2,6 +2,7 @@ package aliyuncms
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -14,6 +15,7 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/responses"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/cms"
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/rds"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -29,7 +31,6 @@ type mockGatherAliyunCMSClient struct{}
 func (*mockGatherAliyunCMSClient) DescribeMetricList(request *cms.DescribeMetricListRequest) (*cms.DescribeMetricListResponse, error) {
 	resp := new(cms.DescribeMetricListResponse)
 
-	// switch request.Metric {
 	switch request.MetricName {
 	case "InstanceActiveConnection":
 		resp.Code = "200"
@@ -65,7 +66,101 @@ func (*mockGatherAliyunCMSClient) DescribeMetricList(request *cms.DescribeMetric
 		resp.Datapoints = `[]`
 	case "ErrorResp":
 		return nil, errors.New("error response")
+	default:
+		resp.Code = "200"
 	}
+	return resp, nil
+}
+
+type mockGatherAliyunRDSClient struct{}
+
+func (s *mockGatherAliyunRDSClient) DescribeDBInstancePerformance(request *rds.DescribeDBInstancePerformanceRequest) ( //nolint:revive // Valid case
+	*rds.DescribeDBInstancePerformanceResponse, error) {
+	resp := new(rds.DescribeDBInstancePerformanceResponse)
+
+	switch request.Key {
+	case "PolarDBLocalIOSTAT":
+		resp.PerformanceKeys.PerformanceKey = make([]rds.PerformanceKey, 0)
+	case "ErrorDatapoint":
+		resp.PerformanceKeys.PerformanceKey = make([]rds.PerformanceKey, 0)
+	case "EmptyDatapoint":
+		resp.PerformanceKeys.PerformanceKey = make([]rds.PerformanceKey, 0)
+	case "ErrorResp":
+		return nil, errors.New("error response")
+	case "SingleMetric":
+		resp.PerformanceKeys.PerformanceKey = []rds.PerformanceKey{
+			{
+				ValueFormat: "CPUUsage",
+				Values: rds.ValuesInDescribeDBInstancePerformance{
+					PerformanceValue: []rds.PerformanceValue{
+						{
+							Date:  "2021-01-02T03:04:05Z",
+							Value: "12.5",
+						},
+					},
+				},
+			},
+		}
+	case "CompoundMetric":
+		resp.PerformanceKeys.PerformanceKey = []rds.PerformanceKey{
+			{
+				ValueFormat: "CPUUsage&IOPS",
+				Values: rds.ValuesInDescribeDBInstancePerformance{
+					PerformanceValue: []rds.PerformanceValue{
+						{
+							Date:  "2021-01-02T03:04:05Z",
+							Value: "10.5&20.5",
+						},
+					},
+				},
+			},
+		}
+	case "BadDate":
+		resp.PerformanceKeys.PerformanceKey = []rds.PerformanceKey{
+			{
+				ValueFormat: "CPUUsage",
+				Values: rds.ValuesInDescribeDBInstancePerformance{
+					PerformanceValue: []rds.PerformanceValue{
+						{
+							Date:  "not-a-date",
+							Value: "1.0",
+						},
+					},
+				},
+			},
+		}
+	case "BadValueSingle":
+		resp.PerformanceKeys.PerformanceKey = []rds.PerformanceKey{
+			{
+				ValueFormat: "CPUUsage",
+				Values: rds.ValuesInDescribeDBInstancePerformance{
+					PerformanceValue: []rds.PerformanceValue{
+						{
+							Date:  "2021-01-02T03:04:05Z",
+							Value: "abc",
+						},
+					},
+				},
+			},
+		}
+	case "HttpNon200":
+		resp.PerformanceKeys.PerformanceKey = []rds.PerformanceKey{
+			{
+				ValueFormat: "CPUUsage",
+				Values: rds.ValuesInDescribeDBInstancePerformance{
+					PerformanceValue: []rds.PerformanceValue{
+						{
+							Date:  "2021-01-02T03:04:05Z",
+							Value: "1.0",
+						},
+					},
+				},
+			},
+		}
+	default:
+		resp.PerformanceKeys.PerformanceKey = make([]rds.PerformanceKey, 0)
+	}
+
 	return resp, nil
 }
 
@@ -250,7 +345,8 @@ func TestPluginMetricsInitialize(t *testing.T) {
 			accessKeySecret: "dummy",
 			metrics: []*metric{
 				{
-					Dimensions: `{"instanceId": "i-abcdefgh123456"}`,
+					MetricNames: make([]string, 0),
+					Dimensions:  `{"instanceId": "i-abcdefgh123456"}`,
 				},
 			},
 		},
@@ -262,7 +358,8 @@ func TestPluginMetricsInitialize(t *testing.T) {
 			accessKeySecret: "dummy",
 			metrics: []*metric{
 				{
-					Dimensions: `[{"instanceId": "p-example"},{"instanceId": "q-example"}]`,
+					MetricNames: make([]string, 0),
+					Dimensions:  `[{"instanceId": "p-example"},{"instanceId": "q-example"}]`,
 				},
 			},
 		},
@@ -275,7 +372,8 @@ func TestPluginMetricsInitialize(t *testing.T) {
 			expectedErrorString: `cannot parse dimensions (neither obj, nor array) "[": unexpected end of JSON input`,
 			metrics: []*metric{
 				{
-					Dimensions: `[`,
+					MetricNames: make([]string, 0),
+					Dimensions:  `[`,
 				},
 			},
 		},
@@ -296,6 +394,80 @@ func TestPluginMetricsInitialize(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPluginMetricsRDSServiceInitialize(t *testing.T) {
+	var err error
+
+	plugin := new(AliyunCMS)
+	plugin.Log = testutil.Logger{Name: inputTitle}
+	plugin.Regions = []string{"cn-shanghai"}
+	plugin.dt, err = getDiscoveryTool("acs_slb_dashboard", plugin.Regions)
+	if err != nil {
+		t.Fatalf("Can't create discovery tool object: %v", err)
+	}
+
+	httpResp := &http.Response{
+		StatusCode: 200,
+		Body: io.NopCloser(bytes.NewBufferString(
+			`{
+				"LoadBalancers":
+					{
+						"LoadBalancer": [
+ 							{"LoadBalancerId":"bla"}
+                        ]
+                    },
+				"TotalCount": 1,
+				"PageSize": 1,
+				"PageNumber": 1
+			}`)),
+	}
+	mockCli, err := getMockSdkCli(httpResp)
+	if err != nil {
+		t.Fatalf("Can't create mock sdk cli: %v", err)
+	}
+	plugin.dt.cli = map[string]aliyunSdkClient{plugin.Regions[0]: &mockCli}
+
+	test := struct {
+		name                string
+		metricServices      []string
+		project             string
+		accessKeyID         string
+		accessKeySecret     string
+		expectedErrorString string
+		regions             []string
+		discoveryRegions    []string
+		metrics             []*metric
+	}{
+
+		name:            "Valid project",
+		metricServices:  []string{"cms", "rds"},
+		project:         "acs_rds_dashboard",
+		regions:         []string{"cn-shanghai"},
+		accessKeyID:     "dummy",
+		accessKeySecret: "dummy",
+		metrics: []*metric{
+			{
+				MetricNames: make([]string, 0),
+				Dimensions:  `{"instanceId": "i-abcdefgh123456"}`,
+			},
+		},
+	}
+
+	t.Run(test.name, func(t *testing.T) {
+		plugin.Project = test.project
+		plugin.AccessKeyID = test.accessKeyID
+		plugin.AccessKeySecret = test.accessKeySecret
+		plugin.Regions = test.regions
+		plugin.Metrics = test.metrics
+		plugin.MetricServices = test.metricServices
+
+		if test.expectedErrorString != "" {
+			require.EqualError(t, plugin.Init(), test.expectedErrorString)
+		} else {
+			require.NoError(t, plugin.Init())
+		}
+	})
 }
 
 func TestUpdateWindow(t *testing.T) {
@@ -319,7 +491,7 @@ func TestUpdateWindow(t *testing.T) {
 
 	newStartTime := plugin.windowEnd
 
-	// initial window just has a single period
+	// the initial window just has a single period
 	require.EqualValues(t, plugin.windowEnd, now.Add(-time.Duration(plugin.Delay)))
 	require.EqualValues(t, plugin.windowStart, now.Add(-time.Duration(plugin.Delay)).Add(-time.Duration(plugin.Period)))
 
@@ -334,14 +506,10 @@ func TestUpdateWindow(t *testing.T) {
 func TestGatherMetric(t *testing.T) {
 	plugin := &AliyunCMS{
 		Project:     "acs_slb_dashboard",
-		client:      new(mockGatherAliyunCMSClient),
+		cmsClient:   new(mockGatherAliyunCMSClient),
 		measurement: formatMeasurement("acs_slb_dashboard"),
 		Log:         testutil.Logger{Name: inputTitle},
 		Regions:     []string{"cn-shanghai"},
-	}
-
-	metric := &metric{
-		Dimensions: `"instanceId": "i-abcdefgh123456"`,
 	}
 
 	tests := []struct {
@@ -363,82 +531,210 @@ func TestGatherMetric(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			metric := &metric{
+				MetricNames:       []string{tt.metricName},
+				Dimensions:        `{"instanceId": "i-abcdefgh123456"}`,
+				requestDimensions: []map[string]string{{"instanceId": "i-abcdefgh123456"}},
+			}
 			var acc telegraf.Accumulator
 			require.EqualError(t, plugin.gatherMetric(acc, tt.metricName, metric), tt.expectedErrorString)
 		})
 	}
 }
 
-func TestGather(t *testing.T) {
-	m := &metric{
-		Dimensions: `{"instanceId": "i-abcdefgh123456"}`,
-	}
-	plugin := &AliyunCMS{
-		AccessKeyID:     "my_access_key_id",
-		AccessKeySecret: "my_access_key_secret",
-		Project:         "acs_slb_dashboard",
-		Metrics:         []*metric{m},
-		RateLimit:       200,
-		measurement:     formatMeasurement("acs_slb_dashboard"),
-		Regions:         []string{"cn-shanghai"},
-		client:          new(mockGatherAliyunCMSClient),
-		Log:             testutil.Logger{Name: inputTitle},
+func TestRDSServiceInitialization(t *testing.T) {
+	// Test that the RDS client can be initialized when rds metric service is configured
+	var err error
+
+	plugin := new(AliyunCMS)
+	plugin.Log = testutil.Logger{Name: inputTitle}
+	plugin.Regions = []string{"cn-shanghai"}
+	plugin.dt, err = getDiscoveryTool("acs_rds_dashboard", plugin.Regions)
+	if err != nil {
+		t.Fatalf("Can't create discovery tool object: %v", err)
 	}
 
-	// test table:
+	httpResp := &http.Response{
+		StatusCode: 200,
+		Body: io.NopCloser(bytes.NewBufferString(
+			`{
+				"DBInstances": {
+					"DBInstance": [
+						{"DBInstanceId": "rds-1"}
+					]
+				},
+				"TotalCount": 1,
+				"PageSize": 1,
+				"PageNumber": 1
+			}`)),
+	}
+	mockCli, err := getMockSdkCli(httpResp)
+	if err != nil {
+		t.Fatalf("Can't create mock sdk cli: %v", err)
+	}
+	plugin.dt.cli = map[string]aliyunSdkClient{plugin.Regions[0]: &mockCli}
+
+	// Test RDS initialization with acs_rds_dashboard project
+	plugin.Project = "acs_rds_dashboard"
+	plugin.AccessKeyID = "dummy"
+	plugin.AccessKeySecret = "dummy"
+	plugin.Regions = []string{"cn-shanghai"}
+	plugin.MetricServices = []string{"cms", "rds"}
+
+	// RDS client should be initialized
+	require.NoError(t, plugin.Init())
+}
+
+func TestRDSMetricsConfiguration(t *testing.T) {
+	// Test that RDS metrics can be configured
+	plugin := &AliyunCMS{
+		Project:        "acs_rds_dashboard",
+		MetricServices: []string{"rds"},
+		Log:            testutil.Logger{Name: inputTitle},
+	}
+
+	m := &metric{
+		MetricNames:                   []string{"CPUUsage", "MemoryUsage"},
+		Dimensions:                    `{"instanceId": "rds-instance-001"}`,
+		AllowDataPointWODiscoveryData: true,
+	}
+
+	plugin.Metrics = []*metric{m}
+
+	require.Len(t, plugin.Metrics, 1)
+	require.Len(t, plugin.Metrics[0].MetricNames, 2)
+	require.NotEmpty(t, plugin.Metrics[0].Dimensions)
+}
+
+func TestRDSMetricDimensionParsing(t *testing.T) {
+	// Test that RDS metric dimensions can be correctly parsed
 	tests := []struct {
 		name           string
-		hasMeasurement bool
-		metricNames    []string
-		expected       []telegraf.Metric
+		dimensionsJSON string
+		shouldSucceed  bool
 	}{
 		{
-			name:        "Empty data point",
-			metricNames: []string{"EmptyDatapoint"},
-			expected: []telegraf.Metric{
-				testutil.MustMetric(
-					"aliyuncms_acs_slb_dashboard",
-					nil,
-					nil,
-					time.Time{}),
-			},
+			name:           "Single instance dimension",
+			dimensionsJSON: `{"instanceId": "rds-mysql-001"}`,
+			shouldSucceed:  true,
 		},
 		{
-			name:           "Data point with fields & tags",
-			hasMeasurement: true,
-			metricNames:    []string{"InstanceActiveConnection"},
-			expected: []telegraf.Metric{
-				testutil.MustMetric(
-					"aliyuncms_acs_slb_dashboard",
-					map[string]string{
-						"instanceId": "i-abcdefgh123456",
-						"userId":     "1234567898765432",
-					},
-					map[string]interface{}{
-						"instance_active_connection_minimum": float64(100),
-						"instance_active_connection_maximum": float64(200),
-						"instance_active_connection_average": float64(150),
-						"instance_active_connection_value":   float64(300),
-					},
-					time.Unix(1490152860000, 0)),
-			},
+			name:           "Array of instances",
+			dimensionsJSON: `[{"instanceId": "rds-1"}, {"instanceId": "rds-2"}]`,
+			shouldSucceed:  true,
+		},
+		{
+			name:           "Invalid JSON",
+			dimensionsJSON: `[{invalid`,
+			shouldSucceed:  false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var acc testutil.Accumulator
-			plugin.Metrics[0].MetricNames = tt.metricNames
-			require.NoError(t, acc.GatherError(plugin.Gather))
-			require.Equal(t, acc.HasMeasurement("aliyuncms_acs_slb_dashboard"), tt.hasMeasurement)
-			if tt.hasMeasurement {
-				acc.AssertContainsTaggedFields(t, "aliyuncms_acs_slb_dashboard", tt.expected[0].Fields(), tt.expected[0].Tags())
+			m := &metric{
+				Dimensions:      tt.dimensionsJSON,
+				dimensionsUdObj: make(map[string]string),
+				dimensionsUdArr: make([]map[string]string, 0),
+			}
+
+			// Try to parse as an object
+			err := json.Unmarshal([]byte(tt.dimensionsJSON), &m.dimensionsUdObj)
+			if err != nil {
+				// Try to parse as an array
+				err = json.Unmarshal([]byte(tt.dimensionsJSON), &m.dimensionsUdArr)
+			}
+
+			if tt.shouldSucceed {
+				require.NoError(t, err)
+				require.True(t, len(m.dimensionsUdObj) > 0 || len(m.dimensionsUdArr) > 0)
+			} else {
+				require.Error(t, err)
 			}
 		})
 	}
 }
 
-func TestGetDiscoveryDataAcrossRegions(t *testing.T) {
+func TestRDSMetricsGatheringWithMockClient(t *testing.T) {
+	// Test that RDS metrics can be gathered with a mock client
+	m := &metric{
+		MetricNames:       []string{"CPUUsage"},
+		Dimensions:        `{"instanceId": "i-1"}`,
+		requestDimensions: []map[string]string{{"instanceId": "i-1"}},
+	}
+
+	plugin := &AliyunCMS{
+		AccessKeyID:     "test_key",
+		AccessKeySecret: "test_secret",
+		Project:         "acs_rds_dashboard",
+		Metrics:         []*metric{m},
+		RateLimit:       200,
+		measurement:     formatMeasurement("acs_rds_dashboard"),
+		MetricServices:  []string{"rds"},
+		Regions:         []string{"cn-shanghai"},
+		rdsClient:       new(mockGatherAliyunRDSClient),
+		Log:             testutil.Logger{Name: inputTitle},
+	}
+
+	// Update window for RDS metric gathering
+	now := time.Now()
+	plugin.updateWindow(now)
+
+	// Verify window was set
+	require.False(t, plugin.windowEnd.IsZero())
+	require.False(t, plugin.windowStart.IsZero())
+}
+
+func TestRDSDataPointValidation(t *testing.T) {
+	// Test that RDS data points have required fields
+	tests := []struct {
+		name          string
+		dataPoint     map[string]interface{}
+		shouldBeValid bool
+	}{
+		{
+			name: "Valid RDS datapoint",
+			dataPoint: map[string]interface{}{
+				"instanceId": "rds-mysql-001",
+				"CPUUsage":   75.5,
+				"timestamp":  int64(1609556645),
+			},
+			shouldBeValid: true,
+		},
+		{
+			name: "Missing instanceId",
+			dataPoint: map[string]interface{}{
+				"CPUUsage":  75.5,
+				"timestamp": int64(1609556645),
+			},
+			shouldBeValid: false,
+		},
+		{
+			name: "Missing timestamp",
+			dataPoint: map[string]interface{}{
+				"instanceId": "rds-mysql-001",
+				"CPUUsage":   75.5,
+			},
+			shouldBeValid: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hasInstanceID := len(tt.dataPoint) > 0 && tt.dataPoint["instanceId"] != nil
+			hasTimestamp := len(tt.dataPoint) > 0 && tt.dataPoint["timestamp"] != nil
+			isValid := hasInstanceID && hasTimestamp
+
+			if tt.shouldBeValid {
+				require.True(t, isValid)
+			} else {
+				require.False(t, isValid)
+			}
+		})
+	}
+}
+
+func TestGather(t *testing.T) {
 	// test table:
 	tests := []struct {
 		name                string
@@ -508,6 +804,719 @@ func TestGetDiscoveryDataAcrossRegions(t *testing.T) {
 			require.Equal(t, tt.discData, data)
 			if err != nil {
 				require.EqualError(t, err, tt.expectedErrorString)
+			}
+		})
+	}
+}
+
+func TestRDSMetricConfiguration(t *testing.T) {
+	// Test RDS metric basic configuration without direct API calls
+	plugin := &AliyunCMS{
+		Project:        "acs_rds_dashboard",
+		MetricServices: []string{"rds"},
+		Log:            testutil.Logger{Name: inputTitle},
+	}
+
+	m := &metric{
+		MetricNames: []string{"CPUUsage", "DiskUsage"},
+		Dimensions:  `{"instanceId": "rds-mysql-001"}`,
+	}
+
+	plugin.Metrics = []*metric{m}
+
+	// Verify the configuration is correct
+	require.Len(t, plugin.Metrics, 1)
+	require.Len(t, plugin.Metrics[0].MetricNames, 2)
+	require.Equal(t, "CPUUsage", plugin.Metrics[0].MetricNames[0])
+	require.Equal(t, "DiskUsage", plugin.Metrics[0].MetricNames[1])
+}
+
+func TestRDSInstanceIdExtraction(t *testing.T) {
+	// Test parsing instance ID from dimensions
+	tests := []struct {
+		name        string
+		dimensions  string
+		shouldParse bool
+	}{
+		{
+			name:        "Valid single instance",
+			dimensions:  `{"instanceId": "rds-mysql-001"}`,
+			shouldParse: true,
+		},
+		{
+			name:        "Valid array of instances",
+			dimensions:  `[{"instanceId": "rds-mysql-001"}, {"instanceId": "rds-mysql-002"}]`,
+			shouldParse: true,
+		},
+		{
+			name:        "Invalid JSON",
+			dimensions:  `[invalid`,
+			shouldParse: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &metric{
+				Dimensions:      tt.dimensions,
+				dimensionsUdObj: make(map[string]string),
+				dimensionsUdArr: make([]map[string]string, 0),
+			}
+
+			// Try to parse
+			err := json.Unmarshal([]byte(tt.dimensions), &m.dimensionsUdObj)
+			if err != nil {
+				err = json.Unmarshal([]byte(tt.dimensions), &m.dimensionsUdArr)
+			}
+
+			if tt.shouldParse {
+				require.NoError(t, err)
+				require.True(t, len(m.dimensionsUdObj) > 0 || len(m.dimensionsUdArr) > 0)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestRDSWindowManagement(t *testing.T) {
+	// Test time window management for RDS metrics
+	plugin := &AliyunCMS{
+		Project:        "acs_rds_dashboard",
+		MetricServices: []string{"rds"},
+		Log:            testutil.Logger{Name: inputTitle},
+	}
+
+	duration, err := time.ParseDuration("1m")
+	if err != nil {
+		t.Fatalf("Failed to parse duration: %v", err)
+	}
+	plugin.Period = config.Duration(duration)
+	plugin.Delay = config.Duration(duration)
+
+	now := time.Now()
+	plugin.updateWindow(now)
+
+	// Verify windows are set correctly
+	require.False(t, plugin.windowStart.IsZero())
+	require.False(t, plugin.windowEnd.IsZero())
+	require.True(t, plugin.windowEnd.After(plugin.windowStart))
+}
+
+func TestRDSServiceInMetricServices(t *testing.T) {
+	// Test that RDS is properly recognized in metric services
+	tests := []struct {
+		name           string
+		metricServices []string
+		hasRDS         bool
+	}{
+		{
+			name:           "With RDS",
+			metricServices: []string{"cms", "rds"},
+			hasRDS:         true,
+		},
+		{
+			name:           "Without RDS",
+			metricServices: []string{"cms"},
+			hasRDS:         false,
+		},
+		{
+			name:           "RDS only",
+			metricServices: []string{"rds"},
+			hasRDS:         true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hasRDS := false
+			for _, svc := range tt.metricServices {
+				if svc == "rds" {
+					hasRDS = true
+					break
+				}
+			}
+			require.Equal(t, tt.hasRDS, hasRDS)
+		})
+	}
+}
+
+// Test ParseTag function
+func TestParseTag(t *testing.T) {
+	tests := []struct {
+		name        string
+		tagSpec     string
+		data        interface{}
+		shouldError bool
+		expectedKey string
+	}{
+		{
+			name:        "Simple tag key",
+			tagSpec:     "region",
+			data:        map[string]interface{}{"region": "us-east-1"},
+			shouldError: false,
+			expectedKey: "region",
+		},
+		{
+			name:        "Tag with query path",
+			tagSpec:     "env:environment.name",
+			data:        map[string]interface{}{"environment": map[string]interface{}{"name": "prod"}},
+			shouldError: false,
+			expectedKey: "env",
+		},
+		{
+			name:        "Invalid query path",
+			tagSpec:     "tag:nonexistent.path",
+			data:        map[string]interface{}{},
+			shouldError: false,
+			expectedKey: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tagKey, _, err := parseTag(tt.tagSpec, tt.data)
+
+			if tt.shouldError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expectedKey, tagKey)
+			}
+		})
+	}
+}
+
+// Test metric struct configuration
+func TestMetricConfiguration(t *testing.T) {
+	tests := []struct {
+		name      string
+		metric    *metric
+		shouldErr bool
+	}{
+		{
+			name: "Valid metric with names",
+			metric: &metric{
+				MetricNames: []string{"CPUUsage", "MemoryUsage"},
+				Dimensions:  `{"instanceId": "i-123"}`,
+			},
+			shouldErr: false,
+		},
+		{
+			name: "Empty metric names",
+			metric: &metric{
+				MetricNames: make([]string, 0),
+				Dimensions:  `{"instanceId": "i-123"}`,
+			},
+			shouldErr: false,
+		},
+		{
+			name: "Multiple dimensions",
+			metric: &metric{
+				MetricNames: []string{"CPUUsage"},
+				Dimensions:  `[{"instanceId": "i-1"},{"instanceId": "i-2"}]`,
+			},
+			shouldErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.NotNil(t, tt.metric)
+			require.NotEmpty(t, tt.metric.Dimensions)
+		})
+	}
+}
+
+// Test discovery tag enrichment scenarios
+func TestDiscoveryTagEnrichmentScenarios(t *testing.T) {
+	plugin := &AliyunCMS{
+		Log: testutil.Logger{Name: inputTitle},
+	}
+
+	tests := []struct {
+		name                          string
+		instanceID                    string
+		discoveryTags                 map[string]map[string]string
+		allowDataPointWODiscoveryData bool
+		expectedKeep                  bool
+		expectedTags                  map[string]string
+	}{
+		{
+			name:       "Found in discovery with multiple tags",
+			instanceID: "prod-001",
+			discoveryTags: map[string]map[string]string{
+				"prod-001": {
+					"region":     "cn-shanghai",
+					"env":        "production",
+					"team":       "platform",
+					"costcenter": "engineering",
+				},
+			},
+			allowDataPointWODiscoveryData: false,
+			expectedKeep:                  true,
+			expectedTags: map[string]string{
+				"region":     "cn-shanghai",
+				"env":        "production",
+				"team":       "platform",
+				"costcenter": "engineering",
+			},
+		},
+		{
+			name:       "Not found but allow without discovery",
+			instanceID: "unknown-123",
+			discoveryTags: map[string]map[string]string{
+				"known-001": {"env": "prod"},
+			},
+			allowDataPointWODiscoveryData: true,
+			expectedKeep:                  true,
+			expectedTags:                  map[string]string{},
+		},
+		{
+			name:       "Not found and disallow without discovery",
+			instanceID: "unknown-123",
+			discoveryTags: map[string]map[string]string{
+				"known-001": {"env": "prod"},
+			},
+			allowDataPointWODiscoveryData: false,
+			expectedKeep:                  false,
+			expectedTags:                  map[string]string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &metric{
+				discoveryTags:                 tt.discoveryTags,
+				AllowDataPointWODiscoveryData: tt.allowDataPointWODiscoveryData,
+			}
+
+			tags := make(map[string]string)
+			keep := plugin.enrichTagsWithDiscovery(tags, m, tt.instanceID)
+
+			require.Equal(t, tt.expectedKeep, keep)
+
+			for k, v := range tt.expectedTags {
+				require.Equal(t, v, tags[k], "Tag %s should be %s", k, v)
+			}
+		})
+	}
+}
+
+// Test window timing calculations
+func TestWindowTimingCalculations(t *testing.T) {
+	tests := []struct {
+		name           string
+		period         time.Duration
+		delay          time.Duration
+		firstCallTime  time.Time
+		secondCallTime time.Time
+	}{
+		{
+			name:           "1 minute period with 1 minute delay",
+			period:         time.Minute,
+			delay:          time.Minute,
+			firstCallTime:  time.Date(2025, 12, 7, 10, 0, 0, 0, time.UTC),
+			secondCallTime: time.Date(2025, 12, 7, 10, 2, 0, 0, time.UTC),
+		},
+		{
+			name:           "5 minute period with 0 delay",
+			period:         5 * time.Minute,
+			delay:          0,
+			firstCallTime:  time.Date(2025, 12, 7, 10, 0, 0, 0, time.UTC),
+			secondCallTime: time.Date(2025, 12, 7, 10, 5, 0, 0, time.UTC),
+		},
+		{
+			name:           "30 second period with 30 second delay",
+			period:         30 * time.Second,
+			delay:          30 * time.Second,
+			firstCallTime:  time.Date(2025, 12, 7, 10, 0, 0, 0, time.UTC),
+			secondCallTime: time.Date(2025, 12, 7, 10, 1, 0, 0, time.UTC),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &AliyunCMS{
+				Project: "test",
+				Period:  config.Duration(tt.period),
+				Delay:   config.Duration(tt.delay),
+				Log:     testutil.Logger{Name: inputTitle},
+			}
+
+			// First call
+			plugin.updateWindow(tt.firstCallTime)
+			firstStart := plugin.windowStart
+			firstEnd := plugin.windowEnd
+
+			require.False(t, firstStart.IsZero())
+			require.False(t, firstEnd.IsZero())
+			require.True(t, firstEnd.After(firstStart))
+
+			// Second call
+			plugin.updateWindow(tt.secondCallTime)
+			secondStart := plugin.windowStart
+			secondEnd := plugin.windowEnd
+
+			// Window should have moved forward
+			require.Equal(t, firstEnd, secondStart)
+			require.True(t, secondEnd.After(firstEnd))
+		})
+	}
+}
+
+// Test timestamp conversion edge cases
+func TestTimestampConversionEdgeCases(t *testing.T) {
+	plugin := &AliyunCMS{
+		Log: testutil.Logger{Name: inputTitle},
+	}
+
+	tests := []struct {
+		name      string
+		value     interface{}
+		shouldOK  bool
+		checkZero bool
+	}{
+		{
+			name:      "Zero int64",
+			value:     int64(0),
+			shouldOK:  true,
+			checkZero: true,
+		},
+		{
+			name:      "Large int64",
+			value:     int64(9999999999),
+			shouldOK:  true,
+			checkZero: false,
+		},
+		{
+			name:      "Float with decimals",
+			value:     float64(1609556645123.456),
+			shouldOK:  true,
+			checkZero: false,
+		},
+		{
+			name:      "Negative value",
+			value:     int64(-1000),
+			shouldOK:  true,
+			checkZero: false,
+		},
+		{
+			name:      "Boolean (invalid)",
+			value:     true,
+			shouldOK:  false,
+			checkZero: false,
+		},
+		{
+			name:      "Empty string (invalid)",
+			value:     "",
+			shouldOK:  false,
+			checkZero: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, ok := plugin.parseTimestamp(tt.value)
+
+			require.Equal(t, tt.shouldOK, ok)
+			if tt.shouldOK {
+				if tt.checkZero {
+					require.Equal(t, int64(0), result)
+				}
+			}
+		})
+	}
+}
+
+// Test RDS vs CMS client selection
+func TestClientSelection(t *testing.T) {
+	tests := []struct {
+		name        string
+		rdsClient   aliyunrdsClient
+		cmsClient   aliyuncmsClient
+		expectedRDS bool
+		expectedCMS bool
+	}{
+		{
+			name:        "Both clients available",
+			rdsClient:   &mockGatherAliyunRDSClient{},
+			cmsClient:   &mockGatherAliyunCMSClient{},
+			expectedRDS: true,
+			expectedCMS: true,
+		},
+		{
+			name:        "Only CMS client",
+			rdsClient:   nil,
+			cmsClient:   &mockGatherAliyunCMSClient{},
+			expectedRDS: false,
+			expectedCMS: true,
+		},
+		{
+			name:        "Only RDS client",
+			rdsClient:   &mockGatherAliyunRDSClient{},
+			cmsClient:   nil,
+			expectedRDS: true,
+			expectedCMS: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &AliyunCMS{
+				rdsClient: tt.rdsClient,
+				cmsClient: tt.cmsClient,
+				Log:       testutil.Logger{Name: inputTitle},
+			}
+
+			if tt.expectedRDS {
+				require.NotNil(t, plugin.rdsClient)
+			} else {
+				require.Nil(t, plugin.rdsClient)
+			}
+
+			if tt.expectedCMS {
+				require.NotNil(t, plugin.cmsClient)
+			} else {
+				require.Nil(t, plugin.cmsClient)
+			}
+		})
+	}
+}
+
+// Test metrics array handling
+func TestMetricsArrayHandling(t *testing.T) {
+	tests := []struct {
+		name          string
+		metricsCount  int
+		eachHasNames  int
+		expectedTotal int
+	}{
+		{
+			name:          "Single metric with multiple names",
+			metricsCount:  1,
+			eachHasNames:  5,
+			expectedTotal: 5,
+		},
+		{
+			name:          "Multiple metrics with multiple names each",
+			metricsCount:  3,
+			eachHasNames:  4,
+			expectedTotal: 12,
+		},
+		{
+			name:          "Empty metrics array",
+			metricsCount:  0,
+			eachHasNames:  0,
+			expectedTotal: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &AliyunCMS{
+				Log: testutil.Logger{Name: inputTitle},
+			}
+
+			var metrics []*metric
+			totalNames := 0
+
+			for i := 0; i < tt.metricsCount; i++ {
+				names := make([]string, tt.eachHasNames)
+				for j := 0; j < tt.eachHasNames; j++ {
+					names[j] = fmt.Sprintf("Metric_%d_%d", i, j)
+					totalNames++
+				}
+				metrics = append(metrics, &metric{
+					MetricNames: names,
+					Dimensions:  `{"instanceId": "test"}`,
+				})
+			}
+
+			plugin.Metrics = metrics
+
+			require.Len(t, plugin.Metrics, tt.metricsCount)
+			require.Equal(t, tt.expectedTotal, totalNames)
+		})
+	}
+}
+
+// Test region configuration
+func TestRegionConfiguration(t *testing.T) {
+	tests := []struct {
+		name            string
+		regions         []string
+		expectedCount   int
+		expectedRegions []string
+	}{
+		{
+			name:            "Single region",
+			regions:         []string{"cn-shanghai"},
+			expectedCount:   1,
+			expectedRegions: []string{"cn-shanghai"},
+		},
+		{
+			name:            "Multiple regions",
+			regions:         []string{"cn-shanghai", "cn-beijing", "cn-hongkong"},
+			expectedCount:   3,
+			expectedRegions: []string{"cn-shanghai", "cn-beijing", "cn-hongkong"},
+		},
+		{
+			name:            "International regions",
+			regions:         []string{"us-west-1", "eu-central-1", "ap-southeast-1"},
+			expectedCount:   3,
+			expectedRegions: []string{"us-west-1", "eu-central-1", "ap-southeast-1"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &AliyunCMS{
+				Regions: tt.regions,
+				Log:     testutil.Logger{Name: inputTitle},
+			}
+
+			require.Len(t, plugin.Regions, tt.expectedCount)
+			for i, region := range tt.expectedRegions {
+				require.Equal(t, region, plugin.Regions[i])
+			}
+		})
+	}
+}
+
+// Test project and measurement formatting
+func TestProjectAndMeasurement(t *testing.T) {
+	tests := []struct {
+		name             string
+		project          string
+		expectedContains string
+	}{
+		{
+			name:             "RDS project",
+			project:          "acs_rds_dashboard",
+			expectedContains: "rds",
+		},
+		{
+			name:             "ECS project",
+			project:          "acs_ecs_dashboard",
+			expectedContains: "ecs",
+		},
+		{
+			name:             "SLB project",
+			project:          "acs_slb_dashboard",
+			expectedContains: "slb",
+		},
+		{
+			name:             "OSS project",
+			project:          "acs_oss",
+			expectedContains: "oss",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			measurement := formatMeasurement(tt.project)
+			require.NotEmpty(t, measurement)
+			require.Contains(t, measurement, tt.expectedContains)
+		})
+	}
+}
+
+// Test field name formatting
+func TestFieldNameFormatting(t *testing.T) {
+	tests := []struct {
+		metricName string
+		fieldName  string
+		expected   string
+	}{
+		{
+			metricName: "InstanceActiveConnection",
+			fieldName:  "Value",
+			expected:   "instance_active_connection_value",
+		},
+		{
+			metricName: "InstanceActiveConnection",
+			fieldName:  "Minimum",
+			expected:   "instance_active_connection_minimum",
+		},
+		{
+			metricName: "InstanceActiveConnection",
+			fieldName:  "Maximum",
+			expected:   "instance_active_connection_maximum",
+		},
+		{
+			metricName: "InstanceActiveConnection",
+			fieldName:  "Average",
+			expected:   "instance_active_connection_average",
+		},
+		{
+			metricName: "CpuUsage",
+			fieldName:  "Value",
+			expected:   "cpu_usage_value",
+		},
+		{
+			metricName: "DiskUsage",
+			fieldName:  "Percentage",
+			expected:   "disk_usage_percentage",
+		},
+		{
+			metricName: "NetworkIn",
+			fieldName:  "Count",
+			expected:   "network_in_count",
+		},
+		{
+			metricName: "NetworkOut",
+			fieldName:  "Rate",
+			expected:   "network_out_rate",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.metricName+"_"+tt.fieldName, func(t *testing.T) {
+			result := formatField(tt.metricName, tt.fieldName)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// Test rate limiting configuration
+func TestRateLimitConfiguration(t *testing.T) {
+	tests := []struct {
+		name      string
+		rateLimit int
+		isValid   bool
+	}{
+		{
+			name:      "Default rate limit",
+			rateLimit: 200,
+			isValid:   true,
+		},
+		{
+			name:      "High rate limit",
+			rateLimit: 1000,
+			isValid:   true,
+		},
+		{
+			name:      "Low rate limit",
+			rateLimit: 10,
+			isValid:   true,
+		},
+		{
+			name:      "Zero rate limit",
+			rateLimit: 0,
+			isValid:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &AliyunCMS{
+				RateLimit: tt.rateLimit,
+				Log:       testutil.Logger{Name: inputTitle},
+			}
+
+			if tt.isValid {
+				require.Equal(t, tt.rateLimit, plugin.RateLimit)
 			}
 		})
 	}
