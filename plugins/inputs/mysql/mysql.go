@@ -20,8 +20,8 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/mysql/v1"
-	"github.com/influxdata/telegraf/plugins/inputs/mysql/v2"
+	v1 "github.com/influxdata/telegraf/plugins/inputs/mysql/v1"
+	v2 "github.com/influxdata/telegraf/plugins/inputs/mysql/v2"
 )
 
 //go:embed sample.conf
@@ -728,6 +728,7 @@ func gatherBinaryLogs(db *sql.DB, servtag string, acc telegraf.Accumulator) erro
 		fileSize  uint64
 		fileName  string
 		encrypted string
+		algorithm string
 	)
 
 	columns, err := rows.Columns()
@@ -738,11 +739,16 @@ func gatherBinaryLogs(db *sql.DB, servtag string, acc telegraf.Accumulator) erro
 
 	// iterate over rows and count the size and count of files
 	for rows.Next() {
-		if numColumns == 3 {
+		switch numColumns {
+		case 3:
 			if err := rows.Scan(&fileName, &fileSize, &encrypted); err != nil {
 				return err
 			}
-		} else {
+		case 4: // Compatible with versions that include encryption algorithms.
+			if err := rows.Scan(&fileName, &fileSize, &encrypted, &algorithm); err != nil {
+				return err
+			}
+		default:
 			if err := rows.Scan(&fileName, &fileSize); err != nil {
 				return err
 			}
