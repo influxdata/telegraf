@@ -151,10 +151,7 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 }
 
 func (m *MQTTConsumer) Gather(_ telegraf.Accumulator) error {
-	if !m.client.IsConnected() {
-		m.Log.Debugf("Connecting %v", m.Servers)
-		return m.connect()
-	}
+	m.Log.Debugf("Gather called %v", m.Servers)
 	return nil
 }
 
@@ -205,6 +202,17 @@ func (m *MQTTConsumer) connect() error {
 		m.Log.Debugf("Session found %v", m.Servers)
 		return nil
 	}
+	return nil
+}
+
+func (m *MQTTConsumer) onConnectionLost(_ mqtt.Client, err error) {
+	// The mqtt library will attempt to reconnect automatically.
+	// Log a message to indicate that we lost our connection.
+	m.Log.Debugf("onConnectionLost %v", m.Servers)
+}
+
+func (m *MQTTConsumer) onConnect(_ mqtt.Client){
+	m.Log.Debugf("onConnect %v", m.Servers)
 	topics := make(map[string]byte)
 	for _, topic := range m.Topics {
 		topics[topic] = byte(m.QoS)
@@ -214,14 +222,6 @@ func (m *MQTTConsumer) connect() error {
 	if subscribeToken.Error() != nil {
 		m.acc.AddError(fmt.Errorf("subscription error: topics %q: %w", strings.Join(m.Topics[:], ","), subscribeToken.Error()))
 	}
-	return nil
-}
-
-func (m *MQTTConsumer) onConnectionLost(_ mqtt.Client, err error) {
-	// Should already be disconnected, but make doubly sure
-	m.client.Disconnect(5)
-	m.acc.AddError(fmt.Errorf("connection lost: %w", err))
-	m.Log.Debugf("Disconnected %v", m.Servers)
 }
 
 func (m *MQTTConsumer) onDelivered(track telegraf.DeliveryInfo) {
@@ -338,12 +338,14 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 		}
 		opts.AddBroker(server)
 	}
-	opts.SetAutoReconnect(false)
+	opts.SetAutoReconnect(true)
 	opts.SetKeepAlive(time.Duration(m.KeepAliveInterval))
 	opts.SetPingTimeout(time.Duration(m.PingTimeout))
 	opts.SetCleanSession(!m.PersistentSession)
 	opts.SetAutoAckDisabled(m.PersistentSession)
 	opts.SetConnectionLostHandler(m.onConnectionLost)
+	opts.SetOnConnectHandler(m.onConnect)
+
 	return opts, nil
 }
 
