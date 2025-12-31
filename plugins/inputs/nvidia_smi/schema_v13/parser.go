@@ -1,4 +1,4 @@
-package schema_v12
+package schema_v13
 
 import (
 	"encoding/xml"
@@ -81,6 +81,7 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		common.SetIfUsed("float", fields, "power_limit", gpu.PowerReadings.PowerLimit)
 		common.SetIfUsed("float", fields, "power_draw", gpu.GpuPowerReadings.PowerDraw)
 		common.SetIfUsed("float", fields, "power_draw", gpu.GpuPowerReadings.InstantPowerDraw)
+		common.SetIfUsed("float", fields, "power_limit", gpu.GpuPowerReadings.CurrentPowerLimit)
 		common.SetIfUsed("float", fields, "power_limit", gpu.GpuPowerReadings.PowerLimit)
 		common.SetIfUsed("float", fields, "module_power_draw", gpu.ModulePowerReadings.PowerDraw)
 		common.SetIfUsed("float", fields, "module_power_draw", gpu.ModulePowerReadings.InstantPowerDraw)
