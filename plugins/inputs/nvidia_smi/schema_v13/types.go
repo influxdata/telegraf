@@ -84,6 +84,7 @@ type smi struct {
 				DramUncorrectable       string `xml:"dram_uncorrectable"`
 				SramCorrectable         string `xml:"sram_correctable"`
 				SramThresholdExceeded   string `xml:"sram_threshold_exceeded"`
+				SramUncorrectable       string `xml:"sram_uncorrectable"`
 				SramUncorrectableParity string `xml:"sram_uncorrectable_parity"`
 				SramUncorrectableSecded string `xml:"sram_uncorrectable_secded"`
 			} `xml:"aggregate"`
@@ -101,6 +102,7 @@ type smi struct {
 				DramCorrectable         string `xml:"dram_correctable"`
 				DramUncorrectable       string `xml:"dram_uncorrectable"`
 				SramCorrectable         string `xml:"sram_correctable"`
+				SramUncorrectable       string `xml:"sram_uncorrectable"`
 				SramUncorrectableParity string `xml:"sram_uncorrectable_parity"`
 				SramUncorrectableSecded string `xml:"sram_uncorrectable_secded"`
 			} `xml:"volatile"`
