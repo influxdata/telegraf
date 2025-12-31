@@ -21,16 +21,16 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		tags := map[string]string{
 			"index": strconv.Itoa(i),
 		}
-		fields := make(map[string]interface{}, 39)
+		fields := make(map[string]any, 39)
 
-		common.SetTagIfUsed(tags, "pstate", gpu.PState)
 		common.SetTagIfUsed(tags, "name", gpu.ProdName)
 		common.SetTagIfUsed(tags, "uuid", gpu.UUID)
-		common.SetTagIfUsed(tags, "compute_mode", gpu.ComputeMode)
+		common.SetTagIfUsed(tags, "serial", gpu.Serial)
 
+		common.SetIfUsed("str", fields, "pstate", gpu.PState)
+		common.SetIfUsed("str", fields, "compute_mode", gpu.ComputeMode)
 		common.SetIfUsed("str", fields, "driver_version", s.DriverVersion)
 		common.SetIfUsed("str", fields, "cuda_version", s.CUDAVersion)
-		common.SetIfUsed("str", fields, "serial", gpu.Serial)
 		common.SetIfUsed("str", fields, "vbios_version", gpu.VbiosVersion)
 		common.SetIfUsed("str", fields, "display_active", gpu.DisplayActive)
 		common.SetIfUsed("str", fields, "display_mode", gpu.DisplayMode)
@@ -65,7 +65,6 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		common.SetIfUsed("int", fields, "clocks_current_sm", gpu.Clocks.SM)
 		common.SetIfUsed("int", fields, "clocks_current_memory", gpu.Clocks.Memory)
 		common.SetIfUsed("int", fields, "clocks_current_video", gpu.Clocks.Video)
-
 		common.SetIfUsed("float", fields, "power_draw", gpu.Power.PowerDraw)
 		common.SetIfUsed("float", fields, "power_limit", gpu.Power.PowerLimit)
 		acc.AddFields("nvidia_smi", fields, tags)

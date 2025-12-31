@@ -14,7 +14,7 @@ func SetTagIfUsed(m map[string]string, k, v string) {
 }
 
 // SetIfUsed sets those fields whose value is different from empty string.
-func SetIfUsed(t string, m map[string]interface{}, k, v string) {
+func SetIfUsed(t string, m map[string]any, k, v string) {
 	if v == "N/A" || v == "" || v == "Requested functionality has been deprecated" {
 		return
 	}

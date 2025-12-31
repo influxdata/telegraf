@@ -29,17 +29,17 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		tags := map[string]string{
 			"index": strconv.Itoa(i),
 		}
-		fields := make(map[string]interface{}, 44)
+		fields := make(map[string]any, 48)
 
-		common.SetTagIfUsed(tags, "pstate", gpu.PerformanceState)
 		common.SetTagIfUsed(tags, "name", gpu.ProductName)
 		common.SetTagIfUsed(tags, "arch", gpu.ProductArchitecture)
 		common.SetTagIfUsed(tags, "uuid", gpu.UUID)
-		common.SetTagIfUsed(tags, "compute_mode", gpu.ComputeMode)
+		common.SetTagIfUsed(tags, "serial", gpu.Serial)
 
+		common.SetIfUsed("str", fields, "pstate", gpu.PerformanceState)
+		common.SetIfUsed("str", fields, "compute_mode", gpu.ComputeMode)
 		common.SetIfUsed("str", fields, "driver_version", s.DriverVersion)
 		common.SetIfUsed("str", fields, "cuda_version", s.CudaVersion)
-		common.SetIfUsed("str", fields, "serial", gpu.Serial)
 		common.SetIfUsed("str", fields, "vbios_version", gpu.VbiosVersion)
 		common.SetIfUsed("str", fields, "display_active", gpu.DisplayActive)
 		common.SetIfUsed("str", fields, "display_mode", gpu.DisplayMode)
@@ -87,17 +87,17 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		acc.AddFields("nvidia_smi", fields, tags, timestamp)
 
 		for _, device := range gpu.MigDevices.MigDevice {
-			tags := make(map[string]string, 8)
+			tags := make(map[string]string, 6)
 			common.SetTagIfUsed(tags, "index", device.Index)
 			common.SetTagIfUsed(tags, "gpu_index", device.GpuInstanceID)
 			common.SetTagIfUsed(tags, "compute_index", device.ComputeInstanceID)
-			common.SetTagIfUsed(tags, "pstate", gpu.PerformanceState)
 			common.SetTagIfUsed(tags, "name", gpu.ProductName)
 			common.SetTagIfUsed(tags, "arch", gpu.ProductArchitecture)
 			common.SetTagIfUsed(tags, "uuid", gpu.UUID)
-			common.SetTagIfUsed(tags, "compute_mode", gpu.ComputeMode)
 
-			fields := make(map[string]interface{}, 8)
+			fields := make(map[string]any, 10)
+			common.SetIfUsed("str", fields, "pstate", gpu.PerformanceState)
+			common.SetIfUsed("str", fields, "compute_mode", gpu.ComputeMode)
 			common.SetIfUsed("int", fields, "sram_uncorrectable", device.EccErrorCount.VolatileCount.SramUncorrectable)
 			common.SetIfUsed("int", fields, "memory_fb_total", device.FbMemoryUsage.Total)
 			common.SetIfUsed("int", fields, "memory_fb_reserved", device.FbMemoryUsage.Reserved)
@@ -115,7 +115,7 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 			common.SetTagIfUsed(tags, "name", process.ProcessName)
 			common.SetTagIfUsed(tags, "type", process.Type)
 
-			fields := make(map[string]interface{}, 2)
+			fields := make(map[string]any, 2)
 			common.SetIfUsed("int", fields, "pid", process.Pid)
 			common.SetIfUsed("int", fields, "used_memory", process.UsedMemory)
 
