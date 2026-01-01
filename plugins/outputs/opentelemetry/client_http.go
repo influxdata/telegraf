@@ -91,13 +91,13 @@ func (h *httpClient) Export(ctx context.Context, request pmetricotlp.ExportReque
 	}
 	defer func() {
 		//nolint:errcheck // cannot fail with io.Discard
-		// 64KB is a not specific limit. But, opentelemetry-collector also uses 64KB for safety.
-		io.CopyN(io.Discard, httpResponse.Body, 64*1024)
+		io.Copy(io.Discard, httpResponse.Body)
 		_ = httpResponse.Body.Close()
 	}()
 
 	if httpResponse.StatusCode < 200 || httpResponse.StatusCode >= 300 {
-		return pmetricotlp.ExportResponse{}, fmt.Errorf("received unexpected status: %s (%d)", http.StatusText(httpResponse.StatusCode), httpResponse.StatusCode)
+		return pmetricotlp.ExportResponse{}, fmt.Errorf("received unexpected status: %s (%d)",
+			http.StatusText(httpResponse.StatusCode), httpResponse.StatusCode)
 	}
 
 	responseBytes, err := readResponseBody(httpResponse)
