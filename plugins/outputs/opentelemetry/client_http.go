@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -100,7 +99,8 @@ func (h *httpClient) Export(ctx context.Context, request pmetricotlp.ExportReque
 			http.StatusText(httpResponse.StatusCode), httpResponse.StatusCode)
 	}
 
-	responseBytes, err := readResponseBody(httpResponse)
+	r := io.LimitReader(httpResponse.Body, 64*1024)
+	responseBytes, err := io.ReadAll(r)
 	if err != nil {
 		return pmetricotlp.ExportResponse{}, err
 	}
@@ -125,39 +125,4 @@ func (h *httpClient) Export(ctx context.Context, request pmetricotlp.ExportReque
 func (h *httpClient) Close() error {
 	h.httpClient.CloseIdleConnections()
 	return nil
-}
-
-// ref. https://github.com/open-telemetry/opentelemetry-collector/blob/7258150320ae4c3b489aa58bd2939ba358b23ae1/exporter/otlphttpexporter/otlp.go#L271
-func readResponseBody(resp *http.Response) ([]byte, error) {
-	if resp.ContentLength == 0 {
-		return nil, nil
-	}
-
-	maxRead := resp.ContentLength
-
-	// if maxRead == -1, the ContentLength header has not been sent, so read up to
-	// the maximum permitted body size. If it is larger than the permitted body
-	// size, still try to read from the body in case the value is an error. If the
-	// body is larger than the maximum size, proto unmarshaling will likely fail.
-	// 64KB is a not specific limit. But, opentelemetry-collector also uses 64KB for safety.
-	if maxRead == -1 || maxRead > 64*1024 {
-		maxRead = 64 * 1024
-	}
-	protoBytes := make([]byte, maxRead)
-	n, err := io.ReadFull(resp.Body, protoBytes)
-
-	// No bytes read and an EOF error indicates there is no body to read.
-	if n == 0 && (err == nil || errors.Is(err, io.EOF)) {
-		return nil, nil
-	}
-
-	// io.ReadFull will return io.ErrorUnexpectedEOF if the Content-Length header
-	// wasn't set, since we will try to read past the length of the body. If this
-	// is the case, the body will still have the full message in it, so we want to
-	// ignore the error and parse the message.
-	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) {
-		return nil, err
-	}
-
-	return protoBytes[:n], nil
 }
