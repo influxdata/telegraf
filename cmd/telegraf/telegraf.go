@@ -9,6 +9,7 @@ import (
 	"net/http"
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
 	"os"
+	"runtime"
 	"os/signal"
 	"sort"
 	"strings"
@@ -120,7 +121,7 @@ func reloadLoop(
 
 		signals := make(chan os.Signal, 1)
 		signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
-			syscall.SIGTERM, syscall.SIGINT)
+			syscall.SIGTERM, syscall.SIGINT,syscall.SIGUSR1)
 		if *fWatchConfig != "" {
 			for _, fConfig := range fConfigs {
 				if _, err := os.Stat(fConfig); err == nil {
@@ -137,6 +138,13 @@ func reloadLoop(
 					log.Printf("I! Reloading Telegraf config")
 					<-reload
 					reload <- true
+				} else if sig == syscall.SIGUSR1 {
+
+					log.Printf("I! Recieved SIGUSR1")
+					crash_file := fmt.Sprintf("/tmp/telegraf_stack.txt")
+					buf := make([]byte, 1<<16)
+					length := runtime.Stack(buf, true)
+					os.WriteFile(crash_file, buf[:length], 0644)
 				}
 				cancel()
 			case <-stop:
