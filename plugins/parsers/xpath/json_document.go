@@ -1,23 +1,38 @@
 package xpath
 
 import (
-	"reflect"
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"strconv"
-	"strings"
 
-	"github.com/antchfx/jsonquery"
 	path "github.com/antchfx/xpath"
+	"github.com/fxamacker/cbor/v2"
+	"github.com/srebhan/cborquery"
 )
 
 type jsonDocument struct{}
 
 func (*jsonDocument) Parse(buf []byte) (dataNode, error) {
-	return jsonquery.Parse(strings.NewReader(string(buf)))
+	// First parse JSON to an interface{}
+	var data interface{}
+	if err := json.Unmarshal(buf, &data); err != nil {
+		return nil, fmt.Errorf("failed to parse JSON: %w", err)
+	}
+
+	// Convert to CBOR to leverage cborquery's correct array handling
+	cborData, err := cbor.Marshal(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert JSON to CBOR: %w", err)
+	}
+
+	// Parse with cborquery which handles arrays correctly
+	return cborquery.Parse(bytes.NewReader(cborData))
 }
 
 func (*jsonDocument) QueryAll(node dataNode, expr string) ([]dataNode, error) {
 	// If this panics it's a programming error as we changed the document type while processing
-	native, err := jsonquery.QueryAll(node.(*jsonquery.Node), expr)
+	native, err := cborquery.QueryAll(node.(*cborquery.Node), expr)
 	if err != nil {
 		return nil, err
 	}
@@ -31,15 +46,15 @@ func (*jsonDocument) QueryAll(node dataNode, expr string) ([]dataNode, error) {
 
 func (*jsonDocument) CreateXPathNavigator(node dataNode) path.NodeNavigator {
 	// If this panics it's a programming error as we changed the document type while processing
-	return jsonquery.CreateXPathNavigator(node.(*jsonquery.Node))
+	return cborquery.CreateXPathNavigator(node.(*cborquery.Node))
 }
 
 func (d *jsonDocument) GetNodePath(node, relativeTo dataNode, sep string) string {
 	names := make([]string, 0)
 
 	// If these panic it's a programming error as we changed the document type while processing
-	nativeNode := node.(*jsonquery.Node)
-	nativeRelativeTo := relativeTo.(*jsonquery.Node)
+	nativeNode := node.(*cborquery.Node)
+	nativeRelativeTo := relativeTo.(*cborquery.Node)
 
 	// Climb up the tree and collect the node names
 	n := nativeNode.Parent
@@ -64,40 +79,41 @@ func (d *jsonDocument) GetNodePath(node, relativeTo dataNode, sep string) string
 
 func (d *jsonDocument) GetNodeName(node dataNode, sep string, withParent bool) string {
 	// If this panics it's a programming error as we changed the document type while processing
-	nativeNode := node.(*jsonquery.Node)
+	nativeNode := node.(*cborquery.Node)
 
-	name := nativeNode.Data
+	name := nativeNode.Name
 
-	// Check if the node is part of an array. If so, determine the index and
-	// concatenate the parent name and the index.
-	kind := reflect.Invalid
-	if nativeNode.Parent != nil && nativeNode.Parent.Value() != nil {
-		kind = reflect.TypeOf(nativeNode.Parent.Value()).Kind()
-	}
-
-	switch kind {
-	case reflect.Slice, reflect.Array:
-		// Determine the index for array elements
-		if name == "" && nativeNode.Parent != nil && withParent {
-			name = nativeNode.Parent.Data + sep
+	// In cborquery, array elements appear as siblings with the same name.
+	// Check if this node is part of an array by looking for siblings with the same name.
+	if nativeNode.Parent != nil && name != "" {
+		idx, count := d.siblingIndex(nativeNode)
+		if count > 1 {
+			// This is an array element, append the index
+			return name + sep + strconv.Itoa(idx)
 		}
-		return name + d.index(nativeNode)
 	}
 
 	return name
 }
 
 func (*jsonDocument) OutputXML(node dataNode) string {
-	native := node.(*jsonquery.Node)
+	native := node.(*cborquery.Node)
 	return native.OutputXML()
 }
 
-func (*jsonDocument) index(node *jsonquery.Node) string {
-	idx := 0
-
-	for n := node; n.PrevSibling != nil; n = n.PrevSibling {
-		idx++
+func (*jsonDocument) siblingIndex(node *cborquery.Node) (idx, count int) {
+	if node.Parent == nil {
+		return 0, 1
 	}
 
-	return strconv.Itoa(idx)
+	// Count siblings with the same name and find our index among them
+	for sibling := node.Parent.FirstChild; sibling != nil; sibling = sibling.NextSibling {
+		if sibling.Name == node.Name {
+			if sibling == node {
+				idx = count
+			}
+			count++
+		}
+	}
+	return idx, count
 }
