@@ -77,6 +77,66 @@ func parseWsrepLatency(value sql.RawBytes) (interface{}, error) {
 	return result, nil
 }
 
+// ParseWsrepProviderOptions parses the given sql.RawBytes value into a map
+// containing all wsrep Provider options settings.
+func parseWsrepProviderOptions(value sql.RawBytes) (interface{}, error) {
+	parts := strings.Split(strings.TrimSpace(string(value)), ";")
+	result := make(map[string]interface{})
+	for _, setting := range parts {
+		key, data, found := strings.Cut(setting, "=")
+
+		// empty string at the end of the field, skip
+		if len(setting) != 0 && !found {
+			return nil, fmt.Errorf("invalid key-value pair for %q", setting)
+		}
+
+		key = strings.TrimSpace(key)
+		data = strings.TrimSpace(data)
+		if len(data) == 0 {
+			continue // empty value, no point in continuing
+		}
+
+		// Only process gcache.size for now
+		if key != "gcache.size" {
+			continue
+		}
+		key = strings.Replace(key, ".", "_", -1)
+
+		// Extract the size suffix for values like 128M
+		suffix := data[len(data)-1:]
+		value := data[:len(data)-1]
+
+		// Determine the scaling factor from the suffix
+		var factor uint64
+		switch strings.ToUpper(suffix) {
+		case "K":
+			factor = 1024
+		case "M":
+			factor = 1024 * 1024
+		case "G":
+			factor = 1024 * 1024 * 1024
+		case "T":
+			factor = 1024 * 1024 * 1024 * 1024
+		case "P":
+			factor = 1024 * 1024 * 1024 * 1024 * 1024
+		case "E":
+			factor = 1024 * 1024 * 1024 * 1024 * 1024 * 1024
+		default:
+			// We got no known unit so parse the whole data as value
+			value = data
+			factor = 1
+		}
+
+		// Compute the actual value
+		v, err := strconv.ParseUint(value, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse value %q: %w", data, err)
+		}
+		result[key] = v * factor
+	}
+	return result, nil
+}
+
 // ParseGTIDMode parses the given sql.RawBytes value into an int64
 // representing the GTID mode. It returns an error if the value is unrecognized.
 func ParseGTIDMode(value sql.RawBytes) (interface{}, error) {
@@ -172,6 +232,9 @@ var globalVariableConversions = map[string]conversionFunc{
 	// https://dev.mysql.com/doc/refman/5.7/en/replication-options-gtids.html
 	// https://dev.mysql.com/doc/refman/8.0/en/replication-options-gtids.html
 	"gtid_mode": ParseGTIDMode,
+
+	// https://galeracluster.com/documentation/html_docs_proto-12/documentation/mysql-wsrep-options.html#wsrep-provider-options
+	"wsrep_provider_options": parseWsrepProviderOptions,
 }
 
 // ConvertGlobalStatus converts the given key and sql.RawBytes value into an appropriate type based on globalStatusConversions.

@@ -597,7 +597,8 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, servtag string, acc telegraf.A
 				acc.AddError(errString)
 			}
 		} else {
-			fields[key] = value
+			// v2.ConvertGlobalVariables can parse "complex" multi-value fields, e.g. wsrep_provider_options
+			parseKeyValues(fields, key, value)
 		}
 
 		// Send 20 fields at a time
