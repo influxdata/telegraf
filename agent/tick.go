@@ -78,6 +78,15 @@ func (t *AlignedTicker) next(now time.Time) time.Duration {
 		d = t.interval
 	}
 	d += t.offset
+
+	// Ensure the duration is positive before adding jitter. This can happen
+	// when using a negative offset that is larger than the time remaining
+	// until the next aligned interval. In this case, we add one full interval
+	// to schedule for the next valid tick time.
+	if d <= 0 {
+		d += t.interval
+	}
+
 	d += internal.RandomDuration(t.jitter)
 	return d
 }
@@ -157,7 +166,7 @@ func (t *UnalignedTicker) start(clk clock.Clock) {
 }
 
 func sleep(ctx context.Context, duration time.Duration, clk clock.Clock) error {
-	if duration == 0 {
+	if duration <= 0 {
 		return nil
 	}
 
