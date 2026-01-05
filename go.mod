@@ -115,7 +115,7 @@ require (
 	github.com/gorcon/rcon v1.4.0
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
-	github.com/gosnmp/gosnmp v1.42.1
+	github.com/gosnmp/gosnmp v1.43.0
 	github.com/grid-x/modbus v0.0.0-20240503115206-582f2ab60a18
 	github.com/gwos/tcg/sdk v0.0.0-20240830123415-f8a34bba6358
 	github.com/hashicorp/consul/api v1.33.0
@@ -390,6 +390,7 @@ require (
 	github.com/golang-sql/civil v0.0.0-20220223132316-b832511892a9 // indirect
 	github.com/golang-sql/sqlexp v0.1.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
+	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/flatbuffers v25.9.23+incompatible // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
