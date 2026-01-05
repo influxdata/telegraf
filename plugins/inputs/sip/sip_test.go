@@ -27,7 +27,7 @@ func TestInit_Defaults(t *testing.T) {
 	require.Equal(t, "OPTIONS", plugin.Method)
 	require.Equal(t, "telegraf", plugin.FromUser)
 	require.Equal(t, "Telegraf SIP Monitor", plugin.UserAgent)
-	require.Equal(t, 200, plugin.ExpectCode)
+	require.Equal(t, 0, plugin.ExpectCode)
 	require.Equal(t, config.Duration(defaultTimeout), plugin.Timeout)
 }
 
@@ -453,7 +453,7 @@ func TestTLSServerName(t *testing.T) {
 		Timeout:    config.Duration(5 * time.Second),
 		FromUser:   "telegraf",
 		UserAgent:  "Test Agent",
-		ExpectCode: 200,
+		ExpectCode: 0,
 		Log:        testutil.Logger{},
 	}
 
@@ -477,7 +477,7 @@ func TestSIPDefaults(t *testing.T) {
 	require.Equal(t, defaultTimeout, time.Duration(plugin.Timeout))
 	require.Equal(t, defaultFromUser, plugin.FromUser)
 	require.Equal(t, defaultUserAgent, plugin.UserAgent)
-	require.Equal(t, defaultExpectCode, plugin.ExpectCode)
+	require.Equal(t, 0, plugin.ExpectCode)
 }
 
 func TestSIPInvalidMethod(t *testing.T) {

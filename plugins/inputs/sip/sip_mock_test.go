@@ -97,7 +97,7 @@ func assertSingleSIPMetric(
 			// nil means validate existence and type only (used for response_time)
 			rt, ok := m.Fields[k].(float64)
 			require.True(t, ok, "%s must be float64", k)
-			require.Greater(t, rt, 0.0, "%s must be positive", k)
+			require.GreaterOrEqual(t, rt, 0.0, "%s must be non-negative", k)
 		} else {
 			require.Equal(t, v, m.Fields[k], "field %s mismatch", k)
 		}

@@ -26,14 +26,13 @@ import (
 var sampleConfig string
 
 const (
-	defaultTimeout    = 5 * time.Second
-	defaultMethod     = "OPTIONS"
-	defaultTransport  = "udp"
-	defaultPort       = 5060
-	defaultTLSPort    = 5061
-	defaultFromUser   = "telegraf"
-	defaultUserAgent  = "Telegraf SIP Monitor"
-	defaultExpectCode = 200
+	defaultTimeout   = 5 * time.Second
+	defaultMethod    = "OPTIONS"
+	defaultTransport = "udp"
+	defaultPort      = 5060
+	defaultTLSPort   = 5061
+	defaultFromUser  = "telegraf"
+	defaultUserAgent = "Telegraf SIP Monitor"
 )
 
 var resultCodes = map[string]int{
@@ -100,9 +99,6 @@ func (s *SIP) Init() error {
 	}
 	if s.UserAgent == "" {
 		s.UserAgent = defaultUserAgent
-	}
-	if s.ExpectCode == 0 {
-		s.ExpectCode = defaultExpectCode
 	}
 
 	// Validate method
@@ -199,7 +195,7 @@ func getScheme(secure bool) string {
 	return "sip"
 }
 
-func (*SIP) addResponseMetadata(res *sip.Response, tags map[string]string) {
+func addResponseMetadata(res *sip.Response, tags map[string]string) {
 	if res == nil {
 		return
 	}
@@ -238,7 +234,7 @@ func setResult(resultString string, fields map[string]any, tags map[string]strin
 	}
 }
 
-func (*SIP) recordMetric(result string, fields map[string]any, tags map[string]string, acc telegraf.Accumulator) {
+func recordMetric(result string, fields map[string]any, tags map[string]string, acc telegraf.Accumulator) {
 	setResult(result, fields, tags)
 	acc.AddFields("sip", fields, tags)
 }
@@ -337,7 +333,7 @@ func (s *SIP) gatherServer(server string, client *sipgo.Client, acc telegraf.Acc
 		if err != nil {
 			s.Log.Errorf("Failed to get credentials for %q: %s", server, err)
 			fields["response_time"] = time.Since(start).Seconds()
-			s.recordMetric("auth_error", fields, tags, acc)
+			recordMetric("auth_error", fields, tags, acc)
 			return
 		}
 
@@ -345,8 +341,8 @@ func (s *SIP) gatherServer(server string, client *sipgo.Client, acc telegraf.Acc
 			// No credentials configured but authentication is required
 			s.Log.Debugf("SIP server %q requires authentication but no credentials provided", server)
 			fields["response_time"] = time.Since(start).Seconds()
-			s.addResponseMetadata(res, tags)
-			s.recordMetric("auth_required", fields, tags, acc)
+			addResponseMetadata(res, tags)
+			recordMetric("auth_required", fields, tags, acc)
 			return
 		}
 
@@ -363,7 +359,7 @@ func (s *SIP) gatherServer(server string, client *sipgo.Client, acc telegraf.Acc
 		if err != nil {
 			s.Log.Debugf("Digest authentication failed for %q: %s", server, err)
 			fields["response_time"] = time.Since(start).Seconds()
-			s.recordMetric("auth_failed", fields, tags, acc)
+			recordMetric("auth_failed", fields, tags, acc)
 			return
 		}
 		// Use the authenticated response
@@ -375,27 +371,27 @@ func (s *SIP) gatherServer(server string, client *sipgo.Client, acc telegraf.Acc
 
 	if res != nil {
 		statusCode := res.StatusCode
-		s.addResponseMetadata(res, tags)
+		addResponseMetadata(res, tags)
 
 		// Check if response matches expected code
 		if s.ExpectCode > 0 {
 			if statusCode == s.ExpectCode {
 				fields["response_code_match"] = 1
-				s.recordMetric("success", fields, tags, acc)
+				recordMetric("success", fields, tags, acc)
 			} else {
 				fields["response_code_match"] = 0
-				s.recordMetric("response_code_mismatch", fields, tags, acc)
+				recordMetric("response_code_mismatch", fields, tags, acc)
 			}
 		} else {
 			// If no expected code, any 2xx response is success
 			if statusCode >= 200 && statusCode < 300 {
-				s.recordMetric("success", fields, tags, acc)
+				recordMetric("success", fields, tags, acc)
 			} else {
-				s.recordMetric("error_response", fields, tags, acc)
+				recordMetric("error_response", fields, tags, acc)
 			}
 		}
 	} else {
-		s.recordMetric("no_response", fields, tags, acc)
+		recordMetric("no_response", fields, tags, acc)
 	}
 }
 
