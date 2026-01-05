@@ -5,12 +5,35 @@ availability of SIP servers such as PBX systems, SIP proxies, registrars, and
 VoIP service providers. It sends SIP requests (typically OPTIONS) and measures
 response times and status codes.
 
+⭐ Telegraf v1.38.0
+🏷️ network, voip
+💻 all
+
 This plugin is particularly useful for:
 
 - Monitoring VoIP infrastructure availability
 - Measuring SIP service response times
 - Verifying SIP server connectivity
 - Alerting on SIP service degradation
+
+## Service Input <!-- @/docs/includes/service_input.md -->
+
+This plugin is a service input. Normal plugins gather metrics determined by the
+interval setting. Service plugins start a service to listen and wait for
+metrics or events to occur. Service plugins have two key differences from
+normal plugins:
+
+1. The global or plugin specific `interval` setting may not apply
+2. The CLI options of `--test`, `--test-wait`, and `--once` may not produce
+   output for this plugin
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+Plugins support additional global and plugin configuration settings for tasks
+such as modifying metrics, tags, and fields, creating aliases, and configuring
+plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Configuration
 
