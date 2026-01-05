@@ -6,7 +6,7 @@ VoIP service providers. It sends SIP requests (typically OPTIONS) and measures
 response times and status codes.
 
 ⭐ Telegraf v1.38.0
-🏷️ network, voip
+🏷️ network
 💻 all
 
 This plugin is particularly useful for:
