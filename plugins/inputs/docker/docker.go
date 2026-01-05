@@ -143,6 +143,18 @@ func (d *Docker) Init() error {
 }
 
 func (d *Docker) Start(telegraf.Accumulator) error {
+	// Attempt initial connection but don't fail if Docker is unavailable.
+	// This preserves backwards compatibility where Telegraf starts even when
+	// Docker daemon is not running.
+	if err := d.initClient(); err != nil {
+		d.Log.Warnf("Failed to connect to Docker daemon during startup: %v. Will retry on first gather.", err)
+	}
+	return nil
+}
+
+// initClient initializes the Docker client and performs Podman detection.
+// Returns an error if the connection fails, but does not prevent Telegraf from starting.
+func (d *Docker) initClient() error {
 	// Get client
 	c, err := d.getNewClient()
 	if err != nil {
@@ -153,6 +165,8 @@ func (d *Docker) Start(telegraf.Accumulator) error {
 	// Check API version compatibility
 	version, err := semver.NewVersion(d.client.ClientVersion())
 	if err != nil {
+		d.client.Close()
+		d.client = nil
 		return fmt.Errorf("failed to parse client version: %w", err)
 	}
 
@@ -170,6 +184,8 @@ func (d *Docker) Start(telegraf.Accumulator) error {
 
 	info, err := d.client.Info(ctx)
 	if err != nil {
+		d.client.Close()
+		d.client = nil
 		return fmt.Errorf("failed to get Docker info: %w", err)
 	}
 
@@ -197,6 +213,13 @@ func (d *Docker) Stop() {
 }
 
 func (d *Docker) Gather(acc telegraf.Accumulator) error {
+	// If client is not initialized, try to connect now
+	if d.client == nil {
+		if err := d.initClient(); err != nil {
+			return fmt.Errorf("failed to connect to Docker daemon: %w", err)
+		}
+	}
+
 	// Create label filters if not already created
 	if !d.filtersCreated {
 		err := d.createLabelFilters()
