@@ -245,7 +245,7 @@ require (
 	golang.org/x/text v0.32.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	gonum.org/v1/gonum v0.16.0
-	google.golang.org/api v0.257.0
+	google.golang.org/api v0.258.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20251111163417-95abcf5c77ba
 	google.golang.org/grpc v1.78.0
 	google.golang.org/protobuf v1.36.11
