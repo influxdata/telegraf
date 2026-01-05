@@ -432,7 +432,6 @@ following works:
 - github.com/wavefronthq/wavefront-sdk-go [Apache License 2.0](https://github.com/wavefrontHQ/wavefront-sdk-go/blob/master/LICENSE)
 - github.com/x448/float16 [MIT License](https://github.com/x448/float16/blob/master/LICENSE)
 - github.com/xanzy/ssh-agent [Apache License 2.0](https://github.com/xanzy/ssh-agent/blob/main/LICENSE)
-- github.com/xdg-go/pbkdf2 [Apache License 2.0](https://github.com/xdg-go/pbkdf2/blob/main/LICENSE)
 - github.com/xdg-go/scram [Apache License 2.0](https://github.com/xdg-go/scram/blob/master/LICENSE)
 - github.com/xdg-go/stringprep [Apache License 2.0](https://github.com/xdg-go/stringprep/blob/master/LICENSE)
 - github.com/xdg/scram [Apache License 2.0](https://github.com/xdg-go/scram/blob/master/LICENSE)
