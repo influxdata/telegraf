@@ -145,7 +145,7 @@ require (
 	github.com/kolo/xmlrpc v0.0.0-20220921171641-a4b6fa1dd06b
 	github.com/leodido/go-syslog/v4 v4.3.0
 	github.com/likexian/whois v1.15.6
-	github.com/likexian/whois-parser v1.24.20
+	github.com/likexian/whois-parser v1.24.21
 	github.com/linkedin/goavro/v2 v2.14.1
 	github.com/logzio/azure-monitor-metrics-receiver v1.1.0
 	github.com/lxc/incus/v6 v6.20.0
@@ -445,7 +445,7 @@ require (
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leodido/ragel-machinery v0.0.0-20190525184631-5f46317e436b // indirect
-	github.com/likexian/gokit v0.25.15 // indirect
+	github.com/likexian/gokit v0.25.16 // indirect
 	github.com/lufia/plan9stats v0.0.0-20251013123823-9fd1530e3ec3 // indirect
 	github.com/magiconair/properties v1.8.10 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
