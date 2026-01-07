@@ -58,7 +58,7 @@ func (t *AlignedTicker) start(now time.Time, clk clock.Clock) {
 
 	// Implement jitter as a random offset. This spreads plugins
 	// over jitter interval range keeping collection interval fixed to
-	// a user-confgured value.
+	// a user-configured value.
 	t.offset += internal.RandomDuration(t.jitter)
 
 	d := t.next(now)
@@ -149,7 +149,7 @@ func (t *UnalignedTicker) start(clk clock.Clock) {
 
 	// Implement jitter as a random offset. This spreads plugins
 	// over jitter interval range keeping collection interval fixed to
-	// a user-confgured value.
+	// a user-configured value.
 	t.offset += internal.RandomDuration(t.jitter)
 
 	ticker := clk.Ticker(t.interval)
