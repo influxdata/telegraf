@@ -1113,24 +1113,36 @@ func TestClickHousePreExistingTableIntegration(t *testing.T) {
 		"`int64_one` Int64",     // created by Telegraf
 		"`bool_one` UInt8",      // created by Telegraf
 	}
-	for _, column := range expectedColumns {
-		require.Eventually(t, func() bool {
-			var out io.Reader
-			_, out, err = container.Exec([]string{
-				"bash",
-				"-c",
-				"clickhouse-client" +
-					" --user=" + username +
-					" --database=" + dbname +
-					" --format=TabSeparatedRaw" +
-					" --query=\"SHOW CREATE TABLE metric_one\"",
-			})
-			require.NoError(t, err)
-			b, err := io.ReadAll(out)
-			require.NoError(t, err)
-			return bytes.Contains(b, []byte(column))
-		}, 5*time.Second, 500*time.Millisecond, "column not found: "+column)
-	}
+
+	// Run the query once and check all columns
+	var tableSchema []byte
+	require.Eventually(t, func() bool {
+		var out io.Reader
+		_, out, err = container.Exec([]string{
+			"bash",
+			"-c",
+			"clickhouse-client" +
+				" --user=" + username +
+				" --database=" + dbname +
+				" --format=TabSeparatedRaw" +
+				" --query=\"SHOW CREATE TABLE metric_one\"",
+		})
+		if err != nil {
+			return false
+		}
+		tableSchema, err = io.ReadAll(out)
+		if err != nil {
+			return false
+		}
+
+		// Check that all expected columns exist in the schema
+		for _, column := range expectedColumns {
+			if !bytes.Contains(tableSchema, []byte(column)) {
+				return false
+			}
+		}
+		return true
+	}, 5*time.Second, 500*time.Millisecond, "not all columns found in table schema")
 }
 
 func TestMysqlEmptyTimestampColumnIntegration(t *testing.T) {
