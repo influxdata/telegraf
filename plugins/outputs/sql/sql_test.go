@@ -1107,11 +1107,11 @@ func TestClickHousePreExistingTableIntegration(t *testing.T) {
 
 	// Verify all columns exist (both pre-existing and newly created)
 	expectedColumns := []string{
-		"timestamp\tDateTime",  // pre-existing
-		"tag_one\tString",      // pre-existing
-		"tag_two\tString",      // created by Telegraf
-		"int64_one\tInt64",     // created by Telegraf
-		"bool_one\tUInt8",      // created by Telegraf
+		"timestamp\tDateTime", // pre-existing
+		"tag_one\tString",     // pre-existing
+		"tag_two\tString",     // created by Telegraf
+		"int64_one\tInt64",    // created by Telegraf
+		"bool_one\tUInt8",     // created by Telegraf
 	}
 
 	// Run the query once and check all columns
