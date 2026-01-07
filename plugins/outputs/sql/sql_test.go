@@ -1081,7 +1081,7 @@ func TestClickHousePreExistingTableIntegration(t *testing.T) {
 			[]telegraf.Tag{
 				{Key: "tag_one", Value: "existing-tag"},
 			},
-			[]telegraf.Field{},
+			nil,
 			ts,
 		),
 	}
