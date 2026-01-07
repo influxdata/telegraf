@@ -1107,15 +1107,15 @@ func TestClickHousePreExistingTableIntegration(t *testing.T) {
 
 	// Verify all columns exist (both pre-existing and newly created)
 	expectedColumns := []string{
-		"`timestamp` DateTime",  // pre-existing
-		"`tag_one` String",      // pre-existing
-		"`tag_two` String",      // created by Telegraf
-		"`int64_one` Int64",     // created by Telegraf
-		"`bool_one` UInt8",      // created by Telegraf
+		"timestamp\tDateTime",  // pre-existing
+		"tag_one\tString",      // pre-existing
+		"tag_two\tString",      // created by Telegraf
+		"int64_one\tInt64",     // created by Telegraf
+		"bool_one\tUInt8",      // created by Telegraf
 	}
 
 	// Run the query once and check all columns
-	var tableSchema []byte
+	var columnsOutput []byte
 	require.Eventually(t, func() bool {
 		var out io.Reader
 		_, out, err = container.Exec([]string{
@@ -1125,24 +1125,24 @@ func TestClickHousePreExistingTableIntegration(t *testing.T) {
 				" --user=" + username +
 				" --database=" + dbname +
 				" --format=TabSeparatedRaw" +
-				" --query=\"SHOW CREATE TABLE metric_one\"",
+				" --query=\"DESCRIBE TABLE metric_one\"",
 		})
 		if err != nil {
 			return false
 		}
-		tableSchema, err = io.ReadAll(out)
+		columnsOutput, err = io.ReadAll(out)
 		if err != nil {
 			return false
 		}
 
-		// Check that all expected columns exist in the schema
+		// Check that all expected columns exist
 		for _, column := range expectedColumns {
-			if !bytes.Contains(tableSchema, []byte(column)) {
+			if !bytes.Contains(columnsOutput, []byte(column)) {
 				return false
 			}
 		}
 		return true
-	}, 5*time.Second, 500*time.Millisecond, "not all columns found in table schema")
+	}, 5*time.Second, 500*time.Millisecond, "not all columns found in table")
 }
 
 func TestMysqlEmptyTimestampColumnIntegration(t *testing.T) {
