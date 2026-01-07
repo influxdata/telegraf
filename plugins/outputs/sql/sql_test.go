@@ -1018,7 +1018,7 @@ func TestClickHousePreExistingTableIntegration(t *testing.T) {
 	initdb, err := filepath.Abs("testdata/clickhouse/initdb/init.sql")
 	require.NoError(t, err)
 
-	// initdb/init.sql creates this database and pre-existing metric_one table
+	// initdb/init.sql creates this database and pre_existing_table
 	const dbname = "foo"
 
 	// username for connecting to clickhouse
@@ -1077,7 +1077,7 @@ func TestClickHousePreExistingTableIntegration(t *testing.T) {
 	// This validates that existing columns don't cause "already exists" errors
 	metricsWithExistingColumns := []telegraf.Metric{
 		stableMetric(
-			"metric_one",
+			"pre_existing_table",
 			[]telegraf.Tag{
 				{Key: "tag_one", Value: "existing-tag"},
 			},
@@ -1091,7 +1091,7 @@ func TestClickHousePreExistingTableIntegration(t *testing.T) {
 	// This validates that the plugin auto-creates new columns
 	metricsWithNewColumns := []telegraf.Metric{
 		stableMetric(
-			"metric_one",
+			"pre_existing_table",
 			[]telegraf.Tag{
 				{Key: "tag_one", Value: "existing-tag"}, // existing
 				{Key: "tag_two", Value: "new-tag"},      // NEW
@@ -1125,7 +1125,7 @@ func TestClickHousePreExistingTableIntegration(t *testing.T) {
 				" --user=" + username +
 				" --database=" + dbname +
 				" --format=TabSeparatedRaw" +
-				" --query=\"DESCRIBE TABLE metric_one\"",
+				" --query=\"DESCRIBE TABLE pre_existing_table\"",
 		})
 		if err != nil {
 			return false
