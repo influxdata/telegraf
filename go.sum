@@ -854,8 +854,8 @@ github.com/apache/arrow/go/v10 v10.0.1/go.mod h1:YvhnlEePVnBS4+0z3fhPfUy7W1Ikj0I
 github.com/apache/arrow/go/v11 v11.0.0/go.mod h1:Eg5OsL5H+e299f7u5ssuXsuHQVEGC4xei5aX110hRiI=
 github.com/apache/arrow/go/v15 v15.0.2 h1:60IliRbiyTWCWjERBCkO1W4Qun9svcYoZrSLcyOsMLE=
 github.com/apache/arrow/go/v15 v15.0.2/go.mod h1:DGXsR3ajT524njufqf95822i+KTh+yea1jass9YXgjA=
-github.com/apache/inlong/inlong-sdk/dataproxy-sdk-twins/dataproxy-sdk-golang v1.0.6 h1:sNHtmH7qsgzMVZEHAUOPbyljoQ2lEl5GTKR6jkaSqXI=
-github.com/apache/inlong/inlong-sdk/dataproxy-sdk-twins/dataproxy-sdk-golang v1.0.6/go.mod h1:aqVmZ1f4b6XL61VeMyRwzr+P45ZvmyiFos9JtyzzJvs=
+github.com/apache/inlong/inlong-sdk/dataproxy-sdk-twins/dataproxy-sdk-golang v1.0.7 h1:r1BYC/OGaKcav2llg5drf1ha1wL93LelKP2iPftI330=
+github.com/apache/inlong/inlong-sdk/dataproxy-sdk-twins/dataproxy-sdk-golang v1.0.7/go.mod h1:FUTK5FZpCPgoZbuPeIEOd5v+CzJ6dXl6rEORxMras14=
 github.com/apache/iotdb-client-go v1.3.5 h1:UHWXC/0GWMw/u7/yUK9XA8vCsQj+6zHsHA4CKRZZCdE=
 github.com/apache/iotdb-client-go v1.3.5/go.mod h1:3D6QYkqRmASS/4HsjU+U/3fscyc5M9xKRfywZsKuoZY=
 github.com/apache/thrift v0.15.0/go.mod h1:PHK3hniurgQaNMZYaCLEqXKsYK8upmhPbmdP2FXSqgU=
@@ -2118,10 +2118,10 @@ github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c h1:rp5dCmg/yLR3mgF
 github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c/go.mod h1:X07ZCGwUbLaax7L0S3Tw4hpejzu63ZrrQiUe6W0hcy0=
 github.com/p4lang/p4runtime v1.4.1 h1:YdtDyDReeGEmSvuxqR8iefSTnttRSW5jWJWtpgCSFv4=
 github.com/p4lang/p4runtime v1.4.1/go.mod h1:OWAP4Wh9uKGnQjleslObpFE0REP78b5gR1pHyYmvNPQ=
-github.com/panjf2000/ants/v2 v2.10.0 h1:zhRg1pQUtkyRiOFo2Sbqwjp0GfBNo9cUY2/Grpx1p+8=
-github.com/panjf2000/ants/v2 v2.10.0/go.mod h1:7ZxyxsqE4vvW0M7LSD8aI3cKwgFhBHbxnlN8mDqHa1I=
-github.com/panjf2000/gnet/v2 v2.6.3 h1:+Lw6FUAvgtc51bcs3w5bNQOsx8iVv5nEWVJUL4lhjsA=
-github.com/panjf2000/gnet/v2 v2.6.3/go.mod h1:HpNv+iQrIOeil1eyhdnKDlui7jivyMf0K3xwaeHKnh8=
+github.com/panjf2000/ants/v2 v2.11.3 h1:AfI0ngBoXJmYOpDh9m516vjqoUu2sLrIVgppI9TZVpg=
+github.com/panjf2000/ants/v2 v2.11.3/go.mod h1:8u92CYMUc6gyvTIw8Ru7Mt7+/ESnJahz5EVtqfrilek=
+github.com/panjf2000/gnet/v2 v2.9.7 h1:6zW7Jl3oAfXwSuh1PxHLndoL2MQRWx0AJR6aaQjxUgA=
+github.com/panjf2000/gnet/v2 v2.9.7/go.mod h1:WQTxDWYuQ/hz3eccH0FN32IVuvZ19HewEWx0l62fx7E=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pascaldekloe/goe v0.1.0 h1:cBOtyMzM9HTpWjXfbbunk26uA6nG3a8n06Wieeh0MwY=
 github.com/pascaldekloe/goe v0.1.0/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
