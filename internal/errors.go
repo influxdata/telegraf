@@ -1,6 +1,9 @@
 package internal
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 var (
 	ErrNotConnected     = errors.New("not connected")
@@ -59,5 +62,25 @@ func (e *PartialWriteError) Error() string {
 }
 
 func (e *PartialWriteError) Unwrap() error {
+	return e.Err
+}
+
+// HTTPError represents an error from an HTTP API with retry information.
+// Use this for HTTP-based output plugins to indicate whether an error
+// is retryable (e.g., 5xx server errors) or not (e.g., 4xx client errors).
+type HTTPError struct {
+	Err        error
+	StatusCode int
+	Retryable  bool
+}
+
+func (e *HTTPError) Error() string {
+	if e.Err == nil {
+		return fmt.Sprintf("HTTP error: status %d", e.StatusCode)
+	}
+	return e.Err.Error()
+}
+
+func (e *HTTPError) Unwrap() error {
 	return e.Err
 }
