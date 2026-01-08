@@ -1,0 +1,1 @@
+nftables,chain=input,rule=rule_with_anonymous_counter,table=mixed bytes=25000i,pkts=500i

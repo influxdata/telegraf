@@ -58,6 +58,37 @@ type expr struct {
 	Cntr *counter `json:"counter,omitempty"`
 }
 
+// UnmarshalJSON handles both anonymous counters (objects with packets/bytes)
+// and named counter references (strings). Named counters are skipped as they
+// don't contain inline statistics.
+func (e *expr) UnmarshalJSON(b []byte) error {
+	var raw struct {
+		Counter json.RawMessage `json:"counter,omitempty"`
+	}
+
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+
+	// Handle counter field if present
+	if len(raw.Counter) > 0 && string(raw.Counter) != "null" {
+		// Check if it's a string (named counter reference) or an object
+		// (anonymous counter with stats). Named counters start with a quote.
+		if raw.Counter[0] == '"' {
+			// Named counter reference - skip it (no inline stats)
+			return nil
+		}
+		// Anonymous counter - parse the object
+		var c counter
+		if err := json.Unmarshal(raw.Counter, &c); err != nil {
+			return err
+		}
+		e.Cntr = &c
+	}
+
+	return nil
+}
+
 type counter struct {
 	Packets int64 `json:"packets"`
 	Bytes   int64 `json:"bytes"`

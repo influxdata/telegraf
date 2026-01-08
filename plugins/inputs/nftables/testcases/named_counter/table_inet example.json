@@ -1,0 +1,57 @@
+{
+    "nftables": [
+        {
+            "metainfo": {
+                "version": "1.1.6",
+                "release_name": "Commodore Bullmoose #7",
+                "json_schema_version": 1
+            }
+        },
+        {
+            "table": {
+                "family": "inet",
+                "name": "example",
+                "handle": 7
+            }
+        },
+        {
+            "chain": {
+                "family": "inet",
+                "table": "example",
+                "name": "input",
+                "handle": 1,
+                "type": "filter",
+                "hook": "input",
+                "prio": 0,
+                "policy": "drop"
+            }
+        },
+        {
+            "counter": {
+                "family": "inet",
+                "name": "named_counter",
+                "table": "example",
+                "handle": 2,
+                "comment": "named counter comment",
+                "packets": 45470,
+                "bytes": 55119375
+            }
+        },
+        {
+            "rule": {
+                "family": "inet",
+                "table": "example",
+                "chain": "input",
+                "handle": 3,
+                "expr": [
+                    {
+                        "counter": "named_counter"
+                    },
+                    {
+                        "accept": null
+                    }
+                ]
+            }
+        }
+    ]
+}
