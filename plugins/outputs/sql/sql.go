@@ -321,7 +321,7 @@ func (p *SQL) tableExists(tableName string) bool {
 		// so we know which columns already exist before trying to add new ones
 		if p.TableUpdateTemplate != "" {
 			if err := p.updateTableCache(tableName); err != nil {
-				p.Log.Errorf("Failed to populate column cache for existing table %s: %v", tableName, err)
+				p.Log.Errorf("failed to populate column cache for existing table %s: %v", tableName, err)
 			}
 		}
 	}
