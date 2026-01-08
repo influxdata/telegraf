@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"io"
 	"reflect"
 	"sort"
@@ -1773,4 +1774,85 @@ func TestPodmanStatsCache(t *testing.T) {
 	d.cleanupStaleCache()
 	require.NotContains(t, d.statsCache, "old-container")
 	require.Contains(t, d.statsCache, testID)
+}
+
+func TestStartWithUnavailableDocker(t *testing.T) {
+	// Test that Telegraf starts successfully even when Docker is unavailable
+	// This is a regression test for https://github.com/influxdata/telegraf/issues/18089
+	var acc testutil.Accumulator
+	d := Docker{
+		Log: testutil.Logger{},
+		newClient: func(string, *tls.Config) (dockerClient, error) {
+			return nil, errors.New("cannot connect to the Docker daemon")
+		},
+		newEnvClient: func() (dockerClient, error) {
+			return nil, errors.New("cannot connect to the Docker daemon")
+		},
+	}
+
+	require.NoError(t, d.Init())
+	// Start should NOT return an error even when Docker is unavailable
+	require.NoError(t, d.Start(&acc))
+	// Client should be nil since connection failed
+	require.Nil(t, d.client)
+
+	// Gather should return an error since Docker is still unavailable
+	err := d.Gather(&acc)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to connect to Docker daemon")
+}
+
+func TestLazyClientInitialization(t *testing.T) {
+	// Test that client is initialized lazily on first Gather if Start failed to connect
+	var acc testutil.Accumulator
+
+	// Track connection attempts
+	connectionAttempts := 0
+
+	d := Docker{
+		Log: testutil.Logger{},
+		newClient: func(string, *tls.Config) (dockerClient, error) {
+			connectionAttempts++
+			// First attempt fails, subsequent attempts succeed
+			if connectionAttempts == 1 {
+				return nil, errors.New("docker daemon not ready")
+			}
+			return &mockClient{
+				InfoF: func() (system.Info, error) {
+					return system.Info{
+						Name:          "docker-desktop",
+						ServerVersion: "20.10.0",
+					}, nil
+				},
+				ContainerListF: func(container.ListOptions) ([]container.Summary, error) {
+					return nil, nil
+				},
+				ClientVersionF: func() string {
+					return "1.24.0"
+				},
+				CloseF: func() error {
+					return nil
+				},
+			}, nil
+		},
+		newEnvClient: func() (dockerClient, error) {
+			return nil, errors.New("not using env client")
+		},
+	}
+
+	require.NoError(t, d.Init())
+	// Start should succeed even though connection fails
+	require.NoError(t, d.Start(&acc))
+	require.Equal(t, 1, connectionAttempts)
+	require.Nil(t, d.client)
+
+	// First Gather fails because Docker is still unavailable (same mock returns error on attempt 1)
+	// Reset connection attempts to simulate Docker becoming available
+	connectionAttempts = 1 // Set to 1 so next attempt (2) will succeed
+
+	// Second Gather should succeed after lazy initialization
+	err := d.Gather(&acc)
+	require.NoError(t, err)
+	require.Equal(t, 2, connectionAttempts)
+	require.NotNil(t, d.client)
 }
