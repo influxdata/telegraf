@@ -10,7 +10,7 @@ import (
 )
 
 func TestMemoryBufferAcceptCallsMetricAccept(t *testing.T) {
-	buf, err := NewBuffer("test", "123", "", 5, "memory", "")
+	buf, err := NewBuffer("test", "123", "", 5, "memory", "", true)
 	require.NoError(t, err)
 	buf.Stats().MetricsAdded.Set(0)
 	buf.Stats().MetricsWritten.Set(0)
@@ -32,7 +32,7 @@ func TestMemoryBufferAcceptCallsMetricAccept(t *testing.T) {
 }
 
 func BenchmarkMemoryBufferAddMetrics(b *testing.B) {
-	buf, err := NewBuffer("test", "123", "", 10000, "memory", "")
+	buf, err := NewBuffer("test", "123", "", 10000, "memory", "", true)
 	require.NoError(b, err)
 	buf.Stats().MetricsAdded.Set(0)
 	buf.Stats().MetricsWritten.Set(0)

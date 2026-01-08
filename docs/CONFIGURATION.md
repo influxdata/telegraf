@@ -373,6 +373,11 @@ The agent table configures Telegraf and the defaults used across all plugins.
   The directory to use when in `disk` buffer mode. Each output plugin will make
   another subdirectory in this directory with the output plugin's ID.
 
+- **buffer_disk_sync**:
+  Controls writes durability when "disk" buffer strategy is used.
+  No sync offers better write performance at the risk of losing metrics buffered in
+  the last `flush_interval` in the event of a power cut. Defaults to 'true'.
+
 ## Plugins
 
 Telegraf plugins are divided into 4 types: [inputs][], [outputs][],
