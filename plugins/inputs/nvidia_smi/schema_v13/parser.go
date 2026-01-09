@@ -1,4 +1,4 @@
-package schema_v12
+package schema_v13
 
 import (
 	"encoding/xml"
@@ -29,7 +29,7 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		tags := map[string]string{
 			"index": strconv.Itoa(i),
 		}
-		fields := make(map[string]any, 48)
+		fields := make(map[string]any, 49)
 
 		common.SetTagIfUsed(tags, "name", gpu.ProductName)
 		common.SetTagIfUsed(tags, "arch", gpu.ProductArchitecture)
@@ -53,10 +53,23 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		common.SetIfUsed("int", fields, "ecc_errors_volatile_dram_uncorrectable", gpu.EccErrors.Volatile.DramUncorrectable)
 		common.SetIfUsed("int", fields, "ecc_errors_volatile_sram_correctable", gpu.EccErrors.Volatile.SramCorrectable)
 		common.SetIfUsed("int", fields, "ecc_errors_volatile_sram_uncorrectable", gpu.EccErrors.Volatile.SramUncorrectable)
+		common.SetIfUsed("int", fields, "ecc_errors_volatile_sram_uncorrectable_parity", gpu.EccErrors.Volatile.SramUncorrectableParity)
+		common.SetIfUsed("int", fields, "ecc_errors_volatile_sram_uncorrectable_secded", gpu.EccErrors.Volatile.SramUncorrectableSecded)
 		common.SetIfUsed("int", fields, "ecc_errors_aggregate_dram_correctable", gpu.EccErrors.Aggregate.DramCorrectable)
 		common.SetIfUsed("int", fields, "ecc_errors_aggregate_dram_uncorrectable", gpu.EccErrors.Aggregate.DramUncorrectable)
 		common.SetIfUsed("int", fields, "ecc_errors_aggregate_sram_correctable", gpu.EccErrors.Aggregate.SramCorrectable)
 		common.SetIfUsed("int", fields, "ecc_errors_aggregate_sram_uncorrectable", gpu.EccErrors.Aggregate.SramUncorrectable)
+		common.SetIfUsed("int", fields, "ecc_errors_aggregate_sram_uncorrectable_parity", gpu.EccErrors.Aggregate.SramUncorrectableParity)
+		common.SetIfUsed("int", fields, "ecc_errors_aggregate_sram_uncorrectable_secded", gpu.EccErrors.Aggregate.SramUncorrectableSecded)
+		common.SetIfUsed("str", fields, "ecc_errors_aggregate_sram_threshold_exceeded", gpu.EccErrors.Aggregate.SramThresholdExceeded)
+		common.SetIfUsed("int", fields, "ecc_errors_aggregate_sram_uncorrectable_l2", gpu.EccErrors.AggregateUncorrectableSramSources.SramL2)
+		common.SetIfUsed("int", fields, "ecc_errors_aggregate_sram_uncorrectable_microcontroller", gpu.EccErrors.AggregateUncorrectableSramSources.SramMicrocontroller)
+		common.SetIfUsed("int", fields, "ecc_errors_aggregate_sram_uncorrectable_other", gpu.EccErrors.AggregateUncorrectableSramSources.SramOther)
+		common.SetIfUsed("int", fields, "ecc_errors_aggregate_sram_uncorrectable_pcie", gpu.EccErrors.AggregateUncorrectableSramSources.SramPcie)
+		common.SetIfUsed("int", fields, "ecc_errors_aggregate_sram_uncorrectable_sm", gpu.EccErrors.AggregateUncorrectableSramSources.SramSm)
+		common.SetIfUsed("str", fields, "ecc_errors_channel_repair_pending", gpu.EccErrors.ChannelRepairPending)
+		common.SetIfUsed("str", fields, "ecc_errors_tpc_repair_pending", gpu.EccErrors.TpcRepairPending)
+		common.SetIfUsed("str", fields, "ecc_errors_unrepairable_memory", gpu.EccErrors.UnrepairableMemory)
 		common.SetIfUsed("int", fields, "retired_pages_multiple_single_bit", gpu.RetiredPages.MultipleSingleBitRetirement.RetiredCount)
 		common.SetIfUsed("int", fields, "retired_pages_double_bit", gpu.RetiredPages.DoubleBitRetirement.RetiredCount)
 		common.SetIfUsed("str", fields, "retired_pages_blacklist", gpu.RetiredPages.PendingBlacklist)
@@ -89,6 +102,7 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		common.SetIfUsed("float", fields, "power_limit", gpu.PowerReadings.PowerLimit)
 		common.SetIfUsed("float", fields, "power_draw", gpu.GpuPowerReadings.PowerDraw)
 		common.SetIfUsed("float", fields, "power_draw", gpu.GpuPowerReadings.InstantPowerDraw)
+		common.SetIfUsed("float", fields, "power_limit", gpu.GpuPowerReadings.CurrentPowerLimit)
 		common.SetIfUsed("float", fields, "power_limit", gpu.GpuPowerReadings.PowerLimit)
 		common.SetIfUsed("float", fields, "module_power_draw", gpu.ModulePowerReadings.PowerDraw)
 		common.SetIfUsed("float", fields, "module_power_draw", gpu.ModulePowerReadings.InstantPowerDraw)
