@@ -40,7 +40,7 @@ func TestInitFail(t *testing.T) {
 				Log:             testutil.Logger{},
 				CredentialsFile: "non-existent-file.json",
 			},
-			expected: "credentials search failed:",
+			expected: "cannot load the credential file:",
 		},
 		{
 			name: "invalid service account file json should fail",
@@ -49,7 +49,7 @@ func TestInitFail(t *testing.T) {
 				Log:             testutil.Logger{},
 				CredentialsFile: "./testdata/invalid-json-sa-key.json",
 			},
-			expected: "credentials search failed: invalid character",
+			expected: "cannot parse the credential file: invalid character",
 		},
 		{
 			name: "missing service account type should fail",
@@ -67,6 +67,15 @@ func TestInitFail(t *testing.T) {
 				CredentialsFile: "./testdata/gdch.json",
 			},
 			expected: "credentials search failed: credentials: STSAudience must be set for the GDCH auth flows",
+		},
+		{
+			name: "missing ca cert path should fail",
+			plugin: &GoogleCloud{
+				Log:             testutil.Logger{},
+				CredentialsFile: "./testdata/gdch-missing-ca-cert-path.json",
+				STSAudience:     "https://localhost",
+			},
+			expected: "credentials search failed: credentials: failed to read certificate:",
 		},
 	}
 
