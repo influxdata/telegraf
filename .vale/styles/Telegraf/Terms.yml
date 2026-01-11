@@ -1,0 +1,19 @@
+# Telegraf-specific terminology
+extends: substitution
+message: "Use '%s' instead of '%s'."
+level: suggestion
+ignorecase: false
+swap:
+  # InfluxData product names (correct capitalization)
+  influxdb: InfluxDB
+  Influxdb: InfluxDB
+  influxDB: InfluxDB
+  telegraf: Telegraf
+  kapacitor: Kapacitor
+  chronograf: Chronograf
+
+  # Common technical terms
+  time-series: time series
+  timeseries: time series
+  data-base: database
+  meta-data: metadata
