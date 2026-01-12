@@ -61,19 +61,21 @@ type expr struct {
 type counter struct {
 	Packets    int64 `json:"packets"`
 	Bytes      int64 `json:"bytes"`
-	IsNamedRef bool  `json:"-"`
+	isNamedRef bool
 }
 
 // UnmarshalJSON handles both anonymous counters (objects with packets/bytes)
 // and named counter references (strings). Named references are marked with
-// IsNamedRef flag since they don't contain inline statistics.
+// isNamedRef flag since they don't contain inline statistics.
 func (c *counter) UnmarshalJSON(b []byte) error {
 	if len(b) > 0 && b[0] == '"' {
 		// Named counter reference - mark it and return
-		c.IsNamedRef = true
+		c.isNamedRef = true
 		return nil
 	}
-	// Anonymous counter - parse the object
+	// Anonymous counter - parse the object using type alias to avoid
+	// infinite recursion (alias has no methods, so json.Unmarshal uses
+	// default struct unmarshaling instead of calling this method again)
 	type counterAlias counter
 	return json.Unmarshal(b, (*counterAlias)(c))
 }
