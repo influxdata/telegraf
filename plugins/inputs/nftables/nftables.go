@@ -84,7 +84,7 @@ func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 			continue
 		}
 		for _, expr := range rule.Exprs {
-			if expr.Cntr == nil {
+			if expr.Cntr == nil || expr.Cntr.IsNamedRef {
 				continue
 			}
 			fields := map[string]interface{}{
