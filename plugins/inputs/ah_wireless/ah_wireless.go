@@ -50,7 +50,7 @@ type Ah_wireless struct {
 	last_alarm_int          [4]alarm_int
 	last_alarm 		[4]alarm
 	last_ut_data		[4]utilization_data
-	last_clt_stat		[4][50]ah_ieee80211_sta_stats_item
+	last_clt_stat		[4][]ah_ieee80211_sta_stats_item
 	last_sq			map[string]map[int]map[int]ah_signal_quality_stats
 	wg			sync.WaitGroup
 	if_stats		[AH_MAX_WIRED]stats_interface_data
@@ -1467,6 +1467,10 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			continue
 		}
 
+		/* Dynamically resize last_clt_stat based on number of clients connected */
+		if t.last_clt_stat[ii] == nil || len(t.last_clt_stat[ii]) != numassoc {
+			t.last_clt_stat[ii] = make([]ah_ieee80211_sta_stats_item, numassoc)
+		}
 
 		clt_item := make([]ah_ieee80211_sta_stats_item, numassoc)
 
@@ -2656,7 +2660,7 @@ func (t *Ah_wireless) Start(acc telegraf.Accumulator) error {
 	t.nw_health =	network_health_data{}
 	t.nw_service =  network_service_data{}
 
-	t.last_clt_stat = [4][50]ah_ieee80211_sta_stats_item{}
+	t.last_clt_stat = [4][]ah_ieee80211_sta_stats_item{}
 
 	return nil
 }
