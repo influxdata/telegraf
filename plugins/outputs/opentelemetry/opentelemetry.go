@@ -74,7 +74,9 @@ func (o *OpenTelemetry) Connect() error {
 		o.ServiceAddress = defaultServiceAddress
 	}
 	switch o.EncodingType {
-	case "", "protobuf", "json":
+	case "":
+		o.EncodingType = "protobuf"
+	case "protobuf", "json":
 		// Do nothing, those are valid
 	default:
 		return fmt.Errorf("invalid encoding %q", o.EncodingType)
