@@ -109,4 +109,3 @@ to use them.
   ## Fixed time-window for the available payload size e.g. "5m"
   # rate_limit_period = "0s"
 ```
-
