@@ -34,7 +34,7 @@ require (
 	github.com/PaesslerAG/gval v1.2.4
 	github.com/SAP/go-hdb v1.13.12
 	github.com/aerospike/aerospike-client-go/v5 v5.11.0
-	github.com/alecthomas/units v0.0.0-20240626203959-61d1e3462e30
+	github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b
 	github.com/alitto/pond v1.9.2
 	github.com/alitto/pond/v2 v2.5.0
 	github.com/aliyun/alibaba-cloud-sdk-go v1.63.107
@@ -43,7 +43,6 @@ require (
 	github.com/antchfx/xmlquery v1.4.4
 	github.com/antchfx/xpath v1.3.4
 	github.com/apache/arrow-go/v18 v18.4.0
-	github.com/apache/inlong/inlong-sdk/dataproxy-sdk-twins/dataproxy-sdk-golang v1.0.5
 	github.com/apache/iotdb-client-go v1.3.4
 	github.com/apache/thrift v0.22.0
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
@@ -144,7 +143,6 @@ require (
 	github.com/likexian/whois-parser v1.24.20
 	github.com/linkedin/goavro/v2 v2.14.0
 	github.com/logzio/azure-monitor-metrics-receiver v1.1.0
-	github.com/lxc/incus/v6 v6.15.0
 	github.com/mdlayher/apcupsd v0.0.0-20220319200143-473c7b5f3c6a
 	github.com/mdlayher/vsock v1.2.1
 	github.com/microsoft/ApplicationInsights-Go v0.4.4
@@ -154,7 +152,7 @@ require (
 	github.com/multiplay/go-ts3 v1.2.0
 	github.com/nats-io/nats-server/v2 v2.11.7
 	github.com/nats-io/nats.go v1.44.0
-	github.com/netsampler/goflow2/v2 v2.2.3
+	github.com/netsampler/goflow2/v2 v2.0.0
 	github.com/newrelic/newrelic-telemetry-sdk-go v0.8.1
 	github.com/nsqio/go-nsq v1.1.0
 	github.com/nwaples/tacplus v0.0.3
@@ -172,13 +170,13 @@ require (
 	github.com/peterbourgon/unixtransport v0.0.6
 	github.com/pion/dtls/v2 v2.2.12
 	github.com/prometheus-community/pro-bing v0.7.0
-	github.com/prometheus/client_golang v1.23.0
+	github.com/prometheus/client_golang v1.20.4
 	github.com/prometheus/client_model v0.6.2
-	github.com/prometheus/common v0.65.0
+	github.com/prometheus/common v0.67.5
 	github.com/prometheus/procfs v0.17.0
-	github.com/prometheus/prometheus v0.54.1
+	github.com/prometheus/prometheus v0.48.1
 	github.com/rabbitmq/amqp091-go v1.10.0
-	github.com/rclone/rclone v1.69.3
+	github.com/rclone/rclone v1.64.2
 	github.com/redis/go-redis/v9 v9.12.1
 	github.com/riemann/riemann-go-client v0.5.1-0.20211206220514-f58f10cdce16
 	github.com/robbiet480/go.nut v0.0.0-20220219091450-bd8f121e1fa1
@@ -187,6 +185,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/seancfoley/ipaddress-go v1.7.1
 	github.com/sensu/sensu-go/api/core/v2 v2.16.0
+	github.com/shirou/gopsutil/v3 v3.23.6
 	github.com/shirou/gopsutil/v4 v4.25.7
 	github.com/showwin/speedtest-go v1.7.10
 	github.com/signalfx/golib/v3 v3.3.54
@@ -196,7 +195,7 @@ require (
 	github.com/snowflakedb/gosnowflake v1.15.0
 	github.com/srebhan/cborquery v1.0.4
 	github.com/srebhan/protobufquery v1.0.4
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
 	github.com/tdrn-org/go-hue v0.3.0
 	github.com/testcontainers/testcontainers-go v0.38.0
@@ -223,20 +222,20 @@ require (
 	go.opentelemetry.io/proto/otlp v1.3.1
 	go.starlark.net v0.0.0-20250717191651-336a4b3a6d1d
 	go.step.sm/crypto v0.69.0
-	golang.org/x/crypto v0.41.0
-	golang.org/x/mod v0.26.0
-	golang.org/x/net v0.42.0
-	golang.org/x/oauth2 v0.30.0
-	golang.org/x/sync v0.16.0
-	golang.org/x/sys v0.35.0
-	golang.org/x/term v0.34.0
-	golang.org/x/text v0.28.0
+	golang.org/x/crypto v0.46.0
+	golang.org/x/mod v0.30.0
+	golang.org/x/net v0.48.0
+	golang.org/x/oauth2 v0.34.0
+	golang.org/x/sync v0.19.0
+	golang.org/x/sys v0.39.0
+	golang.org/x/term v0.38.0
+	golang.org/x/text v0.32.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	gonum.org/v1/gonum v0.16.0
 	google.golang.org/api v0.246.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250721164621-a45f3dfb1074
 	google.golang.org/grpc v1.74.2
-	google.golang.org/protobuf v1.36.7
+	google.golang.org/protobuf v1.36.11
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
 	gopkg.in/olivere/elastic.v5 v5.0.86
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
@@ -248,6 +247,8 @@ require (
 	modernc.org/sqlite v1.38.2
 	software.sslmate.com/src/go-pkcs12 v0.6.0
 )
+
+require go.yaml.in/yaml/v2 v2.4.3 // indirect
 
 require (
 	cel.dev/expr v0.24.0 // indirect
@@ -549,7 +550,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/exp v0.0.0-20250718183923-645b1fa84792 // indirect
 	golang.org/x/time v0.12.0 // indirect
-	golang.org/x/tools v0.35.0 // indirect
+	golang.org/x/tools v0.39.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20211209221555-9c9e7e272434 // indirect
 	google.golang.org/genproto v0.0.0-20250603155806-513f23925822 // indirect

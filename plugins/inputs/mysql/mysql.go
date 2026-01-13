@@ -42,7 +42,7 @@ type Mysql struct {
 	PerfEventsStatementsDigestTextLimit int64            `toml:"perf_events_statements_digest_text_limit"`
 	PerfEventsStatementsLimit           int64            `toml:"perf_events_statements_limit"`
 	PerfEventsStatementsTimeLimit       int64            `toml:"perf_events_statements_time_limit"`
-	AggregateTableIOWaits               bool            `toml:"aggregate_table_io_waits"`
+	AggregateTableIOWaits               bool             `toml:"aggregate_table_io_waits"`
 	TableSchemaDatabases                []string         `toml:"table_schema_databases"`
 	GatherProcessList                   bool             `toml:"gather_process_list"`
 	GatherUserStatistics                bool             `toml:"gather_user_statistics"`
@@ -527,7 +527,7 @@ func (m *Mysql) gatherServer(server *config.Secret, acc telegraf.Accumulator) er
 	}
 
 	if m.GatherTableIOWaits {
-		err = gatherPerfTableIOWaits(db, servtag, acc)
+		err = m.gatherPerfTableIOWaits(db, servtag, acc)
 		if err != nil {
 			return err
 		}

@@ -187,7 +187,6 @@ type serverInfo struct {
 // NewElasticsearch return a new instance of Elasticsearch
 func NewElasticsearch() *Elasticsearch {
 	return &Elasticsearch{
-		HTTPTimeout:                config.Duration(time.Second * 5),
 		ClusterStatsOnlyFromMaster: true,
 		CCRStatsOnlyFromMaster:     true,
 		ClusterHealthLevel:         "indices",
@@ -299,11 +298,11 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 
 			if e.CCRStats && (e.serverInfo[s].isMaster() || !e.CCRStatsOnlyFromMaster || !e.Local) {
 				if err := e.gatherCCRLeaderStats(s+"/_plugins/_replication/leader_stats", acc); err != nil {
-					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+					acc.AddError(errors.New(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 					return
 				}
 				if err := e.gatherCCRFollowerStats(s+"/_plugins/_replication/follower_stats", acc); err != nil {
-					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+					acc.AddError(errors.New(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 					return
 				}
 			}
