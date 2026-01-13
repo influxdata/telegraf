@@ -13,7 +13,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -57,19 +59,19 @@ func TestURLFail(t *testing.T) {
 		{
 			name:     "invalid URL scheme",
 			url:      "!@#$qwert",
-			proxy:    "http://localhost:8181",
+			proxy:    "http://localhost:3128",
 			expected: "invalid scheme in URL",
 		},
 		{
 			name:     "invalid escape sequence in URL",
 			url:      "!@#$%^&*()_+",
-			proxy:    "http://localhost:8181",
+			proxy:    "http://localhost:3128",
 			expected: "invalid URL escape",
 		},
 		{
 			name:     "missing scheme IPv6 like",
 			url:      ":::@#$qwert",
-			proxy:    "http://localhost:8181",
+			proxy:    "http://localhost:3128",
 			expected: "missing protocol scheme",
 		},
 	}
@@ -97,7 +99,7 @@ func TestURLSuccess(t *testing.T) {
 		clientConfig: clientConfig{
 			HTTPClientConfig: httpconfig.HTTPClientConfig{
 				HTTPProxy: proxy.HTTPProxy{
-					HTTPProxyURL: "http://localhost:8181",
+					HTTPProxyURL: "http://localhost:3128",
 				},
 			},
 		},
@@ -855,4 +857,61 @@ func TestStatusCodeUnexpected(t *testing.T) {
 			require.LessOrEqual(t, len(writeErr.MetricsAccept), 2, "accepted metrics")
 		})
 	}
+}
+
+func TestCoreIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Create container instance
+	container := testutil.Container{
+		Image:        "influxdb:core",
+		ExposedPorts: []string{"8181"},
+		Env: map[string]string{
+			"INFLUXDB3_NODE_IDENTIFIER_PREFIX": "node0",
+			"INFLUXDB3_OBJECT_STORE":           "memory",
+		},
+		Cmd:        []string{"influxdb3", "serve", "--without-auth"},
+		WaitingFor: wait.ForListeningPort(nat.Port("8181")),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	// Setup plugin and connect
+	plugin := &InfluxDB{
+		URLs: []string{"http://" + container.Address + ":" + container.Ports["8181"]},
+		clientConfig: clientConfig{
+			Database: "test",
+		},
+		Log: &testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	// Together the metric batch size is too big, split up, we get success
+	metrics := []telegraf.Metric{
+		metric.New(
+			"cpu",
+			map[string]string{},
+			map[string]interface{}{"value": 0.0},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"cpu",
+			map[string]string{},
+			map[string]interface{}{"value": 42.0},
+			time.Unix(0, 1),
+		),
+		metric.New(
+			"cpu",
+			map[string]string{},
+			map[string]interface{}{"value": 43.0},
+			time.Unix(0, 2),
+		),
+	}
+
+	// Write some metrics
+	require.NoError(t, plugin.Write(metrics))
 }
