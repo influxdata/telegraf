@@ -209,6 +209,7 @@ func TestOpenTelemetryHTTPJSON(t *testing.T) {
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			t.Error(err)
+			return
 		}
 
 		req := pmetricotlp.NewExportRequest()
