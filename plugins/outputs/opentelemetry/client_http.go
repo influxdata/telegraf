@@ -88,11 +88,7 @@ func (h *httpClient) Export(ctx context.Context, request pmetricotlp.ExportReque
 	if err != nil {
 		return pmetricotlp.ExportResponse{}, err
 	}
-	defer func() {
-		//nolint:errcheck // cannot fail with io.Discard
-		io.Copy(io.Discard, httpResponse.Body)
-		_ = httpResponse.Body.Close()
-	}()
+	defer httpResponse.Body.Close()
 
 	if httpResponse.StatusCode < 200 || httpResponse.StatusCode >= 300 {
 		return pmetricotlp.ExportResponse{}, fmt.Errorf("received unexpected status: %s (%d)",
