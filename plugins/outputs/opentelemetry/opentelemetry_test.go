@@ -253,8 +253,7 @@ func TestOpenTelemetryHTTPJSON(t *testing.T) {
 		metricsConverter: metricsConverter,
 		Log:              testutil.Logger{},
 	}
-	err = plugin.Connect()
-	require.NoError(t, err)
+	require.NoError(t, plugin.Connect())
 
 	input := testutil.MustMetric(
 		"cpu_temp",
