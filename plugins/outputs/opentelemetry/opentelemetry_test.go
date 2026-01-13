@@ -269,8 +269,7 @@ func TestOpenTelemetryHTTPJSON(t *testing.T) {
 		time.Unix(0, 1622848686000000000),
 	)
 
-	err = plugin.Write([]telegraf.Metric{input})
-	require.NoError(t, err)
+	require.NoError(t, plugin.Write([]telegraf.Metric{input}))
 
 	require.Equal(t, "application/json", receivedContentType)
 
