@@ -137,8 +137,9 @@ func TestAlignedTickerNegativeOffset(t *testing.T) {
 	ticker.start(since, clk)
 	defer ticker.Stop()
 
-	// With interval=30s and offset=-15s, ticks should occur at:
-	// 15s (30s aligned - 15s offset = 15s)
+	// With interval=30s and offset=-15s, the offset is normalized to 15s, so
+	// ticks should occur at:
+	// 15s (30s aligned + 15s offset = 15s)
 	// 45s (next aligned 60s would give 45s, but 30s aligned gives 0s+30s = 30s wait from 15s = 45s)
 	// 75s, 105s, etc.
 	expected := []time.Time{

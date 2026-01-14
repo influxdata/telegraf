@@ -43,7 +43,7 @@ func NewAlignedTicker(now time.Time, interval, jitter, offset time.Duration) *Al
 	t := &AlignedTicker{
 		interval:    interval,
 		jitter:      jitter,
-		offset:      offset,
+		offset:      normalizeOffset(offset, interval),
 		minInterval: interval / 100,
 	}
 	t.start(now, clock.New())
@@ -79,10 +79,8 @@ func (t *AlignedTicker) next(now time.Time) time.Duration {
 	}
 	d += t.offset
 
-	// Ensure the duration is positive before adding jitter. This can happen
-	// when using a negative offset that is larger than the time remaining
-	// until the next aligned interval. In this case, we add one full interval
-	// to schedule for the next valid tick time.
+	// Ensure the duration is positive before adding jitter. This can still
+	// happen with small intervals and clock adjustments.
 	if d <= 0 {
 		d += t.interval
 	}
@@ -141,10 +139,21 @@ func NewUnalignedTicker(interval, jitter, offset time.Duration) *UnalignedTicker
 	t := &UnalignedTicker{
 		interval: interval,
 		jitter:   jitter,
-		offset:   offset,
+		offset:   normalizeOffset(offset, interval),
 	}
 	t.start(clock.New())
 	return t
+}
+
+func normalizeOffset(offset, interval time.Duration) time.Duration {
+	if interval <= 0 || offset == 0 {
+		return offset
+	}
+	offset = offset % interval
+	if offset < 0 {
+		offset += interval
+	}
+	return offset
 }
 
 func (t *UnalignedTicker) start(clk clock.Clock) {
