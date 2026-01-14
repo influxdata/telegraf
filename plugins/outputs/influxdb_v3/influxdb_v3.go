@@ -26,6 +26,7 @@ type clientConfig struct {
 	Database           string          `toml:"database"`
 	DatabaseTag        string          `toml:"database_tag"`
 	ExcludeDatabaseTag bool            `toml:"exclude_database_tag"`
+	Sync               *bool           `toml:"sync"`
 	Timeout            config.Duration `toml:"timeout"`
 	UserAgent          string          `toml:"user_agent"`
 	ContentEncoding    string          `toml:"content_encoding"`

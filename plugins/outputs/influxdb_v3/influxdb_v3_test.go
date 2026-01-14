@@ -196,6 +196,154 @@ func TestWrite(t *testing.T) {
 	require.NoError(t, plugin.Write(metrics))
 }
 
+func TestWriteDefaultSync(t *testing.T) {
+	// Setup a test server
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch r.URL.Path {
+			case "/api/v3/write_lp":
+				if r.URL.Query().Has("no_sync") {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error("Expected 'no_sync' to not be set")
+					return
+				}
+				w.WriteHeader(http.StatusOK)
+			default:
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+		}),
+	)
+	defer ts.Close()
+
+	// Setup plugin and connect
+	plugin := &InfluxDB{
+		URLs: []string{"http://" + ts.Listener.Addr().String()},
+		clientConfig: clientConfig{
+			Database: "telegraf",
+		},
+		Log: &testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	// Test writing
+	metrics := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{
+				"database": "foobar",
+			},
+			map[string]interface{}{
+				"value": 42.123,
+			},
+			time.Unix(0, 0),
+		),
+	}
+	require.NoError(t, plugin.Write(metrics))
+}
+
+func TestWriteExplicitSync(t *testing.T) {
+	// Setup a test server
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch r.URL.Path {
+			case "/api/v3/write_lp":
+				if r.URL.Query().Get("no_sync") != "false" {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error("Expected 'no_sync' to be set to 'false'")
+					return
+				}
+				w.WriteHeader(http.StatusOK)
+			default:
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+		}),
+	)
+	defer ts.Close()
+
+	// Setup plugin and connect
+	sync := true
+	plugin := &InfluxDB{
+		URLs: []string{"http://" + ts.Listener.Addr().String()},
+		clientConfig: clientConfig{
+			Database: "telegraf",
+			Sync:     &sync,
+		},
+		Log: &testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	// Test writing
+	metrics := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{
+				"database": "foobar",
+			},
+			map[string]interface{}{
+				"value": 42.123,
+			},
+			time.Unix(0, 0),
+		),
+	}
+	require.NoError(t, plugin.Write(metrics))
+}
+
+func TestWriteExplicitNoSync(t *testing.T) {
+	// Setup a test server
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch r.URL.Path {
+			case "/api/v3/write_lp":
+				if r.URL.Query().Get("no_sync") != "true" {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error("Expected 'no_sync' to be set to 'true'")
+					return
+				}
+				w.WriteHeader(http.StatusOK)
+			default:
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+		}),
+	)
+	defer ts.Close()
+
+	// Setup plugin and connect
+	sync := false
+	plugin := &InfluxDB{
+		URLs: []string{"http://" + ts.Listener.Addr().String()},
+		clientConfig: clientConfig{
+			Database: "telegraf",
+			Sync:     &sync,
+		},
+		Log: &testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	// Test writing
+	metrics := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{
+				"database": "foobar",
+			},
+			map[string]interface{}{
+				"value": 42.123,
+			},
+			time.Unix(0, 0),
+		),
+	}
+	require.NoError(t, plugin.Write(metrics))
+}
+
 func TestWriteDatabaseTagWorksOnRetry(t *testing.T) {
 	// Setup a test server
 	ts := httptest.NewServer(
