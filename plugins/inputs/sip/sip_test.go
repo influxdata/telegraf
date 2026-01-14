@@ -1,23 +1,94 @@
 package sip
 
 import (
+	"context"
+	"net"
+	net_url "net/url"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/emiago/sipgo"
+	"github.com/emiago/sipgo/sip"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
+type testSIPServer struct {
+	ua     *sipgo.UserAgent
+	server *sipgo.Server
+	addr   string
+}
+
+func pickFreeUDPAddr(t *testing.T) string {
+	t.Helper()
+
+	conn, err := net.ListenPacket("udp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	addr := conn.LocalAddr().String()
+	require.NoError(t, conn.Close())
+
+	return addr
+}
+
+func startTestSIPServerForMethod(
+	t *testing.T,
+	method sip.RequestMethod,
+	handler func(req *sip.Request, tx sip.ServerTransaction),
+) *testSIPServer {
+	t.Helper()
+
+	addr := pickFreeUDPAddr(t)
+
+	ua, err := sipgo.NewUA(
+		sipgo.WithUserAgent("Test SIP Server"),
+	)
+	require.NoError(t, err)
+
+	server, err := sipgo.NewServer(ua)
+	require.NoError(t, err)
+
+	// Register handler for the specified method
+	server.OnRequest(method, handler)
+
+	// Use sipgo's test context key to signal when server is ready
+	serverReady := make(chan struct{})
+	//nolint:staticcheck // SA1029: sipgo.ListenReadyCtxKey is a string constant defined by sipgo library
+	ctx := context.WithValue(context.Background(), sipgo.ListenReadyCtxKey, sipgo.ListenReadyCtxValue(serverReady))
+
+	go func() {
+		//nolint:errcheck // Background server for testing, errors are not critical
+		server.ListenAndServe(ctx, "udp", addr)
+	}()
+
+	// Wait for server to be ready
+	<-serverReady
+
+	return &testSIPServer{
+		ua:     ua,
+		server: server,
+		addr:   addr,
+	}
+}
+
+func (s *testSIPServer) close() {
+	_ = s.server.Close()
+	_ = s.ua.Close()
+}
+
 func TestSampleConfig(t *testing.T) {
 	plugin := &SIP{}
 	require.NotEmpty(t, plugin.SampleConfig())
 }
 
-func TestInit_Defaults(t *testing.T) {
+func TestInitDefaults(t *testing.T) {
 	plugin := &SIP{
-		Servers: []string{"sip://sip.example.com:5060"},
+		Server:  "sip://sip.example.com:5060",
+		Timeout: config.Duration(5 * time.Second),
 	}
 
 	err := plugin.Init()
@@ -26,18 +97,19 @@ func TestInit_Defaults(t *testing.T) {
 	// Check defaults
 	require.Equal(t, "OPTIONS", plugin.Method)
 	require.Equal(t, "telegraf", plugin.FromUser)
-	require.Equal(t, "Telegraf SIP Monitor", plugin.UserAgent)
-	require.Equal(t, 0, plugin.ExpectCode)
-	require.Equal(t, config.Duration(defaultTimeout), plugin.Timeout)
+	require.Equal(t, "telegraf", plugin.ToUser)
+	require.Equal(t, "udp", plugin.Transport)
+	require.Equal(t, config.Duration(5*time.Second), plugin.Timeout)
 }
 
-func TestInit_CustomValues(t *testing.T) {
+func TestInitCustomValues(t *testing.T) {
 	plugin := &SIP{
-		Servers:    []string{"sip://sip.example.com:5061;transport=tcp"},
-		Method:     "INVITE",
-		FromUser:   "testuser",
-		UserAgent:  "Test Agent",
-		ExpectCode: 404,
+		Server:    "sip://sip.example.com:5061",
+		Transport: "tcp",
+		Method:    "INVITE",
+		FromUser:  "testuser",
+		ToUser:    "recipient",
+		Timeout:   config.Duration(5 * time.Second),
 	}
 
 	err := plugin.Init()
@@ -45,24 +117,23 @@ func TestInit_CustomValues(t *testing.T) {
 
 	require.Equal(t, "INVITE", plugin.Method)
 	require.Equal(t, "testuser", plugin.FromUser)
-	require.Equal(t, "Test Agent", plugin.UserAgent)
-	require.Equal(t, 404, plugin.ExpectCode)
+	require.Equal(t, "recipient", plugin.ToUser)
+	require.Equal(t, "tcp", plugin.Transport)
 }
 
-func TestInit_NoServers(t *testing.T) {
-	plugin := &SIP{
-		Servers: nil,
-	}
+func TestInitNoServer(t *testing.T) {
+	plugin := &SIP{}
 
 	err := plugin.Init()
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "at least one server must be specified")
+	require.Contains(t, err.Error(), "server must be specified")
 }
 
-func TestInit_InvalidMethod(t *testing.T) {
+func TestInitInvalidMethod(t *testing.T) {
 	plugin := &SIP{
-		Servers: []string{"sip://sip.example.com:5060"},
+		Server:  "sip://sip.example.com:5060",
 		Method:  "INVALID",
+		Timeout: config.Duration(5 * time.Second),
 	}
 
 	err := plugin.Init()
@@ -70,9 +141,11 @@ func TestInit_InvalidMethod(t *testing.T) {
 	require.Contains(t, err.Error(), "invalid SIP method")
 }
 
-func TestInit_InvalidTransport(t *testing.T) {
+func TestInitInvalidTransport(t *testing.T) {
 	plugin := &SIP{
-		Servers: []string{"sip://sip.example.com:5060;transport=invalid"},
+		Server:    "sip://sip.example.com:5060",
+		Transport: "invalid",
+		Timeout:   config.Duration(5 * time.Second),
 	}
 
 	err := plugin.Init()
@@ -80,42 +153,47 @@ func TestInit_InvalidTransport(t *testing.T) {
 	require.Contains(t, err.Error(), "invalid transport")
 }
 
-func TestInit_ValidMethods(t *testing.T) {
+func TestInitValidMethods(t *testing.T) {
 	validMethods := []string{"OPTIONS", "INVITE", "MESSAGE", "options", "invite", "message"}
 
 	for _, method := range validMethods {
 		t.Run(method, func(t *testing.T) {
 			plugin := &SIP{
-				Servers: []string{"sip://sip.example.com:5060"},
+				Server:  "sip://sip.example.com:5060",
 				Method:  method,
+				Timeout: config.Duration(5 * time.Second),
 			}
 
 			err := plugin.Init()
 			require.NoError(t, err)
+			require.Equal(t, strings.ToUpper(method), plugin.Method)
 		})
 	}
 }
 
-func TestInit_ValidTransports(t *testing.T) {
+func TestInitValidTransports(t *testing.T) {
 	validTransports := []struct {
-		name string
-		url  string
+		name      string
+		server    string
+		transport string
 	}{
-		{"udp", "sip://sip.example.com:5060"},
-		{"tcp", "sip://sip.example.com:5060;transport=tcp"},
-		{"tls", "sips://sip.example.com:5061"},
-		{"ws", "sip://sip.example.com:5060;transport=ws"},
-		{"wss", "sips://sip.example.com:5061;transport=wss"},
+		{"udp", "sip://sip.example.com:5060", "udp"},
+		{"tcp", "sip://sip.example.com:5060", "tcp"},
+		{"ws", "sip://sip.example.com:5060", "ws"},
+		{"wss", "sips://sip.example.com:5061", "wss"},
 	}
 
 	for _, tt := range validTransports {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &SIP{
-				Servers: []string{tt.url},
+				Server:    tt.server,
+				Transport: tt.transport,
+				Timeout:   config.Duration(5 * time.Second),
 			}
 
 			err := plugin.Init()
 			require.NoError(t, err)
+			require.Equal(t, tt.transport, plugin.Transport)
 		})
 	}
 }
@@ -124,6 +202,7 @@ func TestParseServer(t *testing.T) {
 	tests := []struct {
 		name          string
 		server        string
+		transport     string
 		wantHost      string
 		wantPort      int
 		wantTransport string
@@ -131,24 +210,27 @@ func TestParseServer(t *testing.T) {
 		expectError   bool
 	}{
 		{
-			name:          "sip:// URL defaults to UDP",
+			name:          "sip:// URL with UDP transport",
 			server:        "sip://sip.example.com:5060",
+			transport:     "udp",
 			wantHost:      "sip.example.com",
 			wantPort:      5060,
 			wantTransport: "udp",
 			wantSecure:    false,
 		},
 		{
-			name:          "sips:// URL defaults to TLS",
+			name:          "sips:// URL with TLS transport",
 			server:        "sips://sip.example.com:5061",
+			transport:     "tls",
 			wantHost:      "sip.example.com",
 			wantPort:      5061,
 			wantTransport: "tls",
 			wantSecure:    true,
 		},
 		{
-			name:          "sip:// with explicit TCP transport",
-			server:        "sip://sip.example.com:5060;transport=tcp",
+			name:          "sip:// with TCP transport",
+			server:        "sip://sip.example.com:5060",
+			transport:     "tcp",
 			wantHost:      "sip.example.com",
 			wantPort:      5060,
 			wantTransport: "tcp",
@@ -157,6 +239,7 @@ func TestParseServer(t *testing.T) {
 		{
 			name:          "sip:// without port defaults to 5060",
 			server:        "sip://sip.example.com",
+			transport:     "udp",
 			wantHost:      "sip.example.com",
 			wantPort:      5060,
 			wantTransport: "udp",
@@ -165,6 +248,7 @@ func TestParseServer(t *testing.T) {
 		{
 			name:          "sips:// without port defaults to 5061",
 			server:        "sips://secure.example.com",
+			transport:     "tls",
 			wantHost:      "secure.example.com",
 			wantPort:      5061,
 			wantTransport: "tls",
@@ -173,26 +257,20 @@ func TestParseServer(t *testing.T) {
 		{
 			name:          "IP address with port",
 			server:        "sip://192.168.1.100:5070",
+			transport:     "udp",
 			wantHost:      "192.168.1.100",
 			wantPort:      5070,
 			wantTransport: "udp",
 			wantSecure:    false,
 		},
-		{
-			name:        "missing scheme",
-			server:      "sip.example.com:5060",
-			expectError: true,
-		},
-		{
-			name:        "invalid transport",
-			server:      "sip://sip.example.com:5060;transport=invalid",
-			expectError: true,
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			info, err := parseServer(tt.server)
+			u, err := net_url.Parse(tt.server)
+			require.NoError(t, err)
+
+			info, err := parseServer(u, tt.transport)
 
 			if tt.expectError {
 				require.Error(t, err)
@@ -208,131 +286,10 @@ func TestParseServer(t *testing.T) {
 	}
 }
 
-func TestBuildSIPURI(t *testing.T) {
-	tests := []struct {
-		name               string
-		host               string
-		port               int
-		transport          string
-		secure             bool
-		fromUser           string
-		toUser             string
-		wantScheme         string
-		wantUser           string
-		wantHost           string
-		wantPort           int
-		wantTransportParam bool
-	}{
-		{
-			name:               "UDP transport (default for sip)",
-			host:               "sip.example.com",
-			port:               5060,
-			transport:          "udp",
-			secure:             false,
-			fromUser:           "alice",
-			toUser:             "bob",
-			wantScheme:         "sip",
-			wantUser:           "bob",
-			wantHost:           "sip.example.com",
-			wantPort:           5060,
-			wantTransportParam: false, // UDP is default for sip:, no param needed
-		},
-		{
-			name:               "TCP transport",
-			host:               "sip.example.com",
-			port:               5060,
-			transport:          "tcp",
-			secure:             false,
-			fromUser:           "alice",
-			toUser:             "bob",
-			wantScheme:         "sip",
-			wantUser:           "bob",
-			wantHost:           "sip.example.com",
-			wantPort:           5060,
-			wantTransportParam: true, // TCP is non-default for sip:
-		},
-		{
-			name:               "TLS transport (default for sips)",
-			host:               "sip.example.com",
-			port:               5061,
-			transport:          "tls",
-			secure:             true,
-			fromUser:           "alice",
-			toUser:             "bob",
-			wantScheme:         "sips",
-			wantUser:           "bob",
-			wantHost:           "sip.example.com",
-			wantPort:           5061,
-			wantTransportParam: false, // TLS is default for sips:, no param needed
-		},
-		{
-			name:       "Empty ToUser uses FromUser",
-			host:       "sip.example.com",
-			port:       5060,
-			transport:  "udp",
-			secure:     false,
-			fromUser:   "alice",
-			toUser:     "",
-			wantScheme: "sip",
-			wantUser:   "alice",
-			wantHost:   "sip.example.com",
-			wantPort:   5060,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			plugin := &SIP{
-				FromUser: tt.fromUser,
-				ToUser:   tt.toUser,
-			}
-
-			uri := plugin.buildSIPURI(tt.host, tt.port, tt.transport, tt.secure)
-
-			require.Equal(t, tt.wantScheme, uri.Scheme)
-			require.Equal(t, tt.wantUser, uri.User)
-			require.Equal(t, tt.wantHost, uri.Host)
-			require.Equal(t, tt.wantPort, uri.Port)
-
-			if tt.wantTransportParam {
-				require.NotNil(t, uri.UriParams)
-			}
-		})
-	}
-}
-
-func TestSetResult(t *testing.T) {
-	tests := []struct {
-		name           string
-		result         string
-		expectedCode   int
-		expectedResult string
-	}{
-		{"success", "success", 0, "success"},
-		{"response_code_mismatch", "response_code_mismatch", 1, "response_code_mismatch"},
-		{"timeout", "timeout", 2, "timeout"},
-		{"connection_refused", "connection_refused", 3, "connection_refused"},
-		{"connection_failed", "connection_failed", 4, "connection_failed"},
-		{"unknown_result", "unknown_result", 99, "unknown_result"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			fields := make(map[string]any)
-			tags := make(map[string]string)
-
-			setResult(tt.result, fields, tags)
-
-			require.Equal(t, tt.expectedResult, tags["result"])
-			require.Equal(t, tt.expectedResult, fields["result_type"])
-			require.Equal(t, tt.expectedCode, fields["result_code"])
-		})
-	}
-}
-
 func TestStartStop(t *testing.T) {
 	plugin := &SIP{
-		Servers: []string{"sip://sip.example.com:5060"},
+		Server:  "sip://sip.example.com:5060",
+		Timeout: config.Duration(5 * time.Second),
 	}
 
 	err := plugin.Init()
@@ -354,68 +311,50 @@ func TestStartStop(t *testing.T) {
 	require.Nil(t, plugin.ua)
 }
 
-func TestGather_NotInitialized(t *testing.T) {
-	plugin := &SIP{
-		Servers: []string{"sip://sip.example.com:5060"},
-	}
-
-	err := plugin.Init()
-	require.NoError(t, err)
-
-	acc := &testutil.Accumulator{}
-
-	// Try to gather without starting
-	err = plugin.Gather(acc)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "not initialized")
-}
-
-// TestTLSConfiguration tests TLS configuration for secure transports
 func TestTLSConfiguration(t *testing.T) {
 	tests := []struct {
 		name               string
-		serverURL          string
+		server             string
+		transport          string
 		insecureSkipVerify bool
-		expectedScheme     string
 		shouldInitTLS      bool
 	}{
 		{
-			name:           "TLS transport (sips://)",
-			serverURL:      "sips://sip.example.com:5061",
-			expectedScheme: "sips",
-			shouldInitTLS:  true,
+			name:          "TLS via sips:// scheme",
+			server:        "sips://sip.example.com:5061",
+			transport:     "tcp",
+			shouldInitTLS: true,
 		},
 		{
 			name:               "TLS with skip verify",
-			serverURL:          "sips://sip.example.com:5061",
+			server:             "sips://sip.example.com:5061",
+			transport:          "tcp",
 			insecureSkipVerify: true,
-			expectedScheme:     "sips",
 			shouldInitTLS:      true,
 		},
 		{
-			name:           "WSS transport",
-			serverURL:      "sips://sip.example.com:5061;transport=wss",
-			expectedScheme: "sips",
-			shouldInitTLS:  true,
+			name:          "WSS transport",
+			server:        "sips://sip.example.com:5061",
+			transport:     "wss",
+			shouldInitTLS: true,
 		},
 		{
-			name:           "UDP transport (no TLS)",
-			serverURL:      "sip://sip.example.com:5060",
-			expectedScheme: "sip",
-			shouldInitTLS:  false,
+			name:          "UDP transport (no TLS)",
+			server:        "sip://sip.example.com:5060",
+			transport:     "udp",
+			shouldInitTLS: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &SIP{
-				Servers:    []string{tt.serverURL},
-				Method:     "OPTIONS",
-				Timeout:    config.Duration(5 * time.Second),
-				FromUser:   "telegraf",
-				UserAgent:  "Test Agent",
-				ExpectCode: 200,
-				Log:        testutil.Logger{},
+				Server:    tt.server,
+				Transport: tt.transport,
+				Method:    "OPTIONS",
+				Timeout:   config.Duration(5 * time.Second),
+				FromUser:  "telegraf",
+				Log:       testutil.Logger{},
 			}
 
 			plugin.ClientConfig.InsecureSkipVerify = tt.insecureSkipVerify
@@ -424,9 +363,6 @@ func TestTLSConfiguration(t *testing.T) {
 			require.NoError(t, err)
 
 			if tt.shouldInitTLS {
-				// TLS config should be initialized for TLS/WSS transports
-				// Note: tlsConfig might still be nil if no certs are provided,
-				// but that's okay - the transport layer will use defaults
 				if tt.insecureSkipVerify {
 					require.NotNil(t, plugin.tlsConfig)
 					require.Equal(t, tt.insecureSkipVerify, plugin.tlsConfig.InsecureSkipVerify)
@@ -434,27 +370,18 @@ func TestTLSConfiguration(t *testing.T) {
 			} else {
 				require.Nil(t, plugin.tlsConfig)
 			}
-
-			// Parse server to get transport info
-			info, err := parseServer(tt.serverURL)
-			require.NoError(t, err)
-
-			uri := plugin.buildSIPURI(info.Host, info.Port, info.Transport, info.Secure)
-			require.Equal(t, tt.expectedScheme, uri.Scheme)
 		})
 	}
 }
 
-// TestTLSServerName tests SNI configuration
 func TestTLSServerName(t *testing.T) {
 	plugin := &SIP{
-		Servers:    []string{"sips://192.168.1.100:5061"},
-		Method:     "OPTIONS",
-		Timeout:    config.Duration(5 * time.Second),
-		FromUser:   "telegraf",
-		UserAgent:  "Test Agent",
-		ExpectCode: 0,
-		Log:        testutil.Logger{},
+		Server:    "sips://192.168.1.100:5061",
+		Transport: "tcp",
+		Method:    "OPTIONS",
+		Timeout:   config.Duration(5 * time.Second),
+		FromUser:  "telegraf",
+		Log:       testutil.Logger{},
 	}
 
 	plugin.ClientConfig.ServerName = "sip.example.com"
@@ -465,25 +392,38 @@ func TestTLSServerName(t *testing.T) {
 	require.Equal(t, "sip.example.com", plugin.tlsConfig.ServerName)
 }
 
+func TestInitRejectsDeprecatedTLSTransport(t *testing.T) {
+	plugin := &SIP{
+		Server:    "sip://sip.example.com:5060",
+		Transport: "tls",
+		Timeout:   config.Duration(5 * time.Second),
+	}
+
+	err := plugin.Init()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "invalid transport")
+}
+
 func TestSIPDefaults(t *testing.T) {
 	plugin := &SIP{
-		Servers: []string{"sip://127.0.0.1:5060"},
+		Server:  "sip://127.0.0.1:5060",
+		Timeout: config.Duration(5 * time.Second),
 		Log:     testutil.Logger{},
 	}
 
 	require.NoError(t, plugin.Init())
 
 	require.Equal(t, "OPTIONS", plugin.Method)
-	require.Equal(t, defaultTimeout, time.Duration(plugin.Timeout))
-	require.Equal(t, defaultFromUser, plugin.FromUser)
-	require.Equal(t, defaultUserAgent, plugin.UserAgent)
-	require.Equal(t, 0, plugin.ExpectCode)
+	require.Equal(t, 5*time.Second, time.Duration(plugin.Timeout))
+	require.Equal(t, "telegraf", plugin.FromUser)
+	require.Equal(t, "udp", plugin.Transport)
 }
 
 func TestSIPInvalidMethod(t *testing.T) {
 	plugin := &SIP{
-		Servers: []string{"sip://127.0.0.1:5060"},
+		Server:  "sip://127.0.0.1:5060",
 		Method:  "INVALID",
+		Timeout: config.Duration(5 * time.Second),
 		Log:     testutil.Logger{},
 	}
 
@@ -492,13 +432,467 @@ func TestSIPInvalidMethod(t *testing.T) {
 	require.Contains(t, err.Error(), "invalid SIP method")
 }
 
-func TestSIPNoServers(t *testing.T) {
+func TestSIPNoServer(t *testing.T) {
 	plugin := &SIP{
-		Servers: nil,
-		Log:     testutil.Logger{},
+		Log: testutil.Logger{},
 	}
 
 	err := plugin.Init()
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "at least one server must be specified")
+	require.Contains(t, err.Error(), "server must be specified")
+}
+
+func TestSIPServerSuccess(t *testing.T) {
+	server := startTestSIPServerForMethod(t, sip.OPTIONS, func(req *sip.Request, tx sip.ServerTransaction) {
+		res := sip.NewResponseFromRequest(req, 200, "OK", nil)
+		require.NoError(t, tx.Respond(res))
+	})
+	defer server.close()
+
+	plugin := &SIP{
+		Server:   "sip://" + server.addr,
+		Method:   "OPTIONS",
+		Timeout:  config.Duration(2 * time.Second),
+		FromUser: "telegraf",
+		Log:      testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, plugin.Start(acc))
+	defer plugin.Stop()
+
+	require.NoError(t, plugin.Gather(acc))
+
+	require.Len(t, acc.Metrics, 1)
+	m := acc.Metrics[0]
+
+	// Check tags
+	require.Equal(t, "sip://"+server.addr, m.Tags["server"])
+	require.Equal(t, "udp", m.Tags["transport"])
+	require.Equal(t, "OPTIONS", m.Tags["method"])
+	require.Equal(t, "200", m.Tags["status_code"])
+	require.Equal(t, "success", m.Tags["result"])
+
+	// Check fields
+	require.Equal(t, "OK", m.Fields["reason"])
+	rt, ok := m.Fields["response_time"].(float64)
+	require.True(t, ok)
+	require.Greater(t, rt, 0.0)
+}
+
+func TestSIPServerErrorResponse(t *testing.T) {
+	server := startTestSIPServerForMethod(t, sip.OPTIONS, func(req *sip.Request, tx sip.ServerTransaction) {
+		res := sip.NewResponseFromRequest(req, 404, "Not Found", nil)
+		require.NoError(t, tx.Respond(res))
+	})
+	defer server.close()
+
+	plugin := &SIP{
+		Server:   "sip://" + server.addr,
+		Method:   "OPTIONS",
+		Timeout:  config.Duration(2 * time.Second),
+		FromUser: "telegraf",
+		Log:      testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, plugin.Start(acc))
+	defer plugin.Stop()
+
+	require.NoError(t, plugin.Gather(acc))
+
+	require.Len(t, acc.Metrics, 1)
+	m := acc.Metrics[0]
+
+	// Check tags
+	require.Equal(t, "sip://"+server.addr, m.Tags["server"])
+	require.Equal(t, "udp", m.Tags["transport"])
+	require.Equal(t, "404", m.Tags["status_code"])
+	require.Equal(t, "error_response", m.Tags["result"])
+
+	// Check fields
+	require.Equal(t, "Not Found", m.Fields["reason"])
+	rt, ok := m.Fields["response_time"].(float64)
+	require.True(t, ok)
+	require.Greater(t, rt, 0.0)
+}
+
+func TestSIPServerTimeout(t *testing.T) {
+	server := startTestSIPServerForMethod(t, sip.OPTIONS, func(_ *sip.Request, _ sip.ServerTransaction) {
+		// Intentionally no response to trigger timeout
+	})
+	defer server.close()
+
+	plugin := &SIP{
+		Server:   "sip://" + server.addr,
+		Method:   "OPTIONS",
+		Timeout:  config.Duration(100 * time.Millisecond),
+		FromUser: "telegraf",
+		Log:      testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, plugin.Start(acc))
+	defer plugin.Stop()
+
+	require.NoError(t, plugin.Gather(acc))
+
+	require.Len(t, acc.Metrics, 1)
+	m := acc.Metrics[0]
+
+	// Check tags
+	require.Equal(t, "sip://"+server.addr, m.Tags["server"])
+	require.Equal(t, "udp", m.Tags["transport"])
+	require.Equal(t, "timeout", m.Tags["result"])
+
+	// Check fields - timeout should have reason but no response_time
+	require.Equal(t, "Timeout", m.Fields["reason"])
+	_, hasResponseTime := m.Fields["response_time"]
+	require.False(t, hasResponseTime)
+}
+
+func TestSIPServerDelayedResponse(t *testing.T) {
+	server := startTestSIPServerForMethod(t, sip.OPTIONS, func(req *sip.Request, tx sip.ServerTransaction) {
+		time.Sleep(300 * time.Millisecond)
+		res := sip.NewResponseFromRequest(req, 200, "OK", nil)
+		require.NoError(t, tx.Respond(res))
+	})
+	defer server.close()
+
+	plugin := &SIP{
+		Server:   "sip://" + server.addr,
+		Method:   "OPTIONS",
+		Timeout:  config.Duration(1 * time.Second),
+		FromUser: "telegraf",
+		Log:      testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, plugin.Start(acc))
+	defer plugin.Stop()
+
+	require.NoError(t, plugin.Gather(acc))
+
+	// Verify response time is within expected range
+	require.Len(t, acc.Metrics, 1)
+	m := acc.Metrics[0]
+
+	rt := m.Fields["response_time"].(float64)
+	require.Greater(t, rt, 0.3, "response time should be at least 300ms")
+	require.Less(t, rt, 1.0, "response time should be less than timeout")
+
+	// Check remaining fields and tags
+	require.Equal(t, "sip://"+server.addr, m.Tags["server"])
+	require.Equal(t, "udp", m.Tags["transport"])
+	require.Equal(t, "200", m.Tags["status_code"])
+	require.Equal(t, "success", m.Tags["result"])
+	require.Equal(t, "OK", m.Fields["reason"])
+}
+
+func TestSIPDifferentStatusCodes(t *testing.T) {
+	tests := []struct {
+		name       string
+		statusCode int
+		reason     string
+		wantResult string
+	}{
+		{
+			name:       "200_ok",
+			statusCode: 200,
+			reason:     "OK",
+			wantResult: "success",
+		},
+		{
+			name:       "404_not_found",
+			statusCode: 404,
+			reason:     "Not Found",
+			wantResult: "error_response",
+		},
+		{
+			name:       "503_service_unavailable",
+			statusCode: 503,
+			reason:     "Service Unavailable",
+			wantResult: "error_response",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := startTestSIPServerForMethod(t, sip.OPTIONS, func(req *sip.Request, tx sip.ServerTransaction) {
+				res := sip.NewResponseFromRequest(req, tt.statusCode, tt.reason, nil)
+				require.NoError(t, tx.Respond(res))
+			})
+			defer server.close()
+
+			plugin := &SIP{
+				Server:   "sip://" + server.addr,
+				Method:   "OPTIONS",
+				Timeout:  config.Duration(2 * time.Second),
+				FromUser: "telegraf",
+				Log:      testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			acc := &testutil.Accumulator{}
+			require.NoError(t, plugin.Start(acc))
+			defer plugin.Stop()
+
+			require.NoError(t, plugin.Gather(acc))
+
+			require.Len(t, acc.Metrics, 1)
+			m := acc.Metrics[0]
+			require.Equal(t, tt.wantResult, m.Tags["result"])
+			require.Equal(t, strconv.Itoa(tt.statusCode), m.Tags["status_code"])
+			require.Equal(t, tt.reason, m.Fields["reason"])
+		})
+	}
+}
+
+func TestSIPAuthenticationRequired(t *testing.T) {
+	server := startTestSIPServerForMethod(t, sip.OPTIONS, func(req *sip.Request, tx sip.ServerTransaction) {
+		// Respond with 401 Unauthorized to require authentication
+		res := sip.NewResponseFromRequest(req, 401, "Unauthorized", nil)
+		// Add WWW-Authenticate header (required for digest auth)
+		res.AppendHeader(sip.NewHeader("WWW-Authenticate", `Digest realm="test", nonce="abc123"`))
+		require.NoError(t, tx.Respond(res))
+	})
+	defer server.close()
+
+	// Test without credentials - should get auth_required
+	plugin := &SIP{
+		Server:   "sip://" + server.addr,
+		Method:   "OPTIONS",
+		Timeout:  config.Duration(2 * time.Second),
+		FromUser: "telegraf",
+		Log:      testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, plugin.Start(acc))
+	defer plugin.Stop()
+
+	require.NoError(t, plugin.Gather(acc))
+
+	require.Len(t, acc.Metrics, 1)
+	m := acc.Metrics[0]
+
+	// Check tags
+	require.Equal(t, "sip://"+server.addr, m.Tags["server"])
+	require.Equal(t, "udp", m.Tags["transport"])
+	require.Equal(t, "auth_required", m.Tags["result"])
+	require.Equal(t, "401", m.Tags["status_code"])
+
+	// Check fields
+	require.Equal(t, "Unauthorized", m.Fields["reason"])
+	rt, ok := m.Fields["response_time"].(float64)
+	require.True(t, ok)
+	require.Greater(t, rt, 0.0)
+}
+
+func TestSIPAuthenticationSuccess(t *testing.T) {
+	const (
+		validUsername = "alice"
+		validPassword = "secret123"
+	)
+
+	attemptCount := 0
+	server := startTestSIPServerForMethod(t, sip.OPTIONS, func(req *sip.Request, tx sip.ServerTransaction) {
+		attemptCount++
+
+		// Check if Authorization header is present
+		authHeader := req.GetHeader("Authorization")
+
+		if authHeader == nil {
+			// First attempt without auth - send 401 challenge
+			res := sip.NewResponseFromRequest(req, 401, "Unauthorized", nil)
+			res.AppendHeader(sip.NewHeader("WWW-Authenticate", `Digest realm="test", nonce="abc123", algorithm=MD5`))
+			require.NoError(t, tx.Respond(res))
+			return
+		}
+
+		// Second attempt with auth - validate it exists and respond with 200
+		res := sip.NewResponseFromRequest(req, 200, "OK", nil)
+		require.NoError(t, tx.Respond(res))
+	})
+	defer server.close()
+
+	// Create plugin with valid credentials
+	username := config.NewSecret([]byte(validUsername))
+	password := config.NewSecret([]byte(validPassword))
+
+	plugin := &SIP{
+		Server:   "sip://" + server.addr,
+		Method:   "OPTIONS",
+		Timeout:  config.Duration(2 * time.Second),
+		FromUser: "telegraf",
+		Username: username,
+		Password: password,
+		Log:      testutil.Logger{},
+	}
+
+	require.NoError(t, plugin.Init())
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, plugin.Start(acc))
+	defer plugin.Stop()
+
+	require.NoError(t, plugin.Gather(acc))
+
+	// Verify server was called twice (initial request + auth retry)
+	require.Equal(t, 2, attemptCount, "server should be called twice: initial + auth retry")
+
+	// Verify successful authentication
+	require.Len(t, acc.Metrics, 1)
+	m := acc.Metrics[0]
+
+	// Check tags
+	require.Equal(t, "sip://"+server.addr, m.Tags["server"])
+	require.Equal(t, "udp", m.Tags["transport"])
+	require.Equal(t, "200", m.Tags["status_code"])
+	require.Equal(t, "success", m.Tags["result"])
+
+	// Check fields
+	require.Equal(t, "OK", m.Fields["reason"])
+	rt, ok := m.Fields["response_time"].(float64)
+	require.True(t, ok)
+	require.Greater(t, rt, 0.0)
+
+	// SECURITY: Verify credentials never appear in tags
+	for k, v := range m.Tags {
+		require.NotContains(t, v, validUsername, "tag %s must not contain username", k)
+		require.NotContains(t, v, validPassword, "tag %s must not contain password", k)
+	}
+}
+
+func TestSIPCredentialsNotInTags(t *testing.T) {
+	// This test verifies that username/password never appear in tags
+	server := startTestSIPServerForMethod(t, sip.OPTIONS, func(req *sip.Request, tx sip.ServerTransaction) {
+		res := sip.NewResponseFromRequest(req, 200, "OK", nil)
+		require.NoError(t, tx.Respond(res))
+	})
+	defer server.close()
+
+	// Create plugin with credentials
+	username := config.NewSecret([]byte("testuser"))
+	password := config.NewSecret([]byte("testpass"))
+
+	plugin := &SIP{
+		Server:   "sip://" + server.addr,
+		Method:   "OPTIONS",
+		Timeout:  config.Duration(2 * time.Second),
+		FromUser: "telegraf",
+		Username: username,
+		Password: password,
+		Log:      testutil.Logger{},
+	}
+
+	require.NoError(t, plugin.Init())
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, plugin.Start(acc))
+	defer plugin.Stop()
+
+	require.NoError(t, plugin.Gather(acc))
+
+	require.Len(t, acc.Metrics, 1)
+	m := acc.Metrics[0]
+
+	// SECURITY CHECK: Verify all tags don't contain credentials
+	for k, v := range m.Tags {
+		require.NotContains(t, v, "testuser", "tag %s must not contain username", k)
+		require.NotContains(t, v, "testpass", "tag %s must not contain password", k)
+	}
+}
+
+func TestSIPMethodINVITE(t *testing.T) {
+	server := startTestSIPServerForMethod(t, sip.INVITE, func(req *sip.Request, tx sip.ServerTransaction) {
+		// Verify we received an INVITE request
+		require.Equal(t, "INVITE", req.Method.String())
+
+		// INVITE typically gets a 200 OK or 180 Ringing
+		res := sip.NewResponseFromRequest(req, 200, "OK", nil)
+		require.NoError(t, tx.Respond(res))
+	})
+	defer server.close()
+
+	plugin := &SIP{
+		Server:   "sip://" + server.addr,
+		Method:   "INVITE",
+		Timeout:  config.Duration(2 * time.Second),
+		FromUser: "telegraf",
+		Log:      testutil.Logger{},
+	}
+
+	require.NoError(t, plugin.Init())
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, plugin.Start(acc))
+	defer plugin.Stop()
+
+	require.NoError(t, plugin.Gather(acc))
+
+	require.Len(t, acc.Metrics, 1)
+	m := acc.Metrics[0]
+
+	// Check tags
+	require.Equal(t, "sip://"+server.addr, m.Tags["server"])
+	require.Equal(t, "udp", m.Tags["transport"])
+	require.Equal(t, "INVITE", m.Tags["method"])
+	require.Equal(t, "200", m.Tags["status_code"])
+	require.Equal(t, "success", m.Tags["result"])
+
+	// Check fields
+	require.Equal(t, "OK", m.Fields["reason"])
+	rt, ok := m.Fields["response_time"].(float64)
+	require.True(t, ok)
+	require.Greater(t, rt, 0.0)
+}
+
+func TestSIPMethodMESSAGE(t *testing.T) {
+	server := startTestSIPServerForMethod(t, sip.MESSAGE, func(req *sip.Request, tx sip.ServerTransaction) {
+		// Verify we received a MESSAGE request
+		require.Equal(t, "MESSAGE", req.Method.String())
+
+		// MESSAGE typically gets a 200 OK or 202 Accepted
+		res := sip.NewResponseFromRequest(req, 200, "OK", nil)
+		require.NoError(t, tx.Respond(res))
+	})
+	defer server.close()
+
+	plugin := &SIP{
+		Server:   "sip://" + server.addr,
+		Method:   "MESSAGE",
+		Timeout:  config.Duration(2 * time.Second),
+		FromUser: "telegraf",
+		Log:      testutil.Logger{},
+	}
+
+	require.NoError(t, plugin.Init())
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, plugin.Start(acc))
+	defer plugin.Stop()
+
+	require.NoError(t, plugin.Gather(acc))
+
+	require.Len(t, acc.Metrics, 1)
+	m := acc.Metrics[0]
+
+	// Check tags
+	require.Equal(t, "sip://"+server.addr, m.Tags["server"])
+	require.Equal(t, "udp", m.Tags["transport"])
+	require.Equal(t, "MESSAGE", m.Tags["method"])
+	require.Equal(t, "200", m.Tags["status_code"])
+	require.Equal(t, "success", m.Tags["result"])
+
+	// Check fields
+	require.Equal(t, "OK", m.Fields["reason"])
+	rt, ok := m.Fields["response_time"].(float64)
+	require.True(t, ok)
+	require.Greater(t, rt, 0.0)
 }
