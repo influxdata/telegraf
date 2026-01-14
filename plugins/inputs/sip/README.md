@@ -21,16 +21,6 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Configuration
 
-> [!NOTE]
-> Per RFC 3261, the use of `;transport=tls` is deprecated. Use the `sips://` URI scheme instead to indicate TLS transport.
-
-This plugin is particularly useful for:
-
-- Monitoring VoIP infrastructure availability
-- Measuring SIP service response times
-- Verifying SIP server connectivity
-- Alerting on SIP service degradation
-
 ```toml @sample.conf
 # SIP (Session Initiation Protocol) health check plugin
 [[inputs.sip]]
@@ -86,6 +76,16 @@ This plugin is particularly useful for:
   ## TLS renegotiation method, choose from "never", "once", "freely"
   # tls_renegotiation_method = "never"
 ```
+
+> [!NOTE]
+> Per RFC 3261, the use of `;transport=tls` is deprecated. Use the `sips://` URI scheme instead to indicate TLS transport.
+
+This plugin is particularly useful for:
+
+- Monitoring VoIP infrastructure availability
+- Measuring SIP service response times
+- Verifying SIP server connectivity
+- Alerting on SIP service degradation
 
 ## Metrics
 
