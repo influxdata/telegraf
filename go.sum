@@ -1192,8 +1192,8 @@ github.com/emersion/go-textwrapper v0.0.0-20200911093747-65d896831594 h1:IbFBtwo
 github.com/emersion/go-textwrapper v0.0.0-20200911093747-65d896831594/go.mod h1:aqO8z8wPrjkscevZJFVE1wXJrLpC5LtJG7fqLOsPb2U=
 github.com/emersion/go-vcard v0.0.0-20230815062825-8fda7d206ec9 h1:ATgqloALX6cHCranzkLb8/zjivwQ9DWWDCQRnxTPfaA=
 github.com/emersion/go-vcard v0.0.0-20230815062825-8fda7d206ec9/go.mod h1:HMJKR5wlh/ziNp+sHEDV2ltblO4JD2+IdDOWtGcQBTM=
-github.com/emiago/sipgo v1.0.1 h1:8eCZ6L/VX3isyByyv1RrBoQ5GyBoRXBHkNMYjwacRfk=
-github.com/emiago/sipgo v1.0.1/go.mod h1:DuwAxBZhKMqIzQFPGZb1MVAGU6Wuxj64oTOhd5dx/FY=
+github.com/emiago/sipgo v1.1.0 h1:ryr9DhoDercbyCmCtGiZD/uB1NY745DZpsUHfSbWWaI=
+github.com/emiago/sipgo v1.1.0/go.mod h1:DuwAxBZhKMqIzQFPGZb1MVAGU6Wuxj64oTOhd5dx/FY=
 github.com/emicklei/go-restful/v3 v3.12.2 h1:DhwDP0vY3k8ZzE0RunuJy8GhNpPL6zqLkDf9B/a0/xU=
 github.com/emicklei/go-restful/v3 v3.12.2/go.mod h1:6n3XBCmQQb25CM2LCACGz8ukIrRry+4bhvbpWn3mrbc=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=

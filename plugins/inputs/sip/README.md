@@ -78,7 +78,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```
 
 > [!NOTE]
-> Per RFC 3261, the use of `;transport=tls` is deprecated. Use the `sips://` URI scheme instead to indicate TLS transport.
+> Per RFC 3261, the use of `;transport=tls` is deprecated.
+> Use the `sips://` URI scheme instead to indicate TLS transport.
 
 This plugin is particularly useful for:
 
