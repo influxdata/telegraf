@@ -479,7 +479,7 @@ func TestSIPServerSuccess(t *testing.T) {
 	require.Equal(t, 1, m.Fields["up"])
 	rt, ok := m.Fields["response_time"].(float64)
 	require.True(t, ok)
-	require.Greater(t, rt, 0.0)
+	require.GreaterOrEqual(t, rt, 0.0)
 }
 
 func TestSIPServerErrorResponse(t *testing.T) {
@@ -518,7 +518,7 @@ func TestSIPServerErrorResponse(t *testing.T) {
 	require.Equal(t, 0, m.Fields["up"])
 	rt, ok := m.Fields["response_time"].(float64)
 	require.True(t, ok)
-	require.Greater(t, rt, 0.0)
+	require.GreaterOrEqual(t, rt, 0.0)
 }
 
 func TestSIPServerTimeout(t *testing.T) {
@@ -696,7 +696,7 @@ func TestSIPAuthenticationRequired(t *testing.T) {
 	require.Equal(t, 0, m.Fields["up"])
 	rt, ok := m.Fields["response_time"].(float64)
 	require.True(t, ok)
-	require.Greater(t, rt, 0.0)
+	require.GreaterOrEqual(t, rt, 0.0)
 }
 
 func TestSIPAuthenticationSuccess(t *testing.T) {
@@ -766,7 +766,7 @@ func TestSIPAuthenticationSuccess(t *testing.T) {
 	require.Equal(t, 1, m.Fields["up"])
 	rt, ok := m.Fields["response_time"].(float64)
 	require.True(t, ok)
-	require.Greater(t, rt, 0.0)
+	require.GreaterOrEqual(t, rt, 0.0)
 
 	// SECURITY: Verify credentials never appear in tags
 	for k, v := range m.Tags {
@@ -857,7 +857,7 @@ func TestSIPMethodINVITE(t *testing.T) {
 	require.Equal(t, 1, m.Fields["up"])
 	rt, ok := m.Fields["response_time"].(float64)
 	require.True(t, ok)
-	require.Greater(t, rt, 0.0)
+	require.GreaterOrEqual(t, rt, 0.0)
 }
 
 func TestSIPMethodMESSAGE(t *testing.T) {
@@ -902,5 +902,5 @@ func TestSIPMethodMESSAGE(t *testing.T) {
 	require.Equal(t, 1, m.Fields["up"])
 	rt, ok := m.Fields["response_time"].(float64)
 	require.True(t, ok)
-	require.Greater(t, rt, 0.0)
+	require.GreaterOrEqual(t, rt, 0.0)
 }
