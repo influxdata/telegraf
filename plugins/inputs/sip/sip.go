@@ -243,6 +243,7 @@ func (s *SIP) Gather(acc telegraf.Accumulator) error {
 		if errors.Is(err, context.DeadlineExceeded) {
 			tags["result"] = "timeout"
 			fields["reason"] = "Timeout"
+			fields["up"] = 0
 			acc.AddFields("sip", fields, tags)
 			return nil
 		}
@@ -289,6 +290,7 @@ func (s *SIP) Gather(acc telegraf.Accumulator) error {
 		// Determine result based on status code
 		if res.StatusCode >= 200 && res.StatusCode < 300 {
 			tags["result"] = "success"
+			fields["up"] = 1
 		} else if res.StatusCode == 401 || res.StatusCode == 407 {
 			// Check if we have credentials configured
 			u, uErr := s.Username.Get()
@@ -303,14 +305,18 @@ func (s *SIP) Gather(acc telegraf.Accumulator) error {
 
 			if hasCredentials {
 				tags["result"] = "auth_failed"
+				fields["up"] = 0
 			} else {
 				tags["result"] = "auth_required"
+				fields["up"] = 0
 			}
 		} else {
 			tags["result"] = "error_response"
+			fields["up"] = 0
 		}
 	} else {
 		tags["result"] = "no_response"
+		fields["up"] = 0
 	}
 
 	acc.AddFields("sip", fields, tags)
@@ -332,6 +338,9 @@ func (*SIP) handleGatherError(err error, fields map[string]any, tags map[string]
 	} else {
 		tags["result"] = "connection_failed"
 	}
+
+	// Mark as down for all connection failures
+	fields["up"] = 0
 
 	acc.AddFields("sip", fields, tags)
 }

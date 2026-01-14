@@ -99,7 +99,8 @@ This plugin is particularly useful for:
     - result (result type: success, timeout, connection_failed, etc.)
     - server_agent (optional: the Server header from the response)
   - fields:
-    - response_time (float, seconds) - Time taken to receive response
+    - up (int) - Server availability indicator (1 = success, 0 = failure/timeout/error)
+    - response_time (float, seconds, optional) - Time taken to receive response (not set for timeouts/connection failures)
     - reason (string, optional) - SIP response reason phrase, e.g., "OK", "Not Found"
 
 ### Result Types
