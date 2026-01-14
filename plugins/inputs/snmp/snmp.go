@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -108,6 +109,8 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 				return
 			}
 
+			authErrorDetected := false
+
 			// First is the top-level fields. We treat the fields as table prefixes with an empty index.
 			t := snmp.Table{
 				Name:   s.Name,
@@ -115,6 +118,10 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			}
 			topTags := make(map[string]string)
 			if err := s.gatherTable(acc, gs, t, topTags, false); err != nil {
+				// Check if this is an SNMPv3 authentication error due to engine ID change
+				if strings.Contains(err.Error(), "incoming packet is not authentic") {
+					authErrorDetected = true
+				}
 				acc.AddError(fmt.Errorf("agent %s: %w", agent, err))
 				if s.StopOnError {
 					return
@@ -124,11 +131,26 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			// Now is the real tables.
 			for _, t := range s.Tables {
 				if err := s.gatherTable(acc, gs, t, topTags, true); err != nil {
+					// Check if this is an SNMPv3 authentication error due to engine ID change
+					if strings.Contains(err.Error(), "incoming packet is not authentic") {
+						authErrorDetected = true
+					}
 					acc.AddError(fmt.Errorf("agent %s: gathering table %s: %w", agent, t.Name, err))
 					if s.StopOnError {
 						return
 					}
 				}
+			}
+
+			// If we detected an auth error, reset the connection for next cycle
+			if authErrorDetected {
+				s.Log.Warnf("SNMPv3 authentication error detected on agent %s. Closing and resetting connection for next collection cycle.", agent)
+				// Close the existing connection properly
+				if gsWrapper, ok := gs.(snmp.GosnmpWrapper); ok && gsWrapper.Conn != nil {
+					gsWrapper.Conn.Close()
+				}
+				// Clear the cached connection to force re-initialization on next gather
+				s.connectionCache[i] = nil
 			}
 		}(i, agent)
 	}
