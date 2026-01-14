@@ -250,9 +250,9 @@ func TestWriteExplicitSync(t *testing.T) {
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			switch r.URL.Path {
 			case "/api/v3/write_lp":
-				if r.URL.Query().Get("no_sync") != "false" {
+				if noSync := r.URL.Query().Get("no_sync"); noSync != "false" {
 					w.WriteHeader(http.StatusInternalServerError)
-					t.Error("Expected 'no_sync' to be set to 'false'")
+					t.Errorf("Expected 'no_sync' to be set to 'false' but got %q", noSync)
 					return
 				}
 				w.WriteHeader(http.StatusOK)
@@ -300,9 +300,9 @@ func TestWriteExplicitNoSync(t *testing.T) {
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			switch r.URL.Path {
 			case "/api/v3/write_lp":
-				if r.URL.Query().Get("no_sync") != "true" {
+				if noSync := r.URL.Query().Get("no_sync"); noSync != "true" {
 					w.WriteHeader(http.StatusInternalServerError)
-					t.Error("Expected 'no_sync' to be set to 'true'")
+					t.Errorf("Expected 'no_sync' to be set to 'true' but got %q", noSync)
 					return
 				}
 				w.WriteHeader(http.StatusOK)
