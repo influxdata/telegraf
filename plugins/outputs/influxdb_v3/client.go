@@ -240,7 +240,7 @@ func (c *client) writeBatch(ctx context.Context, database string, metrics []tele
 	params := c.url.Query()
 	params.Set("db", database)
 	if c.cfg.Sync != nil {
-		params.Set("no_sync", fmt.Sprint(!*c.cfg.Sync))
+		params.Set("no_sync", strconv.FormatBool(!*c.cfg.Sync))
 	}
 	c.url.RawQuery = params.Encode()
 	req, err := http.NewRequest("POST", c.url.String(), io.NopCloser(bytes.NewBuffer(body)))
