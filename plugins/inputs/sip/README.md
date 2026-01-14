@@ -100,7 +100,8 @@ This plugin is particularly useful for:
     - server_agent (optional: the Server header from the response)
   - fields:
     - up (int) - Server availability indicator (1 = success, 0 = failure/timeout/error)
-    - response_time (float, seconds, optional) - Time taken to receive response (not set for timeouts/connection failures)
+    - response_time (float, seconds, optional) - Time taken to receive
+      response (not set for timeouts/connection failures)
     - reason (string, optional) - SIP response reason phrase, e.g., "OK", "Not Found"
 
 ### Result Types
