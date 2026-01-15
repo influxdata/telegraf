@@ -59,6 +59,9 @@ func (s *Statsd) parseEventMessage(now time.Time, message, defaultHostname strin
 	if err != nil {
 		return fmt.Errorf("invalid message format, could not parse text.length: %q", rawLen[0])
 	}
+	if titleLen < 0 || textLen < 0 {
+		return errors.New("invalid message format, title.length and text.length must be positive integer")
+	}
 	if titleLen+textLen+1 > int64(len(message)) {
 		return errors.New("invalid message format, title.length and text.length exceed total message length")
 	}
