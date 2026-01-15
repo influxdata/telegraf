@@ -32,7 +32,7 @@ func (h *httpClient) Connect(cfg *clientConfig) error {
 	}
 
 	// For coralogix, we enforce HTTP connection with TLS
-	if tlsConfig != nil && cfg.CoralogixConfig != nil {
+	if tlsConfig == nil && cfg.CoralogixConfig != nil {
 		tlsConfig = &tls.Config{}
 	}
 
