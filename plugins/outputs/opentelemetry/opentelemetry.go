@@ -49,7 +49,8 @@ type clientConfig struct {
 	TLSConfig       *tls.ClientConfig
 	Compression     string
 	CoralogixConfig *CoralogixConfig
-	Encoding        string
+	Encoding        string            // only for HTTP client
+	Headers         map[string]string // only for HTTP client, gRPC client uses metadata
 }
 
 type otlpMetricClient interface {
@@ -118,6 +119,7 @@ func (o *OpenTelemetry) Connect() error {
 		Compression:     o.Compression,
 		CoralogixConfig: o.Coralogix,
 		Encoding:        o.EncodingType,
+		Headers:         o.Headers,
 	}
 	err = o.otlpMetricClient.Connect(clientCfg)
 	if err != nil {

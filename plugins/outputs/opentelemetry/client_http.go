@@ -18,6 +18,7 @@ type httpClient struct {
 	url          string
 	encodingType string
 	compress     string
+	headers      map[string]string
 }
 
 func (h *httpClient) Connect(cfg *clientConfig) error {
@@ -25,6 +26,7 @@ func (h *httpClient) Connect(cfg *clientConfig) error {
 	h.url = cfg.ServiceAddress
 	h.encodingType = cfg.Encoding
 	h.compress = cfg.Compression
+	h.headers = cfg.Headers
 
 	tlsConfig, err := cfg.TLSConfig.TLSConfig()
 	if err != nil {
@@ -76,6 +78,9 @@ func (h *httpClient) Export(ctx context.Context, request pmetricotlp.ExportReque
 	httpRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, h.url, reader)
 	if err != nil {
 		return pmetricotlp.ExportResponse{}, err
+	}
+	for key, value := range h.headers {
+		httpRequest.Header.Set(key, value)
 	}
 
 	httpRequest.Header.Set("Content-Type", encoding)
