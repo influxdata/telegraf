@@ -532,8 +532,10 @@ func setupIntegrationTest(t *testing.T) (*testutil.Container, error) {
 	e := &ElasticsearchQuery{
 		URLs: []string{url},
 		HTTPClientConfig: common_http.HTTPClientConfig{
-			ResponseHeaderTimeout: config.Duration(30 * time.Second),
-			Timeout:               config.Duration(30 * time.Second),
+			Timeout: config.Duration(30 * time.Second),
+			TransportConfig: common_http.TransportConfig{
+				ResponseHeaderTimeout: config.Duration(30 * time.Second),
+			},
 		},
 		Log: testutil.Logger{},
 	}
@@ -611,8 +613,10 @@ func TestElasticsearchQueryIntegration(t *testing.T) {
 			fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
 		},
 		HTTPClientConfig: common_http.HTTPClientConfig{
-			ResponseHeaderTimeout: config.Duration(30 * time.Second),
-			Timeout:               config.Duration(30 * time.Second),
+			Timeout: config.Duration(30 * time.Second),
+			TransportConfig: common_http.TransportConfig{
+				ResponseHeaderTimeout: config.Duration(30 * time.Second),
+			},
 		},
 		Log: testutil.Logger{},
 	}
@@ -677,8 +681,10 @@ func TestElasticsearchQueryIntegration_getMetricFields(t *testing.T) {
 			fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
 		},
 		HTTPClientConfig: common_http.HTTPClientConfig{
-			ResponseHeaderTimeout: config.Duration(30 * time.Second),
-			Timeout:               config.Duration(30 * time.Second),
+			Timeout: config.Duration(30 * time.Second),
+			TransportConfig: common_http.TransportConfig{
+				ResponseHeaderTimeout: config.Duration(30 * time.Second),
+			},
 		},
 		Log: testutil.Logger{},
 	}
