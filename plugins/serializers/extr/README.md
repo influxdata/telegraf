@@ -382,7 +382,7 @@ will serialize into the following extr JSON ouput
   "lldpStateChange": [
     {
       "device": {
-        "serialnum": "\"ABCD-1234\""
+        "serialnumber": "\"ABCD-1234\""
       },
       "items": [
         {
@@ -439,7 +439,7 @@ will serialize into the following extr JSON ouput
   "ospfNeighborStateChange": [
     {
       "device": {
-        "reporterSerialnum": "\"XYZ-5678\"",
+        "reporterSerialnumber": "\"XYZ-5678\"",
         "serialnum": "\"ABCD-1234\""
       },
       "items": [
