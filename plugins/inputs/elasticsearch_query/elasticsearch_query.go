@@ -240,8 +240,10 @@ func init() {
 		return &ElasticsearchQuery{
 			HealthCheckInterval: config.Duration(time.Second * 10),
 			HTTPClientConfig: common_http.HTTPClientConfig{
-				ResponseHeaderTimeout: config.Duration(5 * time.Second),
-				Timeout:               config.Duration(5 * time.Second),
+				Timeout: config.Duration(5 * time.Second),
+				TransportConfig: common_http.TransportConfig{
+					ResponseHeaderTimeout: config.Duration(5 * time.Second),
+				},
 			},
 		}
 	})

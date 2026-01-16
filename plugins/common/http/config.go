@@ -51,35 +51,16 @@ func (h *TransportConfig) CreateTransport() (*http.Transport, error) {
 
 // HTTPClientConfig is a common HTTP client struct.
 type HTTPClientConfig struct {
-	Timeout               config.Duration `toml:"timeout"`
-	IdleConnTimeout       config.Duration `toml:"idle_conn_timeout"`
-	MaxIdleConns          int             `toml:"max_idle_conn"`
-	MaxIdleConnsPerHost   int             `toml:"max_idle_conn_per_host"`
-	ResponseHeaderTimeout config.Duration `toml:"response_timeout"`
-	proxy.HTTPProxy
-	tls.ClientConfig
+	Timeout config.Duration `toml:"timeout"`
+	TransportConfig
 	oauth.OAuth2Config
 	cookie.CookieAuthConfig
 }
 
 func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger) (*http.Client, error) {
-	tlsCfg, err := h.ClientConfig.TLSConfig()
+	transport, err := h.TransportConfig.CreateTransport()
 	if err != nil {
-		return nil, fmt.Errorf("creating TLS configuration failed: %w", err)
-	}
-
-	prox, err := h.HTTPProxy.Proxy()
-	if err != nil {
-		return nil, fmt.Errorf("setting up proxy failed: %w", err)
-	}
-
-	transport := &http.Transport{
-		TLSClientConfig:       tlsCfg,
-		Proxy:                 prox,
-		IdleConnTimeout:       time.Duration(h.IdleConnTimeout),
-		MaxIdleConns:          h.MaxIdleConns,
-		MaxIdleConnsPerHost:   h.MaxIdleConnsPerHost,
-		ResponseHeaderTimeout: time.Duration(h.ResponseHeaderTimeout),
+		return nil, fmt.Errorf("setting up transport failed: %w", err)
 	}
 
 	// Register "http+unix" and "https+unix" protocol handler.
