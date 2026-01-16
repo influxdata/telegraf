@@ -220,8 +220,10 @@ func initRunner(t *testing.T) (*CtrlXDataLayer, *httptest.Server) {
 		Username:   config.NewSecret([]byte("user")),
 		Password:   config.NewSecret([]byte("password")),
 		HTTPClientConfig: common_http.HTTPClientConfig{
-			ClientConfig: tls.ClientConfig{
-				InsecureSkipVerify: true,
+			TransportConfig: common_http.TransportConfig{
+				ClientConfig: tls.ClientConfig{
+					InsecureSkipVerify: true,
+				},
 			},
 		},
 		Subscription: subs,
