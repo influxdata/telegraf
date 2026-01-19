@@ -24,7 +24,9 @@
         "hook": "input",
         "prio": 0,
         "policy": "accept"
-      } }, {
+      }
+    },
+    {
       "rule": {
         "family": "inet",
         "table": "test",
@@ -137,6 +139,63 @@
             "accept": null
           }
         ]
+      }
+    },
+    {
+      "set": {
+        "family": "inet",
+        "name": "non_empty_set",
+        "table": "test",
+        "type": "ipv6_addr",
+        "handle": 6,
+        "size": 65536,
+        "flags": ["timeout"],
+        "timeout": 300,
+        "elem": [
+          {
+            "elem": {
+              "val": "::1",
+              "expires": 99
+            }
+          },
+          {
+            "elem": {
+              "val": "::2",
+              "expires": 277
+            }
+          },
+          {
+            "elem": {
+              "val": "::3",
+              "expires": 280
+            }
+          },
+          {
+            "elem": {
+              "val": "::4",
+              "expires": 284
+            }
+          },
+          {
+            "elem": {
+              "val": "::5",
+              "expires": 287
+            }
+          }
+        ]
+      }
+    },
+    {
+      "set": {
+        "family": "inet",
+        "name": "empty_set",
+        "table": "test",
+        "type": "ipv4_addr",
+        "handle": 7,
+        "comment": "comment",
+        "size": 65536,
+        "flags": ["timeout"],
+        "timeout": 300
       }
     }
   ]

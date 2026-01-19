@@ -10,6 +10,7 @@ import (
 type table struct {
 	Metainfo          *metainfo
 	Rules             []*rule
+	Sets              []*set
 	JSONSchemaVersion int `json:"json_schema_version"`
 }
 
@@ -36,6 +37,12 @@ func (nftable *table) UnmarshalJSON(b []byte) error {
 				return fmt.Errorf("unable to parse rule: %w", err)
 			}
 			nftable.Rules = append(nftable.Rules, &r)
+		} else if _, found := nfthing["set"]; found {
+			var s set
+			if err := json.Unmarshal(nfthing["set"], &s); err != nil {
+				return fmt.Errorf("unable to parse set: %w", err)
+			}
+			nftable.Sets = append(nftable.Sets, &s)
 		}
 	}
 	return nil
@@ -62,3 +69,12 @@ type counter struct {
 	Packets int64 `json:"packets"`
 	Bytes   int64 `json:"bytes"`
 }
+
+type set struct {
+	Family string `json:"family"`
+	Name   string `json:"name"`
+	Table  string `json:"table"`
+	Elem   []elem `json:"elem,omitempty"`
+}
+
+type elem struct{}
