@@ -50,6 +50,7 @@ type MonitoringParameters struct {
 // NodeSettings describes how to map from a OPC UA node to a Metric
 type NodeSettings struct {
 	FieldName        string               `toml:"name"`
+	NodeIDStr        string               `toml:"node_id"`
 	Namespace        string               `toml:"namespace"`
 	NamespaceURI     string               `toml:"namespace_uri"`
 	IdentifierType   string               `toml:"identifier_type"`
@@ -78,6 +79,7 @@ type NodeGroupSettings struct {
 }
 
 type EventNodeSettings struct {
+	NodeIDStr      string `toml:"node_id"`
 	Namespace      string `toml:"namespace"`
 	NamespaceURI   string `toml:"namespace_uri"`
 	IdentifierType string `toml:"identifier_type"`
@@ -89,6 +91,104 @@ func (e *EventNodeSettings) NodeID() string {
 		return "nsu=" + e.NamespaceURI + ";" + e.IdentifierType + "=" + e.Identifier
 	}
 	return "ns=" + e.Namespace + ";" + e.IdentifierType + "=" + e.Identifier
+}
+
+// nodeIDParts holds the components of a parsed OPC UA node ID string
+type nodeIDParts struct {
+	namespace      string
+	namespaceURI   string
+	identifierType string
+	identifier     string
+}
+
+// parseNodeIDString parses an OPC UA node ID string (e.g., "ns=0;i=2262" or "nsu=http://...;s=Name")
+// and returns the parsed components.
+func parseNodeIDString(nodeIDStr string) (nodeIDParts, error) {
+	var result nodeIDParts
+
+	// Split on semicolon to get namespace part and identifier part
+	parts := strings.SplitN(nodeIDStr, ";", 2)
+	if len(parts) != 2 {
+		return result, fmt.Errorf("invalid node ID format %q: expected 'ns=X;Y=Z' or 'nsu=URI;Y=Z'", nodeIDStr)
+	}
+
+	// Parse namespace part (ns= or nsu=)
+	nsPart := parts[0]
+	switch {
+	case strings.HasPrefix(nsPart, "ns="):
+		result.namespace = strings.TrimPrefix(nsPart, "ns=")
+	case strings.HasPrefix(nsPart, "nsu="):
+		result.namespaceURI = strings.TrimPrefix(nsPart, "nsu=")
+	default:
+		return result, fmt.Errorf("invalid node ID format %q: namespace must start with 'ns=' or 'nsu='", nodeIDStr)
+	}
+
+	// Parse identifier part (i=, s=, g=, or b=)
+	idPart := parts[1]
+	if len(idPart) < 2 || idPart[1] != '=' {
+		return result, fmt.Errorf("invalid node ID format %q: identifier must be in format 'X=value'", nodeIDStr)
+	}
+
+	result.identifierType = string(idPart[0])
+	result.identifier = idPart[2:]
+
+	// Validate identifier type
+	switch result.identifierType {
+	case "i", "s", "g", "b":
+		// Valid
+	default:
+		return result, fmt.Errorf("invalid identifier type %q in node ID %q: expected i, s, g, or b", result.identifierType, nodeIDStr)
+	}
+
+	return result, nil
+}
+
+// SetFromNodeIDString parses the NodeIDStr field and populates the individual fields.
+// Returns an error if NodeIDStr is set but invalid, or if both NodeIDStr and individual fields are set.
+func (tag *NodeSettings) SetFromNodeIDString() error {
+	if tag.NodeIDStr == "" {
+		return nil
+	}
+
+	// Check for conflicting configuration
+	if tag.Namespace != "" || tag.NamespaceURI != "" || tag.IdentifierType != "" || tag.Identifier != "" {
+		return fmt.Errorf("node %q: cannot specify both 'node_id' and individual fields (namespace/namespace_uri/identifier_type/identifier)", tag.FieldName)
+	}
+
+	parsed, err := parseNodeIDString(tag.NodeIDStr)
+	if err != nil {
+		return fmt.Errorf("node %q: %w", tag.FieldName, err)
+	}
+
+	tag.Namespace = parsed.namespace
+	tag.NamespaceURI = parsed.namespaceURI
+	tag.IdentifierType = parsed.identifierType
+	tag.Identifier = parsed.identifier
+	return nil
+}
+
+// SetFromNodeIDString parses the NodeIDStr field and populates the individual fields.
+// Returns an error if NodeIDStr is set but invalid, or if both NodeIDStr and individual fields are set.
+func (e *EventNodeSettings) SetFromNodeIDString() error {
+	if e.NodeIDStr == "" {
+		return nil
+	}
+
+	// Check for conflicting configuration
+	if e.Namespace != "" || e.NamespaceURI != "" || e.IdentifierType != "" || e.Identifier != "" {
+		return errors.New("cannot specify both 'node_id' and individual fields (namespace/namespace_uri/identifier_type/identifier)")
+	}
+
+	parsed, err := parseNodeIDString(e.NodeIDStr)
+	if err != nil {
+		return err
+	}
+
+	e.Namespace = parsed.namespace
+	e.NamespaceURI = parsed.namespaceURI
+	e.IdentifierType = parsed.identifierType
+	e.Identifier = parsed.identifier
+	return nil
 }
 
 type EventGroupSettings struct {
@@ -103,9 +203,21 @@ type EventGroupSettings struct {
 	Fields           []string            `toml:"fields"`
 }
 
-func (e *EventGroupSettings) UpdateNodeIDSettings() {
+func (e *EventGroupSettings) UpdateNodeIDSettings() error {
+	// Parse node_id string for event type node if provided
+	if err := e.EventTypeNode.SetFromNodeIDString(); err != nil {
+		return fmt.Errorf("event_type_node: %w", err)
+	}
+
 	for i := range e.NodeIDSettings {
 		n := &e.NodeIDSettings[i]
+
+		// Parse node_id string if provided
+		if err := n.SetFromNodeIDString(); err != nil {
+			return fmt.Errorf("node_ids[%d]: %w", i, err)
+		}
+
+		// Apply group defaults only if not already set
 		if n.Namespace == "" {
 			n.Namespace = e.Namespace
 		}
@@ -116,6 +228,7 @@ func (e *EventGroupSettings) UpdateNodeIDSettings() {
 			n.IdentifierType = e.IdentifierType
 		}
 	}
+	return nil
 }
 
 func (e *EventGroupSettings) Validate() error {
@@ -224,9 +337,11 @@ func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputC
 	}
 
 	if o.EventGroups != nil {
-		for _, eventGroup := range o.EventGroups {
-			eventGroup.UpdateNodeIDSettings()
-			if err := eventGroup.Validate(); err != nil {
+		for i := range o.EventGroups {
+			if err := o.EventGroups[i].UpdateNodeIDSettings(); err != nil {
+				return nil, fmt.Errorf("invalid event_settings: %w", err)
+			}
+			if err := o.EventGroups[i].Validate(); err != nil {
 				return nil, fmt.Errorf("invalid event_settings: %w", err)
 			}
 		}
@@ -408,8 +523,15 @@ func validateNodeToAdd(existing map[metricParts]struct{}, nmm *NodeMetricMapping
 // InitNodeMetricMapping builds nodes from the configuration
 func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 	existing := make(map[metricParts]struct{}, len(o.Config.RootNodes))
-	for _, node := range o.Config.RootNodes {
-		nmm, err := NewNodeMetricMapping(o.Config.MetricName, node, make(map[string]string))
+	for i := range o.Config.RootNodes {
+		node := &o.Config.RootNodes[i]
+
+		// Parse node_id string if provided
+		if err := node.SetFromNodeIDString(); err != nil {
+			return err
+		}
+
+		nmm, err := NewNodeMetricMapping(o.Config.MetricName, *node, make(map[string]string))
 		if err != nil {
 			return err
 		}
@@ -420,12 +542,21 @@ func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 		o.NodeMetricMapping = append(o.NodeMetricMapping, *nmm)
 	}
 
-	for _, group := range o.Config.Groups {
+	for gi := range o.Config.Groups {
+		group := &o.Config.Groups[gi]
 		if group.MetricName == "" {
 			group.MetricName = o.Config.MetricName
 		}
 
-		for _, node := range group.Nodes {
+		for ni := range group.Nodes {
+			node := &group.Nodes[ni]
+
+			// Parse node_id string if provided
+			if err := node.SetFromNodeIDString(); err != nil {
+				return err
+			}
+
+			// Apply group defaults only if not already set
 			if node.Namespace == "" {
 				node.Namespace = group.Namespace
 			}
@@ -439,7 +570,7 @@ func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 				node.MonitoringParams.SamplingInterval = group.SamplingInterval
 			}
 
-			nmm, err := NewNodeMetricMapping(group.MetricName, node, group.DefaultTags)
+			nmm, err := NewNodeMetricMapping(group.MetricName, *node, group.DefaultTags)
 			if err != nil {
 				return err
 			}
