@@ -384,7 +384,8 @@ OPC UA supports two ways to specify namespaces:
 
 2. **Namespace URI** (`namespace_uri`): A string URI that uniquely identifies
    the namespace. This is more stable across server restarts but requires the
-   plugin to fetch the namespace array from the server to resolve the URI to an index.
+   plugin to fetch the namespace array from the server to resolve the URI to an
+   index.
 
 **When to use namespace index:**
 
