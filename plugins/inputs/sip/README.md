@@ -5,11 +5,11 @@ This plugin gathers metrics about the health and availability of
 proxies, registrars, and VoIP service providers. It sends SIP requests
 (typically OPTIONS) and measures response times and status codes.
 
-[sip]: https://datatracker.ietf.org/doc/html/rfc3261
-
 ⭐ Telegraf v1.38.0
 🏷️ network
 💻 all
+
+[sip]: https://datatracker.ietf.org/doc/html/rfc3261
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -18,6 +18,15 @@ such as modifying metrics, tags, and fields, creating aliases, and configuring
 plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `username` and
+`password` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
 
 ## Configuration
 
@@ -96,35 +105,12 @@ This plugin is particularly useful for:
     - method (the SIP method used: OPTIONS, INVITE, MESSAGE)
     - transport (the transport protocol: udp, tcp, tls, ws, wss)
     - status_code (the SIP response status code, e.g., "200", "404")
-    - result (result type: success, timeout, connection_failed, etc.)
     - server_agent (optional: the Server header from the response)
   - fields:
     - up (int) - Server availability indicator (1 = success, 0 = failure/timeout/error)
     - response_time (float, seconds, optional) - Time taken to receive
       response (not set for timeouts/connection failures)
     - reason (string, optional) - SIP response reason phrase, e.g., "OK", "Not Found"
-
-### Result Types
-
-The following result types are reported based on [RFC 3261][sip] SIP protocol
-behavior:
-
-| Result Type         | Description                                         |
-| ------------------- | --------------------------------------------------- |
-| success             | Request completed successfully                      |
-| timeout             | Request timed out waiting for response              |
-| connection_refused  | Connection refused by server                        |
-| connection_failed   | Connection failed (general network error)           |
-| no_response         | Transaction completed but no response received      |
-| parse_error         | Failed to parse server address                      |
-| request_error       | Failed to create SIP request                        |
-| transaction_error   | SIP transaction error                               |
-| no_route            | No route to host                                    |
-| network_unreachable | Network is unreachable                              |
-| error_response      | Received error response (4xx, 5xx, 6xx)             |
-| auth_required       | Authentication required but no credentials provided |
-| auth_failed         | Authentication attempt failed                       |
-| auth_error          | Error retrieving authentication credentials         |
 
 ### SIP Methods
 
@@ -140,10 +126,10 @@ The plugin supports the following SIP methods:
 ## Example Output
 
 ```text
-sip,host=telegraf-host,method=OPTIONS,result=success,server=sip://sip.example.com:5060,status_code=200,transport=udp response_time=0.023,reason="OK" 1640000000000000000
-sip,host=telegraf-host,method=OPTIONS,result=timeout,server=sip://unreachable.example.com:5060,transport=udp 1640000000000000000
-sip,host=telegraf-host,method=OPTIONS,result=error_response,server=sip://sip.provider.com:5060,status_code=404,transport=udp response_time=0.045,reason="Not Found" 1640000000000000000
-sip,host=telegraf-host,method=OPTIONS,result=success,server=sips://secure.voip.example.com:5061,status_code=200,transport=tls response_time=0.067,reason="OK" 1640000000000000000
+sip,host=telegraf-host,method=OPTIONS,server=sip://sip.example.com:5060,status_code=200,transport=udp response_time=0.023,reason="OK",up=1i 1640000000000000000
+sip,host=telegraf-host,method=OPTIONS,server=sip://unreachable.example.com:5060,transport=udp reason="Timeout",up=0i 1640000000000000000
+sip,host=telegraf-host,method=OPTIONS,server=sip://sip.provider.com:5060,status_code=404,transport=udp response_time=0.045,reason="Not Found",up=0i 1640000000000000000
+sip,host=telegraf-host,method=OPTIONS,server=sips://secure.voip.example.com:5061,status_code=200,transport=tcp response_time=0.067,reason="OK",up=1i 1640000000000000000
 ```
 
 ### Troubleshooting

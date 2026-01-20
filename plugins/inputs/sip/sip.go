@@ -26,10 +26,10 @@ import (
 var sampleConfig string
 
 type serverInfo struct {
-	Host      string
-	Port      int
-	Transport string
-	Secure    bool
+	host      string
+	port      int
+	transport string
+	secure    bool
 }
 
 type SIP struct {
@@ -51,6 +51,10 @@ type SIP struct {
 	client     *sipgo.Client
 	tlsConfig  *tls.Config
 	serverInfo *serverInfo
+
+	// Cached request components (initialized in Init)
+	requestURI sip.Uri
+	headers    []sip.Header
 }
 
 func (*SIP) SampleConfig() string {
@@ -65,10 +69,6 @@ func (s *SIP) Init() error {
 	if s.ToUser == "" {
 		s.ToUser = s.FromUser
 	}
-	if s.Transport == "" {
-		s.Transport = "udp"
-	}
-
 	// Validate server
 	if s.Server == "" {
 		return errors.New("server must be specified")
@@ -88,22 +88,35 @@ func (s *SIP) Init() error {
 		return errors.New("timeout has to be greater than zero")
 	}
 
-	// Validate server URL scheme
+	// Validate server URL scheme and transport combination
+	// Note: "tls" transport is deprecated per RFC 3261. Use sips:// scheme instead.
 	u, err := net_url.Parse(s.Server)
 	if err != nil {
 		return fmt.Errorf("invalid server URL: %w", err)
 	}
-	if u.Scheme != "sip" && u.Scheme != "sips" {
-		return fmt.Errorf("server URL must use sip:// or sips:// scheme, got %q", u.Scheme)
-	}
-
-	// Validate transport
-	// Note: "tls" transport is deprecated per RFC 3261. Use sips:// scheme instead.
-	switch strings.ToLower(s.Transport) {
-	case "udp", "tcp", "ws", "wss":
-		s.Transport = strings.ToLower(s.Transport)
+	switch u.Scheme {
+	case "sip":
+		// sip:// requires non-secure transport (udp, tcp, ws)
+		switch s.Transport {
+		case "":
+			s.Transport = "udp"
+		case "udp", "tcp", "ws":
+			// valid transports
+		default:
+			return fmt.Errorf("invalid transport %q; must be one of udp, tcp, ws", s.Transport)
+		}
+	case "sips":
+		// sips:// requires secure transport (tcp or wss for TLS)
+		switch s.Transport {
+		case "":
+			s.Transport = "tcp"
+		case "tcp", "wss":
+			// valid transports
+		default:
+			return fmt.Errorf("invalid transport %q for sips:// scheme; must be tcp or wss", s.Transport)
+		}
 	default:
-		return fmt.Errorf("invalid transport %q", s.Transport)
+		return fmt.Errorf("server URL must use sip:// or sips:// scheme, got %q", u.Scheme)
 	}
 
 	// Parse server info
@@ -115,11 +128,11 @@ func (s *SIP) Init() error {
 
 	// Set FromDomain default after serverInfo is available
 	if s.FromDomain == "" {
-		s.FromDomain = s.serverInfo.Host
+		s.FromDomain = s.serverInfo.host
 	}
 
-	// Setup TLS configuration if transport requires it
-	if info.Secure || info.Transport == "wss" {
+	// Setup TLS configuration if secure (sips:// scheme)
+	if info.secure {
 		tlsConfig, err := s.ClientConfig.TLSConfig()
 		if err != nil {
 			return fmt.Errorf("failed to create TLS config: %w", err)
@@ -127,19 +140,47 @@ func (s *SIP) Init() error {
 		s.tlsConfig = tlsConfig
 	}
 
+	// Build cached request components
+	s.requestURI = sip.Uri{
+		Scheme: u.Scheme,
+		User:   s.ToUser,
+		Host:   info.host,
+		Port:   info.port,
+	}
+
+	s.requestURI.UriParams = sip.NewParams()
+	s.requestURI.UriParams.Add("transport", info.transport)
+
+	// Build cached headers (To, User-Agent, Contact)
+	// Note: From header has a dynamic tag per request, so it cannot be cached
+	s.headers = []sip.Header{
+		&sip.ToHeader{Address: s.requestURI},
+		sip.NewHeader("User-Agent", internal.ProductToken()),
+	}
+
+	if s.LocalAddress != "" {
+		s.headers = append(s.headers, &sip.ContactHeader{
+			Address: sip.Uri{
+				Scheme: u.Scheme,
+				User:   s.FromUser,
+				Host:   s.LocalAddress,
+			},
+		})
+	}
+
 	return nil
 }
 
-func (s *SIP) Start(_ telegraf.Accumulator) error {
+func (s *SIP) Start(telegraf.Accumulator) error {
 	// Create SIP user agent with optional TLS config
-	var uaOpts []sipgo.UserAgentOption
+	var opts []sipgo.UserAgentOption
 
 	// Add TLS config if transport requires it
 	if s.tlsConfig != nil {
-		uaOpts = append(uaOpts, sipgo.WithUserAgenTLSConfig(s.tlsConfig))
+		opts = append(opts, sipgo.WithUserAgenTLSConfig(s.tlsConfig))
 	}
 
-	ua, err := sipgo.NewUA(uaOpts...)
+	ua, err := sipgo.NewUA(opts...)
 	if err != nil {
 		return fmt.Errorf("failed to create SIP user agent: %w", err)
 	}
@@ -160,9 +201,8 @@ func (s *SIP) Start(_ telegraf.Accumulator) error {
 func (s *SIP) Stop() {
 	if s.ua != nil {
 		s.ua.Close()
-		s.ua = nil
 	}
-	s.client = nil
+	s.ua = nil
 }
 
 func (s *SIP) Gather(acc telegraf.Accumulator) error {
@@ -170,65 +210,27 @@ func (s *SIP) Gather(acc telegraf.Accumulator) error {
 	tags := map[string]string{
 		"server":    s.Server,
 		"method":    s.Method,
-		"transport": s.serverInfo.Transport,
+		"transport": s.serverInfo.transport,
 	}
 
-	// Build SIP URI for the request
-	scheme := "sip"
-	if s.serverInfo.Secure {
-		scheme = "sips"
-	}
+	// Create SIP request using cached requestURI
+	req := sip.NewRequest(sip.RequestMethod(s.Method), s.requestURI)
 
-	requestURI := &sip.Uri{
-		Scheme: scheme,
-		User:   s.ToUser,
-		Host:   s.serverInfo.Host,
-		Port:   s.serverInfo.Port,
-	}
-
-	// Add transport parameter for non-default transports
-	// Note: sips:// always uses TLS via the scheme, not the transport parameter
-	if scheme == "sip" && s.serverInfo.Transport != "udp" {
-		requestURI.UriParams = sip.NewParams()
-		requestURI.UriParams.Add("transport", s.serverInfo.Transport)
-	}
-
-	// Create SIP request
-	req := sip.NewRequest(sip.RequestMethod(s.Method), *requestURI)
-
-	// Add From header
-	fromURI := sip.Uri{
-		Scheme: scheme,
-		User:   s.FromUser,
-		Host:   s.FromDomain,
-	}
+	// Add From header (has dynamic tag per request, so cannot be cached)
 	from := &sip.FromHeader{
-		Address: fromURI,
-		Params:  sip.NewParams(),
+		Address: sip.Uri{
+			Scheme: s.requestURI.Scheme,
+			User:   s.FromUser,
+			Host:   s.FromDomain,
+		},
+		Params: sip.NewParams(),
 	}
 	from.Params.Add("tag", sip.GenerateTagN(16))
 	req.AppendHeader(from)
 
-	// Add To header
-	to := &sip.ToHeader{
-		Address: *requestURI,
-	}
-	req.AppendHeader(to)
-
-	// Add User-Agent header
-	req.AppendHeader(sip.NewHeader("User-Agent", internal.ProductToken()))
-
-	// Add Contact header if local address specified
-	if s.LocalAddress != "" {
-		contactURI := sip.Uri{
-			Scheme: scheme,
-			User:   s.FromUser,
-			Host:   s.LocalAddress,
-		}
-		contact := &sip.ContactHeader{
-			Address: contactURI,
-		}
-		req.AppendHeader(contact)
+	// Add cached headers (To, User-Agent, Contact)
+	for _, header := range s.headers {
+		req.AppendHeader(header)
 	}
 
 	// Send request and measure response time
@@ -241,7 +243,6 @@ func (s *SIP) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		// Check if it's a timeout
 		if errors.Is(err, context.DeadlineExceeded) {
-			tags["result"] = "timeout"
 			fields["reason"] = "Timeout"
 			fields["up"] = 0
 			acc.AddFields("sip", fields, tags)
@@ -251,7 +252,9 @@ func (s *SIP) Gather(acc telegraf.Accumulator) error {
 		return nil
 	}
 
-	// If we got auth challenge and have credentials, retry with authentication
+	// Handle digest authentication challenge (RFC 8760)
+	// SIP digest auth requires the server's challenge first to obtain the nonce,
+	// so we cannot pre-authenticate on the first request.
 	if res.StatusCode == 401 || res.StatusCode == 407 {
 		// Get credentials
 		username, err := s.Username.Get()
@@ -287,35 +290,13 @@ func (s *SIP) Gather(acc telegraf.Accumulator) error {
 			tags["server_agent"] = serverAgent.Value()
 		}
 
-		// Determine result based on status code
+		// Determine up based on status code (2xx = success)
 		if res.StatusCode >= 200 && res.StatusCode < 300 {
-			tags["result"] = "success"
 			fields["up"] = 1
-		} else if res.StatusCode == 401 || res.StatusCode == 407 {
-			// Check if we have credentials configured
-			u, uErr := s.Username.Get()
-			p, pErr := s.Password.Get()
-			hasCredentials := uErr == nil && pErr == nil && u.String() != "" && p.String() != ""
-			if uErr == nil {
-				u.Destroy()
-			}
-			if pErr == nil {
-				p.Destroy()
-			}
-
-			if hasCredentials {
-				tags["result"] = "auth_failed"
-				fields["up"] = 0
-			} else {
-				tags["result"] = "auth_required"
-				fields["up"] = 0
-			}
 		} else {
-			tags["result"] = "error_response"
 			fields["up"] = 0
 		}
 	} else {
-		tags["result"] = "no_response"
 		fields["up"] = 0
 	}
 
@@ -323,25 +304,9 @@ func (s *SIP) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (*SIP) handleGatherError(err error, fields map[string]any, tags map[string]string, acc telegraf.Accumulator) {
-	errStr := err.Error()
-
-	// Categorize errors
-	if errors.Is(err, context.DeadlineExceeded) {
-		tags["result"] = "timeout"
-	} else if strings.Contains(errStr, "connection refused") {
-		tags["result"] = "connection_refused"
-	} else if strings.Contains(errStr, "no route to host") {
-		tags["result"] = "no_route"
-	} else if strings.Contains(errStr, "network is unreachable") {
-		tags["result"] = "network_unreachable"
-	} else {
-		tags["result"] = "connection_failed"
-	}
-
+func (*SIP) handleGatherError(_ error, fields map[string]any, tags map[string]string, acc telegraf.Accumulator) {
 	// Mark as down for all connection failures
 	fields["up"] = 0
-
 	acc.AddFields("sip", fields, tags)
 }
 
@@ -355,12 +320,12 @@ func (*SIP) handleGatherError(err error, fields map[string]any, tags map[string]
 //   - sips://host:port;transport=wss
 func parseServer(u *net_url.URL, transport string) (*serverInfo, error) {
 	info := &serverInfo{
-		Secure:    u.Scheme == "sips",
-		Transport: transport,
-		Host:      u.Hostname(),
+		secure:    u.Scheme == "sips",
+		transport: transport,
+		host:      u.Hostname(),
 	}
 
-	if info.Host == "" {
+	if info.host == "" {
 		return nil, errors.New("server URL must specify a host")
 	}
 
@@ -371,13 +336,13 @@ func parseServer(u *net_url.URL, transport string) (*serverInfo, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid port %q: %w", portStr, err)
 		}
-		info.Port = port
+		info.port = port
 	} else {
 		// Use default port based on scheme
-		if info.Secure {
-			info.Port = 5061
+		if info.secure {
+			info.port = 5061
 		} else {
-			info.Port = 5060
+			info.port = 5060
 		}
 	}
 

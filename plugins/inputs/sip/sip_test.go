@@ -278,10 +278,10 @@ func TestParseServer(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			require.Equal(t, tt.wantHost, info.Host)
-			require.Equal(t, tt.wantPort, info.Port)
-			require.Equal(t, tt.wantTransport, info.Transport)
-			require.Equal(t, tt.wantSecure, info.Secure)
+			require.Equal(t, tt.wantHost, info.host)
+			require.Equal(t, tt.wantPort, info.port)
+			require.Equal(t, tt.wantTransport, info.transport)
+			require.Equal(t, tt.wantSecure, info.secure)
 		})
 	}
 }
@@ -472,7 +472,6 @@ func TestSIPServerSuccess(t *testing.T) {
 	require.Equal(t, "udp", m.Tags["transport"])
 	require.Equal(t, "OPTIONS", m.Tags["method"])
 	require.Equal(t, "200", m.Tags["status_code"])
-	require.Equal(t, "success", m.Tags["result"])
 
 	// Check fields
 	require.Equal(t, "OK", m.Fields["reason"])
@@ -511,7 +510,6 @@ func TestSIPServerErrorResponse(t *testing.T) {
 	require.Equal(t, "sip://"+server.addr, m.Tags["server"])
 	require.Equal(t, "udp", m.Tags["transport"])
 	require.Equal(t, "404", m.Tags["status_code"])
-	require.Equal(t, "error_response", m.Tags["result"])
 
 	// Check fields
 	require.Equal(t, "Not Found", m.Fields["reason"])
@@ -548,7 +546,6 @@ func TestSIPServerTimeout(t *testing.T) {
 	// Check tags
 	require.Equal(t, "sip://"+server.addr, m.Tags["server"])
 	require.Equal(t, "udp", m.Tags["transport"])
-	require.Equal(t, "timeout", m.Tags["result"])
 
 	// Check fields - timeout should have reason and up field but no response_time
 	require.Equal(t, "Timeout", m.Fields["reason"])
@@ -592,7 +589,6 @@ func TestSIPServerDelayedResponse(t *testing.T) {
 	require.Equal(t, "sip://"+server.addr, m.Tags["server"])
 	require.Equal(t, "udp", m.Tags["transport"])
 	require.Equal(t, "200", m.Tags["status_code"])
-	require.Equal(t, "success", m.Tags["result"])
 	require.Equal(t, "OK", m.Fields["reason"])
 	require.Equal(t, 1, m.Fields["up"])
 }
@@ -602,25 +598,25 @@ func TestSIPDifferentStatusCodes(t *testing.T) {
 		name       string
 		statusCode int
 		reason     string
-		wantResult string
+		wantUp     int
 	}{
 		{
 			name:       "200_ok",
 			statusCode: 200,
 			reason:     "OK",
-			wantResult: "success",
+			wantUp:     1,
 		},
 		{
 			name:       "404_not_found",
 			statusCode: 404,
 			reason:     "Not Found",
-			wantResult: "error_response",
+			wantUp:     0,
 		},
 		{
 			name:       "503_service_unavailable",
 			statusCode: 503,
 			reason:     "Service Unavailable",
-			wantResult: "error_response",
+			wantUp:     0,
 		},
 	}
 
@@ -649,7 +645,7 @@ func TestSIPDifferentStatusCodes(t *testing.T) {
 
 			require.Len(t, acc.Metrics, 1)
 			m := acc.Metrics[0]
-			require.Equal(t, tt.wantResult, m.Tags["result"])
+			require.Equal(t, tt.wantUp, m.Fields["up"])
 			require.Equal(t, strconv.Itoa(tt.statusCode), m.Tags["status_code"])
 			require.Equal(t, tt.reason, m.Fields["reason"])
 		})
@@ -688,7 +684,6 @@ func TestSIPAuthenticationRequired(t *testing.T) {
 	// Check tags
 	require.Equal(t, "sip://"+server.addr, m.Tags["server"])
 	require.Equal(t, "udp", m.Tags["transport"])
-	require.Equal(t, "auth_required", m.Tags["result"])
 	require.Equal(t, "401", m.Tags["status_code"])
 
 	// Check fields
@@ -759,7 +754,6 @@ func TestSIPAuthenticationSuccess(t *testing.T) {
 	require.Equal(t, "sip://"+server.addr, m.Tags["server"])
 	require.Equal(t, "udp", m.Tags["transport"])
 	require.Equal(t, "200", m.Tags["status_code"])
-	require.Equal(t, "success", m.Tags["result"])
 
 	// Check fields
 	require.Equal(t, "OK", m.Fields["reason"])
@@ -850,7 +844,6 @@ func TestSIPMethodINVITE(t *testing.T) {
 	require.Equal(t, "udp", m.Tags["transport"])
 	require.Equal(t, "INVITE", m.Tags["method"])
 	require.Equal(t, "200", m.Tags["status_code"])
-	require.Equal(t, "success", m.Tags["result"])
 
 	// Check fields
 	require.Equal(t, "OK", m.Fields["reason"])
@@ -895,7 +888,6 @@ func TestSIPMethodMESSAGE(t *testing.T) {
 	require.Equal(t, "udp", m.Tags["transport"])
 	require.Equal(t, "MESSAGE", m.Tags["method"])
 	require.Equal(t, "200", m.Tags["status_code"])
-	require.Equal(t, "success", m.Tags["result"])
 
 	// Check fields
 	require.Equal(t, "OK", m.Fields["reason"])
