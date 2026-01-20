@@ -270,7 +270,7 @@ experimental.
 
 #### DSN
 
-The following format for the DSN applies to mssql. For mor information and
+The following format for the DSN applies to mssql. For more information and
 additional configuration options refer to the [go-mssql documentation][go-mssqldb-doc].
 
 [go-mssqldb-doc]: https://pkg.go.dev/github.com/microsoft/go-mssqldb
