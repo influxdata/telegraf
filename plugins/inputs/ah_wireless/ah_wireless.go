@@ -57,6 +57,7 @@ type Ah_wireless struct {
 	ethx_stats		[AH_MAX_WIRED]stats_ethx_data
 	nw_health		network_health_data
 	nw_service		network_service_data
+	fw_stats		firewall_stats_data
 }
 
 /*
@@ -2514,6 +2515,125 @@ func Gather_Network_Service(t *Ah_wireless) error {
 	return nil
 }
 
+func Gather_Firewall_Stats(t *Ah_wireless) error {
+	// Read IP firewall stats from file
+	ip_table, err := os.ReadFile("/tmp/telegraf_dcd_ipfirewall_stats")
+	if err == nil {
+		lines := bytes.Split([]byte(ip_table), newLineByte)
+		for _, curLine := range lines {
+			if len(curLine) == 0 {
+				continue
+			}
+			words := strings.Fields(string(curLine))
+			if len(words) < 3 {
+				continue
+			}
+
+			time_stamp, _ := strconv.ParseUint(words[0], 10, 32)
+			coll_period, _ := strconv.ParseUint(words[1], 10, 32)
+			group_cnt, _ := strconv.ParseUint(words[2], 10, 32)
+
+			t.fw_stats.time_stamp = uint32(time_stamp)
+			t.fw_stats.coll_period = uint32(coll_period)
+
+			// Parse IP firewall groups
+			t.fw_stats.ip_fw_groups = make([]firewall_acl_group, 0, group_cnt)
+			idx := 3
+			for i := uint64(0); i < group_cnt && idx+1 < len(words); i++ {
+				name := words[idx]
+				drop_cnt, _ := strconv.ParseUint(words[idx+1], 10, 32)
+				t.fw_stats.ip_fw_groups = append(t.fw_stats.ip_fw_groups, firewall_acl_group{
+					name:       name,
+					drop_count: uint64(drop_cnt),
+				})
+				idx += 2
+			}
+			break // Only process first line
+		}
+	}
+
+	// Read MAC firewall stats from file
+	mac_table, err := os.ReadFile("/tmp/telegraf_dcd_macfirewall_stats")
+	if err == nil {
+		lines := bytes.Split([]byte(mac_table), newLineByte)
+		for _, curLine := range lines {
+			if len(curLine) == 0 {
+				continue
+			}
+			words := strings.Fields(string(curLine))
+			if len(words) < 3 {
+				continue
+			}
+
+			group_cnt, _ := strconv.ParseUint(words[2], 10, 32)
+
+			// Parse MAC firewall groups
+			t.fw_stats.mac_fw_groups = make([]firewall_acl_group, 0, group_cnt)
+			idx := 3
+			for i := uint64(0); i < group_cnt && idx+1 < len(words); i++ {
+				name := words[idx]
+				drop_cnt, _ := strconv.ParseUint(words[idx+1], 10, 32)
+				t.fw_stats.mac_fw_groups = append(t.fw_stats.mac_fw_groups, firewall_acl_group{
+					name:       name,
+					drop_count: uint64(drop_cnt),
+				})
+				idx += 2
+			}
+			break // Only process first line
+		}
+	}
+
+	return nil
+}
+
+func Send_FirewallStats(t *Ah_wireless, acc telegraf.Accumulator) error {
+	var s string
+	s = "Firewall Statistics\n\n"
+	dumpOutput(FW_STAT_OUT_FILE, s, 0)
+
+	// Emit IP Firewall stats as separate entry
+	if len(t.fw_stats.ip_fw_groups) > 0 {
+		ipFields := map[string]interface{}{}
+		ipFields["collPeriod"] = t.fw_stats.coll_period
+		ipFields["timeStamp"] = t.fw_stats.time_stamp
+		ipFields["firewallType"] = "ipFirewall"
+
+		// Add IP firewall groups using array notation for aclGroups
+		for i, grp := range t.fw_stats.ip_fw_groups {
+			name_key := fmt.Sprintf("name_@%d_aclGroups", i)
+			drop_key := fmt.Sprintf("dropCount_@%d_aclGroups", i)
+			ipFields[name_key] = grp.name
+			ipFields[drop_key] = grp.drop_count
+		}
+
+		acc.AddGauge("FirewallStats", ipFields, nil)
+		prepareAndDumpOutput(FW_STAT_OUT_FILE, ipFields)
+		log.Printf("IP firewall stats processed")
+	}
+
+	// Emit MAC Firewall stats as separate entry
+	if len(t.fw_stats.mac_fw_groups) > 0 {
+		macFields := map[string]interface{}{}
+		macFields["collPeriod"] = t.fw_stats.coll_period
+		macFields["timeStamp"] = t.fw_stats.time_stamp
+		macFields["firewallType"] = "macFirewall"
+
+		// Add MAC firewall groups using array notation for aclGroups
+		for i, grp := range t.fw_stats.mac_fw_groups {
+			name_key := fmt.Sprintf("name_@%d_aclGroups", i)
+			drop_key := fmt.Sprintf("dropCount_@%d_aclGroups", i)
+			macFields[name_key] = grp.name
+			macFields[drop_key] = grp.drop_count
+		}
+
+		acc.AddGauge("FirewallStats", macFields, nil)
+		prepareAndDumpOutput(FW_STAT_OUT_FILE, macFields)
+		log.Printf("MAC firewall stats processed")
+	}
+
+	return nil
+}
+
 func Gather_deffer_end(t *Ah_wireless) {
 	t.wg.Done()
 	if r := recover(); r != nil {
@@ -2558,7 +2678,7 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
 
         // If ANY test flag set, do shared interface + ssid prep once.
         if t.Test_rf_stats_enable == 1 || t.Test_client_stats_enable == 1 ||
-            t.Test_device_stats_enable == 1 || t.Test_network_stats_enable == 1 {
+            t.Test_device_stats_enable == 1 || t.Test_network_stats_enable == 1{
             for _, ifn := range t.Ifname {
                 t.intf_m[ifn] = make(map[string]string)
                 load_ssid(t, ifn)
@@ -2624,9 +2744,11 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
 
 			Gather_Network_Health(t)
 			Gather_Network_Service(t)
+			Gather_Firewall_Stats(t)
 
 			Send_NetworkStats(t,acc)
 			Send_DeviceStats(t,acc)
+			Send_FirewallStats(t,acc)
 
 			t.timer_count = 0
 
