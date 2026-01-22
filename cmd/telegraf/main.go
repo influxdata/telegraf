@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/awnumar/memguard"
-	"github.com/fatih/color"
 	"github.com/urfave/cli/v2"
 
 	"github.com/influxdata/telegraf/config"
@@ -231,14 +230,11 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			pprof.Start(cCtx.String("pprof-addr"))
 		}
 
-		if cCtx.Bool("strict-env-handling") && cCtx.Bool("non-strict-env-handling") {
-			return errors.New("flags --strict-env-handling and --non-strict-env-handling cannot be used together")
-		}
-		if !cCtx.Bool("strict-env-handling") && !cCtx.Bool("non-strict-env-handling") {
-			msg := "Strict environment variable handling will be the new default starting with v1.38.0! " +
-				"If your configuration works with strict handling or you don't use environment variables it is safe " +
-				"to ignore this warning. Otherwise please explicitly add the --non-strict-env-handling flag!"
-			log.Println("W! " + color.YellowString(msg))
+		if cCtx.Bool("strict-env-handling") {
+			if cCtx.Bool("non-strict-env-handling") {
+				return errors.New("flags --strict-env-handling and --non-strict-env-handling cannot be used together")
+			}
+			log.Println("W! Flag --strict-env-handling is deprecated since v1.37.0 and will be removed in v1.40.0 as strict handling is the default now!")
 		}
 
 		if err := config.SetPluginLabelSelections(cCtx.StringSlice("select")); err != nil {
@@ -260,7 +256,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			plugindDir:              cCtx.String("plugin-directory"),
 			password:                cCtx.String("password"),
 			oldEnvBehavior:          cCtx.Bool("old-env-behavior"),
-			nonStrictEnvVars:        !cCtx.Bool("strict-env-handling"),
+			nonStrictEnvVars:        cCtx.Bool("non-strict-env-handling"),
 			printPluginConfigSource: cCtx.Bool("print-plugin-config-source"),
 			test:                    cCtx.Bool("test"),
 			debug:                   cCtx.Bool("debug"),

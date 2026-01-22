@@ -57,7 +57,7 @@ var (
 	// NonStrictEnvVarHandling allows to disable strict and safe environment
 	// variables handling. Strict handling cannot replace non-string settings
 	// so this option must be used in those use-cases.
-	NonStrictEnvVarHandling = true
+	NonStrictEnvVarHandling = false
 
 	// PrintPluginConfigSource is a switch to enable printing of plugin sources
 	PrintPluginConfigSource = false
