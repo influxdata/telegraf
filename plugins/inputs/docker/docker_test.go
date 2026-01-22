@@ -19,6 +19,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -33,6 +34,7 @@ type mockClient struct {
 	NodeListF         func() ([]swarm.Node, error)
 	DiskUsageF        func() (types.DiskUsage, error)
 	ClientVersionF    func() string
+	PingF             func() (types.Ping, error)
 	CloseF            func() error
 }
 
@@ -72,6 +74,10 @@ func (c *mockClient) ClientVersion() string {
 	return c.ClientVersionF()
 }
 
+func (c *mockClient) Ping(context.Context) (types.Ping, error) {
+	return c.PingF()
+}
+
 func (c *mockClient) Close() error {
 	return c.CloseF()
 }
@@ -103,6 +109,9 @@ var baseClient = mockClient{
 	},
 	ClientVersionF: func() string {
 		return version
+	},
+	PingF: func() (types.Ping, error) {
+		return types.Ping{}, nil
 	},
 	CloseF: func() error {
 		return nil
@@ -422,7 +431,8 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 	var acc testutil.Accumulator
 
 	d := Docker{
-		Log: testutil.Logger{},
+		Log:     testutil.Logger{},
+		Timeout: config.Duration(5 * time.Second),
 		newClient: func(string, *tls.Config) (dockerClient, error) {
 			return &mockClient{
 				InfoF: func() (system.Info, error) {
@@ -451,6 +461,9 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 				},
 				ClientVersionF: func() string {
 					return version
+				},
+				PingF: func() (types.Ping, error) {
+					return types.Ping{}, nil
 				},
 				CloseF: func() error {
 					return nil
@@ -1694,6 +1707,7 @@ func TestPodmanDetection(t *testing.T) {
 			var acc testutil.Accumulator
 			d := Docker{
 				Endpoint: tt.endpoint,
+				Timeout:  config.Duration(5 * time.Second),
 				newClient: func(string, *tls.Config) (dockerClient, error) {
 					return &mockClient{
 						InfoF: func() (system.Info, error) {
@@ -1711,6 +1725,9 @@ func TestPodmanDetection(t *testing.T) {
 						},
 						ClientVersionF: func() string {
 							return "1.24.0"
+						},
+						PingF: func() (types.Ping, error) {
+							return types.Ping{}, nil
 						},
 						CloseF: func() error {
 							return nil
@@ -1777,8 +1794,7 @@ func TestPodmanStatsCache(t *testing.T) {
 }
 
 func TestStartWithUnavailableDocker(t *testing.T) {
-	// Test that Telegraf starts successfully even when Docker is unavailable
-	// This is a regression test for https://github.com/influxdata/telegraf/issues/18089
+	// Test that Start returns a retryable StartupError when Docker is unavailable
 	var acc testutil.Accumulator
 	d := Docker{
 		Log: testutil.Logger{},
@@ -1791,41 +1807,69 @@ func TestStartWithUnavailableDocker(t *testing.T) {
 	}
 
 	require.NoError(t, d.Init())
-	// Start should NOT return an error even when Docker is unavailable
-	require.NoError(t, d.Start(&acc))
-	// Client should be nil since connection failed
-	require.Nil(t, d.client)
 
-	// Gather should return an error since Docker is still unavailable
-	err := d.Gather(&acc)
+	// Start should return a StartupError when Docker is unavailable
+	err := d.Start(&acc)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed to connect to Docker daemon")
+
+	var startupErr *internal.StartupError
+	require.ErrorAs(t, err, &startupErr)
+	require.Contains(t, startupErr.Error(), "failed to create Docker client")
 }
 
-func TestLazyClientInitialization(t *testing.T) {
-	// Test that client is initialized lazily on first Gather if Start failed to connect
+func TestStartWithPingFailure(t *testing.T) {
+	// Test that Start returns a retryable StartupError when Ping fails due to connection issues
 	var acc testutil.Accumulator
 
-	// Track connection attempts
-	connectionAttempts := 0
+	// Create a mock client that succeeds on creation but fails on Ping
+	d := Docker{
+		Log:     testutil.Logger{},
+		Timeout: config.Duration(5 * time.Second),
+		newClient: func(string, *tls.Config) (dockerClient, error) {
+			return &mockClient{
+				PingF: func() (types.Ping, error) {
+					return types.Ping{}, errors.New("connection refused")
+				},
+				CloseF: func() error {
+					return nil
+				},
+			}, nil
+		},
+		newEnvClient: func() (dockerClient, error) {
+			return nil, errors.New("not using env client")
+		},
+	}
+
+	require.NoError(t, d.Init())
+
+	// Start should return a StartupError when Ping fails
+	err := d.Start(&acc)
+	require.Error(t, err)
+
+	var startupErr *internal.StartupError
+	require.ErrorAs(t, err, &startupErr)
+	require.Contains(t, startupErr.Error(), "failed to ping Docker daemon")
+	// Client should be nil since we clean up on failure
+	require.Nil(t, d.client)
+}
+
+func TestStartSuccess(t *testing.T) {
+	// Test that Start succeeds when Docker is available
+	var acc testutil.Accumulator
 
 	d := Docker{
-		Log: testutil.Logger{},
+		Log:     testutil.Logger{},
+		Timeout: config.Duration(5 * time.Second),
 		newClient: func(string, *tls.Config) (dockerClient, error) {
-			connectionAttempts++
-			// First attempt fails, subsequent attempts succeed
-			if connectionAttempts == 1 {
-				return nil, errors.New("docker daemon not ready")
-			}
 			return &mockClient{
+				PingF: func() (types.Ping, error) {
+					return types.Ping{}, nil
+				},
 				InfoF: func() (system.Info, error) {
 					return system.Info{
 						Name:          "docker-desktop",
 						ServerVersion: "20.10.0",
 					}, nil
-				},
-				ContainerListF: func(container.ListOptions) ([]container.Summary, error) {
-					return nil, nil
 				},
 				ClientVersionF: func() string {
 					return "1.24.0"
@@ -1841,18 +1885,6 @@ func TestLazyClientInitialization(t *testing.T) {
 	}
 
 	require.NoError(t, d.Init())
-	// Start should succeed even though connection fails
 	require.NoError(t, d.Start(&acc))
-	require.Equal(t, 1, connectionAttempts)
-	require.Nil(t, d.client)
-
-	// First Gather fails because Docker is still unavailable (same mock returns error on attempt 1)
-	// Reset connection attempts to simulate Docker becoming available
-	connectionAttempts = 1 // Set to 1 so next attempt (2) will succeed
-
-	// Second Gather should succeed after lazy initialization
-	err := d.Gather(&acc)
-	require.NoError(t, err)
-	require.Equal(t, 2, connectionAttempts)
 	require.NotNil(t, d.client)
 }

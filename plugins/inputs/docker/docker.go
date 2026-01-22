@@ -25,6 +25,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/internal/docker"
 	docker_stats "github.com/influxdata/telegraf/plugins/common/docker"
@@ -143,24 +144,28 @@ func (d *Docker) Init() error {
 }
 
 func (d *Docker) Start(telegraf.Accumulator) error {
-	// Attempt initial connection but don't fail if Docker is unavailable.
-	// This preserves backwards compatibility where Telegraf starts even when
-	// Docker daemon is not running.
-	if err := d.initClient(); err != nil {
-		d.Log.Warnf("Failed to connect to Docker daemon during startup: %v. Will retry on first gather.", err)
-	}
-	return nil
-}
-
-// initClient initializes the Docker client and performs Podman detection.
-// Returns an error if the connection fails, but does not prevent Telegraf from starting.
-func (d *Docker) initClient() error {
 	// Get client
 	c, err := d.getNewClient()
 	if err != nil {
-		return err
+		return &internal.StartupError{
+			Err:   fmt.Errorf("failed to create Docker client: %w", err),
+			Retry: IsErrConnectionFailed(err),
+		}
 	}
 	d.client = c
+
+	// Use Ping to check connectivity, this is a lightweight check
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
+	_, err = d.client.Ping(ctx)
+	cancel()
+	if err != nil {
+		d.client.Close()
+		d.client = nil
+		return &internal.StartupError{
+			Err:   fmt.Errorf("failed to ping Docker daemon: %w", err),
+			Retry: IsErrConnectionFailed(err),
+		}
+	}
 
 	// Check API version compatibility
 	version, err := semver.NewVersion(d.client.ClientVersion())
@@ -179,14 +184,17 @@ func (d *Docker) initClient() error {
 	}
 
 	// Get info from docker daemon for Podman detection
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
+	ctx, cancel = context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancel()
 
 	info, err := d.client.Info(ctx)
 	if err != nil {
 		d.client.Close()
 		d.client = nil
-		return fmt.Errorf("failed to get Docker info: %w", err)
+		return &internal.StartupError{
+			Err:   fmt.Errorf("failed to get Docker info: %w", err),
+			Retry: IsErrConnectionFailed(err),
+		}
 	}
 
 	d.engineHost = info.Name
@@ -213,11 +221,8 @@ func (d *Docker) Stop() {
 }
 
 func (d *Docker) Gather(acc telegraf.Accumulator) error {
-	// If client is not initialized, try to connect now
 	if d.client == nil {
-		if err := d.initClient(); err != nil {
-			return fmt.Errorf("failed to connect to Docker daemon: %w", err)
-		}
+		return errors.New("docker client not initialized")
 	}
 
 	// Create label filters if not already created
