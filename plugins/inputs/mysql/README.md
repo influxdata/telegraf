@@ -15,10 +15,9 @@ This plugin gathers statistics from [MySQL][mysql] server instances.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
-In addition to the plugin-specific configuration settings, plugins support
-additional global and plugin configuration settings. These settings are used to
-modify metrics, tags, and field or create aliases and configure ordering, etc.
-See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+Plugins support additional global and plugin configuration settings for tasks
+such as modifying metrics, tags, and fields, creating aliases, and configuring
+plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
@@ -248,7 +247,17 @@ measurement name.
 ## Metrics
 
 * Global statuses - all numeric and boolean values of `SHOW GLOBAL STATUSES`
+  * wsrep_evs_repl_latency - a complex field containing multiple values is split
+      into separate fields
+    * wsrep_evs_repl_latency_min(float, seconds)
+    * wsrep_evs_repl_latency_avg(float, seconds)
+    * wsrep_evs_repl_latency_max(float, seconds)
+    * wsrep_evs_repl_latency_stdev(float, seconds)
+    * wsrep_evs_repl_latency_sample_size(float, number)
 * Global variables - all numeric and boolean values of `SHOW GLOBAL VARIABLES`
+  * wsrep_provider_options - a complex field containing multiple values is split
+      into separate fields
+    * gcache_size(int, bytes)
 * Slave status - metrics from `SHOW SLAVE STATUS` the metrics are gathered when
 the single-source replication is on. If the multi-source replication is set,
 then everything works differently, this metric does not work with multi-source

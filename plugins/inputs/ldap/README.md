@@ -13,10 +13,9 @@ servers.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
-In addition to the plugin-specific configuration settings, plugins support
-additional global and plugin configuration settings. These settings are used to
-modify metrics, tags, and field or create aliases and configure ordering, etc.
-See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+Plugins support additional global and plugin configuration settings for tasks
+such as modifying metrics, tags, and fields, creating aliases, and configuring
+plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
@@ -30,12 +29,19 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##    ldap://...      -- unencrypted (non-TLS) connection
   ##    ldaps://...     -- TLS connection
   ##    starttls://...  --  StartTLS connection
+  ##    ldapi://...     -- UNIX socket connection
   ## If no port is given, the default ports, 389 for ldap and starttls and
-  ## 636 for ldaps, are used.
+  ## 636 for ldaps, are used, there is no port on UNIX sockets.
   server = "ldap://localhost"
 
   ## Server dialect, can be "openldap" or "389ds"
   # dialect = "openldap"
+
+  # What sort of Bind to use
+  ## Empty or "simple" means to use a simple LDAP bind, otherwise use a
+  ## specified SASL mechanism (only EXTERNAL currently supported - for TLS
+  ## client certs or UNIX credentials)
+  # bind_mechanism = "simple"
 
   # DN and password to bind with
   ## If bind_dn is empty an anonymous bind is performed.
@@ -85,8 +91,9 @@ are usually named according to the selected dialect.
 
 ### Tags
 
-- server -- Server name or IP
-- port   -- Port used for connecting
+- server -- Server name or IP (except for Unix socket)
+- port   -- Port used for connecting (except for Unix socket)
+- path   -- Path used to connect (when connecting over a Unix socket)
 
 ## Example Output
 

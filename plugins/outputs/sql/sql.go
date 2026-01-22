@@ -311,7 +311,22 @@ func (p *SQL) tableExists(tableName string) bool {
 	stmt := strings.ReplaceAll(p.TableExistsTemplate, "{TABLE}", quoteIdent(tableName))
 
 	_, err := p.db.Exec(stmt)
-	return err == nil
+
+	// Make sure to update the table cache to not query the table existence in
+	// every write cycle
+	exists := err == nil
+	if _, found := p.tables[tableName]; exists && !found {
+		p.tables[tableName] = make(map[string]bool)
+		// If table_update_template is set, populate the column cache now
+		// so we know which columns already exist before trying to add new ones
+		if p.TableUpdateTemplate != "" {
+			if err := p.updateTableCache(tableName); err != nil {
+				p.Log.Errorf("failed to populate column cache for existing table %s: %v", tableName, err)
+			}
+		}
+	}
+
+	return exists
 }
 
 func (p *SQL) updateTableCache(tablename string) error {

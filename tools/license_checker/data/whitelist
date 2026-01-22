@@ -1,3 +1,4 @@
 <github.com/couchbase/goutils@v0.1.2 Apache-2.0
 <=github.com/segmentio/asm@v1.2.0 MIT
 howett.net/plist BSD-2-Clause-Views,BSD-3-Clause
+<=github.com/segmentio/asm@v1.2.1 MIT

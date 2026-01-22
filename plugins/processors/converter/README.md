@@ -15,10 +15,9 @@ type.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
-In addition to the plugin-specific configuration settings, plugins support
-additional global and plugin configuration settings. These settings are used to
-modify metrics, tags, and field or create aliases and configure ordering, etc.
-See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+Plugins support additional global and plugin configuration settings for tasks
+such as modifying metrics, tags, and fields, creating aliases, and configuring
+plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
@@ -63,7 +62,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     float = []
 
     ## Optional field to use for converting base64 encoding of IEEE 754 Float32 values
-    ## i.e. data_json_content_state_openconfig-platform-psu:output-power":"RKeAAA=="
+    ## (for example, data_json_content_state_openconfig-platform-psu:output-power":"RKeAAA==")
     ## into a float32 value 1340
     # base64_ieee_float32 = []
 

@@ -11,10 +11,9 @@ configured nodes.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
-In addition to the plugin-specific configuration settings, plugins support
-additional global and plugin configuration settings. These settings are used to
-modify metrics, tags, and field or create aliases and configure ordering, etc.
-See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+Plugins support additional global and plugin configuration settings for tasks
+such as modifying metrics, tags, and fields, creating aliases, and configuring
+plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
@@ -63,13 +62,16 @@ to use them.
   ## Security mode, one of "None", "Sign", "SignAndEncrypt", or "auto"
   # security_mode = "auto"
 
-  ## Path to cert.pem. Required when security mode or policy isn't "None".
-  ## If cert path is not supplied, self-signed cert and key will be generated.
+  ## Path to client certificate and private key files, must be specified together.
+  ## If none of the options are specified, a temporary self-signed certificate
+  ## will be created. If the options are specified but the files do not exist, a
+  ## self-signed certificate will be created and stored permanently at the
+  ## given locations.
   # certificate = "/etc/telegraf/cert.pem"
-
-  ## Path to private key.pem. Required when security mode or policy isn't "None".
-  ## If key path is not supplied, self-signed cert and key will be generated.
   # private_key = "/etc/telegraf/key.pem"
+
+  ## Path to additional, explicitly trusted certificate for the remote endpoint
+  # remote_certificate = "/etc/telegraf/opcua_server_cert.pem"
 
   ## Authentication Method, one of "Certificate", "UserName", or "Anonymous".  To
   ## authenticate using a specific ID, select 'Certificate' or 'UserName'
@@ -99,10 +101,12 @@ to use them.
   ## Node ID configuration
   ## name              - field name to use in the output
   ## namespace         - OPC UA namespace of the node (integer value 0 thru 3)
+  ## namespace_uri     - OPC UA namespace URI (alternative to namespace for stable references)
   ## identifier_type   - OPC UA ID type (s=string, i=numeric, g=guid, b=opaque)
   ## identifier        - OPC UA ID (tag as shown in opcua browser)
   ## default_tags      - extra tags to be added to the output metric (optional)
   ##
+  ## Note: Specify either 'namespace' or 'namespace_uri', not both.
   ## Use either the inline notation or the bracketed notation, not both.
 
   ## Inline notation (default_tags not supported yet)
@@ -121,6 +125,12 @@ to use them.
   # [[inputs.opcua.nodes]]
   #   name = "node2"
   #   namespace = ""
+  #   identifier_type = ""
+  #   identifier = ""
+  #
+  # [[inputs.opcua.nodes]]
+  #   name = "node3"
+  #   namespace_uri = "http://opcfoundation.org/UA/"
   #   identifier_type = ""
   #   identifier = ""
 
@@ -142,8 +152,12 @@ to use them.
   ## namespace, this is used.
   # namespace =
 
+  ## Group default namespace URI. Alternative to namespace for stable references.
+  ## If a node in the group doesn't set its namespace_uri, this is used.
+  # namespace_uri =
+
   ## Group default identifier type. If a node in the group doesn't set its
-  ## namespace, this is used.
+  ## identifier_type, this is used.
   # identifier_type =
 
   ## Default tags that are applied to every node in this group. Can be
@@ -184,6 +198,48 @@ to use them.
   #   # use_unregistered_reads = false
 ```
 
+### Client Certificate Configuration
+
+When using security modes other than "None", Telegraf acts as an OPC UA client
+and requires a client certificate to authenticate itself to the server. The
+plugin supports three certificate management approaches:
+
+#### Temporary Self-Signed Certificates (Default)
+
+If both `certificate` and `private_key` options are left empty or commented
+out, Telegraf will automatically generate a self-signed certificate in a
+temporary directory on each startup.
+
+> [!NOTE]
+> These certificates are recreated on every Telegraf restart, requiring
+> re-authorization by the OPC UA server each time. This is suitable for testing
+> but not recommended for production environments.
+
+#### Persistent Self-Signed Certificates (Recommended for Testing)
+
+To maintain the same client identity across restarts, specify paths for both
+`certificate` and `private_key`. If the files don't exist, Telegraf will
+generate them at the specified locations and reuse them on subsequent restarts.
+
+> [!IMPORTANT]
+> Ensure Telegraf has write permissions to the specified paths. On first run,
+> Telegraf will generate the certificates and log their locations. On subsequent
+> restarts, Telegraf will reuse the existing certificates, preventing the need
+> to re-authorize the client in the server's trust store.
+
+#### Manual Certificate Management (Production)
+
+For production environments, manually generate and deploy certificates using
+your organization's PKI infrastructure. Place the certificate and private key
+files at the configured paths before starting Telegraf. If both files exist,
+Telegraf will use them without modification.
+
+#### Certificate Validation Rules
+
+- Both `certificate` and `private_key` must be specified together, or both
+  must be empty
+- If one file exists but the other doesn't, Telegraf will return an error
+
 ## Node Configuration
 
 An OPC UA node ID may resemble: "ns=3;s=Temperature". In this example:
@@ -220,13 +276,59 @@ using indexed keys. For example:
 opcua,id=ns\=3;s\=Temperature temp[0]=79.0,temp[1]=38.9,Quality="OK (0x0)",DataType="Float" 1597820490000000000
 ```
 
+### Namespace Index vs Namespace URI
+
+OPC UA supports two ways to specify namespaces:
+
+1. **Namespace Index** (`namespace`): An integer (0-3 or higher) that references
+   a position in the server's namespace array. This is simpler but can change if
+   the server is restarted or reconfigured.
+
+2. **Namespace URI** (`namespace_uri`): A string URI that uniquely identifies
+   the namespace. This is more stable across server restarts but requires the
+   plugin to fetch the namespace array from the server to resolve the URI to an index.
+
+**When to use namespace index:**
+
+- For standard OPC UA namespaces (0 = OPC UA, 1 = Local Server)
+- When namespace stability is not a concern
+- For simpler configuration
+
+**When to use namespace URI:**
+
+- When you need consistent node references across server restarts
+- For production environments where namespace indices might change
+- When working with vendor-specific namespaces
+
+**Example using namespace URI:**
+
+```toml
+[[inputs.opcua.nodes]]
+  name = "ServerStatus"
+  namespace_uri = "http://opcfoundation.org/UA/"
+  identifier_type = "i"
+  identifier = "2256"
+```
+
+This produces the same node ID internally as:
+
+```toml
+[[inputs.opcua.nodes]]
+  name = "ServerStatus"
+  namespace = "0"
+  identifier_type = "i"
+  identifier = "2256"
+```
+
+Note: You must specify either `namespace` or `namespace_uri`, not both.
+
 ## Group Configuration
 
-Groups can set default values for the namespace, identifier type, and
-tags settings.  The default values apply to all the nodes in the
-group.  If a default is set, a node may omit the setting altogether.
-This simplifies node configuration, especially when many nodes share
-the same namespace or identifier type.
+Groups can set default values for the namespace (index or URI), identifier type,
+and tags settings. The default values apply to all the nodes in the group. If a
+default is set, a node may omit the setting altogether. This simplifies node
+configuration, especially when many nodes share the same namespace or identifier
+type.
 
 The output metric will include tags set in the group and the node.  If
 a tag with the same name is set in both places, the tag value from the
@@ -275,6 +377,18 @@ This example group configuration has three groups with two nodes each:
       {name="name", identifier="1002"},
     ]
 ```
+
+### Server Certificate Trust
+
+When connecting to OPC UA servers with self-signed certificates using
+secure modes (Sign or SignAndEncrypt), you need to explicitly trust the
+server's certificate. Use the `remote_certificate` option to specify the
+path to the server's certificate file.
+
+Most OPC UA servers provide their certificate through their management interface
+or configuration directory. Consult your OPC UA server's documentation to locate
+the certificate, typically found in the server's PKI (Public Key Infrastructure)
+directory. Alternatively, you can export the certificate using OPC UA client tools.
 
 ## Connection Service
 

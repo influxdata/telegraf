@@ -14,10 +14,9 @@ collections as time series collections if they don't exist.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
-In addition to the plugin-specific configuration settings, plugins support
-additional global and plugin configuration settings. These settings are used to
-modify metrics, tags, and field or create aliases and configure ordering, etc.
-See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+Plugins support additional global and plugin configuration settings for tasks
+such as modifying metrics, tags, and fields, creating aliases, and configuring
+plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
@@ -48,6 +47,13 @@ to use them.
   # for SCRAM-SHA-256 authentication
   # authentication = "SCRAM"
   # username = "root"
+  # password = "***"
+
+  ## for PLAIN authentication (e.g., LDAP)
+  ## IMPORTANT: PLAIN authentication sends credentials in plaintext during the
+  ## authentication handshake. Always use TLS to encrypt credentials in transit.
+  # authentication = "PLAIN"
+  # username = "myuser"
   # password = "***"
 
   # for x509 certificate authentication

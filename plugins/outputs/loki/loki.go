@@ -135,10 +135,11 @@ func (l *Loki) Write(metrics []telegraf.Metric) error {
 			}
 		}
 
-		var line string
+		var lineBuilder strings.Builder
 		for _, f := range m.FieldList() {
-			line += fmt.Sprintf("%s=\"%v\" ", f.Key, f.Value)
+			lineBuilder.WriteString(fmt.Sprintf("%s=\"%v\" ", f.Key, f.Value))
 		}
+		line := lineBuilder.String()
 
 		s.insertLog(tags, Log{strconv.FormatInt(m.Time().UnixNano(), 10), line})
 	}
@@ -208,12 +209,12 @@ func (l *Loki) writeMetrics(s Streams) error {
 	return nil
 }
 
-// Verify the label name matches the regex [a-zA-Z_:][a-zA-Z0-9_:]*
+// Verify the label name matches the regex [a-zA-Z_][a-zA-Z0-9_]*
 func sanitizeLabelName(name string) string {
-	re := regexp.MustCompile(`^[^a-zA-Z_:]`)
+	re := regexp.MustCompile(`^[^a-zA-Z_]`)
 	result := re.ReplaceAllString(name, "_")
 
-	re = regexp.MustCompile(`[^a-zA-Z0-9_:]`)
+	re = regexp.MustCompile(`[^a-zA-Z0-9_]`)
 	return re.ReplaceAllString(result, "_")
 }
 

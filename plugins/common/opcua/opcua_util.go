@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -32,14 +33,6 @@ func newTempDir() (string, error) {
 }
 
 func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.Duration) (cert, key string, err error) {
-	dir, err := newTempDir()
-	if err != nil {
-		return "", "", &CertificateError{
-			Operation: "directory creation",
-			Err:       fmt.Errorf("%w: %w", ErrCertificateGeneration, err),
-		}
-	}
-
 	if len(host) == 0 {
 		return "", "", &CertificateError{
 			Operation: "validation",
@@ -49,11 +42,35 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 	if rsaBits == 0 {
 		rsaBits = 2048
 	}
-	if len(certFile) == 0 {
+
+	// If both paths are empty, use temporary directory (backward compatible behavior)
+	if certFile == "" && keyFile == "" {
+		dir, err := newTempDir()
+		if err != nil {
+			return "", "", &CertificateError{
+				Operation: "directory creation",
+				Err:       fmt.Errorf("%w: %w", ErrCertificateGeneration, err),
+			}
+		}
 		certFile = dir + "/cert.pem"
-	}
-	if len(keyFile) == 0 {
 		keyFile = dir + "/key.pem"
+	} else {
+		// If paths are provided, create parent directories if they don't exist
+		if err := os.MkdirAll(filepath.Dir(certFile), 0750); err != nil {
+			return "", "", &CertificateError{
+				Operation: "directory creation",
+				Path:      certFile,
+				Err:       fmt.Errorf("%w: failed to create parent directory: %w", ErrCertificateGeneration, err),
+			}
+		}
+
+		if err := os.MkdirAll(filepath.Dir(keyFile), 0750); err != nil {
+			return "", "", &CertificateError{
+				Operation: "directory creation",
+				Path:      keyFile,
+				Err:       fmt.Errorf("%w: failed to create parent directory: %w", ErrCertificateGeneration, err),
+			}
+		}
 	}
 
 	priv, err := rsa.GenerateKey(rand.Reader, rsaBits)
@@ -222,16 +239,18 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 	}
 
 	var cert []byte
+	var pk *rsa.PrivateKey
 	if certFile != "" && keyFile != "" {
 		debug.Printf("Loading cert/key from %s/%s", certFile, keyFile)
 		c, err := tls.LoadX509KeyPair(certFile, keyFile)
 		if err != nil {
 			o.Log.Warnf("Failed to load certificate: %s", err)
 		} else {
-			pk, ok := c.PrivateKey.(*rsa.PrivateKey)
+			pkTemp, ok := c.PrivateKey.(*rsa.PrivateKey)
 			if !ok {
 				return nil, errors.New("invalid private key")
 			}
+			pk = pkTemp
 			cert = c.Certificate[0]
 			opts = append(opts, opcua.PrivateKey(pk), opcua.Certificate(cert))
 		}
@@ -258,12 +277,12 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 	o.Log.Debugf("security policy from configuration %s", secPolicy)
 
 	// Select the most appropriate authentication mode from server capabilities and user input
-	authMode, authOption, err := o.generateAuth(o.Config.AuthMethod, cert, o.Config.Username, o.Config.Password)
+	authMode, authOptions, err := o.generateAuth(o.Config.AuthMethod, cert, pk, o.Config.Username, o.Config.Password)
 	if err != nil {
 		return nil, err
 	}
 
-	opts = append(opts, authOption)
+	opts = append(opts, authOptions...)
 
 	var secMode ua.MessageSecurityMode
 	switch strings.ToLower(mode) {
@@ -348,16 +367,24 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 	}
 
 	opts = append(opts, opcua.SecurityFromEndpoint(serverEndpoint, authMode))
+
+	// If a remote certificate is explicitly configured, use it to override
+	// the certificate from the endpoint. This allows trusting self-signed certificates.
+	if o.Config.RemoteCertificate != "" {
+		o.Log.Debugf("Using explicitly configured remote certificate from %s", o.Config.RemoteCertificate)
+		opts = append(opts, opcua.RemoteCertificateFile(o.Config.RemoteCertificate))
+	}
+
 	return opts, nil
 }
 
-func (o *OpcUAClient) generateAuth(a string, cert []byte, user, passwd config.Secret) (ua.UserTokenType, opcua.Option, error) {
+func (o *OpcUAClient) generateAuth(a string, cert []byte, pk *rsa.PrivateKey, user, passwd config.Secret) (ua.UserTokenType, []opcua.Option, error) {
 	var authMode ua.UserTokenType
-	var authOption opcua.Option
+	var authOptions []opcua.Option
 	switch strings.ToLower(a) {
 	case "anonymous":
 		authMode = ua.UserTokenTypeAnonymous
-		authOption = opcua.AuthAnonymous()
+		authOptions = []opcua.Option{opcua.AuthAnonymous()}
 	case "username":
 		authMode = ua.UserTokenTypeUserName
 
@@ -385,25 +412,29 @@ func (o *OpcUAClient) generateAuth(a string, cert []byte, user, passwd config.Se
 			defer psecret.Destroy()
 			password = psecret.Bytes()
 		}
-		authOption = opcua.AuthUsername(string(username), string(password))
+		authOptions = []opcua.Option{opcua.AuthUsername(string(username), string(password))}
 	case "certificate":
 		authMode = ua.UserTokenTypeCertificate
-		authOption = opcua.AuthCertificate(cert)
+		authOptions = []opcua.Option{opcua.AuthCertificate(cert)}
+		if pk != nil {
+			o.Log.Debug("Setting private key for certificate-based user authentication")
+			authOptions = append(authOptions, opcua.AuthPrivateKey(pk))
+		}
 	case "issuedtoken":
 		// TODO: this is unsupported, should we fail here or let the opcua package handle it?
 		authMode = ua.UserTokenTypeIssuedToken
-		authOption = opcua.AuthIssuedToken([]byte(nil))
+		authOptions = []opcua.Option{opcua.AuthIssuedToken([]byte(nil))}
 	case "":
 		// Default to anonymous when auth method is not specified
 		authMode = ua.UserTokenTypeAnonymous
-		authOption = opcua.AuthAnonymous()
+		authOptions = []opcua.Option{opcua.AuthAnonymous()}
 	default:
 		o.Log.Warnf("unknown auth method %q, defaulting to Anonymous", a)
 		authMode = ua.UserTokenTypeAnonymous
-		authOption = opcua.AuthAnonymous()
+		authOptions = []opcua.Option{opcua.AuthAnonymous()}
 	}
 
-	return authMode, authOption, nil
+	return authMode, authOptions, nil
 }
 
 func validateEndpointConfig(endpoints []*ua.EndpointDescription, secPolicy string, secMode ua.MessageSecurityMode, authMode ua.UserTokenType) error {

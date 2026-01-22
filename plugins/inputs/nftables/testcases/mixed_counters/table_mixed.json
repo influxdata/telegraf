@@ -1,0 +1,77 @@
+{
+  "nftables": [
+    {
+      "metainfo": {
+        "version": "1.1.6",
+        "release_name": "Test",
+        "json_schema_version": 1
+      }
+    },
+    {
+      "table": {
+        "family": "inet",
+        "name": "mixed",
+        "handle": 1
+      }
+    },
+    {
+      "chain": {
+        "family": "inet",
+        "table": "mixed",
+        "name": "input",
+        "handle": 1,
+        "type": "filter",
+        "hook": "input",
+        "prio": 0,
+        "policy": "drop"
+      }
+    },
+    {
+      "counter": {
+        "family": "inet",
+        "name": "my_named_counter",
+        "table": "mixed",
+        "handle": 2,
+        "packets": 1000,
+        "bytes": 50000
+      }
+    },
+    {
+      "rule": {
+        "family": "inet",
+        "table": "mixed",
+        "chain": "input",
+        "handle": 3,
+        "comment": "rule_with_named_counter",
+        "expr": [
+          {
+            "counter": "my_named_counter"
+          },
+          {
+            "accept": null
+          }
+        ]
+      }
+    },
+    {
+      "rule": {
+        "family": "inet",
+        "table": "mixed",
+        "chain": "input",
+        "handle": 4,
+        "comment": "rule_with_anonymous_counter",
+        "expr": [
+          {
+            "counter": {
+              "packets": 500,
+              "bytes": 25000
+            }
+          },
+          {
+            "accept": null
+          }
+        ]
+      }
+    }
+  ]
+}

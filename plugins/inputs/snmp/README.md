@@ -14,10 +14,9 @@ or complete SNMP tables.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
-In addition to the plugin-specific configuration settings, plugins support
-additional global and plugin configuration settings. These settings are used to
-modify metrics, tags, and field or create aliases and configure ordering, etc.
-See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+Plugins support additional global and plugin configuration settings for tasks
+such as modifying metrics, tags, and fields, creating aliases, and configuring
+plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
@@ -47,6 +46,9 @@ to use them.
 
   ## Timeout for each request.
   # timeout = "5s"
+
+  ## Stop polling tables if polling fails on the same agent
+  # stop_on_error = false
 
   ## SNMP version; can be 1, 2, or 3.
   # version = 2

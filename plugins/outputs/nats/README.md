@@ -12,19 +12,17 @@ one of the supported [data formats][data_formats].
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
-In addition to the plugin-specific configuration settings, plugins support
-additional global and plugin configuration settings. These settings are used to
-modify metrics, tags, and field or create aliases and configure ordering, etc.
-See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+Plugins support additional global and plugin configuration settings for tasks
+such as modifying metrics, tags, and fields, creating aliases, and configuring
+plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
 ## Secret-store support
 
-This plugin supports secrets from secret-stores for the `username` and
-`password` option.
-See the [secret-store documentation][SECRETSTORE] for more details on how
-to use them.
+This plugin supports secrets from secret-stores for the `username`, `password`
+and `credential` option. See the [secret-store documentation][SECRETSTORE] for
+more details on how to use them.
 
 [SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
 
@@ -44,7 +42,10 @@ to use them.
   # password = ""
 
   ## Optional NATS 2.0 and NATS NGS compatible user credentials
-  # credentials = "/etc/telegraf/nats.creds"
+  # credentials = ""
+
+  ## Optional authentication with nkey seed file (NATS 2.0)
+  # nkey_seed = "/etc/telegraf/seed.txt"
 
   ## NATS subject for producer messages.
   ## This field can be a static string or a Go template, see README for details.

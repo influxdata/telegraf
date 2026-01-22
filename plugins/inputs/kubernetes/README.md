@@ -5,7 +5,8 @@ This plugin gathers metrics about running pods and containers of a
 
 > [!NOTE]
 > This plugin has to run as part of a `daemonset` within a Kubernetes
-> installation, i.e. Telegraf is running on every node within the cluster.
+> installation.
+> Telegraf must run on every node within the cluster.
 
 You should configure this plugin to talk to its locally running kubelet.
 
@@ -23,10 +24,9 @@ You should configure this plugin to talk to its locally running kubelet.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
-In addition to the plugin-specific configuration settings, plugins support
-additional global and plugin configuration settings. These settings are used to
-modify metrics, tags, and field or create aliases and configure ordering, etc.
-See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+Plugins support additional global and plugin configuration settings for tasks
+such as modifying metrics, tags, and fields, creating aliases, and configuring
+plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
@@ -50,7 +50,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # bearer_token_string = "abc_123"
 
   ## Kubernetes Node Metric Name
-  ## The default Kubernetes node metric name (i.e. kubernetes_node) is the same
+  ## The default Kubernetes node metric name (kubernetes_node) is the same
   ## for the kubernetes and kube_inventory plugins. To avoid conflicts, set this
   ## option to a different value.
   # node_metric_name = "kubernetes_node"

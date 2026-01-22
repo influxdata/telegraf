@@ -15,10 +15,9 @@ Windows Vista and higher.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
-In addition to the plugin-specific configuration settings, plugins support
-additional global and plugin configuration settings. These settings are used to
-modify metrics, tags, and field or create aliases and configure ordering, etc.
-See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+Plugins support additional global and plugin configuration settings for tasks
+such as modifying metrics, tags, and fields, creating aliases, and configuring
+plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
@@ -171,8 +170,8 @@ amount of events you log.
 
 You can send any field, *System*, *Computed* or *XML* as tag field. List of
 those fields is in the `event_tags` config array. Globbing is supported in this
-array, i.e. `Level*` for all fields beginning with `Level`, or `L?vel` for all
-fields where the name is `Level`, `L3vel`, `L@vel` and so on. Tag fields are
+array. For example, `Level*` matches all fields beginning with `Level`, and `L?vel` matches all
+fields where the name is `Level`, `L3vel`, `L@vel`, and so on. Tag fields are
 converted to strings automatically.
 
 By default, all other fields are sent, but you can limit that either by listing

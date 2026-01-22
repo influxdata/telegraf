@@ -1,0 +1,148 @@
+{
+    "$id": "https://github.com/influxdata/telegraf/plugins/outputs/heartbeat/schema_v1.json",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Telegraf Heartbeat",
+    "type": "object",
+    "$defs": {
+        "logEntry": {
+            "type": "object",
+            "description": "Detailed log entry (optional)",
+            "properties": {
+                "time": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Time of the log entry in RFC3339 format with nanosecond precision",
+                    "examples": [
+                        "2025-10-22T16:02:30.12345+02:00",
+                        "2025-10-22T16:02:30Z"
+                    ]
+                },
+                "level": {
+                    "type": "string",
+                    "description": "Log-level of the log entry",
+                    "enum": [
+                        "ERROR",
+                        "WARN",
+                        "INFO",
+                        "DEBUG",
+                        "TRACE"
+                    ]
+                },
+                "source": {
+                    "type": "string",
+                    "description": "Origin of the log entry usually of the form <category>[.<plugin>[::alias]]",
+                    "examples": [
+                        "outputs.heartbeat",
+                        "inputs.http::myservice"
+                    ]
+                },
+                "attributes": {
+                    "type": "object",
+                    "description": "Attributes assigned to the log-entry in key-value form",
+                    "examples": [
+                        {
+                            "alias": "hbt",
+                            "category": "inputs",
+                            "plugin": "test"
+                        }
+                    ]
+                },
+                "message": {
+                    "type": "string",
+                    "description": "The log message itself"
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "time",
+                "level",
+                "source",
+                "message"
+            ]
+        },
+        "statistics": {
+            "type": "object",
+            "description": "Statistics (optional)",
+            "properties": {
+                "errors": {
+                    "type": "integer",
+                    "description": "Number of errors logged since the last successful heartbeat"
+                },
+                "warnings": {
+                    "type": "integer",
+                    "description": "Number of warnings logged since the last successful heartbeat"
+                },
+                "metrics": {
+                    "type": "integer",
+                    "description": "Number of metrics received at the plugin since the last successful heartbeat (optional)"
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "errors",
+                "warnings",
+                "metrics"
+            ]
+        }
+    },
+    "properties": {
+        "id": {
+            "type": "string",
+            "description": "ID of the Telegraf instance as configured in the plugin"
+        },
+        "version": {
+            "type": "string",
+            "description": "Full Telegraf version",
+            "examples": [
+                "Telegraf 1.37.0",
+                "Telegraf 1.37.0-c3db479e (git: output_heartbeat@c3db479e)"
+            ]
+        },
+        "schema": {
+            "type": "integer",
+            "description": "Version of the JSON schema for this heartbeat message",
+            "default": 1
+        },
+        "last": {
+            "type": "integer",
+            "description": "Unix epoch in seconds of the last successful data update, only present if the previous heartbeat failed (optional)"
+        },
+        "hostname": {
+            "type": "string",
+            "description": "Hostname hosting the Telegraf instance (optional)"
+        },
+        "configurations": {
+            "type": "array",
+            "description": "List of configuration sources used to start this Telegraf instance (optional)",
+            "items": {
+                "type": "string"
+            }
+        },
+        "statistics": {
+            "description": "Statistics like number of metrics, errors or warnings since the last successful heartbeat (optional)",
+            "$ref": "#/$defs/statistics"
+        },
+        "logs": {
+            "type": "array",
+            "description": "Log events since the last successful heartbeat (optional)",
+            "items": {
+                "$ref": "#/$defs/logEntry"
+            }
+        },
+        "status": {
+            "type": "string",
+            "description": "Status of the Telegraf instance (optional)",
+            "enum": [
+                "OK",
+                "WARN",
+                "FAIL",
+                "UNDEFINED"
+            ]
+        }
+    },
+    "additionalProperties": false,
+    "required": [
+        "id",
+        "version"
+    ]
+}

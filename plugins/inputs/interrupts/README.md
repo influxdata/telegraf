@@ -9,10 +9,9 @@ soft-interrupts (`/proc/softirqs`).
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
-In addition to the plugin-specific configuration settings, plugins support
-additional global and plugin configuration settings. These settings are used to
-modify metrics, tags, and field or create aliases and configure ordering, etc.
-See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+Plugins support additional global and plugin configuration settings for tasks
+such as modifying metrics, tags, and fields, creating aliases, and configuring
+plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
@@ -29,7 +28,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## deployments.
   # cpu_as_tag = false
 
-  ## To filter which IRQs to collect, make use of tagpass / tagdrop, i.e.
+  ## To filter which IRQs to collect, make use of tagpass / tagdrop:
   # [inputs.interrupts.tagdrop]
   #   irq = [ "NET_RX", "TASKLET" ]
 ```

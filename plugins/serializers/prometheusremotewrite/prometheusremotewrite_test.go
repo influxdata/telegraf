@@ -879,20 +879,22 @@ func prompbToHistogramText(data []byte) ([]byte, error) {
 		// There is no text representation for native histogram and it has to be written out as proto exposition.
 		// For test purpose we format a reasonable string for verification. Labels are sorted to make it deterministic.
 		nameString := ""
-		labelString := "{"
+		var lb strings.Builder
+		lb.WriteByte('{')
 		firstLabel := true
 		for _, l := range ts.Labels {
 			if l.Name == model.MetricNameLabel {
 				nameString = l.Value
 			} else {
 				if !firstLabel {
-					labelString += ", "
+					lb.WriteString(", ")
 				}
-				labelString += fmt.Sprintf("%s=%q", l.Name, l.Value)
+				fmt.Fprintf(&lb, "%s=%q", l.Name, l.Value)
 				firstLabel = false
 			}
 		}
-		labelString += "}"
+		lb.WriteByte('}')
+		labelString := lb.String()
 		for _, h := range ts.Histograms {
 			fh := *h.ToFloatHistogram()
 			buf.WriteString(nameString)

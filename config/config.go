@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -53,6 +54,11 @@ var (
 	// environment variable replacement behavior
 	OldEnvVarReplacement = false
 
+	// NonStrictEnvVarHandling allows to disable strict and safe environment
+	// variables handling. Strict handling cannot replace non-string settings
+	// so this option must be used in those use-cases.
+	NonStrictEnvVarHandling = true
+
 	// PrintPluginConfigSource is a switch to enable printing of plugin sources
 	PrintPluginConfigSource = false
 
@@ -61,6 +67,10 @@ var (
 
 	// telegrafVersion contains the parsed semantic Telegraf version
 	telegrafVersion *semver.Version = semver.New("0.0.0-unknown")
+
+	// List of (redacted) configuration Sources
+	sources   []string
+	sourcesMu sync.Mutex
 )
 
 const EmptySourcePath string = ""
@@ -158,6 +168,11 @@ func NewConfig() *Config {
 		MissingField:  c.missingTomlField,
 	}
 	c.toml = tomlCfg
+
+	// Initialize the configuration source list
+	sourcesMu.Lock()
+	sources = make([]string, 0)
+	sourcesMu.Unlock()
 
 	return c
 }
@@ -289,6 +304,12 @@ type AgentConfig struct {
 	// BufferDirectory is the directory to store buffer files for serialized
 	// to disk metrics when using the "disk_write_through" buffer strategy.
 	BufferDirectory string `toml:"buffer_directory"`
+
+	// BufferDiskSync controls writes durability when "disk" buffer strategy
+	// is used. No sync offers better write performance at the risk of losing
+	// metrics buffered in the last `flush_interval` in the event of a power
+	// cut.
+	BufferDiskSync *bool `toml:"buffer_disk_sync"`
 }
 
 // InputNames returns a list of strings of the configured inputs.
@@ -831,7 +852,13 @@ func LoadConfigFileWithRetries(config string, urlRetryAttempts int) ([]byte, boo
 		switch u.Scheme {
 		case "https", "http":
 			data, err := fetchConfig(u, urlRetryAttempts)
-			return data, true, err
+			if err != nil {
+				return nil, true, err
+			}
+			sourcesMu.Lock()
+			sources = append(sources, u.Redacted())
+			sourcesMu.Unlock()
+			return data, true, nil
 		default:
 			return nil, true, fmt.Errorf("scheme %q not supported", u.Scheme)
 		}
@@ -842,6 +869,9 @@ func LoadConfigFileWithRetries(config string, urlRetryAttempts int) ([]byte, boo
 	if err != nil {
 		return nil, false, err
 	}
+	sourcesMu.Lock()
+	sources = append(sources, config)
+	sourcesMu.Unlock()
 
 	mimeType := http.DetectContentType(buffer)
 	if !strings.Contains(mimeType, "text/plain") {
@@ -849,6 +879,13 @@ func LoadConfigFileWithRetries(config string, urlRetryAttempts int) ([]byte, boo
 	}
 
 	return buffer, false, nil
+}
+
+// GetSources returns the redacted list of configuration sources
+func GetSources() []string {
+	sourcesMu.Lock()
+	defer sourcesMu.Unlock()
+	return slices.Clone(sources)
 }
 
 func fetchConfig(u *url.URL, urlRetryAttempts int) ([]byte, error) {
@@ -921,11 +958,18 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 	if err != nil {
 		return nil, err
 	}
-	outputBytes, err := substituteEnvironment(contents, OldEnvVarReplacement)
-	if err != nil {
-		return nil, err
+
+	// Use non-strict mode
+	if NonStrictEnvVarHandling {
+		output, err := substituteEnvironmentNonStrict(contents, OldEnvVarReplacement)
+		if err != nil {
+			return nil, err
+		}
+		return toml.Parse(output)
 	}
-	return toml.Parse(outputBytes)
+
+	// Use strict mode (default)
+	return substituteEnvironmentStrict(contents, OldEnvVarReplacement)
 }
 
 func (c *Config) addAggregator(name, source string, table *ast.Table) error {
@@ -986,6 +1030,11 @@ func (c *Config) addSecretStore(name, source string, table *ast.Table) error {
 		return fmt.Errorf("invalid secret-store ID %q, must only contain letters, numbers or underscore", storeID)
 	}
 
+	tags := map[string]string{
+		"_id":         storeID,
+		"secretstore": name,
+	}
+
 	creator, ok := secretstores.SecretStores[name]
 	if !ok {
 		// Handle removed, deprecated plugins
@@ -1007,6 +1056,7 @@ func (c *Config) addSecretStore(name, source string, table *ast.Table) error {
 
 	logger := logging.New("secretstores", name, "")
 	models.SetLoggerOnPlugin(store, logger)
+	models.SetStatisticsOnPlugin(store, logger, tags)
 
 	if err := store.Init(); err != nil {
 		return fmt.Errorf("error initializing secret-store %q: %w", storeID, err)
@@ -1686,12 +1736,18 @@ func (c *Config) buildOutput(name, source string, tbl *ast.Table) (*models.Outpu
 	if bufferStrategy == "disk" {
 		bufferStrategy = "disk_write_through"
 	}
+	bufferDiskSync := true
+	if c.Agent.BufferDiskSync != nil {
+		bufferDiskSync = *c.Agent.BufferDiskSync
+	}
+
 	oc := &models.OutputConfig{
 		Name:            name,
 		Source:          source,
 		Filter:          filter,
 		BufferStrategy:  bufferStrategy,
 		BufferDirectory: c.Agent.BufferDirectory,
+		BufferDiskSync:  bufferDiskSync,
 	}
 
 	// TODO: support FieldPass/FieldDrop on outputs
@@ -1724,7 +1780,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	switch key {
 	// General options to ignore
 	case "alias", "always_include_local_tags",
-		"buffer_strategy", "buffer_directory",
+		"buffer_strategy", "buffer_directory", "buffer_disk_sync",
 		"collection_jitter", "collection_offset",
 		"data_format", "delay", "drop", "drop_original",
 		"fielddrop", "fieldexclude", "fieldinclude", "fieldpass", "flush_interval", "flush_jitter",
@@ -1946,7 +2002,7 @@ func (c *Config) matchesLabelSelection(tbl *ast.Table) (bool, error) {
 	// Get the label definitions for the plugin and check them
 	labels := c.getFieldMap(tbl, "labels")
 	for k, v := range labels {
-		if err := CheckSelectionKeyValuePairs(k, v); err != nil {
+		if err := CheckLabelKeyValuePairs(k, v); err != nil {
 			return false, err
 		}
 	}

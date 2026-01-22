@@ -92,8 +92,8 @@ func (t *Turbostat) Init() error {
 	if t.UseSudo {
 		t.command = append(t.command, "sudo")
 	}
-	s := int(time.Duration(t.Interval).Seconds())
-	t.command = append(t.command, t.Path, "--quiet", "--interval", strconv.Itoa(s), "--show", "all")
+	interval := strconv.FormatFloat(time.Duration(t.Interval).Seconds(), 'f', -1, 64)
+	t.command = append(t.command, t.Path, "--quiet", "--interval", interval, "--show", "all")
 
 	return nil
 }

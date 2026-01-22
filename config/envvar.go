@@ -3,12 +3,15 @@ package config
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"strings"
 
 	"github.com/compose-spec/compose-go/template"
 	"github.com/compose-spec/compose-go/utils"
+	"github.com/influxdata/toml"
+	"github.com/influxdata/toml/ast"
 )
 
 type trimmer struct {
@@ -219,7 +222,90 @@ func (t *trimmer) comment() error {
 	}
 }
 
-func substituteEnvironment(contents []byte, oldReplacementBehavior bool) ([]byte, error) {
+func substituteEnvironmentStrict(contents []byte, oldReplacementBehavior bool) (*ast.Table, error) {
+	// Parse the tree
+	tree, err := toml.Parse(contents)
+	if err != nil {
+		return nil, err
+	}
+
+	// Prepare the environment-variable replacer
+	options := []template.Option{
+		template.WithReplacementFunction(func(s string, m template.Mapping, cfg *template.Config) (string, error) {
+			result, applied, err := template.DefaultReplacementAppliedFunc(s, m, cfg)
+			if err == nil && !applied {
+				// Keep undeclared environment-variable patterns to reproduce
+				// pre-v1.27 behavior
+				return s, nil
+			}
+			if err != nil && strings.HasPrefix(err.Error(), "Invalid template:") {
+				// Keep invalid template patterns to ignore regexp substitutions
+				// like ${1}
+				return s, nil
+			}
+			return result, err
+		}),
+		template.WithoutLogging,
+	}
+	if oldReplacementBehavior {
+		options = append(options, template.WithPattern(oldVarRe))
+	}
+
+	envMap := utils.GetAsEqualsMap(os.Environ())
+
+	// Walk the AST and find string items to replace
+	if err := walk(tree, func(n interface{}) error {
+		v, ok := n.(*ast.String)
+		if !ok {
+			return nil
+		}
+		replacement, err := template.SubstituteWithOptions(v.Value, func(k string) (string, bool) {
+			if v, ok := envMap[k]; ok {
+				return v, ok
+			}
+			return "", false
+		}, options...)
+		if err != nil {
+			return err
+		}
+		v.Value = replacement
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return tree, nil
+}
+
+func walk(node interface{}, f func(interface{}) error) error {
+	switch n := node.(type) {
+	case *ast.Table:
+		for k, v := range n.Fields {
+			if err := walk(v, f); err != nil {
+				return fmt.Errorf("processing field %q with value %v failed: %w", k, v, err)
+			}
+		}
+	case []*ast.Table:
+		for _, v := range n {
+			if err := walk(v, f); err != nil {
+				return fmt.Errorf("processing table %q failed: %w", v.Name, err)
+			}
+		}
+	case *ast.Array:
+		for i, v := range n.Value {
+			if err := walk(v, f); err != nil {
+				return fmt.Errorf("processing element %d with value %v failed: %w", i+1, v, err)
+			}
+		}
+	case *ast.KeyValue:
+		if err := walk(n.Value, f); err != nil {
+			return fmt.Errorf("processing value %v for key %q failed: %w", n.Value, n.Key, err)
+		}
+	}
+	return f(node)
+}
+
+func substituteEnvironmentNonStrict(contents []byte, oldReplacementBehavior bool) ([]byte, error) {
 	options := []template.Option{
 		template.WithReplacementFunction(func(s string, m template.Mapping, cfg *template.Config) (string, error) {
 			result, applied, err := template.DefaultReplacementAppliedFunc(s, m, cfg)

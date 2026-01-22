@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -125,25 +126,33 @@ func (t *TopK) generateGroupByKey(m telegraf.Metric) (string, error) {
 		}
 	}
 
-	groupkey := m.Name() + "&"
+	var b strings.Builder
+	b.WriteString(m.Name())
+	b.WriteString("&")
 
 	if len(t.GroupBy) > 0 {
 		tags := m.Tags()
 		keys := make([]string, 0, len(tags))
+		var kb strings.Builder
 		for tag, value := range tags {
 			if t.tagsGlobs.Match(tag) {
-				keys = append(keys, tag+"="+value+"&")
+				kb.Reset()
+				kb.WriteString(tag)
+				kb.WriteString("=")
+				kb.WriteString(value)
+				kb.WriteString("&")
+				keys = append(keys, kb.String())
 			}
 		}
 		// Sorting the selected tags is necessary because dictionaries
 		// do not ensure any specific or deterministic ordering
 		sort.SliceStable(keys, func(i, j int) bool { return keys[i] < keys[j] })
 		for _, str := range keys {
-			groupkey += str
+			b.WriteString(str)
 		}
 	}
 
-	return groupkey, nil
+	return b.String(), nil
 }
 
 func (t *TopK) groupBy(m telegraf.Metric) {

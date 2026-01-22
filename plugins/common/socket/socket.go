@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -36,6 +37,7 @@ type Config struct {
 	ContentEncoding      string           `toml:"content_encoding"`
 	MaxDecompressionSize config.Size      `toml:"max_decompression_size"`
 	MaxParallelParsers   int              `toml:"max_parallel_parsers"`
+	AllowedSources       []net.IP         `toml:"allowed_sources"`
 	common_tls.ServerConfig
 }
 
@@ -123,19 +125,19 @@ func (s *Socket) Setup() error {
 		}
 		s.listener = l
 	case "udp", "udp4", "udp6":
-		l := newPacketListener(s.ContentEncoding, s.MaxDecompressionSize, s.MaxParallelParsers)
+		l := newPacketListener(s.ContentEncoding, s.MaxDecompressionSize, s.MaxParallelParsers, s.AllowedSources, s.log)
 		if err := l.setupUDP(s.url, s.interfaceName, int(s.ReadBufferSize)); err != nil {
 			return err
 		}
 		s.listener = l
 	case "ip", "ip4", "ip6":
-		l := newPacketListener(s.ContentEncoding, s.MaxDecompressionSize, s.MaxParallelParsers)
+		l := newPacketListener(s.ContentEncoding, s.MaxDecompressionSize, s.MaxParallelParsers, s.AllowedSources, s.log)
 		if err := l.setupIP(s.url); err != nil {
 			return err
 		}
 		s.listener = l
 	case "unixgram":
-		l := newPacketListener(s.ContentEncoding, s.MaxDecompressionSize, s.MaxParallelParsers)
+		l := newPacketListener(s.ContentEncoding, s.MaxDecompressionSize, s.MaxParallelParsers, s.AllowedSources, s.log)
 		if err := l.setupUnixgram(s.url, s.SocketMode, int(s.ReadBufferSize)); err != nil {
 			return err
 		}
@@ -178,4 +180,25 @@ func (s *Socket) Close() {
 
 func (s *Socket) Address() net.Addr {
 	return s.listener.address()
+}
+
+func isSourceAllowed(allowed []net.IP, addr net.Addr) (bool, error) {
+	if len(allowed) == 0 {
+		// No filtering, allow all
+		return true, nil
+	}
+	var src net.IP
+	switch a := addr.(type) {
+	case *net.UDPAddr:
+		src = a.IP
+	case *net.TCPAddr:
+		src = a.IP
+	case *net.IPAddr:
+		src = a.IP
+	default:
+		return false, fmt.Errorf("source address %q (%T) has no IP", addr, addr)
+	}
+	return slices.ContainsFunc(allowed, func(allowedIP net.IP) bool {
+		return src.Equal(allowedIP)
+	}), nil
 }

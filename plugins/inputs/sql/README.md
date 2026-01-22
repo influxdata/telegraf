@@ -15,10 +15,9 @@ for the data-source-name (`dsn`) options.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
-In addition to the plugin-specific configuration settings, plugins support
-additional global and plugin configuration settings. These settings are used to
-modify metrics, tags, and field or create aliases and configure ordering, etc.
-See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+Plugins support additional global and plugin configuration settings for tasks
+such as modifying metrics, tags, and fields, creating aliases, and configuring
+plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
@@ -49,9 +48,9 @@ to use them.
   # timeout = "5s"
 
   ## Connection time limits
-  ## By default the maximum idle time and maximum lifetime of a connection is unlimited, i.e. the connections
-  ## will not be closed automatically. If you specify a positive time, the connections will be closed after
-  ## idleing or existing for at least that amount of time, respectively.
+  ## By default the maximum idle time and maximum lifetime of a connection is unlimited.
+  ## Connections will not be closed automatically. If you specify a positive time, the connections will be closed after
+  ## idling or existing for at least that amount of time, respectively.
   # connection_max_idle_time = "0s"
   # connection_max_life_time = "0s"
 
@@ -136,9 +135,9 @@ documentation](https://golang.org/pkg/database/sql/#DB.SetConnMaxIdleTime).
 Multiple `query` sections can be specified for this plugin. Each specified query
 will first be prepared on the server and then executed in every interval using
 the column mappings specified. Please note that `tag` and `field` columns are
-not exclusive, i.e. a column can be added to both. When using both `include` and
+not exclusive (a column can be added to both). When using both `include` and
 `exclude` lists, the `exclude` list takes precedence over the `include`
-list. I.e. given you specify `foo` in both lists, `foo` will _never_ pass the
+list. For example, if you specify `foo` in both lists, `foo` will _never_ pass the
 filter. In case any the columns specified in `measurement_col` or `time_col` are
 _not_ returned by the query, the plugin falls-back to the documented
 defaults. Fields or tags specified in the includes of the options but missing in

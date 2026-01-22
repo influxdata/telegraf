@@ -38,7 +38,7 @@ user-specified configurations.
     ## given.
     ## An entry can have the following properties:
     ##  name        --  Name of the element (e.g. field or tag). Can be omitted
-    ##                  for special assignments (i.e. time & measurement) or if
+    ##                  for special assignments (time and measurement) or if
     ##                  entry is omitted.
     ##  type        --  Data-type of the entry. Can be "int8/16/32/64", "uint8/16/32/64",
     ##                  "float32/64", "bool" and "string".
@@ -169,8 +169,8 @@ determined using the format setting in `type`.
 
 The `timezone` setting allows to convert the extracted time to the
 given value timezone. By default the time will be interpreted as `utc`.
-Other valid values are `local`, i.e. the local timezone configured for
-the machine, or valid timezone-specification e.g. `Europe/Berlin`.
+Other valid values are `local` (the local timezone configured for
+the machine), or valid timezone-specification e.g. `Europe/Berlin`.
 
 ### `tag` specification
 

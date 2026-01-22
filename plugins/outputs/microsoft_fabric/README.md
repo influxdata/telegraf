@@ -22,10 +22,9 @@ It offers an end-to-end solution for event-driven scenarios,
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
-In addition to the plugin-specific configuration settings, plugins support
-additional global and plugin configuration settings. These settings are used to
-modify metrics, tags, and field or create aliases and configure ordering, etc.
-See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+Plugins support additional global and plugin configuration settings for tasks
+such as modifying metrics, tags, and fields, creating aliases, and configuring
+plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
@@ -68,7 +67,7 @@ connection string and provide alias names for each property.
 | Initial Catalog | Database | The default database name. For example, `MyDatabase`. |
 | Ingestion Type | IngestionType | Values can be set to `managed` for streaming ingestion with fallback to batched ingestion or the `queued` method for queuing up metrics and process sequentially |
 | Table Name | TableName | Name of the single table to store all the metrics; only needed if `metrics_grouping_type` is `singletable` |
-| Create Tables | CreateTables | Creates tables and relevant mapping if `true` (default). Otherwise table and mapping creation is skipped. This is useful for running Telegraf with the lowest possible permissions i.e. table ingestor role. |
+| Create Tables | CreateTables | Creates tables and relevant mapping if `true` (default). Otherwise table and mapping creation is skipped. This is useful for running Telegraf with the lowest possible permissions (table ingestor role). |
 | Metrics Grouping Type | MetricsGroupingType | Type of metrics grouping used when pushing to Eventhouse either being `tablepermetric` or `singletable`. Default is "tablepermetric" for one table per different metric.|
 
 [eventhousedocs]: https://learn.microsoft.com/fabric/real-time-intelligence/eventhouse
@@ -88,8 +87,8 @@ plugin will create the table, if the table exists then the plugin will try to
 merge the Telegraf metric schema to the existing table. For more information
 about the merge process check the [`.create-merge` documentation][create-merge].
 
-The table name will match the metric name, i.e. the name of the metric must
-comply with the Eventhouse KQL DB table naming constraints in case you plan
+The table name will match the metric name.
+The name of the metric must comply with the Eventhouse KQL DB table naming constraints in case you plan
 to add a prefix to the metric name.
 
 [create-merge]: https://learn.microsoft.com/kusto/management/create-merge-tables-command?view=microsoft-fabric

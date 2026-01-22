@@ -376,12 +376,15 @@ func prepareDBNamesURLPart(dbNames []string) string {
 	if len(dbNames) == 0 {
 		return ""
 	}
-	result := "?" + dbNames[0]
+	var b strings.Builder
+	b.WriteString("?")
+	b.WriteString(dbNames[0])
 	for _, db := range dbNames[1:] {
-		result += "&name=" + url.QueryEscape(db)
+		b.WriteString("&name=")
+		b.WriteString(url.QueryEscape(db))
 	}
 
-	return result
+	return b.String()
 }
 
 func init() {

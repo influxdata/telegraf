@@ -18,10 +18,9 @@ metrics are lightweight and use Dynamic Management Views supplied by SQL Server.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
-In addition to the plugin-specific configuration settings, plugins support
-additional global and plugin configuration settings. These settings are used to
-modify metrics, tags, and field or create aliases and configure ordering, etc.
-See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+Plugins support additional global and plugin configuration settings for tasks
+such as modifying metrics, tags, and fields, creating aliases, and configuring
+plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
@@ -175,6 +174,16 @@ to use them.
   # max_idle_connections = 0
 ```
 
+For available options in the `servers` DSN check the [driver documentation][driver].
+
+The plugin supports the named-pipe and LPC protocol **on Windows AMD64 and i386**
+for connections. On other platforms those protocols are not available. See the
+[protocol configuration section][driver_protos] of the driver documentation on
+how to specify the protocols.
+
+[driver]: https://github.com/microsoft/go-mssqldb
+[driver_protos]: https://github.com/microsoft/go-mssqldb?tab=readme-ov-file#protocol-configuration
+
 ### Additional Setup
 
 You have to create a login on every SQL Server instance or Azure SQL Managed
@@ -279,11 +288,11 @@ strings.
 
 If more then one managed identity is assigned to the VM, you need specify the
 `client_id` of the identity you wish to use to authenticate with the SQL Server.
-Please check [SQL Server driver][driver] documentation for available options.
+Please check [SQL Server driver][driver_azure] documentation for available options.
 
 [auth_methods]: https://docs.microsoft.com/en-us/azure/azure-sql/database/security-overview#authentication
 [auth_aad]: https://docs.microsoft.com/en-us/azure/azure-sql/database/authentication-aad-overview
-[driver]: https://github.com/microsoft/go-mssqldb#azure-active-directory-authentication
+[driver_azure]: https://github.com/microsoft/go-mssqldb#azure-active-directory-authentication
 
 ### Azure Active Directory (AAD) authentication using MSI
 

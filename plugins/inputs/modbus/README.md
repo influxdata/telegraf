@@ -12,10 +12,9 @@ or serial interfaces with Modbus RTU or Modbus ASCII.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
-In addition to the plugin-specific configuration settings, plugins support
-additional global and plugin configuration settings. These settings are used to
-modify metrics, tags, and field or create aliases and configure ordering, etc.
-See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+Plugins support additional global and plugin configuration settings for tasks
+such as modifying metrics, tags, and fields, creating aliases, and configuring
+plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
@@ -308,7 +307,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## bit *1,2    - (optional) bit of the register, ONLY valid for BIT type
     ## scale *1,3  - (optional) factor to scale the variable with
     ## output *2,3 - (optional) type of resulting field, can be INT64, UINT64 or FLOAT64. Defaults to FLOAT64 if
-    ##               "scale" is provided and to the input "type" class otherwise (i.e. INT* -> INT64, etc).
+    ##               "scale" is provided and to the input "type" class otherwise (INT* -> INT64, etc).
     ##
     ## *1: These fields are ignored for both "coil" and "discrete"-input type of registers.
     ## *2: This field can only be "UINT16" or "BOOL" if specified for both "coil"
@@ -378,9 +377,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## lower byte location of a register see
     ## https://github.com/influxdata/telegraf/issues/14748
     ## Available settings:
-    ##   lower -- use only lower byte of the register i.e. 00XX 00XX 00XX 00XX
-    ##   upper -- use only upper byte of the register i.e. XX00 XX00 XX00 XX00
-    ## By default both bytes of the register are used i.e. XXXX XXXX.
+    ##   lower -- use only lower byte of the register (00XX 00XX 00XX 00XX)
+    ##   upper -- use only upper byte of the register (XX00 XX00 XX00 XX00)
+    ## By default both bytes of the register are used (XXXX XXXX).
     # string_register_location = ""
 ```
 
@@ -388,7 +387,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 You can debug Modbus connection issues by enabling `debug_connection`. To see
 those debug messages, Telegraf has to be started with debugging enabled
-(i.e. with the `--debug` option). Please be aware that connection tracing will
+(with the `--debug` option). Please be aware that connection tracing will
 produce a lot of messages and should __NOT__ be used in production environments.
 
 Please use `pause_after_connect` / `pause_between_requests` with care. Ensure
@@ -399,8 +398,8 @@ collection interval. Note that pauses add up if multiple requests are sent!
 
 The modbus plugin supports multiple configuration styles that can be set using
 the `configuration_type` setting. The different styles are described
-below. Please note that styles cannot be mixed, i.e. only the settings belonging
-to the configured `configuration_type` are used for constructing _modbus_
+below. Please note that styles cannot be mixed.
+Only the settings belonging to the configured `configuration_type` are used for constructing _modbus_
 requests and creation of metrics.
 
 Directly jump to the styles:
@@ -525,8 +524,8 @@ the device. The following algorithms are available
 ##### `none` (_default_)
 
 Do not perform any optimization. Please note that the requests are still obeying
-the maximum request sizes. Furthermore, completely empty requests, i.e. all
-fields specify `omit=true`, are removed. Otherwise, the requests are sent as
+the maximum request sizes. Furthermore, completely empty requests (where all
+fields specify `omit=true`) are removed. Otherwise, the requests are sent as
 specified by the user including request of omitted fields. This setting should
 be used if you want full control over the requests e.g. to accommodate for
 device constraints.
@@ -629,8 +628,8 @@ Using the `output` setting you can explicitly specify the output
 field-datatype. The `output` type can be `INT64`, `UINT64` or `FLOAT64`. If not
 set explicitly, the output type is guessed as follows: If `scale` is set to a
 non-zero value, the output type is `FLOAT64`. Otherwise, the output type
-corresponds to the register datatype _class_, i.e. `INT*` will result in
-`INT64`, `UINT*` in `UINT64` and `FLOAT*` in `FLOAT64`.
+corresponds to the register datatype _class_ (`INT*` will result in
+`INT64`, `UINT*` in `UINT64`, and `FLOAT*` in `FLOAT64`).
 
 This setting is ignored if the field's `omit` is set to `true` and can be
 omitted. In case the `register` type is a bit-type (`coil` or `discrete`) only
@@ -698,8 +697,8 @@ given section using the `measurement` setting. If the setting is omitted
 #### Optimization setting
 
 __Please only use request optimization if you do understand the implications!__
-The `optimization` setting can specified globally, i.e. __NOT__ per metric
-section, and is used to optimize the actual requests sent to the device. Here,
+The `optimization` setting can be specified globally (__NOT__ per metric
+section) and is used to optimize the actual requests sent to the device. Here,
 the optimization is applied across _all metric sections_! The following
 algorithms are available
 
@@ -792,8 +791,8 @@ Using the `output` setting you can explicitly specify the output
 field-datatype. The `output` type can be `INT64`, `UINT64` or `FLOAT64`. If not
 set explicitly, the output type is guessed as follows: If `scale` is set to a
 non-zero value, the output type is `FLOAT64`. Otherwise, the output type
-corresponds to the register datatype _class_, i.e. `INT*` will result in
-`INT64`, `UINT*` in `UINT64` and `FLOAT*` in `FLOAT64`.
+corresponds to the register datatype _class_ (`INT*` will result in
+`INT64`, `UINT*` in `UINT64`, and `FLOAT*` in `FLOAT64`).
 
 In case the `register` is a bit-type (`coil` or `discrete`) only `UINT16` or
 `BOOL` are valid with the former being the default if omitted. For `coil` and

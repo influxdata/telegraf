@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -21,6 +22,9 @@ type batch struct {
 
 func createBatches(metrics []telegraf.Metric, bucket string, size int) []*batch {
 	number := len(metrics) / size
+	if len(metrics)%size > 0 {
+		number++
+	}
 	batches := make([]*batch, 0, number)
 	for i := range number {
 		begin := i * size
@@ -102,11 +106,23 @@ func (b *batch) split() (first, second *batch) {
 }
 
 func (b *batch) serialize(serializer ratelimiter.Serializer, limit int64, encoder internal.ContentEncoder) (int64, error) {
-	// Serialize the metrics with the remaining limit, exit early if nothing was serialized
+	// Serialize the metrics with the remaining limit,
 	body, serr := serializer.SerializeBatch(b.metrics, limit)
 	if serr != nil && !errors.Is(serr, internal.ErrSizeLimitReached) {
-		return int64(len(body)), serr
+		// When only part of the metrics failed to be serialized we should remove
+		// them from the normal handling and mark them as rejected for upstream
+		// to pass on this information
+		var werr *internal.PartialWriteError
+		if errors.As(serr, &werr) {
+			for i, idx := range slices.Backward(werr.MetricsReject) {
+				werr.MetricsReject[i] = b.indices[idx]
+				b.indices = slices.Delete(b.indices, idx, idx+1)
+			}
+			serr = werr
+		}
 	}
+
+	// Exit early if nothing was serialized
 	if len(body) == 0 {
 		return 0, serr
 	}
@@ -115,7 +131,7 @@ func (b *batch) serialize(serializer ratelimiter.Serializer, limit int64, encode
 	if encoder != nil {
 		enc, err := encoder.Encode(body)
 		if err != nil {
-			return int64(len(body)), fmt.Errorf("encoding failed: %w", err)
+			return 0, fmt.Errorf("encoding failed: %w", err)
 		}
 		b.payload = bytes.Clone(enc)
 	} else {

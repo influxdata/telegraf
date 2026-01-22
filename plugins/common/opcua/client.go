@@ -2,9 +2,11 @@ package opcua
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log" //nolint:depguard // just for debug
 	"net/url"
+	"os"
 	"strconv"
 	"time"
 
@@ -35,17 +37,18 @@ func (c ConnectionState) String() string {
 }
 
 type OpcUAClientConfig struct {
-	Endpoint       string          `toml:"endpoint"`
-	SecurityPolicy string          `toml:"security_policy"`
-	SecurityMode   string          `toml:"security_mode"`
-	Certificate    string          `toml:"certificate"`
-	PrivateKey     string          `toml:"private_key"`
-	Username       config.Secret   `toml:"username"`
-	Password       config.Secret   `toml:"password"`
-	AuthMethod     string          `toml:"auth_method"`
-	ConnectTimeout config.Duration `toml:"connect_timeout"`
-	RequestTimeout config.Duration `toml:"request_timeout"`
-	ClientTrace    bool            `toml:"client_trace"`
+	Endpoint          string          `toml:"endpoint"`
+	SecurityPolicy    string          `toml:"security_policy"`
+	SecurityMode      string          `toml:"security_mode"`
+	Certificate       string          `toml:"certificate"`
+	PrivateKey        string          `toml:"private_key"`
+	RemoteCertificate string          `toml:"remote_certificate"`
+	Username          config.Secret   `toml:"username"`
+	Password          config.Secret   `toml:"password"`
+	AuthMethod        string          `toml:"auth_method"`
+	ConnectTimeout    config.Duration `toml:"connect_timeout"`
+	RequestTimeout    config.Duration `toml:"request_timeout"`
+	ClientTrace       bool            `toml:"client_trace"`
 
 	OptionalFields []string         `toml:"optional_fields"`
 	Workarounds    OpcUAWorkarounds `toml:"workarounds"`
@@ -137,7 +140,7 @@ func (o *OpcUAClientConfig) Validate() error {
 }
 
 func (o *OpcUAClientConfig) validateCertificateConfiguration() error {
-	// If using None/None security, certificates are optional
+	// If using None/None security, client certificates are optional
 	if o.SecurityPolicy == "None" && o.SecurityMode == "None" {
 		return nil
 	}
@@ -183,10 +186,75 @@ type OpcUAClient struct {
 	Config *OpcUAClientConfig
 	Log    telegraf.Logger
 
-	Client *opcua.Client
+	Client         *opcua.Client
+	namespaceArray []string
 
 	opts  []opcua.Option
 	codes []ua.StatusCode
+}
+
+// determineOrCreateCertificates handles certificate determination and generation logic
+func (o *OpcUAClient) determineOrCreateCertificates() error {
+	certFile := o.Config.Certificate
+	keyFile := o.Config.PrivateKey
+
+	if certFile == "" && keyFile != "" || certFile != "" && keyFile == "" {
+		return errors.New("specified only one of certificate or private key")
+	}
+
+	var generate, permanent bool
+	if certFile == "" && keyFile == "" {
+		// Case 1: Both empty, generate a non-permanent file
+		generate = true
+	} else {
+		// Case 2 or 3: Both specified - check if files exist
+		var certExists, keyExists bool
+		if _, err := os.Stat(certFile); err == nil {
+			certExists = true
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("checking certificate %q failed: %w", certFile, err)
+		}
+		if _, err := os.Stat(keyFile); err == nil {
+			keyExists = true
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("checking private key %q failed: %w", keyFile, err)
+		}
+
+		// Either both certificate and private key exists or they don't, we don't support mixed setups
+		if certExists != keyExists {
+			return &CertificateError{
+				Operation: "validation",
+				Path:      keyFile,
+				Err:       fmt.Errorf("only one of certificate %q and private key %q exists", certFile, keyFile),
+			}
+		}
+
+		generate = !certExists && !keyExists
+		permanent = true
+	}
+
+	// If both exist, we don't need to do anything, they will be loaded later
+	if !generate {
+		o.Log.Debugf("Using existing certificates from %q and %q", certFile, keyFile)
+		return nil
+	}
+
+	if permanent {
+		o.Log.Infof("Generating permanent self-signed certificate at %q and %q", certFile, keyFile)
+	} else {
+		o.Log.Debug("Generating temporary self-signed certificate")
+	}
+
+	// Generate the certificates
+	cert, privateKey, err := generateCert("urn:telegraf:gopcua:client", 2048, certFile, keyFile, 365*24*time.Hour)
+	if err != nil {
+		return err
+	}
+
+	o.Config.Certificate = cert
+	o.Config.PrivateKey = privateKey
+
+	return nil
 }
 
 // SetupOptions reads the endpoints from the specified server and sets up all authentication
@@ -202,17 +270,9 @@ func (o *OpcUAClient) SetupOptions() error {
 		}
 	}
 
-	if o.Config.Certificate == "" && o.Config.PrivateKey == "" {
-		if o.Config.SecurityPolicy != "None" || o.Config.SecurityMode != "None" {
-			o.Log.Debug("Generating self-signed certificate")
-			cert, privateKey, err := generateCert("urn:telegraf:gopcua:client", 2048,
-				o.Config.Certificate, o.Config.PrivateKey, 365*24*time.Hour)
-			if err != nil {
-				return err
-			}
-
-			o.Config.Certificate = cert
-			o.Config.PrivateKey = privateKey
+	if o.Config.SecurityPolicy != "None" || o.Config.SecurityMode != "None" {
+		if err := o.determineOrCreateCertificates(); err != nil {
+			return err
 		}
 	}
 
@@ -325,4 +385,54 @@ func (o *OpcUAClient) State() ConnectionState {
 		return Disconnected
 	}
 	return ConnectionState(o.Client.State())
+}
+
+// UpdateNamespaceArray fetches the namespace array from the OPC UA server
+// The namespace array is stored at the well-known node ns=0;i=2255
+func (o *OpcUAClient) UpdateNamespaceArray(ctx context.Context) error {
+	if o.Client == nil {
+		return errors.New("client not connected")
+	}
+
+	nodeID := ua.NewNumericNodeID(0, 2255)
+	req := &ua.ReadRequest{
+		MaxAge: 2000,
+		NodesToRead: []*ua.ReadValueID{
+			{NodeID: nodeID},
+		},
+		TimestampsToReturn: ua.TimestampsToReturnBoth,
+	}
+
+	resp, err := o.Client.Read(ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to read namespace array: %w", err)
+	}
+
+	if len(resp.Results) == 0 {
+		return errors.New("no results returned when reading namespace array")
+	}
+
+	result := resp.Results[0]
+	if result.Status != ua.StatusOK {
+		return fmt.Errorf("failed to read namespace array, status: %w", result.Status)
+	}
+
+	if result.Value == nil {
+		return errors.New("namespace array value is nil")
+	}
+
+	// The namespace array is an array of strings
+	namespaces, ok := result.Value.Value().([]string)
+	if !ok {
+		return fmt.Errorf("namespace array is not a string array, got type: %T", result.Value.Value())
+	}
+
+	o.namespaceArray = namespaces
+	o.Log.Debugf("Fetched namespace array with %d entries", len(namespaces))
+	return nil
+}
+
+// NamespaceArray returns the cached namespace array
+func (o *OpcUAClient) NamespaceArray() []string {
+	return o.namespaceArray
 }

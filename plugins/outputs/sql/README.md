@@ -72,10 +72,9 @@ you could improve the ingestion rate, by enabling `batch_transactions`
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
-In addition to the plugin-specific configuration settings, plugins support
-additional global and plugin configuration settings. These settings are used to
-modify metrics, tags, and field or create aliases and configure ordering, etc.
-See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+Plugins support additional global and plugin configuration settings for tasks
+such as modifying metrics, tags, and fields, creating aliases, and configuring
+plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
@@ -268,6 +267,44 @@ types](https://clickhouse.com/docs/en/sql-reference/data-types/) for more info.
 
 Telegraf doesn't have unit tests for go-mssqldb so it should be treated as
 experimental.
+
+#### DSN
+
+The following format for the DSN applies to mssql. For more information and
+additional configuration options refer to the [go-mssql documentation][go-mssqldb-doc].
+
+[go-mssqldb-doc]: https://pkg.go.dev/github.com/microsoft/go-mssqldb
+
+```toml
+data_source_name = "sqlserver://username:password@host/instance?database=dbname"
+```
+
+#### Templates
+
+The following templates are compatible with mssql
+
+```toml
+  table_template = "CREATE TABLE {TABLE}({COLUMNS})"
+  table_exists_template = "SELECT TOP 1 1 FROM {TABLE}"
+  table_update_template = "ALTER TABLE {TABLE} ADD {COLUMN}"
+
+```
+
+#### Metric type to SQL type conversion
+
+The following configuration makes the mapping compatible with mssql:
+
+```toml
+  [outputs.sql.convert]
+    integer              = "INT"
+    real                 = "REAL"
+    text                 = "TEXT"
+    timestamp            = "DATETIMEOFFSET"
+    defaultvalue         = "TEXT"
+    unsigned             = "BIGINT"
+    bool                 = "BIT"
+    conversion_style     = "literal"
+```
 
 ### snowflakedb/gosnowflake
 

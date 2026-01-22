@@ -69,6 +69,7 @@ type S7comm struct {
 	ConnectionType  string             `toml:"connection_type"`
 	BatchMaxSize    int                `toml:"pdu_size"`
 	Timeout         config.Duration    `toml:"timeout"`
+	IdleTimeout     config.Duration    `toml:"idle_timeout"`
 	DebugConnection bool               `toml:"debug_connection" deprecated:"1.35.0;use 'log_level' 'trace' instead"`
 	Configs         []metricDefinition `toml:"metric"`
 	Log             telegraf.Logger    `toml:"-"`
@@ -140,6 +141,7 @@ func (s *S7comm) Init() error {
 	// Create handler for the connection
 	s.handler = gos7.NewTCPClientHandlerWithConnectType(s.Server, s.Rack, s.Slot, connectionTypeMap[s.ConnectionType])
 	s.handler.Timeout = time.Duration(s.Timeout)
+	s.handler.IdleTimeout = time.Duration(s.IdleTimeout)
 	if s.Log.Level().Includes(telegraf.Trace) || s.DebugConnection { // for backward compatibility
 		s.handler.Logger = log.New(&tracelogger{log: s.Log}, "", 0)
 	}
@@ -431,6 +433,7 @@ func init() {
 			Slot:         -1,
 			BatchMaxSize: 20,
 			Timeout:      config.Duration(10 * time.Second),
+			IdleTimeout:  config.Duration(60 * time.Second),
 		}
 	})
 }

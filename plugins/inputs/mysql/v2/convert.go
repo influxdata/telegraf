@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 type conversionFunc func(value sql.RawBytes) (interface{}, error)
@@ -51,6 +52,89 @@ func ParseBoolAsInteger(value sql.RawBytes) (interface{}, error) {
 // It returns the parsed value and an error if the parsing fails.
 func ParseString(value sql.RawBytes) (interface{}, error) {
 	return string(value), nil
+}
+
+// parseWsrepLatency parses the given sql.RawBytes value into a map
+// containing 5 distinct float64 values. These represent min/avg/max/stdev/sample_size.
+// It returns an error if the value is unrecognized.
+func parseWsrepLatency(value sql.RawBytes) (interface{}, error) {
+	keys := []string{"min", "avg", "max", "stdev", "sample_size"}
+	parts := strings.Split(string(value), "/")
+	if len(parts) != len(keys) {
+		return nil, fmt.Errorf("unsupported amount of values in wsrep_evs_repl_latency, got %d expected %d", len(parts), len(keys))
+	}
+
+	result := make(map[string]interface{}, len(keys))
+
+	for i, key := range keys {
+		val, err := strconv.ParseFloat(parts[i], 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse %s value: %w", key, err)
+		}
+		result[key] = val
+	}
+
+	return result, nil
+}
+
+// ParseWsrepProviderOptions parses the given sql.RawBytes value into a map
+// containing all wsrep Provider options settings.
+func parseWsrepProviderOptions(value sql.RawBytes) (interface{}, error) {
+	parts := strings.Split(strings.TrimSpace(string(value)), ";")
+	result := make(map[string]interface{})
+	for _, setting := range parts {
+		key, data, found := strings.Cut(setting, "=")
+
+		// empty string at the end of the field, skip
+		if len(setting) != 0 && !found {
+			return nil, fmt.Errorf("invalid key-value pair for %q", setting)
+		}
+
+		key = strings.TrimSpace(key)
+		data = strings.TrimSpace(data)
+		if len(data) == 0 {
+			continue // empty value, no point in continuing
+		}
+
+		// Only process gcache.size for now
+		if key != "gcache.size" {
+			continue
+		}
+		key = strings.Replace(key, ".", "_", -1)
+
+		// Extract the size suffix for values like 128M
+		suffix := data[len(data)-1:]
+		value := data[:len(data)-1]
+
+		// Determine the scaling factor from the suffix
+		var factor uint64
+		switch strings.ToUpper(suffix) {
+		case "K":
+			factor = 1024
+		case "M":
+			factor = 1024 * 1024
+		case "G":
+			factor = 1024 * 1024 * 1024
+		case "T":
+			factor = 1024 * 1024 * 1024 * 1024
+		case "P":
+			factor = 1024 * 1024 * 1024 * 1024 * 1024
+		case "E":
+			factor = 1024 * 1024 * 1024 * 1024 * 1024 * 1024
+		default:
+			// We got no known unit so parse the whole data as value
+			value = data
+			factor = 1
+		}
+
+		// Compute the actual value
+		v, err := strconv.ParseUint(value, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse value %q: %w", data, err)
+		}
+		result[key] = v * factor
+	}
+	return result, nil
 }
 
 // ParseGTIDMode parses the given sql.RawBytes value into an int64
@@ -116,6 +200,7 @@ var globalStatusConversions = map[string]conversionFunc{
 	"wsrep_commit_oooe":          ParseFloat,
 	"wsrep_commit_oool":          ParseFloat,
 	"wsrep_commit_window":        ParseFloat,
+	"wsrep_evs_repl_latency":     parseWsrepLatency,
 	"wsrep_flow_control_paused":  ParseFloat,
 	"wsrep_local_index":          ParseUint,
 	"wsrep_local_recv_queue_avg": ParseFloat,
@@ -147,6 +232,9 @@ var globalVariableConversions = map[string]conversionFunc{
 	// https://dev.mysql.com/doc/refman/5.7/en/replication-options-gtids.html
 	// https://dev.mysql.com/doc/refman/8.0/en/replication-options-gtids.html
 	"gtid_mode": ParseGTIDMode,
+
+	// https://galeracluster.com/documentation/html_docs_proto-12/documentation/mysql-wsrep-options.html#wsrep-provider-options
+	"wsrep_provider_options": parseWsrepProviderOptions,
 }
 
 // ConvertGlobalStatus converts the given key and sql.RawBytes value into an appropriate type based on globalStatusConversions.

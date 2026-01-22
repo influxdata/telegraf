@@ -10,12 +10,6 @@ import (
 	docker "github.com/docker/docker/client"
 )
 
-// This file is inherited from telegraf docker input plugin
-var (
-	version        = "1.24"
-	defaultHeaders = map[string]string{"User-Agent": "engine-api-cli-1.0"}
-)
-
 type dockerClient interface {
 	// ContainerList lists the containers in the Docker environment.
 	ContainerList(ctx context.Context, options container.ListOptions) ([]container.Summary, error)
@@ -39,9 +33,9 @@ func newClient(host string, tlsConfig *tls.Config) (dockerClient, error) {
 	}
 	httpClient := &http.Client{Transport: transport}
 	client, err := docker.NewClientWithOpts(
-		docker.WithHTTPHeaders(defaultHeaders),
+		docker.WithHTTPHeaders(map[string]string{"User-Agent": "engine-api-cli-1.0"}),
 		docker.WithHTTPClient(httpClient),
-		docker.WithVersion(version),
+		docker.WithAPIVersionNegotiation(),
 		docker.WithHost(host))
 
 	if err != nil {

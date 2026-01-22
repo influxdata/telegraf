@@ -13,10 +13,9 @@ between Nginx (F/OSS) and Nginx Plus, see the Nginx [documentation][diff_doc].
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
-In addition to the plugin-specific configuration settings, plugins support
-additional global and plugin configuration settings. These settings are used to
-modify metrics, tags, and field or create aliases and configure ordering, etc.
-See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+Plugins support additional global and plugin configuration settings for tasks
+such as modifying metrics, tags, and fields, creating aliases, and configuring
+plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
@@ -26,7 +25,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Read Nginx's basic status information (ngx_http_stub_status_module)
 [[inputs.nginx]]
   ## An array of Nginx stub_status URI to gather stats.
-  urls = ["http://localhost/server_status"]
+  urls = ["http://localhost/server_status", "http+unix:///var/run/nginx.sock:/server_status"]
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"

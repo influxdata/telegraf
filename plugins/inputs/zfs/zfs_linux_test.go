@@ -324,8 +324,8 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	}
 
 	z := &Zfs{KstatPath: testKstatPath}
-	err = z.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, z.Init())
+	require.NoError(t, z.Gather(&acc))
 
 	acc.AssertContainsTaggedFields(t, "zfs", intMetrics, tags)
 	acc.Metrics = nil
@@ -342,6 +342,7 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	}
 
 	z = &Zfs{KstatPath: testKstatPath}
+	require.NoError(t, z.Init())
 	acc2 := testutil.Accumulator{}
 	err = z.Gather(&acc2)
 	require.NoError(t, err)
@@ -353,6 +354,7 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 
 	// two pools, one metric
 	z = &Zfs{KstatPath: testKstatPath, KstatMetrics: []string{"arcstats"}}
+	require.NoError(t, z.Init())
 	acc3 := testutil.Accumulator{}
 	err = z.Gather(&acc3)
 	require.NoError(t, err)
@@ -396,6 +398,26 @@ func TestGetTags(t *testing.T) {
 	}
 }
 
+func TestDefaults(t *testing.T) {
+	expectedPath := "/proc/spl/kstat/zfs"
+	expectedMetrics := []string{
+		"abdstats", "arcstats", "dnodestats", "dbufcachestats",
+		"dmu_tx", "fm", "vdev_mirror_stats", "zfetchstats", "zil",
+	}
+
+	plugin := &Zfs{}
+	require.NoError(t, plugin.Init())
+	require.Equal(t, expectedPath, plugin.KstatPath)
+	require.ElementsMatch(t, expectedMetrics, plugin.KstatMetrics)
+}
+
+func TestInvalidKstatMetric(t *testing.T) {
+	plugin := &Zfs{
+		KstatMetrics: []string{"foo"},
+	}
+	require.ErrorContains(t, plugin.Init(), "invalid kstat metric")
+}
+
 func TestCases(t *testing.T) {
 	// Get all testcase directories
 	testpath := filepath.Join("testcases", "linux")
@@ -432,6 +454,7 @@ func TestCases(t *testing.T) {
 			plugin := cfg.Inputs[0].Input.(*Zfs)
 			plugin.KstatPath = procPath
 			plugin.Log = testutil.Logger{}
+			require.NoError(t, plugin.Init())
 
 			// Gather and test
 			var acc testutil.Accumulator
