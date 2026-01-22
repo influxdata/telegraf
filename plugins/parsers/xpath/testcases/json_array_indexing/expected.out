@@ -1,0 +1,1 @@
+nvme,device=/dev/nvme1,model_name=Samsung\ SSD,serial_number=ABC123 ns1_capacity=960197124096i,ns1_id=1i,ns1_utilization=86638583808i,ns2_capacity=500107862016i,ns2_id=2i

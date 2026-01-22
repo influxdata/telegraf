@@ -1604,7 +1604,7 @@ const benchmarkDataJSON = `
 `
 
 var benchmarkConfigJSON = Config{
-	Selection: "data/*",
+	Selection: "//data",
 	Tags: map[string]string{
 		"tags_host":     "tags_host",
 		"tags_sdkver":   "tags_sdkver",
