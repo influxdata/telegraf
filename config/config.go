@@ -305,9 +305,10 @@ type AgentConfig struct {
 	// to disk metrics when using the "disk_write_through" buffer strategy.
 	BufferDirectory string `toml:"buffer_directory"`
 
-	// BufferDiskSync controls writes durability when "disk" buffer strategy is used.
-	// No sync offers better write performance at the risk of losing metrics buffered in
-	// the last `flush_interval` in the event of a power cut.
+	// BufferDiskSync controls writes durability when "disk" buffer strategy
+	// is used. No sync offers better write performance at the risk of losing
+	// metrics buffered in the last `flush_interval` in the event of a power
+	// cut.
 	BufferDiskSync *bool `toml:"buffer_disk_sync"`
 }
 

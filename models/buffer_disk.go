@@ -108,6 +108,8 @@ func (b *DiskBuffer) Add(metrics ...telegraf.Metric) int {
 	}
 
 	if err := b.file.WriteBatch(&batch); err != nil {
+		// This calculation assumes a single writer to the WAL, which is
+		// guaranteed by the mutex and one WAL per buffer instance.
 		dropped := uint64(len(metrics)) - (b.writeIndex() - startIdx)
 		return int(dropped)
 	}

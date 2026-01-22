@@ -375,8 +375,9 @@ The agent table configures Telegraf and the defaults used across all plugins.
 
 - **buffer_disk_sync**:
   Controls writes durability when "disk" buffer strategy is used.
-  No sync offers better write performance at the risk of losing metrics buffered in
-  the last `flush_interval` in the event of a power cut. Defaults to 'true'.
+  No sync offers better write performance at the risk of losing metrics
+  buffered in the last `flush_interval` in the event of a power cut.
+  Defaults to 'true'.
 
 ## Plugins
 
