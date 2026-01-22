@@ -2596,7 +2596,7 @@ func Send_FirewallStats(t *Ah_wireless, acc telegraf.Accumulator) error {
 		ipFields := map[string]interface{}{}
 		ipFields["collPeriod"] = t.fw_stats.coll_period
 		ipFields["timeStamp"] = t.fw_stats.time_stamp
-		ipFields["firewallType"] = "ipFirewall"
+		ipFields["firewallType"] = "IP_FIREWALL"
 
 		// Add IP firewall groups using array notation for aclGroups
 		for i, grp := range t.fw_stats.ip_fw_groups {
@@ -2616,7 +2616,7 @@ func Send_FirewallStats(t *Ah_wireless, acc telegraf.Accumulator) error {
 		macFields := map[string]interface{}{}
 		macFields["collPeriod"] = t.fw_stats.coll_period
 		macFields["timeStamp"] = t.fw_stats.time_stamp
-		macFields["firewallType"] = "macFirewall"
+		macFields["firewallType"] = "MAC_FIREWALL"
 
 		// Add MAC firewall groups using array notation for aclGroups
 		for i, grp := range t.fw_stats.mac_fw_groups {
