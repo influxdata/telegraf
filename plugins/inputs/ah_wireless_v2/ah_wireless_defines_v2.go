@@ -33,6 +33,9 @@ const (
 	CLT_STAT_OUT_FILE =		"/tmp/clientStatOut"
 	NW_STAT_OUT_FILE =		"/tmp/NetworkStatOut"
 	DEV_STAT_OUT_FILE =		"/tmp/DeviceStatOut"
+	FW_STAT_OUT_FILE =		"/tmp/FirewallStatOut"
+	AH_MAX_FW_GROUPS =		128
+	AH_MAX_MAC_ACL_GROUPS =		128
 	EVT_SOCK =			"/tmp/ah_telegraf.sock"
 	AH_MAX_ETH = 			2
 	AH_MAX_WIRED =			AH_MAX_ETH + 2
@@ -1134,6 +1137,19 @@ type network_service_data struct {
 	radius_sev_len		[AH_MAX_RADIUS_NUM]uint8
 	radius_server		[AH_MAX_RADIUS_NUM]string
 	radius_latency		[AH_MAX_RADIUS_NUM]int32
+}
+
+type firewall_acl_group struct {
+	name		string
+	drop_count	uint64
+}
+
+type firewall_stats_data struct {
+	time_stamp		uint32
+	coll_period		uint32
+	firewallType	string
+	ip_fw_groups	[]firewall_acl_group
+	mac_fw_groups	[]firewall_acl_group
 }
 
 type stats_ethx_data struct {
