@@ -25,6 +25,7 @@ const (
 	MAX_DESCRIBLE_LEN        = 128
 	AH_CAPWAP_STAT_NAME_MAX_LEN = 32
 	MAX_OBJ_NAME_LEN         = 4
+	AH_MSG_TRAP_SSID_BIND_UNBIND = 5
 )
 
 const (
@@ -58,6 +59,16 @@ type AhTgrafDfsTrap struct {
 	TrapId    uint8
 	IfName    [AH_MAX_TRAP_IF_NAME + 1]byte
 	Desc      [TRAP_DCRPT_LEN]byte
+}
+type AhTgrafSsidBindUnbindTrap struct {
+	TrapType    uint8
+	TrapID      uint8
+	IfName      [AH_MAX_TRAP_OBJ_NAME + 1]byte
+	IfIndex     int32
+	Description [TRAP_DCRPT_LEN]byte
+	BssidMAC    [MACADDR_LEN]byte
+	SSID        [AH_MAX_TRAP_SSID_NAME + 1]byte
+	State       uint8
 }
 
 type AhFailureTrap struct {
