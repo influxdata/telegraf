@@ -35,10 +35,11 @@ type DiskBuffer struct {
 	mask []int
 }
 
-func NewDiskBuffer(id, path string, stats BufferStats) (*DiskBuffer, error) {
+func NewDiskBuffer(id, path string, stats BufferStats, diskSync bool) (*DiskBuffer, error) {
 	filePath := filepath.Join(path, id)
 	walFile, err := wal.Open(filePath, &wal.Options{
 		AllowEmpty: true,
+		NoSync:     !diskSync,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to open wal file: %w", err)
@@ -94,26 +95,28 @@ func (b *DiskBuffer) Add(metrics ...telegraf.Metric) int {
 	b.Lock()
 	defer b.Unlock()
 
-	dropped := 0
+	var batch wal.Batch
+	idx := b.writeIndex()
+	startIdx := idx
 	for _, m := range metrics {
-		if !b.addSingleMetric(m) {
-			dropped++
+		data, err := metric.ToBytes(m)
+		if err != nil {
+			panic(err)
 		}
+		batch.Write(idx, data)
+		idx++
 	}
-	b.BufferSize.Set(int64(b.length()))
-	return dropped
-}
 
-func (b *DiskBuffer) addSingleMetric(m telegraf.Metric) bool {
-	data, err := metric.ToBytes(m)
-	if err != nil {
-		panic(err)
+	if err := b.file.WriteBatch(&batch); err != nil {
+		// This calculation assumes a single writer to the WAL, which is
+		// guaranteed by the mutex and one WAL per buffer instance.
+		dropped := uint64(len(metrics)) - (b.writeIndex() - startIdx)
+		return int(dropped)
 	}
-	if err := b.file.Write(b.writeIndex(), data); err != nil {
-		return false
-	}
-	b.metricAdded()
-	return true
+
+	b.metricAdded(int64(len(metrics)))
+	b.BufferSize.Set(int64(b.length()))
+	return 0
 }
 
 func (b *DiskBuffer) BeginTransaction(batchSize int) *Transaction {
