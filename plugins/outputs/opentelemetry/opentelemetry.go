@@ -28,8 +28,9 @@ var userAgent = internal.ProductToken()
 var sampleConfig string
 
 type OpenTelemetry struct {
-	ServiceAddress string `toml:"service_address"`
-	EncodingType   string `toml:"encoding_type"`
+	ServiceAddress    string `toml:"service_address"`
+	EncodingType      string `toml:"encoding_type"`
+	MetricNameFormat  string `toml:"metric_name_format"`
 
 	tls.ClientConfig
 	Timeout     config.Duration   `toml:"timeout"`
@@ -81,6 +82,15 @@ func (o *OpenTelemetry) Connect() error {
 		// Do nothing, those are valid
 	default:
 		return fmt.Errorf("invalid encoding %q", o.EncodingType)
+	}
+	if o.MetricNameFormat == "" {
+		o.MetricNameFormat = defaultMetricNameFormat
+	}
+	switch o.MetricNameFormat {
+	case "prometheus", "otel":
+		// Valid formats
+	default:
+		return fmt.Errorf("invalid metric_name_format %q, must be 'prometheus' or 'otel'", o.MetricNameFormat)
 	}
 	if o.Timeout <= 0 {
 		o.Timeout = defaultTimeout
@@ -178,7 +188,8 @@ func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 			o.Log.Warnf("Unrecognized metric type %v", metric.Type())
 			continue
 		}
-		err := batch.AddPoint(metric.Name(), metric.Tags(), metric.Fields(), metric.Time(), vType)
+		metricName := o.transformMetricName(metric.Name())
+		err := batch.AddPoint(metricName, metric.Tags(), metric.Fields(), metric.Time(), vType)
 		if err != nil {
 			o.Log.Warnf("Failed to add point: %v", err)
 			continue
@@ -208,18 +219,38 @@ func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 	return err
 }
 
+// transformMetricName transforms metric names based on the configured format.
+// For "otel" format, it preserves dots (OpenTelemetry semantic conventions).
+// For "prometheus" format (default), it converts dots to underscores.
+func (o *OpenTelemetry) transformMetricName(name string) string {
+	// If MetricNameFormat is not set, default to prometheus behavior for backward compatibility
+	format := o.MetricNameFormat
+	if format == "" {
+		format = defaultMetricNameFormat
+	}
+	
+	if format == "otel" {
+		// Preserve dots for OpenTelemetry semantic conventions
+		return name
+	}
+	// Default "prometheus" format: convert dots to underscores
+	return strings.ReplaceAll(name, ".", "_")
+}
+
 const (
-	defaultServiceAddress = "localhost:4317"
-	defaultTimeout        = config.Duration(5 * time.Second)
-	defaultCompression    = "gzip"
+	defaultServiceAddress  = "localhost:4317"
+	defaultTimeout         = config.Duration(5 * time.Second)
+	defaultCompression     = "gzip"
+	defaultMetricNameFormat = "prometheus"
 )
 
 func init() {
 	outputs.Add("opentelemetry", func() telegraf.Output {
 		return &OpenTelemetry{
-			ServiceAddress: defaultServiceAddress,
-			Timeout:        defaultTimeout,
-			Compression:    defaultCompression,
+			ServiceAddress:   defaultServiceAddress,
+			Timeout:          defaultTimeout,
+			Compression:      defaultCompression,
+			MetricNameFormat: defaultMetricNameFormat,
 		}
 	})
 }

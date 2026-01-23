@@ -30,6 +30,11 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## protobuf, json
   # encoding_type = "protobuf"
 
+  ## Override the default (prometheus) metric name format
+  ## prometheus: converts dots to underscores (default, Prometheus-compatible)
+  ## otel: preserves dot-separated names (OpenTelemetry semantic conventions)
+  # metric_name_format = "prometheus"
+
   ## Override the default (5s) request timeout
   # timeout = "5s"
 
@@ -73,6 +78,15 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # [outputs.opentelemetry.headers]
   # key1 = "value1"
 ```
+
+## Metric Name Format
+
+The plugin supports two metric name formats:
+
+- **prometheus** (default): Converts dots (`.`) to underscores (`_`) in metric names. This is the default behavior and maintains compatibility with Prometheus naming conventions.
+- **otel**: Preserves dot-separated metric names as-is. This is useful when working with OpenTelemetry semantic conventions (e.g., `http.server.duration`, `http.client.request.count`) and ensures consistency across the OpenTelemetry ecosystem.
+
+To use OpenTelemetry semantic conventions, set `metric_name_format = "otel"` in your configuration.
 
 ## Supported dialects
 

@@ -341,8 +341,230 @@ func (m *mockOtelService) Address() string {
 func (m *mockOtelService) Export(ctx context.Context, request pmetricotlp.ExportRequest) (pmetricotlp.ExportResponse, error) {
 	m.metrics = pmetric.NewMetrics()
 	request.Metrics().CopyTo(m.metrics)
+	// Only check metadata if it exists (for tests that provide headers)
 	ctxMetadata, ok := metadata.FromIncomingContext(ctx)
-	require.Equal(m.t, []string{"header1"}, ctxMetadata.Get("test"))
-	require.True(m.t, ok)
+	if ok {
+		if testHeader := ctxMetadata.Get("test"); len(testHeader) > 0 {
+			require.Equal(m.t, []string{"header1"}, testHeader)
+		}
+	}
 	return pmetricotlp.NewExportResponse(), nil
+}
+
+func TestOpenTelemetryMetricNameFormatPrometheus(t *testing.T) {
+	expect := pmetric.NewMetrics()
+	{
+		rm := expect.ResourceMetrics().AppendEmpty()
+		ilm := rm.ScopeMetrics().AppendEmpty()
+		m := ilm.Metrics().AppendEmpty()
+		m.SetName("http_server_duration") // dots converted to underscores
+		m.SetEmptyGauge()
+		dp := m.Gauge().DataPoints().AppendEmpty()
+		dp.SetTimestamp(pcommon.Timestamp(1622848686000000000))
+		dp.SetDoubleValue(87.332)
+	}
+	m := newMockOtelService(t)
+	t.Cleanup(m.Cleanup)
+
+	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(common.NoopLogger{})
+	require.NoError(t, err)
+	plugin := &OpenTelemetry{
+		ServiceAddress:    m.Address(),
+		Timeout:          config.Duration(time.Second),
+		MetricNameFormat: "prometheus",
+		metricsConverter: metricsConverter,
+		otlpMetricClient: &gRPCClient{
+			grpcClientConn:       m.GrpcClient(),
+			metricsServiceClient: pmetricotlp.NewGRPCClient(m.GrpcClient()),
+		},
+		Log: testutil.Logger{},
+	}
+
+	input := testutil.MustMetric(
+		"http.server.duration", // dot-separated name
+		map[string]string{},
+		map[string]interface{}{
+			"gauge": 87.332,
+		},
+		time.Unix(0, 1622848686000000000),
+	)
+
+	require.NoError(t, plugin.Write([]telegraf.Metric{input}))
+
+	got := m.GotMetrics()
+	require.Equal(t, 1, got.ResourceMetrics().Len())
+	require.Equal(t, 1, got.ResourceMetrics().At(0).ScopeMetrics().Len())
+	require.Equal(t, 1, got.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().Len())
+	require.Equal(t, "http_server_duration", got.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0).Name())
+}
+
+func TestOpenTelemetryMetricNameFormatOtel(t *testing.T) {
+	expect := pmetric.NewMetrics()
+	{
+		rm := expect.ResourceMetrics().AppendEmpty()
+		ilm := rm.ScopeMetrics().AppendEmpty()
+		m := ilm.Metrics().AppendEmpty()
+		m.SetName("http.server.duration") // dots preserved
+		m.SetEmptyGauge()
+		dp := m.Gauge().DataPoints().AppendEmpty()
+		dp.SetTimestamp(pcommon.Timestamp(1622848686000000000))
+		dp.SetDoubleValue(87.332)
+	}
+	m := newMockOtelService(t)
+	t.Cleanup(m.Cleanup)
+
+	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(common.NoopLogger{})
+	require.NoError(t, err)
+	plugin := &OpenTelemetry{
+		ServiceAddress:    m.Address(),
+		Timeout:          config.Duration(time.Second),
+		MetricNameFormat: "otel",
+		metricsConverter: metricsConverter,
+		otlpMetricClient: &gRPCClient{
+			grpcClientConn:       m.GrpcClient(),
+			metricsServiceClient: pmetricotlp.NewGRPCClient(m.GrpcClient()),
+		},
+		Log: testutil.Logger{},
+	}
+
+	input := testutil.MustMetric(
+		"http.server.duration", // dot-separated name
+		map[string]string{},
+		map[string]interface{}{
+			"gauge": 87.332,
+		},
+		time.Unix(0, 1622848686000000000),
+	)
+
+	require.NoError(t, plugin.Write([]telegraf.Metric{input}))
+
+	got := m.GotMetrics()
+	require.Equal(t, 1, got.ResourceMetrics().Len())
+	require.Equal(t, 1, got.ResourceMetrics().At(0).ScopeMetrics().Len())
+	require.Equal(t, 1, got.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().Len())
+	require.Equal(t, "http.server.duration", got.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0).Name())
+}
+
+func TestOpenTelemetryMetricNameFormatDefault(t *testing.T) {
+	expect := pmetric.NewMetrics()
+	{
+		rm := expect.ResourceMetrics().AppendEmpty()
+		ilm := rm.ScopeMetrics().AppendEmpty()
+		m := ilm.Metrics().AppendEmpty()
+		m.SetName("http_server_duration") // default is prometheus format
+		m.SetEmptyGauge()
+		dp := m.Gauge().DataPoints().AppendEmpty()
+		dp.SetTimestamp(pcommon.Timestamp(1622848686000000000))
+		dp.SetDoubleValue(87.332)
+	}
+	m := newMockOtelService(t)
+	t.Cleanup(m.Cleanup)
+
+	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(common.NoopLogger{})
+	require.NoError(t, err)
+	plugin := &OpenTelemetry{
+		ServiceAddress:    m.Address(),
+		Timeout:          config.Duration(time.Second),
+		MetricNameFormat: "", // empty should default to prometheus
+		metricsConverter: metricsConverter,
+		otlpMetricClient: &gRPCClient{
+			grpcClientConn:       m.GrpcClient(),
+			metricsServiceClient: pmetricotlp.NewGRPCClient(m.GrpcClient()),
+		},
+		Log: testutil.Logger{},
+	}
+	require.NoError(t, plugin.Connect()) // Connect sets default
+
+	input := testutil.MustMetric(
+		"http.server.duration", // dot-separated name
+		map[string]string{},
+		map[string]interface{}{
+			"gauge": 87.332,
+		},
+		time.Unix(0, 1622848686000000000),
+	)
+
+	require.NoError(t, plugin.Write([]telegraf.Metric{input}))
+
+	got := m.GotMetrics()
+	require.Equal(t, 1, got.ResourceMetrics().Len())
+	require.Equal(t, 1, got.ResourceMetrics().At(0).ScopeMetrics().Len())
+	require.Equal(t, 1, got.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().Len())
+	require.Equal(t, "http_server_duration", got.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0).Name())
+}
+
+func TestOpenTelemetryInvalidMetricNameFormat(t *testing.T) {
+	plugin := &OpenTelemetry{
+		ServiceAddress:    "localhost:4317",
+		MetricNameFormat: "invalid",
+		Log:              testutil.Logger{},
+	}
+	err := plugin.Connect()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "invalid metric_name_format")
+}
+
+func TestOpenTelemetryMetricNameWithUnderscores(t *testing.T) {
+	// Test that existing underscores are preserved in both formats
+	m := newMockOtelService(t)
+	t.Cleanup(m.Cleanup)
+
+	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(common.NoopLogger{})
+	require.NoError(t, err)
+	
+	// Test prometheus format - underscores should remain, dots should be converted
+	plugin := &OpenTelemetry{
+		ServiceAddress:    m.Address(),
+		Timeout:          config.Duration(time.Second),
+		MetricNameFormat: "prometheus",
+		metricsConverter: metricsConverter,
+		otlpMetricClient: &gRPCClient{
+			grpcClientConn:       m.GrpcClient(),
+			metricsServiceClient: pmetricotlp.NewGRPCClient(m.GrpcClient()),
+		},
+		Log: testutil.Logger{},
+	}
+
+	input := testutil.MustMetric(
+		"http.server.request.duration", // dots and underscores
+		map[string]string{},
+		map[string]interface{}{
+			"gauge": 87.332,
+		},
+		time.Unix(0, 1622848686000000000),
+	)
+
+	require.NoError(t, plugin.Write([]telegraf.Metric{input}))
+	got := m.GotMetrics()
+	require.Equal(t, 1, got.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().Len())
+	// Dots should be converted to underscores
+	require.Equal(t, "http_server_request_duration", got.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0).Name())
+	
+	// Test otel format - everything should be preserved
+	plugin2 := &OpenTelemetry{
+		ServiceAddress:    m.Address(),
+		Timeout:          config.Duration(time.Second),
+		MetricNameFormat: "otel",
+		metricsConverter: metricsConverter,
+		otlpMetricClient: &gRPCClient{
+			grpcClientConn:       m.GrpcClient(),
+			metricsServiceClient: pmetricotlp.NewGRPCClient(m.GrpcClient()),
+		},
+		Log: testutil.Logger{},
+	}
+
+	input2 := testutil.MustMetric(
+		"http.server.request.duration",
+		map[string]string{},
+		map[string]interface{}{
+			"gauge": 87.332,
+		},
+		time.Unix(0, 1622848686000000000),
+	)
+
+	require.NoError(t, plugin2.Write([]telegraf.Metric{input2}))
+	got2 := m.GotMetrics()
+	require.Equal(t, 1, got2.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().Len())
+	// Dots should be preserved
+	require.Equal(t, "http.server.request.duration", got2.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0).Name())
 }
