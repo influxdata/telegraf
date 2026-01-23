@@ -1434,40 +1434,58 @@ func TestHandleNXDMEEventListWithDn(t *testing.T) {
 																							{
 																								Fields: []*telemetry.TelemetryField{
 																									{
-																										Name:        "childAction",
-																										ValueByType: &telemetry.TelemetryField_StringValue{StringValue: ""},
+																										Name: "childAction",
+																										ValueByType: &telemetry.TelemetryField_StringValue{
+																										StringValue: "",
+																									},
 																									},
 																									{
-																										Name:        "dn",
-																										ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "sys/intf/phys-[eth1/11]/phys"},
+																										Name: "dn",
+																										ValueByType: &telemetry.TelemetryField_StringValue{
+																										StringValue: "sys/intf/phys-[eth1/11]/phys",
+																									},
 																									},
 																									{
-																										Name:        "lastLinkStChg",
-																										ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "2026-01-22T14:15:46.199-08:00"},
+																										Name: "lastLinkStChg",
+																										ValueByType: &telemetry.TelemetryField_StringValue{
+																										StringValue: "2026-01-22T14:15:46.199-08:00",
+																									},
 																									},
 																									{
-																										Name:        "operBitset",
-																										ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "3-4"},
+																										Name: "operBitset",
+																										ValueByType: &telemetry.TelemetryField_StringValue{
+																										StringValue: "3-4",
+																									},
 																									},
 																									{
-																										Name:        "operSt",
-																										ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "up"},
+																										Name: "operSt",
+																										ValueByType: &telemetry.TelemetryField_StringValue{
+																										StringValue: "up",
+																									},
 																									},
 																									{
-																										Name:        "operStQual",
-																										ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "none"},
+																										Name: "operStQual",
+																										ValueByType: &telemetry.TelemetryField_StringValue{
+																										StringValue: "none",
+																									},
 																									},
 																									{
-																										Name:        "resetCtr",
-																										ValueByType: &telemetry.TelemetryField_Sint64Value{Sint64Value: 2},
+																										Name: "resetCtr",
+																										ValueByType: &telemetry.TelemetryField_Sint64Value{
+																										Sint64Value: 2,
+																									},
 																									},
 																									{
-																										Name:        "rn",
-																										ValueByType: &telemetry.TelemetryField_StringValue{StringValue: ""},
+																										Name: "rn",
+																										ValueByType: &telemetry.TelemetryField_StringValue{
+																										StringValue: "",
+																									},
 																									},
 																									{
-																										Name:        "status",
-																										ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "modified"},
+																										Name: "status",
+																										ValueByType: &telemetry.TelemetryField_StringValue{
+																										StringValue: "modified",
+																									},
 																									},
 																								},
 																							},
