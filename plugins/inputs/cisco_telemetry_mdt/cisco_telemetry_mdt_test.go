@@ -1436,56 +1436,56 @@ func TestHandleNXDMEEventListWithDn(t *testing.T) {
 																									{
 																										Name: "childAction",
 																										ValueByType: &telemetry.TelemetryField_StringValue{
-																										StringValue: "",
-																									},
+																											StringValue: "",
+																										},
 																									},
 																									{
 																										Name: "dn",
 																										ValueByType: &telemetry.TelemetryField_StringValue{
-																										StringValue: "sys/intf/phys-[eth1/11]/phys",
-																									},
+																											StringValue: "sys/intf/phys-[eth1/11]/phys",
+																										},
 																									},
 																									{
 																										Name: "lastLinkStChg",
 																										ValueByType: &telemetry.TelemetryField_StringValue{
-																										StringValue: "2026-01-22T14:15:46.199-08:00",
-																									},
+																											StringValue: "2026-01-22T14:15:46.199-08:00",
+																										},
 																									},
 																									{
 																										Name: "operBitset",
 																										ValueByType: &telemetry.TelemetryField_StringValue{
-																										StringValue: "3-4",
-																									},
+																											StringValue: "3-4",
+																										},
 																									},
 																									{
 																										Name: "operSt",
 																										ValueByType: &telemetry.TelemetryField_StringValue{
-																										StringValue: "up",
-																									},
+																											StringValue: "up",
+																										},
 																									},
 																									{
 																										Name: "operStQual",
 																										ValueByType: &telemetry.TelemetryField_StringValue{
-																										StringValue: "none",
-																									},
+																											StringValue: "none",
+																										},
 																									},
 																									{
 																										Name: "resetCtr",
 																										ValueByType: &telemetry.TelemetryField_Sint64Value{
-																										Sint64Value: 2,
-																									},
+																											Sint64Value: 2,
+																										},
 																									},
 																									{
 																										Name: "rn",
 																										ValueByType: &telemetry.TelemetryField_StringValue{
-																										StringValue: "",
-																									},
+																											StringValue: "",
+																										},
 																									},
 																									{
 																										Name: "status",
 																										ValueByType: &telemetry.TelemetryField_StringValue{
-																										StringValue: "modified",
-																									},
+																											StringValue: "modified",
+																										},
 																									},
 																								},
 																							},
