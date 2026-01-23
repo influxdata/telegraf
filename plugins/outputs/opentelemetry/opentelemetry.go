@@ -28,9 +28,9 @@ var userAgent = internal.ProductToken()
 var sampleConfig string
 
 type OpenTelemetry struct {
-	ServiceAddress    string `toml:"service_address"`
-	EncodingType      string `toml:"encoding_type"`
-	MetricNameFormat  string `toml:"metric_name_format"`
+	ServiceAddress   string `toml:"service_address"`
+	EncodingType     string `toml:"encoding_type"`
+	MetricNameFormat string `toml:"metric_name_format"`
 
 	tls.ClientConfig
 	Timeout     config.Duration   `toml:"timeout"`
@@ -238,9 +238,9 @@ func (o *OpenTelemetry) transformMetricName(name string) string {
 }
 
 const (
-	defaultServiceAddress  = "localhost:4317"
-	defaultTimeout         = config.Duration(5 * time.Second)
-	defaultCompression     = "gzip"
+	defaultServiceAddress   = "localhost:4317"
+	defaultTimeout          = config.Duration(5 * time.Second)
+	defaultCompression      = "gzip"
 	defaultMetricNameFormat = "prometheus"
 )
 
