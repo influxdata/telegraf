@@ -21,6 +21,7 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/api/types/system"
+	"github.com/docker/docker/client"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -144,26 +145,22 @@ func (d *Docker) Init() error {
 }
 
 func (d *Docker) Start(telegraf.Accumulator) error {
-	// Get client
+	// Get client - this only creates the client object, doesn't connect
 	c, err := d.getNewClient()
 	if err != nil {
-		return &internal.StartupError{
-			Err:   fmt.Errorf("failed to create Docker client: %w", err),
-			Retry: IsErrConnectionFailed(err),
-		}
+		return err
 	}
 	d.client = c
 
-	// Use Ping to check connectivity, this is a lightweight check
+	// Use Ping to check connectivity - this is a lightweight check
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
-	_, err = d.client.Ping(ctx)
-	cancel()
-	if err != nil {
+	defer cancel()
+	if _, err := d.client.Ping(ctx); err != nil {
 		d.client.Close()
 		d.client = nil
 		return &internal.StartupError{
 			Err:   fmt.Errorf("failed to ping Docker daemon: %w", err),
-			Retry: IsErrConnectionFailed(err),
+			Retry: client.IsErrConnectionFailed(err),
 		}
 	}
 
@@ -193,7 +190,7 @@ func (d *Docker) Start(telegraf.Accumulator) error {
 		d.client = nil
 		return &internal.StartupError{
 			Err:   fmt.Errorf("failed to get Docker info: %w", err),
-			Retry: IsErrConnectionFailed(err),
+			Retry: client.IsErrConnectionFailed(err),
 		}
 	}
 
@@ -221,10 +218,6 @@ func (d *Docker) Stop() {
 }
 
 func (d *Docker) Gather(acc telegraf.Accumulator) error {
-	if d.client == nil {
-		return errors.New("docker client not initialized")
-	}
-
 	// Create label filters if not already created
 	if !d.filtersCreated {
 		err := d.createLabelFilters()

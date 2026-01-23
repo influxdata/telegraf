@@ -19,8 +19,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -1793,38 +1793,11 @@ func TestPodmanStatsCache(t *testing.T) {
 	require.Contains(t, d.statsCache, testID)
 }
 
-func TestStartWithUnavailableDocker(t *testing.T) {
-	// Test that Start returns a retryable StartupError when Docker is unavailable
-	var acc testutil.Accumulator
-	d := Docker{
-		Log: testutil.Logger{},
-		newClient: func(string, *tls.Config) (dockerClient, error) {
-			return nil, errors.New("cannot connect to the Docker daemon")
-		},
-		newEnvClient: func() (dockerClient, error) {
-			return nil, errors.New("cannot connect to the Docker daemon")
-		},
-	}
-
-	require.NoError(t, d.Init())
-
-	// Start should return a StartupError when Docker is unavailable
-	err := d.Start(&acc)
-	require.Error(t, err)
-
-	var startupErr *internal.StartupError
-	require.ErrorAs(t, err, &startupErr)
-	require.Contains(t, startupErr.Error(), "failed to create Docker client")
-}
-
-func TestStartWithPingFailure(t *testing.T) {
-	// Test that Start returns a retryable StartupError when Ping fails due to connection issues
-	var acc testutil.Accumulator
-
-	// Create a mock client that succeeds on creation but fails on Ping
-	d := Docker{
-		Log:     testutil.Logger{},
-		Timeout: config.Duration(5 * time.Second),
+func TestStartupErrorBehaviorError(t *testing.T) {
+	// Test that model.Start returns error when Ping fails with default "error" behavior
+	// Uses the startup-error-behavior framework (TSD-006)
+	plugin := &Docker{
+		Timeout: config.Duration(100 * time.Millisecond),
 		newClient: func(string, *tls.Config) (dockerClient, error) {
 			return &mockClient{
 				PingF: func() (types.Ping, error) {
@@ -1839,26 +1812,54 @@ func TestStartWithPingFailure(t *testing.T) {
 			return nil, errors.New("not using env client")
 		},
 	}
+	model := models.NewRunningInput(plugin, &models.InputConfig{
+		Name:  "docker",
+		Alias: "error-test",
+	})
+	model.StartupErrors.Set(0)
+	require.NoError(t, model.Init())
 
-	require.NoError(t, d.Init())
+	// Starting the plugin will fail with an error because Ping fails
+	var acc testutil.Accumulator
+	require.ErrorContains(t, model.Start(&acc), "failed to ping Docker daemon")
+}
 
-	// Start should return a StartupError when Ping fails
-	err := d.Start(&acc)
+func TestStartupErrorBehaviorIgnore(t *testing.T) {
+	// Test that model.Start returns fatal error with "ignore" behavior when Ping fails
+	plugin := &Docker{
+		Timeout: config.Duration(100 * time.Millisecond),
+		newClient: func(string, *tls.Config) (dockerClient, error) {
+			return &mockClient{
+				PingF: func() (types.Ping, error) {
+					return types.Ping{}, errors.New("connection refused")
+				},
+				CloseF: func() error {
+					return nil
+				},
+			}, nil
+		},
+		newEnvClient: func() (dockerClient, error) {
+			return nil, errors.New("not using env client")
+		},
+	}
+	model := models.NewRunningInput(plugin, &models.InputConfig{
+		Name:                 "docker",
+		Alias:                "ignore-test",
+		StartupErrorBehavior: "ignore",
+	})
+	model.StartupErrors.Set(0)
+	require.NoError(t, model.Init())
+
+	// Starting the plugin will fail and model should convert to fatal error
+	var acc testutil.Accumulator
+	err := model.Start(&acc)
 	require.Error(t, err)
-
-	var startupErr *internal.StartupError
-	require.ErrorAs(t, err, &startupErr)
-	require.Contains(t, startupErr.Error(), "failed to ping Docker daemon")
-	// Client should be nil since we clean up on failure
-	require.Nil(t, d.client)
+	require.Contains(t, err.Error(), "failed to ping Docker daemon")
 }
 
 func TestStartSuccess(t *testing.T) {
 	// Test that Start succeeds when Docker is available
-	var acc testutil.Accumulator
-
-	d := Docker{
-		Log:     testutil.Logger{},
+	plugin := &Docker{
 		Timeout: config.Duration(5 * time.Second),
 		newClient: func(string, *tls.Config) (dockerClient, error) {
 			return &mockClient{
@@ -1883,8 +1884,13 @@ func TestStartSuccess(t *testing.T) {
 			return nil, errors.New("not using env client")
 		},
 	}
+	model := models.NewRunningInput(plugin, &models.InputConfig{
+		Name:  "docker",
+		Alias: "success-test",
+	})
+	model.StartupErrors.Set(0)
+	require.NoError(t, model.Init())
 
-	require.NoError(t, d.Init())
-	require.NoError(t, d.Start(&acc))
-	require.NotNil(t, d.client)
+	var acc testutil.Accumulator
+	require.NoError(t, model.Start(&acc))
 }

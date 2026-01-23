@@ -12,10 +12,6 @@ import (
 	"github.com/docker/docker/client"
 )
 
-// IsErrConnectionFailed returns true if the error is caused by connection failure.
-// This is a passthrough to the docker client library function.
-var IsErrConnectionFailed = client.IsErrConnectionFailed
-
 var (
 	defaultHeaders = map[string]string{"User-Agent": "engine-api-cli-1.0"}
 )
