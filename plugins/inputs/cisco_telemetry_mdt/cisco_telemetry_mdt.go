@@ -722,8 +722,12 @@ func (c *CiscoTelemetryMDT) parseContentField(
 				nxChildren = subfield
 			} else {
 				sub := subfield.Fields
-				if len(sub) > 0 && sub[0] != nil && sub[0].Fields[0].Name == "subscriptionId" && len(sub[0].Fields) >= 2 {
-					nxAttributes = sub[0].Fields[1].Fields[0].Fields[0].Fields[0].Fields[0].Fields[0]
+				if len(sub) > 0 && sub[0] != nil && len(sub[0].Fields) >= 2 {
+					if sub[0].Fields[0].Name == "subscriptionId" {
+						nxAttributes = sub[0].Fields[1].Fields[0].Fields[0].Fields[0].Fields[0].Fields[0]
+					} else if sub[0].Fields[1].Name == "subscriptionId" {
+						nxAttributes = sub[0].Fields[0].Fields[0].Fields[0].Fields[0].Fields[0].Fields[0]
+					}
 				}
 			}
 			// if nxAttributes == NULL then class based query.
@@ -767,12 +771,14 @@ func (c *CiscoTelemetryMDT) parseContentField(
 	// DME structure: https://developer.cisco.com/site/nxapi-dme-model-reference-api/
 	rn := ""
 	dn := false
+	dnstr := ""
 
 	for _, subfield := range nxAttributes.Fields {
 		if subfield.Name == "rn" {
 			rn = decodeTag(subfield)
 		} else if subfield.Name == "dn" {
 			dn = true
+			dnstr = decodeTag(subfield)
 		}
 	}
 
@@ -781,6 +787,8 @@ func (c *CiscoTelemetryMDT) parseContentField(
 	} else if !dn { // Check for distinguished name being present
 		c.acc.AddError(errors.New("failed while decoding NX-OS: missing 'dn' field"))
 		return
+	} else if dn {
+		tags["dn"] = dnstr
 	}
 
 	for _, subfield := range nxAttributes.Fields {
