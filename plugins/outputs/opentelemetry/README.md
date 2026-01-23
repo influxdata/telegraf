@@ -83,10 +83,16 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 The plugin supports two metric name formats:
 
-- **prometheus** (default): Converts dots (`.`) to underscores (`_`) in metric names. This is the default behavior and maintains compatibility with Prometheus naming conventions.
-- **otel**: Preserves dot-separated metric names as-is. This is useful when working with OpenTelemetry semantic conventions (e.g., `http.server.duration`, `http.client.request.count`) and ensures consistency across the OpenTelemetry ecosystem.
+- **prometheus** (default): Converts dots (`.`) to underscores (`_`) in metric names.
+  This is the default behavior and maintains compatibility with Prometheus naming
+  conventions.
+- **otel**: Preserves dot-separated metric names as-is. This is useful when working
+  with OpenTelemetry semantic conventions (e.g., `http.server.duration`,
+  `http.client.request.count`) and ensures consistency across the OpenTelemetry
+  ecosystem.
 
-To use OpenTelemetry semantic conventions, set `metric_name_format = "otel"` in your configuration.
+To use OpenTelemetry semantic conventions, set `metric_name_format = "otel"` in
+your configuration.
 
 ## Supported dialects
 
