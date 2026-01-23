@@ -511,7 +511,7 @@ func TestOpenTelemetryMetricNameWithUnderscores(t *testing.T) {
 
 	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(common.NoopLogger{})
 	require.NoError(t, err)
-	
+
 	// Test prometheus format - underscores should remain, dots should be converted
 	plugin := &OpenTelemetry{
 		ServiceAddress:    m.Address(),
@@ -539,7 +539,7 @@ func TestOpenTelemetryMetricNameWithUnderscores(t *testing.T) {
 	require.Equal(t, 1, got.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().Len())
 	// Dots should be converted to underscores
 	require.Equal(t, "http_server_request_duration", got.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0).Name())
-	
+
 	// Test otel format - everything should be preserved
 	plugin2 := &OpenTelemetry{
 		ServiceAddress:    m.Address(),

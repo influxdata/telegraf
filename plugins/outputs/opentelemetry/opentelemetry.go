@@ -228,7 +228,7 @@ func (o *OpenTelemetry) transformMetricName(name string) string {
 	if format == "" {
 		format = defaultMetricNameFormat
 	}
-	
+
 	if format == "otel" {
 		// Preserve dots for OpenTelemetry semantic conventions
 		return name
