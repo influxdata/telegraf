@@ -34,6 +34,49 @@ func TestRename(t *testing.T) {
 	assert.Equal(t, "mongodb_shard_stats.in_use", results[8].FieldList()[0].Key)
 }
 
+func TestDeduplicatePrefix(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"apache", "apache"},
+		{"apache.apache", "apache"},
+		{"apache.apache.apache", "apache"},
+		{"apache.apache.apache.apache", "apache"},
+		{"nginx", "nginx"},
+		{"nginx.nginx", "nginx"},
+		{"nginx.nginx.nginx", "nginx"},
+		{"mongodb", "mongodb"},
+		{"mongodb.mongodb.mongodb", "mongodb"},
+		// Edge cases
+		{"", ""},
+		{"a", "a"},
+		{"a.b", "a.b"},
+		{"a.a.b", "a.b"},
+		{"foo.foo.bar.baz", "foo.bar.baz"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := deduplicatePrefix(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestRenameWithCorruptedMeasurementName(t *testing.T) {
+	r := Rename{}
+
+	// Simulate corrupted measurement name with 64+ repeated prefixes
+	corruptedName := "apache.apache.apache.apache.apache"
+	m := newMetric(corruptedName, nil, map[string]interface{}{"BusyWorkers": 10})
+
+	results := r.Process([]telegraf.Metric{m})
+
+	assert.Equal(t, "apache", results[0].Name())
+	assert.Equal(t, "workers.busy", results[0].FieldList()[0].Key)
+}
+
 func newMetric(name string, tags map[string]string, fields map[string]interface{}) telegraf.Metric {
 	if tags == nil {
 		tags = map[string]string{}

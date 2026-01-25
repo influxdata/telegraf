@@ -210,6 +210,10 @@ func NewRename() BatchProcessor { return &Rename{} }
 func (r *Rename) Process(points []telegraf.Metric) []telegraf.Metric {
 	for _, point := range points {
 		originalName := point.Name()
+
+		// Fix corrupted measurement names (e.g., "apache.apache.apache" → "apache")
+		originalName = deduplicatePrefix(originalName)
+
 		replace, ok := measurementReplaces[originalName]
 		if !ok {
 			replace = ChangeNames(originalName)
@@ -275,3 +279,27 @@ func ChangeNames(name string) string {
 }
 
 func (Rename) Close() {}
+
+// deduplicatePrefix fixes recursive prefix corruption.
+// Example: "apache.apache.apache" → "apache"
+func deduplicatePrefix(name string) string {
+	parts := strings.Split(name, ".")
+	if len(parts) < 2 {
+		return name
+	}
+
+	prefix := parts[0]
+	count := 0
+	for count < len(parts) && parts[count] == prefix {
+		count++
+	}
+
+	if count > 1 {
+		remaining := parts[count:]
+		if len(remaining) > 0 {
+			return prefix + "." + strings.Join(remaining, ".")
+		}
+		return prefix
+	}
+	return name
+}
