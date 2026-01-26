@@ -592,6 +592,11 @@ func (s *Statsd) parser() error {
 						s.Log.Errorf("Parsing line failed: %v", err)
 						s.Log.Debugf("  line was: %s", line)
 					}
+				case s.DataDogExtensions && strings.HasPrefix(line, "_sc"):
+					if err := s.parseServiceCheckMessage(in.Time, line, in.Addr); err != nil {
+						s.Log.Errorf("Parsing line failed: %v", err)
+						s.Log.Debugf("  line was: %s", line)
+					}
 				default:
 					if err := s.parseStatsdLine(p, line); err != nil {
 						if !errors.Is(err, errParsing) {

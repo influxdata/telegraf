@@ -19,6 +19,12 @@ const (
 	eventWarning = "warning"
 	eventError   = "error"
 	eventSuccess = "success"
+
+	// Service check status values
+	serviceCheckOK       = 0
+	serviceCheckWarning  = 1
+	serviceCheckCritical = 2
+	serviceCheckUnknown  = 3
 )
 
 var uncommenter = strings.NewReplacer("\\n", "\n")
@@ -179,4 +185,104 @@ func parseDataDogTags(tags map[string]string, message string) {
 		}
 		tags[k] = "true"
 	}
+}
+
+// parseServiceCheckMessage parses a Datadog service check message in the format:
+// _sc|<name>|<status>|d:<timestamp>|h:<hostname>|#<tag_key_1>:<tag_value_1>|m:<message>
+//
+// - <name> - service check name (required)
+// - <status> - 0=OK, 1=Warning, 2=Critical, 3=Unknown (required)
+// - d:<timestamp> - optional Unix timestamp
+// - h:<hostname> - optional hostname override
+// - #<tags> - optional tags (same format as metrics)
+// - m:<message> - optional message
+func (s *Statsd) parseServiceCheckMessage(now time.Time, message, defaultHostname string) error {
+	// Split on | delimiter
+	parts := strings.Split(message, "|")
+	if len(parts) < 3 {
+		return errors.New("invalid service check format: expected at least 3 parts (_sc|name|status)")
+	}
+
+	// Validate the prefix
+	if parts[0] != "_sc" {
+		return errors.New("invalid service check format: must start with _sc")
+	}
+
+	// Extract the service check name
+	checkName := parts[1]
+	if checkName == "" {
+		return errors.New("invalid service check format: empty check name")
+	}
+
+	// Parse the status
+	status, err := strconv.ParseInt(parts[2], 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid service check format: could not parse status %q", parts[2])
+	}
+	if status < serviceCheckOK || status > serviceCheckUnknown {
+		return fmt.Errorf("invalid service check format: status %d out of range (0-3)", status)
+	}
+
+	// Map status to text
+	var statusText string
+	switch status {
+	case serviceCheckOK:
+		statusText = "ok"
+	case serviceCheckWarning:
+		statusText = "warning"
+	case serviceCheckCritical:
+		statusText = "critical"
+	case serviceCheckUnknown:
+		statusText = "unknown"
+	}
+
+	// Initialize tags and fields
+	tags := make(map[string]string)
+	tags["check_name"] = checkName
+	if defaultHostname != "" {
+		tags["source"] = defaultHostname
+	}
+
+	fields := make(map[string]interface{})
+	fields["status"] = status
+	fields["status_text"] = statusText
+
+	ts := now
+
+	// Process optional metadata fields
+	for i := 3; i < len(parts); i++ {
+		part := parts[i]
+		if len(part) < 2 {
+			continue
+		}
+
+		switch {
+		case strings.HasPrefix(part, "d:"):
+			// Timestamp
+			timestamp, err := strconv.ParseInt(part[2:], 10, 64)
+			if err != nil {
+				continue
+			}
+			ts = time.Unix(timestamp, 0)
+		case strings.HasPrefix(part, "h:"):
+			// Hostname
+			tags["source"] = part[2:]
+		case strings.HasPrefix(part, "m:"):
+			// Message
+			fields["message"] = uncommenter.Replace(part[2:])
+		case strings.HasPrefix(part, "#"):
+			// Tags
+			parseDataDogTags(tags, part[1:])
+		}
+	}
+
+	// Use source tag because host is reserved tag key in Telegraf.
+	// In datadog the host tag and `h:` are interchangeable.
+	if host, ok := tags["host"]; ok {
+		delete(tags, "host")
+		tags["source"] = host
+	}
+
+	s.acc.AddFields("statsd_service_check", fields, tags, ts)
+	return nil
 }
