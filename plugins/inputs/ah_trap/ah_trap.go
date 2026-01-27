@@ -372,7 +372,36 @@ func (t *TrapPlugin) Gather_Ah_send_trap(trapType uint32, trapBuf [256]byte, acc
 	return nil
 }
 
+/*
+Helper function to convert state value to string for SSID bind/unbind
+*/
+func stateToString(state uint8) string {
+       switch state {
+       case 0:
+               return "UNBIND"
+       case 1:
+               return "BIND"
+       default:
+               return fmt.Sprintf("UNKNOWN(%d)", state)
+       }
+}
 
+func (t *TrapPlugin) Ah_send_ssid_bind_unbind_trap(trapType uint32, trapBuf [600]byte, acc telegraf.Accumulator) error {
+    var ssidBindUnbind AhTgrafSsidBindUnbindTrap
+    copy((*[unsafe.Sizeof(ssidBindUnbind)]byte)(unsafe.Pointer(&ssidBindUnbind))[:], trapBuf[:unsafe.Sizeof(ssidBindUnbind)])
+
+    acc.AddFields("TrapEvent", map[string]interface{}{
+        "trapType_ssidBindUnbindTrap":    ssidBindUnbind.TrapType,
+        "trapId_ssidBindUnbindTrap":      ssidBindUnbind.TrapID,
+        "ifName_ssidBindUnbindTrap":      ahutil.CleanCString(ssidBindUnbind.IfName[:]),
+        "ifIndex_ssidBindUnbindTrap":     ssidBindUnbind.IfIndex,
+        "description_ssidBindUnbindTrap": ahutil.CleanCString(ssidBindUnbind.Description[:]),
+        "bssidMac_ssidBindUnbindTrap":    ahutil.FormatMac(ssidBindUnbind.BssidMAC),
+        "ssid_ssidBindUnbindTrap":        ahutil.CleanCString(ssidBindUnbind.SSID[:]),
+	"state_ssidBindUnbindTrap":       stateToString(ssidBindUnbind.State),
+    }, nil)
+    return nil
+}
 
 /*
  trapListener listens for incoming trap messages on a UDP connection,
@@ -452,6 +481,18 @@ func (t *TrapPlugin) trapListener(conn net.PacketConn) {
 			copy(trapBuf[:expected], payload)
 			if err := t.Ah_send_sta_leave_trap(trapType, trapBuf, t.acc); err != nil {
 				log.Printf("[ah_trap] Error gathering STA LEAVE STATS trap: %v", err)
+			}
+		case AH_MSG_TRAP_SSID_BIND_UNBIND:
+			var  SsidBindUnbind AhTgrafSsidBindUnbindTrap
+			expected := int(unsafe.Sizeof(SsidBindUnbind))
+			if len(payload) != expected {
+				log.Printf("[ah_trap] Invalid SSID BIND UNBIND STATS size: got %d, expected %d", len(payload), expected)
+				continue
+			}
+			var trapBuf [600]byte
+			copy(trapBuf[:expected], payload)
+			if err := t.Ah_send_ssid_bind_unbind_trap(trapType, trapBuf, t.acc); err != nil {
+				log.Printf("[ah_trap] Error gathering SSID Bind Unbind trap: %v", err)
 			}
 
 		}
