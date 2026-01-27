@@ -1821,7 +1821,9 @@ func TestStartupErrorBehaviorError(t *testing.T) {
 
 	// Starting the plugin will fail with an error because Ping fails
 	var acc testutil.Accumulator
-	require.ErrorContains(t, model.Start(&acc), "failed to ping Docker daemon")
+	err := model.Start(&acc)
+	model.Stop()
+	require.ErrorContains(t, err, "failed to ping Docker daemon")
 }
 
 func TestStartupErrorBehaviorIgnore(t *testing.T) {
@@ -1853,8 +1855,8 @@ func TestStartupErrorBehaviorIgnore(t *testing.T) {
 	// Starting the plugin will fail and model should convert to fatal error
 	var acc testutil.Accumulator
 	err := model.Start(&acc)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed to ping Docker daemon")
+	model.Stop()
+	require.ErrorContains(t, err, "failed to ping Docker daemon")
 }
 
 func TestStartSuccess(t *testing.T) {
@@ -1893,4 +1895,5 @@ func TestStartSuccess(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NoError(t, model.Start(&acc))
+	model.Stop()
 }

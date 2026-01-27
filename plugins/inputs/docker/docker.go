@@ -153,11 +153,10 @@ func (d *Docker) Start(telegraf.Accumulator) error {
 	d.client = c
 
 	// Use Ping to check connectivity - this is a lightweight check
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
-	defer cancel()
-	if _, err := d.client.Ping(ctx); err != nil {
-		d.client.Close()
-		d.client = nil
+	ctxPing, cancelPing := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
+	defer cancelPing()
+	if _, err := d.client.Ping(ctxPing); err != nil {
+		d.Stop()
 		return &internal.StartupError{
 			Err:   fmt.Errorf("failed to ping Docker daemon: %w", err),
 			Retry: client.IsErrConnectionFailed(err),
@@ -167,8 +166,7 @@ func (d *Docker) Start(telegraf.Accumulator) error {
 	// Check API version compatibility
 	version, err := semver.NewVersion(d.client.ClientVersion())
 	if err != nil {
-		d.client.Close()
-		d.client = nil
+		d.Stop()
 		return fmt.Errorf("failed to parse client version: %w", err)
 	}
 
@@ -181,13 +179,12 @@ func (d *Docker) Start(telegraf.Accumulator) error {
 	}
 
 	// Get info from docker daemon for Podman detection
-	ctx, cancel = context.WithTimeout(context.Background(), time.Duration(d.Timeout))
-	defer cancel()
+	ctxInfo, cancelInfo := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
+	defer cancelInfo()
 
-	info, err := d.client.Info(ctx)
+	info, err := d.client.Info(ctxInfo)
 	if err != nil {
-		d.client.Close()
-		d.client = nil
+		d.Stop()
 		return &internal.StartupError{
 			Err:   fmt.Errorf("failed to get Docker info: %w", err),
 			Retry: client.IsErrConnectionFailed(err),
