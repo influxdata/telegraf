@@ -20,8 +20,8 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	v1 "github.com/influxdata/telegraf/plugins/inputs/mysql/v1"
-	v2 "github.com/influxdata/telegraf/plugins/inputs/mysql/v2"
+	"github.com/influxdata/telegraf/plugins/inputs/mysql/v1"
+	"github.com/influxdata/telegraf/plugins/inputs/mysql/v2"
 )
 
 //go:embed sample.conf
