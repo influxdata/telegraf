@@ -403,6 +403,26 @@ func (t *TrapPlugin) Ah_send_ssid_bind_unbind_trap(trapType uint32, trapBuf [600
     return nil
 }
 
+func (t *TrapPlugin) Ah_send_bssid_spoofing_trap(trapType uint32, trapBuf [AH_TRAP_SIZE_300]byte, acc telegraf.Accumulator) error {
+    var bssidSpoofing AhTgrafBSSIDSpoofingTrap
+    copy((*[unsafe.Sizeof(bssidSpoofing)]byte)(unsafe.Pointer(&bssidSpoofing))[:], trapBuf[:unsafe.Sizeof(bssidSpoofing)])
+
+    acc.AddFields("TrapEvent", map[string]interface{}{
+        "trapId_bssidSpoofingTrap":       bssidSpoofing.TrapID,
+        "ifName_bssidSpoofingTrap":       ahutil.CleanCString(bssidSpoofing.IfName[:]),
+        "description_bssidSpoofingTrap":  ahutil.CleanCString(bssidSpoofing.Description[:]),
+        "ifIndex_bssidSpoofingTrap":      bssidSpoofing.IfIndex,
+        "bssidMac_bssidSpoofingTrap":     ahutil.FormatMac(bssidSpoofing.BssidMAC),
+        "attackMac_bssidSpoofingTrap":    ahutil.FormatMac(bssidSpoofing.AttackMAC),
+        "attackCount_bssidSpoofingTrap":  bssidSpoofing.AttackCount,
+        "protocol_bssidSpoofingTrap":     bssidSpoofing.Protocol,
+        "severity_bssidSpoofingTrap":     bssidSpoofing.Severity,
+        "sourceIp_bssidSpoofingTrap":     ahutil.IntToIpv4(bssidSpoofing.SourceIP),
+        "targetIp_bssidSpoofingTrap":     ahutil.IntToIpv4(bssidSpoofing.TargetIP),
+    }, nil)
+    return nil
+}
+
 /*
  trapListener listens for incoming trap messages on a UDP connection,
  extracts the trap type and payload, and processes supported trap types.
@@ -494,7 +514,18 @@ func (t *TrapPlugin) trapListener(conn net.PacketConn) {
 			if err := t.Ah_send_ssid_bind_unbind_trap(trapType, trapBuf, t.acc); err != nil {
 				log.Printf("[ah_trap] Error gathering SSID Bind Unbind trap: %v", err)
 			}
-
+		case AH_MSG_TRAP_BSSID_SPOOFING:
+			var bssidSpoofing AhTgrafBSSIDSpoofingTrap
+			expected := int(unsafe.Sizeof(bssidSpoofing))
+			if len(payload) != expected {
+				log.Printf("[ah_trap] Invalid BSSID SPOOFING size: got %d, expected %d", len(payload), expected)
+				continue
+			}
+			var trapBuf [AH_TRAP_SIZE_300]byte
+			copy(trapBuf[:expected], payload)
+			if err := t.Ah_send_bssid_spoofing_trap(trapType, trapBuf, t.acc); err != nil {
+				log.Printf("[ah_trap] Error gathering BSSID Spoofing trap: %v", err)
+			}
 		}
 	}
 }
