@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"io"
 	"reflect"
 	"sort"
@@ -19,6 +20,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -32,6 +34,7 @@ type mockClient struct {
 	NodeListF         func() ([]swarm.Node, error)
 	DiskUsageF        func() (types.DiskUsage, error)
 	ClientVersionF    func() string
+	PingF             func() (types.Ping, error)
 	CloseF            func() error
 }
 
@@ -71,6 +74,10 @@ func (c *mockClient) ClientVersion() string {
 	return c.ClientVersionF()
 }
 
+func (c *mockClient) Ping(context.Context) (types.Ping, error) {
+	return c.PingF()
+}
+
 func (c *mockClient) Close() error {
 	return c.CloseF()
 }
@@ -102,6 +109,9 @@ var baseClient = mockClient{
 	},
 	ClientVersionF: func() string {
 		return version
+	},
+	PingF: func() (types.Ping, error) {
+		return types.Ping{}, nil
 	},
 	CloseF: func() error {
 		return nil
@@ -421,7 +431,8 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 	var acc testutil.Accumulator
 
 	d := Docker{
-		Log: testutil.Logger{},
+		Log:     testutil.Logger{},
+		Timeout: config.Duration(5 * time.Second),
 		newClient: func(string, *tls.Config) (dockerClient, error) {
 			return &mockClient{
 				InfoF: func() (system.Info, error) {
@@ -450,6 +461,9 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 				},
 				ClientVersionF: func() string {
 					return version
+				},
+				PingF: func() (types.Ping, error) {
+					return types.Ping{}, nil
 				},
 				CloseF: func() error {
 					return nil
@@ -1693,6 +1707,7 @@ func TestPodmanDetection(t *testing.T) {
 			var acc testutil.Accumulator
 			d := Docker{
 				Endpoint: tt.endpoint,
+				Timeout:  config.Duration(5 * time.Second),
 				newClient: func(string, *tls.Config) (dockerClient, error) {
 					return &mockClient{
 						InfoF: func() (system.Info, error) {
@@ -1710,6 +1725,9 @@ func TestPodmanDetection(t *testing.T) {
 						},
 						ClientVersionF: func() string {
 							return "1.24.0"
+						},
+						PingF: func() (types.Ping, error) {
+							return types.Ping{}, nil
 						},
 						CloseF: func() error {
 							return nil
@@ -1773,4 +1791,109 @@ func TestPodmanStatsCache(t *testing.T) {
 	d.cleanupStaleCache()
 	require.NotContains(t, d.statsCache, "old-container")
 	require.Contains(t, d.statsCache, testID)
+}
+
+func TestStartupErrorBehaviorError(t *testing.T) {
+	// Test that model.Start returns error when Ping fails with default "error" behavior
+	// Uses the startup-error-behavior framework (TSD-006)
+	plugin := &Docker{
+		Timeout: config.Duration(100 * time.Millisecond),
+		newClient: func(string, *tls.Config) (dockerClient, error) {
+			return &mockClient{
+				PingF: func() (types.Ping, error) {
+					return types.Ping{}, errors.New("connection refused")
+				},
+				CloseF: func() error {
+					return nil
+				},
+			}, nil
+		},
+		newEnvClient: func() (dockerClient, error) {
+			return nil, errors.New("not using env client")
+		},
+	}
+	model := models.NewRunningInput(plugin, &models.InputConfig{
+		Name:  "docker",
+		Alias: "error-test",
+	})
+	model.StartupErrors.Set(0)
+	require.NoError(t, model.Init())
+
+	// Starting the plugin will fail with an error because Ping fails
+	var acc testutil.Accumulator
+	err := model.Start(&acc)
+	model.Stop()
+	require.ErrorContains(t, err, "failed to ping Docker daemon")
+}
+
+func TestStartupErrorBehaviorIgnore(t *testing.T) {
+	// Test that model.Start returns fatal error with "ignore" behavior when Ping fails
+	plugin := &Docker{
+		Timeout: config.Duration(100 * time.Millisecond),
+		newClient: func(string, *tls.Config) (dockerClient, error) {
+			return &mockClient{
+				PingF: func() (types.Ping, error) {
+					return types.Ping{}, errors.New("connection refused")
+				},
+				CloseF: func() error {
+					return nil
+				},
+			}, nil
+		},
+		newEnvClient: func() (dockerClient, error) {
+			return nil, errors.New("not using env client")
+		},
+	}
+	model := models.NewRunningInput(plugin, &models.InputConfig{
+		Name:                 "docker",
+		Alias:                "ignore-test",
+		StartupErrorBehavior: "ignore",
+	})
+	model.StartupErrors.Set(0)
+	require.NoError(t, model.Init())
+
+	// Starting the plugin will fail and model should convert to fatal error
+	var acc testutil.Accumulator
+	err := model.Start(&acc)
+	model.Stop()
+	require.ErrorContains(t, err, "failed to ping Docker daemon")
+}
+
+func TestStartSuccess(t *testing.T) {
+	// Test that Start succeeds when Docker is available
+	plugin := &Docker{
+		Timeout: config.Duration(5 * time.Second),
+		newClient: func(string, *tls.Config) (dockerClient, error) {
+			return &mockClient{
+				PingF: func() (types.Ping, error) {
+					return types.Ping{}, nil
+				},
+				InfoF: func() (system.Info, error) {
+					return system.Info{
+						Name:          "docker-desktop",
+						ServerVersion: "20.10.0",
+					}, nil
+				},
+				ClientVersionF: func() string {
+					return "1.24.0"
+				},
+				CloseF: func() error {
+					return nil
+				},
+			}, nil
+		},
+		newEnvClient: func() (dockerClient, error) {
+			return nil, errors.New("not using env client")
+		},
+	}
+	model := models.NewRunningInput(plugin, &models.InputConfig{
+		Name:  "docker",
+		Alias: "success-test",
+	})
+	model.StartupErrors.Set(0)
+	require.NoError(t, model.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, model.Start(&acc))
+	model.Stop()
 }
