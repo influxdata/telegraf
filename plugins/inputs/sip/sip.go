@@ -257,23 +257,27 @@ func (s *SIP) Gather(acc telegraf.Accumulator) error {
 	// so we cannot pre-authenticate on the first request.
 	if res.StatusCode == 401 || res.StatusCode == 407 {
 		// Get credentials
-		username, err := s.Username.Get()
-		if err == nil {
-			defer username.Destroy()
-			password, err := s.Password.Get()
-			if err == nil {
-				defer password.Destroy()
+		usernameRaw, err := s.Username.Get()
+		if err != nil {
+			return fmt.Errorf("getting username failed: %w", err)
+		}
+		username := usernameRaw.String()
+		usernameRaw.Destroy()
+		
+		passwordRaw, err := s.Password.Get()
+		if err != nil {
+			return fmt.Errorf("getting password failed: %w", err)
+		}
+		password := passwordRaw.String()
+		passwordRaw.Destroy()
 
-				auth := sipgo.DigestAuth{
-					Username: username.String(),
-					Password: password.String(),
-				}
-				res, err = s.client.DoDigestAuth(ctx, req, res, auth)
-				if err != nil {
-					s.handleGatherError(err, fields, tags, acc)
-					return nil
-				}
-			}
+		res, err = s.client.DoDigestAuth(ctx, req, res, sipgo.DigestAuth{
+			Username: username,
+			Password: password,
+		})
+		if err != nil {
+			s.handleGatherError(err, fields, tags, acc)
+			return nil
 		}
 	}
 
