@@ -68,6 +68,7 @@ func (s *SIP) Init() error {
 	if s.ToUser == "" {
 		s.ToUser = s.FromUser
 	}
+	
 	// Validate server
 	if s.Server == "" {
 		return errors.New("server must be specified")
