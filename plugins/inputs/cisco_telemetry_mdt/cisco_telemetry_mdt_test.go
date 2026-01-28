@@ -1379,3 +1379,165 @@ func TestSourceFieldRewrite(t *testing.T) {
 	fields := map[string]interface{}{"bool": false}
 	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
 }
+
+func TestHandleNXDMEEventListWithDn(t *testing.T) {
+	c := &CiscoTelemetryMDT{
+		Log:       testutil.Logger{},
+		Transport: "dummy",
+		Aliases:   map[string]string{"dme": "sys/intf/phys-[eth1/11]"},
+	}
+	acc := &testutil.Accumulator{}
+	err := c.Start(acc)
+	// error is expected since we are passing in dummy transport
+	require.Error(t, err)
+
+	tel := &telemetry.Telemetry{
+		MsgTimestamp: 1769120146205,
+		EncodingPath: "EVENT-LIST",
+		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "NX-PGBL-GX2"},
+		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "1"},
+		DataGpbkv: []*telemetry.TelemetryField{
+			{
+				Fields: []*telemetry.TelemetryField{
+					{
+						Name: "keys",
+						Fields: []*telemetry.TelemetryField{
+							{
+								Name:        "EVENT-LIST",
+								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "EVENT-LIST"},
+							},
+						},
+					},
+					{
+						Name: "content",
+						Fields: []*telemetry.TelemetryField{
+							{
+								Fields: []*telemetry.TelemetryField{
+									{
+										Name: "children",
+										Fields: []*telemetry.TelemetryField{
+											{
+												Fields: []*telemetry.TelemetryField{
+													{
+														Name: "imdata",
+														Fields: []*telemetry.TelemetryField{
+															{
+																Fields: []*telemetry.TelemetryField{
+																	{
+																		Name: "ethpmPhysIf",
+																		Fields: []*telemetry.TelemetryField{
+																			{
+																				Fields: []*telemetry.TelemetryField{
+																					{
+																						Name: "attributes",
+																						Fields: []*telemetry.TelemetryField{
+																							{
+																								Fields: []*telemetry.TelemetryField{
+																									{
+																										Name: "childAction",
+																										ValueByType: &telemetry.TelemetryField_StringValue{
+																											StringValue: "",
+																										},
+																									},
+																									{
+																										Name: "dn",
+																										ValueByType: &telemetry.TelemetryField_StringValue{
+																											StringValue: "sys/intf/phys-[eth1/11]/phys",
+																										},
+																									},
+																									{
+																										Name: "lastLinkStChg",
+																										ValueByType: &telemetry.TelemetryField_StringValue{
+																											StringValue: "2026-01-22T14:15:46.199-08:00",
+																										},
+																									},
+																									{
+																										Name: "operBitset",
+																										ValueByType: &telemetry.TelemetryField_StringValue{
+																											StringValue: "3-4",
+																										},
+																									},
+																									{
+																										Name: "operSt",
+																										ValueByType: &telemetry.TelemetryField_StringValue{
+																											StringValue: "up",
+																										},
+																									},
+																									{
+																										Name: "operStQual",
+																										ValueByType: &telemetry.TelemetryField_StringValue{
+																											StringValue: "none",
+																										},
+																									},
+																									{
+																										Name: "resetCtr",
+																										ValueByType: &telemetry.TelemetryField_Sint64Value{
+																											Sint64Value: 2,
+																										},
+																									},
+																									{
+																										Name: "rn",
+																										ValueByType: &telemetry.TelemetryField_StringValue{
+																											StringValue: "",
+																										},
+																									},
+																									{
+																										Name: "status",
+																										ValueByType: &telemetry.TelemetryField_StringValue{
+																											StringValue: "modified",
+																										},
+																									},
+																								},
+																							},
+																						},
+																					},
+																				},
+																			},
+																		},
+																	},
+																},
+															},
+														},
+													},
+													{
+														Name:        "subscriptionId",
+														ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 18379759394883829764},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	data, err := proto.Marshal(tel)
+	require.NoError(t, err)
+
+	c.handleTelemetry(data)
+	require.Empty(t, acc.Errors)
+
+	// Verify that the metric was created with the correct measurement name and fields
+	require.Len(t, acc.Metrics, 1, "Expected exactly 1 metric")
+
+	tags := map[string]string{
+		"path":         "EVENT-LIST",
+		"EVENT_LIST":   "EVENT-LIST",
+		"source":       "NX-PGBL-GX2",
+		"subscription": "1",
+	}
+	fields := map[string]interface{}{
+		"dn":            "sys/intf/phys-[eth1/11]/phys",
+		"lastLinkStChg": "2026-01-22T14:15:46.199-08:00",
+		"operBitset":    "3-4",
+		"operSt":        "up",
+		"operStQual":    "none",
+		"resetCtr":      int64(2),
+		"status":        "modified",
+	}
+	acc.AssertContainsTaggedFields(t, "EVENT-LIST", fields, tags)
+}

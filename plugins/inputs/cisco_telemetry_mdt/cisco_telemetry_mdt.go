@@ -722,8 +722,12 @@ func (c *CiscoTelemetryMDT) parseContentField(
 				nxChildren = subfield
 			} else {
 				sub := subfield.Fields
-				if len(sub) > 0 && sub[0] != nil && sub[0].Fields[0].Name == "subscriptionId" && len(sub[0].Fields) >= 2 {
-					nxAttributes = sub[0].Fields[1].Fields[0].Fields[0].Fields[0].Fields[0].Fields[0]
+				if len(sub) > 0 && sub[0] != nil && len(sub[0].Fields) >= 2 {
+					if sub[0].Fields[0].Name == "subscriptionId" {
+						nxAttributes = sub[0].Fields[1].Fields[0].Fields[0].Fields[0].Fields[0].Fields[0]
+					} else if sub[0].Fields[1].Name == "subscriptionId" {
+						nxAttributes = sub[0].Fields[0].Fields[0].Fields[0].Fields[0].Fields[0].Fields[0]
+					}
 				}
 			}
 			// if nxAttributes == NULL then class based query.
