@@ -99,7 +99,7 @@ func (ps *PubSub) Write(metrics []telegraf.Metric) error {
 func (ps *PubSub) initPubSubClient() error {
 	var credsOpt option.ClientOption
 	if ps.CredentialsFile != "" {
-		credsOpt = option.WithCredentialsFile(ps.CredentialsFile)
+		credsOpt = option.WithAuthCredentialsFile(option.ServiceAccount, ps.CredentialsFile)
 	} else {
 		creds, err := google.FindDefaultCredentials(context.Background(), pubsub.ScopeCloudPlatform)
 		if err != nil {

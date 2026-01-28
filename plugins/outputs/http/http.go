@@ -269,7 +269,7 @@ func (h *HTTP) getAccessToken(ctx context.Context, audience string) (*oauth2.Tok
 		return h.oauth2Token, nil
 	}
 
-	ts, err := idtoken.NewTokenSource(ctx, audience, idtoken.WithCredentialsFile(h.CredentialsFile))
+	ts, err := idtoken.NewTokenSource(ctx, audience, idtoken.WithAuthCredentialsFile(idtoken.ServiceAccount, h.CredentialsFile))
 	if err != nil {
 		return nil, fmt.Errorf("error creating oauth2 token source: %w", err)
 	}

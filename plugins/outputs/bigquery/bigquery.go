@@ -93,7 +93,7 @@ func (b *BigQuery) setUpDefaultClient() error {
 	ctx := context.Background()
 
 	if b.CredentialsFile != "" {
-		credentialsOption = option.WithCredentialsFile(b.CredentialsFile)
+		credentialsOption = option.WithAuthCredentialsFile(option.ServiceAccount, b.CredentialsFile)
 	} else {
 		creds, err := google.FindDefaultCredentials(ctx, bigquery.Scope)
 		if err != nil {

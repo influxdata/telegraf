@@ -205,7 +205,7 @@ func (gcs *GCS) setUpDefaultClient() error {
 	var credentialsOption option.ClientOption
 
 	if gcs.CredentialsFile != "" {
-		credentialsOption = option.WithCredentialsFile(gcs.CredentialsFile)
+		credentialsOption = option.WithAuthCredentialsFile(option.ServiceAccount, gcs.CredentialsFile)
 	} else {
 		creds, err := google.FindDefaultCredentials(gcs.ctx, storage.ScopeReadOnly)
 		if err != nil {
