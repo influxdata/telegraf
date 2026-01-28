@@ -599,7 +599,11 @@ func (p *Procstat) supervisorPIDs() ([]string, map[string]map[string]string, err
 
 func (p *Procstat) systemdUnitPIDs() ([]pidsTags, error) {
 	if p.IncludeSystemdChildren {
+		// Adapt the path for newer versions of systemd
 		p.CGroup = "systemd/system.slice/" + p.SystemdUnit
+		if _, err := os.Stat("/sys/fs/cgroup/systemd/system.slice"); errors.Is(err, os.ErrNotExist) {
+			p.CGroup = "system.slice/" + p.SystemdUnit
+		}
 		return p.cgroupPIDs()
 	}
 
