@@ -43,9 +43,8 @@ type SIP struct {
 	LocalAddress string          `toml:"local_address"`
 	Username     config.Secret   `toml:"username"`
 	Password     config.Secret   `toml:"password"`
-	commontls.ClientConfig
-
 	Log telegraf.Logger `toml:"-"`
+	commontls.ClientConfig
 
 	ua         *sipgo.UserAgent
 	client     *sipgo.Client
