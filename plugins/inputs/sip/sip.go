@@ -43,7 +43,7 @@ type SIP struct {
 	LocalAddress string          `toml:"local_address"`
 	Username     config.Secret   `toml:"username"`
 	Password     config.Secret   `toml:"password"`
-	Log telegraf.Logger `toml:"-"`
+	Log          telegraf.Logger `toml:"-"`
 	commontls.ClientConfig
 
 	ua         *sipgo.UserAgent
@@ -68,7 +68,7 @@ func (s *SIP) Init() error {
 	if s.ToUser == "" {
 		s.ToUser = s.FromUser
 	}
-	
+
 	// Validate server
 	if s.Server == "" {
 		return errors.New("server must be specified")
@@ -280,7 +280,7 @@ func (s *SIP) Gather(acc telegraf.Accumulator) error {
 		}
 		username := usernameRaw.String()
 		usernameRaw.Destroy()
-		
+
 		passwordRaw, err := s.Password.Get()
 		if err != nil {
 			return fmt.Errorf("getting password failed: %w", err)
@@ -330,7 +330,6 @@ func (*SIP) handleGatherError(_ error, fields map[string]any, tags map[string]st
 	fields["up"] = 0
 	acc.AddFields("sip", fields, tags)
 }
-
 
 func init() {
 	inputs.Add("sip", func() telegraf.Input {
