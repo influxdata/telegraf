@@ -97,6 +97,49 @@ This plugin is particularly useful for:
 - Verifying SIP server connectivity
 - Alerting on SIP service degradation
 
+## SIP Methods
+
+The plugin supports the following SIP methods:
+
+- **OPTIONS** (recommended): Standard SIP method for health checks. Queries
+  server capabilities without establishing a session.
+- **INVITE**: Initiates a session. Use with caution as it may create call
+  records.
+- **MESSAGE**: Sends an instant message. Useful for testing messaging
+  infrastructure.
+
+## Troubleshooting
+
+### Permission Issues
+
+Some SIP implementations may require specific network permissions. If you
+encounter permission errors, ensure Telegraf has appropriate network access.
+
+### Firewall Configuration
+
+Ensure that:
+
+- Outbound connections to SIP ports (typically 5060/5061) are allowed
+- If using UDP, firewall allows UDP packets
+- Return traffic is permitted for the transaction
+
+### Timeout Issues
+
+If experiencing frequent timeouts:
+
+- Increase the `timeout` value
+- Verify network connectivity to the SIP server
+- Check if the SIP server is configured to respond to the chosen method
+- Ensure the correct transport protocol is selected
+
+### Response Codes
+
+Different SIP servers may respond with different status codes to OPTIONS requests:
+
+- `200 OK` - Server is operational and responding
+- `404 Not Found` - User or resource doesn't exist (may still indicate healthy server)
+- `401 Unauthorized` / `407 Proxy Authentication Required` - Authentication required
+
 ## Metrics
 
 - sip
@@ -110,56 +153,12 @@ This plugin is particularly useful for:
     - up (int) - Server availability indicator (1 = success, 0 = failure/timeout/error)
     - response_time (float, seconds, optional) - Time taken to receive
       response (not set for timeouts/connection failures)
-    - reason (string, optional) - SIP response reason phrase, e.g., "OK", "Not Found"
-
-### SIP Methods
-
-The plugin supports the following SIP methods:
-
-- **OPTIONS** (recommended): Standard SIP method for health checks. Queries
-  server capabilities without establishing a session.
-- **INVITE**: Initiates a session. Use with caution as it may create call
-  records.
-- **MESSAGE**: Sends an instant message. Useful for testing messaging
-  infrastructure.
 
 ## Example Output
 
 ```text
-sip,host=telegraf-host,method=OPTIONS,server=sip://sip.example.com:5060,status_code=200,transport=udp response_time=0.023,reason="OK",up=1i 1640000000000000000
-sip,host=telegraf-host,method=OPTIONS,server=sip://unreachable.example.com:5060,transport=udp reason="Timeout",up=0i 1640000000000000000
-sip,host=telegraf-host,method=OPTIONS,server=sip://sip.provider.com:5060,status_code=404,transport=udp response_time=0.045,reason="Not Found",up=0i 1640000000000000000
-sip,host=telegraf-host,method=OPTIONS,server=sips://secure.voip.example.com:5061,status_code=200,transport=tcp response_time=0.067,reason="OK",up=1i 1640000000000000000
+sip,host=telegraf-host,method=OPTIONS,server=sip://sip.example.com:5060,status_code=200,transport=udp response_time=0.023,up=1i 1640000000000000000
+sip,host=telegraf-host,method=OPTIONS,server=sip://unreachable.example.com:5060,transport=udp up=0i 1640000000000000000
+sip,host=telegraf-host,method=OPTIONS,server=sip://sip.provider.com:5060,status_code=404,transport=udp response_time=0.045,up=0i 1640000000000000000
+sip,host=telegraf-host,method=OPTIONS,server=sips://secure.voip.example.com:5061,status_code=200,transport=tcp response_time=0.067,up=1i 1640000000000000000
 ```
-
-### Troubleshooting
-
-#### Permission Issues
-
-Some SIP implementations may require specific network permissions. If you
-encounter permission errors, ensure Telegraf has appropriate network access.
-
-#### Firewall Configuration
-
-Ensure that:
-
-- Outbound connections to SIP ports (typically 5060/5061) are allowed
-- If using UDP, firewall allows UDP packets
-- Return traffic is permitted for the transaction
-
-#### Timeout Issues
-
-If experiencing frequent timeouts:
-
-- Increase the `timeout` value
-- Verify network connectivity to the SIP server
-- Check if the SIP server is configured to respond to the chosen method
-- Ensure the correct transport protocol is selected
-
-#### Response Codes
-
-Different SIP servers may respond with different status codes to OPTIONS requests:
-
-- `200 OK` - Server is operational and responding
-- `404 Not Found` - User or resource doesn't exist (may still indicate healthy server)
-- `401 Unauthorized` / `407 Proxy Authentication Required` - Authentication required

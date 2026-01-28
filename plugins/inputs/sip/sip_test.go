@@ -476,7 +476,6 @@ func TestSIPServerSuccess(t *testing.T) {
 	require.Equal(t, "200", m.Tags["status_code"])
 
 	// Check fields
-	require.Equal(t, "OK", m.Fields["reason"])
 	require.Equal(t, 1, m.Fields["up"])
 	rt, ok := m.Fields["response_time"].(float64)
 	require.True(t, ok)
@@ -514,7 +513,6 @@ func TestSIPServerErrorResponse(t *testing.T) {
 	require.Equal(t, "404", m.Tags["status_code"])
 
 	// Check fields
-	require.Equal(t, "Not Found", m.Fields["reason"])
 	require.Equal(t, 0, m.Fields["up"])
 	rt, ok := m.Fields["response_time"].(float64)
 	require.True(t, ok)
@@ -549,8 +547,7 @@ func TestSIPServerTimeout(t *testing.T) {
 	require.Equal(t, "sip://"+server.addr, m.Tags["server"])
 	require.Equal(t, "udp", m.Tags["transport"])
 
-	// Check fields - timeout should have reason and up field but no response_time
-	require.Equal(t, "Timeout", m.Fields["reason"])
+	// Check fields - timeout should have up field but no response_time
 	require.Equal(t, 0, m.Fields["up"])
 	_, hasResponseTime := m.Fields["response_time"]
 	require.False(t, hasResponseTime)
@@ -591,7 +588,6 @@ func TestSIPServerDelayedResponse(t *testing.T) {
 	require.Equal(t, "sip://"+server.addr, m.Tags["server"])
 	require.Equal(t, "udp", m.Tags["transport"])
 	require.Equal(t, "200", m.Tags["status_code"])
-	require.Equal(t, "OK", m.Fields["reason"])
 	require.Equal(t, 1, m.Fields["up"])
 }
 
@@ -649,7 +645,6 @@ func TestSIPDifferentStatusCodes(t *testing.T) {
 			m := acc.Metrics[0]
 			require.Equal(t, tt.wantUp, m.Fields["up"])
 			require.Equal(t, strconv.Itoa(tt.statusCode), m.Tags["status_code"])
-			require.Equal(t, tt.reason, m.Fields["reason"])
 		})
 	}
 }
@@ -689,7 +684,6 @@ func TestSIPAuthenticationRequired(t *testing.T) {
 	require.Equal(t, "401", m.Tags["status_code"])
 
 	// Check fields
-	require.Equal(t, "Unauthorized", m.Fields["reason"])
 	require.Equal(t, 0, m.Fields["up"])
 	rt, ok := m.Fields["response_time"].(float64)
 	require.True(t, ok)
@@ -758,7 +752,6 @@ func TestSIPAuthenticationSuccess(t *testing.T) {
 	require.Equal(t, "200", m.Tags["status_code"])
 
 	// Check fields
-	require.Equal(t, "OK", m.Fields["reason"])
 	require.Equal(t, 1, m.Fields["up"])
 	rt, ok := m.Fields["response_time"].(float64)
 	require.True(t, ok)
@@ -848,7 +841,6 @@ func TestSIPMethodINVITE(t *testing.T) {
 	require.Equal(t, "200", m.Tags["status_code"])
 
 	// Check fields
-	require.Equal(t, "OK", m.Fields["reason"])
 	require.Equal(t, 1, m.Fields["up"])
 	rt, ok := m.Fields["response_time"].(float64)
 	require.True(t, ok)
@@ -892,7 +884,6 @@ func TestSIPMethodMESSAGE(t *testing.T) {
 	require.Equal(t, "200", m.Tags["status_code"])
 
 	// Check fields
-	require.Equal(t, "OK", m.Fields["reason"])
 	require.Equal(t, 1, m.Fields["up"])
 	rt, ok := m.Fields["response_time"].(float64)
 	require.True(t, ok)

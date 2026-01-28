@@ -260,7 +260,6 @@ func (s *SIP) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		// Check if it's a timeout
 		if errors.Is(err, context.DeadlineExceeded) {
-			fields["reason"] = "Timeout"
 			fields["up"] = 0
 			acc.AddFields("sip", fields, tags)
 			return nil
@@ -304,9 +303,6 @@ func (s *SIP) Gather(acc telegraf.Accumulator) error {
 	// Process response
 	if res != nil {
 		tags["status_code"] = strconv.Itoa(res.StatusCode)
-		if res.Reason != "" {
-			fields["reason"] = res.Reason
-		}
 		if serverAgent := res.GetHeader("Server"); serverAgent != nil {
 			tags["server_agent"] = serverAgent.Value()
 		}
