@@ -52,7 +52,7 @@ type SIP struct {
 	tlsConfig  *tls.Config
 	serverInfo *serverInfo
 
-	// Cached request components (initialized in Init)
+	// Cached request components
 	requestURI sip.Uri
 	headers    []sip.Header
 }
