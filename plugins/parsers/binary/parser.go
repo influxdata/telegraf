@@ -28,9 +28,9 @@ type Parser struct {
 
 func (p *Parser) Init() error {
 	switch p.Endianness {
-	case "le":
+	case "little", "le":
 		p.converter = binary.LittleEndian
-	case "be":
+	case "big", "be":
 		p.converter = binary.BigEndian
 	case "", "host":
 		p.converter = internal.HostEndianness
