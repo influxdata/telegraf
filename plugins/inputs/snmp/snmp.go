@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -42,6 +43,13 @@ type Snmp struct {
 
 	connectionCache []snmp.Connection
 
+	// Protects connectionCache + lastReset
+	cacheMu   sync.Mutex
+	lastReset []time.Time
+
+	// Prevent thrash: minimum duration between resets per agent
+	resetCooldown time.Duration
+
 	translator snmp.Translator
 }
 
@@ -68,6 +76,11 @@ func (s *Snmp) Init() error {
 	}
 
 	s.connectionCache = make([]snmp.Connection, len(s.Agents))
+	s.lastReset = make([]time.Time, len(s.Agents))
+
+	// Reasonable default cooldown; prevents constant reconnect loops on noisy links.
+	// You can tune this; 30s–2m is usually fine.
+	s.resetCooldown = 30 * time.Second
 
 	for i := range s.Tables {
 		if err := s.Tables[i].Init(s.translator); err != nil {
@@ -114,7 +127,13 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 				Fields: s.Fields,
 			}
 			topTags := make(map[string]string)
-			if err := s.gatherTable(acc, gs, t, topTags, false); err != nil {
+
+			if err := s.gatherTable(acc, gs, tTop, topTags, false); err != nil {
+				// If it's a v3 session/auth mismatch, reset and stop early to avoid extra walks.
+				if s.isSnmpV3SessionInvalid(err) {
+					s.resetConnection(i, agent, gs, err)
+					return
+				}
 				acc.AddError(fmt.Errorf("agent %s: %w", agent, err))
 				if s.StopOnError {
 					return
@@ -124,6 +143,10 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			// Now is the real tables.
 			for _, t := range s.Tables {
 				if err := s.gatherTable(acc, gs, t, topTags, true); err != nil {
+					if s.isSnmpV3SessionInvalid(err) {
+						s.resetConnection(i, agent, gs, err)
+						return
+					}
 					acc.AddError(fmt.Errorf("agent %s: gathering table %s: %w", agent, t.Name, err))
 					if s.StopOnError {
 						return
@@ -171,34 +194,110 @@ func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmp.Connection, t snmp.
 // connections to a single address.  It is an error to use a connection in
 // more than one goroutine.
 func (s *Snmp) getConnection(idx int) (snmp.Connection, error) {
-	if gs := s.connectionCache[idx]; gs != nil {
+	// Read cached connection under lock
+	s.cacheMu.Lock()
+	gs := s.connectionCache[idx]
+	s.cacheMu.Unlock()
+
+	if gs != nil {
 		if err := gs.Reconnect(); err != nil {
 			return gs, fmt.Errorf("reconnecting: %w", err)
 		}
-
 		return gs, nil
 	}
 
 	agent := s.Agents[idx]
 
-	gs, err := snmp.NewWrapper(s.ClientConfig)
+	newConn, err := snmp.NewWrapper(s.ClientConfig)
 	if err != nil {
 		return nil, err
 	}
-
-	err = gs.SetAgent(agent)
-	if err != nil {
+	if err := newConn.SetAgent(agent); err != nil {
 		return nil, err
 	}
-
-	s.connectionCache[idx] = gs
-
-	if err := gs.Connect(); err != nil {
+	if err := newConn.Connect(); err != nil {
 		return nil, fmt.Errorf("setting up connection: %w", err)
 	}
 
-	return gs, nil
+	// Store in cache under lock
+	s.cacheMu.Lock()
+	s.connectionCache[idx] = newConn
+	s.cacheMu.Unlock()
+
+	return newConn, nil
 }
+
+// resetConnection drops the cached connection so the next gather will do a fresh Connect().
+// Includes a cooldown to avoid thrashing on noisy links.
+func (s *Snmp) resetConnection(idx int, agent string, gs snmp.Connection, cause error) {
+	now := time.Now()
+
+	s.cacheMu.Lock()
+	last := s.lastReset[idx]
+	if !last.IsZero() && now.Sub(last) < s.resetCooldown {
+		// Within cooldown; don't thrash
+		s.cacheMu.Unlock()
+		s.Log.Warnf("SNMPv3 session error on agent %s but reset is in cooldown (%s). Cause: %v",
+			agent, s.resetCooldown, cause)
+		return
+	}
+
+	s.lastReset[idx] = now
+	// Drop cached connection
+	s.connectionCache[idx] = nil
+	s.cacheMu.Unlock()
+
+	// Best-effort close if supported (do NOT assume internal fields)
+	type closer interface{ Close() error }
+	if c, ok := gs.(closer); ok {
+		_ = c.Close()
+	}
+
+	s.Log.Warnf("SNMPv3 session/auth mismatch detected on agent %s; cleared cached connection for next cycle. Cause: %v",
+		agent, cause)
+}
+
+// isSnmpV3SessionInvalid tries to detect errors consistent with SNMPv3 engine/time state mismatch
+// after device reboot/snmpd restart (common symptoms).
+func (s *Snmp) isSnmpV3SessionInvalid(err error) bool {
+	// Unwrap to the root message chain
+	msg := strings.ToLower(s.unwrapErrorString(err))
+
+	// Common gosnmp/USM symptoms seen when engineBoots/engineTime changes or auth fails:
+	needles := []string{
+		"incoming packet is not authentic", // auth failure / wrong keys or engine context mismatch symptoms
+		"not in time window",               // engineTime/boots mismatch
+		"unknown engine id",                // engineID changed
+		"unknown engineid",
+		"usm",                              // USM-related failures often include this
+	}
+
+	// If the plugin isn't using v3, avoid resetting for these messages.
+	// (Version is in ClientConfig; keeping it conservative.)
+	if s.Version != 3 {
+		return false
+	}
+
+	for _, n := range needles {
+		if strings.Contains(msg, n) {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Snmp) unwrapErrorString(err error) string {
+	// Build a compact string including wrapped errors without blowing up logs
+	var parts []string
+	seen := 0
+	for err != nil && seen < 6 {
+		parts = append(parts, err.Error())
+		err = errors.Unwrap(err)
+		seen++
+	}
+	return strings.Join(parts, " | ")
+}
+
 
 func init() {
 	inputs.Add("snmp", func() telegraf.Input {
