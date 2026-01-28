@@ -43,7 +43,7 @@ func NewAlignedTicker(now time.Time, interval, jitter, offset time.Duration) *Al
 	t := &AlignedTicker{
 		interval:    interval,
 		jitter:      jitter,
-		offset:      offset,
+		offset:      normalizeOffset(offset, interval),
 		minInterval: interval / 100,
 	}
 	t.start(now, clock.New())
@@ -78,6 +78,13 @@ func (t *AlignedTicker) next(now time.Time) time.Duration {
 		d = t.interval
 	}
 	d += t.offset
+
+	// Ensure the duration is positive before adding jitter. This can still
+	// happen with small intervals and clock adjustments.
+	if d <= 0 {
+		d += t.interval
+	}
+
 	d += internal.RandomDuration(t.jitter)
 	return d
 }
@@ -132,10 +139,21 @@ func NewUnalignedTicker(interval, jitter, offset time.Duration) *UnalignedTicker
 	t := &UnalignedTicker{
 		interval: interval,
 		jitter:   jitter,
-		offset:   offset,
+		offset:   normalizeOffset(offset, interval),
 	}
 	t.start(clock.New())
 	return t
+}
+
+func normalizeOffset(offset, interval time.Duration) time.Duration {
+	if interval <= 0 || offset == 0 {
+		return offset
+	}
+	offset = offset % interval
+	if offset < 0 {
+		offset += interval
+	}
+	return offset
 }
 
 func (t *UnalignedTicker) start(clk clock.Clock) {
@@ -157,7 +175,7 @@ func (t *UnalignedTicker) start(clk clock.Clock) {
 }
 
 func sleep(ctx context.Context, duration time.Duration, clk clock.Clock) error {
-	if duration == 0 {
+	if duration <= 0 {
 		return nil
 	}
 
