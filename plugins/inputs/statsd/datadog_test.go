@@ -9,6 +9,292 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
+func TestServiceCheckGather(t *testing.T) {
+	now := time.Now()
+	type expected struct {
+		tags   map[string]string
+		fields map[string]interface{}
+	}
+	tests := []struct {
+		name     string
+		message  string
+		hostname string
+		now      time.Time
+		err      bool
+		expected expected
+	}{
+		{
+			name:     "basic OK status",
+			message:  "_sc|my.service.check|0",
+			hostname: "default-hostname",
+			now:      now,
+			err:      false,
+			expected: expected{
+				tags: map[string]string{
+					"check_name": "my.service.check",
+					"source":     "default-hostname",
+				},
+				fields: map[string]interface{}{
+					"status":      int64(0),
+					"status_text": "ok",
+				},
+			},
+		},
+		{
+			name:     "warning status",
+			message:  "_sc|jmxfetch-config.can_connect|1",
+			hostname: "default-hostname",
+			now:      now,
+			err:      false,
+			expected: expected{
+				tags: map[string]string{
+					"check_name": "jmxfetch-config.can_connect",
+					"source":     "default-hostname",
+				},
+				fields: map[string]interface{}{
+					"status":      int64(1),
+					"status_text": "warning",
+				},
+			},
+		},
+		{
+			name:     "critical status",
+			message:  "_sc|disk.check|2",
+			hostname: "default-hostname",
+			now:      now,
+			err:      false,
+			expected: expected{
+				tags: map[string]string{
+					"check_name": "disk.check",
+					"source":     "default-hostname",
+				},
+				fields: map[string]interface{}{
+					"status":      int64(2),
+					"status_text": "critical",
+				},
+			},
+		},
+		{
+			name:     "unknown status",
+			message:  "_sc|network.check|3",
+			hostname: "default-hostname",
+			now:      now,
+			err:      false,
+			expected: expected{
+				tags: map[string]string{
+					"check_name": "network.check",
+					"source":     "default-hostname",
+				},
+				fields: map[string]interface{}{
+					"status":      int64(3),
+					"status_text": "unknown",
+				},
+			},
+		},
+		{
+			name:     "with message",
+			message:  "_sc|my.check|0|m:Service is healthy",
+			hostname: "default-hostname",
+			now:      now,
+			err:      false,
+			expected: expected{
+				tags: map[string]string{
+					"check_name": "my.check",
+					"source":     "default-hostname",
+				},
+				fields: map[string]interface{}{
+					"status":      int64(0),
+					"status_text": "ok",
+					"message":     "Service is healthy",
+				},
+			},
+		},
+		{
+			name:     "with hostname override",
+			message:  "_sc|my.check|0|h:custom-host",
+			hostname: "default-hostname",
+			now:      now,
+			err:      false,
+			expected: expected{
+				tags: map[string]string{
+					"check_name": "my.check",
+					"source":     "custom-host",
+				},
+				fields: map[string]interface{}{
+					"status":      int64(0),
+					"status_text": "ok",
+				},
+			},
+		},
+		{
+			name:     "with tags",
+			message:  "_sc|my.check|0|#env:prod,service:web",
+			hostname: "default-hostname",
+			now:      now,
+			err:      false,
+			expected: expected{
+				tags: map[string]string{
+					"check_name": "my.check",
+					"source":     "default-hostname",
+					"env":        "prod",
+					"service":    "web",
+				},
+				fields: map[string]interface{}{
+					"status":      int64(0),
+					"status_text": "ok",
+				},
+			},
+		},
+		{
+			name:     "with all optional fields",
+			message:  "_sc|my.check|2|d:1234567890|h:myhost|#env:test,region:us-west|m:Connection failed",
+			hostname: "default-hostname",
+			now:      now,
+			err:      false,
+			expected: expected{
+				tags: map[string]string{
+					"check_name": "my.check",
+					"source":     "myhost",
+					"env":        "test",
+					"region":     "us-west",
+				},
+				fields: map[string]interface{}{
+					"status":      int64(2),
+					"status_text": "critical",
+					"message":     "Connection failed",
+				},
+			},
+		},
+		{
+			name:     "with newline escape in message",
+			message:  "_sc|my.check|1|m:Line1\\nLine2",
+			hostname: "default-hostname",
+			now:      now,
+			err:      false,
+			expected: expected{
+				tags: map[string]string{
+					"check_name": "my.check",
+					"source":     "default-hostname",
+				},
+				fields: map[string]interface{}{
+					"status":      int64(1),
+					"status_text": "warning",
+					"message":     "Line1\nLine2",
+				},
+			},
+		},
+		{
+			name:     "host tag in tags section",
+			message:  "_sc|my.check|0|#host:taghost",
+			hostname: "default-hostname",
+			now:      now,
+			err:      false,
+			expected: expected{
+				tags: map[string]string{
+					"check_name": "my.check",
+					"source":     "taghost",
+				},
+				fields: map[string]interface{}{
+					"status":      int64(0),
+					"status_text": "ok",
+				},
+			},
+		},
+		{
+			name:     "missing parts",
+			message:  "_sc|my.check",
+			hostname: "default-hostname",
+			now:      now,
+			err:      true,
+		},
+		{
+			name:     "empty check name",
+			message:  "_sc||0",
+			hostname: "default-hostname",
+			now:      now,
+			err:      true,
+		},
+		{
+			name:     "invalid status",
+			message:  "_sc|my.check|abc",
+			hostname: "default-hostname",
+			now:      now,
+			err:      true,
+		},
+		{
+			name:     "status out of range",
+			message:  "_sc|my.check|4",
+			hostname: "default-hostname",
+			now:      now,
+			err:      true,
+		},
+		{
+			name:     "negative status",
+			message:  "_sc|my.check|-1",
+			hostname: "default-hostname",
+			now:      now,
+			err:      true,
+		},
+	}
+
+	acc := &testutil.Accumulator{}
+	s := newTestStatsd()
+	require.NoError(t, s.Start(acc))
+	defer s.Stop()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			acc.ClearMetrics()
+			err := s.parseServiceCheckMessage(tt.now, tt.message, tt.hostname)
+			if tt.err {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, uint64(1), acc.NMetrics())
+
+			m := acc.Metrics[0]
+			require.Equal(t, "statsd_service_check", m.Measurement)
+			require.Equal(t, tt.expected.tags, m.Tags)
+			require.Equal(t, tt.expected.fields, m.Fields)
+		})
+	}
+}
+
+func TestServiceCheckTimestamp(t *testing.T) {
+	acc := &testutil.Accumulator{}
+	s := newTestStatsd()
+	require.NoError(t, s.Start(acc))
+	defer s.Stop()
+
+	// Test with custom timestamp
+	now := time.Now()
+	err := s.parseServiceCheckMessage(now, "_sc|my.check|0|d:1234567890", "default-hostname")
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), acc.NMetrics())
+
+	m := acc.Metrics[0]
+	expectedTime := time.Unix(1234567890, 0)
+	require.Equal(t, expectedTime, m.Time)
+}
+
+func TestServiceCheckNoHostname(t *testing.T) {
+	acc := &testutil.Accumulator{}
+	s := newTestStatsd()
+	require.NoError(t, s.Start(acc))
+	defer s.Stop()
+
+	// Test without default hostname
+	now := time.Now()
+	err := s.parseServiceCheckMessage(now, "_sc|my.check|0", "")
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), acc.NMetrics())
+
+	m := acc.Metrics[0]
+	_, hasSource := m.Tags["source"]
+	require.False(t, hasSource)
+}
+
 func TestEventGather(t *testing.T) {
 	now := time.Now()
 	type expected struct {
