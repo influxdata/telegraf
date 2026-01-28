@@ -1527,7 +1527,6 @@ func TestHandleNXDMEEventListWithDn(t *testing.T) {
 	tags := map[string]string{
 		"path":         "EVENT-LIST",
 		"EVENT_LIST":   "EVENT-LIST",
-		"dn":           "sys/intf/phys-[eth1/11]/phys",
 		"source":       "NX-PGBL-GX2",
 		"subscription": "1",
 	}

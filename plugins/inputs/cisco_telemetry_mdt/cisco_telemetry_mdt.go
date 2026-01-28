@@ -771,14 +771,12 @@ func (c *CiscoTelemetryMDT) parseContentField(
 	// DME structure: https://developer.cisco.com/site/nxapi-dme-model-reference-api/
 	rn := ""
 	dn := false
-	dnstr := ""
 
 	for _, subfield := range nxAttributes.Fields {
 		if subfield.Name == "rn" {
 			rn = decodeTag(subfield)
 		} else if subfield.Name == "dn" {
 			dn = true
-			dnstr = decodeTag(subfield)
 		}
 	}
 
@@ -787,8 +785,6 @@ func (c *CiscoTelemetryMDT) parseContentField(
 	} else if !dn { // Check for distinguished name being present
 		c.acc.AddError(errors.New("failed while decoding NX-OS: missing 'dn' field"))
 		return
-	} else if dn {
-		tags["dn"] = dnstr
 	}
 
 	for _, subfield := range nxAttributes.Fields {
