@@ -53,7 +53,7 @@ type Statsd struct {
 
 	// Percentiles specifies the percentiles that will be calculated for timing
 	// and histogram stats.
-	Percentiles     []number `toml:"percentiles"`
+	Percentiles     []Number `toml:"percentiles"`
 	PercentileLimit int      `toml:"percentile_limit"`
 	DeleteGauges    bool     `toml:"delete_gauges"`
 	DeleteCounters  bool     `toml:"delete_counters"`
@@ -149,17 +149,20 @@ type internalStats struct {
 	MaxPendingMessages selfstat.Stat
 }
 
-// number will get parsed as an int or float depending on what is passed
-type number float64
+// Number will get parsed as an int or float depending on what is passed
+//
+// This type needs to be exported so that the plugin can be configured when using the TOML config file. i.e. It's being
+// used as a library.
+type Number float64
 
 // UnmarshalTOML is a custom TOML unmarshalling function for the number type.
-func (n *number) UnmarshalTOML(b []byte) error {
+func (n *Number) UnmarshalTOML(b []byte) error {
 	value, err := strconv.ParseFloat(string(b), 64)
 	if err != nil {
 		return err
 	}
 
-	*n = number(value)
+	*n = Number(value)
 	return nil
 }
 

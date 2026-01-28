@@ -713,7 +713,7 @@ func TestParse_CountersAsFloat(t *testing.T) {
 // Tests low-level functionality of timings
 func TestParse_Timings(t *testing.T) {
 	s := newTestStatsd()
-	s.Percentiles = []number{90.0}
+	s.Percentiles = []Number{90.0}
 
 	parser, err := s.newGraphiteParser()
 	require.NoError(t, err)
@@ -752,7 +752,7 @@ func TestParse_Timings(t *testing.T) {
 func TestParse_Timings_TimingsAsFloat(t *testing.T) {
 	s := newTestStatsd()
 	s.FloatTimings = true
-	s.Percentiles = []number{90.0}
+	s.Percentiles = []Number{90.0}
 
 	parser, err := s.newGraphiteParser()
 	require.NoError(t, err)
@@ -1752,7 +1752,7 @@ func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
 func TestParse_TimingsMultipleFieldsWithTemplate(t *testing.T) {
 	s := newTestStatsd()
 	s.Templates = []string{"measurement.field"}
-	s.Percentiles = []number{90.0}
+	s.Percentiles = []Number{90.0}
 
 	parser, err := s.newGraphiteParser()
 	require.NoError(t, err)
@@ -1806,7 +1806,7 @@ func TestParse_TimingsMultipleFieldsWithTemplate(t *testing.T) {
 func TestParse_TimingsMultipleFieldsWithoutTemplate(t *testing.T) {
 	s := newTestStatsd()
 	s.Templates = make([]string, 0)
-	s.Percentiles = []number{90.0}
+	s.Percentiles = []Number{90.0}
 
 	parser, err := s.newGraphiteParser()
 	require.NoError(t, err)
@@ -2324,11 +2324,11 @@ func TestUdpFillQueue(t *testing.T) {
 
 func TestParse_Ints(t *testing.T) {
 	s := newTestStatsd()
-	s.Percentiles = []number{90}
+	s.Percentiles = []Number{90}
 	acc := &testutil.Accumulator{}
 
 	require.NoError(t, s.Gather(acc))
-	require.Equal(t, []number{90.0}, s.Percentiles)
+	require.Equal(t, []Number{90.0}, s.Percentiles)
 }
 
 func TestParse_KeyValue(t *testing.T) {
