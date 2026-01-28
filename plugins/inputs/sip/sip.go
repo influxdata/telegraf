@@ -120,11 +120,28 @@ func (s *SIP) Init() error {
 	}
 
 	// Parse server info
-	info, err := parseServer(u, s.Transport)
-	if err != nil {
-		return fmt.Errorf("failed to parse server: %w", err)
+	s.serverInfo = &serverInfo{
+		secure:    u.Scheme == "sips",
+		transport: s.Transport,
+		host:      u.Hostname(),
 	}
-	s.serverInfo = info
+
+	if s.serverInfo.host == "" {
+		return errors.New("server URL must specify a host")
+	}
+
+	portStr := u.Port()
+	if portStr != "" {
+		port, err := strconv.Atoi(portStr)
+		if err != nil {
+			return fmt.Errorf("invalid port %q: %w", portStr, err)
+		}
+		s.serverInfo.port = port
+	} else if s.serverInfo.secure {
+		s.serverInfo.port = 5061
+	} else {
+		s.serverInfo.port = 5060
+	}
 
 	// Set FromDomain default after serverInfo is available
 	if s.FromDomain == "" {
@@ -132,7 +149,7 @@ func (s *SIP) Init() error {
 	}
 
 	// Setup TLS configuration if secure (sips:// scheme)
-	if info.secure {
+	if s.serverInfo.secure {
 		tlsConfig, err := s.ClientConfig.TLSConfig()
 		if err != nil {
 			return fmt.Errorf("failed to create TLS config: %w", err)
@@ -144,12 +161,12 @@ func (s *SIP) Init() error {
 	s.requestURI = sip.Uri{
 		Scheme: u.Scheme,
 		User:   s.ToUser,
-		Host:   info.host,
-		Port:   info.port,
+		Host:   s.serverInfo.host,
+		Port:   s.serverInfo.port,
 	}
 
 	s.requestURI.UriParams = sip.NewParams()
-	s.requestURI.UriParams.Add("transport", info.transport)
+	s.requestURI.UriParams.Add("transport", s.serverInfo.transport)
 
 	// Build cached headers (To, User-Agent, Contact)
 	// Note: From header has a dynamic tag per request, so it cannot be cached
@@ -314,44 +331,6 @@ func (*SIP) handleGatherError(_ error, fields map[string]any, tags map[string]st
 	acc.AddFields("sip", fields, tags)
 }
 
-// parseServer parses a server URL and returns parsed server information
-// Supports RFC 3261 compliant SIP URI formats:
-//   - sip://host:port (defaults to UDP transport)
-//   - sips://host:port (defaults to TLS transport, uses secure scheme)
-//   - sip://host:port;transport=tcp
-//   - sip://host:port;transport=udp
-//   - sip://host:port;transport=ws
-//   - sips://host:port;transport=wss
-func parseServer(u *net_url.URL, transport string) (*serverInfo, error) {
-	info := &serverInfo{
-		secure:    u.Scheme == "sips",
-		transport: transport,
-		host:      u.Hostname(),
-	}
-
-	if info.host == "" {
-		return nil, errors.New("server URL must specify a host")
-	}
-
-	// Parse port
-	portStr := u.Port()
-	if portStr != "" {
-		port, err := strconv.Atoi(portStr)
-		if err != nil {
-			return nil, fmt.Errorf("invalid port %q: %w", portStr, err)
-		}
-		info.port = port
-	} else {
-		// Use default port based on scheme
-		if info.secure {
-			info.port = 5061
-		} else {
-			info.port = 5060
-		}
-	}
-
-	return info, nil
-}
 
 func init() {
 	inputs.Add("sip", func() telegraf.Input {

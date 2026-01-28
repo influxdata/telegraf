@@ -3,7 +3,6 @@ package sip
 import (
 	"context"
 	"net"
-	net_url "net/url"
 	"strconv"
 	"strings"
 	"testing"
@@ -219,12 +218,12 @@ func TestParseServer(t *testing.T) {
 			wantSecure:    false,
 		},
 		{
-			name:          "sips:// URL with TLS transport",
+			name:          "sips:// URL with TCP transport",
 			server:        "sips://sip.example.com:5061",
-			transport:     "tls",
+			transport:     "tcp",
 			wantHost:      "sip.example.com",
 			wantPort:      5061,
-			wantTransport: "tls",
+			wantTransport: "tcp",
 			wantSecure:    true,
 		},
 		{
@@ -248,10 +247,10 @@ func TestParseServer(t *testing.T) {
 		{
 			name:          "sips:// without port defaults to 5061",
 			server:        "sips://secure.example.com",
-			transport:     "tls",
+			transport:     "tcp",
 			wantHost:      "secure.example.com",
 			wantPort:      5061,
-			wantTransport: "tls",
+			wantTransport: "tcp",
 			wantSecure:    true,
 		},
 		{
@@ -267,10 +266,13 @@ func TestParseServer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			u, err := net_url.Parse(tt.server)
-			require.NoError(t, err)
+			plugin := &SIP{
+				Server:    tt.server,
+				Transport: tt.transport,
+				Timeout:   config.Duration(5 * time.Second),
+			}
 
-			info, err := parseServer(u, tt.transport)
+			err := plugin.Init()
 
 			if tt.expectError {
 				require.Error(t, err)
@@ -278,10 +280,10 @@ func TestParseServer(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			require.Equal(t, tt.wantHost, info.host)
-			require.Equal(t, tt.wantPort, info.port)
-			require.Equal(t, tt.wantTransport, info.transport)
-			require.Equal(t, tt.wantSecure, info.secure)
+			require.Equal(t, tt.wantHost, plugin.serverInfo.host)
+			require.Equal(t, tt.wantPort, plugin.serverInfo.port)
+			require.Equal(t, tt.wantTransport, plugin.serverInfo.transport)
+			require.Equal(t, tt.wantSecure, plugin.serverInfo.secure)
 		})
 	}
 }
