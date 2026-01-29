@@ -1,4 +1,5 @@
 //go:generate ../../../tools/config_includer/generator "common.http" "transport.conf.in"
+//go:generate ../../../tools/config_includer/generator "common.http" "client.conf.in"
 package httpconfig
 
 import (
