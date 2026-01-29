@@ -9,12 +9,12 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/rds"
 
 	"github.com/influxdata/telegraf"
-	commonaliyun "github.com/influxdata/telegraf/plugins/common/aliyun"
+	common_aliyun "github.com/influxdata/telegraf/plugins/common/aliyun"
 )
 
 // discoveryTool wraps the common library's DiscoveryTool for RDS
 type discoveryTool struct {
-	*commonaliyun.DiscoveryTool
+	*common_aliyun.DiscoveryTool
 }
 
 // newDiscoveryTool creates a discovery tool for RDS instances using the common library
@@ -26,7 +26,7 @@ func newDiscoveryTool(
 	discoveryInterval time.Duration,
 ) (*discoveryTool, error) {
 	if len(regions) == 0 {
-		regions = commonaliyun.DefaultRegions()
+		regions = common_aliyun.DefaultRegions()
 		lg.Infof("'regions' is not provided! Discovery data will be queried across %d regions:\n%s",
 			len(regions), strings.Join(regions, ","))
 	}
@@ -36,8 +36,8 @@ func newDiscoveryTool(
 	}
 
 	// Create discovery requests per region
-	dscReq := make(map[string]commonaliyun.DiscoveryRequest, len(regions))
-	cli := make(map[string]commonaliyun.AliyunSdkClient, len(regions))
+	dscReq := make(map[string]common_aliyun.DiscoveryRequest, len(regions))
+	cli := make(map[string]common_aliyun.AliyunSdkClient, len(regions))
 
 	var err error
 	for _, region := range regions {
@@ -48,7 +48,7 @@ func newDiscoveryTool(
 		}
 	}
 
-	dt := &commonaliyun.DiscoveryTool{
+	dt := &common_aliyun.DiscoveryTool{
 		Req:                dscReq,
 		Cli:                cli,
 		RespRootKey:        "Items",

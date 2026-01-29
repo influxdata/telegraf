@@ -19,7 +19,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	commonaliyun "github.com/influxdata/telegraf/plugins/common/aliyun"
+	common_aliyun "github.com/influxdata/telegraf/plugins/common/aliyun"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -153,7 +153,7 @@ func TestPluginInitialize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't create mock sdk cli: %v", err)
 	}
-	plugin.dt.Cli = map[string]commonaliyun.AliyunSdkClient{plugin.Regions[0]: &mockCli}
+	plugin.dt.Cli = map[string]common_aliyun.AliyunSdkClient{plugin.Regions[0]: &mockCli}
 
 	tests := []struct {
 		name                string
@@ -197,7 +197,7 @@ func TestPluginInitialize(t *testing.T) {
 				require.NoError(t, plugin.Init())
 			}
 			if len(tt.regions) == 0 { // Check if set to default
-				require.Equal(t, plugin.Regions, commonaliyun.DefaultRegions())
+				require.Equal(t, plugin.Regions, common_aliyun.DefaultRegions())
 			}
 		})
 	}
@@ -233,7 +233,7 @@ func TestPluginMetricsInitialize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't create mock sdk cli: %v", err)
 	}
-	plugin.dt.Cli = map[string]commonaliyun.AliyunSdkClient{plugin.Regions[0]: &mockCli}
+	plugin.dt.Cli = map[string]common_aliyun.AliyunSdkClient{plugin.Regions[0]: &mockCli}
 
 	tests := []struct {
 		name                string
@@ -334,7 +334,7 @@ func TestPluginMetricsRDSServiceInitialize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't create mock sdk cli: %v", err)
 	}
-	plugin.dt.Cli = map[string]commonaliyun.AliyunSdkClient{plugin.Regions[0]: &mockCli}
+	plugin.dt.Cli = map[string]common_aliyun.AliyunSdkClient{plugin.Regions[0]: &mockCli}
 
 	test := struct {
 		name                string
@@ -478,7 +478,7 @@ func TestRDSServiceInitialization(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't create mock sdk cli: %v", err)
 	}
-	plugin.dt.Cli = map[string]commonaliyun.AliyunSdkClient{plugin.Regions[0]: &mockCli}
+	plugin.dt.Cli = map[string]common_aliyun.AliyunSdkClient{plugin.Regions[0]: &mockCli}
 
 	plugin.Project = "acs_rds_dashboard"
 	plugin.AccessKeyID = "dummy"
@@ -690,7 +690,7 @@ func TestGather(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Can't create mock sdk cli: %v", err)
 			}
-			dt.Cli = map[string]commonaliyun.AliyunSdkClient{tt.region: &mockCli}
+			dt.Cli = map[string]common_aliyun.AliyunSdkClient{tt.region: &mockCli}
 			data, err := dt.GetDiscoveryDataAcrossRegions(nil)
 
 			require.Equal(t, tt.discData, data)
@@ -1431,7 +1431,7 @@ func TestInitialDiscoveryDataIsUsed(t *testing.T) {
 	}
 	mockCli, err := getMockSdkCli(httpResp)
 	require.NoError(t, err)
-	plugin.dt.Cli = map[string]commonaliyun.AliyunSdkClient{plugin.Regions[0]: &mockCli}
+	plugin.dt.Cli = map[string]common_aliyun.AliyunSdkClient{plugin.Regions[0]: &mockCli}
 
 	// Get initial discovery data (simulating what Init() does)
 	plugin.discoveryData, err = plugin.dt.GetDiscoveryDataAcrossRegions(nil)
@@ -1525,7 +1525,7 @@ func TestInitialDiscoveryDataWorksWithMultipleMetrics(t *testing.T) {
 	}
 	mockCli, err := getMockSdkCli(httpResp)
 	require.NoError(t, err)
-	plugin.dt.Cli = map[string]commonaliyun.AliyunSdkClient{plugin.Regions[0]: &mockCli}
+	plugin.dt.Cli = map[string]common_aliyun.AliyunSdkClient{plugin.Regions[0]: &mockCli}
 
 	// Get initial discovery data
 	plugin.discoveryData, err = plugin.dt.GetDiscoveryDataAcrossRegions(nil)
