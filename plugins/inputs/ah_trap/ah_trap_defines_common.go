@@ -26,6 +26,8 @@ const (
 	AH_CAPWAP_STAT_NAME_MAX_LEN = 32
 	MAX_OBJ_NAME_LEN         = 4
 	AH_MSG_TRAP_SSID_BIND_UNBIND = 5
+	AH_MSG_TRAP_BSSID_SPOOFING = 7
+	AH_TRAP_SIZE_300	  = 300
 )
 
 const (
@@ -69,6 +71,20 @@ type AhTgrafSsidBindUnbindTrap struct {
 	BssidMAC    [MACADDR_LEN]byte
 	SSID        [AH_MAX_TRAP_SSID_NAME + 1]byte
 	State       uint8
+}
+
+type AhTgrafBSSIDSpoofingTrap struct {
+    TrapID       uint8
+    IfName      [AH_MAX_TRAP_OBJ_NAME + 1]byte
+    Description  [MAX_DESCRIBLE_LEN]byte
+    IfIndex      uint32
+    BssidMAC    [MACADDR_LEN]byte
+    AttackMAC    [MACADDR_LEN]byte
+    AttackCount  uint32
+    Protocol     uint16
+    Severity     uint8
+    SourceIP     uint32
+    TargetIP     uint32
 }
 
 type AhFailureTrap struct {
