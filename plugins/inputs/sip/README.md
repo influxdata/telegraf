@@ -71,19 +71,30 @@ to use them.
   # password = ""
 
   ## Optional TLS Config (only used for sips:// URLs or transport=tls/wss)
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
+  ## Set to true/false to enforce TLS being enabled/disabled. If not set,
+  ## enable TLS only if any of the other options are specified.
+  # tls_enable =
+  ## Trusted root certificates for server
+  # tls_ca = "/path/to/cafile"
+  ## Used for TLS client certificate authentication
+  # tls_cert = "/path/to/certfile"
+  ## Used for TLS client certificate authentication
+  # tls_key = "/path/to/keyfile"
+  ## Password for the key file if it is encrypted
+  # tls_key_pwd = ""
+  ## Send the specified TLS server name via SNI
+  # tls_server_name = "kubernetes.example.com"
+  ## Minimal TLS version to accept by the client
+  # tls_min_version = "TLS12"
+  ## List of ciphers to accept, by default all secure ciphers will be accepted
+  ## See https://pkg.go.dev/crypto/tls#pkg-constants for supported values.
+  ## Use "all", "secure" and "insecure" to add all support ciphers, secure
+  ## suites or insecure suites respectively.
+  # tls_cipher_suites = ["secure"]
+  ## Renegotiation method, "never", "once" or "freely"
+  # tls_renegotiation_method = "never"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
-  ## Use the given name as the SNI server name
-  # tls_server_name = "sip.example.com"
-  ## Minimum TLS version to accept, defaults to TLS 1.2
-  # tls_min_version = "TLS12"
-  ## Maximum TLS version to accept, defaults to TLS 1.3
-  # tls_max_version = "TLS13"
-  ## TLS renegotiation method, choose from "never", "once", "freely"
-  # tls_renegotiation_method = "never"
 ```
 
 > [!NOTE]
