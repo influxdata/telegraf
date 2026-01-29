@@ -17,6 +17,7 @@ import (
 	"google.golang.org/api/option"
 
 	"github.com/influxdata/telegraf"
+	common_gcp "github.com/influxdata/telegraf/plugins/common/gcp"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -205,7 +206,11 @@ func (gcs *GCS) setUpDefaultClient() error {
 	var credentialsOption option.ClientOption
 
 	if gcs.CredentialsFile != "" {
-		credentialsOption = option.WithAuthCredentialsFile(option.ServiceAccount, gcs.CredentialsFile)
+		credType, err := common_gcp.ParseCredentialType(gcs.CredentialsFile)
+		if err != nil {
+			return fmt.Errorf("unable to parse credential file type: %w", err)
+		}
+		credentialsOption = option.WithAuthCredentialsFile(option.CredentialsType(credType), gcs.CredentialsFile)
 	} else {
 		creds, err := google.FindDefaultCredentials(gcs.ctx, storage.ScopeReadOnly)
 		if err != nil {
