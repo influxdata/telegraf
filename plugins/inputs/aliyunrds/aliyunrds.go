@@ -17,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/limiter"
-	commonaliyun "github.com/influxdata/telegraf/plugins/common/aliyun"
+	common_aliyun "github.com/influxdata/telegraf/plugins/common/aliyun"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -96,7 +96,7 @@ func (*AliyunRDS) SampleConfig() string {
 
 // Init performs checks of plugin inputs and initializes internals
 func (s *AliyunRDS) Init() error {
-	credential, err := commonaliyun.GetCredentials(commonaliyun.CredentialConfig{
+	credential, err := common_aliyun.GetCredentials(common_aliyun.CredentialConfig{
 		AccessKeyID:       s.AccessKeyID,
 		AccessKeySecret:   s.AccessKeySecret,
 		AccessKeyStsToken: s.AccessKeyStsToken,
@@ -117,7 +117,7 @@ func (s *AliyunRDS) Init() error {
 
 	// Check regions
 	if len(s.Regions) == 0 {
-		s.Regions = commonaliyun.DefaultRegions()
+		s.Regions = common_aliyun.DefaultRegions()
 		s.Log.Infof("'regions' is not set. Metrics will be queried across %d regions:\n%s",
 			len(s.Regions), strings.Join(s.Regions, ","))
 	}

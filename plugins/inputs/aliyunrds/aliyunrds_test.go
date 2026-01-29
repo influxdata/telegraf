@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
-	commonaliyun "github.com/influxdata/telegraf/plugins/common/aliyun"
+	common_aliyun "github.com/influxdata/telegraf/plugins/common/aliyun"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -845,7 +845,7 @@ func TestInitialDiscoveryDataIsUsedInFirstGather(t *testing.T) {
 
 	// Create a mock discovery tool
 	mockDT := &discoveryTool{
-		DiscoveryTool: &commonaliyun.DiscoveryTool{
+		DiscoveryTool: &common_aliyun.DiscoveryTool{
 			DataChan: make(chan map[string]interface{}, 1),
 		},
 	}

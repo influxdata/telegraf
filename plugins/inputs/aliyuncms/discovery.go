@@ -13,12 +13,12 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/vpc"
 
 	"github.com/influxdata/telegraf"
-	commonaliyun "github.com/influxdata/telegraf/plugins/common/aliyun"
+	common_aliyun "github.com/influxdata/telegraf/plugins/common/aliyun"
 )
 
 // discoveryTool wraps the common library's DiscoveryTool for CMS
 type discoveryTool struct {
-	*commonaliyun.DiscoveryTool
+	*common_aliyun.DiscoveryTool
 }
 
 // newDiscoveryTool creates a discovery tool for CMS using the common library
@@ -38,7 +38,7 @@ func newDiscoveryTool(
 	)
 
 	if len(regions) == 0 {
-		regions = commonaliyun.DefaultRegions()
+		regions = common_aliyun.DefaultRegions()
 		lg.Infof("'regions' is not provided! Discovery data will be queried across %d regions:\n%s",
 			len(regions), strings.Join(regions, ","))
 	}
@@ -47,8 +47,8 @@ func newDiscoveryTool(
 		rateLimit = 1
 	}
 
-	dscReq := make(map[string]commonaliyun.DiscoveryRequest, len(regions))
-	cli := make(map[string]commonaliyun.AliyunSdkClient, len(regions))
+	dscReq := make(map[string]common_aliyun.DiscoveryRequest, len(regions))
+	cli := make(map[string]common_aliyun.AliyunSdkClient, len(regions))
 	for _, region := range regions {
 		switch project {
 		case "acs_ecs_dashboard":
@@ -171,7 +171,7 @@ func newDiscoveryTool(
 		return nil, fmt.Errorf("can't build discovery request for project: %q, regions: %v", project, regions)
 	}
 
-	dt := &commonaliyun.DiscoveryTool{
+	dt := &common_aliyun.DiscoveryTool{
 		Req:                dscReq,
 		Cli:                cli,
 		RespRootKey:        responseRootKey,
