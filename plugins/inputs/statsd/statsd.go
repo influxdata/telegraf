@@ -151,8 +151,8 @@ type internalStats struct {
 
 // Number will get parsed as an int or float depending on what is passed
 //
-// This type needs to be exported so that the plugin can be configured when using the TOML config file. i.e. It's being
-// used as a library.
+// This type needs to be exported so that the plugin can be configured when not using the TOML config file.
+// i.e. It's being used as a library.
 type Number float64
 
 // UnmarshalTOML is a custom TOML unmarshalling function for the number type.
