@@ -1017,118 +1017,6 @@ func TestEventGroupNamespaceURIInheritance(t *testing.T) {
 	require.Equal(t, "nsu=http://custom.org/UA/;i=2254", eventGroup.NodeIDSettings[1].NodeID())
 }
 
-func TestParseNodeIDString(t *testing.T) {
-	tests := []struct {
-		name           string
-		nodeIDStr      string
-		wantNamespace  string
-		wantNsURI      string
-		wantIDType     string
-		wantIdentifier string
-		wantErr        string
-	}{
-		{
-			name:           "numeric with namespace index",
-			nodeIDStr:      "ns=0;i=2262",
-			wantNamespace:  "0",
-			wantIDType:     "i",
-			wantIdentifier: "2262",
-		},
-		{
-			name:           "string with namespace index",
-			nodeIDStr:      "ns=2;s=Device.Sensor.Temp",
-			wantNamespace:  "2",
-			wantIDType:     "s",
-			wantIdentifier: "Device.Sensor.Temp",
-		},
-		{
-			name:           "numeric with namespace URI",
-			nodeIDStr:      "nsu=http://opcfoundation.org/UA/;i=2255",
-			wantNsURI:      "http://opcfoundation.org/UA/",
-			wantIDType:     "i",
-			wantIdentifier: "2255",
-		},
-		{
-			name:           "string with namespace URI",
-			nodeIDStr:      "nsu=http://example.org/;s=MyNode",
-			wantNsURI:      "http://example.org/",
-			wantIDType:     "s",
-			wantIdentifier: "MyNode",
-		},
-		{
-			name:           "guid identifier",
-			nodeIDStr:      "ns=1;g=12345678-1234-1234-1234-123456789012",
-			wantNamespace:  "1",
-			wantIDType:     "g",
-			wantIdentifier: "12345678-1234-1234-1234-123456789012",
-		},
-		{
-			name:           "opaque identifier",
-			nodeIDStr:      "ns=3;b=YmluYXJ5ZGF0YQ==",
-			wantNamespace:  "3",
-			wantIDType:     "b",
-			wantIdentifier: "YmluYXJ5ZGF0YQ==",
-		},
-		{
-			name:      "missing semicolon",
-			nodeIDStr: "ns=0i=2262",
-			wantErr:   "invalid node ID format",
-		},
-		{
-			name:      "invalid namespace prefix",
-			nodeIDStr: "namespace=0;i=2262",
-			wantErr:   "namespace must start with 'ns=' or 'nsu='",
-		},
-		{
-			name:      "invalid identifier type",
-			nodeIDStr: "ns=0;x=2262",
-			wantErr:   "invalid identifier type",
-		},
-		{
-			name:      "missing identifier value format",
-			nodeIDStr: "ns=0;i",
-			wantErr:   "identifier must be in format",
-		},
-		{
-			name:           "empty identifier value is allowed",
-			nodeIDStr:      "ns=0;s=",
-			wantNamespace:  "0",
-			wantIDType:     "s",
-			wantIdentifier: "",
-		},
-		{
-			name:           "identifier with equals sign",
-			nodeIDStr:      "ns=2;s=Key=Value",
-			wantNamespace:  "2",
-			wantIDType:     "s",
-			wantIdentifier: "Key=Value",
-		},
-		{
-			name:           "identifier with semicolon",
-			nodeIDStr:      "ns=2;s=Part1;Part2",
-			wantNamespace:  "2",
-			wantIDType:     "s",
-			wantIdentifier: "Part1;Part2",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			parsed, err := parseNodeIDString(tt.nodeIDStr)
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tt.wantErr)
-				return
-			}
-			require.NoError(t, err)
-			require.Equal(t, tt.wantNamespace, parsed.namespace)
-			require.Equal(t, tt.wantNsURI, parsed.namespaceURI)
-			require.Equal(t, tt.wantIDType, parsed.identifierType)
-			require.Equal(t, tt.wantIdentifier, parsed.identifier)
-		})
-	}
-}
-
 func TestNodeSettingsSetFromNodeIDString(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -1163,27 +1051,32 @@ func TestNodeSettingsSetFromNodeIDString(t *testing.T) {
 		{
 			name:    "conflict with namespace",
 			node:    NodeSettings{FieldName: "test", NodeIDStr: "ns=2;i=100", Namespace: "1"},
-			wantErr: "cannot specify both 'node_id' and individual fields",
+			wantErr: "cannot specify both 'id' and individual fields",
 		},
 		{
 			name:    "conflict with namespace_uri",
 			node:    NodeSettings{FieldName: "test", NodeIDStr: "ns=2;i=100", NamespaceURI: "http://example.org/"},
-			wantErr: "cannot specify both 'node_id' and individual fields",
+			wantErr: "cannot specify both 'id' and individual fields",
 		},
 		{
 			name:    "conflict with identifier_type",
 			node:    NodeSettings{FieldName: "test", NodeIDStr: "ns=2;i=100", IdentifierType: "s"},
-			wantErr: "cannot specify both 'node_id' and individual fields",
+			wantErr: "cannot specify both 'id' and individual fields",
 		},
 		{
 			name:    "conflict with identifier",
 			node:    NodeSettings{FieldName: "test", NodeIDStr: "ns=2;i=100", Identifier: "200"},
-			wantErr: "cannot specify both 'node_id' and individual fields",
+			wantErr: "cannot specify both 'id' and individual fields",
 		},
 		{
-			name:    "invalid node_id string",
-			node:    NodeSettings{FieldName: "test", NodeIDStr: "invalid"},
+			name:    "invalid namespace in node_id string",
+			node:    NodeSettings{FieldName: "test", NodeIDStr: "ns=abc;i=123"},
 			wantErr: "invalid node ID format",
+		},
+		{
+			name:    "invalid namespace URI format",
+			node:    NodeSettings{FieldName: "test", NodeIDStr: "nsu=;i=123"},
+			wantErr: "empty namespace URI",
 		},
 	}
 
@@ -1232,11 +1125,11 @@ func TestEventNodeSettingsSetFromNodeIDString(t *testing.T) {
 		{
 			name:    "conflict with identifier",
 			node:    EventNodeSettings{NodeIDStr: "ns=2;i=100", Identifier: "200"},
-			wantErr: "cannot specify both 'node_id' and individual fields",
+			wantErr: "cannot specify both 'id' and individual fields",
 		},
 		{
-			name:    "invalid node_id string",
-			node:    EventNodeSettings{NodeIDStr: "invalid"},
+			name:    "invalid namespace in node_id string",
+			node:    EventNodeSettings{NodeIDStr: "ns=abc;i=123"},
 			wantErr: "invalid node ID format",
 		},
 	}
@@ -1298,11 +1191,11 @@ func TestValidateOPCTagsWithNodeID(t *testing.T) {
 			err: nil,
 		},
 		{
-			name: "invalid node_id string",
+			name: "invalid namespace in node_id string",
 			config: InputClientConfig{
 				MetricName: "opcua",
 				RootNodes: []NodeSettings{
-					{FieldName: "Invalid", NodeIDStr: "invalid-format"},
+					{FieldName: "Invalid", NodeIDStr: "ns=abc;i=123"},
 				},
 			},
 			err: errors.New("invalid node ID format"),
@@ -1315,7 +1208,7 @@ func TestValidateOPCTagsWithNodeID(t *testing.T) {
 					{FieldName: "Conflict", NodeIDStr: "ns=0;i=2262", Namespace: "1"},
 				},
 			},
-			err: errors.New("cannot specify both 'node_id' and individual fields"),
+			err: errors.New("cannot specify both 'id' and individual fields"),
 		},
 	}
 

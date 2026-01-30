@@ -50,7 +50,7 @@ type MonitoringParameters struct {
 // NodeSettings describes how to map from a OPC UA node to a Metric
 type NodeSettings struct {
 	FieldName        string               `toml:"name"`
-	NodeIDStr        string               `toml:"node_id"`
+	NodeIDStr        string               `toml:"id"`
 	Namespace        string               `toml:"namespace"`
 	NamespaceURI     string               `toml:"namespace_uri"`
 	IdentifierType   string               `toml:"identifier_type"`
@@ -79,7 +79,7 @@ type NodeGroupSettings struct {
 }
 
 type EventNodeSettings struct {
-	NodeIDStr      string `toml:"node_id"`
+	NodeIDStr      string `toml:"id"`
 	Namespace      string `toml:"namespace"`
 	NamespaceURI   string `toml:"namespace_uri"`
 	IdentifierType string `toml:"identifier_type"`
@@ -93,54 +93,32 @@ func (e *EventNodeSettings) NodeID() string {
 	return "ns=" + e.Namespace + ";" + e.IdentifierType + "=" + e.Identifier
 }
 
-// nodeIDParts holds the components of a parsed OPC UA node ID string
-type nodeIDParts struct {
-	namespace      string
-	namespaceURI   string
-	identifierType string
-	identifier     string
+// nodeIDTypeToIdentifierType converts ua.NodeIDType to the identifier type string (i, s, g, b)
+func nodeIDTypeToIdentifierType(t ua.NodeIDType) string {
+	switch t {
+	case ua.NodeIDTypeTwoByte, ua.NodeIDTypeFourByte, ua.NodeIDTypeNumeric:
+		return "i"
+	case ua.NodeIDTypeString:
+		return "s"
+	case ua.NodeIDTypeGUID:
+		return "g"
+	case ua.NodeIDTypeByteString:
+		return "b"
+	default:
+		return ""
+	}
 }
 
-// parseNodeIDString parses an OPC UA node ID string (e.g., "ns=0;i=2262" or "nsu=http://...;s=Name")
-// and returns the parsed components.
-func parseNodeIDString(nodeIDStr string) (nodeIDParts, error) {
-	var result nodeIDParts
-
-	// Split on semicolon to get namespace part and identifier part
-	parts := strings.SplitN(nodeIDStr, ";", 2)
-	if len(parts) != 2 {
-		return result, fmt.Errorf("invalid node ID format %q: expected 'ns=X;Y=Z' or 'nsu=URI;Y=Z'", nodeIDStr)
-	}
-
-	// Parse namespace part (ns= or nsu=)
-	nsPart := parts[0]
-	switch {
-	case strings.HasPrefix(nsPart, "ns="):
-		result.namespace = strings.TrimPrefix(nsPart, "ns=")
-	case strings.HasPrefix(nsPart, "nsu="):
-		result.namespaceURI = strings.TrimPrefix(nsPart, "nsu=")
+// getIdentifierFromNodeID extracts the identifier value as a string from a parsed NodeID
+func getIdentifierFromNodeID(nodeID *ua.NodeID) string {
+	switch nodeID.Type() {
+	case ua.NodeIDTypeTwoByte, ua.NodeIDTypeFourByte, ua.NodeIDTypeNumeric:
+		return strconv.FormatUint(uint64(nodeID.IntID()), 10)
+	case ua.NodeIDTypeString, ua.NodeIDTypeGUID, ua.NodeIDTypeByteString:
+		return nodeID.StringID()
 	default:
-		return result, fmt.Errorf("invalid node ID format %q: namespace must start with 'ns=' or 'nsu='", nodeIDStr)
+		return ""
 	}
-
-	// Parse identifier part (i=, s=, g=, or b=)
-	idPart := parts[1]
-	if len(idPart) < 2 || idPart[1] != '=' {
-		return result, fmt.Errorf("invalid node ID format %q: identifier must be in format 'X=value'", nodeIDStr)
-	}
-
-	result.identifierType = string(idPart[0])
-	result.identifier = idPart[2:]
-
-	// Validate identifier type
-	switch result.identifierType {
-	case "i", "s", "g", "b":
-		// Valid
-	default:
-		return result, fmt.Errorf("invalid identifier type %q in node ID %q: expected i, s, g, or b", result.identifierType, nodeIDStr)
-	}
-
-	return result, nil
 }
 
 // SetFromNodeIDString parses the NodeIDStr field and populates the individual fields.
@@ -152,19 +130,74 @@ func (tag *NodeSettings) SetFromNodeIDString() error {
 
 	// Check for conflicting configuration
 	if tag.Namespace != "" || tag.NamespaceURI != "" || tag.IdentifierType != "" || tag.Identifier != "" {
-		return fmt.Errorf("node %q: cannot specify both 'node_id' and individual fields (namespace/namespace_uri/identifier_type/identifier)", tag.FieldName)
+		return fmt.Errorf("node %q: cannot specify both 'id' and individual fields (namespace/namespace_uri/identifier_type/identifier)", tag.FieldName)
 	}
 
-	parsed, err := parseNodeIDString(tag.NodeIDStr)
-	if err != nil {
-		return fmt.Errorf("node %q: %w", tag.FieldName, err)
+	// Use library function to parse and validate the node ID
+	// For namespace URI (nsu=) format, we need to extract components manually since
+	// ua.ParseExpandedNodeID requires the namespace array which is only available after connecting.
+	// The full parsing with namespace resolution happens in InitNodeIDs().
+	if strings.HasPrefix(tag.NodeIDStr, "nsu=") {
+		parsed, err := parseNamespaceURINodeID(tag.NodeIDStr)
+		if err != nil {
+			return fmt.Errorf("node %q: %w", tag.FieldName, err)
+		}
+		tag.NamespaceURI = parsed.namespaceURI
+		tag.IdentifierType = parsed.identifierType
+		tag.Identifier = parsed.identifier
+	} else {
+		// For namespace index (ns=) format, use ua.ParseNodeID from the library
+		nodeID, err := ua.ParseNodeID(tag.NodeIDStr)
+		if err != nil {
+			return fmt.Errorf("node %q: invalid node ID format %q: %w", tag.FieldName, tag.NodeIDStr, err)
+		}
+		tag.Namespace = strconv.FormatUint(uint64(nodeID.Namespace()), 10)
+		tag.IdentifierType = nodeIDTypeToIdentifierType(nodeID.Type())
+		tag.Identifier = getIdentifierFromNodeID(nodeID)
 	}
 
-	tag.Namespace = parsed.namespace
-	tag.NamespaceURI = parsed.namespaceURI
-	tag.IdentifierType = parsed.identifierType
-	tag.Identifier = parsed.identifier
 	return nil
+}
+
+// nodeIDParts holds the parsed components of a namespace URI node ID
+type nodeIDParts struct {
+	namespaceURI   string
+	identifierType string
+	identifier     string
+}
+
+// parseNamespaceURINodeID parses a node ID string with namespace URI format (nsu=URI;X=identifier).
+func parseNamespaceURINodeID(nodeIDStr string) (nodeIDParts, error) {
+	parts := strings.SplitN(nodeIDStr, ";", 2)
+	if len(parts) != 2 {
+		return nodeIDParts{}, fmt.Errorf("invalid node ID format %q: expected 'nsu=URI;X=identifier'", nodeIDStr)
+	}
+
+	nsURI := strings.TrimPrefix(parts[0], "nsu=")
+	if nsURI == "" {
+		return nodeIDParts{}, fmt.Errorf("invalid node ID format %q: empty namespace URI", nodeIDStr)
+	}
+
+	idPart := parts[1]
+	if len(idPart) < 2 || idPart[1] != '=' {
+		return nodeIDParts{}, fmt.Errorf("invalid node ID format %q: identifier must be in format 'X=value'", nodeIDStr)
+	}
+
+	idType := string(idPart[0])
+	identifier := idPart[2:]
+
+	switch idType {
+	case "i", "s", "g", "b":
+		// Valid identifier types
+	default:
+		return nodeIDParts{}, fmt.Errorf("invalid identifier type %q in node ID %q: expected i, s, g, or b", idType, nodeIDStr)
+	}
+
+	return nodeIDParts{
+		namespaceURI:   nsURI,
+		identifierType: idType,
+		identifier:     identifier,
+	}, nil
 }
 
 // SetFromNodeIDString parses the NodeIDStr field and populates the individual fields.
@@ -176,18 +209,31 @@ func (e *EventNodeSettings) SetFromNodeIDString() error {
 
 	// Check for conflicting configuration
 	if e.Namespace != "" || e.NamespaceURI != "" || e.IdentifierType != "" || e.Identifier != "" {
-		return errors.New("cannot specify both 'node_id' and individual fields (namespace/namespace_uri/identifier_type/identifier)")
+		return errors.New("cannot specify both 'id' and individual fields (namespace/namespace_uri/identifier_type/identifier)")
 	}
 
-	parsed, err := parseNodeIDString(e.NodeIDStr)
-	if err != nil {
-		return err
+	// Use library function to parse and validate the node ID
+	// For namespace URI (nsu=) format, we need to extract components manually since
+	// ua.ParseExpandedNodeID requires the namespace array which is only available after connecting.
+	if strings.HasPrefix(e.NodeIDStr, "nsu=") {
+		parsed, err := parseNamespaceURINodeID(e.NodeIDStr)
+		if err != nil {
+			return err
+		}
+		e.NamespaceURI = parsed.namespaceURI
+		e.IdentifierType = parsed.identifierType
+		e.Identifier = parsed.identifier
+	} else {
+		// For namespace index (ns=) format, use ua.ParseNodeID from the library
+		nodeID, err := ua.ParseNodeID(e.NodeIDStr)
+		if err != nil {
+			return fmt.Errorf("invalid node ID format %q: %w", e.NodeIDStr, err)
+		}
+		e.Namespace = strconv.FormatUint(uint64(nodeID.Namespace()), 10)
+		e.IdentifierType = nodeIDTypeToIdentifierType(nodeID.Type())
+		e.Identifier = getIdentifierFromNodeID(nodeID)
 	}
 
-	e.Namespace = parsed.namespace
-	e.NamespaceURI = parsed.namespaceURI
-	e.IdentifierType = parsed.identifierType
-	e.Identifier = parsed.identifier
 	return nil
 }
 
