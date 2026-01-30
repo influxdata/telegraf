@@ -108,7 +108,7 @@ This plugin is particularly useful for:
 - Verifying SIP server connectivity
 - Alerting on SIP service degradation
 
-## SIP Methods
+### SIP Methods
 
 The plugin supports the following SIP methods:
 
