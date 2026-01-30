@@ -4,7 +4,6 @@ package googlecloud
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"cloud.google.com/go/auth/credentials"
 
 	"github.com/influxdata/telegraf"
+	common_gcp "github.com/influxdata/telegraf/plugins/common/gcp"
 	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/common/slog"
 	"github.com/influxdata/telegraf/plugins/secretstores"
@@ -45,11 +45,11 @@ func (g *GoogleCloud) Init() error {
 		return fmt.Errorf("cannot load the credential file: %w", err)
 	}
 
-	fileType, err := parseFileType(serviceAccount)
+	credType, err := common_gcp.ParseCredentialType(g.CredentialsFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to parse credentials file type: %w", err)
 	}
-	saType := credentials.CredType(fileType)
+	saType := credentials.CredType(credType)
 
 	creds, err := credentials.NewCredentialsFromJSON(saType, serviceAccount, &credentials.DetectOptions{
 		STSAudience: g.STSAudience,
@@ -91,17 +91,6 @@ func (g *GoogleCloud) GetResolver(key string) (telegraf.ResolveFunc, error) {
 		s, err := g.Get(key)
 		return s, true, err
 	}, nil
-}
-
-func parseFileType(b []byte) (string, error) {
-	type fileTypeChecker struct {
-		Type string `json:"type"`
-	}
-	var f fileTypeChecker
-	if err := json.Unmarshal(b, &f); err != nil {
-		return "", fmt.Errorf("cannot parse the credential file: %w", err)
-	}
-	return f.Type, nil
 }
 
 func init() {
