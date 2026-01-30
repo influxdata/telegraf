@@ -82,8 +82,10 @@ func TestURLFail(t *testing.T) {
 				URLs: []string{tt.url},
 				clientConfig: clientConfig{
 					HTTPClientConfig: httpconfig.HTTPClientConfig{
-						HTTPProxy: proxy.HTTPProxy{
-							HTTPProxyURL: tt.proxy,
+						TransportConfig: httpconfig.TransportConfig{
+							HTTPProxy: proxy.HTTPProxy{
+								HTTPProxyURL: tt.proxy,
+							},
 						},
 					},
 				},
@@ -98,8 +100,10 @@ func TestURLSuccess(t *testing.T) {
 		URLs: []string{"http://localhost:1234"},
 		clientConfig: clientConfig{
 			HTTPClientConfig: httpconfig.HTTPClientConfig{
-				HTTPProxy: proxy.HTTPProxy{
-					HTTPProxyURL: "http://localhost:3128",
+				TransportConfig: httpconfig.TransportConfig{
+					HTTPProxy: proxy.HTTPProxy{
+						HTTPProxyURL: "http://localhost:3128",
+					},
 				},
 			},
 		},
@@ -117,7 +121,9 @@ func TestInfluxDBLocalAddress(t *testing.T) {
 	output := InfluxDB{
 		clientConfig: clientConfig{
 			HTTPClientConfig: httpconfig.HTTPClientConfig{
-				LocalAddress: "localhost",
+				TransportConfig: httpconfig.TransportConfig{
+					LocalAddress: "localhost",
+				},
 			},
 		},
 	}

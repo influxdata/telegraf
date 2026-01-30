@@ -78,15 +78,6 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 		return nil, fmt.Errorf("setting up transport failed: %w", err)
 	}
 
-	if h.LocalAddress != "" {
-		localAddr, err := internal.ResolveLocalTCPAddress(h.LocalAddress)
-		if err != nil {
-			return nil, err
-		}
-		dialer := &net.Dialer{LocalAddr: localAddr}
-		transport.DialContext = dialer.DialContext
-	}
-
 	// Register "http+unix" and "https+unix" protocol handler.
 	unixtransport.Register(transport)
 
