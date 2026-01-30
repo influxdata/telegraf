@@ -24,6 +24,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	common_aws "github.com/influxdata/telegraf/plugins/common/aws"
+	common_gcp "github.com/influxdata/telegraf/plugins/common/gcp"
 	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -270,7 +271,12 @@ func (h *HTTP) getAccessToken(ctx context.Context, audience string) (*oauth2.Tok
 		return h.oauth2Token, nil
 	}
 
-	ts, err := idtoken.NewTokenSource(ctx, audience, idtoken.WithCredentialsFile(h.CredentialsFile))
+	credType, err := common_gcp.ParseCredentialType(h.CredentialsFile)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse credentials file type: %w", err)
+	}
+
+	ts, err := idtoken.NewTokenSource(ctx, audience, idtoken.WithAuthCredentialsFile(idtoken.CredentialsType(credType), h.CredentialsFile))
 	if err != nil {
 		return nil, fmt.Errorf("error creating oauth2 token source: %w", err)
 	}

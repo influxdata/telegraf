@@ -20,6 +20,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	common_gcp "github.com/influxdata/telegraf/plugins/common/gcp"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -93,7 +94,11 @@ func (b *BigQuery) setUpDefaultClient() error {
 	ctx := context.Background()
 
 	if b.CredentialsFile != "" {
-		credentialsOption = option.WithCredentialsFile(b.CredentialsFile)
+		credType, err := common_gcp.ParseCredentialType(b.CredentialsFile)
+		if err != nil {
+			return fmt.Errorf("unable to parse credential file type: %w", err)
+		}
+		credentialsOption = option.WithAuthCredentialsFile(option.CredentialsType(credType), b.CredentialsFile)
 	} else {
 		creds, err := google.FindDefaultCredentials(ctx, bigquery.Scope)
 		if err != nil {
