@@ -61,7 +61,7 @@ to use them.
   # timeout = "5s"
 
   ## Enable or disable support for unsigned integer fields
-  # influx_uint_support = false
+  # influx_uint_support = true
 
   ## Omit the timestamp of the metrics when sinding to allow InfluxDB to set the
   ## timestamp of the data during ingestion. You likely want this to be false

@@ -123,7 +123,8 @@ func init() {
 	outputs.Add("influxdb_v3", func() telegraf.Output {
 		return &InfluxDB{
 			clientConfig: clientConfig{
-				Timeout: config.Duration(time.Second * 5),
+				UintSupport: true,
+				Timeout:     config.Duration(time.Second * 5),
 			},
 		}
 	})
