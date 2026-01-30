@@ -1,3 +1,4 @@
+//go:generate ../../../tools/config_includer/generator
 //go:generate ../../../tools/readme_config_includer/generator
 package influxdb_v3
 
@@ -21,17 +22,16 @@ import (
 var sampleConfig string
 
 type clientConfig struct {
-	LocalAddr          string          `toml:"local_address"`
 	Token              config.Secret   `toml:"token"`
 	Database           string          `toml:"database"`
 	DatabaseTag        string          `toml:"database_tag"`
 	ExcludeDatabaseTag bool            `toml:"exclude_database_tag"`
 	Sync               *bool           `toml:"sync"`
-	Timeout            config.Duration `toml:"timeout"`
-	UserAgent          string          `toml:"user_agent"`
 	ContentEncoding    string          `toml:"content_encoding"`
+	UserAgent          string          `toml:"user_agent"`
 	UintSupport        bool            `toml:"influx_uint_support"`
 	OmitTimestamp      bool            `toml:"influx_omit_timestamp"`
+	Timeout            config.Duration `toml:"timeout"`
 	common_http.HTTPClientConfig
 	ratelimiter.RateLimitConfig
 }
