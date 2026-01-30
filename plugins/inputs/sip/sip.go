@@ -321,7 +321,8 @@ func (s *SIP) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (*SIP) handleGatherError(_ error, fields map[string]any, tags map[string]string, acc telegraf.Accumulator) {
+func (s *SIP) handleGatherError(err error, fields map[string]any, tags map[string]string, acc telegraf.Accumulator) {
+	s.Log.Debugf("SIP gather error: %v", err)
 	// Mark as down for all connection failures
 	fields["up"] = 0
 	acc.AddFields("sip", fields, tags)
