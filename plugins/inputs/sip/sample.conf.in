@@ -37,5 +37,5 @@
   # username = ""
   # password = ""
 
-  ## Optional TLS Config (only used for sips:// URLs or transport=tls/wss)
+  ## Optional TLS Config (only used for sips:// URLs or transport=wss)
 {{template "/plugins/common/tls/client.conf"}}
