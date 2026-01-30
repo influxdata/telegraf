@@ -41,7 +41,6 @@ to use them.
 
   ## Transport protocol
   ## Valid values: udp, tcp, ws, wss
-  ## Note: For TLS, use sips:// scheme instead of transport=tls (per RFC 3261)
   # transport = "udp"
 
   ## SIP method to use for health checks
@@ -100,13 +99,6 @@ to use them.
 > [!NOTE]
 > Per RFC 3261, the use of `;transport=tls` is deprecated.
 > Use the `sips://` URI scheme instead to indicate TLS transport.
-
-This plugin is particularly useful for:
-
-- Monitoring VoIP infrastructure availability
-- Measuring SIP service response times
-- Verifying SIP server connectivity
-- Alerting on SIP service degradation
 
 ### SIP Methods
 
