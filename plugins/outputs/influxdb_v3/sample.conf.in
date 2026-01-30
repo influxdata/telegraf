@@ -1,0 +1,45 @@
+# Configuration for sending metrics to InfluxDB 3.x Core and Enterprise
+[[outputs.influxdb_v3]]
+  ## Multiple URLs can be specified but only ONE of them will be selected
+  ## randomly in each interval for writing. If endpoints are unavailable another
+  ## one will be used until all are exhausted or the write succeeds.
+  urls = ["http://127.0.0.1:8181"]
+
+  ## Local address to bind when connecting to the server
+  ## If empty or not set, the local address is automatically chosen
+  # local_address = ""
+
+  ## Token for authentication
+  token = ""
+
+  ## Destination database to write into
+  database = ""
+
+  ## The value of this tag will be used to determine the database. If this
+  ## tag is not set the 'database' option is used as the default.
+  # database_tag = ""
+
+  ## If true, the database tag will not be added to the metric
+  # exclude_database_tag = false
+
+  ## Wait for WAL persistence to complete synchronization
+  ## Setting this to false reduces latency but increases the risk of data loss.
+  ## See https://docs.influxdata.com/influxdb3/enterprise/write-data/http-api/v3-write-lp/#use-no_sync-for-immediate-write-responses
+  # sync = true
+
+  ## Enable or disable support for unsigned integer fields
+  # influx_uint_support = true
+
+  ## Omit the timestamp of the metrics when sinding to allow InfluxDB to set the
+  ## timestamp of the data during ingestion. You likely want this to be false
+  ## to submit the metric timestamp
+  # influx_omit_timestamp = false
+
+  ## HTTP User-Agent
+  # user_agent = "telegraf"
+
+  ## Content-Encoding for write request body, available values are "gzip",
+  ## "none" and "identity"
+  # content_encoding = "gzip"
+
+{{template "/plugins/common/http/client.conf"}}
