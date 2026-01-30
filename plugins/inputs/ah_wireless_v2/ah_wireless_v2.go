@@ -1425,7 +1425,7 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 	var client_mac string
 	ii = 0
 
-
+    currentTime := time.Now()
     for _, intfName2 := range t.Ifname {
 
 		var cltstat ah_ieee80211_get_wifi_sta_stats
@@ -1899,7 +1899,7 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 				fields2[bucket]				= i
 			}
 
-			acc.AddFields("ClientStats", fields2, tags, time.Now())
+			acc.AddFields("ClientStats", fields2, tags, currentTime)
 
 
 			clt_new_stats := saved_stats{}
