@@ -226,6 +226,201 @@ func TestRollingTicker(t *testing.T) {
 	require.Equal(t, expected, actual)
 }
 
+// TestRollingTickerJitterDrift demonstrates that with RollingTicker,
+// jitter causes drift over time. Each tick = interval + random(0, jitter),
+// so average interval = interval + jitter/2.
+//
+// Scenario from issue #17287:
+//   - interval = 60s
+//   - jitter = 10s
+//
+// Current behavior:
+//   - Each tick: interval + random(0-10s)
+//   - Average interval: 60s + 5s = 65s
+//   - After 60 ticks: expected 60min, actual ~65min (5min drift)
+//
+// This demonstrates the bug where jitter increases effective collection interval.
+func TestRollingTickerJitterDrift(t *testing.T) {
+	interval := 60 * time.Second
+	jitter := 10 * time.Second
+
+	clk := clock.NewMock()
+	startTime := clk.Now()
+
+	ticker := &RollingTicker{
+		interval: interval,
+		jitter:   jitter,
+	}
+	ticker.start(clk)
+	defer ticker.Stop()
+
+	// Collect 60 ticks
+	const numTicks = 60
+	var triggers []time.Time
+
+	for len(triggers) < numTicks {
+		select {
+		case tm := <-ticker.Elapsed():
+			triggers = append(triggers, tm)
+		default:
+			clk.Add(1 * time.Second)
+		}
+	}
+
+	// Calculate total elapsed time
+	firstTrigger := triggers[0]
+	lastTrigger := triggers[numTicks-1]
+	totalElapsed := lastTrigger.Sub(firstTrigger)
+
+	// Expected time for 59 intervals: 59 * 60s = 59 minutes
+	expectedTime := time.Duration(numTicks-1) * interval
+
+	// Calculate drift
+	drift := totalElapsed - expectedTime
+
+	t.Logf("=== RollingTicker (interval + jitter each tick) ===")
+	t.Logf("Start time:      %s", startTime.Format("15:04:05"))
+	t.Logf("First trigger:   %s", firstTrigger.Format("15:04:05"))
+	t.Logf("Last trigger:    %s", lastTrigger.Format("15:04:05"))
+	t.Logf("Total elapsed:   %s", totalElapsed)
+	t.Logf("Expected:        %s (if no jitter drift)", expectedTime)
+	t.Logf("Drift:           %s", drift)
+	t.Logf("Avg interval:    %.2fs (expected ~65s with jitter)", totalElapsed.Seconds()/float64(numTicks-1))
+
+	// Current behavior: drift should be ~5 minutes (59 intervals * 5s avg jitter)
+	// This confirms the bug from issue #17287
+	require.Greater(t, drift, 2*time.Minute,
+		"Expected significant drift with RollingTicker jitter behavior")
+	require.Less(t, drift, 10*time.Minute,
+		"Drift is larger than expected maximum")
+}
+
+// TestAlignedTickerJitterBehavior shows that AlignedTicker has different behavior.
+// It realigns to interval boundaries, so jitter doesn't accumulate as drift.
+// However, the average interval is still affected by jitter.
+//
+// Scenario:
+//   - interval = 60s
+//   - jitter = 10s
+//   - start time = 12:02:22
+//
+// Behavior:
+//   - First trigger: next 60s boundary (12:03:00) + jitter = ~12:03:05
+//   - Second trigger: next 60s boundary (12:04:00) + jitter = ~12:04:07
+//   - The jitter variation averages out because of realignment
+func TestAlignedTickerJitterBehavior(t *testing.T) {
+	interval := 60 * time.Second
+	jitter := 10 * time.Second
+	offset := 0 * time.Second
+
+	// Start at 12:02:22
+	startTime := time.Date(2024, 1, 1, 12, 2, 22, 0, time.UTC)
+	clk := clock.NewMock()
+	clk.Set(startTime)
+
+	ticker := &AlignedTicker{
+		interval:    interval,
+		jitter:      jitter,
+		offset:      offset,
+		minInterval: interval / 100,
+	}
+	ticker.start(startTime, clk)
+	defer ticker.Stop()
+
+	// Collect 60 ticks
+	const numTicks = 60
+	var triggers []time.Time
+
+	for len(triggers) < numTicks {
+		select {
+		case tm := <-ticker.Elapsed():
+			triggers = append(triggers, tm)
+		default:
+			clk.Add(1 * time.Second)
+		}
+	}
+
+	firstTrigger := triggers[0]
+	lastTrigger := triggers[numTicks-1]
+	totalElapsed := lastTrigger.Sub(firstTrigger)
+	expectedTime := time.Duration(numTicks-1) * interval
+	drift := totalElapsed - expectedTime
+
+	t.Logf("=== AlignedTicker (realigns to boundaries) ===")
+	t.Logf("Start time:      %s", startTime.Format("15:04:05"))
+	t.Logf("First trigger:   %s", firstTrigger.Format("15:04:05"))
+	t.Logf("Last trigger:    %s", lastTrigger.Format("15:04:05"))
+	t.Logf("Total elapsed:   %s", totalElapsed)
+	t.Logf("Expected:        %s", expectedTime)
+	t.Logf("Drift:           %s", drift)
+	t.Logf("Avg interval:    %.2fs", totalElapsed.Seconds()/float64(numTicks-1))
+
+	// AlignedTicker realigns to boundaries, so drift is minimal
+	// The jitter variations cancel out over time
+	if drift < 0 {
+		drift = -drift
+	}
+	require.Less(t, drift, 1*time.Minute,
+		"AlignedTicker should have minimal drift due to boundary realignment")
+}
+
+// TestUnalignedTickerJitterBehavior shows UnalignedTicker behavior with jitter.
+// Unlike RollingTicker, UnalignedTicker uses a fixed interval ticker internally,
+// so jitter only adds delay but doesn't cause cumulative drift.
+func TestUnalignedTickerJitterBehavior(t *testing.T) {
+	interval := 60 * time.Second
+	jitter := 10 * time.Second
+	offset := 0 * time.Second
+
+	clk := clock.NewMock()
+	startTime := clk.Now()
+
+	ticker := &UnalignedTicker{
+		interval: interval,
+		jitter:   jitter,
+		offset:   offset,
+	}
+	ticker.start(clk)
+	defer ticker.Stop()
+
+	// Collect 60 ticks
+	const numTicks = 60
+	var triggers []time.Time
+
+	for len(triggers) < numTicks {
+		select {
+		case tm := <-ticker.Elapsed():
+			triggers = append(triggers, tm)
+		default:
+			clk.Add(1 * time.Second)
+		}
+	}
+
+	firstTrigger := triggers[0]
+	lastTrigger := triggers[numTicks-1]
+	totalElapsed := lastTrigger.Sub(firstTrigger)
+	expectedTime := time.Duration(numTicks-1) * interval
+	drift := totalElapsed - expectedTime
+
+	t.Logf("=== UnalignedTicker (fixed ticker + jitter sleep) ===")
+	t.Logf("Start time:      %s", startTime.Format("15:04:05"))
+	t.Logf("First trigger:   %s", firstTrigger.Format("15:04:05"))
+	t.Logf("Last trigger:    %s", lastTrigger.Format("15:04:05"))
+	t.Logf("Total elapsed:   %s", totalElapsed)
+	t.Logf("Expected:        %s", expectedTime)
+	t.Logf("Drift:           %s", drift)
+	t.Logf("Avg interval:    %.2fs", totalElapsed.Seconds()/float64(numTicks-1))
+
+	// UnalignedTicker uses clk.Ticker(interval) which fires at fixed intervals
+	// The jitter is added as sleep AFTER each tick, but the ticker rhythm is fixed
+	// So drift should be minimal (jitter variations average out)
+	if drift < 0 {
+		drift = -drift
+	}
+	require.Less(t, drift, 1*time.Minute,
+		"UnalignedTicker should have minimal drift due to fixed internal ticker")
+}
+
 // Simulates running the Ticker for an hour and displays stats about the
 // operation.
 func TestAlignedTickerDistribution(t *testing.T) {
