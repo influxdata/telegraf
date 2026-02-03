@@ -77,7 +77,16 @@ type jolokiaTarget struct {
 	Password string `json:"password,omitempty"`
 }
 
-//	Jolokia JSON response object. Example: {
+// jolokiaOptions represents the options field in Jolokia 2.x responses.
+// In Jolokia 2.x, the target is returned under request.options.target
+// instead of request.target (Jolokia 1.x format).
+type jolokiaOptions struct {
+	Target *jolokiaTarget `json:"target,omitempty"`
+}
+
+// Jolokia JSON response object. Example for Jolokia 1.x:
+//
+//	{
 //	  "request": {
 //	    "type": "read"
 //	    "mbean": "java.lang:type=Runtime",
@@ -90,10 +99,35 @@ type jolokiaTarget struct {
 //	  "timestamp": 1488059309,
 //	  "status": 200
 //	}
+//
+// Example for Jolokia 2.x:
+//
+//	{
+//	  "request": {
+//	    "type": "read"
+//	    "mbean": "java.lang:type=Runtime",
+//	    "attribute": "Uptime",
+//	    "options": {
+//	      "target": {
+//	        "url": "service:jmx:rmi:///jndi/rmi://target:9010/jmxrmi"
+//	      }
+//	    }
+//	  },
+//	  "value": 1214083,
+//	  "timestamp": 1488059309,
+//	  "status": 200
+//	}
 type jolokiaResponse struct {
-	Request jolokiaRequest `json:"request"`
-	Value   interface{}    `json:"value"`
-	Status  int            `json:"status"`
+	Request jolokiaResponseRequest `json:"request"`
+	Value   interface{}            `json:"value"`
+	Status  int                    `json:"status"`
+}
+
+// jolokiaResponseRequest is the request object echoed back in a Jolokia response.
+// It extends jolokiaRequest with the Options field for Jolokia 2.x compatibility.
+type jolokiaResponseRequest struct {
+	jolokiaRequest
+	Options *jolokiaOptions `json:"options,omitempty"`
 }
 
 func NewClient(address string, config *ClientConfig) (*Client, error) {
@@ -244,8 +278,13 @@ func makeReadResponses(jresponses []jolokiaResponse) []ReadResponse {
 			RequestAttributes: rrequest.Attributes,
 			RequestPath:       rrequest.Path,
 		}
+		// Check for target in Jolokia 1.x location (request.target)
 		if jtarget := jr.Request.Target; jtarget != nil {
 			rresponse.RequestTarget = jtarget.URL
+		}
+		// Check for target in Jolokia 2.x location (request.options.target)
+		if rresponse.RequestTarget == "" && jr.Request.Options != nil && jr.Request.Options.Target != nil {
+			rresponse.RequestTarget = jr.Request.Options.Target.URL
 		}
 
 		rresponses = append(rresponses, rresponse)
