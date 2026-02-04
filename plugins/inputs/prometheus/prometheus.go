@@ -312,6 +312,10 @@ func (p *Prometheus) Stop() {
 	p.cancel()
 	p.wg.Wait()
 
+	if p.MonitorPods && !p.isNodeScrapeScope {
+		delete(informerfactory, p.PodNamespace)
+	}
+
 	if p.client != nil {
 		p.client.CloseIdleConnections()
 	}
