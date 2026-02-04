@@ -100,7 +100,7 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/gofrs/uuid/v5 v5.4.0
 	github.com/gogo/protobuf v1.3.2
-	github.com/golang-jwt/jwt/v5 v5.3.0
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
 	github.com/golang/snappy v1.0.0
 	github.com/google/cel-go v0.26.1
