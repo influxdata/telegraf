@@ -4,9 +4,14 @@ package sqlserver
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	_ "embed"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -460,6 +465,64 @@ func (s *SQLServer) accHealth(healthMetrics map[string]*healthMetric, acc telegr
 // Token Provider Implementation
 // ------------------------------------------------------------------------------
 
+func (s *SQLServer) getFederatedTokenFromEnv() (string, error) {
+	clientID, okClient := os.LookupEnv("AZURE_CLIENT_ID")
+	tenantID, okTenant := os.LookupEnv("AZURE_TENANT_ID")
+	tokenFile, okTokenFile := os.LookupEnv("AZURE_FEDERATED_TOKEN_FILE")
+	if !(okClient && okTenant && okTokenFile) {
+		return "", nil
+	}
+
+	assertionBytes, err := os.ReadFile(tokenFile)
+	if err != nil {
+		return "", fmt.Errorf("failed to read AZURE_FEDERATED_TOKEN_FILE: %w", err)
+	}
+
+	formData := url.Values{}
+	formData.Set("client_id", clientID)
+	formData.Set("scope", "https://database.windows.net/.default")
+	formData.Set("grant_type", "client_credentials")
+	formData.Set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
+	formData.Set("client_assertion", strings.TrimSpace(string(assertionBytes)))
+
+	request, err := http.NewRequest(
+		http.MethodPost,
+		fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/v2.0/token", tenantID),
+		strings.NewReader(formData.Encode()),
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to construct federated token request: %w", err)
+	}
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(request)
+	if err != nil {
+		return "", fmt.Errorf("failed to execute federated token request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read federated token response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("federated token request failed with status %s: %s", resp.Status, string(body))
+	}
+
+	var payload struct {
+		AccessToken string `json:"access_token"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return "", fmt.Errorf("failed to parse federated token response: %w", err)
+	}
+	if payload.AccessToken == "" {
+		return "", errors.New("federated token response missing access_token value")
+	}
+
+	return payload.AccessToken, nil
+}
+
 // getTokenProvider returns a function that provides authentication tokens for SQL Server.
 //
 // DEPRECATION NOTICE:
@@ -476,6 +539,17 @@ func (s *SQLServer) accHealth(healthMetrics map[string]*healthMetric, acc telegr
 // - use_deprecated_adal_authentication = false : Use Azure Identity SDK (recommended)
 // - Not set                : Use Azure Identity SDK (recommended)
 func (s *SQLServer) getTokenProvider() (func() (string, error), error) {
+	federatedToken, err := s.getFederatedTokenFromEnv()
+	if err != nil {
+		return nil, err
+	}
+	if federatedToken != "" {
+		s.Log.Debugf("Using federated token from environment variables")
+		return func() (string, error) {
+			return federatedToken, nil
+		}, nil
+	}
+
 	// Check if use_deprecated_adal_authentication config option is set to determine which auth method to use
 	// Default to using Azure Identity SDK if the config is not set
 	useAzureIdentity := !s.UseAdalToken
