@@ -193,7 +193,7 @@ func (s *SIP) Start(telegraf.Accumulator) error {
 	var opts []sipgo.UserAgentOption
 
 	// Add TLS config if transport requires it
-	if s.tlsConfig != nil {
+	if s.serverInfo.secure {
 		opts = append(opts, sipgo.WithUserAgenTLSConfig(s.tlsConfig))
 	}
 
