@@ -56,6 +56,11 @@ func (t *AlignedTicker) start(now time.Time, clk clock.Clock) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.cancel = cancel
 
+	// Implement jitter as a random offset. This spreads plugins
+	// over jitter interval range keeping collection interval fixed to
+	// a user-configured value.
+	t.offset += internal.RandomDuration(t.jitter)
+
 	d := t.next(now)
 	timer := clk.Timer(d)
 
@@ -78,7 +83,6 @@ func (t *AlignedTicker) next(now time.Time) time.Duration {
 		d = t.interval
 	}
 	d += t.offset
-	d += internal.RandomDuration(t.jitter)
 	return d
 }
 
@@ -143,6 +147,11 @@ func (t *UnalignedTicker) start(clk clock.Clock) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.cancel = cancel
 
+	// Implement jitter as a random offset. This spreads plugins
+	// over jitter interval range keeping collection interval fixed to
+	// a user-configured value.
+	t.offset += internal.RandomDuration(t.jitter)
+
 	ticker := clk.Ticker(t.interval)
 	if t.offset == 0 {
 		// Perform initial trigger to stay backward compatible
@@ -178,8 +187,7 @@ func (t *UnalignedTicker) run(ctx context.Context, ticker *clock.Ticker, clk clo
 			ticker.Stop()
 			return
 		case <-ticker.C:
-			jitter := internal.RandomDuration(t.jitter)
-			err := sleep(ctx, t.offset+jitter, clk)
+			err := sleep(ctx, t.offset, clk)
 			if err != nil {
 				ticker.Stop()
 				return
