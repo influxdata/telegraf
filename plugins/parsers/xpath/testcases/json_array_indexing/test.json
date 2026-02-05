@@ -1,0 +1,27 @@
+{
+  "device": {
+    "name": "/dev/nvme1"
+  },
+  "model_name": "Samsung SSD",
+  "serial_number": "ABC123",
+  "nvme_namespaces": [
+    {
+      "id": 1,
+      "capacity": {
+        "bytes": 960197124096
+      },
+      "utilization": {
+        "bytes": 86638583808
+      }
+    },
+    {
+      "id": 2,
+      "capacity": {
+        "bytes": 500107862016
+      },
+      "utilization": {
+        "bytes": 42949672960
+      }
+    }
+  ]
+}
