@@ -1,0 +1,40 @@
+# SIP (Session Initiation Protocol) health check plugin
+[[inputs.sip]]
+  ## SIP server address to monitor
+  ## Format: sip://host[:port] or sips://host[:port]
+  ##   sip://  - Standard SIP (default port 5060)
+  ##   sips:// - Secure SIP with TLS (default port 5061)
+  server = "sip://sip.example.com:5060"
+
+  ## Transport protocol
+  ## Valid values: udp, tcp, ws, wss
+  # transport = "udp"
+
+  ## SIP method to use for health checks
+  ## Valid values: OPTIONS, INVITE, MESSAGE
+  # method = "OPTIONS"
+
+  ## Request timeout
+  # timeout = "5s"
+
+  ## From user as it appears in SIP header
+  # from_user = "telegraf"
+
+  ## From domain (domain part of From header)
+  ## If not specified, uses the server hostname
+  # from_domain = ""
+
+  ## To user as it appears in SIP header
+  ## If not specified, uses the same value as from_user
+  # to_user = ""
+
+  ## Local address to use for outgoing requests
+  # local_address = ""
+
+  ## SIP digest authentication credentials
+  ## Leave empty to use no authentication
+  # username = ""
+  # password = ""
+
+  ## Optional TLS Config (only used for sips:// URLs or transport=wss)
+{{template "/plugins/common/tls/client.conf"}}
