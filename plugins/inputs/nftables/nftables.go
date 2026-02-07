@@ -22,8 +22,12 @@ type Nftables struct {
 	UseSudo bool     `toml:"use_sudo"`
 	Binary  string   `toml:"binary"`
 	Tables  []string `toml:"tables"`
+	Include []string `toml:"include"`
 
-	args []string
+	includeCounters          bool
+	includeSets              bool
+	includeAnonymousCounters bool
+	args                     []string
 }
 
 func (*Nftables) SampleConfig() string {
@@ -37,6 +41,23 @@ func (n *Nftables) Init() error {
 	}
 	if n.Binary == "" {
 		n.Binary = "nft"
+	}
+	if len(n.Include) == 0 {
+		n.Include = []string{"sets", "counters", "anonymous-counters"}
+	}
+
+	// Prepare includes
+	for _, include := range n.Include {
+		switch include {
+		case "counters":
+			n.includeCounters = true
+		case "sets":
+			n.includeSets = true
+		case "anonymous-counters":
+			n.includeAnonymousCounters = true
+		default:
+			return fmt.Errorf("unknown include: %s", include)
+		}
 	}
 
 	// Construct the command
@@ -79,35 +100,52 @@ func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 	if err := json.Unmarshal(out, &nftable); err != nil {
 		return fmt.Errorf("parsing command output failed: %w", err)
 	}
-	for _, rule := range nftable.Rules {
-		if len(rule.Comment) == 0 {
-			continue
-		}
-		for _, expr := range rule.Exprs {
-			if expr.Cntr == nil || expr.Cntr.isNamedRef {
-				continue
-			}
+	if n.includeCounters {
+		for _, counter := range nftable.Counters {
 			fields := map[string]interface{}{
-				"bytes": expr.Cntr.Bytes,
-				"pkts":  expr.Cntr.Packets,
+				"bytes": counter.Bytes,
+				"pkts":  counter.Packets,
 			}
 			tags := map[string]string{
-				"table": rule.Table,
-				"chain": rule.Chain,
-				"rule":  rule.Comment,
+				"table":   counter.Table,
+				"counter": counter.Name,
 			}
 			acc.AddFields("nftables", fields, tags)
 		}
 	}
-	for _, set := range nftable.Sets {
-		fields := map[string]interface{}{
-			"count": len(set.Elem),
+	if n.includeSets {
+		for _, set := range nftable.Sets {
+			fields := map[string]interface{}{
+				"count": len(set.Elem),
+			}
+			tags := map[string]string{
+				"table": set.Table,
+				"set":   set.Name,
+			}
+			acc.AddFields("nftables", fields, tags)
 		}
-		tags := map[string]string{
-			"table": set.Table,
-			"set":   set.Name,
+	}
+	if n.includeAnonymousCounters {
+		for _, rule := range nftable.Rules {
+			if len(rule.Comment) == 0 {
+				continue
+			}
+			for _, expr := range rule.Exprs {
+				if expr.Cntr == nil || expr.Cntr.isNamedRef {
+					continue
+				}
+				fields := map[string]interface{}{
+					"bytes": expr.Cntr.Bytes,
+					"pkts":  expr.Cntr.Packets,
+				}
+				tags := map[string]string{
+					"table": rule.Table,
+					"chain": rule.Chain,
+					"rule":  rule.Comment,
+				}
+				acc.AddFields("nftables", fields, tags)
+			}
 		}
-		acc.AddFields("nftables", fields, tags)
 	}
 	return nil
 }
