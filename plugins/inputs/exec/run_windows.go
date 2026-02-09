@@ -19,7 +19,7 @@ import (
 func (c *commandRunner) run(command string, splitCmd []string) (out, errout []byte, err error) {
 	if splitCmd == nil {
 		// Shell-like string-based command support
-		splitCmd, err := shellquote.Split(command)
+		splitCmd, err = shellquote.Split(command)
 		if err != nil || len(splitCmd) == 0 {
 			return nil, nil, fmt.Errorf("exec: unable to parse command: %w", err)
 		}

@@ -322,7 +322,7 @@ func TestExecArrayBasedSingleCommand(t *testing.T) {
 
 	// Setup plugin
 	plugin := &Exec{
-		Command: []string{"/bin/sh", "-c", "'echo metric_value'"},
+		Command: []string{"/bin/sh", "-c", "echo metric_value"},
 		Timeout: config.Duration(5 * time.Second),
 		Log:     testutil.Logger{},
 	}
