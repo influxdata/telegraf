@@ -150,6 +150,9 @@ func (s *SIP) Init() error {
 
 	// Setup TLS configuration if secure (sips:// scheme)
 	if s.serverInfo.secure {
+		// Force TLS connection even though no TLS properties are given. This will
+		// use the system's TLS configuration (CA etc) if properties are empty.
+		s.ClientConfig = &s.serverInfo.secure
 		tlsConfig, err := s.ClientConfig.TLSConfig()
 		if err != nil {
 			return fmt.Errorf("failed to create TLS config: %w", err)
