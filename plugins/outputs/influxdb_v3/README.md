@@ -35,10 +35,6 @@ to use them.
   ## one will be used until all are exhausted or the write succeeds.
   urls = ["http://127.0.0.1:8181"]
 
-  ## Local address to bind when connecting to the server
-  ## If empty or not set, the local address is automatically chosen
-  # local_address = ""
-
   ## Token for authentication
   token = ""
 
@@ -57,7 +53,9 @@ to use them.
   ## See https://docs.influxdata.com/influxdb3/enterprise/write-data/http-api/v3-write-lp/#use-no_sync-for-immediate-write-responses
   # sync = true
 
-  ## Enable or disable support for unsigned integer fields
+  ## Enable or disable conversion of unsigned integer fields to signed integers
+  ## This is useful if existing data exist as signed integers e.g. from previous
+  ## versions of InfluxDB.
   # influx_uint_support = true
 
   ## Omit the timestamp of the metrics when sinding to allow InfluxDB to set the
