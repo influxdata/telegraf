@@ -10,7 +10,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 )
 
-// AlignedTicker delivers ticks at aligned times plus an optional jitter.  Each
+// aligned delivers ticks at aligned times plus an optional jitter.  Each
 // tick is realigned to avoid drift and handle changes to the system clock.
 //
 // The ticks may have an jitter duration applied to them as an random offset to
@@ -24,7 +24,7 @@ import (
 // The implementation currently does not recalculate until the next tick with
 // no maximum sleep, when using large intervals alignment is not corrected
 // until the next tick.
-type AlignedTicker struct {
+type aligned struct {
 	clk         clock.Clock
 	schedule    time.Time
 	interval    time.Duration
@@ -36,20 +36,7 @@ type AlignedTicker struct {
 	wg          sync.WaitGroup
 }
 
-func NewAlignedTicker(start time.Time, interval, jitter, offset time.Duration) *AlignedTicker {
-	t := &AlignedTicker{
-		clk:         clock.New(),
-		schedule:    start,
-		interval:    interval,
-		jitter:      jitter,
-		offset:      offset,
-		minInterval: interval / 100,
-	}
-	t.start()
-	return t
-}
-
-func (t *AlignedTicker) start() {
+func (t *aligned) start() {
 	t.ch = make(chan time.Time, 1)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -65,7 +52,7 @@ func (t *AlignedTicker) start() {
 	}()
 }
 
-func (t *AlignedTicker) next(now time.Time) time.Duration {
+func (t *aligned) next(now time.Time) time.Duration {
 	// Add minimum interval size to avoid scheduling an interval that is
 	// exceptionally short.  This avoids an issue that can occur where the
 	// previous interval ends slightly early due to very minor clock changes.
@@ -81,7 +68,7 @@ func (t *AlignedTicker) next(now time.Time) time.Duration {
 	return d
 }
 
-func (t *AlignedTicker) run(ctx context.Context, timer *clock.Timer) {
+func (t *aligned) run(ctx context.Context, timer *clock.Timer) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -99,11 +86,11 @@ func (t *AlignedTicker) run(ctx context.Context, timer *clock.Timer) {
 	}
 }
 
-func (t *AlignedTicker) Elapsed() <-chan time.Time {
+func (t *aligned) Elapsed() <-chan time.Time {
 	return t.ch
 }
 
-func (t *AlignedTicker) Stop() {
+func (t *aligned) Stop() {
 	t.cancel()
 	t.wg.Wait()
 }

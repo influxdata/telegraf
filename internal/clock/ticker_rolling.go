@@ -10,7 +10,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 )
 
-// RollingTicker delivers ticks at regular but unaligned intervals.
+// rolling delivers ticks at regular but unaligned intervals.
 //
 // Because the next interval is scheduled based on the interval + jitter, you
 // are guaranteed at least interval seconds without missing a tick and ticks
@@ -21,7 +21,8 @@ import (
 // The first tick is emitted after interval+jitter seconds.
 //
 // Ticks are dropped for slow consumers.
-type RollingTicker struct {
+type rolling struct {
+	clk      clock.Clock
 	interval time.Duration
 	jitter   time.Duration
 	ch       chan time.Time
@@ -29,23 +30,14 @@ type RollingTicker struct {
 	wg       sync.WaitGroup
 }
 
-func NewRollingTicker(interval, jitter time.Duration) *RollingTicker {
-	t := &RollingTicker{
-		interval: interval,
-		jitter:   jitter,
-	}
-	t.start(clock.New())
-	return t
-}
-
-func (t *RollingTicker) start(clk clock.Clock) {
+func (t *rolling) start() {
 	t.ch = make(chan time.Time, 1)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	t.cancel = cancel
 
 	d := t.next()
-	timer := clk.Timer(d)
+	timer := t.clk.Timer(d)
 
 	t.wg.Add(1)
 	go func() {
@@ -54,11 +46,11 @@ func (t *RollingTicker) start(clk clock.Clock) {
 	}()
 }
 
-func (t *RollingTicker) next() time.Duration {
+func (t *rolling) next() time.Duration {
 	return t.interval + internal.RandomDuration(t.jitter)
 }
 
-func (t *RollingTicker) run(ctx context.Context, timer *clock.Timer) {
+func (t *rolling) run(ctx context.Context, timer *clock.Timer) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -76,11 +68,11 @@ func (t *RollingTicker) run(ctx context.Context, timer *clock.Timer) {
 	}
 }
 
-func (t *RollingTicker) Elapsed() <-chan time.Time {
+func (t *rolling) Elapsed() <-chan time.Time {
 	return t.ch
 }
 
-func (t *RollingTicker) Stop() {
+func (t *rolling) Stop() {
 	t.cancel()
 	t.wg.Wait()
 }

@@ -425,12 +425,7 @@ func (a *Agent) runInputs(
 			offset = input.Config.CollectionOffset
 		}
 
-		var ticker clock.Ticker
-		if a.Config.Agent.RoundInterval {
-			ticker = clock.NewAlignedTicker(startTime, interval, jitter, offset)
-		} else {
-			ticker = clock.NewUnalignedTicker(interval, jitter, offset)
-		}
+		ticker := clock.NewTicker(startTime, interval, jitter, offset, a.Config.Agent.RoundInterval)
 		tickers = append(tickers, ticker)
 
 		acc := NewAccumulator(input, unit.dst)
