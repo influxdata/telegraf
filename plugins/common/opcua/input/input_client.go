@@ -61,6 +61,9 @@ type NodeSettings struct {
 
 // NodeID returns the OPC UA node id
 func (tag *NodeSettings) NodeID() string {
+	if tag.NodeIDStr != "" {
+		return tag.NodeIDStr
+	}
 	if tag.NamespaceURI != "" {
 		return "nsu=" + tag.NamespaceURI + ";" + tag.IdentifierType + "=" + tag.Identifier
 	}
@@ -87,154 +90,13 @@ type EventNodeSettings struct {
 }
 
 func (e *EventNodeSettings) NodeID() string {
+	if e.NodeIDStr != "" {
+		return e.NodeIDStr
+	}
 	if e.NamespaceURI != "" {
 		return "nsu=" + e.NamespaceURI + ";" + e.IdentifierType + "=" + e.Identifier
 	}
 	return "ns=" + e.Namespace + ";" + e.IdentifierType + "=" + e.Identifier
-}
-
-// nodeIDTypeToIdentifierType converts ua.NodeIDType to the identifier type string (i, s, g, b)
-func nodeIDTypeToIdentifierType(t ua.NodeIDType) string {
-	switch t {
-	case ua.NodeIDTypeTwoByte, ua.NodeIDTypeFourByte, ua.NodeIDTypeNumeric:
-		return "i"
-	case ua.NodeIDTypeString:
-		return "s"
-	case ua.NodeIDTypeGUID:
-		return "g"
-	case ua.NodeIDTypeByteString:
-		return "b"
-	default:
-		return ""
-	}
-}
-
-// getIdentifierFromNodeID extracts the identifier value as a string from a parsed NodeID
-func getIdentifierFromNodeID(nodeID *ua.NodeID) string {
-	switch nodeID.Type() {
-	case ua.NodeIDTypeTwoByte, ua.NodeIDTypeFourByte, ua.NodeIDTypeNumeric:
-		return strconv.FormatUint(uint64(nodeID.IntID()), 10)
-	case ua.NodeIDTypeString, ua.NodeIDTypeGUID, ua.NodeIDTypeByteString:
-		return nodeID.StringID()
-	default:
-		return ""
-	}
-}
-
-// SetFromNodeIDString parses the NodeIDStr field and populates the individual fields.
-// Returns an error if NodeIDStr is set but invalid, or if both NodeIDStr and individual fields are set.
-func (tag *NodeSettings) SetFromNodeIDString() error {
-	if tag.NodeIDStr == "" {
-		return nil
-	}
-
-	// Check for conflicting configuration
-	if tag.Namespace != "" || tag.NamespaceURI != "" || tag.IdentifierType != "" || tag.Identifier != "" {
-		return fmt.Errorf("node %q: cannot specify both 'id' and individual fields (namespace/namespace_uri/identifier_type/identifier)", tag.FieldName)
-	}
-
-	// Use library function to parse and validate the node ID
-	// For namespace URI (nsu=) format, we need to extract components manually since
-	// ua.ParseExpandedNodeID requires the namespace array which is only available after connecting.
-	// The full parsing with namespace resolution happens in InitNodeIDs().
-	if strings.HasPrefix(tag.NodeIDStr, "nsu=") {
-		parsed, err := parseNamespaceURINodeID(tag.NodeIDStr)
-		if err != nil {
-			return fmt.Errorf("node %q: %w", tag.FieldName, err)
-		}
-		tag.NamespaceURI = parsed.namespaceURI
-		tag.IdentifierType = parsed.identifierType
-		tag.Identifier = parsed.identifier
-	} else {
-		// For namespace index (ns=) format, use ua.ParseNodeID from the library
-		nodeID, err := ua.ParseNodeID(tag.NodeIDStr)
-		if err != nil {
-			return fmt.Errorf("node %q: invalid node ID format %q: %w", tag.FieldName, tag.NodeIDStr, err)
-		}
-		tag.Namespace = strconv.FormatUint(uint64(nodeID.Namespace()), 10)
-		tag.IdentifierType = nodeIDTypeToIdentifierType(nodeID.Type())
-		tag.Identifier = getIdentifierFromNodeID(nodeID)
-	}
-
-	return nil
-}
-
-// nodeIDParts holds the parsed components of a namespace URI node ID
-type nodeIDParts struct {
-	namespaceURI   string
-	identifierType string
-	identifier     string
-}
-
-// parseNamespaceURINodeID parses a node ID string with namespace URI format (nsu=URI;X=identifier).
-func parseNamespaceURINodeID(nodeIDStr string) (nodeIDParts, error) {
-	parts := strings.SplitN(nodeIDStr, ";", 2)
-	if len(parts) != 2 {
-		return nodeIDParts{}, fmt.Errorf("invalid node ID format %q: expected 'nsu=URI;X=identifier'", nodeIDStr)
-	}
-
-	nsURI := strings.TrimPrefix(parts[0], "nsu=")
-	if nsURI == "" {
-		return nodeIDParts{}, fmt.Errorf("invalid node ID format %q: empty namespace URI", nodeIDStr)
-	}
-
-	idPart := parts[1]
-	if len(idPart) < 2 || idPart[1] != '=' {
-		return nodeIDParts{}, fmt.Errorf("invalid node ID format %q: identifier must be in format 'X=value'", nodeIDStr)
-	}
-
-	idType := string(idPart[0])
-	identifier := idPart[2:]
-
-	switch idType {
-	case "i", "s", "g", "b":
-		// Valid identifier types
-	default:
-		return nodeIDParts{}, fmt.Errorf("invalid identifier type %q in node ID %q: expected i, s, g, or b", idType, nodeIDStr)
-	}
-
-	return nodeIDParts{
-		namespaceURI:   nsURI,
-		identifierType: idType,
-		identifier:     identifier,
-	}, nil
-}
-
-// SetFromNodeIDString parses the NodeIDStr field and populates the individual fields.
-// Returns an error if NodeIDStr is set but invalid, or if both NodeIDStr and individual fields are set.
-func (e *EventNodeSettings) SetFromNodeIDString() error {
-	if e.NodeIDStr == "" {
-		return nil
-	}
-
-	// Check for conflicting configuration
-	if e.Namespace != "" || e.NamespaceURI != "" || e.IdentifierType != "" || e.Identifier != "" {
-		return errors.New("cannot specify both 'id' and individual fields (namespace/namespace_uri/identifier_type/identifier)")
-	}
-
-	// Use library function to parse and validate the node ID
-	// For namespace URI (nsu=) format, we need to extract components manually since
-	// ua.ParseExpandedNodeID requires the namespace array which is only available after connecting.
-	if strings.HasPrefix(e.NodeIDStr, "nsu=") {
-		parsed, err := parseNamespaceURINodeID(e.NodeIDStr)
-		if err != nil {
-			return err
-		}
-		e.NamespaceURI = parsed.namespaceURI
-		e.IdentifierType = parsed.identifierType
-		e.Identifier = parsed.identifier
-	} else {
-		// For namespace index (ns=) format, use ua.ParseNodeID from the library
-		nodeID, err := ua.ParseNodeID(e.NodeIDStr)
-		if err != nil {
-			return fmt.Errorf("invalid node ID format %q: %w", e.NodeIDStr, err)
-		}
-		e.Namespace = strconv.FormatUint(uint64(nodeID.Namespace()), 10)
-		e.IdentifierType = nodeIDTypeToIdentifierType(nodeID.Type())
-		e.Identifier = getIdentifierFromNodeID(nodeID)
-	}
-
-	return nil
 }
 
 type EventGroupSettings struct {
@@ -249,18 +111,13 @@ type EventGroupSettings struct {
 	Fields           []string            `toml:"fields"`
 }
 
-func (e *EventGroupSettings) UpdateNodeIDSettings() error {
-	// Parse node_id string for event type node if provided
-	if err := e.EventTypeNode.SetFromNodeIDString(); err != nil {
-		return fmt.Errorf("event_type_node: %w", err)
-	}
-
+func (e *EventGroupSettings) UpdateNodeIDSettings() {
 	for i := range e.NodeIDSettings {
 		n := &e.NodeIDSettings[i]
 
-		// Parse node_id string if provided
-		if err := n.SetFromNodeIDString(); err != nil {
-			return fmt.Errorf("node_ids[%d]: %w", i, err)
+		// Skip group defaults when node ID string is specified directly
+		if n.NodeIDStr != "" {
+			continue
 		}
 
 		// Apply group defaults only if not already set
@@ -274,7 +131,6 @@ func (e *EventGroupSettings) UpdateNodeIDSettings() error {
 			n.IdentifierType = e.IdentifierType
 		}
 	}
-	return nil
 }
 
 func (e *EventGroupSettings) Validate() error {
@@ -308,6 +164,16 @@ func (e EventNodeSettings) validateEventNodeSettings() error {
 	if e == defaultNodeSettings {
 		return errors.New("node settings can't be empty")
 	}
+
+	if e.NodeIDStr != "" {
+		// Node specified with string format; conflict check only.
+		// Full parsing and validation happens in InitEventNodeIDs().
+		if e.Namespace != "" || e.NamespaceURI != "" || e.IdentifierType != "" || e.Identifier != "" {
+			return errors.New("cannot specify both 'id' and individual fields (namespace/namespace_uri/identifier_type/identifier)")
+		}
+		return nil
+	}
+
 	if e.Identifier == "" {
 		return errors.New("identifier must be set")
 	}
@@ -384,9 +250,7 @@ func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputC
 
 	if o.EventGroups != nil {
 		for i := range o.EventGroups {
-			if err := o.EventGroups[i].UpdateNodeIDSettings(); err != nil {
-				return nil, fmt.Errorf("invalid event_settings: %w", err)
-			}
+			o.EventGroups[i].UpdateNodeIDSettings()
 			if err := o.EventGroups[i].Validate(); err != nil {
 				return nil, fmt.Errorf("invalid event_settings: %w", err)
 			}
@@ -520,20 +384,39 @@ func validateNodeToAdd(existing map[metricParts]struct{}, nmm *NodeMetricMapping
 		return fmt.Errorf("empty name in %q", nmm.Tag.FieldName)
 	}
 
-	// Validate namespace configuration
-	hasNamespace := len(nmm.Tag.Namespace) > 0
-	hasNamespaceURI := len(nmm.Tag.NamespaceURI) > 0
+	if nmm.Tag.NodeIDStr != "" {
+		// Node specified with string format; conflict check only.
+		// Full parsing and validation happens in InitNodeIDs().
+		if nmm.Tag.Namespace != "" || nmm.Tag.NamespaceURI != "" || nmm.Tag.IdentifierType != "" || nmm.Tag.Identifier != "" {
+			return fmt.Errorf("node %q: cannot specify both 'id' and individual fields (namespace/namespace_uri/identifier_type/identifier)", nmm.Tag.FieldName)
+		}
+	} else {
+		// Validate namespace configuration
+		hasNamespace := len(nmm.Tag.Namespace) > 0
+		hasNamespaceURI := len(nmm.Tag.NamespaceURI) > 0
 
-	if hasNamespace && hasNamespaceURI {
-		return fmt.Errorf("node %q: cannot specify both 'namespace' and 'namespace_uri', use only one", nmm.Tag.FieldName)
-	}
+		if hasNamespace && hasNamespaceURI {
+			return fmt.Errorf("node %q: cannot specify both 'namespace' and 'namespace_uri', use only one", nmm.Tag.FieldName)
+		}
 
-	if !hasNamespace && !hasNamespaceURI {
-		return fmt.Errorf("node %q: must specify either 'namespace' or 'namespace_uri'", nmm.Tag.FieldName)
-	}
+		if !hasNamespace && !hasNamespaceURI {
+			return fmt.Errorf("node %q: must specify either 'namespace' or 'namespace_uri'", nmm.Tag.FieldName)
+		}
 
-	if len(nmm.Tag.Identifier) == 0 {
-		return errors.New("empty node identifier not allowed")
+		if len(nmm.Tag.Identifier) == 0 {
+			return errors.New("empty node identifier not allowed")
+		}
+
+		switch nmm.Tag.IdentifierType {
+		case "i":
+			if _, err := strconv.Atoi(nmm.Tag.Identifier); err != nil {
+				return fmt.Errorf("identifier type %q does not match the type of identifier %q", nmm.Tag.IdentifierType, nmm.Tag.Identifier)
+			}
+		case "s", "g", "b":
+			// Valid identifier type - do nothing.
+		default:
+			return fmt.Errorf("invalid identifier type %q in %q", nmm.Tag.IdentifierType, nmm.Tag.FieldName)
+		}
 	}
 
 	for k, v := range nmm.MetricTags {
@@ -551,17 +434,6 @@ func validateNodeToAdd(existing map[metricParts]struct{}, nmm *NodeMetricMapping
 			mp.fieldName, mp.metricName, mp.tags)
 	}
 
-	switch nmm.Tag.IdentifierType {
-	case "i":
-		if _, err := strconv.Atoi(nmm.Tag.Identifier); err != nil {
-			return fmt.Errorf("identifier type %q does not match the type of identifier %q", nmm.Tag.IdentifierType, nmm.Tag.Identifier)
-		}
-	case "s", "g", "b":
-		// Valid identifier type - do nothing.
-	default:
-		return fmt.Errorf("invalid identifier type %q in %q", nmm.Tag.IdentifierType, nmm.Tag.FieldName)
-	}
-
 	existing[mp] = struct{}{}
 	return nil
 }
@@ -571,11 +443,6 @@ func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 	existing := make(map[metricParts]struct{}, len(o.Config.RootNodes))
 	for i := range o.Config.RootNodes {
 		node := &o.Config.RootNodes[i]
-
-		// Parse node_id string if provided
-		if err := node.SetFromNodeIDString(); err != nil {
-			return err
-		}
 
 		nmm, err := NewNodeMetricMapping(o.Config.MetricName, *node, make(map[string]string))
 		if err != nil {
@@ -597,20 +464,17 @@ func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 		for ni := range group.Nodes {
 			node := &group.Nodes[ni]
 
-			// Parse node_id string if provided
-			if err := node.SetFromNodeIDString(); err != nil {
-				return err
-			}
-
-			// Apply group defaults only if not already set
-			if node.Namespace == "" {
-				node.Namespace = group.Namespace
-			}
-			if node.NamespaceURI == "" {
-				node.NamespaceURI = group.NamespaceURI
-			}
-			if node.IdentifierType == "" {
-				node.IdentifierType = group.IdentifierType
+			// Skip group defaults when node ID string is specified directly
+			if node.NodeIDStr == "" {
+				if node.Namespace == "" {
+					node.Namespace = group.Namespace
+				}
+				if node.NamespaceURI == "" {
+					node.NamespaceURI = group.NamespaceURI
+				}
+				if node.IdentifierType == "" {
+					node.IdentifierType = group.IdentifierType
+				}
 			}
 			if node.MonitoringParams.SamplingInterval == 0 {
 				node.MonitoringParams.SamplingInterval = group.SamplingInterval
@@ -632,94 +496,59 @@ func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 }
 
 func (o *OpcUAInputClient) InitNodeIDs() error {
+	// Get all namespace definitions of the remote device for handling
+	// namespace URLs (the ones starting with "nsu=") gracefully
+	namespaces := o.NamespaceArray()
+
 	o.NodeIDs = make([]*ua.NodeID, 0, len(o.NodeMetricMapping))
-	namespaceArray := o.NamespaceArray()
-
 	for _, node := range o.NodeMetricMapping {
-		nodeIDStr := node.Tag.NodeID()
-
-		// Check if this uses namespace URI (nsu=) format
-		if strings.HasPrefix(nodeIDStr, "nsu=") {
-			// Namespace URI format requires namespace array
-			if len(namespaceArray) == 0 {
-				return fmt.Errorf("node ID %q uses namespace URI (nsu=) but namespace array is not available - connection to server may be required", nodeIDStr)
-			}
-			// Use ParseExpandedNodeID for namespace URI support
-			expandedNodeID, err := ua.ParseExpandedNodeID(nodeIDStr, namespaceArray)
-			if err != nil {
-				return fmt.Errorf("failed to parse node ID %q: %w", nodeIDStr, err)
-			}
-			o.NodeIDs = append(o.NodeIDs, expandedNodeID.NodeID)
-		} else {
-			// Use ParseNodeID for namespace index (ns=) format
-			nid, err := ua.ParseNodeID(nodeIDStr)
-			if err != nil {
-				return fmt.Errorf("failed to parse node ID %q: %w", nodeIDStr, err)
-			}
-			o.NodeIDs = append(o.NodeIDs, nid)
+		// Generate a textual node-ID in case the user specified individual fields
+		n := node.Tag.NodeIDStr
+		if n == "" {
+			n = node.Tag.NodeID()
 		}
+
+		// Determine the actual node-ID instance using the expanded form as
+		// this handles namespace URLs (nsu=) gracefully
+		expanded, err := ua.ParseExpandedNodeID(n, namespaces)
+		if err != nil {
+			return fmt.Errorf("failed to parse node ID %q: %w", n, err)
+		}
+		o.NodeIDs = append(o.NodeIDs, ua.NewNodeIDFromExpandedNodeID(expanded))
 	}
 
 	return nil
 }
 
 func (o *OpcUAInputClient) InitEventNodeIDs() error {
-	namespaceArray := o.NamespaceArray()
+	// Get all namespace definitions of the remote device for handling
+	// namespace URLs (the ones starting with "nsu=") gracefully
+	namespaces := o.NamespaceArray()
 
 	for _, eventSetting := range o.EventGroups {
-		eventTypeNodeIDStr := eventSetting.EventTypeNode.NodeID()
-		var eid *ua.NodeID
-
 		// Parse event type node ID
-		if strings.HasPrefix(eventTypeNodeIDStr, "nsu=") {
-			if len(namespaceArray) == 0 {
-				return fmt.Errorf(
-					"event type node ID %q uses namespace URI (nsu=) but namespace array is not available - "+
-						"connection to server may be required",
-					eventTypeNodeIDStr,
-				)
-			}
-			expandedNodeID, err := ua.ParseExpandedNodeID(eventTypeNodeIDStr, namespaceArray)
-			if err != nil {
-				return fmt.Errorf("failed to parse event type node ID %q: %w", eventTypeNodeIDStr, err)
-			}
-			eid = expandedNodeID.NodeID
-		} else {
-			parsedID, err := ua.ParseNodeID(eventTypeNodeIDStr)
-			if err != nil {
-				return fmt.Errorf("failed to parse event type node ID %q: %w", eventTypeNodeIDStr, err)
-			}
-			eid = parsedID
+		n := eventSetting.EventTypeNode.NodeIDStr
+		if n == "" {
+			n = eventSetting.EventTypeNode.NodeID()
 		}
+		expanded, err := ua.ParseExpandedNodeID(n, namespaces)
+		if err != nil {
+			return fmt.Errorf("failed to parse event type node ID %q: %w", n, err)
+		}
+		eid := ua.NewNodeIDFromExpandedNodeID(expanded)
 
 		for _, node := range eventSetting.NodeIDSettings {
-			nodeIDStr := node.NodeID()
-			var nid *ua.NodeID
-
-			// Parse node ID
-			if strings.HasPrefix(nodeIDStr, "nsu=") {
-				if len(namespaceArray) == 0 {
-					return fmt.Errorf(
-						"event node ID %q uses namespace URI (nsu=) but namespace array is not available - "+
-							"connection to server may be required",
-						nodeIDStr,
-					)
-				}
-				expandedNodeID, err := ua.ParseExpandedNodeID(nodeIDStr, namespaceArray)
-				if err != nil {
-					return fmt.Errorf("failed to parse node ID %q: %w", nodeIDStr, err)
-				}
-				nid = expandedNodeID.NodeID
-			} else {
-				parsedID, err := ua.ParseNodeID(nodeIDStr)
-				if err != nil {
-					return fmt.Errorf("failed to parse node ID %q: %w", nodeIDStr, err)
-				}
-				nid = parsedID
+			n := node.NodeIDStr
+			if n == "" {
+				n = node.NodeID()
+			}
+			expanded, err := ua.ParseExpandedNodeID(n, namespaces)
+			if err != nil {
+				return fmt.Errorf("failed to parse node ID %q: %w", n, err)
 			}
 
 			nmm := EventNodeMetricMapping{
-				NodeID:           nid,
+				NodeID:           ua.NewNodeIDFromExpandedNodeID(expanded),
 				SamplingInterval: &eventSetting.SamplingInterval,
 				QueueSize:        &eventSetting.QueueSize,
 				EventTypeNode:    eid,

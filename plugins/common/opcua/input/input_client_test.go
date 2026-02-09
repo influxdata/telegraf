@@ -846,12 +846,18 @@ func TestNodeIDGeneration(t *testing.T) {
 			},
 			expected: "nsu=http://vendor.com/;g=12345678-1234-1234-1234-123456789012",
 		},
+		{
+			name: "direct string takes precedence",
+			node: NodeSettings{
+				NodeIDStr: "ns=5;s=MyNode",
+			},
+			expected: "ns=5;s=MyNode",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := tt.node.NodeID()
-			require.Equal(t, tt.expected, actual)
+			require.Equal(t, tt.expected, tt.node.NodeID())
 		})
 	}
 }
@@ -881,12 +887,18 @@ func TestEventNodeIDGeneration(t *testing.T) {
 			},
 			expected: "nsu=http://opcfoundation.org/UA/;i=2253",
 		},
+		{
+			name: "direct string takes precedence",
+			node: EventNodeSettings{
+				NodeIDStr: "ns=2;s=EventSource",
+			},
+			expected: "ns=2;s=EventSource",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := tt.node.NodeID()
-			require.Equal(t, tt.expected, actual)
+			require.Equal(t, tt.expected, tt.node.NodeID())
 		})
 	}
 }
@@ -1006,7 +1018,7 @@ func TestEventGroupNamespaceURIInheritance(t *testing.T) {
 		},
 	}
 
-	require.NoError(t, eventGroup.UpdateNodeIDSettings())
+	eventGroup.UpdateNodeIDSettings()
 
 	// First node should inherit from group
 	require.Equal(t, "http://opcfoundation.org/UA/", eventGroup.NodeIDSettings[0].NamespaceURI)
@@ -1015,141 +1027,6 @@ func TestEventGroupNamespaceURIInheritance(t *testing.T) {
 	// Second node should use its own namespace_uri
 	require.Equal(t, "http://custom.org/UA/", eventGroup.NodeIDSettings[1].NamespaceURI)
 	require.Equal(t, "nsu=http://custom.org/UA/;i=2254", eventGroup.NodeIDSettings[1].NodeID())
-}
-
-func TestNodeSettingsSetFromNodeIDString(t *testing.T) {
-	tests := []struct {
-		name      string
-		node      NodeSettings
-		wantNs    string
-		wantNsURI string
-		wantType  string
-		wantID    string
-		wantErr   string
-	}{
-		{
-			name:     "empty node_id is no-op",
-			node:     NodeSettings{FieldName: "test", Namespace: "1", IdentifierType: "i", Identifier: "123"},
-			wantNs:   "1",
-			wantType: "i",
-			wantID:   "123",
-		},
-		{
-			name:     "valid node_id string",
-			node:     NodeSettings{FieldName: "test", NodeIDStr: "ns=2;s=Temperature"},
-			wantNs:   "2",
-			wantType: "s",
-			wantID:   "Temperature",
-		},
-		{
-			name:      "valid node_id string with namespace URI",
-			node:      NodeSettings{FieldName: "test", NodeIDStr: "nsu=http://example.org/;i=100"},
-			wantNsURI: "http://example.org/",
-			wantType:  "i",
-			wantID:    "100",
-		},
-		{
-			name:    "conflict with namespace",
-			node:    NodeSettings{FieldName: "test", NodeIDStr: "ns=2;i=100", Namespace: "1"},
-			wantErr: "cannot specify both 'id' and individual fields",
-		},
-		{
-			name:    "conflict with namespace_uri",
-			node:    NodeSettings{FieldName: "test", NodeIDStr: "ns=2;i=100", NamespaceURI: "http://example.org/"},
-			wantErr: "cannot specify both 'id' and individual fields",
-		},
-		{
-			name:    "conflict with identifier_type",
-			node:    NodeSettings{FieldName: "test", NodeIDStr: "ns=2;i=100", IdentifierType: "s"},
-			wantErr: "cannot specify both 'id' and individual fields",
-		},
-		{
-			name:    "conflict with identifier",
-			node:    NodeSettings{FieldName: "test", NodeIDStr: "ns=2;i=100", Identifier: "200"},
-			wantErr: "cannot specify both 'id' and individual fields",
-		},
-		{
-			name:    "invalid namespace in node_id string",
-			node:    NodeSettings{FieldName: "test", NodeIDStr: "ns=abc;i=123"},
-			wantErr: "invalid node ID format",
-		},
-		{
-			name:    "invalid namespace URI format",
-			node:    NodeSettings{FieldName: "test", NodeIDStr: "nsu=;i=123"},
-			wantErr: "empty namespace URI",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			node := tt.node
-			err := node.SetFromNodeIDString()
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tt.wantErr)
-				return
-			}
-			require.NoError(t, err)
-			require.Equal(t, tt.wantNs, node.Namespace)
-			require.Equal(t, tt.wantNsURI, node.NamespaceURI)
-			require.Equal(t, tt.wantType, node.IdentifierType)
-			require.Equal(t, tt.wantID, node.Identifier)
-		})
-	}
-}
-
-func TestEventNodeSettingsSetFromNodeIDString(t *testing.T) {
-	tests := []struct {
-		name      string
-		node      EventNodeSettings
-		wantNs    string
-		wantNsURI string
-		wantType  string
-		wantID    string
-		wantErr   string
-	}{
-		{
-			name:     "empty node_id is no-op",
-			node:     EventNodeSettings{Namespace: "1", IdentifierType: "i", Identifier: "123"},
-			wantNs:   "1",
-			wantType: "i",
-			wantID:   "123",
-		},
-		{
-			name:     "valid node_id string",
-			node:     EventNodeSettings{NodeIDStr: "ns=2;s=EventSource"},
-			wantNs:   "2",
-			wantType: "s",
-			wantID:   "EventSource",
-		},
-		{
-			name:    "conflict with identifier",
-			node:    EventNodeSettings{NodeIDStr: "ns=2;i=100", Identifier: "200"},
-			wantErr: "cannot specify both 'id' and individual fields",
-		},
-		{
-			name:    "invalid namespace in node_id string",
-			node:    EventNodeSettings{NodeIDStr: "ns=abc;i=123"},
-			wantErr: "invalid node ID format",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			node := tt.node
-			err := node.SetFromNodeIDString()
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tt.wantErr)
-				return
-			}
-			require.NoError(t, err)
-			require.Equal(t, tt.wantNs, node.Namespace)
-			require.Equal(t, tt.wantNsURI, node.NamespaceURI)
-			require.Equal(t, tt.wantType, node.IdentifierType)
-			require.Equal(t, tt.wantID, node.Identifier)
-		})
-	}
 }
 
 func TestValidateOPCTagsWithNodeID(t *testing.T) {
@@ -1167,7 +1044,6 @@ func TestValidateOPCTagsWithNodeID(t *testing.T) {
 					{FieldName: "ServerState", NodeIDStr: "ns=0;i=2259"},
 				},
 			},
-			err: nil,
 		},
 		{
 			name: "mixed config with node_id and individual fields",
@@ -1178,7 +1054,6 @@ func TestValidateOPCTagsWithNodeID(t *testing.T) {
 					{FieldName: "Temperature", Namespace: "2", IdentifierType: "s", Identifier: "Temp"},
 				},
 			},
-			err: nil,
 		},
 		{
 			name: "node_id with namespace URI",
@@ -1188,17 +1063,6 @@ func TestValidateOPCTagsWithNodeID(t *testing.T) {
 					{FieldName: "ProductUri", NodeIDStr: "nsu=http://opcfoundation.org/UA/;i=2262"},
 				},
 			},
-			err: nil,
-		},
-		{
-			name: "invalid namespace in node_id string",
-			config: InputClientConfig{
-				MetricName: "opcua",
-				RootNodes: []NodeSettings{
-					{FieldName: "Invalid", NodeIDStr: "ns=abc;i=123"},
-				},
-			},
-			err: errors.New("invalid node ID format"),
 		},
 		{
 			name: "conflict between node_id and individual fields",
@@ -1220,8 +1084,7 @@ func TestValidateOPCTagsWithNodeID(t *testing.T) {
 			}
 			err := o.InitNodeMetricMapping()
 			if tt.err != nil {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tt.err.Error())
+				require.ErrorContains(t, err, tt.err.Error())
 				return
 			}
 			require.NoError(t, err)
@@ -1250,16 +1113,8 @@ func TestNodeGroupWithNodeIDString(t *testing.T) {
 	require.NoError(t, o.InitNodeMetricMapping())
 	require.Len(t, o.NodeMetricMapping, 2)
 
-	// Verify first node
-	require.Equal(t, "2", o.NodeMetricMapping[0].Tag.Namespace)
-	require.Equal(t, "s", o.NodeMetricMapping[0].Tag.IdentifierType)
-	require.Equal(t, "Device.Temp", o.NodeMetricMapping[0].Tag.Identifier)
+	// Verify nodes use string directly (no decomposition into individual fields)
 	require.Equal(t, "ns=2;s=Device.Temp", o.NodeMetricMapping[0].Tag.NodeID())
-
-	// Verify second node
-	require.Equal(t, "http://example.org/", o.NodeMetricMapping[1].Tag.NamespaceURI)
-	require.Equal(t, "i", o.NodeMetricMapping[1].Tag.IdentifierType)
-	require.Equal(t, "100", o.NodeMetricMapping[1].Tag.Identifier)
 	require.Equal(t, "nsu=http://example.org/;i=100", o.NodeMetricMapping[1].Tag.NodeID())
 }
 
@@ -1275,20 +1130,10 @@ func TestEventGroupWithNodeIDString(t *testing.T) {
 		Fields: []string{"Severity", "Message"},
 	}
 
-	require.NoError(t, eventGroup.UpdateNodeIDSettings())
+	eventGroup.UpdateNodeIDSettings()
 
-	// Verify event type node
-	require.Equal(t, "0", eventGroup.EventTypeNode.Namespace)
-	require.Equal(t, "i", eventGroup.EventTypeNode.IdentifierType)
-	require.Equal(t, "2041", eventGroup.EventTypeNode.Identifier)
-
-	// Verify first event node
-	require.Equal(t, "2", eventGroup.NodeIDSettings[0].Namespace)
-	require.Equal(t, "s", eventGroup.NodeIDSettings[0].IdentifierType)
-	require.Equal(t, "EventSource1", eventGroup.NodeIDSettings[0].Identifier)
-
-	// Verify second event node
-	require.Equal(t, "http://example.org/", eventGroup.NodeIDSettings[1].NamespaceURI)
-	require.Equal(t, "i", eventGroup.NodeIDSettings[1].IdentifierType)
-	require.Equal(t, "200", eventGroup.NodeIDSettings[1].Identifier)
+	// Verify nodes use string directly (no decomposition into individual fields)
+	require.Equal(t, "ns=0;i=2041", eventGroup.EventTypeNode.NodeID())
+	require.Equal(t, "ns=2;s=EventSource1", eventGroup.NodeIDSettings[0].NodeID())
+	require.Equal(t, "nsu=http://example.org/;i=200", eventGroup.NodeIDSettings[1].NodeID())
 }
