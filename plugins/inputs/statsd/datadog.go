@@ -19,12 +19,6 @@ const (
 	eventWarning = "warning"
 	eventError   = "error"
 	eventSuccess = "success"
-
-	// Service check status values
-	serviceCheckOK       = 0
-	serviceCheckWarning  = 1
-	serviceCheckCritical = 2
-	serviceCheckUnknown  = 3
 )
 
 var uncommenter = strings.NewReplacer("\\n", "\n")
@@ -215,37 +209,28 @@ func (s *Statsd) parseServiceCheckMessage(now time.Time, message, defaultHostnam
 	}
 
 	// Parse the status
-	status, err := strconv.ParseInt(parts[2], 10, 64)
+	statuses := []string{"ok", "warning", "critical", "unknown"}
+
+	idx, err := strconv.ParseInt(parts[2], 10, 64)
 	if err != nil {
 		return fmt.Errorf("invalid service check format: could not parse status %q", parts[2])
 	}
-	if status < serviceCheckOK || status > serviceCheckUnknown {
-		return fmt.Errorf("invalid service check format: status %d out of range (0-3)", status)
+	if idx < 0 || idx >= int64(len(statuses)) {
+		return fmt.Errorf("invalid service check format: status %d out of range (0-%d)", idx, len(statuses)-1)
 	}
+	statusText := statuses[idx]
 
-	// Map status to text
-	var statusText string
-	switch status {
-	case serviceCheckOK:
-		statusText = "ok"
-	case serviceCheckWarning:
-		statusText = "warning"
-	case serviceCheckCritical:
-		statusText = "critical"
-	case serviceCheckUnknown:
-		statusText = "unknown"
+	tags := map[string]string{
+		"check_name": checkName,
 	}
-
-	// Initialize tags and fields
-	tags := make(map[string]string)
-	tags["check_name"] = checkName
 	if defaultHostname != "" {
 		tags["source"] = defaultHostname
 	}
 
-	fields := make(map[string]interface{})
-	fields["status"] = status
-	fields["status_text"] = statusText
+	fields := map[string]interface{}{
+		"status":      idx,
+		"status_text": statusText,
+	}
 
 	ts := now
 

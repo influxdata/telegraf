@@ -6,293 +6,304 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestServiceCheckGather(t *testing.T) {
 	now := time.Now()
-	type expected struct {
-		tags   map[string]string
-		fields map[string]interface{}
-	}
 	tests := []struct {
 		name     string
 		message  string
 		hostname string
-		now      time.Time
-		err      bool
-		expected expected
+		expected []telegraf.Metric
 	}{
 		{
 			name:     "basic OK status",
 			message:  "_sc|my.service.check|0",
 			hostname: "default-hostname",
-			now:      now,
-			err:      false,
-			expected: expected{
-				tags: map[string]string{
-					"check_name": "my.service.check",
-					"source":     "default-hostname",
-				},
-				fields: map[string]interface{}{
-					"status":      int64(0),
-					"status_text": "ok",
-				},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"statsd_service_check",
+					map[string]string{
+						"check_name": "my.service.check",
+						"source":     "default-hostname",
+					},
+					map[string]interface{}{
+						"status":      int64(0),
+						"status_text": "ok",
+					},
+					now,
+				),
 			},
 		},
 		{
 			name:     "warning status",
 			message:  "_sc|jmxfetch-config.can_connect|1",
 			hostname: "default-hostname",
-			now:      now,
-			err:      false,
-			expected: expected{
-				tags: map[string]string{
-					"check_name": "jmxfetch-config.can_connect",
-					"source":     "default-hostname",
-				},
-				fields: map[string]interface{}{
-					"status":      int64(1),
-					"status_text": "warning",
-				},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"statsd_service_check",
+					map[string]string{
+						"check_name": "jmxfetch-config.can_connect",
+						"source":     "default-hostname",
+					},
+					map[string]interface{}{
+						"status":      int64(1),
+						"status_text": "warning",
+					},
+					now,
+				),
 			},
 		},
 		{
 			name:     "critical status",
 			message:  "_sc|disk.check|2",
 			hostname: "default-hostname",
-			now:      now,
-			err:      false,
-			expected: expected{
-				tags: map[string]string{
-					"check_name": "disk.check",
-					"source":     "default-hostname",
-				},
-				fields: map[string]interface{}{
-					"status":      int64(2),
-					"status_text": "critical",
-				},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"statsd_service_check",
+					map[string]string{
+						"check_name": "disk.check",
+						"source":     "default-hostname",
+					},
+					map[string]interface{}{
+						"status":      int64(2),
+						"status_text": "critical",
+					},
+					now,
+				),
 			},
 		},
 		{
 			name:     "unknown status",
 			message:  "_sc|network.check|3",
 			hostname: "default-hostname",
-			now:      now,
-			err:      false,
-			expected: expected{
-				tags: map[string]string{
-					"check_name": "network.check",
-					"source":     "default-hostname",
-				},
-				fields: map[string]interface{}{
-					"status":      int64(3),
-					"status_text": "unknown",
-				},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"statsd_service_check",
+					map[string]string{
+						"check_name": "network.check",
+						"source":     "default-hostname",
+					},
+					map[string]interface{}{
+						"status":      int64(3),
+						"status_text": "unknown",
+					},
+					now,
+				),
 			},
 		},
 		{
 			name:     "with message",
 			message:  "_sc|my.check|0|m:Service is healthy",
 			hostname: "default-hostname",
-			now:      now,
-			err:      false,
-			expected: expected{
-				tags: map[string]string{
-					"check_name": "my.check",
-					"source":     "default-hostname",
-				},
-				fields: map[string]interface{}{
-					"status":      int64(0),
-					"status_text": "ok",
-					"message":     "Service is healthy",
-				},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"statsd_service_check",
+					map[string]string{
+						"check_name": "my.check",
+						"source":     "default-hostname",
+					},
+					map[string]interface{}{
+						"status":      int64(0),
+						"status_text": "ok",
+						"message":     "Service is healthy",
+					},
+					now,
+				),
 			},
 		},
 		{
 			name:     "with hostname override",
 			message:  "_sc|my.check|0|h:custom-host",
 			hostname: "default-hostname",
-			now:      now,
-			err:      false,
-			expected: expected{
-				tags: map[string]string{
-					"check_name": "my.check",
-					"source":     "custom-host",
-				},
-				fields: map[string]interface{}{
-					"status":      int64(0),
-					"status_text": "ok",
-				},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"statsd_service_check",
+					map[string]string{
+						"check_name": "my.check",
+						"source":     "custom-host",
+					},
+					map[string]interface{}{
+						"status":      int64(0),
+						"status_text": "ok",
+					},
+					now,
+				),
 			},
 		},
 		{
 			name:     "with tags",
 			message:  "_sc|my.check|0|#env:prod,service:web",
 			hostname: "default-hostname",
-			now:      now,
-			err:      false,
-			expected: expected{
-				tags: map[string]string{
-					"check_name": "my.check",
-					"source":     "default-hostname",
-					"env":        "prod",
-					"service":    "web",
-				},
-				fields: map[string]interface{}{
-					"status":      int64(0),
-					"status_text": "ok",
-				},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"statsd_service_check",
+					map[string]string{
+						"check_name": "my.check",
+						"source":     "default-hostname",
+						"env":        "prod",
+						"service":    "web",
+					},
+					map[string]interface{}{
+						"status":      int64(0),
+						"status_text": "ok",
+					},
+					now,
+				),
 			},
 		},
 		{
 			name:     "with all optional fields",
 			message:  "_sc|my.check|2|d:1234567890|h:myhost|#env:test,region:us-west|m:Connection failed",
 			hostname: "default-hostname",
-			now:      now,
-			err:      false,
-			expected: expected{
-				tags: map[string]string{
-					"check_name": "my.check",
-					"source":     "myhost",
-					"env":        "test",
-					"region":     "us-west",
-				},
-				fields: map[string]interface{}{
-					"status":      int64(2),
-					"status_text": "critical",
-					"message":     "Connection failed",
-				},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"statsd_service_check",
+					map[string]string{
+						"check_name": "my.check",
+						"source":     "myhost",
+						"env":        "test",
+						"region":     "us-west",
+					},
+					map[string]interface{}{
+						"status":      int64(2),
+						"status_text": "critical",
+						"message":     "Connection failed",
+					},
+					time.Unix(1234567890, 0),
+				),
 			},
 		},
 		{
 			name:     "with newline escape in message",
 			message:  "_sc|my.check|1|m:Line1\\nLine2",
 			hostname: "default-hostname",
-			now:      now,
-			err:      false,
-			expected: expected{
-				tags: map[string]string{
-					"check_name": "my.check",
-					"source":     "default-hostname",
-				},
-				fields: map[string]interface{}{
-					"status":      int64(1),
-					"status_text": "warning",
-					"message":     "Line1\nLine2",
-				},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"statsd_service_check",
+					map[string]string{
+						"check_name": "my.check",
+						"source":     "default-hostname",
+					},
+					map[string]interface{}{
+						"status":      int64(1),
+						"status_text": "warning",
+						"message":     "Line1\nLine2",
+					},
+					now,
+				),
 			},
 		},
 		{
 			name:     "host tag in tags section",
 			message:  "_sc|my.check|0|#host:taghost",
 			hostname: "default-hostname",
-			now:      now,
-			err:      false,
-			expected: expected{
-				tags: map[string]string{
-					"check_name": "my.check",
-					"source":     "taghost",
-				},
-				fields: map[string]interface{}{
-					"status":      int64(0),
-					"status_text": "ok",
-				},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"statsd_service_check",
+					map[string]string{
+						"check_name": "my.check",
+						"source":     "taghost",
+					},
+					map[string]interface{}{
+						"status":      int64(0),
+						"status_text": "ok",
+					},
+					now,
+				),
 			},
 		},
 		{
-			name:     "missing parts",
-			message:  "_sc|my.check",
+			name:     "with custom timestamp",
+			message:  "_sc|my.check|0|d:1234567890",
 			hostname: "default-hostname",
-			now:      now,
-			err:      true,
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"statsd_service_check",
+					map[string]string{
+						"check_name": "my.check",
+						"source":     "default-hostname",
+					},
+					map[string]interface{}{
+						"status":      int64(0),
+						"status_text": "ok",
+					},
+					time.Unix(1234567890, 0),
+				),
+			},
 		},
 		{
-			name:     "empty check name",
-			message:  "_sc||0",
-			hostname: "default-hostname",
-			now:      now,
-			err:      true,
-		},
-		{
-			name:     "invalid status",
-			message:  "_sc|my.check|abc",
-			hostname: "default-hostname",
-			now:      now,
-			err:      true,
-		},
-		{
-			name:     "status out of range",
-			message:  "_sc|my.check|4",
-			hostname: "default-hostname",
-			now:      now,
-			err:      true,
-		},
-		{
-			name:     "negative status",
-			message:  "_sc|my.check|-1",
-			hostname: "default-hostname",
-			now:      now,
-			err:      true,
+			name:     "without default hostname",
+			message:  "_sc|my.check|0",
+			hostname: "",
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"statsd_service_check",
+					map[string]string{
+						"check_name": "my.check",
+					},
+					map[string]interface{}{
+						"status":      int64(0),
+						"status_text": "ok",
+					},
+					now,
+				),
+			},
 		},
 	}
 
-	acc := &testutil.Accumulator{}
-	s := newTestStatsd()
-	require.NoError(t, s.Start(acc))
-	defer s.Stop()
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			acc.ClearMetrics()
-			err := s.parseServiceCheckMessage(tt.now, tt.message, tt.hostname)
-			if tt.err {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
-			require.Equal(t, uint64(1), acc.NMetrics())
+			var acc testutil.Accumulator
+			s := newTestStatsd()
+			require.NoError(t, s.Start(&acc))
+			defer s.Stop()
 
-			m := acc.Metrics[0]
-			require.Equal(t, "statsd_service_check", m.Measurement)
-			require.Equal(t, tt.expected.tags, m.Tags)
-			require.Equal(t, tt.expected.fields, m.Fields)
+			require.NoError(t, s.parseServiceCheckMessage(now, tt.message, tt.hostname))
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
 		})
 	}
 }
 
-func TestServiceCheckTimestamp(t *testing.T) {
-	acc := &testutil.Accumulator{}
-	s := newTestStatsd()
-	require.NoError(t, s.Start(acc))
-	defer s.Stop()
+func TestServiceCheckError(t *testing.T) {
+	tests := []struct {
+		name    string
+		message string
+	}{
+		{
+			name:    "missing parts",
+			message: "_sc|my.check",
+		},
+		{
+			name:    "empty check name",
+			message: "_sc||0",
+		},
+		{
+			name:    "invalid status",
+			message: "_sc|my.check|abc",
+		},
+		{
+			name:    "status out of range",
+			message: "_sc|my.check|4",
+		},
+		{
+			name:    "negative status",
+			message: "_sc|my.check|-1",
+		},
+	}
 
-	// Test with custom timestamp
-	now := time.Now()
-	err := s.parseServiceCheckMessage(now, "_sc|my.check|0|d:1234567890", "default-hostname")
-	require.NoError(t, err)
-	require.Equal(t, uint64(1), acc.NMetrics())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var acc testutil.Accumulator
+			s := newTestStatsd()
+			require.NoError(t, s.Start(&acc))
+			defer s.Stop()
 
-	m := acc.Metrics[0]
-	expectedTime := time.Unix(1234567890, 0)
-	require.Equal(t, expectedTime, m.Time)
-}
-
-func TestServiceCheckNoHostname(t *testing.T) {
-	acc := &testutil.Accumulator{}
-	s := newTestStatsd()
-	require.NoError(t, s.Start(acc))
-	defer s.Stop()
-
-	// Test without default hostname
-	now := time.Now()
-	err := s.parseServiceCheckMessage(now, "_sc|my.check|0", "")
-	require.NoError(t, err)
-	require.Equal(t, uint64(1), acc.NMetrics())
-
-	m := acc.Metrics[0]
-	_, hasSource := m.Tags["source"]
-	require.False(t, hasSource)
+			require.Error(t, s.parseServiceCheckMessage(time.Now(), tt.message, "default-hostname"))
+		})
+	}
 }
 
 func TestEventGather(t *testing.T) {
