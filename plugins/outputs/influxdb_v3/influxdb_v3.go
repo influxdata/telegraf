@@ -29,8 +29,8 @@ type clientConfig struct {
 	Sync               *bool           `toml:"sync"`
 	ContentEncoding    string          `toml:"content_encoding"`
 	UserAgent          string          `toml:"user_agent"`
-	UintSupport        bool            `toml:"influx_uint_support"`
-	OmitTimestamp      bool            `toml:"influx_omit_timestamp"`
+	ConvertUint        bool            `toml:"convert_uint_to_int"`
+	OmitTimestamp      bool            `toml:"omit_timestamp"`
 	Timeout            config.Duration `toml:"timeout"`
 	common_http.HTTPClientConfig
 	ratelimiter.RateLimitConfig
@@ -123,8 +123,7 @@ func init() {
 	outputs.Add("influxdb_v3", func() telegraf.Output {
 		return &InfluxDB{
 			clientConfig: clientConfig{
-				UintSupport: true,
-				Timeout:     config.Duration(time.Second * 5),
+				Timeout: config.Duration(time.Second * 5),
 			},
 		}
 	})

@@ -90,7 +90,7 @@ func newClient(addr string, cfg *clientConfig, log telegraf.Logger) (*client, er
 
 	// Setup the limited serializer
 	serializer := &influx.Serializer{
-		UintSupport:   cfg.UintSupport,
+		UintSupport:   !cfg.ConvertUint,
 		OmitTimestamp: cfg.OmitTimestamp,
 	}
 	if err := serializer.Init(); err != nil {

@@ -300,6 +300,127 @@ func TestWriteExplicitSync(t *testing.T) {
 	require.NoError(t, plugin.Write(metrics))
 }
 
+func TestWriteNotConvertUint(t *testing.T) {
+	// Setup a test server
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch r.URL.Path {
+			case "/api/v3/write_lp":
+				if err := r.ParseForm(); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
+				body, err := io.ReadAll(r.Body)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
+				if !strings.Contains(string(body), "cpu value=42u") {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Errorf("'body' should contain unsigned value but got %q", string(body))
+					return
+				}
+
+				w.WriteHeader(http.StatusNoContent)
+				return
+			default:
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+		}),
+	)
+	defer ts.Close()
+
+	// Setup plugin and connect
+	plugin := &InfluxDB{
+		URLs: []string{"http://" + ts.Listener.Addr().String()},
+		clientConfig: clientConfig{
+			Database:        "telegraf",
+			ContentEncoding: "identity",
+		},
+		Log: &testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	// Test writing
+	metrics := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{},
+			map[string]interface{}{
+				"value": uint64(42),
+			},
+			time.Unix(0, 0),
+		),
+	}
+	require.NoError(t, plugin.Write(metrics))
+}
+
+func TestWriteConvertUint(t *testing.T) {
+	// Setup a test server
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch r.URL.Path {
+			case "/api/v3/write_lp":
+				if err := r.ParseForm(); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
+				body, err := io.ReadAll(r.Body)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
+				if !strings.Contains(string(body), "cpu value=42i") {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Errorf("'body' should contain signed value but got %q", string(body))
+					return
+				}
+
+				w.WriteHeader(http.StatusNoContent)
+				return
+			default:
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+		}),
+	)
+	defer ts.Close()
+
+	// Setup plugin and connect
+	plugin := &InfluxDB{
+		URLs: []string{"http://" + ts.Listener.Addr().String()},
+		clientConfig: clientConfig{
+			Database:        "telegraf",
+			ConvertUint:     true,
+			ContentEncoding: "identity",
+		},
+		Log: &testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	// Test writing
+	metrics := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{},
+			map[string]interface{}{
+				"value": uint64(42),
+			},
+			time.Unix(0, 0),
+		),
+	}
+	require.NoError(t, plugin.Write(metrics))
+}
+
 func TestWriteExplicitNoSync(t *testing.T) {
 	// Setup a test server
 	ts := httptest.NewServer(
