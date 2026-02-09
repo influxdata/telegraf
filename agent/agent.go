@@ -850,7 +850,7 @@ func (a *Agent) runOutputs(
 		go func(output *models.RunningOutput) {
 			defer wg.Done()
 
-			ticker := clock.NewRollingTicker(interval, jitter)
+			ticker := clock.NewTimer(interval, jitter)
 			defer ticker.Stop()
 
 			a.flushLoop(ctx, output, ticker)

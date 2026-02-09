@@ -194,118 +194,6 @@ func TestUnalignedTicker(t *testing.T) {
 	require.Equal(t, expected, actual)
 }
 
-func TestRollingTicker(t *testing.T) {
-	interval := 10 * time.Second
-	jitter := 0 * time.Second
-	offset := 0 * time.Second
-
-	clk := clock.NewMock()
-	clk.Add(1 * time.Second)
-	since := clk.Now()
-	until := since.Add(60 * time.Second)
-
-	ticker := &unaligned{
-		clk:      clk,
-		interval: interval,
-		jitter:   jitter,
-		offset:   offset,
-	}
-	ticker.start()
-	defer ticker.Stop()
-
-	expected := []time.Time{
-		time.Unix(1, 0).UTC(),
-		time.Unix(11, 0).UTC(),
-		time.Unix(21, 0).UTC(),
-		time.Unix(31, 0).UTC(),
-		time.Unix(41, 0).UTC(),
-		time.Unix(51, 0).UTC(),
-		time.Unix(61, 0).UTC(),
-	}
-
-	actual := make([]time.Time, 0)
-	for !clk.Now().After(until) {
-		select {
-		case tm := <-ticker.Elapsed():
-			actual = append(actual, tm.UTC())
-		default:
-		}
-		clk.Add(10 * time.Second)
-	}
-
-	require.Equal(t, expected, actual)
-}
-
-// TestRollingTickerJitterDrift demonstrates that with RollingTicker,
-// jitter causes drift over time. Each tick = interval + random(0, jitter),
-// so average interval = interval + jitter/2.
-//
-// Scenario from issue #17287:
-//   - interval = 60s
-//   - jitter = 10s
-//
-// Current behavior:
-//   - Each tick: interval + random(0-10s)
-//   - Average interval: 60s + 5s = 65s
-//   - After 60 ticks: expected 60min, actual ~65min (5min drift)
-//
-// This demonstrates the bug where jitter increases effective collection interval.
-func TestRollingTickerJitterDrift(t *testing.T) {
-	interval := 60 * time.Second
-	jitter := 10 * time.Second
-
-	clk := clock.NewMock()
-	startTime := clk.Now()
-
-	ticker := &rolling{
-		clk:      clk,
-		interval: interval,
-		jitter:   jitter,
-	}
-	ticker.start()
-	defer ticker.Stop()
-
-	// Collect 60 ticks
-	const numTicks = 60
-	var triggers []time.Time
-
-	for len(triggers) < numTicks {
-		select {
-		case tm := <-ticker.Elapsed():
-			triggers = append(triggers, tm)
-		default:
-			clk.Add(1 * time.Second)
-		}
-	}
-
-	// Calculate total elapsed time
-	firstTrigger := triggers[0]
-	lastTrigger := triggers[numTicks-1]
-	totalElapsed := lastTrigger.Sub(firstTrigger)
-
-	// Expected time for 59 intervals: 59 * 60s = 59 minutes
-	expectedTime := time.Duration(numTicks-1) * interval
-
-	// Calculate drift
-	drift := totalElapsed - expectedTime
-
-	t.Logf("=== RollingTicker (interval + jitter each tick) ===")
-	t.Logf("Start time:      %s", startTime.Format("15:04:05"))
-	t.Logf("First trigger:   %s", firstTrigger.Format("15:04:05"))
-	t.Logf("Last trigger:    %s", lastTrigger.Format("15:04:05"))
-	t.Logf("Total elapsed:   %s", totalElapsed)
-	t.Logf("Expected:        %s (if no jitter drift)", expectedTime)
-	t.Logf("Drift:           %s", drift)
-	t.Logf("Avg interval:    %.2fs (expected ~65s with jitter)", totalElapsed.Seconds()/float64(numTicks-1))
-
-	// Current behavior: drift should be ~5 minutes (59 intervals * 5s avg jitter)
-	// This confirms the bug from issue #17287
-	require.Greater(t, drift, 2*time.Minute,
-		"Expected significant drift with RollingTicker jitter behavior")
-	require.Less(t, drift, 10*time.Minute,
-		"Drift is larger than expected maximum")
-}
-
 // TestAlignedTickerJitterBehavior shows that AlignedTicker has different behavior.
 // It realigns to interval boundaries, so jitter doesn't accumulate as drift.
 // However, the average interval is still affected by jitter.
@@ -378,8 +266,8 @@ func TestAlignedTickerJitterBehavior(t *testing.T) {
 }
 
 // TestUnalignedTickerJitterBehavior shows UnalignedTicker behavior with jitter.
-// Unlike RollingTicker, UnalignedTicker uses a fixed interval ticker internally,
-// so jitter only adds delay but doesn't cause cumulative drift.
+// UnalignedTicker uses a fixed interval ticker internally, so jitter only adds
+// delay but doesn't cause cumulative drift.
 func TestUnalignedTickerJitterBehavior(t *testing.T) {
 	interval := 60 * time.Second
 	jitter := 10 * time.Second
@@ -460,9 +348,9 @@ func TestAlignedTickerDistribution(t *testing.T) {
 	ticker.start()
 	defer ticker.Stop()
 	dist := simulatedDist(ticker, clk)
-	printDist(dist)
-	require.Less(t, 350, dist.Count)
-	require.True(t, 9 < dist.Mean() && dist.Mean() < 11)
+	dist.print()
+	require.Less(t, 350, dist.count)
+	require.True(t, 9 < dist.mean() && dist.mean() < 11)
 }
 
 func TestAlignedTickerDistributionWithOffset(t *testing.T) {
@@ -488,9 +376,9 @@ func TestAlignedTickerDistributionWithOffset(t *testing.T) {
 	ticker.start()
 	defer ticker.Stop()
 	dist := simulatedDist(ticker, clk)
-	printDist(dist)
-	require.Less(t, 350, dist.Count)
-	require.True(t, 9 < dist.Mean() && dist.Mean() < 11)
+	dist.print()
+	require.Less(t, 350, dist.count)
+	require.True(t, 9 < dist.mean() && dist.mean() < 11)
 }
 
 // Simulates running the Ticker for an hour and displays stats about the
@@ -515,9 +403,9 @@ func TestUnalignedTickerDistribution(t *testing.T) {
 	ticker.start()
 	defer ticker.Stop()
 	dist := simulatedDist(ticker, clk)
-	printDist(dist)
-	require.Less(t, 350, dist.Count)
-	require.True(t, 9 < dist.Mean() && dist.Mean() < 11)
+	dist.print()
+	require.Less(t, 350, dist.count)
+	require.True(t, 9 < dist.mean() && dist.mean() < 11)
 }
 
 func TestUnalignedTickerDistributionWithOffset(t *testing.T) {
@@ -540,67 +428,30 @@ func TestUnalignedTickerDistributionWithOffset(t *testing.T) {
 	ticker.start()
 	defer ticker.Stop()
 	dist := simulatedDist(ticker, clk)
-	printDist(dist)
-	require.Less(t, 350, dist.Count)
-	require.True(t, 9 < dist.Mean() && dist.Mean() < 11)
+	dist.print()
+	require.Less(t, 350, dist.count)
+	require.True(t, 9 < dist.mean() && dist.mean() < 11)
 }
 
-// Simulates running the Ticker for an hour and displays stats about the
-// operation.
-func TestRollingTickerDistribution(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode.")
-	}
-
-	interval := 10 * time.Second
-	jitter := 5 * time.Second
-
-	clk := clock.NewMock()
-
-	ticker := &rolling{
-		clk:      clk,
-		interval: interval,
-		jitter:   jitter,
-	}
-	ticker.start()
-	defer ticker.Stop()
-	dist := simulatedDist(ticker, clk)
-	printDist(dist)
-	require.Less(t, 275, dist.Count)
-	require.True(t, 12 < dist.Mean() && 13 > dist.Mean())
+type distribution struct {
+	buckets  [60]int
+	count    int
+	waittime float64
 }
 
-type Distribution struct {
-	Buckets  [60]int
-	Count    int
-	Waittime float64
-}
-
-func (d *Distribution) Mean() float64 {
-	return d.Waittime / float64(d.Count)
-}
-
-func printDist(dist Distribution) {
-	for i, count := range dist.Buckets {
-		fmt.Printf("%2d %s\n", i, strings.Repeat("x", count))
-	}
-	fmt.Printf("Average interval: %f\n", dist.Mean())
-	fmt.Printf("Count: %d\n", dist.Count)
-}
-
-func simulatedDist(ticker Ticker, clk *clock.Mock) Distribution {
+func simulatedDist(ticker Ticker, clk *clock.Mock) distribution {
 	since := clk.Now()
 	until := since.Add(1 * time.Hour)
 
-	var dist Distribution
+	var dist distribution
 
 	last := clk.Now()
 	for !clk.Now().After(until) {
 		select {
 		case tm := <-ticker.Elapsed():
-			dist.Buckets[tm.Second()]++
-			dist.Count++
-			dist.Waittime += tm.Sub(last).Seconds()
+			dist.buckets[tm.Second()]++
+			dist.count++
+			dist.waittime += tm.Sub(last).Seconds()
 			last = tm
 		default:
 			clk.Add(1 * time.Second)
@@ -608,4 +459,16 @@ func simulatedDist(ticker Ticker, clk *clock.Mock) Distribution {
 	}
 
 	return dist
+}
+
+func (d *distribution) mean() float64 {
+	return d.waittime / float64(d.count)
+}
+
+func (dist distribution) print() {
+	for i, count := range dist.buckets {
+		fmt.Printf("%2d %s\n", i, strings.Repeat("x", count))
+	}
+	fmt.Printf("Average interval: %f\n", dist.mean())
+	fmt.Printf("Count: %d\n", dist.count)
 }

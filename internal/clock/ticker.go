@@ -41,13 +41,3 @@ func newUnalignedTicker(interval, jitter, offset time.Duration) *unaligned {
 	t.start()
 	return t
 }
-
-func NewRollingTicker(interval, jitter time.Duration) *rolling {
-	t := &rolling{
-		clk:      clock.New(),
-		interval: interval,
-		jitter:   jitter,
-	}
-	t.start()
-	return t
-}
