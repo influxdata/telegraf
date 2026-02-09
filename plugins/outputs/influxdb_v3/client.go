@@ -170,7 +170,7 @@ func (c *client) write(ctx context.Context, metrics []telegraf.Metric) error {
 		if errors.As(err, &apiErr) {
 			if apiErr.StatusCode == http.StatusRequestEntityTooLarge {
 				// TODO: Need a testcase to verify rejected metrics are not retried...
-				return c.splitAndWriteBatch(ctx, c.cfg.Database, metrics)
+				return c.splitAndWriteBatch(ctx, database, batch)
 			}
 			wErr.Err = err
 			if !apiErr.Retryable {
