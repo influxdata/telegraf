@@ -147,21 +147,21 @@ Different SIP servers may respond with different status codes to OPTIONS request
 
 - sip
   - tags:
-    - server (the SIP server address)
-    - method (the SIP method used: OPTIONS, INVITE, MESSAGE)
-    - transport (the transport protocol: udp, tcp, tls, ws, wss)
+    - source (the SIP server address)
+    - method (the SIP method used, lowercase: options, invite, message)
+    - transport (the transport protocol: udp, tcp, ws, wss)
     - status_code (the SIP response status code, e.g., "200", "404")
+    - result (the result of the request: status text like "OK", "Not Found", or "timeout", "error")
     - server_agent (optional: the Server header from the response)
   - fields:
-    - up (int) - Server availability indicator (1 = success, 0 = failure/timeout/error)
-    - response_time (float, seconds, optional) - Time taken to receive
-      response (not set for timeouts/connection failures)
+    - response_time_s (float, seconds) - Time taken to receive response
+      (for timeouts, this equals the configured timeout value)
 
 ## Example Output
 
 ```text
-sip,host=telegraf-host,method=OPTIONS,server=sip://sip.example.com:5060,status_code=200,transport=udp response_time=0.023,up=1i 1640000000000000000
-sip,host=telegraf-host,method=OPTIONS,server=sip://unreachable.example.com:5060,transport=udp up=0i 1640000000000000000
-sip,host=telegraf-host,method=OPTIONS,server=sip://sip.provider.com:5060,status_code=404,transport=udp response_time=0.045,up=0i 1640000000000000000
-sip,host=telegraf-host,method=OPTIONS,server=sips://secure.voip.example.com:5061,status_code=200,transport=tcp response_time=0.067,up=1i 1640000000000000000
+sip,host=telegraf-host,method=options,result=OK,source=sip://sip.example.com:5060,status_code=200,transport=udp response_time_s=0.023 1640000000000000000
+sip,host=telegraf-host,method=options,result=timeout,source=sip://unreachable.example.com:5060,transport=udp response_time_s=5.0 1640000000000000000
+sip,host=telegraf-host,method=options,result=Not\ Found,source=sip://sip.provider.com:5060,status_code=404,transport=udp response_time_s=0.045 1640000000000000000
+sip,host=telegraf-host,method=options,result=OK,source=sips://secure.voip.example.com:5061,status_code=200,transport=tcp response_time_s=0.067 1640000000000000000
 ```

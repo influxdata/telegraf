@@ -3,7 +3,6 @@ package sip
 
 import (
 	"context"
-	"crypto/tls"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -18,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	commontls "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -44,12 +43,12 @@ type SIP struct {
 	Username     config.Secret   `toml:"username"`
 	Password     config.Secret   `toml:"password"`
 	Log          telegraf.Logger `toml:"-"`
-	commontls.ClientConfig
+	common_tls.ClientConfig
 
 	ua         *sipgo.UserAgent
 	client     *sipgo.Client
-	tlsConfig  *tls.Config
 	serverInfo *serverInfo
+	uaOpts     []sipgo.UserAgentOption
 
 	// Cached request components
 	requestURI sip.Uri
@@ -152,12 +151,12 @@ func (s *SIP) Init() error {
 	if s.serverInfo.secure {
 		// Force TLS connection even though no TLS properties are given. This will
 		// use the system's TLS configuration (CA etc) if properties are empty.
-		s.ClientConfig = &s.serverInfo.secure
+		s.ClientConfig.Enable = &s.serverInfo.secure
 		tlsConfig, err := s.ClientConfig.TLSConfig()
 		if err != nil {
 			return fmt.Errorf("failed to create TLS config: %w", err)
 		}
-		s.tlsConfig = tlsConfig
+		s.uaOpts = append(s.uaOpts, sipgo.WithUserAgenTLSConfig(tlsConfig))
 	}
 
 	// Build cached request components
@@ -192,15 +191,7 @@ func (s *SIP) Init() error {
 }
 
 func (s *SIP) Start(telegraf.Accumulator) error {
-	// Create SIP user agent with optional TLS config
-	var opts []sipgo.UserAgentOption
-
-	// Add TLS config if transport requires it
-	if s.serverInfo.secure {
-		opts = append(opts, sipgo.WithUserAgenTLSConfig(s.tlsConfig))
-	}
-
-	ua, err := sipgo.NewUA(opts...)
+	ua, err := sipgo.NewUA(s.uaOpts...)
 	if err != nil {
 		return fmt.Errorf("failed to create SIP user agent: %w", err)
 	}
@@ -228,8 +219,8 @@ func (s *SIP) Stop() {
 func (s *SIP) Gather(acc telegraf.Accumulator) error {
 	fields := make(map[string]any)
 	tags := map[string]string{
-		"server":    s.Server,
-		"method":    s.Method,
+		"source":    s.Server,
+		"method":    strings.ToLower(s.Method),
 		"transport": s.serverInfo.transport,
 	}
 
@@ -263,11 +254,15 @@ func (s *SIP) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		// Check if it's a timeout
 		if errors.Is(err, context.DeadlineExceeded) {
-			fields["up"] = 0
+			tags["result"] = "timeout"
+			fields["response_time_s"] = time.Duration(s.Timeout).Seconds()
 			acc.AddFields("sip", fields, tags)
 			return nil
 		}
-		s.handleGatherError(err, fields, tags, acc)
+		// Handle other errors inline
+		s.Log.Debugf("SIP gather error: %v", err)
+		tags["result"] = "error"
+		acc.AddFields("sip", fields, tags)
 		return nil
 	}
 
@@ -295,40 +290,29 @@ func (s *SIP) Gather(acc telegraf.Accumulator) error {
 			Password: password,
 		})
 		if err != nil {
-			s.handleGatherError(err, fields, tags, acc)
+			s.Log.Debugf("SIP gather error: %v", err)
+			tags["result"] = "error"
+			acc.AddFields("sip", fields, tags)
 			return nil
 		}
 	}
 
 	// Record response time
-	fields["response_time"] = time.Since(start).Seconds()
+	fields["response_time_s"] = time.Since(start).Seconds()
 
 	// Process response
 	if res != nil {
 		tags["status_code"] = strconv.Itoa(res.StatusCode)
+		tags["result"] = res.Reason
 		if serverAgent := res.GetHeader("Server"); serverAgent != nil {
 			tags["server_agent"] = serverAgent.Value()
 		}
-
-		// Determine up based on status code (2xx = success)
-		if res.StatusCode >= 200 && res.StatusCode < 300 {
-			fields["up"] = 1
-		} else {
-			fields["up"] = 0
-		}
 	} else {
-		fields["up"] = 0
+		tags["result"] = "error"
 	}
 
 	acc.AddFields("sip", fields, tags)
 	return nil
-}
-
-func (s *SIP) handleGatherError(err error, fields map[string]any, tags map[string]string, acc telegraf.Accumulator) {
-	s.Log.Debugf("SIP gather error: %v", err)
-	// Mark as down for all connection failures
-	fields["up"] = 0
-	acc.AddFields("sip", fields, tags)
 }
 
 func init() {
