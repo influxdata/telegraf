@@ -1026,8 +1026,11 @@ func TestCoreIntegration(t *testing.T) {
 			"INFLUXDB3_NODE_IDENTIFIER_PREFIX": "node0",
 			"INFLUXDB3_OBJECT_STORE":           "memory",
 		},
-		Cmd:        []string{"influxdb3", "serve", "--without-auth"},
-		WaitingFor: wait.ForListeningPort(nat.Port("8181")),
+		Cmd: []string{"influxdb3", "serve", "--without-auth"},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port("8181")),
+			wait.ForLog("influxdb3_server: startup time"),
+		),
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
