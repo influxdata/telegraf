@@ -12,6 +12,7 @@ import (
 	"github.com/emiago/sipgo/sip"
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -373,20 +374,24 @@ func TestSIPServerSuccess(t *testing.T) {
 
 	require.NoError(t, plugin.Gather(&acc))
 
-	require.Len(t, acc.Metrics, 1)
-	m := acc.Metrics[0]
-
-	// Check tags
-	require.Equal(t, "sip://"+server.addr, m.Tags["source"])
-	require.Equal(t, "udp", m.Tags["transport"])
-	require.Equal(t, "options", m.Tags["method"])
-	require.Equal(t, "200", m.Tags["status_code"])
-	require.Equal(t, "OK", m.Tags["result"])
-
-	// Check fields
-	rt, ok := m.Fields["response_time_s"].(float64)
-	require.True(t, ok)
-	require.GreaterOrEqual(t, rt, 0.0)
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"sip",
+			map[string]string{
+				"source":      "sip://" + server.addr,
+				"method":      "options",
+				"transport":   "udp",
+				"status_code": "200",
+				"result":      "OK",
+			},
+			map[string]interface{}{
+				"response_time_s": float64(0),
+			},
+			time.Now(),
+		),
+	}
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.IgnoreFields("response_time_s"))
 }
 
 func TestSIPServerErrorResponse(t *testing.T) {
@@ -411,19 +416,24 @@ func TestSIPServerErrorResponse(t *testing.T) {
 
 	require.NoError(t, plugin.Gather(&acc))
 
-	require.Len(t, acc.Metrics, 1)
-	m := acc.Metrics[0]
-
-	// Check tags
-	require.Equal(t, "sip://"+server.addr, m.Tags["source"])
-	require.Equal(t, "udp", m.Tags["transport"])
-	require.Equal(t, "404", m.Tags["status_code"])
-	require.Equal(t, "Not Found", m.Tags["result"])
-
-	// Check fields
-	rt, ok := m.Fields["response_time_s"].(float64)
-	require.True(t, ok)
-	require.GreaterOrEqual(t, rt, 0.0)
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"sip",
+			map[string]string{
+				"source":      "sip://" + server.addr,
+				"method":      "options",
+				"transport":   "udp",
+				"status_code": "404",
+				"result":      "Not Found",
+			},
+			map[string]interface{}{
+				"response_time_s": float64(0),
+			},
+			time.Now(),
+		),
+	}
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.IgnoreFields("response_time_s"))
 }
 
 func TestSIPServerTimeout(t *testing.T) {
@@ -447,16 +457,28 @@ func TestSIPServerTimeout(t *testing.T) {
 
 	require.NoError(t, plugin.Gather(&acc))
 
+	// Use RequireMetricsEqual for tags (no status_code on timeout)
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"sip",
+			map[string]string{
+				"source":    "sip://" + server.addr,
+				"method":    "options",
+				"transport": "udp",
+				"result":    "timeout",
+			},
+			map[string]interface{}{
+				"response_time_s": float64(0),
+			},
+			time.Now(),
+		),
+	}
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.IgnoreFields("response_time_s"))
+
+	// Additionally verify response_time_s equals timeout value
 	require.Len(t, acc.Metrics, 1)
-	m := acc.Metrics[0]
-
-	// Check tags
-	require.Equal(t, "sip://"+server.addr, m.Tags["source"])
-	require.Equal(t, "udp", m.Tags["transport"])
-	require.Equal(t, "timeout", m.Tags["result"])
-
-	// Check fields - timeout should have response_time_s set to timeout value
-	rt, ok := m.Fields["response_time_s"].(float64)
+	rt, ok := acc.Metrics[0].Fields["response_time_s"].(float64)
 	require.True(t, ok)
 	require.InDelta(t, 0.1, rt, 0.01, "response_time_s should equal timeout value")
 }
@@ -484,19 +506,31 @@ func TestSIPServerDelayedResponse(t *testing.T) {
 
 	require.NoError(t, plugin.Gather(&acc))
 
-	// Verify response time is within expected range
-	require.Len(t, acc.Metrics, 1)
-	m := acc.Metrics[0]
+	// Use RequireMetricsEqual for tags and fields structure
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"sip",
+			map[string]string{
+				"source":      "sip://" + server.addr,
+				"method":      "options",
+				"transport":   "udp",
+				"status_code": "200",
+				"result":      "OK",
+			},
+			map[string]interface{}{
+				"response_time_s": float64(0),
+			},
+			time.Now(),
+		),
+	}
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.IgnoreFields("response_time_s"))
 
-	rt := m.Fields["response_time_s"].(float64)
+	// Additionally verify response time is within expected range
+	require.Len(t, acc.Metrics, 1)
+	rt := acc.Metrics[0].Fields["response_time_s"].(float64)
 	require.Greater(t, rt, 0.3, "response time should be at least 300ms")
 	require.Less(t, rt, 1.0, "response time should be less than timeout")
-
-	// Check remaining fields and tags
-	require.Equal(t, "sip://"+server.addr, m.Tags["source"])
-	require.Equal(t, "udp", m.Tags["transport"])
-	require.Equal(t, "200", m.Tags["status_code"])
-	require.Equal(t, "OK", m.Tags["result"])
 }
 
 func TestSIPDifferentStatusCodes(t *testing.T) {
@@ -545,10 +579,24 @@ func TestSIPDifferentStatusCodes(t *testing.T) {
 
 			require.NoError(t, plugin.Gather(&acc))
 
-			require.Len(t, acc.Metrics, 1)
-			m := acc.Metrics[0]
-			require.Equal(t, tt.reason, m.Tags["result"])
-			require.Equal(t, strconv.Itoa(tt.statusCode), m.Tags["status_code"])
+			expected := []telegraf.Metric{
+				testutil.MustMetric(
+					"sip",
+					map[string]string{
+						"source":      "sip://" + server.addr,
+						"method":      "options",
+						"transport":   "udp",
+						"status_code": strconv.Itoa(tt.statusCode),
+						"result":      tt.reason,
+					},
+					map[string]interface{}{
+						"response_time_s": float64(0),
+					},
+					time.Now(),
+				),
+			}
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.IgnoreFields("response_time_s"))
 		})
 	}
 }
@@ -579,19 +627,24 @@ func TestSIPAuthenticationRequired(t *testing.T) {
 
 	require.NoError(t, plugin.Gather(&acc))
 
-	require.Len(t, acc.Metrics, 1)
-	m := acc.Metrics[0]
-
-	// Check tags
-	require.Equal(t, "sip://"+server.addr, m.Tags["source"])
-	require.Equal(t, "udp", m.Tags["transport"])
-	require.Equal(t, "401", m.Tags["status_code"])
-	require.Equal(t, "Unauthorized", m.Tags["result"])
-
-	// Check fields
-	rt, ok := m.Fields["response_time_s"].(float64)
-	require.True(t, ok)
-	require.GreaterOrEqual(t, rt, 0.0)
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"sip",
+			map[string]string{
+				"source":      "sip://" + server.addr,
+				"method":      "options",
+				"transport":   "udp",
+				"status_code": "401",
+				"result":      "Unauthorized",
+			},
+			map[string]interface{}{
+				"response_time_s": float64(0),
+			},
+			time.Now(),
+		),
+	}
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.IgnoreFields("response_time_s"))
 }
 
 func TestSIPAuthenticationSuccess(t *testing.T) {
@@ -647,21 +700,28 @@ func TestSIPAuthenticationSuccess(t *testing.T) {
 	require.Equal(t, 2, attemptCount, "server should be called twice: initial + auth retry")
 
 	// Verify successful authentication
-	require.Len(t, acc.Metrics, 1)
-	m := acc.Metrics[0]
-
-	// Check tags
-	require.Equal(t, "sip://"+server.addr, m.Tags["source"])
-	require.Equal(t, "udp", m.Tags["transport"])
-	require.Equal(t, "200", m.Tags["status_code"])
-	require.Equal(t, "OK", m.Tags["result"])
-
-	// Check fields
-	rt, ok := m.Fields["response_time_s"].(float64)
-	require.True(t, ok)
-	require.GreaterOrEqual(t, rt, 0.0)
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"sip",
+			map[string]string{
+				"source":      "sip://" + server.addr,
+				"method":      "options",
+				"transport":   "udp",
+				"status_code": "200",
+				"result":      "OK",
+			},
+			map[string]interface{}{
+				"response_time_s": float64(0),
+			},
+			time.Now(),
+		),
+	}
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.IgnoreFields("response_time_s"))
 
 	// SECURITY: Verify credentials never appear in tags
+	require.Len(t, acc.Metrics, 1)
+	m := acc.Metrics[0]
 	for k, v := range m.Tags {
 		require.NotContains(t, v, validUsername, "tag %s must not contain username", k)
 		require.NotContains(t, v, validPassword, "tag %s must not contain password", k)
@@ -698,10 +758,28 @@ func TestSIPCredentialsNotInTags(t *testing.T) {
 
 	require.NoError(t, plugin.Gather(&acc))
 
-	require.Len(t, acc.Metrics, 1)
-	m := acc.Metrics[0]
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"sip",
+			map[string]string{
+				"source":      "sip://" + server.addr,
+				"method":      "options",
+				"transport":   "udp",
+				"status_code": "200",
+				"result":      "OK",
+			},
+			map[string]interface{}{
+				"response_time_s": float64(0),
+			},
+			time.Now(),
+		),
+	}
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.IgnoreFields("response_time_s"))
 
 	// SECURITY CHECK: Verify all tags don't contain credentials
+	require.Len(t, acc.Metrics, 1)
+	m := acc.Metrics[0]
 	for k, v := range m.Tags {
 		require.NotContains(t, v, "testuser", "tag %s must not contain username", k)
 		require.NotContains(t, v, "testpass", "tag %s must not contain password", k)
@@ -735,20 +813,24 @@ func TestSIPMethodINVITE(t *testing.T) {
 
 	require.NoError(t, plugin.Gather(&acc))
 
-	require.Len(t, acc.Metrics, 1)
-	m := acc.Metrics[0]
-
-	// Check tags
-	require.Equal(t, "sip://"+server.addr, m.Tags["source"])
-	require.Equal(t, "udp", m.Tags["transport"])
-	require.Equal(t, "invite", m.Tags["method"])
-	require.Equal(t, "200", m.Tags["status_code"])
-	require.Equal(t, "OK", m.Tags["result"])
-
-	// Check fields
-	rt, ok := m.Fields["response_time_s"].(float64)
-	require.True(t, ok)
-	require.GreaterOrEqual(t, rt, 0.0)
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"sip",
+			map[string]string{
+				"source":      "sip://" + server.addr,
+				"method":      "invite",
+				"transport":   "udp",
+				"status_code": "200",
+				"result":      "OK",
+			},
+			map[string]interface{}{
+				"response_time_s": float64(0),
+			},
+			time.Now(),
+		),
+	}
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.IgnoreFields("response_time_s"))
 }
 
 func TestSIPMethodMESSAGE(t *testing.T) {
@@ -778,18 +860,22 @@ func TestSIPMethodMESSAGE(t *testing.T) {
 
 	require.NoError(t, plugin.Gather(&acc))
 
-	require.Len(t, acc.Metrics, 1)
-	m := acc.Metrics[0]
-
-	// Check tags
-	require.Equal(t, "sip://"+server.addr, m.Tags["source"])
-	require.Equal(t, "udp", m.Tags["transport"])
-	require.Equal(t, "message", m.Tags["method"])
-	require.Equal(t, "200", m.Tags["status_code"])
-	require.Equal(t, "OK", m.Tags["result"])
-
-	// Check fields
-	rt, ok := m.Fields["response_time_s"].(float64)
-	require.True(t, ok)
-	require.GreaterOrEqual(t, rt, 0.0)
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"sip",
+			map[string]string{
+				"source":      "sip://" + server.addr,
+				"method":      "message",
+				"transport":   "udp",
+				"status_code": "200",
+				"result":      "OK",
+			},
+			map[string]interface{}{
+				"response_time_s": float64(0),
+			},
+			time.Now(),
+		),
+	}
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.IgnoreFields("response_time_s"))
 }
