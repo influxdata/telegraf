@@ -194,18 +194,18 @@ func (s *Statsd) parseServiceCheckMessage(now time.Time, message, defaultHostnam
 	// Split on | delimiter
 	parts := strings.Split(message, "|")
 	if len(parts) < 3 {
-		return errors.New("invalid service check format: expected at least 3 parts (_sc|name|status)")
+		return fmt.Errorf("invalid service check format for %q; expected at least 3 parts (_sc|name|status)", message)
 	}
 
 	// Validate the prefix
 	if parts[0] != "_sc" {
-		return errors.New("invalid service check format: must start with _sc")
+		return fmt.Errorf("invalid service check format for %q; must start with _sc", message)
 	}
 
 	// Extract the service check name
 	checkName := parts[1]
 	if checkName == "" {
-		return errors.New("invalid service check format: empty check name")
+		return fmt.Errorf("invalid service check format for %q; empty check name", message)
 	}
 
 	// Parse the status
