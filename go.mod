@@ -215,7 +215,7 @@ require (
 	github.com/tinylib/msgp v1.6.3
 	github.com/urfave/cli/v2 v2.27.7
 	github.com/vapourismo/knx-go v0.0.0-20240915133544-a6ab43471c11
-	github.com/vertica/vertica-sql-go v1.3.4
+	github.com/vertica/vertica-sql-go v1.3.5
 	github.com/vishvananda/netlink v1.3.1
 	github.com/vishvananda/netns v0.0.5
 	github.com/vjeantet/grok v1.0.1
