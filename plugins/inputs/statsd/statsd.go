@@ -70,7 +70,7 @@ type Statsd struct {
 	MetricSeparator string `toml:"metric_separator"`
 
 	// Parses extensions to statsd in the datadog statsd format
-	// currently supports metrics and datadog tags.
+	// currently supports metrics, datadog tags, events, and service checks.
 	// http://docs.datadoghq.com/guides/dogstatsd/
 	DataDogExtensions bool `toml:"datadog_extensions"`
 
@@ -592,7 +592,7 @@ func (s *Statsd) parser() error {
 						s.Log.Errorf("Parsing line failed: %v", err)
 						s.Log.Debugf("  line was: %s", line)
 					}
-				case s.DataDogExtensions && strings.HasPrefix(line, "_sc"):
+				case s.DataDogExtensions && strings.HasPrefix(line, "_sc|"):
 					if err := s.parseServiceCheckMessage(in.Time, line, in.Addr); err != nil {
 						s.Log.Errorf("Parsing line failed: %v", err)
 						s.Log.Debugf("  line was: %s", line)
