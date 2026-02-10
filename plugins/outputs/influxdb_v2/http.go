@@ -367,6 +367,10 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 	}
 
 	// We got an error and now try to decode further
+	c.log.Tracef(
+		"Request returned error status in %s: metrics=%d, size=%d bytes, bucket=%q, status=%s",
+		elapsed, metricCount, payloadSize, b.bucket, resp.Status,
+	)
 	var desc string
 	writeResp := &genericRespError{}
 	if json.NewDecoder(resp.Body).Decode(writeResp) == nil {
