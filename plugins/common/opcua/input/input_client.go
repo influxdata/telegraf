@@ -166,8 +166,6 @@ func (e EventNodeSettings) validateEventNodeSettings() error {
 	}
 
 	if e.NodeIDStr != "" {
-		// Node specified with string format; conflict check only.
-		// Full parsing and validation happens in InitEventNodeIDs().
 		if e.Namespace != "" || e.NamespaceURI != "" || e.IdentifierType != "" || e.Identifier != "" {
 			return errors.New("cannot specify both 'id' and individual fields (namespace/namespace_uri/identifier_type/identifier)")
 		}
@@ -385,8 +383,6 @@ func validateNodeToAdd(existing map[metricParts]struct{}, nmm *NodeMetricMapping
 	}
 
 	if nmm.Tag.NodeIDStr != "" {
-		// Node specified with string format; conflict check only.
-		// Full parsing and validation happens in InitNodeIDs().
 		if nmm.Tag.Namespace != "" || nmm.Tag.NamespaceURI != "" || nmm.Tag.IdentifierType != "" || nmm.Tag.Identifier != "" {
 			return fmt.Errorf("node %q: cannot specify both 'id' and individual fields (namespace/namespace_uri/identifier_type/identifier)", nmm.Tag.FieldName)
 		}
@@ -502,17 +498,12 @@ func (o *OpcUAInputClient) InitNodeIDs() error {
 
 	o.NodeIDs = make([]*ua.NodeID, 0, len(o.NodeMetricMapping))
 	for _, node := range o.NodeMetricMapping {
-		// Generate a textual node-ID in case the user specified individual fields
-		n := node.Tag.NodeIDStr
-		if n == "" {
-			n = node.Tag.NodeID()
-		}
-
 		// Determine the actual node-ID instance using the expanded form as
 		// this handles namespace URLs (nsu=) gracefully
-		expanded, err := ua.ParseExpandedNodeID(n, namespaces)
+		nodeID := node.Tag.NodeID()
+		expanded, err := ua.ParseExpandedNodeID(nodeID, namespaces)
 		if err != nil {
-			return fmt.Errorf("failed to parse node ID %q: %w", n, err)
+			return fmt.Errorf("failed to parse node ID %q: %w", nodeID, err)
 		}
 		o.NodeIDs = append(o.NodeIDs, ua.NewNodeIDFromExpandedNodeID(expanded))
 	}
@@ -527,24 +518,18 @@ func (o *OpcUAInputClient) InitEventNodeIDs() error {
 
 	for _, eventSetting := range o.EventGroups {
 		// Parse event type node ID
-		n := eventSetting.EventTypeNode.NodeIDStr
-		if n == "" {
-			n = eventSetting.EventTypeNode.NodeID()
-		}
-		expanded, err := ua.ParseExpandedNodeID(n, namespaces)
+		eventNodeID := eventSetting.EventTypeNode.NodeID()
+		expanded, err := ua.ParseExpandedNodeID(eventNodeID, namespaces)
 		if err != nil {
-			return fmt.Errorf("failed to parse event type node ID %q: %w", n, err)
+			return fmt.Errorf("failed to parse event type node ID %q: %w", eventNodeID, err)
 		}
 		eid := ua.NewNodeIDFromExpandedNodeID(expanded)
 
 		for _, node := range eventSetting.NodeIDSettings {
-			n := node.NodeIDStr
-			if n == "" {
-				n = node.NodeID()
-			}
-			expanded, err := ua.ParseExpandedNodeID(n, namespaces)
+			nodeID := node.NodeID()
+			expanded, err := ua.ParseExpandedNodeID(nodeID, namespaces)
 			if err != nil {
-				return fmt.Errorf("failed to parse node ID %q: %w", n, err)
+				return fmt.Errorf("failed to parse node ID %q: %w", nodeID, err)
 			}
 
 			nmm := EventNodeMetricMapping{

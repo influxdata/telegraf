@@ -1033,7 +1033,6 @@ func TestValidateOPCTagsWithNodeID(t *testing.T) {
 	tests := []struct {
 		name   string
 		config InputClientConfig
-		err    error
 	}{
 		{
 			name: "valid config with node_id string",
@@ -1064,6 +1063,25 @@ func TestValidateOPCTagsWithNodeID(t *testing.T) {
 				},
 			},
 		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			o := OpcUAInputClient{
+				Config: tt.config,
+				Log:    testutil.Logger{},
+			}
+			require.NoError(t, o.InitNodeMetricMapping())
+		})
+	}
+}
+
+func TestValidateOPCTagsWithNodeIDError(t *testing.T) {
+	tests := []struct {
+		name        string
+		config      InputClientConfig
+		expectedErr string
+	}{
 		{
 			name: "conflict between node_id and individual fields",
 			config: InputClientConfig{
@@ -1072,7 +1090,7 @@ func TestValidateOPCTagsWithNodeID(t *testing.T) {
 					{FieldName: "Conflict", NodeIDStr: "ns=0;i=2262", Namespace: "1"},
 				},
 			},
-			err: errors.New("cannot specify both 'id' and individual fields"),
+			expectedErr: "cannot specify both 'id' and individual fields",
 		},
 	}
 
@@ -1082,12 +1100,7 @@ func TestValidateOPCTagsWithNodeID(t *testing.T) {
 				Config: tt.config,
 				Log:    testutil.Logger{},
 			}
-			err := o.InitNodeMetricMapping()
-			if tt.err != nil {
-				require.ErrorContains(t, err, tt.err.Error())
-				return
-			}
-			require.NoError(t, err)
+			require.ErrorContains(t, o.InitNodeMetricMapping(), tt.expectedErr)
 		})
 	}
 }
