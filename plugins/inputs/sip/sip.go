@@ -83,8 +83,8 @@ func (s *SIP) Init() error {
 		return fmt.Errorf("invalid SIP method %q", s.Method)
 	}
 
-	if s.Timeout <= 0 {
-		return errors.New("timeout has to be greater than zero")
+	if s.Timeout < 0 {
+		return errors.New("timeout has to be greater than or equal to zero")
 	}
 
 	// Validate server URL scheme and transport combination
@@ -151,7 +151,9 @@ func (s *SIP) Init() error {
 	if s.serverInfo.secure {
 		// Force TLS connection even though no TLS properties are given. This will
 		// use the system's TLS configuration (CA etc) if properties are empty.
-		s.ClientConfig.Enable = &s.serverInfo.secure
+		if s.ClientConfig.Enable == nil {
+			s.ClientConfig.Enable = &s.serverInfo.secure
+		}
 		tlsConfig, err := s.ClientConfig.TLSConfig()
 		if err != nil {
 			return fmt.Errorf("failed to create TLS config: %w", err)
@@ -254,14 +256,14 @@ func (s *SIP) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		// Check if it's a timeout
 		if errors.Is(err, context.DeadlineExceeded) {
-			tags["result"] = "timeout"
+			tags["result"] = "Timeout"
 			fields["response_time_s"] = time.Duration(s.Timeout).Seconds()
 			acc.AddFields("sip", fields, tags)
 			return nil
 		}
 		// Handle other errors inline
-		s.Log.Debugf("SIP gather error: %v", err)
-		tags["result"] = "error"
+		s.Log.Debugf("unauthenticated request to %q failed with: %v", s.Server, err)
+		tags["result"] = "Error"
 		acc.AddFields("sip", fields, tags)
 		return nil
 	}
@@ -290,8 +292,8 @@ func (s *SIP) Gather(acc telegraf.Accumulator) error {
 			Password: password,
 		})
 		if err != nil {
-			s.Log.Debugf("SIP gather error: %v", err)
-			tags["result"] = "error"
+			s.Log.Debugf("authenticated request to %q failed with: %v", s.Server, err)
+			tags["result"] = "Error"
 			acc.AddFields("sip", fields, tags)
 			return nil
 		}
@@ -308,7 +310,8 @@ func (s *SIP) Gather(acc telegraf.Accumulator) error {
 			tags["server_agent"] = serverAgent.Value()
 		}
 	} else {
-		tags["result"] = "error"
+		tags["result"] = "No Response"
+		s.Log.Debugf("no response from %q", s.Server)
 	}
 
 	acc.AddFields("sip", fields, tags)

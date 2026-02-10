@@ -96,10 +96,6 @@ to use them.
   # insecure_skip_verify = false
 ```
 
-> [!NOTE]
-> Per RFC 3261, the use of `;transport=tls` is deprecated.
-> Use the `sips://` URI scheme instead to indicate TLS transport.
-
 ### SIP Methods
 
 The plugin supports the following SIP methods:
@@ -151,7 +147,7 @@ Different SIP servers may respond with different status codes to OPTIONS request
     - method (the SIP method used, lowercase: options, invite, message)
     - transport (the transport protocol: udp, tcp, ws, wss)
     - status_code (the SIP response status code, e.g., "200", "404")
-    - result (the result of the request: status text like "OK", "Not Found", or "timeout", "error")
+    - result (the result of the request: status text like "OK", "Not Found", or "Timeout", "Error", "No Response")
     - server_agent (optional: the Server header from the response)
   - fields:
     - response_time_s (float, seconds) - Time taken to receive response
@@ -161,7 +157,7 @@ Different SIP servers may respond with different status codes to OPTIONS request
 
 ```text
 sip,host=telegraf-host,method=options,result=OK,source=sip://sip.example.com:5060,status_code=200,transport=udp response_time_s=0.023 1640000000000000000
-sip,host=telegraf-host,method=options,result=timeout,source=sip://unreachable.example.com:5060,transport=udp response_time_s=5.0 1640000000000000000
+sip,host=telegraf-host,method=options,result=Timeout,source=sip://unreachable.example.com:5060,transport=udp response_time_s=5.0 1640000000000000000
 sip,host=telegraf-host,method=options,result=Not\ Found,source=sip://sip.provider.com:5060,status_code=404,transport=udp response_time_s=0.045 1640000000000000000
 sip,host=telegraf-host,method=options,result=OK,source=sips://secure.voip.example.com:5061,status_code=200,transport=tcp response_time_s=0.067 1640000000000000000
 ```
