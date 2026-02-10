@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	tmetric "github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -24,7 +24,7 @@ func TestServiceCheckGather(t *testing.T) {
 			message:  "_sc|my.service.check|0",
 			hostname: "default-hostname",
 			expected: []telegraf.Metric{
-				tmetric.New(
+				metric.New(
 					"statsd_service_check",
 					map[string]string{
 						"check_name": "my.service.check",
@@ -43,7 +43,7 @@ func TestServiceCheckGather(t *testing.T) {
 			message:  "_sc|jmxfetch-config.can_connect|1",
 			hostname: "default-hostname",
 			expected: []telegraf.Metric{
-				tmetric.New(
+				metric.New(
 					"statsd_service_check",
 					map[string]string{
 						"check_name": "jmxfetch-config.can_connect",
@@ -62,7 +62,7 @@ func TestServiceCheckGather(t *testing.T) {
 			message:  "_sc|disk.check|2",
 			hostname: "default-hostname",
 			expected: []telegraf.Metric{
-				tmetric.New(
+				metric.New(
 					"statsd_service_check",
 					map[string]string{
 						"check_name": "disk.check",
@@ -81,7 +81,7 @@ func TestServiceCheckGather(t *testing.T) {
 			message:  "_sc|network.check|3",
 			hostname: "default-hostname",
 			expected: []telegraf.Metric{
-				tmetric.New(
+				metric.New(
 					"statsd_service_check",
 					map[string]string{
 						"check_name": "network.check",
@@ -100,7 +100,7 @@ func TestServiceCheckGather(t *testing.T) {
 			message:  "_sc|my.check|0|m:Service is healthy",
 			hostname: "default-hostname",
 			expected: []telegraf.Metric{
-				tmetric.New(
+				metric.New(
 					"statsd_service_check",
 					map[string]string{
 						"check_name": "my.check",
@@ -120,7 +120,7 @@ func TestServiceCheckGather(t *testing.T) {
 			message:  "_sc|my.check|0|h:custom-host",
 			hostname: "default-hostname",
 			expected: []telegraf.Metric{
-				tmetric.New(
+				metric.New(
 					"statsd_service_check",
 					map[string]string{
 						"check_name": "my.check",
@@ -139,7 +139,7 @@ func TestServiceCheckGather(t *testing.T) {
 			message:  "_sc|my.check|0|#env:prod,service:web",
 			hostname: "default-hostname",
 			expected: []telegraf.Metric{
-				tmetric.New(
+				metric.New(
 					"statsd_service_check",
 					map[string]string{
 						"check_name": "my.check",
@@ -160,7 +160,7 @@ func TestServiceCheckGather(t *testing.T) {
 			message:  "_sc|my.check|2|d:1234567890|h:myhost|#env:test,region:us-west|m:Connection failed",
 			hostname: "default-hostname",
 			expected: []telegraf.Metric{
-				tmetric.New(
+				metric.New(
 					"statsd_service_check",
 					map[string]string{
 						"check_name": "my.check",
@@ -182,7 +182,7 @@ func TestServiceCheckGather(t *testing.T) {
 			message:  "_sc|my.check|1|m:Line1\\nLine2",
 			hostname: "default-hostname",
 			expected: []telegraf.Metric{
-				tmetric.New(
+				metric.New(
 					"statsd_service_check",
 					map[string]string{
 						"check_name": "my.check",
@@ -202,7 +202,7 @@ func TestServiceCheckGather(t *testing.T) {
 			message:  "_sc|my.check|0|#host:taghost",
 			hostname: "default-hostname",
 			expected: []telegraf.Metric{
-				tmetric.New(
+				metric.New(
 					"statsd_service_check",
 					map[string]string{
 						"check_name": "my.check",
@@ -221,7 +221,7 @@ func TestServiceCheckGather(t *testing.T) {
 			message:  "_sc|my.check|0|d:1234567890",
 			hostname: "default-hostname",
 			expected: []telegraf.Metric{
-				tmetric.New(
+				metric.New(
 					"statsd_service_check",
 					map[string]string{
 						"check_name": "my.check",
@@ -240,7 +240,7 @@ func TestServiceCheckGather(t *testing.T) {
 			message:  "_sc|my.check|0",
 			hostname: "",
 			expected: []telegraf.Metric{
-				tmetric.New(
+				metric.New(
 					"statsd_service_check",
 					map[string]string{
 						"check_name": "my.check",

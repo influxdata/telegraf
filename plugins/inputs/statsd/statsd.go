@@ -170,7 +170,7 @@ type input struct {
 }
 
 // One statsd metric, form is <bucket>:<value>|<mtype>|@<samplerate>
-type metric struct {
+type rawMetric struct {
 	name       string
 	field      string
 	bucket     string
@@ -653,7 +653,7 @@ func (s *Statsd) parseStatsdLine(p *graphite.Parser, line string) error {
 
 	// Add a metric for each bit available
 	for _, bit := range bits {
-		m := metric{}
+		m := rawMetric{}
 
 		m.bucket = bucketName
 
@@ -839,7 +839,7 @@ func parseKeyValue(keyValue string) (key, val string) {
 // aggregate takes in a metric. It then
 // aggregates and caches the current value(s). It does not deal with the
 // Delete* options, because those are dealt with in the Gather function.
-func (s *Statsd) aggregate(m metric) {
+func (s *Statsd) aggregate(m rawMetric) {
 	s.Lock()
 	defer s.Unlock()
 
