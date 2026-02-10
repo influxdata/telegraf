@@ -367,11 +367,51 @@ func (t *TrapPlugin) Gather_Ah_send_trap(trapType uint32, trapBuf [256]byte, acc
 			"desc_dfsBangTrap":        ahutil.CleanCString(dfs.Desc[:]),
 		}, nil)
 
+	case AH_MSG_TRAP_DEV_IP_CHANGE:
+		var devIpChange AhTgrafDevIpChangeTrap
+		copy((*[unsafe.Sizeof(devIpChange)]byte)(unsafe.Pointer(&devIpChange))[:], trapBuf[:unsafe.Sizeof(devIpChange)])
+
+		log.Printf("[ah_trap] DEV_IP_CHANGE: ipv6AddrNum=%d, ipv6Data[0].Addr=%v, ipv6Data[1].Addr=%v, innerStructSize=%d",
+		devIpChange.Ipv6AddrNum,
+		net.IP(devIpChange.Ipv6Data[0].Ipv6Addr[:]).String(),
+		net.IP(devIpChange.Ipv6Data[1].Ipv6Addr[:]).String(),
+		unsafe.Sizeof(devIpChange.Ipv6Data[0]))
+
+		acc.AddFields("TrapEvent", map[string]interface{}{
+			"trapType_devIpChangeTrap":          devIpChange.TrapType,
+			"ipv4Addr_devIpChangeTrap":          ahutil.IntToIpv4(devIpChange.Ipv4Addr),
+			"ipv4Netmask_devIpChangeTrap":       ahutil.IntToIpv4(devIpChange.Ipv4Netmask),
+			"ipv4DefaultGateway_devIpChangeTrap": ahutil.IntToIpv4(devIpChange.Ipv4DefaultGateway),
+			"ipv6AddrNum_devIpChangeTrap":       devIpChange.Ipv6AddrNum,
+			"ipv6Data_devIpChangeTrap":          formatDevIpChangeIpv6Data(devIpChange.Ipv6Data[:], int(devIpChange.Ipv6AddrNum)),
+		}, nil)
 	}
 
 	return nil
 }
 
+/*Helper function to format IPv6 data for DEV_IP_CHANGE trap
+*/
+func formatDevIpChangeIpv6Data(ipv6Data []AhTgrafDevIpChangeIpv6Data, count int) string {
+	var result []map[string]interface{}
+	for i := 0; i < count && i < len(ipv6Data); i++ {
+		prefixBytes := make([]byte, 4)
+		binary.LittleEndian.PutUint32(prefixBytes, ipv6Data[i].Ipv6Prefix)
+		prefixHostOrder := binary.BigEndian.Uint32(prefixBytes)
+		entry := map[string]interface{}{
+			"ipv6AddrType":       ipv6Data[i].Ipv6AddrType,
+			"ipv6Addr":           net.IP(ipv6Data[i].Ipv6Addr[:]).String(),
+			"ipv6Prefix":         prefixHostOrder,
+			"ipv6DefaultGateway": net.IP(ipv6Data[i].Ipv6DefaultGateway[:]).String(),
+		}
+		result = append(result, entry)
+	}
+	jsonBytes, err := json.Marshal(result)
+	if err != nil {
+		return "[]"
+	}
+	return string(jsonBytes)
+}
 /*
 Helper function to convert state value to string for SSID bind/unbind
 */
@@ -525,6 +565,18 @@ func (t *TrapPlugin) trapListener(conn net.PacketConn) {
 			copy(trapBuf[:expected], payload)
 			if err := t.Ah_send_bssid_spoofing_trap(trapType, trapBuf, t.acc); err != nil {
 				log.Printf("[ah_trap] Error gathering BSSID Spoofing trap: %v", err)
+			}
+		case AH_MSG_TRAP_DEV_IP_CHANGE:
+			var devIpChange AhTgrafDevIpChangeTrap
+			expected := int(unsafe.Sizeof(devIpChange))
+			if len(payload) != expected {
+				log.Printf("[ah_trap] Invalid DEV_IP_CHANGE size: got %d, expected %d", len(payload), expected)
+				continue
+			}
+			var trapBuf [AH_TRAP_SIZE_256]byte
+			copy(trapBuf[:expected], payload)
+			if err := t.Gather_Ah_send_trap(trapType, trapBuf, t.acc); err != nil {
+				log.Printf("[ah_trap] Error gathering DEV_IP_CHANGE trap: %v", err)
 			}
 		}
 	}

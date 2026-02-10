@@ -28,6 +28,9 @@ const (
 	AH_MSG_TRAP_SSID_BIND_UNBIND = 5
 	AH_MSG_TRAP_BSSID_SPOOFING = 7
 	AH_TRAP_SIZE_300	  = 300
+	AH_TRAP_SIZE_256         = 256
+	AH_MSG_TRAP_DEV_IP_CHANGE = 17
+	AH_MGT0_ADDR6_NUM_MAX    = 2
 )
 
 const (
@@ -85,6 +88,25 @@ type AhTgrafBSSIDSpoofingTrap struct {
     Severity     uint8
     SourceIP     uint32
     TargetIP     uint32
+}
+
+type AhTgrafDevIpChangeIpv6Data struct {
+	Ipv6AddrType       uint8
+	_                  [3]byte
+	Ipv6Addr           [16]byte
+	Ipv6Prefix         uint32
+	Ipv6DefaultGateway [16]byte
+}
+
+type AhTgrafDevIpChangeTrap struct {
+	TrapType           uint8
+	_                  [3]byte
+	Ipv4Addr           uint32
+	Ipv4Netmask        uint32
+	Ipv4DefaultGateway uint32
+	Ipv6AddrNum        uint8
+	_                  [3]byte
+	Ipv6Data           [AH_MGT0_ADDR6_NUM_MAX]AhTgrafDevIpChangeIpv6Data
 }
 
 type AhFailureTrap struct {
