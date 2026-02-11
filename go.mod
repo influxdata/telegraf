@@ -6,9 +6,9 @@ godebug x509negativeserial=1
 
 require (
 	cloud.google.com/go/auth v0.18.1
-	cloud.google.com/go/bigquery v1.72.0
+	cloud.google.com/go/bigquery v1.73.1
 	cloud.google.com/go/monitoring v1.24.3
-	cloud.google.com/go/pubsub/v2 v2.3.0
+	cloud.google.com/go/pubsub/v2 v2.4.0
 	cloud.google.com/go/storage v1.59.2
 	collectd.org v0.6.0
 	github.com/99designs/keyring v1.2.2
@@ -57,9 +57,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.17
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.53.1
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.63.1
-	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.54.0
+	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.55.0
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.285.0
-	github.com/aws/aws-sdk-go-v2/service/kinesis v1.42.10
+	github.com/aws/aws-sdk-go-v2/service/kinesis v1.43.0
 	github.com/aws/aws-sdk-go-v2/service/sts v1.41.6
 	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.35.16
 	github.com/aws/smithy-go v1.24.0
@@ -140,7 +140,7 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0
 	github.com/karrick/godirwalk v1.16.2
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
-	github.com/klauspost/compress v1.18.3
+	github.com/klauspost/compress v1.18.4
 	github.com/klauspost/pgzip v1.2.6
 	github.com/kolo/xmlrpc v0.0.0-20220921171641-a4b6fa1dd06b
 	github.com/leodido/go-syslog/v4 v4.3.0
@@ -175,7 +175,7 @@ require (
 	github.com/pcolladosoto/goslurm v0.1.0
 	github.com/peterbourgon/unixtransport v0.0.7
 	github.com/pion/dtls/v2 v2.2.12
-	github.com/prometheus-community/pro-bing v0.7.0
+	github.com/prometheus-community/pro-bing v0.8.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
 	github.com/prometheus/common v0.67.5
@@ -197,7 +197,7 @@ require (
 	github.com/sijms/go-ora/v2 v2.9.0
 	github.com/sirupsen/logrus v1.9.4
 	github.com/sleepinggenius2/gosmi v0.4.4
-	github.com/snowflakedb/gosnowflake v1.18.1
+	github.com/snowflakedb/gosnowflake v1.19.0
 	github.com/srebhan/cborquery v1.0.4
 	github.com/srebhan/protobufquery v1.0.4
 	github.com/stretchr/testify v1.11.1
@@ -215,7 +215,7 @@ require (
 	github.com/tinylib/msgp v1.6.3
 	github.com/urfave/cli/v2 v2.27.7
 	github.com/vapourismo/knx-go v0.0.0-20240915133544-a6ab43471c11
-	github.com/vertica/vertica-sql-go v1.3.4
+	github.com/vertica/vertica-sql-go v1.3.5
 	github.com/vishvananda/netlink v1.3.1
 	github.com/vishvananda/netns v0.0.5
 	github.com/vjeantet/grok v1.0.1
@@ -224,7 +224,7 @@ require (
 	github.com/x448/float16 v0.8.4
 	github.com/xdg/scram v1.0.5
 	github.com/yuin/goldmark v1.7.16
-	go.mongodb.org/mongo-driver v1.17.8
+	go.mongodb.org/mongo-driver v1.17.9
 	go.opentelemetry.io/collector/pdata v1.46.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.44.0
 	go.opentelemetry.io/otel/sdk/metric v1.39.0
@@ -234,19 +234,19 @@ require (
 	go.starlark.net v0.0.0-20251109183026-be02852a5e1f
 	go.step.sm/crypto v0.76.0
 	go.yaml.in/yaml/v3 v3.0.4
-	golang.org/x/crypto v0.47.0
+	golang.org/x/crypto v0.48.0
 	golang.org/x/exp v0.0.0-20251209150349-8475f28825e9
-	golang.org/x/mod v0.32.0
-	golang.org/x/net v0.49.0
+	golang.org/x/mod v0.33.0
+	golang.org/x/net v0.50.0
 	golang.org/x/oauth2 v0.34.0
 	golang.org/x/sync v0.19.0
-	golang.org/x/sys v0.40.0
-	golang.org/x/term v0.39.0
-	golang.org/x/text v0.33.0
+	golang.org/x/sys v0.41.0
+	golang.org/x/term v0.40.0
+	golang.org/x/text v0.34.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	gonum.org/v1/gonum v0.17.0
 	google.golang.org/api v0.264.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217
+	google.golang.org/genproto/googleapis/api v0.0.0-20251222181119-0a764e51fe1b
 	google.golang.org/grpc v1.78.0
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
@@ -256,7 +256,7 @@ require (
 	k8s.io/apimachinery v0.35.0
 	k8s.io/client-go v0.35.0
 	layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68
-	modernc.org/sqlite v1.44.3
+	modernc.org/sqlite v1.45.0
 	software.sslmate.com/src/go-pkcs12 v0.7.0
 )
 
