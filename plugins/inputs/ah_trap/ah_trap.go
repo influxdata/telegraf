@@ -9,6 +9,7 @@ import (
 	"sync"
 	"unsafe"
 	"encoding/binary"
+	"encoding/json"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/common/ahutil"
