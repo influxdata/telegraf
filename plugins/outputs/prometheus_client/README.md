@@ -69,6 +69,12 @@ to use them.
   ## Unless set to false all string metrics will be sent as labels.
   # string_as_label = true
 
+  ## Control how metric names and label names are sanitized.
+  ## The default "legacy" keeps ASCII-only Prometheus name rules.
+  ## Set to "utf8" to allow UTF-8 metric and label names.
+  ## Valid options: "legacy", "utf8"
+  # content_encoding = "legacy"
+
   ## If set, enable TLS with the given certificate.
   # tls_cert = "/etc/ssl/telegraf.crt"
   # tls_key = "/etc/ssl/telegraf.key"

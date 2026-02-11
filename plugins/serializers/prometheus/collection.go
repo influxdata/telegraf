@@ -113,6 +113,20 @@ func NewCollection(config FormatConfig) *Collection {
 	return cache
 }
 
+func (c *Collection) sanitizeMetricName(name string) (string, bool) {
+	if c.config.ContentEncoding == "utf8" {
+		return SanitizeMetricNameUTF8(name)
+	}
+	return SanitizeMetricName(name)
+}
+
+func (c *Collection) sanitizeLabelName(name string) (string, bool) {
+	if c.config.ContentEncoding == "utf8" {
+		return SanitizeLabelNameUTF8(name)
+	}
+	return SanitizeLabelName(name)
+}
+
 func hasLabel(name string, labels []labelPair) bool {
 	for _, label := range labels {
 		if name == label.name {
@@ -137,7 +151,7 @@ func (c *Collection) createLabels(metric telegraf.Metric) []labelPair {
 			}
 		}
 
-		name, ok := SanitizeLabelName(tag.Key)
+		name, ok := c.sanitizeLabelName(tag.Key)
 		if !ok {
 			continue
 		}
@@ -156,7 +170,7 @@ func (c *Collection) createLabels(metric telegraf.Metric) []labelPair {
 			continue
 		}
 
-		name, ok := SanitizeLabelName(field.Key)
+		name, ok := c.sanitizeLabelName(field.Key)
 		if !ok {
 			continue
 		}
@@ -185,7 +199,7 @@ func (c *Collection) Add(m telegraf.Metric, now time.Time) {
 	labels := c.createLabels(m)
 	for _, field := range m.FieldList() {
 		metricName := MetricName(m.Name(), field.Key, m.Type())
-		metricName, ok := SanitizeMetricName(metricName)
+		metricName, ok := c.sanitizeMetricName(metricName)
 		if !ok {
 			continue
 		}

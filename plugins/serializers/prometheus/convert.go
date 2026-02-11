@@ -101,6 +101,22 @@ func SanitizeLabelName(name string) (string, bool) {
 	return sanitize(name, labelNameTable)
 }
 
+// SanitizeMetricNameUTF8 checks if the name is a valid Prometheus metric name using UTF-8 validation.
+func SanitizeMetricNameUTF8(name string) (string, bool) {
+	if model.UTF8Validation.IsValidMetricName(name) {
+		return name, true
+	}
+	return sanitize(name, metricNameTable)
+}
+
+// SanitizeLabelNameUTF8 checks if the name is a valid Prometheus label name using UTF-8 validation.
+func SanitizeLabelNameUTF8(name string) (string, bool) {
+	if model.UTF8Validation.IsValidLabelName(name) {
+		return name, true
+	}
+	return sanitize(name, labelNameTable)
+}
+
 // MetricName returns the Prometheus metric name.
 func MetricName(measurement, fieldKey string, valueType telegraf.ValueType) string {
 	switch valueType {

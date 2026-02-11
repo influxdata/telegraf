@@ -60,6 +60,7 @@ type PrometheusClient struct {
 	StringAsLabel      bool                               `toml:"string_as_label"`
 	ExportTimestamp    bool                               `toml:"export_timestamp"`
 	TypeMappings       serializers_prometheus.MetricTypes `toml:"metric_types"`
+	ContentEncoding    string                             `toml:"content_encoding"`
 	HTTPHeaders        map[string]*config.Secret          `toml:"http_headers"`
 	Log                telegraf.Logger                    `toml:"-"`
 
@@ -116,6 +117,7 @@ func (p *PrometheusClient) Init() error {
 			p.ExportTimestamp,
 			p.TypeMappings,
 			p.Log,
+			p.ContentEncoding,
 		)
 		err := registry.Register(p.collector)
 		if err != nil {
@@ -127,6 +129,7 @@ func (p *PrometheusClient) Init() error {
 			p.StringAsLabel,
 			p.ExportTimestamp,
 			p.TypeMappings,
+			p.ContentEncoding,
 		)
 		err := registry.Register(p.collector)
 		if err != nil {
