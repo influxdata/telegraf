@@ -324,9 +324,23 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 		return fmt.Errorf("adding headers failed: %w", err)
 	}
 
-	// Execute the request
+	// Log request details before sending
+	payloadSize := len(b.payload)
+	metricCount := len(b.metrics)
+	c.log.Tracef(
+		"Sending batch: metrics=%d, size=%d bytes (%.2f KB), bucket=%q, timeout=%s",
+		metricCount, payloadSize, float64(payloadSize)/1024, b.bucket, c.timeout,
+	)
+
+	// Execute the request and track timing
+	start := time.Now()
 	resp, err := c.client.Do(req.WithContext(ctx))
+	elapsed := time.Since(start)
 	if err != nil {
+		c.log.Tracef(
+			"Request failed after %s (timeout=%s): metrics=%d, size=%d bytes, bucket=%q, error=%v",
+			elapsed, c.timeout, metricCount, payloadSize, b.bucket, err,
+		)
 		internal.OnClientError(c.client, err)
 		return err
 	}
@@ -345,10 +359,18 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 		http.StatusMultiStatus,
 		http.StatusAlreadyReported:
 		c.retryCount.Store(0)
+		c.log.Tracef(
+			"Request succeeded in %s: metrics=%d, size=%d bytes (%.2f KB), bucket=%q",
+			elapsed, metricCount, payloadSize, float64(payloadSize)/1024, b.bucket,
+		)
 		return nil
 	}
 
 	// We got an error and now try to decode further
+	c.log.Tracef(
+		"Request returned error status in %s: metrics=%d, size=%d bytes, bucket=%q, status=%s",
+		elapsed, metricCount, payloadSize, b.bucket, resp.Status,
+	)
 	var desc string
 	writeResp := &genericRespError{}
 	if json.NewDecoder(resp.Body).Decode(writeResp) == nil {
