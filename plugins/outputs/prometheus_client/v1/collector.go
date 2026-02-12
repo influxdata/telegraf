@@ -83,7 +83,13 @@ func (c *Collector) sanitizeLabelName(name string) (string, bool) {
 	return serializers_prometheus.SanitizeLabelName(name)
 }
 
-func NewCollector(expire time.Duration, stringsAsLabel, exportTimestamp bool, typeMapping serializers_prometheus.MetricTypes, log telegraf.Logger, contentEncoding string) *Collector {
+func NewCollector(
+	expire time.Duration,
+	stringsAsLabel, exportTimestamp bool,
+	typeMapping serializers_prometheus.MetricTypes,
+	log telegraf.Logger,
+	contentEncoding string,
+) *Collector {
 	c := &Collector{
 		ExpirationInterval: expire,
 		StringAsLabel:      stringsAsLabel,
