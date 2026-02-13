@@ -70,7 +70,7 @@ type Statsd struct {
 	MetricSeparator string `toml:"metric_separator"`
 
 	// Parses extensions to statsd in the datadog statsd format
-	// currently supports metrics and datadog tags.
+	// currently supports metrics, datadog tags, events, and service checks.
 	// http://docs.datadoghq.com/guides/dogstatsd/
 	DataDogExtensions bool `toml:"datadog_extensions"`
 
@@ -173,7 +173,7 @@ type input struct {
 }
 
 // One statsd metric, form is <bucket>:<value>|<mtype>|@<samplerate>
-type metric struct {
+type rawMetric struct {
 	name       string
 	field      string
 	bucket     string
@@ -595,6 +595,11 @@ func (s *Statsd) parser() error {
 						s.Log.Errorf("Parsing line failed: %v", err)
 						s.Log.Debugf("  line was: %s", line)
 					}
+				case s.DataDogExtensions && strings.HasPrefix(line, "_sc|"):
+					if err := s.parseServiceCheckMessage(in.Time, line, in.Addr); err != nil {
+						s.Log.Errorf("Parsing line failed: %v", err)
+						s.Log.Debugf("  line was: %s", line)
+					}
 				default:
 					if err := s.parseStatsdLine(p, line); err != nil {
 						if !errors.Is(err, errParsing) {
@@ -651,7 +656,7 @@ func (s *Statsd) parseStatsdLine(p *graphite.Parser, line string) error {
 
 	// Add a metric for each bit available
 	for _, bit := range bits {
-		m := metric{}
+		m := rawMetric{}
 
 		m.bucket = bucketName
 
@@ -837,7 +842,7 @@ func parseKeyValue(keyValue string) (key, val string) {
 // aggregate takes in a metric. It then
 // aggregates and caches the current value(s). It does not deal with the
 // Delete* options, because those are dealt with in the Gather function.
-func (s *Statsd) aggregate(m metric) {
+func (s *Statsd) aggregate(m rawMetric) {
 	s.Lock()
 	defer s.Unlock()
 
