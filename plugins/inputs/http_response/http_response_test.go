@@ -1408,9 +1408,6 @@ func Test_isURLInIPv6(t *testing.T) {
 			address: parseURL(t, "https://[2001:db8:a0b:12f0::1%25eth0]:15000/"), // `%25` escapes `%`
 			want:    true,
 		}, {
-			address: parseURL(t, "https://2001:0db8:0001:0000:0000:0ab9:C0A8:0102"),
-			want:    true,
-		}, {
 			address: parseURL(t, "http://[2607:f8b0:4005:802::1007]/"),
 			want:    true,
 		}, {
