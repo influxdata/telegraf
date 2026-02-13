@@ -26,6 +26,8 @@ type FormatConfig struct {
 	// helps to reduce payload size.
 	CompactEncoding bool        `toml:"prometheus_compact_encoding"`
 	TypeMappings    MetricTypes `toml:"prometheus_metric_types"`
+	// ContentEncoding defines whether to allow UTF-8 characters in metric names and label names.
+	ContentEncoding string `toml:"prometheus_content_encoding"`
 }
 
 // MetricTypes defines the mapping of metric names to their types.
