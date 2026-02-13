@@ -290,31 +290,41 @@ func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
 	}
 
 	// collect build info
-	number := js.LastBuild.Number
-	if number < 1 {
-		// no build info
-		return nil
+	builds := js.Builds
+	if len(builds) == 0 {
+		if js.LastBuild.Number < 1 {
+			return nil
+		}
+		builds = []jobBuild{js.LastBuild}
 	}
-	build, err := j.client.getBuild(context.Background(), jr, number)
-	if err != nil {
-		return err
-	}
-
-	if build.Building {
-		j.Log.Debugf("Ignore running build on %s, build %v", jr.name, number)
-		return nil
+	if len(builds) > maxBuildsPerJob {
+		builds = builds[:maxBuildsPerJob]
 	}
 
-	// stop if build is too old
-	// Higher up in gatherJobs
 	cutoff := time.Now().Add(-1 * time.Duration(j.MaxBuildAge))
 
-	// Here we just test
-	if build.getTimestamp().Before(cutoff) {
-		return nil
-	}
+	for _, jb := range builds {
+		if jb.Number < 1 {
+			continue
+		}
 
-	j.gatherJobBuild(jr, build, acc)
+		build, err := j.client.getBuild(context.Background(), jr, jb.Number)
+		if err != nil {
+			acc.AddError(err)
+			continue
+		}
+
+		if build.Building {
+			j.Log.Debugf("Ignore running build on %s, build %v", jr.name, jb.Number)
+			continue
+		}
+
+		if build.getTimestamp().Before(cutoff) {
+			continue
+		}
+
+		j.gatherJobBuild(jr, build, acc)
+	}
 	return nil
 }
 
@@ -362,6 +372,7 @@ type swapSpaceMonitor struct {
 
 type jobResponse struct {
 	LastBuild jobBuild   `json:"lastBuild"`
+	Builds    []jobBuild `json:"builds"`
 	Jobs      []innerJob `json:"jobs"`
 	Name      string     `json:"name"`
 }

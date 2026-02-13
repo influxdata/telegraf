@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+const maxBuildsPerJob = 20
+
 type client struct {
 	baseURL       string
 	httpClient    *http.Client
@@ -132,7 +134,7 @@ func (c *client) getJobs(ctx context.Context, jr *jobRequest) (js *jobResponse, 
 	js = new(jobResponse)
 	url := jobPath
 	if jr != nil {
-		url = jr.url()
+		url = fmt.Sprintf("%s?tree=builds[number,url]{0,%d},lastBuild[number,url],jobs[name,url,color],name", jr.url(), maxBuildsPerJob)
 	}
 	err = c.doGet(ctx, url, js)
 	return js, err

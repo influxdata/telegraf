@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -108,7 +110,7 @@ type mockHandler struct {
 }
 
 func (h mockHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	o, ok := h.responseMap[r.URL.RequestURI()]
+	o, ok := h.responseMap[r.URL.EscapedPath()]
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -230,7 +232,7 @@ func TestGatherFail(t *testing.T) {
 					},
 				},
 			},
-			expected: "[/job/job1/api/json] 404 Not Found",
+			expected: "404 Not Found",
 		},
 		{
 			name: "bad build info",
@@ -255,7 +257,7 @@ func TestGatherFail(t *testing.T) {
 			// Setup test server
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				// Lookup the response using the URI
-				response, ok := tt.response[r.URL.RequestURI()]
+				response, ok := tt.response[r.URL.EscapedPath()]
 				if !ok {
 					w.WriteHeader(http.StatusNotFound)
 					return
@@ -543,7 +545,7 @@ func TestGatherNodeData(t *testing.T) {
 			// Setup test server
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				// Lookup the response using the URI
-				response, ok := tt.response[r.URL.RequestURI()]
+				response, ok := tt.response[r.URL.EscapedPath()]
 				if !ok {
 					w.WriteHeader(http.StatusNotFound)
 					return
@@ -672,7 +674,7 @@ func TestGatherLabels(t *testing.T) {
 	// Setup test server
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Lookup the response using the URI
-		response, ok := response[r.URL.RequestURI()]
+		response, ok := response[r.URL.EscapedPath()]
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -717,6 +719,676 @@ func TestGatherLabels(t *testing.T) {
 
 	actual := acc.GetTelegrafMetrics()
 	testutil.RequireMetricsEqual(t, expected, actual, options...)
+}
+
+func TestGatherJobBuilds(t *testing.T) {
+	twoHoursAgo := (time.Now().Unix() - int64((2 * time.Hour).Seconds())) * 1000
+	oneMinAgo := (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000
+
+	tests := []struct {
+		name     string
+		response map[string]interface{}
+		expected []telegraf.Metric
+	}{
+		{
+			name: "multiple builds",
+			response: map[string]interface{}{
+				"/api/json": &jobResponse{
+					Jobs: []innerJob{
+						{Name: "pipeline"},
+					},
+				},
+				"/computer/api/json": nodeResponse{},
+				"/job/pipeline/api/json": &jobResponse{
+					Builds: []jobBuild{{Number: 3}, {Number: 2}, {Number: 1}},
+					LastBuild: jobBuild{
+						Number: 3,
+					},
+				},
+				"/job/pipeline/1/api/json": &buildResponse{
+					Building:  false,
+					Result:    "SUCCESS",
+					Duration:  10000,
+					Number:    1,
+					Timestamp: oneMinAgo,
+				},
+				"/job/pipeline/2/api/json": &buildResponse{
+					Building:  false,
+					Result:    "FAILURE",
+					Duration:  20000,
+					Number:    2,
+					Timestamp: oneMinAgo,
+				},
+				"/job/pipeline/3/api/json": &buildResponse{
+					Building:  false,
+					Result:    "SUCCESS",
+					Duration:  30000,
+					Number:    3,
+					Timestamp: oneMinAgo,
+				},
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"jenkins",
+					map[string]string{
+						"source": "127.0.0.1",
+						"port":   "",
+					},
+					map[string]interface{}{
+						"busy_executors":  0,
+						"total_executors": 0,
+					},
+					time.Unix(0, 0),
+				),
+				metric.New(
+					"jenkins_job",
+					map[string]string{
+						"source":  "127.0.0.1",
+						"port":    "",
+						"name":    "pipeline",
+						"result":  "SUCCESS",
+						"parents": "",
+					},
+					map[string]interface{}{
+						"duration":    int64(10000),
+						"number":      int64(1),
+						"result_code": 0,
+					},
+					time.Unix(0, 0),
+				),
+				metric.New(
+					"jenkins_job",
+					map[string]string{
+						"source":  "127.0.0.1",
+						"port":    "",
+						"name":    "pipeline",
+						"result":  "FAILURE",
+						"parents": "",
+					},
+					map[string]interface{}{
+						"duration":    int64(20000),
+						"number":      int64(2),
+						"result_code": 1,
+					},
+					time.Unix(0, 0),
+				),
+				metric.New(
+					"jenkins_job",
+					map[string]string{
+						"source":  "127.0.0.1",
+						"port":    "",
+						"name":    "pipeline",
+						"result":  "SUCCESS",
+						"parents": "",
+					},
+					map[string]interface{}{
+						"duration":    int64(30000),
+						"number":      int64(3),
+						"result_code": 0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "running build skipped",
+			response: map[string]interface{}{
+				"/api/json": &jobResponse{
+					Jobs: []innerJob{
+						{Name: "pipeline"},
+					},
+				},
+				"/computer/api/json": nodeResponse{},
+				"/job/pipeline/api/json": &jobResponse{
+					Builds: []jobBuild{{Number: 3}, {Number: 2}},
+					LastBuild: jobBuild{
+						Number: 3,
+					},
+				},
+				"/job/pipeline/3/api/json": &buildResponse{
+					Building:  true,
+					Result:    "",
+					Duration:  0,
+					Number:    3,
+					Timestamp: time.Now().Unix() * 1000,
+				},
+				"/job/pipeline/2/api/json": &buildResponse{
+					Building:  false,
+					Result:    "SUCCESS",
+					Duration:  15000,
+					Number:    2,
+					Timestamp: oneMinAgo,
+				},
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"jenkins",
+					map[string]string{
+						"source": "127.0.0.1",
+						"port":   "",
+					},
+					map[string]interface{}{
+						"busy_executors":  0,
+						"total_executors": 0,
+					},
+					time.Unix(0, 0),
+				),
+				metric.New(
+					"jenkins_job",
+					map[string]string{
+						"source":  "127.0.0.1",
+						"port":    "",
+						"name":    "pipeline",
+						"result":  "SUCCESS",
+						"parents": "",
+					},
+					map[string]interface{}{
+						"duration":    int64(15000),
+						"number":      int64(2),
+						"result_code": 0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "max build age filters old builds",
+			response: map[string]interface{}{
+				"/api/json": &jobResponse{
+					Jobs: []innerJob{
+						{Name: "pipeline"},
+					},
+				},
+				"/computer/api/json": nodeResponse{},
+				"/job/pipeline/api/json": &jobResponse{
+					Builds: []jobBuild{{Number: 3}, {Number: 2}, {Number: 1}},
+					LastBuild: jobBuild{
+						Number: 3,
+					},
+				},
+				"/job/pipeline/3/api/json": &buildResponse{
+					Building:  false,
+					Result:    "SUCCESS",
+					Duration:  10000,
+					Number:    3,
+					Timestamp: oneMinAgo,
+				},
+				"/job/pipeline/2/api/json": &buildResponse{
+					Building:  false,
+					Result:    "SUCCESS",
+					Duration:  20000,
+					Number:    2,
+					Timestamp: twoHoursAgo,
+				},
+				// Build 1 is also too old, so no metric is emitted for it
+				"/job/pipeline/1/api/json": &buildResponse{
+					Building:  false,
+					Result:    "SUCCESS",
+					Duration:  30000,
+					Number:    1,
+					Timestamp: (time.Now().Unix() - int64((3 * time.Hour).Seconds())) * 1000,
+				},
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"jenkins",
+					map[string]string{
+						"source": "127.0.0.1",
+						"port":   "",
+					},
+					map[string]interface{}{
+						"busy_executors":  0,
+						"total_executors": 0,
+					},
+					time.Unix(0, 0),
+				),
+				metric.New(
+					"jenkins_job",
+					map[string]string{
+						"source":  "127.0.0.1",
+						"port":    "",
+						"name":    "pipeline",
+						"result":  "SUCCESS",
+						"parents": "",
+					},
+					map[string]interface{}{
+						"duration":    int64(10000),
+						"number":      int64(3),
+						"result_code": 0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "last build fallback",
+			response: map[string]interface{}{
+				"/api/json": &jobResponse{
+					Jobs: []innerJob{
+						{Name: "pipeline"},
+					},
+				},
+				"/computer/api/json": nodeResponse{},
+				"/job/pipeline/api/json": &jobResponse{
+					Builds:    nil,
+					LastBuild: jobBuild{Number: 5},
+				},
+				"/job/pipeline/5/api/json": &buildResponse{
+					Building:  false,
+					Result:    "SUCCESS",
+					Duration:  12000,
+					Number:    5,
+					Timestamp: oneMinAgo,
+				},
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"jenkins",
+					map[string]string{
+						"source": "127.0.0.1",
+						"port":   "",
+					},
+					map[string]interface{}{
+						"busy_executors":  0,
+						"total_executors": 0,
+					},
+					time.Unix(0, 0),
+				),
+				metric.New(
+					"jenkins_job",
+					map[string]string{
+						"source":  "127.0.0.1",
+						"port":    "",
+						"name":    "pipeline",
+						"result":  "SUCCESS",
+						"parents": "",
+					},
+					map[string]interface{}{
+						"duration":    int64(12000),
+						"number":      int64(5),
+						"result_code": 0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "no build when last build invalid",
+			response: map[string]interface{}{
+				"/api/json": &jobResponse{
+					Jobs: []innerJob{
+						{Name: "pipeline"},
+					},
+				},
+				"/computer/api/json": nodeResponse{},
+				"/job/pipeline/api/json": &jobResponse{
+					Builds:    nil,
+					LastBuild: jobBuild{Number: 0},
+				},
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"jenkins",
+					map[string]string{
+						"source": "127.0.0.1",
+						"port":   "",
+					},
+					map[string]interface{}{
+						"busy_executors":  0,
+						"total_executors": 0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			// Build 2 is older than MaxBuildAge but builds 1 and 3 are recent.
+			// All valid builds should still be reported even if an old build
+			// appears between newer ones (i.e. non-descending order).
+			name: "old build among new builds",
+			response: map[string]interface{}{
+				"/api/json": &jobResponse{
+					Jobs: []innerJob{
+						{Name: "pipeline"},
+					},
+				},
+				"/computer/api/json": nodeResponse{},
+				"/job/pipeline/api/json": &jobResponse{
+					Builds:    []jobBuild{{Number: 3}, {Number: 2}, {Number: 1}},
+					LastBuild: jobBuild{Number: 3},
+				},
+				"/job/pipeline/1/api/json": &buildResponse{
+					Building:  false,
+					Result:    "SUCCESS",
+					Duration:  10000,
+					Number:    1,
+					Timestamp: oneMinAgo,
+				},
+				"/job/pipeline/2/api/json": &buildResponse{
+					Building:  false,
+					Result:    "SUCCESS",
+					Duration:  20000,
+					Number:    2,
+					Timestamp: twoHoursAgo,
+				},
+				"/job/pipeline/3/api/json": &buildResponse{
+					Building:  false,
+					Result:    "SUCCESS",
+					Duration:  30000,
+					Number:    3,
+					Timestamp: oneMinAgo,
+				},
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"jenkins",
+					map[string]string{
+						"source": "127.0.0.1",
+						"port":   "",
+					},
+					map[string]interface{}{
+						"busy_executors":  0,
+						"total_executors": 0,
+					},
+					time.Unix(0, 0),
+				),
+				metric.New(
+					"jenkins_job",
+					map[string]string{
+						"source":  "127.0.0.1",
+						"port":    "",
+						"name":    "pipeline",
+						"result":  "SUCCESS",
+						"parents": "",
+					},
+					map[string]interface{}{
+						"duration":    int64(10000),
+						"number":      int64(1),
+						"result_code": 0,
+					},
+					time.Unix(0, 0),
+				),
+				metric.New(
+					"jenkins_job",
+					map[string]string{
+						"source":  "127.0.0.1",
+						"port":    "",
+						"name":    "pipeline",
+						"result":  "SUCCESS",
+						"parents": "",
+					},
+					map[string]interface{}{
+						"duration":    int64(30000),
+						"number":      int64(3),
+						"result_code": 0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup test server
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				resp, ok := tt.response[r.URL.EscapedPath()]
+				if !ok {
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
+
+				buf, err := json.Marshal(resp)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				if len(buf) == 0 {
+					w.WriteHeader(http.StatusNoContent)
+					return
+				}
+
+				if _, err := w.Write(buf); err != nil {
+					t.Logf("writing failed: %v", err)
+					t.Fail()
+				}
+			}))
+			defer ts.Close()
+
+			// Setup the plugin
+			plugin := &Jenkins{
+				URL:             ts.URL,
+				MaxBuildAge:     config.Duration(time.Hour),
+				ResponseTimeout: config.Duration(time.Second),
+				Log:             testutil.Logger{},
+			}
+
+			// Collect the data
+			var acc testutil.Accumulator
+			require.NoError(t, acc.GatherError(plugin.Gather))
+
+			// Check the resulting metrics
+			options := []cmp.Option{
+				testutil.IgnoreTime(),
+				testutil.SortMetrics(),
+				testutil.IgnoreTags("port"),
+			}
+
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, tt.expected, actual, options...)
+		})
+	}
+}
+
+func TestGatherBuildFetchErrorPartial(t *testing.T) {
+	// Build 2 returns an HTTP error, but builds 1 and 3 succeed.
+	// Metrics should still be emitted for the successful builds,
+	// and the error should be recorded via acc.AddError.
+	response := map[string]interface{}{
+		"/api/json": &jobResponse{
+			Jobs: []innerJob{
+				{Name: "pipeline"},
+			},
+		},
+		"/computer/api/json": nodeResponse{},
+		"/job/pipeline/api/json": &jobResponse{
+			Builds:    []jobBuild{{Number: 3}, {Number: 2}, {Number: 1}},
+			LastBuild: jobBuild{Number: 3},
+		},
+		// Build 2 is deliberately missing from responses, causing a 404
+		"/job/pipeline/1/api/json": &buildResponse{
+			Building:  false,
+			Result:    "SUCCESS",
+			Duration:  10000,
+			Number:    1,
+			Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
+		},
+		"/job/pipeline/3/api/json": &buildResponse{
+			Building:  false,
+			Result:    "SUCCESS",
+			Duration:  30000,
+			Number:    3,
+			Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
+		},
+	}
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"jenkins",
+			map[string]string{
+				"source": "127.0.0.1",
+				"port":   "",
+			},
+			map[string]interface{}{
+				"busy_executors":  0,
+				"total_executors": 0,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"jenkins_job",
+			map[string]string{
+				"source":  "127.0.0.1",
+				"port":    "",
+				"name":    "pipeline",
+				"result":  "SUCCESS",
+				"parents": "",
+			},
+			map[string]interface{}{
+				"duration":    int64(10000),
+				"number":      int64(1),
+				"result_code": 0,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"jenkins_job",
+			map[string]string{
+				"source":  "127.0.0.1",
+				"port":    "",
+				"name":    "pipeline",
+				"result":  "SUCCESS",
+				"parents": "",
+			},
+			map[string]interface{}{
+				"duration":    int64(30000),
+				"number":      int64(3),
+				"result_code": 0,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	// Setup test server
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resp, ok := response[r.URL.EscapedPath()]
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		buf, err := json.Marshal(resp)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if len(buf) == 0 {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		if _, err := w.Write(buf); err != nil {
+			t.Logf("writing failed: %v", err)
+			t.Fail()
+		}
+	}))
+	defer ts.Close()
+
+	plugin := &Jenkins{
+		URL:             ts.URL,
+		MaxBuildAge:     config.Duration(time.Hour),
+		ResponseTimeout: config.Duration(time.Second),
+		Log:             testutil.Logger{},
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
+
+	// Should have recorded an error for the failed build fetch
+	require.Len(t, acc.Errors, 1)
+	require.ErrorContains(t, acc.Errors[0], "404")
+
+	// Metrics for the two successful builds should still be present
+	options := []cmp.Option{
+		testutil.IgnoreTime(),
+		testutil.SortMetrics(),
+		testutil.IgnoreTags("port"),
+	}
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, options...)
+}
+
+func TestGatherBuildsCappedAt20(t *testing.T) {
+	// A job has 25 builds, all within MaxBuildAge.
+	// The plugin should fetch at most 20 build details,
+	// because getJobs should use a tree parameter to limit
+	// the builds array returned by Jenkins.
+	const totalBuilds = 25
+	maxExpectedFetches := maxBuildsPerJob
+
+	now := time.Now()
+
+	// Build the job response with 25 builds (newest-first)
+	builds := make([]jobBuild, totalBuilds)
+	for i := 0; i < totalBuilds; i++ {
+		builds[i] = jobBuild{Number: int64(totalBuilds - i)}
+	}
+
+	// Track how many build-detail requests are made and whether the tree parameter was sent
+	var buildFetchCount atomic.Int32
+	var treeParameterSeen atomic.Bool
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.EscapedPath()
+		var resp interface{}
+
+		switch path {
+		case "/", "/api/json":
+			resp = &jobResponse{
+				Jobs: []innerJob{{Name: "pipeline"}},
+			}
+		case "/computer/api/json":
+			resp = &nodeResponse{}
+		case "/job/pipeline/api/json":
+			// Simulate Jenkins honoring the tree parameter:
+			// when the request includes tree=...{0,20}, return only 20 builds.
+			buildsToReturn := builds
+			if strings.Contains(r.URL.RawQuery, "tree=") {
+				treeParameterSeen.Store(true)
+				if len(buildsToReturn) > maxExpectedFetches {
+					buildsToReturn = buildsToReturn[:maxExpectedFetches]
+				}
+			}
+			resp = &jobResponse{
+				Builds:    buildsToReturn,
+				LastBuild: jobBuild{Number: int64(totalBuilds)},
+			}
+		default:
+			// Must be a build detail request like /job/pipeline/<N>/api/json
+			buildFetchCount.Add(1)
+			resp = &buildResponse{
+				Building:  false,
+				Result:    "SUCCESS",
+				Duration:  10000,
+				Number:    1,
+				Timestamp: (now.Unix() - int64(time.Minute.Seconds())) * 1000,
+			}
+		}
+
+		buf, err := json.Marshal(resp)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if _, err := w.Write(buf); err != nil {
+			t.Logf("writing failed: %v", err)
+			t.Fail()
+		}
+	}))
+	defer ts.Close()
+
+	plugin := &Jenkins{
+		URL:             ts.URL,
+		MaxBuildAge:     config.Duration(time.Hour),
+		ResponseTimeout: config.Duration(time.Second),
+		Log:             testutil.Logger{},
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(plugin.Gather))
+
+	require.True(t, treeParameterSeen.Load(), "expected the job request to include a tree query parameter")
+	require.LessOrEqual(t, int(buildFetchCount.Load()), maxExpectedFetches,
+		"expected at most %d build fetches but got %d", maxExpectedFetches, buildFetchCount.Load())
 }
 
 func TestGatherJobs(t *testing.T) {
@@ -1220,10 +1892,10 @@ func TestGatherJobs(t *testing.T) {
 			// Setup test server
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				// Lookup the response using the URI
-				response, ok := tt.response[r.URL.RequestURI()]
+				response, ok := tt.response[r.URL.EscapedPath()]
 				if !ok {
 					// Shortcut unrelated endpoints
-					if r.URL.RequestURI() != "/computer/api/json" {
+					if r.URL.EscapedPath() != "/computer/api/json" {
 						w.WriteHeader(http.StatusNotFound)
 						return
 					}
