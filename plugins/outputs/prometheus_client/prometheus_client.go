@@ -38,6 +38,7 @@ const (
 	defaultExpirationInterval = config.Duration(60 * time.Second)
 	defaultReadTimeout        = 10 * time.Second
 	defaultWriteTimeout       = 10 * time.Second
+	defaultContentEncoding    = "legacy"
 )
 
 type Collector interface {
@@ -101,6 +102,15 @@ func (p *PrometheusClient) Init() error {
 		default:
 			return fmt.Errorf("unrecognized collector %s", collector)
 		}
+	}
+
+	switch p.ContentEncoding {
+	case "":
+		p.ContentEncoding = defaultContentEncoding
+	case "legacy", "utf8":
+		// Valid encodings.
+	default:
+		return fmt.Errorf("invalid content_encoding %q: must be \"legacy\" or \"utf8\"", p.ContentEncoding)
 	}
 
 	if err := p.TypeMappings.Init(); err != nil {
