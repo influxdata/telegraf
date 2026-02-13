@@ -8,7 +8,7 @@ executors:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     resource_class: large
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.25.5'
+      - image: 'quay.io/influxdb/telegraf-ci:1.26.0'
     environment:
       GOFLAGS: -p=4
   mac:
@@ -80,7 +80,7 @@ commands:
           condition:
             equal: [ windows, << parameters.type >> ]
           steps:
-            - run: go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0
+            - run: go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.5.0
       - when:
           condition: << parameters.nightly >>
           steps:

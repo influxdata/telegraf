@@ -13,10 +13,6 @@ type mockHandler struct {
 	responseMap map[string]interface{}
 }
 
-func toPtr[T any](v T) *T {
-	return &v
-}
-
 func TestNewClient(t *testing.T) {
 	_, err := newClient("https://127.0.0.1:443/", "default", "", time.Second, tls.ClientConfig{})
 	require.NoErrorf(t, err, "Failed to create new client: %v", err)

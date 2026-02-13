@@ -36,7 +36,8 @@ linters:
     - nilerr
     - nolintlint
     - perfsprint
-    - prealloc
+    # Temporarily disabled due to many new warnings when updating to Go 1.26
+    # - prealloc
     - predeclared
     - revive
     - sqlclosecheck
@@ -275,10 +276,10 @@ linters:
       # Default: false
       require-specific: true
 
-    prealloc:
+    # prealloc:
       # Report pre-allocation suggestions only on simple loops that have no returns/breaks/continues/gotos in them.
       # Default: true
-      simple: false
+      # simple: false
 
     revive:
       # Sets the default severity.
