@@ -3,10 +3,6 @@
 This plugin gathers packets and bytes counters for rules within
 Linux's [nftables][nftables] firewall, as well as set element counts.
 
-> [!IMPORTANT]
-> Rules are identified by the associated comment so those **comments have to be
-> unique**! Rules without comment are ignored.
-
 ⭐ Telegraf v1.37.0
 🏷️ network, system
 💻 linux
@@ -34,6 +30,10 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Tables to monitor (may use "family table" format, e.g., "inet filter")
   # tables = [ "filter" ]
+
+  ## Kinds of objects to monitor: "counters" (named counters), "sets",
+  ## (named sets), "anonymous-counters" (on commented rules).
+  # include = [ "counters", "sets", "anonymous-counters" ]
 ```
 
 Since telegraf will fork a process to run nftables, `AmbientCapabilities` is
@@ -44,12 +44,31 @@ required to transmit the capabilities bounding set to the forked process.
 You may edit your sudo configuration with the following:
 
 ```sudo
-telegraf ALL=(root) NOPASSWD: /usr/bin/nft *
+telegraf ALL=(root) NOPASSWD: /usr/bin/nft --json list table *
 ```
 
 ## Metrics
 
-Rules:
+Counters (when `counters` included):
+
+* nftables
+  * tags:
+    * table
+    * counter
+  * fields:
+    * pkts (integer, count)
+    * bytes (integer, bytes)
+
+Sets (when `sets` included):
+
+* nftables
+  * tags:
+    * table
+    * set
+  * field:
+    * count (integer, count)
+
+Anonymous counters on commented rules (when `anonymous-counters` included):
 
 * nftables
   * tags:
@@ -60,19 +79,11 @@ Rules:
     * pkts (integer, count)
     * bytes (integer, bytes)
 
-Sets:
-
-* nftables
-  * tags:
-    * table
-    * set
-  * field:
-    * count (integer, count)
-
 ## Example Output
 
 ```text
-> nftables,chain=incoming,host=my_hostname,rule=comment_val_1,table=filter bytes=66435845i,pkts=133882i 1757367516000000000
-> nftables,chain=outgoing,host=my_hostname,rule=comment_val2,table=filter bytes=25596512i,pkts=145129i 1757367516000000000
+> nftables,host=my_hostname,counter=my_counter,table=filter bytes=48968i,pkts=48i 1757367516000000000
 > nftables,host=my_hostname,set=my_set,table=filter count=10i 1757367516000000000
+> nftables,chain=incoming,host=my_hostname,rule=comment_val_1,table=filter bytes=66435845i,pkts=133882i 1757367516000000000
+> nftables,chain=outgoing,host=my_hostname,rule=comment_val_2,table=filter bytes=25596512i,pkts=145129i 1757367516000000000
 ```
