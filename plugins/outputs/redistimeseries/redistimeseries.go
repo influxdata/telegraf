@@ -22,13 +22,14 @@ import (
 var sampleConfig string
 
 type RedisTimeSeries struct {
-	Address             string          `toml:"address"`
-	Username            config.Secret   `toml:"username"`
-	Password            config.Secret   `toml:"password"`
-	Database            int             `toml:"database"`
-	ConvertStringFields bool            `toml:"convert_string_fields"`
-	Timeout             config.Duration `toml:"timeout"`
-	Log                 telegraf.Logger `toml:"-"`
+	Address             string           `toml:"address"`
+	Username            config.Secret    `toml:"username"`
+	Password            config.Secret    `toml:"password"`
+	Database            int              `toml:"database"`
+	ConvertStringFields bool             `toml:"convert_string_fields"`
+	Timeout             config.Duration  `toml:"timeout"`
+	Expire              *config.Duration `toml:"expire"`
+	Log                 telegraf.Logger  `toml:"-"`
 	tls.ClientConfig
 	client *redis.Client
 }
@@ -104,8 +105,13 @@ func (r *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
 				}
 			}
 
-			resp := r.client.TSAddWithArgs(ctx, key, m.Time().UnixMilli(), value, &redis.TSOptions{Labels: m.Tags()})
-			if err := resp.Err(); err != nil {
+			pipe := r.client.Pipeline()
+			pipe.TSAddWithArgs(ctx, key, m.Time().UnixMilli(), value, &redis.TSOptions{Labels: m.Tags()})
+			if r.Expire != nil {
+				pipe.Expire(ctx, key, time.Duration(*r.Expire))
+			}
+			_, err := pipe.Exec(ctx)
+			if err != nil {
 				return fmt.Errorf("adding sample %q failed: %w", key, err)
 			}
 		}
