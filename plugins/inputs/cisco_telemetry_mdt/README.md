@@ -85,6 +85,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 #    dnpath = '{"Name": "show ip route summary","prop": [{"Key": "routes","Value": "string"}, {"Key": "best-paths","Value": "string"}]}'
 #    dnpath2 = '{"Name": "show processes cpu","prop": [{"Key": "kernel_percent","Value": "float"}, {"Key": "idle_percent","Value": "float"}, {"Key": "process","Value": "string"}, {"Key": "user_percent","Value": "float"}, {"Key": "onesec","Value": "float"}]}'
 #    dnpath3 = '{"Name": "show processes memory physical","prop": [{"Key": "processname","Value": "string"}]}'
+#    dnpath4 = '{"Name": "sys/nbm/show/interfaces","prop": [{"Key": "bwCurrentIng","Value": "int64*1000"}, {"Key": "bwCurrentEgr","Value": "int64*1000"}, {"Key": "bwUsableIng","Value": "int64*1000"}]}' 
+#    dnpath5 = '{"Name": "sys/nbm/show/interfaces","prop": [{"Key": "bwCurrentIng","Value": "float64/1000"}, {"Key": "bwCurrentEgr","Value": "float64/1000"}, {"Key": "bwUsableIng","Value": "float64/1000"}]}' 
 
  ## Additional GRPC connection settings.
  [inputs.cisco_telemetry_mdt.grpc_enforcement_policy]
