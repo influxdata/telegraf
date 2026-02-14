@@ -27,7 +27,7 @@ more details on how to use them.
 ## Configuration
 
 ```toml @sample.conf
-# Configuration for sending metrics to InfluxDB 2.0
+# Configuration for sending metrics to InfluxDB 2.x
 [[outputs.influxdb_v2]]
   ## The URLs of the InfluxDB cluster nodes.
   ##

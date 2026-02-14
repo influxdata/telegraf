@@ -54,6 +54,9 @@ store usage.
   # max_idle_conn_per_host = 0
   # response_timeout = "0s"
 
+  ## Use the local address for connecting, assigned by the OS by default
+  # local_address = ""
+
   ## Optional proxy settings
   # use_system_proxy = false
   # http_proxy_url = ""
