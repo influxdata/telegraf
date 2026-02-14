@@ -846,12 +846,18 @@ func TestNodeIDGeneration(t *testing.T) {
 			},
 			expected: "nsu=http://vendor.com/;g=12345678-1234-1234-1234-123456789012",
 		},
+		{
+			name: "direct string takes precedence",
+			node: NodeSettings{
+				NodeIDStr: "ns=5;s=MyNode",
+			},
+			expected: "ns=5;s=MyNode",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := tt.node.NodeID()
-			require.Equal(t, tt.expected, actual)
+			require.Equal(t, tt.expected, tt.node.NodeID())
 		})
 	}
 }
@@ -881,12 +887,18 @@ func TestEventNodeIDGeneration(t *testing.T) {
 			},
 			expected: "nsu=http://opcfoundation.org/UA/;i=2253",
 		},
+		{
+			name: "direct string takes precedence",
+			node: EventNodeSettings{
+				NodeIDStr: "ns=2;s=EventSource",
+			},
+			expected: "ns=2;s=EventSource",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := tt.node.NodeID()
-			require.Equal(t, tt.expected, actual)
+			require.Equal(t, tt.expected, tt.node.NodeID())
 		})
 	}
 }
@@ -1015,4 +1027,126 @@ func TestEventGroupNamespaceURIInheritance(t *testing.T) {
 	// Second node should use its own namespace_uri
 	require.Equal(t, "http://custom.org/UA/", eventGroup.NodeIDSettings[1].NamespaceURI)
 	require.Equal(t, "nsu=http://custom.org/UA/;i=2254", eventGroup.NodeIDSettings[1].NodeID())
+}
+
+func TestValidateOPCTagsWithNodeID(t *testing.T) {
+	tests := []struct {
+		name   string
+		config InputClientConfig
+	}{
+		{
+			name: "valid config with node_id string",
+			config: InputClientConfig{
+				MetricName: "opcua",
+				RootNodes: []NodeSettings{
+					{FieldName: "ProductUri", NodeIDStr: "ns=0;i=2262"},
+					{FieldName: "ServerState", NodeIDStr: "ns=0;i=2259"},
+				},
+			},
+		},
+		{
+			name: "mixed config with node_id and individual fields",
+			config: InputClientConfig{
+				MetricName: "opcua",
+				RootNodes: []NodeSettings{
+					{FieldName: "ProductUri", NodeIDStr: "ns=0;i=2262"},
+					{FieldName: "Temperature", Namespace: "2", IdentifierType: "s", Identifier: "Temp"},
+				},
+			},
+		},
+		{
+			name: "node_id with namespace URI",
+			config: InputClientConfig{
+				MetricName: "opcua",
+				RootNodes: []NodeSettings{
+					{FieldName: "ProductUri", NodeIDStr: "nsu=http://opcfoundation.org/UA/;i=2262"},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			o := OpcUAInputClient{
+				Config: tt.config,
+				Log:    testutil.Logger{},
+			}
+			require.NoError(t, o.InitNodeMetricMapping())
+		})
+	}
+}
+
+func TestValidateOPCTagsWithNodeIDError(t *testing.T) {
+	tests := []struct {
+		name        string
+		config      InputClientConfig
+		expectedErr string
+	}{
+		{
+			name: "conflict between node_id and individual fields",
+			config: InputClientConfig{
+				MetricName: "opcua",
+				RootNodes: []NodeSettings{
+					{FieldName: "Conflict", NodeIDStr: "ns=0;i=2262", Namespace: "1"},
+				},
+			},
+			expectedErr: "cannot specify both 'id' and individual fields",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			o := OpcUAInputClient{
+				Config: tt.config,
+				Log:    testutil.Logger{},
+			}
+			require.ErrorContains(t, o.InitNodeMetricMapping(), tt.expectedErr)
+		})
+	}
+}
+
+func TestNodeGroupWithNodeIDString(t *testing.T) {
+	cfg := InputClientConfig{
+		MetricName: "opcua",
+		Groups: []NodeGroupSettings{
+			{
+				MetricName: "group1",
+				Nodes: []NodeSettings{
+					{FieldName: "Node1", NodeIDStr: "ns=2;s=Device.Temp"},
+					{FieldName: "Node2", NodeIDStr: "nsu=http://example.org/;i=100"},
+				},
+			},
+		},
+	}
+
+	o := OpcUAInputClient{
+		Config: cfg,
+		Log:    testutil.Logger{},
+	}
+	require.NoError(t, o.InitNodeMetricMapping())
+	require.Len(t, o.NodeMetricMapping, 2)
+
+	// Verify nodes use string directly (no decomposition into individual fields)
+	require.Equal(t, "ns=2;s=Device.Temp", o.NodeMetricMapping[0].Tag.NodeID())
+	require.Equal(t, "nsu=http://example.org/;i=100", o.NodeMetricMapping[1].Tag.NodeID())
+}
+
+func TestEventGroupWithNodeIDString(t *testing.T) {
+	eventGroup := EventGroupSettings{
+		EventTypeNode: EventNodeSettings{
+			NodeIDStr: "ns=0;i=2041",
+		},
+		NodeIDSettings: []EventNodeSettings{
+			{NodeIDStr: "ns=2;s=EventSource1"},
+			{NodeIDStr: "nsu=http://example.org/;i=200"},
+		},
+		Fields: []string{"Severity", "Message"},
+	}
+
+	eventGroup.UpdateNodeIDSettings()
+
+	// Verify nodes use string directly (no decomposition into individual fields)
+	require.Equal(t, "ns=0;i=2041", eventGroup.EventTypeNode.NodeID())
+	require.Equal(t, "ns=2;s=EventSource1", eventGroup.NodeIDSettings[0].NodeID())
+	require.Equal(t, "nsu=http://example.org/;i=200", eventGroup.NodeIDSettings[1].NodeID())
 }
