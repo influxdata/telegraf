@@ -122,6 +122,11 @@ func (b *DiskBuffer) Add(metrics ...telegraf.Metric) int {
 func (b *DiskBuffer) BeginTransaction(batchSize int) *Transaction {
 	b.Lock()
 	defer b.Unlock()
+	log.Printf(
+		"D! [buffer] (SDD) starting transaction of size %d and buffer fullness of %d with %d masked entries",
+		batchSize, b.length(), len(b.mask),
+	)
+	log.Printf("D! [buffer] (SDD) mask: %v", b.mask)
 
 	if b.length() == 0 {
 		return &Transaction{}
@@ -158,6 +163,7 @@ func (b *DiskBuffer) BeginTransaction(batchSize int) *Transaction {
 			if errors.Is(err, metric.ErrSkipTracking) {
 				// Could not look up tracking information for metric so skip
 				// the metric and mask it so it is truncated later on.
+				log.Printf("D! [buffer] (SDD) masking tracking metric %d", offset)
 				b.mask = append(b.mask, offset)
 				continue
 			}
@@ -170,6 +176,7 @@ func (b *DiskBuffer) BeginTransaction(batchSize int) *Transaction {
 			// after restarting Telegraf. Skip the metric and mask it so it is
 			// trucated later on
 			b.mask = append(b.mask, offset)
+			log.Printf("D! [buffer] (SDD) masking left-over metric  %d from previous run", offset)
 			continue
 		}
 
@@ -178,16 +185,22 @@ func (b *DiskBuffer) BeginTransaction(batchSize int) *Transaction {
 		b.batchSize++
 		batchSize--
 	}
+	log.Printf("D! [buffer] (SDD) final offsets: %v", offsets)
 	return &Transaction{Batch: metrics, valid: true, state: offsets}
 }
 
 func (b *DiskBuffer) EndTransaction(tx *Transaction) {
+	log.Printf(
+		"D! [buffer] (SDD) ending transaction of size %d with %d accepted and %d rejected metrics",
+		len(tx.Batch), len(tx.Accept), len(tx.Reject),
+	)
 	if len(tx.Batch) == 0 {
 		return
 	}
 
 	// Ignore invalid transactions and make sure they can only be finished once
 	if !tx.valid {
+		log.Print("D! [buffer] (SDD) found invalid transaction")
 		return
 	}
 	tx.valid = false
@@ -197,6 +210,11 @@ func (b *DiskBuffer) EndTransaction(tx *Transaction) {
 
 	b.Lock()
 	defer b.Unlock()
+
+	log.Printf("D! [buffer] (SDD) ending transaction with %d masked entries", len(b.mask))
+	log.Printf("D! [buffer] (SDD)   mask: %v", b.mask)
+	log.Printf("D! [buffer] (SDD)   accept: %v", tx.Accept)
+	log.Printf("D! [buffer] (SDD)   reject: %v", tx.Reject)
 
 	// Mark metrics which should be removed in the internal mask
 	remove := make([]int, 0, len(tx.Accept)+len(tx.Reject))
@@ -210,12 +228,15 @@ func (b *DiskBuffer) EndTransaction(tx *Transaction) {
 	}
 	b.mask = append(b.mask, remove...)
 	sort.Ints(b.mask)
+	log.Printf("D! [buffer] (SDD) mask size before deletion: %d", len(b.mask))
 
 	// Remove the metrics that are marked for removal from the front of the
 	// WAL file. All other metrics must be kept.
 	if len(b.mask) == 0 || b.mask[0] != 0 {
 		// Mask is empty or the first index is not the front of the file, so
 		// exit early as there is nothing to remove
+		printlen := min(10, len(b.mask))
+		log.Printf("D! [buffer] (SDD) no entries to delete, mask starts with: %v", b.mask[:printlen])
 		return
 	}
 
@@ -244,11 +265,15 @@ func (b *DiskBuffer) EndTransaction(tx *Transaction) {
 	for i := range b.mask {
 		b.mask[i] -= correction
 	}
+	printlen := min(10, len(b.mask))
+	log.Printf("D! [buffer] (SDD) mask start after deletion: %v", b.mask[:printlen])
 
 	// check if the original end index is still valid, clear if not
 	if b.originalEnd < b.readIndex() {
+		log.Printf("D! [buffer] (SDD) resetting original end from %d (read: %d) to zero", b.originalEnd, b.readIndex())
 		b.originalEnd = 0
 	}
+	log.Printf("D! [buffer] (SDD) ending transaction with %d remaining metrics", b.length())
 
 	b.resetBatch()
 	b.BufferSize.Set(int64(b.length()))
