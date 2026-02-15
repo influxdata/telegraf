@@ -119,6 +119,49 @@ func TestAlignedTickerOffset(t *testing.T) {
 	require.Equal(t, expected, actual)
 }
 
+func TestAlignedTickerNegativeOffset(t *testing.T) {
+	interval := 30 * time.Second
+	jitter := 0 * time.Second
+	offset := -15 * time.Second
+
+	clk := clock.NewMock()
+	since := clk.Now()
+	until := since.Add(120 * time.Second)
+
+	ticker := &AlignedTicker{
+		interval:    interval,
+		jitter:      jitter,
+		offset:      offset,
+		minInterval: interval / 100,
+	}
+	ticker.start(since, clk)
+	defer ticker.Stop()
+
+	// With interval=30s and offset=-15s, the offset is normalized to 15s, so
+	// ticks should occur at:
+	// 15s (30s aligned + 15s offset = 15s)
+	// 45s (next aligned 60s would give 45s, but 30s aligned gives 0s+30s = 30s wait from 15s = 45s)
+	// 75s, 105s, etc.
+	expected := []time.Time{
+		time.Unix(15, 0).UTC(),
+		time.Unix(45, 0).UTC(),
+		time.Unix(75, 0).UTC(),
+		time.Unix(105, 0).UTC(),
+	}
+
+	actual := make([]time.Time, 0)
+	for !clk.Now().After(until) {
+		select {
+		case tm := <-ticker.Elapsed():
+			actual = append(actual, tm.UTC())
+		default:
+		}
+		clk.Add(1 * time.Second)
+	}
+
+	require.Equal(t, expected, actual)
+}
+
 func TestAlignedTickerMissedTick(t *testing.T) {
 	interval := 10 * time.Second
 	jitter := 0 * time.Second
@@ -457,6 +500,32 @@ func TestAlignedTickerDistributionWithOffset(t *testing.T) {
 	interval := 10 * time.Second
 	jitter := 5 * time.Second
 	offset := 3 * time.Second
+
+	clk := clock.NewMock()
+	since := clk.Now()
+
+	ticker := &AlignedTicker{
+		interval:    interval,
+		jitter:      jitter,
+		offset:      offset,
+		minInterval: interval / 100,
+	}
+	ticker.start(since, clk)
+	defer ticker.Stop()
+	dist := simulatedDist(ticker, clk)
+	printDist(dist)
+	require.Less(t, 350, dist.Count)
+	require.True(t, 9 < dist.Mean() && dist.Mean() < 11)
+}
+
+func TestAlignedTickerDistributionWithNegativeOffset(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	interval := 10 * time.Second
+	jitter := 5 * time.Second
+	offset := -3 * time.Second
 
 	clk := clock.NewMock()
 	since := clk.Now()

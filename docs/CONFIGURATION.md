@@ -278,7 +278,8 @@ The agent table configures Telegraf and the defaults used across all plugins.
 - **collection_offset**:
   Collection offset is used to shift the collection by the given [interval][].
   This can be be used to avoid many plugins querying constraint devices
-  at the same time by manually scheduling them in time.
+  at the same time by manually scheduling them in time. Negative values wrap
+  within the interval (e.g. -15s with a 30s interval becomes 15s).
 
 - **flush_interval**:
   Default flushing [interval][] for all outputs. Maximum flush_interval will be
@@ -427,7 +428,9 @@ Parameters that can be used with any input plugin:
 - **collection_offset**:
   Overrides the `collection_offset` setting of the [agent][Agent] for the
   plugin. Collection offset is used to shift the collection by the given
-  [interval][]. The value must be non-zero to override the agent setting.
+  [interval][]. Negative values wrap within the interval (e.g. -15s with a
+  30s interval becomes 15s). The value must be non-zero to override the agent
+  setting.
 - **name_override**: Override the base name of the measurement.  (Default is
   the name of the input).
 - **name_prefix**: Specifies a prefix to attach to the measurement name.
