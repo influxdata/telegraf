@@ -123,6 +123,9 @@
   configuration works in strict mode or you are not using environment variables, **do not** add the flag as it will be
   removed later and ignore the new warning at startup. In case you need the current behavior please add
   `--non-strict-env-handling` when starting Telegraf to prepare for the upcoming change!
+  to prevent security issues as an opt-in flag. To provide security-by-default, PR [#17961](https://github.com/influxdata/telegraf/pull/17961)
+  makes the **strict environment variable handling the default**! In case you need the old behavior you can opt-out
+  using the `--non-strict-env-handling` flag.
 
 ### New Plugins
 
