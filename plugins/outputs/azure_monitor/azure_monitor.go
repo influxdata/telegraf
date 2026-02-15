@@ -344,10 +344,11 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 		// Azure Monitor's maximum request body size of 4MB. Send batches that
 		// exceed this size via separate write requests.
 		if buffer.Len()+len(buf)+1 > maxRequestBodySize {
-			if retryable, err := a.send(buffer.Bytes()); err != nil {
+			if err := a.send(buffer.Bytes()); err != nil {
 				writeErr.Err = err
-				if !retryable {
-					writeErr.MetricsReject = append(writeErr.MetricsAccept, batchIndices...)
+				var httpErr *internal.HTTPError
+				if errors.As(err, &httpErr) && !httpErr.Retryable {
+					writeErr.MetricsReject = append(writeErr.MetricsReject, batchIndices...)
 				}
 				return writeErr
 			}
@@ -363,10 +364,11 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	if retryable, err := a.send(buffer.Bytes()); err != nil {
+	if err := a.send(buffer.Bytes()); err != nil {
 		writeErr.Err = err
-		if !retryable {
-			writeErr.MetricsReject = append(writeErr.MetricsAccept, batchIndices...)
+		var httpErr *internal.HTTPError
+		if errors.As(err, &httpErr) && !httpErr.Retryable {
+			writeErr.MetricsReject = append(writeErr.MetricsReject, batchIndices...)
 		}
 		return writeErr
 	}
@@ -379,19 +381,19 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 	return writeErr
 }
 
-func (a *AzureMonitor) send(body []byte) (bool, error) {
+func (a *AzureMonitor) send(body []byte) error {
 	var buf bytes.Buffer
 	g := gzip.NewWriter(&buf)
 	if _, err := g.Write(body); err != nil {
-		return false, fmt.Errorf("zipping content failed: %w", err)
+		return fmt.Errorf("zipping content failed: %w", err)
 	}
 	if err := g.Close(); err != nil {
-		return false, fmt.Errorf("closing gzip writer failed: %w", err)
+		return fmt.Errorf("closing gzip writer failed: %w", err)
 	}
 
 	req, err := http.NewRequest("POST", a.url, &buf)
 	if err != nil {
-		return false, fmt.Errorf("creating request failed: %w", err)
+		return fmt.Errorf("creating request failed: %w", err)
 	}
 
 	req.Header.Set("Content-Encoding", "gzip")
@@ -401,7 +403,7 @@ func (a *AzureMonitor) send(body []byte) (bool, error) {
 	// refresh the token if needed.
 	req, err = a.preparer.Prepare(req)
 	if err != nil {
-		return false, fmt.Errorf("unable to fetch authentication credentials: %w", err)
+		return fmt.Errorf("unable to fetch authentication credentials: %w", err)
 	}
 
 	resp, err := a.client.Do(req)
@@ -415,20 +417,32 @@ func (a *AzureMonitor) send(body []byte) (bool, error) {
 				Timeout: time.Duration(a.Timeout),
 			}
 		}
-		return true, err
+		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
-		return false, nil
+		return nil
 	}
 
-	retryable := resp.StatusCode != 400
-	if respbody, err := io.ReadAll(resp.Body); err == nil {
-		return retryable, fmt.Errorf("failed to write batch: [%d] %s: %s", resp.StatusCode, resp.Status, string(respbody))
+	//nolint:errcheck // error is not relevant for error message construction
+	respbody, _ := io.ReadAll(resp.Body)
+
+	// 4xx client errors are not retryable - the request itself is invalid
+	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+		return &internal.HTTPError{
+			Err:        fmt.Errorf("failed to write batch: [%d] %s: %s", resp.StatusCode, resp.Status, string(respbody)),
+			StatusCode: resp.StatusCode,
+			Retryable:  false,
+		}
 	}
 
-	return retryable, fmt.Errorf("failed to write batch: [%d] %s", resp.StatusCode, resp.Status)
+	// 5xx and other errors are retryable
+	return &internal.HTTPError{
+		Err:        fmt.Errorf("failed to write batch: [%d] %s: %s", resp.StatusCode, resp.Status, string(respbody)),
+		StatusCode: resp.StatusCode,
+		Retryable:  true,
+	}
 }
 
 // vmMetadata retrieves metadata about the current Azure VM
