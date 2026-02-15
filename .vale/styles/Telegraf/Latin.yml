@@ -1,0 +1,17 @@
+# Avoid Latin abbreviations in documentation
+# Use plain English equivalents instead
+extends: substitution
+message: "Use '%s' instead of '%s'."
+level: warning
+ignorecase: true
+swap:
+  e\.g\.: for example
+  i\.e\.: that is
+  etc\.: and so on
+  viz\.: namely
+  vs\.: versus
+  cf\.: compare
+  et al\.: and others
+  N\.B\.: note
+  [\s]*'\s*e\.g\.[\s]*': ", for example,"
+  [\s]*'\s*i\.e\.[\s]*': ", that is,"

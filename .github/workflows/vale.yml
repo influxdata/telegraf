@@ -1,0 +1,38 @@
+name: Vale prose linting
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - '**.md'
+      - '.vale.ini'
+      - '.vale/**'
+
+permissions:
+  contents: read
+
+jobs:
+  vale:
+    name: Lint prose
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Get changed Markdown files
+        id: changed-files
+        uses: tj-actions/changed-files@24d32ffd492484c1d75e0c0b894501ddb9d30d62 # v47.0.0
+        with:
+          files: |
+            **.md
+
+      - name: Run Vale
+        if: steps.changed-files.outputs.any_changed == 'true'
+        uses: errata-ai/vale-action@v2
+        with:
+          files: ${{ steps.changed-files.outputs.all_changed_files }}
+          fail_on_error: false
+          reporter: github-pr-check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
