@@ -18,6 +18,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -172,19 +173,43 @@ func (d *Dynatrace) send(msg string) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusBadRequest {
-		return fmt.Errorf("request failed with response code: %d", resp.StatusCode)
+	// Success: 2xx responses
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		// 2xx: Success - print metric line results as info log
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			d.Log.Errorf("Dynatrace error reading response")
+		}
+		bodyString := string(bodyBytes)
+		d.Log.Debugf("Dynatrace returned: %s", bodyString)
+
+		return nil
 	}
 
-	// print metric line results as info log
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		d.Log.Errorf("Dynatrace error reading response")
+	// Determine retryability based on status code
+	// Only specific 5xx errors that indicate transient issues are retryable
+	retryable := false
+	switch resp.StatusCode {
+	case http.StatusTooManyRequests, // 429 - rate limiting
+		http.StatusInternalServerError, // 500 - transient server error
+		http.StatusBadGateway,          // 502 - upstream issue
+		http.StatusServiceUnavailable,  // 503 - server overloaded
+		http.StatusGatewayTimeout:      // 504 - upstream timeout
+		retryable = true
 	}
-	bodyString := string(bodyBytes)
-	d.Log.Debugf("Dynatrace returned: %s", bodyString)
 
-	return nil
+	// Log appropriately based on retryability
+	if retryable {
+		d.Log.Warnf("Server error %d, metrics will be retried", resp.StatusCode)
+	} else {
+		d.Log.Errorf("Error %d, metrics will be dropped", resp.StatusCode)
+	}
+
+	return &internal.HTTPError{
+		Err:        fmt.Errorf("request failed with response code: %d", resp.StatusCode),
+		StatusCode: resp.StatusCode,
+		Retryable:  retryable,
+	}
 }
 
 func (d *Dynatrace) Init() error {
