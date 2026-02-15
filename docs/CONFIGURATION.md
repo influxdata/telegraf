@@ -271,9 +271,11 @@ The agent table configures Telegraf and the defaults used across all plugins.
 
 - **collection_jitter**:
   Collection jitter is used to jitter the collection by a random [interval][].
-  Each plugin will sleep for a random time within jitter before collecting.
-  This can be used to avoid many plugins querying things like sysfs at the
-  same time, which can have a measurable effect on the system.
+  Each plugin will apply a random offset within the jitter range at startup.
+  This spreads plugin collection times over the jitter interval range while
+  keeping the collection interval fixed. This can be used to avoid many plugins
+  querying things like sysfs at the same time, which can have a measurable
+  effect on the system.
 
 - **collection_offset**:
   Collection offset is used to shift the collection by the given [interval][].
@@ -423,7 +425,8 @@ Parameters that can be used with any input plugin:
 - **collection_jitter**:
   Overrides the `collection_jitter` setting of the [agent][Agent] for the
   plugin.  Collection jitter is used to jitter the collection by a random
-  [interval][]. The value must be non-zero to override the agent setting.
+  [interval][]. The jitter is applied as a random offset at startup. The value
+  must be non-zero to override the agent setting.
 - **collection_offset**:
   Overrides the `collection_offset` setting of the [agent][Agent] for the
   plugin. Collection offset is used to shift the collection by the given
