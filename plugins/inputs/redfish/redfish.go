@@ -53,6 +53,9 @@ type system struct {
 			Ref string `json:"@odata.id"`
 		}
 	}
+	Processors struct {
+			Ref string `json:"@odata.id"`
+	}
 }
 
 type chassis struct {
@@ -135,6 +138,23 @@ type thermal struct {
 		LowerThresholdFatal    *float64
 		Status                 status
 	}
+}
+
+type processors struct {
+	Members []struct {
+		Ref string `json:"@odata.id"`
+	}
+}
+
+type processor struct {
+	Metrics struct {
+		Ref string `json:"@odata.id"`
+	}
+}
+
+type processorMetrics struct {
+	KernelPercent              *float64
+	UserPercent                *float64
 }
 
 type location struct {
@@ -247,6 +267,22 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 	}
+	// TODO check if processor metrics is selected
+	processors, err := r.getProcessors(system.Processors.Ref)
+	if err != nil {
+		return err
+	}
+	for _, member := range processors.Members {
+		processor, err := r.getProcessor(member.Ref)
+		if err != nil {
+			return err
+		}
+		err = r.gatherProcessorMetrics(acc, address, system, processor)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -314,6 +350,36 @@ func (r *Redfish) getComputerSystem(id string) (*system, error) {
 		return nil, err
 	}
 	return system, nil
+}
+
+func (r *Redfish) getProcessors(ref string) (*processors, error) {
+	loc := r.baseURL.ResolveReference(&url.URL{Path: ref})
+	processors := &processors{}
+	err := r.getData(loc.String(), processors)
+	if err != nil {
+		return nil, err
+	}
+	return processors, nil
+}
+
+func (r *Redfish) getProcessor(ref string) (*processor, error) {
+	loc := r.baseURL.ResolveReference(&url.URL{Path: ref})
+	processor := &processor{}
+	err := r.getData(loc.String(), processor)
+	if err != nil {
+		return nil, err
+	}
+	return processor, nil
+}
+
+func (r *Redfish) getProcessorMetrics(ref string) (*processorMetrics, error) {
+	loc := r.baseURL.ResolveReference(&url.URL{Path: ref})
+	processorMetrics := &processorMetrics{}
+	err := r.getData(loc.String(), processorMetrics)
+	if err != nil {
+		return nil, err
+	}
+	return processorMetrics, nil
 }
 
 func (r *Redfish) getChassis(ref string) (*chassis, error) {
@@ -521,6 +587,25 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *
 		fields["lower_threshold_fatal"] = j.LowerThresholdFatal
 		acc.AddFields("redfish_power_voltages", fields, tags)
 	}
+
+	return nil
+}
+
+func (r *Redfish) gatherProcessorMetrics(acc telegraf.Accumulator, address string, system *system, processor *processor) error {
+	processorMetrics, err := r.getProcessorMetrics(processor.Metrics.Ref)
+	if err != nil {
+		return err
+	}
+
+	j := processorMetrics
+	tags := make(map[string]string, 19)
+	tags["address"] = address
+	tags["source"] = system.Hostname
+
+	fields := make(map[string]interface{})
+	fields["user_percent"] = j.UserPercent
+	fields["kernel_percent"] = j.KernelPercent
+	acc.AddFields("redfish_processor_metrics", fields, tags)
 
 	return nil
 }
