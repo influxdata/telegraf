@@ -120,6 +120,7 @@ func (t *TrapPlugin) Ah_send_sta_leave_trap(trapType uint32, trapBuf [600]byte, 
 		"staAddr6_staLeaveStatsTrap":		IntToIPv6_1(staLeave.StaAddr6[:], int(staLeave.StaAddr6Num)),
 		"eventreasoncode_staLeaveStatsTrap":	staLeave.EventReasonCode,
 		"eventtype_staLeaveStatsTrap":		staLeave.EventType,
+		"clear_trapMessage_staLeaveStatsTrap": GetTrapClearStatus(trapType, trapBuf[:]),
 	}, nil)
 	return nil
 }

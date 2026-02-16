@@ -55,5 +55,6 @@ func gatherConnectionChangeTrap(ahconnectionchange AhConnectionChangeTrap, trap 
 		"severityLevel_trapMessage_connectionChangeTrap": trap.Level,
 		"msgId_trapMessage_connectionChangeTrap": trap.MsgID,
 		"desc_trapMessage_connectionChangeTrap":  ahutil.CleanCString(trap.Desc[:]),
+		"clear_trapMessage_connectionChangeTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
 	}, nil)
 }

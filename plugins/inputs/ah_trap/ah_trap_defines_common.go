@@ -2,6 +2,7 @@ package ah_trap
 
 import (
 	"net"
+	"unsafe"
 )
 
 type AhTrapType uint32
@@ -31,6 +32,10 @@ const (
 	AH_TRAP_SIZE_256         = 256
 	AH_MSG_TRAP_DEV_IP_CHANGE = 17
 	AH_MGT0_ADDR6_NUM_MAX    = 2
+	AH_SNMP_TRUE             = 1
+	AH_SNMP_FALSE            = 2
+	AH_MSG_TRAP_SET          = 0
+	AH_MSG_TRAP_CLEAR        = 1
 )
 
 const (
@@ -285,4 +290,52 @@ func IntToIPv6_1(addrs []AhStaAddr6, count int) []string {
 type AhStaAddr6 struct {
 	AddrType byte      // char addr_type
 	StaAddr6 [16]byte  // struct in6_addr (IPv6 address is 16 bytes)
+}
+
+// GetTrapClearStatus extracts clear status from trap based on trap type and set field
+// Mimics ah_get_msg_trap_type_clear() from syslogd.c
+// Returns: 0 = SET (alarm raised), 1 = CLEAR (alarm cleared)
+func GetTrapClearStatus(trapType uint32, unionData []byte) uint8 {
+	clear := uint8(0) // Default: SET
+
+	switch AhTrapType(trapType) {
+	case AH_FAILURE_TRAP_TYPE:
+		var failure AhFailureTrap
+		if len(unionData) >= int(unsafe.Sizeof(failure)) {
+			copy((*[1 << 10]byte)(unsafe.Pointer(&failure))[:unsafe.Sizeof(failure)], unionData)
+			if failure.Set == AH_SNMP_TRUE {
+				clear = AH_MSG_TRAP_SET
+			} else {
+				clear = AH_MSG_TRAP_CLEAR
+			}
+		}
+
+	case AH_INTERFERENCE_ALERT_TRAP_TYPE:
+		var interference AhInterferenceAlertTrap
+		if len(unionData) >= int(unsafe.Sizeof(interference)) {
+			copy((*[1 << 10]byte)(unsafe.Pointer(&interference))[:unsafe.Sizeof(interference)], unionData)
+			if interference.Set == AH_SNMP_TRUE {
+				clear = AH_MSG_TRAP_SET
+			} else {
+				clear = AH_MSG_TRAP_CLEAR
+			}
+		}
+
+	case AH_ALARM_ALRT_TRAP_TYPE:
+		var alarmAlert AhAlarmAlrtTrap
+		if len(unionData) >= int(unsafe.Sizeof(alarmAlert)) {
+			copy((*[1 << 10]byte)(unsafe.Pointer(&alarmAlert))[:unsafe.Sizeof(alarmAlert)], unionData)
+			if alarmAlert.Set == AH_SNMP_TRUE {
+				clear = AH_MSG_TRAP_SET
+			} else {
+				clear = AH_MSG_TRAP_CLEAR
+			}
+		}
+
+	default:
+		// Event traps always return SET (0)
+		clear = 0
+	}
+
+	return clear
 }
