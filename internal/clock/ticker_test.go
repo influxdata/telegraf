@@ -465,10 +465,10 @@ func (d *distribution) mean() float64 {
 	return d.waittime / float64(d.count)
 }
 
-func (dist distribution) print() {
-	for i, count := range dist.buckets {
+func (d distribution) print() {
+	for i, count := range d.buckets {
 		fmt.Printf("%2d %s\n", i, strings.Repeat("x", count))
 	}
-	fmt.Printf("Average interval: %f\n", dist.mean())
-	fmt.Printf("Count: %d\n", dist.count)
+	fmt.Printf("Average interval: %f\n", d.mean())
+	fmt.Printf("Count: %d\n", d.count)
 }
