@@ -147,7 +147,7 @@ Different SIP servers may respond with different status codes to OPTIONS request
     - method (the SIP method used, lowercase: options, invite, message)
     - transport (the transport protocol: udp, tcp, ws, wss)
     - status_code (the SIP response status code, e.g., "200", "404")
-    - result (the result of the request: status text like "OK", "Not Found", or "Timeout", "Error", "No Response")
+    - result (the result of the request: status text like "OK")
     - server_agent (optional: the Server header from the response)
   - fields:
     - response_time_s (float, seconds) - Time taken to receive response
