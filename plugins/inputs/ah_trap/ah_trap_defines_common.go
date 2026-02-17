@@ -235,13 +235,9 @@ type AhKeyFullAlarmTrap struct {
 type AhChainStreamTrap struct {
 	Name         [AH_MAX_TRAP_OBJ_NAME + 1]byte
 	IfIndex      uint32
-	PrevTxChain  uint8
 	NewTxChain   uint8
-	PrevTxStream uint8
 	NewTxStream  uint8
-	PrevRxChain  uint8
 	NewRxChain   uint8
-	PrevRxStream uint8
 	NewRxStream  uint8
 	Reason       uint8
 }

@@ -333,7 +333,7 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                         "desc_trapMessage_keyFullAlarmTrap":    ahutil.CleanCString(trap.Desc[:]),
                         }, nil)
 
-        case AH_CHAIN_STREAM_TRAP_TYPE:
+	case AH_CHAIN_STREAM_TRAP_TYPE:
                 var ahchainstream AhChainStreamTrap
                 rawSize := int(unsafe.Sizeof(ahchainstream))
                 copy((*[1 << 10]byte)(unsafe.Pointer(&ahchainstream))[:rawSize], trap.Union[:rawSize])
@@ -341,17 +341,14 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                 acc.AddFields("TrapEvent", map[string]interface{}{
                         "trapObjName_chainStreamTrap":             ahutil.CleanCString(ahchainstream.Name[:]),
                         "ifIndex_chainStreamTrap":              ahchainstream.IfIndex,
-                        "prevTxChain_chainStreamTrap":          ahchainstream.PrevTxChain,
                         "newTxChain_chainStreamTrap":           ahchainstream.NewTxChain,
-                        "prevTxStream_chainStreamTrap":         ahchainstream.PrevTxStream,
                         "newTxStream_chainStreamTrap":          ahchainstream.NewTxStream,
-                        "prevRxChain_chainStreamTrap":          ahchainstream.PrevRxChain,
                         "newRxChain_chainStreamTrap":           ahchainstream.NewRxChain,
-                        "prevRxStream_chainStreamTrap":         ahchainstream.PrevRxStream,
                         "newRxStream_chainStreamTrap":          ahchainstream.NewRxStream,
                         "reason_chainStreamTrap":               ahchainstream.Reason,
-                        "level_trapMessage_chainStreamTrap":    trap.Level,
+                        "severityLevel_trapMessage_chainStreamTrap":    trap.Level,
                         "msgId_trapMessage_chainStreamTrap":    trap.MsgID,
+                        "clear_trapMessage_chainStreamTrap":    GetTrapClearStatus(trap.TrapType, trap.Union[:]),
                         "desc_trapMessage_chainStreamTrap":     ahutil.CleanCString(trap.Desc[:]),
                 }, nil)
 
