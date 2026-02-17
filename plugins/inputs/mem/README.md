@@ -35,6 +35,8 @@ Available fields are dependent on platform.
 - mem
   - fields:
     - active (integer, Darwin, FreeBSD, Linux, OpenBSD)
+    - active_anon (integer, Linux)
+    - active_file (integer, Linux)
     - available (integer)
     - available_percent (float)
     - buffered (integer, FreeBSD, Linux)
@@ -49,11 +51,14 @@ Available fields are dependent on platform.
     - huge_page_size (integer, Linux)
     - huge_pages_total (integer, Linux)
     - inactive (integer, Darwin, FreeBSD, Linux, OpenBSD)
+    - inactive_anon (integer, Linux)
+    - inactive_file (integer, Linux)
     - laundry (integer, FreeBSD)
     - low_free (integer, Linux)
     - low_total (integer, Linux)
     - mapped (integer, Linux)
     - page_tables (integer, Linux)
+    - percpu (integer, Linux)
     - shared (integer, Linux)
     - slab (integer, Linux)
     - sreclaimable (integer, Linux)
@@ -62,6 +67,7 @@ Available fields are dependent on platform.
     - swap_free (integer, Linux)
     - swap_total (integer, Linux)
     - total (integer)
+    - unevictable (integer, Linux)
     - used (integer)
     - used_percent (float)
     - vmalloc_chunk (integer, Linux)
@@ -74,5 +80,5 @@ Available fields are dependent on platform.
 ## Example Output
 
 ```text
-mem active=9299595264i,available=16818249728i,available_percent=80.41654254645131,buffered=2383761408i,cached=13316689920i,commit_limit=14751920128i,committed_as=11781156864i,dirty=122880i,free=1877688320i,high_free=0i,high_total=0i,huge_page_size=2097152i,huge_pages_free=0i,huge_pages_total=0i,inactive=7549939712i,low_free=0i,low_total=0i,mapped=416763904i,page_tables=19787776i,shared=670679040i,slab=2081071104i,sreclaimable=1923395584i,sunreclaim=157675520i,swap_cached=1302528i,swap_free=4286128128i,swap_total=4294963200i,total=20913917952i,used=3335778304i,used_percent=15.95004011996231,vmalloc_chunk=0i,vmalloc_total=35184372087808i,vmalloc_used=0i,wired=0i,write_back=0i,write_back_tmp=0i 1574712869000000000
+mem active=9299595264i,active_anon=5765169152i,active_file=3534426112i,available=16818249728i,available_percent=80.41654254645131,buffered=2383761408i,cached=13316689920i,commit_limit=14751920128i,committed_as=11781156864i,dirty=122880i,free=1877688320i,high_free=0i,high_total=0i,huge_page_size=2097152i,huge_pages_free=0i,huge_pages_total=0i,inactive=7549939712i,inactive_anon=1081245696i,inactive_file=6468694016i,low_free=0i,low_total=0i,mapped=416763904i,page_tables=19787776i,percpu=5765120i,shared=670679040i,slab=2081071104i,sreclaimable=1923395584i,sunreclaim=157675520i,swap_cached=1302528i,swap_free=4286128128i,swap_total=4294963200i,total=20913917952i,unevictable=143360i,used=3335778304i,used_percent=15.95004011996231,vmalloc_chunk=0i,vmalloc_total=35184372087808i,vmalloc_used=0i,write_back=0i,write_back_tmp=0i 1574712869000000000
 ```
