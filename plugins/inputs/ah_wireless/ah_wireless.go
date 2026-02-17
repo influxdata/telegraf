@@ -41,6 +41,7 @@ type Ah_wireless struct {
 	Test_client_stats_enable  uint8		`toml:"test_client_stats_enable"`
 	Test_device_stats_enable  uint8		`toml:"test_device_stats_enable"`
 	Test_network_stats_enable uint8		`toml:"test_network_stats_enable"`
+	Test_firewall_stats_enable  uint8	`toml:"test_firewall_stats_enable"`
 	closed			chan		struct{}
 	numclient		[4]int
 	timer_count		uint8
@@ -200,6 +201,7 @@ const sampleConfig = `
   Test_client_stats_enable = 0
   Test_device_stats_enable = 0
   Test_network_stats_enable = 0
+  Test_firewall_stats_enable = 0
 `
 func NewAh_wireless(id int) *Ah_wireless {
 	var err error
@@ -223,6 +225,7 @@ func NewAh_wireless(id int) *Ah_wireless {
 				Test_client_stats_enable: 0,
 				Test_device_stats_enable: 0,
 				Test_network_stats_enable: 0,
+				Test_firewall_stats_enable: 0,
         }
 
 }
@@ -2515,6 +2518,31 @@ func Gather_Network_Service(t *Ah_wireless) error {
 	return nil
 }
 
+func Gather_Dummy_Firewall_Stats(t *Ah_wireless) error {
+
+	t.fw_stats.time_stamp = uint32(time.Now().Unix())
+	t.fw_stats.coll_period = 1
+
+	// Dummy IP firewall groups
+	t.fw_stats.ip_fw_groups = []firewall_acl_group{
+		{name: "Block_USA", drop_count: 1250},
+		{name: "Block_China", drop_count: 3450},
+		{name: "Allow_Internal", drop_count: 0},
+		{name: "Deny_External", drop_count: 5678},
+	}
+
+	// Dummy MAC firewall groups
+	t.fw_stats.mac_fw_groups = []firewall_acl_group{
+		{name: "Trusted_MACs", drop_count: 10},
+		{name: "Blocked_MACs", drop_count: 900},
+		{name: "Guest_MACs", drop_count: 250},
+	}
+
+	log.Printf("[FIREWALL] Generated dummy data - IP groups=%d, MAC groups=%d\n",
+		len(t.fw_stats.ip_fw_groups), len(t.fw_stats.mac_fw_groups))
+	return nil
+}
+
 func Gather_Firewall_Stats(t *Ah_wireless) error {
 	// Read IP firewall stats from file
 	ip_table, err := os.ReadFile("/tmp/telegraf_dcd_ipfirewall_stats")
@@ -2678,7 +2706,8 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
 
         // If ANY test flag set, do shared interface + ssid prep once.
         if t.Test_rf_stats_enable == 1 || t.Test_client_stats_enable == 1 ||
-            t.Test_device_stats_enable == 1 || t.Test_network_stats_enable == 1{
+            t.Test_device_stats_enable == 1 || t.Test_network_stats_enable == 1 ||
+			t.Test_firewall_stats_enable == 1 {
             for _, ifn := range t.Ifname {
                 t.intf_m[ifn] = make(map[string]string)
                 load_ssid(t, ifn)
@@ -2721,6 +2750,14 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
             func() { Gather_EthernetInterfaceStats(t) },
             func() { Send_NetworkStats(t, acc) },
         )
+
+		// Firewall one-shot
+		t.runWirelessStats(&t.Test_firewall_stats_enable,
+			FW_STAT_OUT_FILE,
+			"Firewall Stat Input Plugin Output",
+			func() { Gather_Dummy_Firewall_Stats(t) },
+			func() { Send_FirewallStats(t, acc) },
+		)
 	}
 
         // Periodic / aggregated path
