@@ -45,9 +45,9 @@ func gatherConnectionChangeTrap(ahconnectionchange AhConnectionChangeTrap, trap 
 		"radioProfile_connectionChangeTrap":      ahutil.CleanCString(ahconnectionchange.RadioProf[:]),
 		"negotiateKbps_connectionChangeTrap":     ahconnectionchange.NegotiateKbps,
 		// No MLO fields for AP3000/AP5000
-		"severityLevel_trapMessage_connectionChangeTrap": trap.Level,
+		"severityLevel_trapMessage_connectionChangeTrap": severityToString(trap.Level),
 		"msgId_trapMessage_connectionChangeTrap": trap.MsgID,
 		"desc_trapMessage_connectionChangeTrap":  ahutil.CleanCString(trap.Desc[:]),
-		"clear_trapMessage_connectionChangeTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
+		"isClear_trapMessage_connectionChangeTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
 	}, nil)
 }

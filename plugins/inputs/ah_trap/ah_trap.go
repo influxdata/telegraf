@@ -79,10 +79,10 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
 			"trapObjName_failureTrap":          ahutil.CleanCString(failure.Name[:]),
 			"cause_failureTrap":             failure.Cause,
 			"set_failureTrap":               failure.Set,
-			"severityLevel_trapMessage_failureTrap": trap.Level,
+			"severityLevel_trapMessage_failureTrap": severityToString(trap.Level),
 			"msgId_trapMessage_failureTrap": trap.MsgID,
 			"desc_trapMessage_failureTrap":  ahutil.CleanCString(trap.Desc[:]),
-			"clear_trapMessage_failureTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
+			"isClear_trapMessage_failureTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
 		}, nil)
 
 	case AH_THRESHOLD_TRAP_TYPE:
@@ -95,10 +95,10 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
 			"curVal_thresholdTrap":            ahthreshold.CurVal,
 			"thresholdHigh_thresholdTrap":     ahthreshold.ThresholdHigh,
 			"thresholdLow_thresholdTrap":      ahthreshold.ThresholdLow,
-			"severityLevel_trapMessage_thresholdTrap": trap.Level,
+			"severityLevel_trapMessage_thresholdTrap": severityToString(trap.Level),
 			"msgId_trapMessage_thresholdTrap": trap.MsgID,
 			"desc_trapMessage_thresholdTrap":  ahutil.CleanCString(trap.Desc[:]),
-			"clear_trapMessage_thresholdTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
+			"isClear_trapMessage_thresholdTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
 		}, nil)
 
         case AH_STATE_CHANGE_TRAP_TYPE:
@@ -111,10 +111,10 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                         "preState_stateChangeTrap":          ahstatechange.PreState,
                         "curState_stateChangeTrap":          ahstatechange.CurState,
                         "opMode_stateChangeTrap":            ahstatechange.OperationMode,
-                        "severityLevel_trapMessage_stateChangeTrap": trap.Level,
+					"severityLevel_trapMessage_stateChangeTrap": severityToString(trap.Level),
                         "msgId_trapMessage_stateChangeTrap": trap.MsgID,
                         "desc_trapMessage_stateChangeTrap":  ahutil.CleanCString(trap.Desc[:]),
-                        "clear_trapMessage_stateChangeTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
+                        "isClear_trapMessage_stateChangeTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
 				}, nil)
 
 	 case AH_CONNECTION_CHANGE_TRAP_TYPE:
@@ -142,10 +142,10 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
 			"stationData_idpApEventTrap":       ahidpapevent.StationData,
 			"idpRemoved_idpApEventTrap":        ahidpapevent.IdpRemoved,
 			"idpInnet_idpApEventTrap":          ahidpapevent.IdpInNet,
-                        "severityLevel_trapMessage_idpApEventTrap": trap.Level,
+			"severityLevel_trapMessage_idpApEventTrap": severityToString(trap.Level),
                         "msgId_trapMessage_idpApEventTrap": trap.MsgID,
                         "desc_trapMessage_idpApEventTrap":  ahutil.CleanCString(trap.Desc[:]),
-                        "clear_trapMessage_idpApEventTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
+                        "isClear_trapMessage_idpApEventTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
                 }, nil)
 
 	case AH_CLIENT_INFO_TRAP_TYPE:
@@ -163,10 +163,10 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
 			"mgtStatus_clientInfoTrap":         ahclientinfo.MgtStus,
 			"staAddr6Num_clientInfoTrap":       ahclientinfo.StaAddr6Num,
 			"staAddr6_clientInfoTrap":          intToIPv6(ahclientinfo.StaAddr6[:], int(ahclientinfo.StaAddr6Num)),
-                        "severityLevel_trapMessage_clientInfoTrap": trap.Level,
+			"severityLevel_trapMessage_clientInfoTrap": severityToString(trap.Level),
                         "msgId_trapMessage_clientInfoTrap": trap.MsgID,
                         "desc_trapMessage_clientInfoTrap":  ahutil.CleanCString(trap.Desc[:]),
-                        "clear_trapMessage_clientInfoTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
+                        "isClear_trapMessage_clientInfoTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
                 }, nil)
 
          case AH_POWER_INFO_TRAP_TYPE:
@@ -186,10 +186,10 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                         "wifi0Setting_powerInfoTrap":       ahpowerinfo.Wifi0Setting,
                         "wifi1Setting_powerInfoTrap":       ahpowerinfo.Wifi1Setting,
                         "wifi2Setting_powerInfoTrap":       ahpowerinfo.Wifi2Setting,
-			"severityLevel_trapMessage_powerInfoTrap":  trap.Level,
+			"severityLevel_trapMessage_powerInfoTrap":  severityToString(trap.Level),
                         "msgId_trapMessage_powerInfoTrap":  trap.MsgID,
 			"desc_trapMessage_powerInfoTrap":   ahutil.CleanCString(trap.Desc[:]),
-			"clear_trapMessage_powerInfoTrap":  GetTrapClearStatus(trap.TrapType, trap.Union[:]),
+			"isClear_trapMessage_powerInfoTrap":  GetTrapClearStatus(trap.TrapType, trap.Union[:]),
 			}, nil)
 
 	case AH_CHANNEL_POWER_TRAP_TYPE:
@@ -208,10 +208,10 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                         "powerStrfmt_channelPowerTrap":       ahchannelpowerinfo.PwrStrfmt,
 			"radioEirp_channelPowerTrap":         ahutil.CleanCString(ahchannelpowerinfo.RadioEirp[:]),
                         "reason_channelPowerTrap":            ahchannelpowerinfo.Reason,
-                        "severityLevel_trapMessage_channelPowerTrap":  trap.Level,
+						"severityLevel_trapMessage_channelPowerTrap":  severityToString(trap.Level),
                         "msgId_trapMessage_channelPowerTrap":  trap.MsgID,
                         "desc_trapMessage_channelPowerTrap":   ahutil.CleanCString(trap.Desc[:]),
-                        "clear_trapMessage_channelPowerTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
+                        "isClear_trapMessage_channelPowerTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
                         }, nil)
 
 	case AH_IDP_MITIGATE_TRAP_TYPE:
@@ -227,10 +227,10 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                         "removed_idpMitigateTrap":            ahidpmitigate.Removed,
                         "discoverAge_idpMitigateTrap":        ahidpmitigate.DiscoverAge,
                         "updateAge_idpMitigateTrap":          ahidpmitigate.UpdateAge,
-                        "severityLevel_trapMessage_idpMitigateTrap":  trap.Level,
+						"severityLevel_trapMessage_idpMitigateTrap":  severityToString(trap.Level),
                         "msgId_trapMessage_idpMitigateTrap":  trap.MsgID,
                         "desc_trapMessage_idpMitigateTrap":   ahutil.CleanCString(trap.Desc[:]),
-                        "clear_trapMessage_idpMitigateTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
+                        "isClear_trapMessage_idpMitigateTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
                         }, nil)
 
 	case AH_INTERFERENCE_ALERT_TRAP_TYPE:
@@ -248,10 +248,10 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                         "crcErrRateThreshold_interferenceAlertTrap": ahinterference.CRCErrRateThres,
                         "crcErrRate_interferenceAlertTrap":          ahinterference.CRCErrRate,
                         "failureSet_interferenceAlertTrap":                 ahinterference.Set,
-                        "severityLevel_trapMessage_interferenceAlertTrap":   trap.Level,
+						"severityLevel_trapMessage_interferenceAlertTrap":   severityToString(trap.Level),
                         "msgId_trapMessage_interferenceAlertTrap":   trap.MsgID,
                         "desc_trapMessage_interferenceAlertTrap":    ahutil.CleanCString(trap.Desc[:]),
-                        "clear_trapMessage_interferenceAlertTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
+                        "isClear_trapMessage_interferenceAlertTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
                         }, nil)
 
 	case AH_BW_SENTINEL_TRAP_TYPE:
@@ -271,10 +271,10 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                         "interferenceUtil_bwSentinelTrap":    ahbwsentinel.InterferenceUtil,
 			"txUtil_bwSentinelTrap":              ahbwsentinel.TxUtil,
 			"rxUtil_bwSentinelTrap":              ahbwsentinel.RxUtil,
-                        "severityLevel_trapMessage_bwSentinelTrap":   trap.Level,
+						"severityLevel_trapMessage_bwSentinelTrap":   severityToString(trap.Level),
                         "msgId_trapMessage_bwSentinelTrap":   trap.MsgID,
                         "desc_trapMessage_bwSentinelTrap":    ahutil.CleanCString(trap.Desc[:]),
-                        "clear_trapMessage_bwSentinelTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
+                        "isClear_trapMessage_bwSentinelTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
                         }, nil)
 
 	case AH_ALARM_ALRT_TRAP_TYPE:
@@ -293,10 +293,10 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                         "current_alarmAlertTrap":             ahalarmalert.ShortInterference,
                         "snapshot_alarmAlertTrap":            ahalarmalert.SnapInterference,
                         "failureState_alarmAlertTrap":                 ahalarmalert.Set,
-                        "severityLevel_trapMessage_alarmAlertTrap":   trap.Level,
+						"severityLevel_trapMessage_alarmAlertTrap":   severityToString(trap.Level),
                         "msgId_trapMessage_alarmAlertTrap":   trap.MsgID,
                         "desc_trapMessage_alarmAlertTrap":    ahutil.CleanCString(trap.Desc[:]),
-                        "clear_trapMessage_alarmAlertTrap":   GetTrapClearStatus(trap.TrapType, trap.Union[:]),
+                        "isClear_trapMessage_alarmAlertTrap":   GetTrapClearStatus(trap.TrapType, trap.Union[:]),
                         }, nil)
 
 	case AH_MESH_MGT0_VLAN_CHANGE_TRAP_TYPE:
@@ -310,10 +310,10 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                         "newVlan_meshMgt0vlanChangeTrap":             ahmeshmgtvlan.NewVlan,
                         "oldNativeVlan_meshMgt0vlanChangeTrap":       ahmeshmgtvlan.OldNativeVlan,
                         "newNativeVlan_meshMgt0vlanChangeTrap":       ahmeshmgtvlan.NewNativeVlan,
-                        "severityLevel_trapMessage_meshMgt0vlanChangeTrap":   trap.Level,
+						"severityLevel_trapMessage_meshMgt0vlanChangeTrap":   severityToString(trap.Level),
                         "msgId_trapMessage_meshMgt0vlanChangeTrap":   trap.MsgID,
                         "desc_trapMessage_meshMgt0vlanChangeTrap":    ahutil.CleanCString(trap.Desc[:]),
-						"clear_trapMessage_meshMgt0vlanChangeTrap":   GetTrapClearStatus(trap.TrapType, trap.Union[:]),
+						"isClear_trapMessage_meshMgt0vlanChangeTrap":   GetTrapClearStatus(trap.TrapType, trap.Union[:]),
                         }, nil)
 
 	case AH_MESH_STABLE_STAGE_TRAP_TYPE:
@@ -325,10 +325,10 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                         "trapObjName_meshStableStageTrap":            ahutil.CleanCString(ahmeshstable.Name[:]),
                         "meshStableStage_meshStableStageTrap":     ahmeshstable. MeshStableStage,
                         "meshDataRate_meshStableStageTrap":        ahmeshstable.MeshDataRate,
-                        "level_trapMessage_meshStableStageTrap":   trap.Level,
+					"level_trapMessage_meshStableStageTrap":   severityToString(trap.Level),
                         "msgId_trapMessage_meshStableStageTrap":   trap.MsgID,
                         "desc_trapMessage_meshStableStageTrap":    ahutil.CleanCString(trap.Desc[:]),
-						"clear_trapMessage_meshStableStageTrap":   GetTrapClearStatus(trap.TrapType, trap.Union[:]),
+						"isClear_trapMessage_meshStableStageTrap":   GetTrapClearStatus(trap.TrapType, trap.Union[:]),
                         }, nil)
 
 	case AH_KEY_FULL_ALARM_TRAP_TYPE:
@@ -342,10 +342,10 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                         "bssid_keyFullAlarmTrap":               ahkeyfullalarm.BSSID,
 						"clientMac_keyFullAlarmTrap":           ahkeyfullalarm.ClientMAC,
 						"gtkVlan_keyFullAlarmTrap":             ahkeyfullalarm.GtkVLAN,
-                        "level_trapMessage_keyFullAlarmTrap":   trap.Level,
+			"level_trapMessage_keyFullAlarmTrap":   severityToString(trap.Level),
                         "msgId_trapMessage_keyFullAlarmTrap":   trap.MsgID,
                         "desc_trapMessage_keyFullAlarmTrap":    ahutil.CleanCString(trap.Desc[:]),
-						"clear_trapMessage_keyFullAlarmTrap":   GetTrapClearStatus(trap.TrapType, trap.Union[:]),
+						"isClear_trapMessage_keyFullAlarmTrap":   GetTrapClearStatus(trap.TrapType, trap.Union[:]),
                         }, nil)
 
 	}
@@ -369,7 +369,7 @@ func (t *TrapPlugin) Gather_Ah_send_trap(trapType uint32, trapBuf [256]byte, acc
 			"nativeVlan_faMvlanTrap":         mvlan.NativeVlan,
 			"nativeTagged_faMvlanTrap":       mvlan.NativeTagged,
 			"systemId_faMvlanTrap":           fmt.Sprintf("%X", mvlan.SystemID),
-			"clear_trapMessage_faMvlanTrap":  GetTrapClearStatus(uint32(mvlan.TrapType), trapBuf[:]),
+			"isClear_trapMessage_faMvlanTrap":  GetTrapClearStatus(uint32(mvlan.TrapType), trapBuf[:]),
 		}, nil)
 
 	case AH_MSG_TRAP_DFS_BANG:
@@ -381,7 +381,7 @@ func (t *TrapPlugin) Gather_Ah_send_trap(trapType uint32, trapBuf [256]byte, acc
 			"trapId_dfsBangTrap":      dfs.TrapId,
 			"name_dfsBangTrap":        ahutil.CleanCString(dfs.IfName[:]),
 			"desc_dfsBangTrap":        ahutil.CleanCString(dfs.Desc[:]),
-			"clear_trapMessage_dfsBangTrap": GetTrapClearStatus(uint32(dfs.TrapType), trapBuf[:]),
+			"isClear_trapMessage_dfsBangTrap": GetTrapClearStatus(uint32(dfs.TrapType), trapBuf[:]),
 		}, nil)
 
 	case AH_MSG_TRAP_DEV_IP_CHANGE:
@@ -401,7 +401,7 @@ func (t *TrapPlugin) Gather_Ah_send_trap(trapType uint32, trapBuf [256]byte, acc
 			"ipv4DefaultGateway_devIpChangeTrap": ahutil.IntToIpv4(devIpChange.Ipv4DefaultGateway),
 			"ipv6AddrNum_devIpChangeTrap":       devIpChange.Ipv6AddrNum,
 			"ipv6Data_devIpChangeTrap":          formatDevIpChangeIpv6Data(devIpChange.Ipv6Data[:], int(devIpChange.Ipv6AddrNum)),
-			"clear_trapMessage_devIpChangeTrap": GetTrapClearStatus(uint32(devIpChange.TrapType), trapBuf[:]),
+			"isClear_trapMessage_devIpChangeTrap": GetTrapClearStatus(uint32(devIpChange.TrapType), trapBuf[:]),
 		}, nil)
 	}
 
@@ -457,7 +457,7 @@ func (t *TrapPlugin) Ah_send_ssid_bind_unbind_trap(trapType uint32, trapBuf [600
         "bssidMac_ssidBindUnbindTrap":    ahutil.FormatMac(ssidBindUnbind.BssidMAC),
         "ssid_ssidBindUnbindTrap":        ahutil.CleanCString(ssidBindUnbind.SSID[:]),
 	"state_ssidBindUnbindTrap":       stateToString(ssidBindUnbind.State),
-	"clear_trapMessage_ssidBindUnbindTrap":       GetTrapClearStatus(uint32(ssidBindUnbind.TrapType), trapBuf[:]),
+	"isClear_trapMessage_ssidBindUnbindTrap":       GetTrapClearStatus(uint32(ssidBindUnbind.TrapType), trapBuf[:]),
     }, nil)
     return nil
 }
@@ -475,10 +475,10 @@ func (t *TrapPlugin) Ah_send_bssid_spoofing_trap(trapType uint32, trapBuf [AH_TR
         "attackMac_bssidSpoofingTrap":    ahutil.FormatMac(bssidSpoofing.AttackMAC),
         "attackCount_bssidSpoofingTrap":  bssidSpoofing.AttackCount,
         "protocol_bssidSpoofingTrap":     bssidSpoofing.Protocol,
-        "severity_bssidSpoofingTrap":     bssidSpoofing.Severity,
+		"severity_bssidSpoofingTrap":     severityToString(int32(bssidSpoofing.Severity)),
         "sourceIp_bssidSpoofingTrap":     ahutil.IntToIpv4(bssidSpoofing.SourceIP),
         "targetIp_bssidSpoofingTrap":     ahutil.IntToIpv4(bssidSpoofing.TargetIP),
-        "clear_trapMessage_bssidSpoofingTrap":        GetTrapClearStatus(trapType, trapBuf[:]),
+        "isClear_trapMessage_bssidSpoofingTrap":        GetTrapClearStatus(trapType, trapBuf[:]),
     }, nil)
     return nil
 }

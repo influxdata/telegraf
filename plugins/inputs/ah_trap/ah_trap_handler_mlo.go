@@ -52,9 +52,9 @@ func gatherConnectionChangeTrap(ahconnectionchange AhConnectionChangeTrap, trap 
 		"staLinkAddr_connectionChangeTrap":       ahutil.FormatMac(ahconnectionchange.StaLinkAddr),
 		"apLinkAddr_connectionChangeTrap":        ahutil.FormatMac(ahconnectionchange.ApLinkAddr),
 		"clientAssocBitmap_connectionChangeTrap": ahconnectionchange.ClientAssocBitmap,
-		"severityLevel_trapMessage_connectionChangeTrap": trap.Level,
+		"severityLevel_trapMessage_connectionChangeTrap": severityToString(trap.Level),
 		"msgId_trapMessage_connectionChangeTrap": trap.MsgID,
 		"desc_trapMessage_connectionChangeTrap":  ahutil.CleanCString(trap.Desc[:]),
-		"clear_trapMessage_connectionChangeTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
+		"isClear_trapMessage_connectionChangeTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
 	}, nil)
 }

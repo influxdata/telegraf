@@ -56,6 +56,23 @@ const (
 	AH_MESH_STABLE_STAGE_TRAP_TYPE
 )
 
+func severityToString(level int32) string {
+	switch level {
+	case 1:
+		return "CLEAR"
+	case 2:
+		return "INFO"
+	case 3:
+		return "MINOR"
+	case 4:
+		return "MAJOR"
+	case 5:
+		return "CRITICAL"
+	default:
+		return "UNKNOWN"
+	}
+}
+
 type AhFaMvlanChangeTrap struct {
 	TrapType      uint8
 	SystemID      [10]uint8
@@ -294,9 +311,9 @@ type AhStaAddr6 struct {
 
 // GetTrapClearStatus extracts clear status from trap based on trap type and set field
 // Mimics ah_get_msg_trap_type_clear() from syslogd.c
-// Returns: 0 = SET (alarm raised), 1 = CLEAR (alarm cleared)
-func GetTrapClearStatus(trapType uint32, unionData []byte) uint8 {
-	clear := uint8(0) // Default: SET
+// Returns: false = SET (alarm raised), true = CLEAR (alarm cleared)
+func GetTrapClearStatus(trapType uint32, unionData []byte) bool {
+	isClear := false // Default: SET
 
 	switch AhTrapType(trapType) {
 	case AH_FAILURE_TRAP_TYPE:
@@ -304,9 +321,9 @@ func GetTrapClearStatus(trapType uint32, unionData []byte) uint8 {
 		if len(unionData) >= int(unsafe.Sizeof(failure)) {
 			copy((*[1 << 10]byte)(unsafe.Pointer(&failure))[:unsafe.Sizeof(failure)], unionData)
 			if failure.Set == AH_SNMP_TRUE {
-				clear = AH_MSG_TRAP_SET
+				isClear = false // SET
 			} else {
-				clear = AH_MSG_TRAP_CLEAR
+				isClear = true // CLEAR
 			}
 		}
 
@@ -315,9 +332,9 @@ func GetTrapClearStatus(trapType uint32, unionData []byte) uint8 {
 		if len(unionData) >= int(unsafe.Sizeof(interference)) {
 			copy((*[1 << 10]byte)(unsafe.Pointer(&interference))[:unsafe.Sizeof(interference)], unionData)
 			if interference.Set == AH_SNMP_TRUE {
-				clear = AH_MSG_TRAP_SET
+				isClear = false // SET
 			} else {
-				clear = AH_MSG_TRAP_CLEAR
+				isClear = true // CLEAR
 			}
 		}
 
@@ -326,16 +343,16 @@ func GetTrapClearStatus(trapType uint32, unionData []byte) uint8 {
 		if len(unionData) >= int(unsafe.Sizeof(alarmAlert)) {
 			copy((*[1 << 10]byte)(unsafe.Pointer(&alarmAlert))[:unsafe.Sizeof(alarmAlert)], unionData)
 			if alarmAlert.Set == AH_SNMP_TRUE {
-				clear = AH_MSG_TRAP_SET
+				isClear = false // SET
 			} else {
-				clear = AH_MSG_TRAP_CLEAR
+				isClear = true // CLEAR
 			}
 		}
 
 	default:
-		// Event traps always return SET (0)
-		clear = 0
+		// Event traps always return SET (false)
+		isClear = false
 	}
 
-	return clear
+	return isClear
 }
