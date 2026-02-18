@@ -110,8 +110,7 @@ func TestUnalignedTickerJitterBehavior(t *testing.T) {
 	if drift < 0 {
 		drift = -drift
 	}
-	require.Less(t, drift, 1*time.Minute,
-		"UnalignedTicker should have minimal drift due to fixed internal ticker")
+	require.Less(t, drift, 1*time.Minute, "UnalignedTicker should have minimal drift due to fixed internal ticker")
 }
 
 // Simulates running the Ticker for an hour and displays stats about the
