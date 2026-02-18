@@ -17,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -43,7 +43,7 @@ type SIP struct {
 	Username     config.Secret   `toml:"username"`
 	Password     config.Secret   `toml:"password"`
 	Log          telegraf.Logger `toml:"-"`
-	common_tls.ClientConfig
+	tls.ClientConfig
 
 	ua         *sipgo.UserAgent
 	client     *sipgo.Client

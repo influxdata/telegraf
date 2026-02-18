@@ -13,6 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -338,7 +339,7 @@ func TestSIPServerSuccess(t *testing.T) {
 	require.NoError(t, plugin.Gather(&acc))
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"sip",
 			map[string]string{
 				"source":      "sip://" + server.addr,
@@ -381,7 +382,7 @@ func TestSIPServerErrorResponse(t *testing.T) {
 	require.NoError(t, plugin.Gather(&acc))
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"sip",
 			map[string]string{
 				"source":      "sip://" + server.addr,
@@ -424,7 +425,7 @@ func TestSIPServerTimeout(t *testing.T) {
 
 	// Use RequireMetricsEqual for tags (no status_code on timeout)
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"sip",
 			map[string]string{
 				"source":    "sip://" + server.addr,
@@ -474,7 +475,7 @@ func TestSIPServerDelayedResponse(t *testing.T) {
 
 	// Use RequireMetricsEqual for tags and fields structure
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"sip",
 			map[string]string{
 				"source":      "sip://" + server.addr,
@@ -547,7 +548,7 @@ func TestSIPDifferentStatusCodes(t *testing.T) {
 			require.NoError(t, plugin.Gather(&acc))
 
 			expected := []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"sip",
 					map[string]string{
 						"source":      "sip://" + server.addr,
@@ -596,7 +597,7 @@ func TestSIPAuthenticationRequired(t *testing.T) {
 	require.NoError(t, plugin.Gather(&acc))
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"sip",
 			map[string]string{
 				"source":      "sip://" + server.addr,
@@ -670,7 +671,7 @@ func TestSIPAuthenticationSuccess(t *testing.T) {
 
 	// Verify successful authentication
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"sip",
 			map[string]string{
 				"source":      "sip://" + server.addr,
@@ -731,7 +732,7 @@ func TestSIPMethodINVITE(t *testing.T) {
 	require.NoError(t, plugin.Gather(&acc))
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"sip",
 			map[string]string{
 				"source":      "sip://" + server.addr,
@@ -779,7 +780,7 @@ func TestSIPMethodMESSAGE(t *testing.T) {
 	require.NoError(t, plugin.Gather(&acc))
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"sip",
 			map[string]string{
 				"source":      "sip://" + server.addr,
