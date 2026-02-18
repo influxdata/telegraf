@@ -74,7 +74,7 @@ require (
 	github.com/clarify/clarify-go v0.4.1
 	github.com/cloudevents/sdk-go/v2 v2.16.2
 	github.com/compose-spec/compose-go v1.20.2
-	github.com/coocood/freecache v1.2.4
+	github.com/coocood/freecache v1.2.5
 	github.com/coreos/go-semver v0.3.1
 	github.com/coreos/go-systemd/v22 v22.7.0
 	github.com/couchbase/go-couchbase v0.1.1
