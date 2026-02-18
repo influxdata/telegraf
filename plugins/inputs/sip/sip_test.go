@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -76,7 +75,7 @@ func TestInitErrors(t *testing.T) {
 }
 
 func TestInitValidMethods(t *testing.T) {
-	validMethods := []string{"OPTIONS", "INVITE", "MESSAGE", "options", "invite", "message"}
+	validMethods := []string{"OPTIONS", "INVITE", "MESSAGE"}
 
 	for _, method := range validMethods {
 		t.Run(method, func(t *testing.T) {
@@ -87,7 +86,23 @@ func TestInitValidMethods(t *testing.T) {
 			}
 
 			require.NoError(t, plugin.Init())
-			require.Equal(t, strings.ToUpper(method), plugin.Method)
+			require.Equal(t, method, plugin.Method)
+		})
+	}
+}
+
+func TestInitInvalidMethodCase(t *testing.T) {
+	invalidCaseMethods := []string{"options", "invite", "message", "OpTiOnS"}
+
+	for _, method := range invalidCaseMethods {
+		t.Run(method, func(t *testing.T) {
+			plugin := &SIP{
+				Server:  "sip://sip.example.com:5060",
+				Method:  method,
+				Timeout: config.Duration(5 * time.Second),
+			}
+
+			require.ErrorContains(t, plugin.Init(), "invalid SIP method")
 		})
 	}
 }
@@ -330,10 +345,10 @@ func TestSIPServerSuccess(t *testing.T) {
 				"method":      "options",
 				"transport":   "udp",
 				"status_code": "200",
-				"result":      "OK",
 			},
 			map[string]interface{}{
 				"response_time_s": float64(0),
+				"result":          "OK",
 			},
 			time.Now(),
 		),
@@ -373,10 +388,10 @@ func TestSIPServerErrorResponse(t *testing.T) {
 				"method":      "options",
 				"transport":   "udp",
 				"status_code": "404",
-				"result":      "Not Found",
 			},
 			map[string]interface{}{
 				"response_time_s": float64(0),
+				"result":          "Not Found",
 			},
 			time.Now(),
 		),
@@ -415,10 +430,10 @@ func TestSIPServerTimeout(t *testing.T) {
 				"source":    "sip://" + server.addr,
 				"method":    "options",
 				"transport": "udp",
-				"result":    "Timeout",
 			},
 			map[string]interface{}{
 				"response_time_s": float64(0),
+				"result":          "Timeout",
 			},
 			time.Now(),
 		),
@@ -435,7 +450,7 @@ func TestSIPServerTimeout(t *testing.T) {
 
 func TestSIPServerDelayedResponse(t *testing.T) {
 	server, err := newMockServer(sip.OPTIONS, func(req *sip.Request, tx sip.ServerTransaction) {
-		time.Sleep(300 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 		res := sip.NewResponseFromRequest(req, 200, "OK", nil)
 		require.NoError(t, tx.Respond(res))
 	})
@@ -445,7 +460,7 @@ func TestSIPServerDelayedResponse(t *testing.T) {
 	plugin := &SIP{
 		Server:   "sip://" + server.addr,
 		Method:   "OPTIONS",
-		Timeout:  config.Duration(1 * time.Second),
+		Timeout:  config.Duration(200 * time.Millisecond),
 		FromUser: "telegraf",
 		Log:      testutil.Logger{},
 	}
@@ -466,10 +481,10 @@ func TestSIPServerDelayedResponse(t *testing.T) {
 				"method":      "options",
 				"transport":   "udp",
 				"status_code": "200",
-				"result":      "OK",
 			},
 			map[string]interface{}{
 				"response_time_s": float64(0),
+				"result":          "OK",
 			},
 			time.Now(),
 		),
@@ -480,8 +495,8 @@ func TestSIPServerDelayedResponse(t *testing.T) {
 	// Additionally verify response time is within expected range
 	require.Len(t, acc.Metrics, 1)
 	rt := acc.Metrics[0].Fields["response_time_s"].(float64)
-	require.Greater(t, rt, 0.3, "response time should be at least 300ms")
-	require.Less(t, rt, 1.0, "response time should be less than timeout")
+	require.Greater(t, rt, 0.05, "response time should be at least 50ms")
+	require.Less(t, rt, 0.2, "response time should be less than timeout")
 }
 
 func TestSIPDifferentStatusCodes(t *testing.T) {
@@ -539,10 +554,10 @@ func TestSIPDifferentStatusCodes(t *testing.T) {
 						"method":      "options",
 						"transport":   "udp",
 						"status_code": strconv.Itoa(tt.statusCode),
-						"result":      tt.reason,
 					},
 					map[string]interface{}{
 						"response_time_s": float64(0),
+						"result":          tt.reason,
 					},
 					time.Now(),
 				),
@@ -588,10 +603,10 @@ func TestSIPAuthenticationRequired(t *testing.T) {
 				"method":      "options",
 				"transport":   "udp",
 				"status_code": "401",
-				"result":      "Unauthorized",
 			},
 			map[string]interface{}{
 				"response_time_s": float64(0),
+				"result":          "Unauthorized",
 			},
 			time.Now(),
 		),
@@ -662,10 +677,10 @@ func TestSIPAuthenticationSuccess(t *testing.T) {
 				"method":      "options",
 				"transport":   "udp",
 				"status_code": "200",
-				"result":      "OK",
 			},
 			map[string]interface{}{
 				"response_time_s": float64(0),
+				"result":          "OK",
 			},
 			time.Now(),
 		),
@@ -673,71 +688,17 @@ func TestSIPAuthenticationSuccess(t *testing.T) {
 	actual := acc.GetTelegrafMetrics()
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.IgnoreFields("response_time_s"))
 
-	// SECURITY: Verify credentials never appear in tags
+	// SECURITY: Verify credentials never appear in tags or fields
 	require.Len(t, acc.Metrics, 1)
 	m := acc.Metrics[0]
 	for k, v := range m.Tags {
 		require.NotContains(t, v, validUsername, "tag %s must not contain username", k)
 		require.NotContains(t, v, validPassword, "tag %s must not contain password", k)
 	}
-}
-
-func TestSIPCredentialsNotInTags(t *testing.T) {
-	// This test verifies that username/password never appear in tags
-	server, err := newMockServer(sip.OPTIONS, func(req *sip.Request, tx sip.ServerTransaction) {
-		res := sip.NewResponseFromRequest(req, 200, "OK", nil)
-		require.NoError(t, tx.Respond(res))
-	})
-	require.NoError(t, err)
-	defer server.close()
-
-	// Create plugin with credentials
-	username := config.NewSecret([]byte("testuser"))
-	password := config.NewSecret([]byte("testpass"))
-
-	plugin := &SIP{
-		Server:   "sip://" + server.addr,
-		Method:   "OPTIONS",
-		Timeout:  config.Duration(2 * time.Second),
-		FromUser: "telegraf",
-		Username: username,
-		Password: password,
-		Log:      testutil.Logger{},
-	}
-
-	require.NoError(t, plugin.Init())
-
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Start(&acc))
-	defer plugin.Stop()
-
-	require.NoError(t, plugin.Gather(&acc))
-
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"sip",
-			map[string]string{
-				"source":      "sip://" + server.addr,
-				"method":      "options",
-				"transport":   "udp",
-				"status_code": "200",
-				"result":      "OK",
-			},
-			map[string]interface{}{
-				"response_time_s": float64(0),
-			},
-			time.Now(),
-		),
-	}
-	actual := acc.GetTelegrafMetrics()
-	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.IgnoreFields("response_time_s"))
-
-	// SECURITY CHECK: Verify all tags don't contain credentials
-	require.Len(t, acc.Metrics, 1)
-	m := acc.Metrics[0]
-	for k, v := range m.Tags {
-		require.NotContains(t, v, "testuser", "tag %s must not contain username", k)
-		require.NotContains(t, v, "testpass", "tag %s must not contain password", k)
+	for k, v := range m.Fields {
+		s := fmt.Sprintf("%v", v)
+		require.NotContains(t, s, validUsername, "field %s must not contain username", k)
+		require.NotContains(t, s, validPassword, "field %s must not contain password", k)
 	}
 }
 
@@ -777,10 +738,10 @@ func TestSIPMethodINVITE(t *testing.T) {
 				"method":      "invite",
 				"transport":   "udp",
 				"status_code": "200",
-				"result":      "OK",
 			},
 			map[string]interface{}{
 				"response_time_s": float64(0),
+				"result":          "OK",
 			},
 			time.Now(),
 		),
@@ -825,10 +786,10 @@ func TestSIPMethodMESSAGE(t *testing.T) {
 				"method":      "message",
 				"transport":   "udp",
 				"status_code": "200",
-				"result":      "OK",
 			},
 			map[string]interface{}{
 				"response_time_s": float64(0),
+				"result":          "OK",
 			},
 			time.Now(),
 		),

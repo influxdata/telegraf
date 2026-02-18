@@ -6,7 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	net_url "net/url"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -74,11 +74,11 @@ func (s *SIP) Init() error {
 	}
 
 	// Validate method
-	switch strings.ToUpper(s.Method) {
+	switch s.Method {
 	case "":
 		s.Method = "OPTIONS"
 	case "OPTIONS", "INVITE", "MESSAGE":
-		s.Method = strings.ToUpper(s.Method)
+		// valid
 	default:
 		return fmt.Errorf("invalid SIP method %q", s.Method)
 	}
@@ -89,7 +89,7 @@ func (s *SIP) Init() error {
 
 	// Validate server URL scheme and transport combination
 	// Note: "tls" transport is deprecated per RFC 3261. Use sips:// scheme instead.
-	u, err := net_url.Parse(s.Server)
+	u, err := url.Parse(s.Server)
 	if err != nil {
 		return fmt.Errorf("invalid server URL: %w", err)
 	}
@@ -197,15 +197,14 @@ func (s *SIP) Start(telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("failed to create SIP user agent: %w", err)
 	}
+	s.ua = ua
 
 	// Create SIP client
 	client, err := sipgo.NewClient(ua)
 	if err != nil {
-		ua.Close()
+		s.Stop()
 		return fmt.Errorf("failed to create SIP client: %w", err)
 	}
-
-	s.ua = ua
 	s.client = client
 
 	return nil
@@ -216,6 +215,7 @@ func (s *SIP) Stop() {
 		s.ua.Close()
 	}
 	s.ua = nil
+	s.client = nil
 }
 
 func (s *SIP) Gather(acc telegraf.Accumulator) error {
@@ -256,14 +256,15 @@ func (s *SIP) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		// Check if it's a timeout
 		if errors.Is(err, context.DeadlineExceeded) {
-			tags["result"] = "Timeout"
+			fields["result"] = "Timeout"
 			fields["response_time_s"] = time.Duration(s.Timeout).Seconds()
 			acc.AddFields("sip", fields, tags)
 			return nil
 		}
 		// Handle other errors inline
 		s.Log.Debugf("unauthenticated request to %q failed with: %v", s.Server, err)
-		tags["result"] = "Error"
+		fields["result"] = "Error"
+		fields["response_time_s"] = time.Since(start).Seconds()
 		acc.AddFields("sip", fields, tags)
 		return nil
 	}
@@ -271,7 +272,7 @@ func (s *SIP) Gather(acc telegraf.Accumulator) error {
 	// Handle digest authentication challenge (RFC 8760)
 	// SIP digest auth requires the server's challenge first to obtain the nonce,
 	// so we cannot pre-authenticate on the first request.
-	if res.StatusCode == 401 || res.StatusCode == 407 {
+	if (res.StatusCode == 401 || res.StatusCode == 407) && !s.Username.Empty() {
 		// Get credentials
 		usernameRaw, err := s.Username.Get()
 		if err != nil {
@@ -293,7 +294,8 @@ func (s *SIP) Gather(acc telegraf.Accumulator) error {
 		})
 		if err != nil {
 			s.Log.Debugf("authenticated request to %q failed with: %v", s.Server, err)
-			tags["result"] = "Error"
+			fields["result"] = "Error"
+			fields["response_time_s"] = time.Since(start).Seconds()
 			acc.AddFields("sip", fields, tags)
 			return nil
 		}
@@ -305,12 +307,12 @@ func (s *SIP) Gather(acc telegraf.Accumulator) error {
 	// Process response
 	if res != nil {
 		tags["status_code"] = strconv.Itoa(res.StatusCode)
-		tags["result"] = res.Reason
+		fields["result"] = res.Reason
 		if serverAgent := res.GetHeader("Server"); serverAgent != nil {
-			tags["server_agent"] = serverAgent.Value()
+			fields["server_agent"] = serverAgent.Value()
 		}
 	} else {
-		tags["result"] = "No Response"
+		fields["result"] = "No Response"
 		s.Log.Debugf("no response from %q", s.Server)
 	}
 

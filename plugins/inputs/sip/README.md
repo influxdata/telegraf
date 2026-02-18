@@ -147,17 +147,21 @@ Different SIP servers may respond with different status codes to OPTIONS request
     - method (the SIP method used, lowercase: options, invite, message)
     - transport (the transport protocol: udp, tcp, ws, wss)
     - status_code (the SIP response status code, e.g., "200", "404")
-    - result (the result of the request: status text like "OK")
-    - server_agent (optional: the Server header from the response)
   - fields:
     - response_time_s (float, seconds) - Time taken to receive response
       (for timeouts, this equals the configured timeout value)
+    - result (string) - The outcome of the request: the SIP reason phrase when
+      a response is received (e.g. "OK", "Not Found", "Unauthorized"), or a
+      sentinel value when no valid response is received (`Timeout`, `Error`,
+      `No Response`)
+    - server_agent (string, optional) - Value of the `Server` header from the
+      SIP response, identifying the remote server software
 
 ## Example Output
 
 ```text
-sip,host=telegraf-host,method=options,result=OK,source=sip://sip.example.com:5060,status_code=200,transport=udp response_time_s=0.023 1640000000000000000
-sip,host=telegraf-host,method=options,result=Timeout,source=sip://unreachable.example.com:5060,transport=udp response_time_s=5.0 1640000000000000000
-sip,host=telegraf-host,method=options,result=Not\ Found,source=sip://sip.provider.com:5060,status_code=404,transport=udp response_time_s=0.045 1640000000000000000
-sip,host=telegraf-host,method=options,result=OK,source=sips://secure.voip.example.com:5061,status_code=200,transport=tcp response_time_s=0.067 1640000000000000000
+sip,host=telegraf-host,method=options,source=sip://sip.example.com:5060,status_code=200,transport=udp response_time_s=0.023,result="OK" 1640000000000000000
+sip,host=telegraf-host,method=options,source=sip://unreachable.example.com:5060,transport=udp response_time_s=5.0,result="Timeout" 1640000000000000000
+sip,host=telegraf-host,method=options,source=sip://sip.provider.com:5060,status_code=404,transport=udp response_time_s=0.045,result="Not Found" 1640000000000000000
+sip,host=telegraf-host,method=options,source=sips://secure.voip.example.com:5061,status_code=200,transport=tcp response_time_s=0.067,result="OK",server_agent="Asterisk PBX 18.15.0" 1640000000000000000
 ```
