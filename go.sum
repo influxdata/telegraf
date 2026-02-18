@@ -2116,8 +2116,8 @@ github.com/oracle/oci-go-sdk/v65 v65.80.0 h1:Rr7QLMozd2DfDBKo6AB3DzLYQxAwuOG118+
 github.com/oracle/oci-go-sdk/v65 v65.80.0/go.mod h1:IBEV9l1qBzUpo7zgGaRUhbB05BVfcDGYRFBCPlTcPp0=
 github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c h1:rp5dCmg/yLR3mgFuSOe4oEnDDmGLROTvMragMUXpTQw=
 github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c/go.mod h1:X07ZCGwUbLaax7L0S3Tw4hpejzu63ZrrQiUe6W0hcy0=
-github.com/p4lang/p4runtime v1.4.1 h1:YdtDyDReeGEmSvuxqR8iefSTnttRSW5jWJWtpgCSFv4=
-github.com/p4lang/p4runtime v1.4.1/go.mod h1:OWAP4Wh9uKGnQjleslObpFE0REP78b5gR1pHyYmvNPQ=
+github.com/p4lang/p4runtime v1.5.0 h1:GSccPwIFfeRjyrUSDe19DmqsHia7tGsU8vFuH2JxPTU=
+github.com/p4lang/p4runtime v1.5.0/go.mod h1:exHLJdkEhs+S2DLCkdvHnLbw9uyJoIbAzwMmHUeD37Y=
 github.com/panjf2000/ants/v2 v2.11.3 h1:AfI0ngBoXJmYOpDh9m516vjqoUu2sLrIVgppI9TZVpg=
 github.com/panjf2000/ants/v2 v2.11.3/go.mod h1:8u92CYMUc6gyvTIw8Ru7Mt7+/ESnJahz5EVtqfrilek=
 github.com/panjf2000/gnet/v2 v2.9.7 h1:6zW7Jl3oAfXwSuh1PxHLndoL2MQRWx0AJR6aaQjxUgA=
