@@ -5,6 +5,7 @@ package httpconfig
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/cookie"
 	"github.com/influxdata/telegraf/plugins/common/oauth"
 	"github.com/influxdata/telegraf/plugins/common/proxy"
@@ -25,6 +27,7 @@ type TransportConfig struct {
 	MaxIdleConns          int             `toml:"max_idle_conn"`
 	MaxIdleConnsPerHost   int             `toml:"max_idle_conn_per_host"`
 	ResponseHeaderTimeout config.Duration `toml:"response_timeout"`
+	LocalAddress          string          `toml:"local_address"`
 	proxy.HTTPProxy
 	tls.ClientConfig
 }
@@ -40,14 +43,25 @@ func (h *TransportConfig) CreateTransport() (*http.Transport, error) {
 		return nil, fmt.Errorf("setting up proxy failed: %w", err)
 	}
 
-	return &http.Transport{
+	transport := &http.Transport{
 		TLSClientConfig:       tlsCfg,
 		Proxy:                 prox,
 		IdleConnTimeout:       time.Duration(h.IdleConnTimeout),
 		MaxIdleConns:          h.MaxIdleConns,
 		MaxIdleConnsPerHost:   h.MaxIdleConnsPerHost,
 		ResponseHeaderTimeout: time.Duration(h.ResponseHeaderTimeout),
-	}, nil
+	}
+
+	if h.LocalAddress != "" {
+		localAddr, err := internal.ResolveLocalTCPAddress(h.LocalAddress)
+		if err != nil {
+			return nil, err
+		}
+		dialer := &net.Dialer{LocalAddr: localAddr}
+		transport.DialContext = dialer.DialContext
+	}
+
+	return transport, nil
 }
 
 // HTTPClientConfig is a common HTTP client struct.
