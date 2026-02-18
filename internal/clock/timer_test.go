@@ -11,24 +11,22 @@ import (
 func TestTimer(t *testing.T) {
 	interval := 10 * time.Second
 	jitter := 0 * time.Second
-	offset := 0 * time.Second
 
 	clk := clock.NewMock()
 	clk.Add(1 * time.Second)
+
 	start := clk.Now()
 	end := start.Add(60 * time.Second)
 
-	ticker := &unaligned{
+	ticker := &Timer{
 		clk:      clk,
 		interval: interval,
 		jitter:   jitter,
-		offset:   offset,
 	}
 	ticker.start()
 	defer ticker.Stop()
 
 	expected := []time.Time{
-		time.Unix(1, 0).UTC(),
 		time.Unix(11, 0).UTC(),
 		time.Unix(21, 0).UTC(),
 		time.Unix(31, 0).UTC(),
@@ -43,8 +41,8 @@ func TestTimer(t *testing.T) {
 		case tm := <-ticker.Elapsed():
 			actual = append(actual, tm.UTC())
 		default:
+			clk.Add(1 * time.Second)
 		}
-		clk.Add(10 * time.Second)
 	}
 
 	require.Equal(t, expected, actual)
