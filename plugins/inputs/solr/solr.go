@@ -110,7 +110,7 @@ func (s *Solr) getAPIConfig(server string) *apiConfig {
 	case 2:
 		s.configs[server] = newAPIv2Config()
 	default:
-		s.Log.Warnf("Unknown API version %q! Using latest known", version)
+		s.Log.Warnf("Unknown API version %d! Using latest known", version)
 		s.configs[server] = newAPIv2Config()
 	}
 
