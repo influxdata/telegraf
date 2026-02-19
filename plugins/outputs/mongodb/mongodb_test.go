@@ -318,23 +318,18 @@ func TestConnectAndWriteIntegrationX509Auth(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// validate config
-			err := tt.plugin.Init()
-			require.NoError(t, err)
+			require.NoError(t, tt.plugin.Init())
+
+			// connect
+			err = tt.plugin.Connect()
+			tt.connErrFunc(t, err)
 
 			if err == nil {
-				// connect
-				err = tt.plugin.Connect()
-				tt.connErrFunc(t, err)
+				// insert mock metrics
+				require.NoError(t, tt.plugin.Write(testutil.MockMetrics()))
 
-				if err == nil {
-					// insert mock metrics
-					err = tt.plugin.Write(testutil.MockMetrics())
-					require.NoError(t, err)
-
-					// cleanup
-					err = tt.plugin.Close()
-					require.NoError(t, err)
-				}
+				// cleanup
+				require.NoError(t, tt.plugin.Close())
 			}
 		})
 	}
