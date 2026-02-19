@@ -21,7 +21,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pion/dtls/v2"
+	"github.com/pion/dtls/v3"
+	dtlsnet "github.com/pion/dtls/v3/pkg/net"
 	"golang.org/x/crypto/ocsp"
 
 	"github.com/influxdata/telegraf"
@@ -326,19 +327,30 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		}
 		defer ipConn.Close()
 
-		dtlsCfg := &dtls.Config{
-			InsecureSkipVerify: true,
-			Certificates:       c.tlsCfg.Certificates,
-			RootCAs:            c.tlsCfg.RootCAs,
-			ServerName:         c.serverName(u),
+		dtlsOpts := []dtls.ClientOption{
+			dtls.WithInsecureSkipVerify(true),
+			dtls.WithRootCAs(c.tlsCfg.RootCAs),
+			dtls.WithServerName(c.serverName(u)),
 		}
-		conn, err := dtls.Client(ipConn, dtlsCfg)
+		if len(c.tlsCfg.Certificates) > 0 {
+			dtlsOpts = append(dtlsOpts, dtls.WithCertificates(c.tlsCfg.Certificates...))
+		}
+
+		conn, err := dtls.ClientWithOptions(dtlsnet.PacketConnFromConn(ipConn), ipConn.RemoteAddr(), dtlsOpts...)
 		if err != nil {
 			return nil, nil, err
 		}
 		defer conn.Close()
 
-		rawCerts := conn.ConnectionState().PeerCertificates
+		if err := conn.Handshake(); err != nil {
+			return nil, nil, err
+		}
+
+		state, ok := conn.ConnectionState()
+		if !ok {
+			return nil, nil, errors.New("failed to get DTLS connection state after handshake")
+		}
+		rawCerts := state.PeerCertificates
 		var certs []*x509.Certificate
 		for _, rawCert := range rawCerts {
 			parsed, err := x509.ParseCertificate(rawCert)
