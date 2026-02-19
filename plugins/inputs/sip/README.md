@@ -146,7 +146,7 @@ Different SIP servers may respond with different status codes to OPTIONS request
     - source (the SIP server address)
     - method (the SIP method used, lowercase: options, invite, message)
     - transport (the transport protocol: udp, tcp, ws, wss)
-    - status_code (the SIP response status code, e.g., "200", "404")
+    - status_code (the SIP response status code, e.g., "200", "404"; not always present, e.g. on timeout)
   - fields:
     - response_time_s (float, seconds) - Time taken to receive response
       (for timeouts, this equals the configured timeout value)

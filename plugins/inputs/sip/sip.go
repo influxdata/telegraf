@@ -17,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -77,10 +78,10 @@ func (s *SIP) Init() error {
 	switch s.Method {
 	case "":
 		s.Method = "OPTIONS"
-	case "OPTIONS", "INVITE", "MESSAGE":
-		// valid
 	default:
-		return fmt.Errorf("invalid SIP method %q", s.Method)
+		if err := choice.Check(s.Method, []string{"OPTIONS", "INVITE", "MESSAGE"}); err != nil {
+			return fmt.Errorf("invalid SIP method: %w", err)
+		}
 	}
 
 	if s.Timeout < 0 {
@@ -93,26 +94,27 @@ func (s *SIP) Init() error {
 	if err != nil {
 		return fmt.Errorf("invalid server URL: %w", err)
 	}
+
 	switch u.Scheme {
 	case "sip":
 		// sip:// requires non-secure transport (udp, tcp, ws)
 		switch s.Transport {
 		case "":
 			s.Transport = "udp"
-		case "udp", "tcp", "ws":
-			// valid transports
 		default:
-			return fmt.Errorf("invalid transport %q; must be one of udp, tcp, ws", s.Transport)
+			if err := choice.Check(s.Transport, []string{"udp", "tcp", "ws"}); err != nil {
+				return fmt.Errorf("invalid transport %q; must be one of udp, tcp, ws", s.Transport)
+			}
 		}
 	case "sips":
 		// sips:// requires secure transport (tcp or wss for TLS)
 		switch s.Transport {
 		case "":
 			s.Transport = "tcp"
-		case "tcp", "wss":
-			// valid transports
 		default:
-			return fmt.Errorf("invalid transport %q for sips:// scheme; must be tcp or wss", s.Transport)
+			if err := choice.Check(s.Transport, []string{"tcp", "wss"}); err != nil {
+				return fmt.Errorf("invalid transport %q for sips:// scheme; must be tcp or wss", s.Transport)
+			}
 		}
 	default:
 		return fmt.Errorf("server URL must use sip:// or sips:// scheme, got %q", u.Scheme)
