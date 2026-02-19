@@ -122,6 +122,7 @@ to use them.
   #
   ## Node ID configuration
   ## name              - field name to use in the output
+  ## id                - OPC UA node ID string (e.g., "ns=0;i=2262" or "nsu=http://...;s=Name")
   ## namespace         - OPC UA namespace of the node (integer value 0 thru 3)
   ## namespace_uri     - OPC UA namespace URI (alternative to namespace for stable references)
   ## identifier_type   - OPC UA ID type (s=string, i=numeric, g=guid, b=opaque)
@@ -129,7 +130,7 @@ to use them.
   ## default_tags      - extra tags to be added to the output metric (optional)
   ## monitoring_params - additional settings for the monitored node (optional)
   ##
-  ## Note: Specify either 'namespace' or 'namespace_uri', not both.
+  ## Use EITHER 'id' OR the combination of 'namespace/namespace_uri' + 'identifier_type' + 'identifier'
   ##
   ## Monitoring parameters
   ## sampling_interval  - interval at which the server should check for data
@@ -163,13 +164,25 @@ to use them.
   ##
   ## Use either the inline notation or the bracketed notation, not both.
   #
-  ## Inline notation (default_tags and monitoring_params not supported yet)
+  ## Inline notation using id string (recommended for simplicity)
+  # nodes = [
+  #   {name="ProductUri", id="ns=0;i=2262"},
+  #   {name="ServerState", id="ns=0;i=2259"}
+  # ]
+  #
+  ## Inline notation using individual fields (default_tags and monitoring_params not supported yet)
   # nodes = [
   #   {name="node1", namespace="", identifier_type="", identifier=""},
   #   {name="node2", namespace="", identifier_type="", identifier=""}
   # ]
   #
-  ## Bracketed notation
+  ## Bracketed notation using id string
+  # [[inputs.opcua_listener.nodes]]
+  #   name = "ProductUri"
+  #   id = "ns=0;i=2262"
+  #   default_tags = { tag1 = "value1", tag2 = "value2" }
+
+  ## Bracketed notation using individual fields
   # [[inputs.opcua_listener.nodes]]
   #   name = "node1"
   #   namespace = ""
@@ -270,12 +283,13 @@ to use them.
   #
 
   ## Multiple event groups are allowed.
+  ## Event nodes support both 'id' string format and individual fields.
   # [[inputs.opcua_listener.events]]
   #   ## Polling interval for data collection
   #   # sampling_interval = "10s"
   #   ## Size of the notification queue
   #   # queue_size = 10
-  #   ## Node parameter defaults for node definitions below
+  #   ## Node parameter defaults for node definitions below (used when id is not specified)
   #   # namespace = ""
   #   # identifier_type = ""
   #   ## Specifies OPCUA Event sources to filter on
@@ -284,17 +298,22 @@ to use them.
   #   fields = ["Severity", "Message", "Time"]
   #
   #   ## Type or level of events to capture from the monitored nodes.
+  #   ## Use 'id' string OR individual fields (namespace/identifier_type/identifier)
   #   [inputs.opcua_listener.events.event_type_node]
-  #     namespace = ""
-  #     identifier_type = ""
-  #     identifier = ""
+  #     id = "ns=0;i=2041"
+  #     # Or use individual fields:
+  #     # namespace = ""
+  #     # identifier_type = ""
+  #     # identifier = ""
   #
   #   ## Nodes to monitor for event notifications associated with the defined
-  #   ## event type
+  #   ## event type. Use 'id' string OR individual fields.
   #   [[inputs.opcua_listener.events.node_ids]]
-  #     namespace = ""
-  #     identifier_type = ""
-  #     identifier = ""
+  #     id = "ns=2;s=EventSource1"
+  #     # Or use individual fields:
+  #     # namespace = ""
+  #     # identifier_type = ""
+  #     # identifier = ""
 
   ## Enable workarounds required by some devices to work correctly
   # [inputs.opcua_listener.workarounds]
@@ -313,12 +332,28 @@ An OPC UA node ID may resemble: "ns=3;s=Temperature". In this example:
   `identifier` value is 'Temperature'
 - This example temperature node has a value of 79.0
 
-To gather data from this node enter the following line into the 'nodes'
-property above:
+#### Using `id` String (Recommended)
+
+You can specify nodes using the standard OPC UA node ID string format directly:
+
+```text
+{name="temp", id="ns=3;s=Temperature"},
+```
+
+This is simpler and matches the format shown in OPC UA browsers.
+
+#### Using Individual Fields
+
+Alternatively, you can specify each component separately:
 
 ```text
 {name="temp", namespace="3", identifier_type="s", identifier="Temperature"},
 ```
+
+> [!NOTE]
+> Use either `id` OR the combination of
+> `namespace`/`namespace_uri` + `identifier_type` + `identifier`.
+> Do not mix both formats for the same node.
 
 This node configuration produces a metric like this:
 
@@ -350,7 +385,8 @@ OPC UA supports two ways to specify namespaces:
 
 2. **Namespace URI** (`namespace_uri`): A string URI that uniquely identifies
    the namespace. This is more stable across server restarts but requires the
-   plugin to fetch the namespace array from the server to resolve the URI to an index.
+   plugin to fetch the namespace array from the server to resolve the URI to an
+   index.
 
 **When to use namespace index:**
 
