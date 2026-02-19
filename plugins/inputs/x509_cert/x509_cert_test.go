@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/pion/dtls/v2"
+	"github.com/pion/dtls/v3"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -305,17 +305,27 @@ func TestGatherUDPCertIntegration(t *testing.T) {
 	pair, err := tls.X509KeyPair([]byte(pki.ReadServerCert()), []byte(pki.ReadServerKey()))
 	require.NoError(t, err)
 
-	cfg := &dtls.Config{
-		Certificates: []tls.Certificate{pair},
-	}
-
 	addr := &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 0}
-	listener, err := dtls.Listen("udp", addr, cfg)
+	listener, err := dtls.ListenWithOptions("udp", addr,
+		dtls.WithCertificates(pair),
+	)
 	require.NoError(t, err)
 	defer listener.Close()
 
 	go func() {
-		if _, err := listener.Accept(); err != nil {
+		conn, err := listener.Accept()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		defer conn.Close()
+
+		dtlsConn, ok := conn.(*dtls.Conn)
+		if !ok {
+			t.Error("unexpected DTLS connection type")
+			return
+		}
+		if err := dtlsConn.Handshake(); err != nil {
 			t.Error(err)
 		}
 	}()

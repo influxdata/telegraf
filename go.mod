@@ -174,7 +174,7 @@ require (
 	github.com/pborman/ansi v1.0.0
 	github.com/pcolladosoto/goslurm v0.1.0
 	github.com/peterbourgon/unixtransport v0.0.7
-	github.com/pion/dtls/v2 v2.2.12
+	github.com/pion/dtls/v3 v3.1.2
 	github.com/prometheus-community/pro-bing v0.8.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
@@ -497,8 +497,9 @@ require (
 	github.com/paulmach/orb v0.12.0 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.25 // indirect
-	github.com/pion/logging v0.2.2 // indirect
+	github.com/pion/logging v0.2.4 // indirect
 	github.com/pion/transport/v2 v2.2.10 // indirect
+	github.com/pion/transport/v4 v4.0.1 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkg/sftp v1.13.10 // indirect
