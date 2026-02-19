@@ -18,6 +18,7 @@ import (
 	"github.com/prometheus/common/expfmt"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/influxdata/telegraf"
@@ -313,7 +314,20 @@ func (p *Prometheus) Stop() {
 	p.wg.Wait()
 
 	if p.MonitorPods && !p.isNodeScrapeScope {
-		delete(informerfactory, p.PodNamespace)
+		var factoryToShutdown informers.SharedInformerFactory
+		informerfactoryMu.Lock()
+		if informerfactoryRefs != nil {
+			informerfactoryRefs[p.PodNamespace]--
+			if informerfactoryRefs[p.PodNamespace] <= 0 {
+				factoryToShutdown = informerfactory[p.PodNamespace]
+				delete(informerfactory, p.PodNamespace)
+				delete(informerfactoryRefs, p.PodNamespace)
+			}
+		}
+		informerfactoryMu.Unlock()
+		if factoryToShutdown != nil {
+			factoryToShutdown.Shutdown()
+		}
 	}
 
 	if p.client != nil {
