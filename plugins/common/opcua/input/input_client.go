@@ -437,10 +437,8 @@ func validateNodeToAdd(existing map[metricParts]struct{}, nmm *NodeMetricMapping
 // InitNodeMetricMapping builds nodes from the configuration
 func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 	existing := make(map[metricParts]struct{}, len(o.Config.RootNodes))
-	for i := range o.Config.RootNodes {
-		node := &o.Config.RootNodes[i]
-
-		nmm, err := NewNodeMetricMapping(o.Config.MetricName, *node, make(map[string]string))
+	for _, node := range o.Config.RootNodes {
+		nmm, err := NewNodeMetricMapping(o.Config.MetricName, node, make(map[string]string))
 		if err != nil {
 			return err
 		}
@@ -457,9 +455,7 @@ func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 			group.MetricName = o.Config.MetricName
 		}
 
-		for ni := range group.Nodes {
-			node := &group.Nodes[ni]
-
+		for _, node := range group.Nodes {
 			// Skip group defaults when node ID string is specified directly
 			if node.NodeIDStr == "" {
 				if node.Namespace == "" {
@@ -476,7 +472,7 @@ func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 				node.MonitoringParams.SamplingInterval = group.SamplingInterval
 			}
 
-			nmm, err := NewNodeMetricMapping(group.MetricName, *node, group.DefaultTags)
+			nmm, err := NewNodeMetricMapping(group.MetricName, node, group.DefaultTags)
 			if err != nil {
 				return err
 			}
