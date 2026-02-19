@@ -346,9 +346,9 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
                         "newRxChain_chainStreamTrap":           ahchainstream.NewRxChain,
                         "newRxStream_chainStreamTrap":          ahchainstream.NewRxStream,
                         "reason_chainStreamTrap":               ahchainstream.Reason,
-                        "severityLevel_trapMessage_chainStreamTrap":    trap.Level,
+                        "severityLevel_trapMessage_failureTrap": severityToString(trap.Level),
                         "msgId_trapMessage_chainStreamTrap":    trap.MsgID,
-                        "clear_trapMessage_chainStreamTrap":    GetTrapClearStatus(trap.TrapType, trap.Union[:]),
+                        "isClear_trapMessage_failureTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
                         "desc_trapMessage_chainStreamTrap":     ahutil.CleanCString(trap.Desc[:]),
                 }, nil)
 
