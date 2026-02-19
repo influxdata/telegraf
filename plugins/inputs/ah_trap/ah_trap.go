@@ -348,6 +348,25 @@ func (t *TrapPlugin) Gather_Ah_Logen(trap AhTrapMsg, acc telegraf.Accumulator) e
 						"isClear_trapMessage_keyFullAlarmTrap":   GetTrapClearStatus(trap.TrapType, trap.Union[:]),
                         }, nil)
 
+	case AH_CHAIN_STREAM_TRAP_TYPE:
+                var ahchainstream AhChainStreamTrap
+                rawSize := int(unsafe.Sizeof(ahchainstream))
+                copy((*[1 << 10]byte)(unsafe.Pointer(&ahchainstream))[:rawSize], trap.Union[:rawSize])
+
+                acc.AddFields("TrapEvent", map[string]interface{}{
+                        "trapObjName_chainStreamTrap":             ahutil.CleanCString(ahchainstream.Name[:]),
+                        "ifIndex_chainStreamTrap":              ahchainstream.IfIndex,
+                        "newTxChain_chainStreamTrap":           ahchainstream.NewTxChain,
+                        "newTxStream_chainStreamTrap":          ahchainstream.NewTxStream,
+                        "newRxChain_chainStreamTrap":           ahchainstream.NewRxChain,
+                        "newRxStream_chainStreamTrap":          ahchainstream.NewRxStream,
+                        "reason_chainStreamTrap":               ahchainstream.Reason,
+                        "severityLevel_trapMessage_failureTrap": severityToString(trap.Level),
+                        "msgId_trapMessage_chainStreamTrap":    trap.MsgID,
+                        "isClear_trapMessage_failureTrap": GetTrapClearStatus(trap.TrapType, trap.Union[:]),
+                        "desc_trapMessage_chainStreamTrap":     ahutil.CleanCString(trap.Desc[:]),
+                }, nil)
+
 	}
 	return nil
 }

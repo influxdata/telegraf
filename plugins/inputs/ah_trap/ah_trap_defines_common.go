@@ -54,6 +54,7 @@ const (
 	AH_MESH_MGT0_VLAN_CHANGE_TRAP_TYPE
 	AH_KEY_FULL_ALARM_TRAP_TYPE
 	AH_MESH_STABLE_STAGE_TRAP_TYPE
+	AH_CHAIN_STREAM_TRAP_TYPE
 )
 
 func severityToString(level int32) string {
@@ -273,6 +274,16 @@ type AhKeyFullAlarmTrap struct {
 	BSSID     [MACADDR_LEN]byte
 	ClientMAC [MACADDR_LEN]byte
 	GtkVLAN   uint32
+}
+
+type AhChainStreamTrap struct {
+	Name         [AH_MAX_TRAP_OBJ_NAME + 1]byte
+	IfIndex      uint32
+	NewTxChain   uint8
+	NewTxStream  uint8
+	NewRxChain   uint8
+	NewRxStream  uint8
+	Reason       uint8
 }
 
 // Helper functions
