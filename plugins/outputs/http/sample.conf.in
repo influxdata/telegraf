@@ -1,0 +1,69 @@
+# A plugin that can transmit metrics over HTTP
+[[outputs.http]]
+  ## URL is the address to send metrics to
+  url = "http://127.0.0.1:8080/telegraf"
+
+  ## HTTP method, one of: "POST" or "PUT" or "PATCH"
+  # method = "POST"
+
+  ## HTTP Basic Auth credentials
+  # username = "username"
+  # password = "pa$$word"
+
+  ## Goole API Auth
+  # google_application_credentials = "/etc/telegraf/example_secret.json"
+
+{{template "/plugins/common/http/client.conf"}}
+
+  ## Data format to output.
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+  # data_format = "influx"
+
+  ## Use batch serialization format (default) instead of line based format.
+  ## Batch format is more efficient and should be used unless line based
+  ## format is really needed.
+  # use_batch_format = true
+
+  ## HTTP Content-Encoding for write request body, can be set to "gzip" to
+  ## compress body or "identity" to apply no encoding.
+  # content_encoding = "identity"
+
+  ## Amazon Region
+  #region = "us-east-1"
+
+  ## Amazon Credentials
+  ## Amazon Credentials are not built unless the following aws_service
+  ## setting is set to a non-empty string. It may need to match the name of
+  ## the service output to as well
+  #aws_service = "execute-api"
+
+  ## Credentials are loaded in the following order
+  ## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
+  ## 2) Assumed credentials via STS if role_arn is specified
+  ## 3) explicit credentials from 'access_key' and 'secret_key'
+  ## 4) shared profile from 'profile'
+  ## 5) environment variables
+  ## 6) shared credentials file
+  ## 7) EC2 Instance Profile
+  #access_key = ""
+  #secret_key = ""
+  #token = ""
+  #role_arn = ""
+  #web_identity_token_file = ""
+  #role_session_name = ""
+  #profile = ""
+  #shared_credential_file = ""
+
+  ## Optional list of statuscodes (<200 or >300) upon which requests should not be retried
+  # non_retryable_statuscodes = [409, 413]
+
+  ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
+  ## plugin definition, otherwise additional config options are read as part of
+  ## the table
+
+  ## Additional HTTP headers
+  # [outputs.http.headers]
+  #   ## Should be set manually to "application/json" for json data_format
+  #   Content-Type = "text/plain; charset=utf-8"

@@ -15,6 +15,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/clock"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/common/snmp"
 	"github.com/influxdata/telegraf/plugins/processors"
@@ -398,7 +399,7 @@ func (a *Agent) runInputs(
 	unit *inputUnit,
 ) {
 	var wg sync.WaitGroup
-	tickers := make([]Ticker, 0, len(unit.inputs))
+	tickers := make([]clock.Ticker, 0, len(unit.inputs))
 	for _, input := range unit.inputs {
 		// Overwrite agent interval if this plugin has its own.
 		interval := time.Duration(a.Config.Agent.Interval)
@@ -424,12 +425,7 @@ func (a *Agent) runInputs(
 			offset = input.Config.CollectionOffset
 		}
 
-		var ticker Ticker
-		if a.Config.Agent.RoundInterval {
-			ticker = NewAlignedTicker(startTime, interval, jitter, offset)
-		} else {
-			ticker = NewUnalignedTicker(interval, jitter, offset)
-		}
+		ticker := clock.NewTicker(startTime, interval, jitter, offset, a.Config.Agent.RoundInterval)
 		tickers = append(tickers, ticker)
 
 		acc := NewAccumulator(input, unit.dst)
@@ -566,7 +562,7 @@ func (a *Agent) gatherLoop(
 	ctx context.Context,
 	acc telegraf.Accumulator,
 	input *models.RunningInput,
-	ticker Ticker,
+	ticker clock.Ticker,
 	interval time.Duration,
 ) {
 	for {
@@ -583,7 +579,7 @@ func (a *Agent) gatherLoop(
 }
 
 // gatherOnce runs the input's Gather function once, logging a warning each interval it fails to complete before.
-func (*Agent) gatherOnce(acc telegraf.Accumulator, input *models.RunningInput, ticker Ticker, interval time.Duration) error {
+func (*Agent) gatherOnce(acc telegraf.Accumulator, input *models.RunningInput, ticker clock.Ticker, interval time.Duration) error {
 	done := make(chan error)
 	go func() {
 		defer panicRecover(input)
@@ -854,7 +850,7 @@ func (a *Agent) runOutputs(
 		go func(output *models.RunningOutput) {
 			defer wg.Done()
 
-			ticker := NewRollingTicker(interval, jitter)
+			ticker := clock.NewTimer(interval, jitter)
 			defer ticker.Stop()
 
 			a.flushLoop(ctx, output, ticker)
@@ -884,7 +880,7 @@ func (a *Agent) runOutputs(
 func (a *Agent) flushLoop(
 	ctx context.Context,
 	output *models.RunningOutput,
-	ticker Ticker,
+	ticker clock.Ticker,
 ) {
 	logError := func(err error) {
 		if err != nil {
@@ -921,7 +917,7 @@ func (a *Agent) flushLoop(
 }
 
 // flushOnce runs the output's Write function once, logging a warning each interval it fails to complete before the flush interval elapses.
-func (*Agent) flushOnce(output *models.RunningOutput, ticker Ticker, writeFunc func() error) error {
+func (*Agent) flushOnce(output *models.RunningOutput, ticker clock.Ticker, writeFunc func() error) error {
 	done := make(chan error)
 	go func() {
 		done <- writeFunc()
@@ -1208,7 +1204,7 @@ func panicRecover(input *models.RunningInput) {
 	}
 }
 
-func stopTickers(tickers []Ticker) {
+func stopTickers(tickers []clock.Ticker) {
 	for _, ticker := range tickers {
 		ticker.Stop()
 	}

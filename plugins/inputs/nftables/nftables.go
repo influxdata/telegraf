@@ -84,7 +84,7 @@ func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 			continue
 		}
 		for _, expr := range rule.Exprs {
-			if expr.Cntr == nil {
+			if expr.Cntr == nil || expr.Cntr.isNamedRef {
 				continue
 			}
 			fields := map[string]interface{}{
@@ -98,6 +98,16 @@ func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 			}
 			acc.AddFields("nftables", fields, tags)
 		}
+	}
+	for _, set := range nftable.Sets {
+		fields := map[string]interface{}{
+			"count": len(set.Elem),
+		}
+		tags := map[string]string{
+			"table": set.Table,
+			"set":   set.Name,
+		}
+		acc.AddFields("nftables", fields, tags)
 	}
 	return nil
 }

@@ -729,6 +729,7 @@ func gatherBinaryLogs(db *sql.DB, servtag string, acc telegraf.Accumulator) erro
 		fileSize  uint64
 		fileName  string
 		encrypted string
+		algorithm string
 	)
 
 	columns, err := rows.Columns()
@@ -739,11 +740,16 @@ func gatherBinaryLogs(db *sql.DB, servtag string, acc telegraf.Accumulator) erro
 
 	// iterate over rows and count the size and count of files
 	for rows.Next() {
-		if numColumns == 3 {
+		switch numColumns {
+		case 3:
 			if err := rows.Scan(&fileName, &fileSize, &encrypted); err != nil {
 				return err
 			}
-		} else {
+		case 4: // Compatible with versions that include encryption algorithms.
+			if err := rows.Scan(&fileName, &fileSize, &encrypted, &algorithm); err != nil {
+				return err
+			}
+		default:
 			if err := rows.Scan(&fileName, &fileSize); err != nil {
 				return err
 			}

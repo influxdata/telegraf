@@ -251,6 +251,16 @@ func (s *SnmpTrap) handler(packet *gosnmp.SnmpPacket, addr *net.UDPAddr) {
 		"source":  addr.IP.String(),
 	}
 
+	if s.Log.Level().Includes(telegraf.Trace) {
+		buf, err := packet.MarshalMsg()
+		if err != nil {
+			s.Log.Debugf("marshaling message failed: %v", err)
+		} else {
+			s.Log.Tracef("raw message: %s", hex.EncodeToString(buf))
+		}
+		s.Log.Tracef("message: %s", packet.SafeString())
+	}
+
 	if packet.Version == gosnmp.Version1 {
 		// Follow the procedure described in RFC 2576 3.1 to
 		// translate a v1 trap to v2.

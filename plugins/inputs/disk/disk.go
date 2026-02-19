@@ -49,6 +49,9 @@ func (ds *Disk) Gather(acc telegraf.Accumulator) error {
 		}
 
 		device := partitions[i].Device
+		if device == "none" || device == "" {
+			device = partitions[i].Fstype
+		}
 		mountOpts := mountOptions(partitions[i].Opts)
 		tags := map[string]string{
 			"path":   du.Path,

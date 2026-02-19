@@ -1007,6 +1007,144 @@ func TestClickHouseIntegrationSendBatch(t *testing.T) {
 	}
 }
 
+func TestClickHousePreExistingTableIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	logConfig, err := filepath.Abs("testdata/clickhouse/enable_stdout_log.xml")
+	require.NoError(t, err)
+
+	initdb, err := filepath.Abs("testdata/clickhouse/initdb/init.sql")
+	require.NoError(t, err)
+
+	// initdb/init.sql creates this database and pre_existing_table
+	const dbname = "foo"
+
+	// username for connecting to clickhouse
+	const username = "clickhouse"
+
+	password := testutil.GetRandomString(32)
+	outDir := t.TempDir()
+
+	servicePort := "9000"
+	container := testutil.Container{
+		Image:        "clickhouse",
+		ExposedPorts: []string{servicePort, "8123"},
+		Env: map[string]string{
+			"CLICKHOUSE_USER":     "clickhouse",
+			"CLICKHOUSE_PASSWORD": password,
+		},
+		Files: map[string]string{
+			"/docker-entrypoint-initdb.d/script.sql":                initdb,
+			"/etc/clickhouse-server/config.d/enable_stdout_log.xml": logConfig,
+			"/out": outDir,
+		},
+		WaitingFor: wait.ForAll(
+			wait.NewHTTPStrategy("/").WithPort(nat.Port("8123")),
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("Ready for connections"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	// use the plugin to write to the pre-existing table
+	address := config.NewSecret([]byte(fmt.Sprintf("tcp://%s:%s/%s?username=%s&password=%s",
+		container.Address, container.Ports[servicePort], dbname, username, password)))
+	p := &SQL{
+		Driver:              "clickhouse",
+		DataSourceName:      address,
+		Convert:             defaultConvert,
+		TimestampColumn:     "timestamp",
+		ConnectionMaxIdle:   2,
+		Log:                 testutil.Logger{},
+		TableUpdateTemplate: "ALTER TABLE {TABLE} ADD COLUMN {COLUMN}",
+	}
+	p.Convert.Integer = "Int64"
+	p.Convert.Text = "String"
+	p.Convert.Timestamp = "DateTime"
+	p.Convert.Defaultvalue = "String"
+	p.Convert.Unsigned = "UInt64"
+	p.Convert.Bool = "UInt8"
+	p.Convert.ConversionStyle = "literal"
+	require.NoError(t, p.Init())
+
+	require.NoError(t, p.Connect())
+	defer p.Close()
+
+	// First write: metric with only existing columns (timestamp, tag_one)
+	// This validates that existing columns don't cause "already exists" errors
+	metricsWithExistingColumns := []telegraf.Metric{
+		stableMetric(
+			"pre_existing_table",
+			[]telegraf.Tag{
+				{Key: "tag_one", Value: "existing-tag"},
+			},
+			nil,
+			ts,
+		),
+	}
+	require.NoError(t, p.Write(metricsWithExistingColumns))
+
+	// Second write: metric with existing columns + NEW columns
+	// This validates that the plugin auto-creates new columns
+	metricsWithNewColumns := []telegraf.Metric{
+		stableMetric(
+			"pre_existing_table",
+			[]telegraf.Tag{
+				{Key: "tag_one", Value: "existing-tag"}, // existing
+				{Key: "tag_two", Value: "new-tag"},      // NEW
+			},
+			[]telegraf.Field{
+				{Key: "int64_one", Value: int64(1234)}, // NEW
+				{Key: "bool_one", Value: true},         // NEW
+			},
+			ts,
+		),
+	}
+	require.NoError(t, p.Write(metricsWithNewColumns))
+
+	// Verify all columns exist (both pre-existing and newly created)
+	expectedColumns := []string{
+		"timestamp\tDateTime", // pre-existing
+		"tag_one\tString",     // pre-existing
+		"tag_two\tString",     // created by Telegraf
+		"int64_one\tInt64",    // created by Telegraf
+		"bool_one\tUInt8",     // created by Telegraf
+	}
+
+	// Run the query once and check all columns
+	var columnsOutput []byte
+	require.Eventually(t, func() bool {
+		var out io.Reader
+		_, out, err = container.Exec([]string{
+			"bash",
+			"-c",
+			"clickhouse-client" +
+				" --user=" + username +
+				" --database=" + dbname +
+				" --format=TabSeparatedRaw" +
+				" --query=\"DESCRIBE TABLE pre_existing_table\"",
+		})
+		if err != nil {
+			return false
+		}
+		columnsOutput, err = io.ReadAll(out)
+		if err != nil {
+			return false
+		}
+
+		// Check that all expected columns exist
+		for _, column := range expectedColumns {
+			if !bytes.Contains(columnsOutput, []byte(column)) {
+				return false
+			}
+		}
+		return true
+	}, 5*time.Second, 500*time.Millisecond, "not all columns found in table")
+}
+
 func TestMysqlEmptyTimestampColumnIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")

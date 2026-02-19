@@ -3,17 +3,15 @@ package opentelemetry
 
 import (
 	"context"
-	ntls "crypto/tls"
 	_ "embed"
+	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/influxdata/influxdb-observability/common"
 	"github.com/influxdata/influxdb-observability/influx2otel"
 	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
 	_ "google.golang.org/grpc/encoding/gzip" // Blank import to allow gzip encoding
 	"google.golang.org/grpc/metadata"
 
@@ -31,6 +29,7 @@ var sampleConfig string
 
 type OpenTelemetry struct {
 	ServiceAddress string `toml:"service_address"`
+	EncodingType   string `toml:"encoding_type"`
 
 	tls.ClientConfig
 	Timeout     config.Duration   `toml:"timeout"`
@@ -41,10 +40,23 @@ type OpenTelemetry struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	metricsConverter     *influx2otel.LineProtocolToOtelMetrics
-	grpcClientConn       *grpc.ClientConn
-	metricsServiceClient pmetricotlp.GRPCClient
-	callOptions          []grpc.CallOption
+	metricsConverter *influx2otel.LineProtocolToOtelMetrics
+	otlpMetricClient otlpMetricClient
+}
+
+type clientConfig struct {
+	ServiceAddress  string
+	TLSConfig       *tls.ClientConfig
+	Compression     string
+	CoralogixConfig *CoralogixConfig
+	Encoding        string            // only for HTTP client
+	Headers         map[string]string // only for HTTP client, gRPC client uses metadata
+}
+
+type otlpMetricClient interface {
+	Connect(cfg *clientConfig) error
+	Export(ctx context.Context, request pmetricotlp.ExportRequest) (pmetricotlp.ExportResponse, error)
+	Close() error
 }
 
 type CoralogixConfig struct {
@@ -59,9 +71,16 @@ func (*OpenTelemetry) SampleConfig() string {
 
 func (o *OpenTelemetry) Connect() error {
 	logger := &otelLogger{o.Log}
-
 	if o.ServiceAddress == "" {
 		o.ServiceAddress = defaultServiceAddress
+	}
+	switch o.EncodingType {
+	case "":
+		o.EncodingType = "protobuf"
+	case "protobuf", "json":
+		// Do nothing, those are valid
+	default:
+		return fmt.Errorf("invalid encoding %q", o.EncodingType)
 	}
 	if o.Timeout <= 0 {
 		o.Timeout = defaultTimeout
@@ -82,44 +101,36 @@ func (o *OpenTelemetry) Connect() error {
 	if err != nil {
 		return err
 	}
+	o.metricsConverter = metricsConverter
 
-	var grpcTLSDialOption grpc.DialOption
-	if tlsConfig, err := o.ClientConfig.TLSConfig(); err != nil {
-		return err
-	} else if tlsConfig != nil {
-		grpcTLSDialOption = grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig))
-	} else if o.Coralogix != nil {
-		// For coralogix, we enforce GRPC connection with TLS
-		grpcTLSDialOption = grpc.WithTransportCredentials(credentials.NewTLS(&ntls.Config{}))
-	} else {
-		grpcTLSDialOption = grpc.WithTransportCredentials(insecure.NewCredentials())
+	protocol := "grpc"
+	if strings.HasPrefix(o.ServiceAddress, "http://") || strings.HasPrefix(o.ServiceAddress, "https://") {
+		protocol = "http"
 	}
-
-	grpcClientConn, err := grpc.NewClient(o.ServiceAddress, grpcTLSDialOption, grpc.WithUserAgent(userAgent))
+	switch protocol {
+	case "", "grpc":
+		o.otlpMetricClient = &gRPCClient{}
+	case "http":
+		o.otlpMetricClient = &httpClient{}
+	}
+	clientCfg := &clientConfig{
+		ServiceAddress:  o.ServiceAddress,
+		TLSConfig:       &o.ClientConfig,
+		Compression:     o.Compression,
+		CoralogixConfig: o.Coralogix,
+		Encoding:        o.EncodingType,
+		Headers:         o.Headers,
+	}
+	err = o.otlpMetricClient.Connect(clientCfg)
 	if err != nil {
 		return err
-	}
-
-	metricsServiceClient := pmetricotlp.NewGRPCClient(grpcClientConn)
-
-	o.metricsConverter = metricsConverter
-	o.grpcClientConn = grpcClientConn
-	o.metricsServiceClient = metricsServiceClient
-
-	if o.Compression != "" && o.Compression != "none" {
-		o.callOptions = append(o.callOptions, grpc.UseCompressor(o.Compression))
 	}
 
 	return nil
 }
 
 func (o *OpenTelemetry) Close() error {
-	if o.grpcClientConn != nil {
-		err := o.grpcClientConn.Close()
-		o.grpcClientConn = nil
-		return err
-	}
-	return nil
+	return o.otlpMetricClient.Close()
 }
 
 func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
@@ -193,7 +204,7 @@ func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 		ctx = metadata.NewOutgoingContext(ctx, metadata.New(o.Headers))
 	}
 	defer cancel()
-	_, err := o.metricsServiceClient.Export(ctx, md, o.callOptions...)
+	_, err := o.otlpMetricClient.Export(ctx, md)
 	return err
 }
 

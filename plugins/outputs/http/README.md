@@ -35,9 +35,6 @@ to use them.
   ## URL is the address to send metrics to
   url = "http://127.0.0.1:8080/telegraf"
 
-  ## Timeout for HTTP message
-  # timeout = "5s"
-
   ## HTTP method, one of: "POST" or "PUT" or "PATCH"
   # method = "POST"
 
@@ -45,36 +42,67 @@ to use them.
   # username = "username"
   # password = "pa$$word"
 
-  ## OAuth2 Client Credentials Grant
+  ## Goole API Auth
+  # google_application_credentials = "/etc/telegraf/example_secret.json"
+
+  ## Amount of time allowed to complete the HTTP request
+  # timeout = "5s"
+
+  ## HTTP connection settings
+  # idle_conn_timeout = "0s"
+  # max_idle_conn = 0
+  # max_idle_conn_per_host = 0
+  # response_timeout = "0s"
+
+  ## Use the local address for connecting, assigned by the OS by default
+  # local_address = ""
+
+  ## Optional proxy settings
+  # use_system_proxy = false
+  # http_proxy_url = ""
+
+  ## Optional TLS settings
+  ## Set to true/false to enforce TLS being enabled/disabled. If not set,
+  ## enable TLS only if any of the other options are specified.
+  # tls_enable =
+  ## Trusted root certificates for server
+  # tls_ca = "/path/to/cafile"
+  ## Used for TLS client certificate authentication
+  # tls_cert = "/path/to/certfile"
+  ## Used for TLS client certificate authentication
+  # tls_key = "/path/to/keyfile"
+  ## Password for the key file if it is encrypted
+  # tls_key_pwd = ""
+  ## Send the specified TLS server name via SNI
+  # tls_server_name = "kubernetes.example.com"
+  ## Minimal TLS version to accept by the client
+  # tls_min_version = "TLS12"
+  ## List of ciphers to accept, by default all secure ciphers will be accepted
+  ## See https://pkg.go.dev/crypto/tls#pkg-constants for supported values.
+  ## Use "all", "secure" and "insecure" to add all support ciphers, secure
+  ## suites or insecure suites respectively.
+  # tls_cipher_suites = ["secure"]
+  ## Renegotiation method, "never", "once" or "freely"
+  # tls_renegotiation_method = "never"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
+
+  ## OAuth2 Client Credentials. The options 'client_id', 'client_secret', and 'token_url' are required to use OAuth2.
   # client_id = "clientid"
   # client_secret = "secret"
   # token_url = "https://indentityprovider/oauth2/v1/token"
   # audience = ""
   # scopes = ["urn:opc:idm:__myscopes__"]
 
-  ## Goole API Auth
-  # google_application_credentials = "/etc/telegraf/example_secret.json"
-
-  ## HTTP Proxy support
-  # use_system_proxy = false
-  # http_proxy_url = ""
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-
   ## Optional Cookie authentication
   # cookie_auth_url = "https://localhost/authMe"
   # cookie_auth_method = "POST"
   # cookie_auth_username = "username"
   # cookie_auth_password = "pa$$word"
-  # cookie_auth_headers = '{"Content-Type": "application/json", "X-MY-HEADER":"hello"}'
+  # cookie_auth_headers = { Content-Type = "application/json", X-MY-HEADER = "hello" }
   # cookie_auth_body = '{"username": "user", "password": "pa$$word", "authenticate": "me"}'
   ## cookie_auth_renewal not set or set to "0" will auth once and never renew the cookie
-  # cookie_auth_renewal = "5m"
+  # cookie_auth_renewal = "0s"
 
   ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
@@ -90,20 +118,6 @@ to use them.
   ## HTTP Content-Encoding for write request body, can be set to "gzip" to
   ## compress body or "identity" to apply no encoding.
   # content_encoding = "identity"
-
-  ## MaxIdleConns controls the maximum number of idle (keep-alive)
-  ## connections across all hosts. Zero means no limit.
-  # max_idle_conn = 0
-
-  ## MaxIdleConnsPerHost, if non-zero, controls the maximum idle
-  ## (keep-alive) connections to keep per-host. If zero,
-  ## DefaultMaxIdleConnsPerHost is used(2).
-  # max_idle_conn_per_host = 2
-
-  ## Idle (keep-alive) connection timeout.
-  ## Maximum amount of time before idle connection is closed.
-  ## Zero means no limit.
-  # idle_conn_timeout = 0
 
   ## Amazon Region
   #region = "us-east-1"

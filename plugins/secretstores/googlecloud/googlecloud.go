@@ -6,11 +6,13 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"os"
 
 	"cloud.google.com/go/auth"
 	"cloud.google.com/go/auth/credentials"
 
 	"github.com/influxdata/telegraf"
+	common_gcp "github.com/influxdata/telegraf/plugins/common/gcp"
 	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/common/slog"
 	"github.com/influxdata/telegraf/plugins/secretstores"
@@ -37,11 +39,22 @@ func (g *GoogleCloud) Init() error {
 	if err != nil {
 		return fmt.Errorf("creating HTTP client failed: %w", err)
 	}
-	creds, err := credentials.DetectDefault(&credentials.DetectOptions{
-		STSAudience:     g.STSAudience,
-		CredentialsFile: g.CredentialsFile,
-		Client:          client,
-		Logger:          slog.NewLogger(g.Log),
+
+	serviceAccount, err := os.ReadFile(g.CredentialsFile)
+	if err != nil {
+		return fmt.Errorf("cannot load the credential file: %w", err)
+	}
+
+	credType, err := common_gcp.ParseCredentialType(g.CredentialsFile)
+	if err != nil {
+		return fmt.Errorf("unable to parse credentials file type: %w", err)
+	}
+	saType := credentials.CredType(credType)
+
+	creds, err := credentials.NewCredentialsFromJSON(saType, serviceAccount, &credentials.DetectOptions{
+		STSAudience: g.STSAudience,
+		Client:      client,
+		Logger:      slog.NewLogger(g.Log),
 	})
 	if err != nil {
 		return fmt.Errorf("credentials search failed: %w", err)

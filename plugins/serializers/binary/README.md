@@ -17,8 +17,9 @@ using user-specified configurations.
   data_format = "binary"
 
   ## Specify the endianness of the data.
-  ## Available values are "little" (little-endian), "big" (big-endian) and "host",
-  ## where "host" means the same endianness as the machine running Telegraf.
+  ## Available values are "big" or "be" for big-endian, "little" or "le" for
+  ## little-endian and "host" for using the same endianness as the machine
+  ## running Telegraf.
   # endianness = "host"
 
   ## Definition of the message format and the serialized data.

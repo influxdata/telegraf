@@ -16,6 +16,7 @@ var (
 	defaultHeaders = map[string]string{"User-Agent": "engine-api-cli-1.0"}
 )
 
+//nolint:interfacebloat // wrapping upstream docker client which has many methods
 type dockerClient interface {
 	// Info retrieves system-wide information about the Docker server.
 	Info(ctx context.Context) (system.Info, error)
@@ -35,6 +36,8 @@ type dockerClient interface {
 	DiskUsage(ctx context.Context, options types.DiskUsageOptions) (types.DiskUsage, error)
 	// ClientVersion retrieves the version of the Docker client.
 	ClientVersion() string
+	// Ping pings the server and returns information about the server.
+	Ping(ctx context.Context) (types.Ping, error)
 	// Close releases any resources held by the client.
 	Close() error
 }
@@ -112,6 +115,11 @@ func (c *socketClient) DiskUsage(ctx context.Context, options types.DiskUsageOpt
 // ClientVersion retrieves the version of the Docker client.
 func (c *socketClient) ClientVersion() string {
 	return c.client.ClientVersion()
+}
+
+// Ping pings the server and returns information about the server.
+func (c *socketClient) Ping(ctx context.Context) (types.Ping, error) {
+	return c.client.Ping(ctx)
 }
 
 // Close releases any resources held by the client.

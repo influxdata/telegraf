@@ -273,6 +273,72 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 				"inodes_used_percent": float64(0),
 			},
 		},
+		{
+			name: "virtual filesystem with none device",
+			partitionStats: []disk.PartitionStat{
+				{
+					Device:     "none",
+					Mountpoint: "/tmp",
+					Fstype:     "tmpfs",
+					Opts:       []string{"rw"},
+				},
+			},
+			usageStats: []*disk.UsageStat{
+				{
+					Path:  "/tmp",
+					Total: 42,
+				},
+			},
+			expectedTags: map[string]string{
+				"path":   fmt.Sprintf("%ctmp", os.PathSeparator),
+				"device": "tmpfs",
+				"fstype": "tmpfs",
+				"mode":   "rw",
+			},
+			expectedFields: map[string]interface{}{
+				"total":               uint64(42),
+				"used":                uint64(0),
+				"free":                uint64(0),
+				"inodes_total":        uint64(0),
+				"inodes_free":         uint64(0),
+				"inodes_used":         uint64(0),
+				"used_percent":        float64(0),
+				"inodes_used_percent": float64(0),
+			},
+		},
+		{
+			name: "virtual filesystem with empty device",
+			partitionStats: []disk.PartitionStat{
+				{
+					Device:     "",
+					Mountpoint: "/sys",
+					Fstype:     "sysfs",
+					Opts:       []string{"ro"},
+				},
+			},
+			usageStats: []*disk.UsageStat{
+				{
+					Path:  "/sys",
+					Total: 42,
+				},
+			},
+			expectedTags: map[string]string{
+				"path":   fmt.Sprintf("%csys", os.PathSeparator),
+				"device": "sysfs",
+				"fstype": "sysfs",
+				"mode":   "ro",
+			},
+			expectedFields: map[string]interface{}{
+				"total":               uint64(42),
+				"used":                uint64(0),
+				"free":                uint64(0),
+				"inodes_total":        uint64(0),
+				"inodes_free":         uint64(0),
+				"inodes_used":         uint64(0),
+				"used_percent":        float64(0),
+				"inodes_used_percent": float64(0),
+			},
+		},
 	}
 
 	for _, tt := range tests {

@@ -1,7 +1,7 @@
 # OpenTelemetry Output Plugin
 
 This plugin writes metrics to [OpenTelemetry][opentelemetry] servers and agents
-via gRPC.
+via gRPC or HTTP.
 
 ⭐ Telegraf v1.20.0
 🏷️ logging, messaging
@@ -23,8 +23,12 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Send OpenTelemetry metrics over gRPC
 [[outputs.opentelemetry]]
   ## Override the default (localhost:4317) OpenTelemetry gRPC service
-  ## address:port
+  ## When the protocol is grpc, address:port
+  ## When the protocol is http, http(s)://address:port/path
   # service_address = "localhost:4317"
+  ## Override the default (protobuf) encodingType when Protocol is http
+  ## protobuf, json
+  # encoding_type = "protobuf"
 
   ## Override the default (5s) request timeout
   # timeout = "5s"

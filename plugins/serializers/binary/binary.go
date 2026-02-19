@@ -18,9 +18,9 @@ type Serializer struct {
 
 func (s *Serializer) Init() error {
 	switch s.Endianness {
-	case "big":
+	case "big", "be":
 		s.converter = binary.BigEndian
-	case "little":
+	case "little", "le":
 		s.converter = binary.LittleEndian
 	case "", "host":
 		s.Endianness = "host"
