@@ -48,7 +48,7 @@ func TestValidateOPCTags(t *testing.T) {
 					},
 				},
 			},
-			errors.New(`name "fn" is duplicated (metric name "mn", tags "t1=v1, t2=v2")`),
+			errors.New(`name "fn" is duplicated (metric name "mn", tags "id=ns=2;s=i1, t1=v1, t2=v2")`),
 		},
 		{
 			"empty tag value not allowed",
@@ -179,6 +179,33 @@ func TestValidateOPCTags(t *testing.T) {
 						IdentifierType: "s",
 						Identifier:     "i1",
 						DefaultTags:    map[string]string{"t1": "v1", "t2": "v2"},
+					},
+				},
+			},
+			nil,
+		},
+		{
+			"same field name different node IDs",
+			InputClientConfig{
+				MetricName: "opcua",
+				RootNodes: []NodeSettings{
+					{
+						FieldName:      "breaker_amps",
+						Namespace:      "2",
+						IdentifierType: "s",
+						Identifier:     "AmpA/Value",
+					},
+					{
+						FieldName:      "breaker_amps",
+						Namespace:      "2",
+						IdentifierType: "s",
+						Identifier:     "AmpB/Value",
+					},
+					{
+						FieldName:      "breaker_amps",
+						Namespace:      "2",
+						IdentifierType: "s",
+						Identifier:     "AmpC/Value",
 					},
 				},
 			},
@@ -373,7 +400,7 @@ func TestValidateNodeToAdd(t *testing.T) {
 		{
 			name: "duplicate metric not allowed",
 			existing: map[metricParts]struct{}{
-				{metricName: "testmetric", fieldName: "f", tags: "t1=v1, t2=v2"}: {},
+				{metricName: "testmetric", fieldName: "f", tags: "id=ns=2;s=hf, t1=v1, t2=v2"}: {},
 			},
 			nmm: func() *NodeMetricMapping {
 				nmm, err := NewNodeMetricMapping("testmetric", NodeSettings{
@@ -386,7 +413,7 @@ func TestValidateNodeToAdd(t *testing.T) {
 				require.NoError(t, err)
 				return nmm
 			}(),
-			err: errors.New(`name "f" is duplicated (metric name "testmetric", tags "t1=v1, t2=v2")`),
+			err: errors.New(`name "f" is duplicated (metric name "testmetric", tags "id=ns=2;s=hf, t1=v1, t2=v2")`),
 		},
 		{
 			name:     "identifier type mismatch",
