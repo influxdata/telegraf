@@ -110,8 +110,7 @@ func (r *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
 			if r.Expire != nil {
 				pipe.Expire(ctx, key, time.Duration(*r.Expire))
 			}
-			_, err := pipe.Exec(ctx)
-			if err != nil {
+			if _, err := pipe.Exec(ctx); err != nil {
 				return fmt.Errorf("adding sample %q failed: %w", key, err)
 			}
 		}
