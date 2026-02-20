@@ -58,7 +58,8 @@
             "energy": 4.33,
             "power": 0.7,
             "dead": false,
-            "value": 34
+            "value": 34,
+            "value2": 75
         },
         "sortOrder": 5
     }
