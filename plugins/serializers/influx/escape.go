@@ -31,6 +31,7 @@ var (
 	stringFieldEscaper = strings.NewReplacer(
 		`"`, `\"`,
 		`\`, `\\`,
+		"\n", `\n`,
 	)
 )
 
