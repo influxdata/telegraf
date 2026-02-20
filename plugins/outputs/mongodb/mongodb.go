@@ -265,7 +265,7 @@ func (s *MongoDB) createCollection(ctx context.Context, name string) error {
 }
 
 // Convert a metric into a MongoDB document with all fields being parent level
-// of document and the metadata field is named "tags. Mongodb stores timestamp
+// of document and the metadata field is named "tags". MongoDB stores timestamp
 // as UTC so conversion should be performed on the query or aggregation side.
 func marshal(metric telegraf.Metric) bson.D {
 	var doc bson.D
