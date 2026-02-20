@@ -10,6 +10,7 @@
 - [#18233](https://github.com/influxdata/telegraf/pull/18233) `inputs.procstat` Handle newer versions of systemd correctly
 - [#18225](https://github.com/influxdata/telegraf/pull/18225) `inputs.statsd` Handle negative lengths
 - [#18278](https://github.com/influxdata/telegraf/pull/18278) `parsers.dropwizard` Correct sample config setting name for tag path
+- [#17913](https://github.com/influxdata/telegraf/issues/17913) `inputs.exec` Add support for Array-based single command as in inputs.execd, outputs.exec, outputs.execd
 
 ### Dependency Updates
 
