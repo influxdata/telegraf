@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/antchfx/jsonquery"
 	path "github.com/antchfx/xpath"
 	"github.com/srebhan/cborquery"
 	"github.com/srebhan/protobufquery"
@@ -493,8 +492,6 @@ func (p *Parser) executeQuery(doc, selected dataNode, query string) (r interface
 			switch nn := current.(type) {
 			case *cborquery.NodeNavigator:
 				return nn.GetValue(), nil
-			case *jsonquery.NodeNavigator:
-				return nn.GetValue(), nil
 			case *protobufquery.NodeNavigator:
 				return nn.GetValue(), nil
 			}
@@ -562,10 +559,18 @@ func (p *Parser) constructFieldName(root, node dataNode, name string, expand boo
 
 	// In case the name is empty we should determine the current node's name.
 	// This involves array index expansion in case the parent of the node is
-	// and array. If we expanded here, we should skip our parent as this is
-	// already encoded in the name
+	// an array. If we expanded here, we should skip our parent as this is
+	// already encoded in the name.
 	if name == "" {
 		name = p.document.GetNodeName(node, "_", !expand)
+	} else {
+		// For non-empty names, check if this is an array element and append index.
+		// GetNodeName returns the name with array index for array elements.
+		nodeName := p.document.GetNodeName(node, "_", false)
+		if nodeName != name && strings.Contains(nodeName, name+"_") {
+			// The node name includes an array index (e.g., "cpus_0" vs "cpus")
+			name = nodeName
+		}
 	}
 
 	// If name expansion is requested, construct a path between the current
