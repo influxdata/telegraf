@@ -522,10 +522,10 @@ func GetSSIDbyIfName(ifName string) (ssid string, err error) {
 func IntToIpv4(num uint32) string {
 
     b := make([]byte, 4)
-    b[0] = byte(num)
-    b[1] = byte(num >> 8)
-    b[2] = byte(num >> 16)
-    b[3] = byte(num >> 24)
+    b[0] = byte(num >> 24)
+    b[1] = byte(num >> 16)
+    b[2] = byte(num >> 8)
+    b[3] = byte(num)
     return fmt.Sprintf("%d.%d.%d.%d",b[0],b[1],b[2],b[3])
 }
 
