@@ -229,7 +229,7 @@ func (s *MongoDB) Write(metrics []telegraf.Metric) error {
 		}
 		doc := marshal(metric)
 
-		collection := s.client.Database(s.MetricDatabase).Collection(metric.Name())
+		collection := s.client.Database(s.MetricDatabase).Collection(name)
 		if _, err := collection.InsertOne(ctx, &doc); err != nil {
 			return fmt.Errorf("getting collection %q failed: %w", metric.Name(), err)
 		}
