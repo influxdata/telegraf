@@ -12,6 +12,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -135,8 +136,14 @@ func shouldScrapePod(pod *corev1.Pod, p *Prometheus) bool {
 	return isCandidate && shouldScrape
 }
 
-// Share informer per namespace across all instances of this plugin
-var informerfactory map[string]informers.SharedInformerFactory
+// Share informer per namespace across all instances of this plugin.
+// Access must be protected by informerfactoryMu since multiple plugin
+// instances may Start/Stop concurrently.
+var (
+	informerfactory     map[string]informers.SharedInformerFactory
+	informerfactoryRefs map[string]int
+	informerfactoryMu   sync.Mutex
+)
 
 // An edge case exists if a pod goes offline at the same time a new pod is created
 // (without the scrape annotations). K8s may re-assign the old pod ip to the non-scrape
@@ -151,8 +158,10 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 		resyncinterval = 60 * time.Minute
 	}
 
+	informerfactoryMu.Lock()
 	if informerfactory == nil {
 		informerfactory = make(map[string]informers.SharedInformerFactory)
+		informerfactoryRefs = make(map[string]int)
 	}
 
 	var f informers.SharedInformerFactory
@@ -165,6 +174,8 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 		f = informers.NewSharedInformerFactoryWithOptions(clientset, resyncinterval, informerOptions...)
 		informerfactory[p.PodNamespace] = f
 	}
+	informerfactoryRefs[p.PodNamespace]++
+	informerfactoryMu.Unlock()
 
 	if p.nsAnnotationPass != nil || p.nsAnnotationDrop != nil {
 		p.nsStore = f.Core().V1().Namespaces().Informer().GetStore()
