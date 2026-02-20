@@ -325,6 +325,10 @@ func (p *Prometheus) Stop() {
 			}
 		}
 		informerfactoryMu.Unlock()
+		// Shutdown outside the lock because it blocks until all informer
+		// goroutines terminate. Holding the mutex during that wait would
+		// serialise all plugin Start/Stop operations behind a potentially
+		// slow network teardown.
 		if factoryToShutdown != nil {
 			factoryToShutdown.Shutdown()
 		}
