@@ -290,6 +290,7 @@ func TestHC3JSON(t *testing.T) {
 				"energy": float64(4.33),
 				"power":  float64(0.7),
 				"value":  float64(34),
+				"value2": float64(75),
 			},
 			time.Unix(0, 0),
 		),
