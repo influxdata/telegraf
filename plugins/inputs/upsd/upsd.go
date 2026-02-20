@@ -19,16 +19,6 @@ import (
 var sampleConfig string
 
 var (
-	// Define the set of variables _always_ included in a metric
-	mandatoryVariableSet = map[string]bool{
-		"battery.date":     true,
-		"battery.mfr.date": true,
-		"battery.runtime":  true,
-		"device.model":     true,
-		"device.serial":    true,
-		"ups.firmware":     true,
-		"ups.status":       true,
-	}
 	// Define the default field set to add if existing
 	defaultFieldSet = map[string]string{
 		"battery.charge":          "battery_charge_percent",
@@ -161,9 +151,8 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, upsname string, variables []n
 
 	// Try to gather all default fields and optional field
 	for varname, v := range metrics {
-		// Skip all empty fields and all fields contained in the mandatory set
-		// of fields added above.
-		if v == nil || mandatoryVariableSet[varname] {
+		// Skip all empty fields
+		if v == nil {
 			continue
 		}
 
