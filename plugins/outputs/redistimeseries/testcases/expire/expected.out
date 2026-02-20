@@ -1,0 +1,6 @@
+weather_temperature: 23.100000 1696489223000 location=somewhere; expires
+weather_humidity: 52.300000 1696489223000 location=somewhere; expires
+weather_windspeed: 3.200000 1696489223000 location=somewhere; expires
+weather_temperature: 23.200000 1696489223100 location=somewhere; expires
+weather_humidity: 52.100000 1696489223100 location=somewhere; expires
+weather_windspeed: 13.200000 1696489223100 location=somewhere; expires
