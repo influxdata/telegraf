@@ -41,6 +41,11 @@ to use them.
   ## Timeout for operations such as ping or sending metrics
   # timeout = "10s"
 
+  ## Set a time-to-live (TTL) on each Redis key
+  ## If set, Redis will drop the metric after the specified duration
+  ## Disabled by default (no expiry)
+  # expire = ""
+
   ## Enable attempt to convert string fields to numeric values
   ## If "false" or in case the string value cannot be converted the string
   ## field will be dropped.

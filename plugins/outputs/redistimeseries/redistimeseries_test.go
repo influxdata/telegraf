@@ -161,8 +161,12 @@ func getAllRecords(testContext context.Context, address string) []string {
 		}
 
 		result := client.TSRange(ctx, key, 0, int(time.Now().UnixMilli()))
+		var expires string
+		if client.TTL(ctx, key).Val() != -1 {
+			expires = "; expires"
+		}
 		for _, point := range result.Val() {
-			records = append(records, fmt.Sprintf("%s: %f %d%s", result.Args()[1], point.Value, point.Timestamp, labels))
+			records = append(records, fmt.Sprintf("%s: %f %d%s%s", result.Args()[1], point.Value, point.Timestamp, labels, expires))
 		}
 	}
 
