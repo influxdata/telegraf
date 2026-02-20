@@ -355,8 +355,13 @@ type metricParts struct {
 }
 
 func newMP(n *NodeMetricMapping) metricParts {
-	keys := make([]string, 0, len(n.MetricTags))
-	for key := range n.MetricTags {
+	// Include the node ID as the "id" tag since MetricForNode always adds it
+	tags := map[string]string{"id": n.idStr}
+	for k, v := range n.MetricTags {
+		tags[k] = v
+	}
+	keys := make([]string, 0, len(tags))
+	for key := range tags {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
@@ -367,14 +372,13 @@ func newMP(n *NodeMetricMapping) metricParts {
 		}
 		sb.WriteString(key)
 		sb.WriteString("=")
-		sb.WriteString(n.MetricTags[key])
+		sb.WriteString(tags[key])
 	}
-	x := metricParts{
+	return metricParts{
 		metricName: n.metricName,
 		fieldName:  n.Tag.FieldName,
 		tags:       sb.String(),
 	}
-	return x
 }
 
 func validateNodeToAdd(existing map[metricParts]struct{}, nmm *NodeMetricMapping) error {
