@@ -10,7 +10,8 @@ import (
 type table struct {
 	Metainfo          *metainfo
 	Rules             []*rule
-	Sets              []*set
+	Counters          []*namedCounter
+	Sets              []*namedSet
 	JSONSchemaVersion int `json:"json_schema_version"`
 }
 
@@ -37,8 +38,14 @@ func (nftable *table) UnmarshalJSON(b []byte) error {
 				return fmt.Errorf("unable to parse rule: %w", err)
 			}
 			nftable.Rules = append(nftable.Rules, &r)
+		} else if _, found := nfthing["counter"]; found {
+			var c namedCounter
+			if err := json.Unmarshal(nfthing["counter"], &c); err != nil {
+				return fmt.Errorf("unable to parse counter: %w", err)
+			}
+			nftable.Counters = append(nftable.Counters, &c)
 		} else if _, found := nfthing["set"]; found {
-			var s set
+			var s namedSet
 			if err := json.Unmarshal(nfthing["set"], &s); err != nil {
 				return fmt.Errorf("unable to parse set: %w", err)
 			}
@@ -62,10 +69,10 @@ type rule struct {
 }
 
 type expr struct {
-	Cntr *counter `json:"counter,omitempty"`
+	Cntr *anonymousCounter `json:"counter,omitempty"`
 }
 
-type counter struct {
+type anonymousCounter struct {
 	Packets    int64 `json:"packets"`
 	Bytes      int64 `json:"bytes"`
 	isNamedRef bool
@@ -74,7 +81,7 @@ type counter struct {
 // UnmarshalJSON handles both anonymous counters (objects with packets/bytes)
 // and named counter references (strings). Named references are marked with
 // isNamedRef flag since they don't contain inline statistics.
-func (c *counter) UnmarshalJSON(b []byte) error {
+func (c *anonymousCounter) UnmarshalJSON(b []byte) error {
 	if len(b) > 0 && b[0] == '"' {
 		// Named counter reference - mark it and return
 		c.isNamedRef = true
@@ -83,11 +90,19 @@ func (c *counter) UnmarshalJSON(b []byte) error {
 	// Anonymous counter - parse the object using type alias to avoid
 	// infinite recursion (alias has no methods, so json.Unmarshal uses
 	// default struct unmarshaling instead of calling this method again)
-	type counterAlias counter
-	return json.Unmarshal(b, (*counterAlias)(c))
+	type anonymousCounterAlias anonymousCounter
+	return json.Unmarshal(b, (*anonymousCounterAlias)(c))
 }
 
-type set struct {
+type namedCounter struct {
+	Family  string `json:"family"`
+	Name    string `json:"name"`
+	Table   string `json:"table"`
+	Packets int64  `json:"packets"`
+	Bytes   int64  `json:"bytes"`
+}
+
+type namedSet struct {
 	Family string `json:"family"`
 	Name   string `json:"name"`
 	Table  string `json:"table"`

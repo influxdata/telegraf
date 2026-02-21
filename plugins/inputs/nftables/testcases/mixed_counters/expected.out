@@ -1,1 +1,2 @@
 nftables,chain=input,rule=rule_with_anonymous_counter,table=mixed bytes=25000i,pkts=500i
+nftables,table=mixed,counter=my_named_counter bytes=50000i,pkts=1000i
