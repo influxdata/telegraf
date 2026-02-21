@@ -16,7 +16,6 @@ import (
 	"unicode"
 
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/pkg/stdcopy"
 
 	"github.com/influxdata/telegraf"
@@ -32,8 +31,7 @@ var sampleConfig string
 
 var (
 	// ensure *DockerLogs implements telegraf.ServiceInput
-	_               telegraf.ServiceInput = (*DockerLogs)(nil)
-	containerStates                       = []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
+	_ telegraf.ServiceInput = (*DockerLogs)(nil)
 )
 
 const (
@@ -61,7 +59,6 @@ type DockerLogs struct {
 	labelFilter     filter.Filter
 	containerFilter filter.Filter
 	stateFilter     filter.Filter
-	opts            container.ListOptions
 	wg              sync.WaitGroup
 	mu              sync.Mutex
 	containerList   map[string]context.CancelFunc
@@ -108,19 +105,6 @@ func (d *DockerLogs) Init() error {
 		return err
 	}
 
-	filterArgs := filters.NewArgs()
-	for _, state := range containerStates {
-		if d.stateFilter.Match(state) {
-			filterArgs.Add("status", state)
-		}
-	}
-
-	if filterArgs.Len() != 0 {
-		d.opts = container.ListOptions{
-			Filters: filterArgs,
-		}
-	}
-
 	d.lastRecord = make(map[string]time.Time)
 
 	return nil
@@ -162,7 +146,7 @@ func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(d.Timeout))
 	defer cancel()
-	containers, err := d.client.ContainerList(ctx, d.opts)
+	containers, err := d.client.ContainerList(ctx, container.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -172,8 +156,17 @@ func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 
-		containerName := d.matchedContainerName(cntnr.Names)
+		containerName := parseContainerName(cntnr.Names)
+
 		if containerName == "" {
+			continue
+		}
+
+		if !d.containerFilter.Match(containerName) {
+			continue
+		}
+
+		if !d.stateFilter.Match(cntnr.State) {
 			continue
 		}
 
@@ -225,21 +218,6 @@ func (d *DockerLogs) cancelTails() {
 	for _, cancel := range d.containerList {
 		cancel()
 	}
-}
-
-func (d *DockerLogs) matchedContainerName(names []string) string {
-	// Check if all container names are filtered; in practice I believe
-	// this array is always of length 1.
-	for _, name := range names {
-		trimmedName := strings.TrimPrefix(name, "/")
-		if !strings.Contains(trimmedName, "/") {
-			match := d.containerFilter.Match(trimmedName)
-			if match {
-				return trimmedName
-			}
-		}
-	}
-	return ""
 }
 
 func (d *DockerLogs) hasTTY(ctx context.Context, cntnr container.Summary) (bool, error) {
@@ -327,6 +305,18 @@ func (d *DockerLogs) tailContainerLogs(
 	}
 
 	return nil
+}
+
+// Parse container name
+func parseContainerName(containerNames []string) string {
+	for _, name := range containerNames {
+		trimmedName := strings.TrimPrefix(name, "/")
+		if !strings.Contains(trimmedName, "/") {
+			return trimmedName
+		}
+	}
+
+	return ""
 }
 
 func parseLine(line []byte) (time.Time, string, error) {
