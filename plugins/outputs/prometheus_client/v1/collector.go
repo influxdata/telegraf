@@ -57,19 +57,46 @@ type Collector struct {
 	ExportTimestamp    bool
 	TypeMapping        serializers_prometheus.MetricTypes
 	Log                telegraf.Logger
+	ContentEncoding    string
 
 	sync.Mutex
 	fam          map[string]*MetricFamily
 	expireTicker *time.Ticker
 }
 
-func NewCollector(expire time.Duration, stringsAsLabel, exportTimestamp bool, typeMapping serializers_prometheus.MetricTypes, log telegraf.Logger) *Collector {
+func (c *Collector) sanitizeMetricName(name string) (string, bool) {
+	if c.ContentEncoding == "utf8" {
+		return serializers_prometheus.SanitizeMetricNameUTF8(name)
+	}
+
+	name = sanitize(name)
+	if !isValidTagName(name) {
+		return "", false
+	}
+	return name, true
+}
+
+func (c *Collector) sanitizeLabelName(name string) (string, bool) {
+	if c.ContentEncoding == "utf8" {
+		return serializers_prometheus.SanitizeLabelNameUTF8(name)
+	}
+	return serializers_prometheus.SanitizeLabelName(name)
+}
+
+func NewCollector(
+	expire time.Duration,
+	stringsAsLabel, exportTimestamp bool,
+	typeMapping serializers_prometheus.MetricTypes,
+	log telegraf.Logger,
+	contentEncoding string,
+) *Collector {
 	c := &Collector{
 		ExpirationInterval: expire,
 		StringAsLabel:      stringsAsLabel,
 		ExportTimestamp:    exportTimestamp,
 		TypeMapping:        typeMapping,
 		Log:                log,
+		ContentEncoding:    contentEncoding,
 		fam:                make(map[string]*MetricFamily),
 	}
 
@@ -235,7 +262,7 @@ func (c *Collector) addMetrics(metrics []telegraf.Metric) {
 
 		labels := make(map[string]string)
 		for k, v := range tags {
-			name, ok := serializers_prometheus.SanitizeLabelName(k)
+			name, ok := c.sanitizeLabelName(k)
 			if !ok {
 				continue
 			}
@@ -251,7 +278,7 @@ func (c *Collector) addMetrics(metrics []telegraf.Metric) {
 					continue
 				}
 
-				name, ok := serializers_prometheus.SanitizeLabelName(fn)
+				name, ok := c.sanitizeLabelName(fn)
 				if !ok {
 					continue
 				}
@@ -298,9 +325,8 @@ func (c *Collector) addMetrics(metrics []telegraf.Metric) {
 				Timestamp:    point.Time(),
 				Expiration:   now.Add(c.ExpirationInterval),
 			}
-			mname = sanitize(point.Name())
-
-			if !isValidTagName(mname) {
+			mname, ok := c.sanitizeMetricName(point.Name())
+			if !ok {
 				continue
 			}
 
@@ -344,9 +370,8 @@ func (c *Collector) addMetrics(metrics []telegraf.Metric) {
 				Timestamp:      point.Time(),
 				Expiration:     now.Add(c.ExpirationInterval),
 			}
-			mname = sanitize(point.Name())
-
-			if !isValidTagName(mname) {
+			mname, ok := c.sanitizeMetricName(point.Name())
+			if !ok {
 				continue
 			}
 
@@ -380,21 +405,23 @@ func (c *Collector) addMetrics(metrics []telegraf.Metric) {
 				switch point.Type() {
 				case telegraf.Counter:
 					if fn == "counter" {
-						mname = sanitize(point.Name())
+						mname = point.Name()
 					}
 				case telegraf.Gauge:
 					if fn == "gauge" {
-						mname = sanitize(point.Name())
+						mname = point.Name()
 					}
 				}
 				if mname == "" {
 					if fn == "value" {
-						mname = sanitize(point.Name())
+						mname = point.Name()
 					} else {
-						mname = sanitize(fmt.Sprintf("%s_%s", point.Name(), fn))
+						mname = fmt.Sprintf("%s_%s", point.Name(), fn)
 					}
 				}
-				if !isValidTagName(mname) {
+
+				mname, ok := c.sanitizeMetricName(mname)
+				if !ok {
 					continue
 				}
 				c.addMetricFamily(point, sample, mname, sampleID)

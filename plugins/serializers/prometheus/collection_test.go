@@ -843,3 +843,130 @@ func TestExportTimestamps(t *testing.T) {
 		})
 	}
 }
+
+func TestCollectionUTF8ContentEncoding(t *testing.T) {
+	c := NewCollection(FormatConfig{ContentEncoding: "utf8"})
+	c.Add(
+		testutil.MustMetric(
+			"温度-指标",
+			map[string]string{"主机-名": "example.org"},
+			map[string]interface{}{"数值-值": 42.0},
+			time.Unix(0, 0),
+		),
+		time.Unix(0, 0),
+	)
+
+	expected := []*dto.MetricFamily{
+		{
+			Name: proto.String("温度-指标_数值-值"),
+			Help: proto.String(helpString),
+			Type: dto.MetricType_UNTYPED.Enum(),
+			Metric: []*dto.Metric{
+				{
+					Label: []*dto.LabelPair{
+						{
+							Name:  proto.String("主机-名"),
+							Value: proto.String("example.org"),
+						},
+					},
+					Untyped: &dto.Untyped{Value: proto.Float64(42)},
+				},
+			},
+		},
+	}
+
+	require.Equal(t, expected, c.GetProto())
+}
+
+func TestCollectionUTF8FallbackForInvalidUTF8(t *testing.T) {
+	c := NewCollection(FormatConfig{ContentEncoding: "utf8"})
+	c.Add(
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{
+				string([]byte{0xff, 'h', '-', '1'}): "example.org",
+			},
+			map[string]interface{}{
+				string([]byte{0xff, 't', '-', 'x'}): 42.0,
+			},
+			time.Unix(0, 0),
+		),
+		time.Unix(0, 0),
+	)
+
+	expected := []*dto.MetricFamily{
+		{
+			Name: proto.String("cpu__t_x"),
+			Help: proto.String(helpString),
+			Type: dto.MetricType_UNTYPED.Enum(),
+			Metric: []*dto.Metric{
+				{
+					Label: []*dto.LabelPair{
+						{
+							Name:  proto.String("h_1"),
+							Value: proto.String("example.org"),
+						},
+					},
+					Untyped: &dto.Untyped{Value: proto.Float64(42)},
+				},
+			},
+		},
+	}
+
+	require.Equal(t, expected, c.GetProto())
+}
+
+func TestCollectionUTF8DropWhenFallbackBecomesEmpty(t *testing.T) {
+	tests := []struct {
+		name     string
+		metric   telegraf.Metric
+		expected []*dto.MetricFamily
+	}{
+		{
+			name: "drop metric when metric name is empty after fallback",
+			metric: testutil.MustMetric(
+				string([]byte{0xff}),
+				map[string]string{},
+				map[string]interface{}{
+					string([]byte{0xff}): 42.0,
+				},
+				time.Unix(0, 0),
+			),
+			expected: make([]*dto.MetricFamily, 0),
+		},
+		{
+			name: "drop label when label name is empty after fallback",
+			metric: testutil.MustMetric(
+				"cpu",
+				map[string]string{
+					string([]byte{0xff}): "example.org",
+				},
+				map[string]interface{}{
+					"time_idle": 42.0,
+				},
+				time.Unix(0, 0),
+			),
+			expected: []*dto.MetricFamily{
+				{
+					Name: proto.String("cpu_time_idle"),
+					Help: proto.String(helpString),
+					Type: dto.MetricType_UNTYPED.Enum(),
+					Metric: []*dto.Metric{
+						{
+							Label:   make([]*dto.LabelPair, 0),
+							Untyped: &dto.Untyped{Value: proto.Float64(42)},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := NewCollection(FormatConfig{ContentEncoding: "utf8"})
+			c.Add(tt.metric, time.Unix(0, 0))
+			require.Equal(t, tt.expected, c.GetProto())
+		})
+	}
+}

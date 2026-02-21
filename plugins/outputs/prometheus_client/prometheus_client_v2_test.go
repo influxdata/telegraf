@@ -24,6 +24,7 @@ func TestMetricVersion2(t *testing.T) {
 		name     string
 		output   *PrometheusClient
 		metrics  []telegraf.Metric
+		accept   string
 		expected []byte
 	}{
 		{
@@ -161,6 +162,35 @@ cpu_time_idle{host="example.org"} 42
 # HELP cpu_time_idle Telegraf collected metric
 # TYPE cpu_time_idle untyped
 cpu_time_idle 42
+`),
+		},
+		{
+			name: "utf8 content encoding supports utf8 metric and label names",
+			output: &PrometheusClient{
+				Listen:            ":0",
+				MetricVersion:     2,
+				CollectorsExclude: []string{"gocollector", "process"},
+				Path:              "/metrics",
+				ContentEncoding:   "utf8",
+				Log:               logger,
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"温度-指标",
+					map[string]string{
+						"主机-名": "example.org",
+					},
+					map[string]interface{}{
+						"数值-值": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			accept: "text/plain; version=0.0.4; escaping=allow-utf-8",
+			expected: []byte(`
+# HELP "温度-指标_数值-值" Telegraf collected metric
+# TYPE "温度-指标_数值-值" untyped
+{"温度-指标_数值-值","主机-名"="example.org"} 42
 `),
 		},
 		{
@@ -371,7 +401,13 @@ cpu_time_idle{host="example.org"} 42
 
 			require.NoError(t, tt.output.Write(tt.metrics))
 
-			resp, err := http.Get(tt.output.URL())
+			req, err := http.NewRequest(http.MethodGet, tt.output.URL(), nil)
+			require.NoError(t, err)
+			if tt.accept != "" {
+				req.Header.Set("Accept", tt.accept)
+			}
+
+			resp, err := http.DefaultClient.Do(req)
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, resp.StatusCode)
 			defer resp.Body.Close()
