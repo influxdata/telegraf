@@ -414,11 +414,10 @@ func (t *TrapPlugin) Gather_Ah_send_trap(trapType uint32, trapBuf [256]byte, acc
 		unsafe.Sizeof(devIpChange.Ipv6Data[0]))
 
 		acc.AddFields("TrapEvent", map[string]interface{}{
-			"trapType_devIpChangeTrap":          devIpChange.TrapType,
-			"ipv4Addr_devIpChangeTrap":          ahutil.IntToIpv4(devIpChange.Ipv4Addr),
-			"ipv4Netmask_devIpChangeTrap":       ahutil.IntToIpv4(devIpChange.Ipv4Netmask),
+			"trapId_devIpChangeTrap":          devIpChange.TrapType,
+			"ipv4Address_devIpChangeTrap":          ahutil.IntToIpv4(devIpChange.Ipv4Addr),
+			"ipv4MaskLength_devIpChangeTrap":      ipv4MaskToLength(devIpChange.Ipv4Netmask),
 			"ipv4DefaultGateway_devIpChangeTrap": ahutil.IntToIpv4(devIpChange.Ipv4DefaultGateway),
-			"ipv6AddrNum_devIpChangeTrap":       devIpChange.Ipv6AddrNum,
 			"ipv6Data_devIpChangeTrap":          formatDevIpChangeIpv6Data(devIpChange.Ipv6Data[:], int(devIpChange.Ipv6AddrNum)),
 			"isClear_trapMessage_devIpChangeTrap": GetTrapClearStatus(uint32(devIpChange.TrapType), trapBuf[:]),
 		}, nil)
@@ -427,8 +426,24 @@ func (t *TrapPlugin) Gather_Ah_send_trap(trapType uint32, trapBuf [256]byte, acc
 	return nil
 }
 
-/*Helper function to format IPv6 data for DEV_IP_CHANGE trap
-*/
+func ipv4MaskToLength(mask uint32) int {
+	m := make(net.IPMask, 4)
+	binary.LittleEndian.PutUint32(m, mask)
+	ones, _ := net.IPv4Mask(m[0], m[1], m[2], m[3]).Size()
+	return ones
+}
+
+func ipv6AddressTypeToString(addrType uint8) string {
+	switch addrType {
+	case 1:
+		return "STATIC"
+	case 2:
+		return "LINK_LOCAL"
+	default:
+		return fmt.Sprintf("UNKNOWN(%d)", addrType)
+	}
+}
+
 func formatDevIpChangeIpv6Data(ipv6Data []AhTgrafDevIpChangeIpv6Data, count int) string {
 	var result []map[string]interface{}
 	for i := 0; i < count && i < len(ipv6Data); i++ {
@@ -436,8 +451,8 @@ func formatDevIpChangeIpv6Data(ipv6Data []AhTgrafDevIpChangeIpv6Data, count int)
 		binary.LittleEndian.PutUint32(prefixBytes, ipv6Data[i].Ipv6Prefix)
 		prefixHostOrder := binary.BigEndian.Uint32(prefixBytes)
 		entry := map[string]interface{}{
-			"ipv6AddrType":       ipv6Data[i].Ipv6AddrType,
-			"ipv6Addr":           net.IP(ipv6Data[i].Ipv6Addr[:]).String(),
+			"ipv6AddressType":       ipv6AddressTypeToString(ipv6Data[i].Ipv6AddrType),
+			"ipv6Address":           net.IP(ipv6Data[i].Ipv6Addr[:]).String(),
 			"ipv6Prefix":         prefixHostOrder,
 			"ipv6DefaultGateway": net.IP(ipv6Data[i].Ipv6DefaultGateway[:]).String(),
 		}
