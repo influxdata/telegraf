@@ -18,7 +18,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/client"
@@ -39,7 +38,6 @@ var sampleConfig string
 
 var (
 	sizeRegex              = regexp.MustCompile(`^(\d+(\.\d+)*) ?([kKmMgGtTpP])?[bB]?$`)
-	containerStates        = []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
 	containerMetricClasses = []string{"cpu", "network", "blkio"}
 	now                    = time.Now
 
@@ -245,26 +243,11 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	filterArgs := filters.NewArgs()
-	for _, state := range containerStates {
-		if d.stateFilter.Match(state) {
-			filterArgs.Add("status", state)
-		}
-	}
-
-	// All container states were excluded
-	if filterArgs.Len() == 0 {
-		return nil
-	}
-
 	// List containers
-	opts := container.ListOptions{
-		Filters: filterArgs,
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancel()
 
-	containers, err := d.client.ContainerList(ctx, opts)
+	containers, err := d.client.ContainerList(ctx, container.ListOptions{})
 	if errors.Is(err, context.DeadlineExceeded) {
 		return errListTimeout
 	}
@@ -511,16 +494,14 @@ func hostnameFromID(id string) string {
 
 // Parse container name
 func parseContainerName(containerNames []string) string {
-	var cname string
-
 	for _, name := range containerNames {
 		trimmedName := strings.TrimPrefix(name, "/")
 		if !strings.Contains(trimmedName, "/") {
-			cname = trimmedName
-			return cname
+			return trimmedName
 		}
 	}
-	return cname
+
+	return ""
 }
 
 func (d *Docker) gatherContainer(
@@ -529,13 +510,17 @@ func (d *Docker) gatherContainer(
 ) error {
 	var v *container.StatsResponse
 
-	cname := parseContainerName(cntnr.Names)
+	containerName := parseContainerName(cntnr.Names)
 
-	if cname == "" {
+	if containerName == "" {
 		return nil
 	}
 
-	if !d.containerFilter.Match(cname) {
+	if !d.containerFilter.Match(containerName) {
+		return nil
+	}
+
+	if !d.stateFilter.Match(cntnr.State) {
 		return nil
 	}
 
@@ -544,7 +529,7 @@ func (d *Docker) gatherContainer(
 	tags := map[string]string{
 		"engine_host":       d.engineHost,
 		"server_version":    d.serverVersion,
-		"container_name":    cname,
+		"container_name":    containerName,
 		"container_image":   imageName,
 		"container_version": imageVersion,
 	}
