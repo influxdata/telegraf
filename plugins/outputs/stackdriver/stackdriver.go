@@ -14,6 +14,7 @@ import (
 
 	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
 	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
+	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 	"google.golang.org/genproto/googleapis/api/distribution"
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
@@ -24,6 +25,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
+	common_gcp "github.com/influxdata/telegraf/plugins/common/gcp"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -32,6 +34,7 @@ var sampleConfig string
 
 // Stackdriver is the Google Stackdriver config info.
 type Stackdriver struct {
+	CredentialsFile      string            `toml:"credentials_file"`
 	Project              string            `toml:"project"`
 	QuotaProject         string            `toml:"quota_project"`
 	Namespace            string            `toml:"namespace"`
@@ -137,18 +140,37 @@ func (s *Stackdriver) Connect() error {
 
 	s.ResourceLabels["project_id"] = s.Project
 
-	// Define client options, starting with the user agent
-	options := []option.ClientOption{
-		option.WithUserAgent(internal.ProductToken()),
-	}
-
-	if s.QuotaProject != "" {
-		options = append(options, option.WithQuotaProject(s.QuotaProject))
-		s.Log.Infof("Using QuotaProject %s for quota attribution", s.QuotaProject)
-	}
-
 	if s.client == nil {
 		ctx := context.Background()
+
+		// Handle credentials
+		var credsOpt option.ClientOption
+		if s.CredentialsFile != "" {
+			credType, err := common_gcp.ParseCredentialType(s.CredentialsFile)
+			if err != nil {
+				return fmt.Errorf("unable to parse credentials file type: %w", err)
+			}
+			credsOpt = option.WithAuthCredentialsFile(option.CredentialsType(credType), s.CredentialsFile)
+		} else {
+			creds, err := google.FindDefaultCredentials(ctx, "https://www.googleapis.com/auth/monitoring.write")
+			if err != nil {
+				return fmt.Errorf(
+					"unable to find GCP Application Default Credentials: %w. "+
+						"Either set ADC or provide credentials_file config", err)
+			}
+			credsOpt = option.WithCredentials(creds)
+		}
+
+		options := []option.ClientOption{
+			credsOpt,
+			option.WithUserAgent(internal.ProductToken()),
+		}
+
+		if s.QuotaProject != "" {
+			options = append(options, option.WithQuotaProject(s.QuotaProject))
+			s.Log.Infof("Using QuotaProject %s for quota attribution", s.QuotaProject)
+		}
+
 		client, err := monitoring.NewMetricClient(ctx, options...)
 		if err != nil {
 			return err
