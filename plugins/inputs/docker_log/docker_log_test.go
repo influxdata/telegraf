@@ -74,6 +74,7 @@ func Test(t *testing.T) {
 							ID:    "deadbeef",
 							Names: []string{"/telegraf"},
 							Image: "influxdata/telegraf:1.11.0",
+							State: "running",
 						},
 					}, nil
 				},
@@ -115,6 +116,7 @@ func Test(t *testing.T) {
 							ID:    "deadbeef",
 							Names: []string{"/telegraf"},
 							Image: "influxdata/telegraf:1.11.0",
+							State: "running",
 						},
 					}, nil
 				},
