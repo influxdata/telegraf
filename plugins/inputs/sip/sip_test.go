@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -495,7 +496,8 @@ func TestSIPServerDelayedResponse(t *testing.T) {
 
 	// Additionally verify response time is within expected range
 	require.Len(t, acc.Metrics, 1)
-	rt := acc.Metrics[0].Fields["response_time_s"].(float64)
+	rt, ok := acc.FloatField("sip", "response_time_s")
+	require.True(t, ok)
 	require.Greater(t, rt, 0.05, "response time should be at least 50ms")
 	require.Less(t, rt, 0.2, "response time should be less than timeout")
 }
@@ -622,9 +624,9 @@ func TestSIPAuthenticationSuccess(t *testing.T) {
 		validPassword = "secret123"
 	)
 
-	attemptCount := 0
+	var attemptCount atomic.Int32
 	server, err := newMockServer(sip.OPTIONS, func(req *sip.Request, tx sip.ServerTransaction) {
-		attemptCount++
+		attemptCount.Add(1)
 
 		// Check if Authorization header is present
 		authHeader := req.GetHeader("Authorization")
@@ -667,7 +669,7 @@ func TestSIPAuthenticationSuccess(t *testing.T) {
 	require.NoError(t, plugin.Gather(&acc))
 
 	// Verify server was called twice (initial request + auth retry)
-	require.Equal(t, 2, attemptCount, "server should be called twice: initial + auth retry")
+	require.EqualValues(t, 2, attemptCount.Load(), "server should be called twice: initial + auth retry")
 
 	// Verify successful authentication
 	expected := []telegraf.Metric{
