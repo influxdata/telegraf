@@ -18,7 +18,7 @@ func gatherConnectionChangeTrap(ahconnectionchange AhConnectionChangeTrap, trap 
 		"remoteId_connectionChangeTrap":          ahutil.FormatMac(ahconnectionchange.RemoteID),
 		"bssid_connectionChangeTrap":             ahutil.FormatMac(ahconnectionchange.BSSID),
 		"curState_connectionChangeTrap":          ahconnectionchange.CurState,
-		"clientIp_connectionChangeTrap":          ahutil.IntToIpv4(ahconnectionchange.ClientIP),
+		"clientIp_connectionChangeTrap":          intToIPv4(ahconnectionchange.ClientIP),
 		"clientAuthMethod_connectionChangeTrap":  ahconnectionchange.ClientAuthMethod,
 		"clientEncryptMethod_connectionChangeTrap": ahconnectionchange.ClientEncryptMethod,
 		"clientMacProto_connectionChangeTrap":    ahconnectionchange.ClientMacProto,
