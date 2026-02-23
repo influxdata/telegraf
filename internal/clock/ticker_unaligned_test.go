@@ -20,6 +20,7 @@ func TestUnalignedTicker(t *testing.T) {
 
 	ticker := &unaligned{
 		clk:      clk,
+		schedule: start,
 		interval: interval,
 		jitter:   jitter,
 		offset:   offset,
@@ -69,6 +70,7 @@ func TestUnalignedTickerJitterBehavior(t *testing.T) {
 
 	ticker := &unaligned{
 		clk:      clk,
+		schedule: start,
 		interval: interval,
 		jitter:   jitter,
 		offset:   offset,
@@ -125,9 +127,11 @@ func TestUnalignedTickerDistribution(t *testing.T) {
 	offset := 0 * time.Second
 
 	clk := clock.NewMock()
+	start := clk.Now()
 
 	ticker := &unaligned{
 		clk:      clk,
+		schedule: start,
 		interval: interval,
 		jitter:   jitter,
 		offset:   offset,
@@ -150,9 +154,11 @@ func TestUnalignedTickerDistributionWithOffset(t *testing.T) {
 	offset := 3 * time.Second
 
 	clk := clock.NewMock()
+	start := clk.Now()
 
 	ticker := &unaligned{
 		clk:      clk,
+		schedule: start,
 		interval: interval,
 		jitter:   jitter,
 		offset:   offset,

@@ -22,6 +22,7 @@ import (
 // Ticks are dropped for slow consumers.
 type unaligned struct {
 	clk      clock.Clock
+	schedule time.Time
 	interval time.Duration
 	jitter   time.Duration
 	offset   time.Duration
@@ -32,39 +33,45 @@ type unaligned struct {
 
 func (t *unaligned) start() {
 	t.ch = make(chan time.Time, 1)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	t.cancel = cancel
 
-	ticker := t.clk.Ticker(t.interval)
-	if t.offset == 0 {
-		// Perform initial trigger to stay backward compatible
-		t.ch <- t.clk.Now()
-	}
+	// Compute the scheduled first tick by adding the offset. By doing so, we
+	// do not need to take the offset into account later.
+	t.schedule = t.schedule.Add(t.offset)
 
 	t.wg.Add(1)
 	go func() {
 		defer t.wg.Done()
-		t.run(ctx, ticker)
+		t.run(ctx)
 	}()
 }
 
-func (t *unaligned) run(ctx context.Context, ticker *clock.Ticker) {
+func (t *unaligned) run(ctx context.Context) {
+	// Start with the first scheduled
+	timer := t.clk.Timer(t.clk.Until(t.schedule))
+
 	for {
 		select {
-		case <-ctx.Done():
-			ticker.Stop()
-			return
-		case <-ticker.C:
-			jitter := internal.RandomDuration(t.jitter)
-			err := sleep(ctx, t.offset+jitter, t.clk)
-			if err != nil {
-				ticker.Stop()
-				return
-			}
+		case ts := <-timer.C:
+			// Compute the next scheduled interval by adding the interval and
+			// randomizing the timing with the given jitter (if any). Note, we
+			// need to remember the next scheduling without adding the ticker
+			// to avoid drifting of the ticks by jitter/2 on average!
+			t.schedule = t.schedule.Add(t.interval)
+			timer.Reset(t.clk.Until(t.schedule) + internal.RandomDuration(t.jitter))
+
+			// Fire our event in a non-blocking fashion to avoid blocking the
+			// ticker if the agent code did not read the ticker channel yet.
 			select {
-			case t.ch <- t.clk.Now():
+			case t.ch <- ts:
 			default:
 			}
+		case <-ctx.Done():
+			// Someone stopped the ticker so cleanup and leave
+			timer.Stop()
+			return
 		}
 	}
 }
@@ -76,19 +83,4 @@ func (t *unaligned) Elapsed() <-chan time.Time {
 func (t *unaligned) Stop() {
 	t.cancel()
 	t.wg.Wait()
-}
-
-func sleep(ctx context.Context, duration time.Duration, clk clock.Clock) error {
-	if duration == 0 {
-		return nil
-	}
-
-	t := clk.Timer(duration)
-	select {
-	case <-t.C:
-		return nil
-	case <-ctx.Done():
-		t.Stop()
-		return ctx.Err()
-	}
 }
