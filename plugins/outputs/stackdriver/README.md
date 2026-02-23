@@ -35,10 +35,11 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## GCP Project
   project = "erudite-bloom-151019"
 
-  ## Optional. Filepath for GCP credentials JSON file to authorize calls to
-  ## Cloud Monitoring APIs. If not set explicitly, Telegraf will attempt to use
-  ## Application Default Credentials, which is preferred.
-  # credentials_file = "path/to/my/creds.json"
+  ## Optional. GCP access token for authorizing calls to Cloud Monitoring APIs.
+  ## Use with a secret-store to dynamically provide tokens, e.g. from the
+  ## googlecloud secret store: @{gcp_auth:token}
+  ## If not set, Telegraf will use Application Default Credentials (preferred).
+  # credentials_token = "@{gcp_auth:token}"
 
   ## Quota Project
   ## Specifies the Google Cloud project that should be billed for metric ingestion.

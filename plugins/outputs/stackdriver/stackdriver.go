@@ -14,7 +14,7 @@ import (
 
 	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
 	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
-	"golang.org/x/oauth2/google"
+	"golang.org/x/oauth2"
 	"google.golang.org/api/option"
 	"google.golang.org/genproto/googleapis/api/distribution"
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
@@ -23,9 +23,9 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
-	common_gcp "github.com/influxdata/telegraf/plugins/common/gcp"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -34,7 +34,7 @@ var sampleConfig string
 
 // Stackdriver is the Google Stackdriver config info.
 type Stackdriver struct {
-	CredentialsFile      string            `toml:"credentials_file"`
+	CredentialsToken     config.Secret     `toml:"credentials_token"`
 	Project              string            `toml:"project"`
 	QuotaProject         string            `toml:"quota_project"`
 	Namespace            string            `toml:"namespace"`
@@ -143,27 +143,13 @@ func (s *Stackdriver) Connect() error {
 	if s.client == nil {
 		ctx := context.Background()
 
-		// Handle credentials
-		var credsOpt option.ClientOption
-		if s.CredentialsFile != "" {
-			credType, err := common_gcp.ParseCredentialType(s.CredentialsFile)
-			if err != nil {
-				return fmt.Errorf("unable to parse credentials file type: %w", err)
-			}
-			credsOpt = option.WithAuthCredentialsFile(option.CredentialsType(credType), s.CredentialsFile)
-		} else {
-			creds, err := google.FindDefaultCredentials(ctx, "https://www.googleapis.com/auth/monitoring.write")
-			if err != nil {
-				return fmt.Errorf(
-					"unable to find GCP Application Default Credentials: %w. "+
-						"Either set ADC or provide credentials_file config", err)
-			}
-			credsOpt = option.WithCredentials(creds)
+		options := []option.ClientOption{
+			option.WithUserAgent(internal.ProductToken()),
 		}
 
-		options := []option.ClientOption{
-			credsOpt,
-			option.WithUserAgent(internal.ProductToken()),
+		if !s.CredentialsToken.Empty() {
+			ts := &secretTokenSource{secret: &s.CredentialsToken}
+			options = append(options, option.WithTokenSource(ts))
 		}
 
 		if s.QuotaProject != "" {
@@ -710,8 +696,27 @@ func (s *Stackdriver) getStackdriverLabels(tags []*telegraf.Tag) map[string]stri
 	return labels
 }
 
+// secretTokenSource bridges a config.Secret to an oauth2.TokenSource,
+// allowing the Google client to fetch fresh tokens from a secret store.
+type secretTokenSource struct {
+	secret *config.Secret
+}
+
+func (s *secretTokenSource) Token() (*oauth2.Token, error) {
+	buf, err := s.secret.Get()
+	if err != nil {
+		return nil, fmt.Errorf("getting credentials token failed: %w", err)
+	}
+	defer buf.Destroy()
+	return &oauth2.Token{
+		AccessToken: buf.String(),
+		TokenType:   "Bearer",
+	}, nil
+}
+
 // Close will terminate the session to the backend, returning error if an issue arises.
 func (s *Stackdriver) Close() error {
+	s.CredentialsToken.Destroy()
 	return s.client.Close()
 }
 
