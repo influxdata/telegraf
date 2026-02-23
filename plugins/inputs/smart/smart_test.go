@@ -73,7 +73,7 @@ func TestGatherAttributes(t *testing.T) {
 			err := s.Gather(&acc)
 
 			require.NoError(t, err)
-			require.Equal(t, 32, acc.NFields(), "Wrong number of fields gathered")
+			require.Equal(t, 43, acc.NFields(), "Wrong number of fields gathered")
 
 			testutil.RequireMetricsEqual(t, testSmartctlNVMeAttributes, acc.GetTelegrafMetrics(),
 				testutil.SortMetrics(), testutil.IgnoreTime())
@@ -175,7 +175,7 @@ func TestGatherNoAttributes(t *testing.T) {
 		err := s.Gather(&acc)
 
 		require.NoError(t, err)
-		require.Equal(t, 13, acc.NFields(), "Wrong number of fields gathered")
+		require.Equal(t, 24, acc.NFields(), "Wrong number of fields gathered")
 		acc.AssertDoesNotContainMeasurement(t, "smart_attribute")
 
 		for _, test := range testsAda0Device {
@@ -302,7 +302,7 @@ func TestGatherLongFormEnduranceAttrib(t *testing.T) {
 	wg.Add(1)
 
 	sampleSmart.gatherDisk(acc, "", wg)
-	require.Equal(t, 7, acc.NFields(), "Wrong number of fields gathered")
+	require.Equal(t, 8, acc.NFields(), "Wrong number of fields gathered")
 	require.Equal(t, uint64(5), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
@@ -959,9 +959,20 @@ var (
 				"serial_no": "D704940282?",
 			},
 			map[string]interface{}{
-				"exit_status": 0,
-				"health_ok":   true,
-				"temp_c":      38,
+				"exit_status":               0,
+				"health_ok":                 true,
+				"temp_c":                    38,
+				"power_on_hours":            int64(6038),
+				"power_cycle_count":         int64(472),
+				"unsafe_shutdowns":          int64(355),
+				"available_spare":           int64(100),
+				"available_spare_threshold": int64(10),
+				"percentage_used":           int64(16),
+				"critical_warning":          int64(9),
+				"media_errors":              int64(0),
+				"error_log_entries":         int64(119699),
+				"warning_temperature_time":  int64(11),
+				"critical_temperature_time": int64(7),
 			},
 			time.Now(),
 		),
@@ -1325,9 +1336,20 @@ var (
 				"serial_no": "xxx",
 			},
 			map[string]interface{}{
-				"exit_status": 0,
-				"health_ok":   true,
-				"temp_c":      47,
+				"exit_status":               0,
+				"health_ok":                 true,
+				"temp_c":                    47,
+				"power_on_hours":            int64(1290),
+				"power_cycle_count":         int64(10779),
+				"unsafe_shutdowns":          int64(9),
+				"available_spare":           int64(100),
+				"available_spare_threshold": int64(10),
+				"percentage_used":           int64(0),
+				"critical_warning":          int64(0),
+				"media_errors":              int64(0),
+				"error_log_entries":         int64(979),
+				"warning_temperature_time":  int64(0),
+				"critical_temperature_time": int64(0),
 			},
 			time.Now(),
 		),
@@ -1632,9 +1654,20 @@ var (
 	}{
 		{
 			map[string]interface{}{
-				"exit_status": int(0),
-				"temp_c":      int64(38),
-				"health_ok":   true,
+				"exit_status":               int(0),
+				"temp_c":                    int64(38),
+				"health_ok":                 true,
+				"power_on_hours":            int64(6038),
+				"power_cycle_count":         int64(472),
+				"unsafe_shutdowns":          int64(355),
+				"available_spare":           int64(100),
+				"available_spare_threshold": int64(10),
+				"percentage_used":           int64(16),
+				"critical_warning":          int64(9),
+				"media_errors":              int64(0),
+				"error_log_entries":         int64(119699),
+				"warning_temperature_time":  int64(11),
+				"critical_temperature_time": int64(7),
 			},
 			map[string]string{
 				"device":    "nvme0",
