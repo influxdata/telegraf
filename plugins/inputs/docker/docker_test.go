@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"io"
 	"reflect"
-	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -595,6 +594,7 @@ func TestContainerLabels(t *testing.T) {
 func genContainerLabeled(labels map[string]string) container.Summary {
 	c := containerList[0]
 	c.Labels = labels
+	c.State = "running"
 	return c
 }
 
@@ -1146,49 +1146,36 @@ func TestContainerStateFilter(t *testing.T) {
 		name     string
 		include  []string
 		exclude  []string
-		expected map[string][]string
+		expected []string
 	}{
 		{
-			name: "default",
-			expected: map[string][]string{
-				"status": {"running"},
-			},
+			name:     "default",
+			expected: []string{"running"},
 		},
 		{
-			name:    "include running",
-			include: []string{"running"},
-			expected: map[string][]string{
-				"status": {"running"},
-			},
+			name:     "include running",
+			include:  []string{"running"},
+			expected: []string{"running"},
 		},
 		{
-			name:    "include glob",
-			include: []string{"r*"},
-			expected: map[string][]string{
-				"status": {"restarting", "running", "removing"},
-			},
+			name:     "include glob",
+			include:  []string{"r*"},
+			expected: []string{"restarting", "running", "removing"},
 		},
 		{
-			name:    "include all",
-			include: []string{"*"},
-			expected: map[string][]string{
-				"status": {"created", "restarting", "running", "removing", "paused", "exited", "dead"},
-			},
+			name:     "include all",
+			include:  []string{"*"},
+			expected: []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"},
 		},
 		{
 			name:    "exclude all",
 			exclude: []string{"*"},
-			expected: map[string][]string{
-				"status": {},
-			},
 		},
 		{
-			name:    "exclude all",
-			include: []string{"*"},
-			exclude: []string{"exited"},
-			expected: map[string][]string{
-				"status": {"created", "restarting", "running", "removing", "paused", "dead"},
-			},
+			name:     "exclude all",
+			include:  []string{"*"},
+			exclude:  []string{"exited"},
+			expected: []string{"created", "restarting", "running", "removing", "paused", "dead"},
 		},
 	}
 
@@ -1196,17 +1183,19 @@ func TestContainerStateFilter(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
 
+			containerStates := []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
+
 			newClientFunc := func(string, *tls.Config) (dockerClient, error) {
 				client := baseClient
-				client.ContainerListF = func(options container.ListOptions) ([]container.Summary, error) {
-					for k, v := range tt.expected {
-						actual := options.Filters.Get(k)
-						sort.Strings(actual)
-						sort.Strings(v)
-						require.Equal(t, v, actual)
+				client.ContainerListF = func(container.ListOptions) ([]container.Summary, error) {
+					var containers []container.Summary
+					for _, v := range containerStates {
+						containers = append(containers, container.Summary{
+							Names: []string{v},
+							State: v,
+						})
 					}
-
-					return nil, nil
+					return containers, nil
 				}
 				return &client, nil
 			}
@@ -1222,6 +1211,22 @@ func TestContainerStateFilter(t *testing.T) {
 			require.NoError(t, d.Start(&acc))
 			err := d.Gather(&acc)
 			require.NoError(t, err)
+
+			// Set of expected names
+			var expected = make(map[string]bool)
+			for _, v := range tt.expected {
+				expected[v] = true
+			}
+
+			// Set of actual names
+			var actual = make(map[string]bool)
+			for _, metric := range acc.Metrics {
+				if name, ok := metric.Tags["container_name"]; ok {
+					actual[name] = true
+				}
+			}
+
+			require.Equal(t, expected, actual)
 		})
 	}
 }
@@ -1240,6 +1245,7 @@ func TestContainerName(t *testing.T) {
 					var containers []container.Summary
 					containers = append(containers, container.Summary{
 						Names: []string{"/logspout/foo"},
+						State: "running",
 					})
 					return containers, nil
 				}
@@ -1260,6 +1266,7 @@ func TestContainerName(t *testing.T) {
 					var containers []container.Summary
 					containers = append(containers, container.Summary{
 						Names: []string{"/logspout"},
+						State: "running",
 					})
 					return containers, nil
 				}

@@ -86,6 +86,7 @@ var containerList = []container.Summary{
 		Image:   "quay.io/coreos/etcd:v3.3.25",
 		Command: "/etcd -name etcd0 -advertise-client-urls http://localhost:2379 -listen-client-urls http://0.0.0.0:2379",
 		Created: 1455941930,
+		State:   "running",
 		Status:  "Up 4 hours",
 		Ports: []container.Port{
 			{
@@ -123,6 +124,7 @@ var containerList = []container.Summary{
 		Image:   "quay.io:4443/coreos/etcd:v3.3.25",
 		Command: "/etcd -name etcd2 -advertise-client-urls http://localhost:2379 -listen-client-urls http://0.0.0.0:2379",
 		Created: 1455941933,
+		State:   "running",
 		Status:  "Up 4 hours",
 		Ports: []container.Port{
 			{
@@ -157,14 +159,17 @@ var containerList = []container.Summary{
 	{
 		ID:    "e8a713dd90604f5a257b97c15945e047ab60ed5b2c4397c5a6b5bf40e1bd2791",
 		Names: []string{"/acme"},
+		State: "running",
 	},
 	{
 		ID:    "9bc6faf9ba8106fae32e8faafd38a1dd6f6d262bec172398cc10bc03c0d6841a",
 		Names: []string{"/acme-test"},
+		State: "running",
 	},
 	{
 		ID:    "d4ccced494a1d5fe8ebdb0a86335a0dab069319912221e5838a132ab18a8bc84",
 		Names: []string{"/foo"},
+		State: "running",
 	},
 }
 
