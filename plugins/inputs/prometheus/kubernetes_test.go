@@ -363,39 +363,6 @@ func TestLabelFilters(t *testing.T) {
 	}
 }
 
-func pod() *corev1.Pod {
-	p := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{}, Status: corev1.PodStatus{}, Spec: corev1.PodSpec{}}
-	p.Status.PodIP = "127.0.0.1"
-	p.Name = "myPod"
-	p.Namespace = "default"
-	return p
-}
-
-type mockSharedInformerFactory struct {
-	informers.SharedInformerFactory
-	onShutdown func()
-}
-
-func (m *mockSharedInformerFactory) Shutdown() {
-	if m.onShutdown != nil {
-		m.onShutdown()
-	}
-}
-
-func resetInformerFactoryState(t *testing.T) {
-	t.Helper()
-	informerfactoryMu.Lock()
-	informerfactory = nil
-	informerfactoryRefs = nil
-	informerfactoryMu.Unlock()
-	t.Cleanup(func() {
-		informerfactoryMu.Lock()
-		informerfactory = nil
-		informerfactoryRefs = nil
-		informerfactoryMu.Unlock()
-	})
-}
-
 func TestInformerFactoryRefCounting(t *testing.T) {
 	resetInformerFactoryState(t)
 
@@ -538,4 +505,37 @@ func TestInformerFactoryConcurrentStop(t *testing.T) {
 	require.False(t, refsExist)
 	require.False(t, factoryExist)
 	require.Equal(t, int32(1), shutdownCount.Load())
+}
+
+func pod() *corev1.Pod {
+	p := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{}, Status: corev1.PodStatus{}, Spec: corev1.PodSpec{}}
+	p.Status.PodIP = "127.0.0.1"
+	p.Name = "myPod"
+	p.Namespace = "default"
+	return p
+}
+
+type mockSharedInformerFactory struct {
+	informers.SharedInformerFactory
+	onShutdown func()
+}
+
+func (m *mockSharedInformerFactory) Shutdown() {
+	if m.onShutdown != nil {
+		m.onShutdown()
+	}
+}
+
+func resetInformerFactoryState(t *testing.T) {
+	t.Helper()
+	informerfactoryMu.Lock()
+	informerfactory = nil
+	informerfactoryRefs = nil
+	informerfactoryMu.Unlock()
+	t.Cleanup(func() {
+		informerfactoryMu.Lock()
+		informerfactory = nil
+		informerfactoryRefs = nil
+		informerfactoryMu.Unlock()
+	})
 }
