@@ -210,14 +210,25 @@ smartctl --scan -d nvme
     - serial_no
     - wwn
   - fields:
+    - available_spare (NVMe)
+    - available_spare_threshold (NVMe)
+    - critical_temperature_time (NVMe)
+    - critical_warning (NVMe)
+    - error_log_entries (NVMe)
     - exit_status
     - health_ok
+    - media_errors (NVMe)
     - media_wearout_indicator
     - percent_lifetime_remain
+    - percentage_used (NVMe)
+    - power_cycle_count
+    - power_on_hours
     - read_error_rate
-    - seek_error
+    - seek_error_rate
     - temp_c
     - udma_crc_errors
+    - unsafe_shutdowns (NVMe)
+    - warning_temperature_time (NVMe)
     - wear_leveling_count
 
 - smart_attribute:

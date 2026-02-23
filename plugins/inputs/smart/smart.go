@@ -109,7 +109,8 @@ var (
 		"Media_Wearout_Indicator": "media_wearout_indicator",
 	}
 
-	// NVMe fields to promote from smart_attribute to smart_device measurement
+	// NVMe fields to promote from smart_attribute to smart_device measurement.
+	// Also applies to SAS attributes parsed through the sasNVMeAttributes path.
 	nvmeDeviceFields = map[string]string{
 		"Power_Cycle_Count":               "power_cycle_count",
 		"Power_On_Hours":                  "power_on_hours",
