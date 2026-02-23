@@ -670,6 +670,7 @@ func unpack[Slice ~[]E, E any](prefix string, value Slice) map[string]interface{
 func (o *OpcUAInputClient) MetricForEvent(nodeIdx int, event *ua.EventFieldList) telegraf.Metric {
 	node := o.EventNodeMetricMapping[nodeIdx]
 	fields := make(map[string]interface{}, len(event.EventFields))
+	var sourceTime, serverTime time.Time
 	for i, field := range event.EventFields {
 		name := node.Fields[i]
 		value := field.Value()
@@ -683,11 +684,22 @@ func (o *OpcUAInputClient) MetricForEvent(nodeIdx int, event *ua.EventFieldList)
 		case *ua.LocalizedText:
 			fields[name] = v.Text
 		case time.Time:
+			if name == "Time" {
+				sourceTime = v
+			} else if name == "ReceiveTime" {
+				serverTime = v
+			}
 			fields[name] = v.Format(time.RFC3339)
 		default:
 			fields[name] = v
 		}
 	}
+
+	if len(fields) == 0 {
+		o.Log.Warn("Event has no fields with values, skipping")
+		return nil
+	}
+
 	tags := map[string]string{
 		"node_id": node.NodeID.String(),
 		"source":  o.Config.Endpoint,
@@ -695,10 +707,11 @@ func (o *OpcUAInputClient) MetricForEvent(nodeIdx int, event *ua.EventFieldList)
 	var t time.Time
 	switch o.Config.Timestamp {
 	case TimestampSourceServer:
-		t = o.LastReceivedData[nodeIdx].ServerTime
+		t = serverTime
 	case TimestampSourceSource:
-		t = o.LastReceivedData[nodeIdx].SourceTime
-	default:
+		t = sourceTime
+	}
+	if t.IsZero() {
 		t = time.Now()
 	}
 

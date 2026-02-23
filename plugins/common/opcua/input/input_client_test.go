@@ -821,6 +821,175 @@ func TestMetricForNode(t *testing.T) {
 	}
 }
 
+func TestMetricForEvent(t *testing.T) {
+	now := time.Date(2026, 2, 23, 8, 44, 15, 0, time.UTC)
+	conf := &opcua.OpcUAClientConfig{
+		Endpoint:       "opc.tcp://localhost:4862",
+		SecurityPolicy: "None",
+		SecurityMode:   "None",
+		AuthMethod:     "",
+		ConnectTimeout: config.Duration(2 * time.Second),
+		RequestTimeout: config.Duration(2 * time.Second),
+		Workarounds:    opcua.OpcUAWorkarounds{},
+	}
+	c, err := conf.CreateClient(testutil.Logger{})
+	require.NoError(t, err)
+
+	tests := []struct {
+		name     string
+		config   InputClientConfig
+		mapping  []EventNodeMetricMapping
+		event    *ua.EventFieldList
+		expected telegraf.Metric
+	}{
+		{
+			name: "all fields nil returns nil",
+			config: InputClientConfig{
+				OpcUAClientConfig: *conf,
+				Timestamp:         TimestampSourceTelegraf,
+			},
+			mapping: []EventNodeMetricMapping{
+				{
+					NodeID:        ua.NewNumericNodeID(0, 2253),
+					EventTypeNode: ua.NewNumericNodeID(2, 1003),
+					Fields:        []string{"EventId", "Message", "Severity"},
+				},
+			},
+			event: &ua.EventFieldList{
+				ClientHandle: 0,
+				EventFields:  []*ua.Variant{ua.MustVariant(nil), ua.MustVariant(nil), ua.MustVariant(nil)},
+			},
+			expected: nil,
+		},
+		{
+			name: "fields with values",
+			config: InputClientConfig{
+				OpcUAClientConfig: *conf,
+				Timestamp:         TimestampSourceTelegraf,
+			},
+			mapping: []EventNodeMetricMapping{
+				{
+					NodeID:        ua.NewNumericNodeID(0, 2253),
+					EventTypeNode: ua.NewNumericNodeID(0, 2041),
+					Fields:        []string{"Severity", "SourceName"},
+				},
+			},
+			event: &ua.EventFieldList{
+				ClientHandle: 0,
+				EventFields: []*ua.Variant{
+					ua.MustVariant(uint16(500)),
+					ua.MustVariant("TestSource"),
+				},
+			},
+			expected: metric.New("opcua_event",
+				map[string]string{"node_id": "i=2253", "source": "opc.tcp://localhost:4862"},
+				map[string]interface{}{"Severity": uint16(500), "SourceName": "TestSource"},
+				now,
+			),
+		},
+		{
+			name: "source timestamp from event Time field",
+			config: InputClientConfig{
+				OpcUAClientConfig: *conf,
+				Timestamp:         TimestampSourceSource,
+			},
+			mapping: []EventNodeMetricMapping{
+				{
+					NodeID:        ua.NewNumericNodeID(0, 2253),
+					EventTypeNode: ua.NewNumericNodeID(0, 2041),
+					Fields:        []string{"Time", "Severity"},
+				},
+			},
+			event: &ua.EventFieldList{
+				ClientHandle: 0,
+				EventFields: []*ua.Variant{
+					ua.MustVariant(now),
+					ua.MustVariant(uint16(100)),
+				},
+			},
+			expected: metric.New("opcua_event",
+				map[string]string{"node_id": "i=2253", "source": "opc.tcp://localhost:4862"},
+				map[string]interface{}{"Time": now.Format(time.RFC3339), "Severity": uint16(100)},
+				now,
+			),
+		},
+		{
+			name: "server timestamp from event ReceiveTime field",
+			config: InputClientConfig{
+				OpcUAClientConfig: *conf,
+				Timestamp:         TimestampSourceServer,
+			},
+			mapping: []EventNodeMetricMapping{
+				{
+					NodeID:        ua.NewNumericNodeID(0, 2253),
+					EventTypeNode: ua.NewNumericNodeID(0, 2041),
+					Fields:        []string{"ReceiveTime", "Severity"},
+				},
+			},
+			event: &ua.EventFieldList{
+				ClientHandle: 0,
+				EventFields: []*ua.Variant{
+					ua.MustVariant(now),
+					ua.MustVariant(uint16(200)),
+				},
+			},
+			expected: metric.New("opcua_event",
+				map[string]string{"node_id": "i=2253", "source": "opc.tcp://localhost:4862"},
+				map[string]interface{}{"ReceiveTime": now.Format(time.RFC3339), "Severity": uint16(200)},
+				now,
+			),
+		},
+		{
+			name: "localized text field",
+			config: InputClientConfig{
+				OpcUAClientConfig: *conf,
+				Timestamp:         TimestampSourceTelegraf,
+			},
+			mapping: []EventNodeMetricMapping{
+				{
+					NodeID:        ua.NewNumericNodeID(0, 2253),
+					EventTypeNode: ua.NewNumericNodeID(0, 2041),
+					Fields:        []string{"Message"},
+				},
+			},
+			event: &ua.EventFieldList{
+				ClientHandle: 0,
+				EventFields: []*ua.Variant{
+					ua.MustVariant(&ua.LocalizedText{Text: "Alarm triggered"}),
+				},
+			},
+			expected: metric.New("opcua_event",
+				map[string]string{"node_id": "i=2253", "source": "opc.tcp://localhost:4862"},
+				map[string]interface{}{"Message": "Alarm triggered"},
+				now,
+			),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			o := OpcUAInputClient{
+				OpcUAClient:            c,
+				Config:                 tt.config,
+				Log:                    testutil.Logger{},
+				EventNodeMetricMapping: tt.mapping,
+			}
+			actual := o.MetricForEvent(0, tt.event)
+			if tt.expected == nil {
+				require.Nil(t, actual)
+				return
+			}
+			require.NotNil(t, actual)
+			require.Equal(t, tt.expected.Tags(), actual.Tags())
+			require.Equal(t, tt.expected.Fields(), actual.Fields())
+			// Only check timestamp for non-gather sources (gather uses time.Now())
+			if tt.config.Timestamp != TimestampSourceTelegraf {
+				require.Equal(t, tt.expected.Time(), actual.Time())
+			}
+		})
+	}
+}
+
 // TestNodeIDGeneration tests that NodeID() generates correct node ID strings
 func TestNodeIDGeneration(t *testing.T) {
 	tests := []struct {

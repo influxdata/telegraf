@@ -276,7 +276,9 @@ func (o *subscribeClient) processReceivedNotifications() {
 				// It is assumed the events are ordered chronologically
 				for _, event := range notif.Events {
 					i := int(event.ClientHandle)
-					o.metrics <- o.MetricForEvent(i, event)
+					if m := o.MetricForEvent(i, event); m != nil {
+						o.metrics <- m
+					}
 				}
 			default:
 				o.Log.Warnf("Received notification has unexpected type %s", reflect.TypeOf(res.Value))
