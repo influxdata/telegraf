@@ -34,30 +34,31 @@ type Checker interface {
 }
 
 type Health struct {
-	ServiceAddress string          `toml:"service_address"`
-	ReadTimeout    config.Duration `toml:"read_timeout"`
-	WriteTimeout   config.Duration `toml:"write_timeout"`
-	BasicUsername  string          `toml:"basic_username"`
-	BasicPassword  string          `toml:"basic_password"`
-	common_tls.ServerConfig
-
+	ServiceAddress        string          `toml:"service_address"`
+	ReadTimeout           config.Duration `toml:"read_timeout"`
+	WriteTimeout          config.Duration `toml:"write_timeout"`
+	BasicUsername         string          `toml:"basic_username"`
+	BasicPassword         string          `toml:"basic_password"`
 	Compares              []*Compares     `toml:"compares"`
 	Contains              []*Contains     `toml:"contains"`
 	MaxTimeBetweenMetrics config.Duration `toml:"max_time_between_metrics"`
+	DefaultStatus         int             `toml:"default_status"`
+	Log                   telegraf.Logger `toml:"-"`
+	common_tls.ServerConfig
 
-	Log      telegraf.Logger `toml:"-"`
 	checkers []Checker
 
-	wg             sync.WaitGroup
-	server         *http.Server
-	origin         string
-	network        string
-	address        string
-	tlsConf        *tls.Config
-	lastMetricTime time.Time
+	wg      sync.WaitGroup
+	server  *http.Server
+	origin  string
+	network string
+	address string
+	tlsConf *tls.Config
 
-	mu      sync.Mutex
-	healthy bool
+	mu             sync.Mutex
+	lastMetricTime time.Time
+	healthy        bool
+	initialized    bool
 }
 
 func (*Health) SampleConfig() string {
@@ -82,6 +83,10 @@ func (h *Health) Init() error {
 		h.address = u.Host
 	default:
 		return errors.New("service_address contains invalid scheme")
+	}
+
+	if h.DefaultStatus <= 0 {
+		h.DefaultStatus = http.StatusOK
 	}
 
 	h.tlsConf, err = h.ServerConfig.TLSConfig()
@@ -120,6 +125,7 @@ func (h *Health) Connect() error {
 	h.origin = h.getOrigin(listener)
 
 	h.Log.Infof("Listening on %s", h.origin)
+
 	// Initialize lastMetricTime here to fail if no metrics are received
 	// before the configured max timeout.
 	h.lastMetricTime = time.Now()
@@ -136,8 +142,7 @@ func (h *Health) Connect() error {
 	return nil
 }
 
-func onAuthError(_ http.ResponseWriter) {
-}
+func onAuthError(_ http.ResponseWriter) {}
 
 func (h *Health) listen() (net.Listener, error) {
 	if h.tlsConf != nil {
@@ -146,36 +151,46 @@ func (h *Health) listen() (net.Listener, error) {
 	return net.Listen(h.network, h.address)
 }
 
-func (h *Health) ServeHTTP(rw http.ResponseWriter, _ *http.Request) {
-	var code = http.StatusOK
+func (h *Health) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
-	healthy := h.isHealthy()
-	if h.MaxTimeBetweenMetrics > 0 {
-		healthy = healthy && time.Since(h.lastMetricTime) < time.Duration(h.MaxTimeBetweenMetrics)
+	w.Header().Set("Server", internal.ProductToken())
+
+	if !h.initialized {
+		w.WriteHeader(h.DefaultStatus)
+		return
 	}
 
-	if !healthy {
-		code = http.StatusServiceUnavailable
+	if h.healthy && (h.MaxTimeBetweenMetrics <= 0 || time.Since(h.lastMetricTime) < time.Duration(h.MaxTimeBetweenMetrics)) {
+		w.WriteHeader(http.StatusOK)
+		return
 	}
 
-	rw.Header().Set("Server", internal.ProductToken())
-	http.Error(rw, http.StatusText(code), code)
+	w.WriteHeader(http.StatusServiceUnavailable)
 }
 
 // Write runs all checks over the metric batch and adjust health state.
 func (h *Health) Write(metrics []telegraf.Metric) error {
-	h.lastMetricTime = time.Now()
+	ts := time.Now()
 	healthy := true
 	for _, checker := range h.checkers {
 		success := checker.Check(metrics)
 		if !success {
 			healthy = false
+			break
 		}
 	}
+
 	// healthy only represents the result of the configured checkers and not
 	// the MaxTimeBetweenMetrics validation. The timeout check is done when
 	// serving the HTTP response.
-	h.setHealthy(healthy)
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.lastMetricTime = ts
+	h.healthy = healthy
+	h.initialized = true
+
 	return nil
 }
 
@@ -219,24 +234,11 @@ func (h *Health) getOrigin(listener net.Listener) string {
 	}
 }
 
-func (h *Health) setHealthy(healthy bool) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.healthy = healthy
-}
-
-func (h *Health) isHealthy() bool {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	return h.healthy
-}
-
 func NewHealth() *Health {
 	return &Health{
 		ServiceAddress: defaultServiceAddress,
 		ReadTimeout:    config.Duration(defaultReadTimeout),
 		WriteTimeout:   config.Duration(defaultWriteTimeout),
-		healthy:        true,
 	}
 }
 

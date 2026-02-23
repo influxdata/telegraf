@@ -10,6 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs/health"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -329,4 +330,88 @@ func TestTimeBetweenMetrics(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+func TestDefaultStatusHealthy(t *testing.T) {
+	now := time.Now()
+	plugin := health.NewHealth()
+	plugin.ServiceAddress = "tcp://127.0.0.1:0"
+	plugin.Contains = []*health.Contains{
+		{
+			Field: "time_idle",
+		},
+	}
+	plugin.DefaultStatus = http.StatusTooEarly
+	plugin.Log = testutil.Logger{}
+	input := []telegraf.Metric{
+		metric.New(
+			"cpu",
+			map[string]string{},
+			map[string]interface{}{
+				"time_idle": 42,
+			},
+			now),
+	}
+
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	resp, err := http.Get(plugin.Origin())
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	_, err = io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusTooEarly, resp.StatusCode)
+
+	require.NoError(t, plugin.Write(input))
+
+	resp, err = http.Get(plugin.Origin())
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	_, err = io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func TestDefaultStatusUnhealthy(t *testing.T) {
+	now := time.Now()
+	plugin := health.NewHealth()
+	plugin.ServiceAddress = "tcp://127.0.0.1:0"
+	plugin.Contains = []*health.Contains{
+		{
+			Field: "foo",
+		},
+	}
+	plugin.DefaultStatus = http.StatusTooEarly
+	plugin.Log = testutil.Logger{}
+	input := []telegraf.Metric{
+		metric.New(
+			"cpu",
+			map[string]string{},
+			map[string]interface{}{
+				"time_idle": 42,
+			},
+			now),
+	}
+
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	resp, err := http.Get(plugin.Origin())
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	_, err = io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusTooEarly, resp.StatusCode)
+
+	require.NoError(t, plugin.Write(input))
+
+	resp, err = http.Get(plugin.Origin())
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	_, err = io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
 }
