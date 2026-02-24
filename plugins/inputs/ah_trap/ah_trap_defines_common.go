@@ -37,6 +37,7 @@ const (
 	AH_MSG_TRAP_SET          = 0
 	AH_MSG_TRAP_CLEAR        = 1
 	AH_MSG_TRAP_VERIFY_OOB_SN  = 117
+	AH_MSG_TRAP_PORTAL_CHANGE  = 120
 )
 
 const (
@@ -138,6 +139,10 @@ type AhVerifyOobSnTrap struct {
 	SerialNumber [AH_MAX_NAME_LEN]byte;
 }
 
+type AhPortalChangeTrap struct {
+	TrapType	uint8;
+	Macaddr [MACADDR_LEN]byte;
+}
 type AhFailureTrap struct {
 	Name  [AH_MAX_TRAP_OBJ_NAME+1]byte
 	Cause int32
