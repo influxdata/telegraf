@@ -114,14 +114,14 @@ func NewCollection(config FormatConfig) *Collection {
 }
 
 func (c *Collection) sanitizeMetricName(name string) (string, bool) {
-	if c.config.ContentEncoding == "utf8" {
+	if c.config.NameSanitization == "utf8" {
 		return SanitizeMetricNameUTF8(name)
 	}
 	return SanitizeMetricName(name)
 }
 
 func (c *Collection) sanitizeLabelName(name string) (string, bool) {
-	if c.config.ContentEncoding == "utf8" {
+	if c.config.NameSanitization == "utf8" {
 		return SanitizeLabelNameUTF8(name)
 	}
 	return SanitizeLabelName(name)

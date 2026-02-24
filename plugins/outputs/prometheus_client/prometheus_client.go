@@ -38,7 +38,7 @@ const (
 	defaultExpirationInterval = config.Duration(60 * time.Second)
 	defaultReadTimeout        = 10 * time.Second
 	defaultWriteTimeout       = 10 * time.Second
-	defaultContentEncoding    = "legacy"
+	defaultNameSanitization   = "legacy"
 )
 
 type Collector interface {
@@ -61,7 +61,7 @@ type PrometheusClient struct {
 	StringAsLabel      bool                               `toml:"string_as_label"`
 	ExportTimestamp    bool                               `toml:"export_timestamp"`
 	TypeMappings       serializers_prometheus.MetricTypes `toml:"metric_types"`
-	ContentEncoding    string                             `toml:"content_encoding"`
+	NameSanitization   string                             `toml:"name_sanitization"`
 	HTTPHeaders        map[string]*config.Secret          `toml:"http_headers"`
 	Log                telegraf.Logger                    `toml:"-"`
 
@@ -104,13 +104,11 @@ func (p *PrometheusClient) Init() error {
 		}
 	}
 
-	switch p.ContentEncoding {
-	case "":
-		p.ContentEncoding = defaultContentEncoding
+	switch p.NameSanitization {
 	case "legacy", "utf8":
-		// Valid encodings.
+		// Valid sanitization modes.
 	default:
-		return fmt.Errorf("invalid content_encoding %q: must be \"legacy\" or \"utf8\"", p.ContentEncoding)
+		return fmt.Errorf("invalid name_sanitization %q: must be \"legacy\" or \"utf8\"", p.NameSanitization)
 	}
 
 	if err := p.TypeMappings.Init(); err != nil {
@@ -127,7 +125,7 @@ func (p *PrometheusClient) Init() error {
 			p.ExportTimestamp,
 			p.TypeMappings,
 			p.Log,
-			p.ContentEncoding,
+			p.NameSanitization,
 		)
 		err := registry.Register(p.collector)
 		if err != nil {
@@ -139,7 +137,7 @@ func (p *PrometheusClient) Init() error {
 			p.StringAsLabel,
 			p.ExportTimestamp,
 			p.TypeMappings,
-			p.ContentEncoding,
+			p.NameSanitization,
 		)
 		err := registry.Register(p.collector)
 		if err != nil {
@@ -320,6 +318,7 @@ func init() {
 			Path:               defaultPath,
 			ExpirationInterval: defaultExpirationInterval,
 			StringAsLabel:      true,
+			NameSanitization:   defaultNameSanitization,
 		}
 	})
 }

@@ -39,7 +39,7 @@ reporting others every bucket/quantile will continue to exist.
   ## The default "legacy" keeps ASCII-only Prometheus name rules.
   ## Set to "utf8" to allow UTF-8 metric and label names.
   ## Valid options: "legacy", "utf8"
-  prometheus_content_encoding = "legacy"
+  prometheus_name_sanitization = "legacy"
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read

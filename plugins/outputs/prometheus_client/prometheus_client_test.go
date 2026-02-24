@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -18,6 +19,7 @@ func TestLandingPage(t *testing.T) {
 		Listen:            ":0",
 		CollectorsExclude: []string{"process"},
 		MetricVersion:     1,
+		NameSanitization:  defaultNameSanitization,
 		Log:               &testutil.Logger{Name: "outputs.prometheus_client"},
 	}
 	expected := "Telegraf Output Plugin: Prometheus Client"
@@ -91,8 +93,9 @@ func TestFormatHeader(t *testing.T) {
 
 	// Setup the plugin
 	plugin := PrometheusClient{
-		Listen: ":0",
-		Log:    testutil.Logger{Name: "outputs.prometheus_client"},
+		Listen:           ":0",
+		NameSanitization: defaultNameSanitization,
+		Log:              testutil.Logger{Name: "outputs.prometheus_client"},
 	}
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -120,4 +123,56 @@ func TestFormatHeader(t *testing.T) {
 			require.Equal(t, tt.expected, resp.Header.Get("Content-Type"))
 		})
 	}
+}
+
+func TestNameSanitizationValidation(t *testing.T) {
+	tests := []struct {
+		name             string
+		nameSanitization string
+		err              string
+	}{
+		{
+			name:             "legacy",
+			nameSanitization: "legacy",
+		},
+		{
+			name:             "utf8",
+			nameSanitization: "utf8",
+		},
+		{
+			name:             "invalid value",
+			nameSanitization: "gzip",
+			err:              "invalid name_sanitization \"gzip\": must be \"legacy\" or \"utf8\"",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := PrometheusClient{
+				Listen:            ":0",
+				MetricVersion:     1,
+				CollectorsExclude: []string{"gocollector", "process"},
+				NameSanitization:  tt.nameSanitization,
+				Log:               testutil.Logger{Name: "outputs.prometheus_client"},
+			}
+
+			err := plugin.Init()
+			if tt.err != "" {
+				require.EqualError(t, err, tt.err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tt.nameSanitization, plugin.NameSanitization)
+		})
+	}
+}
+
+func TestNameSanitizationDefaultFromConstructor(t *testing.T) {
+	creator, found := outputs.Outputs["prometheus_client"]
+	require.True(t, found)
+
+	plugin := creator().(*PrometheusClient)
+	require.Equal(t, defaultNameSanitization, plugin.NameSanitization)
+	require.NoError(t, plugin.Init())
 }

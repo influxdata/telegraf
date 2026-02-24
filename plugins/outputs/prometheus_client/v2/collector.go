@@ -48,13 +48,13 @@ func NewCollector(
 	expire time.Duration,
 	stringsAsLabel, exportTimestamp bool,
 	typeMapping serializers_prometheus.MetricTypes,
-	contentEncoding string,
+	nameSanitization string,
 ) *Collector {
 	cfg := serializers_prometheus.FormatConfig{
-		StringAsLabel:   stringsAsLabel,
-		ExportTimestamp: exportTimestamp,
-		TypeMappings:    typeMapping,
-		ContentEncoding: contentEncoding,
+		StringAsLabel:    stringsAsLabel,
+		ExportTimestamp:  exportTimestamp,
+		TypeMappings:     typeMapping,
+		NameSanitization: nameSanitization,
 	}
 
 	return &Collector{

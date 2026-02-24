@@ -16,6 +16,8 @@ type Serializer struct {
 	FormatConfig
 }
 
+const defaultNameSanitization = "legacy"
+
 // FormatConfig contains the configuration for the Prometheus serializer.
 type FormatConfig struct {
 	ExportTimestamp bool `toml:"prometheus_export_timestamp"`
@@ -26,8 +28,8 @@ type FormatConfig struct {
 	// helps to reduce payload size.
 	CompactEncoding bool        `toml:"prometheus_compact_encoding"`
 	TypeMappings    MetricTypes `toml:"prometheus_metric_types"`
-	// ContentEncoding defines whether to allow UTF-8 characters in metric names and label names.
-	ContentEncoding string `toml:"prometheus_content_encoding"`
+	// NameSanitization defines whether to allow UTF-8 characters in metric names and label names.
+	NameSanitization string `toml:"prometheus_name_sanitization"`
 }
 
 // MetricTypes defines the mapping of metric names to their types.
@@ -67,6 +69,15 @@ func (mt *MetricTypes) DetermineType(name string, m telegraf.Metric) telegraf.Va
 }
 
 func (s *Serializer) Init() error {
+	switch s.NameSanitization {
+	case "":
+		s.NameSanitization = defaultNameSanitization
+	case "legacy", "utf8":
+		// Valid sanitization modes.
+	default:
+		return fmt.Errorf("invalid prometheus_name_sanitization %q: must be \"legacy\" or \"utf8\"", s.NameSanitization)
+	}
+
 	return s.FormatConfig.TypeMappings.Init()
 }
 

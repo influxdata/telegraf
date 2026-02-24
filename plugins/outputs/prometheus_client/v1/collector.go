@@ -57,7 +57,7 @@ type Collector struct {
 	ExportTimestamp    bool
 	TypeMapping        serializers_prometheus.MetricTypes
 	Log                telegraf.Logger
-	ContentEncoding    string
+	NameSanitization   string
 
 	sync.Mutex
 	fam          map[string]*MetricFamily
@@ -65,7 +65,7 @@ type Collector struct {
 }
 
 func (c *Collector) sanitizeMetricName(name string) (string, bool) {
-	if c.ContentEncoding == "utf8" {
+	if c.NameSanitization == "utf8" {
 		return serializers_prometheus.SanitizeMetricNameUTF8(name)
 	}
 
@@ -77,7 +77,7 @@ func (c *Collector) sanitizeMetricName(name string) (string, bool) {
 }
 
 func (c *Collector) sanitizeLabelName(name string) (string, bool) {
-	if c.ContentEncoding == "utf8" {
+	if c.NameSanitization == "utf8" {
 		return serializers_prometheus.SanitizeLabelNameUTF8(name)
 	}
 	return serializers_prometheus.SanitizeLabelName(name)
@@ -88,7 +88,7 @@ func NewCollector(
 	stringsAsLabel, exportTimestamp bool,
 	typeMapping serializers_prometheus.MetricTypes,
 	log telegraf.Logger,
-	contentEncoding string,
+	nameSanitization string,
 ) *Collector {
 	c := &Collector{
 		ExpirationInterval: expire,
@@ -96,7 +96,7 @@ func NewCollector(
 		ExportTimestamp:    exportTimestamp,
 		TypeMapping:        typeMapping,
 		Log:                log,
-		ContentEncoding:    contentEncoding,
+		NameSanitization:   nameSanitization,
 		fam:                make(map[string]*MetricFamily),
 	}
 

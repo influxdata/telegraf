@@ -227,11 +227,12 @@ cpu_time_idle{host="example.org"} 42
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Serializer{
 				FormatConfig{
-					SortMetrics:     true,
-					ExportTimestamp: tt.config.ExportTimestamp,
-					StringAsLabel:   tt.config.StringAsLabel,
-					CompactEncoding: tt.config.CompactEncoding,
-					TypeMappings:    tt.config.TypeMappings,
+					SortMetrics:      true,
+					ExportTimestamp:  tt.config.ExportTimestamp,
+					StringAsLabel:    tt.config.StringAsLabel,
+					CompactEncoding:  tt.config.CompactEncoding,
+					TypeMappings:     tt.config.TypeMappings,
+					NameSanitization: tt.config.NameSanitization,
 				},
 			}
 			require.NoError(t, s.Init())
@@ -782,5 +783,54 @@ func BenchmarkSerializeBatch(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, err := s.SerializeBatch(metrics)
 		require.NoError(b, err)
+	}
+}
+
+func TestNameSanitizationValidation(t *testing.T) {
+	tests := []struct {
+		name             string
+		nameSanitization string
+		expected         string
+		err              string
+	}{
+		{
+			name:             "default when empty",
+			nameSanitization: "",
+			expected:         "legacy",
+		},
+		{
+			name:             "legacy",
+			nameSanitization: "legacy",
+			expected:         "legacy",
+		},
+		{
+			name:             "utf8",
+			nameSanitization: "utf8",
+			expected:         "utf8",
+		},
+		{
+			name:             "invalid value",
+			nameSanitization: "gzip",
+			err:              "invalid prometheus_name_sanitization \"gzip\": must be \"legacy\" or \"utf8\"",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &Serializer{
+				FormatConfig{
+					NameSanitization: tt.nameSanitization,
+				},
+			}
+
+			err := s.Init()
+			if tt.err != "" {
+				require.EqualError(t, err, tt.err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, s.NameSanitization)
+		})
 	}
 }

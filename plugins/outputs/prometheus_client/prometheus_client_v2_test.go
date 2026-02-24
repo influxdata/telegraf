@@ -34,6 +34,7 @@ func TestMetricVersion2(t *testing.T) {
 				MetricVersion:     2,
 				CollectorsExclude: []string{"gocollector", "process"},
 				Path:              "/metrics",
+				NameSanitization:  defaultNameSanitization,
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
@@ -61,6 +62,7 @@ cpu_time_idle{host="example.org"} 42
 				MetricVersion:     2,
 				CollectorsExclude: []string{"gocollector", "process"},
 				Path:              "/metrics",
+				NameSanitization:  defaultNameSanitization,
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
@@ -89,6 +91,7 @@ rpc_duration_seconds_count 2693
 				MetricVersion:     2,
 				CollectorsExclude: []string{"gocollector", "process"},
 				Path:              "/metrics",
+				NameSanitization:  defaultNameSanitization,
 				ExportTimestamp:   true,
 				Log:               logger,
 			},
@@ -117,6 +120,7 @@ cpu_time_idle{host="example.org"} 42 0
 				MetricVersion:     2,
 				CollectorsExclude: []string{"gocollector", "process"},
 				Path:              "/metrics",
+				NameSanitization:  defaultNameSanitization,
 				StringAsLabel:     true,
 				Log:               logger,
 			},
@@ -144,6 +148,7 @@ cpu_time_idle{host="example.org"} 42
 				MetricVersion:     2,
 				CollectorsExclude: []string{"gocollector", "process"},
 				Path:              "/metrics",
+				NameSanitization:  defaultNameSanitization,
 				StringAsLabel:     false,
 				Log:               logger,
 			},
@@ -165,13 +170,13 @@ cpu_time_idle 42
 `),
 		},
 		{
-			name: "utf8 content encoding supports utf8 metric and label names",
+			name: "utf8 name sanitization supports utf8 metric and label names",
 			output: &PrometheusClient{
 				Listen:            ":0",
 				MetricVersion:     2,
 				CollectorsExclude: []string{"gocollector", "process"},
 				Path:              "/metrics",
-				ContentEncoding:   "utf8",
+				NameSanitization:  "utf8",
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
@@ -200,6 +205,7 @@ cpu_time_idle 42
 				MetricVersion:     2,
 				CollectorsExclude: []string{"gocollector", "process"},
 				Path:              "/metrics",
+				NameSanitization:  defaultNameSanitization,
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
@@ -227,6 +233,7 @@ cpu_time_idle{host="example.org"} 42
 				MetricVersion:     2,
 				CollectorsExclude: []string{"gocollector", "process"},
 				Path:              "/metrics",
+				NameSanitization:  defaultNameSanitization,
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
@@ -309,6 +316,7 @@ cpu_usage_idle_count{cpu="cpu1"} 20
 				MetricVersion:     2,
 				CollectorsExclude: []string{"gocollector", "process"},
 				Path:              "/metrics",
+				NameSanitization:  defaultNameSanitization,
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
@@ -340,6 +348,7 @@ cpu_usage_idle_count{cpu="cpu1"} 20
 				MetricVersion:     2,
 				CollectorsExclude: []string{"gocollector", "process"},
 				Path:              "/metrics",
+				NameSanitization:  defaultNameSanitization,
 				TypeMappings:      prometheus.MetricTypes{Counter: []string{"cpu_time_idle"}},
 				Log:               logger,
 			},
@@ -368,6 +377,7 @@ cpu_time_idle{host="example.org"} 42
 				MetricVersion:     2,
 				CollectorsExclude: []string{"gocollector", "process"},
 				Path:              "/metrics",
+				NameSanitization:  defaultNameSanitization,
 				TypeMappings:      prometheus.MetricTypes{Gauge: []string{"cpu_time_idle"}},
 				Log:               logger,
 			},
@@ -536,6 +546,7 @@ rpc_duration_seconds_count 2693
 				MetricVersion:     2,
 				Log:               logger,
 				CollectorsExclude: []string{"gocollector", "process"},
+				NameSanitization:  defaultNameSanitization,
 			}
 			err = output.Init()
 			require.NoError(t, err)

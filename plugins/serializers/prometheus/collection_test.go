@@ -844,8 +844,8 @@ func TestExportTimestamps(t *testing.T) {
 	}
 }
 
-func TestCollectionUTF8ContentEncoding(t *testing.T) {
-	c := NewCollection(FormatConfig{ContentEncoding: "utf8"})
+func TestCollectionUTF8NameSanitization(t *testing.T) {
+	c := NewCollection(FormatConfig{NameSanitization: "utf8"})
 	c.Add(
 		testutil.MustMetric(
 			"温度-指标",
@@ -879,7 +879,7 @@ func TestCollectionUTF8ContentEncoding(t *testing.T) {
 }
 
 func TestCollectionUTF8FallbackForInvalidUTF8(t *testing.T) {
-	c := NewCollection(FormatConfig{ContentEncoding: "utf8"})
+	c := NewCollection(FormatConfig{NameSanitization: "utf8"})
 	c.Add(
 		testutil.MustMetric(
 			"cpu",
@@ -964,7 +964,7 @@ func TestCollectionUTF8DropWhenFallbackBecomesEmpty(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := NewCollection(FormatConfig{ContentEncoding: "utf8"})
+			c := NewCollection(FormatConfig{NameSanitization: "utf8"})
 			c.Add(tt.metric, time.Unix(0, 0))
 			require.Equal(t, tt.expected, c.GetProto())
 		})
