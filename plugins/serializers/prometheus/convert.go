@@ -117,6 +117,24 @@ func SanitizeLabelNameUTF8(name string) (string, bool) {
 	return sanitize(name, labelNameTable)
 }
 
+// SanitizeMetricNameByEncoding sanitizes metric names according to the
+// configured name sanitization mode.
+func SanitizeMetricNameByEncoding(name, encoding string) (string, bool) {
+	if encoding == "utf8" {
+		return SanitizeMetricNameUTF8(name)
+	}
+	return SanitizeMetricName(name)
+}
+
+// SanitizeLabelNameByEncoding sanitizes label names according to the configured
+// name sanitization mode.
+func SanitizeLabelNameByEncoding(name, encoding string) (string, bool) {
+	if encoding == "utf8" {
+		return SanitizeLabelNameUTF8(name)
+	}
+	return SanitizeLabelName(name)
+}
+
 // MetricName returns the Prometheus metric name.
 func MetricName(measurement, fieldKey string, valueType telegraf.ValueType) string {
 	switch valueType {

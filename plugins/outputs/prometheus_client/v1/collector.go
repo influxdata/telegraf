@@ -2,7 +2,6 @@ package v1
 
 import (
 	"fmt"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -13,11 +12,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	serializers_prometheus "github.com/influxdata/telegraf/plugins/serializers/prometheus"
-)
-
-var (
-	invalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_:]`)
-	validNameCharRE   = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*`)
 )
 
 // SampleID uniquely identifies a Sample
@@ -65,22 +59,11 @@ type Collector struct {
 }
 
 func (c *Collector) sanitizeMetricName(name string) (string, bool) {
-	if c.NameSanitization == "utf8" {
-		return serializers_prometheus.SanitizeMetricNameUTF8(name)
-	}
-
-	name = sanitize(name)
-	if !isValidTagName(name) {
-		return "", false
-	}
-	return name, true
+	return serializers_prometheus.SanitizeMetricNameByEncoding(name, c.NameSanitization)
 }
 
 func (c *Collector) sanitizeLabelName(name string) (string, bool) {
-	if c.NameSanitization == "utf8" {
-		return serializers_prometheus.SanitizeLabelNameUTF8(name)
-	}
-	return serializers_prometheus.SanitizeLabelName(name)
+	return serializers_prometheus.SanitizeLabelNameByEncoding(name, c.NameSanitization)
 }
 
 func NewCollector(
@@ -169,14 +152,6 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 			ch <- metric
 		}
 	}
-}
-
-func sanitize(value string) string {
-	return invalidNameCharRE.ReplaceAllString(value, "_")
-}
-
-func isValidTagName(tag string) bool {
-	return validNameCharRE.MatchString(tag)
 }
 
 func getPromValueType(tt telegraf.ValueType) prometheus.ValueType {
