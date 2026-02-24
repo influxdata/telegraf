@@ -162,7 +162,7 @@ func getAllRecords(testContext context.Context, address string) []string {
 
 		result := client.TSRange(ctx, key, 0, int(time.Now().UnixMilli()))
 		var expires string
-		if client.TTL(ctx, key).Val() != -1 {
+		if client.TTL(ctx, key).Val() > 0 {
 			expires = "; expires"
 		}
 		for _, point := range result.Val() {

@@ -117,7 +117,7 @@ func (r *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
 				pipe.TSAddWithArgs(ctx, key, m.Time().UnixMilli(), value, &redis.TSOptions{Labels: m.Tags()})
 				pipe.Expire(ctx, key, time.Duration(*r.Expire))
 				if _, err := pipe.Exec(ctx); err != nil {
-					return fmt.Errorf("adding sample %q failed: %w", key, err)
+					return fmt.Errorf("writing sample %q with expiry failed: %w", key, err)
 				}
 			} else {
 				resp := r.client.TSAddWithArgs(ctx, key, m.Time().UnixMilli(), value, &redis.TSOptions{Labels: m.Tags()})
