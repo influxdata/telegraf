@@ -57,7 +57,7 @@ func (is *InternetSpeed) Init() error {
 	}
 
 	var err error
-	is.serverFilter, err = filter.NewIncludeExcludeFilterDefaults(is.ServerIDInclude, is.ServerIDExclude, false, false)
+	is.serverFilter, err = filter.NewIncludeExcludeFilterDefaults(is.ServerIDInclude, is.ServerIDExclude, true, false)
 	if err != nil {
 		return fmt.Errorf("error compiling server ID filters: %w", err)
 	}
@@ -170,30 +170,33 @@ func (is *InternetSpeed) findClosestServer() error {
 		return errors.New("no servers found")
 	}
 
-	// Return the first match or the server with the lowest latency
-	// when filter mismatch all servers.
+	return is.selectServer()
+}
+
+func (is *InternetSpeed) selectServer() error {
+	// Select the server with the lowest latency matching the filter.
+	// If no server has latency info, use the first match (closest by distance).
 	var minLatency int64 = math.MaxInt64
 	selectIndex := -1
 	for index, server := range is.servers {
-		if is.serverFilter.Match(server.ID) {
+		if !is.serverFilter.Match(server.ID) {
+			continue
+		}
+		if server.Latency > 0 && server.Latency.Milliseconds() < minLatency {
+			minLatency = server.Latency.Milliseconds()
 			selectIndex = index
-			break
-		}
-		if server.Latency > 0 {
-			if minLatency > server.Latency.Milliseconds() {
-				minLatency = server.Latency.Milliseconds()
-				selectIndex = index
-			}
+		} else if selectIndex == -1 {
+			selectIndex = index
 		}
 	}
 
-	if selectIndex != -1 {
-		is.server = is.servers[selectIndex]
-		is.Log.Debugf("using server %s in %s (%s)\n", is.server.ID, is.server.Name, is.server.Host)
-		return nil
+	if selectIndex == -1 {
+		return errors.New("no server set: filter excluded all servers or no available server found")
 	}
 
-	return errors.New("no server set: filter excluded all servers or no available server found")
+	is.server = is.servers[selectIndex]
+	is.Log.Debugf("using server %s in %s (%s)\n", is.server.ID, is.server.Name, is.server.Host)
+	return nil
 }
 
 func timeDurationMillisecondToFloat64(d time.Duration) float64 {
