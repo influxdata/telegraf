@@ -43,6 +43,8 @@ to use them.
 
   ## Set a time-to-live (TTL) on each Redis key
   ## If set, Redis will drop the metric after the specified duration
+  ## The TTL is refreshed on every write, so the key only expires
+  ## if no new data arrives within the configured period
   ## Disabled by default (no expiry)
   # expire = ""
 

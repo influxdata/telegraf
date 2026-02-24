@@ -34,6 +34,13 @@ type RedisTimeSeries struct {
 	client *redis.Client
 }
 
+func (r *RedisTimeSeries) Init() error {
+	if r.Expire != nil && time.Duration(*r.Expire) <= 0 {
+		return errors.New("expire must be a positive duration")
+	}
+	return nil
+}
+
 func (r *RedisTimeSeries) Connect() error {
 	if r.Address == "" {
 		return errors.New("redis address must be specified")
