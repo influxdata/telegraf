@@ -827,10 +827,8 @@ func TestMetricForEvent(t *testing.T) {
 		Endpoint:       "opc.tcp://localhost:4862",
 		SecurityPolicy: "None",
 		SecurityMode:   "None",
-		AuthMethod:     "",
 		ConnectTimeout: config.Duration(2 * time.Second),
 		RequestTimeout: config.Duration(2 * time.Second),
-		Workarounds:    opcua.OpcUAWorkarounds{},
 	}
 	c, err := conf.CreateClient(testutil.Logger{})
 	require.NoError(t, err)
@@ -884,7 +882,7 @@ func TestMetricForEvent(t *testing.T) {
 			expected: metric.New("opcua_event",
 				map[string]string{"node_id": "i=2253", "source": "opc.tcp://localhost:4862"},
 				map[string]interface{}{"Severity": uint16(500), "SourceName": "TestSource"},
-				now,
+				time.Time{},
 			),
 		},
 		{
@@ -961,7 +959,32 @@ func TestMetricForEvent(t *testing.T) {
 			expected: metric.New("opcua_event",
 				map[string]string{"node_id": "i=2253", "source": "opc.tcp://localhost:4862"},
 				map[string]interface{}{"Message": "Alarm triggered"},
-				now,
+				time.Time{},
+			),
+		},
+		{
+			name: "source timestamp falls back to now when Time field absent",
+			config: InputClientConfig{
+				OpcUAClientConfig: *conf,
+				Timestamp:         TimestampSourceSource,
+			},
+			mapping: []EventNodeMetricMapping{
+				{
+					NodeID:        ua.NewNumericNodeID(0, 2253),
+					EventTypeNode: ua.NewNumericNodeID(0, 2041),
+					Fields:        []string{"Severity"},
+				},
+			},
+			event: &ua.EventFieldList{
+				ClientHandle: 0,
+				EventFields: []*ua.Variant{
+					ua.MustVariant(uint16(300)),
+				},
+			},
+			expected: metric.New("opcua_event",
+				map[string]string{"node_id": "i=2253", "source": "opc.tcp://localhost:4862"},
+				map[string]interface{}{"Severity": uint16(300)},
+				time.Time{},
 			),
 		},
 	}
@@ -982,8 +1005,7 @@ func TestMetricForEvent(t *testing.T) {
 			require.NotNil(t, actual)
 			require.Equal(t, tt.expected.Tags(), actual.Tags())
 			require.Equal(t, tt.expected.Fields(), actual.Fields())
-			// Only check timestamp for non-gather sources (gather uses time.Now())
-			if tt.config.Timestamp != TimestampSourceTelegraf {
+			if !tt.expected.Time().IsZero() {
 				require.Equal(t, tt.expected.Time(), actual.Time())
 			}
 		})
