@@ -421,6 +421,14 @@ func (t *TrapPlugin) Gather_Ah_send_trap(trapType uint32, trapBuf [256]byte, acc
 			"ipv6Data_devIpChangeTrap":          formatDevIpChangeIpv6Data(devIpChange.Ipv6Data[:], int(devIpChange.Ipv6AddrNum)),
 			"isClear_trapMessage_devIpChangeTrap": GetTrapClearStatus(uint32(devIpChange.TrapType), trapBuf[:]),
 		}, nil)
+	case AH_MSG_TRAP_VERIFY_OOB_SN:
+		var oobSn  AhVerifyOobSnTrap
+		copy((*[unsafe.Sizeof(oobSn)]byte)(unsafe.Pointer(&oobSn))[:], trapBuf[:unsafe.Sizeof(oobSn)])
+		acc.AddFields("TrapEvent", map[string]interface{}{
+			"trapId_oobSerialNumberTrap":       oobSn.TrapType,
+			"serialNumber_oobSerialNumberTrap":   ahutil.CleanCString(oobSn.SerialNumber[:]),
+			"isClear_trapMessage_oobSerialNumberTrap": GetTrapClearStatus(uint32(oobSn.TrapType), trapBuf[:]),
+		}, nil)
 	}
 
 	return nil
@@ -631,6 +639,18 @@ func (t *TrapPlugin) trapListener(conn net.PacketConn) {
 			copy(trapBuf[:expected], payload)
 			if err := t.Gather_Ah_send_trap(trapType, trapBuf, t.acc); err != nil {
 				log.Printf("[ah_trap] Error gathering DEV_IP_CHANGE trap: %v", err)
+			}
+		case AH_MSG_TRAP_VERIFY_OOB_SN:
+			var oobSn  AhVerifyOobSnTrap
+			expected := int(unsafe.Sizeof(oobSn))
+			if len(payload) != expected {
+				log.Printf("[ah_trap] Invalid OutOfBox SerialNumbe size: got %d, expected %d", len(payload), expected)
+				continue
+			}
+			var trapBuf [AH_TRAP_SIZE_256]byte
+			copy(trapBuf[:expected], payload)
+			if err := t.Gather_Ah_send_trap(trapType, trapBuf, t.acc); err != nil {
+				log.Printf("[ah_trap] Error gathering OutOfBox SerialNumber trap: %v", err)
 			}
 		}
 	}
