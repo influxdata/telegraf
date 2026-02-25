@@ -113,6 +113,21 @@ of messages included using the `limit` setting.
 > As the amount of log messages can be high, especially when configuring a low
 > level such as `info` the resulting heartbeat messages might be large. Restrict
 > the included messages by choosing a higher log-level and/or by using a limit!
+When including `logs` in the message the number of errors and warnings logged
+in this Telegraf instance are included in the heartbeat message. This comprises
+_all_ log messages of all plugins and the agent itself logged _after_ the
+`Connect` function of this plugin was called, i.e. you will not see any
+initialization or configuration errors in the heartbeat messages!
+
+For getting the actual log _messages_ you can include `log-details`. Via the
+optional `outputs.heartbeat.status` you can limit the messages by log-`level`
+or limit the number included using the `limit` setting.
+
+> [!WARNING]
+> As the amount of log messages can be high, especially when configuring low
+> level such as `info` the resulting heartbeat messages might be large. Use the
+> `log-details` option with care if network traffic is a limiting factor and
+> restrict the included messages to high levels and use a limit!
 
 When setting the `level` option only messages with this or more severe levels
 are included.
@@ -121,5 +136,6 @@ The `limit` setting allows to specify the maximum number of log-messages
 included in the heartbeat message. If the number of log-messages exceeds the
 given limit they are selected by the most severe level and most recent messages
 first.
+given limit they are selected by most severe and most recent messages first.
 
 [schema]: /plugins/outputs/heartbeat/schema_v1.json
