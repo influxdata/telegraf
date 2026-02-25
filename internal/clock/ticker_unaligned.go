@@ -50,7 +50,7 @@ func (t *unaligned) start() {
 
 func (t *unaligned) run(ctx context.Context) {
 	// Start with the first scheduled
-	timer := t.clk.Timer(t.clk.Until(t.schedule))
+	timer := t.clk.Timer(t.clk.Until(t.schedule) + internal.RandomDuration(t.jitter))
 
 	for {
 		select {
