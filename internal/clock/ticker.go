@@ -19,8 +19,9 @@ func NewTicker(start time.Time, interval, jitter, offset time.Duration, align bo
 }
 
 func newAlignedTicker(start time.Time, interval, jitter, offset time.Duration) *aligned {
+	clk := clock.New()
 	t := &aligned{
-		clk:         clock.New(),
+		clk:         clk,
 		schedule:    start,
 		interval:    interval,
 		jitter:      jitter,
@@ -32,8 +33,10 @@ func newAlignedTicker(start time.Time, interval, jitter, offset time.Duration) *
 }
 
 func newUnalignedTicker(interval, jitter, offset time.Duration) *unaligned {
+	clk := clock.New()
 	t := &unaligned{
-		clk:      clock.New(),
+		clk:      clk,
+		schedule: clk.Now(),
 		interval: interval,
 		jitter:   jitter,
 		offset:   offset,
