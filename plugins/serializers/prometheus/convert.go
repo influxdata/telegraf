@@ -123,8 +123,8 @@ func sanitizeLabelNameUTF8(name string) (string, bool) {
 
 // SanitizeMetricNameByEncoding sanitizes metric names according to the
 // configured name sanitization mode.
-func SanitizeMetricNameByEncoding(name, encoding string) (string, bool) {
-	switch encoding {
+func SanitizeMetricNameByEncoding(name, mode string) (string, bool) {
+	switch mode {
 	case "utf8":
 		return sanitizeMetricNameUTF8(name)
 	default:
@@ -134,8 +134,8 @@ func SanitizeMetricNameByEncoding(name, encoding string) (string, bool) {
 
 // SanitizeLabelNameByEncoding sanitizes label names according to the configured
 // name sanitization mode.
-func SanitizeLabelNameByEncoding(name, encoding string) (string, bool) {
-	switch encoding {
+func SanitizeLabelNameByEncoding(name, mode string) (string, bool) {
+	switch mode {
 	case "utf8":
 		return sanitizeLabelNameUTF8(name)
 	default:

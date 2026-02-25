@@ -58,14 +58,6 @@ type Collector struct {
 	expireTicker *time.Ticker
 }
 
-func (c *Collector) sanitizeMetricName(name string) (string, bool) {
-	return serializers_prometheus.SanitizeMetricNameByEncoding(name, c.NameSanitization)
-}
-
-func (c *Collector) sanitizeLabelName(name string) (string, bool) {
-	return serializers_prometheus.SanitizeLabelNameByEncoding(name, c.NameSanitization)
-}
-
 func NewCollector(
 	expire time.Duration,
 	stringsAsLabel, exportTimestamp bool,
@@ -423,4 +415,12 @@ func (c *Collector) Expire(now time.Time) {
 			}
 		}
 	}
+}
+
+func (c *Collector) sanitizeMetricName(name string) (string, bool) {
+	return serializers_prometheus.SanitizeMetricNameByEncoding(name, c.NameSanitization)
+}
+
+func (c *Collector) sanitizeLabelName(name string) (string, bool) {
+	return serializers_prometheus.SanitizeLabelNameByEncoding(name, c.NameSanitization)
 }
