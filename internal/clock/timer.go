@@ -36,7 +36,6 @@ func NewTimer(interval, jitter time.Duration) *Timer {
 		interval: interval,
 		jitter:   jitter,
 	}
-	t.start()
 	return t
 }
 
