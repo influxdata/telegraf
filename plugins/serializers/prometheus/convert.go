@@ -101,16 +101,20 @@ func SanitizeLabelName(name string) (string, bool) {
 	return sanitize(name, labelNameTable)
 }
 
-// SanitizeMetricNameUTF8 checks if the name is a valid Prometheus metric name using UTF-8 validation.
-func SanitizeMetricNameUTF8(name string) (string, bool) {
+// sanitizeMetricNameUTF8 checks if the name is a valid Prometheus metric name
+// using UTF-8 validation. If the name is invalid (including non-UTF-8 input),
+// it falls back to legacy ASCII sanitization.
+func sanitizeMetricNameUTF8(name string) (string, bool) {
 	if model.UTF8Validation.IsValidMetricName(name) {
 		return name, true
 	}
 	return sanitize(name, metricNameTable)
 }
 
-// SanitizeLabelNameUTF8 checks if the name is a valid Prometheus label name using UTF-8 validation.
-func SanitizeLabelNameUTF8(name string) (string, bool) {
+// sanitizeLabelNameUTF8 checks if the name is a valid Prometheus label name
+// using UTF-8 validation. If the name is invalid (including non-UTF-8 input),
+// it falls back to legacy ASCII sanitization.
+func sanitizeLabelNameUTF8(name string) (string, bool) {
 	if model.UTF8Validation.IsValidLabelName(name) {
 		return name, true
 	}
@@ -121,7 +125,7 @@ func SanitizeLabelNameUTF8(name string) (string, bool) {
 // configured name sanitization mode.
 func SanitizeMetricNameByEncoding(name, encoding string) (string, bool) {
 	if encoding == "utf8" {
-		return SanitizeMetricNameUTF8(name)
+		return sanitizeMetricNameUTF8(name)
 	}
 	return SanitizeMetricName(name)
 }
@@ -130,7 +134,7 @@ func SanitizeMetricNameByEncoding(name, encoding string) (string, bool) {
 // name sanitization mode.
 func SanitizeLabelNameByEncoding(name, encoding string) (string, bool) {
 	if encoding == "utf8" {
-		return SanitizeLabelNameUTF8(name)
+		return sanitizeLabelNameUTF8(name)
 	}
 	return SanitizeLabelName(name)
 }

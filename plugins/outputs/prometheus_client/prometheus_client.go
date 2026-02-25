@@ -105,6 +105,8 @@ func (p *PrometheusClient) Init() error {
 	}
 
 	switch p.NameSanitization {
+	case "":
+		p.NameSanitization = defaultNameSanitization
 	case "legacy", "utf8":
 		// Valid sanitization modes.
 	default:

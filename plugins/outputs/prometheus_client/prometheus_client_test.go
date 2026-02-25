@@ -19,7 +19,6 @@ func TestLandingPage(t *testing.T) {
 		Listen:            ":0",
 		CollectorsExclude: []string{"process"},
 		MetricVersion:     1,
-		NameSanitization:  defaultNameSanitization,
 		Log:               &testutil.Logger{Name: "outputs.prometheus_client"},
 	}
 	expected := "Telegraf Output Plugin: Prometheus Client"
@@ -93,9 +92,8 @@ func TestFormatHeader(t *testing.T) {
 
 	// Setup the plugin
 	plugin := PrometheusClient{
-		Listen:           ":0",
-		NameSanitization: defaultNameSanitization,
-		Log:              testutil.Logger{Name: "outputs.prometheus_client"},
+		Listen: ":0",
+		Log:    testutil.Logger{Name: "outputs.prometheus_client"},
 	}
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -129,15 +127,23 @@ func TestNameSanitizationValidation(t *testing.T) {
 	tests := []struct {
 		name             string
 		nameSanitization string
+		expected         string
 		err              string
 	}{
 		{
 			name:             "legacy",
 			nameSanitization: "legacy",
+			expected:         "legacy",
 		},
 		{
 			name:             "utf8",
 			nameSanitization: "utf8",
+			expected:         "utf8",
+		},
+		{
+			name:             "empty value defaults to legacy",
+			nameSanitization: "",
+			expected:         defaultNameSanitization,
 		},
 		{
 			name:             "invalid value",
@@ -163,7 +169,7 @@ func TestNameSanitizationValidation(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			require.Equal(t, tt.nameSanitization, plugin.NameSanitization)
+			require.Equal(t, tt.expected, plugin.NameSanitization)
 		})
 	}
 }

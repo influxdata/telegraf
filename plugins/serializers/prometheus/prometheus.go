@@ -16,8 +16,6 @@ type Serializer struct {
 	FormatConfig
 }
 
-const defaultNameSanitization = "legacy"
-
 // FormatConfig contains the configuration for the Prometheus serializer.
 type FormatConfig struct {
 	ExportTimestamp bool `toml:"prometheus_export_timestamp"`
@@ -71,7 +69,7 @@ func (mt *MetricTypes) DetermineType(name string, m telegraf.Metric) telegraf.Va
 func (s *Serializer) Init() error {
 	switch s.NameSanitization {
 	case "":
-		s.NameSanitization = defaultNameSanitization
+		s.NameSanitization = "legacy"
 	case "legacy", "utf8":
 		// Valid sanitization modes.
 	default:
