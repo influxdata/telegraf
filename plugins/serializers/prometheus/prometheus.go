@@ -26,7 +26,8 @@ type FormatConfig struct {
 	// helps to reduce payload size.
 	CompactEncoding bool        `toml:"prometheus_compact_encoding"`
 	TypeMappings    MetricTypes `toml:"prometheus_metric_types"`
-	// NameSanitization defines whether to allow UTF-8 characters in metric names and label names.
+	// NameSanitization controls how metric names and label names are sanitized.
+	// Valid values: "legacy" (ASCII-only rules), "utf8" (allows UTF-8 names).
 	NameSanitization string `toml:"prometheus_name_sanitization"`
 }
 

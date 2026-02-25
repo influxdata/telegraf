@@ -844,6 +844,25 @@ func TestExportTimestamps(t *testing.T) {
 	}
 }
 
+func TestCollectionLegacyDropsUTF8OnlyNames(t *testing.T) {
+	c := NewCollection(FormatConfig{NameSanitization: "legacy"})
+	c.Add(
+		testutil.MustMetric(
+			"温度-指标",
+			map[string]string{"主机-名": "example.org"},
+			map[string]interface{}{"数值-值": 42.0},
+			time.Unix(0, 0),
+		),
+		time.Unix(0, 0),
+	)
+
+	// In legacy mode, purely UTF-8 metric names are sanitized to underscores
+	// which get trimmed to empty strings, causing the metric to be dropped.
+	// In contrast, TestCollectionUTF8NameSanitization shows these names
+	// are preserved in utf8 mode.
+	require.Empty(t, c.GetProto())
+}
+
 func TestCollectionUTF8NameSanitization(t *testing.T) {
 	c := NewCollection(FormatConfig{NameSanitization: "utf8"})
 	c.Add(

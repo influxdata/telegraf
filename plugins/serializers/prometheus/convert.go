@@ -124,19 +124,23 @@ func sanitizeLabelNameUTF8(name string) (string, bool) {
 // SanitizeMetricNameByEncoding sanitizes metric names according to the
 // configured name sanitization mode.
 func SanitizeMetricNameByEncoding(name, encoding string) (string, bool) {
-	if encoding == "utf8" {
+	switch encoding {
+	case "utf8":
 		return sanitizeMetricNameUTF8(name)
+	default:
+		return SanitizeMetricName(name)
 	}
-	return SanitizeMetricName(name)
 }
 
 // SanitizeLabelNameByEncoding sanitizes label names according to the configured
 // name sanitization mode.
 func SanitizeLabelNameByEncoding(name, encoding string) (string, bool) {
-	if encoding == "utf8" {
+	switch encoding {
+	case "utf8":
 		return sanitizeLabelNameUTF8(name)
+	default:
+		return SanitizeLabelName(name)
 	}
-	return SanitizeLabelName(name)
 }
 
 // MetricName returns the Prometheus metric name.
