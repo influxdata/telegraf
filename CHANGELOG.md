@@ -1,6 +1,14 @@
 <!-- markdownlint-disable MD013 MD024 -->
 # Changelog
 
+## Unreleased
+
+### Important Changes
+
+- PR [#17961](https://github.com/influxdata/telegraf/pull/17961) makes the
+ **strict environment variable handling the default**! In case you need the old
+ behavior you can opt-out using the `--non-strict-env-handling` flag.
+
 ## v1.37.3 [2026-02-23]
 
 ### Bugfixes

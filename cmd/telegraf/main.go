@@ -235,9 +235,9 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			return errors.New("flags --strict-env-handling and --non-strict-env-handling cannot be used together")
 		}
 		if !cCtx.Bool("strict-env-handling") && !cCtx.Bool("non-strict-env-handling") {
-			msg := "Strict environment variable handling will be the new default starting with v1.38.0! " +
-				"If your configuration works with strict handling or you don't use environment variables it is safe " +
-				"to ignore this warning. Otherwise please explicitly add the --non-strict-env-handling flag!"
+			msg := "Strict environment variable handling is the new default starting with v1.38.0! " +
+				"If your configuration does not works with strict handling please explicitly add " +
+				"the --non-strict-env-handling flag to switch to the previous behavior!"
 			log.Println("W! " + color.YellowString(msg))
 		}
 
@@ -260,7 +260,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			plugindDir:              cCtx.String("plugin-directory"),
 			password:                cCtx.String("password"),
 			oldEnvBehavior:          cCtx.Bool("old-env-behavior"),
-			nonStrictEnvVars:        !cCtx.Bool("strict-env-handling"),
+			nonStrictEnvVars:        cCtx.Bool("non-strict-env-handling"),
 			printPluginConfigSource: cCtx.Bool("print-plugin-config-source"),
 			test:                    cCtx.Bool("test"),
 			debug:                   cCtx.Bool("debug"),
