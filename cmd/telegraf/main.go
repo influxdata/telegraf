@@ -236,7 +236,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		}
 		if !cCtx.Bool("strict-env-handling") && !cCtx.Bool("non-strict-env-handling") {
 			msg := "Strict environment variable handling is the new default starting with v1.38.0! " +
-				"If your configuration does not works with strict handling please explicitly add " +
+				"If your configuration does not work with strict handling please explicitly add " +
 				"the --non-strict-env-handling flag to switch to the previous behavior!"
 			log.Println("W! " + color.YellowString(msg))
 		}
