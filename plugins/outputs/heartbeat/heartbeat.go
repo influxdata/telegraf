@@ -210,7 +210,7 @@ func (h *Heartbeat) send() error {
 			h.message.ConfigSources = &sources
 		case "logs":
 			var entries []logEntry
-			if h.Logs.Limit == 0 || h.Logs.Limit > uint64(len(h.logEvents)) {
+			if h.Logs.Limit == 0 || h.Logs.Limit > uint64(len(logEvents)) {
 				entries = getLogEntriesUnlimited(logEvents)
 			} else {
 				entries = getLogEntriesLimited(logEvents, int(h.Logs.Limit))
