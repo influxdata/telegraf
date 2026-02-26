@@ -52,8 +52,8 @@ to use them.
   ## Logging information filtering, only applies if "logs" is added to "include"
   # [outputs.heartbeat.logs]
   #   ## Number of log entries to send (unlimited by default)
-  #   ## In case more log-entries are available entires with higher log levels
-  #   ## and more recent entires are preferred.
+  #   ## In case more log-entries are available entries with higher log levels
+  #   ## and more recent entries are preferred.
   #   # limit = 0
   #
   #   ## Minimum log-level for sending the entry
