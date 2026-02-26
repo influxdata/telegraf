@@ -105,7 +105,7 @@ When including `logs` in the message the actual log _messages_ are included.
 This comprises the log messages of _all_ plugins _and_ the agent itself being
 logged _after_ the `Connect` function of this plugin was called, i.e. you will
 not see any initialization or configuration errors in the heartbeat messages!
-You can limit the messages sent with in the optional `outputs.heartbeat.logs`
+You can limit the messages sent within the optional `outputs.heartbeat.logs`
 section where you can limit the messages by log-`level` or limit the number
 of messages included using the `limit` setting.
 
