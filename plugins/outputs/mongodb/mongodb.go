@@ -34,6 +34,7 @@ type MongoDB struct {
 	Password            config.Secret   `toml:"password"`
 	ServerSelectTimeout config.Duration `toml:"timeout"`
 	TTL                 config.Duration `toml:"ttl"`
+	WriteBatch          bool            `toml:"write_batch"`
 	Log                 telegraf.Logger `toml:"-"`
 	tls.ClientConfig
 
@@ -218,6 +219,19 @@ func (s *MongoDB) Connect() error {
 func (s *MongoDB) Write(metrics []telegraf.Metric) error {
 	ctx := context.Background()
 
+	if s.WriteBatch {
+		return s.writeBatch(ctx, metrics)
+	}
+
+	return s.writeIndividual(ctx, metrics)
+}
+
+func (s *MongoDB) Close() error {
+	ctx := context.Background()
+	return s.client.Disconnect(ctx)
+}
+
+func (s *MongoDB) writeIndividual(ctx context.Context, metrics []telegraf.Metric) error {
 	// Write one metric at a time
 	for _, metric := range metrics {
 		name := metric.Name()
@@ -231,15 +245,36 @@ func (s *MongoDB) Write(metrics []telegraf.Metric) error {
 
 		collection := s.client.Database(s.MetricDatabase).Collection(name)
 		if _, err := collection.InsertOne(ctx, &doc); err != nil {
-			return fmt.Errorf("getting collection %q failed: %w", metric.Name(), err)
+			return fmt.Errorf("inserting metric into collection %q failed: %w", name, err)
 		}
 	}
 	return nil
 }
 
-func (s *MongoDB) Close() error {
-	ctx := context.Background()
-	return s.client.Disconnect(ctx)
+func (s *MongoDB) writeBatch(ctx context.Context, metrics []telegraf.Metric) error {
+	// Collect metrics by name
+	batches := make(map[string][]interface{})
+	for _, m := range metrics {
+		name := m.Name()
+		batches[name] = append(batches[name], marshal(m))
+	}
+
+	// Write all metric of a collection at a time
+	for name, batch := range batches {
+		// Create a new collection if it doesn't exist
+		if !s.collections[name] {
+			if err := s.createCollection(ctx, name); err != nil {
+				return fmt.Errorf("creating time series collection %q failed: %w", name, err)
+			}
+		}
+		collection := s.client.Database(s.MetricDatabase).Collection(name)
+
+		// Write the batch at once
+		if _, err := collection.InsertMany(ctx, batch); err != nil {
+			return fmt.Errorf("inserting metrics into collection %q failed: %w", name, err)
+		}
+	}
+	return nil
 }
 
 func (s *MongoDB) createCollection(ctx context.Context, name string) error {
