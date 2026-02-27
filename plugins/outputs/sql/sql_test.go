@@ -208,7 +208,7 @@ func TestMysqlIntegration(t *testing.T) {
 	for _, fn := range files {
 		expected, err := os.ReadFile(fn)
 		require.NoError(t, err)
-		expected = sanitze(expected, removalMariadb)
+		expected = sanitize(expected, removalMariadb)
 
 		require.Eventually(t, func() bool {
 			rc, out, err := container.Exec([]string{
@@ -377,7 +377,7 @@ func TestMysqlIntegrationSendBatch(t *testing.T) {
 	for _, fn := range files {
 		expected, err := os.ReadFile(fn)
 		require.NoError(t, err)
-		expected = sanitze(expected, removalMariadb)
+		expected = sanitize(expected, removalMariadb)
 
 		require.Eventually(t, func() bool {
 			rc, out, err := container.Exec([]string{
@@ -459,7 +459,7 @@ func TestPostgresIntegration(t *testing.T) {
 
 	expected, err := os.ReadFile("./testdata/postgres/expected.sql")
 	require.NoError(t, err)
-	expected = sanitze(expected, removalPostgres)
+	expected = sanitize(expected, removalPostgres)
 
 	require.Eventually(t, func() bool {
 		rc, out, err := container.Exec([]string{
@@ -627,7 +627,7 @@ func TestPostgresIntegrationSendBatch(t *testing.T) {
 
 	expected, err := os.ReadFile("./testdata/postgres/expected.sql")
 	require.NoError(t, err)
-	expected = sanitze(expected, removalPostgres)
+	expected = sanitize(expected, removalPostgres)
 
 	require.Eventually(t, func() bool {
 		rc, out, err := container.Exec([]string{
@@ -1186,7 +1186,7 @@ func TestMysqlEmptyTimestampColumnIntegration(t *testing.T) {
 	for _, fn := range files {
 		expected, err := os.ReadFile(fn)
 		require.NoError(t, err)
-		expected = sanitze(expected, removalMariadb)
+		expected = sanitize(expected, removalMariadb)
 
 		require.Eventually(t, func() bool {
 			rc, out, err := container.Exec([]string{
@@ -1216,7 +1216,6 @@ func TestTimestampOnUpdateSchema(t *testing.T) {
 	require.Equal(t, expected, results)
 }
 
-/* INTERNAL */
 var (
 	removalMariadb = []*regexp.Regexp{
 		regexp.MustCompile(`^(?i)SET\s.*$`), // metadata
@@ -1241,7 +1240,7 @@ func dumpEquals(t *testing.T, expected []byte, out io.Reader, remove []*regexp.R
 	}
 
 	// Sanitize the dump
-	dumpSanitized := sanitze(dump, remove)
+	dumpSanitized := sanitize(dump, remove)
 
 	matches := bytes.Contains(dumpSanitized, expected)
 	if !matches {
@@ -1250,21 +1249,21 @@ func dumpEquals(t *testing.T, expected []byte, out io.Reader, remove []*regexp.R
 	return matches
 }
 
-func sanitze(in []byte, remove []*regexp.Regexp) []byte {
+func sanitize(in []byte, remove []*regexp.Regexp) []byte {
 	var out bytes.Buffer
 
 	// Iterate line-wise over the input and remove all lines matching any of
 	// removal expressions
 	out.Grow(len(in))
 	for line := range bytes.Lines(in) {
-		matches := len(remove) == 0
+		keep := true
 		for _, re := range remove {
 			if re.Match(bytes.TrimSpace(line)) {
-				matches = true
+				keep = false
 				break
 			}
 		}
-		if !matches {
+		if keep {
 			out.Write(line)
 		}
 	}
