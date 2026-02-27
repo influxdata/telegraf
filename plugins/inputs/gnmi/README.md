@@ -87,6 +87,9 @@ details on how to use them.
   ## Only receive updates for the state, also suppresses receiving the initial state
   # updates_only = false
 
+  ## Emit a metric for "delete" messages
+  # emit_delete_metrics = false
+
   ## Enforces the namespace of the first element as origin for aliases and
   ## response paths, required for backward compatibility.
   ## NOTE: Set to 'false' if possible but be aware that this might change the path tag!

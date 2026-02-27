@@ -50,6 +50,7 @@ type GNMI struct {
 	Prefix                        string            `toml:"prefix"`
 	Target                        string            `toml:"target"`
 	UpdatesOnly                   bool              `toml:"updates_only"`
+	EmitDeleteMetrics             bool              `toml:"emit_delete_metrics"`
 	VendorSpecific                []string          `toml:"vendor_specific"`
 	Username                      config.Secret     `toml:"username"`
 	Password                      config.Secret     `toml:"password"`
@@ -276,6 +277,7 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 				tagsubs:                       c.TagSubscriptions,
 				maxMsgSize:                    int(c.MaxMsgSize),
 				vendorExt:                     c.VendorSpecific,
+				emitDeleteMetrics:             c.EmitDeleteMetrics,
 				tagStore:                      newTagStore(c.TagSubscriptions),
 				trace:                         c.Trace,
 				canonicalFieldNames:           c.CanonicalFieldNames,
