@@ -33,7 +33,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Kinds of objects to monitor: "counters" (named counters), "sets",
   ## (named sets), "anonymous-counters" (on commented rules).
-  # include = [ "counters", "sets", "anonymous-counters" ]
+  # include = ["anonymous-counters"]
 ```
 
 Since telegraf will fork a process to run nftables, `AmbientCapabilities` is
