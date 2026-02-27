@@ -10,14 +10,13 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestSelectServerIncludeFilter(t *testing.T) {
+func TestSelectServer(t *testing.T) {
 	tests := []struct {
-		name            string
-		include         []string
-		exclude         []string
-		servers         speedtest.Servers
-		expectedID      string
-		expectedErrText string
+		name       string
+		include    []string
+		exclude    []string
+		servers    speedtest.Servers
+		expectedID string
 	}{
 		{
 			name: "no filter selects lowest latency",
@@ -47,15 +46,6 @@ func TestSelectServerIncludeFilter(t *testing.T) {
 				{ID: "3", Latency: 15 * time.Millisecond},
 			},
 			expectedID: "3",
-		},
-		{
-			name:    "include filter with no match returns error",
-			include: []string{"99"},
-			servers: speedtest.Servers{
-				{ID: "1", Latency: 10 * time.Millisecond},
-				{ID: "2", Latency: 20 * time.Millisecond},
-			},
-			expectedErrText: "filter excluded all servers",
 		},
 		{
 			name:    "exclude filter skips excluded server",
@@ -89,15 +79,24 @@ func TestSelectServerIncludeFilter(t *testing.T) {
 			require.NoError(t, plugin.Init())
 			plugin.servers = tt.servers
 
-			err := plugin.selectServer()
-			if tt.expectedErrText != "" {
-				require.ErrorContains(t, err, tt.expectedErrText)
-				return
-			}
-			require.NoError(t, err)
+			require.NoError(t, plugin.selectServer())
 			require.Equal(t, tt.expectedID, plugin.server.ID)
 		})
 	}
+}
+
+func TestSelectServerError(t *testing.T) {
+	plugin := &InternetSpeed{
+		ServerIDInclude: []string{"99"},
+		Log:             testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	plugin.servers = speedtest.Servers{
+		{ID: "1", Latency: 10 * time.Millisecond},
+		{ID: "2", Latency: 20 * time.Millisecond},
+	}
+
+	require.ErrorContains(t, plugin.selectServer(), "filter excluded all servers")
 }
 
 func TestGathering(t *testing.T) {
