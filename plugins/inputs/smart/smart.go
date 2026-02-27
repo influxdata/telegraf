@@ -902,9 +902,9 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 					if err := parse(fields, deviceFields, matches[2]); err != nil {
 						continue
 					}
-					if field, ok := nvmeDeviceFields[attr.Name]; ok {
-						if rawValue, ok := fields["raw_value"]; ok {
-							deviceFields[field] = rawValue
+					if name, found := nvmeDeviceFields[attr.Name]; found {
+						if v, found := fields["raw_value"]; found {
+							deviceFields[name] = v
 						}
 					}
 					// if the field is classified as an attribute, only add it
