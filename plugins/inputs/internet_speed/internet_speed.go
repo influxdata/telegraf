@@ -182,11 +182,16 @@ func (is *InternetSpeed) selectServer() error {
 		if !is.serverFilter.Match(server.ID) {
 			continue
 		}
-		if server.Latency > 0 && server.Latency.Milliseconds() < minLatency {
+		if selectIndex == -1 {
+			// Select the first server we found and store the latency if it is valid
+			selectIndex = index
+			if server.Latency > 0 {
+				minLatency = server.Latency.Milliseconds()
+			}
+		} else if server.Latency > 0 && server.Latency.Milliseconds() < minLatency {
+			// Select the server if it has a lower latency than the previous one
+			selectIndex = index
 			minLatency = server.Latency.Milliseconds()
-			selectIndex = index
-		} else if selectIndex == -1 {
-			selectIndex = index
 		}
 	}
 
