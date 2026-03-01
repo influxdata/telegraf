@@ -10,31 +10,31 @@ import (
 	"slices"
 
 	vault "github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/api/auth/approle"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/secretstores"
+	"github.com/influxdata/telegraf/plugins/secretstores/vault/auth"
 )
 
 //go:embed sample.conf
 var sampleConfig string
 
 type Vault struct {
-	ID         string   `toml:"id"`
-	Address    string   `toml:"address"`
-	MountPath  string   `toml:"mount_path"`
-	SecretPath string   `toml:"secret_path"`
-	Engine     string   `toml:"engine"`
-	AppRole    *appRole `toml:"approle"`
+	ID         string `toml:"id"`
+	Address    string `toml:"address"`
+	MountPath  string `toml:"mount_path"`
+	SecretPath string `toml:"secret_path"`
+	Engine     string `toml:"engine"`
 
+	AppRole    *auth.AppRole    `toml:"approle"`
+	AwsEC2     *auth.AwsEC2     `toml:"aws_ec2"`
+	AwsIAM     *auth.AwsIAM     `toml:"aws_iam"`
+	Azure      *auth.Azure      `toml:"azure"`
+	Kubernetes *auth.Kubernetes `toml:"kubernetes"`
+	UserPass   *auth.UserPass   `toml:"userpass"`
+
+	auth   auth.VaultAuth
 	client *vault.Client
-}
-
-type appRole struct {
-	RoleID          string        `toml:"role_id"`
-	ResponseWrapped bool          `toml:"response_wrapped"`
-	Secret          config.Secret `toml:"secret"`
 }
 
 func (*Vault) SampleConfig() string {
@@ -50,9 +50,10 @@ func (v *Vault) Init() error {
 		return fmt.Errorf("unsupported engine: %s", v.Engine)
 	}
 
-	if v.AppRole == nil {
-		return errors.New("approle configuration missing")
+	if err := v.validateAuth(); err != nil {
+		return err
 	}
+
 	if v.ID == "" {
 		return errors.New("id missing")
 	}
@@ -75,7 +76,64 @@ func (v *Vault) Init() error {
 
 	v.client = client
 
-	return v.authenticate()
+	authInfo, err := v.auth.Authenticate(v.client)
+	if err != nil {
+		return err
+	}
+
+	if renewable, err := authInfo.TokenIsRenewable(); renewable && err == nil {
+		watcher, err := v.client.NewLifetimeWatcher(&vault.LifetimeWatcherInput{Secret: authInfo})
+		if err != nil {
+			return fmt.Errorf("unable to initialize Vault lifetime watcher: %w", err)
+		}
+		go watcher.Start()
+	}
+
+	return nil
+}
+
+func (v *Vault) validateAuth() error {
+	if v.AppRole != nil {
+		if v.auth != nil {
+			return errors.New("must only specify one authentication method")
+		}
+		v.auth = v.AppRole
+	}
+	if v.AwsEC2 != nil {
+		if v.auth != nil {
+			return errors.New("must only specify one authentication method")
+		}
+		v.auth = v.AwsEC2
+	}
+	if v.AwsIAM != nil {
+		if v.auth != nil {
+			return errors.New("must only specify one authentication method")
+		}
+		v.auth = v.AwsIAM
+	}
+	if v.Azure != nil {
+		if v.auth != nil {
+			return errors.New("must only specify one authentication method")
+		}
+		v.auth = v.Azure
+	}
+	if v.Kubernetes != nil {
+		if v.auth != nil {
+			return errors.New("must only specify one authentication method")
+		}
+		v.auth = v.Kubernetes
+	}
+	if v.UserPass != nil {
+		if v.auth != nil {
+			return errors.New("must only specify one authentication method")
+		}
+		v.auth = v.UserPass
+	}
+
+	if v.auth == nil {
+		return errors.New("no auth method set")
+	}
+	return v.auth.Validate()
 }
 
 func (v *Vault) Get(key string) ([]byte, error) {
@@ -129,41 +187,6 @@ func (v *Vault) GetResolver(key string) (telegraf.ResolveFunc, error) {
 		return s, true, err
 	}
 	return resolver, nil
-}
-
-func (v *Vault) authenticate() error {
-	secret, err := v.AppRole.Secret.Get()
-	if err != nil {
-		return fmt.Errorf("getting secret failed: %w", err)
-	}
-	secretID := &approle.SecretID{FromString: secret.String()}
-	defer secret.Destroy()
-
-	opts := make([]approle.LoginOption, 0)
-	if v.AppRole.ResponseWrapped {
-		opts = append(opts, approle.WithWrappingToken())
-	}
-
-	appRoleAuth, err := approle.NewAppRoleAuth(v.AppRole.RoleID, secretID, opts...)
-	if err != nil {
-		return fmt.Errorf("unable to initialize AppRole auth method: %w", err)
-	}
-
-	authInfo, err := v.client.Auth().Login(context.Background(), appRoleAuth)
-	if err != nil {
-		return fmt.Errorf("unable to login to AppRole auth method: %w", err)
-	}
-	if authInfo == nil {
-		return errors.New("no auth info was returned after login")
-	}
-
-	watcher, err := v.client.NewLifetimeWatcher(&vault.LifetimeWatcherInput{Secret: authInfo})
-	if err != nil {
-		return fmt.Errorf("unable to initialize Vault lifetime watcher: %w", err)
-	}
-	go watcher.Start()
-
-	return nil
 }
 
 func (v *Vault) getSecret() (*vault.KVSecret, error) {

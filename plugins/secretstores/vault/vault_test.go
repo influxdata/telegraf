@@ -14,6 +14,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/vault"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/secretstores/vault/auth"
 )
 
 func createContainer(t *testing.T, initCommands []string) (*vault.VaultContainer, func()) {
@@ -155,7 +156,7 @@ func TestIntegrationKVv1(t *testing.T) {
 		MountPath:  mountPath,
 		SecretPath: secretPath,
 		Engine:     "kv-v1",
-		AppRole: &appRole{
+		AppRole: &auth.AppRole{
 			RoleID: getRoleID(t, container),
 			Secret: config.NewSecret([]byte(getSecretID(t, container))),
 		},
@@ -192,7 +193,7 @@ func TestIntegrationKVv2(t *testing.T) {
 		Address:    addr,
 		MountPath:  mountPath,
 		SecretPath: secretPath,
-		AppRole: &appRole{
+		AppRole: &auth.AppRole{
 			RoleID: getRoleID(t, container),
 			Secret: config.NewSecret([]byte(getSecretID(t, container))),
 		},
@@ -229,7 +230,7 @@ func TestIntegrationAppRoleSecretWrapped(t *testing.T) {
 		Address:    addr,
 		MountPath:  mountPath,
 		SecretPath: secretPath,
-		AppRole: &appRole{
+		AppRole: &auth.AppRole{
 			RoleID:          getRoleID(t, container),
 			Secret:          config.NewSecret([]byte(getWrappedSecretID(t, container))),
 			ResponseWrapped: true,
