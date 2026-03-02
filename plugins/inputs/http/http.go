@@ -116,9 +116,16 @@ func (h *HTTP) Stop() {
 //	error: Any error that may have occurred
 func (h *HTTP) gatherURL(acc telegraf.Accumulator, url string) error {
 	body := makeRequestBodyReader(h.ContentEncoding, h.Body)
+	if body != nil {
+		defer body.Close()
+	}
+
 	request, err := http.NewRequest(h.Method, url, body)
 	if err != nil {
 		return err
+	}
+	if body != nil && h.ContentEncoding != "gzip" {
+		request.ContentLength = int64(len(h.Body))
 	}
 
 	if !h.Token.Empty() {
@@ -236,17 +243,17 @@ func (h *HTTP) setRequestAuth(request *http.Request) error {
 	return nil
 }
 
-func makeRequestBodyReader(contentEncoding, body string) io.Reader {
+func makeRequestBodyReader(contentEncoding, body string) io.ReadCloser {
 	if body == "" {
 		return nil
 	}
 
-	var reader io.Reader = strings.NewReader(body)
+	reader := strings.NewReader(body)
 	if contentEncoding == "gzip" {
 		return internal.CompressWithGzip(reader)
 	}
 
-	return reader
+	return io.NopCloser(reader)
 }
 
 func init() {
