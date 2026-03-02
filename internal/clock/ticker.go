@@ -19,6 +19,8 @@ type Ticker struct {
 	jitter   time.Duration
 	cancel   context.CancelFunc
 	wg       sync.WaitGroup
+
+	cfg *config
 }
 
 func NewTicker(interval, jitter, offset time.Duration, opt ...Option) *Ticker {
@@ -51,6 +53,7 @@ func NewTicker(interval, jitter, offset time.Duration, opt ...Option) *Ticker {
 		schedule: schedule,
 		interval: interval,
 		jitter:   jitter,
+		cfg:      cfg,
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -73,6 +76,11 @@ func (t *Ticker) Stop() {
 func (t *Ticker) run(ctx context.Context) {
 	// Start with the first scheduled tick
 	timer := t.clk.Timer(t.clk.Until(t.schedule) + internal.RandomDuration(t.jitter))
+	defer timer.Stop()
+
+	if t.cfg.notifier != nil {
+		t.cfg.notifier <- true
+	}
 
 	for {
 		select {
@@ -85,14 +93,12 @@ func (t *Ticker) run(ctx context.Context) {
 			timer.Reset(t.clk.Until(t.schedule) + internal.RandomDuration(t.jitter))
 
 			// Fire our event in a non-blocking fashion to avoid blocking the
-			// ticker if the agent code did not read the ticker channel yet.
+			// ticker if the agent code did not read the channel yet
 			select {
 			case t.C <- ts:
 			default:
 			}
 		case <-ctx.Done():
-			// Someone stopped the ticker so cleanup and leave
-			timer.Stop()
 			return
 		}
 	}

@@ -15,10 +15,13 @@ func TestUnalignedTicker(t *testing.T) {
 
 	clk := clock.NewMock()
 	clk.Add(1 * time.Second)
+
 	start := clk.Now()
 	end := start.Add(60 * time.Second)
 
-	ticker := NewTicker(interval, jitter, offset, WithClock(clk))
+	startup := make(chan bool, 1)
+
+	ticker := NewTicker(interval, jitter, offset, WithClock(clk), WithStartupNotification(startup))
 	defer ticker.Stop()
 
 	expected := []time.Time{
@@ -33,16 +36,14 @@ func TestUnalignedTicker(t *testing.T) {
 
 	actual := make([]time.Time, 0, len(expected))
 
-	// Wait for the first tick to avoid race conditions between updating the
-	// time and starting the timer.
-	tm := <-ticker.C
-	actual = append(actual, tm.UTC())
+	// Wait for the ticker to startup
+	<-startup
 
 	// Advance the clock and collect all ticks on the way
 	for !clk.Now().After(end) {
 		select {
-		case tm := <-ticker.C:
-			actual = append(actual, tm.UTC())
+		case ts := <-ticker.C:
+			actual = append(actual, ts.UTC())
 		default:
 			clk.Add(1 * time.Second)
 		}
@@ -70,8 +71,8 @@ func TestUnalignedTickerJitterBehavior(t *testing.T) {
 
 	for len(triggers) < numTicks {
 		select {
-		case tm := <-ticker.C:
-			triggers = append(triggers, tm)
+		case ts := <-ticker.C:
+			triggers = append(triggers, ts)
 		default:
 			clk.Add(1 * time.Second)
 		}
