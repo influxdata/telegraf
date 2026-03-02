@@ -46,7 +46,18 @@ to use them.
   ##   hostname   -- hostname of the instance running Telegraf
   ##   statistics -- number of metrics, logged errors and warnings, etc
   ##   configs    -- redacted list of configs loaded by this instance
+  ##   logs       -- detailed log-entries for this instance
   # include = ["hostname"]
+
+  ## Logging information filtering, only applies if "logs" is added to "include"
+  # [outputs.heartbeat.logs]
+  #   ## Number of log entries to send (unlimited by default)
+  #   ## In case more log-entries are available entries with higher log levels
+  #   ## and more recent entries are preferred.
+  #   # limit = 0
+  #
+  #   ## Minimum log-level for sending the entry
+  #   # level = "error"
 
   ## Additional HTTP headers
   # [outputs.heartbeat.headers]
@@ -87,5 +98,28 @@ configuration directory while a new configuration is added or removed.
 > Configuration URLs are redacted to remove the username and password
 > information. However, sensitive information might still be contained in the
 > URL or the path sent. Use with care!
+
+### Logging information
+
+When including `logs` in the message the actual log _messages_ are included.
+This comprises the log messages of _all_ plugins _and_ the agent itself being
+logged _after_ the `Connect` function of this plugin was called, i.e. you will
+not see any initialization or configuration errors in the heartbeat messages!
+You can limit the messages sent within the optional `outputs.heartbeat.logs`
+section where you can limit the messages by log-`level` or limit the number
+of messages included using the `limit` setting.
+
+> [!WARNING]
+> As the amount of log messages can be high, especially when configuring a low
+> level such as `info` the resulting heartbeat messages might be large. Restrict
+> the included messages by choosing a higher log-level and/or by using a limit!
+
+When setting the `level` option only messages with this or more severe levels
+are included.
+
+The `limit` setting allows to specify the maximum number of log-messages
+included in the heartbeat message. If the number of log-messages exceeds the
+given limit they are selected by the most severe level and most recent messages
+first.
 
 [schema]: /plugins/outputs/heartbeat/schema_v1.json

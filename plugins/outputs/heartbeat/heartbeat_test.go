@@ -79,6 +79,19 @@ func TestInitFail(t *testing.T) {
 			},
 			expected: "invalid 'include' setting",
 		},
+		{
+			name: "invalid log level",
+			plugin: &Heartbeat{
+				URL:        u,
+				InstanceID: "telegraf",
+				Interval:   config.Duration(10 * time.Second),
+				Logs: LogsConfig{
+					LogLevel: "foo",
+				},
+				Include: []string{"logs"},
+			},
+			expected: "invalid log-level",
+		},
 	}
 
 	for _, tt := range tests {
@@ -97,7 +110,7 @@ func TestIncludes(t *testing.T) {
 		URL:        u,
 		InstanceID: "telegraf",
 		Interval:   config.Duration(10 * time.Second),
-		Include:    []string{"configs", "hostname", "statistics"},
+		Include:    []string{"configs", "hostname", "logs", "statistics"},
 		Log:        &testutil.Logger{},
 	}
 
@@ -166,6 +179,7 @@ func TestIncludedExtraData(t *testing.T) {
 		"$VERSION", internal.FormatFullVersion(),
 		"$SCHEMA", strconv.Itoa(jsonSchemaVersion),
 		"$CONFIGS", strings.Join(cfgsExpected, ","),
+		"$LOGTIME", logtime.UTC().Format(time.RFC3339Nano),
 	)
 
 	tests := []struct {
@@ -216,8 +230,32 @@ func TestIncludedExtraData(t *testing.T) {
 			}`,
 		},
 		{
+			name:     "logs",
+			includes: []string{"logs"},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"logs": [
+					{
+						"time": "$LOGTIME",
+						"level": "ERROR",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test",
+							"source": "heartbeat",
+							"type": "testing"
+						},
+						"message": "An error message"
+					}
+				]
+			}`,
+		},
+		{
 			name:     "all",
-			includes: []string{"configs", "hostname", "statistics"},
+			includes: []string{"configs", "hostname", "logs", "statistics"},
 			expected: `{
 			  "id": "telegraf",
 			  "version": "$VERSION",
@@ -228,7 +266,22 @@ func TestIncludedExtraData(t *testing.T) {
 				"warnings": 2,
 				"metrics": 5
 			  },
-			  "configurations": [$CONFIGS]
+			  "configurations": [$CONFIGS],
+			  "logs": [
+				{
+				  "time": "$LOGTIME",
+				  "level": "ERROR",
+				  "source": "inputs.test::hbt",
+				  "attributes": {
+					"alias": "hbt",
+					"category": "inputs",
+					"plugin": "test",
+					"source": "heartbeat",
+					"type": "testing"
+				  },
+				  "message": "An error message"
+				}
+              ]
 			}`,
 		},
 	}
@@ -322,6 +375,822 @@ func TestIncludedExtraData(t *testing.T) {
 			var v interface{}
 			require.NoError(t, json.Unmarshal([]byte(actual), &v))
 			require.NoError(t, schema.Validate(v))
+		})
+	}
+}
+
+func TestDetailedLogging(t *testing.T) {
+	// Get the hostname for test-data construction
+	hostname, err := os.Hostname()
+	require.NoError(t, err)
+
+	// Prepare a string replacer to replace dynamic content such as the hostname
+	// in the expected strings
+	replacer := strings.NewReplacer(
+		"$HOSTNAME", hostname,
+		"$VERSION", internal.FormatFullVersion(),
+		"$SCHEMA", strconv.Itoa(jsonSchemaVersion),
+	)
+
+	// Prepare the logging time reference
+	logtime, err := time.Parse(time.RFC3339, "2025-10-22T16:02:30Z")
+	require.NoError(t, err)
+
+	tests := []struct {
+		name     string
+		source   string
+		attrs    map[string]interface{}
+		logcfg   LogsConfig
+		logs     []logEvent
+		expected string
+	}{
+		{
+			name:   "default config",
+			source: "inputs.test::hbt",
+			logs: []logEvent{
+				{
+					timestamp: logtime,
+					level:     telegraf.Error,
+					msg:       "An error message",
+				},
+				{
+					timestamp: logtime.Add(1 * time.Second),
+					level:     telegraf.Warn,
+					msg:       "A first warning",
+				},
+				{
+					timestamp: logtime.Add(2 * time.Second),
+					level:     telegraf.Info,
+					msg:       "An information",
+				},
+				{
+					timestamp: logtime.Add(3 * time.Second),
+					level:     telegraf.Debug,
+					msg:       "A debug information",
+				},
+				{
+					timestamp: logtime.Add(4 * time.Second),
+					level:     telegraf.Trace,
+					msg:       "A trace information",
+				},
+				{
+					timestamp: logtime.Add(5 * time.Second),
+					level:     telegraf.Warn,
+					msg:       "A second warning",
+				},
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"logs": [
+				  {
+					"time": "2025-10-22T16:02:30Z",
+					"level": "ERROR",
+					"source": "inputs.test::hbt",
+					"attributes": {
+					  "alias": "hbt",
+					  "category": "inputs",
+					  "plugin": "test"
+					},
+					"message": "An error message"
+				  }
+				]
+			}`,
+		},
+		{
+			name:   "warn level",
+			source: "inputs.test::hbt",
+			logcfg: LogsConfig{
+				LogLevel: "warn",
+			},
+			logs: []logEvent{
+				{
+					timestamp: logtime,
+					level:     telegraf.Error,
+					msg:       "An error message",
+				},
+				{
+					timestamp: logtime.Add(1 * time.Second),
+					level:     telegraf.Warn,
+					msg:       "A first warning",
+				},
+				{
+					timestamp: logtime.Add(2 * time.Second),
+					level:     telegraf.Info,
+					msg:       "An information",
+				},
+				{
+					timestamp: logtime.Add(3 * time.Second),
+					level:     telegraf.Debug,
+					msg:       "A debug information",
+				},
+				{
+					timestamp: logtime.Add(4 * time.Second),
+					level:     telegraf.Trace,
+					msg:       "A trace information",
+				},
+				{
+					timestamp: logtime.Add(5 * time.Second),
+					level:     telegraf.Warn,
+					msg:       "A second warning",
+				},
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"logs": [
+					{
+						"time": "2025-10-22T16:02:30Z",
+						"level": "ERROR",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "An error message"
+					},
+					{
+						"time": "2025-10-22T16:02:31Z",
+						"level": "WARN",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "A first warning"
+					},
+					{
+						"time": "2025-10-22T16:02:35Z",
+						"level": "WARN",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "A second warning"
+					}
+				]
+			}`,
+		},
+		{
+			name:   "info level",
+			source: "inputs.test::hbt",
+			logcfg: LogsConfig{
+				LogLevel: "info",
+			},
+			logs: []logEvent{
+				{
+					timestamp: logtime,
+					level:     telegraf.Error,
+					msg:       "An error message",
+				},
+				{
+					timestamp: logtime.Add(1 * time.Second),
+					level:     telegraf.Warn,
+					msg:       "A first warning",
+				},
+				{
+					timestamp: logtime.Add(2 * time.Second),
+					level:     telegraf.Info,
+					msg:       "An information",
+				},
+				{
+					timestamp: logtime.Add(3 * time.Second),
+					level:     telegraf.Debug,
+					msg:       "A debug information",
+				},
+				{
+					timestamp: logtime.Add(4 * time.Second),
+					level:     telegraf.Trace,
+					msg:       "A trace information",
+				},
+				{
+					timestamp: logtime.Add(5 * time.Second),
+					level:     telegraf.Warn,
+					msg:       "A second warning",
+				},
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"logs": [
+					{
+						"time": "2025-10-22T16:02:30Z",
+						"level": "ERROR",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "An error message"
+					},
+					{
+						"time": "2025-10-22T16:02:31Z",
+						"level": "WARN",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "A first warning"
+					},
+					{
+						"time": "2025-10-22T16:02:32Z",
+						"level": "INFO",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "An information"
+					},
+					{
+						"time": "2025-10-22T16:02:35Z",
+						"level": "WARN",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "A second warning"
+					}
+				]
+			}`,
+		},
+		{
+			name:   "debug level",
+			source: "inputs.test::hbt",
+			logcfg: LogsConfig{
+				LogLevel: "debug",
+			},
+			logs: []logEvent{
+				{
+					timestamp: logtime,
+					level:     telegraf.Error,
+					msg:       "An error message",
+				},
+				{
+					timestamp: logtime.Add(1 * time.Second),
+					level:     telegraf.Warn,
+					msg:       "A first warning",
+				},
+				{
+					timestamp: logtime.Add(2 * time.Second),
+					level:     telegraf.Info,
+					msg:       "An information",
+				},
+				{
+					timestamp: logtime.Add(3 * time.Second),
+					level:     telegraf.Debug,
+					msg:       "A debug information",
+				},
+				{
+					timestamp: logtime.Add(4 * time.Second),
+					level:     telegraf.Trace,
+					msg:       "A trace information",
+				},
+				{
+					timestamp: logtime.Add(5 * time.Second),
+					level:     telegraf.Warn,
+					msg:       "A second warning",
+				},
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"logs": [
+					{
+						"time": "2025-10-22T16:02:30Z",
+						"level": "ERROR",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "An error message"
+					},
+					{
+						"time": "2025-10-22T16:02:31Z",
+						"level": "WARN",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "A first warning"
+					},
+					{
+						"time": "2025-10-22T16:02:32Z",
+						"level": "INFO",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "An information"
+					},
+					{
+						"time": "2025-10-22T16:02:33Z",
+						"level": "DEBUG",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "A debug information"
+					},
+					{
+						"time": "2025-10-22T16:02:35Z",
+						"level": "WARN",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "A second warning"
+					}
+				]
+			}`,
+		},
+		{
+			name:   "trace level",
+			source: "inputs.test::hbt",
+			logcfg: LogsConfig{
+				LogLevel: "trace",
+			},
+			logs: []logEvent{
+				{
+					timestamp: logtime,
+					level:     telegraf.Error,
+					msg:       "An error message",
+				},
+				{
+					timestamp: logtime.Add(1 * time.Second),
+					level:     telegraf.Warn,
+					msg:       "A first warning",
+				},
+				{
+					timestamp: logtime.Add(2 * time.Second),
+					level:     telegraf.Info,
+					msg:       "An information",
+				},
+				{
+					timestamp: logtime.Add(3 * time.Second),
+					level:     telegraf.Debug,
+					msg:       "A debug information",
+				},
+				{
+					timestamp: logtime.Add(4 * time.Second),
+					level:     telegraf.Trace,
+					msg:       "A trace information",
+				},
+				{
+					timestamp: logtime.Add(5 * time.Second),
+					level:     telegraf.Warn,
+					msg:       "A second warning",
+				},
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"logs": [
+					{
+						"time": "2025-10-22T16:02:30Z",
+						"level": "ERROR",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "An error message"
+					},
+					{
+						"time": "2025-10-22T16:02:31Z",
+						"level": "WARN",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "A first warning"
+					},
+					{
+						"time": "2025-10-22T16:02:32Z",
+						"level": "INFO",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "An information"
+					},
+					{
+						"time": "2025-10-22T16:02:33Z",
+						"level": "DEBUG",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "A debug information"
+					},
+					{
+						"time": "2025-10-22T16:02:34Z",
+						"level": "TRACE",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "A trace information"
+					},
+					{
+						"time": "2025-10-22T16:02:35Z",
+						"level": "WARN",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "A second warning"
+					}
+				]
+			}`,
+		},
+		{
+			name:   "trace level with limit",
+			source: "inputs.test::hbt",
+			logcfg: LogsConfig{
+				LogLevel: "trace",
+				Limit:    3,
+			},
+			logs: []logEvent{
+				{
+					timestamp: logtime,
+					level:     telegraf.Error,
+					msg:       "An error message",
+				},
+				{
+					timestamp: logtime.Add(1 * time.Second),
+					level:     telegraf.Warn,
+					msg:       "A first warning",
+				},
+				{
+					timestamp: logtime.Add(2 * time.Second),
+					level:     telegraf.Info,
+					msg:       "An information",
+				},
+				{
+					timestamp: logtime.Add(3 * time.Second),
+					level:     telegraf.Debug,
+					msg:       "A debug information",
+				},
+				{
+					timestamp: logtime.Add(4 * time.Second),
+					level:     telegraf.Trace,
+					msg:       "A trace information",
+				},
+				{
+					timestamp: logtime.Add(5 * time.Second),
+					level:     telegraf.Warn,
+					msg:       "A second warning",
+				},
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"logs": [
+					{
+						"time": "2025-10-22T16:02:30Z",
+						"level": "ERROR",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "An error message"
+					},
+					{
+						"time": "2025-10-22T16:02:31Z",
+						"level": "WARN",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "A first warning"
+					},
+					{
+						"time": "2025-10-22T16:02:35Z",
+						"level": "WARN",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "A second warning"
+					}
+				]
+			}`,
+		},
+		{
+			name:   "limited with most recent error messages",
+			source: "inputs.test::hbt",
+			logcfg: LogsConfig{
+				LogLevel: "trace",
+				Limit:    3,
+			},
+			logs: []logEvent{
+				{
+					timestamp: logtime,
+					level:     telegraf.Error,
+					msg:       "A first error message",
+				},
+				{
+					timestamp: logtime.Add(1 * time.Second),
+					level:     telegraf.Error,
+					msg:       "A second error message",
+				},
+				{
+					timestamp: logtime.Add(2 * time.Second),
+					level:     telegraf.Error,
+					msg:       "A third error message",
+				},
+				{
+					timestamp: logtime.Add(3 * time.Second),
+					level:     telegraf.Warn,
+					msg:       "A first warning",
+				},
+				{
+					timestamp: logtime.Add(4 * time.Second),
+					level:     telegraf.Error,
+					msg:       "A fourth error message",
+				},
+				{
+					timestamp: logtime.Add(5 * time.Second),
+					level:     telegraf.Warn,
+					msg:       "A second warning",
+				},
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"logs": [
+					{
+						"time": "2025-10-22T16:02:31Z",
+						"level": "ERROR",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "A second error message"
+					},
+					{
+						"time": "2025-10-22T16:02:32Z",
+						"level": "ERROR",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "A third error message"
+					},
+					{
+						"time": "2025-10-22T16:02:34Z",
+						"level": "ERROR",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "A fourth error message"
+					}
+				]
+			}`,
+		},
+		{
+			name:   "limited with most recent warning messages",
+			source: "inputs.test::hbt",
+			logcfg: LogsConfig{
+				LogLevel: "trace",
+				Limit:    5,
+			},
+			logs: []logEvent{
+				{
+					timestamp: logtime,
+					level:     telegraf.Error,
+					msg:       "A first error message",
+				},
+				{
+					timestamp: logtime.Add(1 * time.Second),
+					level:     telegraf.Error,
+					msg:       "A second error message",
+				},
+				{
+					timestamp: logtime.Add(2 * time.Second),
+					level:     telegraf.Error,
+					msg:       "A third error message",
+				},
+				{
+					timestamp: logtime.Add(3 * time.Second),
+					level:     telegraf.Warn,
+					msg:       "A first warning",
+				},
+				{
+					timestamp: logtime.Add(4 * time.Second),
+					level:     telegraf.Error,
+					msg:       "A fourth error message",
+				},
+				{
+					timestamp: logtime.Add(5 * time.Second),
+					level:     telegraf.Warn,
+					msg:       "A second warning",
+				},
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"logs": [
+					{
+						"time": "2025-10-22T16:02:30Z",
+						"level": "ERROR",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "A first error message"
+					},
+					{
+						"time": "2025-10-22T16:02:31Z",
+						"level": "ERROR",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "A second error message"
+					},
+					{
+						"time": "2025-10-22T16:02:32Z",
+						"level": "ERROR",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "A third error message"
+					},
+					{
+						"time": "2025-10-22T16:02:34Z",
+						"level": "ERROR",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "A fourth error message"
+					},
+					{
+						"time": "2025-10-22T16:02:35Z",
+						"level": "WARN",
+						"source": "inputs.test::hbt",
+						"attributes": {
+							"alias": "hbt",
+							"category": "inputs",
+							"plugin": "test"
+						},
+						"message": "A second warning"
+					}
+				]
+			}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Inject dynamic content into the expectation
+			expected := replacer.Replace(tt.expected)
+
+			// Create a test server to validate the data sent
+			var receivedMessage string
+			var receivedMu sync.Mutex
+			var snapshot atomic.Bool
+			var done atomic.Bool
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPost {
+					t.Fail()
+					w.WriteHeader(http.StatusMethodNotAllowed)
+				}
+
+				// Decode the body
+				if snapshot.Swap(false) {
+					body, err := io.ReadAll(r.Body)
+					if err != nil {
+						t.Fail()
+						w.WriteHeader(http.StatusInternalServerError)
+					}
+					receivedMu.Lock()
+					receivedMessage = string(body)
+					receivedMu.Unlock()
+					done.Store(true)
+				}
+				w.WriteHeader(http.StatusOK)
+			}))
+			defer ts.Close()
+
+			// Initialize the plugin
+			u := config.NewSecret([]byte("http://" + ts.Listener.Addr().String()))
+			defer u.Destroy()
+
+			plugin := &Heartbeat{
+				URL:        u,
+				InstanceID: "telegraf",
+				Interval:   config.Duration(100 * time.Millisecond),
+				Include:    []string{"logs"},
+				Logs:       tt.logcfg,
+				Log:        &testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			// Register the logging handler early to avoid race conditions
+			// during testing. This is not ideal but the only way to get
+			// reliable tests without a race between the Connect call,
+			// registering the callback and the actual logging.
+			id, err := logger.AddCallback(plugin.handleLogEvent)
+			require.NoError(t, err)
+			defer logger.RemoveCallback(id)
+			plugin.logCallbackID = id
+
+			// Setup the logger
+			category, remaining, found := strings.Cut(tt.source, ".")
+			var name, alias string
+			if found {
+				name, alias, _ = strings.Cut(remaining, ":")
+				alias = strings.TrimLeft(alias, ":")
+			}
+			logger := logger.New(category, name, alias)
+			for k, v := range tt.attrs {
+				logger.AddAttribute(k, v)
+			}
+
+			// Log the given messages
+			for _, e := range tt.logs {
+				logger.Print(e.level, e.timestamp, e.msg)
+			}
+
+			// Start processing
+			snapshot.Store(true)
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
+
+			// Wait for the data to arrive at the test-server and check the
+			// payload we got.
+			require.Eventually(t, func() bool {
+				return done.Load()
+			}, 3*time.Second, 100*time.Millisecond)
+
+			receivedMu.Lock()
+			actual := receivedMessage
+			receivedMu.Unlock()
+			require.JSONEq(t, expected, actual, actual)
 		})
 	}
 }
@@ -462,7 +1331,7 @@ func TestSendingFail(t *testing.T) {
 		URL:        u,
 		InstanceID: "telegraf",
 		Interval:   config.Duration(250 * time.Millisecond),
-		Include:    []string{"statistics"},
+		Include:    []string{"logs", "statistics"},
 		Log:        &log,
 	}
 	require.NoError(t, plugin.Init())
@@ -514,10 +1383,25 @@ func TestSendingFail(t *testing.T) {
 		"version": "$VERSION",
 		"schema": $SCHEMA,
 		"statistics": {
-			"errors": 1,
-			"warnings": 2,
-			"metrics": 5
-		}
+		  "errors": 1,
+		  "warnings": 2,
+		  "metrics": 5
+		},
+        "logs": [
+		  {
+			"time": "$LOGTIME",
+			"level": "ERROR",
+			"source": "inputs.test::hbt",
+			"attributes": {
+			  "alias": "hbt",
+			  "category": "inputs",
+			  "plugin": "test",
+			  "source": "heartbeat",
+			  "type": "testing"
+			},
+			"message": "An error message"
+		  }
+        ]
 	}`)
 
 	receivedMu.Lock()
@@ -586,4 +1470,12 @@ func TestSendingFail(t *testing.T) {
 	require.Equal(t, uint64(2), msg.Statistics.Metrics)
 	require.Equal(t, uint64(5), msg.Statistics.Errors)
 	require.Equal(t, uint64(0), msg.Statistics.Warnings)
+	require.NotNil(t, msg.Logs)
+	require.NotEmpty(t, *msg.Logs)
+	logmsg := make([]string, 0, len(*msg.Logs))
+	for _, e := range *msg.Logs {
+		logmsg = append(logmsg, e.Message)
+	}
+	require.Contains(t, logmsg, "An error message logged during failing sends")
+	require.Contains(t, logmsg, "Another error message logged during failing sends")
 }

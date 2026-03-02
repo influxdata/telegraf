@@ -35,6 +35,7 @@ type Heartbeat struct {
 	Token      config.Secret             `toml:"token"`
 	Interval   config.Duration           `toml:"interval"`
 	Include    []string                  `toml:"include"`
+	Logs       LogsConfig                `toml:"logs"`
 	Headers    map[string]*config.Secret `toml:"headers"`
 	Log        telegraf.Logger           `toml:"-"`
 	common_http.HTTPClientConfig
@@ -45,10 +46,13 @@ type Heartbeat struct {
 	wg            sync.WaitGroup
 
 	// Output message parts
-	message message
+	message   message
+	logEvents []*logEvent
 
 	// Statistics
 	stats statistics
+
+	sync.Mutex
 }
 
 func (*Heartbeat) SampleConfig() string {
@@ -86,6 +90,16 @@ func (h *Heartbeat) Init() error {
 				return fmt.Errorf("getting hostname failed: %w", err)
 			}
 			h.message.Hostname = host
+		case "logs":
+			// Set default log level if necessary
+			if h.Logs.LogLevel == "" {
+				h.Logs.LogLevel = "error"
+			}
+			h.Logs.level = telegraf.LogLevelFromString(h.Logs.LogLevel)
+			if h.Logs.level == telegraf.None && h.Logs.LogLevel != "" && h.Logs.LogLevel != "none" {
+				return fmt.Errorf("invalid log-level %q", h.Logs.LogLevel)
+			}
+
 		default:
 			return fmt.Errorf("invalid 'include' setting %q", inc)
 		}
@@ -96,7 +110,7 @@ func (h *Heartbeat) Init() error {
 
 func (h *Heartbeat) Connect() error {
 	// Make sure we register a logging callback if we need to collect logs
-	if slices.Contains(h.Include, "statistics") && h.logCallbackID == "" {
+	if (slices.Contains(h.Include, "logs") || slices.Contains(h.Include, "statistics")) && h.logCallbackID == "" {
 		id, err := logger.AddCallback(h.handleLogEvent)
 		if err != nil {
 			return fmt.Errorf("registering logging callback failed: %w", err)
@@ -170,6 +184,9 @@ func (h *Heartbeat) Write(metrics []telegraf.Metric) error {
 func (h *Heartbeat) send() error {
 	// Snapshot the current information state for sending the message
 	snapshot := h.stats.snapshot()
+	h.Lock()
+	logEvents := h.logEvents
+	h.Unlock()
 
 	// Add the last successful update timestamp if any previous update failed
 	if snapshot.lastUpdateFailed {
@@ -191,6 +208,14 @@ func (h *Heartbeat) send() error {
 		case "configs":
 			sources := config.GetSources()
 			h.message.ConfigSources = &sources
+		case "logs":
+			var entries []logEntry
+			if h.Logs.Limit == 0 || h.Logs.Limit > uint64(len(logEvents)) {
+				entries = getLogEntriesUnlimited(logEvents)
+			} else {
+				entries = getLogEntriesLimited(logEvents, int(h.Logs.Limit))
+			}
+			h.message.Logs = &entries
 		}
 	}
 
@@ -264,6 +289,9 @@ func (h *Heartbeat) send() error {
 
 	// Update statistics on successful sent
 	h.stats.remove(snapshot, time.Now())
+	h.Lock()
+	h.logEvents = h.logEvents[len(logEvents):]
+	h.Unlock()
 
 	return nil
 }
