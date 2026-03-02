@@ -812,6 +812,35 @@ func TestMetricForNode(t *testing.T) {
 				time.Date(2022, 3, 17, 8, 55, 0, 0, &time.Location{})),
 		},
 		{
+			testname: "datetime array preserves timezone",
+			nmm: []NodeMetricMapping{
+				{
+					Tag: NodeSettings{
+						FieldName: "fn",
+					},
+					idStr:      "ns=3;s=hi",
+					metricName: "testingmetric",
+					MetricTags: map[string]string{"t1": "v1"},
+				},
+			},
+			v: []time.Time{
+				time.Date(2022, 3, 17, 8, 55, 0, 0, time.FixedZone("EST", -5*3600)),
+				time.Date(2022, 3, 17, 8, 56, 0, 0, time.FixedZone("EST", -5*3600)),
+			},
+			isArray:  true,
+			dataType: ua.TypeIDDateTime,
+			time:     time.Date(2022, 3, 17, 8, 55, 0, 0, &time.Location{}),
+			status:   ua.StatusOK,
+			expected: metric.New("testingmetric",
+				map[string]string{"t1": "v1", "id": "ns=3;s=hi"},
+				map[string]interface{}{
+					"Quality": "The operation succeeded. StatusGood (0x0)",
+					"fn[0]":   "2022-03-17T08:55:00-05:00",
+					"fn[1]":   "2022-03-17T08:56:00-05:00",
+				},
+				time.Date(2022, 3, 17, 8, 55, 0, 0, &time.Location{})),
+		},
+		{
 			testname: "nil does not panic",
 			nmm: []NodeMetricMapping{
 				{
