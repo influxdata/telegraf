@@ -341,7 +341,7 @@ func TestDefaultStatusHealthy(t *testing.T) {
 		expected int
 	}{
 		{
-			name: "healty",
+			name: "healthy",
 			input: []telegraf.Metric{
 				metric.New(
 					"cpu",
