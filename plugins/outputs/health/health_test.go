@@ -372,7 +372,6 @@ func TestDefaultStatusHealthy(t *testing.T) {
 		},
 		{
 			name:     "timeout",
-			input:    []telegraf.Metric{},
 			timeout:  100 * time.Millisecond,
 			expected: http.StatusServiceUnavailable,
 		},
