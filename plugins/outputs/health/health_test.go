@@ -333,85 +333,79 @@ func TestTimeBetweenMetrics(t *testing.T) {
 }
 
 func TestDefaultStatusHealthy(t *testing.T) {
-	now := time.Now()
-	plugin := health.NewHealth()
-	plugin.ServiceAddress = "tcp://127.0.0.1:0"
-	plugin.Contains = []*health.Contains{
+	tests := []struct {
+		name     string
+		input    []telegraf.Metric
+		contains []*health.Contains
+		expected int
+	}{
 		{
-			Field: "time_idle",
+			name: "healty",
+			input: []telegraf.Metric{
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42,
+					},
+					time.Now(),
+				),
+			},
+			contains: []*health.Contains{{Field: "time_idle"}},
+			expected: http.StatusOK,
+		},
+		{
+			name: "unhealthy",
+			input: []telegraf.Metric{
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42,
+					},
+					time.Now(),
+				),
+			},
+			contains: []*health.Contains{{Field: "foo"}},
+			expected: http.StatusServiceUnavailable,
 		},
 	}
-	plugin.DefaultStatus = http.StatusTooEarly
-	plugin.Log = testutil.Logger{}
-	input := []telegraf.Metric{
-		metric.New(
-			"cpu",
-			map[string]string{},
-			map[string]interface{}{
-				"time_idle": 42,
-			},
-			now),
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup and start plugin
+			plugin := &health.Health{
+				ServiceAddress: "tcp://127.0.0.1:0",
+				DefaultStatus:  http.StatusTooEarly,
+				Contains:       tt.contains,
+				ReadTimeout:    config.Duration(5 * time.Second),
+				WriteTimeout:   config.Duration(5 * time.Second),
+				Log:            testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
+
+			// Check the status without sending any metric and check for the
+			// default status code
+			resp, err := http.Get(plugin.Origin())
+			require.NoError(t, err)
+			defer resp.Body.Close()
+			_, err = io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			require.Equal(t, http.StatusTooEarly, resp.StatusCode)
+
+			// Write metric(s) if any so the plugin leaves the default  state
+			require.NoError(t, plugin.Write(tt.input))
+
+			// Check health again which now should return the expected health
+			resp, err = http.Get(plugin.Origin())
+			require.NoError(t, err)
+			defer resp.Body.Close()
+			_, err = io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, resp.StatusCode)
+		})
 	}
-
-	require.NoError(t, plugin.Init())
-	require.NoError(t, plugin.Connect())
-	defer plugin.Close()
-
-	resp, err := http.Get(plugin.Origin())
-	require.NoError(t, err)
-	defer resp.Body.Close()
-	_, err = io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusTooEarly, resp.StatusCode)
-
-	require.NoError(t, plugin.Write(input))
-
-	resp, err = http.Get(plugin.Origin())
-	require.NoError(t, err)
-	defer resp.Body.Close()
-	_, err = io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-}
-
-func TestDefaultStatusUnhealthy(t *testing.T) {
-	now := time.Now()
-	plugin := health.NewHealth()
-	plugin.ServiceAddress = "tcp://127.0.0.1:0"
-	plugin.Contains = []*health.Contains{
-		{
-			Field: "foo",
-		},
-	}
-	plugin.DefaultStatus = http.StatusTooEarly
-	plugin.Log = testutil.Logger{}
-	input := []telegraf.Metric{
-		metric.New(
-			"cpu",
-			map[string]string{},
-			map[string]interface{}{
-				"time_idle": 42,
-			},
-			now),
-	}
-
-	require.NoError(t, plugin.Init())
-	require.NoError(t, plugin.Connect())
-	defer plugin.Close()
-
-	resp, err := http.Get(plugin.Origin())
-	require.NoError(t, err)
-	defer resp.Body.Close()
-	_, err = io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusTooEarly, resp.StatusCode)
-
-	require.NoError(t, plugin.Write(input))
-
-	resp, err = http.Get(plugin.Origin())
-	require.NoError(t, err)
-	defer resp.Body.Close()
-	_, err = io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
 }
