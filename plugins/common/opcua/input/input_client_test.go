@@ -720,7 +720,8 @@ func TestMetricForNode(t *testing.T) {
 	require.NoError(t, err)
 	o := OpcUAInputClient{
 		Config: InputClientConfig{
-			Timestamp: TimestampSourceSource,
+			Timestamp:       TimestampSourceSource,
+			TimestampFormat: time.RFC3339Nano,
 		},
 		OpcUAClient:      c,
 		Log:              testutil.Logger{},
