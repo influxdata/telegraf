@@ -55,10 +55,10 @@ type Health struct {
 	address string
 	tlsConf *tls.Config
 
-	mu             sync.Mutex
-	lastMetricTime time.Time
-	healthy        bool
-	initialized    bool
+	mu               sync.Mutex
+	lastMetricTime   time.Time
+	healthy          bool
+	metricsAvailable bool
 }
 
 func (*Health) SampleConfig() string {
@@ -157,7 +157,7 @@ func (h *Health) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 
 	w.Header().Set("Server", internal.ProductToken())
 
-	if !h.initialized {
+	if !h.metricsAvailable {
 		w.WriteHeader(h.DefaultStatus)
 		return
 	}
@@ -189,7 +189,7 @@ func (h *Health) Write(metrics []telegraf.Metric) error {
 	defer h.mu.Unlock()
 	h.lastMetricTime = ts
 	h.healthy = healthy
-	h.initialized = true
+	h.metricsAvailable = true
 
 	return nil
 }
