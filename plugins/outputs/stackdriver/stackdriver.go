@@ -34,7 +34,7 @@ var sampleConfig string
 
 // Stackdriver is the Google Stackdriver config info.
 type Stackdriver struct {
-	CredentialsToken     config.Secret     `toml:"credentials_token"`
+	Token                config.Secret     `toml:"token"`
 	Project              string            `toml:"project"`
 	QuotaProject         string            `toml:"quota_project"`
 	Namespace            string            `toml:"namespace"`
@@ -145,16 +145,12 @@ func (s *Stackdriver) Connect() error {
 
 		options := []option.ClientOption{
 			option.WithUserAgent(internal.ProductToken()),
+			option.WithQuotaProject(s.QuotaProject),
 		}
 
-		if !s.CredentialsToken.Empty() {
-			ts := &secretTokenSource{secret: &s.CredentialsToken}
+		if !s.Token.Empty() {
+			ts := &secretTokenSource{secret: &s.Token}
 			options = append(options, option.WithTokenSource(ts))
-		}
-
-		if s.QuotaProject != "" {
-			options = append(options, option.WithQuotaProject(s.QuotaProject))
-			s.Log.Infof("Using QuotaProject %s for quota attribution", s.QuotaProject)
 		}
 
 		client, err := monitoring.NewMetricClient(ctx, options...)
@@ -716,7 +712,6 @@ func (s *secretTokenSource) Token() (*oauth2.Token, error) {
 
 // Close will terminate the session to the backend, returning error if an issue arises.
 func (s *Stackdriver) Close() error {
-	s.CredentialsToken.Destroy()
 	return s.client.Close()
 }
 
