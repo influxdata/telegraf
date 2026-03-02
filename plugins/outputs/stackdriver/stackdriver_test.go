@@ -25,6 +25,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -1172,6 +1173,44 @@ func TestBuildHistogram(t *testing.T) {
 	value, err := buildHistogram(m)
 	require.NoError(t, err)
 	require.Equal(t, expected, value.GetDistributionValue())
+}
+
+func TestSecretTokenSource(t *testing.T) {
+	secret := config.NewSecret([]byte("my-access-token"))
+	ts := &secretTokenSource{secret: &secret}
+
+	token, err := ts.Token()
+	require.NoError(t, err)
+	require.Equal(t, "my-access-token", token.AccessToken)
+	require.Equal(t, "Bearer", token.TokenType)
+}
+
+func TestWriteWithToken(t *testing.T) {
+	server := &mockServer{
+		resps: []proto.Message{&emptypb.Empty{}},
+	}
+	srv, client := startServer(t, server)
+	defer srv.GracefulStop()
+
+	plugin := &Stackdriver{
+		Token:     config.NewSecret([]byte("my-token")),
+		Project:   "projects/[PROJECT]",
+		Namespace: "test",
+		Log:       testutil.Logger{},
+		client:    client,
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	require.NoError(t, plugin.Write(testutil.MockMetrics()))
+
+	require.Len(t, server.reqs, 1)
+	request, ok := server.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
+	require.Truef(t, ok, "Invalid request type %T", server.reqs[0])
+
+	require.Len(t, request.TimeSeries, 1)
+	ts := request.TimeSeries[0]
+	require.Equal(t, "global", ts.Resource.Type)
+	require.Equal(t, "projects/[PROJECT]", ts.Resource.Labels["project_id"])
 }
 
 func startServer(t *testing.T, mock *mockServer) (*grpc.Server, *monitoring.MetricClient) {
