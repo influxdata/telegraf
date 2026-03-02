@@ -160,17 +160,26 @@ func (h *Health) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 
 	w.Header().Set("Server", internal.ProductToken())
 
+	// Check the timeout independent of the available metrics
+	if h.MaxTimeBetweenMetrics > 0 && time.Since(h.lastMetricTime) >= time.Duration(h.MaxTimeBetweenMetrics) {
+		http.Error(w, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
+		return
+	}
+
+	// Return the default status if we have no metrics to check
 	if !h.metricsAvailable {
-		w.WriteHeader(h.DefaultStatus)
+		http.Error(w, http.StatusText(h.DefaultStatus), h.DefaultStatus)
 		return
 	}
 
-	if h.healthy && (h.MaxTimeBetweenMetrics <= 0 || time.Since(h.lastMetricTime) < time.Duration(h.MaxTimeBetweenMetrics)) {
-		w.WriteHeader(http.StatusOK)
+	// Check the health conditions and return 425 - Service Unavailabe for
+	// unhealthy states
+	if !h.healthy {
+		http.Error(w, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
 		return
 	}
 
-	w.WriteHeader(http.StatusServiceUnavailable)
+	http.Error(w, http.StatusText(http.StatusOK), http.StatusOK)
 }
 
 // Write runs all checks over the metric batch and adjust health state.

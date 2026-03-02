@@ -337,6 +337,7 @@ func TestDefaultStatusHealthy(t *testing.T) {
 		name     string
 		input    []telegraf.Metric
 		contains []*health.Contains
+		timeout  time.Duration
 		expected int
 	}{
 		{
@@ -369,18 +370,25 @@ func TestDefaultStatusHealthy(t *testing.T) {
 			contains: []*health.Contains{{Field: "foo"}},
 			expected: http.StatusServiceUnavailable,
 		},
+		{
+			name:     "timeout",
+			input:    []telegraf.Metric{},
+			timeout:  100 * time.Millisecond,
+			expected: http.StatusServiceUnavailable,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup and start plugin
 			plugin := &health.Health{
-				ServiceAddress: "tcp://127.0.0.1:0",
-				DefaultStatus:  http.StatusTooEarly,
-				Contains:       tt.contains,
-				ReadTimeout:    config.Duration(5 * time.Second),
-				WriteTimeout:   config.Duration(5 * time.Second),
-				Log:            testutil.Logger{},
+				ServiceAddress:        "tcp://127.0.0.1:0",
+				DefaultStatus:         http.StatusTooEarly,
+				Contains:              tt.contains,
+				MaxTimeBetweenMetrics: config.Duration(tt.timeout),
+				ReadTimeout:           config.Duration(5 * time.Second),
+				WriteTimeout:          config.Duration(5 * time.Second),
+				Log:                   testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 
@@ -396,8 +404,13 @@ func TestDefaultStatusHealthy(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, http.StatusTooEarly, resp.StatusCode)
 
-			// Write metric(s) if any so the plugin leaves the default  state
-			require.NoError(t, plugin.Write(tt.input))
+			// Write metric(s) if any OR provoke a timeout if no metrics given
+			// so the plugin leaves the default state
+			if len(tt.input) > 0 {
+				require.NoError(t, plugin.Write(tt.input))
+			} else {
+				time.Sleep(tt.timeout)
+			}
 
 			// Check health again which now should return the expected health
 			resp, err = http.Get(plugin.Origin())
