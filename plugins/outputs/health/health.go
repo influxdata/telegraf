@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	_ "embed"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -85,8 +86,10 @@ func (h *Health) Init() error {
 		return errors.New("service_address contains invalid scheme")
 	}
 
-	if h.DefaultStatus <= 0 {
+	if h.DefaultStatus == 0 {
 		h.DefaultStatus = http.StatusOK
+	} else if h.DefaultStatus < 0 || h.DefaultStatus > 599 {
+		return fmt.Errorf("invalid default HTTP status code %d", h.DefaultStatus)
 	}
 
 	h.tlsConf, err = h.ServerConfig.TLSConfig()
