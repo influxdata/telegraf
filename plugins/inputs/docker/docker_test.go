@@ -707,13 +707,13 @@ func TestContainerNames(t *testing.T) {
 			require.NoError(t, err)
 
 			// Set of expected names
-			var expected = make(map[string]bool)
+			expected := make(map[string]bool)
 			for _, v := range tt.expected {
 				expected[v] = true
 			}
 
 			// Set of actual names
-			var actual = make(map[string]bool)
+			actual := make(map[string]bool)
 			for _, metric := range acc.Metrics {
 				if name, ok := metric.Tags["container_name"]; ok {
 					actual[name] = true
@@ -1186,7 +1186,7 @@ func TestContainerStateFilter(t *testing.T) {
 			exclude: []string{"*"},
 		},
 		{
-			name:     "exclude all",
+			name:     "exclude exited",
 			include:  []string{"*"},
 			exclude:  []string{"exited"},
 			expected: []string{"created", "restarting", "running", "removing", "paused", "dead"},
@@ -1227,13 +1227,13 @@ func TestContainerStateFilter(t *testing.T) {
 			require.NoError(t, err)
 
 			// Set of expected names
-			var expected = make(map[string]bool)
+			expected := make(map[string]bool)
 			for _, v := range tt.expected {
 				expected[v] = true
 			}
 
 			// Set of actual names
-			var actual = make(map[string]bool)
+			actual := make(map[string]bool)
 			for _, metric := range acc.Metrics {
 				if name, ok := metric.Tags["container_name"]; ok {
 					actual[name] = true
