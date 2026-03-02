@@ -622,6 +622,12 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 				fields = unpack(nmm.Tag.FieldName, typedValue)
 			case []bool:
 				fields = unpack(nmm.Tag.FieldName, typedValue)
+			case []time.Time:
+				strs := make([]string, len(typedValue))
+				for i, t := range typedValue {
+					strs[i] = t.UTC().Format(time.RFC3339Nano)
+				}
+				fields = unpack(nmm.Tag.FieldName, strs)
 			default:
 				o.Log.Errorf("could not unpack variant array of type: %T", typedValue)
 			}
