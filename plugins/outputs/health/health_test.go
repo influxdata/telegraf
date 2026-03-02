@@ -332,6 +332,15 @@ func TestTimeBetweenMetrics(t *testing.T) {
 	}
 }
 
+func TestHealthInvalidDefaultStatus(t *testing.T) {
+	plugin := &health.Health{
+		ServiceAddress: "tcp://127.0.0.1:0",
+		DefaultStatus:  225,
+		Log:            testutil.Logger{},
+	}
+	require.ErrorContains(t, plugin.Init(), "invalid default HTTP status code")
+}
+
 func TestDefaultStatusHealthy(t *testing.T) {
 	tests := []struct {
 		name     string

@@ -88,7 +88,9 @@ func (h *Health) Init() error {
 
 	if h.DefaultStatus == 0 {
 		h.DefaultStatus = http.StatusOK
-	} else if h.DefaultStatus < 0 || h.DefaultStatus > 599 {
+	}
+
+	if http.StatusText(h.DefaultStatus) == "" {
 		return fmt.Errorf("invalid default HTTP status code %d", h.DefaultStatus)
 	}
 
