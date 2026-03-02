@@ -916,7 +916,7 @@ func (a *Agent) flushLoop(ctx context.Context, output *models.RunningOutput, tim
 }
 
 // flushOnce runs the output's Write function once, logging a warning each interval it fails to complete before the flush interval elapses.
-func (*Agent) flushOnce(output *models.RunningOutput, ticker *clock.Timer, writeFunc func() error) error {
+func (*Agent) flushOnce(output *models.RunningOutput, timer *clock.Timer, writeFunc func() error) error {
 	done := make(chan error)
 	go func() {
 		done <- writeFunc()
@@ -927,7 +927,7 @@ func (*Agent) flushOnce(output *models.RunningOutput, ticker *clock.Timer, write
 		case err := <-done:
 			output.LogBufferStatus()
 			return err
-		case <-ticker.Elapsed():
+		case <-timer.Elapsed():
 			log.Printf("W! [agent] [%q] did not complete within its flush interval",
 				output.LogName())
 			output.LogBufferStatus()
