@@ -109,6 +109,22 @@ var (
 		"Media_Wearout_Indicator": "media_wearout_indicator",
 	}
 
+	// NVMe fields to promote from smart_attribute to smart_device measurement.
+	// Also applies to SAS attributes parsed through the sasNVMeAttributes path.
+	nvmeDeviceFields = map[string]string{
+		"Power_Cycle_Count":               "power_cycle_count",
+		"Power_On_Hours":                  "power_on_hours",
+		"Unsafe_Shutdowns":                "unsafe_shutdowns",
+		"Available_Spare":                 "available_spare",
+		"Available_Spare_Threshold":       "available_spare_threshold",
+		"Percentage_Used":                 "percentage_used",
+		"Critical_Warning":                "critical_warning",
+		"Media_and_Data_Integrity_Errors": "media_errors",
+		"Error_Information_Log_Entries":   "error_log_entries",
+		"Warning_Temperature_Time":        "warning_temperature_time",
+		"Critical_Temperature_Time":       "critical_temperature_time",
+	}
+
 	// to obtain metrics from smartctl
 	sasNVMeAttributes = map[string]struct {
 		ID    string
@@ -885,6 +901,11 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 
 					if err := parse(fields, deviceFields, matches[2]); err != nil {
 						continue
+					}
+					if name, found := nvmeDeviceFields[attr.Name]; found {
+						if v, found := fields["raw_value"]; found {
+							deviceFields[name] = v
+						}
 					}
 					// if the field is classified as an attribute, only add it
 					// if m.Attributes is true
