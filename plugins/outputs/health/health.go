@@ -174,7 +174,7 @@ func (h *Health) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 
-	// Check the health conditions and return 503 - Service Unavailabe for
+	// Check the health conditions and return 503 - Service Unavailable for
 	// unhealthy states
 	if !h.healthy {
 		http.Error(w, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
