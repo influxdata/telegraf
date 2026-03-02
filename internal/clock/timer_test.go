@@ -130,15 +130,37 @@ func TestTimerDistribution(t *testing.T) {
 
 	clk := clock.NewMock()
 
-	ticker := &Timer{
+	timer := &Timer{
 		clk:      clk,
 		interval: interval,
 		jitter:   jitter,
 	}
-	ticker.start()
-	defer ticker.Stop()
-	dist := simulatedDist(ticker, clk)
+	timer.start()
+	defer timer.Stop()
+	dist := simulatedTimerDist(timer, clk)
 	dist.print()
 	require.Less(t, 275, dist.count)
 	require.True(t, 12 < dist.mean() && 13 > dist.mean())
+}
+
+func simulatedTimerDist(ticker *Timer, clk *clock.Mock) distribution {
+	start := clk.Now()
+	end := start.Add(1 * time.Hour)
+
+	var dist distribution
+
+	last := clk.Now()
+	for !clk.Now().After(end) {
+		select {
+		case tm := <-ticker.Elapsed():
+			dist.buckets[tm.Second()]++
+			dist.count++
+			dist.waittime += tm.Sub(last).Seconds()
+			last = tm
+		default:
+			clk.Add(1 * time.Second)
+		}
+	}
+
+	return dist
 }

@@ -1,46 +1,99 @@
 package clock
 
 import (
+	"context"
+	"sync"
 	"time"
 
 	"github.com/benbjohnson/clock"
+
+	"github.com/influxdata/telegraf/internal"
 )
 
-type Ticker interface {
-	Elapsed() <-chan time.Time
-	Stop()
+type Ticker struct {
+	C chan time.Time
+
+	clk      clock.Clock
+	schedule time.Time
+	interval time.Duration
+	jitter   time.Duration
+	cancel   context.CancelFunc
+	wg       sync.WaitGroup
 }
 
-func NewTicker(start time.Time, interval, jitter, offset time.Duration, align bool) Ticker {
-	if align {
-		return newAlignedTicker(start, interval, jitter, offset)
+func NewTicker(interval, jitter, offset time.Duration, opt ...Option) *Ticker {
+	// Apply the options
+	cfg := &config{
+		clk: clock.New(),
 	}
-	return newUnalignedTicker(interval, jitter, offset)
-}
-
-func newAlignedTicker(start time.Time, interval, jitter, offset time.Duration) *aligned {
-	clk := clock.New()
-	t := &aligned{
-		clk:         clk,
-		schedule:    start,
-		interval:    interval,
-		jitter:      jitter,
-		offset:      offset,
-		minInterval: interval / 100,
+	for _, o := range opt {
+		o(cfg)
 	}
-	t.start()
-	return t
-}
 
-func newUnalignedTicker(interval, jitter, offset time.Duration) *unaligned {
-	clk := clock.New()
-	t := &unaligned{
-		clk:      clk,
-		schedule: clk.Now(),
+	schedule := cfg.clk.Now()
+
+	// Align the scheduled trigger time to interval borders
+	if cfg.align {
+		// Add minimum interval size to avoid scheduling exceptionally short
+		// intervals. This avoids an issue that can occur where the previous
+		// interval ends slightly early due to very minor clock changes.
+		schedule = internal.AlignTime(cfg.start.Add(interval/100), interval)
+	}
+
+	// Compute the scheduled first tick by adding the offset. By doing so, we
+	// do not need to take the offset into account later.
+	schedule = schedule.Add(offset)
+
+	// Initialize the ticker instance and start it
+	t := &Ticker{
+		C:        make(chan time.Time, 1),
+		clk:      cfg.clk,
+		schedule: schedule,
 		interval: interval,
 		jitter:   jitter,
-		offset:   offset,
 	}
-	t.start()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.cancel = cancel
+
+	t.wg.Add(1)
+	go func() {
+		defer t.wg.Done()
+		t.run(ctx)
+	}()
+
 	return t
+}
+
+func (t *Ticker) Stop() {
+	t.cancel()
+	t.wg.Wait()
+}
+
+func (t *Ticker) run(ctx context.Context) {
+	// Start with the first scheduled tick
+	timer := t.clk.Timer(t.clk.Until(t.schedule) + internal.RandomDuration(t.jitter))
+
+	for {
+		select {
+		case ts := <-timer.C:
+			// Compute the next scheduled interval by adding the interval and
+			// randomizing the timing with the given jitter (if any). Note, we
+			// need to remember the next scheduling without adding the ticker
+			// to avoid drifting of the ticks by jitter/2 on average!
+			t.schedule = t.schedule.Add(t.interval)
+			timer.Reset(t.clk.Until(t.schedule) + internal.RandomDuration(t.jitter))
+
+			// Fire our event in a non-blocking fashion to avoid blocking the
+			// ticker if the agent code did not read the ticker channel yet.
+			select {
+			case t.C <- ts:
+			default:
+			}
+		case <-ctx.Done():
+			// Someone stopped the ticker so cleanup and leave
+			timer.Stop()
+			return
+		}
+	}
 }

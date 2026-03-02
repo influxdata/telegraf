@@ -18,14 +18,7 @@ func TestUnalignedTicker(t *testing.T) {
 	start := clk.Now()
 	end := start.Add(60 * time.Second)
 
-	ticker := &unaligned{
-		clk:      clk,
-		schedule: start,
-		interval: interval,
-		jitter:   jitter,
-		offset:   offset,
-	}
-	ticker.start()
+	ticker := NewTicker(interval, jitter, offset, WithClock(clk))
 	defer ticker.Stop()
 
 	expected := []time.Time{
@@ -42,13 +35,13 @@ func TestUnalignedTicker(t *testing.T) {
 
 	// Wait for the first tick to avoid race conditions between updating the
 	// time and starting the timer.
-	tm := <-ticker.Elapsed()
+	tm := <-ticker.C
 	actual = append(actual, tm.UTC())
 
 	// Advance the clock and collect all ticks on the way
 	for !clk.Now().After(end) {
 		select {
-		case tm := <-ticker.Elapsed():
+		case tm := <-ticker.C:
 			actual = append(actual, tm.UTC())
 		default:
 			clk.Add(1 * time.Second)
@@ -68,14 +61,7 @@ func TestUnalignedTickerJitterBehavior(t *testing.T) {
 	clk := clock.NewMock()
 	start := clk.Now()
 
-	ticker := &unaligned{
-		clk:      clk,
-		schedule: start,
-		interval: interval,
-		jitter:   jitter,
-		offset:   offset,
-	}
-	ticker.start()
+	ticker := NewTicker(interval, jitter, offset, WithClock(clk))
 	defer ticker.Stop()
 
 	// Collect 60 ticks
@@ -84,7 +70,7 @@ func TestUnalignedTickerJitterBehavior(t *testing.T) {
 
 	for len(triggers) < numTicks {
 		select {
-		case tm := <-ticker.Elapsed():
+		case tm := <-ticker.C:
 			triggers = append(triggers, tm)
 		default:
 			clk.Add(1 * time.Second)
@@ -127,18 +113,11 @@ func TestUnalignedTickerDistribution(t *testing.T) {
 	offset := 0 * time.Second
 
 	clk := clock.NewMock()
-	start := clk.Now()
 
-	ticker := &unaligned{
-		clk:      clk,
-		schedule: start,
-		interval: interval,
-		jitter:   jitter,
-		offset:   offset,
-	}
-	ticker.start()
+	ticker := NewTicker(interval, jitter, offset, WithClock(clk))
 	defer ticker.Stop()
-	dist := simulatedDist(ticker, clk)
+
+	dist := simulatedTickerDist(ticker, clk)
 	dist.print()
 	require.Less(t, 350, dist.count)
 	require.True(t, 9 < dist.mean() && dist.mean() < 11)
@@ -154,18 +133,11 @@ func TestUnalignedTickerDistributionWithOffset(t *testing.T) {
 	offset := 3 * time.Second
 
 	clk := clock.NewMock()
-	start := clk.Now()
 
-	ticker := &unaligned{
-		clk:      clk,
-		schedule: start,
-		interval: interval,
-		jitter:   jitter,
-		offset:   offset,
-	}
-	ticker.start()
+	ticker := NewTicker(interval, jitter, offset, WithClock(clk))
 	defer ticker.Stop()
-	dist := simulatedDist(ticker, clk)
+
+	dist := simulatedTickerDist(ticker, clk)
 	dist.print()
 	require.Less(t, 350, dist.count)
 	require.True(t, 9 < dist.mean() && dist.mean() < 11)

@@ -393,13 +393,16 @@ func (*Agent) startInputs(dst chan<- telegraf.Metric, inputs []*models.RunningIn
 //
 // When the context is done the timers are stopped and this function returns
 // after all ongoing Gather calls complete.
-func (a *Agent) runInputs(
-	ctx context.Context,
-	startTime time.Time,
-	unit *inputUnit,
-) {
+func (a *Agent) runInputs(ctx context.Context, startTime time.Time, unit *inputUnit) {
 	var wg sync.WaitGroup
-	tickers := make([]clock.Ticker, 0, len(unit.inputs))
+	var options []clock.Option
+
+	// Initialize time rounding
+	if a.Config.Agent.RoundInterval {
+		options = append(options, clock.WithAlignment(startTime))
+	}
+
+	tickers := make([]*clock.Ticker, 0, len(unit.inputs))
 	for _, input := range unit.inputs {
 		// Overwrite agent interval if this plugin has its own.
 		interval := time.Duration(a.Config.Agent.Interval)
@@ -425,7 +428,7 @@ func (a *Agent) runInputs(
 			offset = input.Config.CollectionOffset
 		}
 
-		ticker := clock.NewTicker(startTime, interval, jitter, offset, a.Config.Agent.RoundInterval)
+		ticker := clock.NewTicker(interval, jitter, offset, options...)
 		tickers = append(tickers, ticker)
 
 		acc := NewAccumulator(input, unit.dst)
@@ -562,12 +565,12 @@ func (a *Agent) gatherLoop(
 	ctx context.Context,
 	acc telegraf.Accumulator,
 	input *models.RunningInput,
-	ticker clock.Ticker,
+	ticker *clock.Ticker,
 	interval time.Duration,
 ) {
 	for {
 		select {
-		case <-ticker.Elapsed():
+		case <-ticker.C:
 			err := a.gatherOnce(acc, input, ticker, interval)
 			if err != nil {
 				acc.AddError(err)
@@ -579,7 +582,7 @@ func (a *Agent) gatherLoop(
 }
 
 // gatherOnce runs the input's Gather function once, logging a warning each interval it fails to complete before.
-func (*Agent) gatherOnce(acc telegraf.Accumulator, input *models.RunningInput, ticker clock.Ticker, interval time.Duration) error {
+func (*Agent) gatherOnce(acc telegraf.Accumulator, input *models.RunningInput, ticker *clock.Ticker, interval time.Duration) error {
 	done := make(chan error)
 	go func() {
 		defer panicRecover(input)
@@ -600,7 +603,7 @@ func (*Agent) gatherOnce(acc telegraf.Accumulator, input *models.RunningInput, t
 			log.Printf("W! [%s] Collection took longer than expected; not complete after interval of %s",
 				input.LogName(), interval)
 			input.IncrGatherTimeouts()
-		case <-ticker.Elapsed():
+		case <-ticker.C:
 			log.Printf("D! [%s] Previous collection has not completed; scheduled collection skipped",
 				input.LogName())
 		}
@@ -850,10 +853,10 @@ func (a *Agent) runOutputs(
 		go func(output *models.RunningOutput) {
 			defer wg.Done()
 
-			ticker := clock.NewTimer(interval, jitter)
-			defer ticker.Stop()
+			timer := clock.NewTimer(interval, jitter)
+			defer timer.Stop()
 
-			a.flushLoop(ctx, output, ticker)
+			a.flushLoop(ctx, output, timer)
 		}(output)
 	}
 
@@ -877,11 +880,7 @@ func (a *Agent) runOutputs(
 
 // flushLoop runs an output's flush function periodically until the context is
 // done.
-func (a *Agent) flushLoop(
-	ctx context.Context,
-	output *models.RunningOutput,
-	ticker clock.Ticker,
-) {
+func (a *Agent) flushLoop(ctx context.Context, output *models.RunningOutput, timer *clock.Timer) {
 	logError := func(err error) {
 		if err != nil {
 			log.Printf("E! [agent] Error writing to %s: %v", output.LogName(), err)
@@ -897,19 +896,19 @@ func (a *Agent) flushLoop(
 		// Favor shutdown over other methods.
 		select {
 		case <-ctx.Done():
-			logError(a.flushOnce(output, ticker, output.Write))
+			logError(a.flushOnce(output, timer, output.Write))
 			return
 		default:
 		}
 
 		select {
 		case <-ctx.Done():
-			logError(a.flushOnce(output, ticker, output.Write))
+			logError(a.flushOnce(output, timer, output.Write))
 			return
-		case <-ticker.Elapsed():
-			logError(a.flushOnce(output, ticker, output.Write))
+		case <-timer.Elapsed():
+			logError(a.flushOnce(output, timer, output.Write))
 		case <-flushRequested:
-			logError(a.flushOnce(output, ticker, output.Write))
+			logError(a.flushOnce(output, timer, output.Write))
 		case <-output.BatchReady:
 			logError(a.flushBatch(output, output.WriteBatch))
 		}
@@ -917,7 +916,7 @@ func (a *Agent) flushLoop(
 }
 
 // flushOnce runs the output's Write function once, logging a warning each interval it fails to complete before the flush interval elapses.
-func (*Agent) flushOnce(output *models.RunningOutput, ticker clock.Ticker, writeFunc func() error) error {
+func (*Agent) flushOnce(output *models.RunningOutput, timer *clock.Timer, writeFunc func() error) error {
 	done := make(chan error)
 	go func() {
 		done <- writeFunc()
@@ -928,7 +927,7 @@ func (*Agent) flushOnce(output *models.RunningOutput, ticker clock.Ticker, write
 		case err := <-done:
 			output.LogBufferStatus()
 			return err
-		case <-ticker.Elapsed():
+		case <-timer.Elapsed():
 			log.Printf("W! [agent] [%q] did not complete within its flush interval",
 				output.LogName())
 			output.LogBufferStatus()
@@ -1204,7 +1203,7 @@ func panicRecover(input *models.RunningInput) {
 	}
 }
 
-func stopTickers(tickers []clock.Ticker) {
+func stopTickers(tickers []*clock.Ticker) {
 	for _, ticker := range tickers {
 		ticker.Stop()
 	}
