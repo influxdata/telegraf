@@ -35,7 +35,7 @@ func NewTicker(interval, jitter, offset time.Duration, opt ...Option) *Ticker {
 	// Align the scheduled trigger time to interval borders
 	if cfg.align {
 		// Add minimum interval size to avoid scheduling exceptionally short
-		// intervals This avoids an issue that can occur where the previous
+		// intervals. This avoids an issue that can occur where the previous
 		// interval ends slightly early due to very minor clock changes.
 		schedule = internal.AlignTime(cfg.start.Add(interval/100), interval)
 	}
