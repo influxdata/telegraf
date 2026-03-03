@@ -627,7 +627,7 @@ func TestSubscribeCalledIfNoSession(t *testing.T) {
 	require.Equal(t, 1, fClient.subscribeCallCount)
 }
 
-func TestSubscribeNotCalledIfSession(t *testing.T) {
+func TestSubscribeCalledWithSession(t *testing.T) {
 	fClient := &fakeClient{
 		connectF: func() mqtt.Token {
 			return &fakeToken{sessionPresent: true}
@@ -652,7 +652,9 @@ func TestSubscribeNotCalledIfSession(t *testing.T) {
 	require.NoError(t, plugin.Start(&acc))
 	plugin.Stop()
 
-	require.Equal(t, 0, fClient.subscribeCallCount)
+	// Subscribe is always called, even with persistent sessions, to ensure
+	// subscriptions are restored after reconnection.
+	require.Equal(t, 1, fClient.subscribeCallCount)
 }
 
 func TestIntegration(t *testing.T) {
@@ -1017,7 +1019,7 @@ func TestReconnectIntegration(t *testing.T) {
 	require.NoError(t, plugin.Start(&acc))
 	defer plugin.Stop()
 
-	// Pause the container for simulating loosing connection
+	// Pause the container to simulate losing connection
 	require.NoError(t, container.Pause())
 	defer container.Resume() //nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
 
@@ -1026,15 +1028,48 @@ func TestReconnectIntegration(t *testing.T) {
 		return !plugin.client.IsConnected()
 	}, 5*time.Second, 100*time.Millisecond)
 
-	// There should be no metrics as the plugin is not fully started up yet
-	require.ErrorContains(t, plugin.Gather(&acc), "network Error")
-	require.False(t, plugin.client.IsConnected())
-
-	// Unpause the container, now we should be able to reconnect
+	// Unpause the container; paho's auto-reconnect should restore the connection
 	require.NoError(t, container.Resume())
-	require.NoError(t, plugin.Gather(&acc))
 
+	// Wait for paho to auto-reconnect
 	require.Eventually(t, func() bool {
-		return plugin.Gather(&acc) == nil
-	}, 5*time.Second, 200*time.Millisecond)
+		return plugin.client.IsConnected()
+	}, 10*time.Second, 200*time.Millisecond)
+
+	// Setup a producer to send metrics after reconnection
+	cfg, err := plugin.createOpts()
+	require.NoError(t, err)
+	producer := mqtt.NewClient(cfg)
+	token := producer.Connect()
+	token.Wait()
+	require.NoError(t, token.Error())
+	defer producer.Disconnect(100)
+
+	// Publish metrics and verify they are received after reconnection
+	metrics := []string{
+		"test,source=A value=0i 1712780301000000000",
+		"test,source=B value=1i 1712780301000000100",
+	}
+	expected := make([]telegraf.Metric, 0, len(metrics))
+	for _, x := range metrics {
+		parsed, err := parser.Parse([]byte(x))
+		require.NoError(t, err)
+		for i := range parsed {
+			parsed[i].AddTag("topic", topic)
+		}
+		expected = append(expected, parsed...)
+	}
+	for _, x := range metrics {
+		xtoken := producer.Publish(topic, byte(plugin.QoS), false, []byte(x))
+		require.NoError(t, xtoken.Error())
+	}
+
+	// Verify that the metrics were received after reconnection
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= uint64(len(expected))
+	}, 5*time.Second, 100*time.Millisecond)
+
+	producer.Disconnect(100)
+	plugin.Stop()
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
