@@ -191,12 +191,8 @@ func (m *MQTTConsumer) connect() error {
 		}
 		return token.Error()
 	}
-	m.Log.Infof("Connected %v", m.Servers)
-
-	// Subscribe to topics. The onConnect callback also subscribes on each
-	// reconnection handled by paho's auto-reconnect, so this handles the
-	// initial connection while onConnect handles subsequent reconnections.
-	m.subscribe()
+	// Logging and subscribing are handled by onConnect(), which paho
+	// invokes on every successful connection including the initial one.
 	return nil
 }
 

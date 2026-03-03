@@ -23,6 +23,7 @@ type fakeClient struct {
 	subscribeMultipleF func() mqtt.Token
 	addRouteF          func(callback mqtt.MessageHandler)
 	disconnectF        func()
+	opts               *mqtt.ClientOptions
 
 	connectCallCount    int
 	subscribeCallCount  int
@@ -36,6 +37,9 @@ func (c *fakeClient) Connect() mqtt.Token {
 	c.connectCallCount++
 	token := c.connectF()
 	c.connected = token.Error() == nil
+	if c.connected && c.opts != nil && c.opts.OnConnect != nil {
+		c.opts.OnConnect(nil)
+	}
 	return token
 }
 
@@ -108,19 +112,21 @@ func (t *fakeToken) Done() <-chan struct{} {
 func TestLifecycleSanity(t *testing.T) {
 	var acc testutil.Accumulator
 
-	plugin := newMQTTConsumer(func(*mqtt.ClientOptions) client {
-		return &fakeClient{
-			connectF: func() mqtt.Token {
-				return &fakeToken{}
-			},
-			addRouteF: func(mqtt.MessageHandler) {
-			},
-			subscribeMultipleF: func() mqtt.Token {
-				return &fakeToken{}
-			},
-			disconnectF: func() {
-			},
-		}
+	fClient := &fakeClient{
+		connectF: func() mqtt.Token {
+			return &fakeToken{}
+		},
+		addRouteF: func(mqtt.MessageHandler) {
+		},
+		subscribeMultipleF: func() mqtt.Token {
+			return &fakeToken{}
+		},
+		disconnectF: func() {
+		},
+	}
+	plugin := newMQTTConsumer(func(o *mqtt.ClientOptions) client {
+		fClient.opts = o
+		return fClient
 	})
 	plugin.Log = testutil.Logger{}
 	plugin.Servers = []string{"tcp://127.0.0.1"}
@@ -535,7 +541,8 @@ func TestTopicTag(t *testing.T) {
 				},
 			}
 
-			plugin := newMQTTConsumer(func(*mqtt.ClientOptions) client {
+			plugin := newMQTTConsumer(func(o *mqtt.ClientOptions) client {
+				fClient.opts = o
 				return fClient
 			})
 			plugin.Log = testutil.Logger{}
@@ -582,7 +589,8 @@ func TestAddRouteCalledForEachTopic(t *testing.T) {
 		disconnectF: func() {
 		},
 	}
-	plugin := newMQTTConsumer(func(*mqtt.ClientOptions) client {
+	plugin := newMQTTConsumer(func(o *mqtt.ClientOptions) client {
+		fClient.opts = o
 		return fClient
 	})
 	plugin.Log = testutil.Logger{}
@@ -611,7 +619,8 @@ func TestSubscribeCalledIfNoSession(t *testing.T) {
 		disconnectF: func() {
 		},
 	}
-	plugin := newMQTTConsumer(func(*mqtt.ClientOptions) client {
+	plugin := newMQTTConsumer(func(o *mqtt.ClientOptions) client {
+		fClient.opts = o
 		return fClient
 	})
 	plugin.Log = testutil.Logger{}
@@ -640,7 +649,8 @@ func TestSubscribeCalledWithSession(t *testing.T) {
 		disconnectF: func() {
 		},
 	}
-	plugin := newMQTTConsumer(func(*mqtt.ClientOptions) client {
+	plugin := newMQTTConsumer(func(o *mqtt.ClientOptions) client {
+		fClient.opts = o
 		return fClient
 	})
 	plugin.Log = testutil.Logger{}
@@ -702,13 +712,12 @@ func TestIntegration(t *testing.T) {
 	defer plugin.Stop()
 
 	// Setup a producer to send some metrics to the broker
-	cfg, err := plugin.createOpts()
-	require.NoError(t, err)
-	client := mqtt.NewClient(cfg)
-	token := client.Connect()
+	producerOpts := mqtt.NewClientOptions().AddBroker(url).SetConnectTimeout(5 * time.Second)
+	producer := mqtt.NewClient(producerOpts)
+	token := producer.Connect()
 	token.Wait()
 	require.NoError(t, token.Error())
-	defer client.Disconnect(100)
+	defer producer.Disconnect(100)
 
 	// Setup the metrics
 	metrics := []string{
@@ -728,7 +737,7 @@ func TestIntegration(t *testing.T) {
 
 	// Write metrics
 	for _, x := range metrics {
-		xtoken := client.Publish(topic, byte(plugin.QoS), false, []byte(x))
+		xtoken := producer.Publish(topic, byte(plugin.QoS), false, []byte(x))
 		require.NoError(t, xtoken.Error())
 	}
 
@@ -737,7 +746,7 @@ func TestIntegration(t *testing.T) {
 		return acc.NMetrics() >= uint64(len(expected))
 	}, 3*time.Second, 100*time.Millisecond)
 
-	client.Disconnect(100)
+	producer.Disconnect(100)
 	plugin.Stop()
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
@@ -935,13 +944,12 @@ func TestStartupErrorBehaviorRetryIntegration(t *testing.T) {
 	defer model.Stop()
 
 	// Setup a producer to send some metrics to the broker
-	cfg, err := plugin.createOpts()
-	require.NoError(t, err)
-	client := mqtt.NewClient(cfg)
-	token := client.Connect()
-	token.Wait()
-	require.NoError(t, token.Error())
-	defer client.Disconnect(100)
+	producerOpts := mqtt.NewClientOptions().AddBroker(url).SetConnectTimeout(5 * time.Second)
+	producer := mqtt.NewClient(producerOpts)
+	ptoken := producer.Connect()
+	ptoken.Wait()
+	require.NoError(t, ptoken.Error())
+	defer producer.Disconnect(100)
 
 	// Setup the metrics
 	metrics := []string{
@@ -961,7 +969,7 @@ func TestStartupErrorBehaviorRetryIntegration(t *testing.T) {
 
 	// Write metrics
 	for _, x := range metrics {
-		xtoken := client.Publish(topic, byte(plugin.QoS), false, []byte(x))
+		xtoken := producer.Publish(topic, byte(plugin.QoS), false, []byte(x))
 		require.NoError(t, xtoken.Error())
 	}
 
@@ -970,7 +978,7 @@ func TestStartupErrorBehaviorRetryIntegration(t *testing.T) {
 		return acc.NMetrics() >= uint64(len(expected))
 	}, 3*time.Second, 100*time.Millisecond)
 
-	client.Disconnect(100)
+	producer.Disconnect(100)
 	plugin.Stop()
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
@@ -1037,9 +1045,8 @@ func TestReconnectIntegration(t *testing.T) {
 	}, 10*time.Second, 200*time.Millisecond)
 
 	// Setup a producer to send metrics after reconnection
-	cfg, err := plugin.createOpts()
-	require.NoError(t, err)
-	producer := mqtt.NewClient(cfg)
+	producerOpts := mqtt.NewClientOptions().AddBroker(url).SetConnectTimeout(5 * time.Second)
+	producer := mqtt.NewClient(producerOpts)
 	token := producer.Connect()
 	token.Wait()
 	require.NoError(t, token.Error())
