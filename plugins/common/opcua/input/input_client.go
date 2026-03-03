@@ -625,7 +625,7 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 			case []time.Time:
 				strs := make([]string, len(typedValue))
 				for i, t := range typedValue {
-					strs[i] = t.UTC().Format(time.RFC3339Nano)
+					strs[i] = t.Format(o.Config.TimestampFormat)
 				}
 				fields = unpack(nmm.Tag.FieldName, strs)
 			default:
