@@ -104,11 +104,12 @@ store usage.
   #   secret = ""
 
   # [secretstores.vault.userpass]
-  #   ## The Vault UserPass username
+  #   ## The Vault Userpass username
   #   username = ""
   #
-  #   ## The Vault UserPass password
+  #   ## The Vault Userpass password
   #   password = ""
+
 ```
 
 [vault]: https://www.hashicorp.com/en/products/vault
