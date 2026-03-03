@@ -112,7 +112,7 @@ func (s *statistics) variables() map[string]interface{} {
 	s.RLock()
 	defer s.RUnlock()
 
-	// Add the raw statistucs
+	// Add the raw statistics
 	vars := map[string]interface{}{
 		"metrics":      s.metrics,
 		"log_errors":   s.logErrors,
