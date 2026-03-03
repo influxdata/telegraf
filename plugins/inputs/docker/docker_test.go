@@ -1245,6 +1245,64 @@ func TestContainerStateFilter(t *testing.T) {
 	}
 }
 
+func TestNonRunningContainerEmitsStatusMetrics(t *testing.T) {
+	newClientFunc := func(string, *tls.Config) (dockerClient, error) {
+		client := baseClient
+		client.ContainerListF = func(container.ListOptions) ([]container.Summary, error) {
+			return []container.Summary{
+				{
+					ID:    "abc123",
+					Names: []string{"/stopped-container"},
+					State: "exited",
+				},
+			}, nil
+		}
+		client.ContainerStatsF = func(string) (container.StatsResponseReader, error) {
+			return container.StatsResponseReader{
+				Body: io.NopCloser(strings.NewReader("")),
+			}, nil
+		}
+		client.ContainerInspectF = func() (container.InspectResponse, error) {
+			return container.InspectResponse{
+				Config: &container.Config{},
+				ContainerJSONBase: &container.ContainerJSONBase{
+					State: &container.State{
+						Status:     "exited",
+						ExitCode:   137,
+						StartedAt:  "2024-01-01T00:00:00Z",
+						FinishedAt: "2024-01-01T01:00:00Z",
+					},
+				},
+			}, nil
+		}
+		return &client, nil
+	}
+
+	d := Docker{
+		Log:                   testutil.Logger{},
+		newClient:             newClientFunc,
+		ContainerStateInclude: []string{"exited"},
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, d.Init())
+	require.NoError(t, d.Start(&acc))
+	require.NoError(t, d.Gather(&acc))
+
+	// Status metrics should be emitted even for non-running containers
+	require.True(t, acc.HasMeasurement("docker_container_status"))
+	require.Equal(t, "exited", acc.TagValue("docker_container_status", "container_status"))
+	exitcode, ok := acc.IntField("docker_container_status", "exitcode")
+	require.True(t, ok)
+	require.Equal(t, 137, exitcode)
+
+	// Runtime stats (cpu, mem, net, blkio) should NOT be emitted
+	acc.AssertDoesNotContainMeasurement(t, "docker_container_cpu")
+	acc.AssertDoesNotContainMeasurement(t, "docker_container_mem")
+	acc.AssertDoesNotContainMeasurement(t, "docker_container_net")
+	acc.AssertDoesNotContainMeasurement(t, "docker_container_blkio")
+}
+
 func TestContainerName(t *testing.T) {
 	tests := []struct {
 		name       string
