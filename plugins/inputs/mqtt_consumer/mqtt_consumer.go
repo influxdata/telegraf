@@ -148,9 +148,7 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 	}()
 
 	if err := m.connect(); err != nil {
-		m.cancel()
-		m.cancel = nil
-		m.wg.Wait()
+		m.Stop()
 		return err
 	}
 	return nil
@@ -196,7 +194,8 @@ func (m *MQTTConsumer) connect() error {
 	return nil
 }
 
-func (m *MQTTConsumer) subscribe() {
+func (m *MQTTConsumer) onConnect(_ mqtt.Client) {
+	m.Log.Infof("Connected %v", m.Servers)
 	topics := make(map[string]byte)
 	for _, topic := range m.Topics {
 		topics[topic] = byte(m.QoS)
@@ -206,11 +205,6 @@ func (m *MQTTConsumer) subscribe() {
 	if subscribeToken.Error() != nil {
 		m.acc.AddError(fmt.Errorf("subscription error: topics %q: %w", strings.Join(m.Topics, ","), subscribeToken.Error()))
 	}
-}
-
-func (m *MQTTConsumer) onConnect(_ mqtt.Client) {
-	m.Log.Infof("Connected %v", m.Servers)
-	m.subscribe()
 }
 
 func (m *MQTTConsumer) onConnectionLost(_ mqtt.Client, err error) {
