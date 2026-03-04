@@ -83,7 +83,11 @@ func (s *statistics) snapshot() *statistics {
 					entry[k] = v
 				}
 			}
-			entry["buffer_fullness"] = float64(entry["buffer_size"].(int64)) / float64(entry["buffer_limit"].(int64))
+			if limit := entry["buffer_limit"].(int64); limit != 0 {
+				entry["buffer_fullness"] = float64(entry["buffer_size"].(int64)) / float64(limit)
+			} else {
+				entry["buffer_fullness"] = float64(1.0) // output 100% if no limit
+			}
 			out.currentOutputs[name] = append(out.currentOutputs[name], entry)
 		case "agent":
 			out.currentAgent = m.Fields()
