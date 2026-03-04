@@ -412,30 +412,23 @@ func TestConnectAndWriteX509AuthFailIntegration(t *testing.T) {
 	}
 }
 
-func TestWriteIndividualIntegration(t *testing.T) {
+func TestWriteIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	// Setup the container
-	servicePort := "27017"
-	container := testutil.Container{
-		Image:        "mongo",
-		ExposedPorts: []string{servicePort},
-		WaitingFor:   wait.ForLog("Waiting for connections"),
-		Quiet:        true,
+	tests := []struct {
+		name  string
+		batch bool
+	}{
+		{
+			name: "individual",
+		},
+		{
+			name:  "batch",
+			batch: true,
+		},
 	}
-	require.NoError(t, container.Start(), "failed to start container")
-	defer container.Terminate()
-
-	// Setup and start the plugin
-	plugin := &MongoDB{
-		Dsn:            "mongodb://" + container.Address + ":" + container.Ports[servicePort],
-		MetricDatabase: "telegraf_test",
-	}
-	require.NoError(t, plugin.Init())
-	require.NoError(t, plugin.Connect())
-	defer plugin.Close()
 
 	// Setup the input metrics and expected results
 	input := []telegraf.Metric{
@@ -482,6 +475,7 @@ func TestWriteIndividualIntegration(t *testing.T) {
 			time.Unix(30, 40),
 		),
 	}
+
 	expected := map[string][]bson.D{
 		"test1": {
 			bson.D{
@@ -524,174 +518,57 @@ func TestWriteIndividualIntegration(t *testing.T) {
 		},
 	}
 
-	// Write the metrics
-	require.NoError(t, plugin.Write(input))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup the container
+			servicePort := "27017"
+			container := testutil.Container{
+				Image:        "mongo",
+				ExposedPorts: []string{servicePort},
+				WaitingFor:   wait.ForLog("Waiting for connections"),
+				Quiet:        true,
+			}
+			require.NoError(t, container.Start(), "failed to start container")
+			defer container.Terminate()
 
-	// Check the database and collections
-	client := plugin.client
-	databases, err := client.ListDatabaseNames(t.Context(), bson.D{})
-	require.NoError(t, err)
-	require.Contains(t, databases, "telegraf_test")
+			// Setup and start the plugin
+			plugin := &MongoDB{
+				Dsn:            "mongodb://" + container.Address + ":" + container.Ports[servicePort],
+				MetricDatabase: "telegraf_test",
+				WriteBatch:     tt.batch,
+			}
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
 
-	database := client.Database("telegraf_test")
-	require.NotNil(t, database)
-	collections, err := database.ListCollectionNames(t.Context(), bson.D{})
-	require.NoError(t, err)
+			// Write the metrics
+			require.NoError(t, plugin.Write(input))
 
-	// Read the metrics from the database and compare
-	for expectedCollection, expectedDocuments := range expected {
-		require.Contains(t, collections, expectedCollection)
+			// Check the database and collections
+			client := plugin.client
+			databases, err := client.ListDatabaseNames(t.Context(), bson.D{})
+			require.NoError(t, err)
+			require.Contains(t, databases, "telegraf_test")
 
-		c := database.Collection(expectedCollection)
-		projection := bson.D{primitive.E{Key: "_id", Value: 0}}
-		cur, err := c.Find(t.Context(), bson.D{}, options.Find().SetProjection(projection))
-		require.NoError(t, err)
+			database := client.Database("telegraf_test")
+			require.NotNil(t, database)
+			collections, err := database.ListCollectionNames(t.Context(), bson.D{})
+			require.NoError(t, err)
 
-		var documents []bson.D
-		require.NoError(t, cur.All(t.Context(), &documents))
-		require.ElementsMatchf(t, expectedDocuments, documents, "mismatch in collection %q", expectedCollection)
-	}
-}
+			// Read the metrics from the database and compare
+			for expectedCollection, expectedDocuments := range expected {
+				require.Contains(t, collections, expectedCollection)
 
-func TestWriteBatchIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
+				c := database.Collection(expectedCollection)
+				projection := bson.D{primitive.E{Key: "_id", Value: 0}}
+				cur, err := c.Find(t.Context(), bson.D{}, options.Find().SetProjection(projection))
+				require.NoError(t, err)
 
-	// Setup the container
-	servicePort := "27017"
-	container := testutil.Container{
-		Image:        "mongo",
-		ExposedPorts: []string{servicePort},
-		WaitingFor:   wait.ForLog("Waiting for connections"),
-		Quiet:        true,
-	}
-	require.NoError(t, container.Start(), "failed to start container")
-	defer container.Terminate()
-
-	// Setup and start the plugin
-	plugin := &MongoDB{
-		Dsn:            "mongodb://" + container.Address + ":" + container.Ports[servicePort],
-		MetricDatabase: "telegraf_test",
-		WriteBatch:     true,
-	}
-	require.NoError(t, plugin.Init())
-	require.NoError(t, plugin.Connect())
-	defer plugin.Close()
-
-	// Setup the input metrics and expected results
-	input := []telegraf.Metric{
-		metric.New(
-			"test1",
-			map[string]string{"source": "foo"},
-			map[string]interface{}{"value": 1},
-			time.Unix(0, 0),
-		),
-		metric.New(
-			"test1",
-			map[string]string{"source": "foo"},
-			map[string]interface{}{"value": 2},
-			time.Unix(10, 0),
-		),
-		metric.New(
-			"test1",
-			map[string]string{"source": "foo"},
-			map[string]interface{}{"value": 3},
-			time.Unix(20, 0),
-		),
-		metric.New(
-			"test2",
-			map[string]string{"source": "bar"},
-			map[string]interface{}{"value": 10},
-			time.Unix(0, 10),
-		),
-		metric.New(
-			"test2",
-			map[string]string{"source": "bar"},
-			map[string]interface{}{"value": 20},
-			time.Unix(10, 20),
-		),
-		metric.New(
-			"test2",
-			map[string]string{"source": "bar"},
-			map[string]interface{}{"value": 30},
-			time.Unix(20, 30),
-		),
-		metric.New(
-			"test2",
-			map[string]string{"source": "bar"},
-			map[string]interface{}{"value": 40},
-			time.Unix(30, 40),
-		),
-	}
-	expected := map[string][]bson.D{
-		"test1": {
-			bson.D{
-				primitive.E{Key: "timestamp", Value: primitive.DateTime(0)},
-				primitive.E{Key: "tags", Value: bson.D{primitive.E{Key: "source", Value: "foo"}}},
-				primitive.E{Key: "value", Value: int64(1)},
-			},
-			bson.D{
-				primitive.E{Key: "timestamp", Value: primitive.DateTime(10000)},
-				primitive.E{Key: "tags", Value: bson.D{primitive.E{Key: "source", Value: "foo"}}},
-				primitive.E{Key: "value", Value: int64(2)},
-			},
-			bson.D{
-				primitive.E{Key: "timestamp", Value: primitive.DateTime(20000)},
-				primitive.E{Key: "tags", Value: bson.D{primitive.E{Key: "source", Value: "foo"}}},
-				primitive.E{Key: "value", Value: int64(3)},
-			},
-		},
-		"test2": {
-			bson.D{
-				primitive.E{Key: "timestamp", Value: primitive.DateTime(0)},
-				primitive.E{Key: "tags", Value: bson.D{primitive.E{Key: "source", Value: "bar"}}},
-				primitive.E{Key: "value", Value: int64(10)},
-			},
-			bson.D{
-				primitive.E{Key: "timestamp", Value: primitive.DateTime(10000)},
-				primitive.E{Key: "tags", Value: bson.D{primitive.E{Key: "source", Value: "bar"}}},
-				primitive.E{Key: "value", Value: int64(20)},
-			},
-			bson.D{
-				primitive.E{Key: "timestamp", Value: primitive.DateTime(20000)},
-				primitive.E{Key: "tags", Value: bson.D{primitive.E{Key: "source", Value: "bar"}}},
-				primitive.E{Key: "value", Value: int64(30)},
-			},
-			bson.D{
-				primitive.E{Key: "timestamp", Value: primitive.DateTime(30000)},
-				primitive.E{Key: "tags", Value: bson.D{primitive.E{Key: "source", Value: "bar"}}},
-				primitive.E{Key: "value", Value: int64(40)},
-			},
-		},
-	}
-
-	// Write the metrics
-	require.NoError(t, plugin.Write(input))
-
-	// Check the database and collections
-	client := plugin.client
-	databases, err := client.ListDatabaseNames(t.Context(), bson.D{})
-	require.NoError(t, err)
-	require.Contains(t, databases, "telegraf_test")
-
-	database := client.Database("telegraf_test")
-	require.NotNil(t, database)
-	collections, err := database.ListCollectionNames(t.Context(), bson.D{})
-	require.NoError(t, err)
-
-	// Read the metrics from the database and compare
-	for expectedCollection, expectedDocuments := range expected {
-		require.Contains(t, collections, expectedCollection)
-
-		c := database.Collection(expectedCollection)
-		projection := bson.D{primitive.E{Key: "_id", Value: 0}}
-		cur, err := c.Find(t.Context(), bson.D{}, options.Find().SetProjection(projection))
-		require.NoError(t, err)
-
-		var documents []bson.D
-		require.NoError(t, cur.All(t.Context(), &documents))
-		require.ElementsMatchf(t, expectedDocuments, documents, "mismatch in collection %q", expectedCollection)
+				var documents []bson.D
+				require.NoError(t, cur.All(t.Context(), &documents))
+				require.ElementsMatchf(t, expectedDocuments, documents, "mismatch in collection %q", expectedCollection)
+			}
+		})
 	}
 }
 
