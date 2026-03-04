@@ -636,6 +636,39 @@ func TestSubscribeCalledIfNoSession(t *testing.T) {
 	require.Equal(t, 1, fClient.subscribeCallCount)
 }
 
+func TestResubscribeOnReconnect(t *testing.T) {
+	var acc testutil.Accumulator
+
+	fClient := &fakeClient{
+		connectF: func() mqtt.Token {
+			return &fakeToken{}
+		},
+		addRouteF:          func(mqtt.MessageHandler) {},
+		subscribeMultipleF: func() mqtt.Token { return &fakeToken{} },
+		disconnectF:        func() {},
+	}
+	plugin := newMQTTConsumer(func(o *mqtt.ClientOptions) client {
+		fClient.opts = o
+		return fClient
+	})
+	plugin.Log = testutil.Logger{}
+	plugin.Servers = []string{"tcp://127.0.0.1"}
+	plugin.SetParser(&fakeParser{})
+
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Start(&acc))
+
+	// First connection triggers subscribe via onConnect
+	require.Equal(t, 1, fClient.subscribeCallCount)
+
+	// Simulate paho auto-reconnect calling OnConnect again
+	fClient.opts.OnConnect(nil)
+
+	require.Equal(t, 2, fClient.subscribeCallCount)
+
+	plugin.Stop()
+}
+
 func TestSubscribeCalledWithSession(t *testing.T) {
 	fClient := &fakeClient{
 		connectF: func() mqtt.Token {
