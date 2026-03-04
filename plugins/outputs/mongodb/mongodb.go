@@ -259,7 +259,7 @@ func (s *MongoDB) writeBatch(ctx context.Context, metrics []telegraf.Metric) err
 		batches[name] = append(batches[name], marshal(m))
 	}
 
-	// Write all metric of a collection at a time
+	// Write all metrics of a collection at a time
 	for name, batch := range batches {
 		// Create a new collection if it doesn't exist
 		if !s.collections[name] {
