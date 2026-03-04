@@ -40,6 +40,7 @@ type Container struct {
 	Address string
 	Ports   map[string]string
 	Logs    TestLogConsumer
+	Quiet   bool
 
 	container testcontainers.Container
 	ctx       context.Context
@@ -156,7 +157,10 @@ func (c *Container) Terminate() {
 	if err := c.container.Terminate(c.ctx); err != nil {
 		fmt.Printf("failed to terminate the container: %s", err)
 	}
-	c.PrintLogs()
+
+	if !c.Quiet {
+		c.PrintLogs()
+	}
 }
 
 func (c *Container) Pause() error {
