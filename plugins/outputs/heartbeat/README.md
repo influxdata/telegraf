@@ -248,6 +248,17 @@ information matching the `internal_write` metric of the
 If not stated otherwise, all variables are accumulated since the last successful
 heartbeat message.
 
+The following functions are available:
+
+- `encoding` functions of the [CEL encoder library][cel_encoder]
+- `math` functions of the [CEL math library][cel_math]
+- `string` functions of the [CEL strings library][cel_strings]
+- `now` function for getting the current time
+
 [schema]: /plugins/outputs/heartbeat/schema_v1.json
-[cel]: https://cel.dev
 [internal_plugin]: /plugins/inputs/internal/README.md
+
+[cel]: https://cel.dev
+[cel_encoder]: https://github.com/google/cel-go/blob/master/ext/README.md#encoders
+[cel_math]: https://github.com/google/cel-go/blob/master/ext/README.md#math
+[cel_strings]: https://github.com/google/cel-go/blob/master/ext/README.md#strings
