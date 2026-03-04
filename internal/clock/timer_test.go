@@ -48,7 +48,7 @@ func TestTimer(t *testing.T) {
 	require.Equal(t, expected, actual)
 }
 
-// TestTimerJitterDrift demonstrates that with a Timer,  jitter causes drift
+// TestTimerJitterDrift demonstrates that with a Timer, jitter causes drift
 // over time. Each tick = interval + random(0, jitter), so the
 // average tick distance is interval + jitter/2.
 //
