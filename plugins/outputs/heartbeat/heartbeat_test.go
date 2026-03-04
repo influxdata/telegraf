@@ -1307,6 +1307,7 @@ func TestStatusComputation(t *testing.T) {
 	tests := []struct {
 		name     string
 		stats    *statistics
+		agent    *agentStats
 		inputs   []*inputStats
 		outputs  []*outputStats
 		cfg      StatusConfig
@@ -1729,6 +1730,58 @@ func TestStatusComputation(t *testing.T) {
 				"status": "WARN"
 			}`,
 		},
+		{
+			name: "agent statistics warn",
+			cfg: StatusConfig{
+				Warn:    `agent.gather_timeouts > 0 || agent.metrics_dropped > 0`,
+				Fail:    `agent.gather_errors > 0`,
+				Order:   []string{"fail", "warn", "ok"},
+				Default: "ok",
+			},
+			stats: &statistics{
+				metrics:     1,
+				logErrors:   0,
+				logWarnings: 0,
+			},
+			agent: &agentStats{
+				metricsRejected: 1,
+				metricsDropped:  5,
+				gatherTimeouts:  0,
+				gatherErrors:    0,
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "WARN"
+			}`,
+		},
+		{
+			name: "agent statistics error",
+			cfg: StatusConfig{
+				Warn:    `agent.gather_timeouts > 0 || agent.metrics_dropped > 0`,
+				Fail:    `agent.gather_errors > 0`,
+				Order:   []string{"fail", "warn", "ok"},
+				Default: "ok",
+			},
+			stats: &statistics{
+				metrics:     1,
+				logErrors:   0,
+				logWarnings: 0,
+			},
+			agent: &agentStats{
+				metricsRejected: 1,
+				metricsDropped:  5,
+				gatherTimeouts:  0,
+				gatherErrors:    8,
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "ERR"
+			}`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1785,6 +1838,10 @@ func TestStatusComputation(t *testing.T) {
 			}
 
 			// Register plugin statistics of any
+			if tt.agent != nil {
+				tt.agent.register()
+				defer tt.agent.unregister()
+			}
 			for _, s := range tt.inputs {
 				s.register()
 			}
@@ -2113,6 +2170,40 @@ func TestSendingFail(t *testing.T) {
 	require.Contains(t, logmsg, "Another error message logged during failing sends")
 }
 
+type agentStats struct {
+	// Model stats
+	metricsWritten  int64
+	metricsRejected int64
+	metricsDropped  int64
+	metricsGathered int64
+	gatherErrors    int64
+	gatherTimeouts  int64
+}
+
+func (s *agentStats) register() {
+	tags := make(map[string]string)
+
+	// Register and set model stats
+	selfstat.Register("agent", "metrics_written", tags).Set(s.metricsWritten)
+	selfstat.Register("agent", "metrics_rejected", tags).Set(s.metricsRejected)
+	selfstat.Register("agent", "metrics_dropped", tags).Set(s.metricsDropped)
+	selfstat.Register("agent", "metrics_gathered", tags).Set(s.metricsGathered)
+	selfstat.Register("agent", "gather_errors", tags).Set(s.gatherErrors)
+	selfstat.Register("agent", "gather_timeouts", tags).Set(s.gatherTimeouts)
+}
+
+func (s *agentStats) unregister() {
+	tags := make(map[string]string)
+
+	// Unregister model stats
+	selfstat.Unregister("agent", "metrics_written", tags)
+	selfstat.Unregister("agent", "metrics_rejected", tags)
+	selfstat.Unregister("agent", "metrics_dropped", tags)
+	selfstat.Unregister("agent", "metrics_gathered", tags)
+	selfstat.Unregister("agent", "gather_errors", tags)
+	selfstat.Unregister("agent", "gather_timeouts", tags)
+}
+
 type inputStats struct {
 	name  string
 	id    string
@@ -2152,7 +2243,7 @@ func (s *inputStats) unregister() {
 		tags["alias"] = s.alias
 	}
 
-	// Register and set model stats
+	// Unregister model stats
 	selfstat.Unregister("gather", "errors", tags)
 	selfstat.Unregister("gather", "metrics_gathered", tags)
 	selfstat.Unregister("gather", "gather_time_ns", tags)
@@ -2213,13 +2304,13 @@ func (s *outputStats) unregister() {
 		tags["alias"] = s.alias
 	}
 
-	// Register and set model stats
+	// Unregister model stats
 	selfstat.Unregister("write", "errors", tags)
 	selfstat.Unregister("write", "metrics_filtered", tags)
 	selfstat.Unregister("write", "write_time_ns", tags)
 	selfstat.Unregister("write", "startup_errors", tags)
 
-	// Register and set buffer stats
+	// Unregister buffer stats
 	selfstat.Unregister("write", "metrics_added", tags)
 	selfstat.Unregister("write", "metrics_written", tags)
 	selfstat.Unregister("write", "metrics_rejected", tags)

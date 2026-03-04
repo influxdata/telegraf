@@ -34,7 +34,7 @@ func environment() (*cel.Env, error) {
 			decls.NewVariable("log_warnings", types.IntType),
 			decls.NewVariable("last_update", types.TimestampType),
 			decls.NewVariable("inputs", pluginStatisticsType),
-			decls.NewVariable("outputs", types.NewMapType(types.StringType, types.DynType)),
+			decls.NewVariable("outputs", pluginStatisticsType),
 		),
 		cel.Function(
 			"now",

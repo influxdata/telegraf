@@ -196,9 +196,12 @@ For defining expressions you can use the following variables
 The `agent` statistics variable is a `map` with information matching the
 `internal_agent` metric of the [internal input plugin][internal_plugin]:
 
-- `metrics_written` (int)  -- number of metrics written by the agent
-- `metrics_rejected` (int) -- number of metrics rejected by the agent
-- `metrics_dropped` (int)  -- number of metrics dropped by the agent
+- `metrics_written` (int)  -- number of metrics written in total by all outputs
+- `metrics_rejected` (int) -- number of metrics rejected in total by all outputs
+- `metrics_dropped` (int)  -- number of metrics dropped in total by all outputs
+- `metrics_gathered` (int) -- number of metrics collected in total by all inputs
+- `gather_errors` (int)    -- number of errors during collection by all inputs
+- `gather_timeouts` (int)  -- number of collection timeouts by all inputs
 
 The `inputs` statistics variable is a `map` with the key denoting the plugin
 type (e.g. `cpu` for `inputs.cpu`) and the value being list of plugin
