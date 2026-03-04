@@ -97,7 +97,7 @@ func TestTimerJitterDrift(t *testing.T) {
 	// Calculate drift
 	drift := totalElapsed - expectedTime
 
-	t.Logf("=== RollingTicker (interval + jitter each tick) ===")
+	t.Logf("=== Timer (interval + jitter each tick) ===")
 	t.Logf("Start time:      %s", start.Format("15:04:05"))
 	t.Logf("First trigger:   %s", firstTrigger.Format("15:04:05"))
 	t.Logf("Last trigger:    %s", lastTrigger.Format("15:04:05"))
@@ -109,7 +109,7 @@ func TestTimerJitterDrift(t *testing.T) {
 	// Current behavior: drift should be ~5 minutes (59 intervals * 5s avg jitter)
 	// This confirms the bug from issue #17287
 	require.Greater(t, drift, 2*time.Minute,
-		"Expected significant drift with RollingTicker jitter behavior")
+		"Expected significant drift with Timer jitter behavior")
 	require.Less(t, drift, 10*time.Minute,
 		"Drift is larger than expected maximum")
 }
