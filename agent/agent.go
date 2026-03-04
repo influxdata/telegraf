@@ -905,7 +905,7 @@ func (a *Agent) flushLoop(ctx context.Context, output *models.RunningOutput, tim
 		case <-ctx.Done():
 			logError(a.flushOnce(output, timer, output.Write))
 			return
-		case <-timer.Elapsed():
+		case <-timer.C:
 			logError(a.flushOnce(output, timer, output.Write))
 		case <-flushRequested:
 			logError(a.flushOnce(output, timer, output.Write))
@@ -927,7 +927,7 @@ func (*Agent) flushOnce(output *models.RunningOutput, timer *clock.Timer, writeF
 		case err := <-done:
 			output.LogBufferStatus()
 			return err
-		case <-timer.Elapsed():
+		case <-timer.C:
 			log.Printf("W! [agent] [%q] did not complete within its flush interval",
 				output.LogName())
 			output.LogBufferStatus()

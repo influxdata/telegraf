@@ -32,8 +32,8 @@ func TestAlignedTicker(t *testing.T) {
 	actual := make([]time.Time, 0)
 	clk.Add(10 * time.Second)
 	for !clk.Now().After(end) {
-		tm := <-ticker.C
-		actual = append(actual, tm.UTC())
+		ts := <-ticker.C
+		actual = append(actual, ts.UTC())
 
 		clk.Add(10 * time.Second)
 	}
@@ -56,8 +56,8 @@ func TestAlignedTickerJitter(t *testing.T) {
 	last := start
 	for !clk.Now().After(end) {
 		select {
-		case tm := <-ticker.C:
-			dur := tm.Sub(last)
+		case ts := <-ticker.C:
+			dur := ts.Sub(last)
 			// 10s interval + 5s jitter + up to 1s late firing.
 			require.LessOrEqual(t, dur, 16*time.Second, "expected elapsed time to be less than 16 seconds, but was %s", dur)
 			require.GreaterOrEqual(t, dur, 5*time.Second, "expected elapsed time to be more than 5 seconds, but was %s", dur)
@@ -91,8 +91,8 @@ func TestAlignedTickerOffset(t *testing.T) {
 	actual := make([]time.Time, 0)
 	clk.Add(10*time.Second + offset)
 	for !clk.Now().After(end) {
-		tm := <-ticker.C
-		actual = append(actual, tm.UTC())
+		ts := <-ticker.C
+		actual = append(actual, ts.UTC())
 		clk.Add(10 * time.Second)
 	}
 
@@ -118,15 +118,15 @@ func TestAlignedTickerMissedTick(t *testing.T) {
 	for range 25 {
 		clk.Add(1 * time.Second)
 	}
-	tm := <-ticker.C
-	require.Equal(t, time.Unix(10, 0).UTC(), tm.UTC())
+	ts := <-ticker.C
+	require.Equal(t, time.Unix(10, 0).UTC(), ts.UTC())
 
 	// Advance the time further until we receive another tick
 	for range 5 {
 		clk.Add(1 * time.Second)
 	}
-	tm = <-ticker.C
-	require.Equal(t, time.Unix(30, 0).UTC(), tm.UTC())
+	ts = <-ticker.C
+	require.Equal(t, time.Unix(30, 0).UTC(), ts.UTC())
 }
 
 // TestAlignedTickerJitterBehavior shows that AlignedTicker has different behavior.
@@ -161,8 +161,8 @@ func TestAlignedTickerJitterBehavior(t *testing.T) {
 
 	for len(triggers) < numTicks {
 		select {
-		case tm := <-ticker.C:
-			triggers = append(triggers, tm)
+		case ts := <-ticker.C:
+			triggers = append(triggers, ts)
 		default:
 			clk.Add(1 * time.Second)
 		}

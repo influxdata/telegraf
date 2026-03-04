@@ -10,6 +10,8 @@ type config struct {
 	clk   clock.Clock
 	start time.Time
 	align bool
+
+	notifier chan bool
 }
 
 type Option func(*config)
@@ -24,5 +26,11 @@ func WithAlignment(start time.Time) Option {
 	return func(c *config) {
 		c.start = start
 		c.align = true
+	}
+}
+
+func WithStartupNotification(notifier chan bool) Option {
+	return func(c *config) {
+		c.notifier = notifier
 	}
 }
