@@ -1731,7 +1731,7 @@ func TestStatusComputation(t *testing.T) {
 			}`,
 		},
 		{
-			name: "agent statistics warn",
+			name: "agent warn",
 			cfg: StatusConfig{
 				Warn:    `agent.gather_timeouts > 0 || agent.metrics_dropped > 0`,
 				Fail:    `agent.gather_errors > 0`,
@@ -1757,7 +1757,7 @@ func TestStatusComputation(t *testing.T) {
 			}`,
 		},
 		{
-			name: "agent statistics error",
+			name: "agent error",
 			cfg: StatusConfig{
 				Warn:    `agent.gather_timeouts > 0 || agent.metrics_dropped > 0`,
 				Fail:    `agent.gather_errors > 0`,
@@ -1779,7 +1779,7 @@ func TestStatusComputation(t *testing.T) {
 				"id": "telegraf",
 				"version": "$VERSION",
 				"schema": $SCHEMA,
-				"status": "ERR"
+				"status": "FAIL"
 			}`,
 		},
 	}
@@ -2192,7 +2192,7 @@ func (s *agentStats) register() {
 	selfstat.Register("agent", "gather_timeouts", tags).Set(s.gatherTimeouts)
 }
 
-func (s *agentStats) unregister() {
+func (*agentStats) unregister() {
 	tags := make(map[string]string)
 
 	// Unregister model stats

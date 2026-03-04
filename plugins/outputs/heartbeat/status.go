@@ -33,6 +33,7 @@ func environment() (*cel.Env, error) {
 			decls.NewVariable("log_errors", types.IntType),
 			decls.NewVariable("log_warnings", types.IntType),
 			decls.NewVariable("last_update", types.TimestampType),
+			decls.NewVariable("agent", types.NewMapType(types.StringType, types.DynType)),
 			decls.NewVariable("inputs", pluginStatisticsType),
 			decls.NewVariable("outputs", pluginStatisticsType),
 		),
