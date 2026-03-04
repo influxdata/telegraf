@@ -144,7 +144,8 @@ func (h *handler) handleUpdateMetadata(notification *gnmi.Notification, extensio
 	timestamp := time.Unix(0, notification.Timestamp)
 
 	// Extract tags from potential extension in the update notification
-	headerTags := make(map[string]string)
+	headerTags := map[string]string{"source": h.host}
+
 	for _, ext := range extension {
 		currentExt := ext.GetRegisteredExt().Msg
 		if currentExt == nil {
@@ -177,13 +178,6 @@ func (h *handler) handleUpdateMetadata(notification *gnmi.Notification, extensio
 	if h.enforceFirstNamespaceAsOrigin {
 		prefix.enforceFirstNamespaceAsOrigin()
 	}
-
-	// Add info to the tags
-	headerTags["source"] = h.host
-	if !prefix.empty() {
-		headerTags["path"] = prefix.fullPath()
-	}
-
 	return timestamp, headerTags, prefix
 }
 
@@ -245,13 +239,16 @@ func (h *handler) handleUpdates(acc telegraf.Accumulator, updates []*gnmi.Update
 
 	// Some devices do not provide a prefix, so do some guesswork based
 	// on the paths of the fields
-	if headerTags["path"] == "" && h.guessPathStrategy == "common path" {
+	var path string
+	if !prefix.empty() {
+		path = prefix.fullPath()
+	} else if h.guessPathStrategy == "common path" {
 		paths := make([]*pathInfo, 0, len(valueFields))
 		for _, f := range valueFields {
 			paths = append(paths, f.path)
 		}
 		if prefixPath := guessPrefix(paths); prefixPath != "" {
-			headerTags["path"] = prefixPath
+			path = prefixPath
 		}
 	}
 
@@ -266,6 +263,9 @@ func (h *handler) handleUpdates(acc telegraf.Accumulator, updates []*gnmi.Update
 		tags := make(map[string]string, len(headerTags)+len(fieldTags))
 		for key, val := range headerTags {
 			tags[key] = val
+		}
+		if path != "" {
+			tags["path"] = path
 		}
 		for key, val := range fieldTags {
 			tags[key] = val
@@ -358,9 +358,12 @@ func (h *handler) handleDeletes(acc telegraf.Accumulator, deletes []*gnmi.Path, 
 
 	// Some devices do not provide a prefix, so do some guesswork based
 	// on the paths of the fields
-	if headerTags["path"] == "" && h.guessPathStrategy == "common path" {
+	var path string
+	if !prefix.empty() {
+		path = prefix.fullPath()
+	} else if h.guessPathStrategy == "common path" {
 		if prefixPath := guessPrefix(paths); prefixPath != "" {
-			headerTags["path"] = prefixPath
+			path = prefixPath
 		}
 	}
 
@@ -372,9 +375,12 @@ func (h *handler) handleDeletes(acc telegraf.Accumulator, deletes []*gnmi.Path, 
 
 		// Prepare tags from prefix
 		fieldTags := field.tags(h.tagPathPrefix)
-		tags := make(map[string]string, len(headerTags)+len(fieldTags))
+		tags := make(map[string]string, len(headerTags)+len(fieldTags)+1)
 		for key, val := range headerTags {
 			tags[key] = val
+		}
+		if path != "" {
+			tags["path"] = path
 		}
 		for key, val := range fieldTags {
 			tags[key] = val
@@ -409,9 +415,6 @@ func (h *handler) handleDeletes(acc telegraf.Accumulator, deletes []*gnmi.Path, 
 		}
 
 		fields := map[string]interface{}{"operation": "delete"}
-
-		fmt.Printf("[delete] got name %q with tags %+v\n", name, tags)
-
 		acc.AddFields(name, fields, tags, timestamp)
 	}
 }
