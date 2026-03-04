@@ -1782,6 +1782,48 @@ func TestStatusComputation(t *testing.T) {
 				"status": "FAIL"
 			}`,
 		},
+		{
+			name: "last-update warn",
+			cfg: StatusConfig{
+				Warn:    `now() - last_update > duration('10s')`,
+				Fail:    `now() - last_update > duration('60s')`,
+				Order:   []string{"fail", "warn", "ok"},
+				Default: "ok",
+			},
+			stats: &statistics{
+				metrics:     1,
+				logErrors:   0,
+				logWarnings: 0,
+				lastUpdate:  time.Now().Add(-15 * time.Second),
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "WARN"
+			}`,
+		},
+		{
+			name: "last-update error",
+			cfg: StatusConfig{
+				Warn:    `now() - last_update > duration('10s')`,
+				Fail:    `now() - last_update > duration('60s')`,
+				Order:   []string{"fail", "warn", "ok"},
+				Default: "ok",
+			},
+			stats: &statistics{
+				metrics:     1,
+				logErrors:   0,
+				logWarnings: 0,
+				lastUpdate:  time.Now().Add(-2 * time.Minute),
+			},
+			expected: `{
+				"id": "telegraf",
+				"version": "$VERSION",
+				"schema": $SCHEMA,
+				"status": "FAIL"
+			}`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1830,11 +1872,13 @@ func TestStatusComputation(t *testing.T) {
 
 			// Override the statistics for the computation
 			if tt.stats != nil {
+				plugin.stats.Lock()
 				plugin.stats.metrics = tt.stats.metrics
 				plugin.stats.logErrors = tt.stats.logErrors
 				plugin.stats.logWarnings = tt.stats.logWarnings
 				plugin.stats.lastUpdate = tt.stats.lastUpdate
 				plugin.stats.lastUpdateFailed = tt.stats.lastUpdateFailed
+				plugin.stats.Unlock()
 			}
 
 			// Register plugin statistics of any

@@ -117,11 +117,7 @@ func (s *statistics) variables() map[string]interface{} {
 		"metrics":      s.metrics,
 		"log_errors":   s.logErrors,
 		"log_warnings": s.logWarnings,
-	}
-	if s.lastUpdate.IsZero() {
-		vars["last_update"] = nil
-	} else {
-		vars["last_update"] = s.lastUpdate
+		"last_update":  s.lastUpdate,
 	}
 
 	// Calculate diff

@@ -187,7 +187,7 @@ For defining expressions you can use the following variables
 - `metrics` (int)      -- number of metrics arriving at this plugin
 - `log_errors` (int)   -- number of errors logged
 - `log_warnings` (int) -- number of warnings logged
-- `last_update` (int)  -- time of last successful heartbeat message, can be used
+- `last_update` (time) -- time of last successful heartbeat message, can be used
                           to e.g. calculate rates
 - `agent` (map)        -- agent statistics, see below
 - `inputs` (map)       -- input plugin statistics, see below

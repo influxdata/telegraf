@@ -159,6 +159,11 @@ func (h *Heartbeat) Init() error {
 		}
 	}
 
+	// Initialize the last-sent timestamp
+	h.stats.Lock()
+	h.stats.lastUpdate = time.Now()
+	h.stats.Unlock()
+
 	return nil
 }
 
@@ -359,7 +364,7 @@ func (h *Heartbeat) send() error {
 		return fmt.Errorf("received status %d (%s) with message %s", resp.StatusCode, resp.Status, response)
 	}
 
-	// Update statistics on successful sent
+	// Update statistics and last-update timestamp on successful sent
 	h.stats.remove(snapshot, time.Now())
 	h.Lock()
 	h.logEvents = h.logEvents[len(logEvents):]
