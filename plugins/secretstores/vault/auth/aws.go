@@ -72,7 +72,7 @@ func (a *AwsEC2) Init() error {
 		a.SignatureType = "pkcs7"
 	case "pkcs7", "identity", "rsa2048":
 	default:
-		return errors.New("unknown signature type: " + a.SignatureType)
+		return fmt.Errorf("unknown signature type: %q", a.SignatureType)
 	}
 
 	if a.Region == "" {

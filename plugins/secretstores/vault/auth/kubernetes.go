@@ -12,8 +12,8 @@ import (
 )
 
 type Kubernetes struct {
-	RoleName string        `toml:"role_name"`
-	Secret   config.Secret `toml:"secret"`
+	RoleName            string        `toml:"role_name"`
+	ServiceAccountToken config.Secret `toml:"service_account_token"`
 }
 
 // Init validates the auth method options and sets any necessary defaults
@@ -21,15 +21,15 @@ func (k *Kubernetes) Init() error {
 	if k.RoleName == "" {
 		return errors.New("kubernetes role_name missing")
 	}
-	if k.Secret.Empty() {
-		return errors.New("kubernetes secret missing")
+	if k.ServiceAccountToken.Empty() {
+		return errors.New("kubernetes service_account_token missing")
 	}
 	return nil
 }
 
 // Authenticate uses the provided configuration to authenticate to Vault
 func (k *Kubernetes) Authenticate(client *vault.Client) (*vault.Secret, error) {
-	secret, err := k.Secret.Get()
+	secret, err := k.ServiceAccountToken.Get()
 	if err != nil {
 		return nil, fmt.Errorf("getting secret failed: %w", err)
 	}

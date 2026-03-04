@@ -101,7 +101,7 @@ store usage.
   #   role_name = ""
   #
   #   ## The Kubernetes service account token
-  #   secret = ""
+  #   service_account_token = ""
 
   # [secretstores.vault.userpass]
   #   ## The Vault Userpass username
