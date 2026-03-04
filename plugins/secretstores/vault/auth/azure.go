@@ -14,8 +14,8 @@ type Azure struct {
 	ResourceURL string `toml:"resource_url"`
 }
 
-// Validate checks if the provided configuration fields are valid
-func (a *Azure) Validate() error {
+// Init validates the auth method options and sets any necessary defaults
+func (a *Azure) Init() error {
 	if a.RoleName == "" {
 		return errors.New("azure role_name missing")
 	}

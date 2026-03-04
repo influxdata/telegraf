@@ -33,6 +33,8 @@ type Vault struct {
 	Kubernetes *auth.Kubernetes `toml:"kubernetes"`
 	UserPass   *auth.UserPass   `toml:"userpass"`
 
+	Log telegraf.Logger `toml:"-"`
+
 	auth   auth.VaultAuth
 	client *vault.Client
 }
@@ -81,59 +83,20 @@ func (v *Vault) Init() error {
 		return err
 	}
 
-	if renewable, err := authInfo.TokenIsRenewable(); renewable && err == nil {
+	renewable, err := authInfo.TokenIsRenewable()
+	if err != nil {
+		v.Log.Errorf("failed to check if auth token is renewable: %v", err)
+	}
+	if renewable {
 		watcher, err := v.client.NewLifetimeWatcher(&vault.LifetimeWatcherInput{Secret: authInfo})
 		if err != nil {
-			return fmt.Errorf("unable to initialize Vault lifetime watcher: %w", err)
+			v.Log.Errorf("unable to initialize Vault lifetime watcher: %v", err)
+		} else {
+			go watcher.Start()
 		}
-		go watcher.Start()
 	}
 
 	return nil
-}
-
-func (v *Vault) validateAuth() error {
-	if v.AppRole != nil {
-		if v.auth != nil {
-			return errors.New("must only specify one authentication method")
-		}
-		v.auth = v.AppRole
-	}
-	if v.AwsEC2 != nil {
-		if v.auth != nil {
-			return errors.New("must only specify one authentication method")
-		}
-		v.auth = v.AwsEC2
-	}
-	if v.AwsIAM != nil {
-		if v.auth != nil {
-			return errors.New("must only specify one authentication method")
-		}
-		v.auth = v.AwsIAM
-	}
-	if v.Azure != nil {
-		if v.auth != nil {
-			return errors.New("must only specify one authentication method")
-		}
-		v.auth = v.Azure
-	}
-	if v.Kubernetes != nil {
-		if v.auth != nil {
-			return errors.New("must only specify one authentication method")
-		}
-		v.auth = v.Kubernetes
-	}
-	if v.UserPass != nil {
-		if v.auth != nil {
-			return errors.New("must only specify one authentication method")
-		}
-		v.auth = v.UserPass
-	}
-
-	if v.auth == nil {
-		return errors.New("no auth method set")
-	}
-	return v.auth.Validate()
 }
 
 func (v *Vault) Get(key string) ([]byte, error) {
@@ -187,6 +150,38 @@ func (v *Vault) GetResolver(key string) (telegraf.ResolveFunc, error) {
 		return s, true, err
 	}
 	return resolver, nil
+}
+
+func (v *Vault) validateAuth() error {
+	var methods []auth.VaultAuth
+	if v.AppRole != nil {
+		methods = append(methods, v.AppRole)
+	}
+	if v.AwsEC2 != nil {
+		methods = append(methods, v.AwsEC2)
+	}
+	if v.AwsIAM != nil {
+		methods = append(methods, v.AwsIAM)
+	}
+	if v.Azure != nil {
+		methods = append(methods, v.Azure)
+	}
+	if v.Kubernetes != nil {
+		methods = append(methods, v.Kubernetes)
+	}
+	if v.UserPass != nil {
+		methods = append(methods, v.UserPass)
+	}
+
+	if len(methods) == 0 {
+		return errors.New("no auth method set")
+	}
+	if len(methods) > 1 {
+		return errors.New("must only specify one authentication method")
+	}
+
+	v.auth = methods[0]
+	return v.auth.Init()
 }
 
 func (v *Vault) getSecret() (*vault.KVSecret, error) {

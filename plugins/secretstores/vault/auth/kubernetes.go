@@ -6,18 +6,18 @@ import (
 	"fmt"
 
 	vault "github.com/hashicorp/vault/api"
-	auth "github.com/hashicorp/vault/api/auth/kubernetes"
+	"github.com/hashicorp/vault/api/auth/kubernetes"
 
 	"github.com/influxdata/telegraf/config"
 )
 
 type Kubernetes struct {
-	RoleName string
-	Secret   config.Secret
+	RoleName string        `toml:"role_name"`
+	Secret   config.Secret `toml:"secret"`
 }
 
-// Validate checks if the provided configuration fields are valid
-func (k *Kubernetes) Validate() error {
+// Init validates the auth method options and sets any necessary defaults
+func (k *Kubernetes) Init() error {
 	if k.RoleName == "" {
 		return errors.New("kubernetes role_name missing")
 	}
@@ -33,10 +33,10 @@ func (k *Kubernetes) Authenticate(client *vault.Client) (*vault.Secret, error) {
 	if err != nil {
 		return nil, fmt.Errorf("getting secret failed: %w", err)
 	}
-	opt := auth.WithServiceAccountToken(secret.String())
+	opt := kubernetes.WithServiceAccountToken(secret.String())
 	defer secret.Destroy()
 
-	kubernetesAuth, err := auth.NewKubernetesAuth(k.RoleName, opt)
+	kubernetesAuth, err := kubernetes.NewKubernetesAuth(k.RoleName, opt)
 	if err != nil {
 		return nil, fmt.Errorf("unable to initialize Kubernetes auth method: %w", err)
 	}

@@ -15,8 +15,8 @@ type AwsIAM struct {
 	ServerIDHeader string `toml:"server_id_header"`
 }
 
-// Validate checks if the provided configuration fields are valid
-func (a *AwsIAM) Validate() error {
+// Init validates the auth method options and sets any necessary defaults
+func (a *AwsIAM) Init() error {
 	if a.RoleName == "" {
 		return errors.New("aws iam role_name missing")
 	}
@@ -61,8 +61,8 @@ type AwsEC2 struct {
 	SignatureType string `toml:"signature_type"`
 }
 
-// Validate checks if the provided configuration fields are valid
-func (a *AwsEC2) Validate() error {
+// Init validates the auth method options and sets any necessary defaults
+func (a *AwsEC2) Init() error {
 	if a.RoleName == "" {
 		return errors.New("aws ec2 role_name missing")
 	}

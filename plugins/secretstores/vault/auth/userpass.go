@@ -16,8 +16,8 @@ type UserPass struct {
 	Password config.Secret `toml:"password"`
 }
 
-// Validate checks if the provided configuration fields are valid
-func (u *UserPass) Validate() error {
+// Init validates the auth method options and sets any necessary defaults
+func (u *UserPass) Init() error {
 	if u.Username == "" {
 		return errors.New("userpass username missing")
 	}

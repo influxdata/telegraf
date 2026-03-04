@@ -2,7 +2,7 @@
 
 The `vault` plugin allows to utilize secrets stored in a
 [HashiCorp Vault][vault] server via the Vault API. It supports authentication
-via AppRole.
+via AppRole, Userpass, AWS IAM, AWS EC2, Azure and Kubernetes.
 
 ⭐ Telegraf v1.37.0
 🏷️ secrets

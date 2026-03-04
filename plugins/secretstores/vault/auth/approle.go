@@ -17,8 +17,8 @@ type AppRole struct {
 	Secret          config.Secret `toml:"secret"`
 }
 
-// Validate checks if the provided configuration fields are valid
-func (a *AppRole) Validate() error {
+// Init validates the auth method options and sets any necessary defaults
+func (a *AppRole) Init() error {
 	if a.RoleID == "" {
 		return errors.New("approle role_id missing")
 	}
@@ -37,7 +37,7 @@ func (a *AppRole) Authenticate(v *vault.Client) (*vault.Secret, error) {
 	secretID := &approle.SecretID{FromString: secret.String()}
 	defer secret.Destroy()
 
-	opts := make([]approle.LoginOption, 0)
+	var opts []approle.LoginOption
 	if a.ResponseWrapped {
 		opts = append(opts, approle.WithWrappingToken())
 	}
