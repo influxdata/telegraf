@@ -737,6 +737,248 @@ func TestHandleNXXformMulti(t *testing.T) {
 	acc.AssertContainsFields(t, "dme", fields)
 }
 
+func TestHandleDmeDoubleToIntXForm(t *testing.T) {
+	c := &CiscoTelemetryMDT{
+		Transport: "dummy",
+		Aliases:   map[string]string{"dme": "sys/nbm/show/interfaces"},
+		Dmes: map[string]string{
+			"dnpath1": `{
+				"Name": "sys/nbm/show/interfaces",
+				"prop": [
+					{"Key": "bwCurrentIng", "Value": "int64*1000"}, 
+					{"Key": "bwCurrentEgr", "Value": "int64*1000"}, 
+					{"Key": "bwUsableIng", "Value": "int64*1000"},
+					{"Key": "bwUsableEgr", "Value": "int64*1000"}, 
+					{"Key": "bwActualIng", "Value": "int64*1000"}, 
+					{"Key": "bwActualEgr", "Value": "int64*1000"}
+				]
+			}`,
+		},
+	}
+	acc := &testutil.Accumulator{}
+	err := c.Start(acc)
+	// error is expected since we are passing in dummy transport
+	require.Error(t, err)
+
+	tel := &telemetry.Telemetry{
+		MsgTimestamp: 1543236572000,
+		EncodingPath: "sys/nbm/show/interfaces",
+		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
+		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
+		DataGpbkv: []*telemetry.TelemetryField{
+			{
+				Fields: []*telemetry.TelemetryField{
+					{
+						Name: "keys",
+						Fields: []*telemetry.TelemetryField{
+							{
+								Name:        "foo",
+								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "bar"},
+							},
+						},
+					},
+					{
+						Name: "content",
+						Fields: []*telemetry.TelemetryField{
+							{
+								Fields: []*telemetry.TelemetryField{
+									{
+										Name: "fooEntity",
+										Fields: []*telemetry.TelemetryField{
+											{
+												Fields: []*telemetry.TelemetryField{
+													{
+														Name: "attributes",
+														Fields: []*telemetry.TelemetryField{
+															{
+																Fields: []*telemetry.TelemetryField{
+																	{
+																		Name:        "rn",
+																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "some-rn"},
+																	},
+																	{
+																		Name:        "bwCurrentIng",
+																		ValueByType: &telemetry.TelemetryField_DoubleValue{DoubleValue: 100.0},
+																	},
+																	{
+																		Name:        "bwCurrentEgr",
+																		ValueByType: &telemetry.TelemetryField_DoubleValue{DoubleValue: 200.0},
+																	},
+																	{
+																		Name:        "bwUsableIng",
+																		ValueByType: &telemetry.TelemetryField_DoubleValue{DoubleValue: 300.0},
+																	},
+																	{
+																		Name:        "bwUsableEgr",
+																		ValueByType: &telemetry.TelemetryField_DoubleValue{DoubleValue: 400.0},
+																	},
+																	{
+																		Name:        "bwActualIng",
+																		ValueByType: &telemetry.TelemetryField_DoubleValue{DoubleValue: 500.0},
+																	},
+																	{
+																		Name:        "bwActualEgr",
+																		ValueByType: &telemetry.TelemetryField_DoubleValue{DoubleValue: 600.0},
+																	},
+																	{
+																		Name:        "subscriptionId",
+																		ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 2814749767106551},
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	data, err := proto.Marshal(tel)
+	require.NoError(t, err)
+
+	c.handleTelemetry(data)
+	require.Empty(t, acc.Errors)
+	// validate various transformation scenarios newly added in the code.
+	fields := map[string]interface{}{
+		"bwCurrentIng":   int64(100000),
+		"bwCurrentEgr":   int64(200000),
+		"bwUsableIng":    int64(300000),
+		"bwUsableEgr":    int64(400000),
+		"bwActualIng":    int64(500000),
+		"bwActualEgr":    int64(600000),
+		"subscriptionId": "2814749767106551",
+	}
+	acc.AssertContainsFields(t, "dme", fields)
+}
+
+func TestHandleDmeIntToDoubleXForm(t *testing.T) {
+	c := &CiscoTelemetryMDT{
+		Transport: "dummy",
+		Aliases:   map[string]string{"dme": "sys/nbm/show/interfaces"},
+		Dmes: map[string]string{
+			"dnpath1": `{
+				"Name": "sys/nbm/show/interfaces",
+				"prop": [
+					{"Key": "bwCurrentIng", "Value": "float64/1000"}, 
+					{"Key": "bwCurrentEgr", "Value": "float64/1000"}, 
+					{"Key": "bwUsableIng", "Value": "float64/1000"},
+					{"Key": "bwUsableEgr", "Value": "float64/1000"}, 
+					{"Key": "bwActualIng", "Value": "float64/1000"}, 
+					{"Key": "bwActualEgr", "Value": "float64/1000"}
+				]
+			}`,
+		},
+	}
+	acc := &testutil.Accumulator{}
+	err := c.Start(acc)
+	// error is expected since we are passing in dummy transport
+	require.Error(t, err)
+
+	tel := &telemetry.Telemetry{
+		MsgTimestamp: 1543236572000,
+		EncodingPath: "sys/nbm/show/interfaces",
+		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
+		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
+		DataGpbkv: []*telemetry.TelemetryField{
+			{
+				Fields: []*telemetry.TelemetryField{
+					{
+						Name: "keys",
+						Fields: []*telemetry.TelemetryField{
+							{
+								Name:        "foo",
+								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "bar"},
+							},
+						},
+					},
+					{
+						Name: "content",
+						Fields: []*telemetry.TelemetryField{
+							{
+								Fields: []*telemetry.TelemetryField{
+									{
+										Name: "fooEntity",
+										Fields: []*telemetry.TelemetryField{
+											{
+												Fields: []*telemetry.TelemetryField{
+													{
+														Name: "attributes",
+														Fields: []*telemetry.TelemetryField{
+															{
+																Fields: []*telemetry.TelemetryField{
+																	{
+																		Name:        "rn",
+																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "some-rn"},
+																	},
+																	{
+																		Name:        "bwCurrentIng",
+																		ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 100000},
+																	},
+																	{
+																		Name:        "bwCurrentEgr",
+																		ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 200000},
+																	},
+																	{
+																		Name:        "bwUsableIng",
+																		ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 300000},
+																	},
+																	{
+																		Name:        "bwUsableEgr",
+																		ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 400000},
+																	},
+																	{
+																		Name:        "bwActualIng",
+																		ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 500000},
+																	},
+																	{
+																		Name:        "bwActualEgr",
+																		ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 600000},
+																	},
+																	{
+																		Name:        "subscriptionId",
+																		ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 2814749767106551},
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	data, err := proto.Marshal(tel)
+	require.NoError(t, err)
+
+	c.handleTelemetry(data)
+	require.Empty(t, acc.Errors)
+	// validate various transformation scenarios newly added in the code.
+	fields := map[string]interface{}{
+		"bwCurrentIng":   float64(100.0),
+		"bwCurrentEgr":   float64(200.0),
+		"bwUsableIng":    float64(300.0),
+		"bwUsableEgr":    float64(400.0),
+		"bwActualIng":    float64(500.0),
+		"bwActualEgr":    float64(600.0),
+		"subscriptionId": "2814749767106551",
+	}
+	acc.AssertContainsFields(t, "dme", fields)
+}
+
 func TestHandleNXDME(t *testing.T) {
 	c := &CiscoTelemetryMDT{
 		Transport: "dummy",
