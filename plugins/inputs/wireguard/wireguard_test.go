@@ -42,7 +42,6 @@ func TestWireguard_gatherDeviceMetrics(t *testing.T) {
 
 func TestWireguard_gatherDevicePeerMetrics(t *testing.T) {
 	pubkey, err := wgtypes.ParseKey("NZTRIrv/ClTcQoNAnChEot+WL7OH7uEGQmx8oAN9rWE=")
-	endpoint := net.UDPAddr{IP: net.IPv4(192, 168, 1, 100), Port: 51820}
 	require.NoError(t, err)
 
 	device := &wgtypes.Device{
@@ -50,7 +49,7 @@ func TestWireguard_gatherDevicePeerMetrics(t *testing.T) {
 	}
 	peer := wgtypes.Peer{
 		PublicKey:                   pubkey,
-		Endpoint:                    &endpoint,
+		Endpoint:                    &net.UDPAddr{IP: net.IPv4(192, 168, 1, 100), Port: 51820},
 		PersistentKeepaliveInterval: 1 * time.Minute,
 		LastHandshakeTime:           time.Unix(100, 0),
 		ReceiveBytes:                int64(40),
