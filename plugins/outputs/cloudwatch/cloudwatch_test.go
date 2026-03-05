@@ -212,7 +212,6 @@ func TestBuildMetricDatums(t *testing.T) {
 			require.NoError(t, plugin.Init())
 			datums := plugin.buildMetricDatum(tt.input)
 			require.Len(t, datums, tt.expected)
-
 		})
 	}
 }
@@ -236,7 +235,6 @@ func TestBuildMetricDatumResolution(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			// Setup plugin
 			plugin := &CloudWatch{
 				Namespace:             "foo",
