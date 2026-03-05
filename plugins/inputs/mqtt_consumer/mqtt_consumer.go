@@ -160,6 +160,8 @@ func (*MQTTConsumer) Gather(telegraf.Accumulator) error {
 
 func (m *MQTTConsumer) Stop() {
 	if m.client != nil {
+		// Disconnect is safe to call on an already-disconnected client;
+		// paho logs a warning and returns early in that case.
 		m.Log.Debugf("Disconnecting %v", m.Servers)
 		m.client.Disconnect(200)
 		m.Log.Debugf("Disconnected %v", m.Servers)
