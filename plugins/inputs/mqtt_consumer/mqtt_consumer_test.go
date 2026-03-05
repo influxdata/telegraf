@@ -1064,10 +1064,14 @@ func TestReconnectIntegration(t *testing.T) {
 	require.NoError(t, container.Pause())
 	defer container.Resume() //nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
 
-	// Wait until we really lost the connection
+	// Wait until onConnectionLost fires (detected via the accumulator error).
+	// We cannot reliably poll IsConnected() because paho's auto-reconnect may
+	// flip it back to true before the next poll tick.
 	require.Eventually(t, func() bool {
-		return !plugin.client.IsConnected()
-	}, 5*time.Second, 100*time.Millisecond)
+		acc.Lock()
+		defer acc.Unlock()
+		return len(acc.Errors) > 0
+	}, 10*time.Second, 100*time.Millisecond)
 
 	// Unpause the container; paho's auto-reconnect should restore the connection
 	require.NoError(t, container.Resume())
