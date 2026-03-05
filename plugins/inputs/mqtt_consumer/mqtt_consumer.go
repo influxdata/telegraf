@@ -154,7 +154,7 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (*MQTTConsumer) Gather(_ telegraf.Accumulator) error {
+func (*MQTTConsumer) Gather(telegraf.Accumulator) error {
 	return nil
 }
 
