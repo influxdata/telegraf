@@ -51,7 +51,6 @@ type SIP struct {
 	uaOpts     []sipgo.UserAgentOption
 
 	// Cached request components
-	methodTag  string
 	requestURI sip.Uri
 	headers    []sip.Header
 }
@@ -191,8 +190,6 @@ func (s *SIP) Init() error {
 		})
 	}
 
-	s.methodTag = strings.ToLower(s.Method)
-
 	return nil
 }
 
@@ -226,7 +223,7 @@ func (s *SIP) Gather(acc telegraf.Accumulator) error {
 	fields := make(map[string]any)
 	tags := map[string]string{
 		"source":    s.Server,
-		"method":    s.methodTag,
+		"method":    strings.ToLower(s.Method),
 		"transport": s.serverInfo.transport,
 	}
 
