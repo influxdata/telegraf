@@ -1095,7 +1095,7 @@ func TestCases(t *testing.T) {
 			// Check for errors
 			require.Len(t, acc.Errors, len(expectedErrors))
 			if len(acc.Errors) > 0 {
-				var actualErrorMsgs []string
+				actualErrorMsgs := make([]string, 0, len(acc.Errors))
 				for _, err := range acc.Errors {
 					actualErrorMsgs = append(actualErrorMsgs, err.Error())
 				}
