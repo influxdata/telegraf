@@ -75,7 +75,8 @@ those printed by this command.
     nanoseconds; 0 if unset)
     - `protocol_version` (int, Wireguard protocol version number)
     - `allowed_ips` (int, number of allowed IPs for this peer)
-    - `endpoint` (string, most recent source address:port used for communication by this peer, e.g. `192.168.1.100:51820`)
+    - `endpoint` (string, most recent source address:port
+     used for communication by this peer, e.g. `192.168.1.100:51820`)
     - `last_handshake_time_ns` (int, Unix timestamp of the last handshake for
        this peer in nanoseconds)
     - `rx_bytes` (int, number of bytes received from this peer)
