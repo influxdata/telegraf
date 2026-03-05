@@ -90,7 +90,7 @@ func (c *CloudWatch) Close() error {
 }
 
 func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
-	var datums []types.MetricDatum
+	datums := make([]types.MetricDatum, 0, len(metrics))
 	for _, m := range metrics {
 		d := c.buildMetricDatum(m)
 		datums = append(datums, d...)
