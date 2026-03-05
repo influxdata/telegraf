@@ -121,6 +121,7 @@ func gatherDevicePeerMetrics(acc telegraf.Accumulator, device *wgtypes.Device, p
 	}
 
 	gauges := map[string]interface{}{
+		"endpoint":               peer.Endpoint.String(),
 		"last_handshake_time_ns": peer.LastHandshakeTime.UnixNano(),
 		"rx_bytes":               peer.ReceiveBytes,
 		"tx_bytes":               peer.TransmitBytes,
