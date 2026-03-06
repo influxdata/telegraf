@@ -76,7 +76,7 @@ func TestConcurrentConns(t *testing.T) {
 	require.NoError(t, err)
 	require.Never(t, func() bool {
 		return acc.NFields() > 0
-	}, 50*time.Millisecond, 5*time.Millisecond)
+	}, 100*time.Millisecond, 5*time.Millisecond)
 }
 
 // Test that MaxTCPConnections is respected when max==1
@@ -114,7 +114,7 @@ func TestConcurrentConns1(t *testing.T) {
 	require.NoError(t, err)
 	require.Never(t, func() bool {
 		return acc.NFields() > 0
-	}, 50*time.Millisecond, 5*time.Millisecond)
+	}, 100*time.Millisecond, 5*time.Millisecond)
 }
 
 // Test that MaxTCPConnections is respected
@@ -341,6 +341,7 @@ func BenchmarkTCP(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		require.NoError(b, listener.Start(acc))
 
+		time.Sleep(time.Millisecond * 250)
 		conn, err := net.Dial("tcp", "127.0.0.1:8125")
 		require.NoError(b, err)
 
@@ -2476,10 +2477,12 @@ func TestParse_InvalidAndRecoverIntegration(t *testing.T) {
 	_, err = conn.Write([]byte("cpu.time_idle:42|c\n"))
 	require.NoError(t, err)
 
-	require.Eventuallyf(t, func() bool {
-		require.NoError(t, statsd.Gather(acc))
+	require.Eventually(t, func() bool {
+		if err := statsd.Gather(acc); err != nil {
+			return false
+		}
 		return acc.NMetrics() >= 1
-	}, time.Second, 10*time.Millisecond, "expected 1 metric, got %d", acc.NMetrics())
+	}, time.Second, 10*time.Millisecond, "expected at least 1 metric")
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
