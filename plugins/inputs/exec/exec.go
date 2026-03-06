@@ -27,7 +27,7 @@ const maxStderrBytes int = 512
 
 type Exec struct {
 	Commands    []string        `toml:"commands"`
-	Command     string          `toml:"command"`
+	Command     []string        `toml:"command"`
 	Environment []string        `toml:"environment"`
 	IgnoreError bool            `toml:"ignore_error"`
 	Timeout     config.Duration `toml:"timeout"`
@@ -45,7 +45,7 @@ type Exec struct {
 type exitCodeHandlerFunc func([]telegraf.Metric, error, []byte) []telegraf.Metric
 
 type runner interface {
-	run(string) ([]byte, []byte, error)
+	run(string, []string) ([]byte, []byte, error)
 }
 
 type commandRunner struct {
@@ -59,11 +59,6 @@ func (*Exec) SampleConfig() string {
 }
 
 func (e *Exec) Init() error {
-	// Legacy single command support
-	if e.Command != "" {
-		e.Commands = append(e.Commands, e.Command)
-	}
-
 	e.runner = &commandRunner{
 		environment: e.Environment,
 		timeout:     time.Duration(e.Timeout),
@@ -90,13 +85,23 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 	commands := e.updateRunners()
 
 	var wg sync.WaitGroup
+	// Shell-like string-based commands support
 	for _, cmd := range commands {
 		wg.Add(1)
 
 		go func(c string) {
 			defer wg.Done()
-			acc.AddError(e.processCommand(acc, c))
+			acc.AddError(e.processCommand(acc, c, nil))
 		}(cmd)
+	}
+	// Array-based single command support
+	if len(e.Command) != 0 {
+		wg.Add(1)
+
+		go func(c []string) {
+			defer wg.Done()
+			acc.AddError(e.processCommand(acc, "", c))
+		}(e.Command)
 	}
 	wg.Wait()
 	return nil
@@ -136,8 +141,8 @@ func (e *Exec) updateRunners() []string {
 	return commands
 }
 
-func (e *Exec) processCommand(acc telegraf.Accumulator, cmd string) error {
-	out, errBuf, runErr := e.runner.run(cmd)
+func (e *Exec) processCommand(acc telegraf.Accumulator, cmd string, splitCmd []string) error {
+	out, errBuf, runErr := e.runner.run(cmd, splitCmd)
 	if !e.IgnoreError && !e.parseDespiteError && runErr != nil {
 		return fmt.Errorf("exec: %w for command %q: %s", runErr, cmd, string(errBuf))
 	}
