@@ -162,11 +162,16 @@ func TestStatusCode(t *testing.T) {
 			},
 		},
 		{
-			name:       "4xx status is an error",
+			name:       "4xx status drops metrics without error",
 			plugin:     pluginFn(),
 			statusCode: http.StatusBadRequest,
 			errFunc: func(t *testing.T, err error) {
+				// 4xx client errors return HTTPError with Retryable: false
 				require.Error(t, err)
+				var httpErr *internal.HTTPError
+				require.ErrorAs(t, err, &httpErr)
+				require.Equal(t, http.StatusBadRequest, httpErr.StatusCode)
+				require.False(t, httpErr.Retryable, "4xx errors should not be retryable")
 			},
 		},
 	}
