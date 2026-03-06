@@ -1245,6 +1245,94 @@ func TestContainerStateFilter(t *testing.T) {
 	}
 }
 
+func TestNonRunningContainerEmitsStatusMetrics(t *testing.T) {
+	newClientFunc := func(string, *tls.Config) (dockerClient, error) {
+		client := baseClient
+		client.ContainerListF = func(container.ListOptions) ([]container.Summary, error) {
+			return []container.Summary{
+				{
+					ID:    "abc123",
+					Names: []string{"/stopped-container"},
+					State: "exited",
+				},
+			}, nil
+		}
+		client.ContainerStatsF = func(string) (container.StatsResponseReader, error) {
+			return container.StatsResponseReader{
+				Body: io.NopCloser(strings.NewReader("")),
+			}, nil
+		}
+		client.ContainerInspectF = func() (container.InspectResponse, error) {
+			return container.InspectResponse{
+				Config: &container.Config{},
+				ContainerJSONBase: &container.ContainerJSONBase{
+					State: &container.State{
+						Status:     "exited",
+						ExitCode:   137,
+						StartedAt:  "2024-01-01T00:00:00Z",
+						FinishedAt: "2024-01-01T01:00:00Z",
+					},
+				},
+			}, nil
+		}
+		return &client, nil
+	}
+
+	now = func() time.Time {
+		return time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC)
+	}
+	defer func() {
+		now = time.Now
+	}()
+
+	d := Docker{
+		Log:                   testutil.Logger{},
+		newClient:             newClientFunc,
+		ContainerStateInclude: []string{"exited"},
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, d.Init())
+	require.NoError(t, d.Start(&acc))
+	require.NoError(t, d.Gather(&acc))
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"docker_container_status",
+			map[string]string{
+				"container_name":    "stopped-container",
+				"container_image":   "",
+				"container_version": "unknown",
+				"engine_host":       "absol",
+				"server_version":    "17.09.0-ce",
+				"container_status":  "exited",
+			},
+			map[string]interface{}{
+				"oomkilled":     false,
+				"pid":           0,
+				"exitcode":      137,
+				"restart_count": 0,
+				"container_id":  "abc123",
+				"started_at":    time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixNano(),
+				"finished_at":   time.Date(2024, 1, 1, 1, 0, 0, 0, time.UTC).UnixNano(),
+				"uptime_ns":     int64(time.Hour),
+			},
+			time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
+		),
+	}
+
+	actual := filterMetrics(acc.GetTelegrafMetrics(), func(m telegraf.Metric) bool {
+		return m.Name() == "docker_container_status"
+	})
+	testutil.RequireMetricsEqual(t, expected, actual)
+
+	// Runtime stats (cpu, mem, net, blkio) should NOT be emitted
+	acc.AssertDoesNotContainMeasurement(t, "docker_container_cpu")
+	acc.AssertDoesNotContainMeasurement(t, "docker_container_mem")
+	acc.AssertDoesNotContainMeasurement(t, "docker_container_net")
+	acc.AssertDoesNotContainMeasurement(t, "docker_container_blkio")
+}
+
 func TestContainerName(t *testing.T) {
 	tests := []struct {
 		name       string
