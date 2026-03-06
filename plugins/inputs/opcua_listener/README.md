@@ -154,6 +154,7 @@ to use them.
   ##                  "StatusValueTimestamp": report notifications if either status,
   ##                                          value or timestamp changes
   ## deadband_type  - type of the deadband filter to be applied, possible values:
+  ##                  "None": no deadband filter is applied
   ##                  "Absolute": absolute change in a data value to report a notification
   ##                  "Percent": works only with nodes that have an EURange property set
   ##                             and is defined as: send notification if
