@@ -1,7 +1,10 @@
 package warp10
 
 import (
+	"errors"
 	"math"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -9,11 +12,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
-
-type ErrorTest struct {
-	Message  string
-	Expected string
-}
 
 func TestWriteWarp10(t *testing.T) {
 	w := Warp10{
@@ -76,9 +74,15 @@ func TestWriteWarp10EncodedTags(t *testing.T) {
 }
 
 func TestHandleWarp10Error(t *testing.T) {
-	tests := [...]*ErrorTest{
+	tests := []struct {
+		name      string
+		message   string
+		expected  string
+		isAuthErr bool
+	}{
 		{
-			Message: `
+			name: "invalid token",
+			message: `
 			<html>
 			<head>
 			<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
@@ -90,10 +94,12 @@ func TestHandleWarp10Error(t *testing.T) {
 			</body>
 			</html>
 			`,
-			Expected: "Invalid token",
+			expected:  "Invalid token",
+			isAuthErr: true,
 		},
 		{
-			Message: `
+			name: "token expired",
+			message: `
 			<html>
 			<head>
 			<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
@@ -105,10 +111,12 @@ func TestHandleWarp10Error(t *testing.T) {
 			</body>
 			</html>
 			`,
-			Expected: "Token Expired",
+			expected:  "Token Expired",
+			isAuthErr: true,
 		},
 		{
-			Message: `
+			name: "token revoked",
+			message: `
 			<html>
 			<head>
 			<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
@@ -120,10 +128,12 @@ func TestHandleWarp10Error(t *testing.T) {
 			</body>
 			</html>
 			`,
-			Expected: "Token revoked",
+			expected:  "Token revoked",
+			isAuthErr: true,
 		},
 		{
-			Message: `
+			name: "write token missing",
+			message: `
 			<html>
 			<head>
 			<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
@@ -135,16 +145,185 @@ func TestHandleWarp10Error(t *testing.T) {
 			</body>
 			</html>
 			`,
-			Expected: "Write token missing",
+			expected:  "Write token missing",
+			isAuthErr: true,
 		},
 		{
-			Message:  `<title>Error 503: server unavailable</title>`,
-			Expected: "<title>Error 503: server unavailable</title>",
+			name:      "server unavailable (retryable)",
+			message:   `<title>Error 503: server unavailable</title>`,
+			expected:  "<title>Error 503: server unavailable</title>",
+			isAuthErr: false,
 		},
 	}
 
-	for _, handledError := range tests {
-		payload := HandleError(handledError.Message, 511)
-		require.Exactly(t, handledError.Expected, payload)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := handleError(tt.message, 511)
+			require.EqualError(t, err, tt.expected)
+			var authErr *tokenAuthError
+			if tt.isAuthErr {
+				require.ErrorAs(t, err, &authErr)
+			} else {
+				require.False(t, errors.As(err, &authErr))
+			}
+		})
 	}
+}
+
+func newTestServer(t *testing.T, statusCode int, body string) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(statusCode)
+		if _, err := w.Write([]byte(body)); err != nil {
+			t.Log(err)
+			t.Fail()
+			return
+		}
+	}))
+}
+
+func TestAuthFailure_SameTokenBlocksWrites(t *testing.T) {
+	ts := newTestServer(t, http.StatusInternalServerError, "Invalid token")
+	defer ts.Close()
+
+	w := &Warp10{
+		WarpURL:          ts.URL,
+		Token:            config.NewSecret([]byte("BAD_TOKEN")),
+		AuthErrorRetries: 3,
+		PrintErrorBody:   true,
+		Log:              testutil.Logger{},
+	}
+	require.NoError(t, w.Init())
+	require.NoError(t, w.Connect())
+	defer w.Close()
+
+	metrics := testutil.MockMetrics()
+
+	// First write: triggers auth error, sets failure state
+	require.ErrorContains(t, w.Write(metrics), "Invalid token")
+	require.Equal(t, "BAD_TOKEN", w.failedToken)
+	require.Equal(t, uint(3), w.authRetriesLeft)
+
+	// Next 3 writes: silently dropped (countdown 2, 1, 0)
+	require.NoError(t, w.Write(metrics))
+	require.Equal(t, uint(2), w.authRetriesLeft)
+	require.NoError(t, w.Write(metrics))
+	require.Equal(t, uint(1), w.authRetriesLeft)
+	require.NoError(t, w.Write(metrics))
+	require.Equal(t, uint(0), w.authRetriesLeft)
+
+	// 4th write after initial: retries (countdown reached 0)
+	require.ErrorContains(t, w.Write(metrics), "Invalid token")
+	require.Equal(t, uint(3), w.authRetriesLeft)
+}
+
+func TestAuthFailure_TokenChangeResumesWrites(t *testing.T) {
+	ts := newTestServer(t, http.StatusOK, "")
+	defer ts.Close()
+
+	w := &Warp10{
+		WarpURL:          ts.URL,
+		Token:            config.NewSecret([]byte("NEW_TOKEN")),
+		AuthErrorRetries: 10,
+		Log:              testutil.Logger{},
+	}
+	require.NoError(t, w.Init())
+	require.NoError(t, w.Connect())
+	defer w.Close()
+
+	// Simulate prior failure state with a different token
+	w.failedToken = "OLD_TOKEN"
+	w.authRetriesLeft = 5
+
+	// Write should succeed because token changed
+	require.NoError(t, w.Write(testutil.MockMetrics()))
+	require.Empty(t, w.failedToken)
+	require.Equal(t, uint(0), w.authRetriesLeft)
+}
+
+func TestAuthFailure_DefaultZeroRetriesEveryInterval(t *testing.T) {
+	ts := newTestServer(t, http.StatusInternalServerError, "Invalid token")
+	defer ts.Close()
+
+	w := &Warp10{
+		WarpURL:          ts.URL,
+		Token:            config.NewSecret([]byte("BAD_TOKEN")),
+		AuthErrorRetries: 0, // default
+		PrintErrorBody:   true,
+		Log:              testutil.Logger{},
+	}
+	require.NoError(t, w.Init())
+	require.NoError(t, w.Connect())
+	defer w.Close()
+
+	metrics := testutil.MockMetrics()
+
+	// Every write should attempt the request (retry every flush)
+	require.ErrorContains(t, w.Write(metrics), "Invalid token")
+	require.ErrorContains(t, w.Write(metrics), "Invalid token")
+	require.ErrorContains(t, w.Write(metrics), "Invalid token")
+}
+
+func TestAuthFailure_SuccessClearsFailureState(t *testing.T) {
+	ts := newTestServer(t, http.StatusOK, "")
+	defer ts.Close()
+
+	w := &Warp10{
+		WarpURL:          ts.URL,
+		Token:            config.NewSecret([]byte("GOOD_TOKEN")),
+		AuthErrorRetries: 5,
+		Log:              testutil.Logger{},
+	}
+	require.NoError(t, w.Init())
+	require.NoError(t, w.Connect())
+	defer w.Close()
+
+	// Simulate prior failure state with same token
+	w.failedToken = "GOOD_TOKEN"
+	w.authRetriesLeft = 0 // countdown exhausted, will retry
+
+	// Write succeeds
+	require.NoError(t, w.Write(testutil.MockMetrics()))
+	require.Empty(t, w.failedToken)
+	require.Equal(t, uint(0), w.authRetriesLeft)
+}
+
+func TestAuthFailure_RetryableErrorDoesNotTrackAuthFailure(t *testing.T) {
+	ts := newTestServer(t, http.StatusInternalServerError, "broken pipe")
+	defer ts.Close()
+
+	w := &Warp10{
+		WarpURL:          ts.URL,
+		Token:            config.NewSecret([]byte("GOOD_TOKEN")),
+		AuthErrorRetries: 3,
+		PrintErrorBody:   true,
+		Log:              testutil.Logger{},
+	}
+	require.NoError(t, w.Init())
+	require.NoError(t, w.Connect())
+	defer w.Close()
+
+	require.ErrorContains(t, w.Write(testutil.MockMetrics()), "broken pipe")
+	require.Empty(t, w.failedToken)
+	require.Equal(t, uint(0), w.authRetriesLeft)
+}
+
+func TestAuthFailure_PrintErrorBodyStillTracksAuthFailure(t *testing.T) {
+	ts := newTestServer(t, http.StatusInternalServerError, "Token Expired")
+	defer ts.Close()
+
+	w := &Warp10{
+		WarpURL:          ts.URL,
+		Token:            config.NewSecret([]byte("EXPIRED_TOKEN")),
+		AuthErrorRetries: 2,
+		PrintErrorBody:   true,
+		Log:              testutil.Logger{},
+	}
+	require.NoError(t, w.Init())
+	require.NoError(t, w.Connect())
+	defer w.Close()
+
+	require.ErrorContains(t, w.Write(testutil.MockMetrics()), "Token Expired")
+	require.Equal(t, "EXPIRED_TOKEN", w.failedToken)
+	require.Equal(t, uint(2), w.authRetriesLeft)
 }

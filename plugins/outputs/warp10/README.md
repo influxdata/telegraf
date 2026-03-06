@@ -44,8 +44,14 @@ to use them.
   ## Print Warp 10 error body
   # print_error_body = false
 
-  ## Max string error size
+  ## Max string error size
   # max_string_error_size = 511
+
+  ## Number of flush intervals to wait before retrying after an authentication
+  ## error. A value of 0 (default) retries every flush interval
+  ## (backward-compatible behavior). A positive number waits that many intervals
+  ## before retrying.
+  # auth_error_retries = 0
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -54,6 +60,23 @@ to use them.
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 ```
+
+### Authentication Error Handling
+
+Warp 10 returns HTTP 500 for all errors, including authentication failures
+(invalid, expired, or revoked tokens). The plugin parses the response body to
+distinguish authentication errors from transient failures.
+
+When an authentication error is detected, the plugin tracks the failing token
+and uses the `auth_error_retries` setting to control retry behavior:
+
+- **`0` (default):** retries every flush interval (backward-compatible
+  behavior).
+- **Positive number (e.g., `3`):** waits that many flush intervals before
+  retrying the request.
+
+If the token changes (e.g., refreshed by a secret-store), writes resume
+immediately regardless of the retry countdown.
 
 ## Output Format
 
