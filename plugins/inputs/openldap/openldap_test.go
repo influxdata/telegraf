@@ -56,7 +56,7 @@ func TestOpenldapNoConnectionIntegration(t *testing.T) {
 	require.NotEmpty(t, acc.Errors) // test that we set an error
 }
 
-func TestOpenldapGeneratesMetricsIntegration(t *testing.T) {
+func TestIntegrationOpenldap(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -73,27 +73,58 @@ func TestOpenldapGeneratesMetricsIntegration(t *testing.T) {
 			wait.ForListeningPort(nat.Port(servicePort)),
 		),
 	}
-	err := container.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
 	port, err := strconv.Atoi(container.Ports[servicePort])
 	require.NoError(t, err)
 
-	o := &Openldap{
-		Host:         container.Address,
-		Port:         port,
-		BindDn:       "CN=manager,DC=example,DC=org",
-		BindPassword: "secret",
-	}
+	t.Run("generates metrics", func(t *testing.T) {
+		o := &Openldap{
+			Host:         container.Address,
+			Port:         port,
+			BindDn:       "CN=manager,DC=example,DC=org",
+			BindPassword: "secret",
+		}
 
-	var acc testutil.Accumulator
-	err = o.Gather(&acc)
-	require.NoError(t, err)
-	commonTests(t, o, &acc)
+		var acc testutil.Accumulator
+		require.NoError(t, o.Gather(&acc))
+		commonTests(t, o, &acc)
+	})
+
+	t.Run("bind", func(t *testing.T) {
+		o := &Openldap{
+			Host:               container.Address,
+			Port:               port,
+			TLS:                "",
+			InsecureSkipVerify: true,
+			BindDn:             "CN=manager,DC=example,DC=org",
+			BindPassword:       "secret",
+		}
+
+		var acc testutil.Accumulator
+		require.NoError(t, o.Gather(&acc))
+		commonTests(t, o, &acc)
+	})
+
+	t.Run("reverse metrics", func(t *testing.T) {
+		o := &Openldap{
+			Host:               container.Address,
+			Port:               port,
+			TLS:                "",
+			InsecureSkipVerify: true,
+			BindDn:             "CN=manager,DC=example,DC=org",
+			BindPassword:       "secret",
+			ReverseMetricNames: true,
+		}
+
+		var acc testutil.Accumulator
+		require.NoError(t, o.Gather(&acc))
+		require.True(t, acc.HasInt64Field("openldap", "connections_total"), "Has an integer field called connections_total")
+	})
 }
 
-func TestOpenldapStartTLSIntegration(t *testing.T) {
+func TestIntegrationOpenldapTLS(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -109,7 +140,7 @@ func TestOpenldapStartTLSIntegration(t *testing.T) {
 
 	container := testutil.Container{
 		Image:        "bitnamilegacy/openldap",
-		ExposedPorts: []string{servicePort},
+		ExposedPorts: []string{servicePort, servicePortSecure},
 		Env: map[string]string{
 			"LDAP_ADMIN_USERNAME": "manager",
 			"LDAP_ADMIN_PASSWORD": "secret",
@@ -126,186 +157,74 @@ func TestOpenldapStartTLSIntegration(t *testing.T) {
 		WaitingFor: wait.ForAll(
 			wait.ForLog("slapd starting"),
 			wait.ForListeningPort(nat.Port(servicePort)),
-		),
-	}
-	err = container.Start()
-	require.NoError(t, err, "failed to start container")
-	defer container.Terminate()
-
-	port, err := strconv.Atoi(container.Ports[servicePort])
-	require.NoError(t, err)
-
-	cert, err := filepath.Abs(pki.ClientCertPath())
-	require.NoError(t, err)
-
-	o := &Openldap{
-		Host:               container.Address,
-		Port:               port,
-		TLS:                "starttls",
-		InsecureSkipVerify: true,
-		BindDn:             "CN=manager,DC=example,DC=org",
-		BindPassword:       "secret",
-		TLSCA:              cert,
-	}
-
-	var acc testutil.Accumulator
-	err = o.Gather(&acc)
-	require.NoError(t, err)
-	commonTests(t, o, &acc)
-}
-
-func TestOpenldapLDAPSIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	pki := testutil.NewPKI("../../../testutil/pki")
-
-	tlsPem, err := filepath.Abs(pki.ServerCertAndKeyPath())
-	require.NoError(t, err)
-	tlsCert, err := filepath.Abs(pki.ServerCertPath())
-	require.NoError(t, err)
-	tlsKey, err := filepath.Abs(pki.ServerKeyPath())
-	require.NoError(t, err)
-
-	container := testutil.Container{
-		Image:        "bitnamilegacy/openldap",
-		ExposedPorts: []string{servicePortSecure},
-		Env: map[string]string{
-			"LDAP_ADMIN_USERNAME": "manager",
-			"LDAP_ADMIN_PASSWORD": "secret",
-			"LDAP_ENABLE_TLS":     "yes",
-			"LDAP_TLS_CA_FILE":    "server.pem",
-			"LDAP_TLS_CERT_FILE":  "server.crt",
-			"LDAP_TLS_KEY_FILE":   "server.key",
-		},
-		Files: map[string]string{
-			"/server.pem": tlsPem,
-			"/server.crt": tlsCert,
-			"/server.key": tlsKey,
-		},
-		WaitingFor: wait.ForAll(
-			wait.ForLog("slapd starting"),
 			wait.ForListeningPort(nat.Port(servicePortSecure)),
 		),
 	}
-	err = container.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
-	port, err := strconv.Atoi(container.Ports[servicePortSecure])
-	require.NoError(t, err)
+	t.Run("starttls", func(t *testing.T) {
+		port, err := strconv.Atoi(container.Ports[servicePort])
+		require.NoError(t, err)
 
-	o := &Openldap{
-		Host:               container.Address,
-		Port:               port,
-		TLS:                "ldaps",
-		InsecureSkipVerify: true,
-		BindDn:             "CN=manager,DC=example,DC=org",
-		BindPassword:       "secret",
-	}
+		cert, err := filepath.Abs(pki.ClientCertPath())
+		require.NoError(t, err)
 
-	var acc testutil.Accumulator
-	err = o.Gather(&acc)
-	require.NoError(t, err)
-	commonTests(t, o, &acc)
-}
+		o := &Openldap{
+			Host:               container.Address,
+			Port:               port,
+			TLS:                "starttls",
+			InsecureSkipVerify: true,
+			BindDn:             "CN=manager,DC=example,DC=org",
+			BindPassword:       "secret",
+			TLSCA:              cert,
+		}
 
-func TestOpenldapInvalidTLSIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
+		var acc testutil.Accumulator
+		require.NoError(t, o.Gather(&acc))
+		commonTests(t, o, &acc)
+	})
 
-	pki := testutil.NewPKI("../../../testutil/pki")
-	tlsPem, err := filepath.Abs(pki.ServerCertAndKeyPath())
-	require.NoError(t, err)
-	tlsCert, err := filepath.Abs(pki.ServerCertPath())
-	require.NoError(t, err)
-	tlsKey, err := filepath.Abs(pki.ServerKeyPath())
-	require.NoError(t, err)
+	t.Run("ldaps", func(t *testing.T) {
+		port, err := strconv.Atoi(container.Ports[servicePortSecure])
+		require.NoError(t, err)
 
-	container := testutil.Container{
-		Image:        "bitnamilegacy/openldap",
-		ExposedPorts: []string{servicePortSecure},
-		Env: map[string]string{
-			"LDAP_ADMIN_USERNAME": "manager",
-			"LDAP_ADMIN_PASSWORD": "secret",
-			"LDAP_ENABLE_TLS":     "yes",
-			"LDAP_TLS_CA_FILE":    "server.pem",
-			"LDAP_TLS_CERT_FILE":  "server.crt",
-			"LDAP_TLS_KEY_FILE":   "server.key",
-		},
-		Files: map[string]string{
-			"/server.pem": tlsPem,
-			"/server.crt": tlsCert,
-			"/server.key": tlsKey,
-		},
-		WaitingFor: wait.ForAll(
-			wait.ForLog("slapd starting"),
-			wait.ForListeningPort(nat.Port(servicePortSecure)),
-		),
-	}
-	err = container.Start()
-	require.NoError(t, err, "failed to start container")
-	defer container.Terminate()
+		o := &Openldap{
+			Host:               container.Address,
+			Port:               port,
+			TLS:                "ldaps",
+			InsecureSkipVerify: true,
+			BindDn:             "CN=manager,DC=example,DC=org",
+			BindPassword:       "secret",
+		}
 
-	port, err := strconv.Atoi(container.Ports[servicePortSecure])
-	require.NoError(t, err)
+		var acc testutil.Accumulator
+		require.NoError(t, o.Gather(&acc))
+		commonTests(t, o, &acc)
+	})
 
-	o := &Openldap{
-		Host:               container.Address,
-		Port:               port,
-		TLS:                "invalid",
-		InsecureSkipVerify: true,
-	}
+	t.Run("invalid tls", func(t *testing.T) {
+		port, err := strconv.Atoi(container.Ports[servicePortSecure])
+		require.NoError(t, err)
 
-	var acc testutil.Accumulator
-	err = o.Gather(&acc)
-	require.NoError(t, err)         // test that we didn't return an error
-	require.Zero(t, acc.NFields())  // test that we didn't return any fields
-	require.NotEmpty(t, acc.Errors) // test that we set an error
-}
+		o := &Openldap{
+			Host:               container.Address,
+			Port:               port,
+			TLS:                "invalid",
+			InsecureSkipVerify: true,
+		}
 
-func TestOpenldapBindIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	container := testutil.Container{
-		Image:        "bitnamilegacy/openldap",
-		ExposedPorts: []string{servicePort},
-		Env: map[string]string{
-			"LDAP_ADMIN_USERNAME": "manager",
-			"LDAP_ADMIN_PASSWORD": "secret",
-		},
-		WaitingFor: wait.ForAll(
-			wait.ForLog("slapd starting"),
-			wait.ForListeningPort(nat.Port(servicePort)),
-		),
-	}
-	err := container.Start()
-	require.NoError(t, err, "failed to start container")
-	defer container.Terminate()
-
-	port, err := strconv.Atoi(container.Ports[servicePort])
-	require.NoError(t, err)
-
-	o := &Openldap{
-		Host:               container.Address,
-		Port:               port,
-		TLS:                "",
-		InsecureSkipVerify: true,
-		BindDn:             "CN=manager,DC=example,DC=org",
-		BindPassword:       "secret",
-	}
-
-	var acc testutil.Accumulator
-	err = o.Gather(&acc)
-	require.NoError(t, err)
-	commonTests(t, o, &acc)
+		var acc testutil.Accumulator
+		err = o.Gather(&acc)
+		require.NoError(t, err)         // test that we didn't return an error
+		require.Zero(t, acc.NFields())  // test that we didn't return any fields
+		require.NotEmpty(t, acc.Errors) // test that we set an error
+	})
 }
 
 func commonTests(t *testing.T, o *Openldap, acc *testutil.Accumulator) {
+	t.Helper()
+
 	// helpful local commands to run:
 	// ldapwhoami -D "CN=manager,DC=example,DC=org" -H ldap://localhost:1389 -w secret
 	// ldapsearch -D "CN=manager,DC=example,DC=org" -H "ldap://localhost:1389" -b cn=Monitor -w secret
@@ -314,44 +233,4 @@ func commonTests(t *testing.T, o *Openldap, acc *testutil.Accumulator) {
 	require.Equal(t, o.Host, acc.TagValue("openldap", "server"), "Has a tag value of server=o.Host")
 	require.Equal(t, strconv.Itoa(o.Port), acc.TagValue("openldap", "port"), "Has a tag value of port=o.Port")
 	require.True(t, acc.HasInt64Field("openldap", "total_connections"), "Has an integer field called total_connections")
-}
-
-func TestOpenldapReverseMetricsIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	container := testutil.Container{
-		Image:        "bitnamilegacy/openldap",
-		ExposedPorts: []string{servicePort},
-		Env: map[string]string{
-			"LDAP_ADMIN_USERNAME": "manager",
-			"LDAP_ADMIN_PASSWORD": "secret",
-		},
-		WaitingFor: wait.ForAll(
-			wait.ForLog("slapd starting"),
-			wait.ForListeningPort(nat.Port(servicePort)),
-		),
-	}
-	err := container.Start()
-	require.NoError(t, err, "failed to start container")
-	defer container.Terminate()
-
-	port, err := strconv.Atoi(container.Ports[servicePort])
-	require.NoError(t, err)
-
-	o := &Openldap{
-		Host:               container.Address,
-		Port:               port,
-		TLS:                "",
-		InsecureSkipVerify: true,
-		BindDn:             "CN=manager,DC=example,DC=org",
-		BindPassword:       "secret",
-		ReverseMetricNames: true,
-	}
-
-	var acc testutil.Accumulator
-	err = o.Gather(&acc)
-	require.NoError(t, err)
-	require.True(t, acc.HasInt64Field("openldap", "connections_total"), "Has an integer field called connections_total")
 }
