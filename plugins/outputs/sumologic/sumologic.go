@@ -20,6 +20,25 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
 )
 
+// httpError represents an HTTP error with retry classification.
+// 4xx client errors are not retryable, 5xx server errors are retryable.
+type httpError struct {
+	err        error
+	statusCode int
+	retryable  bool
+}
+
+func (e *httpError) Error() string {
+	if e.err == nil {
+		return fmt.Sprintf("HTTP error: status %d", e.statusCode)
+	}
+	return e.err.Error()
+}
+
+func (e *httpError) Unwrap() error {
+	return e.err
+}
+
 //go:embed sample.conf
 var sampleConfig string
 
@@ -185,11 +204,27 @@ func (s *SumoLogic) writeRequestChunk(reqBody []byte) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("sumologic: when writing to %q received status code: %d", s.URL, resp.StatusCode)
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		return nil
 	}
 
-	return nil
+	// 4xx client errors are not retryable - the request itself is invalid
+	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+		if s.Log != nil {
+			s.Log.Errorf("Client error %d, metrics will be dropped", resp.StatusCode)
+		}
+		return &httpError{
+			err:        fmt.Errorf("sumologic: client error %d: metrics dropped", resp.StatusCode),
+			statusCode: resp.StatusCode,
+			retryable:  false,
+		}
+	}
+
+	return &httpError{
+		err:        fmt.Errorf("sumologic: when writing to %q received status code: %d", s.URL, resp.StatusCode),
+		statusCode: resp.StatusCode,
+		retryable:  true,
+	}
 }
 
 // splitIntoChunks splits metrics to be sent into chunks so that every request
