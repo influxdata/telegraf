@@ -346,8 +346,8 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 		if buffer.Len()+len(buf)+1 > maxRequestBodySize {
 			if err := a.send(buffer.Bytes()); err != nil {
 				writeErr.Err = err
-				var httpErr *internal.HTTPError
-				if errors.As(err, &httpErr) && !httpErr.Retryable {
+				var httpErr *httpError
+				if errors.As(err, &httpErr) && !httpErr.retryable {
 					writeErr.MetricsReject = append(writeErr.MetricsReject, batchIndices...)
 				}
 				return writeErr
@@ -366,8 +366,8 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 
 	if err := a.send(buffer.Bytes()); err != nil {
 		writeErr.Err = err
-		var httpErr *internal.HTTPError
-		if errors.As(err, &httpErr) && !httpErr.Retryable {
+		var httpErr *httpError
+		if errors.As(err, &httpErr) && !httpErr.retryable {
 			writeErr.MetricsReject = append(writeErr.MetricsReject, batchIndices...)
 		}
 		return writeErr
@@ -430,18 +430,18 @@ func (a *AzureMonitor) send(body []byte) error {
 
 	// 4xx client errors are not retryable - the request itself is invalid
 	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
-		return &internal.HTTPError{
-			Err:        fmt.Errorf("failed to write batch: [%d] %s: %s", resp.StatusCode, resp.Status, string(respbody)),
-			StatusCode: resp.StatusCode,
-			Retryable:  false,
+		return &httpError{
+			err:        fmt.Errorf("failed to write batch: [%d] %s: %s", resp.StatusCode, resp.Status, string(respbody)),
+			statusCode: resp.StatusCode,
+			retryable:  false,
 		}
 	}
 
 	// 5xx and other errors are retryable
-	return &internal.HTTPError{
-		Err:        fmt.Errorf("failed to write batch: [%d] %s: %s", resp.StatusCode, resp.Status, string(respbody)),
-		StatusCode: resp.StatusCode,
-		Retryable:  true,
+	return &httpError{
+		err:        fmt.Errorf("failed to write batch: [%d] %s: %s", resp.StatusCode, resp.Status, string(respbody)),
+		statusCode: resp.StatusCode,
+		retryable:  true,
 	}
 }
 
