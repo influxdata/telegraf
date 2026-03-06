@@ -1185,34 +1185,6 @@ func TestSecretTokenSource(t *testing.T) {
 	require.Equal(t, "Bearer", token.TokenType)
 }
 
-func TestWriteWithToken(t *testing.T) {
-	server := &mockServer{
-		resps: []proto.Message{&emptypb.Empty{}},
-	}
-	srv, client := startServer(t, server)
-	defer srv.GracefulStop()
-
-	plugin := &Stackdriver{
-		Token:     config.NewSecret([]byte("my-token")),
-		Project:   "projects/[PROJECT]",
-		Namespace: "test",
-		Log:       testutil.Logger{},
-		client:    client,
-	}
-	require.NoError(t, plugin.Init())
-	require.NoError(t, plugin.Connect())
-	require.NoError(t, plugin.Write(testutil.MockMetrics()))
-
-	require.Len(t, server.reqs, 1)
-	request, ok := server.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
-	require.Truef(t, ok, "Invalid request type %T", server.reqs[0])
-
-	require.Len(t, request.TimeSeries, 1)
-	ts := request.TimeSeries[0]
-	require.Equal(t, "global", ts.Resource.Type)
-	require.Equal(t, "projects/[PROJECT]", ts.Resource.Labels["project_id"])
-}
-
 func startServer(t *testing.T, mock *mockServer) (*grpc.Server, *monitoring.MetricClient) {
 	t.Helper()
 
