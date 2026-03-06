@@ -42,7 +42,8 @@ func checkDataChangeFilterParameters(params *input.DataChangeFilter) error {
 		params.Trigger != input.StatusValue &&
 		params.Trigger != input.StatusValueTimestamp:
 		return fmt.Errorf("trigger '%s' not supported", params.Trigger)
-	case params.DeadbandType != input.Absolute &&
+	case params.DeadbandType != input.None &&
+		params.DeadbandType != input.Absolute &&
 		params.DeadbandType != input.Percent:
 		return fmt.Errorf("deadband_type '%s' not supported", params.DeadbandType)
 	case params.DeadbandValue == nil:
