@@ -18,13 +18,30 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 //go:embed sample.conf
 var sampleConfig string
+
+// httpError represents an HTTP error with retry information.
+type httpError struct {
+	err        error
+	statusCode int
+	retryable  bool
+}
+
+func (e *httpError) Error() string {
+	if e.err == nil {
+		return fmt.Sprintf("HTTP error: status %d", e.statusCode)
+	}
+	return e.err.Error()
+}
+
+func (e *httpError) Unwrap() error {
+	return e.err
+}
 
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
@@ -173,32 +190,43 @@ func (d *Dynatrace) send(msg string) error {
 	}
 	defer resp.Body.Close()
 
-	// 4xx client errors are not retryable - the request itself is invalid
-	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
-		d.Log.Errorf("Client error %d, metrics will be dropped", resp.StatusCode)
-		return &internal.HTTPError{
-			Err:        fmt.Errorf("client error %d: metrics dropped", resp.StatusCode),
-			StatusCode: resp.StatusCode,
-			Retryable:  false,
+	// Success: 2xx responses
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		// 2xx: Success - print metric line results as info log
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			d.Log.Errorf("Dynatrace error reading response")
 		}
-	} else if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		// 5xx and other non-2xx errors are retryable
-		return &internal.HTTPError{
-			Err:        fmt.Errorf("request failed with response code: %d", resp.StatusCode),
-			StatusCode: resp.StatusCode,
-			Retryable:  true,
-		}
+		bodyString := string(bodyBytes)
+		d.Log.Debugf("Dynatrace returned: %s", bodyString)
+
+		return nil
 	}
 
-	// 2xx: Success - print metric line results as info log
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		d.Log.Errorf("Dynatrace error reading response")
+	// Determine retryability based on status code
+	// Only specific 5xx errors that indicate transient issues are retryable
+	retryable := false
+	switch resp.StatusCode {
+	case http.StatusTooManyRequests, // 429 - rate limiting
+		http.StatusInternalServerError, // 500 - transient server error
+		http.StatusBadGateway,          // 502 - upstream issue
+		http.StatusServiceUnavailable,  // 503 - server overloaded
+		http.StatusGatewayTimeout:      // 504 - upstream timeout
+		retryable = true
 	}
-	bodyString := string(bodyBytes)
-	d.Log.Debugf("Dynatrace returned: %s", bodyString)
 
-	return nil
+	// Log appropriately based on retryability
+	if retryable {
+		d.Log.Warnf("Server error %d, metrics will be retried", resp.StatusCode)
+	} else {
+		d.Log.Errorf("Error %d, metrics will be dropped", resp.StatusCode)
+	}
+
+	return &httpError{
+		err:        fmt.Errorf("request failed with response code: %d", resp.StatusCode),
+		statusCode: resp.StatusCode,
+		retryable:  retryable,
+	}
 }
 
 func (d *Dynatrace) Init() error {
