@@ -79,11 +79,34 @@ func TestBadStatusCode(t *testing.T) {
 	err := d.Connect()
 	require.NoError(t, err)
 	err = d.Write(testutil.MockMetrics())
-	if err == nil {
-		t.Errorf("error expected but none returned")
-	} else {
-		require.EqualError(t, err, fmt.Sprintf("received bad status code, %v: %s", http.StatusInternalServerError, errorString))
-	}
+	require.Error(t, err)
+	require.EqualError(t, err, fmt.Sprintf("received bad status code, %v: %s", http.StatusInternalServerError, errorString))
+
+	var he *httpError
+	require.ErrorAs(t, err, &he)
+	require.Equal(t, http.StatusInternalServerError, he.statusCode)
+	require.True(t, he.retryable)
+}
+
+func TestClientErrorNotRetryable(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+		fmt.Fprint(w, `{"errors": ["Forbidden"]}`)
+	}))
+	defer ts.Close()
+
+	d := NewDatadog(ts.URL)
+	d.Apikey = "123456"
+	d.Log = testutil.Logger{}
+	err := d.Connect()
+	require.NoError(t, err)
+	err = d.Write(testutil.MockMetrics())
+	require.Error(t, err)
+
+	var he *httpError
+	require.ErrorAs(t, err, &he)
+	require.Equal(t, http.StatusForbidden, he.statusCode)
+	require.False(t, he.retryable)
 }
 
 func TestAuthenticatedUrl(t *testing.T) {
