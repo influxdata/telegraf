@@ -164,6 +164,7 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 
 	pinger.Source = p.sourceAddress
 	pinger.Interval = p.calcInterval
+
 	if p.Deadline > 0 {
 		pinger.Timeout = time.Duration(p.Deadline) * time.Second
 	}

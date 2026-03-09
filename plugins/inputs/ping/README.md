@@ -45,11 +45,10 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # ping_interval = 1.0
 
   ## If set, the time to wait for a ping response in seconds.  Operates like
-  ## the "-W" option of the ping command.  This setting is used by the "exec"
-  ## method only.
+  ## the "-W" option of the ping command (for "exec" method only)
   # timeout = 1.0
 
-  ## If set, the total ping deadline, in seconds.  Operates like the "-w"
+  ## If set, the total ping deadline, in seconds. Operates like the "-w"
   ## option of the ping command.  Use this option to control timeout behavior
   ## when using the "native" method.
   # deadline = 10
