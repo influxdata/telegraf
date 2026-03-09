@@ -39,7 +39,7 @@ func TestOpenldapMockResult(t *testing.T) {
 	commonTests(t, o, &acc)
 }
 
-func TestOpenldapNoConnectionIntegration(t *testing.T) {
+func TestIntegrationOpenldapNoConnection(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -50,10 +50,9 @@ func TestOpenldapNoConnectionIntegration(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := o.Gather(&acc)
-	require.NoError(t, err)         // test that we didn't return an error
-	require.Zero(t, acc.NFields())  // test that we didn't return any fields
-	require.NotEmpty(t, acc.Errors) // test that we set an error
+	require.NoError(t, o.Gather(&acc)) // test that we didn't return an error
+	require.Zero(t, acc.NFields())     // test that we didn't return any fields
+	require.NotEmpty(t, acc.Errors)    // test that we set an error
 }
 
 func TestIntegrationOpenldap(t *testing.T) {
