@@ -55,8 +55,8 @@ func TestConcurrentConns(t *testing.T) {
 	defer listener.Stop()
 
 	require.Eventually(t, func() bool {
-		conn, dialErr := net.Dial("tcp", "127.0.0.1:8125")
-		if dialErr != nil {
+		conn, err := net.Dial("tcp", "127.0.0.1:8125")
+		if err != nil {
 			return false
 		}
 		conn.Close()
@@ -74,9 +74,8 @@ func TestConcurrentConns(t *testing.T) {
 	require.NoError(t, err)
 	_, err = conn.Write([]byte(testMsg))
 	require.NoError(t, err)
-	require.Never(t, func() bool {
-		return acc.NFields() > 0
-	}, 100*time.Millisecond, 5*time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
+	require.Zero(t, acc.NFields())
 }
 
 // Test that MaxTCPConnections is respected when max==1
@@ -95,8 +94,8 @@ func TestConcurrentConns1(t *testing.T) {
 	defer listener.Stop()
 
 	require.Eventually(t, func() bool {
-		conn, dialErr := net.Dial("tcp", "127.0.0.1:8125")
-		if dialErr != nil {
+		conn, err := net.Dial("tcp", "127.0.0.1:8125")
+		if err != nil {
 			return false
 		}
 		conn.Close()
@@ -112,9 +111,8 @@ func TestConcurrentConns1(t *testing.T) {
 	require.NoError(t, err)
 	_, err = conn.Write([]byte(testMsg))
 	require.NoError(t, err)
-	require.Never(t, func() bool {
-		return acc.NFields() > 0
-	}, 100*time.Millisecond, 5*time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
+	require.Zero(t, acc.NFields())
 }
 
 // Test that MaxTCPConnections is respected
@@ -132,8 +130,8 @@ func TestCloseConcurrentConns(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 
 	require.Eventually(t, func() bool {
-		conn, dialErr := net.Dial("tcp", "127.0.0.1:8125")
-		if dialErr != nil {
+		conn, err := net.Dial("tcp", "127.0.0.1:8125")
+		if err != nil {
 			return false
 		}
 		conn.Close()
