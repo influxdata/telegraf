@@ -61,7 +61,7 @@ func (nr *NewRelic) Connect() error {
 			cfg.ErrorLogger = func(e map[string]interface{}) {
 				var b strings.Builder
 				for k, v := range e {
-					b.WriteString(fmt.Sprintf("%s = %s ", k, v))
+					fmt.Fprintf(&b, "%s = %s ", k, v)
 				}
 				nr.errorCount++
 				nr.savedErrors[nr.errorCount] = b.String()

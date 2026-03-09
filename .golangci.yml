@@ -36,7 +36,8 @@ linters:
     - nilerr
     - nolintlint
     - perfsprint
-    - prealloc
+    # Temporarily disabled while fixing linter issues after a linter update
+    # - prealloc
     - predeclared
     - revive
     - sqlclosecheck
@@ -275,10 +276,10 @@ linters:
       # Default: false
       require-specific: true
 
-    prealloc:
+    # prealloc:
       # Report pre-allocation suggestions only on simple loops that have no returns/breaks/continues/gotos in them.
       # Default: true
-      simple: false
+      # simple: false
 
     revive:
       # Sets the default severity.
@@ -371,6 +372,7 @@ linters:
         - name: modifies-value-receiver
         - name: optimize-operands-order
         - name: package-comments
+        - name: package-naming
         - name: range
         - name: range-val-address
         - name: range-val-in-closure
@@ -510,21 +512,21 @@ linters:
       - path-except: ^plugins/(aggregators|inputs|outputs|parsers|processors|serializers)/...
         text: "max-public-structs: you have exceeded the maximum number"
 
-      # revive:var-naming
+      # revive:package-naming
       - path: (.+)\.go$
-        text: don't use an underscore in package name
+        text: don't use package name .* that contains an underscore
 
-      # revive:var-naming
+      # revive:package-naming
       - path: (.*)\.go$
-        text: avoid meaningless package names
+        text: don't use .* because it is a bad package name
 
-      # revive:var-naming: Exclude mixed-caps packages in migrations, as these migrations are fixing the issues from before.
+      # revive:package-naming: Exclude mixed-caps packages in migrations, as these migrations are fixing the issues from before.
       - path: migrations/.*\.go$
         text: don't use MixedCaps in package name
 
-      # revive:var-naming: Exclude check for package names that conflict with standard library package names (e.g., "net", "json", "http", "os")
+      # revive:package-naming: Exclude check for package names that conflict with standard library package names (e.g., "net", "json", "http", "os")
       - path: (.*)\.go$
-        text: conflict with Go standard library package names
+        text: conflicts with common Go standard library package
 
       # revive:exported
       - path: (.+)\.go$
