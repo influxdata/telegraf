@@ -257,6 +257,82 @@ func TestParseFullOutput(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "openntpd", fourthpeerfields, fourthpeertags)
 }
 
+func TestParseFullOutputAll(t *testing.T) {
+	acc := &testutil.Accumulator{}
+	v := &Openntpd{
+		run: openntpdCTL(fullOutputAll),
+	}
+	err := v.Gather(acc)
+	require.NoError(t, err)
+
+	// Peers
+	require.True(t, acc.HasMeasurement("openntpd"))
+
+	firstpeerfields := map[string]interface{}{
+		"wt":     int64(1),
+		"tl":     int64(10),
+		"next":   int64(56),
+		"poll":   int64(63),
+		"offset": float64(9.271),
+		"delay":  float64(44.662),
+		"jitter": float64(2.678),
+	}
+	firstpeertags := map[string]string{
+		"remote":  "212.129.9.36",
+		"stratum": "3",
+	}
+	acc.AssertContainsTaggedFields(t, "openntpd", firstpeerfields, firstpeertags)
+
+	// Status
+	require.True(t, acc.HasMeasurement("openntpd_status"))
+	statusFields := map[string]interface{}{
+		"peers_valid":         int64(12),
+		"peers_total":         int64(12),
+		"sensors_valid":       int64(1),
+		"sensors_total":       int64(1),
+		"constraint_offset_s": int64(-1),
+		"clock_synced":        int64(1),
+		"stratum":             int64(1),
+	}
+	acc.AssertContainsFields(t, "openntpd_status", statusFields)
+
+	// Sensors
+	require.True(t, acc.HasMeasurement("openntpd_sensors"))
+	sensorFields := map[string]interface{}{
+		"wt":         int64(10),
+		"gd":         int64(1),
+		"st":         int64(0),
+		"next":       int64(1),
+		"poll":       int64(15),
+		"offset":     float64(-0.673),
+		"correction": float64(0.600),
+	}
+	sensorTags := map[string]string{
+		"sensor":       "nmea0",
+		"refid":        "GPS",
+		"state_prefix": "*",
+	}
+	acc.AssertContainsTaggedFields(t, "openntpd_sensors", sensorFields, sensorTags)
+}
+
+func TestParseStatusLineClockNotSynced(t *testing.T) {
+	acc := &testutil.Accumulator{}
+	v := &Openntpd{
+		run: openntpdCTL(outputNoSync),
+	}
+	err := v.Gather(acc)
+	require.NoError(t, err)
+
+	require.True(t, acc.HasMeasurement("openntpd_status"))
+	statusFields := map[string]interface{}{
+		"peers_valid":         int64(0),
+		"peers_total":         int64(4),
+		"constraint_offset_s": int64(0),
+		"clock_synced":        int64(0),
+	}
+	acc.AssertContainsFields(t, "openntpd_status", statusFields)
+}
+
 var simpleOutput = `peer
 wt tl st  next  poll          offset       delay      jitter
 212.129.9.36 from pool 0.debian.pool.ntp.org
@@ -325,3 +401,31 @@ wt tl st  next  poll          offset       delay      jitter
 1  2  -  105s  300s             ---- peer not valid ----
 194.57.169.1 from pool 3.debian.pool.ntp.org
 1 10  2   32s   63s         6.589ms    52.051ms     2.057ms`
+
+// fullOutputAll represents the output of `ntpctl -s all` with status line,
+// peers and a sensor section.
+var fullOutputAll = `12/12 peers valid, 1/1 sensors valid, constraint offset -1s, clock synced, stratum 1
+
+peer
+   wt tl st  next  poll          offset       delay      jitter
+212.129.9.36 from pool 0.debian.pool.ntp.org
+    1 10  3   56s   63s         9.271ms    44.662ms     2.678ms
+163.172.25.19 from pool 0.debian.pool.ntp.org
+    1 10  2   21s   64s        -0.103ms    53.199ms     9.046ms
+92.243.6.5 from pool 0.debian.pool.ntp.org
+ *  1 10  2   45s  980s        -9.901ms    67.573ms    29.350ms
+178.33.111.49 from pool 0.debian.pool.ntp.org
+    1  2  -  203s  300s             ---- peer not valid ----
+
+sensor
+   wt gd st  next  poll          offset  correction
+nmea0  GPS
+ * 10  1  0    1s   15s        -0.673ms     0.600ms`
+
+// outputNoSync represents a status line where the clock is not yet synced.
+var outputNoSync = `0/4 peers valid, constraint offset 0s, clock unsynced
+
+peer
+   wt tl st  next  poll          offset       delay      jitter
+212.129.9.36 from pool 0.debian.pool.ntp.org
+    1  2  -    5s   15s             ---- peer not valid ----`
