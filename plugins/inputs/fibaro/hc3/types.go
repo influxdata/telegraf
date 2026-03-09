@@ -32,6 +32,6 @@ type Devices struct {
 		Energy       *float64    `json:"energy"`
 		Power        *float64    `json:"power"`
 		Value        interface{} `json:"value"`
-		Value2       *string     `json:"value2"`
+		Value2       interface{} `json:"value2"`
 	} `json:"properties"`
 }

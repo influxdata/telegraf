@@ -73,6 +73,7 @@ func (h *httpClient) Export(ctx context.Context, request pmetricotlp.ExportReque
 
 	if h.compress != "" && h.compress != "none" {
 		reader = internal.CompressWithGzip(reader)
+		defer reader.(io.ReadCloser).Close()
 	}
 
 	httpRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, h.url, reader)

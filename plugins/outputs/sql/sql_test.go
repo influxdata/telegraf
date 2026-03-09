@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 	"time"
 
@@ -207,6 +208,7 @@ func TestMysqlIntegration(t *testing.T) {
 	for _, fn := range files {
 		expected, err := os.ReadFile(fn)
 		require.NoError(t, err)
+		expected = sanitize(expected, removalMariadb)
 
 		require.Eventually(t, func() bool {
 			rc, out, err := container.Exec([]string{
@@ -220,11 +222,9 @@ func TestMysqlIntegration(t *testing.T) {
 					dbname,
 			})
 			require.NoError(t, err)
-			require.Equal(t, 0, rc)
+			require.Zero(t, rc)
 
-			b, err := io.ReadAll(out)
-			require.NoError(t, err)
-			return bytes.Contains(b, expected)
+			return dumpEquals(t, expected, out, removalMariadb)
 		}, 10*time.Second, 500*time.Millisecond, fn)
 	}
 }
@@ -303,12 +303,12 @@ func TestMysqlUpdateSchemeIntegration(t *testing.T) {
 					dbname,
 			})
 			require.NoError(t, err)
-			require.Equal(t, 0, rc)
+			require.Zero(t, rc)
 
-			b, err := io.ReadAll(out)
+			dump, err := io.ReadAll(out)
 			require.NoError(t, err)
 
-			return bytes.Contains(b, []byte(column))
+			return bytes.Contains(dump, []byte(column))
 		}, 10*time.Second, 500*time.Millisecond, column)
 	}
 }
@@ -377,6 +377,7 @@ func TestMysqlIntegrationSendBatch(t *testing.T) {
 	for _, fn := range files {
 		expected, err := os.ReadFile(fn)
 		require.NoError(t, err)
+		expected = sanitize(expected, removalMariadb)
 
 		require.Eventually(t, func() bool {
 			rc, out, err := container.Exec([]string{
@@ -390,12 +391,9 @@ func TestMysqlIntegrationSendBatch(t *testing.T) {
 					dbname,
 			})
 			require.NoError(t, err)
-			require.Equal(t, 0, rc)
+			require.Zero(t, rc)
 
-			b, err := io.ReadAll(out)
-			require.NoError(t, err)
-
-			return bytes.Contains(b, expected)
+			return dumpEquals(t, expected, out, removalMariadb)
 		}, 10*time.Second, 500*time.Millisecond, fn)
 	}
 }
@@ -461,6 +459,7 @@ func TestPostgresIntegration(t *testing.T) {
 
 	expected, err := os.ReadFile("./testdata/postgres/expected.sql")
 	require.NoError(t, err)
+	expected = sanitize(expected, removalPostgres)
 
 	require.Eventually(t, func() bool {
 		rc, out, err := container.Exec([]string{
@@ -469,21 +468,12 @@ func TestPostgresIntegration(t *testing.T) {
 			"pg_dump" +
 				" --username=" + username +
 				" --no-comments" +
-				" " + dbname +
-				// pg_dump's output has comments that include build info
-				// of postgres and pg_dump. The build info changes with
-				// each release. To prevent these changes from causing the
-				// test to fail, we strip out comments. Also strip out
-				// blank lines.
-				"|grep -E -v '(^--|^$|^SET )'",
+				" " + dbname,
 		})
 		require.NoError(t, err)
-		require.Equal(t, 0, rc)
+		require.Zero(t, rc)
 
-		b, err := io.ReadAll(out)
-		require.NoError(t, err)
-
-		return bytes.Contains(b, expected)
+		return dumpEquals(t, expected, out, removalPostgres)
 	}, 5*time.Second, 500*time.Millisecond)
 }
 
@@ -562,21 +552,15 @@ func TestPostgresUpdateSchemeIntegration(t *testing.T) {
 				"pg_dump" +
 					" --username=" + username +
 					" --no-comments" +
-					" " + dbname +
-					// pg_dump's output has comments that include build info
-					// of postgres and pg_dump. The build info changes with
-					// each release. To prevent these changes from causing the
-					// test to fail, we strip out comments. Also strip out
-					// blank lines.
-					"|grep -E -v '(^--|^$|^SET )'",
+					" " + dbname,
 			})
 			require.NoError(t, err)
-			require.Equal(t, 0, rc)
+			require.Zero(t, rc)
 
-			b, err := io.ReadAll(out)
+			dump, err := io.ReadAll(out)
 			require.NoError(t, err)
 
-			return bytes.Contains(b, []byte(column))
+			return bytes.Contains(dump, []byte(column))
 		}, 5*time.Second, 500*time.Millisecond, column)
 	}
 }
@@ -643,6 +627,7 @@ func TestPostgresIntegrationSendBatch(t *testing.T) {
 
 	expected, err := os.ReadFile("./testdata/postgres/expected.sql")
 	require.NoError(t, err)
+	expected = sanitize(expected, removalPostgres)
 
 	require.Eventually(t, func() bool {
 		rc, out, err := container.Exec([]string{
@@ -651,21 +636,12 @@ func TestPostgresIntegrationSendBatch(t *testing.T) {
 			"pg_dump" +
 				" --username=" + username +
 				" --no-comments" +
-				" " + dbname +
-				// pg_dump's output has comments that include build info
-				// of postgres and pg_dump. The build info changes with
-				// each release. To prevent these changes from causing the
-				// test to fail, we strip out comments. Also strip out
-				// blank lines.
-				"|grep -E -v '(^--|^$|^SET )'",
+				" " + dbname,
 		})
 		require.NoError(t, err)
-		require.Equal(t, 0, rc)
+		require.Zero(t, rc)
 
-		b, err := io.ReadAll(out)
-		require.NoError(t, err)
-
-		return bytes.Contains(b, expected)
+		return dumpEquals(t, expected, out, removalPostgres)
 	}, 5*time.Second, 500*time.Millisecond)
 }
 
@@ -745,8 +721,7 @@ func TestClickHouseIntegration(t *testing.T) {
 	}
 	for _, tc := range cases {
 		require.Eventually(t, func() bool {
-			var out io.Reader
-			_, out, err = container.Exec([]string{
+			rc, out, err := container.Exec([]string{
 				"bash",
 				"-c",
 				"clickhouse-client" +
@@ -757,9 +732,12 @@ func TestClickHouseIntegration(t *testing.T) {
 					` --query="SELECT * FROM \"` + tc.table + `\"; SHOW CREATE TABLE \"` + tc.table + `\""`,
 			})
 			require.NoError(t, err)
-			b, err := io.ReadAll(out)
+			require.Zero(t, rc)
+
+			dump, err := io.ReadAll(out)
 			require.NoError(t, err)
-			return bytes.Contains(b, []byte(tc.expected))
+
+			return bytes.Contains(dump, []byte(tc.expected))
 		}, 5*time.Second, 500*time.Millisecond)
 	}
 }
@@ -840,8 +818,7 @@ func TestClickHouseUpdateSchemeIntegration(t *testing.T) {
 	}
 	for _, column := range fields {
 		require.Eventually(t, func() bool {
-			var out io.Reader
-			_, out, err = container.Exec([]string{
+			rc, out, err := container.Exec([]string{
 				"bash",
 				"-c",
 				"clickhouse-client" +
@@ -852,9 +829,12 @@ func TestClickHouseUpdateSchemeIntegration(t *testing.T) {
 					` --query="SELECT * FROM "metric_one"; SHOW CREATE TABLE "metric_one""`,
 			})
 			require.NoError(t, err)
-			b, err := io.ReadAll(out)
+			require.Zero(t, rc)
+
+			dump, err := io.ReadAll(out)
 			require.NoError(t, err)
-			return bytes.Contains(b, []byte(column))
+
+			return bytes.Contains(dump, []byte(column))
 		}, 5*time.Second, 500*time.Millisecond, column)
 	}
 }
@@ -988,8 +968,7 @@ func TestClickHouseIntegrationSendBatch(t *testing.T) {
 	}
 	for _, tc := range cases {
 		require.Eventually(t, func() bool {
-			var out io.Reader
-			_, out, err = container.Exec([]string{
+			rc, out, err := container.Exec([]string{
 				"bash",
 				"-c",
 				"clickhouse-client" +
@@ -1000,9 +979,12 @@ func TestClickHouseIntegrationSendBatch(t *testing.T) {
 					` --query="SELECT * FROM \"` + tc.table + `\"; SHOW CREATE TABLE \"` + tc.table + `\""`,
 			})
 			require.NoError(t, err)
-			b, err := io.ReadAll(out)
+			require.Zero(t, rc)
+
+			dump, err := io.ReadAll(out)
 			require.NoError(t, err)
-			return bytes.Contains(b, []byte(tc.expected))
+
+			return bytes.Contains(dump, []byte(tc.expected))
 		}, 5*time.Second, 500*time.Millisecond)
 	}
 }
@@ -1117,8 +1099,7 @@ func TestClickHousePreExistingTableIntegration(t *testing.T) {
 	// Run the query once and check all columns
 	var columnsOutput []byte
 	require.Eventually(t, func() bool {
-		var out io.Reader
-		_, out, err = container.Exec([]string{
+		rc, out, err := container.Exec([]string{
 			"bash",
 			"-c",
 			"clickhouse-client" +
@@ -1127,13 +1108,11 @@ func TestClickHousePreExistingTableIntegration(t *testing.T) {
 				" --format=TabSeparatedRaw" +
 				" --query=\"DESCRIBE TABLE pre_existing_table\"",
 		})
-		if err != nil {
-			return false
-		}
+		require.NoError(t, err)
+		require.Zero(t, rc)
+
 		columnsOutput, err = io.ReadAll(out)
-		if err != nil {
-			return false
-		}
+		require.NoError(t, err)
 
 		// Check that all expected columns exist
 		for _, column := range expectedColumns {
@@ -1207,6 +1186,7 @@ func TestMysqlEmptyTimestampColumnIntegration(t *testing.T) {
 	for _, fn := range files {
 		expected, err := os.ReadFile(fn)
 		require.NoError(t, err)
+		expected = sanitize(expected, removalMariadb)
 
 		require.Eventually(t, func() bool {
 			rc, out, err := container.Exec([]string{
@@ -1219,12 +1199,9 @@ func TestMysqlEmptyTimestampColumnIntegration(t *testing.T) {
 					dbname,
 			})
 			require.NoError(t, err)
-			require.Equal(t, 0, rc)
+			require.Zero(t, rc)
 
-			b, err := io.ReadAll(out)
-			require.NoError(t, err)
-
-			return bytes.Contains(b, expected)
+			return dumpEquals(t, expected, out, removalMariadb)
 		}, 10*time.Second, 500*time.Millisecond, fn)
 	}
 }
@@ -1237,4 +1214,58 @@ func TestTimestampOnUpdateSchema(t *testing.T) {
 	expected := defaultConvert.Timestamp
 	results := p.deriveDatatype(ts)
 	require.Equal(t, expected, results)
+}
+
+var (
+	removalMariadb = []*regexp.Regexp{
+		regexp.MustCompile(`^(?i)SET\s.*$`), // metadata
+		regexp.MustCompile(`^\/\*.*\*\/;$`), // comments
+		regexp.MustCompile(`^$`),            // blank line
+	}
+	removalPostgres = []*regexp.Regexp{
+		regexp.MustCompile(`^(--|(?i)SET ).*$`), // comments and metadata
+		regexp.MustCompile(`^$`),                // blank line
+	}
+)
+
+func dumpEquals(t *testing.T, expected []byte, out io.Reader, remove []*regexp.Regexp) bool {
+	// Mark this as a helper function
+	t.Helper()
+
+	// Read and sanitze the dump
+	dump, err := io.ReadAll(out)
+	if err != nil {
+		t.Logf("reading dump output failed: %v", err)
+		return false
+	}
+
+	// Sanitize the dump
+	dumpSanitized := sanitize(dump, remove)
+
+	matches := bytes.Contains(dumpSanitized, expected)
+	if !matches {
+		t.Logf("got unexpected output:\n%s", string(dump))
+	}
+	return matches
+}
+
+func sanitize(in []byte, remove []*regexp.Regexp) []byte {
+	var out bytes.Buffer
+
+	// Iterate line-wise over the input and remove all lines matching any of
+	// removal expressions
+	out.Grow(len(in))
+	for line := range bytes.Lines(in) {
+		keep := true
+		for _, re := range remove {
+			if re.Match(bytes.TrimSpace(line)) {
+				keep = false
+				break
+			}
+		}
+		if keep {
+			out.Write(line)
+		}
+	}
+	return out.Bytes()
 }

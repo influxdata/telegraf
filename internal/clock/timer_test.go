@@ -18,13 +18,10 @@ func TestTimer(t *testing.T) {
 	start := clk.Now()
 	end := start.Add(60 * time.Second)
 
-	ticker := &Timer{
-		clk:      clk,
-		interval: interval,
-		jitter:   jitter,
-	}
-	ticker.start()
-	defer ticker.Stop()
+	startup := make(chan bool, 1)
+
+	timer := NewTimer(interval, jitter, WithClock(clk), WithStartupNotification(startup))
+	defer timer.Stop()
 
 	expected := []time.Time{
 		time.Unix(11, 0).UTC(),
@@ -35,11 +32,14 @@ func TestTimer(t *testing.T) {
 		time.Unix(61, 0).UTC(),
 	}
 
-	actual := make([]time.Time, 0)
+	// Wait for the timer to startup
+	<-startup
+
+	actual := make([]time.Time, 0, len(expected))
 	for !clk.Now().After(end) {
 		select {
-		case tm := <-ticker.Elapsed():
-			actual = append(actual, tm.UTC())
+		case ts := <-timer.C:
+			actual = append(actual, ts.UTC())
 		default:
 			clk.Add(1 * time.Second)
 		}
@@ -48,9 +48,9 @@ func TestTimer(t *testing.T) {
 	require.Equal(t, expected, actual)
 }
 
-// TestTimerJitterDrift demonstrates that with RollingTicker,
-// jitter causes drift over time. Each tick = interval + random(0, jitter),
-// so average interval = interval + jitter/2.
+// TestTimerJitterDrift demonstrates that with a Timer, jitter causes drift
+// over time. Each tick = interval + random(0, jitter), so the
+// average tick distance is interval + jitter/2.
 //
 // Scenario from issue #17287:
 //   - interval = 60s
@@ -61,7 +61,8 @@ func TestTimer(t *testing.T) {
 //   - Average interval: 60s + 5s = 65s
 //   - After 60 ticks: expected 60min, actual ~65min (5min drift)
 //
-// This demonstrates the bug where jitter increases effective collection interval.
+// This is intentional as Timer is used for flushing and there we want to
+// guarantee a minimum pause between flush cycles.
 func TestTimerJitterDrift(t *testing.T) {
 	interval := 60 * time.Second
 	jitter := 10 * time.Second
@@ -69,13 +70,8 @@ func TestTimerJitterDrift(t *testing.T) {
 	clk := clock.NewMock()
 	start := clk.Now()
 
-	ticker := &Timer{
-		clk:      clk,
-		interval: interval,
-		jitter:   jitter,
-	}
-	ticker.start()
-	defer ticker.Stop()
+	timer := NewTimer(interval, jitter, WithClock(clk))
+	defer timer.Stop()
 
 	// Collect 60 ticks
 	const numTicks = 60
@@ -83,8 +79,8 @@ func TestTimerJitterDrift(t *testing.T) {
 
 	for len(triggers) < numTicks {
 		select {
-		case tm := <-ticker.Elapsed():
-			triggers = append(triggers, tm)
+		case ts := <-timer.C:
+			triggers = append(triggers, ts)
 		default:
 			clk.Add(1 * time.Second)
 		}
@@ -101,7 +97,7 @@ func TestTimerJitterDrift(t *testing.T) {
 	// Calculate drift
 	drift := totalElapsed - expectedTime
 
-	t.Logf("=== RollingTicker (interval + jitter each tick) ===")
+	t.Logf("=== Timer (interval + jitter each tick) ===")
 	t.Logf("Start time:      %s", start.Format("15:04:05"))
 	t.Logf("First trigger:   %s", firstTrigger.Format("15:04:05"))
 	t.Logf("Last trigger:    %s", lastTrigger.Format("15:04:05"))
@@ -113,7 +109,7 @@ func TestTimerJitterDrift(t *testing.T) {
 	// Current behavior: drift should be ~5 minutes (59 intervals * 5s avg jitter)
 	// This confirms the bug from issue #17287
 	require.Greater(t, drift, 2*time.Minute,
-		"Expected significant drift with RollingTicker jitter behavior")
+		"Expected significant drift with Timer jitter behavior")
 	require.Less(t, drift, 10*time.Minute,
 		"Drift is larger than expected maximum")
 }
@@ -130,15 +126,33 @@ func TestTimerDistribution(t *testing.T) {
 
 	clk := clock.NewMock()
 
-	ticker := &Timer{
-		clk:      clk,
-		interval: interval,
-		jitter:   jitter,
-	}
-	ticker.start()
-	defer ticker.Stop()
-	dist := simulatedDist(ticker, clk)
+	timer := NewTimer(interval, jitter, WithClock(clk))
+	defer timer.Stop()
+
+	dist := simulatedTimerDist(timer, clk)
 	dist.print()
 	require.Less(t, 275, dist.count)
 	require.True(t, 12 < dist.mean() && 13 > dist.mean())
+}
+
+func simulatedTimerDist(timer *Timer, clk *clock.Mock) distribution {
+	start := clk.Now()
+	end := start.Add(1 * time.Hour)
+
+	var dist distribution
+
+	last := clk.Now()
+	for !clk.Now().After(end) {
+		select {
+		case ts := <-timer.C:
+			dist.buckets[ts.Second()]++
+			dist.count++
+			dist.waittime += ts.Sub(last).Seconds()
+			last = ts
+		default:
+			clk.Add(1 * time.Second)
+		}
+	}
+
+	return dist
 }

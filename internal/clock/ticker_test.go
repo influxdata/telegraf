@@ -14,7 +14,7 @@ type distribution struct {
 	waittime float64
 }
 
-func simulatedDist(ticker Ticker, clk *clock.Mock) distribution {
+func simulatedTickerDist(ticker *Ticker, clk *clock.Mock) distribution {
 	start := clk.Now()
 	end := start.Add(1 * time.Hour)
 
@@ -23,11 +23,11 @@ func simulatedDist(ticker Ticker, clk *clock.Mock) distribution {
 	last := clk.Now()
 	for !clk.Now().After(end) {
 		select {
-		case tm := <-ticker.Elapsed():
-			dist.buckets[tm.Second()]++
+		case ts := <-ticker.C:
+			dist.buckets[ts.Second()]++
 			dist.count++
-			dist.waittime += tm.Sub(last).Seconds()
-			last = tm
+			dist.waittime += ts.Sub(last).Seconds()
+			last = ts
 		default:
 			clk.Add(1 * time.Second)
 		}

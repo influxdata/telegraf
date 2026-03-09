@@ -74,6 +74,15 @@ func Parse(acc telegraf.Accumulator, sectionBytes, roomBytes, devicesBytes []byt
 			}
 		}
 
+		if device.Properties.Value2 != nil {
+			v, err := internal.ToFloat64(device.Properties.Value2)
+			if err != nil {
+				acc.AddError(fmt.Errorf("unable to convert value2: %w", err))
+			} else {
+				fields["value2"] = v
+			}
+		}
+
 		acc.AddFields("fibaro", fields, tags)
 	}
 

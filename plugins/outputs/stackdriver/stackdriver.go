@@ -14,6 +14,7 @@ import (
 
 	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
 	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
+	"golang.org/x/oauth2"
 	"google.golang.org/api/option"
 	"google.golang.org/genproto/googleapis/api/distribution"
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
@@ -22,6 +23,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -32,6 +34,7 @@ var sampleConfig string
 
 // Stackdriver is the Google Stackdriver config info.
 type Stackdriver struct {
+	Token                config.Secret     `toml:"token"`
 	Project              string            `toml:"project"`
 	QuotaProject         string            `toml:"quota_project"`
 	Namespace            string            `toml:"namespace"`
@@ -137,18 +140,19 @@ func (s *Stackdriver) Connect() error {
 
 	s.ResourceLabels["project_id"] = s.Project
 
-	// Define client options, starting with the user agent
-	options := []option.ClientOption{
-		option.WithUserAgent(internal.ProductToken()),
-	}
-
-	if s.QuotaProject != "" {
-		options = append(options, option.WithQuotaProject(s.QuotaProject))
-		s.Log.Infof("Using QuotaProject %s for quota attribution", s.QuotaProject)
-	}
-
 	if s.client == nil {
 		ctx := context.Background()
+
+		options := []option.ClientOption{
+			option.WithUserAgent(internal.ProductToken()),
+			option.WithQuotaProject(s.QuotaProject),
+		}
+
+		if !s.Token.Empty() {
+			ts := &secretTokenSource{secret: &s.Token}
+			options = append(options, option.WithTokenSource(ts))
+		}
+
 		client, err := monitoring.NewMetricClient(ctx, options...)
 		if err != nil {
 			return err
@@ -686,6 +690,24 @@ func (s *Stackdriver) getStackdriverLabels(tags []*telegraf.Tag) map[string]stri
 	}
 
 	return labels
+}
+
+// secretTokenSource bridges a config.Secret to an oauth2.TokenSource,
+// allowing the Google client to fetch fresh tokens from a secret store.
+type secretTokenSource struct {
+	secret *config.Secret
+}
+
+func (s *secretTokenSource) Token() (*oauth2.Token, error) {
+	buf, err := s.secret.Get()
+	if err != nil {
+		return nil, fmt.Errorf("getting credentials token failed: %w", err)
+	}
+	defer buf.Destroy()
+	return &oauth2.Token{
+		AccessToken: buf.String(),
+		TokenType:   "Bearer",
+	}, nil
 }
 
 // Close will terminate the session to the backend, returning error if an issue arises.

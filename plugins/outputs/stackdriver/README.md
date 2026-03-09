@@ -27,6 +27,14 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `token` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
+
 ## Configuration
 
 ```toml @sample.conf
@@ -34,6 +42,9 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [[outputs.stackdriver]]
   ## GCP Project
   project = "erudite-bloom-151019"
+
+  ## GCP access token for authorizing calls to Cloud Monitoring APIs
+  # token = "@{gcp_auth:token}"
 
   ## Quota Project
   ## Specifies the Google Cloud project that should be billed for metric ingestion.

@@ -40,6 +40,7 @@ type handler struct {
 	maxMsgSize                    int
 	emptyNameWarnShown            bool
 	vendorExt                     []string
+	emitDeleteMetrics             bool
 	tagStore                      *tagStore
 	trace                         bool
 	canonicalFieldNames           bool
@@ -119,20 +120,32 @@ func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, t
 				h.log.Debugf("Got update_%v: %s", t, string(buf))
 			}
 		}
-		if response, ok := reply.Response.(*gnmi.SubscribeResponse_Update); ok {
-			h.handleSubscribeResponseUpdate(acc, response, reply.GetExtension())
+
+		response, ok := reply.Response.(*gnmi.SubscribeResponse_Update)
+		if !ok {
+			continue
+		}
+
+		// Extract the metadata
+		timestamp, tags, prefix := h.handleUpdateMetadata(response.Update, reply.GetExtension())
+
+		// Handle "update" notifications contained in the response
+		h.handleUpdates(acc, response.Update.Update, timestamp, tags, prefix)
+
+		// Handle "delete" notifications contained in the response if requested
+		if h.emitDeleteMetrics {
+			h.handleDeletes(acc, response.Update.Delete, timestamp, tags, prefix)
 		}
 	}
 	return nil
 }
 
-// Handle SubscribeResponse_Update message from gNMI and parse contained telemetry data
-func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, response *gnmi.SubscribeResponse_Update, extension []*gnmi_ext.Extension) {
-	grouper := metric.NewSeriesGrouper()
-	timestamp := time.Unix(0, response.Update.Timestamp)
+func (h *handler) handleUpdateMetadata(notification *gnmi.Notification, extension []*gnmi_ext.Extension) (time.Time, map[string]string, *pathInfo) {
+	timestamp := time.Unix(0, notification.Timestamp)
 
 	// Extract tags from potential extension in the update notification
-	headerTags := make(map[string]string)
+	headerTags := map[string]string{"source": h.host}
+
 	for _, ext := range extension {
 		currentExt := ext.GetRegisteredExt().Msg
 		if currentExt == nil {
@@ -161,21 +174,21 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 	}
 
 	// Extract the path part valid for the whole set of updates if any
-	prefix := newInfoFromPath(response.Update.Prefix)
+	prefix := newInfoFromPath(notification.Prefix)
 	if h.enforceFirstNamespaceAsOrigin {
 		prefix.enforceFirstNamespaceAsOrigin()
 	}
+	return timestamp, headerTags, prefix
+}
 
-	// Add info to the tags
-	headerTags["source"] = h.host
-	if !prefix.empty() {
-		headerTags["path"] = prefix.fullPath()
-	}
+// Handle SubscribeResponse_Update message from gNMI and parse contained telemetry data
+func (h *handler) handleUpdates(acc telegraf.Accumulator, updates []*gnmi.Update, timestamp time.Time, headerTags map[string]string, prefix *pathInfo) {
+	grouper := metric.NewSeriesGrouper()
 
 	// Process and remove tag-updates from the response first so we can
 	// add all available tags to the metrics later.
 	var valueFields []updateField
-	for _, update := range response.Update.Update {
+	for _, update := range updates {
 		if update.Path == nil {
 			continue
 		}
@@ -226,9 +239,16 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 
 	// Some devices do not provide a prefix, so do some guesswork based
 	// on the paths of the fields
-	if headerTags["path"] == "" && h.guessPathStrategy == "common path" {
-		if prefixPath := guessPrefixFromUpdate(valueFields); prefixPath != "" {
-			headerTags["path"] = prefixPath
+	var path string
+	if !prefix.empty() {
+		path = prefix.fullPath()
+	} else if h.guessPathStrategy == "common path" {
+		paths := make([]*pathInfo, 0, len(valueFields))
+		for _, f := range valueFields {
+			paths = append(paths, f.path)
+		}
+		if prefixPath := guessPrefix(paths); prefixPath != "" {
+			path = prefixPath
 		}
 	}
 
@@ -244,6 +264,9 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 		for key, val := range headerTags {
 			tags[key] = val
 		}
+		if path != "" {
+			tags["path"] = path
+		}
 		for key, val := range fieldTags {
 			tags[key] = val
 		}
@@ -258,10 +281,10 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 		if name == "" {
 			h.log.Debugf("No measurement alias for gNMI path: %s", field.path)
 			if !h.emptyNameWarnShown {
-				if buf, err := json.Marshal(response); err == nil {
+				if buf, err := json.Marshal(updates); err == nil {
 					h.log.Warnf(emptyNameWarning, field.path, string(buf))
 				} else {
-					h.log.Warnf(emptyNameWarning, field.path, response.Update)
+					h.log.Warnf(emptyNameWarning, field.path, updates)
 				}
 				h.emptyNameWarnShown = true
 			}
@@ -312,13 +335,97 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 	}
 }
 
+func (h *handler) handleDeletes(acc telegraf.Accumulator, deletes []*gnmi.Path, timestamp time.Time, headerTags map[string]string, prefix *pathInfo) {
+	paths := make([]*pathInfo, 0, len(deletes))
+	for _, del := range deletes {
+		if del == nil {
+			continue
+		}
+
+		if len(del.Elem) == 0 && prefix.empty() {
+			continue
+		}
+
+		fullPath := prefix.append(del)
+		if h.enforceFirstNamespaceAsOrigin {
+			prefix.enforceFirstNamespaceAsOrigin()
+		}
+		if del.Origin != "" {
+			fullPath.origin = del.Origin
+		}
+		paths = append(paths, fullPath)
+	}
+
+	// Some devices do not provide a prefix, so do some guesswork based
+	// on the paths of the fields
+	var path string
+	if !prefix.empty() {
+		path = prefix.fullPath()
+	} else if h.guessPathStrategy == "common path" {
+		if prefixPath := guessPrefix(paths); prefixPath != "" {
+			path = prefixPath
+		}
+	}
+
+	// Parse individual update message and create measurements
+	for _, field := range paths {
+		if field.empty() {
+			continue
+		}
+
+		// Prepare tags from prefix
+		fieldTags := field.tags(h.tagPathPrefix)
+		tags := make(map[string]string, len(headerTags)+len(fieldTags)+1)
+		for key, val := range headerTags {
+			tags[key] = val
+		}
+		if path != "" {
+			tags["path"] = path
+		}
+		for key, val := range fieldTags {
+			tags[key] = val
+		}
+
+		// Add the tags derived via tag-subscriptions
+		for k, v := range h.tagStore.lookup(field, tags) {
+			tags[k] = v
+		}
+
+		// Lookup alias for the metric
+		aliasPath, name := h.lookupAlias(field)
+		if name == "" {
+			h.log.Debugf("No measurement alias for gNMI path: %s", field)
+			if !h.emptyNameWarnShown {
+				if buf, err := json.Marshal(deletes); err == nil {
+					h.log.Warnf(emptyNameWarning, field, string(buf))
+				} else {
+					h.log.Warnf(emptyNameWarning, field, deletes)
+				}
+				h.emptyNameWarnShown = true
+			}
+		}
+
+		aliasInfo := newInfoFromString(aliasPath)
+		if h.enforceFirstNamespaceAsOrigin {
+			aliasInfo.enforceFirstNamespaceAsOrigin()
+		}
+
+		if tags["path"] == "" && h.guessPathStrategy == "subscription" {
+			tags["path"] = aliasInfo.String()
+		}
+
+		fields := map[string]interface{}{"operation": "delete"}
+		acc.AddFields(name, fields, tags, timestamp)
+	}
+}
+
 // Try to find the alias for the given path
 type aliasCandidate struct {
 	path, alias string
 }
 
 func (h *handler) lookupAlias(info *pathInfo) (aliasPath, alias string) {
-	candidates := make([]aliasCandidate, 0)
+	candidates := make([]aliasCandidate, 0, len(h.aliases))
 	for i, a := range h.aliases {
 		if !i.isSubPathOf(info) {
 			continue
@@ -337,20 +444,20 @@ func (h *handler) lookupAlias(info *pathInfo) (aliasPath, alias string) {
 	return candidates[0].path, candidates[0].alias
 }
 
-func guessPrefixFromUpdate(fields []updateField) string {
-	if len(fields) == 0 {
+func guessPrefix(paths []*pathInfo) string {
+	if len(paths) == 0 {
 		return ""
 	}
-	if len(fields) == 1 {
-		return fields[0].path.dir()
+	if len(paths) == 1 {
+		return paths[0].dir()
 	}
-	segments := make([]segment, 0, len(fields[0].path.segments))
+	segments := make([]segment, 0, len(paths[0].segments))
 	commonPath := &pathInfo{
-		origin:   fields[0].path.origin,
-		segments: append(segments, fields[0].path.segments...),
+		origin:   paths[0].origin,
+		segments: append(segments, paths[0].segments...),
 	}
-	for _, f := range fields[1:] {
-		commonPath.keepCommonPart(f.path)
+	for _, f := range paths[1:] {
+		commonPath.keepCommonPart(f)
 	}
 	if commonPath.empty() {
 		return ""
