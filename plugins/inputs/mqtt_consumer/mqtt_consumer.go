@@ -28,6 +28,7 @@ var (
 	once sync.Once
 	// 30 Seconds is the default used by paho.mqtt.golang
 	defaultConnectionTimeout      = config.Duration(30 * time.Second)
+	defaultMaxReconnectInterval   = config.Duration(30 * time.Second)
 	defaultMaxUndeliveredMessages = 1000
 )
 
@@ -40,6 +41,7 @@ type MQTTConsumer struct {
 	Password               config.Secret        `toml:"password"`
 	QoS                    int                  `toml:"qos"`
 	ConnectionTimeout      config.Duration      `toml:"connection_timeout"`
+	MaxReconnectInterval   config.Duration      `toml:"max_reconnect_interval"`
 	KeepAliveInterval      config.Duration      `toml:"keepalive"`
 	PingTimeout            config.Duration      `toml:"ping_timeout"`
 	MaxUndeliveredMessages int                  `toml:"max_undelivered_messages"`
@@ -329,6 +331,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 		opts.AddBroker(server)
 	}
 	opts.SetAutoReconnect(true)
+	opts.SetMaxReconnectInterval(time.Duration(m.MaxReconnectInterval))
 	opts.SetKeepAlive(time.Duration(m.KeepAliveInterval))
 	opts.SetPingTimeout(time.Duration(m.PingTimeout))
 	opts.SetCleanSession(!m.PersistentSession)
@@ -343,6 +346,7 @@ func newMQTTConsumer(factory clientFactory) *MQTTConsumer {
 		Servers:                []string{"tcp://127.0.0.1:1883"},
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		ConnectionTimeout:      defaultConnectionTimeout,
+		MaxReconnectInterval:   defaultMaxReconnectInterval,
 		KeepAliveInterval:      config.Duration(60 * time.Second),
 		PingTimeout:            config.Duration(10 * time.Second),
 		clientFactory:          factory,
