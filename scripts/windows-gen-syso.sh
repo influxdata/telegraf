@@ -6,12 +6,13 @@ NAME="Telegraf"
 VERSION=$(cd ../../ && make version)
 FLAGS=()
 
-# If building for arm64, then include the extra flags required.
+# If building for arm64, then include the extra required flag.
 if [ -n "${1+x}" ] && [ "$1" = "arm64" ]; then
-    FLAGS=(-arm -64)
+    FLAGS=(-arm)
 fi
 
 goversioninfo "${FLAGS[@]}" \
+    -64 \
     -product-name "$NAME" \
     -product-version "$VERSION" \
     -skip-versioninfo \
