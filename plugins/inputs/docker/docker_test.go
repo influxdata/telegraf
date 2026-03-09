@@ -19,6 +19,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -1278,13 +1279,6 @@ func TestNonRunningContainerEmitsStatusMetrics(t *testing.T) {
 		return &client, nil
 	}
 
-	now = func() time.Time {
-		return time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC)
-	}
-	defer func() {
-		now = time.Now
-	}()
-
 	d := Docker{
 		Log:                   testutil.Logger{},
 		newClient:             newClientFunc,
@@ -1297,7 +1291,7 @@ func TestNonRunningContainerEmitsStatusMetrics(t *testing.T) {
 	require.NoError(t, d.Gather(&acc))
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"docker_container_status",
 			map[string]string{
 				"container_name":    "stopped-container",
@@ -1317,20 +1311,14 @@ func TestNonRunningContainerEmitsStatusMetrics(t *testing.T) {
 				"finished_at":   time.Date(2024, 1, 1, 1, 0, 0, 0, time.UTC).UnixNano(),
 				"uptime_ns":     int64(time.Hour),
 			},
-			time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
+			time.Time{},
 		),
 	}
 
 	actual := filterMetrics(acc.GetTelegrafMetrics(), func(m telegraf.Metric) bool {
-		return m.Name() == "docker_container_status"
+		return strings.HasPrefix(m.Name(), "docker_container_")
 	})
-	testutil.RequireMetricsEqual(t, expected, actual)
-
-	// Runtime stats (cpu, mem, net, blkio) should NOT be emitted
-	acc.AssertDoesNotContainMeasurement(t, "docker_container_cpu")
-	acc.AssertDoesNotContainMeasurement(t, "docker_container_mem")
-	acc.AssertDoesNotContainMeasurement(t, "docker_container_net")
-	acc.AssertDoesNotContainMeasurement(t, "docker_container_blkio")
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 }
 
 func TestContainerName(t *testing.T) {
