@@ -50,7 +50,7 @@ func (ms *Mem) Gather(acc telegraf.Accumulator) error {
 		fields["wired"] = vm.Wired
 	case "openbsd":
 		fields["active"] = vm.Active
-		fields["cached"] = vm.Cached
+		fields["cached"] = vm.Buffers
 		fields["free"] = vm.Free
 		fields["inactive"] = vm.Inactive
 		fields["wired"] = vm.Wired
