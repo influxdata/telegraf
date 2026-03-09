@@ -15,6 +15,10 @@ import (
 var sampleConfig string
 
 type Mem struct {
+	CollectExtended bool `toml:"collect_extended"`
+
+	Log telegraf.Logger `toml:"-"`
+
 	ps       psutil.PS
 	platform string
 }
@@ -25,6 +29,10 @@ func (*Mem) SampleConfig() string {
 
 func (ms *Mem) Init() error {
 	ms.platform = runtime.GOOS
+	if ms.CollectExtended && !extendedMemorySupported {
+		ms.Log.Warn("collect_extended is not supported on this platform, ignoring")
+		ms.CollectExtended = false
+	}
 	return nil
 }
 
@@ -92,6 +100,16 @@ func (ms *Mem) Gather(acc telegraf.Accumulator) error {
 		fields["vmalloc_used"] = vm.VmallocUsed
 		fields["write_back_tmp"] = vm.WriteBackTmp
 		fields["write_back"] = vm.WriteBack
+	}
+
+	if ms.CollectExtended {
+		if extended, err := getExtendedMemoryFields(); err == nil {
+			for k, v := range extended {
+				fields[k] = v
+			}
+		} else {
+			acc.AddError(fmt.Errorf("getting extended virtual memory info failed: %w", err))
+		}
 	}
 
 	acc.AddGauge("mem", fields, nil)

@@ -1,6 +1,8 @@
 package mem
 
 import (
+	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -114,4 +116,107 @@ func TestMemStats(t *testing.T) {
 	}
 
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+}
+
+func TestMemStatsCollectExtended(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Skipping Linux-specific extended memory test")
+	}
+
+	tests := []struct {
+		name           string
+		testdataDir    string
+		extendedFields map[string]interface{}
+	}{
+		{
+			name:        "normal",
+			testdataDir: "normal",
+			extendedFields: map[string]interface{}{
+				"active_anon":   uint64(5765169152),
+				"inactive_anon": uint64(1082245120),
+				"active_file":   uint64(3535425536),
+				"inactive_file": uint64(4421992448),
+				"unevictable":   uint64(143360),
+				"percpu":        uint64(5767168),
+			},
+		},
+		{
+			name:        "missing fields",
+			testdataDir: "missing_fields",
+			extendedFields: map[string]interface{}{
+				"active_anon":   uint64(5765169152),
+				"inactive_anon": uint64(1082245120),
+				"active_file":   uint64(3535425536),
+				"inactive_file": uint64(4421992448),
+				"unevictable":   uint64(0),
+				"percpu":        uint64(0),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hostProc, err := filepath.Abs(filepath.Join("testdata", tt.testdataDir, "proc"))
+			require.NoError(t, err)
+			t.Setenv("HOST_PROC", hostProc)
+
+			var mps psutil.MockPS
+			defer mps.AssertExpectations(t)
+			var acc testutil.Accumulator
+
+			vms := &mem.VirtualMemoryStat{
+				Total:     12400,
+				Available: 7600,
+				Used:      5000,
+				Free:      1235,
+			}
+
+			mps.On("VMStat").Return(vms, nil)
+			plugin := &Mem{
+				ps:              &mps,
+				CollectExtended: true,
+			}
+
+			require.NoError(t, plugin.Init())
+			plugin.platform = "linux"
+
+			require.NoError(t, plugin.Gather(&acc))
+
+			fields := acc.GetTelegrafMetrics()[0].Fields()
+			for k, v := range tt.extendedFields {
+				require.Equal(t, v, fields[k], "field %q mismatch", k)
+			}
+		})
+	}
+}
+
+func TestMemStatsCollectExtendedDisabled(t *testing.T) {
+	var mps psutil.MockPS
+	defer mps.AssertExpectations(t)
+	var acc testutil.Accumulator
+
+	vms := &mem.VirtualMemoryStat{
+		Total:     12400,
+		Available: 7600,
+		Used:      5000,
+	}
+
+	mps.On("VMStat").Return(vms, nil)
+	plugin := &Mem{
+		ps:              &mps,
+		CollectExtended: false,
+	}
+
+	err := plugin.Init()
+	require.NoError(t, err)
+
+	plugin.platform = "linux"
+
+	err = plugin.Gather(&acc)
+	require.NoError(t, err)
+
+	fields := acc.GetTelegrafMetrics()[0].Fields()
+	for _, key := range []string{"active_anon", "inactive_anon", "active_file", "inactive_file", "unevictable", "percpu"} {
+		require.Nil(t, fields[key], "field %q should not be present when collect_extended is false", key)
+	}
 }
