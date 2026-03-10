@@ -46,9 +46,9 @@ func checkDataChangeFilterParameters(params *input.DataChangeFilter) error {
 		params.DeadbandType != input.Absolute &&
 		params.DeadbandType != input.Percent:
 		return fmt.Errorf("deadband_type '%s' not supported", params.DeadbandType)
-	case params.DeadbandValue == nil:
+	case params.DeadbandType != input.None && params.DeadbandValue == nil:
 		return errors.New("deadband_value was not set")
-	case *params.DeadbandValue < 0:
+	case params.DeadbandValue != nil && *params.DeadbandValue < 0:
 		return errors.New("negative deadband_value not supported")
 	default:
 		return nil
@@ -73,9 +73,14 @@ func assignConfigValuesToRequest(req *ua.MonitoredItemCreateRequest, monParams *
 
 		req.RequestedParameters.Filter = ua.NewExtensionObject(
 			&ua.DataChangeFilter{
-				Trigger:       ua.DataChangeTriggerFromString(string(monParams.DataChangeFilter.Trigger)),
-				DeadbandType:  uint32(ua.DeadbandTypeFromString(string(monParams.DataChangeFilter.DeadbandType))),
-				DeadbandValue: *monParams.DataChangeFilter.DeadbandValue,
+				Trigger:      ua.DataChangeTriggerFromString(string(monParams.DataChangeFilter.Trigger)),
+				DeadbandType: uint32(ua.DeadbandTypeFromString(string(monParams.DataChangeFilter.DeadbandType))),
+				DeadbandValue: func() float64 {
+					if monParams.DataChangeFilter.DeadbandValue != nil {
+						return *monParams.DataChangeFilter.DeadbandValue
+					}
+					return 0
+				}(),
 			},
 		)
 	}
