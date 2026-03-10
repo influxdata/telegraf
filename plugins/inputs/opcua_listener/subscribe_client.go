@@ -71,16 +71,17 @@ func assignConfigValuesToRequest(req *ua.MonitoredItemCreateRequest, monParams *
 			return fmt.Errorf(err.Error()+", node '%s'", req.ItemToMonitor.NodeID)
 		}
 
+		var deadbandValue float64
+
+		if monParams.DataChangeFilter.DeadbandValue != nil {
+			deadbandValue = *monParams.DataChangeFilter.DeadbandValue
+		}
+
 		req.RequestedParameters.Filter = ua.NewExtensionObject(
 			&ua.DataChangeFilter{
-				Trigger:      ua.DataChangeTriggerFromString(string(monParams.DataChangeFilter.Trigger)),
-				DeadbandType: uint32(ua.DeadbandTypeFromString(string(monParams.DataChangeFilter.DeadbandType))),
-				DeadbandValue: func() float64 {
-					if monParams.DataChangeFilter.DeadbandValue != nil {
-						return *monParams.DataChangeFilter.DeadbandValue
-					}
-					return 0
-				}(),
+				Trigger:       ua.DataChangeTriggerFromString(string(monParams.DataChangeFilter.Trigger)),
+				DeadbandType:  uint32(ua.DeadbandTypeFromString(string(monParams.DataChangeFilter.DeadbandType))),
+				DeadbandValue: deadbandValue,
 			},
 		)
 	}
