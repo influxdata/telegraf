@@ -93,10 +93,7 @@ func jsonToZipkinThrift(jsonRaw []byte) ([]byte, error) {
 		return nil, fmt.Errorf("error unmarshalling: %w", err)
 	}
 
-	var zspans []*zipkincore.Span
-	if err != nil {
-		return nil, err
-	}
+	zspans := make([]*zipkincore.Span, 0, len(spans))
 	zspans = append(zspans, spans...)
 
 	buf := thrift.NewTMemoryBuffer()

@@ -57,7 +57,7 @@ func (m *message) authenticate(req *http.Request, expected config.Secret) error 
 
 func (m *message) decodeData(r *requestBody) ([][]byte, error) {
 	// Decode base64-encoded data and return them as a slice of byte slices
-	decodedData := make([][]byte, 0)
+	decodedData := make([][]byte, 0, len(r.Records))
 	for _, record := range r.Records {
 		data, err := base64.StdEncoding.DecodeString(record.EncodedData)
 		if err != nil {

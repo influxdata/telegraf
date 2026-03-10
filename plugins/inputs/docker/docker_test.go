@@ -1202,7 +1202,7 @@ func TestContainerStateFilter(t *testing.T) {
 			newClientFunc := func(string, *tls.Config) (dockerClient, error) {
 				client := baseClient
 				client.ContainerListF = func(container.ListOptions) ([]container.Summary, error) {
-					var containers []container.Summary
+					containers := make([]container.Summary, 0, len(containerStates))
 					for _, v := range containerStates {
 						containers = append(containers, container.Summary{
 							Names: []string{v},
@@ -1256,11 +1256,12 @@ func TestContainerName(t *testing.T) {
 			clientFunc: func(string, *tls.Config) (dockerClient, error) {
 				client := baseClient
 				client.ContainerListF = func(container.ListOptions) ([]container.Summary, error) {
-					var containers []container.Summary
-					containers = append(containers, container.Summary{
-						Names: []string{"/logspout/foo"},
-						State: "running",
-					})
+					containers := []container.Summary{
+						{
+							Names: []string{"/logspout/foo"},
+							State: "running",
+						},
+					}
 					return containers, nil
 				}
 				client.ContainerStatsF = func(string) (container.StatsResponseReader, error) {
@@ -1277,11 +1278,12 @@ func TestContainerName(t *testing.T) {
 			clientFunc: func(string, *tls.Config) (dockerClient, error) {
 				client := baseClient
 				client.ContainerListF = func(container.ListOptions) ([]container.Summary, error) {
-					var containers []container.Summary
-					containers = append(containers, container.Summary{
-						Names: []string{"/logspout"},
-						State: "running",
-					})
+					containers := []container.Summary{
+						{
+							Names: []string{"/logspout"},
+							State: "running",
+						},
+					}
 					return containers, nil
 				}
 				client.ContainerStatsF = func(string) (container.StatsResponseReader, error) {
