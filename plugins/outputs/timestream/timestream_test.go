@@ -453,68 +453,97 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 }
 
 func buildExpectedMultiRecords(multiMeasureName, tableName string) *timestreamwrite.WriteRecordsInput {
-	var recordsMultiTableMode []types.Record
-	recordDouble := buildMultiRecords([]SimpleInput{
-		{
-			t:             time1Epoch,
-			tableName:     metricName1,
-			dimensions:    map[string]string{"tag1": "value1"},
-			measureValues: map[string]string{"measureDouble": "10"},
-		}}, multiMeasureName, types.MeasureValueTypeDouble)
+	var totalRecords int
+	recordDouble := buildMultiRecords(
+		[]SimpleInput{
+			{
+				t:             time1Epoch,
+				tableName:     metricName1,
+				dimensions:    map[string]string{"tag1": "value1"},
+				measureValues: map[string]string{"measureDouble": "10"},
+			},
+		},
+		multiMeasureName,
+		types.MeasureValueTypeDouble,
+	)
+	totalRecords += len(recordDouble)
 
+	recordBigint := buildMultiRecords(
+		[]SimpleInput{
+			{
+				t:             time1Epoch,
+				tableName:     metricName1,
+				dimensions:    map[string]string{"tag2": "value2"},
+				measureValues: map[string]string{"measureBigint": "20"},
+			},
+		},
+		multiMeasureName,
+		types.MeasureValueTypeBigint,
+	)
+	totalRecords += len(recordBigint)
+
+	recordVarchar := buildMultiRecords(
+		[]SimpleInput{
+			{
+				t:             time1Epoch,
+				tableName:     metricName1,
+				dimensions:    map[string]string{"tag3": "value3"},
+				measureValues: map[string]string{"measureVarchar": "DUMMY"},
+			},
+		},
+		multiMeasureName,
+		types.MeasureValueTypeVarchar,
+	)
+	totalRecords += len(recordVarchar)
+
+	recordBool := buildMultiRecords(
+		[]SimpleInput{
+			{
+				t:             time1Epoch,
+				tableName:     metricName1,
+				dimensions:    map[string]string{"tag4": "value4"},
+				measureValues: map[string]string{"measureBool": "true"},
+			},
+		},
+		multiMeasureName,
+		types.MeasureValueTypeBoolean,
+	)
+	totalRecords += len(recordBool)
+
+	recordMaxUint64 := buildMultiRecords(
+		[]SimpleInput{
+			{
+				t:             time1Epoch,
+				tableName:     metricName1,
+				dimensions:    map[string]string{"tag5": "value5"},
+				measureValues: map[string]string{"measureMaxUint64": "9223372036854775807"},
+			},
+		},
+		multiMeasureName,
+		types.MeasureValueTypeBigint,
+	)
+	totalRecords += len(recordMaxUint64)
+
+	recordUint64 := buildMultiRecords(
+		[]SimpleInput{
+			{
+				t:             time1Epoch,
+				tableName:     metricName1,
+				dimensions:    map[string]string{"tag6": "value6"},
+				measureValues: map[string]string{"measureSmallUint64": "123456"},
+			},
+		},
+		multiMeasureName,
+		types.MeasureValueTypeBigint,
+	)
+	totalRecords += len(recordUint64)
+
+	recordsMultiTableMode := make([]types.Record, 0, totalRecords)
 	recordsMultiTableMode = append(recordsMultiTableMode, recordDouble...)
-
-	recordBigint := buildMultiRecords([]SimpleInput{
-		{
-			t:             time1Epoch,
-			tableName:     metricName1,
-			dimensions:    map[string]string{"tag2": "value2"},
-			measureValues: map[string]string{"measureBigint": "20"},
-		}}, multiMeasureName, types.MeasureValueTypeBigint)
-
 	recordsMultiTableMode = append(recordsMultiTableMode, recordBigint...)
-
-	recordVarchar := buildMultiRecords([]SimpleInput{
-		{
-			t:             time1Epoch,
-			tableName:     metricName1,
-			dimensions:    map[string]string{"tag3": "value3"},
-			measureValues: map[string]string{"measureVarchar": "DUMMY"},
-		}}, multiMeasureName, types.MeasureValueTypeVarchar)
-
 	recordsMultiTableMode = append(recordsMultiTableMode, recordVarchar...)
-
-	recordBool := buildMultiRecords([]SimpleInput{
-		{
-			t:             time1Epoch,
-			tableName:     metricName1,
-			dimensions:    map[string]string{"tag4": "value4"},
-			measureValues: map[string]string{"measureBool": "true"},
-		},
-	}, multiMeasureName, types.MeasureValueTypeBoolean)
-
 	recordsMultiTableMode = append(recordsMultiTableMode, recordBool...)
-
-	recordMaxUint64 := buildMultiRecords([]SimpleInput{
-		{
-			t:             time1Epoch,
-			tableName:     metricName1,
-			dimensions:    map[string]string{"tag5": "value5"},
-			measureValues: map[string]string{"measureMaxUint64": "9223372036854775807"},
-		},
-	}, multiMeasureName, types.MeasureValueTypeBigint)
-
 	recordsMultiTableMode = append(recordsMultiTableMode, recordMaxUint64...)
-
-	recordUint64 := buildMultiRecords([]SimpleInput{
-		{
-			t:             time1Epoch,
-			tableName:     metricName1,
-			dimensions:    map[string]string{"tag6": "value6"},
-			measureValues: map[string]string{"measureSmallUint64": "123456"},
-		},
-	}, multiMeasureName, types.MeasureValueTypeBigint)
-
 	recordsMultiTableMode = append(recordsMultiTableMode, recordUint64...)
 
 	expectedResultMultiTable := &timestreamwrite.WriteRecordsInput{
@@ -860,16 +889,16 @@ func TestTransformMetricsRequestsAboveLimitAreSplitSingleTable(t *testing.T) {
 		CommonAttributes: &types.Record{},
 	}
 
-	var recordsSecondReq []types.Record
-
 	localTime++
 
-	recordsSecondReq = append(recordsSecondReq, buildRecord(SimpleInput{
-		t:             strconv.Itoa(localTime),
-		tableName:     testSingleTableName,
-		dimensions:    map[string]string{"tag1": "value1", testSingleTableDim: metricName1},
-		measureValues: map[string]string{"value_supported" + strconv.Itoa(maxRecordsInWriteRecordsCall+1): "10"},
-	})...)
+	recordsSecondReq := buildRecord(
+		SimpleInput{
+			t:             strconv.Itoa(localTime),
+			tableName:     testSingleTableName,
+			dimensions:    map[string]string{"tag1": "value1", testSingleTableDim: metricName1},
+			measureValues: map[string]string{"value_supported" + strconv.Itoa(maxRecordsInWriteRecordsCall+1): "10"},
+		},
+	)
 
 	expectedResult2SingleTable := &timestreamwrite.WriteRecordsInput{
 		DatabaseName:     aws.String(tsDBName),
@@ -1347,8 +1376,7 @@ func buildExpectedInput(i SimpleInput) *timestreamwrite.WriteRecordsInput {
 }
 
 func buildRecords(inputs []SimpleInput) []types.Record {
-	var tsRecords []types.Record
-
+	tsRecords := make([]types.Record, 0, len(inputs))
 	for _, inp := range inputs {
 		tsRecords = append(tsRecords, buildRecord(inp)...)
 	}
