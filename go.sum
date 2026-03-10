@@ -2612,10 +2612,10 @@ go.opentelemetry.io/proto/otlp v0.15.0/go.mod h1:H7XAot3MsfNsj7EXtrA2q5xSNQ10UqI
 go.opentelemetry.io/proto/otlp v0.19.0/go.mod h1:H7XAot3MsfNsj7EXtrA2q5xSNQ10UqI405h3+duxN4U=
 go.opentelemetry.io/proto/otlp v1.10.0 h1:IQRWgT5srOCYfiWnpqUYz9CVmbO8bFmKcwYxpuCSL2g=
 go.opentelemetry.io/proto/otlp v1.10.0/go.mod h1:/CV4QoCR/S9yaPj8utp3lvQPoqMtxXdzn7ozvvozVqk=
-go.opentelemetry.io/proto/otlp/collector/profiles/v1development v0.2.0 h1:40vBjolEOioNBl8zPj1wxqlA7kJ82RxR4HnUv7W8zRI=
-go.opentelemetry.io/proto/otlp/collector/profiles/v1development v0.2.0/go.mod h1:4wAsc1dEVb4D1ZykBNC9AriTU9uLYtmziLrB+7G4lb4=
-go.opentelemetry.io/proto/otlp/profiles/v1development v0.2.0 h1:yXinc284C6bmzA1r9jk7MxAhrBIIOH3qwmqwBmylZrA=
-go.opentelemetry.io/proto/otlp/profiles/v1development v0.2.0/go.mod h1:ygxocDWPB6Y6bySAjxmHyTebjAJ8jcEUAZc03gu1pxk=
+go.opentelemetry.io/proto/otlp/collector/profiles/v1development v0.3.0 h1:AWBLtJn3ajH399gyOuJdqPsC9w152x3xGVVO/UK3vyM=
+go.opentelemetry.io/proto/otlp/collector/profiles/v1development v0.3.0/go.mod h1:kCdbxyM9kfmv3v4ZQzZ2pACxoQ6lE0IsjP+UcZwQnr4=
+go.opentelemetry.io/proto/otlp/profiles/v1development v0.3.0 h1:ZQs05qo3Yh4KUHeVH6v89xErwmsvgA/cLX2/w5Ikp+k=
+go.opentelemetry.io/proto/otlp/profiles/v1development v0.3.0/go.mod h1:3iiRVKaCfVo0UI1ZaSMm5WbCBbINRqVlD9SUmvyBNrY=
 go.opentelemetry.io/proto/slim/otlp v1.9.0 h1:fPVMv8tP3TrsqlkH1HWYUpbCY9cAIemx184VGkS6vlE=
 go.opentelemetry.io/proto/slim/otlp v1.9.0/go.mod h1:xXdeJJ90Gqyll+orzUkY4bOd2HECo5JofeoLpymVqdI=
 go.opentelemetry.io/proto/slim/otlp/collector/profiles/v1development v0.2.0 h1:o13nadWDNkH/quoDomDUClnQBpdQQ2Qqv0lQBjIXjE8=
