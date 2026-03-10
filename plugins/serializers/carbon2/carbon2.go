@@ -90,7 +90,7 @@ func (s *Serializer) createObject(metric telegraf.Metric) []byte {
 			}
 		}
 
-		m.WriteString(fmt.Sprintf(s.template, strings.ReplaceAll(name, " ", "_"), strings.ReplaceAll(fieldName, " ", "_")))
+		fmt.Fprintf(&m, s.template, strings.ReplaceAll(name, " ", "_"), strings.ReplaceAll(fieldName, " ", "_"))
 		for _, tag := range metric.TagList() {
 			m.WriteString(strings.ReplaceAll(tag.Key, " ", "_"))
 			m.WriteString("=")

@@ -169,10 +169,9 @@ func (s *Serializer) writeData(metric telegraf.Metric) error {
 		timestamp = metric.Time().UTC().Format(s.TimestampFormat)
 	}
 
-	columns := []string{
-		timestamp,
-		metric.Name(),
-	}
+	columns := make([]string, 0, len(metric.TagList())+len(metric.FieldList())+2)
+	columns = append(columns, timestamp, metric.Name())
+
 	for _, tag := range metric.TagList() {
 		columns = append(columns, tag.Value)
 	}
