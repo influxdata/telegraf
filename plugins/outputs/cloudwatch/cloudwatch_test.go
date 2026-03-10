@@ -57,8 +57,8 @@ func TestBuildDimensions(t *testing.T) {
 
 	// Wrapper for later cleanup
 	tags := make(map[string]string, len(input))
-	for _, t := range input {
-		tags[t.Key] = t.Value
+	for _, tag := range input {
+		tags[tag.Key] = tag.Value
 	}
 
 	for _, tt := range tests {
@@ -172,7 +172,8 @@ func TestBuildMetricDatums(t *testing.T) {
 				map[string]string{"tag1": "value1"},
 				map[string]interface{}{
 					"valueA": float64(10),
-					"valueB": float64(0), "valueC": float64(100),
+					"valueB": float64(0),
+					"valueC": float64(100),
 					"valueD": float64(20),
 				},
 				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
