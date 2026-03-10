@@ -48,10 +48,10 @@ func (s Streams) MarshalJSON() ([]byte, error) {
 func uniqKeyFromTagList(ts []*telegraf.Tag) (k string) {
 	var b strings.Builder
 	for _, t := range ts {
-		fmt.Fprintf(&b, "%s-%s-",
+		b.WriteString(fmt.Sprintf("%s-%s-",
 			strings.ReplaceAll(t.Key, "-", "--"),
 			strings.ReplaceAll(t.Value, "-", "--"),
-		)
+		))
 	}
 	return b.String()
 }

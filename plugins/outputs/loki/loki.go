@@ -137,7 +137,7 @@ func (l *Loki) Write(metrics []telegraf.Metric) error {
 
 		var lineBuilder strings.Builder
 		for _, f := range m.FieldList() {
-			fmt.Fprintf(&lineBuilder, "%s=\"%v\" ", f.Key, f.Value)
+			lineBuilder.WriteString(fmt.Sprintf("%s=\"%v\" ", f.Key, f.Value))
 		}
 		line := lineBuilder.String()
 

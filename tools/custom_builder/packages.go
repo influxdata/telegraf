@@ -74,7 +74,6 @@ func (p *packageCollection) collectPackagesForCategory(category string) error {
 		}
 
 		var fset token.FileSet
-		//nolint:staticcheck // SA1019: Will be fixed in a future PR
 		pkgs, err := parser.ParseDir(&fset, path, sourceFileFilter, parser.ParseComments)
 		if err != nil {
 			log.Printf("parsing directory %q failed: %v", path, err)
