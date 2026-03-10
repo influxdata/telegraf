@@ -2,7 +2,6 @@ package cloudwatch
 
 import (
 	"math"
-	"sort"
 	"testing"
 	"time"
 
@@ -17,113 +16,236 @@ import (
 
 // Test that each tag becomes one dimension
 func TestBuildDimensions(t *testing.T) {
-	const maxDimensions = 10
-
-	testPoint := testutil.TestMetric(1)
-	dimensions := BuildDimensions(testPoint.Tags())
-
-	tagKeys := make([]string, 0, len(testPoint.Tags()))
-	for k := range testPoint.Tags() {
-		tagKeys = append(tagKeys, k)
+	tests := []struct {
+		name     string
+		expected []types.Dimension
+	}{
+		{
+			name: "10 max dimensions",
+			expected: []types.Dimension{
+				{Name: aws.String("host"), Value: aws.String("localhost")},
+				{Name: aws.String("a"), Value: aws.String("1")},
+				{Name: aws.String("b"), Value: aws.String("2")},
+				{Name: aws.String("c"), Value: aws.String("3")},
+				{Name: aws.String("d"), Value: aws.String("4")},
+				{Name: aws.String("e"), Value: aws.String("5")},
+				{Name: aws.String("f"), Value: aws.String("6")},
+				{Name: aws.String("g"), Value: aws.String("7")},
+				{Name: aws.String("h"), Value: aws.String("8")},
+				{Name: aws.String("i"), Value: aws.String("9")},
+			},
+		},
 	}
 
-	sort.Strings(tagKeys)
-
-	if len(testPoint.Tags()) >= maxDimensions {
-		require.Len(t, dimensions, maxDimensions, "Number of dimensions should be less than MaxDimensions")
-	} else {
-		require.Len(t, dimensions, len(testPoint.Tags()), "Number of dimensions should be equal to number of tags")
+	// Define the input tags and the expected output
+	input := []*telegraf.Tag{
+		{Key: "a", Value: "1"},
+		{Key: "b", Value: "2"},
+		{Key: "c", Value: "3"},
+		{Key: "d", Value: "4"},
+		{Key: "e", Value: "5"},
+		{Key: "f", Value: "6"},
+		{Key: "g", Value: "7"},
+		{Key: "h", Value: "8"},
+		{Key: "i", Value: "9"},
+		{Key: "j", Value: "10"},
+		{Key: "k", Value: "11"},
+		{Key: "host", Value: "localhost"},
+		{Key: "l", Value: "12"},
+		{Key: "m", Value: "13"},
 	}
 
-	for i, key := range tagKeys {
-		if i >= 10 {
-			break
-		}
-		require.Equal(t, key, *dimensions[i].Name, "Key should be equal")
-		require.Equal(t, testPoint.Tags()[key], *dimensions[i].Value, "Value should be equal")
+	// Wrapper for later cleanup
+	tags := make(map[string]string, len(input))
+	for _, tag := range input {
+		tags[tag.Key] = tag.Value
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Build the dimensions and check
+			dimensions := BuildDimensions(tags)
+			require.Len(t, dimensions, len(tt.expected))
+			for i, actual := range dimensions {
+				require.Equalf(t, *tt.expected[i].Name, *actual.Name, "mismatch for element %d", i)
+				require.Equalf(t, *tt.expected[i].Value, *actual.Value, "mismatch for element %d", i)
+			}
+		})
 	}
 }
 
 // Test that metrics with valid values have a MetricDatum created where as non valid do not.
 // Skips "time.Time" type as something is converting the value to string.
 func TestBuildMetricDatums(t *testing.T) {
-	zero := 0.0
-	validMetrics := []telegraf.Metric{
-		testutil.TestMetric(1),
-		testutil.TestMetric(int32(1)),
-		testutil.TestMetric(int64(1)),
-		testutil.TestMetric(float64(1)),
-		testutil.TestMetric(float64(0)),
-		testutil.TestMetric(math.Copysign(zero, -1)), // the CW documentation does not call out -0 as rejected
-		testutil.TestMetric(float64(8.515920e-109)),
-		testutil.TestMetric(float64(1.174271e+108)), // largest should be 1.174271e+108
-		testutil.TestMetric(true),
-	}
-	invalidMetrics := []telegraf.Metric{
-		testutil.TestMetric("Foo"),
-		testutil.TestMetric(math.Log(-1.0)),
-		testutil.TestMetric(float64(8.515919e-109)), // smallest should be 8.515920e-109
-		testutil.TestMetric(float64(1.174272e+108)), // largest should be 1.174271e+108
-	}
-	for _, point := range validMetrics {
-		datums := BuildMetricDatum(false, false, point)
-		require.Lenf(t, datums, 1, "Valid point should create a Datum {value: %v}", point)
-	}
-	for _, point := range invalidMetrics {
-		datums := BuildMetricDatum(false, false, point)
-		require.Emptyf(t, datums, "Valid point should not create a Datum {value: %v}", point)
-	}
-
-	statisticMetric := metric.New(
-		"test1",
-		map[string]string{"tag1": "value1"},
-		map[string]interface{}{"value_max": float64(10), "value_min": float64(0), "value_sum": float64(100), "value_count": float64(20)},
-		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-	)
-	datums := BuildMetricDatum(true, false, statisticMetric)
-	require.Lenf(t, datums, 1, "Valid point should create a Datum {value: %v}", statisticMetric)
-
-	multiFieldsMetric := metric.New(
-		"test1",
-		map[string]string{"tag1": "value1"},
-		map[string]interface{}{"valueA": float64(10), "valueB": float64(0), "valueC": float64(100), "valueD": float64(20)},
-		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-	)
-	datums = BuildMetricDatum(true, false, multiFieldsMetric)
-	require.Lenf(t, datums, 4, "Each field should create a Datum {value: %v}", multiFieldsMetric)
-
-	multiStatisticMetric := metric.New(
-		"test1",
-		map[string]string{"tag1": "value1"},
-		map[string]interface{}{
-			"valueA_max": float64(10), "valueA_min": float64(0), "valueA_sum": float64(100), "valueA_count": float64(20),
-			"valueB_max": float64(10), "valueB_min": float64(0), "valueB_sum": float64(100), "valueB_count": float64(20),
-			"valueC_max": float64(10), "valueC_min": float64(0), "valueC_sum": float64(100),
-			"valueD": float64(10), "valueE": float64(0),
+	tests := []struct {
+		name       string
+		statistics bool
+		highres    bool
+		input      telegraf.Metric
+		expected   int
+	}{
+		{
+			name:     "valid int",
+			input:    testutil.TestMetric(1),
+			expected: 1,
 		},
-		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-	)
-	datums = BuildMetricDatum(true, false, multiStatisticMetric)
-	require.Lenf(t, datums, 7, "Valid point should create a Datum {value: %v}", multiStatisticMetric)
+		{
+			name:     "valid int32",
+			input:    testutil.TestMetric(int32(1)),
+			expected: 1,
+		},
+		{
+			name:     "valid int64",
+			input:    testutil.TestMetric(int64(1)),
+			expected: 1,
+		},
+		{
+			name:     "valid float64 zero",
+			input:    testutil.TestMetric(float64(0)),
+			expected: 1,
+		},
+		{
+			name:     "valid float64 negative zero",
+			input:    testutil.TestMetric(math.Copysign(0, -1)),
+			expected: 1,
+		},
+		{
+			name:     "valid float64 one",
+			input:    testutil.TestMetric(float64(1)),
+			expected: 1,
+		},
+		{
+			name:     "valid float64 tiny",
+			input:    testutil.TestMetric(float64(8.515920e-109)),
+			expected: 1,
+		},
+		{
+			name:     "valid float64 huge",
+			input:    testutil.TestMetric(float64(1.174271e+108)),
+			expected: 1,
+		},
+		{
+			name:     "valid bool",
+			input:    testutil.TestMetric(true),
+			expected: 1,
+		},
+		{
+			name:     "invalid string",
+			input:    testutil.TestMetric("Foo"),
+			expected: 0,
+		},
+		{
+			name:     "invalid NaN",
+			input:    testutil.TestMetric(math.NaN()),
+			expected: 0,
+		},
+		{
+			name:     "invalid too small",
+			input:    testutil.TestMetric(float64(8.515919e-109)),
+			expected: 0,
+		},
+		{
+			name:     "invalid too large",
+			input:    testutil.TestMetric(float64(1.174272e+108)),
+			expected: 0,
+		},
+		{
+			name:       "statistics",
+			statistics: true,
+			input: metric.New(
+				"test1",
+				map[string]string{"tag1": "value1"},
+				map[string]interface{}{
+					"value_max":   float64(10),
+					"value_min":   float64(0),
+					"value_sum":   float64(100),
+					"value_count": float64(20)},
+				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+			),
+			expected: 1,
+		},
+		{
+			name:       "multiple",
+			statistics: true,
+			input: metric.New(
+				"test1",
+				map[string]string{"tag1": "value1"},
+				map[string]interface{}{
+					"valueA": float64(10),
+					"valueB": float64(0),
+					"valueC": float64(100),
+					"valueD": float64(20),
+				},
+				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+			),
+			expected: 4,
+		},
+		{
+			name:       "multiple statistics",
+			statistics: true,
+			input: metric.New(
+				"test1",
+				map[string]string{"tag1": "value1"},
+				map[string]interface{}{
+					"valueA_max":   float64(10),
+					"valueA_min":   float64(0),
+					"valueA_sum":   float64(100),
+					"valueA_count": float64(20),
+					"valueB_max":   float64(10),
+					"valueB_min":   float64(0),
+					"valueB_sum":   float64(100),
+					"valueB_count": float64(20),
+					"valueC_max":   float64(10),
+					"valueC_min":   float64(0),
+					"valueC_sum":   float64(100),
+					"valueD":       float64(10),
+					"valueE":       float64(0),
+				},
+				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+			),
+			expected: 7,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			datums := BuildMetricDatum(tt.statistics, tt.highres, tt.input)
+			require.Len(t, datums, tt.expected)
+		})
+	}
 }
 
-func TestMetricDatumResolution(t *testing.T) {
-	const expectedStandardResolutionValue = int32(60)
-	const expectedHighResolutionValue = int32(1)
+func TestBuildMetricDatumResolution(t *testing.T) {
+	tests := []struct {
+		name     string
+		highres  bool
+		expected int32
+	}{
+		{
+			name:     "standard",
+			expected: 60,
+		},
+		{
+			name:     "high",
+			highres:  true,
+			expected: 1,
+		},
+	}
 
-	m := testutil.TestMetric(1)
-
-	standardResolutionDatum := BuildMetricDatum(false, false, m)
-	actualStandardResolutionValue := *standardResolutionDatum[0].StorageResolution
-	require.Equal(t, expectedStandardResolutionValue, actualStandardResolutionValue)
-
-	highResolutionDatum := BuildMetricDatum(false, true, m)
-	actualHighResolutionValue := *highResolutionDatum[0].StorageResolution
-	require.Equal(t, expectedHighResolutionValue, actualHighResolutionValue)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Build a metric datum and check
+			datum := BuildMetricDatum(false, tt.highres, testutil.TestMetric(1))
+			require.Len(t, datum, 1)
+			require.NotNil(t, datum[0].StorageResolution)
+			require.Equal(t, tt.expected, *datum[0].StorageResolution)
+		})
+	}
 }
 
-func TestBuildMetricDatums_SkipEmptyTags(t *testing.T) {
-	input := testutil.MustMetric(
+func TestBuildMetricDatumsSkipEmptyTags(t *testing.T) {
+	// Build a metric datum and check
+	input := metric.New(
 		"cpu",
 		map[string]string{
 			"host": "example.org",
@@ -134,25 +256,76 @@ func TestBuildMetricDatums_SkipEmptyTags(t *testing.T) {
 		},
 		time.Unix(0, 0),
 	)
-
-	datums := BuildMetricDatum(true, false, input)
-	require.Len(t, datums[0].Dimensions, 1)
+	datum := BuildMetricDatum(true, false, input)
+	require.Len(t, datum, 1)
+	require.Len(t, datum[0].Dimensions, 1)
 }
 
 func TestPartitionDatums(t *testing.T) {
-	testDatum := types.MetricDatum{
+	const partitionSize = 2
+
+	// Create a test-datum for keeping the tests short
+	datum := types.MetricDatum{
 		MetricName: aws.String("Foo"),
 		Value:      aws.Float64(1),
 	}
 
-	zeroDatum := make([]types.MetricDatum, 0)
-	oneDatum := []types.MetricDatum{testDatum}
-	twoDatum := []types.MetricDatum{testDatum, testDatum}
-	threeDatum := []types.MetricDatum{testDatum, testDatum, testDatum}
+	tests := []struct {
+		name     string
+		input    []types.MetricDatum
+		expected [][]types.MetricDatum
+	}{
+		{
+			name:     "empty",
+			input:    make([]types.MetricDatum, 0),
+			expected: make([][]types.MetricDatum, 0),
+		},
+		{
+			name: "single",
+			input: []types.MetricDatum{
+				datum,
+			},
+			expected: [][]types.MetricDatum{
+				{
+					datum,
+				},
+			},
+		},
+		{
+			name: "two",
+			input: []types.MetricDatum{
+				datum,
+				datum,
+			},
+			expected: [][]types.MetricDatum{
+				{
+					datum,
+					datum,
+				},
+			},
+		},
+		{
+			name: "three",
+			input: []types.MetricDatum{
+				datum,
+				datum,
+				datum,
+			},
+			expected: [][]types.MetricDatum{
+				{
+					datum,
+					datum,
+				},
+				{
+					datum,
+				},
+			},
+		},
+	}
 
-	require.Empty(t, PartitionDatums(2, zeroDatum))
-	require.Equal(t, [][]types.MetricDatum{oneDatum}, PartitionDatums(2, oneDatum))
-	require.Equal(t, [][]types.MetricDatum{oneDatum}, PartitionDatums(2, oneDatum))
-	require.Equal(t, [][]types.MetricDatum{twoDatum}, PartitionDatums(2, twoDatum))
-	require.Equal(t, [][]types.MetricDatum{twoDatum, oneDatum}, PartitionDatums(2, threeDatum))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, PartitionDatums(partitionSize, tt.input))
+		})
+	}
 }
