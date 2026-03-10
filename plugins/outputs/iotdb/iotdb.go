@@ -214,12 +214,10 @@ func (s *IoTDB) convertMetricsToRecordsWithTags(metrics []telegraf.Metric) (*rec
 
 	for _, metric := range metrics {
 		// write `metric` to the output sink here
-		var tags []*telegraf.Tag
-		tags = append(tags, metric.TagList()...)
 		// deal with basic parameter
-		var keys []string
-		var values []interface{}
-		var dataTypes []client.TSDataType
+		keys := make([]string, 0, len(metric.FieldList()))
+		values := make([]interface{}, 0, len(metric.FieldList()))
+		dataTypes := make([]client.TSDataType, 0, len(metric.FieldList()))
 		for _, field := range metric.FieldList() {
 			datatype, value := s.getDataTypeAndValue(field.Value)
 			if datatype == client.UNKNOWN {
@@ -240,7 +238,7 @@ func (s *IoTDB) convertMetricsToRecordsWithTags(metrics []telegraf.Metric) (*rec
 		measurementsList = append(measurementsList, keys)
 		valuesList = append(valuesList, values)
 		dataTypesList = append(dataTypesList, dataTypes)
-		tagsList = append(tagsList, tags)
+		tagsList = append(tagsList, metric.TagList())
 	}
 	rwt := &recordsWithTags{
 		DeviceIDList:     deviceidList,
@@ -295,7 +293,8 @@ func (s *IoTDB) modifyRecordsWithTags(rwt *recordsWithTags) error {
 	case "device_id":
 		// method 2: treat Tag(Key:Value) as subtree of device id
 		for index, tags := range rwt.TagsList { // for each record
-			topic := []string{rwt.DeviceIDList[index]}
+			topic := make([]string, 0, len(tags)+1)
+			topic = append(topic, rwt.DeviceIDList[index])
 			for _, tag := range tags { // for each tag, append it's Value
 				tagValue, err := s.validateTag(tag.Value) // validates tag
 				if err != nil {

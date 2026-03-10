@@ -172,11 +172,8 @@ func groupByMetricName(metrics []telegraf.Metric) map[string][]bigquery.ValueSav
 }
 
 func newValuesSaver(m telegraf.Metric) *bigquery.ValuesSaver {
-	s := make(bigquery.Schema, 0)
-	r := make([]bigquery.Value, 0)
-	timeSchema := timeStampFieldSchema()
-	s = append(s, timeSchema)
-	r = append(r, m.Time())
+	s := bigquery.Schema{timeStampFieldSchema()}
+	r := []bigquery.Value{m.Time()}
 
 	s, r = tagsSchemaAndValues(m, s, r)
 	s, r = valuesSchemaAndValues(m, s, r)

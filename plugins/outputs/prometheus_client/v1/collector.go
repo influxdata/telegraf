@@ -115,7 +115,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		for _, sample := range family.Samples {
 			// Get labels for this sample; unset labels will be set to the
 			// empty string
-			var labels []string
+			labels := make([]string, 0, len(labelNames))
 			for _, label := range labelNames {
 				v := sample.Labels[label]
 				labels = append(labels, v)

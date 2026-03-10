@@ -599,8 +599,8 @@ func buildHistogram(m telegraf.Metric) (*monitoringpb.TypedValue, error) {
 	m.RemoveField("count")
 
 	// Build map of the buckets and their values
-	buckets := make([]float64, 0)
-	bucketCounts := make([]int64, 0)
+	buckets := make([]float64, 0, len(m.FieldList()))
+	bucketCounts := make([]int64, 0, len(m.FieldList()))
 	for _, field := range m.FieldList() {
 		// Add the +inf value to bucket counts, no need to define a bound
 		if strings.Contains(strings.ToLower(field.Key), "+inf") {

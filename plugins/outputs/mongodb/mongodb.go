@@ -303,11 +303,11 @@ func (s *MongoDB) createCollection(ctx context.Context, name string) error {
 // of document and the metadata field is named "tags". MongoDB stores timestamp
 // as UTC so conversion should be performed on the query or aggregation side.
 func marshal(metric telegraf.Metric) bson.D {
-	var doc bson.D
+	doc := make(bson.D, 0, len(metric.FieldList())+2)
 	for _, f := range metric.FieldList() {
 		doc = append(doc, primitive.E{Key: f.Key, Value: f.Value})
 	}
-	var tags bson.D
+	tags := make(bson.D, 0, len(metric.TagList()))
 	for _, t := range metric.TagList() {
 		tags = append(tags, primitive.E{Key: t.Key, Value: t.Value})
 	}
