@@ -33,8 +33,8 @@ type Ping struct {
 	Method       string   `toml:"method"`        // Method defines how to ping (native or exec)
 	Count        int      `toml:"count"`         // Number of pings to send (ping -c <COUNT>)
 	PingInterval float64  `toml:"ping_interval"` // Interval at which to ping (ping -i <INTERVAL>)
-	Timeout      float64  `toml:"timeout"`       // Per-ping timeout, in seconds. 0 means no timeout (ping -W <TIMEOUT>)
-	Deadline     int      `toml:"deadline"`      // Ping deadline, in seconds. 0 means no deadline. (ping -w <DEADLINE>)
+	Timeout      float64  `toml:"timeout"`       // Per-ping timeout in seconds for the exec method. 0 means no timeout (ping -W <TIMEOUT>)
+	Deadline     int      `toml:"deadline"`      // Total ping deadline in seconds. 0 means no deadline (ping -w <DEADLINE>)
 	Interface    string   `toml:"interface"`     // Interface or source address to send ping from (ping -I/-S <INTERFACE/SRC_ADDR>)
 	Percentiles  []int    `toml:"percentiles"`   // Calculate the given percentiles when using native method
 	Binary       string   `toml:"binary"`        // Ping executable binary
@@ -88,6 +88,10 @@ func (p *Ping) Init() error {
 		p.calcTimeout = time.Duration(5) * time.Second
 	} else {
 		p.calcTimeout = time.Duration(p.Timeout) * time.Second
+	}
+
+	if p.Method == "native" && p.Timeout > 0 {
+		p.Log.Warn(`"timeout" is ignored when method = "native"; use "deadline" to control the total runtime`)
 	}
 
 	return nil

@@ -442,6 +442,7 @@ func TestPingGatherNative(t *testing.T) {
 		{
 			P: &Ping{
 				Urls:           []string{"localhost", "127.0.0.2"},
+				Log:            testutil.Logger{},
 				Method:         "native",
 				Count:          5,
 				Percentiles:    []int{50, 95, 99},
@@ -451,6 +452,7 @@ func TestPingGatherNative(t *testing.T) {
 		{
 			P: &Ping{
 				Urls:           []string{"localhost", "127.0.0.2"},
+				Log:            testutil.Logger{},
 				Method:         "native",
 				Count:          5,
 				PingInterval:   1,
@@ -478,6 +480,23 @@ func TestPingGatherNative(t *testing.T) {
 		require.True(t, acc.HasField("ping", "maximum_response_ms"))
 		require.True(t, acc.HasField("ping", "standard_deviation_ms"))
 	}
+}
+
+func TestInitWarnsForNativeTimeout(t *testing.T) {
+	logger := &testutil.CaptureLogger{Name: "ping"}
+	p := &Ping{
+		Log:      logger,
+		Method:   "native",
+		Count:    1,
+		Timeout:  2.0,
+		Deadline: 10,
+	}
+
+	require.NoError(t, p.Init())
+	warnings := logger.Warnings()
+	require.Len(t, warnings, 1)
+	require.Contains(t, warnings[0], `"timeout" is ignored when method = "native"`)
+	require.Contains(t, warnings[0], `"deadline"`)
 }
 
 func TestNoPacketsSent(t *testing.T) {
