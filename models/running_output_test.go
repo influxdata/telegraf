@@ -12,6 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/selfstat"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -789,7 +790,7 @@ func TestRunningOutputInternalMetrics(t *testing.T) {
 		10)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"internal_write",
 			map[string]string{
 				"_id":    "",
