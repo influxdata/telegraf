@@ -85,7 +85,7 @@ func (p *Parser) Parse(data []byte) ([]telegraf.Metric, error) {
 	}
 
 	matches := 0
-	metrics := make([]telegraf.Metric, 0)
+	metrics := make([]telegraf.Metric, 0, len(p.Configs))
 	for i, cfg := range p.Configs {
 		// Apply the filter and see if we should match this
 		if !cfg.matches(buf) {
@@ -151,7 +151,7 @@ func extractPart(in []byte, offset, bits uint64) ([]byte, error) {
 		return nil, fmt.Errorf("out-of-bounds @%d with %d bits", offset, bits)
 	}
 
-	var out []byte
+	out := make([]byte, 0, length)
 	out = append(out, in[start:start+length]...)
 
 	if offset%8 != 0 {

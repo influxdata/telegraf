@@ -334,7 +334,7 @@ func parseCSV(p *Parser, r io.Reader) ([]telegraf.Metric, error) {
 		return nil, err
 	}
 
-	metrics := make([]telegraf.Metric, 0)
+	metrics := make([]telegraf.Metric, 0, len(table))
 	for _, record := range table {
 		m, err := p.parseRecord(record)
 		if err != nil {
