@@ -554,10 +554,11 @@ func (d *Docker) gatherContainer(
 	daemonOSType := r.OSType
 	dec := json.NewDecoder(r.Body)
 	if err = dec.Decode(&v); err != nil {
-		if errors.Is(err, io.EOF) {
-			return nil
+		if !errors.Is(err, io.EOF) {
+			return fmt.Errorf("error decoding: %w", err)
 		}
-		return fmt.Errorf("error decoding: %w", err)
+		// EOF is expected for non-running containers (e.g. exited, created);
+		// continue with nil stats so inspect metrics are still collected.
 	}
 
 	// For Podman, fix the CPU stats using cache if available
@@ -657,6 +658,10 @@ func (d *Docker) parseContainerStats(
 	tags map[string]string,
 	id, daemonOSType string,
 ) {
+	if stat == nil {
+		return
+	}
+
 	tm := stat.Read
 
 	if tm.Before(time.Unix(0, 0)) {
