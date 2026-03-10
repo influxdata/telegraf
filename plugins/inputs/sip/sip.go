@@ -17,7 +17,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -78,14 +77,14 @@ func (s *SIP) Init() error {
 	switch s.Method {
 	case "":
 		s.Method = "OPTIONS"
+	case "OPTIONS", "INVITE", "MESSAGE":
+		// valid
 	default:
-		if err := choice.Check(s.Method, []string{"OPTIONS", "INVITE", "MESSAGE"}); err != nil {
-			return fmt.Errorf("invalid SIP method: %w", err)
-		}
+		return fmt.Errorf("invalid SIP method %q", s.Method)
 	}
 
 	if s.Timeout < 0 {
-		return errors.New("timeout has to be greater than or equal to zero")
+		return fmt.Errorf("timeout %s must not be negative", time.Duration(s.Timeout))
 	}
 
 	// Validate server URL scheme and transport combination
@@ -101,20 +100,20 @@ func (s *SIP) Init() error {
 		switch s.Transport {
 		case "":
 			s.Transport = "udp"
+		case "udp", "tcp", "ws":
+			// valid
 		default:
-			if err := choice.Check(s.Transport, []string{"udp", "tcp", "ws"}); err != nil {
-				return fmt.Errorf("invalid transport %q; must be one of udp, tcp, ws", s.Transport)
-			}
+			return fmt.Errorf("invalid transport %q for sip:// scheme", s.Transport)
 		}
 	case "sips":
 		// sips:// requires secure transport (tcp or wss for TLS)
 		switch s.Transport {
 		case "":
 			s.Transport = "tcp"
+		case "tcp", "wss":
+			// valid
 		default:
-			if err := choice.Check(s.Transport, []string{"tcp", "wss"}); err != nil {
-				return fmt.Errorf("invalid transport %q for sips:// scheme; must be tcp or wss", s.Transport)
-			}
+			return fmt.Errorf("invalid transport %q for sips:// scheme", s.Transport)
 		}
 	default:
 		return fmt.Errorf("server URL must use sip:// or sips:// scheme, got %q", u.Scheme)
@@ -158,7 +157,7 @@ func (s *SIP) Init() error {
 		}
 		tlsConfig, err := s.ClientConfig.TLSConfig()
 		if err != nil {
-			return fmt.Errorf("failed to create TLS config: %w", err)
+			return fmt.Errorf("creating TLS config failed: %w", err)
 		}
 		s.uaOpts = append(s.uaOpts, sipgo.WithUserAgenTLSConfig(tlsConfig))
 	}
@@ -197,7 +196,7 @@ func (s *SIP) Init() error {
 func (s *SIP) Start(telegraf.Accumulator) error {
 	ua, err := sipgo.NewUA(s.uaOpts...)
 	if err != nil {
-		return fmt.Errorf("failed to create SIP user agent: %w", err)
+		return fmt.Errorf("creating SIP user agent failed: %w", err)
 	}
 	s.ua = ua
 
@@ -205,7 +204,7 @@ func (s *SIP) Start(telegraf.Accumulator) error {
 	client, err := sipgo.NewClient(ua)
 	if err != nil {
 		s.Stop()
-		return fmt.Errorf("failed to create SIP client: %w", err)
+		return fmt.Errorf("creating SIP client failed: %w", err)
 	}
 	s.client = client
 
