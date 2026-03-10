@@ -52,7 +52,6 @@ func (s *Serializer) Serialize(metric telegraf.Metric) (out []byte, err error) {
 }
 
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) (out []byte, err error) {
-	//nolint:prealloc // Pre-allocating may change format of marshaled JSON
 	objects := make([]oiMetric, 0)
 	for _, metric := range metrics {
 		objects = append(objects, createObject(metric)...)
