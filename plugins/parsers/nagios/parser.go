@@ -190,9 +190,10 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 }
 
 func parsePerfData(perfdatas string, timestamp time.Time) ([]telegraf.Metric, error) {
-	metrics := make([]telegraf.Metric, 0)
+	unParsedPerfs := perfSplitRegExp.FindAllString(perfdatas, -1)
+	metrics := make([]telegraf.Metric, 0, len(unParsedPerfs))
 
-	for _, unParsedPerf := range perfSplitRegExp.FindAllString(perfdatas, -1) {
+	for _, unParsedPerf := range unParsedPerfs {
 		trimmedPerf := strings.TrimSpace(unParsedPerf)
 		perf := nagiosRegExp.FindStringSubmatch(trimmedPerf)
 
