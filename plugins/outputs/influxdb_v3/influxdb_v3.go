@@ -22,16 +22,15 @@ import (
 var sampleConfig string
 
 type clientConfig struct {
-	Token              config.Secret   `toml:"token"`
-	Database           string          `toml:"database"`
-	DatabaseTag        string          `toml:"database_tag"`
-	ExcludeDatabaseTag bool            `toml:"exclude_database_tag"`
-	Sync               *bool           `toml:"sync"`
-	ContentEncoding    string          `toml:"content_encoding"`
-	UserAgent          string          `toml:"user_agent"`
-	ConvertUint        bool            `toml:"convert_uint_to_int"`
-	OmitTimestamp      bool            `toml:"omit_timestamp"`
-	Timeout            config.Duration `toml:"timeout"`
+	Token              config.Secret `toml:"token"`
+	Database           string        `toml:"database"`
+	DatabaseTag        string        `toml:"database_tag"`
+	ExcludeDatabaseTag bool          `toml:"exclude_database_tag"`
+	Sync               *bool         `toml:"sync"`
+	ContentEncoding    string        `toml:"content_encoding"`
+	UserAgent          string        `toml:"user_agent"`
+	ConvertUint        bool          `toml:"convert_uint_to_int"`
+	OmitTimestamp      bool          `toml:"omit_timestamp"`
 	common_http.HTTPClientConfig
 	ratelimiter.RateLimitConfig
 }
@@ -123,7 +122,9 @@ func init() {
 	outputs.Add("influxdb_v3", func() telegraf.Output {
 		return &InfluxDB{
 			clientConfig: clientConfig{
-				Timeout: config.Duration(time.Second * 5),
+				HTTPClientConfig: common_http.HTTPClientConfig{
+					Timeout: config.Duration(5 * time.Second),
+				},
 			},
 		}
 	})
