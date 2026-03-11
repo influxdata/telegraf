@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -54,7 +55,7 @@ func TestSingleMetricTDigest(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
 			map[string]interface{}{
@@ -86,7 +87,7 @@ func TestSingleMetricTDigest(t *testing.T) {
 
 	metrics := make([]telegraf.Metric, 0, 100)
 	for i := 0; i < 100; i++ {
-		metrics = append(metrics, testutil.MustMetric(
+		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
 			map[string]interface{}{
@@ -124,7 +125,7 @@ func TestMultipleMetricsTDigest(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"test",
 			map[string]string{"series": "foo"},
 			map[string]interface{}{
@@ -133,7 +134,7 @@ func TestMultipleMetricsTDigest(t *testing.T) {
 			},
 			time.Now(),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"test",
 			map[string]string{"series": "bar"},
 			map[string]interface{}{
@@ -147,14 +148,14 @@ func TestMultipleMetricsTDigest(t *testing.T) {
 	metricsA := make([]telegraf.Metric, 0, 100)
 	metricsB := make([]telegraf.Metric, 0, 100)
 	for i := 0; i < 100; i++ {
-		metricsA = append(metricsA, testutil.MustMetric(
+		metricsA = append(metricsA, metric.New(
 			"test",
 			map[string]string{"series": "foo"},
 			map[string]interface{}{"a": int64(i), "b": float64(i), "x1": "string", "x2": true},
 			time.Now(),
 		))
 
-		metricsB = append(metricsB, testutil.MustMetric(
+		metricsB = append(metricsB, metric.New(
 			"test",
 			map[string]string{"series": "bar"},
 			map[string]interface{}{"a": int64(2 * i), "b": float64(2 * i), "x1": "string", "x2": true},
@@ -186,7 +187,7 @@ func TestSingleMetricExactR7(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
 			map[string]interface{}{
@@ -218,7 +219,7 @@ func TestSingleMetricExactR7(t *testing.T) {
 
 	metrics := make([]telegraf.Metric, 0, 100)
 	for i := 0; i < 100; i++ {
-		metrics = append(metrics, testutil.MustMetric(
+		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
 			map[string]interface{}{
@@ -256,7 +257,7 @@ func TestMultipleMetricsExactR7(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"test",
 			map[string]string{"series": "foo"},
 			map[string]interface{}{
@@ -265,7 +266,7 @@ func TestMultipleMetricsExactR7(t *testing.T) {
 			},
 			time.Now(),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"test",
 			map[string]string{"series": "bar"},
 			map[string]interface{}{
@@ -279,14 +280,14 @@ func TestMultipleMetricsExactR7(t *testing.T) {
 	metricsA := make([]telegraf.Metric, 0, 100)
 	metricsB := make([]telegraf.Metric, 0, 100)
 	for i := 0; i < 100; i++ {
-		metricsA = append(metricsA, testutil.MustMetric(
+		metricsA = append(metricsA, metric.New(
 			"test",
 			map[string]string{"series": "foo"},
 			map[string]interface{}{"a": int64(i), "b": float64(i), "x1": "string", "x2": true},
 			time.Now(),
 		))
 
-		metricsB = append(metricsB, testutil.MustMetric(
+		metricsB = append(metricsB, metric.New(
 			"test",
 			map[string]string{"series": "bar"},
 			map[string]interface{}{"a": int64(2 * i), "b": float64(2 * i), "x1": "string", "x2": true},
@@ -318,7 +319,7 @@ func TestSingleMetricExactR8(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
 			map[string]interface{}{
@@ -350,7 +351,7 @@ func TestSingleMetricExactR8(t *testing.T) {
 
 	metrics := make([]telegraf.Metric, 0, 100)
 	for i := 0; i < 100; i++ {
-		metrics = append(metrics, testutil.MustMetric(
+		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
 			map[string]interface{}{
@@ -388,7 +389,7 @@ func TestMultipleMetricsExactR8(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"test",
 			map[string]string{"series": "foo"},
 			map[string]interface{}{
@@ -397,7 +398,7 @@ func TestMultipleMetricsExactR8(t *testing.T) {
 			},
 			time.Now(),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"test",
 			map[string]string{"series": "bar"},
 			map[string]interface{}{
@@ -411,14 +412,14 @@ func TestMultipleMetricsExactR8(t *testing.T) {
 	metricsA := make([]telegraf.Metric, 0, 100)
 	metricsB := make([]telegraf.Metric, 0, 100)
 	for i := 0; i < 100; i++ {
-		metricsA = append(metricsA, testutil.MustMetric(
+		metricsA = append(metricsA, metric.New(
 			"test",
 			map[string]string{"series": "foo"},
 			map[string]interface{}{"a": int64(i), "b": float64(i), "x1": "string", "x2": true},
 			time.Now(),
 		))
 
-		metricsB = append(metricsB, testutil.MustMetric(
+		metricsB = append(metricsB, metric.New(
 			"test",
 			map[string]string{"series": "bar"},
 			map[string]interface{}{"a": int64(2 * i), "b": float64(2 * i), "x1": "string", "x2": true},
@@ -442,7 +443,7 @@ func TestMultipleMetricsExactR8(t *testing.T) {
 func BenchmarkDefaultTDigest(b *testing.B) {
 	metrics := make([]telegraf.Metric, 0, 100)
 	for i := 0; i < 100; i++ {
-		metrics = append(metrics, testutil.MustMetric(
+		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
 			map[string]interface{}{
@@ -478,7 +479,7 @@ func BenchmarkDefaultTDigest(b *testing.B) {
 func BenchmarkDefaultTDigest100Q(b *testing.B) {
 	metrics := make([]telegraf.Metric, 0, 100)
 	for i := 0; i < 100; i++ {
-		metrics = append(metrics, testutil.MustMetric(
+		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
 			map[string]interface{}{
@@ -519,7 +520,7 @@ func BenchmarkDefaultTDigest100Q(b *testing.B) {
 func BenchmarkDefaultExactR7(b *testing.B) {
 	metrics := make([]telegraf.Metric, 0, 100)
 	for i := 0; i < 100; i++ {
-		metrics = append(metrics, testutil.MustMetric(
+		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
 			map[string]interface{}{
@@ -555,7 +556,7 @@ func BenchmarkDefaultExactR7(b *testing.B) {
 func BenchmarkDefaultExactR7100Q(b *testing.B) {
 	metrics := make([]telegraf.Metric, 0, 100)
 	for i := 0; i < 100; i++ {
-		metrics = append(metrics, testutil.MustMetric(
+		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
 			map[string]interface{}{
@@ -596,7 +597,7 @@ func BenchmarkDefaultExactR7100Q(b *testing.B) {
 func BenchmarkDefaultExactR8(b *testing.B) {
 	metrics := make([]telegraf.Metric, 0, 100)
 	for i := 0; i < 100; i++ {
-		metrics = append(metrics, testutil.MustMetric(
+		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
 			map[string]interface{}{
@@ -632,7 +633,7 @@ func BenchmarkDefaultExactR8(b *testing.B) {
 func BenchmarkDefaultExactR8100Q(b *testing.B) {
 	metrics := make([]telegraf.Metric, 0, 100)
 	for i := 0; i < 100; i++ {
-		metrics = append(metrics, testutil.MustMetric(
+		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
 			map[string]interface{}{
