@@ -20,7 +20,7 @@ type metricFamily struct {
 	typ  telegraf.ValueType
 }
 
-type metric struct {
+type promMetric struct {
 	labels    []labelPair
 	time      time.Time
 	addTime   time.Time
@@ -95,7 +95,7 @@ func makeMetricKey(labels []labelPair) metricKey {
 
 type entry struct {
 	family  metricFamily
-	metrics map[metricKey]*metric
+	metrics map[metricKey]*promMetric
 }
 
 // Collection is a cache of metrics that are being processed.
@@ -208,7 +208,7 @@ func (c *Collection) Add(m telegraf.Metric, now time.Time) {
 		if !ok {
 			singleEntry = entry{
 				family:  family,
-				metrics: make(map[metricKey]*metric),
+				metrics: make(map[metricKey]*promMetric),
 			}
 			c.entries[family] = singleEntry
 		}
@@ -236,7 +236,7 @@ func (c *Collection) Add(m telegraf.Metric, now time.Time) {
 				continue
 			}
 
-			existingMetric = &metric{
+			existingMetric = &promMetric{
 				labels:  labels,
 				time:    m.Time(),
 				addTime: now,
@@ -246,7 +246,7 @@ func (c *Collection) Add(m telegraf.Metric, now time.Time) {
 			singleEntry.metrics[metricKey] = existingMetric
 		case telegraf.Histogram:
 			if existingMetric == nil {
-				existingMetric = &metric{
+				existingMetric = &promMetric{
 					labels:    labels,
 					time:      m.Time(),
 					addTime:   now,
@@ -297,7 +297,7 @@ func (c *Collection) Add(m telegraf.Metric, now time.Time) {
 			singleEntry.metrics[metricKey] = existingMetric
 		case telegraf.Summary:
 			if existingMetric == nil {
-				existingMetric = &metric{
+				existingMetric = &promMetric{
 					labels:  labels,
 					time:    m.Time(),
 					addTime: now,
@@ -385,8 +385,8 @@ func (c *Collection) GetEntries() []entry {
 }
 
 // GetMetrics returns a slice of all metrics in the entry.
-func (c *Collection) GetMetrics(entry entry) []*metric {
-	metrics := make([]*metric, 0, len(entry.metrics))
+func (c *Collection) GetMetrics(entry entry) []*promMetric {
+	metrics := make([]*promMetric, 0, len(entry.metrics))
 	for _, metric := range entry.metrics {
 		metrics = append(metrics, metric)
 	}
