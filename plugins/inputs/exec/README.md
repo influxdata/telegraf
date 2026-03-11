@@ -44,6 +44,9 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## plugin will continue to parse the output.
   # ignore_error = false
 
+  ## Log all messages sent to stderr
+  # log_stderr = false
+
   ## Data format
   ## By default, exec expects JSON. This was done for historical reasons and is
   ## different than other inputs that use the influx line protocol. Each data
