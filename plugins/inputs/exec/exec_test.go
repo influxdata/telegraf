@@ -312,6 +312,159 @@ func TestExecCommandWithEnv(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
+func TestStderrLogging(t *testing.T) {
+	tests := []struct {
+		name     string
+		output   string
+		expected []testutil.Entry
+	}{
+		{
+			name:   "no level",
+			output: `an error message`,
+			expected: []testutil.Entry{
+				{
+					Level: testutil.LevelError,
+					Name:  "inputs.exec",
+					Text:  `an error message`,
+				},
+			},
+		},
+		{
+			name:   "error",
+			output: `E! an error message`,
+			expected: []testutil.Entry{
+				{
+					Level: testutil.LevelError,
+					Name:  "inputs.exec",
+					Text:  `an error message`,
+				},
+			},
+		},
+		{
+			name:   "warning",
+			output: `W! a warning message`,
+			expected: []testutil.Entry{
+				{
+					Level: testutil.LevelWarn,
+					Name:  "inputs.exec",
+					Text:  `a warning message`,
+				},
+			},
+		},
+		{
+			name:   "info",
+			output: `I! an info message`,
+			expected: []testutil.Entry{
+				{
+					Level: testutil.LevelInfo,
+					Name:  "inputs.exec",
+					Text:  `an info message`,
+				},
+			},
+		},
+		{
+			name:   "debug",
+			output: `D! a debug message`,
+			expected: []testutil.Entry{
+				{
+					Level: testutil.LevelDebug,
+					Name:  "inputs.exec",
+					Text:  `a debug message`,
+				},
+			},
+		},
+		{
+			name:   "trace",
+			output: `T! a trace message`,
+			expected: []testutil.Entry{
+				{
+					Level: testutil.LevelTrace,
+					Name:  "inputs.exec",
+					Text:  `a trace message`,
+				},
+			},
+		},
+
+		{
+			name: "multiline output",
+			output: `
+E! an error message
+D! some details
+D! some more details
+T! very detailed details
+`,
+			expected: []testutil.Entry{
+				{
+					Level: testutil.LevelError,
+					Name:  "inputs.exec",
+					Text:  `an error message`,
+				},
+				{
+					Level: testutil.LevelDebug,
+					Name:  "inputs.exec",
+					Text:  `some details`,
+				},
+				{
+					Level: testutil.LevelDebug,
+					Name:  "inputs.exec",
+					Text:  `some more details`,
+				},
+				{
+					Level: testutil.LevelTrace,
+					Name:  "inputs.exec",
+					Text:  `very detailed details`,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup parser
+			parser := &value.Parser{
+				MetricName: "exec",
+				DataType:   "integer",
+			}
+			require.NoError(t, parser.Init())
+
+			// Setup logger
+			logger := &testutil.CaptureLogger{Name: "inputs.exec"}
+
+			// Setup plugin
+			plugin := &Exec{
+				Commands:  []string{"echo 42"},
+				LogStdErr: true,
+				Log:       logger,
+			}
+			plugin.SetParser(parser)
+			require.NoError(t, plugin.Init())
+
+			// Mock the runner
+			plugin.runner = &runnerMock{
+				out:    []byte("42"),
+				errout: []byte(tt.output),
+			}
+
+			// Gather the metrics and check the result
+			var acc testutil.Accumulator
+			require.NoError(t, acc.GatherError(plugin.Gather))
+
+			expected := []telegraf.Metric{
+				metric.New(
+					"exec",
+					map[string]string{},
+					map[string]interface{}{"value": int64(42)},
+					time.Unix(0, 0),
+				),
+			}
+			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+
+			// Check the received log-messages
+			require.ElementsMatch(t, tt.expected, logger.Messages())
+		})
+	}
+}
+
 func TestTruncate(t *testing.T) {
 	tests := []struct {
 		name     string
