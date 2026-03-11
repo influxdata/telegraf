@@ -72,6 +72,32 @@ func TestDiskIO(t *testing.T) {
 			},
 		},
 		{
+			name: "sanitize serial newlines",
+			result: Result{
+				stats: map[string]disk.IOCountersStat{
+					"sdb": {
+						ReadCount:    1,
+						WriteCount:   2,
+						Name:         "sdb",
+						SerialNumber: "INTEL SSDPE21K100GA \n_PHKE831600AC100EGN \n",
+					},
+				},
+				err: nil,
+			},
+			err: nil,
+			metrics: []Metric{
+				{
+					tags: map[string]string{
+						"name":   "sdb",
+						"serial": "INTEL SSDPE21K100GA _PHKE831600AC100EGN",
+					},
+					fields: map[string]interface{}{
+						"reads": uint64(1),
+					},
+				},
+			},
+		},
+		{
 			name:    "glob device",
 			devices: []string{"sd*"},
 			result: Result{

@@ -20,7 +20,8 @@ import (
 var sampleConfig string
 
 var (
-	varRegex = regexp.MustCompile(`\$(?:\w+|\{\w+\})`)
+	varRegex           = regexp.MustCompile(`\$(?:\w+|\{\w+\})`)
+	serialTagSanitizer = strings.NewReplacer("\n", "", "\r", "")
 )
 
 type DiskIO struct {
@@ -106,8 +107,9 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 		}
 
 		if !d.SkipSerialNumber {
-			if len(io.SerialNumber) != 0 {
-				tags["serial"] = io.SerialNumber
+			serial := sanitizeSerialNumber(io.SerialNumber)
+			if len(serial) != 0 {
+				tags["serial"] = serial
 			} else {
 				tags["serial"] = "unknown"
 			}
@@ -158,6 +160,10 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 // hasMeta reports whether s contains any special glob characters.
 func hasMeta(s string) bool {
 	return strings.ContainsAny(s, "*?[")
+}
+
+func sanitizeSerialNumber(serial string) string {
+	return strings.TrimSpace(serialTagSanitizer.Replace(serial))
 }
 
 func (d *DiskIO) diskName(devName string) (string, []string) {
