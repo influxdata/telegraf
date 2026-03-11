@@ -205,7 +205,7 @@ func TestSerializeBatch(t *testing.T) {
 
 func TestSerializeBatchSkipInf(t *testing.T) {
 	metrics := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{},
 			map[string]interface{}{
@@ -225,7 +225,7 @@ func TestSerializeBatchSkipInf(t *testing.T) {
 
 func TestSerializeBatchSkipInfAllFields(t *testing.T) {
 	metrics := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{},
 			map[string]interface{}{
