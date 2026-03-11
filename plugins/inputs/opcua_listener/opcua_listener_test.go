@@ -825,6 +825,59 @@ func TestSubscribeClientConfigValidMonitoringParams(t *testing.T) {
 	}, subClient.monitoredItemsReqs[0].RequestedParameters)
 }
 
+func TestSubscribeClientConfigValidMonitoringParamsNoDeadband(t *testing.T) {
+	subscribeConfig := subscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://localhost:4840",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName: "testing",
+			RootNodes:  make([]input.NodeSettings, 0),
+			Groups:     make([]input.NodeGroupSettings, 0),
+		},
+		SubscriptionInterval: 0,
+	}
+
+	var queueSize uint32 = 10
+	discardOldest := true
+	subscribeConfig.RootNodes = append(subscribeConfig.RootNodes, input.NodeSettings{
+		FieldName:      "foo",
+		Namespace:      "3",
+		Identifier:     "1",
+		IdentifierType: "i",
+		MonitoringParams: input.MonitoringParameters{
+			SamplingInterval: 50000000,
+			QueueSize:        &queueSize,
+			DiscardOldest:    &discardOldest,
+			DataChangeFilter: &input.DataChangeFilter{
+				Trigger:      "Status",
+				DeadbandType: "None",
+			},
+		},
+	})
+
+	subClient, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
+	require.NoError(t, err)
+	require.Equal(t, &ua.MonitoringParameters{
+		SamplingInterval: 50,
+		QueueSize:        queueSize,
+		DiscardOldest:    discardOldest,
+		Filter: ua.NewExtensionObject(
+			&ua.DataChangeFilter{
+				Trigger:       ua.DataChangeTriggerStatus,
+				DeadbandType:  uint32(ua.DeadbandTypeNone),
+				DeadbandValue: 0,
+			},
+		),
+	}, subClient.monitoredItemsReqs[0].RequestedParameters)
+}
+
 func TestSubscribeClientConfigValidMonitoringAndEventParams(t *testing.T) {
 	subscribeConfig := subscribeClientConfig{
 		InputClientConfig: input.InputClientConfig{
