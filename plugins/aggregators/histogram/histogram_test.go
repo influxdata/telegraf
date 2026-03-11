@@ -291,7 +291,8 @@ func TestHistogramWithAllFieldsNonCumulative(t *testing.T) {
 	cfg := []bucketConfig{
 		{
 			Metric:  "first_metric_name",
-			Buckets: []float64{0.0, 15.5, 20.0, 30.0, 40.0}},
+			Buckets: []float64{0.0, 15.5, 20.0, 30.0, 40.0},
+		},
 		{
 			Metric:  "second_metric_name",
 			Buckets: []float64{0.0, 4.0, 10.0, 23.0, 30.0},
