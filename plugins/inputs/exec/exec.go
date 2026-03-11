@@ -2,6 +2,7 @@
 package exec
 
 import (
+	"bufio"
 	"bytes"
 	_ "embed"
 	"fmt"
@@ -161,7 +162,41 @@ func (e *Exec) processCommand(acc telegraf.Accumulator, cmd string) error {
 		acc.AddMetric(m)
 	}
 
+	if len(errBuf) > 0 {
+		e.cmdReadErr(errBuf)
+	}
+
+	if runErr == nil && len(errBuf) > 0 && !e.IgnoreError {
+		return fmt.Errorf("exec: command %q wrote to stderr: %s", cmd, string(errBuf))
+	}
+
 	return nil
+}
+
+func (e *Exec) cmdReadErr(out []byte) {
+	scanner := bufio.NewScanner(bytes.NewReader(out))
+
+	for scanner.Scan() {
+		msg := scanner.Text()
+		switch {
+		case strings.HasPrefix(msg, "E! "):
+			e.Log.Error(msg[3:])
+		case strings.HasPrefix(msg, "W! "):
+			e.Log.Warn(msg[3:])
+		case strings.HasPrefix(msg, "I! "):
+			e.Log.Info(msg[3:])
+		case strings.HasPrefix(msg, "D! "):
+			e.Log.Debug(msg[3:])
+		case strings.HasPrefix(msg, "T! "):
+			e.Log.Trace(msg[3:])
+		default:
+			e.Log.Errorf("stderr: %q", msg)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		e.Log.Errorf("error reading stderr: %v", err)
+	}
 }
 
 func truncate(buf *bytes.Buffer) {

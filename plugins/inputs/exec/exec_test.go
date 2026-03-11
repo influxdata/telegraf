@@ -175,6 +175,69 @@ func TestCommandIgnoreError(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
+func TestCommandStderrWithSuccessExit(t *testing.T) {
+	// Setup parser
+	parser := &json.Parser{MetricName: "exec"}
+	require.NoError(t, parser.Init())
+
+	// Setup plugin
+	plugin := &Exec{
+		Commands: []string{"testcommand"},
+		Log:      testutil.Logger{},
+	}
+	plugin.SetParser(parser)
+	require.NoError(t, plugin.Init())
+	plugin.runner = &runnerMock{
+		out:    []byte(validJSON),
+		errout: []byte("Error alarm from this script"),
+	}
+
+	// Gather the metrics and check the result
+	var acc testutil.Accumulator
+	err := acc.GatherError(plugin.Gather)
+	require.ErrorContains(t, err, "wrote to stderr")
+	require.ErrorContains(t, err, "Error alarm from this script")
+	require.Equal(t, 8, acc.NFields(), "Metrics should still be parsed and added")
+}
+
+func TestCommandStderrWithSuccessExitIgnoreError(t *testing.T) {
+	// Setup parser
+	parser := &json.Parser{MetricName: "exec"}
+	require.NoError(t, parser.Init())
+
+	// Setup plugin
+	log := &testutil.CaptureLogger{Name: "exec"}
+	plugin := &Exec{
+		Commands:    []string{"testcommand"},
+		IgnoreError: true,
+		Log:         log,
+	}
+	plugin.SetParser(parser)
+	require.NoError(t, plugin.Init())
+	plugin.runner = &runnerMock{
+		out:    []byte(validJSON),
+		errout: []byte("W! warning\nI! info\nD! debug\nT! trace\nplain stderr line"),
+	}
+
+	// Gather the metrics and check the result
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(plugin.Gather))
+	require.Equal(t, 8, acc.NFields(), "Metrics should still be parsed and added")
+
+	messages := log.Messages()
+	require.Len(t, messages, 5)
+	require.Equal(t, testutil.LevelWarn, messages[0].Level)
+	require.Equal(t, "warning", messages[0].Text)
+	require.Equal(t, testutil.LevelInfo, messages[1].Level)
+	require.Equal(t, "info", messages[1].Text)
+	require.Equal(t, testutil.LevelDebug, messages[2].Level)
+	require.Equal(t, "debug", messages[2].Text)
+	require.Equal(t, testutil.LevelTrace, messages[3].Level)
+	require.Equal(t, "trace", messages[3].Text)
+	require.Equal(t, testutil.LevelError, messages[4].Level)
+	require.Equal(t, `stderr: "plain stderr line"`, messages[4].Text)
+}
+
 func TestExecCommandWithGlob(t *testing.T) {
 	// Setup parser
 	parser := value.Parser{
