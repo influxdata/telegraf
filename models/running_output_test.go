@@ -44,11 +44,11 @@ func TestRunningOutputDropFilter(t *testing.T) {
 	m := &mockOutput{}
 	ro := NewRunningOutput(m, conf, 1000, 10000)
 
-	for _, metric := range first5 {
-		ro.AddMetric(metric)
+	for _, mt := range first5 {
+		ro.AddMetric(mt)
 	}
-	for _, metric := range next5 {
-		ro.AddMetric(metric)
+	for _, mt := range next5 {
+		ro.AddMetric(mt)
 	}
 	require.Empty(t, m.Metrics())
 
@@ -69,11 +69,11 @@ func TestRunningOutputPassFilter(t *testing.T) {
 	m := &mockOutput{}
 	ro := NewRunningOutput(m, conf, 1000, 10000)
 
-	for _, metric := range first5 {
-		ro.AddMetric(metric)
+	for _, mt := range first5 {
+		ro.AddMetric(mt)
 	}
-	for _, metric := range next5 {
-		ro.AddMetric(metric)
+	for _, mt := range next5 {
+		ro.AddMetric(mt)
 	}
 	require.Empty(t, m.Metrics())
 
@@ -229,11 +229,11 @@ func TestRunningOutputDefault(t *testing.T) {
 	m := &mockOutput{}
 	ro := NewRunningOutput(m, conf, 1000, 10000)
 
-	for _, metric := range first5 {
-		ro.AddMetric(metric)
+	for _, mt := range first5 {
+		ro.AddMetric(mt)
 	}
-	for _, metric := range next5 {
-		ro.AddMetric(metric)
+	for _, mt := range next5 {
+		ro.AddMetric(mt)
 	}
 	require.Empty(t, m.Metrics())
 
@@ -251,11 +251,11 @@ func TestRunningOutputWriteFail(t *testing.T) {
 	ro := NewRunningOutput(m, conf, 4, 12)
 
 	// Fill buffer to limit twice
-	for _, metric := range first5 {
-		ro.AddMetric(metric)
+	for _, mt := range first5 {
+		ro.AddMetric(mt)
 	}
-	for _, metric := range next5 {
-		ro.AddMetric(metric)
+	for _, mt := range next5 {
+		ro.AddMetric(mt)
 	}
 	// no successful flush yet
 	require.Empty(t, m.Metrics())
@@ -283,8 +283,8 @@ func TestRunningOutputWriteFailOrder(t *testing.T) {
 	ro := NewRunningOutput(m, conf, 100, 1000)
 
 	// add 5 metrics
-	for _, metric := range first5 {
-		ro.AddMetric(metric)
+	for _, mt := range first5 {
+		ro.AddMetric(mt)
 	}
 	// no successful flush yet
 	require.Empty(t, m.Metrics())
@@ -298,8 +298,8 @@ func TestRunningOutputWriteFailOrder(t *testing.T) {
 	m.batchAcceptSize = 0
 
 	// add 5 more metrics
-	for _, metric := range next5 {
-		ro.AddMetric(metric)
+	for _, mt := range next5 {
+		ro.AddMetric(mt)
 	}
 	err = ro.Write()
 	require.NoError(t, err)
@@ -321,8 +321,8 @@ func TestRunningOutputWriteFailOrder2(t *testing.T) {
 	ro := NewRunningOutput(m, conf, 5, 100)
 
 	// add 5 metrics
-	for _, metric := range first5 {
-		ro.AddMetric(metric)
+	for _, mt := range first5 {
+		ro.AddMetric(mt)
 	}
 	// Write fails
 	err := ro.Write()
@@ -331,8 +331,8 @@ func TestRunningOutputWriteFailOrder2(t *testing.T) {
 	require.Empty(t, m.Metrics())
 
 	// add 5 metrics
-	for _, metric := range next5 {
-		ro.AddMetric(metric)
+	for _, mt := range next5 {
+		ro.AddMetric(mt)
 	}
 	// Write fails
 	err = ro.Write()
@@ -341,8 +341,8 @@ func TestRunningOutputWriteFailOrder2(t *testing.T) {
 	require.Empty(t, m.Metrics())
 
 	// add 5 metrics
-	for _, metric := range first5 {
-		ro.AddMetric(metric)
+	for _, mt := range first5 {
+		ro.AddMetric(mt)
 	}
 	// Write fails
 	err = ro.Write()
@@ -351,8 +351,8 @@ func TestRunningOutputWriteFailOrder2(t *testing.T) {
 	require.Empty(t, m.Metrics())
 
 	// add 5 metrics
-	for _, metric := range next5 {
-		ro.AddMetric(metric)
+	for _, mt := range next5 {
+		ro.AddMetric(mt)
 	}
 	// Write fails
 	err = ro.Write()
@@ -384,8 +384,8 @@ func TestRunningOutputWriteFailOrder3(t *testing.T) {
 	ro := NewRunningOutput(m, conf, 5, 1000)
 
 	// add 5 metrics
-	for _, metric := range first5 {
-		ro.AddMetric(metric)
+	for _, mt := range first5 {
+		ro.AddMetric(mt)
 	}
 	// no successful flush yet
 	require.Empty(t, m.Metrics())
@@ -1069,11 +1069,11 @@ func TestRunningOutputWritePartialSuccess(t *testing.T) {
 	defer model.Close()
 
 	// Fill buffer completely
-	for _, metric := range first5 {
-		model.AddMetric(metric)
+	for _, mt := range first5 {
+		model.AddMetric(mt)
 	}
-	for _, metric := range next5 {
-		model.AddMetric(metric)
+	for _, mt := range next5 {
+		model.AddMetric(mt)
 	}
 
 	// We no not expect any successful flush yet
@@ -1110,11 +1110,11 @@ func TestRunningOutputWritePartialSuccessAndLoss(t *testing.T) {
 	defer model.Close()
 
 	// Fill buffer completely
-	for _, metric := range first5 {
-		model.AddMetric(metric)
+	for _, mt := range first5 {
+		model.AddMetric(mt)
 	}
-	for _, metric := range next5 {
-		model.AddMetric(metric)
+	for _, mt := range next5 {
+		model.AddMetric(mt)
 	}
 	expected := []telegraf.Metric{
 		/* fatal, */ first5[1], first5[2], first5[3],
@@ -1154,11 +1154,11 @@ func TestRunningOutputWriteBatchPartialSuccess(t *testing.T) {
 	defer model.Close()
 
 	// Fill buffer completely
-	for _, metric := range first5 {
-		model.AddMetric(metric)
+	for _, mt := range first5 {
+		model.AddMetric(mt)
 	}
-	for _, metric := range next5 {
-		model.AddMetric(metric)
+	for _, mt := range next5 {
+		model.AddMetric(mt)
 	}
 
 	// We no not expect any successful flush yet
@@ -1195,11 +1195,11 @@ func TestRunningOutputWriteBatchPartialSuccessAndLoss(t *testing.T) {
 	defer model.Close()
 
 	// Fill buffer completely
-	for _, metric := range first5 {
-		model.AddMetric(metric)
+	for _, mt := range first5 {
+		model.AddMetric(mt)
 	}
-	for _, metric := range next5 {
-		model.AddMetric(metric)
+	for _, mt := range next5 {
+		model.AddMetric(mt)
 	}
 	expected := []telegraf.Metric{
 		/* fatal, */ first5[1], first5[2], first5[3],
