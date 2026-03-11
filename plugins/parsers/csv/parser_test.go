@@ -514,7 +514,7 @@ func TestParseStream(t *testing.T) {
 	m, err := p.ParseLine(csvBody)
 	require.NoError(t, err)
 	testutil.RequireMetricEqual(t,
-		testutil.MustMetric(
+		metric.New(
 			"csv",
 			map[string]string{},
 			map[string]interface{}{
@@ -544,7 +544,7 @@ func TestParseLineMultiMetricErrorMessage(t *testing.T) {
 	m, err := p.ParseLine(csvOneRow)
 	require.NoError(t, err)
 	testutil.RequireMetricEqual(t,
-		testutil.MustMetric(
+		metric.New(
 			"csv",
 			map[string]string{},
 			map[string]interface{}{
@@ -576,7 +576,7 @@ func TestTimestampUnixFloatPrecision(t *testing.T) {
 	data := `1551129661.95456123352050781250,42`
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"csv",
 			map[string]string{},
 			map[string]interface{}{
@@ -607,7 +607,7 @@ func TestSkipMeasurementColumn(t *testing.T) {
 		1,5,1551129661.954561233`
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"csv",
 			map[string]string{},
 			map[string]interface{}{
@@ -639,7 +639,7 @@ func TestSkipTimestampColumn(t *testing.T) {
 		1,5,1551129661.954561233`
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"csv",
 			map[string]string{},
 			map[string]interface{}{
@@ -694,7 +694,7 @@ func TestEmptyMeasurementName(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric("csv",
+		metric.New("csv",
 			map[string]string{},
 			map[string]interface{}{
 				"b": 2,
@@ -721,7 +721,7 @@ func TestNumericMeasurementName(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric("1",
+		metric.New("1",
 			map[string]string{},
 			map[string]interface{}{
 				"b": 2,
@@ -747,7 +747,7 @@ func TestStaticMeasurementName(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric("csv",
+		metric.New("csv",
 			map[string]string{},
 			map[string]interface{}{
 				"a": 1,
@@ -775,7 +775,7 @@ func TestSkipEmptyStringValue(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric("csv",
+		metric.New("csv",
 			map[string]string{},
 			map[string]interface{}{
 				"a": 1,
@@ -802,7 +802,7 @@ func TestSkipSpecifiedStringValue(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric("csv",
+		metric.New("csv",
 			map[string]string{},
 			map[string]interface{}{
 				"a": 1,

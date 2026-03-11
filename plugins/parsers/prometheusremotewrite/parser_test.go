@@ -144,7 +144,7 @@ func TestParse(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"prometheus_remote_write",
 			map[string]string{
 				"quantile": "0.99",
@@ -154,7 +154,7 @@ func TestParse(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"prometheus_remote_write",
 			map[string]string{
 				"job": "prometheus",
@@ -242,7 +242,7 @@ func TestHistograms(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"prometheus_remote_write",
 			map[string]string{},
 			map[string]interface{}{
@@ -250,7 +250,7 @@ func TestHistograms(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"prometheus_remote_write",
 			map[string]string{},
 			map[string]interface{}{
@@ -258,7 +258,7 @@ func TestHistograms(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"prometheus_remote_write",
 			map[string]string{},
 			map[string]interface{}{
@@ -266,7 +266,7 @@ func TestHistograms(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"prometheus_remote_write",
 			map[string]string{},
 			map[string]interface{}{
@@ -304,7 +304,7 @@ func TestDefaultTags(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"prometheus_remote_write",
 			map[string]string{
 				"defaultTag": "defaultTagValue",
@@ -350,7 +350,7 @@ func TestMetricsWithTimestamp(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"prometheus_remote_write",
 			map[string]string{
 				"__eg__": "bar",
