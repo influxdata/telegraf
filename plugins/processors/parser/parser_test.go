@@ -836,6 +836,360 @@ func TestApply(t *testing.T) {
 	}
 }
 
+func TestMergeMultipleParsedMetrics(t *testing.T) {
+	tests := []struct {
+		name     string
+		strategy string
+		drop     bool
+		msg      string
+		parser   telegraf.Parser
+		expected []telegraf.Metric
+	}{
+		{
+			name: "no merge",
+			msg: `
+metric,status=ok value=1i 1773239679000000000
+metric,status=warn value=23i 1773239679100000000
+metric,status=ok value=19i 1773239679200000000
+metric,status=fault value=42i 1773239679300000000
+`,
+			parser: &influx.Parser{},
+			expected: []telegraf.Metric{
+				metric.New(
+					"metric",
+					map[string]string{
+						"status": "ok",
+					},
+					map[string]interface{}{
+						"value": int64(1),
+					},
+					time.Unix(0, 1773239679000000000),
+				),
+				metric.New(
+					"metric",
+					map[string]string{
+						"status": "warn",
+					},
+					map[string]interface{}{
+						"value": int64(23),
+					},
+					time.Unix(0, 1773239679100000000),
+				),
+				metric.New(
+					"metric",
+					map[string]string{
+						"status": "ok",
+					},
+					map[string]interface{}{
+						"value": int64(19),
+					},
+					time.Unix(0, 1773239679200000000),
+				),
+				metric.New(
+					"metric",
+					map[string]string{
+						"status": "fault",
+					},
+					map[string]interface{}{
+						"value": int64(42),
+					},
+					time.Unix(0, 1773239679300000000),
+				),
+				// Original metric
+				metric.New(
+					"test",
+					map[string]string{"source": "foo"},
+					map[string]interface{}{
+						"message": `
+metric,status=ok value=1i 1773239679000000000
+metric,status=warn value=23i 1773239679100000000
+metric,status=ok value=19i 1773239679200000000
+metric,status=fault value=42i 1773239679300000000
+`,
+						"additional": true,
+					},
+					time.Unix(1773258782, 0),
+				),
+			},
+		},
+		{
+			name:     "override same field",
+			strategy: "override",
+			msg: `
+metric,status=ok value=1i 1773239679000000000
+metric,status=warn value=23i 1773239679100000000
+metric,status=ok value=19i 1773239679200000000
+metric,status=fault value=42i 1773239679300000000
+`,
+			parser: &influx.Parser{},
+			expected: []telegraf.Metric{
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "fault",
+					},
+					map[string]interface{}{
+						"value":      int64(42),
+						"additional": true,
+					},
+					time.Unix(1773258782, 0),
+				),
+			},
+		},
+		{
+			name:     "override different fields",
+			strategy: "override",
+			msg: `
+metric,status=ok value1=1i 1773239679000000000
+metric,status=warn value2=23i 1773239679100000000
+metric,status=ok value3=19i 1773239679200000000
+metric,status=fault value4=42i 1773239679300000000
+`,
+			parser: &influx.Parser{},
+			expected: []telegraf.Metric{
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "fault",
+					},
+					map[string]interface{}{
+						"value1":     int64(1),
+						"value2":     int64(23),
+						"value3":     int64(19),
+						"value4":     int64(42),
+						"additional": true,
+					},
+					time.Unix(1773258782, 0),
+				),
+			},
+		},
+		{
+			name:     "override timestamp same field",
+			strategy: "override-with-timestamp",
+			msg: `
+metric,status=ok value=1i 1773239679000000000
+metric,status=warn value=23i 1773239679100000000
+metric,status=ok value=19i 1773239679200000000
+metric,status=fault value=42i 1773239679300000000
+`,
+			parser: &influx.Parser{},
+			expected: []telegraf.Metric{
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "fault",
+					},
+					map[string]interface{}{
+						"value":      int64(42),
+						"additional": true,
+					},
+					time.Unix(0, 1773239679300000000),
+				),
+			},
+		},
+		{
+			name:     "override timestamp different fields",
+			strategy: "override-with-timestamp",
+			msg: `
+metric,status=ok value1=1i 1773239679000000000
+metric,status=warn value2=23i 1773239679100000000
+metric,status=ok value3=19i 1773239679200000000
+metric,status=fault value4=42i 1773239679300000000
+`,
+			parser: &influx.Parser{},
+			expected: []telegraf.Metric{
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "fault",
+					},
+					map[string]interface{}{
+						"value1":     int64(1),
+						"value2":     int64(23),
+						"value3":     int64(19),
+						"value4":     int64(42),
+						"additional": true,
+					},
+					time.Unix(0, 1773239679300000000),
+				),
+			},
+		},
+		{
+			name: "drop no merge",
+			drop: true,
+			msg: `
+metric,status=ok value=1i 1773239679000000000
+metric,status=warn value=23i 1773239679100000000
+metric,status=ok value=19i 1773239679200000000
+metric,status=fault value=42i 1773239679300000000
+`,
+			parser: &influx.Parser{},
+			expected: []telegraf.Metric{
+				metric.New(
+					"metric",
+					map[string]string{"status": "ok"},
+					map[string]interface{}{"value": int64(1)},
+					time.Unix(0, 1773239679000000000),
+				),
+				metric.New(
+					"metric",
+					map[string]string{"status": "warn"},
+					map[string]interface{}{"value": int64(23)},
+					time.Unix(0, 1773239679100000000),
+				),
+				metric.New(
+					"metric",
+					map[string]string{"status": "ok"},
+					map[string]interface{}{"value": int64(19)},
+					time.Unix(0, 1773239679200000000),
+				),
+				metric.New(
+					"metric",
+					map[string]string{"status": "fault"},
+					map[string]interface{}{"value": int64(42)},
+					time.Unix(0, 1773239679300000000),
+				),
+			},
+		},
+		{
+			name:     "drop override same field",
+			strategy: "override",
+			drop:     true,
+			msg: `
+metric,status=ok value=1i 1773239679000000000
+metric,status=warn value=23i 1773239679100000000
+metric,status=ok value=19i 1773239679200000000
+metric,status=fault value=42i 1773239679300000000
+`,
+			parser: &influx.Parser{},
+			expected: []telegraf.Metric{
+				metric.New(
+					"metric",
+					map[string]string{"status": "fault"},
+					map[string]interface{}{"value": int64(42)},
+					time.Unix(0, 1773239679000000000),
+				),
+			},
+		},
+		{
+			name:     "drop override different fields",
+			strategy: "override",
+			drop:     true,
+			msg: `
+metric,status=ok value1=1i 1773239679000000000
+metric,status=warn value2=23i 1773239679100000000
+metric,status=ok value3=19i 1773239679200000000
+metric,status=fault value4=42i 1773239679300000000
+`,
+			parser: &influx.Parser{},
+			expected: []telegraf.Metric{
+				metric.New(
+					"metric",
+					map[string]string{"status": "fault"},
+					map[string]interface{}{
+						"value1": int64(1),
+						"value2": int64(23),
+						"value3": int64(19),
+						"value4": int64(42),
+					},
+					time.Unix(0, 1773239679000000000),
+				),
+			},
+		},
+		{
+			name:     "drop override timestamp same field",
+			strategy: "override-with-timestamp",
+			drop:     true,
+			msg: `
+metric,status=ok value=1i 1773239679000000000
+metric,status=warn value=23i 1773239679100000000
+metric,status=ok value=19i 1773239679200000000
+metric,status=fault value=42i 1773239679300000000
+`,
+			parser: &influx.Parser{},
+			expected: []telegraf.Metric{
+				metric.New(
+					"metric",
+					map[string]string{"status": "fault"},
+					map[string]interface{}{"value": int64(42)},
+					time.Unix(0, 1773239679300000000),
+				),
+			},
+		},
+		{
+			name:     "drop override timestamp different fields",
+			strategy: "override-with-timestamp",
+			drop:     true,
+			msg: `
+metric,status=ok value1=1i 1773239679000000000
+metric,status=warn value2=23i 1773239679100000000
+metric,status=ok value3=19i 1773239679200000000
+metric,status=fault value4=42i 1773239679300000000
+`,
+			parser: &influx.Parser{},
+			expected: []telegraf.Metric{
+				metric.New(
+					"metric",
+					map[string]string{"status": "fault"},
+					map[string]interface{}{
+						"value1": int64(1),
+						"value2": int64(23),
+						"value3": int64(19),
+						"value4": int64(42),
+					},
+					time.Unix(0, 1773239679300000000),
+				),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Add the message to the expected metric if the original metric
+			// will not be dropped
+			expected := tt.expected
+			if tt.strategy != "" && !tt.drop {
+				for i := range expected {
+					expected[i].AddField("message", tt.msg)
+				}
+			}
+
+			// Setup parser
+			if p, ok := tt.parser.(telegraf.Initializer); ok {
+				require.NoError(t, p.Init())
+			}
+
+			// Setup message
+			input := metric.New(
+				"test",
+				map[string]string{"source": "foo"},
+				map[string]interface{}{
+					"message":    tt.msg,
+					"additional": true,
+				},
+				time.Unix(1773258782, 0),
+			)
+
+			// Setup plugin
+			plugin := Parser{
+				ParseFields:  []string{"message"},
+				DropOriginal: tt.drop,
+				Merge:        tt.strategy,
+				Log:          testutil.Logger{Name: "processor.parser"},
+			}
+			plugin.SetParser(tt.parser)
+
+			// Parse the metric and check the result
+			output := plugin.Apply(input)
+			testutil.RequireMetricsEqual(t, tt.expected, output, testutil.SortMetrics())
+		})
+	}
+}
+
 func TestInvalidMerge(t *testing.T) {
 	plugin := Parser{Merge: "fake"}
 	require.Error(t, plugin.Init())

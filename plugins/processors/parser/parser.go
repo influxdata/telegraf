@@ -137,11 +137,12 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 			continue
 		}
 
-		if p.Merge == "override" {
+		switch p.Merge {
+		case "override":
 			results = append(results, merge(newMetrics[0], newMetrics[1:]))
-		} else if p.Merge == "override-with-timestamp" {
+		case "override-with-timestamp":
 			results = append(results, mergeWithTimestamp(newMetrics[0], newMetrics[1:]))
-		} else {
+		default:
 			results = append(results, newMetrics...)
 		}
 	}
