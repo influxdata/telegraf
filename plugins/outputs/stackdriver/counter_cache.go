@@ -74,7 +74,8 @@ func (cc *counterCache) GetStartTime(key string, value *monpb.TypedValue, endTim
 func NewCounterCache(log telegraf.Logger) *counterCache {
 	return &counterCache{
 		cache: make(map[string]*counterCacheEntry),
-		log:   log}
+		log:   log,
+	}
 }
 
 func NewCounterCacheEntry(value *monpb.TypedValue, ts *tspb.Timestamp) *counterCacheEntry {

@@ -216,8 +216,8 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 	// sort the timestamps we collected
 	sort.Slice(timestamps, func(i, j int) bool { return timestamps[i] < timestamps[j] })
 
-	s.Log.Debugf("received %d metrics\n", len(metrics))
-	s.Log.Debugf("split into %d groups by timestamp\n", len(metricBatch))
+	s.Log.Debugf("received %d metrics", len(metrics))
+	s.Log.Debugf("split into %d groups by timestamp", len(metricBatch))
 	for _, timestamp := range timestamps {
 		if err := s.sendBatch(metricBatch[timestamp]); err != nil {
 			return err
@@ -599,9 +599,10 @@ func buildHistogram(m telegraf.Metric) (*monitoringpb.TypedValue, error) {
 	m.RemoveField("count")
 
 	// Build map of the buckets and their values
-	buckets := make([]float64, 0, len(m.FieldList()))
-	bucketCounts := make([]int64, 0, len(m.FieldList()))
-	for _, field := range m.FieldList() {
+	fields := m.FieldList()
+	buckets := make([]float64, 0, len(fields))
+	bucketCounts := make([]int64, 0, len(fields))
+	for _, field := range fields {
 		// Add the +inf value to bucket counts, no need to define a bound
 		if strings.Contains(strings.ToLower(field.Key), "+inf") {
 			count, err := internal.ToInt64(field.Value)
@@ -712,6 +713,9 @@ func (s *secretTokenSource) Token() (*oauth2.Token, error) {
 
 // Close will terminate the session to the backend, returning error if an issue arises.
 func (s *Stackdriver) Close() error {
+	if s.client == nil {
+		return nil
+	}
 	return s.client.Close()
 }
 
