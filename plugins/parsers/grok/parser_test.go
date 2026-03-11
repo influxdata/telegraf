@@ -642,7 +642,7 @@ func TestParseErrors_WrongIntegerType(t *testing.T) {
 	require.NoError(t, err)
 	testutil.RequireMetricEqual(t,
 		m,
-		testutil.MustMetric("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
+		metric.New("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
 }
 
 func TestParseErrors_WrongFloatType(t *testing.T) {
@@ -659,7 +659,7 @@ func TestParseErrors_WrongFloatType(t *testing.T) {
 	require.NoError(t, err)
 	testutil.RequireMetricEqual(t,
 		m,
-		testutil.MustMetric("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
+		metric.New("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
 }
 
 func TestParseErrors_WrongDurationType(t *testing.T) {
@@ -676,7 +676,7 @@ func TestParseErrors_WrongDurationType(t *testing.T) {
 	require.NoError(t, err)
 	testutil.RequireMetricEqual(t,
 		m,
-		testutil.MustMetric("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
+		metric.New("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
 }
 
 func TestParseErrors_WrongTimeLayout(t *testing.T) {
@@ -693,7 +693,7 @@ func TestParseErrors_WrongTimeLayout(t *testing.T) {
 	require.NoError(t, err)
 	testutil.RequireMetricEqual(t,
 		m,
-		testutil.MustMetric("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
+		metric.New("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
 }
 
 func TestParseInteger_Base16(t *testing.T) {
@@ -1159,7 +1159,7 @@ func TestTrimRegression(t *testing.T) {
 	actual, err := p.ParseLine(`level=info msg="ok"`)
 	require.NoError(t, err)
 
-	expected := testutil.MustMetric(
+	expected := metric.New(
 		"",
 		map[string]string{},
 		map[string]interface{}{
