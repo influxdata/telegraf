@@ -177,6 +177,53 @@ func TestWindow(t *testing.T) {
 	}
 }
 
+func TestGetCollectionJitter(t *testing.T) {
+	t.Parallel()
+
+	agentJitter := 10 * time.Second
+	tests := []struct {
+		name   string
+		config *models.InputConfig
+		want   time.Duration
+	}{
+		{
+			name: "fallback to agent when input config is nil",
+			want: agentJitter,
+		},
+		{
+			name: "fallback to agent when input jitter is unset",
+			config: &models.InputConfig{
+				CollectionJitter:    0,
+				CollectionJitterSet: false,
+			},
+			want: agentJitter,
+		},
+		{
+			name: "override when input jitter is non-zero",
+			config: &models.InputConfig{
+				CollectionJitter: 5 * time.Second,
+			},
+			want: 5 * time.Second,
+		},
+		{
+			name: "override when input jitter is explicitly set to zero",
+			config: &models.InputConfig{
+				CollectionJitter:    0,
+				CollectionJitterSet: true,
+			},
+			want: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := getCollectionJitter(agentJitter, tt.config)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestCases(t *testing.T) {
 	// Get all directories in testcases
 	folders, err := os.ReadDir("testcases")

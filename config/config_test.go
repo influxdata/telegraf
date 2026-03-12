@@ -146,6 +146,29 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 	require.Equal(t, inputConfig, c.Inputs[0].Config, "Testdata did not produce correct memcached metadata.")
 }
 
+func TestConfig_InputCollectionJitterExplicitZeroIsSet(t *testing.T) {
+	c := config.NewConfig()
+	cfg := []byte(`
+[agent]
+  collection_jitter = "10s"
+
+[[inputs.memcached]]
+  servers = ["localhost"]
+  collection_jitter = "0s"
+
+[[inputs.memcached]]
+  servers = ["127.0.0.1"]
+`)
+	require.NoError(t, c.LoadConfigData(cfg, config.EmptySourcePath))
+	require.Len(t, c.Inputs, 2)
+
+	require.Equal(t, time.Duration(0), c.Inputs[0].Config.CollectionJitter)
+	require.True(t, c.Inputs[0].Config.CollectionJitterSet)
+
+	require.Equal(t, time.Duration(0), c.Inputs[1].Config.CollectionJitter)
+	require.False(t, c.Inputs[1].Config.CollectionJitterSet)
+}
+
 func TestConfig_LoadSingleInput_WithSeparators(t *testing.T) {
 	c := config.NewConfig()
 	confFile := filepath.Join("testdata", "single_plugin_with_separators.toml")
