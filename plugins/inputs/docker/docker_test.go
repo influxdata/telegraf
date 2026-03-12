@@ -593,9 +593,9 @@ func TestContainerLabels(t *testing.T) {
 
 			// Grab tags from a container metric
 			var actual map[string]string
-			for _, metric := range acc.Metrics {
-				if metric.Measurement == "docker_container_cpu" {
-					actual = metric.Tags
+			for _, mt := range acc.Metrics {
+				if mt.Measurement == "docker_container_cpu" {
+					actual = mt.Tags
 				}
 			}
 
@@ -715,8 +715,8 @@ func TestContainerNames(t *testing.T) {
 
 			// Set of actual names
 			actual := make(map[string]bool)
-			for _, metric := range acc.Metrics {
-				if name, ok := metric.Tags["container_name"]; ok {
+			for _, mt := range acc.Metrics {
+				if name, ok := mt.Tags["container_name"]; ok {
 					actual[name] = true
 				}
 			}
@@ -1235,8 +1235,8 @@ func TestContainerStateFilter(t *testing.T) {
 
 			// Set of actual names
 			actual := make(map[string]bool)
-			for _, metric := range acc.Metrics {
-				if name, ok := metric.Tags["container_name"]; ok {
+			for _, mt := range acc.Metrics {
+				if name, ok := mt.Tags["container_name"]; ok {
 					actual[name] = true
 				}
 			}
@@ -1382,10 +1382,10 @@ func TestContainerName(t *testing.T) {
 			err := d.Gather(&acc)
 			require.NoError(t, err)
 
-			for _, metric := range acc.Metrics {
+			for _, mt := range acc.Metrics {
 				// This tag is set on all container measurements
-				if metric.Measurement == "docker_container_mem" {
-					require.Equal(t, tt.expected, metric.Tags["container_name"])
+				if mt.Measurement == "docker_container_mem" {
+					require.Equal(t, tt.expected, mt.Tags["container_name"])
 				}
 			}
 		})
