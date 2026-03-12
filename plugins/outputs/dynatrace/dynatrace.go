@@ -18,6 +18,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -172,11 +173,24 @@ func (d *Dynatrace) send(msg string) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusBadRequest {
-		return fmt.Errorf("request failed with response code: %d", resp.StatusCode)
+	// 4xx client errors are not retryable - the request itself is invalid
+	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+		d.Log.Errorf("Client error %d, metrics will be dropped", resp.StatusCode)
+		return &internal.HTTPError{
+			Err:        fmt.Errorf("client error %d: metrics dropped", resp.StatusCode),
+			StatusCode: resp.StatusCode,
+			Retryable:  false,
+		}
+	} else if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		// 5xx and other non-2xx errors are retryable
+		return &internal.HTTPError{
+			Err:        fmt.Errorf("request failed with response code: %d", resp.StatusCode),
+			StatusCode: resp.StatusCode,
+			Retryable:  true,
+		}
 	}
 
-	// print metric line results as info log
+	// 2xx: Success - print metric line results as info log
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		d.Log.Errorf("Dynatrace error reading response")

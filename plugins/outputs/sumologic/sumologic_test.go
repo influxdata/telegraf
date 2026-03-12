@@ -146,27 +146,51 @@ func TestStatusCode(t *testing.T) {
 			},
 		},
 		{
-			name:       "1xx status is an error",
+			name:       "1xx status is retryable",
 			plugin:     pluginFn(),
 			statusCode: http.StatusSwitchingProtocols,
 			errFunc: func(t *testing.T, err error) {
 				require.Error(t, err)
+				var httpErr *httpError
+				require.ErrorAs(t, err, &httpErr)
+				require.Equal(t, http.StatusSwitchingProtocols, httpErr.statusCode)
+				require.True(t, httpErr.retryable, "1xx errors should be retryable")
 			},
 		},
 		{
-			name:       "3xx status is an error",
+			name:       "3xx status is retryable",
 			plugin:     pluginFn(),
 			statusCode: http.StatusMultipleChoices,
 			errFunc: func(t *testing.T, err error) {
 				require.Error(t, err)
+				var httpErr *httpError
+				require.ErrorAs(t, err, &httpErr)
+				require.Equal(t, http.StatusMultipleChoices, httpErr.statusCode)
+				require.True(t, httpErr.retryable, "3xx errors should be retryable")
 			},
 		},
 		{
-			name:       "4xx status is an error",
+			name:       "4xx status drops metrics without retry",
 			plugin:     pluginFn(),
 			statusCode: http.StatusBadRequest,
 			errFunc: func(t *testing.T, err error) {
 				require.Error(t, err)
+				var httpErr *httpError
+				require.ErrorAs(t, err, &httpErr)
+				require.Equal(t, http.StatusBadRequest, httpErr.statusCode)
+				require.False(t, httpErr.retryable, "4xx errors should not be retryable")
+			},
+		},
+		{
+			name:       "5xx status is retryable",
+			plugin:     pluginFn(),
+			statusCode: http.StatusInternalServerError,
+			errFunc: func(t *testing.T, err error) {
+				require.Error(t, err)
+				var httpErr *httpError
+				require.ErrorAs(t, err, &httpErr)
+				require.Equal(t, http.StatusInternalServerError, httpErr.statusCode)
+				require.True(t, httpErr.retryable, "5xx errors should be retryable")
 			},
 		},
 	}
