@@ -103,7 +103,7 @@ func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
 		}
 
 		if _, err := c.svc.PutMetricData(context.Background(), params); err != nil {
-			c.Log.Errorf("Unable to write to CloudWatch : %v", err)
+			c.Log.Errorf("Unable to write to CloudWatch: %v", err)
 		}
 	}
 
