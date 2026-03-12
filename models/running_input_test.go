@@ -96,7 +96,7 @@ func TestRunningInputMakeMetricWithPluginTags(t *testing.T) {
 		},
 	})
 
-	m := testutil.MustMetric("RITest",
+	m := metric.New("RITest",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(101),
@@ -149,7 +149,7 @@ func TestRunningInputMakeMetricWithDaemonTags(t *testing.T) {
 		"foo": "bar",
 	})
 
-	m := testutil.MustMetric("RITest",
+	m := metric.New("RITest",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(101),
@@ -287,7 +287,7 @@ func TestRunningInputMakeMetricWithAlwaysKeepingPluginTagsDisabled(t *testing.T)
 	ri.SetDefaultTags(map[string]string{"logic": "rulez"})
 	require.NoError(t, ri.Config.Filter.Compile())
 
-	m := testutil.MustMetric("RITest",
+	m := metric.New("RITest",
 		map[string]string{
 			"b": "test",
 		},
@@ -325,7 +325,7 @@ func TestRunningInputMakeMetricWithAlwaysKeepingLocalPluginTagsEnabled(t *testin
 	ri.SetDefaultTags(map[string]string{"logic": "rulez"})
 	require.NoError(t, ri.Config.Filter.Compile())
 
-	m := testutil.MustMetric("RITest",
+	m := metric.New("RITest",
 		map[string]string{
 			"b": "test",
 		},
@@ -364,7 +364,7 @@ func TestRunningInputMakeMetricWithAlwaysKeepingGlobalPluginTagsEnabled(t *testi
 	ri.SetDefaultTags(map[string]string{"logic": "rulez"})
 	require.NoError(t, ri.Config.Filter.Compile())
 
-	m := testutil.MustMetric("RITest",
+	m := metric.New("RITest",
 		map[string]string{
 			"b": "test",
 		},
@@ -404,7 +404,7 @@ func TestRunningInputMakeMetricWithAlwaysKeepingPluginTagsEnabled(t *testing.T) 
 	ri.SetDefaultTags(map[string]string{"logic": "rulez"})
 	require.NoError(t, ri.Config.Filter.Compile())
 
-	m := testutil.MustMetric("RITest",
+	m := metric.New("RITest",
 		map[string]string{
 			"b": "test",
 		},
