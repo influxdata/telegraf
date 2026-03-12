@@ -125,7 +125,7 @@ func (n *Openntpd) Gather(acc telegraf.Accumulator) error {
 //
 //	12/12 peers valid, 1/1 sensors valid, constraint offset -1s, clock synced, stratum 1
 func parseStatusLine(line string, acc telegraf.Accumulator) {
-	fields := make(map[string]interface{})
+	fields := make(map[string]interface{}, 7)
 
 	parts := strings.Split(line, ", ")
 	for _, part := range parts {
@@ -133,15 +133,13 @@ func parseStatusLine(line string, acc telegraf.Accumulator) {
 		switch {
 		case strings.HasSuffix(part, "peers valid"):
 			fraction := strings.Fields(part)[0]
-			pv, pt, ok := parseFraction(fraction)
-			if ok {
+			if pv, pt, ok := parseFraction(fraction); ok {
 				fields["peers_valid"] = pv
 				fields["peers_total"] = pt
 			}
 		case strings.HasSuffix(part, "sensors valid"):
 			fraction := strings.Fields(part)[0]
-			sv, st, ok := parseFraction(fraction)
-			if ok {
+			if sv, st, ok := parseFraction(fraction); ok {
 				fields["sensors_valid"] = sv
 				fields["sensors_total"] = st
 			}
@@ -161,23 +159,22 @@ func parseStatusLine(line string, acc telegraf.Accumulator) {
 		}
 	}
 
-	if _, hasSynced := fields["clock_synced"]; !hasSynced {
+	// Make sure we always provide the clock_synced field
+	if _, found := fields["clock_synced"]; !found {
 		fields["clock_synced"] = int64(0)
 	}
 
-	if len(fields) > 0 {
-		acc.AddFields("openntpd_status", fields, make(map[string]string))
-	}
+	acc.AddFields("openntpd_status", fields, make(map[string]string))
 }
 
 // parseFraction splits "12/12" into (numerator, denominator, ok).
 func parseFraction(s string) (num, den int64, ok bool) {
-	idx := strings.Index(s, "/")
-	if idx < 0 {
+	n, d, found := strings.Cut(s, "/")
+	if !found {
 		return 0, 0, false
 	}
-	num, err1 := strconv.ParseInt(s[:idx], 10, 64)
-	den, err2 := strconv.ParseInt(s[idx+1:], 10, 64)
+	num, err1 := strconv.ParseInt(n, 10, 64)
+	den, err2 := strconv.ParseInt(d, 10, 64)
 	if err1 != nil || err2 != nil {
 		return 0, 0, false
 	}
@@ -264,7 +261,7 @@ func parseSensor(scanner *bufio.Scanner, headerLine string, acc telegraf.Accumul
 		return
 	}
 
-	tags := make(map[string]string)
+	tags := make(map[string]string, 3)
 	tags["sensor"] = headerFields[0]
 	if len(headerFields) >= 2 {
 		tags["refid"] = headerFields[1]
@@ -282,7 +279,7 @@ func parseSensor(scanner *bufio.Scanner, headerLine string, acc telegraf.Accumul
 		statsFields = statsFields[1:]
 	}
 
-	mFields := make(map[string]interface{})
+	mFields := make(map[string]interface{}, 7)
 
 	for key, index := range sensorIntI {
 		if index >= len(statsFields) || statsFields[index] == "-" {

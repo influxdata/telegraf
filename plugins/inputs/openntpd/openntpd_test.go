@@ -3,10 +3,13 @@ package openntpd
 import (
 	"bytes"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -258,79 +261,164 @@ func TestParseFullOutput(t *testing.T) {
 }
 
 func TestParseFullOutputAll(t *testing.T) {
-	acc := &testutil.Accumulator{}
-	v := &Openntpd{
+	plugin := &Openntpd{
 		run: openntpdCTL(fullOutputAll),
 	}
-	err := v.Gather(acc)
-	require.NoError(t, err)
 
-	// Peers
-	require.True(t, acc.HasMeasurement("openntpd"))
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
 
-	firstpeerfields := map[string]interface{}{
-		"wt":     int64(1),
-		"tl":     int64(10),
-		"next":   int64(56),
-		"poll":   int64(63),
-		"offset": float64(9.271),
-		"delay":  float64(44.662),
-		"jitter": float64(2.678),
+	expected := []telegraf.Metric{
+		metric.New(
+			"openntpd_status",
+			map[string]string{},
+			map[string]interface{}{
+				"peers_valid":         int64(12),
+				"peers_total":         int64(12),
+				"sensors_valid":       int64(1),
+				"sensors_total":       int64(1),
+				"constraint_offset_s": int64(-1),
+				"clock_synced":        int64(1),
+				"stratum":             int64(1),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"openntpd",
+			map[string]string{
+				"remote":  "212.129.9.36",
+				"stratum": "3",
+			},
+			map[string]interface{}{
+				"wt":     int64(1),
+				"tl":     int64(10),
+				"next":   int64(56),
+				"poll":   int64(63),
+				"offset": float64(9.271),
+				"delay":  float64(44.662),
+				"jitter": float64(2.678),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"openntpd",
+			map[string]string{
+				"remote":  "163.172.25.19",
+				"stratum": "2",
+			},
+			map[string]interface{}{
+				"wt":     int64(1),
+				"tl":     int64(10),
+				"next":   int64(21),
+				"poll":   int64(64),
+				"offset": float64(-0.103),
+				"delay":  float64(53.199),
+				"jitter": float64(9.046),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"openntpd",
+			map[string]string{
+				"remote":       "92.243.6.5",
+				"stratum":      "2",
+				"state_prefix": "*",
+			},
+			map[string]interface{}{
+				"wt":     int64(1),
+				"tl":     int64(10),
+				"next":   int64(45),
+				"poll":   int64(980),
+				"offset": float64(-9.901),
+				"delay":  float64(67.573),
+				"jitter": float64(29.350),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"openntpd",
+			map[string]string{
+				"remote":  "178.33.111.49",
+				"stratum": "-",
+			},
+			map[string]interface{}{
+				"wt":   int64(1),
+				"tl":   int64(2),
+				"next": int64(203),
+				"poll": int64(300),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"openntpd_sensors",
+			map[string]string{
+				"sensor":       "nmea0",
+				"refid":        "GPS",
+				"state_prefix": "*",
+			},
+			map[string]interface{}{
+				"wt":         int64(10),
+				"gd":         int64(1),
+				"st":         int64(0),
+				"next":       int64(1),
+				"poll":       int64(15),
+				"offset":     float64(-0.673),
+				"correction": float64(0.600),
+			},
+			time.Unix(0, 0),
+		),
 	}
-	firstpeertags := map[string]string{
-		"remote":  "212.129.9.36",
-		"stratum": "3",
-	}
-	acc.AssertContainsTaggedFields(t, "openntpd", firstpeerfields, firstpeertags)
 
-	// Status
-	require.True(t, acc.HasMeasurement("openntpd_status"))
-	statusFields := map[string]interface{}{
-		"peers_valid":         int64(12),
-		"peers_total":         int64(12),
-		"sensors_valid":       int64(1),
-		"sensors_total":       int64(1),
-		"constraint_offset_s": int64(-1),
-		"clock_synced":        int64(1),
-		"stratum":             int64(1),
-	}
-	acc.AssertContainsFields(t, "openntpd_status", statusFields)
-
-	// Sensors
-	require.True(t, acc.HasMeasurement("openntpd_sensors"))
-	sensorFields := map[string]interface{}{
-		"wt":         int64(10),
-		"gd":         int64(1),
-		"st":         int64(0),
-		"next":       int64(1),
-		"poll":       int64(15),
-		"offset":     float64(-0.673),
-		"correction": float64(0.600),
-	}
-	sensorTags := map[string]string{
-		"sensor":       "nmea0",
-		"refid":        "GPS",
-		"state_prefix": "*",
-	}
-	acc.AssertContainsTaggedFields(t, "openntpd_sensors", sensorFields, sensorTags)
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t,
+		expected, actual,
+		testutil.SortMetrics(),
+		testutil.IgnoreTime(),
+	)
 }
 
 func TestParseStatusLineClockNotSynced(t *testing.T) {
-	acc := &testutil.Accumulator{}
-	v := &Openntpd{
+	plugin := &Openntpd{
 		run: openntpdCTL(outputNoSync),
 	}
-	err := v.Gather(acc)
-	require.NoError(t, err)
 
-	require.True(t, acc.HasMeasurement("openntpd_status"))
-	statusFields := map[string]interface{}{
-		"peers_valid":         int64(0),
-		"peers_total":         int64(4),
-		"constraint_offset_s": int64(0),
-		"clock_synced":        int64(0),
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"openntpd_status",
+			map[string]string{},
+			map[string]interface{}{
+				"peers_valid":         int64(0),
+				"peers_total":         int64(4),
+				"constraint_offset_s": int64(0),
+				"clock_synced":        int64(0),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"openntpd",
+			map[string]string{
+				"remote":  "212.129.9.36",
+				"stratum": "-",
+			},
+			map[string]interface{}{
+				"wt":   int64(1),
+				"tl":   int64(2),
+				"next": int64(5),
+				"poll": int64(15),
+			},
+			time.Unix(0, 0),
+		),
 	}
-	acc.AssertContainsFields(t, "openntpd_status", statusFields)
+
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t,
+		expected, actual,
+		testutil.SortMetrics(),
+		testutil.IgnoreTime(),
+	)
 }
 
 var simpleOutput = `peer
