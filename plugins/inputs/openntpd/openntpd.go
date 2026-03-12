@@ -24,22 +24,33 @@ var (
 	defaultBinary  = "/usr/sbin/ntpctl"
 	defaultTimeout = config.Duration(5 * time.Second)
 
-	// Mapping of the ntpctl tag key to the index in the command output
-	tagI = map[string]int{
+	// Peer column index mappings
+	peerTagI = map[string]int{
 		"stratum": 2,
 	}
-	// Mapping of float metrics to their index in the command output
-	floatI = map[string]int{
+	peerFloatI = map[string]int{
 		"offset": 5,
 		"delay":  6,
 		"jitter": 7,
 	}
-	// Mapping of int metrics to their index in the command output
-	intI = map[string]int{
+	peerIntI = map[string]int{
 		"wt":   0,
 		"tl":   1,
 		"next": 3,
 		"poll": 4,
+	}
+
+	// Sensor column index mappings
+	sensorIntI = map[string]int{
+		"wt":   0,
+		"gd":   1,
+		"st":   2,
+		"next": 3,
+		"poll": 4,
+	}
+	sensorFloatI = map[string]int{
+		"offset":     5,
+		"correction": 6,
 	}
 )
 
@@ -63,114 +74,248 @@ func (n *Openntpd) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("error gathering metrics: %w", err)
 	}
 
-	lineCounter := 0
+	// section tracks which part of the output we are in:
+	// "" = before first section header (status line area)
+	// "peer" = inside peer section
+	// "sensor" = inside sensor section
+	section := ""
+	skipNext := false
+
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
-		// skip first (peer) and second (field list) line
-		if lineCounter < 2 {
-			lineCounter++
+		line := scanner.Text()
+		trimmed := strings.TrimSpace(line)
+
+		if trimmed == "" {
 			continue
 		}
 
-		line := scanner.Text()
-
-		fields := strings.Fields(line)
-
-		mFields := make(map[string]interface{})
-		tags := make(map[string]string)
-
-		// Even line ---> ntp server info
-		if lineCounter%2 == 0 {
-			// DNS resolution error ---> keep DNS name as remote name
-			if fields[0] != "not" {
-				tags["remote"] = fields[0]
-			} else {
-				tags["remote"] = fields[len(fields)-1]
-			}
+		if trimmed == "peer" {
+			section = "peer"
+			skipNext = true
+			continue
 		}
 
-		// Read next line - Odd line ---> ntp server stats
-		scanner.Scan()
-		line = scanner.Text()
-		lineCounter++
-
-		fields = strings.Fields(line)
-
-		// if there is an ntpctl state prefix, remove it and make it it's own tag
-		if strings.ContainsAny(fields[0], "*") {
-			tags["state_prefix"] = fields[0]
-			fields = fields[1:]
+		if trimmed == "sensor" {
+			section = "sensor"
+			skipNext = true
+			continue
 		}
 
-		// Get tags from output
-		for key, index := range tagI {
-			if index >= len(fields) {
-				continue
-			}
-			tags[key] = fields[index]
+		// Skip the column-header line that follows each section header
+		if skipNext {
+			skipNext = false
+			continue
 		}
 
-		// Get integer metrics from output
-		for key, index := range intI {
-			if index >= len(fields) {
-				continue
-			}
-			if fields[index] == "-" {
-				continue
-			}
-
-			if key == "next" || key == "poll" {
-				m, err := strconv.ParseInt(strings.TrimSuffix(fields[index], "s"), 10, 64)
-				if err != nil {
-					acc.AddError(fmt.Errorf("integer value expected, got: %s", fields[index]))
-					continue
-				}
-				mFields[key] = m
-			} else {
-				m, err := strconv.ParseInt(fields[index], 10, 64)
-				if err != nil {
-					acc.AddError(fmt.Errorf("integer value expected, got: %s", fields[index]))
-					continue
-				}
-				mFields[key] = m
-			}
+		switch section {
+		case "":
+			parseStatusLine(trimmed, acc)
+		case "peer":
+			parsePeer(scanner, line, acc)
+		case "sensor":
+			parseSensor(scanner, line, acc)
 		}
-
-		// get float metrics from output
-		for key, index := range floatI {
-			if len(fields) <= index {
-				continue
-			}
-			if fields[index] == "-" || fields[index] == "----" || fields[index] == "peer" || fields[index] == "not" || fields[index] == "valid" {
-				continue
-			}
-
-			if key == "offset" || key == "delay" || key == "jitter" {
-				m, err := strconv.ParseFloat(strings.TrimSuffix(fields[index], "ms"), 64)
-				if err != nil {
-					acc.AddError(fmt.Errorf("float value expected, got: %s", fields[index]))
-					continue
-				}
-				mFields[key] = m
-			} else {
-				m, err := strconv.ParseFloat(fields[index], 64)
-				if err != nil {
-					acc.AddError(fmt.Errorf("float value expected, got: %s", fields[index]))
-					continue
-				}
-				mFields[key] = m
-			}
-		}
-		acc.AddFields("openntpd", mFields, tags)
-
-		lineCounter++
 	}
+
 	return nil
+}
+
+// parseStatusLine parses the summary line produced by `ntpctl -s all`, e.g.:
+//
+//	12/12 peers valid, 1/1 sensors valid, constraint offset -1s, clock synced, stratum 1
+func parseStatusLine(line string, acc telegraf.Accumulator) {
+	fields := make(map[string]interface{}, 7)
+
+	parts := strings.Split(line, ", ")
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		switch {
+		case strings.HasSuffix(part, "peers valid"):
+			fraction := strings.Fields(part)[0]
+			if pv, pt, ok := parseFraction(fraction); ok {
+				fields["peers_valid"] = pv
+				fields["peers_total"] = pt
+			}
+		case strings.HasSuffix(part, "sensors valid"):
+			fraction := strings.Fields(part)[0]
+			if sv, st, ok := parseFraction(fraction); ok {
+				fields["sensors_valid"] = sv
+				fields["sensors_total"] = st
+			}
+		case strings.HasPrefix(part, "constraint offset "):
+			val := strings.TrimPrefix(part, "constraint offset ")
+			val = strings.TrimSuffix(val, "s")
+			if v, err := strconv.ParseInt(val, 10, 64); err == nil {
+				fields["constraint_offset_s"] = v
+			}
+		case part == "clock synced":
+			fields["clock_synced"] = int64(1)
+		case strings.HasPrefix(part, "stratum "):
+			val := strings.TrimPrefix(part, "stratum ")
+			if v, err := strconv.ParseInt(val, 10, 64); err == nil {
+				fields["stratum"] = v
+			}
+		}
+	}
+
+	// Make sure we always provide the clock_synced field
+	if _, found := fields["clock_synced"]; !found {
+		fields["clock_synced"] = int64(0)
+	}
+
+	acc.AddFields("openntpd_status", fields, make(map[string]string))
+}
+
+// parseFraction splits "12/12" into (numerator, denominator, ok).
+func parseFraction(s string) (num, den int64, ok bool) {
+	n, d, found := strings.Cut(s, "/")
+	if !found {
+		return 0, 0, false
+	}
+	num, err1 := strconv.ParseInt(n, 10, 64)
+	den, err2 := strconv.ParseInt(d, 10, 64)
+	if err1 != nil || err2 != nil {
+		return 0, 0, false
+	}
+	return num, den, true
+}
+
+// parsePeer parses a two-line peer entry. headerLine is the first line
+// (peer address / DNS name); the second line is read from scanner.
+func parsePeer(scanner *bufio.Scanner, headerLine string, acc telegraf.Accumulator) {
+	headerFields := strings.Fields(headerLine)
+
+	mFields := make(map[string]interface{})
+	tags := make(map[string]string)
+
+	// DNS resolution error → keep DNS name as remote
+	if headerFields[0] != "not" {
+		tags["remote"] = headerFields[0]
+	} else {
+		tags["remote"] = headerFields[len(headerFields)-1]
+	}
+
+	if !scanner.Scan() {
+		return
+	}
+	statsLine := scanner.Text()
+	statsFields := strings.Fields(statsLine)
+
+	// Optional state prefix (e.g. "*")
+	if strings.ContainsAny(statsFields[0], "*") {
+		tags["state_prefix"] = statsFields[0]
+		statsFields = statsFields[1:]
+	}
+
+	for key, index := range peerTagI {
+		if index < len(statsFields) {
+			tags[key] = statsFields[index]
+		}
+	}
+
+	for key, index := range peerIntI {
+		if index >= len(statsFields) || statsFields[index] == "-" {
+			continue
+		}
+		raw := statsFields[index]
+		if key == "next" || key == "poll" {
+			raw = strings.TrimSuffix(raw, "s")
+		}
+		v, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			acc.AddError(fmt.Errorf("integer value expected, got: %s", statsFields[index]))
+			continue
+		}
+		mFields[key] = v
+	}
+
+	for key, index := range peerFloatI {
+		if index >= len(statsFields) {
+			continue
+		}
+		raw := statsFields[index]
+		if raw == "-" || raw == "----" || raw == "peer" ||
+			raw == "not" || raw == "valid" {
+			continue
+		}
+		if key == "offset" || key == "delay" || key == "jitter" {
+			raw = strings.TrimSuffix(raw, "ms")
+		}
+		v, err := strconv.ParseFloat(raw, 64)
+		if err != nil {
+			acc.AddError(fmt.Errorf("float value expected, got: %s", statsFields[index]))
+			continue
+		}
+		mFields[key] = v
+	}
+
+	acc.AddFields("openntpd", mFields, tags)
+}
+
+// parseSensor parses a two-line sensor entry. headerLine is the first line
+// (sensor name and refid); the second line is read from scanner.
+func parseSensor(scanner *bufio.Scanner, headerLine string, acc telegraf.Accumulator) {
+	headerFields := strings.Fields(headerLine)
+	if len(headerFields) < 1 {
+		return
+	}
+
+	tags := make(map[string]string, 3)
+	tags["sensor"] = headerFields[0]
+	if len(headerFields) >= 2 {
+		tags["refid"] = headerFields[1]
+	}
+
+	if !scanner.Scan() {
+		return
+	}
+	statsLine := scanner.Text()
+	statsFields := strings.Fields(statsLine)
+
+	// Optional state prefix (e.g. "*")
+	if len(statsFields) > 0 && strings.ContainsAny(statsFields[0], "*") {
+		tags["state_prefix"] = statsFields[0]
+		statsFields = statsFields[1:]
+	}
+
+	mFields := make(map[string]interface{}, 7)
+
+	for key, index := range sensorIntI {
+		if index >= len(statsFields) || statsFields[index] == "-" {
+			continue
+		}
+		raw := statsFields[index]
+		if key == "next" || key == "poll" {
+			raw = strings.TrimSuffix(raw, "s")
+		}
+		v, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			acc.AddError(fmt.Errorf("integer value expected, got: %s", statsFields[index]))
+			continue
+		}
+		mFields[key] = v
+	}
+
+	for key, index := range sensorFloatI {
+		if index >= len(statsFields) || statsFields[index] == "-" {
+			continue
+		}
+		raw := strings.TrimSuffix(statsFields[index], "ms")
+		v, err := strconv.ParseFloat(raw, 64)
+		if err != nil {
+			acc.AddError(fmt.Errorf("float value expected, got: %s", statsFields[index]))
+			continue
+		}
+		mFields[key] = v
+	}
+
+	acc.AddFields("openntpd_sensors", mFields, tags)
 }
 
 // Shell out to ntpctl and return the output
 func openntpdRunner(cmdName string, timeout config.Duration, useSudo bool) (*bytes.Buffer, error) {
-	cmdArgs := []string{"-s", "peers"}
+	cmdArgs := []string{"-s", "all"}
 
 	cmd := exec.Command(cmdName, cmdArgs...)
 

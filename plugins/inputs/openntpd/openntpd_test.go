@@ -3,10 +3,13 @@ package openntpd
 import (
 	"bytes"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -257,6 +260,167 @@ func TestParseFullOutput(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "openntpd", fourthpeerfields, fourthpeertags)
 }
 
+func TestParseFullOutputAll(t *testing.T) {
+	plugin := &Openntpd{
+		run: openntpdCTL(fullOutputAll),
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"openntpd_status",
+			map[string]string{},
+			map[string]interface{}{
+				"peers_valid":         int64(12),
+				"peers_total":         int64(12),
+				"sensors_valid":       int64(1),
+				"sensors_total":       int64(1),
+				"constraint_offset_s": int64(-1),
+				"clock_synced":        int64(1),
+				"stratum":             int64(1),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"openntpd",
+			map[string]string{
+				"remote":  "212.129.9.36",
+				"stratum": "3",
+			},
+			map[string]interface{}{
+				"wt":     int64(1),
+				"tl":     int64(10),
+				"next":   int64(56),
+				"poll":   int64(63),
+				"offset": float64(9.271),
+				"delay":  float64(44.662),
+				"jitter": float64(2.678),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"openntpd",
+			map[string]string{
+				"remote":  "163.172.25.19",
+				"stratum": "2",
+			},
+			map[string]interface{}{
+				"wt":     int64(1),
+				"tl":     int64(10),
+				"next":   int64(21),
+				"poll":   int64(64),
+				"offset": float64(-0.103),
+				"delay":  float64(53.199),
+				"jitter": float64(9.046),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"openntpd",
+			map[string]string{
+				"remote":       "92.243.6.5",
+				"stratum":      "2",
+				"state_prefix": "*",
+			},
+			map[string]interface{}{
+				"wt":     int64(1),
+				"tl":     int64(10),
+				"next":   int64(45),
+				"poll":   int64(980),
+				"offset": float64(-9.901),
+				"delay":  float64(67.573),
+				"jitter": float64(29.350),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"openntpd",
+			map[string]string{
+				"remote":  "178.33.111.49",
+				"stratum": "-",
+			},
+			map[string]interface{}{
+				"wt":   int64(1),
+				"tl":   int64(2),
+				"next": int64(203),
+				"poll": int64(300),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"openntpd_sensors",
+			map[string]string{
+				"sensor":       "nmea0",
+				"refid":        "GPS",
+				"state_prefix": "*",
+			},
+			map[string]interface{}{
+				"wt":         int64(10),
+				"gd":         int64(1),
+				"st":         int64(0),
+				"next":       int64(1),
+				"poll":       int64(15),
+				"offset":     float64(-0.673),
+				"correction": float64(0.600),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t,
+		expected, actual,
+		testutil.SortMetrics(),
+		testutil.IgnoreTime(),
+	)
+}
+
+func TestParseStatusLineClockNotSynced(t *testing.T) {
+	plugin := &Openntpd{
+		run: openntpdCTL(outputNoSync),
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"openntpd_status",
+			map[string]string{},
+			map[string]interface{}{
+				"peers_valid":         int64(0),
+				"peers_total":         int64(4),
+				"constraint_offset_s": int64(0),
+				"clock_synced":        int64(0),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"openntpd",
+			map[string]string{
+				"remote":  "212.129.9.36",
+				"stratum": "-",
+			},
+			map[string]interface{}{
+				"wt":   int64(1),
+				"tl":   int64(2),
+				"next": int64(5),
+				"poll": int64(15),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t,
+		expected, actual,
+		testutil.SortMetrics(),
+		testutil.IgnoreTime(),
+	)
+}
+
 var simpleOutput = `peer
 wt tl st  next  poll          offset       delay      jitter
 212.129.9.36 from pool 0.debian.pool.ntp.org
@@ -325,3 +489,31 @@ wt tl st  next  poll          offset       delay      jitter
 1  2  -  105s  300s             ---- peer not valid ----
 194.57.169.1 from pool 3.debian.pool.ntp.org
 1 10  2   32s   63s         6.589ms    52.051ms     2.057ms`
+
+// fullOutputAll represents the output of `ntpctl -s all` with status line,
+// peers and a sensor section.
+var fullOutputAll = `12/12 peers valid, 1/1 sensors valid, constraint offset -1s, clock synced, stratum 1
+
+peer
+   wt tl st  next  poll          offset       delay      jitter
+212.129.9.36 from pool 0.debian.pool.ntp.org
+    1 10  3   56s   63s         9.271ms    44.662ms     2.678ms
+163.172.25.19 from pool 0.debian.pool.ntp.org
+    1 10  2   21s   64s        -0.103ms    53.199ms     9.046ms
+92.243.6.5 from pool 0.debian.pool.ntp.org
+ *  1 10  2   45s  980s        -9.901ms    67.573ms    29.350ms
+178.33.111.49 from pool 0.debian.pool.ntp.org
+    1  2  -  203s  300s             ---- peer not valid ----
+
+sensor
+   wt gd st  next  poll          offset  correction
+nmea0  GPS
+ * 10  1  0    1s   15s        -0.673ms     0.600ms`
+
+// outputNoSync represents a status line where the clock is not yet synced.
+var outputNoSync = `0/4 peers valid, constraint offset 0s, clock unsynced
+
+peer
+   wt tl st  next  poll          offset       delay      jitter
+212.129.9.36 from pool 0.debian.pool.ntp.org
+    1  2  -    5s   15s             ---- peer not valid ----`
