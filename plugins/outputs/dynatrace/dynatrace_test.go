@@ -135,102 +135,49 @@ func TestMissingAPIToken(t *testing.T) {
 }
 
 func TestSendMetrics(t *testing.T) {
-	var expected []string
-
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// check the encoded result
-		bodyBytes, err := io.ReadAll(r.Body)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			t.Error(err)
-			return
-		}
-
-		bodyString := string(bodyBytes)
-		lines := strings.Split(bodyString, "\n")
-
-		sort.Strings(lines)
-		sort.Strings(expected)
-
-		expectedString := strings.Join(expected, "\n")
-		foundString := strings.Join(lines, "\n")
-		if foundString != expectedString {
-			t.Errorf("Metric encoding failed. expected: %#v but got: %#v", expectedString, foundString)
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-		if err = json.NewEncoder(w).Encode(fmt.Sprintf(`{"linesOk":%d,"linesInvalid":0,"error":null}`, len(lines))); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			t.Error(err)
-			return
-		}
-	}))
-	defer ts.Close()
-
-	d := &Dynatrace{
-		URL:      ts.URL,
-		APIToken: config.NewSecret([]byte("123")),
-		Log:      testutil.Logger{},
+	// Init metrics
+	metrics := []telegraf.Metric{
+		// Simple metrics are exported as a gauge unless in additional_counters
+		metric.New(
+			"simple_metric",
+			map[string]string{},
+			map[string]interface{}{"value": float64(3.14), "counter": 5},
+			time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+		),
+		// Even if Type() returns counter, all metrics are treated as a gauge unless explicitly added to additional_counters
+		metric.New(
+			"counter_type",
+			map[string]string{},
+			map[string]interface{}{"value": float64(3.14), "counter": 5},
+			time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+			telegraf.Counter,
+		),
+		// Add some complex metrics
+		metric.New(
+			"complex_metric",
+			map[string]string{},
+			map[string]interface{}{"int": 1, "int64": int64(2), "float": 3.0, "float64": float64(4.0), "true": true, "false": false},
+			time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+		),
 	}
 
-	err := d.Init()
-	require.NoError(t, err)
-	err = d.Connect()
-	require.NoError(t, err)
-
-	// Init metrics
-
-	// Simple metrics are exported as a gauge unless in additional_counters
-	expected = append(expected,
+	// Init expected results
+	expected := []string{
+		// Simple metrics are exported as a gauge unless in additional_counters
 		"simple_metric.value,dt.metrics.source=telegraf gauge,3.14 1289430000000",
 		"simple_metric.counter,dt.metrics.source=telegraf count,delta=5 1289430000000",
-	)
-	d.AddCounterMetrics = append(d.AddCounterMetrics, "simple_metric.counter")
-	m1 := metric.New(
-		"simple_metric",
-		map[string]string{},
-		map[string]interface{}{"value": float64(3.14), "counter": 5},
-		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
-	)
-
-	// Even if Type() returns counter, all metrics are treated as a gauge unless explicitly added to additional_counters
-	expected = append(expected,
+		// Even if Type() returns counter, all metrics are treated as a gauge unless explicitly added to additional_counters
 		"counter_type.value,dt.metrics.source=telegraf gauge,3.14 1289430000000",
 		"counter_type.counter,dt.metrics.source=telegraf count,delta=5 1289430000000",
-	)
-	d.AddCounterMetrics = append(d.AddCounterMetrics, "counter_type.counter")
-	m2 := metric.New(
-		"counter_type",
-		map[string]string{},
-		map[string]interface{}{"value": float64(3.14), "counter": 5},
-		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
-		telegraf.Counter,
-	)
-
-	expected = append(expected,
+		// Add some complex metrics
 		"complex_metric.int,dt.metrics.source=telegraf gauge,1 1289430000000",
 		"complex_metric.int64,dt.metrics.source=telegraf gauge,2 1289430000000",
 		"complex_metric.float,dt.metrics.source=telegraf gauge,3 1289430000000",
 		"complex_metric.float64,dt.metrics.source=telegraf gauge,4 1289430000000",
 		"complex_metric.true,dt.metrics.source=telegraf gauge,1 1289430000000",
 		"complex_metric.false,dt.metrics.source=telegraf gauge,0 1289430000000",
-	)
-	m3 := metric.New(
-		"complex_metric",
-		map[string]string{},
-		map[string]interface{}{"int": 1, "int64": int64(2), "float": 3.0, "float64": float64(4.0), "true": true, "false": false},
-		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
-	)
-
-	metrics := []telegraf.Metric{m1, m2, m3}
-
-	err = d.Write(metrics)
-	require.NoError(t, err)
-}
-
-func TestSendMetricsWithPatterns(t *testing.T) {
-	var expected []string
+	}
+	sort.Strings(expected)
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// check the encoded result
@@ -242,11 +189,9 @@ func TestSendMetricsWithPatterns(t *testing.T) {
 		}
 
 		bodyString := string(bodyBytes)
-
 		lines := strings.Split(bodyString, "\n")
 
 		sort.Strings(lines)
-		sort.Strings(expected)
 
 		expectedString := strings.Join(expected, "\n")
 		foundString := strings.Join(lines, "\n")
@@ -267,84 +212,125 @@ func TestSendMetricsWithPatterns(t *testing.T) {
 	d := &Dynatrace{
 		URL:      ts.URL,
 		APIToken: config.NewSecret([]byte("123")),
-		Log:      testutil.Logger{},
+		AddCounterMetrics: []string{
+			// Simple metrics are exported as a gauge unless in additional_counters
+			"simple_metric.counter",
+			// Even if Type() returns counter, all metrics are treated as a gauge unless explicitly added to additional_counters
+			"counter_type.counter",
+		},
+		Log: testutil.Logger{},
+	}
+	require.NoError(t, d.Init())
+	require.NoError(t, d.Connect())
+	require.NoError(t, d.Write(metrics))
+}
+
+func TestSendMetricsWithPatterns(t *testing.T) {
+	// Init metrics
+	metrics := []telegraf.Metric{
+		// Add pattern to match all metrics that match simple_[a-z]+_metric.counter
+		metric.New(
+			"simple_abc_metric",
+			map[string]string{},
+			map[string]interface{}{"value": float64(3.14), "counter": 5},
+			time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+		),
+		metric.New(
+			"simple_xyz_metric",
+			map[string]string{},
+			map[string]interface{}{"value": float64(3.14), "counter": 5},
+			time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+		),
+		// Even if Type() returns counter, all metrics are treated as a gauge unless pattern match with additional_counters_patterns
+		metric.New(
+			"counter_fan01_type",
+			map[string]string{},
+			map[string]interface{}{"value": float64(3.14), "counter": 5},
+			time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+			telegraf.Counter,
+		),
+		metric.New(
+			"counter_fanNaN_type",
+			map[string]string{},
+			map[string]interface{}{"value": float64(3.14), "counter": 5},
+			time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+			telegraf.Counter,
+		),
+		metric.New(
+			"complex_metric",
+			map[string]string{},
+			map[string]interface{}{"int": 1, "int64": int64(2), "float": 3.0, "float64": float64(4.0), "true": true, "false": false},
+			time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+		),
 	}
 
-	err := d.Init()
-	require.NoError(t, err)
-	err = d.Connect()
-	require.NoError(t, err)
-
-	// Init metrics
-
-	// Simple metrics are exported as a gauge unless pattern match in additional_counters_patterns
-	expected = append(expected,
+	// Init expected results
+	expected := []string{
+		// Simple metrics are exported as a gauge unless pattern match in additional_counters_patterns
 		"simple_abc_metric.value,dt.metrics.source=telegraf gauge,3.14 1289430000000",
 		"simple_abc_metric.counter,dt.metrics.source=telegraf count,delta=5 1289430000000",
 		"simple_xyz_metric.value,dt.metrics.source=telegraf gauge,3.14 1289430000000",
 		"simple_xyz_metric.counter,dt.metrics.source=telegraf count,delta=5 1289430000000",
-	)
-	// Add pattern to match all metrics that match simple_[a-z]+_metric.counter
-	d.AddCounterMetricsPatterns = append(d.AddCounterMetricsPatterns, "simple_[a-z]+_metric.counter")
-
-	m1 := metric.New(
-		"simple_abc_metric",
-		map[string]string{},
-		map[string]interface{}{"value": float64(3.14), "counter": 5},
-		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
-	)
-
-	m2 := metric.New(
-		"simple_xyz_metric",
-		map[string]string{},
-		map[string]interface{}{"value": float64(3.14), "counter": 5},
-		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
-	)
-
-	// Even if Type() returns counter, all metrics are treated as a gauge unless pattern match with additional_counters_patterns
-	expected = append(expected,
+		// Even if Type() returns counter, all metrics are treated as a gauge unless pattern match with additional_counters_patterns
 		"counter_fan01_type.value,dt.metrics.source=telegraf gauge,3.14 1289430000000",
 		"counter_fan01_type.counter,dt.metrics.source=telegraf count,delta=5 1289430000000",
 		"counter_fanNaN_type.counter,dt.metrics.source=telegraf gauge,5 1289430000000",
 		"counter_fanNaN_type.value,dt.metrics.source=telegraf gauge,3.14 1289430000000",
-	)
-	d.AddCounterMetricsPatterns = append(d.AddCounterMetricsPatterns, "counter_fan[0-9]+_type.counter")
-	m3 := metric.New(
-		"counter_fan01_type",
-		map[string]string{},
-		map[string]interface{}{"value": float64(3.14), "counter": 5},
-		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
-		telegraf.Counter,
-	)
-
-	m4 := metric.New(
-		"counter_fanNaN_type",
-		map[string]string{},
-		map[string]interface{}{"value": float64(3.14), "counter": 5},
-		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
-		telegraf.Counter,
-	)
-
-	expected = append(expected,
+		// Add some complex metrics
 		"complex_metric.int,dt.metrics.source=telegraf gauge,1 1289430000000",
 		"complex_metric.int64,dt.metrics.source=telegraf gauge,2 1289430000000",
 		"complex_metric.float,dt.metrics.source=telegraf gauge,3 1289430000000",
 		"complex_metric.float64,dt.metrics.source=telegraf gauge,4 1289430000000",
 		"complex_metric.true,dt.metrics.source=telegraf gauge,1 1289430000000",
 		"complex_metric.false,dt.metrics.source=telegraf gauge,0 1289430000000",
-	)
+	}
+	sort.Strings(expected)
 
-	m5 := metric.New(
-		"complex_metric",
-		map[string]string{},
-		map[string]interface{}{"int": 1, "int64": int64(2), "float": 3.0, "float64": float64(4.0), "true": true, "false": false},
-		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
-	)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// check the encoded result
+		bodyBytes, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 
-	metrics := []telegraf.Metric{m1, m2, m3, m4, m5}
+		bodyString := string(bodyBytes)
 
-	err = d.Write(metrics)
-	require.NoError(t, err)
+		lines := strings.Split(bodyString, "\n")
+
+		sort.Strings(lines)
+
+		expectedString := strings.Join(expected, "\n")
+		foundString := strings.Join(lines, "\n")
+		if foundString != expectedString {
+			t.Errorf("Metric encoding failed. expected: %#v but got: %#v", expectedString, foundString)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		if err = json.NewEncoder(w).Encode(fmt.Sprintf(`{"linesOk":%d,"linesInvalid":0,"error":null}`, len(lines))); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
+	}))
+	defer ts.Close()
+
+	d := &Dynatrace{
+		URL:      ts.URL,
+		APIToken: config.NewSecret([]byte("123")),
+		AddCounterMetricsPatterns: []string{
+			// Add pattern to match all metrics that match simple_[a-z]+_metric.counter
+			"simple_[a-z]+_metric.counter",
+			// Even if Type() returns counter, all metrics are treated as a gauge unless pattern match with additional_counters_patterns
+			"counter_fan[0-9]+_type.counter",
+		},
+		Log: testutil.Logger{},
+	}
+	require.NoError(t, d.Init())
+	require.NoError(t, d.Connect())
+	require.NoError(t, d.Write(metrics))
 }
 
 func TestSendSingleMetricWithUnorderedTags(t *testing.T) {

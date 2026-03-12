@@ -78,12 +78,14 @@ func TestSocketWriter_unixgram(t *testing.T) {
 }
 
 func testSocketWriterStream(t *testing.T, sw *SocketWriter, lconn net.Conn) {
-	metrics := []telegraf.Metric{testutil.TestMetric(1, "test")}
+	metrics := []telegraf.Metric{
+		testutil.TestMetric(1, "test"),
+		testutil.TestMetric(2, "test"),
+	}
 	mbs1out, err := sw.serializer.Serialize(metrics[0])
 	require.NoError(t, err)
 	mbs1out, err = sw.encoder.Encode(mbs1out)
 	require.NoError(t, err)
-	metrics = append(metrics, testutil.TestMetric(2, "test"))
 	mbs2out, err := sw.serializer.Serialize(metrics[1])
 	require.NoError(t, err)
 	mbs2out, err = sw.encoder.Encode(mbs2out)
@@ -103,13 +105,15 @@ func testSocketWriterStream(t *testing.T, sw *SocketWriter, lconn net.Conn) {
 }
 
 func testSocketWriterPacket(t *testing.T, sw *SocketWriter, lconn net.PacketConn) {
-	metrics := []telegraf.Metric{testutil.TestMetric(1, "test")}
+	metrics := []telegraf.Metric{
+		testutil.TestMetric(1, "test"),
+		testutil.TestMetric(2, "test"),
+	}
 	mbs1out, err := sw.serializer.Serialize(metrics[0])
 	require.NoError(t, err)
 	mbs1out, err = sw.encoder.Encode(mbs1out)
 	require.NoError(t, err)
 	mbs1str := string(mbs1out)
-	metrics = append(metrics, testutil.TestMetric(2, "test"))
 	mbs2out, err := sw.serializer.Serialize(metrics[1])
 	require.NoError(t, err)
 	mbs2out, err = sw.encoder.Encode(mbs2out)

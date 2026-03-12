@@ -30,6 +30,7 @@ const (
 type DeadbandType string
 
 const (
+	None     DeadbandType = "None"
 	Absolute DeadbandType = "Absolute"
 	Percent  DeadbandType = "Percent"
 )

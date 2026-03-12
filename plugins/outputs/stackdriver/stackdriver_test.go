@@ -25,6 +25,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -1172,6 +1173,16 @@ func TestBuildHistogram(t *testing.T) {
 	value, err := buildHistogram(m)
 	require.NoError(t, err)
 	require.Equal(t, expected, value.GetDistributionValue())
+}
+
+func TestSecretTokenSource(t *testing.T) {
+	secret := config.NewSecret([]byte("my-access-token"))
+	ts := &secretTokenSource{secret: &secret}
+
+	token, err := ts.Token()
+	require.NoError(t, err)
+	require.Equal(t, "my-access-token", token.AccessToken)
+	require.Equal(t, "Bearer", token.TokenType)
 }
 
 func startServer(t *testing.T, mock *mockServer) (*grpc.Server, *monitoring.MetricClient) {

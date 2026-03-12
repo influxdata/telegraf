@@ -207,7 +207,7 @@ func TestInvalidTypeQueries(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{},
 				map[string]interface{}{
@@ -228,7 +228,7 @@ func TestInvalidTypeQueries(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{},
 				map[string]interface{}{
@@ -274,7 +274,7 @@ func TestParseTimestamps(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{},
 				map[string]interface{}{},
@@ -291,7 +291,7 @@ func TestParseTimestamps(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{},
 				map[string]interface{}{},
@@ -308,7 +308,7 @@ func TestParseTimestamps(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{},
 				map[string]interface{}{},
@@ -325,7 +325,7 @@ func TestParseTimestamps(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{},
 				map[string]interface{}{},
@@ -342,7 +342,7 @@ func TestParseTimestamps(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{},
 				map[string]interface{}{},
@@ -359,7 +359,7 @@ func TestParseTimestamps(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{},
 				map[string]interface{}{},
@@ -409,7 +409,7 @@ func TestParseSingleValues(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{},
 				map[string]interface{}{
@@ -436,7 +436,7 @@ func TestParseSingleValues(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{},
 				map[string]interface{}{
@@ -465,7 +465,7 @@ func TestParseSingleValues(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{},
 				map[string]interface{}{
@@ -490,7 +490,7 @@ func TestParseSingleValues(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{},
 				map[string]interface{}{
@@ -513,7 +513,7 @@ func TestParseSingleValues(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{},
 				map[string]interface{}{
@@ -536,7 +536,7 @@ func TestParseSingleValues(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{},
 				map[string]interface{}{
@@ -559,7 +559,7 @@ func TestParseSingleValues(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{
 					"state": "ok",
@@ -606,7 +606,7 @@ func TestParseSingleAttributes(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{},
 				map[string]interface{}{},
@@ -623,7 +623,7 @@ func TestParseSingleAttributes(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{},
 				map[string]interface{}{},
@@ -645,7 +645,7 @@ func TestParseSingleAttributes(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{},
 				map[string]interface{}{
@@ -672,7 +672,7 @@ func TestParseSingleAttributes(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{},
 				map[string]interface{}{
@@ -701,7 +701,7 @@ func TestParseSingleAttributes(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{},
 				map[string]interface{}{
@@ -725,7 +725,7 @@ func TestParseSingleAttributes(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{},
 				map[string]interface{}{
@@ -747,7 +747,7 @@ func TestParseSingleAttributes(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{
 					"state": "ok",
@@ -769,7 +769,7 @@ func TestParseSingleAttributes(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{},
 				map[string]interface{}{
@@ -823,7 +823,7 @@ func TestParseMultiValues(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{},
 				map[string]interface{}{
@@ -854,7 +854,7 @@ func TestParseMultiValues(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"test",
 				map[string]string{},
 				map[string]interface{}{
@@ -918,7 +918,7 @@ func TestParseMultiNodes(t *testing.T) {
 			},
 			defaultTags: map[string]string{},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"test",
 					map[string]string{
 						"name":  "Device 1",
@@ -931,7 +931,7 @@ func TestParseMultiNodes(t *testing.T) {
 					},
 					time.Unix(1577923199, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"test",
 					map[string]string{
 						"name":  "Device 2",
@@ -944,7 +944,7 @@ func TestParseMultiNodes(t *testing.T) {
 					},
 					time.Unix(1577923199, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"test",
 					map[string]string{
 						"name":  "Device 3",
@@ -957,7 +957,7 @@ func TestParseMultiNodes(t *testing.T) {
 					},
 					time.Unix(1577923199, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"test",
 					map[string]string{
 						"name":  "Device 4",
@@ -970,7 +970,7 @@ func TestParseMultiNodes(t *testing.T) {
 					},
 					time.Unix(1577923199, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"test",
 					map[string]string{
 						"name":  "Device 5",
@@ -1026,7 +1026,7 @@ func TestParseMetricQuery(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"state",
 				map[string]string{},
 				map[string]interface{}{
@@ -1048,7 +1048,7 @@ func TestParseMetricQuery(t *testing.T) {
 				},
 			},
 			defaultTags: map[string]string{},
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"the_metric",
 				map[string]string{},
 				map[string]interface{}{

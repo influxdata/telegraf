@@ -45,7 +45,7 @@ type PointParser struct {
 
 // NewWavefrontElements returns a slice of elementParser's for the Graphite format
 func NewWavefrontElements() []elementParser {
-	var elements []elementParser
+	elements := make([]elementParser, 0, 7)
 	wsParser := whiteSpaceParser{}
 	wsParserNextOpt := whiteSpaceParser{nextOptional: true}
 	repeatParser := loopedParser{wrappedParser: &tagParser{}, wsParser: &wsParser}
@@ -128,7 +128,7 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 }
 
 func (p *PointParser) convertPointToTelegrafMetric(points []Point) ([]telegraf.Metric, error) {
-	metrics := make([]telegraf.Metric, 0)
+	metrics := make([]telegraf.Metric, 0, len(points))
 
 	for _, point := range points {
 		tags := make(map[string]string)

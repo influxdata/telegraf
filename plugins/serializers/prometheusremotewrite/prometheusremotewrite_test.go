@@ -839,7 +839,7 @@ func prompbToText(data []byte) ([]byte, error) {
 	}
 	samples := protoToSamples(&req)
 	for _, sample := range samples {
-		buf.WriteString(fmt.Sprintf("%s %s\n", sample.Metric.String(), sample.Value.String()))
+		fmt.Fprintf(&buf, "%s %s\n", sample.Metric.String(), sample.Value.String())
 	}
 
 	return buf.Bytes(), nil
@@ -899,7 +899,7 @@ func prompbToHistogramText(data []byte) ([]byte, error) {
 			fh := *h.ToFloatHistogram()
 			buf.WriteString(nameString)
 			buf.WriteString(labelString)
-			buf.WriteString(fmt.Sprintf(" %v\n", fh.String()))
+			fmt.Fprintf(&buf, " %v\n", fh.String())
 		}
 	}
 	return buf.Bytes(), nil

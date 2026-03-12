@@ -76,8 +76,8 @@ func TestMsgPackTime96(t *testing.T) {
 }
 
 func TestMsgPackTimeEdgeCases(t *testing.T) {
-	times := make([]time.Time, 0)
-	expected := make([][]byte, 0)
+	times := make([]time.Time, 0, 8)
+	expected := make([][]byte, 0, 8)
 
 	// Unix epoch. Begin of 4bytes dates
 	// Nanoseconds: 0x00000000, Seconds: 0x0000000000000000

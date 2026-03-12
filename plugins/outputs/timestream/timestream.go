@@ -483,7 +483,6 @@ func (t *Timestream) buildSingleWriteRecords(point telegraf.Metric) []types.Reco
 }
 
 func (t *Timestream) buildMultiMeasureWriteRecords(point telegraf.Metric) []types.Record {
-	var records []types.Record
 	dimensions := t.buildDimensions(point)
 
 	multiMeasureName := t.MeasureNameForMultiMeasureRecords
@@ -509,18 +508,16 @@ func (t *Timestream) buildMultiMeasureWriteRecords(point telegraf.Metric) []type
 
 	timeUnit, timeValue := getTimestreamTime(point.Time())
 
-	record := types.Record{
-		MeasureName:      aws.String(multiMeasureName),
-		MeasureValueType: "MULTI",
-		MeasureValues:    multiMeasures,
-		Dimensions:       dimensions,
-		Time:             aws.String(timeValue),
-		TimeUnit:         timeUnit,
+	return []types.Record{
+		{
+			MeasureName:      aws.String(multiMeasureName),
+			MeasureValueType: "MULTI",
+			MeasureValues:    multiMeasures,
+			Dimensions:       dimensions,
+			Time:             aws.String(timeValue),
+			TimeUnit:         timeUnit,
+		},
 	}
-
-	records = append(records, record)
-
-	return records
 }
 
 // partitionRecords splits the Timestream records into smaller slices of a max size

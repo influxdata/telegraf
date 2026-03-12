@@ -36,7 +36,7 @@ func TestSimple(t *testing.T) {
 	final.Push(&acc)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"m1",
 			tags,
 			map[string]interface{}{
@@ -74,7 +74,7 @@ func TestTwoTags(t *testing.T) {
 	final.Push(&acc)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"m1",
 			tags2,
 			map[string]interface{}{
@@ -82,7 +82,7 @@ func TestTwoTags(t *testing.T) {
 			},
 			time.Unix(1530939937, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"m1",
 			tags1,
 			map[string]interface{}{
@@ -128,7 +128,7 @@ func TestLongDifference(t *testing.T) {
 	final.Push(&acc)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"m",
 			tags,
 			map[string]interface{}{
@@ -136,7 +136,7 @@ func TestLongDifference(t *testing.T) {
 			},
 			now.Add(time.Second*-275),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"m",
 			tags,
 			map[string]interface{}{
@@ -192,7 +192,7 @@ func TestOutputStrategyTimeout(t *testing.T) {
 	final.Push(&acc)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"m",
 			tags,
 			map[string]interface{}{
@@ -200,7 +200,7 @@ func TestOutputStrategyTimeout(t *testing.T) {
 			},
 			now.Add(time.Second*-275),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"m",
 			tags,
 			map[string]interface{}{
