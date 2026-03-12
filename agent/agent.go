@@ -417,10 +417,7 @@ func (a *Agent) runInputs(ctx context.Context, startTime time.Time, unit *inputU
 		}
 
 		// Overwrite agent collection_jitter if this plugin has its own.
-		jitter := time.Duration(a.Config.Agent.CollectionJitter)
-		if input.Config.CollectionJitter != 0 {
-			jitter = input.Config.CollectionJitter
-		}
+		jitter := getCollectionJitter(time.Duration(a.Config.Agent.CollectionJitter), input.Config)
 
 		// Overwrite agent collection_offset if this plugin has its own.
 		offset := time.Duration(a.Config.Agent.CollectionOffset)
@@ -1187,6 +1184,16 @@ func getPrecision(precision, interval time.Duration) time.Duration {
 	default:
 		return time.Nanosecond
 	}
+}
+
+func getCollectionJitter(agentJitter time.Duration, cfg *models.InputConfig) time.Duration {
+	if cfg == nil {
+		return agentJitter
+	}
+	if cfg.CollectionJitterSet || cfg.CollectionJitter != 0 {
+		return cfg.CollectionJitter
+	}
+	return agentJitter
 }
 
 // panicRecover displays an error if an input panics.
