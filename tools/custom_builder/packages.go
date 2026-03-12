@@ -297,7 +297,7 @@ func extractRegisteredNames(pkg *packages.Package, pluginType string) []string {
 	for _, file := range pkg.Syntax {
 		names, err := extractPluginInfo(file, pluginType, declarations)
 		if err != nil {
-			log.Printf("%q error: %v", file.Name, err)
+			log.Printf("%q/%q error: %v", pkg.PkgPath, file.Name.Name, err)
 			continue
 		}
 		registeredNames = append(registeredNames, names...)
