@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -20,7 +21,7 @@ import (
 func BenchmarkRemoteWrite(b *testing.B) {
 	batch := make([]telegraf.Metric, 1000)
 	for i := range batch {
-		batch[i] = testutil.MustMetric(
+		batch[i] = metric.New(
 			"cpu",
 			map[string]string{
 				"host": "example.org",
@@ -50,7 +51,7 @@ func TestRemoteWriteSerialize(t *testing.T) {
 		// metric is called "prometheus" and has no fields.
 		{
 			name: "empty name is skipped",
-			metric: testutil.MustMetric(
+			metric: metric.New(
 				"prometheus",
 				map[string]string{
 					"host": "example.org",
@@ -62,7 +63,7 @@ func TestRemoteWriteSerialize(t *testing.T) {
 		},
 		{
 			name: "empty labels are skipped",
-			metric: testutil.MustMetric(
+			metric: metric.New(
 				"cpu",
 				map[string]string{
 					"": "example.org",
@@ -78,7 +79,7 @@ cpu_time_idle 42
 		},
 		{
 			name: "simple",
-			metric: testutil.MustMetric(
+			metric: metric.New(
 				"cpu",
 				map[string]string{
 					"host": "example.org",
@@ -94,7 +95,7 @@ cpu_time_idle{host="example.org"} 42
 		},
 		{
 			name: "prometheus input untyped",
-			metric: testutil.MustMetric(
+			metric: metric.New(
 				"prometheus",
 				map[string]string{
 					"code":   "400",
@@ -112,7 +113,7 @@ http_requests_total{code="400", method="post"} 3
 		},
 		{
 			name: "prometheus input counter",
-			metric: testutil.MustMetric(
+			metric: metric.New(
 				"prometheus",
 				map[string]string{
 					"code":   "400",
@@ -130,7 +131,7 @@ http_requests_total{code="400", method="post"} 3
 		},
 		{
 			name: "prometheus input gauge",
-			metric: testutil.MustMetric(
+			metric: metric.New(
 				"prometheus",
 				map[string]string{
 					"code":   "400",
@@ -148,7 +149,7 @@ http_requests_total{code="400", method="post"} 3
 		},
 		{
 			name: "prometheus input histogram no buckets",
-			metric: testutil.MustMetric(
+			metric: metric.New(
 				"prometheus",
 				map[string]string{},
 				map[string]interface{}{
@@ -166,7 +167,7 @@ http_request_duration_seconds_bucket{le="+Inf"} 144320
 		},
 		{
 			name: "prometheus input histogram only bucket",
-			metric: testutil.MustMetric(
+			metric: metric.New(
 				"prometheus",
 				map[string]string{
 					"le": "0.5",
@@ -219,11 +220,11 @@ func TestRemoteWriteSerializeNegative(t *testing.T) {
 		clog.Clear()
 	}
 
-	m := testutil.MustMetric("@@!!", nil, map[string]interface{}{"!!": "@@"}, time.Unix(0, 0))
+	m := metric.New("@@!!", nil, map[string]interface{}{"!!": "@@"}, time.Unix(0, 0))
 	_, err := s.Serialize(m)
 	assert("failed to parse metric name \"@@!!_!!\"", err)
 
-	m = testutil.MustMetric("prometheus", nil,
+	m = metric.New("prometheus", nil,
 		map[string]interface{}{
 			"http_requests_total": "asd",
 		},
@@ -232,7 +233,7 @@ func TestRemoteWriteSerializeNegative(t *testing.T) {
 	_, err = s.Serialize(m)
 	assert("bad sample", err)
 
-	m = testutil.MustMetric(
+	m = metric.New(
 		"prometheus",
 		map[string]string{
 			"le": "0.5",
@@ -246,7 +247,7 @@ func TestRemoteWriteSerializeNegative(t *testing.T) {
 	_, err = s.Serialize(m)
 	assert("bad sample", err)
 
-	m = testutil.MustMetric(
+	m = metric.New(
 		"prometheus",
 		map[string]string{
 			"code":   "400",
@@ -262,7 +263,7 @@ func TestRemoteWriteSerializeNegative(t *testing.T) {
 	_, err = s.Serialize(m)
 	assert("bad sample", err)
 
-	m = testutil.MustMetric(
+	m = metric.New(
 		"prometheus",
 		map[string]string{"quantile": "0.01a"},
 		map[string]interface{}{
@@ -285,7 +286,7 @@ func TestRemoteWriteSerializeBatch(t *testing.T) {
 		{
 			name: "simple",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"host": "one.example.org",
@@ -295,7 +296,7 @@ func TestRemoteWriteSerializeBatch(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"host": "two.example.org",
@@ -314,7 +315,7 @@ cpu_time_idle{host="two.example.org"} 42
 		{
 			name: "multiple metric families",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"host": "one.example.org",
@@ -334,7 +335,7 @@ cpu_time_idle{host="one.example.org"} 42
 		{
 			name: "histogram",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"prometheus",
 					map[string]string{},
 					map[string]interface{}{
@@ -344,7 +345,7 @@ cpu_time_idle{host="one.example.org"} 42
 					time.Unix(0, 0),
 					telegraf.Histogram,
 				),
-				testutil.MustMetric(
+				metric.New(
 					"prometheus",
 					map[string]string{"le": "0.05"},
 					map[string]interface{}{
@@ -353,7 +354,7 @@ cpu_time_idle{host="one.example.org"} 42
 					time.Unix(0, 0),
 					telegraf.Histogram,
 				),
-				testutil.MustMetric(
+				metric.New(
 					"prometheus",
 					map[string]string{"le": "0.1"},
 					map[string]interface{}{
@@ -362,7 +363,7 @@ cpu_time_idle{host="one.example.org"} 42
 					time.Unix(0, 0),
 					telegraf.Histogram,
 				),
-				testutil.MustMetric(
+				metric.New(
 					"prometheus",
 					map[string]string{"le": "0.2"},
 					map[string]interface{}{
@@ -371,7 +372,7 @@ cpu_time_idle{host="one.example.org"} 42
 					time.Unix(0, 0),
 					telegraf.Histogram,
 				),
-				testutil.MustMetric(
+				metric.New(
 					"prometheus",
 					map[string]string{"le": "0.5"},
 					map[string]interface{}{
@@ -380,7 +381,7 @@ cpu_time_idle{host="one.example.org"} 42
 					time.Unix(0, 0),
 					telegraf.Histogram,
 				),
-				testutil.MustMetric(
+				metric.New(
 					"prometheus",
 					map[string]string{"le": "1.0"},
 					map[string]interface{}{
@@ -389,7 +390,7 @@ cpu_time_idle{host="one.example.org"} 42
 					time.Unix(0, 0),
 					telegraf.Histogram,
 				),
-				testutil.MustMetric(
+				metric.New(
 					"prometheus",
 					map[string]string{"le": "+Inf"},
 					map[string]interface{}{
@@ -413,7 +414,7 @@ http_request_duration_seconds_bucket{le="1"} 133988
 		{
 			name: "summary with quantile",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"prometheus",
 					map[string]string{},
 					map[string]interface{}{
@@ -423,7 +424,7 @@ http_request_duration_seconds_bucket{le="1"} 133988
 					time.Unix(0, 0),
 					telegraf.Summary,
 				),
-				testutil.MustMetric(
+				metric.New(
 					"prometheus",
 					map[string]string{"quantile": "0.01"},
 					map[string]interface{}{
@@ -432,7 +433,7 @@ http_request_duration_seconds_bucket{le="1"} 133988
 					time.Unix(0, 0),
 					telegraf.Summary,
 				),
-				testutil.MustMetric(
+				metric.New(
 					"prometheus",
 					map[string]string{"quantile": "0.05"},
 					map[string]interface{}{
@@ -441,7 +442,7 @@ http_request_duration_seconds_bucket{le="1"} 133988
 					time.Unix(0, 0),
 					telegraf.Summary,
 				),
-				testutil.MustMetric(
+				metric.New(
 					"prometheus",
 					map[string]string{"quantile": "0.5"},
 					map[string]interface{}{
@@ -450,7 +451,7 @@ http_request_duration_seconds_bucket{le="1"} 133988
 					time.Unix(0, 0),
 					telegraf.Summary,
 				),
-				testutil.MustMetric(
+				metric.New(
 					"prometheus",
 					map[string]string{"quantile": "0.9"},
 					map[string]interface{}{
@@ -459,7 +460,7 @@ http_request_duration_seconds_bucket{le="1"} 133988
 					time.Unix(0, 0),
 					telegraf.Summary,
 				),
-				testutil.MustMetric(
+				metric.New(
 					"prometheus",
 					map[string]string{"quantile": "0.99"},
 					map[string]interface{}{
@@ -482,7 +483,7 @@ rpc_duration_seconds{quantile="0.99"} 76656
 		{
 			name: "newer sample",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -490,7 +491,7 @@ rpc_duration_seconds{quantile="0.99"} 76656
 					},
 					time.Unix(1, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -506,7 +507,7 @@ cpu_time_idle 43
 		{
 			name: "colons are not replaced in metric name from measurement",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu::xyzzy",
 					map[string]string{},
 					map[string]interface{}{
@@ -522,7 +523,7 @@ cpu::xyzzy_time_idle 42
 		{
 			name: "colons are not replaced in metric name from field",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -538,7 +539,7 @@ cpu_time:idle 42
 		{
 			name: "invalid label",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"host-name": "example.org",
@@ -556,7 +557,7 @@ cpu_time_idle{host_name="example.org"} 42
 		{
 			name: "colons are replaced in label name",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"host:name": "example.org",
@@ -574,7 +575,7 @@ cpu_time_idle{host_name="example.org"} 42
 		{
 			name: "discard strings",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -592,7 +593,7 @@ cpu_time_idle 42
 			name:          "string as label",
 			stringAsLabel: true,
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -610,7 +611,7 @@ cpu_time_idle{cpu="cpu0"} 42
 			name:          "string as label duplicate tag",
 			stringAsLabel: true,
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"cpu": "cpu0",
@@ -630,7 +631,7 @@ cpu_time_idle{cpu="cpu0"} 42
 			name:          "replace characters when using string as label",
 			stringAsLabel: true,
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -647,7 +648,7 @@ cpu_time_idle{host_name="example.org"} 42
 		{
 			name: "multiple fields grouping",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"cpu": "cpu0",
@@ -659,7 +660,7 @@ cpu_time_idle{host_name="example.org"} 42
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"cpu": "cpu1",
@@ -671,7 +672,7 @@ cpu_time_idle{host_name="example.org"} 42
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"cpu": "cpu2",
@@ -683,7 +684,7 @@ cpu_time_idle{host_name="example.org"} 42
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"cpu": "cpu3",
@@ -714,7 +715,7 @@ cpu_time_user{cpu="cpu3"} 94148
 		{
 			name: "summary with no quantile",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"prometheus",
 					map[string]string{},
 					map[string]interface{}{
@@ -734,7 +735,7 @@ rpc_duration_seconds_sum 17560473
 			name:          "empty label string value",
 			stringAsLabel: true,
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"prometheus",
 					map[string]string{
 						"cpu": "",
@@ -777,7 +778,7 @@ func TestRemoteWriteSerializeNativeHistogram(t *testing.T) {
 	}{
 		{
 			name: "native histogram",
-			metric: testutil.MustMetric(
+			metric: metric.New(
 				"rpc_duration_seconds",
 				map[string]string{
 					"host": "example.org",
@@ -848,14 +849,14 @@ func prompbToText(data []byte) ([]byte, error) {
 func protoToSamples(req *prompb.WriteRequest) model.Samples {
 	var samples model.Samples
 	for _, ts := range req.Timeseries {
-		metric := make(model.Metric, len(ts.Labels))
+		mt := make(model.Metric, len(ts.Labels))
 		for _, l := range ts.Labels {
-			metric[model.LabelName(l.Name)] = model.LabelValue(l.Value)
+			mt[model.LabelName(l.Name)] = model.LabelValue(l.Value)
 		}
 
 		for _, s := range ts.Samples {
 			samples = append(samples, &model.Sample{
-				Metric:    metric,
+				Metric:    mt,
 				Value:     model.SampleValue(s.Value),
 				Timestamp: model.Time(s.Timestamp),
 			})
