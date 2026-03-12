@@ -26,12 +26,12 @@ func newPgrepFinder() (pidFinder, error) {
 func (*pgrep) pidFile(path string) ([]pid, error) {
 	pidString, err := os.ReadFile(path)
 	if err != nil {
-		return make([]pid, 0), fmt.Errorf("failed to read pidfile %q: %w",
+		return nil, fmt.Errorf("failed to read pidfile %q: %w",
 			path, err)
 	}
 	processID, err := strconv.ParseInt(strings.TrimSpace(string(pidString)), 10, 32)
 	if err != nil {
-		return make([]pid, 0), err
+		return nil, err
 	}
 	return []pid{pid(processID)}, nil
 }

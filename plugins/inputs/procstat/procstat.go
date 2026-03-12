@@ -709,7 +709,7 @@ func isDir(path string) (bool, error) {
 func (p *Procstat) winServicePIDs() ([]pid, error) {
 	processID, err := queryPidWithWinServiceName(p.WinService)
 	if err != nil {
-		return make([]pid, 0), err
+		return nil, err
 	}
 
 	return []pid{pid(processID)}, nil

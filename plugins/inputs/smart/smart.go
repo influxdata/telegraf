@@ -624,7 +624,7 @@ func gatherNVMeDeviceInfo(nvme, deviceName string, timeout config.Duration, useS
 	splitName := strings.Split(deviceName, " ")
 	args := make([]string, 0, len(splitName)+1)
 	args = append(args, "id-ctrl")
-	args = append(args, strings.Split(deviceName, " ")...)
+	args = append(args, splitName...)
 
 	out, err := runCmd(timeout, useSudo, nvme, args...)
 	if err != nil {
@@ -677,7 +677,7 @@ func gatherIntelNVMeDisk(acc telegraf.Accumulator, timeout config.Duration, uses
 	splitName := strings.Split(device.name, " ")
 	args := make([]string, 0, len(splitName)+2)
 	args = append(args, "intel", "smart-log-add")
-	args = append(args, strings.Split(device.name, " ")...)
+	args = append(args, splitName...)
 
 	out, e := runCmd(timeout, usesudo, nvme, args...)
 	outStr := string(out)

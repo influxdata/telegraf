@@ -391,7 +391,7 @@ func (c *Ceph) execute(command string) (string, error) {
 	splitCommand := strings.Split(command, " ")
 	cmdArgs := make([]string, 0, len(splitCommand)+6)
 	cmdArgs = append(cmdArgs, "--conf", c.CephConfig, "--name", c.CephUser, "--format", "json")
-	cmdArgs = append(cmdArgs, strings.Split(command, " ")...)
+	cmdArgs = append(cmdArgs, splitCommand...)
 
 	cmd := exec.Command(c.CephBinary, cmdArgs...)
 
