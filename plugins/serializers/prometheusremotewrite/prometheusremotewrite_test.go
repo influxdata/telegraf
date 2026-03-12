@@ -849,14 +849,14 @@ func prompbToText(data []byte) ([]byte, error) {
 func protoToSamples(req *prompb.WriteRequest) model.Samples {
 	var samples model.Samples
 	for _, ts := range req.Timeseries {
-		metric := make(model.Metric, len(ts.Labels))
+		mt := make(model.Metric, len(ts.Labels))
 		for _, l := range ts.Labels {
-			metric[model.LabelName(l.Name)] = model.LabelValue(l.Value)
+			mt[model.LabelName(l.Name)] = model.LabelValue(l.Value)
 		}
 
 		for _, s := range ts.Samples {
 			samples = append(samples, &model.Sample{
-				Metric:    metric,
+				Metric:    mt,
 				Value:     model.SampleValue(s.Value),
 				Timestamp: model.Time(s.Timestamp),
 			})
