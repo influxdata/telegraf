@@ -35,6 +35,6 @@ type ParserPlugin interface {
 // ParserFuncPlugin is an interface for plugins that are able to parse
 // arbitrary data formats.
 type ParserFuncPlugin interface {
-	// GetParser returns a new parser.
+	// SetParserFunc returns a new parser.
 	SetParserFunc(fn ParserFunc)
 }
