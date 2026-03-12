@@ -189,7 +189,20 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	if resp.StatusCode < 200 || resp.StatusCode > 209 {
 		//nolint:errcheck // err can be ignored since it is just for logging
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("received bad status code, %d: %s", resp.StatusCode, string(body))
+		// 4xx client errors are not retryable - the request itself is invalid
+		if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+			d.Log.Errorf("Client error %d, metrics will be dropped: %s", resp.StatusCode, string(body))
+			return &httpError{
+				err:        fmt.Errorf("client error %d: metrics dropped", resp.StatusCode),
+				statusCode: resp.StatusCode,
+				retryable:  false,
+			}
+		}
+		return &httpError{
+			err:        fmt.Errorf("received bad status code, %d: %s", resp.StatusCode, string(body)),
+			statusCode: resp.StatusCode,
+			retryable:  true,
+		}
 	}
 
 	return nil
@@ -268,6 +281,23 @@ func (p *Point) setValue(v interface{}) error {
 		return fmt.Errorf("undeterminable field type: %T", v)
 	}
 	return nil
+}
+
+type httpError struct {
+	err        error
+	statusCode int
+	retryable  bool
+}
+
+func (e *httpError) Error() string {
+	if e.err == nil {
+		return fmt.Sprintf("HTTP error: status %d", e.statusCode)
+	}
+	return e.err.Error()
+}
+
+func (e *httpError) Unwrap() error {
+	return e.err
 }
 
 func (*Datadog) Close() error {
