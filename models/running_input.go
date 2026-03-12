@@ -92,6 +92,7 @@ type InputConfig struct {
 	ID                   string
 	Interval             time.Duration
 	CollectionJitter     time.Duration
+	CollectionJitterSet  bool
 	CollectionOffset     time.Duration
 	Precision            time.Duration
 	TimeSource           string
