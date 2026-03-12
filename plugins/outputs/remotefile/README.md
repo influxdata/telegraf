@@ -96,6 +96,13 @@ to use them.
   # compression_level = -1
 ```
 
+## Supported backends
+
+- [Amazon S3 storage providers](https://rclone.org/s3/)
+- [Google Cloud Storage](https://rclone.org/googlecloudstorage/)
+- [Local filesystem](https://rclone.org/local/)
+- [Secure FTP](https://rclone.org/sftp/)
+
 ## Available custom functions
 
 The following functions can be used in the templates:
