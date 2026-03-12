@@ -767,7 +767,7 @@ func (node *EventNodeMetricMapping) createWhereClauses() (*ua.ContentFilter, err
 			Elements: make([]*ua.ContentFilterElement, 0),
 		}, nil
 	}
-	operands := make([]*ua.ExtensionObject, 0)
+	operands := make([]*ua.ExtensionObject, 0, len(node.SourceNames))
 	for _, sourceName := range node.SourceNames {
 		literalOperand := &ua.ExtensionObject{
 			EncodingMask: 1,

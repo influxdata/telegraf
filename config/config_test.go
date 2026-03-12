@@ -905,7 +905,7 @@ func TestConfig_MultipleProcessorsOrder(t *testing.T) {
 
 			require.Len(t, c.Processors, len(test.expectedOrder))
 
-			var order []string
+			order := make([]string, 0, len(c.Processors))
 			for _, p := range c.Processors {
 				order = append(order, p.Config.Name)
 			}

@@ -101,7 +101,9 @@ func deleteEmpty(s []string) []string {
 // runApp defines all the subcommands and flags for Telegraf
 // this abstraction is used for testing, so outputBuffer and args can be changed
 func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfig, m App) error {
-	configHandlingFlags := []cli.Flag{
+	cliFlags := cliFlags()
+	configHandlingFlags := make([]cli.Flag, 0, len(cliFlags)+10)
+	configHandlingFlags = append(configHandlingFlags,
 		&cli.StringSliceFlag{
 			Name:  "config",
 			Usage: "configuration file to load",
@@ -143,9 +145,9 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			Name:  "non-strict-env-handling",
 			Usage: "allow unsafe non-strict handling of environment variables to replace non-string settings",
 		},
-	}
+	)
 
-	mainFlags := append(configHandlingFlags, cliFlags()...)
+	mainFlags := append(configHandlingFlags, cliFlags...)
 
 	// This function is used when Telegraf is run with only flags
 	action := func(cCtx *cli.Context) error {

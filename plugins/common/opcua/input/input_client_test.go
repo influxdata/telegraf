@@ -316,6 +316,7 @@ func TestNewNodeMetricMappingIdStrInstantiated(t *testing.T) {
 }
 
 func TestValidateNodeToAdd(t *testing.T) {
+	//nolint:prealloc // Resulting code would be much messier
 	tests := []struct {
 		name     string
 		existing map[metricParts]struct{}

@@ -76,8 +76,9 @@ func normalizeURL(raw string) (*url.URL, error) {
 	switch u.Hostname() {
 	case "github.com":
 		u.Host = "raw.githubusercontent.com"
-		var cleaned []string
-		for _, p := range strings.Split(u.Path, "/") {
+		split := strings.Split(u.Path, "/")
+		cleaned := make([]string, 0, len(split))
+		for _, p := range split {
 			// Filter out elements
 			if p == "blob" {
 				continue
