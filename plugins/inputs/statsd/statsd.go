@@ -452,8 +452,8 @@ func (s *Statsd) Stop() {
 		//  - get all conns from the s.conns map and put into slice
 		//  - this is so the forget() function doesnt conflict with looping
 		//    over the s.conns map
-		conns := make([]*net.TCPConn, 0, len(s.conns))
 		s.cleanup.Lock()
+		conns := make([]*net.TCPConn, 0, len(s.conns))
 		for _, conn := range s.conns {
 			conns = append(conns, conn)
 		}
