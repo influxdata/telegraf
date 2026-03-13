@@ -93,9 +93,6 @@ func jsonToZipkinThrift(jsonRaw []byte) ([]byte, error) {
 		return nil, fmt.Errorf("error unmarshalling: %w", err)
 	}
 
-	zspans := make([]*zipkincore.Span, 0, len(spans))
-	zspans = append(zspans, spans...)
-
 	buf := thrift.NewTMemoryBuffer()
 	transport := thrift.NewTBinaryProtocolConf(buf, nil)
 
@@ -103,7 +100,7 @@ func jsonToZipkinThrift(jsonRaw []byte) ([]byte, error) {
 		return nil, fmt.Errorf("error in beginning thrift write: %w", err)
 	}
 
-	for _, span := range zspans {
+	for _, span := range spans {
 		err = span.Write(context.Background(), transport)
 		if err != nil {
 			return nil, fmt.Errorf("error converting zipkin struct to thrift: %w", err)

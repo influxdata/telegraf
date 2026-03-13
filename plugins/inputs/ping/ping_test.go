@@ -208,8 +208,7 @@ func TestArgs6(t *testing.T) {
 }
 
 func TestArguments(t *testing.T) {
-	arguments := make([]string, 0, 3)
-	arguments = append(arguments, "-c", "3")
+	arguments := []string{"-c", "3"}
 	expected := append(arguments, "www.google.com")
 	p := Ping{
 		Count:        2,
