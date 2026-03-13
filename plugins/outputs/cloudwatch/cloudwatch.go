@@ -5,6 +5,7 @@ import (
 	"context"
 	_ "embed"
 	"errors"
+	"fmt"
 	"math"
 	"net/http"
 	"strings"
@@ -103,7 +104,7 @@ func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
 		}
 
 		if _, err := c.svc.PutMetricData(context.Background(), params); err != nil {
-			c.Log.Errorf("Unable to write to CloudWatch: %v", err)
+			return fmt.Errorf("unable to write to CloudWatch: %w", err)
 		}
 	}
 
@@ -170,7 +171,7 @@ func (c *CloudWatch) buildMetricDatum(m telegraf.Metric) []types.MetricDatum {
 
 	// The buildDatum function returns at most one entry per statistic type for
 	// each field so allocate the maximum amount of entries
-	datums := make([]types.MetricDatum, 0, 5*len(fields))
+	datums := make([]types.MetricDatum, 0, 4*len(fields))
 	for _, f := range fields {
 		datums = append(datums, f.buildDatum()...)
 	}
