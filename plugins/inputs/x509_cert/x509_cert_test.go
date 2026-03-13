@@ -416,11 +416,13 @@ func TestSourcesToURLs(t *testing.T) {
 	}
 	require.NoError(t, m.Init())
 
-	expected := []string{
+	expected := make([]string, 0, len(m.Sources)+3)
+	expected = append(
+		expected,
 		"https://www.influxdata.com:443",
 		"tcp://influxdata.com:443",
 		"smtp://influxdata.com:25",
-	}
+	)
 
 	expectedPaths := []string{
 		"/dummy_test_path_file.pem",

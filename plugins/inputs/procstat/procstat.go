@@ -607,14 +607,12 @@ func (p *Procstat) systemdUnitPIDs() ([]pidsTags, error) {
 		return p.cgroupPIDs()
 	}
 
-	var pidTags []pidsTags
 	pids, err := p.simpleSystemdUnitPIDs()
 	if err != nil {
 		return nil, err
 	}
 	tags := map[string]string{"systemd_unit": p.SystemdUnit}
-	pidTags = append(pidTags, pidsTags{pids, tags})
-	return pidTags, nil
+	return []pidsTags{{pids, tags}}, nil
 }
 
 func (p *Procstat) simpleSystemdUnitPIDs() ([]pid, error) {
@@ -709,16 +707,12 @@ func isDir(path string) (bool, error) {
 }
 
 func (p *Procstat) winServicePIDs() ([]pid, error) {
-	var pids []pid
-
 	processID, err := queryPidWithWinServiceName(p.WinService)
 	if err != nil {
-		return pids, err
+		return nil, err
 	}
 
-	pids = append(pids, pid(processID))
-
-	return pids, nil
+	return []pid{pid(processID)}, nil
 }
 
 func init() {

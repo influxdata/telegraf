@@ -37,8 +37,6 @@ func (*mockAzureClientsManager) createAzureClients(_, _, _, _ string, _ azcore.C
 }
 
 func (*mockAzureResourcesClient) List(_ context.Context, _ *armresources.ClientListOptions) ([]*armresources.ClientListResponse, error) {
-	var responses []*armresources.ClientListResponse
-
 	file, err := os.ReadFile("testdata/json/azure_resources_response.json")
 	if err != nil {
 		return nil, fmt.Errorf("error reading file: %w", err)
@@ -55,8 +53,7 @@ func (*mockAzureResourcesClient) List(_ context.Context, _ *armresources.ClientL
 		},
 	}
 
-	responses = append(responses, response)
-	return responses, nil
+	return []*armresources.ClientListResponse{response}, nil
 }
 
 func (*mockAzureResourcesClient) ListByResourceGroup(

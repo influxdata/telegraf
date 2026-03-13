@@ -130,7 +130,7 @@ func getNodeURLs(log telegraf.Logger) ([]string, error) {
 
 // Prefer internal addresses, if none found, use ExternalIP
 func getNodeAddress(addresses []v1.NodeAddress) string {
-	extAddresses := make([]string, 0)
+	extAddresses := make([]string, 0, len(addresses))
 	for _, addr := range addresses {
 		if addr.Type == v1.NodeInternalIP {
 			return addr.Address

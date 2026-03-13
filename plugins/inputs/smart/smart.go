@@ -475,7 +475,7 @@ func (m *Smart) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	var devicesFromScan []string
+	devicesFromScan := make([]string, 0, len(scannedNVMeDevices)+len(scannedNonNVMeDevices))
 	devicesFromScan = append(devicesFromScan, scannedNVMeDevices...)
 	devicesFromScan = append(devicesFromScan, scannedNonNVMeDevices...)
 
@@ -621,8 +621,11 @@ func getDeviceInfoForNVMeDisks(acc telegraf.Accumulator, devices []string, nvme 
 }
 
 func gatherNVMeDeviceInfo(nvme, deviceName string, timeout config.Duration, useSudo bool) (device nvmeDevice, err error) {
-	args := []string{"id-ctrl"}
-	args = append(args, strings.Split(deviceName, " ")...)
+	splitName := strings.Split(deviceName, " ")
+	args := make([]string, 0, len(splitName)+1)
+	args = append(args, "id-ctrl")
+	args = append(args, splitName...)
+
 	out, err := runCmd(timeout, useSudo, nvme, args...)
 	if err != nil {
 		return device, err
@@ -671,8 +674,11 @@ func findNVMeDeviceInfo(output string) (nvmeDevice, error) {
 func gatherIntelNVMeDisk(acc telegraf.Accumulator, timeout config.Duration, usesudo bool, nvme string, device nvmeDevice, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	args := []string{"intel", "smart-log-add"}
-	args = append(args, strings.Split(device.name, " ")...)
+	splitName := strings.Split(device.name, " ")
+	args := make([]string, 0, len(splitName)+2)
+	args = append(args, "intel", "smart-log-add")
+	args = append(args, splitName...)
+
 	out, e := runCmd(timeout, usesudo, nvme, args...)
 	outStr := string(out)
 
@@ -739,8 +745,11 @@ func gatherIntelNVMeDisk(acc telegraf.Accumulator, timeout config.Duration, uses
 func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	// smartctl 5.41 & 5.42 have are broken regarding handling of --nocheck/-n
-	args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "-n", m.Nocheck, "--format=brief"}
-	args = append(args, strings.Split(device, " ")...)
+	splitDevice := strings.Split(device, " ")
+	args := make([]string, 0, len(splitDevice)+7)
+	args = append(args, "--info", "--health", "--attributes", "--tolerance=verypermissive", "-n", m.Nocheck, "--format=brief")
+	args = append(args, splitDevice...)
+
 	out, e := runCmd(m.Timeout, m.UseSudo, m.PathSmartctl, args...)
 	outStr := string(out)
 

@@ -388,8 +388,10 @@ func (c *Ceph) flatten(data interface{}) []*metric {
 
 // execute executes the 'ceph' command with the supplied arguments, returning JSON formatted output
 func (c *Ceph) execute(command string) (string, error) {
-	cmdArgs := []string{"--conf", c.CephConfig, "--name", c.CephUser, "--format", "json"}
-	cmdArgs = append(cmdArgs, strings.Split(command, " ")...)
+	splitCommand := strings.Split(command, " ")
+	cmdArgs := make([]string, 0, len(splitCommand)+6)
+	cmdArgs = append(cmdArgs, "--conf", c.CephConfig, "--name", c.CephUser, "--format", "json")
+	cmdArgs = append(cmdArgs, splitCommand...)
 
 	cmd := exec.Command(c.CephBinary, cmdArgs...)
 

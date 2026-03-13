@@ -44,15 +44,15 @@ func TestCtrlXCreateSubscriptionBasic(t *testing.T) {
 	}))
 	defer server.Close()
 
-	subs := make([]subscription, 0)
-	subs = append(subs, subscription{
-		index: 0,
-		Nodes: []node{
-			{Name: "counter", Address: "plc/app/Application/sym/PLC_PRG/counter"},
-			{Name: "counterReverse", Address: "plc/app/Application/sym/PLC_PRG/counterReverse"},
+	subs := []subscription{
+		{
+			index: 0,
+			Nodes: []node{
+				{Name: "counter", Address: "plc/app/Application/sym/PLC_PRG/counter"},
+				{Name: "counterReverse", Address: "plc/app/Application/sym/PLC_PRG/counterReverse"},
+			},
 		},
-	},
-	)
+	}
 	s := &CtrlXDataLayer{
 		connection:   &http.Client{},
 		url:          server.URL,
@@ -90,14 +90,16 @@ func TestCtrlXCreateSubscriptionDriven(t *testing.T) {
 				}
 			}))
 			defer server.Close()
-			subs := make([]subscription, 0)
-			subs = append(subs, subscription{
-				Nodes: []node{
-					{Name: "counter", Address: "plc/app/Application/sym/PLC_PRG/counter"},
-					{Name: "counterReverse", Address: "plc/app/Application/sym/PLC_PRG/counterReverse"},
+
+			subs := []subscription{
+				{
+					Nodes: []node{
+						{Name: "counter", Address: "plc/app/Application/sym/PLC_PRG/counter"},
+						{Name: "counterReverse", Address: "plc/app/Application/sym/PLC_PRG/counterReverse"},
+					},
 				},
-			},
-			)
+			}
+
 			s := &CtrlXDataLayer{
 				connection:   &http.Client{},
 				url:          server.URL,
@@ -205,15 +207,15 @@ func cleanup(server *httptest.Server) {
 
 func initRunner(t *testing.T) (*CtrlXDataLayer, *httptest.Server) {
 	server := newServer(t)
-
-	subs := make([]subscription, 0)
-	subs = append(subs, subscription{
-		Measurement: "ctrlx",
-		Nodes: []node{
-			{Name: "counter", Address: "plc/app/Application/sym/PLC_PRG/counter"},
+	subs := []subscription{
+		{
+			Measurement: "ctrlx",
+			Nodes: []node{
+				{Name: "counter", Address: "plc/app/Application/sym/PLC_PRG/counter"},
+			},
 		},
-	},
-	)
+	}
+
 	s := &CtrlXDataLayer{
 		connection: &http.Client{},
 		url:        server.URL,
