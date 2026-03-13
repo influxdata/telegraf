@@ -83,15 +83,12 @@ func (p *Ping) Init() error {
 		p.calcInterval = time.Duration(p.PingInterval * float64(time.Second))
 	}
 
-	// If no timeout is given default to 5 seconds, matching original implementation
-	if p.Timeout == 0 {
-		p.calcTimeout = time.Duration(5) * time.Second
-	} else {
-		p.calcTimeout = time.Duration(p.Timeout) * time.Second
-	}
-
 	if p.Method == "native" && p.Timeout > 0 {
 		p.Log.Warn(`"timeout" is ignored when method = "native"; use "deadline" to control the total runtime`)
+	} else if p.Timeout == 0 {
+		p.calcTimeout = time.Duration(1) * time.Second
+	} else {
+		p.calcTimeout = time.Duration(p.Timeout) * time.Second
 	}
 
 	return nil
@@ -304,7 +301,6 @@ func init() {
 			pingHost:     hostPinger,
 			PingInterval: 1.0,
 			Count:        1,
-			Timeout:      1.0,
 			Deadline:     10,
 			Method:       "exec",
 			Binary:       "ping",
