@@ -244,6 +244,7 @@ require (
 	golang.org/x/sys v0.42.0
 	golang.org/x/term v0.40.0
 	golang.org/x/text v0.34.0
+	golang.org/x/tools v0.42.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	gonum.org/v1/gonum v0.17.0
 	google.golang.org/api v0.270.0
@@ -576,7 +577,6 @@ require (
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	golang.org/x/telemetry v0.0.0-20260209163413-e7419c687ee4 // indirect
 	golang.org/x/time v0.15.0 // indirect
-	golang.org/x/tools v0.42.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20211209221555-9c9e7e272434 // indirect
 	google.golang.org/genproto v0.0.0-20260128011058-8636f8732409 // indirect
