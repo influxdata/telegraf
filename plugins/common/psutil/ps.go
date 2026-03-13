@@ -112,8 +112,8 @@ func (s *SystemPS) DiskUsage(mountPointFilter, mountOptsExclude, fstypeExclude [
 	// partition to avoid triggering a mount.
 	fstypeExcludeSet.add("autofs")
 
-	var usage []*disk.UsageStat
-	var partitions []*disk.PartitionStat
+	usage := make([]*disk.UsageStat, 0, len(parts))
+	partitions := make([]*disk.PartitionStat, 0, len(parts))
 	hostMountPrefix := s.OSGetenv("HOST_MOUNT_PREFIX")
 
 partitionRange:
