@@ -55,16 +55,10 @@ func TestBuildDimensions(t *testing.T) {
 		{Key: "m", Value: "13"},
 	}
 
-	// Wrapper for later cleanup
-	tags := make(map[string]string, len(input))
-	for _, tag := range input {
-		tags[tag.Key] = tag.Value
-	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Build the dimensions and check
-			dimensions := BuildDimensions(tags)
+			dimensions := buildDimensions(input)
 			require.Len(t, dimensions, len(tt.expected))
 			for i, actual := range dimensions {
 				require.Equalf(t, *tt.expected[i].Name, *actual.Name, "mismatch for element %d", i)
@@ -209,7 +203,14 @@ func TestBuildMetricDatums(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			datums := BuildMetricDatum(tt.statistics, tt.highres, tt.input)
+			plugin := &CloudWatch{
+				Namespace:             "foo",
+				WriteStatistics:       tt.statistics,
+				HighResolutionMetrics: tt.highres,
+				Log:                   testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+			datums := plugin.buildMetricDatum(tt.input)
 			require.Len(t, datums, tt.expected)
 		})
 	}
@@ -234,8 +235,16 @@ func TestBuildMetricDatumResolution(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Setup plugin
+			plugin := &CloudWatch{
+				Namespace:             "foo",
+				HighResolutionMetrics: tt.highres,
+				Log:                   testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
 			// Build a metric datum and check
-			datum := BuildMetricDatum(false, tt.highres, testutil.TestMetric(1))
+			datum := plugin.buildMetricDatum(testutil.TestMetric(1))
 			require.Len(t, datum, 1)
 			require.NotNil(t, datum[0].StorageResolution)
 			require.Equal(t, tt.expected, *datum[0].StorageResolution)
@@ -244,6 +253,14 @@ func TestBuildMetricDatumResolution(t *testing.T) {
 }
 
 func TestBuildMetricDatumsSkipEmptyTags(t *testing.T) {
+	// Setup plugin
+	plugin := &CloudWatch{
+		Namespace:       "foo",
+		WriteStatistics: true,
+		Log:             testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
 	// Build a metric datum and check
 	input := metric.New(
 		"cpu",
@@ -256,7 +273,7 @@ func TestBuildMetricDatumsSkipEmptyTags(t *testing.T) {
 		},
 		time.Unix(0, 0),
 	)
-	datum := BuildMetricDatum(true, false, input)
+	datum := plugin.buildMetricDatum(input)
 	require.Len(t, datum, 1)
 	require.Len(t, datum[0].Dimensions, 1)
 }
@@ -325,7 +342,7 @@ func TestPartitionDatums(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.expected, PartitionDatums(partitionSize, tt.input))
+			require.Equal(t, tt.expected, partitionDatums(tt.input, partitionSize))
 		})
 	}
 }
