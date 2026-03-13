@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/setup-go@v6
         with:
-          go-version: '1.25.7'
+          go-version: '1.26.1'
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0

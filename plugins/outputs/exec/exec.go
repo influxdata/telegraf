@@ -125,7 +125,7 @@ func (c *CommandRunner) Run(timeout time.Duration, command, environments []strin
 			if c.log.Level() < telegraf.Debug {
 				c.log.Errorf("Command error: %q", truncate(s))
 			} else {
-				c.log.Debugf("Command error: %q", s)
+				c.log.Debugf("Command error: %v", s)
 			}
 		}
 
