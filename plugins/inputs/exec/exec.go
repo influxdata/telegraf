@@ -2,6 +2,7 @@
 package exec
 
 import (
+	"bufio"
 	"bytes"
 	_ "embed"
 	"fmt"
@@ -30,6 +31,7 @@ type Exec struct {
 	Command     string          `toml:"command"`
 	Environment []string        `toml:"environment"`
 	IgnoreError bool            `toml:"ignore_error"`
+	LogStdErr   bool            `toml:"log_stderr"`
 	Timeout     config.Duration `toml:"timeout"`
 	Log         telegraf.Logger `toml:"-"`
 
@@ -140,6 +142,35 @@ func (e *Exec) processCommand(acc telegraf.Accumulator, cmd string) error {
 	out, errBuf, runErr := e.runner.run(cmd)
 	if !e.IgnoreError && !e.parseDespiteError && runErr != nil {
 		return fmt.Errorf("exec: %w for command %q: %s", runErr, cmd, string(errBuf))
+	}
+
+	// Log output in stderr
+	if e.LogStdErr && len(errBuf) > 0 {
+		scanner := bufio.NewScanner(bytes.NewBuffer(errBuf))
+
+		for scanner.Scan() {
+			msg := scanner.Text()
+			switch {
+			case strings.TrimSpace(msg) == "":
+				continue
+			case strings.HasPrefix(msg, "E! "):
+				e.Log.Error(msg[3:])
+			case strings.HasPrefix(msg, "W! "):
+				e.Log.Warn(msg[3:])
+			case strings.HasPrefix(msg, "I! "):
+				e.Log.Info(msg[3:])
+			case strings.HasPrefix(msg, "D! "):
+				e.Log.Debug(msg[3:])
+			case strings.HasPrefix(msg, "T! "):
+				e.Log.Trace(msg[3:])
+			default:
+				e.Log.Error(msg)
+			}
+		}
+
+		if err := scanner.Err(); err != nil {
+			acc.AddError(fmt.Errorf("error reading stderr: %w", err))
+		}
 	}
 
 	metrics, err := e.parser.Parse(out)

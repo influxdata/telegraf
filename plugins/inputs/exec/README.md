@@ -44,6 +44,9 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## plugin will continue to parse the output.
   # ignore_error = false
 
+  ## Log all messages sent to stderr
+  # log_stderr = false
+
   ## Data format
   ## By default, exec expects JSON. This was done for historical reasons and is
   ## different than other inputs that use the influx line protocol. Each data
@@ -56,7 +59,15 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 Glob patterns in the `command` option are matched on every run, so adding new
 scripts that match the pattern will cause them to be picked up immediately.
 
-## Example
+### Logging
+
+When setting `log_stderr` to `true`, the called command may write log messages
+to `stderr`, which Telegraf will log line-wise using the configured logging
+facility. By default, the _error_ level will be used. Use the known prefixes
+`E!`, `W!`, `I!`, `D!` or `T!` to log with the _error_, _warning_, _info_,
+_debug_ or _trace_ log-level, respectively.
+
+### Example
 
 This script produces static values, since no timestamp is specified the values
 are at the current time. Ensure that int values are followed with `i` for proper
@@ -77,7 +88,7 @@ It can be paired with the following configuration and will be run at the
   data_format = "influx"
 ```
 
-## Common Issues
+## Troubleshooting
 
 ### My script works when I run it by hand, but not when Telegraf is running as a service
 
