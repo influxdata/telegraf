@@ -9,6 +9,19 @@
  **strict environment variable handling the default**! In case you need the old
  behavior you can opt-out using the `--non-strict-env-handling` flag.
 
+- Starting in v1.36.0, the `used_percent` field reported by the `mem` input
+ plugin on Linux increased by roughly 6-20% for the same memory state. This was
+ caused by an upstream change in the
+ [gopsutil](https://github.com/shirou/gopsutil) dependency (v4.25.8), which
+ changed the `Used` memory calculation from `Total - Free - Buffers - Cached`
+ to `Total - Available` (using the kernel's `MemAvailable` from
+ `/proc/meminfo`). The new formula is more accurate as the old one assumed all
+ cached and buffered memory was immediately reclaimable, which is not always the
+ case. Dashboards or alerts based on `used_percent` thresholds may need
+ adjustment. The raw fields (`free`, `buffered`, `cached`, `available`,
+ `total`) are unaffected and can be used to compute either definition in
+ queries.
+
 ### New Plugins
 
 - [#18183](https://github.com/influxdata/telegraf/pull/18183) `inputs.sip` Add plugin
