@@ -205,20 +205,20 @@ func (t Table) Build(gs Connection, walk bool) (*RTable, error) {
 					}, idx)
 				}
 
+				if _, ok := ifv[idx]; ok {
+					return fmt.Errorf("duplicate index %q", idx)
+				}
+
 				fv, err := f.Convert(ent)
 				if err != nil {
-					return &walkError{
-						msg: fmt.Sprintf("converting %q (OID %s) for field %s", ent.Value, ent.Name, f.Name),
-						err: err,
-					}
+					return fmt.Errorf("converting %q (OID %s): %w", ent.Value, ent.Name, err)
 				}
 				ifv[idx] = fv
 				return nil
 			})
 			if err != nil {
-				// Our callback always wraps errors in a walkError.
-				// If this error isn't a walkError, we know it's not
-				// from the callback
+				// Our callback always wraps errors in a walkError when breaking the walk,
+				// so if it's not a walkError it must be an actual error
 				var walkErr *walkError
 				if !errors.As(err, &walkErr) {
 					return nil, fmt.Errorf("performing bulk walk for field %s: %w", f.Name, err)
