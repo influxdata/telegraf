@@ -21,6 +21,7 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -59,7 +60,7 @@ func TestOpenTelemetry(t *testing.T) {
 		Log: testutil.Logger{},
 	}
 
-	input := testutil.MustMetric(
+	input := metric.New(
 		"cpu_temp",
 		map[string]string{
 			"foo":               "bar",
@@ -158,7 +159,7 @@ func TestOpenTelemetryHTTPProtobuf(t *testing.T) {
 	}
 	require.NoError(t, plugin.Connect())
 
-	input := testutil.MustMetric(
+	input := metric.New(
 		"cpu_temp",
 		map[string]string{
 			"foo":               "bar",
@@ -256,7 +257,7 @@ func TestOpenTelemetryHTTPJSON(t *testing.T) {
 	}
 	require.NoError(t, plugin.Connect())
 
-	input := testutil.MustMetric(
+	input := metric.New(
 		"cpu_temp",
 		map[string]string{
 			"foo":               "bar",

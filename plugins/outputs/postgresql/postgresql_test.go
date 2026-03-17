@@ -387,7 +387,7 @@ func newMetric(
 	tags map[string]string,
 	fields map[string]interface{},
 ) telegraf.Metric {
-	return testutil.MustMetric(t.Name()+suffix, tags, fields, time.Now())
+	return metric.New(t.Name()+suffix, tags, fields, time.Now())
 }
 
 type MSS = map[string]string

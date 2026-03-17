@@ -218,7 +218,7 @@ func TestTopicTag(t *testing.T) {
 
 	// Define an input metric for writing
 	input := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"topic": "xyzzy",

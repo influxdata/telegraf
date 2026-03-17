@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	inputs "github.com/influxdata/telegraf/plugins/inputs/prometheus"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
 	"github.com/influxdata/telegraf/testutil"
@@ -37,7 +38,7 @@ func TestMetricVersion1(t *testing.T) {
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"host": "example.org",
@@ -64,7 +65,7 @@ cpu_time_idle{host="example.org"} 42
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu_time_idle",
 					map[string]string{
 						"host": "example.org",
@@ -91,7 +92,7 @@ cpu_time_idle{host="example.org"} 42
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu_time_idle",
 					map[string]string{
 						"host": "example.org",
@@ -120,7 +121,7 @@ cpu_time_idle{host="example.org"} 42
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu_time_idle",
 					map[string]string{
 						"host": "example.org",
@@ -149,7 +150,7 @@ cpu_time_idle{host="example.org"} 42 1257894000000
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu_time_idle",
 					map[string]string{},
 					map[string]interface{}{
@@ -177,7 +178,7 @@ cpu_time_idle{host_name="example.org"} 42
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"温度-指标",
 					map[string]string{
 						"主机-名": "example.org",
@@ -206,7 +207,7 @@ cpu_time_idle{host_name="example.org"} 42
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu_time_idle",
 					map[string]string{
 						"host": "example.org",
@@ -234,7 +235,7 @@ cpu_time_idle{host="example.org"} 42
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"http_request_duration_seconds",
 					map[string]string{},
 					map[string]interface{}{
@@ -274,7 +275,7 @@ http_request_duration_seconds_count 144320
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"rpc_duration_seconds",
 					map[string]string{},
 					map[string]interface{}{
@@ -313,7 +314,7 @@ rpc_duration_seconds_count 2693
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu_time_idle",
 					map[string]string{
 						"host": "example.org",
@@ -341,7 +342,7 @@ cpu_time_idle{host="example.org"} 42
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu_time_idle",
 					map[string]string{
 						"host": "example.org",
