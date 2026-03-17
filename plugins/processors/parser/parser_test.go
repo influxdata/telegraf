@@ -900,12 +900,7 @@ metric,status=fault value=42i 1773239679300000000
 					"test",
 					map[string]string{"source": "foo"},
 					map[string]interface{}{
-						"message": `
-metric,status=ok value=1i 1773239679000000000
-metric,status=warn value=23i 1773239679100000000
-metric,status=ok value=19i 1773239679200000000
-metric,status=fault value=42i 1773239679300000000
-`,
+						"message":    "<msg>",
 						"additional": true,
 					},
 					time.Unix(1773258782, 0),
@@ -930,6 +925,7 @@ metric,status=fault value=42i 1773239679300000000
 						"status": "fault",
 					},
 					map[string]interface{}{
+						"message":    "<msg>",
 						"value":      int64(42),
 						"additional": true,
 					},
@@ -955,6 +951,7 @@ metric,status=fault value4=42i 1773239679300000000
 						"status": "fault",
 					},
 					map[string]interface{}{
+						"message":    "<msg>",
 						"value1":     int64(1),
 						"value2":     int64(23),
 						"value3":     int64(19),
@@ -983,6 +980,7 @@ metric,status=fault value=42i 1773239679300000000
 						"status": "fault",
 					},
 					map[string]interface{}{
+						"message":    "<msg>",
 						"value":      int64(42),
 						"additional": true,
 					},
@@ -1008,6 +1006,7 @@ metric,status=fault value4=42i 1773239679300000000
 						"status": "fault",
 					},
 					map[string]interface{}{
+						"message":    "<msg>",
 						"value1":     int64(1),
 						"value2":     int64(23),
 						"value3":     int64(19),
@@ -1015,6 +1014,231 @@ metric,status=fault value4=42i 1773239679300000000
 						"additional": true,
 					},
 					time.Unix(0, 1773239679300000000),
+				),
+			},
+		},
+		{
+			name:     "parent same field",
+			strategy: "parent",
+			msg: `
+metric,status=ok value=1i 1773239679000000000
+metric,status=warn value=23i 1773239679100000000
+metric,status=ok value=19i 1773239679200000000
+metric,status=fault value=42i 1773239679300000000
+`,
+			parser: &influx.Parser{},
+			expected: []telegraf.Metric{
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "ok",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value":      int64(1),
+						"additional": true,
+					},
+					time.Unix(1773258782, 0),
+				),
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "warn",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value":      int64(23),
+						"additional": true,
+					},
+					time.Unix(1773258782, 0),
+				),
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "ok",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value":      int64(19),
+						"additional": true,
+					},
+					time.Unix(1773258782, 0),
+				),
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "fault",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value":      int64(42),
+						"additional": true,
+					},
+					time.Unix(1773258782, 0),
+				),
+				// Original metric
+				metric.New(
+					"test",
+					map[string]string{"source": "foo"},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"additional": true,
+					},
+					time.Unix(1773258782, 0),
+				),
+			},
+		},
+		{
+			name:     "parent different fields",
+			strategy: "parent",
+			msg: `
+metric,status=ok value1=1i 1773239679000000000
+metric,status=warn value2=23i 1773239679100000000
+metric,status=ok value3=19i 1773239679200000000
+metric,status=fault value4=42i 1773239679300000000
+`,
+			parser: &influx.Parser{},
+			expected: []telegraf.Metric{
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "ok",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value1":     int64(1),
+						"additional": true,
+					},
+					time.Unix(1773258782, 0),
+				),
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "warn",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value2":     int64(23),
+						"additional": true,
+					},
+					time.Unix(1773258782, 0),
+				),
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "ok",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value3":     int64(19),
+						"additional": true,
+					},
+					time.Unix(1773258782, 0),
+				),
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "fault",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value4":     int64(42),
+						"additional": true,
+					},
+					time.Unix(1773258782, 0),
+				),
+				// Original metric
+				metric.New(
+					"test",
+					map[string]string{"source": "foo"},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"additional": true,
+					},
+					time.Unix(1773258782, 0),
+				),
+			},
+		},
+		{
+			name:     "parent timestamp same field",
+			strategy: "parent-with-timestamp",
+			msg: `
+metric,status=ok value=1i 1773239679000000000
+metric,status=warn value=23i 1773239679100000000
+metric,status=ok value=19i 1773239679200000000
+metric,status=fault value=42i 1773239679300000000
+`,
+			parser: &influx.Parser{},
+			expected: []telegraf.Metric{
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "ok",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value":      int64(1),
+						"additional": true,
+					},
+					time.Unix(0, 1773239679000000000),
+				),
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "warn",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value":      int64(23),
+						"additional": true,
+					},
+					time.Unix(0, 1773239679100000000),
+				),
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "ok",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value":      int64(19),
+						"additional": true,
+					},
+					time.Unix(0, 1773239679200000000),
+				),
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "fault",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value":      int64(42),
+						"additional": true,
+					},
+					time.Unix(0, 1773239679300000000),
+				),
+				// Original metric
+				metric.New(
+					"test",
+					map[string]string{"source": "foo"},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"additional": true,
+					},
+					time.Unix(1773258782, 0),
 				),
 			},
 		},
@@ -1145,6 +1369,204 @@ metric,status=fault value4=42i 1773239679300000000
 				),
 			},
 		},
+		{
+			name:     "drop parent same field",
+			strategy: "parent",
+			drop:     true,
+			msg: `
+metric,status=ok value=1i 1773239679000000000
+metric,status=warn value=23i 1773239679100000000
+metric,status=ok value=19i 1773239679200000000
+metric,status=fault value=42i 1773239679300000000
+`,
+			parser: &influx.Parser{},
+			expected: []telegraf.Metric{
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "ok",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value":      int64(1),
+						"additional": true,
+					},
+					time.Unix(1773258782, 0),
+				),
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "warn",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value":      int64(23),
+						"additional": true,
+					},
+					time.Unix(1773258782, 0),
+				),
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "ok",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value":      int64(19),
+						"additional": true,
+					},
+					time.Unix(1773258782, 0),
+				),
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "fault",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value":      int64(42),
+						"additional": true,
+					},
+					time.Unix(1773258782, 0),
+				),
+			},
+		},
+		{
+			name:     "drop parent different fields",
+			strategy: "parent",
+			drop:     true,
+			msg: `
+metric,status=ok value1=1i 1773239679000000000
+metric,status=warn value2=23i 1773239679100000000
+metric,status=ok value3=19i 1773239679200000000
+metric,status=fault value4=42i 1773239679300000000
+`,
+			parser: &influx.Parser{},
+			expected: []telegraf.Metric{
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "ok",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value1":     int64(1),
+						"additional": true,
+					},
+					time.Unix(1773258782, 0),
+				),
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "warn",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value2":     int64(23),
+						"additional": true,
+					},
+					time.Unix(1773258782, 0),
+				),
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "ok",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value3":     int64(19),
+						"additional": true,
+					},
+					time.Unix(1773258782, 0),
+				),
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "fault",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value4":     int64(42),
+						"additional": true,
+					},
+					time.Unix(1773258782, 0),
+				),
+			},
+		},
+		{
+			name:     "drop parent timestamp same field",
+			strategy: "parent-with-timestamp",
+			drop:     true,
+			msg: `
+metric,status=ok value=1i 1773239679000000000
+metric,status=warn value=23i 1773239679100000000
+metric,status=ok value=19i 1773239679200000000
+metric,status=fault value=42i 1773239679300000000
+`,
+			parser: &influx.Parser{},
+			expected: []telegraf.Metric{
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "ok",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value":      int64(1),
+						"additional": true,
+					},
+					time.Unix(0, 1773239679000000000),
+				),
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "warn",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value":      int64(23),
+						"additional": true,
+					},
+					time.Unix(0, 1773239679100000000),
+				),
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "ok",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value":      int64(19),
+						"additional": true,
+					},
+					time.Unix(0, 1773239679200000000),
+				),
+				metric.New(
+					"metric",
+					map[string]string{
+						"source": "foo",
+						"status": "fault",
+					},
+					map[string]interface{}{
+						"message":    "<msg>",
+						"value":      int64(42),
+						"additional": true,
+					},
+					time.Unix(0, 1773239679300000000),
+				),
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -1152,8 +1574,8 @@ metric,status=fault value4=42i 1773239679300000000
 			// Add the message to the expected metric if the original metric
 			// will not be dropped
 			expected := tt.expected
-			if tt.strategy != "" && !tt.drop {
-				for i := range expected {
+			for i := range expected {
+				if expected[i].HasField("message") {
 					expected[i].AddField("message", tt.msg)
 				}
 			}
