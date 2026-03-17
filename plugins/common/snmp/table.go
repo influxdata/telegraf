@@ -206,7 +206,7 @@ func (t Table) Build(gs Connection, walk bool) (*RTable, error) {
 				}
 
 				if _, ok := ifv[idx]; ok {
-					return fmt.Errorf("duplicate index %q", idx)
+					return nil // we've already seen this index, so skip it.
 				}
 
 				fv, err := f.Convert(ent)

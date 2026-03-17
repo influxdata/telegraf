@@ -257,7 +257,8 @@ func TestTableBuild_walk_duplicateIndex(t *testing.T) {
 	}
 
 	tbl := Table{
-		Name: "mytable",
+		Name:       "mytable",
+		IndexAsTag: true,
 		Fields: []Field{
 			{
 				Name:           "myfield",
@@ -267,6 +268,9 @@ func TestTableBuild_walk_duplicateIndex(t *testing.T) {
 		},
 	}
 
-	_, err := tbl.Build(conn, true)
-	require.EqualError(t, err, `performing bulk walk for field myfield: duplicate index ".0"`)
+	tb, err := tbl.Build(conn, true)
+	require.NoError(t, err)
+	require.Len(t, tb.Rows, 1)
+	require.Equal(t, tb.Rows[0].Tags["index"], "0")
+	require.Contains(t, tb.Rows[0].Fields, "myfield")
 }
