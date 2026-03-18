@@ -76,7 +76,7 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 			tags,
 		),
 		StartupErrors: selfstat.Register(
-			"write",
+			"gather",
 			"startup_errors",
 			tags,
 		),
