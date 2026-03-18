@@ -159,9 +159,10 @@ func (h *Heartbeat) Init() error {
 		}
 	}
 
-	// Initialize the last-sent timestamp
+	// Initialize the last-sent timestamp and internal stats collection flag
 	h.stats.Lock()
 	h.stats.lastUpdate = time.Now()
+	h.stats.includeInternal = slices.Contains(h.Include, "status")
 	h.stats.Unlock()
 
 	return nil

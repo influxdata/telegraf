@@ -15,6 +15,7 @@ type statistics struct {
 	logWarnings      uint64
 	lastUpdate       time.Time
 	lastUpdateFailed bool
+	includeInternal  bool
 
 	lastAgent      map[string]interface{}
 	lastInputs     map[string][]map[string]interface{}
@@ -43,6 +44,10 @@ func (s *statistics) snapshot() *statistics {
 		currentAgent:   make(map[string]interface{}),
 		currentInputs:  make(map[string][]map[string]interface{}),
 		currentOutputs: make(map[string][]map[string]interface{}),
+	}
+
+	if !s.includeInternal {
+		return out
 	}
 
 	// Add internal statistics
