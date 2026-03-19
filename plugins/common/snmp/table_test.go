@@ -276,7 +276,7 @@ func TestTableBuild_walk_duplicateIndex(t *testing.T) {
 	tb, err := tbl.Build(conn, true)
 	require.NoError(t, err)
 	require.Len(t, tb.Rows, 1)
-	require.Equal(t, tb.Rows[0].Tags["index"], "0")
+	require.Equal(t, "0", tb.Rows[0].Tags["index"])
 	require.Contains(t, tb.Rows[0].Fields, "myfield1")
 	require.Contains(t, tb.Rows[0].Fields, "myfield2")
 }
