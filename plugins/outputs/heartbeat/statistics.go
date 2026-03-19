@@ -15,7 +15,6 @@ type statistics struct {
 	logWarnings      uint64
 	lastUpdate       time.Time
 	lastUpdateFailed bool
-	includeInternal  bool
 
 	lastAgent      map[string]interface{}
 	lastInputs     map[string][]map[string]interface{}
@@ -23,6 +22,9 @@ type statistics struct {
 	currentAgent   map[string]interface{}
 	currentInputs  map[string][]map[string]interface{}
 	currentOutputs map[string][]map[string]interface{}
+
+	// Internal flags
+	includeInternal bool
 
 	sync.RWMutex
 }
