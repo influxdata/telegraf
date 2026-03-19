@@ -251,8 +251,9 @@ func TestTableBuild_walk_duplicateIndex(t *testing.T) {
 	conn := &testSNMPConnection{
 		host: "localhost",
 		values: map[string]interface{}{
-			".1.0.0.2.1.5.0.1.1": 1,
-			".1.0.0.2.1.5.0.1.2": 2,
+			".1.0.0.0.1.1.0.0": 0,
+			".1.0.0.0.1.1.0.1": 1,
+			".1.0.0.0.1.2.0":   2,
 		},
 	}
 
@@ -261,9 +262,13 @@ func TestTableBuild_walk_duplicateIndex(t *testing.T) {
 		IndexAsTag: true,
 		Fields: []Field{
 			{
-				Name:           "myfield",
-				Oid:            ".1.0.0.2.1.5",
+				Name:           "myfield1",
+				Oid:            ".1.0.0.0.1.1",
 				OidIndexLength: 1,
+			},
+			{
+				Name: "myfield2",
+				Oid:  ".1.0.0.0.1.2",
 			},
 		},
 	}
@@ -272,5 +277,6 @@ func TestTableBuild_walk_duplicateIndex(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, tb.Rows, 1)
 	require.Equal(t, tb.Rows[0].Tags["index"], "0")
-	require.Contains(t, tb.Rows[0].Fields, "myfield")
+	require.Contains(t, tb.Rows[0].Fields, "myfield1")
+	require.Contains(t, tb.Rows[0].Fields, "myfield2")
 }
