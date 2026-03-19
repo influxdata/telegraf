@@ -95,7 +95,6 @@ will result in
 
 ```text
 metric,status=fault value1=1i,value2=23i,value3=19i,value4=42i 1773258782000000000
-metric,source=foo,status=fault value1=1i,value2=23i,value3=19i,value4=42i,additional=true 1773258782000000000
 ```
 
 with `drop_original = true`
@@ -111,7 +110,7 @@ with `drop_original = false`
 #### `override-with-timestamp`
 
 This strategy will behave the same way as `override` but will also override the
-timestamp with the one of the parsed metrics if it exists.
+timestamp with the one of the latest parsed metric.
 
 #### `parent`
 
