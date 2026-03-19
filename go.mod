@@ -248,7 +248,7 @@ require (
 	gonum.org/v1/gonum v0.17.0
 	google.golang.org/api v0.272.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20260217215200-42d3e9bedb6d
-	google.golang.org/grpc v1.79.2
+	google.golang.org/grpc v1.79.3
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
 	gopkg.in/olivere/elastic.v5 v5.0.86
