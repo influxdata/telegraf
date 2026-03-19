@@ -42,7 +42,6 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##  - none: keep the newly parsed metrics as-is
   ##  - override: emit a single metric with all tags and fields of newly parsed
   ##    merged but retaining the first timestamp. If drop_original is
-  ##    merged merged but retaining the first timestamp. If drop_original is
   ##    false, all metrics are merged into the original metric.
   ##    NOTE: Existing field or tag values will be overridden.
   ##  - override-with-timestamp: same as "override", but the timestamp is set
