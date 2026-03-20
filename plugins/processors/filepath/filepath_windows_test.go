@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/testutil"
+	"github.com/influxdata/telegraf/metric"
 )
 
 var samplePath = "c:\\my\\test\\\\c\\..\\path\\file.log"
@@ -17,7 +17,7 @@ func TestOptions_Apply(t *testing.T) {
 			o:            newOptions("c:\\my\\test\\"),
 			inputMetrics: getSmokeTestInputMetrics(samplePath),
 			expectedMetrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					smokeMetricName,
 					map[string]string{
 						"baseTag":  "file.log",

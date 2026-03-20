@@ -27,7 +27,7 @@ func TestGeo(t *testing.T) {
 	err := plugin.Init()
 	require.NoError(t, err)
 
-	m := testutil.MustMetric(
+	m := metric.New(
 		"mta",
 		map[string]string{},
 		map[string]interface{}{
@@ -38,7 +38,7 @@ func TestGeo(t *testing.T) {
 	)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"mta",
 			map[string]string{
 				"s2_cell_id": "89e8ed4",

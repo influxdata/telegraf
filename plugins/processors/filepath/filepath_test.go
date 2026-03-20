@@ -23,7 +23,7 @@ func TestOptions_Apply(t *testing.T) {
 			o:            newOptions("/my/test/"),
 			inputMetrics: getSmokeTestInputMetrics(samplePath),
 			expectedMetrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					smokeMetricName,
 					map[string]string{
 						"baseTag":  "file.log",
@@ -55,14 +55,14 @@ func TestOptions_Apply(t *testing.T) {
 					},
 				}},
 			inputMetrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"testMetric",
 					map[string]string{"sourcePath": samplePath},
 					map[string]interface{}{"sourcePath": samplePath},
 					time.Now()),
 			},
 			expectedMetrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"testMetric",
 					map[string]string{"sourcePath": samplePath, "basePath": "file.log"},
 					map[string]interface{}{"sourcePath": samplePath, "basePath": "file.log"},
