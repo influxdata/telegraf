@@ -961,7 +961,7 @@ func TestBase64Decode(t *testing.T) {
 				},
 			},
 			metric: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -971,7 +971,7 @@ func TestBase64Decode(t *testing.T) {
 				),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -991,7 +991,7 @@ func TestBase64Decode(t *testing.T) {
 				},
 			},
 			metric: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -1001,7 +1001,7 @@ func TestBase64Decode(t *testing.T) {
 				),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -1021,7 +1021,7 @@ func TestBase64Decode(t *testing.T) {
 				},
 			},
 			metric: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -1031,7 +1031,7 @@ func TestBase64Decode(t *testing.T) {
 				),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -1069,7 +1069,7 @@ func TestValidUTF8(t *testing.T) {
 				},
 			},
 			metric: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -1079,7 +1079,7 @@ func TestValidUTF8(t *testing.T) {
 				),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -1100,7 +1100,7 @@ func TestValidUTF8(t *testing.T) {
 				},
 			},
 			metric: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -1110,7 +1110,7 @@ func TestValidUTF8(t *testing.T) {
 				),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -1131,7 +1131,7 @@ func TestValidUTF8(t *testing.T) {
 				},
 			},
 			metric: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -1141,7 +1141,7 @@ func TestValidUTF8(t *testing.T) {
 				),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
