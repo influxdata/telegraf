@@ -1689,6 +1689,9 @@ func (c *Config) buildInput(name, source string, tbl *ast.Table) (*models.InputC
 	cp.Precision, _ = c.getFieldDuration(tbl, "precision")
 	cp.CollectionJitter, _ = c.getFieldDuration(tbl, "collection_jitter")
 	cp.CollectionOffset, _ = c.getFieldDuration(tbl, "collection_offset")
+	if cp.CollectionOffset < 0 {
+		return nil, fmt.Errorf("negative collection_offset %s is not allowed for input %s; use a positive offset instead (e.g. interval - offset)", cp.CollectionOffset, name)
+	}
 	cp.StartupErrorBehavior = c.getFieldString(tbl, "startup_error_behavior")
 	cp.TimeSource = c.getFieldString(tbl, "time_source")
 

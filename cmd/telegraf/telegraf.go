@@ -456,6 +456,13 @@ func (t *Telegraf) runAgent(ctx context.Context, reloadConfig bool) error {
 		return fmt.Errorf("agent flush_interval must be positive; found %v", c.Agent.Interval)
 	}
 
+	if int64(c.Agent.CollectionOffset) < 0 {
+		return fmt.Errorf(
+			"agent collection_offset must not be negative, found %v; use a positive offset instead (e.g. interval - offset)",
+			c.Agent.CollectionOffset,
+		)
+	}
+
 	// Setup logging as configured.
 	logConfig := &logger.Config{
 		Debug:                   c.Agent.Debug || t.debug,

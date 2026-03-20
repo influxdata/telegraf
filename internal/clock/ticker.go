@@ -2,7 +2,6 @@ package clock
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -24,17 +23,7 @@ type Ticker struct {
 	cfg *config
 }
 
-func NewTicker(interval, jitter, offset time.Duration, opt ...Option) (*Ticker, error) {
-	if interval <= 0 {
-		return nil, fmt.Errorf("interval must be positive, got %s", interval)
-	}
-	if offset < 0 {
-		return nil, fmt.Errorf("negative offset %s is not allowed; use a positive offset instead, e.g. interval-offset = %s", offset, interval+offset)
-	}
-	if offset >= interval {
-		return nil, fmt.Errorf("offset %s must be less than interval %s", offset, interval)
-	}
-
+func NewTicker(interval, jitter, offset time.Duration, opt ...Option) *Ticker {
 	// Apply the options
 	cfg := &config{
 		clk: clock.New(),
@@ -76,7 +65,7 @@ func NewTicker(interval, jitter, offset time.Duration, opt ...Option) (*Ticker, 
 		t.run(ctx)
 	}()
 
-	return t, nil
+	return t
 }
 
 func (t *Ticker) Stop() {

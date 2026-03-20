@@ -18,8 +18,7 @@ func TestUnalignedTicker(t *testing.T) {
 
 	startup := make(chan bool, 1)
 
-	ticker, err := NewTicker(interval, jitter, offset, WithClock(clk), WithStartupNotification(startup))
-	require.NoError(t, err)
+	ticker := NewTicker(interval, jitter, offset, WithClock(clk), WithStartupNotification(startup))
 	defer ticker.Stop()
 
 	expected := []time.Time{
@@ -62,8 +61,7 @@ func TestUnalignedTickerJitterBehavior(t *testing.T) {
 	clk := clock.NewMock()
 	start := clk.Now()
 
-	ticker, err := NewTicker(interval, jitter, offset, WithClock(clk))
-	require.NoError(t, err)
+	ticker := NewTicker(interval, jitter, offset, WithClock(clk))
 	defer ticker.Stop()
 
 	// Collect 60 ticks
@@ -116,8 +114,7 @@ func TestUnalignedTickerDistribution(t *testing.T) {
 
 	clk := clock.NewMock()
 
-	ticker, err := NewTicker(interval, jitter, offset, WithClock(clk))
-	require.NoError(t, err)
+	ticker := NewTicker(interval, jitter, offset, WithClock(clk))
 	defer ticker.Stop()
 
 	dist := simulatedTickerDist(ticker, clk)
@@ -137,8 +134,7 @@ func TestUnalignedTickerDistributionWithOffset(t *testing.T) {
 
 	clk := clock.NewMock()
 
-	ticker, err := NewTicker(interval, jitter, offset, WithClock(clk))
-	require.NoError(t, err)
+	ticker := NewTicker(interval, jitter, offset, WithClock(clk))
 	defer ticker.Stop()
 
 	dist := simulatedTickerDist(ticker, clk)

@@ -17,8 +17,7 @@ func TestAlignedTicker(t *testing.T) {
 	start := clk.Now()
 	end := start.Add(60 * time.Second)
 
-	ticker, err := NewTicker(interval, jitter, offset, WithClock(clk), WithAlignment(start))
-	require.NoError(t, err)
+	ticker := NewTicker(interval, jitter, offset, WithClock(clk), WithAlignment(start))
 	defer ticker.Stop()
 
 	expected := []time.Time{
@@ -51,8 +50,7 @@ func TestAlignedTickerJitter(t *testing.T) {
 	start := clk.Now()
 	end := start.Add(61 * time.Second)
 
-	ticker, err := NewTicker(interval, jitter, offset, WithClock(clk), WithAlignment(start))
-	require.NoError(t, err)
+	ticker := NewTicker(interval, jitter, offset, WithClock(clk), WithAlignment(start))
 	defer ticker.Stop()
 
 	last := start
@@ -79,8 +77,7 @@ func TestAlignedTickerOffset(t *testing.T) {
 	start := clk.Now()
 	end := start.Add(61 * time.Second)
 
-	ticker, err := NewTicker(interval, jitter, offset, WithClock(clk), WithAlignment(start))
-	require.NoError(t, err)
+	ticker := NewTicker(interval, jitter, offset, WithClock(clk), WithAlignment(start))
 	defer ticker.Stop()
 
 	expected := []time.Time{
@@ -110,8 +107,7 @@ func TestAlignedTickerMissedTick(t *testing.T) {
 	clk := clock.NewMock()
 	start := clk.Now()
 
-	ticker, err := NewTicker(interval, jitter, offset, WithClock(clk), WithAlignment(start))
-	require.NoError(t, err)
+	ticker := NewTicker(interval, jitter, offset, WithClock(clk), WithAlignment(start))
 	defer ticker.Stop()
 
 	// Advance the time after we should have received two ticks but we did not
@@ -156,8 +152,7 @@ func TestAlignedTickerJitterBehavior(t *testing.T) {
 	clk := clock.NewMock()
 	clk.Set(start)
 
-	ticker, err := NewTicker(interval, jitter, offset, WithClock(clk), WithAlignment(start))
-	require.NoError(t, err)
+	ticker := NewTicker(interval, jitter, offset, WithClock(clk), WithAlignment(start))
 	defer ticker.Stop()
 
 	// Collect 60 ticks
@@ -211,8 +206,7 @@ func TestAlignedTickerDistribution(t *testing.T) {
 	clk := clock.NewMock()
 	start := clk.Now()
 
-	ticker, err := NewTicker(interval, jitter, offset, WithClock(clk), WithAlignment(start))
-	require.NoError(t, err)
+	ticker := NewTicker(interval, jitter, offset, WithClock(clk), WithAlignment(start))
 	defer ticker.Stop()
 
 	dist := simulatedTickerDist(ticker, clk)
@@ -233,59 +227,11 @@ func TestAlignedTickerDistributionWithOffset(t *testing.T) {
 	clk := clock.NewMock()
 	start := clk.Now()
 
-	ticker, err := NewTicker(interval, jitter, offset, WithClock(clk), WithAlignment(start))
-	require.NoError(t, err)
+	ticker := NewTicker(interval, jitter, offset, WithClock(clk), WithAlignment(start))
 	defer ticker.Stop()
 
 	dist := simulatedTickerDist(ticker, clk)
 	dist.print()
 	require.Less(t, 350, dist.count)
 	require.True(t, 9 < dist.mean() && dist.mean() < 11)
-}
-
-func TestTickerValidationErrors(t *testing.T) {
-	tests := []struct {
-		name        string
-		interval    time.Duration
-		offset      time.Duration
-		expectedMsg string
-	}{
-		{
-			name:        "negative interval",
-			interval:    -1 * time.Second,
-			offset:      0,
-			expectedMsg: "interval must be positive",
-		},
-		{
-			name:        "zero interval",
-			interval:    0,
-			offset:      0,
-			expectedMsg: "interval must be positive",
-		},
-		{
-			name:        "negative offset",
-			interval:    30 * time.Second,
-			offset:      -1 * time.Second,
-			expectedMsg: "negative offset",
-		},
-		{
-			name:        "offset equals interval",
-			interval:    30 * time.Second,
-			offset:      30 * time.Second,
-			expectedMsg: "must be less than interval",
-		},
-		{
-			name:        "offset larger than interval",
-			interval:    30 * time.Second,
-			offset:      31 * time.Second,
-			expectedMsg: "must be less than interval",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewTicker(tt.interval, 0, tt.offset)
-			require.ErrorContains(t, err, tt.expectedMsg)
-		})
-	}
 }
