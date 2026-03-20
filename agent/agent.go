@@ -428,7 +428,11 @@ func (a *Agent) runInputs(ctx context.Context, startTime time.Time, unit *inputU
 			offset = input.Config.CollectionOffset
 		}
 
-		ticker := clock.NewTicker(interval, jitter, offset, options...)
+		ticker, err := clock.NewTicker(interval, jitter, offset, options...)
+		if err != nil {
+			log.Printf("E! [agent] Failed to create ticker for input %s: %v", input.LogName(), err)
+			continue
+		}
 		tickers = append(tickers, ticker)
 
 		acc := NewAccumulator(input, unit.dst)
