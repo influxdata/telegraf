@@ -457,10 +457,7 @@ func (t *Telegraf) runAgent(ctx context.Context, reloadConfig bool) error {
 	}
 
 	if int64(c.Agent.CollectionOffset) < 0 {
-		return fmt.Errorf(
-			"agent collection_offset must not be negative, found %v; use a positive offset instead (e.g. interval - offset)",
-			c.Agent.CollectionOffset,
-		)
+		return fmt.Errorf("agent collection_offset must not be negative, found %v", c.Agent.CollectionOffset)
 	}
 
 	// Setup logging as configured.
