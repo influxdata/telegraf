@@ -2445,8 +2445,8 @@ github.com/tdrn-org/go-tr064 v0.2.3/go.mod h1:3MAciJ87LZgVVkvl9Ns+dYAaS6oa5zEbyy
 github.com/tedsuo/ifrit v0.0.0-20180802180643-bea94bb476cc/go.mod h1:eyZnKCc955uh98WQvzOm0dgAeLnf2O0Rz0LPoC5ze+0=
 github.com/testcontainers/testcontainers-go v0.41.0 h1:mfpsD0D36YgkxGj2LrIyxuwQ9i2wCKAD+ESsYM1wais=
 github.com/testcontainers/testcontainers-go v0.41.0/go.mod h1:pdFrEIfaPl24zmBjerWTTYaY0M6UHsqA1YSvsoU40MI=
-github.com/testcontainers/testcontainers-go/modules/azure v0.40.0 h1:a4Qn4UEgL3uzpY1Hhuzh2c87u/CuSoTaV12timQfHQU=
-github.com/testcontainers/testcontainers-go/modules/azure v0.40.0/go.mod h1:047cjSoIxghqTQt8OVeLwLO918jOTrRnKYSEG5L6paQ=
+github.com/testcontainers/testcontainers-go/modules/azure v0.41.0 h1:Nxirpth+EKiseK+ltiFJRoZgOa6RlZKcvizt94m/SVw=
+github.com/testcontainers/testcontainers-go/modules/azure v0.41.0/go.mod h1:PyWvoXPogb/s9H4kNKcoSxNCn7bdVDMfM4DT0yta/eY=
 github.com/testcontainers/testcontainers-go/modules/kafka v0.41.0 h1:2pKbVpuAyU/jNH2xxQevwZzvAmKvSF/AHSnOi//y0rE=
 github.com/testcontainers/testcontainers-go/modules/kafka v0.41.0/go.mod h1:6GH3Es5PUD/eKYGXOnFt150gAas7ZEVfiIXHboNFjeY=
 github.com/testcontainers/testcontainers-go/modules/vault v0.41.0 h1:Hx5n69IeJBhMkiQ7V3RBCq1iPUrWCv+KEwZCjoWRc3Y=
