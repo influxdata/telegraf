@@ -1490,8 +1490,39 @@ func TestParseBrowsePath(t *testing.T) {
 }
 
 func TestParseBrowsePathError(t *testing.T) {
-	_, err := parseBrowsePath("")
-	require.ErrorContains(t, err, "empty browse path")
+	tests := []struct {
+		name    string
+		field   string
+		errText string
+	}{
+		{
+			name:    "empty string",
+			field:   "",
+			errText: "empty segment",
+		},
+		{
+			name:    "leading slash",
+			field:   "/Severity",
+			errText: "empty segment",
+		},
+		{
+			name:    "trailing slash",
+			field:   "Severity/",
+			errText: "empty segment",
+		},
+		{
+			name:    "double slash",
+			field:   "AckedState//Id",
+			errText: "empty segment",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := parseBrowsePath(tt.field)
+			require.ErrorContains(t, err, tt.errText)
+		})
+	}
 }
 
 func TestCreateSelectClausesWithNamespacedFields(t *testing.T) {

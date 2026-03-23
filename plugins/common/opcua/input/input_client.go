@@ -773,12 +773,9 @@ func parseBrowsePath(field string) ([]*ua.QualifiedName, error) {
 	path := make([]*ua.QualifiedName, 0, len(segments))
 	for _, seg := range segments {
 		if seg == "" {
-			continue
+			return nil, fmt.Errorf("empty segment in browse path %q", field)
 		}
-		ns, name, err := parseQualifiedName(seg)
-		if err != nil {
-			return nil, err
-		}
+		ns, name := parseQualifiedName(seg)
 		path = append(path, &ua.QualifiedName{NamespaceIndex: ns, Name: name})
 	}
 	if len(path) == 0 {
@@ -789,17 +786,17 @@ func parseBrowsePath(field string) ([]*ua.QualifiedName, error) {
 
 // parseQualifiedName parses a single segment like "2:TEXT01" into a namespace
 // index and name. If no namespace prefix is present, namespace 0 is used.
-func parseQualifiedName(segment string) (uint16, string, error) {
-	idx := strings.Index(segment, ":")
-	if idx < 0 {
-		return 0, segment, nil
+func parseQualifiedName(segment string) (uint16, string) {
+	prefix, name, found := strings.Cut(segment, ":")
+	if !found {
+		return 0, segment
 	}
-	ns, err := strconv.ParseUint(segment[:idx], 10, 16)
+	ns, err := strconv.ParseUint(prefix, 10, 16)
 	if err != nil {
 		// Not a valid namespace prefix, treat the whole segment as the name
-		return 0, segment, nil
+		return 0, segment
 	}
-	return uint16(ns), segment[idx+1:], nil
+	return uint16(ns), name
 }
 
 func (node *EventNodeMetricMapping) createWhereClauses() (*ua.ContentFilter, error) {
