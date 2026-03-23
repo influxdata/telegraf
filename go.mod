@@ -233,7 +233,7 @@ require (
 	go.opentelemetry.io/proto/otlp/collector/profiles/v1development v0.3.0
 	go.opentelemetry.io/proto/otlp/profiles/v1development v0.3.0
 	go.starlark.net v0.0.0-20260210143700-b62fd896b91b
-	go.step.sm/crypto v0.76.2
+	go.step.sm/crypto v0.77.1
 	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/crypto v0.49.0
 	golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa
@@ -269,7 +269,7 @@ require (
 	cloud.google.com/go/iam v1.5.3 // indirect
 	code.cloudfoundry.org/clock v1.2.0 // indirect
 	dario.cat/mergo v1.0.2 // indirect
-	filippo.io/edwards25519 v1.1.1 // indirect
+	filippo.io/edwards25519 v1.2.0 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20240806141605-e8a1dd7889d6 // indirect
 	github.com/Azure/azure-amqp-common-go/v4 v4.2.0 // indirect
