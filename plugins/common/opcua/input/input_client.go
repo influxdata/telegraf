@@ -752,13 +752,54 @@ func (node *EventNodeMetricMapping) createSelectClauses() ([]*ua.SimpleAttribute
 		return nil, err
 	}
 	for i, name := range node.Fields {
+		browsePath, err := parseBrowsePath(name)
+		if err != nil {
+			return nil, fmt.Errorf("parsing field %q failed: %w", name, err)
+		}
 		selects[i] = &ua.SimpleAttributeOperand{
 			TypeDefinitionID: typeDefinition,
-			BrowsePath:       []*ua.QualifiedName{{NamespaceIndex: 0, Name: name}},
+			BrowsePath:       browsePath,
 			AttributeID:      ua.AttributeIDValue,
 		}
 	}
 	return selects, nil
+}
+
+// parseBrowsePath parses a field name into a browse path of qualified names.
+// It supports namespace-qualified segments (e.g. "2:TEXT01") and multi-segment
+// paths separated by "/" (e.g. "AckedState/Id" or "2:AckedState/0:Id").
+func parseBrowsePath(field string) ([]*ua.QualifiedName, error) {
+	segments := strings.Split(field, "/")
+	path := make([]*ua.QualifiedName, 0, len(segments))
+	for _, seg := range segments {
+		if seg == "" {
+			continue
+		}
+		ns, name, err := parseQualifiedName(seg)
+		if err != nil {
+			return nil, err
+		}
+		path = append(path, &ua.QualifiedName{NamespaceIndex: ns, Name: name})
+	}
+	if len(path) == 0 {
+		return nil, fmt.Errorf("empty browse path")
+	}
+	return path, nil
+}
+
+// parseQualifiedName parses a single segment like "2:TEXT01" into a namespace
+// index and name. If no namespace prefix is present, namespace 0 is used.
+func parseQualifiedName(segment string) (uint16, string, error) {
+	idx := strings.Index(segment, ":")
+	if idx < 0 {
+		return 0, segment, nil
+	}
+	ns, err := strconv.ParseUint(segment[:idx], 10, 16)
+	if err != nil {
+		// Not a valid namespace prefix, treat the whole segment as the name
+		return 0, segment, nil
+	}
+	return uint16(ns), segment[idx+1:], nil
 }
 
 func (node *EventNodeMetricMapping) createWhereClauses() (*ua.ContentFilter, error) {
