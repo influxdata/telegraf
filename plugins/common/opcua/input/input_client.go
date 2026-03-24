@@ -778,9 +778,6 @@ func parseBrowsePath(field string) ([]*ua.QualifiedName, error) {
 		ns, name := parseQualifiedName(seg)
 		path = append(path, &ua.QualifiedName{NamespaceIndex: ns, Name: name})
 	}
-	if len(path) == 0 {
-		return nil, fmt.Errorf("empty browse path")
-	}
 	return path, nil
 }
 
