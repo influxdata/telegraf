@@ -141,9 +141,9 @@ metric,status=fault value4=42i 1773239679300000000
 will result in
 
 ```text
-metric,source=foo,status=fault value1=1i,additional=true 1773258782000000000
-metric,source=foo,status=fault value2=23i,additional=true 1773258782000000000
-metric,source=foo,status=fault value3=19i,additional=true 1773258782000000000
+metric,source=foo,status=ok value1=1i,additional=true 1773258782000000000
+metric,source=foo,status=warn value2=23i,additional=true 1773258782000000000
+metric,source=foo,status=ok value3=19i,additional=true 1773258782000000000
 metric,source=foo,status=fault value4=42i,additional=true 1773258782000000000
 ```
 
