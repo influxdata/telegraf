@@ -118,6 +118,11 @@ func (o *readClient) connect() error {
 		}
 	}
 
+	o.Log.Tracef("Node request order (%d nodes):", len(o.reqIDs))
+	for i, req := range o.reqIDs {
+		o.Log.Tracef("  [%d] %s", i, req.NodeID.String())
+	}
+
 	if err := o.read(); err != nil {
 		return fmt.Errorf("get data failed: %w", err)
 	}
