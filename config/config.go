@@ -640,7 +640,7 @@ func (c *Config) LoadConfigData(data []byte, path string) error {
 		if err = c.toml.UnmarshalTable(subTable, c.Agent); err != nil {
 			return fmt.Errorf("error parsing [agent]: %w", err)
 		}
-		if int64(c.Agent.CollectionOffset) < 0 {
+		if c.Agent.CollectionOffset < 0 {
 			return fmt.Errorf("agent collection_offset must not be negative, found %v", c.Agent.CollectionOffset)
 		}
 	}
