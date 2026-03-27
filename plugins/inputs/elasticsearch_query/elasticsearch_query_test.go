@@ -19,6 +19,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -65,7 +66,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			},
 		},
 		[]telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"measurement1",
 				map[string]string{"URI_keyword": "/downloads/product_1"},
 				map[string]interface{}{"size_avg": float64(202.30038022813687), "doc_count": int64(263)},
@@ -100,13 +101,13 @@ var testEsAggregationData = []esAggregationQueryTest{
 			},
 		},
 		[]telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"measurement2",
 				map[string]string{"URI_keyword": "/downloads/product_1"},
 				map[string]interface{}{"size_max": float64(3301), "doc_count": int64(263)},
 				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 			),
-			testutil.MustMetric(
+			metric.New(
 				"measurement2",
 				map[string]string{"URI_keyword": "/downloads/product_2"},
 				map[string]interface{}{"size_max": float64(3318), "doc_count": int64(237)},
@@ -141,19 +142,19 @@ var testEsAggregationData = []esAggregationQueryTest{
 			},
 		},
 		[]telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"measurement3",
 				map[string]string{"response_keyword": "200"},
 				map[string]interface{}{"size_sum": float64(22790), "doc_count": int64(22)},
 				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 			),
-			testutil.MustMetric(
+			metric.New(
 				"measurement3",
 				map[string]string{"response_keyword": "304"},
 				map[string]interface{}{"size_sum": float64(0), "doc_count": int64(219)},
 				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 			),
-			testutil.MustMetric(
+			metric.New(
 				"measurement3",
 				map[string]string{"response_keyword": "404"},
 				map[string]interface{}{"size_sum": float64(86932), "doc_count": int64(259)},
@@ -202,49 +203,49 @@ var testEsAggregationData = []esAggregationQueryTest{
 			},
 		},
 		[]telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"measurement4",
 				map[string]string{"response_keyword": "404", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
 				map[string]interface{}{"size_min": float64(318), "response_time_min": float64(126), "doc_count": int64(146)},
 				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 			),
-			testutil.MustMetric(
+			metric.New(
 				"measurement4",
 				map[string]string{"response_keyword": "304", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
 				map[string]interface{}{"size_min": float64(0), "response_time_min": float64(71), "doc_count": int64(113)},
 				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 			),
-			testutil.MustMetric(
+			metric.New(
 				"measurement4",
 				map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
 				map[string]interface{}{"size_min": float64(490), "response_time_min": float64(1514), "doc_count": int64(3)},
 				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 			),
-			testutil.MustMetric(
+			metric.New(
 				"measurement4",
 				map[string]string{"response_keyword": "404", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
 				map[string]interface{}{"size_min": float64(318), "response_time_min": float64(237), "doc_count": int64(113)},
 				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 			),
-			testutil.MustMetric(
+			metric.New(
 				"measurement4",
 				map[string]string{"response_keyword": "304", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
 				map[string]interface{}{"size_min": float64(0), "response_time_min": float64(134), "doc_count": int64(106)},
 				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 			),
-			testutil.MustMetric(
+			metric.New(
 				"measurement4",
 				map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
 				map[string]interface{}{"size_min": float64(490), "response_time_min": float64(2), "doc_count": int64(13)},
 				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 			),
-			testutil.MustMetric(
+			metric.New(
 				"measurement4",
 				map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1", "method_keyword": "HEAD"},
 				map[string]interface{}{"size_min": float64(0), "response_time_min": float64(8479), "doc_count": int64(1)},
 				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 			),
-			testutil.MustMetric(
+			metric.New(
 				"measurement4",
 				map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2", "method_keyword": "HEAD"},
 				map[string]interface{}{"size_min": float64(0), "response_time_min": float64(1059), "doc_count": int64(5)},
@@ -273,7 +274,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			},
 		},
 		[]telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"measurement5",
 				map[string]string{"URI_keyword": "/downloads/product_2"},
 				map[string]interface{}{"doc_count": int64(237)},
@@ -306,13 +307,13 @@ var testEsAggregationData = []esAggregationQueryTest{
 			},
 		},
 		[]telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"measurement6",
 				map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1"},
 				map[string]interface{}{"doc_count": int64(4)},
 				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 			),
-			testutil.MustMetric(
+			metric.New(
 				"measurement6",
 				map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2"},
 				map[string]interface{}{"doc_count": int64(18)},
@@ -335,7 +336,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 		},
 		nil,
 		[]telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"measurement7",
 				map[string]string{},
 				map[string]interface{}{"doc_count": int64(22)},
@@ -365,7 +366,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			},
 		},
 		[]telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"measurement8",
 				map[string]string{},
 				map[string]interface{}{"size_max": float64(3318)},
@@ -443,7 +444,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 			},
 		},
 		[]telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"measurement12",
 				map[string]string{},
 				map[string]interface{}{"size_avg": float64(0)},

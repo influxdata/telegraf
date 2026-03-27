@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -149,7 +150,7 @@ func TestGatherValidXML(t *testing.T) {
 			name:     "GeForce GTX 1070 Ti",
 			filename: "gtx-1070-ti.xml",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi",
 					map[string]string{
 						"name":         "GeForce GTX 1070 Ti",
@@ -183,7 +184,7 @@ func TestGatherValidXML(t *testing.T) {
 			name:     "GeForce GTX 1660 Ti",
 			filename: "gtx-1660-ti.xml",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi",
 					map[string]string{
 						"compute_mode": "Default",
@@ -229,7 +230,7 @@ func TestGatherValidXML(t *testing.T) {
 			name:     "Quadro P400",
 			filename: "quadro-p400.xml",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi",
 					map[string]string{
 						"compute_mode": "Default",
@@ -274,7 +275,7 @@ func TestGatherValidXML(t *testing.T) {
 			name:     "Quadro P2000",
 			filename: "quadro-p2000-v12.xml",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi",
 					map[string]string{
 						"arch":         "Pascal",
@@ -324,7 +325,7 @@ func TestGatherValidXML(t *testing.T) {
 			name:     "Tesla T4",
 			filename: "tesla-t4.xml",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi",
 					map[string]string{
 						"compute_mode": "Default",
@@ -376,7 +377,7 @@ func TestGatherValidXML(t *testing.T) {
 			name:     "A10G",
 			filename: "a10g.xml",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi",
 					map[string]string{
 						"compute_mode": "Default",
@@ -429,7 +430,7 @@ func TestGatherValidXML(t *testing.T) {
 			name:     "RTC 3060 schema v12",
 			filename: "rtx-3060-v12.xml",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi",
 					map[string]string{
 						"compute_mode": "Default",
@@ -479,7 +480,7 @@ func TestGatherValidXML(t *testing.T) {
 			name:     "RTC 3080 schema v12",
 			filename: "rtx-3080-v12.xml",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi",
 					map[string]string{
 						"compute_mode": "Default",
@@ -522,7 +523,7 @@ func TestGatherValidXML(t *testing.T) {
 						"vbios_version":                 "94.02.71.40.72",
 					},
 					time.Unix(1689872450, 0)),
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi_process",
 					map[string]string{
 						"name": "/usr/lib/Xorg",
@@ -533,7 +534,7 @@ func TestGatherValidXML(t *testing.T) {
 						"used_memory": int64(550),
 					},
 					time.Unix(1689872450, 0)),
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi_process",
 					map[string]string{
 						"name": "/usr/bin/gnome-shell",
@@ -544,7 +545,7 @@ func TestGatherValidXML(t *testing.T) {
 						"used_memory": int64(18),
 					},
 					time.Unix(1689872450, 0)),
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi_process",
 					map[string]string{
 						"name": "/opt/microsoft/msedge/msedge --type=gpu-process " +
@@ -562,7 +563,7 @@ func TestGatherValidXML(t *testing.T) {
 						"used_memory": int64(79),
 					},
 					time.Unix(1689872450, 0)),
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi_process",
 					map[string]string{
 						"name": "/usr/lib/firefox/firefox",
@@ -573,7 +574,7 @@ func TestGatherValidXML(t *testing.T) {
 						"used_memory": int64(541),
 					},
 					time.Unix(1689872450, 0)),
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi_process",
 					map[string]string{
 						"name": "/opt/visual-studio-code/code --type=gpu-process " +
@@ -598,7 +599,7 @@ func TestGatherValidXML(t *testing.T) {
 			name:     "RTC 3090 schema v12",
 			filename: "rtx-3090-v12.xml",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi",
 					map[string]string{
 						"compute_mode": "Default",
@@ -646,7 +647,7 @@ func TestGatherValidXML(t *testing.T) {
 			name:     "A100-SXM4 schema v12",
 			filename: "a100-sxm4-v12.xml",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi",
 					map[string]string{
 						"compute_mode": "Default",
@@ -684,7 +685,7 @@ func TestGatherValidXML(t *testing.T) {
 						"vbios_version":                 "92.00.36.00.02",
 					},
 					time.Unix(1689872450, 0)),
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi_mig",
 					map[string]string{
 						"compute_mode":  "Default",
@@ -707,7 +708,7 @@ func TestGatherValidXML(t *testing.T) {
 						"sram_uncorrectable": 0,
 					},
 					time.Unix(1689872450, 0)),
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi_mig",
 					map[string]string{
 						"compute_mode":  "Default",
@@ -730,7 +731,7 @@ func TestGatherValidXML(t *testing.T) {
 						"sram_uncorrectable": 0,
 					},
 					time.Unix(1689872450, 0)),
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi_mig",
 					map[string]string{
 						"compute_mode":  "Default",
@@ -753,7 +754,7 @@ func TestGatherValidXML(t *testing.T) {
 						"sram_uncorrectable": 0,
 					},
 					time.Unix(1689872450, 0)),
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi_mig",
 					map[string]string{
 						"compute_mode":  "Default",
