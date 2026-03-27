@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -31,7 +32,7 @@ func TestNode(t *testing.T) {
 				},
 			},
 			output: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					nodeMeasurement,
 					map[string]string{},
 					map[string]interface{}{
@@ -112,7 +113,7 @@ func TestNode(t *testing.T) {
 				},
 			},
 			output: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					nodeMeasurement,
 					map[string]string{
 						"node_name":         "node1",
@@ -127,7 +128,7 @@ func TestNode(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					nodeMeasurement,
 					map[string]string{
 						"node_name":         "node1",

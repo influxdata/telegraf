@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -71,7 +72,7 @@ func TestEndpoint(t *testing.T) {
 				},
 			},
 			output: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"kubernetes_endpoint",
 					map[string]string{
 						"endpoint_name": "storage",
@@ -132,7 +133,7 @@ func TestEndpoint(t *testing.T) {
 				},
 			},
 			output: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"kubernetes_endpoint",
 					map[string]string{
 						"endpoint_name": "storage",
@@ -202,7 +203,7 @@ func TestEndpoint(t *testing.T) {
 				},
 			},
 			output: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"kubernetes_endpoint",
 					map[string]string{
 						"endpoint_name": "storage",
@@ -220,7 +221,7 @@ func TestEndpoint(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"kubernetes_endpoint",
 					map[string]string{
 						"endpoint_name": "storage",
@@ -308,7 +309,7 @@ func TestEndpoint(t *testing.T) {
 				},
 			},
 			output: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"kubernetes_endpoint",
 					map[string]string{
 						"endpoint_name": "storage",
@@ -432,7 +433,7 @@ func TestEndpoint(t *testing.T) {
 				},
 			},
 			output: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"kubernetes_endpoint",
 					map[string]string{
 						"endpoint_name": "storage",
