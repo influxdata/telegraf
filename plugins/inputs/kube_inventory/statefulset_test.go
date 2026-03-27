@@ -365,8 +365,8 @@ func TestStatefulSetSelectorFilter(t *testing.T) {
 
 		// Grab selector tags
 		actual := map[string]string{}
-		for _, metric := range acc.Metrics {
-			for key, val := range metric.Tags {
+		for _, m := range acc.Metrics {
+			for key, val := range m.Tags {
 				if strings.Contains(key, "selector_") {
 					actual[key] = val
 				}
