@@ -21,6 +21,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/gnmi/extensions/jnpr_gnmi_extention"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -257,7 +258,7 @@ func TestNotification(t *testing.T) {
 				},
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"alias",
 					map[string]string{
 						"path":   "type:/model",
@@ -271,7 +272,7 @@ func TestNotification(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"alias",
 					map[string]string{
 						"path":   "type:/model",
@@ -284,7 +285,7 @@ func TestNotification(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"alias",
 					map[string]string{
 						"path":   "type:/model",
@@ -298,7 +299,7 @@ func TestNotification(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"alias",
 					map[string]string{
 						"path":   "type:/model",
@@ -368,7 +369,7 @@ func TestNotification(t *testing.T) {
 				},
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"PHY_COUNTERS",
 					map[string]string{
 						"path":    "type:/state/port/ethernet/oper-speed",
@@ -523,7 +524,7 @@ func TestNotification(t *testing.T) {
 				},
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"oc-neigh-state",
 					map[string]string{
 						"source":                    "127.0.0.1",
@@ -632,7 +633,7 @@ func TestNotification(t *testing.T) {
 				},
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"interfaces",
 					map[string]string{
 						"path":   "openconfig:/interfaces/interface/state/counters",
@@ -769,7 +770,7 @@ func TestNotification(t *testing.T) {
 				},
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"temperature",
 					map[string]string{
 						"path":   "openconfig-platform:/components/component/state",
@@ -858,7 +859,7 @@ func TestNotification(t *testing.T) {
 				},
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"type",
 					map[string]string{
 						"path":             "openconfig-platform:/components/component/state",

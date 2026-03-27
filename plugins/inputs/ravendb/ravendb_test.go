@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -202,10 +203,10 @@ func TestRavenDBGeneratesMetricsFull(t *testing.T) {
 		"public_server_url": "http://localhost:8080",
 	}
 
-	serverExpected := testutil.MustMetric("ravendb_server", serverTags, serverFields, defaultTime)
-	dbExpected := testutil.MustMetric("ravendb_databases", dbTags, dbFields, defaultTime)
-	indexExpected := testutil.MustMetric("ravendb_indexes", indexTags, indexFields, defaultTime)
-	collectionsExpected := testutil.MustMetric("ravendb_collections", collectionTags, collectionFields, defaultTime)
+	serverExpected := metric.New("ravendb_server", serverTags, serverFields, defaultTime)
+	dbExpected := metric.New("ravendb_databases", dbTags, dbFields, defaultTime)
+	indexExpected := metric.New("ravendb_indexes", indexTags, indexFields, defaultTime)
+	collectionsExpected := metric.New("ravendb_collections", collectionTags, collectionFields, defaultTime)
 
 	for _, metric := range acc.GetTelegrafMetrics() {
 		switch metric.Name() {
@@ -391,10 +392,10 @@ func TestRavenDBGeneratesMetricsMin(t *testing.T) {
 
 	defaultTime := time.Unix(0, 0)
 
-	serverExpected := testutil.MustMetric("ravendb_server", serverTags, serverFields, defaultTime)
-	dbExpected := testutil.MustMetric("ravendb_databases", dbTags, dbFields, defaultTime)
-	indexExpected := testutil.MustMetric("ravendb_indexes", indexTags, indexFields, defaultTime)
-	collectionsExpected := testutil.MustMetric("ravendb_collections", collectionTags, collectionFields, defaultTime)
+	serverExpected := metric.New("ravendb_server", serverTags, serverFields, defaultTime)
+	dbExpected := metric.New("ravendb_databases", dbTags, dbFields, defaultTime)
+	indexExpected := metric.New("ravendb_indexes", indexTags, indexFields, defaultTime)
+	collectionsExpected := metric.New("ravendb_collections", collectionTags, collectionFields, defaultTime)
 
 	for _, metric := range acc.GetTelegrafMetrics() {
 		switch metric.Name() {

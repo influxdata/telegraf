@@ -14,6 +14,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -102,7 +103,7 @@ func TestRedisSentinelMasters(t *testing.T) {
 	}
 
 	expectedMetrics := []telegraf.Metric{
-		testutil.MustMetric(measurementMasters, expectedTags, expectedFields, now),
+		metric.New(measurementMasters, expectedTags, expectedFields, now),
 	}
 
 	sentinelMastersOutput := map[string]string{
@@ -132,7 +133,7 @@ func TestRedisSentinelMasters(t *testing.T) {
 	require.NoErrorf(t, sentinelErr, "failed converting output: %v", sentinelErr)
 
 	actualMetrics := []telegraf.Metric{
-		testutil.MustMetric(measurementMasters, sentinelTags, sentinelFields, now),
+		metric.New(measurementMasters, sentinelTags, sentinelFields, now),
 	}
 
 	testutil.RequireMetricsEqual(t, expectedMetrics, actualMetrics, testutil.IgnoreTime())
@@ -163,7 +164,7 @@ func TestRedisSentinels(t *testing.T) {
 	}
 
 	expectedMetrics := []telegraf.Metric{
-		testutil.MustMetric(measurementSentinels, expectedTags, expectedFields, now),
+		metric.New(measurementSentinels, expectedTags, expectedFields, now),
 	}
 
 	sentinelsOutput := map[string]string{
@@ -187,7 +188,7 @@ func TestRedisSentinels(t *testing.T) {
 	require.NoErrorf(t, sentinelErr, "failed converting output: %v", sentinelErr)
 
 	actualMetrics := []telegraf.Metric{
-		testutil.MustMetric(measurementSentinels, sentinelTags, sentinelFields, now),
+		metric.New(measurementSentinels, sentinelTags, sentinelFields, now),
 	}
 
 	testutil.RequireMetricsEqual(t, expectedMetrics, actualMetrics)
@@ -224,7 +225,7 @@ func TestRedisSentinelReplicas(t *testing.T) {
 	}
 
 	expectedMetrics := []telegraf.Metric{
-		testutil.MustMetric(measurementReplicas, expectedTags, expectedFields, now),
+		metric.New(measurementReplicas, expectedTags, expectedFields, now),
 	}
 
 	replicasOutput := map[string]string{
@@ -254,7 +255,7 @@ func TestRedisSentinelReplicas(t *testing.T) {
 	require.NoErrorf(t, sentinelErr, "failed converting output: %v", sentinelErr)
 
 	actualMetrics := []telegraf.Metric{
-		testutil.MustMetric(measurementReplicas, sentinelTags, sentinelFields, now),
+		metric.New(measurementReplicas, sentinelTags, sentinelFields, now),
 	}
 
 	testutil.RequireMetricsEqual(t, expectedMetrics, actualMetrics)
@@ -323,7 +324,7 @@ func TestRedisSentinelInfoAll(t *testing.T) {
 	}
 
 	expectedMetrics := []telegraf.Metric{
-		testutil.MustMetric(measurementSentinel, expectedTags, expectedFields, now),
+		metric.New(measurementSentinel, expectedTags, expectedFields, now),
 	}
 
 	sentinelInfoResponse, err := os.ReadFile("testdata/sentinel.info.response")
@@ -335,7 +336,7 @@ func TestRedisSentinelInfoAll(t *testing.T) {
 	require.NoErrorf(t, sentinelErr, "failed converting output: %v", sentinelErr)
 
 	actualMetrics := []telegraf.Metric{
-		testutil.MustMetric(measurementSentinel, sentinelTags, sentinelFields, now),
+		metric.New(measurementSentinel, sentinelTags, sentinelFields, now),
 	}
 
 	testutil.RequireMetricsEqual(t, expectedMetrics, actualMetrics)

@@ -116,7 +116,7 @@ func TestGrokParser(t *testing.T) {
 
 func TestCharacterEncoding(t *testing.T) {
 	expected := []telegraf.Metric{
-		testutil.MustMetric("file",
+		metric.New("file",
 			map[string]string{
 				"dest": "example.org",
 				"hop":  "1",
@@ -133,7 +133,7 @@ func TestCharacterEncoding(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("file",
+		metric.New("file",
 			map[string]string{
 				"dest": "example.org",
 				"hop":  "2",
@@ -150,7 +150,7 @@ func TestCharacterEncoding(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("file",
+		metric.New("file",
 			map[string]string{
 				"dest": "example.org",
 				"hop":  "3",
@@ -167,7 +167,7 @@ func TestCharacterEncoding(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("file",
+		metric.New("file",
 			map[string]string{
 				"dest": "example.org",
 				"hop":  "4",
@@ -276,7 +276,7 @@ func TestCharacterEncoding(t *testing.T) {
 
 func TestStatefulParsers(t *testing.T) {
 	expected := []telegraf.Metric{
-		testutil.MustMetric("file",
+		metric.New("file",
 			map[string]string{
 				"dest": "example.org",
 				"hop":  "1",
@@ -293,7 +293,7 @@ func TestStatefulParsers(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("file",
+		metric.New("file",
 			map[string]string{
 				"dest": "example.org",
 				"hop":  "2",
@@ -310,7 +310,7 @@ func TestStatefulParsers(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("file",
+		metric.New("file",
 			map[string]string{
 				"dest": "example.org",
 				"hop":  "3",
@@ -327,7 +327,7 @@ func TestStatefulParsers(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("file",
+		metric.New("file",
 			map[string]string{
 				"dest": "example.org",
 				"hop":  "4",
