@@ -208,16 +208,16 @@ func TestRavenDBGeneratesMetricsFull(t *testing.T) {
 	indexExpected := metric.New("ravendb_indexes", indexTags, indexFields, defaultTime)
 	collectionsExpected := metric.New("ravendb_collections", collectionTags, collectionFields, defaultTime)
 
-	for _, metric := range acc.GetTelegrafMetrics() {
-		switch metric.Name() {
+	for _, m := range acc.GetTelegrafMetrics() {
+		switch m.Name() {
 		case "ravendb_server":
-			testutil.RequireMetricEqual(t, serverExpected, metric, testutil.IgnoreTime())
+			testutil.RequireMetricEqual(t, serverExpected, m, testutil.IgnoreTime())
 		case "ravendb_databases":
-			testutil.RequireMetricEqual(t, dbExpected, metric, testutil.IgnoreTime())
+			testutil.RequireMetricEqual(t, dbExpected, m, testutil.IgnoreTime())
 		case "ravendb_indexes":
-			testutil.RequireMetricEqual(t, indexExpected, metric, testutil.IgnoreTime())
+			testutil.RequireMetricEqual(t, indexExpected, m, testutil.IgnoreTime())
 		case "ravendb_collections":
-			testutil.RequireMetricEqual(t, collectionsExpected, metric, testutil.IgnoreTime())
+			testutil.RequireMetricEqual(t, collectionsExpected, m, testutil.IgnoreTime())
 		}
 	}
 }
@@ -397,16 +397,16 @@ func TestRavenDBGeneratesMetricsMin(t *testing.T) {
 	indexExpected := metric.New("ravendb_indexes", indexTags, indexFields, defaultTime)
 	collectionsExpected := metric.New("ravendb_collections", collectionTags, collectionFields, defaultTime)
 
-	for _, metric := range acc.GetTelegrafMetrics() {
-		switch metric.Name() {
+	for _, m := range acc.GetTelegrafMetrics() {
+		switch m.Name() {
 		case "ravendb_server":
-			testutil.RequireMetricEqual(t, serverExpected, metric, testutil.IgnoreTime())
+			testutil.RequireMetricEqual(t, serverExpected, m, testutil.IgnoreTime())
 		case "ravendb_databases":
-			testutil.RequireMetricEqual(t, dbExpected, metric, testutil.IgnoreTime())
+			testutil.RequireMetricEqual(t, dbExpected, m, testutil.IgnoreTime())
 		case "ravendb_indexes":
-			testutil.RequireMetricEqual(t, indexExpected, metric, testutil.IgnoreTime())
+			testutil.RequireMetricEqual(t, indexExpected, m, testutil.IgnoreTime())
 		case "ravendb_collections":
-			testutil.RequireMetricEqual(t, collectionsExpected, metric, testutil.IgnoreTime())
+			testutil.RequireMetricEqual(t, collectionsExpected, m, testutil.IgnoreTime())
 		}
 	}
 }
