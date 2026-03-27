@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -55,7 +56,7 @@ func TestRabbitMQGeneratesMetricsSet1(t *testing.T) {
 
 	// Define test cases
 	expected := []telegraf.Metric{
-		testutil.MustMetric("rabbitmq_overview",
+		metric.New("rabbitmq_overview",
 			map[string]string{
 				"url": ts.URL,
 			},
@@ -79,7 +80,7 @@ func TestRabbitMQGeneratesMetricsSet1(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("rabbitmq_queue",
+		metric.New("rabbitmq_queue",
 			map[string]string{
 				"auto_delete": "false",
 				"durable":     "false",
@@ -117,7 +118,7 @@ func TestRabbitMQGeneratesMetricsSet1(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("rabbitmq_queue",
+		metric.New("rabbitmq_queue",
 			map[string]string{
 				"auto_delete": "false",
 				"durable":     "true",
@@ -155,7 +156,7 @@ func TestRabbitMQGeneratesMetricsSet1(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("rabbitmq_queue",
+		metric.New("rabbitmq_queue",
 			map[string]string{
 				"auto_delete": "false",
 				"durable":     "true",
@@ -193,7 +194,7 @@ func TestRabbitMQGeneratesMetricsSet1(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("rabbitmq_queue",
+		metric.New("rabbitmq_queue",
 			map[string]string{
 				"auto_delete": "false",
 				"durable":     "true",
@@ -231,7 +232,7 @@ func TestRabbitMQGeneratesMetricsSet1(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("rabbitmq_node",
+		metric.New("rabbitmq_node",
 			map[string]string{
 				"node": "rabbit@vagrant-ubuntu-trusty-64",
 				"url":  ts.URL,
@@ -291,7 +292,7 @@ func TestRabbitMQGeneratesMetricsSet1(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("rabbitmq_exchange",
+		metric.New("rabbitmq_exchange",
 			map[string]string{
 				"auto_delete": "true",
 				"durable":     "false",
@@ -309,7 +310,7 @@ func TestRabbitMQGeneratesMetricsSet1(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("rabbitmq_federation",
+		metric.New("rabbitmq_federation",
 			map[string]string{
 				"queue":          "exampleLocalQueue",
 				"type":           "queue",
@@ -388,7 +389,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 
 	// Define test cases
 	expected := []telegraf.Metric{
-		testutil.MustMetric("rabbitmq_overview",
+		metric.New("rabbitmq_overview",
 			map[string]string{
 				"url": ts.URL,
 			},
@@ -412,7 +413,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("rabbitmq_queue",
+		metric.New("rabbitmq_queue",
 			map[string]string{
 				"auto_delete": "false",
 				"durable":     "false",
@@ -449,7 +450,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("rabbitmq_queue",
+		metric.New("rabbitmq_queue",
 			map[string]string{
 				"auto_delete": "false",
 				"durable":     "false",
@@ -486,7 +487,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("rabbitmq_queue",
+		metric.New("rabbitmq_queue",
 			map[string]string{
 				"auto_delete": "false",
 				"durable":     "false",
@@ -523,7 +524,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("rabbitmq_node",
+		metric.New("rabbitmq_node",
 			map[string]string{
 				"node": "rabbit@rmqserver",
 				"url":  ts.URL,
@@ -583,7 +584,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("rabbitmq_queue",
+		metric.New("rabbitmq_queue",
 			map[string]string{
 				"auto_delete": "false",
 				"durable":     "false",
@@ -620,7 +621,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("rabbitmq_queue",
+		metric.New("rabbitmq_queue",
 			map[string]string{
 				"auto_delete": "false",
 				"durable":     "false",
@@ -657,7 +658,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("rabbitmq_exchange",
+		metric.New("rabbitmq_exchange",
 			map[string]string{
 				"auto_delete": "false",
 				"durable":     "true",
@@ -675,7 +676,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("rabbitmq_exchange",
+		metric.New("rabbitmq_exchange",
 			map[string]string{
 				"auto_delete": "false",
 				"durable":     "true",
@@ -693,7 +694,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("rabbitmq_exchange",
+		metric.New("rabbitmq_exchange",
 			map[string]string{
 				"auto_delete": "false",
 				"durable":     "true",
@@ -711,7 +712,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("rabbitmq_exchange",
+		metric.New("rabbitmq_exchange",
 			map[string]string{
 				"auto_delete": "false",
 				"durable":     "true",
@@ -729,7 +730,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("rabbitmq_exchange",
+		metric.New("rabbitmq_exchange",
 			map[string]string{
 				"auto_delete": "false",
 				"durable":     "true",
@@ -747,7 +748,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("rabbitmq_exchange",
+		metric.New("rabbitmq_exchange",
 			map[string]string{
 				"auto_delete": "false",
 				"durable":     "true",
@@ -765,7 +766,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("rabbitmq_exchange",
+		metric.New("rabbitmq_exchange",
 			map[string]string{
 				"auto_delete": "false",
 				"durable":     "true",
@@ -783,7 +784,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("rabbitmq_exchange",
+		metric.New("rabbitmq_exchange",
 			map[string]string{
 				"auto_delete": "true",
 				"durable":     "false",
