@@ -118,6 +118,43 @@ func TestMemStats(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
+var linuxBaseFields = map[string]interface{}{
+	"total":             uint64(12400),
+	"available":         uint64(7600),
+	"used":              uint64(5000),
+	"used_percent":      100 * float64(5000) / float64(12400),
+	"available_percent": 100 * float64(7600) / float64(12400),
+	"free":              uint64(1235),
+	"active":            uint64(0),
+	"buffered":          uint64(0),
+	"cached":            uint64(0),
+	"commit_limit":      uint64(0),
+	"committed_as":      uint64(0),
+	"dirty":             uint64(0),
+	"high_free":         uint64(0),
+	"high_total":        uint64(0),
+	"huge_pages_free":   uint64(0),
+	"huge_page_size":    uint64(0),
+	"huge_pages_total":  uint64(0),
+	"inactive":          uint64(0),
+	"low_free":          uint64(0),
+	"low_total":         uint64(0),
+	"mapped":            uint64(0),
+	"page_tables":       uint64(0),
+	"shared":            uint64(0),
+	"slab":              uint64(0),
+	"sreclaimable":      uint64(0),
+	"sunreclaim":        uint64(0),
+	"swap_cached":       uint64(0),
+	"swap_free":         uint64(0),
+	"swap_total":        uint64(0),
+	"vmalloc_chunk":     uint64(0),
+	"vmalloc_total":     uint64(0),
+	"vmalloc_used":      uint64(0),
+	"write_back_tmp":    uint64(0),
+	"write_back":        uint64(0),
+}
+
 func TestMemStatsCollectExtended(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.Skip("Skipping Linux-specific extended memory test")
@@ -154,6 +191,8 @@ func TestMemStatsCollectExtended(t *testing.T) {
 		},
 	}
 
+	baseFields := linuxBaseFields
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			hostProc, err := filepath.Abs(filepath.Join("testdata", tt.testdataDir, "proc"))
@@ -182,10 +221,18 @@ func TestMemStatsCollectExtended(t *testing.T) {
 
 			require.NoError(t, plugin.Gather(&acc))
 
-			fields := acc.GetTelegrafMetrics()[0].Fields()
-			for k, v := range tt.extendedFields {
-				require.Equal(t, v, fields[k], "field %q mismatch", k)
+			fields := make(map[string]interface{}, len(baseFields)+len(tt.extendedFields))
+			for k, v := range baseFields {
+				fields[k] = v
 			}
+			for k, v := range tt.extendedFields {
+				fields[k] = v
+			}
+
+			expected := []telegraf.Metric{
+				testutil.MustMetric("mem", map[string]string{}, fields, time.Unix(0, 0), telegraf.Gauge),
+			}
+			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 		})
 	}
 }
@@ -199,6 +246,7 @@ func TestMemStatsCollectExtendedDisabled(t *testing.T) {
 		Total:     12400,
 		Available: 7600,
 		Used:      5000,
+		Free:      1235,
 	}
 
 	mps.On("VMStat").Return(vms, nil)
@@ -215,8 +263,8 @@ func TestMemStatsCollectExtendedDisabled(t *testing.T) {
 	err = plugin.Gather(&acc)
 	require.NoError(t, err)
 
-	fields := acc.GetTelegrafMetrics()[0].Fields()
-	for _, key := range []string{"active_anon", "inactive_anon", "active_file", "inactive_file", "unevictable", "percpu"} {
-		require.Nil(t, fields[key], "field %q should not be present when collect_extended is false", key)
+	expected := []telegraf.Metric{
+		testutil.MustMetric("mem", map[string]string{}, linuxBaseFields, time.Unix(0, 0), telegraf.Gauge),
 	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
