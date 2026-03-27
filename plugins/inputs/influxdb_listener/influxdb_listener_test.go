@@ -20,6 +20,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -333,7 +334,7 @@ func TestWriteRetentionPolicyTag(t *testing.T) {
 	require.Equal(t, 204, resp.StatusCode)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"rp": "myrp",
@@ -494,7 +495,7 @@ func TestWriteLargeLine(t *testing.T) {
 			// TODO: with the new parser, long lines aren't a problem.  Do we need to skip them?
 			// require.EqualValues(t, 400, resp.StatusCode)
 
-			expected := testutil.MustMetric(
+			expected := metric.New(
 				"super_long_metric",
 				map[string]string{"foo": "bar"},
 				map[string]interface{}{

@@ -19,6 +19,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/common/oauth"
 	httpplugin "github.com/influxdata/telegraf/plugins/inputs/http"
@@ -446,7 +447,7 @@ func TestHTTPWithCSVFormat(t *testing.T) {
 	})
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric("metricName",
+		metric.New("metricName",
 			map[string]string{
 				"url": address,
 				"c":   "ok",
@@ -524,7 +525,7 @@ func TestConnectionOverUnixSocket(t *testing.T) {
 	})
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric("metricName",
+		metric.New("metricName",
 			map[string]string{
 				"url": address,
 				"c":   "ok",

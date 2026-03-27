@@ -16,6 +16,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -1142,7 +1143,7 @@ func TestRedirect(t *testing.T) {
 	require.NoError(t, h.Gather(&acc))
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"http_response",
 			map[string]string{
 				"server":      ts.URL,
