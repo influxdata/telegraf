@@ -929,9 +929,9 @@ func TestRabbitMQQueueTypeTag(t *testing.T) {
 
 	// Check that queue metrics don't have type tag when disabled
 	queueMetrics := acc.GetTelegrafMetrics()
-	for _, metric := range queueMetrics {
-		if metric.Name() == "rabbitmq_queue" {
-			require.False(t, metric.HasTag("type"), "Queue metric should not have type tag when IncludeQueueTypeTag is false")
+	for _, m := range queueMetrics {
+		if m.Name() == "rabbitmq_queue" {
+			require.False(t, m.HasTag("type"), "Queue metric should not have type tag when IncludeQueueTypeTag is false")
 		}
 	}
 
@@ -953,12 +953,12 @@ func TestRabbitMQQueueTypeTag(t *testing.T) {
 	queueMetricsWithType := accWithType.GetTelegrafMetrics()
 	queueTypeMap := make(map[string]string) // queue name -> queue type
 
-	for _, metric := range queueMetricsWithType {
-		if metric.Name() == "rabbitmq_queue" {
-			require.True(t, metric.HasTag("type"), "Queue metric should have type tag when IncludeQueueTypeTag is true")
+	for _, m := range queueMetricsWithType {
+		if m.Name() == "rabbitmq_queue" {
+			require.True(t, m.HasTag("type"), "Queue metric should have type tag when IncludeQueueTypeTag is true")
 
-			queueName, _ := metric.GetTag("queue")
-			queueType, _ := metric.GetTag("type")
+			queueName, _ := m.GetTag("queue")
+			queueType, _ := m.GetTag("type")
 			queueTypeMap[queueName] = queueType
 		}
 	}
