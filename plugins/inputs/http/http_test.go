@@ -64,8 +64,8 @@ func TestHTTPWithJSONFormat(t *testing.T) {
 	require.Len(t, acc.Metrics, 1)
 
 	// basic check to see if we got the right field, value and tag
-	var metric = acc.Metrics[0]
-	require.Equal(t, metric.Measurement, metricName)
+	var m = acc.Metrics[0]
+	require.Equal(t, m.Measurement, metricName)
 	require.Len(t, acc.Metrics[0].Fields, 1)
 	require.InDelta(t, 1.2, acc.Metrics[0].Fields["a"], testutil.DefaultDelta)
 	require.Equal(t, acc.Metrics[0].Tags["url"], address)

@@ -341,7 +341,7 @@ func TestGatherMetric(t *testing.T) {
 		Regions:     []string{"cn-shanghai"},
 	}
 
-	metric := &metricDef{
+	md := &metricDef{
 		Dimensions: `"instanceId": "i-abcdefgh123456"`,
 	}
 
@@ -365,7 +365,7 @@ func TestGatherMetric(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc telegraf.Accumulator
-			require.EqualError(t, plugin.gatherMetric(acc, tt.metricName, metric), tt.expectedErrorString)
+			require.EqualError(t, plugin.gatherMetric(acc, tt.metricName, md), tt.expectedErrorString)
 		})
 	}
 }
