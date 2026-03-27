@@ -372,7 +372,7 @@ func TestConsumerGroupHandlerConsumeClaim(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{},
 			map[string]interface{}{
@@ -401,7 +401,7 @@ func TestConsumerGroupHandlerHandle(t *testing.T) {
 				Value: []byte("42"),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -436,7 +436,7 @@ func TestConsumerGroupHandlerHandle(t *testing.T) {
 				Value: []byte("42"),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"topic": "telegraf",

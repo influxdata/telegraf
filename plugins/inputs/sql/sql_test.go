@@ -12,6 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -66,7 +67,7 @@ func TestMariaDBIntegration(t *testing.T) {
 				},
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"sql",
 					map[string]string{
 						"tag_one": "tag1",
@@ -164,7 +165,7 @@ func TestPostgreSQLIntegration(t *testing.T) {
 				},
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"sql",
 					map[string]string{
 						"tag_one": "tag1",
@@ -258,7 +259,7 @@ func TestClickHouseIntegration(t *testing.T) {
 				},
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"sql",
 					map[string]string{
 						"tag_one": "tag1",

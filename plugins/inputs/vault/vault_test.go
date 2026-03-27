@@ -14,6 +14,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -25,7 +26,7 @@ func TestVaultStats(t *testing.T) {
 		{
 			name: "Metrics",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"vault.raft.replication.appendEntries.logs",
 					map[string]string{
 						"peer_id": "clustnode-02",
@@ -42,7 +43,7 @@ func TestVaultStats(t *testing.T) {
 					time.Unix(1638287340, 0),
 					1,
 				),
-				testutil.MustMetric(
+				metric.New(
 					"vault.core.unsealed",
 					map[string]string{
 						"cluster": "vault-cluster-23b671c7",
@@ -53,7 +54,7 @@ func TestVaultStats(t *testing.T) {
 					time.Unix(1638287340, 0),
 					2,
 				),
-				testutil.MustMetric(
+				metric.New(
 					"vault.token.lookup",
 					map[string]string{},
 					map[string]interface{}{
@@ -111,7 +112,7 @@ func TestVaultStats(t *testing.T) {
 
 func TestRedirect(t *testing.T) {
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"vault.raft.replication.appendEntries.logs",
 			map[string]string{
 				"peer_id": "clustnode-02",
@@ -128,7 +129,7 @@ func TestRedirect(t *testing.T) {
 			time.Unix(1638287340, 0),
 			1,
 		),
-		testutil.MustMetric(
+		metric.New(
 			"vault.core.unsealed",
 			map[string]string{
 				"cluster": "vault-cluster-23b671c7",
@@ -139,7 +140,7 @@ func TestRedirect(t *testing.T) {
 			time.Unix(1638287340, 0),
 			2,
 		),
-		testutil.MustMetric(
+		metric.New(
 			"vault.token.lookup",
 			map[string]string{},
 			map[string]interface{}{
