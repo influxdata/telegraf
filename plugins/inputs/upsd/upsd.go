@@ -19,6 +19,17 @@ import (
 var sampleConfig string
 
 var (
+	// Fields that must always be emitted as strings to avoid type conflicts.
+	// The go.nut library auto-detects numeric-looking values (e.g. "0764")
+	// and converts them to int64, but IDs like vendorid/productid should
+	// remain strings regardless of their content.
+	stringFieldSet = map[string]bool{
+		"ups.vendorid":              true,
+		"ups.productid":             true,
+		"driver.parameter.vendorid": true,
+		"driver.parameter.productid": true,
+	}
+
 	// Define the default field set to add if existing
 	defaultFieldSet = map[string]string{
 		"battery.charge":          "battery_charge_percent",
@@ -168,8 +179,14 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, upsname string, variables []n
 			continue
 		}
 
-		// Force expected float values to actually being float (e.g. if delivered as int)
-		if u.ForceFloat {
+		// Force ID fields to always be strings to avoid type conflicts
+		if stringFieldSet[varname] {
+			str, err := internal.ToString(v)
+			if err == nil {
+				v = str
+			}
+		} else if u.ForceFloat {
+			// Force expected float values to actually being float (e.g. if delivered as int)
 			float, err := internal.ToFloat64(v)
 			if err == nil {
 				v = float
