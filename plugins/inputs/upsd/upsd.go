@@ -24,9 +24,9 @@ var (
 	// and converts them to int64, but IDs like vendorid/productid should
 	// remain strings regardless of their content.
 	stringFieldSet = map[string]bool{
-		"ups.vendorid":              true,
-		"ups.productid":             true,
-		"driver.parameter.vendorid": true,
+		"ups.vendorid":               true,
+		"ups.productid":              true,
+		"driver.parameter.vendorid":  true,
 		"driver.parameter.productid": true,
 	}
 
