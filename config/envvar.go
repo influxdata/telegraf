@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/compose-spec/compose-go/template"
@@ -18,6 +19,8 @@ type trimmer struct {
 	input  *bytes.Reader
 	output bytes.Buffer
 }
+
+var simpleBracedVarRe = regexp.MustCompile(`\$\{([_a-zA-Z][_a-zA-Z0-9]*)\}`)
 
 func removeComments(buf []byte) ([]byte, error) {
 	t := &trimmer{
@@ -232,7 +235,7 @@ func substituteEnvironmentStrict(contents []byte, oldReplacementBehavior bool) (
 	// Prepare the environment-variable replacer
 	options := []template.Option{
 		template.WithReplacementFunction(func(s string, m template.Mapping, cfg *template.Config) (string, error) {
-			result, applied, err := template.DefaultReplacementAppliedFunc(s, m, cfg)
+			result, applied, err := defaultReplacementKeepingUnsetBracedVars(s, m, cfg)
 			if err == nil && !applied {
 				// Keep undeclared environment-variable patterns to reproduce
 				// pre-v1.27 behavior
@@ -308,7 +311,7 @@ func walk(node interface{}, f func(interface{}) error) error {
 func substituteEnvironmentNonStrict(contents []byte, oldReplacementBehavior bool) ([]byte, error) {
 	options := []template.Option{
 		template.WithReplacementFunction(func(s string, m template.Mapping, cfg *template.Config) (string, error) {
-			result, applied, err := template.DefaultReplacementAppliedFunc(s, m, cfg)
+			result, applied, err := defaultReplacementKeepingUnsetBracedVars(s, m, cfg)
 			if err == nil && !applied {
 				// Keep undeclared environment-variable patterns to reproduce
 				// pre-v1.27 behavior
@@ -335,4 +338,49 @@ func substituteEnvironmentNonStrict(contents []byte, oldReplacementBehavior bool
 		return "", false
 	}, options...)
 	return []byte(retVal), err
+}
+
+func defaultReplacementKeepingUnsetBracedVars(s string, m template.Mapping, cfg *template.Config) (string, bool, error) {
+	matches := simpleBracedVarRe.FindAllStringSubmatch(s, -1)
+	if len(matches) == 0 {
+		return template.DefaultReplacementAppliedFunc(s, m, cfg)
+	}
+
+	type tokenMap struct {
+		token string
+		varRe string
+	}
+
+	preserved := make([]tokenMap, 0, len(matches))
+	tmp := s
+	for i, match := range matches {
+		if len(match) != 2 {
+			continue
+		}
+		k := match[1]
+		if _, ok := m(k); ok {
+			continue
+		}
+		token := fmt.Sprintf("__TELEGRAF_KEEP_UNSET_ENV_%d__", i)
+		varRe := "${" + k + "}"
+		tmp = strings.ReplaceAll(tmp, varRe, token)
+		preserved = append(preserved, tokenMap{token: token, varRe: varRe})
+	}
+
+	if !strings.Contains(tmp, "$") {
+		result := tmp
+		for _, p := range preserved {
+			result = strings.ReplaceAll(result, p.token, p.varRe)
+		}
+		return result, true, nil
+	}
+
+	result, applied, err := template.DefaultReplacementAppliedFunc(tmp, m, cfg)
+	if err != nil {
+		return result, applied, err
+	}
+	for _, p := range preserved {
+		result = strings.ReplaceAll(result, p.token, p.varRe)
+	}
+	return result, applied, nil
 }
