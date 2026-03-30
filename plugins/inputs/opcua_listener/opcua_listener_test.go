@@ -1420,12 +1420,10 @@ func TestProcessNotificationsSurvivesNilValueAndError(t *testing.T) {
 				{
 					ClientHandle: 0,
 					Value: &ua.DataValue{
-						Value:             ua.MustVariant(float64(42.0)),
-						Status:            ua.StatusOK,
-						ServerTimestamp:   time.Now(),
-						SourceTimestamp:   time.Now(),
-						ServerPicoseconds: 0,
-						SourcePicoseconds: 0,
+						Value:           ua.MustVariant(float64(42.0)),
+						Status:          ua.StatusOK,
+						ServerTimestamp: time.Now(),
+						SourceTimestamp: time.Now(),
 					},
 				},
 			},

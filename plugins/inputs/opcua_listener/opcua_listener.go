@@ -45,9 +45,10 @@ func (o *OpcUaListener) Start(acc telegraf.Accumulator) error {
 }
 
 func (o *OpcUaListener) Gather(acc telegraf.Accumulator) error {
+	state := o.client.State()
 	switch {
-	case o.client.State() == opcua.Connected,
-		o.client.State() == opcua.Reconnecting,
+	case state == opcua.Connected,
+		state == opcua.Reconnecting,
 		o.subscribeClientConfig.ConnectFailBehavior == "ignore":
 		return nil
 	}
