@@ -2135,11 +2135,11 @@ func testValidateSet(
 	} else {
 		f = "value"
 	}
-	var metric cachedset
+	var m cachedset
 	var found bool
 	for _, v := range cache {
 		if v.name == name {
-			metric = v
+			m = v
 			found = true
 			break
 		}
@@ -2148,8 +2148,8 @@ func testValidateSet(
 		return fmt.Errorf("test Error: Metric name %s not found", name)
 	}
 
-	if value != int64(len(metric.fields[f])) {
-		return fmt.Errorf("measurement: %s, expected %d, actual %d", name, value, len(metric.fields[f]))
+	if value != int64(len(m.fields[f])) {
+		return fmt.Errorf("measurement: %s, expected %d, actual %d", name, value, len(m.fields[f]))
 	}
 	return nil
 }
