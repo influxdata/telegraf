@@ -262,8 +262,8 @@ func (o *subscribeClient) processReceivedNotifications() {
 				continue
 			}
 			if res.Value == nil {
-				o.Log.Error("Received nil notification")
-				return
+				o.Log.Warn("Received nil notification value, skipping")
+				continue
 			}
 
 			switch notif := res.Value.(type) {

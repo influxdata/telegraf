@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
+	gopcua "github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -1355,4 +1356,90 @@ func TestSubscribeClientConfigValidEventStreamingDefaultNodeParams(t *testing.T)
 	o := subscribeConfig.InputClientConfig.EventGroups[0].NodeIDSettings[0]
 	require.Equal(t, "i", o.IdentifierType)
 	require.Equal(t, "3", o.Namespace)
+}
+
+func TestProcessNotificationsSurvivesNilValueAndError(t *testing.T) {
+	// This test verifies that processReceivedNotifications continues processing
+	// after receiving nil values and errors on the notification channel, which
+	// occur during gopcua's automatic session reconnection cycle.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	nodeID, err := ua.ParseNodeID("ns=0;i=2258")
+	require.NoError(t, err)
+
+	nodeSettings := input.NodeSettings{FieldName: "TestValue"}
+	nmm, err := input.NewNodeMetricMapping("opcua", nodeSettings, nil)
+	require.NoError(t, err)
+
+	opcuaConfig := &opcua.OpcUAClientConfig{
+		Endpoint:       "opc.tcp://localhost:4840",
+		SecurityPolicy: "None",
+		SecurityMode:   "None",
+		AuthMethod:     "Anonymous",
+		ConnectTimeout: config.Duration(5 * time.Second),
+		RequestTimeout: config.Duration(10 * time.Second),
+	}
+	opcuaClient, err := opcuaConfig.CreateClient(testutil.Logger{})
+	require.NoError(t, err)
+
+	client := &subscribeClient{
+		OpcUAInputClient: &input.OpcUAInputClient{
+			OpcUAClient: opcuaClient,
+			Log:         testutil.Logger{},
+			Config: input.InputClientConfig{
+				MetricName: "opcua",
+				Timestamp:  input.TimestampSourceTelegraf,
+			},
+			NodeIDs:           []*ua.NodeID{nodeID},
+			NodeMetricMapping: []input.NodeMetricMapping{*nmm},
+			LastReceivedData: []input.NodeValue{
+				{TagName: "TestValue"},
+			},
+		},
+		dataNotifications: make(chan *gopcua.PublishNotificationData, 10),
+		metrics:           make(chan telegraf.Metric, 10),
+		ctx:               ctx,
+		cancel:            cancel,
+	}
+
+	go client.processReceivedNotifications()
+
+	// Simulate a reconnection error (gopcua sends errors through the channel during recovery)
+	client.dataNotifications <- &gopcua.PublishNotificationData{
+		Error: fmt.Errorf("session closed"),
+	}
+
+	// Simulate a nil value notification (can occur as a transient state during reconnection)
+	client.dataNotifications <- &gopcua.PublishNotificationData{}
+
+	// Send a valid data change notification after the error and nil value
+	client.dataNotifications <- &gopcua.PublishNotificationData{
+		Value: &ua.DataChangeNotification{
+			MonitoredItems: []*ua.MonitoredItemNotification{
+				{
+					ClientHandle: 0,
+					Value: &ua.DataValue{
+						Value:             ua.MustVariant(float64(42.0)),
+						Status:            ua.StatusOK,
+						ServerTimestamp:   time.Now(),
+						SourceTimestamp:   time.Now(),
+						ServerPicoseconds: 0,
+						SourcePicoseconds: 0,
+					},
+				},
+			},
+		},
+	}
+
+	// The goroutine must survive the error and nil value, then produce a metric
+	require.Eventually(t, func() bool {
+		return len(client.metrics) >= 1
+	}, time.Second, 10*time.Millisecond)
+
+	m := <-client.metrics
+	require.Equal(t, "opcua", m.Name())
+	v, ok := m.GetField("TestValue")
+	require.True(t, ok)
+	require.InDelta(t, 42.0, v, 0.001)
 }
