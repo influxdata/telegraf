@@ -2,6 +2,7 @@ package opcua_listener
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -1407,7 +1408,7 @@ func TestProcessNotificationsSurvivesNilValueAndError(t *testing.T) {
 
 	// Simulate a reconnection error (gopcua sends errors through the channel during recovery)
 	client.dataNotifications <- &gopcua.PublishNotificationData{
-		Error: fmt.Errorf("session closed"),
+		Error: errors.New("session closed"),
 	}
 
 	// Simulate a nil value notification (can occur as a transient state during reconnection)
