@@ -5,6 +5,8 @@ import (
 
 	"github.com/gopcua/opcua/ua"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestSetupWorkarounds(t *testing.T) {
@@ -223,4 +225,45 @@ func TestRemoteCertificateValidation(t *testing.T) {
 			require.NoError(t, config.Validate())
 		})
 	}
+}
+
+func TestGenerateClientOptsWithLocales(t *testing.T) {
+	endpoints := []*ua.EndpointDescription{
+		{
+			EndpointURL:       "opc.tcp://localhost:4840",
+			SecurityPolicyURI: ua.SecurityPolicyURINone,
+			SecurityMode:      ua.MessageSecurityModeNone,
+			SecurityLevel:     0,
+			UserIdentityTokens: []*ua.UserTokenPolicy{
+				{TokenType: ua.UserTokenTypeAnonymous},
+			},
+		},
+	}
+
+	baseClient := &OpcUAClient{
+		Config: &OpcUAClientConfig{
+			Endpoint:       "opc.tcp://localhost:4840",
+			SecurityPolicy: "None",
+			SecurityMode:   "None",
+			AuthMethod:     "Anonymous",
+		},
+		Log: &testutil.Logger{},
+	}
+	baseOpts, err := baseClient.generateClientOpts(endpoints)
+	require.NoError(t, err)
+
+	localesClient := &OpcUAClient{
+		Config: &OpcUAClientConfig{
+			Endpoint:       "opc.tcp://localhost:4840",
+			SecurityPolicy: "None",
+			SecurityMode:   "None",
+			AuthMethod:     "Anonymous",
+			Locales:        []string{"en", "de"},
+		},
+		Log: &testutil.Logger{},
+	}
+	localesOpts, err := localesClient.generateClientOpts(endpoints)
+	require.NoError(t, err)
+
+	require.Len(t, localesOpts, len(baseOpts)+1)
 }
