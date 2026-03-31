@@ -203,6 +203,9 @@ func (k *Kapacitor) gatherURL(
 
 	if s.Kapacitor != nil {
 		for _, obj := range *s.Kapacitor {
+			obj.Tags["kap_version"] = s.Version
+			obj.Tags["url"] = url
+
 			// Strip out high-cardinality or duplicative tags
 			excludeTags := []string{"host", "cluster_id", "server_id"}
 			for _, key := range excludeTags {
