@@ -46,6 +46,10 @@ to use them.
   ## Maximum time that a session shall remain open without activity.
   # session_timeout = "20m"
 
+  ## Preferred locales for the OPC UA session, ordered by priority.
+  ## The server returns LocalizedText values in the first supported locale.
+  # locales = []
+
   ## Retry options for failing reads e.g. due to invalid sessions
   ## If the retry count is zero, the read will fail after the initial attempt.
   # read_retry_timeout = "100ms"

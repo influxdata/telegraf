@@ -53,6 +53,7 @@ type OpcUAClientConfig struct {
 	OptionalFields []string         `toml:"optional_fields"`
 	Workarounds    OpcUAWorkarounds `toml:"workarounds"`
 	SessionTimeout config.Duration  `toml:"session_timeout"`
+	Locales        []string         `toml:"locales"`
 }
 
 func (o *OpcUAClientConfig) Validate() error {

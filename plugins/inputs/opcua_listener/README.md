@@ -63,6 +63,10 @@ to use them.
   # Maximum time that a session shall remain open without activity.
   # session_timeout = "20m"
   #
+  ## Preferred locales for the OPC UA session, ordered by priority.
+  ## The server returns LocalizedText values in the first supported locale.
+  # locales = []
+  #
   ## The interval at which the server should at least update its monitored items.
   ## Please note that the OPC UA server might reject the specified interval if it cannot meet the required update rate.
   ## Therefore, always refer to the hardware/software documentation of your server to ensure the specified interval is supported.
