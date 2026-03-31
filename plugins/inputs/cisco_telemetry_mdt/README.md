@@ -85,8 +85,6 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 #    dnpath = '{"Name": "show ip route summary","prop": [{"Key": "routes","Value": "string"}, {"Key": "best-paths","Value": "string"}]}'
 #    dnpath2 = '{"Name": "show processes cpu","prop": [{"Key": "kernel_percent","Value": "float"}, {"Key": "idle_percent","Value": "float"}, {"Key": "process","Value": "string"}, {"Key": "user_percent","Value": "float"}, {"Key": "onesec","Value": "float"}]}'
 #    dnpath3 = '{"Name": "show processes memory physical","prop": [{"Key": "processname","Value": "string"}]}'
-#    dnpath4 = '{"Name": "sys/nbm/show/interfaces","prop": [{"Key": "bwCurrentIng","Value": "int64*1000"}, {"Key": "bwCurrentEgr","Value": "int64*1000"}, {"Key": "bwUsableIng","Value": "int64*1000"}]}' 
-#    dnpath5 = '{"Name": "sys/nbm/show/interfaces","prop": [{"Key": "bwCurrentIng","Value": "float64/1000"}, {"Key": "bwCurrentEgr","Value": "float64/1000"}, {"Key": "bwUsableIng","Value": "float64/1000"}]}' 
 
  ## Additional GRPC connection settings.
  [inputs.cisco_telemetry_mdt.grpc_enforcement_policy]
@@ -99,6 +97,88 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## GRPC minimum timeout between successive pings, decreasing this value may
   ## help if this plugin is closing connections with ENHANCE_YOUR_CALM (too_many_pings).
   # keepalive_minimum_time = "5m"
+
+ ## Bandwidth field unit conversion using processors.
+ ## See README for full details.
+
+ # Scale bandwidth fields: multiply by 1000
+ # [[processors.scale]]
+ #   namepass = ["sys/nbm/show/interfaces"]
+ #   order = 1
+ #   [[processors.scale.scaling]]
+ #     factor = 1000.0
+ #     offset = 0.0
+ #     fields = ["bwCurrentIng", "bwCurrentEgr", "bwUsableIng", "bwUsableEgr", "bwActualIng", "bwActualEgr"]
+
+ # Convert scaled float fields back to integer (to match existing InfluxDB schema)
+ # [[processors.converter]]
+ #   namepass = ["sys/nbm/show/interfaces"]
+ #   order = 2
+ #   [processors.converter.fields]
+ #     integer = ["bwCurrentIng", "bwCurrentEgr", "bwUsableIng", "bwUsableEgr", "bwActualIng", "bwActualEgr"]
+
+ # Scale bandwidth fields: divide by 1000 (int input → float output)
+ # [[processors.scale]]
+ #   namepass = ["sys/nbm/show/interfaces"]
+ #   order = 1
+ #   [[processors.scale.scaling]]
+ #     factor = 0.001
+ #     offset = 0.0
+ #     fields = ["bwCurrentIng", "bwCurrentEgr", "bwUsableIng", "bwUsableEgr", "bwActualIng", "bwActualEgr"]
+
+ # Ensure output is float type
+ # [[processors.converter]]
+ #   namepass = ["sys/nbm/show/interfaces"]
+ #   order = 2
+ #   [processors.converter.fields]
+ #     float = ["bwCurrentIng", "bwCurrentEgr", "bwUsableIng", "bwUsableEgr", "bwActualIng", "bwActualEgr"]
+```
+
+## Unit Conversion with Processors
+
+### Example: Multiply bandwidth fields by 1000 (Kbps to bps)
+
+Scale the fields first, then convert the resulting floats back to integers to
+match an existing InfluxDB schema:
+
+```toml
+# Scale bandwidth fields: multiply by 1000
+[[processors.scale]]
+  namepass = ["sys/nbm/show/interfaces"]
+  order = 1
+  [[processors.scale.scaling]]
+    factor = 1000.0
+    offset = 0.0
+    fields = ["bwCurrentIng", "bwCurrentEgr", "bwUsableIng", "bwUsableEgr", "bwActualIng", "bwActualEgr"]
+
+# Convert scaled float fields back to integer (to match existing InfluxDB schema)
+[[processors.converter]]
+  namepass = ["sys/nbm/show/interfaces"]
+  order = 2
+  [processors.converter.fields]
+    integer = ["bwCurrentIng", "bwCurrentEgr", "bwUsableIng", "bwUsableEgr", "bwActualIng", "bwActualEgr"]
+```
+
+### Example: Divide bandwidth fields by 1000 (bps to Kbps)
+
+Scale the fields and ensure float output:
+
+```toml
+# Scale bandwidth fields: divide by 1000 (int input → float output)
+[[processors.scale]]
+  namepass = ["sys/nbm/show/interfaces"]
+  order = 1
+  [[processors.scale.scaling]]
+    factor = 0.001
+    offset = 0.0
+    fields = ["bwCurrentIng", "bwCurrentEgr", "bwUsableIng", "bwUsableEgr", "bwActualIng", "bwActualEgr"]
+
+# Ensure output is float type
+[[processors.converter]]
+  namepass = ["sys/nbm/show/interfaces"]
+  order = 2
+  [processors.converter.fields]
+    float = ["bwCurrentIng", "bwCurrentEgr", "bwUsableIng", "bwUsableEgr", "bwActualIng", "bwActualEgr"]
 ```
 
 ## Metrics
