@@ -455,6 +455,77 @@ func TestConfig_FieldNotDefined(t *testing.T) {
 	}
 }
 
+func TestConfig_FieldNotDefined_AllowPluginMissingFields(t *testing.T) {
+	tests := []struct {
+		name          string
+		filename      string
+		minInputs     int
+		minProcessors int
+	}{
+		{
+			name:      "in input plugin without parser",
+			filename:  "./testdata/invalid_field.toml",
+			minInputs: 1,
+		},
+		{
+			name:      "in input plugin with parser",
+			filename:  "./testdata/invalid_field_with_parser.toml",
+			minInputs: 1,
+		},
+		{
+			name:      "in input plugin with parser func",
+			filename:  "./testdata/invalid_field_with_parserfunc.toml",
+			minInputs: 1,
+		},
+		{
+			name:      "in parser of input plugin",
+			filename:  "./testdata/invalid_field_in_parser_table.toml",
+			minInputs: 1,
+		},
+		{
+			name:      "in parser of input plugin with parser-func",
+			filename:  "./testdata/invalid_field_in_parserfunc_table.toml",
+			minInputs: 1,
+		},
+		{
+			name:          "in processor plugin without parser",
+			filename:      "./testdata/invalid_field_processor.toml",
+			minProcessors: 1,
+		},
+		{
+			name:          "in processor plugin with parser",
+			filename:      "./testdata/invalid_field_processor_with_parser.toml",
+			minProcessors: 1,
+		},
+		{
+			name:          "in processor plugin with parser func",
+			filename:      "./testdata/invalid_field_processor_with_parserfunc.toml",
+			minProcessors: 1,
+		},
+		{
+			name:          "in parser of processor plugin",
+			filename:      "./testdata/invalid_field_processor_in_parser_table.toml",
+			minProcessors: 1,
+		},
+		{
+			name:      "in parser of processor plugin with parser-func",
+			filename:  "./testdata/invalid_field_processor_in_parserfunc_table.toml",
+			minInputs: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := config.NewConfig()
+			c.Agent.AllowPluginMissingFields = true
+			err := c.LoadConfig(tt.filename)
+			require.NoError(t, err)
+			require.GreaterOrEqual(t, len(c.Inputs), tt.minInputs)
+			require.GreaterOrEqual(t, len(c.Processors), tt.minProcessors)
+		})
+	}
+}
+
 func TestConfig_WrongFieldType(t *testing.T) {
 	c := config.NewConfig()
 	err := c.LoadConfig("./testdata/wrong_field_type.toml")

@@ -310,6 +310,11 @@ type AgentConfig struct {
 	// metrics buffered in the last `flush_interval` in the event of a power
 	// cut.
 	BufferDiskSync *bool `toml:"buffer_disk_sync"`
+
+	// AllowPluginMissingFields, when true, logs a warning for configuration
+	// keys that are not used by the target table (agent, tags, or plugin) and
+	// continues loading instead of returning an error.
+	AllowPluginMissingFields bool `toml:"allow_plugin_missing_fields"`
 }
 
 // InputNames returns a list of strings of the configured inputs.
@@ -680,11 +685,13 @@ func (c *Config) LoadConfigData(data []byte, path string) error {
 		}
 	}
 
-	if len(c.UnusedFields) > 0 {
-		return fmt.Errorf(
-			"line %d: configuration specified the fields %q, but they were not used; "+
-				"this is either a typo or this config option does not exist in this version",
-			tbl.Line, keys(c.UnusedFields))
+	err = c.unusedFieldsErrorOrWarn(
+		"line %d: configuration specified the fields %q, but they were not used; "+
+			"this is either a typo or this config option does not exist in this version",
+		tbl.Line,
+	)
+	if err != nil {
+		return err
 	}
 
 	// Initialize the file-sorting slices
@@ -718,11 +725,13 @@ func (c *Config) LoadConfigData(data []byte, path string) error {
 					return fmt.Errorf("unsupported config format: %s",
 						pluginName)
 				}
-				if len(c.UnusedFields) > 0 {
-					return fmt.Errorf(
-						"plugin %s.%s: line %d: configuration specified the fields %q, but they were not used; "+
-							"this is either a typo or this config option does not exist in this version",
-						name, pluginName, subTable.Line, keys(c.UnusedFields))
+				err = c.unusedFieldsErrorOrWarn(
+					"plugin %s.%s: line %d: configuration specified the fields %q, but they were not used; "+
+						"this is either a typo or this config option does not exist in this version",
+					name, pluginName, subTable.Line,
+				)
+				if err != nil {
+					return err
 				}
 			}
 		case "inputs", "plugins":
@@ -743,11 +752,13 @@ func (c *Config) LoadConfigData(data []byte, path string) error {
 					return fmt.Errorf("unsupported config format: %s",
 						pluginName)
 				}
-				if len(c.UnusedFields) > 0 {
-					return fmt.Errorf(
-						"plugin %s.%s: line %d: configuration specified the fields %q, but they were not used; "+
-							"this is either a typo or this config option does not exist in this version",
-						name, pluginName, subTable.Line, keys(c.UnusedFields))
+				err = c.unusedFieldsErrorOrWarn(
+					"plugin %s.%s: line %d: configuration specified the fields %q, but they were not used; "+
+						"this is either a typo or this config option does not exist in this version",
+					name, pluginName, subTable.Line,
+				)
+				if err != nil {
+					return err
 				}
 			}
 		case "processors":
@@ -763,15 +774,13 @@ func (c *Config) LoadConfigData(data []byte, path string) error {
 					return fmt.Errorf("unsupported config format: %s",
 						pluginName)
 				}
-				if len(c.UnusedFields) > 0 {
-					return fmt.Errorf(
-						"plugin %s.%s: line %d: configuration specified the fields %q, but they were not used; "+
-							"this is either a typo or this config option does not exist in this version",
-						name,
-						pluginName,
-						subTable.Line,
-						keys(c.UnusedFields),
-					)
+				err = c.unusedFieldsErrorOrWarn(
+					"plugin %s.%s: line %d: configuration specified the fields %q, but they were not used; "+
+						"this is either a typo or this config option does not exist in this version",
+					name, pluginName, subTable.Line,
+				)
+				if err != nil {
+					return err
 				}
 			}
 		case "aggregators":
@@ -787,11 +796,13 @@ func (c *Config) LoadConfigData(data []byte, path string) error {
 					return fmt.Errorf("unsupported config format: %s",
 						pluginName)
 				}
-				if len(c.UnusedFields) > 0 {
-					return fmt.Errorf(
-						"plugin %s.%s: line %d: configuration specified the fields %q, but they were not used; "+
-							"this is either a typo or this config option does not exist in this version",
-						name, pluginName, subTable.Line, keys(c.UnusedFields))
+				err = c.unusedFieldsErrorOrWarn(
+					"plugin %s.%s: line %d: configuration specified the fields %q, but they were not used; "+
+						"this is either a typo or this config option does not exist in this version",
+					name, pluginName, subTable.Line,
+				)
+				if err != nil {
+					return err
 				}
 			}
 		case "secretstores":
@@ -806,10 +817,13 @@ func (c *Config) LoadConfigData(data []byte, path string) error {
 				default:
 					return fmt.Errorf("unsupported config format: %s", pluginName)
 				}
-				if len(c.UnusedFields) > 0 {
-					msg := "plugin %s.%s: line %d: configuration specified the fields %q, but they were not used; " +
-						"this is either a typo or this config option does not exist in this version"
-					return fmt.Errorf(msg, name, pluginName, subTable.Line, keys(c.UnusedFields))
+				err = c.unusedFieldsErrorOrWarn(
+					"plugin %s.%s: line %d: configuration specified the fields %q, but they were not used; "+
+						"this is either a typo or this config option does not exist in this version",
+					name, pluginName, subTable.Line,
+				)
+				if err != nil {
+					return err
 				}
 			}
 
@@ -2024,6 +2038,26 @@ func (c *Config) matchesLabelSelection(tbl *ast.Table) (bool, error) {
 
 	// Match the selection statement against the labels
 	return pluginLabelSelector.matches(labels), nil
+}
+
+// unusedFieldsErrorOrWarn fails load with a formatted error when UnusedFields
+// is non-empty and AllowPluginMissingFields is false. When AllowPluginMissingFields
+// is true, it logs a warning and returns nil.
+func (c *Config) unusedFieldsErrorOrWarn(format string, args ...any) error {
+	c.unusedFieldsMutex.Lock()
+	if len(c.UnusedFields) == 0 {
+		c.unusedFieldsMutex.Unlock()
+		return nil
+	}
+	fieldKeys := keys(c.UnusedFields)
+	c.unusedFieldsMutex.Unlock()
+	allow := c.Agent != nil && c.Agent.AllowPluginMissingFields
+	fmtArgs := append(append([]any(nil), args...), fieldKeys)
+	if allow {
+		log.Printf("W! "+format, fmtArgs...)
+		return nil
+	}
+	return fmt.Errorf(format, fmtArgs...)
 }
 
 func keys(m map[string]bool) []string {
