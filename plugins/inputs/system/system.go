@@ -22,38 +22,30 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-var crossPlatformCollectors = []string{"load", "users", "n_cpus", "uptime"}
+var availableCollectors = []string{"load", "uptime"}
 
 type System struct {
 	Collect []string `toml:"collect"`
-	PathEtc string   `toml:"host_etc"`
-	PathSys string   `toml:"host_sys"`
 
 	Log telegraf.Logger `toml:"-"`
 
 	collectLoad   bool
-	collectUsers  bool
-	collectNCPUs  bool
 	collectUptime bool
-
-	platformData //nolint:unused,nolintlint // for OS-specific usage
 }
 
 func (*System) SampleConfig() string {
 	return sampleConfig
 }
 
-func (s *System) initCommon(available []string) error {
+func (s *System) Init() error {
 	if len(s.Collect) == 0 {
-		s.Collect = available
+		s.Collect = availableCollectors
 	}
-	if err := choice.CheckSlice(s.Collect, available); err != nil {
+	if err := choice.CheckSlice(s.Collect, availableCollectors); err != nil {
 		return fmt.Errorf("config option 'collect': %w", err)
 	}
 
 	s.collectLoad = choice.Contains("load", s.Collect)
-	s.collectUsers = choice.Contains("users", s.Collect)
-	s.collectNCPUs = choice.Contains("n_cpus", s.Collect)
 	s.collectUptime = choice.Contains("uptime", s.Collect)
 
 	return nil
@@ -61,9 +53,10 @@ func (s *System) initCommon(available []string) error {
 
 func (s *System) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
-	fields := make(map[string]interface{})
 
 	if s.collectLoad {
+		fields := make(map[string]interface{})
+
 		loadavg, err := load.Avg()
 		if err != nil {
 			if !strings.Contains(err.Error(), "not implemented") {
@@ -74,9 +67,7 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 			fields["load5"] = loadavg.Load5
 			fields["load15"] = loadavg.Load15
 		}
-	}
 
-	if s.collectNCPUs {
 		numLogicalCPUs, err := cpu.Counts(true)
 		if err != nil {
 			return err
@@ -87,9 +78,7 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 		}
 		fields["n_cpus"] = numLogicalCPUs
 		fields["n_physical_cpus"] = numPhysicalCPUs
-	}
 
-	if s.collectUsers {
 		users, err := host.Users()
 		if err == nil {
 			fields["n_users"] = len(users)
@@ -99,9 +88,7 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 		} else if os.IsPermission(err) {
 			s.Log.Debug(err.Error())
 		}
-	}
 
-	if len(fields) > 0 {
 		acc.AddGauge("system", fields, nil, now)
 	}
 
@@ -117,8 +104,6 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 			"uptime_format": formatUptime(uptime),
 		}, nil, now)
 	}
-
-	s.gatherPlatformInfo(acc)
 
 	return nil
 }
