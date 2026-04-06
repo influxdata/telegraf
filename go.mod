@@ -52,13 +52,13 @@ require (
 	github.com/awnumar/memguard v0.23.0
 	github.com/aws/aws-msk-iam-sasl-signer-go v1.0.4
 	github.com/aws/aws-sdk-go-v2 v1.41.5
-	github.com/aws/aws-sdk-go-v2/config v1.32.13
-	github.com/aws/aws-sdk-go-v2/credentials v1.19.13
+	github.com/aws/aws-sdk-go-v2/config v1.32.14
+	github.com/aws/aws-sdk-go-v2/credentials v1.19.14
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.21
-	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.55.3
-	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.66.0
+	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.56.0
+	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.68.0
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.57.1
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.296.1
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.296.2
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.43.5
 	github.com/aws/aws-sdk-go-v2/service/sts v1.41.10
 	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.35.20
@@ -320,8 +320,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.6 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.71.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/signin v1.0.9 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.30.14 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.18 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.30.15 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.19 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bitly/go-hostpool v0.1.0 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
