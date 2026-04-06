@@ -224,7 +224,7 @@ require (
 	github.com/xdg/scram v1.0.5
 	github.com/yuin/goldmark v1.8.2
 	go.mongodb.org/mongo-driver v1.17.9
-	go.opentelemetry.io/collector/pdata v1.54.0
+	go.opentelemetry.io/collector/pdata v1.55.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.44.0
 	go.opentelemetry.io/otel/sdk/metric v1.42.0
 	go.opentelemetry.io/proto/otlp v1.10.0
@@ -568,8 +568,8 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/collector/consumer/consumererror v0.135.0 // indirect
-	go.opentelemetry.io/collector/featuregate v1.54.0 // indirect
-	go.opentelemetry.io/collector/internal/testutil v0.148.0 // indirect
+	go.opentelemetry.io/collector/featuregate v1.55.0 // indirect
+	go.opentelemetry.io/collector/internal/testutil v0.149.0 // indirect
 	go.opentelemetry.io/collector/pdata/pprofile v0.140.0 // indirect
 	go.opentelemetry.io/collector/semconv v0.128.0 // indirect
 	go.opentelemetry.io/contrib/detectors/gcp v1.39.0 // indirect
