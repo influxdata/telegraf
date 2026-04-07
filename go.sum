@@ -446,8 +446,8 @@ cloud.google.com/go/pubsub v1.26.0/go.mod h1:QgBH3U/jdJy/ftjPhTkyXNj543Tin1pRYcd
 cloud.google.com/go/pubsub v1.27.1/go.mod h1:hQN39ymbV9geqBnfQq6Xf63yNhUAhv9CZhzp5O6qsW0=
 cloud.google.com/go/pubsub v1.28.0/go.mod h1:vuXFpwaVoIPQMGXqRyUQigu/AX1S3IWugR9xznmcXX8=
 cloud.google.com/go/pubsub v1.30.0/go.mod h1:qWi1OPS0B+b5L+Sg6Gmc9zD1Y+HaM0MdUr7LsupY1P4=
-cloud.google.com/go/pubsub/v2 v2.5.0 h1:iBO4L8Iidb12B6DGP1oRxfP82FhYEAD9vLoe5Ps8+oc=
-cloud.google.com/go/pubsub/v2 v2.5.0/go.mod h1:9P6nc3S1f2qzVxJQDDtWghWea8KYWz4pwqpcCuik2FI=
+cloud.google.com/go/pubsub/v2 v2.5.1 h1:+TwXJr78P9RrMV3S8lKHIhJo2E99jI7ta65e+ujJjts=
+cloud.google.com/go/pubsub/v2 v2.5.1/go.mod h1:Pd+qeabMX+576vQJhTN7TelE4k6kJh15dLU/ptOQ/UA=
 cloud.google.com/go/pubsublite v1.5.0/go.mod h1:xapqNQ1CuLfGi23Yda/9l4bBCKz/wC3KIJ5gKcxveZg=
 cloud.google.com/go/pubsublite v1.6.0/go.mod h1:1eFCS0U11xlOuMFV/0iBqw3zP12kddMeCbj/F3FSj9k=
 cloud.google.com/go/pubsublite v1.7.0/go.mod h1:8hVMwRXfDfvGm3fahVbtDbiLePT3gpoiJYJY+vxWxVM=
