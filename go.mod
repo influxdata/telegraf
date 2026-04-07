@@ -8,7 +8,7 @@ require (
 	cloud.google.com/go/auth v0.19.0
 	cloud.google.com/go/bigquery v1.75.0
 	cloud.google.com/go/monitoring v1.24.3
-	cloud.google.com/go/pubsub/v2 v2.5.0
+	cloud.google.com/go/pubsub/v2 v2.5.1
 	cloud.google.com/go/storage v1.62.0
 	collectd.org v0.6.0
 	github.com/99designs/keyring v1.2.2
