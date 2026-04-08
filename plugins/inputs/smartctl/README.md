@@ -8,7 +8,7 @@ package to collect additional information about NVMe devices.
 
 > [!NOTE]
 > This plugin requires [`smartmontools`][smartmon] to be installed on your
-> system. The `smartctl` command must to be executable by Telegraf and must
+> system. The `smartctl` command must be executable by Telegraf and must
 > supporting JSON output. JSON output was added in v7.0 and improved in
 > subsequent releases
 
@@ -77,7 +77,8 @@ Users need the following in the Telegraf config:
   use_sudo = true
 ```
 
-And to update the `/etc/sudoers` file to allow running smartctl:
+and to update the `/etc/sudoers` file (or add a file in `/etc/sudoers.d/`)
+to allow running smartctl:
 
 ```bash
 $ visudo
@@ -86,6 +87,12 @@ Cmnd_Alias SMARTCTL = /usr/sbin/smartctl
 telegraf  ALL=(ALL) NOPASSWD: SMARTCTL
 Defaults!SMARTCTL !logfile, !syslog, !pam_session
 ```
+
+> [!NOTE]
+> If your system uses the `sudo-rs` Rust-based rewrite of GNU `sudo`, the
+> logging options in `Defaults!SMARTCTL` are not supported and will cause
+> errors. There's not currently a native way to prevent voluminous logs with
+> `use_sudo` enabled. See trifectatechfoundation/sudo-rs#1181.
 
 ## Troubleshooting
 
