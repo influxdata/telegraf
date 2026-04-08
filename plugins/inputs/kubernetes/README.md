@@ -39,7 +39,6 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   url = "http://127.0.0.1:10255"
 
   ## Use bearer token for authorization.
-  ## Ignored if url is empty and in-cluster config is used.
   # bearer_token = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 
   ## Kubernetes Node Metric Name
