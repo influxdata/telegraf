@@ -185,7 +185,7 @@ func TestExecCommandWithGlob(t *testing.T) {
 
 	// Setup plugin
 	plugin := &Exec{
-		Commands: []string{"/bin/ech* metric_value"},
+		Commands: []string{"/bin/ech[o] metric_value"},
 		Timeout:  config.Duration(5 * time.Second),
 		Log:      testutil.Logger{},
 	}
