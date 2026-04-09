@@ -118,43 +118,6 @@ func TestMemStats(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
-var linuxBaseFields = map[string]interface{}{
-	"total":             uint64(12400),
-	"available":         uint64(7600),
-	"used":              uint64(5000),
-	"used_percent":      100 * float64(5000) / float64(12400),
-	"available_percent": 100 * float64(7600) / float64(12400),
-	"free":              uint64(1235),
-	"active":            uint64(0),
-	"buffered":          uint64(0),
-	"cached":            uint64(0),
-	"commit_limit":      uint64(0),
-	"committed_as":      uint64(0),
-	"dirty":             uint64(0),
-	"high_free":         uint64(0),
-	"high_total":        uint64(0),
-	"huge_pages_free":   uint64(0),
-	"huge_page_size":    uint64(0),
-	"huge_pages_total":  uint64(0),
-	"inactive":          uint64(0),
-	"low_free":          uint64(0),
-	"low_total":         uint64(0),
-	"mapped":            uint64(0),
-	"page_tables":       uint64(0),
-	"shared":            uint64(0),
-	"slab":              uint64(0),
-	"sreclaimable":      uint64(0),
-	"sunreclaim":        uint64(0),
-	"swap_cached":       uint64(0),
-	"swap_free":         uint64(0),
-	"swap_total":        uint64(0),
-	"vmalloc_chunk":     uint64(0),
-	"vmalloc_total":     uint64(0),
-	"vmalloc_used":      uint64(0),
-	"write_back_tmp":    uint64(0),
-	"write_back":        uint64(0),
-}
-
 func TestMemStatsCollectExtended(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.Skip("Skipping Linux-specific extended memory test")
@@ -191,8 +154,6 @@ func TestMemStatsCollectExtended(t *testing.T) {
 		},
 	}
 
-	baseFields := linuxBaseFields
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			hostProc, err := filepath.Abs(filepath.Join("testdata", tt.testdataDir, "proc"))
@@ -201,7 +162,6 @@ func TestMemStatsCollectExtended(t *testing.T) {
 
 			var mps psutil.MockPS
 			defer mps.AssertExpectations(t)
-			var acc testutil.Accumulator
 
 			vms := &mem.VirtualMemoryStat{
 				Total:     12400,
@@ -215,15 +175,46 @@ func TestMemStatsCollectExtended(t *testing.T) {
 				ps:              &mps,
 				CollectExtended: true,
 			}
-
 			require.NoError(t, plugin.Init())
-			plugin.platform = "linux"
 
+			var acc testutil.Accumulator
 			require.NoError(t, plugin.Gather(&acc))
 
-			fields := make(map[string]interface{}, len(baseFields)+len(tt.extendedFields))
-			for k, v := range baseFields {
-				fields[k] = v
+			fields := map[string]interface{}{
+				"total":             uint64(12400),
+				"available":         uint64(7600),
+				"used":              uint64(5000),
+				"used_percent":      100 * float64(5000) / float64(12400),
+				"available_percent": 100 * float64(7600) / float64(12400),
+				"free":              uint64(1235),
+				"active":            uint64(0),
+				"buffered":          uint64(0),
+				"cached":            uint64(0),
+				"commit_limit":      uint64(0),
+				"committed_as":      uint64(0),
+				"dirty":             uint64(0),
+				"high_free":         uint64(0),
+				"high_total":        uint64(0),
+				"huge_pages_free":   uint64(0),
+				"huge_page_size":    uint64(0),
+				"huge_pages_total":  uint64(0),
+				"inactive":          uint64(0),
+				"low_free":          uint64(0),
+				"low_total":         uint64(0),
+				"mapped":            uint64(0),
+				"page_tables":       uint64(0),
+				"shared":            uint64(0),
+				"slab":              uint64(0),
+				"sreclaimable":      uint64(0),
+				"sunreclaim":        uint64(0),
+				"swap_cached":       uint64(0),
+				"swap_free":         uint64(0),
+				"swap_total":        uint64(0),
+				"vmalloc_chunk":     uint64(0),
+				"vmalloc_total":     uint64(0),
+				"vmalloc_used":      uint64(0),
+				"write_back_tmp":    uint64(0),
+				"write_back":        uint64(0),
 			}
 			for k, v := range tt.extendedFields {
 				fields[k] = v
@@ -237,34 +228,37 @@ func TestMemStatsCollectExtended(t *testing.T) {
 	}
 }
 
-func TestMemStatsCollectExtendedDisabled(t *testing.T) {
-	var mps psutil.MockPS
-	defer mps.AssertExpectations(t)
-	var acc testutil.Accumulator
-
-	vms := &mem.VirtualMemoryStat{
-		Total:     12400,
-		Available: 7600,
-		Used:      5000,
-		Free:      1235,
+func TestMemStatsCollectExtendedWindows(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Skipping Windows-specific extended memory test")
 	}
 
-	mps.On("VMStat").Return(vms, nil)
 	plugin := &Mem{
-		ps:              &mps,
-		CollectExtended: false,
+		ps:              psutil.NewSystemPS(),
+		CollectExtended: true,
 	}
+	require.NoError(t, plugin.Init())
 
-	err := plugin.Init()
-	require.NoError(t, err)
-
-	plugin.platform = "linux"
-
-	err = plugin.Gather(&acc)
-	require.NoError(t, err)
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric("mem", map[string]string{}, linuxBaseFields, time.Unix(0, 0), telegraf.Gauge),
+		testutil.MustMetric("mem", map[string]string{}, map[string]interface{}{
+			"total":             uint64(0),
+			"available":         uint64(0),
+			"used":              uint64(0),
+			"used_percent":      float64(0),
+			"available_percent": float64(0),
+			"free":              uint64(0),
+			"commit_limit":      uint64(0),
+			"commit_total":      uint64(0),
+			"virtual_total":     uint64(0),
+			"virtual_avail":     uint64(0),
+			"phys_total":        uint64(0),
+			"phys_avail":        uint64(0),
+			"page_file_total":   uint64(0),
+			"page_file_avail":   uint64(0),
+		}, time.Unix(0, 0), telegraf.Gauge),
 	}
-	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+	testutil.RequireMetricsStructureEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
