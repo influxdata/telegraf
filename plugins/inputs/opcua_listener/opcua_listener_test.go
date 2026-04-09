@@ -811,8 +811,14 @@ func TestSubscribeClientConfigValidMonitoringParams(t *testing.T) {
 		},
 	})
 
-	subClient, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
+	_, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
 	require.NoError(t, err)
+
+	// Verify assignConfigValuesToRequest correctly translates monitoring params
+	nodeID, err := ua.ParseNodeID("ns=3;i=1")
+	require.NoError(t, err)
+	req := gopcua.NewMonitoredItemCreateRequestWithDefaults(nodeID, ua.AttributeIDValue, 0)
+	require.NoError(t, assignConfigValuesToRequest(req, &subscribeConfig.RootNodes[0].MonitoringParams))
 	require.Equal(t, &ua.MonitoringParameters{
 		SamplingInterval: 50,
 		QueueSize:        queueSize,
@@ -824,48 +830,26 @@ func TestSubscribeClientConfigValidMonitoringParams(t *testing.T) {
 				DeadbandValue: deadbandValue,
 			},
 		),
-	}, subClient.monitoredItemsReqs[0].RequestedParameters)
+	}, req.RequestedParameters)
 }
 
 func TestSubscribeClientConfigValidMonitoringParamsNoDeadband(t *testing.T) {
-	subscribeConfig := subscribeClientConfig{
-		InputClientConfig: input.InputClientConfig{
-			OpcUAClientConfig: opcua.OpcUAClientConfig{
-				Endpoint:       "opc.tcp://localhost:4840",
-				SecurityPolicy: "None",
-				SecurityMode:   "None",
-				AuthMethod:     "Anonymous",
-				ConnectTimeout: config.Duration(10 * time.Second),
-				RequestTimeout: config.Duration(1 * time.Second),
-				Workarounds:    opcua.OpcUAWorkarounds{},
-			},
-			MetricName: "testing",
-			RootNodes:  make([]input.NodeSettings, 0),
-			Groups:     make([]input.NodeGroupSettings, 0),
-		},
-		SubscriptionInterval: 0,
-	}
-
 	var queueSize uint32 = 10
 	discardOldest := true
-	subscribeConfig.RootNodes = append(subscribeConfig.RootNodes, input.NodeSettings{
-		FieldName:      "foo",
-		Namespace:      "3",
-		Identifier:     "1",
-		IdentifierType: "i",
-		MonitoringParams: input.MonitoringParameters{
-			SamplingInterval: 50000000,
-			QueueSize:        &queueSize,
-			DiscardOldest:    &discardOldest,
-			DataChangeFilter: &input.DataChangeFilter{
-				Trigger:      "Status",
-				DeadbandType: "None",
-			},
+	monParams := input.MonitoringParameters{
+		SamplingInterval: 50000000,
+		QueueSize:        &queueSize,
+		DiscardOldest:    &discardOldest,
+		DataChangeFilter: &input.DataChangeFilter{
+			Trigger:      "Status",
+			DeadbandType: "None",
 		},
-	})
+	}
 
-	subClient, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
+	nodeID, err := ua.ParseNodeID("ns=3;i=1")
 	require.NoError(t, err)
+	req := gopcua.NewMonitoredItemCreateRequestWithDefaults(nodeID, ua.AttributeIDValue, 0)
+	require.NoError(t, assignConfigValuesToRequest(req, &monParams))
 	require.Equal(t, &ua.MonitoringParameters{
 		SamplingInterval: 50,
 		QueueSize:        queueSize,
@@ -877,7 +861,7 @@ func TestSubscribeClientConfigValidMonitoringParamsNoDeadband(t *testing.T) {
 				DeadbandValue: 0,
 			},
 		),
-	}, subClient.monitoredItemsReqs[0].RequestedParameters)
+	}, req.RequestedParameters)
 }
 
 func TestSubscribeClientConfigValidMonitoringAndEventParams(t *testing.T) {
@@ -944,8 +928,14 @@ func TestSubscribeClientConfigValidMonitoringAndEventParams(t *testing.T) {
 		Fields:      []string{"PressureValue"},
 	})
 
-	subClient, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
+	_, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
 	require.NoError(t, err)
+
+	// Verify assignConfigValuesToRequest correctly translates monitoring params
+	nodeID, err := ua.ParseNodeID("ns=3;i=1")
+	require.NoError(t, err)
+	req := gopcua.NewMonitoredItemCreateRequestWithDefaults(nodeID, ua.AttributeIDValue, 0)
+	require.NoError(t, assignConfigValuesToRequest(req, &subscribeConfig.RootNodes[0].MonitoringParams))
 	require.Equal(t, &ua.MonitoringParameters{
 		SamplingInterval: 50,
 		QueueSize:        queueSize,
@@ -957,7 +947,7 @@ func TestSubscribeClientConfigValidMonitoringAndEventParams(t *testing.T) {
 				DeadbandValue: deadbandValue,
 			},
 		),
-	}, subClient.monitoredItemsReqs[0].RequestedParameters)
+	}, req.RequestedParameters)
 }
 
 func TestSubscribeClientConfigValidEventStreamingParams(t *testing.T) {
