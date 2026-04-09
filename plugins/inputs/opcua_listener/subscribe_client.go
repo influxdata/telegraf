@@ -99,7 +99,7 @@ func (sc *subscribeClientConfig) createSubscribeClient(log telegraf.Logger) (*su
 	for _, node := range client.NodeMetricMapping {
 		if node.Tag.MonitoringParams.DataChangeFilter != nil {
 			if err := checkDataChangeFilterParameters(node.Tag.MonitoringParams.DataChangeFilter); err != nil {
-				return nil, fmt.Errorf("%s, node '%s'", err, node.Tag.NodeID())
+				return nil, fmt.Errorf("node '%s': %w", node.Tag.NodeID(), err)
 			}
 		}
 	}
@@ -144,6 +144,7 @@ func (o *subscribeClient) connect() error {
 		return fmt.Errorf("initializing event node IDs failed: %w", err)
 	}
 
+	o.Log.Debugf("Creating monitored items")
 	o.monitoredItemsReqs = make([]*ua.MonitoredItemCreateRequest, 0, len(o.NodeIDs))
 	for i, nodeID := range o.NodeIDs {
 		req := opcua.NewMonitoredItemCreateRequestWithDefaults(nodeID, ua.AttributeIDValue, uint32(i))
@@ -153,6 +154,7 @@ func (o *subscribeClient) connect() error {
 		o.monitoredItemsReqs = append(o.monitoredItemsReqs, req)
 	}
 
+	o.Log.Debugf("Creating event streaming items")
 	o.eventItemsReqs = make([]*ua.MonitoredItemCreateRequest, 0, len(o.EventNodeMetricMapping))
 	for i, node := range o.EventNodeMetricMapping {
 		req := opcua.NewMonitoredItemCreateRequestWithDefaults(node.NodeID, ua.AttributeIDEventNotifier, uint32(i))
