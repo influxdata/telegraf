@@ -62,9 +62,9 @@ func TestWireguard_gatherDevicePeerMetrics(t *testing.T) {
 		"protocol_version":                 0,
 		"allowed_ips":                      2,
 		"allowed_peer_cidr":                "<nil>,<nil>",
+		"endpoint":                         "192.168.1.100:51820",
 	}
 	expectGauges := map[string]interface{}{
-		"endpoint":               "192.168.1.100:51820",
 		"last_handshake_time_ns": int64(100000000000),
 		"rx_bytes":               int64(40),
 		"tx_bytes":               int64(60),
@@ -135,15 +135,19 @@ func TestWireguard_allowedPeerCIDR(t *testing.T) {
 				"allowed_ips":                      len(tc.allowedIPs),
 				"allowed_peer_cidr":                tc.allowedPeerCidr,
 			}
-			_ = map[string]string{
-				"device":     "wg0",
-				"public_key": pubkey.String(),
-			}
 
 			var acc testutil.Accumulator
 			gatherDevicePeerMetrics(&acc, device, peer)
 			acc.AssertDoesNotContainMeasurement(t, measurementDevice)
 			acc.AssertContainsFields(t, measurementPeer, expectFields)
+
+			// Verify endpoint field is absent when Endpoint is nil
+			for _, m := range acc.GetTelegrafMetrics() {
+				if m.Name() == measurementPeer {
+					_, found := m.GetField("endpoint")
+					require.False(t, found, "endpoint field should not be present when Endpoint is nil")
+				}
+			}
 		})
 	}
 }

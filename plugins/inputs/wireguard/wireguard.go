@@ -112,6 +112,10 @@ func gatherDevicePeerMetrics(acc telegraf.Accumulator, device *wgtypes.Device, p
 		"allowed_ips":                      len(peer.AllowedIPs),
 	}
 
+	if peer.Endpoint != nil {
+		fields["endpoint"] = peer.Endpoint.String()
+	}
+
 	if len(peer.AllowedIPs) > 0 {
 		cidrs := make([]string, 0, len(peer.AllowedIPs))
 		for _, ip := range peer.AllowedIPs {
@@ -121,7 +125,6 @@ func gatherDevicePeerMetrics(acc telegraf.Accumulator, device *wgtypes.Device, p
 	}
 
 	gauges := map[string]interface{}{
-		"endpoint":               peer.Endpoint.String(),
 		"last_handshake_time_ns": peer.LastHandshakeTime.UnixNano(),
 		"rx_bytes":               peer.ReceiveBytes,
 		"tx_bytes":               peer.TransmitBytes,
