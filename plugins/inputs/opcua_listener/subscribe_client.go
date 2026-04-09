@@ -68,7 +68,7 @@ func assignConfigValuesToRequest(req *ua.MonitoredItemCreateRequest, monParams *
 
 	if monParams.DataChangeFilter != nil {
 		if err := checkDataChangeFilterParameters(monParams.DataChangeFilter); err != nil {
-			return fmt.Errorf(err.Error()+", node '%s'", req.ItemToMonitor.NodeID)
+			return fmt.Errorf("node '%s': %w", req.ItemToMonitor.NodeID, err)
 		}
 
 		var deadbandValue float64
@@ -125,7 +125,7 @@ func (sc *subscribeClientConfig) createSubscribeClient(log telegraf.Logger) (*su
 		// The node id index (i) is used as the handle for the monitored item
 		req := opcua.NewMonitoredItemCreateRequestWithDefaults(nodeID, ua.AttributeIDValue, uint32(i))
 		if err := assignConfigValuesToRequest(req, &client.NodeMetricMapping[i].Tag.MonitoringParams); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("assigning monitoring params failed: %w", err)
 		}
 		subClient.monitoredItemsReqs[i] = req
 	}

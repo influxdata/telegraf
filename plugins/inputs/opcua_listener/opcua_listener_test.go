@@ -594,7 +594,7 @@ func TestSubscribeClientConfigInvalidTrigger(t *testing.T) {
 	})
 
 	_, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
-	require.ErrorContains(t, err, "trigger 'not_valid' not supported, node 'ns=3;i=1'")
+	require.ErrorContains(t, err, "node 'ns=3;i=1': trigger 'not_valid' not supported")
 }
 
 func TestSubscribeClientConfigMissingTrigger(t *testing.T) {
@@ -628,7 +628,7 @@ func TestSubscribeClientConfigMissingTrigger(t *testing.T) {
 	})
 
 	_, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
-	require.ErrorContains(t, err, "trigger '' not supported, node 'ns=3;i=1'")
+	require.ErrorContains(t, err, "node 'ns=3;i=1': trigger '' not supported")
 }
 
 func TestSubscribeClientConfigInvalidDeadbandType(t *testing.T) {
@@ -663,7 +663,7 @@ func TestSubscribeClientConfigInvalidDeadbandType(t *testing.T) {
 	})
 
 	_, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
-	require.ErrorContains(t, err, "deadband_type 'not_valid' not supported, node 'ns=3;i=1'")
+	require.ErrorContains(t, err, "node 'ns=3;i=1': deadband_type 'not_valid' not supported")
 }
 
 func TestSubscribeClientConfigMissingDeadbandType(t *testing.T) {
@@ -697,7 +697,7 @@ func TestSubscribeClientConfigMissingDeadbandType(t *testing.T) {
 	})
 
 	_, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
-	require.ErrorContains(t, err, "deadband_type '' not supported, node 'ns=3;i=1'")
+	require.ErrorContains(t, err, "node 'ns=3;i=1': deadband_type '' not supported")
 }
 
 func TestSubscribeClientConfigInvalidDeadbandValue(t *testing.T) {
@@ -734,7 +734,7 @@ func TestSubscribeClientConfigInvalidDeadbandValue(t *testing.T) {
 	})
 
 	_, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
-	require.ErrorContains(t, err, "negative deadband_value not supported, node 'ns=3;i=1'")
+	require.ErrorContains(t, err, "node 'ns=3;i=1': negative deadband_value not supported")
 }
 
 func TestSubscribeClientConfigMissingDeadbandValue(t *testing.T) {
@@ -769,7 +769,7 @@ func TestSubscribeClientConfigMissingDeadbandValue(t *testing.T) {
 	})
 
 	_, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
-	require.ErrorContains(t, err, "deadband_value was not set, node 'ns=3;i=1'")
+	require.ErrorContains(t, err, "node 'ns=3;i=1': deadband_value was not set")
 }
 
 func TestSubscribeClientConfigValidMonitoringParams(t *testing.T) {
