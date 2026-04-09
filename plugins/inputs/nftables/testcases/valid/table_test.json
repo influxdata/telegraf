@@ -188,6 +188,20 @@
     {
       "set": {
         "family": "inet",
+        "name": "static_set",
+        "table": "test",
+        "type": "ipv4_addr",
+        "handle": 18,
+        "flags": ["interval"],
+        "elem": [
+          "10.47.55.250",
+          "10.47.56.232"
+        ]
+      }
+    },
+    {
+      "set": {
+        "family": "inet",
         "name": "empty_set",
         "table": "test",
         "type": "ipv4_addr",
