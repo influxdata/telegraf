@@ -208,6 +208,7 @@ func TestArgs6(t *testing.T) {
 }
 
 func TestArguments(t *testing.T) {
+	//nolint:prealloc // do not preallocate to not share the underlying slice
 	arguments := []string{"-c", "3"}
 	expected := append(arguments, "www.google.com")
 	p := Ping{
