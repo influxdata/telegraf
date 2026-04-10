@@ -138,16 +138,9 @@ func TestWireguard_allowedPeerCIDR(t *testing.T) {
 
 			var acc testutil.Accumulator
 			gatherDevicePeerMetrics(&acc, device, peer)
+			require.Equal(t, 7, acc.NFields())
 			acc.AssertDoesNotContainMeasurement(t, measurementDevice)
 			acc.AssertContainsFields(t, measurementPeer, expectFields)
-
-			// Verify endpoint field is absent when Endpoint is nil
-			for _, m := range acc.GetTelegrafMetrics() {
-				if m.Name() == measurementPeer {
-					_, found := m.GetField("endpoint")
-					require.False(t, found, "endpoint field should not be present when Endpoint is nil")
-				}
-			}
 		})
 	}
 }
