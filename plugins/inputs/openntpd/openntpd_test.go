@@ -20,177 +20,161 @@ func openntpdCTL(output string) func(string, config.Duration, bool) (*bytes.Buff
 }
 
 func TestParseSimpleOutput(t *testing.T) {
-	acc := &testutil.Accumulator{}
-	v := &Openntpd{
+	plugin := &Openntpd{
 		run: openntpdCTL(simpleOutput),
 	}
-	err := v.Gather(acc)
 
-	require.NoError(t, err)
-	require.True(t, acc.HasMeasurement("openntpd"))
-	require.Equal(t, uint64(1), acc.NMetrics())
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
 
-	require.Equal(t, 7, acc.NFields())
-
-	firstpeerfields := map[string]interface{}{
-		"wt":     int64(1),
-		"tl":     int64(10),
-		"next":   int64(56),
-		"poll":   int64(63),
-		"offset": float64(9.271),
-		"delay":  float64(44.662),
-		"jitter": float64(2.678),
+	expected := []telegraf.Metric{
+		metric.New(
+			"openntpd",
+			map[string]string{
+				"remote":  "212.129.9.36",
+				"stratum": "3",
+			},
+			map[string]interface{}{
+				"wt":     int64(1),
+				"tl":     int64(10),
+				"next":   int64(56),
+				"poll":   int64(63),
+				"offset": float64(9.271),
+				"delay":  float64(44.662),
+				"jitter": float64(2.678),
+			},
+			time.Unix(0, 0),
+		),
 	}
 
-	firstpeertags := map[string]string{
-		"remote":  "212.129.9.36",
-		"stratum": "3",
-	}
-
-	acc.AssertContainsTaggedFields(t, "openntpd", firstpeerfields, firstpeertags)
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
 func TestParseSimpleOutputwithStatePrefix(t *testing.T) {
-	acc := &testutil.Accumulator{}
-	v := &Openntpd{
+	plugin := &Openntpd{
 		run: openntpdCTL(simpleOutputwithStatePrefix),
 	}
-	err := v.Gather(acc)
 
-	require.NoError(t, err)
-	require.True(t, acc.HasMeasurement("openntpd"))
-	require.Equal(t, uint64(1), acc.NMetrics())
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
 
-	require.Equal(t, 7, acc.NFields())
-
-	firstpeerfields := map[string]interface{}{
-		"wt":     int64(1),
-		"tl":     int64(10),
-		"next":   int64(45),
-		"poll":   int64(980),
-		"offset": float64(-9.901),
-		"delay":  float64(67.573),
-		"jitter": float64(29.350),
+	expected := []telegraf.Metric{
+		metric.New(
+			"openntpd",
+			map[string]string{
+				"remote":       "92.243.6.5",
+				"stratum":      "2",
+				"state_prefix": "*",
+			},
+			map[string]interface{}{
+				"wt":     int64(1),
+				"tl":     int64(10),
+				"next":   int64(45),
+				"poll":   int64(980),
+				"offset": float64(-9.901),
+				"delay":  float64(67.573),
+				"jitter": float64(29.350),
+			},
+			time.Unix(0, 0),
+		),
 	}
 
-	firstpeertags := map[string]string{
-		"remote":       "92.243.6.5",
-		"stratum":      "2",
-		"state_prefix": "*",
-	}
-
-	acc.AssertContainsTaggedFields(t, "openntpd", firstpeerfields, firstpeertags)
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
 func TestParseSimpleOutputInvalidPeer(t *testing.T) {
-	acc := &testutil.Accumulator{}
-	v := &Openntpd{
+	plugin := &Openntpd{
 		run: openntpdCTL(simpleOutputInvalidPeer),
 	}
-	err := v.Gather(acc)
 
-	require.NoError(t, err)
-	require.True(t, acc.HasMeasurement("openntpd"))
-	require.Equal(t, uint64(1), acc.NMetrics())
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
 
-	require.Equal(t, 4, acc.NFields())
-
-	firstpeerfields := map[string]interface{}{
-		"wt":   int64(1),
-		"tl":   int64(2),
-		"next": int64(203),
-		"poll": int64(300),
+	expected := []telegraf.Metric{
+		metric.New(
+			"openntpd",
+			map[string]string{
+				"remote":  "178.33.111.49",
+				"stratum": "-",
+			},
+			map[string]interface{}{
+				"wt":   int64(1),
+				"tl":   int64(2),
+				"next": int64(203),
+				"poll": int64(300),
+			},
+			time.Unix(0, 0),
+		),
 	}
 
-	firstpeertags := map[string]string{
-		"remote":  "178.33.111.49",
-		"stratum": "-",
-	}
-
-	acc.AssertContainsTaggedFields(t, "openntpd", firstpeerfields, firstpeertags)
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
 func TestParseSimpleOutputServersDNSError(t *testing.T) {
-	acc := &testutil.Accumulator{}
-	v := &Openntpd{
+	plugin := &Openntpd{
 		run: openntpdCTL(simpleOutputServersDNSError),
 	}
-	err := v.Gather(acc)
 
-	require.NoError(t, err)
-	require.True(t, acc.HasMeasurement("openntpd"))
-	require.Equal(t, uint64(1), acc.NMetrics())
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
 
-	require.Equal(t, 4, acc.NFields())
-
-	firstpeerfields := map[string]interface{}{
-		"next": int64(2),
-		"poll": int64(15),
-		"wt":   int64(1),
-		"tl":   int64(2),
+	expected := []telegraf.Metric{
+		metric.New(
+			"openntpd",
+			map[string]string{
+				"remote":  "pool.nl.ntp.org",
+				"stratum": "-",
+			},
+			map[string]interface{}{
+				"wt":   int64(1),
+				"tl":   int64(2),
+				"next": int64(2),
+				"poll": int64(15),
+			},
+			time.Unix(0, 0),
+		),
 	}
 
-	firstpeertags := map[string]string{
-		"remote":  "pool.nl.ntp.org",
-		"stratum": "-",
-	}
-
-	acc.AssertContainsTaggedFields(t, "openntpd", firstpeerfields, firstpeertags)
-
-	secondpeerfields := map[string]interface{}{
-		"next": int64(2),
-		"poll": int64(15),
-		"wt":   int64(1),
-		"tl":   int64(2),
-	}
-
-	secondpeertags := map[string]string{
-		"remote":  "pool.nl.ntp.org",
-		"stratum": "-",
-	}
-
-	acc.AssertContainsTaggedFields(t, "openntpd", secondpeerfields, secondpeertags)
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
 func TestParseSimpleOutputServerDNSError(t *testing.T) {
-	acc := &testutil.Accumulator{}
-	v := &Openntpd{
+	plugin := &Openntpd{
 		run: openntpdCTL(simpleOutputServerDNSError),
 	}
-	err := v.Gather(acc)
 
-	require.NoError(t, err)
-	require.True(t, acc.HasMeasurement("openntpd"))
-	require.Equal(t, uint64(1), acc.NMetrics())
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
 
-	require.Equal(t, 4, acc.NFields())
-
-	firstpeerfields := map[string]interface{}{
-		"next": int64(12),
-		"poll": int64(15),
-		"wt":   int64(1),
-		"tl":   int64(2),
+	expected := []telegraf.Metric{
+		metric.New(
+			"openntpd",
+			map[string]string{
+				"remote":  "pool.fr.ntp.org",
+				"stratum": "-",
+			},
+			map[string]interface{}{
+				"wt":   int64(1),
+				"tl":   int64(2),
+				"next": int64(12),
+				"poll": int64(15),
+			},
+			time.Unix(0, 0),
+		),
 	}
 
-	firstpeertags := map[string]string{
-		"remote":  "pool.fr.ntp.org",
-		"stratum": "-",
-	}
-
-	acc.AssertContainsTaggedFields(t, "openntpd", firstpeerfields, firstpeertags)
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
 func TestParseFullOutput(t *testing.T) {
-	acc := &testutil.Accumulator{}
-	v := &Openntpd{
+	plugin := &Openntpd{
 		run: openntpdCTL(fullOutput),
 	}
-	err := v.Gather(acc)
 
-	require.NoError(t, err)
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
 	require.True(t, acc.HasMeasurement("openntpd"))
 	require.Equal(t, uint64(20), acc.NMetrics())
-
 	require.Equal(t, 113, acc.NFields())
 
 	firstpeerfields := map[string]interface{}{
