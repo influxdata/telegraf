@@ -238,7 +238,7 @@ func parsePeer(scanner *bufio.Scanner, headerLine string, acc telegraf.Accumulat
 		}
 		v, err := strconv.ParseInt(raw, 10, 64)
 		if err != nil {
-			acc.AddError(fmt.Errorf("integer value expected, got: %s", statsFields[index]))
+			acc.AddError(fmt.Errorf("integer value expected, got: %q", statsFields[index]))
 			continue
 		}
 		mFields[key] = v
@@ -258,7 +258,7 @@ func parsePeer(scanner *bufio.Scanner, headerLine string, acc telegraf.Accumulat
 		}
 		v, err := strconv.ParseFloat(raw, 64)
 		if err != nil {
-			acc.AddError(fmt.Errorf("float value expected, got: %s", statsFields[index]))
+			acc.AddError(fmt.Errorf("float value expected, got: %q", statsFields[index]))
 			continue
 		}
 		mFields[key] = v
@@ -308,7 +308,7 @@ func parseSensor(scanner *bufio.Scanner, headerLine string, acc telegraf.Accumul
 		}
 		v, err := strconv.ParseInt(raw, 10, 64)
 		if err != nil {
-			acc.AddError(fmt.Errorf("integer value expected, got: %s", statsFields[index]))
+			acc.AddError(fmt.Errorf("integer value expected, got: %q", statsFields[index]))
 			continue
 		}
 		mFields[key] = v
@@ -321,7 +321,7 @@ func parseSensor(scanner *bufio.Scanner, headerLine string, acc telegraf.Accumul
 		raw := strings.TrimSuffix(statsFields[index], "ms")
 		v, err := strconv.ParseFloat(raw, 64)
 		if err != nil {
-			acc.AddError(fmt.Errorf("float value expected, got: %s", statsFields[index]))
+			acc.AddError(fmt.Errorf("float value expected, got: %q", statsFields[index]))
 			continue
 		}
 		mFields[key] = v
