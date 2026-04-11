@@ -249,7 +249,6 @@ func TestMemStatsCollectExtendedWindows(t *testing.T) {
 			"used":              uint64(0),
 			"used_percent":      float64(0),
 			"available_percent": float64(0),
-			"free":              uint64(0),
 			"commit_limit":      uint64(0),
 			"commit_total":      uint64(0),
 			"virtual_total":     uint64(0),
