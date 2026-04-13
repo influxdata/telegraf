@@ -2373,8 +2373,8 @@ github.com/tdrn-org/go-hue v0.3.0 h1:ywIlfTx9lcDp+n9XyGNY/9mUihW82lsWUanTzvdfeMc
 github.com/tdrn-org/go-hue v0.3.0/go.mod h1:KUnPy2lGoP43ygNoCg6jVEhf8h5fpRn0Esjxq9syCnU=
 github.com/tdrn-org/go-nsdp v0.5.1 h1:w80Y5zF02nEopj/ycTcsDzeq5DgYeKquvGe8xuWXcEM=
 github.com/tdrn-org/go-nsdp v0.5.1/go.mod h1:e2I00mSN+Gl8DBgQmSerI6z4M2KrsQbN0SjpQYoI1OI=
-github.com/tdrn-org/go-tr064 v0.2.3 h1:hTKavfSTiUqmy02UvhHrvTQv6tTTkmGjYnOKv37br10=
-github.com/tdrn-org/go-tr064 v0.2.3/go.mod h1:3MAciJ87LZgVVkvl9Ns+dYAaS6oa5zEbyyL+T2a154E=
+github.com/tdrn-org/go-tr064 v0.3.0 h1:jeab3z69trkwsxNN1Vo3W+ED/u61MbWTZW4PNI2+1pg=
+github.com/tdrn-org/go-tr064 v0.3.0/go.mod h1:3MAciJ87LZgVVkvl9Ns+dYAaS6oa5zEbyyL+T2a154E=
 github.com/tedsuo/ifrit v0.0.0-20180802180643-bea94bb476cc/go.mod h1:eyZnKCc955uh98WQvzOm0dgAeLnf2O0Rz0LPoC5ze+0=
 github.com/testcontainers/testcontainers-go v0.41.0 h1:mfpsD0D36YgkxGj2LrIyxuwQ9i2wCKAD+ESsYM1wais=
 github.com/testcontainers/testcontainers-go v0.41.0/go.mod h1:pdFrEIfaPl24zmBjerWTTYaY0M6UHsqA1YSvsoU40MI=
