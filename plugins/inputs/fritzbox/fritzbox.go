@@ -194,17 +194,17 @@ func gatherWanInfo(acc telegraf.Accumulator, deviceClient *tr064.Client, service
 			return fmt.Errorf("failed to parse total bytes received: %w", err)
 		}
 	} else {
-		// Fall back to wancommonifconfig service in case igdicfg is not available (only uint32 based)
+		// Fall back to wancommonifconfig service in case igdicfg is not available
 		totalBytesSentResponse := &wancommonifconfig.GetTotalBytesSentResponse{}
 		if err = serviceClient.GetTotalBytesSent(totalBytesSentResponse); err != nil {
 			return fmt.Errorf("failed to query bytes sent: %w", err)
 		}
-		totalBytesSent = uint64(totalBytesSentResponse.NewTotalBytesSent)
+		totalBytesSent = totalBytesSentResponse.NewTotalBytesSent
 		totalBytesReceivedResponse := &wancommonifconfig.GetTotalBytesReceivedResponse{}
 		if err = serviceClient.GetTotalBytesReceived(totalBytesReceivedResponse); err != nil {
 			return fmt.Errorf("failed to query bytes received: %w", err)
 		}
-		totalBytesReceived = uint64(totalBytesReceivedResponse.NewTotalBytesReceived)
+		totalBytesReceived = totalBytesReceivedResponse.NewTotalBytesReceived
 	}
 	tags := map[string]string{
 		"source":  serviceClient.TR064Client.DeviceUrl.Hostname(),
