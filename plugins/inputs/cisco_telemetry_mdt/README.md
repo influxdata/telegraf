@@ -99,52 +99,12 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # keepalive_minimum_time = "5m"
 ```
 
-## Unit Conversion with Processors
+## Unit Conversion
 
-### Example: Multiply bandwidth fields by 1000 (Kbps to bps)
-
-Scale the fields first, then convert the resulting floats back to integers to
-match an existing InfluxDB schema:
-
-```toml
-# Scale bandwidth fields: multiply by 1000
-[[processors.scale]]
-  namepass = ["sys/nbm/show/interfaces"]
-  order = 1
-  [[processors.scale.scaling]]
-    factor = 1000.0
-    offset = 0.0
-    fields = ["bwCurrentIng", "bwCurrentEgr", "bwUsableIng", "bwUsableEgr", "bwActualIng", "bwActualEgr"]
-
-# Convert scaled float fields back to integer (to match existing InfluxDB schema)
-[[processors.converter]]
-  namepass = ["sys/nbm/show/interfaces"]
-  order = 2
-  [processors.converter.fields]
-    integer = ["bwCurrentIng", "bwCurrentEgr", "bwUsableIng", "bwUsableEgr", "bwActualIng", "bwActualEgr"]
-```
-
-### Example: Divide bandwidth fields by 1000 (bps to Kbps)
-
-Scale the fields and ensure float output:
-
-```toml
-# Scale bandwidth fields: divide by 1000 (int input → float output)
-[[processors.scale]]
-  namepass = ["sys/nbm/show/interfaces"]
-  order = 1
-  [[processors.scale.scaling]]
-    factor = 0.001
-    offset = 0.0
-    fields = ["bwCurrentIng", "bwCurrentEgr", "bwUsableIng", "bwUsableEgr", "bwActualIng", "bwActualEgr"]
-
-# Ensure output is float type
-[[processors.converter]]
-  namepass = ["sys/nbm/show/interfaces"]
-  order = 2
-  [processors.converter.fields]
-    float = ["bwCurrentIng", "bwCurrentEgr", "bwUsableIng", "bwUsableEgr", "bwActualIng", "bwActualEgr"]
-```
+For converting between units or types please use the
+[scale](/plugins/processors/scale/README.md) and
+[converter](/plugins/processors/converter/README.md) processor plugins
+respectively.
 
 ## Metrics
 
