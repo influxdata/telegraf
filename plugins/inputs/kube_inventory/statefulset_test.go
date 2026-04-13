@@ -48,7 +48,7 @@ func TestStatefulSet(t *testing.T) {
 									ObservedGeneration: 119,
 								},
 								Spec: v1.StatefulSetSpec{
-									Replicas: toPtr(int32(3)),
+									Replicas: new(int32(3)),
 									Selector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
 											"select1": "s1",
@@ -106,7 +106,7 @@ func TestStatefulSet(t *testing.T) {
 									ObservedGeneration: 119,
 								},
 								Spec: v1.StatefulSetSpec{
-									Replicas: toPtr(int32(3)),
+									Replicas: new(int32(3)),
 									Selector: nil,
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -243,7 +243,7 @@ func TestStatefulSetSelectorFilter(t *testing.T) {
 						ObservedGeneration: 119,
 					},
 					Spec: v1.StatefulSetSpec{
-						Replicas: toPtr(int32(3)),
+						Replicas: new(int32(3)),
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"select1": "s1",

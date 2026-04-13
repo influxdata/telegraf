@@ -92,7 +92,7 @@ func (m *fakePerformanceQuery) getCounterPath(counterHandle pdhCounterHandle) (s
 			return counter.path, nil
 		}
 	}
-	return "", fmt.Errorf("in getCounterPath: invalid handle: %q", counterHandle)
+	return "", fmt.Errorf("in getCounterPath: invalid handle: %v", counterHandle)
 }
 
 func (m *fakePerformanceQuery) expandWildCardPath(counterPath string) ([]string, error) {
@@ -114,7 +114,7 @@ func (m *fakePerformanceQuery) getFormattedCounterValueDouble(counterHandle pdhC
 			return counter.value, nil
 		}
 	}
-	return 0, fmt.Errorf("in getFormattedCounterValueDouble: invalid handle: %q", counterHandle)
+	return 0, fmt.Errorf("in getFormattedCounterValueDouble: invalid handle: %v", counterHandle)
 }
 
 func (m *fakePerformanceQuery) getRawCounterValue(counterHandle pdhCounterHandle) (int64, error) {
@@ -129,7 +129,7 @@ func (m *fakePerformanceQuery) getRawCounterValue(counterHandle pdhCounterHandle
 			return int64(counter.value), nil
 		}
 	}
-	return 0, fmt.Errorf("in getRawCounterValue: invalid handle: %q", counterHandle)
+	return 0, fmt.Errorf("in getRawCounterValue: invalid handle: %v", counterHandle)
 }
 
 func (m *fakePerformanceQuery) findCounterByPath(counterPath string) *testCounter {
@@ -161,10 +161,10 @@ func (m *fakePerformanceQuery) getFormattedCounterArrayDouble(hCounter pdhCounte
 				}
 				return counters, nil
 			}
-			return nil, fmt.Errorf("in getFormattedCounterArrayDouble: invalid counter: %q", hCounter)
+			return nil, fmt.Errorf("in getFormattedCounterArrayDouble: invalid counter: %v", hCounter)
 		}
 	}
-	return nil, fmt.Errorf("in getFormattedCounterArrayDouble: invalid counter: %q, no paths found", hCounter)
+	return nil, fmt.Errorf("in getFormattedCounterArrayDouble: invalid counter: %v, no paths found", hCounter)
 }
 
 func (m *fakePerformanceQuery) getRawCounterArray(hCounter pdhCounterHandle) ([]counterValue, error) {
@@ -187,10 +187,10 @@ func (m *fakePerformanceQuery) getRawCounterArray(hCounter pdhCounterHandle) ([]
 				}
 				return counters, nil
 			}
-			return nil, fmt.Errorf("in getRawCounterArray: invalid counter: %q", hCounter)
+			return nil, fmt.Errorf("in getRawCounterArray: invalid counter: %v", hCounter)
 		}
 	}
-	return nil, fmt.Errorf("in getRawCounterArray: invalid counter: %q, no paths found", hCounter)
+	return nil, fmt.Errorf("in getRawCounterArray: invalid counter: %v, no paths found", hCounter)
 }
 
 func (m *fakePerformanceQuery) collectData() error {
