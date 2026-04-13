@@ -76,6 +76,22 @@ func (b *bridge) processLights(acc telegraf.Accumulator) error {
 			} else {
 				fields["on"] = 0
 			}
+			if light.Dimming != nil && light.Dimming.Brightness != nil {
+				fields["brightness"] = float64(*light.Dimming.Brightness)
+			}
+			if light.ColorTemperature != nil &&
+				light.ColorTemperature.MirekValid != nil && *light.ColorTemperature.MirekValid &&
+				light.ColorTemperature.Mirek != nil {
+				fields["color_temp"] = int64(*light.ColorTemperature.Mirek)
+			}
+			if light.Color != nil && light.Color.Xy != nil {
+				if light.Color.Xy.X != nil {
+					fields["color_x"] = float64(*light.Color.Xy.X)
+				}
+				if light.Color.Xy.Y != nil {
+					fields["color_y"] = float64(*light.Color.Xy.Y)
+				}
+			}
 			acc.AddGauge("huebridge_light", fields, tags)
 		}
 	}
