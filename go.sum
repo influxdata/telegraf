@@ -1657,6 +1657,8 @@ github.com/henrybear327/Proton-API-Bridge v1.0.0 h1:gjKAaWfKu++77WsZTHg6FUyPC5W0
 github.com/henrybear327/Proton-API-Bridge v1.0.0/go.mod h1:gunH16hf6U74W2b9CGDaWRadiLICsoJ6KRkSt53zLts=
 github.com/henrybear327/go-proton-api v1.0.0 h1:zYi/IbjLwFAW7ltCeqXneUGJey0TN//Xo851a/BgLXw=
 github.com/henrybear327/go-proton-api v1.0.0/go.mod h1:w63MZuzufKcIZ93pwRgiOtxMXYafI8H74D77AxytOBc=
+github.com/howeyc/fsnotify v0.9.0 h1:0gtV5JmOKH4A8SsFxG2BczSeXWWPvcMT0euZt5gDAxY=
+github.com/howeyc/fsnotify v0.9.0/go.mod h1:41HzSPxBGeFRQKEEwgh49TRw/nKBsYZ2cF1OzPjSJsA=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
 github.com/huandu/xstrings v1.5.0 h1:2ag3IFq9ZDANvthTwTiqSSZLjDc+BedvHPAp5tJy2TI=
 github.com/huandu/xstrings v1.5.0/go.mod h1:y5/lhBue+AyNmUVz9RLU9xbLR0o4KIIExikq4ovT0aE=
@@ -1683,8 +1685,8 @@ github.com/influxdata/line-protocol/v2 v2.0.0-20210312151457-c52fdecb625a/go.mod
 github.com/influxdata/line-protocol/v2 v2.1.0/go.mod h1:QKw43hdUBg3GTk2iC3iyCxksNj7PX9aUSeYOYE/ceHY=
 github.com/influxdata/line-protocol/v2 v2.2.1 h1:EAPkqJ9Km4uAxtMRgUubJyqAr6zgWM0dznKMLRauQRE=
 github.com/influxdata/line-protocol/v2 v2.2.1/go.mod h1:DmB3Cnh+3oxmG6LOBIxce4oaL4CPj3OmMPgvauXh+tM=
-github.com/influxdata/tail v1.0.1-0.20241014115250-3e0015cb677a h1:IJBVizlP2eArwAurfli2Em5N7pTK1YCbDsdDtnou024=
-github.com/influxdata/tail v1.0.1-0.20241014115250-3e0015cb677a/go.mod h1:VeiWgI3qaGdJWust2fP27a6J+koITo/1c/UhxeOxgaM=
+github.com/influxdata/tail v2.10.6-bug100770-inotify-leak+incompatible h1:UxVdPUL6zfRSsGEcCD52rRrtbMIi5QpICOghUB9bIHU=
+github.com/influxdata/tail v2.10.6-bug100770-inotify-leak+incompatible/go.mod h1:xTFF2SILpIYc5N+Srb0d5qpx7d+f733nBrbasb13DtQ=
 github.com/influxdata/toml v0.0.0-20251106153700-c381e153d076 h1:FqEkdokbxeBpCtZix3tLcIu2/OClDLCoKlbKXFLOEwo=
 github.com/influxdata/toml v0.0.0-20251106153700-c381e153d076/go.mod h1:zApaNFpP/bTpQItGZNNUMISDMDAnTXu9UqJ4yT3ocz8=
 github.com/intel/iaevents v1.1.0 h1:FzxMBfXk/apG2EUXUCfaq3gUQ+q+TgZ1HNMjjUILUGE=
@@ -3421,8 +3423,6 @@ gopkg.in/evanphx/json-patch.v4 v4.13.0 h1:czT3CmqEaQ1aanPc5SdlgQrrEIb8w/wwCvWWnf
 gopkg.in/evanphx/json-patch.v4 v4.13.0/go.mod h1:p8EYWUEYMpynmqDbY58zCKCFZw8pRWMG4EsWvDvM72M=
 gopkg.in/fatih/pool.v2 v2.0.0 h1:xIFeWtxifuQJGk/IEPKsTduEKcKvPmhoiVDGpC40nKg=
 gopkg.in/fatih/pool.v2 v2.0.0/go.mod h1:8xVGeu1/2jr2wm5V9SPuMht2H5AEmf5aFMGSQixtjTY=
-gopkg.in/fsnotify.v1 v1.2.1/go.mod h1:Tz8NjZHkW78fSQdbUxIjBTcgA1z1m8ZHf0WmKUhAMys=
-gopkg.in/fsnotify.v1 v1.4.7 h1:xOHLXZwVvI9hhs+cLKq5+I5onOuwQLhQwiu63xxlHs4=
 gopkg.in/fsnotify.v1 v1.4.7/go.mod h1:Tz8NjZHkW78fSQdbUxIjBTcgA1z1m8ZHf0WmKUhAMys=
 gopkg.in/gorethink/gorethink.v3 v3.0.5 h1:e2Uc/Xe+hpcVQFsj6MuHlYog3r0JYpnTzwDj/y2O4MU=
 gopkg.in/gorethink/gorethink.v3 v3.0.5/go.mod h1:+3yIIHJUGMBK+wyPH+iN5TP+88ikFDfZdqTlK3Y9q8I=
@@ -3440,7 +3440,6 @@ gopkg.in/olivere/elastic.v5 v5.0.86/go.mod h1:M3WNlsF+WhYn7api4D87NIflwTV/c0iVs8
 gopkg.in/resty.v1 v1.12.0/go.mod h1:mDo4pnntr5jdWRML875a/NmxYqAlA73dVijT2AXvQQo=
 gopkg.in/sourcemap.v1 v1.0.5 h1:inv58fC9f9J3TK2Y2R1NPntXEn3/wjWHkonhIUODNTI=
 gopkg.in/sourcemap.v1 v1.0.5/go.mod h1:2RlvNNSMglmRrcvhfuzp4hQHwOtjxlbjX7UPY/GXb78=
-gopkg.in/tomb.v1 v1.0.0-20140529071818-c131134a1947/go.mod h1:dt/ZhP58zS4L8KSrWDmTeBkI65Dw0HsyUHuEVlX15mw=
 gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 h1:uRGJdciOHaEIrze2W8Q3AKkepLTh2hOroT7a+7czfdQ=
 gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7/go.mod h1:dt/ZhP58zS4L8KSrWDmTeBkI65Dw0HsyUHuEVlX15mw=
 gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637 h1:yiW+nvdHb9LVqSHQBXfZCieqV4fzYhNBql77zY0ykqs=
@@ -3491,6 +3490,8 @@ k8s.io/kube-openapi v0.0.0-20250910181357-589584f1c912 h1:Y3gxNAuB0OBLImH611+UDZ
 k8s.io/kube-openapi v0.0.0-20250910181357-589584f1c912/go.mod h1:kdmbQkyfwUagLfXIad1y2TdrjPFWp2Q89B3qkRwf/pQ=
 k8s.io/utils v0.0.0-20260319190234-28399d86e0b5 h1:kBawHLSnx/mYHmRnNUf9d4CpjREbeZuxoSGOX/J+aYM=
 k8s.io/utils v0.0.0-20260319190234-28399d86e0b5/go.mod h1:xDxuJ0whA3d0I4mf/C4ppKHxXynQ+fxnkmQH0vTHnuk=
+launchpad.net/tomb v0.0.0-20140529072043-000000000018 h1:FKZEDyGErCWXdYkBcatiuhFIVmFXa4IX63x9qhyDAgA=
+launchpad.net/tomb v0.0.0-20140529072043-000000000018/go.mod h1:w6+8ELEkBc7BXqHIC1HxPn+1oMBGALPhRpM4jkUYWJM=
 layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68 h1:2NDro2Jzkrqfngy/sA5GVnChs7fx8EzcQKFi/lI2cfg=
 layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68/go.mod h1:pFWM9De99EY9TPVyHIyA56QmoRViVck/x41WFkUlc9A=
 lukechampine.com/uint128 v1.1.1/go.mod h1:c4eWIwlEGaxC/+H1VguhU4PHXNWDCDMUlWdIWl2j1gk=

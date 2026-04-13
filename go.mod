@@ -128,7 +128,7 @@ require (
 	github.com/influxdata/influxdb-observability/influx2otel v0.5.12
 	github.com/influxdata/influxdb-observability/otel2influx v0.5.12
 	github.com/influxdata/line-protocol/v2 v2.2.1
-	github.com/influxdata/tail v1.0.1-0.20241014115250-3e0015cb677a
+	github.com/influxdata/tail v2.10.6-bug100770-inotify-leak+incompatible
 	github.com/influxdata/toml v0.0.0-20251106153700-c381e153d076
 	github.com/intel/iaevents v1.1.0
 	github.com/intel/powertelemetry v1.0.2
@@ -431,6 +431,7 @@ require (
 	github.com/hashicorp/hcl v1.0.1-vault-7 // indirect
 	github.com/hashicorp/packer-plugin-sdk v0.3.2 // indirect
 	github.com/hashicorp/serf v0.10.1 // indirect
+	github.com/howeyc/fsnotify v0.9.0 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/icholy/digest v1.1.0 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
@@ -591,7 +592,6 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260401024825-9d38bb4040a9 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
-	gopkg.in/fsnotify.v1 v1.4.7 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.1 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
@@ -604,6 +604,7 @@ require (
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250910181357-589584f1c912 // indirect
 	k8s.io/utils v0.0.0-20260319190234-28399d86e0b5 // indirect
+	launchpad.net/tomb v0.0.0-20140529072043-000000000018 // indirect
 	modernc.org/libc v1.70.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
