@@ -20,6 +20,7 @@ type subscribeClientConfig struct {
 	input.InputClientConfig
 	SubscriptionInterval config.Duration `toml:"subscription_interval"`
 	ConnectFailBehavior  string          `toml:"connect_fail_behavior"`
+	MonitorFailBehavior  string          `toml:"monitor_fail_behavior"`
 }
 
 type subscribeClient struct {
@@ -223,16 +224,19 @@ func (o *subscribeClient) startMonitoring(ctx context.Context) (<-chan telegraf.
 		o.Log.Debug("Monitoring items")
 
 		for idx, res := range resp.Results {
-			if !o.StatusCodeOK(res.StatusCode) {
-				// Verify NodeIDs array has been built before trying to get item; otherwise show '?' for node id
-				if len(o.OpcUAInputClient.NodeIDs) > idx {
-					o.Log.Debugf("Failed to create monitored item for node %v (%v)",
-						o.OpcUAInputClient.NodeMetricMapping[idx].Tag.FieldName, o.OpcUAInputClient.NodeIDs[idx].String())
-				} else {
-					o.Log.Debugf("Failed to create monitored item for node %v (%v)", o.OpcUAInputClient.NodeMetricMapping[idx].Tag.FieldName, '?')
-				}
-				return nil, fmt.Errorf("creating monitored item failed with status code: %w", res.StatusCode)
+			if o.StatusCodeOK(res.StatusCode) {
+				continue
 			}
+			nodeID := "?"
+			if len(o.OpcUAInputClient.NodeIDs) > idx {
+				nodeID = o.OpcUAInputClient.NodeIDs[idx].String()
+			}
+			fieldName := o.OpcUAInputClient.NodeMetricMapping[idx].Tag.FieldName
+			if o.Config.MonitorFailBehavior == "ignore" {
+				o.Log.Warnf("Failed to create monitored item for node %v (%v): %v", fieldName, nodeID, res.StatusCode)
+				continue
+			}
+			return nil, fmt.Errorf("creating monitored item for node %v (%v) failed with status code: %w", fieldName, nodeID, res.StatusCode)
 		}
 	}
 
@@ -243,10 +247,15 @@ func (o *subscribeClient) startMonitoring(ctx context.Context) (<-chan telegraf.
 		}
 		o.Log.Debug("Monitoring events")
 
-		for _, res := range resp.Results {
-			if !o.StatusCodeOK(res.StatusCode) {
-				return nil, fmt.Errorf("creating monitored event streaming item failed with status code: %w", res.StatusCode)
+		for idx, res := range resp.Results {
+			if o.StatusCodeOK(res.StatusCode) {
+				continue
 			}
+			if o.Config.MonitorFailBehavior == "ignore" {
+				o.Log.Warnf("Failed to create monitored event item at index %d: %v", idx, res.StatusCode)
+				continue
+			}
+			return nil, fmt.Errorf("creating monitored event streaming item failed with status code: %w", res.StatusCode)
 		}
 	}
 

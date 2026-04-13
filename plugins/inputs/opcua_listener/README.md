@@ -57,6 +57,11 @@ to use them.
   #      "retry": retry connecting at each interval
   # connect_fail_behavior = "error"
   #
+  ## Behavior when creating a monitored item for a node fails. Valid options are:
+  ##     "error": stop the plugin and return an error
+  ##     "ignore": log a warning and continue with remaining nodes
+  # monitor_fail_behavior = "error"
+  #
   ## Maximum time allowed for a request over the established connection.
   # request_timeout = "5s"
   #

@@ -36,6 +36,14 @@ func (o *OpcUaListener) Init() (err error) {
 	default:
 		return fmt.Errorf("unknown setting %q for 'connect_fail_behavior'", o.ConnectFailBehavior)
 	}
+	switch o.MonitorFailBehavior {
+	case "":
+		o.MonitorFailBehavior = "error"
+	case "error", "ignore":
+		// Do nothing as these are valid
+	default:
+		return fmt.Errorf("unknown setting %q for 'monitor_fail_behavior'", o.MonitorFailBehavior)
+	}
 	o.client, err = o.subscribeClientConfig.createSubscribeClient(o.Log)
 	return err
 }
