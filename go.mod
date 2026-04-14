@@ -7,7 +7,7 @@ godebug x509negativeserial=1
 require (
 	cloud.google.com/go/auth v0.20.0
 	cloud.google.com/go/bigquery v1.75.0
-	cloud.google.com/go/monitoring v1.25.0
+	cloud.google.com/go/monitoring v1.26.0
 	cloud.google.com/go/pubsub/v2 v2.5.1
 	cloud.google.com/go/storage v1.62.0
 	collectd.org v0.6.0
@@ -246,7 +246,7 @@ require (
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	gonum.org/v1/gonum v0.17.0
 	google.golang.org/api v0.275.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20260401001100-f93e5f3e9f0f
+	google.golang.org/genproto/googleapis/api v0.0.0-20260401024825-9d38bb4040a9
 	google.golang.org/grpc v1.80.0
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
