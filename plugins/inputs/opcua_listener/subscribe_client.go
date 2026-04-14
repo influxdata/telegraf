@@ -216,6 +216,7 @@ func (o *subscribeClient) startMonitoring(ctx context.Context) (<-chan telegraf.
 		return nil, err
 	}
 
+	var skippedItems int
 	if len(o.monitoredItemsReqs) != 0 {
 		resp, err := o.sub.Monitor(ctx, ua.TimestampsToReturnBoth, o.monitoredItemsReqs...)
 		if err != nil {
@@ -234,6 +235,7 @@ func (o *subscribeClient) startMonitoring(ctx context.Context) (<-chan telegraf.
 			fieldName := o.OpcUAInputClient.NodeMetricMapping[idx].Tag.FieldName
 			if o.Config.MonitorFailBehavior == "ignore" {
 				o.Log.Warnf("Failed to create monitored item for node %v (%v): %v", fieldName, nodeID, res.StatusCode)
+				skippedItems++
 				continue
 			}
 			return nil, fmt.Errorf("creating monitored item for node %v (%v) failed with status code: %w", fieldName, nodeID, res.StatusCode)
@@ -251,12 +253,19 @@ func (o *subscribeClient) startMonitoring(ctx context.Context) (<-chan telegraf.
 			if o.StatusCodeOK(res.StatusCode) {
 				continue
 			}
+			nodeID := o.EventNodeMetricMapping[idx].NodeID
 			if o.Config.MonitorFailBehavior == "ignore" {
-				o.Log.Warnf("Failed to create monitored event item at index %d: %v", idx, res.StatusCode)
+				o.Log.Warnf("Failed to create monitored event item for node %v: %v", nodeID, res.StatusCode)
+				skippedItems++
 				continue
 			}
-			return nil, fmt.Errorf("creating monitored event streaming item failed with status code: %w", res.StatusCode)
+			return nil, fmt.Errorf("creating monitored event item for node %v failed with status code: %w", nodeID, res.StatusCode)
 		}
+	}
+
+	totalItems := len(o.monitoredItemsReqs) + len(o.eventItemsReqs)
+	if skippedItems > 0 && skippedItems == totalItems {
+		o.Log.Warnf("All %d monitored items failed, no data will be collected", totalItems)
 	}
 
 	go o.processReceivedNotifications()
