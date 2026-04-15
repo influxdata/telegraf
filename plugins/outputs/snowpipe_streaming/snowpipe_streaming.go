@@ -430,7 +430,7 @@ func goTypeToSnowflake(v interface{}) string {
 }
 
 func (s *SnowpipeStreaming) fetchTableSchema(tableName string) (*tableSchema, error) {
-	query := fmt.Sprintf(
+	query := fmt.Sprintf( //nolint:gosec // G201: quoteIdent sanitises identifier
 		"SELECT COLUMN_NAME FROM %s.INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?",
 		quoteIdent(s.Database),
 	)

@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -80,7 +81,7 @@ func init() {
 	sql.Register("snowflake_mock", &mockDriver{})
 }
 
-func (_ *mockDriver) Open(_ string) (driver.Conn, error) {
+func (*mockDriver) Open(_ string) (driver.Conn, error) {
 	c := getGlobalMock()
 	if c == nil {
 		return nil, errors.New("no mock conn configured")
@@ -141,27 +142,27 @@ func (c *mockConn) getQueries() []executedQuery {
 	return out
 }
 
-func (_ *mockStmt) Close() error  { return nil }
-func (_ *mockStmt) NumInput() int { return -1 }
+func (*mockStmt) Close() error  { return nil }
+func (*mockStmt) NumInput() int { return -1 }
 
-func (s *mockStmt) Exec(args []driver.Value) (driver.Result, error) { //nolint:revive // receiver used
+func (s *mockStmt) Exec(args []driver.Value) (driver.Result, error) {
 	return s.conn.Exec(s.query, args)
 }
 
-func (s *mockStmt) Query(args []driver.Value) (driver.Rows, error) { //nolint:revive // receiver used
+func (s *mockStmt) Query(args []driver.Value) (driver.Rows, error) {
 	return s.conn.Query(s.query, args)
 }
 
-func (_ *mockTx) Commit() error   { return nil }
-func (_ *mockTx) Rollback() error { return nil }
+func (*mockTx) Commit() error   { return nil }
+func (*mockTx) Rollback() error { return nil }
 
 type mockResult struct{}
 
-func (_ mockResult) LastInsertId() (int64, error) { return 0, nil }
-func (_ mockResult) RowsAffected() (int64, error) { return 1, nil }
+func (mockResult) LastInsertId() (int64, error) { return 0, nil }
+func (mockResult) RowsAffected() (int64, error) { return 1, nil }
 
-func (r *mockRows) Columns() []string { return r.columns } //nolint:revive // receiver used
-func (_ *mockRows) Close() error      { return nil }
+func (r *mockRows) Columns() []string { return r.columns }
+func (*mockRows) Close() error        { return nil }
 func (r *mockRows) Next(dest []driver.Value) error {
 	if r.pos >= len(r.data) {
 		return io.EOF
@@ -695,7 +696,7 @@ func TestConcurrentWrites(t *testing.T) {
 			defer wg.Done()
 			name := fmt.Sprintf("metric_%d", i)
 			m := testMetric(name, nil, map[string]interface{}{"val": float64(i)}, ts)
-			_ = s.Write([]telegraf.Metric{m})
+			assert.NoError(t, s.Write([]telegraf.Metric{m}))
 		}(i)
 	}
 
