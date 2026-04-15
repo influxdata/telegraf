@@ -161,7 +161,7 @@ func (_ mockResult) LastInsertId() (int64, error) { return 0, nil }
 func (_ mockResult) RowsAffected() (int64, error) { return 1, nil }
 
 func (r *mockRows) Columns() []string { return r.columns } //nolint:revive // receiver used
-func (_ *mockRows) Close() error       { return nil }
+func (_ *mockRows) Close() error      { return nil }
 func (r *mockRows) Next(dest []driver.Value) error {
 	if r.pos >= len(r.data) {
 		return io.EOF
