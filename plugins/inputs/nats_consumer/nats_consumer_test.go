@@ -968,8 +968,8 @@ func TestJetStreamDurableWithQueueGroup(t *testing.T) {
 
 	total := acc1.NMetrics() + acc2.NMetrics()
 	require.Equal(t, uint64(msgCount), total, "all messages should be consumed across both consumers")
-	require.True(t, acc1.NMetrics() > 0, "consumer 1 should receive some messages")
-	require.True(t, acc2.NMetrics() > 0, "consumer 2 should receive some messages")
+	require.Positive(t, acc1.NMetrics(), "consumer 1 should receive some messages")
+	require.Positive(t, acc2.NMetrics(), "consumer 2 should receive some messages")
 }
 
 type sender struct {

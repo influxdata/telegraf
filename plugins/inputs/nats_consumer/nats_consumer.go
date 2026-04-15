@@ -4,6 +4,7 @@ package nats_consumer
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -107,11 +108,11 @@ func (n *NatsConsumer) Init() error {
 	}
 
 	if n.JsDeliverPolicy == "by_start_sequence" && n.JsStartSequence == 0 {
-		return fmt.Errorf("jetstream_start_sequence must be set when jetstream_deliver_policy is \"by_start_sequence\"")
+		return errors.New("jetstream_start_sequence must be set when jetstream_deliver_policy is \"by_start_sequence\"")
 	}
 
 	if n.JsDeliverPolicy == "by_start_time" && n.JsStartTime == "" {
-		return fmt.Errorf("jetstream_start_time must be set when jetstream_deliver_policy is \"by_start_time\"")
+		return errors.New("jetstream_start_time must be set when jetstream_deliver_policy is \"by_start_time\"")
 	}
 
 	return nil
@@ -203,7 +204,10 @@ func (n *NatsConsumer) Start(acc telegraf.Accumulator) error {
 			case "by_start_sequence":
 				subOptions = append(subOptions, nats.StartSequence(n.JsStartSequence))
 			case "by_start_time":
-				st, _ := time.Parse(time.RFC3339, n.JsStartTime)
+				st, err := time.Parse(time.RFC3339, n.JsStartTime)
+				if err != nil {
+					return err
+				}
 				subOptions = append(subOptions, nats.StartTime(st))
 			}
 			if n.JsAckWait > 0 {
