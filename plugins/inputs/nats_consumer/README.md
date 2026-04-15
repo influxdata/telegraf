@@ -72,6 +72,47 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## thus jetstream_subjects won't work
   jetstream_stream = ""
 
+  ## jetstream durable consumer name
+  ## When set, the plugin creates or binds to a durable consumer that
+  ## survives restarts. Without this, an ephemeral consumer is created
+  ## and messages may be replayed or missed on restart.
+  # jetstream_durable_name = ""
+
+  ## jetstream deliver policy
+  ## Controls where in the stream the consumer starts receiving messages.
+  ## One of: "all", "last", "new", "by_start_sequence", "by_start_time"
+  # jetstream_deliver_policy = "all"
+
+  ## jetstream start sequence
+  ## Used with jetstream_deliver_policy = "by_start_sequence".
+  ## The consumer will start receiving messages from this stream sequence number.
+  # jetstream_start_sequence = 0
+
+  ## jetstream start time (RFC3339)
+  ## Used with jetstream_deliver_policy = "by_start_time".
+  ## The consumer will start receiving messages from this timestamp.
+  # jetstream_start_time = ""
+
+  ## jetstream ack wait duration
+  ## How long the server waits for an acknowledgement before redelivering
+  ## a message to the consumer.
+  # jetstream_ack_wait = "30s"
+
+  ## jetstream max deliver
+  ## Maximum number of delivery attempts for a single message. Set to -1
+  ## for unlimited redelivery attempts.
+  # jetstream_max_deliver = -1
+
+  ## jetstream filter subjects
+  ## Filter specific subjects within a stream (JetStream 2.10+).
+  ## This allows consuming only a subset of subjects from a stream.
+  # jetstream_filter_subjects = []
+
+  ## jetstream consumer name
+  ## Explicit consumer name for named consumers (different from durable_name).
+  ## Used for pre-created consumers or when you want a specific consumer identity.
+  # jetstream_consumer_name = ""
+
   ## name a queue group
   queue_group = "telegraf_consumers"
 

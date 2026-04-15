@@ -8,10 +8,12 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/nats-io/nats.go"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -36,6 +38,14 @@ type NatsConsumer struct {
 	NkeySeed               string          `toml:"nkey_seed"`
 	JsSubjects             []string        `toml:"jetstream_subjects"`
 	JsStream               string          `toml:"jetstream_stream"`
+	JsDurableName          string          `toml:"jetstream_durable_name"`
+	JsDeliverPolicy        string          `toml:"jetstream_deliver_policy"`
+	JsStartSequence        uint64          `toml:"jetstream_start_sequence"`
+	JsStartTime            string          `toml:"jetstream_start_time"`
+	JsAckWait              config.Duration `toml:"jetstream_ack_wait"`
+	JsMaxDeliver           int             `toml:"jetstream_max_deliver"`
+	JsFilterSubjects       []string        `toml:"jetstream_filter_subjects"`
+	JsConsumerName         string          `toml:"jetstream_consumer_name"`
 	PendingMessageLimit    int             `toml:"pending_message_limit"`
 	PendingBytesLimit      int             `toml:"pending_bytes_limit"`
 	MaxUndeliveredMessages int             `toml:"max_undelivered_messages"`
@@ -82,6 +92,29 @@ func (*NatsConsumer) SampleConfig() string {
 
 func (n *NatsConsumer) SetParser(parser telegraf.Parser) {
 	n.parser = parser
+}
+
+func (n *NatsConsumer) Init() error {
+	validPolicies := []string{"", "all", "last", "new", "by_start_sequence", "by_start_time"}
+	if !slices.Contains(validPolicies, n.JsDeliverPolicy) {
+		return fmt.Errorf("invalid jetstream_deliver_policy %q, must be one of: all, last, new, by_start_sequence, by_start_time", n.JsDeliverPolicy)
+	}
+
+	if n.JsDeliverPolicy == "by_start_time" && n.JsStartTime != "" {
+		if _, err := time.Parse(time.RFC3339, n.JsStartTime); err != nil {
+			return fmt.Errorf("invalid jetstream_start_time %q: must be RFC3339 format: %w", n.JsStartTime, err)
+		}
+	}
+
+	if n.JsDeliverPolicy == "by_start_sequence" && n.JsStartSequence == 0 {
+		return fmt.Errorf("jetstream_start_sequence must be set when jetstream_deliver_policy is \"by_start_sequence\"")
+	}
+
+	if n.JsDeliverPolicy == "by_start_time" && n.JsStartTime == "" {
+		return fmt.Errorf("jetstream_start_time must be set when jetstream_deliver_policy is \"by_start_time\"")
+	}
+
+	return nil
 }
 
 // Start the nats consumer. Caller must call *NatsConsumer.Stop() to clean up.
@@ -157,6 +190,31 @@ func (n *NatsConsumer) Start(acc telegraf.Accumulator) error {
 			if n.JsStream != "" {
 				subOptions = append(subOptions, nats.BindStream(n.JsStream))
 			}
+			if n.JsDurableName != "" {
+				subOptions = append(subOptions, nats.Durable(n.JsDurableName))
+			}
+			switch n.JsDeliverPolicy {
+			case "all", "":
+				subOptions = append(subOptions, nats.DeliverAll())
+			case "last":
+				subOptions = append(subOptions, nats.DeliverLast())
+			case "new":
+				subOptions = append(subOptions, nats.DeliverNew())
+			case "by_start_sequence":
+				subOptions = append(subOptions, nats.StartSequence(n.JsStartSequence))
+			case "by_start_time":
+				st, _ := time.Parse(time.RFC3339, n.JsStartTime)
+				subOptions = append(subOptions, nats.StartTime(st))
+			}
+			if n.JsAckWait > 0 {
+				subOptions = append(subOptions, nats.AckWait(time.Duration(n.JsAckWait)))
+			}
+			if n.JsMaxDeliver > 0 {
+				subOptions = append(subOptions, nats.MaxDeliver(n.JsMaxDeliver))
+			}
+			if n.JsConsumerName != "" {
+				subOptions = append(subOptions, nats.ConsumerName(n.JsConsumerName))
+			}
 			n.jsConn, connErr = n.conn.JetStream(nats.PublishAsyncMaxPending(256))
 			if connErr != nil {
 				return connErr
@@ -164,9 +222,17 @@ func (n *NatsConsumer) Start(acc telegraf.Accumulator) error {
 
 			if n.jsConn != nil {
 				for _, jsSub := range n.JsSubjects {
-					sub, err := n.jsConn.QueueSubscribe(jsSub, n.QueueGroup, func(m *nats.Msg) {
-						n.in <- m
-					}, subOptions...)
+					var sub *nats.Subscription
+					var err error
+					if n.QueueGroup != "" {
+						sub, err = n.jsConn.QueueSubscribe(jsSub, n.QueueGroup, func(m *nats.Msg) {
+							n.in <- m
+						}, subOptions...)
+					} else {
+						sub, err = n.jsConn.Subscribe(jsSub, func(m *nats.Msg) {
+							n.in <- m
+						}, subOptions...)
+					}
 					if err != nil {
 						return err
 					}
@@ -322,9 +388,16 @@ func (n *NatsConsumer) clean() {
 	}
 
 	for _, sub := range n.jsSubs {
-		if err := sub.Unsubscribe(); err != nil {
-			n.Log.Errorf("Error unsubscribing from subject %s in queue %s: %s",
-				sub.Subject, sub.Queue, err)
+		if n.JsDurableName != "" {
+			if err := sub.Drain(); err != nil {
+				n.Log.Errorf("Error draining JetStream subject %s in queue %s: %s",
+					sub.Subject, sub.Queue, err)
+			}
+		} else {
+			if err := sub.Unsubscribe(); err != nil {
+				n.Log.Errorf("Error unsubscribing from subject %s in queue %s: %s",
+					sub.Subject, sub.Queue, err)
+			}
 		}
 	}
 
@@ -342,6 +415,8 @@ func init() {
 			PendingBytesLimit:      nats.DefaultSubPendingBytesLimit,
 			PendingMessageLimit:    nats.DefaultSubPendingMsgsLimit,
 			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+			JsAckWait:              config.Duration(30 * time.Second),
+			JsMaxDeliver:           -1,
 		}
 	})
 }
