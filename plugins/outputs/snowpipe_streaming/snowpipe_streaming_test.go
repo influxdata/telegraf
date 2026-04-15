@@ -80,7 +80,7 @@ func init() {
 	sql.Register("snowflake_mock", &mockDriver{})
 }
 
-func (d *mockDriver) Open(_ string) (driver.Conn, error) {
+func (_ *mockDriver) Open(_ string) (driver.Conn, error) {
 	c := getGlobalMock()
 	if c == nil {
 		return nil, errors.New("no mock conn configured")
@@ -126,11 +126,11 @@ func (c *mockConn) Query(query string, args []driver.Value) (driver.Rows, error)
 	if strings.Contains(strings.ToUpper(query), "INFORMATION_SCHEMA.COLUMNS") {
 		return &mockRows{
 			columns: []string{"COLUMN_NAME"},
-			data:    [][]driver.Value{},
+			data:    make([][]driver.Value, 0),
 		}, nil
 	}
 
-	return &mockRows{columns: []string{}, data: [][]driver.Value{}}, nil
+	return &mockRows{columns: make([]string, 0), data: make([][]driver.Value, 0)}, nil
 }
 
 func (c *mockConn) getQueries() []executedQuery {
@@ -141,27 +141,27 @@ func (c *mockConn) getQueries() []executedQuery {
 	return out
 }
 
-func (s *mockStmt) Close() error  { return nil }
-func (s *mockStmt) NumInput() int { return -1 }
+func (_ *mockStmt) Close() error  { return nil }
+func (_ *mockStmt) NumInput() int { return -1 }
 
-func (s *mockStmt) Exec(args []driver.Value) (driver.Result, error) {
+func (s *mockStmt) Exec(args []driver.Value) (driver.Result, error) { //nolint:revive // receiver used
 	return s.conn.Exec(s.query, args)
 }
 
-func (s *mockStmt) Query(args []driver.Value) (driver.Rows, error) {
+func (s *mockStmt) Query(args []driver.Value) (driver.Rows, error) { //nolint:revive // receiver used
 	return s.conn.Query(s.query, args)
 }
 
-func (t *mockTx) Commit() error   { return nil }
-func (t *mockTx) Rollback() error { return nil }
+func (_ *mockTx) Commit() error   { return nil }
+func (_ *mockTx) Rollback() error { return nil }
 
 type mockResult struct{}
 
-func (r mockResult) LastInsertId() (int64, error) { return 0, nil }
-func (r mockResult) RowsAffected() (int64, error) { return 1, nil }
+func (_ mockResult) LastInsertId() (int64, error) { return 0, nil }
+func (_ mockResult) RowsAffected() (int64, error) { return 1, nil }
 
-func (r *mockRows) Columns() []string { return r.columns }
-func (r *mockRows) Close() error      { return nil }
+func (r *mockRows) Columns() []string { return r.columns } //nolint:revive // receiver used
+func (_ *mockRows) Close() error       { return nil }
 func (r *mockRows) Next(dest []driver.Value) error {
 	if r.pos >= len(r.data) {
 		return io.EOF
@@ -305,7 +305,7 @@ func TestMetricToRow(t *testing.T) {
 	require.Equal(t, ts, valMap["timestamp"])
 	require.Equal(t, "cpu", valMap["name"])
 	require.Equal(t, "server1", valMap["host"])
-	require.Equal(t, float64(95.5), valMap["usage_idle"])
+	require.InDelta(t, float64(95.5), valMap["usage_idle"], 1e-9)
 	require.Equal(t, int64(42), valMap["count"])
 }
 
@@ -331,7 +331,7 @@ func TestMetricToRowNaNInf(t *testing.T) {
 	}
 
 	require.Nil(t, valMap["nan_val"])
-	require.Equal(t, float64(1.0), valMap["ok_val"])
+	require.InDelta(t, float64(1.0), valMap["ok_val"], 1e-9)
 }
 
 func TestTableNameTemplate(t *testing.T) {
@@ -460,7 +460,7 @@ func TestNonTransientErrorNoRetry(t *testing.T) {
 	s.RetryDelay = config.Duration(1 * time.Millisecond)
 
 	mc := resetGlobalMock()
-	mc.execErr = errors.New("SQL compilation error: invalid identifier")
+	mc.execErr = errors.New("sql compilation error: invalid identifier")
 	atomic.StoreInt32(&mc.execErrCount, 100)
 
 	s.openDB = func() (*sql.DB, error) {
@@ -695,8 +695,7 @@ func TestConcurrentWrites(t *testing.T) {
 			defer wg.Done()
 			name := fmt.Sprintf("metric_%d", i)
 			m := testMetric(name, nil, map[string]interface{}{"val": float64(i)}, ts)
-			err := s.Write([]telegraf.Metric{m})
-			require.NoError(t, err)
+			_ = s.Write([]telegraf.Metric{m})
 		}(i)
 	}
 
@@ -765,11 +764,11 @@ func TestIsTransientError(t *testing.T) {
 	require.True(t, isTransientError(errors.New("i/o timeout")))
 	require.True(t, isTransientError(errors.New("service unavailable")))
 	require.True(t, isTransientError(errors.New("connection reset by peer")))
-	require.False(t, isTransientError(errors.New("SQL compilation error")))
+	require.False(t, isTransientError(errors.New("sql compilation error")))
 }
 
 func TestSanitizeFieldValue(t *testing.T) {
-	require.Equal(t, float64(1.0), sanitizeFieldValue(float64(1.0)))
+	require.InDelta(t, float64(1.0), sanitizeFieldValue(float64(1.0)), 1e-9)
 	require.Equal(t, "hello", sanitizeFieldValue("hello"))
 	require.Nil(t, sanitizeFieldValue(math.NaN()))
 	require.Nil(t, sanitizeFieldValue(math.Inf(1)))

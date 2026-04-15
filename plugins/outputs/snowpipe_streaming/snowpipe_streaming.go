@@ -2,7 +2,6 @@
 package snowpipe_streaming
 
 import (
-	"context"
 	"crypto/rsa"
 	"crypto/x509"
 	gosql "database/sql"
@@ -369,7 +368,8 @@ func (s *SnowpipeStreaming) ensureTable(tableName string, sample telegraf.Metric
 	}
 	s.schemaCache[tableName] = schema
 
-	return s.evolveSchemaLocked(tableName, sample, schema)
+	s.evolveSchemaLocked(tableName, sample, schema)
+	return nil
 }
 
 func (s *SnowpipeStreaming) createTableIfNotExists(tableName string, sample telegraf.Metric) error {
@@ -431,13 +431,11 @@ func goTypeToSnowflake(v interface{}) string {
 
 func (s *SnowpipeStreaming) fetchTableSchema(tableName string) (*tableSchema, error) {
 	query := fmt.Sprintf(
-		"SELECT COLUMN_NAME FROM %s.INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s'",
-		s.Database,
-		strings.ToUpper(s.Schema),
-		strings.ToUpper(tableName),
+		"SELECT COLUMN_NAME FROM %s.INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?",
+		quoteIdent(s.Database),
 	)
 
-	rows, err := s.db.Query(query)
+	rows, err := s.db.Query(query, strings.ToUpper(s.Schema), strings.ToUpper(tableName))
 	if err != nil {
 		return nil, fmt.Errorf("fetching schema for %q: %w", tableName, err)
 	}
@@ -458,10 +456,11 @@ func (s *SnowpipeStreaming) fetchTableSchema(tableName string) (*tableSchema, er
 func (s *SnowpipeStreaming) evolveSchema(tableName string, sample telegraf.Metric, schema *tableSchema) error {
 	s.schemaMu.Lock()
 	defer s.schemaMu.Unlock()
-	return s.evolveSchemaLocked(tableName, sample, schema)
+	s.evolveSchemaLocked(tableName, sample, schema)
+	return nil
 }
 
-func (s *SnowpipeStreaming) evolveSchemaLocked(tableName string, sample telegraf.Metric, schema *tableSchema) error {
+func (s *SnowpipeStreaming) evolveSchemaLocked(tableName string, sample telegraf.Metric, schema *tableSchema) {
 	needed := s.buildColumnOrder(sample)
 	for _, col := range needed {
 		if schema.columns[strings.ToUpper(col)] {
@@ -482,7 +481,6 @@ func (s *SnowpipeStreaming) evolveSchemaLocked(tableName string, sample telegraf
 		schema.columns[strings.ToUpper(col)] = true
 		s.Log.Infof("Added column %q (%s) to table %q", col, sqlType, tableName)
 	}
-	return nil
 }
 
 func (s *SnowpipeStreaming) buildDSN() (string, error) {
@@ -536,7 +534,7 @@ func loadPrivateKey(path, passphrase string) (*rsa.PrivateKey, error) {
 		// Fall back to PKCS1
 		key, err2 := x509.ParsePKCS1PrivateKey(keyBytes)
 		if err2 != nil {
-			return nil, fmt.Errorf("parsing private key (PKCS8: %v, PKCS1: %v)", err, err2)
+			return nil, fmt.Errorf("parsing private key (PKCS8: %w, PKCS1: %w)", err, err2)
 		}
 		return key, nil
 	}
@@ -555,10 +553,10 @@ func isTransientError(err error) bool {
 	var sfErr *gosnowflake.SnowflakeError
 	if errors.As(err, &sfErr) {
 		// HTTP 429, 503, and internal server errors are transient
-		switch {
-		case sfErr.Number == gosnowflake.ErrCodeServiceUnavailable:
+		switch sfErr.Number {
+		case gosnowflake.ErrCodeServiceUnavailable:
 			return true
-		case sfErr.Number == gosnowflake.ErrCodeFailedToConnect:
+		case gosnowflake.ErrCodeFailedToConnect:
 			return true
 		}
 	}
@@ -588,8 +586,3 @@ func init() {
 
 // Compile-time interface check
 var _ telegraf.Output = (*SnowpipeStreaming)(nil)
-
-// connectContext is a helper for future use with context-aware connections
-func (s *SnowpipeStreaming) connectContext(_ context.Context) error {
-	return s.Connect()
-}
