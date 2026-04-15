@@ -20,7 +20,6 @@ type subscribeClientConfig struct {
 	input.InputClientConfig
 	SubscriptionInterval config.Duration `toml:"subscription_interval"`
 	ConnectFailBehavior  string          `toml:"connect_fail_behavior"`
-	MonitorFailBehavior  string          `toml:"monitor_fail_behavior"`
 }
 
 type subscribeClient struct {
@@ -233,12 +232,8 @@ func (o *subscribeClient) startMonitoring(ctx context.Context) (<-chan telegraf.
 				nodeID = o.OpcUAInputClient.NodeIDs[idx].String()
 			}
 			fieldName := o.OpcUAInputClient.NodeMetricMapping[idx].Tag.FieldName
-			if o.Config.MonitorFailBehavior == "ignore" {
-				o.Log.Warnf("Failed to create monitored item for node %v (%v): %v", fieldName, nodeID, res.StatusCode)
-				skippedItems++
-				continue
-			}
-			return nil, fmt.Errorf("creating monitored item for node %v (%v) failed with status code: %w", fieldName, nodeID, res.StatusCode)
+			o.Log.Warnf("Failed to create monitored item for node %v (%v): %v", fieldName, nodeID, res.StatusCode)
+			skippedItems++
 		}
 	}
 
@@ -253,13 +248,12 @@ func (o *subscribeClient) startMonitoring(ctx context.Context) (<-chan telegraf.
 			if o.StatusCodeOK(res.StatusCode) {
 				continue
 			}
-			nodeID := o.EventNodeMetricMapping[idx].NodeID
-			if o.Config.MonitorFailBehavior == "ignore" {
-				o.Log.Warnf("Failed to create monitored event item for node %v: %v", nodeID, res.StatusCode)
-				skippedItems++
-				continue
+			nodeID := "?"
+			if len(o.EventNodeMetricMapping) > idx {
+				nodeID = o.EventNodeMetricMapping[idx].NodeID.String()
 			}
-			return nil, fmt.Errorf("creating monitored event item for node %v failed with status code: %w", nodeID, res.StatusCode)
+			o.Log.Warnf("Failed to create monitored event item for node %v: %v", nodeID, res.StatusCode)
+			skippedItems++
 		}
 	}
 
