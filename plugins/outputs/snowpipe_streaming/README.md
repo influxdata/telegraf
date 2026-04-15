@@ -17,14 +17,18 @@ ingest without staging files.
 1. A Snowflake account with a database and schema already created.
 2. Key-pair authentication configured for the Snowflake user:
    - Generate an RSA key pair:
+
      ```bash
      openssl genrsa 2048 | openssl pkcs8 -topk8 -inform PEM -out rsa_key.p8 -nocrypt
      openssl rsa -in rsa_key.p8 -pubout -out rsa_key.pub
      ```
+
    - Assign the public key to the user:
+
      ```sql
      ALTER USER my_user SET RSA_PUBLIC_KEY='<public key contents>';
      ```
+
 3. The user must have INSERT privileges on the target table(s).
 4. If `create_table = true`, the user must also have CREATE TABLE privileges.
 

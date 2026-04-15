@@ -141,7 +141,7 @@ func (c *mockConn) getQueries() []executedQuery {
 	return out
 }
 
-func (s *mockStmt) Close() error { return nil }
+func (s *mockStmt) Close() error  { return nil }
 func (s *mockStmt) NumInput() int { return -1 }
 
 func (s *mockStmt) Exec(args []driver.Value) (driver.Result, error) {
@@ -178,17 +178,17 @@ func (r *mockRows) Next(dest []driver.Value) error {
 func newTestPlugin(t *testing.T) *SnowpipeStreaming {
 	t.Helper()
 	s := &SnowpipeStreaming{
-		Account:            "test_account",
-		User:               "test_user",
-		Database:           "TEST_DB",
-		Schema:             "PUBLIC",
-		Table:              "METRICS",
-		BatchSize:          1000,
-		RetryMax:           3,
-		RetryDelay:         config.Duration(10 * time.Millisecond),
-		TimestampColumn:    "timestamp",
+		Account:             "test_account",
+		User:                "test_user",
+		Database:            "TEST_DB",
+		Schema:              "PUBLIC",
+		Table:               "METRICS",
+		BatchSize:           1000,
+		RetryMax:            3,
+		RetryDelay:          config.Duration(10 * time.Millisecond),
+		TimestampColumn:     "timestamp",
 		TableSchemaCacheTTL: config.Duration(5 * time.Minute),
-		Log:                testutil.Logger{},
+		Log:                 testutil.Logger{},
 	}
 	require.NoError(t, s.Init())
 	return s

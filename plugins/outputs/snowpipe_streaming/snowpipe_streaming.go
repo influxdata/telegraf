@@ -28,30 +28,30 @@ import (
 var sampleConfig string
 
 type SnowpipeStreaming struct {
-	Account            string          `toml:"account"`
-	User               string          `toml:"user"`
-	PrivateKeyPath     string          `toml:"private_key_path"`
-	PrivateKeyPass     string          `toml:"private_key_passphrase"`
-	Role               string          `toml:"role"`
-	Database           string          `toml:"database"`
-	Schema             string          `toml:"schema"`
-	Table              string          `toml:"table"`
-	BatchSize          int             `toml:"batch_size"`
-	RetryMax           int             `toml:"retry_max"`
-	RetryDelay         config.Duration `toml:"retry_delay"`
-	TimestampColumn    string          `toml:"timestamp_column"`
-	TagColumns         []string        `toml:"tag_columns"`
-	FieldColumns       []string        `toml:"field_columns"`
-	CreateTable        bool            `toml:"create_table"`
+	Account             string          `toml:"account"`
+	User                string          `toml:"user"`
+	PrivateKeyPath      string          `toml:"private_key_path"`
+	PrivateKeyPass      string          `toml:"private_key_passphrase"`
+	Role                string          `toml:"role"`
+	Database            string          `toml:"database"`
+	Schema              string          `toml:"schema"`
+	Table               string          `toml:"table"`
+	BatchSize           int             `toml:"batch_size"`
+	RetryMax            int             `toml:"retry_max"`
+	RetryDelay          config.Duration `toml:"retry_delay"`
+	TimestampColumn     string          `toml:"timestamp_column"`
+	TagColumns          []string        `toml:"tag_columns"`
+	FieldColumns        []string        `toml:"field_columns"`
+	CreateTable         bool            `toml:"create_table"`
 	TableSchemaCacheTTL config.Duration `toml:"table_schema_cache_ttl"`
 
 	Log telegraf.Logger `toml:"-"`
 
-	db            *gosql.DB
-	tableTmpl     *template.Template
-	tableHasTmpl  bool
-	tagSet        map[string]bool
-	fieldSet      map[string]bool
+	db           *gosql.DB
+	tableTmpl    *template.Template
+	tableHasTmpl bool
+	tagSet       map[string]bool
+	fieldSet     map[string]bool
 
 	schemaMu    sync.RWMutex
 	schemaCache map[string]*tableSchema
@@ -577,10 +577,10 @@ func quoteIdent(name string) string {
 func init() {
 	outputs.Add("snowpipe_streaming", func() telegraf.Output {
 		return &SnowpipeStreaming{
-			BatchSize:          1000,
-			RetryMax:           3,
-			RetryDelay:         config.Duration(1 * time.Second),
-			TimestampColumn:    "timestamp",
+			BatchSize:           1000,
+			RetryMax:            3,
+			RetryDelay:          config.Duration(1 * time.Second),
+			TimestampColumn:     "timestamp",
 			TableSchemaCacheTTL: config.Duration(5 * time.Minute),
 		}
 	})
