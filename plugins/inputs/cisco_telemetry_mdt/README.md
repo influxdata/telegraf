@@ -99,12 +99,13 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # keepalive_minimum_time = "5m"
 ```
 
-## Unit Conversion
+### Unit Conversion
 
-For converting between units or types please use the
-[scale](/plugins/processors/scale/README.md) and
-[converter](/plugins/processors/converter/README.md) processor plugins
-respectively.
+For converting between units or types please use the [scale][scale_plugin]
+and [converter][converter_plugin] processor plugins, respectively.
+
+[scale_plugin]: /plugins/processors/scale/README.md
+[converter_plugin]: /plugins/processors/converter/README.md
 
 ## Metrics
 
