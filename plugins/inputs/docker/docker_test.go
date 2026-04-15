@@ -1246,6 +1246,30 @@ func TestContainerStateFilter(t *testing.T) {
 	}
 }
 
+func TestContainerListRequestsAllContainers(t *testing.T) {
+	var gotOptions container.ListOptions
+	newClientFunc := func(string, *tls.Config) (dockerClient, error) {
+		client := baseClient
+		client.ContainerListF = func(options container.ListOptions) ([]container.Summary, error) {
+			gotOptions = options
+			return nil, nil
+		}
+		return &client, nil
+	}
+
+	d := Docker{
+		Log:       testutil.Logger{},
+		newClient: newClientFunc,
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, d.Init())
+	require.NoError(t, d.Start(&acc))
+	require.NoError(t, d.Gather(&acc))
+
+	require.True(t, gotOptions.All, "ContainerList must request all containers so non-running states can be filtered client-side")
+}
+
 func TestNonRunningContainerEmitsStatusMetrics(t *testing.T) {
 	newClientFunc := func(string, *tls.Config) (dockerClient, error) {
 		client := baseClient
