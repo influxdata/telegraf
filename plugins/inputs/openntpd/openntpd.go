@@ -136,18 +136,24 @@ func parseStatusLine(line string, acc telegraf.Accumulator) {
 			if pv, pt, ok := parseFraction(fraction); ok {
 				fields["peers_valid"] = pv
 				fields["peers_total"] = pt
+			} else {
+				acc.AddError(fmt.Errorf("parsing peers fraction failed for %q", fraction))
 			}
 		case strings.HasSuffix(part, "sensors valid"):
 			fraction := strings.Fields(part)[0]
 			if sv, st, ok := parseFraction(fraction); ok {
 				fields["sensors_valid"] = sv
 				fields["sensors_total"] = st
+			} else {
+				acc.AddError(fmt.Errorf("parsing sensors fraction failed for %q", fraction))
 			}
 		case strings.HasPrefix(part, "constraint offset "):
 			val := strings.TrimPrefix(part, "constraint offset ")
 			val = strings.TrimSuffix(val, "s")
 			if v, err := strconv.ParseInt(val, 10, 64); err == nil {
 				fields["constraint_offset_s"] = v
+			} else {
+				acc.AddError(fmt.Errorf("integer value expected for constraint offset %q", val))
 			}
 		case part == "clock synced":
 			fields["clock_synced"] = int64(1)
@@ -155,6 +161,8 @@ func parseStatusLine(line string, acc telegraf.Accumulator) {
 			val := strings.TrimPrefix(part, "stratum ")
 			if v, err := strconv.ParseInt(val, 10, 64); err == nil {
 				fields["stratum"] = v
+			} else {
+				acc.AddError(fmt.Errorf("integer value expected for stratum %q", val))
 			}
 		}
 	}
@@ -209,7 +217,7 @@ func parsePeer(scanner *bufio.Scanner, headerLine string, acc telegraf.Accumulat
 	}
 
 	// Optional state prefix (e.g. "*")
-	if strings.ContainsAny(statsFields[0], "*") {
+	if strings.Contains(statsFields[0], "*") {
 		tags["state_prefix"] = statsFields[0]
 		statsFields = statsFields[1:]
 	}
@@ -230,7 +238,7 @@ func parsePeer(scanner *bufio.Scanner, headerLine string, acc telegraf.Accumulat
 		}
 		v, err := strconv.ParseInt(raw, 10, 64)
 		if err != nil {
-			acc.AddError(fmt.Errorf("integer value expected, got: %s", statsFields[index]))
+			acc.AddError(fmt.Errorf("value %q is not an integer", statsFields[index]))
 			continue
 		}
 		mFields[key] = v
@@ -250,7 +258,7 @@ func parsePeer(scanner *bufio.Scanner, headerLine string, acc telegraf.Accumulat
 		}
 		v, err := strconv.ParseFloat(raw, 64)
 		if err != nil {
-			acc.AddError(fmt.Errorf("float value expected, got: %s", statsFields[index]))
+			acc.AddError(fmt.Errorf("value %q is not a float", statsFields[index]))
 			continue
 		}
 		mFields[key] = v
@@ -263,7 +271,7 @@ func parsePeer(scanner *bufio.Scanner, headerLine string, acc telegraf.Accumulat
 // (sensor name and refid); the second line is read from scanner.
 func parseSensor(scanner *bufio.Scanner, headerLine string, acc telegraf.Accumulator) {
 	headerFields := strings.Fields(headerLine)
-	if len(headerFields) < 1 {
+	if len(headerFields) == 0 {
 		return
 	}
 
@@ -283,7 +291,7 @@ func parseSensor(scanner *bufio.Scanner, headerLine string, acc telegraf.Accumul
 	}
 
 	// Optional state prefix (e.g. "*")
-	if strings.ContainsAny(statsFields[0], "*") {
+	if strings.Contains(statsFields[0], "*") {
 		tags["state_prefix"] = statsFields[0]
 		statsFields = statsFields[1:]
 	}
@@ -300,7 +308,7 @@ func parseSensor(scanner *bufio.Scanner, headerLine string, acc telegraf.Accumul
 		}
 		v, err := strconv.ParseInt(raw, 10, 64)
 		if err != nil {
-			acc.AddError(fmt.Errorf("integer value expected, got: %s", statsFields[index]))
+			acc.AddError(fmt.Errorf("value %q is not an integer", statsFields[index]))
 			continue
 		}
 		mFields[key] = v
@@ -313,7 +321,7 @@ func parseSensor(scanner *bufio.Scanner, headerLine string, acc telegraf.Accumul
 		raw := strings.TrimSuffix(statsFields[index], "ms")
 		v, err := strconv.ParseFloat(raw, 64)
 		if err != nil {
-			acc.AddError(fmt.Errorf("float value expected, got: %s", statsFields[index]))
+			acc.AddError(fmt.Errorf("value %q is not a float", statsFields[index]))
 			continue
 		}
 		mFields[key] = v
