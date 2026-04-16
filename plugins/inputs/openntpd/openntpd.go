@@ -153,7 +153,7 @@ func parseStatusLine(line string, acc telegraf.Accumulator) {
 			if v, err := strconv.ParseInt(val, 10, 64); err == nil {
 				fields["constraint_offset_s"] = v
 			} else {
-				acc.AddError(fmt.Errorf("integer value expected for constraint offset, got: %q", val))
+				acc.AddError(fmt.Errorf("integer value expected for constraint offset %q", val))
 			}
 		case part == "clock synced":
 			fields["clock_synced"] = int64(1)
