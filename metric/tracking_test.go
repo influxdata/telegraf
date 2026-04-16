@@ -10,17 +10,6 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-func mustMetric(
-	name string,
-	tags map[string]string,
-	fields map[string]interface{},
-	tm time.Time,
-	tp ...telegraf.ValueType,
-) telegraf.Metric {
-	m := New(name, tags, fields, tm, tp...)
-	return m
-}
-
 type deliveries struct {
 	Info map[telegraf.TrackingID]telegraf.DeliveryInfo
 }
@@ -75,7 +64,7 @@ func TestTracking(t *testing.T) {
 	}{
 		{
 			name: "accept",
-			metric: mustMetric(
+			metric: New(
 				"memory",
 				map[string]string{},
 				map[string]interface{}{
@@ -91,7 +80,7 @@ func TestTracking(t *testing.T) {
 		},
 		{
 			name: "reject",
-			metric: mustMetric(
+			metric: New(
 				"memory",
 				map[string]string{},
 				map[string]interface{}{
@@ -107,7 +96,7 @@ func TestTracking(t *testing.T) {
 		},
 		{
 			name: "accept copy",
-			metric: mustMetric(
+			metric: New(
 				"memory",
 				map[string]string{},
 				map[string]interface{}{
@@ -125,7 +114,7 @@ func TestTracking(t *testing.T) {
 		},
 		{
 			name: "copy with accept and done",
-			metric: mustMetric(
+			metric: New(
 				"memory",
 				map[string]string{},
 				map[string]interface{}{
@@ -143,7 +132,7 @@ func TestTracking(t *testing.T) {
 		},
 		{
 			name: "copy with mixed delivery",
-			metric: mustMetric(
+			metric: New(
 				"memory",
 				map[string]string{},
 				map[string]interface{}{
@@ -184,7 +173,7 @@ func TestGroupTracking(t *testing.T) {
 		{
 			name: "accept",
 			metrics: []telegraf.Metric{
-				mustMetric(
+				New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -192,7 +181,7 @@ func TestGroupTracking(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				mustMetric(
+				New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -210,7 +199,7 @@ func TestGroupTracking(t *testing.T) {
 		{
 			name: "reject",
 			metrics: []telegraf.Metric{
-				mustMetric(
+				New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -218,7 +207,7 @@ func TestGroupTracking(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				mustMetric(
+				New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -236,7 +225,7 @@ func TestGroupTracking(t *testing.T) {
 		{
 			name: "remove",
 			metrics: []telegraf.Metric{
-				mustMetric(
+				New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -244,7 +233,7 @@ func TestGroupTracking(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				mustMetric(
+				New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -262,7 +251,7 @@ func TestGroupTracking(t *testing.T) {
 		{
 			name: "mixed",
 			metrics: []telegraf.Metric{
-				mustMetric(
+				New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -270,7 +259,7 @@ func TestGroupTracking(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				mustMetric(
+				New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
