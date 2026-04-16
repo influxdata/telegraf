@@ -258,7 +258,7 @@ func parsePeer(scanner *bufio.Scanner, headerLine string, acc telegraf.Accumulat
 		}
 		v, err := strconv.ParseFloat(raw, 64)
 		if err != nil {
-			acc.AddError(fmt.Errorf("float value expected, got: %q", statsFields[index]))
+			acc.AddError(fmt.Errorf("value %q is not a float", statsFields[index]))
 			continue
 		}
 		mFields[key] = v
