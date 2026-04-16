@@ -89,10 +89,10 @@ Defaults!SMARTCTL !logfile, !syslog, !pam_session
 ```
 
 > [!NOTE]
-> If your system uses the `sudo-rs` Rust-based rewrite of GNU `sudo`, the
-> logging options in `Defaults!SMARTCTL` are not supported and will cause
-> errors. There's not currently a native way to prevent voluminous logs with
-> `use_sudo` enabled. See trifectatechfoundation/sudo-rs#1181.
+> 🪲 If you are using `sudo-rs` instead of GNU `sudo`, the `Defaults!SMARTCTL`
+> line has to be removed as these logging options are not currently supported
+> and will cause errors running sudo until that is resolved.
+> See trifectatechfoundation/sudo-rs#1181.
 
 ## Troubleshooting
 
