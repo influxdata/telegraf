@@ -385,6 +385,62 @@ func TestSubscribeClientIntegrationAdditionalFields(t *testing.T) {
 	}
 }
 
+func TestSkipFailedMonitoredItemsIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "open62541/open62541",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("TCP network layer listening on opc.tcp://"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	subscribeConfig := subscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+			},
+			MetricName: "testing",
+			RootNodes: []input.NodeSettings{
+				{FieldName: "ProductName", Namespace: "0", IdentifierType: "i", Identifier: "2261"},
+				{FieldName: "NonExistent", Namespace: "99", IdentifierType: "i", Identifier: "99999"},
+			},
+		},
+	}
+
+	o, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		return o.SetupOptions() == nil
+	}, 5*time.Second, 10*time.Millisecond)
+
+	require.NoError(t, o.connect())
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	res, err := o.startMonitoring(ctx)
+	require.NoError(t, err)
+
+	select {
+	case m := <-res:
+		require.Contains(t, m.Fields(), "ProductName")
+	case <-ctx.Done():
+		t.Fatal("Timed out waiting for metric from valid node")
+	}
+}
+
 func TestSubscribeClientConfig(t *testing.T) {
 	toml := `
 [[inputs.opcua_listener]]
