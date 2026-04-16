@@ -308,7 +308,7 @@ func parseSensor(scanner *bufio.Scanner, headerLine string, acc telegraf.Accumul
 		}
 		v, err := strconv.ParseInt(raw, 10, 64)
 		if err != nil {
-			acc.AddError(fmt.Errorf("integer value expected, got: %q", statsFields[index]))
+			acc.AddError(fmt.Errorf("value %q is not an integer", statsFields[index]))
 			continue
 		}
 		mFields[key] = v
