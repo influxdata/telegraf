@@ -7,7 +7,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -30,7 +29,7 @@ func launchTestContainer(t *testing.T, imageVersion string) *testutil.Container 
 			"DISABLE_PERFORMANCE_ANALYZER_AGENT_CLI": "true",
 		},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("Init AD version hash ring successfully"),
 		),
 	}

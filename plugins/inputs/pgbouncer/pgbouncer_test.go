@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -40,7 +39,7 @@ func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
 			"PG_ENV_POSTGRESQL_PASS": "pgbouncer",
 		},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(pgBouncerServicePort)),
+			wait.ForListeningPort(pgBouncerServicePort),
 			wait.ForLog("LOG process up"),
 		),
 	}
@@ -130,7 +129,7 @@ func TestPgBouncerGeneratesMetricsIntegrationShowCommands(t *testing.T) {
 			"PG_ENV_POSTGRESQL_PASS": "pgbouncer",
 		},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(pgBouncerServicePort)),
+			wait.ForListeningPort(pgBouncerServicePort),
 			wait.ForLog("LOG process up"),
 		),
 	}

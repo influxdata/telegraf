@@ -7,7 +7,6 @@ import (
 	"github.com/bluenviron/gomavlib/v3"
 	"github.com/bluenviron/gomavlib/v3/pkg/dialects/common"
 	"github.com/bluenviron/gomavlib/v3/pkg/frame"
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -285,7 +284,7 @@ func TestArduPilotIntegration(t *testing.T) {
 		Image:        "radarku/ardupilot-sitl",
 		ExposedPorts: []string{"5760"},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port("5760")),
+			wait.ForListeningPort("5760"),
 		),
 	}
 	require.NoError(t, container.Start(), "failed to start ardupilot container")

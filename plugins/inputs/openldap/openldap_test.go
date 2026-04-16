@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/go-ldap/ldap/v3"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -70,7 +69,7 @@ func TestOpenldapGeneratesMetricsIntegration(t *testing.T) {
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("slapd starting"),
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 		),
 	}
 	err := container.Start()
@@ -125,7 +124,7 @@ func TestOpenldapStartTLSIntegration(t *testing.T) {
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("slapd starting"),
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 		),
 	}
 	err = container.Start()
@@ -186,7 +185,7 @@ func TestOpenldapLDAPSIntegration(t *testing.T) {
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("slapd starting"),
-			wait.ForListeningPort(nat.Port(servicePortSecure)),
+			wait.ForListeningPort(servicePortSecure),
 		),
 	}
 	err = container.Start()
@@ -242,7 +241,7 @@ func TestOpenldapInvalidTLSIntegration(t *testing.T) {
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("slapd starting"),
-			wait.ForListeningPort(nat.Port(servicePortSecure)),
+			wait.ForListeningPort(servicePortSecure),
 		),
 	}
 	err = container.Start()
@@ -280,7 +279,7 @@ func TestOpenldapBindIntegration(t *testing.T) {
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("slapd starting"),
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 		),
 	}
 	err := container.Start()
@@ -330,7 +329,7 @@ func TestOpenldapReverseMetricsIntegration(t *testing.T) {
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("slapd starting"),
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 		),
 	}
 	err := container.Start()

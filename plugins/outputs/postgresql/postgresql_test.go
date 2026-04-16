@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/tracelog"
@@ -253,7 +252,7 @@ func newPostgresqlTest(tb testing.TB) (*PostgresqlTest, error) {
 			// the database comes up twice, once right away, then again a second
 			// time after the docker entrypoint starts configuration
 			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 		),
 	}
 	tb.Cleanup(container.Terminate)
@@ -331,7 +330,7 @@ func TestConnectionIssueAtStartup(t *testing.T) {
 			// the database comes up twice, once right away, then again a second
 			// time after the docker entrypoint starts configuration
 			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 		),
 	}
 	require.NoError(t, container.Start(), "failed to start container")

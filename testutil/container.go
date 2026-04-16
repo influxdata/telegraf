@@ -8,9 +8,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/go-connections/nat"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -120,7 +119,7 @@ func (c *Container) LookupMappedPorts() error {
 			port = strings.Split(port, ":")[1]
 		}
 
-		p, err := c.container.MappedPort(c.ctx, nat.Port(port))
+		p, err := c.container.MappedPort(c.ctx, port)
 		if err != nil {
 			return fmt.Errorf("failed to find %q: %w", port, err)
 		}
@@ -169,7 +168,8 @@ func (c *Container) Pause() error {
 		return fmt.Errorf("getting provider failed: %w", err)
 	}
 
-	return provider.Client().ContainerPause(c.ctx, c.container.GetContainerID())
+	_, err = provider.Client().ContainerPause(c.ctx, c.container.GetContainerID(), client.ContainerPauseOptions{})
+	return err
 }
 
 func (c *Container) Resume() error {
@@ -178,7 +178,8 @@ func (c *Container) Resume() error {
 		return fmt.Errorf("getting provider failed: %w", err)
 	}
 
-	return provider.Client().ContainerUnpause(c.ctx, c.container.GetContainerID())
+	_, err = provider.Client().ContainerUnpause(c.ctx, c.container.GetContainerID(), client.ContainerUnpauseOptions{})
+	return err
 }
 
 func (c *Container) GetInfo() (string, error) {
@@ -198,7 +199,7 @@ func (c *Container) GetInfo() (string, error) {
 	}
 
 	// Try direct inspection first - much more efficient than listing all images
-	imageInfo, err := provider.Client().ImageInspect(c.ctx, ci.ContainerJSONBase.Image)
+	imageInfo, err := provider.Client().ImageInspect(c.ctx, ci.Image)
 	if err == nil {
 		// Process imageInfo.RepoDigests directly
 		var digests []string
@@ -220,13 +221,13 @@ func (c *Container) GetInfo() (string, error) {
 
 	// Fallback to original method if direct inspection fails
 	// This preserves backward compatibility in case the direct method fails
-	summaries, err := provider.Client().ImageList(c.ctx, image.ListOptions{})
+	summaries, err := provider.Client().ImageList(c.ctx, client.ImageListOptions{})
 	if err != nil {
 		return "", fmt.Errorf("listing images failed: %w", err)
 	}
 
-	for _, s := range summaries {
-		if s.ID != ci.ContainerJSONBase.Image {
+	for _, s := range summaries.Items {
+		if s.ID != ci.Image {
 			continue
 		}
 		var digest []string

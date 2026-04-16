@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	gopcua "github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
 	"github.com/stretchr/testify/require"
@@ -109,7 +108,7 @@ func TestStartPlugin(t *testing.T) {
 		Image:        "open62541/open62541",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("TCP network layer listening on opc.tcp://"),
 		),
 	}
@@ -139,7 +138,7 @@ func TestSubscribeClientIntegration(t *testing.T) {
 		Image:        "open62541/open62541",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("TCP network layer listening on opc.tcp://"),
 		),
 	}
@@ -253,7 +252,7 @@ func TestSubscribeClientIntegrationAdditionalFields(t *testing.T) {
 		Image:        "open62541/open62541",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("TCP network layer listening on opc.tcp://"),
 		),
 	}
@@ -394,7 +393,7 @@ func TestSkipFailedMonitoredItemsIntegration(t *testing.T) {
 		Image:        "open62541/open62541",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("TCP network layer listening on opc.tcp://"),
 		),
 	}

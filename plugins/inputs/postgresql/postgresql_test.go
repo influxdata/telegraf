@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -26,7 +25,7 @@ func launchTestContainer(t *testing.T) *testutil.Container {
 			// the database comes up twice, once right away, then again a second
 			// time after the docker entrypoint starts configuration
 			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 		),
 	}
 
@@ -89,8 +88,6 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 		"sessions_abandoned",
 	}
 
-	var int32Metrics []string
-
 	floatMetrics := []string{
 		"blk_read_time",
 		"blk_write_time",
@@ -110,12 +107,6 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 		metricsCounted++
 	}
 
-	//nolint:gosec // G602: False positive — this is a safe range iteration over a slice (it may be empty)
-	for _, metric := range int32Metrics {
-		require.True(t, acc.HasInt32Field("postgresql", metric), "%q not found in int32 metrics", metric)
-		metricsCounted++
-	}
-
 	for _, metric := range floatMetrics {
 		require.True(t, acc.HasFloatField("postgresql", metric), "%q not found in float metrics", metric)
 		metricsCounted++
@@ -127,7 +118,7 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 	}
 
 	require.Positive(t, metricsCounted)
-	require.Equal(t, len(floatMetrics)+len(intMetrics)+len(int32Metrics)+len(stringMetrics), metricsCounted)
+	require.Equal(t, len(floatMetrics)+len(intMetrics)+len(stringMetrics), metricsCounted)
 }
 
 func TestPostgresqlTagsMetricsWithDatabaseNameIntegration(t *testing.T) {
@@ -345,7 +336,7 @@ func TestInitialConnectivityIssueIntegration(t *testing.T) {
 			// the database comes up twice, once right away, then again a second
 			// time after the docker entrypoint starts configuration
 			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 		),
 	}
 	require.NoError(t, container.Start(), "failed to start container")

@@ -8,8 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/go-connections/nat"
+	"github.com/moby/moby/api/types/container"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -206,7 +205,7 @@ func TestIntegration(t *testing.T) {
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("Root Token: root"),
-			wait.ForListeningPort(nat.Port("8200")),
+			wait.ForListeningPort("8200"),
 		),
 	}
 	require.NoError(t, cntnr.Start(), "failed to start container")
