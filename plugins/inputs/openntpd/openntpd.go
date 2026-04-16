@@ -162,7 +162,7 @@ func parseStatusLine(line string, acc telegraf.Accumulator) {
 			if v, err := strconv.ParseInt(val, 10, 64); err == nil {
 				fields["stratum"] = v
 			} else {
-				acc.AddError(fmt.Errorf("integer value expected for stratum, got: %q", val))
+				acc.AddError(fmt.Errorf("integer value expected for stratum %q", val))
 			}
 		}
 	}
