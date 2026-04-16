@@ -99,6 +99,14 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # keepalive_minimum_time = "5m"
 ```
 
+### Unit Conversion
+
+For converting between units or types please use the [scale][scale_plugin]
+and [converter][converter_plugin] processor plugins, respectively.
+
+[scale_plugin]: /plugins/processors/scale/README.md
+[converter_plugin]: /plugins/processors/converter/README.md
+
 ## Metrics
 
 Metrics are named by the encoding path that generated the data, or by the alias
