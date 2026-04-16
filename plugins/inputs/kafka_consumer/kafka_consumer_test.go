@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/IBM/sarama"
+	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	kafkacontainer "github.com/testcontainers/testcontainers-go/modules/kafka"
@@ -734,9 +735,10 @@ func TestStartupErrorBehaviorErrorIntegration(t *testing.T) {
 	containerID := container.GetContainerID()
 	provider, err := testcontainers.NewDockerProvider()
 	require.NoError(t, err)
-	require.NoError(t, provider.Client().ContainerPause(t.Context(), containerID))
+	_, err = provider.Client().ContainerPause(t.Context(), containerID, client.ContainerPauseOptions{})
+	require.NoError(t, err)
 	//nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
-	defer provider.Client().ContainerUnpause(t.Context(), containerID)
+	defer provider.Client().ContainerUnpause(t.Context(), containerID, client.ContainerUnpauseOptions{})
 
 	// Setup the plugin and connect to the broker
 	plugin := &KafkaConsumer{
@@ -787,9 +789,10 @@ func TestStartupErrorBehaviorIgnoreIntegration(t *testing.T) {
 	containerID := container.GetContainerID()
 	provider, err := testcontainers.NewDockerProvider()
 	require.NoError(t, err)
-	require.NoError(t, provider.Client().ContainerPause(t.Context(), containerID))
+	_, err = provider.Client().ContainerPause(t.Context(), containerID, client.ContainerPauseOptions{})
+	require.NoError(t, err)
 	//nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
-	defer provider.Client().ContainerUnpause(t.Context(), containerID)
+	defer provider.Client().ContainerUnpause(t.Context(), containerID, client.ContainerUnpauseOptions{})
 
 	// Setup the plugin and connect to the broker
 	plugin := &KafkaConsumer{
@@ -846,9 +849,10 @@ func TestStartupErrorBehaviorRetryIntegration(t *testing.T) {
 	containerID := container.GetContainerID()
 	provider, err := testcontainers.NewDockerProvider()
 	require.NoError(t, err)
-	require.NoError(t, provider.Client().ContainerPause(t.Context(), containerID))
+	_, err = provider.Client().ContainerPause(t.Context(), containerID, client.ContainerPauseOptions{})
+	require.NoError(t, err)
 	//nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
-	defer provider.Client().ContainerUnpause(t.Context(), containerID)
+	defer provider.Client().ContainerUnpause(t.Context(), containerID, client.ContainerUnpauseOptions{})
 
 	// Setup the plugin and connect to the broker
 	plugin := &KafkaConsumer{
@@ -889,7 +893,8 @@ func TestStartupErrorBehaviorRetryIntegration(t *testing.T) {
 	require.Equal(t, int64(2), model.StartupErrors.Get())
 
 	// Unpause the container, now writes should succeed
-	require.NoError(t, provider.Client().ContainerUnpause(t.Context(), containerID))
+	_, err = provider.Client().ContainerUnpause(t.Context(), containerID, client.ContainerUnpauseOptions{})
+	require.NoError(t, err)
 	require.NoError(t, model.Gather(&acc))
 	defer model.Stop()
 	require.Equal(t, int64(2), model.StartupErrors.Get())

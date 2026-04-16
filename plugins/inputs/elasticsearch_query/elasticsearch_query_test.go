@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
@@ -521,7 +520,7 @@ func setupIntegrationTest(t *testing.T) (*testutil.Container, error) {
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("] mode [basic] - valid"),
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 		),
 	}
 	err := container.Start()

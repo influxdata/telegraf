@@ -83,7 +83,6 @@ require (
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/djherbis/times v1.6.0
 	github.com/docker/docker v28.5.2+incompatible
-	github.com/docker/go-connections v0.6.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/dynatrace-oss/dynatrace-metric-utils-go v0.5.0
 	github.com/eclipse/paho.golang v0.23.0
@@ -154,6 +153,8 @@ require (
 	github.com/microsoft/go-mssqldb v1.9.8
 	github.com/miekg/dns v1.1.72
 	github.com/moby/ipvs v1.1.0
+	github.com/moby/moby/api v1.54.1
+	github.com/moby/moby/client v0.4.0
 	github.com/multiplay/go-ts3 v1.2.0
 	github.com/nats-io/nats-server/v2 v2.12.6
 	github.com/nats-io/nats.go v1.50.0
@@ -204,10 +205,10 @@ require (
 	github.com/tdrn-org/go-hue v0.3.0
 	github.com/tdrn-org/go-nsdp v0.5.1
 	github.com/tdrn-org/go-tr064 v0.3.0
-	github.com/testcontainers/testcontainers-go v0.41.0
-	github.com/testcontainers/testcontainers-go/modules/azure v0.41.0
-	github.com/testcontainers/testcontainers-go/modules/kafka v0.41.0
-	github.com/testcontainers/testcontainers-go/modules/vault v0.41.0
+	github.com/testcontainers/testcontainers-go v0.42.0
+	github.com/testcontainers/testcontainers-go/modules/azure v0.42.0
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.42.0
+	github.com/testcontainers/testcontainers-go/modules/vault v0.42.0
 	github.com/thomasklein94/packer-plugin-libvirt v0.5.0
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/wal v1.2.1
@@ -349,6 +350,7 @@ require (
 	github.com/devigned/tab v0.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/distribution/reference v0.6.0 // indirect
+	github.com/docker/go-connections v0.7.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dvsekhvalnov/jose2go v1.7.0 // indirect
 	github.com/eapache/go-resiliency v1.7.0 // indirect
@@ -457,7 +459,7 @@ require (
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leodido/ragel-machinery v0.0.0-20190525184631-5f46317e436b // indirect
 	github.com/likexian/gokit v0.25.16 // indirect
-	github.com/lufia/plan9stats v0.0.0-20260324052639-156f7da3f749 // indirect
+	github.com/lufia/plan9stats v0.0.0-20260330125221-c963978e514e // indirect
 	github.com/magiconair/properties v1.8.10 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
@@ -476,7 +478,7 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/go-archive v0.2.0 // indirect
-	github.com/moby/patternmatcher v0.6.0 // indirect
+	github.com/moby/patternmatcher v0.6.1 // indirect
 	github.com/moby/sys/sequential v0.6.0 // indirect
 	github.com/moby/sys/user v0.4.0 // indirect
 	github.com/moby/sys/userns v0.1.0 // indirect
@@ -484,7 +486,6 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
 	github.com/montanaflynn/stats v0.7.1 // indirect
-	github.com/morikuni/aec v1.1.0 // indirect
 	github.com/mtibben/percent v0.2.1 // indirect
 	github.com/muhlemmer/gu v0.3.1 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
@@ -536,7 +537,7 @@ require (
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.6.0 // indirect
-	github.com/stretchr/objx v0.5.2 // indirect
+	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/tinylru v1.2.1 // indirect
@@ -574,7 +575,7 @@ require (
 	go.opentelemetry.io/collector/semconv v0.128.0 // indirect
 	go.opentelemetry.io/contrib/detectors/gcp v1.39.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.67.0 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.67.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0 // indirect
 	go.opentelemetry.io/otel v1.43.0 // indirect
 	go.opentelemetry.io/otel/metric v1.43.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.43.0 // indirect

@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -1167,7 +1166,7 @@ func TestCoreIntegration(t *testing.T) {
 		},
 		Cmd: []string{"influxdb3", "serve", "--without-auth"},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port("8181")),
+			wait.ForListeningPort("8181"),
 			wait.ForLog("influxdb3_server: startup time"),
 		),
 	}

@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/opensearch-project/opensearch-go/v2/opensearchutil"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -550,7 +549,7 @@ func setupIntegrationTest(t *testing.T, image string) (*testutil.Container, *Ope
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForLog(".opendistro_security is used as internal security index."),
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 		),
 	}
 	err = container.Start()
