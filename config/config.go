@@ -1699,7 +1699,7 @@ func (c *Config) buildInput(name, source string, tbl *ast.Table) (*models.InputC
 	}
 	cp.Interval, _ = c.getFieldDuration(tbl, "interval")
 	cp.Precision, _ = c.getFieldDuration(tbl, "precision")
-	cp.CollectionJitter, _ = c.getFieldDuration(tbl, "collection_jitter")
+	cp.CollectionJitter, cp.CollectionJitterSet = c.getFieldDuration(tbl, "collection_jitter")
 	cp.CollectionOffset, _ = c.getFieldDuration(tbl, "collection_offset")
 	if cp.CollectionOffset < 0 {
 		return nil, fmt.Errorf("negative collection_offset %q is not allowed", cp.CollectionOffset)
