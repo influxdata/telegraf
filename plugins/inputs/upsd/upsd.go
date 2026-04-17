@@ -57,14 +57,15 @@ const (
 )
 
 type Upsd struct {
-	Server     string          `toml:"server"`
-	Port       int             `toml:"port"`
-	Username   string          `toml:"username"`
-	Password   string          `toml:"password"`
-	ForceFloat bool            `toml:"force_float"`
-	Additional []string        `toml:"additional_fields"`
-	DumpRaw    bool            `toml:"dump_raw_variables" deprecated:"1.35.0;use 'log_level' 'trace' instead"`
-	Log        telegraf.Logger `toml:"-"`
+	Server       string          `toml:"server"`
+	Port         int             `toml:"port"`
+	Username     string          `toml:"username"`
+	Password     string          `toml:"password"`
+	ForceFloat   bool            `toml:"force_float"`
+	StringifyIDs *bool           `toml:"stringify_ids"`
+	Additional   []string        `toml:"additional_fields"`
+	DumpRaw      bool            `toml:"dump_raw_variables" deprecated:"1.35.0;use 'log_level' 'trace' instead"`
+	Log          telegraf.Logger `toml:"-"`
 
 	filter filter.Filter
 	dumped map[string]bool
@@ -83,6 +84,13 @@ func (u *Upsd) Init() error {
 	u.filter = f
 
 	u.dumped = make(map[string]bool)
+
+	if u.StringifyIDs == nil {
+		u.Log.Warn("'stringify_ids' is not set explicitly; vendor/product IDs may be emitted as int64 " +
+			"when the underlying value looks numeric, causing type conflicts between UPS devices. " +
+			"The default will change to 'true' in a future release. " +
+			"Set 'stringify_ids = true' to opt into the new behavior now, or 'stringify_ids = false' to keep the legacy behavior and silence this warning.")
+	}
 
 	return nil
 }
@@ -180,7 +188,9 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, upsname string, variables []n
 		}
 
 		// Force ID fields to always be strings to avoid type conflicts
-		if stringFieldSet[varname] {
+		// between UPS devices with numeric-looking IDs (auto-converted to
+		// int64 by go.nut) and devices with non-numeric IDs.
+		if u.StringifyIDs != nil && *u.StringifyIDs && stringFieldSet[varname] {
 			str, err := internal.ToString(v)
 			if err == nil {
 				v = str

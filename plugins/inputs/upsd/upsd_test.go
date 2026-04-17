@@ -33,6 +33,7 @@ func TestBadServer(t *testing.T) {
 	plugin := &Upsd{
 		Server: addr.IP.String(),
 		Port:   addr.Port,
+		Log:    testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 
