@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/psutil"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -124,32 +125,116 @@ func TestMemStatsCollectExtended(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		testdataDir    string
-		extendedFields map[string]interface{}
+		name        string
+		testdataDir string
+		expected    []telegraf.Metric
 	}{
 		{
 			name:        "normal",
 			testdataDir: "normal",
-			extendedFields: map[string]interface{}{
-				"active_anon":   uint64(5765169152),
-				"inactive_anon": uint64(1082245120),
-				"active_file":   uint64(3535425536),
-				"inactive_file": uint64(4421992448),
-				"unevictable":   uint64(143360),
-				"percpu":        uint64(5767168),
+			expected: []telegraf.Metric{
+				metric.New(
+					"mem",
+					map[string]string{},
+					map[string]interface{}{
+						"total":             uint64(12400),
+						"available":         uint64(7600),
+						"used":              uint64(5000),
+						"used_percent":      100 * float64(5000) / float64(12400),
+						"available_percent": 100 * float64(7600) / float64(12400),
+						"free":              uint64(1235),
+						"active":            uint64(0),
+						"buffered":          uint64(0),
+						"cached":            uint64(0),
+						"commit_limit":      uint64(0),
+						"committed_as":      uint64(0),
+						"dirty":             uint64(0),
+						"high_free":         uint64(0),
+						"high_total":        uint64(0),
+						"huge_pages_free":   uint64(0),
+						"huge_page_size":    uint64(0),
+						"huge_pages_total":  uint64(0),
+						"inactive":          uint64(0),
+						"low_free":          uint64(0),
+						"low_total":         uint64(0),
+						"mapped":            uint64(0),
+						"page_tables":       uint64(0),
+						"shared":            uint64(0),
+						"slab":              uint64(0),
+						"sreclaimable":      uint64(0),
+						"sunreclaim":        uint64(0),
+						"swap_cached":       uint64(0),
+						"swap_free":         uint64(0),
+						"swap_total":        uint64(0),
+						"vmalloc_chunk":     uint64(0),
+						"vmalloc_total":     uint64(0),
+						"vmalloc_used":      uint64(0),
+						"write_back_tmp":    uint64(0),
+						"write_back":        uint64(0),
+						"active_anon":       uint64(5765169152),
+						"inactive_anon":     uint64(1082245120),
+						"active_file":       uint64(3535425536),
+						"inactive_file":     uint64(4421992448),
+						"unevictable":       uint64(143360),
+						"percpu":            uint64(5767168),
+					},
+					time.Unix(0, 0),
+					telegraf.Gauge,
+				),
 			},
 		},
 		{
 			name:        "missing fields",
 			testdataDir: "missing_fields",
-			extendedFields: map[string]interface{}{
-				"active_anon":   uint64(5765169152),
-				"inactive_anon": uint64(1082245120),
-				"active_file":   uint64(3535425536),
-				"inactive_file": uint64(4421992448),
-				"unevictable":   uint64(0),
-				"percpu":        uint64(0),
+			expected: []telegraf.Metric{
+				metric.New(
+					"mem",
+					map[string]string{},
+					map[string]interface{}{
+						"total":             uint64(12400),
+						"available":         uint64(7600),
+						"used":              uint64(5000),
+						"used_percent":      100 * float64(5000) / float64(12400),
+						"available_percent": 100 * float64(7600) / float64(12400),
+						"free":              uint64(1235),
+						"active":            uint64(0),
+						"buffered":          uint64(0),
+						"cached":            uint64(0),
+						"commit_limit":      uint64(0),
+						"committed_as":      uint64(0),
+						"dirty":             uint64(0),
+						"high_free":         uint64(0),
+						"high_total":        uint64(0),
+						"huge_pages_free":   uint64(0),
+						"huge_page_size":    uint64(0),
+						"huge_pages_total":  uint64(0),
+						"inactive":          uint64(0),
+						"low_free":          uint64(0),
+						"low_total":         uint64(0),
+						"mapped":            uint64(0),
+						"page_tables":       uint64(0),
+						"shared":            uint64(0),
+						"slab":              uint64(0),
+						"sreclaimable":      uint64(0),
+						"sunreclaim":        uint64(0),
+						"swap_cached":       uint64(0),
+						"swap_free":         uint64(0),
+						"swap_total":        uint64(0),
+						"vmalloc_chunk":     uint64(0),
+						"vmalloc_total":     uint64(0),
+						"vmalloc_used":      uint64(0),
+						"write_back_tmp":    uint64(0),
+						"write_back":        uint64(0),
+						"active_anon":       uint64(5765169152),
+						"inactive_anon":     uint64(1082245120),
+						"active_file":       uint64(3535425536),
+						"inactive_file":     uint64(4421992448),
+						"unevictable":       uint64(0),
+						"percpu":            uint64(0),
+					},
+					time.Unix(0, 0),
+					telegraf.Gauge,
+				),
 			},
 		},
 	}
@@ -180,50 +265,7 @@ func TestMemStatsCollectExtended(t *testing.T) {
 			var acc testutil.Accumulator
 			require.NoError(t, plugin.Gather(&acc))
 
-			fields := map[string]interface{}{
-				"total":             uint64(12400),
-				"available":         uint64(7600),
-				"used":              uint64(5000),
-				"used_percent":      100 * float64(5000) / float64(12400),
-				"available_percent": 100 * float64(7600) / float64(12400),
-				"free":              uint64(1235),
-				"active":            uint64(0),
-				"buffered":          uint64(0),
-				"cached":            uint64(0),
-				"commit_limit":      uint64(0),
-				"committed_as":      uint64(0),
-				"dirty":             uint64(0),
-				"high_free":         uint64(0),
-				"high_total":        uint64(0),
-				"huge_pages_free":   uint64(0),
-				"huge_page_size":    uint64(0),
-				"huge_pages_total":  uint64(0),
-				"inactive":          uint64(0),
-				"low_free":          uint64(0),
-				"low_total":         uint64(0),
-				"mapped":            uint64(0),
-				"page_tables":       uint64(0),
-				"shared":            uint64(0),
-				"slab":              uint64(0),
-				"sreclaimable":      uint64(0),
-				"sunreclaim":        uint64(0),
-				"swap_cached":       uint64(0),
-				"swap_free":         uint64(0),
-				"swap_total":        uint64(0),
-				"vmalloc_chunk":     uint64(0),
-				"vmalloc_total":     uint64(0),
-				"vmalloc_used":      uint64(0),
-				"write_back_tmp":    uint64(0),
-				"write_back":        uint64(0),
-			}
-			for k, v := range tt.extendedFields {
-				fields[k] = v
-			}
-
-			expected := []telegraf.Metric{
-				testutil.MustMetric("mem", map[string]string{}, fields, time.Unix(0, 0), telegraf.Gauge),
-			}
-			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 		})
 	}
 }
@@ -243,21 +285,27 @@ func TestMemStatsCollectExtendedWindows(t *testing.T) {
 	require.NoError(t, plugin.Gather(&acc))
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric("mem", map[string]string{}, map[string]interface{}{
-			"total":             uint64(0),
-			"available":         uint64(0),
-			"used":              uint64(0),
-			"used_percent":      float64(0),
-			"available_percent": float64(0),
-			"commit_limit":      uint64(0),
-			"commit_total":      uint64(0),
-			"virtual_total":     uint64(0),
-			"virtual_avail":     uint64(0),
-			"phys_total":        uint64(0),
-			"phys_avail":        uint64(0),
-			"page_file_total":   uint64(0),
-			"page_file_avail":   uint64(0),
-		}, time.Unix(0, 0), telegraf.Gauge),
+		metric.New(
+			"mem",
+			map[string]string{},
+			map[string]interface{}{
+				"total":             uint64(0),
+				"available":         uint64(0),
+				"used":              uint64(0),
+				"used_percent":      float64(0),
+				"available_percent": float64(0),
+				"commit_limit":      uint64(0),
+				"commit_total":      uint64(0),
+				"virtual_total":     uint64(0),
+				"virtual_avail":     uint64(0),
+				"phys_total":        uint64(0),
+				"phys_avail":        uint64(0),
+				"page_file_total":   uint64(0),
+				"page_file_avail":   uint64(0),
+			},
+			time.Unix(0, 0),
+			telegraf.Gauge,
+		),
 	}
 	testutil.RequireMetricsStructureEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
