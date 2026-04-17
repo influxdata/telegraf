@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	"golang.org/x/sys/unix"
+
+	"github.com/influxdata/telegraf/internal"
 )
 
 type diskInfoCache struct {
@@ -21,8 +23,12 @@ type diskInfoCache struct {
 }
 
 func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
+	devPath := internal.GetDevPath()
+	runPath := internal.GetRunPath()
+	sysPath := internal.GetSysPath()
+
 	// Check if the device exists
-	path := "/dev/" + devName
+	path := filepath.Join(devPath, devName)
 	var stat unix.Stat_t
 	if err := unix.Stat(path, &stat); err != nil {
 		return nil, fmt.Errorf("error reading %s: %w", path, err)
@@ -43,10 +49,10 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 	} else {
 		major := unix.Major(uint64(stat.Rdev)) //nolint:unconvert // Conversion needed for some architectures
 		minor := unix.Minor(uint64(stat.Rdev)) //nolint:unconvert // Conversion needed for some architectures
-		udevDataPath = fmt.Sprintf("/run/udev/data/b%d:%d", major, minor)
+		udevDataPath = filepath.Join(runPath, "udev", "data", fmt.Sprintf("b%d:%d", major, minor))
 		if _, err := os.Stat(udevDataPath); err != nil {
 			// This path failed, try the fallback .udev style (non-systemd)
-			udevDataPath = "/dev/.udev/db/block:" + devName
+			udevDataPath = filepath.Join(devPath, ".udev", "db", "block:"+devName)
 			if _, err := os.Stat(udevDataPath); err != nil {
 				// Giving up, cannot retrieve disk info
 				return nil, fmt.Errorf("error reading %s: %w", udevDataPath, err)
@@ -66,7 +72,7 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		// This allows us to also "poison" it during test scenarios
 		sysBlockPath = ic.sysBlockPath
 	} else {
-		sysBlockPath = "/sys/class/block/" + devName
+		sysBlockPath = filepath.Join(sysPath, "class", "block", devName)
 	}
 
 	devInfo, err := readDevData(sysBlockPath)
@@ -173,8 +179,8 @@ func resolveName(name string) string {
 	if !errors.Is(err, fs.ErrNotExist) {
 		return name
 	}
-	// Try to prepend "/dev"
-	resolved, err = filepath.EvalSymlinks("/dev/" + name)
+	// Try to prepend the host /dev path (HOST_DEV / HOST_MOUNT_PREFIX).
+	resolved, err = filepath.EvalSymlinks(filepath.Join(internal.GetDevPath(), name))
 	if err != nil {
 		return name
 	}
@@ -183,7 +189,7 @@ func resolveName(name string) string {
 }
 
 func getDeviceWWID(name string) string {
-	path := fmt.Sprintf("/sys/block/%s/wwid", filepath.Base(name))
+	path := filepath.Join(internal.GetSysPath(), "block", filepath.Base(name), "wwid")
 	buf, err := os.ReadFile(path)
 	if err != nil {
 		return ""
