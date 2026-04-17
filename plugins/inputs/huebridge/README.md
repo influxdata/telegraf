@@ -137,10 +137,10 @@ containing the persisted token.
     - `device` - The name of the device
   - fields
     - `on` (int) - 0: light is off 1: light is on
-    - `brightness` (float) - Current brightness percentage (0-100), only present for dimmable lights
-    - `color_temp` (int) - Color temperature in mireds, only present when the light is in color-temperature mode
-    - `color_x` (float) - CIE xy color point X coordinate, only present for color lights
-    - `color_y` (float) - CIE xy color point Y coordinate, only present for color lights
+    - `brightness` (float) - Brightness percentage (0-100)
+    - `color_temp` (int) - Color temperature in mireds
+    - `color_x` (float) - CIE xy color point X coordinate
+    - `color_y` (float) - CIE xy color point Y coordinate
 - `huebridge_temperature`
   - tags
     - `bridge_id` - The bridge id (this metrics has been queried from)
