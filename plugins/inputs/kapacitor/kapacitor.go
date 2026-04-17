@@ -209,6 +209,20 @@ func (k *Kapacitor) gatherURL(
 				delete(obj.Tags, key)
 			}
 
+			// Always tag with the source URL so metrics from multiple
+			// Kapacitor instances are distinguishable downstream. The
+			// top-level kapacitor / kapacitor_memstats metrics already
+			// carry it, but kapacitor_edges / kapacitor_ingress /
+			// kapacitor_load did not, which made it impossible to tell
+			// which instance a row came from when the plugin polled
+			// more than one URL (see influxdata/telegraf#18645).
+			if obj.Tags == nil {
+				obj.Tags = make(map[string]string, 1)
+			}
+			if _, present := obj.Tags["url"]; !present {
+				obj.Tags["url"] = url
+			}
+
 			// Convert time-related string field to int
 			if _, ok := obj.Values["avg_exec_time_ns"]; ok {
 				d, err := time.ParseDuration(obj.Values["avg_exec_time_ns"].(string))
