@@ -28,6 +28,7 @@ func (*GoogleCloud) SampleConfig() string {
 type GoogleCloud struct {
 	STSAudience     string          `toml:"sts_audience"`
 	CredentialsFile string          `toml:"credentials_file"`
+	Scopes          []string        `toml:"scopes"` // used for standard public-GCP service_account keys
 	Log             telegraf.Logger `toml:"-"`
 	common_http.HTTPClientConfig
 
@@ -49,9 +50,17 @@ func (g *GoogleCloud) Init() error {
 	if err != nil {
 		return fmt.Errorf("unable to parse credentials file type: %w", err)
 	}
+
+	// Default minimal scope only for standard public-GCP service-account JSON keys.
+	// GDCH/STS users continue to rely exclusively on sts_audience (Scopes is ignored).
+	if len(g.Scopes) == 0 && credType == "service_account" {
+		g.Scopes = []string{"https://www.googleapis.com/auth/monitoring"}
+	}
+
 	saType := credentials.CredType(credType)
 
 	creds, err := credentials.NewCredentialsFromJSON(saType, serviceAccount, &credentials.DetectOptions{
+		Scopes:      g.Scopes, // new
 		STSAudience: g.STSAudience,
 		Client:      client,
 		Logger:      slog.NewLogger(g.Log),
