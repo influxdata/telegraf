@@ -611,6 +611,36 @@ func TestInit_NoSubscriptionID(t *testing.T) {
 	require.Error(t, am.Init())
 }
 
+func TestInit_NoClientID(t *testing.T) {
+	file, err := os.ReadFile("testdata/toml/init_no_client_id.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureManager = &mockAzureClientsManager{}
+
+	require.Error(t, am.Init())
+}
+
+func TestInit_NoTenantID(t *testing.T) {
+	file, err := os.ReadFile("testdata/toml/init_no_tenant_id.toml")
+	require.NoError(t, err)
+	require.NotNil(t, file)
+	require.NotEmpty(t, file)
+
+	var am *AzureMonitor
+	require.NoError(t, toml.Unmarshal(file, &am))
+
+	am.Log = testutil.Logger{}
+	am.azureManager = &mockAzureClientsManager{}
+
+	require.Error(t, am.Init())
+}
+
 func TestInit_NoTargets(t *testing.T) {
 	file, err := os.ReadFile("testdata/toml/init_no_targets.toml")
 	require.NoError(t, err)
@@ -911,10 +941,18 @@ func TestGather_Success(t *testing.T) {
 		resourceTargets = append(resourceTargets, receiver.NewResourceTarget(target.ResourceID, target.Metrics, target.Aggregations))
 	}
 
+	var clientSecret string
+	if !am.ClientSecret.Empty() {
+		clientSecretValue, err := am.ClientSecret.Get()
+		require.NoError(t, err)
+		clientSecret = clientSecretValue.String()
+		defer clientSecretValue.Destroy()
+	}
+
 	var clientOptions = azcore.ClientOptions{Cloud: cloud.AzurePublic}
 
 	var azureClients *receiver.AzureClients
-	azureClients, err = am.azureManager.createAzureClients(am.SubscriptionID, am.ClientID, am.ClientSecret, am.TenantID, clientOptions)
+	azureClients, err = am.azureManager.createAzureClients(am.SubscriptionID, am.ClientID, clientSecret, am.TenantID, clientOptions)
 	require.NoError(t, err)
 	require.NotNil(t, azureClients)
 
@@ -998,10 +1036,18 @@ func TestGather_China_Success(t *testing.T) {
 		resourceTargets = append(resourceTargets, receiver.NewResourceTarget(target.ResourceID, target.Metrics, target.Aggregations))
 	}
 
+	var clientSecret string
+	if !am.ClientSecret.Empty() {
+		clientSecretValue, err := am.ClientSecret.Get()
+		require.NoError(t, err)
+		clientSecret = clientSecretValue.String()
+		defer clientSecretValue.Destroy()
+	}
+
 	var clientOptions = azcore.ClientOptions{Cloud: cloud.AzureChina}
 
 	var azureClients *receiver.AzureClients
-	azureClients, err = am.azureManager.createAzureClients(am.SubscriptionID, am.ClientID, am.ClientSecret, am.TenantID, clientOptions)
+	azureClients, err = am.azureManager.createAzureClients(am.SubscriptionID, am.ClientID, clientSecret, am.TenantID, clientOptions)
 	require.NoError(t, err)
 	require.NotNil(t, azureClients)
 
@@ -1031,10 +1077,18 @@ func TestGather_Government_Success(t *testing.T) {
 		resourceTargets = append(resourceTargets, receiver.NewResourceTarget(target.ResourceID, target.Metrics, target.Aggregations))
 	}
 
+	var clientSecret string
+	if !am.ClientSecret.Empty() {
+		clientSecretValue, err := am.ClientSecret.Get()
+		require.NoError(t, err)
+		clientSecret = clientSecretValue.String()
+		defer clientSecretValue.Destroy()
+	}
+
 	var clientOptions = azcore.ClientOptions{Cloud: cloud.AzureGovernment}
 
 	var azureClients *receiver.AzureClients
-	azureClients, err = am.azureManager.createAzureClients(am.SubscriptionID, am.ClientID, am.ClientSecret, am.TenantID, clientOptions)
+	azureClients, err = am.azureManager.createAzureClients(am.SubscriptionID, am.ClientID, clientSecret, am.TenantID, clientOptions)
 	require.NoError(t, err)
 	require.NotNil(t, azureClients)
 
@@ -1064,10 +1118,18 @@ func TestGather_Public_Success(t *testing.T) {
 		resourceTargets = append(resourceTargets, receiver.NewResourceTarget(target.ResourceID, target.Metrics, target.Aggregations))
 	}
 
+	var clientSecret string
+	if !am.ClientSecret.Empty() {
+		clientSecretValue, err := am.ClientSecret.Get()
+		require.NoError(t, err)
+		clientSecret = clientSecretValue.String()
+		defer clientSecretValue.Destroy()
+	}
+
 	var clientOptions = azcore.ClientOptions{Cloud: cloud.AzurePublic}
 
 	var azureClients *receiver.AzureClients
-	azureClients, err = am.azureManager.createAzureClients(am.SubscriptionID, am.ClientID, am.ClientSecret, am.TenantID, clientOptions)
+	azureClients, err = am.azureManager.createAzureClients(am.SubscriptionID, am.ClientID, clientSecret, am.TenantID, clientOptions)
 	require.NoError(t, err)
 	require.NotNil(t, azureClients)
 
