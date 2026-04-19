@@ -3,6 +3,7 @@ package azure_monitor
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -64,6 +65,16 @@ func (*AzureMonitor) SampleConfig() string {
 }
 
 func (am *AzureMonitor) Init() error {
+	if am.SubscriptionID == "" {
+		return errors.New("subscription_id is required")
+	}
+	if am.ClientID == "" {
+		return errors.New("client_id is required")
+	}
+	if am.TenantID == "" {
+		return errors.New("tenant_id is required")
+	}
+
 	var clientOptions azcore.ClientOptions
 	switch am.CloudOption {
 	case "AzureChina":
