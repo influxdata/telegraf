@@ -171,7 +171,7 @@ require (
 	github.com/openzipkin/zipkin-go v0.4.3
 	github.com/p4lang/p4runtime v1.5.0
 	github.com/pavlo-v-chernykh/keystore-go/v4 v4.5.0
-	github.com/pborman/ansi v1.0.0
+	github.com/pborman/ansi v1.1.0
 	github.com/pcolladosoto/goslurm v0.1.0
 	github.com/peterbourgon/unixtransport v0.0.7
 	github.com/pion/dtls/v3 v3.1.2
