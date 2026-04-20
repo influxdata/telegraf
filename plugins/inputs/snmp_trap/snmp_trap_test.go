@@ -1161,6 +1161,71 @@ func TestReceiveTrapV3(t *testing.T) {
 				),
 			},
 		},
+		// Test v3 with long passwords (>12 characters) to verify password length handling
+		// This test ensures that Telegraf correctly processes SNMPv3 passwords longer than 12 characters
+		// Related to: https://github.com/influxdata/telegraf/issues/18273
+		{
+			name:      "authPriv SHA-AES with long passwords",
+			secName:   "peter",
+			secLevel:  "authPriv",
+			authProto: "SHA",
+			authPass:  "this_is_a_very_long_authentication_password_with_more_than_12_characters",
+			privProto: "AES",
+			privPass:  "this_is_a_very_long_privacy_password_with_more_than_12_characters_too",
+			trap: gosnmp.SnmpTrap{
+				Variables: []gosnmp.SnmpPDU{
+					{
+						Name:  ".1.3.6.1.2.1.1.3.0",
+						Type:  gosnmp.TimeTicks,
+						Value: now,
+					},
+					{
+						Name:  ".1.3.6.1.6.3.1.1.4.1.0", // SNMPv2-MIB::snmpTrapOID.0
+						Type:  gosnmp.ObjectIdentifier,
+						Value: ".1.3.6.1.6.3.1.1.5.1", // coldStart
+					},
+				},
+			},
+			entries: []entry{
+				{
+					oid: ".1.3.6.1.6.3.1.1.4.1.0",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "snmpTrapOID.0",
+					},
+				},
+				{
+					oid: ".1.3.6.1.6.3.1.1.5.1",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "coldStart",
+					},
+				},
+				{
+					oid: ".1.3.6.1.2.1.1.3.0",
+					e: snmp.MibEntry{
+						MibName: "UNUSED_MIB_NAME",
+						OidText: "sysUpTimeInstance",
+					},
+				},
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"snmp_trap", // name
+					map[string]string{ // tags
+						"oid":     ".1.3.6.1.6.3.1.1.5.1",
+						"name":    "coldStart",
+						"mib":     "SNMPv2-MIB",
+						"version": "3",
+						"source":  "127.0.0.1",
+					},
+					map[string]interface{}{ // fields
+						"sysUpTimeInstance": now,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 
 	for _, tt := range tests {
