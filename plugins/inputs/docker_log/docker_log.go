@@ -15,8 +15,9 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -28,15 +29,6 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
-
-var (
-	// ensure *DockerLogs implements telegraf.ServiceInput
-	_ telegraf.ServiceInput = (*DockerLogs)(nil)
-)
-
-const (
-	defaultEndpoint = "unix:///var/run/docker.sock"
-)
 
 type DockerLogs struct {
 	Endpoint              string          `toml:"endpoint"`
@@ -74,35 +66,33 @@ func (*DockerLogs) SampleConfig() string {
 }
 
 func (d *DockerLogs) Init() error {
-	var err error
 	if d.Endpoint == "ENV" {
-		d.client, err = d.newEnvClient()
+		c, err := d.newEnvClient()
 		if err != nil {
-			return err
+			return fmt.Errorf("creating client from environment failed: %w", err)
 		}
+		d.client = c
 	} else {
 		tlsConfig, err := d.ClientConfig.TLSConfig()
 		if err != nil {
-			return err
+			return fmt.Errorf("creating TLS configuration failed: %w", err)
 		}
-		d.client, err = d.newClient(d.Endpoint, tlsConfig)
+		c, err := d.newClient(d.Endpoint, tlsConfig)
 		if err != nil {
-			return err
+			return fmt.Errorf("creating client failed: %w", err)
 		}
+		d.client = c
 	}
 
 	// Create filters
-	err = d.createLabelFilters()
-	if err != nil {
-		return err
+	if err := d.createLabelFilters(); err != nil {
+		return fmt.Errorf("creating label filter failed: %w", err)
 	}
-	err = d.createContainerFilters()
-	if err != nil {
-		return err
+	if err := d.createContainerFilters(); err != nil {
+		return fmt.Errorf("creating container filter failed: %w", err)
 	}
-	err = d.createContainerStateFilters()
-	if err != nil {
-		return err
+	if err := d.createContainerStateFilters(); err != nil {
+		return fmt.Errorf("creating container state filter failed: %w", err)
 	}
 
 	d.lastRecord = make(map[string]time.Time)
@@ -146,7 +136,7 @@ func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(d.Timeout))
 	defer cancel()
-	containers, err := d.client.ContainerList(ctx, container.ListOptions{})
+	containers, err := d.client.ContainerList(ctx, client.ContainerListOptions{})
 	if err != nil {
 		return err
 	}
@@ -166,7 +156,7 @@ func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 
-		if !d.stateFilter.Match(cntnr.State) {
+		if !d.stateFilter.Match(string(cntnr.State)) {
 			continue
 		}
 
@@ -268,7 +258,7 @@ func (d *DockerLogs) tailContainerLogs(
 		d.lastRecordMtx.Unlock()
 	}
 
-	logOptions := container.LogsOptions{
+	logOptions := client.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Timestamps: true,
@@ -389,12 +379,7 @@ func tailStream(
 	}
 }
 
-func tailMultiplexed(
-	acc telegraf.Accumulator,
-	tags map[string]string,
-	containerID string,
-	src io.ReadCloser,
-) (time.Time, error) {
+func tailMultiplexed(acc telegraf.Accumulator, tags map[string]string, containerID string, src io.ReadCloser) (time.Time, error) {
 	outReader, outWriter := io.Pipe()
 	errReader, errWriter := io.Pipe()
 
@@ -479,7 +464,7 @@ func init() {
 	inputs.Add("docker_log", func() telegraf.Input {
 		return &DockerLogs{
 			Timeout:       config.Duration(time.Second * 5),
-			Endpoint:      defaultEndpoint,
+			Endpoint:      "unix:///var/run/docker.sock",
 			newEnvClient:  newEnvClient,
 			newClient:     newClient,
 			containerList: make(map[string]context.CancelFunc),
