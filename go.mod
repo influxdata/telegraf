@@ -9,7 +9,7 @@ require (
 	cloud.google.com/go/bigquery v1.76.0
 	cloud.google.com/go/monitoring v1.26.0
 	cloud.google.com/go/pubsub/v2 v2.6.0
-	cloud.google.com/go/storage v1.62.0
+	cloud.google.com/go/storage v1.62.1
 	collectd.org v0.6.0
 	github.com/99designs/keyring v1.2.2
 	github.com/Azure/azure-event-hubs-go/v3 v3.6.2
