@@ -1,0 +1,128 @@
+package docker
+
+import (
+	"bytes"
+	"encoding/binary"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
+)
+
+type Logs struct {
+	Content     string
+	Multiplexed bool
+}
+
+type Server struct {
+	List    []container.Summary
+	Inspect map[string]container.InspectResponse
+	Logs    map[string]Logs
+
+	server *httptest.Server
+}
+
+func (s *Server) Start(t *testing.T) string {
+	t.Helper()
+
+	s.server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var response []byte
+		switch {
+		case r.URL.Path == "/_ping":
+			// Ping response
+			var err error
+			response, err = json.Marshal(&client.PingResult{
+				APIVersion: "1.54",
+				OSType:     "linux/amd64",
+			})
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Logf("failed to marshal ping response: %v", err)
+				t.Fail()
+				return
+			}
+		case r.URL.Path == "/v1.54/containers/json":
+			// List response
+			var err error
+			response, err = json.Marshal(s.List)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Logf("failed to marshal list response: %v", err)
+				t.Fail()
+				return
+			}
+		case strings.HasPrefix(r.URL.Path, "/v1.54/containers") &&
+			len(strings.Split(r.URL.Path, "/")) == 5 &&
+			strings.HasSuffix(r.URL.Path, "/json"):
+			// Inspect response
+			id := strings.Split(r.URL.Path, "/")[3]
+			data, found := s.Inspect[id]
+			if !found {
+				w.WriteHeader(http.StatusNotFound)
+				t.Logf("inspect response for %q not found", id)
+				t.Fail()
+				return
+			}
+			var err error
+			response, err = json.Marshal(data)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Logf("failed to marshal list response: %v", err)
+				t.Fail()
+				return
+			}
+		case strings.HasPrefix(r.URL.Path, "/v1.54/containers") &&
+			len(strings.Split(r.URL.Path, "/")) == 5 &&
+			strings.HasSuffix(r.URL.Path, "/logs"):
+			// Logs response
+			id := strings.Split(r.URL.Path, "/")[3]
+			data, found := s.Logs[id]
+			if !found {
+				w.WriteHeader(http.StatusNotFound)
+				t.Logf("log response for %q not found", id)
+				t.Fail()
+				return
+			}
+			if data.Multiplexed {
+				// Emulate a multiplexed writer
+				var buf bytes.Buffer
+				header := [8]byte{0: 1}
+				binary.BigEndian.PutUint32(header[4:], uint32(len(data.Content)))
+				if _, err := buf.Write(header[:]); err != nil {
+					t.Logf("writing log multiplex header failed: %v", err)
+					t.Fail()
+					return
+				}
+				if _, err := buf.WriteString(data.Content); err != nil {
+					t.Logf("writing log multiplex content failed: %v", err)
+					t.Fail()
+					return
+				}
+				response = buf.Bytes()
+			} else {
+				response = []byte(data.Content)
+			}
+		default:
+			t.Logf("unhandled url: %q (len: %d)", r.URL.Path, len(strings.Split(r.URL.Path, "/")))
+			t.Fail()
+			return
+		}
+
+		if _, err := w.Write(response); err != nil {
+			t.Logf("failed to write ping response: %v", err)
+			t.Fail()
+		}
+	}))
+
+	return s.server.URL
+}
+
+func (s *Server) Close() {
+	if s.server != nil {
+		s.server.Close()
+	}
+}
