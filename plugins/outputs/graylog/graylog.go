@@ -358,6 +358,7 @@ func (g *Graylog) Connect() error {
 	}
 
 	if g.Reconnection {
+		g.wg.Add(1)
 		go g.connectRetry(tlsCfg)
 		return nil
 	}
@@ -382,11 +383,11 @@ func (g *Graylog) Connect() error {
 }
 
 func (g *Graylog) connectRetry(tlsCfg *tls.Config) {
+	defer g.wg.Done()
+
 	var writers []io.Writer
 	var closers []io.WriteCloser
 	var attempt int64
-
-	g.wg.Add(1)
 
 	servers := make([]string, 0, len(g.Servers))
 	servers = append(servers, g.Servers...)
@@ -418,8 +419,6 @@ func (g *Graylog) connectRetry(tlsCfg *tls.Config) {
 	g.writer = io.MultiWriter(writers...)
 	g.closers = closers
 	g.Unlock()
-
-	g.wg.Done()
 }
 
 func (g *Graylog) connectEndpoints(servers []string, tlsCfg *tls.Config) ([]string, []gelf) {
