@@ -72,7 +72,7 @@ func (s *Server) Start(t *testing.T) string {
 			response, err = json.Marshal(data)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
-				t.Errorf("failed to marshal list response: %v", err)
+				t.Errorf("failed to marshal inspect response: %v", err)
 				return
 			}
 		case strings.HasPrefix(r.URL.Path, "/v"+apiVersion+"/containers") &&
