@@ -112,7 +112,7 @@ func (s *Server) Start(t *testing.T) string {
 		}
 
 		if _, err := w.Write(response); err != nil {
-			t.Errorf("failed to write ping response: %v", err)
+			t.Errorf("failed to write response: %v", err)
 			return
 		}
 	}))
