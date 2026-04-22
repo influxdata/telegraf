@@ -305,7 +305,7 @@ func TestDisconnectedServerOnConnect(t *testing.T) {
 
 	// Close the server right before we try to connect.
 	ts.Close()
-	require.Error(t, e.Connect())
+	require.NoError(t, e.Connect())
 }
 
 func TestDisconnectedServerOnWrite(t *testing.T) {
