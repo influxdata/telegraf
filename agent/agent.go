@@ -766,6 +766,18 @@ func (*Agent) push(ctx context.Context, aggregator *models.RunningAggregator, ac
 
 		select {
 		case <-time.After(until):
+			// Go's timers may fire slightly before the deadline, especially
+			// on platforms with coarse timer granularity. Sleep any remaining
+			// time so Push always runs at or after the window end, never
+			// before.
+			if remaining := time.Until(aggregator.EndPeriod()); remaining > 0 {
+				select {
+				case <-time.After(remaining):
+				case <-ctx.Done():
+					aggregator.Push(acc)
+					return
+				}
+			}
 			aggregator.Push(acc)
 		case <-ctx.Done():
 			aggregator.Push(acc)
