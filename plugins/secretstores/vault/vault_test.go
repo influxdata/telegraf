@@ -242,3 +242,77 @@ func TestIntegrationAppRoleSecretWrapped(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []byte(secretValue), secret)
 }
+
+func TestInitAuthValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		plugin      *Vault
+		errContains string
+	}{
+		{
+			name: "no auth method",
+			plugin: &Vault{
+				ID:         "vault",
+				Address:    "http://localhost:8200",
+				MountPath:  "secret",
+				SecretPath: "my/path",
+			},
+			errContains: `set either "token" or "approle"`,
+		},
+		{
+			name: "both token and approle",
+			plugin: &Vault{
+				ID:         "vault",
+				Address:    "http://localhost:8200",
+				MountPath:  "secret",
+				SecretPath: "my/path",
+				Token:      config.NewSecret([]byte("some-token")),
+				AppRole: &appRole{
+					RoleID: "role",
+					Secret: config.NewSecret([]byte("secret")),
+				},
+			},
+			errContains: "only one authentication method",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.ErrorContains(t, tt.plugin.Init(), tt.errContains)
+		})
+	}
+}
+
+func TestIntegrationTokenAuth(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	mountPath := "my-mount-path"
+	secretPath := "my-secret-path"
+	secretName := "secret-some-name"
+	secretValue := "secret-some-value"
+
+	container, closer := createContainer(t, []string{
+		fmt.Sprintf("secrets enable -path=%s kv-v2", mountPath),
+		fmt.Sprintf("kv put -mount=%s %s %s=%s", mountPath, secretPath, secretName, secretValue),
+	})
+	defer closer()
+
+	addr, err := container.HttpHostAddress(context.Background())
+	require.NoError(t, err)
+
+	plugin := &Vault{
+		ID:         "test_integration_token",
+		Address:    addr,
+		MountPath:  mountPath,
+		SecretPath: secretPath,
+		Token:      config.NewSecret([]byte("SomeToken")),
+	}
+
+	require.NoError(t, plugin.Init())
+
+	secret, err := plugin.Get(secretName)
+	require.NoError(t, err)
+	require.Equal(t, []byte(secretValue), secret)
+}
