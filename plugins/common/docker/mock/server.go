@@ -13,6 +13,8 @@ import (
 	"github.com/moby/moby/client"
 )
 
+const apiVersion = "1.54"
+
 type Logs struct {
 	Content     string
 	Multiplexed bool
@@ -38,7 +40,7 @@ func (s *Server) Start(t *testing.T) string {
 			// Ping response
 			var err error
 			response, err = json.Marshal(&client.PingResult{
-				APIVersion: "1.54",
+				APIVersion: apiVersion,
 				OSType:     "linux/amd64",
 			})
 			if err != nil {
@@ -47,7 +49,7 @@ func (s *Server) Start(t *testing.T) string {
 				t.Fail()
 				return
 			}
-		case r.URL.Path == "/v1.54/containers/json":
+		case r.URL.Path == "/v"+apiVersion+"/containers/json":
 			// List response
 			var err error
 			response, err = json.Marshal(s.List)
@@ -57,7 +59,7 @@ func (s *Server) Start(t *testing.T) string {
 				t.Fail()
 				return
 			}
-		case strings.HasPrefix(r.URL.Path, "/v1.54/containers/") &&
+		case strings.HasPrefix(r.URL.Path, "/v"+apiVersion+"/containers/") &&
 			len(parts) == 5 &&
 			strings.HasSuffix(r.URL.Path, "/json"):
 			// Inspect response
@@ -77,7 +79,7 @@ func (s *Server) Start(t *testing.T) string {
 				t.Fail()
 				return
 			}
-		case strings.HasPrefix(r.URL.Path, "/v1.54/containers") &&
+		case strings.HasPrefix(r.URL.Path, "/v"+apiVersion+"/containers") &&
 			len(parts) == 5 &&
 			strings.HasSuffix(r.URL.Path, "/logs"):
 			// Logs response
