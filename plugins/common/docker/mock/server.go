@@ -75,7 +75,7 @@ func (s *Server) Start(t *testing.T) string {
 				t.Errorf("failed to marshal inspect response: %v", err)
 				return
 			}
-		case strings.HasPrefix(r.URL.Path, "/v"+apiVersion+"/containers") &&
+		case strings.HasPrefix(r.URL.Path, "/v"+apiVersion+"/containers/") &&
 			len(parts) == 5 &&
 			strings.HasSuffix(r.URL.Path, "/logs"):
 			// Logs response
