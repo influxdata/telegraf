@@ -31,6 +31,8 @@ func (s *Server) Start(t *testing.T) string {
 
 	s.server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var response []byte
+
+		parts := strings.Split(r.URL.Path, "/")
 		switch {
 		case r.URL.Path == "/_ping":
 			// Ping response
@@ -55,11 +57,11 @@ func (s *Server) Start(t *testing.T) string {
 				t.Fail()
 				return
 			}
-		case strings.HasPrefix(r.URL.Path, "/v1.54/containers") &&
-			len(strings.Split(r.URL.Path, "/")) == 5 &&
+		case strings.HasPrefix(r.URL.Path, "/v1.54/containers/") &&
+			len(parts) == 5 &&
 			strings.HasSuffix(r.URL.Path, "/json"):
 			// Inspect response
-			id := strings.Split(r.URL.Path, "/")[3]
+			id := parts[3]
 			data, found := s.Inspect[id]
 			if !found {
 				w.WriteHeader(http.StatusNotFound)
@@ -76,10 +78,10 @@ func (s *Server) Start(t *testing.T) string {
 				return
 			}
 		case strings.HasPrefix(r.URL.Path, "/v1.54/containers") &&
-			len(strings.Split(r.URL.Path, "/")) == 5 &&
+			len(parts) == 5 &&
 			strings.HasSuffix(r.URL.Path, "/logs"):
 			// Logs response
-			id := strings.Split(r.URL.Path, "/")[3]
+			id := parts[3]
 			data, found := s.Logs[id]
 			if !found {
 				w.WriteHeader(http.StatusNotFound)
@@ -107,7 +109,7 @@ func (s *Server) Start(t *testing.T) string {
 				response = []byte(data.Content)
 			}
 		default:
-			t.Logf("unhandled url: %q (len: %d)", r.URL.Path, len(strings.Split(r.URL.Path, "/")))
+			t.Logf("unhandled url: %q (len: %d)", r.URL.Path, len(parts))
 			t.Fail()
 			return
 		}
