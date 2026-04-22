@@ -305,6 +305,7 @@ func (g *gelfTCP) send(b []byte) error {
 	// only ever write to it. Reconnect and retry the write once before
 	// reporting the error to avoid noisy logs on every graceful close.
 	if err := g.Connect(); err != nil {
+		g.conn = nil
 		return err
 	}
 	return g.writeFrame(b)
