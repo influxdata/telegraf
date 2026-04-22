@@ -135,9 +135,9 @@ func TestGather(t *testing.T) {
 			// Trigger a gather cycle which will make the logs to be "tracked"
 			// and wait until we did see enough data
 			require.NoError(t, plugin.Gather(&acc))
-			require.Eventuallyf(t, func() bool {
+			require.Eventually(t, func() bool {
 				return acc.NMetrics() >= uint64(len(tt.expected))
-			}, 3*time.Second, 100*time.Millisecond, "got %d metrics, expected %d", acc.NMetrics(), len(tt.expected))
+			}, 3*time.Second, 100*time.Millisecond)
 
 			// Check the results
 			require.Empty(t, acc.Errors)
