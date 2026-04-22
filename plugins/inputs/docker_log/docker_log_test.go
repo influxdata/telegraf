@@ -11,7 +11,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
-	common_docker "github.com/influxdata/telegraf/plugins/common/docker"
+	"github.com/influxdata/telegraf/plugins/common/docker/mock"
 	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -19,16 +19,16 @@ import (
 func TestGather(t *testing.T) {
 	tests := []struct {
 		name     string
-		server   *common_docker.Server
+		server   *mock.Server
 		expected []telegraf.Metric
 	}{
 		{
 			name:   "no containers",
-			server: &common_docker.Server{},
+			server: &mock.Server{},
 		},
 		{
 			name: "one container tty",
-			server: &common_docker.Server{
+			server: &mock.Server{
 				List: []container.Summary{
 					{
 						ID:    "deadbeef",
@@ -45,7 +45,7 @@ func TestGather(t *testing.T) {
 						},
 					},
 				},
-				Logs: map[string]common_docker.Logs{
+				Logs: map[string]mock.Logs{
 					"deadbeef": {Content: "2020-04-28T18:43:16.432691200Z hello\n"},
 				},
 			},
@@ -69,7 +69,7 @@ func TestGather(t *testing.T) {
 		},
 		{
 			name: "one container multiplex",
-			server: &common_docker.Server{
+			server: &mock.Server{
 				List: []container.Summary{
 					{
 						ID:    "deadbeef",
@@ -85,7 +85,7 @@ func TestGather(t *testing.T) {
 						},
 					},
 				},
-				Logs: map[string]common_docker.Logs{
+				Logs: map[string]mock.Logs{
 					"deadbeef": {
 						Content:     "2020-04-28T18:42:16.432691200Z hello from stdout\n",
 						Multiplexed: true,

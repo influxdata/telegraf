@@ -1,4 +1,4 @@
-package docker
+package mock
 
 import (
 	"bytes"
