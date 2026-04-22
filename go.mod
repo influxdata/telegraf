@@ -202,7 +202,7 @@ require (
 	github.com/srebhan/protobufquery v1.0.4
 	github.com/stretchr/testify v1.11.1
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
-	github.com/tdrn-org/go-hue v0.3.0
+	github.com/tdrn-org/go-hue v1.2.0
 	github.com/tdrn-org/go-nsdp v0.5.1
 	github.com/tdrn-org/go-tr064 v0.3.0
 	github.com/testcontainers/testcontainers-go v0.42.0
@@ -374,7 +374,7 @@ require (
 	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-openapi/jsonpointer v0.22.5 // indirect
+	github.com/go-openapi/jsonpointer v0.23.0 // indirect
 	github.com/go-openapi/jsonreference v0.21.4 // indirect
 	github.com/go-openapi/swag v0.26.0 // indirect
 	github.com/go-openapi/swag/cmdutils v0.26.0 // indirect
@@ -461,7 +461,7 @@ require (
 	github.com/likexian/gokit v0.25.16 // indirect
 	github.com/lufia/plan9stats v0.0.0-20260330125221-c963978e514e // indirect
 	github.com/magiconair/properties v1.8.10 // indirect
-	github.com/mailru/easyjson v0.9.0 // indirect
+	github.com/mailru/easyjson v0.9.2 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-ieproxy v0.0.11 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -496,7 +496,7 @@ require (
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/ncw/swift/v2 v2.0.3 // indirect
-	github.com/oapi-codegen/runtime v1.1.1 // indirect
+	github.com/oapi-codegen/runtime v1.4.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatautil v0.148.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
