@@ -45,8 +45,7 @@ func (s *Server) Start(t *testing.T) string {
 			})
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
-				t.Logf("failed to marshal ping response: %v", err)
-				t.Fail()
+				t.Errorf("failed to marshal ping response: %v", err)
 				return
 			}
 		case r.URL.Path == "/v"+apiVersion+"/containers/json":
@@ -55,8 +54,7 @@ func (s *Server) Start(t *testing.T) string {
 			response, err = json.Marshal(s.List)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
-				t.Logf("failed to marshal list response: %v", err)
-				t.Fail()
+				t.Errorf("failed to marshal list response: %v", err)
 				return
 			}
 		case strings.HasPrefix(r.URL.Path, "/v"+apiVersion+"/containers/") &&
@@ -67,16 +65,14 @@ func (s *Server) Start(t *testing.T) string {
 			data, found := s.Inspect[id]
 			if !found {
 				w.WriteHeader(http.StatusNotFound)
-				t.Logf("inspect response for %q not found", id)
-				t.Fail()
+				t.Errorf("inspect response for %q not found", id)
 				return
 			}
 			var err error
 			response, err = json.Marshal(data)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
-				t.Logf("failed to marshal list response: %v", err)
-				t.Fail()
+				t.Errorf("failed to marshal list response: %v", err)
 				return
 			}
 		case strings.HasPrefix(r.URL.Path, "/v"+apiVersion+"/containers") &&
@@ -87,8 +83,7 @@ func (s *Server) Start(t *testing.T) string {
 			data, found := s.Logs[id]
 			if !found {
 				w.WriteHeader(http.StatusNotFound)
-				t.Logf("log response for %q not found", id)
-				t.Fail()
+				t.Errorf("log response for %q not found", id)
 				return
 			}
 			if data.Multiplexed {
@@ -97,13 +92,13 @@ func (s *Server) Start(t *testing.T) string {
 				header := [8]byte{0: 1}
 				binary.BigEndian.PutUint32(header[4:], uint32(len(data.Content)))
 				if _, err := buf.Write(header[:]); err != nil {
-					t.Logf("writing log multiplex header failed: %v", err)
-					t.Fail()
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Errorf("writing log multiplex header failed: %v", err)
 					return
 				}
 				if _, err := buf.WriteString(data.Content); err != nil {
-					t.Logf("writing log multiplex content failed: %v", err)
-					t.Fail()
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Errorf("writing log multiplex content failed: %v", err)
 					return
 				}
 				response = buf.Bytes()
@@ -111,14 +106,14 @@ func (s *Server) Start(t *testing.T) string {
 				response = []byte(data.Content)
 			}
 		default:
-			t.Logf("unhandled url: %q (len: %d)", r.URL.Path, len(parts))
-			t.Fail()
+			w.WriteHeader(http.StatusNotFound)
+			t.Errorf("unhandled url: %q (len: %d)", r.URL.Path, len(parts))
 			return
 		}
 
 		if _, err := w.Write(response); err != nil {
-			t.Logf("failed to write ping response: %v", err)
-			t.Fail()
+			t.Errorf("failed to write ping response: %v", err)
+			return
 		}
 	}))
 
