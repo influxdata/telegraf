@@ -94,7 +94,7 @@ func (am *AzureMonitor) Init() error {
 			return fmt.Errorf("getting client secret failed: %w", err)
 		}
 		clientSecret = secret.String()
-		defer secret.Destroy()
+		secret.Destroy()
 	}
 
 	var err error
