@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -15,22 +16,17 @@ import (
 	"github.com/shirou/gopsutil/v4/load"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/choice"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 //go:embed sample.conf
 var sampleConfig string
 
-var availableCollectors = []string{"load", "uptime"}
-
 type System struct {
-	Collect []string `toml:"collect"`
+	Include []string `toml:"include"`
 
 	Log telegraf.Logger `toml:"-"`
-
-	collectLoad   bool
-	collectUptime bool
 }
 
 func (*System) SampleConfig() string {
@@ -38,71 +34,128 @@ func (*System) SampleConfig() string {
 }
 
 func (s *System) Init() error {
-	if len(s.Collect) == 0 {
-		s.Collect = availableCollectors
-	}
-	if err := choice.CheckSlice(s.Collect, availableCollectors); err != nil {
-		return fmt.Errorf("config option 'collect': %w", err)
+	if len(s.Include) == 0 {
+		s.Include = []string{"load", "users", "deprecated-cpus", "deprecated-uptime"}
 	}
 
-	s.collectLoad = choice.Contains("load", s.Collect)
-	s.collectUptime = choice.Contains("uptime", s.Collect)
+	enabled := make(map[string]bool, len(s.Include))
+	deduped := make([]string, 0, len(s.Include))
+	for _, incl := range s.Include {
+		if enabled[incl] {
+			continue
+		}
+		switch incl {
+		case "load", "users", "cpus", "uptime":
+		case "deprecated-cpus":
+			config.PrintOptionValueDeprecationNotice(
+				"inputs.system",
+				"include",
+				"deprecated-cpus",
+				telegraf.DeprecationInfo{
+					Since:     "1.39.0",
+					RemovalIn: "1.45.0",
+					Notice:    "use 'cpus' instead",
+				},
+			)
+		case "deprecated-uptime":
+			config.PrintOptionValueDeprecationNotice(
+				"inputs.system",
+				"include",
+				"deprecated-uptime",
+				telegraf.DeprecationInfo{
+					Since:     "1.39.0",
+					RemovalIn: "1.45.0",
+					Notice:    "use 'uptime' instead",
+				},
+			)
+		default:
+			return fmt.Errorf("invalid 'include' option %q", incl)
+		}
+		enabled[incl] = true
+		deduped = append(deduped, incl)
+	}
+	s.Include = deduped
+
+	if enabled["cpus"] && enabled["deprecated-cpus"] {
+		return errors.New(`"cpus" and "deprecated-cpus" are mutually exclusive`)
+	}
+	if enabled["uptime"] && enabled["deprecated-uptime"] {
+		return errors.New(`"uptime" and "deprecated-uptime" are mutually exclusive`)
+	}
 
 	return nil
 }
 
 func (s *System) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
+	fields := make(map[string]interface{}, 8)
 
-	if s.collectLoad {
-		fields := make(map[string]interface{})
-
-		loadavg, err := load.Avg()
-		if err != nil {
-			if !strings.Contains(err.Error(), "not implemented") {
-				return err
+	for _, incl := range s.Include {
+		switch incl {
+		case "load":
+			loadavg, err := load.Avg()
+			if err != nil {
+				if !strings.Contains(err.Error(), "not implemented") {
+					acc.AddError(fmt.Errorf("reading load averages: %w", err))
+				}
+				continue
 			}
-		} else {
 			fields["load1"] = loadavg.Load1
 			fields["load5"] = loadavg.Load5
 			fields["load15"] = loadavg.Load15
+		case "users":
+			users, err := host.Users()
+			if err == nil {
+				fields["n_users"] = len(users)
+				fields["n_unique_users"] = findUniqueUsers(users)
+			} else if os.IsNotExist(err) {
+				s.Log.Debugf("Reading users: %s", err.Error())
+			} else if os.IsPermission(err) {
+				s.Log.Debug(err.Error())
+			} else {
+				s.Log.Warnf("Reading users: %s", err.Error())
+			}
+		case "cpus", "deprecated-cpus":
+			numLogicalCPUs, err := cpu.Counts(true)
+			if err != nil {
+				acc.AddError(fmt.Errorf("reading logical CPU count: %w", err))
+				continue
+			}
+			numPhysicalCPUs, err := cpu.Counts(false)
+			if err != nil {
+				acc.AddError(fmt.Errorf("reading physical CPU count: %w", err))
+				continue
+			}
+			if incl == "cpus" {
+				fields["n_virtual_cpus"] = numLogicalCPUs
+			} else {
+				fields["n_cpus"] = numLogicalCPUs
+			}
+			fields["n_physical_cpus"] = numPhysicalCPUs
+		case "uptime":
+			uptime, err := host.Uptime()
+			if err != nil {
+				acc.AddError(fmt.Errorf("reading uptime: %w", err))
+				continue
+			}
+			fields["uptime"] = uptime
+		case "deprecated-uptime":
+			uptime, err := host.Uptime()
+			if err != nil {
+				acc.AddError(fmt.Errorf("reading uptime: %w", err))
+				continue
+			}
+			acc.AddCounter("system", map[string]interface{}{
+				"uptime": uptime,
+			}, nil, now)
+			acc.AddFields("system", map[string]interface{}{
+				"uptime_format": formatUptime(uptime),
+			}, nil, now)
 		}
-
-		numLogicalCPUs, err := cpu.Counts(true)
-		if err != nil {
-			return err
-		}
-		numPhysicalCPUs, err := cpu.Counts(false)
-		if err != nil {
-			return err
-		}
-		fields["n_cpus"] = numLogicalCPUs
-		fields["n_physical_cpus"] = numPhysicalCPUs
-
-		users, err := host.Users()
-		if err == nil {
-			fields["n_users"] = len(users)
-			fields["n_unique_users"] = findUniqueUsers(users)
-		} else if os.IsNotExist(err) {
-			s.Log.Debugf("Reading users: %s", err.Error())
-		} else if os.IsPermission(err) {
-			s.Log.Debug(err.Error())
-		}
-
-		acc.AddGauge("system", fields, nil, now)
 	}
 
-	if s.collectUptime {
-		uptime, err := host.Uptime()
-		if err != nil {
-			return err
-		}
-		acc.AddCounter("system", map[string]interface{}{
-			"uptime": uptime,
-		}, nil, now)
-		acc.AddFields("system", map[string]interface{}{
-			"uptime_format": formatUptime(uptime),
-		}, nil, now)
+	if len(fields) > 0 {
+		acc.AddGauge("system", fields, nil, now)
 	}
 
 	return nil
