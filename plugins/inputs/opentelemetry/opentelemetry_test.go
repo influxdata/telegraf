@@ -15,7 +15,7 @@ import (
 	"github.com/influxdata/influxdb-observability/otel2influx"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
-	"go.opentelemetry.io/otel/sdk/metric"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	otlplogs "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	otlpmetrics "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
@@ -27,6 +27,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
@@ -58,10 +59,10 @@ func TestOpenTelemetry(t *testing.T) {
 	defer exporter.Shutdown(ctx) //nolint:errcheck // We cannot do anything if the shutdown fails
 
 	// Setup the metric to send
-	reader := metric.NewManualReader()
+	reader := sdkmetric.NewManualReader()
 	defer reader.Shutdown(ctx) //nolint:errcheck // We cannot do anything if the shutdown fails
 
-	provider := metric.NewMeterProvider(metric.WithReader(reader))
+	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 	meter := provider.Meter("library-name")
 	counter, err := meter.Int64Counter("measurement-counter")
 	require.NoError(t, err)
@@ -85,7 +86,7 @@ func TestOpenTelemetry(t *testing.T) {
 		exesuffix = ".exe"
 	}
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"measurement-counter",
 			map[string]string{
 				"otel.library.name":      "library-name",

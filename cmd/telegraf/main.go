@@ -101,6 +101,7 @@ func deleteEmpty(s []string) []string {
 // runApp defines all the subcommands and flags for Telegraf
 // this abstraction is used for testing, so outputBuffer and args can be changed
 func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfig, m App) error {
+	//nolint:prealloc // False positive as this has a fixed, known-in-advance size
 	configHandlingFlags := []cli.Flag{
 		&cli.StringSliceFlag{
 			Name:  "config",

@@ -181,7 +181,8 @@ func TestServeHTTP(t *testing.T) {
 		pubPush.SetParser(p)
 
 		dst := make(chan telegraf.Metric, 1)
-		ro := models.NewRunningOutput(&testOutput{failWrite: test.fail}, &models.OutputConfig{}, 1, 1)
+		ro, err := models.NewRunningOutput(&testOutput{failWrite: test.fail}, &models.OutputConfig{}, 1, 1)
+		require.NoError(t, err)
 		pubPush.acc = agent.NewAccumulator(&testMetricMaker{}, dst).WithTracking(1)
 
 		wg.Add(1)

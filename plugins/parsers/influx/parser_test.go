@@ -576,6 +576,19 @@ var ptests = []struct {
 		},
 		err: nil,
 	},
+	{
+		name:    "backslash only",
+		input:   []byte(`\\`),
+		metrics: nil,
+		err: &ParseError{
+			Offset:     2,
+			LineOffset: 0,
+			LineNumber: 1,
+			Column:     3,
+			msg:        "expected tag",
+			buf:        `\\`,
+		},
+	},
 }
 
 func TestParser(t *testing.T) {
@@ -837,6 +850,12 @@ func TestSeriesParser(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMetricHandlerNilMetric(t *testing.T) {
+	h := NewMetricHandler()
+	h.SetTimeFunc(func() time.Time { return time.Now() })
+	require.Nil(t, h.Metric(), "Metric() should return nil when no measurement was set")
 }
 
 func TestParserErrorString(t *testing.T) {

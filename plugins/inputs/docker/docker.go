@@ -247,7 +247,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancel()
 
-	containers, err := d.client.ContainerList(ctx, container.ListOptions{})
+	containers, err := d.client.ContainerList(ctx, container.ListOptions{All: true})
 	if errors.Is(err, context.DeadlineExceeded) {
 		return errListTimeout
 	}

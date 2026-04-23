@@ -2,6 +2,7 @@
 package huebridge
 
 import (
+	"context"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -89,7 +90,7 @@ func (h *HueBridge) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			acc.AddError(bridge.process(acc))
+			acc.AddError(bridge.process(context.Background(), acc))
 		}()
 	}
 	wg.Wait()

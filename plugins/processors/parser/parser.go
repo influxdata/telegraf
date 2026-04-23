@@ -33,7 +33,9 @@ func (*Parser) SampleConfig() string {
 
 func (p *Parser) Init() error {
 	switch p.Merge {
-	case "", "override", "override-with-timestamp":
+	case "":
+		p.Merge = "none"
+	case "none", "override", "override-with-timestamp", "parent", "parent-with-timestamp":
 	default:
 		return fmt.Errorf("unrecognized merge value: %s", p.Merge)
 	}
@@ -139,9 +141,13 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 
 		switch p.Merge {
 		case "override":
-			results = append(results, merge(newMetrics[0], newMetrics[1:]))
+			results = append(results, mergeAll(newMetrics[0], newMetrics[1:], false))
 		case "override-with-timestamp":
-			results = append(results, mergeWithTimestamp(newMetrics[0], newMetrics[1:]))
+			results = append(results, mergeAll(newMetrics[0], newMetrics[1:], true))
+		case "parent":
+			results = append(results, mergeIndividual(metric, newMetrics, false)...)
+		case "parent-with-timestamp":
+			results = append(results, mergeIndividual(metric, newMetrics, true)...)
 		default:
 			results = append(results, newMetrics...)
 		}
@@ -149,20 +155,27 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	return results
 }
 
-func merge(base telegraf.Metric, metrics []telegraf.Metric) telegraf.Metric {
+func mergeIndividual(base telegraf.Metric, metrics []telegraf.Metric, mergeTime bool) []telegraf.Metric {
+	result := make([]telegraf.Metric, 0, len(metrics))
 	for _, metric := range metrics {
+		out := base.Copy()
 		for _, field := range metric.FieldList() {
-			base.AddField(field.Key, field.Value)
+			out.AddField(field.Key, field.Value)
 		}
 		for _, tag := range metric.TagList() {
-			base.AddTag(tag.Key, tag.Value)
+			out.AddTag(tag.Key, tag.Value)
 		}
-		base.SetName(metric.Name())
+		out.SetName(metric.Name())
+		if mergeTime && !metric.Time().IsZero() {
+			out.SetTime(metric.Time())
+		}
+		result = append(result, out)
 	}
-	return base
+
+	return result
 }
 
-func mergeWithTimestamp(base telegraf.Metric, metrics []telegraf.Metric) telegraf.Metric {
+func mergeAll(base telegraf.Metric, metrics []telegraf.Metric, mergeTime bool) telegraf.Metric {
 	for _, metric := range metrics {
 		for _, field := range metric.FieldList() {
 			base.AddField(field.Key, field.Value)
@@ -171,7 +184,8 @@ func mergeWithTimestamp(base telegraf.Metric, metrics []telegraf.Metric) telegra
 			base.AddTag(tag.Key, tag.Value)
 		}
 		base.SetName(metric.Name())
-		if !metric.Time().IsZero() {
+
+		if mergeTime && !metric.Time().IsZero() {
 			base.SetTime(metric.Time())
 		}
 	}

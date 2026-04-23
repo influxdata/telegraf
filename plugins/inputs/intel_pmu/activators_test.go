@@ -19,9 +19,8 @@ func (m *mockPlacementFactory) NewPlacements(_ string, cpu int, cpus ...int) ([]
 	if m.err {
 		return nil, errors.New("mock error")
 	}
-	placements := []ia.PlacementProvider{
-		&ia.Placement{CPU: cpu, PMUType: 4},
-	}
+	placements := make([]ia.PlacementProvider, 0, len(cpus)+1)
+	placements = append(placements, &ia.Placement{CPU: cpu, PMUType: 4})
 	for _, cpu := range cpus {
 		placements = append(placements, &ia.Placement{CPU: cpu, PMUType: 4})
 	}
@@ -134,7 +133,7 @@ func TestActivateUncoreEvents(t *testing.T) {
 		mEntity := &uncoreEventEntity{parsedEvents: parsedEvents, parsedSockets: []int{0, 1, 2}}
 		placements := []ia.PlacementProvider{&ia.Placement{}, &ia.Placement{}, &ia.Placement{}}
 
-		var expectedEvents []multiEvent
+		expectedEvents := make([]multiEvent, 0, len(parsedEvents))
 		for _, event := range parsedEvents {
 			for _, socket := range mEntity.parsedSockets {
 				mMaker.On("makeUncorePlacements", event.custom.Event, socket).Return(placements, nil).Once()
@@ -232,7 +231,7 @@ func TestActivateCoreEvents(t *testing.T) {
 		placements := []ia.PlacementProvider{&ia.Placement{CPU: 0}, &ia.Placement{CPU: 1}, &ia.Placement{CPU: 2}}
 		mEntity := &coreEventEntity{PerfGroup: false, parsedEvents: parsedEvents, parsedCores: []int{0, 1, 2}}
 
-		var activeEvents []*ia.ActiveEvent
+		activeEvents := make([]*ia.ActiveEvent, 0, len(parsedEvents))
 		for _, event := range parsedEvents {
 			mMaker.On("makeCorePlacements", mEntity.parsedCores, event.custom.Event).Return(placements, nil).Once()
 			for _, plc := range placements {

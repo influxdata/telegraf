@@ -70,7 +70,7 @@ func TestIfNameIntegration(t *testing.T) {
 
 	require.NoError(t, err)
 
-	m := testutil.MustMetric(
+	m := metric.New(
 		"cpu",
 		map[string]string{
 			"ifIndex": "1",
@@ -80,7 +80,7 @@ func TestIfNameIntegration(t *testing.T) {
 		time.Unix(0, 0),
 	)
 
-	expected := testutil.MustMetric(
+	expected := metric.New(
 		"cpu",
 		map[string]string{
 			"ifIndex": "1",

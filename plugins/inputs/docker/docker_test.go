@@ -750,7 +750,7 @@ func TestContainerStatus(t *testing.T) {
 			},
 			inspect: containerInspect(),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"docker_container_status",
 					map[string]string{
 						"container_name":    "etcd",
@@ -787,7 +787,7 @@ func TestContainerStatus(t *testing.T) {
 				return i
 			}(),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"docker_container_status",
 					map[string]string{
 						"container_name":    "etcd",
@@ -826,7 +826,7 @@ func TestContainerStatus(t *testing.T) {
 				return i
 			}(),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"docker_container_status",
 					map[string]string{
 						"container_name":    "etcd",
@@ -863,7 +863,7 @@ func TestContainerStatus(t *testing.T) {
 				return i
 			}(),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"docker_container_status",
 					map[string]string{
 						"container_name":    "etcd",
@@ -1246,6 +1246,30 @@ func TestContainerStateFilter(t *testing.T) {
 	}
 }
 
+func TestContainerListRequestsAllContainers(t *testing.T) {
+	var gotOptions container.ListOptions
+	newClientFunc := func(string, *tls.Config) (dockerClient, error) {
+		client := baseClient
+		client.ContainerListF = func(options container.ListOptions) ([]container.Summary, error) {
+			gotOptions = options
+			return nil, nil
+		}
+		return &client, nil
+	}
+
+	d := Docker{
+		Log:       testutil.Logger{},
+		newClient: newClientFunc,
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, d.Init())
+	require.NoError(t, d.Start(&acc))
+	require.NoError(t, d.Gather(&acc))
+
+	require.True(t, gotOptions.All, "ContainerList must request all containers so non-running states can be filtered client-side")
+}
+
 func TestNonRunningContainerEmitsStatusMetrics(t *testing.T) {
 	newClientFunc := func(string, *tls.Config) (dockerClient, error) {
 		client := baseClient
@@ -1439,7 +1463,7 @@ func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
 
 	var (
 		testDate       = time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC)
-		metricCPUTotal = testutil.MustMetric(
+		metricCPUTotal = metric.New(
 			"docker_container_cpu",
 			map[string]string{
 				"cpu": "cpu-total",
@@ -1447,14 +1471,14 @@ func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
 			map[string]interface{}{},
 			testDate)
 
-		metricCPU0 = testutil.MustMetric(
+		metricCPU0 = metric.New(
 			"docker_container_cpu",
 			map[string]string{
 				"cpu": "cpu0",
 			},
 			map[string]interface{}{},
 			testDate)
-		metricCPU1 = testutil.MustMetric(
+		metricCPU1 = metric.New(
 			"docker_container_cpu",
 			map[string]string{
 				"cpu": "cpu1",
@@ -1462,7 +1486,7 @@ func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
 			map[string]interface{}{},
 			testDate)
 
-		metricNetworkTotal = testutil.MustMetric(
+		metricNetworkTotal = metric.New(
 			"docker_container_net",
 			map[string]string{
 				"network": "total",
@@ -1470,7 +1494,7 @@ func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
 			map[string]interface{}{},
 			testDate)
 
-		metricNetworkEth0 = testutil.MustMetric(
+		metricNetworkEth0 = metric.New(
 			"docker_container_net",
 			map[string]string{
 				"network": "eth0",
@@ -1478,28 +1502,28 @@ func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
 			map[string]interface{}{},
 			testDate)
 
-		metricNetworkEth1 = testutil.MustMetric(
+		metricNetworkEth1 = metric.New(
 			"docker_container_net",
 			map[string]string{
 				"network": "eth0",
 			},
 			map[string]interface{}{},
 			testDate)
-		metricBlkioTotal = testutil.MustMetric(
+		metricBlkioTotal = metric.New(
 			"docker_container_blkio",
 			map[string]string{
 				"device": "total",
 			},
 			map[string]interface{}{},
 			testDate)
-		metricBlkio6_0 = testutil.MustMetric(
+		metricBlkio6_0 = metric.New(
 			"docker_container_blkio",
 			map[string]string{
 				"device": "6:0",
 			},
 			map[string]interface{}{},
 			testDate)
-		metricBlkio6_1 = testutil.MustMetric(
+		metricBlkio6_1 = metric.New(
 			"docker_container_blkio",
 			map[string]string{
 				"device": "6:1",

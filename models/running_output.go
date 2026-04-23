@@ -13,6 +13,8 @@ import (
 	"github.com/influxdata/telegraf/selfstat"
 )
 
+var GlobalWriteErrors = selfstat.Register("agent", "write_errors", make(map[string]string))
+
 const (
 	// Default size of metrics batch size.
 	DefaultMetricBatchSize = 1000
@@ -60,6 +62,7 @@ type RunningOutput struct {
 
 	MetricsFiltered selfstat.Stat
 	WriteTime       selfstat.Stat
+	WriteErrors     selfstat.Stat
 	StartupErrors   selfstat.Stat
 
 	BatchReady chan time.Time
@@ -73,7 +76,7 @@ type RunningOutput struct {
 	aggMutex sync.Mutex
 }
 
-func NewRunningOutput(output telegraf.Output, config *OutputConfig, batchSize, bufferLimit int) *RunningOutput {
+func NewRunningOutput(output telegraf.Output, config *OutputConfig, batchSize, bufferLimit int) (*RunningOutput, error) {
 	tags := map[string]string{
 		"output": config.Name,
 		"_id":    config.ID,
@@ -82,10 +85,10 @@ func NewRunningOutput(output telegraf.Output, config *OutputConfig, batchSize, b
 		tags["alias"] = config.Alias
 	}
 
-	writeErrorsRegister := selfstat.Register("write", "errors", tags)
+	errorLogRegister := selfstat.Register("write", "errors", tags)
 	logger := logging.New("outputs", config.Name, config.Alias)
 	logger.RegisterErrorCallback(func() {
-		writeErrorsRegister.Incr(1)
+		errorLogRegister.Incr(1)
 	})
 	if err := logger.SetLogLevel(config.LogLevel); err != nil {
 		logger.Error(err)
@@ -108,7 +111,7 @@ func NewRunningOutput(output telegraf.Output, config *OutputConfig, batchSize, b
 
 	b, err := NewBuffer(config.Name, config.ID, config.Alias, bufferLimit, config.BufferStrategy, config.BufferDirectory, config.BufferDiskSync)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("creating buffer failed: %w", err)
 	}
 
 	ro := &RunningOutput{
@@ -128,6 +131,11 @@ func NewRunningOutput(output telegraf.Output, config *OutputConfig, batchSize, b
 			"write_time_ns",
 			tags,
 		),
+		WriteErrors: selfstat.Register(
+			"write",
+			"write_errors",
+			tags,
+		),
 		StartupErrors: selfstat.Register(
 			"write",
 			"startup_errors",
@@ -136,7 +144,7 @@ func NewRunningOutput(output telegraf.Output, config *OutputConfig, batchSize, b
 		log: logger,
 	}
 
-	return ro
+	return ro, nil
 }
 
 func (r *RunningOutput) LogName() string {
@@ -370,7 +378,13 @@ func (r *RunningOutput) doTransaction() error {
 	r.updateTransaction(tx, err)
 	r.buffer.EndTransaction(tx)
 
-	return err
+	if err != nil {
+		r.WriteErrors.Incr(1)
+		GlobalWriteErrors.Incr(1)
+		return err
+	}
+
+	return nil
 }
 
 func (r *RunningOutput) writeMetrics(metrics []telegraf.Metric) error {

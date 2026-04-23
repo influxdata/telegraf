@@ -137,7 +137,7 @@ func TestGetConnection(t *testing.T) {
 	}{
 		{
 			name: "agent error",
-			input: testutil.MustMetric(
+			input: metric.New(
 				"test",
 				map[string]string{
 					"source": "test://127.0.0.1",
@@ -149,7 +149,7 @@ func TestGetConnection(t *testing.T) {
 		},
 		{
 			name: "v2 trap",
-			input: testutil.MustMetric(
+			input: metric.New(
 				"test",
 				map[string]string{
 					"source":    "127.0.0.1",
@@ -268,7 +268,7 @@ func TestAdd(t *testing.T) {
 		},
 		{
 			name: "no index tag",
-			input: testutil.MustMetric(
+			input: metric.New(
 				"test",
 				map[string]string{
 					"source": "127.0.0.1",
@@ -277,7 +277,7 @@ func TestAdd(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"test",
 					map[string]string{
 						"source": "127.0.0.1",
@@ -289,7 +289,7 @@ func TestAdd(t *testing.T) {
 		},
 		{
 			name: "cached",
-			input: testutil.MustMetric(
+			input: metric.New(
 				"test",
 				map[string]string{
 					"source": "127.0.0.1",
@@ -299,7 +299,7 @@ func TestAdd(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"test",
 					map[string]string{
 						"source": "127.0.0.1",
@@ -313,7 +313,7 @@ func TestAdd(t *testing.T) {
 		},
 		{
 			name: "non-existing index",
-			input: testutil.MustMetric(
+			input: metric.New(
 				"test",
 				map[string]string{
 					"source": "127.0.0.1",
@@ -323,7 +323,7 @@ func TestAdd(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"test",
 					map[string]string{
 						"source": "127.0.0.1",
@@ -397,7 +397,7 @@ func TestExpiry(t *testing.T) {
 			".1.3.6.1.2.1.31.1.1.1.1.1": "eth1",
 		},
 	}
-	m := testutil.MustMetric(
+	m := metric.New(
 		"test",
 		map[string]string{"source": "127.0.0.1"},
 		map[string]interface{}{"value": 1.0},
@@ -662,7 +662,7 @@ func TestNoReenqueAfterStop(t *testing.T) {
 
 	// Send two metrics for the
 	for range 2 {
-		m := testutil.MustMetric(
+		m := metric.New(
 			"test",
 			map[string]string{
 				"source": "127.0.0.1",
@@ -741,7 +741,7 @@ func TestStopWithTaskInWorkerPool(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
 
-	m := testutil.MustMetric(
+	m := metric.New(
 		"test",
 		map[string]string{
 			"source": "127.0.0.1",
@@ -833,7 +833,7 @@ func TestStopWithTaskInWorkerPoolWithGoTimeout(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
 
-	m := testutil.MustMetric(
+	m := metric.New(
 		"test",
 		map[string]string{
 			"source": "127.0.0.1",

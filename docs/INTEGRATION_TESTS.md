@@ -35,12 +35,10 @@ container := testutil.Container{
     },
     WaitingFor: wait.ForAll(
         wait.ForLog("database system is ready to accept connections"),
-        wait.ForListeningPort(nat.Port(servicePort)),
+        wait.ForListeningPort(servicePort),
     ),
 }
-
-err := container.Start()
-require.NoError(t, err, "failed to start container")
+require.NoError(t, container.Start(), "failed to start container")
 
 defer func() {
     require.NoError(t, container.Terminate(), "terminating container failed")

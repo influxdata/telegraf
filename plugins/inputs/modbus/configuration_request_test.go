@@ -11,6 +11,7 @@ import (
 	"github.com/tbrandon/mbserver"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -430,7 +431,7 @@ func TestRequestTypesCoil(t *testing.T) {
 			}
 
 			expected := []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"modbus",
 					map[string]string{
 						"type":     cCoils,
@@ -1059,7 +1060,7 @@ func TestRequestTypesHoldingABCD(t *testing.T) {
 			}
 
 			expected := []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"modbus",
 					map[string]string{
 						"type":     cHoldingRegisters,
@@ -1679,7 +1680,7 @@ func TestRequestTypesHoldingDCBA(t *testing.T) {
 			}
 
 			expected := []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"modbus",
 					map[string]string{
 						"type":     cHoldingRegisters,
@@ -2138,7 +2139,7 @@ func TestRequestStartingWithOmits(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"modbus",
 			map[string]string{
 				"type":     cHoldingRegisters,
@@ -2327,7 +2328,7 @@ func TestRequestMultipleSlavesOneFail(t *testing.T) {
 	)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"modbus",
 			map[string]string{
 				"type":     cHoldingRegisters,
@@ -2337,7 +2338,7 @@ func TestRequestMultipleSlavesOneFail(t *testing.T) {
 			map[string]interface{}{"holding-0": int16(0x42)},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"modbus",
 			map[string]string{
 				"type":     cHoldingRegisters,

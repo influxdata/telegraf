@@ -60,7 +60,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		for colIndex := range metadata.Schema.NumColumns() {
 			col, err := rowGroup.Column(colIndex)
 			if err != nil {
-				return nil, fmt.Errorf("unable to fetch column %q: %w", colIndex, err)
+				return nil, fmt.Errorf("unable to fetch column %d: %w", colIndex, err)
 			}
 
 			scanners[colIndex] = newColumnParser(col)

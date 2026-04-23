@@ -11,6 +11,7 @@ import (
 	"github.com/tbrandon/mbserver"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -188,7 +189,7 @@ func TestRegisterCoils(t *testing.T) {
 			}
 
 			expected := []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"modbus",
 					map[string]string{
 						"type":     cCoils,
@@ -825,7 +826,7 @@ func TestRegisterHoldingRegisters(t *testing.T) {
 			}
 
 			expected := []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"modbus",
 					map[string]string{
 						"type":     cHoldingRegisters,
@@ -912,7 +913,7 @@ func TestRegisterReadMultipleCoilWithHole(t *testing.T) {
 	modbus.Coils = fcs
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"modbus",
 			map[string]string{
 				"type":     cCoils,
@@ -971,7 +972,7 @@ func TestRegisterReadMultipleCoilLimit(t *testing.T) {
 	modbus.Coils = fcs
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"modbus",
 			map[string]string{
 				"type":     cCoils,
@@ -1045,7 +1046,7 @@ func TestRegisterReadMultipleHoldingRegisterWithHole(t *testing.T) {
 	modbus.HoldingRegisters = fcs
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"modbus",
 			map[string]string{
 				"type":     cHoldingRegisters,
@@ -1102,7 +1103,7 @@ func TestRegisterReadMultipleHoldingRegisterLimit(t *testing.T) {
 	modbus.HoldingRegisters = fcs
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"modbus",
 			map[string]string{
 				"type":     cHoldingRegisters,
@@ -1170,7 +1171,7 @@ func TestRegisterHighAddresses(t *testing.T) {
 	}
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"modbus",
 			map[string]string{
 				"type":     cHoldingRegisters,

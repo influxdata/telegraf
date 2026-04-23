@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -85,7 +86,7 @@ func getSampleMetricFields(path string) map[string]interface{} {
 
 func getSmokeTestInputMetrics(path string) []telegraf.Metric {
 	return []telegraf.Metric{
-		testutil.MustMetric(smokeMetricName, getSampleMetricTags(path), getSampleMetricFields(path),
+		metric.New(smokeMetricName, getSampleMetricTags(path), getSampleMetricFields(path),
 			time.Now()),
 	}
 }

@@ -414,7 +414,7 @@ func (t *Telegraf) getConfigFiles() error {
 	for _, fConfigDirectory := range t.configDir {
 		files, err := config.WalkDirectory(fConfigDirectory)
 		if err != nil {
-			return err
+			return fmt.Errorf("reading config directory failed: %w", err)
 		}
 		configFiles = append(configFiles, files...)
 	}

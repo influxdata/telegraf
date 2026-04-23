@@ -464,9 +464,15 @@ func sliceContains(name string, list []string) bool {
 
 // WalkDirectory collects all toml files that need to be loaded
 func WalkDirectory(path string) ([]string, error) {
+	// Check permissions of the directly specified directories and error
+	// out if those are not readable
+	if _, err := os.ReadDir(path); err != nil {
+		return nil, err
+	}
+
 	var files []string
-	walkfn := func(thispath string, info os.FileInfo, _ error) error {
-		if info == nil {
+	walkfn := func(thispath string, info os.FileInfo, err error) error {
+		if info == nil || errors.Is(err, os.ErrPermission) {
 			log.Printf("W! Telegraf is not permitted to read %s", thispath)
 			return nil
 		}
@@ -639,6 +645,9 @@ func (c *Config) LoadConfigData(data []byte, path string) error {
 		}
 		if err = c.toml.UnmarshalTable(subTable, c.Agent); err != nil {
 			return fmt.Errorf("error parsing [agent]: %w", err)
+		}
+		if c.Agent.CollectionOffset < 0 {
+			return fmt.Errorf("agent collection_offset must not be negative, found %v", c.Agent.CollectionOffset)
 		}
 	}
 
@@ -1414,7 +1423,10 @@ func (c *Config) addOutput(name, source string, table *ast.Table) error {
 		}
 	}
 
-	ro := models.NewRunningOutput(output, outputConfig, c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
+	ro, err := models.NewRunningOutput(output, outputConfig, c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
+	if err != nil {
+		return err
+	}
 	c.Outputs = append(c.Outputs, ro)
 
 	return nil
@@ -1687,8 +1699,11 @@ func (c *Config) buildInput(name, source string, tbl *ast.Table) (*models.InputC
 	}
 	cp.Interval, _ = c.getFieldDuration(tbl, "interval")
 	cp.Precision, _ = c.getFieldDuration(tbl, "precision")
-	cp.CollectionJitter, _ = c.getFieldDuration(tbl, "collection_jitter")
+	cp.CollectionJitter, cp.CollectionJitterSet = c.getFieldDuration(tbl, "collection_jitter")
 	cp.CollectionOffset, _ = c.getFieldDuration(tbl, "collection_offset")
+	if cp.CollectionOffset < 0 {
+		return nil, fmt.Errorf("negative collection_offset %q is not allowed", cp.CollectionOffset)
+	}
 	cp.StartupErrorBehavior = c.getFieldString(tbl, "startup_error_behavior")
 	cp.TimeSource = c.getFieldString(tbl, "time_source")
 

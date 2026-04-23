@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -88,7 +89,7 @@ func TestJSONSuccess(t *testing.T) {
 	require.Equal(t, uint64(5), acc.NMetrics())
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"fibaro",
 			map[string]string{
 				"deviceId": "1",
@@ -102,7 +103,7 @@ func TestJSONSuccess(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"fibaro",
 			map[string]string{
 				"deviceId": "2",
@@ -116,7 +117,7 @@ func TestJSONSuccess(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"fibaro",
 			map[string]string{
 				"deviceId": "3",
@@ -130,7 +131,7 @@ func TestJSONSuccess(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"fibaro",
 			map[string]string{
 				"deviceId": "4",
@@ -145,7 +146,7 @@ func TestJSONSuccess(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"fibaro",
 			map[string]string{
 				"deviceId": "5",
@@ -220,7 +221,7 @@ func TestHC3JSON(t *testing.T) {
 	require.Equal(t, uint64(5), acc.NMetrics())
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"fibaro",
 			map[string]string{
 				"deviceId": "1",
@@ -234,7 +235,7 @@ func TestHC3JSON(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"fibaro",
 			map[string]string{
 				"deviceId": "2",
@@ -248,7 +249,7 @@ func TestHC3JSON(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"fibaro",
 			map[string]string{
 				"deviceId": "3",
@@ -262,7 +263,7 @@ func TestHC3JSON(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"fibaro",
 			map[string]string{
 				"deviceId": "4",
@@ -277,7 +278,7 @@ func TestHC3JSON(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"fibaro",
 			map[string]string{
 				"deviceId": "5",

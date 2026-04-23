@@ -110,3 +110,10 @@ type namedSet struct {
 }
 
 type elem struct{}
+
+// UnmarshalJSON accepts any JSON value type. Statically defined nftables sets
+// use plain strings for elements while dynamically added entries use objects.
+// Since the plugin only counts elements, the content is discarded.
+func (*elem) UnmarshalJSON([]byte) error {
+	return nil
+}

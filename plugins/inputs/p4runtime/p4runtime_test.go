@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -129,7 +130,7 @@ func TestOneCounterRead(t *testing.T) {
 				5,
 				&p4.CounterData{ByteCount: 5, PacketCount: 1},
 			),
-			expected: []telegraf.Metric{testutil.MustMetric(
+			expected: []telegraf.Metric{metric.New(
 				"p4_runtime",
 				map[string]string{
 					"p4program_name": "P4Program",
@@ -160,7 +161,7 @@ func TestOneCounterRead(t *testing.T) {
 				5,
 				&p4.CounterData{ByteCount: 5},
 			),
-			expected: []telegraf.Metric{testutil.MustMetric(
+			expected: []telegraf.Metric{metric.New(
 				"p4_runtime",
 				map[string]string{
 					"p4program_name": "P4Program",
@@ -191,7 +192,7 @@ func TestOneCounterRead(t *testing.T) {
 				5,
 				&p4.CounterData{PacketCount: 1},
 			),
-			expected: []telegraf.Metric{testutil.MustMetric(
+			expected: []telegraf.Metric{metric.New(
 				"p4_runtime",
 				map[string]string{
 					"p4program_name": "P4Program",
@@ -290,7 +291,7 @@ func TestMultipleEntitiesSingleCounterRead(t *testing.T) {
 			}
 
 			entities = append(entities, counterEntry)
-			expected = append(expected, testutil.MustMetric(
+			expected = append(expected, metric.New(
 				"p4_runtime",
 				map[string]string{
 					"p4program_name": "P4Program",
@@ -372,7 +373,7 @@ func TestSingleEntitiesMultipleCounterRead(t *testing.T) {
 				),
 			)
 
-			expected = append(expected, testutil.MustMetric(
+			expected = append(expected, metric.New(
 				"p4_runtime",
 				map[string]string{
 					"p4program_name": "P4Program",
