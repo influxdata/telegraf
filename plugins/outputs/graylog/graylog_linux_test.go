@@ -1,4 +1,4 @@
-//go:build !windows && !darwin
+//go:build linux
 
 package graylog
 
@@ -119,15 +119,15 @@ func TestWriteTCP(t *testing.T) {
 			metrics := testutil.MockMetrics()
 
 			// TCP scenario:
-			// 4 messages are send
-			// -> connection gets forcefully broken after the 2nd message (server closes connection)
-			// -> the 3rd write fails with error
-			// -> during the 4th write connection is restored and write is successful
+			// 4 messages are sent
+			// -> connection gets closed by the server after the 2nd message
+			// -> the 3rd write transparently reconnects and succeeds
+			// -> the 4th write also succeeds on the new connection
 
 			require.NoError(t, plugin.Write(metrics))
 			require.NoError(t, plugin.Write(metrics))
 			require.NoError(t, <-errs)
-			require.ErrorContains(t, plugin.Write(metrics), "error writing message")
+			require.NoError(t, plugin.Write(metrics))
 			require.NoError(t, plugin.Write(metrics))
 		})
 	}
@@ -279,7 +279,9 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, errs cha
 		}
 		defer conn.Close()
 
-		// in TCP scenario only 3 messages are received, the 3rd is lost due to simulated connection break after the 2nd
+		// In the TCP scenario the server receives 2 messages on the first
+		// connection, closes it, then receives the remaining 2 messages
+		// after the client transparently reconnects.
 
 		fmt.Println("server: receiving packet 1")
 		err = recv(conn)
@@ -310,6 +312,11 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, errs cha
 		}
 		defer conn.Close()
 
+		fmt.Println("server: receiving packet 3")
+		err = recv(conn)
+		if err != nil {
+			fmt.Println(err)
+		}
 		fmt.Println("server: receiving packet 4")
 		err = recv(conn)
 		if err != nil {
@@ -356,7 +363,7 @@ func TestWriteTCPServerDown(t *testing.T) {
 		Log:               testutil.Logger{},
 	}
 	require.NoError(t, dummy.Close())
-	require.ErrorContains(t, plugin.Connect(), "connect: connection refused")
+	require.ErrorContains(t, plugin.Connect(), "connect: connection failed for")
 }
 
 func TestWriteTCPServerUnavailableOnWrite(t *testing.T) {
@@ -421,7 +428,12 @@ func TestWriteTCPServerDownRetry(t *testing.T) {
 	require.NoError(t, dummy.Close())
 	require.NoError(t, plugin.Connect())
 	require.Eventually(t, func() bool {
-		return strings.Contains(logger.LastError(), "after attempt #5...")
+		for _, m := range logger.Messages() {
+			if strings.Contains(m.String(), "after attempt #5...") {
+				return true
+			}
+		}
+		return false
 	}, 5*time.Second, 100*time.Millisecond)
 	require.NoError(t, plugin.Close())
 }
