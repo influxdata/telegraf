@@ -55,9 +55,9 @@ func (v *Vault) Init() error {
 	approleSet := v.AppRole != nil
 	switch {
 	case !tokenSet && !approleSet:
-		return errors.New("authentication method missing: set either \"token\" or \"approle\"")
+		return errors.New("authentication method missing: set either `token` or `approle`")
 	case tokenSet && approleSet:
-		return errors.New("only one authentication method may be set: \"token\" or \"approle\"")
+		return errors.New("only one authentication method may be set: `token` or `approle`")
 	}
 	if v.ID == "" {
 		return errors.New("id missing")

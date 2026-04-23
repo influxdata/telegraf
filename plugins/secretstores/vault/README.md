@@ -65,7 +65,7 @@ store usage.
   ## secret-store, e.g. @{other_store:vault_token}). Use "approle" to have
   ## Telegraf authenticate via the AppRole method and manage token renewal.
 
-  ## Vault token
+  ## Vault token used to authenticate with the server
   # token = ""
 
   # [secretstores.vault.approle]

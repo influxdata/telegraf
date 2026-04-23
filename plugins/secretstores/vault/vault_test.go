@@ -244,33 +244,28 @@ func TestIntegrationAppRoleSecretWrapped(t *testing.T) {
 }
 
 func TestInitAuthValidation(t *testing.T) {
+	base := Vault{
+		ID:         "vault",
+		Address:    "http://localhost:8200",
+		MountPath:  "secret",
+		SecretPath: "my/path",
+	}
 	tests := []struct {
 		name        string
-		plugin      *Vault
+		token       config.Secret
+		approle     *appRole
 		errContains string
 	}{
 		{
-			name: "no auth method",
-			plugin: &Vault{
-				ID:         "vault",
-				Address:    "http://localhost:8200",
-				MountPath:  "secret",
-				SecretPath: "my/path",
-			},
-			errContains: `set either "token" or "approle"`,
+			name:        "no auth method",
+			errContains: "set either `token` or `approle`",
 		},
 		{
-			name: "both token and approle",
-			plugin: &Vault{
-				ID:         "vault",
-				Address:    "http://localhost:8200",
-				MountPath:  "secret",
-				SecretPath: "my/path",
-				Token:      config.NewSecret([]byte("some-token")),
-				AppRole: &appRole{
-					RoleID: "role",
-					Secret: config.NewSecret([]byte("secret")),
-				},
+			name:  "both token and approle",
+			token: config.NewSecret([]byte("some-token")),
+			approle: &appRole{
+				RoleID: "role",
+				Secret: config.NewSecret([]byte("secret")),
 			},
 			errContains: "only one authentication method",
 		},
@@ -278,7 +273,10 @@ func TestInitAuthValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.ErrorContains(t, tt.plugin.Init(), tt.errContains)
+			v := base
+			v.Token = tt.token
+			v.AppRole = tt.approle
+			require.ErrorContains(t, v.Init(), tt.errContains)
 		})
 	}
 }
