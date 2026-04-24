@@ -4,6 +4,7 @@ package mem
 import (
 	_ "embed"
 	"fmt"
+	"maps"
 	"runtime"
 
 	"github.com/influxdata/telegraf"
@@ -15,9 +16,8 @@ import (
 var sampleConfig string
 
 type Mem struct {
-	CollectExtended bool `toml:"collect_extended"`
-
-	Log telegraf.Logger `toml:"-"`
+	CollectExtended bool            `toml:"collect_extended"`
+	Log             telegraf.Logger `toml:"-"`
 
 	ps       psutil.PS
 	platform string
@@ -103,13 +103,11 @@ func (ms *Mem) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if ms.CollectExtended {
-		if extended, err := getExtendedMemoryFields(); err == nil {
-			for k, v := range extended {
-				fields[k] = v
-			}
-		} else {
+		extended, err := getExtendedMemoryFields()
+		if err != nil {
 			acc.AddError(fmt.Errorf("getting extended virtual memory info failed: %w", err))
 		}
+		maps.Copy(fields, extended)
 	}
 
 	acc.AddGauge("mem", fields, nil)
