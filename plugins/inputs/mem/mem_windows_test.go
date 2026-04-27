@@ -14,7 +14,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestMemStatsCollectExtendedWindows(t *testing.T) {
+func TestMemStatsCollectExtended(t *testing.T) {
 	plugin := &Mem{
 		ps:              psutil.NewSystemPS(),
 		CollectExtended: true,

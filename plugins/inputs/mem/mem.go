@@ -106,8 +106,9 @@ func (ms *Mem) Gather(acc telegraf.Accumulator) error {
 		extended, err := getExtendedMemoryFields()
 		if err != nil {
 			acc.AddError(fmt.Errorf("getting extended virtual memory info failed: %w", err))
+		} else {
+			maps.Copy(fields, extended)
 		}
-		maps.Copy(fields, extended)
 	}
 
 	acc.AddGauge("mem", fields, nil)
