@@ -71,7 +71,7 @@ func (b *bridge) processLights(ctx context.Context, acc telegraf.Accumulator) er
 			"room":      b.resolveResourceRoom(light.Id, light.Metadata.Name),
 			"device":    light.Metadata.Name,
 		}
-		fields := make(map[string]interface{}, 1)
+		fields := make(map[string]interface{}, 5)
 		if light.On.On {
 			fields["on"] = 1
 		} else {
@@ -347,10 +347,6 @@ func (b *bridge) fetchDeviceNames(ctx context.Context) error {
 		return fmt.Errorf("failed to fetch bridge devices from %s: %s", b, getDevicesResponse.HTTPResponse.Status)
 	}
 	responseData := getDevicesResponse.JSON200.Data
-	if responseData == nil {
-		b.deviceNames = make(map[string]string)
-		return nil
-	}
 	b.deviceNames = make(map[string]string, len(responseData))
 	for _, device := range responseData {
 		b.deviceNames[device.Id] = device.Metadata.Name
@@ -367,10 +363,6 @@ func (b *bridge) fetchRoomAssignments(ctx context.Context) error {
 		return fmt.Errorf("failed to fetch bridge rooms from %s: %s", b, getRoomsResponse.HTTPResponse.Status)
 	}
 	responseData := getRoomsResponse.JSON200.Data
-	if responseData == nil {
-		b.roomAssignments = maps.Clone(b.configRoomAssignments)
-		return nil
-	}
 	b.roomAssignments = make(map[string]string, len(responseData))
 	for _, roomGet := range responseData {
 		for _, children := range roomGet.Children {
