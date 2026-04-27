@@ -165,7 +165,7 @@ func TestIntegrationKVv1(t *testing.T) {
 
 	secret, err := plugin.Get(secretName)
 	require.NoError(t, err)
-	require.Equal(t, []byte(secretValue), secret)
+	require.Equal(t, secretValue, string(secret))
 }
 
 func TestIntegrationKVv2(t *testing.T) {
@@ -202,7 +202,7 @@ func TestIntegrationKVv2(t *testing.T) {
 
 	secret, err := plugin.Get(secretName)
 	require.NoError(t, err)
-	require.Equal(t, []byte(secretValue), secret)
+	require.Equal(t, secretValue, string(secret))
 }
 
 func TestIntegrationAppRoleSecretWrapped(t *testing.T) {
@@ -240,5 +240,5 @@ func TestIntegrationAppRoleSecretWrapped(t *testing.T) {
 
 	secret, err := plugin.Get(secretName)
 	require.NoError(t, err)
-	require.Equal(t, []byte(secretValue), secret)
+	require.Equal(t, secretValue, string(secret))
 }
