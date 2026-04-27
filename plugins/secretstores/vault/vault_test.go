@@ -251,14 +251,14 @@ func TestInitAuthValidation(t *testing.T) {
 		SecretPath: "my/path",
 	}
 	tests := []struct {
-		name        string
-		token       config.Secret
-		approle     *appRole
-		errContains string
+		name     string
+		token    config.Secret
+		approle  *appRole
+		expected string
 	}{
 		{
-			name:        "no auth method",
-			errContains: "set either `token` or `approle`",
+			name:     "no auth method",
+			expected: "set either `token` or `approle`",
 		},
 		{
 			name:  "both token and approle",
@@ -267,7 +267,7 @@ func TestInitAuthValidation(t *testing.T) {
 				RoleID: "role",
 				Secret: config.NewSecret([]byte("secret")),
 			},
-			errContains: "only one authentication method",
+			expected: "only one authentication method",
 		},
 	}
 
@@ -276,7 +276,7 @@ func TestInitAuthValidation(t *testing.T) {
 			v := base
 			v.Token = tt.token
 			v.AppRole = tt.approle
-			require.ErrorContains(t, v.Init(), tt.errContains)
+			require.ErrorContains(t, v.Init(), tt.expected)
 		})
 	}
 }
@@ -312,5 +312,5 @@ func TestIntegrationTokenAuth(t *testing.T) {
 
 	secret, err := plugin.Get(secretName)
 	require.NoError(t, err)
-	require.Equal(t, []byte(secretValue), secret)
+	require.Equal(t, secretValue, string(secret))
 }

@@ -4,16 +4,6 @@ The `vault` plugin allows to utilize secrets stored in a
 [HashiCorp Vault][vault] server via the Vault API. It supports authentication
 via a pre-obtained Vault token or via the AppRole method.
 
-When authenticating with a `token`, the token may be provided directly or
-chained from another secret-store (e.g. `@{other_store:vault_token}`). This
-lets you obtain a token through any mechanism another secret-store can
-produce (OAuth2, file, environment, etc.) and hand it to this plugin. Token
-renewal is the responsibility of the supplying source.
-
-When authenticating with `approle`, the plugin logs in with the configured
-Role ID and Secret ID and starts a lifetime watcher to keep the token
-renewed.
-
 ⭐ Telegraf v1.37.0
 🏷️ secrets
 💻 all
@@ -29,6 +19,18 @@ secrets, see their respective documentation (e.g.
 store usage.
 
 ## Configuration
+
+### Authentication
+
+When authenticating with a `token`, the token may be provided directly or
+chained from another secret-store (e.g. `@{other_store:vault_token}`). This
+lets you obtain a token through any mechanism another secret-store can
+produce (OAuth2, file, environment, etc.) and hand it to this plugin. Token
+renewal is the responsibility of the supplying source.
+
+When authenticating with `approle`, the plugin logs in with the configured
+Role ID and Secret ID and starts a lifetime watcher to keep the token
+renewed.
 
 ```toml @sample.conf
 # Secret-store to access Vault Secrets
