@@ -220,6 +220,12 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 		opcua.RequestTimeout(time.Duration(o.Config.RequestTimeout)),
 	}
 
+	// Let the caller own reconnection. Without this, gopcua's monitor and the
+	// caller's reconnect cycle both create sessions, flooding the server.
+	if o.DisableAutoReconnect {
+		opts = append(opts, opcua.AutoReconnect(false))
+	}
+
 	if o.Config.SessionTimeout != 0 {
 		opts = append(opts, opcua.SessionTimeout(time.Duration(o.Config.SessionTimeout)))
 	}

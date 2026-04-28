@@ -52,6 +52,11 @@ func (rc *readClientConfig) createReadClient(log telegraf.Logger) (*readClient, 
 		return nil, err
 	}
 
+	// The polling reader has no subscriptions to preserve across reconnects, so
+	// gopcua's auto-reconnect only races with our own connect cycle and floods
+	// the server with sessions during outages. Let Telegraf own reconnection.
+	inputClient.DisableAutoReconnect = true
+
 	tags := map[string]string{
 		"endpoint": inputClient.Config.OpcUAClientConfig.Endpoint,
 	}

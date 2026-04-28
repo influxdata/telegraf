@@ -227,6 +227,37 @@ func TestRemoteCertificateValidation(t *testing.T) {
 	}
 }
 
+func TestGenerateClientOptsDisableAutoReconnect(t *testing.T) {
+	endpoints := []*ua.EndpointDescription{
+		{
+			EndpointURL:       "opc.tcp://localhost:4840",
+			SecurityPolicyURI: ua.SecurityPolicyURINone,
+			SecurityMode:      ua.MessageSecurityModeNone,
+			SecurityLevel:     0,
+			UserIdentityTokens: []*ua.UserTokenPolicy{
+				{TokenType: ua.UserTokenTypeAnonymous},
+			},
+		},
+	}
+
+	cfg := &OpcUAClientConfig{
+		Endpoint:       "opc.tcp://localhost:4840",
+		SecurityPolicy: "None",
+		SecurityMode:   "None",
+		AuthMethod:     "Anonymous",
+	}
+
+	defaultClient := &OpcUAClient{Config: cfg, Log: &testutil.Logger{}}
+	defaultOpts, err := defaultClient.generateClientOpts(endpoints)
+	require.NoError(t, err)
+
+	disabledClient := &OpcUAClient{Config: cfg, Log: &testutil.Logger{}, DisableAutoReconnect: true}
+	disabledOpts, err := disabledClient.generateClientOpts(endpoints)
+	require.NoError(t, err)
+
+	require.Len(t, disabledOpts, len(defaultOpts)+1)
+}
+
 func TestGenerateClientOptsWithLocales(t *testing.T) {
 	endpoints := []*ua.EndpointDescription{
 		{
