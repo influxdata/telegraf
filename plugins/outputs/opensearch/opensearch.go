@@ -145,7 +145,7 @@ func (o *Opensearch) Connect() error {
 	_, err = o.osClient.Ping()
 	if err != nil {
 		return &internal.StartupError{
-			Err:   err,
+			Err:   fmt.Errorf("unable to ping server: %w", err),
 			Retry: true,
 		}
 	}
