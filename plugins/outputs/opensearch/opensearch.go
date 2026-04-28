@@ -22,6 +22,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -143,7 +144,10 @@ func (o *Opensearch) Connect() error {
 
 	_, err = o.osClient.Ping()
 	if err != nil {
-		o.Log.Errorf("unable to ping OpenSearch server: %v", err)
+		return &internal.StartupError{
+			Err:   err,
+			Retry: true,
+		}
 	}
 
 	return nil

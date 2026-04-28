@@ -11,6 +11,8 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -305,7 +307,63 @@ func TestDisconnectedServerOnConnect(t *testing.T) {
 
 	// Close the server right before we try to connect.
 	ts.Close()
-	require.NoError(t, e.Connect())
+	require.Error(t, e.Connect())
+}
+
+func TestConnectionIssueAtStartup(t *testing.T) {
+	// Test case for https://github.com/influxdata/telegraf/issues/18783
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
+
+	urls := []string{"http://" + ts.Listener.Addr().String()}
+
+	plugin := &Opensearch{
+		URLs:            urls,
+		IndexName:       `{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
+		Timeout:         config.Duration(time.Second * 5),
+		EnableGzip:      false,
+		ManageTemplate:  false,
+		Log:             testutil.Logger{},
+		AuthBearerToken: config.NewSecret([]byte("0123456789abcdef")),
+	}
+	var err error
+	plugin.indexTmpl, err = template.New("index").Parse(plugin.IndexName)
+	require.NoError(t, err)
+
+	// Close the server before we try to connect
+	ts.Close()
+
+	// Create a model to be able to use the startup retry strategy
+	model, err := models.NewRunningOutput(
+		plugin,
+		&models.OutputConfig{
+			Name:                 "opensearch",
+			StartupErrorBehavior: "retry",
+		},
+		1000, 1000,
+	)
+	require.NoError(t, err)
+	require.NoError(t, model.Init())
+
+	// The connect call should not fail even though the server is closed due to the "retry" strategy
+	require.NoError(t, model.Connect())
+
+	// Writing metrics in this state should fail since server is closed
+	metrics := testutil.MockMetrics()
+	for _, m := range metrics {
+		model.AddMetric(m)
+	}
+	require.ErrorIs(t, model.WriteBatch(), internal.ErrNotConnected)
+
+	// Start the server and check that writes succeed
+	ts.Start()
+	require.NoError(t, model.WriteBatch())
+
+	ts.Close()
+	model.Close()
 }
 
 func TestDisconnectedServerOnWrite(t *testing.T) {
