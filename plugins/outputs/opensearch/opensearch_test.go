@@ -324,10 +324,8 @@ func TestConnectionIssueAtStartup(t *testing.T) {
 		URLs:            urls,
 		IndexName:       `{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
 		Timeout:         config.Duration(time.Second * 5),
-		EnableGzip:      false,
-		ManageTemplate:  false,
-		Log:             testutil.Logger{},
 		AuthBearerToken: config.NewSecret([]byte("0123456789abcdef")),
+		Log:             testutil.Logger{},
 	}
 	var err error
 	plugin.indexTmpl, err = template.New("index").Parse(plugin.IndexName)
