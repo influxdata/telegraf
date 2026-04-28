@@ -146,9 +146,9 @@ using the `startup_error_behavior` setting. Available values are:
 
 ### Required parameters
 
-* `urls`: A list containing the full HTTP URL of one or more nodes from your
+- `urls`: A list containing the full HTTP URL of one or more nodes from your
   OpenSearch instance.
-* `index_name`: The target index for metrics. You can use the date format
+- `index_name`: The target index for metrics. You can use the date format
 
 For example: "telegraf-{{.Time.Format \"2006-01-02\"}}" would set it to
 "telegraf-2023-07-27". You can also specify metric name (`{{ .Name }}`), tag
