@@ -191,6 +191,9 @@ type OpcUAClient struct {
 
 	opts  []opcua.Option
 	codes []ua.StatusCode
+
+	// Internal flags
+	DisableAutoReconnect bool
 }
 
 // determineOrCreateCertificates handles certificate determination and generation logic
