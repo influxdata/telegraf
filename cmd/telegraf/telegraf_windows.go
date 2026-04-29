@@ -7,6 +7,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -148,6 +149,7 @@ func (t *Telegraf) Execute(_ []string, r <-chan svc.ChangeRequest, changes chan<
 		select {
 		case err := <-loopErr:
 			if err != nil {
+				log.Printf("E! %s", err)
 				//nolint:errcheck // We have no way to route the error to the user so ignore it
 				svclog.Error(eventID, err.Error())
 				return true, 3
