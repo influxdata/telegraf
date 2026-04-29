@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -446,7 +447,7 @@ func TestGather(t *testing.T) {
 				},
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"intel_pmt",
 					map[string]string{
 						"guid":           "test-guid",
@@ -462,7 +463,7 @@ func TestGather(t *testing.T) {
 					},
 					time.Time{},
 				),
-				testutil.MustMetric(
+				metric.New(
 					"intel_pmt",
 					map[string]string{
 						"guid":           "test-guid2",
@@ -536,7 +537,7 @@ func TestGather(t *testing.T) {
 				},
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"intel_pmt",
 					map[string]string{
 						"guid":           "test-guid",

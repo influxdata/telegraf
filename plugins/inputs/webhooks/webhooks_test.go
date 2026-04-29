@@ -15,7 +15,7 @@ import (
 
 func TestAvailableWebhooks(t *testing.T) {
 	wb := newWebhooks()
-	expected := make([]Webhook, 0)
+	expected := make([]Webhook, 0, 7)
 	if !reflect.DeepEqual(wb.availableWebhooks(), expected) {
 		t.Errorf("expected to %v.\nGot %v", expected, wb.availableWebhooks())
 	}

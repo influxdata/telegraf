@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/stdlib"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/influxdata/telegraf/config"
 )
@@ -54,7 +54,7 @@ func (c *Config) CreateService() (*Service, error) {
 	if c.IsPgBouncer {
 		// Remove DriveConfig and revert it by the ParseConfig method
 		// See https://github.com/influxdata/telegraf/issues/9134
-		connConfig.PreferSimpleProtocol = true
+		connConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 	}
 
 	// Provide the connection string without sensitive information for use as

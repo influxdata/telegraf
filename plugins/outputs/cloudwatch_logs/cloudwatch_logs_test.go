@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/aws"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -347,7 +348,7 @@ func TestWrite(t *testing.T) {
 			expectedMetricsOrder: map[int]int{0: 0, 1: 1},
 			expectedMetricsCount: 2,
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"docker_log",
 					map[string]string{
 						"container_name":    "telegraf",
@@ -362,7 +363,7 @@ func TestWrite(t *testing.T) {
 					},
 					time.Now().Add(-time.Minute),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"docker_log",
 					map[string]string{
 						"container_name":    "telegraf",
@@ -385,7 +386,7 @@ func TestWrite(t *testing.T) {
 			expectedMetricsOrder: map[int]int{0: 1, 1: 0},
 			expectedMetricsCount: 2,
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"docker_log",
 					map[string]string{
 						"container_name":    "telegraf",
@@ -400,7 +401,7 @@ func TestWrite(t *testing.T) {
 					},
 					time.Now(),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"docker_log",
 					map[string]string{
 						"container_name":    "telegraf",
@@ -422,7 +423,7 @@ func TestWrite(t *testing.T) {
 			logStreamName:        "deadbeef",
 			expectedMetricsCount: 0,
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"docker_log",
 					map[string]string{
 						"container_name":    "telegraf",
@@ -437,7 +438,7 @@ func TestWrite(t *testing.T) {
 					},
 					time.Now().Add(-maxPastLogEventTimeOffset).Add(-time.Hour),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"docker_log",
 					map[string]string{
 						"container_name":    "telegraf",
@@ -459,7 +460,7 @@ func TestWrite(t *testing.T) {
 			logStreamName:        "deadbeef",
 			expectedMetricsCount: 0,
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"docker_log",
 					map[string]string{
 						"container_name":    "telegraf",
@@ -483,7 +484,7 @@ func TestWrite(t *testing.T) {
 			expectedMetricsOrder: map[int]int{0: 0, 1: 1, 2: 2, 3: 3, 4: 4},
 			expectedMetricsCount: 5,
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"docker_log",
 					map[string]string{
 						"container_name":    "telegraf",
@@ -499,7 +500,7 @@ func TestWrite(t *testing.T) {
 					},
 					time.Now().Add(-4*time.Minute),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"docker_log",
 					map[string]string{
 						"container_name":    "telegraf",
@@ -515,7 +516,7 @@ func TestWrite(t *testing.T) {
 					},
 					time.Now().Add(-3*time.Minute),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"docker_log",
 					map[string]string{
 						"container_name":    "telegraf",
@@ -531,7 +532,7 @@ func TestWrite(t *testing.T) {
 					},
 					time.Now().Add(-2*time.Minute),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"docker_log",
 					map[string]string{
 						"container_name":    "telegraf",
@@ -547,7 +548,7 @@ func TestWrite(t *testing.T) {
 					},
 					time.Now().Add(-time.Minute),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"docker_log",
 					map[string]string{
 						"container_name":    "telegraf",

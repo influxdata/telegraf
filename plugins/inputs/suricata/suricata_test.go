@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -90,7 +91,7 @@ func TestSuricataAlerts(t *testing.T) {
 	acc.Wait(1)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"suricata_alert",
 			map[string]string{},
 			map[string]interface{}{
@@ -139,7 +140,7 @@ func TestSuricata(t *testing.T) {
 	acc.Wait(1)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"suricata",
 			map[string]string{
 				"thread": "total",
@@ -189,7 +190,7 @@ func TestThreadStats(t *testing.T) {
 	acc.Wait(2)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"suricata",
 			map[string]string{
 				"thread": "W#05-wlp4s0",
@@ -348,7 +349,7 @@ func TestSuricataParse(t *testing.T) {
 	}{{
 		filename: "test2.json",
 		expected: []telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"suricata",
 				map[string]string{
 					"thread": "W#01-ens2f1",
@@ -389,7 +390,7 @@ func TestSuricataParseVersion2(t *testing.T) {
 		{
 			filename: "v2/alert.json",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"suricata",
 					map[string]string{
 						"event_type": "alert",
@@ -420,7 +421,7 @@ func TestSuricataParseVersion2(t *testing.T) {
 		{
 			filename: "v2/dns.json",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"suricata",
 					map[string]string{
 						"event_type": "dns",
@@ -445,7 +446,7 @@ func TestSuricataParseVersion2(t *testing.T) {
 		{
 			filename: "v2/drop.json",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"suricata",
 					map[string]string{
 						"event_type": "drop",
@@ -475,7 +476,7 @@ func TestSuricataParseVersion2(t *testing.T) {
 		{
 			filename: "v2/flow.json",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"suricata",
 					map[string]string{
 						"event_type": "flow",
@@ -497,7 +498,7 @@ func TestSuricataParseVersion2(t *testing.T) {
 		{
 			filename: "v2/http.json",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"suricata",
 					map[string]string{
 						"event_type": "http",
@@ -525,7 +526,7 @@ func TestSuricataParseVersion2(t *testing.T) {
 		{
 			filename: "v2/status.json",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"suricata",
 					map[string]string{
 						"event_type": "stats",

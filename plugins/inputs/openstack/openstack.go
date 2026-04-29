@@ -486,7 +486,7 @@ func (o *OpenStack) gatherSubnets(ctx context.Context, acc telegraf.Accumulator)
 		return fmt.Errorf("unable to extract subnets: %w", err)
 	}
 	for _, subnet := range extractedSubnets {
-		var allocationPools []string
+		allocationPools := make([]string, 0, len(subnet.AllocationPools))
 		for _, pool := range subnet.AllocationPools {
 			allocationPools = append(allocationPools, pool.Start+"-"+pool.End)
 		}

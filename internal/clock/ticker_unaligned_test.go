@@ -16,9 +16,6 @@ func TestUnalignedTicker(t *testing.T) {
 	clk := clock.NewMock()
 	clk.Add(1 * time.Second)
 
-	start := clk.Now()
-	end := start.Add(60 * time.Second)
-
 	startup := make(chan bool, 1)
 
 	ticker := NewTicker(interval, jitter, offset, WithClock(clk), WithStartupNotification(startup))
@@ -39,14 +36,16 @@ func TestUnalignedTicker(t *testing.T) {
 	// Wait for the ticker to startup
 	<-startup
 
-	// Advance the clock and collect all ticks on the way
-	for !clk.Now().After(end) {
-		select {
-		case ts := <-ticker.C:
-			actual = append(actual, ts.UTC())
-		default:
-			clk.Add(1 * time.Second)
-		}
+	// The first tick fires immediately inside the Timer() constructor
+	// (Timer(0) with deadline == now), so no clock advance is needed.
+	// Blocking on each read ensures the ticker goroutine has called
+	// timer.Reset() before the next clock advance, preventing the
+	// race between clk.Add() and timer.Reset() that causes flaky
+	// deadline shifts.
+	actual = append(actual, (<-ticker.C).UTC())
+	for i := 1; i < len(expected); i++ {
+		clk.Add(interval)
+		actual = append(actual, (<-ticker.C).UTC())
 	}
 	require.Equal(t, expected, actual)
 }

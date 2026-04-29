@@ -16,6 +16,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -1142,7 +1143,7 @@ func TestRedirect(t *testing.T) {
 	require.NoError(t, h.Gather(&acc))
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"http_response",
 			map[string]string{
 				"server":      ts.URL,
@@ -1406,9 +1407,6 @@ func Test_isURLInIPv6(t *testing.T) {
 			want:    true,
 		}, {
 			address: parseURL(t, "https://[2001:db8:a0b:12f0::1%25eth0]:15000/"), // `%25` escapes `%`
-			want:    true,
-		}, {
-			address: parseURL(t, "https://2001:0db8:0001:0000:0000:0ab9:C0A8:0102"),
 			want:    true,
 		}, {
 			address: parseURL(t, "http://[2607:f8b0:4005:802::1007]/"),

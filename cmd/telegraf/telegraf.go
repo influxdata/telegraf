@@ -188,7 +188,7 @@ func (t *Telegraf) reloadLoop() error {
 				if sig == syscall.SIGHUP {
 					log.Println("I! Reloading Telegraf config")
 					// May need to update the list of known config files
-					// if a delete or create occured. That way on the reload
+					// if a delete or create occurred. That way on the reload
 					// we ensure we watch the correct files.
 					if err := t.getConfigFiles(); err != nil {
 						log.Println("E! Error loading config files: ", err)
@@ -414,7 +414,7 @@ func (t *Telegraf) getConfigFiles() error {
 	for _, fConfigDirectory := range t.configDir {
 		files, err := config.WalkDirectory(fConfigDirectory)
 		if err != nil {
-			return err
+			return fmt.Errorf("reading config directory failed: %w", err)
 		}
 		configFiles = append(configFiles, files...)
 	}

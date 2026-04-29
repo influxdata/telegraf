@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -205,7 +204,7 @@ func TestWrite(t *testing.T) {
 
 	// Test writing
 	metrics := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"database": "foobar",
@@ -254,7 +253,7 @@ func TestWriteDefaultSync(t *testing.T) {
 
 	// Test writing
 	metrics := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"database": "foobar",
@@ -304,7 +303,7 @@ func TestWriteExplicitSync(t *testing.T) {
 
 	// Test writing
 	metrics := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"database": "foobar",
@@ -366,7 +365,7 @@ func TestWriteNotConvertUint(t *testing.T) {
 
 	// Test writing
 	metrics := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{},
 			map[string]interface{}{
@@ -427,7 +426,7 @@ func TestWriteConvertUint(t *testing.T) {
 
 	// Test writing
 	metrics := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{},
 			map[string]interface{}{
@@ -475,7 +474,7 @@ func TestWriteExplicitNoSync(t *testing.T) {
 
 	// Test writing
 	metrics := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"database": "foobar",
@@ -545,7 +544,7 @@ func TestWriteDatabaseTagWorksOnRetry(t *testing.T) {
 
 	// Send the metrics which should be succeed if sent twice
 	metrics := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"database": "foo",
@@ -1167,7 +1166,7 @@ func TestCoreIntegration(t *testing.T) {
 		},
 		Cmd: []string{"influxdb3", "serve", "--without-auth"},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port("8181")),
+			wait.ForListeningPort("8181"),
 			wait.ForLog("influxdb3_server: startup time"),
 		),
 	}

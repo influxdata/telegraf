@@ -72,7 +72,8 @@ func TestCasesScan(t *testing.T) {
 }
 
 func fakeScanExecCommand(command string, args ...string) *exec.Cmd {
-	cs := []string{"-test.run=TestScanHelperProcess", "--", command}
+	cs := make([]string, 0, len(args)+3)
+	cs = append(cs, "-test.run=TestScanHelperProcess", "--", command)
 	cs = append(cs, args...)
 	cmd := exec.Command(os.Args[0], cs...)
 	cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
@@ -162,7 +163,8 @@ func TestCasesDevices(t *testing.T) {
 }
 
 func fakeDeviceExecCommand(command string, args ...string) *exec.Cmd {
-	cs := []string{"-test.run=TestDeviceHelperProcess", "--", command}
+	cs := make([]string, 0, len(args)+3)
+	cs = append(cs, "-test.run=TestDeviceHelperProcess", "--", command)
 	cs = append(cs, args...)
 	cmd := exec.Command(os.Args[0], cs...)
 	cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}

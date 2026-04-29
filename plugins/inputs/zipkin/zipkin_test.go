@@ -622,7 +622,7 @@ func TestZipkinPlugin(t *testing.T) {
 				t.Fatalf("Got unexpected errors. want error = %v, errors = %v\n", tt.wantErr, mockAcc.Errors)
 			}
 
-			var got []testutil.Metric
+			got := make([]testutil.Metric, 0, len(mockAcc.Metrics))
 			for _, m := range mockAcc.Metrics {
 				got = append(got, *m)
 			}

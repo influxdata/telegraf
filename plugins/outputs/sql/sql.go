@@ -15,7 +15,7 @@ import (
 
 	_ "github.com/ClickHouse/clickhouse-go/v2"              // clickhouse
 	_ "github.com/go-sql-driver/mysql"                      // mysql
-	_ "github.com/jackc/pgx/v4/stdlib"                      // pgx (postgres)
+	_ "github.com/jackc/pgx/v5/stdlib"                      // pgx (postgres)
 	_ "github.com/microsoft/go-mssqldb"                     // mssql (sql server)
 	_ "github.com/microsoft/go-mssqldb/integratedauth/krb5" // integrated auth for mssql
 	_ "github.com/snowflakedb/gosnowflake"                  // snowflake

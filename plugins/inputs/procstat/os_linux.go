@@ -231,7 +231,7 @@ func statsTCP(conns []gopsnet.ConnectionStat, family uint8) ([]map[string]interf
 	}
 
 	// Filter the responses via the inodes belonging to the process
-	fieldslist := make([]map[string]interface{}, 0)
+	fieldslist := make([]map[string]interface{}, 0, len(responses))
 	for _, r := range responses {
 		c, found := inodes[r.InetDiagMsg.INode]
 		if !found {
@@ -294,7 +294,7 @@ func statsUDP(conns []gopsnet.ConnectionStat, family uint8) ([]map[string]interf
 	}
 
 	// Filter the responses via the inodes belonging to the process
-	fieldslist := make([]map[string]interface{}, 0)
+	fieldslist := make([]map[string]interface{}, 0, len(responses))
 	for _, r := range responses {
 		c, found := inodes[r.InetDiagMsg.INode]
 		if !found {
@@ -353,7 +353,7 @@ func statsUnix(conns []gopsnet.ConnectionStat) ([]map[string]interface{}, error)
 	}
 
 	// Filter the responses via the inodes belonging to the process
-	fieldslist := make([]map[string]interface{}, 0)
+	fieldslist := make([]map[string]interface{}, 0, len(responses))
 	for _, r := range responses {
 		// Check if the inode belongs to the process and skip otherwise
 		c, found := inodes[r.DiagMsg.INode]

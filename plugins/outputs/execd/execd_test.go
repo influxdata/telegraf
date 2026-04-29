@@ -244,7 +244,7 @@ func runOutputConsumerProgram() {
 		}
 		numMetrics++
 
-		expected := testutil.MustMetric(metricName,
+		expected := metric.New(metricName,
 			map[string]string{"name": "cpu1"},
 			map[string]interface{}{"idle": 50, "sys": 30},
 			now,

@@ -251,7 +251,7 @@ func TestInitMissingPidMethod(t *testing.T) {
 
 func TestGather_CreateProcessErrorOk(t *testing.T) {
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"procstat_lookup",
 			map[string]string{
 				"exe":        "foo",
@@ -287,7 +287,7 @@ func TestGather_CreateProcessErrorOk(t *testing.T) {
 
 func TestGather_ProcessName(t *testing.T) {
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"procstat",
 			map[string]string{
 				"exe":          "foo",
@@ -323,7 +323,7 @@ func TestGather_ProcessName(t *testing.T) {
 			time.Unix(0, 0),
 			telegraf.Untyped,
 		),
-		testutil.MustMetric(
+		metric.New(
 			"procstat_lookup",
 			map[string]string{
 				"exe":        "foo",

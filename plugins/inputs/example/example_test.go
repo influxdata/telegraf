@@ -8,6 +8,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -85,7 +86,7 @@ func TestFixedValue(t *testing.T) {
 				NumberFields: 1,
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"example",
 					map[string]string{
 						"device": "test",
@@ -95,7 +96,7 @@ func TestFixedValue(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"example",
 					map[string]string{
 						"device": "test",
@@ -105,7 +106,7 @@ func TestFixedValue(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"example",
 					map[string]string{
 						"device": "test",
@@ -123,7 +124,7 @@ func TestFixedValue(t *testing.T) {
 				DeviceName: "test",
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"example",
 					map[string]string{
 						"device": "test",
@@ -134,7 +135,7 @@ func TestFixedValue(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"example",
 					map[string]string{
 						"device": "test",
@@ -145,7 +146,7 @@ func TestFixedValue(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"example",
 					map[string]string{
 						"device": "test",
@@ -165,7 +166,7 @@ func TestFixedValue(t *testing.T) {
 				NumberFields: 4,
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"example",
 					map[string]string{
 						"device": "test",
@@ -178,7 +179,7 @@ func TestFixedValue(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"example",
 					map[string]string{
 						"device": "test",
@@ -191,7 +192,7 @@ func TestFixedValue(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"example",
 					map[string]string{
 						"device": "test",
@@ -249,7 +250,7 @@ func TestRandomValue(t *testing.T) {
 				NumberFields:         1,
 				EnableRandomVariable: true,
 			},
-			template: testutil.MustMetric(
+			template: metric.New(
 				"example",
 				map[string]string{
 					"device": "test",
@@ -266,7 +267,7 @@ func TestRandomValue(t *testing.T) {
 				DeviceName:           "test",
 				EnableRandomVariable: true,
 			},
-			template: testutil.MustMetric(
+			template: metric.New(
 				"example",
 				map[string]string{
 					"device": "test",
@@ -285,7 +286,7 @@ func TestRandomValue(t *testing.T) {
 				NumberFields:         4,
 				EnableRandomVariable: true,
 			},
-			template: testutil.MustMetric(
+			template: metric.New(
 				"example",
 				map[string]string{
 					"device": "test",
@@ -389,7 +390,7 @@ func TestRandomValueFailPartial(t *testing.T) {
 				EnableRandomVariable: true,
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"example",
 					map[string]string{
 						"device": "flappy",
@@ -399,7 +400,7 @@ func TestRandomValueFailPartial(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"example",
 					map[string]string{
 						"device": "flappy",

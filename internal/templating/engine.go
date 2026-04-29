@@ -43,7 +43,7 @@ func NewEngine(joiner string, defaultTemplate *Template, templates []string) (*E
 }
 
 func parseTemplateSpecs(templates []string) templateSpecs {
-	tmplts := templateSpecs{}
+	tmplts := make(templateSpecs, 0, len(templates))
 	for _, pattern := range templates {
 		tmplt := templateSpec{
 			separator: DefaultSeparator,

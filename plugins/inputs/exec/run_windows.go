@@ -5,23 +5,15 @@ package exec
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"syscall"
 
-	"github.com/kballard/go-shellquote"
-
 	"github.com/influxdata/telegraf/internal"
 )
 
-func (c *commandRunner) run(command string) (out, errout []byte, err error) {
-	splitCmd, err := shellquote.Split(command)
-	if err != nil || len(splitCmd) == 0 {
-		return nil, nil, fmt.Errorf("exec: unable to parse command: %w", err)
-	}
-
+func (c *commandRunner) run(splitCmd []string) (out, errout []byte, err error) {
 	cmd := exec.Command(splitCmd[0], splitCmd[1:]...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP,

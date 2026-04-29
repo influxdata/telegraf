@@ -249,7 +249,7 @@ func makeJolokiaRequest(rrequest ReadRequest, jtarget *jolokiaTarget) jolokiaReq
 }
 
 func makeReadResponses(jresponses []jolokiaResponse) []ReadResponse {
-	rresponses := make([]ReadResponse, 0)
+	rresponses := make([]ReadResponse, 0, len(jresponses))
 
 	for _, jr := range jresponses {
 		rrequest := ReadRequest{

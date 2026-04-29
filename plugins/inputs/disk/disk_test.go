@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/psutil"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -572,7 +573,7 @@ func TestDiskUsageIssues(t *testing.T) {
 				InodesUsed:  2000,
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"disk",
 					map[string]string{
 						"device": "tmpfs",
@@ -593,7 +594,7 @@ func TestDiskUsageIssues(t *testing.T) {
 					time.Unix(0, 0),
 					telegraf.Gauge,
 				),
-				testutil.MustMetric(
+				metric.New(
 					"disk",
 					map[string]string{
 						"device": "nvme0n1p4",
@@ -628,7 +629,7 @@ func TestDiskUsageIssues(t *testing.T) {
 				InodesUsed:  2000,
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"disk",
 					map[string]string{
 						"device": "sda1",
@@ -650,7 +651,7 @@ func TestDiskUsageIssues(t *testing.T) {
 					time.Unix(0, 0),
 					telegraf.Gauge,
 				),
-				testutil.MustMetric(
+				metric.New(
 					"disk",
 					map[string]string{
 						"device": "sdb",

@@ -224,6 +224,10 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 		opts = append(opts, opcua.SessionTimeout(time.Duration(o.Config.SessionTimeout)))
 	}
 
+	if len(o.Config.Locales) > 0 {
+		opts = append(opts, opcua.Locales(o.Config.Locales...))
+	}
+
 	certFile := o.Config.Certificate
 	keyFile := o.Config.PrivateKey
 	policy := o.Config.SecurityPolicy

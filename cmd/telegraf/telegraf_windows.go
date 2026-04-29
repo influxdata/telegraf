@@ -7,7 +7,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,7 +17,11 @@ import (
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/eventlog"
 	"golang.org/x/sys/windows/svc/mgr"
+
+	"github.com/influxdata/telegraf/internal"
 )
+
+const eventID = 100
 
 func getLockedMemoryLimit() uint64 {
 	handle := windows.CurrentProcess()
@@ -108,20 +111,24 @@ func (t *Telegraf) Execute(_ []string, r <-chan svc.ChangeRequest, changes chan<
 	// Create a eventlog logger for  all service related things
 	svclog, err := eventlog.Open(t.serviceName)
 	if err != nil {
-		log.Printf("E! Initializing the service logger failed: %s", err)
 		return true, 1
 	}
 	defer svclog.Close()
 
+	//nolint:errcheck // We have no way to route the error to the user so ignore it
+	svclog.Info(eventID, fmt.Sprintf("Starting Telegraf %s...", internal.Version))
+
 	// Load the configuration file(s)
 	cfg, err := t.loadConfiguration()
 	if err != nil {
-		if lerr := svclog.Error(100, err.Error()); lerr != nil {
-			log.Printf("E! Logging error %q failed: %s", err, lerr)
-		}
+		//nolint:errcheck // We have no way to route the error to the user so ignore it
+		svclog.Error(eventID, err.Error())
 		return true, 2
 	}
 	t.cfg = cfg
+
+	//nolint:errcheck // We have no way to route the error to the user so ignore it
+	svclog.Info(eventID, "Finished loading configurations, starting data collection...")
 
 	// Actually start the processing loop in the background to be able to
 	// react to service change requests
@@ -134,16 +141,20 @@ func (t *Telegraf) Execute(_ []string, r <-chan svc.ChangeRequest, changes chan<
 	}()
 	changes <- svc.Status{State: svc.Running, Accepts: accepted}
 
+	//nolint:errcheck // We have no way to route the error to the user so ignore it
+	svclog.Info(eventID, "Telegraf is running...")
+
 	for {
 		select {
 		case err := <-loopErr:
 			if err != nil {
-				if lerr := svclog.Error(100, err.Error()); lerr != nil {
-					log.Printf("E! Logging error %q failed: %s", err, lerr)
-				}
+				//nolint:errcheck // We have no way to route the error to the user so ignore it
+				svclog.Error(eventID, err.Error())
 				return true, 3
 			}
-			return false, 0
+			//nolint:errcheck // We have no way to route the error to the user so ignore it
+			svclog.Info(eventID, "Stopped Telegraf")
+			return false, windows.NO_ERROR
 		case c := <-r:
 			switch c.Cmd {
 			case svc.Interrogate:
@@ -155,11 +166,12 @@ func (t *Telegraf) Execute(_ []string, r <-chan svc.ChangeRequest, changes chan<
 				changes <- svc.Status{State: svc.StopPending}
 				var empty struct{}
 				stop <- empty // signal reloadLoop to finish (context cancel)
+
+				//nolint:errcheck // We have no way to route the error to the user so ignore it
+				svclog.Info(eventID, "Stopping Telegraf...")
 			default:
-				msg := fmt.Sprintf("Unexpected control request #%d", c)
-				if lerr := svclog.Error(100, msg); lerr != nil {
-					log.Printf("E! Logging error %q failed: %s", msg, lerr)
-				}
+				//nolint:errcheck // We have no way to route the error to the user so ignore it
+				svclog.Error(eventID, fmt.Sprintf("Unexpected control request #%d", c))
 			}
 		}
 	}

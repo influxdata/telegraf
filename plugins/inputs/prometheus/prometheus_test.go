@@ -467,7 +467,7 @@ go_gc_duration_seconds_count 42`
 	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"prometheus",
 			map[string]string{
 				"quantile": "0",
@@ -478,7 +478,7 @@ go_gc_duration_seconds_count 42`
 			time.Unix(0, 0),
 			telegraf.Summary,
 		),
-		testutil.MustMetric(
+		metric.New(
 			"prometheus",
 			map[string]string{
 				"quantile": "1",
@@ -489,7 +489,7 @@ go_gc_duration_seconds_count 42`
 			time.Unix(0, 0),
 			telegraf.Summary,
 		),
-		testutil.MustMetric(
+		metric.New(
 			"prometheus",
 			map[string]string{},
 			map[string]interface{}{
@@ -498,7 +498,7 @@ go_gc_duration_seconds_count 42`
 			time.Unix(0, 0),
 			telegraf.Summary,
 		),
-		testutil.MustMetric(
+		metric.New(
 			"prometheus_request",
 			map[string]string{},
 			map[string]interface{}{
@@ -800,21 +800,21 @@ go_memstats_heap_alloc_bytes 1.581062048e+09
 	require.NoError(t, p.Gather(&acc))
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"openmetric",
 			map[string]string{},
 			map[string]interface{}{"go_memstats_gc_cpu_fraction": float64(-0.00014404354379774563)},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
-		testutil.MustMetric(
+		metric.New(
 			"openmetric",
 			map[string]string{},
 			map[string]interface{}{"go_memstats_gc_sys_bytes": 6.0936192e+07},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
-		testutil.MustMetric(
+		metric.New(
 			"openmetric",
 			map[string]string{},
 			map[string]interface{}{"go_memstats_heap_alloc_bytes": 1.581062048e+09},
@@ -852,21 +852,21 @@ func TestOpenmetricsProtobuf(t *testing.T) {
 	require.NoError(t, p.Gather(&acc))
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"openmetric",
 			map[string]string{},
 			map[string]interface{}{"go_memstats_gc_cpu_fraction": float64(-0.00014404354379774563)},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
-		testutil.MustMetric(
+		metric.New(
 			"openmetric",
 			map[string]string{},
 			map[string]interface{}{"go_memstats_gc_sys_bytes": 6.0936192e+07},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
-		testutil.MustMetric(
+		metric.New(
 			"openmetric",
 			map[string]string{},
 			map[string]interface{}{"go_memstats_heap_alloc_bytes": 1.581062048e+09},
@@ -915,21 +915,21 @@ go_memstats_heap_alloc_bytes 1.581062048e+09
 	require.NoError(t, p.Gather(&acc))
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"openmetric",
 			map[string]string{},
 			map[string]interface{}{"go_memstats_gc_cpu_fraction": float64(-0.00014404354379774563)},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
-		testutil.MustMetric(
+		metric.New(
 			"openmetric",
 			map[string]string{},
 			map[string]interface{}{"go_memstats_gc_sys_bytes": 6.0936192e+07},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
-		testutil.MustMetric(
+		metric.New(
 			"openmetric",
 			map[string]string{},
 			map[string]interface{}{"go_memstats_heap_alloc_bytes": 1.581062048e+09},

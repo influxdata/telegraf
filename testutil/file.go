@@ -32,7 +32,7 @@ func ParseRawLinesFrom(lines []string, header string) ([]string, error) {
 		return nil, fmt.Errorf("header %q does not exist", header)
 	}
 
-	output := make([]string, 0)
+	output := make([]string, 0, len(lines)-start)
 	for _, line := range lines[start:] {
 		if !strings.HasPrefix(strings.TrimLeft(line, "\t "), "#") {
 			return nil, errors.New("section does not end with trailing empty line")
@@ -66,7 +66,7 @@ func ParseMetricsFrom(lines []string, header string, parser LineParser) ([]teleg
 		return nil, fmt.Errorf("header %q does not exist", header)
 	}
 
-	metrics := make([]telegraf.Metric, 0)
+	metrics := make([]telegraf.Metric, 0, len(lines)-start)
 	for _, line := range lines[start:] {
 		if !strings.HasPrefix(strings.TrimLeft(line, "\t "), "#") {
 			return nil, errors.New("section does not end with trailing empty line")

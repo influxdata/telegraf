@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -65,7 +66,7 @@ func TestWrite(t *testing.T) {
 			name:   "metric is converted to json value",
 			plugin: &YandexCloudMonitoring{},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cluster",
 					map[string]string{},
 					map[string]interface{}{
@@ -86,7 +87,7 @@ func TestWrite(t *testing.T) {
 			name:   "int64 metric is converted to json value",
 			plugin: &YandexCloudMonitoring{},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cluster",
 					map[string]string{},
 					map[string]interface{}{
@@ -107,7 +108,7 @@ func TestWrite(t *testing.T) {
 			name:   "int metric is converted to json value",
 			plugin: &YandexCloudMonitoring{},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cluster",
 					map[string]string{},
 					map[string]interface{}{

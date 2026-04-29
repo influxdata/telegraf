@@ -349,7 +349,7 @@ cpu,42
 	require.NoError(t, plugin.Init())
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric("cpu",
+		metric.New("cpu",
 			map[string]string{
 				"path": tmpfile,
 			},
@@ -357,7 +357,7 @@ cpu,42
 				"time_idle": 42,
 			},
 			time.Unix(0, 0)),
-		testutil.MustMetric("cpu",
+		metric.New("cpu",
 			map[string]string{
 				"path": tmpfile,
 			},
@@ -389,7 +389,7 @@ skip2,mem,100
 	require.NoError(t, os.WriteFile(tmpfile, []byte(content), 0600))
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric("cpu",
+		metric.New("cpu",
 			map[string]string{
 				"path": tmpfile,
 			},
@@ -397,7 +397,7 @@ skip2,mem,100
 				"value2": 42,
 			},
 			time.Unix(0, 0)),
-		testutil.MustMetric("mem",
+		metric.New("mem",
 			map[string]string{
 				"path": tmpfile,
 			},
@@ -447,7 +447,7 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 	require.NoError(t, os.WriteFile(tmpfile, []byte(content), 0600))
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric("cpu",
+		metric.New("cpu",
 			map[string]string{
 				"customPathTagMyFile": tmpfile,
 			},
@@ -455,7 +455,7 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 				"time_idle": 42.0,
 			},
 			time.Unix(0, 0)),
-		testutil.MustMetric("cpu",
+		metric.New("cpu",
 			map[string]string{
 				"customPathTagMyFile": tmpfile,
 			},
@@ -492,7 +492,7 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 
 func TestCharacterEncoding(t *testing.T) {
 	full := []telegraf.Metric{
-		testutil.MustMetric("cpu",
+		metric.New("cpu",
 			map[string]string{
 				"cpu": "cpu0",
 			},
@@ -501,7 +501,7 @@ func TestCharacterEncoding(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("cpu",
+		metric.New("cpu",
 			map[string]string{
 				"cpu": "cpu1",
 			},
@@ -510,7 +510,7 @@ func TestCharacterEncoding(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("cpu",
+		metric.New("cpu",
 			map[string]string{
 				"cpu": "cpu2",
 			},
@@ -519,7 +519,7 @@ func TestCharacterEncoding(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("cpu",
+		metric.New("cpu",
 			map[string]string{
 				"cpu": "cpu3",
 			},
@@ -528,7 +528,7 @@ func TestCharacterEncoding(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("cpu",
+		metric.New("cpu",
 			map[string]string{
 				"cpu": "cpu-total",
 			},

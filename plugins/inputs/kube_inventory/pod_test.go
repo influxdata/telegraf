@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -193,7 +194,7 @@ func TestPod(t *testing.T) {
 											APIVersion: "apps/v1",
 											Kind:       "DaemonSet",
 											Name:       "forwarder",
-											Controller: toPtr(true),
+											Controller: new(true),
 										},
 									},
 									Generation: 11232,
@@ -211,7 +212,7 @@ func TestPod(t *testing.T) {
 				},
 			},
 			output: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					podContainerMeasurement,
 					map[string]string{
 						"pod_name":       "pod1",
@@ -228,7 +229,7 @@ func TestPod(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					podContainerMeasurement,
 					map[string]string{
 						"pod_name":       "pod1",
@@ -245,7 +246,7 @@ func TestPod(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					podContainerMeasurement,
 					map[string]string{
 						"pod_name":       "pod1",
@@ -262,7 +263,7 @@ func TestPod(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					podContainerMeasurement,
 					map[string]string{
 						"namespace":             "ns1",
@@ -284,7 +285,7 @@ func TestPod(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					podContainerMeasurement,
 					map[string]string{
 						"pod_name":       "pod1",
@@ -301,7 +302,7 @@ func TestPod(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					podContainerMeasurement,
 					map[string]string{
 						"pod_name":       "pod1",
@@ -318,7 +319,7 @@ func TestPod(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					podContainerMeasurement,
 					map[string]string{
 						"pod_name":       "pod1",
@@ -335,7 +336,7 @@ func TestPod(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					podContainerMeasurement,
 					map[string]string{
 						"namespace":             "ns1",
@@ -359,7 +360,7 @@ func TestPod(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					podContainerMeasurement,
 					map[string]string{
 						"pod_name":       "pod1",
@@ -376,7 +377,7 @@ func TestPod(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					podContainerMeasurement,
 					map[string]string{
 						"pod_name":       "pod1",
@@ -393,7 +394,7 @@ func TestPod(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					podContainerMeasurement,
 					map[string]string{
 						"pod_name":       "pod1",
@@ -410,7 +411,7 @@ func TestPod(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					podContainerMeasurement,
 					map[string]string{
 						"namespace":             "ns1",
@@ -559,7 +560,7 @@ func TestPodSelectorFilter(t *testing.T) {
 								APIVersion: "apps/v1",
 								Kind:       "DaemonSet",
 								Name:       "forwarder",
-								Controller: toPtr(true),
+								Controller: new(true),
 							},
 						},
 						Generation: 11232,
@@ -679,8 +680,8 @@ func TestPodSelectorFilter(t *testing.T) {
 
 		// Grab selector tags
 		actual := map[string]string{}
-		for _, metric := range acc.Metrics {
-			for key, val := range metric.Tags {
+		for _, m := range acc.Metrics {
+			for key, val := range m.Tags {
 				if strings.Contains(key, "node_selector_") {
 					actual[key] = val
 				}
@@ -802,7 +803,7 @@ func TestPodPendingContainers(t *testing.T) {
 											APIVersion: "apps/v1",
 											Kind:       "DaemonSet",
 											Name:       "forwarder",
-											Controller: toPtr(true),
+											Controller: new(true),
 										},
 									},
 									Generation: 11232,
@@ -820,7 +821,7 @@ func TestPodPendingContainers(t *testing.T) {
 				},
 			},
 			output: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					podContainerMeasurement,
 					map[string]string{
 						"pod_name":       "pod1",
@@ -837,7 +838,7 @@ func TestPodPendingContainers(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					podContainerMeasurement,
 					map[string]string{
 						"pod_name":       "pod1",
@@ -854,7 +855,7 @@ func TestPodPendingContainers(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					podContainerMeasurement,
 					map[string]string{
 						"pod_name":       "pod1",
@@ -871,7 +872,7 @@ func TestPodPendingContainers(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					podContainerMeasurement,
 					map[string]string{
 						"namespace":             "ns1",
@@ -894,7 +895,7 @@ func TestPodPendingContainers(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					podContainerMeasurement,
 					map[string]string{
 						"pod_name":       "pod1",
@@ -911,7 +912,7 @@ func TestPodPendingContainers(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					podContainerMeasurement,
 					map[string]string{
 						"pod_name":       "pod1",
@@ -928,7 +929,7 @@ func TestPodPendingContainers(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					podContainerMeasurement,
 					map[string]string{
 						"pod_name":       "pod1",
@@ -945,7 +946,7 @@ func TestPodPendingContainers(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					podContainerMeasurement,
 					map[string]string{
 						"namespace":             "ns1",

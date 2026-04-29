@@ -39,6 +39,9 @@ func (h *MetricHandler) SetTimeFunc(f TimeFunc) {
 }
 
 func (h *MetricHandler) Metric() telegraf.Metric {
+	if h.metric == nil {
+		return nil
+	}
 	if h.metric.Time().IsZero() {
 		h.metric.SetTime(h.timeFunc().Truncate(h.timePrecision))
 	}

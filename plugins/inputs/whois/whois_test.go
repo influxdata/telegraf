@@ -135,7 +135,7 @@ func TestCases(t *testing.T) {
 			var acc testutil.Accumulator
 			require.NoError(t, plugin.Gather(&acc))
 
-			var actualErrorMsgs []string
+			actualErrorMsgs := make([]string, 0, len(acc.Errors))
 			for _, err := range acc.Errors {
 				actualErrorMsgs = append(actualErrorMsgs, err.Error())
 			}

@@ -38,7 +38,7 @@ func (pb *pointBuilder) Build(mbean string, value interface{}) ([]point, error) 
 		return nil, fmt.Errorf("the response of %s's value should be a map", mbean)
 	}
 
-	points := make([]point, 0)
+	points := make([]point, 0, len(valueMap))
 	for mbean, value := range valueMap {
 		points = append(points, point{
 			Tags:   pb.extractTags(mbean),

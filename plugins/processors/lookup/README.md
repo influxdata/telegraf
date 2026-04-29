@@ -105,7 +105,7 @@ This setting specifies comma-separated-value files with the following format
 
 ```csv
 # Optional comments
-ignored,tag-name1,...,tag-valueN
+ignored,tag-name1,...,tag-nameN
 keyA,tag-value1,...,,,,
 keyB,tag-value1,,,,...,
 ...

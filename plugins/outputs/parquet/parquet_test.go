@@ -11,7 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/testutil"
+	"github.com/influxdata/telegraf/metric"
 )
 
 func TestCases(t *testing.T) {
@@ -26,7 +26,7 @@ func TestCases(t *testing.T) {
 		{
 			name: "basic single metric",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"test",
 					map[string]string{},
 					map[string]interface{}{
@@ -41,7 +41,7 @@ func TestCases(t *testing.T) {
 		{
 			name: "mix of tags and fields",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"test",
 					map[string]string{
 						"tag": "tag",
@@ -51,7 +51,7 @@ func TestCases(t *testing.T) {
 					},
 					time.Now(),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"test",
 					map[string]string{
 						"tag": "tag2",
@@ -68,7 +68,7 @@ func TestCases(t *testing.T) {
 		{
 			name: "null values",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"test",
 					map[string]string{
 						"host": "tag",
@@ -78,7 +78,7 @@ func TestCases(t *testing.T) {
 					},
 					time.Now(),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"test",
 					map[string]string{
 						"tag": "tag2",
@@ -95,7 +95,7 @@ func TestCases(t *testing.T) {
 		{
 			name: "data types",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"test",
 					map[string]string{},
 					map[string]interface{}{
@@ -151,7 +151,7 @@ func TestCases(t *testing.T) {
 
 func TestRotation(t *testing.T) {
 	metrics := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"test",
 			map[string]string{},
 			map[string]interface{}{
@@ -181,7 +181,7 @@ func TestRotation(t *testing.T) {
 
 func TestOmitTimestamp(t *testing.T) {
 	metrics := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"test",
 			map[string]string{},
 			map[string]interface{}{
@@ -214,7 +214,7 @@ func TestOmitTimestamp(t *testing.T) {
 
 func TestTimestampDifferentName(t *testing.T) {
 	metrics := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"test",
 			map[string]string{},
 			map[string]interface{}{

@@ -7,7 +7,8 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/tracelog"
 
 	"github.com/influxdata/telegraf"
 )
@@ -54,15 +55,15 @@ type PGXLogger struct {
 	telegraf.Logger
 }
 
-func (l PGXLogger) Log(_ context.Context, level pgx.LogLevel, msg string, data map[string]interface{}) {
+func (l PGXLogger) Log(_ context.Context, level tracelog.LogLevel, msg string, data map[string]interface{}) {
 	switch level {
-	case pgx.LogLevelError:
+	case tracelog.LogLevelError:
 		l.Errorf("PG %s - %+v", msg, data)
-	case pgx.LogLevelWarn:
+	case tracelog.LogLevelWarn:
 		l.Warnf("PG %s - %+v", msg, data)
-	case pgx.LogLevelInfo, pgx.LogLevelNone:
+	case tracelog.LogLevelInfo, tracelog.LogLevelNone:
 		l.Infof("PG %s - %+v", msg, data)
-	case pgx.LogLevelDebug, pgx.LogLevelTrace:
+	case tracelog.LogLevelDebug, tracelog.LogLevelTrace:
 		l.Debugf("PG %s - %+v", msg, data)
 	default:
 		l.Debugf("PG %s - %+v", msg, data)

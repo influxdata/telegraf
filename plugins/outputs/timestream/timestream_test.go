@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	common_aws "github.com/influxdata/telegraf/plugins/common/aws"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -240,7 +241,7 @@ func TestWriteMultiMeasuresSingleTableMode(t *testing.T) {
 
 		fieldName1 := "value_supported1" + strconv.Itoa(i)
 		fieldName2 := "value_supported2" + strconv.Itoa(i)
-		inputs = append(inputs, testutil.MustMetric(
+		inputs = append(inputs, metric.New(
 			"multi_measure_name",
 			map[string]string{"tag1": "value1"},
 			map[string]interface{}{
@@ -298,7 +299,7 @@ func TestWriteMultiMeasuresMultiTableMode(t *testing.T) {
 
 		fieldName1 := "value_supported1" + strconv.Itoa(i)
 		fieldName2 := "value_supported2" + strconv.Itoa(i)
-		inputs = append(inputs, testutil.MustMetric(
+		inputs = append(inputs, metric.New(
 			"multi_measure_name",
 			map[string]string{"tag1": "value1"},
 			map[string]interface{}{
@@ -349,7 +350,7 @@ func TestWriteMultiMeasuresMultiTableMode(t *testing.T) {
 }
 
 func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
-	input1 := testutil.MustMetric(
+	input1 := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
 		map[string]interface{}{
@@ -358,7 +359,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 		time1,
 	)
 
-	input2 := testutil.MustMetric(
+	input2 := metric.New(
 		metricName1,
 		map[string]string{"tag2": "value2"},
 		map[string]interface{}{
@@ -367,7 +368,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 		time1,
 	)
 
-	input3 := testutil.MustMetric(
+	input3 := metric.New(
 		metricName1,
 		map[string]string{"tag3": "value3"},
 		map[string]interface{}{
@@ -376,7 +377,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 		time1,
 	)
 
-	input4 := testutil.MustMetric(
+	input4 := metric.New(
 		metricName1,
 		map[string]string{"tag4": "value4"},
 		map[string]interface{}{
@@ -385,7 +386,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 		time1,
 	)
 
-	input5 := testutil.MustMetric(
+	input5 := metric.New(
 		metricName1,
 		map[string]string{"tag5": "value5"},
 		map[string]interface{}{
@@ -394,7 +395,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 		time1,
 	)
 
-	input6 := testutil.MustMetric(
+	input6 := metric.New(
 		metricName1,
 		map[string]string{"tag6": "value6"},
 		map[string]interface{}{
@@ -596,7 +597,7 @@ func TestThrottlingErrorIsReturnedToTelegraf(t *testing.T) {
 		Log:          testutil.Logger{},
 	}
 	require.NoError(t, plugin.Connect())
-	input := testutil.MustMetric(
+	input := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
 		map[string]interface{}{"value": float64(1)},
@@ -622,7 +623,7 @@ func TestRejectedRecordsErrorResultsInMetricsBeingSkipped(t *testing.T) {
 		Log:          testutil.Logger{},
 	}
 	require.NoError(t, plugin.Connect())
-	input := testutil.MustMetric(
+	input := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
 		map[string]interface{}{"value": float64(1)},
@@ -658,7 +659,7 @@ func TestWriteWhenRequestsGreaterThanMaxWriteGoRoutinesCount(t *testing.T) {
 	inputs := make([]telegraf.Metric, 0, totalRecords)
 	for i := 1; i <= totalRecords; i++ {
 		fieldName := "value_supported" + strconv.Itoa(i)
-		inputs = append(inputs, testutil.MustMetric(
+		inputs = append(inputs, metric.New(
 			metricName1,
 			map[string]string{"tag1": "value1"},
 			map[string]interface{}{
@@ -697,7 +698,7 @@ func TestWriteWhenRequestsLesserThanMaxWriteGoRoutinesCount(t *testing.T) {
 	inputs := make([]telegraf.Metric, 0, totalRecords)
 	for i := 1; i <= totalRecords; i++ {
 		fieldName := "value_supported" + strconv.Itoa(i)
-		inputs = append(inputs, testutil.MustMetric(
+		inputs = append(inputs, metric.New(
 			metricName1,
 			map[string]string{"tag1": "value1"},
 			map[string]interface{}{
@@ -713,13 +714,13 @@ func TestWriteWhenRequestsLesserThanMaxWriteGoRoutinesCount(t *testing.T) {
 }
 
 func TestTransformMetricsSkipEmptyMetric(t *testing.T) {
-	input1 := testutil.MustMetric(
+	input1 := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
 		map[string]interface{}{}, // no fields here
 		time1,
 	)
-	input2 := testutil.MustMetric(
+	input2 := metric.New(
 		metricName1,
 		map[string]string{"tag2": "value2"},
 		map[string]interface{}{
@@ -727,7 +728,7 @@ func TestTransformMetricsSkipEmptyMetric(t *testing.T) {
 		},
 		time1,
 	)
-	input3 := testutil.MustMetric(
+	input3 := metric.New(
 		metricName1,
 		map[string]string{}, // record with no dimensions should appear in the results
 		map[string]interface{}{
@@ -796,7 +797,7 @@ func TestTransformMetricsRequestsAboveLimitAreSplit(t *testing.T) {
 	inputs := make([]telegraf.Metric, 0, maxRecordsInWriteRecordsCall+1)
 	for i := 1; i <= maxRecordsInWriteRecordsCall+1; i++ {
 		fieldName := "value_supported" + strconv.Itoa(i)
-		inputs = append(inputs, testutil.MustMetric(
+		inputs = append(inputs, metric.New(
 			metricName1,
 			map[string]string{"tag1": "value1"},
 			map[string]interface{}{
@@ -856,7 +857,7 @@ func TestTransformMetricsRequestsAboveLimitAreSplitSingleTable(t *testing.T) {
 		localTime++
 
 		fieldName := "value_supported" + strconv.Itoa(i)
-		inputs = append(inputs, testutil.MustMetric(
+		inputs = append(inputs, metric.New(
 			metricName1,
 			map[string]string{"tag1": "value1"},
 			map[string]interface{}{
@@ -913,7 +914,7 @@ func TestTransformMetricsRequestsAboveLimitAreSplitSingleTable(t *testing.T) {
 }
 
 func TestTransformMetricsDifferentDimensionsSameTimestampsAreWrittenSeparate(t *testing.T) {
-	input1 := testutil.MustMetric(
+	input1 := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
 		map[string]interface{}{
@@ -922,7 +923,7 @@ func TestTransformMetricsDifferentDimensionsSameTimestampsAreWrittenSeparate(t *
 		time1,
 	)
 
-	input2 := testutil.MustMetric(
+	input2 := metric.New(
 		metricName2,
 		map[string]string{"tag2": "value2"},
 		map[string]interface{}{
@@ -977,7 +978,7 @@ func TestTransformMetricsDifferentDimensionsSameTimestampsAreWrittenSeparate(t *
 }
 
 func TestTransformMetricsSameDimensionsDifferentDimensionValuesAreWrittenSeparate(t *testing.T) {
-	input1 := testutil.MustMetric(
+	input1 := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
 		map[string]interface{}{
@@ -985,7 +986,7 @@ func TestTransformMetricsSameDimensionsDifferentDimensionValuesAreWrittenSeparat
 		},
 		time1,
 	)
-	input2 := testutil.MustMetric(
+	input2 := metric.New(
 		metricName2,
 		map[string]string{"tag1": "value2"},
 		map[string]interface{}{
@@ -1039,7 +1040,7 @@ func TestTransformMetricsSameDimensionsDifferentDimensionValuesAreWrittenSeparat
 }
 
 func TestTransformMetricsSameDimensionsDifferentTimestampsAreWrittenSeparate(t *testing.T) {
-	input1 := testutil.MustMetric(
+	input1 := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
 		map[string]interface{}{
@@ -1047,7 +1048,7 @@ func TestTransformMetricsSameDimensionsDifferentTimestampsAreWrittenSeparate(t *
 		},
 		time1,
 	)
-	input2 := testutil.MustMetric(
+	input2 := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
 		map[string]interface{}{
@@ -1110,7 +1111,7 @@ func TestTransformMetricsSameDimensionsDifferentTimestampsAreWrittenSeparate(t *
 }
 
 func TestTransformMetricsSameDimensionsSameTimestampsAreWrittenTogether(t *testing.T) {
-	input1 := testutil.MustMetric(
+	input1 := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
 		map[string]interface{}{
@@ -1118,7 +1119,7 @@ func TestTransformMetricsSameDimensionsSameTimestampsAreWrittenTogether(t *testi
 		},
 		time1,
 	)
-	input2 := testutil.MustMetric(
+	input2 := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
 		map[string]interface{}{
@@ -1151,7 +1152,7 @@ func TestTransformMetricsSameDimensionsSameTimestampsAreWrittenTogether(t *testi
 }
 
 func TestTransformMetricsDifferentMetricsAreWrittenToDifferentTablesInMultiTableMapping(t *testing.T) {
-	input1 := testutil.MustMetric(
+	input1 := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
 		map[string]interface{}{
@@ -1159,7 +1160,7 @@ func TestTransformMetricsDifferentMetricsAreWrittenToDifferentTablesInMultiTable
 		},
 		time1,
 	)
-	input2 := testutil.MustMetric(
+	input2 := metric.New(
 		metricName2,
 		map[string]string{"tag1": "value1"},
 		map[string]interface{}{
@@ -1213,7 +1214,7 @@ func TestTransformMetricsDifferentMetricsAreWrittenToDifferentTablesInMultiTable
 }
 
 func TestTransformMetricsUnsupportedFieldsAreSkipped(t *testing.T) {
-	metricWithUnsupportedField := testutil.MustMetric(
+	metricWithUnsupportedField := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
 		map[string]interface{}{

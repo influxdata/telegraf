@@ -452,8 +452,8 @@ func (s *Statsd) Stop() {
 		//  - get all conns from the s.conns map and put into slice
 		//  - this is so the forget() function doesnt conflict with looping
 		//    over the s.conns map
-		var conns []*net.TCPConn
 		s.cleanup.Lock()
+		conns := make([]*net.TCPConn, 0, len(s.conns))
 		for _, conn := range s.conns {
 			conns = append(conns, conn)
 		}
@@ -759,7 +759,7 @@ func (s *Statsd) parseStatsdLine(p *graphite.Parser, line string) error {
 		}
 
 		// Make a unique key for the measurement name/tags
-		var tg []string
+		tg := make([]string, 0, len(m.tags)+1)
 		for k, v := range m.tags {
 			tg = append(tg, k+"="+v)
 		}

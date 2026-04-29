@@ -364,17 +364,6 @@ func RequireMetricsStructureSubset(t testing.TB, expected, actual []telegraf.Met
 	}
 }
 
-// MustMetric creates a new metric.
-func MustMetric(
-	name string,
-	tags map[string]string,
-	fields map[string]interface{},
-	tm time.Time,
-	tp ...telegraf.ValueType,
-) telegraf.Metric {
-	return metric.New(name, tags, fields, tm, tp...)
-}
-
 func FromTestMetric(met *Metric) telegraf.Metric {
 	return metric.New(met.Measurement, met.Tags, met.Fields, met.Time, met.Type)
 }

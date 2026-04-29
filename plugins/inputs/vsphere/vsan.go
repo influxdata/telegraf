@@ -218,14 +218,13 @@ func (e *endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 			continue
 		}
 		entityRefID = strings.TrimPrefix(entityRefID, perfPrefix)
-		var perfSpecs []vsantypes.VsanPerfQuerySpec
-
-		perfSpec := vsantypes.VsanPerfQuerySpec{
-			EntityRefId: entityRefID + ":*",
-			StartTime:   &start,
-			EndTime:     &end,
+		perfSpecs := []vsantypes.VsanPerfQuerySpec{
+			{
+				EntityRefId: entityRefID + ":*",
+				StartTime:   &start,
+				EndTime:     &end,
+			},
 		}
-		perfSpecs = append(perfSpecs, perfSpec)
 
 		perfRequest := vsantypes.VsanPerfQueryPerf{
 			This:       perfManagerRef,

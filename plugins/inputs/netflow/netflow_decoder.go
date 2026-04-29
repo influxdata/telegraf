@@ -741,7 +741,7 @@ func (d *netflowDecoder) decodeValueV9(field netflow.DataField) ([]telegraf.Fiel
 
 	// Check the version specific default field mappings
 	if mappings, found := fieldMappingsNetflowV9[elementID]; found {
-		var fields []telegraf.Field
+		fields := make([]telegraf.Field, 0, len(mappings))
 		for _, m := range mappings {
 			v, err := m.decoder(raw)
 			if err != nil {
@@ -754,7 +754,7 @@ func (d *netflowDecoder) decodeValueV9(field netflow.DataField) ([]telegraf.Fiel
 
 	// Check the common default field mappings
 	if mappings, found := fieldMappingsNetflowCommon[elementID]; found {
-		var fields []telegraf.Field
+		fields := make([]telegraf.Field, 0, len(mappings))
 		for _, m := range mappings {
 			v, err := m.decoder(raw)
 			if err != nil {
@@ -769,7 +769,7 @@ func (d *netflowDecoder) decodeValueV9(field netflow.DataField) ([]telegraf.Fiel
 	// Netflow v9 packets. See https://github.com/influxdata/telegraf/issues/14902
 	// and https://github.com/influxdata/telegraf/issues/14903.
 	if mappings, found := fieldMappingsIPFIX[elementID]; found {
-		var fields []telegraf.Field
+		fields := make([]telegraf.Field, 0, len(mappings))
 		for _, m := range mappings {
 			v, err := m.decoder(raw)
 			if err != nil {
@@ -839,7 +839,7 @@ func (d *netflowDecoder) decodeValueIPFIX(field netflow.DataField) ([]telegraf.F
 
 	// Check the version specific default field mappings
 	if mappings, found := fieldMappingsIPFIX[elementID]; found {
-		var fields []telegraf.Field
+		fields := make([]telegraf.Field, 0, len(mappings))
 		for _, m := range mappings {
 			v, err := m.decoder(raw)
 			if err != nil {
@@ -852,7 +852,7 @@ func (d *netflowDecoder) decodeValueIPFIX(field netflow.DataField) ([]telegraf.F
 
 	// Check the common default field mappings
 	if mappings, found := fieldMappingsNetflowCommon[elementID]; found {
-		var fields []telegraf.Field
+		fields := make([]telegraf.Field, 0, len(mappings))
 		for _, m := range mappings {
 			v, err := m.decoder(raw)
 			if err != nil {

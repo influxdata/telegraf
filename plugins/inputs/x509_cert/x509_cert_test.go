@@ -312,10 +312,15 @@ func TestGatherUDPCertIntegration(t *testing.T) {
 	require.NoError(t, err)
 	defer listener.Close()
 
+	// Hold the server-side connection open until the client is done gathering.
+	// Closing earlier sends a CloseNotify that can race with the client's
+	// in-flight handshake under pion/dtls v3 and surface as a handshake error.
+	done := make(chan struct{})
+	defer close(done)
 	go func() {
 		conn, err := listener.Accept()
 		if err != nil {
-			t.Error(err)
+			t.Errorf("accept failed: %v", err)
 			return
 		}
 		defer conn.Close()
@@ -326,8 +331,10 @@ func TestGatherUDPCertIntegration(t *testing.T) {
 			return
 		}
 		if err := dtlsConn.Handshake(); err != nil {
-			t.Error(err)
+			t.Errorf("server handshake failed: %v", err)
+			return
 		}
+		<-done
 	}()
 
 	m := &X509Cert{
@@ -416,11 +423,13 @@ func TestSourcesToURLs(t *testing.T) {
 	}
 	require.NoError(t, m.Init())
 
-	expected := []string{
+	expected := make([]string, 0, len(m.Sources)+3)
+	expected = append(
+		expected,
 		"https://www.influxdata.com:443",
 		"tcp://influxdata.com:443",
 		"smtp://influxdata.com:25",
-	}
+	)
 
 	expectedPaths := []string{
 		"/dummy_test_path_file.pem",

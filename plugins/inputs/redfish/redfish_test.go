@@ -12,6 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -44,7 +45,7 @@ func TestDellApis(t *testing.T) {
 	require.NoError(t, err)
 
 	expectedMetrics := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_temperatures",
 			map[string]string{
 				"name":      "CPU1 Temp",
@@ -63,7 +64,7 @@ func TestDellApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -80,7 +81,7 @@ func TestDellApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -97,7 +98,7 @@ func TestDellApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -114,7 +115,7 @@ func TestDellApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -131,7 +132,7 @@ func TestDellApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -148,7 +149,7 @@ func TestDellApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -165,7 +166,7 @@ func TestDellApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -182,7 +183,7 @@ func TestDellApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -199,7 +200,7 @@ func TestDellApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -216,7 +217,7 @@ func TestDellApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -233,7 +234,7 @@ func TestDellApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -250,7 +251,7 @@ func TestDellApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -267,7 +268,7 @@ func TestDellApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -284,7 +285,7 @@ func TestDellApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -301,7 +302,7 @@ func TestDellApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -318,7 +319,7 @@ func TestDellApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -335,7 +336,7 @@ func TestDellApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_power_powercontrol",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -356,7 +357,7 @@ func TestDellApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_power_powersupplies",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -374,7 +375,7 @@ func TestDellApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_power_voltages",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -389,7 +390,7 @@ func TestDellApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_power_voltages",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -405,7 +406,7 @@ func TestDellApis(t *testing.T) {
 			time.Unix(0, 0),
 		),
 
-		testutil.MustMetric(
+		metric.New(
 			"redfish_power_voltages",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -467,7 +468,7 @@ func TestHPApis(t *testing.T) {
 	require.NoError(t, err)
 
 	expectedMetricsHp := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_temperatures",
 			map[string]string{
 				"name":      "01-Inlet Ambient",
@@ -484,7 +485,7 @@ func TestHPApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_temperatures",
 			map[string]string{
 				"name":      "44-P/S 2 Zone",
@@ -501,7 +502,7 @@ func TestHPApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -516,7 +517,7 @@ func TestHPApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -531,7 +532,7 @@ func TestHPApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -546,7 +547,7 @@ func TestHPApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_power_powercontrol",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -564,7 +565,7 @@ func TestHPApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_power_powersupplies",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -581,7 +582,7 @@ func TestHPApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_power_powersupplies",
 			map[string]string{
 				"source":    "tpa-hostname",
@@ -646,7 +647,7 @@ func TestHPilo4Apis(t *testing.T) {
 	require.NoError(t, err)
 
 	expectedMetricsHp := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_temperatures",
 			map[string]string{
 				"name":      "01-Inlet Ambient",
@@ -663,7 +664,7 @@ func TestHPilo4Apis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_temperatures",
 			map[string]string{
 				"name":      "44-P/S 2 Zone",
@@ -680,7 +681,7 @@ func TestHPilo4Apis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
 				"address":   address,
@@ -958,7 +959,7 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 	require.NoError(t, err)
 
 	expectedMetricsHp := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_temperatures",
 			map[string]string{
 				"name":                 "01-Inlet Ambient",
@@ -988,7 +989,7 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_temperatures",
 			map[string]string{
 				"name":                 "44-P/S 2 Zone",
@@ -1018,7 +1019,7 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
 				"source":               "tpa-hostname",
@@ -1046,7 +1047,7 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
 				"source":               "tpa-hostname",
@@ -1074,7 +1075,7 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
 				"source":               "tpa-hostname",
@@ -1102,7 +1103,7 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_power_powercontrol",
 			map[string]string{
 				"source":               "tpa-hostname",
@@ -1133,7 +1134,7 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_power_powersupplies",
 			map[string]string{
 				"source":               "tpa-hostname",
@@ -1163,7 +1164,7 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"redfish_power_powersupplies",
 			map[string]string{
 				"source":               "tpa-hostname",

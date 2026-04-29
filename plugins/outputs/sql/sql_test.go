@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -175,7 +174,7 @@ func TestMysqlIntegration(t *testing.T) {
 		},
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("mariadbd: ready for connections.").WithOccurrence(2),
 		),
 	}
@@ -259,7 +258,7 @@ func TestMysqlUpdateSchemeIntegration(t *testing.T) {
 		},
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("mariadbd: ready for connections.").WithOccurrence(2),
 		),
 	}
@@ -343,7 +342,7 @@ func TestMysqlIntegrationSendBatch(t *testing.T) {
 		},
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("mariadbd: ready for connections.").WithOccurrence(2),
 		),
 	}
@@ -427,7 +426,7 @@ func TestPostgresIntegration(t *testing.T) {
 		},
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
 		),
 	}
@@ -506,7 +505,7 @@ func TestPostgresUpdateSchemeIntegration(t *testing.T) {
 		},
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
 		),
 	}
@@ -594,7 +593,7 @@ func TestPostgresIntegrationSendBatch(t *testing.T) {
 		},
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
 		),
 	}
@@ -679,8 +678,8 @@ func TestClickHouseIntegration(t *testing.T) {
 			"/out": outDir,
 		},
 		WaitingFor: wait.ForAll(
-			wait.NewHTTPStrategy("/").WithPort(nat.Port("8123")),
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.NewHTTPStrategy("/").WithPort("8123"),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("Ready for connections"),
 		),
 	}
@@ -776,8 +775,8 @@ func TestClickHouseUpdateSchemeIntegration(t *testing.T) {
 			"/out": outDir,
 		},
 		WaitingFor: wait.ForAll(
-			wait.NewHTTPStrategy("/").WithPort(nat.Port("8123")),
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.NewHTTPStrategy("/").WithPort("8123"),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("Ready for connections"),
 		),
 	}
@@ -925,8 +924,8 @@ func TestClickHouseIntegrationSendBatch(t *testing.T) {
 			"/out": outDir,
 		},
 		WaitingFor: wait.ForAll(
-			wait.NewHTTPStrategy("/").WithPort(nat.Port("8123")),
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.NewHTTPStrategy("/").WithPort("8123"),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("Ready for connections"),
 		),
 	}
@@ -1023,8 +1022,8 @@ func TestClickHousePreExistingTableIntegration(t *testing.T) {
 			"/out": outDir,
 		},
 		WaitingFor: wait.ForAll(
-			wait.NewHTTPStrategy("/").WithPort(nat.Port("8123")),
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.NewHTTPStrategy("/").WithPort("8123"),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("Ready for connections"),
 		),
 	}
@@ -1154,7 +1153,7 @@ func TestMysqlEmptyTimestampColumnIntegration(t *testing.T) {
 		},
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("mariadbd: ready for connections.").WithOccurrence(2),
 		),
 	}

@@ -11,6 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -538,7 +539,7 @@ func TestParse_Sets_SetsAsFloat(t *testing.T) {
 	}
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"unique_user_ids",
 			map[string]string{"metric_type": "set"},
 			map[string]interface{}{"value": 2.0},
@@ -676,42 +677,42 @@ func TestParse_CountersAsFloat(t *testing.T) {
 	}
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"small_inc",
 			map[string]string{"metric_type": "counter"},
 			map[string]interface{}{"value": 2.0},
 			time.Now(),
 			telegraf.Counter,
 		),
-		testutil.MustMetric(
+		metric.New(
 			"big_inc",
 			map[string]string{"metric_type": "counter"},
 			map[string]interface{}{"value": 1100101.0},
 			time.Now(),
 			telegraf.Counter,
 		),
-		testutil.MustMetric(
+		metric.New(
 			"zero_init",
 			map[string]string{"metric_type": "counter"},
 			map[string]interface{}{"value": 0.0},
 			time.Now(),
 			telegraf.Counter,
 		),
-		testutil.MustMetric(
+		metric.New(
 			"sample_rate",
 			map[string]string{"metric_type": "counter"},
 			map[string]interface{}{"value": 11.0},
 			time.Now(),
 			telegraf.Counter,
 		),
-		testutil.MustMetric(
+		metric.New(
 			"scientific_notation",
 			map[string]string{"metric_type": "counter"},
 			map[string]interface{}{"value": 469600.0},
 			time.Now(),
 			telegraf.Counter,
 		),
-		testutil.MustMetric(
+		metric.New(
 			"negative_test",
 			map[string]string{"metric_type": "counter"},
 			map[string]interface{}{"value": 95.0},
@@ -1256,7 +1257,7 @@ func TestParse_DataDogTags(t *testing.T) {
 			name: "counter",
 			line: "my_counter:1|c|#host:localhost,environment:prod,endpoint:/:tenant?/oauth/ro",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"my_counter",
 					map[string]string{
 						"endpoint":    "/:tenant?/oauth/ro",
@@ -1276,7 +1277,7 @@ func TestParse_DataDogTags(t *testing.T) {
 			name: "gauge",
 			line: "my_gauge:10.1|g|#live",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"my_gauge",
 					map[string]string{
 						"live":        "true",
@@ -1294,7 +1295,7 @@ func TestParse_DataDogTags(t *testing.T) {
 			name: "set",
 			line: "my_set:1|s|#host:localhost",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"my_set",
 					map[string]string{
 						"host":        "localhost",
@@ -1311,7 +1312,7 @@ func TestParse_DataDogTags(t *testing.T) {
 			name: "timer",
 			line: "my_timer:3|ms|@0.1|#live,host:localhost",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"my_timer",
 					map[string]string{
 						"host":        "localhost",
@@ -1335,7 +1336,7 @@ func TestParse_DataDogTags(t *testing.T) {
 			name: "empty tag set",
 			line: "cpu:42|c|#",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"metric_type": "counter",
@@ -1381,7 +1382,7 @@ func TestParse_DataDogContainerID(t *testing.T) {
 			line: "my_counter:1|c|#host:localhost,endpoint:/:tenant?/oauth/ro|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
 			keep: true,
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"my_counter",
 					map[string]string{
 						"endpoint":    "/:tenant?/oauth/ro",
@@ -1402,7 +1403,7 @@ func TestParse_DataDogContainerID(t *testing.T) {
 			line: "my_gauge:10.1|g|#live|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
 			keep: true,
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"my_gauge",
 					map[string]string{
 						"live":        "true",
@@ -1422,7 +1423,7 @@ func TestParse_DataDogContainerID(t *testing.T) {
 			line: "my_set:1|s|#host:localhost|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
 			keep: true,
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"my_set",
 					map[string]string{
 						"host":        "localhost",
@@ -1441,7 +1442,7 @@ func TestParse_DataDogContainerID(t *testing.T) {
 			line: "my_timer:3|ms|@0.1|#live,host:localhost|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
 			keep: true,
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"my_timer",
 					map[string]string{
 						"host":        "localhost",
@@ -1467,7 +1468,7 @@ func TestParse_DataDogContainerID(t *testing.T) {
 			line: "cpu:42|c|#|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
 			keep: true,
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"metric_type": "counter",
@@ -1486,7 +1487,7 @@ func TestParse_DataDogContainerID(t *testing.T) {
 			line: "cpu:42|c|#live,host:localhost|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
 			keep: false,
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"host":        "localhost",
@@ -1630,7 +1631,7 @@ func TestCachesExpireAfterMaxTTL(t *testing.T) {
 
 	testutil.RequireMetricsEqual(t,
 		[]telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"valid",
 				map[string]string{
 					"metric_type": "counter",
@@ -1641,7 +1642,7 @@ func TestCachesExpireAfterMaxTTL(t *testing.T) {
 				time.Now(),
 				telegraf.Counter,
 			),
-			testutil.MustMetric(
+			metric.New(
 				"valid",
 				map[string]string{
 					"metric_type": "counter",
@@ -1652,7 +1653,7 @@ func TestCachesExpireAfterMaxTTL(t *testing.T) {
 				time.Now(),
 				telegraf.Counter,
 			),
-			testutil.MustMetric(
+			metric.New(
 				"valid",
 				map[string]string{
 					"metric_type": "counter",
@@ -2134,11 +2135,11 @@ func testValidateSet(
 	} else {
 		f = "value"
 	}
-	var metric cachedset
+	var m cachedset
 	var found bool
 	for _, v := range cache {
 		if v.name == name {
-			metric = v
+			m = v
 			found = true
 			break
 		}
@@ -2147,8 +2148,8 @@ func testValidateSet(
 		return fmt.Errorf("test Error: Metric name %s not found", name)
 	}
 
-	if value != int64(len(metric.fields[f])) {
-		return fmt.Errorf("measurement: %s, expected %d, actual %d", name, value, len(metric.fields[f]))
+	if value != int64(len(m.fields[f])) {
+		return fmt.Errorf("measurement: %s, expected %d, actual %d", name, value, len(m.fields[f]))
 	}
 	return nil
 }
@@ -2247,7 +2248,7 @@ func TestTCP(t *testing.T) {
 
 	testutil.RequireMetricsEqual(t,
 		[]telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"cpu_time_idle",
 				map[string]string{
 					"metric_type": "counter",
@@ -2292,7 +2293,7 @@ func TestUdp(t *testing.T) {
 
 	testutil.RequireMetricsEqual(t,
 		[]telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"cpu_time_idle",
 				map[string]string{
 					"metric_type": "counter",
@@ -2483,7 +2484,7 @@ func TestParse_InvalidAndRecoverIntegration(t *testing.T) {
 	}, time.Second, 10*time.Millisecond, "expected at least 1 metric")
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu_time_idle",
 			map[string]string{
 				"metric_type": "counter",
@@ -2532,7 +2533,7 @@ func TestParse_DeltaCounter(t *testing.T) {
 	}, time.Second, 100*time.Millisecond, "Expected 1 metric found %d", acc.NMetrics())
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu_time_idle",
 			map[string]string{
 				"metric_type": "counter",

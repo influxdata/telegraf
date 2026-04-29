@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -47,7 +48,7 @@ func TestStatefulSet(t *testing.T) {
 									ObservedGeneration: 119,
 								},
 								Spec: v1.StatefulSetSpec{
-									Replicas: toPtr(int32(3)),
+									Replicas: new(int32(3)),
 									Selector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
 											"select1": "s1",
@@ -67,7 +68,7 @@ func TestStatefulSet(t *testing.T) {
 				},
 			},
 			output: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"kubernetes_statefulset",
 					map[string]string{
 						"namespace":        "ns1",
@@ -105,7 +106,7 @@ func TestStatefulSet(t *testing.T) {
 									ObservedGeneration: 119,
 								},
 								Spec: v1.StatefulSetSpec{
-									Replicas: toPtr(int32(3)),
+									Replicas: new(int32(3)),
 									Selector: nil,
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -120,7 +121,7 @@ func TestStatefulSet(t *testing.T) {
 				},
 			},
 			output: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"kubernetes_statefulset",
 					map[string]string{
 						"namespace":        "ns1",
@@ -176,7 +177,7 @@ func TestStatefulSet(t *testing.T) {
 				},
 			},
 			output: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"kubernetes_statefulset",
 					map[string]string{
 						"namespace":        "ns1",
@@ -242,7 +243,7 @@ func TestStatefulSetSelectorFilter(t *testing.T) {
 						ObservedGeneration: 119,
 					},
 					Spec: v1.StatefulSetSpec{
-						Replicas: toPtr(int32(3)),
+						Replicas: new(int32(3)),
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"select1": "s1",
@@ -364,8 +365,8 @@ func TestStatefulSetSelectorFilter(t *testing.T) {
 
 		// Grab selector tags
 		actual := map[string]string{}
-		for _, metric := range acc.Metrics {
-			for key, val := range metric.Tags {
+		for _, m := range acc.Metrics {
+			for key, val := range m.Tags {
 				if strings.Contains(key, "selector_") {
 					actual[key] = val
 				}

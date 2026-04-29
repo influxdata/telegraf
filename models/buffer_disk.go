@@ -42,6 +42,9 @@ func NewDiskBuffer(id, path string, stats BufferStats, diskSync bool) (*DiskBuff
 		NoSync:     !diskSync,
 	})
 	if err != nil {
+		if errors.Is(err, wal.ErrCorrupt) {
+			return nil, fmt.Errorf("wal file is corrupt, you have to manually delete the wal at %q and restart Telegraf", filePath)
+		}
 		return nil, fmt.Errorf("failed to open wal file: %w", err)
 	}
 
