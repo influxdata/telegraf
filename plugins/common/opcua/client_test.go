@@ -227,7 +227,7 @@ func TestRemoteCertificateValidation(t *testing.T) {
 	}
 }
 
-func TestGenerateClientOptsDisableAutoReconnect(t *testing.T) {
+func TestGenerateClientOptsExtras(t *testing.T) {
 	endpoints := []*ua.EndpointDescription{
 		{
 			EndpointURL:       "opc.tcp://localhost:4840",
@@ -240,61 +240,42 @@ func TestGenerateClientOptsDisableAutoReconnect(t *testing.T) {
 		},
 	}
 
-	cfg := &OpcUAClientConfig{
-		Endpoint:       "opc.tcp://localhost:4840",
-		SecurityPolicy: "None",
-		SecurityMode:   "None",
-		AuthMethod:     "Anonymous",
-	}
-
-	defaultClient := &OpcUAClient{Config: cfg, Log: &testutil.Logger{}}
-	defaultOpts, err := defaultClient.generateClientOpts(endpoints)
-	require.NoError(t, err)
-
-	disabledClient := &OpcUAClient{Config: cfg, Log: &testutil.Logger{}, DisableAutoReconnect: true}
-	disabledOpts, err := disabledClient.generateClientOpts(endpoints)
-	require.NoError(t, err)
-
-	require.Len(t, disabledOpts, len(defaultOpts)+1)
-}
-
-func TestGenerateClientOptsWithLocales(t *testing.T) {
-	endpoints := []*ua.EndpointDescription{
-		{
-			EndpointURL:       "opc.tcp://localhost:4840",
-			SecurityPolicyURI: ua.SecurityPolicyURINone,
-			SecurityMode:      ua.MessageSecurityModeNone,
-			SecurityLevel:     0,
-			UserIdentityTokens: []*ua.UserTokenPolicy{
-				{TokenType: ua.UserTokenTypeAnonymous},
+	newBaseClient := func() *OpcUAClient {
+		return &OpcUAClient{
+			Config: &OpcUAClientConfig{
+				Endpoint:       "opc.tcp://localhost:4840",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
 			},
-		},
+			Log: &testutil.Logger{},
+		}
 	}
 
-	baseClient := &OpcUAClient{
-		Config: &OpcUAClientConfig{
-			Endpoint:       "opc.tcp://localhost:4840",
-			SecurityPolicy: "None",
-			SecurityMode:   "None",
-			AuthMethod:     "Anonymous",
-		},
-		Log: &testutil.Logger{},
-	}
-	baseOpts, err := baseClient.generateClientOpts(endpoints)
+	baseOpts, err := newBaseClient().generateClientOpts(endpoints)
 	require.NoError(t, err)
 
-	localesClient := &OpcUAClient{
-		Config: &OpcUAClientConfig{
-			Endpoint:       "opc.tcp://localhost:4840",
-			SecurityPolicy: "None",
-			SecurityMode:   "None",
-			AuthMethod:     "Anonymous",
-			Locales:        []string{"en", "de"},
+	tests := []struct {
+		name   string
+		modify func(*OpcUAClient)
+	}{
+		{
+			name:   "locales",
+			modify: func(c *OpcUAClient) { c.Config.Locales = []string{"en", "de"} },
 		},
-		Log: &testutil.Logger{},
+		{
+			name:   "disable auto-reconnect",
+			modify: func(c *OpcUAClient) { c.DisableAutoReconnect = true },
+		},
 	}
-	localesOpts, err := localesClient.generateClientOpts(endpoints)
-	require.NoError(t, err)
 
-	require.Len(t, localesOpts, len(baseOpts)+1)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := newBaseClient()
+			tt.modify(client)
+			opts, err := client.generateClientOpts(endpoints)
+			require.NoError(t, err)
+			require.Len(t, opts, len(baseOpts)+1)
+		})
+	}
 }
