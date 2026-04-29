@@ -24,8 +24,7 @@ import (
 var sampleConfig string
 
 type System struct {
-	Include []string `toml:"include"`
-
+	Include []string    `toml:"include"`
 	Log telegraf.Logger `toml:"-"`
 }
 
