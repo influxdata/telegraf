@@ -60,7 +60,7 @@ func (g *GoogleCloud) Init() error {
 	saType := credentials.CredType(credType)
 
 	creds, err := credentials.NewCredentialsFromJSON(saType, serviceAccount, &credentials.DetectOptions{
-		Scopes:      g.Scopes, // new
+		Scopes:      g.Scopes,
 		STSAudience: g.STSAudience,
 		Client:      client,
 		Logger:      slog.NewLogger(g.Log),
