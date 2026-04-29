@@ -16,10 +16,14 @@ import (
 	receiver "github.com/logzio/azure-monitor-metrics-receiver"
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
-type mockAzureClientsManager struct{}
+type mockAzureClientsManager struct {
+	clientSecret string
+}
 
 type mockAzureResourcesClient struct{}
 
@@ -27,7 +31,9 @@ type mockAzureMetricDefinitionsClient struct{}
 
 type mockAzureMetricsClient struct{}
 
-func (*mockAzureClientsManager) createAzureClients(_, _, _, _ string, _ azcore.ClientOptions) (*receiver.AzureClients, error) {
+func (m *mockAzureClientsManager) createAzureClients(_, _, clientSecret, _ string, _ azcore.ClientOptions) (*receiver.AzureClients, error) {
+	m.clientSecret = clientSecret
+
 	return &receiver.AzureClients{
 		Ctx:                     context.Background(),
 		ResourcesClient:         &mockAzureResourcesClient{},
@@ -194,6 +200,22 @@ func (*mockAzureMetricsClient) List(
 	}
 
 	return armmonitor.MetricsClientListResponse{}, errors.New("resource ID was not found")
+}
+
+func TestClientSecretSupportsSecretStore(t *testing.T) {
+	am := &AzureMonitor{
+		ClientSecret: config.NewSecret([]byte("@{store:key}")),
+	}
+	t.Cleanup(am.ClientSecret.Destroy)
+	require.NoError(t, am.ClientSecret.Link(map[string]telegraf.ResolveFunc{
+		"@{store:key}": func() ([]byte, bool, error) {
+			return []byte("resolvedSecret"), false, nil
+		},
+	}))
+
+	secret, err := am.clientSecret()
+	require.NoError(t, err)
+	require.Equal(t, "resolvedSecret", secret)
 }
 
 func TestInit_ResourceTargetsOnly(t *testing.T) {
@@ -912,9 +934,11 @@ func TestGather_Success(t *testing.T) {
 	}
 
 	var clientOptions = azcore.ClientOptions{Cloud: cloud.AzurePublic}
+	clientSecret, err := am.clientSecret()
+	require.NoError(t, err)
 
 	var azureClients *receiver.AzureClients
-	azureClients, err = am.azureManager.createAzureClients(am.SubscriptionID, am.ClientID, am.ClientSecret, am.TenantID, clientOptions)
+	azureClients, err = am.azureManager.createAzureClients(am.SubscriptionID, am.ClientID, clientSecret, am.TenantID, clientOptions)
 	require.NoError(t, err)
 	require.NotNil(t, azureClients)
 
@@ -999,9 +1023,11 @@ func TestGather_China_Success(t *testing.T) {
 	}
 
 	var clientOptions = azcore.ClientOptions{Cloud: cloud.AzureChina}
+	clientSecret, err := am.clientSecret()
+	require.NoError(t, err)
 
 	var azureClients *receiver.AzureClients
-	azureClients, err = am.azureManager.createAzureClients(am.SubscriptionID, am.ClientID, am.ClientSecret, am.TenantID, clientOptions)
+	azureClients, err = am.azureManager.createAzureClients(am.SubscriptionID, am.ClientID, clientSecret, am.TenantID, clientOptions)
 	require.NoError(t, err)
 	require.NotNil(t, azureClients)
 
@@ -1032,9 +1058,11 @@ func TestGather_Government_Success(t *testing.T) {
 	}
 
 	var clientOptions = azcore.ClientOptions{Cloud: cloud.AzureGovernment}
+	clientSecret, err := am.clientSecret()
+	require.NoError(t, err)
 
 	var azureClients *receiver.AzureClients
-	azureClients, err = am.azureManager.createAzureClients(am.SubscriptionID, am.ClientID, am.ClientSecret, am.TenantID, clientOptions)
+	azureClients, err = am.azureManager.createAzureClients(am.SubscriptionID, am.ClientID, clientSecret, am.TenantID, clientOptions)
 	require.NoError(t, err)
 	require.NotNil(t, azureClients)
 
@@ -1065,9 +1093,11 @@ func TestGather_Public_Success(t *testing.T) {
 	}
 
 	var clientOptions = azcore.ClientOptions{Cloud: cloud.AzurePublic}
+	clientSecret, err := am.clientSecret()
+	require.NoError(t, err)
 
 	var azureClients *receiver.AzureClients
-	azureClients, err = am.azureManager.createAzureClients(am.SubscriptionID, am.ClientID, am.ClientSecret, am.TenantID, clientOptions)
+	azureClients, err = am.azureManager.createAzureClients(am.SubscriptionID, am.ClientID, clientSecret, am.TenantID, clientOptions)
 	require.NoError(t, err)
 	require.NotNil(t, azureClients)
 

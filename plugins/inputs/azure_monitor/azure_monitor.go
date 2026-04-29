@@ -12,13 +12,14 @@ import (
 	receiver "github.com/logzio/azure-monitor-metrics-receiver"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type AzureMonitor struct {
 	SubscriptionID       string                 `toml:"subscription_id"`
 	ClientID             string                 `toml:"client_id"`
-	ClientSecret         string                 `toml:"client_secret"`
+	ClientSecret         config.Secret          `toml:"client_secret"`
 	TenantID             string                 `toml:"tenant_id"`
 	CloudOption          string                 `toml:"cloud_option,omitempty"`
 	ResourceTargets      []*resourceTarget      `toml:"resource_target"`
@@ -75,8 +76,12 @@ func (am *AzureMonitor) Init() error {
 		return fmt.Errorf("unknown cloud option: %s", am.CloudOption)
 	}
 
-	var err error
-	am.azureClients, err = am.azureManager.createAzureClients(am.SubscriptionID, am.ClientID, am.ClientSecret, am.TenantID, clientOptions)
+	clientSecret, err := am.clientSecret()
+	if err != nil {
+		return fmt.Errorf("getting client secret failed: %w", err)
+	}
+
+	am.azureClients, err = am.azureManager.createAzureClients(am.SubscriptionID, am.ClientID, clientSecret, am.TenantID, clientOptions)
 	if err != nil {
 		return err
 	}
@@ -140,6 +145,20 @@ func (am *AzureMonitor) Gather(acc telegraf.Accumulator) error {
 
 	waitGroup.Wait()
 	return nil
+}
+
+func (am *AzureMonitor) clientSecret() (string, error) {
+	if am.ClientSecret.Empty() {
+		return "", nil
+	}
+
+	secret, err := am.ClientSecret.Get()
+	if err != nil {
+		return "", err
+	}
+	defer secret.Destroy()
+
+	return secret.String(), nil
 }
 
 func (am *AzureMonitor) setReceiver() error {

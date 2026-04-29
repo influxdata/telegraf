@@ -99,6 +99,13 @@ and `version=<telegraf_version>`.
                          (excluding startup-errors)
   - write_time_ns     -- duration of the write operation
 
+The internal input can additionally report its own startup status as an
+`internal_write` series tagged with `input=internal` and
+`version=<telegraf_version>`.
+
+- internal_write
+  - startup_errors    -- number of errors while starting the internal plugin
+
 internal_<plugin_name> are metrics which are defined on a per-plugin basis, and
 usually contain tags which differentiate each instance of a particular type of
 plugin and `version=<telegraf_version>`.
@@ -116,6 +123,7 @@ to each particular plugin and with `version=<telegraf_version>`.
 ```text
 internal_memstats,host=tyrion alloc_bytes=4457408i,sys_bytes=10590456i,pointer_lookups=7i,mallocs=17642i,frees=7473i,heap_sys_bytes=6848512i,heap_idle_bytes=1368064i,heap_in_use_bytes=5480448i,heap_released_bytes=0i,total_alloc_bytes=6875560i,heap_alloc_bytes=4457408i,heap_objects_bytes=10169i,num_gc=2i 1480682800000000000
 internal_agent,host=tyrion,go_version=1.12.7,version=1.99.0 metrics_written=18i,metrics_dropped=0i,metrics_gathered=19i,metrics_rejected=0i,gather_errors=0i,gather_timeouts=0i,write_errors=0i 1480682800000000000
+internal_write,input=internal,host=tyrion,version=1.99.0 startup_errors=0i 1480682800000000000
 internal_write,output=file,host=tyrion,version=1.99.0 buffer_limit=10000i,buffer_size=0i,errors=0i,metrics_added=18i,metrics_dropped=0i,metrics_filtered=0i,metrics_rejected=0i,metrics_written=18i,startup_errors=1i,write_errors=0i,write_time_ns=636609i 1480682800000000000
 internal_gather,input=internal,host=tyrion,version=1.99.0 errors=2i,gather_errors=1i,gather_time_ns=442114i,gather_timeouts=0i,metrics_gathered=19i,startup_errors=0i 1480682800000000000
 internal_gather,input=http_listener,host=tyrion,version=1.99.0 errors=0i,gather_errors=0i,gather_time_ns=167285i,gather_timeouts=0i,metrics_gathered=0i,startup_errors=0i 1480682800000000000
