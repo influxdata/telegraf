@@ -20,35 +20,27 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Read metrics about system load & uptime
 [[inputs.system]]
-  ## Metric groups to collect; the "include" option controls which fields
-  ## are gathered and how they are emitted.
-  ##
-  ## Available options:
-  ##   load             - 1/5/15-minute load averages (load1, load5, load15)
-  ##   users            - logged-in user counts (n_users, n_unique_users)
-  ##   cpus             - CPU counts with new field names (n_virtual_cpus,
-  ##                      n_physical_cpus)
-  ##   deprecated-cpus  - CPU counts with legacy field names (n_cpus,
-  ##                      n_physical_cpus); deprecated, use "cpus" instead
-  ##   uptime           - system uptime as a field in the main metric
-  ##   deprecated-uptime - system uptime as separate counter and
-  ##                       uptime_format metrics; deprecated, use "uptime"
-  ##                       instead
-  ##
-  ## "cpus" and "deprecated-cpus" are mutually exclusive.
-  ## "uptime" and "deprecated-uptime" are mutually exclusive.
-  ##
-  ## By default all groups are collected with backward-compatible field names.
-  # include = ["load", "users", "deprecated-cpus", "deprecated-uptime"]
+  ## Information to collect; available options are:
+  ##   load             - 1, 5 and 15-minute load averages
+  ##   users            - logged-in user counts
+  ##   cpus             - CPU counts of the system
+  ##   legacy_cpus      - legacy layout of CPU counts; see README for details
+  ##   uptime           - system uptime
+  ##   legacy_uptime    - legacy layout of system uptime; see README for details
+  # include = ["load", "users", "legacy_cpus", "legacy_uptime"]
 ```
 
-> **Note:** `cpus` and `deprecated-cpus` are mutually exclusive.
-> `uptime` and `deprecated-uptime` are mutually exclusive.
->
-> **Migration note:** Switching from `deprecated-uptime` to `uptime` changes
-> the Prometheus metric type of `system_uptime` from **counter** to **gauge**.
-> If your dashboards or alerts use counter-specific functions such as `rate()`
-> or `increase()` on `system_uptime`, update them before migrating.
+> [!NOTE]
+> The `cpus` and `legacy_cpus` options are mutually exclusive,
+> as are `uptime` and `legacy_uptime`.
+
+<!-- markdownlint-disable-next-line MD028 -->
+
+> [!IMPORTANT]
+> Switching from `legacy_uptime` to `uptime` changes the Prometheus metric
+> type of `system_uptime` from **counter** to **gauge**. If your dashboards
+> or alerts use `rate()` or `increase()` on `system_uptime`, update them
+> before migrating.
 
 ### Permissions
 
@@ -75,17 +67,17 @@ controls which groups are gathered.
 | `n_users`         | `users`                    | integer | Number of logged-in user sessions           |
 | `n_unique_users`  | `users`                    | integer | Number of unique logged-in usernames        |
 | `n_virtual_cpus`  | `cpus`                     | integer | Number of logical CPUs                      |
-| `n_cpus`          | `deprecated-cpus`          | integer | Number of logical CPUs (deprecated name)    |
-| `n_physical_cpus` | `cpus` / `deprecated-cpus` | integer | Number of physical CPUs                     |
+| `n_cpus`          | `legacy_cpus`              | integer | Number of logical CPUs (legacy name)        |
+| `n_physical_cpus` | `cpus` / `legacy_cpus`     | integer | Number of physical CPUs                     |
 | `uptime`          | `uptime`                   | integer | System uptime in seconds (gauge field)      |
-| `uptime`          | `deprecated-uptime`        | integer | System uptime in seconds (separate counter) |
-| `uptime_format`   | `deprecated-uptime`        | string  | Human-readable uptime (deprecated)          |
+| `uptime`          | `legacy_uptime`            | integer | System uptime in seconds (separate counter) |
+| `uptime_format`   | `legacy_uptime`            | string  | Human-readable uptime (deprecated)          |
 
 ## Example Output
 
 ### Default configuration
 
-With the default `include = ["load", "users", "deprecated-cpus", "deprecated-uptime"]`,
+With the default `include = ["load", "users", "legacy_cpus", "legacy_uptime"]`,
 the output is backward-compatible with previous versions:
 
 ```text

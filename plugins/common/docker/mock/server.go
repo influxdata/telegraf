@@ -31,9 +31,14 @@ type Server struct {
 func (s *Server) Start(t *testing.T) string {
 	t.Helper()
 
-	s.server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var response []byte
+	s.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if agent := r.Header.Get("User-Agent"); agent != "engine-api-cli-1.0" {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("invalid user-agent %q", agent)
+			return
+		}
 
+		var response []byte
 		parts := strings.Split(r.URL.Path, "/")
 		switch {
 		case r.URL.Path == "/_ping":

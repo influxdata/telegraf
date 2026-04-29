@@ -2,7 +2,7 @@
 
 The `vault` plugin allows to utilize secrets stored in a
 [HashiCorp Vault][vault] server via the Vault API. It supports authentication
-via AppRole.
+via a pre-obtained Vault token or via the AppRole method.
 
 ⭐ Telegraf v1.37.0
 🏷️ secrets
@@ -19,6 +19,18 @@ secrets, see their respective documentation (e.g.
 store usage.
 
 ## Configuration
+
+### Authentication
+
+When authenticating with a `token`, the token may be provided directly or
+chained from another secret-store (e.g. `@{other_store:vault_token}`). This
+lets you obtain a token through any mechanism another secret-store can
+produce (OAuth2, file, environment, etc.) and hand it to this plugin. Token
+renewal is the responsibility of the supplying source.
+
+When authenticating with `approle`, the plugin logs in with the configured
+Role ID and Secret ID and starts a lifetime watcher to keep the token
+renewed.
 
 ```toml @sample.conf
 # Secret-store to access Vault Secrets
@@ -49,15 +61,24 @@ store usage.
   ## By default will use the kv-v2 engine.
   # engine = "kv-v2"
 
-  [secretstores.vault.approle]
-    ## The Role ID for AppRole Authentication, a UUID string
-    role_id = ""
+  ## Authentication
+  ## Exactly one of "token" or "approle" must be configured. Use "token" to
+  ## pass an already-obtained Vault token (directly or via another
+  ## secret-store, e.g. @{other_store:vault_token}). Use "approle" to have
+  ## Telegraf authenticate via the AppRole method and manage token renewal.
 
-    ## Whether the Secret ID is configured to be response wrapped or not
-    # response_wrapped = false
+  ## Vault token used to authenticate with the server
+  # token = ""
 
-    ## The Secret ID for AppRole Authentication
-    secret = ""
+  # [secretstores.vault.approle]
+  #   ## The Role ID for AppRole Authentication, a UUID string
+  #   role_id = ""
+  #
+  #   ## Whether the Secret ID is configured to be response wrapped or not
+  #   # response_wrapped = false
+  #
+  #   ## The Secret ID for AppRole Authentication
+  #   secret = ""
 ```
 
 [vault]: https://www.hashicorp.com/en/products/vault

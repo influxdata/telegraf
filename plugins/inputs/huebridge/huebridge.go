@@ -90,7 +90,9 @@ func (h *HueBridge) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			acc.AddError(bridge.process(context.Background(), acc))
+			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(h.Timeout))
+			defer cancel()
+			acc.AddError(bridge.process(ctx, acc))
 		}()
 	}
 	wg.Wait()

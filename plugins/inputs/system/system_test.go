@@ -69,14 +69,20 @@ func TestUniqueUsers(t *testing.T) {
 }
 
 func TestInitAllValidOptions(t *testing.T) {
-	// cpus/deprecated-cpus and uptime/deprecated-uptime are mutually exclusive,
+	// cpus/legacy_cpus and uptime/legacy_uptime are mutually exclusive,
 	// so cover all six valid values across two configurations.
-	for _, include := range [][]string{
-		{"load", "users", "cpus", "uptime"},
-		{"load", "users", "deprecated-cpus", "deprecated-uptime"},
-	} {
-		s := &System{Include: include, Log: &testutil.Logger{}}
-		require.NoError(t, s.Init())
+	tests := []struct {
+		name    string
+		include []string
+	}{
+		{"new", []string{"load", "users", "cpus", "uptime"}},
+		{"legacy", []string{"load", "users", "legacy_cpus", "legacy_uptime"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &System{Include: tt.include, Log: &testutil.Logger{}}
+			require.NoError(t, s.Init())
+		})
 	}
 }
 
@@ -93,12 +99,12 @@ func TestInitErrors(t *testing.T) {
 		},
 		{
 			name:    "cpus mutually exclusive",
-			include: []string{"cpus", "deprecated-cpus"},
+			include: []string{"cpus", "legacy_cpus"},
 			errMsg:  "mutually exclusive",
 		},
 		{
 			name:    "uptime mutually exclusive",
-			include: []string{"uptime", "deprecated-uptime"},
+			include: []string{"uptime", "legacy_uptime"},
 			errMsg:  "mutually exclusive",
 		},
 	}
@@ -214,8 +220,8 @@ func TestGather(t *testing.T) {
 			},
 		},
 		{
-			name:    "deprecated-uptime only",
-			include: []string{"deprecated-uptime"},
+			name:    "legacy_uptime only",
+			include: []string{"legacy_uptime"},
 			expected: []telegraf.Metric{
 				metric.New(
 					"system",
@@ -252,7 +258,7 @@ func TestGather(t *testing.T) {
 		},
 		{
 			name:    "duplicates are de-duplicated",
-			include: []string{"deprecated-uptime", "deprecated-uptime", "cpus", "cpus"},
+			include: []string{"legacy_uptime", "legacy_uptime", "cpus", "cpus"},
 			expected: []telegraf.Metric{
 				metric.New(
 					"system",
