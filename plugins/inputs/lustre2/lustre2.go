@@ -491,10 +491,37 @@ var wantedOstFields = []*mapping{
 		inProc: "cache_hit",
 	},
 	{
+		inProc:   "cache_hit",
+		reportAs: "cache_hit_samples",
+	},
+	{
+		inProc:   "cache_hit",
+		field:    6,
+		reportAs: "cache_hit_pages",
+	},
+	{
 		inProc: "cache_miss",
 	},
 	{
+		inProc:   "cache_miss",
+		reportAs: "cache_miss_samples",
+	},
+	{
+		inProc:   "cache_miss",
+		field:    6,
+		reportAs: "cache_miss_pages",
+	},
+	{
 		inProc: "cache_access",
+	},
+	{
+		inProc:   "cache_access",
+		reportAs: "cache_access_samples",
+	},
+	{
+		inProc:   "cache_access",
+		field:    6,
+		reportAs: "cache_access_pages",
 	},
 }
 

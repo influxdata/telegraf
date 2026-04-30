@@ -5,6 +5,7 @@ package lustre2
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -77,4 +78,42 @@ func TestCases(t *testing.T) {
 			testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
 		})
 	}
+}
+
+func TestCacheStatsReportSamplesAndPages(t *testing.T) {
+	rootdir := t.TempDir()
+	statsDir := filepath.Join(rootdir, "proc", "fs", "lustre", "osd-ldiskfs", "OST0001")
+	require.NoError(t, os.MkdirAll(statsDir, 0750))
+
+	stats := strings.Join([]string{
+		"cache_access              14035947725 samples [pages] 1 4096 4102574238162",
+		"cache_hit                 10365450287 samples [pages] 1 4096 1561298774315",
+		"cache_miss                3807445393 samples [pages] 1 4096 2541275463847",
+	}, "\n")
+	require.NoError(t, os.WriteFile(filepath.Join(statsDir, "stats"), []byte(stats), 0640))
+
+	plugin := &Lustre2{
+		OstProcfiles: []string{"/proc/fs/lustre/osd-ldiskfs/*/stats"},
+		rootdir:      rootdir,
+		Log:          testutil.Logger{},
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
+	require.Empty(t, acc.Errors)
+
+	metrics := acc.GetTelegrafMetrics()
+	require.Len(t, metrics, 1)
+	require.Equal(t, map[string]string{"name": "OST0001"}, metrics[0].Tags())
+	require.Equal(t, map[string]interface{}{
+		"cache_access":         uint64(14035947725),
+		"cache_access_samples": uint64(14035947725),
+		"cache_access_pages":   uint64(4102574238162),
+		"cache_hit":            uint64(10365450287),
+		"cache_hit_samples":    uint64(10365450287),
+		"cache_hit_pages":      uint64(1561298774315),
+		"cache_miss":           uint64(3807445393),
+		"cache_miss_samples":   uint64(3807445393),
+		"cache_miss_pages":     uint64(2541275463847),
+	}, metrics[0].Fields())
 }
