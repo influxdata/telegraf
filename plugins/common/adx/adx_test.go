@@ -8,8 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/azure-kusto-go/kusto"
-	"github.com/Azure/azure-kusto-go/kusto/ingest"
+	"github.com/Azure/azure-kusto-go/azkustoingest"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -42,13 +41,12 @@ func TestQueryConstruction(t *testing.T) {
 
 func TestGetMetricIngestor(t *testing.T) {
 	plugin := Client{
-		logger: testutil.Logger{},
-		client: kusto.NewMockClient(),
 		cfg: &Config{
 			Database:      "mydb",
 			IngestionType: QueuedIngestion,
 		},
-		ingestors: map[string]ingest.Ingestor{"test1": &fakeIngestor{}},
+		ingestors: map[string]azkustoingest.Ingestor{"test1": &fakeIngestor{}},
+		logger:    testutil.Logger{},
 	}
 
 	ingestor, err := plugin.getMetricIngestor(t.Context(), "test1")
@@ -58,12 +56,11 @@ func TestGetMetricIngestor(t *testing.T) {
 
 func TestGetMetricIngestorNoIngester(t *testing.T) {
 	plugin := Client{
-		logger: testutil.Logger{},
-		client: kusto.NewMockClient(),
 		cfg: &Config{
 			IngestionType: QueuedIngestion,
 		},
-		ingestors: map[string]ingest.Ingestor{"test1": &fakeIngestor{}},
+		ingestors: map[string]azkustoingest.Ingestor{"test1": &fakeIngestor{}},
+		logger:    testutil.Logger{},
 	}
 
 	ingestor, err := plugin.getMetricIngestor(t.Context(), "test1")
@@ -73,18 +70,17 @@ func TestGetMetricIngestorNoIngester(t *testing.T) {
 
 func TestPushMetrics(t *testing.T) {
 	plugin := Client{
-		logger: testutil.Logger{},
-		client: kusto.NewMockClient(),
 		cfg: &Config{
 			Database:      "mydb",
 			Endpoint:      "https://ingest-test.westus.kusto.windows.net",
 			IngestionType: QueuedIngestion,
 		},
-		ingestors: map[string]ingest.Ingestor{"test1": &fakeIngestor{}},
+		ingestors: map[string]azkustoingest.Ingestor{"test1": &fakeIngestor{}},
+		logger:    testutil.Logger{},
 	}
 
 	metrics := []byte(`{"fields": {"value": 1}, "name": "test1", "tags": {"tag1": "value1"}, "timestamp": "2021-01-01T00:00:00Z"}`)
-	require.NoError(t, plugin.PushMetrics(ingest.FileFormat(ingest.JSON), "test1", metrics))
+	require.NoError(t, plugin.PushMetrics(azkustoingest.FileFormat(azkustoingest.JSON), "test1", metrics))
 }
 
 func TestPushMetricsOutputs(t *testing.T) {
@@ -167,7 +163,7 @@ func TestPushMetricsOutputs(t *testing.T) {
 				tableMetricGroups[m.Name()] = append(tableMetricGroups[m.Name()], metricInBytes...)
 			}
 
-			format := ingest.FileFormat(ingest.JSON)
+			format := azkustoingest.FileFormat(azkustoingest.JSON)
 			for tableName, tableMetrics := range tableMetricGroups {
 				require.NoError(t, client.PushMetrics(format, tableName, tableMetrics))
 				createdFakeIngestor := ingestor
@@ -185,21 +181,23 @@ func TestPushMetricsOutputs(t *testing.T) {
 }
 
 func TestAlreadyClosed(t *testing.T) {
-	plugin := Client{
-		logger: testutil.Logger{},
-		cfg: &Config{
-			IngestionType: QueuedIngestion,
-		},
-		client: kusto.NewMockClient(),
+	cfg := &Config{
+		Endpoint:      "https://foobar",
+		Database:      "test",
+		IngestionType: QueuedIngestion,
 	}
+	plugin, err := cfg.NewClient("test", testutil.Logger{})
+	require.NoError(t, err)
 	require.NoError(t, plugin.Close())
 }
+
+// Internal
 
 type fakeIngestor struct {
 	actualOutputMetric map[string]interface{}
 }
 
-func (f *fakeIngestor) FromReader(_ context.Context, reader io.Reader, _ ...ingest.FileOption) (*ingest.Result, error) {
+func (f *fakeIngestor) FromReader(_ context.Context, reader io.Reader, _ ...azkustoingest.FileOption) (*azkustoingest.Result, error) {
 	scanner := bufio.NewScanner(reader)
 	scanner.Scan()
 	firstLine := scanner.Text()
@@ -207,11 +205,11 @@ func (f *fakeIngestor) FromReader(_ context.Context, reader io.Reader, _ ...inge
 	if err != nil {
 		return nil, err
 	}
-	return &ingest.Result{}, nil
+	return &azkustoingest.Result{}, nil
 }
 
-func (*fakeIngestor) FromFile(_ context.Context, _ string, _ ...ingest.FileOption) (*ingest.Result, error) {
-	return &ingest.Result{}, nil
+func (*fakeIngestor) FromFile(_ context.Context, _ string, _ ...azkustoingest.FileOption) (*azkustoingest.Result, error) {
+	return &azkustoingest.Result{}, nil
 }
 
 func (*fakeIngestor) Close() error {
