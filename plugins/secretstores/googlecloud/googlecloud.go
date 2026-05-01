@@ -28,7 +28,6 @@ func (*GoogleCloud) SampleConfig() string {
 type GoogleCloud struct {
 	STSAudience     string          `toml:"sts_audience"`
 	CredentialsFile string          `toml:"credentials_file"`
-	CredentialScopes          []string        `toml:"credential_scopes"`
 	Log             telegraf.Logger `toml:"-"`
 	common_http.HTTPClientConfig
 
@@ -51,10 +50,11 @@ func (g *GoogleCloud) Init() error {
 		return fmt.Errorf("unable to parse credentials file type: %w", err)
 	}
 
-	// Default minimal scope only for standard public-GCP service-account JSON keys.
+	// Default to cloud-platform scope for standard public-GCP service-account JSON keys.
+	// This covers all GCP APIs; actual permissions are still gated by IAM roles.
 	// GDCH/STS users continue to rely exclusively on sts_audience (Scopes is ignored).
 	if len(g.Scopes) == 0 && credType == "service_account" {
-		g.Scopes = []string{"https://www.googleapis.com/auth/monitoring"}
+		g.Scopes = []string{"https://www.googleapis.com/auth/cloud-platform"}
 	}
 
 	saType := credentials.CredType(credType)

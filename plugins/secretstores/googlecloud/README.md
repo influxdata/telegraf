@@ -27,10 +27,11 @@ store usage.
   ## Path to the service account credentials file
   credentials_file = "./testdata/gdch.json"
 
-  ## Scopes for the generated access token
-  ## Required for public-GCP service-accounts; GDCH/STS users can
-  ## ignore this option as only the audience parameter is evaluated.
-  # credential_scopes = ["https://www.googleapis.com/auth/monitoring"]
+  ## OAuth2 scopes for the generated access token.
+  ## Defaults to cloud-platform for service-account credentials.
+  ## GDCH/STS users can ignore this option as only the audience
+  ## parameter is evaluated for those credential types.
+  # scopes = ["https://www.googleapis.com/auth/cloud-platform"]
 
   ## Audience sent to when retrieving an STS token.
   ## Currently only used for GDCH auth flow
