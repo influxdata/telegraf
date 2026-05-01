@@ -174,7 +174,7 @@ measurement,host=hostname valueA=0,valueB=1
 
 It will generate this Zabbix metrics:
 
-```json
+```jsonl
 {"host": "hostname", "key": "telegraf.measurement.valueA", "value": "0"}
 {"host": "hostname", "key": "telegraf.measurement.valueB", "value": "1"}
 ```
@@ -188,7 +188,7 @@ measurement,host=hostname,tagA=keyA,tagB=keyB valueA=0,valueB=1
 
 Zabbix generated metrics:
 
-```json
+```jsonl
 {"host": "hostname", "key": "telegraf.measurement.valueA[keyA,keyB]", "value": "0"}
 {"host": "hostname", "key": "telegraf.measurement.valueB[keyA,keyB]", "value": "1"}
 ```

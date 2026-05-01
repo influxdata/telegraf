@@ -131,8 +131,9 @@ using the postgresql extensions [pg_stat_statements][pg_stat_statements],
   withdbname=false
   tagvalue="db,username,state"
 [[inputs.postgresql_extensible.query]]
-  sqlquery="select setting as max_connections from pg_settings where \
-  name='max_connections'"
+  sqlquery="""\
+  select setting as max_connections from pg_settings where \
+  name='max_connections'"""
   version=801
   withdbname=false
   tagvalue=""
@@ -142,15 +143,17 @@ using the postgresql extensions [pg_stat_statements][pg_stat_statements],
   withdbname=false
   tagvalue=""
 [[inputs.postgresql_extensible.query]]
-  sqlquery="select setting as shared_buffers from pg_settings where \
-  name='shared_buffers'"
+  sqlquery="""\
+  select setting as shared_buffers from pg_settings where \
+  name='shared_buffers'"""
   version=801
   withdbname=false
   tagvalue=""
 [[inputs.postgresql_extensible.query]]
-  sqlquery="SELECT db, count( distinct blocking_pid ) AS num_blocking_sessions,\
+  sqlquery="""\
+  SELECT db, count( distinct blocking_pid ) AS num_blocking_sessions,\
   count( distinct blocked_pid) AS num_blocked_sessions FROM \
-  public.blocking_procs group by db"
+  public.blocking_procs group by db"""
   version=901
   withdbname=false
   tagvalue="db"

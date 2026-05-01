@@ -158,7 +158,7 @@ for containers that have no explicit hostname set, as defined by docker.
 Kubernetes may add many labels to your containers, if they are not needed you
 may prefer to exclude them:
 
-```json
+```toml
   docker_label_exclude = ["annotation.kubernetes*"]
 ```
 
@@ -167,7 +167,7 @@ may prefer to exclude them:
 Docker-compose will add labels to your containers. You can limit restrict labels
 to selected ones, e.g.
 
-```json
+```toml
   docker_label_include = [
     "com.docker.compose.config-hash",
     "com.docker.compose.container-number",
