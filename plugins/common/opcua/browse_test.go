@@ -11,16 +11,13 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestBrowseEmptyTree(t *testing.T) {
+func TestBrowseEmpty(t *testing.T) {
 	fake := newFakeBrowseClient()
 	rootID := ua.NewNumericNodeID(0, 85)
 
-	tree, err := newBrowser(fake).Browse(t.Context(), rootID)
+	nodes, err := newBrowser(fake).Browse(t.Context(), rootID)
 	require.NoError(t, err)
-	require.NotNil(t, tree.Root)
-	require.Equal(t, rootID, tree.Root.NodeID)
-	require.Empty(t, tree.AllNodes)
-	require.Empty(t, tree.Root.Children)
+	require.Empty(t, nodes)
 	require.Equal(t, 1, fake.browseCalls)
 }
 
@@ -31,18 +28,17 @@ func TestBrowseSingleLevel(t *testing.T) {
 		makeRef(t, "ns=2;s=ServerTime", "ServerTime", ua.NodeClassVariable),
 	}
 
-	tree, err := newBrowser(fake).Browse(t.Context(), ua.NewNumericNodeID(0, 85))
+	nodes, err := newBrowser(fake).Browse(t.Context(), ua.NewNumericNodeID(0, 85))
 	require.NoError(t, err)
-	require.Len(t, tree.AllNodes, 2)
-	require.Len(t, tree.Root.Children, 2)
+	require.Len(t, nodes, 2)
 
-	require.Equal(t, "Plant1", tree.AllNodes[0].BrowseName)
-	require.Equal(t, []string{"Plant1"}, tree.AllNodes[0].PathSegments)
-	require.Equal(t, ua.NodeClassObject, tree.AllNodes[0].NodeClass)
+	require.Equal(t, "Plant1", nodes[0].BrowseName)
+	require.Equal(t, []string{"Plant1"}, nodes[0].PathSegments)
+	require.Equal(t, ua.NodeClassObject, nodes[0].NodeClass)
 
-	require.Equal(t, "ServerTime", tree.AllNodes[1].BrowseName)
-	require.Equal(t, []string{"ServerTime"}, tree.AllNodes[1].PathSegments)
-	require.Equal(t, ua.NodeClassVariable, tree.AllNodes[1].NodeClass)
+	require.Equal(t, "ServerTime", nodes[1].BrowseName)
+	require.Equal(t, []string{"ServerTime"}, nodes[1].PathSegments)
+	require.Equal(t, ua.NodeClassVariable, nodes[1].NodeClass)
 }
 
 func TestBrowseDescendsOnlyContainers(t *testing.T) {
@@ -59,13 +55,13 @@ func TestBrowseDescendsOnlyContainers(t *testing.T) {
 		makeRef(t, "ns=2;s=ShouldNotAppear", "ShouldNotAppear", ua.NodeClassVariable),
 	}
 
-	tree, err := newBrowser(fake).Browse(t.Context(), ua.NewNumericNodeID(0, 85))
+	nodes, err := newBrowser(fake).Browse(t.Context(), ua.NewNumericNodeID(0, 85))
 	require.NoError(t, err)
 
-	names := collectBrowseNames(tree.AllNodes)
+	names := collectBrowseNames(nodes)
 	require.ElementsMatch(t, []string{"Plant1", "Sensor", "MV01"}, names)
 
-	mv01 := findByName(tree.AllNodes, "MV01")
+	mv01 := findByName(nodes, "MV01")
 	require.NotNil(t, mv01)
 	require.Equal(t, []string{"Plant1", "MV01"}, mv01.PathSegments)
 }
@@ -82,9 +78,9 @@ func TestBrowseCycleDetection(t *testing.T) {
 		makeRef(t, "ns=2;s=A", "A", ua.NodeClassObject),
 	}
 
-	tree, err := newBrowser(fake).Browse(t.Context(), ua.NewNumericNodeID(0, 85))
+	nodes, err := newBrowser(fake).Browse(t.Context(), ua.NewNumericNodeID(0, 85))
 	require.NoError(t, err)
-	require.Len(t, tree.AllNodes, 2, "cycle must not produce duplicates")
+	require.Len(t, nodes, 2, "cycle must not produce duplicates")
 }
 
 func TestBrowseMaxDepth(t *testing.T) {
@@ -102,10 +98,10 @@ func TestBrowseMaxDepth(t *testing.T) {
 	browser := newBrowser(fake)
 	browser.MaxDepth = 2
 
-	tree, err := browser.Browse(t.Context(), ua.NewNumericNodeID(0, 85))
+	nodes, err := browser.Browse(t.Context(), ua.NewNumericNodeID(0, 85))
 	require.NoError(t, err)
 
-	names := collectBrowseNames(tree.AllNodes)
+	names := collectBrowseNames(nodes)
 	require.ElementsMatch(t, []string{"L1", "L2"}, names)
 }
 
@@ -121,9 +117,9 @@ func TestBrowseMaxNodes(t *testing.T) {
 	browser := newBrowser(fake)
 	browser.MaxNodes = 2
 
-	tree, err := browser.Browse(t.Context(), ua.NewNumericNodeID(0, 85))
+	nodes, err := browser.Browse(t.Context(), ua.NewNumericNodeID(0, 85))
 	require.NoError(t, err)
-	require.Len(t, tree.AllNodes, 2)
+	require.Len(t, nodes, 2)
 }
 
 func TestBrowsePerResultBadStatusSkipped(t *testing.T) {
@@ -137,10 +133,10 @@ func TestBrowsePerResultBadStatusSkipped(t *testing.T) {
 		makeRef(t, "ns=2;s=GoodChild", "GoodChild", ua.NodeClassVariable),
 	}
 
-	tree, err := newBrowser(fake).Browse(t.Context(), ua.NewNumericNodeID(0, 85))
+	nodes, err := newBrowser(fake).Browse(t.Context(), ua.NewNumericNodeID(0, 85))
 	require.NoError(t, err)
 
-	names := collectBrowseNames(tree.AllNodes)
+	names := collectBrowseNames(nodes)
 	require.ElementsMatch(t, []string{"Good", "Forbidden", "GoodChild"}, names)
 }
 
@@ -155,10 +151,10 @@ func TestBrowseContinuationPoints(t *testing.T) {
 		makeRef(t, "ns=2;s=E", "E", ua.NodeClassVariable),
 	}
 
-	tree, err := newBrowser(fake).Browse(t.Context(), ua.NewNumericNodeID(0, 85))
+	nodes, err := newBrowser(fake).Browse(t.Context(), ua.NewNumericNodeID(0, 85))
 	require.NoError(t, err)
 
-	names := collectBrowseNames(tree.AllNodes)
+	names := collectBrowseNames(nodes)
 	require.ElementsMatch(t, []string{"A", "B", "C", "D", "E"}, names)
 	require.GreaterOrEqual(t, fake.nextCalls, 1, "BrowseNext must be invoked when chunked")
 }
@@ -199,10 +195,10 @@ func TestBrowsePathSegmentsPreserved(t *testing.T) {
 		makeRef(t, "ns=2;s=MV01", "MV01", ua.NodeClassVariable),
 	}
 
-	tree, err := newBrowser(fake).Browse(t.Context(), ua.NewNumericNodeID(0, 85))
+	nodes, err := newBrowser(fake).Browse(t.Context(), ua.NewNumericNodeID(0, 85))
 	require.NoError(t, err)
 
-	mv01 := findByName(tree.AllNodes, "MV01")
+	mv01 := findByName(nodes, "MV01")
 	require.NotNil(t, mv01)
 	require.Equal(t, []string{"Objects", "Plant1", "Device1", "MV01"}, mv01.PathSegments)
 }
@@ -225,9 +221,9 @@ func TestBrowseBatching(t *testing.T) {
 	browser := newBrowser(fake)
 	browser.BatchSize = 5
 
-	tree, err := browser.Browse(t.Context(), ua.NewNumericNodeID(0, 85))
+	nodes, err := browser.Browse(t.Context(), ua.NewNumericNodeID(0, 85))
 	require.NoError(t, err)
-	require.Len(t, tree.AllNodes, 4)
+	require.Len(t, nodes, 4)
 	require.Equal(t, 2, fake.browseCalls, "root browse + one batched browse for the two children")
 }
 

@@ -23,22 +23,15 @@ type browseClient interface {
 // Compile-time check that *opcua.Client satisfies browseClient.
 var _ browseClient = (*opcua.Client)(nil)
 
-// BrowsedNode is a single node in the discovered address-space tree.
+// BrowsedNode is a single node discovered from the address space. PathSegments
+// holds the browse-path segments from the browse root to this node, exclusive
+// of the root itself.
 type BrowsedNode struct {
 	NodeID       *ua.NodeID
 	BrowseName   string
 	DisplayName  string
 	NodeClass    ua.NodeClass
 	PathSegments []string
-	Children     []*BrowsedNode
-}
-
-// BrowseTree is the address space discovered from a single browse run.
-// AllNodes is a flat index over the discovered descendants (the root itself
-// is excluded; only nodes returned by the server appear here).
-type BrowseTree struct {
-	Root     *BrowsedNode
-	AllNodes []*BrowsedNode
 }
 
 // AddressSpaceBrowser walks an OPC UA server's address space using the
@@ -47,10 +40,10 @@ type BrowseTree struct {
 // ObjectType nodes are descended into. Variable and other terminal classes
 // are recorded but not expanded.
 //
-// MaxDepth caps tree depth (0 = unlimited). MaxNodes caps total discovered
-// nodes (0 = unlimited); when reached, browsing stops and the partial tree
-// is returned. BatchSize controls how many nodes are browsed per request
-// (0 falls back to defaultBrowseBatchSize).
+// MaxDepth caps the number of levels descended below the root (0 = unlimited).
+// MaxNodes caps total discovered nodes (0 = unlimited); when reached,
+// browsing stops and the partial result is returned. BatchSize controls how
+// many nodes are browsed per request (0 falls back to defaultBrowseBatchSize).
 type AddressSpaceBrowser struct {
 	Client    browseClient
 	Log       telegraf.Logger
@@ -60,23 +53,22 @@ type AddressSpaceBrowser struct {
 }
 
 // Browse walks the address space starting from rootID and returns the
-// discovered tree. The root node is included as a placeholder; only its
-// descendants are populated from the server.
-func (b *AddressSpaceBrowser) Browse(ctx context.Context, rootID *ua.NodeID) (*BrowseTree, error) {
+// discovered descendants. The root itself is not included in the result.
+func (b *AddressSpaceBrowser) Browse(ctx context.Context, rootID *ua.NodeID) ([]*BrowsedNode, error) {
 	batchSize := b.BatchSize
 	if batchSize <= 0 {
 		batchSize = defaultBrowseBatchSize
 	}
 
-	root := &BrowsedNode{NodeID: rootID}
-	tree := &BrowseTree{Root: root}
+	var nodes []*BrowsedNode
 	visited := map[string]struct{}{rootID.String(): {}}
 
 	type queueItem struct {
-		node  *BrowsedNode
-		depth int
+		nodeID *ua.NodeID
+		path   []string
+		depth  int
 	}
-	queue := []queueItem{{node: root, depth: 0}}
+	queue := []queueItem{{nodeID: rootID}}
 
 	for len(queue) > 0 {
 		var batch []queueItem
@@ -95,7 +87,7 @@ func (b *AddressSpaceBrowser) Browse(ctx context.Context, rootID *ua.NodeID) (*B
 		descs := make([]*ua.BrowseDescription, len(batch))
 		for i, item := range batch {
 			descs[i] = &ua.BrowseDescription{
-				NodeID:          item.node.NodeID,
+				NodeID:          item.nodeID,
 				BrowseDirection: ua.BrowseDirectionForward,
 				ReferenceTypeID: ua.NewNumericNodeID(0, id.HierarchicalReferences),
 				IncludeSubtypes: true,
@@ -111,7 +103,7 @@ func (b *AddressSpaceBrowser) Browse(ctx context.Context, rootID *ua.NodeID) (*B
 
 		for i, result := range resp.Results {
 			if result.StatusCode != ua.StatusOK {
-				b.Log.Debugf("Browse failed for %s: %v", batch[i].node.NodeID, result.StatusCode)
+				b.Log.Debugf("Browse failed for %s: %v", batch[i].nodeID, result.StatusCode)
 				continue
 			}
 
@@ -129,7 +121,7 @@ func (b *AddressSpaceBrowser) Browse(ctx context.Context, rootID *ua.NodeID) (*B
 				}
 				nextResult := next.Results[0]
 				if nextResult.StatusCode != ua.StatusOK {
-					b.Log.Debugf("Browse-next failed for %s: %v", batch[i].node.NodeID, nextResult.StatusCode)
+					b.Log.Debugf("Browse-next failed for %s: %v", batch[i].nodeID, nextResult.StatusCode)
 					break
 				}
 				refs = append(refs, nextResult.References...)
@@ -143,31 +135,34 @@ func (b *AddressSpaceBrowser) Browse(ctx context.Context, rootID *ua.NodeID) (*B
 				}
 				visited[key] = struct{}{}
 
-				path := make([]string, len(batch[i].node.PathSegments)+1)
-				copy(path, batch[i].node.PathSegments)
+				path := make([]string, len(batch[i].path)+1)
+				copy(path, batch[i].path)
 				path[len(path)-1] = ref.BrowseName.Name
 
-				child := &BrowsedNode{
-					NodeID:       ua.NewNodeIDFromExpandedNodeID(ref.NodeID),
+				childID := ua.NewNodeIDFromExpandedNodeID(ref.NodeID)
+				nodes = append(nodes, &BrowsedNode{
+					NodeID:       childID,
 					BrowseName:   ref.BrowseName.Name,
 					DisplayName:  ref.DisplayName.Text,
 					NodeClass:    ref.NodeClass,
 					PathSegments: path,
-				}
-				batch[i].node.Children = append(batch[i].node.Children, child)
-				tree.AllNodes = append(tree.AllNodes, child)
+				})
 
-				if b.MaxNodes > 0 && len(tree.AllNodes) >= b.MaxNodes {
+				if b.MaxNodes > 0 && len(nodes) >= b.MaxNodes {
 					b.Log.Warnf("Reached max_nodes limit (%d), stopping browse", b.MaxNodes)
-					return tree, nil
+					return nodes, nil
 				}
 
 				if ref.NodeClass == ua.NodeClassObject || ref.NodeClass == ua.NodeClassObjectType {
-					queue = append(queue, queueItem{node: child, depth: batch[i].depth + 1})
+					queue = append(queue, queueItem{
+						nodeID: childID,
+						path:   path,
+						depth:  batch[i].depth + 1,
+					})
 				}
 			}
 		}
 	}
 
-	return tree, nil
+	return nodes, nil
 }
