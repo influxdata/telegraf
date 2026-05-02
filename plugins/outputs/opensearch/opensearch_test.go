@@ -355,7 +355,7 @@ func TestConnectionIssueAtStartup(t *testing.T) {
 	require.NoError(t, model.WriteBatch())
 
 	defer ts.Close()
-	defer model.Close()
+	model.Close()
 }
 
 func TestDisconnectedServerOnWrite(t *testing.T) {
