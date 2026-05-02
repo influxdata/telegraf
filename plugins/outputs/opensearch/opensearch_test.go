@@ -311,17 +311,14 @@ func TestDisconnectedServerOnConnect(t *testing.T) {
 }
 
 func TestConnectionIssueAtStartup(t *testing.T) {
-	// Test case for https://github.com/influxdata/telegraf/issues/18783
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	ts := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 
 	urls := []string{"http://" + ts.Listener.Addr().String()}
 
 	plugin := &Opensearch{
 		URLs:            urls,
+		ManageTemplate:  true,
+		TemplateName:    "telegraf",
 		IndexName:       `{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
 		Timeout:         config.Duration(time.Second * 5),
 		AuthBearerToken: config.NewSecret([]byte("0123456789abcdef")),
@@ -330,9 +327,6 @@ func TestConnectionIssueAtStartup(t *testing.T) {
 	var err error
 	plugin.indexTmpl, err = template.New("index").Parse(plugin.IndexName)
 	require.NoError(t, err)
-
-	// Close the server before we try to connect
-	ts.Close()
 
 	// Create a model to be able to use the startup retry strategy
 	model, err := models.NewRunningOutput(
@@ -360,8 +354,8 @@ func TestConnectionIssueAtStartup(t *testing.T) {
 	ts.Start()
 	require.NoError(t, model.WriteBatch())
 
-	ts.Close()
-	model.Close()
+	defer ts.Close()
+	defer model.Close()
 }
 
 func TestDisconnectedServerOnWrite(t *testing.T) {

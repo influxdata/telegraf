@@ -135,18 +135,21 @@ func (o *Opensearch) Connect() error {
 		o.Log.Errorf("error creating OpenSearch client: %v", err)
 	}
 
-	if o.ManageTemplate {
-		err := o.manageTemplate(ctx)
-		if err != nil {
-			return err
-		}
-	}
-
 	_, err = o.osClient.Ping()
 	if err != nil {
 		return &internal.StartupError{
-			Err:   fmt.Errorf("unable to ping server: %w", err),
+			Err:   fmt.Errorf("unable to ping OpenSearch server: %w", err),
 			Retry: true,
+		}
+	}
+
+	if o.ManageTemplate {
+		err := o.manageTemplate(ctx)
+		if err != nil {
+			return &internal.StartupError{
+				Err:   err,
+				Retry: true,
+			}
 		}
 	}
 
