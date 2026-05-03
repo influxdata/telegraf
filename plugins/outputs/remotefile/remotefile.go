@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"log/slog" //nolint:depguard // Required by rclone's SetOutput API signature
 	"os"
 	"path/filepath"
 	"text/template"
@@ -15,6 +16,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/rclone/rclone/fs"
 	"github.com/rclone/rclone/fs/fspath"
+	fslog "github.com/rclone/rclone/fs/log"
 	"github.com/rclone/rclone/vfs"
 	"github.com/rclone/rclone/vfs/vfscommon"
 
@@ -84,9 +86,10 @@ func (f *File) Init() error {
 		f.vfsopts.CacheMaxSize = fs.SizeSuffix(f.MaxCacheSize)
 	}
 
-	fs.LogOutput = func(level fs.LogLevel, text string) {
-		f.Log.Tracef("[%s] %s", level.String(), text)
-	}
+	fslog.Handler.SetOutput(func(level slog.Level, text string) {
+		// Use a goroutine to avoid deadlock with the slog handler mutex
+		go f.Log.Tracef("[%s] %s", level.String(), text)
+	})
 
 	// Setup custom template functions
 	funcs := template.FuncMap{"now": time.Now}
@@ -144,7 +147,7 @@ func (f *File) Connect() error {
 		return fmt.Errorf("creating remote failed: %w", err)
 	}
 	f.fscancel = cancel
-	f.root = vfs.New(rootfs, &f.vfsopts)
+	f.root = vfs.New(ctx, rootfs, &f.vfsopts)
 
 	// Force connection to make sure we actually can connect
 	if _, err := f.root.Fs().List(ctx, "/"); err != nil {
