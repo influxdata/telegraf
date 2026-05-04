@@ -43,12 +43,10 @@ func (h *httpClient) Connect(cfg *clientConfig) error {
 		tlsConfig = &tls.Config{}
 	}
 
-	if tlsConfig != nil {
-		h.httpClient.Transport = &http.Transport{
-			TLSClientConfig: tlsConfig,
-			Proxy:           proxyFunc,
-		}
-	}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = tlsConfig
+	transport.Proxy = proxyFunc
+	h.httpClient.Transport = transport
 
 	return nil
 }
