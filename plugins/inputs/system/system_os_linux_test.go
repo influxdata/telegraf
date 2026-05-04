@@ -28,7 +28,7 @@ func setupOS(t testing.TB) bool {
 	return true
 }
 
-func mockOSRelease(t testing.TB, content string) string {
+func mockOSRelease(t testing.TB, content string) {
 	t.Helper()
 	etcDir := os.Getenv("HOST_ETC")
 	if etcDir == "" {
@@ -37,7 +37,6 @@ func mockOSRelease(t testing.TB, content string) string {
 		t.Setenv("HOST_ETC", etcDir)
 	}
 	writeOSRelease(t, etcDir, content)
-	return etcDir
 }
 
 func writeOSRelease(t testing.TB, etcDir, content string) {
@@ -67,7 +66,7 @@ func TestGatherOSValuesLinux(t *testing.T) {
 
 	require.Equal(t, "linux", m.Fields["os"])
 	require.Equal(t, "telegraftest", m.Fields["platform"])
-	require.Equal(t, "", m.Fields["platform_family"])
+	require.Empty(t, m.Fields["platform_family"])
 	require.Equal(t, "1.0", m.Fields["platform_version"])
 	require.IsType(t, "", m.Fields["kernel_version"])
 	require.NotEmpty(t, m.Fields["kernel_version"])
@@ -86,9 +85,9 @@ func TestGatherOSMissingOSReleaseLinux(t *testing.T) {
 
 	m, found := acc.Get("system_os")
 	require.True(t, found, "uname syscall always populates kernel fields on Linux")
-	require.Equal(t, "", m.Fields["platform"])
-	require.Equal(t, "", m.Fields["platform_family"])
-	require.Equal(t, "", m.Fields["platform_version"])
+	require.Empty(t, m.Fields["platform"])
+	require.Empty(t, m.Fields["platform_family"])
+	require.Empty(t, m.Fields["platform_version"])
 	require.NotEmpty(t, m.Fields["kernel_version"])
 	require.NotEmpty(t, m.Fields["kernel_arch"])
 }
