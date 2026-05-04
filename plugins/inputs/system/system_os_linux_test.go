@@ -83,6 +83,14 @@ func TestGatherOSMissingOSReleaseLinux(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NoError(t, s.Gather(&acc))
+
+	m, found := acc.Get("system_os")
+	require.True(t, found, "uname syscall always populates kernel fields on Linux")
+	require.Equal(t, "", m.Fields["platform"])
+	require.Equal(t, "", m.Fields["platform_family"])
+	require.Equal(t, "", m.Fields["platform_version"])
+	require.NotEmpty(t, m.Fields["kernel_version"])
+	require.NotEmpty(t, m.Fields["kernel_arch"])
 }
 
 func TestGatherOSCacheLinux(t *testing.T) {
@@ -110,7 +118,7 @@ func TestGatherOSCacheLinux(t *testing.T) {
 			expectedPlatform: "upgraded",
 		},
 		{
-			name:             "served from cache within ttl",
+			name:             "served from cache within positive ttl",
 			ttl:              defaultOSCacheTTL,
 			expectedPlatform: "telegraftest",
 		},

@@ -105,12 +105,11 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 	for _, incl := range s.Include {
 		switch incl {
 		case "os":
-			// A zero TTL caches the values until restart.
 			ttl := time.Duration(s.OSCacheTTL)
 			expired := ttl > 0 && now.Sub(s.osCachedAt) >= ttl
 			if s.osCachedAt.IsZero() || expired {
-				osFields, errs := gatherOS()
-				for _, err := range errs {
+				osFields, err := gatherOS()
+				if err != nil {
 					acc.AddError(err)
 				}
 				s.osFields = osFields
@@ -191,24 +190,24 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 // gatherOS reads OS release and uname information via gopsutil, skipping
 // host.Info() to avoid the unrelated virtualization, boot-time and
 // process-count probes.
-func gatherOS() (map[string]interface{}, []error) {
+func gatherOS() (map[string]interface{}, error) {
 	var errs []error
-	record := func(name string, err error) {
-		if err == nil || strings.Contains(err.Error(), "not implemented") {
-			return
-		}
-		errs = append(errs, fmt.Errorf("reading %s: %w", name, err))
-	}
 
 	platform, family, version, err := host.PlatformInformation()
-	record("platform information", err)
+	if err != nil && !strings.Contains(err.Error(), "not implemented") {
+		errs = append(errs, fmt.Errorf("reading platform information: %w", err))
+	}
 	kernelVersion, err := host.KernelVersion()
-	record("kernel version", err)
+	if err != nil && !strings.Contains(err.Error(), "not implemented") {
+		errs = append(errs, fmt.Errorf("reading kernel version: %w", err))
+	}
 	kernelArch, err := host.KernelArch()
-	record("kernel architecture", err)
+	if err != nil && !strings.Contains(err.Error(), "not implemented") {
+		errs = append(errs, fmt.Errorf("reading kernel architecture: %w", err))
+	}
 
 	if platform == "" && family == "" && version == "" && kernelVersion == "" && kernelArch == "" {
-		return nil, errs
+		return nil, errors.Join(errs...)
 	}
 	return map[string]interface{}{
 		"os":               runtime.GOOS,
@@ -217,7 +216,7 @@ func gatherOS() (map[string]interface{}, []error) {
 		"platform_version": version,
 		"kernel_version":   kernelVersion,
 		"kernel_arch":      kernelArch,
-	}, errs
+	}, errors.Join(errs...)
 }
 
 func findUniqueUsers(userStats []host.UserStat) int {

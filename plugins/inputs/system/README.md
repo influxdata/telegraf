@@ -65,18 +65,8 @@ The `os` group reads `/etc/os-release` on Linux (typically world-readable) and
 calls the `uname` syscall on POSIX systems. On platforms where gopsutil cannot
 provide a particular value (e.g. parts of FreeBSD/OpenBSD/Solaris) the
 corresponding field is left empty; if no field can be gathered, the
-`system_os` metric is skipped entirely.
-
-Results of the `os` group are cached for `os_cache_ttl` (default 5 minutes)
-between gathers. The values rarely change at runtime, but the cache is
-refreshed periodically so that distribution upgrades (which rewrite
-`/etc/os-release`) and `kexec` boots (which change `uname -r`/`-m`) surface
-in the metric without restarting telegraf. Set `os_cache_ttl = "0s"` to
-cache the values until telegraf restarts; this is appropriate on static
-hosts where the operator is sure no `kexec` boot or distribution upgrade
-will occur during the agent's lifetime. To re-read the data on every
-gather (effectively disabling the cache), set the TTL to a very small
-positive value such as `"1ns"`.
+`system_os` metric is skipped entirely. Results are cached between gathers,
+see `os_cache_ttl` above.
 
 ## Metrics
 
@@ -103,21 +93,18 @@ separate `system_os` measurement.
 
 ### `system_os`
 
-Emitted only when `os` is included. The values are gathered through
-[gopsutil][gopsutil] for cross-platform support and reflect operating
-system release information together with `uname`-style kernel data.
-Fields are reported as strings; on platforms where a particular value
-cannot be determined the corresponding field is empty.
-
-[gopsutil]: https://github.com/shirou/gopsutil
+Emitted only when `os` is included. The values reflect operating system
+release information together with `uname`-style kernel data. Fields are
+reported as strings; on platforms where a particular value cannot be
+determined the corresponding field is empty.
 
 | Field              | Type   | Description                                                          |
 |--------------------|--------|----------------------------------------------------------------------|
 | `os`               | string | Operating system family as reported by Go's runtime (e.g. `linux`)   |
 | `platform`         | string | OS distribution / platform identifier (e.g. `ubuntu`, `centos`)      |
 | `platform_family`  | string | Platform family (e.g. `debian`, `rhel`)                              |
-| `platform_version` | string | Platform / distribution version (e.g. `22.04`)                       |
-| `kernel_version`   | string | Kernel release as returned by `uname -r` (e.g. `5.15.0-91-generic`)  |
+| `platform_version` | string | Platform / distribution version (e.g. `26.04`)                       |
+| `kernel_version`   | string | Kernel release as returned by `uname -r` (e.g. `7.0.0-7-generic`)    |
 | `kernel_arch`      | string | Kernel architecture as returned by `uname -m` (e.g. `x86_64`)        |
 
 ## Example Output
@@ -147,5 +134,5 @@ system,host=worker-01 load1=3.72,load5=2.4,load15=2.1,n_users=3i,n_unique_users=
 With `include = ["os"]`, a separate `system_os` measurement is emitted:
 
 ```text
-system_os,host=worker-01 os="linux",platform="ubuntu",platform_family="debian",platform_version="22.04",kernel_version="5.15.0-91-generic",kernel_arch="x86_64" 1748000000000000000
+system_os,host=worker-01 os="linux",platform="ubuntu",platform_family="debian",platform_version="26.04",kernel_version="7.0.0-7-generic",kernel_arch="x86_64" 1748000000000000000
 ```
