@@ -189,6 +189,7 @@ func TestAlreadyClosed(t *testing.T) {
 	plugin, err := cfg.NewClient("test", testutil.Logger{})
 	require.NoError(t, err)
 	require.NoError(t, plugin.Close())
+	require.NoError(t, plugin.Close())
 }
 
 // Internal
