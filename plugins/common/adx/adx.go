@@ -102,14 +102,15 @@ func (adx *Client) Close() error {
 			errs.AddError(err)
 		}
 	}
-	if err := adx.client.Close(); err != nil {
-		errs.AddError(err)
+	if adx.client != nil {
+		if err := adx.client.Close(); err != nil {
+			errs.AddError(err)
+		}
 	}
 
 	adx.client = nil
 	adx.ingestors = nil
 
-	// Combine errors into a single object and return the combined error
 	return errs.GetError()
 }
 
