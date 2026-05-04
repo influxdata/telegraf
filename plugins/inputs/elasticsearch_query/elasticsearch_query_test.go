@@ -1,11 +1,13 @@
 package elasticsearch_query
 
 import (
+	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -416,6 +418,7 @@ func TestGatherIntegration(t *testing.T) {
 		require.Truef(t, cmp.Equal(expected, actual, opts...), "mismatch in aggreation %d\nexpected:%v\nactual:%v\n", i, expected, actual)
 	}
 
+	// Check the metrics
 	testutil.RequireMetricsEqual(t, expectedMetrics, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
 }
 
@@ -513,14 +516,45 @@ func TestGatherFailIntegration(t *testing.T) {
 
 func sendData(ctx context.Context, url string) error {
 	// Read the data
-	buf, err := os.ReadFile(filepath.Join("testdata", "nginx.json"))
+	type nginxlog struct {
+		IPaddress    string    `json:"IP"`
+		Timestamp    time.Time `json:"@timestamp"`
+		Method       string    `json:"method"`
+		URI          string    `json:"URI"`
+		Httpversion  string    `json:"http_version"`
+		Response     string    `json:"response"`
+		Size         float64   `json:"size"`
+		ResponseTime float64   `json:"response_time"`
+	}
+	file, err := os.Open(filepath.Join("testdata", "nginx_logs"))
 	if err != nil {
 		return fmt.Errorf("reading nginx logs failed: %w", err)
 	}
+	defer file.Close()
 
-	var logs []map[string]interface{}
-	if err := json.Unmarshal(buf, &logs); err != nil {
-		return fmt.Errorf("parsing nginx logs failed: %w", err)
+	var logs []nginxlog
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		parts := strings.Split(scanner.Text(), " ")
+		size, err := strconv.Atoi(parts[9])
+		if err != nil {
+			return fmt.Errorf("parsing size failed: %w", err)
+		}
+		responseTime, err := strconv.Atoi(parts[len(parts)-1])
+		if err != nil {
+			return fmt.Errorf("parsing response-time failed: %w", err)
+		}
+
+		logs = append(logs, nginxlog{
+			IPaddress:    parts[0],
+			Timestamp:    time.Now().UTC(),
+			Method:       strings.ReplaceAll(parts[5], `"`, ""),
+			URI:          parts[6],
+			Httpversion:  strings.ReplaceAll(parts[7], `"`, ""),
+			Response:     parts[8],
+			Size:         float64(size),
+			ResponseTime: float64(responseTime),
+		})
 	}
 
 	// Create the client
