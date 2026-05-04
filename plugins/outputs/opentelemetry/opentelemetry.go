@@ -227,8 +227,6 @@ func init() {
 			ServiceAddress: defaultServiceAddress,
 			Timeout:        defaultTimeout,
 			Compression:    defaultCompression,
-			HTTPProxy:      proxy.HTTPProxy{UseSystemProxy: false},
-			TCPProxy:       proxy.TCPProxy{UseProxy: false},
 		}
 	})
 }
