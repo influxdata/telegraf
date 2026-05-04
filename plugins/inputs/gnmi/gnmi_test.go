@@ -47,27 +47,6 @@ func TestParsePath(t *testing.T) {
 	require.Error(t, err)
 }
 
-type mockServer struct {
-	subscribeF func(gnmi.GNMI_SubscribeServer) error
-	grpcServer *grpc.Server
-}
-
-func (*mockServer) Capabilities(context.Context, *gnmi.CapabilityRequest) (*gnmi.CapabilityResponse, error) {
-	return nil, nil
-}
-
-func (*mockServer) Get(context.Context, *gnmi.GetRequest) (*gnmi.GetResponse, error) {
-	return nil, nil
-}
-
-func (*mockServer) Set(context.Context, *gnmi.SetRequest) (*gnmi.SetResponse, error) {
-	return nil, nil
-}
-
-func (s *mockServer) Subscribe(server gnmi.GNMI_SubscribeServer) error {
-	return s.subscribeF(server)
-}
-
 func TestWaitError(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
@@ -1108,4 +1087,25 @@ func TestCases(t *testing.T) {
 			testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
 		})
 	}
+}
+
+type mockServer struct {
+	subscribeF func(gnmi.GNMI_SubscribeServer) error
+	grpcServer *grpc.Server
+}
+
+func (*mockServer) Capabilities(context.Context, *gnmi.CapabilityRequest) (*gnmi.CapabilityResponse, error) {
+	return nil, nil
+}
+
+func (*mockServer) Get(context.Context, *gnmi.GetRequest) (*gnmi.GetResponse, error) {
+	return nil, nil
+}
+
+func (*mockServer) Set(context.Context, *gnmi.SetRequest) (*gnmi.SetResponse, error) {
+	return nil, nil
+}
+
+func (s *mockServer) Subscribe(server gnmi.GNMI_SubscribeServer) error {
+	return s.subscribeF(server)
 }
