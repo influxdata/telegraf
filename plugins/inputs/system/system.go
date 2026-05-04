@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -23,9 +24,15 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+const defaultOSCacheTTL = 5 * time.Minute
+
 type System struct {
-	Include []string        `toml:"include"`
-	Log     telegraf.Logger `toml:"-"`
+	Include    []string        `toml:"include"`
+	OSCacheTTL config.Duration `toml:"os_cache_ttl"`
+	Log        telegraf.Logger `toml:"-"`
+
+	osFields   map[string]interface{}
+	osCachedAt time.Time
 }
 
 func (*System) SampleConfig() string {
@@ -46,7 +53,7 @@ func (s *System) Init() error {
 			continue
 		}
 		switch incl {
-		case "load", "users", "cpus", "uptime":
+		case "load", "users", "cpus", "uptime", "os":
 		case "legacy_cpus":
 			if userSupplied {
 				config.PrintOptionValueDeprecationNotice(
@@ -97,6 +104,21 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 
 	for _, incl := range s.Include {
 		switch incl {
+		case "os":
+			// A zero TTL caches the values until restart.
+			ttl := time.Duration(s.OSCacheTTL)
+			expired := ttl > 0 && now.Sub(s.osCachedAt) >= ttl
+			if s.osCachedAt.IsZero() || expired {
+				osFields, errs := gatherOS()
+				for _, err := range errs {
+					acc.AddError(err)
+				}
+				s.osFields = osFields
+				s.osCachedAt = now
+			}
+			if len(s.osFields) > 0 {
+				acc.AddFields("system_os", s.osFields, nil, now)
+			}
 		case "load":
 			loadavg, err := load.Avg()
 			if err != nil {
@@ -166,6 +188,38 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+// gatherOS reads OS release and uname information via gopsutil, skipping
+// host.Info() to avoid the unrelated virtualization, boot-time and
+// process-count probes.
+func gatherOS() (map[string]interface{}, []error) {
+	var errs []error
+	record := func(name string, err error) {
+		if err == nil || strings.Contains(err.Error(), "not implemented") {
+			return
+		}
+		errs = append(errs, fmt.Errorf("reading %s: %w", name, err))
+	}
+
+	platform, family, version, err := host.PlatformInformation()
+	record("platform information", err)
+	kernelVersion, err := host.KernelVersion()
+	record("kernel version", err)
+	kernelArch, err := host.KernelArch()
+	record("kernel architecture", err)
+
+	if platform == "" && family == "" && version == "" && kernelVersion == "" && kernelArch == "" {
+		return nil, errs
+	}
+	return map[string]interface{}{
+		"os":               runtime.GOOS,
+		"platform":         platform,
+		"platform_family":  family,
+		"platform_version": version,
+		"kernel_version":   kernelVersion,
+		"kernel_arch":      kernelArch,
+	}, errs
+}
+
 func findUniqueUsers(userStats []host.UserStat) int {
 	uniqueUsers := make(map[string]bool)
 	for _, userstat := range userStats {
@@ -201,6 +255,8 @@ func formatUptime(uptime uint64) string {
 
 func init() {
 	inputs.Add("system", func() telegraf.Input {
-		return &System{}
+		return &System{
+			OSCacheTTL: config.Duration(defaultOSCacheTTL),
+		}
 	})
 }

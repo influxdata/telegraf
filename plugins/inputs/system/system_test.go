@@ -75,8 +75,8 @@ func TestInitAllValidOptions(t *testing.T) {
 		name    string
 		include []string
 	}{
-		{"new", []string{"load", "users", "cpus", "uptime"}},
-		{"legacy", []string{"load", "users", "legacy_cpus", "legacy_uptime"}},
+		{"new", []string{"load", "users", "cpus", "uptime", "os"}},
+		{"legacy", []string{"load", "users", "legacy_cpus", "legacy_uptime", "os"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -120,16 +120,19 @@ func TestInitErrors(t *testing.T) {
 }
 
 func TestGather(t *testing.T) {
-	// host.Users() depends on /var/run/utmp which is not available on every
-	// runner. On Linux we mock it via HOST_VAR; on other platforms we probe
-	// at runtime and skip relevant cases when the call cannot be satisfied.
+	// host.Users() depends on /var/run/utmp and host.PlatformInformation()
+	// on /etc/os-release; neither is available on every runner. On Linux
+	// we mock them via HOST_VAR/HOST_ETC; on other platforms we probe at
+	// runtime and skip relevant cases when the call cannot be satisfied.
 	usersAvailable := setupUsers(t)
+	osAvailable := setupOS(t)
 
 	tests := []struct {
 		name         string
 		include      []string
 		expected     []telegraf.Metric
 		requireUsers bool
+		requireOS    bool
 	}{
 		{
 			name:         "default",
@@ -257,6 +260,65 @@ func TestGather(t *testing.T) {
 			},
 		},
 		{
+			name:      "os only",
+			include:   []string{"os"},
+			requireOS: true,
+			expected: []telegraf.Metric{
+				metric.New(
+					"system_os",
+					map[string]string{},
+					map[string]interface{}{
+						"os":               "",
+						"platform":         "",
+						"platform_family":  "",
+						"platform_version": "",
+						"kernel_version":   "",
+						"kernel_arch":      "",
+					},
+					time.Unix(0, 0),
+					telegraf.Untyped,
+				),
+			},
+		},
+		{
+			name:         "all new options including os",
+			include:      []string{"load", "users", "cpus", "uptime", "os"},
+			requireUsers: true,
+			requireOS:    true,
+			expected: []telegraf.Metric{
+				metric.New(
+					"system",
+					map[string]string{},
+					map[string]interface{}{
+						"load1":           float64(0),
+						"load5":           float64(0),
+						"load15":          float64(0),
+						"n_users":         0,
+						"n_unique_users":  0,
+						"n_virtual_cpus":  0,
+						"n_physical_cpus": 0,
+						"uptime":          uint64(0),
+					},
+					time.Unix(0, 0),
+					telegraf.Gauge,
+				),
+				metric.New(
+					"system_os",
+					map[string]string{},
+					map[string]interface{}{
+						"os":               "",
+						"platform":         "",
+						"platform_family":  "",
+						"platform_version": "",
+						"kernel_version":   "",
+						"kernel_arch":      "",
+					},
+					time.Unix(0, 0),
+					telegraf.Untyped,
+				),
+			},
+		},
+		{
 			name:    "duplicates are de-duplicated",
 			include: []string{"legacy_uptime", "legacy_uptime", "cpus", "cpus"},
 			expected: []telegraf.Metric{
@@ -291,6 +353,9 @@ func TestGather(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.requireUsers && !usersAvailable {
 				t.Skip("host.Users() not mockable on this platform")
+			}
+			if tt.requireOS && !osAvailable {
+				t.Skip("host.PlatformInformation() not available on this platform")
 			}
 			s := &System{
 				Include: tt.include,

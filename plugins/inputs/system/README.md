@@ -27,7 +27,16 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##   legacy_cpus      - legacy layout of CPU counts; see README for details
   ##   uptime           - system uptime
   ##   legacy_uptime    - legacy layout of system uptime; see README for details
+  ##   os               - operating system release and uname information
   # include = ["load", "users", "legacy_cpus", "legacy_uptime"]
+
+  ## How long to cache the result of the "os" group between gathers.
+  ## Set higher to reduce the number of os-release/uname reads, lower to
+  ## surface distro upgrades and kexec'd kernels faster. A value of zero
+  ## ("0s") caches the values until telegraf restarts; only safe on hosts
+  ## that are not re-imaged or kexec'd at runtime. To re-read on every
+  ## gather, set to a very small positive value such as "1ns".
+  # os_cache_ttl = "5m"
 ```
 
 > [!NOTE]
@@ -52,12 +61,31 @@ The `n_unique_users` shows the count of unique usernames logged in. This way if
 a user has multiple sessions open/started they would only get counted once. The
 same requirements for `n_users` apply.
 
+The `os` group reads `/etc/os-release` on Linux (typically world-readable) and
+calls the `uname` syscall on POSIX systems. On platforms where gopsutil cannot
+provide a particular value (e.g. parts of FreeBSD/OpenBSD/Solaris) the
+corresponding field is left empty; if no field can be gathered, the
+`system_os` metric is skipped entirely.
+
+Results of the `os` group are cached for `os_cache_ttl` (default 5 minutes)
+between gathers. The values rarely change at runtime, but the cache is
+refreshed periodically so that distribution upgrades (which rewrite
+`/etc/os-release`) and `kexec` boots (which change `uname -r`/`-m`) surface
+in the metric without restarting telegraf. Set `os_cache_ttl = "0s"` to
+cache the values until telegraf restarts; this is appropriate on static
+hosts where the operator is sure no `kexec` boot or distribution upgrade
+will occur during the agent's lifetime. To re-read the data on every
+gather (effectively disabling the cache), set the TTL to a very small
+positive value such as `"1ns"`.
+
 ## Metrics
 
-### `system`
+The `include` option controls which measurements and fields are gathered.
+The `load`, `users`, `cpus` / `legacy_cpus` and `uptime` / `legacy_uptime`
+groups populate the `system` measurement, while the `os` group emits a
+separate `system_os` measurement.
 
-All fields below belong to the `system` measurement. The `include` option
-controls which groups are gathered.
+### `system`
 
 | Field             | Include option             | Type    | Description                                 |
 |-------------------|----------------------------|---------|---------------------------------------------|
@@ -72,6 +100,25 @@ controls which groups are gathered.
 | `uptime`          | `uptime`                   | integer | System uptime in seconds (gauge field)      |
 | `uptime`          | `legacy_uptime`            | integer | System uptime in seconds (separate counter) |
 | `uptime_format`   | `legacy_uptime`            | string  | Human-readable uptime (deprecated)          |
+
+### `system_os`
+
+Emitted only when `os` is included. The values are gathered through
+[gopsutil][gopsutil] for cross-platform support and reflect operating
+system release information together with `uname`-style kernel data.
+Fields are reported as strings; on platforms where a particular value
+cannot be determined the corresponding field is empty.
+
+[gopsutil]: https://github.com/shirou/gopsutil
+
+| Field              | Type   | Description                                                          |
+|--------------------|--------|----------------------------------------------------------------------|
+| `os`               | string | Operating system family as reported by Go's runtime (e.g. `linux`)   |
+| `platform`         | string | OS distribution / platform identifier (e.g. `ubuntu`, `centos`)      |
+| `platform_family`  | string | Platform family (e.g. `debian`, `rhel`)                              |
+| `platform_version` | string | Platform / distribution version (e.g. `22.04`)                       |
+| `kernel_version`   | string | Kernel release as returned by `uname -r` (e.g. `5.15.0-91-generic`)  |
+| `kernel_arch`      | string | Kernel architecture as returned by `uname -m` (e.g. `x86_64`)        |
 
 ## Example Output
 
@@ -93,4 +140,12 @@ in a single metric with the new field names:
 
 ```text
 system,host=worker-01 load1=3.72,load5=2.4,load15=2.1,n_users=3i,n_unique_users=2i,n_virtual_cpus=4i,n_physical_cpus=2i,uptime=1249632i 1748000000000000000
+```
+
+### OS information
+
+With `include = ["os"]`, a separate `system_os` measurement is emitted:
+
+```text
+system_os,host=worker-01 os="linux",platform="ubuntu",platform_family="debian",platform_version="22.04",kernel_version="5.15.0-91-generic",kernel_arch="x86_64" 1748000000000000000
 ```
