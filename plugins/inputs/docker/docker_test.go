@@ -2047,7 +2047,7 @@ func readContainerData(path string) (*containerData, error) {
 	if _, err := os.Stat(filepath.Join(path, "inspect.json")); err == nil {
 		buf, err := os.ReadFile(filepath.Join(path, "inspect.json"))
 		if err != nil {
-			return nil, fmt.Errorf("reading inspection datafailed: %w", err)
+			return nil, fmt.Errorf("reading inspection data failed: %w", err)
 		}
 		if err := json.Unmarshal(buf, &in.inspection); err != nil {
 			return nil, fmt.Errorf("parsing inspection data failed: %w", err)
