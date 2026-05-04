@@ -390,6 +390,9 @@ func (*Telegraf) watchRemoteConfigs(ctx context.Context, signals chan os.Signal,
 }
 
 func (t *Telegraf) loadConfiguration() (*config.Config, error) {
+	// Make sure secrets are cleared
+	config.ResetSecrets()
+
 	// If no other options are specified, load the config file and run.
 	c := config.NewConfig()
 	c.Agent.Quiet = t.quiet
