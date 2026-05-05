@@ -415,7 +415,7 @@ func TestGatherIntegration(t *testing.T) {
 	for i, agg := range plugin.Aggregations {
 		actual := agg.aggregationQueryList
 		expected := expectedData[i]
-		require.Truef(t, cmp.Equal(expected, actual, opts...), "mismatch in aggreation %d\nexpected:%v\nactual:%v\n", i, expected, actual)
+		require.Truef(t, cmp.Equal(expected, actual, opts...), "mismatch in aggregation %d\nexpected:%v\nactual:%v\n", i, expected, actual)
 	}
 
 	// Check the metrics
@@ -586,7 +586,7 @@ func sendData(ctx context.Context, url string) error {
 
 	// Force elastic to refresh indexes to get new batch data
 	if _, err := client.Refresh().Do(ctx); err != nil {
-		return fmt.Errorf("refeshing indices failed: %w", err)
+		return fmt.Errorf("refreshing indices failed: %w", err)
 	}
 
 	return nil
