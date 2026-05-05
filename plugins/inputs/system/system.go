@@ -105,9 +105,7 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 	for _, incl := range s.Include {
 		switch incl {
 		case "os":
-			ttl := time.Duration(s.OSCacheTTL)
-			expired := ttl > 0 && now.Sub(s.osCachedAt) >= ttl
-			if s.osCachedAt.IsZero() || expired {
+			if time.Since(s.osCachedAt) > time.Duration(s.OSCacheTTL) {
 				osFields, err := gatherOS()
 				if err != nil {
 					acc.AddError(err)
