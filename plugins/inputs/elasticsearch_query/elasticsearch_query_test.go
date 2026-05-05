@@ -511,7 +511,7 @@ func TestGatherFailIntegration(t *testing.T) {
 	for _, err := range acc.Errors {
 		actual = append(actual, err.Error())
 	}
-	require.ElementsMatch(t, actual, expected)
+	require.ElementsMatch(t, expected, actual)
 }
 
 func sendData(ctx context.Context, url string) error {
