@@ -32,11 +32,9 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## How long to cache the result of the "os" group between gathers.
   ## Set higher to reduce the number of os-release/uname reads, lower to
-  ## surface distro upgrades and kexec'd kernels faster. A value of zero
-  ## ("0s") caches the values until telegraf restarts; only safe on hosts
-  ## that are not re-imaged or kexec'd at runtime. To re-read on every
-  ## gather, set to a very small positive value such as "1ns".
-  # os_cache_ttl = "5m"
+  ## surface distro upgrades and kexec'd kernels faster. Set to zero to
+  ## re-read the data on every gather.
+  # os_cache_ttl = "8h"
 ```
 
 > [!NOTE]
@@ -101,11 +99,11 @@ determined the corresponding field is empty.
 | Field              | Type   | Description                                                          |
 |--------------------|--------|----------------------------------------------------------------------|
 | `os`               | string | Operating system family as reported by Go's runtime (e.g. `linux`)   |
+| `arch`             | string | Architecture as reported by Go's runtime (e.g. `amd64`)              |
 | `platform`         | string | OS distribution / platform identifier (e.g. `ubuntu`, `centos`)      |
 | `platform_family`  | string | Platform family (e.g. `debian`, `rhel`)                              |
 | `platform_version` | string | Platform / distribution version (e.g. `26.04`)                       |
 | `kernel_version`   | string | Kernel release as returned by `uname -r` (e.g. `7.0.0-7-generic`)    |
-| `kernel_arch`      | string | Kernel architecture as returned by `uname -m` (e.g. `x86_64`)        |
 
 ## Example Output
 
@@ -134,5 +132,5 @@ system,host=worker-01 load1=3.72,load5=2.4,load15=2.1,n_users=3i,n_unique_users=
 With `include = ["os"]`, a separate `system_os` measurement is emitted:
 
 ```text
-system_os,host=worker-01 os="linux",platform="ubuntu",platform_family="debian",platform_version="26.04",kernel_version="7.0.0-7-generic",kernel_arch="x86_64" 1748000000000000000
+system_os,host=worker-01 os="linux",arch="amd64",platform="ubuntu",platform_family="debian",platform_version="26.04",kernel_version="7.0.0-7-generic" 1748000000000000000
 ```

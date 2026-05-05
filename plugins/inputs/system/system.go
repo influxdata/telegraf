@@ -24,8 +24,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const defaultOSCacheTTL = 5 * time.Minute
-
 type System struct {
 	Include    []string        `toml:"include"`
 	OSCacheTTL config.Duration `toml:"os_cache_ttl"`
@@ -109,9 +107,10 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 				osFields, err := gatherOS()
 				if err != nil {
 					acc.AddError(err)
+				} else {
+					s.osFields = osFields
+					s.osCachedAt = now
 				}
-				s.osFields = osFields
-				s.osCachedAt = now
 			}
 			if len(s.osFields) > 0 {
 				acc.AddFields("system_os", s.osFields, nil, now)
@@ -189,32 +188,26 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 // host.Info() to avoid the unrelated virtualization, boot-time and
 // process-count probes.
 func gatherOS() (map[string]interface{}, error) {
-	var errs []error
-
 	platform, family, version, err := host.PlatformInformation()
 	if err != nil && !strings.Contains(err.Error(), "not implemented") {
-		errs = append(errs, fmt.Errorf("reading platform information: %w", err))
+		return nil, fmt.Errorf("reading platform information: %w", err)
 	}
 	kernelVersion, err := host.KernelVersion()
 	if err != nil && !strings.Contains(err.Error(), "not implemented") {
-		errs = append(errs, fmt.Errorf("reading kernel version: %w", err))
-	}
-	kernelArch, err := host.KernelArch()
-	if err != nil && !strings.Contains(err.Error(), "not implemented") {
-		errs = append(errs, fmt.Errorf("reading kernel architecture: %w", err))
+		return nil, fmt.Errorf("reading kernel version: %w", err)
 	}
 
-	if platform == "" && family == "" && version == "" && kernelVersion == "" && kernelArch == "" {
-		return nil, errors.Join(errs...)
+	if platform == "" && family == "" && version == "" && kernelVersion == "" {
+		return nil, nil
 	}
 	return map[string]interface{}{
 		"os":               runtime.GOOS,
+		"arch":             runtime.GOARCH,
 		"platform":         platform,
 		"platform_family":  family,
 		"platform_version": version,
 		"kernel_version":   kernelVersion,
-		"kernel_arch":      kernelArch,
-	}, errors.Join(errs...)
+	}, nil
 }
 
 func findUniqueUsers(userStats []host.UserStat) int {
@@ -253,7 +246,7 @@ func formatUptime(uptime uint64) string {
 func init() {
 	inputs.Add("system", func() telegraf.Input {
 		return &System{
-			OSCacheTTL: config.Duration(defaultOSCacheTTL),
+			OSCacheTTL: config.Duration(8 * time.Hour),
 		}
 	})
 }
