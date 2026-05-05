@@ -29,7 +29,11 @@ type System struct {
 	OSCacheTTL config.Duration `toml:"os_cache_ttl"`
 	Log        telegraf.Logger `toml:"-"`
 
+<<<<<<< HEAD
 	osCache   map[string]interface{}
+=======
+	osCache    map[string]interface{}
+>>>>>>> fb11253bd (review feedback)
 	osCachedAt time.Time
 }
 
@@ -104,16 +108,16 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 		switch incl {
 		case "os":
 			if time.Since(s.osCachedAt) > time.Duration(s.OSCacheTTL) {
-				osFields, err := gatherOS()
+				osCache, err := gatherOS()
 				if err != nil {
 					acc.AddError(err)
 				} else {
-					s.osFields = osFields
+					s.osCache = osCache
 					s.osCachedAt = now
 				}
 			}
-			if len(s.osFields) > 0 {
-				acc.AddFields("system_os", s.osFields, nil, now)
+			if len(s.osCache) > 0 {
+				acc.AddFields("system_os", s.osCache, nil, now)
 			}
 		case "load":
 			loadavg, err := load.Avg()
@@ -199,8 +203,13 @@ func gatherOS() (map[string]interface{}, error) {
 
 	if platform == "" && family == "" && version == "" && kernelVersion == "" {
 		return map[string]interface{}{
+<<<<<<< HEAD
 			"os":               runtime.GOOS,
 			"arch":             runtime.GOARCH,
+=======
+			"os":   runtime.GOOS,
+			"arch": runtime.GOARCH,
+>>>>>>> fb11253bd (review feedback)
 		}, nil
 	}
 	return map[string]interface{}{
