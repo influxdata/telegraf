@@ -29,7 +29,7 @@ type System struct {
 	OSCacheTTL config.Duration `toml:"os_cache_ttl"`
 	Log        telegraf.Logger `toml:"-"`
 
-	osFields   map[string]interface{}
+	osCache   map[string]interface{}
 	osCachedAt time.Time
 }
 
