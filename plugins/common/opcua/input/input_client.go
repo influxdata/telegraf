@@ -203,6 +203,23 @@ const (
 	TimestampSourceTelegraf TimestampSource = "gather"
 )
 
+// BrowsePathSettings is one pattern-based discovery rule.
+type BrowsePathSettings struct {
+	Pattern     string            `toml:"pattern"`
+	MetricName  string            `toml:"name"`
+	DefaultTags map[string]string `toml:"default_tags"`
+}
+
+// BrowseConfig configures address-space discovery for the input client.
+// When Paths is empty, browse-based discovery is disabled and the existing
+// nodes/group/events configuration is used as-is.
+type BrowseConfig struct {
+	Root     string               `toml:"root"`
+	Depth    int                  `toml:"depth"`
+	MaxNodes int                  `toml:"max_nodes"`
+	Paths    []BrowsePathSettings `toml:"paths"`
+}
+
 // InputClientConfig a configuration for the input client
 type InputClientConfig struct {
 	opcua.OpcUAClientConfig
@@ -212,6 +229,7 @@ type InputClientConfig struct {
 	RootNodes       []NodeSettings       `toml:"nodes"`
 	Groups          []NodeGroupSettings  `toml:"group"`
 	EventGroups     []EventGroupSettings `toml:"events"`
+	Browse          BrowseConfig         `toml:"browse"`
 }
 
 func (o *InputClientConfig) Validate() error {
@@ -230,12 +248,30 @@ func (o *InputClientConfig) Validate() error {
 		o.TimestampFormat = time.RFC3339Nano
 	}
 
-	if len(o.Groups) == 0 && len(o.RootNodes) == 0 && o.EventGroups == nil {
-		return errors.New("no groups, root nodes or events provided to gather from")
+	if len(o.Groups) == 0 && len(o.RootNodes) == 0 && o.EventGroups == nil && len(o.Browse.Paths) == 0 {
+		return errors.New("no groups, root nodes, browse paths or events provided to gather from")
 	}
 	for _, group := range o.Groups {
 		if len(group.Nodes) == 0 {
 			return errors.New("group has no nodes to collect from")
+		}
+	}
+
+	if len(o.Browse.Paths) > 0 {
+		if o.Browse.Root == "" {
+			// OPC UA Objects folder, the standard top of the user-visible address space.
+			o.Browse.Root = "ns=0;i=85"
+		}
+		if _, err := ua.ParseNodeID(o.Browse.Root); err != nil {
+			return fmt.Errorf("invalid browse root %q: %w", o.Browse.Root, err)
+		}
+		for i, p := range o.Browse.Paths {
+			if p.Pattern == "" {
+				return fmt.Errorf("browse path at index %d has empty pattern", i)
+			}
+			if _, err := opcua.CompilePathPattern(p.Pattern); err != nil {
+				return fmt.Errorf("invalid browse pattern at index %d: %w", i, err)
+			}
 		}
 	}
 
@@ -269,12 +305,15 @@ func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputC
 		EventGroups: o.EventGroups,
 	}
 
-	log.Debug("Initialising node to metric mapping")
-	if err := c.InitNodeMetricMapping(); err != nil {
-		return nil, err
+	// Browse-based discovery defers metric mapping until after Connect.
+	// The discovered nodes are not known until the server is reachable.
+	if len(o.Browse.Paths) == 0 {
+		log.Debug("Initialising node to metric mapping")
+		if err := c.InitNodeMetricMapping(); err != nil {
+			return nil, err
+		}
+		c.initLastReceivedValues()
 	}
-
-	c.initLastReceivedValues()
 
 	return c, nil
 }
