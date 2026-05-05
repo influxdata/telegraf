@@ -556,6 +556,9 @@ func sendData(ctx context.Context, url string) error {
 			ResponseTime: float64(responseTime),
 		})
 	}
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("scanning nginx logs failed: %w", err)
+	}
 
 	// Create the client
 	options := []elastic5.ClientOptionFunc{
