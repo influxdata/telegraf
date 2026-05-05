@@ -471,7 +471,7 @@ func (t *Telegraf) runAgent(ctx context.Context, reloadConfig bool) error {
 	}
 
 	if err := logger.SetupLogging(logConfig); err != nil {
-		return err
+		return fmt.Errorf("setting up logging failed: %w", err)
 	}
 
 	log.Printf("I! Starting Telegraf %s%s brought to you by InfluxData the makers of InfluxDB", internal.Version, internal.Customized)
