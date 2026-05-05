@@ -198,7 +198,10 @@ func gatherOS() (map[string]interface{}, error) {
 	}
 
 	if platform == "" && family == "" && version == "" && kernelVersion == "" {
-		return nil, nil
+		return map[string]interface{}{
+			"os":               runtime.GOOS,
+			"arch":             runtime.GOARCH,
+		}, nil
 	}
 	return map[string]interface{}{
 		"os":               runtime.GOOS,
