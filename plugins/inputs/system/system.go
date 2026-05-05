@@ -29,11 +29,7 @@ type System struct {
 	OSCacheTTL config.Duration `toml:"os_cache_ttl"`
 	Log        telegraf.Logger `toml:"-"`
 
-<<<<<<< HEAD
-	osCache   map[string]interface{}
-=======
 	osCache    map[string]interface{}
->>>>>>> fb11253bd (review feedback)
 	osCachedAt time.Time
 }
 
@@ -203,13 +199,8 @@ func gatherOS() (map[string]interface{}, error) {
 
 	if platform == "" && family == "" && version == "" && kernelVersion == "" {
 		return map[string]interface{}{
-<<<<<<< HEAD
-			"os":               runtime.GOOS,
-			"arch":             runtime.GOARCH,
-=======
 			"os":   runtime.GOOS,
 			"arch": runtime.GOARCH,
->>>>>>> fb11253bd (review feedback)
 		}, nil
 	}
 	return map[string]interface{}{
