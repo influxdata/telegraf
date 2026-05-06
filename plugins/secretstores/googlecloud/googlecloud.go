@@ -49,9 +49,18 @@ func (g *GoogleCloud) Init() error {
 	if err != nil {
 		return fmt.Errorf("unable to parse credentials file type: %w", err)
 	}
+
+	// Default to cloud-platform scope for standard public-GCP service-account JSON keys.
+	// This covers all GCP APIs; actual permissions are still gated by IAM roles.
+	// GDCH/STS users continue to rely exclusively on sts_audience (Scopes is ignored).
+	if len(g.Scopes) == 0 && credType == "service_account" {
+		g.Scopes = []string{"https://www.googleapis.com/auth/cloud-platform"}
+	}
+
 	saType := credentials.CredType(credType)
 
 	creds, err := credentials.NewCredentialsFromJSON(saType, serviceAccount, &credentials.DetectOptions{
+		Scopes:      g.Scopes,
 		STSAudience: g.STSAudience,
 		Client:      client,
 		Logger:      slog.NewLogger(g.Log),
