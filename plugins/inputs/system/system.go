@@ -196,16 +196,17 @@ func gatherOS() (map[string]interface{}, error) {
 	if err != nil && !strings.Contains(err.Error(), "not implemented") {
 		return nil, fmt.Errorf("reading kernel version: %w", err)
 	}
-
-	if platform == "" && family == "" && version == "" && kernelVersion == "" {
-		return map[string]interface{}{
-			"os":   runtime.GOOS,
-			"arch": runtime.GOARCH,
-		}, nil
+	arch, err := host.KernelArch()
+	if err != nil && !strings.Contains(err.Error(), "not implemented") {
+		return nil, fmt.Errorf("reading kernel architecture: %w", err)
 	}
+	if arch == "" {
+		arch = runtime.GOARCH
+	}
+
 	return map[string]interface{}{
 		"os":               runtime.GOOS,
-		"arch":             runtime.GOARCH,
+		"arch":             arch,
 		"platform":         platform,
 		"platform_family":  family,
 		"platform_version": version,

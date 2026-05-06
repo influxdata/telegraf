@@ -99,7 +99,7 @@ determined the corresponding field is empty.
 | Field              | Type   | Description                                                          |
 |--------------------|--------|----------------------------------------------------------------------|
 | `os`               | string | Operating system family as reported by Go's runtime (e.g. `linux`)   |
-| `arch`             | string | Architecture as reported by Go's runtime (e.g. `amd64`)              |
+| `arch`             | string | Architecture as returned by `uname -m` (e.g. `x86_64`)               |
 | `platform`         | string | OS distribution / platform identifier (e.g. `ubuntu`, `centos`)      |
 | `platform_family`  | string | Platform family (e.g. `debian`, `rhel`)                              |
 | `platform_version` | string | Platform / distribution version (e.g. `26.04`)                       |
@@ -132,5 +132,5 @@ system,host=worker-01 load1=3.72,load5=2.4,load15=2.1,n_users=3i,n_unique_users=
 With `include = ["os"]`, a separate `system_os` measurement is emitted:
 
 ```text
-system_os,host=worker-01 os="linux",arch="amd64",platform="ubuntu",platform_family="debian",platform_version="26.04",kernel_version="7.0.0-7-generic" 1748000000000000000
+system_os,host=worker-01 os="linux",arch="x86_64",platform="ubuntu",platform_family="debian",platform_version="26.04",kernel_version="7.0.0-7-generic" 1748000000000000000
 ```
