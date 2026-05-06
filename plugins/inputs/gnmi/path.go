@@ -3,6 +3,7 @@ package gnmi
 import (
 	"strings"
 
+	"github.com/google/gnxi/utils/xpath"
 	"github.com/openconfig/gnmi/proto/gnmi"
 )
 
@@ -22,6 +23,17 @@ type pathInfo struct {
 	target    string
 	segments  []segment
 	keyValues []keySegment
+}
+
+// ParsePath from XPath-like string to gNMI path structure
+func parsePath(origin, pathToParse, target string) (*gnmi.Path, error) {
+	gnmiPath, err := xpath.ToGNMIPath(pathToParse)
+	if err != nil {
+		return nil, err
+	}
+	gnmiPath.Origin = origin
+	gnmiPath.Target = target
+	return gnmiPath, err
 }
 
 func newInfoFromString(path string) *pathInfo {
