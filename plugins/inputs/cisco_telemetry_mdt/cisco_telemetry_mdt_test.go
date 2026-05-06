@@ -50,9 +50,9 @@ func TestTCPDialoutOverflow(t *testing.T) {
 		transport: plugin.Transport,
 		addr:      plugin.listener.Addr().String(),
 	}
+	require.NoError(t, c.connect(t.Context()))
 	defer c.close()
 	require.NoError(t, c.send(t.Context(), bytes.Repeat([]byte{0xd, 0xe, 0xa, 0xd}, 1024)))
-	plugin.Stop()
 
 	// Wait for the errors to be accumulated
 	require.Eventually(t, func() bool {
@@ -121,6 +121,7 @@ func TestTCPDialoutMultiple(t *testing.T) {
 		addr:      addr,
 		transport: "tcp",
 	}
+	require.NoError(t, c1.connect(t.Context()))
 	defer c1.close()
 	data, err := proto.Marshal(msg)
 	require.NoError(t, err)
@@ -231,8 +232,9 @@ func TestGRPCDialoutError(t *testing.T) {
 		addr:      addr,
 		transport: plugin.Transport,
 	}
+	require.NoError(t, c.connect(t.Context()))
 	defer c.close()
-	require.NoError(t, c.sendGRPC(t.Context(), &mdtdialout.MdtDialoutArgs{Errors: "foobar"}))
+	require.NoError(t, c.sendGRPC(&mdtdialout.MdtDialoutArgs{Errors: "foobar"}))
 
 	// Wait for the error message to appear
 	require.Eventually(t, func() bool {
@@ -534,6 +536,7 @@ func TestCases(t *testing.T) {
 				transport: plugin.Transport,
 				addr:      plugin.listener.Addr().String(),
 			}
+			require.NoError(t, c.connect(t.Context()))
 			defer c.close()
 			for i, payload := range packets {
 				require.NoErrorf(t, c.send(t.Context(), payload), "sending packet %d", i)
@@ -604,8 +607,61 @@ type client struct {
 	transport string
 	tlscfg    *tls.Config
 
-	conn  net.Conn
-	reqid atomic.Int64
+	conn   net.Conn
+	stream mdtdialout.GRPCMdtDialout_MdtDialoutClient
+	reqid  atomic.Int64
+}
+
+func (c *client) connect(ctx context.Context) error {
+	switch c.transport {
+	case "grpc":
+		var creds credentials.TransportCredentials
+
+		// Setup the connection credentials
+		if c.tlscfg == nil {
+			creds = insecure.NewCredentials()
+		} else {
+			creds = credentials.NewTLS(c.tlscfg)
+		}
+
+		// Connect to the server
+		opts := []grpc.DialOption{
+			grpc.WithTransportCredentials(creds),
+		}
+		conn, err := grpc.NewClient(c.addr, opts...)
+		if err != nil {
+			return fmt.Errorf("dialing server %q failed: %w", c.addr, err)
+		}
+		conn.Connect()
+
+		// Create a nokia dial-out client
+		client := mdtdialout.NewGRPCMdtDialoutClient(conn)
+		stream, err := client.MdtDialout(ctx)
+		if err != nil {
+			return fmt.Errorf("creating dial-out stream failed: %w", err)
+		}
+		c.stream = stream
+	case "tcp":
+		conn, err := net.Dial("tcp", c.addr)
+		if err != nil {
+			return fmt.Errorf("connecting to %q failed: %w", c.addr, err)
+		}
+		c.conn = conn
+	default:
+		return fmt.Errorf("unknown transport %q", c.transport)
+	}
+
+	return nil
+}
+
+func (c *client) close() {
+	if c.conn != nil {
+		c.conn.Close()
+		c.conn = nil
+	}
+	if c.stream != nil {
+		c.stream.CloseSend()
+	}
 }
 
 func (c *client) send(ctx context.Context, payload []byte) error {
@@ -615,16 +671,10 @@ func (c *client) send(ctx context.Context, payload []byte) error {
 			ReqId: c.reqid.Add(1),
 			Data:  payload,
 		}
-		if err := c.sendGRPC(ctx, data); err != nil {
+		if err := c.sendGRPC(data); err != nil {
 			return fmt.Errorf("sending via GRPC failed: %w", err)
 		}
 	case "tcp":
-		conn, err := net.Dial("tcp", c.addr)
-		if err != nil {
-			return fmt.Errorf("connecting to %q failed: %w", c.addr, err)
-		}
-		c.conn = conn
-
 		// TCP Dialout telemetry framing header
 		var buf bytes.Buffer
 		if _, err := buf.Write(createTCPHeader(0, 0, 0, 0, uint32(len(payload)))); err != nil {
@@ -645,44 +695,8 @@ func (c *client) send(ctx context.Context, payload []byte) error {
 	return nil
 }
 
-func (c *client) close() {
-	if c.conn != nil {
-		c.conn.Close()
-		c.conn = nil
-	}
-}
-
-func (c *client) sendGRPC(ctx context.Context, msg *mdtdialout.MdtDialoutArgs) error {
-	var creds credentials.TransportCredentials
-
-	// Setup the connection credentials
-	if c.tlscfg == nil {
-		creds = insecure.NewCredentials()
-	} else {
-		creds = credentials.NewTLS(c.tlscfg)
-	}
-
-	// Connect to the server
-	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(creds),
-	}
-	conn, err := grpc.NewClient(c.addr, opts...)
-	if err != nil {
-		return fmt.Errorf("dialing server %q failed: %w", c.addr, err)
-	}
-	conn.Connect()
-
-	// Create a nokia dial-out client
-	client := mdtdialout.NewGRPCMdtDialoutClient(conn)
-	sctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	stream, err := client.MdtDialout(sctx)
-	if err != nil {
-		return fmt.Errorf("creating dial-out stream failed: %w", err)
-	}
-	defer stream.CloseSend()
-
-	if err := stream.Send(msg); err != nil && !errors.Is(err, io.EOF) {
+func (c *client) sendGRPC(msg *mdtdialout.MdtDialoutArgs) error {
+	if err := c.stream.Send(msg); err != nil && !errors.Is(err, io.EOF) {
 		return err
 	}
 

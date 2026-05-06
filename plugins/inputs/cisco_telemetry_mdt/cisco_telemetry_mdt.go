@@ -303,8 +303,10 @@ func (c *CiscoTelemetryMDT) acceptTCPClients() {
 		c.wg.Add(1)
 		go func() {
 			c.Log.Debugf("Accepted Cisco MDT TCP dialout connection from %s", conn.RemoteAddr())
-			if err := c.handleTCPClient(conn); err != nil && !errors.Is(err, io.EOF) {
-				c.acc.AddError(err)
+			if err := c.handleTCPClient(conn); err != nil {
+				if !errors.Is(err, io.EOF) && !errors.Is(err, net.ErrClosed) {
+					c.acc.AddError(err)
+				}
 			}
 			c.Log.Debugf("Closed Cisco MDT TCP dialout connection from %s", conn.RemoteAddr())
 
@@ -345,7 +347,7 @@ func (c *CiscoTelemetryMDT) handleTCPClient(conn net.Conn) error {
 	for {
 		// Read and validate dialout telemetry header
 		if err := binary.Read(conn, binary.BigEndian, &hdr); err != nil {
-			return err
+			return fmt.Errorf("reading header failed: %w", err)
 		}
 
 		maxMsgSize := tcpMaxMsgLen
@@ -363,7 +365,7 @@ func (c *CiscoTelemetryMDT) handleTCPClient(conn net.Conn) error {
 		payload.Reset()
 		if size, err := payload.ReadFrom(io.LimitReader(conn, int64(hdr.MsgLen))); size != int64(hdr.MsgLen) {
 			if err != nil {
-				return err
+				return fmt.Errorf("reading payload failed: %w", err)
 			}
 			return errors.New("premature EOF during TCP dialout")
 		}
