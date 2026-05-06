@@ -1,0 +1,106 @@
+{
+    "nodeIdStr": "NX-PGBL-GX2",
+    "subscriptionIdStr": "1",
+    "encodingPath": "EVENT-LIST",
+    "msgTimestamp": "1769120146205",
+    "dataGpbkv": [
+        {
+            "fields": [
+                {
+                    "name": "keys",
+                    "fields": [
+                        {
+                            "name": "EVENT-LIST",
+                            "stringValue": "EVENT-LIST"
+                        }
+                    ]
+                },
+                {
+                    "name": "content",
+                    "fields": [
+                        {
+                            "fields": [
+                                {
+                                    "name": "children",
+                                    "fields": [
+                                        {
+                                            "fields": [
+                                                {
+                                                    "name": "imdata",
+                                                    "fields": [
+                                                        {
+                                                            "fields": [
+                                                                {
+                                                                    "name": "ethpmPhysIf",
+                                                                    "fields": [
+                                                                        {
+                                                                            "fields": [
+                                                                                {
+                                                                                    "name": "attributes",
+                                                                                    "fields": [
+                                                                                        {
+                                                                                            "fields": [
+                                                                                                {
+                                                                                                    "name": "childAction",
+                                                                                                    "stringValue": ""
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "dn",
+                                                                                                    "stringValue": "sys/intf/phys-[eth1/11]/phys"
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "lastLinkStChg",
+                                                                                                    "stringValue": "2026-01-22T14:15:46.199-08:00"
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "operBitset",
+                                                                                                    "stringValue": "3-4"
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "operSt",
+                                                                                                    "stringValue": "up"
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "operStQual",
+                                                                                                    "stringValue": "none"
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "resetCtr",
+                                                                                                    "sint64Value": "2"
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "rn",
+                                                                                                    "stringValue": ""
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "status",
+                                                                                                    "stringValue": "modified"
+                                                                                                }
+                                                                                            ]
+                                                                                        }
+                                                                                    ]
+                                                                                }
+                                                                            ]
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "name": "subscriptionId",
+                                                    "uint64Value": "18379759394883829764"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

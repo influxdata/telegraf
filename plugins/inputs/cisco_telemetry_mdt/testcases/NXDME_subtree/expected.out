@@ -1,0 +1,2 @@
+dme,dn=eth1/1,path=sys/dme,source=hostname,subscription=subscription,sys/dme=sys/dme dn="eth1/1",foo="bar1" 1543236572000000000
+dme,dn=eth1/2,path=sys/dme,source=hostname,subscription=subscription,sys/dme=sys/dme dn="eth1/2",foo="bar2" 1543236572000000000

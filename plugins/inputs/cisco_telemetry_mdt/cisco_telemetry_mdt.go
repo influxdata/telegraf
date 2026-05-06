@@ -303,8 +303,7 @@ func (c *CiscoTelemetryMDT) acceptTCPClients() {
 		c.wg.Add(1)
 		go func() {
 			c.Log.Debugf("Accepted Cisco MDT TCP dialout connection from %s", conn.RemoteAddr())
-			err := c.handleTCPClient(conn)
-			if err != nil {
+			if err := c.handleTCPClient(conn); err != nil && !errors.Is(err, io.EOF) {
 				c.acc.AddError(err)
 			}
 			c.Log.Debugf("Closed Cisco MDT TCP dialout connection from %s", conn.RemoteAddr())
