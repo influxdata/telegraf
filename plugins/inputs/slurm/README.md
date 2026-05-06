@@ -5,8 +5,8 @@ for a [SLURM][slurm] instance using the REST API provided by the `slurmrestd`
 daemon.
 
 > [!NOTE]
-> This plugin currently supports versions v0.0.38 (SLURM 23.02.x) and 
-> v0.0.41 (SLURM 24.05.x) of the [SLURM REST API][api] which must be enabled in the
+> This plugin currently supports versions v0.0.38 (SLURM 23.02.x) and v0.0.41
+> (SLURM 24.05.x) of the [SLURM REST API][api] which must be enabled in the
 > `slurmrestd` daemon. For more information, check the [documentation][config].
 
 [slurm]: https://slurm.schedmd.com
