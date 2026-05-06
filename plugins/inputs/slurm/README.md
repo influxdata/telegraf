@@ -9,6 +9,10 @@ daemon.
 > (SLURM 24.05.x) of the [SLURM REST API][api] which must be enabled in the
 > `slurmrestd` daemon. For more information, check the [documentation][config].
 
+⭐ Telegraf v1.32.0
+🏷️ server
+💻 all
+
 [slurm]: https://slurm.schedmd.com
 [api]: https://slurm.schedmd.com/rest.html
 [config]: https://slurm.schedmd.com/rest_quickstart.html#customization
