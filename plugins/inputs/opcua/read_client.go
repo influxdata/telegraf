@@ -38,12 +38,11 @@ type readClient struct {
 	ReadError               selfstat.Stat
 	Workarounds             readClientWorkarounds
 
-	// internal values
-	reqIDs []*ua.ReadValueID
-	ctx    context.Context
-
-	// Track last session error to force reconnection
-	forceReconnect bool
+	// Internal flags
+	reqIDs             []*ua.ReadValueID
+	ctx                context.Context
+	forceReconnect     bool
+	mappingInitialized bool
 }
 
 func (rc *readClientConfig) createReadClient(log telegraf.Logger) (*readClient, error) {
@@ -97,6 +96,19 @@ func (o *readClient) connect() error {
 	if err := o.OpcUAClient.UpdateNamespaceArray(o.ctx); err != nil {
 		o.Log.Warnf("Failed to fetch namespace array: %v", err)
 		// Continue anyway - this is only needed if using namespace URIs
+	}
+
+	// Browse-based discovery runs on the first connect only. Reconnects keep
+	// the previously built metric mapping; node IDs are refreshed below in
+	// case the server restarted with a renumbered namespace.
+	if len(o.Config.Browse.Paths) > 0 && !o.mappingInitialized {
+		if err := o.OpcUAInputClient.DiscoverNodes(o.ctx); err != nil {
+			return fmt.Errorf("browse discovery failed: %w", err)
+		}
+		if err := o.OpcUAInputClient.InitNodeMetricMapping(); err != nil {
+			return fmt.Errorf("initializing node metric mapping failed: %w", err)
+		}
+		o.mappingInitialized = true
 	}
 
 	// Make sure we setup the node-ids correctly after reconnect

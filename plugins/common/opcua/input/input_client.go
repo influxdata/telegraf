@@ -312,7 +312,6 @@ func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputC
 		if err := c.InitNodeMetricMapping(); err != nil {
 			return nil, err
 		}
-		c.initLastReceivedValues()
 	}
 
 	return c, nil
@@ -373,6 +372,48 @@ type OpcUAInputClient struct {
 	LastReceivedData       []NodeValue
 	EventGroups            []EventGroupSettings
 	EventNodeMetricMapping []EventNodeMetricMapping
+}
+
+// DiscoverNodes walks the address space using the configured browse settings
+// and appends the resolved node groups onto the client's configuration. It
+// is safe to call once after the client is connected and the namespace array
+// has been fetched. Patterns that match no nodes are warned about, not
+// errored, so misconfiguration on a partially populated server does not
+// prevent collection from explicit nodes.
+func (o *OpcUAInputClient) DiscoverNodes(ctx context.Context) error {
+	rootID, err := ua.ParseNodeID(o.Config.Browse.Root)
+	if err != nil {
+		return fmt.Errorf("parsing browse root %q: %w", o.Config.Browse.Root, err)
+	}
+
+	browser := &opcua.AddressSpaceBrowser{
+		Client:   o.Client,
+		Log:      o.Log,
+		MaxDepth: o.Config.Browse.Depth,
+		MaxNodes: o.Config.Browse.MaxNodes,
+	}
+	nodes, err := browser.Browse(ctx, rootID)
+	if err != nil {
+		return fmt.Errorf("browsing address space failed: %w", err)
+	}
+	o.Log.Infof("Browse discovered %d nodes from root %q", len(nodes), o.Config.Browse.Root)
+
+	groups, err := ResolveBrowsedNodes(nodes, o.Config.Browse.Paths)
+	if err != nil {
+		return err
+	}
+
+	matched := 0
+	for i, g := range groups {
+		matched += len(g.Nodes)
+		if len(g.Nodes) == 0 {
+			o.Log.Warnf("Browse pattern %q matched no nodes", o.Config.Browse.Paths[i].Pattern)
+		}
+	}
+	o.Log.Infof("Browse patterns matched %d variables", matched)
+
+	o.Config.Groups = append(o.Config.Groups, groups...)
+	return nil
 }
 
 // Stop the connection to the client
@@ -528,6 +569,7 @@ func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 		}
 	}
 
+	o.initLastReceivedValues()
 	return nil
 }
 
