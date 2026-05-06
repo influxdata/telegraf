@@ -37,9 +37,9 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # username = "foo"
   # token = "topSecret"
 
-  ## Version of SLURM REST API to use, default is "0038"
-  ## Currently implemented: 0038 (Slurm 23.02.x), 0041 (Slurm 24.05.x)
-  # api_version = "0041"
+  ## SLURM REST API version to use.
+  ## Supported values: "0038" (default), "0041"
+  # api_version = "0038"
 
   ## Enabled endpoints
   ## List of endpoints a user can acquire data from.
