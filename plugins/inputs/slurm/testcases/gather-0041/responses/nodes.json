@@ -1,0 +1,377 @@
+{
+  "nodes": [
+    {
+      "architecture": "x86_64",
+      "burstbuffer_network_address": "",
+      "boards": 1,
+      "boot_time": {
+        "set": true,
+        "infinite": false,
+        "number": 1745922264
+      },
+      "cluster_name": "",
+      "cores": 64,
+      "specialized_cores": 0,
+      "cpu_binding": 0,
+      "cpu_load": 51,
+      "free_mem": {
+        "set": true,
+        "infinite": false,
+        "number": 511695
+      },
+      "cpus": 128,
+      "effective_cpus": 128,
+      "specialized_cpus": "",
+      "energy": {
+        "average_watts": 0,
+        "base_consumed_energy": 0,
+        "consumed_energy": 0,
+        "current_watts": {
+          "set": true,
+          "infinite": false,
+          "number": 0
+        },
+        "previous_consumed_energy": 0,
+        "last_collected": 0
+      },
+      "external_sensors": {
+      },
+      "extra": "",
+      "power": {
+      },
+      "features": [
+        "AMD",
+        "7763"
+      ],
+      "active_features": [
+        "AMD",
+        "7763"
+      ],
+      "gpu_spec": "",
+      "gres": "",
+      "gres_drained": "N\/A",
+      "gres_used": "",
+      "instance_id": "",
+      "instance_type": "",
+      "last_busy": {
+        "set": true,
+        "infinite": false,
+        "number": 1741874217
+      },
+      "mcs_label": "",
+      "specialized_memory": 0,
+      "name": "node01",
+      "next_state_after_reboot": [
+        "INVALID"
+      ],
+      "address": "node01",
+      "hostname": "node01",
+      "state": [
+        "DOWN"
+      ],
+      "operating_system": "Linux 5.14.0-427.13.1.el9_4.x86_64 #1 SMP PREEMPT_DYNAMIC Wed May 1 19:11:28 UTC 2024",
+      "owner": "",
+      "partitions": [
+        "nodes",
+        "nodesprio",
+        "amd",
+        "amdprio",
+        "milan",
+        "milanprio"
+      ],
+      "port": 6818,
+      "real_memory": 508000,
+      "res_cores_per_gpu": 0,
+      "comment": "",
+      "reason": "NO NETWORK ADDRESS FOUND : Not responding",
+      "reason_changed_at": {
+        "set": true,
+        "infinite": false,
+        "number": 1743573775
+      },
+      "reason_set_by_user": "slurm",
+      "resume_after": {
+        "set": true,
+        "infinite": false,
+        "number": 0
+      },
+      "reservation": "",
+      "alloc_memory": 0,
+      "alloc_cpus": 0,
+      "alloc_idle_cpus": 128,
+      "tres_used": "",
+      "tres_weighted": 0.0,
+      "slurmd_start_time": {
+        "set": true,
+        "infinite": false,
+        "number": 1745922398
+      },
+      "sockets": 2,
+      "threads": 1,
+      "temporary_disk": 1024,
+      "weight": 1,
+      "tres": "cpu=128,mem=508000M,billing=128",
+      "version": "24.05.5"
+    },
+    {
+      "architecture": "x86_64",
+      "burstbuffer_network_address": "",
+      "boards": 1,
+      "boot_time": {
+        "set": true,
+        "infinite": false,
+        "number": 1746695340
+      },
+      "cluster_name": "",
+      "cores": 64,
+      "specialized_cores": 0,
+      "cpu_binding": 0,
+      "cpu_load": 31,
+      "free_mem": {
+        "set": true,
+        "infinite": false,
+        "number": 480785
+      },
+      "cpus": 128,
+      "effective_cpus": 128,
+      "specialized_cpus": "",
+      "energy": {
+        "average_watts": 0,
+        "base_consumed_energy": 0,
+        "consumed_energy": 0,
+        "current_watts": {
+          "set": true,
+          "infinite": false,
+          "number": 0
+        },
+        "previous_consumed_energy": 0,
+        "last_collected": 0
+      },
+      "external_sensors": {
+      },
+      "extra": "",
+      "power": {
+      },
+      "features": [
+        "AMD",
+        "7763"
+      ],
+      "active_features": [
+        "AMD",
+        "7763"
+      ],
+      "gpu_spec": "",
+      "gres": "",
+      "gres_drained": "N\/A",
+      "gres_used": "",
+      "instance_id": "",
+      "instance_type": "",
+      "last_busy": {
+        "set": true,
+        "infinite": false,
+        "number": 1741874217
+      },
+      "mcs_label": "",
+      "specialized_memory": 0,
+      "name": "node02",
+      "next_state_after_reboot": [
+        "INVALID"
+      ],
+      "address": "node02",
+      "hostname": "node02",
+      "state": [
+        "DOWN",
+        "INVALID_REG"
+      ],
+      "operating_system": "Linux 5.14.0-427.13.1.el9_4.x86_64 #1 SMP PREEMPT_DYNAMIC Wed May 1 19:11:28 UTC 2024",
+      "owner": "",
+      "partitions": [
+        "nodes",
+        "nodesprio",
+        "amd",
+        "amdprio",
+        "milan",
+        "milanprio"
+      ],
+      "port": 6818,
+      "real_memory": 508000,
+      "res_cores_per_gpu": 0,
+      "comment": "",
+      "reason": "Low socket*core*thread count, Low CPUs, Low RealMemory (reported:483516 < 100.00% of configured:508000)",
+      "reason_changed_at": {
+        "set": true,
+        "infinite": false,
+        "number": 1746695478
+      },
+      "reason_set_by_user": "slurm",
+      "resume_after": {
+        "set": true,
+        "infinite": false,
+        "number": 0
+      },
+      "reservation": "",
+      "alloc_memory": 0,
+      "alloc_cpus": 0,
+      "alloc_idle_cpus": 128,
+      "tres_used": "",
+      "tres_weighted": 0.0,
+      "slurmd_start_time": {
+        "set": true,
+        "infinite": false,
+        "number": 1746695478
+      },
+      "sockets": 2,
+      "threads": 1,
+      "temporary_disk": 1024,
+      "weight": 1,
+      "tres": "cpu=128,mem=508000M,billing=128",
+      "version": "24.05.5"
+    },
+    {
+      "architecture": "x86_64",
+      "burstbuffer_network_address": "",
+      "boards": 1,
+      "boot_time": {
+        "set": true,
+        "infinite": false,
+        "number": 1746695122
+      },
+      "cluster_name": "",
+      "cores": 64,
+      "specialized_cores": 0,
+      "cpu_binding": 0,
+      "cpu_load": 1,
+      "free_mem": {
+        "set": true,
+        "infinite": false,
+        "number": 769825
+      },
+      "cpus": 128,
+      "effective_cpus": 128,
+      "specialized_cpus": "",
+      "energy": {
+        "average_watts": 0,
+        "base_consumed_energy": 0,
+        "consumed_energy": 0,
+        "current_watts": {
+          "set": true,
+          "infinite": false,
+          "number": 0
+        },
+        "previous_consumed_energy": 0,
+        "last_collected": 0
+      },
+      "external_sensors": {
+      },
+      "extra": "",
+      "power": {
+      },
+      "features": [
+        "AMD",
+        "9554"
+      ],
+      "active_features": [
+        "AMD",
+        "9554"
+      ],
+      "gpu_spec": "",
+      "gres": "",
+      "gres_drained": "N\/A",
+      "gres_used": "",
+      "instance_id": "",
+      "instance_type": "",
+      "last_busy": {
+        "set": true,
+        "infinite": false,
+        "number": 1741874217
+      },
+      "mcs_label": "",
+      "specialized_memory": 0,
+      "name": "node03",
+      "next_state_after_reboot": [
+        "INVALID"
+      ],
+      "address": "node03",
+      "hostname": "node03",
+      "state": [
+        "DOWN"
+      ],
+      "operating_system": "Linux 5.14.0-427.13.1.el9_4.x86_64 #1 SMP PREEMPT_DYNAMIC Wed May 1 19:11:28 UTC 2024",
+      "owner": "",
+      "partitions": [
+        "nodes",
+        "nodesprio",
+        "amd",
+        "amdprio",
+        "genoa",
+        "genoaprio"
+      ],
+      "port": 6818,
+      "real_memory": 760000,
+      "res_cores_per_gpu": 0,
+      "comment": "",
+      "reason": "NO NETWORK ADDRESS FOUND : Not responding",
+      "reason_changed_at": {
+        "set": true,
+        "infinite": false,
+        "number": 1743573775
+      },
+      "reason_set_by_user": "slurm",
+      "resume_after": {
+        "set": true,
+        "infinite": false,
+        "number": 0
+      },
+      "reservation": "",
+      "alloc_memory": 0,
+      "alloc_cpus": 0,
+      "alloc_idle_cpus": 128,
+      "tres_used": "",
+      "tres_weighted": 0.0,
+      "slurmd_start_time": {
+        "set": true,
+        "infinite": false,
+        "number": 1746695260
+      },
+      "sockets": 2,
+      "threads": 1,
+      "temporary_disk": 1024,
+      "weight": 1,
+      "tres": "cpu=128,mem=760000M,billing=128",
+      "version": "24.05.5"
+    }
+  ],
+  "last_update": {
+    "set": true,
+    "infinite": false,
+    "number": 1746783123
+  },
+  "meta": {
+    "plugin": {
+      "type": "openapi\/slurmctld",
+      "name": "Slurm OpenAPI slurmctld",
+      "data_parser": "data_parser\/v0.0.41",
+      "accounting_storage": "accounting_storage\/slurmdbd"
+    },
+    "client": {
+      "source": "[localhost]:42674",
+      "user": "root",
+      "group": "root"
+    },
+    "command": [
+    ],
+    "slurm": {
+      "version": {
+        "major": "24",
+        "micro": "5",
+        "minor": "05"
+      },
+      "release": "24.05.5",
+      "cluster": "cluster"
+    }
+  },
+  "errors": [
+  ],
+  "warnings": [
+  ]
+}
