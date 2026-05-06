@@ -55,11 +55,11 @@ func (s *subscription) buildFullPath(origin, prefix, target string) error {
 	s.fullPath.Origin = s.Origin
 	s.fullPath.Target = target
 	if prefix != "" {
-		prefix, err := xpath.ToGNMIPath(prefix)
+		prefixPath, err := xpath.ToGNMIPath(prefix)
 		if err != nil {
 			return err
 		}
-		s.fullPath.Elem = append(prefix.Elem, s.fullPath.Elem...)
+		s.fullPath.Elem = append(prefixPath.Elem, s.fullPath.Elem...)
 		if s.Origin == "" && origin != "" {
 			s.fullPath.Origin = origin
 		}
