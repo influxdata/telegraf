@@ -174,6 +174,11 @@ func (c *GNMI) Init() error {
 	}
 	c.Log.Debugf("Internal alias mapping: %+v", c.internalAliases)
 
+	// Use the new TLS option for enabling
+	// Honor deprecated option
+	enable := c.ClientConfig.Enable != nil && *c.ClientConfig.Enable
+	c.ClientConfig.Enable = &enable
+
 	// Warn about configures insecure cipher suites
 	insecure := common_tls.InsecureCiphers(c.ClientConfig.TLSCipherSuites)
 	if len(insecure) > 0 {
