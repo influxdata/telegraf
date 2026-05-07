@@ -114,7 +114,8 @@ func (p *Ping) args(url, system string) []string {
 	// build the ping command args based on toml config
 	args := []string{"-c", strconv.Itoa(p.Count), "-n", "-s", "16"}
 	if p.PingInterval > 0 {
-		args = append(args, "-i", strconv.FormatFloat(p.calcInterval.Seconds(), 'f', -1, 64))
+		interval := time.Duration(p.PingInterval).Seconds()
+		args = append(args, "-i", strconv.FormatFloat(interval, 'f', -1, 64))
 	}
 	if p.Timeout > 0 {
 		timeout := time.Duration(p.Timeout).Seconds()
