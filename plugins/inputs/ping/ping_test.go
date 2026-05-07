@@ -517,7 +517,7 @@ func TestNoPacketsSent(t *testing.T) {
 	require.NoError(t, p.Init())
 
 	var testAcc testutil.Accumulator
-	p.pingToURLNative("localhost", &testAcc)
+	p.pingToURLNative(&testAcc, "localhost")
 	require.Zero(t, testAcc.Errors)
 	require.True(t, testAcc.HasField("ping", "result_code"))
 	require.Equal(t, 2, testAcc.Metrics[0].Fields["result_code"])
@@ -538,7 +538,7 @@ func TestDNSLookupError(t *testing.T) {
 	require.NoError(t, p.Init())
 
 	var testAcc testutil.Accumulator
-	p.pingToURLNative("localhost", &testAcc)
+	p.pingToURLNative(&testAcc, "localhost")
 	require.Zero(t, testAcc.Errors)
 	require.True(t, testAcc.HasField("ping", "result_code"))
 	require.Equal(t, 1, testAcc.Metrics[0].Fields["result_code"])

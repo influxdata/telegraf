@@ -121,7 +121,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 
 			switch p.Method {
 			case "native":
-				p.pingToURLNative(host, acc)
+				p.pingToURLNative(acc, host)
 			default:
 				p.pingToURL(acc, host)
 			}
@@ -207,7 +207,7 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 	return ps, nil
 }
 
-func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
+func (p *Ping) pingToURLNative(acc telegraf.Accumulator, destination string) {
 	tags := map[string]string{"url": destination}
 
 	stats, err := p.nativePingFunc(destination)
