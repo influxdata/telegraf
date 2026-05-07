@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
 )
@@ -25,7 +26,7 @@ type statistics struct {
 	roundTripTimeStats
 }
 
-func (p *Ping) pingToURL(host string, acc telegraf.Accumulator) {
+func (p *Ping) pingToURL(acc telegraf.Accumulator, host string) {
 	tags := map[string]string{"url": host}
 	fields := map[string]interface{}{"result_code": 0}
 
@@ -86,7 +87,8 @@ func (p *Ping) args(url string) []string {
 	args := []string{"-n", strconv.Itoa(p.Count)}
 
 	if p.Timeout > 0 {
-		args = append(args, "-w", strconv.FormatFloat(p.Timeout*1000, 'f', 0, 64))
+		timeout := time.Duration(p.Timeout).Seconds()
+		args = append(args, "-w", strconv.FormatFloat(timeout*1000, 'f', 0, 64))
 	}
 
 	args = append(args, url)
@@ -176,7 +178,7 @@ func (p *Ping) timeout() float64 {
 	// Add also one second interval
 
 	if p.Timeout > 0 {
-		return p.Timeout + 1
+		return time.Duration(p.Timeout).Seconds() + 1
 	}
 	return 4 + 1
 }
