@@ -60,10 +60,12 @@ a user has multiple sessions open/started they would only get counted once. The
 same requirements for `n_users` apply.
 
 The `os` group reads `/etc/os-release` on Linux (typically world-readable) and
-calls the `uname` syscall on POSIX systems. On platforms where gopsutil cannot
-provide a particular value (e.g. parts of FreeBSD/OpenBSD/Solaris) the
-corresponding field is left empty; if no field can be gathered, the
-`system_os` metric is skipped entirely. Results are cached between gathers,
+calls the `uname` syscall on POSIX systems. The `os` field is always populated
+from Go's runtime, and `arch` falls back to the runtime architecture when the
+kernel cannot be queried, so both are always present. On platforms where
+gopsutil cannot provide platform release or kernel data (e.g. parts of
+FreeBSD/OpenBSD/Solaris) the `platform`, `platform_family`, `platform_version`
+and `kernel_version` fields may be empty. Results are cached between gathers,
 see `os_cache_ttl` above.
 
 ## Metrics
@@ -93,8 +95,9 @@ separate `system_os` measurement.
 
 Emitted only when `os` is included. The values reflect operating system
 release information together with `uname`-style kernel data. Fields are
-reported as strings; on platforms where a particular value cannot be
-determined the corresponding field is empty.
+reported as strings. The `os` and `arch` fields are always populated; the
+`platform`, `platform_family`, `platform_version` and `kernel_version` fields
+may be empty on platforms where gopsutil cannot determine them.
 
 | Field              | Type   | Description                                                          |
 |--------------------|--------|----------------------------------------------------------------------|

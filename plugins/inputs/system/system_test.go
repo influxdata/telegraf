@@ -329,22 +329,31 @@ func TestGatherOSValues(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, s.Gather(&acc))
 
+	// arch and kernel_version come from uname(2) and depend on the host.
 	expected := []telegraf.Metric{
 		metric.New(
 			"system_os",
 			map[string]string{},
 			map[string]interface{}{
 				"os":               "linux",
-				"arch":             "amd64",
 				"platform":         "telegraftest",
 				"platform_family":  "",
 				"platform_version": "1.0",
-				"kernel_version":   "",
 			},
 			time.Unix(0, 0),
 			telegraf.Untyped,
 		),
 	}
 
-	testutil.RequireMetricsStructureEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual,
+		testutil.IgnoreTime(), testutil.IgnoreFields("arch", "kernel_version"))
+
+	require.Len(t, actual, 1)
+	arch, ok := actual[0].GetField("arch")
+	require.True(t, ok)
+	require.NotEmpty(t, arch)
+	kernelVersion, ok := actual[0].GetField("kernel_version")
+	require.True(t, ok)
+	require.NotEmpty(t, kernelVersion)
 }
