@@ -102,6 +102,26 @@ func TestResolveBrowsedNodesNodeMatchesMultiplePatterns(t *testing.T) {
 	require.Len(t, groups[1].Nodes, 1)
 }
 
+func TestResolveBrowsedNodesSkipsEmptyBrowseName(t *testing.T) {
+	nodes := []*opcua.BrowsedNode{
+		browsedVariable(t, "ns=2;s=Plant1.MV01", "MV01", []string{"Plant1", "MV01"}),
+		{
+			NodeID:       mustParseNodeID(t, "ns=2;s=Plant1.unnamed"),
+			BrowseName:   "",
+			NodeClass:    ua.NodeClassVariable,
+			PathSegments: []string{"Plant1", ""},
+		},
+	}
+	paths := []BrowsePathSettings{
+		{Pattern: "Plant1/**", MetricName: "all"},
+	}
+
+	groups, err := ResolveBrowsedNodes(nodes, paths)
+	require.NoError(t, err)
+	require.Len(t, groups[0].Nodes, 1)
+	require.Equal(t, "MV01", groups[0].Nodes[0].FieldName)
+}
+
 func TestResolveBrowsedNodesPatternCompileError(t *testing.T) {
 	paths := []BrowsePathSettings{
 		{Pattern: "Plant1/[bad", MetricName: "broken"},

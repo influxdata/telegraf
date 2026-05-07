@@ -32,7 +32,10 @@ func ResolveBrowsedNodes(nodes []*opcua.BrowsedNode, paths []BrowsePathSettings)
 	}
 
 	for _, node := range nodes {
-		if node.NodeClass != ua.NodeClassVariable {
+		// Skip nodes the resolver cannot turn into a valid NodeSettings.
+		// validateNodeToAdd downstream rejects empty FieldName and would
+		// otherwise abort the whole mapping for one malformed server entry.
+		if node.NodeClass != ua.NodeClassVariable || node.BrowseName == "" {
 			continue
 		}
 		for i, c := range compiled {

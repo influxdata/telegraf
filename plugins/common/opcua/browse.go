@@ -135,9 +135,9 @@ func (b *AddressSpaceBrowser) Browse(ctx context.Context, rootID *ua.NodeID) ([]
 				}
 				visited[key] = struct{}{}
 
-				path := make([]string, len(batch[i].path)+1)
-				copy(path, batch[i].path)
-				path[len(path)-1] = ref.BrowseName.Name
+				childPath := make([]string, len(batch[i].path)+1)
+				copy(childPath, batch[i].path)
+				childPath[len(childPath)-1] = ref.BrowseName.Name
 
 				childID := ua.NewNodeIDFromExpandedNodeID(ref.NodeID)
 				nodes = append(nodes, &BrowsedNode{
@@ -145,7 +145,7 @@ func (b *AddressSpaceBrowser) Browse(ctx context.Context, rootID *ua.NodeID) ([]
 					BrowseName:   ref.BrowseName.Name,
 					DisplayName:  ref.DisplayName.Text,
 					NodeClass:    ref.NodeClass,
-					PathSegments: path,
+					PathSegments: childPath,
 				})
 
 				if b.MaxNodes > 0 && len(nodes) >= b.MaxNodes {
@@ -156,7 +156,7 @@ func (b *AddressSpaceBrowser) Browse(ctx context.Context, rootID *ua.NodeID) ([]
 				if ref.NodeClass == ua.NodeClassObject || ref.NodeClass == ua.NodeClassObjectType {
 					queue = append(queue, queueItem{
 						nodeID: childID,
-						path:   path,
+						path:   childPath,
 						depth:  batch[i].depth + 1,
 					})
 				}

@@ -505,10 +505,9 @@ mapping time.
 > Browse runs once on the first connect. Subsequent reconnects keep the
 > same node set; restart Telegraf to pick up new nodes added to the
 > server.
-
-> [!NOTE]
-> Phase 1 accepts node-ID strings (`ns=0;i=85`) for `root`. Path-string
-> roots and namespace-URI (`nsu=...`) forms are not yet supported.
+>
+> The `root` option accepts node-ID strings (`ns=N;...`). Path-string
+> form and namespace-URI (`nsu=...`) form are not currently supported.
 
 ## Connection Service
 
