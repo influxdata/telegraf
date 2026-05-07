@@ -90,6 +90,13 @@ func assignConfigValuesToRequest(req *ua.MonitoredItemCreateRequest, monParams *
 }
 
 func (sc *subscribeClientConfig) createSubscribeClient(log telegraf.Logger) (*subscribeClient, error) {
+	// Browse-based discovery is currently only wired into inputs.opcua. The
+	// shared InputClientConfig accepts the [browse] table for inputs.opcua_listener
+	// too, so reject it explicitly here to avoid silently producing zero metrics.
+	if len(sc.Browse.Paths) > 0 {
+		return nil, errors.New("browse-based discovery is not yet supported for inputs.opcua_listener; use inputs.opcua instead")
+	}
+
 	client, err := sc.InputClientConfig.CreateInputClient(log)
 	if err != nil {
 		return nil, err
