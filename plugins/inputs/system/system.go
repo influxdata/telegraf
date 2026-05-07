@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jaypipes/ghw"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/host"
 	"github.com/shirou/gopsutil/v4/load"
@@ -25,12 +26,15 @@ import (
 var sampleConfig string
 
 type System struct {
-	Include    []string        `toml:"include"`
-	OSCacheTTL config.Duration `toml:"os_cache_ttl"`
-	Log        telegraf.Logger `toml:"-"`
+	Include          []string        `toml:"include"`
+	OSCacheTTL       config.Duration `toml:"os_cache_ttl"`
+	HardwareCacheTTL config.Duration `toml:"hardware_cache_ttl"`
+	Log              telegraf.Logger `toml:"-"`
 
-	osCache    map[string]interface{}
-	osCachedAt time.Time
+	osCache          map[string]interface{}
+	osCachedAt       time.Time
+	hardwareCache    map[string]interface{}
+	hardwareCachedAt time.Time
 }
 
 func (*System) SampleConfig() string {
@@ -51,7 +55,7 @@ func (s *System) Init() error {
 			continue
 		}
 		switch incl {
-		case "load", "users", "cpus", "uptime", "os":
+		case "load", "users", "cpus", "uptime", "os", "hardware":
 		case "legacy_cpus":
 			if userSupplied {
 				config.PrintOptionValueDeprecationNotice(
@@ -93,6 +97,10 @@ func (s *System) Init() error {
 		return errors.New(`"uptime" and "legacy_uptime" are mutually exclusive`)
 	}
 
+	if enabled["hardware"] && !hardwareSupported {
+		s.Log.Warn("'hardware' is not supported on this platform, ignoring")
+	}
+
 	return nil
 }
 
@@ -114,6 +122,19 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 			}
 			if len(s.osCache) > 0 {
 				acc.AddFields("system_os", s.osCache, nil, now)
+			}
+		case "hardware":
+			if time.Since(s.hardwareCachedAt) > time.Duration(s.HardwareCacheTTL) {
+				hwCache, err := gatherHardware()
+				if err != nil {
+					acc.AddError(err)
+				} else {
+					s.hardwareCache = hwCache
+					s.hardwareCachedAt = now
+				}
+			}
+			if len(s.hardwareCache) > 0 {
+				acc.AddFields("system_hardware", s.hardwareCache, nil, now)
 			}
 		case "load":
 			loadavg, err := load.Avg()
@@ -214,6 +235,68 @@ func gatherOS() (map[string]interface{}, error) {
 	}, nil
 }
 
+// gatherHardware reads BIOS, baseboard, chassis and product DMI/SMBIOS
+// information. Fields that cannot be read are omitted.
+func gatherHardware() (map[string]interface{}, error) {
+	// Disable ghw warnings; honor GHW_CHROOT and other GHW_* env variables.
+	ctx := ghw.WithDisableWarnings()(ghw.ContextFromEnv())
+
+	fields := make(map[string]interface{})
+
+	bios, err := ghw.BIOS(ctx)
+	if err != nil && !strings.Contains(err.Error(), "not implemented") {
+		return nil, fmt.Errorf("reading BIOS information: %w", err)
+	}
+	if bios != nil {
+		addNonEmpty(fields, "bios_vendor", bios.Vendor)
+		addNonEmpty(fields, "bios_version", bios.Version)
+		addNonEmpty(fields, "bios_date", bios.Date)
+	}
+
+	bb, err := ghw.Baseboard(ctx)
+	if err != nil && !strings.Contains(err.Error(), "not implemented") {
+		return nil, fmt.Errorf("reading baseboard information: %w", err)
+	}
+	if bb != nil {
+		addNonEmpty(fields, "board_vendor", bb.Vendor)
+		addNonEmpty(fields, "board_product", bb.Product)
+		addNonEmpty(fields, "board_version", bb.Version)
+	}
+
+	ch, err := ghw.Chassis(ctx)
+	if err != nil && !strings.Contains(err.Error(), "not implemented") {
+		return nil, fmt.Errorf("reading chassis information: %w", err)
+	}
+	if ch != nil {
+		addNonEmpty(fields, "chassis_vendor", ch.Vendor)
+		addNonEmpty(fields, "chassis_type", ch.Type)
+		addNonEmpty(fields, "chassis_type_description", ch.TypeDescription)
+		addNonEmpty(fields, "chassis_version", ch.Version)
+	}
+
+	prod, err := ghw.Product(ctx)
+	if err != nil && !strings.Contains(err.Error(), "not implemented") {
+		return nil, fmt.Errorf("reading product information: %w", err)
+	}
+	if prod != nil {
+		addNonEmpty(fields, "product_vendor", prod.Vendor)
+		addNonEmpty(fields, "product_name", prod.Name)
+		addNonEmpty(fields, "product_family", prod.Family)
+	}
+
+	return fields, nil
+}
+
+// addNonEmpty adds value to fields under key, dropping empty strings and the
+// ghw "unknown" sentinel.
+func addNonEmpty(fields map[string]interface{}, key, value string) {
+	value = strings.TrimSpace(value)
+	if value == "" || value == "unknown" {
+		return
+	}
+	fields[key] = value
+}
+
 func findUniqueUsers(userStats []host.UserStat) int {
 	uniqueUsers := make(map[string]bool)
 	for _, userstat := range userStats {
@@ -250,7 +333,8 @@ func formatUptime(uptime uint64) string {
 func init() {
 	inputs.Add("system", func() telegraf.Input {
 		return &System{
-			OSCacheTTL: config.Duration(8 * time.Hour),
+			OSCacheTTL:       config.Duration(8 * time.Hour),
+			HardwareCacheTTL: config.Duration(8 * time.Hour),
 		}
 	})
 }

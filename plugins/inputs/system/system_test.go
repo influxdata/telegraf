@@ -78,8 +78,8 @@ func TestInitAllValidOptions(t *testing.T) {
 		name    string
 		include []string
 	}{
-		{"new", []string{"load", "users", "cpus", "uptime", "os"}},
-		{"legacy", []string{"load", "users", "legacy_cpus", "legacy_uptime", "os"}},
+		{"new", []string{"load", "users", "cpus", "uptime", "os", "hardware"}},
+		{"legacy", []string{"load", "users", "legacy_cpus", "legacy_uptime", "os", "hardware"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -356,4 +356,99 @@ func TestGatherOSValues(t *testing.T) {
 	kernelVersion, ok := actual[0].GetField("kernel_version")
 	require.True(t, ok)
 	require.NotEmpty(t, kernelVersion)
+}
+
+func TestGatherHardwareValues(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Skipping test on non-Linux setups...")
+	}
+
+	chroot, err := filepath.Abs(filepath.Join("testdata", "hardware"))
+	require.NoError(t, err)
+	t.Setenv("GHW_CHROOT", chroot)
+
+	s := &System{
+		Include:          []string{"hardware"},
+		HardwareCacheTTL: config.Duration(8 * time.Hour),
+		Log:              &testutil.Logger{},
+	}
+	require.NoError(t, s.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, s.Gather(&acc))
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"system_hardware",
+			map[string]string{},
+			map[string]interface{}{
+				"bios_vendor":              "Telegraf BIOS, Inc.",
+				"bios_version":             "1.2.3",
+				"bios_date":                "01/01/2026",
+				"board_vendor":             "Telegraf Boards Co.",
+				"board_product":            "TG-BOARD-X1",
+				"board_version":            "A1",
+				"chassis_vendor":           "Telegraf Chassis Ltd.",
+				"chassis_type":             "3",
+				"chassis_type_description": "Desktop",
+				"chassis_version":          "v0",
+				"product_vendor":           "Telegraf Systems",
+				"product_name":             "TG-Server-9000",
+				"product_family":           "TG-Server",
+			},
+			time.Unix(0, 0),
+			telegraf.Untyped,
+		),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+}
+
+func TestGatherHardwareCaching(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Skipping test on non-Linux setups...")
+	}
+
+	chroot, err := filepath.Abs(filepath.Join("testdata", "hardware"))
+	require.NoError(t, err)
+	t.Setenv("GHW_CHROOT", chroot)
+
+	s := &System{
+		Include:          []string{"hardware"},
+		HardwareCacheTTL: config.Duration(8 * time.Hour),
+		Log:              &testutil.Logger{},
+	}
+	require.NoError(t, s.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, s.Gather(&acc))
+	firstCachedAt := s.hardwareCachedAt
+	require.False(t, firstCachedAt.IsZero())
+
+	require.NoError(t, s.Gather(&acc))
+	require.Equal(t, firstCachedAt, s.hardwareCachedAt)
+	require.Len(t, acc.GetTelegrafMetrics(), 2)
+}
+
+func TestAddNonEmpty(t *testing.T) {
+	tests := []struct {
+		name     string
+		key      string
+		value    string
+		expected map[string]interface{}
+	}{
+		{"normal", "vendor", "Acme", map[string]interface{}{"vendor": "Acme"}},
+		{"trims", "vendor", "  Acme  \n", map[string]interface{}{"vendor": "Acme"}},
+		{"empty", "vendor", "", map[string]interface{}{}},
+		{"whitespace", "vendor", "   \t\n", map[string]interface{}{}},
+		{"unknown sentinel", "vendor", "unknown", map[string]interface{}{}},
+		{"capitalized unknown is kept", "vendor", "Unknown", map[string]interface{}{"vendor": "Unknown"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fields := map[string]interface{}{}
+			addNonEmpty(fields, tt.key, tt.value)
+			require.Equal(t, tt.expected, fields)
+		})
+	}
 }
