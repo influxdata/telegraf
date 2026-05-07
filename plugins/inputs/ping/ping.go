@@ -9,7 +9,7 @@ import (
 	"net"
 	"os/exec"
 	"runtime"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -17,6 +17,7 @@ import (
 	ping "github.com/prometheus-community/pro-bing"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -24,25 +25,21 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const (
-	defaultPingDataBytesSize = 56
-)
-
 type Ping struct {
-	Urls         []string `toml:"urls"`          // URLs to ping
-	Method       string   `toml:"method"`        // Method defines how to ping (native or exec)
-	Count        int      `toml:"count"`         // Number of pings to send (ping -c <COUNT>)
-	PingInterval float64  `toml:"ping_interval"` // Interval at which to ping (ping -i <INTERVAL>)
-	Timeout      float64  `toml:"timeout"`       // Per-ping timeout in seconds for the exec method. 0 means no timeout (ping -W <TIMEOUT>)
-	Deadline     int      `toml:"deadline"`      // Total ping deadline in seconds. 0 means no deadline (ping -w <DEADLINE>)
-	Interface    string   `toml:"interface"`     // Interface or source address to send ping from (ping -I/-S <INTERFACE/SRC_ADDR>)
-	Percentiles  []int    `toml:"percentiles"`   // Calculate the given percentiles when using native method
-	Binary       string   `toml:"binary"`        // Ping executable binary
+	Urls         []string        `toml:"urls"`          // URLs to ping
+	Method       string          `toml:"method"`        // Method defines how to ping (native or exec)
+	Count        int             `toml:"count"`         // Number of pings to send (ping -c <COUNT>)
+	PingInterval config.Duration `toml:"ping_interval"` // Interval at which to ping (ping -i <INTERVAL>)
+	Timeout      config.Duration `toml:"timeout"`       // Per-ping timeout in seconds for the exec method. 0 means no timeout (ping -W <TIMEOUT>)
+	Deadline     config.Duration `toml:"deadline"`      // Total ping deadline in seconds. 0 means no deadline (ping -w <DEADLINE>)
+	Interface    string          `toml:"interface"`     // Interface or source address to send ping from (ping -I/-S <INTERFACE/SRC_ADDR>)
+	Percentiles  []int           `toml:"percentiles"`   // Calculate the given percentiles when using native method
+	Binary       string          `toml:"binary"`        // Ping executable binary
 	// Arguments for ping command. When arguments are not empty, system binary will be used and other options (ping_interval, timeout, etc.) will be ignored
 	Arguments []string        `toml:"arguments"`
 	IPv4      bool            `toml:"ipv4"` // Whether to resolve addresses using ipv4 or not.
 	IPv6      bool            `toml:"ipv6"` // Whether to resolve addresses using ipv6 or not.
-	Size      *int            `toml:"size"` // Packet size
+	Size      config.Size     `toml:"size"` // Packet size
 	Log       telegraf.Logger `toml:"-"`
 
 	wg             sync.WaitGroup // wg is used to wait for ping with multiple URLs
@@ -57,10 +54,7 @@ type Ping struct {
 // passed arguments. This can be easily switched with a mocked ping function
 // for unit test purposes (see ping_test.go)
 type hostPingerFunc func(binary string, timeout float64, args ...string) (string, error)
-
 type nativePingFunc func(destination string) (*pingStats, error)
-
-type durationSlice []time.Duration
 
 type pingStats struct {
 	ping.Statistics
@@ -72,25 +66,50 @@ func (*Ping) SampleConfig() string {
 }
 
 func (p *Ping) Init() error {
-	if p.Count < 1 {
-		return errors.New("bad number of packets to transmit")
+	// Defaults
+	if p.Count <= 0 {
+		p.Count = 1
+	}
+
+	if p.Size == 0 {
+		p.Size = 56
+	}
+
+	switch p.Method {
+	case "":
+		p.Method = "exec"
+	case "exec", "native":
+		// Do nothing, those are valid
+	default:
+		return fmt.Errorf("invalid 'method' %q", p.Method)
+	}
+
+	if p.Binary == "" {
+		p.Binary = "ping"
+	}
+
+	if p.pingHost == nil {
+		p.pingHost = hostPinger
+	}
+
+	if p.nativePingFunc == nil {
+		p.nativePingFunc = p.nativePing
 	}
 
 	// The interval cannot be below 0.2 seconds, matching ping implementation: https://linux.die.net/man/8/ping
-	if p.PingInterval < 0.2 {
-		p.calcInterval = time.Duration(.2 * float64(time.Second))
+	if time.Duration(p.PingInterval) < 200*time.Millisecond {
+		p.calcInterval = 200 * time.Millisecond
 	} else {
-		p.calcInterval = time.Duration(p.PingInterval * float64(time.Second))
+		p.calcInterval = time.Duration(p.PingInterval)
 	}
 
 	if p.Method == "native" && p.Timeout > 0 {
 		p.Log.Warn(`"timeout" is ignored when method = "native"; use "deadline" to control the total runtime`)
 	} else if p.Timeout == 0 {
-		p.calcTimeout = time.Duration(1) * time.Second
+		p.calcTimeout = 1 * time.Second
 	} else {
-		p.calcTimeout = time.Duration(p.Timeout) * time.Second
+		p.calcTimeout = time.Duration(p.Timeout)
 	}
-
 	return nil
 }
 
@@ -102,13 +121,12 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 
 			switch p.Method {
 			case "native":
-				p.pingToURLNative(host, acc)
+				p.pingToURLNative(acc, host)
 			default:
-				p.pingToURL(host, acc)
+				p.pingToURL(acc, host)
 			}
 		}(host)
 	}
-
 	p.wg.Wait()
 
 	return nil
@@ -133,10 +151,7 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 	}
 
 	if p.Method == "native" {
-		pinger.Size = defaultPingDataBytesSize
-		if p.Size != nil {
-			pinger.Size = *p.Size
-		}
+		pinger.Size = int(p.Size)
 	}
 
 	// Support either an IP address or interface name
@@ -163,7 +178,7 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 	pinger.Interval = p.calcInterval
 
 	if p.Deadline > 0 {
-		pinger.Timeout = time.Duration(p.Deadline) * time.Second
+		pinger.Timeout = time.Duration(p.Deadline)
 	}
 
 	// Get Time to live (TTL) of first response, matching original implementation
@@ -192,7 +207,7 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 	return ps, nil
 }
 
-func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
+func (p *Ping) pingToURLNative(acc telegraf.Accumulator, destination string) {
 	tags := map[string]string{"url": destination}
 
 	stats, err := p.nativePingFunc(destination)
@@ -228,8 +243,8 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 		acc.AddFields("ping", fields, tags)
 		return
 	}
+	slices.Sort(stats.Rtts)
 
-	sort.Sort(durationSlice(stats.Rtts))
 	for _, perc := range p.Percentiles {
 		var value = percentile(stats.Rtts, perc)
 		var field = fmt.Sprintf("percentile%v_ms", perc)
@@ -251,14 +266,8 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 	acc.AddFields("ping", fields, tags)
 }
 
-func (p durationSlice) Len() int { return len(p) }
-
-func (p durationSlice) Less(i, j int) bool { return p[i] < p[j] }
-
-func (p durationSlice) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
-
 // R7 from Hyndman and Fan (1996), which matches Excel
-func percentile(values durationSlice, perc int) time.Duration {
+func percentile(values []time.Duration, perc int) time.Duration {
 	if len(values) == 0 {
 		return 0
 	}
@@ -268,12 +277,12 @@ func percentile(values durationSlice, perc int) time.Duration {
 	if perc > 100 {
 		perc = 100
 	}
-	var percFloat = float64(perc) / 100.0
+	percFloat := float64(perc) / 100.0
 
-	var count = len(values)
-	var rank = percFloat * float64(count-1)
-	var rankInteger = int(rank)
-	var rankFraction = rank - math.Floor(rank)
+	count := len(values)
+	rank := percFloat * float64(count-1)
+	rankInteger := int(rank)
+	rankFraction := rank - math.Floor(rank)
 
 	if rankInteger >= count-1 {
 		return values[count-1]
@@ -290,24 +299,15 @@ func hostPinger(binary string, timeout float64, args ...string) (string, error) 
 		return "", err
 	}
 	c := exec.Command(bin, args...)
-	out, err := internal.CombinedOutputTimeout(c,
-		time.Second*time.Duration(timeout+5))
+	out, err := internal.CombinedOutputTimeout(c, time.Second*time.Duration(timeout+5))
 	return string(out), err
 }
 
 func init() {
 	inputs.Add("ping", func() telegraf.Input {
-		p := &Ping{
-			pingHost:     hostPinger,
-			PingInterval: 1.0,
-			Count:        1,
-			Deadline:     10,
-			Method:       "exec",
-			Binary:       "ping",
-			Arguments:    make([]string, 0),
-			Percentiles:  make([]int, 0),
+		return &Ping{
+			PingInterval: config.Duration(1 * time.Second),
+			Deadline:     config.Duration(10 * time.Second),
 		}
-		p.nativePingFunc = p.nativePing
-		return p
 	})
 }

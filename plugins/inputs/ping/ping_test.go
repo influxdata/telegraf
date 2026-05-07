@@ -11,6 +11,7 @@ import (
 	ping "github.com/prometheus-community/pro-bing"
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -75,6 +76,39 @@ var fatalPingOutput = `
 ping: -i interval too short: Operation not permitted
 `
 
+// Linux ping output with varying TTL
+var linuxPingOutputWithVaryingTTL = `
+PING www.google.com (216.58.218.164) 56(84) bytes of data.
+64 bytes from host.net (216.58.218.164): icmp_seq=1 ttl=63 time=35.2 ms
+64 bytes from host.net (216.58.218.164): icmp_seq=2 ttl=255 time=42.3 ms
+64 bytes from host.net (216.58.218.164): icmp_seq=3 ttl=64 time=45.1 ms
+64 bytes from host.net (216.58.218.164): icmp_seq=4 ttl=64 time=43.5 ms
+64 bytes from host.net (216.58.218.164): icmp_seq=5 ttl=255 time=51.8 ms
+
+--- www.google.com ping statistics ---
+5 packets transmitted, 5 received, 0% packet loss, time 4010ms
+rtt min/avg/max/mdev = 35.225/43.628/51.806/5.325 ms
+`
+
+var lossyPingOutput = `
+PING www.google.com (216.58.218.164) 56(84) bytes of data.
+64 bytes from host.net (216.58.218.164): icmp_seq=1 ttl=63 time=35.2 ms
+64 bytes from host.net (216.58.218.164): icmp_seq=3 ttl=63 time=45.1 ms
+64 bytes from host.net (216.58.218.164): icmp_seq=5 ttl=63 time=51.8 ms
+
+--- www.google.com ping statistics ---
+5 packets transmitted, 3 received, 40% packet loss, time 4010ms
+rtt min/avg/max/mdev = 35.225/44.033/51.806/5.325 ms
+`
+
+var errorPingOutput = `
+PING www.amazon.com (176.32.98.166): 56 data bytes
+Request timeout for icmp_seq 0
+
+--- www.amazon.com ping statistics ---
+2 packets transmitted, 0 packets received, 100.0% packet loss
+`
+
 // Test that ping command output is processed properly
 func TestProcessPingOutput(t *testing.T) {
 	stats, err := processPingOutput(bsdPingOutput)
@@ -118,20 +152,6 @@ func TestProcessPingOutput(t *testing.T) {
 	require.InDelta(t, -1.0, stats.stddev, testutil.DefaultDelta)
 }
 
-// Linux ping output with varying TTL
-var linuxPingOutputWithVaryingTTL = `
-PING www.google.com (216.58.218.164) 56(84) bytes of data.
-64 bytes from host.net (216.58.218.164): icmp_seq=1 ttl=63 time=35.2 ms
-64 bytes from host.net (216.58.218.164): icmp_seq=2 ttl=255 time=42.3 ms
-64 bytes from host.net (216.58.218.164): icmp_seq=3 ttl=64 time=45.1 ms
-64 bytes from host.net (216.58.218.164): icmp_seq=4 ttl=64 time=43.5 ms
-64 bytes from host.net (216.58.218.164): icmp_seq=5 ttl=255 time=51.8 ms
-
---- www.google.com ping statistics ---
-5 packets transmitted, 5 received, 0% packet loss, time 4010ms
-rtt min/avg/max/mdev = 35.225/43.628/51.806/5.325 ms
-`
-
 // Test that ping command output is processed properly
 func TestProcessPingOutputWithVaryingTTL(t *testing.T) {
 	stats, err := processPingOutput(linuxPingOutputWithVaryingTTL)
@@ -157,10 +177,11 @@ func TestArgs(t *testing.T) {
 	p := Ping{
 		Count:        2,
 		Interface:    "eth0",
-		Timeout:      12.0,
-		Deadline:     24,
-		PingInterval: 1.2,
+		Timeout:      config.Duration(12 * time.Second),
+		Deadline:     config.Duration(24 * time.Second),
+		PingInterval: config.Duration(1200 * time.Millisecond),
 	}
+	require.NoError(t, p.Init())
 
 	var systemCases = []struct {
 		system string
@@ -184,11 +205,12 @@ func TestArgs6(t *testing.T) {
 	p := Ping{
 		Count:        2,
 		Interface:    "eth0",
-		Timeout:      12.0,
-		Deadline:     24,
-		PingInterval: 1.2,
+		Timeout:      config.Duration(12 * time.Second),
+		Deadline:     config.Duration(24 * time.Second),
+		PingInterval: config.Duration(1200 * time.Millisecond),
 		Binary:       "ping6",
 	}
+	require.NoError(t, p.Init())
 
 	var systemCases = []struct {
 		system string
@@ -208,26 +230,21 @@ func TestArgs6(t *testing.T) {
 }
 
 func TestArguments(t *testing.T) {
-	//nolint:prealloc // do not preallocate to not share the underlying slice
-	arguments := []string{"-c", "3"}
-	expected := append(arguments, "www.google.com")
 	p := Ping{
 		Count:        2,
 		Interface:    "eth0",
-		Timeout:      12.0,
-		Deadline:     24,
-		PingInterval: 1.2,
-		Arguments:    arguments,
+		Timeout:      config.Duration(12 * time.Second),
+		Deadline:     config.Duration(24 * time.Second),
+		PingInterval: config.Duration(1200 * time.Millisecond),
+		Arguments:    []string{"-c", "3"},
 	}
+	require.NoError(t, p.Init())
 
+	expected := []string{"-c", "3", "www.google.com"}
 	for _, system := range []string{"darwin", "linux", "anything else"} {
 		actual := p.args("www.google.com", system)
 		require.Equal(t, expected, actual)
 	}
-}
-
-func mockHostPinger(string, float64, ...string) (string, error) {
-	return linuxPingOutput, nil
 }
 
 // Test that Gather function works on a normal ping
@@ -237,6 +254,7 @@ func TestPingGather(t *testing.T) {
 		Urls:     []string{"localhost", "influxdata.com"},
 		pingHost: mockHostPinger,
 	}
+	require.NoError(t, p.Init())
 
 	require.NoError(t, acc.GatherError(p.Gather))
 	tags := map[string]string{"url": "localhost"}
@@ -262,30 +280,18 @@ func TestPingGatherIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode, retrieves systems ping utility")
 	}
 
-	var acc testutil.Accumulator
 	p, ok := inputs.Inputs["ping"]().(*Ping)
-	p.Log = testutil.Logger{}
 	require.True(t, ok)
+
+	p.Log = testutil.Logger{}
 	p.Urls = []string{"localhost", "influxdata.com"}
+	require.NoError(t, p.Init())
+
+	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(p.Gather))
 
 	require.Equal(t, 0, acc.Metrics[0].Fields["result_code"])
 	require.Equal(t, 0, acc.Metrics[1].Fields["result_code"])
-}
-
-var lossyPingOutput = `
-PING www.google.com (216.58.218.164) 56(84) bytes of data.
-64 bytes from host.net (216.58.218.164): icmp_seq=1 ttl=63 time=35.2 ms
-64 bytes from host.net (216.58.218.164): icmp_seq=3 ttl=63 time=45.1 ms
-64 bytes from host.net (216.58.218.164): icmp_seq=5 ttl=63 time=51.8 ms
-
---- www.google.com ping statistics ---
-5 packets transmitted, 3 received, 40% packet loss, time 4010ms
-rtt min/avg/max/mdev = 35.225/44.033/51.806/5.325 ms
-`
-
-func mockLossyHostPinger(string, float64, ...string) (string, error) {
-	return lossyPingOutput, nil
 }
 
 // Test that Gather works on a ping with lossy packets
@@ -295,6 +301,7 @@ func TestLossyPingGather(t *testing.T) {
 		Urls:     []string{"www.google.com"},
 		pingHost: mockLossyHostPinger,
 	}
+	require.NoError(t, p.Init())
 
 	require.NoError(t, acc.GatherError(p.Gather))
 	tags := map[string]string{"url": "www.google.com"}
@@ -312,19 +319,6 @@ func TestLossyPingGather(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
 
-var errorPingOutput = `
-PING www.amazon.com (176.32.98.166): 56 data bytes
-Request timeout for icmp_seq 0
-
---- www.amazon.com ping statistics ---
-2 packets transmitted, 0 packets received, 100.0% packet loss
-`
-
-func mockErrorHostPinger(string, float64, ...string) (string, error) {
-	// This error will not trigger correct error paths
-	return errorPingOutput, nil
-}
-
 // Test that Gather works on a ping with no transmitted packets, even though the
 // command returns an error
 func TestBadPingGather(t *testing.T) {
@@ -333,6 +327,7 @@ func TestBadPingGather(t *testing.T) {
 		Urls:     []string{"www.amazon.com"},
 		pingHost: mockErrorHostPinger,
 	}
+	require.NoError(t, p.Init())
 
 	require.NoError(t, acc.GatherError(p.Gather))
 	tags := map[string]string{"url": "www.amazon.com"}
@@ -345,10 +340,6 @@ func TestBadPingGather(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
 
-func mockFatalHostPinger(string, float64, ...string) (string, error) {
-	return fatalPingOutput, errors.New("so very bad")
-}
-
 // Test that a fatal ping command does not gather any statistics.
 func TestFatalPingGather(t *testing.T) {
 	var acc testutil.Accumulator
@@ -356,6 +347,7 @@ func TestFatalPingGather(t *testing.T) {
 		Urls:     []string{"www.amazon.com"},
 		pingHost: mockFatalHostPinger,
 	}
+	require.NoError(t, p.Init())
 
 	err := acc.GatherError(p.Gather)
 	require.Error(t, err)
@@ -393,6 +385,8 @@ func TestErrorWithHostNamePingGather(t *testing.T) {
 				return param.out, errors.New("so very bad")
 			},
 		}
+		require.NoError(t, p.Init())
+
 		require.Error(t, acc.GatherError(p.Gather))
 		require.Len(t, acc.Errors, 1)
 		require.Contains(t, acc.Errors[0].Error(), param.error.Error())
@@ -409,6 +403,8 @@ func TestPingBinary(t *testing.T) {
 			return "", nil
 		},
 	}
+	require.NoError(t, p.Init())
+
 	err := acc.GatherError(p.Gather)
 	require.Error(t, err)
 	require.EqualValues(t, "\"www.google.com\": fatal error processing ping output", err.Error())
@@ -489,11 +485,11 @@ func TestInitWarnsForNativeTimeout(t *testing.T) {
 		Log:      logger,
 		Method:   "native",
 		Count:    1,
-		Timeout:  2.0,
-		Deadline: 10,
+		Timeout:  config.Duration(2 * time.Second),
+		Deadline: config.Duration(10 * time.Second),
 	}
-
 	require.NoError(t, p.Init())
+
 	warnings := logger.Warnings()
 	require.Len(t, warnings, 1)
 	require.Contains(t, warnings[0], `"timeout" is ignored when method = "native"`)
@@ -518,11 +514,10 @@ func TestNoPacketsSent(t *testing.T) {
 			return s, nil
 		},
 	}
-
-	var testAcc testutil.Accumulator
 	require.NoError(t, p.Init())
 
-	p.pingToURLNative("localhost", &testAcc)
+	var testAcc testutil.Accumulator
+	p.pingToURLNative(&testAcc, "localhost")
 	require.Zero(t, testAcc.Errors)
 	require.True(t, testAcc.HasField("ping", "result_code"))
 	require.Equal(t, 2, testAcc.Metrics[0].Fields["result_code"])
@@ -540,12 +535,28 @@ func TestDNSLookupError(t *testing.T) {
 			return nil, errors.New("unknown")
 		},
 	}
-
-	var testAcc testutil.Accumulator
 	require.NoError(t, p.Init())
 
-	p.pingToURLNative("localhost", &testAcc)
+	var testAcc testutil.Accumulator
+	p.pingToURLNative(&testAcc, "localhost")
 	require.Zero(t, testAcc.Errors)
 	require.True(t, testAcc.HasField("ping", "result_code"))
 	require.Equal(t, 1, testAcc.Metrics[0].Fields["result_code"])
+}
+
+func mockHostPinger(string, float64, ...string) (string, error) {
+	return linuxPingOutput, nil
+}
+
+func mockLossyHostPinger(string, float64, ...string) (string, error) {
+	return lossyPingOutput, nil
+}
+
+func mockErrorHostPinger(string, float64, ...string) (string, error) {
+	// This error will not trigger correct error paths
+	return errorPingOutput, nil
+}
+
+func mockFatalHostPinger(string, float64, ...string) (string, error) {
+	return fatalPingOutput, errors.New("so very bad")
 }
