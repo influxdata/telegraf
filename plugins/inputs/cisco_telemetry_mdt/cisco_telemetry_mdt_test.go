@@ -24,11 +24,11 @@ import (
 
 func TestHandleTelemetryTwoSimple(t *testing.T) {
 	c := &CiscoTelemetryMDT{
-		Log:       testutil.Logger{},
 		Transport: "dummy",
 		Aliases: map[string]string{
 			"alias": "type:model/some/path",
 		},
+		Log: testutil.Logger{},
 	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
@@ -269,10 +269,11 @@ func TestIncludeDeleteField(t *testing.T) {
 	}
 	for _, test := range testCases {
 		c := &CiscoTelemetryMDT{
-			Log:                testutil.Logger{},
 			Transport:          "dummy",
 			Aliases:            map[string]string{"deleted": encodingPath.stringValue},
-			IncludeDeleteField: true}
+			IncludeDeleteField: true,
+			Log:                testutil.Logger{},
+		}
 		acc := &testutil.Accumulator{}
 		// error is expected since we are passing in dummy transport
 		require.ErrorContains(t, c.Start(acc), "dummy")
@@ -287,11 +288,11 @@ func TestIncludeDeleteField(t *testing.T) {
 
 func TestHandleTelemetrySingleNested(t *testing.T) {
 	c := &CiscoTelemetryMDT{
-		Log:       testutil.Logger{},
 		Transport: "dummy",
 		Aliases: map[string]string{
 			"nested": "type:model/nested/path",
 		},
+		Log: testutil.Logger{},
 	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
@@ -369,6 +370,7 @@ func TestHandleEmbeddedTags(t *testing.T) {
 		Transport:    "dummy",
 		Aliases:      map[string]string{"extra": "type:model/extra"},
 		EmbeddedTags: []string{"type:model/extra/list/name"},
+		Log:          testutil.Logger{},
 	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
@@ -457,6 +459,7 @@ func TestHandleNXAPI(t *testing.T) {
 	c := &CiscoTelemetryMDT{
 		Transport: "dummy",
 		Aliases:   map[string]string{"nxapi": "show nxapi"},
+		Log:       testutil.Logger{},
 	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
@@ -561,9 +564,9 @@ func TestHandleNXAPI(t *testing.T) {
 
 func TestHandleNXAPIXformNXAPI(t *testing.T) {
 	c := &CiscoTelemetryMDT{
-		Log:       testutil.Logger{},
 		Transport: "dummy",
 		Aliases:   map[string]string{"nxapi": "show nxapi"},
+		Log:       testutil.Logger{},
 	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
@@ -648,6 +651,7 @@ func TestHandleNXXformMulti(t *testing.T) {
 	c := &CiscoTelemetryMDT{
 		Transport: "dummy",
 		Aliases:   map[string]string{"dme": "sys/lldp"},
+		Log:       testutil.Logger{},
 	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
@@ -741,6 +745,7 @@ func TestHandleNXDME(t *testing.T) {
 	c := &CiscoTelemetryMDT{
 		Transport: "dummy",
 		Aliases:   map[string]string{"dme": "sys/dme"},
+		Log:       testutil.Logger{},
 	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
@@ -823,6 +828,7 @@ func TestHandleNXDMESubtree(t *testing.T) {
 	c := &CiscoTelemetryMDT{
 		Transport: "dummy",
 		Aliases:   map[string]string{"dme": "sys/dme"},
+		Log:       testutil.Logger{},
 	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
@@ -962,9 +968,9 @@ func TestHandleNXDMESubtree(t *testing.T) {
 
 func TestTCPDialoutOverflow(t *testing.T) {
 	c := &CiscoTelemetryMDT{
-		Log:            testutil.Logger{},
 		Transport:      "tcp",
 		ServiceAddress: "127.0.0.1:0",
+		Log:            testutil.Logger{},
 	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
@@ -1040,7 +1046,6 @@ func mockTelemetryMessage() *telemetry.Telemetry {
 
 func TestGRPCDialoutMicroburst(t *testing.T) {
 	c := &CiscoTelemetryMDT{
-		Log:            testutil.Logger{},
 		Transport:      "grpc",
 		ServiceAddress: "127.0.0.1:0",
 		Aliases: map[string]string{
@@ -1048,6 +1053,7 @@ func TestGRPCDialoutMicroburst(t *testing.T) {
 			"parallel": "type:model/parallel/path",
 			"other":    "type:model/other/path",
 		},
+		Log: testutil.Logger{},
 	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
@@ -1080,7 +1086,6 @@ func TestGRPCDialoutMicroburst(t *testing.T) {
 
 func TestTCPDialoutMultiple(t *testing.T) {
 	c := &CiscoTelemetryMDT{
-		Log:            testutil.Logger{},
 		Transport:      "tcp",
 		ServiceAddress: "127.0.0.1:0",
 		Aliases: map[string]string{
@@ -1088,6 +1093,7 @@ func TestTCPDialoutMultiple(t *testing.T) {
 			"parallel": "type:model/parallel/path",
 			"other":    "type:model/other/path",
 		},
+		Log: testutil.Logger{},
 	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
@@ -1177,9 +1183,9 @@ func TestTCPDialoutMultiple(t *testing.T) {
 
 func TestGRPCDialoutError(t *testing.T) {
 	c := &CiscoTelemetryMDT{
-		Log:            testutil.Logger{},
 		Transport:      "grpc",
 		ServiceAddress: "127.0.0.1:0",
+		Log:            testutil.Logger{},
 	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
@@ -1205,7 +1211,6 @@ func TestGRPCDialoutError(t *testing.T) {
 
 func TestGRPCDialoutMultiple(t *testing.T) {
 	c := &CiscoTelemetryMDT{
-		Log:            testutil.Logger{},
 		Transport:      "grpc",
 		ServiceAddress: "127.0.0.1:0",
 		Aliases: map[string]string{
@@ -1213,6 +1218,7 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 			"parallel": "type:model/parallel/path",
 			"other":    "type:model/other/path",
 		},
+		Log: testutil.Logger{},
 	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
@@ -1293,13 +1299,13 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 
 func TestGRPCDialoutKeepalive(t *testing.T) {
 	c := &CiscoTelemetryMDT{
-		Log:            testutil.Logger{},
 		Transport:      "grpc",
 		ServiceAddress: "127.0.0.1:0",
 		EnforcementPolicy: grpcEnforcementPolicy{
 			PermitKeepaliveWithoutCalls: true,
 			KeepaliveMinTime:            0,
 		},
+		Log: testutil.Logger{},
 	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)
@@ -1324,9 +1330,9 @@ func TestGRPCDialoutKeepalive(t *testing.T) {
 
 func TestSourceFieldRewrite(t *testing.T) {
 	c := &CiscoTelemetryMDT{
-		Log:       testutil.Logger{},
 		Transport: "dummy",
 		Aliases:   map[string]string{"alias": "type:model/some/path"},
+		Log:       testutil.Logger{},
 	}
 	c.SourceFieldName = "mdt_source"
 	acc := &testutil.Accumulator{}
@@ -1382,9 +1388,9 @@ func TestSourceFieldRewrite(t *testing.T) {
 
 func TestHandleNXDMEEventListWithDn(t *testing.T) {
 	c := &CiscoTelemetryMDT{
-		Log:       testutil.Logger{},
 		Transport: "dummy",
 		Aliases:   map[string]string{"dme": "sys/intf/phys-[eth1/11]"},
+		Log:       testutil.Logger{},
 	}
 	acc := &testutil.Accumulator{}
 	err := c.Start(acc)

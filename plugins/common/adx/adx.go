@@ -156,7 +156,7 @@ func (adx *Client) getMetricIngestor(ctx context.Context, tableName string) (azk
 	// Create a new ingestor client for the table
 	var ingestor azkustoingest.Ingestor
 	var err error
-	switch strings.ToLower(adx.cfg.IngestionType) {
+	switch adx.cfg.IngestionType {
 	case ManagedIngestion:
 		ingestor, err = azkustoingest.NewManaged(adx.conn, options...)
 	case QueuedIngestion:

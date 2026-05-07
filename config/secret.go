@@ -16,7 +16,7 @@ import (
 // by the config to their respective secret-stores.
 // Secrets containing constant strings will not be found in this
 // list.
-var unlinkedSecrets = make([]*Secret, 0)
+var unlinkedSecrets []*Secret
 
 // secretStorePattern is a regex to validate secret-store IDs
 var secretStorePattern = regexp.MustCompile(`^\w+$`)
@@ -38,6 +38,11 @@ type secretImpl interface {
 	Container(secret []byte) secretContainer
 	EmptyBuffer() SecretBuffer
 	Wipe(secret []byte)
+}
+
+func ResetSecrets() {
+	unlinkedSecrets = make([]*Secret, 0)
+	secretCount.Store(0)
 }
 
 func EnableSecretProtection() {

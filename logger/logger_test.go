@@ -28,6 +28,11 @@ func TestErrorCounting(t *testing.T) {
 		"errors",
 		map[string]string{"input": "test"},
 	)
+	defer selfstat.Unregister(
+		"gather",
+		"errors",
+		map[string]string{"input": "test"},
+	)
 	iLog := New("inputs", "test", "")
 	iLog.RegisterErrorCallback(func() {
 		reg.Incr(1)

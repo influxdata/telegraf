@@ -12,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/gnxi/utils/xpath"
 	"github.com/openconfig/gnmi/proto/gnmi"
 	"github.com/openconfig/gnmi/proto/gnmi_ext"
 	"google.golang.org/grpc/keepalive"
@@ -76,24 +75,6 @@ type GNMI struct {
 	wg              sync.WaitGroup
 }
 
-type subscription struct {
-	Name              string          `toml:"name"`
-	Origin            string          `toml:"origin"`
-	Path              string          `toml:"path"`
-	SubscriptionMode  string          `toml:"subscription_mode"`
-	SampleInterval    config.Duration `toml:"sample_interval"`
-	SuppressRedundant bool            `toml:"suppress_redundant"`
-	HeartbeatInterval config.Duration `toml:"heartbeat_interval"`
-
-	fullPath *gnmi.Path
-}
-
-type tagSubscription struct {
-	subscription
-	Match    string   `toml:"match"`
-	Elements []string `toml:"elements"`
-}
-
 func (*GNMI) SampleConfig() string {
 	return sampleConfig
 }
@@ -125,11 +106,6 @@ func (c *GNMI) Init() error {
 		return fmt.Errorf("invalid 'path_guessing_strategy' %q", c.GuessPathStrategy)
 	}
 
-	// Use the new TLS option for enabling
-	// Honor deprecated option
-	enable := c.ClientConfig.Enable != nil && *c.ClientConfig.Enable
-	c.ClientConfig.Enable = &enable
-
 	// Split the subscriptions into "normal" and "tag" subscription
 	// and prepare them.
 	for i := len(c.Subscriptions) - 1; i >= 0; i-- {
@@ -143,12 +119,12 @@ func (c *GNMI) Init() error {
 			return fmt.Errorf("empty 'path' found for subscription %d", i+1)
 		}
 
-		if err := subscription.buildFullPath(c); err != nil {
+		if err := subscription.buildFullPath(c.Origin, c.Prefix, c.Target); err != nil {
 			return err
 		}
 	}
 	for idx := range c.TagSubscriptions {
-		if err := c.TagSubscriptions[idx].buildFullPath(c); err != nil {
+		if err := c.TagSubscriptions[idx].buildFullPath(c.Origin, c.Prefix, c.Target); err != nil {
 			return err
 		}
 		switch c.TagSubscriptions[idx].Match {
@@ -172,13 +148,21 @@ func (c *GNMI) Init() error {
 	// Invert explicit alias list and prefill subscription names
 	c.internalAliases = make(map[*pathInfo]string, len(c.Subscriptions)+len(c.Aliases)+len(c.TagSubscriptions))
 	for _, s := range c.Subscriptions {
-		if err := s.buildAlias(c.internalAliases, c.EnforceFirstNamespaceAsOrigin); err != nil {
+		info, name, err := s.buildAlias(c.EnforceFirstNamespaceAsOrigin)
+		if err != nil {
 			return err
+		}
+		if info != nil && name != "" {
+			c.internalAliases[info] = name
 		}
 	}
 	for _, s := range c.TagSubscriptions {
-		if err := s.buildAlias(c.internalAliases, c.EnforceFirstNamespaceAsOrigin); err != nil {
+		info, name, err := s.buildAlias(c.EnforceFirstNamespaceAsOrigin)
+		if err != nil {
 			return err
+		}
+		if info != nil && name != "" {
+			c.internalAliases[info] = name
 		}
 	}
 	for alias, encodingPath := range c.Aliases {
@@ -189,6 +173,11 @@ func (c *GNMI) Init() error {
 		c.internalAliases[path] = alias
 	}
 	c.Log.Debugf("Internal alias mapping: %+v", c.internalAliases)
+
+	// Use the new TLS option for enabling
+	// Honor deprecated option
+	enable := c.ClientConfig.Enable != nil && *c.ClientConfig.Enable
+	c.ClientConfig.Enable = &enable
 
 	// Warn about configures insecure cipher suites
 	insecure := common_tls.InsecureCiphers(c.ClientConfig.TLSCipherSuites)
@@ -308,31 +297,13 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (*GNMI) Gather(telegraf.Accumulator) error {
-	return nil
-}
-
 func (c *GNMI) Stop() {
 	c.cancel()
 	c.wg.Wait()
 }
 
-func (s *subscription) buildSubscription() (*gnmi.Subscription, error) {
-	gnmiPath, err := parsePath(s.Origin, s.Path, "")
-	if err != nil {
-		return nil, err
-	}
-	mode, ok := gnmi.SubscriptionMode_value[strings.ToUpper(s.SubscriptionMode)]
-	if !ok {
-		return nil, fmt.Errorf("invalid subscription mode %s", s.SubscriptionMode)
-	}
-	return &gnmi.Subscription{
-		Path:              gnmiPath,
-		Mode:              gnmi.SubscriptionMode(mode),
-		HeartbeatInterval: uint64(time.Duration(s.HeartbeatInterval).Nanoseconds()),
-		SampleInterval:    uint64(time.Duration(s.SampleInterval).Nanoseconds()),
-		SuppressRedundant: s.SuppressRedundant,
-	}, nil
+func (*GNMI) Gather(telegraf.Accumulator) error {
+	return nil
 }
 
 // Create a new gNMI SubscribeRequest
@@ -395,59 +366,6 @@ func (c *GNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, error) {
 		},
 		Extension: extensions,
 	}, nil
-}
-
-// ParsePath from XPath-like string to gNMI path structure
-func parsePath(origin, pathToParse, target string) (*gnmi.Path, error) {
-	gnmiPath, err := xpath.ToGNMIPath(pathToParse)
-	if err != nil {
-		return nil, err
-	}
-	gnmiPath.Origin = origin
-	gnmiPath.Target = target
-	return gnmiPath, err
-}
-
-func (s *subscription) buildFullPath(c *GNMI) error {
-	var err error
-	if s.fullPath, err = xpath.ToGNMIPath(s.Path); err != nil {
-		return err
-	}
-	s.fullPath.Origin = s.Origin
-	s.fullPath.Target = c.Target
-	if c.Prefix != "" {
-		prefix, err := xpath.ToGNMIPath(c.Prefix)
-		if err != nil {
-			return err
-		}
-		s.fullPath.Elem = append(prefix.Elem, s.fullPath.Elem...)
-		if s.Origin == "" && c.Origin != "" {
-			s.fullPath.Origin = c.Origin
-		}
-	}
-	return nil
-}
-
-func (s *subscription) buildAlias(aliases map[*pathInfo]string, enforceFirstNamespaceAsOrigin bool) error {
-	// Build the subscription path without keys
-	path, err := parsePath(s.Origin, s.Path, "")
-	if err != nil {
-		return err
-	}
-	info := newInfoFromPathWithoutKeys(path)
-	if enforceFirstNamespaceAsOrigin {
-		info.enforceFirstNamespaceAsOrigin()
-	}
-
-	// If the user didn't provide a measurement name, use last path element
-	name := s.Name
-	if name == "" && len(info.segments) > 0 {
-		name = info.segments[len(info.segments)-1].id
-	}
-	if name != "" {
-		aliases[info] = name
-	}
-	return nil
 }
 
 func init() {

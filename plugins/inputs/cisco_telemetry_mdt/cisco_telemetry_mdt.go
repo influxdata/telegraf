@@ -5,6 +5,7 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,6 +24,7 @@ import (
 	_ "google.golang.org/grpc/encoding/gzip" // Required to allow gzip encoding
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/peer"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
@@ -378,6 +380,14 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 	if err != nil {
 		c.acc.AddError(fmt.Errorf("failed to decode: %w: %s", err, msg.String()))
 		return
+	}
+
+	if c.Log.Level().Includes(telegraf.Trace) {
+		if d, err := protojson.Marshal(msg); err != nil {
+			c.Log.Tracef("reencoding message %q failed: %v", hex.EncodeToString(data), err)
+		} else {
+			c.Log.Tracef("received message: %s", string(d))
+		}
 	}
 
 	grouper := metric.NewSeriesGrouper()
