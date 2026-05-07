@@ -267,6 +267,8 @@ following works:
 - github.com/jackc/pgx [MIT License](https://github.com/jackc/pgx/blob/master/LICENSE)
 - github.com/jackc/puddle [MIT License](https://github.com/jackc/puddle/blob/master/LICENSE)
 - github.com/jaegertracing/jaeger [Apache License 2.0](https://github.com/jaegertracing/jaeger/blob/master/LICENSE)
+- github.com/jaypipes/ghw [Apache License 2.0](https://github.com/jaypipes/ghw/blob/main/COPYING)
+- github.com/jaypipes/pcidb [Apache License 2.0](https://github.com/jaypipes/pcidb/blob/main/LICENSE)
 - github.com/jcmturner/aescts [Apache License 2.0](https://github.com/jcmturner/aescts/blob/master/LICENSE)
 - github.com/jcmturner/dnsutils [Apache License 2.0](https://github.com/jcmturner/dnsutils/blob/master/LICENSE)
 - github.com/jcmturner/gofork [BSD 3-Clause "New" or "Revised" License](https://github.com/jcmturner/gofork/blob/master/LICENSE)
