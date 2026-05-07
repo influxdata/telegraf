@@ -67,7 +67,7 @@ func (*Ping) SampleConfig() string {
 
 func (p *Ping) Init() error {
 	// Defaults
-	if p.Count == 0 {
+	if p.Count <= 0 {
 		p.Count = 1
 	}
 
