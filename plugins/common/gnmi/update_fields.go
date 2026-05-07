@@ -23,7 +23,7 @@ type updateField struct {
 	value interface{}
 }
 
-func (h *handler) newFieldsFromUpdate(path *pathInfo, update *gnmi.Update) ([]updateField, error) {
+func (h *Handler) newFieldsFromUpdate(path *pathInfo, update *gnmi.Update) ([]updateField, error) {
 	if update.Val == nil || update.Val.Value == nil {
 		return []updateField{{path: path}}, nil
 	}
@@ -54,7 +54,7 @@ func (h *handler) newFieldsFromUpdate(path *pathInfo, update *gnmi.Update) ([]up
 	return []updateField{{path, nativeType}}, nil
 }
 
-func (h *handler) processJSON(path *pathInfo, data []byte) ([]updateField, error) {
+func (h *Handler) processJSON(path *pathInfo, data []byte) ([]updateField, error) {
 	var nested interface{}
 	if err := json.Unmarshal(data, &nested); err != nil {
 		return nil, fmt.Errorf("failed to parse JSON value: %w", err)
@@ -67,7 +67,7 @@ func (h *handler) processJSON(path *pathInfo, data []byte) ([]updateField, error
 	fields := make([]updateField, 0, len(entries))
 	for _, entry := range entries {
 		p := path.appendSegments(entry.key...)
-		if h.enforceFirstNamespaceAsOrigin {
+		if h.EnforceFirstNamespaceAsOrigin {
 			p.enforceFirstNamespaceAsOrigin()
 		}
 
@@ -80,7 +80,7 @@ func (h *handler) processJSON(path *pathInfo, data []byte) ([]updateField, error
 	return fields, nil
 }
 
-func (h *handler) processJSONIETF(path *pathInfo, data []byte) ([]updateField, error) {
+func (h *Handler) processJSONIETF(path *pathInfo, data []byte) ([]updateField, error) {
 	var nested interface{}
 	if err := json.Unmarshal(data, &nested); err != nil {
 		return nil, fmt.Errorf("failed to parse JSON value: %w", err)
@@ -121,7 +121,7 @@ func (h *handler) processJSONIETF(path *pathInfo, data []byte) ([]updateField, e
 	fields := make([]updateField, 0, len(entries))
 	for _, entry := range entries {
 		p := path.appendSegments(entry.key...)
-		if h.enforceFirstNamespaceAsOrigin {
+		if h.EnforceFirstNamespaceAsOrigin {
 			p.enforceFirstNamespaceAsOrigin()
 		}
 

@@ -11,7 +11,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 )
 
-type subscription struct {
+type Subscription struct {
 	Name              string          `toml:"name"`
 	Origin            string          `toml:"origin"`
 	Path              string          `toml:"path"`
@@ -23,14 +23,14 @@ type subscription struct {
 	fullPath *gnmi.Path
 }
 
-type tagSubscription struct {
-	subscription
+type TagSubscription struct {
 	Match    string   `toml:"match"`
 	Elements []string `toml:"elements"`
+	Subscription
 }
 
-func (s *subscription) buildSubscription() (*gnmi.Subscription, error) {
-	gnmiPath, err := parsePath(s.Origin, s.Path, "")
+func (s *Subscription) Request() (*gnmi.Subscription, error) {
+	gnmiPath, err := ParsePath(s.Origin, s.Path, "")
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func (s *subscription) buildSubscription() (*gnmi.Subscription, error) {
 	}, nil
 }
 
-func (s *subscription) buildFullPath(origin, prefix, target string) error {
+func (s *Subscription) Build(origin, prefix, target string) error {
 	var err error
 	if s.fullPath, err = xpath.ToGNMIPath(s.Path); err != nil {
 		return err
@@ -65,23 +65,4 @@ func (s *subscription) buildFullPath(origin, prefix, target string) error {
 		}
 	}
 	return nil
-}
-
-func (s *subscription) buildAlias(enforceFirstNamespaceAsOrigin bool) (*pathInfo, string, error) {
-	// Build the subscription path without keys
-	path, err := parsePath(s.Origin, s.Path, "")
-	if err != nil {
-		return nil, "", err
-	}
-	info := newInfoFromPathWithoutKeys(path)
-	if enforceFirstNamespaceAsOrigin {
-		info.enforceFirstNamespaceAsOrigin()
-	}
-
-	// If the user didn't provide a measurement name, use last path element
-	name := s.Name
-	if name == "" && len(info.segments) > 0 {
-		name = info.segments[len(info.segments)-1].id
-	}
-	return info, name, nil
 }

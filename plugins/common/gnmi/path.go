@@ -26,7 +26,7 @@ type pathInfo struct {
 }
 
 // ParsePath from XPath-like string to gNMI path structure
-func parsePath(origin, pathToParse, target string) (*gnmi.Path, error) {
+func ParsePath(origin, pathToParse, target string) (*gnmi.Path, error) {
 	gnmiPath, err := xpath.ToGNMIPath(pathToParse)
 	if err != nil {
 		return nil, err
@@ -34,6 +34,27 @@ func parsePath(origin, pathToParse, target string) (*gnmi.Path, error) {
 	gnmiPath.Origin = origin
 	gnmiPath.Target = target
 	return gnmiPath, err
+}
+
+func guessPrefix(paths []*pathInfo) string {
+	if len(paths) == 0 {
+		return ""
+	}
+	if len(paths) == 1 {
+		return paths[0].dir()
+	}
+	segments := make([]segment, 0, len(paths[0].segments))
+	commonPath := &pathInfo{
+		origin:   paths[0].origin,
+		segments: append(segments, paths[0].segments...),
+	}
+	for _, f := range paths[1:] {
+		commonPath.keepCommonPart(f)
+	}
+	if commonPath.empty() {
+		return ""
+	}
+	return commonPath.String()
 }
 
 func newInfoFromString(path string) *pathInfo {
