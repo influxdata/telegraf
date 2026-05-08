@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -95,30 +96,20 @@ func (s *System) Init() error {
 		return errors.New(`"uptime" and "legacy_uptime" are mutually exclusive`)
 	}
 
-	if enabled["dmi"] {
-		if !dmiSupported {
-			s.Log.Warn("'dmi' is not supported on this platform, ignoring")
-			s.Include = removeInclude(s.Include, "dmi")
-		} else {
-			dmi, err := gatherDMI()
-			if err != nil {
-				return err
-			}
-			s.dmi = dmi
+	if enabled["dmi"] && !dmiSupported {
+		s.Log.Warn("'dmi' is not supported on this platform, ignoring")
+		s.Include = slices.DeleteFunc(s.Include, func(v string) bool { return v == "dmi" })
+	}
+
+	if slices.Contains(s.Include, "dmi") {
+		dmi, err := gatherDMI()
+		if err != nil {
+			return err
 		}
+		s.dmi = dmi
 	}
 
 	return nil
-}
-
-func removeInclude(include []string, value string) []string {
-	out := make([]string, 0, len(include))
-	for _, v := range include {
-		if v != value {
-			out = append(out, v)
-		}
-	}
-	return out
 }
 
 func (s *System) Gather(acc telegraf.Accumulator) error {
@@ -243,8 +234,7 @@ func gatherOS() (map[string]interface{}, error) {
 	}, nil
 }
 
-// gatherDMI reads BIOS, baseboard, chassis and product DMI/SMBIOS
-// information. Fields that cannot be read are omitted.
+// gatherDMI reads BIOS, baseboard, chassis and product DMI/SMBIOS information.
 func gatherDMI() (map[string]interface{}, error) {
 	ctx := ghw.WithDisableWarnings()(ghw.WithDisableTools()(ghw.ContextFromEnv()))
 
@@ -255,9 +245,9 @@ func gatherDMI() (map[string]interface{}, error) {
 		return nil, fmt.Errorf("reading BIOS information: %w", err)
 	}
 	if bios != nil {
-		addNonEmpty(fields, "bios_vendor", bios.Vendor)
-		addNonEmpty(fields, "bios_version", bios.Version)
-		addNonEmpty(fields, "bios_date", bios.Date)
+		fields["bios_vendor"] = bios.Vendor
+		fields["bios_version"] = bios.Version
+		fields["bios_date"] = bios.Date
 	}
 
 	bb, err := ghw.Baseboard(ctx)
@@ -265,11 +255,11 @@ func gatherDMI() (map[string]interface{}, error) {
 		return nil, fmt.Errorf("reading baseboard information: %w", err)
 	}
 	if bb != nil {
-		addNonEmpty(fields, "board_vendor", bb.Vendor)
-		addNonEmpty(fields, "board_product", bb.Product)
-		addNonEmpty(fields, "board_version", bb.Version)
-		addNonEmpty(fields, "board_serial", bb.SerialNumber)
-		addNonEmpty(fields, "board_asset_tag", bb.AssetTag)
+		fields["board_vendor"] = bb.Vendor
+		fields["board_product"] = bb.Product
+		fields["board_version"] = bb.Version
+		fields["board_serial"] = bb.SerialNumber
+		fields["board_asset_tag"] = bb.AssetTag
 	}
 
 	ch, err := ghw.Chassis(ctx)
@@ -277,12 +267,12 @@ func gatherDMI() (map[string]interface{}, error) {
 		return nil, fmt.Errorf("reading chassis information: %w", err)
 	}
 	if ch != nil {
-		addNonEmpty(fields, "chassis_vendor", ch.Vendor)
-		addNonEmpty(fields, "chassis_type", ch.Type)
-		addNonEmpty(fields, "chassis_type_description", ch.TypeDescription)
-		addNonEmpty(fields, "chassis_version", ch.Version)
-		addNonEmpty(fields, "chassis_serial", ch.SerialNumber)
-		addNonEmpty(fields, "chassis_asset_tag", ch.AssetTag)
+		fields["chassis_vendor"] = ch.Vendor
+		fields["chassis_type"] = ch.Type
+		fields["chassis_type_description"] = ch.TypeDescription
+		fields["chassis_version"] = ch.Version
+		fields["chassis_serial"] = ch.SerialNumber
+		fields["chassis_asset_tag"] = ch.AssetTag
 	}
 
 	prod, err := ghw.Product(ctx)
@@ -290,26 +280,16 @@ func gatherDMI() (map[string]interface{}, error) {
 		return nil, fmt.Errorf("reading product information: %w", err)
 	}
 	if prod != nil {
-		addNonEmpty(fields, "product_vendor", prod.Vendor)
-		addNonEmpty(fields, "product_name", prod.Name)
-		addNonEmpty(fields, "product_family", prod.Family)
-		addNonEmpty(fields, "product_version", prod.Version)
-		addNonEmpty(fields, "product_serial", prod.SerialNumber)
-		addNonEmpty(fields, "product_sku", prod.SKU)
-		addNonEmpty(fields, "product_uuid", prod.UUID)
+		fields["product_vendor"] = prod.Vendor
+		fields["product_name"] = prod.Name
+		fields["product_family"] = prod.Family
+		fields["product_version"] = prod.Version
+		fields["product_serial"] = prod.SerialNumber
+		fields["product_sku"] = prod.SKU
+		fields["product_uuid"] = prod.UUID
 	}
 
 	return fields, nil
-}
-
-// addNonEmpty adds value to fields under key, dropping empty strings and the
-// ghw "unknown" sentinel.
-func addNonEmpty(fields map[string]interface{}, key, value string) {
-	value = strings.TrimSpace(value)
-	if value == "" || value == "unknown" {
-		return
-	}
-	fields[key] = value
 }
 
 func findUniqueUsers(userStats []host.UserStat) int {

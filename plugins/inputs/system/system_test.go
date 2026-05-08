@@ -410,26 +410,3 @@ func TestGatherDMIValues(t *testing.T) {
 
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
-
-func TestAddNonEmpty(t *testing.T) {
-	tests := []struct {
-		name     string
-		key      string
-		value    string
-		expected map[string]interface{}
-	}{
-		{"normal", "vendor", "Acme", map[string]interface{}{"vendor": "Acme"}},
-		{"trims", "vendor", "  Acme  \n", map[string]interface{}{"vendor": "Acme"}},
-		{"empty", "vendor", "", map[string]interface{}{}},
-		{"whitespace", "vendor", "   \t\n", map[string]interface{}{}},
-		{"unknown sentinel", "vendor", "unknown", map[string]interface{}{}},
-		{"capitalized unknown is kept", "vendor", "Unknown", map[string]interface{}{"vendor": "Unknown"}},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			fields := map[string]interface{}{}
-			addNonEmpty(fields, tt.key, tt.value)
-			require.Equal(t, tt.expected, fields)
-		})
-	}
-}

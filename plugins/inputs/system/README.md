@@ -119,8 +119,11 @@ may be empty on platforms where gopsutil cannot determine them.
 
 ### `system_dmi`
 
-Emitted only when `dmi` is included. Fields are reported as strings; any
-field that the operating system does not expose is omitted.
+Emitted only when `dmi` is included. All fields are reported as strings
+with the values returned by the underlying source: an empty string when
+the field is not exposed by the system, or `unknown` when it is restricted
+by the kernel (typical for serial numbers, asset tags and the product
+UUID on Linux without root).
 
 | Field                      | Type   | Description                                                          |
 |----------------------------|--------|----------------------------------------------------------------------|
@@ -178,8 +181,18 @@ system_os,host=worker-01 os="linux",arch="x86_64",platform="ubuntu",platform_fam
 
 ### DMI information
 
-With `include = ["dmi"]`, a separate `system_dmi` measurement is emitted:
+With `include = ["dmi"]`, a separate `system_dmi` measurement is emitted.
+When telegraf has access to all DMI fields (e.g. running as root or with
+`CAP_SYS_ADMIN` on Linux), the metric carries the full information:
 
 ```text
-system_dmi,host=worker-01 bios_vendor="Dell Inc.",bios_version="2.18.0",bios_date="04/12/2024",board_vendor="Dell Inc.",board_product="0X3D66",chassis_vendor="Dell Inc.",chassis_type="23",chassis_type_description="Rack mount chassis",product_vendor="Dell Inc.",product_name="PowerEdge R750",product_sku="SKU=NotProvided;ModelName=PowerEdge R750" 1748000000000000000
+system_dmi,host=worker-01 bios_vendor="Dell Inc.",bios_version="2.18.0",bios_date="04/12/2024",board_vendor="Dell Inc.",board_product="0X3D66",board_version="A00",board_serial="CN747503AB0123",board_asset_tag="",chassis_vendor="Dell Inc.",chassis_type="23",chassis_type_description="Rack mount chassis",chassis_version="",chassis_serial="7XK4P03",chassis_asset_tag="",product_vendor="Dell Inc.",product_name="PowerEdge R750",product_family="PowerEdge",product_version="",product_serial="7XK4P03",product_sku="SKU=NotProvided;ModelName=PowerEdge R750",product_uuid="4c4c4544-0058-4b10-8034-b3c04f503033" 1748000000000000000
+```
+
+When telegraf runs without privileges to read kernel-restricted DMI fields,
+those fields are reported as `unknown` instead. This is the typical case
+when telegraf runs as a regular user on Linux:
+
+```text
+system_dmi,host=worker-01 bios_vendor="Dell Inc.",bios_version="2.18.0",bios_date="04/12/2024",board_vendor="Dell Inc.",board_product="0X3D66",board_version="A00",board_serial="unknown",board_asset_tag="",chassis_vendor="Dell Inc.",chassis_type="23",chassis_type_description="Rack mount chassis",chassis_version="",chassis_serial="unknown",chassis_asset_tag="",product_vendor="Dell Inc.",product_name="PowerEdge R750",product_family="PowerEdge",product_version="",product_serial="unknown",product_sku="SKU=NotProvided;ModelName=PowerEdge R750",product_uuid="unknown" 1748000000000000000
 ```
