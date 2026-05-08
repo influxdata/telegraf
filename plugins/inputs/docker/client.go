@@ -12,10 +12,6 @@ import (
 	"github.com/docker/docker/client"
 )
 
-var (
-	defaultHeaders = map[string]string{"User-Agent": "engine-api-cli-1.0"}
-)
-
 //nolint:interfacebloat // wrapping upstream docker client which has many methods
 type dockerClient interface {
 	// Info retrieves system-wide information about the Docker server.
@@ -57,7 +53,7 @@ func newClient(host string, tlsConfig *tls.Config) (dockerClient, error) {
 	httpClient := &http.Client{Transport: transport}
 
 	dockerClient, err := client.NewClientWithOpts(
-		client.WithHTTPHeaders(defaultHeaders),
+		client.WithUserAgent("engine-api-cli-1.0"),
 		client.WithHTTPClient(httpClient),
 		client.WithAPIVersionNegotiation(),
 		client.WithHost(host))
