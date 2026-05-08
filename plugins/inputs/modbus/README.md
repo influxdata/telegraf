@@ -390,7 +390,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## Maximum number of input or holding registers to read per request
     ## The specification defines this limits to 125 but some devices only
     ## support a smaller number per request
-	  # max_word_registers_per_request = 125
+    # max_word_registers_per_request = 125
 ```
 
 ## Notes
@@ -409,8 +409,8 @@ collection interval. Note that pauses add up if multiple requests are sent!
 The modbus plugin supports multiple configuration styles that can be set using
 the `configuration_type` setting. The different styles are described
 below. Please note that styles cannot be mixed.
-Only the settings belonging to the configured `configuration_type` are used for constructing _modbus_
-requests and creation of metrics.
+Only the settings belonging to the configured `configuration_type` are used for
+constructing _modbus_ requests and creation of metrics.
 
 Directly jump to the styles:
 
