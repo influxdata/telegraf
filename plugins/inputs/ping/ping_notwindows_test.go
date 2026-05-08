@@ -416,7 +416,7 @@ func TestPingGatherNative(t *testing.T) {
 		P *Ping
 	}
 
-	fakePingFunc := func(string) (*pingStats, error) {
+	fakePingFunc := func(string, int) (*pingStats, error) {
 		s := &pingStats{
 			Statistics: ping.Statistics{
 				PacketsSent: 5,
@@ -503,7 +503,7 @@ func TestNoPacketsSent(t *testing.T) {
 		Method:      "native",
 		Count:       5,
 		Percentiles: []int{50, 95, 99},
-		nativePingFunc: func(string) (*pingStats, error) {
+		nativePingFunc: func(string, int) (*pingStats, error) {
 			s := &pingStats{
 				Statistics: ping.Statistics{
 					PacketsSent: 0,
@@ -531,7 +531,7 @@ func TestDNSLookupError(t *testing.T) {
 		Urls:   []string{"localhost"},
 		Method: "native",
 		IPv6:   false,
-		nativePingFunc: func(string) (*pingStats, error) {
+		nativePingFunc: func(string, int) (*pingStats, error) {
 			return nil, errors.New("unknown")
 		},
 	}

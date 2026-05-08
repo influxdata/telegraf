@@ -12,7 +12,6 @@ import (
 	"slices"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	ping "github.com/prometheus-community/pro-bing"
@@ -29,9 +28,8 @@ var sampleConfig string
 // This variable needs to be global as the generated IDs have to be unique
 // within the PROCESS not just the thread.
 var (
-	availableIDs   []int
-	availableIDsMu sync.Mutex
-	once           sync.Once
+	usedIDs     []uint16
+	usedIDsCond = sync.NewCond(&sync.Mutex{})
 )
 
 type Ping struct {
@@ -57,19 +55,13 @@ type Ping struct {
 	sourceAddress  string
 	pingHost       hostPingerFunc // host ping function
 	nativePingFunc nativePingFunc
-
-	// Tracking the ID range for this plugin instance to avoid collisions when
-	// assigning received packets to sent ones.
-	availableIDs      []int
-	availableIDsIndex atomic.Uint32
-	sync.Mutex
 }
 
 // hostPingerFunc is a function that runs the "ping" function using a list of
 // passed arguments. This can be easily switched with a mocked ping function
 // for unit test purposes (see ping_test.go)
 type hostPingerFunc func(binary string, timeout float64, args ...string) (string, error)
-type nativePingFunc func(destination string) (*pingStats, error)
+type nativePingFunc func(destination string, id int) (*pingStats, error)
 
 type pingStats struct {
 	ping.Statistics
@@ -111,14 +103,6 @@ func (p *Ping) Init() error {
 		p.nativePingFunc = p.nativePing
 	}
 
-	// Check for the number of available IDs
-	if p.Method == "native" {
-		// Let's limit the number of endpoint to 65536 to be conservative
-		if len(p.Urls) > math.MaxUint16 {
-			return fmt.Errorf("too many URLs (%d), max 65536 are permitted across ALL plugin instances", len(p.Urls))
-		}
-	}
-
 	// The interval cannot be below 0.2 seconds, matching ping implementation: https://linux.die.net/man/8/ping
 	if time.Duration(p.PingInterval) < 200*time.Millisecond {
 		p.calcInterval = 200 * time.Millisecond
@@ -136,49 +120,7 @@ func (p *Ping) Init() error {
 	return nil
 }
 
-func (p *Ping) Start(telegraf.Accumulator) error {
-	// For native pings we need to generate unique IDs accross all plugin
-	// instances so use the latest offset and reserve an ID range for this plugin
-	if p.Method == "native" {
-		nURLs := len(p.Urls)
-
-		// Check if there are global enough IDs left and reserve them
-		availableIDsMu.Lock()
-		if len(availableIDs) < nURLs {
-			availableIDsMu.Unlock()
-			return errors.New("too many URLs across all plugin instances, max 65536 are permitted")
-		}
-
-		// Reserve the IDs
-		p.Lock()
-		p.availableIDs = availableIDs[:nURLs]
-		p.Unlock()
-
-		// Remove the reserved IDs from the available list
-		availableIDs = availableIDs[nURLs:]
-		availableIDsMu.Unlock()
-	}
-
-	return nil
-}
-
-func (p *Ping) Stop() {
-	// We must free the reserved IDs on shutdown
-	availableIDsMu.Lock()
-	defer availableIDsMu.Unlock()
-
-	p.Lock()
-	defer p.Unlock()
-
-	availableIDs = append(availableIDs, p.availableIDs...)
-	p.availableIDsIndex.Store(0)
-	p.availableIDs = make([]int, 0)
-}
-
 func (p *Ping) Gather(acc telegraf.Accumulator) error {
-	// Reset the IDs on the new cycle
-	p.availableIDsIndex.Store(0)
-
 	for _, host := range p.Urls {
 		p.wg.Add(1)
 		go func(host string) {
@@ -197,7 +139,74 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (p *Ping) nativePing(destination string) (*pingStats, error) {
+func reserveNativePingID() (uint16, error) {
+	usedIDsCond.L.Lock()
+	defer usedIDsCond.L.Unlock()
+
+	// Check if we are the first
+	if len(usedIDs) == 0 {
+		usedIDs = append(usedIDs, 0)
+		return 0, nil
+	}
+
+	// Check if there is a free ID at the end
+	if id := usedIDs[len(usedIDs)-1]; id < math.MaxUint16 {
+		id++
+		usedIDs = append(usedIDs, id)
+		return id, nil
+	}
+
+	// Check for free spots in the list
+	if len(usedIDs) < math.MaxUint16 {
+		// There is still space in the list, find the free spot
+		for i, id := range usedIDs {
+			if uint16(i) == id {
+				continue
+			}
+			// We found an spot with a missing ID. Insert the biggest
+			// available in the spot to optimize searches and keep the list
+			// sorted.
+			id--
+			usedIDs = slices.Insert(usedIDs, i, id)
+			return id, nil
+		}
+	}
+
+	// All IDs are used, waiting for an ID to become available
+	for len(usedIDs) > math.MaxUint16 {
+		usedIDsCond.Wait()
+	}
+
+	// Search for a free spot
+	for i, used := range usedIDs {
+		if uint16(i) == used {
+			continue
+		}
+		// We found an spot with a missing ID. Insert the biggest
+		// available in the spot to optimize searches and keep the list
+		// sorted.
+		id := used - 1
+		usedIDs = slices.Insert(usedIDs, i, id)
+		return id, nil
+	}
+
+	return 0, errors.New("no unused ID available")
+}
+
+func freeNativePingID(id uint16) {
+	// Removing the ID from the presorted list keeping the list sorted
+	usedIDsCond.L.Lock()
+	idx, found := slices.BinarySearch(usedIDs, id)
+	if found {
+		usedIDs = slices.Delete(usedIDs, idx, idx+1)
+	}
+	usedIDsCond.L.Unlock()
+
+	// Signal all waiting pingers to check for the free ID
+	usedIDsCond.Broadcast()
+}
+
+func (p *Ping) nativePing(destination string, id int) (*pingStats, error) {
 	ps := &pingStats{}
 
 	pinger, err := ping.NewPinger(destination)
@@ -207,9 +216,8 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 
 	// Make sure we get a unique ID as otherwise the library may confuse
 	// responses between multiple pingers and present wrong results
-	p.Lock()
-	pinger.SetID(p.availableIDs[p.availableIDsIndex.Add(1)-1])
-	p.Unlock()
+	pinger.SetID(id)
+
 	pinger.SetPrivileged(true)
 
 	if p.IPv4 && p.IPv6 {
@@ -280,7 +288,13 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 func (p *Ping) pingToURLNative(acc telegraf.Accumulator, destination string) {
 	tags := map[string]string{"url": destination}
 
-	stats, err := p.nativePingFunc(destination)
+	id, err := reserveNativePingID()
+	if err != nil {
+		p.Log.Errorf("ping failed: %v", err)
+	}
+	defer freeNativePingID(id)
+
+	stats, err := p.nativePingFunc(destination, int(id))
 	if err != nil {
 		p.Log.Errorf("ping failed: %s", err.Error())
 		fields := make(map[string]interface{}, 1)
@@ -374,16 +388,6 @@ func hostPinger(binary string, timeout float64, args ...string) (string, error) 
 }
 
 func init() {
-	// Fill the available IDs once
-	once.Do(func() {
-		availableIDsMu.Lock()
-		defer availableIDsMu.Unlock()
-		availableIDs = make([]int, math.MaxUint16)
-		for i := range math.MaxUint16 {
-			availableIDs[i] = i
-		}
-	})
-
 	inputs.Add("ping", func() telegraf.Input {
 		return &Ping{
 			PingInterval: config.Duration(1 * time.Second),
