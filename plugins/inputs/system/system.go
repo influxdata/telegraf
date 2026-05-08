@@ -26,15 +26,13 @@ import (
 var sampleConfig string
 
 type System struct {
-	Include          []string        `toml:"include"`
-	OSCacheTTL       config.Duration `toml:"os_cache_ttl"`
-	HardwareCacheTTL config.Duration `toml:"hardware_cache_ttl"`
-	Log              telegraf.Logger `toml:"-"`
+	Include    []string        `toml:"include"`
+	OSCacheTTL config.Duration `toml:"os_cache_ttl"`
+	Log        telegraf.Logger `toml:"-"`
 
-	osCache          map[string]interface{}
-	osCachedAt       time.Time
-	hardwareCache    map[string]interface{}
-	hardwareCachedAt time.Time
+	osCache    map[string]interface{}
+	osCachedAt time.Time
+	dmi        map[string]interface{}
 }
 
 func (*System) SampleConfig() string {
@@ -55,7 +53,7 @@ func (s *System) Init() error {
 			continue
 		}
 		switch incl {
-		case "load", "users", "cpus", "uptime", "os", "hardware":
+		case "load", "users", "cpus", "uptime", "os", "dmi":
 		case "legacy_cpus":
 			if userSupplied {
 				config.PrintOptionValueDeprecationNotice(
@@ -97,11 +95,30 @@ func (s *System) Init() error {
 		return errors.New(`"uptime" and "legacy_uptime" are mutually exclusive`)
 	}
 
-	if enabled["hardware"] && !hardwareSupported {
-		s.Log.Warn("'hardware' is not supported on this platform, ignoring")
+	if enabled["dmi"] {
+		if !dmiSupported {
+			s.Log.Warn("'dmi' is not supported on this platform, ignoring")
+			s.Include = removeInclude(s.Include, "dmi")
+		} else {
+			dmi, err := gatherDMI()
+			if err != nil {
+				return err
+			}
+			s.dmi = dmi
+		}
 	}
 
 	return nil
+}
+
+func removeInclude(include []string, value string) []string {
+	out := make([]string, 0, len(include))
+	for _, v := range include {
+		if v != value {
+			out = append(out, v)
+		}
+	}
+	return out
 }
 
 func (s *System) Gather(acc telegraf.Accumulator) error {
@@ -123,18 +140,9 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 			if len(s.osCache) > 0 {
 				acc.AddFields("system_os", s.osCache, nil, now)
 			}
-		case "hardware":
-			if time.Since(s.hardwareCachedAt) > time.Duration(s.HardwareCacheTTL) {
-				hwCache, err := gatherHardware()
-				if err != nil {
-					acc.AddError(err)
-				} else {
-					s.hardwareCache = hwCache
-					s.hardwareCachedAt = now
-				}
-			}
-			if len(s.hardwareCache) > 0 {
-				acc.AddFields("system_hardware", s.hardwareCache, nil, now)
+		case "dmi":
+			if len(s.dmi) > 0 {
+				acc.AddFields("system_dmi", s.dmi, nil, now)
 			}
 		case "load":
 			loadavg, err := load.Avg()
@@ -235,11 +243,10 @@ func gatherOS() (map[string]interface{}, error) {
 	}, nil
 }
 
-// gatherHardware reads BIOS, baseboard, chassis and product DMI/SMBIOS
+// gatherDMI reads BIOS, baseboard, chassis and product DMI/SMBIOS
 // information. Fields that cannot be read are omitted.
-func gatherHardware() (map[string]interface{}, error) {
-	// Disable ghw warnings; honor GHW_CHROOT and other GHW_* env variables.
-	ctx := ghw.WithDisableWarnings()(ghw.ContextFromEnv())
+func gatherDMI() (map[string]interface{}, error) {
+	ctx := ghw.WithDisableWarnings()(ghw.WithDisableTools()(ghw.ContextFromEnv()))
 
 	fields := make(map[string]interface{})
 
@@ -261,6 +268,8 @@ func gatherHardware() (map[string]interface{}, error) {
 		addNonEmpty(fields, "board_vendor", bb.Vendor)
 		addNonEmpty(fields, "board_product", bb.Product)
 		addNonEmpty(fields, "board_version", bb.Version)
+		addNonEmpty(fields, "board_serial", bb.SerialNumber)
+		addNonEmpty(fields, "board_asset_tag", bb.AssetTag)
 	}
 
 	ch, err := ghw.Chassis(ctx)
@@ -272,6 +281,8 @@ func gatherHardware() (map[string]interface{}, error) {
 		addNonEmpty(fields, "chassis_type", ch.Type)
 		addNonEmpty(fields, "chassis_type_description", ch.TypeDescription)
 		addNonEmpty(fields, "chassis_version", ch.Version)
+		addNonEmpty(fields, "chassis_serial", ch.SerialNumber)
+		addNonEmpty(fields, "chassis_asset_tag", ch.AssetTag)
 	}
 
 	prod, err := ghw.Product(ctx)
@@ -282,6 +293,10 @@ func gatherHardware() (map[string]interface{}, error) {
 		addNonEmpty(fields, "product_vendor", prod.Vendor)
 		addNonEmpty(fields, "product_name", prod.Name)
 		addNonEmpty(fields, "product_family", prod.Family)
+		addNonEmpty(fields, "product_version", prod.Version)
+		addNonEmpty(fields, "product_serial", prod.SerialNumber)
+		addNonEmpty(fields, "product_sku", prod.SKU)
+		addNonEmpty(fields, "product_uuid", prod.UUID)
 	}
 
 	return fields, nil
@@ -333,8 +348,7 @@ func formatUptime(uptime uint64) string {
 func init() {
 	inputs.Add("system", func() telegraf.Input {
 		return &System{
-			OSCacheTTL:       config.Duration(8 * time.Hour),
-			HardwareCacheTTL: config.Duration(8 * time.Hour),
+			OSCacheTTL: config.Duration(8 * time.Hour),
 		}
 	})
 }

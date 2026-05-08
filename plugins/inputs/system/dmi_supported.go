@@ -2,4 +2,4 @@
 
 package system
 
-const hardwareSupported = true
+const dmiSupported = true

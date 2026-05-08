@@ -28,7 +28,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##   uptime           - system uptime
   ##   legacy_uptime    - legacy layout of system uptime; see README for details
   ##   os               - operating system release and uname information
-  ##   hardware         - DMI/SMBIOS hardware information
+  ##   dmi              - BIOS, baseboard, chassis and product information from DMI/SMBIOS
   # include = ["load", "users", "legacy_cpus", "legacy_uptime"]
 
   ## How long to cache the result of the "os" group between gathers.
@@ -36,11 +36,6 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## surface distro upgrades and kexec'd kernels faster. Set to zero to
   ## re-read the data on every gather.
   # os_cache_ttl = "8h"
-
-  ## How long to cache the result of the "hardware" group between gathers.
-  ## DMI/SMBIOS data is effectively static for the life of the machine.
-  ## Set to zero to re-read on every gather.
-  # hardware_cache_ttl = "8h"
 ```
 
 > [!NOTE]
@@ -74,13 +69,13 @@ FreeBSD/OpenBSD/Solaris) the `platform`, `platform_family`, `platform_version`
 and `kernel_version` fields may be empty. Results are cached between gathers,
 see `os_cache_ttl` above.
 
-The `hardware` group exposes BIOS, baseboard, chassis and product information
-from DMI/SMBIOS. On Linux the data is read from `/sys/class/dmi/id/` and does
-not require root access for most fields; serial numbers and asset tags are
+The `dmi` group exposes BIOS, baseboard, chassis and product information from
+DMI/SMBIOS. On Linux the data is read from `/sys/class/dmi/id/` and does not
+require root access for most fields; serial numbers and asset tags are
 generally restricted by the kernel. On Windows the data is read via WMI.
-macOS, BSD and Solaris are not supported. Fields that cannot be determined
-are omitted from the metric. Results are cached between gathers, see
-`hardware_cache_ttl` above.
+macOS, BSD and Solaris are not supported and the `dmi` value is ignored
+there. The data is read once during plugin initialization since DMI/SMBIOS
+does not change at runtime.
 
 ## Metrics
 
@@ -122,26 +117,34 @@ may be empty on platforms where gopsutil cannot determine them.
 | `platform_version` | string | Platform / distribution version (e.g. `26.04`)                       |
 | `kernel_version`   | string | Kernel release as returned by `uname -r` (e.g. `7.0.0-7-generic`)    |
 
-### `system_hardware`
+### `system_dmi`
 
-Emitted only when `hardware` is included. Fields are reported as strings; any
+Emitted only when `dmi` is included. Fields are reported as strings; any
 field that the operating system does not expose is omitted.
 
-| Field                      | Type   | Description                                                                          |
-|----------------------------|--------|--------------------------------------------------------------------------------------|
-| `bios_vendor`              | string | BIOS vendor (e.g. `Dell Inc.`)                                                       |
-| `bios_version`             | string | BIOS version (e.g. `2.18.0`)                                                         |
-| `bios_date`                | string | BIOS release date (e.g. `04/12/2024`)                                                |
-| `board_vendor`             | string | Baseboard / motherboard vendor                                                       |
-| `board_product`            | string | Baseboard product name (e.g. `0X3D66`)                                               |
-| `board_version`            | string | Baseboard version                                                                    |
-| `chassis_vendor`           | string | Chassis vendor                                                                       |
-| `chassis_type`             | string | Chassis type code as defined by SMBIOS DSP0134 (e.g. `3`, `10`)                      |
-| `chassis_type_description` | string | Human-readable chassis type description (e.g. `Desktop`, `Notebook`)                 |
-| `chassis_version`          | string | Chassis version                                                                      |
-| `product_vendor`           | string | System product vendor (e.g. `Dell Inc.`)                                             |
-| `product_name`             | string | System product name (e.g. `PowerEdge R750`)                                          |
-| `product_family`           | string | System product family                                                                |
+| Field                      | Type   | Description                                                          |
+|----------------------------|--------|----------------------------------------------------------------------|
+| `bios_vendor`              | string | BIOS vendor (e.g. `Dell Inc.`)                                       |
+| `bios_version`             | string | BIOS version (e.g. `2.18.0`)                                         |
+| `bios_date`                | string | BIOS release date (e.g. `04/12/2024`)                                |
+| `board_vendor`             | string | Baseboard / motherboard vendor                                       |
+| `board_product`            | string | Baseboard product name (e.g. `0X3D66`)                               |
+| `board_version`            | string | Baseboard version                                                    |
+| `board_serial`             | string | Baseboard serial number (kernel-restricted on Linux)                 |
+| `board_asset_tag`          | string | Baseboard asset tag (kernel-restricted on Linux)                     |
+| `chassis_vendor`           | string | Chassis vendor                                                       |
+| `chassis_type`             | string | Chassis type code as defined by SMBIOS DSP0134 (e.g. `3`, `10`)      |
+| `chassis_type_description` | string | Human-readable chassis type description (e.g. `Desktop`, `Notebook`) |
+| `chassis_version`          | string | Chassis version                                                      |
+| `chassis_serial`           | string | Chassis serial number (kernel-restricted on Linux)                   |
+| `chassis_asset_tag`        | string | Chassis asset tag (kernel-restricted on Linux)                       |
+| `product_vendor`           | string | System product vendor (e.g. `Dell Inc.`)                             |
+| `product_name`             | string | System product name (e.g. `PowerEdge R750`)                          |
+| `product_family`           | string | System product family                                                |
+| `product_version`          | string | System product version                                               |
+| `product_serial`           | string | System product serial number (kernel-restricted on Linux)            |
+| `product_sku`              | string | System product SKU                                                   |
+| `product_uuid`             | string | System product UUID (kernel-restricted on Linux)                     |
 
 ## Example Output
 
@@ -173,10 +176,10 @@ With `include = ["os"]`, a separate `system_os` measurement is emitted:
 system_os,host=worker-01 os="linux",arch="x86_64",platform="ubuntu",platform_family="debian",platform_version="26.04",kernel_version="7.0.0-7-generic" 1748000000000000000
 ```
 
-### Hardware information
+### DMI information
 
-With `include = ["hardware"]`, a separate `system_hardware` measurement is emitted:
+With `include = ["dmi"]`, a separate `system_dmi` measurement is emitted:
 
 ```text
-system_hardware,host=worker-01 bios_vendor="Dell Inc.",bios_version="2.18.0",bios_date="04/12/2024",board_vendor="Dell Inc.",board_product="0X3D66",chassis_vendor="Dell Inc.",chassis_type="23",chassis_type_description="Rack mount chassis",product_vendor="Dell Inc.",product_name="PowerEdge R750" 1748000000000000000
+system_dmi,host=worker-01 bios_vendor="Dell Inc.",bios_version="2.18.0",bios_date="04/12/2024",board_vendor="Dell Inc.",board_product="0X3D66",chassis_vendor="Dell Inc.",chassis_type="23",chassis_type_description="Rack mount chassis",product_vendor="Dell Inc.",product_name="PowerEdge R750",product_sku="SKU=NotProvided;ModelName=PowerEdge R750" 1748000000000000000
 ```
