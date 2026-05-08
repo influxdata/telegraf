@@ -24,7 +24,6 @@ func countRegisters(requests []request) uint64 {
 // Only split too-large groups, but ignore all optimization potential
 func splitMaxBatchSize(g request, maxBatchSize uint16) []request {
 	var requests []request
-
 	idx := 0
 	for start := g.address; start < g.address+g.length; {
 		current := request{
