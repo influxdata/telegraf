@@ -96,6 +96,10 @@ func (b *AddressSpaceBrowser) Browse(ctx context.Context, rootID *ua.NodeID) ([]
 			}
 		}
 
+		// Batched Browse: one RPC carries up to batchSize BrowseDescriptions.
+		// gopcua's Node.References sends a single BrowseDescription per call, so we
+		// use the raw Browse/BrowseNext API to keep large address-space walks to
+		// O(N/batchSize) round trips instead of O(N).
 		resp, err := b.Client.Browse(ctx, &ua.BrowseRequest{NodesToBrowse: descs})
 		if err != nil {
 			return nil, fmt.Errorf("browse request failed: %w", err)
