@@ -216,7 +216,7 @@ func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator, opts types.DiskUsageO
 		"server_version": d.serverVersion,
 	}
 
-	acc.AddFields("docker_disk_usage", fields, tags)
+	acc.AddFields("docker_disk_usage", fields, tags, now)
 
 	// Containers
 	for _, cntnr := range du.Containers {
