@@ -20,6 +20,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -33,7 +34,7 @@ type System struct {
 
 	osCache    map[string]interface{}
 	osCachedAt time.Time
-	dmi        map[string]interface{}
+	dmiMetric  telegraf.Metric
 }
 
 func (*System) SampleConfig() string {
@@ -101,14 +102,6 @@ func (s *System) Init() error {
 		s.Include = slices.DeleteFunc(s.Include, func(v string) bool { return v == "dmi" })
 	}
 
-	if slices.Contains(s.Include, "dmi") {
-		dmi, err := gatherDMI()
-		if err != nil {
-			return err
-		}
-		s.dmi = dmi
-	}
-
 	return nil
 }
 
@@ -132,8 +125,14 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 				acc.AddFields("system_os", s.osCache, nil, now)
 			}
 		case "dmi":
-			if len(s.dmi) > 0 {
-				acc.AddFields("system_dmi", s.dmi, nil, now)
+			if s.dmiMetric != nil {
+				s.dmiMetric.SetTime(now)
+				acc.AddMetric(s.dmiMetric)
+			} else if m, err := gatherDMI(now); err != nil {
+				acc.AddError(fmt.Errorf("gathering DMI information failed: %w", err))
+			} else {
+				s.dmiMetric = m
+				acc.AddMetric(m)
 			}
 		case "load":
 			loadavg, err := load.Avg()
@@ -235,7 +234,7 @@ func gatherOS() (map[string]interface{}, error) {
 }
 
 // gatherDMI reads BIOS, baseboard, chassis and product DMI/SMBIOS information.
-func gatherDMI() (map[string]interface{}, error) {
+func gatherDMI(now time.Time) (telegraf.Metric, error) {
 	ctx := ghw.ContextFromEnv()
 	ctx = ghw.WithDisableWarnings()(ctx)
 	ctx = ghw.WithDisableTools()(ctx)
@@ -291,7 +290,7 @@ func gatherDMI() (map[string]interface{}, error) {
 		fields["product_uuid"] = prod.UUID
 	}
 
-	return fields, nil
+	return metric.New("system_dmi", nil, fields, now), nil
 }
 
 func findUniqueUsers(userStats []host.UserStat) int {
