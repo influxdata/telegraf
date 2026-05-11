@@ -135,7 +135,7 @@ func (o *Opensearch) Connect() error {
 		o.Log.Errorf("error creating OpenSearch client: %v", err)
 	}
 
-	_, err = o.osClient.Ping()
+	_, err = o.osClient.Ping(o.osClient.Ping.WithContext(ctx))
 	if err != nil {
 		return &internal.StartupError{
 			Err:   fmt.Errorf("unable to ping OpenSearch server: %w", err),
