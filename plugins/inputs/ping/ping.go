@@ -156,22 +156,6 @@ func reserveNativePingID() (uint16, error) {
 		return id, nil
 	}
 
-	// Check for free spots in the list
-	if len(usedIDs) < math.MaxUint16 {
-		// There is still space in the list, find the free spot
-		for i, id := range usedIDs {
-			if uint16(i) == id {
-				continue
-			}
-			// We found an spot with a missing ID. Insert the biggest
-			// available in the spot to optimize searches and keep the list
-			// sorted.
-			id--
-			usedIDs = slices.Insert(usedIDs, i, id)
-			return id, nil
-		}
-	}
-
 	// All IDs are used, waiting for an ID to become available
 	for len(usedIDs) > math.MaxUint16 {
 		usedIDsCond.Wait()
