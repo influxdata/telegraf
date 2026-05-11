@@ -240,7 +240,7 @@ func gatherDMI() (map[string]interface{}, error) {
 	ctx = ghw.WithDisableWarnings()(ctx)
 	ctx = ghw.WithDisableTools()(ctx)
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]interface{}, 21)
 
 	bios, err := ghw.BIOS(ctx)
 	if err != nil && !strings.Contains(err.Error(), "not implemented") {
