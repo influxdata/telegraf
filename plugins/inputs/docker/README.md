@@ -38,7 +38,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Use container ID hostname as source (trimmed to 12 characters)
   # source_tag = false
 
-  ## Containers to include and exclude acepting wildcards; all if empty
+  ## Containers to include and exclude accepting wildcards; all if empty
   # container_name_include = []
   # container_name_exclude = []
 
