@@ -404,7 +404,6 @@ func TestGatherDMIValues(t *testing.T) {
 				"product_uuid":             "00000000-0000-0000-0000-000000000001",
 			},
 			time.Unix(0, 0),
-			telegraf.Untyped,
 		),
 	}
 
