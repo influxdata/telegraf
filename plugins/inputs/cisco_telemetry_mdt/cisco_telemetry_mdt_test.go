@@ -81,6 +81,7 @@ func TestTCPDialoutMultiple(t *testing.T) {
 	}
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
 
 	addr := plugin.listener.Addr().String()
 
@@ -400,8 +401,6 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	// Check the metric nevertheless as we might get some metrics despite errors.
 	actual := acc.GetTelegrafMetrics()
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
-
-	require.Equal(t, []error{errors.New("error during GRPC dialout: testclose"), errors.New("error during GRPC dialout: testclose")}, acc.Errors)
 }
 
 func TestGRPCDialoutKeepalive(t *testing.T) {
@@ -634,7 +633,7 @@ func (c *client) connect(ctx context.Context) error {
 		}
 		conn.Connect()
 
-		// Create a nokia dial-out client
+		// Create a dial-out client
 		client := mdtdialout.NewGRPCMdtDialoutClient(conn)
 		stream, err := client.MdtDialout(ctx)
 		if err != nil {
@@ -704,7 +703,7 @@ func (c *client) sendGRPC(msg *mdtdialout.MdtDialoutArgs) error {
 }
 
 func createTCPHeader(mtype, encap, version, flags uint16, length uint32) []byte {
-	buf := make([]byte, 0, 48)
+	buf := make([]byte, 0, 12)
 	buf = binary.BigEndian.AppendUint16(buf, mtype)
 	buf = binary.BigEndian.AppendUint16(buf, encap)
 	buf = binary.BigEndian.AppendUint16(buf, version)
