@@ -356,12 +356,12 @@ func (d *Docker) fixPodmanCPUStats(containerID string, current *container.StatsR
 
 // cleanupStaleCache removes expired entries from the stats cache
 func (d *Docker) cleanupStaleCache() {
+	d.statsCacheMutex.Lock()
+	defer d.statsCacheMutex.Unlock()
+
 	if len(d.statsCache) == 0 {
 		return // Early exit if cache is empty
 	}
-
-	d.statsCacheMutex.Lock()
-	defer d.statsCacheMutex.Unlock()
 
 	cutoff := time.Now().Add(-time.Duration(d.PodmanCacheTTL))
 	expiredCount := 0
