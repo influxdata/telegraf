@@ -24,7 +24,7 @@ driver.parameter.synchronous: NUMBER
 driver.parameter.vendor: NUMBER
 driver.parameter.vendorid: NUMBER
 driver.state: NUMBER
-driver.version:
+driver.version: 
 driver.version.data: NUMBER
 driver.version.internal: NUMBER
 driver.version.usb: NUMBER

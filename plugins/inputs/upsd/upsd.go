@@ -86,10 +86,9 @@ func (u *Upsd) Init() error {
 	u.dumped = make(map[string]bool)
 
 	if u.StringifyIDs == nil {
-		u.Log.Warn("'stringify_ids' is not set explicitly; vendor/product IDs may be emitted as int64 " +
-			"when the underlying value looks numeric, causing type conflicts between UPS devices. " +
-			"The default will change to 'true' in a future release. " +
-			"Set 'stringify_ids = true' to opt into the new behavior now, or 'stringify_ids = false' to keep the legacy behavior and silence this warning.")
+		u.Log.Warn("Option 'stringify_ids' is not set; the default will flip from 'false' to 'true' " +
+			"in a future release to fix vendor/product ID type conflicts. " +
+			"Set it explicitly to lock in behavior and silence this warning.")
 	}
 
 	return nil
@@ -190,13 +189,16 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, upsname string, variables []n
 		// Force ID fields to always be strings to avoid type conflicts
 		// between UPS devices with numeric-looking IDs (auto-converted to
 		// int64 by go.nut) and devices with non-numeric IDs.
-		if u.StringifyIDs != nil && *u.StringifyIDs && stringFieldSet[varname] {
+		stringify := u.StringifyIDs != nil && *u.StringifyIDs && stringFieldSet[varname]
+		if stringify {
 			str, err := internal.ToString(v)
 			if err == nil {
 				v = str
 			}
-		} else if u.ForceFloat {
-			// Force expected float values to actually being float (e.g. if delivered as int)
+		}
+
+		// Force expected float values to actually being float (e.g. if delivered as int)
+		if !stringify && u.ForceFloat {
 			float, err := internal.ToFloat64(v)
 			if err == nil {
 				v = float

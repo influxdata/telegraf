@@ -21,6 +21,41 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
+func TestStringifyIDsWarning(t *testing.T) {
+	tr := true
+	fa := false
+	tests := []struct {
+		name        string
+		value       *bool
+		wantWarning bool
+	}{
+		{name: "unset emits warning", value: nil, wantWarning: true},
+		{name: "explicit true is silent", value: &tr, wantWarning: false},
+		{name: "explicit false is silent", value: &fa, wantWarning: false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			logger := &testutil.CaptureLogger{}
+			plugin := &Upsd{
+				Server:       defaultAddress,
+				Port:         defaultPort,
+				StringifyIDs: tc.value,
+				Log:          logger,
+			}
+			require.NoError(t, plugin.Init())
+
+			warnings := logger.Warnings()
+			if tc.wantWarning {
+				require.Len(t, warnings, 1)
+				require.Contains(t, warnings[0], "stringify_ids")
+			} else {
+				require.Empty(t, warnings)
+			}
+		})
+	}
+}
+
 func TestBadServer(t *testing.T) {
 	// Create and start a server without interactions
 	server := &mockServer{}

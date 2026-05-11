@@ -35,14 +35,9 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## parsed as integers and others as floats.
   # force_float = false
 
-  ## Force vendor/product IDs to always be emitted as strings to avoid type
-  ## conflicts between UPS devices with numeric-looking IDs (e.g. "0764",
-  ## auto-converted to int64 by the NUT client library) and UPS devices with
-  ## non-numeric IDs (e.g. "ABCD"). Affected fields: ups_vendorid, ups_productid,
-  ## driver_parameter_vendorid, driver_parameter_productid.
-  ## Note: leading zeros are lost on the wire (e.g. "0764" becomes "764").
-  ## If left unset, a warning is logged. The default will change to true in a
-  ## future release.
+  ## Emit vendor/product IDs as strings regardless of their value. Avoids
+  ## type conflicts when some UPS devices report numeric-looking IDs and
+  ## others report alphanumeric. See README for migration notes.
   # stringify_ids = false
 
   ## Collect additional fields if they are available for the UPS
@@ -95,9 +90,10 @@ strings. The default is currently `false` to preserve backwards-compatible
 behavior, but will flip to `true` in a future release. If the option is left
 unset, a warning is logged on startup.
 
-> **Note:** the NUT library parses `"0764"` into `int64(764)` before Telegraf
-> sees it, so the stringified value will be `"764"` — leading zeros are lost
-> and cannot be recovered at this layer.
+> [!NOTE]
+> The NUT library parses `"0764"` into `int64(764)` before Telegraf sees it,
+> so the stringified value will be `"764"`; leading zeros are lost and cannot
+> be recovered at this layer.
 
 ## Metrics
 
