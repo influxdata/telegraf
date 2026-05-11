@@ -156,7 +156,7 @@ func reserveNativePingID() (uint16, error) {
 		return id, nil
 	}
 
-	// All IDs are used, waiting for an ID to become available
+	// Waiting for an ID to become available if all are in use
 	for len(usedIDs) > math.MaxUint16 {
 		usedIDsCond.Wait()
 	}
@@ -166,9 +166,11 @@ func reserveNativePingID() (uint16, error) {
 		if uint16(i) == used {
 			continue
 		}
-		// We found an spot with a missing ID. Insert the biggest
-		// available in the spot to optimize searches and keep the list
-		// sorted.
+		// We found an spot with a missing ID. Insert the largest available ID
+		// in the spot to optimize for future searches and keep the list sorted.
+		// I.e. if the list is [10, 65535] we will insert '9' and get
+		// [9, 10, 65535], making the next search also taking only one iteration
+		// instead of two.
 		id := used - 1
 		usedIDs = slices.Insert(usedIDs, i, id)
 		return id, nil
