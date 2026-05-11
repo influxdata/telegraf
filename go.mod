@@ -47,7 +47,7 @@ require (
 	github.com/apache/arrow-go/v18 v18.6.0
 	github.com/apache/inlong/inlong-sdk/dataproxy-sdk-twins/dataproxy-sdk-golang v1.0.7
 	github.com/apache/iotdb-client-go v1.3.7
-	github.com/apache/thrift v0.22.0
+	github.com/apache/thrift v0.23.1-0.20260429145742-d2acd3c49e58
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
 	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
 	github.com/awnumar/memguard v0.23.0
