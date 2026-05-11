@@ -45,13 +45,13 @@ func TestInitFail(t *testing.T) {
 			name:      "unsupported perdevice_include",
 			perDevice: []string{"nonExistentClass"},
 			total:     []string{"cpu"},
-			expected:  "unknown choice nonExistentClass",
+			expected:  `invalid 'perdevice_include' setting "nonExistentClass"`,
 		},
 		{
 			name:      "unsupported total_include",
 			perDevice: []string{"cpu"},
 			total:     []string{"nonExistentClass"},
-			expected:  "unknown choice nonExistentClass",
+			expected:  `invalid 'total_include' setting "nonExistentClass"`,
 		},
 	}
 	for _, tt := range tests {
@@ -79,8 +79,6 @@ func TestCases(t *testing.T) {
 			TotalInclude:     []string{"cpu", "blkio", "network"},
 			Timeout:          config.Duration(time.Second * 5),
 			PodmanCacheTTL:   config.Duration(60 * time.Second),
-			newEnvClient:     newEnvClient,
-			newClient:        newClient,
 		}
 	})
 
@@ -265,8 +263,6 @@ func TestContainerLabels(t *testing.T) {
 				TotalInclude: []string{"cpu"},
 				Timeout:      config.Duration(time.Second * 5),
 				Log:          testutil.Logger{},
-				newClient:    newClient,
-				newEnvClient: newEnvClient,
 			}
 			require.NoError(t, plugin.Init())
 
@@ -369,8 +365,6 @@ func TestContainerNames(t *testing.T) {
 				ContainerExclude: tt.exclude,
 				Timeout:          config.Duration(time.Second * 5),
 				Log:              testutil.Logger{},
-				newClient:        newClient,
-				newEnvClient:     newEnvClient,
 			}
 			require.NoError(t, plugin.Init())
 
@@ -555,8 +549,6 @@ func TestContainerStatus(t *testing.T) {
 				IncludeSourceTag: true,
 				Timeout:          config.Duration(time.Second * 5),
 				Log:              testutil.Logger{},
-				newClient:        newClient,
-				newEnvClient:     newEnvClient,
 			}
 			require.NoError(t, plugin.Init())
 
@@ -731,8 +723,6 @@ func TestGatherInfo(t *testing.T) {
 		TotalInclude:     []string{"cpu", "blkio", "network"},
 		Timeout:          config.Duration(time.Second * 5),
 		Log:              testutil.Logger{},
-		newClient:        newClient,
-		newEnvClient:     newEnvClient,
 	}
 	require.NoError(t, plugin.Init())
 
@@ -816,8 +806,6 @@ func TestGatherSwarmInfo(t *testing.T) {
 		GatherServices: true,
 		Timeout:        config.Duration(time.Second * 5),
 		Log:            testutil.Logger{},
-		newClient:      newClient,
-		newEnvClient:   newEnvClient,
 	}
 	require.NoError(t, plugin.Init())
 
@@ -914,8 +902,6 @@ func TestGatherDiskUsage(t *testing.T) {
 		StorageObjects: []string{"container"},
 		Timeout:        config.Duration(time.Second * 5),
 		Log:            testutil.Logger{},
-		newClient:      newClient,
-		newEnvClient:   newEnvClient,
 	}
 	require.NoError(t, plugin.Init())
 
@@ -1013,8 +999,6 @@ func TestContainerStateFilter(t *testing.T) {
 				ContainerStateExclude: tt.exclude,
 				Timeout:               config.Duration(time.Second * 5),
 				Log:                   testutil.Logger{},
-				newClient:             newClient,
-				newEnvClient:          newEnvClient,
 			}
 			require.NoError(t, plugin.Init())
 
@@ -1084,11 +1068,9 @@ func TestContainerName(t *testing.T) {
 
 			// Setup plugin
 			plugin := &Docker{
-				Endpoint:     addr,
-				Timeout:      config.Duration(time.Second * 5),
-				Log:          testutil.Logger{},
-				newClient:    newClient,
-				newEnvClient: newEnvClient,
+				Endpoint: addr,
+				Timeout:  config.Duration(time.Second * 5),
+				Log:      testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 
@@ -1286,9 +1268,8 @@ func TestStartupErrorBehaviorError(t *testing.T) {
 	// Test that model.Start returns error when Ping fails with default "error" behavior
 	// Uses the startup-error-behavior framework (TSD-006)
 	plugin := &Docker{
-		Endpoint:  server.URL,
-		Timeout:   config.Duration(100 * time.Millisecond),
-		newClient: newClient,
+		Endpoint: server.URL,
+		Timeout:  config.Duration(100 * time.Millisecond),
 	}
 	model := models.NewRunningInput(plugin, &models.InputConfig{
 		Name:  "docker",
@@ -1301,7 +1282,7 @@ func TestStartupErrorBehaviorError(t *testing.T) {
 
 	// Starting the plugin will fail with an error because Ping fails
 	var acc testutil.Accumulator
-	require.ErrorContains(t, model.Start(&acc), "failed to ping Docker daemon")
+	require.ErrorContains(t, model.Start(&acc), "failed to ping daemon")
 	model.Stop()
 }
 
@@ -1311,9 +1292,8 @@ func TestStartupErrorBehaviorIgnore(t *testing.T) {
 
 	// Test that model.Start returns fatal error with "ignore" behavior when Ping fails
 	plugin := &Docker{
-		Endpoint:  server.URL,
-		Timeout:   config.Duration(100 * time.Millisecond),
-		newClient: newClient,
+		Endpoint: server.URL,
+		Timeout:  config.Duration(100 * time.Millisecond),
 	}
 	model := models.NewRunningInput(plugin, &models.InputConfig{
 		Name:                 "docker",
@@ -1327,7 +1307,7 @@ func TestStartupErrorBehaviorIgnore(t *testing.T) {
 
 	// Starting the plugin will fail and model should convert to fatal error
 	var acc testutil.Accumulator
-	require.ErrorContains(t, model.Start(&acc), "failed to ping Docker daemon")
+	require.ErrorContains(t, model.Start(&acc), "failed to ping daemon")
 	model.Stop()
 }
 
@@ -1337,9 +1317,8 @@ func TestStartupErrorBehaviorRetry(t *testing.T) {
 
 	// Test that model.Start returns fatal error with "ignore" behavior when Ping fails
 	plugin := &Docker{
-		Endpoint:  failedServer.URL,
-		Timeout:   config.Duration(100 * time.Millisecond),
-		newClient: newClient,
+		Endpoint: failedServer.URL,
+		Timeout:  config.Duration(100 * time.Millisecond),
 	}
 	model := models.NewRunningInput(plugin, &models.InputConfig{
 		Name:                 "docker",
@@ -1381,9 +1360,8 @@ func TestStartupSuccess(t *testing.T) {
 
 	// Test that Start succeeds when Docker is available
 	plugin := &Docker{
-		Endpoint:  addr,
-		Timeout:   config.Duration(5 * time.Second),
-		newClient: newClient,
+		Endpoint: addr,
+		Timeout:  config.Duration(5 * time.Second),
 	}
 	model := models.NewRunningInput(plugin, &models.InputConfig{
 		Name:  "docker",
