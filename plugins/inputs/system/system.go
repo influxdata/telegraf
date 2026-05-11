@@ -236,7 +236,9 @@ func gatherOS() (map[string]interface{}, error) {
 
 // gatherDMI reads BIOS, baseboard, chassis and product DMI/SMBIOS information.
 func gatherDMI() (map[string]interface{}, error) {
-	ctx := ghw.WithDisableWarnings()(ghw.WithDisableTools()(ghw.ContextFromEnv()))
+	ctx := ghw.ContextFromEnv()
+	ctx = ghw.WithDisableWarnings()(ctx)
+	ctx = ghw.WithDisableTools()(ctx)
 
 	fields := make(map[string]interface{})
 
