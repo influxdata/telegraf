@@ -16,7 +16,6 @@ import (
 	"github.com/docker/docker/api/types/swarm"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/internal/docker"
 	docker_stats "github.com/influxdata/telegraf/plugins/common/docker"
 )
@@ -330,6 +329,7 @@ func (d *Docker) gatherContainerInfo(acc telegraf.Accumulator, cntnr container.S
 	}
 
 	if info.State != nil {
+		tags["container_status"] = info.State.Status
 		addStateMetric(acc, &info, tags, cntnr.ID)
 		addHealthMetric(acc, &info, tags)
 	}
@@ -385,7 +385,6 @@ func (d *Docker) gatherContainerStats(acc telegraf.Accumulator, tags map[string]
 }
 
 func addStateMetric(acc telegraf.Accumulator, info *container.InspectResponse, tags map[string]string, id string) {
-	tags["container_status"] = info.State.Status
 	statefields := map[string]interface{}{
 		"oomkilled":     info.State.OOMKilled,
 		"pid":           info.State.Pid,
@@ -420,7 +419,6 @@ func addHealthMetric(acc telegraf.Accumulator, info *container.InspectResponse, 
 	if info.State.Health == nil {
 		return
 	}
-	tags["container_status"] = info.State.Status
 
 	healthfields := map[string]interface{}{
 		"health_status":  info.State.Health.Status,
@@ -578,17 +576,13 @@ func (d *Docker) addNetworkMetrics(acc telegraf.Accumulator, stats *container.St
 				default:
 					continue
 				}
-
-				if _, ok := totalNetworkStatMap[field]; ok {
-					totalNetworkStatMap[field] = 0
-				}
 				totalNetworkStatMap[field] += value
 			}
 		}
 	}
 
 	// totalNetworkStatMap could be empty if container is running with --net=host.
-	if choice.Contains("network", d.TotalInclude) && len(totalNetworkStatMap) != 0 {
+	if slices.Contains(d.TotalInclude, "network") && len(totalNetworkStatMap) != 0 {
 		nettags := maps.Clone(tags)
 		nettags["network"] = "total"
 
@@ -673,10 +667,6 @@ func (d *Docker) addBlockIOMetrics(acc telegraf.Accumulator, stat *container.Sta
 					value = uint64(v)
 				default:
 					continue
-				}
-
-				if _, ok := totalStatMap[field]; ok {
-					totalStatMap[field] = 0
 				}
 				totalStatMap[field] += value
 			}

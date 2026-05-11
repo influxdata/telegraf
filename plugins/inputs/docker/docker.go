@@ -265,6 +265,9 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 				acc.AddError(err)
 				return
 			}
+			if tags == nil {
+				return
+			}
 			acc.AddError(d.gatherContainerStats(acc, tags, c.ID))
 		}(cntnr)
 	}
