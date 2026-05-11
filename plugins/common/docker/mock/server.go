@@ -27,7 +27,7 @@ type Logs struct {
 type Server struct {
 	Info     system.Info
 	List     []container.Summary
-	Disks    container.DiskUsage
+	Disks    system.DiskUsage
 	RawDisks []byte // Raw response as the disks response format depends on the API version
 	Inspect  map[string]container.InspectResponse
 	Stats    map[string]container.StatsResponse
