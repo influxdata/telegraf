@@ -453,7 +453,6 @@ func TestMetricMaxRegistersWorkaround(t *testing.T) {
 	}
 	require.NoError(t, plugin.Init())
 
-	// Check the resulting requests
 	require.Len(t, plugin.requests, 1)
 	require.Contains(t, plugin.requests, byte(1))
 	require.Len(t, plugin.requests[1].coil, 2, "coil")

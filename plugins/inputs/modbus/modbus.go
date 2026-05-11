@@ -142,6 +142,13 @@ func (m *Modbus) Init() error {
 		return fmt.Errorf("retries cannot be negative in device %q", m.Name)
 	}
 
+	if m.Workarounds.MaxBitRegistersPerRequest > maxQuantityCoils {
+		return fmt.Errorf("maximum number of bit-registers cannot exceed %d", maxQuantityCoils)
+	}
+	if m.Workarounds.MaxWordRegistersPerRequest > maxQuantityHoldingRegisters {
+		return fmt.Errorf("maximum number of word-registers cannot exceed %d", maxQuantityHoldingRegisters)
+	}
+
 	// Determine the configuration style
 	var cfg configuration
 	switch m.ConfigurationType {
