@@ -187,7 +187,7 @@ func freeNativePingID(id uint16) {
 	usedIDsCond.L.Unlock()
 
 	// Signal all waiting pingers to check for the free ID
-	usedIDsCond.Broadcast()
+	usedIDsCond.Signal()
 }
 
 func (p *Ping) nativePing(destination string, id int) (*pingStats, error) {
