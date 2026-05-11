@@ -388,7 +388,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
     # max_bit_registers_per_request = 2000
 
     ## Maximum number of input or holding registers to read per request
-    ## The specification defines this limits to 125 but some devices only
+    ## The specification defines this limit as 125 but some devices only
     ## support a smaller number per request
     # max_word_registers_per_request = 125
 ```
