@@ -180,7 +180,7 @@ func TestBrowseNextRPCErrorPropagates(t *testing.T) {
 	require.ErrorContains(t, err, "browse-next request failed")
 }
 
-func TestBrowsePathSegmentsPreserved(t *testing.T) {
+func TestBrowsePathPreserved(t *testing.T) {
 	fake := newFakeBrowseClient()
 	fake.refs["i=85"] = []*ua.ReferenceDescription{
 		makeRef(t, "ns=2;s=Objects", "Objects", ua.NodeClassObject),
