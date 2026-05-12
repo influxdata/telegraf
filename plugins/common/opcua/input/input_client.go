@@ -15,6 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/opcua"
 )
@@ -269,7 +270,7 @@ func (o *InputClientConfig) Validate() error {
 			if p.Pattern == "" {
 				return fmt.Errorf("browse path at index %d has empty pattern", i)
 			}
-			if _, err := opcua.CompilePathPattern(p.Pattern); err != nil {
+			if _, err := filter.Compile([]string{p.Pattern}, '/'); err != nil {
 				return fmt.Errorf("invalid browse pattern at index %d: %w", i, err)
 			}
 		}

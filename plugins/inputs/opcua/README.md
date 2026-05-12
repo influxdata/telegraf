@@ -227,6 +227,7 @@ to use them.
   #   ##   **      zero or more segments (recursive descent)
   #   ##   ?       single character within a segment
   #   ##   [abc]   character class within a segment
+  #   ##   {a,b}   alternation: any of the comma-separated alternatives
   #   ##   \       escapes the next character
   #   ## Multiple paths may be configured; a node matching multiple patterns
   #   ## appears in each matching group.
@@ -485,8 +486,8 @@ configuration stays backwards compatible with any explicit `nodes` or
 
 ### Pattern Syntax
 
-Patterns operate on browse-path segments split on `/`. Each segment uses
-the same glob rules as Go's `path.Match`:
+Patterns are compiled by Telegraf's `filter` package with `/` as the segment
+separator:
 
 | Token   | Meaning                                              |
 |---------|------------------------------------------------------|
@@ -495,6 +496,7 @@ the same glob rules as Go's `path.Match`:
 | `**`    | zero or more segments (recursive descent)            |
 | `?`     | single character within a segment                    |
 | `[abc]` | character class within a segment                     |
+| `{a,b}` | alternation: any of the comma-separated alternatives |
 | `\`     | escapes the next character                           |
 
 A node matched by multiple patterns appears in each matching group;

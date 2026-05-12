@@ -3,6 +3,7 @@ package opcua
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/id"
@@ -23,15 +24,16 @@ type browseClient interface {
 // Compile-time check that *opcua.Client satisfies browseClient.
 var _ browseClient = (*opcua.Client)(nil)
 
-// BrowsedNode is a single node discovered from the address space. PathSegments
-// holds the browse-path segments from the browse root to this node, exclusive
-// of the root itself.
+// BrowsedNode is a single node discovered from the address space. Path is the
+// slash-joined browse path from the browse root to this node, exclusive of the
+// root itself, suitable for matching against a filter.Filter compiled with "/"
+// as the separator.
 type BrowsedNode struct {
-	NodeID       *ua.NodeID
-	BrowseName   string
-	DisplayName  string
-	NodeClass    ua.NodeClass
-	PathSegments []string
+	NodeID      *ua.NodeID
+	BrowseName  string
+	DisplayName string
+	NodeClass   ua.NodeClass
+	Path        string
 }
 
 // AddressSpaceBrowser walks an OPC UA server's address space using the
@@ -61,7 +63,7 @@ func (b *AddressSpaceBrowser) Browse(ctx context.Context, rootID *ua.NodeID) ([]
 	}
 
 	var nodes []*BrowsedNode
-	visited := map[string]struct{}{rootID.String(): {}}
+	visited := map[string]bool{rootID.String(): true}
 
 	type queueItem struct {
 		nodeID *ua.NodeID
@@ -134,10 +136,10 @@ func (b *AddressSpaceBrowser) Browse(ctx context.Context, rootID *ua.NodeID) ([]
 
 			for _, ref := range refs {
 				key := ref.NodeID.String()
-				if _, seen := visited[key]; seen {
+				if visited[key] {
 					continue
 				}
-				visited[key] = struct{}{}
+				visited[key] = true
 
 				childPath := make([]string, len(batch[i].path)+1)
 				copy(childPath, batch[i].path)
@@ -145,11 +147,11 @@ func (b *AddressSpaceBrowser) Browse(ctx context.Context, rootID *ua.NodeID) ([]
 
 				childID := ua.NewNodeIDFromExpandedNodeID(ref.NodeID)
 				nodes = append(nodes, &BrowsedNode{
-					NodeID:       childID,
-					BrowseName:   ref.BrowseName.Name,
-					DisplayName:  ref.DisplayName.Text,
-					NodeClass:    ref.NodeClass,
-					PathSegments: childPath,
+					NodeID:      childID,
+					BrowseName:  ref.BrowseName.Name,
+					DisplayName: ref.DisplayName.Text,
+					NodeClass:   ref.NodeClass,
+					Path:        strings.Join(childPath, "/"),
 				})
 
 				if b.MaxNodes > 0 && len(nodes) >= b.MaxNodes {

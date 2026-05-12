@@ -11,9 +11,9 @@ import (
 
 func TestResolveBrowsedNodesDispatchesByPattern(t *testing.T) {
 	nodes := []*opcua.BrowsedNode{
-		browsedVariable(t, "ns=2;s=Plant1.Device1.MV01", "MV01", []string{"Plant1", "Device1", "MV01"}),
-		browsedVariable(t, "ns=2;s=Plant1.Device2.MV02", "MV02", []string{"Plant1", "Device2", "MV02"}),
-		browsedVariable(t, "ns=2;s=Plant1.Device1.Temperature", "Temperature", []string{"Plant1", "Device1", "Temperature"}),
+		browsedVariable(t, "ns=2;s=Plant1.Device1.MV01", "MV01", "Plant1/Device1/MV01"),
+		browsedVariable(t, "ns=2;s=Plant1.Device2.MV02", "MV02", "Plant1/Device2/MV02"),
+		browsedVariable(t, "ns=2;s=Plant1.Device1.Temperature", "Temperature", "Plant1/Device1/Temperature"),
 	}
 	paths := []BrowsePathSettings{
 		{Pattern: "Plant1/*/MV*", MetricName: "valves"},
@@ -38,12 +38,12 @@ func TestResolveBrowsedNodesDispatchesByPattern(t *testing.T) {
 func TestResolveBrowsedNodesSkipsNonVariables(t *testing.T) {
 	nodes := []*opcua.BrowsedNode{
 		{
-			NodeID:       mustParseNodeID(t, "ns=2;s=Plant1"),
-			BrowseName:   "Plant1",
-			NodeClass:    ua.NodeClassObject,
-			PathSegments: []string{"Plant1"},
+			NodeID:     mustParseNodeID(t, "ns=2;s=Plant1"),
+			BrowseName: "Plant1",
+			NodeClass:  ua.NodeClassObject,
+			Path:       "Plant1",
 		},
-		browsedVariable(t, "ns=2;s=Plant1.MV01", "MV01", []string{"Plant1", "MV01"}),
+		browsedVariable(t, "ns=2;s=Plant1.MV01", "MV01", "Plant1/MV01"),
 	}
 	paths := []BrowsePathSettings{
 		{Pattern: "Plant1/**", MetricName: "all"},
@@ -58,7 +58,7 @@ func TestResolveBrowsedNodesSkipsNonVariables(t *testing.T) {
 
 func TestResolveBrowsedNodesAppliesDefaultTags(t *testing.T) {
 	nodes := []*opcua.BrowsedNode{
-		browsedVariable(t, "ns=2;s=Plant1.MV01", "MV01", []string{"Plant1", "MV01"}),
+		browsedVariable(t, "ns=2;s=Plant1.MV01", "MV01", "Plant1/MV01"),
 	}
 	paths := []BrowsePathSettings{
 		{
@@ -75,7 +75,7 @@ func TestResolveBrowsedNodesAppliesDefaultTags(t *testing.T) {
 
 func TestResolveBrowsedNodesEmptyResultPerPath(t *testing.T) {
 	nodes := []*opcua.BrowsedNode{
-		browsedVariable(t, "ns=2;s=Plant1.MV01", "MV01", []string{"Plant1", "MV01"}),
+		browsedVariable(t, "ns=2;s=Plant1.MV01", "MV01", "Plant1/MV01"),
 	}
 	paths := []BrowsePathSettings{
 		{Pattern: "Plant2/**", MetricName: "other"},
@@ -89,7 +89,7 @@ func TestResolveBrowsedNodesEmptyResultPerPath(t *testing.T) {
 
 func TestResolveBrowsedNodesNodeMatchesMultiplePatterns(t *testing.T) {
 	nodes := []*opcua.BrowsedNode{
-		browsedVariable(t, "ns=2;s=Plant1.MV01", "MV01", []string{"Plant1", "MV01"}),
+		browsedVariable(t, "ns=2;s=Plant1.MV01", "MV01", "Plant1/MV01"),
 	}
 	paths := []BrowsePathSettings{
 		{Pattern: "Plant1/MV*", MetricName: "by_prefix"},
@@ -104,12 +104,12 @@ func TestResolveBrowsedNodesNodeMatchesMultiplePatterns(t *testing.T) {
 
 func TestResolveBrowsedNodesSkipsEmptyBrowseName(t *testing.T) {
 	nodes := []*opcua.BrowsedNode{
-		browsedVariable(t, "ns=2;s=Plant1.MV01", "MV01", []string{"Plant1", "MV01"}),
+		browsedVariable(t, "ns=2;s=Plant1.MV01", "MV01", "Plant1/MV01"),
 		{
-			NodeID:       mustParseNodeID(t, "ns=2;s=Plant1.unnamed"),
-			BrowseName:   "",
-			NodeClass:    ua.NodeClassVariable,
-			PathSegments: []string{"Plant1", ""},
+			NodeID:     mustParseNodeID(t, "ns=2;s=Plant1.unnamed"),
+			BrowseName: "",
+			NodeClass:  ua.NodeClassVariable,
+			Path:       "Plant1/",
 		},
 	}
 	paths := []BrowsePathSettings{
@@ -193,13 +193,13 @@ func TestValidateBrowseAloneIsSufficient(t *testing.T) {
 	require.NoError(t, cfg.Validate())
 }
 
-func browsedVariable(t *testing.T, nodeID, browseName string, segments []string) *opcua.BrowsedNode {
+func browsedVariable(t *testing.T, nodeID, browseName, path string) *opcua.BrowsedNode {
 	t.Helper()
 	return &opcua.BrowsedNode{
-		NodeID:       mustParseNodeID(t, nodeID),
-		BrowseName:   browseName,
-		NodeClass:    ua.NodeClassVariable,
-		PathSegments: segments,
+		NodeID:     mustParseNodeID(t, nodeID),
+		BrowseName: browseName,
+		NodeClass:  ua.NodeClassVariable,
+		Path:       path,
 	}
 }
 

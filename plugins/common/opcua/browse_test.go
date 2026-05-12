@@ -33,11 +33,11 @@ func TestBrowseSingleLevel(t *testing.T) {
 	require.Len(t, nodes, 2)
 
 	require.Equal(t, "Plant1", nodes[0].BrowseName)
-	require.Equal(t, []string{"Plant1"}, nodes[0].PathSegments)
+	require.Equal(t, "Plant1", nodes[0].Path)
 	require.Equal(t, ua.NodeClassObject, nodes[0].NodeClass)
 
 	require.Equal(t, "ServerTime", nodes[1].BrowseName)
-	require.Equal(t, []string{"ServerTime"}, nodes[1].PathSegments)
+	require.Equal(t, "ServerTime", nodes[1].Path)
 	require.Equal(t, ua.NodeClassVariable, nodes[1].NodeClass)
 }
 
@@ -63,7 +63,7 @@ func TestBrowseDescendsOnlyContainers(t *testing.T) {
 
 	mv01 := findByName(nodes, "MV01")
 	require.NotNil(t, mv01)
-	require.Equal(t, []string{"Plant1", "MV01"}, mv01.PathSegments)
+	require.Equal(t, "Plant1/MV01", mv01.Path)
 }
 
 func TestBrowseCycleDetection(t *testing.T) {
@@ -200,7 +200,7 @@ func TestBrowsePathSegmentsPreserved(t *testing.T) {
 
 	mv01 := findByName(nodes, "MV01")
 	require.NotNil(t, mv01)
-	require.Equal(t, []string{"Objects", "Plant1", "Device1", "MV01"}, mv01.PathSegments)
+	require.Equal(t, "Objects/Plant1/Device1/MV01", mv01.Path)
 }
 
 func TestBrowseBatching(t *testing.T) {
