@@ -225,6 +225,7 @@ func TestGRPCDialoutError(t *testing.T) {
 	}
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
 
 	addr := plugin.listener.Addr().String()
 
