@@ -338,13 +338,13 @@ cpu,42
 	plugin.InitialReadOffset = "beginning"
 	plugin.Files = []string{tmpfile}
 	plugin.SetParserFunc(func() (telegraf.Parser, error) {
-		parser := csv.Parser{
+		parser := &csv.Parser{
 			MeasurementColumn: "measurement",
 			HeaderRowCount:    1,
-			TimeFunc:          func() time.Time { return time.Unix(0, 0) },
 		}
+		parser.SetTimeFunc(func() time.Time { return time.Unix(0, 0) })
 		err := parser.Init()
-		return &parser, err
+		return parser, err
 	})
 	require.NoError(t, plugin.Init())
 
@@ -412,15 +412,15 @@ skip2,mem,100
 	plugin.InitialReadOffset = "beginning"
 	plugin.Files = []string{tmpfile}
 	plugin.SetParserFunc(func() (telegraf.Parser, error) {
-		parser := csv.Parser{
+		parser := &csv.Parser{
 			MeasurementColumn: "measurement1",
 			HeaderRowCount:    2,
 			SkipRows:          1,
 			SkipColumns:       1,
-			TimeFunc:          func() time.Time { return time.Unix(0, 0) },
 		}
+		parser.SetTimeFunc(func() time.Time { return time.Unix(0, 0) })
 		err := parser.Init()
-		return &parser, err
+		return parser, err
 	})
 	require.NoError(t, plugin.Init())
 

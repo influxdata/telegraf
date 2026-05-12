@@ -752,7 +752,7 @@ func TestConfig_ParserInterface(t *testing.T) {
 			param: map[string]interface{}{
 				"HeaderRowCount": 42,
 			},
-			mask: []string{"TimeFunc", "ResetMode"},
+			mask: []string{"ResetMode"},
 		},
 		"xpath_protobuf": {
 			param: map[string]interface{}{
@@ -970,7 +970,7 @@ func TestConfig_ProcessorsWithParsers(t *testing.T) {
 			param: map[string]interface{}{
 				"HeaderRowCount": 42,
 			},
-			mask: []string{"TimeFunc", "ResetMode"},
+			mask: []string{"ResetMode"},
 		},
 		"xpath_protobuf": {
 			param: map[string]interface{}{
