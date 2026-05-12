@@ -211,7 +211,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.42.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.42.0
 	github.com/thomasklein94/packer-plugin-libvirt v0.5.0
-	github.com/tidwall/gjson v1.18.0
+	github.com/tidwall/gjson v1.19.0
 	github.com/tidwall/wal v1.2.1
 	github.com/tinylib/msgp v1.6.4
 	github.com/urfave/cli/v2 v2.27.7
