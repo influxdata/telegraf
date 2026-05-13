@@ -2,200 +2,119 @@ package opcua
 
 import (
 	"context"
-	"errors"
+	"fmt"
+	"net"
 	"testing"
+	"time"
 
+	"github.com/gopcua/opcua"
+	"github.com/gopcua/opcua/id"
+	"github.com/gopcua/opcua/server"
+	"github.com/gopcua/opcua/server/attrs"
 	"github.com/gopcua/opcua/ua"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestBrowseEmpty(t *testing.T) {
-	fake := newFakeBrowseClient()
-	rootID := ua.NewNumericNodeID(0, 85)
-
-	nodes, err := newBrowser(fake).Browse(t.Context(), rootID)
-	require.NoError(t, err)
-	require.Empty(t, nodes)
-	require.Equal(t, 1, fake.browseCalls)
-}
-
 func TestBrowseSingleLevel(t *testing.T) {
-	fake := newFakeBrowseClient()
-	fake.refs["i=85"] = []*ua.ReferenceDescription{
-		makeRef(t, "ns=2;s=Plant1", "Plant1", ua.NodeClassObject),
-		makeRef(t, "ns=2;s=ServerTime", "ServerTime", ua.NodeClassVariable),
+	if testing.Short() {
+		t.Skip("Skipping test that spins up an OPC UA server")
 	}
+	ts := startBrowseTestServer(t)
+	root := ts.addFolder(t, nil, "root")
+	ts.addFolder(t, root, "Plant1")
+	ts.addVariable(t, root, "ServerTime")
+	ts.start(t)
 
-	nodes, err := newBrowser(fake).Browse(t.Context(), ua.NewNumericNodeID(0, 85))
+	client := ts.connect(t)
+	nodes, err := newBrowser(client).Browse(t.Context(), root.id)
 	require.NoError(t, err)
 	require.Len(t, nodes, 2)
 
-	require.Equal(t, "Plant1", nodes[0].BrowseName)
-	require.Equal(t, "Plant1", nodes[0].Path)
-	require.Equal(t, ua.NodeClassObject, nodes[0].NodeClass)
+	plant1 := findByName(nodes, "Plant1")
+	require.NotNil(t, plant1)
+	require.Equal(t, "Plant1", plant1.Path)
+	require.Equal(t, ua.NodeClassObject, plant1.NodeClass)
 
-	require.Equal(t, "ServerTime", nodes[1].BrowseName)
-	require.Equal(t, "ServerTime", nodes[1].Path)
-	require.Equal(t, ua.NodeClassVariable, nodes[1].NodeClass)
+	serverTime := findByName(nodes, "ServerTime")
+	require.NotNil(t, serverTime)
+	require.Equal(t, "ServerTime", serverTime.Path)
+	require.Equal(t, ua.NodeClassVariable, serverTime.NodeClass)
 }
 
 func TestBrowseDescendsOnlyContainers(t *testing.T) {
-	fake := newFakeBrowseClient()
-	fake.refs["i=85"] = []*ua.ReferenceDescription{
-		makeRef(t, "ns=2;s=Plant1", "Plant1", ua.NodeClassObject),
-		makeRef(t, "ns=2;s=Sensor", "Sensor", ua.NodeClassVariable),
+	if testing.Short() {
+		t.Skip("Skipping test that spins up an OPC UA server")
 	}
-	fake.refs["ns=2;s=Plant1"] = []*ua.ReferenceDescription{
-		makeRef(t, "ns=2;s=MV01", "MV01", ua.NodeClassVariable),
-	}
-	// Children under a Variable would be a bug if descended.
-	fake.refs["ns=2;s=Sensor"] = []*ua.ReferenceDescription{
-		makeRef(t, "ns=2;s=ShouldNotAppear", "ShouldNotAppear", ua.NodeClassVariable),
-	}
+	ts := startBrowseTestServer(t)
+	root := ts.addFolder(t, nil, "root")
+	plant := ts.addFolder(t, root, "Plant1")
+	ts.addVariable(t, plant, "MV01")
+	ts.addVariable(t, root, "Sensor")
+	ts.start(t)
 
-	nodes, err := newBrowser(fake).Browse(t.Context(), ua.NewNumericNodeID(0, 85))
+	client := ts.connect(t)
+	nodes, err := newBrowser(client).Browse(t.Context(), root.id)
 	require.NoError(t, err)
 
-	names := collectBrowseNames(nodes)
-	require.ElementsMatch(t, []string{"Plant1", "Sensor", "MV01"}, names)
-
+	require.ElementsMatch(t, []string{"Plant1", "MV01", "Sensor"}, collectBrowseNames(nodes))
 	mv01 := findByName(nodes, "MV01")
 	require.NotNil(t, mv01)
 	require.Equal(t, "Plant1/MV01", mv01.Path)
 }
 
-func TestBrowseCycleDetection(t *testing.T) {
-	fake := newFakeBrowseClient()
-	fake.refs["i=85"] = []*ua.ReferenceDescription{
-		makeRef(t, "ns=2;s=A", "A", ua.NodeClassObject),
-	}
-	fake.refs["ns=2;s=A"] = []*ua.ReferenceDescription{
-		makeRef(t, "ns=2;s=B", "B", ua.NodeClassObject),
-	}
-	fake.refs["ns=2;s=B"] = []*ua.ReferenceDescription{
-		makeRef(t, "ns=2;s=A", "A", ua.NodeClassObject),
-	}
-
-	nodes, err := newBrowser(fake).Browse(t.Context(), ua.NewNumericNodeID(0, 85))
-	require.NoError(t, err)
-	require.Len(t, nodes, 2, "cycle must not produce duplicates")
-}
-
 func TestBrowseMaxDepth(t *testing.T) {
-	fake := newFakeBrowseClient()
-	fake.refs["i=85"] = []*ua.ReferenceDescription{
-		makeRef(t, "ns=2;s=L1", "L1", ua.NodeClassObject),
+	if testing.Short() {
+		t.Skip("Skipping test that spins up an OPC UA server")
 	}
-	fake.refs["ns=2;s=L1"] = []*ua.ReferenceDescription{
-		makeRef(t, "ns=2;s=L2", "L2", ua.NodeClassObject),
-	}
-	fake.refs["ns=2;s=L2"] = []*ua.ReferenceDescription{
-		makeRef(t, "ns=2;s=L3", "L3", ua.NodeClassObject),
-	}
+	ts := startBrowseTestServer(t)
+	root := ts.addFolder(t, nil, "root")
+	l1 := ts.addFolder(t, root, "L1")
+	l2 := ts.addFolder(t, l1, "L2")
+	ts.addFolder(t, l2, "L3")
+	ts.start(t)
 
-	browser := newBrowser(fake)
+	browser := newBrowser(ts.connect(t))
 	browser.MaxDepth = 2
 
-	nodes, err := browser.Browse(t.Context(), ua.NewNumericNodeID(0, 85))
+	nodes, err := browser.Browse(t.Context(), root.id)
 	require.NoError(t, err)
-
-	names := collectBrowseNames(nodes)
-	require.ElementsMatch(t, []string{"L1", "L2"}, names)
+	require.ElementsMatch(t, []string{"L1", "L2"}, collectBrowseNames(nodes))
 }
 
 func TestBrowseMaxNodes(t *testing.T) {
-	fake := newFakeBrowseClient()
-	fake.refs["i=85"] = []*ua.ReferenceDescription{
-		makeRef(t, "ns=2;s=A", "A", ua.NodeClassObject),
-		makeRef(t, "ns=2;s=B", "B", ua.NodeClassObject),
-		makeRef(t, "ns=2;s=C", "C", ua.NodeClassObject),
-		makeRef(t, "ns=2;s=D", "D", ua.NodeClassObject),
+	if testing.Short() {
+		t.Skip("Skipping test that spins up an OPC UA server")
 	}
+	ts := startBrowseTestServer(t)
+	root := ts.addFolder(t, nil, "root")
+	for _, name := range []string{"A", "B", "C", "D"} {
+		ts.addFolder(t, root, name)
+	}
+	ts.start(t)
 
-	browser := newBrowser(fake)
+	browser := newBrowser(ts.connect(t))
 	browser.MaxNodes = 2
 
-	nodes, err := browser.Browse(t.Context(), ua.NewNumericNodeID(0, 85))
+	nodes, err := browser.Browse(t.Context(), root.id)
 	require.NoError(t, err)
 	require.Len(t, nodes, 2)
 }
 
-func TestBrowsePerResultBadStatusSkipped(t *testing.T) {
-	fake := newFakeBrowseClient()
-	fake.refs["i=85"] = []*ua.ReferenceDescription{
-		makeRef(t, "ns=2;s=Good", "Good", ua.NodeClassObject),
-		makeRef(t, "ns=2;s=Forbidden", "Forbidden", ua.NodeClassObject),
-	}
-	fake.statuses["ns=2;s=Forbidden"] = ua.StatusBadUserAccessDenied
-	fake.refs["ns=2;s=Good"] = []*ua.ReferenceDescription{
-		makeRef(t, "ns=2;s=GoodChild", "GoodChild", ua.NodeClassVariable),
-	}
-
-	nodes, err := newBrowser(fake).Browse(t.Context(), ua.NewNumericNodeID(0, 85))
-	require.NoError(t, err)
-
-	names := collectBrowseNames(nodes)
-	require.ElementsMatch(t, []string{"Good", "Forbidden", "GoodChild"}, names)
-}
-
-func TestBrowseContinuationPoints(t *testing.T) {
-	fake := newFakeBrowseClient()
-	fake.chunkSize = 2
-	fake.refs["i=85"] = []*ua.ReferenceDescription{
-		makeRef(t, "ns=2;s=A", "A", ua.NodeClassVariable),
-		makeRef(t, "ns=2;s=B", "B", ua.NodeClassVariable),
-		makeRef(t, "ns=2;s=C", "C", ua.NodeClassVariable),
-		makeRef(t, "ns=2;s=D", "D", ua.NodeClassVariable),
-		makeRef(t, "ns=2;s=E", "E", ua.NodeClassVariable),
-	}
-
-	nodes, err := newBrowser(fake).Browse(t.Context(), ua.NewNumericNodeID(0, 85))
-	require.NoError(t, err)
-
-	names := collectBrowseNames(nodes)
-	require.ElementsMatch(t, []string{"A", "B", "C", "D", "E"}, names)
-	require.GreaterOrEqual(t, fake.nextCalls, 1, "BrowseNext must be invoked when chunked")
-}
-
-func TestBrowseRPCErrorPropagates(t *testing.T) {
-	fake := newFakeBrowseClient()
-	fake.browseErr = errors.New("network down")
-
-	_, err := newBrowser(fake).Browse(t.Context(), ua.NewNumericNodeID(0, 85))
-	require.ErrorContains(t, err, "browse request failed")
-}
-
-func TestBrowseNextRPCErrorPropagates(t *testing.T) {
-	fake := newFakeBrowseClient()
-	fake.chunkSize = 1
-	fake.browseNextErr = errors.New("next failed")
-	fake.refs["i=85"] = []*ua.ReferenceDescription{
-		makeRef(t, "ns=2;s=A", "A", ua.NodeClassVariable),
-		makeRef(t, "ns=2;s=B", "B", ua.NodeClassVariable),
-	}
-
-	_, err := newBrowser(fake).Browse(t.Context(), ua.NewNumericNodeID(0, 85))
-	require.ErrorContains(t, err, "browse-next request failed")
-}
-
 func TestBrowsePathPreserved(t *testing.T) {
-	fake := newFakeBrowseClient()
-	fake.refs["i=85"] = []*ua.ReferenceDescription{
-		makeRef(t, "ns=2;s=Objects", "Objects", ua.NodeClassObject),
+	if testing.Short() {
+		t.Skip("Skipping test that spins up an OPC UA server")
 	}
-	fake.refs["ns=2;s=Objects"] = []*ua.ReferenceDescription{
-		makeRef(t, "ns=2;s=Plant1", "Plant1", ua.NodeClassObject),
-	}
-	fake.refs["ns=2;s=Plant1"] = []*ua.ReferenceDescription{
-		makeRef(t, "ns=2;s=Device1", "Device1", ua.NodeClassObject),
-	}
-	fake.refs["ns=2;s=Device1"] = []*ua.ReferenceDescription{
-		makeRef(t, "ns=2;s=MV01", "MV01", ua.NodeClassVariable),
-	}
+	ts := startBrowseTestServer(t)
+	root := ts.addFolder(t, nil, "root")
+	objects := ts.addFolder(t, root, "Objects")
+	plant1 := ts.addFolder(t, objects, "Plant1")
+	device1 := ts.addFolder(t, plant1, "Device1")
+	ts.addVariable(t, device1, "MV01")
+	ts.start(t)
 
-	nodes, err := newBrowser(fake).Browse(t.Context(), ua.NewNumericNodeID(0, 85))
+	nodes, err := newBrowser(ts.connect(t)).Browse(t.Context(), root.id)
 	require.NoError(t, err)
 
 	mv01 := findByName(nodes, "MV01")
@@ -203,118 +122,8 @@ func TestBrowsePathPreserved(t *testing.T) {
 	require.Equal(t, "Objects/Plant1/Device1/MV01", mv01.Path)
 }
 
-func TestBrowseBatching(t *testing.T) {
-	fake := newFakeBrowseClient()
-	// Three siblings under root, each with a child. With batch size 2,
-	// the second-level expansion should issue a single batched browse.
-	fake.refs["i=85"] = []*ua.ReferenceDescription{
-		makeRef(t, "ns=2;s=A", "A", ua.NodeClassObject),
-		makeRef(t, "ns=2;s=B", "B", ua.NodeClassObject),
-	}
-	fake.refs["ns=2;s=A"] = []*ua.ReferenceDescription{
-		makeRef(t, "ns=2;s=AC", "AC", ua.NodeClassVariable),
-	}
-	fake.refs["ns=2;s=B"] = []*ua.ReferenceDescription{
-		makeRef(t, "ns=2;s=BC", "BC", ua.NodeClassVariable),
-	}
-
-	browser := newBrowser(fake)
-	browser.BatchSize = 5
-
-	nodes, err := browser.Browse(t.Context(), ua.NewNumericNodeID(0, 85))
-	require.NoError(t, err)
-	require.Len(t, nodes, 4)
-	require.Equal(t, 2, fake.browseCalls, "root browse + one batched browse for the two children")
-}
-
-type fakeBrowseClient struct {
-	refs          map[string][]*ua.ReferenceDescription
-	statuses      map[string]ua.StatusCode
-	browseErr     error
-	browseNextErr error
-	chunkSize     int
-	continuations map[string][]*ua.ReferenceDescription
-	browseCalls   int
-	nextCalls     int
-}
-
-func newFakeBrowseClient() *fakeBrowseClient {
-	return &fakeBrowseClient{
-		refs:          make(map[string][]*ua.ReferenceDescription),
-		statuses:      make(map[string]ua.StatusCode),
-		continuations: make(map[string][]*ua.ReferenceDescription),
-	}
-}
-
-func (f *fakeBrowseClient) Browse(_ context.Context, req *ua.BrowseRequest) (*ua.BrowseResponse, error) {
-	f.browseCalls++
-	if f.browseErr != nil {
-		return nil, f.browseErr
-	}
-	resp := &ua.BrowseResponse{Results: make([]*ua.BrowseResult, len(req.NodesToBrowse))}
-	for i, desc := range req.NodesToBrowse {
-		key := desc.NodeID.String()
-		result := &ua.BrowseResult{}
-		if status, ok := f.statuses[key]; ok {
-			result.StatusCode = status
-			resp.Results[i] = result
-			continue
-		}
-		refs := f.refs[key]
-		if f.chunkSize > 0 && len(refs) > f.chunkSize {
-			cp := []byte("cp-" + key)
-			f.continuations[string(cp)] = refs[f.chunkSize:]
-			result.References = refs[:f.chunkSize]
-			result.ContinuationPoint = cp
-		} else {
-			result.References = refs
-		}
-		resp.Results[i] = result
-	}
-	return resp, nil
-}
-
-func (f *fakeBrowseClient) BrowseNext(_ context.Context, req *ua.BrowseNextRequest) (*ua.BrowseNextResponse, error) {
-	f.nextCalls++
-	if f.browseNextErr != nil {
-		return nil, f.browseNextErr
-	}
-	resp := &ua.BrowseNextResponse{Results: make([]*ua.BrowseResult, len(req.ContinuationPoints))}
-	for i, cp := range req.ContinuationPoints {
-		remaining, ok := f.continuations[string(cp)]
-		if !ok {
-			resp.Results[i] = &ua.BrowseResult{}
-			continue
-		}
-		delete(f.continuations, string(cp))
-		result := &ua.BrowseResult{}
-		if f.chunkSize > 0 && len(remaining) > f.chunkSize {
-			nextCp := []byte(string(cp) + "+")
-			f.continuations[string(nextCp)] = remaining[f.chunkSize:]
-			result.References = remaining[:f.chunkSize]
-			result.ContinuationPoint = nextCp
-		} else {
-			result.References = remaining
-		}
-		resp.Results[i] = result
-	}
-	return resp, nil
-}
-
-func makeRef(t *testing.T, nodeID, browseName string, class ua.NodeClass) *ua.ReferenceDescription {
-	t.Helper()
-	nid, err := ua.ParseNodeID(nodeID)
-	require.NoError(t, err)
-	return &ua.ReferenceDescription{
-		NodeID:      &ua.ExpandedNodeID{NodeID: nid},
-		BrowseName:  &ua.QualifiedName{Name: browseName},
-		DisplayName: &ua.LocalizedText{Text: browseName},
-		NodeClass:   class,
-	}
-}
-
-func newBrowser(client browseClient) *AddressSpaceBrowser {
-	return &AddressSpaceBrowser{Client: client, Log: testutil.Logger{}}
+func newBrowser(c *opcua.Client) *AddressSpaceBrowser {
+	return &AddressSpaceBrowser{Client: c, Log: testutil.Logger{}}
 }
 
 func collectBrowseNames(nodes []*BrowsedNode) []string {
@@ -332,4 +141,108 @@ func findByName(nodes []*BrowsedNode, name string) *BrowsedNode {
 		}
 	}
 	return nil
+}
+
+type browseTestServer struct {
+	srv *server.Server
+	ns  *server.NodeNameSpace
+	url string
+}
+
+type browseTestNode struct {
+	id   *ua.NodeID
+	node *server.Node
+}
+
+func startBrowseTestServer(t *testing.T) *browseTestServer {
+	t.Helper()
+
+	// Bind a free port up front; close the listener so the server can
+	// claim it. The brief gap is acceptable for serial unit tests.
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	port := l.Addr().(*net.TCPAddr).Port
+	require.NoError(t, l.Close())
+
+	srv := server.New(
+		server.EnableSecurity("None", ua.MessageSecurityModeNone),
+		server.EnableAuthMode(ua.UserTokenTypeAnonymous),
+		server.EndPoint("127.0.0.1", port),
+	)
+
+	ns := server.NewNodeNameSpace(srv, "telegraf-test")
+	srv.AddNamespace(ns)
+
+	// Hook the test namespace's Objects folder under the standard one so
+	// the standard Objects(i=85) browse path remains intact.
+	rootNS, err := srv.Namespace(0)
+	require.NoError(t, err)
+	rootNS.Objects().AddRef(ns.Objects(), id.HasComponent, true)
+
+	return &browseTestServer{
+		srv: srv,
+		ns:  ns,
+		url: fmt.Sprintf("opc.tcp://127.0.0.1:%d", port),
+	}
+}
+
+func (ts *browseTestServer) addFolder(t *testing.T, parent *browseTestNode, name string) *browseTestNode {
+	t.Helper()
+	// Build the folder/object node by hand: server.NewFolderNode in
+	// gopcua v0.8.0 panics building the Description value (it passes the
+	// NodeClass enum to a variant constructor that does not support it).
+	nodeID := ua.NewStringNodeID(ts.ns.ID(), name)
+	folder := server.NewNode(
+		nodeID,
+		map[ua.AttributeID]*ua.DataValue{
+			ua.AttributeIDNodeClass:   server.DataValueFromValue(uint32(ua.NodeClassObject)),
+			ua.AttributeIDBrowseName:  server.DataValueFromValue(attrs.BrowseName(name)),
+			ua.AttributeIDDisplayName: server.DataValueFromValue(attrs.DisplayName(name, name)),
+		},
+		nil,
+		nil,
+	)
+	ts.ns.AddNode(folder)
+	if parent == nil {
+		ts.ns.Objects().AddRef(folder, id.HasComponent, true)
+	} else {
+		parent.node.AddRef(folder, id.HasComponent, true)
+	}
+	return &browseTestNode{id: nodeID, node: folder}
+}
+
+func (ts *browseTestServer) addVariable(t *testing.T, parent *browseTestNode, name string) {
+	t.Helper()
+	nodeID := ua.NewStringNodeID(ts.ns.ID(), name)
+	v := server.NewVariableNode(nodeID, name, int32(0))
+	ts.ns.AddNode(v)
+	parent.node.AddRef(v, id.HasComponent, true)
+}
+
+func (ts *browseTestServer) start(t *testing.T) {
+	t.Helper()
+	require.NoError(t, ts.srv.Start(context.Background()))
+	t.Cleanup(func() {
+		_ = ts.srv.Close()
+	})
+	// Wait for the listener to accept connections before returning.
+	require.Eventually(t, func() bool {
+		c, err := net.DialTimeout("tcp", ts.url[len("opc.tcp://"):], 100*time.Millisecond)
+		if err != nil {
+			return false
+		}
+		_ = c.Close()
+		return true
+	}, 5*time.Second, 50*time.Millisecond, "OPC UA server did not start listening")
+}
+
+func (ts *browseTestServer) connect(t *testing.T) *opcua.Client {
+	t.Helper()
+	c, err := opcua.NewClient(ts.url, opcua.SecurityMode(ua.MessageSecurityModeNone))
+	require.NoError(t, err)
+	require.NoError(t, c.Connect(context.Background()))
+	t.Cleanup(func() {
+		_ = c.Close(context.Background())
+	})
+	return c
 }

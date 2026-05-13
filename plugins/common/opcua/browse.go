@@ -13,16 +13,6 @@ import (
 
 const defaultBrowseBatchSize = 50
 
-// browseClient is the subset of *opcua.Client used by AddressSpaceBrowser.
-// Defined as an interface so tests can supply a fake without a live server.
-type browseClient interface {
-	Browse(ctx context.Context, req *ua.BrowseRequest) (*ua.BrowseResponse, error)
-	BrowseNext(ctx context.Context, req *ua.BrowseNextRequest) (*ua.BrowseNextResponse, error)
-}
-
-// Compile-time check that *opcua.Client satisfies browseClient.
-var _ browseClient = (*opcua.Client)(nil)
-
 // BrowsedNode is a single node discovered from the address space. Path is the
 // slash-joined browse path from the browse root to this node, exclusive of the
 // root itself, suitable for matching against a filter.Filter compiled with "/"
@@ -46,7 +36,7 @@ type BrowsedNode struct {
 // browsing stops and the partial result is returned. BatchSize controls how
 // many nodes are browsed per request (0 falls back to defaultBrowseBatchSize).
 type AddressSpaceBrowser struct {
-	Client    browseClient
+	Client    *opcua.Client
 	Log       telegraf.Logger
 	MaxDepth  int
 	MaxNodes  int
