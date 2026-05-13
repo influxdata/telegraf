@@ -132,7 +132,7 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 				fields["n_users"] = len(users)
 				fields["n_unique_users"] = findUniqueUsers(users)
 			} else if os.IsNotExist(err) {
-				s.Log.Debugf("Reading users: %s", err.Error())
+				s.Log.Tracef("Reading users: %s", err.Error())
 			} else if os.IsPermission(err) {
 				s.Log.Debug(err.Error())
 			} else {
