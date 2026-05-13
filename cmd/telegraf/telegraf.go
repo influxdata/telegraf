@@ -359,7 +359,9 @@ func (*Telegraf) watchRemoteConfigs(ctx context.Context, signals chan os.Signal,
 					continue
 				}
 
-				if v, exists := os.LookupEnv("INFLUX_TOKEN"); exists {
+				if v, exists := os.LookupEnv("TELEGRAF_CONTROLLER_TOKEN"); exists {
+					req.Header.Add("Authorization", "Bearer "+v)
+				} else if v, exists := os.LookupEnv("INFLUX_TOKEN"); exists {
 					req.Header.Add("Authorization", "Token "+v)
 				}
 				req.Header.Set("User-Agent", internal.ProductToken())

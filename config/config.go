@@ -903,7 +903,9 @@ func fetchConfig(u *url.URL, urlRetryAttempts int) ([]byte, error) {
 		return nil, err
 	}
 
-	if v, exists := os.LookupEnv("INFLUX_TOKEN"); exists {
+	if v, exists := os.LookupEnv("TELEGRAF_CONTROLLER_TOKEN"); exists {
+		req.Header.Add("Authorization", "Bearer "+v)
+	} else if v, exists := os.LookupEnv("INFLUX_TOKEN"); exists {
 		req.Header.Add("Authorization", "Token "+v)
 	}
 	req.Header.Add("Accept", "application/toml")
