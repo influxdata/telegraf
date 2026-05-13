@@ -209,6 +209,9 @@ type BrowsePathSettings struct {
 	Pattern     string            `toml:"pattern"`
 	MetricName  string            `toml:"name"`
 	DefaultTags map[string]string `toml:"default_tags"`
+
+	// Internal fields
+	compiled filter.Filter
 }
 
 // BrowseConfig configures address-space discovery for the input client.
@@ -271,13 +274,16 @@ func (o *InputClientConfig) Validate() error {
 			return fmt.Errorf("invalid browse root %q: %w", o.Browse.Root, err)
 		}
 		o.Browse.parsedRoot = rootID
-		for i, p := range o.Browse.Paths {
+		for i := range o.Browse.Paths {
+			p := &o.Browse.Paths[i]
 			if p.Pattern == "" {
 				return fmt.Errorf("browse path at index %d has empty pattern", i)
 			}
-			if _, err := filter.Compile([]string{p.Pattern}, '/'); err != nil {
+			f, err := filter.Compile([]string{p.Pattern}, '/')
+			if err != nil {
 				return fmt.Errorf("invalid browse pattern at index %d: %w", i, err)
 			}
+			p.compiled = f
 		}
 	}
 
@@ -399,18 +405,7 @@ func (o *OpcUAInputClient) DiscoverNodes(ctx context.Context) error {
 	}
 	o.Log.Infof("Browse discovered %d nodes from root %q", len(nodes), o.Config.Browse.Root)
 
-	groups, err := ResolveBrowsedNodes(nodes, o.Config.Browse.Paths)
-	if err != nil {
-		return err
-	}
-
-	matched := 0
-	for i, g := range groups {
-		matched += len(g.Nodes)
-		if len(g.Nodes) == 0 {
-			o.Log.Warnf("Browse pattern %q matched no nodes", o.Config.Browse.Paths[i].Pattern)
-		}
-	}
+	groups, matched := ResolveBrowsedNodes(nodes, o.Config.Browse.Paths)
 	o.Log.Infof("Browse patterns matched %d variables", matched)
 
 	o.Config.Groups = append(o.Config.Groups, groups...)
