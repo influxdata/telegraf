@@ -3,7 +3,6 @@ package opcua
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/id"
@@ -67,35 +66,36 @@ func (b *AddressSpaceBrowser) Browse(ctx context.Context, rootID *ua.NodeID) ([]
 
 	type queueItem struct {
 		nodeID *ua.NodeID
-		path   []string
+		path   string
 		depth  int
 	}
 	queue := []queueItem{{nodeID: rootID}}
 
 	for len(queue) > 0 {
-		var batch []queueItem
-		for len(queue) > 0 && len(batch) < batchSize {
-			item := queue[0]
-			queue = queue[1:]
+		// Consume up to batchSize items from the queue, skipping items past
+		// MaxDepth in place, and build the per-item BrowseDescription in the
+		// same pass.
+		batch := make([]queueItem, 0, batchSize)
+		descs := make([]*ua.BrowseDescription, 0, batchSize)
+		consumed := 0
+		for ; consumed < len(queue) && len(batch) < batchSize; consumed++ {
+			item := queue[consumed]
 			if b.MaxDepth > 0 && item.depth >= b.MaxDepth {
 				continue
 			}
 			batch = append(batch, item)
-		}
-		if len(batch) == 0 {
-			continue
-		}
-
-		descs := make([]*ua.BrowseDescription, len(batch))
-		for i, item := range batch {
-			descs[i] = &ua.BrowseDescription{
+			descs = append(descs, &ua.BrowseDescription{
 				NodeID:          item.nodeID,
 				BrowseDirection: ua.BrowseDirectionForward,
 				ReferenceTypeID: ua.NewNumericNodeID(0, id.HierarchicalReferences),
 				IncludeSubtypes: true,
 				NodeClassMask:   uint32(ua.NodeClassAll),
 				ResultMask:      uint32(ua.BrowseResultMaskAll),
-			}
+			})
+		}
+		queue = queue[consumed:]
+		if len(batch) == 0 {
+			continue
 		}
 
 		// Batched Browse: one RPC carries up to batchSize BrowseDescriptions.
@@ -115,6 +115,9 @@ func (b *AddressSpaceBrowser) Browse(ctx context.Context, rootID *ua.NodeID) ([]
 
 			refs := result.References
 			cont := result.ContinuationPoint
+			// Drain continuation points: BrowseNext returns the *next* page of
+			// references for this BrowseDescription, not a fresh first page,
+			// so we append onto refs rather than replacing it.
 			for len(cont) > 0 {
 				next, err := b.Client.BrowseNext(ctx, &ua.BrowseNextRequest{
 					ContinuationPoints: [][]byte{cont},
@@ -125,6 +128,7 @@ func (b *AddressSpaceBrowser) Browse(ctx context.Context, rootID *ua.NodeID) ([]
 				if len(next.Results) == 0 {
 					break
 				}
+				// One continuation point in, one result out.
 				nextResult := next.Results[0]
 				if nextResult.StatusCode != ua.StatusOK {
 					b.Log.Debugf("Browse-next failed for %s: %v", batch[i].nodeID, nextResult.StatusCode)
@@ -141,9 +145,10 @@ func (b *AddressSpaceBrowser) Browse(ctx context.Context, rootID *ua.NodeID) ([]
 				}
 				visited[key] = true
 
-				childPath := make([]string, len(batch[i].path)+1)
-				copy(childPath, batch[i].path)
-				childPath[len(childPath)-1] = ref.BrowseName.Name
+				childPath := ref.BrowseName.Name
+				if batch[i].path != "" {
+					childPath = batch[i].path + "/" + ref.BrowseName.Name
+				}
 
 				childID := ua.NewNodeIDFromExpandedNodeID(ref.NodeID)
 				nodes = append(nodes, &BrowsedNode{
@@ -151,7 +156,7 @@ func (b *AddressSpaceBrowser) Browse(ctx context.Context, rootID *ua.NodeID) ([]
 					BrowseName:  ref.BrowseName.Name,
 					DisplayName: ref.DisplayName.Text,
 					NodeClass:   ref.NodeClass,
-					Path:        strings.Join(childPath, "/"),
+					Path:        childPath,
 				})
 
 				if b.MaxNodes > 0 && len(nodes) >= b.MaxNodes {
