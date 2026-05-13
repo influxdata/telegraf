@@ -374,6 +374,8 @@ func TestEnableFlagEnabled(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 
-	expected := &cryptotls.Config{}
+	expected := &cryptotls.Config{
+		MinVersion: cryptotls.VersionTLS12,
+	}
 	require.Equal(t, expected, cfg)
 }

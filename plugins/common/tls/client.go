@@ -43,7 +43,9 @@ func (c *ClientConfig) TLSConfig() (*tls.Config, error) {
 		// Check if TLS config is forcefully enabled and supposed to
 		// use the system defaults.
 		if c.Enable != nil && *c.Enable {
-			return &tls.Config{}, nil
+			return &tls.Config{
+				MinVersion: TLSMinVersionDefault,
+			}, nil
 		}
 
 		return nil, nil
