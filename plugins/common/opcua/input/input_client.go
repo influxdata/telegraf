@@ -219,6 +219,9 @@ type BrowseConfig struct {
 	Depth    int                  `toml:"depth"`
 	MaxNodes int                  `toml:"max_nodes"`
 	Paths    []BrowsePathSettings `toml:"paths"`
+
+	// Internal fields
+	parsedRoot *ua.NodeID
 }
 
 // InputClientConfig a configuration for the input client
@@ -263,9 +266,11 @@ func (o *InputClientConfig) Validate() error {
 			// OPC UA Objects folder, the standard top of the user-visible address space.
 			o.Browse.Root = "ns=0;i=85"
 		}
-		if _, err := ua.ParseNodeID(o.Browse.Root); err != nil {
+		rootID, err := ua.ParseNodeID(o.Browse.Root)
+		if err != nil {
 			return fmt.Errorf("invalid browse root %q: %w", o.Browse.Root, err)
 		}
+		o.Browse.parsedRoot = rootID
 		for i, p := range o.Browse.Paths {
 			if p.Pattern == "" {
 				return fmt.Errorf("browse path at index %d has empty pattern", i)
@@ -382,18 +387,13 @@ type OpcUAInputClient struct {
 // errored, so misconfiguration on a partially populated server does not
 // prevent collection from explicit nodes.
 func (o *OpcUAInputClient) DiscoverNodes(ctx context.Context) error {
-	rootID, err := ua.ParseNodeID(o.Config.Browse.Root)
-	if err != nil {
-		return fmt.Errorf("parsing browse root %q: %w", o.Config.Browse.Root, err)
-	}
-
 	browser := &opcua.AddressSpaceBrowser{
 		Client:   o.Client,
 		Log:      o.Log,
 		MaxDepth: o.Config.Browse.Depth,
 		MaxNodes: o.Config.Browse.MaxNodes,
 	}
-	nodes, err := browser.Browse(ctx, rootID)
+	nodes, err := browser.Browse(ctx, o.Config.Browse.parsedRoot)
 	if err != nil {
 		return fmt.Errorf("browsing address space failed: %w", err)
 	}
