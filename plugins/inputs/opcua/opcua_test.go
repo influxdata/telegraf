@@ -132,14 +132,14 @@ func TestReadClientBrowseDiscoveryIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, client.connect())
-	require.True(t, client.mappingInitialized, "mapping should be initialized after first connect")
 	require.NotEmpty(t, client.NodeMetricMapping, "browse should discover at least one variable under Server/**")
 
-	// Reconnect must not re-run discovery or grow the mapping.
+	// Reconnect re-runs discovery against an unchanged server; mapping size
+	// must stay bounded rather than grow with each reconnect.
 	mappingSize := len(client.NodeMetricMapping)
 	require.NoError(t, client.Disconnect(t.Context()))
 	require.NoError(t, client.connect())
-	require.Len(t, client.NodeMetricMapping, mappingSize, "reconnect must not re-run browse discovery")
+	require.Len(t, client.NodeMetricMapping, mappingSize, "rediscovery must not grow the mapping")
 }
 
 func TestReadClientIntegration(t *testing.T) {

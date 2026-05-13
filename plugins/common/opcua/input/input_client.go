@@ -312,10 +312,11 @@ func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputC
 	}
 
 	c := &OpcUAInputClient{
-		OpcUAClient: opcClient,
-		Log:         log,
-		Config:      *o,
-		EventGroups: o.EventGroups,
+		OpcUAClient:    opcClient,
+		Log:            log,
+		Config:         *o,
+		EventGroups:    o.EventGroups,
+		userGroupCount: len(o.Groups),
 	}
 
 	// Browse-based discovery defers metric mapping until after Connect.
@@ -385,14 +386,19 @@ type OpcUAInputClient struct {
 	LastReceivedData       []NodeValue
 	EventGroups            []EventGroupSettings
 	EventNodeMetricMapping []EventNodeMetricMapping
+
+	// Internal fields
+	userGroupCount int
 }
 
 // DiscoverNodes walks the address space using the configured browse settings
-// and appends the resolved node groups onto the client's configuration. It
-// is safe to call once after the client is connected and the namespace array
-// has been fetched. Patterns that match no nodes are warned about, not
-// errored, so misconfiguration on a partially populated server does not
-// prevent collection from explicit nodes.
+// and replaces any previously discovered node groups on the client's
+// configuration with the freshly resolved ones. User-supplied groups (those
+// present before any discovery) are preserved. Safe to call repeatedly across
+// reconnects so dynamically added or removed server nodes are picked up.
+// Browse failures bubble up as errors, but patterns that match no nodes only
+// produce a log entry so partial-server misconfiguration does not block
+// collection from explicit nodes.
 func (o *OpcUAInputClient) DiscoverNodes(ctx context.Context) error {
 	browser := &opcua.AddressSpaceBrowser{
 		Client:    o.Client,
@@ -410,7 +416,9 @@ func (o *OpcUAInputClient) DiscoverNodes(ctx context.Context) error {
 	groups, matched := ResolveBrowsedNodes(nodes, o.Config.Browse.Paths)
 	o.Log.Infof("Browse patterns matched %d variables", matched)
 
-	o.Config.Groups = append(o.Config.Groups, groups...)
+	// Drop the previously discovered groups before re-appending, so the
+	// effective Groups slice stays bounded across reconnects.
+	o.Config.Groups = append(o.Config.Groups[:o.userGroupCount], groups...)
 	return nil
 }
 
@@ -517,8 +525,11 @@ func validateNodeToAdd(existing map[metricParts]struct{}, nmm *NodeMetricMapping
 	return nil
 }
 
-// InitNodeMetricMapping builds nodes from the configuration
+// InitNodeMetricMapping builds nodes from the configuration. Safe to call
+// repeatedly: any previous mappings are discarded so the result reflects the
+// current Config.RootNodes and Config.Groups.
 func (o *OpcUAInputClient) InitNodeMetricMapping() error {
+	o.NodeMetricMapping = nil
 	existing := make(map[metricParts]struct{}, len(o.Config.RootNodes))
 	for _, node := range o.Config.RootNodes {
 		nmm, err := NewNodeMetricMapping(o.Config.MetricName, node, make(map[string]string))

@@ -39,10 +39,9 @@ type readClient struct {
 	Workarounds             readClientWorkarounds
 
 	// Internal flags
-	reqIDs             []*ua.ReadValueID
-	ctx                context.Context
-	forceReconnect     bool
-	mappingInitialized bool
+	reqIDs         []*ua.ReadValueID
+	ctx            context.Context
+	forceReconnect bool
 }
 
 func (rc *readClientConfig) createReadClient(log telegraf.Logger) (*readClient, error) {
@@ -98,17 +97,17 @@ func (o *readClient) connect() error {
 		// Continue anyway - this is only needed if using namespace URIs
 	}
 
-	// Browse-based discovery runs on the first connect only. Reconnects keep
-	// the previously built metric mapping; node IDs are refreshed below in
-	// case the server restarted with a renumbered namespace.
-	if len(o.Config.Browse.Paths) > 0 && !o.mappingInitialized {
+	// Browse-based discovery runs on every connect so server-side schema
+	// changes (added or removed nodes, renumbered namespaces) are picked up
+	// on reconnect. DiscoverNodes replaces the previously discovered groups
+	// and InitNodeMetricMapping rebuilds the mapping from scratch.
+	if len(o.Config.Browse.Paths) > 0 {
 		if err := o.OpcUAInputClient.DiscoverNodes(o.ctx); err != nil {
 			return fmt.Errorf("browse discovery failed: %w", err)
 		}
 		if err := o.OpcUAInputClient.InitNodeMetricMapping(); err != nil {
 			return fmt.Errorf("initializing node metric mapping failed: %w", err)
 		}
-		o.mappingInitialized = true
 	}
 
 	// Make sure we setup the node-ids correctly after reconnect
