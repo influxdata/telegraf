@@ -218,10 +218,11 @@ type BrowsePathSettings struct {
 // When Paths is empty, browse-based discovery is disabled and the existing
 // nodes/group/events configuration is used as-is.
 type BrowseConfig struct {
-	Root     string               `toml:"root"`
-	Depth    int                  `toml:"depth"`
-	MaxNodes int                  `toml:"max_nodes"`
-	Paths    []BrowsePathSettings `toml:"paths"`
+	Root      string               `toml:"root"`
+	Depth     int                  `toml:"depth"`
+	MaxNodes  int                  `toml:"max_nodes"`
+	BatchSize int                  `toml:"batch_size"`
+	Paths     []BrowsePathSettings `toml:"paths"`
 
 	// Internal fields
 	parsedRoot *ua.NodeID
@@ -394,10 +395,11 @@ type OpcUAInputClient struct {
 // prevent collection from explicit nodes.
 func (o *OpcUAInputClient) DiscoverNodes(ctx context.Context) error {
 	browser := &opcua.AddressSpaceBrowser{
-		Client:   o.Client,
-		Log:      o.Log,
-		MaxDepth: o.Config.Browse.Depth,
-		MaxNodes: o.Config.Browse.MaxNodes,
+		Client:    o.Client,
+		Log:       o.Log,
+		MaxDepth:  o.Config.Browse.Depth,
+		MaxNodes:  o.Config.Browse.MaxNodes,
+		BatchSize: o.Config.Browse.BatchSize,
 	}
 	nodes, err := browser.Browse(ctx, o.Config.Browse.parsedRoot)
 	if err != nil {

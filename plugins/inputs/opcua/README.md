@@ -221,6 +221,11 @@ to use them.
   #   ## Maximum number of discovered nodes. 0 means unlimited.
   #   # max_nodes = 0
   #
+  #   ## Number of nodes browsed per Browse request. 0 falls back to the
+  #   ## built-in default. Lower values reduce per-RPC payload at the cost
+  #   ## of more round trips; raise for fast servers and large trees.
+  #   # batch_size = 0
+  #
   #   ## Pattern-based discovery rules. Each path defines one glob pattern
   #   ## over browse-path segments. Pattern syntax:
   #   ##   *       any single segment (or any chars within a segment)
@@ -473,6 +478,9 @@ configuration stays backwards compatible with any explicit `nodes` or
   # Optional safety limits.
   depth = 10
   max_nodes = 50000
+
+  # Optional per-RPC tuning.
+  batch_size = 50
 
   [[inputs.opcua.browse.paths]]
     pattern = "Plant1/*/MV*"
