@@ -111,7 +111,7 @@ func (p *Parser) extractMetricsV2(ometrics *MetricFamily) []telegraf.Metric {
 			case MetricType_HISTOGRAM, MetricType_GAUGE_HISTOGRAM:
 				histogram := omp.GetHistogramValue()
 
-				// Add an overall metric containing the number of samples and and its sum
+				// Add an overall metric containing the number of samples and its sum
 				histFields := make(map[string]interface{})
 				histFields[metricName+"_count"] = float64(histogram.GetCount())
 				if s := histogram.GetSum(); s != nil {
