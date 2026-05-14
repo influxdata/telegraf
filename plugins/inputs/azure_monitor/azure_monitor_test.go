@@ -115,36 +115,26 @@ func (*mockAzureMetricDefinitionsClient) List(
 		return armmonitor.MetricDefinitionsClientListResponse{}, err
 	}
 
-	if resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type1/resource1" {
+	switch resourceID {
+	case "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type1/resource1":
 		return armmonitor.MetricDefinitionsClientListResponse{
 			MetricDefinitionCollection: armmonitor.MetricDefinitionCollection{
 				Value: metricDefinitions[0],
 			},
 		}, nil
-	}
-
-	if resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type2/resource2" {
+	case "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type2/resource2",
+		"/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type2/resource4",
+		"/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type2/resource5",
+		"/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type2/resource6":
 		return armmonitor.MetricDefinitionsClientListResponse{
 			MetricDefinitionCollection: armmonitor.MetricDefinitionCollection{
 				Value: metricDefinitions[1],
 			},
 		}, nil
-	}
-
-	if resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type1/resource3" {
+	case "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type1/resource3":
 		return armmonitor.MetricDefinitionsClientListResponse{
 			MetricDefinitionCollection: armmonitor.MetricDefinitionCollection{
 				Value: metricDefinitions[2],
-			},
-		}, nil
-	}
-
-	if resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type2/resource4" ||
-		resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type2/resource5" ||
-		resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type2/resource6" {
-		return armmonitor.MetricDefinitionsClientListResponse{
-			MetricDefinitionCollection: armmonitor.MetricDefinitionCollection{
-				Value: metricDefinitions[1],
 			},
 		}, nil
 	}

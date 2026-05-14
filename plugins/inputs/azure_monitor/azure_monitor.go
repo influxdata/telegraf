@@ -68,12 +68,6 @@ func (am *AzureMonitor) Init() error {
 	if am.SubscriptionID == "" {
 		return errors.New("subscription_id is required")
 	}
-	if am.ClientID == "" {
-		return errors.New("client_id is required")
-	}
-	if am.TenantID == "" {
-		return errors.New("tenant_id is required")
-	}
 
 	var clientOptions azcore.ClientOptions
 	switch am.CloudOption {
@@ -89,6 +83,12 @@ func (am *AzureMonitor) Init() error {
 
 	var clientSecret string
 	if !am.ClientSecret.Empty() {
+		if am.ClientID == "" {
+			return errors.New("client_id is required when client_secret is set")
+		}
+		if am.TenantID == "" {
+			return errors.New("tenant_id is required when client_secret is set")
+		}
 		secret, err := am.ClientSecret.Get()
 		if err != nil {
 			return fmt.Errorf("getting client secret failed: %w", err)
