@@ -113,6 +113,16 @@ func (o *Opensearch) Init() error {
 		return errors.New("template_name configuration not defined")
 	}
 
+	if o.ManageTemplate {
+		prefix := o.IndexName
+		if idx := strings.Index(prefix, "{{"); idx >= 0 {
+			prefix = prefix[:idx]
+		}
+		if prefix == "" {
+			return errors.New("template cannot be created for dynamic index names without an index prefix")
+		}
+	}
+
 	return nil
 }
 

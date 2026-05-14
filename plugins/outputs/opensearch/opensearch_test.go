@@ -312,6 +312,7 @@ func TestDisconnectedServerOnConnect(t *testing.T) {
 
 func TestConnectionIssueAtStartup(t *testing.T) {
 	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
+	defer ts.Close()
 
 	urls := []string{"http://" + ts.Listener.Addr().String()}
 
@@ -319,7 +320,7 @@ func TestConnectionIssueAtStartup(t *testing.T) {
 		URLs:            urls,
 		ManageTemplate:  true,
 		TemplateName:    "telegraf",
-		IndexName:       `{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
+		IndexName:       `test-{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
 		Timeout:         config.Duration(time.Second * 5),
 		AuthBearerToken: config.NewSecret([]byte("0123456789abcdef")),
 		Log:             testutil.Logger{},
@@ -339,6 +340,7 @@ func TestConnectionIssueAtStartup(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NoError(t, model.Init())
+	t.Cleanup(func() { model.Close() })
 
 	// The connect call should not fail even though the server is closed due to the "retry" strategy
 	require.NoError(t, model.Connect())
@@ -353,9 +355,6 @@ func TestConnectionIssueAtStartup(t *testing.T) {
 	// Start the server and check that writes succeed
 	ts.Start()
 	require.NoError(t, model.WriteBatch())
-
-	defer ts.Close()
-	model.Close()
 }
 
 func TestDisconnectedServerOnWrite(t *testing.T) {
