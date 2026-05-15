@@ -368,44 +368,51 @@ func TestGatherDMIValues(t *testing.T) {
 	t.Setenv("GHW_CHROOT", chroot)
 
 	s := &System{
-		Include: []string{"dmi"},
-		Log:     &testutil.Logger{},
+		Include:     []string{"dmi"},
+		DMICacheTTL: config.Duration(8 * time.Hour),
+		Log:         &testutil.Logger{},
 	}
 	require.NoError(t, s.Init())
 
+	expected := metric.New(
+		"system_dmi",
+		nil,
+		map[string]interface{}{
+			"bios_vendor":              "Telegraf BIOS, Inc.",
+			"bios_version":             "1.2.3",
+			"bios_date":                "01/01/2026",
+			"board_vendor":             "Telegraf Boards Co.",
+			"board_product":            "TG-BOARD-X1",
+			"board_version":            "A1",
+			"board_serial":             "BS-1234",
+			"board_asset_tag":          "ASSET-A",
+			"chassis_vendor":           "Telegraf Chassis Ltd.",
+			"chassis_type":             "3",
+			"chassis_type_description": "Desktop",
+			"chassis_version":          "v0",
+			"chassis_serial":           "CS-5678",
+			"chassis_asset_tag":        "ASSET-C",
+			"product_vendor":           "Telegraf Systems",
+			"product_name":             "TG-Server-9000",
+			"product_family":           "TG-Server",
+			"product_version":          "v9",
+			"product_serial":           "PS-9999",
+			"product_sku":              "SKU-XYZ",
+			"product_uuid":             "00000000-0000-0000-0000-000000000001",
+		},
+		time.Unix(0, 0),
+	)
+
 	var acc testutil.Accumulator
 	require.NoError(t, s.Gather(&acc))
+	firstCachedAt := s.dmiCachedAt
+	require.False(t, firstCachedAt.IsZero())
 
-	expected := []telegraf.Metric{
-		metric.New(
-			"system_dmi",
-			map[string]string{},
-			map[string]interface{}{
-				"bios_vendor":              "Telegraf BIOS, Inc.",
-				"bios_version":             "1.2.3",
-				"bios_date":                "01/01/2026",
-				"board_vendor":             "Telegraf Boards Co.",
-				"board_product":            "TG-BOARD-X1",
-				"board_version":            "A1",
-				"board_serial":             "BS-1234",
-				"board_asset_tag":          "ASSET-A",
-				"chassis_vendor":           "Telegraf Chassis Ltd.",
-				"chassis_type":             "3",
-				"chassis_type_description": "Desktop",
-				"chassis_version":          "v0",
-				"chassis_serial":           "CS-5678",
-				"chassis_asset_tag":        "ASSET-C",
-				"product_vendor":           "Telegraf Systems",
-				"product_name":             "TG-Server-9000",
-				"product_family":           "TG-Server",
-				"product_version":          "v9",
-				"product_serial":           "PS-9999",
-				"product_sku":              "SKU-XYZ",
-				"product_uuid":             "00000000-0000-0000-0000-000000000001",
-			},
-			time.Unix(0, 0),
-		),
-	}
+	// A second gather within the TTL must reuse the cached fields and
+	// must not re-read DMI from the system.
+	require.NoError(t, s.Gather(&acc))
+	require.Equal(t, firstCachedAt, s.dmiCachedAt)
 
-	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+	expected2 := []telegraf.Metric{expected, expected}
+	testutil.RequireMetricsEqual(t, expected2, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }

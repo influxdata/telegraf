@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"slices"
 	"strings"
 	"time"
 
@@ -20,7 +19,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -28,13 +26,16 @@ import (
 var sampleConfig string
 
 type System struct {
-	Include    []string        `toml:"include"`
-	OSCacheTTL config.Duration `toml:"os_cache_ttl"`
-	Log        telegraf.Logger `toml:"-"`
+	Include     []string        `toml:"include"`
+	OSCacheTTL  config.Duration `toml:"os_cache_ttl"`
+	DMICacheTTL config.Duration `toml:"dmi_cache_ttl"`
+	Log         telegraf.Logger `toml:"-"`
 
-	osCache    map[string]interface{}
-	osCachedAt time.Time
-	dmiMetric  telegraf.Metric
+	osCache     map[string]interface{}
+	osCachedAt  time.Time
+	dmiFields   map[string]interface{}
+	dmiCachedAt time.Time
+	dmiEnabled  bool
 }
 
 func (*System) SampleConfig() string {
@@ -97,9 +98,12 @@ func (s *System) Init() error {
 		return errors.New(`"uptime" and "legacy_uptime" are mutually exclusive`)
 	}
 
-	if enabled["dmi"] && !dmiSupported {
-		s.Log.Warn("'dmi' is not supported on this platform, ignoring")
-		s.Include = slices.DeleteFunc(s.Include, func(v string) bool { return v == "dmi" })
+	if enabled["dmi"] {
+		if dmiSupported {
+			s.dmiEnabled = true
+		} else {
+			s.Log.Warn("'dmi' is not supported on this platform, ignoring")
+		}
 	}
 
 	return nil
@@ -125,14 +129,20 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 				acc.AddFields("system_os", s.osCache, nil, now)
 			}
 		case "dmi":
-			if s.dmiMetric != nil {
-				s.dmiMetric.SetTime(now)
-				acc.AddMetric(s.dmiMetric)
-			} else if m, err := gatherDMI(now); err != nil {
-				acc.AddError(fmt.Errorf("gathering DMI information failed: %w", err))
-			} else {
-				s.dmiMetric = m
-				acc.AddMetric(m)
+			if !s.dmiEnabled {
+				continue
+			}
+			if time.Since(s.dmiCachedAt) > time.Duration(s.DMICacheTTL) {
+				dmiFields, err := gatherDMI()
+				if err != nil {
+					acc.AddError(err)
+				} else {
+					s.dmiFields = dmiFields
+					s.dmiCachedAt = now
+				}
+			}
+			if len(s.dmiFields) > 0 {
+				acc.AddFields("system_dmi", s.dmiFields, nil, now)
 			}
 		case "load":
 			loadavg, err := load.Avg()
@@ -234,7 +244,7 @@ func gatherOS() (map[string]interface{}, error) {
 }
 
 // gatherDMI reads BIOS, baseboard, chassis and product DMI/SMBIOS information.
-func gatherDMI(now time.Time) (telegraf.Metric, error) {
+func gatherDMI() (map[string]interface{}, error) {
 	ctx := ghw.ContextFromEnv()
 	ctx = ghw.WithDisableWarnings()(ctx)
 	ctx = ghw.WithDisableTools()(ctx)
@@ -290,7 +300,7 @@ func gatherDMI(now time.Time) (telegraf.Metric, error) {
 		fields["product_uuid"] = prod.UUID
 	}
 
-	return metric.New("system_dmi", nil, fields, now), nil
+	return fields, nil
 }
 
 func findUniqueUsers(userStats []host.UserStat) int {
@@ -329,7 +339,8 @@ func formatUptime(uptime uint64) string {
 func init() {
 	inputs.Add("system", func() telegraf.Input {
 		return &System{
-			OSCacheTTL: config.Duration(8 * time.Hour),
+			OSCacheTTL:  config.Duration(8 * time.Hour),
+			DMICacheTTL: config.Duration(8 * time.Hour),
 		}
 	})
 }

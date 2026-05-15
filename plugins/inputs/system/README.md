@@ -36,6 +36,11 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## surface distro upgrades and kexec'd kernels faster. Set to zero to
   ## re-read the data on every gather.
   # os_cache_ttl = "8h"
+
+  ## How long to cache the result of the "dmi" group between gathers.
+  ## DMI/SMBIOS data is effectively static for the life of the machine,
+  ## so a long cache is typical. Set to zero to re-read on every gather.
+  # dmi_cache_ttl = "8h"
 ```
 
 > [!NOTE]
@@ -74,8 +79,7 @@ DMI/SMBIOS. On Linux the data is read from `/sys/class/dmi/id/` and does not
 require root access for most fields; serial numbers and asset tags are
 generally restricted by the kernel. On Windows the data is read via WMI.
 macOS, BSD and Solaris are not supported and the `dmi` value is ignored
-there. The data is read once during plugin initialization since DMI/SMBIOS
-does not change at runtime.
+there. Results are cached between gathers, see `dmi_cache_ttl` above.
 
 ## Metrics
 
