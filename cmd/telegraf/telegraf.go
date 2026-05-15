@@ -402,6 +402,7 @@ func (t *Telegraf) loadConfiguration() (*config.Config, error) {
 	c.OutputFilters = t.outputFilters
 	c.InputFilters = t.inputFilters
 	c.SecretStoreFilters = t.secretstoreFilters
+	c.TestMode = !t.once && (t.test || t.testWait != 0)
 
 	if err := t.getConfigFiles(); err != nil {
 		return c, err

@@ -88,6 +88,9 @@ type Config struct {
 	InputFilters       []string
 	OutputFilters      []string
 	SecretStoreFilters []string
+	// TestMode keeps output parsing in place while avoiding resources only
+	// needed when outputs are actually used.
+	TestMode bool
 
 	SecretStores      map[string]telegraf.SecretStore
 	secretStoreSource map[string][]string
@@ -1784,7 +1787,12 @@ func (c *Config) buildOutput(name, source string, tbl *ast.Table) (*models.Outpu
 		return nil, c.firstErr()
 	}
 
-	if oc.BufferStrategy == "disk_write_through" {
+	if err := models.CheckBufferSettings(oc.BufferStrategy); err != nil {
+		return nil, err
+	}
+	if c.TestMode {
+		oc.BufferStrategy = "discard"
+	} else if oc.BufferStrategy == "disk_write_through" {
 		log.Printf("W! Using disk-write-through buffer strategy for plugin outputs.%s, this is an experimental feature", name)
 	}
 
