@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -679,4 +680,55 @@ func TestParseSubdirectoriesFilesIgnore(t *testing.T) {
 	// File should have gone back to the test directory, as we configured.
 	_, err = os.Stat(filepath.Join(finishedDirectory, testJSONFile))
 	require.NoError(t, err)
+}
+
+func TestPreserveTimestamps(t *testing.T) {
+	testJSONFile := "test.json"
+	originalTime := time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)
+
+	runMonitor := func(t *testing.T, preserve bool) os.FileInfo {
+		t.Helper()
+		acc := testutil.Accumulator{}
+		finishedDirectory := t.TempDir()
+		processDirectory := t.TempDir()
+
+		r := DirectoryMonitor{
+			Directory:          processDirectory,
+			FinishedDirectory:  finishedDirectory,
+			PreserveTimestamps: preserve,
+			MaxBufferedMetrics: defaultMaxBufferedMetrics,
+			FileQueueSize:      defaultFileQueueSize,
+			ParseMethod:        defaultParseMethod,
+		}
+		require.NoError(t, r.Init())
+		r.SetParserFunc(func() (telegraf.Parser, error) {
+			p := &json.Parser{NameKey: "Name"}
+			err := p.Init()
+			return p, err
+		})
+
+		srcPath := filepath.Join(processDirectory, testJSONFile)
+		require.NoError(t, os.WriteFile(srcPath, []byte(`{"Name": "event1", "Speed": 100.1}`), 0640))
+		require.NoError(t, os.Chtimes(srcPath, originalTime, originalTime))
+
+		r.Log = testutil.Logger{}
+		require.NoError(t, r.Start(&acc))
+		require.NoError(t, r.Gather(&acc))
+		acc.Wait(1)
+		r.Stop()
+
+		info, err := os.Stat(filepath.Join(finishedDirectory, testJSONFile))
+		require.NoError(t, err)
+		return info
+	}
+
+	t.Run("enabled keeps the original modification time", func(t *testing.T) {
+		info := runMonitor(t, true)
+		require.True(t, info.ModTime().Equal(originalTime), "expected %s, got %s", originalTime, info.ModTime())
+	})
+
+	t.Run("disabled uses the move time", func(t *testing.T) {
+		info := runMonitor(t, false)
+		require.False(t, info.ModTime().Equal(originalTime), "expected the move time, got the original timestamp")
+	})
 }
