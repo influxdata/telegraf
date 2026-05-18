@@ -105,7 +105,7 @@ func (c *GNMI) Init() error {
 	}
 
 	for i := range c.TagSubscriptions {
-		s := c.TagSubscriptions[i]
+		s := &c.TagSubscriptions[i]
 		if err := s.Build(c.Origin, c.Prefix, c.Target); err != nil {
 			return err
 		}
@@ -129,7 +129,7 @@ func (c *GNMI) Init() error {
 		if err := c.handler.AddAliasFromSubscription(s.Subscription); err != nil {
 			return fmt.Errorf("adding alias for tag-subscription %q (%s) failed: %w", s.Name, s.Path, err)
 		}
-		c.handler.AddTagSubscription(&s)
+		c.handler.AddTagSubscription(s)
 	}
 
 	// Add the user-specified aliases

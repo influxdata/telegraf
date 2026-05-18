@@ -22,7 +22,7 @@ import (
 // Define the warning to show if we cannot get a metric name.
 const emptyNameWarning = `Got empty metric-name for response (field %q), usually
 indicating configuration issues as the response cannot be related to any
-subscription.Please open an issue on https://github.com/influxdata/telegraf
+subscription. Please open an issue on https://github.com/influxdata/telegraf
 including your device model and the following response data:
 %+v
 This message is only printed once.`
@@ -39,31 +39,27 @@ type HandlerConfig struct {
 	EnforceFirstNamespaceAsOrigin bool     `toml:"-"`
 }
 
-func (cfg *HandlerConfig) Check() error {
+func (cfg *HandlerConfig) Handler(log telegraf.Logger) (*Handler, error) {
 	// Check vendor_specific options configured by user
 	if err := choice.CheckSlice(cfg.VendorExt, supportedExtensions); err != nil {
-		return fmt.Errorf("unsupported vendor_specific option: %w", err)
+		return nil, fmt.Errorf("unsupported vendor_specific option: %w", err)
 	}
 
 	// Check path guessing and handle deprecated option
 	switch cfg.GuessPathStrategy {
 	case "", "none", "common path", "subscription":
 	default:
-		return fmt.Errorf("invalid 'path_guessing_strategy' %q", cfg.GuessPathStrategy)
+		return nil, fmt.Errorf("invalid 'path_guessing_strategy' %q", cfg.GuessPathStrategy)
 	}
 
 	// Load the YANG models if specified by the user and check for errors early.
 	// We redo this later to actually use the decode.
 	if len(cfg.YangModelPaths) > 0 {
 		if _, err := yangmodel.NewDecoder(cfg.YangModelPaths...); err != nil {
-			return fmt.Errorf("invalid YANG model decoder: %w", err)
+			return nil, fmt.Errorf("invalid YANG model decoder: %w", err)
 		}
 	}
 
-	return nil
-}
-
-func (cfg *HandlerConfig) Handler(log telegraf.Logger) (*Handler, error) {
 	h := &Handler{
 		HandlerConfig: cfg,
 		aliases:       make(map[*pathInfo]string),
