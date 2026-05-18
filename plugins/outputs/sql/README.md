@@ -78,10 +78,10 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
-## Secret-store support
+## Secret store support
 
-This plugin supports secrets from secret-stores for the `data_source_name`
-option. See the [secret-store documentation][SECRETSTORE] for more details on
+This plugin supports secrets from secret stores for the `data_source_name`
+option. See the [secret store documentation][SECRETSTORE] for more details on
 how to use them.
 
 [SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
@@ -231,7 +231,7 @@ docs](https://modernc.org/sqlite) for details.
 
 ### clickhouse
 
-#### DSN
+#### Clickhouse DSN
 
 Note that even when the DSN is specified as `https://` the `secure=true`
 parameter is still required.
@@ -244,7 +244,7 @@ for warnings in your log file and refer to the
 
 [v2-dsn-docs]: https://github.com/ClickHouse/clickhouse-go/tree/v2.30.2?tab=readme-ov-file#dsn
 
-#### Metric type to SQL type conversion
+#### Clickhouse metric type to SQL type conversion
 
 The following configuration makes the mapping compatible with Clickhouse:
 
@@ -268,7 +268,7 @@ types](https://clickhouse.com/docs/en/sql-reference/data-types/) for more info.
 Telegraf doesn't have unit tests for go-mssqldb so it should be treated as
 experimental.
 
-#### DSN
+#### MSSQL DSN
 
 The following format for the DSN applies to mssql. For more information and
 additional configuration options refer to the [go-mssql documentation][go-mssqldb-doc].
@@ -290,7 +290,7 @@ The following templates are compatible with mssql
 
 ```
 
-#### Metric type to SQL type conversion
+#### MSSQL metric type to SQL type conversion
 
 The following configuration makes the mapping compatible with mssql:
 

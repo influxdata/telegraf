@@ -71,7 +71,7 @@ func (d *Docker) List() ([]string, error) {
 }
 
 func (*Docker) Set(_, _ string) error {
-	return errors.New("secret-store does not support creating secrets")
+	return errors.New("secret store does not support creating secrets")
 }
 
 func (d *Docker) GetResolver(key string) (telegraf.ResolveFunc, error) {
@@ -82,7 +82,7 @@ func (d *Docker) GetResolver(key string) (telegraf.ResolveFunc, error) {
 	return resolver, nil
 }
 
-// Register the secret-store on load.
+// Register the secret store on load.
 func init() {
 	secretstores.Add("docker", func(id string) telegraf.SecretStore {
 		return &Docker{ID: id}

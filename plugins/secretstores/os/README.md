@@ -1,17 +1,18 @@
-# OS Secret-store Plugin
+# OS Secret Store Plugin
 
-The `os` plugin allows to manage and store secrets using the native Operating
-System keyring. For Windows this plugin uses the credential manager, on Linux
-the kernel keyring is used and on MacOS we use the Keychain implementation.
+Thus plugin allows to read and manage secrets using the native Operating
+System keyring. For Windows this plugin uses the
+[credential manager][windows_credmgr], on Linux the
+[kernel keyring][linux_keyring] is used and on MacOS we use the
+[Keychain][macos_keychain] implementation.
 
-To manage your secrets you can either use Telegraf or the tools that natively
-comes with your operating system. Run
+⭐ Telegraf v1.25.0
+🏷️ system
+💻 all
 
-```shell
-telegraf secrets help
-```
-
-to get more information on how to do this with Telegraf.
+[windows_credmgr]: https://support.microsoft.com/windows/credential-manager-in-windows-1b5c916a-6a16-889f-8581-fc16e8165ac0
+[linux_keyring]: https://docs.kernel.org/security/keys/core.html
+[macos_keychain]: https://support.apple.com/guide/keychain-access/kyca1083/mac
 
 ## Usage <!-- @/docs/includes/secret_usage.md -->
 
@@ -20,34 +21,17 @@ the Telegraf configuration. Only certain Telegraf plugins and options of
 support secret stores. To see which plugins and options support
 secrets, see their respective documentation (e.g.
 `plugins/outputs/influxdb/README.md`). If the plugin's README has the
-`Secret-store support` section, it will detail which options support secret
+`Secret store support` section, it will detail which options support secret
 store usage.
 
 ## Configuration
 
-The configuration differs slightly depending on the Operating System. We first
-describe the common options here and the refer to the individual interpretation
-or options in the following sections.
-
-All secret-store implementations require an `id` to be able to reference the
-store when specifying the secret. The `id` needs to be unique in the
-configuration.
-
-For all operating systems, the keyring name can be chosen using the `keyring`
-parameter. However, the interpretation is slightly different on the individual
-implementations.
-
-The `dynamic` flag allows to indicate secrets that change during the runtime of
-Telegraf. I.e. when set to `true`, the secret will be read from the secret-store
-on every access by a plugin. If set to `false`, all secrets in the secret store
-are assumed to be static and are only read once at startup of Telegraf.
-
 ```toml @sample.conf
-# Operating System native secret-store
+# Get secrets from Operating System's native secret store
 [[secretstores.os]]
-  ## Unique identifier for the secret-store.
+  ## Unique identifier for the secret store.
   ## This id can later be used in plugins to reference the secrets
-  ## in this secret-store via @{<id>:<secret_key>} (mandatory)
+  ## in this secret store via @{<id>:<secret_key>} (mandatory)
   id = "secretstore"
 
   ## Keyring Name & Collection
@@ -69,9 +53,21 @@ are assumed to be static and are only read once at startup of Telegraf.
   # dynamic = false
 ```
 
+As the configuration differs slightly depending on the Operating System we
+provide individual interpretations or options in the following sections.
+
+For all operating systems, the keyring name can be chosen using the `keyring`
+parameter. However, the interpretation is slightly different on the individual
+implementations.
+
+The `dynamic` flag allows to indicate secrets that change during the runtime of
+Telegraf. I.e. when set to `true`, the secret will be read from the secret store
+on every access by a plugin. If set to `false`, all secrets in the secret store
+are assumed to be static and are only read once at startup of Telegraf.
+
 ### Linux
 
-On Linux the kernel keyring in the `user` scope is used to store the
+On Linux the kernel keyring in the `user` scope is used to read or store
 secrets. The `collection` setting is ignored on Linux.
 
 ### MacOS
@@ -80,28 +76,27 @@ On MacOS the Keychain implementation is used. Here the `keyring` parameter
 corresponds to the Keychain name and the `collection` to the optional Keychain
 service name. Additionally a password is required to access the Keychain.
 The `password` itself is also a secret and can be a string, an environment
-variable or a reference to a secret stored in another secret-store.
+variable or a reference to a secret stored in another secret store.
 If `password` is omitted, you will be prompted for the password on startup.
 
 ### Windows
 
-On Windows you can use the Credential Manager in the Control Panel or
-[Telegraf](../../../cmd/telegraf/README.md) to manage your secrets.
-
-If using the Credential Manager, click "Windows Credentials" and then
-"Add a generic credential" with the following:
+On Windows you can use the Credential Manager in the Control Panel to manage
+your secrets. Click "Windows Credentials" and then "Add a generic credential"
+with the following settings
 
 * _Internet or network address_: Enter the secret name in the format of:
   `<collection>:<keyring>:<key_name>`
-* _User name_: Use `telegraf`. This field is not used, but needs something
-  entered.
+* _User name_: This field is unused, but cannot be left empty
 * _Password_: The actual secret value
 
 If using Telegraf, see the help output of `telegraf secrets set` to add
 secrets. Again use the `<collection>:<keyring>:<key_name>` format of the secret
 key name.
 
-### Docker
+## Additional Information
+
+### Docker containers
 
 Access to the kernel keyring is __disabled by default__ in docker containers
 (see [documentation](https://docs.docker.com/engine/security/seccomp/)).
