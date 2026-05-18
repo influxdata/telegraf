@@ -1,6 +1,6 @@
 # OS Secret Store Plugin
 
-Thus plugin allows to read and manage secrets using the native Operating
+This plugin allows to read and manage secrets using the native Operating
 System keyring. For Windows this plugin uses the
 [credential manager][windows_credmgr], on Linux the
 [kernel keyring][linux_keyring] is used and on MacOS we use the
