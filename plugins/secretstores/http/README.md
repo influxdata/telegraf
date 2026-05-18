@@ -154,7 +154,7 @@ If your HTTP endpoint provides JSON data in a different format, you can use
 the `transformation` option to apply a [JSONata expression][jsonata]
 (version v1.5.4) to transform the server answer to the format above.
 
-[jsonata]: (https://jsonata.org)
+[jsonata]: https://jsonata.org
 
 ### Encryption
 
