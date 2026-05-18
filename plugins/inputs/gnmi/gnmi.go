@@ -75,8 +75,11 @@ func (c *GNMI) Init() error {
 	}
 
 	// Create a response handler
-	c.HandlerConfig.EnforceFirstNamespaceAsOrigin = c.EnforceFirstNamespaceAsOrigin
-	h, err := c.HandlerConfig.Handler(c.Log)
+	var options []common_gnmi.Option
+	if c.EnforceFirstNamespaceAsOrigin {
+		options = append(options, common_gnmi.WithEnforceFirstNamespaceAsOrigin())
+	}
+	h, err := c.HandlerConfig.Handler(c.Log, options...)
 	if err != nil {
 		return fmt.Errorf("creating response handler failed: %w", err)
 	}

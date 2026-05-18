@@ -2,7 +2,6 @@ package gnmi
 
 import (
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -27,60 +26,13 @@ including your device model and the following response data:
 %+v
 This message is only printed once.`
 
-type HandlerConfig struct {
-	EmitDeleteMetrics             bool     `toml:"emit_delete_metrics"`
-	CanonicalFieldNames           bool     `toml:"canonical_field_names"`
-	TrimSlash                     bool     `toml:"trim_field_names"`
-	TagPathPrefix                 bool     `toml:"prefix_tag_key_with_path"`
-	GuessPathStrategy             string   `toml:"path_guessing_strategy"`
-	VendorExt                     []string `toml:"vendor_specific"`
-	YangModelPaths                []string `toml:"yang_model_paths"`
-	DefaultName                   string   `toml:"-"`
-	EnforceFirstNamespaceAsOrigin bool     `toml:"-"`
-}
-
-func (cfg *HandlerConfig) Handler(log telegraf.Logger) (*Handler, error) {
-	// Check vendor_specific options configured by user
-	if err := choice.CheckSlice(cfg.VendorExt, supportedExtensions); err != nil {
-		return nil, fmt.Errorf("unsupported vendor_specific option: %w", err)
-	}
-
-	// Check path guessing and handle deprecated option
-	switch cfg.GuessPathStrategy {
-	case "", "none", "common path", "subscription":
-	default:
-		return nil, fmt.Errorf("invalid 'path_guessing_strategy' %q", cfg.GuessPathStrategy)
-	}
-
-	// Load the YANG models if specified by the user and check for errors early.
-	// We redo this later to actually use the decode.
-	if len(cfg.YangModelPaths) > 0 {
-		if _, err := yangmodel.NewDecoder(cfg.YangModelPaths...); err != nil {
-			return nil, fmt.Errorf("invalid YANG model decoder: %w", err)
-		}
-	}
-
-	h := &Handler{
-		HandlerConfig: cfg,
-		aliases:       make(map[*pathInfo]string),
-		tagStore:      newTagStore(),
-		log:           log,
-	}
-
-	// Load the YANG models if specified by the user
-	if len(cfg.YangModelPaths) > 0 {
-		decoder, err := yangmodel.NewDecoder(cfg.YangModelPaths...)
-		if err != nil {
-			return nil, fmt.Errorf("creating YANG model decoder failed: %w", err)
-		}
-		h.decoder = decoder
-	}
-	return h, nil
-}
-
 type Handler struct {
 	*HandlerConfig
 	log telegraf.Logger
+
+	// Option settings
+	defaultName                   string
+	EnforceFirstNamespaceAsOrigin bool
 
 	// Internal
 	aliases            map[*pathInfo]string
@@ -269,8 +221,8 @@ func (h *Handler) handleUpdates(acc telegraf.Accumulator, updates []*gnmi.Update
 		// Lookup alias for the metric
 		aliasPath, name := h.lookupAlias(field.path)
 		if name == "" {
-			if h.DefaultName != "" {
-				name = h.DefaultName
+			if h.defaultName != "" {
+				name = h.defaultName
 			} else {
 				h.log.Debugf("No measurement alias for gNMI path: %s", field.path)
 				if !h.emptyNameWarnShown {
@@ -388,8 +340,8 @@ func (h *Handler) handleDeletes(acc telegraf.Accumulator, deletes []*gnmi.Path, 
 		// Lookup alias for the metric
 		aliasPath, name := h.lookupAlias(field)
 		if name == "" {
-			if h.DefaultName != "" {
-				name = h.DefaultName
+			if h.defaultName != "" {
+				name = h.defaultName
 			} else {
 				h.log.Debugf("No measurement alias for gNMI path: %s", field)
 				if !h.emptyNameWarnShown {
