@@ -1,0 +1,14 @@
+// Copyright (c) 2020 Nokia
+
+syntax = "proto3";
+
+import "gnmi.proto";
+
+package Nokia.SROS;
+
+option go_package = "github.com/influxdata/telegraf/plugins/inputs/gnmi_dialout/nokia";
+
+
+service DialoutTelemetry {
+  rpc Publish(stream gnmi.SubscribeResponse) returns (stream gnmi.SubscribeRequest);
+}
