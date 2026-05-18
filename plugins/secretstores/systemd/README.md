@@ -60,7 +60,7 @@ other systemd services is mediated by the `User=` and `PrivateMounts=`
 service-unit directives for those services. See the
 [systemd.exec man-page][systemd-exec] for details.
 
-> [!INPOTANT]
+> [!IMPORTANT]
 > To use `ImportCredential`, as done in the default service file, you
 > need **systemd version 254+** otherwise you need to specify the credentials
 > using `LoadCredentialEncrypted` in a service-override.
