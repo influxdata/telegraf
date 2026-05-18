@@ -4,9 +4,9 @@ This section is for developers who want to create a new secret store plugin.
 
 ## Secret Store Plugin Guidelines
 
-* A secret store must conform to the [telegraf.SecretStore][] interface.
-* Secret-stores should call `secretstores.Add` in their `init` function to register
-  themselves.  See below for a quick example.
+* A secret store must conform to telegraf's [`SecretStore` interface][interface].
+* Secret stores should call `secretstores.Add` in their `init` function to register
+  themselves. See below for a quick example.
 * To be available within Telegraf itself, plugins must register themselves
   using a file in `github.com/influxdata/telegraf/plugins/secretstores/all`
   named according to the plugin name. Make sure you also add build-tags to
@@ -20,7 +20,7 @@ This section is for developers who want to create a new secret store plugin.
   automatically into the Readme.
 * Follow the recommended [Code Style][].
 
-[telegraf.SecretStore]: https://pkg.go.dev/github.com/influxdata/telegraf?utm_source=godoc#SecretStore
+[interface]: https://pkg.go.dev/github.com/influxdata/telegraf?utm_source=godoc#SecretStore
 [Sample Config]: https://github.com/influxdata/telegraf/blob/master/docs/developers/SAMPLE_CONFIG.md
 [Code Style]: https://github.com/influxdata/telegraf/blob/master/docs/developers/CODE_STYLE.md
 
@@ -106,7 +106,7 @@ func (p *Printer) GetResolver(key string) (telegraf.ResolveFunc, error) {
     return resolver, nil
 }
 
-// Register the secret-store on load.
+// Register the secret store on load.
 func init() {
     secretstores.Add("printer", func(string) telegraf.SecretStore {
         return &Printer{}
