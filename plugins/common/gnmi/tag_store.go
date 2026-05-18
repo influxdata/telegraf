@@ -19,26 +19,25 @@ type elementsStore struct {
 	tags     map[string]map[string]string
 }
 
-func newTagStore(subs []tagSubscription) *tagStore {
+func newTagStore() *tagStore {
 	store := tagStore{
 		unconditional: make(map[string]string),
 		names:         make(map[string]map[string]string),
 		elements: elementsStore{
-			required: make([][]string, 0, len(subs)),
+			required: make([][]string, 0),
 			tags:     make(map[string]map[string]string),
 		},
 	}
-	for _, s := range subs {
-		if s.Match == "elements" {
-			store.elements.required = append(store.elements.required, s.Elements)
-		}
-	}
-
 	return &store
+}
+func (s *tagStore) add(sub *TagSubscription) {
+	if sub.Match == "elements" {
+		s.elements.required = append(s.elements.required, sub.Elements)
+	}
 }
 
 // Store tags extracted from TagSubscriptions
-func (s *tagStore) insert(subscription tagSubscription, path *pathInfo, values []updateField, tags map[string]string) error {
+func (s *tagStore) insert(subscription *TagSubscription, path *pathInfo, values []updateField, tags map[string]string) error {
 	switch subscription.Match {
 	case "unconditional":
 		for _, f := range values {
