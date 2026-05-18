@@ -18,7 +18,7 @@ func WithDefaultName(name string) Option {
 
 func WithEnforceFirstNamespaceAsOrigin() Option {
 	return func(h *Handler) {
-		h.EnforceFirstNamespaceAsOrigin = true
+		h.enforceFirstNamespaceAsOrigin = true
 	}
 }
 

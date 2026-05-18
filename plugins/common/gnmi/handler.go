@@ -32,7 +32,7 @@ type Handler struct {
 
 	// Option settings
 	defaultName                   string
-	EnforceFirstNamespaceAsOrigin bool
+	enforceFirstNamespaceAsOrigin bool
 
 	// Internal
 	aliases            map[*pathInfo]string
@@ -117,7 +117,7 @@ func (h *Handler) handleUpdateMetadata(
 
 	// Extract the path part valid for the whole set of updates if any
 	prefix := newInfoFromPath(notification.Prefix)
-	if h.EnforceFirstNamespaceAsOrigin {
+	if h.enforceFirstNamespaceAsOrigin {
 		prefix.enforceFirstNamespaceAsOrigin()
 	}
 	return timestamp, headerTags, prefix
@@ -140,7 +140,7 @@ func (h *Handler) handleUpdates(acc telegraf.Accumulator, updates []*gnmi.Update
 		}
 
 		fullPath := prefix.append(update.Path)
-		if h.EnforceFirstNamespaceAsOrigin {
+		if h.enforceFirstNamespaceAsOrigin {
 			prefix.enforceFirstNamespaceAsOrigin()
 		}
 		if update.Path.Origin != "" {
@@ -237,7 +237,7 @@ func (h *Handler) handleUpdates(acc telegraf.Accumulator, updates []*gnmi.Update
 		}
 
 		aliasInfo := newInfoFromString(aliasPath)
-		if h.EnforceFirstNamespaceAsOrigin {
+		if h.enforceFirstNamespaceAsOrigin {
 			aliasInfo.enforceFirstNamespaceAsOrigin()
 		}
 
@@ -293,7 +293,7 @@ func (h *Handler) handleDeletes(acc telegraf.Accumulator, deletes []*gnmi.Path, 
 		}
 
 		fullPath := prefix.append(del)
-		if h.EnforceFirstNamespaceAsOrigin {
+		if h.enforceFirstNamespaceAsOrigin {
 			prefix.enforceFirstNamespaceAsOrigin()
 		}
 		if del.Origin != "" {
@@ -356,7 +356,7 @@ func (h *Handler) handleDeletes(acc telegraf.Accumulator, deletes []*gnmi.Path, 
 		}
 
 		aliasInfo := newInfoFromString(aliasPath)
-		if h.EnforceFirstNamespaceAsOrigin {
+		if h.enforceFirstNamespaceAsOrigin {
 			aliasInfo.enforceFirstNamespaceAsOrigin()
 		}
 

@@ -16,7 +16,7 @@ func (h *Handler) AddAliasFromSubscription(s Subscription) error {
 		return err
 	}
 	info := newInfoFromPathWithoutKeys(path)
-	if h.EnforceFirstNamespaceAsOrigin {
+	if h.enforceFirstNamespaceAsOrigin {
 		info.enforceFirstNamespaceAsOrigin()
 	}
 
@@ -33,7 +33,7 @@ func (h *Handler) AddAliasFromSubscription(s Subscription) error {
 
 func (h *Handler) AddAlias(name, path string) {
 	info := newInfoFromString(path)
-	if h.EnforceFirstNamespaceAsOrigin {
+	if h.enforceFirstNamespaceAsOrigin {
 		info.enforceFirstNamespaceAsOrigin()
 	}
 

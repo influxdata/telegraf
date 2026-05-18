@@ -67,7 +67,7 @@ func (h *Handler) processJSON(path *pathInfo, data []byte) ([]updateField, error
 	fields := make([]updateField, 0, len(entries))
 	for _, entry := range entries {
 		p := path.appendSegments(entry.key...)
-		if h.EnforceFirstNamespaceAsOrigin {
+		if h.enforceFirstNamespaceAsOrigin {
 			p.enforceFirstNamespaceAsOrigin()
 		}
 
@@ -121,7 +121,7 @@ func (h *Handler) processJSONIETF(path *pathInfo, data []byte) ([]updateField, e
 	fields := make([]updateField, 0, len(entries))
 	for _, entry := range entries {
 		p := path.appendSegments(entry.key...)
-		if h.EnforceFirstNamespaceAsOrigin {
+		if h.enforceFirstNamespaceAsOrigin {
 			p.enforceFirstNamespaceAsOrigin()
 		}
 
