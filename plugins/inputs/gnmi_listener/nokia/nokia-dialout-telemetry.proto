@@ -6,7 +6,7 @@ import "gnmi.proto";
 
 package Nokia.SROS;
 
-option go_package = "github.com/influxdata/telegraf/plugins/inputs/gnmi_dialout/nokia";
+option go_package = "github.com/influxdata/telegraf/plugins/inputs/gnmi_listener/nokia";
 
 
 service DialoutTelemetry {

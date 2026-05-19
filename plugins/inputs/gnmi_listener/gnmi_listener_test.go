@@ -80,8 +80,6 @@ func TestMutualTLSFail(t *testing.T) {
 		},
 	})
 	require.Error(t, err)
-
-	plugin.Stop()
 }
 
 func TestCases(t *testing.T) {
@@ -246,6 +244,7 @@ func (d *nokiaDevice) send(ctx context.Context, msg *gnmi.SubscribeResponse) (*g
 		return nil, fmt.Errorf("dialing server %q failed: %w", d.addr, err)
 	}
 	conn.Connect()
+	defer conn.Close()
 
 	// Create a nokia dial-out client
 	client := nokia.NewDialoutTelemetryClient(conn)
@@ -272,7 +271,6 @@ func (d *nokiaDevice) send(ctx context.Context, msg *gnmi.SubscribeResponse) (*g
 		}
 		return nil, err
 	}
-	time.Sleep(time.Second)
 	return resp, nil
 }
 
