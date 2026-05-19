@@ -1,6 +1,6 @@
 //go:generate ../../../tools/config_includer/generator
 //go:generate ../../../tools/readme_config_includer/generator
-package gnmilistener
+package gnmi_listener
 
 import (
 	_ "embed"

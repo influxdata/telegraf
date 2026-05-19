@@ -1,4 +1,4 @@
-package gnmilistener
+package gnmi_listener
 
 import (
 	"context"
