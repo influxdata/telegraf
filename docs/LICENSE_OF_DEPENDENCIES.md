@@ -137,7 +137,6 @@ following works:
 - github.com/dimchansky/utfbom [Apache License 2.0](https://github.com/dimchansky/utfbom/blob/master/LICENSE)
 - github.com/distribution/reference [Apache License 2.0](https://github.com/distribution/reference/blob/main/LICENSE)
 - github.com/djherbis/times [MIT License](https://github.com/djherbis/times/blob/master/LICENSE)
-- github.com/docker/docker [Apache License 2.0](https://github.com/docker/docker/blob/master/LICENSE)
 - github.com/docker/go-connections [Apache License 2.0](https://github.com/docker/go-connections/blob/master/LICENSE)
 - github.com/docker/go-units [Apache License 2.0](https://github.com/docker/go-units/blob/master/LICENSE)
 - github.com/dustin/go-humanize [MIT License](https://github.com/dustin/go-humanize/blob/master/LICENSE)

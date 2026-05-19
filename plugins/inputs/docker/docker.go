@@ -13,10 +13,9 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/system"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/system"
+	"github.com/moby/moby/client"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -67,7 +66,7 @@ type Docker struct {
 	labelFilter     filter.Filter
 	containerFilter filter.Filter
 	stateFilter     filter.Filter
-	objectTypes     []types.DiskUsageObject
+	diskUsage       client.DiskUsageOptions
 
 	// Stats cache for Podman CPU calculation
 	statsCache      map[string]*cachedContainerStats
@@ -109,19 +108,19 @@ func (d *Docker) Init() error {
 	}
 
 	// Create storage query objects
-	d.objectTypes = make([]types.DiskUsageObject, 0, len(d.StorageObjects))
 	for _, object := range d.StorageObjects {
 		switch object {
 		case "container":
-			d.objectTypes = append(d.objectTypes, types.ContainerObject)
+			d.diskUsage.Containers = true
 		case "image":
-			d.objectTypes = append(d.objectTypes, types.ImageObject)
+			d.diskUsage.Images = true
 		case "volume":
-			d.objectTypes = append(d.objectTypes, types.VolumeObject)
+			d.diskUsage.Volumes = true
 		default:
 			return fmt.Errorf("invalid storage object type: %q", object)
 		}
 	}
+	d.diskUsage.Verbose = true
 
 	// Create filters
 	var err error
@@ -145,7 +144,7 @@ func (d *Docker) Start(telegraf.Accumulator) error {
 	// Create a new client, this does not connect
 	switch d.Endpoint {
 	case "ENV":
-		c, err := client.NewClientWithOpts(client.FromEnv)
+		c, err := client.New(client.FromEnv)
 		if err != nil {
 			return fmt.Errorf("creating client from environment failed: %w", err)
 		}
@@ -158,7 +157,6 @@ func (d *Docker) Start(telegraf.Accumulator) error {
 
 		options := []client.Opt{
 			client.WithUserAgent("engine-api-cli-1.0"),
-			client.WithAPIVersionNegotiation(),
 			client.WithHost(d.Endpoint),
 		}
 		if tlsConfig != nil {
@@ -167,7 +165,7 @@ func (d *Docker) Start(telegraf.Accumulator) error {
 			}}
 			options = append(options, client.WithHTTPClient(httpClient))
 		}
-		c, err := client.NewClientWithOpts(options...)
+		c, err := client.New(options...)
 		if err != nil {
 			return fmt.Errorf("creating client failed: %w", err)
 		}
@@ -177,7 +175,7 @@ func (d *Docker) Start(telegraf.Accumulator) error {
 	// Use Ping to check connectivity - this is a lightweight check
 	ctxPing, cancelPing := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancelPing()
-	if _, err := d.client.Ping(ctxPing); err != nil {
+	if _, err := d.client.Ping(ctxPing, client.PingOptions{}); err != nil {
 		d.Stop()
 		return &internal.StartupError{
 			Err:   fmt.Errorf("failed to ping daemon: %w", err),
@@ -193,7 +191,7 @@ func (d *Docker) Start(telegraf.Accumulator) error {
 	}
 	if version.LessThan(semver.New(1, 23, 0, "", "")) {
 		return fmt.Errorf("unsupported API version (%s), upgrade to docker engine 1.12+", version)
-	} else if version.LessThan(semver.New(1, 42, 0, "", "")) && len(d.objectTypes) > 0 {
+	} else if version.LessThan(semver.New(1, 42, 0, "", "")) && len(d.StorageObjects) > 0 {
 		return fmt.Errorf("unsupported API version (%s) for disk usage, upgrade to docker engine 23.0+", version)
 	}
 
@@ -201,7 +199,7 @@ func (d *Docker) Start(telegraf.Accumulator) error {
 	ctxInfo, cancelInfo := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancelInfo()
 
-	info, err := d.client.Info(ctxInfo)
+	info, err := d.client.Info(ctxInfo, client.InfoOptions{})
 	if err != nil {
 		d.Stop()
 		return &internal.StartupError{
@@ -209,15 +207,15 @@ func (d *Docker) Start(telegraf.Accumulator) error {
 			Retry: client.IsErrConnectionFailed(err),
 		}
 	}
-	d.engineHost = info.Name
-	d.serverVersion = info.ServerVersion
-	d.isPodman = d.detectPodman(&info)
+	d.engineHost = info.Info.Name
+	d.serverVersion = info.Info.ServerVersion
+	d.isPodman = d.detectPodman(&info.Info)
 
 	// Initialize stats cache only for Podman to save memory for Docker users
 	if d.isPodman {
 		d.statsCache = make(map[string]*cachedContainerStats)
 		msg := "Detected Podman engine (version: %s, name: %s), using stats caching for accurate CPU measurements"
-		d.Log.Debugf(msg, info.ServerVersion, info.Name)
+		d.Log.Debugf(msg, info.Info.ServerVersion, info.Info.Name)
 	}
 
 	return nil
@@ -244,7 +242,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancel()
 
-	containers, err := d.client.ContainerList(ctx, container.ListOptions{All: true})
+	containers, err := d.client.ContainerList(ctx, client.ContainerListOptions{All: true})
 	if errors.Is(err, context.DeadlineExceeded) {
 		return errors.New("timeout retrieving container list")
 	}
@@ -254,8 +252,8 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 
 	// Per-container metrics
 	var wg sync.WaitGroup
-	wg.Add(len(containers))
-	for _, cntnr := range containers {
+	wg.Add(len(containers.Items))
+	for _, cntnr := range containers.Items {
 		go func(c container.Summary) {
 			defer wg.Done()
 
@@ -274,8 +272,8 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	wg.Wait()
 
 	// Per disk/volume usage data
-	if len(d.objectTypes) > 0 {
-		acc.AddError(d.gatherDiskUsage(acc, types.DiskUsageOptions{Types: d.objectTypes}))
+	if len(d.StorageObjects) > 0 {
+		acc.AddError(d.gatherDiskUsage(acc))
 	}
 
 	// Clean up stale cache entries for Podman

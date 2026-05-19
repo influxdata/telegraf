@@ -8,10 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/system"
 	"github.com/google/go-cmp/cmp"
-	moby_container "github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/system"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -126,7 +125,6 @@ func TestCases(t *testing.T) {
 			// Setup the server
 			server, err := mock.NewServerFromFiles(filepath.Join(testcasePath, "data"))
 			require.NoError(t, err)
-			server.APIVersion = "1.24"
 
 			addr := server.Start(t)
 			defer server.Close()
@@ -244,13 +242,12 @@ func TestContainerLabels(t *testing.T) {
 			// Setup the server
 			server, err := mock.NewServerFromFiles("testdata")
 			require.NoError(t, err)
-			server.APIVersion = "1.24"
 
 			// Manipulate the data for the test
 			c := server.List[0]
 			c.Labels = tt.labels
 			c.State = "running"
-			server.List = []moby_container.Summary{c}
+			server.List = []container.Summary{c}
 
 			addr := server.Start(t)
 			defer server.Close()
@@ -353,7 +350,6 @@ func TestContainerNames(t *testing.T) {
 			// Setup the server
 			server, err := mock.NewServerFromFiles("testdata")
 			require.NoError(t, err)
-			server.APIVersion = "1.24"
 
 			addr := server.Start(t)
 			defer server.Close()
@@ -529,7 +525,6 @@ func TestContainerStatus(t *testing.T) {
 			// Setup the server
 			server, err := mock.NewServerFromFiles("testdata")
 			require.NoError(t, err)
-			server.APIVersion = "1.24"
 
 			// Manipulate data for the test
 			server.List = server.List[:1]
@@ -709,7 +704,6 @@ func TestGatherInfo(t *testing.T) {
 	// Setup the server
 	server, err := mock.NewServerFromFiles("testdata")
 	require.NoError(t, err)
-	server.APIVersion = "1.24"
 
 	addr := server.Start(t)
 	defer server.Close()
@@ -795,7 +789,6 @@ func TestGatherSwarmInfo(t *testing.T) {
 	// Setup the server
 	server, err := mock.NewServerFromFiles("testdata")
 	require.NoError(t, err)
-	server.APIVersion = "1.24"
 
 	addr := server.Start(t)
 	defer server.Close()
@@ -891,7 +884,6 @@ func TestGatherDiskUsage(t *testing.T) {
 	// Setup the server
 	server, err := mock.NewServerFromFiles("testdata")
 	require.NoError(t, err)
-	server.APIVersion = "1.24"
 
 	addr := server.Start(t)
 	defer server.Close()
@@ -953,21 +945,20 @@ func TestContainerStateFilter(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		containerStates := []moby_container.ContainerState{
-			moby_container.StateCreated,
-			moby_container.StateRestarting,
-			moby_container.StateRunning,
-			moby_container.StateRemoving,
-			moby_container.StatePaused,
-			moby_container.StateExited,
-			moby_container.StateDead,
+		containerStates := []container.ContainerState{
+			container.StateCreated,
+			container.StateRestarting,
+			container.StateRunning,
+			container.StateRemoving,
+			container.StatePaused,
+			container.StateExited,
+			container.StateDead,
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup the server
 			server, err := mock.NewServerFromFiles("testdata")
 			require.NoError(t, err)
-			server.APIVersion = "1.24"
 
 			// Make sure we request to list all container states
 			server.ListParams = map[string]string{"all": "1"}
@@ -980,9 +971,9 @@ func TestContainerStateFilter(t *testing.T) {
 				break
 			}
 			// Fake states data
-			server.List = make([]moby_container.Summary, 0, len(containerStates))
+			server.List = make([]container.Summary, 0, len(containerStates))
 			for _, v := range containerStates {
-				server.List = append(server.List, moby_container.Summary{
+				server.List = append(server.List, container.Summary{
 					ID:    id,
 					Names: []string{string(v)},
 					State: v,
@@ -1041,7 +1032,6 @@ func TestContainerName(t *testing.T) {
 			// Setup the server
 			server, err := mock.NewServerFromFiles("testdata")
 			require.NoError(t, err)
-			server.APIVersion = "1.24"
 
 			// Make sure we request to list all container states
 			server.ListParams = map[string]string{"all": "1"}
@@ -1055,7 +1045,7 @@ func TestContainerName(t *testing.T) {
 			}
 
 			// Fake the container list
-			server.List = []moby_container.Summary{
+			server.List = []container.Summary{
 				{
 					ID:    id,
 					Names: []string{"/logspout"},
@@ -1341,7 +1331,6 @@ func TestStartupErrorBehaviorRetry(t *testing.T) {
 	// Start the server again and check we can gather now
 	server, err := mock.NewServerFromFiles("testdata")
 	require.NoError(t, err)
-	server.APIVersion = "1.24"
 
 	addr := server.Start(t)
 	defer server.Close()
@@ -1353,7 +1342,6 @@ func TestStartupErrorBehaviorRetry(t *testing.T) {
 func TestStartupSuccess(t *testing.T) {
 	server, err := mock.NewServerFromFiles("testdata")
 	require.NoError(t, err)
-	server.APIVersion = "1.24"
 
 	addr := server.Start(t)
 	defer server.Close()
