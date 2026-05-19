@@ -618,6 +618,30 @@ deadband_value = 100.0
 	}, o.subscribeClientConfig.Groups)
 }
 
+func TestSubscribeClientRejectsBrowseConfig(t *testing.T) {
+	subscribeConfig := subscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://localhost:4840",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+			},
+			MetricName: "testing",
+			Browse: input.BrowseConfig{
+				Paths: []input.BrowsePathSettings{
+					{Pattern: "Server/**", MetricName: "server_vars"},
+				},
+			},
+		},
+	}
+
+	_, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
+	require.ErrorContains(t, err, "browse-based discovery is not yet supported for inputs.opcua_listener")
+}
+
 func TestSubscribeClientConfigInvalidTrigger(t *testing.T) {
 	subscribeConfig := subscribeClientConfig{
 		InputClientConfig: input.InputClientConfig{

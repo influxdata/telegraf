@@ -91,6 +91,57 @@ func TestGetDataBadNodeContainerIntegration(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestReadClientBrowseDiscoveryIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "open62541/open62541",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(servicePort),
+			wait.ForLog("TCP network layer listening on opc.tcp://"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	readConfig := readClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName: "browse_test",
+			Browse: input.BrowseConfig{
+				Depth: 5,
+				Paths: []input.BrowsePathSettings{
+					{Pattern: "Server/**", MetricName: "server_vars"},
+				},
+			},
+		},
+	}
+
+	client, err := readConfig.createReadClient(testutil.Logger{})
+	require.NoError(t, err)
+
+	require.NoError(t, client.connect())
+	require.NotEmpty(t, client.NodeMetricMapping, "browse should discover at least one variable under Server/**")
+
+	// Reconnect re-runs discovery against an unchanged server; mapping size
+	// must stay bounded rather than grow with each reconnect.
+	mappingSize := len(client.NodeMetricMapping)
+	require.NoError(t, client.Disconnect(t.Context()))
+	require.NoError(t, client.connect())
+	require.Len(t, client.NodeMetricMapping, mappingSize, "rediscovery must not grow the mapping")
+}
+
 func TestReadClientIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
