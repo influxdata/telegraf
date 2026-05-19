@@ -36,7 +36,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestMutalTLSFail(t *testing.T) {
+func TestMutualTLSFail(t *testing.T) {
 	// Setup plugin
 	plugin := &GNMIListener{
 		Address: "127.0.0.1:0",
