@@ -46,12 +46,14 @@ func (t *Temperature) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("getting temperatures failed: %w", err)
 	}
 
-	if len(temperatures) == 0 {
+	if len(temperatures) == 0 || t.ThermalZones {
 		// There is no hwmon interface, fallback to thermal-zone parsing
-		temperatures, err = t.gatherThermalZone(path)
+		// Or append the thermal-zone parsing if set in the configuration
+		temperaturesZones, err := t.gatherThermalZone(path)
 		if err != nil {
 			return fmt.Errorf("getting temperatures (via fallback) failed: %w", err)
 		}
+		temperatures = append(temperatures, temperaturesZones...)
 	}
 
 	switch t.MetricFormat {
