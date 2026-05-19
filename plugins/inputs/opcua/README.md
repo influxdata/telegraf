@@ -512,9 +512,9 @@ duplicate `(metric_name, field_name, tags)` combinations are rejected at
 mapping time.
 
 > [!NOTE]
-> Browse runs once on the first connect. Subsequent reconnects keep the
-> same node set; restart Telegraf to pick up new nodes added to the
-> server.
+> Browse runs on every connect, so address-space changes (nodes added or
+> removed, renumbered namespaces) are picked up on reconnect without
+> restarting Telegraf.
 >
 > The `root` option accepts node-ID strings (`ns=N;...`). Path-string
 > form and namespace-URI (`nsu=...`) form are not currently supported.
