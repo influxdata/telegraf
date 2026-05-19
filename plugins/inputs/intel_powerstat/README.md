@@ -17,7 +17,7 @@ Plugin is mostly based on Linux Kernel modules that expose specific metrics over
 `sysfs` or `devfs` interfaces. The following dependencies are expected:
 
 - `intel-rapl` kernel module which exposes Intel Runtime Power Limiting metrics
-  via `sysfs` (`/sys/devices/virtual/powercap/intel-rapl`),
+  over `sysfs` (`/sys/devices/virtual/powercap/intel-rapl`),
 - `msr` kernel module that provides access to processor model specific
   registers over `devfs` (`/dev/cpu/cpu%d/msr`),
 - `cpufreq` kernel module - which exposes per-CPU Frequency over `sysfs`
