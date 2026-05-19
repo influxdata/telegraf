@@ -213,6 +213,9 @@ func (l *packetListener) setupUDP(u *url.URL, ifname string, bufferSize int) err
 			conn, err = net.ListenMulticastUDP(u.Scheme, iface, addr)
 		}
 		if err != nil {
+			if conn != nil {
+				conn.Close()
+			}
 			return fmt.Errorf("listening (udp multicast) failed: %w", err)
 		}
 	} else {
@@ -291,33 +294,37 @@ func (l *packetListener) close() error {
 }
 
 func listenSSM(network string, ifi *net.Interface, gaddr *net.UDPAddr, sourceAddr string) (*net.UDPConn, error) {
+	src := &net.UDPAddr{IP: net.ParseIP(sourceAddr)}
+	if src.IP == nil {
+		return nil, fmt.Errorf("invalid multicast_source address %q", sourceAddr)
+	}
+
+	if network == "udp" {
+		if gaddr.IP.To4() != nil {
+			network = "udp4"
+		} else {
+			network = "udp6"
+		}
+	}
+
 	conn, err := net.ListenUDP(network, gaddr)
 	if err != nil {
 		return nil, fmt.Errorf("creating UDP socket failed: %w", err)
-	}
-
-	src := &net.UDPAddr{IP: net.ParseIP(sourceAddr)}
-	if src.IP == nil {
-		conn.Close()
-		return nil, fmt.Errorf("invalid multicast_source address %q", sourceAddr)
 	}
 
 	switch network {
 	case "udp4":
 		p := ipv4.NewPacketConn(conn)
 		if err := p.JoinSourceSpecificGroup(ifi, gaddr, src); err != nil {
-			conn.Close()
-			return nil, fmt.Errorf("joining SSM group (IGMPv3) failed: %w", err)
+			return conn, fmt.Errorf("joining SSM group (IGMPv3) failed: %w", err)
 		}
 	case "udp6":
 		p := ipv6.NewPacketConn(conn)
 		if err := p.JoinSourceSpecificGroup(ifi, gaddr, src); err != nil {
-			conn.Close()
-			return nil, fmt.Errorf("joining SSM group (MLDv2) failed: %w", err)
+			return conn, fmt.Errorf("joining SSM group (MLDv2) failed: %w", err)
 		}
 	default:
-		conn.Close()
-		return nil, fmt.Errorf("ssm support failure for network %q, use udp4 or udp6", network)
+		return conn, fmt.Errorf("ssm support failure for network %q, use udp4 or udp6", network)
 	}
 
 	return conn, nil
