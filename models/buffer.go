@@ -114,8 +114,20 @@ func NewBuffer(name, id, alias string, capacity int, strategy, path string, disk
 		return NewMemoryBuffer(capacity, bs)
 	case "disk_write_through":
 		return NewDiskBuffer(id, path, bs, diskSync)
+	case "discard":
+		return newDiscardBuffer(bs), nil
 	}
 	return nil, fmt.Errorf("invalid buffer strategy %q", strategy)
+}
+
+// CheckBufferSettings verifies that the buffer settings are valid without
+// opening or allocating the buffer.
+func CheckBufferSettings(strategy string) error {
+	switch strategy {
+	case "", "memory", "disk_write_through":
+		return nil
+	}
+	return fmt.Errorf("invalid buffer strategy %q", strategy)
 }
 
 func NewBufferStats(tags map[string]string, capacity int) BufferStats {
