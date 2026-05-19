@@ -123,7 +123,7 @@ func TestBrowsePathPreserved(t *testing.T) {
 }
 
 func newBrowser(c *opcua.Client) *AddressSpaceBrowser {
-	return &AddressSpaceBrowser{Client: c, Log: testutil.Logger{}}
+	return &AddressSpaceBrowser{Client: c, Log: testutil.Logger{}, BatchSize: 50}
 }
 
 func collectBrowseNames(nodes []*BrowsedNode) []string {

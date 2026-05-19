@@ -11,8 +11,6 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-const defaultBrowseBatchSize = 50
-
 // BrowsedNode is a single node discovered from the address space. Path is the
 // slash-joined browse path from the browse root to this node, exclusive of the
 // root itself, suitable for matching against a filter.Filter compiled with "/"
@@ -33,8 +31,9 @@ type BrowsedNode struct {
 //
 // MaxDepth caps the number of levels descended below the root (0 = unlimited).
 // MaxNodes caps total discovered nodes (0 = unlimited); when reached,
-// browsing stops and the partial result is returned. BatchSize controls how
-// many nodes are browsed per request (0 falls back to defaultBrowseBatchSize).
+// browsing stops and the partial result is returned. BatchSize is the number
+// of nodes browsed per request and must be positive; callers are responsible
+// for substituting a default.
 type AddressSpaceBrowser struct {
 	Client    *opcua.Client
 	Log       telegraf.Logger
@@ -46,11 +45,6 @@ type AddressSpaceBrowser struct {
 // Browse walks the address space starting from rootID and returns the
 // discovered descendants. The root itself is not included in the result.
 func (b *AddressSpaceBrowser) Browse(ctx context.Context, rootID *ua.NodeID) ([]*BrowsedNode, error) {
-	batchSize := b.BatchSize
-	if batchSize <= 0 {
-		batchSize = defaultBrowseBatchSize
-	}
-
 	var nodes []*BrowsedNode
 	visited := map[string]bool{rootID.String(): true}
 
@@ -62,13 +56,13 @@ func (b *AddressSpaceBrowser) Browse(ctx context.Context, rootID *ua.NodeID) ([]
 	queue := []queueItem{{nodeID: rootID}}
 
 	for len(queue) > 0 {
-		// Consume up to batchSize items from the queue, skipping items past
+		// Consume up to BatchSize items from the queue, skipping items past
 		// MaxDepth in place, and build the per-item BrowseDescription in the
 		// same pass.
-		batch := make([]queueItem, 0, batchSize)
-		descs := make([]*ua.BrowseDescription, 0, batchSize)
+		batch := make([]queueItem, 0, b.BatchSize)
+		descs := make([]*ua.BrowseDescription, 0, b.BatchSize)
 		consumed := 0
-		for ; consumed < len(queue) && len(batch) < batchSize; consumed++ {
+		for ; consumed < len(queue) && len(batch) < b.BatchSize; consumed++ {
 			item := queue[consumed]
 			if b.MaxDepth > 0 && item.depth >= b.MaxDepth {
 				continue
@@ -115,10 +109,9 @@ func (b *AddressSpaceBrowser) Browse(ctx context.Context, rootID *ua.NodeID) ([]
 				if err != nil {
 					return nil, fmt.Errorf("browse-next request failed: %w", err)
 				}
-				if len(next.Results) == 0 {
-					break
+				if len(next.Results) != 1 {
+					return nil, fmt.Errorf("browse-next returned %d results, expected 1", len(next.Results))
 				}
-				// One continuation point in, one result out.
 				nextResult := next.Results[0]
 				if nextResult.StatusCode != ua.StatusOK {
 					b.Log.Debugf("Browse-next failed for %s: %v", batch[i].nodeID, nextResult.StatusCode)

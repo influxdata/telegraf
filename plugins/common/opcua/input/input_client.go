@@ -275,6 +275,9 @@ func (o *InputClientConfig) Validate() error {
 			return fmt.Errorf("invalid browse root %q: %w", o.Browse.Root, err)
 		}
 		o.Browse.parsedRoot = rootID
+		if o.Browse.BatchSize <= 0 {
+			o.Browse.BatchSize = 50
+		}
 		for i := range o.Browse.Paths {
 			p := &o.Browse.Paths[i]
 			if p.Pattern == "" {
