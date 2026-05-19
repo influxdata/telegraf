@@ -437,29 +437,29 @@ func (monitor *DirectoryMonitor) moveFile(srcPath, dstBaseDir string) {
 		monitor.Log.Errorf("Could not close input file: %s", err)
 	}
 
-	// Capture the source timestamps before removing the original so they can
-	// be restored on the moved file.
-	var srcTimes times.Timespec
-	if monitor.PreserveTimestamps {
-		if srcTimes, err = times.Stat(srcPath); err != nil {
-			monitor.Log.Errorf("Could not read timestamps of %q: %v", srcPath, err)
-		}
+	// Close the destination file
+	if err := outputFile.Close(); err != nil {
+		monitor.Log.Errorf("Could not close output file: %s", err)
 	}
 
+	// Restore the timestamps on the moved file to be able to keep track of the original file
+	if monitor.PreserveTimestamps {
+		srcTimes, err := times.Stat(srcPath)
+		if err != nil {
+			monitor.Log.Errorf("Could not read timestamps of %q: %v", srcPath, err)
+		}
+		
+		if srcTimes != nil {
+			if err := os.Chtimes(dstPath, srcTimes.AccessTime(), srcTimes.ModTime()); err != nil {
+				monitor.Log.Errorf("Could not preserve timestamps on %q: %v", dstPath, err)
+			}
+		}
+	}
+	
 	if err := os.Remove(srcPath); err != nil {
 		monitor.Log.Errorf("Failed removing original file: %s", err)
 	}
 
-	if monitor.PreserveTimestamps && srcTimes != nil {
-		// Close the destination file before adjusting its timestamps so the
-		// change is not undone by a later flush and applies cleanly on Windows.
-		if err := outputFile.Close(); err != nil {
-			monitor.Log.Errorf("Could not close output file: %s", err)
-		}
-		if err := os.Chtimes(dstPath, srcTimes.AccessTime(), srcTimes.ModTime()); err != nil {
-			monitor.Log.Errorf("Could not preserve timestamps on %q: %v", dstPath, err)
-		}
-	}
 }
 
 func (monitor *DirectoryMonitor) isMonitoredFile(fileName string) bool {
