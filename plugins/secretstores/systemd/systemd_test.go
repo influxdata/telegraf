@@ -84,7 +84,7 @@ func TestSetNotAvailable(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	// Try to Store the secrets, which this plugin should not let
-	require.ErrorContains(t, plugin.Set("foo", "bar"), "secret-store does not support creating secrets")
+	require.ErrorContains(t, plugin.Set("foo", "bar"), "secret store does not support creating secrets")
 }
 
 func TestListGet(t *testing.T) {

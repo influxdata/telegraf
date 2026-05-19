@@ -11,17 +11,17 @@ import (
 )
 
 // unlinkedSecrets contains the list of secrets that contain
-// references not yet linked to their corresponding secret-store.
+// references not yet linked to their corresponding secret store.
 // Those secrets must later (after reading the config) be linked
-// by the config to their respective secret-stores.
+// by the config to their respective secret stores.
 // Secrets containing constant strings will not be found in this
 // list.
 var unlinkedSecrets []*Secret
 
-// secretStorePattern is a regex to validate secret-store IDs
+// secretStorePattern is a regex to validate secret store IDs
 var secretStorePattern = regexp.MustCompile(`^\w+$`)
 
-// secretPattern is a regex to extract references to secrets store in a secret-store
+// secretPattern is a regex to extract references to secrets store in a secret store
 var secretPattern = regexp.MustCompile(`@\{(\w+:\w+)\}`)
 
 // secretCandidatePattern is a regex to find secret candidates to warn users on invalid characters in references
@@ -116,7 +116,7 @@ func (s *Secret) UnmarshalText(b []byte) error {
 	// Unmarshal secret from TOML and put it into protected memory
 	s.init(b)
 
-	// Keep track of secrets that contain references to secret-stores
+	// Keep track of secrets that contain references to secret stores
 	// for later resolving by the config.
 	if len(s.unlinked) > 0 && s.notempty {
 		unlinkedSecrets = append(unlinkedSecrets, s)
@@ -230,7 +230,7 @@ func (s *Secret) Get() (SecretBuffer, error) {
 }
 
 // Set overwrites the secret's value with a new one. Please note, the secret
-// is not linked again, so only references to secret-stores can be used, e.g. by
+// is not linked again, so only references to secret stores can be used, e.g. by
 // adding more clear-text or reordering secrets.
 func (s *Secret) Set(value []byte) error {
 	// Link the new value can be resolved
@@ -253,7 +253,7 @@ func (s *Secret) GetUnlinked() []string {
 }
 
 // Link used the given resolver map to link the secret parts to their
-// secret-store resolvers.
+// secret store resolvers.
 func (s *Secret) Link(resolvers map[string]telegraf.ResolveFunc) error {
 	// Decrypt the secret so we can return it
 	if s.container == nil {

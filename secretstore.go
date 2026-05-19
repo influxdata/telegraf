@@ -1,6 +1,6 @@
 package telegraf
 
-// SecretStore is an interface defining functions that a secret-store plugin must satisfy.
+// SecretStore is an interface defining functions that a secret store plugin must satisfy
 type SecretStore interface {
 	Initializer
 	PluginDescriber

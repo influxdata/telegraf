@@ -1,12 +1,14 @@
-# HashiCorp Vault Secret-Store Plugin
+# HashiCorp Vault Secret Store Plugin
 
-The `vault` plugin allows to utilize secrets stored in a
-[HashiCorp Vault][vault] server via the Vault API. It supports authentication
-via a pre-obtained Vault token or via the AppRole method.
+This plugin allows to access secrets provided by a [HashiCorp Vault][vault]
+server via the Vault API. It supports authentication via a pre-obtained token or
+via the `AppRole` method.
 
 ⭐ Telegraf v1.37.0
-🏷️ secrets
+🏷️ web
 💻 all
+
+[vault]: https://www.hashicorp.com/en/products/vault
 
 ## Usage <!-- @/docs/includes/secret_usage.md -->
 
@@ -15,29 +17,17 @@ the Telegraf configuration. Only certain Telegraf plugins and options of
 support secret stores. To see which plugins and options support
 secrets, see their respective documentation (e.g.
 `plugins/outputs/influxdb/README.md`). If the plugin's README has the
-`Secret-store support` section, it will detail which options support secret
+`Secret store support` section, it will detail which options support secret
 store usage.
 
 ## Configuration
 
-### Authentication
-
-When authenticating with a `token`, the token may be provided directly or
-chained from another secret-store (e.g. `@{other_store:vault_token}`). This
-lets you obtain a token through any mechanism another secret-store can
-produce (OAuth2, file, environment, etc.) and hand it to this plugin. Token
-renewal is the responsibility of the supplying source.
-
-When authenticating with `approle`, the plugin logs in with the configured
-Role ID and Secret ID and starts a lifetime watcher to keep the token
-renewed.
-
 ```toml @sample.conf
-# Secret-store to access Vault Secrets
+# Retrieve Hashicorp Vault secrets
 [[secretstores.vault]]
-  ## Unique identifier for the secretstore.
+  ## Unique identifier for the secret store.
   ## This id can later be used in plugins to reference the secrets
-  ## in this secret-store via @{<id>:<secret_key>} (mandatory)
+  ## in this secret store via @{<id>:<secret_key>} (mandatory)
   id = "vault_secretstore"
 
   ## Address of the Vault server
@@ -64,7 +54,7 @@ renewed.
   ## Authentication
   ## Exactly one of "token" or "approle" must be configured. Use "token" to
   ## pass an already-obtained Vault token (directly or via another
-  ## secret-store, e.g. @{other_store:vault_token}). Use "approle" to have
+  ## secret store, e.g. @{other_store:vault_token}). Use "approle" to have
   ## Telegraf authenticate via the AppRole method and manage token renewal.
 
   ## Vault token used to authenticate with the server
@@ -81,4 +71,18 @@ renewed.
   #   secret = ""
 ```
 
-[vault]: https://www.hashicorp.com/en/products/vault
+### Authentication
+
+When authenticating with a `token`, the token may be provided directly or
+chained from another secret store (e.g. `@{other_store:vault_token}`). This
+lets you obtain a token through any mechanism another secret store can
+produce (OAuth2, file, environment, etc.) and hand it to this plugin. Token
+renewal is the responsibility of the supplying source.
+
+When authenticating with `approle`, the plugin logs in with the configured
+Role ID and Secret ID and starts a lifetime watcher to keep the token
+renewed.
+
+## Additional Information
+
+This plugin only supports reading the secrets, it cannot create or modify them.

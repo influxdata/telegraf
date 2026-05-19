@@ -480,7 +480,7 @@ func (t *Telegraf) runAgent(ctx context.Context, reloadConfig bool) error {
 	}
 
 	log.Printf("I! Starting Telegraf %s%s brought to you by InfluxData the makers of InfluxDB", internal.Version, internal.Customized)
-	log.Printf("I! Available plugins: %d inputs, %d aggregators, %d processors, %d parsers, %d outputs, %d secret-stores",
+	log.Printf("I! Available plugins: %d inputs, %d aggregators, %d processors, %d parsers, %d outputs, %d secret stores",
 		len(inputs.Inputs),
 		len(aggregators.Aggregators),
 		len(processors.Processors),

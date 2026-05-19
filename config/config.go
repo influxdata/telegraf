@@ -396,7 +396,7 @@ func (c *Config) OutputNamesWithSources() string {
 	return getPluginSourcesTable(plugins)
 }
 
-// SecretstoreNames returns a list of strings of the configured secret-stores.
+// SecretstoreNames returns a list of strings of the configured secret stores.
 func (c *Config) SecretstoreNames() []string {
 	names := make([]string, 0, len(c.SecretStores))
 	for name := range c.SecretStores {
@@ -594,7 +594,7 @@ func (c *Config) LoadAll(configFiles ...string) error {
 	}
 	c.NumberSecrets = uint64(count)
 
-	// Let's link all secrets to their secret-stores
+	// Let's link all secrets to their secret stores
 	return c.LinkSecrets()
 }
 
@@ -1035,10 +1035,10 @@ func (c *Config) addSecretStore(name, source string, table *ast.Table) error {
 
 	storeID := c.getFieldString(table, "id")
 	if storeID == "" {
-		return fmt.Errorf("%q secret-store without ID", name)
+		return fmt.Errorf("%q secret store without ID", name)
 	}
 	if !secretStorePattern.MatchString(storeID) {
-		return fmt.Errorf("invalid secret-store ID %q, must only contain letters, numbers or underscore", storeID)
+		return fmt.Errorf("invalid secret store ID %q, must only contain letters, numbers or underscore", storeID)
 	}
 
 	tags := map[string]string{
@@ -1070,7 +1070,7 @@ func (c *Config) addSecretStore(name, source string, table *ast.Table) error {
 	models.SetStatisticsOnPlugin(store, logger, tags)
 
 	if err := store.Init(); err != nil {
-		return fmt.Errorf("error initializing secret-store %q: %w", storeID, err)
+		return fmt.Errorf("error initializing secret store %q: %w", storeID, err)
 	}
 
 	if _, found := c.SecretStores[storeID]; found {
@@ -1092,7 +1092,7 @@ func (c *Config) LinkSecrets() error {
 			storeID, key := splitLink(ref)
 			store, found := c.SecretStores[storeID]
 			if !found {
-				return fmt.Errorf("unknown secret-store for %q", ref)
+				return fmt.Errorf("unknown secret store for %q", ref)
 			}
 			resolver, err := store.GetResolver(key)
 			if err != nil {
@@ -1810,7 +1810,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"pass", "period", "precision",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "startup_error_behavior", "labels":
 
-	// Secret-store options to ignore
+	// secret store options to ignore
 	case "id":
 
 	// Parser and serializer options to ignore
