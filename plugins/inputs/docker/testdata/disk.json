@@ -19,8 +19,7 @@
                 "NetworkSettings": null,
                 "Mounts": null
             }
-        ],
-        "TotalSize": 10000000000
+        ]
     },
     "ImageUsage": {
         "Items": [
@@ -50,7 +49,8 @@
                 "SharedSize": 0,
                 "Size": 425484494
             }
-        ]
+        ],
+        "TotalSize": 10000000000
     },
     "VolumeUsage": {
         "Items": [

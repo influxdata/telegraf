@@ -208,7 +208,7 @@ func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator) error {
 
 	// Layers size
 	fields := map[string]interface{}{
-		"layers_size": du.Containers.TotalSize,
+		"layers_size": du.Images.TotalSize,
 	}
 
 	tags := map[string]string{
@@ -345,7 +345,7 @@ func (d *Docker) gatherContainerStats(acc telegraf.Accumulator, tags map[string]
 	defer cancelStats()
 
 	// Get container stats
-	result, err := d.client.ContainerStats(ctxStats, id, client.ContainerStatsOptions{})
+	result, err := d.client.ContainerStats(ctxStats, id, client.ContainerStatsOptions{IncludePreviousSample: true})
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			return errors.New("timeout retrieving container stats")
