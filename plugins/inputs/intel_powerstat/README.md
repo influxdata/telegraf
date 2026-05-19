@@ -16,8 +16,8 @@ busyness, CPU temperature, actual CPU utilization and power statistics.
 Plugin is mostly based on Linux Kernel modules that expose specific metrics over
 `sysfs` or `devfs` interfaces. The following dependencies are expected:
 
-- `intel-rapl` kernel module which exposes Intel Runtime Power Limiting metrics over
-  `sysfs` (`/sys/devices/virtual/powercap/intel-rapl`),
+- `intel-rapl` kernel module which exposes Intel Runtime Power Limiting metrics
+  via `sysfs` (`/sys/devices/virtual/powercap/intel-rapl`),
 - `msr` kernel module that provides access to processor model specific
   registers over `devfs` (`/dev/cpu/cpu%d/msr`),
 - `cpufreq` kernel module - which exposes per-CPU Frequency over `sysfs`
@@ -381,8 +381,9 @@ The following measurements are supported by Intel PowerStat plugin:
       | `core_id`    | ID of physical processor core. |
       | `cpu_id`     | ID of logical processor core.  |
 
-    Measurement `powerstat_core` metrics are collected per-CPU (`cpu_id` is the key)
-    while `core_id` and `package_id` tags are additional topology information.
+    Measurement `powerstat_core` metrics are collected per-CPU, with `cpu_id`
+    being the key, while `core_id` and `package_id` tags are additional topology
+    information.
 
   - Available metrics for `powerstat_core` measurement:
 

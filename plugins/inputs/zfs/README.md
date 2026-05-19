@@ -216,8 +216,8 @@ but it was already cached (boring)
 was not in the cache (good job, could become a demand hit in the future)
 - `arcstats_prefetch_metadata_hits` Same as above, but for metadata
 - `arcstats_prefetch_metadata_misses` Same as above, but for metadata
-- `arcstats_mru_hits` Cache hit in the “most recently used cache”, we move this to
-the mfu cache.
+- `arcstats_mru_hits` Cache hit in the “most recently used cache”, we move this
+to the mfu cache.
 - `arcstats_mru_ghost_hits` Cache hit in the “most recently used ghost list” we
 had this item in the cache, but evicted it, maybe we should increase the mru
 cache size.
@@ -269,8 +269,8 @@ cache because of the prefetcher.
 - `zfetchstats_misses` Counts the number of prefetch cache misses.
 - `zfetchstats_colinear_hits` Counts the number of cache hits, to items which are
 in the cache because of the prefetcher (prefetched linear reads)
-- `zfetchstats_stride_hits` Counts the number of cache hits, to items which are in
-the cache because of the prefetcher (prefetched stride reads)
+- `zfetchstats_stride_hits` Counts the number of cache hits, to items which are
+in the cache because of the prefetcher (prefetched stride reads)
 
 ### Vdev Cache Stats (FreeBSD)
 
