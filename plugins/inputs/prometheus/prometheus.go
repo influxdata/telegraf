@@ -30,6 +30,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/openmetrics"
 	parsers_prometheus "github.com/influxdata/telegraf/plugins/parsers/prometheus"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
 //go:embed sample.conf
@@ -531,6 +532,11 @@ func (p *Prometheus) gatherURL(u urlAndAddress, acc telegraf.Accumulator) (map[s
 
 	var err error
 	var resp *http.Response
+	urlStr := u.url.String()
+	connectStat := selfstat.Register("prometheus", "connection_status", map[string]string{"url": urlStr})
+	gatherSuccess := selfstat.Register("prometheus", "gathers_total", map[string]string{"url": urlStr, "status": "success"})
+	gatherFailure := selfstat.Register("prometheus", "gathers_total", map[string]string{"url": urlStr, "status": "failure"})
+
 	var start time.Time
 	if u.url.Scheme != "unix" {
 		start = time.Now()
@@ -541,6 +547,8 @@ func (p *Prometheus) gatherURL(u urlAndAddress, acc telegraf.Accumulator) (map[s
 	}
 	end := time.Since(start).Seconds()
 	if err != nil {
+		connectStat.Set(0)
+		gatherFailure.Incr(1)
 		return requestFields, tags, fmt.Errorf("error making HTTP request to %q: %w", u.url, err)
 	}
 	requestFields["response_time"] = end
@@ -548,6 +556,8 @@ func (p *Prometheus) gatherURL(u urlAndAddress, acc telegraf.Accumulator) (map[s
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		connectStat.Set(0)
+		gatherFailure.Incr(1)
 		return requestFields, tags, fmt.Errorf("%q returned HTTP status %q", u.url, resp.Status)
 	}
 
@@ -562,19 +572,26 @@ func (p *Prometheus) gatherURL(u urlAndAddress, acc telegraf.Accumulator) (map[s
 
 		body, err = io.ReadAll(lr)
 		if err != nil {
+			connectStat.Set(0)
+			gatherFailure.Incr(1)
 			return requestFields, tags, fmt.Errorf("error reading body: %w", err)
 		}
 		if int64(len(body)) > limit {
+			connectStat.Set(0)
+			gatherFailure.Incr(1)
 			p.Log.Infof("skipping %s: content length exceeded maximum body size (%d)", u.url, limit)
 			return requestFields, tags, nil
 		}
 	} else {
 		body, err = io.ReadAll(resp.Body)
 		if err != nil {
+			connectStat.Set(0)
+			gatherFailure.Incr(1)
 			return requestFields, tags, fmt.Errorf("error reading body: %w", err)
 		}
 	}
 	requestFields["content_length"] = len(body)
+	connectStat.Set(1)
 
 	// Override the response format if the user requested it
 	if p.contentType != "" {
@@ -600,8 +617,10 @@ func (p *Prometheus) gatherURL(u urlAndAddress, acc telegraf.Accumulator) (map[s
 	}
 	metrics, err := metricParser.Parse(body)
 	if err != nil {
+		gatherFailure.Incr(1)
 		return requestFields, tags, fmt.Errorf("error reading metrics for %q: %w", u.url, err)
 	}
+	gatherSuccess.Incr(1)
 
 	for _, metric := range metrics {
 		tags := metric.Tags()
