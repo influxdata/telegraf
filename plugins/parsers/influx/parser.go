@@ -21,8 +21,6 @@ var (
 	ErrNoMetric = errors.New("no metric in line")
 )
 
-type TimeFunc func() time.Time
-
 // ParseError indicates a error in the parsing of the text.
 type ParseError struct {
 	Offset     int
@@ -66,17 +64,41 @@ type Parser struct {
 	// If set to "series" a series machine will be initialized, defaults to regular machine
 	Type string `toml:"-"`
 
-	sync.Mutex
-	*machine
 	handler *MetricHandler
+	*machine
+	sync.Mutex
 }
 
-func (p *Parser) SetTimeFunc(f TimeFunc) {
+func (p *Parser) Init() error {
+	p.handler = NewMetricHandler()
+	if p.Type == "series" {
+		p.machine = NewSeriesMachine(p.handler)
+	} else {
+		p.machine = NewMachine(p.handler)
+	}
+
+	timeDuration := time.Duration(p.InfluxTimestampPrecision)
+	switch timeDuration {
+	case 0:
+	case time.Nanosecond, time.Microsecond, time.Millisecond, time.Second:
+		p.SetTimePrecision(timeDuration)
+	default:
+		return fmt.Errorf("invalid time precision: %d", p.InfluxTimestampPrecision)
+	}
+
+	return nil
+}
+
+func (p *Parser) SetTimeFunc(f func() time.Time) {
 	p.handler.SetTimeFunc(f)
 }
 
 func (p *Parser) SetTimePrecision(u time.Duration) {
 	p.handler.SetTimePrecision(u)
+}
+
+func (p *Parser) SetDefaultTags(tags map[string]string) {
+	p.DefaultTags = tags
 }
 
 func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
@@ -127,10 +149,6 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	return metrics[0], nil
 }
 
-func (p *Parser) SetDefaultTags(tags map[string]string) {
-	p.DefaultTags = tags
-}
-
 func (p *Parser) applyDefaultTags(metrics []telegraf.Metric) {
 	if len(p.DefaultTags) == 0 {
 		return
@@ -147,26 +165,6 @@ func (p *Parser) applyDefaultTagsSingle(metric telegraf.Metric) {
 			metric.AddTag(k, v)
 		}
 	}
-}
-
-func (p *Parser) Init() error {
-	p.handler = NewMetricHandler()
-	if p.Type == "series" {
-		p.machine = NewSeriesMachine(p.handler)
-	} else {
-		p.machine = NewMachine(p.handler)
-	}
-
-	timeDuration := time.Duration(p.InfluxTimestampPrecision)
-	switch timeDuration {
-	case 0:
-	case time.Nanosecond, time.Microsecond, time.Millisecond, time.Second:
-		p.SetTimePrecision(timeDuration)
-	default:
-		return fmt.Errorf("invalid time precision: %d", p.InfluxTimestampPrecision)
-	}
-
-	return nil
 }
 
 func init() {
@@ -195,7 +193,7 @@ func NewStreamParser(r io.Reader) *StreamParser {
 // SetTimeFunc changes the function used to determine the time of metrics
 // without a timestamp.  The default TimeFunc is time.Now.  Useful mostly for
 // testing, or perhaps if you want all metrics to have the same timestamp.
-func (sp *StreamParser) SetTimeFunc(f TimeFunc) {
+func (sp *StreamParser) SetTimeFunc(f func() time.Time) {
 	sp.handler.SetTimeFunc(f)
 }
 
