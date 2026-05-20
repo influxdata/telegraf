@@ -81,6 +81,7 @@ type Prometheus struct {
 	PodLabelInclude             []string            `toml:"pod_label_include"`
 	PodLabelExclude             []string            `toml:"pod_label_exclude"`
 	CacheRefreshInterval        int                 `toml:"cache_refresh_interval"`
+	Statistics                  *selfstat.Collector `toml:"-"`
 
 	// Consul discovery
 	ConsulConfig consulConfig `toml:"consul"`
@@ -119,6 +120,10 @@ type Prometheus struct {
 
 	// list of http services to scrape
 	httpServices map[string]urlAndAddress
+
+	connectStat             map[string]selfstat.Stat
+	gathersTotalSuccessStat map[string]selfstat.Stat
+	gathersTotalFailureStat map[string]selfstat.Stat
 }
 
 type urlAndAddress struct {
@@ -256,6 +261,11 @@ func (p *Prometheus) Init() error {
 	}
 
 	p.kubernetesPods = make(map[podID]urlAndAddress)
+
+	// Initialize Internal Metrics
+	p.connectStat = make(map[string]selfstat.Stat)
+	p.gathersTotalSuccessStat = make(map[string]selfstat.Stat)
+	p.gathersTotalFailureStat = make(map[string]selfstat.Stat)
 
 	return nil
 }
@@ -533,9 +543,11 @@ func (p *Prometheus) gatherURL(u urlAndAddress, acc telegraf.Accumulator) (map[s
 	var err error
 	var resp *http.Response
 	urlStr := u.url.String()
-	connectStat := selfstat.Register("prometheus", "connection_status", map[string]string{"url": urlStr})
-	gatherSuccess := selfstat.Register("prometheus", "gathers_total", map[string]string{"url": urlStr, "status": "success"})
-	gatherFailure := selfstat.Register("prometheus", "gathers_total", map[string]string{"url": urlStr, "status": "failure"})
+
+	// Create internal metrics for each URL
+	p.connectStat[urlStr] = p.Statistics.Register("prometheus", "connection_status", map[string]string{"url": urlStr})
+	p.gathersTotalSuccessStat[urlStr] = p.Statistics.Register("prometheus", "gathers_total", map[string]string{"url": urlStr, "status": "success"})
+	p.gathersTotalFailureStat[urlStr] = p.Statistics.Register("prometheus", "gathers_total", map[string]string{"url": urlStr, "status": "failure"})
 
 	var start time.Time
 	if u.url.Scheme != "unix" {
@@ -547,8 +559,8 @@ func (p *Prometheus) gatherURL(u urlAndAddress, acc telegraf.Accumulator) (map[s
 	}
 	end := time.Since(start).Seconds()
 	if err != nil {
-		connectStat.Set(0)
-		gatherFailure.Incr(1)
+		p.connectStat[urlStr].Set(0)
+		p.gathersTotalFailureStat[urlStr].Incr(1)
 		return requestFields, tags, fmt.Errorf("error making HTTP request to %q: %w", u.url, err)
 	}
 	requestFields["response_time"] = end
@@ -556,8 +568,8 @@ func (p *Prometheus) gatherURL(u urlAndAddress, acc telegraf.Accumulator) (map[s
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		connectStat.Set(0)
-		gatherFailure.Incr(1)
+		p.connectStat[urlStr].Set(0)
+		p.gathersTotalFailureStat[urlStr].Incr(1)
 		return requestFields, tags, fmt.Errorf("%q returned HTTP status %q", u.url, resp.Status)
 	}
 
@@ -572,26 +584,26 @@ func (p *Prometheus) gatherURL(u urlAndAddress, acc telegraf.Accumulator) (map[s
 
 		body, err = io.ReadAll(lr)
 		if err != nil {
-			connectStat.Set(0)
-			gatherFailure.Incr(1)
+			p.connectStat[urlStr].Set(0)
+			p.gathersTotalFailureStat[urlStr].Incr(1)
 			return requestFields, tags, fmt.Errorf("error reading body: %w", err)
 		}
 		if int64(len(body)) > limit {
-			connectStat.Set(0)
-			gatherFailure.Incr(1)
+			p.connectStat[urlStr].Set(0)
+			p.gathersTotalFailureStat[urlStr].Incr(1)
 			p.Log.Infof("skipping %s: content length exceeded maximum body size (%d)", u.url, limit)
 			return requestFields, tags, nil
 		}
 	} else {
 		body, err = io.ReadAll(resp.Body)
 		if err != nil {
-			connectStat.Set(0)
-			gatherFailure.Incr(1)
+			p.connectStat[urlStr].Set(0)
+			p.gathersTotalFailureStat[urlStr].Incr(1)
 			return requestFields, tags, fmt.Errorf("error reading body: %w", err)
 		}
 	}
 	requestFields["content_length"] = len(body)
-	connectStat.Set(1)
+	p.connectStat[urlStr].Set(1)
 
 	// Override the response format if the user requested it
 	if p.contentType != "" {
@@ -617,10 +629,10 @@ func (p *Prometheus) gatherURL(u urlAndAddress, acc telegraf.Accumulator) (map[s
 	}
 	metrics, err := metricParser.Parse(body)
 	if err != nil {
-		gatherFailure.Incr(1)
+		p.gathersTotalFailureStat[urlStr].Incr(1)
 		return requestFields, tags, fmt.Errorf("error reading metrics for %q: %w", u.url, err)
 	}
-	gatherSuccess.Incr(1)
+	p.gathersTotalSuccessStat[urlStr].Incr(1)
 
 	for _, metric := range metrics {
 		tags := metric.Tags()
