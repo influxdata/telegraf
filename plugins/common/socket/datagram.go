@@ -39,7 +39,14 @@ type packetListener struct {
 	parsePool *pond.WorkerPool
 }
 
-func newPacketListener(encoding string, maxDecompressionSize config.Size, maxWorkers int, allowedSources []net.IP, multicastSource string, logger telegraf.Logger) *packetListener {
+func newPacketListener(
+	encoding string,
+	maxDecompressionSize config.Size,
+	maxWorkers int,
+	allowedSources []net.IP,
+	multicastSource string,
+	logger telegraf.Logger,
+) *packetListener {
 	return &packetListener{
 		AllowedSources:       allowedSources,
 		MulticastSource:      multicastSource,
