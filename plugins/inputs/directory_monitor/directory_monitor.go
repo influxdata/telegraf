@@ -448,18 +448,17 @@ func (monitor *DirectoryMonitor) moveFile(srcPath, dstBaseDir string) {
 		if err != nil {
 			monitor.Log.Errorf("Could not read timestamps of %q: %v", srcPath, err)
 		}
-		
+
 		if srcTimes != nil {
 			if err := os.Chtimes(dstPath, srcTimes.AccessTime(), srcTimes.ModTime()); err != nil {
 				monitor.Log.Errorf("Could not preserve timestamps on %q: %v", dstPath, err)
 			}
 		}
 	}
-	
+
 	if err := os.Remove(srcPath); err != nil {
 		monitor.Log.Errorf("Failed removing original file: %s", err)
 	}
-
 }
 
 func (monitor *DirectoryMonitor) isMonitoredFile(fileName string) bool {
