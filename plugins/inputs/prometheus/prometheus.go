@@ -263,6 +263,9 @@ func (p *Prometheus) Init() error {
 	p.kubernetesPods = make(map[podID]urlAndAddress)
 
 	// Initialize Internal Metrics
+	// if p.Statistics == nil {
+	// 	p.Statistics = selfstat.NewCollector(nil)
+	// }
 	p.connectStat = make(map[string]selfstat.Stat)
 	p.gathersTotalSuccessStat = make(map[string]selfstat.Stat)
 	p.gathersTotalFailureStat = make(map[string]selfstat.Stat)

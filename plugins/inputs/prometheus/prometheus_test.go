@@ -17,6 +17,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/selfstat"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -62,9 +63,10 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
-		Log:    testutil.Logger{},
-		URLs:   []string{ts.URL},
-		URLTag: "url",
+		Log:        testutil.Logger{},
+		URLs:       []string{ts.URL},
+		Statistics: selfstat.NewCollector(nil),
+		URLTag:     "url",
 	}
 	err := p.Init()
 	require.NoError(t, err)
@@ -139,6 +141,7 @@ func TestPrometheusCustomHeader(t *testing.T) {
 			URLs:        []string{ts.URL},
 			URLTag:      "url",
 			HTTPHeaders: test.headers,
+			Statistics:  selfstat.NewCollector(nil),
 		}
 		err := p.Init()
 		require.NoError(t, err)
@@ -162,6 +165,7 @@ func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
 	p := &Prometheus{
 		Log:                testutil.Logger{},
 		KubernetesServices: []string{ts.URL},
+		Statistics:         selfstat.NewCollector(nil),
 		URLTag:             "url",
 	}
 	err := p.Init()
@@ -200,6 +204,7 @@ test_counter{label="test"} 1 1685443805885`
 	p := &Prometheus{
 		Log:                testutil.Logger{},
 		KubernetesServices: []string{ts.URL},
+		Statistics:         selfstat.NewCollector(nil),
 	}
 	require.NoError(t, p.Init())
 
@@ -240,6 +245,7 @@ func TestPrometheusGeneratesMetricsAlthoughFirstDNSFailsIntegration(t *testing.T
 		Log:                testutil.Logger{},
 		URLs:               []string{ts.URL},
 		KubernetesServices: []string{"http://random.telegraf.local:88/metrics"},
+		Statistics:         selfstat.NewCollector(nil),
 	}
 	err := p.Init()
 	require.NoError(t, err)
@@ -273,6 +279,7 @@ func TestPrometheusGeneratesMetricsSlowEndpoint(t *testing.T) {
 		client: &http.Client{
 			Timeout: time.Second * 5,
 		},
+		Statistics: selfstat.NewCollector(nil),
 	}
 	err := p.Init()
 	require.NoError(t, err)
@@ -308,6 +315,7 @@ func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeout(t *testing.T) {
 		client: &http.Client{
 			Timeout: time.Second * 5,
 		},
+		Statistics: selfstat.NewCollector(nil),
 	}
 	err := p.Init()
 	require.NoError(t, err)
@@ -334,9 +342,10 @@ func TestPrometheusGeneratesMetricsSlowEndpointNewConfigParameter(t *testing.T) 
 	defer ts.Close()
 
 	p := &Prometheus{
-		Log:    testutil.Logger{},
-		URLs:   []string{ts.URL},
-		URLTag: "url",
+		Log:        testutil.Logger{},
+		URLs:       []string{ts.URL},
+		URLTag:     "url",
+		Statistics: selfstat.NewCollector(nil),
 	}
 	err := p.Init()
 	require.NoError(t, err)
@@ -367,9 +376,10 @@ func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeoutNewConfigParameter(t
 	defer ts.Close()
 
 	p := &Prometheus{
-		Log:    testutil.Logger{},
-		URLs:   []string{ts.URL},
-		URLTag: "url",
+		Log:        testutil.Logger{},
+		URLs:       []string{ts.URL},
+		URLTag:     "url",
+		Statistics: selfstat.NewCollector(nil),
 	}
 	err := p.Init()
 	require.NoError(t, err)
@@ -396,6 +406,7 @@ func TestPrometheusContentLengthLimit(t *testing.T) {
 		URLs:               []string{ts.URL},
 		URLTag:             "url",
 		ContentLengthLimit: 1,
+		Statistics:         selfstat.NewCollector(nil),
 	}
 	require.NoError(t, p.Init())
 
@@ -419,6 +430,7 @@ func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {
 		URLs:          []string{ts.URL},
 		URLTag:        "url",
 		MetricVersion: 2,
+		Statistics:    selfstat.NewCollector(nil),
 	}
 	err := p.Init()
 	require.NoError(t, err)
@@ -457,6 +469,7 @@ go_gc_duration_seconds_count 42`
 		URLTag:               "",
 		MetricVersion:        2,
 		EnableRequestMetrics: true,
+		Statistics:           selfstat.NewCollector(nil),
 	}
 	err := p.Init()
 	require.NoError(t, err)
@@ -528,6 +541,7 @@ func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {
 		URLs:          []string{ts.URL},
 		URLTag:        "url",
 		MetricVersion: 2,
+		Statistics:    selfstat.NewCollector(nil),
 	}
 	err := p.Init()
 	require.NoError(t, err)
@@ -557,6 +571,7 @@ func TestPrometheusGeneratesMetricsWithIgnoreTimestamp(t *testing.T) {
 		URLs:            []string{ts.URL},
 		URLTag:          "url",
 		IgnoreTimestamp: true,
+		Statistics:      selfstat.NewCollector(nil),
 	}
 	require.NoError(t, p.Init())
 
@@ -571,7 +586,7 @@ func TestPrometheusGeneratesMetricsWithIgnoreTimestamp(t *testing.T) {
 
 func TestUnsupportedFieldSelector(t *testing.T) {
 	fieldSelectorString := "spec.containerName=container"
-	prom := &Prometheus{Log: testutil.Logger{}, KubernetesFieldSelector: fieldSelectorString}
+	prom := &Prometheus{Log: testutil.Logger{}, KubernetesFieldSelector: fieldSelectorString, Statistics: selfstat.NewCollector(nil)}
 
 	fieldSelector, err := fields.ParseSelector(prom.KubernetesFieldSelector)
 	require.NoError(t, err)
@@ -589,6 +604,7 @@ func TestInitConfigErrors(t *testing.T) {
 		MonitorPods:       true,
 		PodScrapeScope:    "node",
 		PodScrapeInterval: 60,
+		Statistics:        selfstat.NewCollector(nil),
 	}
 
 	// Both invalid IP addresses
@@ -634,6 +650,7 @@ func TestInitConfigSelectors(t *testing.T) {
 		PodScrapeInterval:           60,
 		KubernetesLabelSelector:     "app=test",
 		KubernetesFieldSelector:     "spec.nodeName=node-0",
+		Statistics:                  selfstat.NewCollector(nil),
 	}
 	err := p.Init()
 	require.NoError(t, err)
@@ -659,6 +676,7 @@ test_counter{label="test"} 1 1685443805885`
 		Log:                  testutil.Logger{},
 		KubernetesServices:   []string{ts.URL},
 		EnableRequestMetrics: true,
+		Statistics:           selfstat.NewCollector(nil),
 	}
 	require.NoError(t, p.Init())
 
@@ -703,6 +721,7 @@ func TestPrometheusInternalContentBadFormat(t *testing.T) {
 		Log:                  testutil.Logger{},
 		KubernetesServices:   []string{ts.URL},
 		EnableRequestMetrics: true,
+		Statistics:           selfstat.NewCollector(nil),
 	}
 	require.NoError(t, p.Init())
 
@@ -738,6 +757,7 @@ func TestPrometheusInternalNoWeb(t *testing.T) {
 		Log:                  testutil.Logger{},
 		KubernetesServices:   []string{ts.URL},
 		EnableRequestMetrics: true,
+		Statistics:           selfstat.NewCollector(nil),
 	}
 	require.NoError(t, p.Init())
 
@@ -793,6 +813,7 @@ go_memstats_heap_alloc_bytes 1.581062048e+09
 		URLs:          []string{ts.URL},
 		URLTag:        "",
 		MetricVersion: 2,
+		Statistics:    selfstat.NewCollector(nil),
 	}
 	require.NoError(t, p.Init())
 
@@ -845,6 +866,7 @@ func TestOpenmetricsProtobuf(t *testing.T) {
 		URLs:          []string{ts.URL},
 		URLTag:        "",
 		MetricVersion: 2,
+		Statistics:    selfstat.NewCollector(nil),
 	}
 	require.NoError(t, p.Init())
 
@@ -908,6 +930,7 @@ go_memstats_heap_alloc_bytes 1.581062048e+09
 		URLTag:              "",
 		MetricVersion:       2,
 		ContentTypeOverride: "openmetrics-text",
+		Statistics:          selfstat.NewCollector(nil),
 	}
 	require.NoError(t, p.Init())
 
