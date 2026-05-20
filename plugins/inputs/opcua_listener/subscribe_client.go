@@ -90,13 +90,6 @@ func assignConfigValuesToRequest(req *ua.MonitoredItemCreateRequest, monParams *
 }
 
 func (sc *subscribeClientConfig) createSubscribeClient(log telegraf.Logger) (*subscribeClient, error) {
-	// Browse-based discovery is currently only wired into inputs.opcua. The
-	// shared InputClientConfig accepts the [browse] table for inputs.opcua_listener
-	// too, so reject it explicitly here to avoid silently producing zero metrics.
-	if len(sc.Browse.Paths) > 0 {
-		return nil, errors.New("browse-based discovery is not yet supported for inputs.opcua_listener; use inputs.opcua instead")
-	}
-
 	client, err := sc.InputClientConfig.CreateInputClient(log)
 	if err != nil {
 		return nil, err
@@ -141,6 +134,19 @@ func (o *subscribeClient) connect() error {
 	if err := o.OpcUAClient.UpdateNamespaceArray(o.ctx); err != nil {
 		o.Log.Warnf("Failed to fetch namespace array: %v", err)
 		// Continue anyway - this is only needed if using namespace URIs
+	}
+
+	// Browse-based discovery runs on every connect so server-side schema
+	// changes (added or removed nodes, renumbered namespaces) are picked up
+	// on reconnect. DiscoverNodes replaces the previously discovered groups
+	// and InitNodeMetricMapping rebuilds the mapping from scratch.
+	if len(o.Config.Browse.Paths) > 0 {
+		if err := o.OpcUAInputClient.DiscoverNodes(o.ctx); err != nil {
+			return fmt.Errorf("browse discovery failed: %w", err)
+		}
+		if err := o.OpcUAInputClient.InitNodeMetricMapping(); err != nil {
+			return fmt.Errorf("initializing node metric mapping failed: %w", err)
+		}
 	}
 
 	// Initialize node IDs after connection so namespace URIs can be resolved
