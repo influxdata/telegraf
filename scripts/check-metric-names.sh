@@ -13,12 +13,14 @@ BASE="origin/${BASE_REF}"
 # Extract backtick-quoted field names from the first column of markdown tables.
 # Matches lines like:  | `field_name`  | ...
 extract_fields() {
+    # shellcheck disable=SC2016 -- backtick is a literal regex character, not a command substitution
     grep -oE '^\s*\|\s*`[a-zA-Z0-9_]+`' "$1" 2>/dev/null \
         | awk -F'`' '{print $2}' \
         || true
 }
 
 extract_fields_from_stdin() {
+    # shellcheck disable=SC2016 -- backtick is a literal regex character, not a command substitution
     grep -oE '^\s*\|\s*`[a-zA-Z0-9_]+`' 2>/dev/null \
         | awk -F'`' '{print $2}' \
         || true
