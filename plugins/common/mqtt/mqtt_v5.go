@@ -67,8 +67,13 @@ func NewMQTTv5Client(cfg *MqttConfig) (*mqttv5Client, error) {
 
 	brokers := make([]*url.URL, 0, len(servers))
 	for _, server := range servers {
-		if tlsCfg != nil {
-			server.Scheme = "tls"
+		switch server.Scheme {
+		case "ws", "wss":
+			// Keep websocket schemes as-is
+		default:
+			if tlsCfg != nil {
+				server.Scheme = "tls"
+			}
 		}
 		brokers = append(brokers, server)
 	}

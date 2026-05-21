@@ -71,8 +71,15 @@ func NewMQTTv311Client(cfg *MqttConfig) (*mqttv311Client, error) {
 		return nil, err
 	}
 	for _, server := range servers {
-		if tlsCfg != nil {
-			server.Scheme = "tls"
+		switch server.Scheme {
+		case "ws":
+			// Keep ws:// as-is
+		case "wss":
+			// Keep wss:// as-is
+		default:
+			if tlsCfg != nil {
+				server.Scheme = "tls"
+			}
 		}
 		broker := server.String()
 		opts.AddBroker(broker)
