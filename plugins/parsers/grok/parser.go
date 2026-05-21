@@ -196,6 +196,10 @@ func (p *Parser) Compile() error {
 	return p.compileCustomPatterns()
 }
 
+func (p *Parser) SetTimeFunc(fn func() time.Time) {
+	p.timeFunc = fn
+}
+
 // ParseLine is the primary function to process individual lines, returning the metrics
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	var err error
@@ -226,7 +230,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		tags[k] = v
 	}
 
-	timestamp := time.Now()
+	timestamp := p.timeFunc()
 	for k, v := range values {
 		if k == "" || v == "" {
 			continue
