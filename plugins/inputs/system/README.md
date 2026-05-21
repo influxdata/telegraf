@@ -98,7 +98,7 @@ separate `system_os` measurement.
 | `n_users`         | `users`                    | integer | Number of logged-in user sessions           |
 | `n_unique_users`  | `users`                    | integer | Number of unique logged-in usernames        |
 | `n_virtual_cpus`  | `cpus`                     | integer | Number of logical CPUs                      |
-| `n_cpus_RENAMED`          | `legacy_cpus`              | integer | Number of logical CPUs (legacy name)        |
+| `n_cpus`          | `legacy_cpus`              | integer | Number of logical CPUs (legacy name)        |
 | `n_physical_cpus` | `cpus` / `legacy_cpus`     | integer | Number of physical CPUs                     |
 | `uptime`          | `uptime`                   | integer | System uptime in seconds (gauge field)      |
 | `uptime`          | `legacy_uptime`            | integer | System uptime in seconds (separate counter) |
