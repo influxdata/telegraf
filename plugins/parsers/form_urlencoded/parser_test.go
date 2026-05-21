@@ -20,9 +20,10 @@ const (
 )
 
 func TestParseValidFormData(t *testing.T) {
-	parser := Parser{
+	parser := &Parser{
 		MetricName: "form_urlencoded_test",
 	}
+	require.NoError(t, parser.Init())
 
 	metrics, err := parser.Parse([]byte(validFormData))
 	require.NoError(t, err)
@@ -36,9 +37,10 @@ func TestParseValidFormData(t *testing.T) {
 }
 
 func TestParseLineValidFormData(t *testing.T) {
-	parser := Parser{
+	parser := &Parser{
 		MetricName: "form_urlencoded_test",
 	}
+	require.NoError(t, parser.Init())
 
 	metrics, err := parser.ParseLine(validFormData)
 	require.NoError(t, err)
@@ -51,10 +53,11 @@ func TestParseLineValidFormData(t *testing.T) {
 }
 
 func TestParseValidFormDataWithTags(t *testing.T) {
-	parser := Parser{
+	parser := &Parser{
 		MetricName: "form_urlencoded_test",
 		TagKeys:    []string{"tag1", "tag2"},
 	}
+	require.NoError(t, parser.Init())
 
 	metrics, err := parser.Parse([]byte(validFormData))
 	require.NoError(t, err)
@@ -71,11 +74,12 @@ func TestParseValidFormDataWithTags(t *testing.T) {
 }
 
 func TestParseValidFormDataDefaultTags(t *testing.T) {
-	parser := Parser{
+	parser := &Parser{
 		MetricName:  "form_urlencoded_test",
 		TagKeys:     []string{"tag1", "tag2"},
 		DefaultTags: map[string]string{"tag4": "default"},
 	}
+	require.NoError(t, parser.Init())
 
 	metrics, err := parser.Parse([]byte(validFormData))
 	require.NoError(t, err)
@@ -93,11 +97,12 @@ func TestParseValidFormDataDefaultTags(t *testing.T) {
 }
 
 func TestParseValidFormDataDefaultTagsOverride(t *testing.T) {
-	parser := Parser{
+	parser := &Parser{
 		MetricName:  "form_urlencoded_test",
 		TagKeys:     []string{"tag1", "tag2"},
 		DefaultTags: map[string]string{"tag1": "default"},
 	}
+	require.NoError(t, parser.Init())
 
 	metrics, err := parser.Parse([]byte(validFormData))
 	require.NoError(t, err)
@@ -114,10 +119,11 @@ func TestParseValidFormDataDefaultTagsOverride(t *testing.T) {
 }
 
 func TestParseEncodedFormData(t *testing.T) {
-	parser := Parser{
+	parser := &Parser{
 		MetricName: "form_urlencoded_test",
 		TagKeys:    []string{"tag1"},
 	}
+	require.NoError(t, parser.Init())
 
 	metrics, err := parser.Parse([]byte(encodedFormData))
 	require.NoError(t, err)
@@ -132,9 +138,10 @@ func TestParseEncodedFormData(t *testing.T) {
 }
 
 func TestParseInvalidFormDataError(t *testing.T) {
-	parser := Parser{
+	parser := &Parser{
 		MetricName: "form_urlencoded_test",
 	}
+	require.NoError(t, parser.Init())
 
 	metrics, err := parser.Parse([]byte(notEscapedProperlyFormData))
 	require.Error(t, err)
@@ -142,9 +149,10 @@ func TestParseInvalidFormDataError(t *testing.T) {
 }
 
 func TestParseInvalidFormDataEmptyKey(t *testing.T) {
-	parser := Parser{
+	parser := &Parser{
 		MetricName: "form_urlencoded_test",
 	}
+	require.NoError(t, parser.Init())
 
 	// Empty key for field
 	metrics, err := parser.Parse([]byte(blankKeyFormData))
@@ -167,9 +175,10 @@ func TestParseInvalidFormDataEmptyKey(t *testing.T) {
 }
 
 func TestParseInvalidFormDataEmptyString(t *testing.T) {
-	parser := Parser{
+	parser := &Parser{
 		MetricName: "form_urlencoded_test",
 	}
+	require.NoError(t, parser.Init())
 
 	metrics, err := parser.Parse([]byte(emptyFormData))
 	require.NoError(t, err)
@@ -183,6 +192,7 @@ func TestBenchmarkData(t *testing.T) {
 		MetricName: "benchmark",
 		TagKeys:    []string{"tags_host", "tags_platform", "tags_sdkver"},
 	}
+	require.NoError(t, plugin.Init())
 
 	expected := []telegraf.Metric{
 		metric.New(
@@ -209,6 +219,7 @@ func BenchmarkParsing(b *testing.B) {
 		MetricName: "benchmark",
 		TagKeys:    []string{"source", "tags_platform", "tags_sdkver"},
 	}
+	require.NoError(b, plugin.Init())
 
 	for n := 0; n < b.N; n++ {
 		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
