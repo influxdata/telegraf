@@ -21,14 +21,6 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-var raiseNoFileLimit = func(hc *container.HostConfig) {
-	hc.Ulimits = append(hc.Ulimits, &container.Ulimit{
-		Name: "nofile",
-		Soft: 32768,
-		Hard: 32768,
-	})
-}
-
 func TestInitSuccess(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -1012,4 +1004,12 @@ func generateBenchmarkMetrics(collections, total int) []telegraf.Metric {
 		m = append(m, testutil.TestMetric(i, fmt.Sprintf("collection_%d", i%collections)))
 	}
 	return m
+}
+
+func raiseNoFileLimit(hc *container.HostConfig) {
+	hc.Ulimits = append(hc.Ulimits, &container.Ulimit{
+		Name: "nofile",
+		Soft: 32768,
+		Hard: 32768,
+	})
 }
