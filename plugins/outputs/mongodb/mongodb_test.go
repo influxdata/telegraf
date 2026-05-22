@@ -896,7 +896,11 @@ func TestWriteIntegration(t *testing.T) {
 
 				// Verify the collection documents
 				projection := bson.D{primitive.E{Key: "_id", Value: 0}}
-				cur, err := c.Find(t.Context(), bson.D{}, options.Find().SetProjection(projection))
+				cur, err := c.Find(
+					t.Context(),
+					bson.D{},
+					options.Find().SetProjection(projection).SetSort(bson.D{{Key: "timestamp", Value: 1}}),
+				)
 				require.NoError(t, err)
 
 				var documents []bson.D

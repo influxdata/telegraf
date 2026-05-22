@@ -69,9 +69,7 @@ func (s *MongoDB) Init() error {
 		s.MetadataTagStrategy = "keep"
 	case "keep", "move", "clear":
 	default:
-		if len(s.MetadataKeys) > 0 {
-			return fmt.Errorf("invalid 'metadata_tag_strategy' %q", s.MetadataTagStrategy)
-		}
+		return fmt.Errorf("invalid 'metadata_tag_strategy' %q", s.MetadataTagStrategy)
 	}
 
 	// Do some basic Dsn checks
