@@ -1,65 +1,46 @@
 package redfish
 
 import (
-	"net/url"
+	"strconv"
 
 	"github.com/influxdata/telegraf"
+	"github.com/stmcginnis/gofish/schemas"
 )
 
-type power struct {
-	PowerControl []struct {
-		Name                string
-		MemberID            string
-		PowerAllocatedWatts *float64
-		PowerAvailableWatts *float64
-		PowerCapacityWatts  *float64
-		PowerConsumedWatts  *float64
-		PowerRequestedWatts *float64
-		PowerMetrics        struct {
-			AverageConsumedWatts *float64
-			IntervalInMin        int
-			MaxConsumedWatts     *float64
-			MinConsumedWatts     *float64
-		}
+func (r *Redfish) gatherPower(acc telegraf.Accumulator, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
+	powerSubsys, err := chassis.PowerSubsystem()
+	if err != nil {
+		return err
 	}
-	PowerSupplies []struct {
-		Name                 string
-		MemberID             string
-		PowerInputWatts      *float64
-		PowerCapacityWatts   *float64
-		PowerOutputWatts     *float64
-		LastPowerOutputWatts *float64
-		Status               status
-		LineInputVoltage     *float64
-		SerialNumber         string
+
+	// The redfish version is not an indicator as to which of these api's has been implemented
+	// We use the old endpoints only as a fallback as to not generate duplicates
+	if powerSubsys == nil {
+		// Gather metrics via the legacy api
+		r.gatherPowerMetrics(acc, system, chassis)
+	} else {
+		// Gather metrics via the current thermal subsys api
+		r.gatherPowerSubsysMetrics(acc, system, powerSubsys, chassis)
 	}
-	Voltages []struct {
-		Name                   string
-		MemberID               string
-		ReadingVolts           *float64
-		UpperThresholdCritical *float64
-		UpperThresholdFatal    *float64
-		LowerThresholdCritical *float64
-		LowerThresholdFatal    *float64
-		Status                 status
-	}
+
+	return nil
 }
 
-func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *system, chassis *chassis) error {
-	power, err := r.getPower(chassis.Power.Ref)
-	if err != nil {
+func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
+	power, err := chassis.Power()
+	if err != nil || power == nil {
 		return err
 	}
 
 	for _, j := range power.PowerControl {
 		tags := map[string]string{
 			"member_id": j.MemberID,
-			"address":   address,
-			"name":      j.Name,
-			"source":    system.Hostname,
+			// "address":   address,
+			"name":   j.Name,
+			"source": system.HostName,
 		}
-		if _, ok := r.tagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
-			tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
+		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
+			// tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 			tags["room"] = chassis.Location.PostalAddress.Room
 			tags["rack"] = chassis.Location.Placement.Rack
 			tags["row"] = chassis.Location.Placement.Row
@@ -86,13 +67,13 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *
 	for _, j := range power.PowerSupplies {
 		tags := make(map[string]string, 19)
 		tags["member_id"] = j.MemberID
-		tags["address"] = address
+		// tags["address"] = address
 		tags["name"] = j.Name
-		tags["source"] = system.Hostname
-		tags["state"] = j.Status.State
+		tags["source"] = system.HostName
+		tags["state"] = string(j.Status.State)
 		tags["serial_num"] = j.SerialNumber
-		if _, ok := r.tagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
-			tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
+		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
+			// tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 			tags["room"] = chassis.Location.PostalAddress.Room
 			tags["rack"] = chassis.Location.Placement.Rack
 			tags["row"] = chassis.Location.Placement.Row
@@ -114,11 +95,11 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *
 	for _, j := range power.Voltages {
 		tags := make(map[string]string, 19)
 		tags["member_id"] = j.MemberID
-		tags["address"] = address
+		// tags["address"] = address
 		tags["name"] = j.Name
-		tags["source"] = system.Hostname
-		if _, ok := r.tagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
-			tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
+		tags["source"] = system.HostName
+		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
+			// tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 			tags["room"] = chassis.Location.PostalAddress.Room
 			tags["rack"] = chassis.Location.Placement.Rack
 			tags["row"] = chassis.Location.Placement.Row
@@ -141,12 +122,67 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *
 	return nil
 }
 
-func (r *Redfish) getPower(ref string) (*power, error) {
-	loc := r.baseURL.ResolveReference(&url.URL{Path: ref})
-	power := &power{}
-	err := r.getData(loc.String(), power)
-	if err != nil {
-		return nil, err
+func (r *Redfish) gatherPowerSubsysMetrics(acc telegraf.Accumulator, system *schemas.ComputerSystem, powerSubsys *schemas.PowerSubsystem, chassis *schemas.Chassis) error {
+
+	for _, redundGroup := range powerSubsys.PowerSupplyRedundancy {
+		tags := map[string]string{
+			"name":   redundGroup.GroupName,
+			"source": system.HostName,
+		}
+		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
+			// tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
+			tags["room"] = chassis.Location.PostalAddress.Room
+			tags["rack"] = chassis.Location.Placement.Rack
+			tags["row"] = chassis.Location.Placement.Row
+		}
+		if _, ok := r.tagSet[tagSetChassis]; ok {
+			setChassisTags(chassis, tags)
+		}
+
+		fields := map[string]interface{}{
+			"type":   redundGroup.RedundancyType,
+			"health": redundGroup.Status.Health,
+			"state":  redundGroup.Status.State,
+		}
+
+		acc.AddFields("redfish_powersubsys_redundancy", fields, tags)
 	}
-	return power, nil
+
+	psu, err := powerSubsys.PowerSupplies()
+	if err != nil || psu == nil {
+		return err
+	}
+
+	// Contains Voltage and wattage info
+	for _, j := range psu {
+		tags := make(map[string]string, 19)
+		tags["member_id"] = j.MemberID
+		// tags["address"] = address
+		tags["name"] = j.Name
+		tags["source"] = system.HostName
+		tags["state"] = string(j.Status.State)
+		tags["serial_num"] = j.SerialNumber
+		tags["hotpluggable"] = strconv.FormatBool(j.HotPluggable)
+		tags["line_input_voltage_type"] = string(j.LineInputVoltageType)
+		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
+			tags["room"] = chassis.Location.PostalAddress.Room
+			tags["rack"] = chassis.Location.Placement.Rack
+			tags["row"] = chassis.Location.Placement.Row
+		}
+		if _, ok := r.tagSet[tagSetChassis]; ok {
+			setChassisTags(chassis, tags)
+		}
+
+		fields := make(map[string]interface{})
+		fields["health"] = j.Status.Health
+		fields["power_input_watts"] = j.PowerInputWatts
+		fields["power_output_watts"] = j.PowerOutputWatts
+		fields["line_input_voltage"] = j.LineInputVoltage
+		fields["last_power_output_watts"] = j.LastPowerOutputWatts
+		fields["power_capacity_watts"] = j.PowerCapacityWatts
+		fields["firmware_version"] = j.FirmwareVersion
+		acc.AddFields("redfish_powersubsys_powersupplies", fields, tags)
+	}
+
+	return nil
 }
