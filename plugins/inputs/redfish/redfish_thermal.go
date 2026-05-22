@@ -5,7 +5,7 @@ import (
 	"github.com/stmcginnis/gofish/schemas"
 )
 
-func (r *Redfish) gatherThermal(acc telegraf.Accumulator, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
+func (r *Redfish) gatherThermal(acc telegraf.Accumulator, address string, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
 
 	thermalSubsys, err := chassis.ThermalSubsystem()
 	if err != nil {
@@ -16,16 +16,16 @@ func (r *Redfish) gatherThermal(acc telegraf.Accumulator, system *schemas.Comput
 	// We use the old endpoints only as a fallback as to not generate duplicates
 	if thermalSubsys == nil {
 		// Gather metrics via the legacy api
-		r.gatherThermalMetrics(acc, system, chassis)
+		err = r.gatherThermalMetrics(acc, address, system, chassis)
 	} else {
 		// Gather metrics via the current thermal subsys api
-		r.gatherThermalSubsysMetrics(acc, system, thermalSubsys, chassis)
+		err = r.gatherThermalSubsysMetrics(acc, system, thermalSubsys, chassis)
 	}
 
-	return nil
+	return err
 }
 
-func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
+func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, address string, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
 	thermal, err := chassis.Thermal()
 	if err != nil || thermal == nil {
 		return err
@@ -34,7 +34,9 @@ func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, system *schemas
 	for _, j := range thermal.Temperatures {
 		tags := make(map[string]string, 19)
 		tags["member_id"] = j.MemberID
-		// tags["address"] = address
+		tags["address"] = address
+		tags["state"] = string(j.Status.State)
+		tags["health"] = string(j.Status.Health)
 		tags["name"] = j.Name
 		tags["source"] = system.HostName
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
@@ -48,8 +50,7 @@ func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, system *schemas
 		}
 
 		fields := make(map[string]interface{})
-		fields["state"] = j.Status.State
-		fields["health"] = j.Status.Health
+
 		fields["reading_celsius"] = j.ReadingCelsius
 		fields["upper_threshold_critical"] = j.UpperThresholdCritical
 		fields["upper_threshold_fatal"] = j.UpperThresholdFatal
@@ -62,11 +63,11 @@ func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, system *schemas
 		tags := make(map[string]string, 20)
 		fields := make(map[string]interface{}, 5)
 		tags["member_id"] = j.MemberID
-		//tags["address"] = address
+		tags["address"] = address
 		tags["name"] = j.Name
 		tags["source"] = system.HostName
-		fields["state"] = j.Status.State
-		fields["health"] = j.Status.Health
+		tags["state"] = string(j.Status.State)
+		tags["health"] = string(j.Status.Health)
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
 			// tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 			tags["room"] = chassis.Location.PostalAddress.Room

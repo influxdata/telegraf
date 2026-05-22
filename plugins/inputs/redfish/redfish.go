@@ -7,7 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -71,6 +73,12 @@ func (r *Redfish) Init() error {
 }
 
 func (r *Redfish) Gather(acc telegraf.Accumulator) error {
+	redfishUrl, _ := url.Parse(r.Address)
+	address, _, err := net.SplitHostPort(redfishUrl.Host)
+	if err != nil {
+		address = redfishUrl.Host
+	}
+
 	systems, err := r.gf.Systems()
 	if err != nil {
 		return err
@@ -88,11 +96,11 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 					var err error
 					switch metric {
 					case "thermal":
-						err = r.gatherThermal(acc, system, chassis)
+						err = r.gatherThermal(acc, address, system, chassis)
 					case "power":
-						err = r.gatherPower(acc, system, chassis)
+						err = r.gatherPower(acc, address, system, chassis)
 					case "storage":
-						err = r.gatherStorage(acc, system, chassis)
+						err = r.gatherStorage(acc, address, system, chassis)
 					default:
 						return fmt.Errorf("unknown metric requested: %s", metric)
 					}
@@ -273,6 +281,7 @@ func (r *Redfish) gofishSetup() (*gofish.Service, error) {
 			Endpoint:   r.Address,
 			Username:   user,
 			Password:   pass,
+			BasicAuth:  true,
 			HTTPClient: &r.client,
 		}
 	}

@@ -11,15 +11,16 @@ type MembersList struct {
 	}
 }
 
-func (r *Redfish) gatherStorage(acc telegraf.Accumulator, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
+func (r *Redfish) gatherStorage(acc telegraf.Accumulator, address string, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
 	storage, err := system.Storage()
-	if err != nil && (storage == nil || len(storage) == 0) {
+	if err != nil && len(storage) == 0 {
 		return err
 	}
 
 	for _, j := range storage {
 		tags := make(map[string]string, 20)
 		tags["source"] = system.HostName
+		tags["address"] = address
 		tags["state"] = string(j.Status.State)
 		tags["health_rollup"] = string(j.Status.HealthRollup)
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok {

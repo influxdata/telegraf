@@ -7,7 +7,7 @@ import (
 	"github.com/stmcginnis/gofish/schemas"
 )
 
-func (r *Redfish) gatherPower(acc telegraf.Accumulator, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
+func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
 	powerSubsys, err := chassis.PowerSubsystem()
 	if err != nil {
 		return err
@@ -17,16 +17,16 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, system *schemas.Computer
 	// We use the old endpoints only as a fallback as to not generate duplicates
 	if powerSubsys == nil {
 		// Gather metrics via the legacy api
-		r.gatherPowerMetrics(acc, system, chassis)
+		err = r.gatherPowerMetrics(acc, address, system, chassis)
 	} else {
 		// Gather metrics via the current thermal subsys api
-		r.gatherPowerSubsysMetrics(acc, system, powerSubsys, chassis)
+		err = r.gatherPowerSubsysMetrics(acc, address, system, powerSubsys, chassis)
 	}
 
-	return nil
+	return err
 }
 
-func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
+func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
 	power, err := chassis.Power()
 	if err != nil || power == nil {
 		return err
@@ -35,9 +35,9 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, system *schemas.C
 	for _, j := range power.PowerControl {
 		tags := map[string]string{
 			"member_id": j.MemberID,
-			// "address":   address,
-			"name":   j.Name,
-			"source": system.HostName,
+			"address":   address,
+			"name":      j.Name,
+			"source":    system.HostName,
 		}
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
 			// tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
@@ -55,8 +55,8 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, system *schemas.C
 			"power_capacity_watts":   j.PowerCapacityWatts,
 			"power_consumed_watts":   j.PowerConsumedWatts,
 			"power_requested_watts":  j.PowerRequestedWatts,
-			"average_consumed_watts": j.PowerMetrics.AverageConsumedWatts,
-			"interval_in_min":        j.PowerMetrics.IntervalInMin,
+			"average_consumed_watts": float64(*j.PowerMetrics.AverageConsumedWatts),
+			"interval_in_min":        int64(*j.PowerMetrics.IntervalInMin),
 			"max_consumed_watts":     j.PowerMetrics.MaxConsumedWatts,
 			"min_consumed_watts":     j.PowerMetrics.MinConsumedWatts,
 		}
@@ -67,11 +67,12 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, system *schemas.C
 	for _, j := range power.PowerSupplies {
 		tags := make(map[string]string, 19)
 		tags["member_id"] = j.MemberID
-		// tags["address"] = address
+		tags["address"] = address
 		tags["name"] = j.Name
 		tags["source"] = system.HostName
 		tags["state"] = string(j.Status.State)
 		tags["serial_num"] = j.SerialNumber
+		tags["health"] = string(j.Status.Health)
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
 			// tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 			tags["room"] = chassis.Location.PostalAddress.Room
@@ -83,7 +84,6 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, system *schemas.C
 		}
 
 		fields := make(map[string]interface{})
-		fields["health"] = j.Status.Health
 		fields["power_input_watts"] = j.PowerInputWatts
 		fields["power_output_watts"] = j.PowerOutputWatts
 		fields["line_input_voltage"] = j.LineInputVoltage
@@ -95,9 +95,11 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, system *schemas.C
 	for _, j := range power.Voltages {
 		tags := make(map[string]string, 19)
 		tags["member_id"] = j.MemberID
-		// tags["address"] = address
+		tags["address"] = address
 		tags["name"] = j.Name
 		tags["source"] = system.HostName
+		tags["state"] = string(j.Status.State)
+		tags["health"] = string(j.Status.Health)
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
 			// tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 			tags["room"] = chassis.Location.PostalAddress.Room
@@ -109,8 +111,6 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, system *schemas.C
 		}
 
 		fields := make(map[string]interface{})
-		fields["state"] = j.Status.State
-		fields["health"] = j.Status.Health
 		fields["reading_volts"] = j.ReadingVolts
 		fields["upper_threshold_critical"] = j.UpperThresholdCritical
 		fields["upper_threshold_fatal"] = j.UpperThresholdFatal
@@ -122,7 +122,7 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, system *schemas.C
 	return nil
 }
 
-func (r *Redfish) gatherPowerSubsysMetrics(acc telegraf.Accumulator, system *schemas.ComputerSystem, powerSubsys *schemas.PowerSubsystem, chassis *schemas.Chassis) error {
+func (r *Redfish) gatherPowerSubsysMetrics(acc telegraf.Accumulator, address string, system *schemas.ComputerSystem, powerSubsys *schemas.PowerSubsystem, chassis *schemas.Chassis) error {
 
 	for _, redundGroup := range powerSubsys.PowerSupplyRedundancy {
 		tags := map[string]string{
@@ -157,7 +157,7 @@ func (r *Redfish) gatherPowerSubsysMetrics(acc telegraf.Accumulator, system *sch
 	for _, j := range psu {
 		tags := make(map[string]string, 19)
 		tags["member_id"] = j.MemberID
-		// tags["address"] = address
+		tags["address"] = address
 		tags["name"] = j.Name
 		tags["source"] = system.HostName
 		tags["state"] = string(j.Status.State)

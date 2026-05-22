@@ -18,20 +18,24 @@ import (
 
 func TestDellApis(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !checkAuth(r, "test", "test") {
+		if !checkAuth(r, "test", "test", "token") {
 			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 			return
 		}
 
 		switch r.URL.Path {
+		case "/redfish/v1/":
+			http.ServeFile(w, r, "testdata/base.json")
+		case "/redfish/v1/Systems/":
+			http.ServeFile(w, r, "testdata/dell/systems.json")
 		case "/redfish/v1/Chassis/System.Embedded.1/Thermal":
-			http.ServeFile(w, r, "testdata/dell_thermal.json")
+			http.ServeFile(w, r, "testdata/dell/thermal.json")
 		case "/redfish/v1/Chassis/System.Embedded.1/Power":
-			http.ServeFile(w, r, "testdata/dell_power.json")
+			http.ServeFile(w, r, "testdata/dell/power.json")
 		case "/redfish/v1/Chassis/System.Embedded.1":
-			http.ServeFile(w, r, "testdata/dell_chassis.json")
+			http.ServeFile(w, r, "testdata/dell/chassis.json")
 		case "/redfish/v1/Systems/System.Embedded.1":
-			http.ServeFile(w, r, "testdata/dell_systems.json")
+			http.ServeFile(w, r, "testdata/dell/systems_1.json")
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -360,12 +364,13 @@ func TestDellApis(t *testing.T) {
 		metric.New(
 			"redfish_power_powersupplies",
 			map[string]string{
-				"source":    "tpa-hostname",
-				"name":      "PS1 Status",
-				"member_id": "PSU.Slot.1",
-				"address":   address,
-				"health":    "OK",
-				"state":     "Enabled",
+				"source":     "tpa-hostname",
+				"name":       "PS1 Status",
+				"member_id":  "PSU.Slot.1",
+				"address":    address,
+				"health":     "OK",
+				"state":      "Enabled",
+				"serial_num": "PHARP0079G0049",
 			},
 			map[string]interface{}{
 				"power_capacity_watts": 750.00,
@@ -441,20 +446,30 @@ func TestDellApis(t *testing.T) {
 
 func TestHPApis(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !checkAuth(r, "test", "test") {
+		if !checkAuth(r, "test", "test", "token") {
 			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 			return
 		}
 
 		switch r.URL.Path {
+		case "/redfish/v1/":
+			http.ServeFile(w, r, "testdata/base.json")
+		case "/redfish/v1/Systems/":
+			http.ServeFile(w, r, "testdata/hp/systems.json")
 		case "/redfish/v1/Chassis/1/Thermal":
-			http.ServeFile(w, r, "testdata/hp_thermal.json")
+			http.ServeFile(w, r, "testdata/hp/thermal.json")
 		case "/redfish/v1/Chassis/1/Power":
-			http.ServeFile(w, r, "testdata/hp_power.json")
+			http.ServeFile(w, r, "testdata/hp/power.json")
+		case "/redfish/v1/Chassis/DE043000/Drives/0":
+			http.ServeFile(w, r, "testdata/hp/storage_drive0.json")
 		case "/redfish/v1/Systems/1":
-			http.ServeFile(w, r, "testdata/hp_systems.json")
+			http.ServeFile(w, r, "testdata/hp/systems_1.json")
+		case "/redfish/v1/Systems/1/Storage/":
+			http.ServeFile(w, r, "testdata/hp/storage.json")
+		case "/redfish/v1/Systems/1/Storage/DE043000":
+			http.ServeFile(w, r, "testdata/hp/storage_de043000.json")
 		case "/redfish/v1/Chassis/1/":
-			http.ServeFile(w, r, "testdata/hp_chassis.json")
+			http.ServeFile(w, r, "testdata/hp/chassis.json")
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -568,12 +583,13 @@ func TestHPApis(t *testing.T) {
 		metric.New(
 			"redfish_power_powersupplies",
 			map[string]string{
-				"source":    "tpa-hostname",
-				"name":      "HpeServerPowerSupply",
-				"member_id": "0",
-				"address":   address,
-				"health":    "OK",
-				"state":     "Enabled",
+				"source":     "tpa-hostname",
+				"name":       "HpeServerPowerSupply",
+				"member_id":  "0",
+				"address":    address,
+				"health":     "OK",
+				"state":      "Enabled",
+				"serial_num": "5WEBP0B8JAQ2K9",
 			},
 			map[string]interface{}{
 				"power_capacity_watts":    800.0,
@@ -585,12 +601,13 @@ func TestHPApis(t *testing.T) {
 		metric.New(
 			"redfish_power_powersupplies",
 			map[string]string{
-				"source":    "tpa-hostname",
-				"name":      "HpeServerPowerSupply",
-				"member_id": "1",
-				"address":   address,
-				"health":    "OK",
-				"state":     "Enabled",
+				"source":     "tpa-hostname",
+				"name":       "HpeServerPowerSupply",
+				"member_id":  "1",
+				"address":    address,
+				"health":     "OK",
+				"state":      "Enabled",
+				"serial_num": "5WEBP0B8JAQ2KL",
 			},
 			map[string]interface{}{
 				"power_capacity_watts":    800.0,
@@ -599,6 +616,28 @@ func TestHPApis(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
+		metric.New(
+			"redfish_storage",
+			map[string]string{
+				"address":       address,
+				"disk_health":   "OK",
+				"disk_state":    "Enabled",
+				"health_rollup": "OK",
+				"location":      "Slot=22:Port=2:Box=1:Bay=1",
+				"manufacturer":  "HPE",
+				"media_type":    "SSD",
+				"model":         "Modelname",
+				"protocol":      "SAS",
+				"serial_number": "SERIALNUMBER",
+				"source":        "tpa-hostname",
+				"state":         "Enabled",
+			},
+			map[string]interface{}{
+				"capacity_bytes": 1600321314816,
+				"speed_gbs":      22.0,
+			},
+			time.Unix(0, 0),
+		),
 	}
 
 	hpPlugin := &Redfish{
@@ -606,7 +645,7 @@ func TestHPApis(t *testing.T) {
 		Username:         config.NewSecret([]byte("test")),
 		Password:         config.NewSecret([]byte("test")),
 		ComputerSystemID: "1",
-		IncludeMetrics:   []string{"thermal", "power"},
+		IncludeMetrics:   []string{"thermal", "power", "storage"},
 	}
 	require.NoError(t, hpPlugin.Init())
 	var hpAcc testutil.Accumulator
@@ -618,121 +657,40 @@ func TestHPApis(t *testing.T) {
 		testutil.IgnoreTime())
 }
 
-func TestHPilo4Apis(t *testing.T) {
+func checkAuth(r *http.Request, username, password string, token string) bool {
+	// The base path requires not auth
+	if r.URL.Path == "/redfish/v1/" {
+		return true
+	}
+
+	authHeader := r.Header.Get("X-Auth-Token")
+	if authHeader != "" {
+		return authHeader == token
+	} else {
+		user, pass, ok := r.BasicAuth()
+		if !ok {
+			return false
+		}
+		return user == username && pass == password
+	}
+}
+
+func TestBasicAuth(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !checkAuth(r, "test", "test") {
+		if !checkAuth(r, "testing", "testing", "token") {
 			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 			return
 		}
 
 		switch r.URL.Path {
-		case "/redfish/v1/Chassis/1/Thermal":
-			http.ServeFile(w, r, "testdata/hp_thermal_ilo4.json")
-		case "/redfish/v1/Chassis/1/Power":
-			http.ServeFile(w, r, "testdata/hp_power.json")
-		case "/redfish/v1/Systems/1":
-			http.ServeFile(w, r, "testdata/hp_systems.json")
-		case "/redfish/v1/Chassis/1/":
-			http.ServeFile(w, r, "testdata/hp_chassis.json")
-		default:
-			w.WriteHeader(http.StatusNotFound)
-		}
-	}))
-
-	defer ts.Close()
-
-	u, err := url.Parse(ts.URL)
-	require.NoError(t, err)
-	address, _, err := net.SplitHostPort(u.Host)
-	require.NoError(t, err)
-
-	expectedMetricsHp := []telegraf.Metric{
-		metric.New(
-			"redfish_thermal_temperatures",
-			map[string]string{
-				"name":      "01-Inlet Ambient",
-				"member_id": "0",
-				"source":    "tpa-hostname",
-				"address":   address,
-				"health":    "OK",
-				"state":     "Enabled",
-			},
-			map[string]interface{}{
-				"reading_celsius":          19.0,
-				"upper_threshold_critical": 42.0,
-				"upper_threshold_fatal":    47.0,
-			},
-			time.Unix(0, 0),
-		),
-		metric.New(
-			"redfish_thermal_temperatures",
-			map[string]string{
-				"name":      "44-P/S 2 Zone",
-				"member_id": "42",
-				"source":    "tpa-hostname",
-				"address":   address,
-				"health":    "OK",
-				"state":     "Enabled",
-			},
-			map[string]interface{}{
-				"reading_celsius":          34.0,
-				"upper_threshold_critical": 75.0,
-				"upper_threshold_fatal":    80.0,
-			},
-			time.Unix(0, 0),
-		),
-		metric.New(
-			"redfish_thermal_fans",
-			map[string]string{
-				"address":   address,
-				"health":    "OK",
-				"member_id": "",
-				"name":      "Fan 1",
-				"source":    "tpa-hostname",
-				"state":     "Enabled",
-			},
-			map[string]interface{}{
-				"reading_percent": 17,
-			},
-			time.Unix(0, 0),
-		),
-	}
-
-	hpPlugin := &Redfish{
-		Address:          ts.URL,
-		Username:         config.NewSecret([]byte("test")),
-		Password:         config.NewSecret([]byte("test")),
-		ComputerSystemID: "1",
-		IncludeMetrics:   []string{"thermal"},
-	}
-	require.NoError(t, hpPlugin.Init())
-	var hpAcc testutil.Accumulator
-
-	err = hpPlugin.Gather(&hpAcc)
-	require.NoError(t, err)
-	require.True(t, hpAcc.HasMeasurement("redfish_thermal_temperatures"))
-	testutil.RequireMetricsEqual(t, expectedMetricsHp, hpAcc.GetTelegrafMetrics(),
-		testutil.IgnoreTime())
-}
-
-func checkAuth(r *http.Request, username, password string) bool {
-	user, pass, ok := r.BasicAuth()
-	if !ok {
-		return false
-	}
-	return user == username && pass == password
-}
-
-func TestInvalidUsernameorPassword(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !checkAuth(r, "testing", "testing") {
-			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
-			return
-		}
-
-		switch r.URL.Path {
+		case "/redfish/v1/":
+			http.ServeFile(w, r, "testdata/base.json")
+		case "/redfish/v1/Systems/":
+			http.ServeFile(w, r, "testdata/dell/systems.json")
+		case "/redfish/v1/Systems/System.Embedded.1":
+			http.ServeFile(w, r, "testdata/dell/systems_1.json")
 		case "/redfish/v1/Chassis/System.Embedded.1/Thermal":
-			http.ServeFile(w, r, "testdata/dell_thermal.json")
+			http.ServeFile(w, r, "testdata/dell/thermal.json")
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -749,21 +707,67 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NoError(t, r.Init())
-	u, err := url.Parse(ts.URL)
+	_, err := url.Parse(ts.URL)
 	require.NoError(t, err)
 	err = r.Gather(&acc)
-	require.EqualError(t, err, "received status code 401 (Unauthorized) for address http://"+u.Host+"/redfish/v1/Systems/System.Embedded.1, expected 200")
+	require.EqualError(t, err, "failed to retrieve some items: [{\"link\":\"/redfish/v1/Systems/\",\"error\":\"401: Unauthorized.\\n\"}]")
 }
-func TestNoUsernameorPasswordConfiguration(t *testing.T) {
+
+func TestTokenAuth(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !checkAuth(r, "testing", "testing") {
+		if !checkAuth(r, "testing", "testing", "faulty-token") {
 			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 			return
 		}
 
 		switch r.URL.Path {
+		case "/redfish/v1/":
+			http.ServeFile(w, r, "testdata/base.json")
+		case "/redfish/v1/Systems/":
+			http.ServeFile(w, r, "testdata/dell/systems.json")
+		case "/redfish/v1/Systems/System.Embedded.1":
+			http.ServeFile(w, r, "testdata/dell/systems_1.json")
+		case "/redfish/v1/Chassis/System.Embedded.1":
+			http.ServeFile(w, r, "testdata/dell/systems_1.json")
 		case "/redfish/v1/Chassis/System.Embedded.1/Thermal":
-			http.ServeFile(w, r, "testdata/dell_thermal.json")
+			http.ServeFile(w, r, "testdata/dell/thermal.json")
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	r := &Redfish{
+		Address:          ts.URL,
+		Token:            config.NewSecret([]byte("token")),
+		ComputerSystemID: "System.Embedded.1",
+		IncludeMetrics:   []string{"thermal", "power"},
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, r.Init())
+	_, err := url.Parse(ts.URL)
+	require.NoError(t, err)
+	err = r.Gather(&acc)
+	require.EqualError(t, err, "failed to retrieve some items: [{\"link\":\"/redfish/v1/Systems/\",\"error\":\"401: Unauthorized.\\n\"}]")
+}
+
+func TestNoUsernameorPasswordConfiguration(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !checkAuth(r, "testing", "testing", "token") {
+			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
+			return
+		}
+
+		switch r.URL.Path {
+		case "/redfish/v1/":
+			http.ServeFile(w, r, "testdata/base.json")
+		case "/redfish/v1/Systems/":
+			http.ServeFile(w, r, "testdata/dell/systems.json")
+		case "/redfish/v1/Systems/System.Embedded.1":
+			http.ServeFile(w, r, "testdata/dell/systems.json")
+		case "/redfish/v1/Chassis/System.Embedded.1/Thermal":
+			http.ServeFile(w, r, "testdata/dell/thermal.json")
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -778,7 +782,7 @@ func TestNoUsernameorPasswordConfiguration(t *testing.T) {
 
 	err := r.Init()
 	require.Error(t, err)
-	require.EqualError(t, err, "did not provide username and password")
+	require.EqualError(t, err, "Empty token or username or password. Provide either a token or user and password")
 }
 
 func TestInvalidDellJSON(t *testing.T) {
@@ -791,42 +795,39 @@ func TestInvalidDellJSON(t *testing.T) {
 	}{
 		{
 			name:             "check Thermal",
-			thermalfilename:  "testdata/dell_thermalinvalid.json",
-			powerfilename:    "testdata/dell_power.json",
-			chassisfilename:  "testdata/dell_chassis.json",
-			hostnamefilename: "testdata/dell_systems.json",
+			thermalfilename:  "testdata/dell/thermal_invalid.json",
+			powerfilename:    "testdata/dell/power.json",
+			chassisfilename:  "testdata/dell/chassis.json",
+			hostnamefilename: "testdata/dell/systems_1.json",
 		},
 		{
 			name:             "check Power",
-			thermalfilename:  "testdata/dell_thermal.json",
-			powerfilename:    "testdata/dell_powerinvalid.json",
-			chassisfilename:  "testdata/dell_chassis.json",
-			hostnamefilename: "testdata/dell_systems.json",
-		},
-		{
-			name:             "check Location",
-			thermalfilename:  "testdata/dell_thermal.json",
-			powerfilename:    "testdata/dell_power.json",
-			chassisfilename:  "testdata/dell_chassisinvalid.json",
-			hostnamefilename: "testdata/dell_systems.json",
+			thermalfilename:  "testdata/dell/thermal.json",
+			powerfilename:    "testdata/dell/power_invalid.json",
+			chassisfilename:  "testdata/dell/chassis.json",
+			hostnamefilename: "testdata/dell/systems_1.json",
 		},
 		{
 			name:             "check Hostname",
-			thermalfilename:  "testdata/dell_thermal.json",
-			powerfilename:    "testdata/dell_power.json",
-			chassisfilename:  "testdata/dell_chassis.json",
-			hostnamefilename: "testdata/dell_systemsinvalid.json",
+			thermalfilename:  "testdata/dell/thermal.json",
+			powerfilename:    "testdata/dell/power.json",
+			chassisfilename:  "testdata/dell/chassis.json",
+			hostnamefilename: "testdata/dell/systems_invalid.json",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if !checkAuth(r, "test", "test") {
+				if !checkAuth(r, "test", "test", "token") {
 					http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 					return
 				}
 
 				switch r.URL.Path {
+				case "/redfish/v1/":
+					http.ServeFile(w, r, "testdata/base.json")
+				case "/redfish/v1/Systems/":
+					http.ServeFile(w, r, "testdata/dell/systems.json")
 				case "/redfish/v1/Chassis/System.Embedded.1/Thermal":
 					http.ServeFile(w, r, tt.thermalfilename)
 				case "/redfish/v1/Chassis/System.Embedded.1/Power":
@@ -854,7 +855,7 @@ func TestInvalidDellJSON(t *testing.T) {
 			var acc testutil.Accumulator
 			err := plugin.Gather(&acc)
 			require.Error(t, err)
-			require.Contains(t, err.Error(), "error parsing input:")
+			require.Contains(t, err.Error(), "invalid character")
 		})
 	}
 }
@@ -869,43 +870,47 @@ func TestInvalidHPJSON(t *testing.T) {
 	}{
 		{
 			name:             "check Thermal",
-			thermalfilename:  "testdata/hp_thermalinvalid.json",
-			powerfilename:    "testdata/hp_power.json",
-			hostnamefilename: "testdata/hp_systems.json",
-			chassisfilename:  "testdata/hp_chassis.json",
+			thermalfilename:  "testdata/hp/thermal_invalid.json",
+			powerfilename:    "testdata/hp/power.json",
+			hostnamefilename: "testdata/hp/systems_1.json",
+			chassisfilename:  "testdata/hp/chassis.json",
 		},
 		{
 			name:             "check Power",
-			thermalfilename:  "testdata/hp_thermal.json",
-			powerfilename:    "testdata/hp_powerinvalid.json",
-			hostnamefilename: "testdata/hp_systems.json",
-			chassisfilename:  "testdata/hp_chassis.json",
+			thermalfilename:  "testdata/hp/thermal.json",
+			powerfilename:    "testdata/hp/power_invalid.json",
+			hostnamefilename: "testdata/hp/systems_1.json",
+			chassisfilename:  "testdata/hp/chassis.json",
 		},
 		{
 			name:             "check Hostname",
-			thermalfilename:  "testdata/hp_thermal.json",
-			powerfilename:    "testdata/hp_power.json",
-			hostnamefilename: "testdata/hp_systemsinvalid.json",
-			chassisfilename:  "testdata/hp_chassis.json",
+			thermalfilename:  "testdata/hp/thermal.json",
+			powerfilename:    "testdata/hp/power.json",
+			hostnamefilename: "testdata/hp/systems_invalid.json",
+			chassisfilename:  "testdata/hp/chassis.json",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if !checkAuth(r, "test", "test") {
+				if !checkAuth(r, "test", "test", "token") {
 					http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 					return
 				}
 
 				switch r.URL.Path {
+				case "/redfish/v1/":
+					http.ServeFile(w, r, "testdata/base.json")
+				case "/redfish/v1/Systems/":
+					http.ServeFile(w, r, "testdata/hp/systems.json")
+				case "/redfish/v1/Systems/1":
+					http.ServeFile(w, r, tt.hostnamefilename)
 				case "/redfish/v1/Chassis/1/Thermal":
 					http.ServeFile(w, r, tt.thermalfilename)
 				case "/redfish/v1/Chassis/1/Power":
 					http.ServeFile(w, r, tt.powerfilename)
 				case "/redfish/v1/Chassis/1/":
 					http.ServeFile(w, r, tt.chassisfilename)
-				case "/redfish/v1/Systems/System.Embedded.2":
-					http.ServeFile(w, r, tt.hostnamefilename)
 				default:
 					w.WriteHeader(http.StatusNotFound)
 				}
@@ -916,7 +921,7 @@ func TestInvalidHPJSON(t *testing.T) {
 				Address:          ts.URL,
 				Username:         config.NewSecret([]byte("test")),
 				Password:         config.NewSecret([]byte("test")),
-				ComputerSystemID: "System.Embedded.2",
+				ComputerSystemID: "1",
 				IncludeMetrics:   []string{"thermal", "power"},
 			}
 
@@ -925,27 +930,31 @@ func TestInvalidHPJSON(t *testing.T) {
 			var acc testutil.Accumulator
 			err := plugin.Gather(&acc)
 			require.Error(t, err)
-			require.Contains(t, err.Error(), "error parsing input:")
+			require.Contains(t, err.Error(), "invalid character '{' looking for beginning of object key string")
 		})
 	}
 }
 
 func TestIncludeTagSetsConfiguration(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !checkAuth(r, "test", "test") {
+		if !checkAuth(r, "test", "test", "token") {
 			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 			return
 		}
 
 		switch r.URL.Path {
+		case "/redfish/v1/":
+			http.ServeFile(w, r, "testdata/base.json")
+		case "/redfish/v1/Systems/":
+			http.ServeFile(w, r, "testdata/hp/systems.json")
 		case "/redfish/v1/Chassis/1/Thermal":
-			http.ServeFile(w, r, "testdata/hp_thermal.json")
+			http.ServeFile(w, r, "testdata/hp/thermal.json")
 		case "/redfish/v1/Chassis/1/Power":
-			http.ServeFile(w, r, "testdata/hp_power.json")
+			http.ServeFile(w, r, "testdata/hp/power.json")
 		case "/redfish/v1/Systems/1":
-			http.ServeFile(w, r, "testdata/hp_systems.json")
+			http.ServeFile(w, r, "testdata/hp/systems_1.json")
 		case "/redfish/v1/Chassis/1/":
-			http.ServeFile(w, r, "testdata/hp_chassis.json")
+			http.ServeFile(w, r, "testdata/hp/chassis.json")
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -962,16 +971,16 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 		metric.New(
 			"redfish_thermal_temperatures",
 			map[string]string{
-				"name":                 "01-Inlet Ambient",
-				"member_id":            "0",
-				"source":               "tpa-hostname",
-				"address":              address,
-				"health":               "OK",
-				"state":                "Enabled",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"datacenter":           "",
+				"name":      "01-Inlet Ambient",
+				"member_id": "0",
+				"source":    "tpa-hostname",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
+				"rack":      "",
+				"room":      "",
+				"row":       "",
+				//"datacenter":           "",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",
@@ -992,16 +1001,16 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 		metric.New(
 			"redfish_thermal_temperatures",
 			map[string]string{
-				"name":                 "44-P/S 2 Zone",
-				"source":               "tpa-hostname",
-				"member_id":            "42",
-				"address":              address,
-				"health":               "OK",
-				"state":                "Enabled",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"datacenter":           "",
+				"name":      "44-P/S 2 Zone",
+				"source":    "tpa-hostname",
+				"member_id": "42",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
+				"rack":      "",
+				"room":      "",
+				"row":       "",
+				//"datacenter":           "",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",
@@ -1022,16 +1031,16 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "Fan 1",
-				"member_id":            "0",
-				"address":              address,
-				"health":               "OK",
-				"state":                "Enabled",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"datacenter":           "",
+				"source":    "tpa-hostname",
+				"name":      "Fan 1",
+				"member_id": "0",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
+				"rack":      "",
+				"room":      "",
+				"row":       "",
+				//"datacenter":           "",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",
@@ -1050,16 +1059,16 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "Fan 2",
-				"member_id":            "1",
-				"address":              address,
-				"health":               "OK",
-				"state":                "Enabled",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"datacenter":           "",
+				"source":    "tpa-hostname",
+				"name":      "Fan 2",
+				"member_id": "1",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
+				"rack":      "",
+				"room":      "",
+				"row":       "",
+				//"datacenter":           "",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",
@@ -1078,16 +1087,16 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "Fan 3",
-				"member_id":            "2",
-				"address":              address,
-				"health":               "OK",
-				"state":                "Enabled",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"datacenter":           "",
+				"source":    "tpa-hostname",
+				"name":      "Fan 3",
+				"member_id": "2",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
+				"rack":      "",
+				"room":      "",
+				"row":       "",
+				//"datacenter":           "",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",
@@ -1106,14 +1115,14 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 		metric.New(
 			"redfish_power_powercontrol",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "",
-				"member_id":            "0",
-				"address":              address,
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"datacenter":           "",
+				"source":    "tpa-hostname",
+				"name":      "",
+				"member_id": "0",
+				"address":   address,
+				"rack":      "",
+				"room":      "",
+				"row":       "",
+				//"datacenter":           "",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",
@@ -1137,16 +1146,16 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 		metric.New(
 			"redfish_power_powersupplies",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "HpeServerPowerSupply",
-				"member_id":            "0",
-				"address":              address,
-				"health":               "OK",
-				"state":                "Enabled",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"datacenter":           "",
+				"source":    "tpa-hostname",
+				"name":      "HpeServerPowerSupply",
+				"member_id": "0",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
+				"rack":      "",
+				"room":      "",
+				"row":       "",
+				//"datacenter":           "",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",
@@ -1156,6 +1165,7 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 				"chassis_serialnumber": "QWEVC007C99803",
 				"chassis_state":        "Enabled",
 				"chassis_health":       "OK",
+				"serial_num":           "5WEBP0B8JAQ2K9",
 			},
 			map[string]interface{}{
 				"power_capacity_watts":    800.0,
@@ -1167,16 +1177,16 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 		metric.New(
 			"redfish_power_powersupplies",
 			map[string]string{
-				"source":               "tpa-hostname",
-				"name":                 "HpeServerPowerSupply",
-				"member_id":            "1",
-				"address":              address,
-				"health":               "OK",
-				"state":                "Enabled",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"datacenter":           "",
+				"source":    "tpa-hostname",
+				"name":      "HpeServerPowerSupply",
+				"member_id": "1",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
+				"rack":      "",
+				"room":      "",
+				"row":       "",
+				//"datacenter":           "",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",
@@ -1186,6 +1196,7 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 				"chassis_serialnumber": "QWEVC007C99803",
 				"chassis_state":        "Enabled",
 				"chassis_health":       "OK",
+				"serial_num":           "5WEBP0B8JAQ2KL",
 			},
 			map[string]interface{}{
 				"power_capacity_watts":    800.0,
@@ -1212,4 +1223,8 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 	require.True(t, hpAcc.HasMeasurement("redfish_thermal_temperatures"))
 	testutil.RequireMetricsEqual(t, expectedMetricsHp, hpAcc.GetTelegrafMetrics(),
 		testutil.IgnoreTime())
+}
+
+func TestSubsystemsApi(t *testing.T) {
+
 }
