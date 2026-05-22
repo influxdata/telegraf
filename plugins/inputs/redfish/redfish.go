@@ -35,6 +35,7 @@ type Redfish struct {
 	ComputerSystemID string          `toml:"computer_system_id"`
 	IncludeMetrics   []string        `toml:"include_metrics"`
 	IncludeTagSets   []string        `toml:"include_tag_sets"`
+	Workarounds      []string        `toml:"workarounds" deprecated in 1.39; ILO4 is EOSL, option ignored`
 	Timeout          config.Duration `toml:"timeout"`
 
 	tagSet map[string]bool

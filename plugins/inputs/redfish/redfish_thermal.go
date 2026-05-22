@@ -42,7 +42,6 @@ func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, address string,
 		tags["name"] = j.Name
 		tags["source"] = system.HostName
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
-			// tags["datacenter"] = chassis.Location.PostalAddress.DataCenter // Not in the standard
 			tags["room"] = chassis.Location.PostalAddress.Room
 			tags["rack"] = chassis.Location.Placement.Rack
 			tags["row"] = chassis.Location.Placement.Row
@@ -76,7 +75,6 @@ func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, address string,
 		tags["state"] = string(j.Status.State)
 		tags["health"] = string(j.Status.Health)
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
-			// tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 			tags["room"] = chassis.Location.PostalAddress.Room
 			tags["rack"] = chassis.Location.Placement.Rack
 			tags["row"] = chassis.Location.Placement.Row
