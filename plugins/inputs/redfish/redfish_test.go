@@ -758,7 +758,7 @@ func TestHPilo4Apis(t *testing.T) {
 		testutil.IgnoreTime())
 }
 
-func checkAuth(r *http.Request, username, password string, token string) bool {
+func checkAuth(r *http.Request, username, password, token string) bool {
 	// The base path requires not auth
 	if r.URL.Path == "/redfish/v1/" {
 		return true
@@ -767,13 +767,12 @@ func checkAuth(r *http.Request, username, password string, token string) bool {
 	authHeader := r.Header.Get("X-Auth-Token")
 	if authHeader != "" {
 		return authHeader == token
-	} else {
-		user, pass, ok := r.BasicAuth()
-		if !ok {
-			return false
-		}
-		return user == username && pass == password
 	}
+	user, pass, ok := r.BasicAuth()
+	if !ok {
+		return false
+	}
+	return user == username && pass == password
 }
 
 func TestBasicAuth(t *testing.T) {
@@ -1072,16 +1071,15 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 		metric.New(
 			"redfish_thermal_temperatures",
 			map[string]string{
-				"name":      "01-Inlet Ambient",
-				"member_id": "0",
-				"source":    "tpa-hostname",
-				"address":   address,
-				"health":    "OK",
-				"state":     "Enabled",
-				"rack":      "",
-				"room":      "",
-				"row":       "",
-				//"datacenter":           "",
+				"name":                 "01-Inlet Ambient",
+				"member_id":            "0",
+				"source":               "tpa-hostname",
+				"address":              address,
+				"health":               "OK",
+				"state":                "Enabled",
+				"rack":                 "",
+				"room":                 "",
+				"row":                  "",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",
@@ -1102,16 +1100,15 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 		metric.New(
 			"redfish_thermal_temperatures",
 			map[string]string{
-				"name":      "44-P/S 2 Zone",
-				"source":    "tpa-hostname",
-				"member_id": "42",
-				"address":   address,
-				"health":    "OK",
-				"state":     "Enabled",
-				"rack":      "",
-				"room":      "",
-				"row":       "",
-				//"datacenter":           "",
+				"name":                 "44-P/S 2 Zone",
+				"source":               "tpa-hostname",
+				"member_id":            "42",
+				"address":              address,
+				"health":               "OK",
+				"state":                "Enabled",
+				"rack":                 "",
+				"room":                 "",
+				"row":                  "",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",
@@ -1132,16 +1129,15 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":    "tpa-hostname",
-				"name":      "Fan 1",
-				"member_id": "0",
-				"address":   address,
-				"health":    "OK",
-				"state":     "Enabled",
-				"rack":      "",
-				"room":      "",
-				"row":       "",
-				//"datacenter":           "",
+				"source":               "tpa-hostname",
+				"name":                 "Fan 1",
+				"member_id":            "0",
+				"address":              address,
+				"health":               "OK",
+				"state":                "Enabled",
+				"rack":                 "",
+				"room":                 "",
+				"row":                  "",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",
@@ -1160,16 +1156,15 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":    "tpa-hostname",
-				"name":      "Fan 2",
-				"member_id": "1",
-				"address":   address,
-				"health":    "OK",
-				"state":     "Enabled",
-				"rack":      "",
-				"room":      "",
-				"row":       "",
-				//"datacenter":           "",
+				"source":               "tpa-hostname",
+				"name":                 "Fan 2",
+				"member_id":            "1",
+				"address":              address,
+				"health":               "OK",
+				"state":                "Enabled",
+				"rack":                 "",
+				"room":                 "",
+				"row":                  "",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",
@@ -1188,16 +1183,15 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 		metric.New(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":    "tpa-hostname",
-				"name":      "Fan 3",
-				"member_id": "2",
-				"address":   address,
-				"health":    "OK",
-				"state":     "Enabled",
-				"rack":      "",
-				"room":      "",
-				"row":       "",
-				//"datacenter":           "",
+				"source":               "tpa-hostname",
+				"name":                 "Fan 3",
+				"member_id":            "2",
+				"address":              address,
+				"health":               "OK",
+				"state":                "Enabled",
+				"rack":                 "",
+				"room":                 "",
+				"row":                  "",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",
@@ -1216,14 +1210,13 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 		metric.New(
 			"redfish_power_powercontrol",
 			map[string]string{
-				"source":    "tpa-hostname",
-				"name":      "",
-				"member_id": "0",
-				"address":   address,
-				"rack":      "",
-				"room":      "",
-				"row":       "",
-				//"datacenter":           "",
+				"source":               "tpa-hostname",
+				"name":                 "",
+				"member_id":            "0",
+				"address":              address,
+				"rack":                 "",
+				"room":                 "",
+				"row":                  "",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",
@@ -1247,16 +1240,15 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 		metric.New(
 			"redfish_power_powersupplies",
 			map[string]string{
-				"source":    "tpa-hostname",
-				"name":      "HpeServerPowerSupply",
-				"member_id": "0",
-				"address":   address,
-				"health":    "OK",
-				"state":     "Enabled",
-				"rack":      "",
-				"room":      "",
-				"row":       "",
-				//"datacenter":           "",
+				"source":               "tpa-hostname",
+				"name":                 "HpeServerPowerSupply",
+				"member_id":            "0",
+				"address":              address,
+				"health":               "OK",
+				"state":                "Enabled",
+				"rack":                 "",
+				"room":                 "",
+				"row":                  "",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",
@@ -1278,16 +1270,15 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 		metric.New(
 			"redfish_power_powersupplies",
 			map[string]string{
-				"source":    "tpa-hostname",
-				"name":      "HpeServerPowerSupply",
-				"member_id": "1",
-				"address":   address,
-				"health":    "OK",
-				"state":     "Enabled",
-				"rack":      "",
-				"room":      "",
-				"row":       "",
-				//"datacenter":           "",
+				"source":               "tpa-hostname",
+				"name":                 "HpeServerPowerSupply",
+				"member_id":            "1",
+				"address":              address,
+				"health":               "OK",
+				"state":                "Enabled",
+				"rack":                 "",
+				"room":                 "",
+				"row":                  "",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",

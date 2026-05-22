@@ -10,12 +10,13 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/stmcginnis/gofish"
+	"github.com/stmcginnis/gofish/schemas"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/stmcginnis/gofish"
-	"github.com/stmcginnis/gofish/schemas"
 )
 
 //go:embed sample.conf
@@ -35,7 +36,7 @@ type Redfish struct {
 	ComputerSystemID string          `toml:"computer_system_id"`
 	IncludeMetrics   []string        `toml:"include_metrics"`
 	IncludeTagSets   []string        `toml:"include_tag_sets"`
-	Workarounds      []string        `toml:"workarounds" deprecated in 1.39; ILO4 is EOSL, option ignored`
+	Workarounds      []string        `toml:"workarounds" deprecated:"1.39;ILO4 is EOSL, option ignored"`
 	Timeout          config.Duration `toml:"timeout"`
 
 	tagSet map[string]bool
@@ -69,10 +70,14 @@ func (r *Redfish) Init() error {
 }
 
 func (r *Redfish) Gather(acc telegraf.Accumulator) error {
-	redfishUrl, _ := url.Parse(r.Address)
-	address, _, err := net.SplitHostPort(redfishUrl.Host)
+	redfishURL, err := url.Parse(r.Address)
 	if err != nil {
-		address = redfishUrl.Host
+		return err
+	}
+
+	address, _, err := net.SplitHostPort(redfishURL.Host)
+	if err != nil {
+		address = redfishURL.Host
 	}
 
 	systems, err := r.gf.Systems()
@@ -105,7 +110,6 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 					}
 				}
 			}
-
 		}
 	}
 	return nil
@@ -143,7 +147,7 @@ func (r *Redfish) checkConfig() error {
 	validAuth := r.useTokenAuth || useSimpleAuth
 
 	if !validAuth {
-		return errors.New("Empty token or username or password. Provide either a token or user and password")
+		return errors.New("empty token or username or password. Provide either a token or user and password")
 	}
 
 	if r.ComputerSystemID == "" {
@@ -177,14 +181,13 @@ func (r *Redfish) gofishSetup() (*gofish.Service, error) {
 		Timeout: time.Duration(r.Timeout),
 	}
 
-	config := gofish.ClientConfig{}
 	if r.useTokenAuth {
 		token, err := r.Token.Get()
 		if err != nil {
 			return nil, fmt.Errorf("getting token failed: %w", err)
 		}
 
-		config = gofish.ClientConfig{
+		gfConfig := gofish.ClientConfig{
 			Endpoint: r.Address,
 			Session: &gofish.Session{
 				ID:    "",
@@ -194,30 +197,39 @@ func (r *Redfish) gofishSetup() (*gofish.Service, error) {
 		}
 
 		token.Destroy()
-	} else {
-		username, err := r.Username.Get()
-		if err != nil {
-			return nil, fmt.Errorf("getting username failed: %w", err)
-		}
-		user := username.String()
-		username.Destroy()
 
-		password, err := r.Password.Get()
+		c, err := gofish.Connect(gfConfig)
 		if err != nil {
-			return nil, fmt.Errorf("getting password failed: %w", err)
+			return nil, err
 		}
-		pass := password.String()
-		password.Destroy()
 
-		config = gofish.ClientConfig{
-			Endpoint:   r.Address,
-			Username:   user,
-			Password:   pass,
-			BasicAuth:  true,
-			HTTPClient: &r.client,
-		}
+		// Retrieve the service root
+		return c.Service, nil
 	}
-	c, err := gofish.Connect(config)
+
+	username, err := r.Username.Get()
+	if err != nil {
+		return nil, fmt.Errorf("getting username failed: %w", err)
+	}
+	user := username.String()
+	username.Destroy()
+
+	password, err := r.Password.Get()
+	if err != nil {
+		return nil, fmt.Errorf("getting password failed: %w", err)
+	}
+	pass := password.String()
+	password.Destroy()
+
+	gfConfig := gofish.ClientConfig{
+		Endpoint:   r.Address,
+		Username:   user,
+		Password:   pass,
+		BasicAuth:  true,
+		HTTPClient: &r.client,
+	}
+
+	c, err := gofish.Connect(gfConfig)
 	if err != nil {
 		return nil, err
 	}

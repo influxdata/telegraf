@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/influxdata/telegraf"
 	"github.com/stmcginnis/gofish/schemas"
+
+	"github.com/influxdata/telegraf"
 )
 
 func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
@@ -41,7 +42,6 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, s
 			"source":    system.HostName,
 		}
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
-			// tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 			tags["room"] = chassis.Location.PostalAddress.Room
 			tags["rack"] = chassis.Location.Placement.Rack
 			tags["row"] = chassis.Location.Placement.Row
@@ -65,17 +65,16 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, s
 		acc.AddFields("redfish_power_powercontrol", fields, tags)
 	}
 
-	for _, j := range power.PowerSupplies {
+	for j := range power.PowerSupplies {
 		tags := make(map[string]string, 19)
-		tags["member_id"] = j.MemberID
+		tags["member_id"] = power.PowerSupplies[j].MemberID
 		tags["address"] = address
-		tags["name"] = j.Name
+		tags["name"] = power.PowerSupplies[j].Name
 		tags["source"] = system.HostName
-		tags["state"] = string(j.Status.State)
-		tags["serial_num"] = j.SerialNumber
-		tags["health"] = string(j.Status.Health)
+		tags["state"] = string(power.PowerSupplies[j].Status.State)
+		tags["serial_num"] = power.PowerSupplies[j].SerialNumber
+		tags["health"] = string(power.PowerSupplies[j].Status.Health)
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
-			// tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 			tags["room"] = chassis.Location.PostalAddress.Room
 			tags["rack"] = chassis.Location.Placement.Rack
 			tags["row"] = chassis.Location.Placement.Row
@@ -85,11 +84,11 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, s
 		}
 
 		fields := make(map[string]interface{})
-		fields["power_input_watts"] = j.PowerInputWatts
-		fields["power_output_watts"] = j.PowerOutputWatts
-		fields["line_input_voltage"] = j.LineInputVoltage
-		fields["last_power_output_watts"] = j.LastPowerOutputWatts
-		fields["power_capacity_watts"] = j.PowerCapacityWatts
+		fields["power_input_watts"] = power.PowerSupplies[j].PowerInputWatts
+		fields["power_output_watts"] = power.PowerSupplies[j].PowerOutputWatts
+		fields["line_input_voltage"] = power.PowerSupplies[j].LineInputVoltage
+		fields["last_power_output_watts"] = power.PowerSupplies[j].LastPowerOutputWatts
+		fields["power_capacity_watts"] = power.PowerSupplies[j].PowerCapacityWatts
 		acc.AddFields("redfish_power_powersupplies", fields, tags)
 	}
 
@@ -102,7 +101,6 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, s
 		tags["state"] = string(j.Status.State)
 		tags["health"] = string(j.Status.Health)
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
-			// tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 			tags["room"] = chassis.Location.PostalAddress.Room
 			tags["rack"] = chassis.Location.Placement.Rack
 			tags["row"] = chassis.Location.Placement.Row
@@ -123,8 +121,12 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, s
 	return nil
 }
 
-func (r *Redfish) gatherPowerSubsysMetrics(acc telegraf.Accumulator, address string, system *schemas.ComputerSystem, powerSubsys *schemas.PowerSubsystem, chassis *schemas.Chassis) error {
-
+func (r *Redfish) gatherPowerSubsysMetrics(
+	acc telegraf.Accumulator,
+	address string,
+	system *schemas.ComputerSystem,
+	powerSubsys *schemas.PowerSubsystem,
+	chassis *schemas.Chassis) error {
 	for _, redundGroup := range powerSubsys.PowerSupplyRedundancy {
 		tags := map[string]string{
 			"name":    redundGroup.GroupName,
@@ -160,7 +162,11 @@ func (r *Redfish) gatherPowerSubsysMetrics(acc telegraf.Accumulator, address str
 		// this manual parsing is required.
 		// The Type definitions exist thou, since they are generated from the official Standard
 		powerSupply := schemas.PowerSupplyUnit{}
-		json.Unmarshal(j.RawData, &powerSupply)
+		err = json.Unmarshal(j.RawData, &powerSupply)
+		if err != nil {
+			return err
+		}
+
 		powerSupply.SetClient(powerSubsys.GetClient())
 		psuMetrics, err := powerSupply.Metrics()
 		if err != nil {

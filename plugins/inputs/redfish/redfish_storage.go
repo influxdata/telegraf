@@ -1,8 +1,9 @@
 package redfish
 
 import (
-	"github.com/influxdata/telegraf"
 	"github.com/stmcginnis/gofish/schemas"
+
+	"github.com/influxdata/telegraf"
 )
 
 type MembersList struct {
@@ -52,7 +53,6 @@ func (r *Redfish) gatherStorage(acc telegraf.Accumulator, address string, system
 
 			acc.AddFields("redfish_storage", fields, tags)
 		}
-
 	}
 
 	return nil

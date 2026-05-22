@@ -3,12 +3,12 @@ package redfish
 import (
 	"encoding/json"
 
-	"github.com/influxdata/telegraf"
 	"github.com/stmcginnis/gofish/schemas"
+
+	"github.com/influxdata/telegraf"
 )
 
 func (r *Redfish) gatherThermal(acc telegraf.Accumulator, address string, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
-
 	thermalSubsys, err := chassis.ThermalSubsystem()
 	if err != nil {
 		return err
@@ -60,20 +60,20 @@ func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, address string,
 		acc.AddFields("redfish_thermal_temperatures", fields, tags)
 	}
 
-	for _, j := range thermal.Fans {
+	for j := range thermal.Fans {
 		tags := make(map[string]string, 20)
 		fields := make(map[string]interface{}, 5)
-		tags["member_id"] = j.MemberID
+		tags["member_id"] = thermal.Fans[j].MemberID
 		tags["address"] = address
 
-		if j.FanName != "" {
-			tags["name"] = j.FanName
+		if thermal.Fans[j].FanName != "" { //nolint:staticcheck // used for backwards compatibilty to ilo4
+			tags["name"] = thermal.Fans[j].FanName //nolint:staticcheck // used for backwards compatibilty to ilo4
 		} else {
-			tags["name"] = j.Name
+			tags["name"] = thermal.Fans[j].Name
 		}
 		tags["source"] = system.HostName
-		tags["state"] = string(j.Status.State)
-		tags["health"] = string(j.Status.Health)
+		tags["state"] = string(thermal.Fans[j].Status.State)
+		tags["health"] = string(thermal.Fans[j].Status.Health)
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
 			tags["room"] = chassis.Location.PostalAddress.Room
 			tags["rack"] = chassis.Location.Placement.Rack
@@ -87,19 +87,22 @@ func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, address string,
 		var ilo4ReadingPercent struct {
 			CurrentReading *int64
 		}
-		json.Unmarshal(j.RawData, &ilo4ReadingPercent)
+		err = json.Unmarshal(thermal.Fans[j].RawData, &ilo4ReadingPercent)
+		if err != nil {
+			return err
+		}
 
 		if ilo4ReadingPercent.CurrentReading != nil {
 			fields["reading_percent"] = ilo4ReadingPercent.CurrentReading
 		} else {
-			if j.ReadingUnits == "RPM" {
-				fields["upper_threshold_critical"] = j.UpperThresholdCritical
-				fields["upper_threshold_fatal"] = j.UpperThresholdFatal
-				fields["lower_threshold_critical"] = j.LowerThresholdCritical
-				fields["lower_threshold_fatal"] = j.LowerThresholdFatal
-				fields["reading_rpm"] = j.Reading
-			} else if j.Reading != nil {
-				fields["reading_percent"] = j.Reading
+			if thermal.Fans[j].ReadingUnits == "RPM" {
+				fields["upper_threshold_critical"] = thermal.Fans[j].UpperThresholdCritical
+				fields["upper_threshold_fatal"] = thermal.Fans[j].UpperThresholdFatal
+				fields["lower_threshold_critical"] = thermal.Fans[j].LowerThresholdCritical
+				fields["lower_threshold_fatal"] = thermal.Fans[j].LowerThresholdFatal
+				fields["reading_rpm"] = thermal.Fans[j].Reading
+			} else if thermal.Fans[j].Reading != nil {
+				fields["reading_percent"] = thermal.Fans[j].Reading
 			}
 		}
 		acc.AddFields("redfish_thermal_fans", fields, tags)
@@ -108,9 +111,21 @@ func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, address string,
 	return nil
 }
 
-func (r *Redfish) gatherThermalSubsysMetrics(acc telegraf.Accumulator, address string, system *schemas.ComputerSystem, thermalSubsys *schemas.ThermalSubsystem, chassis *schemas.Chassis) error {
-	thermalMetrics, _ := thermalSubsys.ThermalMetrics()
-	fans, _ := thermalSubsys.Fans()
+func (r *Redfish) gatherThermalSubsysMetrics(
+	acc telegraf.Accumulator,
+	address string,
+	system *schemas.ComputerSystem,
+	thermalSubsys *schemas.ThermalSubsystem,
+	chassis *schemas.Chassis) error {
+	thermalMetrics, err := thermalSubsys.ThermalMetrics()
+	if err != nil {
+		return err
+	}
+
+	fans, err := thermalSubsys.Fans()
+	if err != nil {
+		return err
+	}
 	for _, j := range thermalMetrics.TemperatureReadingsCelsius {
 		tags := make(map[string]string, 14)
 		tags["name"] = j.DeviceName
@@ -164,7 +179,10 @@ func (r *Redfish) gatherThermalSubsysMetrics(acc telegraf.Accumulator, address s
 					Reading *float32
 				}
 			}
-			json.Unmarshal(j.RawData, &speedPercentReading)
+			err = json.Unmarshal(j.RawData, &speedPercentReading)
+			if err != nil {
+				return err
+			}
 			fields["reading_percent"] = speedPercentReading.SpeedPercent.Reading
 		}
 
