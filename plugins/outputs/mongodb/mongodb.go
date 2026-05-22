@@ -197,7 +197,7 @@ func (s *MongoDB) Init() error {
 	if len(s.MetadataKeys) > 0 {
 		f, err := filter.Compile(s.MetadataKeys)
 		if err != nil {
-			return fmt.Errorf("creating meta-data filter failed: %w", err)
+			return fmt.Errorf("creating metadata filter failed: %w", err)
 		}
 		s.metadataFilter = f
 	}
