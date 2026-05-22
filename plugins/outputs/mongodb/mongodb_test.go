@@ -10,6 +10,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/influxdata/telegraf"
@@ -55,7 +56,8 @@ func TestInitFail(t *testing.T) {
 		username    config.Secret
 		password    config.Secret
 		granularity string
-		expected    string
+
+		expected string
 	}{
 		{
 			name:        "invalid metric granularity",
@@ -418,15 +420,370 @@ func TestWriteIntegration(t *testing.T) {
 	}
 
 	tests := []struct {
-		name  string
-		batch bool
+		name         string
+		batch        bool
+		meta         []string
+		metaStrategy string
+		expected     map[string][]bson.D
 	}{
 		{
 			name: "individual",
+			expected: map[string][]bson.D{
+				"test1": {
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(0)},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(1)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(10000)},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(2)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(20000)},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(3)},
+					},
+				},
+				"test2": {
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(0)},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(10)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(10000)},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(20)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(20000)},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(30)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(30000)},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(40)},
+					},
+				},
+			},
 		},
 		{
 			name:  "batch",
 			batch: true,
+			expected: map[string][]bson.D{
+				"test1": {
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(0)},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(1)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(10000)},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(2)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(20000)},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(3)},
+					},
+				},
+				"test2": {
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(0)},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(10)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(10000)},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(20)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(20000)},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(30)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(30000)},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(40)},
+					},
+				},
+			},
+		},
+		{
+			name: "metadata source",
+			meta: []string{"source"},
+			expected: map[string][]bson.D{
+				"test1": {
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(0)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(1)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(10000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(2)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(20000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(3)},
+					},
+				},
+				"test2": {
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(0)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(10)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(10000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(20)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(20000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(30)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(30000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(40)},
+					},
+				},
+			},
+		},
+		{
+			name:         "metadata source move",
+			meta:         []string{"source"},
+			metaStrategy: "move",
+			expected: map[string][]bson.D{
+				"test1": {
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(0)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(1)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(10000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(2)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(20000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(3)},
+					},
+				},
+				"test2": {
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(0)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(10)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(10000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(20)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(20000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(30)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(30000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(40)},
+					},
+				},
+			},
+		},
+		{
+			name:         "metadata source clear",
+			meta:         []string{"source"},
+			metaStrategy: "clear",
+			expected: map[string][]bson.D{
+				"test1": {
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(0)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+						}},
+						primitive.E{Key: "value", Value: int64(1)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(10000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+						}},
+						primitive.E{Key: "value", Value: int64(2)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(20000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+						}},
+						primitive.E{Key: "value", Value: int64(3)},
+					},
+				},
+				"test2": {
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(0)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "value", Value: int64(10)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(10000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "value", Value: int64(20)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(20000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "value", Value: int64(30)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(30000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "value", Value: int64(40)},
+					},
+				},
+			},
 		},
 	}
 
@@ -434,88 +791,46 @@ func TestWriteIntegration(t *testing.T) {
 	input := []telegraf.Metric{
 		metric.New(
 			"test1",
-			map[string]string{"source": "foo"},
+			map[string]string{"source": "foo", "version": "v1.2"},
 			map[string]interface{}{"value": 1},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"test1",
-			map[string]string{"source": "foo"},
+			map[string]string{"source": "foo", "version": "v1.2"},
 			map[string]interface{}{"value": 2},
 			time.Unix(10, 0),
 		),
 		metric.New(
 			"test1",
-			map[string]string{"source": "foo"},
+			map[string]string{"source": "foo", "version": "v1.2"},
 			map[string]interface{}{"value": 3},
 			time.Unix(20, 0),
 		),
 		metric.New(
 			"test2",
-			map[string]string{"source": "bar"},
+			map[string]string{"source": "bar", "version": "v1.2"},
 			map[string]interface{}{"value": 10},
 			time.Unix(0, 10),
 		),
 		metric.New(
 			"test2",
-			map[string]string{"source": "bar"},
+			map[string]string{"source": "bar", "version": "v1.2"},
 			map[string]interface{}{"value": 20},
 			time.Unix(10, 20),
 		),
 		metric.New(
 			"test2",
-			map[string]string{"source": "bar"},
+			map[string]string{"source": "bar", "version": "v1.2"},
 			map[string]interface{}{"value": 30},
 			time.Unix(20, 30),
 		),
 		metric.New(
 			"test2",
-			map[string]string{"source": "bar"},
+			map[string]string{"source": "bar", "version": "v1.2"},
 			map[string]interface{}{"value": 40},
 			time.Unix(30, 40),
 		),
-	}
-
-	expected := map[string][]bson.D{
-		"test1": {
-			bson.D{
-				primitive.E{Key: "timestamp", Value: primitive.DateTime(0)},
-				primitive.E{Key: "tags", Value: bson.D{primitive.E{Key: "source", Value: "foo"}}},
-				primitive.E{Key: "value", Value: int64(1)},
-			},
-			bson.D{
-				primitive.E{Key: "timestamp", Value: primitive.DateTime(10000)},
-				primitive.E{Key: "tags", Value: bson.D{primitive.E{Key: "source", Value: "foo"}}},
-				primitive.E{Key: "value", Value: int64(2)},
-			},
-			bson.D{
-				primitive.E{Key: "timestamp", Value: primitive.DateTime(20000)},
-				primitive.E{Key: "tags", Value: bson.D{primitive.E{Key: "source", Value: "foo"}}},
-				primitive.E{Key: "value", Value: int64(3)},
-			},
-		},
-		"test2": {
-			bson.D{
-				primitive.E{Key: "timestamp", Value: primitive.DateTime(0)},
-				primitive.E{Key: "tags", Value: bson.D{primitive.E{Key: "source", Value: "bar"}}},
-				primitive.E{Key: "value", Value: int64(10)},
-			},
-			bson.D{
-				primitive.E{Key: "timestamp", Value: primitive.DateTime(10000)},
-				primitive.E{Key: "tags", Value: bson.D{primitive.E{Key: "source", Value: "bar"}}},
-				primitive.E{Key: "value", Value: int64(20)},
-			},
-			bson.D{
-				primitive.E{Key: "timestamp", Value: primitive.DateTime(20000)},
-				primitive.E{Key: "tags", Value: bson.D{primitive.E{Key: "source", Value: "bar"}}},
-				primitive.E{Key: "value", Value: int64(30)},
-			},
-			bson.D{
-				primitive.E{Key: "timestamp", Value: primitive.DateTime(30000)},
-				primitive.E{Key: "tags", Value: bson.D{primitive.E{Key: "source", Value: "bar"}}},
-				primitive.E{Key: "value", Value: int64(40)},
-			},
-		},
 	}
 
 	for _, tt := range tests {
@@ -533,9 +848,11 @@ func TestWriteIntegration(t *testing.T) {
 
 			// Setup and start the plugin
 			plugin := &MongoDB{
-				Dsn:            "mongodb://" + container.Address + ":" + container.Ports[servicePort],
-				MetricDatabase: "telegraf_test",
-				WriteBatch:     tt.batch,
+				Dsn:                 "mongodb://" + container.Address + ":" + container.Ports[servicePort],
+				MetricDatabase:      "telegraf_test",
+				WriteBatch:          tt.batch,
+				MetadataKeys:        tt.meta,
+				MetadataTagStrategy: tt.metaStrategy,
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -555,18 +872,45 @@ func TestWriteIntegration(t *testing.T) {
 			collections, err := database.ListCollectionNames(t.Context(), bson.D{})
 			require.NoError(t, err)
 
-			// Read the metrics from the database and compare
-			for expectedCollection, expectedDocuments := range expected {
-				require.Contains(t, collections, expectedCollection)
+			speclist, err := database.ListCollectionSpecifications(t.Context(), bson.D{})
+			require.NoError(t, err)
+			specifications := make(map[string]*mongo.CollectionSpecification, len(speclist))
+			for _, s := range speclist {
+				specifications[s.Name] = s
+			}
 
+			// Read the metrics from the database and compare
+			for expectedCollection, expectedDocuments := range tt.expected {
+				require.Contains(t, collections, expectedCollection)
 				c := database.Collection(expectedCollection)
+
+				// Check metadata field
+				require.Contains(t, specifications, expectedCollection)
+				ts := specifications[expectedCollection].Options.Lookup("timeseries")
+				metaField := ts.Document().Lookup("metaField")
+				if len(tt.meta) == 0 {
+					require.Equal(t, "tags", metaField.StringValue())
+				} else {
+					require.Equal(t, "metadata", metaField.StringValue())
+				}
+
+				// Verify the collection documents
 				projection := bson.D{primitive.E{Key: "_id", Value: 0}}
-				cur, err := c.Find(t.Context(), bson.D{}, options.Find().SetProjection(projection))
+				cur, err := c.Find(
+					t.Context(),
+					bson.D{},
+					options.Find().SetProjection(projection).SetSort(bson.D{{Key: "timestamp", Value: 1}}),
+				)
 				require.NoError(t, err)
 
 				var documents []bson.D
 				require.NoError(t, cur.All(t.Context(), &documents))
-				require.ElementsMatchf(t, expectedDocuments, documents, "mismatch in collection %q", expectedCollection)
+				require.Len(t, documents, len(expectedDocuments))
+
+				for i, actual := range documents {
+					expected := expectedDocuments[i]
+					require.ElementsMatchf(t, expected, actual, "mismatch in collection %q element %d", expectedCollection, i)
+				}
 			}
 		})
 	}

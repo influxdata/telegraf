@@ -66,6 +66,22 @@ to use them.
   ## Database to store measurements and time series collections
   # database = "telegraf"
 
+  ## If true, write multiple metrics for the same collection in a batched
+  ## fashion. Otherwise, write each metric individually.
+  # write_batch = false
+
+  ## List of tags to use as metadata (wildcards accepted)
+  ## If empty the "tags" element will be used as metadata field, otherwise
+  ## a "metadata" element will be created containing the matching, existing
+  ## tag key-values.
+  # metadata_keys = []
+
+  ## Behavior when using explicit metadata keys; ignored for empty metadata_keys
+  ##  keep  -- keep all tags as tags
+  ##  move  -- move tags matching metadata_keys and delete them in the tags field
+  ##  clear -- clear ALL tags and remove the tags field entirely from the document
+  # metadata_tag_strategy = "keep"
+
   ## Granularity can be seconds, minutes, or hours.
   ## Configuring this value will be based on your input collection frequency
   ## see https://docs.mongodb.com/manual/core/timeseries-collections/#create-a-time-series-collection
@@ -74,7 +90,4 @@ to use them.
   ## TTL to automatically expire documents from the measurement collections.
   # ttl = "360h"
 
-  ## If true, write multiple metrics for the same collection in a batched
-  ## fashion. Otherwise, write each metric individually.
-  # write_batch = false
 ```
