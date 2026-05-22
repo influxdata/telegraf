@@ -47,8 +47,10 @@ type Redfish struct {
 }
 
 type system struct {
-	Hostname string `json:"hostname"`
-	Links    struct {
+	Hostname     string `json:"hostname"`
+	SerialNumber string
+	BiosVersion  string
+	Links        struct {
 		Chassis []struct {
 			Ref string `json:"@odata.id"`
 		}
