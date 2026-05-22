@@ -248,9 +248,9 @@ to use them.
 
   ## Kafka headers to add to the message where header values accept templates
   # [outputs.kafka.headers]
-  #   metric_name = "{{ .Name }}"
-  #   my_tag = "foo-{{ .Tag "mytag" }}"
-  #   my_value = "bar-{{ .Field "my" }}-{{ .Field "value" }}"
+  #   metric_name = '{{ .Name }}'
+  #   my_tag = 'foo-{{ .Tag "mytag" }}'
+  #   my_value = 'bar-{{ .Field "my" }}-{{ .Field "value" }}'
 ```
 
 ### `max_retry`
