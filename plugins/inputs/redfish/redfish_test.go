@@ -882,7 +882,7 @@ func TestNoUsernameorPasswordConfiguration(t *testing.T) {
 
 	err := r.Init()
 	require.Error(t, err)
-	require.EqualError(t, err, "Empty token or username or password. Provide either a token or user and password")
+	require.EqualError(t, err, "empty token or username or password. Provide either a token or user and password")
 }
 
 func TestInvalidDellJSON(t *testing.T) {

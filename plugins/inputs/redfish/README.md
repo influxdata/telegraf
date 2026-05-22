@@ -71,6 +71,7 @@ details on how to use them.
 ```
 
 ## Metrics
+
 There are two types of metrics. The newer subsystem type and the old type.
 
 - redfish_thermal_temperatures
@@ -130,20 +131,20 @@ There are two types of metrics. The newer subsystem type and the old type.
 
 - redfish_power_powercontrol
   - tags
-		- member_id
-	  - address
+    - member_id
+    - address
     - name
-		- source
+    - source
   - fields
-			- power_allocated_watts
-			- power_available_watts
-			- power_capacity_watts
-			- power_consumed_watts
-			- power_requested_watts
-			- average_consumed_watts
-			- interval_in_min
-			- max_consumed_watts
-			- min_consumed_watts
+      - power_allocated_watts
+      - power_available_watts
+      - power_capacity_watts
+      - power_consumed_watts
+      - power_requested_watts
+      - average_consumed_watts
+      - interval_in_min
+      - max_consumed_watts
+      - min_consumed_watts
 
 - redfish_power_powersupplies
   - tags:
@@ -177,49 +178,49 @@ There are two types of metrics. The newer subsystem type and the old type.
     - lower_threshold_fatal
 
 - redfish_powersubsys_redundancy
-	-tags
+  -tags
     - name
-		- address
-		- source
-		- type
-		- health
-		- state
+    - address
+    - source
+    - type
+    - health
+    - state
   - fields
-		- redund_group_count
+    - redund_group_count
 
 - redfish_powersubsys_powersupplies
-	- tags
-		- address
-		- name
-		- source
-		- state
-		- serial_num
-		- hotpluggable
-		- health
+  - tags
+    - address
+    - name
+    - source
+    - state
+    - serial_num
+    - hotpluggable
+    - health
   - fields
-		- power_input_watts
-		- power_output_watts
-		- line_input_voltage
-		- power_capacity_watts
-		- firmware_version
+    - power_input_watts
+    - power_output_watts
+    - line_input_voltage
+    - power_capacity_watts
+    - firmware_version
 
 - redfish_storage
   - tags
-		- source
-		- address
-		- state
-		- health_rollup
-		- manufacturer
-		- media_type
-		- model
-		- location
-		- protocol
-		- serial_number
-		- disk_health
-		- disk_state
-	- fields
+    - source
+    - address
+    - state
+    - health_rollup
+    - manufacturer
+    - media_type
+    - model
+    - location
+    - protocol
+    - serial_number
+    - disk_health
+    - disk_state
+  - fields
     - speed_gbs
-		- capacity_bytes
+    - capacity_bytes
 
 ### Tag Sets
 
