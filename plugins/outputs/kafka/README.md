@@ -134,9 +134,6 @@ to use them.
   ##   * now: Uses the time of write
   # producer_timestamp = metric
 
-  ## Add metric name as specified kafka header if not empty
-  # metric_name_header = ""
-
   ## Optional TLS Config
   # enable_tls = false
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -248,6 +245,12 @@ to use them.
   #   method = "tags"
   #   keys = ["foo", "bar"]
   #   separator = "_"
+
+  ## Kafka headers to add to the message where header values accept templates
+  # [outputs.kafka.headers]
+  #   metric_name = '{{ .Name }}'
+  #   my_tag = 'foo-{{ .Tag "mytag" }}'
+  #   my_value = 'bar-{{ .Field "my" }}-{{ .Field "value" }}'
 ```
 
 ### `max_retry`
