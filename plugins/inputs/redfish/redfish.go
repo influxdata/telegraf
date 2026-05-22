@@ -53,6 +53,9 @@ type system struct {
 			Ref string `json:"@odata.id"`
 		}
 	}
+	Storage struct {
+		Ref string `json:"@odata.id"`
+	}
 }
 
 type chassis struct {
@@ -111,7 +114,7 @@ func (r *Redfish) Init() error {
 	}
 	for _, metric := range r.IncludeMetrics {
 		switch metric {
-		case "thermal", "power":
+		case "thermal", "power", "storage":
 		default:
 			return fmt.Errorf("unknown metric requested: %s", metric)
 		}
@@ -175,6 +178,8 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 				err = r.gatherThermal(acc, address, system, chassis)
 			case "power":
 				err = r.gatherPower(acc, address, system, chassis)
+			case "storage":
+				err = r.gatherStorage(acc, address, system, chassis)
 			default:
 				return fmt.Errorf("unknown metric requested: %s", metric)
 			}
