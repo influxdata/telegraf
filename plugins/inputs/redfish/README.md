@@ -136,15 +136,15 @@ There are two types of metrics. The newer subsystem type and the old type.
     - name
     - source
   - fields
-      - power_allocated_watts
-      - power_available_watts
-      - power_capacity_watts
-      - power_consumed_watts
-      - power_requested_watts
-      - average_consumed_watts
-      - interval_in_min
-      - max_consumed_watts
-      - min_consumed_watts
+    - power_allocated_watts
+    - power_available_watts
+    - power_capacity_watts
+    - power_consumed_watts
+    - power_requested_watts
+    - average_consumed_watts
+    - interval_in_min
+    - max_consumed_watts
+    - min_consumed_watts
 
 - redfish_power_powersupplies
   - tags:
@@ -178,7 +178,7 @@ There are two types of metrics. The newer subsystem type and the old type.
     - lower_threshold_fatal
 
 - redfish_powersubsys_redundancy
-  -tags
+  - tags
     - name
     - address
     - source
