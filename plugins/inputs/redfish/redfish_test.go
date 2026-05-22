@@ -633,7 +633,7 @@ func TestHPApis(t *testing.T) {
 				"state":         "Enabled",
 			},
 			map[string]interface{}{
-				"capacity_bytes": 1600321314816,
+				"capacity_bytes": 1600,
 				"speed_gbs":      22.0,
 			},
 			time.Unix(0, 0),

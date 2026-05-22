@@ -31,7 +31,7 @@
   },
   "BlockSizeBytes": 512,
   "CapableSpeedGbs": 22.0,
-  "CapacityBytes": 1600321314816,
+  "CapacityBytes": 1600,
   "EncryptionAbility": "None",
   "FailurePredicted": false,
   "Identifiers": [
