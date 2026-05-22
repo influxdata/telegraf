@@ -1327,5 +1327,143 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 }
 
 func TestSubsystemsApi(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !checkAuth(r, "test", "test", "token") {
+			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
+			return
+		}
 
+		switch r.URL.Path {
+		case "/redfish/v1/":
+			http.ServeFile(w, r, "testdata/base.json")
+		case "/redfish/v1/Systems/":
+			http.ServeFile(w, r, "testdata/hp/systems.json")
+		case "/redfish/v1/Chassis/1/ThermalSubsystem":
+			http.ServeFile(w, r, "testdata/hp/thermal_subsys.json")
+		case "/redfish/v1/Chassis/1/ThermalSubsystem/ThermalMetrics":
+			http.ServeFile(w, r, "testdata/hp/thermal_metrics.json")
+		case "/redfish/v1/Chassis/1/ThermalSubsystem/Fans":
+			http.ServeFile(w, r, "testdata/hp/thermal_subsys_fans.json")
+		case "/redfish/v1/Chassis/1/ThermalSubsystem/Fans/0":
+			http.ServeFile(w, r, "testdata/hp/thermal_subsys_fans_0.json")
+		case "/redfish/v1/Chassis/1/PowerSubsystem":
+			http.ServeFile(w, r, "testdata/hp/power_subsys.json")
+		case "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies":
+			http.ServeFile(w, r, "testdata/hp/power_subsys_psu.json")
+		case "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/PowerSupply1":
+			http.ServeFile(w, r, "testdata/hp/power_subsys_psu_1.json")
+		case "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/PowerSupply1/Metrics":
+			http.ServeFile(w, r, "testdata/hp/power_subsys_metrics.json")
+		case "/redfish/v1/Systems/1":
+			http.ServeFile(w, r, "testdata/hp/systems_1.json")
+		case "/redfish/v1/Chassis/1/":
+			http.ServeFile(w, r, "testdata/hp/chassis_subsys.json")
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+
+	defer ts.Close()
+
+	u, err := url.Parse(ts.URL)
+	require.NoError(t, err)
+	address, _, err := net.SplitHostPort(u.Host)
+	require.NoError(t, err)
+
+	expectedMetricsHp := []telegraf.Metric{
+		metric.New(
+			"redfish_thermalsubsys_temperatures",
+			map[string]string{
+				"name":          "01-Inlet Ambient",
+				"source":        "tpa-hostname",
+				"address":       address,
+				"health_rollup": "OK",
+				"state":         "Enabled",
+			},
+			map[string]interface{}{
+				"reading_celsius": 19.0,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"redfish_thermalsubsys_temperatures",
+			map[string]string{
+				"name":          "02-CPU 1 PkgTmp",
+				"source":        "tpa-hostname",
+				"address":       address,
+				"health_rollup": "OK",
+				"state":         "Enabled",
+			},
+			map[string]interface{}{
+				"reading_celsius": 42.0,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"redfish_thermalsubsys_fans",
+			map[string]string{
+				"source":    "tpa-hostname",
+				"name":      "Fan 1",
+				"member_id": "0",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
+			},
+			map[string]interface{}{
+				"reading_percent": 20.0,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"redfish_powersubsys_redundancy",
+			map[string]string{
+				"name":    "",
+				"source":  "tpa-hostname",
+				"address": address,
+				"type":    "Failover",
+				"health":  "OK",
+				"state":   "UnavailableOffline",
+			},
+			map[string]interface{}{
+				"redund_group_count": 0,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"redfish_powersubsys_powersupplies",
+			map[string]string{
+				"source":       "tpa-hostname",
+				"name":         "Power Supply Bay 1",
+				"hotpluggable": "false",
+				"address":      address,
+				"health":       "Warning",
+				"state":        "Enabled",
+				"serial_num":   "3488247",
+			},
+			map[string]interface{}{
+				"power_capacity_watts": 400.0,
+				"line_input_voltage":   230.2,
+				"power_input_watts":    937.4,
+				"power_output_watts":   937.4,
+				"firmware_version":     "1.00",
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	hpPlugin := &Redfish{
+		Address:          ts.URL,
+		Username:         config.NewSecret([]byte("test")),
+		Password:         config.NewSecret([]byte("test")),
+		ComputerSystemID: "1",
+		IncludeMetrics:   []string{"thermal", "power"},
+	}
+	require.NoError(t, hpPlugin.Init())
+	var hpAcc testutil.Accumulator
+
+	err = hpPlugin.Gather(&hpAcc)
+	require.NoError(t, err)
+	require.True(t, hpAcc.HasMeasurement("redfish_thermalsubsys_temperatures"))
+	testutil.RequireMetricsEqual(t, expectedMetricsHp, hpAcc.GetTelegrafMetrics(),
+		testutil.IgnoreTime())
 }

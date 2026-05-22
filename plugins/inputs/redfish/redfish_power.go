@@ -1,6 +1,7 @@
 package redfish
 
 import (
+	"encoding/json"
 	"strconv"
 
 	"github.com/influxdata/telegraf"
@@ -126,11 +127,14 @@ func (r *Redfish) gatherPowerSubsysMetrics(acc telegraf.Accumulator, address str
 
 	for _, redundGroup := range powerSubsys.PowerSupplyRedundancy {
 		tags := map[string]string{
-			"name":   redundGroup.GroupName,
-			"source": system.HostName,
+			"name":    redundGroup.GroupName,
+			"address": address,
+			"source":  system.HostName,
+			"type":    string(redundGroup.RedundancyType),
+			"health":  string(redundGroup.Status.Health),
+			"state":   string(redundGroup.Status.State),
 		}
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
-			// tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 			tags["room"] = chassis.Location.PostalAddress.Room
 			tags["rack"] = chassis.Location.Placement.Rack
 			tags["row"] = chassis.Location.Placement.Row
@@ -140,9 +144,7 @@ func (r *Redfish) gatherPowerSubsysMetrics(acc telegraf.Accumulator, address str
 		}
 
 		fields := map[string]interface{}{
-			"type":   redundGroup.RedundancyType,
-			"health": redundGroup.Status.Health,
-			"state":  redundGroup.Status.State,
+			"redund_group_count": redundGroup.RedundancyGroupCount,
 		}
 
 		acc.AddFields("redfish_powersubsys_redundancy", fields, tags)
@@ -153,17 +155,26 @@ func (r *Redfish) gatherPowerSubsysMetrics(acc telegraf.Accumulator, address str
 		return err
 	}
 
-	// Contains Voltage and wattage info
 	for _, j := range psu {
+		// Due to Gofish not having implemented a PowerSupplyUnit getter (PowerSupplies() is for the old API)
+		// this manual parsing is required.
+		// The Type definitions exist thou, since they are generated from the official Standard
+		powerSupply := schemas.PowerSupplyUnit{}
+		json.Unmarshal(j.RawData, &powerSupply)
+		powerSupply.SetClient(powerSubsys.GetClient())
+		psuMetrics, err := powerSupply.Metrics()
+		if err != nil {
+			return err
+		}
+
 		tags := make(map[string]string, 19)
-		tags["member_id"] = j.MemberID
 		tags["address"] = address
-		tags["name"] = j.Name
+		tags["name"] = powerSupply.Name
 		tags["source"] = system.HostName
-		tags["state"] = string(j.Status.State)
-		tags["serial_num"] = j.SerialNumber
-		tags["hotpluggable"] = strconv.FormatBool(j.HotPluggable)
-		tags["line_input_voltage_type"] = string(j.LineInputVoltageType)
+		tags["state"] = string(powerSupply.Status.State)
+		tags["serial_num"] = powerSupply.SerialNumber
+		tags["hotpluggable"] = strconv.FormatBool(powerSupply.HotPluggable)
+		tags["health"] = string(powerSupply.Status.Health)
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
 			tags["room"] = chassis.Location.PostalAddress.Room
 			tags["rack"] = chassis.Location.Placement.Rack
@@ -174,13 +185,11 @@ func (r *Redfish) gatherPowerSubsysMetrics(acc telegraf.Accumulator, address str
 		}
 
 		fields := make(map[string]interface{})
-		fields["health"] = j.Status.Health
-		fields["power_input_watts"] = j.PowerInputWatts
-		fields["power_output_watts"] = j.PowerOutputWatts
-		fields["line_input_voltage"] = j.LineInputVoltage
-		fields["last_power_output_watts"] = j.LastPowerOutputWatts
-		fields["power_capacity_watts"] = j.PowerCapacityWatts
-		fields["firmware_version"] = j.FirmwareVersion
+		fields["power_input_watts"] = psuMetrics.InputPowerWatts.Reading
+		fields["power_output_watts"] = psuMetrics.OutputPowerWatts.Reading
+		fields["line_input_voltage"] = psuMetrics.InputVoltage.Reading
+		fields["power_capacity_watts"] = powerSupply.PowerCapacityWatts
+		fields["firmware_version"] = powerSupply.FirmwareVersion
 		acc.AddFields("redfish_powersubsys_powersupplies", fields, tags)
 	}
 

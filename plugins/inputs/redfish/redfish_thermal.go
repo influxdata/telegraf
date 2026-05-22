@@ -21,7 +21,7 @@ func (r *Redfish) gatherThermal(acc telegraf.Accumulator, address string, system
 		err = r.gatherThermalMetrics(acc, address, system, chassis)
 	} else {
 		// Gather metrics via the current thermal subsys api
-		err = r.gatherThermalSubsysMetrics(acc, system, thermalSubsys, chassis)
+		err = r.gatherThermalSubsysMetrics(acc, address, system, thermalSubsys, chassis)
 	}
 
 	return err
@@ -70,7 +70,7 @@ func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, address string,
 		if j.FanName != "" {
 			tags["name"] = j.FanName
 		} else {
-		tags["name"] = j.Name
+			tags["name"] = j.Name
 		}
 		tags["source"] = system.HostName
 		tags["state"] = string(j.Status.State)
@@ -94,14 +94,14 @@ func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, address string,
 		if ilo4ReadingPercent.CurrentReading != nil {
 			fields["reading_percent"] = ilo4ReadingPercent.CurrentReading
 		} else {
-		if j.ReadingUnits == "RPM" {
-			fields["upper_threshold_critical"] = j.UpperThresholdCritical
-			fields["upper_threshold_fatal"] = j.UpperThresholdFatal
-			fields["lower_threshold_critical"] = j.LowerThresholdCritical
-			fields["lower_threshold_fatal"] = j.LowerThresholdFatal
-			fields["reading_rpm"] = j.Reading
-		} else if j.Reading != nil {
-			fields["reading_percent"] = j.Reading
+			if j.ReadingUnits == "RPM" {
+				fields["upper_threshold_critical"] = j.UpperThresholdCritical
+				fields["upper_threshold_fatal"] = j.UpperThresholdFatal
+				fields["lower_threshold_critical"] = j.LowerThresholdCritical
+				fields["lower_threshold_fatal"] = j.LowerThresholdFatal
+				fields["reading_rpm"] = j.Reading
+			} else if j.Reading != nil {
+				fields["reading_percent"] = j.Reading
 			}
 		}
 		acc.AddFields("redfish_thermal_fans", fields, tags)
@@ -110,13 +110,16 @@ func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, address string,
 	return nil
 }
 
-func (r *Redfish) gatherThermalSubsysMetrics(acc telegraf.Accumulator, system *schemas.ComputerSystem, thermalSubsys *schemas.ThermalSubsystem, chassis *schemas.Chassis) error {
+func (r *Redfish) gatherThermalSubsysMetrics(acc telegraf.Accumulator, address string, system *schemas.ComputerSystem, thermalSubsys *schemas.ThermalSubsystem, chassis *schemas.Chassis) error {
 	thermalMetrics, _ := thermalSubsys.ThermalMetrics()
 	fans, _ := thermalSubsys.Fans()
 	for _, j := range thermalMetrics.TemperatureReadingsCelsius {
 		tags := make(map[string]string, 14)
 		tags["name"] = j.DeviceName
 		tags["source"] = system.HostName
+		tags["address"] = address
+		tags["state"] = string(thermalSubsys.Status.State)
+		tags["health_rollup"] = string(thermalSubsys.Status.HealthRollup)
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
 			tags["room"] = chassis.Location.PostalAddress.Room
 			tags["rack"] = chassis.Location.Placement.Rack
@@ -134,8 +137,9 @@ func (r *Redfish) gatherThermalSubsysMetrics(acc telegraf.Accumulator, system *s
 	for _, j := range fans {
 		tags := make(map[string]string, 20)
 		fields := make(map[string]interface{}, 5)
-		tags["member_id"] = j.MemberID
+		tags["member_id"] = j.ID
 		tags["name"] = j.Name
+		tags["address"] = address
 		tags["source"] = system.HostName
 		tags["state"] = string(j.Status.State)
 		tags["health"] = string(j.Status.Health)
@@ -154,9 +158,18 @@ func (r *Redfish) gatherThermalSubsysMetrics(acc telegraf.Accumulator, system *s
 			fields["lower_threshold_critical"] = j.LowerThresholdCritical
 			fields["lower_threshold_fatal"] = j.LowerThresholdFatal
 			fields["reading_rpm"] = j.Reading
-		} else {
+		} else if j.Reading != nil {
 			fields["reading_percent"] = j.Reading
+		} else {
+			var speedPercentReading struct {
+				SpeedPercent struct {
+					Reading *float32
+				}
+			}
+			json.Unmarshal(j.RawData, &speedPercentReading)
+			fields["reading_percent"] = speedPercentReading.SpeedPercent.Reading
 		}
+
 		acc.AddFields("redfish_thermalsubsys_fans", fields, tags)
 	}
 
