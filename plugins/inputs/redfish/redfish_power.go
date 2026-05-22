@@ -31,6 +31,7 @@ type power struct {
 		LastPowerOutputWatts *float64
 		Status               status
 		LineInputVoltage     *float64
+		SerialNumber         string
 	}
 	Voltages []struct {
 		Name                   string
@@ -90,6 +91,7 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *
 		tags["source"] = system.Hostname
 		tags["state"] = j.Status.State
 		tags["health"] = j.Status.Health
+		tags["serial_num"] = j.SerialNumber
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
 			tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 			tags["room"] = chassis.Location.PostalAddress.Room
