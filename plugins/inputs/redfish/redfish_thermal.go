@@ -1,6 +1,8 @@
 package redfish
 
 import (
+	"encoding/json"
+
 	"github.com/influxdata/telegraf"
 	"github.com/stmcginnis/gofish/schemas"
 )
@@ -64,7 +66,12 @@ func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, address string,
 		fields := make(map[string]interface{}, 5)
 		tags["member_id"] = j.MemberID
 		tags["address"] = address
+
+		if j.FanName != "" {
+			tags["name"] = j.FanName
+		} else {
 		tags["name"] = j.Name
+		}
 		tags["source"] = system.HostName
 		tags["state"] = string(j.Status.State)
 		tags["health"] = string(j.Status.Health)
@@ -78,6 +85,15 @@ func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, address string,
 			setChassisTags(chassis, tags)
 		}
 
+		// Due to ILO4 not being fully readfish compatible we have to do this parsing manually
+		var ilo4ReadingPercent struct {
+			CurrentReading *int64
+		}
+		json.Unmarshal(j.RawData, &ilo4ReadingPercent)
+
+		if ilo4ReadingPercent.CurrentReading != nil {
+			fields["reading_percent"] = ilo4ReadingPercent.CurrentReading
+		} else {
 		if j.ReadingUnits == "RPM" {
 			fields["upper_threshold_critical"] = j.UpperThresholdCritical
 			fields["upper_threshold_fatal"] = j.UpperThresholdFatal
@@ -86,8 +102,7 @@ func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, address string,
 			fields["reading_rpm"] = j.Reading
 		} else if j.Reading != nil {
 			fields["reading_percent"] = j.Reading
-		} else {
-			fields["reading_percent"] = j.Reading
+			}
 		}
 		acc.AddFields("redfish_thermal_fans", fields, tags)
 	}

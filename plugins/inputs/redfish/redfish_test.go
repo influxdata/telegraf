@@ -657,6 +657,107 @@ func TestHPApis(t *testing.T) {
 		testutil.IgnoreTime())
 }
 
+func TestHPilo4Apis(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !checkAuth(r, "test", "test", "token") {
+			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
+			return
+		}
+
+		switch r.URL.Path {
+		case "/redfish/v1/":
+			http.ServeFile(w, r, "testdata/base.json")
+		case "/redfish/v1/Systems/":
+			http.ServeFile(w, r, "testdata/hp/systems.json")
+		case "/redfish/v1/Chassis/1/Thermal":
+			http.ServeFile(w, r, "testdata/hp/thermal_ilo4.json")
+		case "/redfish/v1/Chassis/1/Power":
+			http.ServeFile(w, r, "testdata/hp/power.json")
+		case "/redfish/v1/Systems/1":
+			http.ServeFile(w, r, "testdata/hp/systems_1.json")
+		case "/redfish/v1/Chassis/1/":
+			http.ServeFile(w, r, "testdata/hp/chassis.json")
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+
+	defer ts.Close()
+
+	u, err := url.Parse(ts.URL)
+	require.NoError(t, err)
+	address, _, err := net.SplitHostPort(u.Host)
+	require.NoError(t, err)
+
+	expectedMetricsHp := []telegraf.Metric{
+		metric.New(
+			"redfish_thermal_temperatures",
+			map[string]string{
+				"name":      "01-Inlet Ambient",
+				"member_id": "0",
+				"source":    "tpa-hostname",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
+			},
+			map[string]interface{}{
+				"reading_celsius":          19.0,
+				"upper_threshold_critical": 42.0,
+				"upper_threshold_fatal":    47.0,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"redfish_thermal_temperatures",
+			map[string]string{
+				"name":      "44-P/S 2 Zone",
+				"member_id": "42",
+				"source":    "tpa-hostname",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
+			},
+			map[string]interface{}{
+				"reading_celsius":          34.0,
+				"upper_threshold_critical": 75.0,
+				"upper_threshold_fatal":    80.0,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"redfish_thermal_fans",
+			map[string]string{
+				"address":   address,
+				"health":    "OK",
+				"member_id": "",
+				"name":      "Fan 1",
+				"source":    "tpa-hostname",
+				"state":     "Enabled",
+			},
+			map[string]interface{}{
+				"reading_percent": 17,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	hpPlugin := &Redfish{
+		Address:          ts.URL,
+		Username:         config.NewSecret([]byte("test")),
+		Password:         config.NewSecret([]byte("test")),
+		ComputerSystemID: "1",
+		IncludeMetrics:   []string{"thermal"},
+	}
+	require.NoError(t, hpPlugin.Init())
+	var hpAcc testutil.Accumulator
+
+	err = hpPlugin.Gather(&hpAcc)
+	require.NoError(t, err)
+	require.True(t, hpAcc.HasMeasurement("redfish_thermal_temperatures"))
+	testutil.RequireMetricsEqual(t, expectedMetricsHp, hpAcc.GetTelegrafMetrics(),
+		testutil.IgnoreTime())
+}
+
 func checkAuth(r *http.Request, username, password string, token string) bool {
 	// The base path requires not auth
 	if r.URL.Path == "/redfish/v1/" {
