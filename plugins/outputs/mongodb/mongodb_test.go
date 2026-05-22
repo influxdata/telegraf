@@ -56,7 +56,8 @@ func TestInitFail(t *testing.T) {
 		username    config.Secret
 		password    config.Secret
 		granularity string
-		expected    string
+
+		expected string
 	}{
 		{
 			name:        "invalid metric granularity",
@@ -419,10 +420,11 @@ func TestWriteIntegration(t *testing.T) {
 	}
 
 	tests := []struct {
-		name     string
-		meta     []string
-		batch    bool
-		expected map[string][]bson.D
+		name         string
+		batch        bool
+		meta         []string
+		metaStrategy string
+		expected     map[string][]bson.D
 	}{
 		{
 			name: "individual",
@@ -642,6 +644,147 @@ func TestWriteIntegration(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:         "metadata source move",
+			meta:         []string{"source"},
+			metaStrategy: "move",
+			expected: map[string][]bson.D{
+				"test1": {
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(0)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(1)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(10000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(2)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(20000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(3)},
+					},
+				},
+				"test2": {
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(0)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(10)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(10000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(20)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(20000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(30)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(30000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(40)},
+					},
+				},
+			},
+		},
+		{
+			name:         "metadata source clear",
+			meta:         []string{"source"},
+			metaStrategy: "clear",
+			expected: map[string][]bson.D{
+				"test1": {
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(0)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+						}},
+						primitive.E{Key: "value", Value: int64(1)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(10000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+						}},
+						primitive.E{Key: "value", Value: int64(2)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(20000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+						}},
+						primitive.E{Key: "value", Value: int64(3)},
+					},
+				},
+				"test2": {
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(0)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "value", Value: int64(10)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(10000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "value", Value: int64(20)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(20000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "value", Value: int64(30)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(30000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "value", Value: int64(40)},
+					},
+				},
+			},
+		},
 	}
 
 	// Setup the input metrics and expected results
@@ -705,10 +848,11 @@ func TestWriteIntegration(t *testing.T) {
 
 			// Setup and start the plugin
 			plugin := &MongoDB{
-				Dsn:            "mongodb://" + container.Address + ":" + container.Ports[servicePort],
-				MetricDatabase: "telegraf_test",
-				WriteBatch:     tt.batch,
-				MetadataKeys:   tt.meta,
+				Dsn:                 "mongodb://" + container.Address + ":" + container.Ports[servicePort],
+				MetricDatabase:      "telegraf_test",
+				WriteBatch:          tt.batch,
+				MetadataKeys:        tt.meta,
+				MetadataTagStrategy: tt.metaStrategy,
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())

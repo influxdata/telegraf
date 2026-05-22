@@ -76,6 +76,12 @@ to use them.
   ## tag key-values.
   # metadata_keys = []
 
+  ## Behavior when using explicit metadata keys; ignored for empty metadata_keys
+  ##  keep  -- keep all tags as tags
+  ##  move  -- move tags matching metadata_keys and delete them in the tags field
+  ##  clear -- clear ALL tags and remove the tags field entirely from the document
+  # metadata_tag_strategy = "keep"
+
   ## Granularity can be seconds, minutes, or hours.
   ## Configuring this value will be based on your input collection frequency
   ## see https://docs.mongodb.com/manual/core/timeseries-collections/#create-a-time-series-collection

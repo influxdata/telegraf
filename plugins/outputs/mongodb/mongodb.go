@@ -35,6 +35,7 @@ type MongoDB struct {
 	Password            config.Secret   `toml:"password"`
 	WriteBatch          bool            `toml:"write_batch"`
 	MetadataKeys        []string        `toml:"metadata_keys"`
+	MetadataTagStrategy string          `toml:"metadata_tag_strategy"`
 	ServerSelectTimeout config.Duration `toml:"timeout"`
 	TTL                 config.Duration `toml:"ttl"`
 	Log                 telegraf.Logger `toml:"-"`
@@ -61,6 +62,16 @@ func (s *MongoDB) Init() error {
 	case "seconds", "minutes", "hours":
 	default:
 		return errors.New("invalid time series collection granularity. please specify \"seconds\", \"minutes\", or \"hours\"")
+	}
+
+	switch s.MetadataTagStrategy {
+	case "":
+		s.MetadataTagStrategy = "keep"
+	case "keep", "move", "clear":
+	default:
+		if len(s.MetadataKeys) > 0 {
+			return fmt.Errorf("invalid 'metadata_tag_strategy' %q", s.MetadataTagStrategy)
+		}
 	}
 
 	// Do some basic Dsn checks
@@ -318,29 +329,35 @@ func (s *MongoDB) createCollection(ctx context.Context, name string) error {
 }
 
 // Convert a metric into a MongoDB document with all fields being parent level
-// of document and the metadata field is named "tags". MongoDB stores timestamp
-// as UTC so conversion should be performed on the query or aggregation side.
+// of document. Metadata and/or tags will be added as subdocument. MongoDB
+// stores timestamp as UTC so conversion should be performed on the query or
+// aggregation side.
 func (s *MongoDB) marshal(metric telegraf.Metric) bson.D {
 	doc := make(bson.D, 0, len(metric.FieldList())+2)
+	doc = append(doc, primitive.E{Key: "timestamp", Value: metric.Time()})
 
-	// Add metadata if specified any
-	if s.metadataFilter != nil {
-		metadata := make(bson.D, 0, len(s.MetadataKeys))
-		for _, t := range metric.TagList() {
-			if s.metadataFilter.Match(t.Key) {
-				metadata = append(metadata, primitive.E{Key: t.Key, Value: t.Value})
+	tags := make(bson.D, 0, len(metric.TagList()))
+	metadata := make(bson.D, 0, len(s.MetadataKeys))
+	for _, t := range metric.TagList() {
+		// Add metadata if specified any
+		if s.metadataFilter != nil && s.metadataFilter.Match(t.Key) {
+			metadata = append(metadata, primitive.E{Key: t.Key, Value: t.Value})
+			if s.MetadataTagStrategy == "keep" {
+				tags = append(tags, primitive.E{Key: t.Key, Value: t.Value})
 			}
+		} else if s.MetadataTagStrategy != "clear" {
+			tags = append(tags, primitive.E{Key: t.Key, Value: t.Value})
 		}
+	}
+
+	if s.metadataFilter != nil {
 		doc = append(doc, primitive.E{Key: "metadata", Value: metadata})
 	}
-	tags := make(bson.D, 0, len(metric.TagList()))
-	for _, t := range metric.TagList() {
-		tags = append(tags, primitive.E{Key: t.Key, Value: t.Value})
+
+	if s.MetadataTagStrategy != "clear" {
+		doc = append(doc, primitive.E{Key: "tags", Value: tags})
 	}
-	doc = append(doc,
-		primitive.E{Key: "tags", Value: tags},
-		primitive.E{Key: "timestamp", Value: metric.Time()},
-	)
+
 	for _, f := range metric.FieldList() {
 		doc = append(doc, primitive.E{Key: f.Key, Value: f.Value})
 	}
