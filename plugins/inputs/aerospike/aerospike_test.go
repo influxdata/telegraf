@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	as "github.com/aerospike/aerospike-client-go/v5"
+	"github.com/moby/moby/api/types/container"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -15,13 +16,20 @@ import (
 const servicePort = "3000"
 
 func launchTestServer(t *testing.T) *testutil.Container {
+	t.Helper()
 	container := testutil.Container{
 		Image:        "aerospike:ce-8.1.0.1",
 		ExposedPorts: []string{servicePort},
 		WaitingFor:   wait.ForLog("migrations: complete"),
+		HostConfigModifier: func(hc *container.HostConfig) {
+			hc.Ulimits = append(hc.Ulimits, &container.Ulimit{
+				Name: "nofile",
+				Soft: 32768,
+				Hard: 32768,
+			})
+		},
 	}
-	err := container.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, container.Start(), "failed to start container")
 
 	return &container
 }
