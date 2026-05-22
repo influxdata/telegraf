@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moby/moby/api/types/container"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"go.mongodb.org/mongo-driver/bson"
@@ -19,6 +20,14 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
+
+var raiseNoFileLimit = func(hc *container.HostConfig) {
+	hc.Ulimits = append(hc.Ulimits, &container.Ulimit{
+		Name: "nofile",
+		Soft: 32768,
+		Hard: 32768,
+	})
+}
 
 func TestInitSuccess(t *testing.T) {
 	tests := []struct {
@@ -134,17 +143,18 @@ func TestConnectAndWriteNoAuthIntegration(t *testing.T) {
 	}
 
 	servicePort := "27017"
-	container := testutil.Container{
-		Image:        "mongo",
-		ExposedPorts: []string{servicePort},
-		WaitingFor:   wait.ForLog("Waiting for connections"),
+	cntnr := testutil.Container{
+		Image:              "mongo",
+		ExposedPorts:       []string{servicePort},
+		WaitingFor:         wait.ForLog("Waiting for connections"),
+		HostConfigModifier: raiseNoFileLimit,
 	}
-	require.NoError(t, container.Start(), "failed to start container")
-	defer container.Terminate()
+	require.NoError(t, cntnr.Start(), "failed to start container")
+	defer cntnr.Terminate()
 
 	// Run test
 	plugin := &MongoDB{
-		Dsn:                "mongodb://" + container.Address + ":" + container.Ports[servicePort],
+		Dsn:                "mongodb://" + cntnr.Address + ":" + cntnr.Ports[servicePort],
 		AuthenticationType: "NONE",
 		MetricDatabase:     "telegraf_test",
 		MetricGranularity:  "seconds",
@@ -166,21 +176,22 @@ func TestConnectAndWriteSCRAMAuthIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	servicePort := "27017"
-	container := testutil.Container{
+	cntnr := testutil.Container{
 		Image:        "mongo",
 		ExposedPorts: []string{servicePort},
 		Files: map[string]string{
 			"/docker-entrypoint-initdb.d/setup.js": initdb,
 		},
-		WaitingFor: wait.ForLog("Waiting for connections").WithOccurrence(2),
+		WaitingFor:         wait.ForLog("Waiting for connections").WithOccurrence(2),
+		HostConfigModifier: raiseNoFileLimit,
 	}
-	require.NoError(t, container.Start(), "failed to start container")
-	defer container.Terminate()
+	require.NoError(t, cntnr.Start(), "failed to start container")
+	defer cntnr.Terminate()
 
 	// Setup plugin
 	plugin := &MongoDB{
 		Dsn: fmt.Sprintf("mongodb://%s:%s/admin",
-			container.Address, container.Ports[servicePort]),
+			cntnr.Address, cntnr.Ports[servicePort]),
 		AuthenticationType: "SCRAM",
 		Username:           config.NewSecret([]byte("root")),
 		Password:           config.NewSecret([]byte("changeme")),
@@ -205,20 +216,21 @@ func TestConnectAndWriteSCRAMAuthBadPasswordIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	servicePort := "27017"
-	container := testutil.Container{
+	cntnr := testutil.Container{
 		Image:        "mongo",
 		ExposedPorts: []string{servicePort},
 		Files: map[string]string{
 			"/docker-entrypoint-initdb.d/setup.js": initdb,
 		},
-		WaitingFor: wait.ForLog("Waiting for connections").WithOccurrence(2),
+		WaitingFor:         wait.ForLog("Waiting for connections").WithOccurrence(2),
+		HostConfigModifier: raiseNoFileLimit,
 	}
-	require.NoError(t, container.Start(), "failed to start container")
-	defer container.Terminate()
+	require.NoError(t, cntnr.Start(), "failed to start container")
+	defer cntnr.Terminate()
 
 	// Setup plugin
 	plugin := &MongoDB{
-		Dsn:                 "mongodb://" + container.Address + ":" + container.Ports[servicePort] + "/admin",
+		Dsn:                 "mongodb://" + cntnr.Address + ":" + cntnr.Ports[servicePort] + "/admin",
 		AuthenticationType:  "SCRAM",
 		Username:            config.NewSecret([]byte("root")),
 		Password:            config.NewSecret([]byte("root")),
@@ -248,7 +260,7 @@ func TestConnectAndWriteX509AuthSuccessIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	servicePort := "27017"
-	container := testutil.Container{
+	cntnr := testutil.Container{
 		Image:        "mongo",
 		ExposedPorts: []string{servicePort},
 		Files: map[string]string{
@@ -263,10 +275,11 @@ func TestConnectAndWriteX509AuthSuccessIntegration(t *testing.T) {
 			"--tlsCAFile", "/cacert.pem",
 			"--tlsCertificateKeyFile", "/server.pem",
 		},
-		WaitingFor: wait.ForLog("Waiting for connections").WithOccurrence(2),
+		WaitingFor:         wait.ForLog("Waiting for connections").WithOccurrence(2),
+		HostConfigModifier: raiseNoFileLimit,
 	}
-	require.NoError(t, container.Start(), "failed to start container")
-	defer container.Terminate()
+	require.NoError(t, cntnr.Start(), "failed to start container")
+	defer cntnr.Terminate()
 
 	tests := []struct {
 		name      string
@@ -300,7 +313,7 @@ func TestConnectAndWriteX509AuthSuccessIntegration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup plugin
 			plugin := &MongoDB{
-				Dsn:                 "mongodb://" + container.Address + ":" + container.Ports[servicePort],
+				Dsn:                 "mongodb://" + cntnr.Address + ":" + cntnr.Ports[servicePort],
 				AuthenticationType:  "X509",
 				MetricDatabase:      "telegraf_test",
 				MetricGranularity:   "seconds",
@@ -335,7 +348,7 @@ func TestConnectAndWriteX509AuthFailIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	servicePort := "27017"
-	container := testutil.Container{
+	cntnr := testutil.Container{
 		Image:        "mongo",
 		ExposedPorts: []string{servicePort},
 		Files: map[string]string{
@@ -350,10 +363,11 @@ func TestConnectAndWriteX509AuthFailIntegration(t *testing.T) {
 			"--tlsCAFile", "/cacert.pem",
 			"--tlsCertificateKeyFile", "/server.pem",
 		},
-		WaitingFor: wait.ForLog("Waiting for connections").WithOccurrence(2),
+		WaitingFor:         wait.ForLog("Waiting for connections").WithOccurrence(2),
+		HostConfigModifier: raiseNoFileLimit,
 	}
-	require.NoError(t, container.Start(), "failed to start container")
-	defer container.Terminate()
+	require.NoError(t, cntnr.Start(), "failed to start container")
+	defer cntnr.Terminate()
 
 	tests := []struct {
 		name      string
@@ -398,7 +412,7 @@ func TestConnectAndWriteX509AuthFailIntegration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup plugin
 			plugin := &MongoDB{
-				Dsn:                 "mongodb://" + container.Address + ":" + container.Ports[servicePort],
+				Dsn:                 "mongodb://" + cntnr.Address + ":" + cntnr.Ports[servicePort],
 				AuthenticationType:  "X509",
 				MetricDatabase:      "telegraf_test",
 				MetricGranularity:   "seconds",
@@ -837,18 +851,19 @@ func TestWriteIntegration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup the container
 			servicePort := "27017"
-			container := testutil.Container{
-				Image:        "mongo",
-				ExposedPorts: []string{servicePort},
-				WaitingFor:   wait.ForLog("Waiting for connections"),
-				Quiet:        true,
+			cntnr := testutil.Container{
+				Image:              "mongo",
+				ExposedPorts:       []string{servicePort},
+				WaitingFor:         wait.ForLog("Waiting for connections"),
+				Quiet:              true,
+				HostConfigModifier: raiseNoFileLimit,
 			}
-			require.NoError(t, container.Start(), "failed to start container")
-			defer container.Terminate()
+			require.NoError(t, cntnr.Start(), "failed to start container")
+			defer cntnr.Terminate()
 
 			// Setup and start the plugin
 			plugin := &MongoDB{
-				Dsn:                 "mongodb://" + container.Address + ":" + container.Ports[servicePort],
+				Dsn:                 "mongodb://" + cntnr.Address + ":" + cntnr.Ports[servicePort],
 				MetricDatabase:      "telegraf_test",
 				WriteBatch:          tt.batch,
 				MetadataKeys:        tt.meta,
@@ -925,18 +940,19 @@ func BenchmarkWriteIndividual(b *testing.B) {
 
 	// Start a mongodb container for benchmarking
 	servicePort := "27017"
-	container := testutil.Container{
-		Image:        "mongo",
-		ExposedPorts: []string{servicePort},
-		WaitingFor:   wait.ForLog("Waiting for connections"),
-		Quiet:        true,
+	cntnr := testutil.Container{
+		Image:              "mongo",
+		ExposedPorts:       []string{servicePort},
+		WaitingFor:         wait.ForLog("Waiting for connections"),
+		Quiet:              true,
+		HostConfigModifier: raiseNoFileLimit,
 	}
-	require.NoError(b, container.Start(), "failed to start container")
-	defer container.Terminate()
+	require.NoError(b, cntnr.Start(), "failed to start container")
+	defer cntnr.Terminate()
 
 	// Setup the plugin and connect
 	plugin := &MongoDB{
-		Dsn:            "mongodb://" + container.Address + ":" + container.Ports[servicePort],
+		Dsn:            "mongodb://" + cntnr.Address + ":" + cntnr.Ports[servicePort],
 		MetricDatabase: "telegraf_bench",
 	}
 	require.NoError(b, plugin.Init())
@@ -961,18 +977,19 @@ func BenchmarkWriteBatch(b *testing.B) {
 
 	// Start a mongodb container for benchmarking
 	servicePort := "27017"
-	container := testutil.Container{
-		Image:        "mongo",
-		ExposedPorts: []string{servicePort},
-		WaitingFor:   wait.ForLog("Waiting for connections"),
-		Quiet:        true,
+	cntnr := testutil.Container{
+		Image:              "mongo",
+		ExposedPorts:       []string{servicePort},
+		WaitingFor:         wait.ForLog("Waiting for connections"),
+		Quiet:              true,
+		HostConfigModifier: raiseNoFileLimit,
 	}
-	require.NoError(b, container.Start(), "failed to start container")
-	defer container.Terminate()
+	require.NoError(b, cntnr.Start(), "failed to start container")
+	defer cntnr.Terminate()
 
 	// Setup the plugin and connect
 	plugin := &MongoDB{
-		Dsn:            "mongodb://" + container.Address + ":" + container.Ports[servicePort],
+		Dsn:            "mongodb://" + cntnr.Address + ":" + cntnr.Ports[servicePort],
 		MetricDatabase: "telegraf_bench",
 		WriteBatch:     true,
 	}
