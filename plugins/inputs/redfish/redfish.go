@@ -3,15 +3,11 @@ package redfish
 
 import (
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"net/url"
-	"slices"
-	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -39,7 +35,6 @@ type Redfish struct {
 	ComputerSystemID string          `toml:"computer_system_id"`
 	IncludeMetrics   []string        `toml:"include_metrics"`
 	IncludeTagSets   []string        `toml:"include_tag_sets"`
-	Workarounds      []string        `toml:"workarounds"`
 	Timeout          config.Duration `toml:"timeout"`
 
 	tagSet map[string]bool
@@ -115,62 +110,6 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (r *Redfish) getData(address string, payload interface{}) error {
-	req, err := http.NewRequest("GET", address, nil)
-	if err != nil {
-		return err
-	}
-
-	username, err := r.Username.Get()
-	if err != nil {
-		return fmt.Errorf("getting username failed: %w", err)
-	}
-	user := username.String()
-	username.Destroy()
-
-	password, err := r.Password.Get()
-	if err != nil {
-		return fmt.Errorf("getting password failed: %w", err)
-	}
-	pass := password.String()
-	password.Destroy()
-
-	req.SetBasicAuth(user, pass)
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("OData-Version", "4.0")
-
-	// workaround for iLO4 thermal data
-	if slices.Contains(r.Workarounds, "ilo4-thermal") && strings.Contains(address, "/Thermal") {
-		req.Header.Del("OData-Version")
-	}
-
-	resp, err := r.client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("received status code %d (%s) for address %s, expected 200",
-			resp.StatusCode,
-			http.StatusText(resp.StatusCode),
-			address)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(body, &payload)
-	if err != nil {
-		return fmt.Errorf("error parsing input: %w", err)
-	}
-
-	return nil
-}
-
 func setChassisTags(chassis *schemas.Chassis, tags map[string]string) {
 	tags["chassis_chassistype"] = string(chassis.ChassisType)
 	tags["chassis_manufacturer"] = chassis.Manufacturer
@@ -218,14 +157,6 @@ func (r *Redfish) checkConfig() error {
 		case "thermal", "power", "storage":
 		default:
 			return fmt.Errorf("unknown metric requested: %s", metric)
-		}
-	}
-
-	for _, workaround := range r.Workarounds {
-		switch workaround {
-		case "ilo4-thermal":
-		default:
-			return fmt.Errorf("unknown workaround requested: %s", workaround)
 		}
 	}
 
