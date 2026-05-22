@@ -354,7 +354,7 @@ func (s *MongoDB) marshal(metric telegraf.Metric) bson.D {
 		doc = append(doc, primitive.E{Key: "metadata", Value: metadata})
 	}
 
-	if s.MetadataTagStrategy != "clear" {
+	if s.metadataFilter == nil || s.MetadataTagStrategy != "clear" {
 		doc = append(doc, primitive.E{Key: "tags", Value: tags})
 	}
 
