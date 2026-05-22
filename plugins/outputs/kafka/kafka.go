@@ -88,6 +88,9 @@ func (k *Kafka) Init() error {
 
 	// Legacy support for metric_name_header
 	if k.MetricNameHeader != "" {
+		if k.Headers == nil {
+			k.Headers = make(map[string]string, 1)
+		}
 		k.Headers[k.MetricNameHeader] = "{{ .Name }}"
 	}
 
