@@ -139,44 +139,45 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func reserveNativePingID() (uint16, error) {
+func reserveNativePingID() uint16 {
 	usedIDsCond.L.Lock()
 	defer usedIDsCond.L.Unlock()
 
-	// Check if we are the first
-	if len(usedIDs) == 0 {
-		usedIDs = append(usedIDs, 0)
-		return 0, nil
-	}
-
-	// Check if there is a free ID at the end
-	if id := usedIDs[len(usedIDs)-1]; id < math.MaxUint16 {
-		id++
-		usedIDs = append(usedIDs, id)
-		return id, nil
-	}
-
-	// Waiting for an ID to become available if all are in use
-	for len(usedIDs) > math.MaxUint16 {
-		usedIDsCond.Wait()
-	}
-
-	// Search for a free spot
-	for i, used := range usedIDs {
-		if uint16(i) == used {
-			continue
+	// Wait for an ID to become avaulable
+	for {
+		// Check if we are the first
+		if len(usedIDs) == 0 {
+			usedIDs = append(usedIDs, 0)
+			return 0
 		}
-		// We found an spot with a missing ID. Insert the largest available ID
-		// in the spot to optimize for future searches and keep the list sorted.
-		// I.e. if the list is [10, 65535] we will insert '9' and get
-		// [9, 10, 65535], making the next search also taking only one iteration
-		// instead of two.
-		id := used - 1
-		usedIDs = slices.Insert(usedIDs, i, id)
-		return id, nil
-	}
 
-	return 0, errors.New("no unused ID available")
+		// Check if there is a free ID at the end
+		if id := usedIDs[len(usedIDs)-1]; id < math.MaxUint16 {
+			id++
+			usedIDs = append(usedIDs, id)
+			return id
+		}
+
+		// Waiting for an ID to become available if all are in use
+		for len(usedIDs) > math.MaxUint16 {
+			usedIDsCond.Wait()
+		}
+
+		// Search for a free spot
+		for i, used := range usedIDs {
+			if uint16(i) == used {
+				continue
+			}
+			// We found a spot with a missing ID. Insert the largest available ID
+			// in the spot to optimize for future searches and keep the list sorted.
+			// I.e. if the list is [10, 65535] we will insert '9' and get
+			// [9, 10, 65535], making the next search also taking only one iteration
+			// instead of two.
+			id := used - 1
+			usedIDs = slices.Insert(usedIDs, i, id)
+			return id
+		}
+	}
 }
 
 func freeNativePingID(id uint16) {
@@ -274,15 +275,12 @@ func (p *Ping) nativePing(destination string, id int) (*pingStats, error) {
 func (p *Ping) pingToURLNative(acc telegraf.Accumulator, destination string) {
 	tags := map[string]string{"url": destination}
 
-	id, err := reserveNativePingID()
-	if err != nil {
-		p.Log.Errorf("ping failed: %v", err)
-	}
+	id := reserveNativePingID()
 	defer freeNativePingID(id)
 
 	stats, err := p.nativePingFunc(destination, int(id))
 	if err != nil {
-		p.Log.Errorf("ping failed: %s", err.Error())
+		p.Log.Errorf("ping failed: %v", err)
 		fields := make(map[string]interface{}, 1)
 		if strings.Contains(err.Error(), "unknown") {
 			fields["result_code"] = 1

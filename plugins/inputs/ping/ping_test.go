@@ -107,6 +107,11 @@ func TestNativeIDs(t *testing.T) {
 			usedIDsCond.L.Lock()
 			usedIDs = slices.Clone(initialIDs)
 			usedIDsCond.L.Unlock()
+			t.Cleanup(func() {
+				usedIDsCond.L.Lock()
+				usedIDs = make([]uint16, 0)
+				usedIDsCond.L.Unlock()
+			})
 
 			// Add a number of plugin instances that need to share the IDs
 			var wg sync.WaitGroup
@@ -187,6 +192,11 @@ func TestNativeIDsWaitOnFull(t *testing.T) {
 	usedIDsCond.L.Lock()
 	usedIDs = slices.Clone(initialUsedIDs)
 	usedIDsCond.L.Unlock()
+	t.Cleanup(func() {
+		usedIDsCond.L.Lock()
+		usedIDs = make([]uint16, 0)
+		usedIDsCond.L.Unlock()
+	})
 
 	// Add a number of plugin instances that need to share the IDs
 	var wg sync.WaitGroup
@@ -262,23 +272,6 @@ func TestNativeIDsWaitOnFull(t *testing.T) {
 	usedIDsCond.L.Lock()
 	defer usedIDsCond.L.Unlock()
 	require.Equal(t, initialUsedIDs[len(targets):], usedIDs)
-}
-
-func Benchmark(b *testing.B) {
-	// Generate a target list
-	targets := slices.Repeat([]string{"localhost"}, 100)
-
-	plugin := &Ping{
-		Method: "native",
-		Urls:   targets,
-		Log:    &testutil.Logger{},
-	}
-	require.NoError(b, plugin.Init())
-
-	acc := &testutil.Accumulator{Discard: true}
-	for b.Loop() {
-		require.NoError(b, plugin.Gather(acc))
-	}
 }
 
 func fakeResult() (*pingStats, error) {
