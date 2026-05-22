@@ -24,7 +24,7 @@ var imagesDEB = []string{
 	// LTS
 	"ubuntu/noble",
 	// Latest
-	"ubuntu/plucky",
+	"ubuntu/resolute",
 }
 
 func main() {
