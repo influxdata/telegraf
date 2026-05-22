@@ -44,8 +44,6 @@ func (r *Redfish) gatherThermal(acc telegraf.Accumulator, address string, system
 		tags["address"] = address
 		tags["name"] = j.Name
 		tags["source"] = system.Hostname
-		tags["state"] = j.Status.State
-		tags["health"] = j.Status.Health
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
 			tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 			tags["room"] = chassis.Location.PostalAddress.Room
@@ -57,6 +55,8 @@ func (r *Redfish) gatherThermal(acc telegraf.Accumulator, address string, system
 		}
 
 		fields := make(map[string]interface{})
+		fields["state"] = j.Status.State
+		fields["health"] = j.Status.Health
 		fields["reading_celsius"] = j.ReadingCelsius
 		fields["upper_threshold_critical"] = j.UpperThresholdCritical
 		fields["upper_threshold_fatal"] = j.UpperThresholdFatal
@@ -75,8 +75,8 @@ func (r *Redfish) gatherThermal(acc telegraf.Accumulator, address string, system
 			tags["name"] = j.FanName
 		}
 		tags["source"] = system.Hostname
-		tags["state"] = j.Status.State
-		tags["health"] = j.Status.Health
+		fields["state"] = j.Status.State
+		fields["health"] = j.Status.Health
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
 			tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 			tags["room"] = chassis.Location.PostalAddress.Room

@@ -90,7 +90,6 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *
 		tags["name"] = j.Name
 		tags["source"] = system.Hostname
 		tags["state"] = j.Status.State
-		tags["health"] = j.Status.Health
 		tags["serial_num"] = j.SerialNumber
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
 			tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
@@ -103,6 +102,7 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *
 		}
 
 		fields := make(map[string]interface{})
+		fields["health"] = j.Status.Health
 		fields["power_input_watts"] = j.PowerInputWatts
 		fields["power_output_watts"] = j.PowerOutputWatts
 		fields["line_input_voltage"] = j.LineInputVoltage
@@ -117,8 +117,6 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *
 		tags["address"] = address
 		tags["name"] = j.Name
 		tags["source"] = system.Hostname
-		tags["state"] = j.Status.State
-		tags["health"] = j.Status.Health
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
 			tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
 			tags["room"] = chassis.Location.PostalAddress.Room
@@ -130,6 +128,8 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *
 		}
 
 		fields := make(map[string]interface{})
+		fields["state"] = j.Status.State
+		fields["health"] = j.Status.Health
 		fields["reading_volts"] = j.ReadingVolts
 		fields["upper_threshold_critical"] = j.UpperThresholdCritical
 		fields["upper_threshold_fatal"] = j.UpperThresholdFatal
