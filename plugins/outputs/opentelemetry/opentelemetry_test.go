@@ -47,10 +47,11 @@ func TestOpenTelemetry(t *testing.T) {
 
 	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(common.NoopLogger{})
 	require.NoError(t, err)
+	testHeaderSecret := config.NewSecret([]byte("header1"))
 	plugin := &OpenTelemetry{
 		ServiceAddress:   m.Address(),
 		Timeout:          config.Duration(time.Second),
-		Headers:          map[string]string{"test": "header1"},
+		Headers:          map[string]*config.Secret{"test": &testHeaderSecret},
 		Attributes:       map[string]string{"attr-key": "attr-val"},
 		metricsConverter: metricsConverter,
 		otlpMetricClient: &gRPCClient{

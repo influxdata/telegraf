@@ -35,7 +35,7 @@ type OpenTelemetry struct {
 	tls.ClientConfig
 	Timeout     config.Duration   `toml:"timeout"`
 	Compression string            `toml:"compression"`
-	Headers     map[string]string `toml:"headers"`
+	Headers     map[string]*config.Secret `toml:"headers"`
 	Attributes  map[string]string `toml:"attributes"`
 	Coralogix   *CoralogixConfig  `toml:"coralogix"`
 	proxy.HTTPProxy
@@ -55,7 +55,7 @@ type clientConfig struct {
 	HTTPProxy       *proxy.HTTPProxy  // only for HTTP client
 	TCPProxy        *proxy.TCPProxy   // only for gRPC client
 	Encoding        string            // only for HTTP client
-	Headers         map[string]string // only for HTTP client, gRPC client uses metadata
+	Headers         map[string]*config.Secret // only for HTTP client, gRPC client uses metadata
 }
 
 type otlpMetricClient interface {
@@ -95,11 +95,14 @@ func (o *OpenTelemetry) Connect() error {
 	}
 	if o.Coralogix != nil {
 		if o.Headers == nil {
-			o.Headers = make(map[string]string)
+			o.Headers = make(map[string]*config.Secret)
 		}
-		o.Headers["ApplicationName"] = o.Coralogix.AppName
-		o.Headers["ApiName"] = o.Coralogix.SubSystem
-		o.Headers["Authorization"] = "Bearer " + o.Coralogix.PrivateKey
+		appName := config.NewSecret([]byte(o.Coralogix.AppName))
+		o.Headers["ApplicationName"] = &appName
+		subSystem := config.NewSecret([]byte(o.Coralogix.SubSystem))
+		o.Headers["ApiName"] = &subSystem
+		bearer := config.NewSecret([]byte("Bearer " + o.Coralogix.PrivateKey))
+		o.Headers["Authorization"] = &bearer
 	}
 
 	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(logger)
@@ -208,7 +211,16 @@ func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Timeout))
 
 	if len(o.Headers) > 0 {
-		ctx = metadata.NewOutgoingContext(ctx, metadata.New(o.Headers))
+		md := make(map[string]string, len(o.Headers))
+		for k, v := range o.Headers {
+			secret, err := v.Get()
+			if err != nil {
+				return fmt.Errorf("getting header %q secret failed: %w", k, err)
+			}
+			md[k] = secret.String()
+			secret.Destroy()
+		}
+		ctx = metadata.NewOutgoingContext(ctx, metadata.New(md))
 	}
 	defer cancel()
 	_, err := o.otlpMetricClient.Export(ctx, md)

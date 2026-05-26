@@ -10,6 +10,7 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 )
 
@@ -18,7 +19,7 @@ type httpClient struct {
 	url          string
 	encodingType string
 	compress     string
-	headers      map[string]string
+	headers      map[string]*config.Secret
 }
 
 func (h *httpClient) Connect(cfg *clientConfig) error {
@@ -85,7 +86,12 @@ func (h *httpClient) Export(ctx context.Context, request pmetricotlp.ExportReque
 		return pmetricotlp.ExportResponse{}, err
 	}
 	for key, value := range h.headers {
-		httpRequest.Header.Set(key, value)
+		secret, err := value.Get()
+		if err != nil {
+			return pmetricotlp.ExportResponse{}, fmt.Errorf("getting header %q secret failed: %w", key, err)
+		}
+		httpRequest.Header.Set(key, secret.String())
+		secret.Destroy()
 	}
 
 	httpRequest.Header.Set("Content-Type", encoding)
