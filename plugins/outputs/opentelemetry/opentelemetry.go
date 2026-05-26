@@ -33,11 +33,11 @@ type OpenTelemetry struct {
 	EncodingType   string `toml:"encoding_type"`
 
 	tls.ClientConfig
-	Timeout     config.Duration   `toml:"timeout"`
-	Compression string            `toml:"compression"`
+	Timeout     config.Duration           `toml:"timeout"`
+	Compression string                    `toml:"compression"`
 	Headers     map[string]*config.Secret `toml:"headers"`
-	Attributes  map[string]string `toml:"attributes"`
-	Coralogix   *CoralogixConfig  `toml:"coralogix"`
+	Attributes  map[string]string         `toml:"attributes"`
+	Coralogix   *CoralogixConfig          `toml:"coralogix"`
 	proxy.HTTPProxy
 	proxy.TCPProxy
 
@@ -52,9 +52,9 @@ type clientConfig struct {
 	TLSConfig       *tls.ClientConfig
 	Compression     string
 	CoralogixConfig *CoralogixConfig
-	HTTPProxy       *proxy.HTTPProxy  // only for HTTP client
-	TCPProxy        *proxy.TCPProxy   // only for gRPC client
-	Encoding        string            // only for HTTP client
+	HTTPProxy       *proxy.HTTPProxy          // only for HTTP client
+	TCPProxy        *proxy.TCPProxy           // only for gRPC client
+	Encoding        string                    // only for HTTP client
 	Headers         map[string]*config.Secret // only for HTTP client, gRPC client uses metadata
 }
 
