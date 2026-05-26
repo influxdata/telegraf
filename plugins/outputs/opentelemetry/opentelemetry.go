@@ -33,11 +33,12 @@ type OpenTelemetry struct {
 	EncodingType   string `toml:"encoding_type"`
 
 	tls.ClientConfig
-	Timeout     config.Duration           `toml:"timeout"`
-	Compression string                    `toml:"compression"`
-	Headers     map[string]*config.Secret `toml:"headers"`
-	Attributes  map[string]string         `toml:"attributes"`
-	Coralogix   *CoralogixConfig          `toml:"coralogix"`
+	Timeout     config.Duration   `toml:"timeout"`
+	Compression string            `toml:"compression"`
+	Token       config.Secret     `toml:"token"`
+	Headers     map[string]string `toml:"headers"`
+	Attributes  map[string]string `toml:"attributes"`
+	Coralogix   *CoralogixConfig  `toml:"coralogix"`
 	proxy.HTTPProxy
 	proxy.TCPProxy
 
@@ -52,10 +53,11 @@ type clientConfig struct {
 	TLSConfig       *tls.ClientConfig
 	Compression     string
 	CoralogixConfig *CoralogixConfig
-	HTTPProxy       *proxy.HTTPProxy          // only for HTTP client
-	TCPProxy        *proxy.TCPProxy           // only for gRPC client
-	Encoding        string                    // only for HTTP client
-	Headers         map[string]*config.Secret // only for HTTP client, gRPC client uses metadata
+	HTTPProxy       *proxy.HTTPProxy  // only for HTTP client
+	TCPProxy        *proxy.TCPProxy   // only for gRPC client
+	Encoding        string            // only for HTTP client
+	Token           *config.Secret    // only for HTTP client, gRPC client uses metadata
+	Headers         map[string]string // only for HTTP client, gRPC client uses metadata
 }
 
 type otlpMetricClient interface {
@@ -95,14 +97,11 @@ func (o *OpenTelemetry) Connect() error {
 	}
 	if o.Coralogix != nil {
 		if o.Headers == nil {
-			o.Headers = make(map[string]*config.Secret)
+			o.Headers = make(map[string]string)
 		}
-		appName := config.NewSecret([]byte(o.Coralogix.AppName))
-		o.Headers["ApplicationName"] = &appName
-		subSystem := config.NewSecret([]byte(o.Coralogix.SubSystem))
-		o.Headers["ApiName"] = &subSystem
-		bearer := config.NewSecret([]byte("Bearer " + o.Coralogix.PrivateKey))
-		o.Headers["Authorization"] = &bearer
+		o.Headers["ApplicationName"] = o.Coralogix.AppName
+		o.Headers["ApiName"] = o.Coralogix.SubSystem
+		o.Headers["Authorization"] = "Bearer " + o.Coralogix.PrivateKey
 	}
 
 	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(logger)
@@ -129,6 +128,7 @@ func (o *OpenTelemetry) Connect() error {
 		HTTPProxy:       &o.HTTPProxy,
 		TCPProxy:        &o.TCPProxy,
 		Encoding:        o.EncodingType,
+		Token:           &o.Token,
 		Headers:         o.Headers,
 	}
 	err = o.otlpMetricClient.Connect(clientCfg)
@@ -211,17 +211,20 @@ func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Timeout))
 	defer cancel()
 
-	if len(o.Headers) > 0 {
-		md := make(map[string]string, len(o.Headers))
-		for k, v := range o.Headers {
-			secret, err := v.Get()
-			if err != nil {
-				return fmt.Errorf("getting header %q secret failed: %w", k, err)
-			}
-			md[k] = secret.String()
-			secret.Destroy()
+	grpcMD := make(map[string]string, len(o.Headers))
+	for k, v := range o.Headers {
+		grpcMD[k] = v
+	}
+	if !o.Token.Empty() {
+		token, err := o.Token.Get()
+		if err != nil {
+			return fmt.Errorf("getting token secret failed: %w", err)
 		}
-		ctx = metadata.NewOutgoingContext(ctx, metadata.New(md))
+		grpcMD["authorization"] = "Bearer " + token.String()
+		token.Destroy()
+	}
+	if len(grpcMD) > 0 {
+		ctx = metadata.NewOutgoingContext(ctx, metadata.New(grpcMD))
 	}
 	_, err := o.otlpMetricClient.Export(ctx, md)
 	return err
