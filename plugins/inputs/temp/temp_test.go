@@ -346,20 +346,18 @@ func sensorsTemperaturesOld(syspath string) ([]sensors.TemperatureStat, error) {
 }
 
 func TestReadFileAsync(t *testing.T) {
-	normalFile := createFile(t, "normal.txt", []byte("45000\n"))
-	largeFile := createFile(t, "large.txt", []byte("9999999911"))
-	emptyFile := createFile(t, "empty.txt", make([]byte, 0))
-
-	// Setup Test 4: Named pipe (FIFO) to simulate EAGAIN
-	fifoFile := filepath.Join(t.TempDir(), "sensor_pipe")
-	require.NoError(t, unix.Mkfifo(fifoFile, 0666))
-
-	holdOpen, err := unix.Open(fifoFile, unix.O_RDWR|unix.O_NONBLOCK, 0)
-	require.NoError(t, err)
-
+	// fds stores the in-memory file-descriptors
+	fds := make([]int, 2)
+	// Unnamed pipe to simulate EAGAIN
+	require.NoError(t, unix.Pipe(fds[:]))
+	readFd, writeFd := fds[0], fds[1]
 	t.Cleanup(func() {
-		require.NoError(t, unix.Close(holdOpen))
+		require.NoError(t, unix.Close(readFd))
+		require.NoError(t, unix.Close(writeFd))
 	})
+
+	// Convert the file descriptor to a virtual file path
+	fifoFile := fmt.Sprintf("/dev/fd/%d", readFd)
 
 	tests := []struct {
 		name          string
@@ -369,25 +367,25 @@ func TestReadFileAsync(t *testing.T) {
 	}{
 		{
 			name:          "Valid file",
-			path:          normalFile,
-			expectedValue: []byte("45000\n"),
+			path:          filepath.Join("testdata", "temp.normal"),
+			expectedValue: []byte("45000"),
 			expectedError: nil,
 		},
 		{
 			name:          "File larger than 8 bytes (Truncation)",
-			path:          largeFile,
+			path:          filepath.Join("testdata", "temp.too_long"),
 			expectedValue: bytes.Repeat([]byte("9"), 8),
 			expectedError: nil,
 		},
 		{
 			name:          "Empty file",
-			path:          emptyFile,
+			path:          filepath.Join("testdata", "temp.empty"),
 			expectedValue: make([]byte, 0),
 			expectedError: nil,
 		},
 		{
 			name:          "File does not exist",
-			path:          filepath.Join(t.TempDir(), "missing.txt"),
+			path:          filepath.Join("testdata", "temp.missing"),
 			expectedValue: nil,
 			expectedError: unix.ENOENT,
 		},
@@ -401,15 +399,9 @@ func TestReadFileAsync(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotBytes, err := readFileAsync(tt.path)
+			data, err := readFileAsync(tt.path)
 			require.ErrorIs(t, err, tt.expectedError)
-			require.Equal(t, tt.expectedValue, gotBytes)
+			require.Equal(t, tt.expectedValue, data)
 		})
 	}
-}
-
-func createFile(t *testing.T, name string, content []byte) string {
-	fileName := filepath.Join(t.TempDir(), name)
-	require.NoError(t, os.WriteFile(fileName, content, 0640))
-	return fileName
 }
