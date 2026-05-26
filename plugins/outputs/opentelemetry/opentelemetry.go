@@ -209,6 +209,7 @@ func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Timeout))
+	defer cancel()
 
 	if len(o.Headers) > 0 {
 		md := make(map[string]string, len(o.Headers))
@@ -222,7 +223,6 @@ func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 		}
 		ctx = metadata.NewOutgoingContext(ctx, metadata.New(md))
 	}
-	defer cancel()
 	_, err := o.otlpMetricClient.Export(ctx, md)
 	return err
 }
