@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
 
@@ -90,7 +91,11 @@ func (h *httpClient) Export(ctx context.Context, request pmetricotlp.ExportReque
 		if err != nil {
 			return pmetricotlp.ExportResponse{}, fmt.Errorf("getting header %q secret failed: %w", key, err)
 		}
-		httpRequest.Header.Set(key, secret.String())
+		headerVal := secret.String()
+		if strings.EqualFold(key, "host") {
+			httpRequest.Host = headerVal
+		}
+		httpRequest.Header.Set(key, headerVal)
 		secret.Destroy()
 	}
 
