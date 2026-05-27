@@ -105,13 +105,10 @@ func (c *httpClient) Init() error {
 			}
 		}
 	case "unix":
+		socketPath := c.url.Path
 		transport = &http.Transport{
 			Dial: func(_, _ string) (net.Conn, error) {
-				return net.DialTimeout(
-					c.url.Scheme,
-					c.url.Path,
-					c.timeout,
-				)
+				return net.DialTimeout("unix", socketPath, c.timeout)
 			},
 		}
 	default:
