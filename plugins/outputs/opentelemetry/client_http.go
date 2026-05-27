@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
 
@@ -89,9 +88,6 @@ func (h *httpClient) Export(ctx context.Context, request pmetricotlp.ExportReque
 		return pmetricotlp.ExportResponse{}, err
 	}
 	for key, value := range h.headers {
-		if strings.EqualFold(key, "host") {
-			httpRequest.Host = value
-		}
 		httpRequest.Header.Set(key, value)
 	}
 	if h.token != nil && !h.token.Empty() {

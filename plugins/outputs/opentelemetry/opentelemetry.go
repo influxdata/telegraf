@@ -5,6 +5,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"maps"
 	"sort"
 	"strings"
 	"time"
@@ -211,20 +212,17 @@ func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Timeout))
 	defer cancel()
 
-	grpcMD := make(map[string]string, len(o.Headers))
-	for k, v := range o.Headers {
-		grpcMD[k] = v
-	}
+	headers := maps.Clone(o.Headers)
 	if !o.Token.Empty() {
 		token, err := o.Token.Get()
 		if err != nil {
 			return fmt.Errorf("getting token secret failed: %w", err)
 		}
-		grpcMD["authorization"] = "Bearer " + token.String()
+		headers["authorization"] = "Bearer " + token.String()
 		token.Destroy()
 	}
-	if len(grpcMD) > 0 {
-		ctx = metadata.NewOutgoingContext(ctx, metadata.New(grpcMD))
+	if len(headers) > 0 {
+		ctx = metadata.NewOutgoingContext(ctx, metadata.New(headers))
 	}
 	_, err := o.otlpMetricClient.Export(ctx, md)
 	return err
