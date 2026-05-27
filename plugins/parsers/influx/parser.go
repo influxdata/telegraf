@@ -190,9 +190,6 @@ func NewStreamParser(r io.Reader) *StreamParser {
 	}
 }
 
-// SetTimeFunc changes the function used to determine the time of metrics
-// without a timestamp.  The default TimeFunc is time.Now.  Useful mostly for
-// testing, or perhaps if you want all metrics to have the same timestamp.
 func (sp *StreamParser) SetTimeFunc(f func() time.Time) {
 	sp.handler.SetTimeFunc(f)
 }
