@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -140,7 +141,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		// See https://github.com/graphite-project/carbon/issues/54
 		if unixTime != float64(-1) {
 			// Check if we have fractional seconds
-			timestamp = time.Unix(0, int64(unixTime*float64(time.Second)))
+			timestamp = time.Unix(int64(unixTime), int64((unixTime-math.Floor(unixTime))*float64(time.Second)))
 			if timestamp.Before(MinDate) || timestamp.After(MaxDate) {
 				return nil, errors.New("timestamp out of range")
 			}
