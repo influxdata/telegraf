@@ -114,10 +114,6 @@ func (p *Parser) Init() error {
 	}
 	p.g = g
 
-	if p.UniqueTimestamp == "" {
-		p.UniqueTimestamp = "auto"
-	}
-
 	// Give Patterns fake names so that they can be treated as named
 	// "custom patterns"
 	p.NamedPatterns = make([]string, 0, len(p.Patterns))
