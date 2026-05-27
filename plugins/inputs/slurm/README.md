@@ -5,7 +5,8 @@ for a [SLURM][slurm] instance using the REST API provided by the `slurmrestd`
 daemon.
 
 > [!NOTE]
-> This plugin supports the [REST API v0.0.38][api] which must be enabled in the
+> This plugin currently supports versions v0.0.38 (SLURM 23.02.x) and v0.0.41
+> (SLURM 24.05.x) of the [SLURM REST API][api] which must be enabled in the
 > `slurmrestd` daemon. For more information, check the [documentation][config].
 
 ⭐ Telegraf v1.32.0
@@ -35,6 +36,10 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Credentials for JWT-based authentication.
   # username = "foo"
   # token = "topSecret"
+
+  ## SLURM REST API version to use.
+  ## Supported values: "0038" (default), "0041"
+  # api_version = "0038"
 
   ## Enabled endpoints
   ## List of endpoints a user can acquire data from.

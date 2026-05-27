@@ -7,6 +7,10 @@
   # username = "foo"
   # token = "topSecret"
 
+  ## SLURM REST API version to use.
+  ## Supported values: "0038" (default), "0041"
+  # api_version = "0038"
+
   ## Enabled endpoints
   ## List of endpoints a user can acquire data from.
   ## Available values are: diag, jobs, nodes, partitions, reservations.
