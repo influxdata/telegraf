@@ -63,7 +63,7 @@ added to a metric if the key matches.
 
 In the `json` format, the input `files` must have the following format
 
-```json
+```text
 {
   "keyA": {
     "tag-name1": "tag-value1",
@@ -133,7 +133,7 @@ With a lookup table of
   "xyzzy-red": {
     "location": "us-west",
     "rack": "C01-42"
-  },
+  }
 }
 ```
 
