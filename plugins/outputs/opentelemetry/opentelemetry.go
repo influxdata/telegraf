@@ -218,6 +218,9 @@ func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 		if err != nil {
 			return fmt.Errorf("getting token secret failed: %w", err)
 		}
+		if headers == nil {
+			headers = make(map[string]string, 1)
+		}
 		headers["authorization"] = "Bearer " + token.String()
 		token.Destroy()
 	}
