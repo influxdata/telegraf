@@ -1981,28 +1981,33 @@ func (c *Config) getFieldStringSlice(tbl *ast.Table, fieldName string) []string 
 
 func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string) []models.TagFilter {
 	var target []models.TagFilter
+
 	if node, ok := tbl.Fields[fieldName]; ok {
 		subTbl, ok := node.(*ast.Table)
 		if !ok {
 			c.addError(tbl, fmt.Errorf("invalid syntax for %q: expected a table of key=[values]", fieldName))
 			return nil
-		} else {
-			for name, val := range subTbl.Fields {
-				if kv, ok := val.(*ast.KeyValue); ok {
-					ary, ok := kv.Value.(*ast.Array)
-					if !ok {
-						c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting string array/slice format on each entry", fieldName))
-						return nil
-					}
+		}
 
-					tagFilter := models.TagFilter{Name: name}
-					for _, elem := range ary.Value {
-						if str, ok := elem.(*ast.String); ok {
-							tagFilter.Values = append(tagFilter.Values, str.Value)
-						}
-					}
-					target = append(target, tagFilter)
+		for name, val := range subTbl.Fields {
+			if kv, ok := val.(*ast.KeyValue); ok {
+				ary, ok := kv.Value.(*ast.Array)
+				if !ok {
+					c.addError(tbl, fmt.Errorf(
+						"found unexpected format while parsing %q, expecting string array/slice format on each entry",
+						fieldName,
+					))
+					return nil
 				}
+
+				tagFilter := models.TagFilter{Name: name}
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						tagFilter.Values = append(tagFilter.Values, str.Value)
+					}
+				}
+
+				target = append(target, tagFilter)
 			}
 		}
 	}
