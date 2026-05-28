@@ -1484,9 +1484,7 @@ func TestConfigEnvVarsNonStrictMalicious(t *testing.T) {
 
 func TestInvalidTagpassSyntaxFromFile(t *testing.T) {
 	c := config.NewConfig()
-	err := c.LoadConfig("testdata/tagfilter_invalid.toml")
-	require.Error(t, err)
-	require.Contains(t, err.Error(), `invalid syntax for "tagpass"`)
+	require.ErrorContains(t, c.LoadConfig("testdata/tagfilter_invalid.toml"), `invalid syntax for "tagpass"`)
 }
 
 func TestValidTagpassAndTagdropSyntaxFromFile(t *testing.T) {
