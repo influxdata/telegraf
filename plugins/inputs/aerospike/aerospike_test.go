@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	as "github.com/aerospike/aerospike-client-go/v5"
-	"github.com/moby/moby/api/types/container"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -17,21 +16,15 @@ const servicePort = "3000"
 
 func launchTestServer(t *testing.T) *testutil.Container {
 	t.Helper()
-	cntnr := testutil.Container{
-		Image:        "aerospike:ce-8.1.0.1",
-		ExposedPorts: []string{servicePort},
-		WaitingFor:   wait.ForLog("migrations: complete"),
-		HostConfigModifier: func(hc *container.HostConfig) {
-			hc.Ulimits = append(hc.Ulimits, &container.Ulimit{
-				Name: "nofile",
-				Soft: 32768,
-				Hard: 32768,
-			})
-		},
+	container := testutil.Container{
+		Image:              "aerospike:ce-8.1.0.1",
+		ExposedPorts:       []string{servicePort},
+		WaitingFor:         wait.ForLog("migrations: complete"),
+		HostConfigModifier: testutil.RaiseNofileLimit,
 	}
-	require.NoError(t, cntnr.Start(), "failed to start container")
+	require.NoError(t, container.Start(), "failed to start container")
 
-	return &cntnr
+	return &container
 }
 
 func TestAerospikeStatisticsIntegration(t *testing.T) {
@@ -39,11 +32,11 @@ func TestAerospikeStatisticsIntegration(t *testing.T) {
 		t.Skip("Skipping aerospike integration tests.")
 	}
 
-	cntnr := launchTestServer(t)
-	defer cntnr.Terminate()
+	container := launchTestServer(t)
+	defer container.Terminate()
 
 	a := &Aerospike{
-		Servers: []string{fmt.Sprintf("%s:%s", cntnr.Address, cntnr.Ports[servicePort])},
+		Servers: []string{fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])},
 	}
 
 	var acc testutil.Accumulator
@@ -66,12 +59,12 @@ func TestAerospikeStatisticsPartialErrIntegration(t *testing.T) {
 		t.Skip("Skipping aerospike integration tests.")
 	}
 
-	cntnr := launchTestServer(t)
-	defer cntnr.Terminate()
+	container := launchTestServer(t)
+	defer container.Terminate()
 
 	a := &Aerospike{
 		Servers: []string{
-			fmt.Sprintf("%s:%s", cntnr.Address, cntnr.Ports[servicePort]),
+			fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
 			testutil.GetLocalHost() + ":9999",
 		},
 	}
@@ -93,12 +86,12 @@ func TestSelectNamespacesIntegration(t *testing.T) {
 		t.Skip("Skipping aerospike integration tests.")
 	}
 
-	cntnr := launchTestServer(t)
-	defer cntnr.Terminate()
+	container := launchTestServer(t)
+	defer container.Terminate()
 
 	// Select nonexistent namespace
 	a := &Aerospike{
-		Servers:    []string{fmt.Sprintf("%s:%s", cntnr.Address, cntnr.Ports[servicePort])},
+		Servers:    []string{fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])},
 		Namespaces: []string{"notTest"},
 	}
 
@@ -130,12 +123,12 @@ func TestDisableQueryNamespacesIntegration(t *testing.T) {
 		t.Skip("Skipping aerospike integration tests.")
 	}
 
-	cntnr := launchTestServer(t)
-	defer cntnr.Terminate()
+	container := launchTestServer(t)
+	defer container.Terminate()
 
 	a := &Aerospike{
 		Servers: []string{
-			fmt.Sprintf("%s:%s", cntnr.Address, cntnr.Ports[servicePort]),
+			fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
 		},
 		DisableQueryNamespaces: true,
 	}
@@ -160,16 +153,16 @@ func TestQuerySetsIntegration(t *testing.T) {
 		t.Skip("Skipping aerospike integration tests.")
 	}
 
-	cntnr := launchTestServer(t)
-	defer cntnr.Terminate()
+	container := launchTestServer(t)
+	defer container.Terminate()
 
-	portInt, err := strconv.Atoi(cntnr.Ports[servicePort])
+	portInt, err := strconv.Atoi(container.Ports[servicePort])
 	require.NoError(t, err)
 
 	// create a set
 	// test is the default namespace from aerospike
 	policy := as.NewClientPolicy()
-	client, errAs := as.NewClientWithPolicy(policy, cntnr.Address, portInt)
+	client, errAs := as.NewClientWithPolicy(policy, container.Address, portInt)
 	require.NoError(t, errAs)
 
 	key, errAs := as.NewKey("test", "foo", 123)
@@ -192,7 +185,7 @@ func TestQuerySetsIntegration(t *testing.T) {
 
 	a := &Aerospike{
 		Servers: []string{
-			fmt.Sprintf("%s:%s", cntnr.Address, cntnr.Ports[servicePort]),
+			fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
 		},
 		QuerySets:              true,
 		DisableQueryNamespaces: true,
@@ -215,16 +208,16 @@ func TestSelectQuerySetsIntegration(t *testing.T) {
 		t.Skip("Skipping aerospike integration tests.")
 	}
 
-	cntnr := launchTestServer(t)
-	defer cntnr.Terminate()
+	container := launchTestServer(t)
+	defer container.Terminate()
 
-	portInt, err := strconv.Atoi(cntnr.Ports[servicePort])
+	portInt, err := strconv.Atoi(container.Ports[servicePort])
 	require.NoError(t, err)
 
 	// create a set
 	// test is the default namespace from aerospike
 	policy := as.NewClientPolicy()
-	client, errAs := as.NewClientWithPolicy(policy, cntnr.Address, portInt)
+	client, errAs := as.NewClientWithPolicy(policy, container.Address, portInt)
 	require.NoError(t, errAs)
 
 	key, errAs := as.NewKey("test", "foo", 123)
@@ -247,7 +240,7 @@ func TestSelectQuerySetsIntegration(t *testing.T) {
 
 	a := &Aerospike{
 		Servers: []string{
-			fmt.Sprintf("%s:%s", cntnr.Address, cntnr.Ports[servicePort]),
+			fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
 		},
 		QuerySets:              true,
 		Sets:                   []string{"test/foo"},
@@ -271,12 +264,12 @@ func TestDisableTTLHistogramIntegration(t *testing.T) {
 		t.Skip("Skipping aerospike integration tests.")
 	}
 
-	cntnr := launchTestServer(t)
-	defer cntnr.Terminate()
+	container := launchTestServer(t)
+	defer container.Terminate()
 
 	a := &Aerospike{
 		Servers: []string{
-			fmt.Sprintf("%s:%s", cntnr.Address, cntnr.Ports[servicePort]),
+			fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
 		},
 		QuerySets:          true,
 		EnableTTLHistogram: false,
@@ -296,12 +289,12 @@ func TestDisableObjectSizeLinearHistogramIntegration(t *testing.T) {
 		t.Skip("Skipping aerospike integration tests.")
 	}
 
-	cntnr := launchTestServer(t)
-	defer cntnr.Terminate()
+	container := launchTestServer(t)
+	defer container.Terminate()
 
 	a := &Aerospike{
 		Servers: []string{
-			fmt.Sprintf("%s:%s", cntnr.Address, cntnr.Ports[servicePort]),
+			fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
 		},
 		QuerySets:                       true,
 		EnableObjectSizeLinearHistogram: false,
