@@ -23,10 +23,10 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Information to collect; available options are:
   ##   cpus             - CPU counts of the system
   ##   dmi              - BIOS, baseboard, chassis and product information from DMI/SMBIOS
+  ##   legacy_uptime    - legacy layout of system uptime; see README for details
   ##   load             - 1, 5 and 15-minute load averages
   ##   os               - operating system release and uname information
   ##   uptime           - system uptime
-  ##   legacy_uptime    - legacy layout of system uptime; see README for details
   ##   users            - logged-in user counts
   # include = ["cpus", "legacy_uptime", "load", "users"]
 
