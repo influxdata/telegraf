@@ -1480,6 +1480,7 @@ func TestConfigEnvVarsNonStrictMalicious(t *testing.T) {
 
 	// We expect too plugins due to malicious environment setting
 	require.Len(t, c.Inputs, 2)
+}
 
 func TestInvalidTagpassSyntaxFromFile(t *testing.T) {
 	c := config.NewConfig()
