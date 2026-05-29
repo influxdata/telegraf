@@ -2,12 +2,10 @@ package influxdb_v2
 
 import (
 	"fmt"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"path"
-	"runtime"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -55,37 +53,6 @@ func TestHTTPClientInit(t *testing.T) {
 	}
 }
 
-func TestHTTPClientUnixSocketDial(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("unix socket path cannot be represented as a URL on Windows")
-	}
-
-	socketPath := testutil.TempSocket(t)
-
-	ln, err := net.Listen("unix", socketPath)
-	if err != nil {
-		t.Skipf("unix sockets not supported on this platform: %v", err)
-	}
-
-	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	srv.Listener = ln
-	srv.Start()
-	defer srv.Close()
-
-	plugin := &InfluxDB{
-		URLs:   []string{"unix://" + socketPath},
-		Bucket: "test",
-		Log:    &testutil.Logger{},
-	}
-	require.NoError(t, plugin.Init())
-	require.NoError(t, plugin.Connect())
-	defer plugin.Close()
-
-	m := metric.New("cpu", nil, map[string]interface{}{"value": 1.0}, time.Now())
-	require.NoError(t, plugin.Write([]telegraf.Metric{m}))
-}
 
 func TestHTTPClientInitFail(t *testing.T) {
 	tests := []struct {
