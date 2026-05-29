@@ -47,12 +47,13 @@ type HTTPResponse struct {
 	Headers         map[string]string   `toml:"headers"`
 	FollowRedirects bool                `toml:"follow_redirects"`
 	// Absolute path to file with Bearer token
-	BearerToken         string      `toml:"bearer_token"`
-	ResponseBodyField   string      `toml:"response_body_field"`
-	ResponseBodyMaxSize config.Size `toml:"response_body_max_size"`
-	ResponseStringMatch string      `toml:"response_string_match"`
-	ResponseStatusCode  int         `toml:"response_status_code"`
-	Interface           string      `toml:"interface"`
+	BearerToken         string        `toml:"bearer_token"`
+	Token               config.Secret `toml:"token"`
+	ResponseBodyField   string        `toml:"response_body_field"`
+	ResponseBodyMaxSize config.Size   `toml:"response_body_max_size"`
+	ResponseStringMatch string        `toml:"response_string_match"`
+	ResponseStatusCode  int           `toml:"response_status_code"`
+	Interface           string        `toml:"interface"`
 	// HTTP Basic Auth Credentials
 	Username config.Secret `toml:"username"`
 	Password config.Secret `toml:"password"`
@@ -80,6 +81,10 @@ func (*HTTPResponse) SampleConfig() string {
 }
 
 func (h *HTTPResponse) Init() error {
+	if h.BearerToken != "" && !h.Token.Empty() {
+		return errors.New("either use 'bearer_token' or 'token' not both")
+	}
+
 	// Compile the body regex if it exists
 	if h.ResponseStringMatch != "" {
 		var err error
@@ -326,7 +331,15 @@ func (h *HTTPResponse) httpGather(cl client) (map[string]interface{}, map[string
 		request.Header.Set("User-Agent", internal.ProductToken())
 	}
 
-	if h.BearerToken != "" {
+	if !h.Token.Empty() {
+		token, err := h.Token.Get()
+		if err != nil {
+			return nil, nil, fmt.Errorf("getting token secret failed: %w", err)
+		}
+		bearer := "Bearer " + strings.TrimSpace(token.String())
+		token.Destroy()
+		request.Header.Add("Authorization", bearer)
+	} else if h.BearerToken != "" {
 		token, err := os.ReadFile(h.BearerToken)
 		if err != nil {
 			return nil, nil, err
