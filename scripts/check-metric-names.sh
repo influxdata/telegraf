@@ -10,20 +10,31 @@ set -euo pipefail
 BASE_REF="${GITHUB_BASE_REF:-master}"
 BASE="origin/${BASE_REF}"
 
-# Extract backtick-quoted field names from the first column of markdown tables.
-# Matches lines like:  | `field_name`  | ...
+# Extract field names from plugin README Metrics sections.
+# Supports two conventions used across the Telegraf plugin READMEs:
+#   Bullet-list (majority): "    - field_name (type)"
+#   Pipe-table (minority):  "| `field_name` | ... |"
+_extract_fields_from_stream() {
+    {
+        # Bullet-list format: lines indented under a "- fields:" block.
+        # Matches "    - field_name" optionally followed by whitespace/parens.
+        grep -oE '^\s{4,}-\s+[a-zA-Z0-9_]+' 2>/dev/null \
+            | awk '{print $NF}' \
+            || true
+        # Pipe-table format: first column contains a backtick-quoted name.
+        # shellcheck disable=SC2016
+        grep -oE '^\s*\|\s*`[a-zA-Z0-9_]+`' 2>/dev/null \
+            | awk -F'`' '{print $2}' \
+            || true
+    }
+}
+
 extract_fields() {
-    # shellcheck disable=SC2016
-    grep -oE '^\s*\|\s*`[a-zA-Z0-9_]+`' "$1" 2>/dev/null \
-        | awk -F'`' '{print $2}' \
-        || true
+    _extract_fields_from_stream < "$1"
 }
 
 extract_fields_from_stdin() {
-    # shellcheck disable=SC2016
-    grep -oE '^\s*\|\s*`[a-zA-Z0-9_]+`' 2>/dev/null \
-        | awk -F'`' '{print $2}' \
-        || true
+    _extract_fields_from_stream
 }
 
 CHANGED_READMES=$(git diff --name-only "${BASE}...HEAD" -- 'plugins/*/*/README.md' 2>/dev/null || true)
