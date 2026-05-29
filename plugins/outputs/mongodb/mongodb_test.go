@@ -135,9 +135,10 @@ func TestConnectAndWriteNoAuthIntegration(t *testing.T) {
 
 	servicePort := "27017"
 	container := testutil.Container{
-		Image:        "mongo",
-		ExposedPorts: []string{servicePort},
-		WaitingFor:   wait.ForLog("Waiting for connections"),
+		Image:              "mongo",
+		ExposedPorts:       []string{servicePort},
+		WaitingFor:         wait.ForLog("Waiting for connections"),
+		HostConfigModifier: testutil.RaiseNofileLimit,
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
@@ -172,7 +173,8 @@ func TestConnectAndWriteSCRAMAuthIntegration(t *testing.T) {
 		Files: map[string]string{
 			"/docker-entrypoint-initdb.d/setup.js": initdb,
 		},
-		WaitingFor: wait.ForLog("Waiting for connections").WithOccurrence(2),
+		WaitingFor:         wait.ForLog("Waiting for connections").WithOccurrence(2),
+		HostConfigModifier: testutil.RaiseNofileLimit,
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
@@ -211,7 +213,8 @@ func TestConnectAndWriteSCRAMAuthBadPasswordIntegration(t *testing.T) {
 		Files: map[string]string{
 			"/docker-entrypoint-initdb.d/setup.js": initdb,
 		},
-		WaitingFor: wait.ForLog("Waiting for connections").WithOccurrence(2),
+		WaitingFor:         wait.ForLog("Waiting for connections").WithOccurrence(2),
+		HostConfigModifier: testutil.RaiseNofileLimit,
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
@@ -263,7 +266,8 @@ func TestConnectAndWriteX509AuthSuccessIntegration(t *testing.T) {
 			"--tlsCAFile", "/cacert.pem",
 			"--tlsCertificateKeyFile", "/server.pem",
 		},
-		WaitingFor: wait.ForLog("Waiting for connections").WithOccurrence(2),
+		WaitingFor:         wait.ForLog("Waiting for connections").WithOccurrence(2),
+		HostConfigModifier: testutil.RaiseNofileLimit,
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
@@ -350,7 +354,8 @@ func TestConnectAndWriteX509AuthFailIntegration(t *testing.T) {
 			"--tlsCAFile", "/cacert.pem",
 			"--tlsCertificateKeyFile", "/server.pem",
 		},
-		WaitingFor: wait.ForLog("Waiting for connections").WithOccurrence(2),
+		WaitingFor:         wait.ForLog("Waiting for connections").WithOccurrence(2),
+		HostConfigModifier: testutil.RaiseNofileLimit,
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
@@ -838,10 +843,11 @@ func TestWriteIntegration(t *testing.T) {
 			// Setup the container
 			servicePort := "27017"
 			container := testutil.Container{
-				Image:        "mongo",
-				ExposedPorts: []string{servicePort},
-				WaitingFor:   wait.ForLog("Waiting for connections"),
-				Quiet:        true,
+				Image:              "mongo",
+				ExposedPorts:       []string{servicePort},
+				WaitingFor:         wait.ForLog("Waiting for connections"),
+				Quiet:              true,
+				HostConfigModifier: testutil.RaiseNofileLimit,
 			}
 			require.NoError(t, container.Start(), "failed to start container")
 			defer container.Terminate()
@@ -926,10 +932,11 @@ func BenchmarkWriteIndividual(b *testing.B) {
 	// Start a mongodb container for benchmarking
 	servicePort := "27017"
 	container := testutil.Container{
-		Image:        "mongo",
-		ExposedPorts: []string{servicePort},
-		WaitingFor:   wait.ForLog("Waiting for connections"),
-		Quiet:        true,
+		Image:              "mongo",
+		ExposedPorts:       []string{servicePort},
+		WaitingFor:         wait.ForLog("Waiting for connections"),
+		Quiet:              true,
+		HostConfigModifier: testutil.RaiseNofileLimit,
 	}
 	require.NoError(b, container.Start(), "failed to start container")
 	defer container.Terminate()
@@ -962,10 +969,11 @@ func BenchmarkWriteBatch(b *testing.B) {
 	// Start a mongodb container for benchmarking
 	servicePort := "27017"
 	container := testutil.Container{
-		Image:        "mongo",
-		ExposedPorts: []string{servicePort},
-		WaitingFor:   wait.ForLog("Waiting for connections"),
-		Quiet:        true,
+		Image:              "mongo",
+		ExposedPorts:       []string{servicePort},
+		WaitingFor:         wait.ForLog("Waiting for connections"),
+		Quiet:              true,
+		HostConfigModifier: testutil.RaiseNofileLimit,
 	}
 	require.NoError(b, container.Start(), "failed to start container")
 	defer container.Terminate()

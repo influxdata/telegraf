@@ -182,6 +182,17 @@ func (c *Container) Resume() error {
 	return err
 }
 
+// RaiseNofileLimit is a HostConfigModifier that raises the container's nofile
+// ulimit. Some services (e.g. mongo) refuse to start when the inherited soft
+// limit is below their recommended minimum, which fails tests on CI hosts.
+func RaiseNofileLimit(hc *container.HostConfig) {
+	hc.Ulimits = append(hc.Ulimits, &container.Ulimit{
+		Name: "nofile",
+		Soft: 32768,
+		Hard: 32768,
+	})
+}
+
 func (c *Container) GetInfo() (string, error) {
 	dc, ok := c.container.(*testcontainers.DockerContainer)
 	if !ok {
