@@ -448,7 +448,11 @@ func (p *Prometheus) getAllURLs() (map[string]urlAndAddress, error) {
 	return allURLs, nil
 }
 
-func (p *Prometheus) gatherURL(u urlAndAddress, acc telegraf.Accumulator, connectStat selfstat.Stat, successStat selfstat.Stat, failureStat selfstat.Stat) (map[string]interface{}, map[string]string, error) {
+func (p *Prometheus) gatherURL(
+	u urlAndAddress,
+	acc telegraf.Accumulator,
+	connectStat, successStat, failureStat selfstat.Stat,
+) (map[string]interface{}, map[string]string, error) {
 	var req *http.Request
 	var uClient *http.Client
 	requestFields := make(map[string]interface{})
