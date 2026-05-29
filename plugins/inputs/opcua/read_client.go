@@ -134,6 +134,11 @@ func (o *readClient) connect() error {
 		}
 	}
 
+	o.Log.Tracef("Node request order (%d nodes):", len(o.reqIDs))
+	for i, req := range o.reqIDs {
+		o.Log.Tracef("  [%d] %s", i, req.NodeID.String())
+	}
+
 	if err := o.read(); err != nil {
 		return fmt.Errorf("get data failed: %w", err)
 	}
@@ -157,15 +162,19 @@ func (o *readClient) ensureConnected() error {
 }
 
 func (o *readClient) currentValues() ([]telegraf.Metric, error) {
+	connectStart := time.Now()
 	if err := o.ensureConnected(); err != nil {
 		return nil, err
 	}
+	o.Log.Tracef("Connection check took %s", time.Since(connectStart))
 
 	if state := o.State(); state != opcua.Connected {
 		return nil, fmt.Errorf("not connected, in state %q", state)
 	}
 
+	readStart := time.Now()
 	if err := o.read(); err != nil {
+		o.Log.Tracef("Read failed after %s: %v", time.Since(readStart), err)
 		// We do not return the disconnect error, as this would mask the
 		// original problem, but we do log it
 		if derr := o.Disconnect(context.Background()); derr != nil {
@@ -174,16 +183,22 @@ func (o *readClient) currentValues() ([]telegraf.Metric, error) {
 
 		return nil, err
 	}
+	o.Log.Tracef("OPC UA read of %d nodes took %s", len(o.NodeIDs), time.Since(readStart))
 
+	metricStart := time.Now()
 	metrics := make([]telegraf.Metric, 0, len(o.NodeMetricMapping))
+	var skipped int
 	// Parse the resulting data into metrics
 	for i := range o.NodeIDs {
 		if !o.StatusCodeOK(o.LastReceivedData[i].Quality) {
+			skipped++
 			continue
 		}
 
 		metrics = append(metrics, o.MetricForNode(i))
 	}
+	o.Log.Tracef("Metric construction took %s (%d metrics, %d skipped due to bad quality)",
+		time.Since(metricStart), len(metrics), skipped)
 
 	return metrics, nil
 }
@@ -201,18 +216,26 @@ func (o *readClient) read() error {
 		count++
 
 		// Try to update the values for all registered nodes
+		o.Log.Tracef("Sending OPC UA read request for %d %s nodes (attempt %d)...",
+			len(o.reqIDs), nodeTypeLabel(o.Workarounds.UseUnregisteredReads), count)
+		requestStart := time.Now()
 		resp, err := o.Client.Read(o.ctx, req)
+		plcDuration := time.Since(requestStart)
 		if err == nil {
 			// Success, update the node values and exit
 			o.ReadSuccess.Incr(1)
 			o.forceReconnect = false
+			o.Log.Tracef("OPC UA read response received in %s, updating %d node values...", plcDuration, len(resp.Results))
+			updateStart := time.Now()
 			for i, d := range resp.Results {
 				o.UpdateNodeValue(i, d)
 			}
+			o.Log.Tracef("Node value update took %s", time.Since(updateStart))
 			return nil
 		}
 
 		o.ReadError.Incr(1)
+		o.Log.Tracef("OPC UA read request failed after %s: %v", plcDuration, err)
 
 		isSessionError := errors.Is(err, ua.StatusBadSessionIDInvalid) ||
 			errors.Is(err, ua.StatusBadSessionNotActivated) ||
