@@ -993,12 +993,12 @@ func TestPrometheusGatherStatsSuccess(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(p.Gather))
 
-	testUrl := ts.URL
-	require.EqualValues(t, 1, p.Statistics.Get("prometheus", "connection_status", map[string]string{"url": testUrl}).Get())
+	testURL := ts.URL
+	require.EqualValues(t, 1, p.Statistics.Get("prometheus", "connection_status", map[string]string{"url": testURL}).Get())
 	require.EqualValues(t, 1, p.Statistics.Get("prometheus", "gathers_total",
-		map[string]string{"url": testUrl, "status": "success"}).Get())
+		map[string]string{"url": testURL, "status": "success"}).Get())
 	require.EqualValues(t, 0, p.Statistics.Get("prometheus", "gathers_total",
-		map[string]string{"url": testUrl, "status": "failure"}).Get())
+		map[string]string{"url": testURL, "status": "failure"}).Get())
 }
 
 func TestPrometheusGatherStatsFailure(t *testing.T) {
@@ -1019,12 +1019,12 @@ func TestPrometheusGatherStatsFailure(t *testing.T) {
 	// Gather surfaces the per-URL error, so expect one.
 	require.Error(t, acc.GatherError(p.Gather))
 
-	testUrl := ts.URL
-	require.EqualValues(t, 0, p.Statistics.Get("prometheus", "connection_status", map[string]string{"url": testUrl}).Get())
+	testURL := ts.URL
+	require.EqualValues(t, 0, p.Statistics.Get("prometheus", "connection_status", map[string]string{"url": testURL}).Get())
 	require.EqualValues(t, 1, p.Statistics.Get("prometheus", "gathers_total",
-		map[string]string{"url": testUrl, "status": "failure"}).Get())
+		map[string]string{"url": testURL, "status": "failure"}).Get())
 	require.EqualValues(t, 0, p.Statistics.Get("prometheus", "gathers_total",
-		map[string]string{"url": testUrl, "status": "success"}).Get())
+		map[string]string{"url": testURL, "status": "success"}).Get())
 }
 
 func TestPrometheusGatherStatsRecovery(t *testing.T) {
@@ -1048,13 +1048,13 @@ func TestPrometheusGatherStatsRecovery(t *testing.T) {
 	}
 	require.NoError(t, p.Init())
 
-	testUrl := ts.URL
+	testURL := ts.URL
 	connect := func() int64 {
-		return p.Statistics.Get("prometheus", "connection_status", map[string]string{"url": testUrl}).Get()
+		return p.Statistics.Get("prometheus", "connection_status", map[string]string{"url": testURL}).Get()
 	}
 	total := func(status string) int64 {
 		return p.Statistics.Get("prometheus", "gathers_total",
-			map[string]string{"url": testUrl, "status": status}).Get()
+			map[string]string{"url": testURL, "status": status}).Get()
 	}
 
 	// First gather fails.
