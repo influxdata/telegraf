@@ -28,6 +28,7 @@ type Smartctl struct {
 	Timeout        config.Duration `toml:"timeout"`
 	DevicesInclude []string        `toml:"devices_include"`
 	DevicesExclude []string        `toml:"devices_exclude"`
+	MetricVersion  int             `toml:"metric_version"`
 	Log            telegraf.Logger `toml:"-"`
 
 	deviceFilter filter.Filter
