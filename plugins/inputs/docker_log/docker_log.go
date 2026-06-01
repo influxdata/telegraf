@@ -271,7 +271,7 @@ func (d *DockerLogs) tailContainerLogs(
 		ShowStderr: true,
 		Timestamps: true,
 		Details:    false,
-		Follow:     true,
+		Follow:     false,
 		Since:      since,
 	}
 
