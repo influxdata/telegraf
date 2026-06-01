@@ -24,10 +24,6 @@ to use them.
 
 [SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
 
-To use OAuth2 client credentials, configure the
-`secretstores.oauth2` secret store and reference the
-token from `inputs.http_response`.
-
 ## Configuration
 
 ```toml @sample.conf
@@ -49,13 +45,13 @@ token from `inputs.http_response`.
   ## Whether to follow redirects from the server (defaults to false)
   # follow_redirects = false
 
-  ## Optional file with Bearer token
+  ## Optional file with Bearer token.
+  ##   deprecated in 1.39; use the token option
   ## file content is added as an Authorization header
   # bearer_token = "/path/to/file"
 
-  ## Optional Bearer token used in the Authorization header.
-  ## To fetch this value from a secret store, use a secret-store reference such as
-  ## "@{oauth:healthcheck}". This option is exclusive with bearer_token.
+  ## Bearer token for authentication, accepting secret-store references
+  ## This option cannot be used in combination with 'bearer_token'.
   # token = "my-token"
 
   ## Optional HTTP Basic Auth Credentials
