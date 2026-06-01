@@ -36,7 +36,7 @@ func (p *Parser) extractMetricsV2(prommetrics *dto.MetricFamily) []telegraf.Metr
 		case dto.MetricType_SUMMARY:
 			summary := pm.GetSummary()
 
-			// Add an overall metric containing the number of samples and and its sum
+			// Add an overall metric containing the number of samples and its sum
 			summaryFields := make(map[string]interface{})
 			summaryFields[metricName+"_count"] = float64(summary.GetSampleCount())
 			summaryFields[metricName+"_sum"] = summary.GetSampleSum()
@@ -55,7 +55,7 @@ func (p *Parser) extractMetricsV2(prommetrics *dto.MetricFamily) []telegraf.Metr
 		case dto.MetricType_HISTOGRAM:
 			histogram := pm.GetHistogram()
 
-			// Add an overall metric containing the number of samples and and its sum
+			// Add an overall metric containing the number of samples and its sum
 			histFields := make(map[string]interface{})
 			histFields[metricName+"_count"] = float64(histogram.GetSampleCount())
 			histFields[metricName+"_sum"] = histogram.GetSampleSum()
