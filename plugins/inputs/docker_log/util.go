@@ -63,6 +63,7 @@ func tailStream(
 	containerID string,
 	reader io.ReadCloser,
 	stream string,
+	offset time.Time,
 ) (time.Time, error) {
 	defer reader.Close()
 
@@ -82,16 +83,19 @@ func tailStream(
 			ts, message, err := parseLine(line)
 			if err != nil {
 				acc.AddError(err)
-			} else {
+			} else if ts.After(offset) {
+				// Docker's "since" filter is inclusive of the boundary
+				// timestamp, so skip records at or before the last processed
+				// one to avoid re-emitting them on every interval.
 				acc.AddFields("docker_log", map[string]interface{}{
 					"container_id": containerID,
 					"message":      message,
 				}, tags, ts)
-			}
 
-			// Store the last processed timestamp
-			if ts.After(lastTS) {
-				lastTS = ts
+				// Store the last processed timestamp
+				if ts.After(lastTS) {
+					lastTS = ts
+				}
 			}
 		}
 
@@ -104,7 +108,7 @@ func tailStream(
 	}
 }
 
-func tailMultiplexed(acc telegraf.Accumulator, tags map[string]string, containerID string, src io.ReadCloser) (time.Time, error) {
+func tailMultiplexed(acc telegraf.Accumulator, tags map[string]string, containerID string, src io.ReadCloser, offset time.Time) (time.Time, error) {
 	outReader, outWriter := io.Pipe()
 	errReader, errWriter := io.Pipe()
 
@@ -114,7 +118,7 @@ func tailMultiplexed(acc telegraf.Accumulator, tags map[string]string, container
 	go func() {
 		defer wg.Done()
 		var err error
-		tsStdout, err = tailStream(acc, tags, containerID, outReader, "stdout")
+		tsStdout, err = tailStream(acc, tags, containerID, outReader, "stdout", offset)
 		if err != nil {
 			acc.AddError(err)
 		}
@@ -124,7 +128,7 @@ func tailMultiplexed(acc telegraf.Accumulator, tags map[string]string, container
 	go func() {
 		defer wg.Done()
 		var err error
-		tsStderr, err = tailStream(acc, tags, containerID, errReader, "stderr")
+		tsStderr, err = tailStream(acc, tags, containerID, errReader, "stderr", offset)
 		if err != nil {
 			acc.AddError(err)
 		}
