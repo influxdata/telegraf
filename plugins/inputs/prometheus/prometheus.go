@@ -30,6 +30,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/openmetrics"
 	parsers_prometheus "github.com/influxdata/telegraf/plugins/parsers/prometheus"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
 //go:embed sample.conf
@@ -80,6 +81,7 @@ type Prometheus struct {
 	PodLabelInclude             []string            `toml:"pod_label_include"`
 	PodLabelExclude             []string            `toml:"pod_label_exclude"`
 	CacheRefreshInterval        int                 `toml:"cache_refresh_interval"`
+	Statistics                  *selfstat.Collector `toml:"-"`
 
 	// Consul discovery
 	ConsulConfig consulConfig `toml:"consul"`
@@ -118,6 +120,10 @@ type Prometheus struct {
 
 	// list of http services to scrape
 	httpServices map[string]urlAndAddress
+
+	// Set of URLs that currently have internal statistics registered, used to
+	// unregister stats for targets that are no longer being scraped.
+	statURLs map[string]struct{}
 }
 
 type urlAndAddress struct {
@@ -255,7 +261,7 @@ func (p *Prometheus) Init() error {
 	}
 
 	p.kubernetesPods = make(map[podID]urlAndAddress)
-
+	p.statURLs = make(map[string]struct{})
 	return nil
 }
 
@@ -290,11 +296,28 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
+
+	p.unregisterStaleStats(allURLs)
+
 	for _, URL := range allURLs {
 		wg.Add(1)
+		// Create internal metrics for the URL
+		urlStr := URL.url.String()
+		p.statURLs[urlStr] = struct{}{}
+		connectStat := p.Statistics.Register("prometheus", "connection_status", map[string]string{"url": urlStr})
+		gathersTotalSuccessStat := p.Statistics.Register("prometheus", "gathers_total", map[string]string{"url": urlStr, "status": "success"})
+		gathersTotalFailureStat := p.Statistics.Register("prometheus", "gathers_total", map[string]string{"url": urlStr, "status": "failure"})
+
 		go func(serviceURL urlAndAddress) {
 			defer wg.Done()
 			requestFields, tags, err := p.gatherURL(serviceURL, acc)
+			if err != nil {
+				gathersTotalFailureStat.Incr(1)
+				connectStat.Set(0)
+			} else {
+				gathersTotalSuccessStat.Incr(1)
+				connectStat.Set(1)
+			}
 			acc.AddError(err)
 
 			// Add metrics
@@ -307,6 +330,26 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 	wg.Wait()
 
 	return nil
+}
+
+// Remove internal statistics for any URL that was scraped previously but is not
+// part of the current target set, preventing stale metrics and unbounded growth
+// when targets are discovered dynamically.
+func (p *Prometheus) unregisterStaleStats(allURLs map[string]urlAndAddress) {
+	current := make(map[string]struct{}, len(allURLs))
+	for _, u := range allURLs {
+		current[u.url.String()] = struct{}{}
+	}
+
+	for urlStr := range p.statURLs {
+		if _, ok := current[urlStr]; ok {
+			continue
+		}
+		p.Statistics.Unregister("prometheus", "connection_status", map[string]string{"url": urlStr})
+		p.Statistics.Unregister("prometheus", "gathers_total", map[string]string{"url": urlStr, "status": "success"})
+		p.Statistics.Unregister("prometheus", "gathers_total", map[string]string{"url": urlStr, "status": "failure"})
+		delete(p.statURLs, urlStr)
+	}
 }
 
 func (p *Prometheus) Stop() {
@@ -531,6 +574,7 @@ func (p *Prometheus) gatherURL(u urlAndAddress, acc telegraf.Accumulator) (map[s
 
 	var err error
 	var resp *http.Response
+
 	var start time.Time
 	if u.url.Scheme != "unix" {
 		start = time.Now()
