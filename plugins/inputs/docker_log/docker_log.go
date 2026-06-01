@@ -257,14 +257,19 @@ func (d *DockerLogs) tailContainerLogs(
 		return err
 	}
 
+	var offset time.Time
 	since := time.Time{}.Format(time.RFC3339Nano)
-	if !d.FromBeginning {
-		d.lastRecordMtx.Lock()
-		if ts, ok := d.lastRecord[cntnr.ID]; ok {
+	d.lastRecordMtx.Lock()
+	if ts, ok := d.lastRecord[cntnr.ID]; ok {
+		// Continue past the last processed record. Docker's "since" filter is
+		// inclusive of the boundary timestamp, so the offset is used to drop
+		// records that were already emitted in a previous cycle.
+		offset = ts
+		if !d.FromBeginning {
 			since = ts.Format(time.RFC3339Nano)
 		}
-		d.lastRecordMtx.Unlock()
 	}
+	d.lastRecordMtx.Unlock()
 
 	logOptions := client.ContainerLogsOptions{
 		ShowStdout: true,
@@ -288,9 +293,9 @@ func (d *DockerLogs) tailContainerLogs(
 	// multiplexed.
 	var last time.Time
 	if hasTTY {
-		last, err = tailStream(acc, tags, cntnr.ID, logReader, "tty")
+		last, err = tailStream(acc, tags, cntnr.ID, logReader, "tty", offset)
 	} else {
-		last, err = tailMultiplexed(acc, tags, cntnr.ID, logReader)
+		last, err = tailMultiplexed(acc, tags, cntnr.ID, logReader, offset)
 	}
 	if err != nil {
 		return err
