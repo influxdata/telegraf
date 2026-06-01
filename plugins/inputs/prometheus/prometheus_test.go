@@ -507,7 +507,8 @@ go_gc_duration_seconds_count 42`
 			map[string]string{},
 			map[string]interface{}{
 				"go_gc_duration_seconds_sum":   float64(42.0),
-				"go_gc_duration_seconds_count": float64(42)},
+				"go_gc_duration_seconds_count": float64(42),
+			},
 			time.Unix(0, 0),
 			telegraf.Summary,
 		),
@@ -516,7 +517,8 @@ go_gc_duration_seconds_count 42`
 			map[string]string{},
 			map[string]interface{}{
 				"content_length": int64(1),
-				"response_time":  float64(0)},
+				"response_time":  float64(0),
+			},
 			time.Unix(0, 0),
 			telegraf.Untyped,
 		),
@@ -688,10 +690,12 @@ test_counter{label="test"} 1 1685443805885`
 		metric.New(
 			"prometheus_request",
 			map[string]string{
-				"address": tsAddress},
+				"address": tsAddress,
+			},
 			map[string]interface{}{
 				"content_length": int64(1),
-				"response_time":  float64(0)},
+				"response_time":  float64(0),
+			},
 			time.UnixMilli(0),
 			telegraf.Untyped,
 		),
@@ -733,10 +737,12 @@ func TestPrometheusInternalContentBadFormat(t *testing.T) {
 		metric.New(
 			"prometheus_request",
 			map[string]string{
-				"address": tsAddress},
+				"address": tsAddress,
+			},
 			map[string]interface{}{
 				"content_length": int64(94),
-				"response_time":  float64(0)},
+				"response_time":  float64(0),
+			},
 			time.UnixMilli(0),
 			telegraf.Untyped,
 		),
@@ -769,10 +775,12 @@ func TestPrometheusInternalNoWeb(t *testing.T) {
 		metric.New(
 			"prometheus_request",
 			map[string]string{
-				"address": tsAddress},
+				"address": tsAddress,
+			},
 			map[string]interface{}{
 				"content_length": int64(94),
-				"response_time":  float64(0)},
+				"response_time":  float64(0),
+			},
 			time.UnixMilli(0),
 			telegraf.Untyped,
 		),
@@ -985,12 +993,12 @@ func TestPrometheusGatherStatsSuccess(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(p.Gather))
 
-	url := ts.URL
-	require.EqualValues(t, 1, p.Statistics.Get("prometheus", "connection_status", map[string]string{"url": url}).Get())
+	testUrl := ts.URL
+	require.EqualValues(t, 1, p.Statistics.Get("prometheus", "connection_status", map[string]string{"url": testUrl}).Get())
 	require.EqualValues(t, 1, p.Statistics.Get("prometheus", "gathers_total",
-		map[string]string{"url": url, "status": "success"}).Get())
+		map[string]string{"url": testUrl, "status": "success"}).Get())
 	require.EqualValues(t, 0, p.Statistics.Get("prometheus", "gathers_total",
-		map[string]string{"url": url, "status": "failure"}).Get())
+		map[string]string{"url": testUrl, "status": "failure"}).Get())
 }
 
 func TestPrometheusGatherStatsFailure(t *testing.T) {
@@ -1011,12 +1019,12 @@ func TestPrometheusGatherStatsFailure(t *testing.T) {
 	// Gather surfaces the per-URL error, so expect one.
 	require.Error(t, acc.GatherError(p.Gather))
 
-	url := ts.URL
-	require.EqualValues(t, 0, p.Statistics.Get("prometheus", "connection_status", map[string]string{"url": url}).Get())
+	testUrl := ts.URL
+	require.EqualValues(t, 0, p.Statistics.Get("prometheus", "connection_status", map[string]string{"url": testUrl}).Get())
 	require.EqualValues(t, 1, p.Statistics.Get("prometheus", "gathers_total",
-		map[string]string{"url": url, "status": "failure"}).Get())
+		map[string]string{"url": testUrl, "status": "failure"}).Get())
 	require.EqualValues(t, 0, p.Statistics.Get("prometheus", "gathers_total",
-		map[string]string{"url": url, "status": "success"}).Get())
+		map[string]string{"url": testUrl, "status": "success"}).Get())
 }
 
 func TestPrometheusGatherStatsRecovery(t *testing.T) {
@@ -1040,13 +1048,13 @@ func TestPrometheusGatherStatsRecovery(t *testing.T) {
 	}
 	require.NoError(t, p.Init())
 
-	url := ts.URL
+	testUrl := ts.URL
 	connect := func() int64 {
-		return p.Statistics.Get("prometheus", "connection_status", map[string]string{"url": url}).Get()
+		return p.Statistics.Get("prometheus", "connection_status", map[string]string{"url": testUrl}).Get()
 	}
 	total := func(status string) int64 {
 		return p.Statistics.Get("prometheus", "gathers_total",
-			map[string]string{"url": url, "status": status}).Get()
+			map[string]string{"url": testUrl, "status": status}).Get()
 	}
 
 	// First gather fails.
