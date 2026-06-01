@@ -23,7 +23,31 @@ type Parser struct {
 	DefaultTags map[string]string `toml:"-"`
 
 	metricName string
+	timeFunc   func() time.Time
 	tagFilter  filter.Filter
+}
+
+func (p *Parser) SetDefaultTags(tags map[string]string) {
+	p.DefaultTags = tags
+}
+
+func (p *Parser) SetTimeFunc(f func() time.Time) {
+	p.timeFunc = f
+}
+
+func (p *Parser) Init() error {
+	// Compile tag key patterns
+	f, err := filter.Compile(p.TagKeys)
+	if err != nil {
+		return fmt.Errorf("error compiling tag pattern: %w", err)
+	}
+	p.tagFilter = f
+
+	if p.timeFunc == nil {
+		p.timeFunc = time.Now
+	}
+
+	return nil
 }
 
 // Parse converts a slice of bytes in logfmt format to metrics.
@@ -34,8 +58,7 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 	for {
 		ok := decoder.ScanRecord()
 		if !ok {
-			err := decoder.Err()
-			if err != nil {
+			if err := decoder.Err(); err != nil {
 				return nil, err
 			}
 			break
@@ -65,7 +88,7 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 			continue
 		}
 
-		m := metric.New(p.metricName, tags, fields, time.Now())
+		m := metric.New(p.metricName, tags, fields, p.timeFunc())
 
 		metrics = append(metrics, m)
 	}
@@ -86,11 +109,6 @@ func (p *Parser) ParseLine(s string) (telegraf.Metric, error) {
 	return metrics[0], nil
 }
 
-// SetDefaultTags adds tags to the metrics outputs of Parse and ParseLine.
-func (p *Parser) SetDefaultTags(tags map[string]string) {
-	p.DefaultTags = tags
-}
-
 func (p *Parser) applyDefaultTags(metrics []telegraf.Metric) {
 	if len(p.DefaultTags) == 0 {
 		return
@@ -103,17 +121,6 @@ func (p *Parser) applyDefaultTags(metrics []telegraf.Metric) {
 			}
 		}
 	}
-}
-
-func (p *Parser) Init() error {
-	var err error
-
-	// Compile tag key patterns
-	if p.tagFilter, err = filter.Compile(p.TagKeys); err != nil {
-		return fmt.Errorf("error compiling tag pattern: %w", err)
-	}
-
-	return nil
 }
 
 func init() {
