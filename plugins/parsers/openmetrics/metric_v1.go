@@ -11,7 +11,7 @@ import (
 )
 
 func (p *Parser) extractMetricsV1(ometrics *MetricFamily) []telegraf.Metric {
-	now := time.Now()
+	now := p.timeFunc()
 
 	// Convert each prometheus metrics to the corresponding telegraf metrics.
 	// You will get one telegraf metric with one field per prometheus metric
