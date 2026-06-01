@@ -45,11 +45,6 @@ to use them.
   ## Whether to follow redirects from the server (defaults to false)
   # follow_redirects = false
 
-  ## Optional file with Bearer token.
-  ##   deprecated in 1.39; use the token option
-  ## file content is added as an Authorization header
-  # bearer_token = "/path/to/file"
-
   ## Bearer token for authentication, accepting secret-store references
   ## This option cannot be used in combination with 'bearer_token'.
   # token = "my-token"

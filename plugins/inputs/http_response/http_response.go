@@ -47,7 +47,7 @@ type HTTPResponse struct {
 	Headers         map[string]string   `toml:"headers"`
 	FollowRedirects bool                `toml:"follow_redirects"`
 	// Absolute path to file with Bearer token
-	BearerToken         string        `toml:"bearer_token" deprecated:"1.39.0;use 'token' instead"`
+	BearerToken         string        `toml:"bearer_token" deprecated:"1.39.0;1.45.0;use 'token' instead"`
 	Token               config.Secret `toml:"token"`
 	ResponseBodyField   string        `toml:"response_body_field"`
 	ResponseBodyMaxSize config.Size   `toml:"response_body_max_size"`
