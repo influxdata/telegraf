@@ -94,6 +94,7 @@ func TestParseLine(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &Parser{Log: testutil.Logger{}}
+			require.NoError(t, p.Init())
 
 			actual, err := p.ParseLine(tt.input)
 			require.NoError(t, err)
@@ -230,6 +231,7 @@ func TestParse(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &Parser{Log: testutil.Logger{}}
+			require.NoError(t, p.Init())
 
 			actual, err := p.Parse(tt.input)
 			require.NoError(t, err)
@@ -315,6 +317,7 @@ put benchmark_b 1653643420 5 tags_host=myhost tags_platform=python tags_sdkver=3
 
 func TestBenchmarkData(t *testing.T) {
 	plugin := &Parser{}
+	require.NoError(t, plugin.Init())
 
 	expected := []telegraf.Metric{
 		metric.New(
@@ -350,6 +353,7 @@ func TestBenchmarkData(t *testing.T) {
 
 func BenchmarkParsing(b *testing.B) {
 	plugin := &Parser{}
+	require.NoError(b, plugin.Init())
 
 	for n := 0; n < b.N; n++ {
 		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
