@@ -1697,12 +1697,15 @@ func TestBase64FieldValidation(t *testing.T) {
 		time.Unix(0, 0))
 
 	testLogger := &testutil.CaptureLogger{}
+
+	parser := &json.Parser{}
+	require.NoError(t, parser.Init())
 	plugin := &Parser{
 		ParseFields:  []string{"a"},
 		Base64Fields: []string{"b"},
 		Log:          testLogger,
 	}
-	plugin.SetParser(&json.Parser{})
+	plugin.SetParser(parser)
 	require.NoError(t, plugin.Init())
 	plugin.Apply(testMetric)
 	require.Empty(t, testLogger.Errors())
@@ -1720,30 +1723,21 @@ func TestBase64FieldValidation(t *testing.T) {
 
 func TestTracking(t *testing.T) {
 	var testCases = []struct {
-		name       string
-		numMetrics int
-		parser     Parser
-		payload    string
+		name         string
+		numMetrics   int
+		dropOriginal bool
+		payload      string
 	}{
 		{
 			name:       "keep all",
 			numMetrics: 2,
-			parser: Parser{
-				DropOriginal: false,
-				ParseFields:  []string{"payload"},
-				parser:       &json.Parser{},
-			},
-			payload: `{"value": 1}`,
+			payload:    `{"value": 1}`,
 		},
 		{
-			name:       "drop original",
-			numMetrics: 1,
-			parser: Parser{
-				DropOriginal: true,
-				ParseFields:  []string{"payload"},
-				parser:       &json.Parser{},
-			},
-			payload: `{"value": 1}`,
+			name:         "drop original",
+			numMetrics:   1,
+			dropOriginal: true,
+			payload:      `{"value": 1}`,
 		},
 	}
 	for _, tt := range testCases {
@@ -1758,7 +1752,13 @@ func TestTracking(t *testing.T) {
 			}
 
 			// Configure the plugin
-			plugin := tt.parser
+			parser := &json.Parser{}
+			require.NoError(t, parser.Init())
+			plugin := &Parser{
+				DropOriginal: tt.dropOriginal,
+				ParseFields:  []string{"payload"},
+			}
+			plugin.SetParser(parser)
 			require.NoError(t, plugin.Init())
 
 			// Process expected metrics and compare with resulting metrics
