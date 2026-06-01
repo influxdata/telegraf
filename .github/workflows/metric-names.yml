@@ -1,0 +1,22 @@
+name: Check metric name backward compatibility
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  check-metric-names:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Get changed plugin READMEs
+        id: changed-files
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          files: ./plugins/**/README.md
+      - name: Check for removed metric fields
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: bash scripts/check-metric-names.sh
