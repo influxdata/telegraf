@@ -1,6 +1,7 @@
 package docker_log
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -139,4 +140,44 @@ func TestGather(t *testing.T) {
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
 		})
 	}
+}
+
+func TestGatherConcurrentState(t *testing.T) {
+	// Spawn many containers so their tailing goroutines update the shared
+	// last-record state concurrently. Run with -race to detect unsynchronized
+	// access to the state map.
+	const count = 64
+	server := &mock.Server{
+		Inspect: make(map[string]container.InspectResponse, count),
+		Logs:    make(map[string]mock.Logs, count),
+	}
+	for i := 0; i < count; i++ {
+		id := fmt.Sprintf("container%03d", i)
+		server.List = append(server.List, container.Summary{
+			ID:    id,
+			Names: []string{"/" + id},
+			Image: "influxdata/telegraf:1.11.0",
+			State: "running",
+		})
+		server.Inspect[id] = container.InspectResponse{Config: &container.Config{Tty: true}}
+		server.Logs[id] = mock.Logs{Content: "2020-04-28T18:43:16.432691200Z hello\n"}
+	}
+	addr := server.Start(t)
+	defer server.Close()
+
+	plugin := &DockerLogs{
+		Endpoint: addr,
+		Timeout:  config.Duration(time.Second * 5),
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	require.NoError(t, plugin.Gather(&acc))
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= uint64(count)
+	}, 5*time.Second, 50*time.Millisecond)
+	require.Empty(t, acc.Errors)
 }
