@@ -545,6 +545,19 @@ func (tsuite *SecretImplTestSuite) TestSecretEqualTo() {
 	require.False(t, equal)
 }
 
+func (tsuite *SecretImplTestSuite) TestSecretEmpty() {
+	t := tsuite.T()
+
+	var s Secret
+	buf, err := s.Get()
+	require.NoError(t, err)
+	defer buf.Destroy()
+
+	require.Empty(t, buf.Bytes())
+	require.Empty(t, buf.TemporaryString())
+	require.Empty(t, buf.String())
+}
+
 func (tsuite *SecretImplTestSuite) TestSecretStoreInvalidReference() {
 	t := tsuite.T()
 
