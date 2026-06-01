@@ -7,6 +7,7 @@ import (
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -180,4 +181,76 @@ func TestGatherConcurrentState(t *testing.T) {
 		return acc.NMetrics() >= uint64(count)
 	}, 5*time.Second, 50*time.Millisecond)
 	require.Empty(t, acc.Errors)
+}
+
+func TestTailLogsNoDuplicateIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	tests := []struct {
+		name          string
+		fromBeginning bool
+	}{
+		{name: "telegraf-docker-log-from-end", fromBeginning: false},
+		{name: "telegraf-docker-log-from-beginning", fromBeginning: true},
+	}
+
+	// Continuously emit a uniquely numbered line so every record has a distinct
+	// timestamp and we can detect any line that gets collected more than once.
+	const script = "i=1; while true; do echo \"log line $i\"; i=$((i+1)); sleep 0.3; done"
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cntnr := testutil.Container{
+				Name:       tt.name,
+				Image:      "alpine:3",
+				Entrypoint: []string{"/bin/sh", "-c", script},
+				WaitingFor: wait.ForLog("log line 1"),
+			}
+			require.NoError(t, cntnr.Start(), "failed to start container")
+			defer cntnr.Terminate()
+
+			// Restrict the plugin to our container so it ignores everything else
+			// running on the daemon (e.g. the testcontainers reaper).
+			plugin := &DockerLogs{
+				Endpoint:         "ENV",
+				FromBeginning:    tt.fromBeginning,
+				ContainerInclude: []string{tt.name},
+				Timeout:          config.Duration(5 * time.Second),
+			}
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
+
+			// First cycle reads the lines produced so far and persists the offset.
+			require.NoError(t, plugin.Gather(&acc))
+			require.Eventually(t, func() bool {
+				return acc.NMetrics() > 0
+			}, 10*time.Second, 200*time.Millisecond)
+			collected := acc.NMetrics()
+
+			// Keep gathering until lines produced after the first cycle are
+			// collected, proving the offset advances without over-skipping new
+			// records. The container guards a second goroutine while the first
+			// is still running, so repeated Gather calls cannot double-read.
+			require.Eventually(t, func() bool {
+				require.NoError(t, plugin.Gather(&acc))
+				return acc.NMetrics() > collected
+			}, 20*time.Second, 300*time.Millisecond)
+
+			// Docker's "since" filter is inclusive of the boundary timestamp, so
+			// the last line of one cycle must not be re-emitted by the next one.
+			counts := make(map[string]int)
+			for _, m := range acc.GetTelegrafMetrics() {
+				msg, ok := m.GetField("message")
+				require.True(t, ok)
+				counts[msg.(string)]++
+			}
+			for msg, n := range counts {
+				require.Equalf(t, 1, n, "log line %q was collected %d times", msg, n)
+			}
+		})
+	}
 }
