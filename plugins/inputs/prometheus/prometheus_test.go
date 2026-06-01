@@ -963,3 +963,144 @@ go_memstats_heap_alloc_bytes 1.581062048e+09
 
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
 }
+
+func TestPrometheusGatherStatsSuccess(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if _, err := fmt.Fprintln(w, sampleTextFormat); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		Log:        testutil.Logger{},
+		URLs:       []string{ts.URL},
+		Statistics: selfstat.NewCollector(nil),
+		URLTag:     "url",
+	}
+	require.NoError(t, p.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(p.Gather))
+
+	url := ts.URL
+	require.EqualValues(t, 1, p.Statistics.Get("prometheus", "connection_status", map[string]string{"url": url}).Get())
+	require.EqualValues(t, 1, p.Statistics.Get("prometheus", "gathers_total",
+		map[string]string{"url": url, "status": "success"}).Get())
+	require.EqualValues(t, 0, p.Statistics.Get("prometheus", "gathers_total",
+		map[string]string{"url": url, "status": "failure"}).Get())
+}
+
+func TestPrometheusGatherStatsFailure(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		Log:        testutil.Logger{},
+		URLs:       []string{ts.URL},
+		Statistics: selfstat.NewCollector(nil),
+		URLTag:     "url",
+	}
+	require.NoError(t, p.Init())
+
+	var acc testutil.Accumulator
+	// Gather surfaces the per-URL error, so expect one.
+	require.Error(t, acc.GatherError(p.Gather))
+
+	url := ts.URL
+	require.EqualValues(t, 0, p.Statistics.Get("prometheus", "connection_status", map[string]string{"url": url}).Get())
+	require.EqualValues(t, 1, p.Statistics.Get("prometheus", "gathers_total",
+		map[string]string{"url": url, "status": "failure"}).Get())
+	require.EqualValues(t, 0, p.Statistics.Get("prometheus", "gathers_total",
+		map[string]string{"url": url, "status": "success"}).Get())
+}
+
+func TestPrometheusGatherStatsRecovery(t *testing.T) {
+	var healthy bool
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if !healthy {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if _, err := fmt.Fprintln(w, sampleTextFormat); err != nil {
+			t.Error(err)
+		}
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		Log:        testutil.Logger{},
+		URLs:       []string{ts.URL},
+		Statistics: selfstat.NewCollector(nil),
+		URLTag:     "url",
+	}
+	require.NoError(t, p.Init())
+
+	url := ts.URL
+	connect := func() int64 {
+		return p.Statistics.Get("prometheus", "connection_status", map[string]string{"url": url}).Get()
+	}
+	total := func(status string) int64 {
+		return p.Statistics.Get("prometheus", "gathers_total",
+			map[string]string{"url": url, "status": status}).Get()
+	}
+
+	// First gather fails.
+	var failAcc testutil.Accumulator
+	require.Error(t, failAcc.GatherError(p.Gather))
+	require.EqualValues(t, 0, connect())
+	require.EqualValues(t, 1, total("failure"))
+
+	// Server recovers; gauge flips to 1, success counter increments, failure unchanged.
+	healthy = true
+	var okAcc testutil.Accumulator
+	require.NoError(t, okAcc.GatherError(p.Gather))
+	require.EqualValues(t, 1, connect())
+	require.EqualValues(t, 1, total("success"))
+	require.EqualValues(t, 1, total("failure"))
+}
+
+func TestPrometheusGatherStatsUnregistersStaleURL(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if _, err := fmt.Fprintln(w, sampleTextFormat); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
+	})
+	ts1 := httptest.NewServer(handler)
+	defer ts1.Close()
+	ts2 := httptest.NewServer(handler)
+	defer ts2.Close()
+
+	p := &Prometheus{
+		Log:        testutil.Logger{},
+		URLs:       []string{ts1.URL, ts2.URL},
+		Statistics: selfstat.NewCollector(nil),
+		URLTag:     "url",
+	}
+	require.NoError(t, p.Init())
+
+	// First gather scrapes both targets, registering stats for each.
+	var acc1 testutil.Accumulator
+	require.NoError(t, acc1.GatherError(p.Gather))
+	require.NotNil(t, p.Statistics.Get("prometheus", "connection_status", map[string]string{"url": ts1.URL}))
+	require.NotNil(t, p.Statistics.Get("prometheus", "connection_status", map[string]string{"url": ts2.URL}))
+
+	// Drop the second target from discovery and gather again.
+	p.URLs = []string{ts1.URL}
+	var acc2 testutil.Accumulator
+	require.NoError(t, acc2.GatherError(p.Gather))
+
+	// The surviving target keeps its stats; the dropped one is unregistered.
+	require.NotNil(t, p.Statistics.Get("prometheus", "connection_status", map[string]string{"url": ts1.URL}))
+	require.Nil(t, p.Statistics.Get("prometheus", "connection_status", map[string]string{"url": ts2.URL}))
+	require.Nil(t, p.Statistics.Get("prometheus", "gathers_total",
+		map[string]string{"url": ts2.URL, "status": "success"}))
+	require.Nil(t, p.Statistics.Get("prometheus", "gathers_total",
+		map[string]string{"url": ts2.URL, "status": "failure"}))
+}

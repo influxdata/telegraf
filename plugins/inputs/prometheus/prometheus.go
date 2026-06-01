@@ -120,6 +120,10 @@ type Prometheus struct {
 
 	// list of http services to scrape
 	httpServices map[string]urlAndAddress
+
+	// Set of URLs that currently have internal statistics registered, used to
+	// unregister stats for targets that are no longer being scraped.
+	statURLs map[string]struct{}
 }
 
 type urlAndAddress struct {
@@ -257,6 +261,7 @@ func (p *Prometheus) Init() error {
 	}
 
 	p.kubernetesPods = make(map[podID]urlAndAddress)
+	p.statURLs = make(map[string]struct{})
 	return nil
 }
 
@@ -291,29 +296,60 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
+
+	p.unregisterStaleStats(allURLs)
+
 	for _, URL := range allURLs {
 		wg.Add(1)
 		// Create internal metrics for the URL
 		urlStr := URL.url.String()
+		p.statURLs[urlStr] = struct{}{}
 		connectStat := p.Statistics.Register("prometheus", "connection_status", map[string]string{"url": urlStr})
 		gathersTotalSuccessStat := p.Statistics.Register("prometheus", "gathers_total", map[string]string{"url": urlStr, "status": "success"})
 		gathersTotalFailureStat := p.Statistics.Register("prometheus", "gathers_total", map[string]string{"url": urlStr, "status": "failure"})
 
-		go func(serviceURL urlAndAddress, connectStat selfstat.Stat, successStat selfstat.Stat, failureStat selfstat.Stat) {
+		go func(serviceURL urlAndAddress) {
 			defer wg.Done()
-			requestFields, tags, err := p.gatherURL(serviceURL, acc, connectStat, successStat, failureStat)
+			requestFields, tags, err := p.gatherURL(serviceURL, acc)
+			if err != nil {
+				gathersTotalFailureStat.Incr(1)
+				connectStat.Set(0)
+			} else {
+				gathersTotalSuccessStat.Incr(1)
+				connectStat.Set(1)
+			}
 			acc.AddError(err)
 
 			// Add metrics
 			if p.EnableRequestMetrics {
 				acc.AddFields("prometheus_request", requestFields, tags)
 			}
-		}(URL, connectStat, gathersTotalSuccessStat, gathersTotalFailureStat)
+		}(URL)
 	}
 
 	wg.Wait()
 
 	return nil
+}
+
+// Remove internal statistics for any URL that was scraped previously but is not
+// part of the current target set, preventing stale metrics and unbounded growth
+// when targets are discovered dynamically.
+func (p *Prometheus) unregisterStaleStats(allURLs map[string]urlAndAddress) {
+	current := make(map[string]struct{}, len(allURLs))
+	for _, u := range allURLs {
+		current[u.url.String()] = struct{}{}
+	}
+
+	for urlStr := range p.statURLs {
+		if _, ok := current[urlStr]; ok {
+			continue
+		}
+		p.Statistics.Unregister("prometheus", "connection_status", map[string]string{"url": urlStr})
+		p.Statistics.Unregister("prometheus", "gathers_total", map[string]string{"url": urlStr, "status": "success"})
+		p.Statistics.Unregister("prometheus", "gathers_total", map[string]string{"url": urlStr, "status": "failure"})
+		delete(p.statURLs, urlStr)
+	}
 }
 
 func (p *Prometheus) Stop() {
@@ -448,11 +484,7 @@ func (p *Prometheus) getAllURLs() (map[string]urlAndAddress, error) {
 	return allURLs, nil
 }
 
-func (p *Prometheus) gatherURL(
-	u urlAndAddress,
-	acc telegraf.Accumulator,
-	connectStat, successStat, failureStat selfstat.Stat,
-) (map[string]interface{}, map[string]string, error) {
+func (p *Prometheus) gatherURL(u urlAndAddress, acc telegraf.Accumulator) (map[string]interface{}, map[string]string, error) {
 	var req *http.Request
 	var uClient *http.Client
 	requestFields := make(map[string]interface{})
@@ -553,8 +585,6 @@ func (p *Prometheus) gatherURL(
 	}
 	end := time.Since(start).Seconds()
 	if err != nil {
-		connectStat.Set(0)
-		failureStat.Incr(1)
 		return requestFields, tags, fmt.Errorf("error making HTTP request to %q: %w", u.url, err)
 	}
 	requestFields["response_time"] = end
@@ -562,8 +592,6 @@ func (p *Prometheus) gatherURL(
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		connectStat.Set(0)
-		failureStat.Incr(1)
 		return requestFields, tags, fmt.Errorf("%q returned HTTP status %q", u.url, resp.Status)
 	}
 
@@ -578,26 +606,19 @@ func (p *Prometheus) gatherURL(
 
 		body, err = io.ReadAll(lr)
 		if err != nil {
-			connectStat.Set(0)
-			failureStat.Incr(1)
 			return requestFields, tags, fmt.Errorf("error reading body: %w", err)
 		}
 		if int64(len(body)) > limit {
-			connectStat.Set(0)
-			failureStat.Incr(1)
 			p.Log.Infof("skipping %s: content length exceeded maximum body size (%d)", u.url, limit)
 			return requestFields, tags, nil
 		}
 	} else {
 		body, err = io.ReadAll(resp.Body)
 		if err != nil {
-			connectStat.Set(0)
-			failureStat.Incr(1)
 			return requestFields, tags, fmt.Errorf("error reading body: %w", err)
 		}
 	}
 	requestFields["content_length"] = len(body)
-	connectStat.Set(1)
 
 	// Override the response format if the user requested it
 	if p.contentType != "" {
@@ -623,10 +644,8 @@ func (p *Prometheus) gatherURL(
 	}
 	metrics, err := metricParser.Parse(body)
 	if err != nil {
-		failureStat.Incr(1)
 		return requestFields, tags, fmt.Errorf("error reading metrics for %q: %w", u.url, err)
 	}
-	successStat.Incr(1)
 
 	for _, metric := range metrics {
 		tags := metric.Tags()
