@@ -261,9 +261,7 @@ func (d *DockerLogs) tailContainerLogs(
 	since := time.Time{}.Format(time.RFC3339Nano)
 	d.lastRecordMtx.Lock()
 	if ts, ok := d.lastRecord[cntnr.ID]; ok {
-		// Continue past the last processed record. Docker's "since" filter is
-		// inclusive of the boundary timestamp, so the offset is used to drop
-		// records that were already emitted in a previous cycle.
+		// Drop records already emitted in a previous cycle (see tailStream).
 		offset = ts
 		if !d.FromBeginning {
 			since = ts.Format(time.RFC3339Nano)

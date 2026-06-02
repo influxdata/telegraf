@@ -222,7 +222,6 @@ func TestTailLogsNoDuplicateIntegration(t *testing.T) {
 
 			var acc testutil.Accumulator
 			require.NoError(t, plugin.Start(&acc))
-			defer plugin.Stop()
 
 			// First cycle reads the lines produced so far and persists the offset.
 			require.NoError(t, plugin.Gather(&acc))
@@ -240,8 +239,11 @@ func TestTailLogsNoDuplicateIntegration(t *testing.T) {
 				return acc.NMetrics() > collected
 			}, 20*time.Second, 300*time.Millisecond)
 
-			// Docker's "since" filter is inclusive of the boundary timestamp, so
-			// the last line of one cycle must not be re-emitted by the next one.
+			// Drain any in-flight tailing goroutine so the final cycle's output
+			// is fully recorded before we inspect the accumulator.
+			plugin.Stop()
+
+			// Every line must be collected exactly once across cycles.
 			counts := make(map[string]int)
 			for _, m := range acc.GetTelegrafMetrics() {
 				msg, ok := m.GetField("message")
