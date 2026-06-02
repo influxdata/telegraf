@@ -194,7 +194,7 @@ func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) (
 
 		// if the year is 0, set to current year
 		if timestamp.Year() == 0 {
-			timestamp = timestamp.AddDate(timestamp.Year(), 0, 0)
+			timestamp = timestamp.AddDate(p.timeFunc().Year(), 0, 0)
 		}
 	}
 
