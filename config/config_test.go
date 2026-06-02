@@ -342,7 +342,9 @@ func TestConfig_LoadDirectory(t *testing.T) {
 			require.NoError(t, parser.Init())
 			parser.Log = nil
 
-			// Compare the parser
+			// Compare the parser ignoring the time function
+			expectedPlugins[i].parser.(telegraf.ParserTimeFuncPlugin).SetTimeFunc(nil)
+			parser.SetTimeFunc(nil)
 			require.Equalf(t, expectedPlugins[i].parser, parser, "Plugin %d: incorrect parser produced", i)
 		}
 
