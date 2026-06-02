@@ -63,6 +63,29 @@ func TestInitPluginWithBadConnectFailBehaviorValue(t *testing.T) {
 	require.ErrorContains(t, err, "unknown setting \"notanoption\" for 'connect_fail_behavior'")
 }
 
+func TestInitPluginWithNegativeBatchSize(t *testing.T) {
+	plugin := OpcUaListener{
+		subscribeClientConfig: subscribeClientConfig{
+			InputClientConfig: input.InputClientConfig{
+				OpcUAClientConfig: opcua.OpcUAClientConfig{
+					Endpoint:       "opc.tcp://notarealserver:4840",
+					SecurityPolicy: "None",
+					SecurityMode:   "None",
+					ConnectTimeout: config.Duration(5 * time.Second),
+					RequestTimeout: config.Duration(10 * time.Second),
+				},
+				MetricName: "opcua",
+				Timestamp:  input.TimestampSourceTelegraf,
+				RootNodes:  make([]input.NodeSettings, 0),
+			},
+			SubscriptionInterval:    config.Duration(100 * time.Millisecond),
+			MonitoredItemsBatchSize: -1,
+		},
+		Log: testutil.Logger{},
+	}
+	require.ErrorContains(t, plugin.Init(), "'monitored_items_batch_size' must not be negative")
+}
+
 func TestStartPlugin(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -440,6 +463,84 @@ func TestSkipFailedMonitoredItemsIntegration(t *testing.T) {
 	}
 }
 
+func TestMonitoredItemsBatchSizeIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "open62541/open62541",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(servicePort),
+			wait.ForLog("TCP network layer listening on opc.tcp://"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	// Register more monitored items than the batch size so the registration is
+	// split across multiple CreateMonitoredItems requests. All items must still
+	// be monitored and their results mapped back to the correct field. Each item
+	// points at the continuously updating server CurrentTime node (i=2258) so
+	// every monitored item reliably emits an initial notification.
+	nodes := []input.NodeSettings{
+		{FieldName: "time1", Namespace: "0", IdentifierType: "i", Identifier: "2258"},
+		{FieldName: "time2", Namespace: "0", IdentifierType: "i", Identifier: "2258"},
+		{FieldName: "time3", Namespace: "0", IdentifierType: "i", Identifier: "2258"},
+		{FieldName: "time4", Namespace: "0", IdentifierType: "i", Identifier: "2258"},
+	}
+
+	subscribeConfig := subscribeClientConfig{
+		MonitoredItemsBatchSize: 2,
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+			},
+			MetricName: "testing",
+			RootNodes:  nodes,
+		},
+	}
+
+	o, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		return o.SetupOptions() == nil
+	}, 5*time.Second, 10*time.Millisecond)
+
+	require.NoError(t, o.connect())
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	res, err := o.startMonitoring(ctx)
+	require.NoError(t, err)
+
+	expected := make(map[string]bool, len(nodes))
+	for _, node := range nodes {
+		expected[node.FieldName] = true
+	}
+
+	received := make(map[string]bool, len(nodes))
+	for len(received) < len(expected) {
+		select {
+		case m := <-res:
+			for field := range m.Fields() {
+				if expected[field] {
+					received[field] = true
+				}
+			}
+		case <-ctx.Done():
+			t.Fatalf("Timed out waiting for metrics, only received %v", received)
+		}
+	}
+}
+
 func TestSubscribeClientConfig(t *testing.T) {
 	toml := `
 [[inputs.opcua_listener]]
@@ -449,6 +550,7 @@ connect_timeout = "10s"
 request_timeout = "5s"
 subscription_interval = "200ms"
 connect_fail_behavior = "error"
+monitored_items_batch_size = 500
 security_policy = "auto"
 security_mode = "auto"
 certificate = "/etc/telegraf/cert.pem"
@@ -504,6 +606,7 @@ additional_valid_status_codes = ["0xC0"]
 	require.Equal(t, config.Duration(5*time.Second), o.subscribeClientConfig.RequestTimeout)
 	require.Equal(t, config.Duration(200*time.Millisecond), o.subscribeClientConfig.SubscriptionInterval)
 	require.Equal(t, "error", o.subscribeClientConfig.ConnectFailBehavior)
+	require.Equal(t, 500, o.subscribeClientConfig.MonitoredItemsBatchSize)
 	require.Equal(t, "auto", o.subscribeClientConfig.SecurityPolicy)
 	require.Equal(t, "auto", o.subscribeClientConfig.SecurityMode)
 	require.Equal(t, "/etc/telegraf/cert.pem", o.subscribeClientConfig.Certificate)

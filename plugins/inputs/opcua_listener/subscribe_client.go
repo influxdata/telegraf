@@ -18,8 +18,9 @@ import (
 
 type subscribeClientConfig struct {
 	input.InputClientConfig
-	SubscriptionInterval config.Duration `toml:"subscription_interval"`
-	ConnectFailBehavior  string          `toml:"connect_fail_behavior"`
+	SubscriptionInterval    config.Duration `toml:"subscription_interval"`
+	ConnectFailBehavior     string          `toml:"connect_fail_behavior"`
+	MonitoredItemsBatchSize int             `toml:"monitored_items_batch_size"`
 }
 
 type subscribeClient struct {
@@ -214,6 +215,37 @@ func (o *subscribeClient) stop(ctx context.Context) <-chan struct{} {
 	return closing
 }
 
+// monitor registers the given monitored-item requests on the subscription.
+// Servers reject a CreateMonitoredItems request whose encoded size exceeds
+// their negotiated maximum message size, which surfaces as a connection drop
+// (BadTcpMessageTooLarge) for large node counts. When monitored_items_batch_size
+// is set, the requests are split into batches of that size and the per-request
+// results are concatenated in the original order so the caller's index-to-node
+// mapping stays valid.
+func (o *subscribeClient) monitor(ctx context.Context, reqs []*ua.MonitoredItemCreateRequest) ([]*ua.MonitoredItemCreateResult, error) {
+	batchSize := o.Config.MonitoredItemsBatchSize
+	if batchSize <= 0 || batchSize >= len(reqs) {
+		batchSize = len(reqs)
+	}
+
+	results := make([]*ua.MonitoredItemCreateResult, 0, len(reqs))
+	for start := 0; start < len(reqs); start += batchSize {
+		end := min(start+batchSize, len(reqs))
+		batch := reqs[start:end]
+
+		resp, err := o.sub.Monitor(ctx, ua.TimestampsToReturnBoth, batch...)
+		if err != nil {
+			return nil, err
+		}
+		if len(resp.Results) != len(batch) {
+			return nil, fmt.Errorf("server returned %d results for %d requested items", len(resp.Results), len(batch))
+		}
+		results = append(results, resp.Results...)
+	}
+
+	return results, nil
+}
+
 func (o *subscribeClient) startMonitoring(ctx context.Context) (<-chan telegraf.Metric, error) {
 	err := o.connect()
 	if err != nil {
@@ -230,13 +262,13 @@ func (o *subscribeClient) startMonitoring(ctx context.Context) (<-chan telegraf.
 
 	var skippedItems int
 	if len(o.monitoredItemsReqs) != 0 {
-		resp, err := o.sub.Monitor(ctx, ua.TimestampsToReturnBoth, o.monitoredItemsReqs...)
+		results, err := o.monitor(ctx, o.monitoredItemsReqs)
 		if err != nil {
 			return nil, fmt.Errorf("failed to start monitoring items: %w", err)
 		}
 		o.Log.Debug("Monitoring items")
 
-		for idx, res := range resp.Results {
+		for idx, res := range results {
 			if o.StatusCodeOK(res.StatusCode) {
 				continue
 			}
@@ -251,13 +283,13 @@ func (o *subscribeClient) startMonitoring(ctx context.Context) (<-chan telegraf.
 	}
 
 	if len(o.eventItemsReqs) != 0 {
-		resp, err := o.sub.Monitor(ctx, ua.TimestampsToReturnBoth, o.eventItemsReqs...)
+		results, err := o.monitor(ctx, o.eventItemsReqs)
 		if err != nil {
 			return nil, fmt.Errorf("failed to start monitoring event stream: %w", err)
 		}
 		o.Log.Debug("Monitoring events")
 
-		for idx, res := range resp.Results {
+		for idx, res := range results {
 			if o.StatusCodeOK(res.StatusCode) {
 				continue
 			}
