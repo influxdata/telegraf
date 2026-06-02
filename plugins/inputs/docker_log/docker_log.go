@@ -296,11 +296,11 @@ func (d *DockerLogs) tailContainerLogs(
 		return err
 	}
 
+	d.lastRecordMtx.Lock()
 	if ts, ok := d.lastRecord[cntnr.ID]; !ok || ts.Before(last) {
-		d.lastRecordMtx.Lock()
 		d.lastRecord[cntnr.ID] = last
-		d.lastRecordMtx.Unlock()
 	}
+	d.lastRecordMtx.Unlock()
 
 	return nil
 }
