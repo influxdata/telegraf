@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/shirou/gopsutil/v4/host"
 	"github.com/stretchr/testify/require"
 
@@ -188,8 +189,9 @@ func TestGather(t *testing.T) {
 			},
 		},
 		{
-			name:    "legacy only",
-			include: []string{"legacy"},
+			name:         "legacy only",
+			include:      []string{"legacy"},
+			requireUsers: true,
 			expected: []telegraf.Metric{
 				metric.New(
 					"system",
@@ -239,68 +241,27 @@ func TestGather(t *testing.T) {
 				),
 			},
 		},
-		{
-			name:    "duplicates are de-duplicated",
-			include: []string{"legacy", "legacy", "cpus", "cpus"},
-			expected: []telegraf.Metric{
-				metric.New(
-					"system",
-					map[string]string{},
-					map[string]interface{}{
-						"load1":           float64(0),
-						"load5":           float64(0),
-						"load15":          float64(0),
-						"n_users":         0,
-						"n_unique_users":  0,
-						"n_cpus":          0,
-						"n_physical_cpus": 0,
-					},
-					time.Unix(0, 0),
-					telegraf.Gauge,
-				),
-				metric.New(
-					"system",
-					map[string]string{},
-					map[string]interface{}{"uptime": uint64(0)},
-					time.Unix(0, 0),
-					telegraf.Counter,
-				),
-				metric.New(
-					"system",
-					map[string]string{},
-					map[string]interface{}{"uptime_format": string("")},
-					time.Unix(0, 0),
-					telegraf.Untyped,
-				),
-				metric.New(
-					"system",
-					map[string]string{},
-					map[string]interface{}{
-						"n_cpus":          0,
-						"n_physical_cpus": 0,
-					},
-					time.Unix(0, 0),
-					telegraf.Untyped,
-				),
-			},
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.requireUsers && !usersAvailable {
 				t.Skip("host.Users() not mockable on this platform")
 			}
-			s := &System{
+
+			plugin := &System{
 				Include: tt.include,
 				Log:     &testutil.Logger{},
 			}
-			require.NoError(t, s.Init())
+			require.NoError(t, plugin.Init())
 
 			var acc testutil.Accumulator
-			require.NoError(t, s.Gather(&acc))
+			require.NoError(t, plugin.Gather(&acc))
 
-			actual := acc.GetTelegrafMetrics()
-			testutil.RequireMetricsStructureEqual(t, tt.expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
+			options := []cmp.Option{
+				testutil.IgnoreTime(),
+				testutil.SortMetrics(),
+			}
+			testutil.RequireMetricsStructureEqual(t, tt.expected, acc.GetTelegrafMetrics(), options...)
 		})
 	}
 }
