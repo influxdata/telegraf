@@ -1,0 +1,99 @@
+{
+  "@odata.type": "#PowerSupply.v1_7_0.PowerSupply",
+  "Id": "Bay1",
+  "Name": "Power Supply Bay 1",
+  "Status": {
+    "State": "Enabled",
+    "Health": "Warning"
+  },
+  "LineInputStatus": "Normal",
+  "Model": "RKS-440DC",
+  "Manufacturer": "Contoso Power",
+  "FirmwareVersion": "1.00",
+  "SerialNumber": "3488247",
+  "PartNumber": "23456-133",
+  "SparePartNumber": "93284-133",
+  "LocationIndicatorActive": false,
+  "HotPluggable": false,
+  "PowerCapacityWatts": 400,
+  "PhaseWiringType": "OnePhase3Wire",
+  "PlugType": "IEC_60320_C14",
+  "InputRanges": [
+    {
+      "NominalVoltageType": "AC200To240V",
+      "CapacityWatts": 400
+    },
+    {
+      "NominalVoltageType": "AC120V",
+      "CapacityWatts": 350
+    },
+    {
+      "NominalVoltageType": "DC380V",
+      "CapacityWatts": 400
+    }
+  ],
+  "EfficiencyRatings": [
+    {
+      "LoadPercent": 25,
+      "EfficiencyPercent": 75
+    },
+    {
+      "LoadPercent": 50,
+      "EfficiencyPercent": 85
+    },
+    {
+      "LoadPercent": 90,
+      "EfficiencyPercent": 80
+    }
+  ],
+  "OutputRails": [
+    {
+      "NominalVoltage": 3.3,
+      "PhysicalContext": "SystemBoard",
+      "VoltageControl": {
+        "ControlMode": "Override",
+        "SetPoint": 3.45,
+        "AllowableMin": 3,
+        "AllowableMax": 3.6
+      }
+    },
+    {
+      "NominalVoltage": 5,
+      "PhysicalContext": "SystemBoard",
+      "VoltageControl": {
+        "ControlMode": "Automatic",
+        "SetPoint": 5,
+        "AllowableMin": 4.7,
+        "AllowableMax": 5.5
+      }
+    },
+    {
+      "NominalVoltage": 12,
+      "PhysicalContext": "StorageDevice"
+    }
+  ],
+  "Location": {
+    "PartLocation": {
+      "ServiceLabel": "PSU 1",
+      "LocationType": "Bay",
+      "LocationOrdinalValue": 0
+    }
+  },
+  "Links": {
+    "Outlet": {
+      "@odata.id": "https://redfishpdu.contoso.com/redfish/v1/PowerEquipment/RackPDUs/1/Outlets/A4"
+    }
+  },
+  "Assembly": {
+    "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/PowerSupply1/Assembly"
+  },
+  "Metrics": {
+    "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/PowerSupply1/Metrics"
+  },
+  "Actions": {
+    "#PowerSupply.Reset": {
+      "target": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/PowerSupply1/PowerSupply.Reset"
+    }
+  },
+  "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/PowerSupply1"
+}
