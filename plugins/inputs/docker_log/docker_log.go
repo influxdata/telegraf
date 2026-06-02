@@ -4,7 +4,6 @@ package docker_log
 import (
 	"context"
 	_ "embed"
-	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -210,9 +209,7 @@ func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 			}()
 
 			if err := d.tailContainerLogs(ctx, acc, container, containerName); err != nil {
-				if !errors.Is(err, context.Canceled) {
-					acc.AddError(err)
-				}
+				acc.AddError(err)
 			}
 		}(cntnr)
 	}
@@ -265,7 +262,7 @@ func (d *DockerLogs) tailContainerLogs(
 		ShowStderr: true,
 		Timestamps: true,
 		Details:    false,
-		Follow:     false,
+		Follow:     true,
 	}
 
 	if !d.FromBeginning {
