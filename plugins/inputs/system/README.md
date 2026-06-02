@@ -21,14 +21,14 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Read metrics about system load & uptime
 [[inputs.system]]
   ## Information to collect; available options are:
-  ##   cpus             - CPU counts of the system
-  ##   dmi              - BIOS, baseboard, chassis and product information from DMI/SMBIOS
-  ##   legacy_uptime    - legacy layout of system uptime; see README for details
-  ##   load             - 1, 5 and 15-minute load averages
-  ##   os               - operating system release and uname information
-  ##   uptime           - system uptime
-  ##   users            - logged-in user counts
-  # include = ["cpus", "legacy_uptime", "load", "users"]
+  ##   legacy - legacy layout of system metrics; see README for details
+  ##   cpus   - CPU counts of the system
+  ##   dmi    - BIOS, baseboard, chassis and product information from DMI/SMBIOS
+  ##   load   - 1, 5 and 15-minute load averages
+  ##   os     - operating system release and uname information
+  ##   uptime - system uptime
+  ##   users  - logged-in user counts
+  # include = ["legacy"]
 
   ## How long to cache the result of the "os" group between gathers.
   ## Set higher to reduce the number of os-release/uname reads, lower to
@@ -42,16 +42,20 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # dmi_cache_ttl = "8h"
 ```
 
-> [!NOTE]
-> The `uptime` and `legacy_uptime` options are mutually exclusive.
+### `legacy` include vs. fine-grained options
 
-<!-- markdownlint-disable-next-line MD028 -->
+While `legacy` is the default `include` for compatibility reasons, it is _not_
+recommended as it creates three, sparse metrics, one containing the CPU, load
+and user information, one for the uptime and one for the formatted uptime.
+However, if you are using Prometheus as an output, it might be your preferred
+choice as the metrics are typed correctly.
 
-> [!IMPORTANT]
-> Switching from `legacy_uptime` to `uptime` changes the Prometheus metric
-> type of `system_uptime` from **counter** to **gauge**. If your dashboards
-> or alerts use `rate()` or `increase()` on `system_uptime`, update them
-> before migrating.
+If you are using the fine-grained options such as `cpus` you will get a _single_,
+untyped metric containing all selected information.
+
+Both `legacy` and the fine-grained options can be used at the same time
+resulting in four metrics in total (one for the fine-grained set and three for
+the `legacy` setting).
 
 ### Permissions
 
@@ -82,80 +86,99 @@ there. Results are cached between gathers, see `dmi_cache_ttl` above.
 ## Metrics
 
 The `include` option controls which measurements and fields are gathered.
-The `cpus`, `load`, `users` and `uptime` / `legacy_uptime` groups populate the
-`system` measurement, while the `os` group emits a separate `system_os`
-measurement.
+The fine-grained options like `cpus`, `load` or `users` populate the `system`
+metric, while the `legacy` setting emits three `system` metrics.
 
-### `system`
+### fine-grained options
 
-| Field             | Include option             | Type    | Description                                 |
-|-------------------|----------------------------|---------|---------------------------------------------|
-| `load1`           | `load`                     | float   | 1-minute load average                       |
-| `load5`           | `load`                     | float   | 5-minute load average                       |
-| `load15`          | `load`                     | float   | 15-minute load average                      |
-| `n_users`         | `users`                    | integer | Number of logged-in user sessions           |
-| `n_unique_users`  | `users`                    | integer | Number of unique logged-in usernames        |
-| `n_cpus`          | `cpus`                     | integer | Number of logical CPUs                      |
-| `n_physical_cpus` | `cpus`                     | integer | Number of physical CPUs                     |
-| `uptime`          | `uptime`                   | integer | System uptime in seconds (gauge field)      |
-| `uptime`          | `legacy_uptime`            | integer | System uptime in seconds (separate counter) |
-| `uptime_format`   | `legacy_uptime`            | string  | Human-readable uptime (deprecated)          |
+When `os` is included, the values reflect operating system release information
+together with `uname`-style kernel data. Fields are reported as strings. The
+`os` and `arch` fields are always populated; the `platform`, `platform_family`,
+`platform_version` and `kernel_version` fields may be empty on unsupported
+platforms.
 
-### `system_os`
+When `dmi` is included fields may be empty if the field is not exposed by the
+system, or `unknown` when it is restricted by the kernel (typical for serial
+numbers, asset tags and the product UUID on Linux without root).
 
-Emitted only when `os` is included. The values reflect operating system
-release information together with `uname`-style kernel data. Fields are
-reported as strings. The `os` and `arch` fields are always populated; the
-`platform`, `platform_family`, `platform_version` and `kernel_version` fields
-may be empty on platforms where gopsutil cannot determine them.
+#### `system`
 
-| Field              | Type   | Description                                                          |
-|--------------------|--------|----------------------------------------------------------------------|
-| `os`               | string | Operating system family as reported by Go's runtime (e.g. `linux`)   |
-| `arch`             | string | Architecture as returned by `uname -m` (e.g. `x86_64`)               |
-| `platform`         | string | OS distribution / platform identifier (e.g. `ubuntu`, `centos`)      |
-| `platform_family`  | string | Platform family (e.g. `debian`, `rhel`)                              |
-| `platform_version` | string | Platform / distribution version (e.g. `26.04`)                       |
-| `kernel_version`   | string | Kernel release as returned by `uname -r` (e.g. `7.0.0-7-generic`)    |
+| Field               | Include option | Type    | Description                                    |
+|---------------------|----------------|---------|------------------------------------------------|
+| `n_cpus`            | `cpus`         | integer | Number of logical CPUs                         |
+| `n_physical_cpus`   | `cpus`         | integer | Number of physical CPUs                        |
+| `bios_vendor`       | `dmi`          | string  | BIOS vendor (e.g. `Dell Inc.`)                 |
+| `bios_version`      | `dmi`          | string  | BIOS version (e.g. `2.18.0`)                   |
+| `bios_date`         | `dmi`          | string  | BIOS release date (e.g. `04/12/2024`)          |
+| `board_vendor`      | `dmi`          | string  | Baseboard / motherboard vendor                 |
+| `board_product`     | `dmi`          | string  | Baseboard product name (e.g. `0X3D66`)         |
+| `board_version`     | `dmi`          | string  | Baseboard version                              |
+| `board_serial`      | `dmi`          | string  | Baseboard serial number (restricted)           |
+| `board_asset_tag`   | `dmi`          | string  | Baseboard asset tag (restricted)               |
+| `chassis_vendor`    | `dmi`          | string  | Chassis vendor                                 |
+| `chassis_type_code` | `dmi`          | string  | Chassis type code as defined by SMBIOS DSP0134 |
+| `chassis_type`      | `dmi`          | string  | Human-readable chassis type description        |
+| `chassis_version`   | `dmi`          | string  | Chassis version                                |
+| `chassis_serial`    | `dmi`          | string  | Chassis serial number (restricted)             |
+| `chassis_asset_tag` | `dmi`          | string  | Chassis asset tag (restricted)                 |
+| `product_vendor`    | `dmi`          | string  | System product vendor (e.g. `Dell Inc.`)       |
+| `product_name`      | `dmi`          | string  | System product name (e.g. `PowerEdge R750`)    |
+| `product_family`    | `dmi`          | string  | System product family                          |
+| `product_version`   | `dmi`          | string  | System product version                         |
+| `product_serial`    | `dmi`          | string  | System product serial number (restricted)      |
+| `product_sku`       | `dmi`          | string  | System product SKU                             |
+| `product_uuid`      | `dmi`          | string  | System product UUID (restricted)               |
+| `load1`             | `load`         | float   | 1-minute load average                          |
+| `load5`             | `load`         | float   | 5-minute load average                          |
+| `load15`            | `load`         | float   | 15-minute load average                         |
+| `os`                | `os`           | string  | OS family                                      |
+| `arch`              | `os`           | string  | Architecture                                   |
+| `platform`          | `os`           | string  | OS distribution / platform identifier          |
+| `platform_family`   | `os`           | string  | Platform family (e.g. `debian`, `rhel`)        |
+| `platform_version`  | `os`           | string  | Platform / distribution version                |
+| `kernel_version`    | `os`           | string  | Kernel release as returned by `uname -r`       |
+| `uptime`            | `uptime`       | integer | System uptime in seconds                       |
+| `n_users`           | `users`        | integer | Number of logged-in user sessions              |
+| `n_unique_users`    | `users`        | integer | Number of unique logged-in usernames           |
 
-### `system_dmi`
+The resulting metric is untyped.
 
-Emitted only when `dmi` is included. All fields are reported as strings
-with the values returned by the underlying source: an empty string when
-the field is not exposed by the system, or `unknown` when it is restricted
-by the kernel (typical for serial numbers, asset tags and the product
-UUID on Linux without root).
+### legacy setting
 
-| Field                      | Type   | Description                                                          |
-|----------------------------|--------|----------------------------------------------------------------------|
-| `bios_vendor`              | string | BIOS vendor (e.g. `Dell Inc.`)                                       |
-| `bios_version`             | string | BIOS version (e.g. `2.18.0`)                                         |
-| `bios_date`                | string | BIOS release date (e.g. `04/12/2024`)                                |
-| `board_vendor`             | string | Baseboard / motherboard vendor                                       |
-| `board_product`            | string | Baseboard product name (e.g. `0X3D66`)                               |
-| `board_version`            | string | Baseboard version                                                    |
-| `board_serial`             | string | Baseboard serial number (kernel-restricted on Linux)                 |
-| `board_asset_tag`          | string | Baseboard asset tag (kernel-restricted on Linux)                     |
-| `chassis_vendor`           | string | Chassis vendor                                                       |
-| `chassis_type`             | string | Chassis type code as defined by SMBIOS DSP0134 (e.g. `3`, `10`)      |
-| `chassis_type_description` | string | Human-readable chassis type description (e.g. `Desktop`, `Notebook`) |
-| `chassis_version`          | string | Chassis version                                                      |
-| `chassis_serial`           | string | Chassis serial number (kernel-restricted on Linux)                   |
-| `chassis_asset_tag`        | string | Chassis asset tag (kernel-restricted on Linux)                       |
-| `product_vendor`           | string | System product vendor (e.g. `Dell Inc.`)                             |
-| `product_name`             | string | System product name (e.g. `PowerEdge R750`)                          |
-| `product_family`           | string | System product family                                                |
-| `product_version`          | string | System product version                                               |
-| `product_serial`           | string | System product serial number (kernel-restricted on Linux)            |
-| `product_sku`              | string | System product SKU                                                   |
-| `product_uuid`             | string | System product UUID (kernel-restricted on Linux)                     |
+The following three metrics are emitted if `include` contains the `legacy`
+setting.
+
+#### `system` (gauge)
+
+| Field             | Type    | Description                                    |
+|-------------------|---------|------------------------------------------------|
+| `load1`           | float   | 1-minute load average                          |
+| `load5`           | float   | 5-minute load average                          |
+| `load15`          | float   | 15-minute load average                         |
+| `n_users`         | integer | Number of logged-in user sessions              |
+| `n_unique_users`  | integer | Number of unique logged-in usernames           |
+| `n_cpus`          | integer | Number of logical CPUs                         |
+| `n_physical_cpus` | integer | Number of physical CPUs                        |
+| `uptime`          | integer | System uptime in seconds                       |
+
+#### `system` (counter)
+
+| Field             | Type    | Description                                    |
+|-------------------|---------|------------------------------------------------|
+| `uptime`          | integer | System uptime in seconds                       |
+
+#### `system` (untyped)
+
+| Field             | Type    | Description                                    |
+|-------------------|---------|------------------------------------------------|
+| `uptime_format`   | string  | Human-readable uptime                          |
 
 ## Example Output
 
 ### Default configuration
 
-With the default `include = ["cpus", "legacy_uptime", "load", "users"]`,
-the output is backward-compatible with previous versions:
+With the default `include = ["legacy"]` the output is backward-compatible with
+previous versions:
 
 ```text
 system,host=worker-01 load1=3.72,load5=2.4,load15=2.1,n_users=3i,n_unique_users=2i,n_cpus=4i,n_physical_cpus=2i 1748000000000000000
@@ -172,28 +195,8 @@ in a single metric with the new field names:
 system,host=worker-01 load1=3.72,load5=2.4,load15=2.1,n_users=3i,n_unique_users=2i,n_cpus=4i,n_physical_cpus=2i,uptime=1249632i 1748000000000000000
 ```
 
-### OS information
-
-With `include = ["os"]`, a separate `system_os` measurement is emitted:
+When including all options the emitted metric will be
 
 ```text
-system_os,host=worker-01 os="linux",arch="x86_64",platform="ubuntu",platform_family="debian",platform_version="26.04",kernel_version="7.0.0-7-generic" 1748000000000000000
-```
-
-### DMI information
-
-With `include = ["dmi"]`, a separate `system_dmi` measurement is emitted.
-When telegraf has access to all DMI fields (e.g. running as root or with
-`CAP_SYS_ADMIN` on Linux), the metric carries the full information:
-
-```text
-system_dmi,host=worker-01 bios_vendor="Dell Inc.",bios_version="2.18.0",bios_date="04/12/2024",board_vendor="Dell Inc.",board_product="0X3D66",board_version="A00",board_serial="CN747503AB0123",board_asset_tag="",chassis_vendor="Dell Inc.",chassis_type="23",chassis_type_description="Rack mount chassis",chassis_version="",chassis_serial="7XK4P03",chassis_asset_tag="",product_vendor="Dell Inc.",product_name="PowerEdge R750",product_family="PowerEdge",product_version="",product_serial="7XK4P03",product_sku="SKU=NotProvided;ModelName=PowerEdge R750",product_uuid="4c4c4544-0058-4b10-8034-b3c04f503033" 1748000000000000000
-```
-
-When telegraf runs without privileges to read kernel-restricted DMI fields,
-those fields are reported as `unknown` instead. This is the typical case
-when telegraf runs as a regular user on Linux:
-
-```text
-system_dmi,host=worker-01 bios_vendor="Dell Inc.",bios_version="2.18.0",bios_date="04/12/2024",board_vendor="Dell Inc.",board_product="0X3D66",board_version="A00",board_serial="unknown",board_asset_tag="",chassis_vendor="Dell Inc.",chassis_type="23",chassis_type_description="Rack mount chassis",chassis_version="",chassis_serial="unknown",chassis_asset_tag="",product_vendor="Dell Inc.",product_name="PowerEdge R750",product_family="PowerEdge",product_version="",product_serial="unknown",product_sku="SKU=NotProvided;ModelName=PowerEdge R750",product_uuid="unknown" 1748000000000000000
+system,host=worker-01 load1=3.72,load5=2.4,load15=2.1,n_users=3i,n_unique_users=2i,n_cpus=4i,n_physical_cpus=2i,uptime=1249632i os="linux",arch="x86_64",platform="ubuntu",platform_family="debian",platform_version="26.04",kernel_version="7.0.0-7-generic" bios_vendor="Dell Inc.",bios_version="2.18.0",bios_date="04/12/2024",board_vendor="Dell Inc.",board_product="0X3D66",board_version="A00",board_serial="CN747503AB0123",board_asset_tag="",chassis_vendor="Dell Inc.",chassis_type="23",chassis_type_description="Rack mount chassis",chassis_version="",chassis_serial="7XK4P03",chassis_asset_tag="",product_vendor="Dell Inc.",product_name="PowerEdge R750",product_family="PowerEdge",product_version="",product_serial="7XK4P03",product_sku="SKU=NotProvided;ModelName=PowerEdge R750",product_uuid="4c4c4544-0058-4b10-8034-b3c04f503033" 1748000000000000000
 ```
