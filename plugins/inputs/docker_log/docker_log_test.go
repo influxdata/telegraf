@@ -151,7 +151,7 @@ func TestGatherConcurrentState(t *testing.T) {
 		Inspect: make(map[string]container.InspectResponse, count),
 		Logs:    make(map[string]mock.Logs, count),
 	}
-	for i := 0; i < count; i++ {
+	for i := range count {
 		id := fmt.Sprintf("container%03d", i)
 		server.List = append(server.List, container.Summary{
 			ID:    id,
