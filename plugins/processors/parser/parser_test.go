@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -21,15 +22,16 @@ import (
 
 func TestApply(t *testing.T) {
 	tests := []struct {
-		name         string
-		parseFields  []string
-		parseTags    []string
-		parseBase64  []string
-		parser       telegraf.Parser
-		dropOriginal bool
-		merge        string
-		input        telegraf.Metric
-		expected     []telegraf.Metric
+		name               string
+		parseFields        []string
+		parseTags          []string
+		parseBase64        []string
+		parser             telegraf.Parser
+		dropOriginal       bool
+		merge              string
+		input              telegraf.Metric
+		expected           []telegraf.Metric
+		undefinedTimestamp bool
 	}{
 		{
 			name:         "parse one field drop original",
@@ -51,7 +53,7 @@ func TestApply(t *testing.T) {
 				map[string]interface{}{
 					"sample": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
 				},
-				time.Unix(0, 0)),
+				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"singleField",
@@ -64,6 +66,7 @@ func TestApply(t *testing.T) {
 					map[string]interface{}{},
 					time.Unix(0, 0)),
 			},
+			undefinedTimestamp: true,
 		},
 		{
 			name:         "parse one field with merge",
@@ -86,7 +89,7 @@ func TestApply(t *testing.T) {
 				map[string]interface{}{
 					"sample": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
 				},
-				time.Unix(0, 0)),
+				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"singleField",
@@ -100,7 +103,7 @@ func TestApply(t *testing.T) {
 					map[string]interface{}{
 						"sample": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
 					},
-					time.Unix(0, 0)),
+					time.Unix(1773239679, 0)),
 			},
 		},
 		{
@@ -123,7 +126,7 @@ func TestApply(t *testing.T) {
 				map[string]interface{}{
 					"sample": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
 				},
-				time.Unix(0, 0)),
+				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"singleField",
@@ -145,6 +148,7 @@ func TestApply(t *testing.T) {
 					map[string]interface{}{},
 					time.Unix(0, 0)),
 			},
+			undefinedTimestamp: true,
 		},
 		{
 			name:         "parse one field keep with measurement name",
@@ -157,7 +161,7 @@ func TestApply(t *testing.T) {
 				map[string]interface{}{
 					"message": "deal,computer_name=hosta message=\"stuff\" 1530654676316265790",
 				},
-				time.Unix(0, 0)),
+				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"influxField",
@@ -176,6 +180,7 @@ func TestApply(t *testing.T) {
 					},
 					time.Unix(0, 0)),
 			},
+			undefinedTimestamp: true,
 		},
 		{
 			name:         "parse one field override replaces name",
@@ -191,7 +196,7 @@ func TestApply(t *testing.T) {
 				map[string]interface{}{
 					"message": "deal,computer_name=hosta message=\"stuff\" 1530654676316265790",
 				},
-				time.Unix(0, 0)),
+				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"deal",
@@ -202,7 +207,7 @@ func TestApply(t *testing.T) {
 					map[string]interface{}{
 						"message": "stuff",
 					},
-					time.Unix(0, 0)),
+					time.Unix(1773239679, 0)),
 			},
 		},
 		{
@@ -220,7 +225,7 @@ func TestApply(t *testing.T) {
 						"GET /xampp/status.php HTTP/1.1\" 200 3891 \"http://cadenza/xampp/navi.php\" \"Mozilla/5.0 (Macintosh; " +
 						"Intel Mac OS X 10.9; rv:25.0) Gecko/20100101 Firefox/25.0\"",
 				},
-				time.Unix(0, 0)),
+				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"success",
@@ -240,6 +245,7 @@ func TestApply(t *testing.T) {
 					},
 					time.Unix(0, 0)),
 			},
+			undefinedTimestamp: true,
 		},
 		{
 			name:         "parse two fields [replace]",
@@ -255,7 +261,7 @@ func TestApply(t *testing.T) {
 					"field_1": `{"lvl":"info","msg":"http request"}`,
 					"field_2": `{"err":"fatal","fatal":"security threat"}`,
 				},
-				time.Unix(0, 0)),
+				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"bigMeasure",
@@ -272,6 +278,7 @@ func TestApply(t *testing.T) {
 					map[string]interface{}{},
 					time.Unix(0, 0)),
 			},
+			undefinedTimestamp: true,
 		},
 		{
 			name:         "parse two fields [merge]",
@@ -288,7 +295,7 @@ func TestApply(t *testing.T) {
 					"field_1": `{"lvl":"info","msg":"http request"}`,
 					"field_2": `{"err":"fatal","fatal":"security threat"}`,
 				},
-				time.Unix(0, 0)),
+				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"bigMeasure",
@@ -302,7 +309,7 @@ func TestApply(t *testing.T) {
 						"field_1": `{"lvl":"info","msg":"http request"}`,
 						"field_2": `{"err":"fatal","fatal":"security threat"}`,
 					},
-					time.Unix(0, 0)),
+					time.Unix(1773239679, 0)),
 			},
 		},
 		{
@@ -319,7 +326,7 @@ func TestApply(t *testing.T) {
 					"field_1": `{"lvl":"info","msg":"http request"}`,
 					"field_2": `{"err":"fatal","fatal":"security threat"}`,
 				},
-				time.Unix(0, 0)),
+				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"bigMeasure",
@@ -346,6 +353,7 @@ func TestApply(t *testing.T) {
 					map[string]interface{}{},
 					time.Unix(0, 0)),
 			},
+			undefinedTimestamp: true,
 		},
 		{
 			name:         "parse one tag drop original",
@@ -359,7 +367,7 @@ func TestApply(t *testing.T) {
 					"sample": `ts=2018-07-24T19:43:40.275Z`,
 				},
 				map[string]interface{}{},
-				time.Unix(0, 0)),
+				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"singleTag",
@@ -369,6 +377,7 @@ func TestApply(t *testing.T) {
 					},
 					time.Unix(0, 0)),
 			},
+			undefinedTimestamp: true,
 		},
 		{
 			name:         "parse one tag with merge",
@@ -383,7 +392,7 @@ func TestApply(t *testing.T) {
 					"sample": `ts=2018-07-24T19:43:40.275Z`,
 				},
 				map[string]interface{}{},
-				time.Unix(0, 0)),
+				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"singleTag",
@@ -394,7 +403,7 @@ func TestApply(t *testing.T) {
 					map[string]interface{}{
 						"ts": "2018-07-24T19:43:40.275Z",
 					},
-					time.Unix(0, 0)),
+					time.Unix(1773239679, 0)),
 			},
 		},
 		{
@@ -409,7 +418,7 @@ func TestApply(t *testing.T) {
 					"sample": `ts=2018-07-24T19:43:40.275Z`,
 				},
 				map[string]interface{}{},
-				time.Unix(0, 0)),
+				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"singleTag",
@@ -427,9 +436,10 @@ func TestApply(t *testing.T) {
 					},
 					time.Unix(0, 0)),
 			},
+			undefinedTimestamp: true,
 		},
 		{
-			name:         "Fail to parse one field but parses other [keep]",
+			name:         "fail to parse one field but parses other [keep]",
 			parseFields:  []string{"good", "bad"},
 			dropOriginal: false,
 			parser: &json.Parser{
@@ -442,7 +452,7 @@ func TestApply(t *testing.T) {
 					"good": `{"lvl":"info"}`,
 					"bad":  "why",
 				},
-				time.Unix(0, 0)),
+				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"success",
@@ -460,9 +470,10 @@ func TestApply(t *testing.T) {
 					map[string]interface{}{},
 					time.Unix(0, 0)),
 			},
+			undefinedTimestamp: true,
 		},
 		{
-			name:         "Fail to parse one field but parses other [keep] v2",
+			name:         "fail to parse one field but parses other [keep] v2",
 			parseFields:  []string{"bad", "good", "ok"},
 			dropOriginal: false,
 			parser: &json.Parser{
@@ -476,7 +487,7 @@ func TestApply(t *testing.T) {
 					"good": `{"lvl":"info"}`,
 					"ok":   `{"thing":"thang"}`,
 				},
-				time.Unix(0, 0)),
+				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"success",
@@ -502,9 +513,10 @@ func TestApply(t *testing.T) {
 					map[string]interface{}{},
 					time.Unix(0, 0)),
 			},
+			undefinedTimestamp: true,
 		},
 		{
-			name:         "Fail to parse one field but parses other [merge]",
+			name:         "fail to parse one field but parses other [merge]",
 			parseFields:  []string{"good", "bad"},
 			dropOriginal: false,
 			merge:        "override",
@@ -520,7 +532,7 @@ func TestApply(t *testing.T) {
 					"good": `{"lvl":"info"}`,
 					"bad":  "why",
 				},
-				time.Unix(0, 0)),
+				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"success",
@@ -532,11 +544,11 @@ func TestApply(t *testing.T) {
 						"good": `{"lvl":"info"}`,
 						"bad":  "why",
 					},
-					time.Unix(0, 0)),
+					time.Unix(1773239679, 0)),
 			},
 		},
 		{
-			name:         "Fail to parse one field but parses other [replace]",
+			name:         "fail to parse one field but parses other [replace]",
 			parseFields:  []string{"good", "bad"},
 			dropOriginal: true,
 			parser: &json.Parser{
@@ -551,7 +563,7 @@ func TestApply(t *testing.T) {
 					"good": `{"lvl":"info"}`,
 					"bad":  "why",
 				},
-				time.Unix(0, 0)),
+				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"success",
@@ -561,6 +573,7 @@ func TestApply(t *testing.T) {
 					map[string]interface{}{},
 					time.Unix(0, 0)),
 			},
+			undefinedTimestamp: true,
 		},
 		{
 			name:        "parser without metric name (issue #12115)",
@@ -578,13 +591,13 @@ func TestApply(t *testing.T) {
 				"myname",
 				map[string]string{},
 				map[string]interface{}{"value": "7.2"},
-				time.Unix(0, 0)),
+				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"myname",
 					map[string]string{},
 					map[string]interface{}{"value": float64(7.2)},
-					time.Unix(0, 0)),
+					time.Unix(1773239679, 0)),
 			},
 		},
 		{
@@ -597,13 +610,13 @@ func TestApply(t *testing.T) {
 				"myname",
 				map[string]string{},
 				map[string]interface{}{"value": "test value=7.2"},
-				time.Unix(0, 0)),
+				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"test",
 					map[string]string{},
 					map[string]interface{}{"value": float64(7.2)},
-					time.Unix(0, 0)),
+					time.Unix(1773239679, 0)),
 			},
 		},
 		{
@@ -620,7 +633,7 @@ func TestApply(t *testing.T) {
 				map[string]interface{}{
 					"value": `{"timestamp": "2020-06-27 19:43:40", "value": 42.1}`,
 				},
-				time.Unix(0, 0)),
+				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"myname",
@@ -726,7 +739,7 @@ func TestApply(t *testing.T) {
 				map[string]interface{}{
 					"sample": `eyJ0ZXh0IjogInRlc3QgYmFzZTY0In0=`,
 				},
-				time.Unix(0, 0)),
+				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"singleField",
@@ -736,6 +749,7 @@ func TestApply(t *testing.T) {
 					map[string]interface{}{},
 					time.Unix(0, 0)),
 			},
+			undefinedTimestamp: true,
 		},
 		{
 			name:         "parse two base64 fields",
@@ -751,7 +765,7 @@ func TestApply(t *testing.T) {
 					"field_1": `eyJsdmwiOiJpbmZvIiwibXNnIjoiaHR0cCByZXF1ZXN0In0=`,
 					"field_2": `eyJlcnIiOiJmYXRhbCIsImZhdGFsIjoic2VjdXJpdHkgdGhyZWF0In0=`,
 				},
-				time.Unix(0, 0)),
+				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"bigMeasure",
@@ -770,6 +784,7 @@ func TestApply(t *testing.T) {
 					map[string]interface{}{},
 					time.Unix(0, 0)),
 			},
+			undefinedTimestamp: true,
 		},
 		{
 			name:         "parse two fields, one base64",
@@ -786,7 +801,7 @@ func TestApply(t *testing.T) {
 					"field_1": `eyJsdmwiOiJpbmZvIiwibXNnIjoiaHR0cCByZXF1ZXN0In0=`,
 					"field_2": `{"err":"fatal","fatal":"security threat"}`,
 				},
-				time.Unix(0, 0)),
+				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"bigMeasure",
@@ -805,6 +820,7 @@ func TestApply(t *testing.T) {
 					map[string]interface{}{},
 					time.Unix(0, 0)),
 			},
+			undefinedTimestamp: true,
 		},
 	}
 
@@ -826,12 +842,14 @@ func TestApply(t *testing.T) {
 			output := plugin.Apply(tt.input)
 			t.Logf("Testing: %s", tt.name)
 
-			// check timestamp when using with-timestamp merge type
-			if tt.merge == "override-with-timestamp" {
-				testutil.RequireMetricsEqual(t, tt.expected, output, testutil.SortMetrics())
-			} else {
-				testutil.RequireMetricsEqual(t, tt.expected, output, testutil.SortMetrics(), testutil.IgnoreTime())
+			// Check timestamp only if it is defined by the metrics
+			options := []cmp.Option{
+				testutil.SortMetrics(),
 			}
+			if tt.undefinedTimestamp {
+				options = append(options, testutil.IgnoreTime())
+			}
+			testutil.RequireMetricsEqual(t, tt.expected, output, options...)
 		})
 	}
 }
