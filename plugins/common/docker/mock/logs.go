@@ -17,7 +17,7 @@ type Logs struct {
 func WriteLog(ctx context.Context, t *testing.T, w http.ResponseWriter, msgs <-chan *Logs) {
 	t.Helper()
 
-	// We need to flush all content to really transmit it over the wrie and
+	// We need to flush all content to really transmit it over the wire and
 	// avoid keeping things in the buffer
 	f := w.(interface{ Flush() })
 
