@@ -2,6 +2,7 @@
 package azure_monitor
 
 import (
+	"context"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -9,13 +10,16 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	receiver "github.com/logzio/azure-monitor-metrics-receiver"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+//go:embed sample.conf
+var sampleConfig string
+
+const maxMetricsBatch = 20
 
 type AzureMonitor struct {
 	SubscriptionID       string                 `toml:"subscription_id"`
@@ -28,9 +32,8 @@ type AzureMonitor struct {
 	SubscriptionTargets  []*resource            `toml:"subscription_target"`
 	Log                  telegraf.Logger        `toml:"-"`
 
-	receiver     *receiver.AzureMonitorMetricsReceiver
-	azureManager azureClientsCreator
-	azureClients *receiver.AzureClients
+	receiver *metricReceiver
+	factory  clientFactory
 }
 
 type resourceTarget struct {
@@ -50,33 +53,39 @@ type resource struct {
 	Aggregations []string `toml:"aggregations"`
 }
 
-type azureClientsManager struct{}
-
-type azureClientsCreator interface {
-	createAzureClients(subscriptionID string, clientID string, clientSecret string, tenantID string,
-		clientOptions azcore.ClientOptions) (*receiver.AzureClients, error)
-}
-
-//go:embed sample.conf
-var sampleConfig string
-
 func (*AzureMonitor) SampleConfig() string {
 	return sampleConfig
 }
 
 func (am *AzureMonitor) Init() error {
+	// Validate settings
 	if am.SubscriptionID == "" {
 		return errors.New("subscription_id is required")
 	}
 
+	if len(am.ResourceTargets) == 0 && len(am.ResourceGroupTargets) == 0 && len(am.SubscriptionTargets) == 0 {
+		return errors.New("no target to collect metrics from")
+	}
+
+	// Validate the targets
+	if err := am.validateTargets(); err != nil {
+		return err
+	}
+
+	// Canonicalize resource target IDs
+	for _, target := range am.ResourceTargets {
+		target.ResourceID = "/subscriptions/" + am.SubscriptionID + "/" + target.ResourceID
+	}
+
+	// Setup client options
 	var clientOptions azcore.ClientOptions
 	switch am.CloudOption {
 	case "AzureChina":
-		clientOptions = azcore.ClientOptions{Cloud: cloud.AzureChina}
+		clientOptions.Cloud = cloud.AzureChina
 	case "AzureGovernment":
-		clientOptions = azcore.ClientOptions{Cloud: cloud.AzureGovernment}
+		clientOptions.Cloud = cloud.AzureGovernment
 	case "", "AzurePublic":
-		clientOptions = azcore.ClientOptions{Cloud: cloud.AzurePublic}
+		clientOptions.Cloud = cloud.AzurePublic
 	default:
 		return fmt.Errorf("unknown cloud option: %s", am.CloudOption)
 	}
@@ -97,40 +106,20 @@ func (am *AzureMonitor) Init() error {
 		secret.Destroy()
 	}
 
-	var err error
-	am.azureClients, err = am.azureManager.createAzureClients(am.SubscriptionID, am.ClientID, clientSecret, am.TenantID, clientOptions)
+	// Create a new client
+	client, err := am.factory.createClient(am.SubscriptionID, am.ClientID, clientSecret, am.TenantID, clientOptions)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating client failed: %w", err)
 	}
 
-	if err = am.setReceiver(); err != nil {
-		return fmt.Errorf("error setting Azure Monitor receiver: %w", err)
+	// Setup the receiver
+	ctx := context.Background()
+	receiver, err := newReceiver(ctx, client, am.SubscriptionID, am.ResourceTargets, am.ResourceGroupTargets, am.SubscriptionTargets)
+	if err != nil {
+		return fmt.Errorf("creating receiver failed: %w", err)
 	}
-
-	if err = am.receiver.CreateResourceTargetsFromResourceGroupTargets(); err != nil {
-		return fmt.Errorf("error creating resource targets from resource group targets: %w", err)
-	}
-
-	if err = am.receiver.CreateResourceTargetsFromSubscriptionTargets(); err != nil {
-		return fmt.Errorf("error creating resource targets from subscription targets: %w", err)
-	}
-
-	if err = am.receiver.CheckResourceTargetsMetricsValidation(); err != nil {
-		return fmt.Errorf("error checking resource targets metrics validation: %w", err)
-	}
-
-	if err = am.receiver.SetResourceTargetsMetrics(); err != nil {
-		return fmt.Errorf("error setting resource targets metrics: %w", err)
-	}
-
-	if err = am.receiver.SplitResourceTargetsMetricsByMinTimeGrain(); err != nil {
-		return fmt.Errorf("error splitting resource targets metrics by min time grain: %w", err)
-	}
-
-	am.receiver.SplitResourceTargetsWithMoreThanMaxMetrics()
-	am.receiver.SetResourceTargetsAggregations()
-
-	am.Log.Debug("Total resource targets: ", len(am.receiver.Targets.ResourceTargets))
+	am.receiver = receiver
+	am.Log.Debug("Total resource targets: ", len(am.receiver.resources))
 
 	return nil
 }
@@ -138,25 +127,15 @@ func (am *AzureMonitor) Init() error {
 func (am *AzureMonitor) Gather(acc telegraf.Accumulator) error {
 	var waitGroup sync.WaitGroup
 
-	for _, target := range am.receiver.Targets.ResourceTargets {
+	for _, target := range am.receiver.resources {
 		am.Log.Debug("Collecting metrics for resource target ", target.ResourceID)
-		waitGroup.Add(1)
+		ctx := context.Background()
 
-		go func(target *receiver.ResourceTarget) {
+		waitGroup.Add(1)
+		go func(target *resourceTarget) {
 			defer waitGroup.Done()
 
-			collectedMetrics, notCollectedMetrics, err := am.receiver.CollectResourceTargetMetrics(target)
-			if err != nil {
-				acc.AddError(err)
-			}
-
-			for _, collectedMetric := range collectedMetrics {
-				acc.AddFields(collectedMetric.Name, collectedMetric.Fields, collectedMetric.Tags)
-			}
-
-			for _, notCollectedMetric := range notCollectedMetrics {
-				am.Log.Info("Did not get any metric value from Azure Monitor API for the metric ID ", notCollectedMetric)
-			}
+			am.receiver.collectMetrics(ctx, acc, target, am.Log)
 		}(target)
 	}
 
@@ -164,54 +143,45 @@ func (am *AzureMonitor) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (am *AzureMonitor) setReceiver() error {
-	resourceTargets := make([]*receiver.ResourceTarget, 0, len(am.ResourceTargets))
-	resourceGroupTargets := make([]*receiver.ResourceGroupTarget, 0, len(am.ResourceGroupTargets))
-	subscriptionTargets := make([]*receiver.Resource, 0, len(am.SubscriptionTargets))
-
-	for _, target := range am.ResourceTargets {
-		resourceTargets = append(resourceTargets, receiver.NewResourceTarget(target.ResourceID, target.Metrics, target.Aggregations))
+func (am *AzureMonitor) validateTargets() error {
+	// Validate resource targets
+	for index, target := range am.ResourceTargets {
+		if target.ResourceID == "" {
+			return fmt.Errorf("missing resource ID in resource target #%d", index+1)
+		}
 	}
 
-	for _, target := range am.ResourceGroupTargets {
-		resources := make([]*receiver.Resource, 0, len(target.Resources))
-		for _, resource := range target.Resources {
-			resources = append(resources, receiver.NewResource(resource.ResourceType, resource.Metrics, resource.Aggregations))
+	// Validate resource group targets
+	for index, target := range am.ResourceGroupTargets {
+		if target.ResourceGroup == "" {
+			return fmt.Errorf("missing resource group in resource group target #%d", index+1)
 		}
 
-		resourceGroupTargets = append(resourceGroupTargets, receiver.NewResourceGroupTarget(target.ResourceGroup, resources))
+		if len(target.Resources) == 0 {
+			return fmt.Errorf("no resources in resource group target #%d", index+1)
+		}
+
+		for resourceIndex, resource := range target.Resources {
+			if resource.ResourceType == "" {
+				return fmt.Errorf("no resource type for resource group target #%d resource #%d", index+1, resourceIndex+1)
+			}
+		}
 	}
 
-	for _, target := range am.SubscriptionTargets {
-		subscriptionTargets = append(subscriptionTargets, receiver.NewResource(target.ResourceType, target.Metrics, target.Aggregations))
+	// Validate subscription targets
+	for index, target := range am.SubscriptionTargets {
+		if target.ResourceType == "" {
+			return fmt.Errorf("missing resource type in subscription target #%d", index+1)
+		}
 	}
 
-	targets := receiver.NewTargets(resourceTargets, resourceGroupTargets, subscriptionTargets)
-	var err error
-	am.receiver, err = receiver.NewAzureMonitorMetricsReceiver(am.SubscriptionID, targets, am.azureClients)
-	return err
-}
-
-func (*azureClientsManager) createAzureClients(
-	subscriptionID, clientID, clientSecret, tenantID string,
-	clientOptions azcore.ClientOptions,
-) (*receiver.AzureClients, error) {
-	if clientSecret != "" {
-		return receiver.CreateAzureClients(subscriptionID, clientID, clientSecret, tenantID, receiver.WithAzureClientOptions(&clientOptions))
-	}
-
-	token, err := azidentity.NewDefaultAzureCredential(&azidentity.DefaultAzureCredentialOptions{TenantID: tenantID,
-		ClientOptions: clientOptions})
-	if err != nil {
-		return nil, fmt.Errorf("error creating Azure token: %w", err)
-	}
-	return receiver.CreateAzureClientsWithCreds(subscriptionID, token, receiver.WithAzureClientOptions(&clientOptions))
+	return nil
 }
 
 func init() {
 	inputs.Add("azure_monitor", func() telegraf.Input {
 		return &AzureMonitor{
-			azureManager: &azureClientsManager{},
+			factory: &azureFactory{},
 		}
 	})
 }
