@@ -628,12 +628,16 @@ func (p *Prometheus) gatherURL(u urlAndAddress, acc telegraf.Accumulator) (map[s
 	// Parse the metrics
 	var metricParser telegraf.Parser
 	if openmetrics.AcceptsContent(resp.Header) {
-		metricParser = &openmetrics.Parser{
+		mp := &openmetrics.Parser{
 			Header:          resp.Header,
 			MetricVersion:   p.MetricVersion,
 			IgnoreTimestamp: p.IgnoreTimestamp,
 			Log:             p.Log,
 		}
+		if err := mp.Init(); err != nil {
+			return nil, nil, err
+		}
+		metricParser = mp
 	} else {
 		metricParser = &parsers_prometheus.Parser{
 			Header:          resp.Header,
