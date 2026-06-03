@@ -354,26 +354,31 @@ jobs:
           nightly: << parameters.nightly >>
   nightly:
     executor: telegraf-ci
+    environment:
+      AWS_REGION: auto
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
     steps:
       - attach_workspace:
           at: '/build'
       - run:
           command: |
-            aws s3 sync /build/dist s3://dl.influxdata.com/telegraf/nightlies/ \
+            aws s3 sync /build/dist s3://dl-influxdata-com/telegraf/nightlies/ \
               --exclude "*" \
               --include "*.tar.gz" \
               --include "*.deb" \
               --include "*.rpm" \
-              --include "*.zip" \
-              --acl public-read
+              --include "*.zip"
   release:
     executor: telegraf-ci
+    environment:
+      AWS_REGION: auto
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
     steps:
       - attach_workspace:
           at: '/build'
       - run:
           command: |
-            aws s3 sync /build/dist s3://dl.influxdata.com/telegraf/releases/ \
+            aws s3 sync /build/dist s3://dl-influxdata-com/telegraf/releases/ \
               --exclude "*" \
               --include "telegraf*.DIGESTS" \
               --include "telegraf*.digests" \
@@ -382,8 +387,7 @@ jobs:
               --include "telegraf*.dmg" \
               --include "telegraf*.rpm" \
               --include "telegraf*.tar.gz" \
-              --include "telegraf*.zip" \
-              --acl public-read
+              --include "telegraf*.zip"
   docker-nightly:
     machine:
       image: ubuntu-2204:current
