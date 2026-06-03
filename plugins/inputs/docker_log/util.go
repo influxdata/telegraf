@@ -138,7 +138,7 @@ func tailMultiplexed(acc telegraf.Accumulator, tags map[string]string, container
 	_ = src.Close()
 	wg.Wait()
 
-	if err != nil {
+	if err != nil && !errors.Is(err, context.Canceled) {
 		return time.Time{}, err
 	}
 	if tsStdout.After(tsStderr) {

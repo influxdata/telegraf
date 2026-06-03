@@ -33,7 +33,17 @@ func WriteLog(ctx context.Context, t *testing.T, w http.ResponseWriter, msgs <-c
 			if !ok {
 				return
 			}
-			logLine := []byte(msg.Content)
+			var logLine []byte
+			if msg.Multiplexed {
+				buf, err := msg.multiplex()
+				if err != nil {
+					t.Logf("multiplexing failed: %v", err)
+					continue
+				}
+				logLine = buf
+			} else {
+				logLine = []byte(msg.Content)
+			}
 			if _, err := w.Write(logLine); err != nil {
 				t.Logf("writing log line failed: %v", err)
 			}
