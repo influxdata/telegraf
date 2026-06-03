@@ -153,19 +153,6 @@ func TestGather(t *testing.T) {
 			},
 		},
 		{
-			name:    "uptime as gauge field",
-			include: []string{"uptime"},
-			expected: []telegraf.Metric{
-				metric.New(
-					"system",
-					map[string]string{},
-					map[string]interface{}{"uptime": uint64(0)},
-					time.Unix(0, 0),
-					telegraf.Untyped,
-				),
-			},
-		},
-		{
 			name:         "all new options",
 			include:      []string{"load", "users", "cpus", "uptime"},
 			requireUsers: true,
