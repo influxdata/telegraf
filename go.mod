@@ -175,7 +175,7 @@ require (
 	github.com/pborman/ansi v1.1.0
 	github.com/pcolladosoto/goslurm v0.1.0
 	github.com/peterbourgon/unixtransport v0.0.7
-	github.com/pion/dtls/v3 v3.1.2
+	github.com/pion/dtls/v3 v3.1.3
 	github.com/prometheus-community/pro-bing v0.8.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
