@@ -177,8 +177,11 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 
 func (s *System) gatherLegacy(acc telegraf.Accumulator, now time.Time) error {
 	loadavg, err := load.Avg()
-	if err != nil && !strings.Contains(err.Error(), "not implemented") {
-		return err
+	if err != nil {
+		if !strings.Contains(err.Error(), "not implemented") {
+			return err
+		}
+		loadavg = &load.AvgStat{}
 	}
 
 	numLogicalCPUs, err := cpu.Counts(true)
