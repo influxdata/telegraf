@@ -21,15 +21,14 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Read metrics about system load & uptime
 [[inputs.system]]
   ## Information to collect; available options are:
-  ##   load             - 1, 5 and 15-minute load averages
-  ##   users            - logged-in user counts
   ##   cpus             - CPU counts of the system
-  ##   legacy_cpus      - legacy layout of CPU counts; see README for details
-  ##   uptime           - system uptime
-  ##   legacy_uptime    - legacy layout of system uptime; see README for details
-  ##   os               - operating system release and uname information
   ##   dmi              - BIOS, baseboard, chassis and product information from DMI/SMBIOS
-  # include = ["load", "users", "legacy_cpus", "legacy_uptime"]
+  ##   legacy_uptime    - legacy layout of system uptime; see README for details
+  ##   load             - 1, 5 and 15-minute load averages
+  ##   os               - operating system release and uname information
+  ##   uptime           - system uptime
+  ##   users            - logged-in user counts
+  # include = ["cpus", "legacy_uptime", "load", "users"]
 
   ## How long to cache the result of the "os" group between gathers.
   ## Set higher to reduce the number of os-release/uname reads, lower to
@@ -44,8 +43,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```
 
 > [!NOTE]
-> The `cpus` and `legacy_cpus` options are mutually exclusive,
-> as are `uptime` and `legacy_uptime`.
+> The `uptime` and `legacy_uptime` options are mutually exclusive.
 
 <!-- markdownlint-disable-next-line MD028 -->
 
@@ -84,9 +82,9 @@ there. Results are cached between gathers, see `dmi_cache_ttl` above.
 ## Metrics
 
 The `include` option controls which measurements and fields are gathered.
-The `load`, `users`, `cpus` / `legacy_cpus` and `uptime` / `legacy_uptime`
-groups populate the `system` measurement, while the `os` group emits a
-separate `system_os` measurement.
+The `cpus`, `load`, `users` and `uptime` / `legacy_uptime` groups populate the
+`system` measurement, while the `os` group emits a separate `system_os`
+measurement.
 
 ### `system`
 
@@ -97,9 +95,8 @@ separate `system_os` measurement.
 | `load15`          | `load`                     | float   | 15-minute load average                      |
 | `n_users`         | `users`                    | integer | Number of logged-in user sessions           |
 | `n_unique_users`  | `users`                    | integer | Number of unique logged-in usernames        |
-| `n_virtual_cpus`  | `cpus`                     | integer | Number of logical CPUs                      |
-| `n_cpus`          | `legacy_cpus`              | integer | Number of logical CPUs (legacy name)        |
-| `n_physical_cpus` | `cpus` / `legacy_cpus`     | integer | Number of physical CPUs                     |
+| `n_cpus`          | `cpus`                     | integer | Number of logical CPUs                      |
+| `n_physical_cpus` | `cpus`                     | integer | Number of physical CPUs                     |
 | `uptime`          | `uptime`                   | integer | System uptime in seconds (gauge field)      |
 | `uptime`          | `legacy_uptime`            | integer | System uptime in seconds (separate counter) |
 | `uptime_format`   | `legacy_uptime`            | string  | Human-readable uptime (deprecated)          |
@@ -157,7 +154,7 @@ UUID on Linux without root).
 
 ### Default configuration
 
-With the default `include = ["load", "users", "legacy_cpus", "legacy_uptime"]`,
+With the default `include = ["cpus", "legacy_uptime", "load", "users"]`,
 the output is backward-compatible with previous versions:
 
 ```text
@@ -168,11 +165,11 @@ system,host=worker-01 uptime_format="14 days, 11:07" 1748000000000000000
 
 ### Recommended configuration
 
-With `include = ["load", "users", "cpus", "uptime"]`, all fields are emitted
+With `include = ["cpus", "load", "users", "uptime"]`, all fields are emitted
 in a single metric with the new field names:
 
 ```text
-system,host=worker-01 load1=3.72,load5=2.4,load15=2.1,n_users=3i,n_unique_users=2i,n_virtual_cpus=4i,n_physical_cpus=2i,uptime=1249632i 1748000000000000000
+system,host=worker-01 load1=3.72,load5=2.4,load15=2.1,n_users=3i,n_unique_users=2i,n_cpus=4i,n_physical_cpus=2i,uptime=1249632i 1748000000000000000
 ```
 
 ### OS information

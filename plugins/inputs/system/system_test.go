@@ -72,14 +72,14 @@ func TestUniqueUsers(t *testing.T) {
 }
 
 func TestInitAllValidOptions(t *testing.T) {
-	// cpus/legacy_cpus and uptime/legacy_uptime are mutually exclusive,
-	// so cover all six valid values across two configurations.
+	// The uptime/legacy_uptime settings are mutually exclusive, so cover all
+	// valid values across two configurations.
 	tests := []struct {
 		name    string
 		include []string
 	}{
 		{"new", []string{"load", "users", "cpus", "uptime", "os", "dmi"}},
-		{"legacy", []string{"load", "users", "legacy_cpus", "legacy_uptime", "os", "dmi"}},
+		{"legacy", []string{"load", "users", "cpus", "legacy_uptime", "os", "dmi"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -99,11 +99,6 @@ func TestInitErrors(t *testing.T) {
 			name:    "invalid option",
 			include: []string{"invalid"},
 			errMsg:  `invalid 'include' option "invalid"`,
-		},
-		{
-			name:    "cpus mutually exclusive",
-			include: []string{"cpus", "legacy_cpus"},
-			errMsg:  "mutually exclusive",
 		},
 		{
 			name:    "uptime mutually exclusive",
@@ -178,7 +173,7 @@ func TestGather(t *testing.T) {
 					"system",
 					map[string]string{},
 					map[string]interface{}{
-						"n_virtual_cpus":  0,
+						"n_cpus":          0,
 						"n_physical_cpus": 0,
 					},
 					time.Unix(0, 0),
@@ -213,7 +208,7 @@ func TestGather(t *testing.T) {
 						"load15":          float64(0),
 						"n_users":         0,
 						"n_unique_users":  0,
-						"n_virtual_cpus":  0,
+						"n_cpus":          0,
 						"n_physical_cpus": 0,
 						"uptime":          uint64(0),
 					},
@@ -267,7 +262,7 @@ func TestGather(t *testing.T) {
 					"system",
 					map[string]string{},
 					map[string]interface{}{
-						"n_virtual_cpus":  0,
+						"n_cpus":          0,
 						"n_physical_cpus": 0,
 					},
 					time.Unix(0, 0),

@@ -16,6 +16,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	inputs "github.com/influxdata/telegraf/plugins/inputs/prometheus"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
+	"github.com/influxdata/telegraf/selfstat"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -489,6 +490,7 @@ rpc_duration_seconds_count 2693
 				URLs:          []string{address},
 				URLTag:        "",
 				MetricVersion: 1,
+				Statistics:    selfstat.NewCollector(make(map[string]string)),
 			}
 			err := input.Init()
 			require.NoError(t, err)

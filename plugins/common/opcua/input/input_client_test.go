@@ -784,6 +784,28 @@ func TestMetricForNode(t *testing.T) {
 				time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{})),
 		},
 		{
+			testname: "byte array metric build correctly",
+			nmm: []NodeMetricMapping{
+				{
+					Tag: NodeSettings{
+						FieldName: "fn",
+					},
+					idStr:      "ns=3;s=hi",
+					metricName: "testingmetric",
+					MetricTags: map[string]string{"t1": "v1"},
+				},
+			},
+			v:        ua.ByteArray{0x01, 0x02},
+			isArray:  true,
+			dataType: ua.TypeIDByte,
+			time:     time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{}),
+			status:   ua.StatusOK,
+			expected: metric.New("testingmetric",
+				map[string]string{"t1": "v1", "id": "ns=3;s=hi"},
+				map[string]interface{}{"Quality": "The operation succeeded. StatusGood (0x0)", "fn[0]": byte(1), "fn[1]": byte(2)},
+				time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{})),
+		},
+		{
 			testname: "datetime array metric build correctly",
 			nmm: []NodeMetricMapping{
 				{

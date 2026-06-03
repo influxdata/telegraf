@@ -2,10 +2,13 @@
 package kafka
 
 import (
+	"bytes"
 	_ "embed"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/IBM/sarama"
@@ -24,16 +27,17 @@ var sampleConfig string
 var zeroTime = time.Unix(0, 0)
 
 type Kafka struct {
-	Brokers           []string        `toml:"brokers"`
-	Topic             string          `toml:"topic"`
-	TopicTag          string          `toml:"topic_tag"`
-	ExcludeTopicTag   bool            `toml:"exclude_topic_tag"`
-	TopicSuffix       TopicSuffix     `toml:"topic_suffix"`
-	RoutingTag        string          `toml:"routing_tag"`
-	RoutingKey        string          `toml:"routing_key"`
-	ProducerTimestamp string          `toml:"producer_timestamp"`
-	MetricNameHeader  string          `toml:"metric_name_header"`
-	Log               telegraf.Logger `toml:"-"`
+	Brokers           []string          `toml:"brokers"`
+	Topic             string            `toml:"topic"`
+	TopicTag          string            `toml:"topic_tag"`
+	ExcludeTopicTag   bool              `toml:"exclude_topic_tag"`
+	TopicSuffix       TopicSuffix       `toml:"topic_suffix"`
+	RoutingTag        string            `toml:"routing_tag"`
+	RoutingKey        string            `toml:"routing_key"`
+	ProducerTimestamp string            `toml:"producer_timestamp"`
+	MetricNameHeader  string            `toml:"metric_name_header" deprecated:"1.39.0;1.45.0;please use 'headers' instead"`
+	Headers           map[string]string `toml:"headers"`
+	Log               telegraf.Logger   `toml:"-"`
 	proxy.Socks5ProxyConfig
 	kafka.WriteConfig
 
@@ -45,6 +49,7 @@ type Kafka struct {
 	saramaConfig *sarama.Config
 	producerFunc func(addrs []string, config *sarama.Config) (sarama.SyncProducer, error)
 	producer     sarama.SyncProducer
+	headerTmpl   map[string]*template.Template
 
 	serializer telegraf.Serializer
 }
@@ -74,16 +79,25 @@ func (k *Kafka) Init() error {
 		return fmt.Errorf("unknown topic suffix method provided: %s", k.TopicSuffix.Method)
 	}
 
-	config := sarama.NewConfig()
-	if err := k.SetConfig(config, k.Log); err != nil {
-		return err
-	}
-
 	// Legacy support ssl config
 	if k.Certificate != "" {
 		k.TLSCert = k.Certificate
 		k.TLSCA = k.CA
 		k.TLSKey = k.Key
+	}
+
+	// Legacy support for metric_name_header
+	if k.MetricNameHeader != "" {
+		if k.Headers == nil {
+			k.Headers = make(map[string]string, 1)
+		}
+		k.Headers[k.MetricNameHeader] = "{{ .Name }}"
+	}
+
+	// Create new configuration
+	config := sarama.NewConfig()
+	if err := k.SetConfig(config, k.Log); err != nil {
+		return err
 	}
 
 	if k.Socks5ProxyEnabled {
@@ -103,6 +117,16 @@ func (k *Kafka) Init() error {
 	case "metric", "now":
 	default:
 		return fmt.Errorf("unknown producer_timestamp option: %s", k.ProducerTimestamp)
+	}
+
+	// Setup header templates
+	k.headerTmpl = make(map[string]*template.Template, len(k.Headers))
+	for name, expr := range k.Headers {
+		tmpl, err := template.New(name).Parse(expr)
+		if err != nil {
+			return fmt.Errorf("creating template for header %q failed: %w", name, err)
+		}
+		k.headerTmpl[name] = tmpl
 	}
 
 	return nil
@@ -136,17 +160,23 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 		}
 
 		m := &sarama.ProducerMessage{
-			Topic: topic,
-			Value: sarama.ByteEncoder(buf),
+			Topic:   topic,
+			Value:   sarama.ByteEncoder(buf),
+			Headers: make([]sarama.RecordHeader, 0, len(k.headerTmpl)),
 		}
 
-		if k.MetricNameHeader != "" {
-			m.Headers = []sarama.RecordHeader{
-				{
-					Key:   []byte(k.MetricNameHeader),
-					Value: []byte(metric.Name()),
-				},
+		// Set the message headers
+		var headerValue bytes.Buffer
+		for name, tmpl := range k.headerTmpl {
+			headerValue.Reset()
+			if err := tmpl.Execute(&headerValue, metric); err != nil {
+				k.Log.Errorf("adding header %q failed: %v", name, err)
+				continue
 			}
+			m.Headers = append(m.Headers, sarama.RecordHeader{
+				Key:   []byte(name),
+				Value: slices.Clone(headerValue.Bytes()),
+			})
 		}
 
 		// Negative timestamps are not allowed by the Kafka protocol.
@@ -154,14 +184,15 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 			m.Timestamp = metric.Time()
 		}
 
+		// Add the routing key if configured
 		key, err := k.routingKey(metric)
 		if err != nil {
 			return fmt.Errorf("could not generate routing key: %w", err)
 		}
-
 		if key != "" {
 			m.Key = sarama.StringEncoder(key)
 		}
+
 		msgs = append(msgs, m)
 	}
 

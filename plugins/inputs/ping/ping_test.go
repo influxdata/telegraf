@@ -1,562 +1,292 @@
-//go:build !windows
-
 package ping
 
 import (
-	"errors"
-	"sort"
+	"context"
+	"math"
+	"slices"
+	"sync"
 	"testing"
 	"time"
 
 	ping "github.com/prometheus-community/pro-bing"
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
 )
 
-// BSD/Darwin ping output
-var bsdPingOutput = `
-PING www.google.com (216.58.217.36): 56 data bytes
-64 bytes from 216.58.217.36: icmp_seq=0 ttl=55 time=15.087 ms
-64 bytes from 216.58.217.36: icmp_seq=1 ttl=55 time=21.564 ms
-64 bytes from 216.58.217.36: icmp_seq=2 ttl=55 time=27.263 ms
-64 bytes from 216.58.217.36: icmp_seq=3 ttl=55 time=18.828 ms
-64 bytes from 216.58.217.36: icmp_seq=4 ttl=55 time=18.378 ms
+func TestNativeIDs(t *testing.T) {
+	// Generate a target list
+	targets := slices.Repeat([]string{"localhost"}, 100)
 
---- www.google.com ping statistics ---
-5 packets transmitted, 5 packets received, 0.0% packet loss
-round-trip min/avg/max/stddev = 15.087/20.224/27.263/4.076 ms
-`
-
-// FreeBSD ping6 output
-var freebsdPing6Output = `
-PING6(64=40+8+16 bytes) 2001:db8::1 --> 2a00:1450:4001:824::2004
-24 bytes from 2a00:1450:4001:824::2004, icmp_seq=0 hlim=117 time=93.870 ms
-24 bytes from 2a00:1450:4001:824::2004, icmp_seq=1 hlim=117 time=40.278 ms
-24 bytes from 2a00:1450:4001:824::2004, icmp_seq=2 hlim=120 time=59.077 ms
-24 bytes from 2a00:1450:4001:824::2004, icmp_seq=3 hlim=117 time=37.102 ms
-24 bytes from 2a00:1450:4001:824::2004, icmp_seq=4 hlim=117 time=35.727 ms
-
---- www.google.com ping6 statistics ---
-5 packets transmitted, 5 packets received, 0.0% packet loss
-round-trip min/avg/max/std-dev = 35.727/53.211/93.870/22.000 ms
-`
-
-// Linux ping output
-var linuxPingOutput = `
-PING www.google.com (216.58.218.164) 56(84) bytes of data.
-64 bytes from host.net (216.58.218.164): icmp_seq=1 ttl=63 time=35.2 ms
-64 bytes from host.net (216.58.218.164): icmp_seq=2 ttl=63 time=42.3 ms
-64 bytes from host.net (216.58.218.164): icmp_seq=3 ttl=63 time=45.1 ms
-64 bytes from host.net (216.58.218.164): icmp_seq=4 ttl=63 time=43.5 ms
-64 bytes from host.net (216.58.218.164): icmp_seq=5 ttl=63 time=51.8 ms
-
---- www.google.com ping statistics ---
-5 packets transmitted, 5 received, 0% packet loss, time 4010ms
-rtt min/avg/max/mdev = 35.225/43.628/51.806/5.325 ms
-`
-
-// BusyBox v1.24.1 (2017-02-28 03:28:13 CET) multi-call binary
-var busyBoxPingOutput = `
-PING 8.8.8.8 (8.8.8.8): 56 data bytes
-64 bytes from 8.8.8.8: seq=0 ttl=56 time=22.559 ms
-64 bytes from 8.8.8.8: seq=1 ttl=56 time=15.810 ms
-64 bytes from 8.8.8.8: seq=2 ttl=56 time=16.262 ms
-64 bytes from 8.8.8.8: seq=3 ttl=56 time=15.815 ms
-
---- 8.8.8.8 ping statistics ---
-4 packets transmitted, 4 packets received, 0% packet loss
-round-trip min/avg/max = 15.810/17.611/22.559 ms
-`
-
-// Fatal ping output (invalid argument)
-var fatalPingOutput = `
-ping: -i interval too short: Operation not permitted
-`
-
-// Linux ping output with varying TTL
-var linuxPingOutputWithVaryingTTL = `
-PING www.google.com (216.58.218.164) 56(84) bytes of data.
-64 bytes from host.net (216.58.218.164): icmp_seq=1 ttl=63 time=35.2 ms
-64 bytes from host.net (216.58.218.164): icmp_seq=2 ttl=255 time=42.3 ms
-64 bytes from host.net (216.58.218.164): icmp_seq=3 ttl=64 time=45.1 ms
-64 bytes from host.net (216.58.218.164): icmp_seq=4 ttl=64 time=43.5 ms
-64 bytes from host.net (216.58.218.164): icmp_seq=5 ttl=255 time=51.8 ms
-
---- www.google.com ping statistics ---
-5 packets transmitted, 5 received, 0% packet loss, time 4010ms
-rtt min/avg/max/mdev = 35.225/43.628/51.806/5.325 ms
-`
-
-var lossyPingOutput = `
-PING www.google.com (216.58.218.164) 56(84) bytes of data.
-64 bytes from host.net (216.58.218.164): icmp_seq=1 ttl=63 time=35.2 ms
-64 bytes from host.net (216.58.218.164): icmp_seq=3 ttl=63 time=45.1 ms
-64 bytes from host.net (216.58.218.164): icmp_seq=5 ttl=63 time=51.8 ms
-
---- www.google.com ping statistics ---
-5 packets transmitted, 3 received, 40% packet loss, time 4010ms
-rtt min/avg/max/mdev = 35.225/44.033/51.806/5.325 ms
-`
-
-var errorPingOutput = `
-PING www.amazon.com (176.32.98.166): 56 data bytes
-Request timeout for icmp_seq 0
-
---- www.amazon.com ping statistics ---
-2 packets transmitted, 0 packets received, 100.0% packet loss
-`
-
-// Test that ping command output is processed properly
-func TestProcessPingOutput(t *testing.T) {
-	stats, err := processPingOutput(bsdPingOutput)
-	require.NoError(t, err)
-	require.Equal(t, 55, stats.ttl, "ttl value is 55")
-	require.Equal(t, 5, stats.packetsTransmitted, "5 packets were transmitted")
-	require.Equal(t, 5, stats.packetsReceived, "5 packets were received")
-	require.InDelta(t, 15.087, stats.min, testutil.DefaultDelta)
-	require.InDelta(t, 20.224, stats.avg, testutil.DefaultDelta)
-	require.InDelta(t, 27.263, stats.max, testutil.DefaultDelta)
-	require.InDelta(t, 4.076, stats.stddev, testutil.DefaultDelta)
-
-	stats, err = processPingOutput(freebsdPing6Output)
-	require.NoError(t, err)
-	require.Equal(t, 117, stats.ttl, "ttl value is 117")
-	require.Equal(t, 5, stats.packetsTransmitted, "5 packets were transmitted")
-	require.Equal(t, 5, stats.packetsReceived, "5 packets were received")
-	require.InDelta(t, 35.727, stats.min, testutil.DefaultDelta)
-	require.InDelta(t, 53.211, stats.avg, testutil.DefaultDelta)
-	require.InDelta(t, 93.870, stats.max, testutil.DefaultDelta)
-	require.InDelta(t, 22.000, stats.stddev, testutil.DefaultDelta)
-
-	stats, err = processPingOutput(linuxPingOutput)
-	require.NoError(t, err)
-	require.Equal(t, 63, stats.ttl, "ttl value is 63")
-	require.Equal(t, 5, stats.packetsTransmitted, "5 packets were transmitted")
-	require.Equal(t, 5, stats.packetsReceived, "5 packets were received")
-	require.InDelta(t, 35.225, stats.min, testutil.DefaultDelta)
-	require.InDelta(t, 43.628, stats.avg, testutil.DefaultDelta)
-	require.InDelta(t, 51.806, stats.max, testutil.DefaultDelta)
-	require.InDelta(t, 5.325, stats.stddev, testutil.DefaultDelta)
-
-	stats, err = processPingOutput(busyBoxPingOutput)
-	require.NoError(t, err)
-	require.Equal(t, 56, stats.ttl, "ttl value is 56")
-	require.Equal(t, 4, stats.packetsTransmitted, "4 packets were transmitted")
-	require.Equal(t, 4, stats.packetsReceived, "4 packets were received")
-	require.InDelta(t, 15.810, stats.min, testutil.DefaultDelta)
-	require.InDelta(t, 17.611, stats.avg, testutil.DefaultDelta)
-	require.InDelta(t, 22.559, stats.max, testutil.DefaultDelta)
-	require.InDelta(t, -1.0, stats.stddev, testutil.DefaultDelta)
-}
-
-// Test that ping command output is processed properly
-func TestProcessPingOutputWithVaryingTTL(t *testing.T) {
-	stats, err := processPingOutput(linuxPingOutputWithVaryingTTL)
-	require.NoError(t, err)
-	require.Equal(t, 63, stats.ttl, "ttl value is 63")
-	require.Equal(t, 5, stats.packetsTransmitted, "5 packets were transmitted")
-	require.Equal(t, 5, stats.packetsReceived, "5 packets were transmitted")
-	require.InDelta(t, 35.225, stats.min, testutil.DefaultDelta)
-	require.InDelta(t, 43.628, stats.avg, testutil.DefaultDelta)
-	require.InDelta(t, 51.806, stats.max, testutil.DefaultDelta)
-	require.InDelta(t, 5.325, stats.stddev, testutil.DefaultDelta)
-}
-
-// Test that processPingOutput returns an error when 'ping' fails to run, such
-// as when an invalid argument is provided
-func TestErrorProcessPingOutput(t *testing.T) {
-	_, err := processPingOutput(fatalPingOutput)
-	require.Error(t, err, "Error was expected from processPingOutput")
-}
-
-// Test that default arg lists are created correctly
-func TestArgs(t *testing.T) {
-	p := Ping{
-		Count:        2,
-		Interface:    "eth0",
-		Timeout:      config.Duration(12 * time.Second),
-		Deadline:     config.Duration(24 * time.Second),
-		PingInterval: config.Duration(1200 * time.Millisecond),
-	}
-	require.NoError(t, p.Init())
-
-	var systemCases = []struct {
-		system string
-		output []string
+	tests := []struct {
+		name        string
+		initializer func() []uint16
+		expected    func() []int
 	}{
-		{"darwin", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12000", "-t", "24", "-I", "eth0", "www.google.com"}},
-		{"linux", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12", "-w", "24", "-I", "eth0", "www.google.com"}},
-		{"anything else", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12", "-w", "24", "-i", "eth0", "www.google.com"}},
-	}
-	for i := range systemCases {
-		actual := p.args("www.google.com", systemCases[i].system)
-		expected := systemCases[i].output
-		sort.Strings(actual)
-		sort.Strings(expected)
-		require.Equal(t, expected, actual)
-	}
-}
-
-// Test that default arg lists for ping6 are created correctly
-func TestArgs6(t *testing.T) {
-	p := Ping{
-		Count:        2,
-		Interface:    "eth0",
-		Timeout:      config.Duration(12 * time.Second),
-		Deadline:     config.Duration(24 * time.Second),
-		PingInterval: config.Duration(1200 * time.Millisecond),
-		Binary:       "ping6",
-	}
-	require.NoError(t, p.Init())
-
-	var systemCases = []struct {
-		system string
-		output []string
-	}{
-		{"freebsd", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-x", "12000", "-X", "24", "-S", "eth0", "www.google.com"}},
-		{"linux", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12", "-w", "24", "-I", "eth0", "www.google.com"}},
-		{"anything else", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12", "-w", "24", "-i", "eth0", "www.google.com"}},
-	}
-	for i := range systemCases {
-		actual := p.args("www.google.com", systemCases[i].system)
-		expected := systemCases[i].output
-		sort.Strings(actual)
-		sort.Strings(expected)
-		require.Equal(t, expected, actual)
-	}
-}
-
-func TestArguments(t *testing.T) {
-	p := Ping{
-		Count:        2,
-		Interface:    "eth0",
-		Timeout:      config.Duration(12 * time.Second),
-		Deadline:     config.Duration(24 * time.Second),
-		PingInterval: config.Duration(1200 * time.Millisecond),
-		Arguments:    []string{"-c", "3"},
-	}
-	require.NoError(t, p.Init())
-
-	expected := []string{"-c", "3", "www.google.com"}
-	for _, system := range []string{"darwin", "linux", "anything else"} {
-		actual := p.args("www.google.com", system)
-		require.Equal(t, expected, actual)
-	}
-}
-
-// Test that Gather function works on a normal ping
-func TestPingGather(t *testing.T) {
-	var acc testutil.Accumulator
-	p := Ping{
-		Urls:     []string{"localhost", "influxdata.com"},
-		pingHost: mockHostPinger,
-	}
-	require.NoError(t, p.Init())
-
-	require.NoError(t, acc.GatherError(p.Gather))
-	tags := map[string]string{"url": "localhost"}
-	fields := map[string]interface{}{
-		"packets_transmitted":   5,
-		"packets_received":      5,
-		"percent_packet_loss":   0.0,
-		"ttl":                   63,
-		"minimum_response_ms":   35.225,
-		"average_response_ms":   43.628,
-		"maximum_response_ms":   51.806,
-		"standard_deviation_ms": 5.325,
-		"result_code":           0,
-	}
-	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
-
-	tags = map[string]string{"url": "influxdata.com"}
-	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
-}
-
-func TestPingGatherIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode, retrieves systems ping utility")
-	}
-
-	p, ok := inputs.Inputs["ping"]().(*Ping)
-	require.True(t, ok)
-
-	p.Log = testutil.Logger{}
-	p.Urls = []string{"localhost", "influxdata.com"}
-	require.NoError(t, p.Init())
-
-	var acc testutil.Accumulator
-	require.NoError(t, acc.GatherError(p.Gather))
-
-	require.Equal(t, 0, acc.Metrics[0].Fields["result_code"])
-	require.Equal(t, 0, acc.Metrics[1].Fields["result_code"])
-}
-
-// Test that Gather works on a ping with lossy packets
-func TestLossyPingGather(t *testing.T) {
-	var acc testutil.Accumulator
-	p := Ping{
-		Urls:     []string{"www.google.com"},
-		pingHost: mockLossyHostPinger,
-	}
-	require.NoError(t, p.Init())
-
-	require.NoError(t, acc.GatherError(p.Gather))
-	tags := map[string]string{"url": "www.google.com"}
-	fields := map[string]interface{}{
-		"packets_transmitted":   5,
-		"packets_received":      3,
-		"percent_packet_loss":   40.0,
-		"ttl":                   63,
-		"minimum_response_ms":   35.225,
-		"average_response_ms":   44.033,
-		"maximum_response_ms":   51.806,
-		"standard_deviation_ms": 5.325,
-		"result_code":           0,
-	}
-	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
-}
-
-// Test that Gather works on a ping with no transmitted packets, even though the
-// command returns an error
-func TestBadPingGather(t *testing.T) {
-	var acc testutil.Accumulator
-	p := Ping{
-		Urls:     []string{"www.amazon.com"},
-		pingHost: mockErrorHostPinger,
-	}
-	require.NoError(t, p.Init())
-
-	require.NoError(t, acc.GatherError(p.Gather))
-	tags := map[string]string{"url": "www.amazon.com"}
-	fields := map[string]interface{}{
-		"packets_transmitted": 2,
-		"packets_received":    0,
-		"percent_packet_loss": 100.0,
-		"result_code":         0,
-	}
-	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
-}
-
-// Test that a fatal ping command does not gather any statistics.
-func TestFatalPingGather(t *testing.T) {
-	var acc testutil.Accumulator
-	p := Ping{
-		Urls:     []string{"www.amazon.com"},
-		pingHost: mockFatalHostPinger,
-	}
-	require.NoError(t, p.Init())
-
-	err := acc.GatherError(p.Gather)
-	require.Error(t, err)
-	require.EqualValues(t, "host \"www.amazon.com\": so very bad - ping: -i interval too short: Operation not permitted", err.Error())
-	require.False(t, acc.HasMeasurement("packets_transmitted"),
-		"Fatal ping should not have packet measurements")
-	require.False(t, acc.HasMeasurement("packets_received"),
-		"Fatal ping should not have packet measurements")
-	require.False(t, acc.HasMeasurement("percent_packet_loss"),
-		"Fatal ping should not have packet measurements")
-	require.False(t, acc.HasMeasurement("ttl"),
-		"Fatal ping should not have packet measurements")
-	require.False(t, acc.HasMeasurement("minimum_response_ms"),
-		"Fatal ping should not have packet measurements")
-	require.False(t, acc.HasMeasurement("average_response_ms"),
-		"Fatal ping should not have packet measurements")
-	require.False(t, acc.HasMeasurement("maximum_response_ms"),
-		"Fatal ping should not have packet measurements")
-}
-
-func TestErrorWithHostNamePingGather(t *testing.T) {
-	params := []struct {
-		out   string
-		error error
-	}{
-		{"", errors.New("host \"www.amazon.com\": so very bad")},
-		{"so bad", errors.New("host \"www.amazon.com\": so very bad")},
-	}
-
-	for _, param := range params {
-		var acc testutil.Accumulator
-		p := Ping{
-			Urls: []string{"www.amazon.com"},
-			pingHost: func(string, float64, ...string) (string, error) {
-				return param.out, errors.New("so very bad")
-			},
-		}
-		require.NoError(t, p.Init())
-
-		require.Error(t, acc.GatherError(p.Gather))
-		require.Len(t, acc.Errors, 1)
-		require.Contains(t, acc.Errors[0].Error(), param.error.Error())
-	}
-}
-
-func TestPingBinary(t *testing.T) {
-	var acc testutil.Accumulator
-	p := Ping{
-		Urls:   []string{"www.google.com"},
-		Binary: "ping6",
-		pingHost: func(binary string, _ float64, _ ...string) (string, error) {
-			require.Equal(t, "ping6", binary)
-			return "", nil
-		},
-	}
-	require.NoError(t, p.Init())
-
-	err := acc.GatherError(p.Gather)
-	require.Error(t, err)
-	require.EqualValues(t, "\"www.google.com\": fatal error processing ping output", err.Error())
-}
-
-// Test that Gather function works using native ping
-func TestPingGatherNative(t *testing.T) {
-	type test struct {
-		P *Ping
-	}
-
-	fakePingFunc := func(string) (*pingStats, error) {
-		s := &pingStats{
-			Statistics: ping.Statistics{
-				PacketsSent: 5,
-				PacketsRecv: 5,
-				Rtts: []time.Duration{
-					3 * time.Millisecond,
-					4 * time.Millisecond,
-					1 * time.Millisecond,
-					5 * time.Millisecond,
-					2 * time.Millisecond,
-				},
-			},
-			ttl: 1,
-		}
-
-		return s, nil
-	}
-
-	tests := []test{
 		{
-			P: &Ping{
-				Urls:           []string{"localhost", "127.0.0.2"},
-				Log:            testutil.Logger{},
-				Method:         "native",
-				Count:          5,
-				Percentiles:    []int{50, 95, 99},
-				nativePingFunc: fakePingFunc,
+			name: "empty",
+			initializer: func() []uint16 {
+				return make([]uint16, 0)
+			},
+			expected: func() []int {
+				e := make([]int, 10*len(targets))
+				for i := range e {
+					e[i] = i
+				}
+				return e
 			},
 		},
 		{
-			P: &Ping{
-				Urls:           []string{"localhost", "127.0.0.2"},
-				Log:            testutil.Logger{},
-				Method:         "native",
-				Count:          5,
-				PingInterval:   1,
-				Percentiles:    []int{50, 95, 99},
-				nativePingFunc: fakePingFunc,
+			name: "append",
+			initializer: func() []uint16 {
+				return []uint16{999}
+			},
+			expected: func() []int {
+				e := make([]int, 10*len(targets))
+				for i := range e {
+					e[i] = 1000 + i
+				}
+				return e
+			},
+		},
+		{
+			name: "insert",
+			initializer: func() []uint16 {
+				e := make([]uint16, 0, 10*len(targets)+1)
+				for i := range uint16(10 * len(targets)) {
+					e = append(e, 2*i+1)
+				}
+				// We need max at the end to force fill-in
+				e = append(e, math.MaxUint16)
+				return e
+			},
+			expected: func() []int {
+				e := make([]int, 10*len(targets))
+				for i := range e {
+					e[i] = 2 * i
+				}
+				return e
+			},
+		},
+		{
+			name: "insert highest",
+			initializer: func() []uint16 {
+				return []uint16{math.MaxUint16}
+			},
+			expected: func() []int {
+				e := make([]int, 10*len(targets))
+				for i := range e {
+					e[i] = math.MaxUint16 - len(e) + i
+				}
+				return e
+			},
+		},
+		{
+			name: "complete fill",
+			initializer: func() []uint16 {
+				e := make([]uint16, 0, math.MaxUint16-10*len(targets))
+				for i := range uint16(math.MaxUint16 - 10*len(targets)) {
+					e = append(e, i)
+				}
+				return e
+			},
+			expected: func() []int {
+				e := make([]int, 10*len(targets))
+				for i := range e {
+					e[i] = math.MaxUint16 - len(e) + i
+				}
+				return e
 			},
 		},
 	}
 
-	for _, tc := range tests {
-		var acc testutil.Accumulator
-		require.NoError(t, tc.P.Init())
-		require.NoError(t, acc.GatherError(tc.P.Gather))
-		require.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_transmitted", 5))
-		require.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_received", 5))
-		require.True(t, acc.HasField("ping", "percentile50_ms"))
-		require.InDelta(t, float64(3), acc.Metrics[0].Fields["percentile50_ms"], testutil.DefaultDelta)
-		require.True(t, acc.HasField("ping", "percentile95_ms"))
-		require.InDelta(t, float64(4.799999), acc.Metrics[0].Fields["percentile95_ms"], testutil.DefaultDelta)
-		require.True(t, acc.HasField("ping", "percentile99_ms"))
-		require.InDelta(t, float64(4.96), acc.Metrics[0].Fields["percentile99_ms"], testutil.DefaultDelta)
-		require.True(t, acc.HasField("ping", "percent_packet_loss"))
-		require.True(t, acc.HasField("ping", "minimum_response_ms"))
-		require.True(t, acc.HasField("ping", "average_response_ms"))
-		require.True(t, acc.HasField("ping", "maximum_response_ms"))
-		require.True(t, acc.HasField("ping", "standard_deviation_ms"))
-	}
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup the initial state
+			initialIDs := tt.initializer()
+			usedIDsCond.L.Lock()
+			usedIDs = slices.Clone(initialIDs)
+			usedIDsCond.L.Unlock()
+			t.Cleanup(func() {
+				usedIDsCond.L.Lock()
+				usedIDs = make([]uint16, 0)
+				usedIDsCond.L.Unlock()
+			})
 
-func TestInitWarnsForNativeTimeout(t *testing.T) {
-	logger := &testutil.CaptureLogger{Name: "ping"}
-	p := &Ping{
-		Log:      logger,
-		Method:   "native",
-		Count:    1,
-		Timeout:  config.Duration(2 * time.Second),
-		Deadline: config.Duration(10 * time.Second),
-	}
-	require.NoError(t, p.Init())
+			// Add a number of plugin instances that need to share the IDs
+			var wg sync.WaitGroup
+			var seenIDsMu sync.Mutex
+			seenIDs := make([]int, 0, 10*len(targets))
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			for range 10 {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
 
-	warnings := logger.Warnings()
-	require.Len(t, warnings, 1)
-	require.Contains(t, warnings[0], `"timeout" is ignored when method = "native"`)
-	require.Contains(t, warnings[0], `"deadline"`)
-}
+					plugin := &Ping{
+						Method: "native",
+						Urls:   targets,
+						Log:    &testutil.Logger{},
+						nativePingFunc: func(_ string, id int) (*pingStats, error) {
+							seenIDsMu.Lock()
+							seenIDs = append(seenIDs, id)
+							seenIDsMu.Unlock()
 
-func TestNoPacketsSent(t *testing.T) {
-	p := &Ping{
-		Log:         testutil.Logger{},
-		Urls:        []string{"localhost", "127.0.0.2"},
-		Method:      "native",
-		Count:       5,
-		Percentiles: []int{50, 95, 99},
-		nativePingFunc: func(string) (*pingStats, error) {
-			s := &pingStats{
-				Statistics: ping.Statistics{
-					PacketsSent: 0,
-					PacketsRecv: 0,
-				},
+							<-ctx.Done()
+
+							return fakeResult()
+						},
+					}
+					if err := plugin.Init(); err != nil {
+						t.Errorf("initializing plugin failed: %v", err)
+					}
+
+					var acc testutil.Accumulator
+					if err := plugin.Gather(&acc); err != nil {
+						t.Errorf("running gather failed: %v", err)
+					}
+				}()
 			}
 
-			return s, nil
-		},
+			// Wait for all plugins to reach the pinging function to ensure we have seen
+			// all IDs and all IDs are unique as they are not free'ed in between.
+			require.Eventually(t, func() bool {
+				seenIDsMu.Lock()
+				defer seenIDsMu.Unlock()
+				return len(seenIDs) >= 10*len(targets)
+			}, 3*time.Second, 100*time.Millisecond)
+
+			// Allow all pings to complete and wait for the plugins to finish
+			cancel()
+			wg.Wait()
+
+			// Check the seen IDs
+			expected := tt.expected()
+
+			seenIDsMu.Lock()
+			defer seenIDsMu.Unlock()
+			require.Len(t, seenIDs, 10*len(targets))
+			slices.Sort(seenIDs)
+			require.Equal(t, expected, seenIDs)
+
+			// Check that all acquired IDs have been free'ed
+			usedIDsCond.L.Lock()
+			defer usedIDsCond.L.Unlock()
+			require.Equal(t, initialIDs, usedIDs)
+		})
 	}
-	require.NoError(t, p.Init())
-
-	var testAcc testutil.Accumulator
-	p.pingToURLNative(&testAcc, "localhost")
-	require.Zero(t, testAcc.Errors)
-	require.True(t, testAcc.HasField("ping", "result_code"))
-	require.Equal(t, 2, testAcc.Metrics[0].Fields["result_code"])
 }
 
-// Test failed DNS resolutions
-func TestDNSLookupError(t *testing.T) {
-	p := &Ping{
-		Count:  1,
-		Log:    testutil.Logger{},
-		Urls:   []string{"localhost"},
-		Method: "native",
-		IPv6:   false,
-		nativePingFunc: func(string) (*pingStats, error) {
-			return nil, errors.New("unknown")
-		},
+func TestNativeIDsWaitOnFull(t *testing.T) {
+	// Generate a target list
+	targets := slices.Repeat([]string{"localhost"}, 10)
+
+	// Add some used IDs to force filling in
+	initialUsedIDs := make([]uint16, 0, math.MaxUint16)
+	for i := range uint16(math.MaxUint16) {
+		initialUsedIDs = append(initialUsedIDs, i)
 	}
-	require.NoError(t, p.Init())
+	initialUsedIDs = append(initialUsedIDs, math.MaxUint16)
 
-	var testAcc testutil.Accumulator
-	p.pingToURLNative(&testAcc, "localhost")
-	require.Zero(t, testAcc.Errors)
-	require.True(t, testAcc.HasField("ping", "result_code"))
-	require.Equal(t, 1, testAcc.Metrics[0].Fields["result_code"])
+	usedIDsCond.L.Lock()
+	usedIDs = slices.Clone(initialUsedIDs)
+	usedIDsCond.L.Unlock()
+	t.Cleanup(func() {
+		usedIDsCond.L.Lock()
+		usedIDs = make([]uint16, 0)
+		usedIDsCond.L.Unlock()
+	})
+
+	// Add a number of plugin instances that need to share the IDs
+	var wg sync.WaitGroup
+	var seenIDsMu sync.Mutex
+	seenIDs := make([]int, 0, len(targets))
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		plugin := &Ping{
+			Method: "native",
+			Urls:   targets,
+			Log:    &testutil.Logger{},
+			nativePingFunc: func(_ string, id int) (*pingStats, error) {
+				seenIDsMu.Lock()
+				seenIDs = append(seenIDs, id)
+				seenIDsMu.Unlock()
+
+				<-ctx.Done()
+
+				return fakeResult()
+			},
+		}
+		if err := plugin.Init(); err != nil {
+			t.Errorf("initializing plugin failed: %v", err)
+		}
+
+		var acc testutil.Accumulator
+		if err := plugin.Gather(&acc); err != nil {
+			t.Errorf("running gather failed: %v", err)
+		}
+	}()
+
+	// All pingers should wait since the IDs are full
+	require.Never(t, func() bool {
+		seenIDsMu.Lock()
+		defer seenIDsMu.Unlock()
+		return len(seenIDs) > 0
+	}, time.Second, 100*time.Millisecond)
+
+	// Free the required amount of IDs
+	for i := range uint16(len(targets)) {
+		freeNativePingID(i)
+	}
+
+	// Wait for all plugins to reach the pinging function to ensure we have seen
+	// all IDs and all IDs are unique as they are not free'ed in between.
+	require.Eventually(t, func() bool {
+		seenIDsMu.Lock()
+		defer seenIDsMu.Unlock()
+		return len(seenIDs) >= len(targets)
+	}, 3*time.Second, 100*time.Millisecond)
+
+	// Allow all pings to complete and wait for the plugins to finish
+	cancel()
+	wg.Wait()
+
+	// Check the seen IDs
+	expected := make([]int, len(targets))
+	for i := range expected {
+		expected[i] = i
+	}
+
+	seenIDsMu.Lock()
+	defer seenIDsMu.Unlock()
+	require.Len(t, seenIDs, len(targets))
+	slices.Sort(seenIDs)
+	require.Equal(t, expected, seenIDs)
+
+	// Check that all IDs have been free'ed
+	usedIDsCond.L.Lock()
+	defer usedIDsCond.L.Unlock()
+	require.Equal(t, initialUsedIDs[len(targets):], usedIDs)
 }
 
-func mockHostPinger(string, float64, ...string) (string, error) {
-	return linuxPingOutput, nil
-}
-
-func mockLossyHostPinger(string, float64, ...string) (string, error) {
-	return lossyPingOutput, nil
-}
-
-func mockErrorHostPinger(string, float64, ...string) (string, error) {
-	// This error will not trigger correct error paths
-	return errorPingOutput, nil
-}
-
-func mockFatalHostPinger(string, float64, ...string) (string, error) {
-	return fatalPingOutput, errors.New("so very bad")
+func fakeResult() (*pingStats, error) {
+	return &pingStats{
+		Statistics: ping.Statistics{
+			PacketsSent: 5,
+			PacketsRecv: 5,
+			Rtts: []time.Duration{
+				3 * time.Millisecond,
+				4 * time.Millisecond,
+				1 * time.Millisecond,
+				5 * time.Millisecond,
+				2 * time.Millisecond,
+			},
+		},
+		ttl: 1,
+	}, nil
 }

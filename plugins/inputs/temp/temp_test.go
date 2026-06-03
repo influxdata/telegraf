@@ -3,6 +3,7 @@
 package temp
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/shirou/gopsutil/v4/sensors"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -341,4 +343,65 @@ func sensorsTemperaturesOld(syspath string) ([]sensors.TemperatureStat, error) {
 		})
 	}
 	return temperatures, nil
+}
+
+func TestReadFileAsync(t *testing.T) {
+	// fds stores the in-memory file-descriptors
+	fds := make([]int, 2)
+	// Unnamed pipe to simulate EAGAIN
+	require.NoError(t, unix.Pipe(fds[:]))
+	readFd, writeFd := fds[0], fds[1]
+	t.Cleanup(func() {
+		require.NoError(t, unix.Close(readFd))
+		require.NoError(t, unix.Close(writeFd))
+	})
+
+	// Convert the file descriptor to a virtual file path
+	fifoFile := fmt.Sprintf("/dev/fd/%d", readFd)
+
+	tests := []struct {
+		name          string
+		path          string
+		expectedValue []byte
+		expectedError error
+	}{
+		{
+			name:          "Valid file",
+			path:          filepath.Join("testdata", "temp.normal"),
+			expectedValue: []byte("45000"),
+			expectedError: nil,
+		},
+		{
+			name:          "File larger than 8 bytes (Truncation)",
+			path:          filepath.Join("testdata", "temp.too_long"),
+			expectedValue: bytes.Repeat([]byte("9"), 8),
+			expectedError: nil,
+		},
+		{
+			name:          "Empty file",
+			path:          filepath.Join("testdata", "temp.empty"),
+			expectedValue: make([]byte, 0),
+			expectedError: nil,
+		},
+		{
+			name:          "File does not exist",
+			path:          filepath.Join("testdata", "temp.missing"),
+			expectedValue: nil,
+			expectedError: unix.ENOENT,
+		},
+		{
+			name:          "Non-blocking read on empty pipe (EAGAIN)",
+			path:          fifoFile,
+			expectedValue: nil,
+			expectedError: unix.EAGAIN,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data, err := readFileAsync(tt.path)
+			require.ErrorIs(t, err, tt.expectedError)
+			require.Equal(t, tt.expectedValue, data)
+		})
+	}
 }

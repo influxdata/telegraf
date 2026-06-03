@@ -49,7 +49,7 @@ type InfluxDBListener struct {
 	RetentionPolicyTag string          `toml:"retention_policy_tag"`
 	ParserType         string          `toml:"parser_type"`
 
-	timeFunc influx.TimeFunc
+	timeFunc func() time.Time
 
 	listener net.Listener
 	server   http.Server

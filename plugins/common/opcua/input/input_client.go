@@ -695,7 +695,7 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 			case []uint8:
 				fields = unpack(nmm.Tag.FieldName, typedValue)
 			case ua.ByteArray:
-				fields = unpack(nmm.Tag.FieldName, []byte(typedValue))
+				fields = unpack(nmm.Tag.FieldName, typedValue)
 			case []uint16:
 				fields = unpack(nmm.Tag.FieldName, typedValue)
 			case []uint32:

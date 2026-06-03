@@ -618,28 +618,55 @@ deadband_value = 100.0
 	}, o.subscribeClientConfig.Groups)
 }
 
-func TestSubscribeClientRejectsBrowseConfig(t *testing.T) {
+func TestSubscribeClientBrowseDiscoveryIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "open62541/open62541",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(servicePort),
+			wait.ForLog("TCP network layer listening on opc.tcp://"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
 	subscribeConfig := subscribeClientConfig{
 		InputClientConfig: input.InputClientConfig{
 			OpcUAClientConfig: opcua.OpcUAClientConfig{
-				Endpoint:       "opc.tcp://localhost:4840",
+				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
 				SecurityPolicy: "None",
 				SecurityMode:   "None",
 				AuthMethod:     "Anonymous",
 				ConnectTimeout: config.Duration(10 * time.Second),
 				RequestTimeout: config.Duration(1 * time.Second),
 			},
-			MetricName: "testing",
+			MetricName: "browse_listener",
 			Browse: input.BrowseConfig{
+				Depth: 5,
 				Paths: []input.BrowsePathSettings{
 					{Pattern: "Server/**", MetricName: "server_vars"},
 				},
 			},
 		},
+		SubscriptionInterval: config.Duration(100 * time.Millisecond),
 	}
 
-	_, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
-	require.ErrorContains(t, err, "browse-based discovery is not yet supported for inputs.opcua_listener")
+	client, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
+	require.NoError(t, err)
+
+	require.NoError(t, client.connect())
+	require.NotEmpty(t, client.NodeMetricMapping, "browse should discover at least one variable under Server/**")
+
+	// Reconnect re-runs discovery against an unchanged server; mapping size
+	// must stay bounded rather than grow with each reconnect.
+	mappingSize := len(client.NodeMetricMapping)
+	require.NoError(t, client.Disconnect(t.Context()))
+	require.NoError(t, client.connect())
+	require.Len(t, client.NodeMetricMapping, mappingSize, "rediscovery must not grow the mapping")
 }
 
 func TestSubscribeClientConfigInvalidTrigger(t *testing.T) {

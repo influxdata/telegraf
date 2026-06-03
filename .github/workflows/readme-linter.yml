@@ -5,6 +5,10 @@ on:
   pull_request:
     branches: # Names of target branches, not source branches
       - master
+
+permissions:
+  contents: read
+
 jobs:
   run-readme-linter:
     runs-on: ubuntu-latest

@@ -38,6 +38,7 @@ type Config struct {
 	MaxDecompressionSize config.Size      `toml:"max_decompression_size"`
 	MaxParallelParsers   int              `toml:"max_parallel_parsers"`
 	AllowedSources       []net.IP         `toml:"allowed_sources"`
+	MulticastSource      string           `toml:"multicast_source"`
 	common_tls.ServerConfig
 }
 
@@ -125,19 +126,19 @@ func (s *Socket) Setup() error {
 		}
 		s.listener = l
 	case "udp", "udp4", "udp6":
-		l := newPacketListener(s.ContentEncoding, s.MaxDecompressionSize, s.MaxParallelParsers, s.AllowedSources, s.log)
+		l := newPacketListener(s.ContentEncoding, s.MaxDecompressionSize, s.MaxParallelParsers, s.AllowedSources, s.MulticastSource, s.log)
 		if err := l.setupUDP(s.url, s.interfaceName, int(s.ReadBufferSize)); err != nil {
 			return err
 		}
 		s.listener = l
 	case "ip", "ip4", "ip6":
-		l := newPacketListener(s.ContentEncoding, s.MaxDecompressionSize, s.MaxParallelParsers, s.AllowedSources, s.log)
+		l := newPacketListener(s.ContentEncoding, s.MaxDecompressionSize, s.MaxParallelParsers, s.AllowedSources, s.MulticastSource, s.log)
 		if err := l.setupIP(s.url); err != nil {
 			return err
 		}
 		s.listener = l
 	case "unixgram":
-		l := newPacketListener(s.ContentEncoding, s.MaxDecompressionSize, s.MaxParallelParsers, s.AllowedSources, s.log)
+		l := newPacketListener(s.ContentEncoding, s.MaxDecompressionSize, s.MaxParallelParsers, s.AllowedSources, s.MulticastSource, s.log)
 		if err := l.setupUnixgram(s.url, s.SocketMode, int(s.ReadBufferSize)); err != nil {
 			return err
 		}

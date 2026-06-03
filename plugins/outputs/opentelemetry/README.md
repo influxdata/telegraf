@@ -77,7 +77,12 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # [outputs.opentelemetry.attributes]
   # "service.name" = "demo"
 
-  ## Additional gRPC request metadata
+  ## Optional Bearer token for authentication.
+  ## Supports secret-store references, e.g. @{<store-id>:<key>}, so tokens
+  ## fetched via the oauth2 secret store are refreshed automatically.
+  # token = ""
+
+  ## Additional gRPC request metadata / HTTP headers
   # [outputs.opentelemetry.headers]
   # key1 = "value1"
 ```

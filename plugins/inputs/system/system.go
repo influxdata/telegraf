@@ -46,7 +46,7 @@ func (s *System) Init() error {
 	// Suppress deprecation warnings for default-only configs.
 	userSupplied := len(s.Include) > 0
 	if !userSupplied {
-		s.Include = []string{"load", "users", "legacy_cpus", "legacy_uptime"}
+		s.Include = []string{"cpus", "load", "users", "legacy_uptime"}
 	}
 
 	enabled := make(map[string]bool, len(s.Include))
@@ -57,19 +57,6 @@ func (s *System) Init() error {
 		}
 		switch incl {
 		case "load", "users", "cpus", "uptime", "os", "dmi":
-		case "legacy_cpus":
-			if userSupplied {
-				config.PrintOptionValueDeprecationNotice(
-					"inputs.system",
-					"include",
-					"legacy_cpus",
-					telegraf.DeprecationInfo{
-						Since:     "1.39.0",
-						RemovalIn: "1.45.0",
-						Notice:    "use 'cpus' instead",
-					},
-				)
-			}
 		case "legacy_uptime":
 			if userSupplied {
 				config.PrintOptionValueDeprecationNotice(
@@ -91,9 +78,6 @@ func (s *System) Init() error {
 	}
 	s.Include = deduped
 
-	if enabled["cpus"] && enabled["legacy_cpus"] {
-		return errors.New(`"cpus" and "legacy_cpus" are mutually exclusive`)
-	}
 	if enabled["uptime"] && enabled["legacy_uptime"] {
 		return errors.New(`"uptime" and "legacy_uptime" are mutually exclusive`)
 	}
@@ -167,7 +151,7 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 			} else {
 				s.Log.Warnf("Reading users: %s", err.Error())
 			}
-		case "cpus", "legacy_cpus":
+		case "cpus":
 			numLogicalCPUs, err := cpu.Counts(true)
 			if err != nil {
 				acc.AddError(fmt.Errorf("reading logical CPU count: %w", err))
@@ -178,11 +162,7 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 				acc.AddError(fmt.Errorf("reading physical CPU count: %w", err))
 				continue
 			}
-			if incl == "cpus" {
-				fields["n_virtual_cpus"] = numLogicalCPUs
-			} else {
-				fields["n_cpus"] = numLogicalCPUs
-			}
+			fields["n_cpus"] = numLogicalCPUs
 			fields["n_physical_cpus"] = numPhysicalCPUs
 		case "uptime":
 			uptime, err := host.Uptime()
