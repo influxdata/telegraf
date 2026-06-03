@@ -197,7 +197,7 @@ func TestStatePersistence(t *testing.T) {
 			Image: "influxdata/telegraf:1.11.0",
 			State: "running",
 		}},
-		LogStreans: map[string]chan *mock.Logs{id: logs},
+		LogStreams: map[string]chan *mock.Logs{id: logs},
 	}
 	addr := server.Start(t)
 	defer server.Close()
@@ -254,7 +254,7 @@ func TestStatePersistenceMux(t *testing.T) {
 			Image: "influxdata/telegraf:1.11.0",
 			State: "running",
 		}},
-		LogStreans: map[string]chan *mock.Logs{id: logs},
+		LogStreams: map[string]chan *mock.Logs{id: logs},
 	}
 	addr := server.Start(t)
 	defer server.Close()

@@ -26,7 +26,7 @@ type Server struct {
 	Inspect    map[string]container.InspectResponse
 	Stats      map[string]container.StatsResponse
 	Logs       map[string]Logs
-	LogStreans map[string]chan *Logs
+	LogStreams map[string]chan *Logs
 
 	Services []swarm.Service
 	Tasks    []swarm.Task
@@ -231,7 +231,7 @@ func (s *Server) Start(t *testing.T) string {
 			len(parts) == 5 && strings.HasSuffix(r.URL.Path, "/logs"):
 			id := parts[3]
 			// Log stream response
-			stream, found := s.LogStreans[id]
+			stream, found := s.LogStreams[id]
 			if found {
 				WriteLog(ctx, t, w, stream)
 				return
