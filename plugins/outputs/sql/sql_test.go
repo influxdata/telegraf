@@ -210,13 +210,16 @@ func TestOracleIntegration(t *testing.T) {
 			}
 			_, err = p.db.Exec(stmt)
 			require.NoError(t, err, "error building expected results table!")
-
 		}
+
 		expectedTable := "expected_" + resTable
 
 		var schemeCount int32
-		resColumns := fmt.Sprintf(`SELECT column_name, data_type, data_precision, data_scale, data_length FROM USER_TAB_COLUMNS WHERE table_name = '%s'`, resTable)
-		expectedColumns := fmt.Sprintf(`SELECT column_name, data_type, data_precision, data_scale, data_length FROM USER_TAB_COLUMNS WHERE table_name = '%s'`, expectedTable)
+		resColumns := fmt.Sprintf(`SELECT column_name, data_type, data_precision, data_scale, data_length 
+			FROM USER_TAB_COLUMNS WHERE table_name = '%s'`, resTable)
+		expectedColumns := fmt.Sprintf(`SELECT column_name, data_type, data_precision, data_scale, data_length 
+			FROM USER_TAB_COLUMNS WHERE table_name = '%s'`, expectedTable)
+		//nolint:gosec // linter doesnt like due to security; no risk of injection so is fine
 		emptyTable := fmt.Sprintf(`SELECT COUNT(*) FROM ((%s MINUS %s) UNION (%s MINUS %s)) countdiff`,
 			resColumns, expectedColumns, expectedColumns, resColumns,
 		)
@@ -226,8 +229,9 @@ func TestOracleIntegration(t *testing.T) {
 		require.Zero(t, schemeCount, "There are mismatching rows! Tables do not share the same schema")
 
 		var rowCount int32
-		resQuery := fmt.Sprintf(`SELECT * FROM "%s"`, resTable)
-		expectedQuery := fmt.Sprintf(`SELECT * FROM "%s"`, expectedTable)
+		resQuery := fmt.Sprintf(`SELECT * FROM %q`, resTable)
+		expectedQuery := fmt.Sprintf(`SELECT * FROM %q`, expectedTable)
+		//nolint:gosec // linter doesnt like due to security; no risk of injection so is fine
 		emptyInsertion := fmt.Sprintf("SELECT COUNT(*) FROM ((%s MINUS %s) UNION (%s MINUS %s)) countdiff",
 			resQuery, expectedQuery, expectedQuery, resQuery,
 		)
@@ -236,7 +240,6 @@ func TestOracleIntegration(t *testing.T) {
 		require.NoError(t, err, "Error in row difference query!")
 		require.Zero(t, rowCount, "There are mismatching rows! Rows do not share the same data!")
 	}
-
 }
 
 func TestOracleUpdateSchemeIntegration(t *testing.T) {
@@ -301,8 +304,10 @@ func TestOracleUpdateSchemeIntegration(t *testing.T) {
 	}
 
 	var schemeCount int32
-	resColumns := `SELECT column_name, data_type, data_precision, data_scale, data_length FROM USER_TAB_COLUMNS WHERE table_name = 'metric_one'`
-	expectedColumns := `SELECT column_name, data_type, data_precision, data_scale, data_length FROM USER_TAB_COLUMNS WHERE table_name = 'expected_metric_one'`
+	resColumns := `SELECT column_name, data_type, data_precision, data_scale, data_length 
+		FROM USER_TAB_COLUMNS WHERE table_name = 'metric_one'`
+	expectedColumns := `SELECT column_name, data_type, data_precision, data_scale, data_length 
+		FROM USER_TAB_COLUMNS WHERE table_name = 'expected_metric_one'`
 	emptyTable := fmt.Sprintf(`SELECT COUNT(*) FROM ((%s MINUS %s) UNION (%s MINUS %s)) countdiff`,
 		resColumns, expectedColumns, expectedColumns, resColumns,
 	)
@@ -390,13 +395,15 @@ func TestOracleIntegrationSendBatch(t *testing.T) {
 			}
 			_, err = p.db.Exec(stmt)
 			require.NoError(t, err, "error building expected results table!")
-
 		}
 		expectedTable := "expected_" + resTable
 
 		var schemeCount int32
-		resColumns := fmt.Sprintf(`SELECT column_name, data_type, data_precision, data_scale, data_length FROM USER_TAB_COLUMNS WHERE table_name = '%s'`, resTable)
-		expectedColumns := fmt.Sprintf(`SELECT column_name, data_type, data_precision, data_scale, data_length FROM USER_TAB_COLUMNS WHERE table_name = '%s'`, expectedTable)
+		resColumns := fmt.Sprintf(`SELECT column_name, data_type, data_precision, data_scale, data_length 
+			FROM USER_TAB_COLUMNS WHERE table_name = '%s'`, resTable)
+		expectedColumns := fmt.Sprintf(`SELECT column_name, data_type, data_precision, data_scale, data_length 
+			FROM USER_TAB_COLUMNS WHERE table_name = '%s'`, expectedTable)
+		//nolint:gosec // linter doesnt like due to security; no risk of injection so is fine
 		emptyTable := fmt.Sprintf(`SELECT COUNT(*) FROM ((%s MINUS %s) UNION (%s MINUS %s)) countdiff`,
 			resColumns, expectedColumns, expectedColumns, resColumns,
 		)
@@ -406,8 +413,9 @@ func TestOracleIntegrationSendBatch(t *testing.T) {
 		require.Zero(t, schemeCount, "There are mismatching rows! Tables do not share the same schema")
 
 		var rowCount int32
-		resQuery := fmt.Sprintf(`SELECT * FROM "%s"`, resTable)
-		expectedQuery := fmt.Sprintf(`SELECT * FROM "%s"`, expectedTable)
+		resQuery := fmt.Sprintf(`SELECT * FROM %q`, resTable)
+		expectedQuery := fmt.Sprintf(`SELECT * FROM %q`, expectedTable)
+		//nolint:gosec // linter doesnt like due to security; no risk of injection so is fine
 		emptyInsertion := fmt.Sprintf("SELECT COUNT(*) FROM ((%s MINUS %s) UNION (%s MINUS %s)) countdiff",
 			resQuery, expectedQuery, expectedQuery, resQuery,
 		)
