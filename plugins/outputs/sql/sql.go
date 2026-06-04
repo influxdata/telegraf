@@ -101,7 +101,7 @@ func (p *SQL) Init() error {
 	case "oracle":
 		p.tableListColumnsTemplate = "SELECT column_name FROM all_tab_columns WHERE table_name = {TABLE}"
 	case "mssql", "mysql", "pgx", "snowflake", "clickhouse":
-		p.TableExistsTemplate = "SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME={TABLE}"
+		p.tableListColumnsTemplate = "SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME={TABLE}"
 	default:
 		return fmt.Errorf("unknown driver %q", p.Driver) // checks for valid driver
 	}
@@ -342,6 +342,7 @@ func (p *SQL) tableExists(tableName string) bool {
 
 func (p *SQL) updateTableCache(tablename string) error {
 	stmt := strings.ReplaceAll(p.tableListColumnsTemplate, "{TABLE}", quoteStr(tablename))
+	fmt.Println(stmt)
 
 	columns, err := p.db.Query(stmt)
 	if err != nil {
