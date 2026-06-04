@@ -64,7 +64,7 @@ func (s *System) Init() error {
 					telegraf.DeprecationInfo{
 						Since:     "1.39.0",
 						RemovalIn: "1.45.0",
-						Notice:    "use 'uptime' instead",
+						Notice:    "use 'load', 'users', 'cpus' and 'uptime' instead",
 					},
 				)
 			}
@@ -179,19 +179,19 @@ func (s *System) gatherLegacy(acc telegraf.Accumulator, now time.Time) error {
 	loadavg, err := load.Avg()
 	if err != nil {
 		if !strings.Contains(err.Error(), "not implemented") {
-			return err
+			return fmt.Errorf("reading load averages: %w", err)
 		}
 		loadavg = &load.AvgStat{}
 	}
 
 	numLogicalCPUs, err := cpu.Counts(true)
 	if err != nil {
-		return err
+		return fmt.Errorf("reading logical CPU count: %w", err)
 	}
 
 	numPhysicalCPUs, err := cpu.Counts(false)
 	if err != nil {
-		return err
+		return fmt.Errorf("reading physical CPU count: %w", err)
 	}
 
 	fields := map[string]interface{}{
@@ -214,7 +214,7 @@ func (s *System) gatherLegacy(acc telegraf.Accumulator, now time.Time) error {
 
 	uptime, err := host.Uptime()
 	if err != nil {
-		return err
+		return fmt.Errorf("reading uptime: %w", err)
 	}
 
 	acc.AddCounter("system", map[string]interface{}{"uptime": uptime}, nil, now)
