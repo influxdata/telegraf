@@ -94,6 +94,14 @@ func (sw *SocketWriter) Connect() error {
 			c, err = tls.Dial(spl[0], spl[1], tlsCfg)
 		}
 		if err != nil {
+			if opErr, ok := errors.AsType[*net.OpError](err); ok {
+				return &internal.StartupError{
+					Err:     opErr,
+					Retry:   true,
+					Partial: false,
+				}
+			}
+
 			return err
 		}
 	}
@@ -154,8 +162,7 @@ func (sw *SocketWriter) Write(metrics []telegraf.Metric) error {
 
 		if _, err := sw.Conn.Write(bs); err != nil {
 			// TODO log & keep going with remaining strings
-			var netErr net.Error
-			if errors.As(err, &netErr) {
+			if netErr, ok := errors.AsType[net.Error](err); ok {
 				// permanent error. close the connection
 				sw.Close()
 				sw.Conn = nil
