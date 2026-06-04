@@ -204,6 +204,26 @@ func TestInit(t *testing.T) {
 				require.Equal(t, 1000*time.Millisecond, plugin.config.Consumer.MaxProcessingTime)
 			},
 		},
+		{
+			name: "custom consumer_fetch_min",
+			plugin: &KafkaConsumer{
+				ConsumerFetchMin: config.Size(1024),
+				Log:              testutil.Logger{},
+			},
+			check: func(t *testing.T, plugin *KafkaConsumer) {
+				require.Equal(t, int32(1024), plugin.config.Consumer.Fetch.Min)
+			},
+		},
+		{
+			name: "custom consumer_fetch_max_wait",
+			plugin: &KafkaConsumer{
+				ConsumerFetchMaxWait: config.Duration(250 * time.Millisecond),
+				Log:                  testutil.Logger{},
+			},
+			check: func(t *testing.T, plugin *KafkaConsumer) {
+				require.Equal(t, 250*time.Millisecond, plugin.config.Consumer.MaxWaitTime)
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

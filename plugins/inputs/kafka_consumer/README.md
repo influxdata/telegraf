@@ -238,6 +238,16 @@ to use them.
   ## `fetch.message.max.bytes`.
   # consumer_fetch_default = "1MB"
 
+  ## The minimum number of message bytes to fetch in a request; the broker
+  ## waits until at least this many bytes are available or 'consumer_fetch_max_wait'
+  ## elapses before responding. Similar to the JVM's `fetch.min.bytes`.
+  # consumer_fetch_min = "1B"
+
+  ## The maximum amount of time the broker waits for 'consumer_fetch_min' bytes
+  ## to become available before responding with fewer bytes anyway. Similar to
+  ## the JVM's `fetch.max.wait.ms`.
+  # consumer_fetch_max_wait = "500ms"
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
