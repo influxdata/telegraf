@@ -5,8 +5,8 @@ import (
 	"bufio"
 	"bytes"
 	_ "embed"
-	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"runtime"
 	"strings"
@@ -35,7 +35,6 @@ type System struct {
 	osCachedAt  time.Time
 	dmiFields   map[string]interface{}
 	dmiCachedAt time.Time
-	dmiEnabled  bool
 }
 
 func (*System) SampleConfig() string {
@@ -46,23 +45,22 @@ func (s *System) Init() error {
 	// Suppress deprecation warnings for default-only configs.
 	userSupplied := len(s.Include) > 0
 	if !userSupplied {
-		s.Include = []string{"cpus", "load", "users", "legacy_uptime"}
+		s.Include = []string{"legacy"}
 	}
 
 	enabled := make(map[string]bool, len(s.Include))
-	deduped := make([]string, 0, len(s.Include))
 	for _, incl := range s.Include {
 		if enabled[incl] {
 			continue
 		}
 		switch incl {
 		case "load", "users", "cpus", "uptime", "os", "dmi":
-		case "legacy_uptime":
+		case "legacy":
 			if userSupplied {
 				config.PrintOptionValueDeprecationNotice(
 					"inputs.system",
 					"include",
-					"legacy_uptime",
+					"legacy",
 					telegraf.DeprecationInfo{
 						Since:     "1.39.0",
 						RemovalIn: "1.45.0",
@@ -74,20 +72,16 @@ func (s *System) Init() error {
 			return fmt.Errorf("invalid 'include' option %q", incl)
 		}
 		enabled[incl] = true
-		deduped = append(deduped, incl)
-	}
-	s.Include = deduped
-
-	if enabled["uptime"] && enabled["legacy_uptime"] {
-		return errors.New(`"uptime" and "legacy_uptime" are mutually exclusive`)
 	}
 
-	if enabled["dmi"] {
-		if dmiSupported {
-			s.dmiEnabled = true
-		} else {
-			s.Log.Warn("'dmi' is not supported on this platform, ignoring")
-		}
+	if enabled["dmi"] && !dmiSupported {
+		s.Log.Warn("'dmi' is not supported on this platform, ignoring")
+		delete(enabled, "dmi")
+	}
+
+	s.Include = make([]string, 0, len(enabled))
+	for k := range enabled {
+		s.Include = append(s.Include, k)
 	}
 
 	return nil
@@ -104,18 +98,16 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 				osCache, err := gatherOS()
 				if err != nil {
 					acc.AddError(err)
-				} else {
-					s.osCache = osCache
-					s.osCachedAt = now
+					continue
 				}
+
+				s.osCache = osCache
+				s.osCachedAt = now
 			}
 			if len(s.osCache) > 0 {
-				acc.AddFields("system_os", s.osCache, nil, now)
+				maps.Copy(fields, s.osCache)
 			}
 		case "dmi":
-			if !s.dmiEnabled {
-				continue
-			}
 			if time.Since(s.dmiCachedAt) > time.Duration(s.DMICacheTTL) {
 				dmiFields, err := gatherDMI()
 				if err != nil {
@@ -126,7 +118,7 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 				}
 			}
 			if len(s.dmiFields) > 0 {
-				acc.AddFields("system_dmi", s.dmiFields, nil, now)
+				maps.Copy(fields, s.dmiFields)
 			}
 		case "load":
 			loadavg, err := load.Avg()
@@ -145,11 +137,11 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 				fields["n_users"] = len(users)
 				fields["n_unique_users"] = findUniqueUsers(users)
 			} else if os.IsNotExist(err) {
-				s.Log.Tracef("Reading users: %s", err.Error())
+				s.Log.Tracef("Reading users: %v", err)
 			} else if os.IsPermission(err) {
-				s.Log.Debug(err.Error())
+				s.Log.Tracef("Reading users: %v", err)
 			} else {
-				s.Log.Warnf("Reading users: %s", err.Error())
+				s.Log.Warnf("Reading users: %v", err)
 			}
 		case "cpus":
 			numLogicalCPUs, err := cpu.Counts(true)
@@ -171,24 +163,62 @@ func (s *System) Gather(acc telegraf.Accumulator) error {
 				continue
 			}
 			fields["uptime"] = uptime
-		case "legacy_uptime":
-			uptime, err := host.Uptime()
-			if err != nil {
-				acc.AddError(fmt.Errorf("reading uptime: %w", err))
-				continue
-			}
-			acc.AddCounter("system", map[string]interface{}{
-				"uptime": uptime,
-			}, nil, now)
-			acc.AddFields("system", map[string]interface{}{
-				"uptime_format": formatUptime(uptime),
-			}, nil, now)
+		case "legacy":
+			acc.AddError(s.gatherLegacy(acc, now))
 		}
 	}
 
 	if len(fields) > 0 {
-		acc.AddGauge("system", fields, nil, now)
+		acc.AddFields("system", fields, nil, now)
 	}
+
+	return nil
+}
+
+func (s *System) gatherLegacy(acc telegraf.Accumulator, now time.Time) error {
+	loadavg, err := load.Avg()
+	if err != nil {
+		if !strings.Contains(err.Error(), "not implemented") {
+			return err
+		}
+		loadavg = &load.AvgStat{}
+	}
+
+	numLogicalCPUs, err := cpu.Counts(true)
+	if err != nil {
+		return err
+	}
+
+	numPhysicalCPUs, err := cpu.Counts(false)
+	if err != nil {
+		return err
+	}
+
+	fields := map[string]interface{}{
+		"load1":           loadavg.Load1,
+		"load5":           loadavg.Load5,
+		"load15":          loadavg.Load15,
+		"n_cpus":          numLogicalCPUs,
+		"n_physical_cpus": numPhysicalCPUs,
+	}
+
+	users, err := host.Users()
+	if err == nil {
+		fields["n_users"] = len(users)
+		fields["n_unique_users"] = findUniqueUsers(users)
+	} else {
+		s.Log.Debugf("Reading users: %v", err)
+	}
+
+	acc.AddGauge("system", fields, nil, now)
+
+	uptime, err := host.Uptime()
+	if err != nil {
+		return err
+	}
+
+	acc.AddCounter("system", map[string]interface{}{"uptime": uptime}, nil, now)
+	acc.AddFields("system", map[string]interface{}{"uptime_format": formatUptime(uptime)}, nil, now)
 
 	return nil
 }
@@ -259,8 +289,8 @@ func gatherDMI() (map[string]interface{}, error) {
 	}
 	if ch != nil {
 		fields["chassis_vendor"] = ch.Vendor
-		fields["chassis_type"] = ch.Type
-		fields["chassis_type_description"] = ch.TypeDescription
+		fields["chassis_type_code"] = ch.Type
+		fields["chassis_type"] = ch.TypeDescription
 		fields["chassis_version"] = ch.Version
 		fields["chassis_serial"] = ch.SerialNumber
 		fields["chassis_asset_tag"] = ch.AssetTag

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/shirou/gopsutil/v4/host"
 	"github.com/stretchr/testify/require"
 
@@ -18,8 +19,8 @@ import (
 func TestUniqueUsers(t *testing.T) {
 	tests := []struct {
 		name     string
-		expected int
 		data     []host.UserStat
+		expected int
 	}{
 		{
 			name:     "single entry",
@@ -72,49 +73,19 @@ func TestUniqueUsers(t *testing.T) {
 }
 
 func TestInitAllValidOptions(t *testing.T) {
-	// The uptime/legacy_uptime settings are mutually exclusive, so cover all
-	// valid values across two configurations.
-	tests := []struct {
-		name    string
-		include []string
-	}{
-		{"new", []string{"load", "users", "cpus", "uptime", "os", "dmi"}},
-		{"legacy", []string{"load", "users", "cpus", "legacy_uptime", "os", "dmi"}},
+	plugin := &System{
+		Include: []string{"load", "users", "cpus", "legacy", "os", "dmi"},
+		Log:     &testutil.Logger{},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &System{Include: tt.include, Log: &testutil.Logger{}}
-			require.NoError(t, s.Init())
-		})
-	}
+	require.NoError(t, plugin.Init())
 }
 
 func TestInitErrors(t *testing.T) {
-	tests := []struct {
-		name    string
-		include []string
-		errMsg  string
-	}{
-		{
-			name:    "invalid option",
-			include: []string{"invalid"},
-			errMsg:  `invalid 'include' option "invalid"`,
-		},
-		{
-			name:    "uptime mutually exclusive",
-			include: []string{"uptime", "legacy_uptime"},
-			errMsg:  "mutually exclusive",
-		},
+	plugin := &System{
+		Include: []string{"invalid"},
+		Log:     &testutil.Logger{},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &System{
-				Include: tt.include,
-				Log:     &testutil.Logger{},
-			}
-			require.ErrorContains(t, s.Init(), tt.errMsg)
-		})
-	}
+	require.ErrorContains(t, plugin.Init(), `invalid 'include' option "invalid"`)
 }
 
 func TestGather(t *testing.T) {
@@ -177,20 +148,7 @@ func TestGather(t *testing.T) {
 						"n_physical_cpus": 0,
 					},
 					time.Unix(0, 0),
-					telegraf.Gauge,
-				),
-			},
-		},
-		{
-			name:    "uptime as gauge field",
-			include: []string{"uptime"},
-			expected: []telegraf.Metric{
-				metric.New(
-					"system",
-					map[string]string{},
-					map[string]interface{}{"uptime": uint64(0)},
-					time.Unix(0, 0),
-					telegraf.Gauge,
+					telegraf.Untyped,
 				),
 			},
 		},
@@ -213,14 +171,30 @@ func TestGather(t *testing.T) {
 						"uptime":          uint64(0),
 					},
 					time.Unix(0, 0),
-					telegraf.Gauge,
+					telegraf.Untyped,
 				),
 			},
 		},
 		{
-			name:    "legacy_uptime only",
-			include: []string{"legacy_uptime"},
+			name:         "legacy only",
+			include:      []string{"legacy"},
+			requireUsers: true,
 			expected: []telegraf.Metric{
+				metric.New(
+					"system",
+					map[string]string{},
+					map[string]interface{}{
+						"load1":           float64(0),
+						"load5":           float64(0),
+						"load15":          float64(0),
+						"n_users":         0,
+						"n_unique_users":  0,
+						"n_cpus":          0,
+						"n_physical_cpus": 0,
+					},
+					time.Unix(0, 0),
+					telegraf.Gauge,
+				),
 				metric.New(
 					"system",
 					map[string]string{},
@@ -250,36 +224,6 @@ func TestGather(t *testing.T) {
 						"n_unique_users": 0,
 					},
 					time.Unix(0, 0),
-					telegraf.Gauge,
-				),
-			},
-		},
-		{
-			name:    "duplicates are de-duplicated",
-			include: []string{"legacy_uptime", "legacy_uptime", "cpus", "cpus"},
-			expected: []telegraf.Metric{
-				metric.New(
-					"system",
-					map[string]string{},
-					map[string]interface{}{
-						"n_cpus":          0,
-						"n_physical_cpus": 0,
-					},
-					time.Unix(0, 0),
-					telegraf.Gauge,
-				),
-				metric.New(
-					"system",
-					map[string]string{},
-					map[string]interface{}{"uptime": uint64(0)},
-					time.Unix(0, 0),
-					telegraf.Counter,
-				),
-				metric.New(
-					"system",
-					map[string]string{},
-					map[string]interface{}{"uptime_format": string("")},
-					time.Unix(0, 0),
 					telegraf.Untyped,
 				),
 			},
@@ -290,17 +234,21 @@ func TestGather(t *testing.T) {
 			if tt.requireUsers && !usersAvailable {
 				t.Skip("host.Users() not mockable on this platform")
 			}
-			s := &System{
+
+			plugin := &System{
 				Include: tt.include,
 				Log:     &testutil.Logger{},
 			}
-			require.NoError(t, s.Init())
+			require.NoError(t, plugin.Init())
 
 			var acc testutil.Accumulator
-			require.NoError(t, s.Gather(&acc))
+			require.NoError(t, plugin.Gather(&acc))
 
-			actual := acc.GetTelegrafMetrics()
-			testutil.RequireMetricsStructureEqual(t, tt.expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
+			options := []cmp.Option{
+				testutil.IgnoreTime(),
+				testutil.SortMetrics(),
+			}
+			testutil.RequireMetricsStructureEqual(t, tt.expected, acc.GetTelegrafMetrics(), options...)
 		})
 	}
 }
@@ -327,7 +275,7 @@ func TestGatherOSValues(t *testing.T) {
 	// arch and kernel_version come from uname(2) and depend on the host.
 	expected := []telegraf.Metric{
 		metric.New(
-			"system_os",
+			"system",
 			map[string]string{},
 			map[string]interface{}{
 				"os":               "linux",
@@ -370,32 +318,33 @@ func TestGatherDMIValues(t *testing.T) {
 	require.NoError(t, s.Init())
 
 	expected := metric.New(
-		"system_dmi",
+		"system",
 		nil,
 		map[string]interface{}{
-			"bios_vendor":              "Telegraf BIOS, Inc.",
-			"bios_version":             "1.2.3",
-			"bios_date":                "01/01/2026",
-			"board_vendor":             "Telegraf Boards Co.",
-			"board_product":            "TG-BOARD-X1",
-			"board_version":            "A1",
-			"board_serial":             "BS-1234",
-			"board_asset_tag":          "ASSET-A",
-			"chassis_vendor":           "Telegraf Chassis Ltd.",
-			"chassis_type":             "3",
-			"chassis_type_description": "Desktop",
-			"chassis_version":          "v0",
-			"chassis_serial":           "CS-5678",
-			"chassis_asset_tag":        "ASSET-C",
-			"product_vendor":           "Telegraf Systems",
-			"product_name":             "TG-Server-9000",
-			"product_family":           "TG-Server",
-			"product_version":          "v9",
-			"product_serial":           "PS-9999",
-			"product_sku":              "SKU-XYZ",
-			"product_uuid":             "00000000-0000-0000-0000-000000000001",
+			"bios_vendor":       "Telegraf BIOS, Inc.",
+			"bios_version":      "1.2.3",
+			"bios_date":         "01/01/2026",
+			"board_vendor":      "Telegraf Boards Co.",
+			"board_product":     "TG-BOARD-X1",
+			"board_version":     "A1",
+			"board_serial":      "BS-1234",
+			"board_asset_tag":   "ASSET-A",
+			"chassis_vendor":    "Telegraf Chassis Ltd.",
+			"chassis_type_code": "3",
+			"chassis_type":      "Desktop",
+			"chassis_version":   "v0",
+			"chassis_serial":    "CS-5678",
+			"chassis_asset_tag": "ASSET-C",
+			"product_vendor":    "Telegraf Systems",
+			"product_name":      "TG-Server-9000",
+			"product_family":    "TG-Server",
+			"product_version":   "v9",
+			"product_serial":    "PS-9999",
+			"product_sku":       "SKU-XYZ",
+			"product_uuid":      "00000000-0000-0000-0000-000000000001",
 		},
 		time.Unix(0, 0),
+		telegraf.Untyped,
 	)
 
 	var acc testutil.Accumulator
@@ -408,6 +357,5 @@ func TestGatherDMIValues(t *testing.T) {
 	require.NoError(t, s.Gather(&acc))
 	require.Equal(t, firstCachedAt, s.dmiCachedAt)
 
-	expected2 := []telegraf.Metric{expected, expected}
-	testutil.RequireMetricsEqual(t, expected2, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+	testutil.RequireMetricsEqual(t, []telegraf.Metric{expected, expected}, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
