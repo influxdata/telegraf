@@ -265,7 +265,7 @@ func (d *DockerLogs) tailContainerLogs(
 		ShowStderr: true,
 		Timestamps: true,
 		Details:    false,
-		Follow:     false,
+		Follow:     true,
 	}
 
 	if !d.FromBeginning {
