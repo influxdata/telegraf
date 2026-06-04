@@ -51,7 +51,8 @@ However, if you are using Prometheus as an output, it might be your preferred
 choice as the metrics are typed correctly.
 
 If you are using the fine-grained options such as `cpus` you will get a _single_,
-untyped metric containing all selected information.
+untyped metric containing all selected information. To reproduce the fields of
+the `legacy` set, use `include = ["load", "users", "cpus", "uptime"]`.
 
 Both `legacy` and the fine-grained options can be used at the same time
 resulting in four metrics in total (one for the fine-grained set and three for

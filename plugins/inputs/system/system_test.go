@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/shirou/gopsutil/v4/host"
 	"github.com/stretchr/testify/require"
 
@@ -244,11 +243,7 @@ func TestGather(t *testing.T) {
 			var acc testutil.Accumulator
 			require.NoError(t, plugin.Gather(&acc))
 
-			options := []cmp.Option{
-				testutil.IgnoreTime(),
-				testutil.SortMetrics(),
-			}
-			testutil.RequireMetricsStructureEqual(t, tt.expected, acc.GetTelegrafMetrics(), options...)
+			testutil.RequireMetricsStructureEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
 		})
 	}
 }
