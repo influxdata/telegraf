@@ -55,6 +55,14 @@ func (s *Smartctl) Init() error {
 		s.Timeout = config.Duration(time.Second * 30)
 	}
 
+	switch s.MetricVersion {
+	case 0:
+		s.MetricVersion = 1
+	case 1, 2:
+	default:
+		return fmt.Errorf("invalid metric_version %d, please use 1 or 2", s.MetricVersion)
+	}
+
 	if len(s.DevicesInclude) != 0 && len(s.DevicesExclude) != 0 {
 		return errors.New("cannot specify both devices_include and devices_exclude")
 	}

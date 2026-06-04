@@ -63,9 +63,9 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## outputs. Currently "smartctl_attribute" metrics include the attribute
     ## name in the "name" tag, and the associated device is not in any tag,
     ## making it harder to associate them to the "smartctl" metrics.
-    ## metric_version = 2 will use the "name" tag for the the device name,
+    ## metric_version = 2 will use the "name" tag for the device name,
     ## and a new "attribute" tag for the attribute name.
-    metric_version = 1
+    # metric_version = 1
 
     ## Timeout for the cli command to complete
     # timeout = "30s"

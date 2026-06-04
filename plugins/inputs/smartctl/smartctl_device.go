@@ -140,7 +140,8 @@ func (s *Smartctl) scanDevice(acc telegraf.Accumulator, deviceName, deviceType s
 		if s.MetricVersion == 2 {
 			attributeTags["attribute"] = attribute.Name
 		} else {
-			attributeTags["name"] = attribute.Name // overwrite device name
+			// v1: the attribute name replaces the device name in the "name" tag
+			attributeTags["name"] = attribute.Name
 		}
 
 		fields := map[string]interface{}{
