@@ -206,8 +206,7 @@ func (r *metricReceiver) collectMetrics(ctx context.Context, acc telegraf.Accumu
 			log.Debugf("no timeseries data for metric %q of resource target %q", *metric.ID, target.ResourceID)
 			continue
 		}
-		// This is from https://github.com/logzio/azure-monitor-metrics-receiver/blob/master/collector.go but why do we
-		// only get the first index?
+		// We only want to collect latest metric which should be in the first timeseries segment
 		timeseries := metric.Timeseries[0].Data
 
 		// Construct the metric name
