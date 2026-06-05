@@ -125,21 +125,21 @@ func (am *AzureMonitor) Init() error {
 }
 
 func (am *AzureMonitor) Gather(acc telegraf.Accumulator) error {
-	var waitGroup sync.WaitGroup
+	var wg sync.WaitGroup
 
+	ctx := context.Background()
 	for _, target := range am.receiver.resources {
 		am.Log.Debug("Collecting metrics for resource target ", target.ResourceID)
-		ctx := context.Background()
 
-		waitGroup.Add(1)
+		wg.Add(1)
 		go func(target *resourceTarget) {
-			defer waitGroup.Done()
+			defer wg.Done()
 
 			am.receiver.collectMetrics(ctx, acc, target, am.Log)
 		}(target)
 	}
+	wg.Wait()
 
-	waitGroup.Wait()
 	return nil
 }
 
