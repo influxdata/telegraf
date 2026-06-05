@@ -16,8 +16,7 @@ import (
 var nameReplacer = strings.NewReplacer(".", "_", "/", "_", " ", "_", "(", "_", ")", "_")
 
 type metricReceiver struct {
-	AzureClients client
-
+	client         client
 	subscriptionID string
 	resources      []*resourceTarget
 }
@@ -31,7 +30,7 @@ func newReceiver(
 	subscriptions []*resource,
 ) (*metricReceiver, error) {
 	r := &metricReceiver{
-		AzureClients:   client,
+		client:         client,
 		subscriptionID: subscriptionID,
 	}
 
@@ -59,7 +58,7 @@ func newReceiver(
 	result := make([]*resourceTarget, 0, len(r.resources))
 	for _, target := range r.resources {
 		// Get all valid metric definitions for the given resource
-		response, err := r.AzureClients.MetricDefinitionsList(ctx, target.ResourceID, nil)
+		response, err := r.client.MetricDefinitionsList(ctx, target.ResourceID, nil)
 		if err != nil {
 			return nil, fmt.Errorf("listing metric definitions for resource target %q failed: %w", target.ResourceID, err)
 		}
@@ -105,7 +104,7 @@ func newReceiver(
 				})
 
 				if !exists {
-					return nil, fmt.Errorf("invalid metric %q for resource target", metric)
+					return nil, fmt.Errorf("invalid metric %q for resource target %q", metric, target.ResourceID)
 				}
 			}
 		} else {
@@ -153,7 +152,7 @@ func (r *metricReceiver) collectMetrics(ctx context.Context, acc telegraf.Accumu
 	names := strings.Join(target.Metrics, ",")
 	aggregations := strings.Join(target.Aggregations, ",")
 
-	response, err := r.AzureClients.MetricsList(ctx, target.ResourceID, &armmonitor.MetricsClientListOptions{
+	response, err := r.client.MetricsList(ctx, target.ResourceID, &armmonitor.MetricsClientListOptions{
 		Metricnames: &names,
 		Aggregation: &aggregations,
 	})
@@ -179,7 +178,13 @@ func (r *metricReceiver) collectMetrics(ctx context.Context, acc telegraf.Accumu
 			continue
 		}
 		if metric.ErrorCode != nil && *metric.ErrorCode != "Success" {
-			acc.AddError(fmt.Errorf("metric error for resource target %q: %s: %s", target.ResourceID, *metric.ErrorCode, *metric.ErrorMessage))
+			var err error
+			if metric.ErrorMessage != nil {
+				err = fmt.Errorf("metric error for resource target %q: %s: %s", target.ResourceID, *metric.ErrorCode, *metric.ErrorMessage)
+			} else {
+				err = fmt.Errorf("metric error for resource target %q: %s", target.ResourceID, *metric.ErrorCode)
+			}
+			acc.AddError(err)
 			continue
 		}
 		if metric.ID == nil {
@@ -290,21 +295,17 @@ func createClientResourcesFilter(resources []*resource) string {
 }
 
 func (r *metricReceiver) createResourceTargetFromResourceGroupTarget(ctx context.Context, target *resourceGroupTarget) error {
-	resourceTargetsCreatedNum := 0
 	filter := createClientResourcesFilter(target.Resources)
 	option := &armresources.ClientListByResourceGroupOptions{Filter: &filter}
-	responses, err := r.AzureClients.ResourcesListByResourceGroup(ctx, target.ResourceGroup, option)
+	responses, err := r.client.ResourcesListByResourceGroup(ctx, target.ResourceGroup, option)
 	if err != nil {
 		return fmt.Errorf("listing by resource group failed: %w", err)
 	}
 
 	for _, response := range responses {
-		currentResourceTargetsCreatedNum, err := r.createResourceTargetFromTargetResources(response.Value, target.Resources)
-		if err != nil {
+		if err := r.createResourceTargetFromTargetResources(response.Value, target.Resources); err != nil {
 			return fmt.Errorf("error creating resource target from resource group target resources: %w", err)
 		}
-
-		resourceTargetsCreatedNum += currentResourceTargetsCreatedNum
 	}
 
 	return nil
@@ -315,56 +316,47 @@ func (r *metricReceiver) createResourceTargetsFromSubscriptionTargets(ctx contex
 		return nil
 	}
 
-	resourceTargetsCreatedNum := 0
 	filter := createClientResourcesFilter(targets)
-	responses, err := r.AzureClients.ResourcesList(ctx, &armresources.ClientListOptions{Filter: &filter})
+	responses, err := r.client.ResourcesList(ctx, &armresources.ClientListOptions{Filter: &filter})
 	if err != nil {
 		return fmt.Errorf("listing resources failed: %w", err)
 	}
 
 	for _, response := range responses {
-		currentResourceTargetsCreatedNum, err := r.createResourceTargetFromTargetResources(response.Value, targets)
-		if err != nil {
+		if err := r.createResourceTargetFromTargetResources(response.Value, targets); err != nil {
 			return fmt.Errorf("error creating resource target from subscription targets: %w", err)
 		}
-
-		resourceTargetsCreatedNum += currentResourceTargetsCreatedNum
 	}
 
 	return nil
 }
 
-func (r *metricReceiver) createResourceTargetFromTargetResources(resources []*armresources.GenericResourceExpanded, targetResources []*resource) (int, error) {
-	resourceTargetsCreatedNum := 0
-
+func (r *metricReceiver) createResourceTargetFromTargetResources(resources []*armresources.GenericResourceExpanded, targetResources []*resource) error {
 	for _, targetResource := range targetResources {
-		isResourceTargetCreated := false
+		var isResourceTargetCreated bool
 
 		for _, resource := range resources {
 			if resource == nil {
-				return resourceTargetsCreatedNum, errors.New("invalid resource")
+				return errors.New("invalid resource")
 			}
 			if resource.ID == nil {
-				return resourceTargetsCreatedNum, errors.New("invalid resource ID")
+				return errors.New("invalid resource ID")
 			}
-			resourceID := *resource.ID
-
 			if resource.Type == nil {
-				return resourceTargetsCreatedNum, errors.New("invalid resource type")
+				return errors.New("invalid resource type")
 			}
 			if *resource.Type != targetResource.ResourceType {
 				continue
 			}
 
-			r.resources = append(r.resources, &resourceTarget{resourceID, targetResource.Metrics, targetResource.Aggregations})
+			r.resources = append(r.resources, &resourceTarget{*resource.ID, targetResource.Metrics, targetResource.Aggregations})
 			isResourceTargetCreated = true
-			resourceTargetsCreatedNum++
 		}
 
 		if !isResourceTargetCreated {
-			return resourceTargetsCreatedNum, fmt.Errorf("could not find resources with resource type %q", targetResource.ResourceType)
+			return fmt.Errorf("could not find resources with resource type %q", targetResource.ResourceType)
 		}
 	}
 
-	return resourceTargetsCreatedNum, nil
+	return nil
 }
