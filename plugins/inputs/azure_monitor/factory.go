@@ -77,7 +77,7 @@ func (*azureFactory) createClient(subscriptionID, clientID, clientSecret, tenant
 
 	resClient, err := armresources.NewClient(subscriptionID, credentials, options)
 	if err != nil {
-		return nil, fmt.Errorf("error creating Azure definitions client: %w", err)
+		return nil, fmt.Errorf("error creating Azure resources client: %w", err)
 	}
 
 	return &azureClient{
