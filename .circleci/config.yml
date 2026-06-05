@@ -199,6 +199,12 @@ jobs:
       - check-changed-files-or-halt
       - run: git config --system core.longpaths true
       - run: choco feature enable -n allowGlobalConfirmation
+      - run:
+          name: Disable Windows HNS excluded port ranges
+          shell: powershell.exe
+          command: |
+            reg add "HKLM\SYSTEM\CurrentControlSet\Services\hns\State" /v EnableExcludedPortRange /d 0 /f
+            Restart-Service hns -Force
       - run: 'sh ./scripts/installgo_windows.sh'
       - run: choco install mingw
       - run: echo 'export PATH="$PATH:/c/ProgramData/mingw64/mingw64/bin"' >> $BASH_ENV
