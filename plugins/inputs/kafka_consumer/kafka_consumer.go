@@ -49,6 +49,8 @@ type KafkaConsumer struct {
 	MsgHeaderAsMetricName                string          `toml:"msg_header_as_metric_name"`
 	TimestampSource                      string          `toml:"timestamp_source"`
 	ConsumerFetchDefault                 config.Size     `toml:"consumer_fetch_default"`
+	ConsumerFetchMin                     config.Size     `toml:"consumer_fetch_min"`
+	ConsumerFetchMaxWait                 config.Duration `toml:"consumer_fetch_max_wait"`
 	ConnectionStrategy                   string          `toml:"connection_strategy" deprecated:"1.33.0;1.40.0;use 'startup_error_behavior' instead"`
 	ResolveCanonicalBootstrapServersOnly bool            `toml:"resolve_canonical_bootstrap_servers_only"`
 	Log                                  telegraf.Logger `toml:"-"`
@@ -188,6 +190,14 @@ func (k *KafkaConsumer) Init() error {
 
 	if k.ConsumerFetchDefault != 0 {
 		cfg.Consumer.Fetch.Default = int32(k.ConsumerFetchDefault)
+	}
+
+	if k.ConsumerFetchMin != 0 {
+		cfg.Consumer.Fetch.Min = int32(k.ConsumerFetchMin)
+	}
+
+	if k.ConsumerFetchMaxWait != 0 {
+		cfg.Consumer.MaxWaitTime = time.Duration(k.ConsumerFetchMaxWait)
 	}
 
 	switch strings.ToLower(k.ConnectionStrategy) {
