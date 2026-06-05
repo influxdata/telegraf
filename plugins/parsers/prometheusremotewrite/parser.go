@@ -30,7 +30,7 @@ func (p *Parser) Init() error {
 	if p.timeFunc == nil {
 		p.timeFunc = time.Now
 	}
-	fmt.Println("tags:", p.DefaultTags)
+
 	return nil
 }
 
