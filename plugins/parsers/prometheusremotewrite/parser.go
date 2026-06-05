@@ -3,6 +3,7 @@ package prometheusremotewrite
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/prometheus/prometheus/prompb"
 
@@ -13,6 +14,24 @@ import (
 type Parser struct {
 	MetricVersion int `toml:"prometheus_metric_version"`
 	DefaultTags   map[string]string
+
+	timeFunc func() time.Time
+}
+
+func (p *Parser) SetDefaultTags(tags map[string]string) {
+	p.DefaultTags = tags
+}
+
+func (p *Parser) SetTimeFunc(f func() time.Time) {
+	p.timeFunc = f
+}
+
+func (p *Parser) Init() error {
+	if p.timeFunc == nil {
+		p.timeFunc = time.Now
+	}
+	fmt.Println("tags:", p.DefaultTags)
+	return nil
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
@@ -58,10 +77,6 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	return metrics[0], nil
-}
-
-func (p *Parser) SetDefaultTags(tags map[string]string) {
-	p.DefaultTags = tags
 }
 
 func init() {
