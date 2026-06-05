@@ -220,7 +220,7 @@ func (r *metricReceiver) collectMetrics(ctx context.Context, acc telegraf.Accumu
 		for _, s := range idSplit {
 			parts = append(parts, strings.Split(s, "/"))
 		}
-		if len(parts) <= 1 {
+		if len(parts) < 2 {
 			acc.AddError(fmt.Errorf("not enough top parts for metric %q of resource target %q", *metric.ID, target.ResourceID))
 			continue
 		}
@@ -238,7 +238,7 @@ func (r *metricReceiver) collectMetrics(ctx context.Context, acc telegraf.Accumu
 		tags := map[string]string{
 			"subscription_id": parts[0][2],
 			"resource_group":  parts[0][4],
-			"resource_name":   parts[1][2],
+			"resource_name":   strings.Join(parts[1][2:], "/"),
 			"namespace":       *response.Namespace,
 			"resource_region": *response.Resourceregion,
 			"unit":            string(*metric.Unit),
