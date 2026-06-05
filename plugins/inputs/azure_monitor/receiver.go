@@ -225,7 +225,7 @@ func (r *metricReceiver) collectMetrics(ctx context.Context, acc telegraf.Accumu
 			continue
 		}
 		if len(parts[1]) < 3 {
-			err := fmt.Errorf("not enough parts (%d/3) for section 1 for metric %q of resource target %q", len(parts[0]), *metric.ID, target.ResourceID)
+			err := fmt.Errorf("not enough parts (%d/3) for section 1 for metric %q of resource target %q", len(parts[1]), *metric.ID, target.ResourceID)
 			acc.AddError(err)
 			continue
 		}
