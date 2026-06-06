@@ -152,9 +152,9 @@ func (p *SQL) Close() error {
 func (p *SQL) quoteIdent(name string) string {
 	if p.Driver == "mysql" {
 		return "`" + strings.ReplaceAll(sanitizeQuoted(name), "`", "``") + "`"
-	} else {
-		return `"` + strings.ReplaceAll(sanitizeQuoted(name), `"`, `""`) + `"`
 	}
+
+	return `"` + strings.ReplaceAll(sanitizeQuoted(name), `"`, `""`) + `"`
 }
 
 // Quote a string literal
