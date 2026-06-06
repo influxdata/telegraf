@@ -98,16 +98,15 @@ func (p *SQL) Init() error {
 	switch p.Driver {
 	case "sqlite":
 		p.tableListColumnsTemplate = "SELECT name AS column_name FROM pragma_table_info({TABLE})"
+	case "clickhouse":
+		p.tableListColumnsTemplate = "SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME={TABLE}"
+		p.convertClickHouseDsn()
 	case "oracle":
 		p.tableListColumnsTemplate = "SELECT column_name FROM all_tab_columns WHERE table_name = {TABLE}"
-	case "mssql", "mysql", "pgx", "snowflake", "clickhouse":
+	case "mssql", "mysql", "pgx", "snowflake":
 		p.tableListColumnsTemplate = "SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME={TABLE}"
 	default:
 		return fmt.Errorf("unknown driver %q", p.Driver) // checks for valid driver
-	}
-
-	if p.Driver == "clickhouse" {
-		p.convertClickHouseDsn()
 	}
 
 	return nil
@@ -342,7 +341,6 @@ func (p *SQL) tableExists(tableName string) bool {
 
 func (p *SQL) updateTableCache(tablename string) error {
 	stmt := strings.ReplaceAll(p.tableListColumnsTemplate, "{TABLE}", quoteStr(tablename))
-	fmt.Println(stmt)
 
 	columns, err := p.db.Query(stmt)
 	if err != nil {

@@ -149,8 +149,6 @@ func TestOracleIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	const username = "system"
-
 	password := testutil.GetRandomString(30) // oracle max pw size is 30 bytes
 
 	servicePort := "1521"
@@ -168,8 +166,8 @@ func TestOracleIntegration(t *testing.T) {
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
-	address := config.NewSecret([]byte(fmt.Sprintf("oracle://%s:%s@%s:%s/FREEPDB1",
-		username, password, container.Address, container.Ports[servicePort],
+	address := config.NewSecret([]byte(fmt.Sprintf("oracle://system:%s@%s:%s/FREEPDB1",
+		password, container.Address, container.Ports[servicePort],
 	)))
 	p := &SQL{
 		Driver:            "oracle",
@@ -246,8 +244,6 @@ func TestOracleUpdateSchemeIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	const username = "system"
-
 	password := testutil.GetRandomString(30) // oracle max pw size is 30 bytes
 
 	servicePort := "1521"
@@ -265,8 +261,8 @@ func TestOracleUpdateSchemeIntegration(t *testing.T) {
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
-	address := config.NewSecret([]byte(fmt.Sprintf("oracle://%s:%s@%s:%s/FREEPDB1",
-		username, password, container.Address, container.Ports[servicePort],
+	address := config.NewSecret([]byte(fmt.Sprintf("oracle://system:%s@%s:%s/FREEPDB1",
+		password, container.Address, container.Ports[servicePort],
 	)))
 	p := &SQL{
 		Driver:              "oracle",
@@ -333,8 +329,6 @@ func TestOracleIntegrationSendBatch(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	const username = "system"
-
 	password := testutil.GetRandomString(30) // oracle max pw size is 30 bytes
 
 	servicePort := "1521"
@@ -352,8 +346,8 @@ func TestOracleIntegrationSendBatch(t *testing.T) {
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
-	address := config.NewSecret([]byte(fmt.Sprintf("oracle://%s:%s@%s:%s/FREEPDB1",
-		username, password, container.Address, container.Ports[servicePort],
+	address := config.NewSecret([]byte(fmt.Sprintf("oracle://system:%s@%s:%s/FREEPDB1",
+		password, container.Address, container.Ports[servicePort],
 	)))
 	p := &SQL{
 		Driver:            "oracle",
