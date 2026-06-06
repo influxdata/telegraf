@@ -31,7 +31,8 @@ type Smartctl struct {
 	MetricVersion  int             `toml:"metric_version"`
 	Log            telegraf.Logger `toml:"-"`
 
-	deviceFilter filter.Filter
+	deviceFilter     filter.Filter
+	attributeTagName string
 }
 
 func (*Smartctl) SampleConfig() string {
@@ -71,6 +72,13 @@ func (s *Smartctl) Init() error {
 	s.deviceFilter, err = filter.NewIncludeExcludeFilter(s.DevicesInclude, s.DevicesExclude)
 	if err != nil {
 		return err
+	}
+
+	// v1: the attribute name replaces the device name in the "name" tag
+	if s.MetricVersion >= 2 {
+		s.attributeTagName = "attribute"
+	} else {
+		s.attributeTagName = "name"
 	}
 
 	return nil
