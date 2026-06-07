@@ -13,7 +13,7 @@ import (
 )
 
 func (p *Parser) extractMetricsV2(ts *prompb.TimeSeries) ([]telegraf.Metric, error) {
-	t := time.Now()
+	t := p.timeFunc()
 
 	// Convert each prometheus metric to a corresponding telegraf metric
 	// with one field each. The process will filter NaNs in values and skip
