@@ -20,21 +20,21 @@ type vmCurrentStats struct {
 }
 
 type vmStat struct {
-	ID         json.Number `json:"vmid"`
-	Name       string      `json:"name"`
-	Status     string      `json:"status"`
-	UsedMem    json.Number `json:"mem"`
-	TotalMem   json.Number `json:"maxmem"`
-	UsedDisk   json.Number `json:"disk"`
-	TotalDisk  json.Number `json:"maxdisk"`
-	UsedSwap   json.Number `json:"swap"`
-	TotalSwap  json.Number `json:"maxswap"`
-	Uptime     json.Number `json:"uptime"`
-	CPULoad    json.Number `json:"cpu"`
-	DiskRead   json.Number `json:"diskread"`
-	DiskWrite  json.Number `json:"diskwrite"`
-	NetIn      json.Number `json:"netin"`
-	NetOut     json.Number `json:"netout"`
+	ID        json.Number `json:"vmid"`
+	Name      string      `json:"name"`
+	Status    string      `json:"status"`
+	UsedMem   json.Number `json:"mem"`
+	TotalMem  json.Number `json:"maxmem"`
+	UsedDisk  json.Number `json:"disk"`
+	TotalDisk json.Number `json:"maxdisk"`
+	UsedSwap  json.Number `json:"swap"`
+	TotalSwap json.Number `json:"maxswap"`
+	Uptime    json.Number `json:"uptime"`
+	CPULoad   json.Number `json:"cpu"`
+	DiskRead  json.Number `json:"diskread"`
+	DiskWrite json.Number `json:"diskwrite"`
+	NetIn     json.Number `json:"netin"`
+	NetOut    json.Number `json:"netout"`
 }
 
 type vmConfig struct {
