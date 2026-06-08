@@ -18,6 +18,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"                      // pgx (postgres)
 	_ "github.com/microsoft/go-mssqldb"                     // mssql (sql server)
 	_ "github.com/microsoft/go-mssqldb/integratedauth/krb5" // integrated auth for mssql
+	_ "github.com/sijms/go-ora/v2"                          // oracle
 	_ "github.com/snowflakedb/gosnowflake"                  // snowflake
 
 	"github.com/influxdata/telegraf"
@@ -79,7 +80,11 @@ func (*SQL) SampleConfig() string {
 func (p *SQL) Init() error {
 	// Set defaults
 	if p.TableExistsTemplate == "" {
-		p.TableExistsTemplate = "SELECT 1 FROM {TABLE} LIMIT 1"
+		if p.Driver == "oracle" {
+			p.TableExistsTemplate = "SELECT 1 FROM {TABLE} FETCH FIRST 1 ROWS ONLY"
+		} else {
+			p.TableExistsTemplate = "SELECT 1 FROM {TABLE} LIMIT 1"
+		}
 	}
 
 	if p.TableTemplate == "" {
@@ -90,18 +95,18 @@ func (p *SQL) Init() error {
 		}
 	}
 
-	p.tableListColumnsTemplate = "SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME={TABLE}"
-	if p.Driver == "sqlite" {
-		p.tableListColumnsTemplate = "SELECT name AS column_name FROM pragma_table_info({TABLE})"
-	}
-
-	// Check for a valid driver
 	switch p.Driver {
+	case "sqlite":
+		p.tableListColumnsTemplate = "SELECT name AS column_name FROM pragma_table_info({TABLE})"
 	case "clickhouse":
+		p.tableListColumnsTemplate = "SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME={TABLE}"
+
 		// Convert v1-style Clickhouse DSN to v2-style
 		p.convertClickHouseDsn()
-	case "mssql", "mysql", "pgx", "snowflake", "sqlite":
-		// Do nothing, those are valid
+	case "oracle":
+		p.tableListColumnsTemplate = "SELECT column_name FROM all_tab_columns WHERE table_name = {TABLE}"
+	case "mssql", "mysql", "pgx", "snowflake":
+		p.tableListColumnsTemplate = "SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME={TABLE}"
 	default:
 		return fmt.Errorf("unknown driver %q", p.Driver)
 	}
@@ -245,14 +250,21 @@ func (p *SQL) generateInsert(tablename string, columns []string) string {
 	for _, column := range columns {
 		quotedColumns = append(quotedColumns, quoteIdent(column))
 	}
-	if p.Driver == "pgx" {
+
+	switch p.Driver {
+	case "pgx":
 		// Postgres uses $1 $2 $3 as placeholders
-		for i := 0; i < len(columns); i++ {
+		for i := range columns {
 			placeholders = append(placeholders, fmt.Sprintf("$%d", i+1))
 		}
-	} else {
+	case "oracle":
+		// Oracle uses :1 :2 :3 as placeholder
+		for i := range columns {
+			placeholders = append(placeholders, fmt.Sprintf(":%d", i+1))
+		}
+	default:
 		// Everything else uses ? ? ? as placeholders
-		for i := 0; i < len(columns); i++ {
+		for range columns {
 			placeholders = append(placeholders, "?")
 		}
 	}
