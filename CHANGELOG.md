@@ -1,6 +1,14 @@
 <!-- markdownlint-disable MD013 MD024 -->
 # Changelog
 
+## Unreleased
+
+### Important Changes
+
+- PR [#19050](https://github.com/influxdata/telegraf/pull/19050) moves the
+ `disk_write_through` buffering strategy out of the _experimental_ status and
+ marks it as stable.
+
 ## v1.38.4 [2026-05-11]
 
 ### Bugfixes

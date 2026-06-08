@@ -1790,10 +1790,9 @@ func (c *Config) buildOutput(name, source string, tbl *ast.Table) (*models.Outpu
 	if err := models.CheckBufferSettings(oc.BufferStrategy); err != nil {
 		return nil, err
 	}
+
 	if c.TestMode {
 		oc.BufferStrategy = "discard"
-	} else if oc.BufferStrategy == "disk_write_through" {
-		log.Printf("W! Using disk-write-through buffer strategy for plugin outputs.%s, this is an experimental feature", name)
 	}
 
 	// Generate an ID for the plugin
