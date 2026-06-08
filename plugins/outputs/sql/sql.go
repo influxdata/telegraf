@@ -100,6 +100,8 @@ func (p *SQL) Init() error {
 		p.tableListColumnsTemplate = "SELECT name AS column_name FROM pragma_table_info({TABLE})"
 	case "clickhouse":
 		p.tableListColumnsTemplate = "SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME={TABLE}"
+
+		// Convert v1-style Clickhouse DSN to v2-style
 		p.convertClickHouseDsn()
 	case "oracle":
 		p.tableListColumnsTemplate = "SELECT column_name FROM all_tab_columns WHERE table_name = {TABLE}"
