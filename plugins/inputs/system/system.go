@@ -42,9 +42,7 @@ func (*System) SampleConfig() string {
 }
 
 func (s *System) Init() error {
-	// Suppress deprecation warnings for default-only configs.
-	userSupplied := len(s.Include) > 0
-	if !userSupplied {
+	if len(s.Include) == 0 {
 		s.Include = []string{"legacy"}
 	}
 
@@ -54,20 +52,7 @@ func (s *System) Init() error {
 			continue
 		}
 		switch incl {
-		case "load", "users", "cpus", "uptime", "os", "dmi":
-		case "legacy":
-			if userSupplied {
-				config.PrintOptionValueDeprecationNotice(
-					"inputs.system",
-					"include",
-					"legacy",
-					telegraf.DeprecationInfo{
-						Since:     "1.39.0",
-						RemovalIn: "1.45.0",
-						Notice:    "use 'load', 'users', 'cpus' and 'uptime' instead",
-					},
-				)
-			}
+		case "legacy", "load", "users", "cpus", "uptime", "os", "dmi":
 		default:
 			return fmt.Errorf("invalid 'include' option %q", incl)
 		}
