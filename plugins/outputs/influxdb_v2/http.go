@@ -107,8 +107,8 @@ func (c *httpClient) Init() error {
 	case "unix":
 		socketPath := c.url.Path
 		transport = &http.Transport{
-			Dial: func(_, _ string) (net.Conn, error) {
-				return net.DialTimeout("unix", socketPath, c.timeout)
+			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+				return (&net.Dialer{Timeout: c.timeout}).DialContext(ctx, "unix", socketPath)
 			},
 		}
 	default:
