@@ -35,6 +35,9 @@ func (o *OpcUA) Init() (err error) {
 }
 
 func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
+	gatherStart := time.Now()
+	o.Log.Tracef("Gather starting for %d nodes...", len(o.client.NodeIDs))
+
 	// Force reconnection every time if a threshold is 0
 	if o.client.ReconnectErrorThreshold == 0 {
 		o.client.forceReconnect = true
@@ -44,6 +47,8 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 	metrics, err := o.client.currentValues()
 	if err != nil {
 		o.consecutiveErrors++
+		o.Log.Tracef("Gather failed after %s: %v (consecutive errors: %d)",
+			time.Since(gatherStart), err, o.consecutiveErrors)
 
 		// Force reconnection based on an error threshold: if threshold > 0, reconnect after
 		// reaching the specified number of consecutive errors; if a threshold = 0, we already
@@ -57,10 +62,13 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 	// Reset error counter on success
 	o.consecutiveErrors = 0
 
+	addStart := time.Now()
 	// Parse the resulting data into metrics
 	for _, m := range metrics {
 		acc.AddMetric(m)
 	}
+	o.Log.Tracef("Gather complete: %d metrics added to accumulator in %s, total gather time %s",
+		len(metrics), time.Since(addStart), time.Since(gatherStart))
 	return nil
 }
 
