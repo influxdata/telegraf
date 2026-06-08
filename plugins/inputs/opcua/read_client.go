@@ -118,11 +118,6 @@ func (o *readClient) connect() error {
 		}
 	}
 
-	o.Log.Tracef("Node request order (%d nodes):", len(o.reqIDs))
-	for i, req := range o.reqIDs {
-		o.Log.Tracef("  [%d] %s", i, req.NodeID.String())
-	}
-
 	if err := o.read(); err != nil {
 		return fmt.Errorf("get data failed: %w", err)
 	}
@@ -175,6 +170,7 @@ func (o *readClient) currentValues() ([]telegraf.Metric, error) {
 	// Parse the resulting data into metrics
 	for i := range o.NodeIDs {
 		if !o.StatusCodeOK(o.LastReceivedData[i].Quality) {
+			o.Log.Tracef("Skipping node %s: bad quality %v", o.NodeIDs[i], o.LastReceivedData[i].Quality)
 			skipped++
 			continue
 		}
