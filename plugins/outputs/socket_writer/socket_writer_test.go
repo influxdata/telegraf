@@ -241,9 +241,8 @@ func TestStartupErrorBehaviorDefault(t *testing.T) {
 	require.NoError(t, model.Init())
 
 	// Starting the plugin will fail with an error because the server does not listen
-	require.Error(t, model.Connect(), "connection should be refused")
 	var serr *internal.StartupError
-	require.ErrorAs(t, err, &serr)
+	require.ErrorAs(t, model.Connect(), &serr)
 }
 
 func TestStartupErrorBehaviorError(t *testing.T) {
@@ -270,9 +269,8 @@ func TestStartupErrorBehaviorError(t *testing.T) {
 	require.NoError(t, model.Init())
 
 	// Starting the plugin will fail with an error because the server does not listen
-	require.Error(t, model.Connect(), "connection should be refused")
 	var serr *internal.StartupError
-	require.ErrorAs(t, err, &serr)
+	require.ErrorAs(t, model.Connect(), &serr)
 }
 
 func TestStartupErrorBehaviorIgnore(t *testing.T) {
@@ -301,10 +299,8 @@ func TestStartupErrorBehaviorIgnore(t *testing.T) {
 	// Starting the plugin will fail because the server does not accept connections.
 	// The model code should convert it to a fatal error for the agent to remove
 	// the plugin.
-
-	require.Error(t, model.Connect(), "connection should be refused")
 	var fatalErr *internal.FatalError
-	require.ErrorAs(t, err, &fatalErr)
+	require.ErrorAs(t, model.Connect(), &fatalErr)
 }
 
 func TestStartupErrorBehaviorRetry(t *testing.T) {
@@ -352,28 +348,22 @@ func TestStartupErrorBehaviorRetry(t *testing.T) {
 	var wg sync.WaitGroup
 	buf := make([]byte, 256)
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
+	wg.Go(func() {
 		conn, err := listener.Accept()
 		if err != nil {
-			t.Logf("accepting connection failed: %v", err)
-			t.Fail()
+			t.Errorf("accepting connection failed: %v", err)
 			return
 		}
 
 		if err := conn.SetReadDeadline(time.Now().Add(3 * time.Second)); err != nil {
-			t.Logf("setting read deadline failed: %v", err)
-			t.Fail()
+			t.Errorf("setting read deadline failed: %v", err)
 			return
 		}
 
 		if _, err := conn.Read(buf); err != nil {
-			t.Logf("reading failed: %v", err)
-			t.Fail()
+			t.Errorf("reading failed: %v", err)
 		}
-	}()
+	})
 
 	// Update the plugin's address and write again. This time the write should
 	// succeed.
