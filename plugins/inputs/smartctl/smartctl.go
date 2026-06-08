@@ -57,9 +57,11 @@ func (s *Smartctl) Init() error {
 	}
 
 	switch s.MetricVersion {
-	case 0:
+	case 0, 1: // v1: the attribute name replaces the device name in the "name" tag
 		s.MetricVersion = 1
-	case 1, 2:
+		s.attributeTagName = "name"
+	case 2: // v2: the attribute name is in a separate "attribute" tag
+		s.attributeTagName = "attribute"
 	default:
 		return fmt.Errorf("invalid metric_version %d, please use 1 or 2", s.MetricVersion)
 	}
@@ -72,13 +74,6 @@ func (s *Smartctl) Init() error {
 	s.deviceFilter, err = filter.NewIncludeExcludeFilter(s.DevicesInclude, s.DevicesExclude)
 	if err != nil {
 		return err
-	}
-
-	// v1: the attribute name replaces the device name in the "name" tag
-	if s.MetricVersion >= 2 {
-		s.attributeTagName = "attribute"
-	} else {
-		s.attributeTagName = "name"
 	}
 
 	return nil
