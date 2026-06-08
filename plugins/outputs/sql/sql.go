@@ -106,7 +106,7 @@ func (p *SQL) Init() error {
 	case "mssql", "mysql", "pgx", "snowflake":
 		p.tableListColumnsTemplate = "SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME={TABLE}"
 	default:
-		return fmt.Errorf("unknown driver %q", p.Driver) // checks for valid driver
+		return fmt.Errorf("unknown driver %q", p.Driver)
 	}
 
 	return nil
