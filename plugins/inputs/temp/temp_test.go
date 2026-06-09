@@ -345,7 +345,7 @@ func sensorsTemperaturesOld(syspath string) ([]sensors.TemperatureStat, error) {
 	return temperatures, nil
 }
 
-func TestReadFileAsync(t *testing.T) {
+func TestReadFileNonblocking(t *testing.T) {
 	// fds stores the in-memory file-descriptors
 	fds := make([]int, 2)
 	// Unnamed pipe to simulate EAGAIN
@@ -399,7 +399,7 @@ func TestReadFileAsync(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			data, err := readFileAsync(tt.path)
+			data, err := readFileNonblocking(tt.path)
 			require.ErrorIs(t, err, tt.expectedError)
 			require.Equal(t, tt.expectedValue, data)
 		})
