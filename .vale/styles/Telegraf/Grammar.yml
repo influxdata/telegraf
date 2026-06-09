@@ -1,0 +1,28 @@
+# Common grammar patterns to avoid
+extends: substitution
+message: "Use '%s' instead of '%s'."
+level: warning
+ignorecase: true
+swap:
+  # "allows to" should be "lets you" or "allows you to"
+  allows to: lets you
+  allow to: let you
+  allowing to: letting you
+
+  # "in order to" is unnecessarily verbose
+  in order to: to
+  In order to: To
+
+  # "In case" is often misused (should be "If")
+  In case: If
+  in case: if
+
+  # Avoid "please" in technical documentation
+  please note: note
+  Please note: Note
+  please ensure: ensure
+  Please ensure: Ensure
+  please see: see
+  Please see: See
+  please refer: refer
+  Please refer: Refer
