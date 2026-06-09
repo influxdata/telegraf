@@ -59,6 +59,14 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ##   * idle: check the device unless it is in sleep, standby, or idle mode
     # nocheck = "standby"
 
+    ## Metric version changes the naming of tags in the smartctl_attributes
+    ## outputs. Currently "smartctl_attribute" metrics include the attribute
+    ## name in the "name" tag, and the associated device is not in any tag,
+    ## making it harder to associate them to the "smartctl" metrics.
+    ## metric_version = 2 will use the "name" tag for the device name,
+    ## and a new "attribute" tag for the attribute name.
+    # metric_version = 1
+
     ## Timeout for the cli command to complete
     # timeout = "30s"
 ```
@@ -120,7 +128,8 @@ having issues.
 - smartctl_attributes
   - tags
     - model (model name of the storage device)
-    - name (name of the attribute)
+    - name (name of the attribute - or the device id if selected by `metric_version=2`)
+    - attribute (name of the attribute - if selected by `metric_version=2`)
     - serial (serial number of the device)
     - type (device type like SATA etc)
     - wwn (world wide number of the device)
