@@ -91,7 +91,14 @@ func (o *OpcUA) Stop() {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	// Bound the disconnect by the configured request timeout so a stuck server
+	// cannot hang shutdown. A zero timeout means "no limit", so fall back to a
+	// sane default to avoid an immediately-expired context.
+	timeout := time.Duration(o.client.Config.RequestTimeout)
+	if timeout <= 0 {
+		timeout = 10 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	if err := o.client.Disconnect(ctx); err != nil {
 		o.Log.Warnf("Disconnecting from OPC UA server failed: %v", err)
