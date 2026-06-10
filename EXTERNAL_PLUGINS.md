@@ -38,6 +38,7 @@ Pull requests welcome.
 - [bacnet](https://github.com/JurajMarcin/telegraf-bacnet) - Gather statistics from BACnet devices, with support for device discovery and Change of Value subscriptions
 - [tado](https://github.com/zoeimogen/tado-telegraf-plugin) - Gather zone temperature settings and current temperature/humidity readings from Tado
 - [homekit](https://github.com/hdecarne-github/homekit-telegraf-plugin) - Gather smart home statistics from [HomeKit](https://en.wikipedia.org/wiki/HomeKit) devices via Home Hub automation
+- [axis_airquality](https://github.com/Mo3he/telegraf-execd-axis-airquality) - Gather air quality measurements (temperature, humidity, CO2, NOx, particulate matter, VOC, AQI, and more) from [Axis](https://www.axis.com) air quality sensors such as the AXIS D6310 via the VAPIX API.
 
 ## Outputs
 
