@@ -201,10 +201,10 @@ specify the `table_update_template` setting in your config file.
 
 ### go-sql-driver/mysql
 
-MySQL default quoting differs from standard ANSI/ISO SQL quoting. You must use
-MySQL's ANSI\_QUOTES mode with this plugin. You can enable this mode by using
-the setting `init_sql = "SET sql_mode='ANSI_QUOTES';"` or through a command-line
-option when running MySQL. See MySQL's docs for [details on
+MySQL default quoting differs from standard ANSI/ISO SQL quoting. Before v1.40.0
+you had to use MySQL's ANSI\_QUOTES mode with this plugin. You can enable this
+mode by using the setting `init_sql = "SET sql_mode='ANSI_QUOTES';"` or through
+a command-line option when running MySQL. See MySQL's docs for [details on
 ANSI\_QUOTES][mysql-quotes] and [how to set the SQL mode][mysql-mode].
 
 You can use a DSN of the format "username:password@tcp(host:port)/dbname". See
