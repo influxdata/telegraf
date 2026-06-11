@@ -19,9 +19,8 @@ import (
 
 type subscribeClientConfig struct {
 	input.InputClientConfig
-	SubscriptionInterval    config.Duration `toml:"subscription_interval"`
-	ConnectFailBehavior     string          `toml:"connect_fail_behavior"`
-	MonitoredItemsBatchSize int             `toml:"monitored_items_batch_size"`
+	SubscriptionInterval config.Duration `toml:"subscription_interval"`
+	ConnectFailBehavior  string          `toml:"connect_fail_behavior"`
 }
 
 type subscribeClient struct {
@@ -226,11 +225,12 @@ func (o *subscribeClient) stop(ctx context.Context) <-chan struct{} {
 func (o *subscribeClient) monitor(ctx context.Context, reqs []*ua.MonitoredItemCreateRequest) ([]*ua.MonitoredItemCreateResult, error) {
 	// Build the batches first: a single batch holds everything when batching is
 	// disabled, otherwise split into chunks of the configured size.
+	batchSize := o.Config.Workarounds.MonitoredItemsBatchSize
 	var batches [][]*ua.MonitoredItemCreateRequest
-	if o.Config.MonitoredItemsBatchSize <= 0 {
+	if batchSize <= 0 {
 		batches = [][]*ua.MonitoredItemCreateRequest{reqs}
 	} else {
-		for chunk := range slices.Chunk(reqs, o.Config.MonitoredItemsBatchSize) {
+		for chunk := range slices.Chunk(reqs, batchSize) {
 			batches = append(batches, chunk)
 		}
 	}

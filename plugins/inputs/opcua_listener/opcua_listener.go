@@ -36,8 +36,8 @@ func (o *OpcUaListener) Init() (err error) {
 	default:
 		return fmt.Errorf("unknown setting %q for 'connect_fail_behavior'", o.ConnectFailBehavior)
 	}
-	if o.MonitoredItemsBatchSize < 0 {
-		return fmt.Errorf("'monitored_items_batch_size' must not be negative, got %d", o.MonitoredItemsBatchSize)
+	if o.Workarounds.MonitoredItemsBatchSize < 0 {
+		return fmt.Errorf("'monitored_items_batch_size' must not be negative, got %d", o.Workarounds.MonitoredItemsBatchSize)
 	}
 	o.client, err = o.subscribeClientConfig.createSubscribeClient(o.Log)
 	return err

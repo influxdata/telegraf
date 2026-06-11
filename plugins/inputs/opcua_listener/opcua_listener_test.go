@@ -73,13 +73,13 @@ func TestInitPluginWithNegativeBatchSize(t *testing.T) {
 					SecurityMode:   "None",
 					ConnectTimeout: config.Duration(5 * time.Second),
 					RequestTimeout: config.Duration(10 * time.Second),
+					Workarounds:    opcua.OpcUAWorkarounds{MonitoredItemsBatchSize: -1},
 				},
 				MetricName: "opcua",
 				Timestamp:  input.TimestampSourceTelegraf,
 				RootNodes:  make([]input.NodeSettings, 0),
 			},
-			SubscriptionInterval:    config.Duration(100 * time.Millisecond),
-			MonitoredItemsBatchSize: -1,
+			SubscriptionInterval: config.Duration(100 * time.Millisecond),
 		},
 		Log: testutil.Logger{},
 	}
@@ -492,7 +492,6 @@ func TestMonitoredItemsBatchSizeIntegration(t *testing.T) {
 	}
 
 	subscribeConfig := subscribeClientConfig{
-		MonitoredItemsBatchSize: 2,
 		InputClientConfig: input.InputClientConfig{
 			OpcUAClientConfig: opcua.OpcUAClientConfig{
 				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
@@ -501,6 +500,7 @@ func TestMonitoredItemsBatchSizeIntegration(t *testing.T) {
 				AuthMethod:     "Anonymous",
 				ConnectTimeout: config.Duration(10 * time.Second),
 				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{MonitoredItemsBatchSize: 2},
 			},
 			MetricName: "testing",
 			RootNodes:  nodes,
@@ -550,7 +550,6 @@ connect_timeout = "10s"
 request_timeout = "5s"
 subscription_interval = "200ms"
 connect_fail_behavior = "error"
-monitored_items_batch_size = 500
 security_policy = "auto"
 security_mode = "auto"
 certificate = "/etc/telegraf/cert.pem"
@@ -589,6 +588,7 @@ default_tags = {tag1="val1", tag2="val2"}
 
 [inputs.opcua_listener.workarounds]
 additional_valid_status_codes = ["0xC0"]
+monitored_items_batch_size = 500
 `
 
 	c := config.NewConfig()
@@ -606,7 +606,6 @@ additional_valid_status_codes = ["0xC0"]
 	require.Equal(t, config.Duration(5*time.Second), o.subscribeClientConfig.RequestTimeout)
 	require.Equal(t, config.Duration(200*time.Millisecond), o.subscribeClientConfig.SubscriptionInterval)
 	require.Equal(t, "error", o.subscribeClientConfig.ConnectFailBehavior)
-	require.Equal(t, 500, o.subscribeClientConfig.MonitoredItemsBatchSize)
 	require.Equal(t, "auto", o.subscribeClientConfig.SecurityPolicy)
 	require.Equal(t, "auto", o.subscribeClientConfig.SecurityMode)
 	require.Equal(t, "/etc/telegraf/cert.pem", o.subscribeClientConfig.Certificate)
@@ -652,7 +651,7 @@ additional_valid_status_codes = ["0xC0"]
 			}},
 		},
 	}, o.subscribeClientConfig.Groups)
-	require.Equal(t, opcua.OpcUAWorkarounds{AdditionalValidStatusCodes: []string{"0xC0"}}, o.subscribeClientConfig.Workarounds)
+	require.Equal(t, opcua.OpcUAWorkarounds{AdditionalValidStatusCodes: []string{"0xC0"}, MonitoredItemsBatchSize: 500}, o.subscribeClientConfig.Workarounds)
 	require.Equal(t, []string{"DataType"}, o.subscribeClientConfig.OptionalFields)
 }
 
