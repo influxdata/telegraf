@@ -154,7 +154,11 @@ func (p *SQL) Close() error {
 }
 
 // Quote an identifier (table or column name)
-func quoteIdent(name string) string {
+func (p *SQL) quoteIdent(name string) string {
+	if p.Driver == "mysql" {
+		return "`" + strings.ReplaceAll(sanitizeQuoted(name), "`", "``") + "`"
+	}
+
 	return `"` + strings.ReplaceAll(sanitizeQuoted(name), `"`, `""`) + `"`
 }
 
@@ -212,34 +216,34 @@ func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	tagColumnNames := make([]string, 0, len(metric.TagList()))
 
 	if p.TimestampColumn != "" {
-		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(p.TimestampColumn), p.Convert.Timestamp))
+		columns = append(columns, fmt.Sprintf("%s %s", p.quoteIdent(p.TimestampColumn), p.Convert.Timestamp))
 	}
 
 	for _, tag := range metric.TagList() {
-		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(tag.Key), p.Convert.Text))
-		tagColumnNames = append(tagColumnNames, quoteIdent(tag.Key))
+		columns = append(columns, fmt.Sprintf("%s %s", p.quoteIdent(tag.Key), p.Convert.Text))
+		tagColumnNames = append(tagColumnNames, p.quoteIdent(tag.Key))
 	}
 
 	var datatype string
 	for _, field := range metric.FieldList() {
 		datatype = p.deriveDatatype(field.Value)
-		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(field.Key), datatype))
+		columns = append(columns, fmt.Sprintf("%s %s", p.quoteIdent(field.Key), datatype))
 	}
 
 	query := p.TableTemplate
-	query = strings.ReplaceAll(query, "{TABLE}", quoteIdent(metric.Name()))
+	query = strings.ReplaceAll(query, "{TABLE}", p.quoteIdent(metric.Name()))
 	query = strings.ReplaceAll(query, "{TABLELITERAL}", quoteStr(metric.Name()))
 	query = strings.ReplaceAll(query, "{COLUMNS}", strings.Join(columns, ","))
 	query = strings.ReplaceAll(query, "{TAG_COLUMN_NAMES}", strings.Join(tagColumnNames, ","))
-	query = strings.ReplaceAll(query, "{TIMESTAMP_COLUMN_NAME}", quoteIdent(p.TimestampColumn))
+	query = strings.ReplaceAll(query, "{TIMESTAMP_COLUMN_NAME}", p.quoteIdent(p.TimestampColumn))
 
 	return query
 }
 
 func (p *SQL) generateAddColumn(tablename, column, columnType string) string {
 	query := p.TableUpdateTemplate
-	query = strings.ReplaceAll(query, "{TABLE}", quoteIdent(tablename))
-	query = strings.ReplaceAll(query, "{COLUMN}", quoteIdent(column)+" "+columnType)
+	query = strings.ReplaceAll(query, "{TABLE}", p.quoteIdent(tablename))
+	query = strings.ReplaceAll(query, "{COLUMN}", p.quoteIdent(column)+" "+columnType)
 
 	return query
 }
@@ -248,7 +252,7 @@ func (p *SQL) generateInsert(tablename string, columns []string) string {
 	placeholders := make([]string, 0, len(columns))
 	quotedColumns := make([]string, 0, len(columns))
 	for _, column := range columns {
-		quotedColumns = append(quotedColumns, quoteIdent(column))
+		quotedColumns = append(quotedColumns, p.quoteIdent(column))
 	}
 
 	switch p.Driver {
@@ -270,7 +274,7 @@ func (p *SQL) generateInsert(tablename string, columns []string) string {
 	}
 
 	return fmt.Sprintf("INSERT INTO %s (%s) VALUES(%s)",
-		quoteIdent(tablename),
+		p.quoteIdent(tablename),
 		strings.Join(quotedColumns, ","),
 		strings.Join(placeholders, ","))
 }
@@ -320,7 +324,7 @@ func (p *SQL) createColumn(tablename, column, columnType string) error {
 }
 
 func (p *SQL) tableExists(tableName string) bool {
-	stmt := strings.ReplaceAll(p.TableExistsTemplate, "{TABLE}", quoteIdent(tableName))
+	stmt := strings.ReplaceAll(p.TableExistsTemplate, "{TABLE}", p.quoteIdent(tableName))
 
 	_, err := p.db.Exec(stmt)
 
