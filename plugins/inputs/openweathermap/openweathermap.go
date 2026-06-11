@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -22,10 +21,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// https://openweathermap.org/current#severalid
-// Limit for the number of city IDs per request.
-const maxIDsPerBatch int = 20
-
 type OpenWeatherMap struct {
 	AppID           string          `toml:"app_id"`
 	CityID          []string        `toml:"city_id"`
@@ -34,10 +29,9 @@ type OpenWeatherMap struct {
 	BaseURL         string          `toml:"base_url"`
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 	Units           string          `toml:"units"`
-	QueryStyle      string          `toml:"query_style"`
+	QueryStyle      string          `toml:"query_style" deprecated:"1.39.1;1.45.0;option is ignored due to upstream API change"`
 
 	client        *http.Client
-	cityIDBatches []string
 	baseParsedURL *url.URL
 }
 
@@ -49,16 +43,6 @@ func (n *OpenWeatherMap) Init() error {
 	// Set the default for the base-URL if not given
 	if n.BaseURL == "" {
 		n.BaseURL = "https://api.openweathermap.org/"
-	}
-
-	// Check the query-style setting
-	switch n.QueryStyle {
-	case "":
-		n.QueryStyle = "batch"
-	case "batch", "individual":
-		// Do nothing, those are valid
-	default:
-		return fmt.Errorf("unknown query-style: %s", n.QueryStyle)
 	}
 
 	// Check the unit setting
@@ -97,21 +81,6 @@ func (n *OpenWeatherMap) Init() error {
 		}
 	}
 
-	// Split the city IDs into batches smaller than the maximum size
-	nBatches := len(n.CityID) / maxIDsPerBatch
-	if len(n.CityID)%maxIDsPerBatch != 0 {
-		nBatches++
-	}
-	batches := make([][]string, nBatches)
-	for i, id := range n.CityID {
-		batch := i / maxIDsPerBatch
-		batches[batch] = append(batches[batch], id)
-	}
-	n.cityIDBatches = make([]string, 0, nBatches)
-	for _, batch := range batches {
-		n.cityIDBatches = append(n.cityIDBatches, strings.Join(batch, ","))
-	}
-
 	// Parse the base-URL used later to construct the property API endpoint
 	u, err := url.Parse(n.BaseURL)
 	if err != nil {
@@ -141,23 +110,12 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 				}(cityID)
 			}
 		case "weather":
-			switch n.QueryStyle {
-			case "individual":
-				for _, cityID := range n.CityID {
-					wg.Add(1)
-					go func(city string) {
-						defer wg.Done()
-						acc.AddError(n.gatherWeather(acc, city))
-					}(cityID)
-				}
-			case "batch":
-				for _, cityIDs := range n.cityIDBatches {
-					wg.Add(1)
-					go func(cities string) {
-						defer wg.Done()
-						acc.AddError(n.gatherWeatherBatch(acc, cities))
-					}(cityIDs)
-				}
+			for _, cityID := range n.CityID {
+				wg.Add(1)
+				go func(city string) {
+					defer wg.Done()
+					acc.AddError(n.gatherWeather(acc, city))
+				}(cityID)
 			}
 		}
 	}
@@ -211,57 +169,6 @@ func (n *OpenWeatherMap) gatherWeather(acc telegraf.Accumulator, city string) er
 	}
 
 	acc.AddFields("weather", fields, tags, tm)
-
-	return nil
-}
-
-func (n *OpenWeatherMap) gatherWeatherBatch(acc telegraf.Accumulator, cities string) error {
-	// Query the data and decode the response
-	addr := n.formatURL("/data/2.5/group", cities)
-	buf, err := n.gatherURL(addr)
-	if err != nil {
-		return fmt.Errorf("querying %q failed: %w", addr, err)
-	}
-
-	var status status
-	if err := json.Unmarshal(buf, &status); err != nil {
-		return fmt.Errorf("parsing JSON response failed: %w", err)
-	}
-
-	// Construct the metrics
-	for _, e := range status.List {
-		tm := time.Unix(e.Dt, 0)
-
-		fields := map[string]interface{}{
-			"cloudiness":   e.Clouds.All,
-			"humidity":     e.Main.Humidity,
-			"pressure":     e.Main.Pressure,
-			"rain":         e.rain(),
-			"snow":         e.snow(),
-			"sunrise":      time.Unix(e.Sys.Sunrise, 0).UnixNano(),
-			"sunset":       time.Unix(e.Sys.Sunset, 0).UnixNano(),
-			"temperature":  e.Main.Temp,
-			"feels_like":   e.Main.Feels,
-			"visibility":   e.Visibility,
-			"wind_degrees": e.Wind.Deg,
-			"wind_speed":   e.Wind.Speed,
-		}
-		tags := map[string]string{
-			"city":     e.Name,
-			"city_id":  strconv.FormatInt(e.ID, 10),
-			"country":  e.Sys.Country,
-			"forecast": "*",
-		}
-
-		if len(e.Weather) > 0 {
-			fields["condition_description"] = e.Weather[0].Description
-			fields["condition_icon"] = e.Weather[0].Icon
-			tags["condition_id"] = strconv.FormatInt(e.Weather[0].ID, 10)
-			tags["condition_main"] = e.Weather[0].Main
-		}
-
-		acc.AddFields("weather", fields, tags, tm)
-	}
 
 	return nil
 }
