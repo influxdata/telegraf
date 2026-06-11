@@ -35,11 +35,30 @@ func (o *OpcUA) Init() (err error) {
 	return err
 }
 
-// Start implements the ServiceInput interface so the agent calls Stop on
-// shutdown and config reload. The connection itself is established lazily in
-// Gather to keep tolerating a server that is unavailable at startup.
 func (*OpcUA) Start(telegraf.Accumulator) error {
 	return nil
+}
+
+func (o *OpcUA) Stop() {
+	if o.client == nil {
+		return
+	}
+	if state := o.client.State(); state == opcua.Closed || state == opcua.Disconnected {
+		return
+	}
+
+	// Bound the disconnect by the configured request timeout so a stuck server
+	// cannot hang shutdown. A zero timeout means "no limit", so fall back to a
+	// sane default to avoid an immediately-expired context.
+	timeout := time.Duration(o.client.Config.RequestTimeout)
+	if timeout <= 0 {
+		timeout = 10 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	if err := o.client.Disconnect(ctx); err != nil {
+		o.Log.Warnf("Disconnecting from OPC UA server failed: %v", err)
+	}
 }
 
 func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
@@ -78,31 +97,6 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 	o.Log.Tracef("Gather complete: %d metrics added to accumulator in %s, total gather time %s",
 		len(metrics), time.Since(addStart), time.Since(gatherStart))
 	return nil
-}
-
-// Stop releases the OPC UA session so it is not orphaned on the server during
-// shutdown or config reload. Without this the session lingers until the
-// server's session timeout, and repeated reloads can exhaust the session limit.
-func (o *OpcUA) Stop() {
-	if o.client == nil {
-		return
-	}
-	if state := o.client.State(); state != opcua.Connected && state != opcua.Connecting {
-		return
-	}
-
-	// Bound the disconnect by the configured request timeout so a stuck server
-	// cannot hang shutdown. A zero timeout means "no limit", so fall back to a
-	// sane default to avoid an immediately-expired context.
-	timeout := time.Duration(o.client.Config.RequestTimeout)
-	if timeout <= 0 {
-		timeout = 10 * time.Second
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	if err := o.client.Disconnect(ctx); err != nil {
-		o.Log.Warnf("Disconnecting from OPC UA server failed: %v", err)
-	}
 }
 
 func init() {
