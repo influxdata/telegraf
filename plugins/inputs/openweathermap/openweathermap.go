@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -21,10 +20,6 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
-
-// https://openweathermap.org/current#severalid
-// Limit for the number of city IDs per request.
-const maxIDsPerBatch int = 20
 
 type OpenWeatherMap struct {
 	AppID           string          `toml:"app_id"`
@@ -37,7 +32,6 @@ type OpenWeatherMap struct {
 	QueryStyle      string          `toml:"query_style" deprecated:"1.39.1;1.45.0;option is ignored due to upstream API change"`
 
 	client        *http.Client
-	cityIDBatches []string
 	baseParsedURL *url.URL
 }
 
@@ -85,21 +79,6 @@ func (n *OpenWeatherMap) Init() error {
 		default:
 			return fmt.Errorf("unknown property to fetch: %s", fetch)
 		}
-	}
-
-	// Split the city IDs into batches smaller than the maximum size
-	nBatches := len(n.CityID) / maxIDsPerBatch
-	if len(n.CityID)%maxIDsPerBatch != 0 {
-		nBatches++
-	}
-	batches := make([][]string, nBatches)
-	for i, id := range n.CityID {
-		batch := i / maxIDsPerBatch
-		batches[batch] = append(batches[batch], id)
-	}
-	n.cityIDBatches = make([]string, 0, nBatches)
-	for _, batch := range batches {
-		n.cityIDBatches = append(n.cityIDBatches, strings.Join(batch, ","))
 	}
 
 	// Parse the base-URL used later to construct the property API endpoint
