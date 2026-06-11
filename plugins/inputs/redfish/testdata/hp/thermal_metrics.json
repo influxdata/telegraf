@@ -1,0 +1,25 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#ThermalMetrics.ThermalMetrics",
+  "@odata.etag": "W/\"9D31D21A\"",
+  "@odata.id": "/redfish/v1/Chassis/1/ThermalSubsystem/ThermalMetrics",
+  "@odata.type": "#ThermalMetrics.v1_3_1.ThermalMetrics",
+  "Id": "ThermalMetrics",
+  "Name": "ThermalMetrics",
+  "TemperatureReadingsCelsius": [
+    {
+      "DeviceName": "01-Inlet Ambient",
+      "PhysicalContext": "Intake",
+      "Reading": 19
+    },
+    {
+      "DeviceName": "02-CPU 1 PkgTmp",
+      "PhysicalContext": "CPU",
+      "Reading": 42
+    }
+  ],
+  "TemperatureSummaryCelsius": {
+    "Ambient": {
+      "Reading": 19
+    }
+  }
+}

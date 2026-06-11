@@ -33,16 +33,18 @@ details on how to use them.
   ## Redfish API Base URL.
   address = "https://127.0.0.1:5000"
 
-  ## Credentials for the Redfish API. Can also use secrets.
+  ## Credentials for the Redfish API. Use either a username and password or a Token. Can also use secrets.
   username = "root"
   password = "password123456"
+  # token = "0123456789abcdef"
 
   ## System Id to collect data for in Redfish APIs.
+  ## Examples: Dell: System.Embedded.1 HPE: 1
   computer_system_id="System.Embedded.1"
 
   ## Metrics to collect
-  ## The metric collects to gather. Choose from "power" and "thermal".
-  # include_metrics = ["power", "thermal"]
+  ## The metric collects to gather. Choose from "power", "thermal" and "storage".
+  # include_metrics = ["power", "thermal", "storage"]
 
   ## Tag sets allow you to include redfish OData link parent data
   ## For Example.
@@ -54,6 +56,7 @@ details on how to use them.
   ## Workarounds
   ## Defines workarounds for certain hardware vendors. Choose from:
   ## * ilo4-thermal - Do not pass 0Data-Version header to Thermal endpoint
+  ##   deprecated in 1.39; ILO4 is EOSL, option will be ignored
   # workarounds = []
 
   ## Amount of time allowed to complete the HTTP request
@@ -68,6 +71,8 @@ details on how to use them.
 ```
 
 ## Metrics
+
+There are two types of metrics. The newer subsystem type and the old type.
 
 - redfish_thermal_temperatures
   - tags:
@@ -99,6 +104,48 @@ details on how to use them.
     - lower_threshold_critical
     - lower_threshold_fatal
 
+- redfish_thermalsubsys_temperatures
+  - tags
+    - name
+    - source
+    - address
+    - state
+    - health_rollup
+  - fields
+    - reading_celsius
+
+- redfish_thermalsubsys_fans
+  - tags
+    - member_id
+    - name
+    - address
+    - source
+    - state
+    - health
+  - fields
+    - upper_threshold_critical
+    - upper_threshold_fatal
+    - lower_threshold_critical
+    - lower_threshold_fatal
+    - reading_rpm (or) reading_percent
+
+- redfish_power_powercontrol
+  - tags
+    - member_id
+    - address
+    - name
+    - source
+  - fields
+    - power_allocated_watts
+    - power_available_watts
+    - power_capacity_watts
+    - power_consumed_watts
+    - power_requested_watts
+    - average_consumed_watts
+    - interval_in_min
+    - max_consumed_watts
+    - min_consumed_watts
+
 - redfish_power_powersupplies
   - tags:
     - source
@@ -107,6 +154,7 @@ details on how to use them.
     - name
     - state
     - health
+    - serial_num
   - fields:
     - last_power_output_watts
     - line_input_voltage
@@ -129,11 +177,56 @@ details on how to use them.
     - lower_threshold_critical
     - lower_threshold_fatal
 
+- redfish_powersubsys_redundancy
+  - tags
+    - name
+    - address
+    - source
+    - type
+    - health
+    - state
+  - fields
+    - redund_group_count
+
+- redfish_powersubsys_powersupplies
+  - tags
+    - address
+    - name
+    - source
+    - state
+    - serial_num
+    - hotpluggable
+    - health
+  - fields
+    - power_input_watts
+    - power_output_watts
+    - line_input_voltage
+    - power_capacity_watts
+    - firmware_version
+
+- redfish_storage
+  - tags
+    - source
+    - address
+    - state
+    - health_rollup
+    - manufacturer
+    - media_type
+    - model
+    - location
+    - protocol
+    - serial_number
+    - disk_health
+    - disk_state
+  - fields
+    - speed_gbs
+    - capacity_bytes
+
 ### Tag Sets
 
 - chassis.location
   - tags:
-    - datacenter (available only if location data is found)
+    - datacenter (deprecated in 1.39 since its not part of the redfish standard)
     - rack (available only if location data is found)
     - room (available only if location data is found)
     - row (available only if location data is found)
@@ -164,4 +257,5 @@ redfish_power_voltages,address=127.0.0.1,chassis_chassistype=RackMount,chassis_h
 redfish_thermal_temperatures,address=127.0.0.1,chassis_chassistype=RackMount,chassis_health=OK,chassis_manufacturer=Contoso,chassis_model=3500RX,chassis_partnumber=224071-J23,chassis_powerstate=On,chassis_serialnumber=437XR1138R2,chassis_sku=8675309,chassis_state=Enabled,health=OK,member_id=0,name=CPU1\ Temp,rack=WEB43,row=North,source=web483,state=Enabled upper_threshold_critical=45,upper_threshold_fatal=48,reading_celsius=41 1691270170000000000
 redfish_thermal_temperatures,address=127.0.0.1,chassis_chassistype=RackMount,chassis_health=OK,chassis_manufacturer=Contoso,chassis_model=3500RX,chassis_partnumber=224071-J23,chassis_powerstate=On,chassis_serialnumber=437XR1138R2,chassis_sku=8675309,chassis_state=Enabled,member_id=1,name=CPU2\ Temp,rack=WEB43,row=North,source=web483,state=Disabled upper_threshold_critical=45,upper_threshold_fatal=48 1691270170000000000
 redfish_thermal_temperatures,address=127.0.0.1,chassis_chassistype=RackMount,chassis_health=OK,chassis_manufacturer=Contoso,chassis_model=3500RX,chassis_partnumber=224071-J23,chassis_powerstate=On,chassis_serialnumber=437XR1138R2,chassis_sku=8675309,chassis_state=Enabled,health=OK,member_id=2,name=Chassis\ Intake\ Temp,rack=WEB43,row=North,source=web483,state=Enabled lower_threshold_critical=5,lower_threshold_fatal=0,reading_celsius=25,upper_threshold_critical=40,upper_threshold_fatal=50 1691270170000000000
+redfish_storage,address=127.0.0.1,disk_health=Critical,disk_state=UnavailableOffline,health_rollup=Critical,host=testhost,location=Slot\=1:Port\=1I:Box\=1:Bay\=4,media_type=HDD,model=ST2000LOLOLOL,protocol=SATA,serial_number=ICT1200,source=testhost,state=Enabled capacity_bytes=2000398934016i,speed_gbs=6 1779446190000000000
 ```

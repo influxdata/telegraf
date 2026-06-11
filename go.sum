@@ -2323,6 +2323,8 @@ github.com/srebhan/cborquery v1.0.4 h1:R+PZ/ZKpgf2z0d9jkr2aCP53GI0PCC9Ibz8iqX/Pl
 github.com/srebhan/cborquery v1.0.4/go.mod h1:667M4EgeI9mJPFV5Mhyxg8rAuRO0SIIrgGtgZcFLqpE=
 github.com/srebhan/protobufquery v1.0.4 h1:MLMo7nS02HSwux538Id3SCkf/FShA4MK3pppc9U/acY=
 github.com/srebhan/protobufquery v1.0.4/go.mod h1:qMuAoKJAsVFYmyLE4H0dQ8F9+gBBHw+LBMqAZ326uA4=
+github.com/stmcginnis/gofish v0.21.6 h1:jK3TGD6VANaAHKHypVNfD6io2nPrU+6eF8X4qARsTlY=
+github.com/stmcginnis/gofish v0.21.6/go.mod h1:PzF5i8ecRG9A2ol8XT64npKUunyraJ+7t0kYMpQAtqU=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSSt89Yw=
