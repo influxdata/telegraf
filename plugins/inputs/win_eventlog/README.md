@@ -137,7 +137,7 @@ There are three types of filtering: **Event Log** name, **XPath Query** and
 
 ```toml
   eventlog_name = "Application"
-  xpath_query = '''
+  xpath_query = ""
 ```
 
 For **XPath Query** filtering set the `xpath_query` value, and `eventlog_name`
