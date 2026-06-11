@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"time"
 
 	"github.com/gopcua/opcua"
@@ -223,16 +224,19 @@ func (o *subscribeClient) stop(ctx context.Context) <-chan struct{} {
 // results are concatenated in the original order so the caller's index-to-node
 // mapping stays valid.
 func (o *subscribeClient) monitor(ctx context.Context, reqs []*ua.MonitoredItemCreateRequest) ([]*ua.MonitoredItemCreateResult, error) {
-	batchSize := o.Config.MonitoredItemsBatchSize
-	if batchSize <= 0 || batchSize >= len(reqs) {
-		batchSize = len(reqs)
+	// Build the batches first: a single batch holds everything when batching is
+	// disabled, otherwise split into chunks of the configured size.
+	var batches [][]*ua.MonitoredItemCreateRequest
+	if o.Config.MonitoredItemsBatchSize <= 0 {
+		batches = [][]*ua.MonitoredItemCreateRequest{reqs}
+	} else {
+		for chunk := range slices.Chunk(reqs, o.Config.MonitoredItemsBatchSize) {
+			batches = append(batches, chunk)
+		}
 	}
 
 	results := make([]*ua.MonitoredItemCreateResult, 0, len(reqs))
-	for start := 0; start < len(reqs); start += batchSize {
-		end := min(start+batchSize, len(reqs))
-		batch := reqs[start:end]
-
+	for _, batch := range batches {
 		resp, err := o.sub.Monitor(ctx, ua.TimestampsToReturnBoth, batch...)
 		if err != nil {
 			return nil, err
