@@ -99,13 +99,21 @@ func getConfigCommands(configHandlingFlags []cli.Flag, outputBuffer io.Writer) [
 
 						ag := agent.NewAgent(c)
 
-						// Set the default for processor skipping
+						// Set the default for processor after aggregators skipping
 						if c.Agent.SkipProcessorsAfterAggregators == nil {
 							msg := `The default value of 'skip_processors_after_aggregators' will change to 'true' with Telegraf v1.40.0! `
 							msg += `If you need the current default behavior, please explicitly set the option to 'false'!`
 							log.Print("W! [agent] ", color.YellowString(msg))
 							skipProcessorsAfterAggregators := false
 							c.Agent.SkipProcessorsAfterAggregators = &skipProcessorsAfterAggregators
+						}
+
+						// Set the default for processor before aggregators skipping
+						if c.Agent.SkipProcessorsBeforeAggregators == nil {
+							msg := `Setting default value of skip_processors_before_aggregators to false`
+							log.Print("W! [agent] ", color.YellowString(msg))
+							skipProcessorsBeforeAggregators := false
+							c.Agent.SkipProcessorsBeforeAggregators = &skipProcessorsBeforeAggregators
 						}
 
 						return ag.InitPlugins()

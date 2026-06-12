@@ -228,6 +228,119 @@ func TestCases(t *testing.T) {
 	}
 }
 
+func ptrBool(b bool) *bool { return &b }
+
+// Validate default initialization of skip flags
+func TestAgent_DefaultSkipFlags(t *testing.T) {
+    c := config.NewConfig()
+    a := NewAgent(c)
+    require.NotNil(t, a.Config.Agent.SkipProcessorsBeforeAggregators)
+    require.NotNil(t, a.Config.Agent.SkipProcessorsAfterAggregators)
+    require.False(t, *a.Config.Agent.SkipProcessorsBeforeAggregators)
+    require.False(t, *a.Config.Agent.SkipProcessorsAfterAggregators)
+}
+
+// Validate error when both flags are true
+func TestAgent_BothSkipFlagsError(t *testing.T) {
+    c := config.NewConfig()
+    c.Agent.SkipProcessorsBeforeAggregators = ptrBool(true)
+    c.Agent.SkipProcessorsAfterAggregators = ptrBool(true)
+    a := NewAgent(c)
+
+    ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+    defer cancel()
+    err := a.runTest(ctx, 0, make(chan telegraf.Metric))
+    require.Error(t, err)
+    require.Contains(t, err.Error(), "cannot set both SkipProcessorsBeforeAggregators and SkipProcessorsAfterAggregators to true")
+}
+
+// Validate runTest with skip-before=true, skip-after=false
+func TestAgent_RunTest_SkipBeforeOnly(t *testing.T) {
+    ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+    defer cancel()
+
+    cfg := config.NewConfig()
+    cfg.Agent.SkipProcessorsBeforeAggregators = ptrBool(true)
+    cfg.Agent.SkipProcessorsAfterAggregators = ptrBool(false)
+    cfg.InputFilters = []string{"cpu"}
+    cfg.ProcessorFilters = []string{"rename"}
+    cfg.AggregatorFilters = []string{"minmax"}
+    require.NoError(t, cfg.LoadAll("../config/testdata/telegraf-agent.toml"))
+
+    agent := NewAgent(cfg)
+    metrics, err := collect(ctx, agent, 0)
+    require.NoError(t, err)
+
+    found := false
+    for _, m := range metrics {
+        if _, ok := m.Fields()["usage_user_min"]; ok {
+            found = true
+            break
+        }
+    }
+    require.True(t, found, "expected usage_user_min when skip before is true")
+}
+
+// Validate runOnce with skip-after=true, skip-before=false
+func TestAgent_RunOnce_SkipAfterOnly(t *testing.T) {
+    ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+    defer cancel()
+
+    cfg := config.NewConfig()
+    cfg.Agent.SkipProcessorsBeforeAggregators = ptrBool(false)
+    cfg.Agent.SkipProcessorsAfterAggregators = ptrBool(true)
+    cfg.InputFilters = []string{"cpu"}
+    cfg.ProcessorFilters = []string{"rename"}
+    cfg.AggregatorFilters = []string{"minmax"}
+    require.NoError(t, cfg.LoadAll("../config/testdata/telegraf-agent.toml"))
+
+    agent := NewAgent(cfg)
+    out := &testutil.Accumulator{}
+    agent.Config.Outputs = []telegraf.Output{out}
+
+    err := agent.runOnce(ctx, 0)
+    require.NoError(t, err)
+
+    found := false
+    for _, m := range out.Metrics {
+        if _, ok := m.Fields()["user_cpu_min"]; ok {
+            found = true
+            break
+        }
+    }
+    require.True(t, found, "expected user_cpu_min when skip after is true")
+}
+
+// Validate runOnce with both flags false (everything runs)
+func TestAgent_RunOnce_BothFalse(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	cfg := config.NewConfig()
+	cfg.Agent.SkipProcessorsBeforeAggregators = ptrBool(false)
+	cfg.Agent.SkipProcessorsAfterAggregators = ptrBool(false)
+	cfg.InputFilters = []string{"cpu"}
+	cfg.ProcessorFilters = []string{"rename"}
+	cfg.AggregatorFilters = []string{"minmax"}
+	require.NoError(t, cfg.LoadAll("../config/testdata/telegraf-agent.toml"))
+
+	agent := NewAgent(cfg)
+	out := &testutil.Accumulator{}
+	agent.Config.Outputs = []telegraf.Output{out}
+
+	err := agent.runOnce(ctx, 0)
+	require.NoError(t, err)
+
+	found := false
+	for _, m := range out.Metrics {
+		if _, ok := m.Fields()["user_cpu_min"]; ok {
+			found = true
+			break
+		}
+	}
+	require.True(t, found, "expected user_cpu_min when both flags are false")
+}
+
 // Implement a "test-mode" like call but collect the metrics
 func collect(ctx context.Context, a *Agent, wait time.Duration) ([]telegraf.Metric, error) {
 	var received []telegraf.Metric
