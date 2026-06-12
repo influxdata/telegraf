@@ -126,7 +126,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	}
 
 	if *a.Config.Agent.SkipProcessorsBeforeAggregators && *a.Config.Agent.SkipProcessorsAfterAggregators {
-		return fmt.Errorf("cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators to true")
+		return errors.New("cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators to true")
 	}
 
 	log.Printf("D! [agent] Initializing plugins")
@@ -1008,7 +1008,7 @@ func (a *Agent) runTest(ctx context.Context, wait time.Duration, outputC chan<- 
 	}
 
 	if *a.Config.Agent.SkipProcessorsBeforeAggregators && *a.Config.Agent.SkipProcessorsAfterAggregators {
-		return fmt.Errorf("cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators to true")
+		return errors.New("cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators to true")
 	}
 
 	log.Printf("D! [agent] Initializing plugins")
@@ -1124,7 +1124,7 @@ func (a *Agent) runOnce(ctx context.Context, wait time.Duration) error {
 	}
 
 	if *a.Config.Agent.SkipProcessorsBeforeAggregators && *a.Config.Agent.SkipProcessorsAfterAggregators {
-		return fmt.Errorf("cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators to true")
+		return errors.New("cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators to true")
 	}
 
 	log.Printf("D! [agent] Initializing plugins")

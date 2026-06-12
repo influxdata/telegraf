@@ -116,6 +116,10 @@ func getConfigCommands(configHandlingFlags []cli.Flag, outputBuffer io.Writer) [
 							c.Agent.SkipProcessorsBeforeAggregators = &skipProcessorsBeforeAggregators
 						}
 
+						if *c.Agent.SkipProcessorsBeforeAggregators && *c.Agent.SkipProcessorsAfterAggregators {
+							return errors.New("cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators to true")
+						}
+
 						return ag.InitPlugins()
 					},
 				},

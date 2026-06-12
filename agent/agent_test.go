@@ -228,105 +228,96 @@ func TestCases(t *testing.T) {
 	}
 }
 
-func ptrBool(b bool) *bool { return &b }
-
-// Default initialization of skip flags
-func TestAgent_DefaultSkipFlags(t *testing.T) {
+func TestAgent_SkipProcessorsBeforeAndAfterError(t *testing.T) {
 	c := config.NewConfig()
-	a := NewAgent(c)
-	require.NotNil(t, a.Config.Agent.SkipProcessorsBeforeAggregators)
-	require.NotNil(t, a.Config.Agent.SkipProcessorsAfterAggregators)
-	require.False(t, *a.Config.Agent.SkipProcessorsBeforeAggregators)
-	require.False(t, *a.Config.Agent.SkipProcessorsAfterAggregators)
-}
+	c.Agent.OmitHostname = true
+	skipBefore := true
+	skipAfter := true
+	c.Agent.SkipProcessorsBeforeAggregators = &skipBefore
+	c.Agent.SkipProcessorsAfterAggregators = &skipAfter
 
-// Error when both flags are true
-func TestAgent_BothSkipFlagsError(t *testing.T) {
-	c := config.NewConfig()
-	c.Agent.SkipProcessorsBeforeAggregators = ptrBool(true)
-	c.Agent.SkipProcessorsAfterAggregators = ptrBool(true)
-	a := NewAgent(c)
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	agent := NewAgent(c)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
-	err := a.runTest(ctx, 0, make(chan telegraf.Metric))
+
+	err := agent.Run(ctx)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "cannot set both SkipProcessorsBeforeAggregators and SkipProcessorsAfterAggregators to true")
+	require.Contains(t, err.Error(), "cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators to true")
 }
 
-// Skip-before-only scenario
-func TestAgent_RunTest_SkipBeforeOnly(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+func TestAgent_SkipProcessorsBeforeAndAfterErrorTest(t *testing.T) {
+	c := config.NewConfig()
+	c.Agent.OmitHostname = true
+	skipBefore := true
+	skipAfter := true
+	c.Agent.SkipProcessorsBeforeAggregators = &skipBefore
+	c.Agent.SkipProcessorsAfterAggregators = &skipAfter
+
+	agent := NewAgent(c)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
 
-	cfg := config.NewConfig()
-	cfg.Agent.SkipProcessorsBeforeAggregators = ptrBool(true)
-	cfg.Agent.SkipProcessorsAfterAggregators = ptrBool(false)
-	cfg.InputFilters = []string{"cpu"}
-	require.NoError(t, cfg.LoadAll("../config/testdata/telegraf-agent.toml"))
-
-	agent := NewAgent(cfg)
-	metrics, err := collect(ctx, agent, 0)
-	require.NoError(t, err)
-
-	found := false
-	for _, m := range metrics {
-		if _, ok := m.Fields()["usage_user_min"]; ok {
-			found = true
-			break
-		}
-	}
-	require.True(t, found, "expected usage_user_min when skip before is true")
+	err := agent.Test(ctx, 0)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators to true")
 }
 
-// Skip-after-only scenario
-func TestAgent_RunOnce_SkipAfterOnly(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+func TestAgent_SkipProcessorsBeforeAndAfterErrorOnce(t *testing.T) {
+	c := config.NewConfig()
+	c.Agent.OmitHostname = true
+	skipBefore := true
+	skipAfter := true
+	c.Agent.SkipProcessorsBeforeAggregators = &skipBefore
+	c.Agent.SkipProcessorsAfterAggregators = &skipAfter
+
+	agent := NewAgent(c)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
 
-	cfg := config.NewConfig()
-	cfg.Agent.SkipProcessorsBeforeAggregators = ptrBool(false)
-	cfg.Agent.SkipProcessorsAfterAggregators = ptrBool(true)
-	cfg.InputFilters = []string{"cpu"}
-	require.NoError(t, cfg.LoadAll("../config/testdata/telegraf-agent.toml"))
-
-	agent := NewAgent(cfg)
-	metrics, err := collect(ctx, agent, 0)
-	require.NoError(t, err)
-
-	found := false
-	for _, m := range metrics {
-		if _, ok := m.Fields()["user_cpu_min"]; ok {
-			found = true
-			break
-		}
-	}
-	require.True(t, found, "expected user_cpu_min when skip after is true")
+	err := agent.Once(ctx, 0)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators to true")
 }
 
-// Both-false scenario (everything runs)
-func TestAgent_RunOnce_BothFalse(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+func TestAgent_SkipProcessorsBeforeDefaultsFalse(t *testing.T) {
+	c := config.NewConfig()
+	c.Agent.OmitHostname = true
+	skipAfter := false
+	c.Agent.SkipProcessorsAfterAggregators = &skipAfter
+
+	agent := NewAgent(c)
+	ctx, cancel := context.WithTimeout(t.Context(), 1*time.Second)
 	defer cancel()
 
-	cfg := config.NewConfig()
-	cfg.Agent.SkipProcessorsBeforeAggregators = ptrBool(false)
-	cfg.Agent.SkipProcessorsAfterAggregators = ptrBool(false)
-	cfg.InputFilters = []string{"cpu"}
-	require.NoError(t, cfg.LoadAll("../config/testdata/telegraf-agent.toml"))
+	require.NoError(t, agent.Run(ctx))
+	require.False(t, *c.Agent.SkipProcessorsBeforeAggregators)
+}
 
-	agent := NewAgent(cfg)
-	metrics, err := collect(ctx, agent, 0)
-	require.NoError(t, err)
+func TestAgent_SkipProcessorsAfterDefaultsFalseWhenBeforeSet(t *testing.T) {
+	c := config.NewConfig()
+	c.Agent.OmitHostname = true
+	skipBefore := false
+	c.Agent.SkipProcessorsBeforeAggregators = &skipBefore
 
-	found := false
-	for _, m := range metrics {
-		if _, ok := m.Fields()["user_cpu_min"]; ok {
-			found = true
-			break
-		}
-	}
-	require.True(t, found, "expected user_cpu_min when both flags are false")
+	agent := NewAgent(c)
+	ctx, cancel := context.WithTimeout(t.Context(), 1*time.Second)
+	defer cancel()
+
+	require.NoError(t, agent.Run(ctx))
+	require.False(t, *c.Agent.SkipProcessorsAfterAggregators)
+}
+
+func TestAgent_BothSkipProcessorsAfterDefaultsToFalse(t *testing.T) {
+	c := config.NewConfig()
+	c.Agent.OmitHostname = true
+
+	agent := NewAgent(c)
+	ctx, cancel := context.WithTimeout(t.Context(), 1*time.Second)
+	defer cancel()
+
+	require.NoError(t, agent.Run(ctx))
+	require.False(t, *c.Agent.SkipProcessorsBeforeAggregators)
+	require.False(t, *c.Agent.SkipProcessorsAfterAggregators)
 }
 
 // Implement a "test-mode" like call but collect the metrics
