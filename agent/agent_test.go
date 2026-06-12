@@ -228,6 +228,98 @@ func TestCases(t *testing.T) {
 	}
 }
 
+func TestAgent_SkipProcessorsBeforeAndAfterError(t *testing.T) {
+	c := config.NewConfig()
+	c.Agent.OmitHostname = true
+	skipBefore := true
+	skipAfter := true
+	c.Agent.SkipProcessorsBeforeAggregators = &skipBefore
+	c.Agent.SkipProcessorsAfterAggregators = &skipAfter
+
+	agent := NewAgent(c)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+
+	err := agent.Run(ctx)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators to true")
+}
+
+func TestAgent_SkipProcessorsBeforeAndAfterErrorTest(t *testing.T) {
+	c := config.NewConfig()
+	c.Agent.OmitHostname = true
+	skipBefore := true
+	skipAfter := true
+	c.Agent.SkipProcessorsBeforeAggregators = &skipBefore
+	c.Agent.SkipProcessorsAfterAggregators = &skipAfter
+
+	agent := NewAgent(c)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+
+	err := agent.Test(ctx, 0)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators to true")
+}
+
+func TestAgent_SkipProcessorsBeforeAndAfterErrorOnce(t *testing.T) {
+	c := config.NewConfig()
+	c.Agent.OmitHostname = true
+	skipBefore := true
+	skipAfter := true
+	c.Agent.SkipProcessorsBeforeAggregators = &skipBefore
+	c.Agent.SkipProcessorsAfterAggregators = &skipAfter
+
+	agent := NewAgent(c)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+
+	err := agent.Once(ctx, 0)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators to true")
+}
+
+func TestAgent_SkipProcessorsBeforeDefaultsFalse(t *testing.T) {
+	c := config.NewConfig()
+	c.Agent.OmitHostname = true
+	skipAfter := false
+	c.Agent.SkipProcessorsAfterAggregators = &skipAfter
+
+	agent := NewAgent(c)
+	ctx, cancel := context.WithTimeout(t.Context(), 1*time.Second)
+	defer cancel()
+
+	require.NoError(t, agent.Run(ctx))
+	require.False(t, *c.Agent.SkipProcessorsBeforeAggregators)
+}
+
+func TestAgent_SkipProcessorsAfterDefaultsFalseWhenBeforeSet(t *testing.T) {
+	c := config.NewConfig()
+	c.Agent.OmitHostname = true
+	skipBefore := false
+	c.Agent.SkipProcessorsBeforeAggregators = &skipBefore
+
+	agent := NewAgent(c)
+	ctx, cancel := context.WithTimeout(t.Context(), 1*time.Second)
+	defer cancel()
+
+	require.NoError(t, agent.Run(ctx))
+	require.False(t, *c.Agent.SkipProcessorsAfterAggregators)
+}
+
+func TestAgent_BothSkipProcessorsAfterDefaultsToFalse(t *testing.T) {
+	c := config.NewConfig()
+	c.Agent.OmitHostname = true
+
+	agent := NewAgent(c)
+	ctx, cancel := context.WithTimeout(t.Context(), 1*time.Second)
+	defer cancel()
+
+	require.NoError(t, agent.Run(ctx))
+	require.False(t, *c.Agent.SkipProcessorsBeforeAggregators)
+	require.False(t, *c.Agent.SkipProcessorsAfterAggregators)
+}
+
 // Implement a "test-mode" like call but collect the metrics
 func collect(ctx context.Context, a *Agent, wait time.Duration) ([]telegraf.Metric, error) {
 	var received []telegraf.Metric
