@@ -30,7 +30,7 @@ type FileCount struct {
 	MTime          config.Duration `toml:"mtime"`
 	Log            telegraf.Logger `toml:"-"`
 	Timeout        config.Duration `toml:"timeout"`
-    MaximumFiles   int64           `toml:"maximum_files"`
+	MaximumFiles   int64           `toml:"maximum_files"`
 
 	fs          fileSystem
 	fileFilters []fileFilterFunc
@@ -146,19 +146,19 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 	newestFileTimestamp := make(map[string]int64)
 
 	start := time.Now()
-    totalFiles := int64(0)
-    maxReached := false
+	totalFiles := int64(0)
+	maxReached := false
 
 	walkFn := func(path string, _ *godirwalk.Dirent) error {
 		// Timeout check (priority)
-        if fc.Timeout > 0 && time.Since(start) > time.Duration(fc.Timeout) {
-            return filepath.SkipDir
-        }
-        // Maximum files check
-        if fc.MaximumFiles > 0 && totalFiles >= fc.MaximumFiles {
-            maxReached = true
-            return filepath.SkipDir
-        }
+		if fc.Timeout > 0 && time.Since(start) > time.Duration(fc.Timeout) {
+			return filepath.SkipDir
+		}
+		// Maximum files check
+		if fc.MaximumFiles > 0 && totalFiles >= fc.MaximumFiles {
+			maxReached = true
+			return filepath.SkipDir
+		}
 
 		rel, err := filepath.Rel(basedir, path)
 		if err == nil && rel == "." {
@@ -327,7 +327,7 @@ func newFileCount() *FileCount {
 		fileFilters:    nil,
 		fs:             osFS{},
 		Timeout:        config.Duration(0),
-        MaximumFiles:   0,
+		MaximumFiles:   0,
 	}
 }
 
