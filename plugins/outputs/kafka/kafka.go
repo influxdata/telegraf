@@ -41,11 +41,6 @@ type Kafka struct {
 	proxy.Socks5ProxyConfig
 	kafka.WriteConfig
 
-	// Legacy TLS config options
-	Certificate string `toml:"certificate" deprecated:"1.36.0;1.40.0;please use 'tls_cert' instead"`
-	Key         string `toml:"key" deprecated:"1.36.0;1.40.0;please use 'tls_cert' instead"`
-	CA          string `toml:"ca" deprecated:"1.36.0;1.40.0;please use 'tls_ca' instead"`
-
 	saramaConfig *sarama.Config
 	producerFunc func(addrs []string, config *sarama.Config) (sarama.SyncProducer, error)
 	producer     sarama.SyncProducer
@@ -77,13 +72,6 @@ func (k *Kafka) Init() error {
 		// Do nothing, those are valid
 	default:
 		return fmt.Errorf("unknown topic suffix method provided: %s", k.TopicSuffix.Method)
-	}
-
-	// Legacy support ssl config
-	if k.Certificate != "" {
-		k.TLSCert = k.Certificate
-		k.TLSCA = k.CA
-		k.TLSKey = k.Key
 	}
 
 	// Legacy support for metric_name_header
