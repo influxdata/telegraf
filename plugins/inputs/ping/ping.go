@@ -47,7 +47,12 @@ type Ping struct {
 	IPv4      bool            `toml:"ipv4"` // Whether to resolve addresses using ipv4 or not.
 	IPv6      bool            `toml:"ipv6"` // Whether to resolve addresses using ipv6 or not.
 	Size      config.Size     `toml:"size"` // Packet size
-	Log       telegraf.Logger `toml:"-"`
+	// When using "native" method, false means unprivileged SOCK_DGRAM
+	// sockets, which requires process GID to be in the range of
+	// net.ipv4.ping_group_range sysctl, nil or true means raw ICMP
+	// sockets, which require CAP_NET_RAW.
+	Privileged *bool           `toml:"privileged"`
+	Log        telegraf.Logger `toml:"-"`
 
 	wg             sync.WaitGroup // wg is used to wait for ping with multiple URLs
 	calcInterval   time.Duration  // Pre-calculated interval and timeout
@@ -205,7 +210,13 @@ func (p *Ping) nativePing(destination string, id int) (*pingStats, error) {
 	// responses between multiple pingers and present wrong results
 	pinger.SetID(id)
 
-	pinger.SetPrivileged(true)
+	// Default to raw ICMP sockets to preserve prior behavior; allow opting
+	// into SOCK_DGRAM sockets.
+	privileged := true
+	if p.Privileged != nil {
+		privileged = *p.Privileged
+	}
+	pinger.SetPrivileged(privileged)
 
 	if p.IPv4 && p.IPv6 {
 		pinger.SetNetwork("ip")
@@ -259,7 +270,7 @@ func (p *Ping) nativePing(destination string, id int) (*pingStats, error) {
 	if err != nil {
 		if strings.Contains(err.Error(), "operation not permitted") {
 			if runtime.GOOS == "linux" {
-				return nil, errors.New("permission changes required, enable CAP_NET_RAW capabilities (refer to the ping plugin's README.md for more info)")
+				return nil, errors.New("permission changes required, enable CAP_NET_RAW capabilities or use privileged = false (refer to the ping plugin's README.md for more info)")
 			}
 
 			return nil, errors.New("permission changes required, refer to the ping plugin's README.md for more info")
