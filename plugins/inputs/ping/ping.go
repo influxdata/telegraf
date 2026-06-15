@@ -43,10 +43,10 @@ type Ping struct {
 	Percentiles  []int           `toml:"percentiles"`   // Calculate the given percentiles when using native method
 	Binary       string          `toml:"binary"`        // Ping executable binary
 	// Arguments for ping command. When arguments are not empty, system binary will be used and other options (ping_interval, timeout, etc.) will be ignored
-	Arguments []string        `toml:"arguments"`
-	IPv4      bool            `toml:"ipv4"` // Whether to resolve addresses using ipv4 or not.
-	IPv6      bool            `toml:"ipv6"` // Whether to resolve addresses using ipv6 or not.
-	Size      config.Size     `toml:"size"` // Packet size
+	Arguments []string    `toml:"arguments"`
+	IPv4      bool        `toml:"ipv4"` // Whether to resolve addresses using ipv4 or not.
+	IPv6      bool        `toml:"ipv6"` // Whether to resolve addresses using ipv6 or not.
+	Size      config.Size `toml:"size"` // Packet size
 	// When using "native" method, false means unprivileged SOCK_DGRAM
 	// sockets, which requires process GID to be in the range of
 	// net.ipv4.ping_group_range sysctl, nil or true means raw ICMP
@@ -270,7 +270,8 @@ func (p *Ping) nativePing(destination string, id int) (*pingStats, error) {
 	if err != nil {
 		if strings.Contains(err.Error(), "operation not permitted") {
 			if runtime.GOOS == "linux" {
-				return nil, errors.New("permission changes required, enable CAP_NET_RAW capabilities or use privileged = false (refer to the ping plugin's README.md for more info)")
+				return nil, errors.New("permission changes required, enable CAP_NET_RAW capabilities or use privileged = false (refer to " +
+					"the ping plugin's README.md for more info)")
 			}
 
 			return nil, errors.New("permission changes required, refer to the ping plugin's README.md for more info")
