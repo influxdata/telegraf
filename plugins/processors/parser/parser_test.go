@@ -16,6 +16,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
+	"github.com/influxdata/telegraf/plugins/parsers/opentsdb"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -645,6 +646,81 @@ func TestApply(t *testing.T) {
 			},
 		},
 		{
+			name:        "override with timestamp no inner time",
+			parseFields: []string{"value"},
+			merge:       "override-with-timestamp",
+			parser:      &json.Parser{},
+			input: metric.New(
+				"myname",
+				map[string]string{},
+				map[string]interface{}{
+					"value": `{"value": 42.1}`,
+				},
+				time.Unix(1773239679, 0)),
+			expected: []telegraf.Metric{
+				metric.New(
+					"myname",
+					map[string]string{},
+					map[string]interface{}{
+						"value": float64(42.1),
+					},
+					time.Unix(1773239679, 0)),
+			},
+		},
+		{
+			name:        "parent with timestamp",
+			parseFields: []string{"value"},
+			merge:       "parent-with-timestamp",
+			parser: &json.Parser{
+				TimeKey:    "timestamp",
+				TimeFormat: "2006-01-02 15:04:05",
+			},
+			dropOriginal: true,
+			input: metric.New(
+				"myname",
+				map[string]string{},
+				map[string]interface{}{
+					"value": `{"timestamp": "2020-06-27 19:43:40", "a": 42.1, "b": 23.5}`,
+				},
+				time.Unix(1773239679, 0)),
+			expected: []telegraf.Metric{
+				metric.New(
+					"myname",
+					map[string]string{},
+					map[string]interface{}{
+						"value": `{"timestamp": "2020-06-27 19:43:40", "a": 42.1, "b": 23.5}`,
+						"a":     float64(42.1),
+						"b":     float64(23.5),
+					},
+					time.Unix(1593287020, 0)),
+			},
+		},
+		{
+			name:         "parent with timestamp no inner timestamp",
+			parseFields:  []string{"value"},
+			merge:        "parent-with-timestamp",
+			parser:       &json.Parser{},
+			dropOriginal: true,
+			input: metric.New(
+				"myname",
+				map[string]string{},
+				map[string]interface{}{
+					"value": `{"a": 42.1, "b": 23.5}`,
+				},
+				time.Unix(1773239679, 0)),
+			expected: []telegraf.Metric{
+				metric.New(
+					"myname",
+					map[string]string{},
+					map[string]interface{}{
+						"value": `{"a": 42.1, "b": 23.5}`,
+						"a":     float64(42.1),
+						"b":     float64(23.5),
+					},
+					time.Unix(1773239679, 0)),
+			},
+		},
+		{
 			name:        "non-string field with binary parser",
 			parseFields: []string{"value"},
 			merge:       "override",
@@ -829,7 +905,7 @@ func TestApply(t *testing.T) {
 			if p, ok := tt.parser.(telegraf.Initializer); ok {
 				require.NoError(t, p.Init())
 			}
-			plugin := Parser{
+			plugin := &Parser{
 				ParseFields:  tt.parseFields,
 				ParseTags:    tt.parseTags,
 				Base64Fields: tt.parseBase64,
@@ -838,6 +914,7 @@ func TestApply(t *testing.T) {
 				Log:          testutil.Logger{Name: "processor.parser"},
 			}
 			plugin.SetParser(tt.parser)
+			require.NoError(t, plugin.Init())
 
 			output := plugin.Apply(tt.input)
 			t.Logf("Testing: %s", tt.name)
@@ -1615,13 +1692,14 @@ metric,status=fault value=42i 1773239679300000000
 			)
 
 			// Setup plugin
-			plugin := Parser{
+			plugin := &Parser{
 				ParseFields:  []string{"message"},
 				DropOriginal: tt.drop,
 				Merge:        tt.strategy,
 				Log:          testutil.Logger{Name: "processor.parser"},
 			}
 			plugin.SetParser(tt.parser)
+			require.NoError(t, plugin.Init())
 
 			// Parse the metric and check the result
 			output := plugin.Apply(input)
@@ -1631,7 +1709,7 @@ metric,status=fault value=42i 1773239679300000000
 }
 
 func TestInvalidMerge(t *testing.T) {
-	plugin := Parser{Merge: "fake"}
+	plugin := &Parser{Merge: "fake"}
 	require.Error(t, plugin.Init())
 }
 
@@ -1693,11 +1771,12 @@ func TestBadApply(t *testing.T) {
 				require.NoError(t, p.Init())
 			}
 
-			plugin := Parser{
+			plugin := &Parser{
 				ParseFields: tt.parseFields,
 				Log:         testutil.Logger{Name: "processor.parser"},
 			}
 			plugin.SetParser(tt.parser)
+			require.NoError(t, plugin.Init())
 
 			output := plugin.Apply(tt.input)
 			testutil.RequireMetricsEqual(t, tt.expected, output, testutil.IgnoreTime())
@@ -1775,6 +1854,7 @@ func TestTracking(t *testing.T) {
 			plugin := &Parser{
 				DropOriginal: tt.dropOriginal,
 				ParseFields:  []string{"payload"},
+				Log:          testutil.Logger{Name: "processor.parser"},
 			}
 			plugin.SetParser(parser)
 			require.NoError(t, plugin.Init())
@@ -1808,26 +1888,39 @@ func TestTracking(t *testing.T) {
 	}
 }
 
+func TestNoTimeFuncParser(t *testing.T) {
+	tests := []string{
+		"override-with-timestamp",
+		"parent-with-timestamp",
+	}
+
+	for _, strategy := range tests {
+		t.Run(strategy, func(t *testing.T) {
+			// Setup a logger for testing
+			logger := &testutil.CaptureLogger{}
+
+			// Setup a parser which doesn't implement the ParserTimeFuncPlugin interface
+			parser := &opentsdb.Parser{}
+
+			// Configure the plugin
+			plugin := &Parser{
+				DropOriginal: true,
+				ParseFields:  []string{"payload"},
+				Merge:        strategy,
+				Log:          logger,
+			}
+			plugin.SetParser(parser)
+			require.NoError(t, plugin.Init())
+
+			// Check for the warning
+			warnings := logger.Warnings()
+			require.Len(t, warnings, 1)
+			require.Contains(t, warnings[0], "Parser will always create a timestamp")
+		})
+	}
+}
+
 // Benchmarks
-
-func getMetricFields(m telegraf.Metric) interface{} {
-	key := "field3"
-	if v, ok := m.Fields()[key]; ok {
-		return v
-	}
-	return nil
-}
-
-func getMetricFieldList(m telegraf.Metric) interface{} {
-	key := "field3"
-	fields := m.FieldList()
-	for _, field := range fields {
-		if field.Key == key {
-			return field.Value
-		}
-	}
-	return nil
-}
 
 func BenchmarkFieldListing(b *testing.B) {
 	m := metric.New(
@@ -1871,4 +1964,25 @@ func BenchmarkFields(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		getMetricFields(m)
 	}
+}
+
+// Internal
+
+func getMetricFields(m telegraf.Metric) interface{} {
+	key := "field3"
+	if v, ok := m.Fields()[key]; ok {
+		return v
+	}
+	return nil
+}
+
+func getMetricFieldList(m telegraf.Metric) interface{} {
+	key := "field3"
+	fields := m.FieldList()
+	for _, field := range fields {
+		if field.Key == key {
+			return field.Value
+		}
+	}
+	return nil
 }
