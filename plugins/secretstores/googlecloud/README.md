@@ -50,6 +50,13 @@ store usage.
 
 This plugin only supports reading the secrets, it cannot create or modify them.
 
+The `scopes` option is only defaulted to `cloud-platform` for credential files
+of `type: "service_account"`, which is the kind downloaded from the Google
+Cloud Console. Other OAuth2-scope-consuming credential types such as
+`authorized_user`, `external_account`, and `impersonated_service_account` must
+set `scopes` manually. For `gdch_service_account` credentials only the
+`sts_audience` option is evaluated and `scopes` is ignored.
+
 To generate a Google-Distributed-Cloud-Hosted service account credentials file
 check the [Manage service accounts][gdch_service_docs] page.
 
