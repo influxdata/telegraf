@@ -60,6 +60,13 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Percentiles to calculate. This only works with the native method.
   # percentiles = [50, 95, 99]
 
+  ## For the "native" method, select the ICMP socket type. When true or
+  ## unspecified (default) raw sockets are used and the CAP_NET_RAW capability
+  ## (or root) is required. When false, unprivileged ICMP datagram sockets
+  ## (SOCK_DGRAM) are used, which require the process GID to be within the
+  ## range in net.ipv4.ping_group_range.
+  # privileged = true
+
   ## Specify the ping executable binary.
   # binary = "ping"
 
@@ -102,7 +109,11 @@ the system `ping` command. Therefore, this method doesn't have external
 dependencies.
 
 With `method = "native"`, the `timeout` option is ignored. Use `deadline` to
-control the total runtime instead.
+control the total runtime instead. The `privileged` option indicates which type
+of socket will be used with `method = "native"`; `true` or `nil` uses raw
+sockets, whereas `false` uses SOCK_DGRAM. The former requires CAP_NET_RAW or
+root, the latter requires your process GID to fall in the range of
+the `net.ipv4.ping_group_range` sysctl.
 
 ### File Limit
 
