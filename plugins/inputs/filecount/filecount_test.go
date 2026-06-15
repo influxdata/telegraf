@@ -35,7 +35,7 @@ func TestNoFiltersOnChildDir(t *testing.T) {
 	matches := []string{"subdir/quux", "subdir/quuz",
 		"subdir/nested2/qux", "subdir/nested2"}
 
-	tags := map[string]string{"directory": getTestdataDir() + "/subdir"}
+	tags := map[string]string{"directory": getTestdataDir() + "/subdir", "filecount_status": "ok"}
 	acc := testutil.Accumulator{}
 	require.NoError(t, acc.GatherError(fc.Gather))
 	require.True(t, acc.HasPoint("filecount", tags, "count", int64(len(matches))))
@@ -50,7 +50,7 @@ func TestNoRecursiveButSuperMeta(t *testing.T) {
 	fc.Directories = []string{getTestdataDir() + "/**"}
 	matches := []string{"subdir/quux", "subdir/quuz", "subdir/nested2"}
 
-	tags := map[string]string{"directory": getTestdataDir() + "/subdir"}
+	tags := map[string]string{"directory": getTestdataDir() + "/subdir", "filecount_status": "ok"}
 	acc := testutil.Accumulator{}
 	require.NoError(t, acc.GatherError(fc.Gather))
 
@@ -80,7 +80,7 @@ func TestDoubleAndSimpleStar(t *testing.T) {
 	fc.Directories = []string{getTestdataDir() + "/**/*"}
 	matches := []string{"qux"}
 
-	tags := map[string]string{"directory": getTestdataDir() + "/subdir/nested2"}
+	tags := map[string]string{"directory": getTestdataDir() + "/subdir/nested2", "filecount_status": "ok"}
 
 	acc := testutil.Accumulator{}
 	require.NoError(t, acc.GatherError(fc.Gather))
@@ -160,7 +160,8 @@ func TestDirectoryWithTrailingSlash(t *testing.T) {
 		metric.New(
 			"filecount",
 			map[string]string{
-				"directory": getTestdataDir(),
+				"directory":        getTestdataDir(),
+				"filecount_status": "ok",
 			},
 			map[string]interface{}{
 				"count":                 9,
@@ -174,6 +175,57 @@ func TestDirectoryWithTrailingSlash(t *testing.T) {
 	}
 
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+}
+
+func TestMaximumFiles(t *testing.T) {
+	fc := getNoFilterFileCount()
+	fc.MaximumFiles = 3
+
+	tags := map[string]string{"directory": getTestdataDir(), "filecount_status": "maximum"}
+	acc := testutil.Accumulator{}
+	require.NoError(t, acc.GatherError(fc.Gather))
+	require.True(t, acc.HasPoint("filecount", tags, "count", int64(3)))
+}
+
+func TestMaximumFilesDisabled(t *testing.T) {
+	fc := getNoFilterFileCount()
+	fc.MaximumFiles = 0
+
+	tags := map[string]string{"directory": getTestdataDir(), "filecount_status": "ok"}
+	acc := testutil.Accumulator{}
+	require.NoError(t, acc.GatherError(fc.Gather))
+	require.True(t, acc.HasPoint("filecount", tags, "count", int64(9)))
+}
+
+func TestTimeout(t *testing.T) {
+	fc := getNoFilterFileCount()
+	fc.Timeout = config.Duration(5 * time.Second)
+
+	tags := map[string]string{"directory": getTestdataDir(), "filecount_status": "ok"}
+	acc := testutil.Accumulator{}
+	require.NoError(t, acc.GatherError(fc.Gather))
+	require.True(t, acc.HasPoint("filecount", tags, "count", int64(9)))
+	require.True(t, acc.HasPoint("filecount", tags, "size_bytes", int64(5096)))
+}
+
+func TestTimeoutDisabled(t *testing.T) {
+	fc := getNoFilterFileCount()
+	fc.Timeout = config.Duration(0)
+
+	tags := map[string]string{"directory": getTestdataDir(), "filecount_status": "ok"}
+	acc := testutil.Accumulator{}
+	require.NoError(t, acc.GatherError(fc.Gather))
+	require.True(t, acc.HasPoint("filecount", tags, "count", int64(9)))
+}
+
+func TestMaximumFilesLargerThanTotal(t *testing.T) {
+	fc := getNoFilterFileCount()
+	fc.MaximumFiles = 100
+
+	tags := map[string]string{"directory": getTestdataDir(), "filecount_status": "ok"}
+	acc := testutil.Accumulator{}
+	require.NoError(t, acc.GatherError(fc.Gather))
+	require.True(t, acc.HasPoint("filecount", tags, "count", int64(9)))
 }
 
 func getNoFilterFileCount() FileCount {
@@ -242,7 +294,7 @@ func getFakeFileSystem(basePath string) fakeFileSystem {
 }
 
 func fileCountEquals(t *testing.T, fc FileCount, expectedCount, expectedSize int) {
-	tags := map[string]string{"directory": getTestdataDir()}
+	tags := map[string]string{"directory": getTestdataDir(), "filecount_status": "ok"}
 	acc := testutil.Accumulator{}
 	require.NoError(t, acc.GatherError(fc.Gather))
 	require.True(t, acc.HasPoint("filecount", tags, "count", int64(expectedCount)))
