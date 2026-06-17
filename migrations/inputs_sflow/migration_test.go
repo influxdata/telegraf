@@ -10,7 +10,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	_ "github.com/influxdata/telegraf/migrations/inputs_sflow" // register migration
 	_ "github.com/influxdata/telegraf/plugins/inputs/netflow"  // register plugin
-	_ "github.com/influxdata/telegraf/plugins/inputs/sflow"    // register plugin
 )
 
 func TestCases(t *testing.T) {
