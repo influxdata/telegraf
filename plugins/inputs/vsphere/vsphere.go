@@ -58,6 +58,7 @@ type VSphere struct {
 	VSANMetricExclude           []string        `toml:"vsan_metric_exclude"`
 	VSANMetricSkipVerify        bool            `toml:"vsan_metric_skip_verify"`
 	VSANClusterInclude          []string        `toml:"vsan_cluster_include"`
+	VSANHealthFetchFromCache    bool            `toml:"vsan_health_fetch_from_cache"`
 	VSANInterval                config.Duration `toml:"vsan_interval"`
 	Separator                   string          `toml:"separator"`
 	CustomAttributeInclude      []string        `toml:"custom_attribute_include"`

@@ -336,7 +336,7 @@ func (e *endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Clie
 		Type:  "VsanVcClusterHealthSystem",
 		Value: "vsan-cluster-health-system",
 	}
-	fetchFromCache := true
+	fetchFromCache := e.parent.VSANHealthFetchFromCache
 	resp, err := vsanmethods.VsanQueryVcClusterHealthSummary(ctx, vsanClient,
 		&vsantypes.VsanQueryVcClusterHealthSummary{
 			This:           healthSystemRef,
@@ -349,10 +349,12 @@ func (e *endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Clie
 	}
 	healthStr := resp.Returnval.OverallHealth
 	healthMap := map[string]int{"red": 2, "yellow": 1, "green": 0}
-	fields := make(map[string]interface{})
-	if val, ok := healthMap[healthStr]; ok {
-		fields["overall_health"] = val
+	val, ok := healthMap[healthStr]
+	if !ok {
+		e.parent.Log.Debugf("[vSAN] Skipping health summary for cluster %s: unexpected overall health %q", clusterRef.name, healthStr)
+		return nil
 	}
+	fields := map[string]interface{}{"overall_health": val}
 	tags := populateClusterTags(make(map[string]string), clusterRef, e.url.Host)
 	acc.AddFields(vsanSummaryMetricsName, fields, tags)
 	return nil
