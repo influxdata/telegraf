@@ -39,7 +39,6 @@ var (
 
 type Tail struct {
 	Files               []string `toml:"files"`
-	FromBeginning       bool     `toml:"from_beginning" deprecated:"1.34.0;1.40.0;use 'initial_read_offset' with value 'beginning' instead"`
 	InitialReadOffset   string   `toml:"initial_read_offset"`
 	Pipe                bool     `toml:"pipe"`
 	WatchMethod         string   `toml:"watch_method"`
@@ -82,15 +81,6 @@ func (t *Tail) SetParserFunc(fn telegraf.ParserFunc) {
 }
 
 func (t *Tail) Init() error {
-	// Backward compatibility setting
-	if t.InitialReadOffset == "" {
-		if t.FromBeginning {
-			t.InitialReadOffset = "beginning"
-		} else {
-			t.InitialReadOffset = "saved-or-end"
-		}
-	}
-
 	// Check settings
 	switch t.InitialReadOffset {
 	case "":
