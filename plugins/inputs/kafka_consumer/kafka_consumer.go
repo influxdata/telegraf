@@ -51,7 +51,6 @@ type KafkaConsumer struct {
 	ConsumerFetchDefault                 config.Size     `toml:"consumer_fetch_default"`
 	ConsumerFetchMin                     config.Size     `toml:"consumer_fetch_min"`
 	ConsumerFetchMaxWait                 config.Duration `toml:"consumer_fetch_max_wait"`
-	ConnectionStrategy                   string          `toml:"connection_strategy" deprecated:"1.33.0;1.40.0;use 'startup_error_behavior' instead"`
 	ResolveCanonicalBootstrapServersOnly bool            `toml:"resolve_canonical_bootstrap_servers_only"`
 	Log                                  telegraf.Logger `toml:"-"`
 	kafka.ReadConfig
@@ -200,12 +199,6 @@ func (k *KafkaConsumer) Init() error {
 		cfg.Consumer.MaxWaitTime = time.Duration(k.ConsumerFetchMaxWait)
 	}
 
-	switch strings.ToLower(k.ConnectionStrategy) {
-	default:
-		return fmt.Errorf("invalid connection strategy %q", k.ConnectionStrategy)
-	case "defer", "startup", "":
-	}
-
 	k.config = cfg
 
 	if len(k.TopicRegexps) == 0 {
@@ -231,8 +224,6 @@ func (k *KafkaConsumer) SetParser(parser telegraf.Parser) {
 }
 
 func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
-	var err error
-
 	// If TopicRegexps is set, add matches to Topics
 	if len(k.TopicRegexps) > 0 {
 		if err := k.refreshTopics(); err != nil {
@@ -243,32 +234,18 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	k.cancel = cancel
 
-	if k.ConnectionStrategy != "defer" {
-		err = k.create()
-		if err != nil {
-			return &internal.StartupError{
-				Err:   fmt.Errorf("create consumer: %w", err),
-				Retry: errors.Is(err, sarama.ErrOutOfBrokers),
-			}
+	if err := k.create(); err != nil {
+		return &internal.StartupError{
+			Err:   fmt.Errorf("create consumer: %w", err),
+			Retry: errors.Is(err, sarama.ErrOutOfBrokers),
 		}
-		k.startErrorAdder(acc)
 	}
+	k.startErrorAdder(acc)
 
 	// Start consumer goroutine
 	k.wg.Add(1)
 	go func() {
-		var err error
 		defer k.wg.Done()
-
-		if k.consumer == nil {
-			err = k.create()
-			if err != nil {
-				acc.AddError(fmt.Errorf("create consumer async: %w", err))
-				return
-			}
-		}
-
-		k.startErrorAdder(acc)
 
 		for ctx.Err() == nil {
 			handler := newConsumerGroupHandler(acc, k.MaxUndeliveredMessages, k.parser, k.Log)
@@ -300,8 +277,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 				internal.SleepContext(ctx, reconnectDelay) //nolint:errcheck // ignore returned error as we cannot do anything about it anyway
 			}
 		}
-		err = k.consumer.Close()
-		if err != nil {
+		if err := k.consumer.Close(); err != nil {
 			acc.AddError(fmt.Errorf("close: %w", err))
 		}
 	}()
