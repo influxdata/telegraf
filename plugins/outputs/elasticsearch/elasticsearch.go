@@ -11,13 +11,12 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"text/template"
 	"time"
 
-	"github.com/olivere/elastic"
+	elasticsearch "github.com/elastic/go-elasticsearch/v9"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -58,71 +57,63 @@ type Elasticsearch struct {
 	tagKeys             []string
 	tls.ClientConfig
 
-	Client *elastic.Client
+	Client *elasticsearch.Client
 }
 
-const telegrafTemplate = `
-{
-	{{ if (lt .Version 6) }}
-	"template": "{{.TemplatePattern}}",
-	{{ else }}
-	"index_patterns" : [ "{{.TemplatePattern}}" ],
-	{{ end }}
-	"settings": {
-		"index": {{.IndexTemplate}}
-	},
-	"mappings" : {
-		{{ if (lt .Version 7) }}
-		"metrics" : {
-			{{ if (lt .Version 6) }}
-			"_all": { "enabled": false },
-			{{ end }}
-		{{ end }}
-		"properties" : {
-			"@timestamp" : { "type" : "date" },
-			"measurement_name" : { "type" : "keyword" }
+// ecsVersion is the ECS schema version stamped into every indexed document.
+const ecsVersion = "9.3.0"
+
+// telegrafTemplate is the composable index template for ES 8+.
+const telegrafTemplate = `{
+	"index_patterns": ["{{.TemplatePattern}}"],
+	"priority": 100,
+	"template": {
+		"settings": {
+			"index": {{.IndexTemplate}}
 		},
-		"dynamic_templates": [
-			{
-				"tags": {
-					"match_mapping_type": "string",
-					"path_match": "tag.*",
-					"mapping": {
-						"ignore_above": 512,
-						"type": "keyword"
+		"mappings": {
+			"properties": {
+				"@timestamp": { "type": "date" },
+				"ecs": {
+					"properties": {
+						"version": { "type": "keyword", "ignore_above": 1024 }
+					}
+				},
+				"event": {
+					"properties": {
+						"dataset": { "type": "keyword", "ignore_above": 1024 }
 					}
 				}
 			},
-			{
-				"metrics_long": {
-					"match_mapping_type": "long",
-					"mapping": {
-						"type": "float",
-						"index": false
+			"dynamic_templates": [
+				{
+					"metrics_long": {
+						"match_mapping_type": "long",
+						"mapping": {
+							"type": "float",
+							"index": false
+						}
+					}
+				},
+				{
+					"metrics_double": {
+						"match_mapping_type": "double",
+						"mapping": {
+							"type": "float",
+							"index": false
+						}
+					}
+				},
+				{
+					"text_fields": {
+						"match": "*",
+						"mapping": {
+							"norms": false
+						}
 					}
 				}
-			},
-			{
-				"metrics_double": {
-					"match_mapping_type": "double",
-					"mapping": {
-						"type": "float",
-						"index": false
-					}
-				}
-			},
-			{
-				"text_fields": {
-					"match": "*",
-					"mapping": {
-						"norms": false
-					}
-				}
-			}
-		]
-		{{ if (lt .Version 7) }}
+			]
 		}
-		{{ end }}
 	}
 }`
 
@@ -136,7 +127,6 @@ const defaultTemplateIndexSettings = `
 
 type templatePart struct {
 	TemplatePattern string
-	Version         int
 	IndexTemplate   string
 }
 
@@ -149,7 +139,6 @@ func (a *Elasticsearch) Connect() error {
 		return errors.New("elasticsearch urls or index_name is not defined")
 	}
 
-	// Determine if we should process NaN and inf values
 	switch a.FloatHandling {
 	case "", "none":
 		a.FloatHandling = "none"
@@ -158,10 +147,12 @@ func (a *Elasticsearch) Connect() error {
 		return fmt.Errorf("invalid float_handling type %q", a.FloatHandling)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
-	defer cancel()
-
-	var clientOptions []elastic.ClientOptionFunc
+	if a.EnableSniffer {
+		a.Log.Warn("enable_sniffer is not supported with the go-elasticsearch client; ignoring")
+	}
+	if time.Duration(a.HealthCheckInterval) != 0 || time.Duration(a.HealthCheckTimeout) != 0 {
+		a.Log.Warn("health_check_interval and health_check_timeout are not supported with the go-elasticsearch client; ignoring")
+	}
 
 	tlsCfg, err := a.ClientConfig.TLSConfig()
 	if err != nil {
@@ -171,77 +162,95 @@ func (a *Elasticsearch) Connect() error {
 		TLSClientConfig: tlsCfg,
 	}
 
-	httpclient := &http.Client{
-		Transport: tr,
-		Timeout:   time.Duration(a.Timeout),
+	cfg := elasticsearch.Config{
+		Addresses:           a.URLs,
+		Transport:           tr,
+		CompressRequestBody: a.EnableGzip,
+		Header:              a.processHeaders(),
 	}
 
-	elasticURL, err := url.Parse(a.URLs[0])
-	if err != nil {
-		return fmt.Errorf("parsing URL failed: %w", err)
-	}
-
-	clientOptions = append(clientOptions,
-		elastic.SetHttpClient(httpclient),
-		elastic.SetSniff(a.EnableSniffer),
-		elastic.SetScheme(elasticURL.Scheme),
-		elastic.SetURL(a.URLs...),
-		elastic.SetHealthcheckInterval(time.Duration(a.HealthCheckInterval)),
-		elastic.SetHealthcheckTimeout(time.Duration(a.HealthCheckTimeout)),
-		elastic.SetGzip(a.EnableGzip),
-	)
-
-	if len(a.Headers) > 0 {
-		headers := a.processHeaders()
-		clientOptions = append(clientOptions, elastic.SetHeaders(headers))
-	}
-
-	authOptions, err := a.getAuthOptions()
-	if err != nil {
+	if err := a.applyAuth(&cfg); err != nil {
 		return err
 	}
-	clientOptions = append(clientOptions, authOptions...)
 
-	if time.Duration(a.HealthCheckInterval) == 0 {
-		clientOptions = append(clientOptions,
-			elastic.SetHealthcheck(false),
-		)
-		a.Log.Debugf("Disabling health check")
-	}
-
-	client, err := elastic.NewClient(clientOptions...)
-
+	client, err := elasticsearch.NewClient(cfg)
 	if err != nil {
 		return err
 	}
 
-	// check for ES version on first node
-	esVersion, err := client.ElasticsearchVersion(a.URLs[0])
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
+	defer cancel()
 
+	res, err := client.Info(client.Info.WithContext(ctx))
 	if err != nil {
 		return fmt.Errorf("elasticsearch version check failed: %w", err)
 	}
-
-	// quit if ES version is not supported
-	majorReleaseNumber, err := strconv.Atoi(strings.Split(esVersion, ".")[0])
-	if err != nil || majorReleaseNumber < 5 {
-		return fmt.Errorf("elasticsearch version not supported: %s", esVersion)
+	defer res.Body.Close()
+	if res.IsError() {
+		return fmt.Errorf("elasticsearch version check returned error: %s", res.String())
 	}
 
-	a.Log.Infof("Elasticsearch version: %q", esVersion)
+	var info struct {
+		Version struct {
+			Number string `json:"number"`
+		} `json:"version"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&info); err != nil {
+		return fmt.Errorf("elasticsearch version parse failed: %w", err)
+	}
 
+	majorReleaseNumber, err := strconv.Atoi(strings.Split(info.Version.Number, ".")[0])
+	if err != nil || majorReleaseNumber < 9 {
+		return fmt.Errorf("elasticsearch version not supported: %s (must be >= 9)", info.Version.Number)
+	}
+
+	a.Log.Infof("Elasticsearch version: %q", info.Version.Number)
 	a.Client = client
 	a.majorReleaseNumber = majorReleaseNumber
 
 	if a.ManageTemplate {
-		err := a.manageTemplate(ctx)
-		if err != nil {
+		if err := a.manageTemplate(ctx); err != nil {
 			return err
 		}
 	}
 
 	a.IndexName, a.tagKeys = GetTagKeys(a.IndexName)
 	a.pipelineName, a.pipelineTagKeys = GetTagKeys(a.UsePipeline)
+
+	return nil
+}
+
+// applyAuth sets authentication fields on the elasticsearch.Config.
+func (a *Elasticsearch) applyAuth(cfg *elasticsearch.Config) error {
+	if !a.Username.Empty() && !a.Password.Empty() {
+		username, err := a.Username.Get()
+		if err != nil {
+			return fmt.Errorf("getting username failed: %w", err)
+		}
+		defer username.Destroy()
+
+		password, err := a.Password.Get()
+		if err != nil {
+			return fmt.Errorf("getting password failed: %w", err)
+		}
+		defer password.Destroy()
+
+		cfg.Username = username.String()
+		cfg.Password = password.String()
+	}
+
+	if !a.AuthBearerToken.Empty() {
+		token, err := a.AuthBearerToken.Get()
+		if err != nil {
+			return fmt.Errorf("getting token failed: %w", err)
+		}
+		defer token.Destroy()
+
+		if cfg.Header == nil {
+			cfg.Header = http.Header{}
+		}
+		cfg.Header.Set("Authorization", "Bearer "+token.String())
+	}
 
 	return nil
 }
@@ -294,18 +303,78 @@ func GetPointID(m telegraf.Metric) string {
 	return fmt.Sprintf("%x", sha256.Sum256(buffer.Bytes()))
 }
 
+// expandDotKeys converts a flat map of string tags into a nested map by splitting keys on ".".
+// Non-dot keys are inserted first so they take precedence over dot-notation paths that share the same root.
+func expandDotKeys(tags map[string]string) map[string]interface{} {
+	result := make(map[string]interface{})
+
+	// First pass: flat keys (no dots) — these take priority
+	for k, v := range tags {
+		if !strings.Contains(k, ".") {
+			result[k] = v
+		}
+	}
+
+	// Second pass: dot-notation keys → nested maps
+	for k, v := range tags {
+		if strings.Contains(k, ".") {
+			setNestedValue(result, strings.Split(k, "."), v)
+		}
+	}
+
+	return result
+}
+
+// setNestedValue recursively walks parts to set value at the leaf, creating intermediate maps as needed.
+// If an intermediate key already holds a scalar (not a map), the nested insertion is silently skipped.
+func setNestedValue(m map[string]interface{}, parts []string, value string) {
+	key := parts[0]
+	if len(parts) == 1 {
+		m[key] = value
+		return
+	}
+
+	child, exists := m[key]
+	if !exists {
+		child = make(map[string]interface{})
+		m[key] = child
+	}
+
+	if childMap, ok := child.(map[string]interface{}); ok {
+		setNestedValue(childMap, parts[1:], value)
+	}
+	// If child is a scalar, the nested key is silently skipped (scalar wins).
+}
+
+// buildECSDocument constructs an ECS-compliant document from a Telegraf metric.
+// Tags with dot-notation keys are expanded into nested JSON objects.
+// Metric fields are nested under the measurement name.
+func (a *Elasticsearch) buildECSDocument(metric telegraf.Metric, fields map[string]interface{}) map[string]interface{} {
+	m := make(map[string]interface{})
+	m["@timestamp"] = metric.Time()
+	m["ecs"] = map[string]interface{}{"version": ecsVersion}
+	m["event"] = map[string]interface{}{"dataset": metric.Name()}
+
+	for k, v := range expandDotKeys(metric.Tags()) {
+		m[k] = v
+	}
+
+	if len(fields) > 0 {
+		m[metric.Name()] = fields
+	}
+
+	return m
+}
+
 func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
 
-	bulkRequest := a.Client.Bulk()
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
 
 	for _, metric := range metrics {
-		var name = metric.Name()
-
-		// index name has to be re-evaluated each time for telegraf
-		// to send the metric to the correct time-based index
 		indexName := a.GetIndexName(a.IndexName, metric.Time(), a.tagKeys, metric.Tags())
 
 		// Handle NaN and inf field-values
@@ -327,59 +396,75 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 			}
 		}
 
-		m := make(map[string]interface{})
-
-		m["@timestamp"] = metric.Time()
-		m["measurement_name"] = name
-		m["tag"] = metric.Tags()
-		m[name] = fields
-
-		br := elastic.NewBulkIndexRequest().Index(indexName).Doc(m)
-
-		if a.UseOpTypeCreate {
-			br.OpType("create")
-		}
-
+		// Build bulk action metadata
+		actionMeta := map[string]interface{}{"_index": indexName}
 		if a.ForceDocumentID {
-			id := GetPointID(metric)
-			br.Id(id)
+			actionMeta["_id"] = GetPointID(metric)
 		}
-
-		if a.majorReleaseNumber <= 6 {
-			br.Type("metrics")
-		}
-
 		if a.UsePipeline != "" {
 			if pipelineName := a.getPipelineName(a.pipelineName, a.pipelineTagKeys, metric.Tags()); pipelineName != "" {
-				br.Pipeline(pipelineName)
+				actionMeta["pipeline"] = pipelineName
 			}
 		}
 
-		bulkRequest.Add(br)
+		actionKey := "index"
+		if a.UseOpTypeCreate {
+			actionKey = "create"
+		}
+
+		action := map[string]interface{}{actionKey: actionMeta}
+		if err := enc.Encode(action); err != nil {
+			return fmt.Errorf("failed to encode bulk action: %w", err)
+		}
+
+		doc := a.buildECSDocument(metric, fields)
+		if err := enc.Encode(doc); err != nil {
+			return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
+		}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
 	defer cancel()
 
-	res, err := bulkRequest.Do(ctx)
-
+	res, err := a.Client.Bulk(bytes.NewReader(buf.Bytes()), a.Client.Bulk.WithContext(ctx))
 	if err != nil {
 		return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
 	}
+	defer res.Body.Close()
 
-	if res.Errors {
-		for id, err := range res.Failed() {
-			a.Log.Errorf(
-				"Elasticsearch indexing failure, id: %d, status: %d, error: %s, caused by: %s, %s",
-				id,
-				err.Status,
-				err.Error.Reason,
-				err.Error.CausedBy["reason"],
-				err.Error.CausedBy["type"],
-			)
-			break
+	if res.IsError() {
+		return fmt.Errorf("error sending bulk request to Elasticsearch: %s", res.String())
+	}
+
+	var bulkRes struct {
+		Errors bool `json:"errors"`
+		Items  []map[string]struct {
+			Status int `json:"status"`
+			Error  struct {
+				Type   string `json:"type"`
+				Reason string `json:"reason"`
+			} `json:"error"`
+		} `json:"items"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&bulkRes); err != nil {
+		return fmt.Errorf("failed to parse bulk response: %w", err)
+	}
+
+	if bulkRes.Errors {
+		var failCount int
+		for _, item := range bulkRes.Items {
+			for action, result := range item {
+				if result.Status >= 400 {
+					failCount++
+					a.Log.Errorf(
+						"Elasticsearch indexing failure, action: %s, status: %d, type: %s, reason: %s",
+						action, result.Status, result.Error.Type, result.Error.Reason,
+					)
+					break
+				}
+			}
 		}
-		return fmt.Errorf("elasticsearch failed to index %d metrics", len(res.Failed()))
+		return fmt.Errorf("elasticsearch failed to index %d metrics", failCount)
 	}
 
 	return nil
@@ -388,12 +473,6 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 	if a.TemplateName == "" {
 		return errors.New("elasticsearch template_name configuration not defined")
-	}
-
-	templateExists, errExists := a.Client.IndexTemplateExists(a.TemplateName).Do(ctx)
-
-	if errExists != nil {
-		return fmt.Errorf("elasticsearch template check failed, template name: %s, error: %w", a.TemplateName, errExists)
 	}
 
 	templatePattern := a.IndexName
@@ -410,15 +489,34 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 		return errors.New("template cannot be created for dynamic index names without an index prefix")
 	}
 
-	if (a.OverwriteTemplate) || (!templateExists) || (templatePattern != "") {
+	// Check using the composable index template API (_index_template)
+	existsRes, err := a.Client.Indices.ExistsIndexTemplate(
+		a.TemplateName,
+		a.Client.Indices.ExistsIndexTemplate.WithContext(ctx),
+	)
+	if err != nil {
+		return fmt.Errorf("elasticsearch template check failed, template name: %s, error: %w", a.TemplateName, err)
+	}
+	existsRes.Body.Close()
+	templateExists := existsRes.StatusCode == http.StatusOK
+
+	if a.OverwriteTemplate || !templateExists {
 		data, err := a.createNewTemplate(templatePattern)
 		if err != nil {
 			return err
 		}
 
-		_, errCreateTemplate := a.Client.IndexPutTemplate(a.TemplateName).BodyString(data.String()).Do(ctx)
-		if errCreateTemplate != nil {
-			return fmt.Errorf("elasticsearch failed to create index template %s: %w", a.TemplateName, errCreateTemplate)
+		putRes, err := a.Client.Indices.PutIndexTemplate(
+			a.TemplateName,
+			bytes.NewReader(data.Bytes()),
+			a.Client.Indices.PutIndexTemplate.WithContext(ctx),
+		)
+		if err != nil {
+			return fmt.Errorf("elasticsearch failed to create index template %s: %w", a.TemplateName, err)
+		}
+		defer putRes.Body.Close()
+		if putRes.IsError() {
+			return fmt.Errorf("elasticsearch failed to create index template %s: %s", a.TemplateName, putRes.String())
 		}
 
 		a.Log.Debugf("Template %s created or updated\n", a.TemplateName)
@@ -442,7 +540,6 @@ func (a *Elasticsearch) createNewTemplate(templatePattern string) (*bytes.Buffer
 
 	tp := templatePart{
 		TemplatePattern: templatePattern + "*",
-		Version:         a.majorReleaseNumber,
 		IndexTemplate:   indexTemplate,
 	}
 
@@ -534,36 +631,6 @@ func getISOWeek(eventTime time.Time) string {
 func (a *Elasticsearch) Close() error {
 	a.Client = nil
 	return nil
-}
-
-func (a *Elasticsearch) getAuthOptions() ([]elastic.ClientOptionFunc, error) {
-	var fns []elastic.ClientOptionFunc
-
-	if !a.Username.Empty() && !a.Password.Empty() {
-		username, err := a.Username.Get()
-		if err != nil {
-			return nil, fmt.Errorf("getting username failed: %w", err)
-		}
-		password, err := a.Password.Get()
-		if err != nil {
-			username.Destroy()
-			return nil, fmt.Errorf("getting password failed: %w", err)
-		}
-		fns = append(fns, elastic.SetBasicAuth(username.String(), password.String()))
-		username.Destroy()
-		password.Destroy()
-	}
-
-	if !a.AuthBearerToken.Empty() {
-		token, err := a.AuthBearerToken.Get()
-		if err != nil {
-			return nil, fmt.Errorf("getting token failed: %w", err)
-		}
-		auth := []string{"Bearer " + token.String()}
-		fns = append(fns, elastic.SetHeaders(http.Header{"Authorization": auth}))
-		token.Destroy()
-	}
-	return fns, nil
 }
 
 func init() {

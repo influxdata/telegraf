@@ -16,6 +16,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -23,13 +24,15 @@ const servicePort = "9200"
 
 func launchTestContainer(t *testing.T) *testutil.Container {
 	container := testutil.Container{
-		Image:        "elasticsearch:6.8.23",
+		Image:        "elasticsearch:9.3.1",
 		ExposedPorts: []string{servicePort},
 		Env: map[string]string{
-			"discovery.type": "single-node",
+			"discovery.type":                  "single-node",
+			"xpack.security.enabled":          "false",
+			"xpack.security.http.ssl.enabled": "false",
 		},
 		WaitingFor: wait.ForAll(
-			wait.ForLog("] mode [basic] - valid"),
+			wait.ForLog("started"),
 			wait.ForListeningPort(servicePort),
 		),
 	}
@@ -669,6 +672,7 @@ func TestPipelineConfigs(t *testing.T) {
 
 func TestRequestHeaderWhenGzipIsEnabled(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Elastic-Product", "Elasticsearch")
 		switch r.URL.Path {
 		case "/_bulk":
 			if contentHeader := r.Header.Get("Content-Encoding"); contentHeader != "gzip" {
@@ -682,13 +686,13 @@ func TestRequestHeaderWhenGzipIsEnabled(t *testing.T) {
 				return
 			}
 
-			if _, err := w.Write([]byte("{}")); err != nil {
+			if _, err := w.Write([]byte(`{"errors":false,"items":[]}`)); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				t.Error(err)
 			}
 			return
 		default:
-			if _, err := w.Write([]byte(`{"version": {"number": "7.8"}}`)); err != nil {
+			if _, err := w.Write([]byte(`{"version": {"number": "9.3.1"},"tagline": "You Know, for Search"}`)); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				t.Error(err)
 			}
@@ -717,6 +721,7 @@ func TestRequestHeaderWhenGzipIsEnabled(t *testing.T) {
 
 func TestRequestHeaderWhenGzipIsDisabled(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Elastic-Product", "Elasticsearch")
 		switch r.URL.Path {
 		case "/_bulk":
 			if contentHeader := r.Header.Get("Content-Encoding"); contentHeader == "gzip" {
@@ -724,13 +729,13 @@ func TestRequestHeaderWhenGzipIsDisabled(t *testing.T) {
 				t.Errorf("Not equal, expected: %q, actual: %q", "gzip", contentHeader)
 				return
 			}
-			if _, err := w.Write([]byte("{}")); err != nil {
+			if _, err := w.Write([]byte(`{"errors":false,"items":[]}`)); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				t.Error(err)
 			}
 			return
 		default:
-			if _, err := w.Write([]byte(`{"version": {"number": "7.8"}}`)); err != nil {
+			if _, err := w.Write([]byte(`{"version": {"number": "9.3.1"},"tagline": "You Know, for Search"}`)); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				t.Error(err)
 			}
@@ -759,6 +764,7 @@ func TestRequestHeaderWhenGzipIsDisabled(t *testing.T) {
 
 func TestAuthorizationHeaderWhenBearerTokenIsPresent(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Elastic-Product", "Elasticsearch")
 		switch r.URL.Path {
 		case "/_bulk":
 			if authHeader := r.Header.Get("Authorization"); authHeader != "Bearer 0123456789abcdef" {
@@ -766,13 +772,13 @@ func TestAuthorizationHeaderWhenBearerTokenIsPresent(t *testing.T) {
 				t.Errorf("Not equal, expected: %q, actual: %q", "Bearer 0123456789abcdef", authHeader)
 				return
 			}
-			if _, err := w.Write([]byte("{}")); err != nil {
+			if _, err := w.Write([]byte(`{"errors":false,"items":[]}`)); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				t.Error(err)
 			}
 			return
 		default:
-			if _, err := w.Write([]byte(`{"version": {"number": "7.8"}}`)); err != nil {
+			if _, err := w.Write([]byte(`{"version": {"number": "9.3.1"},"tagline": "You Know, for Search"}`)); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				t.Error(err)
 			}
@@ -811,7 +817,7 @@ func TestStandardIndexSettings(t *testing.T) {
 	var jsonData esTemplate
 	err = json.Unmarshal(buf.Bytes(), &jsonData)
 	require.NoError(t, err)
-	index := jsonData.Settings.Index
+	index := jsonData.Template.Settings.Index
 	require.Equal(t, "10s", index["refresh_interval"])
 	require.InDelta(t, float64(5000), index["mapping.total_fields.limit"], testutil.DefaultDelta)
 	require.Equal(t, "0-1", index["auto_expand_replicas"])
@@ -834,7 +840,7 @@ func TestDifferentIndexSettings(t *testing.T) {
 	var jsonData esTemplate
 	err = json.Unmarshal(buf.Bytes(), &jsonData)
 	require.NoError(t, err)
-	index := jsonData.Settings.Index
+	index := jsonData.Template.Settings.Index
 	require.Equal(t, "20s", index["refresh_interval"])
 	require.InDelta(t, float64(1000), index["mapping.total_fields.limit"], testutil.DefaultDelta)
 	require.Equal(t, "best_compression", index["codec"])
@@ -906,12 +912,12 @@ func TestProcessHeaders(t *testing.T) {
 		{
 			name: "interface arrays - TOML parsing and mixed types",
 			headers: map[string]interface{}{
-				"X-Forwarded-For":   []interface{}{"192.168.1.1", "10.0.0.1", "172.16.0.1"},
+				"X-Forwarded-For":   []interface{}{"111.111.1.1", "10.0.0.1", "111.11.0.1"},
 				"X-Mixed-Types":     []interface{}{"string-value", 123, true, "another-string"},
 				"X-Empty-Interface": make([]interface{}, 0),
 			},
 			expectedResult: map[string][]string{
-				"X-Forwarded-For": {"192.168.1.1", "10.0.0.1", "172.16.0.1"},
+				"X-Forwarded-For": {"111.111.1.1", "10.0.0.1", "111.11.0.1"},
 				"X-Mixed-Types":   {"string-value", "another-string"}, // Only strings processed
 				// X-Empty-Interface is not included - empty arrays don't create headers
 			},
@@ -972,7 +978,131 @@ func TestProcessHeaders(t *testing.T) {
 	}
 }
 
+func TestExpandDotKeys(t *testing.T) {
+	tests := []struct {
+		name     string
+		tags     map[string]string
+		expected map[string]interface{}
+	}{
+		{
+			name:     "no dots — flat scalar",
+			tags:     map[string]string{"host": "server1"},
+			expected: map[string]interface{}{"host": "server1"},
+		},
+		{
+			name: "single-level dot",
+			tags: map[string]string{"container.name": "a"},
+			expected: map[string]interface{}{
+				"container": map[string]interface{}{"name": "a"},
+			},
+		},
+		{
+			name: "multi-level dot",
+			tags: map[string]string{"orchestrator.cluster.name": "cluster"},
+			expected: map[string]interface{}{
+				"orchestrator": map[string]interface{}{
+					"cluster": map[string]interface{}{"name": "cluster"},
+				},
+			},
+		},
+		{
+			name: "sibling deep merge",
+			tags: map[string]string{
+				"orchestrator.cluster.name": "cluster",
+				"orchestrator.namespace":    "monitoring",
+			},
+			expected: map[string]interface{}{
+				"orchestrator": map[string]interface{}{
+					"cluster":   map[string]interface{}{"name": "cluster"},
+					"namespace": "monitoring",
+				},
+			},
+		},
+		{
+			name: "collision — flat key wins over dot prefix",
+			tags: map[string]string{
+				"host":      "server1",
+				"host.name": "server1.local",
+			},
+			expected: map[string]interface{}{
+				"host": "server1", // flat key wins; host.name is skipped
+			},
+		},
+		{
+			name: "mixed flat and nested",
+			tags: map[string]string{
+				"job":            "monitoring/a",
+				"container.name": "a",
+				"service.name":   "m-a",
+			},
+			expected: map[string]interface{}{
+				"job":       "monitoring/a",
+				"container": map[string]interface{}{"name": "a"},
+				"service":   map[string]interface{}{"name": "m-a"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := expandDotKeys(tt.tags)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestBuildECSDocument(t *testing.T) {
+	e := &Elasticsearch{Log: testutil.Logger{}}
+
+	ts := time.Date(2026, 6, 17, 12, 38, 0, 0, time.UTC)
+	m := metric.New(
+		"up",
+		map[string]string{
+			"orchestrator.cluster.name": "cluster",
+			"orchestrator.namespace":    "monitoring",
+			"container.name":            "a",
+			"service.name":              "m-a",
+			"job":                       "monitoring/a",
+		},
+		map[string]interface{}{
+			"gauge": int64(1),
+		},
+		ts,
+	)
+
+	fields := map[string]interface{}{"gauge": int64(1)}
+	doc := e.buildECSDocument(m, fields)
+
+	require.Equal(t, ts, doc["@timestamp"])
+	require.Equal(t, map[string]interface{}{"version": ecsVersion}, doc["ecs"])
+	require.Equal(t, map[string]interface{}{"dataset": "up"}, doc["event"])
+	require.Equal(t, map[string]interface{}{"gauge": int64(1)}, doc["up"])
+
+	orchestrator, ok := doc["orchestrator"].(map[string]interface{})
+	require.True(t, ok, "orchestrator should be a nested map")
+	require.Equal(t, map[string]interface{}{"name": "cluster"}, orchestrator["cluster"])
+	require.Equal(t, "monitoring", orchestrator["namespace"])
+
+	container, ok := doc["container"].(map[string]interface{})
+	require.True(t, ok, "container should be a nested map")
+	require.Equal(t, "a", container["name"])
+
+	service, ok := doc["service"].(map[string]interface{})
+	require.True(t, ok, "service should be a nested map")
+	require.Equal(t, "m-a", service["name"])
+
+	require.Equal(t, "monitoring/a", doc["job"])
+
+	// Ensure old fields are gone
+	require.NotContains(t, doc, "measurement_name")
+	require.NotContains(t, doc, "tag")
+}
+
 type esTemplate struct {
+	Template esTemplateBody `json:"template"`
+}
+
+type esTemplateBody struct {
 	Settings esSettings `json:"settings"`
 }
 

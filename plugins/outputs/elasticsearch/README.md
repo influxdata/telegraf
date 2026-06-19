@@ -1,15 +1,20 @@
 # Elasticsearch Output Plugin
 
 This plugin writes metrics to [Elasticsearch][elasticsearch] via HTTP using the
-[Elastic client library][client_lib]. The plugin supports Elasticsearch
-releases from v5.x up to v7.x.
+[official Elastic client library][client_lib]. The plugin supports Elasticsearch
+v9.x and later.
+
+Documents are written in [Elastic Common Schema (ECS)][ecs] format: tags with
+dot-notation keys (e.g. `orchestrator.cluster.name`) are expanded into nested
+JSON objects, and the measurement name is stored as `event.dataset`.
 
 ⭐ Telegraf v0.1.5
 🏷️ datastore, logging
 💻 all
 
 [elasticsearch]: https://www.elastic.co
-[client_lib]: http://olivere.github.io/elastic/
+[client_lib]: https://github.com/elastic/go-elasticsearch
+[ecs]: https://www.elastic.co/docs/reference/ecs
 
 ## Elasticsearch indexes and templates
 
@@ -32,133 +37,102 @@ Index templates are used in Elasticsearch to define settings and mappings for
 the indexes and how the fields should be analyzed.  For more information on how
 this works, see [the docs][2].
 
-This plugin can create a working template for use with telegraf metrics. It uses
-Elasticsearch dynamic templates feature to set proper types for the tags and
-metrics fields.  If the template specified already exists, it will not overwrite
-unless you configure this plugin to do so. Thus you can customize this template
-after its creation if necessary.
+This plugin can create a working composable index template for use with telegraf
+metrics. It uses Elasticsearch dynamic templates feature to set proper types for
+the tags and metrics fields.  If the template specified already exists, it will
+not overwrite unless you configure this plugin to do so. Thus you can customize
+this template after its creation if necessary.
 
-Example of an index template created by telegraf on Elasticsearch 5.x:
+Example of the composable index template created by telegraf on Elasticsearch 8+:
 
 ```json
 {
-  "order": 0,
-  "template": "telegraf-*",
-  "settings": {
-    "index": {
-      "mapping": {
-        "total_fields": {
-          "limit": "5000"
-        }
-      },
-      "auto_expand_replicas" : "0-1",
-      "codec" : "best_compression",
-      "refresh_interval": "10s"
-    }
-  },
-  "mappings": {
-    "_default_": {
-      "dynamic_templates": [
-        {
-          "tags": {
-            "path_match": "tag.*",
-            "mapping": {
-              "ignore_above": 512,
-              "type": "keyword"
-            },
-            "match_mapping_type": "string"
+  "index_patterns": ["telegraf-*"],
+  "priority": 100,
+  "template": {
+    "settings": {
+      "index": {
+        "refresh_interval": "10s",
+        "mapping.total_fields.limit": 5000,
+        "auto_expand_replicas": "0-1",
+        "codec": "best_compression"
+      }
+    },
+    "mappings": {
+      "properties": {
+        "@timestamp": { "type": "date" },
+        "ecs": {
+          "properties": {
+            "version": { "type": "keyword", "ignore_above": 1024 }
           }
         },
+        "event": {
+          "properties": {
+            "dataset": { "type": "keyword", "ignore_above": 1024 }
+          }
+        }
+      },
+      "dynamic_templates": [
         {
           "metrics_long": {
-            "mapping": {
-              "index": false,
-              "type": "float"
-            },
-            "match_mapping_type": "long"
+            "match_mapping_type": "long",
+            "mapping": { "type": "float", "index": false }
           }
         },
         {
           "metrics_double": {
-            "mapping": {
-              "index": false,
-              "type": "float"
-            },
-            "match_mapping_type": "double"
+            "match_mapping_type": "double",
+            "mapping": { "type": "float", "index": false }
           }
         },
         {
           "text_fields": {
-            "mapping": {
-              "norms": false
-            },
-            "match": "*"
+            "match": "*",
+            "mapping": { "norms": false }
           }
         }
-      ],
-      "_all": {
-        "enabled": false
-      },
-      "properties": {
-        "@timestamp": {
-          "type": "date"
-        },
-        "measurement_name": {
-          "type": "keyword"
-        }
-      }
+      ]
     }
-  },
-  "aliases": {}
+  }
 }
-
 ```
 
-[2]: https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html
+[2]: https://www.elastic.co/guide/en/elasticsearch/reference/current/index-templates.html
 
 ### Example events
 
-This plugin will format the events in the following way:
+This plugin will format the events in ECS-compliant format. Tags with
+dot-notation keys are expanded into nested JSON objects:
 
 ```json
 {
   "@timestamp": "2017-01-01T00:00:00+00:00",
-  "measurement_name": "cpu",
+  "ecs": { "version": "9.3.0" },
+  "event": { "dataset": "cpu" },
   "cpu": {
     "usage_guest": 0,
-    "usage_guest_nice": 0,
-    "usage_idle": 71.85413456197966,
-    "usage_iowait": 0.256805341656516,
-    "usage_irq": 0,
-    "usage_nice": 0,
-    "usage_softirq": 0.2054442732579466,
-    "usage_steal": 0,
-    "usage_system": 15.04879301548127,
-    "usage_user": 12.634822807288275
+    "usage_idle": 71.85,
+    "usage_system": 15.05,
+    "usage_user": 12.63
   },
-  "tag": {
-    "cpu": "cpu-total",
-    "host": "elastichost",
-    "dc": "datacenter1"
-  }
+  "host": "elastichost",
+  "dc": "datacenter1"
 }
 ```
 
 ```json
 {
   "@timestamp": "2017-01-01T00:00:00+00:00",
-  "measurement_name": "system",
-  "system": {
-    "load1": 0.78,
-    "load15": 0.8,
-    "load5": 0.8,
-    "n_cpus": 2,
-    "n_users": 2
+  "ecs": { "version": "9.3.0" },
+  "event": { "dataset": "up" },
+  "up": { "gauge": 1 },
+  "orchestrator": {
+    "cluster": { "name": "cluster" },
+    "namespace": "monitoring"
   },
-  "tag": {
-    "host": "elastichost",
-    "dc": "datacenter1"
-  }
+  "container": { "name": "a" },
+  "service": { "name": "m-a" },
+  "job": "monitoring/a"
 }
 ```
 
@@ -190,44 +164,10 @@ following way on Linux:
 echo TZ="UTC" | sudo tee -a /etc/default/telegraf
 ```
 
-## OpenSearch Support
+## OpenSearch
 
-OpenSearch is a fork of Elasticsearch hosted by AWS. The OpenSearch server will
-report itself to clients with an AWS specific-version (e.g. v1.0). In reality,
-the actual underlying Elasticsearch version is v7.1. This breaks Telegraf and
-other Elasticsearch clients that need to know what major version they are
-interfacing with.
-
-Amazon has created a [compatibility mode][3] to allow existing Elasticsearch
-clients to properly work when the version needs to be checked. To enable
-compatibility mode users need to set the `override_main_response_version` to
-`true`.
-
-On existing clusters run:
-
-```json
-PUT /_cluster/settings
-{
-  "persistent" : {
-    "compatibility.override_main_response_version" : true
-  }
-}
-```
-
-And on new clusters set the option to true under advanced options:
-
-```json
-POST https://es.us-east-1.amazonaws.com/2021-01-01/opensearch/upgradeDomain
-{
-  "DomainName": "domain-name",
-  "TargetVersion": "OpenSearch_1.0",
-  "AdvancedOptions": {
-    "override_main_response_version": "true"
-   }
-}
-```
-
-[3]: https://docs.aws.amazon.com/opensearch-service/latest/developerguide/rename.html#rename-upgrade
+**OpenSearch is not supported.** Use the dedicated
+[`opensearch` output plugin](../opensearch/README.md) instead.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -257,15 +197,13 @@ to use them.
   urls = [ "http://node1.es.example.com:9200" ] # required.
   ## Elasticsearch client timeout, defaults to "5s" if not set.
   timeout = "5s"
-  ## Set to true to ask Elasticsearch a list of all cluster nodes,
-  ## thus it is not necessary to list all nodes in the urls config option
+  ## Deprecated: not supported with go-elasticsearch v8 client; has no effect.
   enable_sniffer = false
   ## Set to true to enable gzip compression
   enable_gzip = false
-  ## Set the interval to check if the Elasticsearch nodes are available
-  ## Setting to "0s" will disable the health check (not recommended in production)
+  ## Deprecated: not supported with go-elasticsearch v8 client; has no effect.
   health_check_interval = "10s"
-  ## Set the timeout for periodic health checks.
+  ## Deprecated: not supported with go-elasticsearch v8 client; has no effect.
   # health_check_timeout = "1s"
   ## HTTP basic authentication details.
   ## HTTP basic authentication details
@@ -380,11 +318,12 @@ the `default_tag_value` will be used instead.
 ### Optional parameters
 
 * `timeout`: Elasticsearch client timeout, defaults to "5s" if not set.
-* `enable_sniffer`: Set to true to ask Elasticsearch a list of all cluster
-  nodes, thus it is not necessary to list all nodes in the urls config option.
-* `health_check_interval`: Set the interval to check if the nodes are available,
-  in seconds. Setting to 0 will disable the health check (not recommended in
-  production).
+* `enable_sniffer`: **Deprecated.** Not supported with go-elasticsearch v8;
+  accepted for configuration compatibility but has no effect.
+* `health_check_interval`: **Deprecated.** Not supported with go-elasticsearch
+  v8; accepted for configuration compatibility but has no effect.
+* `health_check_timeout`: **Deprecated.** Not supported with go-elasticsearch
+  v8; accepted for configuration compatibility but has no effect.
 * `username`: The username for HTTP basic authentication details (eg. when using
   Shield).
 * `password`: The password for HTTP basic authentication details (eg. when using
