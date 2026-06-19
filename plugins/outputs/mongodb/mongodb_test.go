@@ -135,9 +135,10 @@ func TestConnectAndWriteNoAuthIntegration(t *testing.T) {
 
 	servicePort := "27017"
 	container := testutil.Container{
-		Image:        "mongo",
-		ExposedPorts: []string{servicePort},
-		WaitingFor:   wait.ForLog("Waiting for connections"),
+		Image:              "mongo",
+		ExposedPorts:       []string{servicePort},
+		WaitingFor:         wait.ForLog("Waiting for connections"),
+		HostConfigModifier: testutil.RaiseNofileLimit,
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
@@ -172,7 +173,8 @@ func TestConnectAndWriteSCRAMAuthIntegration(t *testing.T) {
 		Files: map[string]string{
 			"/docker-entrypoint-initdb.d/setup.js": initdb,
 		},
-		WaitingFor: wait.ForLog("Waiting for connections").WithOccurrence(2),
+		WaitingFor:         wait.ForLog("Waiting for connections").WithOccurrence(2),
+		HostConfigModifier: testutil.RaiseNofileLimit,
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
@@ -211,7 +213,8 @@ func TestConnectAndWriteSCRAMAuthBadPasswordIntegration(t *testing.T) {
 		Files: map[string]string{
 			"/docker-entrypoint-initdb.d/setup.js": initdb,
 		},
-		WaitingFor: wait.ForLog("Waiting for connections").WithOccurrence(2),
+		WaitingFor:         wait.ForLog("Waiting for connections").WithOccurrence(2),
+		HostConfigModifier: testutil.RaiseNofileLimit,
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
@@ -263,7 +266,8 @@ func TestConnectAndWriteX509AuthSuccessIntegration(t *testing.T) {
 			"--tlsCAFile", "/cacert.pem",
 			"--tlsCertificateKeyFile", "/server.pem",
 		},
-		WaitingFor: wait.ForLog("Waiting for connections").WithOccurrence(2),
+		WaitingFor:         wait.ForLog("Waiting for connections").WithOccurrence(2),
+		HostConfigModifier: testutil.RaiseNofileLimit,
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
@@ -350,7 +354,8 @@ func TestConnectAndWriteX509AuthFailIntegration(t *testing.T) {
 			"--tlsCAFile", "/cacert.pem",
 			"--tlsCertificateKeyFile", "/server.pem",
 		},
-		WaitingFor: wait.ForLog("Waiting for connections").WithOccurrence(2),
+		WaitingFor:         wait.ForLog("Waiting for connections").WithOccurrence(2),
+		HostConfigModifier: testutil.RaiseNofileLimit,
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
@@ -785,6 +790,188 @@ func TestWriteIntegration(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:  "metadata wildcard batch",
+			batch: true,
+			meta:  []string{"*"},
+			expected: map[string][]bson.D{
+				"test1": {
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(0)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(1)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(10000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(2)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(20000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(3)},
+					},
+				},
+				"test2": {
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(0)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(10)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(10000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(20)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(20000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(30)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(30000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(40)},
+					},
+				},
+			},
+		},
+		{
+			name: "metadata prefix wildcard",
+			meta: []string{"sour*"},
+			expected: map[string][]bson.D{
+				"test1": {
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(0)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(1)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(10000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(2)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(20000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "foo"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(3)},
+					},
+				},
+				"test2": {
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(0)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(10)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(10000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(20)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(20000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(30)},
+					},
+					bson.D{
+						primitive.E{Key: "timestamp", Value: primitive.DateTime(30000)},
+						primitive.E{Key: "metadata", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+						}},
+						primitive.E{Key: "tags", Value: bson.D{
+							primitive.E{Key: "source", Value: "bar"},
+							primitive.E{Key: "version", Value: "v1.2"},
+						}},
+						primitive.E{Key: "value", Value: int64(40)},
+					},
+				},
+			},
+		},
 	}
 
 	// Setup the input metrics and expected results
@@ -838,10 +1025,11 @@ func TestWriteIntegration(t *testing.T) {
 			// Setup the container
 			servicePort := "27017"
 			container := testutil.Container{
-				Image:        "mongo",
-				ExposedPorts: []string{servicePort},
-				WaitingFor:   wait.ForLog("Waiting for connections"),
-				Quiet:        true,
+				Image:              "mongo",
+				ExposedPorts:       []string{servicePort},
+				WaitingFor:         wait.ForLog("Waiting for connections"),
+				Quiet:              true,
+				HostConfigModifier: testutil.RaiseNofileLimit,
 			}
 			require.NoError(t, container.Start(), "failed to start container")
 			defer container.Terminate()
@@ -926,10 +1114,11 @@ func BenchmarkWriteIndividual(b *testing.B) {
 	// Start a mongodb container for benchmarking
 	servicePort := "27017"
 	container := testutil.Container{
-		Image:        "mongo",
-		ExposedPorts: []string{servicePort},
-		WaitingFor:   wait.ForLog("Waiting for connections"),
-		Quiet:        true,
+		Image:              "mongo",
+		ExposedPorts:       []string{servicePort},
+		WaitingFor:         wait.ForLog("Waiting for connections"),
+		Quiet:              true,
+		HostConfigModifier: testutil.RaiseNofileLimit,
 	}
 	require.NoError(b, container.Start(), "failed to start container")
 	defer container.Terminate()
@@ -962,10 +1151,11 @@ func BenchmarkWriteBatch(b *testing.B) {
 	// Start a mongodb container for benchmarking
 	servicePort := "27017"
 	container := testutil.Container{
-		Image:        "mongo",
-		ExposedPorts: []string{servicePort},
-		WaitingFor:   wait.ForLog("Waiting for connections"),
-		Quiet:        true,
+		Image:              "mongo",
+		ExposedPorts:       []string{servicePort},
+		WaitingFor:         wait.ForLog("Waiting for connections"),
+		Quiet:              true,
+		HostConfigModifier: testutil.RaiseNofileLimit,
 	}
 	require.NoError(b, container.Start(), "failed to start container")
 	defer container.Terminate()

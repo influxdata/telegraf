@@ -1,8 +1,7 @@
 package mock
 
 import (
-	"bytes"
-	"encoding/binary"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -19,19 +18,15 @@ import (
 	"github.com/moby/moby/client"
 )
 
-type Logs struct {
-	Content     string
-	Multiplexed bool
-}
-
 type Server struct {
-	Info     system.Info
-	List     []container.Summary
-	Disks    system.DiskUsage
-	RawDisks []byte // Raw response as the disks response format depends on the API version
-	Inspect  map[string]container.InspectResponse
-	Stats    map[string]container.StatsResponse
-	Logs     map[string]Logs
+	Info       system.Info
+	List       []container.Summary
+	Disks      system.DiskUsage
+	RawDisks   []byte // Raw response as the disks response format depends on the API version
+	Inspect    map[string]container.InspectResponse
+	Stats      map[string]container.StatsResponse
+	Logs       map[string]Logs
+	LogStreams map[string]chan *Logs
 
 	Services []swarm.Service
 	Tasks    []swarm.Task
@@ -42,6 +37,7 @@ type Server struct {
 	ListParams map[string]string
 
 	server *httptest.Server
+	cancel context.CancelFunc
 }
 
 func NewServerFromFiles(path string) (*Server, error) {
@@ -162,6 +158,9 @@ func (s *Server) Start(t *testing.T) string {
 		s.APIVersion = "1.54"
 	}
 
+	ctx, cancel := context.WithCancel(t.Context())
+	s.cancel = cancel
+
 	s.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if agent := r.Header.Get("User-Agent"); agent != "engine-api-cli-1.0" {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -230,8 +229,15 @@ func (s *Server) Start(t *testing.T) string {
 			}
 		case strings.HasPrefix(r.URL.Path, "/v"+s.APIVersion+"/containers/") &&
 			len(parts) == 5 && strings.HasSuffix(r.URL.Path, "/logs"):
-			// Logs response
 			id := parts[3]
+			// Log stream response
+			stream, found := s.LogStreams[id]
+			if found {
+				WriteLog(ctx, t, w, stream)
+				return
+			}
+
+			// Logs response
 			data, found := s.Logs[id]
 			if !found {
 				w.WriteHeader(http.StatusNotFound)
@@ -239,21 +245,13 @@ func (s *Server) Start(t *testing.T) string {
 				return
 			}
 			if data.Multiplexed {
-				// Emulate a multiplexed writer
-				var buf bytes.Buffer
-				header := [8]byte{0: 1}
-				binary.BigEndian.PutUint32(header[4:], uint32(len(data.Content)))
-				if _, err := buf.Write(header[:]); err != nil {
+				r, err := data.multiplex()
+				if err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
-					t.Errorf("writing log multiplex header failed: %v", err)
+					t.Errorf("multiplexing failed: %v", err)
 					return
 				}
-				if _, err := buf.WriteString(data.Content); err != nil {
-					w.WriteHeader(http.StatusInternalServerError)
-					t.Errorf("writing log multiplex content failed: %v", err)
-					return
-				}
-				response = buf.Bytes()
+				response = r
 			} else {
 				response = []byte(data.Content)
 			}
@@ -332,6 +330,9 @@ func (s *Server) Start(t *testing.T) string {
 }
 
 func (s *Server) Close() {
+	if s.cancel != nil {
+		s.cancel()
+	}
 	if s.server != nil {
 		s.server.Close()
 	}

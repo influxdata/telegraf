@@ -5,6 +5,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"maps"
 	"sort"
 	"strings"
 	"time"
@@ -35,6 +36,7 @@ type OpenTelemetry struct {
 	tls.ClientConfig
 	Timeout     config.Duration   `toml:"timeout"`
 	Compression string            `toml:"compression"`
+	Token       config.Secret     `toml:"token"`
 	Headers     map[string]string `toml:"headers"`
 	Attributes  map[string]string `toml:"attributes"`
 	Coralogix   *CoralogixConfig  `toml:"coralogix"`
@@ -55,6 +57,7 @@ type clientConfig struct {
 	HTTPProxy       *proxy.HTTPProxy  // only for HTTP client
 	TCPProxy        *proxy.TCPProxy   // only for gRPC client
 	Encoding        string            // only for HTTP client
+	Token           *config.Secret    // only for HTTP client, gRPC client uses metadata
 	Headers         map[string]string // only for HTTP client, gRPC client uses metadata
 }
 
@@ -126,6 +129,7 @@ func (o *OpenTelemetry) Connect() error {
 		HTTPProxy:       &o.HTTPProxy,
 		TCPProxy:        &o.TCPProxy,
 		Encoding:        o.EncodingType,
+		Token:           &o.Token,
 		Headers:         o.Headers,
 	}
 	err = o.otlpMetricClient.Connect(clientCfg)
@@ -206,11 +210,23 @@ func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Timeout))
-
-	if len(o.Headers) > 0 {
-		ctx = metadata.NewOutgoingContext(ctx, metadata.New(o.Headers))
-	}
 	defer cancel()
+
+	headers := maps.Clone(o.Headers)
+	if !o.Token.Empty() {
+		token, err := o.Token.Get()
+		if err != nil {
+			return fmt.Errorf("getting token secret failed: %w", err)
+		}
+		if headers == nil {
+			headers = make(map[string]string, 1)
+		}
+		headers["authorization"] = "Bearer " + token.String()
+		token.Destroy()
+	}
+	if len(headers) > 0 {
+		ctx = metadata.NewOutgoingContext(ctx, metadata.New(headers))
+	}
 	_, err := o.otlpMetricClient.Export(ctx, md)
 	return err
 }

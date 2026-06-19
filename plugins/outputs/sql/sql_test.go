@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -144,6 +145,281 @@ var (
 	}
 )
 
+func TestOracleIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	password := testutil.GetRandomString(30) // oracle max pw size is 30 bytes
+
+	servicePort := "1521"
+	container := testutil.Container{
+		Image: "gvenzl/oracle-free:latest",
+		Env: map[string]string{
+			"ORACLE_PASSWORD": password,
+		},
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(servicePort),
+			wait.ForLog("DATABASE IS READY TO USE"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	address := config.NewSecret([]byte(fmt.Sprintf("oracle://system:%s@%s:%s/FREEPDB1",
+		password, container.Address, container.Ports[servicePort],
+	)))
+	p := &SQL{
+		Driver:            "oracle",
+		DataSourceName:    address,
+		Convert:           defaultConvert,
+		TimestampColumn:   "timestamp",
+		ConnectionMaxIdle: 2,
+		Log:               testutil.Logger{},
+	}
+
+	p.Convert.Integer = "NUMBER(38)"
+	p.Convert.Real = "NUMBER"
+	p.Convert.Text = "VARCHAR2(4000)"
+	p.Convert.Timestamp = "TIMESTAMP"
+	p.Convert.Defaultvalue = "VARCHAR2(4000)"
+	p.Convert.Bool = "BOOLEAN"
+	p.Convert.Unsigned = ""
+
+	require.NoError(t, p.Init())
+	require.NoError(t, p.Connect())
+	require.NoError(t, p.Write(testMetrics))
+
+	tableMap := map[string]string{
+		"metric_one":   "./testdata/oracle/expected_metric_one.sql",
+		"metric_two":   "./testdata/oracle/expected_metric_two.sql",
+		"metric three": "./testdata/oracle/expected_metric_three.sql",
+	}
+
+	for resTable, expectedTableQuery := range tableMap {
+		query, err := os.ReadFile(expectedTableQuery)
+		require.NoError(t, err, "failed to read expected sql table generation file!")
+		sqlStmts := strings.SplitSeq(string(query), ";")
+
+		for stmt := range sqlStmts {
+			// Handles white space after final statement in sql file
+			if strings.TrimSpace(stmt) == "" {
+				continue
+			}
+			_, err = p.db.Exec(stmt)
+			require.NoError(t, err, "error building expected results table!")
+		}
+
+		expectedTable := "expected_" + resTable
+
+		var schemeCount int32
+		resColumns := fmt.Sprintf(`SELECT column_name, data_type, data_precision, data_scale, data_length 
+			FROM USER_TAB_COLUMNS WHERE table_name = '%s'`, resTable)
+		expectedColumns := fmt.Sprintf(`SELECT column_name, data_type, data_precision, data_scale, data_length 
+			FROM USER_TAB_COLUMNS WHERE table_name = '%s'`, expectedTable)
+		//nolint:gosec // linter doesnt like due to security; no risk of injection so is fine
+		emptyTable := fmt.Sprintf(`SELECT COUNT(*) FROM ((%s MINUS %s) UNION (%s MINUS %s)) countdiff`,
+			resColumns, expectedColumns, expectedColumns, resColumns,
+		)
+		err = p.db.QueryRow(emptyTable).Scan(&schemeCount)
+
+		require.NoError(t, err, "Error in table difference query!")
+		require.Zero(t, schemeCount, "There are mismatching rows! Tables do not share the same schema")
+
+		var rowCount int32
+		resQuery := fmt.Sprintf(`SELECT * FROM %q`, resTable)
+		expectedQuery := fmt.Sprintf(`SELECT * FROM %q`, expectedTable)
+		//nolint:gosec // linter doesnt like due to security; no risk of injection so is fine
+		emptyInsertion := fmt.Sprintf("SELECT COUNT(*) FROM ((%s MINUS %s) UNION (%s MINUS %s)) countdiff",
+			resQuery, expectedQuery, expectedQuery, resQuery,
+		)
+		err = p.db.QueryRow(emptyInsertion).Scan(&rowCount)
+
+		require.NoError(t, err, "Error in row difference query!")
+		require.Zero(t, rowCount, "There are mismatching rows! Rows do not share the same data!")
+	}
+}
+
+func TestOracleUpdateSchemeIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	password := testutil.GetRandomString(30) // oracle max pw size is 30 bytes
+
+	servicePort := "1521"
+	container := testutil.Container{
+		Image: "gvenzl/oracle-free:latest",
+		Env: map[string]string{
+			"ORACLE_PASSWORD": password,
+		},
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(servicePort),
+			wait.ForLog("DATABASE IS READY TO USE"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	address := config.NewSecret([]byte(fmt.Sprintf("oracle://system:%s@%s:%s/FREEPDB1",
+		password, container.Address, container.Ports[servicePort],
+	)))
+	p := &SQL{
+		Driver:              "oracle",
+		DataSourceName:      address,
+		Convert:             defaultConvert,
+		TimestampColumn:     "timestamp",
+		ConnectionMaxIdle:   2,
+		TableUpdateTemplate: "ALTER TABLE {TABLE} ADD {COLUMN}",
+		Log:                 testutil.Logger{},
+	}
+
+	p.Convert.Integer = "NUMBER(38)"
+	p.Convert.Real = "NUMBER"
+	p.Convert.Text = "VARCHAR2(4000)"
+	p.Convert.Timestamp = "TIMESTAMP"
+	p.Convert.Defaultvalue = "VARCHAR2(4000)"
+	p.Convert.Bool = "BOOLEAN"
+	p.Convert.Unsigned = ""
+
+	require.NoError(t, p.Init())
+	require.NoError(t, p.Connect())
+	require.NoError(t, p.Write(testMetrics))
+	require.NoError(t, p.Write(postCreateMetrics))
+
+	query, err := os.ReadFile("./testdata/oracle/updatetable/expected_metric_one.sql")
+	require.NoError(t, err, "failed to read expected sql table generation file!")
+	sqlStmts := strings.SplitSeq(string(query), ";")
+
+	for stmt := range sqlStmts {
+		if strings.TrimSpace(stmt) == "" {
+			continue
+		}
+		_, err = p.db.Exec(stmt)
+		require.NoError(t, err, "error building expected results table!")
+	}
+
+	var schemeCount int32
+	resColumns := `SELECT column_name, data_type, data_precision, data_scale, data_length 
+		FROM USER_TAB_COLUMNS WHERE table_name = 'metric_one'`
+	expectedColumns := `SELECT column_name, data_type, data_precision, data_scale, data_length 
+		FROM USER_TAB_COLUMNS WHERE table_name = 'expected_metric_one'`
+	emptyTable := fmt.Sprintf(`SELECT COUNT(*) FROM ((%s MINUS %s) UNION (%s MINUS %s)) countdiff`,
+		resColumns, expectedColumns, expectedColumns, resColumns,
+	)
+
+	err = p.db.QueryRow(emptyTable).Scan(&schemeCount)
+
+	require.NoError(t, err, "Error in table difference query!")
+	require.Zero(t, schemeCount, "There are mismatching rows! Tables do not share the same schema")
+
+	var rowCount int32
+	resQuery := `SELECT * FROM "metric_one"`
+	expectedQuery := `select * from "expected_metric_one"`
+	emptyInsertion := fmt.Sprintf(`SELECT COUNT(*) FROM ((%s MINUS %s) UNION (%s MINUS %s)) countdiff`,
+		resQuery, expectedQuery, expectedQuery, resQuery,
+	)
+	err = p.db.QueryRow(emptyInsertion).Scan(&rowCount)
+
+	require.NoError(t, err, "Error in row difference query!")
+	require.Zero(t, rowCount, "There are mismatching rows! Rows do not share the same data!")
+}
+
+func TestOracleIntegrationSendBatch(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	password := testutil.GetRandomString(30) // oracle max pw size is 30 bytes
+
+	servicePort := "1521"
+	container := testutil.Container{
+		Image: "gvenzl/oracle-free:latest",
+		Env: map[string]string{
+			"ORACLE_PASSWORD": password,
+		},
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(servicePort),
+			wait.ForLog("DATABASE IS READY TO USE"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	address := config.NewSecret([]byte(fmt.Sprintf("oracle://system:%s@%s:%s/FREEPDB1",
+		password, container.Address, container.Ports[servicePort],
+	)))
+	p := &SQL{
+		Driver:            "oracle",
+		DataSourceName:    address,
+		Convert:           defaultConvert,
+		TimestampColumn:   "timestamp",
+		ConnectionMaxIdle: 2,
+		BatchTx:           true,
+		Log:               testutil.Logger{},
+	}
+
+	p.Convert.Integer = "NUMBER(38)"
+	p.Convert.Real = "NUMBER"
+	p.Convert.Text = "VARCHAR2(4000)"
+	p.Convert.Timestamp = "TIMESTAMP"
+	p.Convert.Defaultvalue = "VARCHAR2(4000)"
+	p.Convert.Bool = "BOOLEAN"
+	p.Convert.Unsigned = ""
+
+	require.NoError(t, p.Init())
+	require.NoError(t, p.Connect())
+	require.NoError(t, p.Write(testMetrics))
+
+	tableMap := map[string]string{
+		"metric_one":   "./testdata/oracle/expected_metric_one.sql",
+		"metric_two":   "./testdata/oracle/expected_metric_two.sql",
+		"metric three": "./testdata/oracle/expected_metric_three.sql",
+	}
+
+	for resTable, expectedTableQuery := range tableMap {
+		query, err := os.ReadFile(expectedTableQuery)
+		require.NoError(t, err, "failed to read expected sql table generation file!")
+		sqlStmts := strings.SplitSeq(string(query), ";")
+
+		for stmt := range sqlStmts {
+			// Handles white space after final statement in sql file
+			if strings.TrimSpace(stmt) == "" {
+				continue
+			}
+			_, err = p.db.Exec(stmt)
+			require.NoError(t, err, "error building expected results table!")
+		}
+		expectedTable := "expected_" + resTable
+
+		var schemeCount int32
+		resColumns := fmt.Sprintf(`SELECT column_name, data_type, data_precision, data_scale, data_length 
+			FROM USER_TAB_COLUMNS WHERE table_name = '%s'`, resTable)
+		expectedColumns := fmt.Sprintf(`SELECT column_name, data_type, data_precision, data_scale, data_length 
+			FROM USER_TAB_COLUMNS WHERE table_name = '%s'`, expectedTable)
+		//nolint:gosec // linter doesnt like due to security; no risk of injection so is fine
+		emptyTable := fmt.Sprintf(`SELECT COUNT(*) FROM ((%s MINUS %s) UNION (%s MINUS %s)) countdiff`,
+			resColumns, expectedColumns, expectedColumns, resColumns,
+		)
+		err = p.db.QueryRow(emptyTable).Scan(&schemeCount)
+
+		require.NoError(t, err, "Error in table difference query!")
+		require.Zero(t, schemeCount, "There are mismatching rows! Tables do not share the same schema")
+
+		var rowCount int32
+		resQuery := fmt.Sprintf(`SELECT * FROM %q`, resTable)
+		expectedQuery := fmt.Sprintf(`SELECT * FROM %q`, expectedTable)
+		//nolint:gosec // linter doesnt like due to security; no risk of injection so is fine
+		emptyInsertion := fmt.Sprintf("SELECT COUNT(*) FROM ((%s MINUS %s) UNION (%s MINUS %s)) countdiff",
+			resQuery, expectedQuery, expectedQuery, resQuery,
+		)
+		err = p.db.QueryRow(emptyInsertion).Scan(&rowCount)
+
+		require.NoError(t, err, "Error in row difference query!")
+		require.Zero(t, rowCount, "There are mismatching rows! Rows do not share the same data!")
+	}
+}
+
 func TestMysqlIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -189,7 +465,6 @@ func TestMysqlIntegration(t *testing.T) {
 		Driver:            "mysql",
 		DataSourceName:    address,
 		Convert:           defaultConvert,
-		InitSQL:           "SET sql_mode='ANSI_QUOTES';",
 		TimestampColumn:   "timestamp",
 		ConnectionMaxIdle: 2,
 		Log:               testutil.Logger{},
@@ -273,7 +548,6 @@ func TestMysqlUpdateSchemeIntegration(t *testing.T) {
 		Driver:              "mysql",
 		DataSourceName:      address,
 		Convert:             defaultConvert,
-		InitSQL:             "SET sql_mode='ANSI_QUOTES';",
 		TimestampColumn:     "timestamp",
 		ConnectionMaxIdle:   2,
 		Log:                 testutil.Logger{},
@@ -357,7 +631,6 @@ func TestMysqlIntegrationSendBatch(t *testing.T) {
 		Driver:            "mysql",
 		DataSourceName:    address,
 		Convert:           defaultConvert,
-		InitSQL:           "SET sql_mode='ANSI_QUOTES';",
 		TimestampColumn:   "timestamp",
 		ConnectionMaxIdle: 2,
 		Log:               testutil.Logger{},
@@ -1168,7 +1441,6 @@ func TestMysqlEmptyTimestampColumnIntegration(t *testing.T) {
 		Driver:            "mysql",
 		DataSourceName:    address,
 		Convert:           defaultConvert,
-		InitSQL:           "SET sql_mode='ANSI_QUOTES';",
 		ConnectionMaxIdle: 2,
 		Log:               testutil.Logger{},
 	}

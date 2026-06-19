@@ -1215,6 +1215,55 @@ func TestBasicAuth(t *testing.T) {
 	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
 }
 
+func TestTokenAuth(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if aHeader := r.Header.Get("Authorization"); aHeader != "Bearer my-token" {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Not equal, expected: %q, actual: %q", "Bearer my-token", aHeader)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	h := &HTTPResponse{
+		Log:             testutil.Logger{},
+		URLs:            []string{ts.URL + "/good"},
+		Method:          "GET",
+		ResponseTimeout: config.Duration(time.Second * 20),
+		Token:           config.NewSecret([]byte("my-token")),
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
+
+	expectedFields := map[string]interface{}{
+		"http_response_code": http.StatusOK,
+		"result_type":        "success",
+		"result_code":        0,
+		"response_time":      nil,
+		"content_length":     nil,
+	}
+	expectedTags := map[string]interface{}{
+		"server":      nil,
+		"method":      "GET",
+		"status_code": "200",
+		"result":      "success",
+	}
+	absentFields := []string{"response_string_match"}
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
+}
+
+func TestTokenConflictsWithBearerTokenFile(t *testing.T) {
+	h := &HTTPResponse{
+		BearerToken: "/path/to/token",
+		Token:       config.NewSecret([]byte("my-token")),
+	}
+
+	require.ErrorContains(t, h.Init(), "either use 'bearer_token' or 'token' not both")
+}
+
 func TestStatusCodeMatchFail(t *testing.T) {
 	mux := setUpTestMux()
 	ts := httptest.NewServer(mux)

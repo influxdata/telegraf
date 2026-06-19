@@ -3,6 +3,8 @@ package docker_log
 import (
 	"bufio"
 	"bytes"
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -35,7 +37,6 @@ func parseLine(line []byte) (time.Time, string, error) {
 	}
 
 	tsString := string(parts[0])
-
 	// Keep any leading space, but remove whitespace from end of line.
 	// This preserves space in, for example, stacktraces, while removing
 	// annoying end of line characters and is similar to how other logging
@@ -77,7 +78,6 @@ func tailStream(
 	var lastTS time.Time
 	for {
 		line, err := r.ReadBytes('\n')
-
 		if len(line) != 0 {
 			ts, message, err := parseLine(line)
 			if err != nil {
@@ -96,7 +96,7 @@ func tailStream(
 		}
 
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) || errors.Is(err, context.Canceled) {
 				return lastTS, nil
 			}
 			return time.Time{}, err
@@ -138,7 +138,7 @@ func tailMultiplexed(acc telegraf.Accumulator, tags map[string]string, container
 	_ = src.Close()
 	wg.Wait()
 
-	if err != nil {
+	if err != nil && !errors.Is(err, context.Canceled) {
 		return time.Time{}, err
 	}
 	if tsStdout.After(tsStderr) {
