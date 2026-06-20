@@ -197,27 +197,6 @@ func TestMaximumFilesDisabled(t *testing.T) {
 	require.True(t, acc.HasPoint("filecount", tags, "count", int64(9)))
 }
 
-func TestTimeout(t *testing.T) {
-	fc := getNoFilterFileCount()
-	fc.Timeout = config.Duration(5 * time.Second)
-
-	tags := map[string]string{"directory": getTestdataDir(), "filecount_status": "ok"}
-	acc := testutil.Accumulator{}
-	require.NoError(t, acc.GatherError(fc.Gather))
-	require.True(t, acc.HasPoint("filecount", tags, "count", int64(9)))
-	require.True(t, acc.HasPoint("filecount", tags, "size_bytes", int64(5096)))
-}
-
-func TestTimeoutDisabled(t *testing.T) {
-	fc := getNoFilterFileCount()
-	fc.Timeout = config.Duration(0)
-
-	tags := map[string]string{"directory": getTestdataDir(), "filecount_status": "ok"}
-	acc := testutil.Accumulator{}
-	require.NoError(t, acc.GatherError(fc.Gather))
-	require.True(t, acc.HasPoint("filecount", tags, "count", int64(9)))
-}
-
 func TestMaximumFilesLargerThanTotal(t *testing.T) {
 	fc := getNoFilterFileCount()
 	fc.MaximumFiles = 100

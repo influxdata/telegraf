@@ -50,11 +50,6 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## touched in this duration. Defaults to "0s".
   mtime = "0s"
 
-  ## Stop counting after this duration has passed.
-  ## Acceptable units: ns, us (µs), ms, s, m, h.
-  ## Defaults to "0s" (disabled).
-  timeout = "0s"
-
   ## Stop counting after this many files have been processed.
   ## Defaults to 0 (disabled).
   maximum_files = 0
@@ -65,8 +60,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 - filecount
   - tags:
     - directory (the directory path)
-    - filecount_status (status of the count: "ok", "timeout",
-    or "maximum")
+    - filecount_status (status of the count: "ok" or "maximum")
   - fields:
     - count (integer)
     - size_bytes (integer)
