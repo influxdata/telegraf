@@ -242,7 +242,7 @@ func TestAgent_SkipProcessorsBeforeAndAfterError(t *testing.T) {
 
 	err := agent.Run(ctx)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators to true")
+	require.Contains(t, err.Error(), "cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators as true")
 }
 
 func TestAgent_SkipProcessorsBeforeAndAfterErrorTest(t *testing.T) {
@@ -259,7 +259,7 @@ func TestAgent_SkipProcessorsBeforeAndAfterErrorTest(t *testing.T) {
 
 	err := agent.Test(ctx, 0)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators to true")
+	require.Contains(t, err.Error(), "cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators as true")
 }
 
 func TestAgent_SkipProcessorsBeforeAndAfterErrorOnce(t *testing.T) {
@@ -276,7 +276,7 @@ func TestAgent_SkipProcessorsBeforeAndAfterErrorOnce(t *testing.T) {
 
 	err := agent.Once(ctx, 0)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators to true")
+	require.Contains(t, err.Error(), "cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators as true")
 }
 
 func TestAgent_SkipProcessorsBeforeDefaultsFalse(t *testing.T) {
