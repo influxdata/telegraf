@@ -2360,12 +2360,12 @@ github.com/tdrn-org/go-nsdp v0.5.1/go.mod h1:e2I00mSN+Gl8DBgQmSerI6z4M2KrsQbN0Sj
 github.com/tdrn-org/go-tr064 v0.3.0 h1:jeab3z69trkwsxNN1Vo3W+ED/u61MbWTZW4PNI2+1pg=
 github.com/tdrn-org/go-tr064 v0.3.0/go.mod h1:3MAciJ87LZgVVkvl9Ns+dYAaS6oa5zEbyyL+T2a154E=
 github.com/tedsuo/ifrit v0.0.0-20180802180643-bea94bb476cc/go.mod h1:eyZnKCc955uh98WQvzOm0dgAeLnf2O0Rz0LPoC5ze+0=
-github.com/testcontainers/testcontainers-go v0.42.0 h1:He3IhTzTZOygSXLJPMX7n44XtK+qhjat1nI9cneBbUY=
-github.com/testcontainers/testcontainers-go v0.42.0/go.mod h1:vZjdY1YmUA1qEForxOIOazfsrdyORJAbhi0bp8plN30=
+github.com/testcontainers/testcontainers-go v0.43.0 h1:oEQx5MW2DGd9z3AeEQfB2lPM0eLs7ztyaGRu75bFo5A=
+github.com/testcontainers/testcontainers-go v0.43.0/go.mod h1:+VxkT2NQnKOZPKi6praMuMKYHYyOGXr0XSBSlSMCzFo=
 github.com/testcontainers/testcontainers-go/modules/azure v0.42.0 h1:o37VB8mSmj7BrARKW/JcDxPQDXEDZL455A12b3VrYDg=
 github.com/testcontainers/testcontainers-go/modules/azure v0.42.0/go.mod h1:l1qFYbLlqpYrY1bPoJg09qFp6Y8zv6kZA3Or052po8A=
-github.com/testcontainers/testcontainers-go/modules/kafka v0.42.0 h1:b3plW+MUoF6ZaVOAlLjNQMJsigPLsJFIOqHdzMFv/w4=
-github.com/testcontainers/testcontainers-go/modules/kafka v0.42.0/go.mod h1:U0K+PapjOOVJrQCpvRYe6gKk0Oqh+ffl+J80Ln4EKzg=
+github.com/testcontainers/testcontainers-go/modules/kafka v0.43.0 h1:m9/gBKYmYfOuZ+2yUxPcAvyKSDoJjJRLtjD6u+m5kgo=
+github.com/testcontainers/testcontainers-go/modules/kafka v0.43.0/go.mod h1:iS7LQrOG4GG8b0L1U1sf/CltP5e2h6CNJjBTn+mmUac=
 github.com/testcontainers/testcontainers-go/modules/vault v0.42.0 h1:igl6KuEeQJS6Zrn9K+pAkfYrdoIdJUKDph7cwyReLb8=
 github.com/testcontainers/testcontainers-go/modules/vault v0.42.0/go.mod h1:fJr7WPZTwQx/Fm4O2Ef2T8uh6fXwBxadf9qwcgbR1Sg=
 github.com/thomasklein94/packer-plugin-libvirt v0.5.0 h1:aj2HLHZZM/ClGLIwVp9rrgh+2TOU/w4EiaZHAwCpOgs=
