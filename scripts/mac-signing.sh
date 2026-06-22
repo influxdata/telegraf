@@ -104,7 +104,7 @@ do
 
   # Sign telegraf binary
   echo "Extract $tarFile to $RootAppDir/Resources"
-  tar -xzvf "$tarFile" --strip-components=2 -C "$RootAppDir/Resources"
+  tar -xzvf "$tarFile" --strip-components=1 -C "$RootAppDir/Resources"
   printf "\n"
   TelegrafBinPath="$RootAppDir/Resources/usr/bin/telegraf"
   codesign --force -s "$DeveloperID" --timestamp --options=runtime "$TelegrafBinPath"
