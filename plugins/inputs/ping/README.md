@@ -63,7 +63,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Select the ICMP socket type (native only). If privileged, raw sockets are
   ## used and the CAP_NET_RAW capability (or root) is required. The
   ## unprivileged mode uses ICMP datagram sockets requiring the process GID to
-  ## be within the range in sysctl's net.ipv4.ping_group_range and no further
+  ## be within the range in the net.ipv4.ping_group_range sysctl and no further
   ## capabilities.
   # privileged = true
 
