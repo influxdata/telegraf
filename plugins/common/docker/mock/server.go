@@ -155,7 +155,7 @@ func (s *Server) Start(t *testing.T) string {
 	t.Helper()
 
 	if s.APIVersion == "" {
-		s.APIVersion = "1.54"
+		s.APIVersion = client.MaxAPIVersion
 	}
 
 	ctx, cancel := context.WithCancel(t.Context())
