@@ -208,7 +208,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.43.0
 	github.com/testcontainers/testcontainers-go/modules/azure v0.42.0
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.43.0
-	github.com/testcontainers/testcontainers-go/modules/vault v0.42.0
+	github.com/testcontainers/testcontainers-go/modules/vault v0.43.0
 	github.com/thomasklein94/packer-plugin-libvirt v0.5.0
 	github.com/tidwall/gjson v1.19.0
 	github.com/tidwall/wal v1.2.1
