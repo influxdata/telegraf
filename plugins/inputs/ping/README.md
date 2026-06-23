@@ -110,8 +110,8 @@ dependencies.
 
 With `method = "native"`, the `timeout` option is ignored. Use `deadline` to
 control the total runtime instead. The `privileged` option indicates which type
-of socket will be used with `method = "native"`; `true` or `nil` uses raw
-sockets, whereas `false` uses SOCK_DGRAM. The former requires CAP_NET_RAW or
+of socket will be used with `method = "native"`; `true` uses raw sockets,
+whereas `false` uses SOCK_DGRAM. The former requires CAP_NET_RAW or
 root, the latter requires your process GID to fall in the range of
 the `net.ipv4.ping_group_range` sysctl.
 
