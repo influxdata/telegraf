@@ -972,6 +972,7 @@ disk.capacity.usage.average
 **_propertie_include allow you to collect data that are not metrics.
 
 For sample :
+
 ```toml
   host_propertie_include = ["summary.runtime.powerState", "summary.overallStatus", "summary.runtime.inMaintenanceMode", "summary.runtime.connectionState"]
   vm_propertie_include = ["runtime.powerState"]
@@ -982,7 +983,9 @@ For sample :
 
 All that tag will be added to "internal" metric that always contain "1".
 It is recommanded to use it with processors.enum to convert as metric.
+
 For sample :
+
 ```toml
 [[processors.enum]]
   [[processors.enum.mapping]]
