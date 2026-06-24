@@ -7,13 +7,13 @@ import (
 	"math"
 	"math/rand"
 	"net/url"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
-	"reflect"
 	"unicode"
 
 	"github.com/vmware/govmomi/object"
@@ -84,7 +84,7 @@ type resourceKind struct {
 	parent           string
 	latestSample     time.Time
 	lastColl         time.Time
-	PropertieInclude       []string
+	PropertieInclude []string
 }
 
 type metricEntry struct {
@@ -97,16 +97,16 @@ type metricEntry struct {
 type objectMap map[string]*objectRef
 
 type objectRef struct {
-	name              string
-	altID             string
-	ref               types.ManagedObjectReference
-	parentRef         *types.ManagedObjectReference // Pointer because it must be nillable
-	guest             string
-	dcname            string
-	rpname            string
-	customValues      map[string]string
-	customProperties  map[string]interface{}
-	lookup            map[string]string
+	name             string
+	altID            string
+	ref              types.ManagedObjectReference
+	parentRef        *types.ManagedObjectReference // Pointer because it must be nillable
+	guest            string
+	dcname           string
+	rpname           string
+	customValues     map[string]string
+	customProperties map[string]interface{}
+	lookup           map[string]string
 }
 
 func (e *endpoint) getParent(obj *objectRef, res *resourceKind) (*objectRef, bool) {
@@ -151,7 +151,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.DatacenterInstances,
 			getObjects:       getDatacenters,
 			parent:           "",
-			PropertieInclude:       parent.DatacenterPropertieInclude,
+			PropertieInclude: parent.DatacenterPropertieInclude,
 		},
 		"cluster": {
 			name:             "cluster",
@@ -170,7 +170,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.ClusterInstances,
 			getObjects:       getClusters,
 			parent:           "datacenter",
-			PropertieInclude:       parent.ClusterPropertieInclude,
+			PropertieInclude: parent.ClusterPropertieInclude,
 		},
 		"resourcepool": {
 			name:             "resourcepool",
@@ -189,7 +189,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.ResourcePoolInstances,
 			getObjects:       getResourcePools,
 			parent:           "cluster",
-			PropertieInclude:       parent.ResourcePoolPropertieInclude,
+			PropertieInclude: parent.ResourcePoolPropertieInclude,
 		},
 		"host": {
 			name:             "host",
@@ -208,7 +208,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.HostInstances,
 			getObjects:       getHosts,
 			parent:           "cluster",
-			PropertieInclude:       parent.HostPropertieInclude,
+			PropertieInclude: parent.HostPropertieInclude,
 		},
 		"vm": {
 			name:             "vm",
@@ -227,7 +227,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.VMInstances,
 			getObjects:       getVMs,
 			parent:           "host",
-			PropertieInclude:       parent.VMPropertieInclude,
+			PropertieInclude: parent.VMPropertieInclude,
 		},
 		"datastore": {
 			name:             "datastore",
@@ -245,7 +245,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.DatastoreInstances,
 			getObjects:       getDatastores,
 			parent:           "",
-			PropertieInclude:       parent.DatastorePropertieInclude,
+			PropertieInclude: parent.DatastorePropertieInclude,
 		},
 		"vsan": {
 			name:             "vsan",
@@ -263,7 +263,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: false,
 			getObjects:       getClusters,
 			parent:           "datacenter",
-			PropertieInclude:       parent.VSANPropertieInclude,
+			PropertieInclude: parent.VSANPropertieInclude,
 		},
 	}
 
@@ -660,12 +660,12 @@ func getDatacenters(ctx context.Context, e *endpoint, resourceFilter *resourceFi
 		r := &resources[i]
 
 		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
-			name:         r.Name,
-			ref:          r.ExtensibleManagedObject.Reference(),
-			parentRef:    r.Parent,
-			dcname:       r.Name,
-			customValues: e.loadCustomAttributes(r.ManagedEntity),
-			customProperties:  e.loadCustomProperties(r, PropertieInclude),
+			name:             r.Name,
+			ref:              r.ExtensibleManagedObject.Reference(),
+			parentRef:        r.Parent,
+			dcname:           r.Name,
+			customValues:     e.loadCustomAttributes(r.ManagedEntity),
+			customProperties: e.loadCustomProperties(r, PropertieInclude),
 		}
 	}
 	return m, nil
@@ -710,11 +710,11 @@ func getClusters(ctx context.Context, e *endpoint, resourceFilter *resourceFilte
 				}
 			}
 			m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
-				name:         r.Name,
-				ref:          r.ExtensibleManagedObject.Reference(),
-				parentRef:    p,
-				customValues: e.loadCustomAttributes(r.ManagedEntity),
-				customProperties:  e.loadCustomProperties(r, PropertieInclude),
+				name:             r.Name,
+				ref:              r.ExtensibleManagedObject.Reference(),
+				parentRef:        p,
+				customValues:     e.loadCustomAttributes(r.ManagedEntity),
+				customProperties: e.loadCustomProperties(r, PropertieInclude),
 			}
 			return nil
 		}()
@@ -737,11 +737,11 @@ func getResourcePools(ctx context.Context, e *endpoint, resourceFilter *resource
 		r := &resources[i]
 
 		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
-			name:         r.Name,
-			ref:          r.ExtensibleManagedObject.Reference(),
-			parentRef:    r.Parent,
-			customValues: e.loadCustomAttributes(r.ManagedEntity),
-			customProperties:  e.loadCustomProperties(r, PropertieInclude),
+			name:             r.Name,
+			ref:              r.ExtensibleManagedObject.Reference(),
+			parentRef:        r.Parent,
+			customValues:     e.loadCustomAttributes(r.ManagedEntity),
+			customProperties: e.loadCustomProperties(r, PropertieInclude),
 		}
 	}
 	return m, nil
@@ -771,12 +771,12 @@ func getHosts(ctx context.Context, e *endpoint, resourceFilter *resourceFilter, 
 		lookup := make(map[string]string)
 
 		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
-			name:         r.Name,
-			ref:          r.ExtensibleManagedObject.Reference(),
-			parentRef:    r.Parent,
-			customValues: e.loadCustomAttributes(r.ManagedEntity),
-			customProperties:  e.loadCustomProperties(r, PropertieInclude),
-			lookup:       lookup,
+			name:             r.Name,
+			ref:              r.ExtensibleManagedObject.Reference(),
+			parentRef:        r.Parent,
+			customValues:     e.loadCustomAttributes(r.ManagedEntity),
+			customProperties: e.loadCustomProperties(r, PropertieInclude),
+			lookup:           lookup,
 		}
 	}
 	return m, nil
@@ -863,15 +863,15 @@ func getVMs(ctx context.Context, e *endpoint, rf *resourceFilter, PropertieInclu
 		}
 
 		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
-			name:              r.Name,
-			ref:               r.ExtensibleManagedObject.Reference(),
-			parentRef:         r.Runtime.Host,
-			guest:             guest,
-			altID:             uuid,
-			rpname:            rpname,
-			customValues:      e.loadCustomAttributes(r.ManagedEntity),
-			customProperties:  e.loadCustomProperties(r, PropertieInclude),
-			lookup:            lookup,
+			name:             r.Name,
+			ref:              r.ExtensibleManagedObject.Reference(),
+			parentRef:        r.Runtime.Host,
+			guest:            guest,
+			altID:            uuid,
+			rpname:           rpname,
+			customValues:     e.loadCustomAttributes(r.ManagedEntity),
+			customProperties: e.loadCustomProperties(r, PropertieInclude),
+			lookup:           lookup,
 		}
 	}
 	return m, nil
@@ -897,12 +897,12 @@ func getDatastores(ctx context.Context, e *endpoint, resourceFilter *resourceFil
 			}
 		}
 		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
-			name:         r.Name,
-			ref:          r.ExtensibleManagedObject.Reference(),
-			parentRef:    r.Parent,
-			altID:        lunID,
-			customValues: e.loadCustomAttributes(r.ManagedEntity),
-			customProperties:  e.loadCustomProperties(r, PropertieInclude),
+			name:             r.Name,
+			ref:              r.ExtensibleManagedObject.Reference(),
+			parentRef:        r.Parent,
+			altID:            lunID,
+			customValues:     e.loadCustomAttributes(r.ManagedEntity),
+			customProperties: e.loadCustomProperties(r, PropertieInclude),
 		}
 	}
 	return m, nil
@@ -1384,15 +1384,15 @@ func (e *endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 			if c, ok := e.resourceKinds["cluster"].objects[parent.parentRef.Value]; ok {
 				t["clustername"] = c.name
 			}
-		} 
+		}
 	}
 	if resourceType == "vm" {
 		if objectRef.guest != "" {
 			t["guest"] = objectRef.guest
 		}
-//		if objectRef.lookup["powerstate"] != "" {
-//			t["powerstate"] = objectRef.lookup["powerstate"]
-//		}
+		//		if objectRef.lookup["powerstate"] != "" {
+		//			t["powerstate"] = objectRef.lookup["powerstate"]
+		//		}
 		if gh := objectRef.lookup["guesthostname"]; gh != "" {
 			t["guesthostname"] = gh
 		}
@@ -1400,12 +1400,12 @@ func (e *endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 			t["clustername"] = c.name
 		}
 	} else if resourceType == "host" {
-//		if objectRef.lookup["powerstate"] != "" {
-//			t["powerstate"] = objectRef.lookup["powerstate"]
-//		}
-//		if objectRef.lookup["maintenance"] != "" {
-//			t["maintenance"] = objectRef.lookup["maintenance"]
-//		}
+		//		if objectRef.lookup["powerstate"] != "" {
+		//			t["powerstate"] = objectRef.lookup["powerstate"]
+		//		}
+		//		if objectRef.lookup["maintenance"] != "" {
+		//			t["maintenance"] = objectRef.lookup["maintenance"]
+		//		}
 	}
 
 	// Fill in Datacenter name
@@ -1500,100 +1500,100 @@ func round(x float64) float64 {
 }
 
 func getIndex(enumObj interface{}) int {
-    v := reflect.ValueOf(enumObj)
+	v := reflect.ValueOf(enumObj)
 
-    // Vérifier si le type a une méthode Values()
-    method := v.MethodByName("Values")
-    if !method.IsValid() {
-        // La méthode n'existe pas
-        return -1
-    }
-    for i, s := range method.Call(nil) {
-        if s == enumObj {
-            return i
-        }
-    }
-    return -1 // si non trouvé
+	// Vérifier si le type a une méthode Values()
+	method := v.MethodByName("Values")
+	if !method.IsValid() {
+		// La méthode n'existe pas
+		return -1
+	}
+	for i, s := range method.Call(nil) {
+		if s == enumObj {
+			return i
+		}
+	}
+	return -1 // si non trouvé
 }
 
 func (e *endpoint) getExtraData(entity interface{}, fieldPath string) (interface{}, bool) {
-    v := reflect.ValueOf(entity)
+	v := reflect.ValueOf(entity)
 
-    // Si c'est un pointeur, on dé-référence
-    if v.Kind() == reflect.Ptr {
+	// Si c'est un pointeur, on dé-référence
+	if v.Kind() == reflect.Ptr {
 		if v.IsNil() {
 			// La valeur est un pointeur nil, on ne peut pas continuer
 			return nil, false
 		}
-        v = v.Elem()
-    }
+		v = v.Elem()
+	}
 
-    fields := strings.Split(fieldPath, ".")
-    for _, field := range fields {
-        if v.Kind() == reflect.Struct {
-            v = v.FieldByName(field)
-            // Si le champ n'existe pas ou n'est pas accessible
-            if !v.IsValid() {
+	fields := strings.Split(fieldPath, ".")
+	for _, field := range fields {
+		if v.Kind() == reflect.Struct {
+			v = v.FieldByName(field)
+			// Si le champ n'existe pas ou n'est pas accessible
+			if !v.IsValid() {
 				e.parent.Log.Warnf("Field %s in %s of %s not valid. Skipping", field, fieldPath, reflect.TypeOf(entity))
-                return nil, false 
-            }
-            // Si c'est un pointeur, dé-référencer
-            if v.Kind() == reflect.Ptr {
-                v = v.Elem()
-            }
-        } else {
+				return nil, false
+			}
+			// Si c'est un pointeur, dé-référencer
+			if v.Kind() == reflect.Ptr {
+				v = v.Elem()
+			}
+		} else {
 			e.parent.Log.Warnf("Field %s in %s of %s not struct %s. Skipping", field, fieldPath, reflect.TypeOf(entity), v.Kind())
-            return nil, false 
-        }
-    }
+			return nil, false
+		}
+	}
 
-    // Retourner la valeur sous forme de string
-    if v.IsValid() && v.CanInterface() {
-        return v, true
-    }
+	// Retourner la valeur sous forme de string
+	if v.IsValid() && v.CanInterface() {
+		return v, true
+	}
 	e.parent.Log.Warnf("Field %s of %s no interface. Skipping", fieldPath, reflect.TypeOf(entity))
-    return nil, false 
+	return nil, false
 }
 
 func (e *endpoint) printStructFields(t reflect.Type, prefix string) {
-    if t.Kind() == reflect.Ptr {
-        t = t.Elem()
-    }
-    if t.Kind() != reflect.Struct {
-        e.parent.Log.Warnf("Not a struct:", t)
-        return
-    }
-    for i := 0; i < t.NumField(); i++ {
-        field := t.Field(i)
-        e.parent.Log.Warnf(prefix, "Field:", field.Name, "Type:", field.Type)
-        // Si vous voulez explorer récursivement
-        if field.Type.Kind() == reflect.Struct {
-            e.printStructFields(field.Type, prefix + ">")
-        }
-    }
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	if t.Kind() != reflect.Struct {
+		e.parent.Log.Warnf("Not a struct:", t)
+		return
+	}
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		e.parent.Log.Warnf(prefix, "Field:", field.Name, "Type:", field.Type)
+		// Si vous voulez explorer récursivement
+		if field.Type.Kind() == reflect.Struct {
+			e.printStructFields(field.Type, prefix+">")
+		}
+	}
 }
 
 func (e *endpoint) makePropertyIdentifier(input string) string {
-    var result []rune
+	var result []rune
 	runes := []rune(e.parent.Separator)
-    for _, r := range input {
-        if r == '.' {
+	for _, r := range input {
+		if r == '.' {
 			result = append(result, runes...)
 		} else {
-            result = append(result, r)
-        }
-    }
-    return string(result)
+			result = append(result, r)
+		}
+	}
+	return string(result)
 }
 
 func capitalizeAfterDot(input string) string {
-    var result []rune
-    for i, r := range input {
+	var result []rune
+	for i, r := range input {
 		if i == 0 || input[i-1] == '.' {
 			result = append(result, unicode.ToUpper(r))
 		} else {
-            result = append(result, r)
+			result = append(result, r)
 		}
-    }
-    return string(result)
+	}
+	return string(result)
 }
