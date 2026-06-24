@@ -986,6 +986,8 @@ It is recommanded to use it with processors.enum to convert as metric.
 
 For sample :
 
+For sample :
+
 ```toml
 [[processors.enum]]
   [[processors.enum.mapping]]
