@@ -231,9 +231,8 @@ func TestCases(t *testing.T) {
 func TestAgent_SkipProcessorsBeforeAndAfterError(t *testing.T) {
 	c := config.NewConfig()
 	c.Agent.OmitHostname = true
-	skipBefore := true
 	skipAfter := true
-	c.Agent.SkipProcessorsBeforeAggregators = &skipBefore
+	c.Agent.SkipProcessorsBeforeAggregators = true
 	c.Agent.SkipProcessorsAfterAggregators = &skipAfter
 
 	agent := NewAgent(c)
@@ -248,9 +247,8 @@ func TestAgent_SkipProcessorsBeforeAndAfterError(t *testing.T) {
 func TestAgent_SkipProcessorsBeforeAndAfterErrorTest(t *testing.T) {
 	c := config.NewConfig()
 	c.Agent.OmitHostname = true
-	skipBefore := true
 	skipAfter := true
-	c.Agent.SkipProcessorsBeforeAggregators = &skipBefore
+	c.Agent.SkipProcessorsBeforeAggregators = true
 	c.Agent.SkipProcessorsAfterAggregators = &skipAfter
 
 	agent := NewAgent(c)
@@ -265,9 +263,8 @@ func TestAgent_SkipProcessorsBeforeAndAfterErrorTest(t *testing.T) {
 func TestAgent_SkipProcessorsBeforeAndAfterErrorOnce(t *testing.T) {
 	c := config.NewConfig()
 	c.Agent.OmitHostname = true
-	skipBefore := true
 	skipAfter := true
-	c.Agent.SkipProcessorsBeforeAggregators = &skipBefore
+	c.Agent.SkipProcessorsBeforeAggregators = true
 	c.Agent.SkipProcessorsAfterAggregators = &skipAfter
 
 	agent := NewAgent(c)
@@ -290,14 +287,13 @@ func TestAgent_SkipProcessorsBeforeDefaultsFalse(t *testing.T) {
 	defer cancel()
 
 	require.NoError(t, agent.Run(ctx))
-	require.False(t, *c.Agent.SkipProcessorsBeforeAggregators)
+	require.False(t, c.Agent.SkipProcessorsBeforeAggregators)
 }
 
 func TestAgent_SkipProcessorsAfterDefaultsFalseWhenBeforeSet(t *testing.T) {
 	c := config.NewConfig()
 	c.Agent.OmitHostname = true
-	skipBefore := false
-	c.Agent.SkipProcessorsBeforeAggregators = &skipBefore
+	c.Agent.SkipProcessorsBeforeAggregators = false
 
 	agent := NewAgent(c)
 	ctx, cancel := context.WithTimeout(t.Context(), 1*time.Second)
@@ -316,7 +312,7 @@ func TestAgent_BothSkipProcessorsAfterDefaultsToFalse(t *testing.T) {
 	defer cancel()
 
 	require.NoError(t, agent.Run(ctx))
-	require.False(t, *c.Agent.SkipProcessorsBeforeAggregators)
+	require.False(t, c.Agent.SkipProcessorsBeforeAggregators)
 	require.False(t, *c.Agent.SkipProcessorsAfterAggregators)
 }
 

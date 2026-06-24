@@ -108,15 +108,7 @@ func getConfigCommands(configHandlingFlags []cli.Flag, outputBuffer io.Writer) [
 							c.Agent.SkipProcessorsAfterAggregators = &skipProcessorsAfterAggregators
 						}
 
-						// Set the default for processor before aggregators skipping
-						if c.Agent.SkipProcessorsBeforeAggregators == nil {
-							msg := `Setting default value of skip_processors_before_aggregators to false`
-							log.Print("W! [agent] ", color.YellowString(msg))
-							skipProcessorsBeforeAggregators := false
-							c.Agent.SkipProcessorsBeforeAggregators = &skipProcessorsBeforeAggregators
-						}
-
-						if *c.Agent.SkipProcessorsBeforeAggregators && *c.Agent.SkipProcessorsAfterAggregators {
+						if c.Agent.SkipProcessorsBeforeAggregators && *c.Agent.SkipProcessorsAfterAggregators {
 							return errors.New("cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators to true")
 						}
 
