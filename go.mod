@@ -4,6 +4,8 @@ go 1.26.0
 
 godebug x509negativeserial=1
 
+replace github.com/influxdata/influxdb-observability/influx2otel => github.com/mchrome/influxdb-observability/influx2otel v0.0.0-20260623155732-db200540d054
+
 require (
 	cloud.google.com/go/auth v0.20.0
 	cloud.google.com/go/bigquery v1.77.0

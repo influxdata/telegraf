@@ -1661,8 +1661,6 @@ github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 github.com/influxdata/influxdb-observability/common v0.5.12 h1:4YwZ+vsodz6VfoiX+ZqVotmnyCa9vCCPksSBK/WLjBs=
 github.com/influxdata/influxdb-observability/common v0.5.12/go.mod h1:u+CABnGO/F1IK51pDlZQroh4+igJNo695XrbLGDBhVc=
-github.com/influxdata/influxdb-observability/influx2otel v0.5.12 h1:u0lNE3+63rILk4mtmCYsNyczH/1wEXnM+1aBzBe5akk=
-github.com/influxdata/influxdb-observability/influx2otel v0.5.12/go.mod h1:bM407XIJYnrJYJ9Q3q2ytDSOyFhiYmGm0Sz1Qf48RPk=
 github.com/influxdata/influxdb-observability/otel2influx v0.5.12 h1:t9gmVOOHbZyEAvIYSoO97Tde1KArVtiYdM0/0Dhmuio=
 github.com/influxdata/influxdb-observability/otel2influx v0.5.12/go.mod h1:YGsb8xYfjHvcr2y0+Nj7kOHMTw7fWDbAA4g/qJKkvaU=
 github.com/influxdata/line-protocol-corpus v0.0.0-20210519164801-ca6fa5da0184/go.mod h1:03nmhxzZ7Xk2pdG+lmMd7mHDfeVOYFyhOgwO61qWU98=
@@ -1866,6 +1864,8 @@ github.com/mattn/go-runewidth v0.0.21 h1:jJKAZiQH+2mIinzCJIaIG9Be1+0NR+5sz/lYEEj
 github.com/mattn/go-runewidth v0.0.21/go.mod h1:XBkDxAl56ILZc9knddidhrOlY5R/pDhgLpndooCuJAs=
 github.com/mattn/go-sqlite3 v1.14.14/go.mod h1:NyWgC/yNuGj7Q9rpYnZvas74GogHl5/Z4A/KQRfk6bU=
 github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5Ld7szi9bcBfOoFv/3dc6xSMkL2PC0=
+github.com/mchrome/influxdb-observability/influx2otel v0.0.0-20260623155732-db200540d054 h1:WXWL5QDbST9SMghx58SgxKadDTS1YqFyngMS+7BHnPk=
+github.com/mchrome/influxdb-observability/influx2otel v0.0.0-20260623155732-db200540d054/go.mod h1:YgNF+ESSKXizCNRvkIAFMS8rWaP8t/86GLuycJ7vOTw=
 github.com/mdlayher/apcupsd v0.0.0-20220319200143-473c7b5f3c6a h1:JOlLsLUQnokTyWWwEvOVoKH3XUl6oDMP8jisO54l6J8=
 github.com/mdlayher/apcupsd v0.0.0-20220319200143-473c7b5f3c6a/go.mod h1:960H6oqSawdujauTeLX9BOx+ZdYX0TdG9xE9br5bino=
 github.com/mdlayher/ethtool v0.0.0-20210210192532-2b88debcdd43/go.mod h1:+t7E0lkKfbBsebllff1xdTmyJt8lH37niI6kwFk9OTo=
