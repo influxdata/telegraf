@@ -146,6 +146,29 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 	require.Equal(t, inputConfig, c.Inputs[0].Config, "Testdata did not produce correct memcached metadata.")
 }
 
+func TestConfig_InputCollectionJitterExplicitZeroIsSet(t *testing.T) {
+	c := config.NewConfig()
+	cfg := []byte(`
+[agent]
+  collection_jitter = "10s"
+
+[[inputs.memcached]]
+  servers = ["localhost"]
+  collection_jitter = "0s"
+
+[[inputs.memcached]]
+  servers = ["127.0.0.1"]
+`)
+	require.NoError(t, c.LoadConfigData(cfg, config.EmptySourcePath))
+	require.Len(t, c.Inputs, 2)
+
+	require.Equal(t, time.Duration(0), c.Inputs[0].Config.CollectionJitter)
+	require.True(t, c.Inputs[0].Config.CollectionJitterSet)
+
+	require.Equal(t, time.Duration(0), c.Inputs[1].Config.CollectionJitter)
+	require.False(t, c.Inputs[1].Config.CollectionJitterSet)
+}
+
 func TestConfig_LoadSingleInput_WithSeparators(t *testing.T) {
 	c := config.NewConfig()
 	confFile := filepath.Join("testdata", "single_plugin_with_separators.toml")
@@ -319,7 +342,9 @@ func TestConfig_LoadDirectory(t *testing.T) {
 			require.NoError(t, parser.Init())
 			parser.Log = nil
 
-			// Compare the parser
+			// Compare the parser ignoring the time function
+			expectedPlugins[i].parser.(telegraf.ParserTimeFuncPlugin).SetTimeFunc(nil)
+			parser.SetTimeFunc(nil)
 			require.Equalf(t, expectedPlugins[i].parser, parser, "Plugin %d: incorrect parser produced", i)
 		}
 
@@ -479,6 +504,22 @@ func TestConfig_InlineTables(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, map[string]string{"Authorization": "Token test", "Content-Type": "application/json"}, output.Headers)
 	require.Equal(t, []string{"org_id"}, c.Outputs[0].Config.Filter.TagInclude)
+}
+
+func TestConfig_TestModeSkipsOutputBuffer(t *testing.T) {
+	c := config.NewConfig()
+	err := c.LoadConfig("testdata/test_mode_disk_buffer.toml")
+	require.ErrorContains(t, err, "creating buffer failed")
+
+	c = config.NewConfig()
+	c.TestMode = true
+	require.NoError(t, c.LoadConfig("testdata/test_mode_disk_buffer.toml"))
+	require.Len(t, c.Outputs, 1)
+	require.Equal(t, "discard", c.Outputs[0].Config.BufferStrategy)
+
+	output, ok := c.Outputs[0].Output.(*MockupOutputPluginSerializerNew)
+	require.True(t, ok)
+	require.NotNil(t, output.Serializer)
 }
 
 func TestConfig_SliceComment(t *testing.T) {
@@ -729,7 +770,7 @@ func TestConfig_ParserInterface(t *testing.T) {
 			param: map[string]interface{}{
 				"HeaderRowCount": 42,
 			},
-			mask: []string{"TimeFunc", "ResetMode"},
+			mask: []string{"ResetMode"},
 		},
 		"xpath_protobuf": {
 			param: map[string]interface{}{
@@ -947,7 +988,7 @@ func TestConfig_ProcessorsWithParsers(t *testing.T) {
 			param: map[string]interface{}{
 				"HeaderRowCount": 42,
 			},
-			mask: []string{"TimeFunc", "ResetMode"},
+			mask: []string{"ResetMode"},
 		},
 		"xpath_protobuf": {
 			param: map[string]interface{}{
@@ -1441,6 +1482,28 @@ func TestConfigEnvVarsNonStrictMalicious(t *testing.T) {
 
 	// We expect too plugins due to malicious environment setting
 	require.Len(t, c.Inputs, 2)
+}
+
+func TestInvalidTagpassSyntaxFromFile(t *testing.T) {
+	c := config.NewConfig()
+	require.ErrorContains(t, c.LoadConfig("testdata/tagfilter_invalid.toml"), `invalid syntax for "tagpass"`)
+}
+
+func TestValidTagpassAndTagdropSyntaxFromFile(t *testing.T) {
+	c := config.NewConfig()
+	require.NoError(t, c.LoadConfig("testdata/tagfilter_valid.toml"))
+
+	require.NotEmpty(t, c.Inputs)
+
+	plugin := c.Inputs[0].Config
+	require.Len(t, plugin.Filter.TagPassFilters, 1)
+	require.Len(t, plugin.Filter.TagDropFilters, 1)
+
+	require.Equal(t, "host", plugin.Filter.TagPassFilters[0].Name)
+	require.Equal(t, []string{"server1", "server2"}, plugin.Filter.TagPassFilters[0].Values)
+
+	require.Equal(t, "region", plugin.Filter.TagDropFilters[0].Name)
+	require.Equal(t, []string{"us-west"}, plugin.Filter.TagDropFilters[0].Values)
 }
 
 // Mockup INPUT plugin for (new) parser testing to avoid cyclic dependencies

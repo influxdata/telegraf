@@ -175,21 +175,23 @@ parsed:
   bucket = "replace_with_your_bucket_name"
 ```
 
-## Secret-store secrets
+## Secret store secrets
 
-Additional or instead of environment variables, you can use secret-stores
-to fill in credentials or similar. To do so, you need to configure one or more
-secret-store plugin(s) and then reference the secret in your plugin
+Additional or instead of environment variables, you can use secret stores to
+fill in credentials or similar. To do so, you need to configure one or more
+secret store plugin(s) and then reference the secret in your plugin
 configurations. A reference to a secret is specified in form
 `@{<secret store id>:<secret name>}`, where the `secret store id` is the unique
-ID you defined for your secret-store and `secret name` is the name of the secret
+ID you defined for your secret store and `secret name` is the name of the secret
 to use.
-**NOTE:** Both, the `secret store id` as well as the `secret name` can only
-consist of letters (both upper- and lowercase), numbers and underscores.
+
+>[!NOTE]
+> Both, the `secret store id` as well as the `secret name` can only
+> consist of letters (both upper- and lowercase), numbers and underscores.
 
 **Example**:
 
-This example illustrates the use of secret-store(s) in plugins
+This example illustrates the use of secret store(s) in plugins
 
 ```toml
 [global_tags]

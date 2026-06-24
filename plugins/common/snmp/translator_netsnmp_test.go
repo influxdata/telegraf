@@ -9,7 +9,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestFieldInit(t *testing.T) {
+func TestFieldInitNetsnmp(t *testing.T) {
 	translations := []struct {
 		inputOid           string
 		inputName          string
@@ -42,7 +42,7 @@ func TestFieldInit(t *testing.T) {
 	}
 }
 
-func TestTableInit(t *testing.T) {
+func TestTableInitNetsnmp(t *testing.T) {
 	tbl := Table{
 		Oid: ".1.0.0.0",
 		Fields: []Field{
@@ -83,7 +83,7 @@ func TestTableInit(t *testing.T) {
 	require.Empty(t, tbl.Fields[1].Conversion)
 }
 
-func TestTableBuild_walk(t *testing.T) {
+func TestTableBuildWalkNetsnmp(t *testing.T) {
 	tbl := Table{
 		Name:       "mytable",
 		IndexAsTag: true,
@@ -181,7 +181,7 @@ func TestTableBuild_walk(t *testing.T) {
 	require.Contains(t, tb.Rows, rtr4)
 }
 
-func TestTableBuild_noWalk(t *testing.T) {
+func TestTableBuildNoWalkNetsnmp(t *testing.T) {
 	tbl := Table{
 		Name: "mytable",
 		Fields: []Field{
@@ -227,7 +227,7 @@ func TestTableBuild_noWalk(t *testing.T) {
 	require.Contains(t, tb.Rows, rtr)
 }
 
-func TestSnmpTranslateCache_miss(t *testing.T) {
+func TestSnmpTranslateCacheMiss(t *testing.T) {
 	snmpTranslateCaches = nil
 	oid := "IF-MIB::ifPhysAddress.1"
 	mibName, oidNum, oidText, conversion, err := NewNetsnmpTranslator(testutil.Logger{}).SnmpTranslate(oid)
@@ -241,7 +241,7 @@ func TestSnmpTranslateCache_miss(t *testing.T) {
 	require.Equal(t, err, stc.err)
 }
 
-func TestSnmpTranslateCache_hit(t *testing.T) {
+func TestSnmpTranslateCacheHit(t *testing.T) {
 	snmpTranslateCaches = map[string]snmpTranslateCache{
 		"foo": {
 			mibName:    "a",
@@ -259,7 +259,7 @@ func TestSnmpTranslateCache_hit(t *testing.T) {
 	snmpTranslateCaches = nil
 }
 
-func TestSnmpTableCache_miss(t *testing.T) {
+func TestSnmpTableCacheMiss(t *testing.T) {
 	snmpTableCaches = nil
 	oid := ".1.0.0.0"
 	mibName, oidNum, oidText, fields, err := NewNetsnmpTranslator(testutil.Logger{}).SnmpTable(oid)
@@ -273,7 +273,7 @@ func TestSnmpTableCache_miss(t *testing.T) {
 	require.Equal(t, err, stc.err)
 }
 
-func TestSnmpTableCache_hit(t *testing.T) {
+func TestSnmpTableCacheHit(t *testing.T) {
 	snmpTableCaches = map[string]snmpTableCache{
 		"foo": {
 			mibName: "a",

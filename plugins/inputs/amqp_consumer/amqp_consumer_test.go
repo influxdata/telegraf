@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -85,7 +84,7 @@ func TestIntegration(t *testing.T) {
 		Image:        "rabbitmq",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("Server startup complete"),
 		),
 	}
@@ -167,7 +166,7 @@ func TestStartupErrorBehaviorError(t *testing.T) {
 		Image:        "rabbitmq",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("Server startup complete"),
 		),
 	}
@@ -229,7 +228,7 @@ func TestStartupErrorBehaviorIgnore(t *testing.T) {
 		Image:        "rabbitmq",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("Server startup complete"),
 		),
 	}
@@ -296,7 +295,7 @@ func TestStartupErrorBehaviorRetry(t *testing.T) {
 		Image:        "rabbitmq",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("Server startup complete"),
 		),
 	}
@@ -334,6 +333,7 @@ func TestStartupErrorBehaviorRetry(t *testing.T) {
 		},
 	)
 	require.NoError(t, model.Init())
+	model.StartupErrors.Set(0)
 
 	// Setup the metrics
 	metrics := []string{
@@ -351,6 +351,7 @@ func TestStartupErrorBehaviorRetry(t *testing.T) {
 	// Starting the plugin should succeed as we will retry to startup later
 	var acc testutil.Accumulator
 	require.NoError(t, model.Start(&acc))
+	defer model.Stop()
 
 	// There should be no metrics as the plugin is not fully started up yet
 	require.Empty(t, acc.GetTelegrafMetrics())
@@ -360,7 +361,6 @@ func TestStartupErrorBehaviorRetry(t *testing.T) {
 	// Unpause the container, now writes should succeed
 	require.NoError(t, container.Resume())
 	require.NoError(t, model.Gather(&acc))
-	defer model.Stop()
 
 	// Setup a AMQP producer and send messages
 	client, err := newProducer(url, vhost, exchange, exchangeType, queueName, bindingKey)

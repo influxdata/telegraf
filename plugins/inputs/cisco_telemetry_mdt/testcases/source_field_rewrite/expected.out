@@ -1,0 +1,1 @@
+alias,mdt_source=str,path=type:model/some/path,source=hostname,subscription=subscription bool=false 1543236572000000000

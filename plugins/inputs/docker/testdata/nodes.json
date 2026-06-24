@@ -1,0 +1,38 @@
+[
+    {
+        "ID": "0cl4jturcyd1ks3fwpd010kor",
+        "Version": {},
+        "CreatedAt": "0001-01-01T00:00:00Z",
+        "UpdatedAt": "0001-01-01T00:00:00Z",
+        "Spec": {
+            "Labels": null
+        },
+        "Description": {
+            "Platform": {},
+            "Resources": {},
+            "Engine": {},
+            "TLSInfo": {}
+        },
+        "Status": {
+            "State": "ready"
+        }
+    },
+    {
+        "ID": "0cl4jturcyd1ks3fwpd010kor",
+        "Version": {},
+        "CreatedAt": "0001-01-01T00:00:00Z",
+        "UpdatedAt": "0001-01-01T00:00:00Z",
+        "Spec": {
+            "Labels": null
+        },
+        "Description": {
+            "Platform": {},
+            "Resources": {},
+            "Engine": {},
+            "TLSInfo": {}
+        },
+        "Status": {
+            "State": "ready"
+        }
+    }
+]

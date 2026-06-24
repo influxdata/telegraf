@@ -58,7 +58,7 @@ func (sw *SocketWriter) Connect() error {
 	}
 
 	var c net.Conn
-
+	var sockErr error
 	if spl[0] == "vsock" {
 		addrTuple := strings.SplitN(spl[1], ":", 2)
 
@@ -83,18 +83,19 @@ func (sw *SocketWriter) Connect() error {
 		if (port >= uint64(math.Pow(2, 32))-1) && (port <= 0) {
 			return fmt.Errorf("port number %d is out of range", port)
 		}
-		c, err = vsock.Dial(uint32(cid), uint32(port), nil)
-		if err != nil {
-			return err
-		}
+		c, sockErr = vsock.Dial(uint32(cid), uint32(port), nil)
 	} else {
 		if tlsCfg == nil {
-			c, err = net.Dial(spl[0], spl[1])
+			c, sockErr = net.Dial(spl[0], spl[1])
 		} else {
-			c, err = tls.Dial(spl[0], spl[1], tlsCfg)
+			c, sockErr = tls.Dial(spl[0], spl[1], tlsCfg)
 		}
-		if err != nil {
-			return err
+	}
+
+	if sockErr != nil {
+		return &internal.StartupError{
+			Err:   sockErr,
+			Retry: true,
 		}
 	}
 

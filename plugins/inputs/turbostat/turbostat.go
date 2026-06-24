@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -122,17 +123,16 @@ func (t *Turbostat) Start(acc telegraf.Accumulator) error {
 			acc.AddError(scanner.Err())
 			return
 		}
-		header := scanner.Text()
-		columns := make([]column, 0, 50)
-		for _, s := range strings.Fields(header) {
+		headerFields := strings.Fields(scanner.Text())
+		columns := make([]column, 0, len(headerFields))
+		for _, s := range headerFields {
 			columns = append(columns, createColumn(s))
 		}
 		for scanner.Scan() {
-			line := scanner.Text()
-			if line == header {
+			values := strings.Fields(scanner.Text())
+			if slices.Equal(values, headerFields) {
 				continue
 			}
-			values := strings.Fields(line)
 			acc.AddError(processValues(acc, columns, values))
 		}
 		acc.AddError(scanner.Err())

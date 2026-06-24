@@ -783,7 +783,7 @@ func TestHTTP_WriteDatabaseTagWorksOnRetry(t *testing.T) {
 	require.NoError(t, err)
 
 	metrics := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"database": "foo",
@@ -822,7 +822,7 @@ func TestDBRPTags(t *testing.T) {
 				Database: "telegraf",
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"database": "foo",
@@ -847,7 +847,7 @@ func TestDBRPTags(t *testing.T) {
 				RetentionPolicy: "foo",
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -872,7 +872,7 @@ func TestDBRPTags(t *testing.T) {
 				Log:                  testutil.Logger{},
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"rp": "foo",
@@ -903,7 +903,7 @@ func TestDBRPTags(t *testing.T) {
 				Log:                  testutil.Logger{},
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -928,7 +928,7 @@ func TestDBRPTags(t *testing.T) {
 				Log:                  testutil.Logger{},
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -954,7 +954,7 @@ func TestDBRPTags(t *testing.T) {
 				Log:                       testutil.Logger{},
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"rp": "foo",
@@ -985,7 +985,7 @@ func TestDBRPTags(t *testing.T) {
 				Log:                  testutil.Logger{},
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"rp": "foo",
@@ -1095,7 +1095,7 @@ func TestDBRPTagsCreateDatabaseNotCalledOnRetryAfterForbidden(t *testing.T) {
 	ts.Config.Handler = handlers
 
 	metrics := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{},
 			map[string]interface{}{
@@ -1191,7 +1191,7 @@ func TestDBRPTagsCreateDatabaseCalledOnDatabaseNotFound(t *testing.T) {
 	ts.Config.Handler = handlers
 
 	metrics := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{},
 			map[string]interface{}{
@@ -1249,7 +1249,7 @@ func TestDBNotFoundShouldDropMetricWhenSkipDatabaseCreateIsTrue(t *testing.T) {
 	ts.Config.Handler = http.HandlerFunc(f)
 
 	metrics := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{},
 			map[string]interface{}{

@@ -16,27 +16,6 @@ import (
 
 // Test that each tag becomes one dimension
 func TestBuildDimensions(t *testing.T) {
-	tests := []struct {
-		name     string
-		expected []types.Dimension
-	}{
-		{
-			name: "10 max dimensions",
-			expected: []types.Dimension{
-				{Name: aws.String("host"), Value: aws.String("localhost")},
-				{Name: aws.String("a"), Value: aws.String("1")},
-				{Name: aws.String("b"), Value: aws.String("2")},
-				{Name: aws.String("c"), Value: aws.String("3")},
-				{Name: aws.String("d"), Value: aws.String("4")},
-				{Name: aws.String("e"), Value: aws.String("5")},
-				{Name: aws.String("f"), Value: aws.String("6")},
-				{Name: aws.String("g"), Value: aws.String("7")},
-				{Name: aws.String("h"), Value: aws.String("8")},
-				{Name: aws.String("i"), Value: aws.String("9")},
-			},
-		},
-	}
-
 	// Define the input tags and the expected output
 	input := []*telegraf.Tag{
 		{Key: "a", Value: "1"},
@@ -55,10 +34,65 @@ func TestBuildDimensions(t *testing.T) {
 		{Key: "m", Value: "13"},
 	}
 
+	tests := []struct {
+		name          string
+		maxDimensions int
+		expected      []types.Dimension
+	}{
+		{
+			name:          "0 max dimensions",
+			maxDimensions: 0,
+		},
+		{
+			name:          "10 max dimensions",
+			maxDimensions: 10,
+			expected: []types.Dimension{
+				{Name: aws.String("host"), Value: aws.String("localhost")},
+				{Name: aws.String("a"), Value: aws.String("1")},
+				{Name: aws.String("b"), Value: aws.String("2")},
+				{Name: aws.String("c"), Value: aws.String("3")},
+				{Name: aws.String("d"), Value: aws.String("4")},
+				{Name: aws.String("e"), Value: aws.String("5")},
+				{Name: aws.String("f"), Value: aws.String("6")},
+				{Name: aws.String("g"), Value: aws.String("7")},
+				{Name: aws.String("h"), Value: aws.String("8")},
+				{Name: aws.String("i"), Value: aws.String("9")},
+			},
+		},
+		{
+			name:          "30 max dimensions",
+			maxDimensions: 30,
+			expected: []types.Dimension{
+				{Name: aws.String("host"), Value: aws.String("localhost")},
+				{Name: aws.String("a"), Value: aws.String("1")},
+				{Name: aws.String("b"), Value: aws.String("2")},
+				{Name: aws.String("c"), Value: aws.String("3")},
+				{Name: aws.String("d"), Value: aws.String("4")},
+				{Name: aws.String("e"), Value: aws.String("5")},
+				{Name: aws.String("f"), Value: aws.String("6")},
+				{Name: aws.String("g"), Value: aws.String("7")},
+				{Name: aws.String("h"), Value: aws.String("8")},
+				{Name: aws.String("i"), Value: aws.String("9")},
+				{Name: aws.String("j"), Value: aws.String("10")},
+				{Name: aws.String("k"), Value: aws.String("11")},
+				{Name: aws.String("l"), Value: aws.String("12")},
+				{Name: aws.String("m"), Value: aws.String("13")},
+			},
+		},
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Setup plugin
+			plugin := &CloudWatch{
+				Namespace:     "foo",
+				MaxDimensions: tt.maxDimensions,
+				Log:           testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
 			// Build the dimensions and check
-			dimensions := buildDimensions(input)
+			dimensions := plugin.buildDimensions(input)
 			require.Len(t, dimensions, len(tt.expected))
 			for i, actual := range dimensions {
 				require.Equalf(t, *tt.expected[i].Name, *actual.Name, "mismatch for element %d", i)
@@ -207,6 +241,7 @@ func TestBuildMetricDatums(t *testing.T) {
 				Namespace:             "foo",
 				WriteStatistics:       tt.statistics,
 				HighResolutionMetrics: tt.highres,
+				MaxDimensions:         10,
 				Log:                   testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
@@ -239,6 +274,7 @@ func TestBuildMetricDatumResolution(t *testing.T) {
 			plugin := &CloudWatch{
 				Namespace:             "foo",
 				HighResolutionMetrics: tt.highres,
+				MaxDimensions:         10,
 				Log:                   testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
@@ -257,6 +293,7 @@ func TestBuildMetricDatumsSkipEmptyTags(t *testing.T) {
 	plugin := &CloudWatch{
 		Namespace:       "foo",
 		WriteStatistics: true,
+		MaxDimensions:   10,
 		Log:             testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())

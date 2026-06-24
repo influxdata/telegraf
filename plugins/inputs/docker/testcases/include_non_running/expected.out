@@ -1,0 +1,6 @@
+docker,engine_host=absol,server_version=17.09.0-ce n_containers=0i,n_containers_paused=0i,n_containers_running=0i,n_containers_stopped=0i,n_cpus=0i,n_goroutines=0i,n_images=0i,n_listener_events=0i,n_used_file_descriptors=0i 1778227900761502719
+docker,engine_host=absol,server_version=17.09.0-ce memory_total=0i 1778227900761502719
+docker_container_status,container_image=redis/image,container_name=stopped-container,container_status=exited,container_version=unknown,engine_host=absol,server_version=17.09.0-ce container_id="123456789",exitcode=137i,finished_at=1704070800000000000i,oomkilled=false,pid=0i,restart_count=0i,started_at=1704067200000000000i,uptime_ns=3600000000000i 1778227900762353430
+docker_container_health,container_image=redis/image,container_name=stopped-container,container_status=exited,container_version=unknown,engine_host=absol,server_version=17.09.0-ce failing_streak=1i,health_status="Unhealthy" 1778227900762356690
+docker_container_mem,container_image=redis/image,container_name=stopped-container,container_status=exited,container_version=unknown,engine_host=absol,server_version=17.09.0-ce container_id="123456789",limit=0u,max_usage=0u,usage=0u,usage_percent=0 1778227900762358370
+

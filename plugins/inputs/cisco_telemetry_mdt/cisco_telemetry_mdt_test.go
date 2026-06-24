@@ -1,11 +1,18 @@
 package cisco_telemetry_mdt
 
 import (
+	"bytes"
+	"context"
+	"crypto/tls"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"os"
+	"path/filepath"
+	"sort"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -13,1000 +20,73 @@ import (
 	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/connectivity"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestHandleTelemetryTwoSimple(t *testing.T) {
-	c := &CiscoTelemetryMDT{
-		Log:       testutil.Logger{},
-		Transport: "dummy",
-		Aliases: map[string]string{
-			"alias": "type:model/some/path",
-		},
-	}
-	acc := &testutil.Accumulator{}
-	err := c.Start(acc)
-	// error is expected since we are passing in dummy transport
-	require.Error(t, err)
-
-	tel := &telemetry.Telemetry{
-		MsgTimestamp: 1543236572000,
-		EncodingPath: "type:model/some/path",
-		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
-		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
-		DataGpbkv: []*telemetry.TelemetryField{
-			{
-				Fields: []*telemetry.TelemetryField{
-					{
-						Name: "keys",
-						Fields: []*telemetry.TelemetryField{
-							{
-								Name:        "name",
-								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "str"},
-							},
-							{
-								Name:        "uint64",
-								ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 1234},
-							},
-						},
-					},
-					{
-						Name: "content",
-						Fields: []*telemetry.TelemetryField{
-							{
-								Name:        "bool",
-								ValueByType: &telemetry.TelemetryField_BoolValue{BoolValue: true},
-							},
-						},
-					},
-				},
-			},
-			{
-				Fields: []*telemetry.TelemetryField{
-					{
-						Name: "keys",
-						Fields: []*telemetry.TelemetryField{
-							{
-								Name:        "name",
-								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "str2"},
-							},
-						},
-					},
-					{
-						Name: "content",
-						Fields: []*telemetry.TelemetryField{
-							{
-								Name:        "bool",
-								ValueByType: &telemetry.TelemetryField_BoolValue{BoolValue: false},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	data, err := proto.Marshal(tel)
-	require.NoError(t, err)
-
-	c.handleTelemetry(data)
-	require.Empty(t, acc.Errors)
-
-	tags := map[string]string{
-		"path":         "type:model/some/path",
-		"name":         "str",
-		"uint64":       "1234",
-		"source":       "hostname",
-		"subscription": "subscription",
-	}
-	fields := map[string]interface{}{"bool": true}
-	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
-
-	tags = map[string]string{
-		"path":         "type:model/some/path",
-		"name":         "str2",
-		"source":       "hostname",
-		"subscription": "subscription",
-	}
-	fields = map[string]interface{}{"bool": false}
-	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
-}
-
-func TestIncludeDeleteField(t *testing.T) {
-	type TelemetryEntry struct {
-		name        string
-		fieldName   string
-		uint32Value uint32
-		uint64Value uint64
-		stringValue string
-	}
-	encodingPath := TelemetryEntry{
-		name:        "path",
-		stringValue: "openconfig-interfaces:interfaces/interface/subinterfaces/subinterface/openconfig-if-ip:ipv6/addresses/address",
-	}
-	name := TelemetryEntry{name: "name", stringValue: "Loopback10"}
-	index := TelemetryEntry{name: "index", stringValue: "0"}
-	ip := TelemetryEntry{name: "ip", fieldName: "state/ip", stringValue: "10::10"}
-	prefixLength := TelemetryEntry{name: "prefix-length", fieldName: "state/prefix_length", uint32Value: uint32(128), uint64Value: 128}
-	origin := TelemetryEntry{name: "origin", fieldName: "state/origin", stringValue: "STATIC"}
-	status := TelemetryEntry{name: "status", fieldName: "state/status", stringValue: "PREFERRED"}
-	source := TelemetryEntry{name: "source", stringValue: "hostname"}
-	subscription := TelemetryEntry{name: "subscription", stringValue: "subscription"}
-	deleteKey := "delete"
-	stateKey := "state"
-
-	testCases := []struct {
-		telemetry *telemetry.Telemetry
-		expected  []telegraf.Metric
-	}{{
-		telemetry: &telemetry.Telemetry{
-			MsgTimestamp: 1543236572000,
-			EncodingPath: encodingPath.stringValue,
-			NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: source.stringValue},
-			Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: subscription.stringValue},
-			DataGpbkv: []*telemetry.TelemetryField{
-				{
-					Fields: []*telemetry.TelemetryField{
-						{
-							Name: "keys",
-							Fields: []*telemetry.TelemetryField{
-								{
-									Name:        name.name,
-									ValueByType: &telemetry.TelemetryField_StringValue{StringValue: name.stringValue},
-								},
-								{
-									Name:        index.name,
-									ValueByType: &telemetry.TelemetryField_Uint32Value{Uint32Value: index.uint32Value},
-								},
-								{
-									Name:        ip.name,
-									ValueByType: &telemetry.TelemetryField_StringValue{StringValue: ip.stringValue},
-								},
-							},
-						},
-						{
-							Name: "content",
-							Fields: []*telemetry.TelemetryField{
-								{
-									Name: stateKey,
-									Fields: []*telemetry.TelemetryField{
-										{
-											Name:        ip.name,
-											ValueByType: &telemetry.TelemetryField_StringValue{StringValue: ip.stringValue},
-										},
-										{
-											Name:        prefixLength.name,
-											ValueByType: &telemetry.TelemetryField_Uint32Value{Uint32Value: prefixLength.uint32Value},
-										},
-										{
-											Name:        origin.name,
-											ValueByType: &telemetry.TelemetryField_StringValue{StringValue: origin.stringValue},
-										},
-										{
-											Name:        status.name,
-											ValueByType: &telemetry.TelemetryField_StringValue{StringValue: status.stringValue},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		expected: []telegraf.Metric{
-			metric.New(
-				"deleted",
-				map[string]string{
-					encodingPath.name: encodingPath.stringValue,
-					name.name:         name.stringValue,
-					index.name:        index.stringValue,
-					ip.name:           ip.stringValue,
-					source.name:       source.stringValue,
-					subscription.name: subscription.stringValue,
-				},
-				map[string]interface{}{
-					deleteKey:              false,
-					ip.fieldName:           ip.stringValue,
-					prefixLength.fieldName: prefixLength.uint64Value,
-					origin.fieldName:       origin.stringValue,
-					status.fieldName:       status.stringValue,
-				},
-				time.Now(),
-			)},
-	},
-		{
-			telemetry: &telemetry.Telemetry{
-				MsgTimestamp: 1543236572000,
-				EncodingPath: encodingPath.stringValue,
-				NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: source.stringValue},
-				Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: subscription.stringValue},
-				DataGpbkv: []*telemetry.TelemetryField{
-					{
-						Delete: true,
-						Fields: []*telemetry.TelemetryField{
-							{
-								Name: "keys",
-								Fields: []*telemetry.TelemetryField{
-									{
-										Name:        name.name,
-										ValueByType: &telemetry.TelemetryField_StringValue{StringValue: name.stringValue},
-									},
-									{
-										Name:        index.name,
-										ValueByType: &telemetry.TelemetryField_Uint32Value{Uint32Value: index.uint32Value},
-									},
-									{
-										Name:        ip.name,
-										ValueByType: &telemetry.TelemetryField_StringValue{StringValue: ip.stringValue},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			expected: []telegraf.Metric{
-				metric.New(
-					"deleted",
-					map[string]string{
-						encodingPath.name: encodingPath.stringValue,
-						name.name:         name.stringValue,
-						index.name:        index.stringValue,
-						ip.name:           ip.stringValue,
-						source.name:       source.stringValue,
-						subscription.name: subscription.stringValue,
-					},
-					map[string]interface{}{deleteKey: true},
-					time.Now(),
-				)},
-		},
-	}
-	for _, test := range testCases {
-		c := &CiscoTelemetryMDT{
-			Log:                testutil.Logger{},
-			Transport:          "dummy",
-			Aliases:            map[string]string{"deleted": encodingPath.stringValue},
-			IncludeDeleteField: true}
-		acc := &testutil.Accumulator{}
-		// error is expected since we are passing in dummy transport
-		require.ErrorContains(t, c.Start(acc), "dummy")
-		data, err := proto.Marshal(test.telemetry)
-		require.NoError(t, err)
-
-		c.handleTelemetry(data)
-		actual := acc.GetTelegrafMetrics()
-		testutil.RequireMetricsEqual(t, test.expected, actual, testutil.IgnoreTime())
-	}
-}
-
-func TestHandleTelemetrySingleNested(t *testing.T) {
-	c := &CiscoTelemetryMDT{
-		Log:       testutil.Logger{},
-		Transport: "dummy",
-		Aliases: map[string]string{
-			"nested": "type:model/nested/path",
-		},
-	}
-	acc := &testutil.Accumulator{}
-	err := c.Start(acc)
-	// error is expected since we are passing in dummy transport
-	require.Error(t, err)
-
-	tel := &telemetry.Telemetry{
-		MsgTimestamp: 1543236572000,
-		EncodingPath: "type:model/nested/path",
-		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
-		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
-		DataGpbkv: []*telemetry.TelemetryField{
-			{
-				Fields: []*telemetry.TelemetryField{
-					{
-						Name: "keys",
-						Fields: []*telemetry.TelemetryField{
-							{
-								Name: "nested",
-								Fields: []*telemetry.TelemetryField{
-									{
-										Name: "key",
-										Fields: []*telemetry.TelemetryField{
-											{
-												Name:        "level",
-												ValueByType: &telemetry.TelemetryField_DoubleValue{DoubleValue: 3},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-					{
-						Name: "content",
-						Fields: []*telemetry.TelemetryField{
-							{
-								Name: "nested",
-								Fields: []*telemetry.TelemetryField{
-									{
-										Name: "value",
-										Fields: []*telemetry.TelemetryField{
-											{
-												Name:        "foo",
-												ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "bar"},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	data, err := proto.Marshal(tel)
-	require.NoError(t, err)
-
-	c.handleTelemetry(data)
-	require.Empty(t, acc.Errors)
-
-	tags := map[string]string{
-		"path":         "type:model/nested/path",
-		"level":        "3",
-		"source":       "hostname",
-		"subscription": "subscription",
-	}
-	fields := map[string]interface{}{"nested/value/foo": "bar"}
-	acc.AssertContainsTaggedFields(t, "nested", fields, tags)
-}
-
-func TestHandleEmbeddedTags(t *testing.T) {
-	c := &CiscoTelemetryMDT{
-		Transport:    "dummy",
-		Aliases:      map[string]string{"extra": "type:model/extra"},
-		EmbeddedTags: []string{"type:model/extra/list/name"},
-	}
-	acc := &testutil.Accumulator{}
-	err := c.Start(acc)
-	// error is expected since we are passing in dummy transport
-	require.Error(t, err)
-
-	tel := &telemetry.Telemetry{
-		MsgTimestamp: 1543236572000,
-		EncodingPath: "type:model/extra",
-		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
-		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
-		DataGpbkv: []*telemetry.TelemetryField{
-			{
-				Fields: []*telemetry.TelemetryField{
-					{
-						Name: "keys",
-						Fields: []*telemetry.TelemetryField{
-							{
-								Name:        "foo",
-								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "bar"},
-							},
-						},
-					},
-					{
-						Name: "content",
-						Fields: []*telemetry.TelemetryField{
-							{
-								Name: "list",
-								Fields: []*telemetry.TelemetryField{
-									{
-										Name:        "name",
-										ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "entry1"},
-									},
-									{
-										Name:        "test",
-										ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "foo"},
-									},
-								},
-							},
-							{
-								Name: "list",
-								Fields: []*telemetry.TelemetryField{
-									{
-										Name:        "name",
-										ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "entry2"},
-									},
-									{
-										Name:        "test",
-										ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "bar"},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	data, err := proto.Marshal(tel)
-	require.NoError(t, err)
-
-	c.handleTelemetry(data)
-	require.Empty(t, acc.Errors)
-
-	tags1 := map[string]string{
-		"path":         "type:model/extra",
-		"foo":          "bar",
-		"source":       "hostname",
-		"subscription": "subscription",
-		"list/name":    "entry1",
-	}
-	fields1 := map[string]interface{}{"list/test": "foo"}
-	tags2 := map[string]string{
-		"path":         "type:model/extra",
-		"foo":          "bar",
-		"source":       "hostname",
-		"subscription": "subscription",
-		"list/name":    "entry2",
-	}
-	fields2 := map[string]interface{}{"list/test": "bar"}
-	acc.AssertContainsTaggedFields(t, "extra", fields1, tags1)
-	acc.AssertContainsTaggedFields(t, "extra", fields2, tags2)
-}
-
-func TestHandleNXAPI(t *testing.T) {
-	c := &CiscoTelemetryMDT{
-		Transport: "dummy",
-		Aliases:   map[string]string{"nxapi": "show nxapi"},
-	}
-	acc := &testutil.Accumulator{}
-	err := c.Start(acc)
-	// error is expected since we are passing in dummy transport
-	require.Error(t, err)
-
-	tel := &telemetry.Telemetry{
-		MsgTimestamp: 1543236572000,
-		EncodingPath: "show nxapi",
-		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
-		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
-		DataGpbkv: []*telemetry.TelemetryField{
-			{
-				Fields: []*telemetry.TelemetryField{
-					{
-						Name: "keys",
-						Fields: []*telemetry.TelemetryField{
-							{
-								Name:        "foo",
-								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "bar"},
-							},
-						},
-					},
-					{
-						Name: "content",
-						Fields: []*telemetry.TelemetryField{
-							{
-								Fields: []*telemetry.TelemetryField{
-									{
-										Name: "TABLE_nxapi",
-										Fields: []*telemetry.TelemetryField{
-											{
-												Fields: []*telemetry.TelemetryField{
-													{
-														Name: "ROW_nxapi",
-														Fields: []*telemetry.TelemetryField{
-															{
-																Fields: []*telemetry.TelemetryField{
-																	{
-																		Name:        "index",
-																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "i1"},
-																	},
-																	{
-																		Name:        "value",
-																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "foo"},
-																	},
-																},
-															},
-															{
-																Fields: []*telemetry.TelemetryField{
-																	{
-																		Name:        "index",
-																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "i2"},
-																	},
-																	{
-																		Name:        "value",
-																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "bar"},
-																	},
-																},
-															},
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	data, err := proto.Marshal(tel)
-	require.NoError(t, err)
-
-	c.handleTelemetry(data)
-	require.Empty(t, acc.Errors)
-
-	tags1 := map[string]string{
-		"path":         "show nxapi",
-		"foo":          "bar",
-		"TABLE_nxapi":  "i1",
-		"row_number":   "0",
-		"source":       "hostname",
-		"subscription": "subscription",
-	}
-	fields1 := map[string]interface{}{"value": "foo"}
-	tags2 := map[string]string{
-		"path":         "show nxapi",
-		"foo":          "bar",
-		"TABLE_nxapi":  "i2",
-		"row_number":   "0",
-		"source":       "hostname",
-		"subscription": "subscription",
-	}
-	fields2 := map[string]interface{}{"value": "bar"}
-	acc.AssertContainsTaggedFields(t, "nxapi", fields1, tags1)
-	acc.AssertContainsTaggedFields(t, "nxapi", fields2, tags2)
-}
-
-func TestHandleNXAPIXformNXAPI(t *testing.T) {
-	c := &CiscoTelemetryMDT{
-		Log:       testutil.Logger{},
-		Transport: "dummy",
-		Aliases:   map[string]string{"nxapi": "show nxapi"},
-	}
-	acc := &testutil.Accumulator{}
-	err := c.Start(acc)
-	// error is expected since we are passing in dummy transport
-	require.Error(t, err)
-
-	tel := &telemetry.Telemetry{
-		MsgTimestamp: 1543236572000,
-		EncodingPath: "show processes cpu",
-		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
-		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
-		DataGpbkv: []*telemetry.TelemetryField{
-			{
-				Fields: []*telemetry.TelemetryField{
-					{
-						Name: "keys",
-						Fields: []*telemetry.TelemetryField{
-							{
-								Name:        "foo",
-								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "bar"},
-							},
-						},
-					},
-					{
-						Name: "content",
-						Fields: []*telemetry.TelemetryField{
-							{
-								Fields: []*telemetry.TelemetryField{
-									{
-										Name: "TABLE_process_cpu",
-										Fields: []*telemetry.TelemetryField{
-											{
-												Fields: []*telemetry.TelemetryField{
-													{
-														Name: "ROW_process_cpu",
-														Fields: []*telemetry.TelemetryField{
-															{
-																Fields: []*telemetry.TelemetryField{
-																	{
-																		Name:        "index",
-																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "i1"},
-																	},
-																	{
-																		Name:        "value",
-																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "foo"},
-																	},
-																},
-															},
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	data, err := proto.Marshal(tel)
-	require.NoError(t, err)
-
-	c.handleTelemetry(data)
-	require.Empty(t, acc.Errors)
-
-	tags1 := map[string]string{
-		"path":              "show processes cpu",
-		"foo":               "bar",
-		"TABLE_process_cpu": "i1",
-		"row_number":        "0",
-		"source":            "hostname",
-		"subscription":      "subscription",
-	}
-	fields1 := map[string]interface{}{"value": "foo"}
-	acc.AssertContainsTaggedFields(t, "show processes cpu", fields1, tags1)
-}
-
-func TestHandleNXXformMulti(t *testing.T) {
-	c := &CiscoTelemetryMDT{
-		Transport: "dummy",
-		Aliases:   map[string]string{"dme": "sys/lldp"},
-	}
-	acc := &testutil.Accumulator{}
-	err := c.Start(acc)
-	// error is expected since we are passing in dummy transport
-	require.Error(t, err)
-
-	tel := &telemetry.Telemetry{
-		MsgTimestamp: 1543236572000,
-		EncodingPath: "sys/lldp",
-		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
-		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
-		DataGpbkv: []*telemetry.TelemetryField{
-			{
-				Fields: []*telemetry.TelemetryField{
-					{
-						Name: "keys",
-						Fields: []*telemetry.TelemetryField{
-							{
-								Name:        "foo",
-								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "bar"},
-							},
-						},
-					},
-					{
-						Name: "content",
-						Fields: []*telemetry.TelemetryField{
-							{
-								Fields: []*telemetry.TelemetryField{
-									{
-										Name: "fooEntity",
-										Fields: []*telemetry.TelemetryField{
-											{
-												Fields: []*telemetry.TelemetryField{
-													{
-														Name: "attributes",
-														Fields: []*telemetry.TelemetryField{
-															{
-																Fields: []*telemetry.TelemetryField{
-																	{
-																		Name:        "rn",
-																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "some-rn"},
-																	},
-																	{
-																		Name:        "portIdV",
-																		ValueByType: &telemetry.TelemetryField_Uint32Value{Uint32Value: 12},
-																	},
-																	{
-																		Name:        "portDesc",
-																		ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 100},
-																	},
-																	{
-																		Name:        "test",
-																		ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 281474976710655},
-																	},
-																	{
-																		Name:        "subscriptionId",
-																		ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 2814749767106551},
-																	},
-																},
-															},
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	data, err := proto.Marshal(tel)
-	require.NoError(t, err)
-
-	c.handleTelemetry(data)
-	require.Empty(t, acc.Errors)
-	// validate various transformation scenaarios newly added in the code.
-	fields := map[string]interface{}{
-		"portIdV":        "12",
-		"portDesc":       "100",
-		"test":           int64(281474976710655),
-		"subscriptionId": "2814749767106551",
-	}
-	acc.AssertContainsFields(t, "dme", fields)
-}
-
-func TestHandleNXDME(t *testing.T) {
-	c := &CiscoTelemetryMDT{
-		Transport: "dummy",
-		Aliases:   map[string]string{"dme": "sys/dme"},
-	}
-	acc := &testutil.Accumulator{}
-	err := c.Start(acc)
-	// error is expected since we are passing in dummy transport
-	require.Error(t, err)
-
-	tel := &telemetry.Telemetry{
-		MsgTimestamp: 1543236572000,
-		EncodingPath: "sys/dme",
-		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
-		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
-		DataGpbkv: []*telemetry.TelemetryField{
-			{
-				Fields: []*telemetry.TelemetryField{
-					{
-						Name: "keys",
-						Fields: []*telemetry.TelemetryField{
-							{
-								Name:        "foo",
-								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "bar"},
-							},
-						},
-					},
-					{
-						Name: "content",
-						Fields: []*telemetry.TelemetryField{
-							{
-								Fields: []*telemetry.TelemetryField{
-									{
-										Name: "fooEntity",
-										Fields: []*telemetry.TelemetryField{
-											{
-												Fields: []*telemetry.TelemetryField{
-													{
-														Name: "attributes",
-														Fields: []*telemetry.TelemetryField{
-															{
-																Fields: []*telemetry.TelemetryField{
-																	{
-																		Name:        "rn",
-																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "some-rn"},
-																	},
-																	{
-																		Name:        "value",
-																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "foo"},
-																	},
-																},
-															},
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	data, err := proto.Marshal(tel)
-	require.NoError(t, err)
-
-	c.handleTelemetry(data)
-	require.Empty(t, acc.Errors)
-
-	tags1 := map[string]string{
-		"path":         "sys/dme",
-		"foo":          "bar",
-		"fooEntity":    "some-rn",
-		"source":       "hostname",
-		"subscription": "subscription",
-	}
-	fields1 := map[string]interface{}{"value": "foo"}
-	acc.AssertContainsTaggedFields(t, "dme", fields1, tags1)
-}
-func TestHandleNXDMESubtree(t *testing.T) {
-	c := &CiscoTelemetryMDT{
-		Transport: "dummy",
-		Aliases:   map[string]string{"dme": "sys/dme"},
-	}
-	acc := &testutil.Accumulator{}
-	err := c.Start(acc)
-	// error is expected since we are passing in dummy transport
-	require.Error(t, err)
-
-	tel := &telemetry.Telemetry{
-		MsgTimestamp: 1543236572000,
-		EncodingPath: "sys/dme",
-		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
-		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
-		DataGpbkv: []*telemetry.TelemetryField{
-			{
-				Fields: []*telemetry.TelemetryField{
-					{
-						Name: "keys",
-						Fields: []*telemetry.TelemetryField{
-							{
-								Name:        "sys/dme",
-								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "sys/dme"},
-							},
-						},
-					},
-					{
-						Name: "content",
-						Fields: []*telemetry.TelemetryField{
-							{
-								Fields: []*telemetry.TelemetryField{
-									{
-										Name: "children",
-										Fields: []*telemetry.TelemetryField{
-											{
-												Fields: []*telemetry.TelemetryField{
-													{
-														Name: "fooEntity",
-														Fields: []*telemetry.TelemetryField{
-															{
-																Fields: []*telemetry.TelemetryField{
-																	{
-																		Name: "attributes",
-																		Fields: []*telemetry.TelemetryField{
-																			{
-																				Fields: []*telemetry.TelemetryField{
-																					{
-																						Name: "foo",
-																						ValueByType: &telemetry.TelemetryField_StringValue{
-																							StringValue: "bar1",
-																						},
-																					},
-																					{
-																						Name: "dn",
-																						ValueByType: &telemetry.TelemetryField_StringValue{
-																							StringValue: "eth1/1",
-																						},
-																					},
-																				},
-																			},
-																		},
-																	},
-																},
-															},
-														},
-													},
-												},
-											},
-											{
-												Fields: []*telemetry.TelemetryField{
-													{
-														Name: "fooEntity",
-														Fields: []*telemetry.TelemetryField{
-															{
-																Fields: []*telemetry.TelemetryField{
-																	{
-																		Name: "attributes",
-																		Fields: []*telemetry.TelemetryField{
-																			{
-																				Fields: []*telemetry.TelemetryField{
-																					{
-																						Name: "foo",
-																						ValueByType: &telemetry.TelemetryField_StringValue{
-																							StringValue: "bar2",
-																						},
-																					},
-																					{
-																						Name: "dn",
-																						ValueByType: &telemetry.TelemetryField_StringValue{
-																							StringValue: "eth1/2",
-																						},
-																					},
-																				},
-																			},
-																		},
-																	},
-																},
-															},
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		}}
-	data, err := proto.Marshal(tel)
-	require.NoError(t, err)
-
-	c.handleTelemetry(data)
-	require.Empty(t, acc.Errors)
-
-	require.Len(t, acc.Metrics, 2)
-
-	tags1 := map[string]string{
-		"dn":           "eth1/1",
-		"path":         "sys/dme",
-		"source":       "hostname",
-		"subscription": "subscription",
-		"sys/dme":      "sys/dme",
-	}
-	fields1 := map[string]interface{}{"foo": "bar1", "dn": "eth1/1"}
-	acc.AssertContainsTaggedFields(t, "dme", fields1, tags1)
-
-	tags2 := map[string]string{
-		"dn":           "eth1/2",
-		"path":         "sys/dme",
-		"source":       "hostname",
-		"subscription": "subscription",
-		"sys/dme":      "sys/dme",
-	}
-	fields2 := map[string]interface{}{"foo": "bar2", "dn": "eth1/2"}
-	acc.AssertContainsTaggedFields(t, "dme", fields2, tags2)
-}
-
 func TestTCPDialoutOverflow(t *testing.T) {
-	c := &CiscoTelemetryMDT{
-		Log:            testutil.Logger{},
+	// Setup plugin
+	plugin := &CiscoTelemetryMDT{
 		Transport:      "tcp",
 		ServiceAddress: "127.0.0.1:0",
+		MaxMsgSize:     1000,
+		Log:            testutil.Logger{},
 	}
-	acc := &testutil.Accumulator{}
-	err := c.Start(acc)
-	require.NoError(t, err)
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
 
-	hdr := struct {
-		MsgType       uint16
-		MsgEncap      uint16
-		MsgHdrVersion uint16
-		MsgFlags      uint16
-		MsgLen        uint32
-	}{MsgLen: uint32(1000000000)}
+	// Send data exceeding the message length
+	c := &client{
+		transport: plugin.Transport,
+		addr:      plugin.listener.Addr().String(),
+	}
+	require.NoError(t, c.connect(t.Context()))
+	defer c.close()
+	require.NoError(t, c.send(t.Context(), bytes.Repeat([]byte{0xd, 0xe, 0xa, 0xd}, 1024)))
 
-	addr := c.listener.Addr()
-	conn, err := net.Dial(addr.Network(), addr.String())
-	require.NoError(t, err)
-	require.NoError(t, binary.Write(conn, binary.BigEndian, hdr))
-	_, err = conn.Read([]byte{0})
-	require.True(t, err == nil || errors.Is(err, io.EOF))
-	require.NoError(t, conn.Close())
+	// Wait for the errors to be accumulated
+	require.Eventually(t, func() bool {
+		acc.Lock()
+		defer acc.Unlock()
+		return len(acc.Errors) > 0
+	}, 3*time.Second, 100*time.Millisecond)
 
-	c.Stop()
-
-	require.Contains(t, acc.Errors, errors.New("dialout packet too long: 1000000000"))
+	acc.Lock()
+	defer acc.Unlock()
+	require.Len(t, acc.Errors, 1)
+	require.ErrorContains(t, acc.Errors[0], "dialout packet too long")
 }
 
-func mockTelemetryMicroburstMessage() *telemetry.Telemetry {
-	data, err := os.ReadFile("./testdata/microburst")
-	if err != nil {
-		panic(err)
+func TestTCPDialoutMultiple(t *testing.T) {
+	// Setup plugin and start
+	plugin := &CiscoTelemetryMDT{
+		Transport:      "tcp",
+		ServiceAddress: "127.0.0.1:0",
+		Aliases: map[string]string{
+			"some":     "type:model/some/path",
+			"parallel": "type:model/parallel/path",
+			"other":    "type:model/other/path",
+		},
+		Log: testutil.Logger{},
 	}
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
 
-	newMessage := &telemetry.Telemetry{}
-	err = proto.Unmarshal(data, newMessage)
-	if err != nil {
-		panic(err)
-	}
-	return newMessage
-}
+	addr := plugin.listener.Addr().String()
 
-func mockTelemetryMessage() *telemetry.Telemetry {
-	return &telemetry.Telemetry{
+	// Setup the root message
+	msg := &telemetry.Telemetry{
 		MsgTimestamp: 1543236572000,
 		EncodingPath: "type:model/some/path",
 		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
@@ -1036,176 +116,143 @@ func mockTelemetryMessage() *telemetry.Telemetry {
 			},
 		},
 	}
-}
 
-func TestGRPCDialoutMicroburst(t *testing.T) {
-	c := &CiscoTelemetryMDT{
-		Log:            testutil.Logger{},
-		Transport:      "grpc",
-		ServiceAddress: "127.0.0.1:0",
-		Aliases: map[string]string{
-			"some":     "microburst",
-			"parallel": "type:model/parallel/path",
-			"other":    "type:model/other/path",
-		},
+	// Mimic a first device
+	c1 := &client{
+		addr:      addr,
+		transport: "tcp",
 	}
-	acc := &testutil.Accumulator{}
-	err := c.Start(acc)
+	require.NoError(t, c1.connect(t.Context()))
+	defer c1.close()
+	data, err := proto.Marshal(msg)
 	require.NoError(t, err)
+	require.NoError(t, c1.send(t.Context(), data))
 
-	tel := mockTelemetryMicroburstMessage()
-	data, err := proto.Marshal(tel)
+	// Mimic a second device
+	conn, err := net.Dial("tcp", addr)
 	require.NoError(t, err)
+	defer conn.Close()
 
-	c.handleTelemetry(data)
-	require.Empty(t, acc.Errors)
-	tags := map[string]string{
-		"microburst":   "microburst",
-		"path":         "microburst",
-		"source":       "n9k-eor-tm4",
-		"subscription": "1",
-	}
-	fields := map[string]interface{}{
-		"duration":      uint64(1200),
-		"endDepth":      int64(0),
-		"interfaceName": "Eth0/0/0",
-		"peak":          int64(500),
-		"queue":         "queue-255",
-		"queueType":     "unicast",
-		"threshold":     int64(0),
-		"ts":            "2023-08-03T20:12:59.655308Z",
-	}
-	acc.AssertContainsTaggedFields(t, "microburst", fields, tags)
-}
-
-func TestTCPDialoutMultiple(t *testing.T) {
-	c := &CiscoTelemetryMDT{
-		Log:            testutil.Logger{},
-		Transport:      "tcp",
-		ServiceAddress: "127.0.0.1:0",
-		Aliases: map[string]string{
-			"some":     "type:model/some/path",
-			"parallel": "type:model/parallel/path",
-			"other":    "type:model/other/path",
-		},
-	}
-	acc := &testutil.Accumulator{}
-	err := c.Start(acc)
+	// Send a valid message
+	msg.EncodingPath = "type:model/parallel/path"
+	data, err = proto.Marshal(msg)
 	require.NoError(t, err)
-
-	tel := mockTelemetryMessage()
-
-	hdr := struct {
-		MsgType       uint16
-		MsgEncap      uint16
-		MsgHdrVersion uint16
-		MsgFlags      uint16
-		MsgLen        uint32
-	}{}
-
-	addr := c.listener.Addr()
-	conn, err := net.Dial(addr.Network(), addr.String())
+	_, err = conn.Write(createTCPHeader(0, 0, 0, 0, uint32(len(data))))
 	require.NoError(t, err)
-
-	data, err := proto.Marshal(tel)
-	require.NoError(t, err)
-	hdr.MsgLen = uint32(len(data))
-	require.NoError(t, binary.Write(conn, binary.BigEndian, hdr))
 	_, err = conn.Write(data)
 	require.NoError(t, err)
 
-	conn2, err := net.Dial(addr.Network(), addr.String())
-	require.NoError(t, err)
-
-	tel.EncodingPath = "type:model/parallel/path"
-	data, err = proto.Marshal(tel)
-	require.NoError(t, err)
-	hdr.MsgLen = uint32(len(data))
-	require.NoError(t, binary.Write(conn2, binary.BigEndian, hdr))
-	_, err = conn2.Write(data)
-	require.NoError(t, err)
-	_, err = conn2.Write([]byte{0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0})
-	require.NoError(t, err)
-	_, err = conn2.Read([]byte{0})
-	require.True(t, err == nil || errors.Is(err, io.EOF))
-	require.NoError(t, conn2.Close())
-
-	tel.EncodingPath = "type:model/other/path"
-	data, err = proto.Marshal(tel)
-	require.NoError(t, err)
-	hdr.MsgLen = uint32(len(data))
-	require.NoError(t, binary.Write(conn, binary.BigEndian, hdr))
-	_, err = conn.Write(data)
-	require.NoError(t, err)
-	_, err = conn.Write([]byte{0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0})
+	// Send a header with invalid flags, the server should close the connection
+	_, err = conn.Write(createTCPHeader(0, 0, 0, 257, 0))
 	require.NoError(t, err)
 	_, err = conn.Read([]byte{0})
-	require.True(t, err == nil || errors.Is(err, io.EOF))
-	c.Stop()
-	require.NoError(t, conn.Close())
+	require.ErrorIs(t, err, io.EOF)
 
-	// We use the invalid dialout flags to let the server close the connection
-	require.Equal(t, []error{errors.New("invalid dialout flags: 257"), errors.New("invalid dialout flags: 257")}, acc.Errors)
+	// Make the first device send some more data to ensure the previous error
+	// did not influence the other connection
+	msg.EncodingPath = "type:model/other/path"
+	data, err = proto.Marshal(msg)
+	require.NoError(t, err)
+	require.NoError(t, c1.send(t.Context(), data))
 
-	tags := map[string]string{
-		"path":         "type:model/some/path",
-		"name":         "str",
-		"source":       "hostname",
-		"subscription": "subscription",
+	// Check that we get an error message for the invalid header send
+	require.Eventually(t, func() bool {
+		acc.Lock()
+		defer acc.Unlock()
+		return len(acc.Errors) > 0
+	}, 3*time.Second, 100*time.Millisecond)
+
+	acc.Lock()
+	errs := make([]error, 0, len(acc.Errors))
+	errs = append(errs, acc.Errors...)
+	acc.Unlock()
+	require.Len(t, errs, 1)
+	require.ErrorContains(t, errs[0], "invalid dialout flags: 257")
+
+	// Check the metrics
+	expected := []telegraf.Metric{
+		metric.New(
+			"some",
+			map[string]string{
+				"path":         "type:model/some/path",
+				"name":         "str",
+				"source":       "hostname",
+				"subscription": "subscription",
+			},
+			map[string]interface{}{"value": int64(-1)},
+			time.Unix(0, 1543236572000000000),
+		),
+		metric.New(
+			"parallel",
+			map[string]string{
+				"path":         "type:model/parallel/path",
+				"name":         "str",
+				"source":       "hostname",
+				"subscription": "subscription",
+			},
+			map[string]interface{}{"value": int64(-1)},
+			time.Unix(0, 1543236572000000000),
+		),
+		metric.New(
+			"other",
+			map[string]string{
+				"path":         "type:model/other/path",
+				"name":         "str",
+				"source":       "hostname",
+				"subscription": "subscription",
+			},
+			map[string]interface{}{"value": int64(-1)},
+			time.Unix(0, 1543236572000000000),
+		),
 	}
-	fields := map[string]interface{}{"value": int64(-1)}
-	acc.AssertContainsTaggedFields(t, "some", fields, tags)
 
-	tags = map[string]string{
-		"path":         "type:model/parallel/path",
-		"name":         "str",
-		"source":       "hostname",
-		"subscription": "subscription",
-	}
-	fields = map[string]interface{}{"value": int64(-1)}
-	acc.AssertContainsTaggedFields(t, "parallel", fields, tags)
+	// Wait for the metrics to arrive
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= uint64(len(expected))
+	}, 3*time.Second, 100*time.Millisecond)
 
-	tags = map[string]string{
-		"path":         "type:model/other/path",
-		"name":         "str",
-		"source":       "hostname",
-		"subscription": "subscription",
-	}
-	fields = map[string]interface{}{"value": int64(-1)}
-	acc.AssertContainsTaggedFields(t, "other", fields, tags)
+	// Check the metric nevertheless as we might get some metrics despite errors.
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
 }
 
 func TestGRPCDialoutError(t *testing.T) {
-	c := &CiscoTelemetryMDT{
-		Log:            testutil.Logger{},
+	// Setup plugin and start
+	plugin := &CiscoTelemetryMDT{
 		Transport:      "grpc",
 		ServiceAddress: "127.0.0.1:0",
+		Log:            testutil.Logger{},
 	}
-	acc := &testutil.Accumulator{}
-	err := c.Start(acc)
-	require.NoError(t, err)
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
 
-	addr := c.listener.Addr()
-	conn, err := grpc.NewClient(addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
-	require.NoError(t, err)
-	client := mdtdialout.NewGRPCMdtDialoutClient(conn)
-	stream, err := client.MdtDialout(t.Context())
-	require.NoError(t, err)
+	addr := plugin.listener.Addr().String()
 
-	args := &mdtdialout.MdtDialoutArgs{Errors: "foobar"}
-	require.NoError(t, stream.Send(args))
+	// Create a client and send an error message
+	c := &client{
+		addr:      addr,
+		transport: plugin.Transport,
+	}
+	require.NoError(t, c.connect(t.Context()))
+	defer c.close()
+	require.NoError(t, c.sendGRPC(&mdtdialout.MdtDialoutArgs{Errors: "foobar"}))
 
-	// Wait for the server to close
-	_, err = stream.Recv()
-	require.True(t, err == nil || errors.Is(err, io.EOF))
-	c.Stop()
-
-	require.Equal(t, []error{errors.New("error during GRPC dialout: foobar")}, acc.Errors)
+	// Wait for the error message to appear
+	require.Eventually(t, func() bool {
+		acc.Lock()
+		defer acc.Unlock()
+		return len(acc.Errors) > 0
+	}, 3*time.Second, 100*time.Millisecond)
+	acc.Lock()
+	defer acc.Unlock()
+	require.Len(t, acc.Errors, 1)
+	require.ErrorContains(t, acc.Errors[0], "error during GRPC dialout: foobar")
 }
 
 func TestGRPCDialoutMultiple(t *testing.T) {
-	c := &CiscoTelemetryMDT{
-		Log:            testutil.Logger{},
+	// Setup plugin and start
+	plugin := &CiscoTelemetryMDT{
 		Transport:      "grpc",
 		ServiceAddress: "127.0.0.1:0",
 		Aliases: map[string]string{
@@ -1213,128 +260,16 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 			"parallel": "type:model/parallel/path",
 			"other":    "type:model/other/path",
 		},
+		Log: testutil.Logger{},
 	}
-	acc := &testutil.Accumulator{}
-	err := c.Start(acc)
-	require.NoError(t, err)
-	tel := mockTelemetryMessage()
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
 
-	addr := c.listener.Addr()
-	conn, err := grpc.NewClient(addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
-	require.NoError(t, err)
-	require.True(t, conn.WaitForStateChange(t.Context(), connectivity.Connecting))
-	client := mdtdialout.NewGRPCMdtDialoutClient(conn)
-	stream, err := client.MdtDialout(t.Context())
-	require.NoError(t, err)
+	addr := plugin.listener.Addr().String()
 
-	data, err := proto.Marshal(tel)
-	require.NoError(t, err)
-	args := &mdtdialout.MdtDialoutArgs{Data: data, ReqId: 456}
-	require.NoError(t, stream.Send(args))
-
-	conn2, err := grpc.NewClient(addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
-	require.NoError(t, err)
-	require.True(t, conn.WaitForStateChange(t.Context(), connectivity.Connecting))
-	client2 := mdtdialout.NewGRPCMdtDialoutClient(conn2)
-	stream2, err := client2.MdtDialout(t.Context())
-	require.NoError(t, err)
-
-	tel.EncodingPath = "type:model/parallel/path"
-	data, err = proto.Marshal(tel)
-	require.NoError(t, err)
-	args = &mdtdialout.MdtDialoutArgs{Data: data}
-	require.NoError(t, stream2.Send(args))
-	require.NoError(t, stream2.Send(&mdtdialout.MdtDialoutArgs{Errors: "testclose"}))
-	_, err = stream2.Recv()
-	require.True(t, err == nil || errors.Is(err, io.EOF))
-	require.NoError(t, conn2.Close())
-
-	tel.EncodingPath = "type:model/other/path"
-	data, err = proto.Marshal(tel)
-	require.NoError(t, err)
-	args = &mdtdialout.MdtDialoutArgs{Data: data}
-	require.NoError(t, stream.Send(args))
-	require.NoError(t, stream.Send(&mdtdialout.MdtDialoutArgs{Errors: "testclose"}))
-	_, err = stream.Recv()
-	require.True(t, err == nil || errors.Is(err, io.EOF))
-
-	c.Stop()
-	require.NoError(t, conn.Close())
-
-	require.Equal(t, []error{errors.New("error during GRPC dialout: testclose"), errors.New("error during GRPC dialout: testclose")}, acc.Errors)
-
-	tags := map[string]string{
-		"path":         "type:model/some/path",
-		"name":         "str",
-		"source":       "hostname",
-		"subscription": "subscription",
-	}
-	fields := map[string]interface{}{"value": int64(-1)}
-	acc.AssertContainsTaggedFields(t, "some", fields, tags)
-
-	tags = map[string]string{
-		"path":         "type:model/parallel/path",
-		"name":         "str",
-		"source":       "hostname",
-		"subscription": "subscription",
-	}
-	fields = map[string]interface{}{"value": int64(-1)}
-	acc.AssertContainsTaggedFields(t, "parallel", fields, tags)
-
-	tags = map[string]string{
-		"path":         "type:model/other/path",
-		"name":         "str",
-		"source":       "hostname",
-		"subscription": "subscription",
-	}
-	fields = map[string]interface{}{"value": int64(-1)}
-	acc.AssertContainsTaggedFields(t, "other", fields, tags)
-}
-
-func TestGRPCDialoutKeepalive(t *testing.T) {
-	c := &CiscoTelemetryMDT{
-		Log:            testutil.Logger{},
-		Transport:      "grpc",
-		ServiceAddress: "127.0.0.1:0",
-		EnforcementPolicy: grpcEnforcementPolicy{
-			PermitKeepaliveWithoutCalls: true,
-			KeepaliveMinTime:            0,
-		},
-	}
-	acc := &testutil.Accumulator{}
-	err := c.Start(acc)
-	require.NoError(t, err)
-
-	addr := c.listener.Addr()
-	conn, err := grpc.NewClient(addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
-	require.NoError(t, err)
-	client := mdtdialout.NewGRPCMdtDialoutClient(conn)
-	stream, err := client.MdtDialout(t.Context())
-	require.NoError(t, err)
-
-	tel := mockTelemetryMessage()
-	data, err := proto.Marshal(tel)
-	require.NoError(t, err)
-	args := &mdtdialout.MdtDialoutArgs{Data: data, ReqId: 456}
-	require.NoError(t, stream.Send(args))
-
-	c.Stop()
-	require.NoError(t, conn.Close())
-}
-
-func TestSourceFieldRewrite(t *testing.T) {
-	c := &CiscoTelemetryMDT{
-		Log:       testutil.Logger{},
-		Transport: "dummy",
-		Aliases:   map[string]string{"alias": "type:model/some/path"},
-	}
-	c.SourceFieldName = "mdt_source"
-	acc := &testutil.Accumulator{}
-	err := c.Start(acc)
-	// error is expected since we are passing in dummy transport
-	require.Error(t, err)
-
-	tel := &telemetry.Telemetry{
+	// Setup the root message
+	msg := &telemetry.Telemetry{
 		MsgTimestamp: 1543236572000,
 		EncodingPath: "type:model/some/path",
 		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
@@ -1346,7 +281,7 @@ func TestSourceFieldRewrite(t *testing.T) {
 						Name: "keys",
 						Fields: []*telemetry.TelemetryField{
 							{
-								Name:        "source",
+								Name:        "name",
 								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "str"},
 							},
 						},
@@ -1355,8 +290,8 @@ func TestSourceFieldRewrite(t *testing.T) {
 						Name: "content",
 						Fields: []*telemetry.TelemetryField{
 							{
-								Name:        "bool",
-								ValueByType: &telemetry.TelemetryField_BoolValue{BoolValue: false},
+								Name:        "value",
+								ValueByType: &telemetry.TelemetryField_Sint64Value{Sint64Value: -1},
 							},
 						},
 					},
@@ -1364,38 +299,134 @@ func TestSourceFieldRewrite(t *testing.T) {
 			},
 		},
 	}
-	data, err := proto.Marshal(tel)
+
+	// Mimic a first device
+	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err)
+	client := mdtdialout.NewGRPCMdtDialoutClient(conn)
+	stream, err := client.MdtDialout(t.Context())
 	require.NoError(t, err)
 
-	c.handleTelemetry(data)
-	require.Empty(t, acc.Errors)
+	// Send a valid message for the first device
+	data, err := proto.Marshal(msg)
+	require.NoError(t, err)
+	require.NoError(t, stream.Send(&mdtdialout.MdtDialoutArgs{Data: data, ReqId: 456}))
 
-	tags := map[string]string{
-		"path":         "type:model/some/path",
-		"mdt_source":   "str",
-		"source":       "hostname",
-		"subscription": "subscription",
+	// Mimic a second device
+	conn2, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err)
+	client2 := mdtdialout.NewGRPCMdtDialoutClient(conn2)
+	stream2, err := client2.MdtDialout(t.Context())
+	require.NoError(t, err)
+
+	// Send a valid message for the second device
+	msg.EncodingPath = "type:model/parallel/path"
+	data, err = proto.Marshal(msg)
+	require.NoError(t, err)
+	require.NoError(t, stream2.Send(&mdtdialout.MdtDialoutArgs{Data: data}))
+
+	// Send an error message for the second device
+	require.NoError(t, stream2.Send(&mdtdialout.MdtDialoutArgs{Errors: "testclose"}))
+	_, err = stream2.Recv()
+	require.ErrorIs(t, err, io.EOF)
+	require.NoError(t, conn2.Close())
+
+	// Send another valid message for the first device
+	msg.EncodingPath = "type:model/other/path"
+	data, err = proto.Marshal(msg)
+	require.NoError(t, err)
+	require.NoError(t, stream.Send(&mdtdialout.MdtDialoutArgs{Data: data}))
+
+	// Send an error message for the first device
+	require.NoError(t, stream.Send(&mdtdialout.MdtDialoutArgs{Errors: "testclose"}))
+	_, err = stream.Recv()
+	require.ErrorIs(t, err, io.EOF)
+
+	// Wait for the errors to arrive
+	require.Eventually(t, func() bool {
+		acc.Lock()
+		defer acc.Unlock()
+		return len(acc.Errors) > 1
+	}, 3*time.Second, 100*time.Millisecond)
+
+	// Check the result
+	acc.Lock()
+	errs := make([]error, 0, len(acc.Errors))
+	errs = append(errs, acc.Errors...)
+	acc.Unlock()
+	require.Len(t, errs, 2)
+	require.ErrorContains(t, errs[0], "error during GRPC dialout: testclose")
+	require.ErrorContains(t, errs[1], "error during GRPC dialout: testclose")
+
+	// Check the metrics
+	expected := []telegraf.Metric{
+		metric.New(
+			"some",
+			map[string]string{
+				"path":         "type:model/some/path",
+				"name":         "str",
+				"source":       "hostname",
+				"subscription": "subscription",
+			},
+			map[string]interface{}{"value": int64(-1)},
+			time.Unix(0, 1543236572000000000),
+		),
+		metric.New(
+			"parallel",
+			map[string]string{
+				"path":         "type:model/parallel/path",
+				"name":         "str",
+				"source":       "hostname",
+				"subscription": "subscription",
+			},
+			map[string]interface{}{"value": int64(-1)},
+			time.Unix(0, 1543236572000000000),
+		),
+		metric.New(
+			"other",
+			map[string]string{
+				"path":         "type:model/other/path",
+				"name":         "str",
+				"source":       "hostname",
+				"subscription": "subscription",
+			},
+			map[string]interface{}{"value": int64(-1)},
+			time.Unix(0, 1543236572000000000),
+		),
 	}
-	fields := map[string]interface{}{"bool": false}
-	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
+	// Wait for the metrics to arrive
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= uint64(len(expected))
+	}, 3*time.Second, 100*time.Millisecond)
+
+	// Check the metric nevertheless as we might get some metrics despite errors.
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
 }
 
-func TestHandleNXDMEEventListWithDn(t *testing.T) {
-	c := &CiscoTelemetryMDT{
-		Log:       testutil.Logger{},
-		Transport: "dummy",
-		Aliases:   map[string]string{"dme": "sys/intf/phys-[eth1/11]"},
+func TestGRPCDialoutKeepalive(t *testing.T) {
+	// Setup plugin and start
+	plugin := &CiscoTelemetryMDT{
+		Transport:      "grpc",
+		ServiceAddress: "127.0.0.1:0",
+		EnforcementPolicy: grpcEnforcementPolicy{
+			PermitKeepaliveWithoutCalls: true,
+			KeepaliveMinTime:            0,
+		},
+		Log: testutil.Logger{},
 	}
-	acc := &testutil.Accumulator{}
-	err := c.Start(acc)
-	// error is expected since we are passing in dummy transport
-	require.Error(t, err)
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
 
-	tel := &telemetry.Telemetry{
-		MsgTimestamp: 1769120146205,
-		EncodingPath: "EVENT-LIST",
-		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "NX-PGBL-GX2"},
-		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "1"},
+	addr := plugin.listener.Addr().String()
+
+	// Setup the root message
+	msg := &telemetry.Telemetry{
+		MsgTimestamp: 1543236572000,
+		EncodingPath: "type:model/some/path",
+		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
+		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
 		DataGpbkv: []*telemetry.TelemetryField{
 			{
 				Fields: []*telemetry.TelemetryField{
@@ -1403,8 +434,8 @@ func TestHandleNXDMEEventListWithDn(t *testing.T) {
 						Name: "keys",
 						Fields: []*telemetry.TelemetryField{
 							{
-								Name:        "EVENT-LIST",
-								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "EVENT-LIST"},
+								Name:        "name",
+								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "str"},
 							},
 						},
 					},
@@ -1412,102 +443,8 @@ func TestHandleNXDMEEventListWithDn(t *testing.T) {
 						Name: "content",
 						Fields: []*telemetry.TelemetryField{
 							{
-								Fields: []*telemetry.TelemetryField{
-									{
-										Name: "children",
-										Fields: []*telemetry.TelemetryField{
-											{
-												Fields: []*telemetry.TelemetryField{
-													{
-														Name: "imdata",
-														Fields: []*telemetry.TelemetryField{
-															{
-																Fields: []*telemetry.TelemetryField{
-																	{
-																		Name: "ethpmPhysIf",
-																		Fields: []*telemetry.TelemetryField{
-																			{
-																				Fields: []*telemetry.TelemetryField{
-																					{
-																						Name: "attributes",
-																						Fields: []*telemetry.TelemetryField{
-																							{
-																								Fields: []*telemetry.TelemetryField{
-																									{
-																										Name: "childAction",
-																										ValueByType: &telemetry.TelemetryField_StringValue{
-																											StringValue: "",
-																										},
-																									},
-																									{
-																										Name: "dn",
-																										ValueByType: &telemetry.TelemetryField_StringValue{
-																											StringValue: "sys/intf/phys-[eth1/11]/phys",
-																										},
-																									},
-																									{
-																										Name: "lastLinkStChg",
-																										ValueByType: &telemetry.TelemetryField_StringValue{
-																											StringValue: "2026-01-22T14:15:46.199-08:00",
-																										},
-																									},
-																									{
-																										Name: "operBitset",
-																										ValueByType: &telemetry.TelemetryField_StringValue{
-																											StringValue: "3-4",
-																										},
-																									},
-																									{
-																										Name: "operSt",
-																										ValueByType: &telemetry.TelemetryField_StringValue{
-																											StringValue: "up",
-																										},
-																									},
-																									{
-																										Name: "operStQual",
-																										ValueByType: &telemetry.TelemetryField_StringValue{
-																											StringValue: "none",
-																										},
-																									},
-																									{
-																										Name: "resetCtr",
-																										ValueByType: &telemetry.TelemetryField_Sint64Value{
-																											Sint64Value: 2,
-																										},
-																									},
-																									{
-																										Name: "rn",
-																										ValueByType: &telemetry.TelemetryField_StringValue{
-																											StringValue: "",
-																										},
-																									},
-																									{
-																										Name: "status",
-																										ValueByType: &telemetry.TelemetryField_StringValue{
-																											StringValue: "modified",
-																										},
-																									},
-																								},
-																							},
-																						},
-																					},
-																				},
-																			},
-																		},
-																	},
-																},
-															},
-														},
-													},
-													{
-														Name:        "subscriptionId",
-														ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 18379759394883829764},
-													},
-												},
-											},
-										},
-									},
-								},
+								Name:        "value",
+								ValueByType: &telemetry.TelemetryField_Sint64Value{Sint64Value: -1},
 							},
 						},
 					},
@@ -1515,29 +452,279 @@ func TestHandleNXDMEEventListWithDn(t *testing.T) {
 			},
 		},
 	}
-	data, err := proto.Marshal(tel)
+
+	// Send a message
+	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err)
+	defer conn.Close()
+
+	client := mdtdialout.NewGRPCMdtDialoutClient(conn)
+	stream, err := client.MdtDialout(t.Context())
 	require.NoError(t, err)
 
-	c.handleTelemetry(data)
-	require.Empty(t, acc.Errors)
+	data, err := proto.Marshal(msg)
+	require.NoError(t, err)
 
-	// Verify that the metric was created with the correct measurement name and fields
-	require.Len(t, acc.Metrics, 1, "Expected exactly 1 metric")
+	require.NoError(t, stream.Send(&mdtdialout.MdtDialoutArgs{Data: data, ReqId: 456}))
+}
 
-	tags := map[string]string{
-		"path":         "EVENT-LIST",
-		"EVENT_LIST":   "EVENT-LIST",
-		"source":       "NX-PGBL-GX2",
-		"subscription": "1",
+func TestCases(t *testing.T) {
+	// Get all directories in testdata
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err)
+
+	// Register the plugin
+	inputs.Add("cisco_telemetry_mdt", func() telegraf.Input {
+		return &CiscoTelemetryMDT{
+			Transport:       "grpc",
+			ServiceAddress:  "127.0.0.1:57000",
+			SourceFieldName: "mdt_source",
+		}
+	})
+
+	// Prepare the influx parser for expectations
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
+		}
+		testcasePath := filepath.Join("testcases", f.Name())
+		configFilename := filepath.Join(testcasePath, "telegraf.conf")
+		expectedFilename := filepath.Join(testcasePath, "expected.out")
+		expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
+
+		t.Run(f.Name(), func(t *testing.T) {
+			// Read the input packets
+			packets, err := readInputData(testcasePath)
+			require.NoError(t, err)
+
+			// Read the expected output if any
+			var expected []telegraf.Metric
+			if _, err := os.Stat(expectedFilename); err == nil {
+				var err error
+				expected, err = testutil.ParseMetricsFromFile(expectedFilename, parser)
+				require.NoError(t, err)
+			}
+
+			// Read the expected output if any
+			var expectedErrors []string
+			if _, err := os.Stat(expectedErrorFilename); err == nil {
+				var err error
+				expectedErrors, err = testutil.ParseLinesFromFile(expectedErrorFilename)
+				require.NoError(t, err)
+				require.NotEmpty(t, expectedErrors)
+			}
+
+			// Configure and initialize the plugin
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Inputs, 1)
+
+			plugin := cfg.Inputs[0].Input.(*CiscoTelemetryMDT)
+			plugin.ServiceAddress = "127.0.0.1:0"
+
+			// Start the plugin
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
+
+			// Send all data
+			c := &client{
+				transport: plugin.Transport,
+				addr:      plugin.listener.Addr().String(),
+			}
+			require.NoError(t, c.connect(t.Context()))
+			defer c.close()
+			for i, payload := range packets {
+				require.NoErrorf(t, c.send(t.Context(), payload), "sending packet %d", i)
+			}
+
+			// Wait for the errors to arrive
+			require.Eventually(t, func() bool {
+				acc.Lock()
+				defer acc.Unlock()
+				return len(acc.Errors) >= len(expectedErrors)
+			}, 3*time.Second, 100*time.Millisecond)
+
+			// Check the result
+			var actualErrorMsgs []string
+			acc.Lock()
+			if len(acc.Errors) > 0 {
+				for _, err := range acc.Errors {
+					actualErrorMsgs = append(actualErrorMsgs, err.Error())
+				}
+			}
+			acc.Unlock()
+			require.ElementsMatch(t, actualErrorMsgs, expectedErrors)
+
+			// Wait for the metrics to arrive
+			require.Eventually(t, func() bool {
+				return acc.NMetrics() >= uint64(len(expected))
+			}, 3*time.Second, 100*time.Millisecond)
+
+			// Check the metric nevertheless as we might get some metrics despite errors.
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
+		})
 	}
-	fields := map[string]interface{}{
-		"dn":            "sys/intf/phys-[eth1/11]/phys",
-		"lastLinkStChg": "2026-01-22T14:15:46.199-08:00",
-		"operBitset":    "3-4",
-		"operSt":        "up",
-		"operStQual":    "none",
-		"resetCtr":      int64(2),
-		"status":        "modified",
+}
+
+// Internal
+
+func readInputData(path string) ([][]byte, error) {
+	// Read all payloads
+	files, err := filepath.Glob(filepath.Join(path, "packet*.json"))
+	if err != nil {
+		return nil, fmt.Errorf("globbing failed: %w", err)
 	}
-	acc.AssertContainsTaggedFields(t, "EVENT-LIST", fields, tags)
+	sort.Strings(files)
+	data := make([][]byte, 0, len(files))
+	for _, fn := range files {
+		buf, err := os.ReadFile(fn)
+		if err != nil {
+			return nil, fmt.Errorf("reading %q failed: %w", fn, err)
+		}
+
+		var msg telemetry.Telemetry
+		if err := protojson.Unmarshal(buf, &msg); err != nil {
+			return nil, fmt.Errorf("decoding packet %q failed: %w", fn, err)
+		}
+		d, err := proto.Marshal(&msg)
+		if err != nil {
+			return nil, fmt.Errorf("reencoding packet %q failed: %w", fn, err)
+		}
+		data = append(data, d)
+	}
+
+	return data, nil
+}
+
+type client struct {
+	addr      string
+	transport string
+	tlscfg    *tls.Config
+
+	conn   net.Conn
+	stream mdtdialout.GRPCMdtDialout_MdtDialoutClient
+	reqid  atomic.Int64
+}
+
+func (c *client) connect(ctx context.Context) error {
+	switch c.transport {
+	case "grpc":
+		var creds credentials.TransportCredentials
+
+		// Setup the connection credentials
+		if c.tlscfg == nil {
+			creds = insecure.NewCredentials()
+		} else {
+			creds = credentials.NewTLS(c.tlscfg)
+		}
+
+		// Connect to the server
+		opts := []grpc.DialOption{
+			grpc.WithTransportCredentials(creds),
+		}
+		conn, err := grpc.NewClient(c.addr, opts...)
+		if err != nil {
+			return fmt.Errorf("dialing server %q failed: %w", c.addr, err)
+		}
+		conn.Connect()
+
+		// Create a dial-out client
+		client := mdtdialout.NewGRPCMdtDialoutClient(conn)
+		stream, err := client.MdtDialout(ctx)
+		if err != nil {
+			return fmt.Errorf("creating dial-out stream failed: %w", err)
+		}
+		c.stream = stream
+	case "tcp":
+		conn, err := net.Dial("tcp", c.addr)
+		if err != nil {
+			return fmt.Errorf("connecting to %q failed: %w", c.addr, err)
+		}
+		c.conn = conn
+	default:
+		return fmt.Errorf("unknown transport %q", c.transport)
+	}
+
+	return nil
+}
+
+func (c *client) close() {
+	if c.conn != nil {
+		c.conn.Close()
+		c.conn = nil
+	}
+	if c.stream != nil {
+		c.stream.CloseSend()
+	}
+}
+
+func (c *client) send(ctx context.Context, payload []byte) error {
+	switch c.transport {
+	case "grpc":
+		data := &mdtdialout.MdtDialoutArgs{
+			ReqId: c.reqid.Add(1),
+			Data:  payload,
+		}
+		if err := c.sendGRPC(data); err != nil {
+			return fmt.Errorf("sending via GRPC failed: %w", err)
+		}
+	case "tcp":
+		// TCP Dialout telemetry framing header
+		var buf bytes.Buffer
+		if _, err := buf.Write(createTCPHeader(0, 0, 0, 0, uint32(len(payload)))); err != nil {
+			return fmt.Errorf("writing header failed: %w", err)
+		}
+		// Payload
+		if _, err := buf.Write(payload); err != nil {
+			return fmt.Errorf("writing payload failed: %w", err)
+		}
+
+		if err := c.sendTCP(ctx, buf.Bytes()); err != nil {
+			return fmt.Errorf("sending via TCP failed: %w", err)
+		}
+	default:
+		return fmt.Errorf("unknown transport %q", c.transport)
+	}
+
+	return nil
+}
+
+func (c *client) sendGRPC(msg *mdtdialout.MdtDialoutArgs) error {
+	if err := c.stream.Send(msg); err != nil && !errors.Is(err, io.EOF) {
+		return err
+	}
+
+	return nil
+}
+
+func createTCPHeader(mtype, encap, version, flags uint16, length uint32) []byte {
+	buf := make([]byte, 0, 12)
+	buf = binary.BigEndian.AppendUint16(buf, mtype)
+	buf = binary.BigEndian.AppendUint16(buf, encap)
+	buf = binary.BigEndian.AppendUint16(buf, version)
+	buf = binary.BigEndian.AppendUint16(buf, flags)
+	buf = binary.BigEndian.AppendUint32(buf, length)
+
+	return buf
+}
+
+func (c *client) sendTCP(ctx context.Context, data []byte) error {
+	errch := make(chan error)
+	go func() {
+		_, err := c.conn.Write(data)
+		errch <- err
+	}()
+
+	select {
+	case err := <-errch:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }

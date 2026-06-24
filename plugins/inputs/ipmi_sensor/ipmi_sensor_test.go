@@ -11,6 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -697,7 +698,7 @@ func Test_parseV2(t *testing.T) {
 				measuredAt: time.Now(),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("ipmi_sensor",
+				metric.New("ipmi_sensor",
 					map[string]string{
 						"name":        "power_supply_1",
 						"status_code": "ok",
@@ -720,7 +721,7 @@ func Test_parseV2(t *testing.T) {
 				measuredAt: time.Now(),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("ipmi_sensor",
+				metric.New("ipmi_sensor",
 					map[string]string{
 						"name":        "intrusion",
 						"status_code": "ok",
@@ -742,7 +743,7 @@ func Test_parseV2(t *testing.T) {
 				measuredAt: time.Now(),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("ipmi_sensor",
+				metric.New("ipmi_sensor",
 					map[string]string{
 						"name":        "dimm_thrm_mrgn_1",
 						"status_code": "ok",
@@ -792,7 +793,7 @@ func Test_parsePowerStatus(t *testing.T) {
 				measuredAt: time.Now(),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("ipmi_sensor",
+				metric.New("ipmi_sensor",
 					map[string]string{
 						"name":   "chassis_power_status",
 						"server": "host",
@@ -810,7 +811,7 @@ func Test_parsePowerStatus(t *testing.T) {
 				measuredAt: time.Now(),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("ipmi_sensor",
+				metric.New("ipmi_sensor",
 					map[string]string{
 						"name":   "chassis_power_status",
 						"server": "host",
@@ -843,7 +844,7 @@ Power reading state is:                   activated
 `
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric("ipmi_sensor",
+		metric.New("ipmi_sensor",
 			map[string]string{
 				"name":   "instantaneous_power_reading",
 				"server": "host",
@@ -852,7 +853,7 @@ Power reading state is:                   activated
 			map[string]interface{}{"value": float64(167)},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("ipmi_sensor",
+		metric.New("ipmi_sensor",
 			map[string]string{
 				"name":   "minimum_during_sampling_period",
 				"server": "host",
@@ -861,7 +862,7 @@ Power reading state is:                   activated
 			map[string]interface{}{"value": float64(124)},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("ipmi_sensor",
+		metric.New("ipmi_sensor",
 			map[string]string{
 				"name":   "maximum_during_sampling_period",
 				"server": "host",
@@ -870,7 +871,7 @@ Power reading state is:                   activated
 			map[string]interface{}{"value": float64(422)},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("ipmi_sensor",
+		metric.New("ipmi_sensor",
 			map[string]string{
 				"name":   "average_power_reading_over_sample_period",
 				"server": "host",

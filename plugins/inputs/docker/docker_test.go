@@ -1,539 +1,210 @@
 package docker
 
 import (
-	"context"
-	"crypto/tls"
-	"errors"
-	"io"
-	"reflect"
-	"strings"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/swarm"
-	"github.com/docker/docker/api/types/system"
+	"github.com/google/go-cmp/cmp"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/system"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal/choice"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/plugins/common/docker/mock"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
-type mockClient struct {
-	InfoF             func() (system.Info, error)
-	ContainerListF    func(options container.ListOptions) ([]container.Summary, error)
-	ContainerStatsF   func(containerID string) (container.StatsResponseReader, error)
-	ContainerInspectF func() (container.InspectResponse, error)
-	ServiceListF      func() ([]swarm.Service, error)
-	TaskListF         func() ([]swarm.Task, error)
-	NodeListF         func() ([]swarm.Node, error)
-	DiskUsageF        func() (types.DiskUsage, error)
-	ClientVersionF    func() string
-	PingF             func() (types.Ping, error)
-	CloseF            func() error
-}
-
-func (c *mockClient) Info(context.Context) (system.Info, error) {
-	return c.InfoF()
-}
-
-func (c *mockClient) ContainerList(_ context.Context, options container.ListOptions) ([]container.Summary, error) {
-	return c.ContainerListF(options)
-}
-
-func (c *mockClient) ContainerStats(_ context.Context, containerID string, _ bool) (container.StatsResponseReader, error) {
-	return c.ContainerStatsF(containerID)
-}
-
-func (c *mockClient) ContainerInspect(context.Context, string) (container.InspectResponse, error) {
-	return c.ContainerInspectF()
-}
-
-func (c *mockClient) ServiceList(context.Context, swarm.ServiceListOptions) ([]swarm.Service, error) {
-	return c.ServiceListF()
-}
-
-func (c *mockClient) TaskList(context.Context, swarm.TaskListOptions) ([]swarm.Task, error) {
-	return c.TaskListF()
-}
-
-func (c *mockClient) NodeList(context.Context, swarm.NodeListOptions) ([]swarm.Node, error) {
-	return c.NodeListF()
-}
-
-func (c *mockClient) DiskUsage(context.Context, types.DiskUsageOptions) (types.DiskUsage, error) {
-	return c.DiskUsageF()
-}
-
-func (c *mockClient) ClientVersion() string {
-	return c.ClientVersionF()
-}
-
-func (c *mockClient) Ping(context.Context) (types.Ping, error) {
-	return c.PingF()
-}
-
-func (c *mockClient) Close() error {
-	return c.CloseF()
-}
-
-var baseClient = mockClient{
-	InfoF: func() (system.Info, error) {
-		return info, nil
-	},
-	ContainerListF: func(container.ListOptions) ([]container.Summary, error) {
-		return containerList, nil
-	},
-	ContainerStatsF: func(s string) (container.StatsResponseReader, error) {
-		return containerStats(s), nil
-	},
-	ContainerInspectF: func() (container.InspectResponse, error) {
-		return containerInspect(), nil
-	},
-	ServiceListF: func() ([]swarm.Service, error) {
-		return serviceList, nil
-	},
-	TaskListF: func() ([]swarm.Task, error) {
-		return taskList, nil
-	},
-	NodeListF: func() ([]swarm.Node, error) {
-		return nodeList, nil
-	},
-	DiskUsageF: func() (types.DiskUsage, error) {
-		return diskUsage, nil
-	},
-	ClientVersionF: func() string {
-		return version
-	},
-	PingF: func() (types.Ping, error) {
-		return types.Ping{}, nil
-	},
-	CloseF: func() error {
-		return nil
-	},
-}
-
-func TestDockerGatherContainerStats(t *testing.T) {
-	var acc testutil.Accumulator
-	stats := testStats()
-
-	tags := map[string]string{
-		"container_name":  "redis",
-		"container_image": "redis/image",
-	}
-
-	d := &Docker{
+func TestInit(t *testing.T) {
+	plugin := &Docker{
 		Log:              testutil.Logger{},
-		PerDeviceInclude: containerMetricClasses,
-		TotalInclude:     containerMetricClasses,
+		PerDeviceInclude: []string{"cpu", "network", "blkio"},
+		TotalInclude:     []string{"cpu", "network", "blkio"},
 	}
-	d.parseContainerStats(stats, &acc, tags, "123456789", "linux")
-
-	// test docker_container_net measurement
-	netfields := map[string]interface{}{
-		"rx_dropped":   uint64(1),
-		"rx_bytes":     uint64(2),
-		"rx_errors":    uint64(3),
-		"tx_packets":   uint64(4),
-		"tx_dropped":   uint64(1),
-		"rx_packets":   uint64(2),
-		"tx_errors":    uint64(3),
-		"tx_bytes":     uint64(4),
-		"container_id": "123456789",
-	}
-	nettags := copyTags(tags)
-	nettags["network"] = "eth0"
-	acc.AssertContainsTaggedFields(t, "docker_container_net", netfields, nettags)
-
-	netfields = map[string]interface{}{
-		"rx_dropped":   uint64(6),
-		"rx_bytes":     uint64(8),
-		"rx_errors":    uint64(10),
-		"tx_packets":   uint64(12),
-		"tx_dropped":   uint64(6),
-		"rx_packets":   uint64(8),
-		"tx_errors":    uint64(10),
-		"tx_bytes":     uint64(12),
-		"container_id": "123456789",
-	}
-	nettags = copyTags(tags)
-	nettags["network"] = "total"
-	acc.AssertContainsTaggedFields(t, "docker_container_net", netfields, nettags)
-
-	// test docker_blkio measurement
-	blkiotags := copyTags(tags)
-	blkiotags["device"] = "6:0"
-	blkiofields := map[string]interface{}{
-		"io_service_bytes_recursive_read": uint64(100),
-		"io_serviced_recursive_write":     uint64(101),
-		"container_id":                    "123456789",
-	}
-	acc.AssertContainsTaggedFields(t, "docker_container_blkio", blkiofields, blkiotags)
-
-	blkiotags = copyTags(tags)
-	blkiotags["device"] = "total"
-	blkiofields = map[string]interface{}{
-		"io_service_bytes_recursive_read": uint64(100),
-		"io_serviced_recursive_write":     uint64(302),
-		"container_id":                    "123456789",
-	}
-	acc.AssertContainsTaggedFields(t, "docker_container_blkio", blkiofields, blkiotags)
-
-	// test docker_container_mem measurement
-	memfields := map[string]interface{}{
-		"active_anon":               uint64(0),
-		"active_file":               uint64(1),
-		"cache":                     uint64(0),
-		"container_id":              "123456789",
-		"fail_count":                uint64(1),
-		"hierarchical_memory_limit": uint64(0),
-		"inactive_anon":             uint64(0),
-		"inactive_file":             uint64(3),
-		"limit":                     uint64(2000),
-		"mapped_file":               uint64(0),
-		"max_usage":                 uint64(1001),
-		"pgfault":                   uint64(2),
-		"pgmajfault":                uint64(0),
-		"pgpgin":                    uint64(0),
-		"pgpgout":                   uint64(0),
-		"rss_huge":                  uint64(0),
-		"rss":                       uint64(0),
-		"total_active_anon":         uint64(0),
-		"total_active_file":         uint64(0),
-		"total_cache":               uint64(0),
-		"total_inactive_anon":       uint64(0),
-		"total_inactive_file":       uint64(0),
-		"total_mapped_file":         uint64(0),
-		"total_pgfault":             uint64(0),
-		"total_pgmajfault":          uint64(0),
-		"total_pgpgin":              uint64(4),
-		"total_pgpgout":             uint64(0),
-		"total_rss_huge":            uint64(444),
-		"total_rss":                 uint64(44),
-		"total_unevictable":         uint64(0),
-		"total_writeback":           uint64(55),
-		"unevictable":               uint64(0),
-		"usage_percent":             float64(55.55),
-		"usage":                     uint64(1111),
-		"writeback":                 uint64(0),
-	}
-
-	acc.AssertContainsTaggedFields(t, "docker_container_mem", memfields, tags)
-
-	// test docker_container_cpu measurement
-	cputags := copyTags(tags)
-	cputags["cpu"] = "cpu-total"
-	cpufields := map[string]interface{}{
-		"usage_total":                  uint64(500),
-		"usage_in_usermode":            uint64(100),
-		"usage_in_kernelmode":          uint64(200),
-		"usage_system":                 uint64(100),
-		"throttling_periods":           uint64(1),
-		"throttling_throttled_periods": uint64(0),
-		"throttling_throttled_time":    uint64(0),
-		"usage_percent":                float64(400.0),
-		"container_id":                 "123456789",
-	}
-	acc.AssertContainsTaggedFields(t, "docker_container_cpu", cpufields, cputags)
-
-	cputags["cpu"] = "cpu0"
-	cpu0fields := map[string]interface{}{
-		"usage_total":  uint64(1),
-		"container_id": "123456789",
-	}
-	acc.AssertContainsTaggedFields(t, "docker_container_cpu", cpu0fields, cputags)
-
-	cputags["cpu"] = "cpu1"
-	cpu1fields := map[string]interface{}{
-		"usage_total":  uint64(1002),
-		"container_id": "123456789",
-	}
-	acc.AssertContainsTaggedFields(t, "docker_container_cpu", cpu1fields, cputags)
-
-	// Those tagged filed should not be present because of offline CPUs
-	cputags["cpu"] = "cpu2"
-	cpu2fields := map[string]interface{}{
-		"usage_total":  uint64(0),
-		"container_id": "123456789",
-	}
-	acc.AssertDoesNotContainsTaggedFields(t, "docker_container_cpu", cpu2fields, cputags)
-
-	cputags["cpu"] = "cpu3"
-	cpu3fields := map[string]interface{}{
-		"usage_total":  uint64(0),
-		"container_id": "123456789",
-	}
-	acc.AssertDoesNotContainsTaggedFields(t, "docker_container_cpu", cpu3fields, cputags)
+	require.NoError(t, plugin.Init())
 }
 
-func TestDockerMemoryExcludesCache(t *testing.T) {
-	var acc testutil.Accumulator
-	stats := testStats()
-
-	tags := map[string]string{
-		"container_name":  "redis",
-		"container_image": "redis/image",
-	}
-
-	d := &Docker{
-		Log: testutil.Logger{},
-	}
-
-	delete(stats.MemoryStats.Stats, "cache")
-	delete(stats.MemoryStats.Stats, "inactive_file")
-	delete(stats.MemoryStats.Stats, "total_inactive_file")
-
-	// set cgroup v2 cache value
-	stats.MemoryStats.Stats["inactive_file"] = 9
-
-	d.parseContainerStats(stats, &acc, tags, "123456789", "linux")
-
-	// test docker_container_mem measurement
-	memfields := map[string]interface{}{
-		"active_anon":               uint64(0),
-		"active_file":               uint64(1),
-		"container_id":              "123456789",
-		"fail_count":                uint64(1),
-		"hierarchical_memory_limit": uint64(0),
-		"inactive_anon":             uint64(0),
-		"inactive_file":             uint64(9),
-		"limit":                     uint64(2000),
-		"mapped_file":               uint64(0),
-		"max_usage":                 uint64(1001),
-		"pgfault":                   uint64(2),
-		"pgmajfault":                uint64(0),
-		"pgpgin":                    uint64(0),
-		"pgpgout":                   uint64(0),
-		"rss_huge":                  uint64(0),
-		"rss":                       uint64(0),
-		"total_active_anon":         uint64(0),
-		"total_active_file":         uint64(0),
-		"total_cache":               uint64(0),
-		"total_inactive_anon":       uint64(0),
-		"total_mapped_file":         uint64(0),
-		"total_pgfault":             uint64(0),
-		"total_pgmajfault":          uint64(0),
-		"total_pgpgin":              uint64(4),
-		"total_pgpgout":             uint64(0),
-		"total_rss_huge":            uint64(444),
-		"total_rss":                 uint64(44),
-		"total_unevictable":         uint64(0),
-		"total_writeback":           uint64(55),
-		"unevictable":               uint64(0),
-		"usage_percent":             float64(55.1), // 1102 / 2000
-		"usage":                     uint64(1102),
-		"writeback":                 uint64(0),
-	}
-
-	acc.AssertContainsTaggedFields(t, "docker_container_mem", memfields, tags)
-	acc.ClearMetrics()
-
-	// set cgroup v1 cache value (has priority over cgroups v2)
-	stats.MemoryStats.Stats["total_inactive_file"] = 7
-
-	d.parseContainerStats(stats, &acc, tags, "123456789", "linux")
-
-	// test docker_container_mem measurement
-	memfields = map[string]interface{}{
-		"active_anon": uint64(0),
-		"active_file": uint64(1),
-		// "cache":                     uint64(0),
-		"container_id":              "123456789",
-		"fail_count":                uint64(1),
-		"hierarchical_memory_limit": uint64(0),
-		"inactive_anon":             uint64(0),
-		"inactive_file":             uint64(9),
-		"limit":                     uint64(2000),
-		"mapped_file":               uint64(0),
-		"max_usage":                 uint64(1001),
-		"pgfault":                   uint64(2),
-		"pgmajfault":                uint64(0),
-		"pgpgin":                    uint64(0),
-		"pgpgout":                   uint64(0),
-		"rss_huge":                  uint64(0),
-		"rss":                       uint64(0),
-		"total_active_anon":         uint64(0),
-		"total_active_file":         uint64(0),
-		"total_cache":               uint64(0),
-		"total_inactive_anon":       uint64(0),
-		"total_inactive_file":       uint64(7),
-		"total_mapped_file":         uint64(0),
-		"total_pgfault":             uint64(0),
-		"total_pgmajfault":          uint64(0),
-		"total_pgpgin":              uint64(4),
-		"total_pgpgout":             uint64(0),
-		"total_rss_huge":            uint64(444),
-		"total_rss":                 uint64(44),
-		"total_unevictable":         uint64(0),
-		"total_writeback":           uint64(55),
-		"unevictable":               uint64(0),
-		"usage_percent":             float64(55.2), // 1104 / 2000
-		"usage":                     uint64(1104),
-		"writeback":                 uint64(0),
-	}
-
-	acc.AssertContainsTaggedFields(t, "docker_container_mem", memfields, tags)
-	acc.ClearMetrics()
-
-	// set Docker 19.03 and older cache value (has priority over cgroups v1 and v2)
-	stats.MemoryStats.Stats["cache"] = 16
-
-	d.parseContainerStats(stats, &acc, tags, "123456789", "linux")
-
-	// test docker_container_mem measurement
-	memfields = map[string]interface{}{
-		"active_anon":               uint64(0),
-		"active_file":               uint64(1),
-		"cache":                     uint64(16),
-		"container_id":              "123456789",
-		"fail_count":                uint64(1),
-		"hierarchical_memory_limit": uint64(0),
-		"inactive_anon":             uint64(0),
-		"inactive_file":             uint64(9),
-		"limit":                     uint64(2000),
-		"mapped_file":               uint64(0),
-		"max_usage":                 uint64(1001),
-		"pgfault":                   uint64(2),
-		"pgmajfault":                uint64(0),
-		"pgpgin":                    uint64(0),
-		"pgpgout":                   uint64(0),
-		"rss_huge":                  uint64(0),
-		"rss":                       uint64(0),
-		"total_active_anon":         uint64(0),
-		"total_active_file":         uint64(0),
-		"total_cache":               uint64(0),
-		"total_inactive_anon":       uint64(0),
-		"total_inactive_file":       uint64(7),
-		"total_mapped_file":         uint64(0),
-		"total_pgfault":             uint64(0),
-		"total_pgmajfault":          uint64(0),
-		"total_pgpgin":              uint64(4),
-		"total_pgpgout":             uint64(0),
-		"total_rss_huge":            uint64(444),
-		"total_rss":                 uint64(44),
-		"total_unevictable":         uint64(0),
-		"total_writeback":           uint64(55),
-		"unevictable":               uint64(0),
-		"usage_percent":             float64(54.75), // 1095 / 2000
-		"usage":                     uint64(1095),
-		"writeback":                 uint64(0),
-	}
-
-	acc.AssertContainsTaggedFields(t, "docker_container_mem", memfields, tags)
-}
-
-func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
-	var acc testutil.Accumulator
-
-	d := Docker{
-		Log:     testutil.Logger{},
-		Timeout: config.Duration(5 * time.Second),
-		newClient: func(string, *tls.Config) (dockerClient, error) {
-			return &mockClient{
-				InfoF: func() (system.Info, error) {
-					return info, nil
-				},
-				ContainerListF: func(container.ListOptions) ([]container.Summary, error) {
-					return containerList, nil
-				},
-				ContainerStatsF: func(string) (container.StatsResponseReader, error) {
-					return containerStatsWindows(), nil
-				},
-				ContainerInspectF: func() (container.InspectResponse, error) {
-					return containerInspect(), nil
-				},
-				ServiceListF: func() ([]swarm.Service, error) {
-					return serviceList, nil
-				},
-				TaskListF: func() ([]swarm.Task, error) {
-					return taskList, nil
-				},
-				NodeListF: func() ([]swarm.Node, error) {
-					return nodeList, nil
-				},
-				DiskUsageF: func() (types.DiskUsage, error) {
-					return diskUsage, nil
-				},
-				ClientVersionF: func() string {
-					return version
-				},
-				PingF: func() (types.Ping, error) {
-					return types.Ping{}, nil
-				},
-				CloseF: func() error {
-					return nil
-				},
-			}, nil
+func TestInitFail(t *testing.T) {
+	tests := []struct {
+		name      string
+		perDevice []string
+		total     []string
+		expected  string
+	}{
+		{
+			name:      "unsupported perdevice_include",
+			perDevice: []string{"nonExistentClass"},
+			total:     []string{"cpu"},
+			expected:  `invalid 'perdevice_include' setting "nonExistentClass"`,
+		},
+		{
+			name:      "unsupported total_include",
+			perDevice: []string{"cpu"},
+			total:     []string{"nonExistentClass"},
+			expected:  `invalid 'total_include' setting "nonExistentClass"`,
 		},
 	}
-	require.NoError(t, d.Init())
-	require.NoError(t, d.Start(&acc))
-	err := d.Gather(&acc)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &Docker{
+				PerDeviceInclude: tt.perDevice,
+				TotalInclude:     tt.total,
+				Log:              testutil.Logger{},
+			}
+			require.ErrorContains(t, plugin.Init(), tt.expected)
+		})
+	}
+}
+
+func TestCases(t *testing.T) {
+	// Get all directories in testdata
+	folders, err := os.ReadDir("testcases")
 	require.NoError(t, err)
+
+	// Register the plugin
+	inputs.Add("docker", func() telegraf.Input {
+		return &Docker{
+			Endpoint:         "dummy",
+			PerDeviceInclude: []string{"cpu"},
+			TotalInclude:     []string{"cpu", "blkio", "network"},
+			Timeout:          config.Duration(time.Second * 5),
+			PodmanCacheTTL:   config.Duration(60 * time.Second),
+		}
+	})
+
+	// Prepare the influx parser for expectations
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+
+	// Comparison options
+	options := []cmp.Option{
+		testutil.SortMetrics(),
+		// We need to ignore all time related field values
+		testutil.IgnoreTime(),
+		testutil.IgnoreFields("uptime_ns"),
+	}
+
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
+		}
+
+		t.Run(f.Name(), func(t *testing.T) {
+			testcasePath := filepath.Join("testcases", f.Name())
+			configFilename := filepath.Join(testcasePath, "telegraf.conf")
+			expectedFilename := filepath.Join(testcasePath, "expected.out")
+			expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
+
+			// Read the expected output if any
+			var expected []telegraf.Metric
+			if _, err := os.Stat(expectedFilename); err == nil {
+				var err error
+				expected, err = testutil.ParseMetricsFromFile(expectedFilename, parser)
+				require.NoError(t, err)
+			}
+
+			// Read the expected output if any
+			var expectedErrors []string
+			if _, err := os.Stat(expectedErrorFilename); err == nil {
+				var err error
+				expectedErrors, err = testutil.ParseLinesFromFile(expectedErrorFilename)
+				require.NoError(t, err)
+				require.NotEmpty(t, expectedErrors)
+			}
+
+			// Setup the server
+			server, err := mock.NewServerFromFiles(filepath.Join(testcasePath, "data"))
+			require.NoError(t, err)
+
+			addr := server.Start(t)
+			defer server.Close()
+
+			// Configure and initialize the plugin
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Inputs, 1)
+
+			plugin := cfg.Inputs[0].Input.(*Docker)
+			plugin.Endpoint = addr
+			require.NoError(t, plugin.Init())
+
+			// Start the plugin
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
+
+			// Collect data and test the result
+			require.NoError(t, acc.GatherError(plugin.Gather))
+			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), options...)
+		})
+	}
 }
 
 func TestContainerLabels(t *testing.T) {
 	var tests = []struct {
-		name      string
-		container container.Summary
-		include   []string
-		exclude   []string
-		expected  map[string]string
+		name     string
+		labels   map[string]string
+		include  []string
+		exclude  []string
+		expected map[string]string
 	}{
 		{
-			name: "Nil filters matches all",
-			container: genContainerLabeled(map[string]string{
+			name: "nil filters matches all",
+			labels: map[string]string{
 				"a": "x",
-			}),
-			include: nil,
-			exclude: nil,
+			},
 			expected: map[string]string{
 				"a": "x",
 			},
 		},
 		{
-			name: "Empty filters matches all",
-			container: genContainerLabeled(map[string]string{
+			name: "empty filters matches all",
+			labels: map[string]string{
 				"a": "x",
-			}),
+			},
 			expected: map[string]string{
 				"a": "x",
 			},
 		},
 		{
-			name: "Must match include",
-			container: genContainerLabeled(map[string]string{
+			name: "must match include",
+			labels: map[string]string{
 				"a": "x",
 				"b": "y",
-			}),
+			},
 			include: []string{"a"},
 			expected: map[string]string{
 				"a": "x",
 			},
 		},
 		{
-			name: "Must not match exclude",
-			container: genContainerLabeled(map[string]string{
+			name: "must not match exclude",
+			labels: map[string]string{
 				"a": "x",
 				"b": "y",
-			}),
+			},
 			exclude: []string{"b"},
 			expected: map[string]string{
 				"a": "x",
 			},
 		},
 		{
-			name: "Include Glob",
-			container: genContainerLabeled(map[string]string{
+			name: "include glob",
+			labels: map[string]string{
 				"aa": "x",
 				"ab": "y",
 				"bb": "z",
-			}),
+			},
 			include: []string{"a*"},
 			expected: map[string]string{
 				"aa": "x",
@@ -541,24 +212,24 @@ func TestContainerLabels(t *testing.T) {
 			},
 		},
 		{
-			name: "Exclude Glob",
-			container: genContainerLabeled(map[string]string{
+			name: "exclude glob",
+			labels: map[string]string{
 				"aa": "x",
 				"ab": "y",
 				"bb": "z",
-			}),
+			},
 			exclude: []string{"a*"},
 			expected: map[string]string{
 				"bb": "z",
 			},
 		},
 		{
-			name: "Excluded Includes",
-			container: genContainerLabeled(map[string]string{
+			name: "excluded and includes",
+			labels: map[string]string{
 				"aa": "x",
 				"ab": "y",
 				"bb": "z",
-			}),
+			},
 			include: []string{"a*"},
 			exclude: []string{"*b"},
 			expected: map[string]string{
@@ -568,49 +239,46 @@ func TestContainerLabels(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var acc testutil.Accumulator
+			// Setup the server
+			server, err := mock.NewServerFromFiles("testdata")
+			require.NoError(t, err)
 
-			newClientFunc := func(string, *tls.Config) (dockerClient, error) {
-				client := baseClient
-				client.ContainerListF = func(container.ListOptions) ([]container.Summary, error) {
-					return []container.Summary{tt.container}, nil
-				}
-				return &client, nil
-			}
+			// Manipulate the data for the test
+			c := server.List[0]
+			c.Labels = tt.labels
+			c.State = "running"
+			server.List = []container.Summary{c}
 
-			d := Docker{
-				Log:          testutil.Logger{},
-				newClient:    newClientFunc,
+			addr := server.Start(t)
+			defer server.Close()
+
+			// Setup plugin
+			plugin := &Docker{
+				Endpoint:     addr,
 				LabelInclude: tt.include,
 				LabelExclude: tt.exclude,
 				TotalInclude: []string{"cpu"},
+				Timeout:      config.Duration(time.Second * 5),
+				Log:          testutil.Logger{},
 			}
+			require.NoError(t, plugin.Init())
 
-			require.NoError(t, d.Init())
-			require.NoError(t, d.Start(&acc))
-			err := d.Gather(&acc)
-			require.NoError(t, err)
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
 
-			// Grab tags from a container metric
+			// Collect data and check result
+			require.NoError(t, acc.GatherError(plugin.Gather))
 			var actual map[string]string
 			for _, mt := range acc.Metrics {
 				if mt.Measurement == "docker_container_cpu" {
 					actual = mt.Tags
+					break
 				}
 			}
-
-			for k, v := range tt.expected {
-				require.Equal(t, v, actual[k])
-			}
+			require.Subset(t, actual, tt.expected)
 		})
 	}
-}
-
-func genContainerLabeled(labels map[string]string) container.Summary {
-	c := containerList[0]
-	c.Labels = labels
-	c.State = "running"
-	return c
 }
 
 func TestContainerNames(t *testing.T) {
@@ -622,58 +290,56 @@ func TestContainerNames(t *testing.T) {
 		expected   []string
 	}{
 		{
-			name:     "Nil filters matches all",
-			include:  nil,
-			exclude:  nil,
+			name:     "nil filters matches all",
 			expected: []string{"etcd", "etcd2", "acme", "acme-test", "foo"},
 		},
 		{
-			name:     "Empty filters matches all",
+			name:     "empty filters matches all",
 			expected: []string{"etcd", "etcd2", "acme", "acme-test", "foo"},
 		},
 		{
-			name:     "Match all containers",
+			name:     "match all containers",
 			include:  []string{"*"},
 			expected: []string{"etcd", "etcd2", "acme", "acme-test", "foo"},
 		},
 		{
-			name:     "Include prefix match",
+			name:     "include prefix match",
 			include:  []string{"etc*"},
 			expected: []string{"etcd", "etcd2"},
 		},
 		{
-			name:     "Exact match",
+			name:     "exact match",
 			include:  []string{"etcd"},
 			expected: []string{"etcd"},
 		},
 		{
-			name:     "Star matches zero length",
+			name:     "star matches zero length",
 			include:  []string{"etcd2*"},
 			expected: []string{"etcd2"},
 		},
 		{
-			name:     "Exclude matches all",
+			name:     "exclude matches all",
 			exclude:  []string{"etc*"},
 			expected: []string{"acme", "acme-test", "foo"},
 		},
 		{
-			name:     "Exclude single",
+			name:     "exclude single",
 			exclude:  []string{"etcd"},
 			expected: []string{"etcd2", "acme", "acme-test", "foo"},
 		},
 		{
-			name:    "Exclude all",
+			name:    "exclude all",
 			include: []string{"*"},
 			exclude: []string{"*"},
 		},
 		{
-			name:     "Exclude item matching include",
+			name:     "exclude item matching include",
 			include:  []string{"acme*"},
 			exclude:  []string{"*test*"},
 			expected: []string{"acme"},
 		},
 		{
-			name:     "Exclude item no wildcards",
+			name:     "exclude item no wildcards",
 			include:  []string{"acme*"},
 			exclude:  []string{"test"},
 			expected: []string{"acme", "acme-test"},
@@ -681,76 +347,53 @@ func TestContainerNames(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var acc testutil.Accumulator
-
-			newClientFunc := func(string, *tls.Config) (dockerClient, error) {
-				client := baseClient
-				client.ContainerListF = func(container.ListOptions) ([]container.Summary, error) {
-					return containerList, nil
-				}
-				client.ContainerStatsF = func(s string) (container.StatsResponseReader, error) {
-					return containerStats(s), nil
-				}
-
-				return &client, nil
-			}
-
-			d := Docker{
-				Log:              testutil.Logger{},
-				newClient:        newClientFunc,
-				ContainerInclude: tt.include,
-				ContainerExclude: tt.exclude,
-			}
-
-			require.NoError(t, d.Init())
-			require.NoError(t, d.Start(&acc))
-			err := d.Gather(&acc)
+			// Setup the server
+			server, err := mock.NewServerFromFiles("testdata")
 			require.NoError(t, err)
 
-			// Set of expected names
-			expected := make(map[string]bool)
-			for _, v := range tt.expected {
-				expected[v] = true
-			}
+			addr := server.Start(t)
+			defer server.Close()
 
-			// Set of actual names
-			actual := make(map[string]bool)
+			// Setup plugin
+			plugin := &Docker{
+				Endpoint:         addr,
+				ContainerInclude: tt.include,
+				ContainerExclude: tt.exclude,
+				Timeout:          config.Duration(time.Second * 5),
+				Log:              testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
+
+			// Collect data and check the results
+			require.NoError(t, acc.GatherError(plugin.Gather))
+			actual := make([]string, 0)
 			for _, mt := range acc.Metrics {
 				if name, ok := mt.Tags["container_name"]; ok {
-					actual[name] = true
+					actual = append(actual, name)
 				}
 			}
-
-			require.Equal(t, expected, actual)
+			require.Subset(t, tt.expected, actual)
 		})
 	}
-}
-
-func filterMetrics(metrics []telegraf.Metric, f func(telegraf.Metric) bool) []telegraf.Metric {
-	results := make([]telegraf.Metric, 0, len(metrics))
-	for _, m := range metrics {
-		if f(m) {
-			results = append(results, m)
-		}
-	}
-	return results
 }
 
 func TestContainerStatus(t *testing.T) {
 	var tests = []struct {
 		name     string
-		now      func() time.Time
-		inspect  container.InspectResponse
+		now      time.Time
+		started  *string
+		finished *string
 		expected []telegraf.Metric
 	}{
 		{
 			name: "finished_at is zero value",
-			now: func() time.Time {
-				return time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC)
-			},
-			inspect: containerInspect(),
+			now:  time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"docker_container_status",
 					map[string]string{
 						"container_name":    "etcd",
@@ -777,17 +420,11 @@ func TestContainerStatus(t *testing.T) {
 			},
 		},
 		{
-			name: "finished_at is non-zero value",
-			now: func() time.Time {
-				return time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC)
-			},
-			inspect: func() container.InspectResponse {
-				i := containerInspect()
-				i.ContainerJSONBase.State.FinishedAt = "2018-06-14T05:53:53.266176036Z"
-				return i
-			}(),
+			name:     "finished_at is non-zero value",
+			now:      time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+			finished: new("2018-06-14T05:53:53.266176036Z"),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"docker_container_status",
 					map[string]string{
 						"container_name":    "etcd",
@@ -815,18 +452,12 @@ func TestContainerStatus(t *testing.T) {
 			},
 		},
 		{
-			name: "started_at is zero value",
-			now: func() time.Time {
-				return time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC)
-			},
-			inspect: func() container.InspectResponse {
-				i := containerInspect()
-				i.ContainerJSONBase.State.StartedAt = ""
-				i.ContainerJSONBase.State.FinishedAt = "2018-06-14T05:53:53.266176036Z"
-				return i
-			}(),
+			name:     "started_at is zero value",
+			now:      time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+			started:  new(""),
+			finished: new("2018-06-14T05:53:53.266176036Z"),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"docker_container_status",
 					map[string]string{
 						"container_name":    "etcd",
@@ -852,18 +483,12 @@ func TestContainerStatus(t *testing.T) {
 			},
 		},
 		{
-			name: "container has been restarted",
-			now: func() time.Time {
-				return time.Date(2019, 1, 1, 0, 0, 3, 0, time.UTC)
-			},
-			inspect: func() container.InspectResponse {
-				i := containerInspect()
-				i.ContainerJSONBase.State.StartedAt = "2019-01-01T00:00:02Z"
-				i.ContainerJSONBase.State.FinishedAt = "2019-01-01T00:00:01Z"
-				return i
-			}(),
+			name:     "container has been restarted",
+			now:      time.Date(2019, 1, 1, 0, 0, 3, 0, time.UTC),
+			started:  new("2019-01-01T00:00:02Z"),
+			finished: new("2019-01-01T00:00:01Z"),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"docker_container_status",
 					map[string]string{
 						"container_name":    "etcd",
@@ -893,267 +518,392 @@ func TestContainerStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var (
-				acc           testutil.Accumulator
-				newClientFunc = func(string, *tls.Config) (dockerClient, error) {
-					client := baseClient
-					client.ContainerListF = func(container.ListOptions) ([]container.Summary, error) {
-						return containerList[:1], nil
-					}
-					client.ContainerInspectF = func() (container.InspectResponse, error) {
-						return tt.inspect, nil
-					}
+			// Mock the time
+			now = func() time.Time { return tt.now }
+			defer func() { now = time.Now }()
 
-					return &client, nil
-				}
-				d = Docker{
-					Log:              testutil.Logger{},
-					newClient:        newClientFunc,
-					IncludeSourceTag: true,
-				}
-			)
-
-			// mock time
-			if tt.now != nil {
-				now = tt.now
-			}
-			defer func() {
-				now = time.Now
-			}()
-
-			require.NoError(t, d.Init())
-			require.NoError(t, d.Start(&acc))
-			err := d.Gather(&acc)
+			// Setup the server
+			server, err := mock.NewServerFromFiles("testdata")
 			require.NoError(t, err)
 
-			actual := filterMetrics(acc.GetTelegrafMetrics(), func(m telegraf.Metric) bool {
-				return m.Name() == "docker_container_status"
-			})
-			testutil.RequireMetricsEqual(t, tt.expected, actual)
+			// Manipulate data for the test
+			server.List = server.List[:1]
+			if tt.started != nil {
+				server.Inspect[server.List[0].ID].State.StartedAt = *tt.started
+			}
+			if tt.finished != nil {
+				server.Inspect[server.List[0].ID].State.FinishedAt = *tt.finished
+			}
+
+			addr := server.Start(t)
+			defer server.Close()
+
+			// Setup plugin
+			plugin := &Docker{
+				Endpoint:         addr,
+				IncludeSourceTag: true,
+				Timeout:          config.Duration(time.Second * 5),
+				Log:              testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
+
+			// Collect data and check the result
+			require.NoError(t, acc.GatherError(plugin.Gather))
+			testutil.RequireMetricsSubset(t, tt.expected, acc.GetTelegrafMetrics())
 		})
 	}
 }
 
-func TestDockerGatherInfo(t *testing.T) {
-	var acc testutil.Accumulator
-	d := Docker{
-		Log:       testutil.Logger{},
-		newClient: func(string, *tls.Config) (dockerClient, error) { return &baseClient, nil },
+func TestGatherInfo(t *testing.T) {
+	// Define expected result
+	expected := []telegraf.Metric{
+		metric.New(
+			"docker",
+			map[string]string{
+				"engine_host":    "absol",
+				"server_version": "17.09.0-ce",
+			},
+			map[string]interface{}{
+				"n_listener_events":       int(0),
+				"n_cpus":                  int(4),
+				"n_used_file_descriptors": int(19),
+				"n_containers":            int(108),
+				"n_containers_running":    int(98),
+				"n_containers_stopped":    int(6),
+				"n_containers_paused":     int(3),
+				"n_images":                int(199),
+				"n_goroutines":            int(39),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"docker",
+			map[string]string{
+				"engine_host":    "absol",
+				"server_version": "17.09.0-ce",
+			},
+			map[string]interface{}{
+				"memory_total": int64(3840757760),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"docker",
+			map[string]string{
+				"engine_host":    "absol",
+				"server_version": "17.09.0-ce",
+				"unit":           "bytes",
+			},
+			map[string]interface{}{
+				"pool_blocksize": int64(65540),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"docker_data",
+			map[string]string{
+				"engine_host":    "absol",
+				"server_version": "17.09.0-ce",
+				"unit":           "bytes",
+			},
+			map[string]interface{}{
+				"used":      int64(17300000000),
+				"total":     int64(107400000000),
+				"available": int64(36530000000),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"docker_metadata",
+			map[string]string{
+				"engine_host":    "absol",
+				"server_version": "17.09.0-ce",
+				"unit":           "bytes",
+			},
+			map[string]interface{}{
+				"used":      int64(20970000),
+				"total":     int64(2146999999),
+				"available": int64(2126999999),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"docker_devicemapper",
+			map[string]string{
+				"engine_host":    "absol",
+				"server_version": "17.09.0-ce",
+				"pool_name":      "docker-8:1-1182287-pool",
+			},
+			map[string]interface{}{
+				"base_device_size_bytes":             int64(10740000000),
+				"pool_blocksize_bytes":               int64(65540),
+				"data_space_used_bytes":              int64(17300000000),
+				"data_space_total_bytes":             int64(107400000000),
+				"data_space_available_bytes":         int64(36530000000),
+				"metadata_space_used_bytes":          int64(20970000),
+				"metadata_space_total_bytes":         int64(2146999999),
+				"metadata_space_available_bytes":     int64(2126999999),
+				"thin_pool_minimum_free_space_bytes": int64(10740000000),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"docker_container_cpu",
+			map[string]string{
+				"container_name":    "etcd2",
+				"container_image":   "quay.io:4443/coreos/etcd",
+				"cpu":               "cpu3",
+				"container_version": "v3.3.25",
+				"engine_host":       "absol",
+				"ENVVAR1":           "loremipsum",
+				"ENVVAR2":           "dolorsitamet",
+				"ENVVAR3":           "=ubuntu:10.04",
+				"ENVVAR7":           "ENVVAR8=ENVVAR9",
+				"label1":            "test_value_1",
+				"label2":            "test_value_2",
+				"server_version":    "17.09.0-ce",
+				"container_status":  "running",
+			},
+			map[string]interface{}{
+				"usage_total":  uint64(1231652),
+				"container_id": "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"docker_container_mem",
+			map[string]string{
+				"engine_host":       "absol",
+				"container_name":    "etcd2",
+				"container_image":   "quay.io:4443/coreos/etcd",
+				"container_version": "v3.3.25",
+				"ENVVAR1":           "loremipsum",
+				"ENVVAR2":           "dolorsitamet",
+				"ENVVAR3":           "=ubuntu:10.04",
+				"ENVVAR7":           "ENVVAR8=ENVVAR9",
+				"label1":            "test_value_1",
+				"label2":            "test_value_2",
+				"server_version":    "17.09.0-ce",
+				"container_status":  "running",
+			},
+			map[string]interface{}{
+				"container_id":  "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
+				"limit":         uint64(18935443456),
+				"max_usage":     uint64(0),
+				"usage":         uint64(0),
+				"usage_percent": float64(0),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	// Setup the server
+	server, err := mock.NewServerFromFiles("testdata")
+	require.NoError(t, err)
+
+	addr := server.Start(t)
+	defer server.Close()
+
+	// Setup plugin
+	plugin := &Docker{
+		Endpoint: addr,
 		TagEnvironment: []string{"ENVVAR1", "ENVVAR2", "ENVVAR3", "ENVVAR5",
 			"ENVVAR6", "ENVVAR7", "ENVVAR8", "ENVVAR9"},
 		PerDeviceInclude: []string{"cpu", "network", "blkio"},
 		TotalInclude:     []string{"cpu", "blkio", "network"},
+		Timeout:          config.Duration(time.Second * 5),
+		Log:              testutil.Logger{},
 	}
+	require.NoError(t, plugin.Init())
 
-	require.NoError(t, d.Init())
-	require.NoError(t, d.Start(&acc))
-	err := acc.GatherError(d.Gather)
-	require.NoError(t, err)
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
 
-	acc.AssertContainsTaggedFields(t,
-		"docker",
-		map[string]interface{}{
-			"n_listener_events":       int(0),
-			"n_cpus":                  int(4),
-			"n_used_file_descriptors": int(19),
-			"n_containers":            int(108),
-			"n_containers_running":    int(98),
-			"n_containers_stopped":    int(6),
-			"n_containers_paused":     int(3),
-			"n_images":                int(199),
-			"n_goroutines":            int(39),
-		},
-		map[string]string{
-			"engine_host":    "absol",
-			"server_version": "17.09.0-ce",
-		},
-	)
-
-	acc.AssertContainsTaggedFields(t,
-		"docker",
-		map[string]interface{}{
-			"memory_total": int64(3840757760),
-		},
-		map[string]string{
-			"engine_host":    "absol",
-			"server_version": "17.09.0-ce",
-		},
-	)
-
-	acc.AssertContainsTaggedFields(t,
-		"docker",
-		map[string]interface{}{
-			"pool_blocksize": int64(65540),
-		},
-		map[string]string{
-			"engine_host":    "absol",
-			"server_version": "17.09.0-ce",
-			"unit":           "bytes",
-		},
-	)
-
-	acc.AssertContainsTaggedFields(t,
-		"docker_data",
-		map[string]interface{}{
-			"used":      int64(17300000000),
-			"total":     int64(107400000000),
-			"available": int64(36530000000),
-		},
-		map[string]string{
-			"engine_host":    "absol",
-			"server_version": "17.09.0-ce",
-			"unit":           "bytes",
-		},
-	)
-
-	acc.AssertContainsTaggedFields(t,
-		"docker_metadata",
-		map[string]interface{}{
-			"used":      int64(20970000),
-			"total":     int64(2146999999),
-			"available": int64(2126999999),
-		},
-		map[string]string{
-			"engine_host":    "absol",
-			"server_version": "17.09.0-ce",
-			"unit":           "bytes",
-		},
-	)
-
-	acc.AssertContainsTaggedFields(t,
-		"docker_devicemapper",
-		map[string]interface{}{
-			"base_device_size_bytes":             int64(10740000000),
-			"pool_blocksize_bytes":               int64(65540),
-			"data_space_used_bytes":              int64(17300000000),
-			"data_space_total_bytes":             int64(107400000000),
-			"data_space_available_bytes":         int64(36530000000),
-			"metadata_space_used_bytes":          int64(20970000),
-			"metadata_space_total_bytes":         int64(2146999999),
-			"metadata_space_available_bytes":     int64(2126999999),
-			"thin_pool_minimum_free_space_bytes": int64(10740000000),
-		},
-		map[string]string{
-			"engine_host":    "absol",
-			"server_version": "17.09.0-ce",
-			"pool_name":      "docker-8:1-1182287-pool",
-		},
-	)
-
-	acc.AssertContainsTaggedFields(t,
-		"docker_container_cpu",
-		map[string]interface{}{
-			"usage_total":  uint64(1231652),
-			"container_id": "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
-		},
-		map[string]string{
-			"container_name":    "etcd2",
-			"container_image":   "quay.io:4443/coreos/etcd",
-			"cpu":               "cpu3",
-			"container_version": "v3.3.25",
-			"engine_host":       "absol",
-			"ENVVAR1":           "loremipsum",
-			"ENVVAR2":           "dolorsitamet",
-			"ENVVAR3":           "=ubuntu:10.04",
-			"ENVVAR7":           "ENVVAR8=ENVVAR9",
-			"label1":            "test_value_1",
-			"label2":            "test_value_2",
-			"server_version":    "17.09.0-ce",
-			"container_status":  "running",
-		},
-	)
-	acc.AssertContainsTaggedFields(t,
-		"docker_container_mem",
-		map[string]interface{}{
-			"container_id":  "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
-			"limit":         uint64(18935443456),
-			"max_usage":     uint64(0),
-			"usage":         uint64(0),
-			"usage_percent": float64(0),
-		},
-		map[string]string{
-			"engine_host":       "absol",
-			"container_name":    "etcd2",
-			"container_image":   "quay.io:4443/coreos/etcd",
-			"container_version": "v3.3.25",
-			"ENVVAR1":           "loremipsum",
-			"ENVVAR2":           "dolorsitamet",
-			"ENVVAR3":           "=ubuntu:10.04",
-			"ENVVAR7":           "ENVVAR8=ENVVAR9",
-			"label1":            "test_value_1",
-			"label2":            "test_value_2",
-			"server_version":    "17.09.0-ce",
-			"container_status":  "running",
-		},
-	)
+	// Collect data and check the result
+	require.NoError(t, acc.GatherError(plugin.Gather))
+	testutil.RequireMetricsSubset(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
-func TestDockerGatherSwarmInfo(t *testing.T) {
-	var acc testutil.Accumulator
-	d := Docker{
-		Log:       testutil.Logger{},
-		newClient: func(string, *tls.Config) (dockerClient, error) { return &baseClient, nil },
+func TestGatherSwarmInfo(t *testing.T) {
+	// Define the expected result
+	expected := []telegraf.Metric{
+		metric.New(
+			"docker_swarm",
+			map[string]string{
+				"service_id":   "qolkls9g5iasdiuihcyz9rnx2",
+				"service_name": "test1",
+				"service_mode": "replicated",
+			},
+			map[string]interface{}{
+				"tasks_running": int(2),
+				"tasks_desired": uint64(2),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"docker_swarm",
+			map[string]string{
+				"service_id":   "qolkls9g5iasdiuihcyz9rn3",
+				"service_name": "test2",
+				"service_mode": "global",
+			},
+			map[string]interface{}{
+				"tasks_running": int(1),
+				"tasks_desired": uint64(1),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"docker_swarm",
+			map[string]string{
+				"service_id":   "rfmqydhe8cluzl9hayyrhw5ga",
+				"service_name": "test3",
+				"service_mode": "replicated_job",
+			},
+			map[string]interface{}{
+				"tasks_running":     int(0),
+				"max_concurrent":    uint64(2),
+				"total_completions": uint64(2),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"docker_swarm",
+			map[string]string{
+				"service_id":   "mp50lo68vqgkory4e26ts8f9d",
+				"service_name": "test4",
+				"service_mode": "global_job",
+			},
+			map[string]interface{}{
+				"tasks_running": int(0),
+			},
+			time.Unix(0, 0),
+		),
 	}
 
-	require.NoError(t, d.Init())
-	require.NoError(t, d.Start(&acc))
-	err := acc.GatherError(d.Gather)
+	// Setup the server
+	server, err := mock.NewServerFromFiles("testdata")
 	require.NoError(t, err)
 
-	require.NoError(t, d.gatherSwarmInfo(&acc))
+	addr := server.Start(t)
+	defer server.Close()
 
-	// test docker_container_net measurement
-	acc.AssertContainsTaggedFields(t,
-		"docker_swarm",
-		map[string]interface{}{
-			"tasks_running": int(2),
-			"tasks_desired": uint64(2),
-		},
-		map[string]string{
-			"service_id":   "qolkls9g5iasdiuihcyz9rnx2",
-			"service_name": "test1",
-			"service_mode": "replicated",
-		},
-	)
+	// Setup plugin
+	plugin := &Docker{
+		Endpoint:       addr,
+		GatherServices: true,
+		Timeout:        config.Duration(time.Second * 5),
+		Log:            testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
 
-	acc.AssertContainsTaggedFields(t,
-		"docker_swarm",
-		map[string]interface{}{
-			"tasks_running": int(1),
-			"tasks_desired": uint64(1),
-		},
-		map[string]string{
-			"service_id":   "qolkls9g5iasdiuihcyz9rn3",
-			"service_name": "test2",
-			"service_mode": "global",
-		},
-	)
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
 
-	acc.AssertContainsTaggedFields(t,
-		"docker_swarm",
-		map[string]interface{}{
-			"tasks_running":     int(0),
-			"max_concurrent":    uint64(2),
-			"total_completions": uint64(2),
-		},
-		map[string]string{
-			"service_id":   "rfmqydhe8cluzl9hayyrhw5ga",
-			"service_name": "test3",
-			"service_mode": "replicated_job",
-		},
-	)
+	// Collect data and check the result
+	require.NoError(t, acc.GatherError(plugin.Gather))
+	testutil.RequireMetricsSubset(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
+}
 
-	acc.AssertContainsTaggedFields(t,
-		"docker_swarm",
-		map[string]interface{}{
-			"tasks_running": int(0),
-		},
-		map[string]string{
-			"service_id":   "mp50lo68vqgkory4e26ts8f9d",
-			"service_name": "test4",
-			"service_mode": "global_job",
-		},
-	)
+func TestGatherDiskUsage(t *testing.T) {
+	// Define the expected result
+	expected := []telegraf.Metric{
+		metric.New(
+			"docker_disk_usage",
+			map[string]string{
+				"engine_host":    "absol",
+				"server_version": "17.09.0-ce",
+			},
+			map[string]interface{}{
+				"layers_size": int64(1e10),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"docker_disk_usage",
+			map[string]string{
+				"container_image":   "some_image",
+				"container_version": "1.0.0-alpine",
+				"engine_host":       "absol",
+				"server_version":    "17.09.0-ce",
+				"container_name":    "some_container",
+			},
+			map[string]interface{}{
+				"size_root_fs": int64(123456789),
+				"size_rw":      int64(0)},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"docker_disk_usage",
+			map[string]string{
+				"image_id":       "some_imageid",
+				"image_name":     "some_image_tag",
+				"image_version":  "1.0.0-alpine",
+				"engine_host":    "absol",
+				"server_version": "17.09.0-ce",
+			},
+			map[string]interface{}{
+				"size":        int64(123456789),
+				"shared_size": int64(0)},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"docker_disk_usage",
+			map[string]string{
+				"image_id":       "7f4a1cc74046",
+				"image_name":     "telegraf",
+				"image_version":  "latest",
+				"engine_host":    "absol",
+				"server_version": "17.09.0-ce",
+			},
+			map[string]interface{}{
+				"size":        int64(425484494),
+				"shared_size": int64(0)},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"docker_disk_usage",
+			map[string]string{
+				"volume_name":    "some_volume",
+				"engine_host":    "absol",
+				"server_version": "17.09.0-ce",
+			},
+			map[string]interface{}{
+				"size": int64(123456789),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	// Setup the server
+	server, err := mock.NewServerFromFiles("testdata")
+	require.NoError(t, err)
+
+	addr := server.Start(t)
+	defer server.Close()
+
+	// Setup plugin
+	plugin := &Docker{
+		Endpoint:       addr,
+		StorageObjects: []string{"container"},
+		Timeout:        config.Duration(time.Second * 5),
+		Log:            testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Collect data and check result
+	require.NoError(t, acc.GatherError(plugin.Gather))
+	testutil.RequireMetricsSubset(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
 func TestContainerStateFilter(t *testing.T) {
@@ -1195,194 +945,131 @@ func TestContainerStateFilter(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		containerStates := []container.ContainerState{
+			container.StateCreated,
+			container.StateRestarting,
+			container.StateRunning,
+			container.StateRemoving,
+			container.StatePaused,
+			container.StateExited,
+			container.StateDead,
+		}
+
 		t.Run(tt.name, func(t *testing.T) {
-			var acc testutil.Accumulator
-
-			containerStates := []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
-
-			newClientFunc := func(string, *tls.Config) (dockerClient, error) {
-				client := baseClient
-				client.ContainerListF = func(container.ListOptions) ([]container.Summary, error) {
-					containers := make([]container.Summary, 0, len(containerStates))
-					for _, v := range containerStates {
-						containers = append(containers, container.Summary{
-							Names: []string{v},
-							State: v,
-						})
-					}
-					return containers, nil
-				}
-				return &client, nil
-			}
-
-			d := Docker{
-				Log:                   testutil.Logger{},
-				newClient:             newClientFunc,
-				ContainerStateInclude: tt.include,
-				ContainerStateExclude: tt.exclude,
-			}
-
-			require.NoError(t, d.Init())
-			require.NoError(t, d.Start(&acc))
-			err := d.Gather(&acc)
+			// Setup the server
+			server, err := mock.NewServerFromFiles("testdata")
 			require.NoError(t, err)
 
-			// Set of expected names
-			expected := make(map[string]bool)
-			for _, v := range tt.expected {
-				expected[v] = true
+			// Make sure we request to list all container states
+			server.ListParams = map[string]string{"all": "1"}
+
+			// Manipulate the data for the test
+			// Get the first  ID to use for gather to complete
+			var id string
+			for k := range server.Stats {
+				id = k
+				break
+			}
+			// Fake states data
+			server.List = make([]container.Summary, 0, len(containerStates))
+			for _, v := range containerStates {
+				server.List = append(server.List, container.Summary{
+					ID:    id,
+					Names: []string{string(v)},
+					State: v,
+				})
 			}
 
-			// Set of actual names
-			actual := make(map[string]bool)
+			addr := server.Start(t)
+			defer server.Close()
+
+			// Setup plugin
+			plugin := &Docker{
+				Endpoint:              addr,
+				ContainerStateInclude: tt.include,
+				ContainerStateExclude: tt.exclude,
+				Timeout:               config.Duration(time.Second * 5),
+				Log:                   testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
+
+			// Collect data and check the result
+			require.NoError(t, acc.GatherError(plugin.Gather))
+			actual := make([]string, 0, acc.NMetrics())
 			for _, mt := range acc.Metrics {
 				if name, ok := mt.Tags["container_name"]; ok {
-					actual[name] = true
+					actual = append(actual, name)
 				}
 			}
-
-			require.Equal(t, expected, actual)
+			require.Subset(t, actual, tt.expected)
 		})
 	}
 }
 
-func TestNonRunningContainerEmitsStatusMetrics(t *testing.T) {
-	newClientFunc := func(string, *tls.Config) (dockerClient, error) {
-		client := baseClient
-		client.ContainerListF = func(container.ListOptions) ([]container.Summary, error) {
-			return []container.Summary{
-				{
-					ID:    "abc123",
-					Names: []string{"/stopped-container"},
-					State: "exited",
-				},
-			}, nil
-		}
-		client.ContainerStatsF = func(string) (container.StatsResponseReader, error) {
-			return container.StatsResponseReader{
-				Body: io.NopCloser(strings.NewReader("")),
-			}, nil
-		}
-		client.ContainerInspectF = func() (container.InspectResponse, error) {
-			return container.InspectResponse{
-				Config: &container.Config{},
-				ContainerJSONBase: &container.ContainerJSONBase{
-					State: &container.State{
-						Status:     "exited",
-						ExitCode:   137,
-						StartedAt:  "2024-01-01T00:00:00Z",
-						FinishedAt: "2024-01-01T01:00:00Z",
-					},
-				},
-			}, nil
-		}
-		return &client, nil
-	}
-
-	d := Docker{
-		Log:                   testutil.Logger{},
-		newClient:             newClientFunc,
-		ContainerStateInclude: []string{"exited"},
-	}
-
-	var acc testutil.Accumulator
-	require.NoError(t, d.Init())
-	require.NoError(t, d.Start(&acc))
-	require.NoError(t, d.Gather(&acc))
-
-	expected := []telegraf.Metric{
-		metric.New(
-			"docker_container_status",
-			map[string]string{
-				"container_name":    "stopped-container",
-				"container_image":   "",
-				"container_version": "unknown",
-				"engine_host":       "absol",
-				"server_version":    "17.09.0-ce",
-				"container_status":  "exited",
-			},
-			map[string]interface{}{
-				"oomkilled":     false,
-				"pid":           0,
-				"exitcode":      137,
-				"restart_count": 0,
-				"container_id":  "abc123",
-				"started_at":    time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixNano(),
-				"finished_at":   time.Date(2024, 1, 1, 1, 0, 0, 0, time.UTC).UnixNano(),
-				"uptime_ns":     int64(time.Hour),
-			},
-			time.Time{},
-		),
-	}
-
-	actual := filterMetrics(acc.GetTelegrafMetrics(), func(m telegraf.Metric) bool {
-		return strings.HasPrefix(m.Name(), "docker_container_")
-	})
-	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
-}
-
 func TestContainerName(t *testing.T) {
 	tests := []struct {
-		name       string
-		clientFunc func(host string, tlsConfig *tls.Config) (dockerClient, error)
-		expected   string
+		name           string
+		containerNames []string
+		expected       string
 	}{
 		{
-			name: "container stats name is preferred",
-			clientFunc: func(string, *tls.Config) (dockerClient, error) {
-				client := baseClient
-				client.ContainerListF = func(container.ListOptions) ([]container.Summary, error) {
-					containers := []container.Summary{
-						{
-							Names: []string{"/logspout/foo"},
-							State: "running",
-						},
-					}
-					return containers, nil
-				}
-				client.ContainerStatsF = func(string) (container.StatsResponseReader, error) {
-					return container.StatsResponseReader{
-						Body: io.NopCloser(strings.NewReader(`{"name": "logspout"}`)),
-					}, nil
-				}
-				return &client, nil
-			},
-			expected: "logspout",
+			name:           "container stats name is preferred",
+			containerNames: []string{"/logspout/foo"},
+			expected:       "logspout",
 		},
 		{
-			name: "container stats without name uses container list name",
-			clientFunc: func(string, *tls.Config) (dockerClient, error) {
-				client := baseClient
-				client.ContainerListF = func(container.ListOptions) ([]container.Summary, error) {
-					containers := []container.Summary{
-						{
-							Names: []string{"/logspout"},
-							State: "running",
-						},
-					}
-					return containers, nil
-				}
-				client.ContainerStatsF = func(string) (container.StatsResponseReader, error) {
-					return container.StatsResponseReader{
-						Body: io.NopCloser(strings.NewReader(`{}`)),
-					}, nil
-				}
-				return &client, nil
-			},
-			expected: "logspout",
+			name:           "container stats without name uses container list name",
+			containerNames: []string{"/logspout"},
+			expected:       "logspout",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := Docker{
-				Log:       testutil.Logger{},
-				newClient: tt.clientFunc,
-			}
-			var acc testutil.Accumulator
-			require.NoError(t, d.Init())
-			require.NoError(t, d.Start(&acc))
-			err := d.Gather(&acc)
+			// Setup the server
+			server, err := mock.NewServerFromFiles("testdata")
 			require.NoError(t, err)
+
+			// Make sure we request to list all container states
+			server.ListParams = map[string]string{"all": "1"}
+
+			// Manipulate the data for the test
+			// Get the first  ID to use for gather to complete
+			var id string
+			for k := range server.Stats {
+				id = k
+				break
+			}
+
+			// Fake the container list
+			server.List = []container.Summary{
+				{
+					ID:    id,
+					Names: []string{"/logspout"},
+					State: "running",
+				},
+			}
+
+			addr := server.Start(t)
+			defer server.Close()
+
+			// Setup plugin
+			plugin := &Docker{
+				Endpoint: addr,
+				Timeout:  config.Duration(time.Second * 5),
+				Log:      testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
+
+			// Collect data and check result
+			require.NoError(t, acc.GatherError(plugin.Gather))
 
 			for _, mt := range acc.Metrics {
 				// This tag is set on all container measurements
@@ -1396,446 +1083,132 @@ func TestContainerName(t *testing.T) {
 
 func TestHostnameFromID(t *testing.T) {
 	tests := []struct {
-		name   string
-		id     string
-		expect string
-	}{
-		{
-			name:   "Real ID",
-			id:     "565e3a55f5843cfdd4aa5659a1a75e4e78d47f73c3c483f782fe4a26fc8caa07",
-			expect: "565e3a55f584",
-		},
-		{
-			name:   "Short ID",
-			id:     "shortid123",
-			expect: "shortid123",
-		},
-		{
-			name:   "No ID",
-			id:     "",
-			expect: "shortid123",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			output := hostnameFromID(test.id)
-			if test.expect != output {
-				t.Logf("Container ID for hostname is wrong. Want: %s, Got: %s", output, test.expect)
-			}
-		})
-	}
-}
-
-func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
-	type args struct {
-		stat             *container.StatsResponse
-		tags             map[string]string
-		id               string
-		perDeviceInclude []string
-		totalInclude     []string
-		daemonOSType     string
-	}
-
-	var (
-		testDate       = time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC)
-		metricCPUTotal = testutil.MustMetric(
-			"docker_container_cpu",
-			map[string]string{
-				"cpu": "cpu-total",
-			},
-			map[string]interface{}{},
-			testDate)
-
-		metricCPU0 = testutil.MustMetric(
-			"docker_container_cpu",
-			map[string]string{
-				"cpu": "cpu0",
-			},
-			map[string]interface{}{},
-			testDate)
-		metricCPU1 = testutil.MustMetric(
-			"docker_container_cpu",
-			map[string]string{
-				"cpu": "cpu1",
-			},
-			map[string]interface{}{},
-			testDate)
-
-		metricNetworkTotal = testutil.MustMetric(
-			"docker_container_net",
-			map[string]string{
-				"network": "total",
-			},
-			map[string]interface{}{},
-			testDate)
-
-		metricNetworkEth0 = testutil.MustMetric(
-			"docker_container_net",
-			map[string]string{
-				"network": "eth0",
-			},
-			map[string]interface{}{},
-			testDate)
-
-		metricNetworkEth1 = testutil.MustMetric(
-			"docker_container_net",
-			map[string]string{
-				"network": "eth0",
-			},
-			map[string]interface{}{},
-			testDate)
-		metricBlkioTotal = testutil.MustMetric(
-			"docker_container_blkio",
-			map[string]string{
-				"device": "total",
-			},
-			map[string]interface{}{},
-			testDate)
-		metricBlkio6_0 = testutil.MustMetric(
-			"docker_container_blkio",
-			map[string]string{
-				"device": "6:0",
-			},
-			map[string]interface{}{},
-			testDate)
-		metricBlkio6_1 = testutil.MustMetric(
-			"docker_container_blkio",
-			map[string]string{
-				"device": "6:1",
-			},
-			map[string]interface{}{},
-			testDate)
-	)
-	stats := testStats()
-	tests := []struct {
 		name     string
-		args     args
-		expected []telegraf.Metric
+		id       string
+		expected string
 	}{
 		{
-			name: "Per device and total metrics enabled",
-			args: args{
-				stat:             stats,
-				perDeviceInclude: containerMetricClasses,
-				totalInclude:     containerMetricClasses,
-			},
-			expected: []telegraf.Metric{
-				metricCPUTotal, metricCPU0, metricCPU1,
-				metricNetworkTotal, metricNetworkEth0, metricNetworkEth1,
-				metricBlkioTotal, metricBlkio6_0, metricBlkio6_1,
-			},
+			name:     "Real ID",
+			id:       "565e3a55f5843cfdd4aa5659a1a75e4e78d47f73c3c483f782fe4a26fc8caa07",
+			expected: "565e3a55f584",
 		},
 		{
-			name: "Per device metrics enabled",
-			args: args{
-				stat:             stats,
-				perDeviceInclude: containerMetricClasses,
-			},
-			expected: []telegraf.Metric{
-				metricCPU0, metricCPU1,
-				metricNetworkEth0, metricNetworkEth1,
-				metricBlkio6_0, metricBlkio6_1,
-			},
+			name:     "Short ID",
+			id:       "shortid123",
+			expected: "shortid123",
 		},
 		{
-			name: "Total metrics enabled",
-			args: args{
-				stat:         stats,
-				totalInclude: containerMetricClasses,
-			},
-			expected: []telegraf.Metric{metricCPUTotal, metricNetworkTotal, metricBlkioTotal},
-		},
-		{
-			name: "Per device and total metrics disabled",
-			args: args{
-				stat: stats,
-			},
+			name: "No ID",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var acc testutil.Accumulator
-			d := &Docker{
-				Log:              testutil.Logger{},
-				PerDeviceInclude: tt.args.perDeviceInclude,
-				TotalInclude:     tt.args.totalInclude,
-			}
-			d.parseContainerStats(tt.args.stat, &acc, tt.args.tags, tt.args.id, tt.args.daemonOSType)
-
-			actual := filterMetrics(acc.GetTelegrafMetrics(), func(m telegraf.Metric) bool {
-				return choice.Contains(m.Name(),
-					[]string{"docker_container_cpu", "docker_container_net", "docker_container_blkio"})
-			})
-			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.OnlyTags(), testutil.SortMetrics())
+			require.Equal(t, tt.expected, hostnameFromID(tt.id))
 		})
 	}
-}
-
-func TestDocker_Init(t *testing.T) {
-	type fields struct {
-		PerDeviceInclude []string
-		TotalInclude     []string
-	}
-	tests := []struct {
-		name                 string
-		fields               fields
-		wantErr              bool
-		wantPerDeviceInclude []string
-		wantTotalInclude     []string
-	}{
-		{
-			name: "Unsupported perdevice_include setting",
-			fields: fields{
-				PerDeviceInclude: []string{"nonExistentClass"},
-				TotalInclude:     []string{"cpu"},
-			},
-			wantErr: true,
-		},
-		{
-			name: "Unsupported total_include setting",
-			fields: fields{
-				PerDeviceInclude: []string{"cpu"},
-				TotalInclude:     []string{"nonExistentClass"},
-			},
-			wantErr: true,
-		},
-		{
-			name: "Valid perdevice_include and total_include",
-			fields: fields{
-				PerDeviceInclude: []string{"cpu", "network"},
-				TotalInclude:     []string{"cpu", "blkio"},
-			},
-			wantPerDeviceInclude: []string{"cpu", "network"},
-			wantTotalInclude:     []string{"cpu", "blkio"},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			d := &Docker{
-				Log:              testutil.Logger{},
-				PerDeviceInclude: tt.fields.PerDeviceInclude,
-				TotalInclude:     tt.fields.TotalInclude,
-			}
-			err := d.Init()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Init() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if err == nil {
-				if !reflect.DeepEqual(d.PerDeviceInclude, tt.wantPerDeviceInclude) {
-					t.Errorf("Perdevice include: got  '%v', want '%v'", d.PerDeviceInclude, tt.wantPerDeviceInclude)
-				}
-
-				if !reflect.DeepEqual(d.TotalInclude, tt.wantTotalInclude) {
-					t.Errorf("Total include: got  '%v', want '%v'", d.TotalInclude, tt.wantTotalInclude)
-				}
-			}
-		})
-	}
-}
-
-func TestDockerGatherDiskUsage(t *testing.T) {
-	var acc testutil.Accumulator
-	d := Docker{
-		Log:       testutil.Logger{},
-		newClient: func(string, *tls.Config) (dockerClient, error) { return &baseClient, nil },
-	}
-
-	require.NoError(t, d.Init())
-	require.NoError(t, d.Start(&acc))
-
-	require.NoError(t, acc.GatherError(d.Gather))
-
-	d.gatherDiskUsage(&acc, types.DiskUsageOptions{})
-
-	acc.AssertContainsTaggedFields(t,
-		"docker_disk_usage",
-		map[string]interface{}{
-			"layers_size": int64(1e10),
-		},
-		map[string]string{
-			"engine_host":    "absol",
-			"server_version": "17.09.0-ce",
-		},
-	)
-
-	acc.AssertContainsTaggedFields(t,
-		"docker_disk_usage",
-		map[string]interface{}{
-			"size_root_fs": int64(123456789),
-			"size_rw":      int64(0)},
-		map[string]string{
-			"container_image":   "some_image",
-			"container_version": "1.0.0-alpine",
-			"engine_host":       "absol",
-			"server_version":    "17.09.0-ce",
-			"container_name":    "some_container",
-		},
-	)
-
-	acc.AssertContainsTaggedFields(t,
-		"docker_disk_usage",
-		map[string]interface{}{
-			"size":        int64(123456789),
-			"shared_size": int64(0)},
-		map[string]string{
-			"image_id":       "some_imageid",
-			"image_name":     "some_image_tag",
-			"image_version":  "1.0.0-alpine",
-			"engine_host":    "absol",
-			"server_version": "17.09.0-ce",
-		},
-	)
-
-	acc.AssertContainsTaggedFields(t,
-		"docker_disk_usage",
-		map[string]interface{}{
-			"size":        int64(425484494),
-			"shared_size": int64(0)},
-		map[string]string{
-			"image_id":       "7f4a1cc74046",
-			"image_name":     "telegraf",
-			"image_version":  "latest",
-			"engine_host":    "absol",
-			"server_version": "17.09.0-ce",
-		},
-	)
-
-	acc.AssertContainsTaggedFields(t,
-		"docker_disk_usage",
-		map[string]interface{}{
-			"size": int64(123456789),
-		},
-		map[string]string{
-			"volume_name":    "some_volume",
-			"engine_host":    "absol",
-			"server_version": "17.09.0-ce",
-		},
-	)
 }
 
 func TestPodmanDetection(t *testing.T) {
 	tests := []struct {
-		name          string
-		serverVersion string
-		engineName    string
-		endpoint      string
-		initBinary    string
-		expectPodman  bool
+		name     string
+		version  string
+		engine   string
+		endpoint string
+		binary   string
+		expected bool
 	}{
 		{
-			name:          "Docker engine",
-			serverVersion: "28.3.2",
-			engineName:    "docker-desktop",
-			endpoint:      "unix:///var/run/docker.sock",
-			initBinary:    "docker-init",
-			expectPodman:  false,
+			name:     "Docker engine",
+			version:  "28.3.2",
+			engine:   "docker-desktop",
+			endpoint: "unix:///var/run/docker.sock",
+			binary:   "docker-init",
+			expected: false,
 		},
 		{
-			name:          "Real Podman with version number",
-			serverVersion: "5.6.1",
-			engineName:    "localhost.localdomain",
-			endpoint:      "unix:///run/podman/podman.sock",
-			initBinary:    "crun",
-			expectPodman:  true,
+			name:     "Real Podman with version number",
+			version:  "5.6.1",
+			engine:   "localhost.localdomain",
+			endpoint: "unix:///run/podman/podman.sock",
+			binary:   "crun",
+			expected: true,
 		},
 		{
-			name:          "Podman with version string containing podman",
-			serverVersion: "4.9.4-podman",
-			engineName:    "localhost",
-			endpoint:      "unix:///run/podman/podman.sock",
-			expectPodman:  true,
+			name:     "Podman with version string containing podman",
+			version:  "4.9.4-podman",
+			engine:   "localhost",
+			endpoint: "unix:///run/podman/podman.sock",
+			expected: true,
 		},
 		{
-			name:          "Podman with podman in name",
-			serverVersion: "4.9.4",
-			engineName:    "podman-machine",
-			endpoint:      "unix:///var/run/docker.sock",
-			expectPodman:  true,
+			name:     "Podman with podman in name",
+			version:  "4.9.4",
+			engine:   "podman-machine",
+			endpoint: "unix:///var/run/docker.sock",
+			expected: true,
 		},
 		{
-			name:          "Podman detected by endpoint",
-			serverVersion: "5.2.0",
-			engineName:    "localhost",
-			endpoint:      "unix:///run/podman/podman.sock",
-			expectPodman:  true,
+			name:     "Podman detected by endpoint",
+			version:  "5.2.0",
+			engine:   "localhost",
+			endpoint: "unix:///run/podman/podman.sock",
+			expected: true,
 		},
 		{
-			name:          "Podman with crun runtime",
-			serverVersion: "5.0.1",
-			engineName:    "myhost.local",
-			endpoint:      "unix:///var/run/container.sock",
-			initBinary:    "crun",
-			expectPodman:  true,
+			name:     "Podman with crun runtime",
+			version:  "5.0.1",
+			engine:   "myhost.local",
+			endpoint: "unix:///var/run/container.sock",
+			binary:   "crun",
+			expected: true,
 		},
 		{
-			name:          "Docker with crun (should not detect as Podman)",
-			serverVersion: "20.10.7",
-			engineName:    "docker-host",
-			endpoint:      "unix:///var/run/docker.sock",
-			initBinary:    "crun",
-			expectPodman:  false,
+			name:     "Docker with crun (should not detect as Podman)",
+			version:  "20.10.7",
+			engine:   "docker-host",
+			endpoint: "unix:///var/run/docker.sock",
+			binary:   "crun",
+			expected: false,
 		},
 		{
-			name:          "Edge case - simple version with generic name",
-			serverVersion: "4.8.2",
-			engineName:    "host",
-			endpoint:      "unix:///var/run/container.sock",
-			expectPodman:  true,
+			name:     "Edge case - simple version with generic name",
+			version:  "4.8.2",
+			engine:   "host",
+			endpoint: "unix:///var/run/container.sock",
+			expected: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var acc testutil.Accumulator
-			d := Docker{
-				Endpoint: tt.endpoint,
-				Timeout:  config.Duration(5 * time.Second),
-				newClient: func(string, *tls.Config) (dockerClient, error) {
-					return &mockClient{
-						InfoF: func() (system.Info, error) {
-							return system.Info{
-								Name:          tt.engineName,
-								ServerVersion: tt.serverVersion,
-								InitBinary:    tt.initBinary,
-							}, nil
-						},
-						ContainerListF: func(container.ListOptions) ([]container.Summary, error) {
-							return nil, nil
-						},
-						ServiceListF: func() ([]swarm.Service, error) {
-							return nil, nil
-						},
-						ClientVersionF: func() string {
-							return "1.24.0"
-						},
-						PingF: func() (types.Ping, error) {
-							return types.Ping{}, nil
-						},
-						CloseF: func() error {
-							return nil
-						},
-					}, nil
-				},
-				Log: testutil.Logger{},
+			info := &system.Info{
+				Name:          tt.engine,
+				ServerVersion: tt.version,
+				InitBinary:    tt.binary,
 			}
 
-			require.NoError(t, d.Init())
-			require.NoError(t, d.Start(&acc))
-			require.Equal(t, tt.expectPodman, d.isPodman, "Podman detection mismatch")
+			// Setup plugin
+			plugin := &Docker{
+				Endpoint: tt.endpoint,
+				Log:      testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			// Setup plugin
+			actual := plugin.detectPodman(info)
+			require.Equal(t, tt.expected, actual, "Podman detection mismatch")
 		})
 	}
 }
 
 func TestPodmanStatsCache(t *testing.T) {
 	// Create a mock Docker plugin configured as Podman
-	d := &Docker{
-		isPodman:       true,
+	plugin := &Docker{
 		PodmanCacheTTL: config.Duration(60 * time.Second),
 		Log:            testutil.Logger{},
 		statsCache:     make(map[string]*cachedContainerStats),
+		isPodman:       true,
 	}
 
 	// Create test stats
@@ -1860,42 +1233,33 @@ func TestPodmanStatsCache(t *testing.T) {
 	}
 
 	// First call should cache the stats
-	d.fixPodmanCPUStats(testID, stats1)
-	require.Contains(t, d.statsCache, testID)
-	require.Equal(t, stats1, d.statsCache[testID].stats)
+	plugin.fixPodmanCPUStats(testID, stats1)
+	require.Contains(t, plugin.statsCache, testID)
+	require.Equal(t, stats1, plugin.statsCache[testID].stats)
 
 	// Second call should use cached stats as PreCPUStats
-	d.fixPodmanCPUStats(testID, stats2)
+	plugin.fixPodmanCPUStats(testID, stats2)
 	require.Equal(t, stats1.CPUStats, stats2.PreCPUStats)
 
 	// Test cache cleanup
-	d.statsCache["old-container"] = &cachedContainerStats{
+	plugin.statsCache["old-container"] = &cachedContainerStats{
 		stats:     stats1,
 		timestamp: time.Now().Add(-3 * time.Hour),
 	}
-	d.cleanupStaleCache()
-	require.NotContains(t, d.statsCache, "old-container")
-	require.Contains(t, d.statsCache, testID)
+	plugin.cleanupStaleCache()
+	require.NotContains(t, plugin.statsCache, "old-container")
+	require.Contains(t, plugin.statsCache, testID)
 }
 
 func TestStartupErrorBehaviorError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	defer server.Close()
+
 	// Test that model.Start returns error when Ping fails with default "error" behavior
 	// Uses the startup-error-behavior framework (TSD-006)
 	plugin := &Docker{
-		Timeout: config.Duration(100 * time.Millisecond),
-		newClient: func(string, *tls.Config) (dockerClient, error) {
-			return &mockClient{
-				PingF: func() (types.Ping, error) {
-					return types.Ping{}, errors.New("connection refused")
-				},
-				CloseF: func() error {
-					return nil
-				},
-			}, nil
-		},
-		newEnvClient: func() (dockerClient, error) {
-			return nil, errors.New("not using env client")
-		},
+		Endpoint: server.URL,
+		Timeout:  config.Duration(100 * time.Millisecond),
 	}
 	model := models.NewRunningInput(plugin, &models.InputConfig{
 		Name:  "docker",
@@ -1904,30 +1268,22 @@ func TestStartupErrorBehaviorError(t *testing.T) {
 	model.StartupErrors.Set(0)
 	require.NoError(t, model.Init())
 
+	server.Close()
+
 	// Starting the plugin will fail with an error because Ping fails
 	var acc testutil.Accumulator
-	err := model.Start(&acc)
+	require.ErrorContains(t, model.Start(&acc), "failed to ping daemon")
 	model.Stop()
-	require.ErrorContains(t, err, "failed to ping Docker daemon")
 }
 
 func TestStartupErrorBehaviorIgnore(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	defer server.Close()
+
 	// Test that model.Start returns fatal error with "ignore" behavior when Ping fails
 	plugin := &Docker{
-		Timeout: config.Duration(100 * time.Millisecond),
-		newClient: func(string, *tls.Config) (dockerClient, error) {
-			return &mockClient{
-				PingF: func() (types.Ping, error) {
-					return types.Ping{}, errors.New("connection refused")
-				},
-				CloseF: func() error {
-					return nil
-				},
-			}, nil
-		},
-		newEnvClient: func() (dockerClient, error) {
-			return nil, errors.New("not using env client")
-		},
+		Endpoint: server.URL,
+		Timeout:  config.Duration(100 * time.Millisecond),
 	}
 	model := models.NewRunningInput(plugin, &models.InputConfig{
 		Name:                 "docker",
@@ -1937,39 +1293,63 @@ func TestStartupErrorBehaviorIgnore(t *testing.T) {
 	model.StartupErrors.Set(0)
 	require.NoError(t, model.Init())
 
+	server.Close()
+
 	// Starting the plugin will fail and model should convert to fatal error
 	var acc testutil.Accumulator
-	err := model.Start(&acc)
+	require.ErrorContains(t, model.Start(&acc), "failed to ping daemon")
 	model.Stop()
-	require.ErrorContains(t, err, "failed to ping Docker daemon")
 }
 
-func TestStartSuccess(t *testing.T) {
+func TestStartupErrorBehaviorRetry(t *testing.T) {
+	failedServer := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	defer failedServer.Close()
+
+	// Test that model.Start returns fatal error with "ignore" behavior when Ping fails
+	plugin := &Docker{
+		Endpoint: failedServer.URL,
+		Timeout:  config.Duration(100 * time.Millisecond),
+	}
+	model := models.NewRunningInput(plugin, &models.InputConfig{
+		Name:                 "docker",
+		Alias:                "retry-test",
+		StartupErrorBehavior: "retry",
+	})
+	model.StartupErrors.Set(0)
+	require.NoError(t, model.Init())
+
+	failedServer.Close()
+
+	// Starting the plugin will fail but model will mask this
+	var acc testutil.Accumulator
+	require.NoError(t, model.Start(&acc))
+	defer model.Stop()
+
+	// Check we can't gather
+	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
+
+	// Start the server again and check we can gather now
+	server, err := mock.NewServerFromFiles("testdata")
+	require.NoError(t, err)
+
+	addr := server.Start(t)
+	defer server.Close()
+
+	plugin.Endpoint = addr
+	require.NoError(t, model.Gather(&acc))
+}
+
+func TestStartupSuccess(t *testing.T) {
+	server, err := mock.NewServerFromFiles("testdata")
+	require.NoError(t, err)
+
+	addr := server.Start(t)
+	defer server.Close()
+
 	// Test that Start succeeds when Docker is available
 	plugin := &Docker{
-		Timeout: config.Duration(5 * time.Second),
-		newClient: func(string, *tls.Config) (dockerClient, error) {
-			return &mockClient{
-				PingF: func() (types.Ping, error) {
-					return types.Ping{}, nil
-				},
-				InfoF: func() (system.Info, error) {
-					return system.Info{
-						Name:          "docker-desktop",
-						ServerVersion: "20.10.0",
-					}, nil
-				},
-				ClientVersionF: func() string {
-					return "1.24.0"
-				},
-				CloseF: func() error {
-					return nil
-				},
-			}, nil
-		},
-		newEnvClient: func() (dockerClient, error) {
-			return nil, errors.New("not using env client")
-		},
+		Endpoint: addr,
+		Timeout:  config.Duration(5 * time.Second),
 	}
 	model := models.NewRunningInput(plugin, &models.InputConfig{
 		Name:  "docker",

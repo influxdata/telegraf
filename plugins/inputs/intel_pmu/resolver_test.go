@@ -182,9 +182,6 @@ func TestResolveEntities(t *testing.T) {
 	})
 
 	t.Run("resolve core and uncore events", func(t *testing.T) {
-		var mCoreEvents []*eventWithQuals
-		var nUncoreEvents []*eventWithQuals
-
 		mQuals := []string{"config1=0x23h"}
 		mOptions, err := ia.NewOptions().SetAttrModifiers(mQuals).Build()
 		require.NoError(t, err)
@@ -214,12 +211,14 @@ func TestResolveEntities(t *testing.T) {
 				perfEvent: &ia.PerfEvent{Name: "uncore3", Uncore: true}},
 		}
 
+		mCoreEvents := make([]*eventWithQuals, 0, len(coreTestCases))
 		for _, test := range coreTestCases {
 			matcher := ia.NewNameMatcher(test.event.name)
 			mTransformer.On("Transform", nil, matcher).Return([]*ia.PerfEvent{test.perfEvent}, nil).Once()
 			mCoreEvents = append(mCoreEvents, test.event)
 		}
 
+		nUncoreEvents := make([]*eventWithQuals, 0, len(uncoreTestCases))
 		for _, test := range uncoreTestCases {
 			matcher := ia.NewNameMatcher(test.event.name)
 			mTransformer.On("Transform", nil, matcher).Return([]*ia.PerfEvent{test.perfEvent}, nil).Once()

@@ -6,8 +6,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
-
-	"github.com/influxdata/telegraf"
 )
 
 type statisticType int
@@ -27,7 +25,7 @@ type cloudwatchField interface {
 
 type statisticField struct {
 	measurement string
-	tags        []*telegraf.Tag
+	dimensions  []types.Dimension
 	name        string
 	values      map[statisticType]float64
 	timestamp   time.Time
@@ -50,7 +48,7 @@ func (f *statisticField) buildDatum() []types.MetricDatum {
 
 		datum := types.MetricDatum{
 			MetricName: aws.String(strings.Join([]string{f.measurement, f.name}, "_")),
-			Dimensions: buildDimensions(f.tags),
+			Dimensions: f.dimensions,
 			Timestamp:  aws.Time(f.timestamp),
 			StatisticValues: &types.StatisticSet{
 				Minimum:     aws.Float64(vmin),
@@ -69,7 +67,7 @@ func (f *statisticField) buildDatum() []types.MetricDatum {
 	for sType, value := range f.values {
 		datum := types.MetricDatum{
 			Value:      aws.Float64(value),
-			Dimensions: buildDimensions(f.tags),
+			Dimensions: f.dimensions,
 			Timestamp:  aws.Time(f.timestamp),
 		}
 
@@ -104,7 +102,7 @@ func (f *statisticField) hasAllFields() bool {
 
 type valueField struct {
 	measurement string
-	tags        []*telegraf.Tag
+	dimensions  []types.Dimension
 	name        string
 	value       float64
 	timestamp   time.Time
@@ -122,45 +120,9 @@ func (f *valueField) buildDatum() []types.MetricDatum {
 		{
 			MetricName:        aws.String(strings.Join([]string{f.measurement, f.name}, "_")),
 			Value:             aws.Float64(f.value),
-			Dimensions:        buildDimensions(f.tags),
+			Dimensions:        f.dimensions,
 			Timestamp:         aws.Time(f.timestamp),
 			StorageResolution: aws.Int32(int32(f.resolution)),
 		},
 	}
-}
-
-// buildDimensions makes a list of Dimensions by using a Point's tags. CloudWatch supports up to
-// 10 dimensions per metric, so we only keep up to the first 10 alphabetically.
-// This always includes the "host" tag if it exists.
-func buildDimensions(tags []*telegraf.Tag) []types.Dimension {
-	dimensions := make([]types.Dimension, 0, maxDimensions)
-
-	// Make sure we add the "host" tag if any
-	for _, t := range tags {
-		if t.Key != "host" {
-			continue
-		}
-		dimensions = append(dimensions, types.Dimension{
-			Name:  aws.String("host"),
-			Value: aws.String(t.Value),
-		})
-		break
-	}
-
-	// Add more tags until we reach the maximum
-	// NOTE: The tag-list is already sorted so no need to sort it again
-	for _, t := range tags {
-		if len(dimensions) >= maxDimensions {
-			break
-		}
-		if t.Key == "host" || t.Value == "" {
-			continue
-		}
-		dimensions = append(dimensions, types.Dimension{
-			Name:  aws.String(t.Key),
-			Value: aws.String(t.Value),
-		})
-	}
-
-	return dimensions
 }

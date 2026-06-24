@@ -18,6 +18,8 @@ type Parser struct {
 	FieldName   string            `toml:"value_field_name"`
 	MetricName  string            `toml:"-"`
 	DefaultTags map[string]string `toml:"-"`
+
+	timeFunc func() time.Time
 }
 
 func (v *Parser) Init() error {
@@ -42,7 +44,19 @@ func (v *Parser) Init() error {
 		v.FieldName = "value"
 	}
 
+	if v.timeFunc == nil {
+		v.timeFunc = time.Now
+	}
+
 	return nil
+}
+
+func (v *Parser) SetDefaultTags(tags map[string]string) {
+	v.DefaultTags = tags
+}
+
+func (v *Parser) SetTimeFunc(f func() time.Time) {
+	v.timeFunc = f
 }
 
 func (v *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
@@ -89,8 +103,7 @@ func (v *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 
 	fields := map[string]interface{}{v.FieldName: value}
-	m := metric.New(v.MetricName, v.DefaultTags,
-		fields, time.Now().UTC())
+	m := metric.New(v.MetricName, v.DefaultTags, fields, v.timeFunc())
 
 	return []telegraf.Metric{m}, nil
 }
@@ -107,10 +120,6 @@ func (v *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	return metrics[0], nil
-}
-
-func (v *Parser) SetDefaultTags(tags map[string]string) {
-	v.DefaultTags = tags
 }
 
 func init() {

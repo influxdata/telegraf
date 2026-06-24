@@ -12,7 +12,7 @@ import (
 )
 
 func (p *Parser) extractMetricsV2(prommetrics *dto.MetricFamily) []telegraf.Metric {
-	now := time.Now()
+	now := p.timeFunc()
 
 	// Convert each prometheus metric to a corresponding telegraf metric
 	// with one field each. The process will filter NaNs in values and skip

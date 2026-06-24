@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -145,6 +146,36 @@ func TestInfluxDBLocalAddress(t *testing.T) {
 	require.NoError(t, output.Close())
 }
 
+func TestUnixSocketWrite(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("unix socket path cannot be represented as a URL on Windows")
+	}
+
+	socketPath := testutil.TempSocket(t)
+
+	ln, err := net.Listen("unix", socketPath)
+	require.NoError(t, err)
+
+	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	srv.Listener = ln
+	srv.Start()
+	defer srv.Close()
+
+	plugin := &influxdb.InfluxDB{
+		URLs:   []string{"unix://" + socketPath},
+		Bucket: "test",
+		Log:    &testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	m := metric.New("cpu", nil, map[string]any{"value": 1.0}, time.Now())
+	require.NoError(t, plugin.Write([]telegraf.Metric{m}))
+}
+
 func TestWrite(t *testing.T) {
 	// Setup a test server
 	ts := httptest.NewServer(
@@ -201,7 +232,7 @@ func TestWrite(t *testing.T) {
 
 	// Test writing
 	metrics := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"bucket": "foobar",
@@ -262,7 +293,7 @@ func TestWriteWithPartialSerializationError(t *testing.T) {
 
 	metrics := []telegraf.Metric{
 		// Metric which cannot be serialized
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"type": "invalid",
@@ -273,7 +304,7 @@ func TestWriteWithPartialSerializationError(t *testing.T) {
 			time.Unix(0, 0),
 		),
 		// Valid metric
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"type": "valid",
@@ -284,7 +315,7 @@ func TestWriteWithPartialSerializationError(t *testing.T) {
 			time.Unix(0, 0),
 		),
 		// Metric which cannot be serialized
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"type": "invalid",
@@ -352,7 +383,7 @@ func TestWriteWithPartialSerializationAndSendError(t *testing.T) {
 
 	metrics := []telegraf.Metric{
 		// Metric which cannot be serialized
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"type": "invalid",
@@ -363,7 +394,7 @@ func TestWriteWithPartialSerializationAndSendError(t *testing.T) {
 			time.Unix(0, 0),
 		),
 		// Valid metric
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"type": "valid",
@@ -374,7 +405,7 @@ func TestWriteWithPartialSerializationAndSendError(t *testing.T) {
 			time.Unix(0, 0),
 		),
 		// Metric which cannot be serialized
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"type": "invalid",
@@ -452,7 +483,7 @@ func TestWriteBucketTagWorksOnRetry(t *testing.T) {
 
 	// Send the metrics which should be succeed if sent twice
 	metrics := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"bucket": "foo",

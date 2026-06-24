@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/network"
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -37,14 +37,14 @@ func TestRedisSentinelConnectIntegration(t *testing.T) {
 
 	firstSentinel := createSentinelContainer(redis.Name, net.Name, wait.ForAll(
 		wait.ForLog("+monitor master"),
-		wait.ForListeningPort(nat.Port(sentinelServicePort)),
+		wait.ForListeningPort(sentinelServicePort),
 	))
 	require.NoError(t, firstSentinel.Start(), "failed to start container")
 	defer firstSentinel.Terminate()
 
 	secondSentinel := createSentinelContainer(redis.Name, net.Name, wait.ForAll(
 		wait.ForLog("+sentinel sentinel"),
-		wait.ForListeningPort(nat.Port(sentinelServicePort)),
+		wait.ForListeningPort(sentinelServicePort),
 	))
 	require.NoError(t, secondSentinel.Start(), "failed to start container")
 	defer secondSentinel.Terminate()
@@ -102,7 +102,7 @@ func TestRedisSentinelMasters(t *testing.T) {
 	}
 
 	expectedMetrics := []telegraf.Metric{
-		testutil.MustMetric(measurementMasters, expectedTags, expectedFields, now),
+		metric.New(measurementMasters, expectedTags, expectedFields, now),
 	}
 
 	sentinelMastersOutput := map[string]string{
@@ -132,7 +132,7 @@ func TestRedisSentinelMasters(t *testing.T) {
 	require.NoErrorf(t, sentinelErr, "failed converting output: %v", sentinelErr)
 
 	actualMetrics := []telegraf.Metric{
-		testutil.MustMetric(measurementMasters, sentinelTags, sentinelFields, now),
+		metric.New(measurementMasters, sentinelTags, sentinelFields, now),
 	}
 
 	testutil.RequireMetricsEqual(t, expectedMetrics, actualMetrics, testutil.IgnoreTime())
@@ -163,7 +163,7 @@ func TestRedisSentinels(t *testing.T) {
 	}
 
 	expectedMetrics := []telegraf.Metric{
-		testutil.MustMetric(measurementSentinels, expectedTags, expectedFields, now),
+		metric.New(measurementSentinels, expectedTags, expectedFields, now),
 	}
 
 	sentinelsOutput := map[string]string{
@@ -187,7 +187,7 @@ func TestRedisSentinels(t *testing.T) {
 	require.NoErrorf(t, sentinelErr, "failed converting output: %v", sentinelErr)
 
 	actualMetrics := []telegraf.Metric{
-		testutil.MustMetric(measurementSentinels, sentinelTags, sentinelFields, now),
+		metric.New(measurementSentinels, sentinelTags, sentinelFields, now),
 	}
 
 	testutil.RequireMetricsEqual(t, expectedMetrics, actualMetrics)
@@ -224,7 +224,7 @@ func TestRedisSentinelReplicas(t *testing.T) {
 	}
 
 	expectedMetrics := []telegraf.Metric{
-		testutil.MustMetric(measurementReplicas, expectedTags, expectedFields, now),
+		metric.New(measurementReplicas, expectedTags, expectedFields, now),
 	}
 
 	replicasOutput := map[string]string{
@@ -254,7 +254,7 @@ func TestRedisSentinelReplicas(t *testing.T) {
 	require.NoErrorf(t, sentinelErr, "failed converting output: %v", sentinelErr)
 
 	actualMetrics := []telegraf.Metric{
-		testutil.MustMetric(measurementReplicas, sentinelTags, sentinelFields, now),
+		metric.New(measurementReplicas, sentinelTags, sentinelFields, now),
 	}
 
 	testutil.RequireMetricsEqual(t, expectedMetrics, actualMetrics)
@@ -323,7 +323,7 @@ func TestRedisSentinelInfoAll(t *testing.T) {
 	}
 
 	expectedMetrics := []telegraf.Metric{
-		testutil.MustMetric(measurementSentinel, expectedTags, expectedFields, now),
+		metric.New(measurementSentinel, expectedTags, expectedFields, now),
 	}
 
 	sentinelInfoResponse, err := os.ReadFile("testdata/sentinel.info.response")
@@ -335,7 +335,7 @@ func TestRedisSentinelInfoAll(t *testing.T) {
 	require.NoErrorf(t, sentinelErr, "failed converting output: %v", sentinelErr)
 
 	actualMetrics := []telegraf.Metric{
-		testutil.MustMetric(measurementSentinel, sentinelTags, sentinelFields, now),
+		metric.New(measurementSentinel, sentinelTags, sentinelFields, now),
 	}
 
 	testutil.RequireMetricsEqual(t, expectedMetrics, actualMetrics)
@@ -349,7 +349,7 @@ func createRedisContainer(networkName string) testutil.Container {
 		ExposedPorts: []string{"6379"},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("Ready to accept connections"),
-			wait.ForListeningPort(nat.Port("6379")),
+			wait.ForListeningPort("6379"),
 		),
 	}
 }

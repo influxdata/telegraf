@@ -136,7 +136,8 @@ func (s *Smartctl) scanDevice(acc telegraf.Accumulator, deviceName, deviceType s
 		for k, v := range tags {
 			attributeTags[k] = v
 		}
-		attributeTags["name"] = attribute.Name
+
+		attributeTags[s.attributeTagName] = attribute.Name
 
 		fields := map[string]interface{}{
 			"raw_value": attribute.Raw.Value,

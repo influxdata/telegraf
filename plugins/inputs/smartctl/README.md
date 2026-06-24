@@ -8,7 +8,7 @@ package to collect additional information about NVMe devices.
 
 > [!NOTE]
 > This plugin requires [`smartmontools`][smartmon] to be installed on your
-> system. The `smartctl` command must to be executable by Telegraf and must
+> system. The `smartctl` command must be executable by Telegraf and must
 > supporting JSON output. JSON output was added in v7.0 and improved in
 > subsequent releases
 
@@ -59,6 +59,14 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ##   * idle: check the device unless it is in sleep, standby, or idle mode
     # nocheck = "standby"
 
+    ## Metric version changes the naming of tags in the smartctl_attributes
+    ## outputs. Currently "smartctl_attribute" metrics include the attribute
+    ## name in the "name" tag, and the associated device is not in any tag,
+    ## making it harder to associate them to the "smartctl" metrics.
+    ## metric_version = 2 will use the "name" tag for the device name,
+    ## and a new "attribute" tag for the attribute name.
+    # metric_version = 1
+
     ## Timeout for the cli command to complete
     # timeout = "30s"
 ```
@@ -77,7 +85,8 @@ Users need the following in the Telegraf config:
   use_sudo = true
 ```
 
-And to update the `/etc/sudoers` file to allow running smartctl:
+and to update the `/etc/sudoers` file (or add a file in `/etc/sudoers.d/`)
+to allow running smartctl:
 
 ```bash
 $ visudo
@@ -86,6 +95,12 @@ Cmnd_Alias SMARTCTL = /usr/sbin/smartctl
 telegraf  ALL=(ALL) NOPASSWD: SMARTCTL
 Defaults!SMARTCTL !logfile, !syslog, !pam_session
 ```
+
+> [!NOTE]
+> 🪲 If you are using `sudo-rs` instead of GNU `sudo`, the `Defaults!SMARTCTL`
+> line has to be removed as these logging options are not currently supported
+> and will cause errors running sudo until that is resolved.
+> See trifectatechfoundation/sudo-rs#1181.
 
 ## Troubleshooting
 
@@ -113,7 +128,8 @@ having issues.
 - smartctl_attributes
   - tags
     - model (model name of the storage device)
-    - name (name of the attribute)
+    - name (name of the attribute - or the device id if selected by `metric_version=2`)
+    - attribute (name of the attribute - if selected by `metric_version=2`)
     - serial (serial number of the device)
     - type (device type like SATA etc)
     - wwn (world wide number of the device)

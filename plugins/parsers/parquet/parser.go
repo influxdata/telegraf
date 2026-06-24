@@ -23,14 +23,24 @@ type Parser struct {
 	TimestampTimezone string   `toml:"timestamp_timezone"`
 
 	defaultTags map[string]string
-	location    *time.Location
 	metricName  string
+	location    *time.Location
+	timeFunc    func() time.Time
+}
+
+func (p *Parser) SetDefaultTags(tags map[string]string) {
+	p.defaultTags = tags
+}
+
+func (p *Parser) SetTimeFunc(f func() time.Time) {
+	p.timeFunc = f
 }
 
 func (p *Parser) Init() error {
 	if p.TimestampFormat == "" {
 		p.TimestampFormat = "unix"
 	}
+
 	if p.TimestampTimezone == "" {
 		p.location = time.UTC
 	} else {
@@ -39,6 +49,10 @@ func (p *Parser) Init() error {
 			return fmt.Errorf("invalid location %s: %w", p.TimestampTimezone, err)
 		}
 		p.location = loc
+	}
+
+	if p.timeFunc == nil {
+		p.timeFunc = time.Now
 	}
 
 	return nil
@@ -52,7 +66,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 	metadata := parquetReader.MetaData()
 
-	now := time.Now()
+	now := p.timeFunc()
 	metrics := make([]telegraf.Metric, 0, metadata.NumRows)
 	for i := 0; i < parquetReader.NumRowGroups(); i++ {
 		rowGroup := parquetReader.RowGroup(i)
@@ -60,7 +74,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		for colIndex := range metadata.Schema.NumColumns() {
 			col, err := rowGroup.Column(colIndex)
 			if err != nil {
-				return nil, fmt.Errorf("unable to fetch column %q: %w", colIndex, err)
+				return nil, fmt.Errorf("unable to fetch column %d: %w", colIndex, err)
 			}
 
 			scanners[colIndex] = newColumnParser(col)
@@ -134,10 +148,6 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	return metrics[0], nil
-}
-
-func (p *Parser) SetDefaultTags(tags map[string]string) {
-	p.defaultTags = tags
 }
 
 func init() {

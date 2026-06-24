@@ -4,11 +4,14 @@
 package temp
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"golang.org/x/sys/unix"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -46,12 +49,14 @@ func (t *Temperature) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("getting temperatures failed: %w", err)
 	}
 
-	if len(temperatures) == 0 {
+	if len(temperatures) == 0 || t.ThermalZones {
 		// There is no hwmon interface, fallback to thermal-zone parsing
-		temperatures, err = t.gatherThermalZone(path)
+		// Or append the thermal-zone parsing if set in the configuration
+		temperaturesZones, err := t.gatherThermalZone(path)
 		if err != nil {
 			return fmt.Errorf("getting temperatures (via fallback) failed: %w", err)
 		}
+		temperatures = append(temperatures, temperaturesZones...)
 	}
 
 	switch t.MetricFormat {
@@ -160,9 +165,11 @@ func (t *Temperature) gatherHwmon(syspath string) ([]temperatureStat, error) {
 			additional: make(map[string]interface{}),
 		}
 
-		// Temperature (mandatory)
+		// Temperature (mandatory). Use a non-blocking read as the underlying
+		// hardware might be unavailable (e.g. asleep) and a blocking read would
+		// hang the gather cycle.
 		fn := filepath.Join(path, prefix+"_input")
-		buf, err := os.ReadFile(fn)
+		buf, err := readFileNonblocking(fn)
 		if err != nil {
 			t.Log.Debugf("Couldn't read temperature from %q: %v", fn, err)
 			continue
@@ -230,10 +237,15 @@ func (t *Temperature) gatherThermalZone(syspath string) ([]temperatureStat, erro
 		}
 		name := strings.TrimSpace(string(buf))
 
-		// Actual temperature
-		buf, err = os.ReadFile(filepath.Join(path, "temp"))
+		// Actual temperature. On Linux EAGAIN and EWOULDBLOCK are the same errno.
+		buf, err = readFileNonblocking(filepath.Join(path, "temp"))
 		if err != nil {
-			t.Log.Errorf("Cannot read temperature of zone %q", path)
+			if errors.Is(err, unix.EAGAIN) {
+				// Silently ignore this thermal-zone when the underlying hardware is unavailable
+				t.Log.Tracef("Skipping zone %q as the hardware is unavailable: %v", path, err)
+				continue
+			}
+			t.Log.Errorf("Cannot read temperature of zone %q: %v", path, err)
 			continue
 		}
 		v, err := strconv.ParseFloat(strings.TrimSpace(string(buf)), 64)
@@ -246,4 +258,22 @@ func (t *Temperature) gatherThermalZone(syspath string) ([]temperatureStat, erro
 	}
 
 	return stats, nil
+}
+
+func readFileNonblocking(path string) ([]byte, error) {
+	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_NONBLOCK, 0)
+	if err != nil {
+		return nil, err
+	}
+	defer unix.Close(fd)
+
+	// The kernel specifies the temperatures are expressed in millidegrees
+	// tempBuf of 8 bytes stores temperatures up to 99999.999°C
+	var tempBuf [8]byte
+
+	n, err := unix.Read(fd, tempBuf[:])
+	if err != nil {
+		return nil, err
+	}
+	return tempBuf[:n], nil
 }

@@ -26,7 +26,7 @@ func githubWebhookRequest(t *testing.T, event, jsonString string) {
 
 func githubWebhookRequestWithSignature(t *testing.T, event, jsonString, signature string, expectedStatus int) {
 	var acc testutil.Accumulator
-	gh := &Webhook{Path: "/github", secret: "signature", acc: &acc, log: testutil.Logger{}}
+	gh := &Webhook{Path: "/github", Secret: "signature", acc: &acc, log: testutil.Logger{}}
 	req, err := http.NewRequest("POST", "/github", strings.NewReader(jsonString))
 	require.NoError(t, err)
 	req.Header.Add("X-Github-Event", event)

@@ -316,6 +316,7 @@ func TestNewNodeMetricMappingIdStrInstantiated(t *testing.T) {
 }
 
 func TestValidateNodeToAdd(t *testing.T) {
+	//nolint:prealloc // do not preallocate for code cleanliness
 	tests := []struct {
 		name     string
 		existing map[metricParts]struct{}
@@ -780,6 +781,28 @@ func TestMetricForNode(t *testing.T) {
 			expected: metric.New("testingmetric",
 				map[string]string{"t1": "v1", "id": "ns=3;s=hi"},
 				map[string]interface{}{"Quality": "The operation succeeded. StatusGood (0x0)", "fn[0]": 16, "fn[1]": 17},
+				time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{})),
+		},
+		{
+			testname: "byte array metric build correctly",
+			nmm: []NodeMetricMapping{
+				{
+					Tag: NodeSettings{
+						FieldName: "fn",
+					},
+					idStr:      "ns=3;s=hi",
+					metricName: "testingmetric",
+					MetricTags: map[string]string{"t1": "v1"},
+				},
+			},
+			v:        ua.ByteArray{0x01, 0x02},
+			isArray:  true,
+			dataType: ua.TypeIDByte,
+			time:     time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{}),
+			status:   ua.StatusOK,
+			expected: metric.New("testingmetric",
+				map[string]string{"t1": "v1", "id": "ns=3;s=hi"},
+				map[string]interface{}{"Quality": "The operation succeeded. StatusGood (0x0)", "fn[0]": byte(1), "fn[1]": byte(2)},
 				time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{})),
 		},
 		{
@@ -1426,4 +1449,125 @@ func TestEventGroupWithNodeIDString(t *testing.T) {
 	require.Equal(t, "ns=0;i=2041", eventGroup.EventTypeNode.NodeID())
 	require.Equal(t, "ns=2;s=EventSource1", eventGroup.NodeIDSettings[0].NodeID())
 	require.Equal(t, "nsu=http://example.org/;i=200", eventGroup.NodeIDSettings[1].NodeID())
+}
+
+func TestParseBrowsePath(t *testing.T) {
+	tests := []struct {
+		name     string
+		field    string
+		expected []*ua.QualifiedName
+	}{
+		{
+			name:  "simple field",
+			field: "Severity",
+			expected: []*ua.QualifiedName{
+				{NamespaceIndex: 0, Name: "Severity"},
+			},
+		},
+		{
+			name:  "namespace qualified field",
+			field: "2:TEXT01",
+			expected: []*ua.QualifiedName{
+				{NamespaceIndex: 2, Name: "TEXT01"},
+			},
+		},
+		{
+			name:  "nested browse path",
+			field: "AckedState/Id",
+			expected: []*ua.QualifiedName{
+				{NamespaceIndex: 0, Name: "AckedState"},
+				{NamespaceIndex: 0, Name: "Id"},
+			},
+		},
+		{
+			name:  "namespace qualified nested path",
+			field: "2:AckedState/0:Id",
+			expected: []*ua.QualifiedName{
+				{NamespaceIndex: 2, Name: "AckedState"},
+				{NamespaceIndex: 0, Name: "Id"},
+			},
+		},
+		{
+			name:  "non-numeric prefix treated as name",
+			field: "abc:def",
+			expected: []*ua.QualifiedName{
+				{NamespaceIndex: 0, Name: "abc:def"},
+			},
+		},
+		{
+			name:  "namespace zero explicit",
+			field: "0:Message",
+			expected: []*ua.QualifiedName{
+				{NamespaceIndex: 0, Name: "Message"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := parseBrowsePath(tt.field)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestParseBrowsePathError(t *testing.T) {
+	tests := []struct {
+		name    string
+		field   string
+		errText string
+	}{
+		{
+			name:    "empty string",
+			field:   "",
+			errText: "empty segment",
+		},
+		{
+			name:    "leading slash",
+			field:   "/Severity",
+			errText: "empty segment",
+		},
+		{
+			name:    "trailing slash",
+			field:   "Severity/",
+			errText: "empty segment",
+		},
+		{
+			name:    "double slash",
+			field:   "AckedState//Id",
+			errText: "empty segment",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := parseBrowsePath(tt.field)
+			require.ErrorContains(t, err, tt.errText)
+		})
+	}
+}
+
+func TestCreateSelectClausesWithNamespacedFields(t *testing.T) {
+	node := &EventNodeMetricMapping{
+		EventTypeNode: ua.NewNumericNodeID(0, 2041),
+		Fields:        []string{"Severity", "2:TEXT01", "AckedState/Id"},
+	}
+
+	selects, err := node.createSelectClauses()
+	require.NoError(t, err)
+	require.Len(t, selects, 3)
+
+	require.Equal(t, []*ua.QualifiedName{
+		{NamespaceIndex: 0, Name: "Severity"},
+	}, selects[0].BrowsePath)
+
+	require.Equal(t, []*ua.QualifiedName{
+		{NamespaceIndex: 2, Name: "TEXT01"},
+	}, selects[1].BrowsePath)
+
+	require.Equal(t, []*ua.QualifiedName{
+		{NamespaceIndex: 0, Name: "AckedState"},
+		{NamespaceIndex: 0, Name: "Id"},
+	}, selects[2].BrowsePath)
 }

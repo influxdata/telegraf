@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gofrs/uuid/v5"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -518,7 +519,7 @@ func TestRunningInputProbingSuccess(t *testing.T) {
 		},
 		{
 			name:                 "probing plugin with probe value not set",
-			input:                &mockInput{probeErr},
+			input:                &mockInput{probeReturn: probeErr},
 			startupErrorBehavior: "ignore",
 		},
 	} {
@@ -533,8 +534,89 @@ func TestRunningInputProbingSuccess(t *testing.T) {
 	}
 }
 
+func TestRunningInputStatisticsErrorsCount(t *testing.T) {
+	id, err := uuid.NewV4()
+	require.NoError(t, err)
+	expectedErr := errors.New("an error")
+
+	// Setup a plugin that returns an error during gather
+	plugin := &mockInput{
+		gatherReturn: expectedErr,
+	}
+	model := NewRunningInput(plugin, &InputConfig{
+		Name:  "mock",
+		Alias: "TestRunningOutputStatisticsErrorCount",
+		ID:    id.String(),
+	})
+	require.NoError(t, model.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, model.Start(&acc))
+	defer model.Stop()
+
+	// Get a reference to the plugin's statistics error counter
+	tags := map[string]string{
+		"input": model.Config.Name,
+		"_id":   model.Config.ID,
+		"alias": model.Config.Alias,
+	}
+	stats := selfstat.Register("gather", "errors", tags)
+	require.Zero(t, stats.Get())
+
+	GlobalGatherErrors.Set(0)
+
+	// Log an error in the plugin and verify the error counter increases
+	plugin.Log.Error("an error logging message")
+	require.Equal(t, int64(1), stats.Get())
+
+	// The counter should not increase in case of other log levels
+	plugin.Log.Warn("a warning message")
+	require.Equal(t, int64(1), stats.Get())
+
+	// The logging errors should not increase the gather error count
+	require.Zero(t, model.GatherErrors.Get())
+	require.Zero(t, GlobalGatherErrors.Get())
+}
+
+func TestRunningInputStatisticsGatherErrorsCount(t *testing.T) {
+	id, err := uuid.NewV4()
+	require.NoError(t, err)
+	expectedErr := errors.New("an error")
+
+	// Setup a plugin that returns an error during gather
+	plugin := &mockInput{
+		gatherReturn: expectedErr,
+	}
+	model := NewRunningInput(plugin, &InputConfig{
+		Name:  "mock",
+		Alias: "TestRunningOutputStatisticsErrorCount",
+		ID:    id.String(),
+	})
+	require.NoError(t, model.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, model.Start(&acc))
+	defer model.Stop()
+
+	// We should start off with an empty count
+	require.Zero(t, model.GatherErrors.Get())
+	GlobalGatherErrors.Set(0)
+
+	// Logging an error in the plugin should not increase the count
+	plugin.Log.Error("an error logging message")
+	require.Zero(t, model.GatherErrors.Get())
+
+	// A failed collection should increase the error count
+	require.ErrorIs(t, model.Gather(&acc), expectedErr)
+	require.Equal(t, int64(1), model.GatherErrors.Get())
+	require.Equal(t, int64(1), GlobalGatherErrors.Get())
+}
+
 type mockInput struct {
-	probeReturn error
+	probeReturn  error
+	gatherReturn error
+
+	Log telegraf.Logger
 }
 
 func (*mockInput) SampleConfig() string {
@@ -545,6 +627,6 @@ func (m *mockInput) Probe() error {
 	return m.probeReturn
 }
 
-func (*mockInput) Gather(telegraf.Accumulator) error {
-	return nil
+func (m *mockInput) Gather(telegraf.Accumulator) error {
+	return m.gatherReturn
 }

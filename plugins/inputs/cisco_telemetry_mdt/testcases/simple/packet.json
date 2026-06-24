@@ -1,0 +1,56 @@
+{
+    "nodeIdStr": "hostname",
+    "subscriptionIdStr": "subscription",
+    "encodingPath": "type:model/some/path",
+    "msgTimestamp": "1543236572000",
+    "dataGpbkv": [
+        {
+            "fields": [
+                {
+                    "name": "keys",
+                    "fields": [
+                        {
+                            "name": "name",
+                            "stringValue": "str"
+                        },
+                        {
+                            "name": "uint64",
+                            "uint64Value": "1234"
+                        }
+                    ]
+                },
+                {
+                    "name": "content",
+                    "fields": [
+                        {
+                            "name": "bool",
+                            "boolValue": true
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "fields": [
+                {
+                    "name": "keys",
+                    "fields": [
+                        {
+                            "name": "name",
+                            "stringValue": "str2"
+                        }
+                    ]
+                },
+                {
+                    "name": "content",
+                    "fields": [
+                        {
+                            "name": "bool",
+                            "boolValue": false
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

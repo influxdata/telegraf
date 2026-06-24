@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -25,7 +24,7 @@ func queryRunner(t *testing.T, q []query) *testutil.Accumulator {
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 		),
 	}
 
@@ -88,8 +87,6 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 		"datid",
 	}
 
-	var int32Metrics []string
-
 	floatMetrics := []string{
 		"blk_read_time",
 		"blk_write_time",
@@ -106,12 +103,6 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 		metricsCounted++
 	}
 
-	//nolint:gosec // G602: False positive — this is a safe range iteration over a slice (it may be empty)
-	for _, metric := range int32Metrics {
-		require.True(t, acc.HasInt32Field("postgresql", metric))
-		metricsCounted++
-	}
-
 	for _, metric := range floatMetrics {
 		require.True(t, acc.HasFloatField("postgresql", metric))
 		metricsCounted++
@@ -123,7 +114,7 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 	}
 
 	require.Positive(t, metricsCounted)
-	require.Equal(t, len(floatMetrics)+len(intMetrics)+len(int32Metrics)+len(stringMetrics), metricsCounted)
+	require.Equal(t, len(floatMetrics)+len(intMetrics)+len(stringMetrics), metricsCounted)
 }
 
 func TestPostgresqlQueryOutputTestsIntegration(t *testing.T) {
@@ -206,8 +197,6 @@ func TestPostgresqlFieldOutputIntegration(t *testing.T) {
 		"datid",
 	}
 
-	var int32Metrics []string
-
 	floatMetrics := []string{
 		"blk_read_time",
 		"blk_write_time",
@@ -220,12 +209,6 @@ func TestPostgresqlFieldOutputIntegration(t *testing.T) {
 	for _, field := range intMetrics {
 		_, found := acc.Int64Field(measurement, field)
 		require.Truef(t, found, "expected %s to be an integer", field)
-	}
-
-	//nolint:gosec // G602: False positive — this is a safe range iteration over a slice (it may be empty)
-	for _, field := range int32Metrics {
-		_, found := acc.Int32Field(measurement, field)
-		require.Truef(t, found, "expected %s to be an int32", field)
 	}
 
 	for _, field := range floatMetrics {

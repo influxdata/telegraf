@@ -1,6 +1,7 @@
 package huebridge
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"maps"
@@ -35,28 +36,28 @@ func (b *bridge) String() string {
 	return b.url.Redacted()
 }
 
-func (b *bridge) process(acc telegraf.Accumulator) error {
+func (b *bridge) process(ctx context.Context, acc telegraf.Accumulator) error {
 	if b.resolvedClient == nil {
 		if err := b.resolve(); err != nil {
 			return err
 		}
 	}
 	b.log.Tracef("Processing bridge %s", b)
-	if err := b.fetchMetadata(); err != nil {
+	if err := b.fetchMetadata(ctx); err != nil {
 		// Discard previously resolved client and re-resolve on next process call
 		b.resolvedClient = nil
 		return err
 	}
-	acc.AddError(b.processLights(acc))
-	acc.AddError(b.processTemperatures(acc))
-	acc.AddError(b.processLightLevels(acc))
-	acc.AddError(b.processMotionSensors(acc))
-	acc.AddError(b.processDevicePowers(acc))
+	acc.AddError(b.processLights(ctx, acc))
+	acc.AddError(b.processTemperatures(ctx, acc))
+	acc.AddError(b.processLightLevels(ctx, acc))
+	acc.AddError(b.processMotionSensors(ctx, acc))
+	acc.AddError(b.processDevicePowers(ctx, acc))
 	return nil
 }
 
-func (b *bridge) processLights(acc telegraf.Accumulator) error {
-	getLightsResponse, err := b.resolvedClient.GetLights()
+func (b *bridge) processLights(ctx context.Context, acc telegraf.Accumulator) error {
+	getLightsResponse, err := b.resolvedClient.GetLights(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to access bridge lights on %s: %w", b, err)
 	}
@@ -64,26 +65,37 @@ func (b *bridge) processLights(acc telegraf.Accumulator) error {
 		return fmt.Errorf("failed to fetch bridge lights from %s: %s", b, getLightsResponse.HTTPResponse.Status)
 	}
 	responseData := getLightsResponse.JSON200.Data
-	if responseData != nil {
-		for _, light := range *responseData {
-			tags := make(map[string]string)
-			tags["bridge_id"] = b.resolvedClient.Bridge().BridgeId
-			tags["room"] = b.resolveResourceRoom(*light.Id, *light.Metadata.Name)
-			tags["device"] = *light.Metadata.Name
-			fields := make(map[string]interface{})
-			if *light.On.On {
-				fields["on"] = 1
-			} else {
-				fields["on"] = 0
-			}
-			acc.AddGauge("huebridge_light", fields, tags)
+	for _, light := range responseData {
+		tags := map[string]string{
+			"bridge_id": b.resolvedClient.Bridge().BridgeId,
+			"room":      b.resolveResourceRoom(light.Id, light.Metadata.Name),
+			"device":    light.Metadata.Name,
 		}
+		fields := make(map[string]interface{}, 5)
+		if light.On.On {
+			fields["on"] = 1
+		} else {
+			fields["on"] = 0
+		}
+		if light.Dimming != nil && light.Dimming.Brightness != nil {
+			fields["brightness"] = float64(*light.Dimming.Brightness)
+		}
+		if light.ColorTemperature != nil &&
+			light.ColorTemperature.MirekValid != nil && *light.ColorTemperature.MirekValid &&
+			light.ColorTemperature.Mirek != nil {
+			fields["color_temp"] = int64(*light.ColorTemperature.Mirek)
+		}
+		if light.Color != nil && light.Color.Xy != nil {
+			fields["color_x"] = float64(light.Color.Xy.X)
+			fields["color_y"] = float64(light.Color.Xy.Y)
+		}
+		acc.AddGauge("huebridge_light", fields, tags)
 	}
 	return nil
 }
 
-func (b *bridge) processTemperatures(acc telegraf.Accumulator) error {
-	getTemperaturesResponse, err := b.resolvedClient.GetTemperatures()
+func (b *bridge) processTemperatures(ctx context.Context, acc telegraf.Accumulator) error {
+	getTemperaturesResponse, err := b.resolvedClient.GetTemperatures(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to access bridge temperatures on %s: %w", b, err)
 	}
@@ -91,24 +103,24 @@ func (b *bridge) processTemperatures(acc telegraf.Accumulator) error {
 		return fmt.Errorf("failed to fetch bridge temperatures from %s: %s", b, getTemperaturesResponse.HTTPResponse.Status)
 	}
 	responseData := getTemperaturesResponse.JSON200.Data
-	if responseData != nil {
-		for _, temperature := range *responseData {
-			temperatureName := b.resolveDeviceName(*temperature.Id)
-			tags := make(map[string]string)
-			tags["bridge_id"] = b.resolvedClient.Bridge().BridgeId
-			tags["room"] = b.resolveResourceRoom(*temperature.Id, temperatureName)
-			tags["device"] = temperatureName
-			tags["enabled"] = strconv.FormatBool(*temperature.Enabled)
-			fields := make(map[string]interface{})
-			fields["temperature"] = *temperature.Temperature.TemperatureReport.Temperature
-			acc.AddGauge("huebridge_temperature", fields, tags)
+	for _, temperature := range responseData {
+		temperatureName := b.resolveDeviceName(temperature.Id)
+		tags := map[string]string{
+			"bridge_id": b.resolvedClient.Bridge().BridgeId,
+			"room":      b.resolveResourceRoom(temperature.Id, temperatureName),
+			"device":    temperatureName,
+			"enabled":   strconv.FormatBool(temperature.Enabled),
 		}
+		fields := map[string]interface{}{
+			"temperature": *temperature.Temperature.TemperatureReport.Temperature,
+		}
+		acc.AddGauge("huebridge_temperature", fields, tags)
 	}
 	return nil
 }
 
-func (b *bridge) processLightLevels(acc telegraf.Accumulator) error {
-	getLightLevelsResponse, err := b.resolvedClient.GetLightLevels()
+func (b *bridge) processLightLevels(ctx context.Context, acc telegraf.Accumulator) error {
+	getLightLevelsResponse, err := b.resolvedClient.GetLightLevels(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to access bridge lights levels on %s: %w", b, err)
 	}
@@ -116,25 +128,25 @@ func (b *bridge) processLightLevels(acc telegraf.Accumulator) error {
 		return fmt.Errorf("failed to fetch bridge light levels from %s: %s", b, getLightLevelsResponse.HTTPResponse.Status)
 	}
 	responseData := getLightLevelsResponse.JSON200.Data
-	if responseData != nil {
-		for _, lightLevel := range *responseData {
-			lightLevelName := b.resolveDeviceName(*lightLevel.Id)
-			tags := make(map[string]string)
-			tags["bridge_id"] = b.resolvedClient.Bridge().BridgeId
-			tags["room"] = b.resolveResourceRoom(*lightLevel.Id, lightLevelName)
-			tags["device"] = lightLevelName
-			tags["enabled"] = strconv.FormatBool(*lightLevel.Enabled)
-			fields := make(map[string]interface{})
-			fields["light_level"] = *lightLevel.Light.LightLevelReport.LightLevel
-			fields["light_level_lux"] = math.Pow(10.0, (float64(*lightLevel.Light.LightLevelReport.LightLevel)-1.0)/10000.0)
-			acc.AddGauge("huebridge_light_level", fields, tags)
+	for _, lightLevel := range responseData {
+		lightLevelName := b.resolveDeviceName(lightLevel.Id)
+		tags := map[string]string{
+			"bridge_id": b.resolvedClient.Bridge().BridgeId,
+			"room":      b.resolveResourceRoom(lightLevel.Id, lightLevelName),
+			"device":    lightLevelName,
+			"enabled":   strconv.FormatBool(lightLevel.Enabled),
 		}
+		fields := map[string]interface{}{
+			"light_level":     *lightLevel.Light.LightLevelReport.LightLevel,
+			"light_level_lux": math.Pow(10.0, (float64(*lightLevel.Light.LightLevelReport.LightLevel)-1.0)/10000.0),
+		}
+		acc.AddGauge("huebridge_light_level", fields, tags)
 	}
 	return nil
 }
 
-func (b *bridge) processMotionSensors(acc telegraf.Accumulator) error {
-	getMotionSensorsResponse, err := b.resolvedClient.GetMotionSensors()
+func (b *bridge) processMotionSensors(ctx context.Context, acc telegraf.Accumulator) error {
+	getMotionSensorsResponse, err := b.resolvedClient.GetMotionSensors(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to access bridge motion sensors on %s: %w", b, err)
 	}
@@ -142,28 +154,27 @@ func (b *bridge) processMotionSensors(acc telegraf.Accumulator) error {
 		return fmt.Errorf("failed to fetch bridge motion sensors from %s: %s", b, getMotionSensorsResponse.HTTPResponse.Status)
 	}
 	responseData := getMotionSensorsResponse.JSON200.Data
-	if responseData != nil {
-		for _, motionSensor := range *responseData {
-			motionSensorName := b.resolveDeviceName(*motionSensor.Id)
-			tags := make(map[string]string)
-			tags["bridge_id"] = b.resolvedClient.Bridge().BridgeId
-			tags["room"] = b.resolveResourceRoom(*motionSensor.Id, motionSensorName)
-			tags["device"] = motionSensorName
-			tags["enabled"] = strconv.FormatBool(*motionSensor.Enabled)
-			fields := make(map[string]interface{})
-			if *motionSensor.Motion.MotionReport.Motion {
-				fields["motion"] = 1
-			} else {
-				fields["motion"] = 0
-			}
-			acc.AddGauge("huebridge_motion_sensor", fields, tags)
+	for _, motionSensor := range responseData {
+		motionSensorName := b.resolveDeviceName(motionSensor.Id)
+		tags := map[string]string{
+			"bridge_id": b.resolvedClient.Bridge().BridgeId,
+			"room":      b.resolveResourceRoom(motionSensor.Id, motionSensorName),
+			"device":    motionSensorName,
+			"enabled":   strconv.FormatBool(motionSensor.Enabled),
 		}
+		fields := make(map[string]interface{}, 1)
+		if *motionSensor.Motion.MotionReport.Motion {
+			fields["motion"] = 1
+		} else {
+			fields["motion"] = 0
+		}
+		acc.AddGauge("huebridge_motion_sensor", fields, tags)
 	}
 	return nil
 }
 
-func (b *bridge) processDevicePowers(acc telegraf.Accumulator) error {
-	getDevicePowersResponse, err := b.resolvedClient.GetDevicePowers()
+func (b *bridge) processDevicePowers(ctx context.Context, acc telegraf.Accumulator) error {
+	getDevicePowersResponse, err := b.resolvedClient.GetDevicePowers(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to access bridge device powers on %s: %w", b, err)
 	}
@@ -171,21 +182,21 @@ func (b *bridge) processDevicePowers(acc telegraf.Accumulator) error {
 		return fmt.Errorf("failed to fetch bridge device powers from %s: %s", b, getDevicePowersResponse.HTTPResponse.Status)
 	}
 	responseData := getDevicePowersResponse.JSON200.Data
-	if responseData != nil {
-		for _, devicePower := range *responseData {
-			if devicePower.PowerState.BatteryLevel == nil && devicePower.PowerState.BatteryState == nil {
-				continue
-			}
-			devicePowerName := b.resolveDeviceName(*devicePower.Id)
-			tags := make(map[string]string)
-			tags["bridge_id"] = b.resolvedClient.Bridge().BridgeId
-			tags["room"] = b.resolveResourceRoom(*devicePower.Id, devicePowerName)
-			tags["device"] = devicePowerName
-			fields := make(map[string]interface{})
-			fields["battery_level"] = *devicePower.PowerState.BatteryLevel
-			fields["battery_state"] = *devicePower.PowerState.BatteryState
-			acc.AddGauge("huebridge_device_power", fields, tags)
+	for _, devicePower := range responseData {
+		if devicePower.PowerState.BatteryLevel == nil && devicePower.PowerState.BatteryState == nil {
+			continue
 		}
+		devicePowerName := b.resolveDeviceName(devicePower.Id)
+		tags := map[string]string{
+			"bridge_id": b.resolvedClient.Bridge().BridgeId,
+			"room":      b.resolveResourceRoom(devicePower.Id, devicePowerName),
+			"device":    devicePowerName,
+		}
+		fields := map[string]interface{}{
+			"battery_level": *devicePower.PowerState.BatteryLevel,
+			"battery_state": *devicePower.PowerState.BatteryState,
+		}
+		acc.AddGauge("huebridge_device_power", fields, tags)
 	}
 	return nil
 }
@@ -295,20 +306,20 @@ func (b *bridge) resolveRemoteBridge(locator *hue.RemoteBridgeLocator) error {
 	return nil
 }
 
-func (b *bridge) fetchMetadata() error {
-	err := b.fetchResourceTree()
+func (b *bridge) fetchMetadata(ctx context.Context) error {
+	err := b.fetchResourceTree(ctx)
 	if err != nil {
 		return err
 	}
-	err = b.fetchDeviceNames()
+	err = b.fetchDeviceNames(ctx)
 	if err != nil {
 		return err
 	}
-	return b.fetchRoomAssignments()
+	return b.fetchRoomAssignments(ctx)
 }
 
-func (b *bridge) fetchResourceTree() error {
-	getResourcesResponse, err := b.resolvedClient.GetResources()
+func (b *bridge) fetchResourceTree(ctx context.Context) error {
+	getResourcesResponse, err := b.resolvedClient.GetResources(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to access bridge resources on %s: %w", b, err)
 	}
@@ -322,15 +333,13 @@ func (b *bridge) fetchResourceTree() error {
 	}
 	b.resourceTree = make(map[string]string, len(*responseData))
 	for _, resource := range *responseData {
-		if resource.Owner != nil {
-			b.resourceTree[*resource.Id] = *resource.Owner.Rid
-		}
+		b.resourceTree[resource.Id] = resource.Owner.Rid
 	}
 	return nil
 }
 
-func (b *bridge) fetchDeviceNames() error {
-	getDevicesResponse, err := b.resolvedClient.GetDevices()
+func (b *bridge) fetchDeviceNames(ctx context.Context) error {
+	getDevicesResponse, err := b.resolvedClient.GetDevices(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to access bridge devices on %s: %w", b, err)
 	}
@@ -338,19 +347,15 @@ func (b *bridge) fetchDeviceNames() error {
 		return fmt.Errorf("failed to fetch bridge devices from %s: %s", b, getDevicesResponse.HTTPResponse.Status)
 	}
 	responseData := getDevicesResponse.JSON200.Data
-	if responseData == nil {
-		b.deviceNames = make(map[string]string)
-		return nil
-	}
-	b.deviceNames = make(map[string]string, len(*responseData))
-	for _, device := range *responseData {
-		b.deviceNames[*device.Id] = *device.Metadata.Name
+	b.deviceNames = make(map[string]string, len(responseData))
+	for _, device := range responseData {
+		b.deviceNames[device.Id] = device.Metadata.Name
 	}
 	return nil
 }
 
-func (b *bridge) fetchRoomAssignments() error {
-	getRoomsResponse, err := b.resolvedClient.GetRooms()
+func (b *bridge) fetchRoomAssignments(ctx context.Context) error {
+	getRoomsResponse, err := b.resolvedClient.GetRooms(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to access bridge rooms on %s: %w", b, err)
 	}
@@ -358,14 +363,10 @@ func (b *bridge) fetchRoomAssignments() error {
 		return fmt.Errorf("failed to fetch bridge rooms from %s: %s", b, getRoomsResponse.HTTPResponse.Status)
 	}
 	responseData := getRoomsResponse.JSON200.Data
-	if responseData == nil {
-		b.roomAssignments = maps.Clone(b.configRoomAssignments)
-		return nil
-	}
-	b.roomAssignments = make(map[string]string, len(*responseData))
-	for _, roomGet := range *responseData {
-		for _, children := range *roomGet.Children {
-			b.roomAssignments[*children.Rid] = *roomGet.Metadata.Name
+	b.roomAssignments = make(map[string]string, len(responseData))
+	for _, roomGet := range responseData {
+		for _, children := range roomGet.Children {
+			b.roomAssignments[children.Rid] = roomGet.Metadata.Name
 		}
 	}
 	maps.Copy(b.roomAssignments, b.configRoomAssignments)

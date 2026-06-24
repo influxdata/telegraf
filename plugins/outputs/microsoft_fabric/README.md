@@ -13,12 +13,9 @@ It offers an end-to-end solution for event-driven scenarios,
 🏷️ datastore
 💻 all
 
-[eventhouse]:
- https://learn.microsoft.com/fabric/real-time-intelligence/eventhouse
-[eventstream]:
- https://learn.microsoft.com/fabric/real-time-intelligence/event-streams/overview?tabs=enhancedcapabilities
-[fabric]:
- https://learn.microsoft.com/fabric/real-time-intelligence/overview
+[eventhouse]: https://learn.microsoft.com/fabric/real-time-intelligence/eventhouse
+[eventstream]: https://learn.microsoft.com/fabric/real-time-intelligence/event-streams/overview?tabs=enhancedcapabilities
+[fabric]: https://learn.microsoft.com/fabric/real-time-intelligence/overview
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -87,9 +84,9 @@ plugin will create the table, if the table exists then the plugin will try to
 merge the Telegraf metric schema to the existing table. For more information
 about the merge process check the [`.create-merge` documentation][create-merge].
 
-The table name will match the metric name.
-The name of the metric must comply with the Eventhouse KQL DB table naming constraints in case you plan
-to add a prefix to the metric name.
+The table name will match the metric name. The name of the metric must comply
+with the Eventhouse KQL DB table naming constraints in case you plan to add a
+prefix to the metric name.
 
 [create-merge]: https://learn.microsoft.com/kusto/management/create-merge-tables-command?view=microsoft-fabric
 

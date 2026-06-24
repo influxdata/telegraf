@@ -22,6 +22,10 @@ func (t *Temperature) Init() error {
 		t.Log.Warn("Ignoring 'add_device_tag' on non-Linux platforms!")
 	}
 
+	if t.ThermalZones {
+		t.Log.Warn("Ignoring 'always_gather_zones' on non-Linux platforms!")
+	}
+
 	return nil
 }
 

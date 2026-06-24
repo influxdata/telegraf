@@ -30,12 +30,7 @@ func TestStructuredStderr(t *testing.T) {
 }
 
 func TestStructuredFile(t *testing.T) {
-	tmpfile, err := os.CreateTemp(t.TempDir(), "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
-
-	filename := tmpfile.Name()
-	require.NoError(t, tmpfile.Close())
+	filename := filepath.Join(t.TempDir(), "test.log")
 
 	cfg := &Config{
 		Logfile:             filename,
@@ -66,12 +61,7 @@ func TestStructuredFile(t *testing.T) {
 }
 
 func TestStructuredFileDebug(t *testing.T) {
-	tmpfile, err := os.CreateTemp(t.TempDir(), "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
-
-	filename := tmpfile.Name()
-	require.NoError(t, tmpfile.Close())
+	filename := filepath.Join(t.TempDir(), "test.log")
 
 	cfg := &Config{
 		Logfile:             filename,
@@ -102,12 +92,7 @@ func TestStructuredFileDebug(t *testing.T) {
 }
 
 func TestStructuredFileError(t *testing.T) {
-	tmpfile, err := os.CreateTemp(t.TempDir(), "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
-
-	filename := tmpfile.Name()
-	require.NoError(t, tmpfile.Close())
+	filename := filepath.Join(t.TempDir(), "test.log")
 
 	cfg := &Config{
 		Logfile:             filename,
@@ -140,12 +125,7 @@ func TestStructuredFileError(t *testing.T) {
 }
 
 func TestStructuredAddDefaultLogLevel(t *testing.T) {
-	tmpfile, err := os.CreateTemp(t.TempDir(), "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
-
-	filename := tmpfile.Name()
-	require.NoError(t, tmpfile.Close())
+	filename := filepath.Join(t.TempDir(), "test.log")
 
 	cfg := &Config{
 		Logfile:             filename,
@@ -177,13 +157,7 @@ func TestStructuredAddDefaultLogLevel(t *testing.T) {
 
 func TestStructuredDerivedLogger(t *testing.T) {
 	instance = defaultHandler()
-
-	tmpfile, err := os.CreateTemp(t.TempDir(), "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
-
-	filename := tmpfile.Name()
-	require.NoError(t, tmpfile.Close())
+	filename := filepath.Join(t.TempDir(), "test.log")
 
 	cfg := &Config{
 		Logfile:             filename,
@@ -218,13 +192,7 @@ func TestStructuredDerivedLogger(t *testing.T) {
 
 func TestStructuredDerivedLoggerWithAttributes(t *testing.T) {
 	instance = defaultHandler()
-
-	tmpfile, err := os.CreateTemp(t.TempDir(), "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
-
-	filename := tmpfile.Name()
-	require.NoError(t, tmpfile.Close())
+	filename := filepath.Join(t.TempDir(), "test.log")
 
 	cfg := &Config{
 		Logfile:             filename,
@@ -263,12 +231,7 @@ func TestStructuredDerivedLoggerWithAttributes(t *testing.T) {
 }
 
 func TestStructuredWriteToTruncatedFile(t *testing.T) {
-	tmpfile, err := os.CreateTemp(t.TempDir(), "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
-
-	filename := tmpfile.Name()
-	require.NoError(t, tmpfile.Close())
+	filename := filepath.Join(t.TempDir(), "test.log")
 
 	cfg := &Config{
 		Logfile:             filename,
@@ -319,6 +282,7 @@ func TestStructuredWriteToTruncatedFile(t *testing.T) {
 
 func TestStructuredWriteToFileInRotation(t *testing.T) {
 	tempDir := t.TempDir()
+
 	cfg := &Config{
 		Logfile:             filepath.Join(tempDir, "test.log"),
 		LogFormat:           "structured",
@@ -338,13 +302,7 @@ func TestStructuredWriteToFileInRotation(t *testing.T) {
 
 func TestStructuredLogMessageKey(t *testing.T) {
 	instance = defaultHandler()
-
-	tmpfile, err := os.CreateTemp(t.TempDir(), "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
-
-	filename := tmpfile.Name()
-	require.NoError(t, tmpfile.Close())
+	filename := filepath.Join(t.TempDir(), "test.log")
 
 	cfg := &Config{
 		Logfile:                 filename,
@@ -367,6 +325,37 @@ func TestStructuredLogMessageKey(t *testing.T) {
 		"message":  "TEST",
 		"category": "testing",
 		"plugin":   "test",
+	}
+
+	var actual map[string]interface{}
+	require.NoError(t, json.Unmarshal(buf, &actual))
+
+	require.Contains(t, actual, "time")
+	require.NotEmpty(t, actual["time"])
+	delete(actual, "time")
+	require.Equal(t, expected, actual)
+}
+
+func TestStructuredFileCreateDir(t *testing.T) {
+	filename := filepath.Join(t.TempDir(), "foo", "test.log")
+
+	cfg := &Config{
+		Logfile:                 filename,
+		LogFormat:               "structured",
+		RotationMaxArchives:     -1,
+		StructuredLogMessageKey: "msg",
+	}
+	require.NoError(t, SetupLogging(cfg))
+	defer func() { require.NoError(t, CloseLogging()) }()
+
+	log.Printf("I! TEST")
+
+	buf, err := os.ReadFile(filename)
+	require.NoError(t, err)
+
+	expected := map[string]interface{}{
+		"level": "INFO",
+		"msg":   "TEST",
 	}
 
 	var actual map[string]interface{}

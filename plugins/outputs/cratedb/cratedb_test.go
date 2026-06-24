@@ -110,7 +110,7 @@ func TestConnectionIssueAtStartup(t *testing.T) {
 		Timeout:     config.Duration(time.Second * 5),
 		TableCreate: true,
 	}
-	model := models.NewRunningOutput(
+	model, err := models.NewRunningOutput(
 		plugin,
 		&models.OutputConfig{
 			Name:                 "cratedb",
@@ -118,6 +118,7 @@ func TestConnectionIssueAtStartup(t *testing.T) {
 		},
 		1000, 1000,
 	)
+	require.NoError(t, err)
 	require.NoError(t, model.Init())
 
 	// The connect call should succeed even though the table creation was not

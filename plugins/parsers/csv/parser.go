@@ -22,8 +22,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
-type TimeFunc func() time.Time
-
 const replacementByte = "\ufffd"
 const commaByte = "\u002C"
 
@@ -51,17 +49,14 @@ type Parser struct {
 	ResetMode          string          `toml:"csv_reset_mode"`
 	Log                telegraf.Logger `toml:"-"`
 
+	DefaultTags map[string]string
+
 	metadataSeparatorList metadataPattern
+	timeFunc              func() time.Time
 	location              *time.Location
-
-	gotColumnNames bool
-
-	invalidDelimiter bool
-
-	TimeFunc     func() time.Time
-	DefaultTags  map[string]string
-	metadataTags map[string]string
-
+	gotColumnNames        bool
+	invalidDelimiter      bool
+	metadataTags          map[string]string
 	gotInitialColumnNames bool
 	remainingSkipRows     int
 	remainingHeaderRows   int
@@ -168,8 +163,8 @@ func (p *Parser) Init() error {
 		return fmt.Errorf("initializing separators failed: %w", err)
 	}
 
-	if p.TimeFunc == nil {
-		p.TimeFunc = time.Now
+	if p.timeFunc == nil {
+		p.timeFunc = time.Now
 	}
 
 	if p.Timezone != "" {
@@ -191,8 +186,8 @@ func (p *Parser) Init() error {
 	return nil
 }
 
-func (p *Parser) SetTimeFunc(fn TimeFunc) {
-	p.TimeFunc = fn
+func (p *Parser) SetTimeFunc(fn func() time.Time) {
+	p.timeFunc = fn
 }
 
 func (p *Parser) compile(r io.Reader) *csv.Reader {
@@ -462,7 +457,7 @@ outer:
 		}
 	}
 
-	metricTime, err := parseTimestamp(p.TimeFunc, recordFields, p.TimestampColumn, p.TimestampFormat, p.location)
+	metricTime, err := parseTimestamp(p.timeFunc, recordFields, p.TimestampColumn, p.TimestampFormat, p.location)
 	if err != nil {
 		return nil, err
 	}

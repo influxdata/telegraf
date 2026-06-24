@@ -58,33 +58,44 @@ func (c *configurationOriginal) check() error {
 }
 
 func (c *configurationOriginal) process() (map[byte]requestSet, error) {
-	maxQuantity := uint16(1)
-	if !c.workarounds.OnRequestPerField {
-		maxQuantity = maxQuantityCoils
+	maxQuantity := maxQuantityCoils
+	if c.workarounds.OnRequestPerField {
+		maxQuantity = 1
+	} else if c.workarounds.MaxBitRegistersPerRequest > 0 {
+		maxQuantity = c.workarounds.MaxBitRegistersPerRequest
 	}
 	coil, err := c.initRequests(c.Coils, maxQuantity, false)
 	if err != nil {
 		return nil, err
 	}
 
-	if !c.workarounds.OnRequestPerField {
-		maxQuantity = maxQuantityDiscreteInput
+	maxQuantity = maxQuantityDiscreteInput
+	if c.workarounds.OnRequestPerField {
+		maxQuantity = 1
+	} else if c.workarounds.MaxBitRegistersPerRequest > 0 {
+		maxQuantity = c.workarounds.MaxBitRegistersPerRequest
 	}
 	discrete, err := c.initRequests(c.DiscreteInputs, maxQuantity, false)
 	if err != nil {
 		return nil, err
 	}
 
-	if !c.workarounds.OnRequestPerField {
-		maxQuantity = maxQuantityHoldingRegisters
+	maxQuantity = maxQuantityHoldingRegisters
+	if c.workarounds.OnRequestPerField {
+		maxQuantity = 1
+	} else if c.workarounds.MaxWordRegistersPerRequest > 0 {
+		maxQuantity = c.workarounds.MaxWordRegistersPerRequest
 	}
 	holding, err := c.initRequests(c.HoldingRegisters, maxQuantity, true)
 	if err != nil {
 		return nil, err
 	}
 
-	if !c.workarounds.OnRequestPerField {
-		maxQuantity = maxQuantityInputRegisters
+	maxQuantity = maxQuantityInputRegisters
+	if c.workarounds.OnRequestPerField {
+		maxQuantity = 1
+	} else if c.workarounds.MaxWordRegistersPerRequest > 0 {
+		maxQuantity = c.workarounds.MaxWordRegistersPerRequest
 	}
 	input, err := c.initRequests(c.InputRegisters, maxQuantity, true)
 	if err != nil {

@@ -7,6 +7,29 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestFieldInitFail(t *testing.T) {
+	tests := []struct {
+		name  string
+		field Field
+	}{
+		{"secondary index", Field{
+			SecondaryIndexTable: true,
+			SecondaryIndexUse:   true,
+		}},
+		{"outer join without use", Field{
+			SecondaryOuterJoin: true,
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.field.Name = "foobar"
+			require.Error(t, tt.field.Init(nil))
+			require.False(t, tt.field.initialized)
+		})
+	}
+}
+
 func TestConvertDefault(t *testing.T) {
 	tests := []struct {
 		name     string

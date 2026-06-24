@@ -123,12 +123,12 @@ func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 }
 
 func getPools(path string) ([]poolInfo, error) {
-	pools := make([]poolInfo, 0)
 	version, poolsDirs, err := probeVersion(path)
 	if err != nil {
 		return nil, err
 	}
 
+	pools := make([]poolInfo, 0, len(poolsDirs))
 	for _, poolDir := range poolsDirs {
 		poolDirSplit := strings.Split(poolDir, "/")
 		pool := poolDirSplit[len(poolDirSplit)-2]

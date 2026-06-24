@@ -20,6 +20,10 @@ import (
 
 type OpcUAWorkarounds struct {
 	AdditionalValidStatusCodes []string `toml:"additional_valid_status_codes"`
+	// MonitoredItemsBatchSize splits CreateMonitoredItems into batches of this
+	// size to stay below a server's negotiated maximum message size. It only
+	// applies to subscriptions (opcua_listener); the polling opcua input ignores it.
+	MonitoredItemsBatchSize int `toml:"monitored_items_batch_size"`
 }
 
 type ConnectionState opcua.ConnState
@@ -53,6 +57,7 @@ type OpcUAClientConfig struct {
 	OptionalFields []string         `toml:"optional_fields"`
 	Workarounds    OpcUAWorkarounds `toml:"workarounds"`
 	SessionTimeout config.Duration  `toml:"session_timeout"`
+	Locales        []string         `toml:"locales"`
 }
 
 func (o *OpcUAClientConfig) Validate() error {
@@ -191,6 +196,9 @@ type OpcUAClient struct {
 
 	opts  []opcua.Option
 	codes []ua.StatusCode
+
+	// Internal flags
+	DisableAutoReconnect bool
 }
 
 // determineOrCreateCertificates handles certificate determination and generation logic

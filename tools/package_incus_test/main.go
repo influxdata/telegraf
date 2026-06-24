@@ -9,9 +9,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// Images from https://images.linuxcontainers.org/
 var imagesRPM = []string{
+	"fedora/43",
 	"fedora/42",
-	"fedora/41",
 	"centos/10-Stream",
 }
 
@@ -23,7 +24,7 @@ var imagesDEB = []string{
 	// LTS
 	"ubuntu/noble",
 	// Latest
-	"ubuntu/plucky",
+	"ubuntu/resolute",
 }
 
 func main() {

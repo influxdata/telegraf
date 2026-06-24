@@ -27,8 +27,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Hosts to send ping packets to.
   urls = ["example.org"]
 
-  ## Method used for sending pings, can be either "exec" or "native".  When set
-  ## to "exec" the systems ping command will be executed.  When set to "native"
+  ## Method used for sending pings, can be either "exec" or "native". When set
+  ## to "exec" the systems ping command will be executed. When set to "native"
   ## the plugin will send pings directly.
   ##
   ## While the default is "exec" for backwards compatibility, new deployments
@@ -36,22 +36,22 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## performance.
   # method = "exec"
 
-  ## Number of ping packets to send per interval.  Corresponds to the "-c"
+  ## Number of ping packets to send per interval. Corresponds to the "-c"
   ## option of the ping command.
   # count = 1
 
-  ## Time to wait between sending ping packets in seconds.  Operates like the
-  ## "-i" option of the ping command.
-  # ping_interval = 1.0
+  ## Time to wait between sending ping packets. Operates like the "-i" option
+  ## of the ping command.
+  # ping_interval = "1s"
 
-  ## If set, the time to wait for a ping response in seconds.  Operates like
-  ## the "-W" option of the ping command (for "exec" method only)
-  # timeout = 1.0
+  ## If set, the time to wait for a ping response.  Operates like the "-W"
+  ## option of the ping command (for "exec" method only)
+  # timeout = "1s"
 
-  ## If set, the total ping deadline, in seconds. Operates like the "-w"
-  ## option of the ping command.  Use this option to control timeout behavior
-  ## when using the "native" method.
-  # deadline = 10
+  ## If set, the total ping deadline. Operates like the "-w" option of the ping
+  ## command.  Use this option to control timeout behavior when using the
+  ## "native" method.
+  # deadline = "10s"
 
   ## Interface or source address to send ping from.  Operates like the -I or -S
   ## option of the ping command.
@@ -76,9 +76,9 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## and IPv6 can be used.
   # ipv6 = false
 
-  ## Number of data bytes to be sent. Corresponds to the "-s"
-  ## option of the ping command. This only works with the native method.
-  # size = 56
+  ## Size of the packets to send. Corresponds to the "-s" option of the ping
+  ## command. This only works with the native method.
+  # size = "56B"
 ```
 
 ### Ping methods

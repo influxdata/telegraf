@@ -21,12 +21,13 @@ import (
 var sampleConfig string
 
 type Vault struct {
-	ID         string   `toml:"id"`
-	Address    string   `toml:"address"`
-	MountPath  string   `toml:"mount_path"`
-	SecretPath string   `toml:"secret_path"`
-	Engine     string   `toml:"engine"`
-	AppRole    *appRole `toml:"approle"`
+	ID         string        `toml:"id"`
+	Address    string        `toml:"address"`
+	MountPath  string        `toml:"mount_path"`
+	SecretPath string        `toml:"secret_path"`
+	Engine     string        `toml:"engine"`
+	Token      config.Secret `toml:"token"`
+	AppRole    *appRole      `toml:"approle"`
 
 	client *vault.Client
 }
@@ -50,8 +51,13 @@ func (v *Vault) Init() error {
 		return fmt.Errorf("unsupported engine: %s", v.Engine)
 	}
 
-	if v.AppRole == nil {
-		return errors.New("approle configuration missing")
+	tokenSet := !v.Token.Empty()
+	approleSet := v.AppRole != nil
+	switch {
+	case !tokenSet && !approleSet:
+		return errors.New("authentication method missing: set either `token` or `approle`")
+	case tokenSet && approleSet:
+		return errors.New("only one authentication method may be set: `token` or `approle`")
 	}
 	if v.ID == "" {
 		return errors.New("id missing")
@@ -132,6 +138,16 @@ func (v *Vault) GetResolver(key string) (telegraf.ResolveFunc, error) {
 }
 
 func (v *Vault) authenticate() error {
+	if !v.Token.Empty() {
+		token, err := v.Token.Get()
+		if err != nil {
+			return fmt.Errorf("getting token failed: %w", err)
+		}
+		defer token.Destroy()
+		v.client.SetToken(token.String())
+		return nil
+	}
+
 	secret, err := v.AppRole.Secret.Get()
 	if err != nil {
 		return fmt.Errorf("getting secret failed: %w", err)

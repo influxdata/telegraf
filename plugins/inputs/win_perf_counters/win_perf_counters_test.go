@@ -92,7 +92,7 @@ func (m *fakePerformanceQuery) getCounterPath(counterHandle pdhCounterHandle) (s
 			return counter.path, nil
 		}
 	}
-	return "", fmt.Errorf("in getCounterPath: invalid handle: %q", counterHandle)
+	return "", fmt.Errorf("in getCounterPath: invalid handle: %v", counterHandle)
 }
 
 func (m *fakePerformanceQuery) expandWildCardPath(counterPath string) ([]string, error) {
@@ -114,7 +114,7 @@ func (m *fakePerformanceQuery) getFormattedCounterValueDouble(counterHandle pdhC
 			return counter.value, nil
 		}
 	}
-	return 0, fmt.Errorf("in getFormattedCounterValueDouble: invalid handle: %q", counterHandle)
+	return 0, fmt.Errorf("in getFormattedCounterValueDouble: invalid handle: %v", counterHandle)
 }
 
 func (m *fakePerformanceQuery) getRawCounterValue(counterHandle pdhCounterHandle) (int64, error) {
@@ -129,7 +129,7 @@ func (m *fakePerformanceQuery) getRawCounterValue(counterHandle pdhCounterHandle
 			return int64(counter.value), nil
 		}
 	}
-	return 0, fmt.Errorf("in getRawCounterValue: invalid handle: %q", counterHandle)
+	return 0, fmt.Errorf("in getRawCounterValue: invalid handle: %v", counterHandle)
 }
 
 func (m *fakePerformanceQuery) findCounterByPath(counterPath string) *testCounter {
@@ -161,10 +161,10 @@ func (m *fakePerformanceQuery) getFormattedCounterArrayDouble(hCounter pdhCounte
 				}
 				return counters, nil
 			}
-			return nil, fmt.Errorf("in getFormattedCounterArrayDouble: invalid counter: %q", hCounter)
+			return nil, fmt.Errorf("in getFormattedCounterArrayDouble: invalid counter: %v", hCounter)
 		}
 	}
-	return nil, fmt.Errorf("in getFormattedCounterArrayDouble: invalid counter: %q, no paths found", hCounter)
+	return nil, fmt.Errorf("in getFormattedCounterArrayDouble: invalid counter: %v, no paths found", hCounter)
 }
 
 func (m *fakePerformanceQuery) getRawCounterArray(hCounter pdhCounterHandle) ([]counterValue, error) {
@@ -187,10 +187,10 @@ func (m *fakePerformanceQuery) getRawCounterArray(hCounter pdhCounterHandle) ([]
 				}
 				return counters, nil
 			}
-			return nil, fmt.Errorf("in getRawCounterArray: invalid counter: %q", hCounter)
+			return nil, fmt.Errorf("in getRawCounterArray: invalid counter: %v", hCounter)
 		}
 	}
-	return nil, fmt.Errorf("in getRawCounterArray: invalid counter: %q, no paths found", hCounter)
+	return nil, fmt.Errorf("in getRawCounterArray: invalid counter: %v, no paths found", hCounter)
 }
 
 func (m *fakePerformanceQuery) collectData() error {
@@ -427,8 +427,11 @@ func TestParseConfigMultiComps(t *testing.T) {
 		createPerfObject("", "m", "O1", []string{"I1", "I2"}, []string{"C1", "C2"}, false, false, false)[0],
 		createPerfObject("", "m", "O2", []string{"I"}, []string{"C1", "C2", "C3"}, false, false, false)[0],
 	}
+	//nolint:prealloc // Do not want this to share the underlying array after appending
 	cps11 := []string{"\\O(I)\\C"}
+	//nolint:prealloc // Do not want this to share the underlying array after appending
 	cps12 := []string{"\\\\cmp1\\O(I)\\C"}
+	//nolint:prealloc // Do not want this to share the underlying array after appending
 	cps13 := []string{"\\\\cmp2\\O(I)\\C"}
 	cps21 := []string{"\\O1(I1)\\C1", "\\O1(I1)\\C2", "\\O1(I2)\\C1", "\\O1(I2)\\C2"}
 	cps22 := []string{"\\\\cmp1\\O1(I1)\\C1", "\\\\cmp1\\O1(I1)\\C2", "\\\\cmp1\\O1(I2)\\C1", "\\\\cmp1\\O1(I2)\\C2"}
@@ -816,6 +819,7 @@ func TestParseConfigMultiCompsOverrideOnePerfObject(t *testing.T) {
 		FailOnMissing: false,
 		IncludeTotal:  false,
 	}
+	//nolint:prealloc // Do not want this to share the underlying array after appending
 	cps11 := []string{"\\\\cmp1\\O(I1)\\C1", "\\\\cmp1\\O(I1)\\C2", "\\\\cmp1\\O(I2)\\C1", "\\\\cmp1\\O(I2)\\C2"}
 	cps12 := []string{"\\\\cmp2\\O(I1)\\C1", "\\\\cmp2\\O(I1)\\C2", "\\\\cmp2\\O(I2)\\C1", "\\\\cmp2\\O(I2)\\C2"}
 	cps21 := []string{"\\O1(I)\\C"}
@@ -1161,6 +1165,7 @@ func TestParseConfigTotalExpansion(t *testing.T) {
 func TestParseConfigExpand(t *testing.T) {
 	var err error
 	perfObjects := createPerfObject("", "m", "O", []string{"*"}, []string{"*"}, false, false, false)
+	//nolint:prealloc // Do not want this to share the underlying array after appending
 	cps1 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2"}
 	m := WinPerfCounters{
 		Log:                   testutil.Logger{},
@@ -1439,6 +1444,7 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 	}
 	measurement := "test"
 	perfObjects := createPerfObject("", measurement, "O", []string{"*"}, []string{"*"}, true, false, false)
+	//nolint:prealloc // Do not want this to share the underlying array after appending
 	cps1 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2"}
 	fpm := &fakePerformanceQuery{
 		counters: createCounterMap(append(cps1, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 0}, []uint32{0, 0, 0, 0, 0}),
@@ -1490,6 +1496,7 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields2, tags2)
 
+	//nolint:prealloc // Do not want this to share the underlying array after appending
 	cps2 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2", "\\O(I3)\\C1", "\\O(I3)\\C2"}
 	fpm = &fakePerformanceQuery{
 		counters: createCounterMap(append(cps2, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 0}, []uint32{0, 0, 0, 0, 0, 0, 0}),

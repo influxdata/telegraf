@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -45,7 +46,7 @@ func TestSFlow(t *testing.T) {
 	acc.Wait(2)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"sflow",
 			map[string]string{
 				"agent_address":    "192.168.1.2",
@@ -79,7 +80,7 @@ func TestSFlow(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"sflow",
 			map[string]string{
 				"agent_address":    "192.168.1.2",
