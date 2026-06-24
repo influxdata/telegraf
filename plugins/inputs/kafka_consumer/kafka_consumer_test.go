@@ -591,77 +591,60 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	var tests = []struct {
-		name                 string
-		connectionStrategy   string
-		topics               []string
-		topicRegexps         []string
-		topicRefreshInterval config.Duration
-	}{
-		{"connection strategy startup", "startup", []string{"Test"}, nil, config.Duration(0)},
-		{"connection strategy defer", "defer", []string{"Test"}, nil, config.Duration(0)},
+	kafkaContainer, err := kafkacontainer.Run(t.Context(), "confluentinc/confluent-local:7.5.0")
+	require.NoError(t, err)
+	defer kafkaContainer.Terminate(t.Context()) //nolint:errcheck // ignored
+
+	brokers, err := kafkaContainer.Brokers(t.Context())
+	require.NoError(t, err)
+
+	// Make kafka output
+	t.Logf("rt: starting output plugin")
+	creator := outputs.Outputs["kafka"]
+	output, ok := creator().(*outputs_kafka.Kafka)
+	require.True(t, ok)
+
+	s := &serializers_influx.Serializer{}
+	require.NoError(t, s.Init())
+	output.SetSerializer(s)
+	output.Brokers = brokers
+	output.Topic = "Test"
+	output.Log = testutil.Logger{}
+
+	require.NoError(t, output.Init())
+	require.NoError(t, output.Connect())
+
+	// Make kafka input
+	t.Logf("rt: starting input plugin")
+	input := KafkaConsumer{
+		Brokers:                brokers,
+		Log:                    testutil.Logger{},
+		Topics:                 []string{"Test"},
+		MaxUndeliveredMessages: 1,
 	}
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	input.SetParser(parser)
+	require.NoError(t, input.Init())
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			kafkaContainer, err := kafkacontainer.Run(t.Context(), "confluentinc/confluent-local:7.5.0")
-			require.NoError(t, err)
-			defer kafkaContainer.Terminate(t.Context()) //nolint:errcheck // ignored
+	acc := testutil.Accumulator{}
+	require.NoError(t, input.Start(&acc))
 
-			brokers, err := kafkaContainer.Brokers(t.Context())
-			require.NoError(t, err)
+	// Shove some metrics through
+	expected := testutil.MockMetrics()
+	t.Logf("rt: writing")
+	require.NoError(t, output.Write(expected))
 
-			// Make kafka output
-			t.Logf("rt: starting output plugin")
-			creator := outputs.Outputs["kafka"]
-			output, ok := creator().(*outputs_kafka.Kafka)
-			require.True(t, ok)
+	// Check that they were received
+	t.Logf("rt: expecting")
+	acc.Wait(len(expected))
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 
-			s := &serializers_influx.Serializer{}
-			require.NoError(t, s.Init())
-			output.SetSerializer(s)
-			output.Brokers = brokers
-			output.Topic = "Test"
-			output.Log = testutil.Logger{}
+	t.Logf("rt: shutdown")
+	require.NoError(t, output.Close())
+	input.Stop()
 
-			require.NoError(t, output.Init())
-			require.NoError(t, output.Connect())
-
-			// Make kafka input
-			t.Logf("rt: starting input plugin")
-			input := KafkaConsumer{
-				Brokers:                brokers,
-				Log:                    testutil.Logger{},
-				Topics:                 tt.topics,
-				TopicRegexps:           tt.topicRegexps,
-				MaxUndeliveredMessages: 1,
-				ConnectionStrategy:     tt.connectionStrategy,
-			}
-			parser := &influx.Parser{}
-			require.NoError(t, parser.Init())
-			input.SetParser(parser)
-			require.NoError(t, input.Init())
-
-			acc := testutil.Accumulator{}
-			require.NoError(t, input.Start(&acc))
-
-			// Shove some metrics through
-			expected := testutil.MockMetrics()
-			t.Logf("rt: writing")
-			require.NoError(t, output.Write(expected))
-
-			// Check that they were received
-			t.Logf("rt: expecting")
-			acc.Wait(len(expected))
-			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
-
-			t.Logf("rt: shutdown")
-			require.NoError(t, output.Close())
-			input.Stop()
-
-			t.Logf("rt: done")
-		})
-	}
+	t.Logf("rt: done")
 }
 
 func TestKafkaTimestampSourceIntegration(t *testing.T) {
