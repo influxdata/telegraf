@@ -13,6 +13,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"reflect"
+	"unicode"
 
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/performance"
@@ -75,13 +77,14 @@ type resourceKind struct {
 	paths            []string
 	excludePaths     []string
 	collectInstances bool
-	getObjects       func(context.Context, *endpoint, *resourceFilter) (objectMap, error)
+	getObjects       func(context.Context, *endpoint, *resourceFilter, []string) (objectMap, error)
 	include          []string
 	simple           bool
 	metrics          performance.MetricList
 	parent           string
 	latestSample     time.Time
 	lastColl         time.Time
+	PropertieInclude       []string
 }
 
 type metricEntry struct {
@@ -99,11 +102,10 @@ type objectRef struct {
 	ref               types.ManagedObjectReference
 	parentRef         *types.ManagedObjectReference // Pointer because it must be nillable
 	guest             string
-	memorySizeMB      int32
-	memoryReservation int32
 	dcname            string
 	rpname            string
 	customValues      map[string]string
+	customProperties  map[string]interface{}
 	lookup            map[string]string
 }
 
@@ -149,6 +151,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.DatacenterInstances,
 			getObjects:       getDatacenters,
 			parent:           "",
+			PropertieInclude:       parent.DatacenterPropertieInclude,
 		},
 		"cluster": {
 			name:             "cluster",
@@ -167,6 +170,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.ClusterInstances,
 			getObjects:       getClusters,
 			parent:           "datacenter",
+			PropertieInclude:       parent.ClusterPropertieInclude,
 		},
 		"resourcepool": {
 			name:             "resourcepool",
@@ -185,6 +189,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.ResourcePoolInstances,
 			getObjects:       getResourcePools,
 			parent:           "cluster",
+			PropertieInclude:       parent.ResourcePoolPropertieInclude,
 		},
 		"host": {
 			name:             "host",
@@ -203,6 +208,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.HostInstances,
 			getObjects:       getHosts,
 			parent:           "cluster",
+			PropertieInclude:       parent.HostPropertieInclude,
 		},
 		"vm": {
 			name:             "vm",
@@ -221,6 +227,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.VMInstances,
 			getObjects:       getVMs,
 			parent:           "host",
+			PropertieInclude:       parent.VMPropertieInclude,
 		},
 		"datastore": {
 			name:             "datastore",
@@ -238,6 +245,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.DatastoreInstances,
 			getObjects:       getDatastores,
 			parent:           "",
+			PropertieInclude:       parent.DatastorePropertieInclude,
 		},
 		"vsan": {
 			name:             "vsan",
@@ -255,6 +263,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: false,
 			getObjects:       getClusters,
 			parent:           "datacenter",
+			PropertieInclude:       parent.VSANPropertieInclude,
 		},
 	}
 
@@ -482,10 +491,11 @@ func (e *endpoint) discover(ctx context.Context) error {
 				finder:       &finder{client},
 				resType:      res.vcName,
 				paths:        res.paths,
-				excludePaths: res.excludePaths}
+				excludePaths: res.excludePaths,
+				custoFields:  res.PropertieInclude}
 
 			ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.parent.Timeout))
-			objects, err := res.getObjects(ctx1, e, &rf)
+			objects, err := res.getObjects(ctx1, e, &rf, res.PropertieInclude)
 			cancel1()
 			if err != nil {
 				return err
@@ -637,7 +647,7 @@ func (e *endpoint) complexMetadataSelect(ctx context.Context, res *resourceKind,
 	te.wait()
 }
 
-func getDatacenters(ctx context.Context, e *endpoint, resourceFilter *resourceFilter) (objectMap, error) {
+func getDatacenters(ctx context.Context, e *endpoint, resourceFilter *resourceFilter, PropertieInclude []string) (objectMap, error) {
 	var resources []mo.Datacenter
 	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.parent.Timeout))
 	defer cancel1()
@@ -655,12 +665,13 @@ func getDatacenters(ctx context.Context, e *endpoint, resourceFilter *resourceFi
 			parentRef:    r.Parent,
 			dcname:       r.Name,
 			customValues: e.loadCustomAttributes(r.ManagedEntity),
+			customProperties:  e.loadCustomProperties(r, PropertieInclude),
 		}
 	}
 	return m, nil
 }
 
-func getClusters(ctx context.Context, e *endpoint, resourceFilter *resourceFilter) (objectMap, error) {
+func getClusters(ctx context.Context, e *endpoint, resourceFilter *resourceFilter, PropertieInclude []string) (objectMap, error) {
 	var resources []mo.ClusterComputeResource
 	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.parent.Timeout))
 	defer cancel1()
@@ -703,6 +714,7 @@ func getClusters(ctx context.Context, e *endpoint, resourceFilter *resourceFilte
 				ref:          r.ExtensibleManagedObject.Reference(),
 				parentRef:    p,
 				customValues: e.loadCustomAttributes(r.ManagedEntity),
+				customProperties:  e.loadCustomProperties(r, PropertieInclude),
 			}
 			return nil
 		}()
@@ -714,7 +726,7 @@ func getClusters(ctx context.Context, e *endpoint, resourceFilter *resourceFilte
 }
 
 // noinspection GoUnusedParameter
-func getResourcePools(ctx context.Context, e *endpoint, resourceFilter *resourceFilter) (objectMap, error) {
+func getResourcePools(ctx context.Context, e *endpoint, resourceFilter *resourceFilter, PropertieInclude []string) (objectMap, error) {
 	var resources []mo.ResourcePool
 	err := resourceFilter.findAll(ctx, &resources)
 	if err != nil {
@@ -729,6 +741,7 @@ func getResourcePools(ctx context.Context, e *endpoint, resourceFilter *resource
 			ref:          r.ExtensibleManagedObject.Reference(),
 			parentRef:    r.Parent,
 			customValues: e.loadCustomAttributes(r.ManagedEntity),
+			customProperties:  e.loadCustomProperties(r, PropertieInclude),
 		}
 	}
 	return m, nil
@@ -745,7 +758,7 @@ func getResourcePoolName(rp types.ManagedObjectReference, rps objectMap) string 
 }
 
 // noinspection GoUnusedParameter
-func getHosts(ctx context.Context, e *endpoint, resourceFilter *resourceFilter) (objectMap, error) {
+func getHosts(ctx context.Context, e *endpoint, resourceFilter *resourceFilter, PropertieInclude []string) (objectMap, error) {
 	var resources []mo.HostSystem
 	err := resourceFilter.findAll(ctx, &resources)
 	if err != nil {
@@ -755,17 +768,21 @@ func getHosts(ctx context.Context, e *endpoint, resourceFilter *resourceFilter) 
 	for i := range resources {
 		r := &resources[i]
 
+		lookup := make(map[string]string)
+
 		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
 			name:         r.Name,
 			ref:          r.ExtensibleManagedObject.Reference(),
 			parentRef:    r.Parent,
 			customValues: e.loadCustomAttributes(r.ManagedEntity),
+			customProperties:  e.loadCustomProperties(r, PropertieInclude),
+			lookup:       lookup,
 		}
 	}
 	return m, nil
 }
 
-func getVMs(ctx context.Context, e *endpoint, rf *resourceFilter) (objectMap, error) {
+func getVMs(ctx context.Context, e *endpoint, rf *resourceFilter, PropertieInclude []string) (objectMap, error) {
 	var resources []mo.VirtualMachine
 	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.parent.Timeout))
 	defer cancel1()
@@ -784,27 +801,25 @@ func getVMs(ctx context.Context, e *endpoint, rf *resourceFilter) (objectMap, er
 		resType:      "ResourcePool",
 		paths:        []string{"/*/host/**"},
 		excludePaths: nil}
-	resourcePools, err := getResourcePools(ctx, e, &rprf)
+	resourcePools, err := getResourcePools(ctx, e, &rprf, []string{})
 	if err != nil {
 		return nil, err
 	}
 	for i := range resources {
 		r := &resources[i]
-
-		if r.Runtime.PowerState != "poweredOn" {
-			continue
-		}
+		rpname := ""
 		guest := "unknown"
 		uuid := ""
 		lookup := make(map[string]string)
-		// get the name of the VM resource pool
-		rpname := getResourcePoolName(*r.ResourcePool, resourcePools)
+		if r.Runtime.PowerState == "poweredOn" {
+			// get the name of the VM resource pool
+			rpname = getResourcePoolName(*r.ResourcePool, resourcePools)
+		}
 
 		// Extract host name
 		if r.Guest != nil && r.Guest.HostName != "" {
 			lookup["guesthostname"] = r.Guest.HostName
 		}
-
 		// Collect network information
 		for _, net := range r.Guest.Net {
 			if net.DeviceConfigId == -1 {
@@ -847,40 +862,22 @@ func getVMs(ctx context.Context, e *endpoint, rf *resourceFilter) (objectMap, er
 			uuid = r.Config.Uuid
 		}
 
-		cvs := make(map[string]string)
-		if e.customAttrEnabled {
-			for _, cv := range r.Summary.CustomValue {
-				val := cv.(*types.CustomFieldStringValue)
-				if val.Value == "" {
-					continue
-				}
-				key, ok := e.customFields[val.Key]
-				if !ok {
-					e.log.Warnf("Metadata for custom field %d not found. Skipping", val.Key)
-					continue
-				}
-				if e.customAttrFilter.Match(key) {
-					cvs[key] = val.Value
-				}
-			}
-		}
 		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
 			name:              r.Name,
 			ref:               r.ExtensibleManagedObject.Reference(),
 			parentRef:         r.Runtime.Host,
 			guest:             guest,
-			memorySizeMB:      r.Summary.Config.MemorySizeMB,
-			memoryReservation: r.Summary.Config.MemoryReservation,
 			altID:             uuid,
 			rpname:            rpname,
 			customValues:      e.loadCustomAttributes(r.ManagedEntity),
+			customProperties:  e.loadCustomProperties(r, PropertieInclude),
 			lookup:            lookup,
 		}
 	}
 	return m, nil
 }
 
-func getDatastores(ctx context.Context, e *endpoint, resourceFilter *resourceFilter) (objectMap, error) {
+func getDatastores(ctx context.Context, e *endpoint, resourceFilter *resourceFilter, PropertieInclude []string) (objectMap, error) {
 	var resources []mo.Datastore
 	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.parent.Timeout))
 	defer cancel1()
@@ -905,29 +902,43 @@ func getDatastores(ctx context.Context, e *endpoint, resourceFilter *resourceFil
 			parentRef:    r.Parent,
 			altID:        lunID,
 			customValues: e.loadCustomAttributes(r.ManagedEntity),
+			customProperties:  e.loadCustomProperties(r, PropertieInclude),
 		}
 	}
 	return m, nil
 }
 
 func (e *endpoint) loadCustomAttributes(entity mo.ManagedEntity) map[string]string {
-	if !e.customAttrEnabled {
-		return make(map[string]string)
-	}
 	cvs := make(map[string]string)
-	for _, v := range entity.CustomValue {
-		cv, ok := v.(*types.CustomFieldStringValue)
-		if !ok {
-			e.parent.Log.Warnf("Metadata for custom field %d not of string type. Skipping", cv.Key)
-			continue
+	if e.customAttrEnabled {
+		for _, v := range entity.CustomValue {
+			cv, ok := v.(*types.CustomFieldStringValue)
+			if !ok {
+				e.parent.Log.Warnf("Metadata for custom field %d not of string type. Skipping", cv.Key)
+				continue
+			}
+			key, ok := e.customFields[cv.Key]
+			if !ok {
+				e.parent.Log.Warnf("Metadata for custom field %d not found. Skipping", cv.Key)
+				continue
+			}
+			if e.customAttrFilter.Match(key) {
+				cvs[key] = cv.Value
+			}
 		}
-		key, ok := e.customFields[cv.Key]
-		if !ok {
-			e.parent.Log.Warnf("Metadata for custom field %d not found. Skipping", cv.Key)
-			continue
-		}
-		if e.customAttrFilter.Match(key) {
-			cvs[key] = cv.Value
+	}
+
+	return cvs
+}
+
+func (e *endpoint) loadCustomProperties(entity interface{}, PropertieInclude []string) map[string]interface{} {
+	cvs := make(map[string]interface{})
+	if len(PropertieInclude) != 0 {
+		for _, filtre := range PropertieInclude {
+			if valeur, ok := e.getExtraData(entity, capitalizeAfterDot(filtre)); ok {
+				key := e.makePropertyIdentifier(filtre)
+				cvs[key] = valeur
+			}
 		}
 	}
 	return cvs
@@ -1272,7 +1283,26 @@ func (e *endpoint) collectChunk(
 
 			nValues := 0
 			alignedInfo, alignedValues := e.alignSamples(em.SampleInfo, v.Value, interval)
-			globalFields := e.populateGlobalFields(objectRef, resourceType, prefix)
+			globalFields := e.populateGlobalFields(objectRef)
+
+			if len(globalFields) != 0 {
+				mn, fn := e.makeMetricIdentifier(prefix, "internal")
+				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(latestSample.UnixNano(), 10)
+				bucket, found := buckets[bKey]
+				if !found {
+					fields := make(map[string]interface{})
+					fields[fn] = int64(1.0)
+					tags := map[string]string{}
+					for k, v := range t {
+						tags[k] = v
+					}
+					for k, v := range globalFields {
+						tags[k] = fmt.Sprintf("%v", v)
+					}
+					bucket = metricEntry{name: mn, ts: latestSample, fields: fields, tags: tags}
+					buckets[bKey] = bucket
+				}
+			}
 
 			for idx, sample := range alignedInfo {
 				// According to the docs, SampleInfo and Value should have the same length, but we've seen corrupted
@@ -1293,9 +1323,6 @@ func (e *endpoint) collectChunk(
 				bucket, found := buckets[bKey]
 				if !found {
 					fields := make(map[string]interface{})
-					for k, v := range globalFields {
-						fields[k] = v
-					}
 					bucket = metricEntry{name: mn, ts: ts, fields: fields, tags: t}
 					buckets[bKey] = bucket
 				}
@@ -1326,6 +1353,7 @@ func (e *endpoint) collectChunk(
 				continue
 			}
 		}
+
 		// We've iterated through all the metrics and collected buckets for each
 		// measurement name. Now emit them!
 		for _, bucket := range buckets {
@@ -1353,16 +1381,31 @@ func (e *endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	if found {
 		t[resource.parentTag] = parent.name
 		if resourceType == "vm" {
-			if objectRef.guest != "" {
-				t["guest"] = objectRef.guest
-			}
-			if gh := objectRef.lookup["guesthostname"]; gh != "" {
-				t["guesthostname"] = gh
-			}
 			if c, ok := e.resourceKinds["cluster"].objects[parent.parentRef.Value]; ok {
 				t["clustername"] = c.name
 			}
+		} 
+	}
+	if resourceType == "vm" {
+		if objectRef.guest != "" {
+			t["guest"] = objectRef.guest
 		}
+//		if objectRef.lookup["powerstate"] != "" {
+//			t["powerstate"] = objectRef.lookup["powerstate"]
+//		}
+		if gh := objectRef.lookup["guesthostname"]; gh != "" {
+			t["guesthostname"] = gh
+		}
+		if c, ok := e.resourceKinds["cluster"].objects[parent.parentRef.Value]; ok {
+			t["clustername"] = c.name
+		}
+	} else if resourceType == "host" {
+//		if objectRef.lookup["powerstate"] != "" {
+//			t["powerstate"] = objectRef.lookup["powerstate"]
+//		}
+//		if objectRef.lookup["maintenance"] != "" {
+//			t["maintenance"] = objectRef.lookup["maintenance"]
+//		}
 	}
 
 	// Fill in Datacenter name
@@ -1423,20 +1466,15 @@ func (e *endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	}
 }
 
-func (e *endpoint) populateGlobalFields(objectRef *objectRef, resourceType, prefix string) map[string]interface{} {
+func (e *endpoint) populateGlobalFields(objectRef *objectRef) map[string]interface{} {
 	globalFields := make(map[string]interface{})
-	if resourceType == "vm" && objectRef.memorySizeMB != 0 {
-		_, fieldName := e.makeMetricIdentifier(prefix, "memorySizeMB")
-		globalFields[fieldName] = strconv.Itoa(int(objectRef.memorySizeMB))
-	}
-	if resourceType == "vm" && objectRef.memoryReservation != 0 {
-		_, fieldName := e.makeMetricIdentifier(prefix, "memoryReservation")
-		globalFields[fieldName] = strconv.Itoa(int(objectRef.memoryReservation))
+	for k, v := range objectRef.customProperties {
+		globalFields[k] = v
 	}
 	return globalFields
 }
 
-func (e *endpoint) makeMetricIdentifier(prefix, metric string) (metricName, fieldName string) {
+func (e *endpoint) makeMetricIdentifier(prefix string, metric string) (metricName string, fieldName string) {
 	parts := strings.Split(metric, ".")
 	if len(parts) == 1 {
 		return prefix, parts[0]
@@ -1459,4 +1497,103 @@ func round(x float64) float64 {
 		return t + math.Copysign(1, x)
 	}
 	return t
+}
+
+func getIndex(enumObj interface{}) int {
+    v := reflect.ValueOf(enumObj)
+
+    // Vérifier si le type a une méthode Values()
+    method := v.MethodByName("Values")
+    if !method.IsValid() {
+        // La méthode n'existe pas
+        return -1
+    }
+    for i, s := range method.Call(nil) {
+        if s == enumObj {
+            return i
+        }
+    }
+    return -1 // si non trouvé
+}
+
+func (e *endpoint) getExtraData(entity interface{}, fieldPath string) (interface{}, bool) {
+    v := reflect.ValueOf(entity)
+
+    // Si c'est un pointeur, on dé-référence
+    if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			// La valeur est un pointeur nil, on ne peut pas continuer
+			return nil, false
+		}
+        v = v.Elem()
+    }
+
+    fields := strings.Split(fieldPath, ".")
+    for _, field := range fields {
+        if v.Kind() == reflect.Struct {
+            v = v.FieldByName(field)
+            // Si le champ n'existe pas ou n'est pas accessible
+            if !v.IsValid() {
+				e.parent.Log.Warnf("Field %s in %s of %s not valid. Skipping", field, fieldPath, reflect.TypeOf(entity))
+                return nil, false 
+            }
+            // Si c'est un pointeur, dé-référencer
+            if v.Kind() == reflect.Ptr {
+                v = v.Elem()
+            }
+        } else {
+			e.parent.Log.Warnf("Field %s in %s of %s not struct %s. Skipping", field, fieldPath, reflect.TypeOf(entity), v.Kind())
+            return nil, false 
+        }
+    }
+
+    // Retourner la valeur sous forme de string
+    if v.IsValid() && v.CanInterface() {
+        return v, true
+    }
+	e.parent.Log.Warnf("Field %s of %s no interface. Skipping", fieldPath, reflect.TypeOf(entity))
+    return nil, false 
+}
+
+func (e *endpoint) printStructFields(t reflect.Type, prefix string) {
+    if t.Kind() == reflect.Ptr {
+        t = t.Elem()
+    }
+    if t.Kind() != reflect.Struct {
+        e.parent.Log.Warnf("Not a struct:", t)
+        return
+    }
+    for i := 0; i < t.NumField(); i++ {
+        field := t.Field(i)
+        e.parent.Log.Warnf(prefix, "Field:", field.Name, "Type:", field.Type)
+        // Si vous voulez explorer récursivement
+        if field.Type.Kind() == reflect.Struct {
+            e.printStructFields(field.Type, prefix + ">")
+        }
+    }
+}
+
+func (e *endpoint) makePropertyIdentifier(input string) string {
+    var result []rune
+	runes := []rune(e.parent.Separator)
+    for _, r := range input {
+        if r == '.' {
+			result = append(result, runes...)
+		} else {
+            result = append(result, r)
+        }
+    }
+    return string(result)
+}
+
+func capitalizeAfterDot(input string) string {
+    var result []rune
+    for i, r := range input {
+		if i == 0 || input[i-1] == '.' {
+			result = append(result, unicode.ToUpper(r))
+		} else {
+            result = append(result, r)
+		}
+    }
+    return string(result)
 }
