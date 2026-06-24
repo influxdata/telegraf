@@ -2,6 +2,7 @@
 package filecount
 
 import (
+	"context"
 	_ "embed"
 	"errors"
 	"io/fs"
@@ -28,13 +29,15 @@ type FileCount struct {
 	FollowSymlinks bool            `toml:"follow_symlinks"`
 	Size           config.Size     `toml:"size"`
 	MTime          config.Duration `toml:"mtime"`
-	Log            telegraf.Logger `toml:"-"`
 	Timeout        config.Duration `toml:"timeout"`
+	Log            telegraf.Logger `toml:"-"`
 
 	fs          fileSystem
 	fileFilters []fileFilterFunc
 	globPaths   []globpath.GlobPath
 }
+
+var errTimeout = errors.New("filecount: timeout exceeded")
 
 type fileFilterFunc func(os.FileInfo) (bool, error)
 
@@ -144,11 +147,16 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 	oldestFileTimestamp := make(map[string]int64)
 	newestFileTimestamp := make(map[string]int64)
 
-	start := time.Now()
+	ctx := context.Background()
+	if fc.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(fc.Timeout))
+		defer cancel()
+	}
 
 	walkFn := func(path string, _ *godirwalk.Dirent) error {
-		if fc.Timeout > 0 && time.Since(start) > time.Duration(fc.Timeout) {
-			return filepath.SkipDir
+		if ctx.Err() != nil {
+			return errTimeout
 		}
 
 		rel, err := filepath.Rel(basedir, path)
@@ -194,9 +202,7 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 			gauge["newest_file_timestamp"] = newestFileTimestamp[path]
 
 			tags := map[string]string{"directory": path}
-			if fc.Timeout > 0 && time.Since(start) > time.Duration(fc.Timeout) {
-				tags["filecount_status"] = "timeout"
-			} else {
+			if fc.Timeout > 0 {
 				tags["filecount_status"] = "ok"
 			}
 
@@ -233,8 +239,23 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 			return godirwalk.Halt
 		},
 	})
-	if err != nil {
+	if err != nil && !errors.Is(err, errTimeout) {
 		acc.AddError(err)
+		return
+	}
+
+	if errors.Is(err, errTimeout) && glob.MatchString(basedir) {
+		gauge := map[string]interface{}{
+			"count":                 childCount[basedir],
+			"size_bytes":            childSize[basedir],
+			"oldest_file_timestamp": oldestFileTimestamp[basedir],
+			"newest_file_timestamp": newestFileTimestamp[basedir],
+		}
+		tags := map[string]string{
+			"directory":        basedir,
+			"filecount_status": "timeout",
+		}
+		acc.AddGauge("filecount", gauge, tags)
 	}
 }
 
@@ -314,7 +335,6 @@ func newFileCount() *FileCount {
 		MTime:          config.Duration(0),
 		fileFilters:    nil,
 		fs:             osFS{},
-		Timeout:        config.Duration(0),
 	}
 }
 

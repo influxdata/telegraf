@@ -35,7 +35,7 @@ func TestNoFiltersOnChildDir(t *testing.T) {
 	matches := []string{"subdir/quux", "subdir/quuz",
 		"subdir/nested2/qux", "subdir/nested2"}
 
-	tags := map[string]string{"directory": getTestdataDir() + "/subdir", "filecount_status": "ok"}
+	tags := map[string]string{"directory": getTestdataDir() + "/subdir"}
 	acc := testutil.Accumulator{}
 	require.NoError(t, acc.GatherError(fc.Gather))
 	require.True(t, acc.HasPoint("filecount", tags, "count", int64(len(matches))))
@@ -50,7 +50,7 @@ func TestNoRecursiveButSuperMeta(t *testing.T) {
 	fc.Directories = []string{getTestdataDir() + "/**"}
 	matches := []string{"subdir/quux", "subdir/quuz", "subdir/nested2"}
 
-	tags := map[string]string{"directory": getTestdataDir() + "/subdir", "filecount_status": "ok"}
+	tags := map[string]string{"directory": getTestdataDir() + "/subdir"}
 	acc := testutil.Accumulator{}
 	require.NoError(t, acc.GatherError(fc.Gather))
 
@@ -80,7 +80,7 @@ func TestDoubleAndSimpleStar(t *testing.T) {
 	fc.Directories = []string{getTestdataDir() + "/**/*"}
 	matches := []string{"qux"}
 
-	tags := map[string]string{"directory": getTestdataDir() + "/subdir/nested2", "filecount_status": "ok"}
+	tags := map[string]string{"directory": getTestdataDir() + "/subdir/nested2"}
 
 	acc := testutil.Accumulator{}
 	require.NoError(t, acc.GatherError(fc.Gather))
@@ -160,8 +160,7 @@ func TestDirectoryWithTrailingSlash(t *testing.T) {
 		metric.New(
 			"filecount",
 			map[string]string{
-				"directory":        getTestdataDir(),
-				"filecount_status": "ok",
+				"directory": getTestdataDir(),
 			},
 			map[string]interface{}{
 				"count":                 9,
@@ -206,7 +205,7 @@ func TestTimeoutDisabled(t *testing.T) {
 	fc := getNoFilterFileCount()
 	fc.Timeout = config.Duration(0)
 
-	tags := map[string]string{"directory": getTestdataDir(), "filecount_status": "ok"}
+	tags := map[string]string{"directory": getTestdataDir()}
 	acc := testutil.Accumulator{}
 	require.NoError(t, acc.GatherError(fc.Gather))
 	require.True(t, acc.HasPoint("filecount", tags, "count", int64(9)))
@@ -264,7 +263,7 @@ func getFakeFileSystem(basePath string) fakeFileSystem {
 }
 
 func fileCountEquals(t *testing.T, fc FileCount, expectedCount, expectedSize int) {
-	tags := map[string]string{"directory": getTestdataDir(), "filecount_status": "ok"}
+	tags := map[string]string{"directory": getTestdataDir()}
 	acc := testutil.Accumulator{}
 	require.NoError(t, acc.GatherError(fc.Gather))
 	require.True(t, acc.HasPoint("filecount", tags, "count", int64(expectedCount)))
