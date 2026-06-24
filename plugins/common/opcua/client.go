@@ -278,7 +278,11 @@ func (o *OpcUAClient) SetupOptions() error {
 		}
 	}
 
-	if o.Config.SecurityPolicy != "None" || o.Config.SecurityMode != "None" {
+	// A client certificate is only needed when the channel is actually secured.
+	// Setting either security_policy or security_mode to "None" collapses the
+	// channel to None, so skip certificate creation (which may fail on a
+	// read-only filesystem) unless both request security.
+	if o.Config.SecurityPolicy != "None" && o.Config.SecurityMode != "None" {
 		if err := o.determineOrCreateCertificates(); err != nil {
 			return err
 		}
