@@ -1,6 +1,7 @@
 package modbus
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -390,4 +391,72 @@ func TestMetricAddressOverflow(t *testing.T) {
 		},
 	}
 	require.ErrorIs(t, plugin.Init(), errAddressOverflow)
+}
+
+func TestMetricMaxRegistersWorkaround(t *testing.T) {
+	fields := make([]metricFieldDefinition, 0, 40)
+	for i := range 10 {
+		fields = append(fields,
+			metricFieldDefinition{
+				Name:         fmt.Sprintf("field-coil-%d", i),
+				Address:      uint16(i),
+				RegisterType: "coil",
+			},
+		)
+	}
+	for i := range 10 {
+		fields = append(fields,
+			metricFieldDefinition{
+				Name:         fmt.Sprintf("field-discrete-%d", i),
+				Address:      uint16(i),
+				RegisterType: "discrete",
+			},
+		)
+	}
+	for i := range 10 {
+		fields = append(fields,
+			metricFieldDefinition{
+				Name:         fmt.Sprintf("field-holding-%d", i),
+				Address:      uint16(i * 4),
+				InputType:    "UINT64",
+				RegisterType: "holding",
+			},
+		)
+	}
+	for i := range 10 {
+		fields = append(fields,
+			metricFieldDefinition{
+				Name:         fmt.Sprintf("field-input-%d", i),
+				Address:      uint16(i * 4),
+				InputType:    "UINT64",
+				RegisterType: "input",
+			},
+		)
+	}
+	plugin := &Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "metric",
+		Log:               &testutil.Logger{},
+		Workarounds: workarounds{
+			MaxBitRegistersPerRequest:  6,
+			MaxWordRegistersPerRequest: 8,
+		},
+	}
+	plugin.Metrics = []metricDefinition{
+		{
+			SlaveID:     1,
+			ByteOrder:   "ABCD",
+			Measurement: "test",
+			Fields:      fields,
+		},
+	}
+	require.NoError(t, plugin.Init())
+
+	require.Len(t, plugin.requests, 1)
+	require.Contains(t, plugin.requests, byte(1))
+	require.Len(t, plugin.requests[1].coil, 2, "coil")
+	require.Len(t, plugin.requests[1].discrete, 2, "discrete")
+	require.Len(t, plugin.requests[1].holding, 5, "holding")
+	require.Len(t, plugin.requests[1].input, 5, "input")
 }

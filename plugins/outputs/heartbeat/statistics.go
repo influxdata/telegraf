@@ -23,6 +23,9 @@ type statistics struct {
 	currentInputs  map[string][]map[string]interface{}
 	currentOutputs map[string][]map[string]interface{}
 
+	// Internal flags
+	includeInternal bool
+
 	sync.RWMutex
 }
 
@@ -43,6 +46,10 @@ func (s *statistics) snapshot() *statistics {
 		currentAgent:   make(map[string]interface{}),
 		currentInputs:  make(map[string][]map[string]interface{}),
 		currentOutputs: make(map[string][]map[string]interface{}),
+	}
+
+	if !s.includeInternal {
+		return out
 	}
 
 	// Add internal statistics

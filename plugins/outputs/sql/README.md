@@ -78,10 +78,10 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
-## Secret-store support
+## Secret store support
 
-This plugin supports secrets from secret-stores for the `data_source_name`
-option. See the [secret-store documentation][SECRETSTORE] for more details on
+This plugin supports secrets from secret stores for the `data_source_name`
+option. See the [secret store documentation][SECRETSTORE] for more details on
 how to use them.
 
 [SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
@@ -93,7 +93,8 @@ how to use them.
 [[outputs.sql]]
   ## Database driver
   ## Valid options: mssql (Microsoft SQL Server), mysql (MySQL), pgx (Postgres),
-  ##  sqlite (SQLite3), snowflake (snowflake.com) clickhouse (ClickHouse)
+  ##  sqlite (SQLite3), snowflake (snowflake.com), clickhouse (ClickHouse),
+  ##  oracle (Oracle)
   driver = ""
 
   ## Data source name
@@ -201,10 +202,10 @@ specify the `table_update_template` setting in your config file.
 
 ### go-sql-driver/mysql
 
-MySQL default quoting differs from standard ANSI/ISO SQL quoting. You must use
-MySQL's ANSI\_QUOTES mode with this plugin. You can enable this mode by using
-the setting `init_sql = "SET sql_mode='ANSI_QUOTES';"` or through a command-line
-option when running MySQL. See MySQL's docs for [details on
+MySQL default quoting differs from standard ANSI/ISO SQL quoting. Before v1.40.0
+you had to use MySQL's ANSI\_QUOTES mode with this plugin. You can enable this
+mode by using the setting `init_sql = "SET sql_mode='ANSI_QUOTES';"` or through
+a command-line option when running MySQL. See MySQL's docs for [details on
 ANSI\_QUOTES][mysql-quotes] and [how to set the SQL mode][mysql-mode].
 
 You can use a DSN of the format "username:password@tcp(host:port)/dbname". See
@@ -231,7 +232,7 @@ docs](https://modernc.org/sqlite) for details.
 
 ### clickhouse
 
-#### DSN
+#### Clickhouse DSN
 
 Note that even when the DSN is specified as `https://` the `secure=true`
 parameter is still required.
@@ -244,7 +245,7 @@ for warnings in your log file and refer to the
 
 [v2-dsn-docs]: https://github.com/ClickHouse/clickhouse-go/tree/v2.30.2?tab=readme-ov-file#dsn
 
-#### Metric type to SQL type conversion
+#### Clickhouse metric type to SQL type conversion
 
 The following configuration makes the mapping compatible with Clickhouse:
 
@@ -268,7 +269,7 @@ types](https://clickhouse.com/docs/en/sql-reference/data-types/) for more info.
 Telegraf doesn't have unit tests for go-mssqldb so it should be treated as
 experimental.
 
-#### DSN
+#### MSSQL DSN
 
 The following format for the DSN applies to mssql. For more information and
 additional configuration options refer to the [go-mssql documentation][go-mssqldb-doc].
@@ -290,7 +291,7 @@ The following templates are compatible with mssql
 
 ```
 
-#### Metric type to SQL type conversion
+#### MSSQL metric type to SQL type conversion
 
 The following configuration makes the mapping compatible with mssql:
 
@@ -310,3 +311,41 @@ The following configuration makes the mapping compatible with mssql:
 
 Telegraf doesn't have unit tests for gosnowflake so it should be treated as
 experimental.
+
+### sijms/go-ora
+
+#### Oracle DSN
+
+The following format for the DSN applies to oracle. For more information and
+additional configuration options refer to the [go-ora documentation][go-ora-doc].
+
+[go-ora-doc]: https://github.com/sijms/go-ora
+
+```toml
+data_source_name = "oracle://username:password@host:port/service"
+```
+
+#### Oracle templates
+
+Oracle does not support `LIMIT`, so the `table_exists_template` default is
+adjusted automatically. To enable schema updates, set `table_update_template`
+to the Oracle `ALTER TABLE` syntax (no `COLUMN` keyword):
+
+```toml
+  table_update_template = "ALTER TABLE {TABLE} ADD {COLUMN}"
+```
+
+#### Oracle metric type to SQL type conversion
+
+The following configuration makes the mapping compatible with oracle:
+
+```toml
+  [outputs.sql.convert]
+    integer              = "NUMBER(38)"
+    real                 = "NUMBER"
+    text                 = "VARCHAR2(4000)"
+    timestamp            = "TIMESTAMP"
+    defaultvalue         = "VARCHAR2(4000)"
+    unsigned             = ""
+    bool                 = "BOOLEAN"
+```

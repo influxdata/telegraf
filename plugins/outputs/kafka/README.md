@@ -33,11 +33,11 @@ using the `startup_error_behavior` setting. Available values are:
             the plugin in case probing fails. If the plugin does not support
             probing, Telegraf will behave as if `ignore` was set instead.
 
-## Secret-store support
+## Secret store support
 
-This plugin supports secrets from secret-stores for the `sasl_username`,
+This plugin supports secrets from secret stores for the `sasl_username`,
 `sasl_password` and `sasl_access_token` option.
-See the [secret-store documentation][SECRETSTORE] for more details on how
+See the [secret store documentation][SECRETSTORE] for more details on how
 to use them.
 
 [SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
@@ -133,9 +133,6 @@ to use them.
   ##   * metric: Uses the metric's timestamp
   ##   * now: Uses the time of write
   # producer_timestamp = metric
-
-  ## Add metric name as specified kafka header if not empty
-  # metric_name_header = ""
 
   ## Optional TLS Config
   # enable_tls = false
@@ -248,6 +245,12 @@ to use them.
   #   method = "tags"
   #   keys = ["foo", "bar"]
   #   separator = "_"
+
+  ## Kafka headers to add to the message where header values accept templates
+  # [outputs.kafka.headers]
+  #   metric_name = '{{ .Name }}'
+  #   my_tag = 'foo-{{ .Tag "mytag" }}'
+  #   my_value = 'bar-{{ .Field "my" }}-{{ .Field "value" }}'
 ```
 
 ### `max_retry`

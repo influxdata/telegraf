@@ -1,0 +1,1 @@
+nested,level=3,path=type:model/nested/path,source=hostname,subscription=subscription nested/value/foo="bar" 1543236572000000000

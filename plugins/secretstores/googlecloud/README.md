@@ -1,6 +1,10 @@
-# GoogleCloud Secrets Secret-Store Plugin
+# GoogleCloud Credentials Secret Store Plugin
 
 This plugin allows to retrieve token-based [Google Cloud Credentials][gc_auth].
+
+⭐ Telegraf v1.37.0
+🏷️ cloud
+💻 all
 
 [gc_auth]: https://docs.cloud.google.com/docs/authentication
 
@@ -11,7 +15,7 @@ the Telegraf configuration. Only certain Telegraf plugins and options of
 support secret stores. To see which plugins and options support
 secrets, see their respective documentation (e.g.
 `plugins/outputs/influxdb/README.md`). If the plugin's README has the
-`Secret-store support` section, it will detail which options support secret
+`Secret store support` section, it will detail which options support secret
 store usage.
 
 ## Configuration
@@ -19,13 +23,19 @@ store usage.
 ```toml @sample.conf
 ## Fetch tokens from Google Cloud Authentication
 [[secretstores.googlecloud]]
-  ## Unique identifier for the secret-store.
+  ## Unique identifier for the secret store.
   ## This id can later be used in plugins to reference the secrets
-  ## in this secret-store via @{<id>:token}(mandatory)
+  ## in this secret store via @{<id>:token}(mandatory)
   id = "googlecloud_secret"
 
   ## Path to the service account credentials file
   credentials_file = "./testdata/gdch.json"
+
+  ## OAuth2 scopes for the generated access token.
+  ## Defaults to cloud-platform for service-account credentials.
+  ## GDCH/STS users can ignore this option as only the audience
+  ## parameter is evaluated for those credential types.
+  # scopes = ["https://www.googleapis.com/auth/cloud-platform"]
 
   ## Audience sent to when retrieving an STS token.
   ## Currently only used for GDCH auth flow
@@ -38,7 +48,16 @@ store usage.
 
 ## Additional Information
 
+This plugin only supports reading the secrets, it cannot create or modify them.
+
+The `scopes` option is only defaulted to `cloud-platform` for credential files
+of `type: "service_account"`, which is the kind downloaded from the Google
+Cloud Console. Other OAuth2-scope-consuming credential types such as
+`authorized_user`, `external_account`, and `impersonated_service_account` must
+set `scopes` manually. For `gdch_service_account` credentials only the
+`sts_audience` option is evaluated and `scopes` is ignored.
+
 To generate a Google-Distributed-Cloud-Hosted service account credentials file
-check the [Manage service accounts][gdch_service_docs].
+check the [Manage service accounts][gdch_service_docs] page.
 
 [gdch_service_docs]: https://docs.cloud.google.com/distributed-cloud/hosted/docs/latest/gdch/application/ao-user/iam/service-identities

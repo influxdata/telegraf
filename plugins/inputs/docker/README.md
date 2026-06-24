@@ -26,60 +26,55 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Read metrics about docker containers
 [[inputs.docker]]
-  ## Docker Endpoint
-  ##   To use TCP, set endpoint = "tcp://[ip]:[port]"
-  ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
-  endpoint = "unix:///var/run/docker.sock"
+  ## Endpoint, either "tcp://[ip]:[port]" for TCP, "unix:///<path>" for socket
+  ## or "ENV" for using environment variables (i.e., docker-machine)
+  # endpoint = "unix:///var/run/docker.sock"
 
-  ## Set to true to collect Swarm metrics(desired_replicas, running_replicas)
-  ## Note: configure this in one of the manager nodes in a Swarm cluster.
-  ## configuring in multiple Swarm managers results in duplication of metrics.
-  gather_services = false
+  ## Collect Swarm metrics (desired_replicas, running_replicas)
+  ## Note: Configure this for one of the manager nodes in a Swarm cluster only
+  ## as you will see duplicate metrics otherwise.
+  # gather_services = false
 
-  ## Set the source tag for the metrics to the container ID hostname, eg first 12 chars
-  source_tag = false
+  ## Use container ID hostname as source (trimmed to 12 characters)
+  # source_tag = false
 
-  ## Containers to include and exclude. Collect all if empty. Globs accepted.
-  container_name_include = []
-  container_name_exclude = []
+  ## Containers to include and exclude accepting wildcards; all if empty
+  # container_name_include = []
+  # container_name_exclude = []
 
-  ## Container states to include and exclude. Globs accepted.
-  ## When empty only containers in the "running" state will be captured.
-  ## example: container_state_include = ["created", "restarting", "running", "removing", "paused", "exited", "dead"]
-  ## example: container_state_exclude = ["created", "restarting", "running", "removing", "paused", "exited", "dead"]
-  # container_state_include = []
+  ## Container states to include and exclude accepting wildcards; available:
+  ## "created", "restarting", "running", "removing", "paused", "exited", "dead"
+  # container_state_include = ["running"]
   # container_state_exclude = []
 
-  ## Objects to include for disk usage query
-  ## Allowed values are "container", "image", "volume"
-  ## When empty disk usage is excluded
-  storage_objects = []
+  ## Objects to include for disk usage query; available:
+  ## "container", "image", "volume"
+  # storage_objects = []
 
   ## Timeout for docker list, info, and stats commands
-  timeout = "5s"
+  # timeout = "5s"
 
   ## Podman compatibility settings (auto-enabled when Podman detected)
-  ## Cache TTL for accurate CPU percentage calculation (default: 60s)
-  ## Set higher than your collection interval for accurate measurements
-  ## Set to 0 to keep cache entries forever (not recommended for dynamic environments)
+  ## Cache TTL for accurate CPU percentage calculation. Should be higher than
+  ## your collection interval for accurate measurements. Zero will keep cache
+  ## entries forever (not recommended for dynamic environments).
   # podman_cache_ttl = "60s"
 
-  ## Specifies for which classes a per-device metric should be issued
-  ## Possible values are 'cpu' (cpu0, cpu1, ...), 'blkio' (8:0, 8:1, ...) and 'network' (eth0, eth1, ...)
+  ## Emit per-device metric for the given classes; available:
+  ## 'cpu' (cpu0, ...), 'blkio' (8:0, ...) and 'network' (eth0, ...)
   # perdevice_include = ["cpu"]
 
-  ## Specifies for which classes a total metric should be issued. Total is an aggregated of the 'perdevice_include' values.
-  ## Possible values are 'cpu', 'blkio' and 'network'
-  ## Total 'cpu' is reported directly by Docker daemon, and 'network' and 'blkio' totals are aggregated by this plugin.
+  ## Emit accumulated metrics for the given classes; available:
+  ## 'cpu', 'blkio' and 'network'
   # total_include = ["cpu", "blkio", "network"]
 
-  ## docker labels to include and exclude as tags.  Globs accepted.
-  ## Note that an empty array for both will include all labels as tags
-  docker_label_include = []
-  docker_label_exclude = []
+  ## Container labels to include as tags accepting wildcards; all if empty
+  # docker_label_include = []
+  # docker_label_exclude = []
 
   ## Which environment variables should we use as a tag
-  tag_env = ["JAVA_HOME", "HEAP_SIZE"]
+  ## e.g. tag_env = ["JAVA_HOME", "HEAP_SIZE"]
+  # tag_env = []
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"

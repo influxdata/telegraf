@@ -200,8 +200,12 @@ func (s *SIP) Start(telegraf.Accumulator) error {
 	}
 	s.ua = ua
 
-	// Create SIP client
-	client, err := sipgo.NewClient(ua)
+	// Create SIP client with local address for Via header if configured
+	var clientOpts []sipgo.ClientOption
+	if s.LocalAddress != "" {
+		clientOpts = append(clientOpts, sipgo.WithClientHostname(s.LocalAddress))
+	}
+	client, err := sipgo.NewClient(ua, clientOpts...)
 	if err != nil {
 		s.Stop()
 		return fmt.Errorf("creating SIP client failed: %w", err)

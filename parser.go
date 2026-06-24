@@ -1,5 +1,7 @@
 package telegraf
 
+import "time"
+
 // Parser is an interface defining functions that a parser plugin must satisfy.
 type Parser interface {
 	// Parse takes a byte buffer separated by newlines
@@ -35,6 +37,12 @@ type ParserPlugin interface {
 // ParserFuncPlugin is an interface for plugins that are able to parse
 // arbitrary data formats.
 type ParserFuncPlugin interface {
-	// GetParser returns a new parser.
+	// SetParserFunc returns a new parser.
 	SetParserFunc(fn ParserFunc)
+}
+
+// ParserTimeFuncPlugin allows to override the time used if parsed metrics do
+// not contain an explicit timestamp. By default the current time is used.
+type ParserTimeFuncPlugin interface {
+	SetTimeFunc(func() time.Time)
 }

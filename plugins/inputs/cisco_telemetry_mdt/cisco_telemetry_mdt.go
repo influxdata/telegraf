@@ -5,6 +5,7 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,6 +24,7 @@ import (
 	_ "google.golang.org/grpc/encoding/gzip" // Required to allow gzip encoding
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/peer"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
@@ -301,9 +303,10 @@ func (c *CiscoTelemetryMDT) acceptTCPClients() {
 		c.wg.Add(1)
 		go func() {
 			c.Log.Debugf("Accepted Cisco MDT TCP dialout connection from %s", conn.RemoteAddr())
-			err := c.handleTCPClient(conn)
-			if err != nil {
-				c.acc.AddError(err)
+			if err := c.handleTCPClient(conn); err != nil {
+				if !errors.Is(err, io.EOF) && !errors.Is(err, net.ErrClosed) {
+					c.acc.AddError(err)
+				}
 			}
 			c.Log.Debugf("Closed Cisco MDT TCP dialout connection from %s", conn.RemoteAddr())
 
@@ -344,7 +347,7 @@ func (c *CiscoTelemetryMDT) handleTCPClient(conn net.Conn) error {
 	for {
 		// Read and validate dialout telemetry header
 		if err := binary.Read(conn, binary.BigEndian, &hdr); err != nil {
-			return err
+			return fmt.Errorf("reading header failed: %w", err)
 		}
 
 		maxMsgSize := tcpMaxMsgLen
@@ -362,7 +365,7 @@ func (c *CiscoTelemetryMDT) handleTCPClient(conn net.Conn) error {
 		payload.Reset()
 		if size, err := payload.ReadFrom(io.LimitReader(conn, int64(hdr.MsgLen))); size != int64(hdr.MsgLen) {
 			if err != nil {
-				return err
+				return fmt.Errorf("reading payload failed: %w", err)
 			}
 			return errors.New("premature EOF during TCP dialout")
 		}
@@ -378,6 +381,14 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 	if err != nil {
 		c.acc.AddError(fmt.Errorf("failed to decode: %w: %s", err, msg.String()))
 		return
+	}
+
+	if c.Log.Level().Includes(telegraf.Trace) {
+		if d, err := protojson.Marshal(msg); err != nil {
+			c.Log.Tracef("reencoding message %q failed: %v", hex.EncodeToString(data), err)
+		} else {
+			c.Log.Tracef("received message: %s", string(d))
+		}
 	}
 
 	grouper := metric.NewSeriesGrouper()

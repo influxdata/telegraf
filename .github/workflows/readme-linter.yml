@@ -5,19 +5,23 @@ on:
   pull_request:
     branches: # Names of target branches, not source branches
       - master
+
+permissions:
+  contents: read
+
 jobs:
   run-readme-linter:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-go@v6
         with:
-          go-version: '1.25.7'
-      - uses: actions/checkout@v6
+          go-version: '1.26.4'
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@22103cc46bda19c2b464ffe86db46df6922fd323 # v47.0.5
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           files: ./plugins/**/README.md

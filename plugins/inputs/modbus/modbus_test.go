@@ -186,7 +186,7 @@ func TestRetrySuccessful(t *testing.T) {
 	}
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"modbus",
 			map[string]string{
 				"type":     cCoils,

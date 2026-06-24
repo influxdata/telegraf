@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"time"
 
 	"github.com/gopcua/opcua"
@@ -68,7 +69,7 @@ func assignConfigValuesToRequest(req *ua.MonitoredItemCreateRequest, monParams *
 
 	if monParams.DataChangeFilter != nil {
 		if err := checkDataChangeFilterParameters(monParams.DataChangeFilter); err != nil {
-			return fmt.Errorf(err.Error()+", node '%s'", req.ItemToMonitor.NodeID)
+			return fmt.Errorf("node '%s': %w", req.ItemToMonitor.NodeID, err)
 		}
 
 		var deadbandValue float64
@@ -95,13 +96,13 @@ func (sc *subscribeClientConfig) createSubscribeClient(log telegraf.Logger) (*su
 		return nil, err
 	}
 
-	// Initialize node IDs (namespace URI resolution will happen during connect if needed)
-	if err := client.InitNodeIDs(); err != nil {
-		return nil, err
-	}
-
-	if err := client.InitEventNodeIDs(); err != nil {
-		return nil, err
+	// Validate monitoring parameters at config time (no server connection needed)
+	for _, node := range client.NodeMetricMapping {
+		if node.Tag.MonitoringParams.DataChangeFilter != nil {
+			if err := checkDataChangeFilterParameters(node.Tag.MonitoringParams.DataChangeFilter); err != nil {
+				return nil, fmt.Errorf("node '%s': %w", node.Tag.NodeID(), err)
+			}
+		}
 	}
 
 	processingCtx, processingCancel := context.WithCancel(context.Background())
@@ -109,8 +110,8 @@ func (sc *subscribeClientConfig) createSubscribeClient(log telegraf.Logger) (*su
 	subClient := &subscribeClient{
 		OpcUAInputClient:   client,
 		Config:             *sc,
-		monitoredItemsReqs: make([]*ua.MonitoredItemCreateRequest, len(client.NodeIDs)),
-		eventItemsReqs:     make([]*ua.MonitoredItemCreateRequest, len(client.EventNodeMetricMapping)),
+		monitoredItemsReqs: make([]*ua.MonitoredItemCreateRequest, 0, len(client.NodeMetricMapping)),
+		eventItemsReqs:     make([]*ua.MonitoredItemCreateRequest, 0, len(client.EventNodeMetricMapping)),
 		// 100 was chosen to make sure that the channels will not block when multiple changes come in at the same time.
 		// The channel size should be increased if reports come in on Telegraf blocking when many changes come in at
 		// the same time. It could be made dependent on the number of nodes subscribed to and the subscription interval.
@@ -120,33 +121,6 @@ func (sc *subscribeClientConfig) createSubscribeClient(log telegraf.Logger) (*su
 		cancel:            processingCancel,
 	}
 
-	log.Debugf("Creating monitored items")
-	for i, nodeID := range client.NodeIDs {
-		// The node id index (i) is used as the handle for the monitored item
-		req := opcua.NewMonitoredItemCreateRequestWithDefaults(nodeID, ua.AttributeIDValue, uint32(i))
-		if err := assignConfigValuesToRequest(req, &client.NodeMetricMapping[i].Tag.MonitoringParams); err != nil {
-			return nil, err
-		}
-		subClient.monitoredItemsReqs[i] = req
-	}
-
-	log.Debugf("Creating event streaming items")
-	for i, node := range client.EventNodeMetricMapping {
-		req := opcua.NewMonitoredItemCreateRequestWithDefaults(node.NodeID, ua.AttributeIDEventNotifier, uint32(i))
-		if node.SamplingInterval != nil {
-			req.RequestedParameters.SamplingInterval = float64(time.Duration(*node.SamplingInterval) / time.Millisecond)
-		}
-		if node.QueueSize != nil {
-			req.RequestedParameters.QueueSize = *node.QueueSize
-		}
-
-		filterExtObj, err := node.CreateEventFilter()
-		if err != nil {
-			return nil, fmt.Errorf("failed to create event filter: %w", err)
-		}
-		req.RequestedParameters.Filter = filterExtObj
-		subClient.eventItemsReqs[i] = req
-	}
 	return subClient, nil
 }
 
@@ -161,6 +135,56 @@ func (o *subscribeClient) connect() error {
 	if err := o.OpcUAClient.UpdateNamespaceArray(o.ctx); err != nil {
 		o.Log.Warnf("Failed to fetch namespace array: %v", err)
 		// Continue anyway - this is only needed if using namespace URIs
+	}
+
+	// Browse-based discovery runs on every connect so server-side schema
+	// changes (added or removed nodes, renumbered namespaces) are picked up
+	// on reconnect. DiscoverNodes replaces the previously discovered groups
+	// and InitNodeMetricMapping rebuilds the mapping from scratch.
+	if len(o.Config.Browse.Paths) > 0 {
+		if err := o.OpcUAInputClient.DiscoverNodes(o.ctx); err != nil {
+			return fmt.Errorf("browse discovery failed: %w", err)
+		}
+		if err := o.OpcUAInputClient.InitNodeMetricMapping(); err != nil {
+			return fmt.Errorf("initializing node metric mapping failed: %w", err)
+		}
+	}
+
+	// Initialize node IDs after connection so namespace URIs can be resolved
+	if err := o.OpcUAInputClient.InitNodeIDs(); err != nil {
+		return fmt.Errorf("initializing node IDs failed: %w", err)
+	}
+	if err := o.OpcUAInputClient.InitEventNodeIDs(); err != nil {
+		return fmt.Errorf("initializing event node IDs failed: %w", err)
+	}
+
+	o.Log.Debugf("Creating monitored items")
+	o.monitoredItemsReqs = make([]*ua.MonitoredItemCreateRequest, 0, len(o.NodeIDs))
+	for i, nodeID := range o.NodeIDs {
+		req := opcua.NewMonitoredItemCreateRequestWithDefaults(nodeID, ua.AttributeIDValue, uint32(i))
+		if err := assignConfigValuesToRequest(req, &o.NodeMetricMapping[i].Tag.MonitoringParams); err != nil {
+			return fmt.Errorf("assigning monitoring params failed: %w", err)
+		}
+		o.monitoredItemsReqs = append(o.monitoredItemsReqs, req)
+	}
+
+	o.Log.Debugf("Creating event streaming items")
+	o.eventItemsReqs = make([]*ua.MonitoredItemCreateRequest, 0, len(o.EventNodeMetricMapping))
+	for i, node := range o.EventNodeMetricMapping {
+		req := opcua.NewMonitoredItemCreateRequestWithDefaults(node.NodeID, ua.AttributeIDEventNotifier, uint32(i))
+		if node.SamplingInterval != nil {
+			req.RequestedParameters.SamplingInterval = float64(time.Duration(*node.SamplingInterval) / time.Millisecond)
+		}
+		if node.QueueSize != nil {
+			req.RequestedParameters.QueueSize = *node.QueueSize
+		}
+
+		filterExtObj, err := node.CreateEventFilter()
+		if err != nil {
+			return fmt.Errorf("creating event filter failed: %w", err)
+		}
+		req.RequestedParameters.Filter = filterExtObj
+		o.eventItemsReqs = append(o.eventItemsReqs, req)
 	}
 
 	o.Log.Debugf("Creating OPC UA subscription")
@@ -191,6 +215,41 @@ func (o *subscribeClient) stop(ctx context.Context) <-chan struct{} {
 	return closing
 }
 
+// monitor registers the given monitored-item requests on the subscription.
+// Servers reject a CreateMonitoredItems request whose encoded size exceeds
+// their negotiated maximum message size, which surfaces as a connection drop
+// (BadTcpMessageTooLarge) for large node counts. When monitored_items_batch_size
+// is set, the requests are split into batches of that size and the per-request
+// results are concatenated in the original order so the caller's index-to-node
+// mapping stays valid.
+func (o *subscribeClient) monitor(ctx context.Context, reqs []*ua.MonitoredItemCreateRequest) ([]*ua.MonitoredItemCreateResult, error) {
+	// Build the batches first: a single batch holds everything when batching is
+	// disabled, otherwise split into chunks of the configured size.
+	batchSize := o.Config.Workarounds.MonitoredItemsBatchSize
+	var batches [][]*ua.MonitoredItemCreateRequest
+	if batchSize <= 0 {
+		batches = [][]*ua.MonitoredItemCreateRequest{reqs}
+	} else {
+		for chunk := range slices.Chunk(reqs, batchSize) {
+			batches = append(batches, chunk)
+		}
+	}
+
+	results := make([]*ua.MonitoredItemCreateResult, 0, len(reqs))
+	for _, batch := range batches {
+		resp, err := o.sub.Monitor(ctx, ua.TimestampsToReturnBoth, batch...)
+		if err != nil {
+			return nil, err
+		}
+		if len(resp.Results) != len(batch) {
+			return nil, fmt.Errorf("server returned %d results for %d requested items", len(resp.Results), len(batch))
+		}
+		results = append(results, resp.Results...)
+	}
+
+	return results, nil
+}
+
 func (o *subscribeClient) startMonitoring(ctx context.Context) (<-chan telegraf.Metric, error) {
 	err := o.connect()
 	if err != nil {
@@ -205,39 +264,51 @@ func (o *subscribeClient) startMonitoring(ctx context.Context) (<-chan telegraf.
 		return nil, err
 	}
 
+	var skippedItems int
 	if len(o.monitoredItemsReqs) != 0 {
-		resp, err := o.sub.Monitor(ctx, ua.TimestampsToReturnBoth, o.monitoredItemsReqs...)
+		results, err := o.monitor(ctx, o.monitoredItemsReqs)
 		if err != nil {
 			return nil, fmt.Errorf("failed to start monitoring items: %w", err)
 		}
 		o.Log.Debug("Monitoring items")
 
-		for idx, res := range resp.Results {
-			if !o.StatusCodeOK(res.StatusCode) {
-				// Verify NodeIDs array has been built before trying to get item; otherwise show '?' for node id
-				if len(o.OpcUAInputClient.NodeIDs) > idx {
-					o.Log.Debugf("Failed to create monitored item for node %v (%v)",
-						o.OpcUAInputClient.NodeMetricMapping[idx].Tag.FieldName, o.OpcUAInputClient.NodeIDs[idx].String())
-				} else {
-					o.Log.Debugf("Failed to create monitored item for node %v (%v)", o.OpcUAInputClient.NodeMetricMapping[idx].Tag.FieldName, '?')
-				}
-				return nil, fmt.Errorf("creating monitored item failed with status code: %w", res.StatusCode)
+		for idx, res := range results {
+			if o.StatusCodeOK(res.StatusCode) {
+				continue
 			}
+			nodeID := "?"
+			if len(o.OpcUAInputClient.NodeIDs) > idx {
+				nodeID = o.OpcUAInputClient.NodeIDs[idx].String()
+			}
+			fieldName := o.OpcUAInputClient.NodeMetricMapping[idx].Tag.FieldName
+			o.Log.Warnf("Failed to create monitored item for node %v (%v): %v", fieldName, nodeID, res.StatusCode)
+			skippedItems++
 		}
 	}
 
 	if len(o.eventItemsReqs) != 0 {
-		resp, err := o.sub.Monitor(ctx, ua.TimestampsToReturnBoth, o.eventItemsReqs...)
+		results, err := o.monitor(ctx, o.eventItemsReqs)
 		if err != nil {
 			return nil, fmt.Errorf("failed to start monitoring event stream: %w", err)
 		}
 		o.Log.Debug("Monitoring events")
 
-		for _, res := range resp.Results {
-			if !o.StatusCodeOK(res.StatusCode) {
-				return nil, fmt.Errorf("creating monitored event streaming item failed with status code: %w", res.StatusCode)
+		for idx, res := range results {
+			if o.StatusCodeOK(res.StatusCode) {
+				continue
 			}
+			nodeID := "?"
+			if len(o.EventNodeMetricMapping) > idx {
+				nodeID = o.EventNodeMetricMapping[idx].NodeID.String()
+			}
+			o.Log.Warnf("Failed to create monitored event item for node %v: %v", nodeID, res.StatusCode)
+			skippedItems++
 		}
+	}
+
+	totalItems := len(o.monitoredItemsReqs) + len(o.eventItemsReqs)
+	if skippedItems > 0 && skippedItems == totalItems {
+		o.Log.Warnf("All %d monitored items failed, no data will be collected", totalItems)
 	}
 
 	go o.processReceivedNotifications()
@@ -262,8 +333,8 @@ func (o *subscribeClient) processReceivedNotifications() {
 				continue
 			}
 			if res.Value == nil {
-				o.Log.Error("Received nil notification")
-				return
+				o.Log.Warn("Received nil notification value, skipping")
+				continue
 			}
 
 			switch notif := res.Value.(type) {

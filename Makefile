@@ -180,7 +180,7 @@ vet:
 .PHONY: lint-install
 lint-install:
 	@echo "Installing golangci-lint"
-	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.7.2
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.4
 
 	@echo "Installing markdownlint"
 	npm install -g markdownlint-cli
@@ -270,8 +270,8 @@ plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 
 .PHONY: ci
 ci:
-	docker build -t quay.io/influxdb/telegraf-ci:1.25.7 - < scripts/ci.docker
-	docker push quay.io/influxdb/telegraf-ci:1.25.7
+	docker build -t quay.io/influxdb/telegraf-ci:1.26.4 - < scripts/ci.docker
+	docker push quay.io/influxdb/telegraf-ci:1.26.4
 
 .PHONY: install
 install: $(buildbin)
@@ -426,7 +426,7 @@ $(include_packages):
 	elif [ "$(suffix $@)" = ".zip" ]; then \
 		(cd $(dir $(DESTDIR)) && zip -r - ./*) > $(pkgdir)/telegraf-$(tar_version)_$@ ;\
 	elif [ "$(suffix $@)" = ".gz" ]; then \
-		tar --owner 0 --group 0 -czvf $(pkgdir)/telegraf-$(tar_version)_$@ -C $(dir $(DESTDIR)) . ;\
+		tar --owner 0 --group 0 -czvf $(pkgdir)/telegraf-$(tar_version)_$@ -C $(dir $(DESTDIR)) $(notdir $(DESTDIR)) ;\
 	fi
 
 amd64.deb x86_64.rpm linux_amd64.tar.gz: export GOOS := linux

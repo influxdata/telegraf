@@ -1,6 +1,7 @@
 package modbus
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	"github.com/tbrandon/mbserver"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -430,7 +432,7 @@ func TestRequestTypesCoil(t *testing.T) {
 			}
 
 			expected := []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"modbus",
 					map[string]string{
 						"type":     cCoils,
@@ -1059,7 +1061,7 @@ func TestRequestTypesHoldingABCD(t *testing.T) {
 			}
 
 			expected := []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"modbus",
 					map[string]string{
 						"type":     cHoldingRegisters,
@@ -1679,7 +1681,7 @@ func TestRequestTypesHoldingDCBA(t *testing.T) {
 			}
 
 			expected := []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"modbus",
 					map[string]string{
 						"type":     cHoldingRegisters,
@@ -2138,7 +2140,7 @@ func TestRequestStartingWithOmits(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"modbus",
 			map[string]string{
 				"type":     cHoldingRegisters,
@@ -2327,7 +2329,7 @@ func TestRequestMultipleSlavesOneFail(t *testing.T) {
 	)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"modbus",
 			map[string]string{
 				"type":     cHoldingRegisters,
@@ -2337,7 +2339,7 @@ func TestRequestMultipleSlavesOneFail(t *testing.T) {
 			map[string]interface{}{"holding-0": int16(0x42)},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"modbus",
 			map[string]string{
 				"type":     cHoldingRegisters,
@@ -3137,4 +3139,87 @@ func TestRequestAddressOverflow(t *testing.T) {
 		},
 	}
 	require.ErrorIs(t, plugin.Init(), errAddressOverflow)
+}
+
+func TestRequestMaxRegistersWorkaround(t *testing.T) {
+	plugin := &Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "request",
+		Log:               &testutil.Logger{},
+		Workarounds: workarounds{
+			MaxBitRegistersPerRequest:  6,
+			MaxWordRegistersPerRequest: 8,
+		},
+	}
+
+	fields := make([]requestFieldDefinition, 0, 10)
+	for i := range 10 {
+		fields = append(fields,
+			requestFieldDefinition{
+				Name:    fmt.Sprintf("field-coil-%d", i),
+				Address: uint16(i),
+			},
+		)
+	}
+	plugin.Requests = append(plugin.Requests, requestDefinition{
+		SlaveID:      1,
+		RegisterType: "coil",
+		Fields:       fields,
+	})
+
+	fields = make([]requestFieldDefinition, 0, 10)
+	for i := range 10 {
+		fields = append(fields,
+			requestFieldDefinition{
+				Name:    fmt.Sprintf("field-discrete-%d", i),
+				Address: uint16(i),
+			},
+		)
+	}
+	plugin.Requests = append(plugin.Requests, requestDefinition{
+		SlaveID:      1,
+		RegisterType: "discrete",
+		Fields:       fields,
+	})
+
+	fields = make([]requestFieldDefinition, 0, 10)
+	for i := range 10 {
+		fields = append(fields,
+			requestFieldDefinition{
+				Name:      fmt.Sprintf("field-holding-%d", i),
+				Address:   uint16(4 * i),
+				InputType: "UINT64",
+			},
+		)
+	}
+	plugin.Requests = append(plugin.Requests, requestDefinition{
+		SlaveID:      1,
+		RegisterType: "holding",
+		Fields:       fields,
+	})
+
+	fields = make([]requestFieldDefinition, 0, 10)
+	for i := range 10 {
+		fields = append(fields,
+			requestFieldDefinition{
+				Name:      fmt.Sprintf("field-input-%d", i),
+				Address:   uint16(4 * i),
+				InputType: "UINT64",
+			},
+		)
+	}
+	plugin.Requests = append(plugin.Requests, requestDefinition{
+		SlaveID:      1,
+		RegisterType: "input",
+		Fields:       fields,
+	})
+	require.NoError(t, plugin.Init())
+
+	require.Len(t, plugin.requests, 1)
+	require.Contains(t, plugin.requests, byte(1))
+	require.Len(t, plugin.requests[1].coil, 2, "coil")
+	require.Len(t, plugin.requests[1].discrete, 2, "discrete")
+	require.Len(t, plugin.requests[1].holding, 5, "holding")
+	require.Len(t, plugin.requests[1].input, 5, "input")
 }

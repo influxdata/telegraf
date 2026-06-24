@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -69,7 +70,7 @@ func TestParseXML(t *testing.T) {
 			name:        "Good test",
 			xmlResponse: []byte(apex2016),
 			wantMetrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					Measurement,
 					map[string]string{
 						"source":   "apex",
@@ -84,7 +85,7 @@ func TestParseXML(t *testing.T) {
 					},
 					goodTime,
 				),
-				testutil.MustMetric(
+				metric.New(
 					Measurement,
 					map[string]string{
 						"source":      "apex",
@@ -99,7 +100,7 @@ func TestParseXML(t *testing.T) {
 					map[string]interface{}{"state": "PF1"},
 					goodTime,
 				),
-				testutil.MustMetric(
+				metric.New(
 					Measurement,
 					map[string]string{
 						"source":      "apex",
@@ -114,7 +115,7 @@ func TestParseXML(t *testing.T) {
 					map[string]interface{}{"state": "AOF"},
 					goodTime,
 				),
-				testutil.MustMetric(
+				metric.New(
 					Measurement,
 					map[string]string{
 						"source":      "apex",
@@ -133,7 +134,7 @@ func TestParseXML(t *testing.T) {
 					},
 					goodTime,
 				),
-				testutil.MustMetric(
+				metric.New(
 					Measurement,
 					map[string]string{
 						"source":      "apex",
@@ -151,7 +152,7 @@ func TestParseXML(t *testing.T) {
 					},
 					goodTime,
 				),
-				testutil.MustMetric(
+				metric.New(
 					Measurement,
 					map[string]string{
 						"source":      "apex",
@@ -166,7 +167,7 @@ func TestParseXML(t *testing.T) {
 					map[string]interface{}{"state": "AOF"},
 					goodTime,
 				),
-				testutil.MustMetric(
+				metric.New(
 					Measurement,
 					map[string]string{
 						"source":      "apex",
@@ -181,7 +182,7 @@ func TestParseXML(t *testing.T) {
 					map[string]interface{}{"state": "AOF"},
 					goodTime,
 				),
-				testutil.MustMetric(
+				metric.New(
 					Measurement,
 					map[string]string{
 						"source":     "apex",
@@ -194,7 +195,7 @@ func TestParseXML(t *testing.T) {
 					map[string]interface{}{"value": 30.1},
 					goodTime,
 				),
-				testutil.MustMetric(
+				metric.New(
 					Measurement,
 					map[string]string{
 						"source":   "apex",
@@ -225,7 +226,7 @@ func TestParseXML(t *testing.T) {
 				<timezone>-8.0</timezone><power><failed>a</failed>
 				<restored>12/22/2018 22:55:37</restored></power></status>`),
 			wantMetrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					Measurement,
 					map[string]string{
 						"source":   "",
@@ -248,7 +249,7 @@ func TestParseXML(t *testing.T) {
 				<timezone>-8.0</timezone><power><restored>a</restored>
 				<failed>12/22/2018 22:55:37</failed></power></status>`),
 			wantMetrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					Measurement,
 					map[string]string{
 						"source":   "",
@@ -282,7 +283,7 @@ func TestParseXML(t *testing.T) {
 				</probes></status>`),
 			wantAccErr: true,
 			wantMetrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					Measurement,
 					map[string]string{
 						"source":   "",
@@ -311,7 +312,7 @@ func TestParseXML(t *testing.T) {
 				</probes></status>`),
 			wantAccErr: true,
 			wantMetrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					Measurement,
 					map[string]string{
 						"source":   "",
@@ -339,7 +340,7 @@ func TestParseXML(t *testing.T) {
 				</probes></status>`),
 			wantAccErr: true,
 			wantMetrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					Measurement,
 					map[string]string{
 						"source":   "",

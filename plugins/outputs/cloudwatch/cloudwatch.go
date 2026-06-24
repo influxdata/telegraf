@@ -25,16 +25,19 @@ import (
 var sampleConfig string
 
 const (
-	// PutMetricData only supports up to 1000 data metrics per call
+	// Cloudwatch only supports up to 1000 data metrics per call according to
 	// https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_PutMetricData.html
-	maxBatchSize  = 1000
-	maxDimensions = 10
+	maxBatchSize = 1000
+	// Cloudwatch only accepts up to 30 dimensions per metric according to
+	// https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/publishingMetrics.html#usingDimensions
+	maxDimensions = 30
 )
 
 type CloudWatch struct {
 	Namespace             string          `toml:"namespace"` // CloudWatch Metrics Namespace
 	HighResolutionMetrics bool            `toml:"high_resolution_metrics"`
 	WriteStatistics       bool            `toml:"write_statistics"`
+	MaxDimensions         int             `toml:"max_dimensions"`
 	Log                   telegraf.Logger `toml:"-"`
 	common_aws.CredentialConfig
 	common_http.HTTPClientConfig
@@ -49,8 +52,13 @@ func (*CloudWatch) SampleConfig() string {
 }
 
 func (c *CloudWatch) Init() error {
+	// Check user settings
 	if c.Namespace == "" {
 		return errors.New("namespace is required")
+	}
+
+	if c.MaxDimensions < 0 || c.MaxDimensions > maxDimensions {
+		return fmt.Errorf("number of dimensions has to be between 0 and %d", maxDimensions)
 	}
 
 	// Determine the metric resolution
@@ -112,7 +120,8 @@ func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
 }
 
 func (c *CloudWatch) buildMetricDatum(m telegraf.Metric) []types.MetricDatum {
-	tags := m.TagList()
+	// Extract the dimensions from tags
+	dimensions := c.buildDimensions(m.TagList())
 
 	// Aggregate the metric values into statistics if enabled
 	fields := make(map[string]cloudwatchField, len(m.FieldList()))
@@ -148,7 +157,7 @@ func (c *CloudWatch) buildMetricDatum(m telegraf.Metric) []types.MetricDatum {
 			fields[f.Key] = &valueField{
 				measurement: m.Name(),
 				name:        f.Key,
-				tags:        tags,
+				dimensions:  dimensions,
 				timestamp:   m.Time(),
 				value:       val,
 				resolution:  c.resolution,
@@ -158,7 +167,7 @@ func (c *CloudWatch) buildMetricDatum(m telegraf.Metric) []types.MetricDatum {
 			fields[fieldName] = &statisticField{
 				measurement: m.Name(),
 				name:        fieldName,
-				tags:        tags,
+				dimensions:  dimensions,
 				timestamp:   m.Time(),
 				values:      map[statisticType]float64{sType: val},
 				resolution:  c.resolution,
@@ -177,6 +186,42 @@ func (c *CloudWatch) buildMetricDatum(m telegraf.Metric) []types.MetricDatum {
 	}
 
 	return datums
+}
+
+func (c *CloudWatch) buildDimensions(tags []*telegraf.Tag) []types.Dimension {
+	dimensions := make([]types.Dimension, 0, c.MaxDimensions)
+	if c.MaxDimensions == 0 {
+		return dimensions
+	}
+
+	// Make sure we add the "host" tag if any
+	for _, t := range tags {
+		if t.Key != "host" {
+			continue
+		}
+		dimensions = append(dimensions, types.Dimension{
+			Name:  aws.String("host"),
+			Value: aws.String(t.Value),
+		})
+		break
+	}
+
+	// Add more tags until we reach the maximum
+	// NOTE: The tag-list is already sorted so no need to sort it again
+	for _, t := range tags {
+		if len(dimensions) >= c.MaxDimensions {
+			break
+		}
+		if t.Key == "host" || t.Value == "" {
+			continue
+		}
+		dimensions = append(dimensions, types.Dimension{
+			Name:  aws.String(t.Key),
+			Value: aws.String(t.Value),
+		})
+	}
+
+	return dimensions
 }
 
 func partitionDatums(datums []types.MetricDatum, batchSize int) [][]types.MetricDatum {
@@ -242,6 +287,8 @@ func convert(v interface{}) (float64, bool) {
 
 func init() {
 	outputs.Add("cloudwatch", func() telegraf.Output {
-		return &CloudWatch{}
+		return &CloudWatch{
+			MaxDimensions: 10, // for backward compatibility
+		}
 	})
 }

@@ -1,0 +1,2 @@
+nxapi,TABLE_nxapi=i1,foo=bar,path=show\ nxapi,row_number=0,source=hostname,subscription=subscription value="foo" 1543236572000000000
+nxapi,TABLE_nxapi=i2,foo=bar,path=show\ nxapi,row_number=0,source=hostname,subscription=subscription value="bar" 1543236572000000000

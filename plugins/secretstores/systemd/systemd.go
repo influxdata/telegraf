@@ -102,7 +102,7 @@ func (s *Systemd) List() ([]string, error) {
 }
 
 func (*Systemd) Set(_, _ string) error {
-	return errors.New("secret-store does not support creating secrets")
+	return errors.New("secret store does not support creating secrets")
 }
 
 func (s *Systemd) GetResolver(key string) (telegraf.ResolveFunc, error) {

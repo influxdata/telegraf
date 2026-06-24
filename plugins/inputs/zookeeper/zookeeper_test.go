@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -39,7 +38,7 @@ func TestZookeeperGeneratesMetricsIntegration(t *testing.T) {
 			"ZOO_4LW_COMMANDS_WHITELIST": "mntr",
 		},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("ZooKeeper audit is disabled."),
 		),
 	}

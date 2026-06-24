@@ -35,6 +35,11 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## parsed as integers and others as floats.
   # force_float = false
 
+  ## Emit vendor/product IDs as strings regardless of their value. Avoids
+  ## type conflicts when some UPS devices report numeric-looking IDs and
+  ## others report alphanumeric. See README for migration notes.
+  # stringify_ids = false
+
   ## Collect additional fields if they are available for the UPS
   ## The fields need to be specified as NUT variable names, see
   ## https://networkupstools.org/docs/developer-guide.chunked/apas02.html
@@ -70,6 +75,25 @@ the [enum processor][enum_processor] with
 Alternatively, you can also map the non-binary value to a `boolean`.
 
 [enum_processor]: /plugins/processors/enum/README.md
+
+### Vendor/Product ID types (`stringify_ids`)
+
+The underlying NUT client library (`go.nut`) auto-detects numeric-looking values
+and converts them to `int64`. This means a `vendorid` like `"0764"` becomes
+`int64(764)` while a non-numeric `vendorid` like `"ABCD"` stays a string. When
+multiple UPS devices of different vendors write to the same InfluxDB bucket,
+this causes field type conflicts on `ups_vendorid`, `ups_productid`,
+`driver_parameter_vendorid` and `driver_parameter_productid`.
+
+Set `stringify_ids = true` to force these four fields to always be emitted as
+strings. The default is currently `false` to preserve backwards-compatible
+behavior, but will flip to `true` in a future release. If the option is left
+unset, a warning is logged on startup.
+
+> [!NOTE]
+> The NUT library parses `"0764"` into `int64(764)` before Telegraf sees it,
+> so the stringified value will be `"764"`; leading zeros are lost and cannot
+> be recovered at this layer.
 
 ## Metrics
 

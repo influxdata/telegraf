@@ -40,7 +40,7 @@ func TestSetNotAvailable(t *testing.T) {
 		"secret-file-1": "TryToSetThis",
 	}
 	for k, v := range secret {
-		require.ErrorContains(t, plugin.Set(k, v), "secret-store does not support creating secrets")
+		require.ErrorContains(t, plugin.Set(k, v), "secret store does not support creating secrets")
 	}
 }
 

@@ -28,11 +28,11 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
-## Secret-store support
+## Secret store support
 
-This plugin supports secrets from secret-stores for the `username` and
+This plugin supports secrets from secret stores for the `username` and
 `password` option.
-See the [secret-store documentation][SECRETSTORE] for more details on how
+See the [secret store documentation][SECRETSTORE] for more details on how
 to use them.
 
 [SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
@@ -62,6 +62,10 @@ to use them.
   #
   # Maximum time that a session shall remain open without activity.
   # session_timeout = "20m"
+  #
+  ## Preferred locales for the OPC UA session, ordered by priority.
+  ## The server returns LocalizedText values in the first supported locale.
+  # locales = []
   #
   ## The interval at which the server should at least update its monitored items.
   ## Please note that the OPC UA server might reject the specified interval if it cannot meet the required update rate.
@@ -295,7 +299,10 @@ to use them.
   #   # identifier_type = ""
   #   ## Specifies OPCUA Event sources to filter on
   #   # source_names = ["SourceName1", "SourceName2"]
-  #   ## Fields to capture from event notifications
+  #   ## Fields to capture from event notifications.
+  #   ## Fields support namespace-qualified names using "ns:name" format
+  #   ## (e.g. "2:TEXT01") and nested browse paths using "/" as separator
+  #   ## (e.g. "AckedState/Id" or "2:AckedState/0:Id").
   #   fields = ["Severity", "Message", "Time"]
   #
   #   ## Type or level of events to capture from the monitored nodes.
@@ -316,12 +323,54 @@ to use them.
   #     # identifier_type = ""
   #     # identifier = ""
 
+  ## Browse-based discovery
+  ## Walks the server's address space using the Browse service and matches
+  ## browse paths against glob patterns to discover Variable nodes
+  ## automatically. Backwards compatible: when no paths are configured the
+  ## existing nodes/group configuration is used unchanged.
+  # [inputs.opcua_listener.browse]
+  #   ## Starting node for the browse walk. Defaults to the standard Objects
+  #   ## folder when empty.
+  #   # root = "ns=0;i=85"
+  #
+  #   ## Maximum tree depth descended below the root. 0 means unlimited.
+  #   # depth = 0
+  #
+  #   ## Maximum number of discovered nodes. 0 means unlimited.
+  #   # max_nodes = 0
+  #
+  #   ## Number of nodes browsed per Browse request. 0 falls back to the
+  #   ## built-in default. Lower values reduce per-RPC payload at the cost
+  #   ## of more round trips; raise for fast servers and large trees.
+  #   # batch_size = 0
+  #
+  #   ## Pattern-based discovery rules. Each path defines one glob pattern
+  #   ## over browse-path segments. Pattern syntax:
+  #   ##   *       any single segment (or any chars within a segment)
+  #   ##   **      zero or more segments (recursive descent)
+  #   ##   ?       single character within a segment
+  #   ##   [abc]   character class within a segment
+  #   ##   {a,b}   alternation: any of the comma-separated alternatives
+  #   ##   \       escapes the next character
+  #   ## Multiple paths may be configured; a node matching multiple patterns
+  #   ## appears in each matching group.
+  #   # [[inputs.opcua_listener.browse.paths]]
+  #   #   pattern = "Server/**"
+  #   #   name = "server_vars"
+  #   #   default_tags = { source = "browse" }
+
   ## Enable workarounds required by some devices to work correctly
   # [inputs.opcua_listener.workarounds]
   #  ## Set additional valid status codes, StatusOK (0x0) is always considered valid
   #  # additional_valid_status_codes = ["0xC0"]
   #  ## Use unregistered reads instead of registered reads
   #  # use_unregistered_reads = false
+  #  ## Maximum number of monitored items registered per request when setting up the
+  #  ## subscription. With a large number of nodes the registration request can exceed
+  #  ## the server's maximum message size and cause the subscription to fail (e.g.
+  #  ## "BadTcpMessageTooLarge"). Splitting the registration into smaller batches avoids
+  #  ## this. 0 (the default) registers all items in a single request.
+  #  # monitored_items_batch_size = 0
 ```
 
 ### Node Configuration
@@ -536,6 +585,65 @@ This example group configuration shows how to use group settings:
       {namespace="5", identifier_type="i", identifier="2002"} // no default values will be used
     ]
 ```
+
+## Browse-based Discovery
+
+Large deployments often expose thousands of nodes that share a regular
+naming scheme. Instead of enumerating each node, the
+`[inputs.opcua_listener.browse]` section walks the server's address space
+with the Browse service and matches discovered Variable nodes against glob
+patterns over their browse paths. Discovered nodes are folded into the
+existing pipeline, so the configuration stays backwards compatible with any
+explicit `nodes` or `group` entries.
+
+```toml
+[inputs.opcua_listener.browse]
+  # Starting node for the browse walk (default: Objects folder).
+  root = "ns=0;i=85"
+
+  # Optional safety limits.
+  depth = 10
+  max_nodes = 50000
+
+  # Optional per-RPC tuning.
+  batch_size = 50
+
+  [[inputs.opcua_listener.browse.paths]]
+    pattern = "Plant1/*/MV*"
+    name = "motor_valves"
+    default_tags = { plant = "plant1" }
+
+  [[inputs.opcua_listener.browse.paths]]
+    pattern = "**/Temperature"
+    name = "temperatures"
+```
+
+### Pattern Syntax
+
+Patterns are compiled by Telegraf's `filter` package with `/` as the segment
+separator:
+
+| Token   | Meaning                                              |
+|---------|------------------------------------------------------|
+| literal | exact string match for one segment                   |
+| `*`     | any single segment, or any characters in a segment   |
+| `**`    | zero or more segments (recursive descent)            |
+| `?`     | single character within a segment                    |
+| `[abc]` | character class within a segment                     |
+| `{a,b}` | alternation: any of the comma-separated alternatives |
+| `\`     | escapes the next character                           |
+
+A node matched by multiple patterns appears in each matching group;
+duplicate `(metric_name, field_name, tags)` combinations are rejected at
+mapping time.
+
+The `root` option accepts node-ID strings (`ns=N;...`). Path-string form
+and namespace-URI (`nsu=...`) form are not currently supported.
+
+> [!NOTE]
+> Browse runs on every connect, so address-space changes (nodes added or
+> removed, renumbered namespaces) are picked up on reconnect without
+> restarting Telegraf.
 
 ## Metrics
 

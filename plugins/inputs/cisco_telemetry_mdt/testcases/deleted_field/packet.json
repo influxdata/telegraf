@@ -1,0 +1,55 @@
+{
+    "nodeIdStr": "hostname",
+    "subscriptionIdStr": "subscription",
+    "encodingPath": "openconfig-interfaces:interfaces/interface/subinterfaces/subinterface/openconfig-if-ip:ipv6/addresses/address",
+    "msgTimestamp": "1543236572000",
+    "dataGpbkv": [
+        {
+            "fields": [
+                {
+                    "name": "keys",
+                    "fields": [
+                        {
+                            "name": "name",
+                            "stringValue": "Loopback10"
+                        },
+                        {
+                            "name": "index",
+                            "uint32Value": 0
+                        },
+                        {
+                            "name": "ip",
+                            "stringValue": "10::10"
+                        }
+                    ]
+                },
+                {
+                    "name": "content",
+                    "fields": [
+                        {
+                            "name": "state",
+                            "fields": [
+                                {
+                                    "name": "ip",
+                                    "stringValue": "10::10"
+                                },
+                                {
+                                    "name": "prefix-length",
+                                    "uint32Value": 128
+                                },
+                                {
+                                    "name": "origin",
+                                    "stringValue": "STATIC"
+                                },
+                                {
+                                    "name": "status",
+                                    "stringValue": "PREFERRED"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

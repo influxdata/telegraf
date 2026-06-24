@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -135,7 +136,7 @@ func TestFixedValue(t *testing.T) {
 				Collectors: []string{"bbus"},
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"xio",
 					map[string]string{
 						"serial_number": "A123B45678",

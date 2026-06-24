@@ -28,9 +28,11 @@ type Smartctl struct {
 	Timeout        config.Duration `toml:"timeout"`
 	DevicesInclude []string        `toml:"devices_include"`
 	DevicesExclude []string        `toml:"devices_exclude"`
+	MetricVersion  int             `toml:"metric_version"`
 	Log            telegraf.Logger `toml:"-"`
 
-	deviceFilter filter.Filter
+	deviceFilter     filter.Filter
+	attributeTagName string
 }
 
 func (*Smartctl) SampleConfig() string {
@@ -52,6 +54,16 @@ func (s *Smartctl) Init() error {
 
 	if s.Timeout == 0 {
 		s.Timeout = config.Duration(time.Second * 30)
+	}
+
+	switch s.MetricVersion {
+	case 0, 1: // v1: the attribute name replaces the device name in the "name" tag
+		s.MetricVersion = 1
+		s.attributeTagName = "name"
+	case 2: // v2: the attribute name is in a separate "attribute" tag
+		s.attributeTagName = "attribute"
+	default:
+		return fmt.Errorf("invalid metric_version %d, please use 1 or 2", s.MetricVersion)
 	}
 
 	if len(s.DevicesInclude) != 0 && len(s.DevicesExclude) != 0 {

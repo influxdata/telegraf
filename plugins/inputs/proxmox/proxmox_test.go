@@ -15,7 +15,7 @@ import (
 
 var nodeSearchDomainTestData = `{"data":{"search":"test.example.com","dns1":"1.0.0.1"}}`
 var qemuTestData = `{"data":[{"name":"qemu1","status":"running","maxdisk":10737418240,"cpu":0.029336643550795,"vmid":"113","uptime":2159739,` +
-	`"disk":0,"maxmem":2147483648,"mem":1722451796}]}`
+	`"disk":0,"maxmem":2147483648,"mem":1722451796,"diskread":8604417024,"diskwrite":2481549824,"netin":1469711887,"netout":58448585}]}`
 var qemuConfigTestData = `{"data":{"hostname":"qemu1","searchdomain":"test.example.com"}}`
 var lxcTestData = `{"data":[{"vmid":"111","type":"lxc","uptime":2078164,"swap":9412608,"disk":"744189952","maxmem":536870912,"mem":98500608,` +
 	`"maxswap":536870912,"cpu":0.00371567669193613,"status":"running","maxdisk":"5217320960","name":"container1"},{"vmid":112,"type":"lxc",` +
@@ -23,9 +23,10 @@ var lxcTestData = `{"data":[{"vmid":"111","type":"lxc","uptime":2078164,"swap":9
 	`"status":"running","maxdisk":"5217320960","name":"container2"}]}`
 var lxcConfigTestData = `{"data":{"hostname":"container1","searchdomain":"test.example.com"}}`
 var lxcCurrentStatusTestData = `{"data":{"vmid":"111","type":"lxc","uptime":2078164,"swap":9412608,"disk":"744189952","maxmem":536870912,` +
-	`"mem":98500608,"maxswap":536870912,"cpu":0.00371567669193613,"status":"running","maxdisk":"5217320960","name":"container1"}}`
+	`"mem":98500608,"maxswap":536870912,"cpu":0.00371567669193613,"status":"running","maxdisk":"5217320960","name":"container1",` +
+	`"diskread":123456789,"diskwrite":98765432,"netin":111222333,"netout":444555666}}`
 var qemuCurrentStatusTestData = `{"data":{"name":"qemu1","status":"running","maxdisk":10737418240,"cpu":0.029336643550795,"vmid":"113",` +
-	`"uptime":2159739,"disk":0,"maxmem":2147483648,"mem":1722451796}}`
+	`"uptime":2159739,"disk":0,"maxmem":2147483648,"mem":1722451796,"diskread":8604417024,"diskwrite":2481549824,"netin":1469711887,"netout":58448585}}`
 
 func performTestRequest(apiURL, _ string, _ url.Values) ([]byte, error) {
 	var bytedata = []byte("")
@@ -98,6 +99,10 @@ func TestGatherLxcData(t *testing.T) {
 				"disk_total":           int64(5217320960),
 				"disk_free":            int64(4473131008),
 				"disk_used_percentage": float64(14.26383306117322),
+				"disk_read_bytes":      int64(123456789),
+				"disk_write_bytes":     int64(98765432),
+				"net_in_bytes":         int64(111222333),
+				"net_out_bytes":        int64(444555666),
 			},
 			time.Unix(0, 0),
 		),
@@ -142,6 +147,10 @@ func TestGatherQemuData(t *testing.T) {
 				"disk_total":           int64(10737418240),
 				"disk_free":            int64(10737418240),
 				"disk_used_percentage": float64(0),
+				"disk_read_bytes":      int64(8604417024),
+				"disk_write_bytes":     int64(2481549824),
+				"net_in_bytes":         int64(1469711887),
+				"net_out_bytes":        int64(58448585),
 			},
 			time.Unix(0, 0),
 		),
@@ -188,6 +197,10 @@ func TestGatherLxcDataWithID(t *testing.T) {
 				"disk_total":           int64(5217320960),
 				"disk_free":            int64(4473131008),
 				"disk_used_percentage": float64(14.26383306117322),
+				"disk_read_bytes":      int64(123456789),
+				"disk_write_bytes":     int64(98765432),
+				"net_in_bytes":         int64(111222333),
+				"net_out_bytes":        int64(444555666),
 			},
 			time.Unix(0, 0),
 		),
@@ -234,6 +247,10 @@ func TestGatherQemuDataWithID(t *testing.T) {
 				"disk_total":           int64(10737418240),
 				"disk_free":            int64(10737418240),
 				"disk_used_percentage": float64(0),
+				"disk_read_bytes":      int64(8604417024),
+				"disk_write_bytes":     int64(2481549824),
+				"net_in_bytes":         int64(1469711887),
+				"net_out_bytes":        int64(58448585),
 			},
 			time.Unix(0, 0),
 		),
@@ -253,5 +270,5 @@ func TestGather(t *testing.T) {
 	require.NoError(t, px.Gather(&acc))
 
 	// Results from both tests above
-	require.Equal(t, 30, acc.NFields())
+	require.Equal(t, 38, acc.NFields())
 }

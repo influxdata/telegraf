@@ -470,7 +470,7 @@ func TestSecretStoreDeclarationMissingID(t *testing.T) {
 
 	c := NewConfig()
 	err := c.LoadConfigData(cfg, EmptySourcePath)
-	require.ErrorContains(t, err, `error parsing mockup, "mockup" secret-store without ID`)
+	require.ErrorContains(t, err, `error parsing mockup, "mockup" secret store without ID`)
 }
 
 func TestSecretStoreDeclarationInvalidID(t *testing.T) {
@@ -486,7 +486,7 @@ func TestSecretStoreDeclarationInvalidID(t *testing.T) {
 			cfg := []byte(fmt.Sprintf(tmpl, id))
 			c := NewConfig()
 			err := c.LoadConfigData(cfg, EmptySourcePath)
-			require.ErrorContains(t, err, `error parsing mockup, invalid secret-store ID`)
+			require.ErrorContains(t, err, `error parsing mockup, invalid secret store ID`)
 		})
 	}
 }
@@ -545,6 +545,19 @@ func (tsuite *SecretImplTestSuite) TestSecretEqualTo() {
 	require.False(t, equal)
 }
 
+func (tsuite *SecretImplTestSuite) TestSecretEmpty() {
+	t := tsuite.T()
+
+	var s Secret
+	buf, err := s.Get()
+	require.NoError(t, err)
+	defer buf.Destroy()
+
+	require.Empty(t, buf.Bytes())
+	require.Empty(t, buf.TemporaryString())
+	require.Empty(t, buf.String())
+}
+
 func (tsuite *SecretImplTestSuite) TestSecretStoreInvalidReference() {
 	t := tsuite.T()
 
@@ -565,7 +578,7 @@ func (tsuite *SecretImplTestSuite) TestSecretStoreInvalidReference() {
 	require.NoError(t, store.Init())
 	c.SecretStores["foo"] = store
 	err := c.LinkSecrets()
-	require.EqualError(t, err, `unknown secret-store for "@{mock:test}"`)
+	require.EqualError(t, err, `unknown secret store for "@{mock:test}"`)
 
 	for _, input := range c.Inputs {
 		plugin := input.Input.(*MockupSecretPlugin)

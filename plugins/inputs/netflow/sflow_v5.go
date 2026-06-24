@@ -468,55 +468,51 @@ func (d *sflowv5Decoder) decodeRawHeaderSample(record *sflow.SampledHeader) (map
 }
 
 func (d *sflowv5Decoder) decodeCounterRecords(records []sflow.CounterRecord) (map[string]interface{}, error) {
+	fields := make(map[string]interface{})
 	for _, r := range records {
 		if r.Data == nil {
 			continue
 		}
+
 		switch record := r.Data.(type) {
 		case sflow.IfCounters:
-			fields := map[string]interface{}{
-				"interface":                   record.IfIndex,
-				"interface_type":              record.IfType,
-				"speed":                       record.IfSpeed,
-				"in_bytes":                    record.IfInOctets,
-				"in_unicast_packets_total":    record.IfInUcastPkts,
-				"in_mcast_packets_total":      record.IfInMulticastPkts,
-				"in_broadcast_packets_total":  record.IfInBroadcastPkts,
-				"in_dropped_packets":          record.IfInDiscards,
-				"in_errors":                   record.IfInErrors,
-				"in_unknown_protocol":         record.IfInUnknownProtos,
-				"out_bytes":                   record.IfOutOctets,
-				"out_unicast_packets_total":   record.IfOutUcastPkts,
-				"out_mcast_packets_total":     record.IfOutMulticastPkts,
-				"out_broadcast_packets_total": record.IfOutBroadcastPkts,
-				"out_dropped_packets":         record.IfOutDiscards,
-				"out_errors":                  record.IfOutErrors,
-				"promiscuous":                 record.IfPromiscuousMode,
-			}
+			fields["interface"] = record.IfIndex
+			fields["interface_type"] = record.IfType
+			fields["speed"] = record.IfSpeed
+			fields["in_bytes"] = record.IfInOctets
+			fields["in_unicast_packets_total"] = record.IfInUcastPkts
+			fields["in_mcast_packets_total"] = record.IfInMulticastPkts
+			fields["in_broadcast_packets_total"] = record.IfInBroadcastPkts
+			fields["in_dropped_packets"] = record.IfInDiscards
+			fields["in_errors"] = record.IfInErrors
+			fields["in_unknown_protocol"] = record.IfInUnknownProtos
+			fields["out_bytes"] = record.IfOutOctets
+			fields["out_unicast_packets_total"] = record.IfOutUcastPkts
+			fields["out_mcast_packets_total"] = record.IfOutMulticastPkts
+			fields["out_broadcast_packets_total"] = record.IfOutBroadcastPkts
+			fields["out_dropped_packets"] = record.IfOutDiscards
+			fields["out_errors"] = record.IfOutErrors
+			fields["promiscuous"] = record.IfPromiscuousMode
 			if record.IfStatus == 0 {
 				fields["status"] = "down"
 			} else {
 				fields["status"] = "up"
 			}
-			return fields, nil
 		case sflow.EthernetCounters:
-			fields := map[string]interface{}{
-				"type":                    "IEEE 802.3",
-				"collision_frames_single": record.Dot3StatsSingleCollisionFrames,
-				"collision_frames_multi":  record.Dot3StatsMultipleCollisionFrames,
-				"collisions_late":         record.Dot3StatsLateCollisions,
-				"collisions_excessive":    record.Dot3StatsExcessiveCollisions,
-				"deferred":                record.Dot3StatsDeferredTransmissions,
-				"errors_alignment":        record.Dot3StatsAlignmentErrors,
-				"errors_fcs":              record.Dot3StatsFCSErrors,
-				"errors_sqetest":          record.Dot3StatsSQETestErrors,
-				"errors_internal_mac_tx":  record.Dot3StatsInternalMacTransmitErrors,
-				"errors_internal_mac_rx":  record.Dot3StatsInternalMacReceiveErrors,
-				"errors_carrier_sense":    record.Dot3StatsCarrierSenseErrors,
-				"errors_frame_too_long":   record.Dot3StatsFrameTooLongs,
-				"errors_symbols":          record.Dot3StatsSymbolErrors,
-			}
-			return fields, nil
+			fields["type"] = "IEEE 802.3"
+			fields["collision_frames_single"] = record.Dot3StatsSingleCollisionFrames
+			fields["collision_frames_multi"] = record.Dot3StatsMultipleCollisionFrames
+			fields["collisions_late"] = record.Dot3StatsLateCollisions
+			fields["collisions_excessive"] = record.Dot3StatsExcessiveCollisions
+			fields["deferred"] = record.Dot3StatsDeferredTransmissions
+			fields["errors_alignment"] = record.Dot3StatsAlignmentErrors
+			fields["errors_fcs"] = record.Dot3StatsFCSErrors
+			fields["errors_sqetest"] = record.Dot3StatsSQETestErrors
+			fields["errors_internal_mac_tx"] = record.Dot3StatsInternalMacTransmitErrors
+			fields["errors_internal_mac_rx"] = record.Dot3StatsInternalMacReceiveErrors
+			fields["errors_carrier_sense"] = record.Dot3StatsCarrierSenseErrors
+			fields["errors_frame_too_long"] = record.Dot3StatsFrameTooLongs
+			fields["errors_symbols"] = record.Dot3StatsSymbolErrors
 		case sflow.RawRecord:
 			switch r.Header.DataFormat {
 			case 1005:
@@ -524,10 +520,7 @@ func (d *sflowv5Decoder) decodeCounterRecords(records []sflow.CounterRecord) (ma
 				if len(record.Data) < 4 {
 					return nil, fmt.Errorf("invalid data for raw counter %+v", r)
 				}
-				fields := map[string]interface{}{
-					"port_name": string(record.Data[4:]),
-				}
-				return fields, nil
+				fields["port_name"] = string(record.Data[4:])
 			default:
 				if !d.warnedCounterRaw[r.Header.DataFormat] {
 					data := hex.EncodeToString(record.Data)
@@ -540,5 +533,5 @@ func (d *sflowv5Decoder) decodeCounterRecords(records []sflow.CounterRecord) (ma
 			return nil, fmt.Errorf("unhandled counter record type %T", r.Data)
 		}
 	}
-	return nil, nil
+	return fields, nil
 }

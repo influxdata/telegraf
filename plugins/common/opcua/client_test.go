@@ -5,6 +5,8 @@ import (
 
 	"github.com/gopcua/opcua/ua"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestSetupWorkarounds(t *testing.T) {
@@ -221,6 +223,59 @@ func TestRemoteCertificateValidation(t *testing.T) {
 			}
 
 			require.NoError(t, config.Validate())
+		})
+	}
+}
+
+func TestGenerateClientOptsExtras(t *testing.T) {
+	endpoints := []*ua.EndpointDescription{
+		{
+			EndpointURL:       "opc.tcp://localhost:4840",
+			SecurityPolicyURI: ua.SecurityPolicyURINone,
+			SecurityMode:      ua.MessageSecurityModeNone,
+			SecurityLevel:     0,
+			UserIdentityTokens: []*ua.UserTokenPolicy{
+				{TokenType: ua.UserTokenTypeAnonymous},
+			},
+		},
+	}
+
+	newBaseClient := func() *OpcUAClient {
+		return &OpcUAClient{
+			Config: &OpcUAClientConfig{
+				Endpoint:       "opc.tcp://localhost:4840",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+			},
+			Log: &testutil.Logger{},
+		}
+	}
+
+	baseOpts, err := newBaseClient().generateClientOpts(endpoints)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name   string
+		modify func(*OpcUAClient)
+	}{
+		{
+			name:   "locales",
+			modify: func(c *OpcUAClient) { c.Config.Locales = []string{"en", "de"} },
+		},
+		{
+			name:   "disable auto-reconnect",
+			modify: func(c *OpcUAClient) { c.DisableAutoReconnect = true },
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := newBaseClient()
+			tt.modify(client)
+			opts, err := client.generateClientOpts(endpoints)
+			require.NoError(t, err)
+			require.Len(t, opts, len(baseOpts)+1)
 		})
 	}
 }

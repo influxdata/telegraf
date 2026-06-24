@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs/health"
-	"github.com/influxdata/telegraf/testutil"
 )
 
 func addr(v float64) *float64 {
@@ -17,7 +17,7 @@ func addr(v float64) *float64 {
 
 func TestFieldNotFoundIsSuccess(t *testing.T) {
 	metrics := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{},
 			map[string]interface{}{},
@@ -34,7 +34,7 @@ func TestFieldNotFoundIsSuccess(t *testing.T) {
 
 func TestStringFieldIsFailure(t *testing.T) {
 	metrics := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{},
 			map[string]interface{}{
@@ -60,7 +60,7 @@ func TestFloatConvert(t *testing.T) {
 		{
 			name: "int64 field",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -73,7 +73,7 @@ func TestFloatConvert(t *testing.T) {
 		{
 			name: "uint64 field",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -86,7 +86,7 @@ func TestFloatConvert(t *testing.T) {
 		{
 			name: "float64 field",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -99,7 +99,7 @@ func TestFloatConvert(t *testing.T) {
 		{
 			name: "bool field true",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -112,7 +112,7 @@ func TestFloatConvert(t *testing.T) {
 		{
 			name: "bool field false",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -125,7 +125,7 @@ func TestFloatConvert(t *testing.T) {
 		{
 			name: "string field",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -254,7 +254,7 @@ func TestOperators(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			metrics := []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{

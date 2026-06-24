@@ -22,6 +22,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -112,6 +113,16 @@ func (o *Opensearch) Init() error {
 		return errors.New("template_name configuration not defined")
 	}
 
+	if o.ManageTemplate {
+		prefix := o.IndexName
+		if idx := strings.Index(prefix, "{{"); idx >= 0 {
+			prefix = prefix[:idx]
+		}
+		if prefix == "" {
+			return errors.New("template cannot be created for dynamic index names without an index prefix")
+		}
+	}
+
 	return nil
 }
 
@@ -134,16 +145,22 @@ func (o *Opensearch) Connect() error {
 		o.Log.Errorf("error creating OpenSearch client: %v", err)
 	}
 
-	if o.ManageTemplate {
-		err := o.manageTemplate(ctx)
-		if err != nil {
-			return err
+	_, err = o.osClient.Ping(o.osClient.Ping.WithContext(ctx))
+	if err != nil {
+		return &internal.StartupError{
+			Err:   fmt.Errorf("unable to ping OpenSearch server: %w", err),
+			Retry: true,
 		}
 	}
 
-	_, err = o.osClient.Ping()
-	if err != nil {
-		return fmt.Errorf("unable to ping OpenSearch server: %w", err)
+	if o.ManageTemplate {
+		err := o.manageTemplate(ctx)
+		if err != nil {
+			return &internal.StartupError{
+				Err:   err,
+				Retry: true,
+			}
+		}
 	}
 
 	return nil

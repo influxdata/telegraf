@@ -1,6 +1,9 @@
 package x509_cert
 
 import (
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -312,10 +315,15 @@ func TestGatherUDPCertIntegration(t *testing.T) {
 	require.NoError(t, err)
 	defer listener.Close()
 
+	// Hold the server-side connection open until the client is done gathering.
+	// Closing earlier sends a CloseNotify that can race with the client's
+	// in-flight handshake under pion/dtls v3 and surface as a handshake error.
+	done := make(chan struct{})
+	defer close(done)
 	go func() {
 		conn, err := listener.Accept()
 		if err != nil {
-			t.Error(err)
+			t.Errorf("accept failed: %v", err)
 			return
 		}
 		defer conn.Close()
@@ -326,8 +334,10 @@ func TestGatherUDPCertIntegration(t *testing.T) {
 			return
 		}
 		if err := dtlsConn.Handshake(); err != nil {
-			t.Error(err)
+			t.Errorf("server handshake failed: %v", err)
+			return
 		}
+		<-done
 	}()
 
 	m := &X509Cert{
@@ -626,6 +636,7 @@ func TestClassification(t *testing.T) {
 				"startdate":         start.Unix(),
 				"enddate":           end.Unix(),
 				"verification_code": int64(0),
+				"public_key_length": uint64(2048),
 			},
 			time.Unix(0, 0),
 		),
@@ -652,6 +663,7 @@ func TestClassification(t *testing.T) {
 				"startdate":         start.Unix(),
 				"enddate":           end.Unix(),
 				"verification_code": int64(0),
+				"public_key_length": uint64(2048),
 			},
 			time.Unix(0, 0),
 		),
@@ -678,6 +690,7 @@ func TestClassification(t *testing.T) {
 				"startdate":         start.Unix(),
 				"enddate":           end.Unix(),
 				"verification_code": int64(0),
+				"public_key_length": uint64(4096),
 			},
 			time.Unix(0, 0),
 		),
@@ -691,4 +704,279 @@ func TestClassification(t *testing.T) {
 	}
 	actual := acc.GetTelegrafMetrics()
 	testutil.RequireMetricsEqual(t, expected, actual, opts...)
+}
+
+func TestPublicKeyLength(t *testing.T) {
+	start := time.Now()
+	end := time.Now().AddDate(0, 0, 1)
+
+	tests := []struct {
+		algorithm string
+		length    int
+		expected  []telegraf.Metric
+	}{
+		{
+			algorithm: "rsa",
+			length:    2048,
+			expected: []telegraf.Metric{
+				metric.New(
+					"x509_cert",
+					map[string]string{
+						"common_name":          "Root CA",
+						"country":              "US",
+						"issuer_common_name":   "Root CA",
+						"issuer_serial_number": "",
+						"ocsp_stapled":         "no",
+						"organization":         "Testing Inc.",
+						"public_key_algorithm": "RSA",
+						"san":                  "",
+						"serial_number":        "5394e",
+						"signature_algorithm":  "SHA256-RSA",
+						"source":               "<dummy>",
+						"type":                 "root",
+						"verification":         "invalid",
+					},
+					map[string]interface{}{
+						"age":                int64(0),
+						"expiry":             int64(86399),
+						"startdate":          start.Unix(),
+						"enddate":            end.Unix(),
+						"verification_code":  int64(1),
+						"verification_error": "x509: certificate signed by unknown authority",
+						"public_key_length":  uint64(2048),
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			algorithm: "rsa",
+			length:    4096,
+			expected: []telegraf.Metric{
+				metric.New(
+					"x509_cert",
+					map[string]string{
+						"common_name":          "Root CA",
+						"country":              "US",
+						"issuer_common_name":   "Root CA",
+						"issuer_serial_number": "",
+						"ocsp_stapled":         "no",
+						"organization":         "Testing Inc.",
+						"public_key_algorithm": "RSA",
+						"san":                  "",
+						"serial_number":        "5394e",
+						"signature_algorithm":  "SHA256-RSA",
+						"source":               "<dummy>",
+						"type":                 "root",
+						"verification":         "invalid",
+					},
+					map[string]interface{}{
+						"age":                int64(0),
+						"expiry":             int64(86399),
+						"startdate":          start.Unix(),
+						"enddate":            end.Unix(),
+						"verification_code":  int64(1),
+						"verification_error": "x509: certificate signed by unknown authority",
+						"public_key_length":  uint64(4096),
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			algorithm: "ecdsa",
+			length:    256,
+			expected: []telegraf.Metric{
+				metric.New(
+					"x509_cert",
+					map[string]string{
+						"common_name":          "Root CA",
+						"country":              "US",
+						"issuer_common_name":   "Root CA",
+						"issuer_serial_number": "",
+						"ocsp_stapled":         "no",
+						"organization":         "Testing Inc.",
+						"public_key_algorithm": "ECDSA",
+						"san":                  "",
+						"serial_number":        "5394e",
+						"signature_algorithm":  "ECDSA-SHA256",
+						"source":               "<dummy>",
+						"type":                 "root",
+						"verification":         "invalid",
+					},
+					map[string]interface{}{
+						"age":                int64(0),
+						"expiry":             int64(86399),
+						"startdate":          start.Unix(),
+						"enddate":            end.Unix(),
+						"verification_code":  int64(1),
+						"verification_error": "x509: certificate signed by unknown authority",
+						"public_key_length":  uint64(256),
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			algorithm: "ecdsa",
+			length:    384,
+			expected: []telegraf.Metric{
+				metric.New(
+					"x509_cert",
+					map[string]string{
+						"common_name":          "Root CA",
+						"country":              "US",
+						"issuer_common_name":   "Root CA",
+						"issuer_serial_number": "",
+						"ocsp_stapled":         "no",
+						"organization":         "Testing Inc.",
+						"public_key_algorithm": "ECDSA",
+						"san":                  "",
+						"serial_number":        "5394e",
+						"signature_algorithm":  "ECDSA-SHA384",
+						"source":               "<dummy>",
+						"type":                 "root",
+						"verification":         "invalid",
+					},
+					map[string]interface{}{
+						"age":                int64(0),
+						"expiry":             int64(86399),
+						"startdate":          start.Unix(),
+						"enddate":            end.Unix(),
+						"verification_code":  int64(1),
+						"verification_error": "x509: certificate signed by unknown authority",
+						"public_key_length":  uint64(384),
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			algorithm: "ed25519",
+			expected: []telegraf.Metric{
+				metric.New(
+					"x509_cert",
+					map[string]string{
+						"common_name":          "Root CA",
+						"country":              "US",
+						"issuer_common_name":   "Root CA",
+						"issuer_serial_number": "",
+						"ocsp_stapled":         "no",
+						"organization":         "Testing Inc.",
+						"public_key_algorithm": "Ed25519",
+						"san":                  "",
+						"serial_number":        "5394e",
+						"signature_algorithm":  "Ed25519",
+						"source":               "<dummy>",
+						"type":                 "root",
+						"verification":         "invalid",
+					},
+					map[string]interface{}{
+						"age":                int64(0),
+						"expiry":             int64(86399),
+						"startdate":          start.Unix(),
+						"enddate":            end.Unix(),
+						"verification_code":  int64(1),
+						"verification_error": "x509: certificate signed by unknown authority",
+						"public_key_length":  uint64(256),
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		name := tt.algorithm
+		if tt.length > 0 {
+			name = fmt.Sprintf("%s %d", tt.algorithm, tt.length)
+		}
+		t.Run(name, func(t *testing.T) {
+			// Generate the (unsigned) certificate
+			root := t.TempDir()
+
+			var priv, pub interface{}
+			switch tt.algorithm {
+			case "rsa":
+				key, err := rsa.GenerateKey(rand.Reader, tt.length)
+				require.NoError(t, err)
+				priv = key
+				pub = &key.PublicKey
+			case "ecdsa":
+				var curve elliptic.Curve
+				switch tt.length {
+				case 224:
+					curve = elliptic.P224()
+				case 256:
+					curve = elliptic.P256()
+				case 384:
+					curve = elliptic.P384()
+				case 521:
+					curve = elliptic.P521()
+				default:
+					require.FailNowf(t, "generating private key", "invalid size %d", tt.length)
+				}
+
+				key, err := ecdsa.GenerateKey(curve, rand.Reader)
+				require.NoError(t, err)
+				priv = key
+				pub = &key.PublicKey
+			case "ed25519":
+				seed := make([]byte, ed25519.SeedSize)
+				_, err := rand.Reader.Read(seed)
+				require.NoError(t, err)
+				key := ed25519.NewKeyFromSeed(seed)
+				priv = key
+				pub = key.Public()
+			default:
+				require.FailNowf(t, "generating private key", "unknown algorithm %q", tt.algorithm)
+			}
+
+			certCfg := &x509.Certificate{
+				SerialNumber: big.NewInt(342350),
+				Subject: pkix.Name{
+					Organization: []string{"Testing Inc."},
+					Country:      []string{"US"},
+					CommonName:   "Root CA",
+				},
+				NotBefore:             start,
+				NotAfter:              end,
+				IsCA:                  true,
+				KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,
+				ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+				BasicConstraintsValid: true,
+			}
+			cert, err := x509.CreateCertificate(rand.Reader, certCfg, certCfg, pub, priv)
+			require.NoError(t, err)
+			encoded := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert})
+
+			// Write cert
+			require.NoError(t, os.WriteFile(filepath.Join(root, "cert.pem"), encoded, 0600))
+
+			// Create the actual test
+			certURI := "file://" + filepath.Join(root, "cert.pem")
+			plugin := &X509Cert{
+				Sources: []string{certURI},
+				Log:     testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Gather(&acc))
+			require.Empty(t, acc.Errors)
+
+			opts := []cmp.Option{
+				testutil.SortMetrics(),
+				testutil.IgnoreTime(),
+				// We need to ignore age and expiry fields as they are timing
+				// sensitive. The verification error varies accross OSes so we
+				// also need to ignore it.
+				testutil.IgnoreFields("age", "expiry", "verification_error"),
+				// We need to ignore the source as it is random in this test
+				testutil.IgnoreTags("source"),
+			}
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, tt.expected, actual, opts...)
+		})
+	}
 }

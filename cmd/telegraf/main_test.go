@@ -177,6 +177,9 @@ func TestUsageFlag(t *testing.T) {
   ## Add device tag to distinguish devices with the same name (Linux only)
   # add_device_tag = false
 
+  ## Always gather values from the thermal-zones even if some hwmon exists (Linux only)
+  # always_gather_zones = false
+
 `,
 		},
 	}
