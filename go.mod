@@ -35,7 +35,6 @@ require (
 	github.com/Mellanox/rdmamap v1.2.0
 	github.com/PaesslerAG/gval v1.2.4
 	github.com/SAP/go-hdb v1.16.12
-	github.com/aerospike/aerospike-client-go/v5 v5.11.0
 	github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b
 	github.com/alitto/pond v1.9.2
 	github.com/alitto/pond/v2 v2.7.1
@@ -549,7 +548,6 @@ require (
 	github.com/xdg/stringprep v1.0.3 // indirect
 	github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
-	github.com/yuin/gopher-lua v0.0.0-20200816102855-ee81675732da // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	github.com/zeebo/assert v1.3.1 // indirect
 	github.com/zeebo/xxh3 v1.1.0 // indirect
