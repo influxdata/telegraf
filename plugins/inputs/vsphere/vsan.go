@@ -338,28 +338,32 @@ func (e *endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Clie
 	}
 	healthMap := map[string]int{"red": 2, "yellow": 1, "green": 0}
 
-	// vCenter's cached health summary is often empty until it recomputes, so
-	// read the cache first and fall back to forcing a fresh evaluation on miss.
-	val, found := 0, false
-	for _, fetchFromCache := range []bool{true, false} {
-		resp, err := vsanmethods.VsanQueryVcClusterHealthSummary(ctx, vsanClient,
-			&vsantypes.VsanQueryVcClusterHealthSummary{
-				This:           healthSystemRef,
-				Cluster:        &clusterRef.ref,
-				Fields:         []string{"overallHealth", "overallHealthDescription"},
-				FetchFromCache: &fetchFromCache,
-			})
-		if err != nil {
-			return err
-		}
-		if val, found = healthMap[resp.Returnval.OverallHealth]; found {
-			break
-		}
+	// Read vCenter's cached health summary first
+	summary := &vsantypes.VsanQueryVcClusterHealthSummary{
+		This:           healthSystemRef,
+		Cluster:        &clusterRef.ref,
+		Fields:         []string{"overallHealth", "overallHealthDescription"},
+		FetchFromCache: new(true),
 	}
+	cached, err := vsanmethods.VsanQueryVcClusterHealthSummary(ctx, vsanClient, summary)
+	if err != nil {
+		return fmt.Errorf("reading cached health value failed: %w", err)
+	}
+	val, found := healthMap[cached.Returnval.OverallHealth]
 	if !found {
-		e.parent.Log.Debugf("[vSAN] Skipping health summary for cluster %s: no valid overall health", clusterRef.name)
-		return nil
+		// The cached health summary was empty, so force a recompute by turning the cache off
+		summary.FetchFromCache = new(false)
+		uncached, err := vsanmethods.VsanQueryVcClusterHealthSummary(ctx, vsanClient, summary)
+		if err != nil {
+			return fmt.Errorf("reading uncached health value failed: %w", err)
+		}
+		val, found = healthMap[uncached.Returnval.OverallHealth]
+		if !found {
+			e.parent.Log.Debugf("[vSAN] Skipping health summary for cluster %s due to invalid value %q", clusterRef.name, uncached.Returnval.OverallHealth)
+			return nil
+		}
 	}
+
 	fields := map[string]interface{}{"overall_health": val}
 	tags := populateClusterTags(make(map[string]string), clusterRef, e.url.Host)
 	acc.AddFields(vsanSummaryMetricsName, fields, tags)
