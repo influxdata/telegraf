@@ -469,7 +469,9 @@ func TestGatherIntegration(t *testing.T) {
 	for i, agg := range plugin.Aggregations {
 		actual := agg.aggregationQueryList
 		expected := expectedData[i]
-		require.Truef(t, cmp.Equal(expected, actual, opts...), "mismatch in aggregation %d\nexpected:%v\nactual:%v\n", i, expected, actual)
+
+		equal := len(expected) == 0 && len(actual) == 0 || cmp.Equal(expected, actual, opts...)
+		require.Truef(t, equal, "mismatch in aggregation %d\nexpected:%v\nactual:%v\n", i, expected, actual)
 	}
 
 	// Check the metrics
