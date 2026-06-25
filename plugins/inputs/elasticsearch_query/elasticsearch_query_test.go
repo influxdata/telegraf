@@ -625,7 +625,7 @@ func TestGatherFailGatherIntegration(t *testing.T) {
 			require.NoError(t, plugin.Init())
 
 			var acc testutil.Accumulator
-			require.NoError(t, plugin.Start(&acc), tt.expected)
+			require.NoError(t, plugin.Start(&acc))
 			defer plugin.Stop()
 
 			// Gather data and check error

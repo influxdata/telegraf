@@ -21,6 +21,7 @@ type queryData struct {
 func (aggregation *aggregation) buildAggregationQuery() error {
 	// Create one aggregation per metric field found or function defined for
 	// numeric fields
+	aggregation.aggregationQueryList = make([]queryData, 0, len(aggregation.mapMetricFields)+len(aggregation.Tags))
 	for k, v := range aggregation.mapMetricFields {
 		switch v {
 		case "long", "float", "integer", "short", "double", "scaled_float":

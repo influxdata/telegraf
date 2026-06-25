@@ -59,7 +59,6 @@ func (*ElasticsearchQuery) SampleConfig() string {
 }
 
 func (e *ElasticsearchQuery) Init() error {
-	// Check
 	if e.URLs == nil {
 		return errors.New("no urls defined")
 	}
@@ -124,7 +123,8 @@ func (e *ElasticsearchQuery) Start(telegraf.Accumulator) error {
 		return fmt.Errorf("server version %q not supported (currently supported versions are 5.x and 6.x)", version)
 	}
 
-	// Setup the aggregations
+	// Setup the aggregations, this needs to be done in Start as it will require
+	// API calls to the ElasticSearch endpoint and can thus not happen in Init
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
 	defer cancel()
 
@@ -322,7 +322,7 @@ func (e *ElasticsearchQuery) query(ctx context.Context, aggregation *aggregation
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal response failed: %w", err)
 	}
-	e.Log.Tracef("{\"query\": %s}", string(data))
+	e.Log.Debugf("{\"query\": %s}", string(data))
 
 	// Add only parent elastic.Aggregations to the search request, all the rest
 	// are subaggregations of these
