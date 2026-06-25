@@ -240,6 +240,51 @@ func TestRunningAggregatorAddDoesNotModifyMetric(t *testing.T) {
 	testutil.RequireMetricEqual(t, expected, m)
 }
 
+func TestRunningAggregatorPushAdvancesWindowWhenFiringEarly(t *testing.T) {
+	ra := NewRunningAggregator(&mockAggregator{}, &AggregatorConfig{
+		Name:   "TestRunningAggregator",
+		Filter: Filter{NamePass: []string{"*"}},
+		Period: time.Second,
+	})
+	require.NoError(t, ra.Config.Filter.Compile())
+	acc := testutil.Accumulator{}
+
+	// Simulate a timer firing slightly before periodEnd: set periodEnd
+	// 500ms in the future so time.Now() inside Push falls within the
+	// current window. Before the drift safeguard was loosened, this
+	// tripped the reset and left periodEnd unchanged, causing a second
+	// Push for the same period.
+	windowEnd := time.Now().Add(500 * time.Millisecond)
+	ra.UpdateWindow(windowEnd.Add(-ra.Config.Period), windowEnd)
+
+	ra.Push(&acc)
+
+	require.True(t, ra.EndPeriod().Equal(windowEnd.Add(ra.Config.Period)),
+		"expected periodEnd to advance by one period: want %v, got %v",
+		windowEnd.Add(ra.Config.Period), ra.EndPeriod())
+}
+
+func TestRunningAggregatorPushResetsWindowOnLargeForwardJump(t *testing.T) {
+	// Regression guard for PR #16375: the drift safeguard must still
+	// reset the window when the wall clock is more than one period
+	// beyond the expected window, such as after hibernation.
+	ra := NewRunningAggregator(&mockAggregator{}, &AggregatorConfig{
+		Name:   "TestRunningAggregator",
+		Filter: Filter{NamePass: []string{"*"}},
+		Period: time.Second,
+	})
+	require.NoError(t, ra.Config.Filter.Compile())
+	acc := testutil.Accumulator{}
+
+	staleEnd := time.Now().Add(-2 * time.Minute)
+	ra.UpdateWindow(staleEnd.Add(-ra.Config.Period), staleEnd)
+
+	ra.Push(&acc)
+
+	require.Less(t, time.Since(ra.EndPeriod()).Abs(), 2*ra.Config.Period,
+		"expected safeguard to reset window near current time, got %v", ra.EndPeriod())
+}
+
 type mockAggregator struct {
 	sum int64
 }
