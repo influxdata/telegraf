@@ -176,6 +176,36 @@ func TestDirectoryWithTrailingSlash(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
+func TestTimeout(t *testing.T) {
+	fc := getNoFilterFileCount()
+	fc.Timeout = config.Duration(5 * time.Second)
+
+	tags := map[string]string{"directory": getTestdataDir()}
+	acc := testutil.Accumulator{}
+	require.NoError(t, acc.GatherError(fc.Gather))
+	require.True(t, acc.HasPoint("filecount", tags, "count", int64(9)))
+	require.True(t, acc.HasPoint("filecount", tags, "size_bytes", int64(5096)))
+}
+
+func TestTimeoutExceeded(t *testing.T) {
+	fc := getNoFilterFileCount()
+	fc.Timeout = config.Duration(1 * time.Nanosecond)
+
+	acc := testutil.Accumulator{}
+	require.NoError(t, acc.GatherError(fc.Gather))
+	require.Empty(t, acc.GetTelegrafMetrics())
+}
+
+func TestTimeoutDisabled(t *testing.T) {
+	fc := getNoFilterFileCount()
+	fc.Timeout = config.Duration(0)
+
+	tags := map[string]string{"directory": getTestdataDir()}
+	acc := testutil.Accumulator{}
+	require.NoError(t, acc.GatherError(fc.Gather))
+	require.True(t, acc.HasPoint("filecount", tags, "count", int64(9)))
+}
+
 func getNoFilterFileCount() FileCount {
 	return FileCount{
 		Log:         testutil.Logger{},
@@ -188,27 +218,6 @@ func getNoFilterFileCount() FileCount {
 		fileFilters: nil,
 		fs:          getFakeFileSystem(getTestdataDir()),
 	}
-}
-
-func TestTimeout(t *testing.T) {
-	fc := getNoFilterFileCount()
-	fc.Timeout = config.Duration(5 * time.Second)
-
-	tags := map[string]string{"directory": getTestdataDir(), "filecount_status": "ok"}
-	acc := testutil.Accumulator{}
-	require.NoError(t, acc.GatherError(fc.Gather))
-	require.True(t, acc.HasPoint("filecount", tags, "count", int64(9)))
-	require.True(t, acc.HasPoint("filecount", tags, "size_bytes", int64(5096)))
-}
-
-func TestTimeoutDisabled(t *testing.T) {
-	fc := getNoFilterFileCount()
-	fc.Timeout = config.Duration(0)
-
-	tags := map[string]string{"directory": getTestdataDir()}
-	acc := testutil.Accumulator{}
-	require.NoError(t, acc.GatherError(fc.Gather))
-	require.True(t, acc.HasPoint("filecount", tags, "count", int64(9)))
 }
 
 func getTestdataDir() string {

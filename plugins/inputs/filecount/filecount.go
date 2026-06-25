@@ -37,8 +37,6 @@ type FileCount struct {
 	globPaths   []globpath.GlobPath
 }
 
-var errTimeout = errors.New("filecount: timeout exceeded")
-
 type fileFilterFunc func(os.FileInfo) (bool, error)
 
 func (*FileCount) SampleConfig() string {
@@ -155,8 +153,8 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 	}
 
 	walkFn := func(path string, _ *godirwalk.Dirent) error {
-		if ctx.Err() != nil {
-			return errTimeout
+		if err := ctx.Err(); err != nil {
+			return err
 		}
 
 		rel, err := filepath.Rel(basedir, path)
@@ -202,9 +200,6 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 			gauge["newest_file_timestamp"] = newestFileTimestamp[path]
 
 			tags := map[string]string{"directory": path}
-			if fc.Timeout > 0 {
-				tags["filecount_status"] = "ok"
-			}
 
 			acc.AddGauge("filecount", gauge, tags)
 		}
@@ -239,23 +234,11 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 			return godirwalk.Halt
 		},
 	})
-	if err != nil && !errors.Is(err, errTimeout) {
-		acc.AddError(err)
-		return
-	}
-
-	if errors.Is(err, errTimeout) && glob.MatchString(basedir) {
-		gauge := map[string]interface{}{
-			"count":                 childCount[basedir],
-			"size_bytes":            childSize[basedir],
-			"oldest_file_timestamp": oldestFileTimestamp[basedir],
-			"newest_file_timestamp": newestFileTimestamp[basedir],
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			fc.Log.Warnf("Timeout exceeded while walking %q; results not emitted", basedir)
+			return
 		}
-		tags := map[string]string{
-			"directory":        basedir,
-			"filecount_status": "timeout",
-		}
-		acc.AddGauge("filecount", gauge, tags)
 	}
 }
 
