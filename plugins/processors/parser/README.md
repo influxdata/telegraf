@@ -42,15 +42,15 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##  - none: keep the newly parsed metrics as-is
   ##  - override: emit a single metric with all tags and fields of newly parsed
   ##    merged but retaining the first timestamp. If drop_original is
-  ##    false, all metrics are merged into the original metric.
+  ##    false, all metrics are merged into the original metric
   ##    NOTE: Existing field or tag values will be overridden.
   ##  - override-with-timestamp: same as "override", but the timestamp is set
-  ##    based on the new metrics if present.
+  ##    based on the new metrics if present
   ##  - parent: emit one metric per newly parsed metric with each newly parsed
   ##    metric is merged individually into the parent metric keeping the parent
-  ##    timestamp.
+  ##    timestamp
   ##  - parent-with-timestamp: same as "parent", but the timestamp is set
-  ##    based on the new metric if present.
+  ##    based on the new metric if present
   # merge = "none"
 
   ## The dataformat to be read from files
@@ -110,7 +110,9 @@ with `drop_original = false`
 #### `override-with-timestamp`
 
 This strategy will behave the same way as `override` but will also override the
-timestamp with the one of the latest parsed metric.
+timestamp with the one of the latest parsed metric if it exists. If the parsed
+metric does not contain a timestamp the timestamp if the original metric is
+preserved.
 
 #### `parent`
 
@@ -150,7 +152,8 @@ metric,source=foo,status=fault value4=42i,additional=true 1773258782000000000
 #### `parent-with-timestamp`
 
 This strategy will behave the same way as `parent` but will also override the
-timestamp with the one of the parsed metric if it exists.
+timestamp with the one of the parsed metric if it exists. If the parsed metric
+does not contain a timestamp the timestamp if the original metric is preserved.
 
 ## Example
 
