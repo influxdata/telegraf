@@ -198,10 +198,10 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 			}
 			gauge["oldest_file_timestamp"] = oldestFileTimestamp[path]
 			gauge["newest_file_timestamp"] = newestFileTimestamp[path]
-
-			tags := map[string]string{"directory": path}
-
-			acc.AddGauge("filecount", gauge, tags)
+			acc.AddGauge("filecount", gauge,
+				map[string]string{
+					"directory": path,
+				})
 		}
 		parent := filepath.Dir(path)
 		if fc.Recursive {

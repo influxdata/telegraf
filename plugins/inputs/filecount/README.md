@@ -50,10 +50,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## touched in this duration. Defaults to "0s".
   mtime = "0s"
 
-  ## Stop counting after this duration has passed.
-  ## Acceptable units: ns, us (µs), ms, s, m, h.
-  ## Defaults to "0s" (disabled).
-  timeout = "0s"
+  ## Stop counting after this duration has passed (disabled by default)
+  # timeout = "0s"
 ```
 
 ## Metrics
@@ -61,7 +59,6 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 - filecount
   - tags:
     - directory (the directory path)
-    - filecount_status (status of the count: "ok" or "timeout")
   - fields:
     - count (integer)
     - size_bytes (integer)
@@ -71,6 +68,6 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Example Output
 
 ```text
-filecount,directory=/var/cache/apt,filecount_status=ok count=7i,size_bytes=7438336i,oldest_file_timestamp=1507152973123456789i,newest_file_timestamp=1507152973123456789i 1530034445000000000
-filecount,directory=/tmp,filecount_status=ok count=17i,size_bytes=28934786i,oldest_file_timestamp=1507152973123456789i,newest_file_timestamp=1507152973123456789i 1530034445000000000
+filecount,directory=/var/cache/apt,count=7i,size_bytes=7438336i,oldest_file_timestamp=1507152973123456789i,newest_file_timestamp=1507152973123456789i 1530034445000000000
+filecount,directory=/tmp,count=17i,size_bytes=28934786i,oldest_file_timestamp=1507152973123456789i,newest_file_timestamp=1507152973123456789i 1530034445000000000
 ```
