@@ -228,54 +228,6 @@ func TestCases(t *testing.T) {
 	}
 }
 
-func TestAgent_SkipProcessorsBeforeAndAfterError(t *testing.T) {
-	c := config.NewConfig()
-	c.Agent.OmitHostname = true
-	skipAfter := true
-	c.Agent.SkipProcessorsBeforeAggregators = true
-	c.Agent.SkipProcessorsAfterAggregators = &skipAfter
-
-	agent := NewAgent(c)
-	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
-	defer cancel()
-
-	err := agent.Run(ctx)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators to true")
-}
-
-func TestAgent_SkipProcessorsBeforeAndAfterErrorTest(t *testing.T) {
-	c := config.NewConfig()
-	c.Agent.OmitHostname = true
-	skipAfter := true
-	c.Agent.SkipProcessorsBeforeAggregators = true
-	c.Agent.SkipProcessorsAfterAggregators = &skipAfter
-
-	agent := NewAgent(c)
-	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
-	defer cancel()
-
-	err := agent.Test(ctx, 0)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators to true")
-}
-
-func TestAgent_SkipProcessorsBeforeAndAfterErrorOnce(t *testing.T) {
-	c := config.NewConfig()
-	c.Agent.OmitHostname = true
-	skipAfter := true
-	c.Agent.SkipProcessorsBeforeAggregators = true
-	c.Agent.SkipProcessorsAfterAggregators = &skipAfter
-
-	agent := NewAgent(c)
-	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
-	defer cancel()
-
-	err := agent.Once(ctx, 0)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators to true")
-}
-
 func TestAgent_SkipProcessorsBeforeDefaultsFalse(t *testing.T) {
 	c := config.NewConfig()
 	c.Agent.OmitHostname = true

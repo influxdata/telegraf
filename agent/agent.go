@@ -118,10 +118,6 @@ func (a *Agent) Run(ctx context.Context) error {
 		a.Config.Agent.SkipProcessorsAfterAggregators = &skipProcessorsAfterAggregators
 	}
 
-	if a.Config.Agent.SkipProcessorsBeforeAggregators && *a.Config.Agent.SkipProcessorsAfterAggregators {
-		return errors.New("cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators to true")
-	}
-
 	log.Printf("D! [agent] Initializing plugins")
 	if err := a.InitPlugins(); err != nil {
 		return err
@@ -163,7 +159,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	}
 
 	var pu []*processorUnit
-	if len(a.Config.Processors) != 0 && !a.Config.Agent.SkipProcessorsBeforeAggregators {
+	if len(a.Config.Processors) != 0 {
 		next, pu, err = a.startProcessors(next, a.Config.Processors)
 		if err != nil {
 			return err
@@ -235,12 +231,10 @@ func (a *Agent) InitPlugins() error {
 			return fmt.Errorf("could not initialize input %s: %w", input.LogName(), err)
 		}
 	}
-	if !a.Config.Agent.SkipProcessorsBeforeAggregators {
-		for _, processor := range a.Config.Processors {
-			err := processor.Init()
-			if err != nil {
-				return fmt.Errorf("could not initialize processor %s: %w", processor.LogName(), err)
-			}
+	for _, processor := range a.Config.Processors {
+		err := processor.Init()
+		if err != nil {
+			return fmt.Errorf("could not initialize processor %s: %w", processor.LogName(), err)
 		}
 	}
 	for _, aggregator := range a.Config.Aggregators {
@@ -993,10 +987,6 @@ func (a *Agent) runTest(ctx context.Context, wait time.Duration, outputC chan<- 
 		a.Config.Agent.SkipProcessorsAfterAggregators = &skipProcessorsAfterAggregators
 	}
 
-	if a.Config.Agent.SkipProcessorsBeforeAggregators && *a.Config.Agent.SkipProcessorsAfterAggregators {
-		return errors.New("cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators to true")
-	}
-
 	log.Printf("D! [agent] Initializing plugins")
 	if err := a.InitPlugins(); err != nil {
 		return err
@@ -1022,7 +1012,7 @@ func (a *Agent) runTest(ctx context.Context, wait time.Duration, outputC chan<- 
 	}
 
 	var pu []*processorUnit
-	if len(a.Config.Processors) != 0 && !a.Config.Agent.SkipProcessorsBeforeAggregators {
+	if len(a.Config.Processors) != 0 {
 		var err error
 		next, pu, err = a.startProcessors(next, a.Config.Processors)
 		if err != nil {
@@ -1102,10 +1092,6 @@ func (a *Agent) runOnce(ctx context.Context, wait time.Duration) error {
 		a.Config.Agent.SkipProcessorsAfterAggregators = &skipProcessorsAfterAggregators
 	}
 
-	if a.Config.Agent.SkipProcessorsBeforeAggregators && *a.Config.Agent.SkipProcessorsAfterAggregators {
-		return errors.New("cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators to true")
-	}
-
 	log.Printf("D! [agent] Initializing plugins")
 	if err := a.InitPlugins(); err != nil {
 		return err
@@ -1134,7 +1120,7 @@ func (a *Agent) runOnce(ctx context.Context, wait time.Duration) error {
 	}
 
 	var pu []*processorUnit
-	if len(a.Config.Processors) != 0 && !a.Config.Agent.SkipProcessorsBeforeAggregators {
+	if len(a.Config.Processors) != 0 {
 		next, pu, err = a.startProcessors(next, a.Config.Processors)
 		if err != nil {
 			return err

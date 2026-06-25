@@ -584,6 +584,10 @@ func (c *Config) LoadAll(configFiles ...string) error {
 		}
 	}
 
+	if c.Agent.SkipProcessorsBeforeAggregators && c.Agent.SkipProcessorsAfterAggregators != nil && *c.Agent.SkipProcessorsAfterAggregators {
+		return errors.New("cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators as true")
+	}
+
 	// Sort the processors according to their `order` setting while
 	// using a stable sort to keep the file loading / file position order.
 	sort.Stable(c.Processors)
@@ -833,8 +837,10 @@ func (c *Config) LoadConfigData(data []byte, path string) error {
 	// Sort the processor according to the order they appeared in this file
 	// In a later stage, we sort them using the `order` option.
 	sort.Sort(c.fileProcessors)
-	for _, op := range c.fileProcessors {
-		c.Processors = append(c.Processors, op.plugin.(*models.RunningProcessor))
+	if !c.Agent.SkipProcessorsBeforeAggregators {
+		for _, op := range c.fileProcessors {
+			c.Processors = append(c.Processors, op.plugin.(*models.RunningProcessor))
+		}
 	}
 
 	sort.Sort(c.fileAggProcessors)

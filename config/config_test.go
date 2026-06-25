@@ -1506,6 +1506,25 @@ func TestValidTagpassAndTagdropSyntaxFromFile(t *testing.T) {
 	require.Equal(t, []string{"us-west"}, plugin.Filter.TagDropFilters[0].Values)
 }
 
+func TestConfig_SkipProcessorsBeforeAndAfterError(t *testing.T) {
+	c := config.NewConfig()
+	skipAfter := true
+	c.Agent.SkipProcessorsBeforeAggregators = true
+	c.Agent.SkipProcessorsAfterAggregators = &skipAfter
+
+	err := c.LoadAll()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators as true")
+}
+
+func TestConfig_SkipProcessorsBeforeOmitsProcessors(t *testing.T) {
+	c := config.NewConfig()
+	c.Agent.SkipProcessorsBeforeAggregators = true
+
+	require.NoError(t, c.LoadAll())
+	require.Empty(t, c.Processors)
+}
+
 // Mockup INPUT plugin for (new) parser testing to avoid cyclic dependencies
 type MockupInputPluginParserNew struct {
 	Parser     telegraf.Parser
