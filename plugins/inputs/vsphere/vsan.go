@@ -336,23 +336,35 @@ func (e *endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Clie
 		Type:  "VsanVcClusterHealthSystem",
 		Value: "vsan-cluster-health-system",
 	}
-	fetchFromCache := true
-	resp, err := vsanmethods.VsanQueryVcClusterHealthSummary(ctx, vsanClient,
-		&vsantypes.VsanQueryVcClusterHealthSummary{
-			This:           healthSystemRef,
-			Cluster:        &clusterRef.ref,
-			Fields:         []string{"overallHealth", "overallHealthDescription"},
-			FetchFromCache: &fetchFromCache,
-		})
-	if err != nil {
-		return err
-	}
-	healthStr := resp.Returnval.OverallHealth
 	healthMap := map[string]int{"red": 2, "yellow": 1, "green": 0}
-	fields := make(map[string]interface{})
-	if val, ok := healthMap[healthStr]; ok {
-		fields["overall_health"] = val
+
+	// Read vCenter's cached health summary first
+	summary := &vsantypes.VsanQueryVcClusterHealthSummary{
+		This:           healthSystemRef,
+		Cluster:        &clusterRef.ref,
+		Fields:         []string{"overallHealth", "overallHealthDescription"},
+		FetchFromCache: new(true),
 	}
+	cached, err := vsanmethods.VsanQueryVcClusterHealthSummary(ctx, vsanClient, summary)
+	if err != nil {
+		return fmt.Errorf("reading cached health value failed: %w", err)
+	}
+	val, found := healthMap[cached.Returnval.OverallHealth]
+	if !found {
+		// The cached health summary was empty, so force a recompute by turning the cache off
+		summary.FetchFromCache = new(false)
+		uncached, err := vsanmethods.VsanQueryVcClusterHealthSummary(ctx, vsanClient, summary)
+		if err != nil {
+			return fmt.Errorf("reading uncached health value failed: %w", err)
+		}
+		val, found = healthMap[uncached.Returnval.OverallHealth]
+		if !found {
+			e.parent.Log.Debugf("[vSAN] Skipping health summary for cluster %s due to invalid value %q", clusterRef.name, uncached.Returnval.OverallHealth)
+			return nil
+		}
+	}
+
+	fields := map[string]interface{}{"overall_health": val}
 	tags := populateClusterTags(make(map[string]string), clusterRef, e.url.Host)
 	acc.AddFields(vsanSummaryMetricsName, fields, tags)
 	return nil
