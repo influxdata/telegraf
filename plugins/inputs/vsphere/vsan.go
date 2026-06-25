@@ -336,22 +336,28 @@ func (e *endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Clie
 		Type:  "VsanVcClusterHealthSystem",
 		Value: "vsan-cluster-health-system",
 	}
-	fetchFromCache := e.parent.VSANHealthFetchFromCache
-	resp, err := vsanmethods.VsanQueryVcClusterHealthSummary(ctx, vsanClient,
-		&vsantypes.VsanQueryVcClusterHealthSummary{
-			This:           healthSystemRef,
-			Cluster:        &clusterRef.ref,
-			Fields:         []string{"overallHealth", "overallHealthDescription"},
-			FetchFromCache: &fetchFromCache,
-		})
-	if err != nil {
-		return err
-	}
-	healthStr := resp.Returnval.OverallHealth
 	healthMap := map[string]int{"red": 2, "yellow": 1, "green": 0}
-	val, ok := healthMap[healthStr]
-	if !ok {
-		e.parent.Log.Debugf("[vSAN] Skipping health summary for cluster %s: unexpected overall health %q", clusterRef.name, healthStr)
+
+	// vCenter's cached health summary is often empty until it recomputes, so
+	// read the cache first and fall back to forcing a fresh evaluation on miss.
+	val, found := 0, false
+	for _, fetchFromCache := range []bool{true, false} {
+		resp, err := vsanmethods.VsanQueryVcClusterHealthSummary(ctx, vsanClient,
+			&vsantypes.VsanQueryVcClusterHealthSummary{
+				This:           healthSystemRef,
+				Cluster:        &clusterRef.ref,
+				Fields:         []string{"overallHealth", "overallHealthDescription"},
+				FetchFromCache: &fetchFromCache,
+			})
+		if err != nil {
+			return err
+		}
+		if val, found = healthMap[resp.Returnval.OverallHealth]; found {
+			break
+		}
+	}
+	if !found {
+		e.parent.Log.Debugf("[vSAN] Skipping health summary for cluster %s: no valid overall health", clusterRef.name)
 		return nil
 	}
 	fields := map[string]interface{}{"overall_health": val}
