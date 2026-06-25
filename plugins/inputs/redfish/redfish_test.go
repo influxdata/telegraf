@@ -25,13 +25,13 @@ func TestDellApis(t *testing.T) {
 
 		switch r.URL.Path {
 		case "/redfish/v1/Chassis/System.Embedded.1/Thermal":
-			http.ServeFile(w, r, "testdata/dell_thermal.json")
+			http.ServeFile(w, r, "testdata/dell/dell_thermal.json")
 		case "/redfish/v1/Chassis/System.Embedded.1/Power":
-			http.ServeFile(w, r, "testdata/dell_power.json")
+			http.ServeFile(w, r, "testdata/dell/dell_power.json")
 		case "/redfish/v1/Chassis/System.Embedded.1":
-			http.ServeFile(w, r, "testdata/dell_chassis.json")
+			http.ServeFile(w, r, "testdata/dell/dell_chassis.json")
 		case "/redfish/v1/Systems/System.Embedded.1":
-			http.ServeFile(w, r, "testdata/dell_systems.json")
+			http.ServeFile(w, r, "testdata/dell/dell_systems.json")
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -448,13 +448,13 @@ func TestHPApis(t *testing.T) {
 
 		switch r.URL.Path {
 		case "/redfish/v1/Chassis/1/Thermal":
-			http.ServeFile(w, r, "testdata/hp_thermal.json")
+			http.ServeFile(w, r, "testdata/hp/hp_thermal.json")
 		case "/redfish/v1/Chassis/1/Power":
-			http.ServeFile(w, r, "testdata/hp_power.json")
+			http.ServeFile(w, r, "testdata/hp/hp_power.json")
 		case "/redfish/v1/Systems/1":
-			http.ServeFile(w, r, "testdata/hp_systems.json")
+			http.ServeFile(w, r, "testdata/hp/hp_systems.json")
 		case "/redfish/v1/Chassis/1/":
-			http.ServeFile(w, r, "testdata/hp_chassis.json")
+			http.ServeFile(w, r, "testdata/hp/hp_chassis.json")
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -627,13 +627,13 @@ func TestHPilo4Apis(t *testing.T) {
 
 		switch r.URL.Path {
 		case "/redfish/v1/Chassis/1/Thermal":
-			http.ServeFile(w, r, "testdata/hp_thermal_ilo4.json")
+			http.ServeFile(w, r, "testdata/hp/hp_thermal_ilo4.json")
 		case "/redfish/v1/Chassis/1/Power":
-			http.ServeFile(w, r, "testdata/hp_power.json")
+			http.ServeFile(w, r, "testdata/hp/hp_power.json")
 		case "/redfish/v1/Systems/1":
-			http.ServeFile(w, r, "testdata/hp_systems.json")
+			http.ServeFile(w, r, "testdata/hp/hp_systems.json")
 		case "/redfish/v1/Chassis/1/":
-			http.ServeFile(w, r, "testdata/hp_chassis.json")
+			http.ServeFile(w, r, "testdata/hp/hp_chassis.json")
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -732,7 +732,7 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 
 		switch r.URL.Path {
 		case "/redfish/v1/Chassis/System.Embedded.1/Thermal":
-			http.ServeFile(w, r, "testdata/dell_thermal.json")
+			http.ServeFile(w, r, "testdata/dell/dell_thermal.json")
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -763,7 +763,7 @@ func TestNoUsernameorPasswordConfiguration(t *testing.T) {
 
 		switch r.URL.Path {
 		case "/redfish/v1/Chassis/System.Embedded.1/Thermal":
-			http.ServeFile(w, r, "testdata/dell_thermal.json")
+			http.ServeFile(w, r, "testdata/dell/dell_thermal.json")
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -791,31 +791,31 @@ func TestInvalidDellJSON(t *testing.T) {
 	}{
 		{
 			name:             "check Thermal",
-			thermalfilename:  "testdata/dell_thermalinvalid.json",
-			powerfilename:    "testdata/dell_power.json",
-			chassisfilename:  "testdata/dell_chassis.json",
-			hostnamefilename: "testdata/dell_systems.json",
+			thermalfilename:  "testdata/dell/dell_thermalinvalid.json",
+			powerfilename:    "testdata/dell/dell_power.json",
+			chassisfilename:  "testdata/dell/dell_chassis.json",
+			hostnamefilename: "testdata/dell/dell_systems.json",
 		},
 		{
 			name:             "check Power",
-			thermalfilename:  "testdata/dell_thermal.json",
-			powerfilename:    "testdata/dell_powerinvalid.json",
-			chassisfilename:  "testdata/dell_chassis.json",
-			hostnamefilename: "testdata/dell_systems.json",
+			thermalfilename:  "testdata/dell/dell_thermal.json",
+			powerfilename:    "testdata/dell/dell_powerinvalid.json",
+			chassisfilename:  "testdata/dell/dell_chassis.json",
+			hostnamefilename: "testdata/dell/dell_systems.json",
 		},
 		{
 			name:             "check Location",
-			thermalfilename:  "testdata/dell_thermal.json",
-			powerfilename:    "testdata/dell_power.json",
-			chassisfilename:  "testdata/dell_chassisinvalid.json",
-			hostnamefilename: "testdata/dell_systems.json",
+			thermalfilename:  "testdata/dell/dell_thermal.json",
+			powerfilename:    "testdata/dell/dell_power.json",
+			chassisfilename:  "testdata/dell/dell_chassisinvalid.json",
+			hostnamefilename: "testdata/dell/dell_systems.json",
 		},
 		{
 			name:             "check Hostname",
-			thermalfilename:  "testdata/dell_thermal.json",
-			powerfilename:    "testdata/dell_power.json",
-			chassisfilename:  "testdata/dell_chassis.json",
-			hostnamefilename: "testdata/dell_systemsinvalid.json",
+			thermalfilename:  "testdata/dell/dell_thermal.json",
+			powerfilename:    "testdata/dell/dell_power.json",
+			chassisfilename:  "testdata/dell/dell_chassis.json",
+			hostnamefilename: "testdata/dell/dell_systemsinvalid.json",
 		},
 	}
 	for _, tt := range tests {
@@ -869,24 +869,24 @@ func TestInvalidHPJSON(t *testing.T) {
 	}{
 		{
 			name:             "check Thermal",
-			thermalfilename:  "testdata/hp_thermalinvalid.json",
-			powerfilename:    "testdata/hp_power.json",
-			hostnamefilename: "testdata/hp_systems.json",
-			chassisfilename:  "testdata/hp_chassis.json",
+			thermalfilename:  "testdata/hp/hp_thermalinvalid.json",
+			powerfilename:    "testdata/hp/hp_power.json",
+			hostnamefilename: "testdata/hp/hp_systems.json",
+			chassisfilename:  "testdata/hp/hp_chassis.json",
 		},
 		{
 			name:             "check Power",
-			thermalfilename:  "testdata/hp_thermal.json",
-			powerfilename:    "testdata/hp_powerinvalid.json",
-			hostnamefilename: "testdata/hp_systems.json",
-			chassisfilename:  "testdata/hp_chassis.json",
+			thermalfilename:  "testdata/hp/hp_thermal.json",
+			powerfilename:    "testdata/hp/hp_powerinvalid.json",
+			hostnamefilename: "testdata/hp/hp_systems.json",
+			chassisfilename:  "testdata/hp/hp_chassis.json",
 		},
 		{
 			name:             "check Hostname",
-			thermalfilename:  "testdata/hp_thermal.json",
-			powerfilename:    "testdata/hp_power.json",
-			hostnamefilename: "testdata/hp_systemsinvalid.json",
-			chassisfilename:  "testdata/hp_chassis.json",
+			thermalfilename:  "testdata/hp/hp_thermal.json",
+			powerfilename:    "testdata/hp/hp_power.json",
+			hostnamefilename: "testdata/hp/hp_systemsinvalid.json",
+			chassisfilename:  "testdata/hp/hp_chassis.json",
 		},
 	}
 	for _, tt := range tests {
@@ -939,13 +939,13 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 
 		switch r.URL.Path {
 		case "/redfish/v1/Chassis/1/Thermal":
-			http.ServeFile(w, r, "testdata/hp_thermal.json")
+			http.ServeFile(w, r, "testdata/hp/hp_thermal.json")
 		case "/redfish/v1/Chassis/1/Power":
-			http.ServeFile(w, r, "testdata/hp_power.json")
+			http.ServeFile(w, r, "testdata/hp/hp_power.json")
 		case "/redfish/v1/Systems/1":
-			http.ServeFile(w, r, "testdata/hp_systems.json")
+			http.ServeFile(w, r, "testdata/hp/hp_systems.json")
 		case "/redfish/v1/Chassis/1/":
-			http.ServeFile(w, r, "testdata/hp_chassis.json")
+			http.ServeFile(w, r, "testdata/hp/hp_chassis.json")
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
