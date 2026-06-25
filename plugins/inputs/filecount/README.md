@@ -68,6 +68,6 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Example Output
 
 ```text
-filecount,directory=/var/cache/apt,count=7i,size_bytes=7438336i,oldest_file_timestamp=1507152973123456789i,newest_file_timestamp=1507152973123456789i 1530034445000000000
-filecount,directory=/tmp,count=17i,size_bytes=28934786i,oldest_file_timestamp=1507152973123456789i,newest_file_timestamp=1507152973123456789i 1530034445000000000
+filecount,directory=/var/cache/apt count=7i,size_bytes=7438336i,oldest_file_timestamp=1507152973123456789i,newest_file_timestamp=1507152973123456789i 1530034445000000000
+filecount,directory=/tmp count=17i,size_bytes=28934786i,oldest_file_timestamp=1507152973123456789i,newest_file_timestamp=1507152973123456789i 1530034445000000000
 ```
