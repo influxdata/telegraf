@@ -91,6 +91,10 @@ func (p *Ping) args(url string) []string {
 		args = append(args, "-w", strconv.FormatFloat(timeout*1000, 'f', 0, 64))
 	}
 
+	if p.Interface != "" {
+		args = append(args, "-S", p.Interface)
+	}
+
 	args = append(args, url)
 
 	return args

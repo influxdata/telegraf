@@ -8,9 +8,11 @@ import (
 	gobin "encoding/binary"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
@@ -35,7 +37,20 @@ func (p *Parser) Init() error {
 	switch p.Merge {
 	case "":
 		p.Merge = "none"
-	case "none", "override", "override-with-timestamp", "parent", "parent-with-timestamp":
+	case "none", "override", "parent":
+	case "override-with-timestamp", "parent-with-timestamp":
+		// Make the parser returning a zero timestamp if the data itself does
+		// not contain a timestamp
+		var unwrapped telegraf.Parser
+		unwrapped = p.parser
+		if u, ok := p.parser.(*models.RunningParser); ok {
+			unwrapped = u.Parser
+		}
+		if ptfp, ok := unwrapped.(telegraf.ParserTimeFuncPlugin); !ok {
+			p.Log.Warnf("Parser will always create a timestamp in merge-mode %q!", p.Merge)
+		} else {
+			ptfp.SetTimeFunc(func() time.Time { return time.Time{} })
+		}
 	default:
 		return fmt.Errorf("unrecognized merge value: %s", p.Merge)
 	}

@@ -57,9 +57,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.24
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.29
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.59.0
-	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.76.0
+	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.78.0
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.59.0
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.307.0
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.308.0
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.44.2
 	github.com/aws/aws-sdk-go-v2/service/sts v1.43.3
 	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.36.0
@@ -110,7 +110,7 @@ require (
 	github.com/google/licensecheck v0.3.1
 	github.com/google/uuid v1.6.0
 	github.com/gopacket/gopacket v1.6.1
-	github.com/gopcua/opcua v0.8.0
+	github.com/gopcua/opcua v0.9.0
 	github.com/gophercloud/gophercloud/v2 v2.12.0
 	github.com/gorcon/rcon v1.4.0
 	github.com/gorilla/mux v1.8.1
@@ -153,8 +153,8 @@ require (
 	github.com/microsoft/go-mssqldb v1.10.0
 	github.com/miekg/dns v1.1.72
 	github.com/moby/ipvs v1.1.0
-	github.com/moby/moby/api v1.54.2
-	github.com/moby/moby/client v0.4.1
+	github.com/moby/moby/api v1.55.0
+	github.com/moby/moby/client v0.5.0
 	github.com/multiplay/go-ts3 v1.2.0
 	github.com/nats-io/nats-server/v2 v2.14.2
 	github.com/nats-io/nats.go v1.52.0
@@ -178,12 +178,12 @@ require (
 	github.com/prometheus-community/pro-bing v0.9.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
-	github.com/prometheus/common v0.68.1
+	github.com/prometheus/common v0.69.0
 	github.com/prometheus/procfs v0.20.1
 	github.com/prometheus/prometheus v0.312.0
-	github.com/rabbitmq/amqp091-go v1.11.0
+	github.com/rabbitmq/amqp091-go v1.12.0
 	github.com/rclone/rclone v1.69.3
-	github.com/redis/go-redis/v9 v9.20.1
+	github.com/redis/go-redis/v9 v9.21.0
 	github.com/riemann/riemann-go-client v0.5.1-0.20211206220514-f58f10cdce16
 	github.com/robbiet480/go.nut v0.0.0-20220219091450-bd8f121e1fa1
 	github.com/robinson/gos7 v0.0.0-20240315073918-1f14519e4846
@@ -205,10 +205,10 @@ require (
 	github.com/tdrn-org/go-hue v1.2.0
 	github.com/tdrn-org/go-nsdp v0.5.1
 	github.com/tdrn-org/go-tr064 v0.3.0
-	github.com/testcontainers/testcontainers-go v0.42.0
-	github.com/testcontainers/testcontainers-go/modules/azure v0.42.0
-	github.com/testcontainers/testcontainers-go/modules/kafka v0.42.0
-	github.com/testcontainers/testcontainers-go/modules/vault v0.42.0
+	github.com/testcontainers/testcontainers-go v0.43.0
+	github.com/testcontainers/testcontainers-go/modules/azure v0.43.0
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.43.0
+	github.com/testcontainers/testcontainers-go/modules/vault v0.43.0
 	github.com/thomasklein94/packer-plugin-libvirt v0.5.0
 	github.com/tidwall/gjson v1.19.0
 	github.com/tidwall/wal v1.2.1
@@ -246,7 +246,7 @@ require (
 	golang.org/x/tools v0.46.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	gonum.org/v1/gonum v0.17.0
-	google.golang.org/api v0.284.0
+	google.golang.org/api v0.286.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa
 	google.golang.org/grpc v1.81.1
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
@@ -257,7 +257,7 @@ require (
 	k8s.io/apimachinery v0.36.2
 	k8s.io/client-go v0.36.2
 	layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68
-	modernc.org/sqlite v1.52.0
+	modernc.org/sqlite v1.53.0
 	software.sslmate.com/src/go-pkcs12 v0.7.2
 )
 
@@ -582,7 +582,7 @@ require (
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20211209221555-9c9e7e272434 // indirect
 	google.golang.org/genproto v0.0.0-20260319201613-d00831a3d3e7 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260610212136-7ab31c22f7ad // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
 	gopkg.in/fsnotify.v1 v1.4.7 // indirect
@@ -598,7 +598,7 @@ require (
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260317180543-43fb72c5454a // indirect
 	k8s.io/utils v0.0.0-20260319190234-28399d86e0b5 // indirect
-	modernc.org/libc v1.72.3 // indirect
+	modernc.org/libc v1.73.4 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
