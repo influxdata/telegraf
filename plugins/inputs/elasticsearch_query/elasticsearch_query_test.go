@@ -47,96 +47,150 @@ func TestGatherIntegration(t *testing.T) {
 		{"size": "long"},
 		{"size": "long"},
 	}
-	expectedData := [][]aggregationQueryData{
+	expectedData := [][]queryData{
 		{
 			{
-				aggKey:   aggKey{measurement: "measurement1", name: "size_avg", function: "avg", field: "size"},
-				isParent: false,
+				measurement: "measurement1",
+				name:        "size_avg",
+				function:    "avg",
+				field:       "size",
+				isParent:    false,
 			},
 			{
-				aggKey:   aggKey{measurement: "measurement1", name: "URI_keyword", function: "terms", field: "URI.keyword"},
-				isParent: true,
+				measurement: "measurement1",
+				name:        "URI_keyword",
+				function:    "terms",
+				field:       "URI.keyword",
+				isParent:    true,
 			},
 		},
 		{
 			{
-				aggKey:   aggKey{measurement: "measurement2", name: "size_max", function: "max", field: "size"},
-				isParent: false,
+				measurement: "measurement2",
+				name:        "size_max",
+				function:    "max",
+				field:       "size",
+				isParent:    false,
 			},
 			{
-				aggKey:   aggKey{measurement: "measurement2", name: "URI_keyword", function: "terms", field: "URI.keyword"},
-				isParent: true,
-			},
-		},
-		{
-			{
-				aggKey:   aggKey{measurement: "measurement3", name: "size_sum", function: "sum", field: "size"},
-				isParent: false,
-			},
-			{
-				aggKey:   aggKey{measurement: "measurement3", name: "response_keyword", function: "terms", field: "response.keyword"},
-				isParent: true,
+				measurement: "measurement2",
+				name:        "URI_keyword",
+				function:    "terms",
+				field:       "URI.keyword",
+				isParent:    true,
 			},
 		},
 		{
 			{
-				aggKey:   aggKey{measurement: "measurement4", name: "size_min", function: "min", field: "size"},
-				isParent: false,
+				measurement: "measurement3",
+				name:        "size_sum",
+				function:    "sum",
+				field:       "size",
+				isParent:    false,
 			},
 			{
-				aggKey:   aggKey{measurement: "measurement4", name: "response_time_min", function: "min", field: "response_time"},
-				isParent: false,
-			},
-			{
-				aggKey:   aggKey{measurement: "measurement4", name: "response_keyword", function: "terms", field: "response.keyword"},
-				isParent: false,
-			},
-			{
-				aggKey:   aggKey{measurement: "measurement4", name: "URI_keyword", function: "terms", field: "URI.keyword"},
-				isParent: false,
-			},
-			{
-				aggKey:   aggKey{measurement: "measurement4", name: "method_keyword", function: "terms", field: "method.keyword"},
-				isParent: true,
+				measurement: "measurement3",
+				name:        "response_keyword",
+				function:    "terms",
+				field:       "response.keyword",
+				isParent:    true,
 			},
 		},
 		{
 			{
-				aggKey:   aggKey{measurement: "measurement5", name: "URI_keyword", function: "terms", field: "URI.keyword"},
-				isParent: true,
+				measurement: "measurement4",
+				name:        "size_min",
+				function:    "min",
+				field:       "size",
+				isParent:    false,
+			},
+			{
+				measurement: "measurement4",
+				name:        "response_time_min",
+				function:    "min",
+				field:       "response_time",
+				isParent:    false,
+			},
+			{
+				measurement: "measurement4",
+				name:        "response_keyword",
+				function:    "terms",
+				field:       "response.keyword",
+				isParent:    false,
+			},
+			{
+				measurement: "measurement4",
+				name:        "URI_keyword",
+				function:    "terms",
+				field:       "URI.keyword",
+				isParent:    false,
+			},
+			{
+				measurement: "measurement4",
+				name:        "method_keyword",
+				function:    "terms",
+				field:       "method.keyword",
+				isParent:    true,
 			},
 		},
 		{
 			{
-				aggKey:   aggKey{measurement: "measurement6", name: "URI_keyword", function: "terms", field: "URI.keyword"},
-				isParent: false,
+				measurement: "measurement5",
+				name:        "URI_keyword",
+				function:    "terms",
+				field:       "URI.keyword",
+				isParent:    true,
+			},
+		},
+		{
+			{
+				measurement: "measurement6",
+				name:        "URI_keyword",
+				function:    "terms",
+				field:       "URI.keyword",
+				isParent:    false,
 			},
 			{
-				aggKey:   aggKey{measurement: "measurement6", name: "response_keyword", function: "terms", field: "response.keyword"},
-				isParent: true,
+				measurement: "measurement6",
+				name:        "response_keyword",
+				function:    "terms",
+				field:       "response.keyword",
+				isParent:    true,
 			},
 		},
 		nil,
 		{
 			{
-				aggKey:   aggKey{measurement: "measurement8", name: "size_max", function: "max", field: "size"},
-				isParent: true,
+				measurement: "measurement8",
+				name:        "size_max",
+				function:    "max",
+				field:       "size",
+				isParent:    true,
 			},
 		},
 		{
 			{
-				aggKey:   aggKey{measurement: "measurement12", name: "size_avg", function: "avg", field: "size"},
-				isParent: true,
+				measurement: "measurement12",
+				name:        "size_avg",
+				function:    "avg",
+				field:       "size",
+				isParent:    true,
 			},
 		},
 		{
 			{
-				aggKey:   aggKey{measurement: "measurement13", name: "size_avg", function: "avg", field: "size"},
-				isParent: false,
+				measurement: "measurement13",
+				name:        "size_avg",
+				function:    "avg",
+				field:       "size",
+				isParent:    false,
 			},
 			{
-				aggKey:   aggKey{measurement: "measurement13", name: "nothere", function: "terms", field: "nothere"},
-				isParent: true,
+				measurement: "measurement13",
+				name:        "nothere",
+				function:    "terms",
+				field:       "nothere",
+				isParent:    true,
 			},
 		},
 	}
@@ -286,7 +340,7 @@ func TestGatherIntegration(t *testing.T) {
 	// Setup the plugin
 	plugin := &ElasticsearchQuery{
 		URLs: []string{addr},
-		Aggregations: []esAggregation{
+		Aggregations: []aggregation{
 			{
 				Index:           testindex,
 				MeasurementName: "measurement1",
@@ -407,32 +461,26 @@ func TestGatherIntegration(t *testing.T) {
 
 	// Check the query data
 	opts := []cmp.Option{
-		cmp.AllowUnexported(aggKey{}, aggregationQueryData{}),
-		cmpopts.IgnoreFields(aggregationQueryData{}, "aggregation"),
-		cmpopts.SortSlices(func(x, y aggregationQueryData) bool { return x.aggKey.name > y.aggKey.name }),
+		cmp.AllowUnexported(queryData{}),
+		cmpopts.IgnoreFields(queryData{}, "aggregation"),
+		cmpopts.SortSlices(func(x, y queryData) bool { return x.name > y.name }),
 	}
 
 	for i, agg := range plugin.Aggregations {
 		actual := agg.aggregationQueryList
 		expected := expectedData[i]
-		require.Truef(t, cmp.Equal(expected, actual, opts...), "mismatch in aggregation %d\nexpected:%v\nactual:%v\n", i, expected, actual)
+
+		equal := len(expected) == 0 && len(actual) == 0 || cmp.Equal(expected, actual, opts...)
+		require.Truef(t, equal, "mismatch in aggregation %d\nexpected:%v\nactual:%v\n", i, expected, actual)
 	}
 
 	// Check the metrics
 	testutil.RequireMetricsEqual(t, expectedMetrics, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
 }
 
-func TestGatherFailIntegration(t *testing.T) {
+func TestGatherFailStartIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
-	}
-
-	// Define expectations
-	expected := []string{
-		`elasticsearch query aggregation measurement9: aggregation function "average" not supported`,
-		`elasticsearch query aggregation measurement10: metric field "none" not found on index "test-elasticsearch"`,
-		"elasticsearch query aggregation measurement11: elastic: Error 404 (Not Found): no such index [type=index_not_found_exception]",
-		"elasticsearch query aggregation measurement14: elastic: Error 400 (Bad Request): all shards failed [type=search_phase_execution_exception]",
 	}
 
 	// Setup the container
@@ -455,11 +503,14 @@ func TestGatherFailIntegration(t *testing.T) {
 	// Fill the database
 	require.NoError(t, sendData(t.Context(), addr))
 
-	// Setup plugin
-	plugin := &ElasticsearchQuery{
-		URLs: []string{addr},
-		Aggregations: []esAggregation{
-			{
+	tests := []struct {
+		name     string
+		agg      aggregation
+		expected string
+	}{
+		{
+			name: "invalid function",
+			agg: aggregation{
 				Index:           testindex,
 				MeasurementName: "measurement9",
 				MetricFields:    []string{"size"},
@@ -468,50 +519,121 @@ func TestGatherFailIntegration(t *testing.T) {
 				DateField:       "@timestamp",
 				QueryPeriod:     config.Duration(time.Second * 600),
 			},
-			{
+			expected: `aggregation function "average" not supported`,
+		},
+		{
+			name: "non-existing field",
+			agg: aggregation{
 				Index:           testindex,
 				MeasurementName: "measurement10",
 				MetricFields:    []string{"none"},
 				DateField:       "@timestamp",
 				QueryPeriod:     config.Duration(time.Second * 600),
 			},
-			{
+			expected: `metric field "none" not found on index`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup plugin
+			plugin := &ElasticsearchQuery{
+				URLs:         []string{addr},
+				Aggregations: []aggregation{tt.agg},
+				HTTPClientConfig: common_http.HTTPClientConfig{
+					Timeout: config.Duration(30 * time.Second),
+					TransportConfig: common_http.TransportConfig{
+						ResponseHeaderTimeout: config.Duration(30 * time.Second),
+					},
+				},
+				Log: testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.ErrorContains(t, plugin.Start(&acc), tt.expected)
+			defer plugin.Stop()
+		})
+	}
+}
+
+func TestGatherFailGatherIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Setup the container
+	container := &testutil.Container{
+		Image:        "elasticsearch:6.8.23",
+		ExposedPorts: []string{servicePort},
+		Env: map[string]string{
+			"discovery.type": "single-node",
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("] mode [basic] - valid"),
+			wait.ForListeningPort(servicePort),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	addr := "http://" + container.Address + ":" + container.Ports[servicePort]
+
+	// Fill the database
+	require.NoError(t, sendData(t.Context(), addr))
+
+	tests := []struct {
+		name     string
+		agg      aggregation
+		expected string
+	}{
+		{
+			name: "invalid index",
+			agg: aggregation{
 				Index:           "notanindex",
 				MeasurementName: "measurement11",
 				DateField:       "@timestamp",
 				QueryPeriod:     config.Duration(time.Second * 600),
 			},
-			{
+			expected: "Error 404 (Not Found): no such index",
+		},
+		{
+			name: "invalid time format",
+			agg: aggregation{
 				Index:           testindex,
 				MeasurementName: "measurement14",
 				DateField:       "@timestamp",
 				DateFieldFormat: "yyyy",
 				QueryPeriod:     config.Duration(time.Second * 600),
 			},
+			expected: "Error 400 (Bad Request): all shards failed",
 		},
-		HTTPClientConfig: common_http.HTTPClientConfig{
-			Timeout: config.Duration(30 * time.Second),
-			TransportConfig: common_http.TransportConfig{
-				ResponseHeaderTimeout: config.Duration(30 * time.Second),
-			},
-		},
-		Log: testutil.Logger{},
 	}
-	require.NoError(t, plugin.Init())
 
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Start(&acc))
-	defer plugin.Stop()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup plugin
+			plugin := &ElasticsearchQuery{
+				URLs:         []string{addr},
+				Aggregations: []aggregation{tt.agg},
+				HTTPClientConfig: common_http.HTTPClientConfig{
+					Timeout: config.Duration(30 * time.Second),
+					TransportConfig: common_http.TransportConfig{
+						ResponseHeaderTimeout: config.Duration(30 * time.Second),
+					},
+				},
+				Log: testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
 
-	// Collect data and check the errors
-	require.NoError(t, plugin.Gather(&acc))
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
 
-	// Check the errors
-	actual := make([]string, 0, len(acc.Errors))
-	for _, err := range acc.Errors {
-		actual = append(actual, err.Error())
+			// Gather data and check error
+			require.ErrorContains(t, acc.GatherError(plugin.Gather), tt.expected)
+		})
 	}
-	require.ElementsMatch(t, expected, actual)
 }
 
 func sendData(ctx context.Context, url string) error {
