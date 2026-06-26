@@ -17,7 +17,7 @@
       "MaxReadingRange": null,
       "MemberId": "0x17||Fan.Embedded.1A",
       "MinReadingRange": 600,
-      "Name": System Board Fan1A,
+      "Name": "System Board Fan1A,
       "PhysicalContext": "SystemBoard",
       "Reading": 17760,
       "ReadingUnits": "RPM",
