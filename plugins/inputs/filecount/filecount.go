@@ -236,9 +236,10 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 	})
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
-			fc.Log.Warnf("Timeout exceeded while walking %q; results not emitted", basedir)
+			fc.Log.Warnf("Timeout exceeded while walking %q", basedir)
 			return
 		}
+		acc.AddError(err)
 	}
 }
 
