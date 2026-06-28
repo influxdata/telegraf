@@ -15,9 +15,9 @@ jobs:
     name: Assign milestones to PRs
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - name: Assign milestone to PR
-        uses: srebhan/label-milestone-action@v1.1.0
+        uses: srebhan/label-milestone-action@6d4bf8afb126941ad1581415465beb356ff76a66 # v1.1.0
         id: assign-milestone
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
