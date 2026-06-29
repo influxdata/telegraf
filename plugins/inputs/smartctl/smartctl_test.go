@@ -93,6 +93,9 @@ func TestScanHelperProcess(*testing.T) {
 		os.Exit(42)
 	}
 
+	// Emit a warning to stderr to ensure it does not corrupt the JSON parsed
+	// from stdout (see issue #19165)
+	fmt.Fprintln(os.Stderr, "/dev/sda: warning emitted to stderr")
 	fmt.Fprint(os.Stdout, string(scanBytes))
 	//nolint:revive // os.Exit called intentionally
 	os.Exit(0)
@@ -195,6 +198,9 @@ func TestDeviceHelperProcess(t *testing.T) {
 
 	scanBytes, err := os.ReadFile(filename)
 	require.NoError(t, err)
+	// Emit a warning to stderr to ensure it does not corrupt the JSON parsed
+	// from stdout (see issue #19165)
+	fmt.Fprintln(os.Stderr, "/dev/sda: warning emitted to stderr")
 	fmt.Fprint(os.Stdout, string(scanBytes))
 	os.Exit(0) //nolint:revive // os.Exit called intentionally
 }

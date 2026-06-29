@@ -17,7 +17,7 @@ func (s *Smartctl) scanDevice(acc telegraf.Accumulator, deviceName, deviceType s
 	}
 
 	var device smartctlDeviceJSON
-	out, err := internal.CombinedOutputTimeout(cmd, time.Duration(s.Timeout))
+	out, err := internal.StdOutputTimeout(cmd, time.Duration(s.Timeout))
 	if err != nil {
 		// Error running the command and unable to parse the JSON, then bail
 		if jsonErr := json.Unmarshal(out, &device); jsonErr != nil {
