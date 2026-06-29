@@ -84,7 +84,7 @@ type resourceKind struct {
 	parent           string
 	latestSample     time.Time
 	lastColl         time.Time
-	PropertieInclude []string
+	propertieInclude []string
 }
 
 type metricEntry struct {
@@ -151,7 +151,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.DatacenterInstances,
 			getObjects:       getDatacenters,
 			parent:           "",
-			PropertieInclude: parent.DatacenterPropertieInclude,
+			propertieInclude: parent.DatacenterpropertieInclude,
 		},
 		"cluster": {
 			name:             "cluster",
@@ -170,7 +170,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.ClusterInstances,
 			getObjects:       getClusters,
 			parent:           "datacenter",
-			PropertieInclude: parent.ClusterPropertieInclude,
+			propertieInclude: parent.ClusterpropertieInclude,
 		},
 		"resourcepool": {
 			name:             "resourcepool",
@@ -189,7 +189,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.ResourcePoolInstances,
 			getObjects:       getResourcePools,
 			parent:           "cluster",
-			PropertieInclude: parent.ResourcePoolPropertieInclude,
+			propertieInclude: parent.ResourcePoolpropertieInclude,
 		},
 		"host": {
 			name:             "host",
@@ -208,7 +208,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.HostInstances,
 			getObjects:       getHosts,
 			parent:           "cluster",
-			PropertieInclude: parent.HostPropertieInclude,
+			propertieInclude: parent.HostpropertieInclude,
 		},
 		"vm": {
 			name:             "vm",
@@ -227,7 +227,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.VMInstances,
 			getObjects:       getVMs,
 			parent:           "host",
-			PropertieInclude: parent.VMPropertieInclude,
+			propertieInclude: parent.VMpropertieInclude,
 		},
 		"datastore": {
 			name:             "datastore",
@@ -245,7 +245,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.DatastoreInstances,
 			getObjects:       getDatastores,
 			parent:           "",
-			PropertieInclude: parent.DatastorePropertieInclude,
+			propertieInclude: parent.DatastorepropertieInclude,
 		},
 		"vsan": {
 			name:             "vsan",
@@ -263,7 +263,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: false,
 			getObjects:       getClusters,
 			parent:           "datacenter",
-			PropertieInclude: parent.VSANPropertieInclude,
+			propertieInclude: parent.VSANpropertieInclude,
 		},
 	}
 
@@ -492,10 +492,10 @@ func (e *endpoint) discover(ctx context.Context) error {
 				resType:      res.vcName,
 				paths:        res.paths,
 				excludePaths: res.excludePaths,
-				custoFields:  res.PropertieInclude}
+				custoFields:  res.propertieInclude}
 
 			ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.parent.Timeout))
-			objects, err := res.getObjects(ctx1, e, &rf, res.PropertieInclude)
+			objects, err := res.getObjects(ctx1, e, &rf, res.propertieInclude)
 			cancel1()
 			if err != nil {
 				return err
@@ -647,7 +647,7 @@ func (e *endpoint) complexMetadataSelect(ctx context.Context, res *resourceKind,
 	te.wait()
 }
 
-func getDatacenters(ctx context.Context, e *endpoint, resourceFilter *resourceFilter, PropertieInclude []string) (objectMap, error) {
+func getDatacenters(ctx context.Context, e *endpoint, resourceFilter *resourceFilter, propertieInclude []string) (objectMap, error) {
 	var resources []mo.Datacenter
 	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.parent.Timeout))
 	defer cancel1()
@@ -665,13 +665,13 @@ func getDatacenters(ctx context.Context, e *endpoint, resourceFilter *resourceFi
 			parentRef:        r.Parent,
 			dcname:           r.Name,
 			customValues:     e.loadCustomAttributes(r.ManagedEntity),
-			customProperties: e.loadCustomProperties(r, PropertieInclude),
+			customProperties: e.loadCustomProperties(r, propertieInclude),
 		}
 	}
 	return m, nil
 }
 
-func getClusters(ctx context.Context, e *endpoint, resourceFilter *resourceFilter, PropertieInclude []string) (objectMap, error) {
+func getClusters(ctx context.Context, e *endpoint, resourceFilter *resourceFilter, propertieInclude []string) (objectMap, error) {
 	var resources []mo.ClusterComputeResource
 	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.parent.Timeout))
 	defer cancel1()
@@ -714,7 +714,7 @@ func getClusters(ctx context.Context, e *endpoint, resourceFilter *resourceFilte
 				ref:              r.ExtensibleManagedObject.Reference(),
 				parentRef:        p,
 				customValues:     e.loadCustomAttributes(r.ManagedEntity),
-				customProperties: e.loadCustomProperties(r, PropertieInclude),
+				customProperties: e.loadCustomProperties(r, propertieInclude),
 			}
 			return nil
 		}()
@@ -726,7 +726,7 @@ func getClusters(ctx context.Context, e *endpoint, resourceFilter *resourceFilte
 }
 
 // noinspection GoUnusedParameter
-func getResourcePools(ctx context.Context, e *endpoint, resourceFilter *resourceFilter, PropertieInclude []string) (objectMap, error) {
+func getResourcePools(ctx context.Context, e *endpoint, resourceFilter *resourceFilter, propertieInclude []string) (objectMap, error) {
 	var resources []mo.ResourcePool
 	err := resourceFilter.findAll(ctx, &resources)
 	if err != nil {
@@ -741,7 +741,7 @@ func getResourcePools(ctx context.Context, e *endpoint, resourceFilter *resource
 			ref:              r.ExtensibleManagedObject.Reference(),
 			parentRef:        r.Parent,
 			customValues:     e.loadCustomAttributes(r.ManagedEntity),
-			customProperties: e.loadCustomProperties(r, PropertieInclude),
+			customProperties: e.loadCustomProperties(r, propertieInclude),
 		}
 	}
 	return m, nil
@@ -758,7 +758,7 @@ func getResourcePoolName(rp types.ManagedObjectReference, rps objectMap) string 
 }
 
 // noinspection GoUnusedParameter
-func getHosts(ctx context.Context, e *endpoint, resourceFilter *resourceFilter, PropertieInclude []string) (objectMap, error) {
+func getHosts(ctx context.Context, e *endpoint, resourceFilter *resourceFilter, propertieInclude []string) (objectMap, error) {
 	var resources []mo.HostSystem
 	err := resourceFilter.findAll(ctx, &resources)
 	if err != nil {
@@ -775,14 +775,14 @@ func getHosts(ctx context.Context, e *endpoint, resourceFilter *resourceFilter, 
 			ref:              r.ExtensibleManagedObject.Reference(),
 			parentRef:        r.Parent,
 			customValues:     e.loadCustomAttributes(r.ManagedEntity),
-			customProperties: e.loadCustomProperties(r, PropertieInclude),
+			customProperties: e.loadCustomProperties(r, propertieInclude),
 			lookup:           lookup,
 		}
 	}
 	return m, nil
 }
 
-func getVMs(ctx context.Context, e *endpoint, rf *resourceFilter, PropertieInclude []string) (objectMap, error) {
+func getVMs(ctx context.Context, e *endpoint, rf *resourceFilter, propertieInclude []string) (objectMap, error) {
 	var resources []mo.VirtualMachine
 	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.parent.Timeout))
 	defer cancel1()
@@ -870,14 +870,14 @@ func getVMs(ctx context.Context, e *endpoint, rf *resourceFilter, PropertieInclu
 			altID:            uuid,
 			rpname:           rpname,
 			customValues:     e.loadCustomAttributes(r.ManagedEntity),
-			customProperties: e.loadCustomProperties(r, PropertieInclude),
+			customProperties: e.loadCustomProperties(r, propertieInclude),
 			lookup:           lookup,
 		}
 	}
 	return m, nil
 }
 
-func getDatastores(ctx context.Context, e *endpoint, resourceFilter *resourceFilter, PropertieInclude []string) (objectMap, error) {
+func getDatastores(ctx context.Context, e *endpoint, resourceFilter *resourceFilter, propertieInclude []string) (objectMap, error) {
 	var resources []mo.Datastore
 	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.parent.Timeout))
 	defer cancel1()
@@ -902,7 +902,7 @@ func getDatastores(ctx context.Context, e *endpoint, resourceFilter *resourceFil
 			parentRef:        r.Parent,
 			altID:            lunID,
 			customValues:     e.loadCustomAttributes(r.ManagedEntity),
-			customProperties: e.loadCustomProperties(r, PropertieInclude),
+			customProperties: e.loadCustomProperties(r, propertieInclude),
 		}
 	}
 	return m, nil
@@ -931,10 +931,10 @@ func (e *endpoint) loadCustomAttributes(entity mo.ManagedEntity) map[string]stri
 	return cvs
 }
 
-func (e *endpoint) loadCustomProperties(entity interface{}, PropertieInclude []string) map[string]interface{} {
+func (e *endpoint) loadCustomProperties(entity interface{}, propertieInclude []string) map[string]interface{} {
 	cvs := make(map[string]interface{})
-	if len(PropertieInclude) != 0 {
-		for _, filtre := range PropertieInclude {
+	if len(propertieInclude) != 0 {
+		for _, filtre := range propertieInclude {
 			if valeur, ok := e.getExtraData(entity, capitalizeAfterDot(filtre)); ok {
 				key := e.makePropertyIdentifier(filtre)
 				cvs[key] = valeur

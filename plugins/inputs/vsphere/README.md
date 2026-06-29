@@ -82,6 +82,9 @@ to use them.
   ]
   # vm_metric_exclude = [] ## Nothing is excluded by default
   # vm_instances = true ## true by default
+  ## Custom VM properties to collect.
+  ## If the properties are text-based, they will be added as tags; otherwise, they will be added as metrics.
+  # vm_propertie_include = ["runtime.powerState", "summary.config.MemorySizeMB", "summary.config.MemoryReservation"]
 
   ## Hosts
   ## Typical host metrics (if omitted or empty, all metrics are collected)
@@ -140,7 +143,9 @@ to use them.
 
   # host_metric_exclude = [] ## Nothing excluded by default
   # host_instances = true ## true by default
-
+  ## Custom host properties to collect.
+  ## If the properties are text-based, they will be added as tags; otherwise, they will be added as metrics.
+  # host_propertie_include = ["summary.runtime.powerState", "summary.overallStatus", "summary.runtime.inMaintenanceMode", "summary.runtime.connectionState"]
 
   ## Clusters
   # cluster_include = [ "/*/host/**"] # Inventory path to clusters to collect (by default all are collected)
@@ -983,8 +988,6 @@ For sample :
 
 All that tag will be added to "internal" metric that always contain "1".
 It is recommanded to use it with processors.enum to convert as metric.
-
-For sample :
 
 For sample :
 
