@@ -156,7 +156,7 @@ require (
 	github.com/moby/moby/api v1.55.0
 	github.com/moby/moby/client v0.5.0
 	github.com/multiplay/go-ts3 v1.2.0
-	github.com/nats-io/nats-server/v2 v2.14.2
+	github.com/nats-io/nats-server/v2 v2.14.3
 	github.com/nats-io/nats.go v1.52.0
 	github.com/netsampler/goflow2/v2 v2.2.6
 	github.com/newrelic/newrelic-telemetry-sdk-go v0.8.1
