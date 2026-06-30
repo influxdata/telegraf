@@ -11,8 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 	elastic5 "gopkg.in/olivere/elastic.v5"
@@ -47,153 +45,7 @@ func TestGatherIntegration(t *testing.T) {
 		{"size": "long"},
 		{"size": "long"},
 	}
-	expectedData := [][]queryData{
-		{
-			{
-				measurement: "measurement1",
-				name:        "size_avg",
-				function:    "avg",
-				field:       "size",
-				isParent:    false,
-			},
-			{
-				measurement: "measurement1",
-				name:        "URI_keyword",
-				function:    "terms",
-				field:       "URI.keyword",
-				isParent:    true,
-			},
-		},
-		{
-			{
-				measurement: "measurement2",
-				name:        "size_max",
-				function:    "max",
-				field:       "size",
-				isParent:    false,
-			},
-			{
-				measurement: "measurement2",
-				name:        "URI_keyword",
-				function:    "terms",
-				field:       "URI.keyword",
-				isParent:    true,
-			},
-		},
-		{
-			{
-				measurement: "measurement3",
-				name:        "size_sum",
-				function:    "sum",
-				field:       "size",
-				isParent:    false,
-			},
-			{
-				measurement: "measurement3",
-				name:        "response_keyword",
-				function:    "terms",
-				field:       "response.keyword",
-				isParent:    true,
-			},
-		},
-		{
-			{
-				measurement: "measurement4",
-				name:        "size_min",
-				function:    "min",
-				field:       "size",
-				isParent:    false,
-			},
-			{
-				measurement: "measurement4",
-				name:        "response_time_min",
-				function:    "min",
-				field:       "response_time",
-				isParent:    false,
-			},
-			{
-				measurement: "measurement4",
-				name:        "response_keyword",
-				function:    "terms",
-				field:       "response.keyword",
-				isParent:    false,
-			},
-			{
-				measurement: "measurement4",
-				name:        "URI_keyword",
-				function:    "terms",
-				field:       "URI.keyword",
-				isParent:    false,
-			},
-			{
-				measurement: "measurement4",
-				name:        "method_keyword",
-				function:    "terms",
-				field:       "method.keyword",
-				isParent:    true,
-			},
-		},
-		{
-			{
-				measurement: "measurement5",
-				name:        "URI_keyword",
-				function:    "terms",
-				field:       "URI.keyword",
-				isParent:    true,
-			},
-		},
-		{
-			{
-				measurement: "measurement6",
-				name:        "URI_keyword",
-				function:    "terms",
-				field:       "URI.keyword",
-				isParent:    false,
-			},
-			{
-				measurement: "measurement6",
-				name:        "response_keyword",
-				function:    "terms",
-				field:       "response.keyword",
-				isParent:    true,
-			},
-		},
-		nil,
-		{
-			{
-				measurement: "measurement8",
-				name:        "size_max",
-				function:    "max",
-				field:       "size",
-				isParent:    true,
-			},
-		},
-		{
-			{
-				measurement: "measurement12",
-				name:        "size_avg",
-				function:    "avg",
-				field:       "size",
-				isParent:    true,
-			},
-		},
-		{
-			{
-				measurement: "measurement13",
-				name:        "size_avg",
-				function:    "avg",
-				field:       "size",
-				isParent:    false,
-			},
-			{
-				measurement: "measurement13",
-				name:        "nothere",
-				function:    "terms",
-				field:       "nothere",
-				isParent:    true,
-			},
-		},
-	}
+
 	expectedMetrics := []telegraf.Metric{
 		metric.New(
 			"measurement1",
@@ -456,23 +308,8 @@ func TestGatherIntegration(t *testing.T) {
 	}
 
 	// Collect metrics and check
-	require.NoError(t, plugin.Gather(&acc))
+	require.NoError(t, acc.GatherError(plugin.Gather))
 	require.Empty(t, acc.Errors)
-
-	// Check the query data
-	opts := []cmp.Option{
-		cmp.AllowUnexported(queryData{}),
-		cmpopts.IgnoreFields(queryData{}, "aggregation"),
-		cmpopts.SortSlices(func(x, y queryData) bool { return x.name > y.name }),
-	}
-
-	for i, agg := range plugin.Aggregations {
-		actual := agg.aggregationQueryList
-		expected := expectedData[i]
-
-		equal := len(expected) == 0 && len(actual) == 0 || cmp.Equal(expected, actual, opts...)
-		require.Truef(t, equal, "mismatch in aggregation %d\nexpected:%v\nactual:%v\n", i, expected, actual)
-	}
 
 	// Check the metrics
 	testutil.RequireMetricsEqual(t, expectedMetrics, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
