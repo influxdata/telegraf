@@ -86,7 +86,7 @@ type workflowJob struct {
 }
 
 type workflowRun struct {
-	ID			 int64	   `json:"id"`
+	ID           int64     `json:"id"`
 	HeadBranch   string    `json:"head_branch"`
 	CreatedAt    time.Time `json:"created_at"`
 	RunStartedAt time.Time `json:"run_started_at"`
@@ -734,7 +734,7 @@ func (s workflowRunEvent) newMetric() telegraf.Metric {
 		"run_attempt": s.WorkflowRun.RunAttempt,
 		"run_time":    runTimeMs,
 		"head_branch": s.WorkflowRun.HeadBranch,
-		"run_id": 	   s.WorkflowRun.ID,
+		"run_id":      s.WorkflowRun.ID,
 	}
 	m := metric.New(meas, t, f, time.Now())
 	return m
