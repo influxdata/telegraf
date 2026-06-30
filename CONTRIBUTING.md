@@ -122,6 +122,7 @@ make check
 make check-deps
 make test
 make docs
+vale .  # prose style linting (optional, see docs/developers/PROSE_STYLE.md)
 ```
 
 **Execute integration tests:**
@@ -148,6 +149,7 @@ make test-all
 - [Metric Format Changes][metricformat]
 - [Packaging][packaging]
 - [Profiling][profiling]
+- [Prose Style][prosestyle]
 - [Reviews][reviews]
 - [Sample Config][sample config]
 - [Code of Conduct][code of conduct]
@@ -165,6 +167,7 @@ make test-all
 [metricformat]: /docs/developers/METRIC_FORMAT_CHANGES.md
 [packaging]: /docs/developers/PACKAGING.md
 [profiling]: /docs/developers/PROFILING.md
+[prosestyle]: /docs/developers/PROSE_STYLE.md
 [reviews]: /docs/developers/REVIEWS.md
 [sample config]: /docs/developers/SAMPLE_CONFIG.md
 [code of conduct]: /CODE_OF_CONDUCT.md
