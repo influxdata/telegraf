@@ -1390,22 +1390,12 @@ func (e *endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 		if objectRef.guest != "" {
 			t["guest"] = objectRef.guest
 		}
-		//		if objectRef.lookup["powerstate"] != "" {
-		//			t["powerstate"] = objectRef.lookup["powerstate"]
-		//		}
 		if gh := objectRef.lookup["guesthostname"]; gh != "" {
 			t["guesthostname"] = gh
 		}
 		if c, ok := e.resourceKinds["cluster"].objects[parent.parentRef.Value]; ok {
 			t["clustername"] = c.name
 		}
-	} else if resourceType == "host" {
-		//		if objectRef.lookup["powerstate"] != "" {
-		//			t["powerstate"] = objectRef.lookup["powerstate"]
-		//		}
-		//		if objectRef.lookup["maintenance"] != "" {
-		//			t["maintenance"] = objectRef.lookup["maintenance"]
-		//		}
 	}
 
 	// Fill in Datacenter name
