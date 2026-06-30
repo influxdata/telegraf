@@ -86,7 +86,7 @@ type workflowJob struct {
 }
 
 type workflowRun struct {
-	ID		 int64	   `json:"id"`
+	ID			 int64	   `json:"id"`
 	HeadBranch   string    `json:"head_branch"`
 	CreatedAt    time.Time `json:"created_at"`
 	RunStartedAt time.Time `json:"run_started_at"`
