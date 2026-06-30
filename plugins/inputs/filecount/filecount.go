@@ -48,9 +48,20 @@ func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
 		fc.initGlobPaths(acc)
 	}
 
+	ctx := context.Background()
+	if fc.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(fc.Timeout))
+		defer cancel()
+	}
+
 	for _, glob := range fc.globPaths {
 		for _, dir := range fc.onlyDirectories(glob.GetRoots()) {
-			fc.count(acc, dir, glob)
+			if ctx.Err() != nil {
+				fc.Log.Warn("Timeout exceeded, stopping further directory traversal")
+				return nil
+			}
+			fc.count(ctx, acc, dir, glob)
 		}
 	}
 
@@ -139,18 +150,11 @@ func (fc *FileCount) initFileFilters() {
 	fc.fileFilters = rejectNilFilters(filters)
 }
 
-func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpath.GlobPath) {
+func (fc *FileCount) count(ctx context.Context, acc telegraf.Accumulator, basedir string, glob globpath.GlobPath) {
 	childCount := make(map[string]int64)
 	childSize := make(map[string]int64)
 	oldestFileTimestamp := make(map[string]int64)
 	newestFileTimestamp := make(map[string]int64)
-
-	ctx := context.Background()
-	if fc.Timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, time.Duration(fc.Timeout))
-		defer cancel()
-	}
 
 	walkFn := func(path string, _ *godirwalk.Dirent) error {
 		if err := ctx.Err(); err != nil {
@@ -237,9 +241,9 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			fc.Log.Warnf("Timeout exceeded while walking %q", basedir)
-			return
+		} else {
+			acc.AddError(err)
 		}
-		acc.AddError(err)
 	}
 }
 
