@@ -1489,23 +1489,6 @@ func round(x float64) float64 {
 	return t
 }
 
-func getIndex(enumObj interface{}) int {
-	v := reflect.ValueOf(enumObj)
-
-	// Vérifier si le type a une méthode Values()
-	method := v.MethodByName("Values")
-	if !method.IsValid() {
-		// La méthode n'existe pas
-		return -1
-	}
-	for i, s := range method.Call(nil) {
-		if s == enumObj {
-			return i
-		}
-	}
-	return -1 // si non trouvé
-}
-
 func (e *endpoint) getExtraData(entity interface{}, fieldPath string) (interface{}, bool) {
 	v := reflect.ValueOf(entity)
 
@@ -1543,24 +1526,6 @@ func (e *endpoint) getExtraData(entity interface{}, fieldPath string) (interface
 	}
 	e.parent.Log.Warnf("Field %s of %s no interface. Skipping", fieldPath, reflect.TypeOf(entity))
 	return nil, false
-}
-
-func (e *endpoint) printStructFields(t reflect.Type, prefix string) {
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-	if t.Kind() != reflect.Struct {
-		e.parent.Log.Warnf("Not a struct:", t)
-		return
-	}
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		e.parent.Log.Warnf(prefix, "Field:", field.Name, "Type:", field.Type)
-		// Si vous voulez explorer récursivement
-		if field.Type.Kind() == reflect.Struct {
-			e.printStructFields(field.Type, prefix+">")
-		}
-	}
 }
 
 func (e *endpoint) makePropertyIdentifier(input string) string {
