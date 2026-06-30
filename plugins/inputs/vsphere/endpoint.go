@@ -151,7 +151,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.DatacenterInstances,
 			getObjects:       getDatacenters,
 			parent:           "",
-			propertieInclude: parent.DatacenterpropertieInclude,
+			propertieInclude: parent.DatacenterPropertieInclude,
 		},
 		"cluster": {
 			name:             "cluster",
@@ -170,7 +170,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.ClusterInstances,
 			getObjects:       getClusters,
 			parent:           "datacenter",
-			propertieInclude: parent.ClusterpropertieInclude,
+			propertieInclude: parent.ClusterPropertieInclude,
 		},
 		"resourcepool": {
 			name:             "resourcepool",
@@ -189,7 +189,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.ResourcePoolInstances,
 			getObjects:       getResourcePools,
 			parent:           "cluster",
-			propertieInclude: parent.ResourcePoolpropertieInclude,
+			propertieInclude: parent.ResourcePoolPropertieInclude,
 		},
 		"host": {
 			name:             "host",
@@ -208,7 +208,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.HostInstances,
 			getObjects:       getHosts,
 			parent:           "cluster",
-			propertieInclude: parent.HostpropertieInclude,
+			propertieInclude: parent.HostPropertieInclude,
 		},
 		"vm": {
 			name:             "vm",
@@ -227,7 +227,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.VMInstances,
 			getObjects:       getVMs,
 			parent:           "host",
-			propertieInclude: parent.VMpropertieInclude,
+			propertieInclude: parent.VMPropertieInclude,
 		},
 		"datastore": {
 			name:             "datastore",
@@ -245,7 +245,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.DatastoreInstances,
 			getObjects:       getDatastores,
 			parent:           "",
-			propertieInclude: parent.DatastorepropertieInclude,
+			propertieInclude: parent.DatastorePropertieInclude,
 		},
 		"vsan": {
 			name:             "vsan",
@@ -263,7 +263,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: false,
 			getObjects:       getClusters,
 			parent:           "datacenter",
-			propertieInclude: parent.VSANpropertieInclude,
+			propertieInclude: parent.VSANPropertieInclude,
 		},
 	}
 
