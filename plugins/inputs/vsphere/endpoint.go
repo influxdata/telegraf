@@ -801,7 +801,7 @@ func getVMs(ctx context.Context, e *endpoint, rf *resourceFilter, propertieInclu
 		resType:      "ResourcePool",
 		paths:        []string{"/*/host/**"},
 		excludePaths: nil}
-	resourcePools, err := getResourcePools(ctx, e, &rprf, []string{})
+	resourcePools, err := getResourcePools(ctx, e, &rprf, make([]string, 0))
 	if err != nil {
 		return nil, err
 	}
@@ -1283,23 +1283,23 @@ func (e *endpoint) collectChunk(
 
 			nValues := 0
 			alignedInfo, alignedValues := e.alignSamples(em.SampleInfo, v.Value, interval)
-			globalFields := e.populateGlobalFields(objectRef)
+			globalFields := populateGlobalFields(objectRef)
 
 			if len(globalFields) != 0 {
 				mn, fn := e.makeMetricIdentifier(prefix, "internal")
 				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(latestSample.UnixNano(), 10)
-				bucket, found := buckets[bKey]
+				_, found := buckets[bKey]
 				if !found {
 					fields := make(map[string]interface{})
 					fields[fn] = int64(1.0)
-					tags := map[string]string{}
+					tags := make(map[string]string)
 					for k, v := range t {
 						tags[k] = v
 					}
 					for k, v := range globalFields {
 						tags[k] = fmt.Sprintf("%v", v)
 					}
-					bucket = metricEntry{name: mn, ts: latestSample, fields: fields, tags: tags}
+					bucket := metricEntry{name: mn, ts: latestSample, fields: fields, tags: tags}
 					buckets[bKey] = bucket
 				}
 			}
@@ -1456,7 +1456,7 @@ func (e *endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	}
 }
 
-func (e *endpoint) populateGlobalFields(objectRef *objectRef) map[string]interface{} {
+func populateGlobalFields(objectRef *objectRef) map[string]interface{} {
 	globalFields := make(map[string]interface{})
 	for k, v := range objectRef.customProperties {
 		globalFields[k] = v
@@ -1503,20 +1503,19 @@ func (e *endpoint) getExtraData(entity interface{}, fieldPath string) (interface
 
 	fields := strings.Split(fieldPath, ".")
 	for _, field := range fields {
-		if v.Kind() == reflect.Struct {
-			v = v.FieldByName(field)
-			// Si le champ n'existe pas ou n'est pas accessible
-			if !v.IsValid() {
-				e.parent.Log.Warnf("Field %s in %s of %s not valid. Skipping", field, fieldPath, reflect.TypeOf(entity))
-				return nil, false
-			}
-			// Si c'est un pointeur, dé-référencer
-			if v.Kind() == reflect.Ptr {
-				v = v.Elem()
-			}
-		} else {
+		if v.Kind() != reflect.Struct {
 			e.parent.Log.Warnf("Field %s in %s of %s not struct %s. Skipping", field, fieldPath, reflect.TypeOf(entity), v.Kind())
 			return nil, false
+		}
+		v = v.FieldByName(field)
+		// Si le champ n'existe pas ou n'est pas accessible
+		if !v.IsValid() {
+			e.parent.Log.Warnf("Field %s in %s of %s not valid. Skipping", field, fieldPath, reflect.TypeOf(entity))
+			return nil, false
+		}
+		// Si c'est un pointeur, dé-référencer
+		if v.Kind() == reflect.Ptr {
+			v = v.Elem()
 		}
 	}
 
