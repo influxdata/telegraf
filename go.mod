@@ -175,7 +175,7 @@ require (
 	github.com/pcolladosoto/goslurm v0.1.0
 	github.com/peterbourgon/unixtransport v0.0.7
 	github.com/pion/dtls/v3 v3.1.4
-	github.com/prometheus-community/pro-bing v0.9.0
+	github.com/prometheus-community/pro-bing v0.9.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
 	github.com/prometheus/common v0.69.0
