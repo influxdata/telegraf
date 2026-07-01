@@ -228,6 +228,46 @@ func TestCases(t *testing.T) {
 	}
 }
 
+func TestAgent_SkipProcessorsBeforeDefaultsFalse(t *testing.T) {
+	c := config.NewConfig()
+	c.Agent.OmitHostname = true
+	skipAfter := false
+	c.Agent.SkipProcessorsAfterAggregators = &skipAfter
+
+	agent := NewAgent(c)
+	ctx, cancel := context.WithTimeout(t.Context(), 1*time.Second)
+	defer cancel()
+
+	require.NoError(t, agent.Run(ctx))
+	require.False(t, c.Agent.SkipProcessorsBeforeAggregators)
+}
+
+func TestAgent_SkipProcessorsAfterDefaultsFalseWhenBeforeSet(t *testing.T) {
+	c := config.NewConfig()
+	c.Agent.OmitHostname = true
+	c.Agent.SkipProcessorsBeforeAggregators = false
+
+	agent := NewAgent(c)
+	ctx, cancel := context.WithTimeout(t.Context(), 1*time.Second)
+	defer cancel()
+
+	require.NoError(t, agent.Run(ctx))
+	require.False(t, *c.Agent.SkipProcessorsAfterAggregators)
+}
+
+func TestAgent_BothSkipProcessorsAfterDefaultsToFalse(t *testing.T) {
+	c := config.NewConfig()
+	c.Agent.OmitHostname = true
+
+	agent := NewAgent(c)
+	ctx, cancel := context.WithTimeout(t.Context(), 1*time.Second)
+	defer cancel()
+
+	require.NoError(t, agent.Run(ctx))
+	require.False(t, c.Agent.SkipProcessorsBeforeAggregators)
+	require.False(t, *c.Agent.SkipProcessorsAfterAggregators)
+}
+
 // Implement a "test-mode" like call but collect the metrics
 func collect(ctx context.Context, a *Agent, wait time.Duration) ([]telegraf.Metric, error) {
 	var received []telegraf.Metric
