@@ -145,6 +145,25 @@ func TestArguments(t *testing.T) {
 	require.Equal(t, actual, arguments)
 }
 
+func TestArgumentsInterface(t *testing.T) {
+	p := Ping{
+		Log:       testutil.Logger{},
+		Count:     2,
+		Interface: "192.168.1.1",
+	}
+
+	require.Equal(t, []string{"-n", "2", "-S", "192.168.1.1", "www.google.com"}, p.args("www.google.com"))
+}
+
+func TestArgumentsNoInterface(t *testing.T) {
+	p := Ping{
+		Log:   testutil.Logger{},
+		Count: 2,
+	}
+
+	require.NotContains(t, p.args("www.google.com"), "-S")
+}
+
 var lossyPingOutput = `
 Badanie thecodinglove.com [66.6.44.4] z 9800 bajtami danych:
 Upłynął limit czasu żądania.
