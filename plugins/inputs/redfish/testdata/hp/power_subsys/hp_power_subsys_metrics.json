@@ -1,0 +1,90 @@
+{
+  "@odata.type": "#PowerSupplyMetrics.v1_2_0.PowerSupplyMetrics",
+  "Id": "Metrics",
+  "Name": "Metrics for Power Supply 1",
+  "Status": {
+    "State": "Enabled",
+    "Health": "Warning"
+  },
+  "InputVoltage": {
+    "DataSourceUri": "/redfish/v1/Chassis/1/Sensors/PS1InputVoltage",
+    "Reading": 230.2
+  },
+  "InputCurrentAmps": {
+    "DataSourceUri": "/redfish/v1/Chassis/1/Sensors/PS1InputCurrent",
+    "Reading": 5.19
+  },
+  "InputPowerWatts": {
+    "DataSourceUri": "/redfish/v1/Chassis/1/Sensors/PS1InputPower",
+    "Reading": 937.4
+  },
+  "RailVoltage": [
+    {
+      "DataSourceUri": "/redfish/v1/Chassis/1/Sensors/PS1_3VOutput",
+      "Reading": 3.31
+    },
+    {
+      "DataSourceUri": "/redfish/v1/Chassis/1/Sensors/PS1_5VOutput",
+      "Reading": 5.03
+    },
+    {
+      "DataSourceUri": "/redfish/v1/Chassis/1/Sensors/PS1_12VOutput",
+      "Reading": 12.06
+    }
+  ],
+  "RailCurrentAmps": [
+    {
+      "DataSourceUri": "/redfish/v1/Chassis/1/Sensors/PS1_3VCurrent",
+      "Reading": 9.84
+    },
+    {
+      "DataSourceUri": "/redfish/v1/Chassis/1/Sensors/PS1_5VCurrent",
+      "Reading": 1.25
+    },
+    {
+      "DataSourceUri": "/redfish/v1/Chassis/1/Sensors/PS1_12Current",
+      "Reading": 2.58
+    }
+  ],
+  "OutputPowerWatts": {
+    "DataSourceUri": "/redfish/v1/Chassis/1/Sensors/PS1OutputPower",
+    "Reading": 937.4
+  },
+  "RailPowerWatts": [
+    {
+      "DataSourceUri": "/redfish/v1/Chassis/1/Sensors/PS1_3VPower",
+      "Reading": 79.84
+    },
+    {
+      "DataSourceUri": "/redfish/v1/Chassis/1/Sensors/PS1_5VPower",
+      "Reading": 26.25
+    },
+    {
+      "DataSourceUri": "/redfish/v1/Chassis/1/Sensors/PS1_12VPower",
+      "Reading": 91.58
+    }
+  ],
+  "EnergykWh": {
+    "DataSourceUri": "/redfish/v1/Chassis/1/Sensors/PS1Energy",
+    "Reading": 325675
+  },
+  "FrequencyHz": {
+    "DataSourceUri": "/redfish/v1/Chassis/1/Sensors/PS1InputFrequency",
+    "Reading": 60
+  },
+  "TemperatureCelsius": {
+    "DataSourceUri": "/redfish/v1/Chassis/1/Sensors/PS1Temp",
+    "Reading": 43.9
+  },
+  "FanSpeedPercent": {
+    "DataSourceUri": "/redfish/v1/Chassis/1/Sensors/PS1Fan",
+    "Reading": 68,
+    "SpeedRPM": 3290
+  },
+  "Actions": {
+    "#PowerSupplyMetrics.ResetMetrics": {
+      "target": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/Bay1/Metrics/PowerSupplyMetrics.ResetMetrics"
+    }
+  },
+  "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/Bay1/Metrics"
+}

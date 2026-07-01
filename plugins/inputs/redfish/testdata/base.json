@@ -1,0 +1,68 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
+  "@odata.etag": "W/\"B4009932\"",
+  "@odata.id": "/redfish/v1/",
+  "@odata.type": "#ServiceRoot.v1_13_0.ServiceRoot",
+  "Id": "RootService",
+  "AccountService": {
+    "@odata.id": "/redfish/v1/AccountService/"
+  },
+  "CertificateService": {
+    "@odata.id": "/redfish/v1/CertificateService/"
+  },
+  "Chassis": {
+    "@odata.id": "/redfish/v1/Chassis/"
+  },
+  "ComponentIntegrity": {
+    "@odata.id": "/redfish/v1/ComponentIntegrity/"
+  },
+  "EventService": {
+    "@odata.id": "/redfish/v1/EventService/"
+  },
+  "Fabrics": {
+    "@odata.id": "/redfish/v1/Fabrics/"
+  },
+  "JsonSchemas": {
+    "@odata.id": "/redfish/v1/JsonSchemas/"
+  },
+  "Links": {
+    "Sessions": {
+      "@odata.id": "/redfish/v1/SessionService/Sessions/"
+    }
+  },
+  "Managers": {
+    "@odata.id": "/redfish/v1/Managers/"
+  },
+  "Name": "HPE RESTful Root Service",
+  "Product": "Test",
+  "ProtocolFeaturesSupported": {
+    "ExpandQuery": {
+      "ExpandAll": false,
+      "Levels": true,
+      "Links": false,
+      "MaxLevels": 1,
+      "NoLinks": true
+    },
+    "FilterQuery": true,
+    "OnlyMemberQuery": true,
+    "SelectQuery": true
+  },
+  "RedfishVersion": "1.20.0",
+  "Registries": {
+    "@odata.id": "/redfish/v1/Registries/"
+  },
+  "SessionService": {
+    "@odata.id": "/redfish/v1/SessionService/"
+  },
+  "Systems": {
+    "@odata.id": "/redfish/v1/Systems/"
+  },
+  "Tasks": {
+    "@odata.id": "/redfish/v1/TaskService/"
+  },
+  "UUID": "012345678-1234-5678-abcd-0123456789ab",
+  "UpdateService": {
+    "@odata.id": "/redfish/v1/UpdateService/"
+  },
+  "Vendor": "Test"
+}
