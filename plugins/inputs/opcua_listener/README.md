@@ -580,9 +580,9 @@ This example group configuration shows how to use group settings:
      identifier = "5678"
 
     node_ids = [
-      {identifier="Sensor1"}, // default values will be used for namespace and identifier_type
-      {namespace="2", identifier="TemperatureSensor"}, // default values will be used for identifier_type
-      {namespace="5", identifier_type="i", identifier="2002"} // no default values will be used
+      {identifier="Sensor1"}, # default values will be used for namespace and identifier_type
+      {namespace="2", identifier="TemperatureSensor"}, # default values will be used for identifier_type
+      {namespace="5", identifier_type="i", identifier="2002"} # no default values will be used
     ]
 ```
 
