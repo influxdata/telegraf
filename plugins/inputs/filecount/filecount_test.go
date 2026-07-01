@@ -176,6 +176,63 @@ func TestDirectoryWithTrailingSlash(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
+func TestTimeout(t *testing.T) {
+	fc := getNoFilterFileCount()
+	fc.Timeout = config.Duration(5 * time.Second)
+
+	tags := map[string]string{"directory": getTestdataDir()}
+	acc := testutil.Accumulator{}
+	require.NoError(t, acc.GatherError(fc.Gather))
+	require.True(t, acc.HasPoint("filecount", tags, "count", int64(9)))
+	require.True(t, acc.HasPoint("filecount", tags, "size_bytes", int64(5096)))
+}
+
+func TestTimeoutExceeded(t *testing.T) {
+	fc := getNoFilterFileCount()
+	fc.Timeout = config.Duration(1 * time.Nanosecond)
+
+	acc := testutil.Accumulator{}
+	require.NoError(t, acc.GatherError(fc.Gather))
+	require.Empty(t, acc.GetTelegrafMetrics())
+}
+
+func TestTimeoutSharedAcrossDirectories(t *testing.T) {
+	fc := getNoFilterFileCount()
+	fc.Directories = []string{getTestdataDir(), getTestdataDir() + "/subdir"}
+	fc.Timeout = config.Duration(1 * time.Nanosecond)
+
+	acc := testutil.Accumulator{}
+	require.NoError(t, acc.GatherError(fc.Gather))
+	require.Empty(t, acc.GetTelegrafMetrics())
+}
+
+func TestTimeoutGatherWideWarning(t *testing.T) {
+	logger := &testutil.CaptureLogger{}
+	fc := getNoFilterFileCount()
+	fc.Log = logger
+	fc.Directories = []string{getTestdataDir(), getTestdataDir() + "/subdir"}
+	fc.Timeout = config.Duration(1 * time.Nanosecond)
+
+	acc := testutil.Accumulator{}
+	require.NoError(t, acc.GatherError(fc.Gather))
+
+	require.Empty(t, acc.GetTelegrafMetrics())
+
+	warnings := logger.Warnings()
+	require.Len(t, warnings, 1)
+	require.Contains(t, warnings[0], "Timeout")
+}
+
+func TestTimeoutDisabled(t *testing.T) {
+	fc := getNoFilterFileCount()
+	fc.Timeout = config.Duration(0)
+
+	tags := map[string]string{"directory": getTestdataDir()}
+	acc := testutil.Accumulator{}
+	require.NoError(t, acc.GatherError(fc.Gather))
+	require.True(t, acc.HasPoint("filecount", tags, "count", int64(9)))
+}
+
 func getNoFilterFileCount() FileCount {
 	return FileCount{
 		Log:         testutil.Logger{},

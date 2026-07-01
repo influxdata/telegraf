@@ -2,6 +2,7 @@
 package filecount
 
 import (
+	"context"
 	_ "embed"
 	"errors"
 	"io/fs"
@@ -28,6 +29,7 @@ type FileCount struct {
 	FollowSymlinks bool            `toml:"follow_symlinks"`
 	Size           config.Size     `toml:"size"`
 	MTime          config.Duration `toml:"mtime"`
+	Timeout        config.Duration `toml:"timeout"`
 	Log            telegraf.Logger `toml:"-"`
 
 	fs          fileSystem
@@ -46,9 +48,20 @@ func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
 		fc.initGlobPaths(acc)
 	}
 
+	ctx := context.Background()
+	if fc.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(fc.Timeout))
+		defer cancel()
+	}
+
 	for _, glob := range fc.globPaths {
 		for _, dir := range fc.onlyDirectories(glob.GetRoots()) {
-			fc.count(acc, dir, glob)
+			if ctx.Err() != nil {
+				fc.Log.Warn("Timeout exceeded, stopping further directory traversal")
+				return nil
+			}
+			fc.count(ctx, acc, dir, glob)
 		}
 	}
 
@@ -137,13 +150,17 @@ func (fc *FileCount) initFileFilters() {
 	fc.fileFilters = rejectNilFilters(filters)
 }
 
-func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpath.GlobPath) {
+func (fc *FileCount) count(ctx context.Context, acc telegraf.Accumulator, basedir string, glob globpath.GlobPath) {
 	childCount := make(map[string]int64)
 	childSize := make(map[string]int64)
 	oldestFileTimestamp := make(map[string]int64)
 	newestFileTimestamp := make(map[string]int64)
 
 	walkFn := func(path string, _ *godirwalk.Dirent) error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
 		rel, err := filepath.Rel(basedir, path)
 		if err == nil && rel == "." {
 			return nil
@@ -222,7 +239,11 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 		},
 	})
 	if err != nil {
-		acc.AddError(err)
+		if errors.Is(err, context.DeadlineExceeded) {
+			fc.Log.Warnf("Timeout exceeded while walking %q", basedir)
+		} else {
+			acc.AddError(err)
+		}
 	}
 }
 
