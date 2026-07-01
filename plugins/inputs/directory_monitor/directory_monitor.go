@@ -423,7 +423,6 @@ func (monitor *DirectoryMonitor) moveFile(srcPath, dstBaseDir string) {
 	if err != nil {
 		monitor.Log.Errorf("Could not open output file: %s", err)
 	}
-	defer outputFile.Close()
 
 	_, err = io.Copy(outputFile, inputFile)
 	if err != nil {
@@ -447,12 +446,8 @@ func (monitor *DirectoryMonitor) moveFile(srcPath, dstBaseDir string) {
 		srcTimes, err := times.Stat(srcPath)
 		if err != nil {
 			monitor.Log.Errorf("Could not read timestamps of %q: %v", srcPath, err)
-		}
-
-		if srcTimes != nil {
-			if err := os.Chtimes(dstPath, srcTimes.AccessTime(), srcTimes.ModTime()); err != nil {
-				monitor.Log.Errorf("Could not preserve timestamps on %q: %v", dstPath, err)
-			}
+		} else if err := os.Chtimes(dstPath, srcTimes.AccessTime(), srcTimes.ModTime()); err != nil {
+			monitor.Log.Errorf("Could not preserve timestamps on %q: %v", dstPath, err)
 		}
 	}
 
