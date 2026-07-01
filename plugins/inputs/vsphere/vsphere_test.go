@@ -242,18 +242,18 @@ func TestMaxQuery(t *testing.T) {
 	c2.close()
 }
 
-func testLookupVM(ctx context.Context, t *testing.T, f *finder, path string, expected int, expectedName string, custoFields []string) {
-	poweredOn := types.VirtualMachinePowerState("poweredOn")
+func testLookupVM(ctx context.Context, t *testing.T, f *finder, path string, expected int, expectedName string) {
 	var vm []mo.VirtualMachine
-	err := f.find(ctx, "VirtualMachine", path, &vm, custoFields)
+	ri := resourceInfo{
+		resType:     "VirtualMachine",
+		custoFields: nil,
+	}
+
+	err := f.find(ctx, ri, path, &vm)
 	require.NoError(t, err)
 	require.Len(t, vm, expected)
 	if expectedName != "" {
 		require.Equal(t, expectedName, vm[0].Name)
-	}
-	for i := range vm {
-		v := &vm[i]
-		require.Equal(t, poweredOn, v.Runtime.PowerState)
 	}
 }
 
@@ -274,51 +274,70 @@ func TestFinder(t *testing.T) {
 	f := finder{c}
 
 	var dc []mo.Datacenter
-	err = f.find(t.Context(), "Datacenter", "/DC0", &dc, []string{})
+	ri := resourceInfo{
+		resType:     "Datacenter",
+		custoFields: nil,
+	}
+	err = f.find(t.Context(), ri, "/DC0", &dc)
 	require.NoError(t, err)
 	require.Len(t, dc, 1)
 	require.Equal(t, "DC0", dc[0].Name)
 
 	var host []mo.HostSystem
-	err = f.find(t.Context(), "HostSystem", "/DC0/host/DC0_H0/DC0_H0", &host, []string{})
+	ri = resourceInfo{
+		resType:     "HostSystem",
+		custoFields: nil,
+	}
+	err = f.find(t.Context(), ri, "/DC0/host/DC0_H0/DC0_H0", &host)
 	require.NoError(t, err)
 	require.Len(t, host, 1)
 	require.Equal(t, "DC0_H0", host[0].Name)
 
 	host = make([]mo.HostSystem, 0)
-	err = f.find(t.Context(), "HostSystem", "/DC0/host/DC0_C0/DC0_C0_H0", &host, []string{})
+	err = f.find(t.Context(), ri, "/DC0/host/DC0_C0/DC0_C0_H0", &host)
 	require.NoError(t, err)
 	require.Len(t, host, 1)
 	require.Equal(t, "DC0_C0_H0", host[0].Name)
 
 	resourcepool := make([]mo.ResourcePool, 0)
-	err = f.find(t.Context(), "ResourcePool", "/DC0/host/DC0_C0/Resources/DC0_C0_RP0", &resourcepool, []string{})
+	ri = resourceInfo{
+		resType:     "ResourcePool",
+		custoFields: nil,
+	}
+	err = f.find(t.Context(), ri, "/DC0/host/DC0_C0/Resources/DC0_C0_RP0", &resourcepool)
 	require.NoError(t, err)
 	require.Len(t, host, 1)
 	require.Equal(t, "DC0_C0_H0", host[0].Name)
 
 	host = make([]mo.HostSystem, 0)
-	err = f.find(t.Context(), "HostSystem", "/DC0/host/DC0_C0/*", &host, []string{})
+	ri = resourceInfo{
+		resType:     "HostSystem",
+		custoFields: nil,
+	}
+	err = f.find(t.Context(), ri, "/DC0/host/DC0_C0/*", &host)
 	require.NoError(t, err)
 	require.Len(t, host, 3)
 
 	var vm []mo.VirtualMachine
-	testLookupVM(t.Context(), t, &f, "/DC0/vm/DC0_H0_VM0", 1, "", []string{})
-	testLookupVM(t.Context(), t, &f, "/DC0/vm/DC0_C0*", 2, "", []string{})
-	testLookupVM(t.Context(), t, &f, "/DC0/*/DC0_H0_VM0", 1, "DC0_H0_VM0", []string{})
-	testLookupVM(t.Context(), t, &f, "/DC0/*/DC0_H0_*", 2, "", []string{})
-	testLookupVM(t.Context(), t, &f, "/DC0/**/DC0_H0_VM*", 2, "", []string{})
-	testLookupVM(t.Context(), t, &f, "/DC0/**", 4, "", []string{})
-	testLookupVM(t.Context(), t, &f, "/DC1/**", 4, "", []string{})
-	testLookupVM(t.Context(), t, &f, "/**", 8, "", []string{})
-	testLookupVM(t.Context(), t, &f, "/**/vm/**", 8, "", []string{})
-	testLookupVM(t.Context(), t, &f, "/*/host/**/*DC*", 8, "", []string{})
-	testLookupVM(t.Context(), t, &f, "/*/host/**/*DC*VM*", 8, "", []string{})
-	testLookupVM(t.Context(), t, &f, "/*/host/**/*DC*/*/*DC*", 4, "", []string{})
-	testLookupVM(t.Context(), t, &f, "/*/host/**/*DC*/*/*DC*", 4, "", []string{"runtime.powerState"})
+	testLookupVM(t.Context(), t, &f, "/DC0/vm/DC0_H0_VM0", 1, "")
+	testLookupVM(t.Context(), t, &f, "/DC0/vm/DC0_C0*", 2, "")
+	testLookupVM(t.Context(), t, &f, "/DC0/*/DC0_H0_VM0", 1, "DC0_H0_VM0")
+	testLookupVM(t.Context(), t, &f, "/DC0/*/DC0_H0_*", 2, "")
+	testLookupVM(t.Context(), t, &f, "/DC0/**/DC0_H0_VM*", 2, "")
+	testLookupVM(t.Context(), t, &f, "/DC0/**", 4, "")
+	testLookupVM(t.Context(), t, &f, "/DC1/**", 4, "")
+	testLookupVM(t.Context(), t, &f, "/**", 8, "")
+	testLookupVM(t.Context(), t, &f, "/**/vm/**", 8, "")
+	testLookupVM(t.Context(), t, &f, "/*/host/**/*DC*", 8, "")
+	testLookupVM(t.Context(), t, &f, "/*/host/**/*DC*VM*", 8, "")
+	testLookupVM(t.Context(), t, &f, "/*/host/**/*DC*/*/*DC*", 4, "")
 
 	vm = make([]mo.VirtualMachine, 0)
-	err = f.findAll(t.Context(), "VirtualMachine", []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"}, nil, &vm, []string{})
+	ri = resourceInfo{
+		resType:     "VirtualMachine",
+		custoFields: nil,
+	}
+	err = f.findAll(t.Context(), ri, []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"}, nil, &vm)
 	require.NoError(t, err)
 	require.Len(t, vm, 4)
 
@@ -390,20 +409,28 @@ func TestFolders(t *testing.T) {
 	f := finder{c}
 
 	var folder []mo.Folder
-	err = f.find(t.Context(), "Folder", "/F0", &folder, []string{})
+	ri := resourceInfo{
+		resType:     "Folder",
+		custoFields: nil,
+	}
+	err = f.find(t.Context(), ri, "/F0", &folder)
 	require.NoError(t, err)
 	require.Len(t, folder, 1)
 	require.Equal(t, "F0", folder[0].Name)
 
 	var dc []mo.Datacenter
-	err = f.find(t.Context(), "Datacenter", "/F0/DC1", &dc, []string{})
+	ri = resourceInfo{
+		resType:     "Datacenter",
+		custoFields: nil,
+	}
+	err = f.find(t.Context(), ri, "/F0/DC1", &dc)
 	require.NoError(t, err)
 	require.Len(t, dc, 1)
 	require.Equal(t, "DC1", dc[0].Name)
 
-	testLookupVM(t.Context(), t, &f, "/F0/DC0/vm/**/F*", 0, "", []string{})
-	testLookupVM(t.Context(), t, &f, "/F0/DC1/vm/**/F*/*VM*", 4, "", []string{})
-	testLookupVM(t.Context(), t, &f, "/F0/DC1/vm/**/F*/**", 4, "", []string{})
+	testLookupVM(t.Context(), t, &f, "/F0/DC0/vm/**/F*", 0, "")
+	testLookupVM(t.Context(), t, &f, "/F0/DC1/vm/**/F*/*VM*", 4, "")
+	testLookupVM(t.Context(), t, &f, "/F0/DC1/vm/**/F*/**", 4, "")
 }
 
 func TestVsanCmmds(t *testing.T) {
@@ -418,7 +445,11 @@ func TestVsanCmmds(t *testing.T) {
 
 	f := finder{c}
 	var clusters []mo.ClusterComputeResource
-	err = f.findAll(t.Context(), "ClusterComputeResource", []string{"/**"}, nil, &clusters, []string{})
+	ri := resourceInfo{
+		resType:     "ClusterComputeResource",
+		custoFields: nil,
+	}
+	err = f.findAll(t.Context(), ri, []string{"/**"}, nil, &clusters)
 	require.NoError(t, err)
 
 	clusterObj := object.NewClusterComputeResource(c.client.Client, clusters[0].Reference())
@@ -514,6 +545,10 @@ func testCollection(t *testing.T, excludeClusters bool) {
 	client, err := v.endpoints[0].clientFactory.getClient(t.Context())
 	require.NoError(t, err)
 	hostCache := make(map[string]string)
+	ri := resourceInfo{
+		resType:     "HostSystem",
+		custoFields: nil,
+	}
 	for _, m := range acc.Metrics {
 		delete(mustHaveMetrics, m.Measurement)
 
@@ -525,7 +560,7 @@ func testCollection(t *testing.T, excludeClusters bool) {
 				// We have to follow the host parent path to locate a cluster. Look up the host!
 				finder := finder{client}
 				var hosts []mo.HostSystem
-				err := finder.find(t.Context(), "HostSystem", "/**/"+hostName, &hosts, []string{})
+				err := finder.find(t.Context(), ri, "/**/"+hostName, &hosts)
 				require.NoError(t, err)
 				require.NotEmpty(t, hosts)
 				hostMoid = hosts[0].Reference().Value

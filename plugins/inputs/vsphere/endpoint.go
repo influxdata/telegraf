@@ -492,7 +492,8 @@ func (e *endpoint) discover(ctx context.Context) error {
 				resType:      res.vcName,
 				paths:        res.paths,
 				excludePaths: res.excludePaths,
-				custoFields:  res.propertieInclude}
+				custoFields:  res.propertieInclude,
+			}
 
 			ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.parent.Timeout))
 			objects, err := res.getObjects(ctx1, e, &rf, res.propertieInclude)
@@ -647,11 +648,11 @@ func (e *endpoint) complexMetadataSelect(ctx context.Context, res *resourceKind,
 	te.wait()
 }
 
-func getDatacenters(ctx context.Context, e *endpoint, resourceFilter *resourceFilter, propertieInclude []string) (objectMap, error) {
+func getDatacenters(ctx context.Context, e *endpoint, rf *resourceFilter, propertieInclude []string) (objectMap, error) {
 	var resources []mo.Datacenter
 	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.parent.Timeout))
 	defer cancel1()
-	err := resourceFilter.findAll(ctx1, &resources)
+	err := rf.findAll(ctx1, &resources)
 	if err != nil {
 		return nil, err
 	}
@@ -671,11 +672,11 @@ func getDatacenters(ctx context.Context, e *endpoint, resourceFilter *resourceFi
 	return m, nil
 }
 
-func getClusters(ctx context.Context, e *endpoint, resourceFilter *resourceFilter, propertieInclude []string) (objectMap, error) {
+func getClusters(ctx context.Context, e *endpoint, rf *resourceFilter, propertieInclude []string) (objectMap, error) {
 	var resources []mo.ClusterComputeResource
 	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.parent.Timeout))
 	defer cancel1()
-	err := resourceFilter.findAll(ctx1, &resources)
+	err := rf.findAll(ctx1, &resources)
 	if err != nil {
 		return nil, err
 	}
@@ -726,9 +727,9 @@ func getClusters(ctx context.Context, e *endpoint, resourceFilter *resourceFilte
 }
 
 // noinspection GoUnusedParameter
-func getResourcePools(ctx context.Context, e *endpoint, resourceFilter *resourceFilter, propertieInclude []string) (objectMap, error) {
+func getResourcePools(ctx context.Context, e *endpoint, rf *resourceFilter, propertieInclude []string) (objectMap, error) {
 	var resources []mo.ResourcePool
-	err := resourceFilter.findAll(ctx, &resources)
+	err := rf.findAll(ctx, &resources)
 	if err != nil {
 		return nil, err
 	}
@@ -758,9 +759,9 @@ func getResourcePoolName(rp types.ManagedObjectReference, rps objectMap) string 
 }
 
 // noinspection GoUnusedParameter
-func getHosts(ctx context.Context, e *endpoint, resourceFilter *resourceFilter, propertieInclude []string) (objectMap, error) {
+func getHosts(ctx context.Context, e *endpoint, rf *resourceFilter, propertieInclude []string) (objectMap, error) {
 	var resources []mo.HostSystem
-	err := resourceFilter.findAll(ctx, &resources)
+	err := rf.findAll(ctx, &resources)
 	if err != nil {
 		return nil, err
 	}
@@ -796,12 +797,14 @@ func getVMs(ctx context.Context, e *endpoint, rf *resourceFilter, propertieInclu
 		return nil, err
 	}
 	// Create a ResourcePool Filter and get the list of Resource Pools
-	rprf := resourceFilter{
+	rfrp := resourceFilter{
 		finder:       &finder{client},
 		resType:      "ResourcePool",
 		paths:        []string{"/*/host/**"},
-		excludePaths: nil}
-	resourcePools, err := getResourcePools(ctx, e, &rprf, make([]string, 0))
+		excludePaths: nil,
+		custoFields:  nil,
+	}
+	resourcePools, err := getResourcePools(ctx, e, &rfrp, make([]string, 0))
 	if err != nil {
 		return nil, err
 	}
@@ -877,11 +880,11 @@ func getVMs(ctx context.Context, e *endpoint, rf *resourceFilter, propertieInclu
 	return m, nil
 }
 
-func getDatastores(ctx context.Context, e *endpoint, resourceFilter *resourceFilter, propertieInclude []string) (objectMap, error) {
+func getDatastores(ctx context.Context, e *endpoint, rf *resourceFilter, propertieInclude []string) (objectMap, error) {
 	var resources []mo.Datastore
 	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.parent.Timeout))
 	defer cancel1()
-	err := resourceFilter.findAll(ctx1, &resources)
+	err := rf.findAll(ctx1, &resources)
 	if err != nil {
 		return nil, err
 	}
