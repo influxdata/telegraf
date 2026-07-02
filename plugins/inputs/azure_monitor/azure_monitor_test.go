@@ -49,6 +49,7 @@ func TestInit_ResourceTargetsOnly(t *testing.T) {
 	}
 
 	require.NoError(t, am.Init())
+	require.NoError(t, am.Start(nil))
 	require.Len(t, am.receiver.resources, 8)
 
 	for _, target := range am.receiver.resources {
@@ -148,6 +149,7 @@ func TestInit_ResourceGroupTargetsOnly(t *testing.T) {
 	}
 
 	require.NoError(t, am.Init())
+	require.NoError(t, am.Start(nil))
 	require.Len(t, am.receiver.resources, 9)
 
 	for _, target := range am.receiver.resources {
@@ -269,6 +271,7 @@ func TestInit_SubscriptionTargetsOnly(t *testing.T) {
 	}
 
 	require.NoError(t, am.Init())
+	require.NoError(t, am.Start(nil))
 	require.Len(t, am.receiver.resources, 11)
 
 	for _, target := range am.receiver.resources {
@@ -414,6 +417,7 @@ func TestInit_AllTargetTypes(t *testing.T) {
 	}
 
 	require.NoError(t, am.Init())
+	require.NoError(t, am.Start(nil))
 	require.Len(t, am.receiver.resources, 28)
 }
 
@@ -504,7 +508,8 @@ func TestInit_ResourceTargetWithInvalidResourceID(t *testing.T) {
 	am.Log = testutil.Logger{}
 	am.factory = &mockClientFactory{}
 
-	require.Error(t, am.Init())
+	require.NoError(t, am.Init())
+	require.Error(t, am.Start(nil))
 }
 
 func TestInit_ResourceTargetWithInvalidMetric(t *testing.T) {
@@ -519,7 +524,8 @@ func TestInit_ResourceTargetWithInvalidMetric(t *testing.T) {
 	am.Log = testutil.Logger{}
 	am.factory = &mockClientFactory{}
 
-	require.Error(t, am.Init())
+	require.NoError(t, am.Init())
+	require.Error(t, am.Start(nil))
 }
 
 func TestInit_ResourceTargetWithInvalidAggregation(t *testing.T) {
@@ -534,7 +540,8 @@ func TestInit_ResourceTargetWithInvalidAggregation(t *testing.T) {
 	am.Log = testutil.Logger{}
 	am.factory = &mockClientFactory{}
 
-	require.Error(t, am.Init())
+	require.NoError(t, am.Init())
+	require.Error(t, am.Start(nil))
 }
 
 func TestInit_ResourceGroupTargetWithoutResourceGroup(t *testing.T) {
@@ -579,7 +586,8 @@ func TestInit_ResourceGroupTargetWithInvalidResourceGroup(t *testing.T) {
 	am.Log = testutil.Logger{}
 	am.factory = &mockClientFactory{}
 
-	require.Error(t, am.Init())
+	require.NoError(t, am.Init())
+	require.Error(t, am.Start(nil))
 }
 
 func TestInit_ResourceGroupTargetWithInvalidResourceType(t *testing.T) {
@@ -594,7 +602,8 @@ func TestInit_ResourceGroupTargetWithInvalidResourceType(t *testing.T) {
 	am.Log = testutil.Logger{}
 	am.factory = &mockClientFactory{}
 
-	require.Error(t, am.Init())
+	require.NoError(t, am.Init())
+	require.Error(t, am.Start(nil))
 }
 
 func TestInit_ResourceGroupTargetWithInvalidMetric(t *testing.T) {
@@ -609,7 +618,8 @@ func TestInit_ResourceGroupTargetWithInvalidMetric(t *testing.T) {
 	am.Log = testutil.Logger{}
 	am.factory = &mockClientFactory{}
 
-	require.Error(t, am.Init())
+	require.NoError(t, am.Init())
+	require.Error(t, am.Start(nil))
 }
 
 func TestInit_ResourceGroupTargetWithInvalidAggregation(t *testing.T) {
@@ -624,7 +634,8 @@ func TestInit_ResourceGroupTargetWithInvalidAggregation(t *testing.T) {
 	am.Log = testutil.Logger{}
 	am.factory = &mockClientFactory{}
 
-	require.Error(t, am.Init())
+	require.NoError(t, am.Init())
+	require.Error(t, am.Start(nil))
 }
 
 func TestInit_ResourceGroupTargetWithoutResources(t *testing.T) {
@@ -654,7 +665,8 @@ func TestInit_ResourceGroupTargetNoResourceFound(t *testing.T) {
 	am.Log = testutil.Logger{}
 	am.factory = &mockClientFactory{}
 
-	require.Error(t, am.Init())
+	require.NoError(t, am.Init())
+	require.Error(t, am.Start(nil))
 }
 
 func TestInit_SubscriptionTargetWithoutResourceType(t *testing.T) {
@@ -684,7 +696,8 @@ func TestInit_SubscriptionTargetWithInvalidResourceType(t *testing.T) {
 	am.Log = testutil.Logger{}
 	am.factory = &mockClientFactory{}
 
-	require.Error(t, am.Init())
+	require.NoError(t, am.Init())
+	require.Error(t, am.Start(nil))
 }
 
 func TestInit_SubscriptionTargetWithInvalidMetric(t *testing.T) {
@@ -699,7 +712,8 @@ func TestInit_SubscriptionTargetWithInvalidMetric(t *testing.T) {
 	am.Log = testutil.Logger{}
 	am.factory = &mockClientFactory{}
 
-	require.Error(t, am.Init())
+	require.NoError(t, am.Init())
+	require.Error(t, am.Start(nil))
 }
 
 func TestInit_SubscriptionTargetWithInvalidAggregation(t *testing.T) {
@@ -714,7 +728,8 @@ func TestInit_SubscriptionTargetWithInvalidAggregation(t *testing.T) {
 	am.Log = testutil.Logger{}
 	am.factory = &mockClientFactory{}
 
-	require.Error(t, am.Init())
+	require.NoError(t, am.Init())
+	require.Error(t, am.Start(nil))
 }
 
 func TestInit_SubscriptionTargetNoResourceFound(t *testing.T) {
@@ -729,10 +744,11 @@ func TestInit_SubscriptionTargetNoResourceFound(t *testing.T) {
 	am.Log = testutil.Logger{}
 	am.factory = &mockClientFactory{}
 
-	require.Error(t, am.Init())
+	require.NoError(t, am.Init())
+	require.Error(t, am.Start(nil))
 }
 
-func TestInit_BadCredentials(t *testing.T) {
+func TestStartBadCredentials(t *testing.T) {
 	file, err := os.ReadFile("testdata/toml/init_bad_credentials.toml")
 	require.NoError(t, err)
 	require.NotNil(t, file)
@@ -743,7 +759,8 @@ func TestInit_BadCredentials(t *testing.T) {
 
 	am.Log = testutil.Logger{}
 	am.factory = &azureFactory{}
-	require.Error(t, am.Init())
+	require.NoError(t, am.Init())
+	require.Error(t, am.Start(nil))
 }
 
 func TestGather_Success(t *testing.T) {
@@ -759,6 +776,7 @@ func TestGather_Success(t *testing.T) {
 	am.factory = &mockClientFactory{}
 
 	require.NoError(t, am.Init())
+	require.NoError(t, am.Start(nil))
 
 	expectedResource1Metric1Name := "azure_monitor_microsoft_test_type1_metric1"
 	expectedResource1Metric1MetricFields := make(map[string]interface{})
@@ -828,6 +846,7 @@ func TestGather_China_Success(t *testing.T) {
 	am.factory = &mockClientFactory{}
 
 	require.NoError(t, am.Init())
+	require.NoError(t, am.Start(nil))
 }
 
 func TestGather_Government_Success(t *testing.T) {
@@ -843,6 +862,7 @@ func TestGather_Government_Success(t *testing.T) {
 	am.factory = &mockClientFactory{}
 
 	require.NoError(t, am.Init())
+	require.NoError(t, am.Start(nil))
 }
 
 func TestGather_Public_Success(t *testing.T) {
@@ -858,6 +878,7 @@ func TestGather_Public_Success(t *testing.T) {
 	am.factory = &mockClientFactory{}
 
 	require.NoError(t, am.Init())
+	require.NoError(t, am.Start(nil))
 }
 
 type mockClientFactory struct{}
