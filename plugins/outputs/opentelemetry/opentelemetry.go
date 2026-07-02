@@ -34,12 +34,13 @@ type OpenTelemetry struct {
 	EncodingType   string `toml:"encoding_type"`
 
 	tls.ClientConfig
-	Timeout     config.Duration   `toml:"timeout"`
-	Compression string            `toml:"compression"`
-	Token       config.Secret     `toml:"token"`
-	Headers     map[string]string `toml:"headers"`
-	Attributes  map[string]string `toml:"attributes"`
-	Coralogix   *CoralogixConfig  `toml:"coralogix"`
+	Timeout           config.Duration   `toml:"timeout"`
+	Compression       string            `toml:"compression"`
+	OtelNameSeparator string            `toml:"otel_name_separator"`
+	Token             config.Secret     `toml:"token"`
+	Headers           map[string]string `toml:"headers"`
+	Attributes        map[string]string `toml:"attributes"`
+	Coralogix         *CoralogixConfig  `toml:"coralogix"`
 	proxy.HTTPProxy
 	proxy.TCPProxy
 
@@ -105,7 +106,7 @@ func (o *OpenTelemetry) Connect() error {
 		o.Headers["Authorization"] = "Bearer " + o.Coralogix.PrivateKey
 	}
 
-	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(logger)
+	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetricsWithSeparator(logger, o.OtelNameSeparator)
 	if err != nil {
 		return err
 	}
@@ -232,17 +233,19 @@ func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 }
 
 const (
-	defaultServiceAddress = "localhost:4317"
-	defaultTimeout        = config.Duration(5 * time.Second)
-	defaultCompression    = "gzip"
+	defaultServiceAddress    = "localhost:4317"
+	defaultTimeout           = config.Duration(5 * time.Second)
+	defaultCompression       = "gzip"
+	defaultOtelNameSeparator = "_"
 )
 
 func init() {
 	outputs.Add("opentelemetry", func() telegraf.Output {
 		return &OpenTelemetry{
-			ServiceAddress: defaultServiceAddress,
-			Timeout:        defaultTimeout,
-			Compression:    defaultCompression,
+			ServiceAddress:    defaultServiceAddress,
+			Timeout:           defaultTimeout,
+			Compression:       defaultCompression,
+			OtelNameSeparator: defaultOtelNameSeparator,
 		}
 	})
 }
