@@ -23,6 +23,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -282,6 +283,35 @@ func TestOpenTelemetryHTTPJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	require.JSONEq(t, string(expectJSON), string(gotJSON))
+}
+
+func TestConnectInvalidProxy(t *testing.T) {
+	tests := []struct {
+		name   string
+		plugin *OpenTelemetry
+	}{
+		{
+			name: "grpc",
+			plugin: &OpenTelemetry{
+				ServiceAddress: "localhost:4317",
+				TCPProxy:       proxy.TCPProxy{UseProxy: true, ProxyURL: "://invalid"},
+				Log:            testutil.Logger{},
+			},
+		},
+		{
+			name: "http",
+			plugin: &OpenTelemetry{
+				ServiceAddress: "http://localhost:4318",
+				HTTPProxy:      proxy.HTTPProxy{HTTPProxyURL: "://invalid"},
+				Log:            testutil.Logger{},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.ErrorContains(t, tt.plugin.Connect(), "creating proxy failed:")
+		})
+	}
 }
 
 var _ pmetricotlp.GRPCServer = (*mockOtelService)(nil)
