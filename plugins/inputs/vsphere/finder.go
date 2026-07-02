@@ -29,20 +29,27 @@ type resourceFilter struct {
 	resType      string
 	paths        []string
 	excludePaths []string
+	custoFields  []string
+}
+
+// resourceInfo is a utility class grouping a type and relevant parameters.
+type resourceInfo struct {
+	resType     string
+	custoFields []string
 }
 
 // findAll returns the union of resources found given the supplied resource type and paths.
-func (f *finder) findAll(ctx context.Context, resType string, paths, excludePaths []string, dst interface{}) error {
+func (f *finder) findAll(ctx context.Context, resourceInfo resourceInfo, paths, excludePaths []string, dst interface{}) error {
 	objs := make(map[string]types.ObjectContent)
 	for _, p := range paths {
-		if err := f.findResources(ctx, resType, p, objs); err != nil {
+		if err := f.findResources(ctx, resourceInfo, p, objs); err != nil {
 			return err
 		}
 	}
 	if len(excludePaths) > 0 {
 		excludes := make(map[string]types.ObjectContent)
 		for _, p := range excludePaths {
-			if err := f.findResources(ctx, resType, p, excludes); err != nil {
+			if err := f.findResources(ctx, resourceInfo, p, excludes); err != nil {
 				return err
 			}
 		}
@@ -54,30 +61,30 @@ func (f *finder) findAll(ctx context.Context, resType string, paths, excludePath
 }
 
 // find returns the resources matching the specified path.
-func (f *finder) find(ctx context.Context, resType, path string, dst interface{}) error {
+func (f *finder) find(ctx context.Context, resourceInfo resourceInfo, path string, dst interface{}) error {
 	objs := make(map[string]types.ObjectContent)
-	err := f.findResources(ctx, resType, path, objs)
+	err := f.findResources(ctx, resourceInfo, path, objs)
 	if err != nil {
 		return err
 	}
 	return objectContentToTypedArray(objs, dst)
 }
 
-func (f *finder) findResources(ctx context.Context, resType, path string, objs map[string]types.ObjectContent) error {
+func (f *finder) findResources(ctx context.Context, resourceInfo resourceInfo, path string, objs map[string]types.ObjectContent) error {
 	p := strings.Split(path, "/")
 	flt := make([]property.Match, len(p)-1)
 	for i := 1; i < len(p); i++ {
 		flt[i-1] = property.Match{"name": p[i]}
 	}
-	err := f.descend(ctx, f.client.client.ServiceContent.RootFolder, resType, flt, 0, objs)
+	err := f.descend(ctx, f.client.client.ServiceContent.RootFolder, resourceInfo, flt, 0, objs)
 	if err != nil {
 		return err
 	}
-	f.client.log.Debugf("Find(%s, %s) returned %d objects", resType, path, len(objs))
+	f.client.log.Debugf("Find(%s, %s) returned %d objects", resourceInfo.resType, path, len(objs))
 	return nil
 }
 
-func (f *finder) descend(ctx context.Context, root types.ManagedObjectReference, resType string,
+func (f *finder) descend(ctx context.Context, root types.ManagedObjectReference, resourceInfo resourceInfo,
 	tokens []property.Match, pos int, objs map[string]types.ObjectContent) error {
 	isLeaf := pos == len(tokens)-1
 
@@ -107,18 +114,20 @@ func (f *finder) descend(ctx context.Context, root types.ManagedObjectReference,
 
 	objectTypes := ct
 	if isLeaf {
-		if af, ok := addFields[resType]; ok {
+		if af, ok := addFields[resourceInfo.resType]; ok {
 			fields = append(fields, af...)
 		}
+		fields = append(fields, resourceInfo.custoFields...)
+		uniqueFields := removeDuplicates(fields)
 		if recurse {
 			// Special case: The last token is a recursive wildcard, so we can grab everything
 			// recursively in a single call.
-			v2, err := m.CreateContainerView(ctx, root, []string{resType}, true)
+			v2, err := m.CreateContainerView(ctx, root, []string{resourceInfo.resType}, true)
 			if err != nil {
 				return err
 			}
 			defer v2.Destroy(ctx) //nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
-			err = v2.Retrieve(ctx, []string{resType}, fields, &content)
+			err = v2.Retrieve(ctx, []string{resourceInfo.resType}, uniqueFields, &content)
 			if err != nil {
 				return err
 			}
@@ -127,7 +136,7 @@ func (f *finder) descend(ctx context.Context, root types.ManagedObjectReference,
 			}
 			return nil
 		}
-		objectTypes = []string{resType} // Only load wanted object type at leaf level
+		objectTypes = []string{resourceInfo.resType} // Only load wanted object type at leaf level
 	}
 	err = v.Retrieve(ctx, objectTypes, fields, &content)
 	if err != nil {
@@ -145,7 +154,7 @@ func (f *finder) descend(ctx context.Context, root types.ManagedObjectReference,
 			continue
 		}
 
-		if c.Obj.Type == resType && isLeaf {
+		if c.Obj.Type == resourceInfo.resType && isLeaf {
 			// We found what we're looking for. Consider it a leaf and stop descending
 			objs[c.Obj.String()] = c
 			continue
@@ -161,7 +170,7 @@ func (f *finder) descend(ctx context.Context, root types.ManagedObjectReference,
 				// Rerun the entire level as a leaf. This is needed since all properties aren't loaded
 				// when we're processing non-leaf nodes.
 				if pos == len(tokens)-2 {
-					if c.Obj.Type == resType {
+					if c.Obj.Type == resourceInfo.resType {
 						rerunAsLeaf = true
 						continue
 					}
@@ -175,7 +184,7 @@ func (f *finder) descend(ctx context.Context, root types.ManagedObjectReference,
 			// The normal case: Advance to next token before descending
 			inc = 1
 		}
-		err := f.descend(ctx, c.Obj, resType, tokens, pos+inc, objs)
+		err := f.descend(ctx, c.Obj, resourceInfo, tokens, pos+inc, objs)
 		if err != nil {
 			return err
 		}
@@ -185,7 +194,7 @@ func (f *finder) descend(ctx context.Context, root types.ManagedObjectReference,
 		// We're at a "pseudo leaf", i.e. we looked ahead a token and found that this level contains leaf nodes.
 		// Rerun the entire level as a leaf to get those nodes. This will only be executed when pos is one token
 		// before the last, to pos+1 will always point to a leaf token.
-		return f.descend(ctx, root, resType, tokens, pos+1, objs)
+		return f.descend(ctx, root, resourceInfo, tokens, pos+1, objs)
 	}
 
 	return nil
@@ -224,7 +233,11 @@ func objectContentToTypedArray(objs map[string]types.ObjectContent, dst interfac
 
 // findAll finds all resources matching the paths that were specified upon creation of the resourceFilter.
 func (r *resourceFilter) findAll(ctx context.Context, dst interface{}) error {
-	return r.finder.findAll(ctx, r.resType, r.paths, r.excludePaths, dst)
+	resourceInfo := resourceInfo{
+		resType:     r.resType,
+		custoFields: r.custoFields}
+
+	return r.finder.findAll(ctx, resourceInfo, r.paths, r.excludePaths, dst)
 }
 
 func matchName(f property.Match, props []types.DynamicProperty) bool {
@@ -273,4 +286,16 @@ func init() {
 		"Folder":          nil,
 		"VirtualApp":      nil,
 	}
+}
+
+func removeDuplicates(input []string) []string {
+	seen := make(map[string]struct{})
+	var result []string
+	for _, v := range input {
+		if _, exists := seen[v]; !exists {
+			seen[v] = struct{}{}
+			result = append(result, v)
+		}
+	}
+	return result
 }
