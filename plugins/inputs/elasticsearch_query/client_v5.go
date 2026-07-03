@@ -173,6 +173,10 @@ func (*clientV5) buildQueries(aggregation *aggregation) error {
 
 func (c *clientV5) query(ctx context.Context, aggregation *aggregation) (interface{}, int64, error) {
 	// Type assert client-specific data
+	// This can only be the expected type as it is set by this code with exactly
+	// the expected type. If the assertion fails code will panic here but that's
+	// okay as it can only happen on programming errors e.g. by mixing different
+	// client versions!
 	queries := aggregation.queries.([]queryDataV5)
 
 	now := time.Now().UTC()

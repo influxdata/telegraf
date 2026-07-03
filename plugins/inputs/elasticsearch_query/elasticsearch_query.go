@@ -58,8 +58,8 @@ type aggregation struct {
 	MissingTagValue   string          `toml:"missing_tag_value"`
 
 	mapMetricFields map[string]string
-	queries         interface{}
 	measurements    map[string]map[string]string
+	queries         interface{} // client specific data to execute the query
 }
 
 func (*ElasticsearchQuery) SampleConfig() string {
