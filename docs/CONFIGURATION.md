@@ -776,7 +776,7 @@ metrics entering the plugin or on the metrics it produces.
   selectors are handed to the processor (with modifiers already applied), while
   metrics that do not match bypass the processor and are passed on unchanged.
 
-- **Aggregator plugins** apply filters *before* the metric is passed to `Add`.
+- **Aggregator plugins** apply filters *before* aggregation.
   Selected metrics (with modifiers applied) are fed into the aggregation, while
   metrics that do not match are passed downstream. Whether the original,
   matching metrics are also forwarded to subsequent output plugins is controlled
@@ -786,12 +786,9 @@ metrics entering the plugin or on the metrics it produces.
   selectors, with their tags and fields adjusted by any modifiers, are sent to
   the remote destination.
 
-In all cases, selectors ([`namepass`/`namedrop`](#selectors),
-[`tagpass`/`tagdrop`](#selectors), [`fieldpass`/`fielddrop`](#selectors), and
-[`metricpass`](#selectors)) decide *whether* a metric is handled by the plugin,
-while modifiers ([`fieldinclude`/`fieldexclude`](#modifiers) and
-[`taginclude`/`tagexclude`](#modifiers)) decide *which tags and fields* remain
-on the metrics that are handled.
+In all cases, [selectors](#selectors) determine *whether* a metric is handled
+by the plugin, while [modifiers](#modifiers)) determine *which tags and fields*
+remain on the metrics passed to the plugin.
 
 ### Filtering Examples
 
