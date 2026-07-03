@@ -435,13 +435,13 @@ func TestOpenTelemetrySeparatorHTTPProtobuf(t *testing.T) {
 	defer server.Close()
 
 	plugin := &OpenTelemetry{
-		ServiceAddress:    server.URL,
-		EncodingType:      "protobuf",
-		Timeout:           config.Duration(time.Second),
-		Attributes:        map[string]string{"attr-key": "attr-val"},
-		Compression:       "none",
-		OtelNameSeparator: ".",
-		Log:               testutil.Logger{},
+		ServiceAddress: server.URL,
+		EncodingType:   "protobuf",
+		Timeout:        config.Duration(time.Second),
+		Attributes:     map[string]string{"attr-key": "attr-val"},
+		Compression:    "none",
+		NameSeparator:  ".",
+		Log:            testutil.Logger{},
 	}
 	require.NoError(t, plugin.Connect())
 
@@ -531,13 +531,13 @@ func TestOpenTelemetrySeparatorHTTPJSON(t *testing.T) {
 	defer server.Close()
 
 	plugin := &OpenTelemetry{
-		ServiceAddress:    server.URL,
-		EncodingType:      "json",
-		Timeout:           config.Duration(time.Second),
-		Attributes:        map[string]string{"attr-key": "attr-val"},
-		Compression:       "none",
-		OtelNameSeparator: ".",
-		Log:               testutil.Logger{},
+		ServiceAddress: server.URL,
+		EncodingType:   "json",
+		Timeout:        config.Duration(time.Second),
+		Attributes:     map[string]string{"attr-key": "attr-val"},
+		Compression:    "none",
+		NameSeparator:  ".",
+		Log:            testutil.Logger{},
 	}
 	require.NoError(t, plugin.Connect())
 
