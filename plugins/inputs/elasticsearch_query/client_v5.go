@@ -55,11 +55,14 @@ func (e *ElasticsearchQuery) newClientV5() (client, error) {
 }
 
 func (c *clientV5) close() {
-	if c.httpClient == nil {
-		return
+	if c.client != nil {
+		c.client.Stop()
+		c.client = nil
 	}
-	c.httpClient.CloseIdleConnections()
-	c.httpClient = nil
+	if c.httpClient != nil {
+		c.httpClient.CloseIdleConnections()
+		c.httpClient = nil
+	}
 }
 
 func (c *clientV5) version() (string, error) {
