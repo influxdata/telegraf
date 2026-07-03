@@ -29,7 +29,7 @@ func (e *ElasticsearchQuery) newClientV5() (client, error) {
 
 	// Create a new ElasticSearch client
 	clientOptions := []elastic5.ClientOptionFunc{
-		elastic5.SetHttpClient(e.httpclient),
+		elastic5.SetHttpClient(httpClient),
 		elastic5.SetSniff(e.EnableSniffer),
 		elastic5.SetURL(e.URLs...),
 		elastic5.SetHealthcheckInterval(time.Duration(e.HealthCheckInterval)),

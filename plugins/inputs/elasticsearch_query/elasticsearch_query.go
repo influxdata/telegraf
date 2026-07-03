@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"maps"
-	"net/http"
 	"sync"
 	"time"
 
@@ -42,8 +41,7 @@ type ElasticsearchQuery struct {
 	Log                 telegraf.Logger `toml:"-"`
 	common_http.HTTPClientConfig
 
-	httpclient *http.Client
-	client     client
+	client client
 }
 
 type aggregation struct {
