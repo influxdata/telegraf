@@ -4,22 +4,29 @@ package elasticsearch_query
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
-	"net/http"
 	"sync"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	elastic5 "gopkg.in/olivere/elastic.v5"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+type client interface {
+	version() (string, error)
+	isRunning() bool
+	close()
+	buildQueries(aggregation *aggregation) error
+	getFieldMapping(context.Context, string, string) (map[string]interface{}, error)
+	query(context.Context, *aggregation) (interface{}, int64, error)
+	aggregate(telegraf.Accumulator, string, map[string]string, interface{}) error
+}
 
 //go:embed sample.conf
 var sampleConfig string
@@ -34,24 +41,25 @@ type ElasticsearchQuery struct {
 	Log                 telegraf.Logger `toml:"-"`
 	common_http.HTTPClientConfig
 
-	httpclient *http.Client
-	client     *elastic5.Client
+	client client
 }
 
 type aggregation struct {
-	Index                string          `toml:"index"`
-	MeasurementName      string          `toml:"measurement_name"`
-	DateField            string          `toml:"date_field"`
-	DateFieldFormat      string          `toml:"date_field_custom_format"`
-	QueryPeriod          config.Duration `toml:"query_period"`
-	FilterQuery          string          `toml:"filter_query"`
-	MetricFields         []string        `toml:"metric_fields"`
-	MetricFunction       string          `toml:"metric_function"`
-	Tags                 []string        `toml:"tags"`
-	IncludeMissingTag    bool            `toml:"include_missing_tag"`
-	MissingTagValue      string          `toml:"missing_tag_value"`
-	mapMetricFields      map[string]string
-	aggregationQueryList []queryData
+	Index             string          `toml:"index"`
+	MeasurementName   string          `toml:"measurement_name"`
+	DateField         string          `toml:"date_field"`
+	DateFieldFormat   string          `toml:"date_field_custom_format"`
+	QueryPeriod       config.Duration `toml:"query_period"`
+	FilterQuery       string          `toml:"filter_query"`
+	MetricFields      []string        `toml:"metric_fields"`
+	MetricFunction    string          `toml:"metric_function"`
+	Tags              []string        `toml:"tags"`
+	IncludeMissingTag bool            `toml:"include_missing_tag"`
+	MissingTagValue   string          `toml:"missing_tag_value"`
+
+	mapMetricFields map[string]string
+	measurements    map[string]map[string]string
+	queries         interface{} // client specific data to execute the query
 }
 
 func (*ElasticsearchQuery) SampleConfig() string {
@@ -81,37 +89,15 @@ func (e *ElasticsearchQuery) Init() error {
 }
 
 func (e *ElasticsearchQuery) Start(telegraf.Accumulator) error {
-	// Make sure the HTTP client exists
-	if e.httpclient == nil {
-		httpclient, err := e.HTTPClientConfig.CreateClient(context.Background(), e.Log)
-		if err != nil {
-			return fmt.Errorf("creating HTTP client failed: %w", err)
-		}
-		e.httpclient = httpclient
-	}
-
 	// Create a new ElasticSearch client
-	clientOptions := []elastic5.ClientOptionFunc{
-		elastic5.SetHttpClient(e.httpclient),
-		elastic5.SetSniff(e.EnableSniffer),
-		elastic5.SetURL(e.URLs...),
-		elastic5.SetHealthcheckInterval(time.Duration(e.HealthCheckInterval)),
-	}
-	if e.Username != "" {
-		clientOptions = append(clientOptions, elastic5.SetBasicAuth(e.Username, e.Password))
-	}
-	if time.Duration(e.HealthCheckInterval) == 0 {
-		clientOptions = append(clientOptions, elastic5.SetHealthcheck(false))
-	}
-
-	client, err := elastic5.NewClient(clientOptions...)
+	client, err := e.newClientV5()
 	if err != nil {
-		return fmt.Errorf("creating ElasticSearch client failed: %w", err)
+		return err
 	}
 	e.client = client
 
 	// Get the ElasticSearch version on first node and check if it's supported
-	version, err := e.client.ElasticsearchVersion(e.URLs[0])
+	version, err := e.client.version()
 	if err != nil {
 		return fmt.Errorf("getting server version failed: %w", err)
 	}
@@ -139,16 +125,15 @@ func (e *ElasticsearchQuery) Start(telegraf.Accumulator) error {
 }
 
 func (e *ElasticsearchQuery) Stop() {
-	if e.httpclient != nil {
-		e.httpclient.CloseIdleConnections()
-		e.httpclient = nil
+	if e.client != nil {
+		e.client.close()
 	}
 }
 
 // Gather writes the results of the queries from Elasticsearch to the Accumulator.
 func (e *ElasticsearchQuery) Gather(acc telegraf.Accumulator) error {
 	// Make sure we are connected
-	if !e.client.IsRunning() {
+	if !e.client.isRunning() {
 		e.Stop()
 		if err := e.Start(acc); err != nil {
 			return err
@@ -174,7 +159,12 @@ func (e *ElasticsearchQuery) initAggregation(ctx context.Context, agg *aggregati
 	// retrieve field mapping and build queries only once
 	agg.mapMetricFields = make(map[string]string, len(agg.MetricFields))
 	for _, f := range agg.MetricFields {
-		fields, err := e.getMetricField(ctx, agg.Index, f)
+		response, err := e.client.getFieldMapping(ctx, agg.Index, f)
+		if err != nil {
+			return fmt.Errorf("retrieving index %q field mappings for %q failed: %w", agg.Index, f, err)
+		}
+
+		fields, err := getMetricField(response)
 		if err != nil {
 			return fmt.Errorf("not possible to retrieve field %q: %w", f, err)
 		}
@@ -187,19 +177,43 @@ func (e *ElasticsearchQuery) initAggregation(ctx context.Context, agg *aggregati
 		}
 	}
 
-	if err := agg.buildAggregationQuery(); err != nil {
+	if err := e.client.buildQueries(agg); err != nil {
 		return fmt.Errorf("building aggregation query failed: %w", err)
 	}
 
 	return nil
 }
 
-func (e *ElasticsearchQuery) getMetricField(ctx context.Context, index, field string) (map[string]string, error) {
-	response, err := e.client.GetFieldMapping().Index(index).Field(field).Do(ctx)
+func (e *ElasticsearchQuery) gatherAggregation(acc telegraf.Accumulator, aggregation *aggregation) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
+	defer cancel()
+
+	result, hits, err := e.client.query(ctx, aggregation)
 	if err != nil {
-		return nil, fmt.Errorf("retrieving field mappings for %q failed: %w", index, err)
+		return fmt.Errorf("running query failed: %w", err)
 	}
 
+	// Handle simple non-aggregated results
+	if result == nil {
+		fields := map[string]interface{}{
+			"doc_count": hits,
+		}
+		tags := make(map[string]string)
+		acc.AddFields(aggregation.MeasurementName, fields, tags)
+		return nil
+	}
+
+	// Aggregate results that support aggregation
+	for measurement, aggNameFunction := range aggregation.measurements {
+		if err := e.client.aggregate(acc, measurement, aggNameFunction, result); err != nil {
+			return fmt.Errorf("recursing response failed: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func getMetricField(response map[string]interface{}) (map[string]string, error) {
 	mapMetricFields := make(map[string]string, len(response))
 	for _, index := range response {
 		idx, ok := index.(map[string]interface{})
@@ -255,90 +269,6 @@ func (e *ElasticsearchQuery) getMetricField(ctx context.Context, index, field st
 	}
 
 	return mapMetricFields, nil
-}
-
-func (e *ElasticsearchQuery) gatherAggregation(acc telegraf.Accumulator, aggregation *aggregation) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
-	defer cancel()
-
-	result, err := e.query(ctx, aggregation)
-	if err != nil {
-		return fmt.Errorf("running query failed: %w", err)
-	}
-
-	// Handle simple non-aggregated results
-	if result.Aggregations == nil {
-		fields := map[string]interface{}{
-			"doc_count": result.Hits.TotalHits,
-		}
-		tags := make(map[string]string)
-		acc.AddFields(aggregation.MeasurementName, fields, tags)
-		return nil
-	}
-
-	// Handle aggregated results
-	measurements := make(map[string]map[string]string, len(aggregation.aggregationQueryList))
-
-	// organize the aggregation query data by measurement
-	for _, aggregationQuery := range aggregation.aggregationQueryList {
-		if measurements[aggregationQuery.measurement] == nil {
-			measurements[aggregationQuery.measurement] = map[string]string{
-				aggregationQuery.name: aggregationQuery.function,
-			}
-		} else {
-			measurements[aggregationQuery.measurement][aggregationQuery.name] = aggregationQuery.function
-		}
-	}
-
-	// recurse over query aggregation results per measurement
-	for measurement, aggNameFunction := range measurements {
-		m := &resultMetric{
-			name:   measurement,
-			fields: make(map[string]interface{}),
-			tags:   make(map[string]string),
-		}
-
-		if err := m.recurseResponse(acc, aggNameFunction, result.Aggregations); err != nil {
-			return fmt.Errorf("recursing response failed: %w", err)
-		}
-	}
-
-	return nil
-}
-
-func (e *ElasticsearchQuery) query(ctx context.Context, aggregation *aggregation) (*elastic5.SearchResult, error) {
-	now := time.Now().UTC()
-	from := now.Add(time.Duration(-aggregation.QueryPeriod))
-
-	query := elastic5.NewBoolQuery()
-	query = query.Filter(elastic5.NewQueryStringQuery(aggregation.FilterQuery))
-	query = query.Filter(elastic5.NewRangeQuery(aggregation.DateField).From(from).To(now).Format(aggregation.DateFieldFormat))
-
-	src, err := query.Source()
-	if err != nil {
-		return nil, fmt.Errorf("getting query source failed: %w", err)
-	}
-	data, err := json.Marshal(src)
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal response failed: %w", err)
-	}
-	e.Log.Debugf("{\"query\": %s}", string(data))
-
-	// Add only parent elastic.Aggregations to the search request, all the rest
-	// are subaggregations of these
-	search := e.client.Search().Index(aggregation.Index).Query(query).Size(0)
-	for _, v := range aggregation.aggregationQueryList {
-		if v.isParent && v.aggregation != nil {
-			search.Aggregation(v.name, v.aggregation)
-		}
-	}
-
-	result, err := search.Do(ctx)
-	if err != nil && result != nil {
-		return result, fmt.Errorf("%s - %s", result.Error.Type, result.Error.Reason)
-	}
-
-	return result, err
 }
 
 func init() {
