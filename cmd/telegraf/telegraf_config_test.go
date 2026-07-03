@@ -13,7 +13,7 @@ func TestPrintSampleConfigDefaultOutputIsFile(t *testing.T) {
 	var buf bytes.Buffer
 	printSampleConfig(&buf, Filters{})
 
-	output := buf.string()
+	output := buf.String()
 	require.Contains(t, output, "[[outputs.file]]")
 	require.Contains(t, output, `files = ["stdout"]`)
 }
