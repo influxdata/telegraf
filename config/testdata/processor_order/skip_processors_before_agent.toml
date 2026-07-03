@@ -1,0 +1,2 @@
+[agent]
+    skip_processors_before_aggregators = true

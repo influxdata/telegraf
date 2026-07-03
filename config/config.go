@@ -593,6 +593,10 @@ func (c *Config) LoadAll(configFiles ...string) error {
 	sort.Stable(c.Processors)
 	sort.Stable(c.AggProcessors)
 
+	if c.Agent.SkipProcessorsBeforeAggregators {
+		c.Processors = make(models.RunningProcessors, 0)
+	}
+
 	// Set snmp agent translator default
 	if c.Agent.SnmpTranslator == "" {
 		c.Agent.SnmpTranslator = "netsnmp"
@@ -837,10 +841,8 @@ func (c *Config) LoadConfigData(data []byte, path string) error {
 	// Sort the processor according to the order they appeared in this file
 	// In a later stage, we sort them using the `order` option.
 	sort.Sort(c.fileProcessors)
-	if !c.Agent.SkipProcessorsBeforeAggregators {
-		for _, op := range c.fileProcessors {
-			c.Processors = append(c.Processors, op.plugin.(*models.RunningProcessor))
-		}
+	for _, op := range c.fileProcessors {
+		c.Processors = append(c.Processors, op.plugin.(*models.RunningProcessor))
 	}
 
 	sort.Sort(c.fileAggProcessors)
