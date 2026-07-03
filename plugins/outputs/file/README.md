@@ -23,7 +23,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Send telegraf metrics to file(s)
 [[outputs.file]]
   ## Files to write to, "stdout" is a specially handled file.
-  files = ["stdout", "/tmp/metrics.out"]
+  # files = ["stdout", "/tmp/metrics.out"]
+  files = ["stdout"]
 
   ## Use batch serialization format instead of line based delimiting.  The
   ## batch format allows for the production of non line based output formats and
