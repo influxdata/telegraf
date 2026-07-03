@@ -1467,7 +1467,7 @@ func populateGlobalFields(objectRef *objectRef) map[string]interface{} {
 	return globalFields
 }
 
-func (e *endpoint) makeMetricIdentifier(prefix string, metric string) (metricName string, fieldName string) {
+func (e *endpoint) makeMetricIdentifier(prefix, metric string) (metricName, fieldName string) {
 	parts := strings.Split(metric, ".")
 	if len(parts) == 1 {
 		return prefix, parts[0]
