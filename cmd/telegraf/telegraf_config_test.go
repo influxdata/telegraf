@@ -9,11 +9,11 @@ import (
 	"github.com/influxdata/telegraf/internal"
 )
 
-func TestPrintSampleConfigDefaultOutputIsFile(t *Testing.T) {
+func TestPrintSampleConfigDefaultOutputIsFile(t *testing.T) {
 	var buf bytes.Buffer
 	printSampleConfig(&buf, Filters{})
 
-	output := bug.string()
+	output := buf.string()
 	require.Contains(t, output, "[[outputs.file]]")
 	require.Contains(t, output, `files = ["stdout"]`)
 }
