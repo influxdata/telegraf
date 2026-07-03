@@ -10,7 +10,7 @@ unmodified.
 
 > [!NOTE]
 > The execution environment is sandboxed, and it is not possible to access the
-> local filesystem or perfoming network operations. This is by design of the
+> local filesystem or performing network operations. This is by design of the
 > Starlark language as a configuration language.
 
 The Starlark script used by this plugin needs to be composed of the three

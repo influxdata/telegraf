@@ -289,7 +289,7 @@ func (r *AwsEc2Processor) lookupMetadata(metric telegraf.Metric) telegraf.Metric
 
 		value, err := io.ReadAll(resp.Content)
 		if err != nil {
-			r.Log.Errorf("Reading metadata reponse for %+v failed: %v", path, err)
+			r.Log.Errorf("Reading metadata response for %+v failed: %v", path, err)
 			continue
 		}
 		if len(value) > 0 {

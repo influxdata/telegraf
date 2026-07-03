@@ -33,10 +33,10 @@ setting `uint64_conversion`.
 - `int64_clip`, default option. If an unsigned integer is greater than
 `math.MaxInt64`, save it as `int64`; else save `math.MaxInt64`
 (9223372036854775807).
-- `int64`, force converting an unsigned integer to a`int64`,no mater
+- `int64`, force converting an unsigned integer to a`int64`,no matter
 what the value it is. This option may lead to exception if the value is
 greater than `int64`.
-- `text`force converting an unsigned integer to a string, no mater what the
+- `text`force converting an unsigned integer to a string, no matter what the
 value it is.
 
 ### Time Precision
@@ -136,7 +136,7 @@ to use them.
 
   ## Handling of unsupported characters
   ## Some characters in different versions of IoTDB are not supported in path name
-  ## A guide with suggetions on valid paths can be found here:
+  ## A guide with suggestions on valid paths can be found here:
   ## for iotdb 0.13.x           -> https://iotdb.apache.org/UserGuide/V0.13.x/Reference/Syntax-Conventions.html#identifiers
   ## for iotdb 1.x.x and above  -> https://iotdb.apache.org/UserGuide/V1.3.x/User-Manual/Syntax-Rule.html#identifier
   ##

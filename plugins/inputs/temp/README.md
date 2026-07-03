@@ -52,7 +52,7 @@ be required to run as admin to get the values.
   - tags:
     - sensor
   - fields:
-    - temp (float, celcius)
+    - temp (float, celsius)
 
 ## Example Output
 

@@ -1,6 +1,6 @@
 # Riemann Output Plugin
 
-This plugin writes metric to the [Riemann][riemann] serice via TCP or UDP.
+This plugin writes metric to the [Riemann][riemann] service via TCP or UDP.
 
 ⭐ Telegraf v1.3.0
 🏷️ datastore
