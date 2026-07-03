@@ -24,7 +24,7 @@ var (
 	inputDefaults = []string{"cpu", "mem", "swap", "system", "kernel", "processes", "disk", "diskio"}
 
 	// Default output plugins
-	outputDefaults = make([]string, 0)
+	outputDefaults = []string{"file"}
 )
 
 var header = `# Telegraf Configuration

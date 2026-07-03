@@ -1,12 +1,22 @@
 package main
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/internal"
 )
+
+func TestPrintSampleConfigDefaultOutputIsFile(t *Testing.T) {
+	var buf bytes.Buffer
+	printSampleConfig(&buf, Filters{})
+
+	output := bug.string()
+	require.Contains(t, output, "[[outputs.file]]")
+	require.Contains(t, output, `files = ["stdout"]`)
+}
 
 func TestLoadConfigurationTestModeSkipsDiskOutputBuffer(t *testing.T) {
 	savedVersion := internal.Version
