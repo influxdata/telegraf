@@ -223,11 +223,7 @@ func (*clientV5) aggregate(acc telegraf.Accumulator, measurement string, nameFun
 		tags:   make(map[string]string),
 	}
 
-	if err := m.iterate(acc, nameFunction, r); err != nil {
-		return fmt.Errorf("recursing response failed: %w", err)
-	}
-
-	return nil
+	return m.iterate(acc, nameFunction, r)
 }
 
 type iteratorV5 struct {
