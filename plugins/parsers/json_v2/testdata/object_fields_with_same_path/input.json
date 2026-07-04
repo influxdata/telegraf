@@ -1,0 +1,12 @@
+{
+    "production": {
+        "eim": {
+            "wattHoursLifetime": 100
+        }
+    },
+    "consumption": {
+        "eim": {
+            "wattHoursLifetime": 200
+        }
+    }
+}
