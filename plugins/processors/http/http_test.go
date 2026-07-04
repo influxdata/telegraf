@@ -1,6 +1,7 @@
 package http_test
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -478,6 +479,59 @@ func TestOnErrorKeepEmptyParserResult(t *testing.T) {
 	require.Equal(t, "200", results[0].Tags()["status_code"])
 	require.Equal(t, "body_read_error", results[0].Tags()["result"])
 	require.Contains(t, results[0].Fields()["http_error"], "parser returned no metrics")
+}
+
+func TestOnErrorKeepSerializationFailure(t *testing.T) {
+	plugin := &httpplugin.HTTP{
+		URL:     "http://example.com",
+		OnError: "keep",
+		Log:     testutil.Logger{},
+	}
+	plugin.SetSerializer(&failSerializer{})
+	plugin.SetParserFunc(func() (telegraf.Parser, error) {
+		return &json.Parser{MetricName: metricName}, nil
+	})
+	require.NoError(t, plugin.Init())
+
+	results := plugin.Apply(getMetric())
+	require.Len(t, results, 1)
+	require.Equal(t, "processing_error", results[0].Tags()["result"])
+	require.Contains(t, results[0].Fields()["http_error"], "serializing metric failed")
+	_, hasStatus := results[0].GetTag("status_code")
+	require.False(t, hasStatus)
+}
+
+func TestOnErrorKeepParserInstantiationFailure(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeBody(t, w, simpleJSON)
+	}))
+	defer server.Close()
+
+	plugin := newPlugin(t, server.URL, func(p *httpplugin.HTTP) {
+		p.OnError = "keep"
+	})
+	plugin.SetParserFunc(func() (telegraf.Parser, error) {
+		return nil, errors.New("parser init failed")
+	})
+	require.NoError(t, plugin.Init())
+
+	results := plugin.Apply(getMetric())
+	require.Len(t, results, 1)
+	require.Equal(t, "200", results[0].Tags()["status_code"])
+	require.Equal(t, "processing_error", results[0].Tags()["result"])
+	require.Contains(t, results[0].Fields()["http_error"], "instantiating parser failed")
+}
+
+type failSerializer struct{}
+
+func (*failSerializer) Init() error { return nil }
+
+func (*failSerializer) Serialize(_ telegraf.Metric) ([]byte, error) {
+	return nil, errors.New("serialize failed")
+}
+
+func (*failSerializer) SerializeBatch(_ []telegraf.Metric) ([]byte, error) {
+	return nil, errors.New("serialize failed")
 }
 
 func TestOnErrorKeepTimeout(t *testing.T) {

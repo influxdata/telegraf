@@ -204,6 +204,7 @@ Upon finishing the HTTP request for each metric, the plugin sets the `result`
 tag to describe the outcome:
 
 - `success`: acceptable status code and response parsed successfully
+- `processing_error`: request serialization or parser instantiation failed
 - `body_read_error`: response body could not be parsed, or the parser returned
   no metrics
 - `connection_failed`: network error not otherwise classified below

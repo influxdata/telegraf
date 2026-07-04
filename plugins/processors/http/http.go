@@ -196,7 +196,7 @@ func (h *HTTP) Apply(in ...telegraf.Metric) []telegraf.Metric {
 func (h *HTTP) processMetric(metric telegraf.Metric) ([]telegraf.Metric, error) {
 	reqBody, err := h.serializer.Serialize(metric)
 	if err != nil {
-		return nil, requestErr("connection_failed", nil, fmt.Errorf("serializing metric failed: %w", err))
+		return nil, requestErr("processing_error", nil, fmt.Errorf("serializing metric failed: %w", err))
 	}
 
 	resp, err := h.doRequest(reqBody)
@@ -206,7 +206,7 @@ func (h *HTTP) processMetric(metric telegraf.Metric) ([]telegraf.Metric, error) 
 
 	parser, err := h.parserFunc()
 	if err != nil {
-		return nil, requestErr("connection_failed", resp, fmt.Errorf("instantiating parser failed: %w", err))
+		return nil, requestErr("processing_error", resp, fmt.Errorf("instantiating parser failed: %w", err))
 	}
 	h.configureParser(parser)
 
