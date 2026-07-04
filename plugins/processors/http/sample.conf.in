@@ -1,0 +1,88 @@
+# Enrich or replace metrics by sending them to an HTTP endpoint
+[[processors.http]]
+  ## Required HTTP endpoint to call for each metric
+  url = "https://api.example.com/enrich"
+
+  ## HTTP method, one of: "POST", "PUT", or "PATCH"
+  # method = "POST"
+
+  ## If true, incoming metrics are not emitted.
+  # drop_original = false
+
+  ## Merge Behavior
+  ## Possible options are:
+  ##  - none: keep the newly parsed metrics as-is
+  ##  - override: emit a single metric with all tags and fields of newly parsed
+  ##    merged but retaining the first timestamp. If drop_original is
+  ##    false, all metrics are merged into the original metric
+  ##    NOTE: Existing field or tag values will be overridden.
+  ##  - override-with-timestamp: same as "override", but the timestamp is set
+  ##    based on the new metrics if present
+  ##  - parent: emit one metric per newly parsed metric with each newly parsed
+  ##    metric is merged individually into the parent metric keeping the parent
+  ##    timestamp
+  ##  - parent-with-timestamp: same as "parent", but the timestamp is set
+  ##    based on the new metric if present
+  # merge = "none"
+
+  ## What to do when the HTTP request or response parsing fails.
+  ##   keep - pass the original metric through unchanged
+  ##   drop - discard the metric
+  # on_error = "keep"
+
+  ## List of acceptable HTTP response status codes
+  # success_status_codes = [200]
+
+  ## HTTP Content-Encoding for the request body, can be set to "gzip" to
+  ## compress body or "identity" to apply no encoding.
+  # content_encoding = "identity"
+
+  ## HTTP Basic Auth credentials
+  # username = "username"
+  # password = "pa$$word"
+
+  ## Google API Auth
+  # google_application_credentials = "/etc/telegraf/example_secret.json"
+
+{{template "/plugins/common/http/client.conf"}}
+
+  ## Amazon Region
+  #region = "us-east-1"
+
+  ## Amazon Credentials
+  ## Amazon Credentials are not built unless the following aws_service
+  ## setting is set to a non-empty string.
+  #aws_service = "execute-api"
+
+  ## Credentials are loaded in the following order
+  ## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
+  ## 2) Assumed credentials via STS if role_arn is specified
+  ## 3) explicit credentials from 'access_key' and 'secret_key'
+  ## 4) shared profile from 'profile'
+  ## 5) environment variables
+  ## 6) shared credentials file
+  ## 7) EC2 Instance Profile
+  #access_key = ""
+  #secret_key = ""
+  #token = ""
+  #role_arn = ""
+  #web_identity_token_file = ""
+  #role_session_name = ""
+  #profile = ""
+  #shared_credential_file = ""
+
+  ## Data format used for both request serialization and response parsing.
+  ## The format must support both serialization and parsing (e.g. "influx", "json").
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  data_format = "json"
+
+  ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
+  ## plugin definition, otherwise additional config options are read as part of
+  ## the table
+
+  ## Additional HTTP headers
+  # [processors.http.headers]
+  #   Content-Type = "application/json"
+  #   Authorization = "Bearer ..."
