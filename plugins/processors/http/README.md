@@ -38,6 +38,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##  - override: emit a single metric with all tags and fields of newly parsed
   ##    merged but retaining the first timestamp. If drop_original is
   ##    false, all metrics are merged into the original metric
+  ##    NOTE: Existing field or tag values will be overridden.
   ##  - override-with-timestamp: same as "override", but the timestamp is set
   ##    based on the new metrics if present
   ##  - parent: emit one metric per newly parsed metric with each newly parsed
@@ -48,10 +49,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # merge = "none"
 
   ## What to do when the HTTP request or response parsing fails.
-  ##  - keep: pass the original metric through; adds status_code tag and
-  ##    http_error field when an HTTP response was received (non-success status
-  ##    or response parsing failure), or http_error only when no response
-  ##  - drop: discard the metric
+  ##   keep - pass the original metric through unchanged
+  ##   drop - discard the metric
   # on_error = "keep"
 
   ## List of acceptable HTTP response status codes
