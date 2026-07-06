@@ -1534,7 +1534,7 @@ func TestConfig_SkipProcessorsBeforeIsOrderIndependent(t *testing.T) {
 	require.Empty(t, cAgentFirst.Processors, "processors should be cleared when agent file is loaded first")
 
 	cProcessorFirst := config.NewConfig()
-	require.NoError(t, cAgentFirst.LoadAll(processorFile, agentFile))
+	require.NoError(t, cProcessorFirst.LoadAll(processorFile, agentFile))
 	require.Empty(t, cProcessorFirst.Processors, "processors should be cleared when processor file is loaded first")
 }
 
