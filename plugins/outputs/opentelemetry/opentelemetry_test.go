@@ -203,6 +203,7 @@ func TestOpenTelemetryHTTPJSON(t *testing.T) {
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			t.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -484,6 +485,7 @@ func TestOpenTelemetrySeparatorHTTPJSON(t *testing.T) {
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			t.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
