@@ -334,6 +334,67 @@ func TestOpenTelemetrySeparator(t *testing.T) {
 	require.JSONEq(t, string(expectJSON), string(gotJSON))
 }
 
+func TestOpenTelemetryDefaultSeparator(t *testing.T) {
+	expect := pmetric.NewMetrics()
+	{
+		rm := expect.ResourceMetrics().AppendEmpty()
+		rm.Resource().Attributes().PutStr("host.name", "potato")
+		rm.Resource().Attributes().PutStr("attr-key", "attr-val")
+		ilm := rm.ScopeMetrics().AppendEmpty()
+		ilm.Scope().SetName("My Library Name")
+		m := ilm.Metrics().AppendEmpty()
+		m.SetName("mem_used_percent")
+		m.SetEmptyGauge()
+		dp := m.Gauge().DataPoints().AppendEmpty()
+		dp.Attributes().PutStr("foo", "bar")
+		dp.SetTimestamp(pcommon.Timestamp(1622848686000000000))
+		dp.SetDoubleValue(87.332)
+	}
+	m := newMockOtelService(t)
+	t.Cleanup(m.Cleanup)
+
+	plugin := &OpenTelemetry{
+		ServiceAddress: m.Address(),
+		Timeout:        config.Duration(time.Second),
+		Headers:        map[string]string{"test": "header1"},
+		Attributes:     map[string]string{"attr-key": "attr-val"},
+		NameSeparator:  defaultNameSeparator,
+		otlpMetricClient: &gRPCClient{
+			grpcClientConn:       m.GrpcClient(),
+			metricsServiceClient: pmetricotlp.NewGRPCClient(m.GrpcClient()),
+		},
+		Log: testutil.Logger{},
+	}
+	require.NoError(t, plugin.Connect())
+
+	input := metric.New(
+		"mem",
+		map[string]string{
+			"foo":               "bar",
+			"otel.library.name": "My Library Name",
+			"host.name":         "potato",
+		},
+		map[string]interface{}{
+			"used_percent": 87.332,
+		},
+		time.Unix(0, 1622848686000000000),
+		telegraf.Gauge,
+	)
+
+	require.NoError(t, plugin.Write([]telegraf.Metric{input}))
+
+	got := m.GotMetrics()
+
+	marshaller := pmetric.JSONMarshaler{}
+	expectJSON, err := marshaller.MarshalMetrics(expect)
+	require.NoError(t, err)
+
+	gotJSON, err := marshaller.MarshalMetrics(got)
+	require.NoError(t, err)
+
+	require.JSONEq(t, string(expectJSON), string(gotJSON))
+}
+
 func TestOpenTelemetrySeparatorHTTPProtobuf(t *testing.T) {
 	expect := pmetric.NewMetrics()
 	{
