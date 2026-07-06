@@ -9,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/influxdb-observability/common"
-	"github.com/influxdata/influxdb-observability/influx2otel"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -46,20 +44,18 @@ func TestOpenTelemetry(t *testing.T) {
 	m := newMockOtelService(t)
 	t.Cleanup(m.Cleanup)
 
-	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(common.NoopLogger{})
-	require.NoError(t, err)
 	plugin := &OpenTelemetry{
-		ServiceAddress:   m.Address(),
-		Timeout:          config.Duration(time.Second),
-		Headers:          map[string]string{"test": "header1"},
-		Attributes:       map[string]string{"attr-key": "attr-val"},
-		metricsConverter: metricsConverter,
+		ServiceAddress: m.Address(),
+		Timeout:        config.Duration(time.Second),
+		Headers:        map[string]string{"test": "header1"},
+		Attributes:     map[string]string{"attr-key": "attr-val"},
 		otlpMetricClient: &gRPCClient{
 			grpcClientConn:       m.GrpcClient(),
 			metricsServiceClient: pmetricotlp.NewGRPCClient(m.GrpcClient()),
 		},
 		Log: testutil.Logger{},
 	}
+	require.NoError(t, plugin.Connect())
 
 	input := metric.New(
 		"cpu_temp",
@@ -146,17 +142,13 @@ func TestOpenTelemetryHTTPProtobuf(t *testing.T) {
 	}))
 	defer server.Close()
 
-	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(common.NoopLogger{})
-	require.NoError(t, err)
-
 	plugin := &OpenTelemetry{
-		ServiceAddress:   server.URL,
-		EncodingType:     "protobuf",
-		Timeout:          config.Duration(time.Second),
-		Attributes:       map[string]string{"attr-key": "attr-val"},
-		Compression:      "none",
-		metricsConverter: metricsConverter,
-		Log:              testutil.Logger{},
+		ServiceAddress: server.URL,
+		EncodingType:   "protobuf",
+		Timeout:        config.Duration(time.Second),
+		Attributes:     map[string]string{"attr-key": "attr-val"},
+		Compression:    "none",
+		Log:            testutil.Logger{},
 	}
 	require.NoError(t, plugin.Connect())
 
@@ -244,17 +236,13 @@ func TestOpenTelemetryHTTPJSON(t *testing.T) {
 	}))
 	defer server.Close()
 
-	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(common.NoopLogger{})
-	require.NoError(t, err)
-
 	plugin := &OpenTelemetry{
-		ServiceAddress:   server.URL,
-		EncodingType:     "json",
-		Timeout:          config.Duration(time.Second),
-		Attributes:       map[string]string{"attr-key": "attr-val"},
-		Compression:      "none",
-		metricsConverter: metricsConverter,
-		Log:              testutil.Logger{},
+		ServiceAddress: server.URL,
+		EncodingType:   "json",
+		Timeout:        config.Duration(time.Second),
+		Attributes:     map[string]string{"attr-key": "attr-val"},
+		Compression:    "none",
+		Log:            testutil.Logger{},
 	}
 	require.NoError(t, plugin.Connect())
 
@@ -333,20 +321,19 @@ func TestOpenTelemetrySeparator(t *testing.T) {
 	m := newMockOtelService(t)
 	t.Cleanup(m.Cleanup)
 
-	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetricsWithSeparator(common.NoopLogger{}, ".")
-	require.NoError(t, err)
 	plugin := &OpenTelemetry{
-		ServiceAddress:   m.Address(),
-		Timeout:          config.Duration(time.Second),
-		Headers:          map[string]string{"test": "header1"},
-		Attributes:       map[string]string{"attr-key": "attr-val"},
-		metricsConverter: metricsConverter,
+		ServiceAddress: m.Address(),
+		Timeout:        config.Duration(time.Second),
+		Headers:        map[string]string{"test": "header1"},
+		Attributes:     map[string]string{"attr-key": "attr-val"},
+		NameSeparator:  ".",
 		otlpMetricClient: &gRPCClient{
 			grpcClientConn:       m.GrpcClient(),
 			metricsServiceClient: pmetricotlp.NewGRPCClient(m.GrpcClient()),
 		},
 		Log: testutil.Logger{},
 	}
+	require.NoError(t, plugin.Connect())
 
 	input := metric.New(
 		"mem",
