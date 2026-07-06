@@ -10,7 +10,7 @@
   # username = "username"
   # password = "pa$$word"
 
-  ## Goole API Auth
+  ## Google API Auth
   # google_application_credentials = "/etc/telegraf/example_secret.json"
 
 {{template "/plugins/common/http/client.conf"}}
