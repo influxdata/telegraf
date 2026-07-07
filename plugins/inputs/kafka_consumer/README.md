@@ -79,7 +79,7 @@ to use them.
   ## from 1.0.0 separated by dot. This setting enables the use of new
   ## Kafka features and APIs. Must be 0.10.2.0(used as default) or greater.
   ## Please, check the list of supported versions at
-  ## https://pkg.go.dev/github.com/Shopify/sarama#SupportedVersions
+  ## https://pkg.go.dev/github.com/IBM/sarama#SupportedVersions
   ##   ex: kafka_version = "2.6.0"
   ##   ex: kafka_version = "0.10.2.0"
   # kafka_version = "0.10.2.0"
