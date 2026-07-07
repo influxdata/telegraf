@@ -7,6 +7,7 @@ import (
 	"math"
 	"net"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -153,6 +155,59 @@ func TestGatherTracking(t *testing.T) {
 
 	actual := acc.GetTelegrafMetrics()
 	testutil.RequireMetricsEqual(t, expected, actual, options...)
+}
+
+func TestGatherTimeoutRecovers(t *testing.T) {
+	// Setup a mock server that stops replying to simulate a lost response,
+	// e.g. a network interruption to a remote chronyd (issue #16495).
+	server := Server{
+		TrackingInfo: &fbchrony.Tracking{
+			RefID:      0xA29FC87B,
+			IPAddr:     net.ParseIP("192.168.1.22"),
+			Stratum:    3,
+			LeapStatus: 0,
+			RefTime:    time.Now(),
+		},
+	}
+	addr, err := server.Listen(t)
+	require.NoError(t, err)
+	defer server.Shutdown()
+	server.silent.Store(true)
+
+	// Setup the plugin with a short timeout so the test does not wait long
+	plugin := &Chrony{
+		Server:  "udp://" + addr,
+		Timeout: config.Duration(100 * time.Millisecond),
+		Metrics: []string{"tracking"},
+		Log:     testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// The gather must return within the timeout instead of blocking forever
+	// waiting for a reply that never arrives.
+	gatherErr := make(chan error, 1)
+	go func() {
+		gatherErr <- plugin.Gather(&acc)
+	}()
+	select {
+	case err := <-gatherErr:
+		require.NoError(t, err)
+	case <-time.After(5 * time.Second):
+		require.FailNow(t, "gather blocked instead of timing out")
+	}
+	require.ErrorContains(t, acc.FirstError(), "querying tracking data failed")
+	require.Empty(t, acc.GetTelegrafMetrics())
+
+	// Once the server replies again, collection must recover on the next gather
+	server.silent.Store(false)
+	var accRecovered testutil.Accumulator
+	require.NoError(t, plugin.Gather(&accRecovered))
+	require.NoError(t, accRecovered.FirstError())
+	require.NotEmpty(t, accRecovered.GetTelegrafMetrics())
 }
 
 func TestGatherServerStats(t *testing.T) {
@@ -727,7 +782,8 @@ type Server struct {
 	ServerStatInfo interface{}
 	SourcesInfo    []source
 
-	conn net.PacketConn
+	conn   net.PacketConn
+	silent atomic.Bool
 }
 
 func (s *Server) Shutdown() {
@@ -757,6 +813,10 @@ func (s *Server) serve(t *testing.T) {
 		n, addr, err := s.conn.ReadFrom(buf)
 		if err != nil {
 			return
+		}
+		// Simulate a lost response by draining the request without replying.
+		if s.silent.Load() {
+			continue
 		}
 		t.Logf("mock server: received %d bytes from %q\n", n, addr.String())
 

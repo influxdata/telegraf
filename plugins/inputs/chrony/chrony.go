@@ -145,8 +145,9 @@ func (c *Chrony) Start(_ telegraf.Accumulator) error {
 	}
 	c.Log.Debugf("Connected to %q...", c.Server)
 
-	// Initialize the client
-	c.client = &fbchrony.Client{Connection: c.conn}
+	// Initialize the client, bounding each request by the configured timeout so
+	// a lost response cannot block collection indefinitely (see issue #16495).
+	c.client = &fbchrony.Client{Connection: &deadlineConn{Conn: c.conn, timeout: time.Duration(c.Timeout)}}
 
 	return nil
 }
@@ -534,6 +535,24 @@ func (c *Chrony) gatherSourceStats(acc telegraf.Accumulator) error {
 		acc.AddFields("chrony_sourcestats", fields, tags)
 	}
 	return nil
+}
+
+// deadlineConn applies a read deadline before each read so a query to chronyd
+// cannot block forever if the response is lost, e.g. during a network
+// interruption to a remote server. Without it the plugin waits for the reply
+// indefinitely and never collects again until restarted (see issue #16495).
+type deadlineConn struct {
+	net.Conn
+	timeout time.Duration
+}
+
+func (c *deadlineConn) Read(b []byte) (int, error) {
+	if c.timeout > 0 {
+		if err := c.SetReadDeadline(time.Now().Add(c.timeout)); err != nil {
+			return 0, err
+		}
+	}
+	return c.Conn.Read(b)
 }
 
 func init() {
