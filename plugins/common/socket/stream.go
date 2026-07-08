@@ -79,6 +79,59 @@ func (l *streamListener) setupTCP(u *url.URL, tlsCfg *tls.Config) error {
 	return err
 }
 
+// setup copied from datagram, wrapped in stream listener
+func (l *streamListener) setupUDPStream(u *url.URL, ifname, multicastSource string, bufferSize int) error {
+	network := strings.TrimSuffix(u.Scheme, "stream")
+
+	listener, err := Listen(func() (net.PacketConn, error) {
+		addr, err := net.ResolveUDPAddr(network, u.Host)
+		if err != nil {
+			return nil, fmt.Errorf("resolving UDP address failed: %w", err)
+		}
+
+		var conn *net.UDPConn
+		if addr.IP.IsMulticast() {
+			var iface *net.Interface
+			if ifname != "" {
+				iface, err = net.InterfaceByName(ifname)
+				if err != nil {
+					return nil, fmt.Errorf("resolving address of %q failed: %w", ifname, err)
+				}
+			}
+
+			if multicastSource != "" {
+				conn, err = listenSSM(network, iface, addr, multicastSource)
+			} else {
+				conn, err = net.ListenMulticastUDP(network, iface, addr)
+			}
+			if err != nil {
+				if conn != nil {
+					conn.Close()
+				}
+				return nil, fmt.Errorf("listening (udp multicast) failed: %w", err)
+			}
+		} else {
+			conn, err = net.ListenUDP(network, addr)
+			if err != nil {
+				return nil, fmt.Errorf("listening (udp) failed: %w", err)
+			}
+		}
+
+		if bufferSize > 0 {
+			if err := conn.SetReadBuffer(bufferSize); err != nil {
+				l.Log.Warnf("Setting read buffer on %s socket failed: %v", u.Scheme, err)
+			}
+		}
+
+		return conn, nil
+	})
+	if err != nil {
+		return err
+	}
+	l.listener = listener
+	return nil
+}
+
 func (l *streamListener) setupUnix(u *url.URL, tlsCfg *tls.Config, socketMode string) error {
 	l.path = filepath.FromSlash(u.Path)
 	if runtime.GOOS == "windows" && strings.Contains(l.path, ":") {

@@ -91,6 +91,11 @@ func TestSocketListener(t *testing.T) {
 			encoding:   "gzip",
 		},
 		{
+			name:       "UDP stream",
+			schema:     "udpstream",
+			buffersize: config.Size(1024),
+		},
+		{
 			name:       "unix socket",
 			schema:     "unix",
 			buffersize: config.Size(1024),
@@ -122,7 +127,7 @@ func TestSocketListener(t *testing.T) {
 			var serverAddr string
 			var tlsCfg *tls.Config
 			switch proto {
-			case "tcp", "udp":
+			case "tcp", "udp", "udpstream":
 				serverAddr = "127.0.0.1:0"
 			case "unix", "unixgram":
 				if runtime.GOOS == "windows" {
@@ -512,6 +517,9 @@ func createClient(endpoint string, addr net.Addr, tlsCfg *tls.Config) (net.Conn,
 		return nil, fmt.Errorf("invalid endpoint %q", endpoint)
 	}
 	protocol := parts[0]
+	if protocol == "udpstream" {
+		protocol = "udp"
+	}
 
 	if tlsCfg == nil {
 		return net.Dial(protocol, addr.String())

@@ -92,7 +92,7 @@ func (cfg *Config) NewSocket(address string, splitcfg *SplitConfig, logger teleg
 
 	switch s.url.Scheme {
 	case "tcp", "tcp4", "tcp6", "unix", "unixpacket",
-		"udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram", "vsock":
+		"udp", "udp4", "udp6", "udpstream", "ip", "ip4", "ip6", "unixgram", "vsock":
 	default:
 		return nil, fmt.Errorf("unknown protocol %q in %q", u.Scheme, address)
 	}
@@ -122,6 +122,17 @@ func (s *Socket) Setup() error {
 		)
 
 		if err := l.setupUnix(s.url, s.tlsCfg, s.SocketMode); err != nil {
+			return err
+		}
+		s.listener = l
+	case "udpstream":
+		l := newStreamListener(
+			s.Config,
+			s.splitter,
+			s.log,
+		)
+
+		if err := l.setupUDPStream(s.url, s.interfaceName, s.MulticastSource, int(s.ReadBufferSize)); err != nil {
 			return err
 		}
 		s.listener = l
