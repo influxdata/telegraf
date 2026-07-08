@@ -32,8 +32,9 @@ type AzureMonitor struct {
 	SubscriptionTargets  []*resource            `toml:"subscription_target"`
 	Log                  telegraf.Logger        `toml:"-"`
 
-	receiver *metricReceiver
+	client   client
 	factory  clientFactory
+	receiver *metricReceiver
 }
 
 type resourceTarget struct {
@@ -106,15 +107,20 @@ func (am *AzureMonitor) Init() error {
 		secret.Destroy()
 	}
 
-	// Create a new client
+	// Create a new client. This does not connect to the Azure API.
 	client, err := am.factory.createClient(am.SubscriptionID, am.ClientID, clientSecret, am.TenantID, clientOptions)
 	if err != nil {
 		return fmt.Errorf("creating client failed: %w", err)
 	}
+	am.client = client
 
-	// Setup the receiver
-	ctx := context.Background()
-	receiver, err := newReceiver(ctx, client, am.SubscriptionID, am.ResourceTargets, am.ResourceGroupTargets, am.SubscriptionTargets)
+	return nil
+}
+
+func (am *AzureMonitor) Start(telegraf.Accumulator) error {
+	receiver, err := newReceiver(
+		context.Background(), am.client, am.SubscriptionID, am.ResourceTargets, am.ResourceGroupTargets, am.SubscriptionTargets,
+	)
 	if err != nil {
 		return fmt.Errorf("creating receiver failed: %w", err)
 	}
@@ -122,6 +128,10 @@ func (am *AzureMonitor) Init() error {
 	am.Log.Debug("Total resource targets: ", len(am.receiver.resources))
 
 	return nil
+}
+
+func (am *AzureMonitor) Stop() {
+	am.receiver = nil
 }
 
 func (am *AzureMonitor) Gather(acc telegraf.Accumulator) error {
