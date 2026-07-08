@@ -104,7 +104,7 @@ func TestAppend(t *testing.T) {
 	}
 }
 
-func TesPartialWrite(t *testing.T) {
+func TestPartialWrite(t *testing.T) {
 	for _, method := range []string{"inotify", "poll"} {
 		t.Run(method, func(t *testing.T) {
 			if runtime.GOOS == "windows" && method == "inotify" {
