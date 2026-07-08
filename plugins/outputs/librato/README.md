@@ -8,7 +8,7 @@ The `source_tag` option in the Configuration file is used to send contextual
 information from Point Tags to the API. Besides from this, the plugin currently
 does not send any additional associated Point Tags.
 
-> [!IMPOTANT]
+> [!IMPORTANT]
 > If the point value being sent cannot be converted to a `float64`, the metric
 > is skipped.
 

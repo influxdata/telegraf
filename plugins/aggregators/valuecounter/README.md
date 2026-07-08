@@ -8,7 +8,7 @@ value converted to `string`.
 > The fields to be counted must be configured using the `fields` setting,
 > otherwise no field will be counted and no metric is emitted.
 
-This plugin is useful to e.g. count the occurrances of HTTP status codes or
+This plugin is useful to e.g. count the occurrences of HTTP status codes or
 other categorical values in the defined `period`.
 
 > [!IMPORTANT]

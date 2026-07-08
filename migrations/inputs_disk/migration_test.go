@@ -24,7 +24,7 @@ func TestNoMigration(t *testing.T) {
   ignore_fs = ["tmpfs", "devtmpfs", "devfs", "iso9660", "overlay", "aufs", "squashfs"]
 
   ## Ignore mount points by mount options.
-  ## The 'mount' command reports options of all mounts in parathesis.
+  ## The 'mount' command reports options of all mounts in parenthesis.
   ## Bind mounts can be ignored with the special 'bind' option.
   # ignore_mount_opts = []
 `)

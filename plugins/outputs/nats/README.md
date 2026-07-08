@@ -83,7 +83,7 @@ more details on how to use them.
     ## Use asynchronous publishing for higher throughput, but note that it does not guarantee order within batches.
     # async_publish = false
 
-    ## Timeout for wating on acknowledgement on asynchronous publishing
+    ## Timeout for waiting on acknowledgement on asynchronous publishing
     ## String with valid units "ns", "us" (or "µs"), "ms", "s", "m", "h".
     # async_ack_timeout = "5s"
 

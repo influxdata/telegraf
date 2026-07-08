@@ -42,7 +42,7 @@ to use them.
   # username = "username"
   # password = "pa$$word"
 
-  ## Goole API Auth
+  ## Google API Auth
   # google_application_credentials = "/etc/telegraf/example_secret.json"
 
   ## Amount of time allowed to complete the HTTP request
