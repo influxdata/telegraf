@@ -485,8 +485,9 @@ func TestStartupFailureReleasesClient(t *testing.T) {
 	defer server.Close()
 
 	plugin := &ElasticsearchQuery{
-		URLs: []string{server.URL},
-		Log:  testutil.Logger{},
+		URLs:                []string{server.URL},
+		HealthCheckInterval: config.Duration(10 * time.Second),
+		Log:                 testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 
