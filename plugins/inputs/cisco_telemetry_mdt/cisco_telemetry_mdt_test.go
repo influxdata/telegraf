@@ -41,6 +41,8 @@ func TestTCPDialoutOverflow(t *testing.T) {
 		MaxMsgSize:     1000,
 		Log:            testutil.Logger{},
 	}
+	require.NoError(t, plugin.Init())
+
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
 	defer plugin.Stop()
@@ -79,6 +81,8 @@ func TestTCPDialoutMultiple(t *testing.T) {
 		},
 		Log: testutil.Logger{},
 	}
+	require.NoError(t, plugin.Init())
+
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
 	defer plugin.Stop()
@@ -223,6 +227,8 @@ func TestGRPCDialoutError(t *testing.T) {
 		ServiceAddress: "127.0.0.1:0",
 		Log:            testutil.Logger{},
 	}
+	require.NoError(t, plugin.Init())
+
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
 	defer plugin.Stop()
@@ -262,6 +268,8 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 		},
 		Log: testutil.Logger{},
 	}
+	require.NoError(t, plugin.Init())
+
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
 	defer plugin.Stop()
@@ -415,6 +423,8 @@ func TestGRPCDialoutKeepalive(t *testing.T) {
 		},
 		Log: testutil.Logger{},
 	}
+	require.NoError(t, plugin.Init())
+
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
 	defer plugin.Stop()
@@ -525,6 +535,7 @@ func TestCases(t *testing.T) {
 
 			plugin := cfg.Inputs[0].Input.(*CiscoTelemetryMDT)
 			plugin.ServiceAddress = "127.0.0.1:0"
+			require.NoError(t, plugin.Init())
 
 			// Start the plugin
 			var acc testutil.Accumulator
