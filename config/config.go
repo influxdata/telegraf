@@ -1160,6 +1160,23 @@ func (c *Config) addParser(parentcategory, parentname string, table *ast.Table) 
 		}
 	}
 
+	// Handle embedded parsers for parsers that support them
+	if t, ok := parser.(telegraf.ParserPlugin); ok {
+		val, found := table.Fields["embedded_parser"]
+		if !found {
+			return nil, fmt.Errorf("parser %q requires an 'embedded_parser' table", conf.DataFormat)
+		}
+		subTable, ok := val.(*ast.Table)
+		if !ok {
+			return nil, errors.New("invalid 'embedded_parser' table")
+		}
+		embedded, err := c.addParser(parentcategory, conf.DataFormat, subTable)
+		if err != nil {
+			return nil, fmt.Errorf("adding embedded parser failed: %w", err)
+		}
+		t.SetParser(embedded)
+	}
+
 	if err := c.toml.UnmarshalTable(table, parser); err != nil {
 		return nil, err
 	}
@@ -1823,6 +1840,9 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 
 	// Parser and serializer options to ignore
 	case "data_type", "influx_parser_type":
+
+	// Options handled separately when building embedded parsers
+	case "embedded_parser":
 
 	default:
 		c.unusedFieldsMutex.Lock()
