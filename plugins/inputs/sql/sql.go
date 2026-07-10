@@ -352,7 +352,7 @@ func (s *SQL) executeQuery(ctx context.Context, acc telegraf.Accumulator, q quer
 	} else {
 		// Fallback to unprepared query
 		var err error
-		rows, err = s.db.Query(q.Query)
+		rows, err = s.db.QueryContext(ctx, q.Query)
 		if err != nil {
 			return err
 		}
