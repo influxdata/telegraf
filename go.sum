@@ -1722,8 +1722,8 @@ github.com/jackc/puddle/v2 v2.2.2 h1:PR8nw+E/1w0GLuRFSmiioY6UooMp6KJv0/61nB7icHo
 github.com/jackc/puddle/v2 v2.2.2/go.mod h1:vriiEXHvEE654aYKXXjOvZM39qJ0q+azkZFrfEOc3H4=
 github.com/jaegertracing/jaeger v1.47.0 h1:XXxTMO+GxX930gxKWsg90rFr6RswkCRIW0AgWFnTYsg=
 github.com/jaegertracing/jaeger v1.47.0/go.mod h1:mHU/OHFML51CijQql4+rLfgPOcIb9MhxOMn+RKQwrJc=
-github.com/jaypipes/ghw v0.24.0 h1:6RBrJzvHvZ0t+hSvqPmOd5b21C4fMsyiyFzWljEj8Wg=
-github.com/jaypipes/ghw v0.24.0/go.mod h1:Qk3UjdH8Xu/OiVyb/eDJqnDsUc+awHU75y23ErZU33s=
+github.com/jaypipes/ghw v0.25.0 h1:+7HlAHtQSrCOafYC6oRjqxuCzDZXBr2dFgVlYRRafrs=
+github.com/jaypipes/ghw v0.25.0/go.mod h1:Qk3UjdH8Xu/OiVyb/eDJqnDsUc+awHU75y23ErZU33s=
 github.com/jaypipes/pcidb v1.1.1 h1:QmPhpsbmmnCwZmHeYAATxEaoRuiMAJusKYkUncMC0ro=
 github.com/jaypipes/pcidb v1.1.1/go.mod h1:x27LT2krrUgjf875KxQXKB0Ha/YXLdZRVmw6hH0G7g8=
 github.com/jcmturner/aescts/v2 v2.0.0 h1:9YKLH6ey7H4eDBXW8khjYslgyqG2xZikXP0EQFKrle8=
