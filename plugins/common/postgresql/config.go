@@ -1,6 +1,7 @@
 package postgresql
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/url"
@@ -51,10 +52,20 @@ func (c *Config) CreateService() (*Service, error) {
 
 	// Specific support to make it work with PgBouncer too
 	// See https://github.com/influxdata/telegraf/issues/3253#issuecomment-357505343
+	var opts []stdlib.OptionOpenDB
 	if c.IsPgBouncer {
 		// Remove DriveConfig and revert it by the ParseConfig method
 		// See https://github.com/influxdata/telegraf/issues/9134
 		connConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+
+		// PgBouncer's admin console is not a SQL parser and rejects the
+		// "-- ping" liveness query the driver sends before reusing an idle
+		// connection, flooding the PgBouncer log and forcing a reconnect on
+		// every gather cycle. Skip the ping for PgBouncer connections.
+		// See https://github.com/influxdata/telegraf/issues/19252
+		opts = append(opts, stdlib.OptionShouldPing(func(context.Context, stdlib.ShouldPingParams) bool {
+			return false
+		}))
 	}
 
 	// Provide the connection string without sensitive information for use as
@@ -70,7 +81,7 @@ func (c *Config) CreateService() (*Service, error) {
 		maxIdle:            c.MaxIdle,
 		maxOpen:            c.MaxOpen,
 		maxLifetime:        time.Duration(c.MaxLifetime),
-		dsn:                stdlib.RegisterConnConfig(connConfig),
+		connector:          stdlib.GetConnector(*connConfig, opts...),
 	}, nil
 }
 
