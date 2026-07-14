@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"net"
 	"path"
 	"strconv"
@@ -133,7 +132,7 @@ func (c *CiscoTelemetryMDT) Init() error {
 	}
 
 	// Initialize the path mappings
-	c.nxpathMap = maps.Clone(database)
+	c.nxpathMap = createDatabase()
 
 	// Initialize property conversion map
 	c.propMap = make(map[string]func(field *telemetry.TelemetryField) interface{}, len(c.Dmes)+4)
