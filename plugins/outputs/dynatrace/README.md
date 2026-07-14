@@ -91,7 +91,7 @@ The endpoint for the Dynatrace Metrics API v2 is
   url = "https://{your-environment-id}.live.dynatrace.com/api/v2/metrics/ingest"
 
   ## API token is required if a URL is specified and should be restricted to the 'Ingest metrics' scope
-  api_token = "your API token here" // hard-coded for illustration only, should be read from environment
+  api_token = "your API token here" # hard-coded for illustration only, should be read from environment
 ```
 
 You can learn more about how to use the [Dynatrace API][api].
