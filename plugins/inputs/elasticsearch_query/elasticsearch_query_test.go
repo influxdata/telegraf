@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -471,6 +473,30 @@ func TestGatherFailGatherIntegration(t *testing.T) {
 			require.ErrorContains(t, acc.GatherError(plugin.Gather), tt.expected)
 		})
 	}
+}
+
+func TestStartupFailureReleasesClient(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if _, err := w.Write([]byte(`{"version": {"number": "8.1.2"}}`)); err != nil {
+			t.Error(err)
+		}
+	}))
+	defer server.Close()
+
+	plugin := &ElasticsearchQuery{
+		URLs:                []string{server.URL},
+		HealthCheckInterval: config.Duration(10 * time.Second),
+		Log:                 testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.ErrorContains(t, plugin.Start(&acc), "not supported")
+
+	// The failed start must release the client to not leak the
+	// health-check goroutine
+	require.Nil(t, plugin.client.(*clientV5).client)
 }
 
 func sendData(ctx context.Context, url string) error {

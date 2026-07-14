@@ -99,13 +99,16 @@ func (e *ElasticsearchQuery) Start(telegraf.Accumulator) error {
 	// Get the ElasticSearch version on first node and check if it's supported
 	version, err := e.client.version()
 	if err != nil {
+		e.Stop()
 		return fmt.Errorf("getting server version failed: %w", err)
 	}
 	ver, err := semver.NewVersion(version)
 	if err != nil {
+		e.Stop()
 		return fmt.Errorf("parsing server version %q failed: %w", version, err)
 	}
 	if ver.Major() < 5 || ver.Major() > 6 {
+		e.Stop()
 		return fmt.Errorf("server version %q not supported (currently supported versions are 5.x and 6.x)", version)
 	}
 
@@ -117,6 +120,7 @@ func (e *ElasticsearchQuery) Start(telegraf.Accumulator) error {
 	for i := range e.Aggregations {
 		agg := &e.Aggregations[i]
 		if err := e.initAggregation(ctx, agg); err != nil {
+			e.Stop()
 			return fmt.Errorf("initializing aggregation %q failed: %w", agg.MeasurementName, err)
 		}
 	}
