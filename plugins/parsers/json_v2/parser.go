@@ -534,6 +534,10 @@ func (p *Parser) processObjects(input []byte, objects []Object, timestamp time.T
 	for _, c := range objects {
 		p.objectConfig = c
 
+		// The path results of a previous object are relative to that object's
+		// JSON and must not be matched against this one.
+		p.subPathResults = nil
+
 		if c.Path == "" {
 			return nil, errors.New("the GJSON path is required")
 		}
