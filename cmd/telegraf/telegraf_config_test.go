@@ -15,7 +15,7 @@ func TestPrintSampleConfigDefaultOutputIsFile(t *testing.T) {
 
 	output := buf.String()
 	require.Contains(t, output, "\n[[outputs.file]]")
-	require.Contains(t, output, "\n files = [\"stdout\"]")
+	require.Contains(t, output, "\n  files = [\"stdout\"]")
 }
 
 func TestLoadConfigurationTestModeSkipsDiskOutputBuffer(t *testing.T) {
