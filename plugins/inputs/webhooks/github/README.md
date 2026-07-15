@@ -457,3 +457,4 @@ where the data is sourced from.
 * 'run_time' = `event.workflow_run.completed_at - event.workflow_run.run_started_at`
                 at `event.action = completed in milliseconds` int
 * 'head_branch' = `event.workflow_run.head_branch` string
+* 'run_id' = `event.workflow_run.id` int
