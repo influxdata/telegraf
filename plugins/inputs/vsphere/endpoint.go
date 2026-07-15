@@ -936,13 +936,10 @@ func (e *endpoint) loadCustomAttributes(entity mo.ManagedEntity) map[string]stri
 
 func (e *endpoint) loadCustomProperties(entity interface{}, propertieInclude []string) map[string]interface{} {
 	cvs := make(map[string]interface{})
-	if len(propertieInclude) != 0 {
-		for _, filtre := range propertieInclude {
-			valeur := e.getExtraData(entity, capitalizeAfterDot(filtre))
-			if valeur != nil {
-				key := e.makePropertyIdentifier(filtre)
-				cvs[key] = valeur
-			}
+	for _, filter := range propertiesInclude {
+		if value, ok := e.getExtraData(entity, capitalizeAfterDot(filter)); ok {
+			key := e.makePropertyIdentifier(filter)
+			cvs[key] = value
 		}
 	}
 	return cvs
@@ -1532,16 +1529,7 @@ func (e *endpoint) getExtraData(entity interface{}, fieldPath string) interface{
 }
 
 func (e *endpoint) makePropertyIdentifier(input string) string {
-	var result []rune
-	runes := []rune(e.parent.Separator)
-	for _, r := range input {
-		if r == '.' {
-			result = append(result, runes...)
-		} else {
-			result = append(result, r)
-		}
-	}
-	return string(result)
+	return strings..ReplaceAll(input, '.', e.parent.Separator)
 }
 
 func capitalizeAfterDot(input string) string {
