@@ -938,7 +938,8 @@ func (e *endpoint) loadCustomProperties(entity interface{}, propertieInclude []s
 	cvs := make(map[string]interface{})
 	if len(propertieInclude) != 0 {
 		for _, filtre := range propertieInclude {
-			if valeur, ok := e.getExtraData(entity, capitalizeAfterDot(filtre)); ok {
+			valeur := e.getExtraData(entity, capitalizeAfterDot(filtre))
+			if valeur != nil {
 				key := e.makePropertyIdentifier(filtre)
 				cvs[key] = valeur
 			}
@@ -1492,14 +1493,14 @@ func round(x float64) float64 {
 	return t
 }
 
-func (e *endpoint) getExtraData(entity interface{}, fieldPath string) (interface{}, bool) {
+func (e *endpoint) getExtraData(entity interface{}, fieldPath string) interface{} {
 	v := reflect.ValueOf(entity)
 
 	// Si c'est un pointeur, on dé-référence
 	if v.Kind() == reflect.Ptr {
 		if v.IsNil() {
 			// La valeur est un pointeur nil, on ne peut pas continuer
-			return nil, false
+			return nil
 		}
 		v = v.Elem()
 	}
@@ -1508,13 +1509,13 @@ func (e *endpoint) getExtraData(entity interface{}, fieldPath string) (interface
 	for _, field := range fields {
 		if v.Kind() != reflect.Struct {
 			e.parent.Log.Warnf("Field %s in %s of %s not struct %s. Skipping", field, fieldPath, reflect.TypeOf(entity), v.Kind())
-			return nil, false
+			return nil
 		}
 		v = v.FieldByName(field)
 		// Si le champ n'existe pas ou n'est pas accessible
 		if !v.IsValid() {
 			e.parent.Log.Warnf("Field %s in %s of %s not valid. Skipping", field, fieldPath, reflect.TypeOf(entity))
-			return nil, false
+			return nil
 		}
 		// Si c'est un pointeur, dé-référencer
 		if v.Kind() == reflect.Ptr {
@@ -1524,10 +1525,10 @@ func (e *endpoint) getExtraData(entity interface{}, fieldPath string) (interface
 
 	// Retourner la valeur sous forme de string
 	if v.IsValid() && v.CanInterface() {
-		return v, true
+		return v
 	}
 	e.parent.Log.Warnf("Field %s of %s no interface. Skipping", fieldPath, reflect.TypeOf(entity))
-	return nil, false
+	return nil
 }
 
 func (e *endpoint) makePropertyIdentifier(input string) string {
