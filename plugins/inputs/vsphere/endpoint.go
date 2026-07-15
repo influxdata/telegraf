@@ -912,25 +912,25 @@ func getDatastores(ctx context.Context, e *endpoint, rf *resourceFilter, propert
 }
 
 func (e *endpoint) loadCustomAttributes(entity mo.ManagedEntity) map[string]string {
+	if !e.customAttrEnabled {
+		return make(map[string]string)
+	}
 	cvs := make(map[string]string)
-	if e.customAttrEnabled {
-		for _, v := range entity.CustomValue {
-			cv, ok := v.(*types.CustomFieldStringValue)
-			if !ok {
-				e.parent.Log.Warnf("Metadata for custom field %d not of string type. Skipping", cv.Key)
-				continue
-			}
-			key, ok := e.customFields[cv.Key]
-			if !ok {
-				e.parent.Log.Warnf("Metadata for custom field %d not found. Skipping", cv.Key)
-				continue
-			}
-			if e.customAttrFilter.Match(key) {
-				cvs[key] = cv.Value
-			}
+	for _, v := range entity.CustomValue {
+		cv, ok := v.(*types.CustomFieldStringValue)
+		if !ok {
+			e.parent.Log.Warnf("Metadata for custom field %d not of string type. Skipping", cv.Key)
+			continue
+		}
+		key, ok := e.customFields[cv.Key]
+		if !ok {
+			e.parent.Log.Warnf("Metadata for custom field %d not found. Skipping", cv.Key)
+			continue
+		}
+		if e.customAttrFilter.Match(key) {
+			cvs[key] = cv.Value
 		}
 	}
-
 	return cvs
 }
 
