@@ -1529,7 +1529,7 @@ func (e *endpoint) getExtraData(entity interface{}, fieldPath string) interface{
 }
 
 func (e *endpoint) makePropertyIdentifier(input string) string {
-	return strings..ReplaceAll(input, '.', e.parent.Separator)
+	return strings.ReplaceAll(input, '.', e.parent.Separator)
 }
 
 func capitalizeAfterDot(input string) string {
