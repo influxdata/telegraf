@@ -242,6 +242,7 @@ following works:
 - github.com/hashicorp/go-cleanhttp [Mozilla Public License 2.0](https://github.com/hashicorp/go-cleanhttp/blob/master/LICENSE)
 - github.com/hashicorp/go-hclog [MIT License](https://github.com/hashicorp/go-hclog/blob/main/LICENSE)
 - github.com/hashicorp/go-immutable-radix [Mozilla Public License 2.0](https://github.com/hashicorp/go-immutable-radix/blob/master/LICENSE)
+- github.com/hashicorp/go-metrics [MIT License](https://github.com/hashicorp/go-metrics/blob/master/LICENSE)
 - github.com/hashicorp/go-multierror [Mozilla Public License 2.0](https://github.com/hashicorp/go-multierror/blob/master/LICENSE)
 - github.com/hashicorp/go-retryablehttp [Mozilla Public License 2.0](https://github.com/hashicorp/go-retryablehttp/blob/main/LICENSE)
 - github.com/hashicorp/go-rootcerts [Mozilla Public License 2.0](https://github.com/hashicorp/go-rootcerts/blob/master/LICENSE)
