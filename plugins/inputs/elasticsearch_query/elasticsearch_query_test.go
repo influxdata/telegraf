@@ -2,8 +2,12 @@ package elasticsearch_query
 
 import (
 	"bufio"
+	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,9 +17,10 @@ import (
 	"testing"
 	"time"
 
+	elasticsearch5 "github.com/elastic/go-elasticsearch/v5"
+	esapi5 "github.com/elastic/go-elasticsearch/v5/esapi"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
-	elastic5 "gopkg.in/olivere/elastic.v5"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -28,6 +33,17 @@ const (
 	servicePort = "9200"
 	testindex   = "test-elasticsearch"
 )
+
+type nginxlog struct {
+	IPaddress    string    `json:"IP"`
+	Timestamp    time.Time `json:"@timestamp"`
+	Method       string    `json:"method"`
+	URI          string    `json:"URI"`
+	Httpversion  string    `json:"http_version"`
+	Response     string    `json:"response"`
+	Size         float64   `json:"size"`
+	ResponseTime float64   `json:"response_time"`
+}
 
 func TestGatherIntegration(t *testing.T) {
 	if testing.Short() {
@@ -501,16 +517,6 @@ func TestStartupFailureReleasesClient(t *testing.T) {
 
 func sendData(ctx context.Context, url string) error {
 	// Read the data
-	type nginxlog struct {
-		IPaddress    string    `json:"IP"`
-		Timestamp    time.Time `json:"@timestamp"`
-		Method       string    `json:"method"`
-		URI          string    `json:"URI"`
-		Httpversion  string    `json:"http_version"`
-		Response     string    `json:"response"`
-		Size         float64   `json:"size"`
-		ResponseTime float64   `json:"response_time"`
-	}
 	file, err := os.Open(filepath.Join("testdata", "nginx_logs"))
 	if err != nil {
 		return fmt.Errorf("reading nginx logs failed: %w", err)
@@ -546,32 +552,132 @@ func sendData(ctx context.Context, url string) error {
 	}
 
 	// Create the client
-	options := []elastic5.ClientOptionFunc{
-		elastic5.SetSniff(false),
-		elastic5.SetURL(url),
-		elastic5.SetHealthcheckInterval(10 * time.Second),
-	}
-	client, err := elastic5.NewClient(options...)
+	client, err := newTestIndexer(ctx, url)
 	if err != nil {
 		return fmt.Errorf("creating client failed: %w", err)
 	}
 
 	// Create bulk request for the data
-	bulkRequest := client.Bulk()
-	for _, logline := range logs {
-		bulkRequest.Add(elastic5.NewBulkIndexRequest().
-			Index(testindex).
-			Type("testquery_data").
-			Doc(logline),
-		)
-	}
-	if _, err := bulkRequest.Do(ctx); err != nil {
+	if err := client.bulkIndex(ctx, testindex, logs); err != nil {
 		return fmt.Errorf("sending bulk request failed: %w", err)
 	}
 
 	// Force elastic to refresh indexes to get new batch data
-	if _, err := client.Refresh().Do(ctx); err != nil {
+	if err := client.refresh(ctx); err != nil {
 		return fmt.Errorf("refreshing indices failed: %w", err)
+	}
+
+	return nil
+}
+
+type testIndexer struct {
+	client *elasticsearch5.Client
+	major  int
+}
+
+func newTestIndexer(ctx context.Context, baseURL string) (*testIndexer, error) {
+	client, err := elasticsearch5.NewClient(elasticsearch5.Config{
+		Addresses: []string{baseURL},
+		Transport: &http.Transport{
+			ResponseHeaderTimeout: 30 * time.Second,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	idx := &testIndexer{client: client}
+	major, err := idx.probeMajor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	idx.major = major
+
+	return idx, nil
+}
+
+func (idx *testIndexer) bulkIndex(ctx context.Context, index string, docs []nginxlog) error {
+	meta := map[string]any{
+		"_index": index,
+	}
+	if idx.major <= 6 {
+		meta["_type"] = "testquery_data"
+	}
+	metaLine, err := json.Marshal(map[string]any{"index": meta})
+	if err != nil {
+		return err
+	}
+
+	var body bytes.Buffer
+	encoder := json.NewEncoder(&body)
+	for _, doc := range docs {
+		body.Write(metaLine)
+		body.WriteByte('\n')
+		if err := encoder.Encode(doc); err != nil {
+			return err
+		}
+	}
+
+	var result struct {
+		Errors bool `json:"errors"`
+	}
+	res, err := idx.client.Bulk(
+		&body,
+		idx.client.Bulk.WithContext(ctx),
+	)
+	if err := idx.handleResponse(res, err, &result); err != nil {
+		return err
+	}
+	if result.Errors {
+		return errors.New("bulk indexing reported item errors")
+	}
+
+	return nil
+}
+
+func (idx *testIndexer) refresh(ctx context.Context) error {
+	res, err := idx.client.Indices.Refresh(
+		idx.client.Indices.Refresh.WithContext(ctx),
+	)
+	return idx.handleResponse(res, err, nil)
+}
+
+func (idx *testIndexer) probeMajor(ctx context.Context) (int, error) {
+	var info struct {
+		Version struct {
+			Number string `json:"number"`
+		} `json:"version"`
+	}
+
+	res, err := idx.client.Info(idx.client.Info.WithContext(ctx))
+	if err := idx.handleResponse(res, err, &info); err != nil {
+		return 0, err
+	}
+
+	majorText, _, _ := strings.Cut(info.Version.Number, ".")
+	major, err := strconv.Atoi(majorText)
+	if err != nil {
+		return 0, fmt.Errorf("parsing Elasticsearch version %q failed: %w", info.Version.Number, err)
+	}
+
+	return major, nil
+}
+
+func (*testIndexer) handleResponse(res *esapi5.Response, err error, out any) error {
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.IsError() {
+		data, err := io.ReadAll(res.Body)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("%s: %s", res.Status(), strings.TrimSpace(string(data)))
+	}
+	if out != nil {
+		return json.NewDecoder(res.Body).Decode(out)
 	}
 
 	return nil
