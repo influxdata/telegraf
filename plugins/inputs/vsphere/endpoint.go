@@ -934,7 +934,7 @@ func (e *endpoint) loadCustomAttributes(entity mo.ManagedEntity) map[string]stri
 	return cvs
 }
 
-func (e *endpoint) loadCustomProperties(entity interface{}, propertieInclude []string) map[string]interface{} {
+func (e *endpoint) loadCustomProperties(entity interface{}, propertiesInclude []string) map[string]interface{} {
 	cvs := make(map[string]interface{})
 	for _, filter := range propertiesInclude {
 		if value, ok := e.getExtraData(entity, capitalizeAfterDot(filter)); ok {
