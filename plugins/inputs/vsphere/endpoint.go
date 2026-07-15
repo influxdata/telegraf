@@ -1493,10 +1493,10 @@ func round(x float64) float64 {
 func (e *endpoint) getExtraData(entity interface{}, fieldPath string) interface{} {
 	v := reflect.ValueOf(entity)
 
-	// Si c'est un pointeur, on dé-référence
+	// If it's a pointer, we dereference it.
 	if v.Kind() == reflect.Ptr {
 		if v.IsNil() {
-			// La valeur est un pointeur nil, on ne peut pas continuer
+			// The value is a nil pointer; cannot continue.
 			return nil
 		}
 		v = v.Elem()
@@ -1509,18 +1509,18 @@ func (e *endpoint) getExtraData(entity interface{}, fieldPath string) interface{
 			return nil
 		}
 		v = v.FieldByName(field)
-		// Si le champ n'existe pas ou n'est pas accessible
+		// If the field does not exist or is not accessible
 		if !v.IsValid() {
 			e.parent.Log.Warnf("Field %s in %s of %s not valid. Skipping", field, fieldPath, reflect.TypeOf(entity))
 			return nil
 		}
-		// Si c'est un pointeur, dé-référencer
+		// If it is a pointer, dereference it.
 		if v.Kind() == reflect.Ptr {
 			v = v.Elem()
 		}
 	}
 
-	// Retourner la valeur sous forme de string
+	// Return the value as a string.
 	if v.IsValid() && v.CanInterface() {
 		return v
 	}
