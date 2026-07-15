@@ -34,7 +34,7 @@ type resourceFilter struct {
 
 // resourceInfo is a utility class grouping a type and relevant parameters.
 type resourceInfo struct {
-	resType     string
+	resMType    string
 	custoFields []string
 }
 
@@ -80,7 +80,7 @@ func (f *finder) findResources(ctx context.Context, resourceInfo resourceInfo, p
 	if err != nil {
 		return err
 	}
-	f.client.log.Debugf("Find(%s, %s) returned %d objects", resourceInfo.resType, path, len(objs))
+	f.client.log.Debugf("Find(%s, %s) returned %d objects", resourceInfo.resMType, path, len(objs))
 	return nil
 }
 
@@ -114,7 +114,7 @@ func (f *finder) descend(ctx context.Context, root types.ManagedObjectReference,
 
 	objectTypes := ct
 	if isLeaf {
-		if af, ok := addFields[resourceInfo.resType]; ok {
+		if af, ok := addFields[resourceInfo.resMType]; ok {
 			fields = append(fields, af...)
 		}
 		fields = append(fields, resourceInfo.custoFields...)
@@ -122,12 +122,12 @@ func (f *finder) descend(ctx context.Context, root types.ManagedObjectReference,
 		if recurse {
 			// Special case: The last token is a recursive wildcard, so we can grab everything
 			// recursively in a single call.
-			v2, err := m.CreateContainerView(ctx, root, []string{resourceInfo.resType}, true)
+			v2, err := m.CreateContainerView(ctx, root, []string{resourceInfo.resMType}, true)
 			if err != nil {
 				return err
 			}
 			defer v2.Destroy(ctx) //nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
-			err = v2.Retrieve(ctx, []string{resourceInfo.resType}, uniqueFields, &content)
+			err = v2.Retrieve(ctx, []string{resourceInfo.resMType}, uniqueFields, &content)
 			if err != nil {
 				return err
 			}
@@ -136,7 +136,7 @@ func (f *finder) descend(ctx context.Context, root types.ManagedObjectReference,
 			}
 			return nil
 		}
-		objectTypes = []string{resourceInfo.resType} // Only load wanted object type at leaf level
+		objectTypes = []string{resourceInfo.resMType} // Only load wanted object type at leaf level
 	}
 	err = v.Retrieve(ctx, objectTypes, fields, &content)
 	if err != nil {
@@ -154,7 +154,7 @@ func (f *finder) descend(ctx context.Context, root types.ManagedObjectReference,
 			continue
 		}
 
-		if c.Obj.Type == resourceInfo.resType && isLeaf {
+		if c.Obj.Type == resourceInfo.resMType && isLeaf {
 			// We found what we're looking for. Consider it a leaf and stop descending
 			objs[c.Obj.String()] = c
 			continue
@@ -170,7 +170,7 @@ func (f *finder) descend(ctx context.Context, root types.ManagedObjectReference,
 				// Rerun the entire level as a leaf. This is needed since all properties aren't loaded
 				// when we're processing non-leaf nodes.
 				if pos == len(tokens)-2 {
-					if c.Obj.Type == resourceInfo.resType {
+					if c.Obj.Type == resourceInfo.resMType {
 						rerunAsLeaf = true
 						continue
 					}
@@ -234,7 +234,7 @@ func objectContentToTypedArray(objs map[string]types.ObjectContent, dst interfac
 // findAll finds all resources matching the paths that were specified upon creation of the resourceFilter.
 func (r *resourceFilter) findAll(ctx context.Context, dst interface{}) error {
 	resourceInfo := resourceInfo{
-		resType:     r.resType,
+		resMType:    r.resType,
 		custoFields: r.custoFields}
 
 	return r.finder.findAll(ctx, resourceInfo, r.paths, r.excludePaths, dst)
