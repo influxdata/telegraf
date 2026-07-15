@@ -108,20 +108,9 @@ func TestPgBouncerIdleConnectionReuseIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	postgresServicePort := "5432"
 	pgBouncerServicePort := "6432"
 
-	backend := testutil.Container{
-		Image:        "postgres:alpine",
-		ExposedPorts: []string{postgresServicePort},
-		Env: map[string]string{
-			"POSTGRES_HOST_AUTH_METHOD": "trust",
-		},
-		WaitingFor: wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
-	}
-	require.NoError(t, backend.Start(), "failed to start container")
-	defer backend.Terminate()
-
+	// The admin console serves the SHOW commands without a PostgreSQL backend
 	container := testutil.Container{
 		Image:        "z9pascal/pgbouncer-container:1.24.1-latest",
 		ExposedPorts: []string{pgBouncerServicePort},
