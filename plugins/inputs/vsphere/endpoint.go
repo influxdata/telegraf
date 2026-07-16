@@ -936,10 +936,10 @@ func (e *endpoint) loadCustomAttributes(entity mo.ManagedEntity) map[string]stri
 
 func (e *endpoint) loadCustomProperties(entity interface{}, propertiesInclude []string) map[string]interface{} {
 	cvs := make(map[string]interface{})
-	for _, filter := range propertiesInclude {
-		value := e.getExtraData(entity, capitalizeAfterDot(filter))
+	for _, property := range propertiesInclude {
+		value := e.getExtraData(entity, capitalizeAfterDot(property))
 		if value != nil {
-			key := e.makePropertyIdentifier(filter)
+			key := e.makePropertyIdentifier(property)
 			cvs[key] = value
 		}
 	}
