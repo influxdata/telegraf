@@ -244,6 +244,9 @@ func TestMaxQuery(t *testing.T) {
 
 func testLookupVM(ctx context.Context, t *testing.T, f *finder, path string, expected int, expectedName string) {
 	var vm []mo.VirtualMachine
+	ri := resourceInfo{
+		resType:     "VirtualMachine",
+	}
 
 	err := f.find(ctx, ri, path, &vm)
 	require.NoError(t, err)
@@ -270,12 +273,18 @@ func TestFinder(t *testing.T) {
 	f := finder{c}
 
 	var dc []mo.Datacenter
+	ri := resourceInfo{
+		resType:     "Datacenter",
+	}
 	err = f.find(t.Context(), ri, "/DC0", &dc)
 	require.NoError(t, err)
 	require.Len(t, dc, 1)
 	require.Equal(t, "DC0", dc[0].Name)
 
 	var host []mo.HostSystem
+	ri = resourceInfo{
+		resType:     "HostSystem",
+	}
 	err = f.find(t.Context(), ri, "/DC0/host/DC0_H0/DC0_H0", &host)
 	require.NoError(t, err)
 	require.Len(t, host, 1)
@@ -288,12 +297,18 @@ func TestFinder(t *testing.T) {
 	require.Equal(t, "DC0_C0_H0", host[0].Name)
 
 	resourcepool := make([]mo.ResourcePool, 0)
+	ri = resourceInfo{
+		resType:     "ResourcePool",
+	}
 	err = f.find(t.Context(), ri, "/DC0/host/DC0_C0/Resources/DC0_C0_RP0", &resourcepool)
 	require.NoError(t, err)
 	require.Len(t, host, 1)
 	require.Equal(t, "DC0_C0_H0", host[0].Name)
 
 	host = make([]mo.HostSystem, 0)
+	ri = resourceInfo{
+		resType:     "HostSystem",
+	}
 	err = f.find(t.Context(), ri, "/DC0/host/DC0_C0/*", &host)
 	require.NoError(t, err)
 	require.Len(t, host, 3)
@@ -313,6 +328,9 @@ func TestFinder(t *testing.T) {
 	testLookupVM(t.Context(), t, &f, "/*/host/**/*DC*/*/*DC*", 4, "")
 
 	vm = make([]mo.VirtualMachine, 0)
+	ri = resourceInfo{
+		resType:     "VirtualMachine",
+	}
 	err = f.findAll(t.Context(), ri, []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"}, nil, &vm)
 	require.NoError(t, err)
 	require.Len(t, vm, 4)
@@ -385,12 +403,18 @@ func TestFolders(t *testing.T) {
 	f := finder{c}
 
 	var folder []mo.Folder
+	ri := resourceInfo{
+		resType:     "Folder",
+	}
 	err = f.find(t.Context(), ri, "/F0", &folder)
 	require.NoError(t, err)
 	require.Len(t, folder, 1)
 	require.Equal(t, "F0", folder[0].Name)
 
 	var dc []mo.Datacenter
+	ri = resourceInfo{
+		resType:     "Datacenter",
+	}
 	err = f.find(t.Context(), ri, "/F0/DC1", &dc)
 	require.NoError(t, err)
 	require.Len(t, dc, 1)
@@ -413,6 +437,9 @@ func TestVsanCmmds(t *testing.T) {
 
 	f := finder{c}
 	var clusters []mo.ClusterComputeResource
+	ri := resourceInfo{
+		resType:     "ClusterComputeResource",
+	}
 	err = f.findAll(t.Context(), ri, []string{"/**"}, nil, &clusters)
 	require.NoError(t, err)
 
@@ -509,6 +536,9 @@ func testCollection(t *testing.T, excludeClusters bool) {
 	client, err := v.endpoints[0].clientFactory.getClient(t.Context())
 	require.NoError(t, err)
 	hostCache := make(map[string]string)
+	ri := resourceInfo{
+		resType:     "HostSystem",
+	}
 	for _, m := range acc.Metrics {
 		delete(mustHaveMetrics, m.Measurement)
 
