@@ -32,7 +32,7 @@ func (*Postgresql) SampleConfig() string {
 }
 
 func (p *Postgresql) Init() error {
-	p.IsPgBouncer = !p.PreparedStatements
+	p.SimpleProtocol = !p.PreparedStatements
 
 	service, err := p.Config.CreateService()
 	if err != nil {

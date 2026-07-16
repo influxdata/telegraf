@@ -1,6 +1,7 @@
 package postgresql
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/url"
@@ -24,7 +25,15 @@ type Config struct {
 	MaxIdle       int             `toml:"max_idle"`
 	MaxOpen       int             `toml:"max_open"`
 	MaxLifetime   config.Duration `toml:"max_lifetime"`
-	IsPgBouncer   bool            `toml:"-"`
+
+	// Internal flags
+
+	// IsPgBouncer marks a connection to the PgBouncer admin console, which
+	// only understands PgBouncer's own SHOW commands
+	IsPgBouncer bool `toml:"-"`
+	// SimpleProtocol disables prepared statements, required for the admin
+	// console and for servers reached through a PgBouncer in transaction mode
+	SimpleProtocol bool `toml:"-"`
 }
 
 func (c *Config) CreateService() (*Service, error) {
@@ -49,12 +58,25 @@ func (c *Config) CreateService() (*Service, error) {
 	// Remove the socket name from the path
 	connConfig.Host = socketRegexp.ReplaceAllLiteralString(connConfig.Host, "")
 
-	// Specific support to make it work with PgBouncer too
+	// Neither the PgBouncer admin console nor a server reached through a
+	// PgBouncer with pool_mode set to transaction supports prepared statements
 	// See https://github.com/influxdata/telegraf/issues/3253#issuecomment-357505343
-	if c.IsPgBouncer {
-		// Remove DriveConfig and revert it by the ParseConfig method
-		// See https://github.com/influxdata/telegraf/issues/9134
+	// and https://github.com/influxdata/telegraf/issues/9134
+	if c.IsPgBouncer || c.SimpleProtocol {
 		connConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+	}
+
+	// The PgBouncer admin console is not a SQL parser and rejects the "-- ping"
+	// liveness query the driver sends before reusing an idle connection,
+	// flooding the PgBouncer log and forcing a reconnect on every gather cycle.
+	// Servers reached through a PgBouncer are not affected as the ping is
+	// forwarded to PostgreSQL, so those keep the liveness check.
+	// See https://github.com/influxdata/telegraf/issues/19252
+	var opts []stdlib.OptionOpenDB
+	if c.IsPgBouncer {
+		opts = append(opts, stdlib.OptionShouldPing(func(context.Context, stdlib.ShouldPingParams) bool {
+			return false
+		}))
 	}
 
 	// Provide the connection string without sensitive information for use as
@@ -70,7 +92,7 @@ func (c *Config) CreateService() (*Service, error) {
 		maxIdle:            c.MaxIdle,
 		maxOpen:            c.MaxOpen,
 		maxLifetime:        time.Duration(c.MaxLifetime),
-		dsn:                stdlib.RegisterConnConfig(connConfig),
+		connector:          stdlib.GetConnector(*connConfig, opts...),
 	}, nil
 }
 

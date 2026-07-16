@@ -2,7 +2,9 @@ package pgbouncer
 
 import (
 	"fmt"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -99,6 +101,67 @@ func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
 
 	require.Positive(t, metricsCounted)
 	require.Equal(t, len(intMetricsPgBouncer)+len(intMetricsPgBouncerPools), metricsCounted)
+}
+
+func TestPgBouncerIdleConnectionReuseIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	pgBouncerServicePort := "6432"
+
+	// The admin console serves the SHOW commands without a PostgreSQL backend
+	container := testutil.Container{
+		Image:        "z9pascal/pgbouncer-container:1.24.1-latest",
+		ExposedPorts: []string{pgBouncerServicePort},
+		Env: map[string]string{
+			"PG_ENV_POSTGRESQL_USER": "pgbouncer",
+			"PG_ENV_POSTGRESQL_PASS": "pgbouncer",
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(pgBouncerServicePort),
+			wait.ForLog("LOG process up"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer func() {
+		container.Terminate()
+
+		// The container log can only be inspected after Terminate stopped the
+		// log streaming. PgBouncer's admin console logs an error for every
+		// statement it cannot parse, e.g. the "-- ping" liveness query the
+		// driver sends by default when reusing an idle connection.
+		require.NotContains(t, strings.Join(container.Logs.Msgs, ""), "invalid command")
+	}()
+
+	addr := fmt.Sprintf(
+		"host=%s user=pgbouncer password=pgbouncer dbname=pgbouncer port=%s sslmode=disable",
+		container.Address,
+		container.Ports[pgBouncerServicePort],
+	)
+
+	// Mirror the connection-pool defaults of the plugin factory as keeping the
+	// connection idle and reusing it is the precondition for the driver's
+	// liveness check
+	p := &PgBouncer{
+		Config: postgresql.Config{
+			Address:     config.NewSecret([]byte(addr)),
+			MaxIdle:     1,
+			MaxOpen:     1,
+			IsPgBouncer: true,
+		},
+	}
+	require.NoError(t, p.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, p.Start(&acc))
+	defer p.Stop()
+	require.NoError(t, p.Gather(&acc))
+
+	// Let the connection sit idle beyond the one-second threshold after which
+	// the driver checks connection liveness before reusing it
+	time.Sleep(1500 * time.Millisecond)
+	require.NoError(t, p.Gather(&acc))
 }
 
 func TestPgBouncerGeneratesMetricsIntegrationShowCommands(t *testing.T) {
