@@ -339,7 +339,7 @@ func TestFinder(t *testing.T) {
 		finder:       &f,
 		paths:        []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"},
 		excludePaths: []string{"/DC0/vm/DC0_H0_VM0"},
-		resMType:      "VirtualMachine",
+		resType:      "VirtualMachine",
 	}
 	vm = make([]mo.VirtualMachine, 0)
 	require.NoError(t, rf.findAll(t.Context(), &vm))
@@ -349,7 +349,7 @@ func TestFinder(t *testing.T) {
 		finder:       &f,
 		paths:        []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"},
 		excludePaths: []string{"/**"},
-		resMType:      "VirtualMachine",
+		resType:      "VirtualMachine",
 	}
 	vm = make([]mo.VirtualMachine, 0)
 	require.NoError(t, rf.findAll(t.Context(), &vm))
@@ -359,7 +359,7 @@ func TestFinder(t *testing.T) {
 		finder:       &f,
 		paths:        []string{"/**"},
 		excludePaths: []string{"/**"},
-		resMType:      "VirtualMachine",
+		resType:      "VirtualMachine",
 	}
 	vm = make([]mo.VirtualMachine, 0)
 	require.NoError(t, rf.findAll(t.Context(), &vm))
@@ -369,7 +369,7 @@ func TestFinder(t *testing.T) {
 		finder:       &f,
 		paths:        []string{"/**"},
 		excludePaths: []string{"/this won't match anything"},
-		resMType:      "VirtualMachine",
+		resType:      "VirtualMachine",
 	}
 	vm = make([]mo.VirtualMachine, 0)
 	require.NoError(t, rf.findAll(t.Context(), &vm))
@@ -379,7 +379,7 @@ func TestFinder(t *testing.T) {
 		finder:       &f,
 		paths:        []string{"/**"},
 		excludePaths: []string{"/**/*VM0"},
-		resMType:      "VirtualMachine",
+		resType:      "VirtualMachine",
 	}
 	vm = make([]mo.VirtualMachine, 0)
 	require.NoError(t, rf.findAll(t.Context(), &vm))
