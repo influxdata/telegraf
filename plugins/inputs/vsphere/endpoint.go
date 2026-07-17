@@ -792,11 +792,12 @@ func getVMs(ctx context.Context, e *endpoint, rf *resourceFilter) (objectMap, er
 		r := &resources[i]
 
 		guest := "unknown"
+		rpname := ""
 		uuid := ""
 		lookup := make(map[string]string)
 		// get the name of the VM resource pool
 		if r.Runtime.PowerState == "poweredOn" {
-			rpname := getResourcePoolName(*r.ResourcePool, resourcePools)
+			rpname = getResourcePoolName(*r.ResourcePool, resourcePools)
 		}
 		// Extract host name
 		if r.Guest != nil && r.Guest.HostName != "" {
