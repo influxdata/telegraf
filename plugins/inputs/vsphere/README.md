@@ -84,7 +84,7 @@ to use them.
   # vm_instances = true ## true by default
   ## Custom VM properties to collect.
   ## If the properties are text-based, they will be added as tags; otherwise, they will be added as metrics.
-  # vm_propertie_include = ["runtime.powerState", "summary.config.MemorySizeMB", "summary.config.MemoryReservation"]
+  # vm_property_include = ["runtime.powerState", "summary.config.MemorySizeMB", "summary.config.MemoryReservation"]
 
   ## Hosts
   ## Typical host metrics (if omitted or empty, all metrics are collected)
@@ -145,7 +145,7 @@ to use them.
   # host_instances = true ## true by default
   ## Custom host properties to collect.
   ## If the properties are text-based, they will be added as tags; otherwise, they will be added as metrics.
-  # host_propertie_include = ["summary.runtime.powerState", "summary.overallStatus", "summary.runtime.inMaintenanceMode", "summary.runtime.connectionState"]
+  # host_property_include = ["summary.runtime.powerState", "summary.overallStatus", "summary.runtime.inMaintenanceMode", "summary.runtime.connectionState"]
 
   ## Clusters
   # cluster_include = [ "/*/host/**"] # Inventory path to clusters to collect (by default all are collected)
@@ -155,7 +155,7 @@ to use them.
   # cluster_instances = false ## false by default
   ## Custom cluster properties to collect.
   ## If the properties are text-based, they will be added as tags; otherwise, they will be added as metrics.
-  # cluster_propertie_include = []
+  # cluster_property_include = []
 
   ## Resource Pools
   # resource_pool_include = [ "/*/host/**"] # Inventory path to resource pools to collect (by default all are collected)
@@ -165,7 +165,7 @@ to use them.
   # resource_pool_instances = false ## false by default
   ## Custom resource_pool properties to collect.
   ## If the properties are text-based, they will be added as tags; otherwise, they will be added as metrics.
-  # resource_pool_propertie_include = []
+  # resource_pool_property_include = []
 
   ## Datastores
   # datastore_include = [ "/*/datastore/**"] # Inventory path to datastores to collect (by default all are collected)
@@ -175,7 +175,7 @@ to use them.
   # datastore_instances = false ## false by default
   ## Custom datastore properties to collect.
   ## If the properties are text-based, they will be added as tags; otherwise, they will be added as metrics.
-  # datastore_propertie_include = []
+  # datastore_property_include = []
 
   ## Datacenters
   # datacenter_include = [ "/*/host/**"] # Inventory path to clusters to collect (by default all are collected)
@@ -185,7 +185,7 @@ to use them.
   # datacenter_instances = false ## false by default
   ## Custom cluster properties to collect.
   ## If the properties are text-based, they will be added as tags; otherwise, they will be added as metrics.
-  # datacenter_propertie_include = []
+  # datacenter_property_include = []
 
   ## VSAN
   # vsan_metric_include = [] ## if omitted or empty, all metrics are collected
@@ -194,7 +194,7 @@ to use them.
   # vsan_metric_skip_verify = false ## false by default.
   ## Custom vsan properties to collect.
   ## If the properties are text-based, they will be added as tags; otherwise, they will be added as metrics.
-  # vsan_propertie_include = []
+  # vsan_property_include = []
 
   ## Interval for sampling vSAN performance metrics, can be reduced down to
   ## 30 seconds for vSAN 8 U1.
@@ -974,16 +974,16 @@ disk.capacity.usage.average
 
 #### Collect custom tag
 
-**_propertie_include allow you to collect data that are not metrics.
+**_property_include allow you to collect data that are not metrics.
 
 For sample :
 
 ```toml
-  host_propertie_include = ["summary.runtime.powerState", "summary.overallStatus", "summary.runtime.inMaintenanceMode", "summary.runtime.connectionState"]
-  vm_propertie_include = ["runtime.powerState"]
-  cluster_propertie_include = ["summary.overallStatus"]
-  datastore_propertie_include = ["summary.accessible"]
-  resource_pool_propertie_include = ["overallStatus"]
+  host_property_include = ["summary.runtime.powerState", "summary.overallStatus", "summary.runtime.inMaintenanceMode", "summary.runtime.connectionState"]
+  vm_property_include = ["runtime.powerState"]
+  cluster_property_include = ["summary.overallStatus"]
+  datastore_property_include = ["summary.accessible"]
+  resource_pool_property_include = ["overallStatus"]
 ```
 
 All that tag will be added to "internal" metric that always contain "1".
