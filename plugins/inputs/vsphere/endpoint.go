@@ -84,7 +84,7 @@ type resourceKind struct {
 	parent           string
 	latestSample     time.Time
 	lastColl         time.Time
-	propertyInclude []string
+	propertyInclude  []string
 }
 
 type metricEntry struct {
