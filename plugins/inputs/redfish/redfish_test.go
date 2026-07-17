@@ -854,7 +854,7 @@ func TestInvalidDellJSON(t *testing.T) {
 			var acc testutil.Accumulator
 			err := plugin.Gather(&acc)
 			require.Error(t, err)
-			require.Contains(t, err.Error(), "error parsing input:")
+			require.ErrorContains(t, err, "error parsing input from")
 		})
 	}
 }
@@ -925,9 +925,39 @@ func TestInvalidHPJSON(t *testing.T) {
 			var acc testutil.Accumulator
 			err := plugin.Gather(&acc)
 			require.Error(t, err)
-			require.Contains(t, err.Error(), "error parsing input:")
+			require.ErrorContains(t, err, "error parsing input from")
 		})
 	}
+}
+
+func TestParseErrorIncludesContext(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !checkAuth(r, "test", "test") {
+			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
+			return
+		}
+		// Return an HTML page with a 200 status, as some BMCs do when they
+		// serve a web-UI/login page instead of the Redfish JSON resource.
+		w.Header().Set("Content-Type", "text/html")
+		if _, err := w.Write([]byte("<html><body>login</body></html>")); err != nil {
+			t.Error(err)
+		}
+	}))
+	defer ts.Close()
+
+	plugin := &Redfish{
+		Address:          ts.URL,
+		Username:         config.NewSecret([]byte("test")),
+		Password:         config.NewSecret([]byte("test")),
+		ComputerSystemID: "System.Embedded.1",
+		IncludeMetrics:   []string{"thermal", "power"},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	err := plugin.Gather(&acc)
+	require.ErrorContains(t, err, ts.URL+"/redfish/v1/Systems/System.Embedded.1")
+	require.ErrorContains(t, err, "text/html")
 }
 
 func TestIncludeTagSetsConfiguration(t *testing.T) {
