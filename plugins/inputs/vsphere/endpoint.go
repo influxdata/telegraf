@@ -801,8 +801,6 @@ func getVMs(ctx context.Context, e *endpoint, rf *resourceFilter, propertyInclud
 		finder:       &finder{client},
 		resType:      "ResourcePool",
 		paths:        []string{"/*/host/**"},
-		excludePaths: nil,
-		custoFields:  nil,
 	}
 	resourcePools, err := getResourcePools(ctx, e, &rfrp, make([]string, 0))
 	if err != nil {
@@ -937,7 +935,7 @@ func (e *endpoint) loadCustomAttributes(entity mo.ManagedEntity) map[string]stri
 func (e *endpoint) loadCustomProperties(entity interface{}, propertiesInclude []string) map[string]interface{} {
 	cvs := make(map[string]interface{})
 	for _, property := range propertiesInclude {
-		value := e.getExtraData(entity, capitalizeAfterDot(property))
+		value := e.getExtraProperty(entity, property)
 		if value != nil {
 			key := e.makePropertyIdentifier(property)
 			cvs[key] = value
@@ -1491,7 +1489,7 @@ func round(x float64) float64 {
 	return t
 }
 
-func (e *endpoint) getExtraData(entity interface{}, fieldPath string) interface{} {
+func (e *endpoint) getExtraProperty(entity interface{}, fieldPath string) interface{} {
 	v := reflect.ValueOf(entity)
 
 	// If it's a pointer, we dereference it.
@@ -1503,7 +1501,7 @@ func (e *endpoint) getExtraData(entity interface{}, fieldPath string) interface{
 		v = v.Elem()
 	}
 
-	fields := strings.Split(fieldPath, ".")
+	fields := strings.Split(capitalizeAfterDot(fieldPath), ".")
 	for _, field := range fields {
 		if v.Kind() != reflect.Struct {
 			e.parent.Log.Warnf("Field %s in %s of %s not struct %s. Skipping", field, fieldPath, reflect.TypeOf(entity), v.Kind())
