@@ -798,9 +798,9 @@ func getVMs(ctx context.Context, e *endpoint, rf *resourceFilter, propertyInclud
 	}
 	// Create a ResourcePool Filter and get the list of Resource Pools
 	rfrp := resourceFilter{
-		finder:       &finder{client},
-		resType:      "ResourcePool",
-		paths:        []string{"/*/host/**"},
+		finder:  &finder{client},
+		resType: "ResourcePool",
+		paths:   []string{"/*/host/**"},
 	}
 	resourcePools, err := getResourcePools(ctx, e, &rfrp, make([]string, 0))
 	if err != nil {
