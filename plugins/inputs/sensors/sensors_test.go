@@ -152,6 +152,86 @@ func TestGatherDefault(t *testing.T) {
 	}
 }
 
+func TestGatherMetricVersion2(t *testing.T) {
+	s := Sensors{
+		RemoveNumbers: true,
+		MetricVersion: 2,
+		Timeout:       defaultTimeout,
+		path:          "sensors",
+	}
+	execCommand = fakeExecCommand
+	defer func() { execCommand = exec.Command }()
+	var acc testutil.Accumulator
+
+	require.NoError(t, s.Init())
+	require.NoError(t, s.Gather(&acc))
+
+	var tests = []struct {
+		tags   map[string]string
+		fields map[string]interface{}
+	}{
+		{
+			map[string]string{
+				"device": "acpitz-virtual-0",
+				"sensor": "temp1",
+				"type":   "temp",
+			},
+			map[string]interface{}{
+				"temp_input": 8.3,
+				"temp_crit":  31.3,
+			},
+		},
+		{
+			map[string]string{
+				"device": "power_meter-acpi-0",
+				"sensor": "power1",
+				"type":   "power",
+			},
+			map[string]interface{}{
+				"power_average":          0.0,
+				"power_average_interval": 300.0,
+			},
+		},
+		{
+			map[string]string{
+				"device": "coretemp-isa-0000",
+				"sensor": "physical_id_0",
+				"type":   "physical_id_",
+			},
+			map[string]interface{}{
+				"temp_input":      77.0,
+				"temp_max":        82.0,
+				"temp_crit":       92.0,
+				"temp_crit_alarm": 0.0,
+			},
+		},
+		{
+			map[string]string{
+				"device": "atk0110-acpi-0",
+				"sensor": "vcore_voltage",
+				"type":   "vcore_voltage",
+			},
+			map[string]interface{}{
+				"in_input": 1.136,
+				"in_min":   0.800,
+				"in_max":   1.600,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		acc.AssertContainsTaggedFields(t, "sensors", test.fields, test.tags)
+	}
+}
+
+func TestInitInvalidMetricVersion(t *testing.T) {
+	s := Sensors{
+		MetricVersion: 3,
+		path:          "sensors",
+	}
+	require.ErrorContains(t, s.Init(), "invalid metric_version")
+}
+
 func TestGatherNotRemoveNumbers(t *testing.T) {
 	s := Sensors{
 		RemoveNumbers: false,
