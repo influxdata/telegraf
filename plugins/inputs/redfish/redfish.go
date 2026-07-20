@@ -236,7 +236,7 @@ func (r *Redfish) getData(address string, payload interface{}) error {
 
 	err = json.Unmarshal(body, &payload)
 	if err != nil {
-		return fmt.Errorf("error parsing input: %w", err)
+		return fmt.Errorf("error parsing input from %s (Content-Type %q): %w", address, resp.Header.Get("Content-Type"), err)
 	}
 
 	return nil
