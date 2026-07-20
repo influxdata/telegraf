@@ -30,6 +30,9 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 If you use a distro packaged puppet the `$publicdir` might be different from above.
 
+By default, this file is not readable by the `telegraf` user.
+You can adjust file permissions by configuring the `lastrunfile` setting in Puppet.
+
 ## Metrics
 
 ### PuppetAgent int64 measurements
