@@ -63,7 +63,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.45.1
 	github.com/aws/aws-sdk-go-v2/service/sts v1.44.1
 	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.37.1
-	github.com/aws/smithy-go v1.27.3
+	github.com/aws/smithy-go v1.27.4
 	github.com/benbjohnson/clock v1.3.5
 	github.com/bluenviron/gomavlib/v3 v3.3.5
 	github.com/blues/jsonata-go v1.5.4
