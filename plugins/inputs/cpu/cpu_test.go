@@ -88,7 +88,6 @@ func TestCases(t *testing.T) {
 				expectedErrorFilename := filepath.Join(proc, "expected.err")
 				var expectedError string
 				if _, err := os.Stat(expectedErrorFilename); err == nil {
-					var err error
 					expectedErrors, err := testutil.ParseLinesFromFile(expectedErrorFilename)
 					require.NoError(t, err)
 					require.Len(t, expectedErrors, 1)
