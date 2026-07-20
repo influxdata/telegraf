@@ -3,7 +3,7 @@ package cpu
 
 import (
 	_ "embed"
-	"errors"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -19,7 +19,7 @@ var sampleConfig string
 
 type CPU struct {
 	ps         psutil.PS
-	lastStats  map[string]cpu.TimesStat
+	lastStats  map[string]stats
 	cpuInfo    map[string]cpu.InfoStat
 	coreID     bool
 	physicalID bool
@@ -47,6 +47,7 @@ func (c *CPU) Init() error {
 			c.cpuInfo = make(map[string]cpu.InfoStat)
 			for _, ci := range cpuInfo {
 				c.cpuInfo[fmt.Sprintf("cpu%d", ci.CPU)] = ci
+				c.Log.Tracef("CPU #%d: %+v", ci.CPU, ci)
 			}
 		} else {
 			c.Log.Warnf("Failed to gather info about CPUs: %s", err)
@@ -57,44 +58,28 @@ func (c *CPU) Init() error {
 }
 
 func (c *CPU) Gather(acc telegraf.Accumulator) error {
-	times, err := c.ps.CPUTimes(c.PerCPU, c.TotalCPU)
+	statistics, err := cpuTimes(c.PerCPU, c.TotalCPU)
 	if err != nil {
 		return fmt.Errorf("error getting CPU info: %w", err)
 	}
 	now := time.Now()
 
-	for _, cts := range times {
+	var report bool
+	for _, s := range statistics {
 		tags := map[string]string{
-			"cpu": cts.CPU,
+			"cpu": s.CPU,
 		}
 		if c.coreID {
-			tags["core_id"] = c.cpuInfo[cts.CPU].CoreID
+			tags["core_id"] = c.cpuInfo[s.CPU].CoreID
 		}
 		if c.physicalID {
-			tags["physical_id"] = c.cpuInfo[cts.CPU].PhysicalID
+			tags["physical_id"] = c.cpuInfo[s.CPU].PhysicalID
 		}
 
-		total := totalCPUTime(cts)
-		active := activeCPUTime(cts)
-
+		// Add cpu time metrics
 		if c.CollectCPUTime {
-			// Add cpu time metrics
-			fieldsC := map[string]interface{}{
-				"time_user":       cts.User,
-				"time_system":     cts.System,
-				"time_idle":       cts.Idle,
-				"time_nice":       cts.Nice,
-				"time_iowait":     cts.Iowait,
-				"time_irq":        cts.Irq,
-				"time_softirq":    cts.Softirq,
-				"time_steal":      cts.Steal,
-				"time_guest":      cts.Guest,
-				"time_guest_nice": cts.GuestNice,
-			}
-			if c.ReportActive {
-				fieldsC["time_active"] = activeCPUTime(cts)
-			}
-			acc.AddCounter("cpu", fieldsC, tags, now)
+			fields := s.cycleFields(c.ReportActive)
+			acc.AddCounter("cpu", fields, tags, now)
 		}
 
 		// Add in percentage
@@ -103,57 +88,63 @@ func (c *CPU) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 
-		lastCts, ok := c.lastStats[cts.CPU]
+		last, ok := c.lastStats[s.CPU]
 		if !ok {
 			continue
 		}
-		lastTotal := totalCPUTime(lastCts)
-		lastActive := activeCPUTime(lastCts)
-		totalDelta := total - lastTotal
 
-		if totalDelta < 0 {
-			err = errors.New("current total CPU time is less than previous total CPU time")
+		var fields map[string]interface{}
+		if fields, err = s.percentageFields(last, c.ReportActive); err != nil {
+			// Break the loop here to update the last statistics cache for the
+			// next cycle. The error will be propagated.
+			report = true
 			break
-		}
-
-		if totalDelta == 0 {
+		} else if fields == nil {
+			// We don't have a delta in time so we can't emit statistics here
+			report = true
 			continue
 		}
+		acc.AddGauge("cpu", fields, tags, now)
 
-		fieldsG := map[string]interface{}{
-			"usage_user":       100 * (cts.User - lastCts.User - (cts.Guest - lastCts.Guest)) / totalDelta,
-			"usage_system":     100 * (cts.System - lastCts.System) / totalDelta,
-			"usage_idle":       100 * (cts.Idle - lastCts.Idle) / totalDelta,
-			"usage_nice":       100 * (cts.Nice - lastCts.Nice - (cts.GuestNice - lastCts.GuestNice)) / totalDelta,
-			"usage_iowait":     100 * (cts.Iowait - lastCts.Iowait) / totalDelta,
-			"usage_irq":        100 * (cts.Irq - lastCts.Irq) / totalDelta,
-			"usage_softirq":    100 * (cts.Softirq - lastCts.Softirq) / totalDelta,
-			"usage_steal":      100 * (cts.Steal - lastCts.Steal) / totalDelta,
-			"usage_guest":      100 * (cts.Guest - lastCts.Guest) / totalDelta,
-			"usage_guest_nice": 100 * (cts.GuestNice - lastCts.GuestNice) / totalDelta,
-		}
-		if c.ReportActive {
-			fieldsG["usage_active"] = 100 * (active - lastActive) / totalDelta
-		}
-		acc.AddGauge("cpu", fieldsG, tags, now)
+		// Set a report marker if any of the fields is invalid
+		report = report || !valid(fields)
 	}
 
-	c.lastStats = make(map[string]cpu.TimesStat)
-	for _, cts := range times {
-		c.lastStats[cts.CPU] = cts
+	// Debug print the raw data for invalid values
+	if c.Log.Level().Includes(telegraf.Trace) && report {
+		c.Log.Trace("Detected invalid field values!")
+		for _, s := range statistics {
+			curr, err := json.Marshal(s)
+			if err == nil {
+				last, ok := c.lastStats[s.CPU]
+				if ok {
+					if prev, err := json.Marshal(last); err == nil {
+						c.Log.Tracef("Invalid raw values %d CPU %q: %s; %s", now.UnixNano(), s.CPU, string(curr), string(prev))
+					}
+				} else {
+					c.Log.Tracef("Invalid raw values %d CPU %q: %s; {}", now.UnixNano(), s.CPU, string(curr))
+				}
+			}
+		}
+	}
+
+	// Update the last-value cache for computing the percentages
+	c.lastStats = make(map[string]stats, len(statistics))
+	for _, s := range statistics {
+		c.lastStats[s.CPU] = s
 	}
 
 	return err
 }
 
-func totalCPUTime(t cpu.TimesStat) float64 {
-	total := t.User + t.System + t.Nice + t.Iowait + t.Irq + t.Softirq + t.Steal + t.Idle
-	return total
-}
-
-func activeCPUTime(t cpu.TimesStat) float64 {
-	active := totalCPUTime(t) - t.Idle
-	return active
+func valid(fields map[string]interface{}) bool {
+	for _, raw := range fields {
+		v := raw.(float64)
+		if v < 0.0 || v > 100.0 {
+			return false
+		}
+	}
+	return true
 }
 
 func init() {
