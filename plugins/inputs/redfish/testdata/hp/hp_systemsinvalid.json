@@ -1,4 +1,5 @@
 {
+{
   "@odata.context": "/redfish/v1/$metadata#ComputerSystem.ComputerSystem",
   "@odata.etag": "W/\"43E302D1\"",
   "@odata.id": "/redfish/v1/Systems/1/",
@@ -317,4 +318,3 @@
     }
   ]
 }
-{

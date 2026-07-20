@@ -1,4 +1,5 @@
 {
+{
   "@odata.context": "/redfish/v1/$metadata#Power.Power",
   "@odata.etag": "W/\"2E43EED0\"",
   "@odata.id": "/redfish/v1/Chassis/1/Power",
@@ -142,4 +143,3 @@
     }
   ]
 }
-{

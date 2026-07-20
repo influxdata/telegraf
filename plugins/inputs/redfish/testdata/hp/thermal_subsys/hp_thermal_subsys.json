@@ -1,0 +1,21 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#ThermalSubsystem.ThermalSubsystem",
+  "@odata.etag": "W/\"3404F932\"",
+  "@odata.id": "/redfish/v1/Chassis/1/ThermalSubsystem",
+  "@odata.type": "#ThermalSubsystem.v1_3_1.ThermalSubsystem",
+  "Id": "ThermalSubsystem",
+  "Fans": {
+    "@odata.id": "/redfish/v1/Chassis/1/ThermalSubsystem/Fans"
+  },
+  "Name": "ThermalSubsystem",
+  "Pumps": {
+    "@odata.id": "/redfish/v1/Chassis/1/ThermalSubsystem/Pumps"
+  },
+  "ThermalMetrics": {
+    "@odata.id": "/redfish/v1/Chassis/1/ThermalSubsystem/ThermalMetrics"
+  },
+  "Status": {
+    "HealthRollup": "OK",
+    "State": "Enabled"
+  }
+}
