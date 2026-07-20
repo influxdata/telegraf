@@ -7,6 +7,7 @@ import (
 	"time"
 
 	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
+
 	"github.com/influxdata/telegraf/metric"
 )
 
