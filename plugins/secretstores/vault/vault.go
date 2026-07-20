@@ -119,7 +119,17 @@ func (v *Vault) List() ([]string, error) {
 }
 
 func (v *Vault) Set(key, value string) error {
-	secretsData := map[string]interface{}{key: value}
+	// Vault's Put replaces the whole secret at the path instead of merging into
+	// it, so read the existing secrets first and set the key on top of them to
+	// avoid removing the sibling keys.
+	secretsData := make(map[string]any)
+	switch secret, err := v.getSecret(); {
+	case err == nil && secret != nil && secret.Data != nil:
+		maps.Copy(secretsData, secret.Data)
+	case err != nil && !errors.Is(err, vault.ErrSecretNotFound):
+		return fmt.Errorf("unable to read secret: %w", err)
+	}
+	secretsData[key] = value
 
 	if v.Engine == "kv-v1" {
 		return v.client.KVv1(v.MountPath).Put(context.Background(), v.SecretPath, secretsData)

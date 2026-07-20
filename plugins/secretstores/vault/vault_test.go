@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -241,6 +242,98 @@ func TestIntegrationAppRoleSecretWrapped(t *testing.T) {
 	secret, err := plugin.Get(secretName)
 	require.NoError(t, err)
 	require.Equal(t, secretValue, string(secret))
+}
+
+func TestIntegrationSetKeepsSiblingsKVv1(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	testSetKeepsSiblings(t, "kv-v1")
+}
+
+func TestIntegrationSetKeepsSiblingsKVv2(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	testSetKeepsSiblings(t, "kv-v2")
+}
+
+func testSetKeepsSiblings(t *testing.T, engine string) {
+	t.Helper()
+
+	mountPath := "my-mount-path"
+	secretPath := "my-secret-path"
+
+	container, closer := createContainer(t, []string{
+		fmt.Sprintf("secrets enable -path=%s %s", mountPath, engine),
+		fmt.Sprintf("kv put -mount=%s %s alpha=one beta=two", mountPath, secretPath),
+	})
+	defer closer()
+
+	addr, err := container.HttpHostAddress(context.Background())
+	require.NoError(t, err)
+
+	plugin := &Vault{
+		ID:         "test_" + engine,
+		Address:    addr,
+		MountPath:  mountPath,
+		SecretPath: secretPath,
+		Engine:     engine,
+		Token:      config.NewSecret([]byte("SomeToken")),
+	}
+	require.NoError(t, plugin.Init())
+
+	require.NoError(t, plugin.Set("gamma", "three"))
+
+	keys, err := plugin.List()
+	require.NoError(t, err)
+	slices.Sort(keys)
+	require.Equal(t, []string{"alpha", "beta", "gamma"}, keys)
+}
+
+func TestIntegrationSetCreatesNewPathKVv1(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	testSetCreatesNewPath(t, "kv-v1")
+}
+
+func TestIntegrationSetCreatesNewPathKVv2(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	testSetCreatesNewPath(t, "kv-v2")
+}
+
+func testSetCreatesNewPath(t *testing.T, engine string) {
+	t.Helper()
+
+	mountPath := "my-mount-path"
+	secretPath := "my-secret-path"
+
+	container, closer := createContainer(t, []string{
+		fmt.Sprintf("secrets enable -path=%s %s", mountPath, engine),
+	})
+	defer closer()
+
+	addr, err := container.HttpHostAddress(context.Background())
+	require.NoError(t, err)
+
+	plugin := &Vault{
+		ID:         "test_" + engine,
+		Address:    addr,
+		MountPath:  mountPath,
+		SecretPath: secretPath,
+		Engine:     engine,
+		Token:      config.NewSecret([]byte("SomeToken")),
+	}
+	require.NoError(t, plugin.Init())
+
+	require.NoError(t, plugin.Set("gamma", "three"))
+
+	value, err := plugin.Get("gamma")
+	require.NoError(t, err)
+	require.Equal(t, "three", string(value))
 }
 
 func TestInitAuthValidation(t *testing.T) {
