@@ -16,7 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: debug
-        run: echo Target is ${{ github.event.pull_request.base.ref }}
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: echo "Target is ${BASE_REF}"
       - name: success
         if: github.event.pull_request.base.ref == 'master'
         run: exit 0
