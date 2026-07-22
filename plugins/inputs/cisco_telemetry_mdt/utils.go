@@ -2,7 +2,6 @@ package cisco_telemetry_mdt
 
 import (
 	"strconv"
-	"strings"
 
 	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 
@@ -111,26 +110,20 @@ func nxosValueXformUint64ToString(field *telemetry.TelemetryField) interface{} {
 }
 
 // Xform value field.
-func (c *CiscoTelemetryMDT) nxosValueXform(field *telemetry.TelemetryField, path string) interface{} {
-	if strings.ContainsRune(path, ':') {
-		// not NXOS
-		return nil
-	}
-
+func nxosValueXform(field *telemetry.TelemetryField, propMap map[string]func(*telemetry.TelemetryField) interface{}, prop map[string]string) interface{} {
 	value := decode(field)
 	if value == nil {
 		return nil
 	}
 
-	if _, ok := c.propMap[field.Name]; ok {
-		return c.propMap[field.Name](field)
+	if _, ok := propMap[field.Name]; ok {
+		return propMap[field.Name](field)
 	}
 	// check if we want auto xformation
-	if _, ok := c.propMap["auto-prop-xfromi"]; ok {
-		return c.propMap["auto-prop-xfrom"](field)
+	if _, ok := propMap["auto-prop-xfromi"]; ok {
+		return propMap["auto-prop-xfrom"](field)
 	}
 	// Now check path based conversion; if a mapping exists apply the transformation
-	prop := c.nxpathMap[path]
 	if prop == nil {
 		return nil
 	}
