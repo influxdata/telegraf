@@ -25,6 +25,11 @@ const (
 type Kapacitor struct {
 	URLs    []string        `toml:"urls"`
 	Timeout config.Duration `toml:"timeout"`
+	// TagURL adds the source URL as a tag on nested Kapacitor metrics
+	// (e.g. kapacitor_ingress). Default false to avoid a cardinality change
+	// for existing deployments; top-level kapacitor / kapacitor_memstats
+	// metrics already include the url tag. See influxdata/telegraf#18645.
+	TagURL bool `toml:"tag_url"`
 	tls.ClientConfig
 
 	client *http.Client
@@ -218,10 +223,32 @@ func (k *Kapacitor) gatherURL(
 				obj.Values["avg_exec_time_ns"] = d.Nanoseconds()
 			}
 
+			// Nested metrics (kapacitor_ingress, kapacitor_edges, …) only carry
+			// Kapacitor's own tags — not the scrape URL — so multi-instance
+			// setups cannot tell sources apart. Opt-in url tag (default off)
+			// per maintainer guidance on #18646; kap_version is a field (not a
+			// tag) because it changes over time and would inflate series.
+			tags := obj.Tags
+			if k.TagURL {
+				tags = make(map[string]string, len(obj.Tags)+1)
+				for key, val := range obj.Tags {
+					tags[key] = val
+				}
+				tags["url"] = url
+			}
+			fields := obj.Values
+			if s.Version != "" {
+				fields = make(map[string]interface{}, len(obj.Values)+1)
+				for key, val := range obj.Values {
+					fields[key] = val
+				}
+				fields["kap_version"] = s.Version
+			}
+
 			acc.AddFields(
 				"kapacitor_"+obj.Name,
-				obj.Values,
-				obj.Tags,
+				fields,
+				tags,
 				now,
 			)
 		}

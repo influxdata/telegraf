@@ -141,3 +141,45 @@ func TestErrorHandling404(t *testing.T) {
 	acc.WaitError(1)
 	require.Equal(t, uint64(0), acc.NMetrics())
 }
+
+func TestNestedMetricsTagURL(t *testing.T) {
+	kapacitorReturn, err := os.ReadFile("./testdata/kapacitor_return.json")
+	require.NoError(t, err)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, err := w.Write(kapacitorReturn); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+		}
+	}))
+	defer srv.Close()
+
+	// Default: nested metrics must NOT get a url tag (no cardinality change).
+	pluginOff := &kapacitor.Kapacitor{URLs: []string{srv.URL}}
+	var accOff testutil.Accumulator
+	require.NoError(t, pluginOff.Gather(&accOff))
+	for _, m := range accOff.Metrics {
+		if m.Measurement == "kapacitor_ingress" {
+			_, has := m.Tags["url"]
+			require.False(t, has, "default must not tag nested metrics with url")
+			require.Equal(t, "1.1.0~rc2", m.Fields["kap_version"])
+		}
+	}
+
+	// Opt-in: nested metrics get url + kap_version field.
+	pluginOn := &kapacitor.Kapacitor{URLs: []string{srv.URL}, TagURL: true}
+	var accOn testutil.Accumulator
+	require.NoError(t, pluginOn.Gather(&accOn))
+	found := false
+	for _, m := range accOn.Metrics {
+		if m.Measurement == "kapacitor_ingress" {
+			found = true
+			require.Equal(t, srv.URL, m.Tags["url"])
+			require.Equal(t, "1.1.0~rc2", m.Fields["kap_version"])
+			// high-cardinality host/cluster_id/server_id still stripped
+			_, hasHost := m.Tags["host"]
+			require.False(t, hasHost)
+		}
+	}
+	require.True(t, found, "expected kapacitor_ingress metric")
+}
