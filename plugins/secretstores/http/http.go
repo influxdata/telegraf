@@ -105,10 +105,6 @@ func (h *HTTP) Get(key string) ([]byte, error) {
 	return []byte(v), nil
 }
 
-func (*HTTP) Set(_, _ string) error {
-	return errors.New("setting secrets not supported")
-}
-
 func (h *HTTP) List() ([]string, error) {
 	keys := make([]string, 0, len(h.cache))
 	for k := range h.cache {

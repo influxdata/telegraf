@@ -76,17 +76,6 @@ func TestInit(t *testing.T) {
 	require.NoError(t, plugin.Init())
 }
 
-func TestSetNotAvailable(t *testing.T) {
-	getSystemdVersion = getSystemdVersionMin
-	t.Setenv("CREDENTIALS_DIRECTORY", "testdata")
-
-	plugin := &Systemd{Log: testutil.Logger{}}
-	require.NoError(t, plugin.Init())
-
-	// Try to Store the secrets, which this plugin should not let
-	require.ErrorContains(t, plugin.Set("foo", "bar"), "secret store does not support creating secrets")
-}
-
 func TestListGet(t *testing.T) {
 	getSystemdVersion = getSystemdVersionMin
 	t.Setenv("CREDENTIALS_DIRECTORY", "testdata")

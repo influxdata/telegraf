@@ -81,6 +81,8 @@ func (j *Jose) Get(key string) ([]byte, error) {
 	return item.Data, nil
 }
 
+var _ telegraf.SecretStoreEditor = (*Jose)(nil)
+
 func (j *Jose) Set(key, value string) error {
 	item := keyring.Item{
 		Key:  key,

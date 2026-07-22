@@ -130,13 +130,6 @@ func TestInitErrors(t *testing.T) {
 	require.ErrorContains(t, plugin.Init(), "creating decryptor failed: unknown cipher")
 }
 
-func TestSetNotSupported(t *testing.T) {
-	plugin := &HTTP{}
-	require.NoError(t, plugin.Init())
-
-	require.ErrorContains(t, plugin.Set("key", "value"), "setting secrets not supported")
-}
-
 func TestGetErrors(t *testing.T) {
 	plugin := &HTTP{
 		decryptionConfig: decryptionConfig{

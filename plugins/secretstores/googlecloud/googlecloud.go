@@ -4,7 +4,6 @@ package googlecloud
 import (
 	"context"
 	_ "embed"
-	"errors"
 	"fmt"
 	"os"
 
@@ -87,11 +86,6 @@ func (g *GoogleCloud) Get(key string) ([]byte, error) {
 // List returns the list of secrets provided by this store.
 func (*GoogleCloud) List() ([]string, error) {
 	return []string{"token"}, nil
-}
-
-// Set is not supported for the gcloud secret store.
-func (*GoogleCloud) Set(_, _ string) error {
-	return errors.New("setting secrets is not supported")
 }
 
 // GetResolver returns a resolver function for the secret.

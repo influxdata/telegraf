@@ -66,6 +66,9 @@ func (*MockTelegraf) ListSecretStores() ([]string, error) {
 }
 
 func (*MockTelegraf) GetSecretStore(id string) (telegraf.SecretStore, error) {
+	if id == "readonly" {
+		return &MockReadOnlySecretStore{}, nil
+	}
 	v, found := secrets[id]
 	if !found {
 		return nil, errors.New("unknown secret store")
@@ -110,6 +113,44 @@ func (s *MockSecretStore) List() ([]string, error) {
 }
 
 func (s *MockSecretStore) GetResolver(key string) (telegraf.ResolveFunc, error) {
+	return func() ([]byte, bool, error) {
+		v, err := s.Get(key)
+		return v, false, err
+	}, nil
+}
+
+// MockReadOnlySecretStore only implements the mandatory telegraf.SecretStore
+// interface, not the optional telegraf.SecretStoreEditor, so it cannot set
+// secrets.
+type MockReadOnlySecretStore struct {
+	Secrets map[string][]byte
+}
+
+func (*MockReadOnlySecretStore) Init() error {
+	return nil
+}
+
+func (*MockReadOnlySecretStore) SampleConfig() string {
+	return "I'm just a dummy"
+}
+
+func (s *MockReadOnlySecretStore) Get(key string) ([]byte, error) {
+	v, found := s.Secrets[key]
+	if !found {
+		return nil, errors.New("not found")
+	}
+	return v, nil
+}
+
+func (s *MockReadOnlySecretStore) List() ([]string, error) {
+	keys := make([]string, 0, len(s.Secrets))
+	for k := range s.Secrets {
+		keys = append(keys, k)
+	}
+	return keys, nil
+}
+
+func (s *MockReadOnlySecretStore) GetResolver(key string) (telegraf.ResolveFunc, error) {
 	return func() ([]byte, bool, error) {
 		v, err := s.Get(key)
 		return v, false, err
@@ -281,6 +322,23 @@ func TestPluginDirectoryFlag(t *testing.T) {
 	args = append(args, "--plugin-directory", ".")
 	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockTelegraf())
 	require.ErrorContains(t, err, "go plugin support is not enabled")
+}
+
+func TestSecretsSet(t *testing.T) {
+	buf := new(bytes.Buffer)
+	args := os.Args[0:1]
+	args = append(args, "secrets", "set", "yoda", "episode4", "member")
+	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockTelegraf())
+	require.NoError(t, err)
+	require.Equal(t, []byte("member"), secrets["yoda"]["episode4"])
+}
+
+func TestSecretsSetUnsupported(t *testing.T) {
+	buf := new(bytes.Buffer)
+	args := os.Args[0:1]
+	args = append(args, "secrets", "set", "readonly", "key", "value")
+	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockTelegraf())
+	require.ErrorContains(t, err, `secret store "readonly" does not support setting secrets`)
 }
 
 func TestCommandConfig(t *testing.T) {
