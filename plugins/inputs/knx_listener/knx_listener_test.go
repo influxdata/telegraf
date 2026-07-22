@@ -257,10 +257,12 @@ func TestReconnect(t *testing.T) {
 	require.Eventually(t, func() bool {
 		return !listener.connected.Load()
 	}, 3*time.Second, 100*time.Millisecond, "no disconnect")
-	acc.Lock()
-	err := acc.FirstError()
-	acc.Unlock()
-	require.ErrorContains(t, err, "disconnected from bus")
+	require.Eventually(t, func() bool {
+		acc.Lock()
+		defer acc.Unlock()
+		return acc.FirstError() != nil
+	}, 3*time.Second, 100*time.Millisecond, "no error message")
+	require.ErrorContains(t, acc.FirstError(), "disconnected from bus")
 
 	require.NoError(t, listener.Gather(&acc))
 	require.Eventually(t, func() bool {
