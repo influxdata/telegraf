@@ -146,7 +146,7 @@ func TestNestedMetricsTagURL(t *testing.T) {
 	kapacitorReturn, err := os.ReadFile("./testdata/kapacitor_return.json")
 	require.NoError(t, err)
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		if _, err := w.Write(kapacitorReturn); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			t.Error(err)
