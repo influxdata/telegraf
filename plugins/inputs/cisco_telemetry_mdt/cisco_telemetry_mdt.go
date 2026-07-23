@@ -4,11 +4,8 @@ package cisco_telemetry_mdt
 import (
 	_ "embed"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"net"
-	"path"
-	"strings"
 	"sync"
 	"time"
 
@@ -46,23 +43,14 @@ type CiscoTelemetryMDT struct {
 	Log                telegraf.Logger       `toml:"-"`
 	common_tls.ServerConfig
 
-	// Internal listener / client handle
-	grpcServer *grpc.Server
-	listener   net.Listener
-
-	// Internal state
-	internalAliases map[string]string
-	warned          map[string]bool
-	dmesFuncs       map[string]string
-	extraTags       map[string]map[string]bool
-	nxpathMap       map[string]map[string]string // per path map
-	propMap         map[string]func(*telemetry.TelemetryField) interface{}
-
 	serverOptions []grpc.ServerOption
+	grpcServer    *grpc.Server
+	listener      net.Listener
 
-	acc   telegraf.Accumulator
-	mutex sync.Mutex
-	wg    sync.WaitGroup
+	parser *parser
+
+	acc telegraf.Accumulator
+	wg  sync.WaitGroup
 
 	// Though unused in the code, required by protoc-gen-go-grpc to maintain compatibility
 	mdtdialout.UnimplementedGRPCMdtDialoutServer
@@ -122,68 +110,8 @@ func (c *CiscoTelemetryMDT) Init() error {
 		c.SourceFieldName = "mdt_source"
 	}
 
-	// Invert aliases list
-	c.warned = make(map[string]bool)
-	c.internalAliases = make(map[string]string, len(c.Aliases))
-	for alias, encodingPath := range c.Aliases {
-		c.internalAliases[encodingPath] = alias
-	}
-
-	// Initialize the path mappings
-	c.nxpathMap = createDatabase()
-
-	// Initialize property conversion map
-	c.propMap = make(map[string]func(field *telemetry.TelemetryField) interface{}, len(c.Dmes)+4)
-	c.propMap["test"] = nxosValueXformUint64Toint64
-	c.propMap["asn"] = nxosValueXformUint64ToString            // uint64 to string.
-	c.propMap["subscriptionId"] = nxosValueXformUint64ToString // uint64 to string.
-	c.propMap["operState"] = nxosValueXformUint64ToString      // uint64 to string.
-
-	c.dmesFuncs = make(map[string]string, len(c.Dmes))
-	for dme, dmeKey := range c.Dmes {
-		c.dmesFuncs[dmeKey] = dme
-		switch dmeKey {
-		case "uint64 to int":
-			c.propMap[dme] = nxosValueXformUint64Toint64
-		case "uint64 to string":
-			c.propMap[dme] = nxosValueXformUint64ToString
-		case "string to float64":
-			c.propMap[dme] = nxosValueXformStringTofloat
-		case "string to uint64":
-			c.propMap[dme] = nxosValueXformStringToUint64
-		case "string to int64":
-			c.propMap[dme] = nxosValueXformStringToInt64
-		case "auto-float-xfrom":
-			c.propMap[dme] = nxosValueAutoXformFloatProp
-		default:
-			if !strings.HasPrefix(dme, "dnpath") {
-				// Ignore non-path based property map
-				continue
-			}
-
-			var payload nxPayloadXfromStructure
-			if err := json.Unmarshal([]byte(dmeKey), &payload); err != nil {
-				continue
-			}
-
-			// Build 2 level Hash nxpathMap Key = jsStruct.Name, Value = map of jsStruct.Prop
-			// It will override the default of code if same path is provided in configuration.
-			c.nxpathMap[payload.Name] = make(map[string]string, len(payload.Prop))
-			for _, prop := range payload.Prop {
-				c.nxpathMap[payload.Name][prop.Key] = prop.Value
-			}
-		}
-	}
-
-	// Fill extra tags
-	c.extraTags = make(map[string]map[string]bool)
-	for _, tag := range c.EmbeddedTags {
-		dir := strings.ReplaceAll(path.Dir(tag), "-", "_")
-		if _, found := c.extraTags[dir]; !found {
-			c.extraTags[dir] = make(map[string]bool)
-		}
-		c.extraTags[dir][path.Base(tag)] = true
-	}
+	// Initialize parser
+	c.parser = newParser(c.IncludeDeleteField, c.Aliases, c.Dmes, c.EmbeddedTags, c.Log)
 
 	return nil
 }
@@ -255,7 +183,9 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 		}
 	}
 
+	// Create a grouper to accumulate the fields for a series
 	grouper := metric.NewSeriesGrouper()
+
 	for _, gpbkv := range msg.DataGpbkv {
 		// Top-level field may have measurement timestamp, if not use message timestamp
 		measured := gpbkv.Timestamp
@@ -281,22 +211,17 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 		}
 
 		// Produce metadata tags
-		var tags map[string]string
+		tags := make(map[string]string, 3)
 		if keys != nil {
-			tags = make(map[string]string, len(keys.Fields)+3)
 			for _, subfield := range keys.Fields {
-				c.parseKeyField(tags, subfield, "")
+				parseKeys(subfield, "", tags)
 			}
 
 			// If incoming MDT contains source key, copy to mdt_src
 			if _, ok := tags["source"]; ok {
 				tags[c.SourceFieldName] = tags["source"]
 			}
-		} else {
-			tags = make(map[string]string, 3)
 		}
-
-		// Parse keys
 		tags["source"] = msg.GetNodeIdStr()
 		if msgID := msg.GetSubscriptionIdStr(); msgID != "" {
 			tags["subscription"] = msgID
@@ -304,27 +229,10 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 		encodingPath := msg.GetEncodingPath()
 		tags["path"] = encodingPath
 
-		if content != nil {
-			// Parse values
-			for _, subfield := range content.Fields {
-				prefix := ""
-				switch subfield.Name {
-				case "operation-metric":
-					if len(subfield.Fields[0].Fields) > 0 {
-						prefix = subfield.Fields[0].Fields[0].GetStringValue()
-					}
-				case "class-stats":
-					if len(subfield.Fields[0].Fields) > 1 {
-						prefix = subfield.Fields[0].Fields[1].GetStringValue()
-					}
-				}
-				// Parse the content with and without prefix
-				c.parseContentField(grouper, subfield, prefix, encodingPath, tags, timestamp)
-				c.parseContentField(grouper, subfield, "", encodingPath, tags, timestamp)
-			}
-		}
-		if c.IncludeDeleteField {
-			grouper.Add(c.getMeasurementName(encodingPath), tags, timestamp, "delete", gpbkv.GetDelete())
+		// Parse the "content" field if any
+		errs := c.parser.parse(grouper, content, encodingPath, gpbkv.GetDelete(), tags, timestamp)
+		for _, err := range errs {
+			c.acc.AddError(err)
 		}
 	}
 
