@@ -388,7 +388,7 @@ func (s *state) parseRib(field *telemetry.TelemetryField, tags map[string]string
 			tags[subfield.Name] = decodeTag(subfield)
 		}
 		if value := decode(subfield); value != nil {
-			s.grouper.Add(s.measurement, tags, timestamp, subfield.Name, value)
+			s.grouper.Add(s.path, tags, timestamp, subfield.Name, value)
 		}
 		if subfield.Name != "nextHop" {
 			continue
@@ -403,7 +403,7 @@ func (s *state) parseRib(field *telemetry.TelemetryField, tags map[string]string
 				}
 				if value := decode(ff); value != nil {
 					name := "nextHop/" + ff.Name
-					s.grouper.Add(s.measurement, tags, timestamp, name, value)
+					s.grouper.Add(s.path, tags, timestamp, name, value)
 				}
 			}
 		}
