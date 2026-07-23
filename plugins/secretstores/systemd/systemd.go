@@ -101,10 +101,6 @@ func (s *Systemd) List() ([]string, error) {
 	return secrets, nil
 }
 
-func (*Systemd) Set(_, _ string) error {
-	return errors.New("secret store does not support creating secrets")
-}
-
 func (s *Systemd) GetResolver(key string) (telegraf.ResolveFunc, error) {
 	resolver := func() ([]byte, bool, error) {
 		s, err := s.Get(key)

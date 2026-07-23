@@ -118,6 +118,8 @@ func (v *Vault) List() ([]string, error) {
 	return slices.Collect(maps.Keys(secret.Data)), nil
 }
 
+var _ telegraf.SecretStoreEditor = (*Vault)(nil)
+
 func (v *Vault) Set(key, value string) error {
 	// Vault's Put replaces the whole secret at the path instead of merging into
 	// it, so read the existing secrets first and set the key on top of them to

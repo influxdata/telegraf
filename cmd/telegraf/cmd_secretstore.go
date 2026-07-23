@@ -11,6 +11,8 @@ import (
 	"github.com/awnumar/memguard"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/term"
+
+	"github.com/influxdata/telegraf"
 )
 
 func processFilterOnlySecretStoreFlags(ctx *cli.Context) Filters {
@@ -234,6 +236,16 @@ you will be prompted to enter the value of the secret.
 						storeID := args.First()
 						key := args.Get(1)
 						value := args.Get(2)
+
+						store, err := m.GetSecretStore(storeID)
+						if err != nil {
+							return fmt.Errorf("unable to get secret store: %w", err)
+						}
+						editor, ok := store.(telegraf.SecretStoreEditor)
+						if !ok {
+							return fmt.Errorf("secret store %q does not support setting secrets", storeID)
+						}
+
 						if value == "" {
 							fmt.Printf("Enter secret value: ")
 							b, err := term.ReadPassword(int(os.Stdin.Fd()))
@@ -244,11 +256,7 @@ you will be prompted to enter the value of the secret.
 							value = string(b)
 						}
 
-						store, err := m.GetSecretStore(storeID)
-						if err != nil {
-							return fmt.Errorf("unable to get secret store: %w", err)
-						}
-						if err := store.Set(key, value); err != nil {
+						if err := editor.Set(key, value); err != nil {
 							return fmt.Errorf("unable to set secret: %w", err)
 						}
 

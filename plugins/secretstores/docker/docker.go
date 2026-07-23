@@ -70,10 +70,6 @@ func (d *Docker) List() ([]string, error) {
 	return secrets, nil
 }
 
-func (*Docker) Set(_, _ string) error {
-	return errors.New("secret store does not support creating secrets")
-}
-
 func (d *Docker) GetResolver(key string) (telegraf.ResolveFunc, error) {
 	resolver := func() ([]byte, bool, error) {
 		s, err := d.Get(key)

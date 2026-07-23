@@ -25,25 +25,6 @@ func TestPathNonExistent(t *testing.T) {
 	require.ErrorContainsf(t, plugin.Init(), "accessing directory", "accessing directory %q failed: %v", plugin.Path, plugin.Init())
 }
 
-func TestSetNotAvailable(t *testing.T) {
-	testdir, err := filepath.Abs("testdata")
-	require.NoError(t, err, "testdata cannot be found")
-
-	plugin := &Docker{
-		ID:   "set_path_test",
-		Path: testdir,
-	}
-	require.NoError(t, plugin.Init())
-
-	// Try to Store the secrets, which this plugin should not let
-	secret := map[string]string{
-		"secret-file-1": "TryToSetThis",
-	}
-	for k, v := range secret {
-		require.ErrorContains(t, plugin.Set(k, v), "secret store does not support creating secrets")
-	}
-}
-
 func TestListGet(t *testing.T) {
 	// secret files name and their content to compare under the `testdata` directory
 	secrets := map[string]string{
