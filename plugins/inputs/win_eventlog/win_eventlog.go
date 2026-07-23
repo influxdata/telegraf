@@ -21,6 +21,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -105,7 +106,21 @@ func (w *WinEventLog) Init() error {
 func (w *WinEventLog) Start(telegraf.Accumulator) error {
 	subscription, err := w.evtSubscribe()
 	if err != nil {
-		return fmt.Errorf("subscription of Windows Event Log failed: %w", err)
+		// Mark this as a retriable startup error rather than a plain one: the
+		// channel this plugin subscribes to may be temporarily unavailable (e.g.
+		// disabled by policy, or a feature not yet started) or permanently gone
+		// (e.g. an optional Windows feature was never installed or was removed).
+		// Without this, any evtSubscribe failure here is treated as fatal to the
+		// whole agent (see agent.startInputs), taking down every other configured
+		// input along with it. Wrapping it lets users opt in per-instance via
+		// startup_error_behavior = "retry" (keep trying on a schedule, in case the
+		// channel becomes available later) or "ignore" (drop just this plugin,
+		// everything else keeps running) instead of losing the entire agent over
+		// one missing/inaccessible event log channel.
+		return &internal.StartupError{
+			Err:   fmt.Errorf("subscription of Windows Event Log failed: %w", err),
+			Retry: true,
+		}
 	}
 	w.subscription = subscription
 	w.Log.Debug("Subscription handle id:", w.subscription)
