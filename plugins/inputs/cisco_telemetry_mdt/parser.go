@@ -3,7 +3,6 @@ package cisco_telemetry_mdt
 import (
 	"encoding/json"
 	"errors"
-	"maps"
 	"path"
 	"strconv"
 	"strings"
@@ -188,30 +187,28 @@ func (p *parser) parse(
 }
 
 // Recursively parse the "keys" element and convert to tags
-func parseKeys(field *telemetry.TelemetryField, prefix string) map[string]string {
-	tags := make(map[string]string)
-
-	localname := strings.ReplaceAll(field.Name, "-", "_")
-	name := localname
-	if len(localname) == 0 {
-		name = prefix
-	} else if len(prefix) > 0 {
-		name = prefix + "/" + localname
+func parseKeys(field *telemetry.TelemetryField, prefix string, tags map[string]string) {
+	name := strings.ReplaceAll(field.Name, "-", "_")
+	fullName := prefix
+	if fullName != "" {
+		fullName += "/"
 	}
+	fullName += name
 
-	if tag := decodeTag(field); len(name) > 0 && len(tag) > 0 {
-		if _, exists := tags[localname]; !exists { // Use short keys whenever possible
-			tags[localname] = tag
+	// Store the tag with the short-key if possible, otherwise use the full
+	// tag-key containing the element path
+	if value := decodeTag(field); name != "" && value != "" {
+		if _, exists := tags[name]; !exists {
+			tags[name] = value
 		} else {
-			tags[name] = tag
+			tags[fullName] = value
 		}
 	}
 
+	// Iterate over potential sub-elements
 	for _, subfield := range field.Fields {
-		maps.Copy(tags, parseKeys(subfield, name))
+		parseKeys(subfield, fullName, tags)
 	}
-
-	return tags
 }
 
 func (s *state) parseField(field *telemetry.TelemetryField, prefix string, tags map[string]string, timestamp time.Time) []error {

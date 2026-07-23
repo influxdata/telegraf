@@ -1,0 +1,2 @@
+alias,name=foo,entity=server,machine/name=foo.example.com,location=Offenbach,path=type:model/some/path,source=hostname,subscription=subscription bool=true 1543236572000000000
+alias,name=bar,entity=mainframe,machine/name=bar.example.com,location=Offenbach,path=type:model/some/path,source=hostname,subscription=subscription bool=false 1543236572000000000

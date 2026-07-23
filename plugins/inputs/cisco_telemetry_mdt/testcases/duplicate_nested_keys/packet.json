@@ -1,0 +1,86 @@
+{
+    "nodeIdStr": "hostname",
+    "subscriptionIdStr": "subscription",
+    "encodingPath": "type:model/some/path",
+    "msgTimestamp": "1543236572000",
+    "dataGpbkv": [
+        {
+            "fields": [
+                {
+                    "name": "keys",
+                    "fields": [
+                        {
+                            "name": "name",
+                            "stringValue": "foo"
+                        },
+                        {
+                            "name": "entity",
+                            "stringValue": "server"
+                        },
+                        {
+                            "name": "machine",
+                            "fields": [
+                                {
+                                    "name": "name",
+                                    "stringValue": "foo.example.com"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "location",
+                            "stringValue": "Offenbach"
+                        }
+                    ]
+                },
+                {
+                    "name": "content",
+                    "fields": [
+                        {
+                            "name": "bool",
+                            "boolValue": true
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "fields": [
+                {
+                    "name": "keys",
+                    "fields": [
+                        {
+                            "name": "name",
+                            "stringValue": "bar"
+                        },
+                        {
+                            "name": "entity",
+                            "stringValue": "mainframe"
+                        },
+                        {
+                            "name": "machine",
+                            "fields": [
+                                {
+                                    "name": "name",
+                                    "stringValue": "bar.example.com"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "location",
+                            "stringValue": "Offenbach"
+                        }
+                    ]
+                },
+                {
+                    "name": "content",
+                    "fields": [
+                        {
+                            "name": "bool",
+                            "boolValue": false
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

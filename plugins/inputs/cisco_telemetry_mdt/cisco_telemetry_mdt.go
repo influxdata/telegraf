@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"encoding/hex"
 	"fmt"
-	"maps"
 	"net"
 	"sync"
 	"time"
@@ -211,7 +210,7 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 		tags := make(map[string]string, 3)
 		if keys != nil {
 			for _, subfield := range keys.Fields {
-				maps.Copy(tags, parseKeys(subfield, ""))
+				parseKeys(subfield, "", tags)
 			}
 
 			// If incoming MDT contains source key, copy to mdt_src
