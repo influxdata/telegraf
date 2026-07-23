@@ -20,6 +20,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -182,6 +183,9 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 		}
 	}
 
+	// Create a grouper to accumulate the fields for a series
+	grouper := metric.NewSeriesGrouper()
+
 	for _, gpbkv := range msg.DataGpbkv {
 		// Top-level field may have measurement timestamp, if not use message timestamp
 		measured := gpbkv.Timestamp
@@ -226,7 +230,14 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 		tags["path"] = encodingPath
 
 		// Parse the "content" field if any
-		c.parser.parse(c.acc, content, encodingPath, gpbkv.GetDelete(), tags, timestamp)
+		errs := c.parser.parse(grouper, content, encodingPath, gpbkv.GetDelete(), tags, timestamp)
+		for _, err := range errs {
+			c.acc.AddError(err)
+		}
+	}
+
+	for _, groupedMetric := range grouper.Metrics() {
+		c.acc.AddMetric(groupedMetric)
 	}
 }
 

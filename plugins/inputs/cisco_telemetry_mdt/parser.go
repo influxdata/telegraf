@@ -111,13 +111,13 @@ func newParser(includeDelete bool, aliases, dmes map[string]string, embeddedTags
 }
 
 func (p *parser) parse(
-	acc telegraf.Accumulator,
+	grouper *metric.SeriesGrouper,
 	content *telemetry.TelemetryField,
 	encodingPath string,
 	isDeleted bool,
 	tags map[string]string,
 	timestamp time.Time,
-) {
+) []error {
 	// Do alias lookup, to shorten measurement names
 	measurement := encodingPath
 	if alias, ok := p.aliases[encodingPath]; ok {
@@ -136,9 +136,6 @@ func (p *parser) parse(
 	isNXOS := !strings.ContainsRune(encodingPath, ':')
 	isEvent := isNXOS && strings.Contains(encodingPath, "EVENT-LIST")
 
-	// Create a grouper to accumulate the fields for a series
-	grouper := metric.NewSeriesGrouper()
-
 	// Initialize the parsing state
 	state := &state{
 		path:        encodingPath,
@@ -153,6 +150,7 @@ func (p *parser) parse(
 	}
 
 	// Parse the content if any
+	var errs []error
 	if content != nil {
 		for _, subfield := range content.Fields {
 			var prefix string
@@ -167,23 +165,17 @@ func (p *parser) parse(
 				}
 			}
 			// Parse the content with and without prefix
-			errs := state.parseField(subfield, prefix, tags, timestamp)
-			for _, err := range errs {
-				acc.AddError(err)
-			}
-			errs = state.parseField(subfield, "", tags, timestamp)
-			for _, err := range errs {
-				acc.AddError(err)
-			}
+			errs = append(errs, state.parseField(subfield, prefix, tags, timestamp)...)
+			errs = append(errs, state.parseField(subfield, "", tags, timestamp)...)
 		}
 	}
+
+	// Add a delete field if configured
 	if p.includeDelete {
 		grouper.Add(measurement, tags, timestamp, "delete", isDeleted)
 	}
 
-	for _, groupedMetric := range grouper.Metrics() {
-		acc.AddMetric(groupedMetric)
-	}
+	return errs
 }
 
 // Recursively parse the "keys" element and convert to tags
