@@ -88,6 +88,7 @@ require (
 	github.com/eclipse/paho.golang v0.23.0
 	github.com/eclipse/paho.mqtt.golang v1.5.1
 	github.com/elastic/go-elasticsearch/v5 v5.6.1
+	github.com/elastic/go-elasticsearch/v6 v6.8.10
 	github.com/emiago/sipgo v1.4.3
 	github.com/facebook/time v0.0.0-20250903103710-a5911c32cdb9
 	github.com/fatih/color v1.19.0
@@ -252,7 +253,6 @@ require (
 	google.golang.org/grpc v1.82.1
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
-	gopkg.in/olivere/elastic.v5 v5.0.86
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 	k8s.io/api v0.36.2
 	k8s.io/apimachinery v0.36.2

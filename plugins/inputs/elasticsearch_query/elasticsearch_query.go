@@ -10,8 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	common_http "github.com/influxdata/telegraf/plugins/common/http"
@@ -19,13 +17,9 @@ import (
 )
 
 type client interface {
-	version() (string, error)
-	isRunning() bool
 	close()
-	buildQueries(aggregation *aggregation) error
 	getFieldMapping(context.Context, string, string) (map[string]interface{}, error)
 	query(context.Context, *aggregation) (interface{}, int64, error)
-	aggregate(telegraf.Accumulator, string, map[string]string, interface{}) error
 }
 
 //go:embed sample.conf
@@ -59,7 +53,7 @@ type aggregation struct {
 
 	mapMetricFields map[string]string
 	measurements    map[string]map[string]string
-	queries         interface{} // client specific data to execute the query
+	queries         interface{} // prepared once and reused across collections
 }
 
 func (*ElasticsearchQuery) SampleConfig() string {
@@ -89,28 +83,45 @@ func (e *ElasticsearchQuery) Init() error {
 }
 
 func (e *ElasticsearchQuery) Start(telegraf.Accumulator) error {
-	// Create a new ElasticSearch client
-	client, err := e.newClientV5()
+	// Make sure the HTTP client exists
+	httpClient, err := e.HTTPClientConfig.CreateClient(context.Background(), e.Log)
+	if err != nil {
+		return fmt.Errorf("creating HTTP client failed: %w", err)
+	}
+
+	cfg := clientConfig{
+		urls:              e.URLs,
+		username:          e.Username,
+		password:          e.Password,
+		enableSniffer:     e.EnableSniffer,
+		discoveryInterval: time.Duration(e.HealthCheckInterval),
+		httpClient:        httpClient,
+		log:               e.Log,
+	}
+
+	version, major, err := cfg.probeVersion(context.Background())
+	if err != nil {
+		httpClient.CloseIdleConnections()
+		return err
+	}
+
+	var c client
+	switch major {
+	case 5:
+		if cfg.enableSniffer {
+			e.Log.Warn("'enable_sniffer' is not supported for ElasticSearch 5.x and will be ignored")
+		}
+		c, err = newClientV5(cfg)
+	case 6:
+		c, err = newClientV6(cfg)
+	default:
+		httpClient.CloseIdleConnections()
+		return fmt.Errorf("server version %q not supported (currently supported versions are 5.x and 6.x)", version)
+	}
 	if err != nil {
 		return err
 	}
-	e.client = client
-
-	// Get the ElasticSearch version on first node and check if it's supported
-	version, err := e.client.version()
-	if err != nil {
-		e.Stop()
-		return fmt.Errorf("getting server version failed: %w", err)
-	}
-	ver, err := semver.NewVersion(version)
-	if err != nil {
-		e.Stop()
-		return fmt.Errorf("parsing server version %q failed: %w", version, err)
-	}
-	if ver.Major() < 5 || ver.Major() > 6 {
-		e.Stop()
-		return fmt.Errorf("server version %q not supported (currently supported versions are 5.x and 6.x)", version)
-	}
+	e.client = c
 
 	// Setup the aggregations, this needs to be done in Start as it will require
 	// API calls to the ElasticSearch endpoint and can thus not happen in Init
@@ -136,14 +147,6 @@ func (e *ElasticsearchQuery) Stop() {
 
 // Gather writes the results of the queries from Elasticsearch to the Accumulator.
 func (e *ElasticsearchQuery) Gather(acc telegraf.Accumulator) error {
-	// Make sure we are connected
-	if !e.client.isRunning() {
-		e.Stop()
-		if err := e.Start(acc); err != nil {
-			return err
-		}
-	}
-
 	var wg sync.WaitGroup
 	for i := range e.Aggregations {
 		wg.Add(1)
@@ -181,7 +184,7 @@ func (e *ElasticsearchQuery) initAggregation(ctx context.Context, agg *aggregati
 		}
 	}
 
-	if err := e.client.buildQueries(agg); err != nil {
+	if err := agg.buildQueries(); err != nil {
 		return fmt.Errorf("building aggregation query failed: %w", err)
 	}
 
@@ -209,7 +212,7 @@ func (e *ElasticsearchQuery) gatherAggregation(acc telegraf.Accumulator, aggrega
 
 	// Aggregate results that support aggregation
 	for measurement, aggNameFunction := range aggregation.measurements {
-		if err := e.client.aggregate(acc, measurement, aggNameFunction, result); err != nil {
+		if err := aggregate(acc, measurement, aggNameFunction, result); err != nil {
 			return fmt.Errorf("recursing response failed: %w", err)
 		}
 	}
@@ -278,7 +281,7 @@ func getMetricField(response map[string]interface{}) (map[string]string, error) 
 func init() {
 	inputs.Add("elasticsearch_query", func() telegraf.Input {
 		return &ElasticsearchQuery{
-			HealthCheckInterval: config.Duration(time.Second * 10),
+			HealthCheckInterval: config.Duration(15 * time.Minute),
 			HTTPClientConfig: common_http.HTTPClientConfig{
 				Timeout: config.Duration(5 * time.Second),
 				TransportConfig: common_http.TransportConfig{
