@@ -505,6 +505,35 @@ cpu_time_idle 43
 `),
 		},
 		{
+			name: "multiple samples for the same series",
+			metrics: []telegraf.Metric{
+				metric.New(
+					"cpu",
+					map[string]string{
+						"host": "one.example.org",
+					},
+					map[string]interface{}{
+						"time_idle": 1.0,
+					},
+					time.Unix(0, 0),
+				),
+				metric.New(
+					"cpu",
+					map[string]string{
+						"host": "one.example.org",
+					},
+					map[string]interface{}{
+						"time_idle": 2.0,
+					},
+					time.Unix(1, 0),
+				),
+			},
+			expected: []byte(`
+cpu_time_idle{host="one.example.org"} 1
+cpu_time_idle{host="one.example.org"} 2
+`),
+		},
+		{
 			name: "colons are not replaced in metric name from measurement",
 			metrics: []telegraf.Metric{
 				metric.New(
