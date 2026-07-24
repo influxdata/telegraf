@@ -469,7 +469,7 @@ func (s *state) parseMicroburst(fields []*telemetry.TelemetryField, tags map[str
 				tags[subf.Name] = decodeTag(subf)
 			}
 			if value := decode(subf); value != nil {
-				s.grouper.Add(s.path, tags, timestamp, subf.Name, value)
+				s.grouper.Add(s.measurement, tags, timestamp, subf.Name, value)
 			}
 		}
 	}
