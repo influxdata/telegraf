@@ -5,9 +5,12 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs/kapacitor"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -143,43 +146,107 @@ func TestErrorHandling404(t *testing.T) {
 }
 
 func TestNestedMetricsTagURL(t *testing.T) {
-	kapacitorReturn, err := os.ReadFile("./testdata/kapacitor_return.json")
-	require.NoError(t, err)
+	// Minimal fixture: one nested ingress metric (+ top-level kapacitor).
+	response := []byte(`{
+		"version": "1.1.0",
+		"num_enabled_tasks": 1,
+		"num_subscriptions": 2,
+		"num_tasks": 3,
+		"kapacitor": {
+			"1": {
+				"name": "ingress",
+				"tags": {
+					"task_master": "main",
+					"database": "db",
+					"retention_policy": "rp",
+					"measurement": "m",
+					"host": "localhost",
+					"cluster_id": "c",
+					"server_id": "s"
+				},
+				"values": {"points_received": 42}
+			}
+		}
+	}`)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		if _, err := w.Write(kapacitorReturn); err != nil {
+		if _, err := w.Write(response); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			t.Error(err)
 		}
 	}))
 	defer srv.Close()
 
-	// Default: nested metrics must NOT get a url tag (no cardinality change).
-	pluginOff := &kapacitor.Kapacitor{URLs: []string{srv.URL}}
-	var accOff testutil.Accumulator
-	require.NoError(t, pluginOff.Gather(&accOff))
-	for _, m := range accOff.Metrics {
-		if m.Measurement == "kapacitor_ingress" {
-			_, has := m.Tags["url"]
-			require.False(t, has, "default must not tag nested metrics with url")
-			require.Equal(t, "1.1.0~rc2", m.Fields["kap_version"])
-		}
-	}
+	// Default: nested metrics must NOT get a url tag.
+	plugin := &kapacitor.Kapacitor{URLs: []string{srv.URL}}
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
 
-	// Opt-in: nested metrics get url + kap_version field.
-	pluginOn := &kapacitor.Kapacitor{URLs: []string{srv.URL}, TagURL: true}
-	var accOn testutil.Accumulator
-	require.NoError(t, pluginOn.Gather(&accOn))
-	found := false
-	for _, m := range accOn.Metrics {
-		if m.Measurement == "kapacitor_ingress" {
-			found = true
-			require.Equal(t, srv.URL, m.Tags["url"])
-			require.Equal(t, "1.1.0~rc2", m.Fields["kap_version"])
-			// high-cardinality host/cluster_id/server_id still stripped
-			_, hasHost := m.Tags["host"]
-			require.False(t, hasHost)
-		}
+	expectedOff := []telegraf.Metric{
+		metric.New(
+			"kapacitor",
+			map[string]string{
+				"kap_version": "1.1.0",
+				"url":         srv.URL,
+			},
+			map[string]interface{}{
+				"num_enabled_tasks": 1,
+				"num_subscriptions": 2,
+				"num_tasks":         3,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"kapacitor_ingress",
+			map[string]string{
+				"task_master":      "main",
+				"database":         "db",
+				"retention_policy": "rp",
+				"measurement":      "m",
+			},
+			map[string]interface{}{
+				"points_received": float64(42),
+			},
+			time.Unix(0, 0),
+		),
 	}
-	require.True(t, found, "expected kapacitor_ingress metric")
+	testutil.RequireMetricsEqual(t, expectedOff, acc.GetTelegrafMetrics(),
+		testutil.IgnoreTime(), testutil.SortMetrics())
+
+	// Opt-in: nested metrics get the url tag; high-cardinality tags stay stripped.
+	plugin = &kapacitor.Kapacitor{URLs: []string{srv.URL}, TagURL: true}
+	acc = testutil.Accumulator{}
+	require.NoError(t, plugin.Gather(&acc))
+
+	expectedOn := []telegraf.Metric{
+		metric.New(
+			"kapacitor",
+			map[string]string{
+				"kap_version": "1.1.0",
+				"url":         srv.URL,
+			},
+			map[string]interface{}{
+				"num_enabled_tasks": 1,
+				"num_subscriptions": 2,
+				"num_tasks":         3,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"kapacitor_ingress",
+			map[string]string{
+				"task_master":      "main",
+				"database":         "db",
+				"retention_policy": "rp",
+				"measurement":      "m",
+				"url":              srv.URL,
+			},
+			map[string]interface{}{
+				"points_received": float64(42),
+			},
+			time.Unix(0, 0),
+		),
+	}
+	testutil.RequireMetricsEqual(t, expectedOn, acc.GetTelegrafMetrics(),
+		testutil.IgnoreTime(), testutil.SortMetrics())
 }

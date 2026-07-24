@@ -31,10 +31,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Time limit for http requests
   timeout = "5s"
 
-  ## When true, nested Kapacitor metrics (kapacitor_ingress, kapacitor_edges,
-  ## etc.) also get a "url" tag identifying the scrape source. Top-level
-  ## kapacitor / kapacitor_memstats metrics already include this tag.
-  ## Default false to avoid a sudden cardinality change for existing users.
+  ## Add "url" tag identifying the scrape source to nested Kapacitor metrics
   # tag_url = false
 
   ## Optional TLS Config
