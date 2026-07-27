@@ -326,12 +326,11 @@ func TestClientV7Query(t *testing.T) {
 	defer c.close()
 
 	agg := &aggregation{
-		Index:        "test",
-		DateField:    "@timestamp",
-		FilterQuery:  "*",
-		QueryPeriod:  config.Duration(time.Minute),
-		queries:      make([]queryData, 0),
-		measurements: map[string]map[string]string{},
+		Index:       "test",
+		DateField:   "@timestamp",
+		FilterQuery: "*",
+		QueryPeriod: config.Duration(time.Minute),
+		queries:     make([]queryData, 0),
 	}
 	result, hits, err := c.query(t.Context(), agg)
 	require.NoError(t, err)
