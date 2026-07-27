@@ -126,7 +126,10 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 }
 
 func (e *Execd) cmdReadOutStream(out io.Reader) {
-	parser := influx.NewStreamParser(out)
+	// Type assertions cannot fail because the function is only executed with
+	// both assertions being fine
+	unwrapped := e.parser.(*models.RunningParser)
+	parser := unwrapped.Parser.(*influx.Parser).CreateStreamParser(out)
 
 	for {
 		metric, err := parser.Next()
