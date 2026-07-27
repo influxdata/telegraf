@@ -239,104 +239,146 @@ func TestClientV6Sniffer(t *testing.T) {
 	}
 }
 
-func TestClientV7Sniffer(t *testing.T) {
-	discovered := make(chan struct{}, 1)
-
-	var server *httptest.Server
-	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/_nodes/http" {
-			http.NotFound(w, r)
-			return
-		}
-
-		response := map[string]interface{}{
-			"nodes": map[string]interface{}{
-				"node": map[string]interface{}{
-					"name":  "node",
-					"roles": []string{"data", "ingest"},
-					"http": map[string]string{
-						"publish_address": strings.TrimPrefix(server.URL, "http://"),
-					},
-				},
-			},
-		}
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			t.Error(err)
-			return
-		}
-		discovered <- struct{}{}
-	}))
-	defer server.Close()
-
-	c, err := newClientV7(clientConfig{
-		urls:              []string{server.URL},
-		enableSniffer:     true,
-		discoveryInterval: time.Hour,
-		httpClient:        server.Client(),
-		log:               testutil.Logger{},
-	})
-	require.NoError(t, err)
-
-	select {
-	case <-discovered:
-	case <-time.After(5 * time.Second):
-		t.Fatal("timed out waiting for node discovery")
+func TestClientV7PlusSniffer(t *testing.T) {
+	tests := []struct {
+		name      string
+		newClient func(clientConfig) (client, error)
+	}{
+		{
+			name:      "v7",
+			newClient: newClientV7,
+		},
 	}
 
-	stopped := make(chan struct{})
-	go func() {
-		c.close()
-		close(stopped)
-	}()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			discovered := make(chan struct{}, 1)
 
-	select {
-	case <-stopped:
-	case <-time.After(5 * time.Second):
-		t.Fatal("timed out stopping node discovery")
+			var server *httptest.Server
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/_nodes/http" {
+					http.NotFound(w, r)
+					return
+				}
+
+				response := map[string]interface{}{
+					"nodes": map[string]interface{}{
+						"node": map[string]interface{}{
+							"name":  "node",
+							"roles": []string{"data", "ingest"},
+							"http": map[string]string{
+								"publish_address": strings.TrimPrefix(server.URL, "http://"),
+							},
+						},
+					},
+				}
+				if err := json.NewEncoder(w).Encode(response); err != nil {
+					t.Error(err)
+					return
+				}
+				discovered <- struct{}{}
+			}))
+			defer server.Close()
+
+			c, err := tt.newClient(clientConfig{
+				urls:              []string{server.URL},
+				enableSniffer:     true,
+				discoveryInterval: time.Hour,
+				httpClient:        server.Client(),
+				log:               testutil.Logger{},
+			})
+			require.NoError(t, err)
+
+			select {
+			case <-discovered:
+			case <-time.After(5 * time.Second):
+				t.Fatal("timed out waiting for node discovery")
+			}
+
+			stopped := make(chan struct{})
+			go func() {
+				c.close()
+				close(stopped)
+			}()
+
+			select {
+			case <-stopped:
+			case <-time.After(5 * time.Second):
+				t.Fatal("timed out stopping node discovery")
+			}
+		})
 	}
 }
 
-func TestClientV7Query(t *testing.T) {
-	var trackTotalHits string
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("X-Elastic-Product", "Elasticsearch")
-		switch r.URL.Path {
-		case "/":
-			if _, err := w.Write([]byte(`{"version":{"number":"7.17.29"}}`)); err != nil {
-				t.Error(err)
-			}
-		case "/test/_search":
-			trackTotalHits = r.URL.Query().Get("track_total_hits")
-			if _, err := w.Write([]byte(`{"hits":{"total":{"value":12345,"relation":"eq"}},"aggregations":{}}`)); err != nil {
-				t.Error(err)
-			}
-		default:
-			http.NotFound(w, r)
-		}
-	}))
-	defer server.Close()
-
-	c, err := newClientV7(clientConfig{
-		urls:       []string{server.URL},
-		httpClient: server.Client(),
-		log:        testutil.Logger{},
-	})
-	require.NoError(t, err)
-	defer c.close()
-
-	agg := &aggregation{
-		Index:       "test",
-		DateField:   "@timestamp",
-		FilterQuery: "*",
-		QueryPeriod: config.Duration(time.Minute),
-		queries:     make([]queryData, 0),
+func TestClientQuery(t *testing.T) {
+	tests := []struct {
+		name                   string
+		newClient              func(clientConfig) (client, error)
+		response               string
+		expectedTrackTotalHits string
+	}{
+		{
+			name:      "v5",
+			newClient: newClientV5,
+			response:  `{"hits":{"total":12345},"aggregations":{}}`,
+		},
+		{
+			name:      "v6",
+			newClient: newClientV6,
+			response:  `{"hits":{"total":12345},"aggregations":{}}`,
+		},
+		{
+			name:                   "v7",
+			newClient:              newClientV7,
+			response:               `{"hits":{"total":{"value":12345,"relation":"eq"}},"aggregations":{}}`,
+			expectedTrackTotalHits: "true",
+		},
 	}
-	result, hits, err := c.query(t.Context(), agg)
-	require.NoError(t, err)
-	require.Nil(t, result)
-	require.EqualValues(t, 12345, hits)
-	require.Equal(t, "true", trackTotalHits)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var trackTotalHits string
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set("X-Elastic-Product", "Elasticsearch")
+				switch r.URL.Path {
+				case "/": // The V7 client performs an implicit product check before searching.
+					if _, err := w.Write([]byte("{}")); err != nil {
+						t.Error(err)
+					}
+				case "/test/_search":
+					trackTotalHits = r.URL.Query().Get("track_total_hits")
+					if _, err := w.Write([]byte(tt.response)); err != nil {
+						t.Error(err)
+					}
+				default:
+					http.NotFound(w, r)
+				}
+			}))
+			defer server.Close()
+
+			c, err := tt.newClient(clientConfig{
+				urls:       []string{server.URL},
+				httpClient: server.Client(),
+				log:        testutil.Logger{},
+			})
+			require.NoError(t, err)
+			defer c.close()
+
+			agg := &aggregation{
+				Index:       "test",
+				DateField:   "@timestamp",
+				FilterQuery: "*",
+				QueryPeriod: config.Duration(time.Minute),
+				queries:     make([]queryData, 0),
+			}
+			result, hits, err := c.query(t.Context(), agg)
+			require.NoError(t, err)
+			require.Nil(t, result)
+			require.EqualValues(t, 12345, hits)
+			require.Equal(t, tt.expectedTrackTotalHits, trackTotalHits)
+		})
+	}
 }
 
 type nginxlog struct {
@@ -921,9 +963,24 @@ func TestGatherV5Integration(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expectedMetrics, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
 }
 
-func TestGatherV7Integration(t *testing.T) {
+func TestGatherV7PlusIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
+	}
+
+	tests := []struct {
+		name  string
+		image string
+		env   map[string]string
+	}{
+		{
+			name:  "v7",
+			image: "docker.elastic.co/elasticsearch/elasticsearch:7.17.29",
+			env: map[string]string{
+				"discovery.type": "single-node",
+				"ES_JAVA_OPTS":   "-Xms1g -Xmx1g",
+			},
+		},
 	}
 
 	// Define expectations
@@ -1062,149 +1119,149 @@ func TestGatherV7Integration(t *testing.T) {
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup the container
+			container := &testutil.Container{
+				Image:        tt.image,
+				ExposedPorts: []string{servicePort},
+				Env:          tt.env,
+				WaitingFor:   wait.ForHTTP("/").WithPort(servicePort).WithStartupTimeout(120 * time.Second),
+			}
+			require.NoError(t, container.Start(), "failed to start container")
+			defer container.Terminate()
 
-	// Setup the container
-	container := &testutil.Container{
-		Image:        "docker.elastic.co/elasticsearch/elasticsearch:7.17.29",
-		ExposedPorts: []string{servicePort},
-		Env: map[string]string{
-			"discovery.type": "single-node",
-			"ES_JAVA_OPTS":   "-Xms1g -Xmx1g",
-		},
-		WaitingFor: wait.ForHTTP("/").WithPort(servicePort).WithStartupTimeout(120 * time.Second),
+			addr := "http://" + container.Address + ":" + container.Ports[servicePort]
+
+			// Fill the database
+			require.NoError(t, sendData(t.Context(), addr))
+
+			// Setup the plugin
+			plugin := &ElasticsearchQuery{
+				URLs: []string{addr},
+				Aggregations: []aggregation{
+					{
+						Index:           testindex,
+						MeasurementName: "measurement1",
+						MetricFields:    []string{"size"},
+						FilterQuery:     "product_1",
+						MetricFunction:  "avg",
+						DateField:       "@timestamp",
+						QueryPeriod:     config.Duration(time.Second * 600),
+						Tags:            []string{"URI.keyword"},
+					},
+					{
+						Index:           testindex,
+						MeasurementName: "measurement2",
+						MetricFields:    []string{"size"},
+						FilterQuery:     "downloads",
+						MetricFunction:  "max",
+						DateField:       "@timestamp",
+						QueryPeriod:     config.Duration(time.Second * 600),
+						Tags:            []string{"URI.keyword"},
+					},
+					{
+						Index:           testindex,
+						MeasurementName: "measurement3",
+						MetricFields:    []string{"size"},
+						FilterQuery:     "downloads",
+						MetricFunction:  "sum",
+						DateField:       "@timestamp",
+						QueryPeriod:     config.Duration(time.Second * 600),
+						Tags:            []string{"response.keyword"},
+					},
+					{
+						Index:             testindex,
+						MeasurementName:   "measurement4",
+						MetricFields:      []string{"size", "response_time"},
+						FilterQuery:       "downloads",
+						MetricFunction:    "min",
+						DateField:         "@timestamp",
+						QueryPeriod:       config.Duration(time.Second * 600),
+						IncludeMissingTag: true,
+						MissingTagValue:   "missing",
+						Tags:              []string{"response.keyword", "URI.keyword", "method.keyword"},
+					},
+					{
+						Index:           testindex,
+						MeasurementName: "measurement5",
+						FilterQuery:     "product_2",
+						DateField:       "@timestamp",
+						QueryPeriod:     config.Duration(time.Second * 600),
+						Tags:            []string{"URI.keyword"},
+					},
+					{
+						Index:           testindex,
+						MeasurementName: "measurement6",
+						FilterQuery:     "response: 200",
+						DateField:       "@timestamp",
+						QueryPeriod:     config.Duration(time.Second * 600),
+						Tags:            []string{"URI.keyword", "response.keyword"},
+					},
+					{
+						Index:           testindex,
+						MeasurementName: "measurement7",
+						FilterQuery:     "response: 200",
+						DateField:       "@timestamp",
+						QueryPeriod:     config.Duration(time.Second * 600),
+					},
+					{
+						Index:           testindex,
+						MeasurementName: "measurement8",
+						MetricFields:    []string{"size"},
+						FilterQuery:     "downloads",
+						MetricFunction:  "max",
+						DateField:       "@timestamp",
+						QueryPeriod:     config.Duration(time.Second * 600),
+					},
+					{
+						Index:           testindex,
+						MeasurementName: "measurement12",
+						MetricFields:    []string{"size"},
+						MetricFunction:  "avg",
+						DateField:       "@notatimestamp",
+						QueryPeriod:     config.Duration(time.Second * 600),
+					},
+					{
+						Index:             testindex,
+						MeasurementName:   "measurement13",
+						MetricFields:      []string{"size"},
+						MetricFunction:    "avg",
+						DateField:         "@timestamp",
+						QueryPeriod:       config.Duration(time.Second * 600),
+						IncludeMissingTag: false,
+						Tags:              []string{"nothere"},
+					},
+				},
+				HTTPClientConfig: common_http.HTTPClientConfig{
+					Timeout: config.Duration(30 * time.Second),
+					TransportConfig: common_http.TransportConfig{
+						ResponseHeaderTimeout: config.Duration(30 * time.Second),
+					},
+				},
+				Log: testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
+
+			// Check the ES field mapping
+			for i, agg := range plugin.Aggregations {
+				actual := agg.mapMetricFields
+				expected := expectedFields[i]
+				require.Equalf(t, expected, actual, "mismatch in aggregation %d", i)
+			}
+
+			// Collect metrics and check
+			require.NoError(t, acc.GatherError(plugin.Gather))
+			require.Empty(t, acc.Errors)
+
+			// Check the metrics
+			testutil.RequireMetricsEqual(t, expectedMetrics, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
+		})
 	}
-	require.NoError(t, container.Start(), "failed to start container")
-	defer container.Terminate()
-
-	addr := "http://" + container.Address + ":" + container.Ports[servicePort]
-
-	// Fill the database
-	require.NoError(t, sendData(t.Context(), addr))
-
-	// Setup the plugin
-	plugin := &ElasticsearchQuery{
-		URLs: []string{addr},
-		Aggregations: []aggregation{
-			{
-				Index:           testindex,
-				MeasurementName: "measurement1",
-				MetricFields:    []string{"size"},
-				FilterQuery:     "product_1",
-				MetricFunction:  "avg",
-				DateField:       "@timestamp",
-				QueryPeriod:     config.Duration(time.Second * 600),
-				Tags:            []string{"URI.keyword"},
-			},
-			{
-				Index:           testindex,
-				MeasurementName: "measurement2",
-				MetricFields:    []string{"size"},
-				FilterQuery:     "downloads",
-				MetricFunction:  "max",
-				DateField:       "@timestamp",
-				QueryPeriod:     config.Duration(time.Second * 600),
-				Tags:            []string{"URI.keyword"},
-			},
-			{
-				Index:           testindex,
-				MeasurementName: "measurement3",
-				MetricFields:    []string{"size"},
-				FilterQuery:     "downloads",
-				MetricFunction:  "sum",
-				DateField:       "@timestamp",
-				QueryPeriod:     config.Duration(time.Second * 600),
-				Tags:            []string{"response.keyword"},
-			},
-			{
-				Index:             testindex,
-				MeasurementName:   "measurement4",
-				MetricFields:      []string{"size", "response_time"},
-				FilterQuery:       "downloads",
-				MetricFunction:    "min",
-				DateField:         "@timestamp",
-				QueryPeriod:       config.Duration(time.Second * 600),
-				IncludeMissingTag: true,
-				MissingTagValue:   "missing",
-				Tags:              []string{"response.keyword", "URI.keyword", "method.keyword"},
-			},
-			{
-				Index:           testindex,
-				MeasurementName: "measurement5",
-				FilterQuery:     "product_2",
-				DateField:       "@timestamp",
-				QueryPeriod:     config.Duration(time.Second * 600),
-				Tags:            []string{"URI.keyword"},
-			},
-			{
-				Index:           testindex,
-				MeasurementName: "measurement6",
-				FilterQuery:     "response: 200",
-				DateField:       "@timestamp",
-				QueryPeriod:     config.Duration(time.Second * 600),
-				Tags:            []string{"URI.keyword", "response.keyword"},
-			},
-			{
-				Index:           testindex,
-				MeasurementName: "measurement7",
-				FilterQuery:     "response: 200",
-				DateField:       "@timestamp",
-				QueryPeriod:     config.Duration(time.Second * 600),
-			},
-			{
-				Index:           testindex,
-				MeasurementName: "measurement8",
-				MetricFields:    []string{"size"},
-				FilterQuery:     "downloads",
-				MetricFunction:  "max",
-				DateField:       "@timestamp",
-				QueryPeriod:     config.Duration(time.Second * 600),
-			},
-			{
-				Index:           testindex,
-				MeasurementName: "measurement12",
-				MetricFields:    []string{"size"},
-				MetricFunction:  "avg",
-				DateField:       "@notatimestamp",
-				QueryPeriod:     config.Duration(time.Second * 600),
-			},
-			{
-				Index:             testindex,
-				MeasurementName:   "measurement13",
-				MetricFields:      []string{"size"},
-				MetricFunction:    "avg",
-				DateField:         "@timestamp",
-				QueryPeriod:       config.Duration(time.Second * 600),
-				IncludeMissingTag: false,
-				Tags:              []string{"nothere"},
-			},
-		},
-		HTTPClientConfig: common_http.HTTPClientConfig{
-			Timeout: config.Duration(30 * time.Second),
-			TransportConfig: common_http.TransportConfig{
-				ResponseHeaderTimeout: config.Duration(30 * time.Second),
-			},
-		},
-		Log: testutil.Logger{},
-	}
-	require.NoError(t, plugin.Init())
-
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Start(&acc))
-	defer plugin.Stop()
-
-	// Check the ES field mapping
-	for i, agg := range plugin.Aggregations {
-		actual := agg.mapMetricFields
-		expected := expectedFields[i]
-		require.Equalf(t, expected, actual, "mismatch in aggregation %d", i)
-	}
-
-	// Collect metrics and check
-	require.NoError(t, acc.GatherError(plugin.Gather))
-	require.Empty(t, acc.Errors)
-
-	// Check the metrics
-	testutil.RequireMetricsEqual(t, expectedMetrics, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
 }
 
 func TestGatherFailStartIntegration(t *testing.T) {
