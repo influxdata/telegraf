@@ -78,6 +78,10 @@ func (o *OS) Set(key, value string) error {
 	return o.ring.Set(item)
 }
 
+func (o *OS) Remove(key string) error {
+	return o.ring.Remove(key)
+}
+
 func (o *OS) List() ([]string, error) {
 	return o.ring.Keys()
 }
