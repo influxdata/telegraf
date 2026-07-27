@@ -141,6 +141,38 @@ func (v *Vault) Set(key, value string) error {
 	return err
 }
 
+func (v *Vault) Remove(key string) error {
+	// Vault has no way to delete a single key, so read the existing secrets
+	// first and write back all of them except the one to remove.
+	secret, err := v.getSecret()
+	if err != nil {
+		return fmt.Errorf("unable to read secret: %w", err)
+	}
+	if secret == nil || secret.Data[key] == nil {
+		return fmt.Errorf("secret %q not found", key)
+	}
+	delete(secret.Data, key)
+
+	// The kv-v1 engine rejects writing a secret without any data, so delete the
+	// secret at the path once its last key is gone. Do the same for kv-v2 to
+	// keep both engines behaving alike.
+	if v.Engine == "kv-v1" {
+		kv := v.client.KVv1(v.MountPath)
+		if len(secret.Data) == 0 {
+			return kv.Delete(context.Background(), v.SecretPath)
+		}
+		return kv.Put(context.Background(), v.SecretPath, secret.Data)
+	}
+
+	kv := v.client.KVv2(v.MountPath)
+	if len(secret.Data) == 0 {
+		return kv.Delete(context.Background(), v.SecretPath)
+	}
+
+	_, err = kv.Put(context.Background(), v.SecretPath, secret.Data)
+	return err
+}
+
 func (v *Vault) GetResolver(key string) (telegraf.ResolveFunc, error) {
 	resolver := func() ([]byte, bool, error) {
 		s, err := v.Get(key)
