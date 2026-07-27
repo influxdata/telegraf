@@ -104,6 +104,15 @@ func (s *MockSecretStore) Set(key, value string) error {
 	s.Secrets[key] = []byte(value)
 	return nil
 }
+
+func (s *MockSecretStore) Remove(key string) error {
+	if _, found := s.Secrets[key]; !found {
+		return errors.New("not found")
+	}
+	delete(s.Secrets, key)
+	return nil
+}
+
 func (s *MockSecretStore) List() ([]string, error) {
 	keys := make([]string, 0, len(s.Secrets))
 	for k := range s.Secrets {
@@ -339,6 +348,32 @@ func TestSecretsSetUnsupported(t *testing.T) {
 	args = append(args, "secrets", "set", "readonly", "key", "value")
 	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockTelegraf())
 	require.ErrorContains(t, err, `secret store "readonly" does not support setting secrets`)
+}
+
+func TestSecretsRemove(t *testing.T) {
+	buf := new(bytes.Buffer)
+	args := os.Args[0:1]
+	args = append(args, "secrets", "remove", "oppo_rancisis", "episode2")
+	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockTelegraf())
+	require.NoError(t, err)
+	require.NotContains(t, secrets["oppo_rancisis"], "episode2")
+	require.Contains(t, secrets["oppo_rancisis"], "episode1")
+}
+
+func TestSecretsRemoveNonExisting(t *testing.T) {
+	buf := new(bytes.Buffer)
+	args := os.Args[0:1]
+	args = append(args, "secrets", "remove", "coleman_kcaj", "episode1")
+	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockTelegraf())
+	require.ErrorContains(t, err, "unable to remove secret: not found")
+}
+
+func TestSecretsRemoveUnsupported(t *testing.T) {
+	buf := new(bytes.Buffer)
+	args := os.Args[0:1]
+	args = append(args, "secrets", "remove", "readonly", "key")
+	err := runApp(args, buf, NewMockServer(), NewMockConfig(buf), NewMockTelegraf())
+	require.ErrorContains(t, err, `secret store "readonly" does not support removing secrets`)
 }
 
 func TestCommandConfig(t *testing.T) {

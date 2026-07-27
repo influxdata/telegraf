@@ -5,6 +5,10 @@ This section is for developers who want to create a new secret store plugin.
 ## Secret Store Plugin Guidelines
 
 * A secret store must conform to telegraf's [`SecretStore` interface][interface].
+* Secret stores able to create, modify or erase secrets should additionally
+  implement the optional [`SecretStoreEditor` interface][editor interface].
+  Stores backed by a read-only source must not implement it, the `secrets set`
+  and `secrets remove` commands reject those stores.
 * Secret stores should call `secretstores.Add` in their `init` function to register
   themselves. See below for a quick example.
 * To be available within Telegraf itself, plugins must register themselves
@@ -21,6 +25,7 @@ This section is for developers who want to create a new secret store plugin.
 * Follow the recommended [Code Style][].
 
 [interface]: https://pkg.go.dev/github.com/influxdata/telegraf?utm_source=godoc#SecretStore
+[editor interface]: https://pkg.go.dev/github.com/influxdata/telegraf?utm_source=godoc#SecretStoreEditor
 [Sample Config]: https://github.com/influxdata/telegraf/blob/master/docs/developers/SAMPLE_CONFIG.md
 [Code Style]: https://github.com/influxdata/telegraf/blob/master/docs/developers/CODE_STYLE.md
 
@@ -85,6 +90,15 @@ func (p *Printer) Get(key string) ([]byte, error) {
 // Set sets the given secret for the given key
 func (p *Printer) Set(key, value string) error {
     p.cache[key] = value
+    return nil
+}
+
+// Remove erases the secret for the given key
+func (p *Printer) Remove(key string) error {
+    if _, found := p.cache[key]; !found {
+        return errors.New("not found")
+    }
+    delete(p.cache, key)
     return nil
 }
 

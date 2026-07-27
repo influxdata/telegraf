@@ -263,6 +263,66 @@ you will be prompted to enter the value of the secret.
 						return nil
 					},
 				},
+				{
+					Name:  "remove",
+					Usage: "remove a secret from the given store",
+					Description: `
+The 'remove' command requires passing in your configuration file
+containing the secret store definitions you want to access. To get a
+list of available secret store plugins, please have a look at
+https://github.com/influxdata/telegraf/tree/master/plugins/secretstores.
+and use the 'secrets list' command to get the IDs of available stores and keys.
+
+For help on how to define secret stores, check the documentation of the
+different plugins.
+
+Assuming you use the default configuration file location, you can run
+the following command to remove a secret from an available secret store
+
+> telegraf secrets remove mystore mysecretkey
+
+This will remove the secret with the key 'mysecretkey' from the secret
+store with the ID 'mystore'. Removing a key that does not exist in that
+store results in an error.
+`,
+					ArgsUsage: "<secret store ID> <secret key>",
+					Action: func(cCtx *cli.Context) error {
+						// Only load the secret stores
+						filters := processFilterOnlySecretStoreFlags(cCtx)
+						g := GlobalFlags{
+							config:     cCtx.StringSlice("config"),
+							configDir:  cCtx.StringSlice("config-directory"),
+							plugindDir: cCtx.String("plugin-directory"),
+							password:   cCtx.String("password"),
+							debug:      cCtx.Bool("debug"),
+						}
+						w := WindowFlags{}
+						m.Init(nil, filters, g, w)
+
+						args := cCtx.Args()
+						if !args.Present() || args.Len() != 2 {
+							return errors.New("invalid number of arguments")
+						}
+
+						storeID := args.First()
+						key := args.Get(1)
+
+						store, err := m.GetSecretStore(storeID)
+						if err != nil {
+							return fmt.Errorf("unable to get secret store: %w", err)
+						}
+						editor, ok := store.(telegraf.SecretStoreEditor)
+						if !ok {
+							return fmt.Errorf("secret store %q does not support removing secrets", storeID)
+						}
+
+						if err := editor.Remove(key); err != nil {
+							return fmt.Errorf("unable to remove secret: %w", err)
+						}
+
+						return nil
+					},
+				},
 			},
 		},
 	}
