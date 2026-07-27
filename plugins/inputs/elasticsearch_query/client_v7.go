@@ -35,7 +35,7 @@ func newClientV7(cfg clientConfig) (client, error) {
 
 	client := &clientV7{client: c, httpClient: cfg.httpClient, log: cfg.log}
 	if cfg.enableSniffer && cfg.discoveryInterval > 0 {
-		// The v7 client exposes only DiscoverNodes(), so in-flight calls cannot be canceled.
+		// The v7 connection-pool discovery API accepts no context, so in-flight calls cannot be canceled.
 		ctx, cancel := context.WithCancel(context.Background())
 		client.cancelDiscovery = cancel
 		client.discoveryWG.Add(1)
