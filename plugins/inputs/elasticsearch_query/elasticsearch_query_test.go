@@ -330,7 +330,7 @@ func TestClientV7Query(t *testing.T) {
 		DateField:    "@timestamp",
 		FilterQuery:  "*",
 		QueryPeriod:  config.Duration(time.Minute),
-		queries:      []queryData{},
+		queries:      make([]queryData, 0),
 		measurements: map[string]map[string]string{},
 	}
 	result, hits, err := c.query(t.Context(), agg)
