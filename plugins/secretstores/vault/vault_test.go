@@ -291,6 +291,72 @@ func testSetKeepsSiblings(t *testing.T, engine string) {
 	require.Equal(t, []string{"alpha", "beta", "gamma"}, keys)
 }
 
+func TestIntegrationRemove(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	tests := []struct {
+		engine string
+		// Error reported by the engine for a path without any secret
+		expectedEmpty string
+	}{
+		{
+			engine:        "kv-v1",
+			expectedEmpty: "secret not found",
+		},
+		{
+			engine:        "kv-v2",
+			expectedEmpty: "no secret data found",
+		},
+	}
+
+	mountPath := "my-mount-path"
+	secretPath := "my-secret-path"
+
+	for _, tt := range tests {
+		t.Run(tt.engine, func(t *testing.T) {
+			container, closer := createContainer(t, []string{
+				fmt.Sprintf("secrets enable -path=%s %s", mountPath, tt.engine),
+				fmt.Sprintf("kv put -mount=%s %s alpha=one beta=two", mountPath, secretPath),
+			})
+			defer closer()
+
+			addr, err := container.HttpHostAddress(context.Background())
+			require.NoError(t, err)
+
+			plugin := &Vault{
+				ID:         "test_" + tt.engine,
+				Address:    addr,
+				MountPath:  mountPath,
+				SecretPath: secretPath,
+				Engine:     tt.engine,
+				Token:      config.NewSecret([]byte("SomeToken")),
+			}
+			require.NoError(t, plugin.Init())
+
+			// Removing a secret must keep the sibling secrets at the same path
+			require.NoError(t, plugin.Remove("beta"))
+
+			keys, err := plugin.List()
+			require.NoError(t, err)
+			require.Equal(t, []string{"alpha"}, keys)
+
+			value, err := plugin.Get("alpha")
+			require.NoError(t, err)
+			require.Equal(t, "one", string(value))
+
+			// Removing a secret that does not exist must fail
+			require.ErrorContains(t, plugin.Remove("beta"), `secret "beta" not found`)
+
+			// Removing the last secret must remove the secret at the path completely
+			require.NoError(t, plugin.Remove("alpha"))
+			_, err = plugin.List()
+			require.ErrorContains(t, err, tt.expectedEmpty)
+		})
+	}
+}
+
 func TestIntegrationSetCreatesNewPathKVv1(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
