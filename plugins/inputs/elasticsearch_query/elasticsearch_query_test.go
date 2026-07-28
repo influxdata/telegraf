@@ -239,7 +239,7 @@ func TestClientV6Sniffer(t *testing.T) {
 	}
 }
 
-func TestClientV7PlusSniffer(t *testing.T) {
+func TestClientV7Discovery(t *testing.T) {
 	discovered := make(chan struct{}, 1)
 
 	var server *httptest.Server
