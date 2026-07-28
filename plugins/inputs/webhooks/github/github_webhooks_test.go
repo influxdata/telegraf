@@ -5,13 +5,17 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
+	
 )
 
-func githubWebhookRequest(t *testing.T, event, jsonString string) {
+func githubWebhookRequest(t *testing.T, event, jsonString string) *testutil.Accumulator {
 	var acc testutil.Accumulator
 	gh := &Webhook{Path: "/github", acc: &acc, log: testutil.Logger{}}
 	req, err := http.NewRequest("POST", "/github", strings.NewReader(jsonString))
@@ -22,6 +26,7 @@ func githubWebhookRequest(t *testing.T, event, jsonString string) {
 	if w.Code != http.StatusOK {
 		t.Errorf("POST "+event+" returned HTTP status code %v.\nExpected %v", w.Code, http.StatusOK)
 	}
+	return &acc
 }
 
 func githubWebhookRequestWithSignature(t *testing.T, event, jsonString, signature string, expectedStatus int) {
@@ -127,12 +132,61 @@ func TestEventWithSignatureSuccess(t *testing.T) {
 }
 
 func TestWorkflowJob(t *testing.T) {
-	githubWebhookRequest(t, "workflow_job", WorkflowJobJSON())
+	acc := githubWebhookRequest(t, "workflow_job", WorkflowJobJSON())
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"github_webhooks",
+			map[string]string{
+				"event":      "workflow_job",
+				"action":     "completed",
+				"repository": "DeusDeorum1/yhome-controller",
+				"private":    "true",
+				"user":       "DeusDeorum1",
+				"admin":      "false",
+				"name":       "Run build",
+				"conclusion": "success",
+			},
+			map[string]any{
+				"run_attempt": 1,
+				"queue_time":  int64(0),
+				"run_time":    int64(27000),
+				"head_branch": "feature/test",
+				"run_id":      int64(12537003369),
+			},
+			time.Unix(0, 0),
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
 func TestWorkflowRun(t *testing.T) {
-	githubWebhookRequest(t, "workflow_run", WorkflowRunJSON())
+	acc := githubWebhookRequest(t, "workflow_run", WorkflowRunJSON())
+	expected := []telegraf.Metric{
+		metric.New(
+			"github_webhooks",
+			map[string]string{
+				"event":      "workflow_run",
+				"action":     "completed",
+				"repository": "DeusDeorum1/yhome-controller",
+				"private":    "true",
+				"user":       "DeusDeorum1",
+				"admin":      "false",
+				"name":       ".NET",
+				"conclusion": "success",
+			},
+			map[string]any{
+				"run_attempt": 1,
+				"run_time":    int64(86000),
+				"head_branch": "feature/test",
+				"run_id":      int64(12537003369),
+			},
+			time.Unix(0, 0),
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
+		
 
 func TestCheckSignatureSuccess(t *testing.T) {
 	if !checkSignature("my_little_secret", []byte("random-signature-body"), "sha1=3dca279e731c97c38e3019a075dee9ebbd0a99f0") {
