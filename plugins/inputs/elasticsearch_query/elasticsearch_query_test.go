@@ -254,8 +254,7 @@ func TestClientV7PlusDiscovery(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			discovered := make(chan struct{}, 1)
 
-			var server *httptest.Server
-			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path != "/_nodes/http" {
 					http.NotFound(w, r)
 					return
