@@ -110,7 +110,6 @@ func (w *WinEventLog) Start(telegraf.Accumulator) error {
 		// channel this plugin subscribes to may be temporarily unavailable (e.g.
 		// disabled by policy, or a feature not yet started) or permanently gone
 		// (e.g. an optional Windows feature was never installed or was removed).
-
 		return &internal.StartupError{
 			Err:   fmt.Errorf("subscription of Windows Event Log failed: %w", err),
 			Retry: true,
