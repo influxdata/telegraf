@@ -325,15 +325,12 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 	}
 	separator := "."
 	if name == "" {
-		// If the root of the schema is an array, it is not a named type and
-		// carries no name of its own. In that case the name is taken from the
-		// record describing its elements.
+		// If the root of the schema is an array and it doesn't have a non-standard
+		// name attribute, take the name from the record describing its elements.
 		nameObj := schemaObj
-		if _, hasName := schemaObj["name"]; !hasName {
-			if schemaType, ok := schemaObj["type"].(string); ok && schemaType == "array" {
-				if items, ok := schemaObj["items"].(map[string]interface{}); ok {
-					nameObj = items
-				}
+		if _, hasName := schemaObj["name"]; !hasName && schemaObj["type"] == "array" {
+			if items, ok := schemaObj["items"].(map[string]interface{}); ok {
+				nameObj = items
 			}
 		}
 
