@@ -96,8 +96,11 @@ func TestLookup(t *testing.T) {
 	time.Sleep(minUpdateInterval)
 
 	// Third lookup should directly update
-	// Block the update so we can check for the inflight flag
+	// Block the update so we can check for the inflight flag. Make sure we
+	// unblock the update in case of error...
 	blockUpdate.Store(true)
+	defer blockUpdate.Store(false)
+
 	s.lookup("127.0.0.1", "999")
 	require.Eventually(t, func() bool {
 		_, inflight := s.inflight.Load("127.0.0.1")
