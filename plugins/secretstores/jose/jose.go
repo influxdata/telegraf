@@ -92,6 +92,10 @@ func (j *Jose) Set(key, value string) error {
 	return j.ring.Set(item)
 }
 
+func (j *Jose) Remove(key string) error {
+	return j.ring.Remove(key)
+}
+
 func (j *Jose) List() ([]string, error) {
 	return j.ring.Keys()
 }
