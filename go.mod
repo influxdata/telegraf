@@ -178,9 +178,9 @@ require (
 	github.com/peterbourgon/unixtransport v0.0.7
 	github.com/pion/dtls/v3 v3.1.5
 	github.com/prometheus-community/pro-bing v0.9.1
-	github.com/prometheus/client_golang v1.24.0
+	github.com/prometheus/client_golang v1.24.1
 	github.com/prometheus/client_model v0.6.2
-	github.com/prometheus/common v0.70.0
+	github.com/prometheus/common v0.70.1
 	github.com/prometheus/procfs v0.21.1
 	github.com/prometheus/prometheus v0.313.1
 	github.com/rabbitmq/amqp091-go v1.12.0
