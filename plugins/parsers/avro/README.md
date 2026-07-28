@@ -19,9 +19,9 @@ The metric name will be set according the following priority:
   3. If the name is still not determined, then try to get it from the
      schema definition in the following format `[schema_namespace.]schema_name`,
      where schema namespace is optional and will be added only if it is specified
-     in the schema definition. If the root of the schema is an array and carries
-     no name of its own, the name is taken from the record describing its
-     elements, as an array is not a named type.
+     in the schema definition. If the root of the schema is an array and has
+     no `name` attribute, the name is taken from the record describing its
+     elements.
 
 In case if the metric name could not be determined according to these steps
 the error will be raised and the message will not be parsed.
