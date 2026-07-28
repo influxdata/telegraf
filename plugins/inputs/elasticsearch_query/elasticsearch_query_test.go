@@ -141,10 +141,12 @@ func TestGetMetricFieldError(t *testing.T) {
 	response := map[string]interface{}{
 		"index": map[string]interface{}{
 			"mappings": map[string]interface{}{
-				"size": map[string]interface{}{
-					"full_name": 42,
-					"mapping": map[string]interface{}{
-						"size": map[string]interface{}{"type": "long"},
+				"document": map[string]interface{}{
+					"size": map[string]interface{}{
+						"full_name": 42,
+						"mapping": map[string]interface{}{
+							"size": map[string]interface{}{"type": "long"},
+						},
 					},
 				},
 			},
