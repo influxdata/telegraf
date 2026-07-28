@@ -138,9 +138,14 @@ func TestGetMetricField(t *testing.T) {
 }
 
 func TestGetMetricFieldError(t *testing.T) {
-	response := map[string]interface{}{
-		"index": map[string]interface{}{
-			"mappings": map[string]interface{}{
+	tests := []struct {
+		name          string
+		mappings      map[string]interface{}
+		expectedError string
+	}{
+		{
+			name: "typed invalid full name",
+			mappings: map[string]interface{}{
 				"document": map[string]interface{}{
 					"size": map[string]interface{}{
 						"full_name": 42,
@@ -150,11 +155,30 @@ func TestGetMetricFieldError(t *testing.T) {
 					},
 				},
 			},
+			expectedError: "unexpected type int for full_name field",
+		},
+		{
+			name: "typeless invalid mapping",
+			mappings: map[string]interface{}{
+				"size": map[string]interface{}{
+					"full_name": "size",
+					"mapping":   42,
+				},
+			},
+			expectedError: "unexpected type int for mapping field",
 		},
 	}
 
-	_, err := getMetricField(response)
-	require.ErrorContains(t, err, "unexpected type int for full_name field")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response := map[string]interface{}{
+				"index": map[string]interface{}{"mappings": tt.mappings},
+			}
+
+			_, err := getMetricField(response)
+			require.ErrorContains(t, err, tt.expectedError)
+		})
+	}
 }
 
 func TestClientV5Sniffer(t *testing.T) {
