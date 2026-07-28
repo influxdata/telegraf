@@ -348,6 +348,7 @@ func (s *state) parseDME(fields []*telemetry.TelemetryField, prefix string, tags
 			errs = append(errs, s.parseField(subfield, "", tags, timestamp)...)
 		}
 	}
+	delete(tags, prefix)
 
 	return errs
 }
