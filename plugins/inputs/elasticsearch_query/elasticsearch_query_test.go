@@ -86,10 +86,9 @@ func TestGetMetricField(t *testing.T) {
 		},
 	}
 	tests := []struct {
-		name      string
-		mappings  map[string]interface{}
-		expected  map[string]string
-		wantError bool
+		name     string
+		mappings map[string]interface{}
+		expected map[string]string
 	}{
 		{
 			name: "typed mapping",
@@ -123,18 +122,6 @@ func TestGetMetricField(t *testing.T) {
 			},
 			expected: map[string]string{"full_name": "keyword", "mapping": "long"},
 		},
-		{
-			name: "invalid full name",
-			mappings: map[string]interface{}{
-				"size": map[string]interface{}{
-					"full_name": 42,
-					"mapping": map[string]interface{}{
-						"size": map[string]interface{}{"type": "long"},
-					},
-				},
-			},
-			wantError: true,
-		},
 	}
 
 	for _, tt := range tests {
@@ -144,15 +131,28 @@ func TestGetMetricField(t *testing.T) {
 			}
 
 			actual, err := getMetricField(response)
-			if tt.wantError {
-				require.Error(t, err)
-				return
-			}
-
 			require.NoError(t, err)
 			require.Equal(t, tt.expected, actual)
 		})
 	}
+}
+
+func TestGetMetricFieldError(t *testing.T) {
+	response := map[string]interface{}{
+		"index": map[string]interface{}{
+			"mappings": map[string]interface{}{
+				"size": map[string]interface{}{
+					"full_name": 42,
+					"mapping": map[string]interface{}{
+						"size": map[string]interface{}{"type": "long"},
+					},
+				},
+			},
+		},
+	}
+
+	_, err := getMetricField(response)
+	require.ErrorContains(t, err, "unexpected type int for full_name field")
 }
 
 func TestClientV5Sniffer(t *testing.T) {
