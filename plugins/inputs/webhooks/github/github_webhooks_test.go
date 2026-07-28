@@ -12,7 +12,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
-	
 )
 
 func githubWebhookRequest(t *testing.T, event, jsonString string) *testutil.Accumulator {
@@ -186,7 +185,6 @@ func TestWorkflowRun(t *testing.T) {
 	}
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
-		
 
 func TestCheckSignatureSuccess(t *testing.T) {
 	if !checkSignature("my_little_secret", []byte("random-signature-body"), "sha1=3dca279e731c97c38e3019a075dee9ebbd0a99f0") {
