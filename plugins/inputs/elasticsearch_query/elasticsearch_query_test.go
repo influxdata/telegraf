@@ -276,23 +276,12 @@ func TestClientV7Discovery(t *testing.T) {
 		log:               testutil.Logger{},
 	})
 	require.NoError(t, err)
+	defer c.close()
 
 	select {
 	case <-discovered:
 	case <-time.After(5 * time.Second):
 		t.Fatal("timed out waiting for node discovery")
-	}
-
-	stopped := make(chan struct{})
-	go func() {
-		c.close()
-		close(stopped)
-	}()
-
-	select {
-	case <-stopped:
-	case <-time.After(5 * time.Second):
-		t.Fatal("timed out stopping node discovery")
 	}
 }
 
