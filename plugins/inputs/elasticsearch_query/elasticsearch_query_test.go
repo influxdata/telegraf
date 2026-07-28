@@ -249,18 +249,18 @@ func TestClientV7PlusSniffer(t *testing.T) {
 			return
 		}
 
-		response := map[string]interface{}{
-			"nodes": map[string]interface{}{
-				"node": map[string]interface{}{
-					"name":  "node",
-					"roles": []string{"data", "ingest"},
-					"http": map[string]string{
-						"publish_address": strings.TrimPrefix(server.URL, "http://"),
-					},
-				},
-			},
-		}
-		if err := json.NewEncoder(w).Encode(response); err != nil {
+		const response = `{
+  "nodes": {
+    "node": {
+      "name": "node",
+      "roles": ["data", "ingest"],
+      "http": {
+        "publish_address": "127.0.0.1:9200"
+      }
+    }
+  }
+}`
+		if _, err := w.Write([]byte(response)); err != nil {
 			t.Error(err)
 			return
 		}
