@@ -240,73 +240,59 @@ func TestClientV6Sniffer(t *testing.T) {
 }
 
 func TestClientV7PlusSniffer(t *testing.T) {
-	tests := []struct {
-		name      string
-		newClient func(clientConfig) (client, error)
-	}{
-		{
-			name:      "v7",
-			newClient: newClientV7,
-		},
+	discovered := make(chan struct{}, 1)
+
+	var server *httptest.Server
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/_nodes/http" {
+			http.NotFound(w, r)
+			return
+		}
+
+		response := map[string]interface{}{
+			"nodes": map[string]interface{}{
+				"node": map[string]interface{}{
+					"name":  "node",
+					"roles": []string{"data", "ingest"},
+					"http": map[string]string{
+						"publish_address": strings.TrimPrefix(server.URL, "http://"),
+					},
+				},
+			},
+		}
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			t.Error(err)
+			return
+		}
+		discovered <- struct{}{}
+	}))
+	defer server.Close()
+
+	c, err := newClientV7(clientConfig{
+		urls:              []string{server.URL},
+		enableSniffer:     true,
+		discoveryInterval: time.Hour,
+		httpClient:        server.Client(),
+		log:               testutil.Logger{},
+	})
+	require.NoError(t, err)
+
+	select {
+	case <-discovered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for node discovery")
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			discovered := make(chan struct{}, 1)
+	stopped := make(chan struct{})
+	go func() {
+		c.close()
+		close(stopped)
+	}()
 
-			var server *httptest.Server
-			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path != "/_nodes/http" {
-					http.NotFound(w, r)
-					return
-				}
-
-				response := map[string]interface{}{
-					"nodes": map[string]interface{}{
-						"node": map[string]interface{}{
-							"name":  "node",
-							"roles": []string{"data", "ingest"},
-							"http": map[string]string{
-								"publish_address": strings.TrimPrefix(server.URL, "http://"),
-							},
-						},
-					},
-				}
-				if err := json.NewEncoder(w).Encode(response); err != nil {
-					t.Error(err)
-					return
-				}
-				discovered <- struct{}{}
-			}))
-			defer server.Close()
-
-			c, err := tt.newClient(clientConfig{
-				urls:              []string{server.URL},
-				enableSniffer:     true,
-				discoveryInterval: time.Hour,
-				httpClient:        server.Client(),
-				log:               testutil.Logger{},
-			})
-			require.NoError(t, err)
-
-			select {
-			case <-discovered:
-			case <-time.After(5 * time.Second):
-				t.Fatal("timed out waiting for node discovery")
-			}
-
-			stopped := make(chan struct{})
-			go func() {
-				c.close()
-				close(stopped)
-			}()
-
-			select {
-			case <-stopped:
-			case <-time.After(5 * time.Second):
-				t.Fatal("timed out stopping node discovery")
-			}
-		})
+	select {
+	case <-stopped:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out stopping node discovery")
 	}
 }
 
