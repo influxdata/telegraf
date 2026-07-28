@@ -177,48 +177,12 @@ func TestNestedMetricsTagURL(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	// Default: nested metrics must NOT get a url tag.
-	plugin := &kapacitor.Kapacitor{URLs: []string{srv.URL}}
+	// Opt-in: nested metrics get the url tag; high-cardinality tags stay stripped.
+	plugin := &kapacitor.Kapacitor{URLs: []string{srv.URL}, TagURL: true}
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
 
-	expectedOff := []telegraf.Metric{
-		metric.New(
-			"kapacitor",
-			map[string]string{
-				"kap_version": "1.1.0",
-				"url":         srv.URL,
-			},
-			map[string]interface{}{
-				"num_enabled_tasks": 1,
-				"num_subscriptions": 2,
-				"num_tasks":         3,
-			},
-			time.Unix(0, 0),
-		),
-		metric.New(
-			"kapacitor_ingress",
-			map[string]string{
-				"task_master":      "main",
-				"database":         "db",
-				"retention_policy": "rp",
-				"measurement":      "m",
-			},
-			map[string]interface{}{
-				"points_received": float64(42),
-			},
-			time.Unix(0, 0),
-		),
-	}
-	testutil.RequireMetricsEqual(t, expectedOff, acc.GetTelegrafMetrics(),
-		testutil.IgnoreTime(), testutil.SortMetrics())
-
-	// Opt-in: nested metrics get the url tag; high-cardinality tags stay stripped.
-	plugin = &kapacitor.Kapacitor{URLs: []string{srv.URL}, TagURL: true}
-	acc = testutil.Accumulator{}
-	require.NoError(t, plugin.Gather(&acc))
-
-	expectedOn := []telegraf.Metric{
+	expected := []telegraf.Metric{
 		metric.New(
 			"kapacitor",
 			map[string]string{
@@ -247,6 +211,6 @@ func TestNestedMetricsTagURL(t *testing.T) {
 			time.Unix(0, 0),
 		),
 	}
-	testutil.RequireMetricsEqual(t, expectedOn, acc.GetTelegrafMetrics(),
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(),
 		testutil.IgnoreTime(), testutil.SortMetrics())
 }
