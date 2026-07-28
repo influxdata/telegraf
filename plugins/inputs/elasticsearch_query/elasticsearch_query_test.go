@@ -239,17 +239,29 @@ func TestClientV6Sniffer(t *testing.T) {
 	}
 }
 
-func TestClientV7Discovery(t *testing.T) {
-	discovered := make(chan struct{}, 1)
+func TestClientV7PlusDiscovery(t *testing.T) {
+	tests := []struct {
+		name      string
+		newClient func(clientConfig) (client, error)
+	}{
+		{
+			name:      "v7",
+			newClient: newClientV7,
+		},
+	}
 
-	var server *httptest.Server
-	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/_nodes/http" {
-			http.NotFound(w, r)
-			return
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			discovered := make(chan struct{}, 1)
 
-		const response = `{
+			var server *httptest.Server
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/_nodes/http" {
+					http.NotFound(w, r)
+					return
+				}
+
+				const response = `{
   "nodes": {
     "node": {
       "name": "node",
@@ -260,28 +272,30 @@ func TestClientV7Discovery(t *testing.T) {
     }
   }
 }`
-		if _, err := w.Write([]byte(response)); err != nil {
-			t.Error(err)
-			return
-		}
-		discovered <- struct{}{}
-	}))
-	defer server.Close()
+				if _, err := w.Write([]byte(response)); err != nil {
+					t.Error(err)
+					return
+				}
+				discovered <- struct{}{}
+			}))
+			defer server.Close()
 
-	c, err := newClientV7(clientConfig{
-		urls:              []string{server.URL},
-		enableSniffer:     true,
-		discoveryInterval: time.Hour,
-		httpClient:        server.Client(),
-		log:               testutil.Logger{},
-	})
-	require.NoError(t, err)
-	defer c.close()
+			c, err := tt.newClient(clientConfig{
+				urls:              []string{server.URL},
+				enableSniffer:     true,
+				discoveryInterval: time.Hour,
+				httpClient:        server.Client(),
+				log:               testutil.Logger{},
+			})
+			require.NoError(t, err)
+			defer c.close()
 
-	select {
-	case <-discovered:
-	case <-time.After(5 * time.Second):
-		t.Fatal("timed out waiting for node discovery")
+			select {
+			case <-discovered:
+			case <-time.After(5 * time.Second):
+				t.Fatal("timed out waiting for node discovery")
+			}
+		})
 	}
 }
 
