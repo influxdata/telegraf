@@ -128,7 +128,6 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 		if metric == nil {
 			continue
 		}
-
 		metrics = append(metrics, metric)
 	}
 
@@ -184,6 +183,17 @@ type StreamParser struct {
 
 func NewStreamParser(r io.Reader) *StreamParser {
 	handler := NewMetricHandler()
+	return &StreamParser{
+		machine: NewStreamMachine(r, handler),
+		handler: handler,
+	}
+}
+
+func (p *Parser) CreateStreamParser(r io.Reader) *StreamParser {
+	handler := &MetricHandler{
+		timePrecision: p.handler.timePrecision,
+		timeFunc:      p.handler.timeFunc,
+	}
 	return &StreamParser{
 		machine: NewStreamMachine(r, handler),
 		handler: handler,
