@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync"
 	"testing"
 	"time"
 
@@ -986,6 +987,102 @@ func TestParseErrorIncludesContext(t *testing.T) {
 	err := plugin.Gather(&acc)
 	require.ErrorContains(t, err, ts.URL+"/redfish/v1/Systems/System.Embedded.1")
 	require.ErrorContains(t, err, "text/html")
+}
+
+func TestSkipChassisWithoutReference(t *testing.T) {
+	var mu sync.Mutex
+	var requested []string
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !checkAuth(r, "test", "test") {
+			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
+			return
+		}
+
+		mu.Lock()
+		requested = append(requested, r.URL.Path)
+		mu.Unlock()
+
+		w.Header().Set("Content-Type", "application/json")
+		if _, err := w.Write([]byte(`{"Links": {"Chassis": [{"@odata.id": ""}]}}`)); err != nil {
+			t.Error(err)
+		}
+	}))
+	defer ts.Close()
+
+	plugin := &Redfish{
+		Address:          ts.URL,
+		Username:         config.NewSecret([]byte("test")),
+		Password:         config.NewSecret([]byte("test")),
+		ComputerSystemID: "1",
+		IncludeMetrics:   []string{"thermal", "power"},
+		Log:              testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
+	require.Empty(t, acc.GetTelegrafMetrics())
+
+	// The empty reference must not be requested as it resolves to the web root
+	mu.Lock()
+	defer mu.Unlock()
+	require.Equal(t, []string{"/redfish/v1/Systems/1"}, requested)
+}
+
+func TestSkipChassisWithoutThermalAndPowerReference(t *testing.T) {
+	var mu sync.Mutex
+	var requested []string
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !checkAuth(r, "test", "test") {
+			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
+			return
+		}
+
+		mu.Lock()
+		requested = append(requested, r.URL.Path)
+		mu.Unlock()
+
+		w.Header().Set("Content-Type", "application/json")
+
+		var body string
+		switch r.URL.Path {
+		case "/redfish/v1/Systems/1":
+			body = `{"Links": {"Chassis": [{"@odata.id": "/redfish/v1/Chassis/1"}]}}`
+		case "/redfish/v1/Chassis/1":
+			// Firmware exposing the newer ThermalSubsystem and PowerSubsystem
+			// resources does not provide the Thermal and Power ones
+			body = `{"ChassisType": "RackMount", "Model": "AS-1116CS-TN"}`
+		default:
+			t.Errorf("unexpected request for %q", r.URL.Path)
+			return
+		}
+
+		if _, err := w.Write([]byte(body)); err != nil {
+			t.Error(err)
+		}
+	}))
+	defer ts.Close()
+
+	plugin := &Redfish{
+		Address:          ts.URL,
+		Username:         config.NewSecret([]byte("test")),
+		Password:         config.NewSecret([]byte("test")),
+		ComputerSystemID: "1",
+		IncludeMetrics:   []string{"thermal", "power"},
+		Log:              testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
+	require.Empty(t, acc.GetTelegrafMetrics())
+
+	// The missing references must not be requested as they resolve to the web root
+	mu.Lock()
+	defer mu.Unlock()
+	require.Equal(t, []string{"/redfish/v1/Systems/1", "/redfish/v1/Chassis/1"}, requested)
 }
 
 func TestIncludeTagSetsConfiguration(t *testing.T) {

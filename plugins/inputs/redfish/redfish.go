@@ -39,6 +39,7 @@ type Redfish struct {
 	IncludeTagSets   []string        `toml:"include_tag_sets"`
 	Workarounds      []string        `toml:"workarounds"`
 	Timeout          config.Duration `toml:"timeout"`
+	Log              telegraf.Logger `toml:"-"`
 
 	tagSet map[string]bool
 	client http.Client
@@ -163,6 +164,13 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, link := range system.Links.Chassis {
+		// References are resolved against the configured address, so an empty
+		// one would request the device's web root instead of a Redfish resource
+		if link.Ref == "" {
+			r.Log.Warn("Skipping chassis without reference")
+			continue
+		}
+
 		chassis, err := r.getChassis(link.Ref)
 		if err != nil {
 			return err
@@ -172,8 +180,16 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 			var err error
 			switch metric {
 			case "thermal":
+				if chassis.Thermal.Ref == "" {
+					r.Log.Warnf("Skipping thermal data of chassis %q without reference", link.Ref)
+					continue
+				}
 				err = r.gatherThermal(acc, address, system, chassis)
 			case "power":
+				if chassis.Power.Ref == "" {
+					r.Log.Warnf("Skipping power data of chassis %q without reference", link.Ref)
+					continue
+				}
 				err = r.gatherPower(acc, address, system, chassis)
 			default:
 				return fmt.Errorf("unknown metric requested: %s", metric)
