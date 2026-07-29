@@ -46,6 +46,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # service_address = "unix:///tmp/telegraf.sock"
   # service_address = "unixgram:///tmp/telegraf.sock"
   # service_address = "vsock://cid:port"
+  # service_address = "udp4://239.0.0.1:40000%enp101s0f1np1"
 
   ## Permission for unix sockets (only available on unix sockets)
   ## This setting may not be respected by some platforms. To safely restrict
@@ -206,6 +207,22 @@ sysctl -w kern.ipc.maxsockbuf=9646900
 ```
 
 [kernel_source]: https://github.com/freebsd/freebsd/blob/master/sys/kern/uipc_sockbuf.c#L63-L64
+
+### Multicast
+
+Listening to multicast packets can be done by specifying a multicast group
+address for the `service_address` value, e.g. `239.0.0.1`. To ensure the correct
+interface joins the multicast group, you can append its name at the end of the
+`service_address`. See the example below.
+
+In the example, SSM is also used to filter packets only coming from source
+`10.65.4.2`.
+
+```toml
+[[inputs.socket_listener]]
+  service_address = "udp4://239.0.0.1:40000%enp101s0f1np1"
+  multicast_source = "10.65.4.2"
+```
 
 ## Metrics
 
