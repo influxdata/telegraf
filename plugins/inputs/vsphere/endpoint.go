@@ -151,7 +151,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.DatacenterInstances,
 			getObjects:       getDatacenters,
 			parent:           "",
-			propertyInclude:  parent.DatacenterPropertieInclude,
+			propertyInclude:  parent.DatacenterPropertyInclude,
 		},
 		"cluster": {
 			name:             "cluster",
@@ -170,7 +170,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.ClusterInstances,
 			getObjects:       getClusters,
 			parent:           "datacenter",
-			propertyInclude:  parent.ClusterPropertieInclude,
+			propertyInclude:  parent.ClusterPropertyInclude,
 		},
 		"resourcepool": {
 			name:             "resourcepool",
@@ -189,7 +189,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.ResourcePoolInstances,
 			getObjects:       getResourcePools,
 			parent:           "cluster",
-			propertyInclude:  parent.ResourcePoolPropertieInclude,
+			propertyInclude:  parent.ResourcePoolPropertyInclude,
 		},
 		"host": {
 			name:             "host",
@@ -208,7 +208,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.HostInstances,
 			getObjects:       getHosts,
 			parent:           "cluster",
-			propertyInclude:  parent.HostPropertieInclude,
+			propertyInclude:  parent.HostPropertyInclude,
 		},
 		"vm": {
 			name:             "vm",
@@ -227,7 +227,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: parent.VMInstances,
 			getObjects:       getVMs,
 			parent:           "host",
-			propertyInclude:  parent.VMPropertieInclude,
+			propertyInclude:  parent.VMPropertyInclude,
 		},
 		"datastore": {
 			name:             "datastore",
@@ -238,14 +238,14 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			sampling:         int32(time.Duration(parent.HistoricalInterval).Seconds()),
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.DatastoreMetricInclude, parent.DatastoreMetricExclude),
-			paths:            parent.DatastoreInclude,
+			paths:            arent.DatastoreInclude,
 			excludePaths:     parent.DatastoreExclude,
 			simple:           isSimple(parent.DatastoreMetricInclude, parent.DatastoreMetricExclude),
 			include:          parent.DatastoreMetricInclude,
 			collectInstances: parent.DatastoreInstances,
 			getObjects:       getDatastores,
 			parent:           "",
-			propertyInclude:  parent.DatastorePropertieInclude,
+			propertyInclude:  parent.DatastorePropertyInclude,
 		},
 		"vsan": {
 			name:             "vsan",
@@ -263,7 +263,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: false,
 			getObjects:       getClusters,
 			parent:           "datacenter",
-			propertyInclude:  parent.VSANPropertieInclude,
+			propertyInclude:  parent.VSANPropertyInclude,
 		},
 	}
 
@@ -932,9 +932,9 @@ func (e *endpoint) loadCustomAttributes(entity mo.ManagedEntity) map[string]stri
 	return cvs
 }
 
-func (e *endpoint) loadCustomProperties(entity interface{}, propertiesInclude []string) map[string]interface{} {
+func (e *endpoint) loadCustomProperties(entity interface{}, propertyInclude []string) map[string]interface{} {
 	cvs := make(map[string]interface{})
-	for _, property := range propertiesInclude {
+	for _, property := range propertyInclude {
 		value := e.getExtraProperty(entity, property)
 		if value != nil {
 			key := e.makePropertyIdentifier(property)
