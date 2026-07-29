@@ -238,7 +238,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			sampling:         int32(time.Duration(parent.HistoricalInterval).Seconds()),
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.DatastoreMetricInclude, parent.DatastoreMetricExclude),
-			paths:            arent.DatastoreInclude,
+			paths:            parent.DatastoreInclude,
 			excludePaths:     parent.DatastoreExclude,
 			simple:           isSimple(parent.DatastoreMetricInclude, parent.DatastoreMetricExclude),
 			include:          parent.DatastoreMetricInclude,

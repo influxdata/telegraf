@@ -233,7 +233,7 @@ func objectContentToTypedArray(objs map[string]types.ObjectContent, dst interfac
 
 // findAll finds all resources matching the paths that were specified upon creation of the resourceFilter.
 func (r *resourceFilter) findAll(ctx context.Context, dst interface{}) error {
-	resource := resource{
+	resource := resourceInfo{
 		resMType:    r.resType,
 		customFields: r.customFields}
 
