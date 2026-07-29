@@ -232,7 +232,7 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.44.0
 	go.opentelemetry.io/otel/sdk/metric v1.44.0
 	go.opentelemetry.io/proto/otlp v1.11.0
-	go.opentelemetry.io/proto/otlp/collector/profiles/v1development v0.3.0
+	go.opentelemetry.io/proto/otlp/collector/profiles/v1development v0.4.0
 	go.opentelemetry.io/proto/otlp/profiles/v1development v0.4.0
 	go.starlark.net v0.0.0-20260326113308-fadfc96def35
 	go.step.sm/crypto v0.85.0
