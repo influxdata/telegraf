@@ -15,11 +15,16 @@ type SecretStore interface {
 	GetResolver(key string) (ResolveFunc, error)
 }
 
-// SecretStoreEditor is an optional interface for secret stores that can create
-// or modify secrets. Stores backed by a read-only source do not implement it.
+// SecretStoreEditor is an optional interface for secret stores that can create,
+// modify or erase secrets. Stores backed by a read-only source do not implement
+// it.
 type SecretStoreEditor interface {
 	// Set creates or modifies the secret for the given key
 	Set(key, value string) error
+
+	// Remove erases the secret for the given key and returns an error if there
+	// is no secret stored under that key
+	Remove(key string) error
 }
 
 // ResolveFunc is a function to resolve the secret.
