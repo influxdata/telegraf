@@ -114,9 +114,11 @@ func (e *ElasticsearchQuery) Start(telegraf.Accumulator) error {
 		c, err = newClientV5(cfg)
 	case 6:
 		c, err = newClientV6(cfg)
+	case 7:
+		c, err = newClientV7(cfg)
 	default:
 		httpClient.CloseIdleConnections()
-		return fmt.Errorf("server version %q not supported (currently supported versions are 5.x and 6.x)", version)
+		return fmt.Errorf("server version %q not supported (currently supported versions are 5.x, 6.x and 7.x)", version)
 	}
 	if err != nil {
 		return err
@@ -243,6 +245,16 @@ func getMetricField(response map[string]interface{}) (map[string]string, error) 
 				return nil, fmt.Errorf("unexpected type %T for types", t)
 			}
 
+			// Elasticsearch 7+ field-mapping responses omit the mapping type level.
+			// Each mapping entry is therefore a field descriptor with a string "full_name"
+			// in Elasticsearch 7+, while typed mappings contain field maps at this level.
+			// See https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-get-field-mapping.html
+			_, typeless := fields["full_name"].(string)
+			if typeless {
+				// Process every field descriptor in the mappings map.
+				fields = types
+			}
+
 			for _, f := range fields {
 				field, ok := f.(map[string]interface{})
 				if !ok {
@@ -271,6 +283,11 @@ func getMetricField(response map[string]interface{}) (map[string]string, error) 
 					}
 					mapMetricFields[fullname] = ftype
 				}
+			}
+
+			if typeless {
+				// Avoid processing the entire mappings map again for each remaining entry.
+				break
 			}
 		}
 	}

@@ -153,7 +153,7 @@ func (a *aggregation) buildQueries() error {
 	queries := make([]queryData, 0, len(a.mapMetricFields)+len(a.Tags))
 	for k, v := range a.mapMetricFields {
 		switch v {
-		case "long", "float", "integer", "short", "double", "scaled_float":
+		case "long", "float", "integer", "short", "double", "scaled_float", "unsigned_long":
 		default:
 			continue
 		}
