@@ -492,7 +492,7 @@ func (e *endpoint) discover(ctx context.Context) error {
 				resType:      res.vcName,
 				paths:        res.paths,
 				excludePaths: res.excludePaths,
-				customFields:  res.propertyInclude,
+				customFields: res.propertyInclude,
 			}
 
 			ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.parent.Timeout))

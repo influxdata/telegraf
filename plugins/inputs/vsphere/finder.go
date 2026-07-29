@@ -29,12 +29,12 @@ type resourceFilter struct {
 	resType      string
 	paths        []string
 	excludePaths []string
-	customFields  []string
+	customFields []string
 }
 
 // resourceInfo is a utility class grouping a type and relevant parameters.
 type resourceInfo struct {
-	resMType    string
+	resMType     string
 	customFields []string
 }
 
@@ -234,7 +234,7 @@ func objectContentToTypedArray(objs map[string]types.ObjectContent, dst interfac
 // findAll finds all resources matching the paths that were specified upon creation of the resourceFilter.
 func (r *resourceFilter) findAll(ctx context.Context, dst interface{}) error {
 	resource := resourceInfo{
-		resMType:    r.resType,
+		resMType:     r.resType,
 		customFields: r.customFields}
 
 	return r.finder.findAll(ctx, resource, r.paths, r.excludePaths, dst)
