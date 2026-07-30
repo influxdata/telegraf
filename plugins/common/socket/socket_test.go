@@ -854,54 +854,64 @@ func createClient(endpoint string, addr net.Addr, tlsCfg *tls.Config) (net.Conn,
 	return tls.Dial(protocol, addr.String(), tlsCfg)
 }
 
-func TestInterfaceNameFromServiceAddress(t *testing.T) {
+func TestInterfaceNameFromServiceAddressValid(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		ServiceAddress string
-		Expected       string
-		Invalid        bool
+		name     string
+		address  string
+		expected string
 	}{
-		{ServiceAddress: "tcp://localhost:400", Invalid: false, Expected: ""},
-		{ServiceAddress: "tcp://:8094", Invalid: false, Expected: ""},
-		{ServiceAddress: "tcp://127.0.0.1:http", Invalid: false, Expected: ""},
-		{ServiceAddress: "tcp4://:8094", Invalid: false, Expected: ""},
-		{ServiceAddress: "tcp6://:8094", Invalid: false, Expected: ""},
-		{ServiceAddress: "tcp6://[2001:db8::1]:8094", Invalid: false, Expected: ""},
-		{ServiceAddress: "udp://:8094", Invalid: false, Expected: ""},
-		{ServiceAddress: "udp4://:8094", Invalid: false, Expected: ""},
-		{ServiceAddress: "udp6://:8094", Invalid: false, Expected: ""},
-		{ServiceAddress: "unix:///tmp/telegraf.sock", Invalid: false, Expected: ""},
-		{ServiceAddress: "unixgram:///tmp/telegraf.sock", Invalid: false, Expected: ""},
-		{ServiceAddress: "vsock://cid:port", Invalid: false, Expected: ""},
-		{ServiceAddress: "tcp://localhost:400%.", Invalid: true, Expected: ""},
-		{ServiceAddress: "udp4://127.0.0.1:40000%..", Invalid: true, Expected: ""},
-		{ServiceAddress: "tcp://127.0.0.1:http%hello thisismyinterface", Invalid: true, Expected: ""},
-		{ServiceAddress: "tcp4://:8094%this:ismyinterface", Invalid: true, Expected: ""},
-		{ServiceAddress: "tcp6://:8094%this/is/my/interface", Invalid: true, Expected: ""},
-		{ServiceAddress: "tcp6://[2001:db8::1]:8094%thisnameistoolongtobeaninterface", Invalid: true, Expected: ""},
-		{ServiceAddress: "udp4://239.0.0.1:40000%enp101s0f1np1", Invalid: false, Expected: "enp101s0f1np1"},
-		{ServiceAddress: "tcp6://[2001:db8::1]:8094%br-interface", Invalid: false, Expected: "br-interface"},
-		{ServiceAddress: "udp4://239.0.0.1:40000%enp101s0f1np1", Invalid: false, Expected: "enp101s0f1np1"},
-		{ServiceAddress: "tcp://:8094%dev.name", Invalid: false, Expected: "dev.name"},
+		{name: "tcp localhost no interface name", address: "tcp://localhost:400", expected: ""},
+		{name: "tcp all addresses no interface name", address: "tcp://:8094", expected: ""},
+		{name: "tcp loopback address with string port no interface  name", address: "tcp://127.0.0.1:http", expected: ""},
+		{name: "tcp4 all addresses no interface name", address: "tcp4://:8094", expected: ""},
+		{name: "tcp6 all addresses no interface name", address: "tcp6://:8094", expected: ""},
+		{name: "tcp6 ipv6 with port no interface name", address: "tcp6://[2001:db8::1]:8094", expected: ""},
+		{name: "udp all addresses no interface name", address: "udp://:8094", expected: ""},
+		{name: "udp4 all interfaces no interface name", address: "udp4://:8094", expected: ""},
+		{name: "udp6 all interfaces no interface name", address: "udp6://:8094", expected: ""},
+		{name: "unix no interface name", address: "unix:///tmp/telegraf.sock", expected: ""},
+		{name: "unixgram no interface name", address: "unixgram:///tmp/telegraf.sock", expected: ""},
+		{name: "vsock no interface name", address: "vsock://cid:port", expected: ""},
+		{name: "udp6 multicast with zone id", address: "udp6://[ff02::1%eth0]:8094", expected: ""},
+		{name: "udp6 multicast no interface name", address: "udp6://[ff02::1]:8094", expected: ""},
+		{name: "udp6 multicast with zone id and interface name", address: "udp6://[ff02::1%eth0]:8094%enp0", expected: "enp0"},
+		{name: "udp4 multicast with interface name", address: "udp4://239.0.0.1:40000%enp101s0f1np1", expected: "enp101s0f1np1"},
+		{name: "tcp6 ipv6 with interface name", address: "tcp6://[2001:db8::1]:8094%br-interface", expected: "br-interface"},
+		{name: "tcp all addresses with interface name with period", address: "tcp://:8094%dev.name", expected: "dev.name"},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.ServiceAddress, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			name, present, err := interfaceNameFromServiceAddress(tt.ServiceAddress)
-			if tt.Invalid {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
+			name, err := interfaceNameFromServiceAddress(tt.address)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, name)
+		})
+	}
+}
 
-			if len(tt.Expected) == 0 {
-				require.Empty(t, name)
-				require.False(t, present)
-			} else {
-				require.Equal(t, tt.Expected, name)
-				require.True(t, present)
-			}
+func TestInterfaceNameFromServiceAddressInvalid(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		address string
+	}{
+		{name: "empty string not allowed", address: "tcp://localhost:400%"},
+		{name: ". not allowed", address: "tcp://localhost:400%."},
+		{name: ".. not allowed", address: "udp4://127.0.0.1:40000%.."},
+		{name: " spaces not allowed", address: "tcp://127.0.0.1:http%hello thisismyinterface"},
+		{name: ": not allowed", address: "tcp4://:8094%this:ismyinterface"},
+		{name: "/ not allowed", address: "tcp6://:8094%this/is/my/interface"},
+		{name: "more than 15 chars not allowed", address: "tcp6://[2001:db8::1]:8094%thisnameistoolongtobeaninterface"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			name, err := interfaceNameFromServiceAddress(tt.address)
+			require.Error(t, err)
+			require.Empty(t, name)
 		})
 	}
 }

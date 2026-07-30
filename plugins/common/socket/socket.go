@@ -54,7 +54,7 @@ type Socket struct {
 	listener listener
 }
 
-var extractIfNameRegex = regexp.MustCompile(`%(.*)$`)
+var extractIfNameRegex = regexp.MustCompile(`]?:\d+%(.*)$`)
 var validIfNameRegex = regexp.MustCompile(`^[^/:\s]{1,15}$`)
 
 // interfaceNameFromServiceAddress extract and validates interface names
@@ -64,22 +64,18 @@ var validIfNameRegex = regexp.MustCompile(`^[^/:\s]{1,15}$`)
 //   - No string longer than 15 characters
 //   - Not exactly `.` or `..`
 //   - Contains no `/`, `:` or whitespace
-func interfaceNameFromServiceAddress(address string) (interfaceName string, present bool, valid error) {
+func interfaceNameFromServiceAddress(address string) (interfaceName string, valid error) {
 	matches := extractIfNameRegex.FindStringSubmatch(address)
 	if len(matches) < 2 {
-		return "", false, nil
+		return "", nil
 	}
 
 	ifName := matches[1]
-	if ifName == "." || ifName == ".." {
-		return "", false, fmt.Errorf("interface name `%s` is not valid", ifName)
+	if ifName == "." || ifName == ".." || !validIfNameRegex.MatchString(ifName) {
+		return "", fmt.Errorf("interface name %q is not valid", ifName)
 	}
 
-	if !validIfNameRegex.MatchString(ifName) {
-		return "", false, fmt.Errorf("interface name `%s` is not valid", ifName)
-	}
-
-	return ifName, true, nil
+	return ifName, nil
 }
 
 func (cfg *Config) NewSocket(address string, splitcfg *SplitConfig, logger telegraf.Logger) (*Socket, error) {
@@ -98,12 +94,12 @@ func (cfg *Config) NewSocket(address string, splitcfg *SplitConfig, logger teleg
 	}
 
 	// Resolve the interface to an address if any given
-	ifName, ifNamePresent, ifNameErr := interfaceNameFromServiceAddress(address)
+	ifName, ifNameErr := interfaceNameFromServiceAddress(address)
 	if ifNameErr != nil {
 		return nil, ifNameErr
 	}
 
-	if ifNamePresent {
+	if ifName != "" {
 		s.interfaceName = ifName
 		address = strings.Replace(address, "%"+s.interfaceName, "", 1)
 	}
