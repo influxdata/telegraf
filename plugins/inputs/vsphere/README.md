@@ -988,7 +988,7 @@ For sample :
 ```
 
 All that tag will be added to "internal" metric that always contain "1".
-It is recommanded to use it with processors.enum to convert as metric.
+It is recommended to use it with `processors.enum` to convert as metric.
 
 For sample :
 
