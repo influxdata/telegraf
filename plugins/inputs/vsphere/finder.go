@@ -3,8 +3,8 @@ package vsphere
 import (
 	"context"
 	"reflect"
-	"strings"
 	"slices"
+	"strings"
 
 	"github.com/vmware/govmomi/property"
 	"github.com/vmware/govmomi/view"
