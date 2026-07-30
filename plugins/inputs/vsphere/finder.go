@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 	"strings"
+	"slices"
 
 	"github.com/vmware/govmomi/property"
 	"github.com/vmware/govmomi/view"
