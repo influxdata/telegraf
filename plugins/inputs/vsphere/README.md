@@ -145,7 +145,8 @@ to use them.
   # host_instances = true ## true by default
   ## Custom host properties to collect.
   ## If the properties are text-based, they will be added as tags; otherwise, they will be added as metrics.
-  # host_property_include = ["summary.runtime.powerState", "summary.overallStatus", "summary.runtime.inMaintenanceMode", "summary.runtime.connectionState"]
+  ## host_property_include = ["summary.runtime.powerState", "summary.overallStatus", "summary.runtime.inMaintenanceMode", "summary.runtime.connectionState"]
+  # host_property_include = []
 
   ## Clusters
   # cluster_include = [ "/*/host/**"] # Inventory path to clusters to collect (by default all are collected)
