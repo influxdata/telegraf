@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"sync"
 	"time"
@@ -25,6 +26,7 @@ const (
 type Kapacitor struct {
 	URLs    []string        `toml:"urls"`
 	Timeout config.Duration `toml:"timeout"`
+	TagURL  bool            `toml:"tag_url"`
 	tls.ClientConfig
 
 	client *http.Client
@@ -218,10 +220,20 @@ func (k *Kapacitor) gatherURL(
 				obj.Values["avg_exec_time_ns"] = d.Nanoseconds()
 			}
 
+			// Add url tag to distinguish nested metrics if configured
+			tags := obj.Tags
+			if k.TagURL {
+				tags = maps.Clone(obj.Tags)
+				if tags == nil {
+					tags = make(map[string]string, 1)
+				}
+				tags["url"] = url
+			}
+
 			acc.AddFields(
 				"kapacitor_"+obj.Name,
 				obj.Values,
-				obj.Tags,
+				tags,
 				now,
 			)
 		}
