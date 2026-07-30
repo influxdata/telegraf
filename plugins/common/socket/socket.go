@@ -54,6 +54,34 @@ type Socket struct {
 	listener listener
 }
 
+var extractIfNameRegex = regexp.MustCompile(`%(.*)$`)
+var validIfNameRegex = regexp.MustCompile(`^[^/:\s]{1,15}$`)
+
+// interfaceNameFromServiceAddress extract and validates interface names
+// Valid names folow the rules implemented in https://github.com/torvalds/linux/blob/11028ab62899e4191e074ee364c712b77823a9c4/net/core/dev.c#L1325
+// which comes down to:
+//   - No empty string
+//   - No string longer than 15 characters
+//   - Not exactly `.` or `..`
+//   - Contains no `/`, `:` or whitespace
+func interfaceNameFromServiceAddress(address string) (interfaceName string, present bool, valid error) {
+	matches := extractIfNameRegex.FindStringSubmatch(address)
+	if len(matches) < 2 {
+		return "", false, nil
+	}
+
+	ifName := matches[1]
+	if ifName == "." || ifName == ".." {
+		return "", false, fmt.Errorf("interface name `%s` is not valid", ifName)
+	}
+
+	if !validIfNameRegex.MatchString(ifName) {
+		return "", false, fmt.Errorf("interface name `%s` is not valid", ifName)
+	}
+
+	return ifName, true, nil
+}
+
 func (cfg *Config) NewSocket(address string, splitcfg *SplitConfig, logger telegraf.Logger) (*Socket, error) {
 	s := &Socket{
 		Config: *cfg,
@@ -70,9 +98,13 @@ func (cfg *Config) NewSocket(address string, splitcfg *SplitConfig, logger teleg
 	}
 
 	// Resolve the interface to an address if any given
-	ifregex := regexp.MustCompile(`%([\w\.]+)`)
-	if matches := ifregex.FindStringSubmatch(address); len(matches) == 2 {
-		s.interfaceName = matches[1]
+	ifName, ifNamePresent, ifNameErr := interfaceNameFromServiceAddress(address)
+	if ifNameErr != nil {
+		return nil, ifNameErr
+	}
+
+	if ifNamePresent {
+		s.interfaceName = ifName
 		address = strings.Replace(address, "%"+s.interfaceName, "", 1)
 	}
 

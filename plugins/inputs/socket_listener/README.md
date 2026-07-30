@@ -213,16 +213,17 @@ sysctl -w kern.ipc.maxsockbuf=9646900
 Listening to multicast packets can be done by specifying a multicast group
 address for the `service_address` value, e.g. `239.0.0.1`. To ensure the correct
 interface joins the multicast group, you can append its name at the end of the
-`service_address`. See the example below.
+`service_address` separated by a `%`. Valid interface names follow the Linux
+device naming rules. See the example below.
 
 In the example, SSM is also used to filter packets only coming from source
-`10.65.4.2`. The difference between SSM and `allowed_sources` is where the 
-data packets are accepted. With `multicast_source`, the packets are filtered at 
-the kernel level, while with `allowed_sources` the packets are filtered 
-within Telegraf. This means that with `allowed_sources` all packets are 
-accepted by the kernel, leading to a higher load on the network stack. 
+`10.65.4.2`. The difference between SSM and `allowed_sources` is where the
+data packets are accepted. With `multicast_source`, the packets are filtered at
+the kernel level, while with `allowed_sources` the packets are filtered
+within Telegraf. This means that with `allowed_sources` all packets are
+accepted by the kernel, leading to a higher load on the network stack.
 
-When using multicast, SSM's `multicast_source` is preferred over 
+When using multicast, SSM's `multicast_source` is preferred over
 `allowed_sources`. With unicast, `multicast_source` has no effect and
 `allowed_sources` is required for source filtering.
 
