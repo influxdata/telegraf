@@ -84,7 +84,8 @@ to use them.
   # vm_instances = true ## true by default
   ## Custom VM properties to collect.
   ## If the properties are text-based, they will be added as tags; otherwise, they will be added as metrics.
-  # vm_property_include = ["runtime.powerState", "summary.config.MemorySizeMB", "summary.config.MemoryReservation"]
+  ## example: vm_property_include = ["runtime.powerState", "summary.config.MemorySizeMB", "summary.config.MemoryReservation"]
+  # vm_property_include = []
 
   ## Hosts
   ## Typical host metrics (if omitted or empty, all metrics are collected)
@@ -145,7 +146,7 @@ to use them.
   # host_instances = true ## true by default
   ## Custom host properties to collect.
   ## If the properties are text-based, they will be added as tags; otherwise, they will be added as metrics.
-  ## host_property_include = ["summary.runtime.powerState", "summary.overallStatus", "summary.runtime.inMaintenanceMode", "summary.runtime.connectionState"]
+  ## example: host_property_include = ["summary.runtime.powerState", "summary.overallStatus", "summary.runtime.inMaintenanceMode", "summary.runtime.connectionState"]
   # host_property_include = []
 
   ## Clusters
