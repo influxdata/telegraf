@@ -97,6 +97,9 @@ func (o *OpenTelemetry) Connect() error {
 	if o.Compression == "" {
 		o.Compression = defaultCompression
 	}
+	if o.NameSeparator == "" {
+		o.NameSeparator = defaultNameSeparator
+	}
 	if o.Coralogix != nil {
 		if o.Headers == nil {
 			o.Headers = make(map[string]string)
