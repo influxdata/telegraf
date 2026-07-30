@@ -216,7 +216,15 @@ interface joins the multicast group, you can append its name at the end of the
 `service_address`. See the example below.
 
 In the example, SSM is also used to filter packets only coming from source
-`10.65.4.2`.
+`10.65.4.2`. The difference between SSM and `allowed_sources` is where the 
+data packets are accepted. With `multicast_source`, the packets are filtered at 
+the kernel level, while with `allowed_sources` the packets are filtered 
+within Telegraf. This means that with `allowed_sources` all packets are 
+accepted by the kernel, leading to a higher load on the network stack. 
+
+When using multicast, SSM's `multicast_source` is preferred over 
+`allowed_sources`. With unicast, `multicast_source` has no effect and
+`allowed_sources` is required for source filtering.
 
 ```toml
 [[inputs.socket_listener]]
