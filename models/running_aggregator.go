@@ -182,12 +182,16 @@ func (r *RunningAggregator) Push(acc telegraf.Accumulator) {
 	since := r.periodEnd
 	until := r.periodEnd.Add(r.Config.Period)
 
-	// Check if the next aggregation window will contain "now". This might
-	// not be the case if the machine's clock was adjusted or the machine
-	// hibernated as in those cases the clock might be advanced before or
-	// after the initial aggregation window.
+	// Reset the window only when the current wall-clock time is outside
+	// the next aggregation window by at least one full period, which
+	// indicates the clock was adjusted or the machine hibernated. Smaller
+	// skew (e.g., a Go timer firing a few ms early) is not a clock jump;
+	// resetting in that case would recompute the same slot and cause Push
+	// to run twice for one period.
 	nowWall := time.Now().Truncate(-1)
-	if nowWall.Before(since.Truncate(-1)) || nowWall.After(until.Truncate(-1)) {
+	earliest := since.Add(-r.Config.Period).Truncate(-1)
+	latest := until.Add(r.Config.Period).Truncate(-1)
+	if nowWall.Before(earliest) || nowWall.After(latest) {
 		since = nowWall.Truncate(r.Config.Period)
 		until = since.Add(r.Config.Period)
 	}
