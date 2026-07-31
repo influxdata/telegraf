@@ -799,6 +799,8 @@ type mockServer struct {
 
 	// Errors collected while responding to requests
 	errs []error
+	// Flag denoting the server was closed
+	closed bool
 	sync.Mutex
 }
 
@@ -828,6 +830,12 @@ func newMockServer(method sip.RequestMethod, handler func(*sip.Request) *sip.Res
 	server.OnRequest(method, func(req *sip.Request, tx sip.ServerTransaction) {
 		s.Lock()
 		defer s.Unlock()
+
+		// Requests dispatched after the server was closed can never be answered,
+		// so drop them instead of collecting the inevitable error.
+		if s.closed {
+			return
+		}
 
 		res := handler(req)
 		if res == nil {
@@ -863,6 +871,7 @@ func (s *mockServer) close(t *testing.T) {
 	s.Lock()
 	defer s.Unlock()
 
+	s.closed = true
 	_ = s.server.Close()
 	_ = s.ua.Close()
 
