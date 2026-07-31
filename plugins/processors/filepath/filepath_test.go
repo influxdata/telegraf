@@ -16,15 +16,79 @@ import (
 
 var samplePath = "/my/test//c/../path/file.log"
 
-func TestOptions_Apply(t *testing.T) {
-	tests := []testCase{
+func TestOptionsApply(t *testing.T) {
+	tests := []struct {
+		name     string
+		plugin   *Filepath
+		input    []telegraf.Metric
+		expected []telegraf.Metric
+	}{
 		{
-			name:         "Smoke Test",
-			o:            newOptions("/my/test/"),
-			inputMetrics: getSmokeTestInputMetrics(samplePath),
-			expectedMetrics: []telegraf.Metric{
+			name: "Smoke Test",
+			plugin: &Filepath{
+				BaseName: []baseOpts{
+					{
+						Field: "baseField",
+						Tag:   "baseTag",
+					},
+				},
+				DirName: []baseOpts{
+					{
+						Field: "dirField",
+						Tag:   "dirTag",
+					},
+				},
+				Stem: []baseOpts{
+					{
+						Field: "stemField",
+						Tag:   "stemTag",
+					},
+				},
+				Clean: []baseOpts{
+					{
+						Field: "cleanField",
+						Tag:   "cleanTag",
+					},
+				},
+				Rel: []relOpts{
+					{
+						baseOpts: baseOpts{
+							Field: "relField",
+							Tag:   "relTag",
+						},
+						BasePath: "/my/test/",
+					},
+				},
+				ToSlash: []baseOpts{
+					{
+						Field: "slashField",
+						Tag:   "slashTag",
+					},
+				},
+			},
+			input: []telegraf.Metric{
 				metric.New(
-					smokeMetricName,
+					"testmetric", map[string]string{
+						"baseTag":  samplePath,
+						"dirTag":   samplePath,
+						"stemTag":  samplePath,
+						"cleanTag": samplePath,
+						"relTag":   samplePath,
+						"slashTag": samplePath,
+					},
+					map[string]interface{}{
+						"baseField":  samplePath,
+						"dirField":   samplePath,
+						"stemField":  samplePath,
+						"cleanField": samplePath,
+						"relField":   samplePath,
+						"slashField": samplePath,
+					},
+					time.Now()),
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"testmetric",
 					map[string]string{
 						"baseTag":  "file.log",
 						"dirTag":   "/my/test/path",
@@ -46,7 +110,7 @@ func TestOptions_Apply(t *testing.T) {
 		},
 		{
 			name: "Test Dest Option",
-			o: &Filepath{
+			plugin: &Filepath{
 				BaseName: []baseOpts{
 					{
 						Field: "sourcePath",
@@ -54,14 +118,14 @@ func TestOptions_Apply(t *testing.T) {
 						Dest:  "basePath",
 					},
 				}},
-			inputMetrics: []telegraf.Metric{
+			input: []telegraf.Metric{
 				metric.New(
 					"testMetric",
 					map[string]string{"sourcePath": samplePath},
 					map[string]interface{}{"sourcePath": samplePath},
 					time.Now()),
 			},
-			expectedMetrics: []telegraf.Metric{
+			expected: []telegraf.Metric{
 				metric.New(
 					"testMetric",
 					map[string]string{"sourcePath": samplePath, "basePath": "file.log"},
@@ -70,7 +134,12 @@ func TestOptions_Apply(t *testing.T) {
 			},
 		},
 	}
-	runTestOptionsApply(t, tests)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := tt.plugin.Apply(tt.input...)
+			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.SortMetrics(), testutil.IgnoreTime())
+		})
+	}
 }
 
 func TestTracking(t *testing.T) {
