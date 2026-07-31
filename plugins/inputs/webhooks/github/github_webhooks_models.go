@@ -76,6 +76,7 @@ type pullRequestReviewComment struct {
 }
 
 type workflowJob struct {
+	RunID       int64     `json:"run_id"`
 	RunAttempt  int       `json:"run_attempt"`
 	HeadBranch  string    `json:"head_branch"`
 	CreatedAt   time.Time `json:"created_at"`
@@ -86,6 +87,7 @@ type workflowJob struct {
 }
 
 type workflowRun struct {
+	ID           int64     `json:"id"`
 	HeadBranch   string    `json:"head_branch"`
 	CreatedAt    time.Time `json:"created_at"`
 	RunStartedAt time.Time `json:"run_started_at"`
@@ -700,6 +702,7 @@ func (s workflowJobEvent) newMetric() telegraf.Metric {
 		"queue_time":  queueTimeMs,
 		"run_time":    runTimeMs,
 		"head_branch": s.WorkflowJob.HeadBranch,
+		"run_id":      s.WorkflowJob.RunID,
 	}
 	m := metric.New(meas, t, f, time.Now())
 	return m
@@ -733,6 +736,7 @@ func (s workflowRunEvent) newMetric() telegraf.Metric {
 		"run_attempt": s.WorkflowRun.RunAttempt,
 		"run_time":    runTimeMs,
 		"head_branch": s.WorkflowRun.HeadBranch,
+		"run_id":      s.WorkflowRun.ID,
 	}
 	m := metric.New(meas, t, f, time.Now())
 	return m
