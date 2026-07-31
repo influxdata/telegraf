@@ -14,6 +14,7 @@ import (
 	"github.com/vjeantet/grok"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -76,6 +77,7 @@ type Parser struct {
 	Multiline          bool              `toml:"grok_multiline"`
 	Timezone           string            `toml:"grok_timezone"`
 	UniqueTimestamp    string            `toml:"grok_unique_timestamp"`
+	MaxSize            config.Size       `toml:"grok_maximum_size"`
 	Measurement        string            `toml:"-"`
 	DefaultTags        map[string]string `toml:"-"`
 	Log                telegraf.Logger   `toml:"-"`
@@ -367,6 +369,9 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 
 	scanner := bufio.NewScanner(bytes.NewReader(buf))
+	if p.MaxSize > 0 {
+		scanner.Buffer(make([]byte, p.MaxSize), int(p.MaxSize))
+	}
 	for scanner.Scan() {
 		line := scanner.Text()
 		m, err := p.ParseLine(line)

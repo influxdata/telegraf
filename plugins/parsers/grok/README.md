@@ -127,6 +127,10 @@ If you need help building patterns to match your logs, you will find the
 
   ## Enable multiline messages to be processed.
   # grok_multiline = false
+
+  ## Set the maximum size of the line to parse
+  ## No metric might be emitted if a line to parse exceeds the given size.
+  # grok_maximum_size = "64KiB"
 ```
 
 ### Timestamp Examples
