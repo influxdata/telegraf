@@ -3,6 +3,7 @@ package socket
 import (
 	"bufio"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -54,7 +55,15 @@ type Socket struct {
 	listener listener
 }
 
-var extractIfNameRegex = regexp.MustCompile(`]?:\d+%(.*)$`)
+// extractIfNameRegex matches 4 different case.
+//
+// 1. IPv6 with a zone id and a trailing interface name; or
+// 2. IPv6 with a zone id only; or
+// 3. IPv6 a trailing interface name only; or
+// 4. Any other IP or socket name with a zone id only
+var extractIfNameRegex = regexp.MustCompile(
+	`\[[a-zA-Z0-9:]+%([^%]*)]:\w+%([^%]*)$|\[[a-zA-Z0-9:]+%([^%]*)]:\w+$|\[[a-zA-Z0-9:]+]:\w+%([^%]*)$|[^]]:\w+%([^%]*)$`,
+)
 var validIfNameRegex = regexp.MustCompile(`^[^/:\s]{1,15}$`)
 
 // interfaceNameFromServiceAddress extract and validates interface names
@@ -70,7 +79,19 @@ func interfaceNameFromServiceAddress(address string) (interfaceName string, vali
 		return "", nil
 	}
 
-	ifName := matches[1]
+	ifName := ""
+	matchCount := 0
+	for _, match := range matches[1:] {
+		if match != "" {
+			if matchCount > 0 {
+				return "", errors.New("ipv6 zone id and interface name are mutually exclusive")
+			}
+
+			ifName = match
+			matchCount++
+		}
+	}
+
 	if ifName == "." || ifName == ".." || !validIfNameRegex.MatchString(ifName) {
 		return "", fmt.Errorf("interface name %q is not valid", ifName)
 	}
