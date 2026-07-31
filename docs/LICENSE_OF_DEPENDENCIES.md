@@ -149,6 +149,7 @@ following works:
 - github.com/ebitengine/purego [Apache License 2.0](https://github.com/ebitengine/purego/blob/main/LICENSE)
 - github.com/eclipse/paho.golang [Eclipse Public License - v 2.0](https://github.com/eclipse/paho.golang/blob/master/LICENSE)
 - github.com/eclipse/paho.mqtt.golang [Eclipse Public License - v 2.0](https://github.com/eclipse/paho.mqtt.golang/blob/master/LICENSE)
+- github.com/elastic/elastic-transport-go [Apache License 2.0](https://github.com/elastic/elastic-transport-go/blob/main/LICENSE)
 - github.com/elastic/go-elasticsearch [Apache License 2.0](https://github.com/elastic/go-elasticsearch/blob/main/LICENSE)
 - github.com/elastic/go-sysinfo [Apache License 2.0](https://github.com/elastic/go-sysinfo/blob/main/LICENSE.txt)
 - github.com/elastic/go-windows [Apache License 2.0](https://github.com/elastic/go-windows/blob/main/LICENSE.txt)
