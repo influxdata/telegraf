@@ -798,8 +798,8 @@ type mockServer struct {
 	addr   string
 
 	// Errors collected while responding to requests
-	mu   sync.Mutex
 	errs []error
+	sync.Mutex
 }
 
 // newMockServer starts a SIP server answering the given method with the response
@@ -826,14 +826,15 @@ func newMockServer(method sip.RequestMethod, handler func(*sip.Request) *sip.Res
 	// collecting the errors has to happen here instead of in the handler where
 	// reporting a failure would panic the test binary.
 	server.OnRequest(method, func(req *sip.Request, tx sip.ServerTransaction) {
+		s.Lock()
+		defer s.Unlock()
+
 		res := handler(req)
 		if res == nil {
 			return
 		}
 		if err := tx.Respond(res); err != nil {
-			s.mu.Lock()
 			s.errs = append(s.errs, err)
-			s.mu.Unlock()
 		}
 	})
 
@@ -859,10 +860,11 @@ func newMockServer(method sip.RequestMethod, handler func(*sip.Request) *sip.Res
 func (s *mockServer) close(t *testing.T) {
 	t.Helper()
 
+	s.Lock()
+	defer s.Unlock()
+
 	_ = s.server.Close()
 	_ = s.ua.Close()
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	require.Empty(t, s.errs, "responding to request failed")
 }
