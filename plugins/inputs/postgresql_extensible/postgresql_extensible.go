@@ -111,7 +111,13 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	query := `SELECT setting::integer / 100 AS version FROM pg_settings WHERE name = 'server_version_num'`
 	var dbVersion int
 	if err := p.service.DB.QueryRow(query).Scan(&dbVersion); err != nil {
-		dbVersion = 0
+		// A pooled connection that was closed without database/sql noticing
+		// fails the first query but is then dropped, so retry once on a fresh
+		// connection. Only give up (rather than silently defaulting to version
+		// 0 and running version-mismatched queries) if that also fails. See #18409.
+		if err := p.service.DB.QueryRow(query).Scan(&dbVersion); err != nil {
+			return fmt.Errorf("getting database version failed: %w", err)
+		}
 	}
 
 	// set default timestamp to Now and use for all generated metrics during
