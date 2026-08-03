@@ -362,7 +362,10 @@ func (s *state) parseEvents(events []*telemetry.TelemetryField, prefix string, t
 		} else if events[0].Fields[1].Name == "subscriptionId" {
 			attrFields = events[0].Fields[0].Fields
 		}
-		if len(attrFields) > 0 && len(attrFields[0].Fields) > 0 && len(attrFields[0].Fields[0].Fields) > 0 && len(attrFields[0].Fields[0].Fields[0].Fields) > 0 && len(attrFields[0].Fields[0].Fields[0].Fields[0].Fields) > 0 {
+		valid := len(attrFields) > 0 && len(attrFields[0].Fields) > 0 && len(attrFields[0].Fields[0].Fields) > 0
+		valid = valid && len(attrFields[0].Fields[0].Fields[0].Fields) > 0
+		valid = valid && len(attrFields[0].Fields[0].Fields[0].Fields[0].Fields) > 0
+		if valid {
 			attrs = attrFields[0].Fields[0].Fields[0].Fields[0].Fields[0]
 		}
 	}
