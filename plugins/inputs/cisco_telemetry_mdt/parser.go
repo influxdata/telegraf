@@ -356,24 +356,31 @@ func (s *state) parseDME(fields []*telemetry.TelemetryField, prefix string, tags
 func (s *state) parseEvents(events []*telemetry.TelemetryField, prefix string, tags map[string]string, timestamp time.Time) []error {
 	var attrs *telemetry.TelemetryField
 	if events[0] != nil && len(events[0].Fields) >= 2 {
-		if events[0].Fields[0].Name == "subscriptionId" {
-			attrs = events[0].Fields[1].Fields[0].Fields[0].Fields[0].Fields[0].Fields[0]
+		var attrFields []*telemetry.TelemetryField
+		if events[0].Fields[0].Name == "subscriptionId" && len(events[0].Fields[1].Fields) > 0 {
+			attrFields = events[0].Fields[1].Fields
 		} else if events[0].Fields[1].Name == "subscriptionId" {
-			attrs = events[0].Fields[0].Fields[0].Fields[0].Fields[0].Fields[0].Fields[0]
+			attrFields = events[0].Fields[0].Fields
+		}
+		valid := len(attrFields) > 0 && len(attrFields[0].Fields) > 0 && len(attrFields[0].Fields[0].Fields) > 0
+		valid = valid && len(attrFields[0].Fields[0].Fields[0].Fields) > 0
+		valid = valid && len(attrFields[0].Fields[0].Fields[0].Fields[0].Fields) > 0
+		if valid {
+			attrs = attrFields[0].Fields[0].Fields[0].Fields[0].Fields[0]
 		}
 	}
 
 	// Parse the attribute subfields according to their class
-	if attrs == nil {
-		//nolint:prealloc // We expect errors to be empty by default
-		var errs []error
-		for _, sub := range events {
-			errs = append(errs, s.parseClassAttributeField(sub, tags, timestamp)...)
-		}
-		return errs
+	if attrs != nil {
+		return s.parseDME(attrs.Fields, prefix, tags, timestamp)
 	}
 
-	return s.parseDME(attrs.Fields, prefix, tags, timestamp)
+	//nolint:prealloc // We expect errors to be empty by default
+	var errs []error
+	for _, sub := range events {
+		errs = append(errs, s.parseClassAttributeField(sub, tags, timestamp)...)
+	}
+	return errs
 }
 
 // NXAPI structure: https://developer.cisco.com/docs/cisco-nexus-9000-series-nx-api-cli-reference-release-9-2x/
