@@ -35,6 +35,7 @@ type InternetSpeed struct {
 	Cache            bool     `toml:"cache"`
 	Connections      int      `toml:"connections"`
 	TestMode         string   `toml:"test_mode"`
+	Source           string   `toml:"source"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -155,6 +156,7 @@ func (is *InternetSpeed) findClosestServer() error {
 		UserAgent:  internal.ProductToken(),
 		PingMode:   proto,
 		SavingMode: is.MemorySavingMode,
+		Source:     is.Source,
 	}))
 	if is.Connections > 0 {
 		client.SetNThread(is.Connections)
