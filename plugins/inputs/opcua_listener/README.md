@@ -548,42 +548,42 @@ and all paramters must be set in this section.
 This example group configuration shows how to use group settings:
 
 ```toml
-# Group 1
-[[inputs.opcua_listener.events]]
-   sampling_interval = "10s"
-   queue_size = "100"
-   source_names = ["SourceName1", "SourceName2"]
-   fields = ["Severity", "Message", "Time"]
+  # Group 1
+  [[inputs.opcua_listener.events]]
+    sampling_interval = "10s"
+    queue_size = 100
+    source_names = ["SourceName1", "SourceName2"]
+    fields = ["Severity", "Message", "Time"]
 
-   [inputs.opcua_listener.events.event_type_node]
-     namespace = "1"
-     identifier_type = "i"
-     identifier = "1234"
+    [[inputs.opcua_listener.events.node_ids]]
+      namespace = "2"
+      identifier_type = "i"
+      identifier = "2345"
 
-   [[inputs.opcua_listener.events.node_ids]]
-     namespace = "2"
-     identifier_type = "i"
-     identifier = "2345"
+    [inputs.opcua_listener.events.event_type_node]
+      namespace = "1"
+      identifier_type = "i"
+      identifier = "1234"
 
-# Group 2
-[[inputs.opcua_listener.events]]
-   sampling_interval = "10s"
-   queue_size = "100"
-   namespace = "3"
-   identifier_type = "s"
-   source_names = ["SourceName1", "SourceName2"]
-   fields = ["Severity", "Message", "Time"]
-
-   [inputs.opcua_listener.events.event_type_node]
-     namespace = "1"
-     identifier_type = "i"
-     identifier = "5678"
+  # Group 2
+  [[inputs.opcua_listener.events]]
+    sampling_interval = "10s"
+    queue_size = 100
+    namespace = "3"
+    identifier_type = "s"
+    source_names = ["SourceName1", "SourceName2"]
+    fields = ["Severity", "Message", "Time"]
 
     node_ids = [
-      {identifier="Sensor1"}, # default values will be used for namespace and identifier_type
-      {namespace="2", identifier="TemperatureSensor"}, # default values will be used for identifier_type
-      {namespace="5", identifier_type="i", identifier="2002"} # no default values will be used
+      { identifier="Sensor1" }, # default values will be used for namespace and identifier_type
+      { namespace="2", identifier="TemperatureSensor" }, # default values will be used for identifier_type
+      { namespace="5", identifier_type="i", identifier="2002" } # no default values will be used
     ]
+
+    [inputs.opcua_listener.events.event_type_node]
+      namespace = "1"
+      identifier_type = "i"
+      identifier = "5678"
 ```
 
 ## Browse-based Discovery
