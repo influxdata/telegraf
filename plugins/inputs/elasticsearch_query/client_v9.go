@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"sync"
 
+	elastictransport8 "github.com/elastic/elastic-transport-go/v8/elastictransport"
 	elasticsearch9 "github.com/elastic/go-elasticsearch/v9"
 	esapi9 "github.com/elastic/go-elasticsearch/v9/esapi"
 
@@ -26,12 +27,13 @@ type clientV9 struct {
 func newClientV9(cfg clientConfig) (client, error) {
 	// Use the base client to avoid retaining the full esapi API tree because this
 	// plugin only uses two request types.
-	c, err := elasticsearch9.NewBaseClient(elasticsearch9.Config{
-		Addresses: cfg.urls,
-		Username:  cfg.username,
-		Password:  cfg.password,
-		Transport: roundTripper{client: cfg.httpClient},
-	})
+	c, err := elasticsearch9.NewBase(
+		elasticsearch9.WithAddresses(cfg.urls...),
+		elasticsearch9.WithBasicAuth(cfg.username, cfg.password),
+		elasticsearch9.WithTransportOptions(
+			elastictransport8.WithTransport(roundTripper{client: cfg.httpClient}),
+		),
+	)
 	if err != nil {
 		cfg.httpClient.CloseIdleConnections()
 		return nil, fmt.Errorf("creating ElasticSearch client failed: %w", err)
