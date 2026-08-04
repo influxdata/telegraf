@@ -106,19 +106,20 @@ func (w *WinEventLog) Init() error {
 func (w *WinEventLog) Start(telegraf.Accumulator) error {
 	subscription, err := w.evtSubscribe()
 	if err != nil {
-		// Mark this as a retriable startup error rather than a plain one: the
-		// channel this plugin subscribes to may be temporarily unavailable (e.g.
-		// disabled by policy, or a feature not yet started) or permanently gone
-		// (e.g. an optional Windows feature was never installed or was removed).
+		startupErr := fmt.Errorf("subscription of Windows Event Log failed: %w", err)
 		return &internal.StartupError{
-			Err:   fmt.Errorf("subscription of Windows Event Log failed: %w", err),
-			Retry: true,
+			Err:   startupErr,
+			Retry: isRetriableSubscriptionError(err),
 		}
 	}
 	w.subscription = subscription
 	w.Log.Debug("Subscription handle id:", w.subscription)
 
 	return nil
+}
+
+func isRetriableSubscriptionError(err error) bool {
+	return errors.Is(err, windows.ERROR_EVT_CHANNEL_NOT_FOUND)
 }
 
 func (w *WinEventLog) GetState() interface{} {
