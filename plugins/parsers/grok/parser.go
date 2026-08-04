@@ -375,7 +375,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	scanner := bufio.NewScanner(bytes.NewReader(buf))
 	if p.MaxLineSize > 0 {
-		scanner.Buffer(make([]byte, p.MaxLineSize), int(p.MaxLineSize))
+		scanner.Buffer(nil, int(p.MaxLineSize))
 	}
 	for scanner.Scan() {
 		line := scanner.Text()
