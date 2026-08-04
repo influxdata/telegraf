@@ -800,8 +800,8 @@ github.com/ProtonMail/gopenpgp/v2 v2.9.0/go.mod h1:IldDyh9Hv1ZCCYatTuuEt1XZJ0OPj
 github.com/PuerkitoBio/goquery v1.11.0 h1:jZ7pwMQXIITcUXNH83LLk+txlaEy6NVOfTuP43xxfqw=
 github.com/PuerkitoBio/goquery v1.11.0/go.mod h1:wQHgxUOU3JGuj3oD/QFfxUdlzW6xPHfqyHre6VMY4DQ=
 github.com/RaveNoX/go-jsoncommentstrip v1.0.0/go.mod h1:78ihd09MekBnJnxpICcwzCMzGrKSKYe4AqU6PDYYpjk=
-github.com/SAP/go-hdb v1.16.12 h1:uHhrUCvnYPY67w6NUs8BYRwylXdAiv+hFRApS4qkA5Q=
-github.com/SAP/go-hdb v1.16.12/go.mod h1:16M+ygtB0N/sZosiXf+aeepMvNYSw+/yGbZdGQLVAAE=
+github.com/SAP/go-hdb v1.17.2 h1:bxQfX6tw3twRIeCUf4HCcagORVPtLF5/vigFRQkh1UA=
+github.com/SAP/go-hdb v1.17.2/go.mod h1:UyvW+7VKLmwEYhV3KGEqrR63BWPP22LWWYG6WK0BHSc=
 github.com/a1ex3/zstd-seekable-format-go/pkg v0.10.0 h1:iLDOF0rdGTrol/q8OfPIIs5kLD8XvA2q75o6Uq/tgak=
 github.com/a1ex3/zstd-seekable-format-go/pkg v0.10.0/go.mod h1:DrEWcQJjz7t5iF2duaiyhg4jyoF0kxOD6LtECNGkZ/Q=
 github.com/aalpar/deheap v1.1.2 h1:MABHLcnjqsffb8GLkUFDigqpBBxOMz0DoKM9QfELeTw=
