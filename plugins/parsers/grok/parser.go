@@ -389,7 +389,9 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		}
 		metrics = append(metrics, m)
 	}
-
+	if err := scanner.Err(); err != nil {
+		return metrics, fmt.Errorf("scanning failed: %w", err)
+	}
 	return metrics, nil
 }
 

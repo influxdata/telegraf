@@ -1205,6 +1205,24 @@ func TestLongLine(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, m, testutil.IgnoreTime())
 }
 
+func TestTooLongLine(t *testing.T) {
+	parser := Parser{
+		Measurement: "test",
+		Patterns:    []string{"%{GREEDYDATA:message}"},
+		Log:         &testutil.Logger{},
+	}
+	require.NoError(t, parser.Init())
+
+	msg := strings.Repeat("Long", 20000) + " message" // 80,008 characters
+	m, err := parser.Parse([]byte("short info\n" + msg + "\n"))
+	require.ErrorContains(t, err, "token too long")
+
+	expected := []telegraf.Metric{
+		metric.New("test", map[string]string{}, map[string]interface{}{"message": "short info"}, time.Unix(0, 0)),
+	}
+	testutil.RequireMetricsEqual(t, expected, m, testutil.IgnoreTime())
+}
+
 const benchmarkData = `benchmark 5 1653643421 source=myhost tags_platform=python tags_sdkver=3.11.5
 benchmark 4 1653643422 source=myhost tags_platform=python tags_sdkver=3.11.4
 `
