@@ -278,6 +278,10 @@ func TestClientV7PlusDiscovery(t *testing.T) {
 			name:      "v8",
 			newClient: newClientV8,
 		},
+		{
+			name:      "v9",
+			newClient: newClientV9,
+		},
 	}
 
 	for _, tt := range tests {
@@ -354,6 +358,12 @@ func TestClientQuery(t *testing.T) {
 		{
 			name:                   "v8",
 			newClient:              newClientV8,
+			response:               `{"hits":{"total":{"value":12345,"relation":"eq"}},"aggregations":{}}`,
+			expectedTrackTotalHits: "true",
+		},
+		{
+			name:                   "v9",
+			newClient:              newClientV9,
 			response:               `{"hits":{"total":{"value":12345,"relation":"eq"}},"aggregations":{}}`,
 			expectedTrackTotalHits: "true",
 		},
@@ -1015,6 +1025,15 @@ func TestGatherV7PlusIntegration(t *testing.T) {
 				"ES_JAVA_OPTS":           "-Xms1g -Xmx1g",
 			},
 		},
+		{
+			name:  "v9",
+			image: "docker.elastic.co/elasticsearch/elasticsearch:9.4.3",
+			env: map[string]string{
+				"discovery.type":         "single-node",
+				"xpack.security.enabled": "false",
+				"ES_JAVA_OPTS":           "-Xms1g -Xmx1g",
+			},
+		},
 	}
 
 	// Define expectations
@@ -1480,7 +1499,7 @@ func TestInvalidServerVersion(t *testing.T) {
 func TestStartupFailureReleasesClient(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		if _, err := w.Write([]byte(`{"version": {"number": "9.1.2"}}`)); err != nil {
+		if _, err := w.Write([]byte(`{"version": {"number": "10.1.2"}}`)); err != nil {
 			t.Error(err)
 		}
 	}))
