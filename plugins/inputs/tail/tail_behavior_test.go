@@ -1036,7 +1036,7 @@ func TestLongLine(t *testing.T) {
 	plugin.SetParserFunc(func() (telegraf.Parser, error) {
 		parser := &grok.Parser{
 			Measurement: "tail_grok",
-			MaxSize:     maxSize,
+			MaxLineSize: maxSize,
 			Patterns:    []string{`%{GREEDYDATA:message}`},
 			Log:         testutil.Logger{},
 		}

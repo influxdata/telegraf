@@ -1189,7 +1189,7 @@ func TestMultilineNilMetric(t *testing.T) {
 func TestLongLine(t *testing.T) {
 	parser := Parser{
 		Measurement: "test",
-		MaxSize:     config.Size(128 * 1024), // 128KiB
+		MaxLineSize: config.Size(128 * 1024), // 128KiB
 		Patterns:    []string{"%{GREEDYDATA:message}"},
 		Log:         &testutil.Logger{},
 	}

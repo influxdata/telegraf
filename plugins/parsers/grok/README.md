@@ -130,7 +130,7 @@ If you need help building patterns to match your logs, you will find the
 
   ## Set the maximum size of the line to parse
   ## No metric might be emitted if a line to parse exceeds the given size.
-  # grok_maximum_size = "64KiB"
+  # grok_max_line_size = "64KiB"
 ```
 
 ### Timestamp Examples

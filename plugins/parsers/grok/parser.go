@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"regexp"
 	"strconv"
@@ -77,7 +78,7 @@ type Parser struct {
 	Multiline          bool              `toml:"grok_multiline"`
 	Timezone           string            `toml:"grok_timezone"`
 	UniqueTimestamp    string            `toml:"grok_unique_timestamp"`
-	MaxSize            config.Size       `toml:"grok_maximum_size"`
+	MaxLineSize        config.Size       `toml:"grok_max_line_size"`
 	Measurement        string            `toml:"-"`
 	DefaultTags        map[string]string `toml:"-"`
 	Log                telegraf.Logger   `toml:"-"`
@@ -103,6 +104,10 @@ func (p *Parser) Init() error {
 
 	if p.Timezone == "" {
 		p.Timezone = "UTC"
+	}
+
+	if p.MaxLineSize < 0 || p.MaxLineSize > math.MaxInt {
+		return fmt.Errorf("'grok_max_line_size' has to be greater than 0 and less than %d", math.MaxInt)
 	}
 
 	p.typeMap = make(map[string]map[string]string)
@@ -369,8 +374,8 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 
 	scanner := bufio.NewScanner(bytes.NewReader(buf))
-	if p.MaxSize > 0 {
-		scanner.Buffer(make([]byte, p.MaxSize), int(p.MaxSize))
+	if p.MaxLineSize > 0 {
+		scanner.Buffer(make([]byte, p.MaxLineSize), int(p.MaxLineSize))
 	}
 	for scanner.Scan() {
 		line := scanner.Text()
