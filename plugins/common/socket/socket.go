@@ -55,25 +55,18 @@ type Socket struct {
 	listener listener
 }
 
-// extractIfNameRegex matches 4 different case.
+// extractIfNameRegex extracts and validates matches these case:
 //
-// 1. IPv6 with a zone id and a trailing interface name; or
-// 2. IPv6 with a zone id only; or
-// 3. IPv6 a trailing interface name only; or
-// 4. Any other IP or socket name with a zone id only
+// 1. IPv6 with zone id
+// 2. IPv6 with zone id and trailing interface name
+// 3. IPv6 with trailing interface name
+// 4. Any other hostname with trailing interface name (hostname does not contain a % or ])
 var extractIfNameRegex = regexp.MustCompile(
-	`\[[a-zA-Z0-9:]+%([^%]*)]:\w+%([^%]*)$|\[[a-zA-Z0-9:]+%([^%]*)]:\w+$|\[[a-zA-Z0-9:]+]:\w+%([^%]*)$|[^]]:\w+%([^%]*)$`,
+	`\[[^%]+%([^]]*)][^%]*$|\[[^%]+%([^]]*)][^%]*%(.*)$|\[[^%]]+][^%]*%(.*)$|[^%]]*%(.*)$`,
 )
-var validIfNameRegex = regexp.MustCompile(`^[^/:\s]{1,15}$`)
 
-// interfaceNameFromServiceAddress extract and validates interface names
-// Valid names folow the rules implemented in https://github.com/torvalds/linux/blob/11028ab62899e4191e074ee364c712b77823a9c4/net/core/dev.c#L1325
-// which comes down to:
-//   - No empty string
-//   - No string longer than 15 characters
-//   - Not exactly `.` or `..`
-//   - Contains no `/`, `:` or whitespace
-func interfaceNameFromServiceAddress(address string) (interfaceName string, valid error) {
+// interfaceNameFromServiceAddress extracts interface names
+func interfaceNameFromServiceAddress(address string) (string, error) {
 	matches := extractIfNameRegex.FindStringSubmatch(address)
 	if len(matches) < 2 {
 		return "", nil
@@ -92,8 +85,8 @@ func interfaceNameFromServiceAddress(address string) (interfaceName string, vali
 		}
 	}
 
-	if ifName == "." || ifName == ".." || !validIfNameRegex.MatchString(ifName) {
-		return "", fmt.Errorf("interface name %q is not valid", ifName)
+	if ifName == "" {
+		return "", fmt.Errorf("address %q is not valid", address)
 	}
 
 	return ifName, nil
