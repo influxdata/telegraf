@@ -41,13 +41,13 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # service_address = "tcp6://[2001:db8::1]:8094"
   # service_address = "udp://:8094"
   # service_address = "udp4://:8094"
+  # service_address = "udp4://239.0.0.1:40000%enp101s0f1np1"
   # service_address = "udp6://:8094"
   # service_address = "udp6://[ff02::1%eth0]:8094"
   # service_address = "udp6://[ff02::1]:8094%eth0"
   # service_address = "unix:///tmp/telegraf.sock"
   # service_address = "unixgram:///tmp/telegraf.sock"
   # service_address = "vsock://cid:80"
-  # service_address = "udp4://239.0.0.1:40000%enp101s0f1np1"
 
   ## Permission for unix sockets (only available on unix sockets)
   ## This setting may not be respected by some platforms. To safely restrict
