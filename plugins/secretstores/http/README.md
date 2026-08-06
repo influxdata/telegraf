@@ -145,7 +145,7 @@ Secrets are expected to be JSON data in the following flat key-value form
 ```json
 {
     "secret name A": "secret value A",
-    ...
+    "secret name ...": "...",
     "secret name X": "secret value X"
 }
 ```
