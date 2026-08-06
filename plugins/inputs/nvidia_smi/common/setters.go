@@ -34,7 +34,7 @@ func SetIfUsed(t string, m map[string]interface{}, k, v string) {
 		}
 	case "int":
 		if val != "" && val != "N/A" {
-			i, err := strconv.Atoi(val)
+			i, err := strconv.ParseInt(val, 10, 64)
 			if err == nil {
 				m[k] = i
 			}
