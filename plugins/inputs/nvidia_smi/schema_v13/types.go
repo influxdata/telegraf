@@ -352,12 +352,18 @@ type smi struct {
 			GpuTargetTempMax string `xml:"gpu_target_temp_max"`
 			GpuTargetTempMin string `xml:"gpu_target_temp_min"`
 		} `xml:"supported_gpu_target_temp"`
+		// Cards reporting a thermal limit expose the *_tlimit_threshold tags as an
+		// offset to that limit, the remaining ones report absolute thresholds.
 		Temperature struct {
 			GpuTargetTemperature         string `xml:"gpu_target_temperature"`
 			GpuTemp                      string `xml:"gpu_temp"`
+			GpuTempMaxGpuThreshold       string `xml:"gpu_temp_max_gpu_threshold"`
 			GpuTempMaxGpuTlimitThreshold string `xml:"gpu_temp_max_gpu_tlimit_threshold"`
+			GpuTempMaxMemThreshold       string `xml:"gpu_temp_max_mem_threshold"`
 			GpuTempMaxMemTlimitThreshold string `xml:"gpu_temp_max_mem_tlimit_threshold"`
+			GpuTempMaxThreshold          string `xml:"gpu_temp_max_threshold"`
 			GpuTempMaxTlimitThreshold    string `xml:"gpu_temp_max_tlimit_threshold"`
+			GpuTempSlowThreshold         string `xml:"gpu_temp_slow_threshold"`
 			GpuTempSlowTlimitThreshold   string `xml:"gpu_temp_slow_tlimit_threshold"`
 			GpuTempTlimit                string `xml:"gpu_temp_tlimit"`
 			MemoryTemp                   string `xml:"memory_temp"`
