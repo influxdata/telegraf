@@ -69,18 +69,20 @@ temperature,host=demo.clarifylocal,sensor=TC0P value=49 1682670910000000000
 ```
 
 ```json
-"signal" {
-  "id": "temperature.value.TC0P"
-  "name": "temperature.value"
-  "labels": {
-    "host": ["demo.clarifylocal"],
-    "sensor": ["TC0P"]
-  }
-}
-"values" {
-  "times": ["2023-04-28T08:43:16+00:00"],
-  "series": {
-    "temperature.value.TC0P": [49]
+{
+  "signal" {
+    "id": "temperature.value.TC0P"
+    "name": "temperature.value"
+    "labels": {
+      "host": ["demo.clarifylocal"],
+      "sensor": ["TC0P"]
+    }
+  },
+  "values" {
+    "times": ["2023-04-28T08:43:16+00:00"],
+    "series": {
+      "temperature.value.TC0P": [49]
+    }
   }
 }
 ```
