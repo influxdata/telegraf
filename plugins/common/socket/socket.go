@@ -3,6 +3,7 @@ package socket
 import (
 	"bufio"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -54,6 +55,43 @@ type Socket struct {
 	listener listener
 }
 
+// extractIfNameRegex extracts and validates matches these case:
+//
+// 1. IPv6 with zone id
+// 2. IPv6 with zone id and trailing interface name
+// 3. IPv6 with trailing interface name
+// 4. Any other hostname with trailing interface name (hostname does not contain a % or ])
+var extractIfNameRegex = regexp.MustCompile(
+	`\[[^%]+%([^]]*)][^%]*$|\[[^%]+%([^]]*)][^%]*%(.*)$|\[[^%]]+][^%]*%(.*)$|[^%]]*%(.*)$`,
+)
+
+// interfaceNameFromServiceAddress extracts interface names
+func interfaceNameFromServiceAddress(address string) (string, error) {
+	matches := extractIfNameRegex.FindStringSubmatch(address)
+	if len(matches) < 2 {
+		return "", nil
+	}
+
+	ifName := ""
+	matchCount := 0
+	for _, match := range matches[1:] {
+		if match != "" {
+			if matchCount > 0 {
+				return "", errors.New("ipv6 zone id and interface name are mutually exclusive")
+			}
+
+			ifName = match
+			matchCount++
+		}
+	}
+
+	if ifName == "" {
+		return "", fmt.Errorf("address %q is not valid", address)
+	}
+
+	return ifName, nil
+}
+
 func (cfg *Config) NewSocket(address string, splitcfg *SplitConfig, logger telegraf.Logger) (*Socket, error) {
 	s := &Socket{
 		Config: *cfg,
@@ -70,9 +108,13 @@ func (cfg *Config) NewSocket(address string, splitcfg *SplitConfig, logger teleg
 	}
 
 	// Resolve the interface to an address if any given
-	ifregex := regexp.MustCompile(`%([\w\.]+)`)
-	if matches := ifregex.FindStringSubmatch(address); len(matches) == 2 {
-		s.interfaceName = matches[1]
+	ifName, ifNameErr := interfaceNameFromServiceAddress(address)
+	if ifNameErr != nil {
+		return nil, ifNameErr
+	}
+
+	if ifName != "" {
+		s.interfaceName = ifName
 		address = strings.Replace(address, "%"+s.interfaceName, "", 1)
 	}
 
