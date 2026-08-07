@@ -12,7 +12,7 @@ an HTTP POST per metric.
 
 An example event looks like:
 
-```javascript
+```json
 {
   "time": 1529708430,
   "event": "metric",
@@ -39,7 +39,7 @@ Starting with Splunk Enterprise and Splunk Cloud 8.0, you can now send multiple
 metric values in one payload. This means, for example, that you can send all of
 your CPU stats in one JSON struct, an example event looks like:
 
-```javascript
+```json
 {
   "time": 1572469920,
   "event": "metric",
@@ -56,7 +56,7 @@ your CPU stats in one JSON struct, an example event looks like:
     "metric_name:telegraf.cpu.usage_softirq": 0,
     "metric_name:telegraf.cpu.usage_steal": 0,
     "metric_name:telegraf.cpu.usage_system": 10.2,
-    "metric_name:telegraf.cpu.usage_user": 24.7,
+    "metric_name:telegraf.cpu.usage_user": 24.7
   }
 }
 ```
@@ -143,7 +143,7 @@ forwarder.
 
 A sample event when `hec_routing` is false (or unset) looks like:
 
-```javascript
+```json
 {
     "_value": 0.6,
     "cpu": "cpu0",
