@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -995,4 +996,63 @@ func TestStopIncompleteMultiline(t *testing.T) {
 			require.Equal(t, map[string]int64{fn: 45}, state)
 		})
 	}
+}
+
+func TestLongLine(t *testing.T) {
+	// Get a temporary filename for testing
+	fn := filepath.Join(t.TempDir(), "test.log")
+
+	// Create a file with a long content exceeding the default of 64KiB
+	msg := strings.Repeat("Error123", 1000) // 80,000 characters
+	require.NoError(t, os.WriteFile(fn, []byte(msg+"\n"), 0600))
+
+	// Define the expected metrics in each step
+	expected := []telegraf.Metric{
+		metric.New(
+			"tail_grok",
+			map[string]string{
+				"path": fn,
+			},
+			map[string]interface{}{
+				"message": msg,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	// Setup the plugin
+	plugin := &Tail{
+		Files:               []string{fn},
+		MaxUndeliveredLines: 1000,
+		InitialReadOffset:   "beginning",
+		WatchMethod:         "poll",
+		PathTag:             "path",
+		Log:                 testutil.Logger{},
+
+		offsets: maps.Clone(offsets),
+	}
+	var maxSize config.Size
+	require.NoError(t, maxSize.UnmarshalText([]byte("128KiB")))
+	plugin.SetParserFunc(func() (telegraf.Parser, error) {
+		parser := &grok.Parser{
+			Measurement: "tail_grok",
+			MaxLineSize: maxSize,
+			Patterns:    []string{`%{GREEDYDATA:message}`},
+			Log:         testutil.Logger{},
+		}
+		err := parser.Init()
+		return parser, err
+	})
+	require.NoError(t, plugin.Init())
+
+	// Start the plugin
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Check the metrics read
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= uint64(len(expected))
+	}, 3*time.Second, 100*time.Millisecond)
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }

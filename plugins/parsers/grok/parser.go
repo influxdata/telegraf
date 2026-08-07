@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"regexp"
 	"strconv"
@@ -14,6 +15,7 @@ import (
 	"github.com/vjeantet/grok"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -76,6 +78,7 @@ type Parser struct {
 	Multiline          bool              `toml:"grok_multiline"`
 	Timezone           string            `toml:"grok_timezone"`
 	UniqueTimestamp    string            `toml:"grok_unique_timestamp"`
+	MaxLineSize        config.Size       `toml:"grok_max_line_size"`
 	Measurement        string            `toml:"-"`
 	DefaultTags        map[string]string `toml:"-"`
 	Log                telegraf.Logger   `toml:"-"`
@@ -101,6 +104,10 @@ func (p *Parser) Init() error {
 
 	if p.Timezone == "" {
 		p.Timezone = "UTC"
+	}
+
+	if p.MaxLineSize < 0 || p.MaxLineSize > math.MaxInt {
+		return fmt.Errorf("'grok_max_line_size' has to be greater than 0 and less than %d", math.MaxInt)
 	}
 
 	p.typeMap = make(map[string]map[string]string)
@@ -367,6 +374,9 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 
 	scanner := bufio.NewScanner(bytes.NewReader(buf))
+	if p.MaxLineSize > 0 {
+		scanner.Buffer(nil, int(p.MaxLineSize))
+	}
 	for scanner.Scan() {
 		line := scanner.Text()
 		m, err := p.ParseLine(line)
@@ -379,7 +389,9 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		}
 		metrics = append(metrics, m)
 	}
-
+	if err := scanner.Err(); err != nil {
+		return metrics, fmt.Errorf("scanning failed: %w", err)
+	}
 	return metrics, nil
 }
 

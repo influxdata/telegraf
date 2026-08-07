@@ -3,12 +3,14 @@ package grok
 import (
 	"log"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -1182,6 +1184,43 @@ func TestMultilineNilMetric(t *testing.T) {
 	actual, err := p.Parse(buf)
 	require.NoError(t, err)
 	require.Empty(t, actual)
+}
+
+func TestLongLine(t *testing.T) {
+	parser := Parser{
+		Measurement: "test",
+		MaxLineSize: config.Size(128 * 1024), // 128KiB
+		Patterns:    []string{"%{GREEDYDATA:message}"},
+		Log:         &testutil.Logger{},
+	}
+	require.NoError(t, parser.Init())
+
+	msg := strings.Repeat("Long", 20000) + " message" // 80,008 characters
+	m, err := parser.Parse([]byte(msg + "\n"))
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		metric.New("test", map[string]string{}, map[string]interface{}{"message": msg}, time.Unix(0, 0)),
+	}
+	testutil.RequireMetricsEqual(t, expected, m, testutil.IgnoreTime())
+}
+
+func TestTooLongLine(t *testing.T) {
+	parser := Parser{
+		Measurement: "test",
+		Patterns:    []string{"%{GREEDYDATA:message}"},
+		Log:         &testutil.Logger{},
+	}
+	require.NoError(t, parser.Init())
+
+	msg := strings.Repeat("Long", 20000) + " message" // 80,008 characters
+	m, err := parser.Parse([]byte("short info\n" + msg + "\n"))
+	require.ErrorContains(t, err, "token too long")
+
+	expected := []telegraf.Metric{
+		metric.New("test", map[string]string{}, map[string]interface{}{"message": "short info"}, time.Unix(0, 0)),
+	}
+	testutil.RequireMetricsEqual(t, expected, m, testutil.IgnoreTime())
 }
 
 const benchmarkData = `benchmark 5 1653643421 source=myhost tags_platform=python tags_sdkver=3.11.5
