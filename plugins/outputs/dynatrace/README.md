@@ -91,7 +91,7 @@ The endpoint for the Dynatrace Metrics API v2 is
   url = "https://{your-environment-id}.live.dynatrace.com/api/v2/metrics/ingest"
 
   ## API token is required if a URL is specified and should be restricted to the 'Ingest metrics' scope
-  api_token = "your API token here" // hard-coded for illustration only, should be read from environment
+  api_token = "your API token here" # hard-coded for illustration only, should be read from environment
 ```
 
 You can learn more about how to use the [Dynatrace API][api].
@@ -107,10 +107,10 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
-## Secret-store support
+## Secret store support
 
-This plugin supports secrets from secret-stores for the `api_token` option.
-See the [secret-store documentation][SECRETSTORE] for more details on how
+This plugin supports secrets from secret stores for the `api_token` option.
+See the [secret store documentation][SECRETSTORE] for more details on how
 to use them.
 
 [SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets

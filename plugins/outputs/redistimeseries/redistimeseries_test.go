@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -29,7 +28,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	container := testutil.Container{
 		Image:        "redislabs/redistimeseries",
 		ExposedPorts: []string{servicePort},
-		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
+		WaitingFor:   wait.ForListeningPort(servicePort),
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
@@ -109,7 +108,7 @@ func TestCases(t *testing.T) {
 				Image:        "redis/redis-stack-server:latest",
 				ExposedPorts: []string{servicePort},
 				Env:          map[string]string{},
-				WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
+				WaitingFor:   wait.ForListeningPort(servicePort),
 			}
 			require.NoError(t, container.Start(), "failed to start container")
 			defer container.Terminate()
@@ -161,8 +160,12 @@ func getAllRecords(testContext context.Context, address string) []string {
 		}
 
 		result := client.TSRange(ctx, key, 0, int(time.Now().UnixMilli()))
+		var expires string
+		if client.TTL(ctx, key).Val() > 0 {
+			expires = "; expires"
+		}
 		for _, point := range result.Val() {
-			records = append(records, fmt.Sprintf("%s: %f %d%s", result.Args()[1], point.Value, point.Timestamp, labels))
+			records = append(records, fmt.Sprintf("%s: %f %d%s%s", result.Args()[1], point.Value, point.Timestamp, labels, expires))
 		}
 	}
 

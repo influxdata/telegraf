@@ -14,6 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -73,7 +74,7 @@ func TestGatherAttributes(t *testing.T) {
 			err := s.Gather(&acc)
 
 			require.NoError(t, err)
-			require.Equal(t, 32, acc.NFields(), "Wrong number of fields gathered")
+			require.Equal(t, 43, acc.NFields(), "Wrong number of fields gathered")
 
 			testutil.RequireMetricsEqual(t, testSmartctlNVMeAttributes, acc.GetTelegrafMetrics(),
 				testutil.SortMetrics(), testutil.IgnoreTime())
@@ -175,7 +176,7 @@ func TestGatherNoAttributes(t *testing.T) {
 		err := s.Gather(&acc)
 
 		require.NoError(t, err)
-		require.Equal(t, 13, acc.NFields(), "Wrong number of fields gathered")
+		require.Equal(t, 24, acc.NFields(), "Wrong number of fields gathered")
 		acc.AssertDoesNotContainMeasurement(t, "smart_attribute")
 
 		for _, test := range testsAda0Device {
@@ -302,7 +303,7 @@ func TestGatherLongFormEnduranceAttrib(t *testing.T) {
 	wg.Add(1)
 
 	sampleSmart.gatherDisk(acc, "", wg)
-	require.Equal(t, 7, acc.NFields(), "Wrong number of fields gathered")
+	require.Equal(t, 8, acc.NFields(), "Wrong number of fields gathered")
 	require.Equal(t, uint64(5), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
@@ -569,7 +570,7 @@ func Test_integerOverflow(t *testing.T) {
 
 var (
 	testOverflowAttributes = []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"smart_attribute",
 			map[string]string{
 				"device": "nvme0",
@@ -580,7 +581,7 @@ var (
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"smart_attribute",
 			map[string]string{
 				"device": "nvme0",
@@ -591,7 +592,7 @@ var (
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"smart_device",
 			map[string]string{
 				"device": "nvme0",
@@ -604,7 +605,7 @@ var (
 	}
 
 	testHtsasAtributtes = []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"smart_attribute",
 			map[string]string{
 				"device":    ".",
@@ -619,7 +620,7 @@ var (
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"smart_attribute",
 			map[string]string{
 				"device":    ".",
@@ -634,7 +635,7 @@ var (
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"smart_device",
 			map[string]string{
 				"device":    ".",
@@ -913,7 +914,7 @@ var (
 	mockSerial = "CVFT5123456789ABCD"
 
 	testSmartctlDeviceTypeTag = []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"smart_device",
 			map[string]string{
 				"capacity":    "600000000000",
@@ -931,7 +932,7 @@ var (
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"smart_device",
 			map[string]string{
 				"capacity":    "600000000000",
@@ -952,20 +953,31 @@ var (
 	}
 
 	testSmartctlNVMeAttributes = []telegraf.Metric{
-		testutil.MustMetric("smart_device",
+		metric.New("smart_device",
 			map[string]string{
 				"device":    "nvme0",
 				"model":     "TS128GMTE850",
 				"serial_no": "D704940282?",
 			},
 			map[string]interface{}{
-				"exit_status": 0,
-				"health_ok":   true,
-				"temp_c":      38,
+				"exit_status":               0,
+				"health_ok":                 true,
+				"temp_c":                    38,
+				"power_on_hours":            int64(6038),
+				"power_cycle_count":         int64(472),
+				"unsafe_shutdowns":          int64(355),
+				"available_spare":           int64(100),
+				"available_spare_threshold": int64(10),
+				"percentage_used":           int64(16),
+				"critical_warning":          int64(9),
+				"media_errors":              int64(0),
+				"error_log_entries":         int64(119699),
+				"warning_temperature_time":  int64(11),
+				"critical_temperature_time": int64(7),
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"id":        "9",
@@ -978,7 +990,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"id":        "12",
@@ -991,7 +1003,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Media_and_Data_Integrity_Errors",
@@ -1003,7 +1015,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Error_Information_Log_Entries",
@@ -1015,7 +1027,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Available_Spare",
@@ -1027,7 +1039,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Available_Spare_Threshold",
@@ -1039,7 +1051,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"id":        "194",
@@ -1052,7 +1064,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Critical_Warning",
@@ -1064,7 +1076,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Percentage_Used",
@@ -1076,7 +1088,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Data_Units_Read",
@@ -1088,7 +1100,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Data_Units_Written",
@@ -1100,7 +1112,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Host_Read_Commands",
@@ -1112,7 +1124,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Host_Write_Commands",
@@ -1124,7 +1136,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Controller_Busy_Time",
@@ -1136,7 +1148,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Unsafe_Shutdowns",
@@ -1148,7 +1160,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Warning_Temperature_Time",
@@ -1160,7 +1172,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Critical_Temperature_Time",
@@ -1171,7 +1183,7 @@ var (
 				"raw_value": int64(7),
 			},
 			time.Now(),
-		), testutil.MustMetric("smart_attribute",
+		), metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": "D704940282?",
@@ -1183,7 +1195,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": "D704940282?",
@@ -1195,7 +1207,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": "D704940282?",
@@ -1207,7 +1219,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": "D704940282?",
@@ -1219,7 +1231,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": "D704940282?",
@@ -1231,7 +1243,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": "D704940282?",
@@ -1243,7 +1255,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": "D704940282?",
@@ -1255,7 +1267,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": "D704940282?",
@@ -1267,7 +1279,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": "D704940282?",
@@ -1279,7 +1291,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": "D704940282?",
@@ -1291,7 +1303,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": "D704940282?",
@@ -1303,7 +1315,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": "D704940282?",
@@ -1318,20 +1330,31 @@ var (
 	}
 
 	testSmartctlNVMeWindowsAttributes = []telegraf.Metric{
-		testutil.MustMetric("smart_device",
+		metric.New("smart_device",
 			map[string]string{
 				"device":    "nvme0",
 				"model":     "Samsung SSD 970 EVO 1TB",
 				"serial_no": "xxx",
 			},
 			map[string]interface{}{
-				"exit_status": 0,
-				"health_ok":   true,
-				"temp_c":      47,
+				"exit_status":               0,
+				"health_ok":                 true,
+				"temp_c":                    47,
+				"power_on_hours":            int64(1290),
+				"power_cycle_count":         int64(10779),
+				"unsafe_shutdowns":          int64(9),
+				"available_spare":           int64(100),
+				"available_spare_threshold": int64(10),
+				"percentage_used":           int64(0),
+				"critical_warning":          int64(0),
+				"media_errors":              int64(0),
+				"error_log_entries":         int64(979),
+				"warning_temperature_time":  int64(0),
+				"critical_temperature_time": int64(0),
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"id":        "9",
@@ -1344,7 +1367,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": "xxx",
@@ -1356,7 +1379,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"id":        "12",
@@ -1369,7 +1392,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Media_and_Data_Integrity_Errors",
@@ -1381,7 +1404,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Error_Information_Log_Entries",
@@ -1393,7 +1416,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Available_Spare",
@@ -1405,7 +1428,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Available_Spare_Threshold",
@@ -1417,7 +1440,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"id":        "194",
@@ -1430,7 +1453,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Critical_Warning",
@@ -1442,7 +1465,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Percentage_Used",
@@ -1454,7 +1477,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Data_Units_Read",
@@ -1466,7 +1489,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Data_Units_Written",
@@ -1478,7 +1501,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Host_Read_Commands",
@@ -1490,7 +1513,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Host_Write_Commands",
@@ -1502,7 +1525,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Controller_Busy_Time",
@@ -1514,7 +1537,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"name":      "Critical_Temperature_Time",
@@ -1526,7 +1549,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": "xxx",
@@ -1538,7 +1561,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": "xxx",
@@ -1550,7 +1573,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": "xxx",
@@ -1632,9 +1655,20 @@ var (
 	}{
 		{
 			map[string]interface{}{
-				"exit_status": int(0),
-				"temp_c":      int64(38),
-				"health_ok":   true,
+				"exit_status":               int(0),
+				"temp_c":                    int64(38),
+				"health_ok":                 true,
+				"power_on_hours":            int64(6038),
+				"power_cycle_count":         int64(472),
+				"unsafe_shutdowns":          int64(355),
+				"available_spare":           int64(100),
+				"available_spare_threshold": int64(10),
+				"percentage_used":           int64(16),
+				"critical_warning":          int64(9),
+				"media_errors":              int64(0),
+				"error_log_entries":         int64(119699),
+				"warning_temperature_time":  int64(11),
+				"critical_temperature_time": int64(7),
 			},
 			map[string]string{
 				"device":    "nvme0",
@@ -1645,7 +1679,7 @@ var (
 	}
 
 	testIntelNVMeAttributes = []telegraf.Metric{
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1657,7 +1691,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1669,7 +1703,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1681,7 +1715,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1693,7 +1727,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1705,7 +1739,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1717,7 +1751,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1729,7 +1763,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1741,7 +1775,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1753,7 +1787,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1765,7 +1799,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1777,7 +1811,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1789,7 +1823,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1801,7 +1835,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1813,7 +1847,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1825,7 +1859,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1840,7 +1874,7 @@ var (
 	}
 
 	testIntelNVMeNewFormatAttributes = []telegraf.Metric{
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1852,7 +1886,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1864,7 +1898,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1876,7 +1910,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1888,7 +1922,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1900,7 +1934,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1912,7 +1946,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1924,7 +1958,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1936,7 +1970,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1948,7 +1982,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,
@@ -1960,7 +1994,7 @@ var (
 			},
 			time.Now(),
 		),
-		testutil.MustMetric("smart_attribute",
+		metric.New("smart_attribute",
 			map[string]string{
 				"device":    "nvme0",
 				"serial_no": mockSerial,

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
 	"github.com/tdrn-org/go-hue/mock"
 
@@ -146,5 +147,7 @@ func TestGatherLocal(t *testing.T) {
 	// Verify successfull collection
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(h.Gather))
-	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
+	// Absorb 1-ULP differences in math.Pow (light_level_lux) between amd64 and arm64.
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(),
+		testutil.IgnoreTime(), testutil.SortMetrics(), cmpopts.EquateApprox(0, 1e-9))
 }

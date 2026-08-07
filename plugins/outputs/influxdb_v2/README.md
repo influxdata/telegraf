@@ -16,10 +16,10 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
-## Secret-store support
+## Secret store support
 
-This plugin supports secrets from secret-stores for the `token` and
-`http_headers` option. See the [secret-store documentation][SECRETSTORE] for
+This plugin supports secrets from secret stores for the `token` and
+`http_headers` option. See the [secret store documentation][SECRETSTORE] for
 more details on how to use them.
 
 [SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
@@ -27,7 +27,7 @@ more details on how to use them.
 ## Configuration
 
 ```toml @sample.conf
-# Configuration for sending metrics to InfluxDB 2.0
+# Configuration for sending metrics to InfluxDB 2.x
 [[outputs.influxdb_v2]]
   ## The URLs of the InfluxDB cluster nodes.
   ##

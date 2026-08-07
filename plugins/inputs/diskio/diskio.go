@@ -4,6 +4,8 @@ package diskio
 import (
 	_ "embed"
 	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -20,7 +22,8 @@ import (
 var sampleConfig string
 
 var (
-	varRegex = regexp.MustCompile(`\$(?:\w+|\{\w+\})`)
+	varRegex           = regexp.MustCompile(`\$(?:\w+|\{\w+\})`)
+	serialTagSanitizer = strings.NewReplacer("\n", "", "\r", "")
 )
 
 type DiskIO struct {
@@ -37,6 +40,9 @@ type DiskIO struct {
 	warnDiskTags      map[string]bool
 	lastIOCounterStat map[string]disk.IOCountersStat
 	lastCollectTime   time.Time
+	devPath           string
+	runPath           string
+	sysPath           string
 }
 
 func (*DiskIO) SampleConfig() string {
@@ -59,6 +65,30 @@ func (d *DiskIO) Init() error {
 	d.warnDiskTags = make(map[string]bool)
 	d.lastIOCounterStat = make(map[string]disk.IOCountersStat)
 
+	d.devPath = string(os.PathSeparator) + "dev"
+	d.runPath = string(os.PathSeparator) + "run"
+	d.sysPath = string(os.PathSeparator) + "sys"
+
+	if prefix := os.Getenv("HOST_MOUNT_PREFIX"); prefix != "" {
+		d.devPath = filepath.Join(prefix, "dev")
+		d.runPath = filepath.Join(prefix, "run")
+		d.sysPath = filepath.Join(prefix, "sys")
+	}
+	if root := os.Getenv("HOST_ROOT"); root != "" {
+		d.devPath = filepath.Join(root, "dev")
+		d.runPath = filepath.Join(root, "run")
+		d.sysPath = filepath.Join(root, "sys")
+	}
+	if devPath := os.Getenv("HOST_DEV"); devPath != "" {
+		d.devPath = devPath
+	}
+	if runPath := os.Getenv("HOST_RUN"); runPath != "" {
+		d.runPath = runPath
+	}
+	if sysPath := os.Getenv("HOST_SYS"); sysPath != "" {
+		d.sysPath = sysPath
+	}
+
 	return nil
 }
 
@@ -66,7 +96,7 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 	var devices []string
 	if d.deviceFilter == nil {
 		for _, dev := range d.Devices {
-			devices = append(devices, resolveName(dev))
+			devices = append(devices, d.resolveName(dev))
 		}
 	}
 
@@ -85,7 +115,7 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 		var devLinks []string
 		tags["name"], devLinks = d.diskName(io.Name)
 
-		if wwid := getDeviceWWID(io.Name); wwid != "" {
+		if wwid := d.getDeviceWWID(io.Name); wwid != "" {
 			tags["wwid"] = wwid
 		}
 
@@ -106,8 +136,9 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 		}
 
 		if !d.SkipSerialNumber {
-			if len(io.SerialNumber) != 0 {
-				tags["serial"] = io.SerialNumber
+			serial := sanitizeSerialNumber(io.SerialNumber)
+			if len(serial) != 0 {
+				tags["serial"] = serial
 			} else {
 				tags["serial"] = "unknown"
 			}
@@ -158,6 +189,10 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 // hasMeta reports whether s contains any special glob characters.
 func hasMeta(s string) bool {
 	return strings.ContainsAny(s, "*?[")
+}
+
+func sanitizeSerialNumber(serial string) string {
+	return strings.TrimSpace(serialTagSanitizer.Replace(serial))
 }
 
 func (d *DiskIO) diskName(devName string) (string, []string) {

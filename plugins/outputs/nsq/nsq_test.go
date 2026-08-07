@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -22,7 +21,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 		Image:        "nsqio/nsq",
 		ExposedPorts: []string{servicePort},
 		Entrypoint:   []string{"/nsqd"},
-		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
+		WaitingFor:   wait.ForListeningPort(servicePort),
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")

@@ -2,7 +2,10 @@ package opentelemetry
 
 import (
 	"context"
+	"io"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -19,6 +22,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -44,17 +49,19 @@ func TestOpenTelemetry(t *testing.T) {
 	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(common.NoopLogger{})
 	require.NoError(t, err)
 	plugin := &OpenTelemetry{
-		ServiceAddress:       m.Address(),
-		Timeout:              config.Duration(time.Second),
-		Headers:              map[string]string{"test": "header1"},
-		Attributes:           map[string]string{"attr-key": "attr-val"},
-		metricsConverter:     metricsConverter,
-		grpcClientConn:       m.GrpcClient(),
-		metricsServiceClient: pmetricotlp.NewGRPCClient(m.GrpcClient()),
-		Log:                  testutil.Logger{},
+		ServiceAddress:   m.Address(),
+		Timeout:          config.Duration(time.Second),
+		Headers:          map[string]string{"test": "header1"},
+		Attributes:       map[string]string{"attr-key": "attr-val"},
+		metricsConverter: metricsConverter,
+		otlpMetricClient: &gRPCClient{
+			grpcClientConn:       m.GrpcClient(),
+			metricsServiceClient: pmetricotlp.NewGRPCClient(m.GrpcClient()),
+		},
+		Log: testutil.Logger{},
 	}
 
-	input := testutil.MustMetric(
+	input := metric.New(
 		"cpu_temp",
 		map[string]string{
 			"foo":               "bar",
@@ -64,10 +71,10 @@ func TestOpenTelemetry(t *testing.T) {
 		map[string]interface{}{
 			"gauge": 87.332,
 		},
-		time.Unix(0, 1622848686000000000))
+		time.Unix(0, 1622848686000000000),
+	)
 
-	err = plugin.Write([]telegraf.Metric{input})
-	require.NoError(t, err)
+	require.NoError(t, plugin.Write([]telegraf.Metric{input}))
 
 	got := m.GotMetrics()
 
@@ -79,6 +86,232 @@ func TestOpenTelemetry(t *testing.T) {
 	require.NoError(t, err)
 
 	require.JSONEq(t, string(expectJSON), string(gotJSON))
+}
+
+func TestOpenTelemetryHTTPProtobuf(t *testing.T) {
+	expect := pmetric.NewMetrics()
+	{
+		rm := expect.ResourceMetrics().AppendEmpty()
+		rm.Resource().Attributes().PutStr("host.name", "potato")
+		rm.Resource().Attributes().PutStr("attr-key", "attr-val")
+		ilm := rm.ScopeMetrics().AppendEmpty()
+		ilm.Scope().SetName("My Library Name")
+		m := ilm.Metrics().AppendEmpty()
+		m.SetName("cpu_temp")
+		m.SetEmptyGauge()
+		dp := m.Gauge().DataPoints().AppendEmpty()
+		dp.Attributes().PutStr("foo", "bar")
+		dp.SetTimestamp(pcommon.Timestamp(1622848686000000000))
+		dp.SetDoubleValue(87.332)
+	}
+
+	var receivedMetrics pmetric.Metrics
+	var receivedContentType string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedContentType = r.Header.Get("Content-Type")
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		req := pmetricotlp.NewExportRequest()
+		err = req.UnmarshalProto(body)
+		if err != nil {
+			t.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		receivedMetrics = pmetric.NewMetrics()
+		req.Metrics().CopyTo(receivedMetrics)
+
+		resp := pmetricotlp.NewExportResponse()
+		respBytes, err := resp.MarshalProto()
+		if err != nil {
+			t.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.WriteHeader(http.StatusOK)
+		_, err = w.Write(respBytes)
+		if err != nil {
+			t.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}))
+	defer server.Close()
+
+	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(common.NoopLogger{})
+	require.NoError(t, err)
+
+	plugin := &OpenTelemetry{
+		ServiceAddress:   server.URL,
+		EncodingType:     "protobuf",
+		Timeout:          config.Duration(time.Second),
+		Attributes:       map[string]string{"attr-key": "attr-val"},
+		Compression:      "none",
+		metricsConverter: metricsConverter,
+		Log:              testutil.Logger{},
+	}
+	require.NoError(t, plugin.Connect())
+
+	input := metric.New(
+		"cpu_temp",
+		map[string]string{
+			"foo":               "bar",
+			"otel.library.name": "My Library Name",
+			"host.name":         "potato",
+		},
+		map[string]interface{}{
+			"gauge": 87.332,
+		},
+		time.Unix(0, 1622848686000000000),
+	)
+
+	require.NoError(t, plugin.Write([]telegraf.Metric{input}))
+
+	require.Equal(t, "application/x-protobuf", receivedContentType)
+
+	marshaller := pmetric.JSONMarshaler{}
+	expectJSON, err := marshaller.MarshalMetrics(expect)
+	require.NoError(t, err)
+
+	gotJSON, err := marshaller.MarshalMetrics(receivedMetrics)
+	require.NoError(t, err)
+
+	require.JSONEq(t, string(expectJSON), string(gotJSON))
+}
+
+func TestOpenTelemetryHTTPJSON(t *testing.T) {
+	expect := pmetric.NewMetrics()
+	{
+		rm := expect.ResourceMetrics().AppendEmpty()
+		rm.Resource().Attributes().PutStr("host.name", "potato")
+		rm.Resource().Attributes().PutStr("attr-key", "attr-val")
+		ilm := rm.ScopeMetrics().AppendEmpty()
+		ilm.Scope().SetName("My Library Name")
+		m := ilm.Metrics().AppendEmpty()
+		m.SetName("cpu_temp")
+		m.SetEmptyGauge()
+		dp := m.Gauge().DataPoints().AppendEmpty()
+		dp.Attributes().PutStr("foo", "bar")
+		dp.SetTimestamp(pcommon.Timestamp(1622848686000000000))
+		dp.SetDoubleValue(87.332)
+	}
+
+	var receivedMetrics pmetric.Metrics
+	var receivedContentType string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedContentType = r.Header.Get("Content-Type")
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		req := pmetricotlp.NewExportRequest()
+		err = req.UnmarshalJSON(body)
+		if err != nil {
+			t.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		receivedMetrics = pmetric.NewMetrics()
+		req.Metrics().CopyTo(receivedMetrics)
+
+		resp := pmetricotlp.NewExportResponse()
+		respBytes, err := resp.MarshalJSON()
+		if err != nil {
+			t.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err = w.Write(respBytes)
+		if err != nil {
+			t.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}))
+	defer server.Close()
+
+	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(common.NoopLogger{})
+	require.NoError(t, err)
+
+	plugin := &OpenTelemetry{
+		ServiceAddress:   server.URL,
+		EncodingType:     "json",
+		Timeout:          config.Duration(time.Second),
+		Attributes:       map[string]string{"attr-key": "attr-val"},
+		Compression:      "none",
+		metricsConverter: metricsConverter,
+		Log:              testutil.Logger{},
+	}
+	require.NoError(t, plugin.Connect())
+
+	input := metric.New(
+		"cpu_temp",
+		map[string]string{
+			"foo":               "bar",
+			"otel.library.name": "My Library Name",
+			"host.name":         "potato",
+		},
+		map[string]interface{}{
+			"gauge": 87.332,
+		},
+		time.Unix(0, 1622848686000000000),
+	)
+
+	require.NoError(t, plugin.Write([]telegraf.Metric{input}))
+
+	require.Equal(t, "application/json", receivedContentType)
+
+	marshaller := pmetric.JSONMarshaler{}
+	expectJSON, err := marshaller.MarshalMetrics(expect)
+	require.NoError(t, err)
+
+	gotJSON, err := marshaller.MarshalMetrics(receivedMetrics)
+	require.NoError(t, err)
+
+	require.JSONEq(t, string(expectJSON), string(gotJSON))
+}
+
+func TestConnectInvalidProxy(t *testing.T) {
+	tests := []struct {
+		name   string
+		plugin *OpenTelemetry
+	}{
+		{
+			name: "grpc",
+			plugin: &OpenTelemetry{
+				ServiceAddress: "localhost:4317",
+				TCPProxy:       proxy.TCPProxy{UseProxy: true, ProxyURL: "://invalid"},
+				Log:            testutil.Logger{},
+			},
+		},
+		{
+			name: "http",
+			plugin: &OpenTelemetry{
+				ServiceAddress: "http://localhost:4318",
+				HTTPProxy:      proxy.HTTPProxy{HTTPProxyURL: "://invalid"},
+				Log:            testutil.Logger{},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.ErrorContains(t, tt.plugin.Connect(), "creating proxy failed:")
+		})
+	}
 }
 
 var _ pmetricotlp.GRPCServer = (*mockOtelService)(nil)

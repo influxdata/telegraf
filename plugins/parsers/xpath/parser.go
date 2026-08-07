@@ -51,6 +51,7 @@ type Parser struct {
 	Log                  telegraf.Logger   `toml:"-"`
 
 	document dataDocument
+	timeFunc func() time.Time
 }
 
 type Config struct {
@@ -78,6 +79,14 @@ type Config struct {
 	FieldsHexFilter    filter.Filter
 	FieldsBase64Filter filter.Filter
 	Location           *time.Location
+}
+
+func (p *Parser) SetDefaultTags(tags map[string]string) {
+	p.DefaultTags = tags
+}
+
+func (p *Parser) SetTimeFunc(f func() time.Time) {
+	p.timeFunc = f
 }
 
 func (p *Parser) Init() error {
@@ -146,11 +155,15 @@ func (p *Parser) Init() error {
 		p.Configs[i] = cfg
 	}
 
+	if p.timeFunc == nil {
+		p.timeFunc = time.Now
+	}
+
 	return nil
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	t := time.Now()
+	t := p.timeFunc()
 
 	// Parse the XML
 	doc, err := p.document.Parse(buf)
@@ -202,10 +215,6 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	default:
 		return metrics[0], fmt.Errorf("cannot parse line with multiple (%d) metrics", len(metrics))
 	}
-}
-
-func (p *Parser) SetDefaultTags(tags map[string]string) {
-	p.DefaultTags = tags
 }
 
 func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, cfg Config) (telegraf.Metric, error) {

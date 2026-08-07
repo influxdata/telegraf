@@ -218,6 +218,8 @@ func (c *configurationPerMetric) process() (map[byte]requestSet, error) {
 				params.maxBatchSize = maxQuantityCoils
 				if c.workarounds.OnRequestPerField {
 					params.maxBatchSize = 1
+				} else if c.workarounds.MaxBitRegistersPerRequest > 0 {
+					params.maxBatchSize = c.workarounds.MaxBitRegistersPerRequest
 				}
 				params.enforceFromZero = c.workarounds.ReadCoilsStartingAtZero
 				requests := groupFieldsToRequests(fields, params)
@@ -226,6 +228,8 @@ func (c *configurationPerMetric) process() (map[byte]requestSet, error) {
 				params.maxBatchSize = maxQuantityDiscreteInput
 				if c.workarounds.OnRequestPerField {
 					params.maxBatchSize = 1
+				} else if c.workarounds.MaxBitRegistersPerRequest > 0 {
+					params.maxBatchSize = c.workarounds.MaxBitRegistersPerRequest
 				}
 				requests := groupFieldsToRequests(fields, params)
 				set.discrete = append(set.discrete, requests...)
@@ -233,6 +237,8 @@ func (c *configurationPerMetric) process() (map[byte]requestSet, error) {
 				params.maxBatchSize = maxQuantityHoldingRegisters
 				if c.workarounds.OnRequestPerField {
 					params.maxBatchSize = 1
+				} else if c.workarounds.MaxWordRegistersPerRequest > 0 {
+					params.maxBatchSize = c.workarounds.MaxWordRegistersPerRequest
 				}
 				requests := groupFieldsToRequests(fields, params)
 				set.holding = append(set.holding, requests...)
@@ -240,6 +246,8 @@ func (c *configurationPerMetric) process() (map[byte]requestSet, error) {
 				params.maxBatchSize = maxQuantityInputRegisters
 				if c.workarounds.OnRequestPerField {
 					params.maxBatchSize = 1
+				} else if c.workarounds.MaxWordRegistersPerRequest > 0 {
+					params.maxBatchSize = c.workarounds.MaxWordRegistersPerRequest
 				}
 				requests := groupFieldsToRequests(fields, params)
 				set.input = append(set.input, requests...)

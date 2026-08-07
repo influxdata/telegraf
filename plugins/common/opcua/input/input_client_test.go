@@ -48,7 +48,7 @@ func TestValidateOPCTags(t *testing.T) {
 					},
 				},
 			},
-			errors.New(`name "fn" is duplicated (metric name "mn", tags "t1=v1, t2=v2")`),
+			errors.New(`name "fn" is duplicated (metric name "mn", tags "id=ns=2;s=i1, t1=v1, t2=v2")`),
 		},
 		{
 			"empty tag value not allowed",
@@ -184,6 +184,33 @@ func TestValidateOPCTags(t *testing.T) {
 			},
 			nil,
 		},
+		{
+			"same field name different node IDs",
+			InputClientConfig{
+				MetricName: "opcua",
+				RootNodes: []NodeSettings{
+					{
+						FieldName:      "breaker_amps",
+						Namespace:      "2",
+						IdentifierType: "s",
+						Identifier:     "AmpA/Value",
+					},
+					{
+						FieldName:      "breaker_amps",
+						Namespace:      "2",
+						IdentifierType: "s",
+						Identifier:     "AmpB/Value",
+					},
+					{
+						FieldName:      "breaker_amps",
+						Namespace:      "2",
+						IdentifierType: "s",
+						Identifier:     "AmpC/Value",
+					},
+				},
+			},
+			nil,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -289,6 +316,7 @@ func TestNewNodeMetricMappingIdStrInstantiated(t *testing.T) {
 }
 
 func TestValidateNodeToAdd(t *testing.T) {
+	//nolint:prealloc // do not preallocate for code cleanliness
 	tests := []struct {
 		name     string
 		existing map[metricParts]struct{}
@@ -373,7 +401,7 @@ func TestValidateNodeToAdd(t *testing.T) {
 		{
 			name: "duplicate metric not allowed",
 			existing: map[metricParts]struct{}{
-				{metricName: "testmetric", fieldName: "f", tags: "t1=v1, t2=v2"}: {},
+				{metricName: "testmetric", fieldName: "f", tags: "id=ns=2;s=hf, t1=v1, t2=v2"}: {},
 			},
 			nmm: func() *NodeMetricMapping {
 				nmm, err := NewNodeMetricMapping("testmetric", NodeSettings{
@@ -386,7 +414,7 @@ func TestValidateNodeToAdd(t *testing.T) {
 				require.NoError(t, err)
 				return nmm
 			}(),
-			err: errors.New(`name "f" is duplicated (metric name "testmetric", tags "t1=v1, t2=v2")`),
+			err: errors.New(`name "f" is duplicated (metric name "testmetric", tags "id=ns=2;s=hf, t1=v1, t2=v2")`),
 		},
 		{
 			name:     "identifier type mismatch",
@@ -693,7 +721,8 @@ func TestMetricForNode(t *testing.T) {
 	require.NoError(t, err)
 	o := OpcUAInputClient{
 		Config: InputClientConfig{
-			Timestamp: TimestampSourceSource,
+			Timestamp:       TimestampSourceSource,
+			TimestampFormat: time.RFC3339Nano,
 		},
 		OpcUAClient:      c,
 		Log:              testutil.Logger{},
@@ -755,6 +784,86 @@ func TestMetricForNode(t *testing.T) {
 				time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{})),
 		},
 		{
+			testname: "byte array metric build correctly",
+			nmm: []NodeMetricMapping{
+				{
+					Tag: NodeSettings{
+						FieldName: "fn",
+					},
+					idStr:      "ns=3;s=hi",
+					metricName: "testingmetric",
+					MetricTags: map[string]string{"t1": "v1"},
+				},
+			},
+			v:        ua.ByteArray{0x01, 0x02},
+			isArray:  true,
+			dataType: ua.TypeIDByte,
+			time:     time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{}),
+			status:   ua.StatusOK,
+			expected: metric.New("testingmetric",
+				map[string]string{"t1": "v1", "id": "ns=3;s=hi"},
+				map[string]interface{}{"Quality": "The operation succeeded. StatusGood (0x0)", "fn[0]": byte(1), "fn[1]": byte(2)},
+				time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{})),
+		},
+		{
+			testname: "datetime array metric build correctly",
+			nmm: []NodeMetricMapping{
+				{
+					Tag: NodeSettings{
+						FieldName: "fn",
+					},
+					idStr:      "ns=3;s=hi",
+					metricName: "testingmetric",
+					MetricTags: map[string]string{"t1": "v1"},
+				},
+			},
+			v: []time.Time{
+				time.Date(2022, 3, 17, 8, 55, 0, 0, time.UTC),
+				time.Date(2022, 3, 17, 8, 56, 0, 0, time.UTC),
+			},
+			isArray:  true,
+			dataType: ua.TypeIDDateTime,
+			time:     time.Date(2022, 3, 17, 8, 55, 0, 0, &time.Location{}),
+			status:   ua.StatusOK,
+			expected: metric.New("testingmetric",
+				map[string]string{"t1": "v1", "id": "ns=3;s=hi"},
+				map[string]interface{}{
+					"Quality": "The operation succeeded. StatusGood (0x0)",
+					"fn[0]":   "2022-03-17T08:55:00Z",
+					"fn[1]":   "2022-03-17T08:56:00Z",
+				},
+				time.Date(2022, 3, 17, 8, 55, 0, 0, &time.Location{})),
+		},
+		{
+			testname: "datetime array preserves timezone",
+			nmm: []NodeMetricMapping{
+				{
+					Tag: NodeSettings{
+						FieldName: "fn",
+					},
+					idStr:      "ns=3;s=hi",
+					metricName: "testingmetric",
+					MetricTags: map[string]string{"t1": "v1"},
+				},
+			},
+			v: []time.Time{
+				time.Date(2022, 3, 17, 8, 55, 0, 0, time.FixedZone("EST", -5*3600)),
+				time.Date(2022, 3, 17, 8, 56, 0, 0, time.FixedZone("EST", -5*3600)),
+			},
+			isArray:  true,
+			dataType: ua.TypeIDDateTime,
+			time:     time.Date(2022, 3, 17, 8, 55, 0, 0, &time.Location{}),
+			status:   ua.StatusOK,
+			expected: metric.New("testingmetric",
+				map[string]string{"t1": "v1", "id": "ns=3;s=hi"},
+				map[string]interface{}{
+					"Quality": "The operation succeeded. StatusGood (0x0)",
+					"fn[0]":   "2022-03-17T08:55:00-05:00",
+					"fn[1]":   "2022-03-17T08:56:00-05:00",
+				},
+				time.Date(2022, 3, 17, 8, 55, 0, 0, &time.Location{})),
+		},
+		{
 			testname: "nil does not panic",
 			nmm: []NodeMetricMapping{
 				{
@@ -790,6 +899,197 @@ func TestMetricForNode(t *testing.T) {
 			require.Equal(t, tt.expected.Tags(), actual.Tags())
 			require.Equal(t, tt.expected.Fields(), actual.Fields())
 			require.Equal(t, tt.expected.Time(), actual.Time())
+		})
+	}
+}
+
+func TestMetricForEvent(t *testing.T) {
+	now := time.Date(2026, 2, 23, 8, 44, 15, 0, time.UTC)
+	conf := &opcua.OpcUAClientConfig{
+		Endpoint:       "opc.tcp://localhost:4862",
+		SecurityPolicy: "None",
+		SecurityMode:   "None",
+		ConnectTimeout: config.Duration(2 * time.Second),
+		RequestTimeout: config.Duration(2 * time.Second),
+	}
+	c, err := conf.CreateClient(testutil.Logger{})
+	require.NoError(t, err)
+
+	tests := []struct {
+		name     string
+		config   InputClientConfig
+		mapping  []EventNodeMetricMapping
+		event    *ua.EventFieldList
+		expected telegraf.Metric
+	}{
+		{
+			name: "all fields nil returns nil",
+			config: InputClientConfig{
+				OpcUAClientConfig: *conf,
+				Timestamp:         TimestampSourceTelegraf,
+			},
+			mapping: []EventNodeMetricMapping{
+				{
+					NodeID:        ua.NewNumericNodeID(0, 2253),
+					EventTypeNode: ua.NewNumericNodeID(2, 1003),
+					Fields:        []string{"EventId", "Message", "Severity"},
+				},
+			},
+			event: &ua.EventFieldList{
+				ClientHandle: 0,
+				EventFields:  []*ua.Variant{ua.MustVariant(nil), ua.MustVariant(nil), ua.MustVariant(nil)},
+			},
+			expected: nil,
+		},
+		{
+			name: "fields with values",
+			config: InputClientConfig{
+				OpcUAClientConfig: *conf,
+				Timestamp:         TimestampSourceTelegraf,
+			},
+			mapping: []EventNodeMetricMapping{
+				{
+					NodeID:        ua.NewNumericNodeID(0, 2253),
+					EventTypeNode: ua.NewNumericNodeID(0, 2041),
+					Fields:        []string{"Severity", "SourceName"},
+				},
+			},
+			event: &ua.EventFieldList{
+				ClientHandle: 0,
+				EventFields: []*ua.Variant{
+					ua.MustVariant(uint16(500)),
+					ua.MustVariant("TestSource"),
+				},
+			},
+			expected: metric.New("opcua_event",
+				map[string]string{"node_id": "i=2253", "source": "opc.tcp://localhost:4862"},
+				map[string]interface{}{"Severity": uint16(500), "SourceName": "TestSource"},
+				time.Time{},
+			),
+		},
+		{
+			name: "source timestamp from event Time field",
+			config: InputClientConfig{
+				OpcUAClientConfig: *conf,
+				Timestamp:         TimestampSourceSource,
+			},
+			mapping: []EventNodeMetricMapping{
+				{
+					NodeID:        ua.NewNumericNodeID(0, 2253),
+					EventTypeNode: ua.NewNumericNodeID(0, 2041),
+					Fields:        []string{"Time", "Severity"},
+				},
+			},
+			event: &ua.EventFieldList{
+				ClientHandle: 0,
+				EventFields: []*ua.Variant{
+					ua.MustVariant(now),
+					ua.MustVariant(uint16(100)),
+				},
+			},
+			expected: metric.New("opcua_event",
+				map[string]string{"node_id": "i=2253", "source": "opc.tcp://localhost:4862"},
+				map[string]interface{}{"Time": now.Format(time.RFC3339), "Severity": uint16(100)},
+				now,
+			),
+		},
+		{
+			name: "server timestamp from event ReceiveTime field",
+			config: InputClientConfig{
+				OpcUAClientConfig: *conf,
+				Timestamp:         TimestampSourceServer,
+			},
+			mapping: []EventNodeMetricMapping{
+				{
+					NodeID:        ua.NewNumericNodeID(0, 2253),
+					EventTypeNode: ua.NewNumericNodeID(0, 2041),
+					Fields:        []string{"ReceiveTime", "Severity"},
+				},
+			},
+			event: &ua.EventFieldList{
+				ClientHandle: 0,
+				EventFields: []*ua.Variant{
+					ua.MustVariant(now),
+					ua.MustVariant(uint16(200)),
+				},
+			},
+			expected: metric.New("opcua_event",
+				map[string]string{"node_id": "i=2253", "source": "opc.tcp://localhost:4862"},
+				map[string]interface{}{"ReceiveTime": now.Format(time.RFC3339), "Severity": uint16(200)},
+				now,
+			),
+		},
+		{
+			name: "localized text field",
+			config: InputClientConfig{
+				OpcUAClientConfig: *conf,
+				Timestamp:         TimestampSourceTelegraf,
+			},
+			mapping: []EventNodeMetricMapping{
+				{
+					NodeID:        ua.NewNumericNodeID(0, 2253),
+					EventTypeNode: ua.NewNumericNodeID(0, 2041),
+					Fields:        []string{"Message"},
+				},
+			},
+			event: &ua.EventFieldList{
+				ClientHandle: 0,
+				EventFields: []*ua.Variant{
+					ua.MustVariant(&ua.LocalizedText{Text: "Alarm triggered"}),
+				},
+			},
+			expected: metric.New("opcua_event",
+				map[string]string{"node_id": "i=2253", "source": "opc.tcp://localhost:4862"},
+				map[string]interface{}{"Message": "Alarm triggered"},
+				time.Time{},
+			),
+		},
+		{
+			name: "source timestamp falls back to now when Time field absent",
+			config: InputClientConfig{
+				OpcUAClientConfig: *conf,
+				Timestamp:         TimestampSourceSource,
+			},
+			mapping: []EventNodeMetricMapping{
+				{
+					NodeID:        ua.NewNumericNodeID(0, 2253),
+					EventTypeNode: ua.NewNumericNodeID(0, 2041),
+					Fields:        []string{"Severity"},
+				},
+			},
+			event: &ua.EventFieldList{
+				ClientHandle: 0,
+				EventFields: []*ua.Variant{
+					ua.MustVariant(uint16(300)),
+				},
+			},
+			expected: metric.New("opcua_event",
+				map[string]string{"node_id": "i=2253", "source": "opc.tcp://localhost:4862"},
+				map[string]interface{}{"Severity": uint16(300)},
+				time.Time{},
+			),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			o := OpcUAInputClient{
+				OpcUAClient:            c,
+				Config:                 tt.config,
+				Log:                    testutil.Logger{},
+				EventNodeMetricMapping: tt.mapping,
+			}
+			actual := o.MetricForEvent(0, tt.event)
+			if tt.expected == nil {
+				require.Nil(t, actual)
+				return
+			}
+			require.NotNil(t, actual)
+			require.Equal(t, tt.expected.Tags(), actual.Tags())
+			require.Equal(t, tt.expected.Fields(), actual.Fields())
+			if !tt.expected.Time().IsZero() {
+				require.Equal(t, tt.expected.Time(), actual.Time())
+			}
 		})
 	}
 }
@@ -846,12 +1146,18 @@ func TestNodeIDGeneration(t *testing.T) {
 			},
 			expected: "nsu=http://vendor.com/;g=12345678-1234-1234-1234-123456789012",
 		},
+		{
+			name: "direct string takes precedence",
+			node: NodeSettings{
+				NodeIDStr: "ns=5;s=MyNode",
+			},
+			expected: "ns=5;s=MyNode",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := tt.node.NodeID()
-			require.Equal(t, tt.expected, actual)
+			require.Equal(t, tt.expected, tt.node.NodeID())
 		})
 	}
 }
@@ -881,12 +1187,18 @@ func TestEventNodeIDGeneration(t *testing.T) {
 			},
 			expected: "nsu=http://opcfoundation.org/UA/;i=2253",
 		},
+		{
+			name: "direct string takes precedence",
+			node: EventNodeSettings{
+				NodeIDStr: "ns=2;s=EventSource",
+			},
+			expected: "ns=2;s=EventSource",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := tt.node.NodeID()
-			require.Equal(t, tt.expected, actual)
+			require.Equal(t, tt.expected, tt.node.NodeID())
 		})
 	}
 }
@@ -1015,4 +1327,247 @@ func TestEventGroupNamespaceURIInheritance(t *testing.T) {
 	// Second node should use its own namespace_uri
 	require.Equal(t, "http://custom.org/UA/", eventGroup.NodeIDSettings[1].NamespaceURI)
 	require.Equal(t, "nsu=http://custom.org/UA/;i=2254", eventGroup.NodeIDSettings[1].NodeID())
+}
+
+func TestValidateOPCTagsWithNodeID(t *testing.T) {
+	tests := []struct {
+		name   string
+		config InputClientConfig
+	}{
+		{
+			name: "valid config with node_id string",
+			config: InputClientConfig{
+				MetricName: "opcua",
+				RootNodes: []NodeSettings{
+					{FieldName: "ProductUri", NodeIDStr: "ns=0;i=2262"},
+					{FieldName: "ServerState", NodeIDStr: "ns=0;i=2259"},
+				},
+			},
+		},
+		{
+			name: "mixed config with node_id and individual fields",
+			config: InputClientConfig{
+				MetricName: "opcua",
+				RootNodes: []NodeSettings{
+					{FieldName: "ProductUri", NodeIDStr: "ns=0;i=2262"},
+					{FieldName: "Temperature", Namespace: "2", IdentifierType: "s", Identifier: "Temp"},
+				},
+			},
+		},
+		{
+			name: "node_id with namespace URI",
+			config: InputClientConfig{
+				MetricName: "opcua",
+				RootNodes: []NodeSettings{
+					{FieldName: "ProductUri", NodeIDStr: "nsu=http://opcfoundation.org/UA/;i=2262"},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			o := OpcUAInputClient{
+				Config: tt.config,
+				Log:    testutil.Logger{},
+			}
+			require.NoError(t, o.InitNodeMetricMapping())
+		})
+	}
+}
+
+func TestValidateOPCTagsWithNodeIDError(t *testing.T) {
+	tests := []struct {
+		name        string
+		config      InputClientConfig
+		expectedErr string
+	}{
+		{
+			name: "conflict between node_id and individual fields",
+			config: InputClientConfig{
+				MetricName: "opcua",
+				RootNodes: []NodeSettings{
+					{FieldName: "Conflict", NodeIDStr: "ns=0;i=2262", Namespace: "1"},
+				},
+			},
+			expectedErr: "cannot specify both 'id' and individual fields",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			o := OpcUAInputClient{
+				Config: tt.config,
+				Log:    testutil.Logger{},
+			}
+			require.ErrorContains(t, o.InitNodeMetricMapping(), tt.expectedErr)
+		})
+	}
+}
+
+func TestNodeGroupWithNodeIDString(t *testing.T) {
+	cfg := InputClientConfig{
+		MetricName: "opcua",
+		Groups: []NodeGroupSettings{
+			{
+				MetricName: "group1",
+				Nodes: []NodeSettings{
+					{FieldName: "Node1", NodeIDStr: "ns=2;s=Device.Temp"},
+					{FieldName: "Node2", NodeIDStr: "nsu=http://example.org/;i=100"},
+				},
+			},
+		},
+	}
+
+	o := OpcUAInputClient{
+		Config: cfg,
+		Log:    testutil.Logger{},
+	}
+	require.NoError(t, o.InitNodeMetricMapping())
+	require.Len(t, o.NodeMetricMapping, 2)
+
+	// Verify nodes use string directly (no decomposition into individual fields)
+	require.Equal(t, "ns=2;s=Device.Temp", o.NodeMetricMapping[0].Tag.NodeID())
+	require.Equal(t, "nsu=http://example.org/;i=100", o.NodeMetricMapping[1].Tag.NodeID())
+}
+
+func TestEventGroupWithNodeIDString(t *testing.T) {
+	eventGroup := EventGroupSettings{
+		EventTypeNode: EventNodeSettings{
+			NodeIDStr: "ns=0;i=2041",
+		},
+		NodeIDSettings: []EventNodeSettings{
+			{NodeIDStr: "ns=2;s=EventSource1"},
+			{NodeIDStr: "nsu=http://example.org/;i=200"},
+		},
+		Fields: []string{"Severity", "Message"},
+	}
+
+	eventGroup.UpdateNodeIDSettings()
+
+	// Verify nodes use string directly (no decomposition into individual fields)
+	require.Equal(t, "ns=0;i=2041", eventGroup.EventTypeNode.NodeID())
+	require.Equal(t, "ns=2;s=EventSource1", eventGroup.NodeIDSettings[0].NodeID())
+	require.Equal(t, "nsu=http://example.org/;i=200", eventGroup.NodeIDSettings[1].NodeID())
+}
+
+func TestParseBrowsePath(t *testing.T) {
+	tests := []struct {
+		name     string
+		field    string
+		expected []*ua.QualifiedName
+	}{
+		{
+			name:  "simple field",
+			field: "Severity",
+			expected: []*ua.QualifiedName{
+				{NamespaceIndex: 0, Name: "Severity"},
+			},
+		},
+		{
+			name:  "namespace qualified field",
+			field: "2:TEXT01",
+			expected: []*ua.QualifiedName{
+				{NamespaceIndex: 2, Name: "TEXT01"},
+			},
+		},
+		{
+			name:  "nested browse path",
+			field: "AckedState/Id",
+			expected: []*ua.QualifiedName{
+				{NamespaceIndex: 0, Name: "AckedState"},
+				{NamespaceIndex: 0, Name: "Id"},
+			},
+		},
+		{
+			name:  "namespace qualified nested path",
+			field: "2:AckedState/0:Id",
+			expected: []*ua.QualifiedName{
+				{NamespaceIndex: 2, Name: "AckedState"},
+				{NamespaceIndex: 0, Name: "Id"},
+			},
+		},
+		{
+			name:  "non-numeric prefix treated as name",
+			field: "abc:def",
+			expected: []*ua.QualifiedName{
+				{NamespaceIndex: 0, Name: "abc:def"},
+			},
+		},
+		{
+			name:  "namespace zero explicit",
+			field: "0:Message",
+			expected: []*ua.QualifiedName{
+				{NamespaceIndex: 0, Name: "Message"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := parseBrowsePath(tt.field)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestParseBrowsePathError(t *testing.T) {
+	tests := []struct {
+		name    string
+		field   string
+		errText string
+	}{
+		{
+			name:    "empty string",
+			field:   "",
+			errText: "empty segment",
+		},
+		{
+			name:    "leading slash",
+			field:   "/Severity",
+			errText: "empty segment",
+		},
+		{
+			name:    "trailing slash",
+			field:   "Severity/",
+			errText: "empty segment",
+		},
+		{
+			name:    "double slash",
+			field:   "AckedState//Id",
+			errText: "empty segment",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := parseBrowsePath(tt.field)
+			require.ErrorContains(t, err, tt.errText)
+		})
+	}
+}
+
+func TestCreateSelectClausesWithNamespacedFields(t *testing.T) {
+	node := &EventNodeMetricMapping{
+		EventTypeNode: ua.NewNumericNodeID(0, 2041),
+		Fields:        []string{"Severity", "2:TEXT01", "AckedState/Id"},
+	}
+
+	selects, err := node.createSelectClauses()
+	require.NoError(t, err)
+	require.Len(t, selects, 3)
+
+	require.Equal(t, []*ua.QualifiedName{
+		{NamespaceIndex: 0, Name: "Severity"},
+	}, selects[0].BrowsePath)
+
+	require.Equal(t, []*ua.QualifiedName{
+		{NamespaceIndex: 2, Name: "TEXT01"},
+	}, selects[1].BrowsePath)
+
+	require.Equal(t, []*ua.QualifiedName{
+		{NamespaceIndex: 0, Name: "AckedState"},
+		{NamespaceIndex: 0, Name: "Id"},
+	}, selects[2].BrowsePath)
 }

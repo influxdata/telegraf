@@ -49,6 +49,7 @@ func TestWireguard_gatherDevicePeerMetrics(t *testing.T) {
 	}
 	peer := wgtypes.Peer{
 		PublicKey:                   pubkey,
+		Endpoint:                    &net.UDPAddr{IP: net.IPv4(192, 168, 1, 100), Port: 51820},
 		PersistentKeepaliveInterval: 1 * time.Minute,
 		LastHandshakeTime:           time.Unix(100, 0),
 		ReceiveBytes:                int64(40),
@@ -61,6 +62,7 @@ func TestWireguard_gatherDevicePeerMetrics(t *testing.T) {
 		"protocol_version":                 0,
 		"allowed_ips":                      2,
 		"allowed_peer_cidr":                "<nil>,<nil>",
+		"endpoint":                         "192.168.1.100:51820",
 	}
 	expectGauges := map[string]interface{}{
 		"last_handshake_time_ns": int64(100000000000),
@@ -75,7 +77,7 @@ func TestWireguard_gatherDevicePeerMetrics(t *testing.T) {
 	var acc testutil.Accumulator
 	gatherDevicePeerMetrics(&acc, device, peer)
 
-	require.Equal(t, 7, acc.NFields())
+	require.Equal(t, 8, acc.NFields())
 	acc.AssertDoesNotContainMeasurement(t, measurementDevice)
 	acc.AssertContainsTaggedFields(t, measurementPeer, expectFields, expectTags)
 	acc.AssertContainsTaggedFields(t, measurementPeer, expectGauges, expectTags)
@@ -133,13 +135,10 @@ func TestWireguard_allowedPeerCIDR(t *testing.T) {
 				"allowed_ips":                      len(tc.allowedIPs),
 				"allowed_peer_cidr":                tc.allowedPeerCidr,
 			}
-			_ = map[string]string{
-				"device":     "wg0",
-				"public_key": pubkey.String(),
-			}
 
 			var acc testutil.Accumulator
 			gatherDevicePeerMetrics(&acc, device, peer)
+			require.Equal(t, 7, acc.NFields())
 			acc.AssertDoesNotContainMeasurement(t, measurementDevice)
 			acc.AssertContainsFields(t, measurementPeer, expectFields)
 		})

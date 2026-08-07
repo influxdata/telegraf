@@ -17,7 +17,7 @@ func TestSimple(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	plugin.Add(
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"cpu": "cpu0",
@@ -29,7 +29,7 @@ func TestSimple(t *testing.T) {
 		),
 	)
 	plugin.Add(
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"cpu": "cpu0",
@@ -45,7 +45,7 @@ func TestSimple(t *testing.T) {
 	plugin.Push(&acc)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"cpu": "cpu0",
@@ -66,7 +66,7 @@ func TestNanosecondPrecision(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	plugin.Add(
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"cpu": "cpu0",
@@ -79,7 +79,7 @@ func TestNanosecondPrecision(t *testing.T) {
 	)
 
 	plugin.Add(
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"cpu": "cpu0",
@@ -96,7 +96,7 @@ func TestNanosecondPrecision(t *testing.T) {
 	plugin.Push(&acc)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"cpu": "cpu0",
@@ -117,7 +117,7 @@ func TestNoRounding(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	plugin.Add(
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"cpu": "cpu0",
@@ -130,7 +130,7 @@ func TestNoRounding(t *testing.T) {
 	)
 
 	plugin.Add(
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"cpu": "cpu0",
@@ -147,7 +147,7 @@ func TestNoRounding(t *testing.T) {
 	plugin.Push(&acc)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"cpu": "cpu0",
@@ -157,7 +157,7 @@ func TestNoRounding(t *testing.T) {
 			},
 			time.Unix(0, 1),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"cpu": "cpu0",
@@ -177,7 +177,7 @@ func TestWithRounding(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	plugin.Add(
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"cpu": "cpu0",
@@ -190,7 +190,7 @@ func TestWithRounding(t *testing.T) {
 	)
 
 	plugin.Add(
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"cpu": "cpu0",
@@ -207,7 +207,7 @@ func TestWithRounding(t *testing.T) {
 	plugin.Push(&acc)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"cpu": "cpu0",
@@ -228,7 +228,7 @@ func TestReset(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	plugin.Add(
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"cpu": "cpu0",
@@ -246,7 +246,7 @@ func TestReset(t *testing.T) {
 	plugin.Reset()
 
 	plugin.Add(
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"cpu": "cpu0",
@@ -261,7 +261,7 @@ func TestReset(t *testing.T) {
 	plugin.Push(&acc)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"cpu": "cpu0",
@@ -271,7 +271,7 @@ func TestReset(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"cpu": "cpu0",

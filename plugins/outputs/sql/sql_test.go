@@ -6,10 +6,11 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -144,6 +145,281 @@ var (
 	}
 )
 
+func TestOracleIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	password := testutil.GetRandomString(30) // oracle max pw size is 30 bytes
+
+	servicePort := "1521"
+	container := testutil.Container{
+		Image: "gvenzl/oracle-free:latest",
+		Env: map[string]string{
+			"ORACLE_PASSWORD": password,
+		},
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(servicePort),
+			wait.ForLog("DATABASE IS READY TO USE"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	address := config.NewSecret([]byte(fmt.Sprintf("oracle://system:%s@%s:%s/FREEPDB1",
+		password, container.Address, container.Ports[servicePort],
+	)))
+	p := &SQL{
+		Driver:            "oracle",
+		DataSourceName:    address,
+		Convert:           defaultConvert,
+		TimestampColumn:   "timestamp",
+		ConnectionMaxIdle: 2,
+		Log:               testutil.Logger{},
+	}
+
+	p.Convert.Integer = "NUMBER(38)"
+	p.Convert.Real = "NUMBER"
+	p.Convert.Text = "VARCHAR2(4000)"
+	p.Convert.Timestamp = "TIMESTAMP"
+	p.Convert.Defaultvalue = "VARCHAR2(4000)"
+	p.Convert.Bool = "BOOLEAN"
+	p.Convert.Unsigned = ""
+
+	require.NoError(t, p.Init())
+	require.NoError(t, p.Connect())
+	require.NoError(t, p.Write(testMetrics))
+
+	tableMap := map[string]string{
+		"metric_one":   "./testdata/oracle/expected_metric_one.sql",
+		"metric_two":   "./testdata/oracle/expected_metric_two.sql",
+		"metric three": "./testdata/oracle/expected_metric_three.sql",
+	}
+
+	for resTable, expectedTableQuery := range tableMap {
+		query, err := os.ReadFile(expectedTableQuery)
+		require.NoError(t, err, "failed to read expected sql table generation file!")
+		sqlStmts := strings.SplitSeq(string(query), ";")
+
+		for stmt := range sqlStmts {
+			// Handles white space after final statement in sql file
+			if strings.TrimSpace(stmt) == "" {
+				continue
+			}
+			_, err = p.db.Exec(stmt)
+			require.NoError(t, err, "error building expected results table!")
+		}
+
+		expectedTable := "expected_" + resTable
+
+		var schemeCount int32
+		resColumns := fmt.Sprintf(`SELECT column_name, data_type, data_precision, data_scale, data_length 
+			FROM USER_TAB_COLUMNS WHERE table_name = '%s'`, resTable)
+		expectedColumns := fmt.Sprintf(`SELECT column_name, data_type, data_precision, data_scale, data_length 
+			FROM USER_TAB_COLUMNS WHERE table_name = '%s'`, expectedTable)
+		//nolint:gosec // linter doesnt like due to security; no risk of injection so is fine
+		emptyTable := fmt.Sprintf(`SELECT COUNT(*) FROM ((%s MINUS %s) UNION (%s MINUS %s)) countdiff`,
+			resColumns, expectedColumns, expectedColumns, resColumns,
+		)
+		err = p.db.QueryRow(emptyTable).Scan(&schemeCount)
+
+		require.NoError(t, err, "Error in table difference query!")
+		require.Zero(t, schemeCount, "There are mismatching rows! Tables do not share the same schema")
+
+		var rowCount int32
+		resQuery := fmt.Sprintf(`SELECT * FROM %q`, resTable)
+		expectedQuery := fmt.Sprintf(`SELECT * FROM %q`, expectedTable)
+		//nolint:gosec // linter doesnt like due to security; no risk of injection so is fine
+		emptyInsertion := fmt.Sprintf("SELECT COUNT(*) FROM ((%s MINUS %s) UNION (%s MINUS %s)) countdiff",
+			resQuery, expectedQuery, expectedQuery, resQuery,
+		)
+		err = p.db.QueryRow(emptyInsertion).Scan(&rowCount)
+
+		require.NoError(t, err, "Error in row difference query!")
+		require.Zero(t, rowCount, "There are mismatching rows! Rows do not share the same data!")
+	}
+}
+
+func TestOracleUpdateSchemeIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	password := testutil.GetRandomString(30) // oracle max pw size is 30 bytes
+
+	servicePort := "1521"
+	container := testutil.Container{
+		Image: "gvenzl/oracle-free:latest",
+		Env: map[string]string{
+			"ORACLE_PASSWORD": password,
+		},
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(servicePort),
+			wait.ForLog("DATABASE IS READY TO USE"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	address := config.NewSecret([]byte(fmt.Sprintf("oracle://system:%s@%s:%s/FREEPDB1",
+		password, container.Address, container.Ports[servicePort],
+	)))
+	p := &SQL{
+		Driver:              "oracle",
+		DataSourceName:      address,
+		Convert:             defaultConvert,
+		TimestampColumn:     "timestamp",
+		ConnectionMaxIdle:   2,
+		TableUpdateTemplate: "ALTER TABLE {TABLE} ADD {COLUMN}",
+		Log:                 testutil.Logger{},
+	}
+
+	p.Convert.Integer = "NUMBER(38)"
+	p.Convert.Real = "NUMBER"
+	p.Convert.Text = "VARCHAR2(4000)"
+	p.Convert.Timestamp = "TIMESTAMP"
+	p.Convert.Defaultvalue = "VARCHAR2(4000)"
+	p.Convert.Bool = "BOOLEAN"
+	p.Convert.Unsigned = ""
+
+	require.NoError(t, p.Init())
+	require.NoError(t, p.Connect())
+	require.NoError(t, p.Write(testMetrics))
+	require.NoError(t, p.Write(postCreateMetrics))
+
+	query, err := os.ReadFile("./testdata/oracle/updatetable/expected_metric_one.sql")
+	require.NoError(t, err, "failed to read expected sql table generation file!")
+	sqlStmts := strings.SplitSeq(string(query), ";")
+
+	for stmt := range sqlStmts {
+		if strings.TrimSpace(stmt) == "" {
+			continue
+		}
+		_, err = p.db.Exec(stmt)
+		require.NoError(t, err, "error building expected results table!")
+	}
+
+	var schemeCount int32
+	resColumns := `SELECT column_name, data_type, data_precision, data_scale, data_length 
+		FROM USER_TAB_COLUMNS WHERE table_name = 'metric_one'`
+	expectedColumns := `SELECT column_name, data_type, data_precision, data_scale, data_length 
+		FROM USER_TAB_COLUMNS WHERE table_name = 'expected_metric_one'`
+	emptyTable := fmt.Sprintf(`SELECT COUNT(*) FROM ((%s MINUS %s) UNION (%s MINUS %s)) countdiff`,
+		resColumns, expectedColumns, expectedColumns, resColumns,
+	)
+
+	err = p.db.QueryRow(emptyTable).Scan(&schemeCount)
+
+	require.NoError(t, err, "Error in table difference query!")
+	require.Zero(t, schemeCount, "There are mismatching rows! Tables do not share the same schema")
+
+	var rowCount int32
+	resQuery := `SELECT * FROM "metric_one"`
+	expectedQuery := `select * from "expected_metric_one"`
+	emptyInsertion := fmt.Sprintf(`SELECT COUNT(*) FROM ((%s MINUS %s) UNION (%s MINUS %s)) countdiff`,
+		resQuery, expectedQuery, expectedQuery, resQuery,
+	)
+	err = p.db.QueryRow(emptyInsertion).Scan(&rowCount)
+
+	require.NoError(t, err, "Error in row difference query!")
+	require.Zero(t, rowCount, "There are mismatching rows! Rows do not share the same data!")
+}
+
+func TestOracleIntegrationSendBatch(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	password := testutil.GetRandomString(30) // oracle max pw size is 30 bytes
+
+	servicePort := "1521"
+	container := testutil.Container{
+		Image: "gvenzl/oracle-free:latest",
+		Env: map[string]string{
+			"ORACLE_PASSWORD": password,
+		},
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(servicePort),
+			wait.ForLog("DATABASE IS READY TO USE"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	address := config.NewSecret([]byte(fmt.Sprintf("oracle://system:%s@%s:%s/FREEPDB1",
+		password, container.Address, container.Ports[servicePort],
+	)))
+	p := &SQL{
+		Driver:            "oracle",
+		DataSourceName:    address,
+		Convert:           defaultConvert,
+		TimestampColumn:   "timestamp",
+		ConnectionMaxIdle: 2,
+		BatchTx:           true,
+		Log:               testutil.Logger{},
+	}
+
+	p.Convert.Integer = "NUMBER(38)"
+	p.Convert.Real = "NUMBER"
+	p.Convert.Text = "VARCHAR2(4000)"
+	p.Convert.Timestamp = "TIMESTAMP"
+	p.Convert.Defaultvalue = "VARCHAR2(4000)"
+	p.Convert.Bool = "BOOLEAN"
+	p.Convert.Unsigned = ""
+
+	require.NoError(t, p.Init())
+	require.NoError(t, p.Connect())
+	require.NoError(t, p.Write(testMetrics))
+
+	tableMap := map[string]string{
+		"metric_one":   "./testdata/oracle/expected_metric_one.sql",
+		"metric_two":   "./testdata/oracle/expected_metric_two.sql",
+		"metric three": "./testdata/oracle/expected_metric_three.sql",
+	}
+
+	for resTable, expectedTableQuery := range tableMap {
+		query, err := os.ReadFile(expectedTableQuery)
+		require.NoError(t, err, "failed to read expected sql table generation file!")
+		sqlStmts := strings.SplitSeq(string(query), ";")
+
+		for stmt := range sqlStmts {
+			// Handles white space after final statement in sql file
+			if strings.TrimSpace(stmt) == "" {
+				continue
+			}
+			_, err = p.db.Exec(stmt)
+			require.NoError(t, err, "error building expected results table!")
+		}
+		expectedTable := "expected_" + resTable
+
+		var schemeCount int32
+		resColumns := fmt.Sprintf(`SELECT column_name, data_type, data_precision, data_scale, data_length 
+			FROM USER_TAB_COLUMNS WHERE table_name = '%s'`, resTable)
+		expectedColumns := fmt.Sprintf(`SELECT column_name, data_type, data_precision, data_scale, data_length 
+			FROM USER_TAB_COLUMNS WHERE table_name = '%s'`, expectedTable)
+		//nolint:gosec // linter doesnt like due to security; no risk of injection so is fine
+		emptyTable := fmt.Sprintf(`SELECT COUNT(*) FROM ((%s MINUS %s) UNION (%s MINUS %s)) countdiff`,
+			resColumns, expectedColumns, expectedColumns, resColumns,
+		)
+		err = p.db.QueryRow(emptyTable).Scan(&schemeCount)
+
+		require.NoError(t, err, "Error in table difference query!")
+		require.Zero(t, schemeCount, "There are mismatching rows! Tables do not share the same schema")
+
+		var rowCount int32
+		resQuery := fmt.Sprintf(`SELECT * FROM %q`, resTable)
+		expectedQuery := fmt.Sprintf(`SELECT * FROM %q`, expectedTable)
+		//nolint:gosec // linter doesnt like due to security; no risk of injection so is fine
+		emptyInsertion := fmt.Sprintf("SELECT COUNT(*) FROM ((%s MINUS %s) UNION (%s MINUS %s)) countdiff",
+			resQuery, expectedQuery, expectedQuery, resQuery,
+		)
+		err = p.db.QueryRow(emptyInsertion).Scan(&rowCount)
+
+		require.NoError(t, err, "Error in row difference query!")
+		require.Zero(t, rowCount, "There are mismatching rows! Rows do not share the same data!")
+	}
+}
+
 func TestMysqlIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -174,7 +450,7 @@ func TestMysqlIntegration(t *testing.T) {
 		},
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("mariadbd: ready for connections.").WithOccurrence(2),
 		),
 	}
@@ -189,7 +465,6 @@ func TestMysqlIntegration(t *testing.T) {
 		Driver:            "mysql",
 		DataSourceName:    address,
 		Convert:           defaultConvert,
-		InitSQL:           "SET sql_mode='ANSI_QUOTES';",
 		TimestampColumn:   "timestamp",
 		ConnectionMaxIdle: 2,
 		Log:               testutil.Logger{},
@@ -207,6 +482,7 @@ func TestMysqlIntegration(t *testing.T) {
 	for _, fn := range files {
 		expected, err := os.ReadFile(fn)
 		require.NoError(t, err)
+		expected = sanitize(expected, removalMariadb)
 
 		require.Eventually(t, func() bool {
 			rc, out, err := container.Exec([]string{
@@ -220,11 +496,9 @@ func TestMysqlIntegration(t *testing.T) {
 					dbname,
 			})
 			require.NoError(t, err)
-			require.Equal(t, 0, rc)
+			require.Zero(t, rc)
 
-			b, err := io.ReadAll(out)
-			require.NoError(t, err)
-			return bytes.Contains(b, expected)
+			return dumpEquals(t, expected, out, removalMariadb)
 		}, 10*time.Second, 500*time.Millisecond, fn)
 	}
 }
@@ -259,7 +533,7 @@ func TestMysqlUpdateSchemeIntegration(t *testing.T) {
 		},
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("mariadbd: ready for connections.").WithOccurrence(2),
 		),
 	}
@@ -274,7 +548,6 @@ func TestMysqlUpdateSchemeIntegration(t *testing.T) {
 		Driver:              "mysql",
 		DataSourceName:      address,
 		Convert:             defaultConvert,
-		InitSQL:             "SET sql_mode='ANSI_QUOTES';",
 		TimestampColumn:     "timestamp",
 		ConnectionMaxIdle:   2,
 		Log:                 testutil.Logger{},
@@ -303,12 +576,12 @@ func TestMysqlUpdateSchemeIntegration(t *testing.T) {
 					dbname,
 			})
 			require.NoError(t, err)
-			require.Equal(t, 0, rc)
+			require.Zero(t, rc)
 
-			b, err := io.ReadAll(out)
+			dump, err := io.ReadAll(out)
 			require.NoError(t, err)
 
-			return bytes.Contains(b, []byte(column))
+			return bytes.Contains(dump, []byte(column))
 		}, 10*time.Second, 500*time.Millisecond, column)
 	}
 }
@@ -343,7 +616,7 @@ func TestMysqlIntegrationSendBatch(t *testing.T) {
 		},
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("mariadbd: ready for connections.").WithOccurrence(2),
 		),
 	}
@@ -358,7 +631,6 @@ func TestMysqlIntegrationSendBatch(t *testing.T) {
 		Driver:            "mysql",
 		DataSourceName:    address,
 		Convert:           defaultConvert,
-		InitSQL:           "SET sql_mode='ANSI_QUOTES';",
 		TimestampColumn:   "timestamp",
 		ConnectionMaxIdle: 2,
 		Log:               testutil.Logger{},
@@ -377,6 +649,7 @@ func TestMysqlIntegrationSendBatch(t *testing.T) {
 	for _, fn := range files {
 		expected, err := os.ReadFile(fn)
 		require.NoError(t, err)
+		expected = sanitize(expected, removalMariadb)
 
 		require.Eventually(t, func() bool {
 			rc, out, err := container.Exec([]string{
@@ -390,12 +663,9 @@ func TestMysqlIntegrationSendBatch(t *testing.T) {
 					dbname,
 			})
 			require.NoError(t, err)
-			require.Equal(t, 0, rc)
+			require.Zero(t, rc)
 
-			b, err := io.ReadAll(out)
-			require.NoError(t, err)
-
-			return bytes.Contains(b, expected)
+			return dumpEquals(t, expected, out, removalMariadb)
 		}, 10*time.Second, 500*time.Millisecond, fn)
 	}
 }
@@ -429,7 +699,7 @@ func TestPostgresIntegration(t *testing.T) {
 		},
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
 		),
 	}
@@ -461,6 +731,7 @@ func TestPostgresIntegration(t *testing.T) {
 
 	expected, err := os.ReadFile("./testdata/postgres/expected.sql")
 	require.NoError(t, err)
+	expected = sanitize(expected, removalPostgres)
 
 	require.Eventually(t, func() bool {
 		rc, out, err := container.Exec([]string{
@@ -469,21 +740,12 @@ func TestPostgresIntegration(t *testing.T) {
 			"pg_dump" +
 				" --username=" + username +
 				" --no-comments" +
-				" " + dbname +
-				// pg_dump's output has comments that include build info
-				// of postgres and pg_dump. The build info changes with
-				// each release. To prevent these changes from causing the
-				// test to fail, we strip out comments. Also strip out
-				// blank lines.
-				"|grep -E -v '(^--|^$|^SET )'",
+				" " + dbname,
 		})
 		require.NoError(t, err)
-		require.Equal(t, 0, rc)
+		require.Zero(t, rc)
 
-		b, err := io.ReadAll(out)
-		require.NoError(t, err)
-
-		return bytes.Contains(b, expected)
+		return dumpEquals(t, expected, out, removalPostgres)
 	}, 5*time.Second, 500*time.Millisecond)
 }
 
@@ -516,7 +778,7 @@ func TestPostgresUpdateSchemeIntegration(t *testing.T) {
 		},
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
 		),
 	}
@@ -562,21 +824,15 @@ func TestPostgresUpdateSchemeIntegration(t *testing.T) {
 				"pg_dump" +
 					" --username=" + username +
 					" --no-comments" +
-					" " + dbname +
-					// pg_dump's output has comments that include build info
-					// of postgres and pg_dump. The build info changes with
-					// each release. To prevent these changes from causing the
-					// test to fail, we strip out comments. Also strip out
-					// blank lines.
-					"|grep -E -v '(^--|^$|^SET )'",
+					" " + dbname,
 			})
 			require.NoError(t, err)
-			require.Equal(t, 0, rc)
+			require.Zero(t, rc)
 
-			b, err := io.ReadAll(out)
+			dump, err := io.ReadAll(out)
 			require.NoError(t, err)
 
-			return bytes.Contains(b, []byte(column))
+			return bytes.Contains(dump, []byte(column))
 		}, 5*time.Second, 500*time.Millisecond, column)
 	}
 }
@@ -610,7 +866,7 @@ func TestPostgresIntegrationSendBatch(t *testing.T) {
 		},
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
 		),
 	}
@@ -643,6 +899,7 @@ func TestPostgresIntegrationSendBatch(t *testing.T) {
 
 	expected, err := os.ReadFile("./testdata/postgres/expected.sql")
 	require.NoError(t, err)
+	expected = sanitize(expected, removalPostgres)
 
 	require.Eventually(t, func() bool {
 		rc, out, err := container.Exec([]string{
@@ -651,21 +908,12 @@ func TestPostgresIntegrationSendBatch(t *testing.T) {
 			"pg_dump" +
 				" --username=" + username +
 				" --no-comments" +
-				" " + dbname +
-				// pg_dump's output has comments that include build info
-				// of postgres and pg_dump. The build info changes with
-				// each release. To prevent these changes from causing the
-				// test to fail, we strip out comments. Also strip out
-				// blank lines.
-				"|grep -E -v '(^--|^$|^SET )'",
+				" " + dbname,
 		})
 		require.NoError(t, err)
-		require.Equal(t, 0, rc)
+		require.Zero(t, rc)
 
-		b, err := io.ReadAll(out)
-		require.NoError(t, err)
-
-		return bytes.Contains(b, expected)
+		return dumpEquals(t, expected, out, removalPostgres)
 	}, 5*time.Second, 500*time.Millisecond)
 }
 
@@ -703,8 +951,8 @@ func TestClickHouseIntegration(t *testing.T) {
 			"/out": outDir,
 		},
 		WaitingFor: wait.ForAll(
-			wait.NewHTTPStrategy("/").WithPort(nat.Port("8123")),
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.NewHTTPStrategy("/").WithPort("8123"),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("Ready for connections"),
 		),
 	}
@@ -745,8 +993,7 @@ func TestClickHouseIntegration(t *testing.T) {
 	}
 	for _, tc := range cases {
 		require.Eventually(t, func() bool {
-			var out io.Reader
-			_, out, err = container.Exec([]string{
+			rc, out, err := container.Exec([]string{
 				"bash",
 				"-c",
 				"clickhouse-client" +
@@ -757,9 +1004,12 @@ func TestClickHouseIntegration(t *testing.T) {
 					` --query="SELECT * FROM \"` + tc.table + `\"; SHOW CREATE TABLE \"` + tc.table + `\""`,
 			})
 			require.NoError(t, err)
-			b, err := io.ReadAll(out)
+			require.Zero(t, rc)
+
+			dump, err := io.ReadAll(out)
 			require.NoError(t, err)
-			return bytes.Contains(b, []byte(tc.expected))
+
+			return bytes.Contains(dump, []byte(tc.expected))
 		}, 5*time.Second, 500*time.Millisecond)
 	}
 }
@@ -798,8 +1048,8 @@ func TestClickHouseUpdateSchemeIntegration(t *testing.T) {
 			"/out": outDir,
 		},
 		WaitingFor: wait.ForAll(
-			wait.NewHTTPStrategy("/").WithPort(nat.Port("8123")),
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.NewHTTPStrategy("/").WithPort("8123"),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("Ready for connections"),
 		),
 	}
@@ -840,8 +1090,7 @@ func TestClickHouseUpdateSchemeIntegration(t *testing.T) {
 	}
 	for _, column := range fields {
 		require.Eventually(t, func() bool {
-			var out io.Reader
-			_, out, err = container.Exec([]string{
+			rc, out, err := container.Exec([]string{
 				"bash",
 				"-c",
 				"clickhouse-client" +
@@ -852,9 +1101,12 @@ func TestClickHouseUpdateSchemeIntegration(t *testing.T) {
 					` --query="SELECT * FROM "metric_one"; SHOW CREATE TABLE "metric_one""`,
 			})
 			require.NoError(t, err)
-			b, err := io.ReadAll(out)
+			require.Zero(t, rc)
+
+			dump, err := io.ReadAll(out)
 			require.NoError(t, err)
-			return bytes.Contains(b, []byte(column))
+
+			return bytes.Contains(dump, []byte(column))
 		}, 5*time.Second, 500*time.Millisecond, column)
 	}
 }
@@ -945,8 +1197,8 @@ func TestClickHouseIntegrationSendBatch(t *testing.T) {
 			"/out": outDir,
 		},
 		WaitingFor: wait.ForAll(
-			wait.NewHTTPStrategy("/").WithPort(nat.Port("8123")),
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.NewHTTPStrategy("/").WithPort("8123"),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("Ready for connections"),
 		),
 	}
@@ -988,8 +1240,7 @@ func TestClickHouseIntegrationSendBatch(t *testing.T) {
 	}
 	for _, tc := range cases {
 		require.Eventually(t, func() bool {
-			var out io.Reader
-			_, out, err = container.Exec([]string{
+			rc, out, err := container.Exec([]string{
 				"bash",
 				"-c",
 				"clickhouse-client" +
@@ -1000,9 +1251,12 @@ func TestClickHouseIntegrationSendBatch(t *testing.T) {
 					` --query="SELECT * FROM \"` + tc.table + `\"; SHOW CREATE TABLE \"` + tc.table + `\""`,
 			})
 			require.NoError(t, err)
-			b, err := io.ReadAll(out)
+			require.Zero(t, rc)
+
+			dump, err := io.ReadAll(out)
 			require.NoError(t, err)
-			return bytes.Contains(b, []byte(tc.expected))
+
+			return bytes.Contains(dump, []byte(tc.expected))
 		}, 5*time.Second, 500*time.Millisecond)
 	}
 }
@@ -1041,8 +1295,8 @@ func TestClickHousePreExistingTableIntegration(t *testing.T) {
 			"/out": outDir,
 		},
 		WaitingFor: wait.ForAll(
-			wait.NewHTTPStrategy("/").WithPort(nat.Port("8123")),
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.NewHTTPStrategy("/").WithPort("8123"),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("Ready for connections"),
 		),
 	}
@@ -1117,8 +1371,7 @@ func TestClickHousePreExistingTableIntegration(t *testing.T) {
 	// Run the query once and check all columns
 	var columnsOutput []byte
 	require.Eventually(t, func() bool {
-		var out io.Reader
-		_, out, err = container.Exec([]string{
+		rc, out, err := container.Exec([]string{
 			"bash",
 			"-c",
 			"clickhouse-client" +
@@ -1127,13 +1380,11 @@ func TestClickHousePreExistingTableIntegration(t *testing.T) {
 				" --format=TabSeparatedRaw" +
 				" --query=\"DESCRIBE TABLE pre_existing_table\"",
 		})
-		if err != nil {
-			return false
-		}
+		require.NoError(t, err)
+		require.Zero(t, rc)
+
 		columnsOutput, err = io.ReadAll(out)
-		if err != nil {
-			return false
-		}
+		require.NoError(t, err)
 
 		// Check that all expected columns exist
 		for _, column := range expectedColumns {
@@ -1175,7 +1426,7 @@ func TestMysqlEmptyTimestampColumnIntegration(t *testing.T) {
 		},
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("mariadbd: ready for connections.").WithOccurrence(2),
 		),
 	}
@@ -1190,7 +1441,6 @@ func TestMysqlEmptyTimestampColumnIntegration(t *testing.T) {
 		Driver:            "mysql",
 		DataSourceName:    address,
 		Convert:           defaultConvert,
-		InitSQL:           "SET sql_mode='ANSI_QUOTES';",
 		ConnectionMaxIdle: 2,
 		Log:               testutil.Logger{},
 	}
@@ -1207,6 +1457,7 @@ func TestMysqlEmptyTimestampColumnIntegration(t *testing.T) {
 	for _, fn := range files {
 		expected, err := os.ReadFile(fn)
 		require.NoError(t, err)
+		expected = sanitize(expected, removalMariadb)
 
 		require.Eventually(t, func() bool {
 			rc, out, err := container.Exec([]string{
@@ -1219,12 +1470,9 @@ func TestMysqlEmptyTimestampColumnIntegration(t *testing.T) {
 					dbname,
 			})
 			require.NoError(t, err)
-			require.Equal(t, 0, rc)
+			require.Zero(t, rc)
 
-			b, err := io.ReadAll(out)
-			require.NoError(t, err)
-
-			return bytes.Contains(b, expected)
+			return dumpEquals(t, expected, out, removalMariadb)
 		}, 10*time.Second, 500*time.Millisecond, fn)
 	}
 }
@@ -1237,4 +1485,58 @@ func TestTimestampOnUpdateSchema(t *testing.T) {
 	expected := defaultConvert.Timestamp
 	results := p.deriveDatatype(ts)
 	require.Equal(t, expected, results)
+}
+
+var (
+	removalMariadb = []*regexp.Regexp{
+		regexp.MustCompile(`^(?i)SET\s.*$`), // metadata
+		regexp.MustCompile(`^\/\*.*\*\/;$`), // comments
+		regexp.MustCompile(`^$`),            // blank line
+	}
+	removalPostgres = []*regexp.Regexp{
+		regexp.MustCompile(`^(--|(?i)SET ).*$`), // comments and metadata
+		regexp.MustCompile(`^$`),                // blank line
+	}
+)
+
+func dumpEquals(t *testing.T, expected []byte, out io.Reader, remove []*regexp.Regexp) bool {
+	// Mark this as a helper function
+	t.Helper()
+
+	// Read and sanitze the dump
+	dump, err := io.ReadAll(out)
+	if err != nil {
+		t.Logf("reading dump output failed: %v", err)
+		return false
+	}
+
+	// Sanitize the dump
+	dumpSanitized := sanitize(dump, remove)
+
+	matches := bytes.Contains(dumpSanitized, expected)
+	if !matches {
+		t.Logf("got unexpected output:\n%s", string(dump))
+	}
+	return matches
+}
+
+func sanitize(in []byte, remove []*regexp.Regexp) []byte {
+	var out bytes.Buffer
+
+	// Iterate line-wise over the input and remove all lines matching any of
+	// removal expressions
+	out.Grow(len(in))
+	for line := range bytes.Lines(in) {
+		keep := true
+		for _, re := range remove {
+			if re.Match(bytes.TrimSpace(line)) {
+				keep = false
+				break
+			}
+		}
+		if keep {
+			out.Write(line)
+		}
+	}
+	return out.Bytes()
 }

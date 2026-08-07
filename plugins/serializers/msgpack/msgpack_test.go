@@ -96,7 +96,7 @@ func TestSerializeMultipleMetric(t *testing.T) {
 	require.NoError(t, err)
 
 	// Multiple metrics in continuous bytes stream
-	var buf []byte
+	buf := make([]byte, 0, len(encoded)*4)
 	buf = append(buf, encoded...)
 	buf = append(buf, encoded...)
 	buf = append(buf, encoded...)

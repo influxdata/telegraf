@@ -74,6 +74,10 @@ func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 
 	gs.MaxRepetitions = s.MaxRepetitions
 
+	gs.AppOpts = map[string]any{
+		"c": true, // disable OID increasing check (some devices don't strictly increase)
+	}
+
 	if s.Version == 3 {
 		gs.ContextName = s.ContextName
 

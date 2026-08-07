@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -75,7 +76,7 @@ func TestIPv4SW(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"sflow",
 			map[string]string{
 				"agent_address":    "192.168.1.2",
@@ -109,7 +110,7 @@ func TestIPv4SW(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"sflow",
 			map[string]string{
 				"agent_address":    "192.168.1.2",
@@ -194,7 +195,7 @@ func TestExpandFlow(t *testing.T) {
 	actual := makeMetrics(p)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"sflow",
 			map[string]string{
 				"agent_address":    "10.0.1.80",
@@ -230,7 +231,7 @@ func TestExpandFlow(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"sflow",
 			map[string]string{
 				"agent_address":    "10.0.1.80",
@@ -266,7 +267,7 @@ func TestExpandFlow(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"sflow",
 			map[string]string{
 				"agent_address":    "10.0.1.80",
@@ -335,7 +336,7 @@ func TestIPv4SWRT(t *testing.T) {
 	actual := makeMetrics(p)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"sflow",
 			map[string]string{
 				"agent_address":    "137.221.79.1",
@@ -369,7 +370,7 @@ func TestIPv4SWRT(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"sflow",
 			map[string]string{
 				"agent_address":    "137.221.79.1",
@@ -403,7 +404,7 @@ func TestIPv4SWRT(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"sflow",
 			map[string]string{
 				"agent_address":    "137.221.79.1",
@@ -437,7 +438,7 @@ func TestIPv4SWRT(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"sflow",
 			map[string]string{
 				"agent_address":    "137.221.79.1",
@@ -473,7 +474,7 @@ func TestIPv4SWRT(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"sflow",
 			map[string]string{
 				"agent_address":    "137.221.79.1",
@@ -507,7 +508,7 @@ func TestIPv4SWRT(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"sflow",
 			map[string]string{
 				"agent_address":    "137.221.79.1",
@@ -563,7 +564,7 @@ func TestIPv6SW(t *testing.T) {
 
 	expected := []telegraf.Metric{
 
-		testutil.MustMetric(
+		metric.New(
 			"sflow",
 			map[string]string{
 				"agent_address":    "10.224.100.129",
@@ -633,7 +634,7 @@ func TestExpandFlowCounter(t *testing.T) {
 	actual := makeMetrics(p)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"sflow",
 			map[string]string{
 				"agent_address":    "10.0.1.80",
@@ -669,7 +670,7 @@ func TestExpandFlowCounter(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"sflow",
 			map[string]string{
 				"agent_address":    "10.0.1.80",
@@ -705,7 +706,7 @@ func TestExpandFlowCounter(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"sflow",
 			map[string]string{
 				"agent_address":    "10.0.1.80",
@@ -741,7 +742,7 @@ func TestExpandFlowCounter(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"sflow",
 			map[string]string{
 				"agent_address":    "10.0.1.80",
@@ -777,7 +778,7 @@ func TestExpandFlowCounter(t *testing.T) {
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"sflow",
 			map[string]string{
 				"agent_address":    "10.0.1.80",

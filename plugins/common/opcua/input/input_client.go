@@ -15,6 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/opcua"
 )
@@ -30,6 +31,7 @@ const (
 type DeadbandType string
 
 const (
+	None     DeadbandType = "None"
 	Absolute DeadbandType = "Absolute"
 	Percent  DeadbandType = "Percent"
 )
@@ -50,6 +52,7 @@ type MonitoringParameters struct {
 // NodeSettings describes how to map from a OPC UA node to a Metric
 type NodeSettings struct {
 	FieldName        string               `toml:"name"`
+	NodeIDStr        string               `toml:"id"`
 	Namespace        string               `toml:"namespace"`
 	NamespaceURI     string               `toml:"namespace_uri"`
 	IdentifierType   string               `toml:"identifier_type"`
@@ -60,6 +63,9 @@ type NodeSettings struct {
 
 // NodeID returns the OPC UA node id
 func (tag *NodeSettings) NodeID() string {
+	if tag.NodeIDStr != "" {
+		return tag.NodeIDStr
+	}
 	if tag.NamespaceURI != "" {
 		return "nsu=" + tag.NamespaceURI + ";" + tag.IdentifierType + "=" + tag.Identifier
 	}
@@ -78,6 +84,7 @@ type NodeGroupSettings struct {
 }
 
 type EventNodeSettings struct {
+	NodeIDStr      string `toml:"id"`
 	Namespace      string `toml:"namespace"`
 	NamespaceURI   string `toml:"namespace_uri"`
 	IdentifierType string `toml:"identifier_type"`
@@ -85,6 +92,9 @@ type EventNodeSettings struct {
 }
 
 func (e *EventNodeSettings) NodeID() string {
+	if e.NodeIDStr != "" {
+		return e.NodeIDStr
+	}
 	if e.NamespaceURI != "" {
 		return "nsu=" + e.NamespaceURI + ";" + e.IdentifierType + "=" + e.Identifier
 	}
@@ -106,6 +116,13 @@ type EventGroupSettings struct {
 func (e *EventGroupSettings) UpdateNodeIDSettings() {
 	for i := range e.NodeIDSettings {
 		n := &e.NodeIDSettings[i]
+
+		// Skip group defaults when node ID string is specified directly
+		if n.NodeIDStr != "" {
+			continue
+		}
+
+		// Apply group defaults only if not already set
 		if n.Namespace == "" {
 			n.Namespace = e.Namespace
 		}
@@ -149,6 +166,14 @@ func (e EventNodeSettings) validateEventNodeSettings() error {
 	if e == defaultNodeSettings {
 		return errors.New("node settings can't be empty")
 	}
+
+	if e.NodeIDStr != "" {
+		if e.Namespace != "" || e.NamespaceURI != "" || e.IdentifierType != "" || e.Identifier != "" {
+			return errors.New("cannot specify both 'id' and individual fields (namespace/namespace_uri/identifier_type/identifier)")
+		}
+		return nil
+	}
+
 	if e.Identifier == "" {
 		return errors.New("identifier must be set")
 	}
@@ -179,6 +204,30 @@ const (
 	TimestampSourceTelegraf TimestampSource = "gather"
 )
 
+// BrowsePathSettings is one pattern-based discovery rule.
+type BrowsePathSettings struct {
+	Pattern     string            `toml:"pattern"`
+	MetricName  string            `toml:"name"`
+	DefaultTags map[string]string `toml:"default_tags"`
+
+	// Internal fields
+	compiled filter.Filter
+}
+
+// BrowseConfig configures address-space discovery for the input client.
+// When Paths is empty, browse-based discovery is disabled and the existing
+// nodes/group/events configuration is used as-is.
+type BrowseConfig struct {
+	Root      string               `toml:"root"`
+	Depth     int                  `toml:"depth"`
+	MaxNodes  int                  `toml:"max_nodes"`
+	BatchSize int                  `toml:"batch_size"`
+	Paths     []BrowsePathSettings `toml:"paths"`
+
+	// Internal fields
+	parsedRoot *ua.NodeID
+}
+
 // InputClientConfig a configuration for the input client
 type InputClientConfig struct {
 	opcua.OpcUAClientConfig
@@ -188,6 +237,7 @@ type InputClientConfig struct {
 	RootNodes       []NodeSettings       `toml:"nodes"`
 	Groups          []NodeGroupSettings  `toml:"group"`
 	EventGroups     []EventGroupSettings `toml:"events"`
+	Browse          BrowseConfig         `toml:"browse"`
 }
 
 func (o *InputClientConfig) Validate() error {
@@ -206,12 +256,38 @@ func (o *InputClientConfig) Validate() error {
 		o.TimestampFormat = time.RFC3339Nano
 	}
 
-	if len(o.Groups) == 0 && len(o.RootNodes) == 0 && o.EventGroups == nil {
-		return errors.New("no groups, root nodes or events provided to gather from")
+	if len(o.Groups) == 0 && len(o.RootNodes) == 0 && o.EventGroups == nil && len(o.Browse.Paths) == 0 {
+		return errors.New("no groups, root nodes, browse paths or events provided to gather from")
 	}
 	for _, group := range o.Groups {
 		if len(group.Nodes) == 0 {
 			return errors.New("group has no nodes to collect from")
+		}
+	}
+
+	if len(o.Browse.Paths) > 0 {
+		if o.Browse.Root == "" {
+			// OPC UA Objects folder, the standard top of the user-visible address space.
+			o.Browse.Root = "ns=0;i=85"
+		}
+		rootID, err := ua.ParseNodeID(o.Browse.Root)
+		if err != nil {
+			return fmt.Errorf("invalid browse root %q: %w", o.Browse.Root, err)
+		}
+		o.Browse.parsedRoot = rootID
+		if o.Browse.BatchSize <= 0 {
+			o.Browse.BatchSize = 50
+		}
+		for i := range o.Browse.Paths {
+			p := &o.Browse.Paths[i]
+			if p.Pattern == "" {
+				return fmt.Errorf("browse path at index %d has empty pattern", i)
+			}
+			f, err := filter.Compile([]string{p.Pattern}, '/')
+			if err != nil {
+				return fmt.Errorf("invalid browse pattern at index %d: %w", i, err)
+			}
+			p.compiled = f
 		}
 	}
 
@@ -224,9 +300,9 @@ func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputC
 	}
 
 	if o.EventGroups != nil {
-		for _, eventGroup := range o.EventGroups {
-			eventGroup.UpdateNodeIDSettings()
-			if err := eventGroup.Validate(); err != nil {
+		for i := range o.EventGroups {
+			o.EventGroups[i].UpdateNodeIDSettings()
+			if err := o.EventGroups[i].Validate(); err != nil {
 				return nil, fmt.Errorf("invalid event_settings: %w", err)
 			}
 		}
@@ -239,18 +315,21 @@ func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputC
 	}
 
 	c := &OpcUAInputClient{
-		OpcUAClient: opcClient,
-		Log:         log,
-		Config:      *o,
-		EventGroups: o.EventGroups,
+		OpcUAClient:    opcClient,
+		Log:            log,
+		Config:         *o,
+		EventGroups:    o.EventGroups,
+		userGroupCount: len(o.Groups),
 	}
 
-	log.Debug("Initialising node to metric mapping")
-	if err := c.InitNodeMetricMapping(); err != nil {
-		return nil, err
+	// Browse-based discovery defers metric mapping until after Connect.
+	// The discovered nodes are not known until the server is reachable.
+	if len(o.Browse.Paths) == 0 {
+		log.Debug("Initialising node to metric mapping")
+		if err := c.InitNodeMetricMapping(); err != nil {
+			return nil, err
+		}
 	}
-
-	c.initLastReceivedValues()
 
 	return c, nil
 }
@@ -310,6 +389,40 @@ type OpcUAInputClient struct {
 	LastReceivedData       []NodeValue
 	EventGroups            []EventGroupSettings
 	EventNodeMetricMapping []EventNodeMetricMapping
+
+	// Internal fields
+	userGroupCount int
+}
+
+// DiscoverNodes walks the address space using the configured browse settings
+// and replaces any previously discovered node groups on the client's
+// configuration with the freshly resolved ones. User-supplied groups (those
+// present before any discovery) are preserved. Safe to call repeatedly across
+// reconnects so dynamically added or removed server nodes are picked up.
+// Browse failures bubble up as errors, but patterns that match no nodes only
+// produce a log entry so partial-server misconfiguration does not block
+// collection from explicit nodes.
+func (o *OpcUAInputClient) DiscoverNodes(ctx context.Context) error {
+	browser := &opcua.AddressSpaceBrowser{
+		Client:    o.Client,
+		Log:       o.Log,
+		MaxDepth:  o.Config.Browse.Depth,
+		MaxNodes:  o.Config.Browse.MaxNodes,
+		BatchSize: o.Config.Browse.BatchSize,
+	}
+	nodes, err := browser.Browse(ctx, o.Config.Browse.parsedRoot)
+	if err != nil {
+		return fmt.Errorf("browsing address space failed: %w", err)
+	}
+	o.Log.Infof("Browse discovered %d nodes from root %q", len(nodes), o.Config.Browse.Root)
+
+	groups, matched := ResolveBrowsedNodes(nodes, o.Config.Browse.Paths)
+	o.Log.Infof("Browse patterns matched %d variables", matched)
+
+	// Drop the previously discovered groups before re-appending, so the
+	// effective Groups slice stays bounded across reconnects.
+	o.Config.Groups = append(o.Config.Groups[:o.userGroupCount], groups...)
+	return nil
 }
 
 // Stop the connection to the client
@@ -332,8 +445,13 @@ type metricParts struct {
 }
 
 func newMP(n *NodeMetricMapping) metricParts {
-	keys := make([]string, 0, len(n.MetricTags))
-	for key := range n.MetricTags {
+	// Include the node ID as the "id" tag since MetricForNode always adds it
+	tags := map[string]string{"id": n.idStr}
+	for k, v := range n.MetricTags {
+		tags[k] = v
+	}
+	keys := make([]string, 0, len(tags))
+	for key := range tags {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
@@ -344,14 +462,13 @@ func newMP(n *NodeMetricMapping) metricParts {
 		}
 		sb.WriteString(key)
 		sb.WriteString("=")
-		sb.WriteString(n.MetricTags[key])
+		sb.WriteString(tags[key])
 	}
-	x := metricParts{
+	return metricParts{
 		metricName: n.metricName,
 		fieldName:  n.Tag.FieldName,
 		tags:       sb.String(),
 	}
-	return x
 }
 
 func validateNodeToAdd(existing map[metricParts]struct{}, nmm *NodeMetricMapping) error {
@@ -359,20 +476,37 @@ func validateNodeToAdd(existing map[metricParts]struct{}, nmm *NodeMetricMapping
 		return fmt.Errorf("empty name in %q", nmm.Tag.FieldName)
 	}
 
-	// Validate namespace configuration
-	hasNamespace := len(nmm.Tag.Namespace) > 0
-	hasNamespaceURI := len(nmm.Tag.NamespaceURI) > 0
+	if nmm.Tag.NodeIDStr != "" {
+		if nmm.Tag.Namespace != "" || nmm.Tag.NamespaceURI != "" || nmm.Tag.IdentifierType != "" || nmm.Tag.Identifier != "" {
+			return fmt.Errorf("node %q: cannot specify both 'id' and individual fields (namespace/namespace_uri/identifier_type/identifier)", nmm.Tag.FieldName)
+		}
+	} else {
+		// Validate namespace configuration
+		hasNamespace := len(nmm.Tag.Namespace) > 0
+		hasNamespaceURI := len(nmm.Tag.NamespaceURI) > 0
 
-	if hasNamespace && hasNamespaceURI {
-		return fmt.Errorf("node %q: cannot specify both 'namespace' and 'namespace_uri', use only one", nmm.Tag.FieldName)
-	}
+		if hasNamespace && hasNamespaceURI {
+			return fmt.Errorf("node %q: cannot specify both 'namespace' and 'namespace_uri', use only one", nmm.Tag.FieldName)
+		}
 
-	if !hasNamespace && !hasNamespaceURI {
-		return fmt.Errorf("node %q: must specify either 'namespace' or 'namespace_uri'", nmm.Tag.FieldName)
-	}
+		if !hasNamespace && !hasNamespaceURI {
+			return fmt.Errorf("node %q: must specify either 'namespace' or 'namespace_uri'", nmm.Tag.FieldName)
+		}
 
-	if len(nmm.Tag.Identifier) == 0 {
-		return errors.New("empty node identifier not allowed")
+		if len(nmm.Tag.Identifier) == 0 {
+			return errors.New("empty node identifier not allowed")
+		}
+
+		switch nmm.Tag.IdentifierType {
+		case "i":
+			if _, err := strconv.Atoi(nmm.Tag.Identifier); err != nil {
+				return fmt.Errorf("identifier type %q does not match the type of identifier %q", nmm.Tag.IdentifierType, nmm.Tag.Identifier)
+			}
+		case "s", "g", "b":
+			// Valid identifier type - do nothing.
+		default:
+			return fmt.Errorf("invalid identifier type %q in %q", nmm.Tag.IdentifierType, nmm.Tag.FieldName)
+		}
 	}
 
 	for k, v := range nmm.MetricTags {
@@ -390,23 +524,15 @@ func validateNodeToAdd(existing map[metricParts]struct{}, nmm *NodeMetricMapping
 			mp.fieldName, mp.metricName, mp.tags)
 	}
 
-	switch nmm.Tag.IdentifierType {
-	case "i":
-		if _, err := strconv.Atoi(nmm.Tag.Identifier); err != nil {
-			return fmt.Errorf("identifier type %q does not match the type of identifier %q", nmm.Tag.IdentifierType, nmm.Tag.Identifier)
-		}
-	case "s", "g", "b":
-		// Valid identifier type - do nothing.
-	default:
-		return fmt.Errorf("invalid identifier type %q in %q", nmm.Tag.IdentifierType, nmm.Tag.FieldName)
-	}
-
 	existing[mp] = struct{}{}
 	return nil
 }
 
-// InitNodeMetricMapping builds nodes from the configuration
+// InitNodeMetricMapping builds nodes from the configuration. Safe to call
+// repeatedly: any previous mappings are discarded so the result reflects the
+// current Config.RootNodes and Config.Groups.
 func (o *OpcUAInputClient) InitNodeMetricMapping() error {
+	o.NodeMetricMapping = nil
 	existing := make(map[metricParts]struct{}, len(o.Config.RootNodes))
 	for _, node := range o.Config.RootNodes {
 		nmm, err := NewNodeMetricMapping(o.Config.MetricName, node, make(map[string]string))
@@ -420,20 +546,24 @@ func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 		o.NodeMetricMapping = append(o.NodeMetricMapping, *nmm)
 	}
 
-	for _, group := range o.Config.Groups {
+	for gi := range o.Config.Groups {
+		group := &o.Config.Groups[gi]
 		if group.MetricName == "" {
 			group.MetricName = o.Config.MetricName
 		}
 
 		for _, node := range group.Nodes {
-			if node.Namespace == "" {
-				node.Namespace = group.Namespace
-			}
-			if node.NamespaceURI == "" {
-				node.NamespaceURI = group.NamespaceURI
-			}
-			if node.IdentifierType == "" {
-				node.IdentifierType = group.IdentifierType
+			// Skip group defaults when node ID string is specified directly
+			if node.NodeIDStr == "" {
+				if node.Namespace == "" {
+					node.Namespace = group.Namespace
+				}
+				if node.NamespaceURI == "" {
+					node.NamespaceURI = group.NamespaceURI
+				}
+				if node.IdentifierType == "" {
+					node.IdentifierType = group.IdentifierType
+				}
 			}
 			if node.MonitoringParams.SamplingInterval == 0 {
 				node.MonitoringParams.SamplingInterval = group.SamplingInterval
@@ -451,98 +581,53 @@ func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 		}
 	}
 
+	o.initLastReceivedValues()
 	return nil
 }
 
 func (o *OpcUAInputClient) InitNodeIDs() error {
+	// Get all namespace definitions of the remote device for handling
+	// namespace URLs (the ones starting with "nsu=") gracefully
+	namespaces := o.NamespaceArray()
+
 	o.NodeIDs = make([]*ua.NodeID, 0, len(o.NodeMetricMapping))
-	namespaceArray := o.NamespaceArray()
-
 	for _, node := range o.NodeMetricMapping {
-		nodeIDStr := node.Tag.NodeID()
-
-		// Check if this uses namespace URI (nsu=) format
-		if strings.HasPrefix(nodeIDStr, "nsu=") {
-			// Namespace URI format requires namespace array
-			if len(namespaceArray) == 0 {
-				return fmt.Errorf("node ID %q uses namespace URI (nsu=) but namespace array is not available - connection to server may be required", nodeIDStr)
-			}
-			// Use ParseExpandedNodeID for namespace URI support
-			expandedNodeID, err := ua.ParseExpandedNodeID(nodeIDStr, namespaceArray)
-			if err != nil {
-				return fmt.Errorf("failed to parse node ID %q: %w", nodeIDStr, err)
-			}
-			o.NodeIDs = append(o.NodeIDs, expandedNodeID.NodeID)
-		} else {
-			// Use ParseNodeID for namespace index (ns=) format
-			nid, err := ua.ParseNodeID(nodeIDStr)
-			if err != nil {
-				return fmt.Errorf("failed to parse node ID %q: %w", nodeIDStr, err)
-			}
-			o.NodeIDs = append(o.NodeIDs, nid)
+		// Determine the actual node-ID instance using the expanded form as
+		// this handles namespace URLs (nsu=) gracefully
+		nodeID := node.Tag.NodeID()
+		expanded, err := ua.ParseExpandedNodeID(nodeID, namespaces)
+		if err != nil {
+			return fmt.Errorf("failed to parse node ID %q: %w", nodeID, err)
 		}
+		o.NodeIDs = append(o.NodeIDs, ua.NewNodeIDFromExpandedNodeID(expanded))
 	}
 
 	return nil
 }
 
 func (o *OpcUAInputClient) InitEventNodeIDs() error {
-	namespaceArray := o.NamespaceArray()
+	// Get all namespace definitions of the remote device for handling
+	// namespace URLs (the ones starting with "nsu=") gracefully
+	namespaces := o.NamespaceArray()
 
 	for _, eventSetting := range o.EventGroups {
-		eventTypeNodeIDStr := eventSetting.EventTypeNode.NodeID()
-		var eid *ua.NodeID
-
 		// Parse event type node ID
-		if strings.HasPrefix(eventTypeNodeIDStr, "nsu=") {
-			if len(namespaceArray) == 0 {
-				return fmt.Errorf(
-					"event type node ID %q uses namespace URI (nsu=) but namespace array is not available - "+
-						"connection to server may be required",
-					eventTypeNodeIDStr,
-				)
-			}
-			expandedNodeID, err := ua.ParseExpandedNodeID(eventTypeNodeIDStr, namespaceArray)
-			if err != nil {
-				return fmt.Errorf("failed to parse event type node ID %q: %w", eventTypeNodeIDStr, err)
-			}
-			eid = expandedNodeID.NodeID
-		} else {
-			parsedID, err := ua.ParseNodeID(eventTypeNodeIDStr)
-			if err != nil {
-				return fmt.Errorf("failed to parse event type node ID %q: %w", eventTypeNodeIDStr, err)
-			}
-			eid = parsedID
+		eventNodeID := eventSetting.EventTypeNode.NodeID()
+		expanded, err := ua.ParseExpandedNodeID(eventNodeID, namespaces)
+		if err != nil {
+			return fmt.Errorf("failed to parse event type node ID %q: %w", eventNodeID, err)
 		}
+		eid := ua.NewNodeIDFromExpandedNodeID(expanded)
 
 		for _, node := range eventSetting.NodeIDSettings {
-			nodeIDStr := node.NodeID()
-			var nid *ua.NodeID
-
-			// Parse node ID
-			if strings.HasPrefix(nodeIDStr, "nsu=") {
-				if len(namespaceArray) == 0 {
-					return fmt.Errorf(
-						"event node ID %q uses namespace URI (nsu=) but namespace array is not available - "+
-							"connection to server may be required",
-						nodeIDStr,
-					)
-				}
-				expandedNodeID, err := ua.ParseExpandedNodeID(nodeIDStr, namespaceArray)
-				if err != nil {
-					return fmt.Errorf("failed to parse node ID %q: %w", nodeIDStr, err)
-				}
-				nid = expandedNodeID.NodeID
-			} else {
-				parsedID, err := ua.ParseNodeID(nodeIDStr)
-				if err != nil {
-					return fmt.Errorf("failed to parse node ID %q: %w", nodeIDStr, err)
-				}
-				nid = parsedID
+			nodeID := node.NodeID()
+			expanded, err := ua.ParseExpandedNodeID(nodeID, namespaces)
+			if err != nil {
+				return fmt.Errorf("failed to parse node ID %q: %w", nodeID, err)
 			}
 
 			nmm := EventNodeMetricMapping{
-				NodeID:           nid,
+				NodeID:           ua.NewNodeIDFromExpandedNodeID(expanded),
 				SamplingInterval: &eventSetting.SamplingInterval,
 				QueueSize:        &eventSetting.QueueSize,
 				EventTypeNode:    eid,
@@ -609,6 +694,8 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 			switch typedValue := o.LastReceivedData[nodeIdx].Value.(type) {
 			case []uint8:
 				fields = unpack(nmm.Tag.FieldName, typedValue)
+			case ua.ByteArray:
+				fields = unpack(nmm.Tag.FieldName, typedValue)
 			case []uint16:
 				fields = unpack(nmm.Tag.FieldName, typedValue)
 			case []uint32:
@@ -631,6 +718,12 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 				fields = unpack(nmm.Tag.FieldName, typedValue)
 			case []bool:
 				fields = unpack(nmm.Tag.FieldName, typedValue)
+			case []time.Time:
+				strs := make([]string, len(typedValue))
+				for i, t := range typedValue {
+					strs[i] = t.Format(o.Config.TimestampFormat)
+				}
+				fields = unpack(nmm.Tag.FieldName, strs)
 			default:
 				o.Log.Errorf("could not unpack variant array of type: %T", typedValue)
 			}
@@ -679,6 +772,7 @@ func unpack[Slice ~[]E, E any](prefix string, value Slice) map[string]interface{
 func (o *OpcUAInputClient) MetricForEvent(nodeIdx int, event *ua.EventFieldList) telegraf.Metric {
 	node := o.EventNodeMetricMapping[nodeIdx]
 	fields := make(map[string]interface{}, len(event.EventFields))
+	var sourceTime, serverTime time.Time
 	for i, field := range event.EventFields {
 		name := node.Fields[i]
 		value := field.Value()
@@ -692,11 +786,22 @@ func (o *OpcUAInputClient) MetricForEvent(nodeIdx int, event *ua.EventFieldList)
 		case *ua.LocalizedText:
 			fields[name] = v.Text
 		case time.Time:
+			if name == "Time" {
+				sourceTime = v
+			} else if name == "ReceiveTime" {
+				serverTime = v
+			}
 			fields[name] = v.Format(time.RFC3339)
 		default:
 			fields[name] = v
 		}
 	}
+
+	if len(fields) == 0 {
+		o.Log.Warn("Event has no fields with values, skipping")
+		return nil
+	}
+
 	tags := map[string]string{
 		"node_id": node.NodeID.String(),
 		"source":  o.Config.Endpoint,
@@ -704,10 +809,11 @@ func (o *OpcUAInputClient) MetricForEvent(nodeIdx int, event *ua.EventFieldList)
 	var t time.Time
 	switch o.Config.Timestamp {
 	case TimestampSourceServer:
-		t = o.LastReceivedData[nodeIdx].ServerTime
+		t = serverTime
 	case TimestampSourceSource:
-		t = o.LastReceivedData[nodeIdx].SourceTime
-	default:
+		t = sourceTime
+	}
+	if t.IsZero() {
 		t = time.Now()
 	}
 
@@ -741,13 +847,48 @@ func (node *EventNodeMetricMapping) createSelectClauses() ([]*ua.SimpleAttribute
 		return nil, err
 	}
 	for i, name := range node.Fields {
+		browsePath, err := parseBrowsePath(name)
+		if err != nil {
+			return nil, fmt.Errorf("parsing field %q failed: %w", name, err)
+		}
 		selects[i] = &ua.SimpleAttributeOperand{
 			TypeDefinitionID: typeDefinition,
-			BrowsePath:       []*ua.QualifiedName{{NamespaceIndex: 0, Name: name}},
+			BrowsePath:       browsePath,
 			AttributeID:      ua.AttributeIDValue,
 		}
 	}
 	return selects, nil
+}
+
+// parseBrowsePath parses a field name into a browse path of qualified names.
+// It supports namespace-qualified segments (e.g. "2:TEXT01") and multi-segment
+// paths separated by "/" (e.g. "AckedState/Id" or "2:AckedState/0:Id").
+func parseBrowsePath(field string) ([]*ua.QualifiedName, error) {
+	segments := strings.Split(field, "/")
+	path := make([]*ua.QualifiedName, 0, len(segments))
+	for _, seg := range segments {
+		if seg == "" {
+			return nil, fmt.Errorf("empty segment in browse path %q", field)
+		}
+		ns, name := parseQualifiedName(seg)
+		path = append(path, &ua.QualifiedName{NamespaceIndex: ns, Name: name})
+	}
+	return path, nil
+}
+
+// parseQualifiedName parses a single segment like "2:TEXT01" into a namespace
+// index and name. If no namespace prefix is present, namespace 0 is used.
+func parseQualifiedName(segment string) (uint16, string) {
+	prefix, name, found := strings.Cut(segment, ":")
+	if !found {
+		return 0, segment
+	}
+	ns, err := strconv.ParseUint(prefix, 10, 16)
+	if err != nil {
+		// Not a valid namespace prefix, treat the whole segment as the name
+		return 0, segment
+	}
+	return uint16(ns), name
 }
 
 func (node *EventNodeMetricMapping) createWhereClauses() (*ua.ContentFilter, error) {
@@ -756,7 +897,7 @@ func (node *EventNodeMetricMapping) createWhereClauses() (*ua.ContentFilter, err
 			Elements: make([]*ua.ContentFilterElement, 0),
 		}, nil
 	}
-	operands := make([]*ua.ExtensionObject, 0)
+	operands := make([]*ua.ExtensionObject, 0, len(node.SourceNames))
 	for _, sourceName := range node.SourceNames {
 		literalOperand := &ua.ExtensionObject{
 			EncodingMask: 1,

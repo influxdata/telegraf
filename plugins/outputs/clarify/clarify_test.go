@@ -16,6 +16,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -63,7 +64,7 @@ func TestGenerateID(t *testing.T) {
 		err      error
 	}{
 		{
-			testutil.MustMetric(
+			metric.New(
 				"cpu+='''..2!@#$abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
 				map[string]string{
 					"tag1": "78sx",
@@ -76,7 +77,7 @@ func TestGenerateID(t *testing.T) {
 			errIDTooLong,
 		},
 		{
-			testutil.MustMetric(
+			metric.New(
 				"cpu@@",
 				map[string]string{
 					"tag1": "78sx",
@@ -90,7 +91,7 @@ func TestGenerateID(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.MustMetric(
+			metric.New(
 				"temperature",
 				map[string]string{},
 				map[string]interface{}{
@@ -102,7 +103,7 @@ func TestGenerateID(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.MustMetric(
+			metric.New(
 				"legacy_measurement",
 				map[string]string{
 					"clarify_input_id": "e5e82f63-3700-4997-835d-eb366b7294a2",
@@ -141,7 +142,7 @@ func TestProcessMetrics(t *testing.T) {
 		outSignals map[string]views.SignalSave
 	}{
 		{
-			testutil.MustMetric(
+			metric.New(
 				"cpu1",
 				map[string]string{
 					"tag1": "78sx",
@@ -167,7 +168,7 @@ func TestProcessMetrics(t *testing.T) {
 			},
 		},
 		{
-			testutil.MustMetric(
+			metric.New(
 				"cpu2",
 				map[string]string{
 					"tag1": "78sx",
@@ -195,7 +196,7 @@ func TestProcessMetrics(t *testing.T) {
 			},
 		},
 		{
-			testutil.MustMetric(
+			metric.New(
 				"temperature",
 				map[string]string{},
 				map[string]interface{}{
@@ -225,7 +226,7 @@ func TestProcessMetrics(t *testing.T) {
 			},
 		},
 		{
-			testutil.MustMetric(
+			metric.New(
 				"legacy_measurement",
 				map[string]string{
 					"clarify_input_id": "e5e82f63-3700-4997-835d-eb366b7294a2",
@@ -253,7 +254,7 @@ func TestProcessMetrics(t *testing.T) {
 			},
 		},
 		{
-			testutil.MustMetric(
+			metric.New(
 				"opc_metric",
 				map[string]string{
 					"node_id": "ns=1;s=Omron PLC.Objects.new_Controller_0.GlobalVars.counter1",

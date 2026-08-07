@@ -8,7 +8,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestFilterApplyEmpty(t *testing.T) {
@@ -545,7 +544,7 @@ func TestFilterTagsPassAndDrop(t *testing.T) {
 }
 
 func TestFilterMetricPass(t *testing.T) {
-	m := testutil.MustMetric("cpu",
+	m := metric.New("cpu",
 		map[string]string{
 			"host":   "Hugin",
 			"source": "myserver@mycompany.com",
@@ -655,7 +654,7 @@ func BenchmarkFilter(b *testing.B) {
 		{
 			name:   "empty filter",
 			filter: Filter{},
-			metric: testutil.MustMetric("cpu",
+			metric: metric.New("cpu",
 				map[string]string{},
 				map[string]interface{}{
 					"value": 42,
@@ -668,7 +667,7 @@ func BenchmarkFilter(b *testing.B) {
 			filter: Filter{
 				NamePass: []string{"cpu"},
 			},
-			metric: testutil.MustMetric("cpu",
+			metric: metric.New("cpu",
 				map[string]string{},
 				map[string]interface{}{
 					"value": 42,
@@ -681,7 +680,7 @@ func BenchmarkFilter(b *testing.B) {
 			filter: Filter{
 				MetricPass: `name == "cpu"`,
 			},
-			metric: testutil.MustMetric("cpu",
+			metric: metric.New("cpu",
 				map[string]string{},
 				map[string]interface{}{
 					"value": 42,
@@ -694,7 +693,7 @@ func BenchmarkFilter(b *testing.B) {
 			filter: Filter{
 				MetricPass: `name.matches("^c[a-z]*$")`,
 			},
-			metric: testutil.MustMetric("cpu",
+			metric: metric.New("cpu",
 				map[string]string{},
 				map[string]interface{}{
 					"value": 42,
@@ -707,7 +706,7 @@ func BenchmarkFilter(b *testing.B) {
 			filter: Filter{
 				MetricPass: `time >= timestamp("2023-04-25T00:00:00Z") - duration("24h")`,
 			},
-			metric: testutil.MustMetric("cpu",
+			metric: metric.New("cpu",
 				map[string]string{},
 				map[string]interface{}{
 					"value": 42,
@@ -722,7 +721,7 @@ func BenchmarkFilter(b *testing.B) {
 					` && fields.exists(f, type(fields[f]) in [int, uint, double] && fields[f] > 20.0)` +
 					` && time >= timestamp("2023-04-25T00:00:00Z") - duration("24h")`,
 			},
-			metric: testutil.MustMetric("cpu",
+			metric: metric.New("cpu",
 				map[string]string{},
 				map[string]interface{}{
 					"value": 42,

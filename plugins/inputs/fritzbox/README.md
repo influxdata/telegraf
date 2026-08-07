@@ -1,14 +1,14 @@
 # Fritzbox Input Plugin
 
-This plugin gathers status information from [AVM][avm] devices (routers,
+This plugin gathers status information from [FRITZ!][fritz] devices (routers,
 repeaters, etc) using the device's [TR-064][tr064] interface.
 
 ⭐ Telegraf v1.35.0
 🏷️ network, iot
 💻 all
 
-[avm]: https://en.avm.de/
-[tr064]: https://avm.de/service/schnittstellen/
+[fritz]: https://fritz.com/
+[tr064]: https://fritz.com/en/pages/interfaces
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -32,6 +32,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #   "wan",
   #   "ppp",
   #   "dsl",
+  #   "fiber",
   #   "wlan",
   # ]
 
@@ -63,6 +64,9 @@ configured devices. Will create `fritzbox_ppp` metrics.
 `dsl` : Collect DSL line status and statistics for the configured devices.
 Will create `fritzbox_dsl` metrics.
 
+`fiber` : Collect Fiber line status and statistics for the configured devices.
+Will create `fritzbox_fiber` metrics.
+
 `wlan` : Collect status and number of associated devices for all WLANs.
 Will create `fritzbox_wlan` metrics.
 
@@ -75,6 +79,11 @@ bandwidth. Will create `fritzbox_hosts` metrics.
 > the plugin's query interval to avoid interval overruns and to minimize
 > the amount of collected data.
 
+An empty `collect` option defaults to the set
+`["device", "wan", "ppp", "dsl", "wlan"]` supported by the initial
+release of the plugin. Newly added options like `fiber` must be
+enabled explicitly.
+
 ## Metrics
 
 By default field names are directly derived from the corresponding [interface
@@ -85,9 +94,9 @@ specification][tr064].
     - `source` - The name of the device (this metric has been queried from)
     - `service` - The service id used to query this metric
   - fields
-    - `uptime` (uint) - Device's uptime in seconds.
-    - `model_name` (string) - Device's model name.
-    - `serial_number` (string) - Device's serial number.
+    - `uptime`           (uint)   - Device's uptime in seconds.
+    - `model_name`       (string) - Device's model name.
+    - `serial_number`    (string) - Device's serial number.
     - `hardware_version` (string) - Device's hardware version.
     - `software_version` (string) - Device's software version.
 - `fritzbox_wan`
@@ -148,6 +157,38 @@ specification][tr064].
     - `atuc_hec_errors`         (uint) - Remote DSLAM Header Error Control errors
     - `crc_errors`              (uint) - Local Modem Cyclic Redundancy Check error
     - `atuc_crc_errors`         (uint) - Remote DSLAM Cyclic Redundancy Check errors
+- `fritzbox_fiber`
+  - tags
+    - `source`  - The name of the device (this metric has been queried from)
+    - `service` - The service id used to query this metric
+  - fields
+    - `optical_signal_level`           (uint)   - Optical signal level (mdBm)
+    - `lower_optical_threshold`        (uint)   - Lower optical threshold (mdBm)
+    - `upper_optical_threshold`        (uint)   - Upper optical threshold (mdBm)
+    - `transmit_optical_level`         (uint)   - Transmit optical signal level
+                                                  (mdBm)
+    - `lower_transmit_power_threshold` (uint)   - Lower transmit power
+                                                  threshold (mdBm)
+    - `upper_transmit_power_threshold` (uint)   - Upper transmit power
+                                                  threshold (mdBm)
+    - `sfp_vendor`                     (string) - SFP module vendor
+    - `sfp_part_number`                (string) - SFP module part number
+    - `sfp_serial_number`              (string) - SFP module serial number
+    - `sfp_type`                       (uint)   - SFP module type
+    - `tx_wave_length`                 (uint)   - TX wave length (nm)
+    - `fiber_mode`                     (string) - Current fiber mode
+    - `bytes_sent`                     (uint)   - Total bytes sent
+    - `bytes_received`                 (uint)   - Total bytes received
+    - `packets_sent`                   (uint)   - Total packets sent
+    - `packets_received`               (uint)   - Total packets received
+    - `packet_errors_sent`             (uint)   - Total send packet errors
+    - `packet_errors_received`         (uint)   - Total receive packet errors
+    - `packets_multicast`              (uint)   - Total multicast packets
+    - `connection_rate_down`           (uint)   - Downstream connection rate (bit/s)
+    - `connection_rate_up`             (uint)   - Upstream connection rate (bit/s)
+    - `best_train_state`               (uint)   - Best train state
+    - `resyncs`                        (uint)   - Number of resyncs
+    - `minutes_in_showtime`            (uint)   - Minutes in showtime
 - `fritzbox_wlan`
   - tags
     - `source`  - The name of the device (this metric has been queried from)
@@ -186,6 +227,8 @@ fritzbox_wan,service=WANCommonInterfaceConfig1,source=fritz.box layer1_upstream_
 fritzbox_ppp,service=WANPPPConnection1,source=fritz.box uptime=369434i,upstream_max_bit_rate=44213433i,downstream_max_bit_rate=68038668i 1737003622308149000
 
 fritzbox_dsl,service=WANDSLInterfaceConfig1,source=fritz.box,status=Up downstream_curr_rate=249065i,downstream_max_rate=249065i,downstream_power=513i,init_timeouts=0i,atuc_crc_errors=13i,errored_secs=25i,atuc_hec_errors=0i,upstream_noise_margin=80i,downstream_noise_margin=60i,downstream_attenuation=140i,receive_blocks=490282831i,transmit_blocks=254577751i,init_errors=0i,crc_errors=53i,fec_errors=0i,hec_errors=0i,upstream_max_rate=48873i,upstream_attenuation=80i,upstream_power=498i,cell_delin=0i,link_retrain=2i,loss_of_framing=0i,upstream_curr_rate=46719i,severly_errored_secs=0i,atuc_fec_errors=0i 1737003645769642000
+
+fritzbox_fiber,service=X_AVM_DE_WANFiber1,source=127.0.0.1 optical_signal_level=0i,lower_optical_threshold=0i,upper_optical_threshold=-5900i,transmit_optical_level=0i,lower_transmit_power_threshold=-500i,upper_transmit_power_threshold=0i,sfp_vendor="XXXX XXx",sfp_part_number="",sfp_serial_number="AB12345678901",sfp_type=0i,tx_wave_length=1310u,fiber_mode="Unknown",bytes_sent=664548698u,bytes_received=0u,packets_sent=1328165u,packets_received=0u,packet_errors_sent=0u,packet_errors_received=0u,packets_multicast=2944821u,connection_rate_down=0u,connection_rate_up=1250000u,best_train_state=0u,resyncs=0u,minutes_in_showtime=0u 1737088741855188000
 
 fritzbox_wlan,band=2400,channel=13,service=WLANConfiguration1,source=fritz.box,ssid=MOCK1234,status=Up total_associations=11i 1737003673561198000
 

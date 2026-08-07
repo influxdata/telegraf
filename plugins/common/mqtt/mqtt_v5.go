@@ -60,12 +60,12 @@ func NewMQTTv5Client(cfg *MqttConfig) (*mqttv5Client, error) {
 		opts.TlsCfg = tlsCfg
 	}
 
-	brokers := make([]*url.URL, 0)
 	servers, err := parseServers(cfg.Servers)
 	if err != nil {
 		return nil, err
 	}
 
+	brokers := make([]*url.URL, 0, len(servers))
 	for _, server := range servers {
 		if tlsCfg != nil {
 			server.Scheme = "tls"

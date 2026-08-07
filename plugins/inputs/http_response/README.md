@@ -15,11 +15,11 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
-## Secret-store support
+## Secret store support
 
-This plugin supports secrets from secret-stores for the `username` and
-`password` option.
-See the [secret-store documentation][SECRETSTORE] for more details on how
+This plugin supports secrets from secret stores for the `username`, `password`
+and `token` options.
+See the [secret store documentation][SECRETSTORE] for more details on how
 to use them.
 
 [SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
@@ -45,9 +45,9 @@ to use them.
   ## Whether to follow redirects from the server (defaults to false)
   # follow_redirects = false
 
-  ## Optional file with Bearer token
-  ## file content is added as an Authorization header
-  # bearer_token = "/path/to/file"
+  ## Bearer token for authentication, accepting secret-store references
+  ## This option cannot be used in combination with 'bearer_token'.
+  # token = "my-token"
 
   ## Optional HTTP Basic Auth Credentials
   # username = "username"

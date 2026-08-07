@@ -534,11 +534,12 @@ func (t *Tail) receiver(parser telegraf.Parser, tailer *tail.Tail) {
 		select {
 		case <-t.ctx.Done():
 			return
-		// Tail is trying to close so drain the sem to allow the receiver
-		// to exit. This condition is hit when the tailer may have hit the
-		// maximum undelivered lines and is trying to close.
+		// The tailer is closing, e.g. on shutdown or when the file is rotated
+		// or removed. Drop the current line but keep draining tailer.Lines so
+		// the tailer can stop. Do not release t.sem here: freeing a slot
+		// without a matching delivery lets another tailer add to an already
+		// full delivery channel and panic with "channel is full" (#19073).
 		case <-tailer.Dying():
-			<-t.sem
 		case t.sem <- empty{}:
 			t.acc.AddTrackingMetricGroup(metrics)
 		}

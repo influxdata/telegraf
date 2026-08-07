@@ -188,7 +188,7 @@ func (t *Telegraf) reloadLoop() error {
 				if sig == syscall.SIGHUP {
 					log.Println("I! Reloading Telegraf config")
 					// May need to update the list of known config files
-					// if a delete or create occured. That way on the reload
+					// if a delete or create occurred. That way on the reload
 					// we ensure we watch the correct files.
 					if err := t.getConfigFiles(); err != nil {
 						log.Println("E! Error loading config files: ", err)
@@ -359,7 +359,9 @@ func (*Telegraf) watchRemoteConfigs(ctx context.Context, signals chan os.Signal,
 					continue
 				}
 
-				if v, exists := os.LookupEnv("INFLUX_TOKEN"); exists {
+				if v, exists := os.LookupEnv("TELEGRAF_CONTROLLER_TOKEN"); exists {
+					req.Header.Add("Authorization", "Bearer "+v)
+				} else if v, exists := os.LookupEnv("INFLUX_TOKEN"); exists {
 					req.Header.Add("Authorization", "Token "+v)
 				}
 				req.Header.Set("User-Agent", internal.ProductToken())
@@ -390,6 +392,9 @@ func (*Telegraf) watchRemoteConfigs(ctx context.Context, signals chan os.Signal,
 }
 
 func (t *Telegraf) loadConfiguration() (*config.Config, error) {
+	// Make sure secrets are cleared
+	config.ResetSecrets()
+
 	// If no other options are specified, load the config file and run.
 	c := config.NewConfig()
 	c.Agent.Quiet = t.quiet
@@ -397,6 +402,7 @@ func (t *Telegraf) loadConfiguration() (*config.Config, error) {
 	c.OutputFilters = t.outputFilters
 	c.InputFilters = t.inputFilters
 	c.SecretStoreFilters = t.secretstoreFilters
+	c.TestMode = !t.once && (t.test || t.testWait != 0)
 
 	if err := t.getConfigFiles(); err != nil {
 		return c, err
@@ -414,7 +420,7 @@ func (t *Telegraf) getConfigFiles() error {
 	for _, fConfigDirectory := range t.configDir {
 		files, err := config.WalkDirectory(fConfigDirectory)
 		if err != nil {
-			return err
+			return fmt.Errorf("reading config directory failed: %w", err)
 		}
 		configFiles = append(configFiles, files...)
 	}
@@ -471,11 +477,11 @@ func (t *Telegraf) runAgent(ctx context.Context, reloadConfig bool) error {
 	}
 
 	if err := logger.SetupLogging(logConfig); err != nil {
-		return err
+		return fmt.Errorf("setting up logging failed: %w", err)
 	}
 
 	log.Printf("I! Starting Telegraf %s%s brought to you by InfluxData the makers of InfluxDB", internal.Version, internal.Customized)
-	log.Printf("I! Available plugins: %d inputs, %d aggregators, %d processors, %d parsers, %d outputs, %d secret-stores",
+	log.Printf("I! Available plugins: %d inputs, %d aggregators, %d processors, %d parsers, %d outputs, %d secret stores",
 		len(inputs.Inputs),
 		len(aggregators.Aggregators),
 		len(processors.Processors),

@@ -10,7 +10,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/testutil"
+	"github.com/influxdata/telegraf/metric"
 )
 
 type input struct {
@@ -32,7 +32,7 @@ func TestCollectionExpire(t *testing.T) {
 			age:  10 * time.Second,
 			input: []input{
 				{
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"cpu",
 						map[string]string{},
 						map[string]interface{}{
@@ -63,7 +63,7 @@ func TestCollectionExpire(t *testing.T) {
 			age:  10 * time.Second,
 			input: []input{
 				{
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"cpu",
 						map[string]string{},
 						map[string]interface{}{
@@ -74,7 +74,7 @@ func TestCollectionExpire(t *testing.T) {
 					addtime: time.Unix(0, 0),
 				},
 				{
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"cpu",
 						map[string]string{},
 						map[string]interface{}{
@@ -105,7 +105,7 @@ func TestCollectionExpire(t *testing.T) {
 			age:  10 * time.Second,
 			input: []input{
 				{
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"cpu",
 						map[string]string{},
 						map[string]interface{}{
@@ -115,7 +115,7 @@ func TestCollectionExpire(t *testing.T) {
 					),
 					addtime: time.Unix(12, 0),
 				}, {
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"cpu",
 						map[string]string{},
 						map[string]interface{}{
@@ -146,7 +146,7 @@ func TestCollectionExpire(t *testing.T) {
 			age:  10 * time.Second,
 			input: []input{
 				{
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"cpu",
 						map[string]string{},
 						map[string]interface{}{
@@ -165,7 +165,7 @@ func TestCollectionExpire(t *testing.T) {
 			age:  10 * time.Second,
 			input: []input{
 				{
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"cpu",
 						map[string]string{},
 						map[string]interface{}{
@@ -175,7 +175,7 @@ func TestCollectionExpire(t *testing.T) {
 					),
 					addtime: time.Unix(0, 0),
 				}, {
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"cpu",
 						map[string]string{},
 						map[string]interface{}{
@@ -206,7 +206,7 @@ func TestCollectionExpire(t *testing.T) {
 			age:  10 * time.Second,
 			input: []input{
 				{
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{},
 						map[string]interface{}{
@@ -218,7 +218,7 @@ func TestCollectionExpire(t *testing.T) {
 					),
 					addtime: time.Unix(0, 0),
 				}, {
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "0.05"},
 						map[string]interface{}{
@@ -229,7 +229,7 @@ func TestCollectionExpire(t *testing.T) {
 					),
 					addtime: time.Unix(0, 0),
 				}, {
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "+Inf"},
 						map[string]interface{}{
@@ -241,7 +241,7 @@ func TestCollectionExpire(t *testing.T) {
 					addtime: time.Unix(0, 0),
 				}, {
 					// Next interval
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{},
 						map[string]interface{}{
@@ -253,7 +253,7 @@ func TestCollectionExpire(t *testing.T) {
 					),
 					addtime: time.Unix(0, 0),
 				}, {
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "0.05"},
 						map[string]interface{}{
@@ -264,7 +264,7 @@ func TestCollectionExpire(t *testing.T) {
 					),
 					addtime: time.Unix(0, 0),
 				}, {
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "+Inf"},
 						map[string]interface{}{
@@ -309,7 +309,7 @@ func TestCollectionExpire(t *testing.T) {
 			age:  10 * time.Second,
 			input: []input{
 				{
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{},
 						map[string]interface{}{
@@ -321,7 +321,7 @@ func TestCollectionExpire(t *testing.T) {
 					),
 					addtime: time.Unix(0, 0),
 				}, {
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "0.05"},
 						map[string]interface{}{
@@ -332,7 +332,7 @@ func TestCollectionExpire(t *testing.T) {
 					),
 					addtime: time.Unix(0, 0),
 				}, {
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "+Inf"},
 						map[string]interface{}{
@@ -352,7 +352,7 @@ func TestCollectionExpire(t *testing.T) {
 			age:  10 * time.Second,
 			input: []input{
 				{
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "+Inf"},
 						map[string]interface{}{
@@ -363,7 +363,7 @@ func TestCollectionExpire(t *testing.T) {
 					),
 					addtime: time.Unix(0, 0),
 				}, {
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{},
 						map[string]interface{}{
@@ -375,7 +375,7 @@ func TestCollectionExpire(t *testing.T) {
 					),
 					addtime: time.Unix(0, 0),
 				}, {
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "0.05"},
 						map[string]interface{}{
@@ -420,7 +420,7 @@ func TestCollectionExpire(t *testing.T) {
 			age:  10 * time.Second,
 			input: []input{
 				{
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{},
 						map[string]interface{}{
@@ -432,7 +432,7 @@ func TestCollectionExpire(t *testing.T) {
 					),
 					addtime: time.Unix(0, 0),
 				}, {
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{"quantile": "0.01"},
 						map[string]interface{}{
@@ -444,7 +444,7 @@ func TestCollectionExpire(t *testing.T) {
 					addtime: time.Unix(0, 0),
 				}, {
 					// Updated Summary
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{},
 						map[string]interface{}{
@@ -456,7 +456,7 @@ func TestCollectionExpire(t *testing.T) {
 					),
 					addtime: time.Unix(0, 0),
 				}, {
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{"quantile": "0.01"},
 						map[string]interface{}{
@@ -497,7 +497,7 @@ func TestCollectionExpire(t *testing.T) {
 			age:  10 * time.Second,
 			input: []input{
 				{
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{},
 						map[string]interface{}{
@@ -509,7 +509,7 @@ func TestCollectionExpire(t *testing.T) {
 					),
 					addtime: time.Unix(0, 0),
 				}, {
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{"quantile": "0.01"},
 						map[string]interface{}{
@@ -529,7 +529,7 @@ func TestCollectionExpire(t *testing.T) {
 			age:  10 * time.Second,
 			input: []input{
 				{
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{},
 						map[string]interface{}{
@@ -541,7 +541,7 @@ func TestCollectionExpire(t *testing.T) {
 					),
 					addtime: time.Unix(0, 0),
 				}, {
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{"quantile": "0.5"},
 						map[string]interface{}{
@@ -552,7 +552,7 @@ func TestCollectionExpire(t *testing.T) {
 					),
 					addtime: time.Unix(0, 0),
 				}, {
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{"quantile": "0.01"},
 						map[string]interface{}{
@@ -597,7 +597,7 @@ func TestCollectionExpire(t *testing.T) {
 			age:  10 * time.Second,
 			input: []input{
 				{
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"cpu",
 						map[string]string{},
 						map[string]interface{}{
@@ -652,7 +652,7 @@ func TestExportTimestamps(t *testing.T) {
 			age:  10 * time.Second,
 			input: []input{
 				{
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{},
 						map[string]interface{}{
@@ -664,7 +664,7 @@ func TestExportTimestamps(t *testing.T) {
 					),
 					addtime: time.Unix(23, 0),
 				}, {
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "0.05"},
 						map[string]interface{}{
@@ -675,7 +675,7 @@ func TestExportTimestamps(t *testing.T) {
 					),
 					addtime: time.Unix(23, 0),
 				}, {
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "+Inf"},
 						map[string]interface{}{
@@ -687,7 +687,7 @@ func TestExportTimestamps(t *testing.T) {
 					addtime: time.Unix(23, 0),
 				}, {
 					// Next interval
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{},
 						map[string]interface{}{
@@ -699,7 +699,7 @@ func TestExportTimestamps(t *testing.T) {
 					),
 					addtime: time.Unix(23, 0),
 				}, {
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "0.05"},
 						map[string]interface{}{
@@ -710,7 +710,7 @@ func TestExportTimestamps(t *testing.T) {
 					),
 					addtime: time.Unix(23, 0),
 				}, {
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "+Inf"},
 						map[string]interface{}{
@@ -756,7 +756,7 @@ func TestExportTimestamps(t *testing.T) {
 			age:  10 * time.Second,
 			input: []input{
 				{
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{},
 						map[string]interface{}{
@@ -768,7 +768,7 @@ func TestExportTimestamps(t *testing.T) {
 					),
 					addtime: time.Unix(23, 0),
 				}, {
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{"quantile": "0.01"},
 						map[string]interface{}{
@@ -780,7 +780,7 @@ func TestExportTimestamps(t *testing.T) {
 					addtime: time.Unix(23, 0),
 				}, {
 					// Updated Summary
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{},
 						map[string]interface{}{
@@ -792,7 +792,7 @@ func TestExportTimestamps(t *testing.T) {
 					),
 					addtime: time.Unix(23, 0),
 				}, {
-					metric: testutil.MustMetric(
+					metric: metric.New(
 						"prometheus",
 						map[string]string{"quantile": "0.01"},
 						map[string]interface{}{
@@ -840,6 +840,152 @@ func TestExportTimestamps(t *testing.T) {
 			actual := c.GetProto()
 
 			require.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
+func TestCollectionLegacyDropsUTF8OnlyNames(t *testing.T) {
+	c := NewCollection(FormatConfig{NameSanitization: "legacy"})
+	c.Add(
+		metric.New(
+			"温度-指标",
+			map[string]string{"主机-名": "example.org"},
+			map[string]interface{}{"数值-值": 42.0},
+			time.Unix(0, 0),
+		),
+		time.Unix(0, 0),
+	)
+
+	// In legacy mode, purely UTF-8 metric names are sanitized to underscores
+	// which get trimmed to empty strings, causing the metric to be dropped.
+	// In contrast, TestCollectionUTF8NameSanitization shows these names
+	// are preserved in utf8 mode.
+	require.Empty(t, c.GetProto())
+}
+
+func TestCollectionUTF8NameSanitization(t *testing.T) {
+	c := NewCollection(FormatConfig{NameSanitization: "utf8"})
+	c.Add(
+		metric.New(
+			"温度-指标",
+			map[string]string{"主机-名": "example.org"},
+			map[string]interface{}{"数值-值": 42.0},
+			time.Unix(0, 0),
+		),
+		time.Unix(0, 0),
+	)
+
+	expected := []*dto.MetricFamily{
+		{
+			Name: proto.String("温度-指标_数值-值"),
+			Help: proto.String(helpString),
+			Type: dto.MetricType_UNTYPED.Enum(),
+			Metric: []*dto.Metric{
+				{
+					Label: []*dto.LabelPair{
+						{
+							Name:  proto.String("主机-名"),
+							Value: proto.String("example.org"),
+						},
+					},
+					Untyped: &dto.Untyped{Value: proto.Float64(42)},
+				},
+			},
+		},
+	}
+
+	require.Equal(t, expected, c.GetProto())
+}
+
+func TestCollectionUTF8FallbackForInvalidUTF8(t *testing.T) {
+	c := NewCollection(FormatConfig{NameSanitization: "utf8"})
+	c.Add(
+		metric.New(
+			"cpu",
+			map[string]string{
+				string([]byte{0xff, 'h', '-', '1'}): "example.org",
+			},
+			map[string]interface{}{
+				string([]byte{0xff, 't', '-', 'x'}): 42.0,
+			},
+			time.Unix(0, 0),
+		),
+		time.Unix(0, 0),
+	)
+
+	expected := []*dto.MetricFamily{
+		{
+			Name: proto.String("cpu__t_x"),
+			Help: proto.String(helpString),
+			Type: dto.MetricType_UNTYPED.Enum(),
+			Metric: []*dto.Metric{
+				{
+					Label: []*dto.LabelPair{
+						{
+							Name:  proto.String("h_1"),
+							Value: proto.String("example.org"),
+						},
+					},
+					Untyped: &dto.Untyped{Value: proto.Float64(42)},
+				},
+			},
+		},
+	}
+
+	require.Equal(t, expected, c.GetProto())
+}
+
+func TestCollectionUTF8DropWhenFallbackBecomesEmpty(t *testing.T) {
+	tests := []struct {
+		name     string
+		metric   telegraf.Metric
+		expected []*dto.MetricFamily
+	}{
+		{
+			name: "drop metric when metric name is empty after fallback",
+			metric: metric.New(
+				string([]byte{0xff}),
+				map[string]string{},
+				map[string]interface{}{
+					string([]byte{0xff}): 42.0,
+				},
+				time.Unix(0, 0),
+			),
+			expected: make([]*dto.MetricFamily, 0),
+		},
+		{
+			name: "drop label when label name is empty after fallback",
+			metric: metric.New(
+				"cpu",
+				map[string]string{
+					string([]byte{0xff}): "example.org",
+				},
+				map[string]interface{}{
+					"time_idle": 42.0,
+				},
+				time.Unix(0, 0),
+			),
+			expected: []*dto.MetricFamily{
+				{
+					Name: proto.String("cpu_time_idle"),
+					Help: proto.String(helpString),
+					Type: dto.MetricType_UNTYPED.Enum(),
+					Metric: []*dto.Metric{
+						{
+							Label:   make([]*dto.LabelPair, 0),
+							Untyped: &dto.Untyped{Value: proto.Float64(42)},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := NewCollection(FormatConfig{NameSanitization: "utf8"})
+			c.Add(tt.metric, time.Unix(0, 0))
+			require.Equal(t, tt.expected, c.GetProto())
 		})
 	}
 }

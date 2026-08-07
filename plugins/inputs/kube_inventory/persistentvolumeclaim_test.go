@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -45,7 +46,7 @@ func TestPersistentVolumeClaim(t *testing.T) {
 								},
 								Spec: corev1.PersistentVolumeClaimSpec{
 									VolumeName:       "pvc-dc870fd6-1e08-11e8-b226-02aa4bc06eb8",
-									StorageClassName: toPtr("ebs-1"),
+									StorageClassName: new("ebs-1"),
 									Selector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
 											"select1": "s1",
@@ -68,7 +69,7 @@ func TestPersistentVolumeClaim(t *testing.T) {
 				},
 			},
 			output: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"kubernetes_persistentvolumeclaim",
 					map[string]string{
 						"pvc_name":         "pc1",
@@ -99,7 +100,7 @@ func TestPersistentVolumeClaim(t *testing.T) {
 								},
 								Spec: corev1.PersistentVolumeClaimSpec{
 									VolumeName:       "pvc-dc870fd6-1e08-11e8-b226-02aa4bc06eb8",
-									StorageClassName: toPtr("ebs-1"),
+									StorageClassName: new("ebs-1"),
 									Selector:         nil,
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -117,7 +118,7 @@ func TestPersistentVolumeClaim(t *testing.T) {
 				},
 			},
 			output: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"kubernetes_persistentvolumeclaim",
 					map[string]string{
 						"pvc_name":     "pc1",
@@ -167,7 +168,7 @@ func TestPersistentVolumeClaim(t *testing.T) {
 				},
 			},
 			output: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"kubernetes_persistentvolumeclaim",
 					map[string]string{
 						"pvc_name":         "pc1",
@@ -224,7 +225,7 @@ func TestPersistentVolumeClaimSelectorFilter(t *testing.T) {
 					},
 					Spec: corev1.PersistentVolumeClaimSpec{
 						VolumeName:       "pvc-dc870fd6-1e08-11e8-b226-02aa4bc06eb8",
-						StorageClassName: toPtr("ebs-1"),
+						StorageClassName: new("ebs-1"),
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"select1": "s1",
@@ -348,8 +349,8 @@ func TestPersistentVolumeClaimSelectorFilter(t *testing.T) {
 
 		// Grab selector tags
 		actual := map[string]string{}
-		for _, metric := range acc.Metrics {
-			for key, val := range metric.Tags {
+		for _, m := range acc.Metrics {
+			for key, val := range m.Tags {
 				if strings.Contains(key, "selector_") {
 					actual[key] = val
 				}

@@ -215,10 +215,6 @@ func assertNagiosState(t *testing.T, m telegraf.Metric, f map[string]interface{}
 }
 
 func TestParse(t *testing.T) {
-	parser := Parser{
-		metricName: "nagios_test",
-	}
-
 	tests := []struct {
 		name    string
 		input   string
@@ -466,6 +462,11 @@ with three lines
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			parser := &Parser{
+				metricName: "nagios_test",
+			}
+			require.NoError(t, parser.Init())
+
 			metrics, err := parser.Parse([]byte(tt.input))
 			tt.assertF(t, metrics, err)
 		})
@@ -531,8 +532,6 @@ const benchmarkData = `DISK OK - free space: / 3326 MB (56%); | /=2643MB;5948;59
 `
 
 func TestBenchmarkData(t *testing.T) {
-	plugin := &Parser{}
-
 	expected := []telegraf.Metric{
 		metric.New(
 			"nagios",
@@ -562,6 +561,9 @@ func TestBenchmarkData(t *testing.T) {
 		),
 	}
 
+	plugin := &Parser{}
+	require.NoError(t, plugin.Init())
+
 	actual, err := plugin.Parse([]byte(benchmarkData))
 	require.NoError(t, err)
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
@@ -569,6 +571,7 @@ func TestBenchmarkData(t *testing.T) {
 
 func BenchmarkParsing(b *testing.B) {
 	plugin := &Parser{}
+	require.NoError(b, plugin.Init())
 
 	for n := 0; n < b.N; n++ {
 		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations

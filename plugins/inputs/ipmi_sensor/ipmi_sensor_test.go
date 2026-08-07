@@ -11,6 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -217,7 +218,8 @@ func TestGather(t *testing.T) {
 // fakeExecCommand is a helper function that mock
 // the exec.Command call (and call the test binary)
 func fakeExecCommand(command string, args ...string) *exec.Cmd {
-	cs := []string{"-test.run=TestHelperProcess", "--", command}
+	cs := make([]string, 0, len(args)+3)
+	cs = append(cs, "-test.run=TestHelperProcess", "--", command)
 	cs = append(cs, args...)
 	cmd := exec.Command(os.Args[0], cs...)
 	cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
@@ -539,7 +541,8 @@ func TestGatherV2(t *testing.T) {
 // fakeExecCommandV2 is a helper function that mock
 // the exec.Command call (and call the test binary)
 func fakeExecCommandV2(command string, args ...string) *exec.Cmd {
-	cs := []string{"-test.run=TestHelperProcessV2", "--", command}
+	cs := make([]string, 0, len(args)+3)
+	cs = append(cs, "-test.run=TestHelperProcessV2", "--", command)
 	cs = append(cs, args...)
 	cmd := exec.Command(os.Args[0], cs...)
 	cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
@@ -695,7 +698,7 @@ func Test_parseV2(t *testing.T) {
 				measuredAt: time.Now(),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("ipmi_sensor",
+				metric.New("ipmi_sensor",
 					map[string]string{
 						"name":        "power_supply_1",
 						"status_code": "ok",
@@ -718,7 +721,7 @@ func Test_parseV2(t *testing.T) {
 				measuredAt: time.Now(),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("ipmi_sensor",
+				metric.New("ipmi_sensor",
 					map[string]string{
 						"name":        "intrusion",
 						"status_code": "ok",
@@ -740,7 +743,7 @@ func Test_parseV2(t *testing.T) {
 				measuredAt: time.Now(),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("ipmi_sensor",
+				metric.New("ipmi_sensor",
 					map[string]string{
 						"name":        "dimm_thrm_mrgn_1",
 						"status_code": "ok",
@@ -790,7 +793,7 @@ func Test_parsePowerStatus(t *testing.T) {
 				measuredAt: time.Now(),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("ipmi_sensor",
+				metric.New("ipmi_sensor",
 					map[string]string{
 						"name":   "chassis_power_status",
 						"server": "host",
@@ -808,7 +811,7 @@ func Test_parsePowerStatus(t *testing.T) {
 				measuredAt: time.Now(),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("ipmi_sensor",
+				metric.New("ipmi_sensor",
 					map[string]string{
 						"name":   "chassis_power_status",
 						"server": "host",
@@ -841,7 +844,7 @@ Power reading state is:                   activated
 `
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric("ipmi_sensor",
+		metric.New("ipmi_sensor",
 			map[string]string{
 				"name":   "instantaneous_power_reading",
 				"server": "host",
@@ -850,7 +853,7 @@ Power reading state is:                   activated
 			map[string]interface{}{"value": float64(167)},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("ipmi_sensor",
+		metric.New("ipmi_sensor",
 			map[string]string{
 				"name":   "minimum_during_sampling_period",
 				"server": "host",
@@ -859,7 +862,7 @@ Power reading state is:                   activated
 			map[string]interface{}{"value": float64(124)},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("ipmi_sensor",
+		metric.New("ipmi_sensor",
 			map[string]string{
 				"name":   "maximum_during_sampling_period",
 				"server": "host",
@@ -868,7 +871,7 @@ Power reading state is:                   activated
 			map[string]interface{}{"value": float64(422)},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric("ipmi_sensor",
+		metric.New("ipmi_sensor",
 			map[string]string{
 				"name":   "average_power_reading_over_sample_period",
 				"server": "host",

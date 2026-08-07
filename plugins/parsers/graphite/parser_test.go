@@ -421,7 +421,7 @@ func TestParseNaN(t *testing.T) {
 	m, err := p.ParseLine("servers.localhost.cpu_load NaN 1435077219")
 	require.NoError(t, err)
 
-	expected := testutil.MustMetric(
+	expected := metric.New(
 		"servers.localhost.cpu_load",
 		map[string]string{},
 		map[string]interface{}{
@@ -440,7 +440,7 @@ func TestParseInf(t *testing.T) {
 	m, err := p.ParseLine("servers.localhost.cpu_load +Inf 1435077219")
 	require.NoError(t, err)
 
-	expected := testutil.MustMetric(
+	expected := metric.New(
 		"servers.localhost.cpu_load",
 		map[string]string{},
 		map[string]interface{}{

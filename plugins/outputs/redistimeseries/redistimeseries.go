@@ -22,15 +22,23 @@ import (
 var sampleConfig string
 
 type RedisTimeSeries struct {
-	Address             string          `toml:"address"`
-	Username            config.Secret   `toml:"username"`
-	Password            config.Secret   `toml:"password"`
-	Database            int             `toml:"database"`
-	ConvertStringFields bool            `toml:"convert_string_fields"`
-	Timeout             config.Duration `toml:"timeout"`
-	Log                 telegraf.Logger `toml:"-"`
+	Address             string           `toml:"address"`
+	Username            config.Secret    `toml:"username"`
+	Password            config.Secret    `toml:"password"`
+	Database            int              `toml:"database"`
+	ConvertStringFields bool             `toml:"convert_string_fields"`
+	Timeout             config.Duration  `toml:"timeout"`
+	Expire              *config.Duration `toml:"expire"`
+	Log                 telegraf.Logger  `toml:"-"`
 	tls.ClientConfig
 	client *redis.Client
+}
+
+func (r *RedisTimeSeries) Init() error {
+	if r.Expire != nil && time.Duration(*r.Expire) <= 0 {
+		return errors.New("expire must be a positive duration")
+	}
+	return nil
 }
 
 func (r *RedisTimeSeries) Connect() error {
@@ -104,9 +112,18 @@ func (r *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
 				}
 			}
 
-			resp := r.client.TSAddWithArgs(ctx, key, m.Time().UnixMilli(), value, &redis.TSOptions{Labels: m.Tags()})
-			if err := resp.Err(); err != nil {
-				return fmt.Errorf("adding sample %q failed: %w", key, err)
+			if r.Expire != nil {
+				pipe := r.client.Pipeline()
+				pipe.TSAddWithArgs(ctx, key, m.Time().UnixMilli(), value, &redis.TSOptions{Labels: m.Tags()})
+				pipe.Expire(ctx, key, time.Duration(*r.Expire))
+				if _, err := pipe.Exec(ctx); err != nil {
+					return fmt.Errorf("writing sample %q with expiry failed: %w", key, err)
+				}
+			} else {
+				resp := r.client.TSAddWithArgs(ctx, key, m.Time().UnixMilli(), value, &redis.TSOptions{Labels: m.Tags()})
+				if err := resp.Err(); err != nil {
+					return fmt.Errorf("adding sample %q failed: %w", key, err)
+				}
 			}
 		}
 	}

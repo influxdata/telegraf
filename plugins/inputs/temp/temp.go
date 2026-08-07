@@ -14,6 +14,7 @@ var sampleConfig string
 type Temperature struct {
 	MetricFormat string          `toml:"metric_format"`
 	DeviceTag    bool            `toml:"add_device_tag"`
+	ThermalZones bool            `toml:"always_gather_zones"`
 	Log          telegraf.Logger `toml:"-"`
 }
 

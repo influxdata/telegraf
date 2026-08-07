@@ -268,13 +268,14 @@ func TestStartupErrorBehaviorDefault(t *testing.T) {
 		DefaultAppname:      "Telegraf",
 	}
 
-	model := models.NewRunningOutput(
+	model, err := models.NewRunningOutput(
 		plugin,
 		&models.OutputConfig{
 			Name: "syslog",
 		},
 		10, 100,
 	)
+	require.NoError(t, err)
 	require.NoError(t, model.Init())
 
 	// Starting the plugin will fail with an error because the server does not listen
@@ -301,7 +302,7 @@ func TestStartupErrorBehaviorError(t *testing.T) {
 		DefaultAppname:      "Telegraf",
 	}
 
-	model := models.NewRunningOutput(
+	model, err := models.NewRunningOutput(
 		plugin,
 		&models.OutputConfig{
 			Name:                 "syslog",
@@ -309,6 +310,7 @@ func TestStartupErrorBehaviorError(t *testing.T) {
 		},
 		10, 100,
 	)
+	require.NoError(t, err)
 	require.NoError(t, model.Init())
 
 	// Starting the plugin will fail with an error because the server does not listen
@@ -335,7 +337,7 @@ func TestStartupErrorBehaviorIgnore(t *testing.T) {
 		DefaultAppname:      "Telegraf",
 	}
 
-	model := models.NewRunningOutput(
+	model, err := models.NewRunningOutput(
 		plugin,
 		&models.OutputConfig{
 			Name:                 "syslog",
@@ -343,6 +345,7 @@ func TestStartupErrorBehaviorIgnore(t *testing.T) {
 		},
 		10, 100,
 	)
+	require.NoError(t, err)
 	require.NoError(t, model.Init())
 
 	// Starting the plugin will fail because the server does not accept connections.
@@ -371,7 +374,7 @@ func TestStartupErrorBehaviorRetry(t *testing.T) {
 		DefaultAppname:      "Telegraf",
 	}
 
-	model := models.NewRunningOutput(
+	model, err := models.NewRunningOutput(
 		plugin,
 		&models.OutputConfig{
 			Name:                 "syslog",
@@ -379,6 +382,7 @@ func TestStartupErrorBehaviorRetry(t *testing.T) {
 		},
 		10, 100,
 	)
+	require.NoError(t, err)
 	require.NoError(t, model.Init())
 
 	// Starting the plugin will return no error because the plugin will

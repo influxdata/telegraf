@@ -1,0 +1,4 @@
+NAME="Telegraf Test OS"
+ID=telegraftest
+VERSION_ID="1.0"
+PRETTY_NAME="Telegraf Test OS 1.0"

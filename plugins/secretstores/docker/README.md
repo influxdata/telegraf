@@ -1,10 +1,14 @@
-# Docker Secrets Secret-Store Plugin
+# Docker Secret Store Plugin
 
-The `docker` plugin allows to utilize credentials and secrets mounted by
-Docker during container runtime. The secrets are mounted as files
-under the `/run/secrets` directory within the container.
+This plugin allows to access [Docker secrets][docker_secrets] mounted by the
+engine during container runtime. The secrets are accessible as files under
+`/run/secrets` from within the container.
 
-> NOTE: This plugin can ONLY read the mounted secrets from Docker and NOT set them.
+⭐ Telegraf v1.27.0
+🏷️ containers
+💻 all
+
+[docker_secrets]: https://docs.docker.com/engine/swarm/secrets/
 
 ## Usage <!-- @/docs/includes/secret_usage.md -->
 
@@ -13,17 +17,17 @@ the Telegraf configuration. Only certain Telegraf plugins and options of
 support secret stores. To see which plugins and options support
 secrets, see their respective documentation (e.g.
 `plugins/outputs/influxdb/README.md`). If the plugin's README has the
-`Secret-store support` section, it will detail which options support secret
+`Secret store support` section, it will detail which options support secret
 store usage.
 
 ## Configuration
 
 ```toml @sample.conf
-# Secret-store to access Docker Secrets
+# Secret store to access docker secrets
 [[secretstores.docker]]
-  ## Unique identifier for the secretstore.
+  ## Unique identifier for the secret store.
   ## This id can later be used in plugins to reference the secrets
-  ## in this secret-store via @{<id>:<secret_key>} (mandatory)
+  ## in this secret store via @{<id>:<secret_key>} (mandatory)
   id = "docker_secretstore"
 
   ## Default Path to directory where docker stores the secrets file
@@ -40,11 +44,12 @@ store usage.
 Each Secret mentioned within a Compose service's `secrets` parameter will be
 available as file under the `/run/secrets/<secret-name>` within the container.
 
-It is possible to let Telegraf pick changed secret values into plugins by setting
-`dynamic = true`. This feature will work only for Docker Secrets provided via
-`file` and `external` type within the `docker-compose.yml` file
-and not when using `environment` type
-(Refer here [Docker Secrets in Compose Specification][1]).
+It is possible to let Telegraf pick changed secret values into plugins by
+setting `dynamic` to `true`. This feature will work only for Docker secrets
+provided via `file` and `external` settings within the `docker-compose.yml` file
+([see documentation][spec]) instead of using `environment` variables.
+
+[spec]: https://github.com/compose-spec/compose-spec/blob/master/09-secrets.md
 
 ## Example Compose File
 
@@ -73,21 +78,6 @@ TELEGRAF_PLUGIN_CREDENTIAL=superSecretStuff
 USERID=1000
 ```
 
-### Referencing Secret within a Plugin
-
-Referencing the secret within a plugin occurs by:
-
-```toml
-[[inputs.<some_plugin>]]
-  password = "@{docker_secretstore:secret_for_plugin}"
-```
-
 ## Additional Information
 
-[Docker Secrets in Swarm][2]
-
-[Creating Secrets in Docker][3]
-
-[1]: https://github.com/compose-spec/compose-spec/blob/master/09-secrets.md
-[2]: https://docs.docker.com/engine/swarm/secrets/
-[3]: https://www.rockyourcode.com/using-docker-secrets-with-docker-compose/
+This plugin only supports reading the secrets, it cannot create or modify them.

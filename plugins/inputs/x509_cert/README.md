@@ -115,6 +115,7 @@ details.
     - age (int, seconds)
     - startdate (int, seconds)
     - enddate (int, seconds)
+    - public_key_length (uint, bit) - for RSA, ECDSA and ed25519 keys
     - ocsp_status_code (int)
     - ocsp_next_update (int, seconds)
     - ocsp_produced_at (int, seconds)

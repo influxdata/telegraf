@@ -907,6 +907,34 @@ func TestTimestampAbbrevWarning(t *testing.T) {
 	require.Contains(t, buf.String(), "Your config is using abbreviated timezones and parsing was changed in v1.27.0")
 }
 
+func TestGoVersion(t *testing.T) {
+	tests := []struct {
+		version  string
+		expected string
+	}{
+		{
+			version:  "go version go1.24.0 linux/amd64",
+			expected: "1.24.0",
+		},
+		{
+			version:  "go version go1.25.2 X:nodwarf5 linux/amd64",
+			expected: "1.25.2",
+		},
+		{
+			version:  "go version go1.26.1-X:nodwarf5 linux/amd64",
+			expected: "1.26.1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.version, func(t *testing.T) {
+			match := reGoVer.FindStringSubmatch(tt.version)
+			require.Len(t, match, 2)
+			require.Equal(t, tt.expected, match[1])
+		})
+	}
+}
+
 func TestProductToken(t *testing.T) {
 	token := ProductToken()
 	// Telegraf version depends on the call to SetVersion, it cannot be set

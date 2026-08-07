@@ -137,7 +137,7 @@ There are three types of filtering: **Event Log** name, **XPath Query** and
 
 ```toml
   eventlog_name = "Application"
-  xpath_query = '''
+  xpath_query = ""
 ```
 
 For **XPath Query** filtering set the `xpath_query` value, and `eventlog_name`
@@ -170,9 +170,9 @@ amount of events you log.
 
 You can send any field, *System*, *Computed* or *XML* as tag field. List of
 those fields is in the `event_tags` config array. Globbing is supported in this
-array. For example, `Level*` matches all fields beginning with `Level`, and `L?vel` matches all
-fields where the name is `Level`, `L3vel`, `L@vel`, and so on. Tag fields are
-converted to strings automatically.
+array. For example, `Level*` matches all fields beginning with `Level`, and
+`L?vel` matches all fields where the name is `Level`, `L3vel`, `L@vel`, and so
+on. Tag fields are converted to strings automatically.
 
 By default, all other fields are sent, but you can limit that either by listing
 it in `event_fields` config array with globbing, or by adding some field name

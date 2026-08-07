@@ -28,7 +28,7 @@ func TestDefaults(t *testing.T) {
 					"is_dead":   true,
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"CPU metrics",
 				map[string]string{},
 				map[string]interface{}{
@@ -39,7 +39,7 @@ func TestDefaults(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"CPU metrics",
 					map[string]string{},
 					map[string]interface{}{
@@ -61,7 +61,7 @@ func TestDefaults(t *testing.T) {
 					"variance":      1.2,
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"CPU metrics",
 				map[string]string{},
 				map[string]interface{}{
@@ -71,7 +71,7 @@ func TestDefaults(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"CPU metrics",
 					map[string]string{},
 					map[string]interface{}{
@@ -96,7 +96,7 @@ func TestDefaults(t *testing.T) {
 					"boost_enabled": false,
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"CPU metrics",
 				map[string]string{},
 				map[string]interface{}{
@@ -107,7 +107,7 @@ func TestDefaults(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"CPU metrics",
 					map[string]string{},
 					map[string]interface{}{
@@ -147,7 +147,7 @@ func TestTagDefaults(t *testing.T) {
 					"wind_feel": "very chill",
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"CPU metrics",
 				map[string]string{
 					"wind_feel": "a dragon's breath",
@@ -159,7 +159,7 @@ func TestTagDefaults(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"CPU metrics",
 					map[string]string{
 						"wind_feel": "a dragon's breath",
@@ -179,7 +179,7 @@ func TestTagDefaults(t *testing.T) {
 					"wind_feel": "Unknown",
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"CPU metrics",
 				map[string]string{},
 				map[string]interface{}{
@@ -189,7 +189,7 @@ func TestTagDefaults(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"CPU metrics",
 					map[string]string{
 						"wind_feel": "Unknown",
@@ -211,7 +211,7 @@ func TestTagDefaults(t *testing.T) {
 					"boost_enabled": "false",
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"CPU metrics",
 				map[string]string{
 					"wind_feel":     " ",
@@ -224,7 +224,7 @@ func TestTagDefaults(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"CPU metrics",
 					map[string]string{
 						"wind_feel":     "Unknown",

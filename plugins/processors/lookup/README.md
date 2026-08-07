@@ -67,14 +67,13 @@ In the `json` format, the input `files` must have the following format
 {
   "keyA": {
     "tag-name1": "tag-value1",
-    ...
-    "tag-nameN": "tag-valueN",
+    "tag-name...": "tag-value...",
+    "tag-nameN": "tag-valueN"
   },
-  ...
   "keyZ": {
     "tag-name1": "tag-value1",
-    ...
-    "tag-nameM": "tag-valueM",
+    "tag-name...": "tag-value...",
+    "tag-nameM": "tag-valueM"
   }
 }
 ```
@@ -105,7 +104,7 @@ This setting specifies comma-separated-value files with the following format
 
 ```csv
 # Optional comments
-ignored,tag-name1,...,tag-valueN
+ignored,tag-name1,...,tag-nameN
 keyA,tag-value1,...,,,,
 keyB,tag-value1,,,,...,
 ...
@@ -133,7 +132,7 @@ With a lookup table of
   "xyzzy-red": {
     "location": "us-west",
     "rack": "C01-42"
-  },
+  }
 }
 ```
 

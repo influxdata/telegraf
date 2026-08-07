@@ -28,12 +28,7 @@ func TestTextStderr(t *testing.T) {
 }
 
 func TestTextFile(t *testing.T) {
-	tmpfile, err := os.CreateTemp(t.TempDir(), "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
-
-	filename := tmpfile.Name()
-	require.NoError(t, tmpfile.Close())
+	filename := filepath.Join(t.TempDir(), "test.log")
 
 	cfg := &Config{
 		Logfile:             filename,
@@ -53,12 +48,7 @@ func TestTextFile(t *testing.T) {
 }
 
 func TestTextFileDebug(t *testing.T) {
-	tmpfile, err := os.CreateTemp(t.TempDir(), "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
-
-	filename := tmpfile.Name()
-	require.NoError(t, tmpfile.Close())
+	filename := filepath.Join(t.TempDir(), "test.log")
 
 	cfg := &Config{
 		Logfile:             filename,
@@ -78,12 +68,7 @@ func TestTextFileDebug(t *testing.T) {
 }
 
 func TestTextFileError(t *testing.T) {
-	tmpfile, err := os.CreateTemp(t.TempDir(), "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
-
-	filename := tmpfile.Name()
-	require.NoError(t, tmpfile.Close())
+	filename := filepath.Join(t.TempDir(), "test.log")
 
 	cfg := &Config{
 		Logfile:             filename,
@@ -104,12 +89,7 @@ func TestTextFileError(t *testing.T) {
 }
 
 func TestTextAddDefaultLogLevel(t *testing.T) {
-	tmpfile, err := os.CreateTemp(t.TempDir(), "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
-
-	filename := tmpfile.Name()
-	require.NoError(t, tmpfile.Close())
+	filename := filepath.Join(t.TempDir(), "test.log")
 
 	cfg := &Config{
 		Logfile:             filename,
@@ -129,12 +109,7 @@ func TestTextAddDefaultLogLevel(t *testing.T) {
 }
 
 func TestTextWriteToTruncatedFile(t *testing.T) {
-	tmpfile, err := os.CreateTemp(t.TempDir(), "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
-
-	filename := tmpfile.Name()
-	require.NoError(t, tmpfile.Close())
+	filename := filepath.Join(t.TempDir(), "test.log")
 
 	cfg := &Config{
 		Logfile:             filename,
@@ -182,13 +157,7 @@ func TestTextWriteToFileInRotation(t *testing.T) {
 
 func TestTextWriteDerivedLogger(t *testing.T) {
 	instance = defaultHandler()
-
-	tmpfile, err := os.CreateTemp(t.TempDir(), "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
-
-	filename := tmpfile.Name()
-	require.NoError(t, tmpfile.Close())
+	filename := filepath.Join(t.TempDir(), "test.log")
 
 	cfg := &Config{
 		Logfile:             filename,
@@ -210,13 +179,7 @@ func TestTextWriteDerivedLogger(t *testing.T) {
 
 func TestTextWriteDerivedLoggerWithAttributes(t *testing.T) {
 	instance = defaultHandler()
-
-	tmpfile, err := os.CreateTemp(t.TempDir(), "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
-
-	filename := tmpfile.Name()
-	require.NoError(t, tmpfile.Close())
+	filename := filepath.Join(t.TempDir(), "test.log")
 
 	cfg := &Config{
 		Logfile:             filename,
@@ -239,6 +202,25 @@ func TestTextWriteDerivedLoggerWithAttributes(t *testing.T) {
 	require.NoError(t, err)
 	require.Greater(t, len(buf), 19)
 	require.Equal(t, "Z I! [testing.test::myalias] TEST\n", string(buf[19:]))
+}
+
+func TestTextFileCreateDir(t *testing.T) {
+	filename := filepath.Join(t.TempDir(), "foo", "test.log")
+
+	cfg := &Config{
+		Logfile:             filename,
+		LogFormat:           "text",
+		RotationMaxArchives: -1,
+	}
+	require.NoError(t, SetupLogging(cfg))
+	defer func() { require.NoError(t, CloseLogging()) }()
+
+	log.Printf("I! TEST")
+
+	buf, err := os.ReadFile(filename)
+	require.NoError(t, err)
+	require.Greater(t, len(buf), 19)
+	require.Equal(t, "Z I! TEST\n", string(buf[19:]))
 }
 
 func BenchmarkTelegrafTextLogWrite(b *testing.B) {

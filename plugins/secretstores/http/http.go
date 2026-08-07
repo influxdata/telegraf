@@ -1,3 +1,4 @@
+//go:generate ../../../tools/config_includer/generator
 //go:generate ../../../tools/readme_config_includer/generator
 package http
 
@@ -102,10 +103,6 @@ func (h *HTTP) Get(key string) ([]byte, error) {
 	}
 
 	return []byte(v), nil
-}
-
-func (*HTTP) Set(_, _ string) error {
-	return errors.New("setting secrets not supported")
 }
 
 func (h *HTTP) List() ([]string, error) {

@@ -1,22 +1,20 @@
-# OAuth2 Secret-store Plugin
+# OAuth2 Secret Store Plugin
 
-The `oauth2` plugin allows to retrieve and maintain secrets from various OAuth2
-services such as [Auth0][auth0], [AzureAD][azuread] or others (see
+This plugin allows to retrieve and maintain secrets from various OAuth2 services
+such as [Auth0][auth0], [AzureAD][azuread] or others (see
 [Configuration section](#configuration)).
-Tokens that are expired or are about to expire will be automatically renewed
-by this secret-store, so other plugins referencing those tokens can then use
-them to perform their API calls without hassle.
+Expired tokens will be renewed automatically for allowing plugins referencing
+those tokens to perform their API calls without hassle.
 
-**Please note:** This plugin only supports the *2-legged client credentials*
-flow.
+> [!NOTE]
+> This plugin only supports the *2-legged client credentials* flow.
 
-You can use Telegraf to test token retrieval. Run
+⭐ Telegraf v1.28.0
+🏷️ web
+💻 all
 
-```shell
-telegraf secrets help
-```
-
-to get more information on how to do access secrets with Telegraf.
+[auth0]: https://auth0.com
+[azuread]: https://azure.microsoft.com/en/products/active-directory
 
 ## Usage <!-- @/docs/includes/secret_usage.md -->
 
@@ -25,17 +23,17 @@ the Telegraf configuration. Only certain Telegraf plugins and options of
 support secret stores. To see which plugins and options support
 secrets, see their respective documentation (e.g.
 `plugins/outputs/influxdb/README.md`). If the plugin's README has the
-`Secret-store support` section, it will detail which options support secret
+`Secret store support` section, it will detail which options support secret
 store usage.
 
 ## Configuration
 
 ```toml @sample.conf
-# Secret-store to retrieve and maintain tokens from various OAuth2 services
+# Retrieve and maintain tokens from various OAuth2 services
 [[secretstores.oauth2]]
-  ## Unique identifier for the secret-store.
+  ## Unique identifier for the secret store.
   ## This id can later be used in plugins to reference the secrets
-  ## in this secret-store via @{<id>:<secret_key>} (mandatory)
+  ## in this secret store via @{<id>:<secret_key>} (mandatory)
   id = "secretstore"
 
   ## Service to retrieve the token(s) from
@@ -76,13 +74,13 @@ store usage.
 ```
 
 All services allow multiple `[[secretstores.oauth2.token]]` sections to be
-specified to define different tokens for the secret store. Please make sure to
-specify `key`s that are **unique** within the secret-store instance as those
-are used to reference the tokens/secrets later.
+specified for defining different tokens in the secret store. Please make sure to
+specify `key`s that are **unique** within the secret store instance as those
+are used to reference the tokens later.
 
-The `oauth2` secret-store supports various services that might differ in the
-required or allowed settings as listed below. All of the services accept
-optional `scopes` and optional `parameter` settings if not stated otherwise.
+This plugin supports various services that might differ in the required or
+allowed settings as listed below. All of the services accept optional `scopes`
+and optional `parameter` settings if not stated otherwise.
 
 Please **replace the placeholders** in the minumal example configurations below
 and add `scopes` and/or `parameters` if required.
@@ -128,9 +126,7 @@ the `tenant_id` and provide a valid `scope`. An example configuration look like
 
 ### Custom service
 
-If your service is not listed above, you can still use it setting
-`service = "custom"` as well as the `token_endpoint`. Please make sure your
-service is configured for the *2-legged client credentials* OAuth2 flow!
-
-[auth0]: https://auth0.com
-[azuread]: https://azure.microsoft.com/en/products/active-directory
+If your service is not listed above, you can still use it setting `service` to
+`custom` and specifying the endpoint of your service using the `token_endpoint`
+setting. Please make sure your service is configured for the
+*2-legged client credentials* OAuth2 flow!

@@ -168,10 +168,8 @@ func (tsrc *TableSource) MetricTableColumns() []utils.Column {
 }
 
 func (tsrc *TableSource) TagTableColumns() []utils.Column {
-	cols := []utils.Column{
-		tsrc.postgresql.tagIDColumn,
-	}
-
+	cols := make([]utils.Column, 0, len(tsrc.TagColumns())+1)
+	cols = append(cols, tsrc.postgresql.tagIDColumn)
 	cols = append(cols, tsrc.TagColumns()...)
 
 	return cols

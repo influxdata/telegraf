@@ -896,7 +896,7 @@ func TestParse(t *testing.T) {
 			},
 			input: []byte(`{"metric": {"__name__": "howdy", "time_idle": 42}}`),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"json",
 					map[string]string{
 						"metric___name__": "howdy",
@@ -930,7 +930,7 @@ func TestParse(t *testing.T) {
 			},
 			input: []byte(`[{"answer": 42}]`),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"json",
 					map[string]string{},
 					map[string]interface{}{
@@ -953,7 +953,7 @@ func TestParse(t *testing.T) {
 }
 `),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"json",
 					map[string]string{},
 					map[string]interface{}{
@@ -978,7 +978,7 @@ func TestParse(t *testing.T) {
 }
 `),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"json",
 					map[string]string{},
 					map[string]interface{}{
@@ -1017,7 +1017,7 @@ func TestParseWithWildcardTagKeys(t *testing.T) {
 			},
 			input: []byte(validJSONTags),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"json_test",
 					map[string]string{
 						"tags_object_mytag":    "foobar",
@@ -1039,7 +1039,7 @@ func TestParseWithWildcardTagKeys(t *testing.T) {
 			},
 			input: []byte(validJSONTags),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"json_test",
 					map[string]string{
 						"mytag":                "foobar",
@@ -1063,7 +1063,7 @@ func TestParseWithWildcardTagKeys(t *testing.T) {
 			},
 			input: []byte(validJSONTags),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"json_test",
 					map[string]string{
 						"tags_object_mytag":    "foobar",
@@ -1085,7 +1085,7 @@ func TestParseWithWildcardTagKeys(t *testing.T) {
 			},
 			input: []byte(validJSONTags),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"json_test",
 					map[string]string{
 						"mytag":                "foobar",
@@ -1127,7 +1127,7 @@ func TestParseLineWithWildcardTagKeys(t *testing.T) {
 				TagKeys:    []string{"tags_object_*"},
 			},
 			input: validJSONTags,
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"json_test",
 				map[string]string{
 					"tags_object_mytag":    "foobar",
@@ -1147,7 +1147,7 @@ func TestParseLineWithWildcardTagKeys(t *testing.T) {
 				TagKeys:    []string{"*tag"},
 			},
 			input: validJSONTags,
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"json_test",
 				map[string]string{
 					"mytag":                "foobar",
@@ -1169,7 +1169,7 @@ func TestParseLineWithWildcardTagKeys(t *testing.T) {
 				TagKeys:    []string{"wrongtagkey", "tags_object_*"},
 			},
 			input: validJSONTags,
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"json_test",
 				map[string]string{
 					"tags_object_mytag":    "foobar",
@@ -1189,7 +1189,7 @@ func TestParseLineWithWildcardTagKeys(t *testing.T) {
 				TagKeys:    []string{"mytag", "tags_object_*"},
 			},
 			input: validJSONTags,
-			expected: testutil.MustMetric(
+			expected: metric.New(
 				"json_test",
 				map[string]string{
 					"mytag":                "foobar",
@@ -1233,7 +1233,7 @@ func TestParseArrayWithWildcardTagKeys(t *testing.T) {
 			},
 			input: []byte(validJSONArrayTags),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"json_array_test",
 					map[string]string{
 						"mytag":                 "foo",
@@ -1247,7 +1247,7 @@ func TestParseArrayWithWildcardTagKeys(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"json_array_test",
 					map[string]string{
 						"mytag":                 "bar",
@@ -1271,7 +1271,7 @@ func TestParseArrayWithWildcardTagKeys(t *testing.T) {
 			},
 			input: []byte(validJSONArrayTags),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"json_array_test",
 					map[string]string{
 						"tags_array_0_mytag":    "foo",
@@ -1283,7 +1283,7 @@ func TestParseArrayWithWildcardTagKeys(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"json_array_test",
 					map[string]string{
 						"tags_array_0_mytag":    "bar",
@@ -1305,7 +1305,7 @@ func TestParseArrayWithWildcardTagKeys(t *testing.T) {
 			},
 			input: []byte(validJSONArrayTags),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"json_array_test",
 					map[string]string{
 						"mytag":                 "foo",
@@ -1319,7 +1319,7 @@ func TestParseArrayWithWildcardTagKeys(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"json_array_test",
 					map[string]string{
 						"mytag":                 "bar",
@@ -1343,7 +1343,7 @@ func TestParseArrayWithWildcardTagKeys(t *testing.T) {
 			},
 			input: []byte(validJSONArrayTags),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"json_array_test",
 					map[string]string{
 						"anothert":              "foo",
@@ -1358,7 +1358,7 @@ func TestParseArrayWithWildcardTagKeys(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"json_array_test",
 					map[string]string{
 						"anothert":              "bar",

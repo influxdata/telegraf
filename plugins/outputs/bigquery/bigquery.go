@@ -20,6 +20,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	common_gcp "github.com/influxdata/telegraf/plugins/common/gcp"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -93,7 +94,11 @@ func (b *BigQuery) setUpDefaultClient() error {
 	ctx := context.Background()
 
 	if b.CredentialsFile != "" {
-		credentialsOption = option.WithCredentialsFile(b.CredentialsFile)
+		credType, err := common_gcp.ParseCredentialType(b.CredentialsFile)
+		if err != nil {
+			return fmt.Errorf("unable to parse credential file type: %w", err)
+		}
+		credentialsOption = option.WithAuthCredentialsFile(option.CredentialsType(credType), b.CredentialsFile)
 	} else {
 		creds, err := google.FindDefaultCredentials(ctx, bigquery.Scope)
 		if err != nil {
@@ -167,11 +172,8 @@ func groupByMetricName(metrics []telegraf.Metric) map[string][]bigquery.ValueSav
 }
 
 func newValuesSaver(m telegraf.Metric) *bigquery.ValuesSaver {
-	s := make(bigquery.Schema, 0)
-	r := make([]bigquery.Value, 0)
-	timeSchema := timeStampFieldSchema()
-	s = append(s, timeSchema)
-	r = append(r, m.Time())
+	s := bigquery.Schema{timeStampFieldSchema()}
+	r := []bigquery.Value{m.Time()}
 
 	s, r = tagsSchemaAndValues(m, s, r)
 	s, r = valuesSchemaAndValues(m, s, r)

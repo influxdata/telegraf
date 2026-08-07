@@ -34,7 +34,7 @@ var (
 	ErrNotImplemented = errors.New("not implemented yet")
 
 	// Regexp for extracting the go version from runtime information
-	reGoVer = regexp.MustCompile(`go([^\s]+).*`)
+	reGoVer = regexp.MustCompile(`go(\d+\.\d+\.\d+).*`)
 )
 
 // Set via LDFLAGS -X

@@ -32,7 +32,7 @@ func TestConverter(t *testing.T) {
 					Tag:      []string{"tag"},
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"cpu",
 				map[string]string{
 					"float":  "42",
@@ -46,7 +46,7 @@ func TestConverter(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"tag": "tag",
@@ -72,7 +72,7 @@ func TestConverter(t *testing.T) {
 					Float:    []string{"float"},
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"cpu",
 				map[string]string{
 					"float": "a",
@@ -84,7 +84,7 @@ func TestConverter(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{},
@@ -104,7 +104,7 @@ func TestConverter(t *testing.T) {
 					Tag:      []string{"f"},
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"cpu",
 				map[string]string{},
 				map[string]interface{}{
@@ -125,7 +125,7 @@ func TestConverter(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"f": "foo",
@@ -157,7 +157,7 @@ func TestConverter(t *testing.T) {
 					Float:    []string{"d"},
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"cpu",
 				map[string]string{},
 				map[string]interface{}{
@@ -169,7 +169,7 @@ func TestConverter(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{},
@@ -189,7 +189,7 @@ func TestConverter(t *testing.T) {
 					Tag:      []string{"f"},
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"cpu",
 				map[string]string{},
 				map[string]interface{}{
@@ -205,7 +205,7 @@ func TestConverter(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"f": "42",
@@ -235,7 +235,7 @@ func TestConverter(t *testing.T) {
 					Tag:      []string{"f"},
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"cpu",
 				map[string]string{},
 				map[string]interface{}{
@@ -251,7 +251,7 @@ func TestConverter(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"f": "42",
@@ -276,7 +276,7 @@ func TestConverter(t *testing.T) {
 					Unsigned: []string{"a", "b"},
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"cpu",
 				map[string]string{},
 				map[string]interface{}{
@@ -286,7 +286,7 @@ func TestConverter(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -309,7 +309,7 @@ func TestConverter(t *testing.T) {
 					Tag:      []string{"f", "ff"},
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"cpu",
 				map[string]string{},
 				map[string]interface{}{
@@ -329,7 +329,7 @@ func TestConverter(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"f":  "true",
@@ -363,7 +363,7 @@ func TestConverter(t *testing.T) {
 					Tag:      []string{"f"},
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"cpu",
 				map[string]string{},
 				map[string]interface{}{
@@ -383,7 +383,7 @@ func TestConverter(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"f": "42",
@@ -412,7 +412,7 @@ func TestConverter(t *testing.T) {
 					Integer: []string{"int_*"},
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"cpu",
 				map[string]string{},
 				map[string]interface{}{
@@ -423,7 +423,7 @@ func TestConverter(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -444,7 +444,7 @@ func TestConverter(t *testing.T) {
 					Float:    []string{"c"},
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"cpu",
 				map[string]string{},
 				map[string]interface{}{
@@ -455,7 +455,7 @@ func TestConverter(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -475,7 +475,7 @@ func TestConverter(t *testing.T) {
 					TimestampFormat: "unix",
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"cpu",
 				map[string]string{},
 				map[string]interface{}{
@@ -485,7 +485,7 @@ func TestConverter(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -503,7 +503,7 @@ func TestConverter(t *testing.T) {
 					TimestampFormat: "unix",
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"cpu",
 				map[string]string{
 					"time": "1677610769",
@@ -514,7 +514,7 @@ func TestConverter(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -532,7 +532,7 @@ func TestConverter(t *testing.T) {
 					TimestampFormat: "blah",
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"cpu",
 				map[string]string{
 					"time": "1677610769",
@@ -543,7 +543,7 @@ func TestConverter(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"time": "1677610769",
@@ -563,7 +563,7 @@ func TestConverter(t *testing.T) {
 					TimestampFormat: "rfc3339",
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"cpu",
 				map[string]string{},
 				map[string]interface{}{
@@ -573,7 +573,7 @@ func TestConverter(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -591,7 +591,7 @@ func TestConverter(t *testing.T) {
 					TimestampFormat: "2006-01-02 15:04:05 MST",
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"cpu",
 				map[string]string{},
 				map[string]interface{}{
@@ -601,7 +601,7 @@ func TestConverter(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -619,7 +619,7 @@ func TestConverter(t *testing.T) {
 					TimestampFormat: "2006-01-0",
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"cpu",
 				map[string]string{},
 				map[string]interface{}{
@@ -629,7 +629,7 @@ func TestConverter(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -647,7 +647,7 @@ func TestConverter(t *testing.T) {
 					Timestamp: []string{"time"},
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"cpu",
 				map[string]string{},
 				map[string]interface{}{
@@ -657,7 +657,7 @@ func TestConverter(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -691,7 +691,7 @@ func TestMultipleTimestamps(t *testing.T) {
 	}
 	require.NoError(t, c.Init())
 
-	input := testutil.MustMetric(
+	input := metric.New(
 		"cpu",
 		map[string]string{},
 		map[string]interface{}{
@@ -722,7 +722,7 @@ func TestMeasurement(t *testing.T) {
 					Measurement: []string{"filepath"},
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"file",
 				map[string]string{
 					"filepath": "/var/log/syslog",
@@ -733,7 +733,7 @@ func TestMeasurement(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"/var/log/syslog",
 					map[string]string{},
 					map[string]interface{}{
@@ -750,7 +750,7 @@ func TestMeasurement(t *testing.T) {
 					Measurement: []string{"topic"},
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"file",
 				map[string]string{},
 				map[string]interface{}{
@@ -760,7 +760,7 @@ func TestMeasurement(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"telegraf",
 					map[string]string{},
 					map[string]interface{}{
@@ -777,7 +777,7 @@ func TestMeasurement(t *testing.T) {
 					Base64IEEEFloat32: []string{"a", "b"},
 				},
 			},
-			input: testutil.MustMetric(
+			input: metric.New(
 				"cpu",
 				map[string]string{},
 				map[string]interface{}{
@@ -787,7 +787,7 @@ func TestMeasurement(t *testing.T) {
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{

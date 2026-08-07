@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -42,7 +42,7 @@ func TestMariaDBIntegration(t *testing.T) {
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("mariadbd: ready for connections.").WithOccurrence(2),
-			wait.ForListeningPort(nat.Port(port)),
+			wait.ForListeningPort(port),
 		),
 	}
 	require.NoError(t, container.Start(), "failed to start container")
@@ -66,7 +66,7 @@ func TestMariaDBIntegration(t *testing.T) {
 				},
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"sql",
 					map[string]string{
 						"tag_one": "tag1",
@@ -140,7 +140,7 @@ func TestPostgreSQLIntegration(t *testing.T) {
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
-			wait.ForListeningPort(nat.Port(port)),
+			wait.ForListeningPort(port),
 		),
 	}
 	require.NoError(t, container.Start(), "failed to start container")
@@ -164,7 +164,7 @@ func TestPostgreSQLIntegration(t *testing.T) {
 				},
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"sql",
 					map[string]string{
 						"tag_one": "tag1",
@@ -232,8 +232,8 @@ func TestClickHouseIntegration(t *testing.T) {
 			"/docker-entrypoint-initdb.d/expected.sql": testdata,
 		},
 		WaitingFor: wait.ForAll(
-			wait.NewHTTPStrategy("/").WithPort(nat.Port("8123")),
-			wait.ForListeningPort(nat.Port(port)),
+			wait.NewHTTPStrategy("/").WithPort("8123"),
+			wait.ForListeningPort(port),
 			wait.ForLog("Saved preprocessed configuration to '/var/lib/clickhouse/preprocessed_configs/users.xml'.").WithOccurrence(2),
 		),
 	}
@@ -258,7 +258,7 @@ func TestClickHouseIntegration(t *testing.T) {
 				},
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"sql",
 					map[string]string{
 						"tag_one": "tag1",

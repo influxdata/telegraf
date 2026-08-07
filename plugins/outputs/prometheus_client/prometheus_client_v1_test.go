@@ -13,8 +13,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	inputs "github.com/influxdata/telegraf/plugins/inputs/prometheus"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
+	"github.com/influxdata/telegraf/selfstat"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -24,6 +26,7 @@ func TestMetricVersion1(t *testing.T) {
 		name     string
 		output   *PrometheusClient
 		metrics  []telegraf.Metric
+		accept   string
 		expected []byte
 	}{
 		{
@@ -36,7 +39,7 @@ func TestMetricVersion1(t *testing.T) {
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"host": "example.org",
@@ -63,7 +66,7 @@ cpu_time_idle{host="example.org"} 42
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu_time_idle",
 					map[string]string{
 						"host": "example.org",
@@ -90,7 +93,7 @@ cpu_time_idle{host="example.org"} 42
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu_time_idle",
 					map[string]string{
 						"host": "example.org",
@@ -119,7 +122,7 @@ cpu_time_idle{host="example.org"} 42
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu_time_idle",
 					map[string]string{
 						"host": "example.org",
@@ -148,7 +151,7 @@ cpu_time_idle{host="example.org"} 42 1257894000000
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu_time_idle",
 					map[string]string{},
 					map[string]interface{}{
@@ -166,6 +169,36 @@ cpu_time_idle{host_name="example.org"} 42
 `),
 		},
 		{
+			name: "utf8 name sanitization supports utf8 metric and label names",
+			output: &PrometheusClient{
+				Listen:            ":0",
+				MetricVersion:     1,
+				CollectorsExclude: []string{"gocollector", "process"},
+				Path:              "/metrics",
+				NameSanitization:  "utf8",
+				Log:               logger,
+			},
+			metrics: []telegraf.Metric{
+				metric.New(
+					"温度-指标",
+					map[string]string{
+						"主机-名": "example.org",
+					},
+					map[string]interface{}{
+						"counter": 42.0,
+					},
+					time.Unix(0, 0),
+					telegraf.Counter,
+				),
+			},
+			accept: "text/plain; version=0.0.4; escaping=allow-utf-8",
+			expected: []byte(`
+# HELP "温度-指标" Telegraf collected metric
+# TYPE "温度-指标" counter
+{"温度-指标","主机-名"="example.org"} 42
+`),
+		},
+		{
 			name: "prometheus gauge",
 			output: &PrometheusClient{
 				Listen:            ":0",
@@ -175,7 +208,7 @@ cpu_time_idle{host_name="example.org"} 42
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu_time_idle",
 					map[string]string{
 						"host": "example.org",
@@ -203,7 +236,7 @@ cpu_time_idle{host="example.org"} 42
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"http_request_duration_seconds",
 					map[string]string{},
 					map[string]interface{}{
@@ -243,7 +276,7 @@ http_request_duration_seconds_count 144320
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"rpc_duration_seconds",
 					map[string]string{},
 					map[string]interface{}{
@@ -282,7 +315,7 @@ rpc_duration_seconds_count 2693
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu_time_idle",
 					map[string]string{
 						"host": "example.org",
@@ -310,7 +343,7 @@ cpu_time_idle{host="example.org"} 42
 				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu_time_idle",
 					map[string]string{
 						"host": "example.org",
@@ -340,7 +373,13 @@ cpu_time_idle{host="example.org"} 42
 
 			require.NoError(t, tt.output.Write(tt.metrics))
 
-			resp, err := http.Get(tt.output.URL())
+			req, err := http.NewRequest(http.MethodGet, tt.output.URL(), nil)
+			require.NoError(t, err)
+			if tt.accept != "" {
+				req.Header.Set("Accept", tt.accept)
+			}
+
+			resp, err := http.DefaultClient.Do(req)
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, resp.StatusCode)
 			defer resp.Body.Close()
@@ -451,6 +490,7 @@ rpc_duration_seconds_count 2693
 				URLs:          []string{address},
 				URLTag:        "",
 				MetricVersion: 1,
+				Statistics:    selfstat.NewCollector(make(map[string]string)),
 			}
 			err := input.Init()
 			require.NoError(t, err)

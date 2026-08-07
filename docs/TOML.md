@@ -5,18 +5,16 @@ common questions and issues that cause questions or confusion.
 
 ## Reference and Validator
 
-For all things TOML related, please consult the [TOML Spec][] and consider
-using a TOML validator. In VSCode the [Even Better TOML][] extension or use the
-[TOML Lint][] website to validate your TOML config.
+For all things TOML related, please consult the [TOML Specification][spec] and
+consider using a TOML validator, e.g. the [TOML Lint website][linter].
 
-[TOML Spec]: https://toml.io/en/v1.0.0
-[Even Better TOML]: https://marketplace.visualstudio.com/items?itemName=tamasfe.even-better-toml
-[TOML Lint]: https://www.toml-lint.com/
+[spec]: https://toml.io/en/v1.0.0
+[linter]: https://www.toml-lint.com/
 
 ## Multiple TOML Files
 
-TOML technically does not support multiple files, this is done as a convenience for
-users.
+TOML technically does not support multiple files, this is done as a convenience
+for users.
 
 Users should be aware that when Telegraf reads a user's config, if multiple
 files or directories are read in, each file at a time and all

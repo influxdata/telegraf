@@ -147,6 +147,9 @@ func (c *consumer) init() error {
 		return errors.New("message handler is undefined")
 	}
 
+	c.Lock()
+	defer c.Unlock()
+
 	c.shardsConsumed = make(map[string]bool)
 	c.shardConsumers = make(map[string]*shardConsumer)
 
@@ -327,7 +330,10 @@ func (c *consumer) startShardConsumer(ctx context.Context, id, seqnr string) {
 		sc.params.ShardIteratorType = types.ShardIteratorTypeAfterSequenceNumber
 		sc.params.StartingSequenceNumber = &seqnr
 	}
+
+	c.Lock()
 	c.shardConsumers[id] = sc
+	c.Unlock()
 
 	childs, err := sc.consume(ctx, id)
 	if err != nil {

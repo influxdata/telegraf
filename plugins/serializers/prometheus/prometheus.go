@@ -26,6 +26,9 @@ type FormatConfig struct {
 	// helps to reduce payload size.
 	CompactEncoding bool        `toml:"prometheus_compact_encoding"`
 	TypeMappings    MetricTypes `toml:"prometheus_metric_types"`
+	// NameSanitization controls how metric names and label names are sanitized.
+	// Valid values: "legacy" (ASCII-only rules), "utf8" (allows UTF-8 names).
+	NameSanitization string `toml:"prometheus_name_sanitization"`
 }
 
 // MetricTypes defines the mapping of metric names to their types.
@@ -65,6 +68,15 @@ func (mt *MetricTypes) DetermineType(name string, m telegraf.Metric) telegraf.Va
 }
 
 func (s *Serializer) Init() error {
+	switch s.NameSanitization {
+	case "":
+		s.NameSanitization = "legacy"
+	case "legacy", "utf8":
+		// Valid sanitization modes.
+	default:
+		return fmt.Errorf("invalid prometheus_name_sanitization %q: must be \"legacy\" or \"utf8\"", s.NameSanitization)
+	}
+
 	return s.FormatConfig.TypeMappings.Init()
 }
 

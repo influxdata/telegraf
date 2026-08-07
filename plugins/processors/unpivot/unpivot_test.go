@@ -41,7 +41,7 @@ func TestOriginalMode(t *testing.T) {
 			tagKey:   "name",
 			valueKey: "value",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{},
 					map[string]interface{}{
 						"idle_time": int64(42),
@@ -50,7 +50,7 @@ func TestOriginalMode(t *testing.T) {
 				),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{
 						"name": "idle_time",
 					},
@@ -66,7 +66,7 @@ func TestOriginalMode(t *testing.T) {
 			tagKey:   "name",
 			valueKey: "value",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{},
 					map[string]interface{}{
 						"idle_time": int64(42),
@@ -76,7 +76,7 @@ func TestOriginalMode(t *testing.T) {
 				),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{
 						"name": "idle_time",
 					},
@@ -85,7 +85,7 @@ func TestOriginalMode(t *testing.T) {
 					},
 					now,
 				),
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{
 						"name": "idle_user",
 					},
@@ -127,7 +127,7 @@ func TestFieldMode(t *testing.T) {
 			tagKey:      "name",
 			valueKey:    "value",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{},
 					map[string]interface{}{
 						"idle_time": int64(42),
@@ -136,7 +136,7 @@ func TestFieldMode(t *testing.T) {
 				),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("idle_time",
+				metric.New("idle_time",
 					map[string]string{},
 					map[string]interface{}{
 						"value": int64(42),
@@ -151,7 +151,7 @@ func TestFieldMode(t *testing.T) {
 			tagKey:      "name",
 			valueKey:    "value",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{},
 					map[string]interface{}{
 						"idle_time": int64(42),
@@ -161,14 +161,14 @@ func TestFieldMode(t *testing.T) {
 				),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("idle_time",
+				metric.New("idle_time",
 					map[string]string{},
 					map[string]interface{}{
 						"value": int64(42),
 					},
 					now,
 				),
-				testutil.MustMetric("idle_user",
+				metric.New("idle_user",
 					map[string]string{},
 					map[string]interface{}{
 						"value": int64(43),
@@ -183,7 +183,7 @@ func TestFieldMode(t *testing.T) {
 			tagKey:      "name",
 			valueKey:    "value",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{
 						"building": "5a",
 					},
@@ -195,7 +195,7 @@ func TestFieldMode(t *testing.T) {
 				),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("idle_time",
+				metric.New("idle_time",
 					map[string]string{
 						"building": "5a",
 					},
@@ -204,7 +204,7 @@ func TestFieldMode(t *testing.T) {
 					},
 					now,
 				),
-				testutil.MustMetric("idle_user",
+				metric.New("idle_user",
 					map[string]string{
 						"building": "5a",
 					},

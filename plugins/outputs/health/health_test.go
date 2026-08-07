@@ -10,6 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs/health"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -44,7 +45,7 @@ func TestHealth(t *testing.T) {
 				},
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -65,7 +66,7 @@ func TestHealth(t *testing.T) {
 				},
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -91,7 +92,7 @@ func TestHealth(t *testing.T) {
 				},
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -243,14 +244,14 @@ func TestTimeBetweenMetrics(t *testing.T) {
 			name:                  "healthy when disabled and old metric",
 			maxTimeBetweenMetrics: config.Duration(0),
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]any{
 						"time_idle": 42,
 					},
 					arbitraryTime),
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]any{
@@ -265,7 +266,7 @@ func TestTimeBetweenMetrics(t *testing.T) {
 			name:                  "healthy when enabled and recent metric",
 			maxTimeBetweenMetrics: config.Duration(5 * time.Second),
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]any{
@@ -280,14 +281,14 @@ func TestTimeBetweenMetrics(t *testing.T) {
 			name:                  "unhealthy when enabled and old metric",
 			maxTimeBetweenMetrics: config.Duration(5 * time.Millisecond),
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]any{
 						"time_idle": 42,
 					},
 					arbitraryTime),
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]any{
@@ -327,6 +328,105 @@ func TestTimeBetweenMetrics(t *testing.T) {
 
 			err = dut.Close()
 			require.NoError(t, err)
+		})
+	}
+}
+
+func TestHealthInvalidDefaultStatus(t *testing.T) {
+	plugin := &health.Health{
+		ServiceAddress: "tcp://127.0.0.1:0",
+		DefaultStatus:  225,
+		Log:            testutil.Logger{},
+	}
+	require.ErrorContains(t, plugin.Init(), "invalid default HTTP status code")
+}
+
+func TestDefaultStatusHealthy(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []telegraf.Metric
+		contains []*health.Contains
+		timeout  time.Duration
+		expected int
+	}{
+		{
+			name: "healthy",
+			input: []telegraf.Metric{
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42,
+					},
+					time.Now(),
+				),
+			},
+			contains: []*health.Contains{{Field: "time_idle"}},
+			expected: http.StatusOK,
+		},
+		{
+			name: "unhealthy",
+			input: []telegraf.Metric{
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42,
+					},
+					time.Now(),
+				),
+			},
+			contains: []*health.Contains{{Field: "foo"}},
+			expected: http.StatusServiceUnavailable,
+		},
+		{
+			name:     "timeout",
+			timeout:  100 * time.Millisecond,
+			expected: http.StatusServiceUnavailable,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup and start plugin
+			plugin := &health.Health{
+				ServiceAddress:        "tcp://127.0.0.1:0",
+				DefaultStatus:         http.StatusTooEarly,
+				Contains:              tt.contains,
+				MaxTimeBetweenMetrics: config.Duration(tt.timeout),
+				ReadTimeout:           config.Duration(5 * time.Second),
+				WriteTimeout:          config.Duration(5 * time.Second),
+				Log:                   testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
+
+			// Check the status without sending any metric and check for the
+			// default status code
+			resp, err := http.Get(plugin.Origin())
+			require.NoError(t, err)
+			defer resp.Body.Close()
+			_, err = io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			require.Equal(t, http.StatusTooEarly, resp.StatusCode)
+
+			// Write metric(s) if any OR provoke a timeout if no metrics given
+			// so the plugin leaves the default state
+			if len(tt.input) > 0 {
+				require.NoError(t, plugin.Write(tt.input))
+			} else {
+				time.Sleep(tt.timeout)
+			}
+
+			// Check health again which now should return the expected health
+			resp, err = http.Get(plugin.Origin())
+			require.NoError(t, err)
+			defer resp.Body.Close()
+			_, err = io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, resp.StatusCode)
 		})
 	}
 }

@@ -22,7 +22,7 @@ type diskInfoCache struct {
 
 func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 	// Check if the device exists
-	path := "/dev/" + devName
+	path := fmt.Sprintf("%s/%s", d.devPath, devName)
 	var stat unix.Stat_t
 	if err := unix.Stat(path, &stat); err != nil {
 		return nil, fmt.Errorf("error reading %s: %w", path, err)
@@ -43,10 +43,10 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 	} else {
 		major := unix.Major(uint64(stat.Rdev)) //nolint:unconvert // Conversion needed for some architectures
 		minor := unix.Minor(uint64(stat.Rdev)) //nolint:unconvert // Conversion needed for some architectures
-		udevDataPath = fmt.Sprintf("/run/udev/data/b%d:%d", major, minor)
+		udevDataPath = fmt.Sprintf("%s/udev/data/b%d:%d", d.runPath, major, minor)
 		if _, err := os.Stat(udevDataPath); err != nil {
 			// This path failed, try the fallback .udev style (non-systemd)
-			udevDataPath = "/dev/.udev/db/block:" + devName
+			udevDataPath = fmt.Sprintf("%s/.udev/db/block:%s", d.devPath, devName)
 			if _, err := os.Stat(udevDataPath); err != nil {
 				// Giving up, cannot retrieve disk info
 				return nil, fmt.Errorf("error reading %s: %w", udevDataPath, err)
@@ -66,10 +66,10 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		// This allows us to also "poison" it during test scenarios
 		sysBlockPath = ic.sysBlockPath
 	} else {
-		sysBlockPath = "/sys/class/block/" + devName
+		sysBlockPath = fmt.Sprintf("%s/class/block/%s", d.sysPath, devName)
 	}
 
-	devInfo, err := readDevData(sysBlockPath)
+	devInfo, err := readDevData(sysBlockPath, d.sysPath)
 	if err == nil {
 		for k, v := range devInfo {
 			info[k] = v
@@ -81,6 +81,7 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 	d.infoCache[devName] = diskInfoCache{
 		modifiedAt:   stat.Mtim.Nano(),
 		udevDataPath: udevDataPath,
+		sysBlockPath: sysBlockPath,
 		values:       info,
 	}
 
@@ -128,7 +129,7 @@ func readUdevData(path string) (map[string]string, error) {
 	return info, nil
 }
 
-func readDevData(path string) (map[string]string, error) {
+func readDevData(path, sysPath string) (map[string]string, error) {
 	// Open the file and read line-wise
 	f, err := os.Open(filepath.Join(path, "uevent"))
 	if err != nil {
@@ -158,14 +159,14 @@ func readDevData(path string) (map[string]string, error) {
 	// Find the DEVPATH property
 	if devlnk, err := filepath.EvalSymlinks(filepath.Join(path, "device")); err == nil {
 		devlnk = filepath.Join(devlnk, filepath.Base(path))
-		devlnk = strings.TrimPrefix(devlnk, "/sys")
+		devlnk = strings.TrimPrefix(devlnk, sysPath)
 		info["DEVPATH"] = devlnk
 	}
 
 	return info, nil
 }
 
-func resolveName(name string) string {
+func (d *DiskIO) resolveName(name string) string {
 	resolved, err := filepath.EvalSymlinks(name)
 	if err == nil {
 		return resolved
@@ -173,8 +174,8 @@ func resolveName(name string) string {
 	if !errors.Is(err, fs.ErrNotExist) {
 		return name
 	}
-	// Try to prepend "/dev"
-	resolved, err = filepath.EvalSymlinks("/dev/" + name)
+	// Try to resolve relative to the host device path.
+	resolved, err = filepath.EvalSymlinks(fmt.Sprintf("%s/%s", d.devPath, name))
 	if err != nil {
 		return name
 	}
@@ -182,8 +183,8 @@ func resolveName(name string) string {
 	return resolved
 }
 
-func getDeviceWWID(name string) string {
-	path := fmt.Sprintf("/sys/block/%s/wwid", filepath.Base(name))
+func (d *DiskIO) getDeviceWWID(name string) string {
+	path := fmt.Sprintf("%s/block/%s/wwid", d.sysPath, filepath.Base(name))
 	buf, err := os.ReadFile(path)
 	if err != nil {
 		return ""

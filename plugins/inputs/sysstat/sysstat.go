@@ -284,13 +284,10 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option, tmpfile string, ts tim
 
 // sadfOptions creates the correct options for the sadf utility.
 func sadfOptions(activityOption, tmpfile string) []string {
-	options := []string{
-		"-p",
-		"--",
-		"-p",
-	}
-
 	opts := strings.Split(activityOption, " ")
+
+	options := make([]string, 0, len(opts)+4)
+	options = append(options, "-p", "--", "-p")
 	options = append(options, opts...)
 	options = append(options, tmpfile)
 

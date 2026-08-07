@@ -1,0 +1,1 @@
+nftables,table=example,counter=named_counter bytes=55119375i,pkts=45470i

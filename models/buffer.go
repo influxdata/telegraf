@@ -95,7 +95,9 @@ type BufferStats struct {
 }
 
 // NewBuffer returns a new empty Buffer with the given capacity.
-func NewBuffer(name, id, alias string, capacity int, strategy, path string) (Buffer, error) {
+//
+//nolint:revive //will move to structs later
+func NewBuffer(name, id, alias string, capacity int, strategy, path string, diskSync bool) (Buffer, error) {
 	registerGob()
 
 	tags := map[string]string{
@@ -111,9 +113,21 @@ func NewBuffer(name, id, alias string, capacity int, strategy, path string) (Buf
 	case "", "memory":
 		return NewMemoryBuffer(capacity, bs)
 	case "disk_write_through":
-		return NewDiskBuffer(id, path, bs)
+		return NewDiskBuffer(id, path, bs, diskSync)
+	case "discard":
+		return newDiscardBuffer(bs), nil
 	}
 	return nil, fmt.Errorf("invalid buffer strategy %q", strategy)
+}
+
+// CheckBufferSettings verifies that the buffer settings are valid without
+// opening or allocating the buffer.
+func CheckBufferSettings(strategy string) error {
+	switch strategy {
+	case "", "memory", "disk_write_through":
+		return nil
+	}
+	return fmt.Errorf("invalid buffer strategy %q", strategy)
 }
 
 func NewBufferStats(tags map[string]string, capacity int) BufferStats {
@@ -154,8 +168,8 @@ func NewBufferStats(tags map[string]string, capacity int) BufferStats {
 	return bs
 }
 
-func (b *BufferStats) metricAdded() {
-	b.MetricsAdded.Incr(1)
+func (b *BufferStats) metricAdded(count int64) {
+	b.MetricsAdded.Incr(count)
 }
 
 func (b *BufferStats) metricWritten(m telegraf.Metric) {

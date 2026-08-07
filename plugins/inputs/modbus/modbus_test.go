@@ -186,7 +186,7 @@ func TestRetrySuccessful(t *testing.T) {
 	}
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"modbus",
 			map[string]string{
 				"type":     cCoils,
@@ -397,7 +397,7 @@ func TestCases(t *testing.T) {
 			var acc testutil.Accumulator
 			require.NoError(t, plugin.Gather(&acc))
 			if len(acc.Errors) > 0 {
-				var actualErrorMsgs []string
+				actualErrorMsgs := make([]string, 0, len(acc.Errors))
 				for _, err := range acc.Errors {
 					actualErrorMsgs = append(actualErrorMsgs, err.Error())
 				}

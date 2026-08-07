@@ -44,11 +44,17 @@ type Collector struct {
 	coll           *serializers_prometheus.Collection
 }
 
-func NewCollector(expire time.Duration, stringsAsLabel, exportTimestamp bool, typeMapping serializers_prometheus.MetricTypes) *Collector {
+func NewCollector(
+	expire time.Duration,
+	stringsAsLabel, exportTimestamp bool,
+	typeMapping serializers_prometheus.MetricTypes,
+	nameSanitization string,
+) *Collector {
 	cfg := serializers_prometheus.FormatConfig{
-		StringAsLabel:   stringsAsLabel,
-		ExportTimestamp: exportTimestamp,
-		TypeMappings:    typeMapping,
+		StringAsLabel:    stringsAsLabel,
+		ExportTimestamp:  exportTimestamp,
+		TypeMappings:     typeMapping,
+		NameSanitization: nameSanitization,
 	}
 
 	return &Collector{

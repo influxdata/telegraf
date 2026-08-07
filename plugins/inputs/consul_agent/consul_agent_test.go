@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -22,7 +23,7 @@ func TestConsulStats(t *testing.T) {
 		{
 			name: "Metrics",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"consul.rpc.request",
 					map[string]string{},
 					map[string]interface{}{
@@ -37,7 +38,7 @@ func TestConsulStats(t *testing.T) {
 					time.Unix(1639218930, 0),
 					1,
 				),
-				testutil.MustMetric(
+				metric.New(
 					"consul.consul.members.clients",
 					map[string]string{
 						"datacenter": "dc1",
@@ -48,7 +49,7 @@ func TestConsulStats(t *testing.T) {
 					time.Unix(1639218930, 0),
 					2,
 				),
-				testutil.MustMetric(
+				metric.New(
 					"consul.api.http",
 					map[string]string{
 						"method": "GET",

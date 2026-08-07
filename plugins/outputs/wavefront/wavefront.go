@@ -85,17 +85,18 @@ func (w *Wavefront) createSender(connectionURL string, flushSeconds int) (wavefr
 	if err != nil {
 		return nil, err
 	}
-	options := []wavefront.Option{
-		wavefront.BatchSize(w.HTTPMaximumBatchSize),
-		wavefront.FlushIntervalSeconds(flushSeconds),
-		wavefront.HTTPClient(client),
-		wavefront.SendInternalMetrics(w.SendInternalMetrics),
-	}
-
 	authOptions, err := w.makeAuthOptions()
 	if err != nil {
 		return nil, err
 	}
+
+	options := make([]wavefront.Option, 0, len(authOptions)+4)
+	options = append(options,
+		wavefront.BatchSize(w.HTTPMaximumBatchSize),
+		wavefront.FlushIntervalSeconds(flushSeconds),
+		wavefront.HTTPClient(client),
+		wavefront.SendInternalMetrics(w.SendInternalMetrics),
+	)
 	options = append(options, authOptions...)
 
 	return wavefront.NewSender(connectionURL, options...)
@@ -161,14 +162,14 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 }
 
 func (w *Wavefront) buildMetrics(m telegraf.Metric) []*serializers_wavefront.MetricPoint {
-	ret := make([]*serializers_wavefront.MetricPoint, 0)
+	ret := make([]*serializers_wavefront.MetricPoint, 0, len(m.FieldList()))
 
-	for fieldName, value := range m.Fields() {
+	for _, field := range m.FieldList() {
 		var name string
-		if !w.SimpleFields && fieldName == "value" {
+		if !w.SimpleFields && field.Key == "value" {
 			name = fmt.Sprintf("%s%s", w.Prefix, m.Name())
 		} else {
-			name = fmt.Sprintf("%s%s%s%s", w.Prefix, m.Name(), w.MetricSeparator, fieldName)
+			name = fmt.Sprintf("%s%s%s%s", w.Prefix, m.Name(), w.MetricSeparator, field.Key)
 		}
 
 		if w.UseRegex {
@@ -186,7 +187,7 @@ func (w *Wavefront) buildMetrics(m telegraf.Metric) []*serializers_wavefront.Met
 			Timestamp: m.Time().Unix(),
 		}
 
-		metricValue, buildError := buildValue(value, metric.Metric, w)
+		metricValue, buildError := buildValue(field.Value, metric.Metric, w)
 		if buildError != nil {
 			w.Log.Debugf("Error building tags: %s\n", buildError.Error())
 			continue

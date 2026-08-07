@@ -9,11 +9,16 @@ import (
 var _ telegraf.Logger = &Logger{}
 
 type Logger struct {
-	Name  string // Name is the plugin name, will be printed in the `[]`.
-	Quiet bool
+	Name     string // Name is the plugin name, will be printed in the `[]`.
+	LogLevel *telegraf.LogLevel
+	Quiet    bool
 }
 
-func (Logger) Level() telegraf.LogLevel {
+func (l Logger) Level() telegraf.LogLevel {
+	// Return the log level if any
+	if l.LogLevel != nil {
+		return *l.LogLevel
+	}
 	// We always want to output at debug level during testing to find issues easier
 	return telegraf.Debug
 }

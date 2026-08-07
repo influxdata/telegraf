@@ -112,6 +112,10 @@ func gatherDevicePeerMetrics(acc telegraf.Accumulator, device *wgtypes.Device, p
 		"allowed_ips":                      len(peer.AllowedIPs),
 	}
 
+	if peer.Endpoint != nil {
+		fields["endpoint"] = peer.Endpoint.String()
+	}
+
 	if len(peer.AllowedIPs) > 0 {
 		cidrs := make([]string, 0, len(peer.AllowedIPs))
 		for _, ip := range peer.AllowedIPs {

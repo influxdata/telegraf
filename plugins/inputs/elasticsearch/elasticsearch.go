@@ -769,8 +769,10 @@ func newElasticsearch() *Elasticsearch {
 		ClusterStatsOnlyFromMaster: true,
 		ClusterHealthLevel:         "indices",
 		HTTPClientConfig: common_http.HTTPClientConfig{
-			ResponseHeaderTimeout: config.Duration(5 * time.Second),
-			Timeout:               config.Duration(5 * time.Second),
+			Timeout: config.Duration(5 * time.Second),
+			TransportConfig: common_http.TransportConfig{
+				ResponseHeaderTimeout: config.Duration(5 * time.Second),
+			},
 		},
 	}
 }

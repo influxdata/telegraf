@@ -1,0 +1,95 @@
+{
+    "nodeIdStr": "hostname",
+    "subscriptionIdStr": "subscription",
+    "encodingPath": "sys/dme",
+    "msgTimestamp": "1543236572000",
+    "dataGpbkv": [
+        {
+            "fields": [
+                {
+                    "name": "keys",
+                    "fields": [
+                        {
+                            "name": "sys/dme",
+                            "stringValue": "sys/dme"
+                        }
+                    ]
+                },
+                {
+                    "name": "content",
+                    "fields": [
+                        {
+                            "fields": [
+                                {
+                                    "name": "children",
+                                    "fields": [
+                                        {
+                                            "fields": [
+                                                {
+                                                    "name": "fooEntity",
+                                                    "fields": [
+                                                        {
+                                                            "fields": [
+                                                                {
+                                                                    "name": "attributes",
+                                                                    "fields": [
+                                                                        {
+                                                                            "fields": [
+                                                                                {
+                                                                                    "name": "foo",
+                                                                                    "stringValue": "bar1"
+                                                                                },
+                                                                                {
+                                                                                    "name": "dn",
+                                                                                    "stringValue": "eth1/1"
+                                                                                }
+                                                                            ]
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "fields": [
+                                                {
+                                                    "name": "fooEntity",
+                                                    "fields": [
+                                                        {
+                                                            "fields": [
+                                                                {
+                                                                    "name": "attributes",
+                                                                    "fields": [
+                                                                        {
+                                                                            "fields": [
+                                                                                {
+                                                                                    "name": "foo",
+                                                                                    "stringValue": "bar2"
+                                                                                },
+                                                                                {
+                                                                                    "name": "dn",
+                                                                                    "stringValue": "eth1/2"
+                                                                                }
+                                                                            ]
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

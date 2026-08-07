@@ -2,7 +2,6 @@ package v1
 
 import (
 	"fmt"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -13,11 +12,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	serializers_prometheus "github.com/influxdata/telegraf/plugins/serializers/prometheus"
-)
-
-var (
-	invalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_:]`)
-	validNameCharRE   = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*`)
 )
 
 // SampleID uniquely identifies a Sample
@@ -57,19 +51,27 @@ type Collector struct {
 	ExportTimestamp    bool
 	TypeMapping        serializers_prometheus.MetricTypes
 	Log                telegraf.Logger
+	NameSanitization   string
 
 	sync.Mutex
 	fam          map[string]*MetricFamily
 	expireTicker *time.Ticker
 }
 
-func NewCollector(expire time.Duration, stringsAsLabel, exportTimestamp bool, typeMapping serializers_prometheus.MetricTypes, log telegraf.Logger) *Collector {
+func NewCollector(
+	expire time.Duration,
+	stringsAsLabel, exportTimestamp bool,
+	typeMapping serializers_prometheus.MetricTypes,
+	log telegraf.Logger,
+	nameSanitization string,
+) *Collector {
 	c := &Collector{
 		ExpirationInterval: expire,
 		StringAsLabel:      stringsAsLabel,
 		ExportTimestamp:    exportTimestamp,
 		TypeMapping:        typeMapping,
 		Log:                log,
+		NameSanitization:   nameSanitization,
 		fam:                make(map[string]*MetricFamily),
 	}
 
@@ -113,7 +115,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		for _, sample := range family.Samples {
 			// Get labels for this sample; unset labels will be set to the
 			// empty string
-			var labels []string
+			labels := make([]string, 0, len(labelNames))
 			for _, label := range labelNames {
 				v := sample.Labels[label]
 				labels = append(labels, v)
@@ -142,14 +144,6 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 			ch <- metric
 		}
 	}
-}
-
-func sanitize(value string) string {
-	return invalidNameCharRE.ReplaceAllString(value, "_")
-}
-
-func isValidTagName(tag string) bool {
-	return validNameCharRE.MatchString(tag)
 }
 
 func getPromValueType(tt telegraf.ValueType) prometheus.ValueType {
@@ -235,7 +229,7 @@ func (c *Collector) addMetrics(metrics []telegraf.Metric) {
 
 		labels := make(map[string]string)
 		for k, v := range tags {
-			name, ok := serializers_prometheus.SanitizeLabelName(k)
+			name, ok := c.sanitizeLabelName(k)
 			if !ok {
 				continue
 			}
@@ -251,7 +245,7 @@ func (c *Collector) addMetrics(metrics []telegraf.Metric) {
 					continue
 				}
 
-				name, ok := serializers_prometheus.SanitizeLabelName(fn)
+				name, ok := c.sanitizeLabelName(fn)
 				if !ok {
 					continue
 				}
@@ -298,9 +292,8 @@ func (c *Collector) addMetrics(metrics []telegraf.Metric) {
 				Timestamp:    point.Time(),
 				Expiration:   now.Add(c.ExpirationInterval),
 			}
-			mname = sanitize(point.Name())
-
-			if !isValidTagName(mname) {
+			mname, ok := c.sanitizeMetricName(point.Name())
+			if !ok {
 				continue
 			}
 
@@ -344,9 +337,8 @@ func (c *Collector) addMetrics(metrics []telegraf.Metric) {
 				Timestamp:      point.Time(),
 				Expiration:     now.Add(c.ExpirationInterval),
 			}
-			mname = sanitize(point.Name())
-
-			if !isValidTagName(mname) {
+			mname, ok := c.sanitizeMetricName(point.Name())
+			if !ok {
 				continue
 			}
 
@@ -380,21 +372,23 @@ func (c *Collector) addMetrics(metrics []telegraf.Metric) {
 				switch point.Type() {
 				case telegraf.Counter:
 					if fn == "counter" {
-						mname = sanitize(point.Name())
+						mname = point.Name()
 					}
 				case telegraf.Gauge:
 					if fn == "gauge" {
-						mname = sanitize(point.Name())
+						mname = point.Name()
 					}
 				}
 				if mname == "" {
 					if fn == "value" {
-						mname = sanitize(point.Name())
+						mname = point.Name()
 					} else {
-						mname = sanitize(fmt.Sprintf("%s_%s", point.Name(), fn))
+						mname = fmt.Sprintf("%s_%s", point.Name(), fn)
 					}
 				}
-				if !isValidTagName(mname) {
+
+				mname, ok := c.sanitizeMetricName(mname)
+				if !ok {
 					continue
 				}
 				c.addMetricFamily(point, sample, mname, sampleID)
@@ -421,4 +415,12 @@ func (c *Collector) Expire(now time.Time) {
 			}
 		}
 	}
+}
+
+func (c *Collector) sanitizeMetricName(name string) (string, bool) {
+	return serializers_prometheus.SanitizeMetricNameByEncoding(name, c.NameSanitization)
+}
+
+func (c *Collector) sanitizeLabelName(name string) (string, bool) {
+	return serializers_prometheus.SanitizeLabelNameByEncoding(name, c.NameSanitization)
 }

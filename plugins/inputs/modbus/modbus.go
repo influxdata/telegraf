@@ -67,12 +67,14 @@ type Modbus struct {
 }
 
 type workarounds struct {
-	AfterConnectPause       config.Duration `toml:"pause_after_connect"`
-	PollPause               config.Duration `toml:"pause_between_requests"`
-	CloseAfterGather        bool            `toml:"close_connection_after_gather"`
-	OnRequestPerField       bool            `toml:"one_request_per_field"`
-	ReadCoilsStartingAtZero bool            `toml:"read_coils_starting_at_zero"`
-	StringRegisterLocation  string          `toml:"string_register_location"`
+	AfterConnectPause          config.Duration `toml:"pause_after_connect"`
+	PollPause                  config.Duration `toml:"pause_between_requests"`
+	CloseAfterGather           bool            `toml:"close_connection_after_gather"`
+	ReadCoilsStartingAtZero    bool            `toml:"read_coils_starting_at_zero"`
+	StringRegisterLocation     string          `toml:"string_register_location"`
+	OnRequestPerField          bool            `toml:"one_request_per_field"`
+	MaxBitRegistersPerRequest  uint16          `toml:"max_bit_registers_per_request"`
+	MaxWordRegistersPerRequest uint16          `toml:"max_word_registers_per_request"`
 }
 
 // According to github.com/grid-x/serial
@@ -138,6 +140,13 @@ func (m *Modbus) Init() error {
 
 	if m.Retries < 0 {
 		return fmt.Errorf("retries cannot be negative in device %q", m.Name)
+	}
+
+	if m.Workarounds.MaxBitRegistersPerRequest > maxQuantityCoils {
+		return fmt.Errorf("maximum number of bit-registers cannot exceed %d", maxQuantityCoils)
+	}
+	if m.Workarounds.MaxWordRegistersPerRequest > maxQuantityHoldingRegisters {
+		return fmt.Errorf("maximum number of word-registers cannot exceed %d", maxQuantityHoldingRegisters)
 	}
 
 	// Determine the configuration style

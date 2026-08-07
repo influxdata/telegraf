@@ -1,0 +1,83 @@
+[
+    {
+        "ID": "qolkls9g5iasdiuihcyz9rnx2",
+        "Version": {},
+        "CreatedAt": "0001-01-01T00:00:00Z",
+        "UpdatedAt": "0001-01-01T00:00:00Z",
+        "Spec": {
+            "Name": "test1",
+            "Labels": null,
+            "TaskTemplate": {
+                "ForceUpdate": 0
+            },
+            "Mode": {
+                "Replicated": {
+                    "Replicas": 2
+                }
+            }
+        },
+        "Endpoint": {
+            "Spec": {}
+        }
+    },
+    {
+        "ID": "qolkls9g5iasdiuihcyz9rn3",
+        "Version": {},
+        "CreatedAt": "0001-01-01T00:00:00Z",
+        "UpdatedAt": "0001-01-01T00:00:00Z",
+        "Spec": {
+            "Name": "test2",
+            "Labels": null,
+            "TaskTemplate": {
+                "ForceUpdate": 0
+            },
+            "Mode": {
+                "Global": {}
+            }
+        },
+        "Endpoint": {
+            "Spec": {}
+        }
+    },
+    {
+        "ID": "rfmqydhe8cluzl9hayyrhw5ga",
+        "Version": {},
+        "CreatedAt": "0001-01-01T00:00:00Z",
+        "UpdatedAt": "0001-01-01T00:00:00Z",
+        "Spec": {
+            "Name": "test3",
+            "Labels": null,
+            "TaskTemplate": {
+                "ForceUpdate": 0
+            },
+            "Mode": {
+                "ReplicatedJob": {
+                    "MaxConcurrent": 2,
+                    "TotalCompletions": 2
+                }
+            }
+        },
+        "Endpoint": {
+            "Spec": {}
+        }
+    },
+    {
+        "ID": "mp50lo68vqgkory4e26ts8f9d",
+        "Version": {},
+        "CreatedAt": "0001-01-01T00:00:00Z",
+        "UpdatedAt": "0001-01-01T00:00:00Z",
+        "Spec": {
+            "Name": "test4",
+            "Labels": null,
+            "TaskTemplate": {
+                "ForceUpdate": 0
+            },
+            "Mode": {
+                "GlobalJob": {}
+            }
+        },
+        "Endpoint": {
+            "Spec": {}
+        }
+    }
+]

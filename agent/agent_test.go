@@ -228,6 +228,19 @@ func TestCases(t *testing.T) {
 	}
 }
 
+func TestAgent_SkipProcessorsAfterAggregatorsDefaultsFalse(t *testing.T) {
+	c := config.NewConfig()
+	c.Agent.OmitHostname = true
+
+	a := NewAgent(c)
+	ctx, cancel := context.WithTimeout(t.Context(), 1*time.Second)
+	defer cancel()
+
+	require.NoError(t, a.Run(ctx))
+	require.NotNil(t, c.Agent.SkipProcessorsAfterAggregators)
+	require.False(t, *c.Agent.SkipProcessorsAfterAggregators)
+}
+
 // Implement a "test-mode" like call but collect the metrics
 func collect(ctx context.Context, a *Agent, wait time.Duration) ([]telegraf.Metric, error) {
 	var received []telegraf.Metric

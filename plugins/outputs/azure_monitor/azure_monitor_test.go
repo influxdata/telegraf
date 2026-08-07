@@ -33,7 +33,7 @@ func TestAggregate(t *testing.T) {
 		{
 			name: "add metric outside window is dropped",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -49,7 +49,7 @@ func TestAggregate(t *testing.T) {
 		{
 			name: "metric not sent until period expires",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -65,7 +65,7 @@ func TestAggregate(t *testing.T) {
 			name:      "add strings as dimensions",
 			stringdim: true,
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{
 						"host": "localhost",
@@ -80,7 +80,7 @@ func TestAggregate(t *testing.T) {
 			addTime:  time.Unix(0, 0),
 			pushTime: time.Unix(3600, 0),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu-value",
 					map[string]string{
 						"host":    "localhost",
@@ -99,7 +99,7 @@ func TestAggregate(t *testing.T) {
 		{
 			name: "add metric to cache and push",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -111,7 +111,7 @@ func TestAggregate(t *testing.T) {
 			addTime:  time.Unix(0, 0),
 			pushTime: time.Unix(3600, 0),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu-value",
 					map[string]string{},
 					map[string]interface{}{
@@ -127,7 +127,7 @@ func TestAggregate(t *testing.T) {
 		{
 			name: "added metric are aggregated",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -135,7 +135,7 @@ func TestAggregate(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -143,7 +143,7 @@ func TestAggregate(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -155,7 +155,7 @@ func TestAggregate(t *testing.T) {
 			addTime:  time.Unix(0, 0),
 			pushTime: time.Unix(3600, 0),
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu-value",
 					map[string]string{},
 					map[string]interface{}{
@@ -227,7 +227,7 @@ func TestWrite(t *testing.T) {
 		{
 			name: "if not an azure metric nothing is sent",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -241,7 +241,7 @@ func TestWrite(t *testing.T) {
 		{
 			name: "single azure metric",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu-value",
 					map[string]string{},
 					map[string]interface{}{
@@ -259,7 +259,7 @@ func TestWrite(t *testing.T) {
 		{
 			name: "multiple azure metric",
 			metrics: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"cpu-value",
 					map[string]string{},
 					map[string]interface{}{
@@ -270,7 +270,7 @@ func TestWrite(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"cpu-value",
 					map[string]string{},
 					map[string]interface{}{

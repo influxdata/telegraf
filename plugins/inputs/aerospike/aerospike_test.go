@@ -15,13 +15,14 @@ import (
 const servicePort = "3000"
 
 func launchTestServer(t *testing.T) *testutil.Container {
+	t.Helper()
 	container := testutil.Container{
-		Image:        "aerospike:ce-8.1.0.1",
-		ExposedPorts: []string{servicePort},
-		WaitingFor:   wait.ForLog("migrations: complete"),
+		Image:              "aerospike:ce-8.1.0.1",
+		ExposedPorts:       []string{servicePort},
+		WaitingFor:         wait.ForLog("migrations: complete"),
+		HostConfigModifier: testutil.RaiseNofileLimit,
 	}
-	err := container.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, container.Start(), "failed to start container")
 
 	return &container
 }

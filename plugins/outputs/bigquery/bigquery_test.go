@@ -10,6 +10,7 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 	"google.golang.org/api/option/internaloption"
 
@@ -224,10 +225,8 @@ func TestAutoDetect(t *testing.T) {
 		CompactTable: "test-metrics",
 	}
 
-	credentialsJSON := []byte(`{"type": "service_account", "project_id": "test-project"}`)
-
 	require.NoError(t, b.Init())
-	require.NoError(t, b.setUpTestClientWithJSON(srv.URL, credentialsJSON))
+	require.NoError(t, b.setUpTestClientWithJSON(srv.URL))
 	require.NoError(t, b.Connect())
 	require.NoError(t, b.Close())
 }
@@ -249,10 +248,12 @@ func (b *BigQuery) setUpTestClient(endpointURL string) error {
 	return nil
 }
 
-func (b *BigQuery) setUpTestClientWithJSON(endpointURL string, credentialsJSON []byte) error {
+func (b *BigQuery) setUpTestClientWithJSON(endpointURL string) error {
 	noAuth := option.WithoutAuthentication()
 	endpoint := option.WithEndpoint(endpointURL)
-	credentials := option.WithCredentialsJSON(credentialsJSON)
+	credentials := internaloption.WithCredentials(&google.Credentials{
+		ProjectID: "test-project",
+	})
 	skipValidate := internaloption.SkipDialSettingsValidation()
 
 	ctx := context.Background()

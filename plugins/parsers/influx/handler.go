@@ -12,9 +12,9 @@ import (
 
 // MetricHandler implements the Handler interface and produces telegraf.Metric.
 type MetricHandler struct {
-	timePrecision time.Duration
-	timeFunc      TimeFunc
 	metric        telegraf.Metric
+	timeFunc      func() time.Time
+	timePrecision time.Duration
 }
 
 func NewMetricHandler() *MetricHandler {
@@ -34,11 +34,14 @@ func (h *MetricHandler) SetTimePrecision(p time.Duration) {
 	// overloaded to hold the unit of measurement of the timestamp.
 }
 
-func (h *MetricHandler) SetTimeFunc(f TimeFunc) {
+func (h *MetricHandler) SetTimeFunc(f func() time.Time) {
 	h.timeFunc = f
 }
 
 func (h *MetricHandler) Metric() telegraf.Metric {
+	if h.metric == nil {
+		return nil
+	}
 	if h.metric.Time().IsZero() {
 		h.metric.SetTime(h.timeFunc().Truncate(h.timePrecision))
 	}

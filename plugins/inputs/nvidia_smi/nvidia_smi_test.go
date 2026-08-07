@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -149,7 +150,7 @@ func TestGatherValidXML(t *testing.T) {
 			name:     "GeForce GTX 1070 Ti",
 			filename: "gtx-1070-ti.xml",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi",
 					map[string]string{
 						"name":         "GeForce GTX 1070 Ti",
@@ -183,7 +184,7 @@ func TestGatherValidXML(t *testing.T) {
 			name:     "GeForce GTX 1660 Ti",
 			filename: "gtx-1660-ti.xml",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi",
 					map[string]string{
 						"compute_mode": "Default",
@@ -229,7 +230,7 @@ func TestGatherValidXML(t *testing.T) {
 			name:     "Quadro P400",
 			filename: "quadro-p400.xml",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi",
 					map[string]string{
 						"compute_mode": "Default",
@@ -274,7 +275,7 @@ func TestGatherValidXML(t *testing.T) {
 			name:     "Quadro P2000",
 			filename: "quadro-p2000-v12.xml",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi",
 					map[string]string{
 						"arch":         "Pascal",
@@ -324,7 +325,7 @@ func TestGatherValidXML(t *testing.T) {
 			name:     "Tesla T4",
 			filename: "tesla-t4.xml",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi",
 					map[string]string{
 						"compute_mode": "Default",
@@ -376,7 +377,7 @@ func TestGatherValidXML(t *testing.T) {
 			name:     "A10G",
 			filename: "a10g.xml",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi",
 					map[string]string{
 						"compute_mode": "Default",
@@ -429,7 +430,7 @@ func TestGatherValidXML(t *testing.T) {
 			name:     "RTC 3060 schema v12",
 			filename: "rtx-3060-v12.xml",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi",
 					map[string]string{
 						"compute_mode": "Default",
@@ -479,7 +480,7 @@ func TestGatherValidXML(t *testing.T) {
 			name:     "RTC 3080 schema v12",
 			filename: "rtx-3080-v12.xml",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi",
 					map[string]string{
 						"compute_mode": "Default",
@@ -522,7 +523,7 @@ func TestGatherValidXML(t *testing.T) {
 						"vbios_version":                 "94.02.71.40.72",
 					},
 					time.Unix(1689872450, 0)),
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi_process",
 					map[string]string{
 						"name": "/usr/lib/Xorg",
@@ -533,7 +534,7 @@ func TestGatherValidXML(t *testing.T) {
 						"used_memory": int64(550),
 					},
 					time.Unix(1689872450, 0)),
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi_process",
 					map[string]string{
 						"name": "/usr/bin/gnome-shell",
@@ -544,7 +545,7 @@ func TestGatherValidXML(t *testing.T) {
 						"used_memory": int64(18),
 					},
 					time.Unix(1689872450, 0)),
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi_process",
 					map[string]string{
 						"name": "/opt/microsoft/msedge/msedge --type=gpu-process " +
@@ -562,7 +563,7 @@ func TestGatherValidXML(t *testing.T) {
 						"used_memory": int64(79),
 					},
 					time.Unix(1689872450, 0)),
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi_process",
 					map[string]string{
 						"name": "/usr/lib/firefox/firefox",
@@ -573,7 +574,7 @@ func TestGatherValidXML(t *testing.T) {
 						"used_memory": int64(541),
 					},
 					time.Unix(1689872450, 0)),
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi_process",
 					map[string]string{
 						"name": "/opt/visual-studio-code/code --type=gpu-process " +
@@ -595,10 +596,63 @@ func TestGatherValidXML(t *testing.T) {
 			},
 		},
 		{
+			name:     "RTX 3080 schema v13",
+			filename: "rtx-3080-v13.xml",
+			expected: []telegraf.Metric{
+				metric.New(
+					"nvidia_smi",
+					map[string]string{
+						"arch":         "Ampere",
+						"compute_mode": "Default",
+						"index":        "0",
+						"name":         "NVIDIA GeForce RTX 3080",
+						"pstate":       "P2",
+						"uuid":         "GPU-19d6d965-2acc-f646-00f8-4c76979aabb4",
+					},
+					map[string]interface{}{
+						"clocks_current_graphics":           1950,
+						"clocks_current_memory":             9251,
+						"clocks_current_sm":                 1950,
+						"clocks_current_video":              1710,
+						"cuda_version":                      "13.2",
+						"display_active":                    "Disabled",
+						"display_mode":                      "Requested",
+						"driver_version":                    "595.58.03",
+						"ecc_errors_channel_repair_pending": "No",
+						"ecc_errors_tpc_repair_pending":     "No",
+						"encoder_stats_average_fps":         0,
+						"encoder_stats_average_latency":     0,
+						"encoder_stats_session_count":       0,
+						"fan_speed":                         0,
+						"fbc_stats_average_fps":             0,
+						"fbc_stats_average_latency":         0,
+						"fbc_stats_session_count":           0,
+						"memory_free":                       660,
+						"memory_reserved":                   397,
+						"memory_total":                      10240,
+						"memory_used":                       9184,
+						"pcie_link_gen_current":             4,
+						"pcie_link_width_current":           16,
+						"power_draw":                        142.33,
+						"power_limit":                       320.0,
+						"serial":                            "REDACTED",
+						"temperature_gpu":                   27,
+						"utilization_decoder":               0,
+						"utilization_encoder":               0,
+						"utilization_gpu":                   65,
+						"utilization_jpeg":                  0,
+						"utilization_memory":                9,
+						"utilization_ofa":                   0,
+						"vbios_version":                     "94.02.71.40.72",
+					},
+					time.Unix(1744280581, 0)),
+			},
+		},
+		{
 			name:     "RTC 3090 schema v12",
 			filename: "rtx-3090-v12.xml",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi",
 					map[string]string{
 						"compute_mode": "Default",
@@ -646,7 +700,7 @@ func TestGatherValidXML(t *testing.T) {
 			name:     "A100-SXM4 schema v12",
 			filename: "a100-sxm4-v12.xml",
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi",
 					map[string]string{
 						"compute_mode": "Default",
@@ -684,7 +738,7 @@ func TestGatherValidXML(t *testing.T) {
 						"vbios_version":                 "92.00.36.00.02",
 					},
 					time.Unix(1689872450, 0)),
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi_mig",
 					map[string]string{
 						"compute_mode":  "Default",
@@ -707,7 +761,7 @@ func TestGatherValidXML(t *testing.T) {
 						"sram_uncorrectable": 0,
 					},
 					time.Unix(1689872450, 0)),
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi_mig",
 					map[string]string{
 						"compute_mode":  "Default",
@@ -730,7 +784,7 @@ func TestGatherValidXML(t *testing.T) {
 						"sram_uncorrectable": 0,
 					},
 					time.Unix(1689872450, 0)),
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi_mig",
 					map[string]string{
 						"compute_mode":  "Default",
@@ -753,7 +807,7 @@ func TestGatherValidXML(t *testing.T) {
 						"sram_uncorrectable": 0,
 					},
 					time.Unix(1689872450, 0)),
-				testutil.MustMetric(
+				metric.New(
 					"nvidia_smi_mig",
 					map[string]string{
 						"compute_mode":  "Default",

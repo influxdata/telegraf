@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs/dpdk/mocks"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -480,7 +481,7 @@ func TestDLB_processCommandResult(t *testing.T) {
 		require.NoError(t, err)
 
 		expected := []telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"intel_dlb",
 				map[string]string{
 					"command": "/eventdev/dev_xstats,0",
@@ -1036,7 +1037,7 @@ TOTAL_ERR_NONFATAL 9`
 
 var (
 	expectedRasMetrics = []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"intel_dlb_ras",
 			map[string]string{
 				"device":      "0000:00:00.0",
@@ -1055,7 +1056,7 @@ var (
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"intel_dlb_ras",
 			map[string]string{
 				"device":      "0000:00:00.0",
@@ -1084,7 +1085,7 @@ var (
 			},
 			time.Unix(0, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"intel_dlb_ras",
 			map[string]string{
 				"device":      "0000:00:00.0",
@@ -1116,7 +1117,7 @@ var (
 	}
 
 	expectedTelegrafMetrics = []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"intel_dlb",
 			map[string]string{
 				"command": "/eventdev/dev_xstats,0",

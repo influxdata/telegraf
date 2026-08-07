@@ -71,7 +71,7 @@ func (c *commandEthtoolMock) driverName(intf namespacedInterface) (string, error
 func (c *commandEthtoolMock) interfaces(includeNamespaces bool) ([]namespacedInterface, error) {
 	namespaces := map[string]*namespaceMock{"": {namespaceName: ""}}
 
-	interfaces := make([]namespacedInterface, 0)
+	interfaces := make([]namespacedInterface, 0, len(c.interfaceMap))
 	for k, v := range c.interfaceMap {
 		if v.namespaceName != "" && !includeNamespaces {
 			continue

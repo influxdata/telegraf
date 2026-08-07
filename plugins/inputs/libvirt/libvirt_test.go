@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -562,14 +563,14 @@ var (
 	}
 
 	expectedMetrics = []telegraf.Metric{
-		testutil.MustMetric("libvirt_state",
+		metric.New("libvirt_state",
 			map[string]string{"domain_name": "Droplet-844329"},
 			map[string]interface{}{
 				"reason": 2,
 				"state":  1,
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_state",
+		metric.New("libvirt_state",
 			map[string]string{"domain_name": "Droplet-33436"},
 			map[string]interface{}{
 				"reason": 1,
@@ -579,13 +580,13 @@ var (
 	}
 
 	expectedMemoryMetrics = []telegraf.Metric{
-		testutil.MustMetric("libvirt_memory_bandwidth_monitor_total",
+		metric.New("libvirt_memory_bandwidth_monitor_total",
 			map[string]string{"domain_name": "Droplet-844329"},
 			map[string]interface{}{
 				"count": 2,
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_memory_bandwidth_monitor",
+		metric.New("libvirt_memory_bandwidth_monitor",
 			map[string]string{"domain_name": "Droplet-844329", "memory_bandwidth_monitor_id": "0"},
 			map[string]interface{}{
 				"name":       "any_name_vcpus_0-4",
@@ -593,7 +594,7 @@ var (
 				"node_count": 2,
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_memory_bandwidth_monitor",
+		metric.New("libvirt_memory_bandwidth_monitor",
 			map[string]string{"domain_name": "Droplet-844329", "memory_bandwidth_monitor_id": "1"},
 			map[string]interface{}{
 				"name":       "vcpus_7",
@@ -601,7 +602,7 @@ var (
 				"node_count": 2,
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_memory_bandwidth_monitor_node",
+		metric.New("libvirt_memory_bandwidth_monitor_node",
 			map[string]string{"domain_name": "Droplet-844329", "memory_bandwidth_monitor_id": "0", "controller_index": "0"},
 			map[string]interface{}{
 				"id":          0,
@@ -609,7 +610,7 @@ var (
 				"bytes_local": int64(4807114752),
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_memory_bandwidth_monitor_node",
+		metric.New("libvirt_memory_bandwidth_monitor_node",
 			map[string]string{"domain_name": "Droplet-844329", "memory_bandwidth_monitor_id": "0", "controller_index": "1"},
 			map[string]interface{}{
 				"id":          1,
@@ -617,7 +618,7 @@ var (
 				"bytes_local": int64(5850161152),
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_memory_bandwidth_monitor_node",
+		metric.New("libvirt_memory_bandwidth_monitor_node",
 			map[string]string{"domain_name": "Droplet-844329", "memory_bandwidth_monitor_id": "1", "controller_index": "0"},
 			map[string]interface{}{
 				"id":          0,
@@ -625,7 +626,7 @@ var (
 				"bytes_local": 290701312,
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_memory_bandwidth_monitor_node",
+		metric.New("libvirt_memory_bandwidth_monitor_node",
 			map[string]string{"domain_name": "Droplet-844329", "memory_bandwidth_monitor_id": "1", "controller_index": "1"},
 			map[string]interface{}{
 				"id":          1,
@@ -636,7 +637,7 @@ var (
 	}
 
 	expectedCPUMetrics = []telegraf.Metric{
-		testutil.MustMetric("libvirt_cpu",
+		metric.New("libvirt_cpu",
 			map[string]string{"domain_name": "Droplet-844329"},
 			map[string]interface{}{
 				"time":                  int64(67419144867000),
@@ -646,13 +647,13 @@ var (
 				"haltpoll_fail_time":    int64(2727253643),
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_cpu_cache_monitor_total",
+		metric.New("libvirt_cpu_cache_monitor_total",
 			map[string]string{"domain_name": "Droplet-844329"},
 			map[string]interface{}{
 				"count": 2,
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_cpu_cache_monitor",
+		metric.New("libvirt_cpu_cache_monitor",
 			map[string]string{"domain_name": "Droplet-844329", "cache_monitor_id": "0"},
 			map[string]interface{}{
 				"name":       "any_name_vcpus_0-3",
@@ -660,7 +661,7 @@ var (
 				"bank_count": 2,
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_cpu_cache_monitor",
+		metric.New("libvirt_cpu_cache_monitor",
 			map[string]string{"domain_name": "Droplet-844329", "cache_monitor_id": "1"},
 			map[string]interface{}{
 				"name":       "vcpus_4-9",
@@ -668,28 +669,28 @@ var (
 				"bank_count": 2,
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_cpu_cache_monitor_bank",
+		metric.New("libvirt_cpu_cache_monitor_bank",
 			map[string]string{"domain_name": "Droplet-844329", "cache_monitor_id": "0", "bank_index": "0"},
 			map[string]interface{}{
 				"id":    0,
 				"bytes": 5406720,
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_cpu_cache_monitor_bank",
+		metric.New("libvirt_cpu_cache_monitor_bank",
 			map[string]string{"domain_name": "Droplet-844329", "cache_monitor_id": "0", "bank_index": "1"},
 			map[string]interface{}{
 				"id":    1,
 				"bytes": 0,
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_cpu_cache_monitor_bank",
+		metric.New("libvirt_cpu_cache_monitor_bank",
 			map[string]string{"domain_name": "Droplet-844329", "cache_monitor_id": "1", "bank_index": "0"},
 			map[string]interface{}{
 				"id":    0,
 				"bytes": 720896,
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_cpu_cache_monitor_bank",
+		metric.New("libvirt_cpu_cache_monitor_bank",
 			map[string]string{"domain_name": "Droplet-844329", "cache_monitor_id": "1", "bank_index": "1"},
 			map[string]interface{}{
 				"id":    1,
@@ -699,7 +700,7 @@ var (
 	}
 
 	expectedVcpuAffinityMetrics = []telegraf.Metric{
-		testutil.MustMetric("libvirt_cpu_affinity",
+		metric.New("libvirt_cpu_affinity",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "0"},
@@ -707,7 +708,7 @@ var (
 				"cpu_id": "0,1,2,3",
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_cpu_affinity",
+		metric.New("libvirt_cpu_affinity",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "1"},
@@ -715,7 +716,7 @@ var (
 				"cpu_id": "1,2,3,4",
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_cpu_affinity",
+		metric.New("libvirt_cpu_affinity",
 			map[string]string{
 				"domain_name": "Droplet-33436",
 				"vcpu_id":     "0"},
@@ -723,7 +724,7 @@ var (
 				"cpu_id": "0,1,2,3",
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_cpu_affinity",
+		metric.New("libvirt_cpu_affinity",
 			map[string]string{
 				"domain_name": "Droplet-33436",
 				"vcpu_id":     "1"},
@@ -734,7 +735,7 @@ var (
 	}
 
 	expectedBalloonMetrics = []telegraf.Metric{
-		testutil.MustMetric("libvirt_balloon",
+		metric.New("libvirt_balloon",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 			},
@@ -758,7 +759,7 @@ var (
 	}
 
 	expectedPerfMetrics = []telegraf.Metric{
-		testutil.MustMetric("libvirt_perf",
+		metric.New("libvirt_perf",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 			},
@@ -790,7 +791,7 @@ var (
 	}
 
 	expectedInterfaceMetrics = []telegraf.Metric{
-		testutil.MustMetric("libvirt_net_total",
+		metric.New("libvirt_net_total",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 			},
@@ -798,7 +799,7 @@ var (
 				"count": 1,
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_net",
+		metric.New("libvirt_net",
 			map[string]string{
 				"domain_name":  "Droplet-844329",
 				"interface_id": "0",
@@ -818,7 +819,7 @@ var (
 	}
 
 	expectedBlockMetrics = []telegraf.Metric{
-		testutil.MustMetric("libvirt_block_total",
+		metric.New("libvirt_block_total",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 			},
@@ -826,7 +827,7 @@ var (
 				"count": 2,
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_block",
+		metric.New("libvirt_block",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 				"block_id":    "0",
@@ -850,7 +851,7 @@ var (
 				"threshold":    int64(2147483648),
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_block",
+		metric.New("libvirt_block",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 				"block_id":    "1",
@@ -877,7 +878,7 @@ var (
 	}
 
 	expectedIOThreadMetrics = []telegraf.Metric{
-		testutil.MustMetric("libvirt_iothread_total",
+		metric.New("libvirt_iothread_total",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 			},
@@ -885,7 +886,7 @@ var (
 				"count": 2,
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_iothread",
+		metric.New("libvirt_iothread",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 				"iothread_id": "0",
@@ -896,7 +897,7 @@ var (
 				"poll_shrink": 0,
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_iothread",
+		metric.New("libvirt_iothread",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 				"iothread_id": "1",
@@ -910,7 +911,7 @@ var (
 	}
 
 	expectedDirtyrateMetrics = []telegraf.Metric{
-		testutil.MustMetric("libvirt_dirtyrate",
+		metric.New("libvirt_dirtyrate",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 			},
@@ -922,7 +923,7 @@ var (
 				"calc_mode":            "dirty-ring",
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_dirtyrate_vcpu",
+		metric.New("libvirt_dirtyrate_vcpu",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "0",
@@ -931,7 +932,7 @@ var (
 				"megabytes_per_second": 1,
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_dirtyrate_vcpu",
+		metric.New("libvirt_dirtyrate_vcpu",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "1",
@@ -943,7 +944,7 @@ var (
 	}
 
 	expectedVCPUMetrics = []telegraf.Metric{
-		testutil.MustMetric("libvirt_vcpu_total",
+		metric.New("libvirt_vcpu_total",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 			},
@@ -952,7 +953,7 @@ var (
 				"maximum": 3,
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_vcpu",
+		metric.New("libvirt_vcpu",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "0",
@@ -966,7 +967,7 @@ var (
 				"delay":    0,
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_vcpu",
+		metric.New("libvirt_vcpu",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "1",
@@ -980,7 +981,7 @@ var (
 				"delay":    0,
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_vcpu",
+		metric.New("libvirt_vcpu",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "2",
@@ -995,7 +996,7 @@ var (
 	}
 
 	expectedExtendedVCPUMetrics = []telegraf.Metric{
-		testutil.MustMetric("libvirt_cpu_affinity",
+		metric.New("libvirt_cpu_affinity",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "0"},
@@ -1003,7 +1004,7 @@ var (
 				"cpu_id": "0,1,2,3",
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_cpu_affinity",
+		metric.New("libvirt_cpu_affinity",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "1"},
@@ -1011,7 +1012,7 @@ var (
 				"cpu_id": "1,2,3,4",
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_vcpu_total",
+		metric.New("libvirt_vcpu_total",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 			},
@@ -1020,7 +1021,7 @@ var (
 				"maximum": 3,
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_vcpu",
+		metric.New("libvirt_vcpu",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "0",
@@ -1035,7 +1036,7 @@ var (
 				"cpu_id":   0,
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_vcpu",
+		metric.New("libvirt_vcpu",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "1",
@@ -1050,7 +1051,7 @@ var (
 				"cpu_id":   1,
 			},
 			time.Now()),
-		testutil.MustMetric("libvirt_vcpu",
+		metric.New("libvirt_vcpu",
 			map[string]string{
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "2",

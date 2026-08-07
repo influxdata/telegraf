@@ -1,0 +1,56 @@
+{
+    "nodeIdStr": "hostname",
+    "subscriptionIdStr": "subscription",
+    "encodingPath": "show processes cpu",
+    "msgTimestamp": "1543236572000",
+    "dataGpbkv": [
+        {
+            "fields": [
+                {
+                    "name": "keys",
+                    "fields": [
+                        {
+                            "name": "foo",
+                            "stringValue": "bar"
+                        }
+                    ]
+                },
+                {
+                    "name": "content",
+                    "fields": [
+                        {
+                            "fields": [
+                                {
+                                    "name": "TABLE_process_cpu",
+                                    "fields": [
+                                        {
+                                            "fields": [
+                                                {
+                                                    "name": "ROW_process_cpu",
+                                                    "fields": [
+                                                        {
+                                                            "fields": [
+                                                                {
+                                                                    "name": "index",
+                                                                    "stringValue": "i1"
+                                                                },
+                                                                {
+                                                                    "name": "value",
+                                                                    "stringValue": "foo"
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

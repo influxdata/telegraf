@@ -27,7 +27,7 @@ func TestPivot(t *testing.T) {
 				ValueKey: "value",
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{
 						"name": "idle_time",
 					},
@@ -38,7 +38,7 @@ func TestPivot(t *testing.T) {
 				),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{},
 					map[string]interface{}{
 						"idle_time": int64(42),
@@ -54,7 +54,7 @@ func TestPivot(t *testing.T) {
 				ValueKey: "value",
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{
 						"foo": "idle_time",
 					},
@@ -65,7 +65,7 @@ func TestPivot(t *testing.T) {
 				),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{
 						"foo": "idle_time",
 					},
@@ -83,7 +83,7 @@ func TestPivot(t *testing.T) {
 				ValueKey: "value",
 			},
 			metrics: []telegraf.Metric{
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{
 						"name": "idle_time",
 					},
@@ -94,7 +94,7 @@ func TestPivot(t *testing.T) {
 				),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{
 						"name": "idle_time",
 					},

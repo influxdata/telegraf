@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/require"
@@ -40,7 +39,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 			container: testutil.Container{
 				Image:        "nats:latest",
 				ExposedPorts: []string{natsServicePort},
-				WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
+				WaitingFor:   wait.ForListeningPort(natsServicePort),
 			},
 			nats: &NATS{
 				Name:       "telegraf",
@@ -54,7 +53,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 			container: testutil.Container{
 				Image:        "nats:latest",
 				ExposedPorts: []string{natsServicePort},
-				WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
+				WaitingFor:   wait.ForListeningPort(natsServicePort),
 			},
 			nats: &NATS{
 				Name:           "telegraf",
@@ -70,7 +69,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 				Image:        "nats:latest",
 				ExposedPorts: []string{natsServicePort},
 				Cmd:          []string{"--js"},
-				WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
+				WaitingFor:   wait.ForListeningPort(natsServicePort),
 			},
 			nats: &NATS{
 				Name:    "telegraf",
@@ -92,7 +91,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 				Image:        "nats:latest",
 				ExposedPorts: []string{natsServicePort},
 				Cmd:          []string{"--js"},
-				WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
+				WaitingFor:   wait.ForListeningPort(natsServicePort),
 			},
 			nats: &NATS{
 				Name:    "telegraf",
@@ -115,7 +114,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 				Image:        "nats:latest",
 				ExposedPorts: []string{natsServicePort},
 				Cmd:          []string{"--js"},
-				WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
+				WaitingFor:   wait.ForListeningPort(natsServicePort),
 			},
 			nats: &NATS{
 				Name:    "telegraf",
@@ -158,7 +157,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 				Image:        "nats:latest",
 				ExposedPorts: []string{natsServicePort},
 				Cmd:          []string{"--js"},
-				WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
+				WaitingFor:   wait.ForListeningPort(natsServicePort),
 			},
 			nats: &NATS{
 				Name:    "telegraf",
@@ -178,7 +177,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 				Image:        "nats:latest",
 				ExposedPorts: []string{natsServicePort},
 				Cmd:          []string{"--js"},
-				WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
+				WaitingFor:   wait.ForListeningPort(natsServicePort),
 			},
 			externalStream: nats.StreamConfig{
 				Name:         "my-external-stream",
@@ -304,7 +303,7 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 		Image:        "nats:latest",
 		ExposedPorts: []string{natsServicePort},
 		Cmd:          []string{"--js"},
-		WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
+		WaitingFor:   wait.ForListeningPort(natsServicePort),
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()

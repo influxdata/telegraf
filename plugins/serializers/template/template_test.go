@@ -181,6 +181,51 @@ func TestSerializeBatch(t *testing.T) {
 	require.Equal(t, "0: cpu 42\n", string(singleBuf))
 }
 
+func TestSerializeTrackingMetric(t *testing.T) {
+	m := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"value": 42.0,
+		},
+		time.Unix(0, 0),
+	)
+	tm, _ := metric.WithTracking(m, func(_ telegraf.DeliveryInfo) {})
+
+	s := &Serializer{Template: "{{ .Name }}"}
+	require.NoError(t, s.Init())
+
+	// Serialize should handle tracking metrics
+	buf, err := s.Serialize(tm)
+	require.NoError(t, err)
+	require.Equal(t, "cpu", string(buf))
+
+	// SerializeBatch should also handle tracking metrics
+	batchBuf, err := s.SerializeBatch([]telegraf.Metric{tm})
+	require.NoError(t, err)
+	require.Equal(t, "cpu", string(batchBuf))
+}
+
+func TestSerializeBatchTrackingMetrics(t *testing.T) {
+	m := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"value": 42.0,
+		},
+		time.Unix(0, 0),
+	)
+	tm, _ := metric.WithTracking(m, func(_ telegraf.DeliveryInfo) {})
+
+	s := &Serializer{BatchTemplate: `{{ range $index, $metric := . }}{{$index}}: {{$metric.Name}} {{$metric.Field "value"}}
+{{end}}`}
+	require.NoError(t, s.Init())
+
+	buf, err := s.SerializeBatch([]telegraf.Metric{tm, tm})
+	require.NoError(t, err)
+	require.Equal(t, "0: cpu 42\n1: cpu 42\n", string(buf))
+}
+
 func BenchmarkSerialize(b *testing.B) {
 	s := &Serializer{}
 	require.NoError(b, s.Init())

@@ -80,7 +80,6 @@ func TestReadCoreEvents(t *testing.T) {
 
 	t.Run("read active events values", func(t *testing.T) {
 		entity := &coreEventEntity{}
-		var expected []coreMetric
 
 		tEvents := []eventWithValues{
 			{&ia.ActiveEvent{PerfEvent: &ia.PerfEvent{Name: "event1"}}, ia.CounterValue{Raw: 316, Enabled: 182060524, Running: 182060524}},
@@ -88,6 +87,7 @@ func TestReadCoreEvents(t *testing.T) {
 			{&ia.ActiveEvent{PerfEvent: &ia.PerfEvent{Name: "event3"}}, ia.CounterValue{Raw: 412323, Enabled: 1823132, Running: 1823180}},
 		}
 
+		expected := make([]coreMetric, 0, len(tEvents))
 		for _, tc := range tEvents {
 			entity.activeEvents = append(entity.activeEvents, tc.activeEvent)
 			cpu, _ := tc.activeEvent.PMUPlacement()
@@ -158,7 +158,6 @@ func TestReadMultiEventSeparately(t *testing.T) {
 	t.Run("read active events values", func(t *testing.T) {
 		perfEvent := &ia.PerfEvent{Name: "event", PMUName: "pmu name"}
 		multi := multiEvent{perfEvent: perfEvent}
-		var expected []uncoreMetric
 
 		tEvents := []eventWithValues{
 			{&ia.ActiveEvent{PerfEvent: perfEvent}, ia.CounterValue{Raw: 316, Enabled: 182060524, Running: 182060524}},
@@ -166,6 +165,7 @@ func TestReadMultiEventSeparately(t *testing.T) {
 			{&ia.ActiveEvent{PerfEvent: perfEvent}, ia.CounterValue{Raw: 412323, Enabled: 1823132, Running: 1823180}},
 		}
 
+		expected := make([]uncoreMetric, 0, len(tEvents))
 		for _, tc := range tEvents {
 			multi.activeEvents = append(multi.activeEvents, tc.activeEvent)
 			newMetric := uncoreMetric{
@@ -387,7 +387,8 @@ func TestReadUncoreEvents(t *testing.T) {
 			{&ia.ActiveEvent{PerfEvent: perfEvent2}, ia.CounterValue{Raw: 2003}},
 			{&ia.ActiveEvent{PerfEvent: perfEvent2}, ia.CounterValue{Raw: 123005}},
 		}
-		var expected []uncoreMetric
+
+		expected := make([]uncoreMetric, 0, len(events))
 		for _, event := range events {
 			multi.activeEvents = append(multi.activeEvents, event.activeEvent)
 			mReader.On("readValue", event.activeEvent).Return(event.values, nil).Once()

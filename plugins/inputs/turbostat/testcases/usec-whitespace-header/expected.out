@@ -1,0 +1,4 @@
+turbostat,core=-,cpu=- average_frequency_mhz=41,busy_frequency_mhz=3431,busy_percent=1.2,tsc_frequency_mhz=3793,usec=500
+turbostat,core=0,cpu=0 average_frequency_mhz=34,busy_frequency_mhz=3083,busy_percent=1.09,tsc_frequency_mhz=3793,usec=30
+turbostat,core=-,cpu=- average_frequency_mhz=50,busy_frequency_mhz=3500,busy_percent=1.5,tsc_frequency_mhz=3793,usec=600
+turbostat,core=0,cpu=0 average_frequency_mhz=44,busy_frequency_mhz=3100,busy_percent=1.19,tsc_frequency_mhz=3793,usec=40

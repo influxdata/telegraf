@@ -76,7 +76,11 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	newMetrics := make([]telegraf.TemplateMetric, 0, len(metrics))
 
 	for _, metric := range metrics {
-		m, ok := metric.(telegraf.TemplateMetric)
+		metricPlain := metric
+		if wm, ok := metric.(telegraf.UnwrappableMetric); ok {
+			metricPlain = wm.Unwrap()
+		}
+		m, ok := metricPlain.(telegraf.TemplateMetric)
 		if !ok {
 			s.Log.Errorf("metric of type %T is not a template metric", metric)
 			return nil, nil

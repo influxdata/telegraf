@@ -115,7 +115,7 @@ type redirectLogger struct {
 func (l *redirectLogger) Print(level telegraf.LogLevel, ts time.Time, prefix string, attr map[string]interface{}, args ...interface{}) {
 	var attrMsg string
 	if len(attr) > 0 {
-		var parts []string
+		parts := make([]string, 0, len(attr))
 		for k, v := range attr {
 			parts = append(parts, fmt.Sprintf("%s=%v", k, v))
 		}

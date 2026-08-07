@@ -73,7 +73,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   metric_separator = "_"
 
   ## Parses extensions to statsd in the datadog statsd format
-  ## currently supports metrics and datadog tags.
+  ## currently supports metrics, datadog tags, events, and service checks.
   ## http://docs.datadoghq.com/guides/dogstatsd/
   datadog_extensions = false
 
@@ -253,6 +253,39 @@ metric type:
     given time interval, a Distribution metric sends all the raw data during a
     time interval.
 
+### Datadog Service Checks
+
+When `datadog_extensions` is enabled, the plugin also supports
+[Datadog service checks][dogstatsd_service_checks] in the format:
+
+```text
+_sc|<name>|<status>|d:<timestamp>|h:<hostname>|#<tag_key_1>:<tag_value_1>|m:<message>
+```
+
+- `<name>` - service check name (required)
+- `<status>` - 0=OK, 1=Warning, 2=Critical, 3=Unknown (required)
+- `d:<timestamp>` - optional Unix timestamp
+- `h:<hostname>` - optional hostname override
+- `#<tags>` - optional tags (same format as metrics)
+- `m:<message>` - optional message
+
+Example:
+
+```shell
+echo "_sc|my.service.check|0|#env:prod|m:Service is healthy" | nc -u -w1 127.0.0.1 8125
+```
+
+Service checks produce a metric with measurement name `statsd_service_check`:
+
+- **Tags:**
+  - `check_name`: The service check name
+  - `source`: Hostname (from `h:` field or default)
+  - Plus any custom tags from the `#` section
+- **Fields:**
+  - `status` (int): Status code (0-3)
+  - `status_text` (string): "ok", "warning", "critical", or "unknown"
+  - `message` (string): Optional message from `m:` field
+
 ## Plugin arguments
 
 - **protocol** string: Protocol used in listener - tcp or udp options
@@ -278,7 +311,7 @@ measurements and tags.
                                           [dogstatsd format][dogstatsd_format]
 - **datadog_extensions** boolean:         Enable parsing of DataDog's extensions
                                           to [dogstatsd format][dogstatsd_format]
-                                          and more
+                                          including events and service checks
 - **datadog_distributions** boolean:      Enable parsing of the Distribution metric
                                           in [DataDog's distribution format][dogstatsd_distri_format]
 - **datadog_keep_container_tag** boolean: Keep or drop the container id as tag.
@@ -290,6 +323,7 @@ measurements and tags.
 
 [dogstatsd_format]: http://docs.datadoghq.com/guides/dogstatsd/
 [dogstatsd_distri_format]: https://docs.datadoghq.com/developers/metrics/types/?tab=distribution#definition
+[dogstatsd_service_checks]: https://docs.datadoghq.com/developers/service_checks/dogstatsd_service_checks_submission/
 
 ## Statsd bucket -> InfluxDB line-protocol Templates
 

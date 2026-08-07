@@ -20,6 +20,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal/globpath"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs/dpdk/mocks"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -630,7 +631,7 @@ func Test_Gather(t *testing.T) {
 		require.Empty(t, mockAcc.Errors)
 
 		expected := []telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"dpdk",
 				map[string]string{
 					"command": "/endpoint1",
@@ -658,7 +659,7 @@ func Test_Gather(t *testing.T) {
 		require.Empty(t, mockAcc.Errors)
 
 		expected := []telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"dpdk",
 				map[string]string{
 					"command": "/endpoint1",
@@ -695,7 +696,7 @@ func Test_Gather(t *testing.T) {
 		require.Empty(t, mockAcc.Errors)
 
 		expected := []telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"dpdk",
 				map[string]string{
 					"command": "/endpoint1",
@@ -732,7 +733,7 @@ func Test_Gather(t *testing.T) {
 		require.Empty(t, mockAcc.Errors)
 
 		expected := []telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"dpdk",
 				map[string]string{
 					"command": "/endpoint1",
@@ -767,7 +768,7 @@ func Test_Gather(t *testing.T) {
 		require.Empty(t, mockAcc.Errors)
 
 		expected := []telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"dpdk",
 				map[string]string{
 					"command": "/endpoint1",
@@ -805,7 +806,7 @@ func Test_Gather_MultiSocket(t *testing.T) {
 		require.Empty(t, mockAcc.Errors)
 
 		expected := []telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"dpdk",
 				map[string]string{
 					"command": "/endpoint1",
@@ -816,7 +817,7 @@ func Test_Gather_MultiSocket(t *testing.T) {
 				},
 				time.Unix(0, 0),
 			),
-			testutil.MustMetric(
+			metric.New(
 				"dpdk",
 				map[string]string{
 					"command": "/endpoint1",

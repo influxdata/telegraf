@@ -101,7 +101,7 @@ type sysInfo struct {
 	DriverVersion string `json:"Driver version"`
 }
 
-type metric struct {
+type gpuMetric struct {
 	tags   map[string]string
 	fields map[string]interface{}
 }
@@ -179,8 +179,8 @@ func (rsmi *ROCmSMI) pollROCmSMI() ([]byte, error) {
 	return internal.StdOutputTimeout(cmd, time.Duration(rsmi.Timeout))
 }
 
-func genTagsFields(gpus map[string]gpu, system map[string]sysInfo) []metric {
-	metrics := make([]metric, 0, len(gpus))
+func genTagsFields(gpus map[string]gpu, system map[string]sysInfo) []gpuMetric {
+	metrics := make([]gpuMetric, 0, len(gpus))
 	for cardID := range gpus {
 		if strings.Contains(cardID, "card") {
 			tags := map[string]string{
@@ -224,7 +224,7 @@ func genTagsFields(gpus map[string]gpu, system map[string]sysInfo) []metric {
 			setIfUsed("str", fields, "card_model", payload.GpuCardModel)
 			setIfUsed("str", fields, "card_vendor", payload.GpuCardVendor)
 
-			metrics = append(metrics, metric{tags, fields})
+			metrics = append(metrics, gpuMetric{tags, fields})
 		}
 	}
 	return metrics

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path"
 	"strconv"
 	"strings"
 	"syscall"
@@ -81,14 +82,15 @@ func findBySystemdUnits(units []string) ([]processGroup, error) {
 	}
 	defer conn.Close()
 
-	sdunits, err := conn.ListUnitsByPatternsContext(ctx, []string{"enabled", "disabled", "static"}, units)
+	sdunits, err := conn.ListUnitFilesByPatternsContext(ctx, []string{"enabled", "disabled", "static"}, units)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list units: %w", err)
 	}
 
 	groups := make([]processGroup, 0, len(sdunits))
 	for _, u := range sdunits {
-		prop, err := conn.GetUnitTypePropertyContext(ctx, u.Name, "Service", "MainPID")
+		name := path.Base(u.Path)
+		prop, err := conn.GetUnitTypePropertyContext(ctx, name, "Service", "MainPID")
 		if err != nil {
 			// This unit might not be a service or similar
 			continue
@@ -104,7 +106,7 @@ func findBySystemdUnits(units []string) ([]processGroup, error) {
 		}
 		groups = append(groups, processGroup{
 			processes: []*gopsprocess.Process{p},
-			tags:      map[string]string{"systemd_unit": u.Name},
+			tags:      map[string]string{"systemd_unit": name},
 		})
 	}
 
@@ -116,8 +118,8 @@ func findByWindowsServices(_ []string) ([]processGroup, error) {
 }
 
 func collectTotalReadWrite(proc process) (r, w uint64, err error) {
-	path := internal.GetProcPath()
-	fs, err := procfs.NewFS(path)
+	procPath := internal.GetProcPath()
+	fs, err := procfs.NewFS(procPath)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -229,7 +231,7 @@ func statsTCP(conns []gopsnet.ConnectionStat, family uint8) ([]map[string]interf
 	}
 
 	// Filter the responses via the inodes belonging to the process
-	fieldslist := make([]map[string]interface{}, 0)
+	fieldslist := make([]map[string]interface{}, 0, len(responses))
 	for _, r := range responses {
 		c, found := inodes[r.InetDiagMsg.INode]
 		if !found {
@@ -292,7 +294,7 @@ func statsUDP(conns []gopsnet.ConnectionStat, family uint8) ([]map[string]interf
 	}
 
 	// Filter the responses via the inodes belonging to the process
-	fieldslist := make([]map[string]interface{}, 0)
+	fieldslist := make([]map[string]interface{}, 0, len(responses))
 	for _, r := range responses {
 		c, found := inodes[r.InetDiagMsg.INode]
 		if !found {
@@ -351,7 +353,7 @@ func statsUnix(conns []gopsnet.ConnectionStat) ([]map[string]interface{}, error)
 	}
 
 	// Filter the responses via the inodes belonging to the process
-	fieldslist := make([]map[string]interface{}, 0)
+	fieldslist := make([]map[string]interface{}, 0, len(responses))
 	for _, r := range responses {
 		// Check if the inode belongs to the process and skip otherwise
 		c, found := inodes[r.DiagMsg.INode]

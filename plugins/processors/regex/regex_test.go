@@ -13,7 +13,7 @@ import (
 )
 
 func newM1() telegraf.Metric {
-	return testutil.MustMetric(
+	return metric.New(
 		"access_log",
 		map[string]string{
 			"verb":      "GET",
@@ -27,7 +27,7 @@ func newM1() telegraf.Metric {
 }
 
 func newM2() telegraf.Metric {
-	return testutil.MustMetric(
+	return metric.New(
 		"access_log",
 		map[string]string{
 			"verb":      "GET",
@@ -180,7 +180,7 @@ func TestTagConversions(t *testing.T) {
 
 func TestMetricNameConversions(t *testing.T) {
 	inputTemplate := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"access_log",
 			map[string]string{
 				"verb":      "GET",
@@ -191,7 +191,7 @@ func TestMetricNameConversions(t *testing.T) {
 			},
 			time.Unix(1627646243, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"access_log",
 			map[string]string{
 				"verb":      "GET",
@@ -204,7 +204,7 @@ func TestMetricNameConversions(t *testing.T) {
 			},
 			time.Unix(1627646253, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"error_log",
 			map[string]string{
 				"verb":      "GET",
@@ -232,7 +232,7 @@ func TestMetricNameConversions(t *testing.T) {
 				Replacement: "${1}",
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"access",
 					map[string]string{
 						"verb":      "GET",
@@ -243,7 +243,7 @@ func TestMetricNameConversions(t *testing.T) {
 					},
 					time.Unix(1627646243, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"access",
 					map[string]string{
 						"verb":      "GET",
@@ -256,7 +256,7 @@ func TestMetricNameConversions(t *testing.T) {
 					},
 					time.Unix(1627646253, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"error",
 					map[string]string{
 						"verb":      "GET",
@@ -296,7 +296,7 @@ func TestMetricNameConversions(t *testing.T) {
 
 func TestFieldRenameConversions(t *testing.T) {
 	inputTemplate := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"access_log",
 			map[string]string{
 				"verb":      "GET",
@@ -307,7 +307,7 @@ func TestFieldRenameConversions(t *testing.T) {
 			},
 			time.Unix(1627646243, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"access_log",
 			map[string]string{
 				"verb":      "GET",
@@ -320,7 +320,7 @@ func TestFieldRenameConversions(t *testing.T) {
 			},
 			time.Unix(1627646253, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"error_log",
 			map[string]string{
 				"verb":      "GET",
@@ -348,7 +348,7 @@ func TestFieldRenameConversions(t *testing.T) {
 				Replacement: "result_${1}",
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"access_log",
 					map[string]string{
 						"verb":      "GET",
@@ -359,7 +359,7 @@ func TestFieldRenameConversions(t *testing.T) {
 					},
 					time.Unix(1627646243, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"access_log",
 					map[string]string{
 						"verb":      "GET",
@@ -372,7 +372,7 @@ func TestFieldRenameConversions(t *testing.T) {
 					},
 					time.Unix(1627646253, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"error_log",
 					map[string]string{
 						"verb":      "GET",
@@ -395,7 +395,7 @@ func TestFieldRenameConversions(t *testing.T) {
 				Replacement: "request",
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"access_log",
 					map[string]string{
 						"verb":      "GET",
@@ -406,7 +406,7 @@ func TestFieldRenameConversions(t *testing.T) {
 					},
 					time.Unix(1627646243, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"access_log",
 					map[string]string{
 						"verb":      "GET",
@@ -419,7 +419,7 @@ func TestFieldRenameConversions(t *testing.T) {
 					},
 					time.Unix(1627646253, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"error_log",
 					map[string]string{
 						"verb":      "GET",
@@ -443,7 +443,7 @@ func TestFieldRenameConversions(t *testing.T) {
 				ResultKey:   "overwrite",
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"access_log",
 					map[string]string{
 						"verb":      "GET",
@@ -454,7 +454,7 @@ func TestFieldRenameConversions(t *testing.T) {
 					},
 					time.Unix(1627646243, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"access_log",
 					map[string]string{
 						"verb":      "GET",
@@ -466,7 +466,7 @@ func TestFieldRenameConversions(t *testing.T) {
 					},
 					time.Unix(1627646253, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"error_log",
 					map[string]string{
 						"verb":      "GET",
@@ -506,7 +506,7 @@ func TestFieldRenameConversions(t *testing.T) {
 
 func TestTagRenameConversions(t *testing.T) {
 	inputTemplate := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"access_log",
 			map[string]string{
 				"verb":      "GET",
@@ -517,7 +517,7 @@ func TestTagRenameConversions(t *testing.T) {
 			},
 			time.Unix(1627646243, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"access_log",
 			map[string]string{
 				"verb":      "GET",
@@ -530,7 +530,7 @@ func TestTagRenameConversions(t *testing.T) {
 			},
 			time.Unix(1627646253, 0),
 		),
-		testutil.MustMetric(
+		metric.New(
 			"error_log",
 			map[string]string{
 				"verb":      "GET",
@@ -558,7 +558,7 @@ func TestTagRenameConversions(t *testing.T) {
 				Replacement: "${1}",
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"access_log",
 					map[string]string{
 						"verb": "GET",
@@ -569,7 +569,7 @@ func TestTagRenameConversions(t *testing.T) {
 					},
 					time.Unix(1627646243, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"access_log",
 					map[string]string{
 						"verb": "GET",
@@ -582,7 +582,7 @@ func TestTagRenameConversions(t *testing.T) {
 					},
 					time.Unix(1627646253, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"error_log",
 					map[string]string{
 						"verb": "GET",
@@ -605,7 +605,7 @@ func TestTagRenameConversions(t *testing.T) {
 				Replacement: "verb",
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"access_log",
 					map[string]string{
 						"verb":      "GET",
@@ -616,7 +616,7 @@ func TestTagRenameConversions(t *testing.T) {
 					},
 					time.Unix(1627646243, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"access_log",
 					map[string]string{
 						"verb":      "GET",
@@ -629,7 +629,7 @@ func TestTagRenameConversions(t *testing.T) {
 					},
 					time.Unix(1627646253, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"error_log",
 					map[string]string{
 						"verb":      "GET",
@@ -653,7 +653,7 @@ func TestTagRenameConversions(t *testing.T) {
 				ResultKey:   "overwrite",
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"access_log",
 					map[string]string{
 						"verb": "200",
@@ -663,7 +663,7 @@ func TestTagRenameConversions(t *testing.T) {
 					},
 					time.Unix(1627646243, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"access_log",
 					map[string]string{
 						"verb": "200",
@@ -675,7 +675,7 @@ func TestTagRenameConversions(t *testing.T) {
 					},
 					time.Unix(1627646253, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"error_log",
 					map[string]string{
 						"verb": "404",
@@ -784,7 +784,7 @@ func TestNamedGroups(t *testing.T) {
 	}
 	require.NoError(t, regex.Init())
 
-	input := testutil.MustMetric(
+	input := metric.New(
 		"access_log",
 		map[string]string{
 			"verb":      "GET",
@@ -996,7 +996,7 @@ func TestTrackedMetricNotLost(t *testing.T) {
 	now := time.Now()
 
 	// Setup raw input and expected output
-	inputRaw := testutil.MustMetric(
+	inputRaw := metric.New(
 		"access_log",
 		map[string]string{
 			"verb":      "GET",

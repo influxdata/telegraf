@@ -152,7 +152,9 @@ func TestHTTPClientConfig(t *testing.T) {
 				URL:    u.String(),
 				Method: defaultMethod,
 				HTTPClientConfig: common_http.HTTPClientConfig{
-					IdleConnTimeout: config.Duration(5 * time.Second),
+					TransportConfig: common_http.TransportConfig{
+						IdleConnTimeout: config.Duration(5 * time.Second),
+					},
 				},
 			},
 			expectedMaxIdleConns:        0,
@@ -164,9 +166,11 @@ func TestHTTPClientConfig(t *testing.T) {
 				URL:    u.String(),
 				Method: defaultMethod,
 				HTTPClientConfig: common_http.HTTPClientConfig{
-					MaxIdleConns:        100,
-					MaxIdleConnsPerHost: 100,
-					IdleConnTimeout:     config.Duration(5 * time.Second),
+					TransportConfig: common_http.TransportConfig{
+						MaxIdleConns:        100,
+						MaxIdleConnsPerHost: 100,
+						IdleConnTimeout:     config.Duration(5 * time.Second),
+					},
 				},
 			},
 			expectedMaxIdleConns:        100,

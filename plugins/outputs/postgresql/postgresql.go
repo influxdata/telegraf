@@ -10,10 +10,11 @@ import (
 	"time"
 
 	"github.com/coocood/freecache"
-	"github.com/jackc/pgconn"
-	"github.com/jackc/pgtype"
-	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/tracelog"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -27,8 +28,8 @@ import (
 type dbh interface {
 	Begin(ctx context.Context) (pgx.Tx, error)
 	CopyFrom(ctx context.Context, tableName pgx.Identifier, columnNames []string, rowSrc pgx.CopyFromSource) (int64, error)
-	Exec(ctx context.Context, sql string, arguments ...interface{}) (commandTag pgconn.CommandTag, err error)
-	Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error)
+	Exec(ctx context.Context, sql string, arguments ...any) (commandTag pgconn.CommandTag, err error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 }
 
 //go:embed sample.conf
@@ -62,7 +63,7 @@ type Postgresql struct {
 	tableManager    *TableManager
 	tagsCache       *freecache.Cache
 
-	pguint8 *pgtype.DataType
+	pguint8 *pgtype.Type
 
 	writeChan      chan *TableSource
 	writeWaitGroup *utils.WaitGroup
@@ -131,10 +132,13 @@ func (p *Postgresql) Init() error {
 	}
 
 	if p.LogLevel != "" {
-		p.dbConfig.ConnConfig.Logger = utils.PGXLogger{Logger: p.Logger}
-		p.dbConfig.ConnConfig.LogLevel, err = pgx.LogLevelFromString(p.LogLevel)
+		level, err := tracelog.LogLevelFromString(p.LogLevel)
 		if err != nil {
 			return errors.New("invalid log level")
+		}
+		p.dbConfig.ConnConfig.Tracer = &tracelog.TraceLog{
+			Logger:   utils.PGXLogger{Logger: p.Logger},
+			LogLevel: level,
 		}
 	}
 
@@ -153,8 +157,8 @@ func (p *Postgresql) Init() error {
 func (p *Postgresql) Connect() error {
 	// Yes, we're not supposed to store the context. However since we don't receive a context, we have to.
 	p.dbContext, p.dbContextCancel = context.WithCancel(context.Background())
-	var err error
-	p.db, err = pgxpool.ConnectConfig(p.dbContext, p.dbConfig)
+
+	db, err := pgxpool.NewWithConfig(p.dbContext, p.dbConfig)
 	if err != nil {
 		p.dbContextCancel()
 		return &internal.StartupError{
@@ -162,6 +166,18 @@ func (p *Postgresql) Connect() error {
 			Retry: true,
 		}
 	}
+
+	// Make sure we are connected
+	if err := db.Ping(p.dbContext); err != nil {
+		db.Close()
+		p.dbContextCancel()
+		return &internal.StartupError{
+			Err:   err,
+			Retry: true,
+		}
+	}
+
+	p.db = db
 	p.tableManager = NewTableManager(p)
 
 	if p.TagsAsForeignKeys {
@@ -183,21 +199,21 @@ func (p *Postgresql) Connect() error {
 
 func (p *Postgresql) registerUint8(_ context.Context, conn *pgx.Conn) error {
 	if p.pguint8 == nil {
-		dt := pgtype.DataType{
+		dt := &pgtype.Type{
 			// Use 'numeric' type for encoding/decoding across the wire
 			// It might be more efficient to create a native pgtype.Type, but would involve a lot of code. So this is
 			// probably good enough.
-			Value: &Uint8{},
+			Codec: &Uint8Codec{},
 			Name:  "uint8",
 		}
 		row := conn.QueryRow(p.dbContext, "SELECT oid FROM pg_type WHERE typname=$1", dt.Name)
 		if err := row.Scan(&dt.OID); err != nil {
 			return fmt.Errorf("retrieving OID for uint8 data type: %w", err)
 		}
-		p.pguint8 = &dt
+		p.pguint8 = dt
 	}
 
-	conn.ConnInfo().RegisterDataType(*p.pguint8)
+	conn.TypeMap().RegisterType(p.pguint8)
 	return nil
 }
 

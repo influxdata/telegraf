@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 	"github.com/stretchr/testify/require"
@@ -694,7 +693,7 @@ func TestIntegrationArtemis(t *testing.T) {
 		ExposedPorts: []string{"61616", "8161"},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("Artemis Console available at"),
-			wait.ForListeningPort(nat.Port("8161")),
+			wait.ForListeningPort("8161"),
 		),
 	}
 	require.NoError(t, container.Start(), "failed to start container")

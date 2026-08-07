@@ -144,7 +144,7 @@ func TestParsesPrometheus(t *testing.T) {
 test{handler="execd",quantile="0.5"} 42.0
 `
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"prometheus",
 			map[string]string{"handler": "execd", "quantile": "0.5"},
 			map[string]interface{}{"test": float64(42.0)},

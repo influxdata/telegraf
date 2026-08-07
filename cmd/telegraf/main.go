@@ -101,6 +101,7 @@ func deleteEmpty(s []string) []string {
 // runApp defines all the subcommands and flags for Telegraf
 // this abstraction is used for testing, so outputBuffer and args can be changed
 func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfig, m App) error {
+	//nolint:prealloc // False positive as this has a fixed, known-in-advance size
 	configHandlingFlags := []cli.Flag{
 		&cli.StringSliceFlag{
 			Name:  "config",
@@ -133,7 +134,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		},
 		&cli.StringFlag{
 			Name:  "secretstore-filter",
-			Usage: "filter the secret-stores to enable, separator is ':'",
+			Usage: "filter the secret stores to enable, separator is ':'",
 		},
 		&cli.BoolFlag{
 			Name:  "strict-env-handling",
@@ -235,9 +236,9 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			return errors.New("flags --strict-env-handling and --non-strict-env-handling cannot be used together")
 		}
 		if !cCtx.Bool("strict-env-handling") && !cCtx.Bool("non-strict-env-handling") {
-			msg := "Strict environment variable handling will be the new default starting with v1.38.0! " +
-				"If your configuration works with strict handling or you don't use environment variables it is safe " +
-				"to ignore this warning. Otherwise please explicitly add the --non-strict-env-handling flag!"
+			msg := "Strict environment variable handling is the new default starting with v1.38.0! " +
+				"If your configuration does not work with strict handling please explicitly add " +
+				"the --non-strict-env-handling flag to switch to the previous behavior!"
 			log.Println("W! " + color.YellowString(msg))
 		}
 
@@ -260,7 +261,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			plugindDir:              cCtx.String("plugin-directory"),
 			password:                cCtx.String("password"),
 			oldEnvBehavior:          cCtx.Bool("old-env-behavior"),
-			nonStrictEnvVars:        !cCtx.Bool("strict-env-handling"),
+			nonStrictEnvVars:        cCtx.Bool("non-strict-env-handling"),
 			printPluginConfigSource: cCtx.Bool("print-plugin-config-source"),
 			test:                    cCtx.Bool("test"),
 			debug:                   cCtx.Bool("debug"),
@@ -333,7 +334,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				},
 				&cli.StringFlag{
 					Name:  "password",
-					Usage: "password to unlock secret-stores",
+					Usage: "password to unlock secret stores",
 				},
 				//
 				// Bool flags

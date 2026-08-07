@@ -16,7 +16,7 @@ import (
 
 type Webhook struct {
 	Path   string
-	secret string
+	Secret string
 	acc    telegraf.Accumulator
 	log    telegraf.Logger
 	auth.BasicAuth
@@ -46,7 +46,7 @@ func (gh *Webhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if gh.secret != "" && !checkSignature(gh.secret, data, r.Header.Get("X-Hub-Signature")) {
+	if gh.Secret != "" && !checkSignature(gh.Secret, data, r.Header.Get("X-Hub-Signature")) {
 		gh.log.Error("Fail to check the github webhook signature")
 		w.WriteHeader(http.StatusBadRequest)
 		return

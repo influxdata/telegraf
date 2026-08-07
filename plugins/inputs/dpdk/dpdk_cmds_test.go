@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -21,7 +22,7 @@ func Test_LinkStatusCommand(t *testing.T) {
 		dpdkConn.processCommand(mockAcc, testutil.Logger{}, ethdevLinkStatusCommand+",1", nil)
 
 		expected := []telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"dpdk",
 				map[string]string{
 					"command": ethdevLinkStatusCommand,
@@ -48,7 +49,7 @@ func Test_LinkStatusCommand(t *testing.T) {
 		dpdkConn.processCommand(mockAcc, testutil.Logger{}, ethdevLinkStatusCommand+",1", nil)
 
 		expected := []telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"dpdk",
 				map[string]string{
 					"command": ethdevLinkStatusCommand,
@@ -86,7 +87,7 @@ func Test_LinkStatusCommand(t *testing.T) {
 		dpdkConn := dpdk.connectors[0]
 		dpdkConn.processCommand(mockAcc, testutil.Logger{}, ethdevLinkStatusCommand+",1", nil)
 		expected := []telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"dpdk",
 				map[string]string{
 					"command": ethdevLinkStatusCommand,
@@ -112,7 +113,7 @@ func Test_LinkStatusCommand(t *testing.T) {
 		dpdkConn.processCommand(mockAcc, testutil.Logger{}, ethdevLinkStatusCommand+",1", nil)
 
 		expected := []telegraf.Metric{
-			testutil.MustMetric(
+			metric.New(
 				"dpdk",
 				map[string]string{
 					"command": ethdevLinkStatusCommand,

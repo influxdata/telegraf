@@ -1,0 +1,1 @@
+show\ processes\ cpu,TABLE_process_cpu=i1,foo=bar,path=show\ processes\ cpu,row_number=0,source=hostname,subscription=subscription value="foo" 1543236572000000000

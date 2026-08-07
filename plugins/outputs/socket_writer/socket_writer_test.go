@@ -6,10 +6,13 @@ import (
 	"runtime"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -78,12 +81,14 @@ func TestSocketWriter_unixgram(t *testing.T) {
 }
 
 func testSocketWriterStream(t *testing.T, sw *SocketWriter, lconn net.Conn) {
-	metrics := []telegraf.Metric{testutil.TestMetric(1, "test")}
+	metrics := []telegraf.Metric{
+		testutil.TestMetric(1, "test"),
+		testutil.TestMetric(2, "test"),
+	}
 	mbs1out, err := sw.serializer.Serialize(metrics[0])
 	require.NoError(t, err)
 	mbs1out, err = sw.encoder.Encode(mbs1out)
 	require.NoError(t, err)
-	metrics = append(metrics, testutil.TestMetric(2, "test"))
 	mbs2out, err := sw.serializer.Serialize(metrics[1])
 	require.NoError(t, err)
 	mbs2out, err = sw.encoder.Encode(mbs2out)
@@ -103,13 +108,15 @@ func testSocketWriterStream(t *testing.T, sw *SocketWriter, lconn net.Conn) {
 }
 
 func testSocketWriterPacket(t *testing.T, sw *SocketWriter, lconn net.PacketConn) {
-	metrics := []telegraf.Metric{testutil.TestMetric(1, "test")}
+	metrics := []telegraf.Metric{
+		testutil.TestMetric(1, "test"),
+		testutil.TestMetric(2, "test"),
+	}
 	mbs1out, err := sw.serializer.Serialize(metrics[0])
 	require.NoError(t, err)
 	mbs1out, err = sw.encoder.Encode(mbs1out)
 	require.NoError(t, err)
 	mbs1str := string(mbs1out)
-	metrics = append(metrics, testutil.TestMetric(2, "test"))
 	mbs2out, err := sw.serializer.Serialize(metrics[1])
 	require.NoError(t, err)
 	mbs2out, err = sw.encoder.Encode(mbs2out)
@@ -208,4 +215,160 @@ func TestSocketWriter_udp_gzip(t *testing.T) {
 	require.NoError(t, sw.Connect())
 
 	testSocketWriterPacket(t, sw, listener)
+}
+
+func TestStartupErrorBehaviorDefault(t *testing.T) {
+	// Setup a dummy listener but do not accept connections
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	address := listener.Addr().String()
+	listener.Close()
+
+	// Setup the plugin and the model to be able to use the startup retry strategy
+	plugin := &SocketWriter{
+		ContentEncoding: "",
+		Address:         "tcp://" + address,
+	}
+
+	model, err := models.NewRunningOutput(
+		plugin,
+		&models.OutputConfig{
+			Name: "socket_writer",
+		},
+		10, 100,
+	)
+	require.NoError(t, err)
+	require.NoError(t, model.Init())
+
+	// Starting the plugin will fail with an error because the server does not listen
+	var serr *internal.StartupError
+	require.ErrorAs(t, model.Connect(), &serr)
+}
+
+func TestStartupErrorBehaviorError(t *testing.T) {
+	// Setup a dummy listener but do not accept connections
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	address := listener.Addr().String()
+	listener.Close()
+
+	// Setup the plugin and the model to be able to use the startup retry strategy
+	plugin := &SocketWriter{
+		Address: "tcp://" + address,
+	}
+
+	model, err := models.NewRunningOutput(
+		plugin,
+		&models.OutputConfig{
+			Name:                 "socket_writer",
+			StartupErrorBehavior: "error",
+		},
+		10, 100,
+	)
+	require.NoError(t, err)
+	require.NoError(t, model.Init())
+
+	// Starting the plugin will fail with an error because the server does not listen
+	var serr *internal.StartupError
+	require.ErrorAs(t, model.Connect(), &serr)
+}
+
+func TestStartupErrorBehaviorIgnore(t *testing.T) {
+	// Setup a dummy listener but do not accept connections
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	address := listener.Addr().String()
+	listener.Close()
+
+	// Setup the plugin and the model to be able to use the startup retry strategy
+	plugin := &SocketWriter{
+		Address: "tcp://" + address,
+	}
+
+	model, err := models.NewRunningOutput(
+		plugin,
+		&models.OutputConfig{
+			Name:                 "socket_writer",
+			StartupErrorBehavior: "ignore",
+		},
+		10, 100,
+	)
+	require.NoError(t, err)
+	require.NoError(t, model.Init())
+
+	// Starting the plugin will fail because the server does not accept connections.
+	// The model code should convert it to a fatal error for the agent to remove
+	// the plugin.
+	var fatalErr *internal.FatalError
+	require.ErrorAs(t, model.Connect(), &fatalErr)
+}
+
+func TestStartupErrorBehaviorRetry(t *testing.T) {
+	// Setup a dummy listener but do not accept connections
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	address := listener.Addr().String()
+	listener.Close()
+
+	// Setup the plugin and the model to be able to use the startup retry strategy
+	plugin := &SocketWriter{
+		Address:    "tcp://" + address,
+		serializer: &influx.Serializer{},
+	}
+
+	model, err := models.NewRunningOutput(
+		plugin,
+		&models.OutputConfig{
+			Name:                 "socket_writer",
+			StartupErrorBehavior: "retry",
+		},
+		10, 100,
+	)
+	require.NoError(t, err)
+	require.NoError(t, model.Init())
+
+	// Starting the plugin will return no error because the plugin will
+	// retry to connect in every write cycle.
+	require.NoError(t, model.Connect())
+	defer model.Close()
+
+	// Writing metrics in this state should fail because we are not fully
+	// started up
+	metrics := testutil.MockMetrics()
+	for _, m := range metrics {
+		model.AddMetric(m)
+	}
+	require.ErrorIs(t, model.WriteBatch(), internal.ErrNotConnected)
+
+	// Startup an actually working listener we can connect and write to
+	listener, err = net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer listener.Close()
+
+	var wg sync.WaitGroup
+	buf := make([]byte, 256)
+
+	wg.Go(func() {
+		conn, err := listener.Accept()
+		if err != nil {
+			t.Errorf("accepting connection failed: %v", err)
+			return
+		}
+
+		if err := conn.SetReadDeadline(time.Now().Add(3 * time.Second)); err != nil {
+			t.Errorf("setting read deadline failed: %v", err)
+			return
+		}
+
+		if _, err := conn.Read(buf); err != nil {
+			t.Errorf("reading failed: %v", err)
+		}
+	})
+
+	// Update the plugin's address and write again. This time the write should
+	// succeed.
+	plugin.Address = "tcp://" + listener.Addr().String()
+	require.NoError(t, model.WriteBatch())
+	wg.Wait()
+	require.NotEmpty(t, string(buf))
 }

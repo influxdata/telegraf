@@ -42,7 +42,7 @@ type (
 		Period            config.Duration `toml:"period"`
 		Delay             config.Duration `toml:"delay"`
 		Project           string          `toml:"project"`
-		Metrics           []*metric       `toml:"metrics"`
+		Metrics           []*metricDef    `toml:"metrics"`
 		RateLimit         int             `toml:"ratelimit"`
 
 		Log telegraf.Logger `toml:"-"`
@@ -57,7 +57,7 @@ type (
 	}
 
 	// metric describes what metrics to get
-	metric struct {
+	metricDef struct {
 		ObjectsFilter                 string   `toml:"objects_filter"`
 		MetricNames                   []string `toml:"names"`
 		Dimensions                    string   `toml:"dimensions"` // String representation of JSON dimensions
@@ -223,7 +223,7 @@ func (s *AliyunCMS) Gather(acc telegraf.Accumulator) error {
 		wg.Add(len(m.MetricNames))
 		for _, metricName := range m.MetricNames {
 			<-lmtr.C
-			go func(metricName string, m *metric) {
+			go func(metricName string, m *metricDef) {
 				defer wg.Done()
 				acc.AddError(s.gatherMetric(acc, metricName, m))
 			}(metricName, m)
@@ -261,7 +261,7 @@ func (s *AliyunCMS) updateWindow(relativeTo time.Time) {
 }
 
 // Gather given metric and emit error
-func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, metric *metric) error {
+func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, metric *metricDef) error {
 	for _, region := range s.Regions {
 		req := cms.CreateDescribeMetricListRequest()
 		req.Period = strconv.FormatInt(int64(time.Duration(s.Period).Seconds()), 10)
@@ -364,7 +364,7 @@ func parseTag(tagSpec string, data interface{}) (tagKey, tagValue string, err er
 	return tagKey, tagValue, nil
 }
 
-func (s *AliyunCMS) prepareTagsAndDimensions(metric *metric) {
+func (s *AliyunCMS) prepareTagsAndDimensions(metric *metricDef) {
 	var (
 		newData     bool
 		defaultTags = []string{"RegionId:RegionId"}

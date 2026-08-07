@@ -496,12 +496,15 @@ func (c *httpClient) makeWriteRequest(address string, body io.Reader) (*http.Req
 // side of the connection in case of error
 func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) *wrappedReader {
 	reader := influx.NewReader(metrics, c.config.Serializer)
+	var rc io.ReadCloser
 	if c.config.ContentEncoding == "gzip" {
-		reader = internal.CompressWithGzip(reader)
+		rc = internal.CompressWithGzip(reader)
+	} else {
+		rc = io.NopCloser(reader)
 	}
 
 	// Create a wrapper to be able to able to extract the number of bytes written
-	return &wrappedReader{r: io.NopCloser(reader)}
+	return &wrappedReader{r: rc}
 }
 
 func (c *httpClient) addHeaders(req *http.Request) error {

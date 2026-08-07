@@ -79,18 +79,18 @@ const maxWriteRoutinesDefault = 1
 var WriteFactory = func(credentialConfig *common_aws.CredentialConfig) (WriteClient, error) {
 	awsCreds, awsErr := credentialConfig.Credentials()
 	if awsErr != nil {
-		panic("Unable to load credentials config " + awsErr.Error())
+		return nil, fmt.Errorf("unable to load credentials config: %w", awsErr)
 	}
 
 	cfg, cfgErr := config.LoadDefaultConfig(context.TODO())
 	if cfgErr != nil {
-		panic("Unable to load SDK config for Timestream " + cfgErr.Error())
+		return nil, fmt.Errorf("unable to load SDK config for Timestream: %w", cfgErr)
 	}
 
 	if credentialConfig.EndpointURL != "" && credentialConfig.Region != "" {
 		cfg, err := config.LoadDefaultConfig(context.TODO())
 		if err != nil {
-			panic("unable to load SDK config for Timestream " + err.Error())
+			return nil, fmt.Errorf("unable to load SDK config for Timestream: %w", err)
 		}
 		cfg.Credentials = awsCreds.Credentials
 
@@ -483,7 +483,6 @@ func (t *Timestream) buildSingleWriteRecords(point telegraf.Metric) []types.Reco
 }
 
 func (t *Timestream) buildMultiMeasureWriteRecords(point telegraf.Metric) []types.Record {
-	var records []types.Record
 	dimensions := t.buildDimensions(point)
 
 	multiMeasureName := t.MeasureNameForMultiMeasureRecords
@@ -509,18 +508,16 @@ func (t *Timestream) buildMultiMeasureWriteRecords(point telegraf.Metric) []type
 
 	timeUnit, timeValue := getTimestreamTime(point.Time())
 
-	record := types.Record{
-		MeasureName:      aws.String(multiMeasureName),
-		MeasureValueType: "MULTI",
-		MeasureValues:    multiMeasures,
-		Dimensions:       dimensions,
-		Time:             aws.String(timeValue),
-		TimeUnit:         timeUnit,
+	return []types.Record{
+		{
+			MeasureName:      aws.String(multiMeasureName),
+			MeasureValueType: "MULTI",
+			MeasureValues:    multiMeasures,
+			Dimensions:       dimensions,
+			Time:             aws.String(timeValue),
+			TimeUnit:         timeUnit,
+		},
 	}
-
-	records = append(records, record)
-
-	return records
 }
 
 // partitionRecords splits the Timestream records into smaller slices of a max size

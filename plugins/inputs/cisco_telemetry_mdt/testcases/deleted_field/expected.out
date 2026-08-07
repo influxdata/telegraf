@@ -1,0 +1,1 @@
+deleted,index=0,ip=10::10,name=Loopback10,path=openconfig-interfaces:interfaces/interface/subinterfaces/subinterface/openconfig-if-ip:ipv6/addresses/address,source=hostname,subscription=subscription delete=false,state/ip="10::10",state/origin="STATIC",state/prefix_length=128u,state/status="PREFERRED" 1543236572000000000

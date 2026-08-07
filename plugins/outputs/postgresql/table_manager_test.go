@@ -51,10 +51,11 @@ func TestTableManagerIntegration_EnsureStructure_alter(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, p.Connect())
 
-	cols := []utils.Column{
+	cols := make([]utils.Column, 0, 3)
+	cols = append(cols,
 		p.columnFromTag("foo", ""),
 		p.columnFromField("bar", 0),
-	}
+	)
 	_, err = p.tableManager.EnsureStructure(
 		ctx,
 		p.db,

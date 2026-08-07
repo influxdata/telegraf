@@ -215,7 +215,7 @@ func TestDateOffset(t *testing.T) {
 	}
 	require.NoError(t, plugin.Init())
 
-	input := testutil.MustMetric(
+	input := metric.New(
 		"cpu",
 		map[string]string{},
 		map[string]interface{}{
@@ -225,7 +225,7 @@ func TestDateOffset(t *testing.T) {
 	)
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"cpu",
 			map[string]string{
 				"hour": "23",

@@ -1007,7 +1007,7 @@ func TestGetHostname(t *testing.T) {
 
 	for desc, test := range tests {
 		t.Run(desc, func(t *testing.T) {
-			metric := metric.New(
+			mt := metric.New(
 
 				"name",
 				test.Tags,
@@ -1015,7 +1015,7 @@ func TestGetHostname(t *testing.T) {
 				time.Now(),
 			)
 
-			host, err := getHostname(test.HostTag, metric)
+			host, err := getHostname(test.HostTag, mt)
 			require.NoError(t, err)
 			require.Equal(t, test.Result, host)
 		})

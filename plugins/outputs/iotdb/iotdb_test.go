@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/apache/iotdb-client-go/client"
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -564,7 +563,7 @@ func TestIntegrationInserts(t *testing.T) {
 		Image:        "apache/iotdb:0.13.0-node",
 		ExposedPorts: []string{iotdbPort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(iotdbPort)),
+			wait.ForListeningPort(iotdbPort),
 			wait.ForLog("IoTDB has started."),
 		),
 	}

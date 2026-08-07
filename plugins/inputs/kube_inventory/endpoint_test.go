@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -41,22 +42,22 @@ func TestEndpoint(t *testing.T) {
 							{
 								Endpoints: []discoveryv1.Endpoint{
 									{
-										Hostname: toPtr("storage-6"),
-										NodeName: toPtr("b.storage.internal"),
+										Hostname: new("storage-6"),
+										NodeName: new("b.storage.internal"),
 										TargetRef: &corev1.ObjectReference{
 											Kind: "pod",
 											Name: "storage-6",
 										},
 										Conditions: discoveryv1.EndpointConditions{
-											Ready: toPtr(true),
+											Ready: new(true),
 										},
 									},
 								},
 								Ports: []discoveryv1.EndpointPort{
 									{
-										Name:     toPtr("server"),
-										Protocol: toPtr(corev1.Protocol("TCP")),
-										Port:     toPtr(int32(8080)),
+										Name:     new("server"),
+										Protocol: new(corev1.Protocol("TCP")),
+										Port:     new(int32(8080)),
 									},
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -71,7 +72,7 @@ func TestEndpoint(t *testing.T) {
 				},
 			},
 			output: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"kubernetes_endpoint",
 					map[string]string{
 						"endpoint_name": "storage",
@@ -102,14 +103,14 @@ func TestEndpoint(t *testing.T) {
 							{
 								Endpoints: []discoveryv1.Endpoint{
 									{
-										Hostname: toPtr("storage-6"),
-										NodeName: toPtr("b.storage.internal"),
+										Hostname: new("storage-6"),
+										NodeName: new("b.storage.internal"),
 										TargetRef: &corev1.ObjectReference{
 											Kind: "pod",
 											Name: "storage-6",
 										},
 										Conditions: discoveryv1.EndpointConditions{
-											Ready: toPtr(false),
+											Ready: new(false),
 										},
 									},
 								},
@@ -121,9 +122,9 @@ func TestEndpoint(t *testing.T) {
 								},
 								Ports: []discoveryv1.EndpointPort{
 									{
-										Name:     toPtr("server"),
-										Protocol: toPtr(corev1.Protocol("TCP")),
-										Port:     toPtr(int32(8080)),
+										Name:     new("server"),
+										Protocol: new(corev1.Protocol("TCP")),
+										Port:     new(int32(8080)),
 									},
 								},
 							},
@@ -132,7 +133,7 @@ func TestEndpoint(t *testing.T) {
 				},
 			},
 			output: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"kubernetes_endpoint",
 					map[string]string{
 						"endpoint_name": "storage",
@@ -163,23 +164,23 @@ func TestEndpoint(t *testing.T) {
 							{
 								Endpoints: []discoveryv1.Endpoint{
 									{
-										Hostname: toPtr("storage-6"),
+										Hostname: new("storage-6"),
 										TargetRef: &corev1.ObjectReference{
 											Kind: "pod",
 											Name: "storage-6",
 										},
 										Conditions: discoveryv1.EndpointConditions{
-											Ready: toPtr(false),
+											Ready: new(false),
 										},
 									},
 									{
-										Hostname: toPtr("storage-12"),
+										Hostname: new("storage-12"),
 										TargetRef: &corev1.ObjectReference{
 											Kind: "pod",
 											Name: "storage-12",
 										},
 										Conditions: discoveryv1.EndpointConditions{
-											Ready: toPtr(true),
+											Ready: new(true),
 										},
 									},
 								},
@@ -191,9 +192,9 @@ func TestEndpoint(t *testing.T) {
 								},
 								Ports: []discoveryv1.EndpointPort{
 									{
-										Name:     toPtr("server"),
-										Protocol: toPtr(corev1.Protocol("TCP")),
-										Port:     toPtr(int32(8080)),
+										Name:     new("server"),
+										Protocol: new(corev1.Protocol("TCP")),
+										Port:     new(int32(8080)),
 									},
 								},
 							},
@@ -202,7 +203,7 @@ func TestEndpoint(t *testing.T) {
 				},
 			},
 			output: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"kubernetes_endpoint",
 					map[string]string{
 						"endpoint_name": "storage",
@@ -220,7 +221,7 @@ func TestEndpoint(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric(
+				metric.New(
 					"kubernetes_endpoint",
 					map[string]string{
 						"endpoint_name": "storage",
@@ -257,9 +258,9 @@ func TestEndpoint(t *testing.T) {
 								},
 								Ports: []discoveryv1.EndpointPort{
 									{
-										Name:     toPtr("server"),
-										Protocol: toPtr(corev1.Protocol("TCP")),
-										Port:     toPtr(int32(8080)),
+										Name:     new("server"),
+										Protocol: new(corev1.Protocol("TCP")),
+										Port:     new(int32(8080)),
 									},
 								},
 							},
@@ -279,13 +280,13 @@ func TestEndpoint(t *testing.T) {
 							{
 								Endpoints: []discoveryv1.Endpoint{
 									{
-										Hostname: toPtr("storage-6"),
+										Hostname: new("storage-6"),
 										TargetRef: &corev1.ObjectReference{
 											Kind: "pod",
 											Name: "storage-6",
 										},
 										Conditions: discoveryv1.EndpointConditions{
-											Ready: toPtr(false),
+											Ready: new(false),
 										},
 									},
 								},
@@ -297,9 +298,9 @@ func TestEndpoint(t *testing.T) {
 								},
 								Ports: []discoveryv1.EndpointPort{
 									{
-										Name:     toPtr(""),
-										Protocol: toPtr(corev1.Protocol("TCP")),
-										Port:     toPtr(int32(8080)),
+										Name:     new(""),
+										Protocol: new(corev1.Protocol("TCP")),
+										Port:     new(int32(8080)),
 									},
 								},
 							},
@@ -308,7 +309,7 @@ func TestEndpoint(t *testing.T) {
 				},
 			},
 			output: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"kubernetes_endpoint",
 					map[string]string{
 						"endpoint_name": "storage",
@@ -338,23 +339,23 @@ func TestEndpoint(t *testing.T) {
 							{
 								Endpoints: []discoveryv1.Endpoint{
 									{
-										Hostname: toPtr("storage-6"),
+										Hostname: new("storage-6"),
 										TargetRef: &corev1.ObjectReference{
 											Kind: "pod",
 											Name: "storage-6",
 										},
 										Conditions: discoveryv1.EndpointConditions{
-											Ready: toPtr(false),
+											Ready: new(false),
 										},
 									},
 									{
-										Hostname: toPtr("storage-12"),
+										Hostname: new("storage-12"),
 										TargetRef: &corev1.ObjectReference{
 											Kind: "pod",
 											Name: "storage-12",
 										},
 										Conditions: discoveryv1.EndpointConditions{
-											Ready: toPtr(true),
+											Ready: new(true),
 										},
 									},
 								},
@@ -405,7 +406,7 @@ func TestEndpoint(t *testing.T) {
 							{
 								Endpoints: []discoveryv1.Endpoint{
 									{
-										Hostname: toPtr("storage-6"),
+										Hostname: new("storage-6"),
 										TargetRef: &corev1.ObjectReference{
 											Kind: "pod",
 											Name: "storage-6",
@@ -421,9 +422,9 @@ func TestEndpoint(t *testing.T) {
 								},
 								Ports: []discoveryv1.EndpointPort{
 									{
-										Name:     toPtr(""),
-										Protocol: toPtr(corev1.Protocol("TCP")),
-										Port:     toPtr(int32(8080)),
+										Name:     new(""),
+										Protocol: new(corev1.Protocol("TCP")),
+										Port:     new(int32(8080)),
 									},
 								},
 							},
@@ -432,7 +433,7 @@ func TestEndpoint(t *testing.T) {
 				},
 			},
 			output: []telegraf.Metric{
-				testutil.MustMetric(
+				metric.New(
 					"kubernetes_endpoint",
 					map[string]string{
 						"endpoint_name": "storage",

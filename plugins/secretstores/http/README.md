@@ -1,15 +1,11 @@
-# HTTP Secret-store Plugin
+# HTTP Secret store Plugin
 
-The `http` plugin allows to query secrets from an HTTP endpoint. The secrets
-can be transmitted plain-text or in an encrypted fashion.
+This plugin allows to query secrets from an HTTP endpoint, transmitting the
+secrets either plain-text or in an encrypted fashion.
 
-To manage your secrets of this secret-store, you should use Telegraf. Run
-
-```shell
-telegraf secrets help
-```
-
-to get more information on how to do this.
+⭐ Telegraf v1.27.0
+🏷️ cloud
+💻 all
 
 ## Usage <!-- @/docs/includes/secret_usage.md -->
 
@@ -18,7 +14,7 @@ the Telegraf configuration. Only certain Telegraf plugins and options of
 support secret stores. To see which plugins and options support
 secrets, see their respective documentation (e.g.
 `plugins/outputs/influxdb/README.md`). If the plugin's README has the
-`Secret-store support` section, it will detail which options support secret
+`Secret store support` section, it will detail which options support secret
 store usage.
 
 ## Configuration
@@ -26,9 +22,9 @@ store usage.
 ```toml @sample.conf
 # Read secrets from a HTTP endpoint
 [[secretstores.http]]
-  ## Unique identifier for the secret-store.
+  ## Unique identifier for the secret store.
   ## This id can later be used in plugins to reference the secrets
-  ## in this secret-store via @{<id>:<secret_key>} (mandatory)
+  ## in this secret store via @{<id>:<secret_key>} (mandatory)
   id = "secretstore"
 
   ## URLs from which to read the secrets
@@ -45,24 +41,54 @@ store usage.
   # username = "username"
   # password = "pa$$word"
 
+  ## Amount of time allowed to complete the HTTP request
+  # timeout = "5s"
+
+  ## HTTP connection settings
+  # idle_conn_timeout = "0s"
+  # max_idle_conn = 0
+  # max_idle_conn_per_host = 0
+  # response_timeout = "0s"
+
+  ## Use the local address for connecting, assigned by the OS by default
+  # local_address = ""
+
+  ## Optional proxy settings
+  # use_system_proxy = false
+  # http_proxy_url = ""
+
+  ## Optional TLS settings
+  ## Set to true/false to enforce TLS being enabled/disabled. If not set,
+  ## enable TLS only if any of the other options are specified.
+  # tls_enable =
+  ## Trusted root certificates for server
+  # tls_ca = "/path/to/cafile"
+  ## Used for TLS client certificate authentication
+  # tls_cert = "/path/to/certfile"
+  ## Used for TLS client certificate authentication
+  # tls_key = "/path/to/keyfile"
+  ## Password for the key file if it is encrypted
+  # tls_key_pwd = ""
+  ## Send the specified TLS server name via SNI
+  # tls_server_name = "kubernetes.example.com"
+  ## Minimal TLS version to accept by the client
+  # tls_min_version = "TLS12"
+  ## List of ciphers to accept, by default all secure ciphers will be accepted
+  ## See https://pkg.go.dev/crypto/tls#pkg-constants for supported values.
+  ## Use "all", "secure" and "insecure" to add all support ciphers, secure
+  ## suites or insecure suites respectively.
+  # tls_cipher_suites = ["secure"]
+  ## Renegotiation method, "never", "once" or "freely"
+  # tls_renegotiation_method = "never"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
+
   ## OAuth2 Client Credentials. The options 'client_id', 'client_secret', and 'token_url' are required to use OAuth2.
   # client_id = "clientid"
   # client_secret = "secret"
   # token_url = "https://indentityprovider/oauth2/v1/token"
+  # audience = ""
   # scopes = ["urn:opc:idm:__myscopes__"]
-
-  ## HTTP Proxy support
-  # use_system_proxy = false
-  # http_proxy_url = ""
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Minimal TLS version to accept by the client
-  # tls_min_version = "TLS12"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
 
   ## Optional Cookie authentication
   # cookie_auth_url = "https://localhost/authMe"
@@ -71,13 +97,8 @@ store usage.
   # cookie_auth_password = "pa$$word"
   # cookie_auth_headers = { Content-Type = "application/json", X-MY-HEADER = "hello" }
   # cookie_auth_body = '{"username": "user", "password": "pa$$word", "authenticate": "me"}'
-  ## When unset or set to zero the authentication will only happen once
-  ## and will never renew the cookie. Set to a suitable duration if you
-  ## require cookie renewal!
+  ## cookie_auth_renewal not set or set to "0" will auth once and never renew the cookie
   # cookie_auth_renewal = "0s"
-
-  ## Amount of time allowed to complete the HTTP request
-  # timeout = "5s"
 
   ## List of success status codes
   # success_status_codes = [200]
@@ -111,37 +132,38 @@ store usage.
   #   # iterations = 0
 ```
 
-A collection of secrets is queried from the `url` endpoint. The plugin currently
-expects JSON data in a flat key-value form and means to convert arbitrary JSON
-to that form (see [transformation section](#transformation)).
-Furthermore, the secret data can be transmitted in an encrypted
-format, see [encryption section](#encryption) for details.
+A collection of secrets is queried from the `url` endpoint. The plugin expects
+JSON data in a flat key-value form. To learn how different JSON formats can be
+converted into that form see the [transformation section](#transformation).
+For data transmitted in an encrypted format, see the
+[encryption section](#encryption).
 
-## Transformation
+### Transformation
 
-Secrets are currently expected to be JSON data in the following flat key-value
-form
+Secrets are expected to be JSON data in the following flat key-value form
 
 ```json
 {
     "secret name A": "secret value A",
-    ...
+    "secret name ...": "...",
     "secret name X": "secret value X"
 }
 ```
 
 If your HTTP endpoint provides JSON data in a different format, you can use
-the `transformation` option to apply a [JSONata expression](https://jsonata.org)
-(version v1.5.4) to transform the server answer to the above format.
+the `transformation` option to apply a [JSONata expression][jsonata]
+(version v1.5.4) to transform the server answer to the format above.
 
-## Encryption
+[jsonata]: https://jsonata.org
 
-### Plain text
+### Encryption
+
+#### Plain text
 
 Set `cipher` to `none` if the secrets are transmitted as plain-text. No further
 options are required.
 
-### Advanced Encryption Standard (AES)
+#### Advanced Encryption Standard (AES)
 
 Currently the following AES ciphers are supported
 
@@ -161,7 +183,7 @@ In case you are using password-based key derivation, `key`
 (and possibly `init_vector`) can be omitted. Take a look at the
 [password-based key derivation section](#password-based-key-derivation).
 
-### Password-based key derivation
+#### Password-based key derivation
 
 Alternatively to providing a `key` (and `init_vector`) the key (and vector)
 can be derived from a given password. Currently the following algorithms are
@@ -171,5 +193,11 @@ supported for `kdf_algorithm`:
 
 You also need to provide the `password` to derive the key from as well as the
 `salt` and `iterations` used.
-__Please note:__ All parameters must match the encryption side to derive the
-same key in Telegraf!
+
+> [!NOTE]
+> All parameters must match the encryption side to derive the same key in this
+> plugin!
+
+## Additional Information
+
+This plugin only supports reading the secrets, it cannot create or modify them.

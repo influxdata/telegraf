@@ -5,7 +5,7 @@ two type of end points `multiple`
 (e.g. `http://<host>:9000/api/system/metrics/multiple`) and `namespace`
 (e.g. `http://<host>:9000/api/system/metrics/namespace/{namespace}`).
 
-Multiple endpoint can be queried and mixing `multiple` and serveral `namespace`
+Multiple endpoint can be queried and mixing `multiple` and several `namespace`
 end points is possible. Check `http://<host>:9000/api/api-browser` for the full
 list of available endpoints.
 

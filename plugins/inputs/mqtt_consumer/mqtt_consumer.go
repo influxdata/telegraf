@@ -28,6 +28,7 @@ var (
 	once sync.Once
 	// 30 Seconds is the default used by paho.mqtt.golang
 	defaultConnectionTimeout      = config.Duration(30 * time.Second)
+	defaultMaxReconnectInterval   = config.Duration(30 * time.Second)
 	defaultMaxUndeliveredMessages = 1000
 )
 
@@ -40,6 +41,7 @@ type MQTTConsumer struct {
 	Password               config.Secret        `toml:"password"`
 	QoS                    int                  `toml:"qos"`
 	ConnectionTimeout      config.Duration      `toml:"connection_timeout"`
+	MaxReconnectInterval   config.Duration      `toml:"max_reconnect_interval"`
 	KeepAliveInterval      config.Duration      `toml:"keepalive"`
 	PingTimeout            config.Duration      `toml:"ping_timeout"`
 	MaxUndeliveredMessages int                  `toml:"max_undelivered_messages"`
@@ -147,19 +149,21 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 		}
 	}()
 
-	return m.connect()
-}
-
-func (m *MQTTConsumer) Gather(_ telegraf.Accumulator) error {
-	if !m.client.IsConnected() {
-		m.Log.Debugf("Connecting %v", m.Servers)
-		return m.connect()
+	if err := m.connect(); err != nil {
+		m.Stop()
+		return err
 	}
 	return nil
 }
 
+func (*MQTTConsumer) Gather(telegraf.Accumulator) error {
+	return nil
+}
+
 func (m *MQTTConsumer) Stop() {
-	if m.client.IsConnected() {
+	if m.client != nil {
+		// Disconnect is safe to call on an already-disconnected client;
+		// paho logs a warning and returns early in that case.
 		m.Log.Debugf("Disconnecting %v", m.Servers)
 		m.client.Disconnect(200)
 		m.Log.Debugf("Disconnected %v", m.Servers)
@@ -167,13 +171,14 @@ func (m *MQTTConsumer) Stop() {
 	if m.cancel != nil {
 		m.cancel()
 	}
+	m.wg.Wait()
 }
 
 func (m *MQTTConsumer) connect() error {
 	m.client = m.clientFactory(m.opts)
-	// AddRoute sets up the function for handling messages.  These need to be
+	// AddRoute sets up the function for handling messages. These need to be
 	// added in case we find a persistent session containing subscriptions so we
-	// know where to dispatch persisted and new messages to.  In the alternate
+	// know where to dispatch persisted and new messages to. In the alternate
 	// case that we need to create the subscriptions these will be replaced.
 	for _, topic := range m.Topics {
 		m.client.AddRoute(topic, m.onMessage)
@@ -181,12 +186,6 @@ func (m *MQTTConsumer) connect() error {
 	token := m.client.Connect()
 	if token.Wait() && token.Error() != nil {
 		if ct, ok := token.(*mqtt.ConnectToken); ok && ct.ReturnCode() == packets.ErrNetworkError {
-			// Network errors might be retryable, stop the metric-tracking
-			// goroutine and return a retryable error.
-			if m.cancel != nil {
-				m.cancel()
-				m.cancel = nil
-			}
 			return &internal.StartupError{
 				Err:   token.Error(),
 				Retry: true,
@@ -194,17 +193,13 @@ func (m *MQTTConsumer) connect() error {
 		}
 		return token.Error()
 	}
-	m.Log.Infof("Connected %v", m.Servers)
+	// Logging and subscribing are handled by onConnect(), which paho
+	// invokes on every successful connection including the initial one.
+	return nil
+}
 
-	// Persistent sessions should skip subscription if a session is present, as
-	// the subscriptions are stored by the server.
-	type sessionPresent interface {
-		SessionPresent() bool
-	}
-	if t, ok := token.(sessionPresent); ok && t.SessionPresent() {
-		m.Log.Debugf("Session found %v", m.Servers)
-		return nil
-	}
+func (m *MQTTConsumer) onConnect(_ mqtt.Client) {
+	m.Log.Infof("Connected %v", m.Servers)
 	topics := make(map[string]byte)
 	for _, topic := range m.Topics {
 		topics[topic] = byte(m.QoS)
@@ -212,14 +207,11 @@ func (m *MQTTConsumer) connect() error {
 	subscribeToken := m.client.SubscribeMultiple(topics, m.onMessage)
 	subscribeToken.Wait()
 	if subscribeToken.Error() != nil {
-		m.acc.AddError(fmt.Errorf("subscription error: topics %q: %w", strings.Join(m.Topics[:], ","), subscribeToken.Error()))
+		m.acc.AddError(fmt.Errorf("subscription error: topics %q: %w", strings.Join(m.Topics, ","), subscribeToken.Error()))
 	}
-	return nil
 }
 
 func (m *MQTTConsumer) onConnectionLost(_ mqtt.Client, err error) {
-	// Should already be disconnected, but make doubly sure
-	m.client.Disconnect(5)
 	m.acc.AddError(fmt.Errorf("connection lost: %w", err))
 	m.Log.Debugf("Disconnected %v", m.Servers)
 }
@@ -338,12 +330,14 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 		}
 		opts.AddBroker(server)
 	}
-	opts.SetAutoReconnect(false)
+	opts.SetAutoReconnect(true)
+	opts.SetMaxReconnectInterval(time.Duration(m.MaxReconnectInterval))
 	opts.SetKeepAlive(time.Duration(m.KeepAliveInterval))
 	opts.SetPingTimeout(time.Duration(m.PingTimeout))
 	opts.SetCleanSession(!m.PersistentSession)
 	opts.SetAutoAckDisabled(m.PersistentSession)
 	opts.SetConnectionLostHandler(m.onConnectionLost)
+	opts.SetOnConnectHandler(m.onConnect)
 	return opts, nil
 }
 
@@ -352,6 +346,7 @@ func newMQTTConsumer(factory clientFactory) *MQTTConsumer {
 		Servers:                []string{"tcp://127.0.0.1:1883"},
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		ConnectionTimeout:      defaultConnectionTimeout,
+		MaxReconnectInterval:   defaultMaxReconnectInterval,
 		KeepAliveInterval:      config.Duration(60 * time.Second),
 		PingTimeout:            config.Duration(10 * time.Second),
 		clientFactory:          factory,

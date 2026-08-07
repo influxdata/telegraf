@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -139,7 +140,7 @@ func TestParkedProcess(t *testing.T) {
 	require.NoError(t, plugin.Gather(&acc))
 
 	expected := []telegraf.Metric{
-		testutil.MustMetric(
+		metric.New(
 			"processes",
 			map[string]string{},
 			map[string]interface{}{

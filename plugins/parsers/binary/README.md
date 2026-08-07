@@ -19,8 +19,9 @@ user-specified configurations.
   # allow_no_match = false
 
   ## Specify the endianness of the data.
-  ## Available values are "be" (big-endian), "le" (little-endian) and "host",
-  ## where "host" means the same endianness as the machine running Telegraf.
+  ## Available values are "big" or "be" for big-endian, "little" or "le" for
+  ## little-endian and "host" for using the same endianness as the machine
+  ## running Telegraf.
   # endianness = "host"
 
   ## Interpret input using the specified encoding
@@ -66,7 +67,7 @@ user-specified configurations.
     ]
 
     ## Optional: Filter evaluated before applying the configuration.
-    ## This option can be used to mange multiple configuration specific for
+    ## This option can be used to manage multiple configuration specific for
     ## a certain message type. If no filter is given, the configuration is applied.
     # [inputs.file.binary.filter]
     #   ## Filter message by the exact length in bytes (default: N/A).

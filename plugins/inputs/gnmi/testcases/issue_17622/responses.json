@@ -1,0 +1,34 @@
+[
+  {
+    "update": {
+      "timestamp": "1772145797466116249",
+      "delete": [
+        {
+          "elem": [
+            {
+              "name": "network-instances"
+            },
+            {
+              "name": "network-instance",
+              "key": {
+                "name": "default"
+              }
+            },
+            {
+              "name": "afts"
+            },
+            {
+              "name": "ipv4-unicast"
+            },
+            {
+              "name": "ipv4-entry",
+              "key": {
+                "prefix": "192.168.170.170/32"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

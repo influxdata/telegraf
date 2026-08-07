@@ -31,6 +31,10 @@ type vmStat struct {
 	TotalSwap json.Number `json:"maxswap"`
 	Uptime    json.Number `json:"uptime"`
 	CPULoad   json.Number `json:"cpu"`
+	DiskRead  json.Number `json:"diskread"`
+	DiskWrite json.Number `json:"diskwrite"`
+	NetIn     json.Number `json:"netin"`
+	NetOut    json.Number `json:"netout"`
 }
 
 type vmConfig struct {

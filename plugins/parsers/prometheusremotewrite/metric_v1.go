@@ -13,7 +13,7 @@ import (
 )
 
 func (p *Parser) extractMetricsV1(ts *prompb.TimeSeries) ([]telegraf.Metric, error) {
-	t := time.Now()
+	t := p.timeFunc()
 
 	// Convert each prometheus metrics to the corresponding telegraf metrics.
 	// You will get one telegraf metric with one field per prometheus metric

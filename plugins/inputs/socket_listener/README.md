@@ -89,6 +89,9 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## If not specified or empty, all sources are allowed.
   # allowed_sources = []
 
+  ## Source IP for Source-Specific Multicast (SSM / IGMPv3)
+  # multicast_source = ""
+
   ## Message splitting strategy and corresponding settings for stream sockets
   ## (tcp, tcp4, tcp6, unix or unixpacket). The setting is ignored for packet
   ## listeners such as udp.

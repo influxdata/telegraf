@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
@@ -24,10 +25,24 @@ type Parser struct {
 	Header          http.Header       `toml:"-"` // set by the prometheus input
 	DefaultTags     map[string]string `toml:"-"`
 	Log             telegraf.Logger   `toml:"-"`
+
+	timeFunc func() time.Time
 }
 
 func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
+}
+
+func (p *Parser) SetTimeFunc(f func() time.Time) {
+	p.timeFunc = f
+}
+
+func (p *Parser) Init() error {
+	if p.timeFunc == nil {
+		p.timeFunc = time.Now
+	}
+
+	return nil
 }
 
 func (p *Parser) Parse(data []byte) ([]telegraf.Metric, error) {

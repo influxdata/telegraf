@@ -7,6 +7,7 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -65,6 +66,12 @@ func init() {
 	add("structured", func(cfg *Config) (sink, error) {
 		var writer io.Writer = os.Stderr
 		if cfg.Logfile != "" {
+			// Make sure the directory for the log-file exists
+			if err := os.MkdirAll(filepath.Dir(cfg.Logfile), 0700); err != nil {
+				return nil, fmt.Errorf("creating log directory failed: %w", err)
+			}
+
+			// Create the logger
 			w, err := rotate.NewFileWriter(
 				cfg.Logfile,
 				cfg.RotationInterval,

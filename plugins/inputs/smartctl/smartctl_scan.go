@@ -21,7 +21,7 @@ func (s *Smartctl) scan() ([]scanDevice, error) {
 	if s.UseSudo {
 		cmd = execCommand("sudo", append([]string{"-n", s.Path}, scanArgs...)...)
 	}
-	out, err := internal.CombinedOutputTimeout(cmd, time.Duration(s.Timeout))
+	out, err := internal.StdOutputTimeout(cmd, time.Duration(s.Timeout))
 	if err != nil {
 		return nil, fmt.Errorf("error running smartctl with %s: %w", scanArgs, err)
 	}

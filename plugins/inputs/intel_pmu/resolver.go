@@ -90,7 +90,7 @@ func (e *iaEntitiesResolver) resolveAllEvents() (coreEvents, uncoreEvents []*eve
 			return nil, nil, err
 		}
 		if e.log != nil && re != nil {
-			var eventErrs []string
+			eventErrs := make([]string, 0, len(re.Errors()))
 			for _, eventErr := range re.Errors() {
 				if eventErr == nil {
 					continue

@@ -52,7 +52,7 @@ func (s *Serializer) Serialize(metric telegraf.Metric) (out []byte, err error) {
 }
 
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) (out []byte, err error) {
-	objects := make([]oiMetric, 0)
+	objects := make([]oiMetric, 0, len(metrics))
 	for _, metric := range metrics {
 		objects = append(objects, createObject(metric)...)
 	}

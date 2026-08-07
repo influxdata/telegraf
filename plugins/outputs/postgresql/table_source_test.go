@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/coocood/freecache"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"

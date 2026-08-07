@@ -100,7 +100,7 @@ type Metric interface {
 	// set then the current value is replaced.
 	AddField(key string, value interface{})
 
-	// RemoveField removes the tag if it is set.
+	// RemoveField removes the field if it is set.
 	RemoveField(key string)
 
 	// SetTime sets the timestamp of the Metric.
@@ -109,7 +109,7 @@ type Metric interface {
 	// SetType sets the value-type of the Metric.
 	SetType(t ValueType)
 
-	// HashID returns an unique identifier for the series.
+	// HashID returns a unique identifier for the series.
 	HashID() uint64
 
 	// HashIDWithFieldsFiltered returns a unique identifier for the metric

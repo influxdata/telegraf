@@ -115,7 +115,7 @@ func TestCases(t *testing.T) {
 
 			// Start testcase mock server
 			tr064Server := mock.Start(mockDir, serviceMocks...)
-			defer tr064Server.Shutdown()
+			defer tr064Server.Stop(t.Context())
 
 			// Load plugin from config
 			conf := config.NewConfig()

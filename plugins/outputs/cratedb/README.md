@@ -60,7 +60,7 @@ using the `startup_error_behavior` setting. Available values are:
 # Configuration for CrateDB to send metrics to.
 [[outputs.cratedb]]
   ## Connection parameters for accessing the database see
-  ##   https://pkg.go.dev/github.com/jackc/pgx/v4#ParseConfig
+  ##   https://pkg.go.dev/github.com/jackc/pgx/v5#ParseConfig
   ## for available options
   url = "postgres://user:password@localhost/schema?sslmode=disable"
 

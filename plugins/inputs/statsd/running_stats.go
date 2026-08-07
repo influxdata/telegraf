@@ -99,7 +99,7 @@ func (rs *runningStats) mean() float64 {
 
 func (rs *runningStats) median() float64 {
 	// Need to sort for median, but keep temporal order
-	var values []float64
+	values := make([]float64, 0, len(rs.med))
 	values = append(values, rs.med...)
 	sort.Float64s(values)
 	count := len(values)

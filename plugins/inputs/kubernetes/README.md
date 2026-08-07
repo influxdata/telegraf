@@ -38,16 +38,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## URL for the kubelet, if empty read metrics from all nodes in the cluster
   url = "http://127.0.0.1:10255"
 
-  ## Use bearer token for authorization. ('bearer_token' takes priority)
-  ## If both of these are empty, we'll use the default serviceaccount:
-  ## at: /var/run/secrets/kubernetes.io/serviceaccount/token
-  ##
-  ## To re-read the token at each interval, please use a file with the
-  ## bearer_token option. If given a string, Telegraf will always use that
-  ## token.
+  ## Use bearer token for authorization.
   # bearer_token = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-  ## OR
-  # bearer_token_string = "abc_123"
 
   ## Kubernetes Node Metric Name
   ## The default Kubernetes node metric name (kubernetes_node) is the same
@@ -100,11 +92,29 @@ following Helm charts:
 - [Chronograf][helm_chronograf]
 - [Kapacitor][helm_kapacitor]
 
+### RBAC Permissions
+
+When `url` is left empty (cluster mode), the plugin uses the Kubernetes API to
+discover all nodes in the cluster, then connects to each node's Kubelet
+on port 10250. This requires a `ClusterRole` with the following permissions:
+
+- **apiGroups**: `""` (core)
+- **resources**: `"nodes"`
+- **verbs**: `"list"`, `"get"`
+
+Refer to the [Kubernetes RBAC documentation][rbac] for creating the appropriate
+ClusterRole and ClusterRoleBinding.
+
+When `url` is explicitly set (e.g., `url = "http://127.0.0.1:10255"`), the plugin
+only talks to the local Kubelet API and does **not** use the Kubernetes API server,
+so no Kubernetes RBAC permissions are required.
+
 [k8s_telegraf_blog]: https://www.influxdata.com/blog/monitoring-kubernetes-architecture/
 [helm_telegraf]: https://github.com/helm/charts/tree/master/stable/telegraf
 [helm_influxdb]: https://github.com/helm/charts/tree/master/stable/influxdb
 [helm_chronograf]: https://github.com/helm/charts/tree/master/stable/chronograf
 [helm_kapacitor]: https://github.com/helm/charts/tree/master/stable/kapacitor
+[rbac]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
 
 ## Metrics
 
