@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -13,6 +14,50 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/postgresql"
 	"github.com/influxdata/telegraf/testutil"
 )
+
+func TestGatherRetriesVersionQueryOnStaleConnection(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	// A closed-but-not-noticed pooled connection fails the first version query;
+	// the retry on a fresh connection succeeds (#18409).
+	mock.ExpectQuery("server_version_num").WillReturnError(errors.New("connection reset by peer"))
+	mock.ExpectQuery("server_version_num").
+		WillReturnRows(sqlmock.NewRows([]string{"version"}).AddRow(1400))
+
+	p := Postgresql{
+		Log:     testutil.Logger{},
+		service: &postgresql.Service{DB: db},
+		// Gated above the reported version so no further query is run.
+		Query: []query{{Sqlquery: "SELECT 1", MinVersion: 1500}},
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, p.Gather(&acc))
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGatherErrorsWhenVersionQueryKeepsFailing(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	// Both the initial query and the retry fail: surface the error instead of
+	// silently defaulting to version 0 and running version-mismatched queries.
+	mock.ExpectQuery("server_version_num").WillReturnError(errors.New("connection reset by peer"))
+	mock.ExpectQuery("server_version_num").WillReturnError(errors.New("connection refused"))
+
+	p := Postgresql{
+		Log:     testutil.Logger{},
+		service: &postgresql.Service{DB: db},
+		Query:   []query{{Sqlquery: "SELECT 1", MinVersion: 1400}},
+	}
+
+	var acc testutil.Accumulator
+	require.Error(t, p.Gather(&acc))
+	require.NoError(t, mock.ExpectationsWereMet())
+}
 
 func queryRunner(t *testing.T, q []query) *testutil.Accumulator {
 	servicePort := "5432"
@@ -222,34 +267,15 @@ func TestPostgresqlFieldOutputIntegration(t *testing.T) {
 	}
 }
 
-func TestPostgresqlSqlScript(t *testing.T) {
-	q := []query{{
+func TestPostgresqlSqlScriptIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	queryRunner(t, []query{{
 		Script:     "testdata/test.sql",
 		MinVersion: 901,
-		Withdbname: false,
-		Tagvalue:   "",
-	}}
-
-	addr := fmt.Sprintf(
-		"host=%s user=postgres sslmode=disable",
-		testutil.GetLocalHost(),
-	)
-
-	p := &Postgresql{
-		Log: testutil.Logger{},
-		Config: postgresql.Config{
-			Address:     config.NewSecret([]byte(addr)),
-			IsPgBouncer: false,
-		},
-		Databases: []string{"postgres"},
-		Query:     q,
-	}
-	require.NoError(t, p.Init())
-
-	var acc testutil.Accumulator
-	require.NoError(t, p.Start(&acc))
-	defer p.Stop()
-	require.NoError(t, acc.GatherError(p.Gather))
+	}})
 }
 
 func TestPostgresqlIgnoresUnwantedColumnsIntegration(t *testing.T) {
@@ -257,23 +283,11 @@ func TestPostgresqlIgnoresUnwantedColumnsIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	addr := fmt.Sprintf(
-		"host=%s user=postgres sslmode=disable",
-		testutil.GetLocalHost(),
-	)
-
-	p := &Postgresql{
-		Log: testutil.Logger{},
-		Config: postgresql.Config{
-			Address: config.NewSecret([]byte(addr)),
-		},
-	}
-	require.NoError(t, p.Init())
-
-	var acc testutil.Accumulator
-	require.NoError(t, p.Start(&acc))
-	defer p.Stop()
-	require.NoError(t, acc.GatherError(p.Gather))
+	// `pg_stat_database` includes `stats_reset`, one of the ignored columns.
+	acc := queryRunner(t, []query{{
+		Sqlquery:   "select * from pg_stat_database",
+		MinVersion: 901,
+	}})
 
 	require.NotEmpty(t, ignoredColumns)
 	for col := range ignoredColumns {
