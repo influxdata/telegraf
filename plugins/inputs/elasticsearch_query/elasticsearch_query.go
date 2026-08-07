@@ -118,9 +118,11 @@ func (e *ElasticsearchQuery) Start(telegraf.Accumulator) error {
 		c, err = newClientV7(cfg)
 	case 8:
 		c, err = newClientV8(cfg)
+	case 9:
+		c, err = newClientV9(cfg)
 	default:
 		httpClient.CloseIdleConnections()
-		return fmt.Errorf("server version %q not supported (currently supported versions are 5.x, 6.x, 7.x and 8.x)", version)
+		return fmt.Errorf("server version %q not supported (currently supported versions are 5.x, 6.x, 7.x, 8.x and 9.x)", version)
 	}
 	if err != nil {
 		return err

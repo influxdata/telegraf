@@ -87,10 +87,12 @@ require (
 	github.com/dynatrace-oss/dynatrace-metric-utils-go v0.5.0
 	github.com/eclipse/paho.golang v0.23.0
 	github.com/eclipse/paho.mqtt.golang v1.5.1
+	github.com/elastic/elastic-transport-go/v8 v8.9.0
 	github.com/elastic/go-elasticsearch/v5 v5.6.1
 	github.com/elastic/go-elasticsearch/v6 v6.8.10
 	github.com/elastic/go-elasticsearch/v7 v7.17.10
 	github.com/elastic/go-elasticsearch/v8 v8.19.6
+	github.com/elastic/go-elasticsearch/v9 v9.4.2
 	github.com/emiago/sipgo v1.4.3
 	github.com/facebook/time v0.0.0-20250903103710-a5911c32cdb9
 	github.com/fatih/color v1.19.0
@@ -360,7 +362,6 @@ require (
 	github.com/eapache/go-resiliency v1.7.0 // indirect
 	github.com/ebitengine/purego v0.10.1 // indirect
 	github.com/echlebek/timeproxy v1.0.0 // indirect
-	github.com/elastic/elastic-transport-go/v8 v8.9.0 // indirect
 	github.com/elastic/go-sysinfo v1.8.1 // indirect
 	github.com/elastic/go-windows v1.0.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
