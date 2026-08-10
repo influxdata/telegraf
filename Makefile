@@ -97,7 +97,8 @@ help:
 	@echo '  clean        - delete build artifacts'
 	@echo '  package      - build all supported packages, override include_packages to only build a subset'
 	@echo '                 e.g.: make package include_packages="amd64.deb"'
-	@echo '  secinfo      - extract security information from the binary (requires govulncheck)'
+	@echo '  vuln-install - install govulncheck'
+	@echo '  vuln-extract - extract security information from the binary (requires govulncheck)'
 	@echo ''
 	@echo 'Possible values for include_packages variable'
 	@$(foreach package,$(include_packages),echo "  $(package)";)
