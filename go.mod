@@ -195,7 +195,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/seancfoley/ipaddress-go v1.7.1
 	github.com/sensu/sensu-go/api/core/v2 v2.16.0
-	github.com/shirou/gopsutil/v4 v4.26.6
+	github.com/shirou/gopsutil/v4 v4.26.7
 	github.com/showwin/speedtest-go v1.7.10
 	github.com/signalfx/golib/v3 v3.3.54
 	github.com/sijms/go-ora/v2 v2.9.0
@@ -358,7 +358,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dvsekhvalnov/jose2go v1.7.0 // indirect
 	github.com/eapache/go-resiliency v1.7.0 // indirect
-	github.com/ebitengine/purego v0.10.1 // indirect
+	github.com/ebitengine/purego v0.10.2 // indirect
 	github.com/echlebek/timeproxy v1.0.0 // indirect
 	github.com/elastic/elastic-transport-go/v8 v8.9.0 // indirect
 	github.com/elastic/go-sysinfo v1.8.1 // indirect
