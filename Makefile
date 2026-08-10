@@ -307,7 +307,7 @@ $(buildbin):
 .PHONY: vuln-extract
 vuln-extract: build
 	# Extract security information from unstripped binary
-	govulncheck --mode=extract telegraf > telegraf-$(version)-$(GOOS)-$(GOARCH)$(GOARM).jsonl
+	govulncheck --mode=extract telegraf$(EXEEXT) > telegraf-$(version)-$(GOOS)-$(GOARCH)$(GOARM).jsonl
 
 # Define packages Telegraf supports, organized by architecture with a rule to echo the list to limit include_packages
 # e.g. make package include_packages="$(make amd64)"
