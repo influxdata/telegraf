@@ -976,7 +976,7 @@ disk.capacity.usage.average
 
 #### Collect custom tag
 
-**_property_include allow you to collect data that are not metrics.
+`*_property_include` allow you to collect data that are not metrics.
 
 For sample :
 
@@ -991,7 +991,7 @@ For sample :
 All that tag will be added to "internal" metric that always contain "1".
 It is recommended to use it with `processors.enum` to convert as metric.
 
-For sample :
+For example :
 
 ```toml
 [[processors.enum]]
