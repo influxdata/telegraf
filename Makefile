@@ -48,8 +48,10 @@ HOSTGO := env -u GOOS -u GOARCH -u GOARM -- go
 INTERNAL_PKG=github.com/influxdata/telegraf/internal
 LDFLAGS := $(LDFLAGS) -X $(INTERNAL_PKG).Commit=$(commit) -X $(INTERNAL_PKG).Branch=$(branch)
 ifneq ($(tag),)
+	RELEASE = true
 	LDFLAGS += -X $(INTERNAL_PKG).Version=$(version)
 else
+	RELEASE = false
 	LDFLAGS += -X $(INTERNAL_PKG).Version=$(version)-$(commit)
 endif
 
@@ -95,6 +97,7 @@ help:
 	@echo '  clean        - delete build artifacts'
 	@echo '  package      - build all supported packages, override include_packages to only build a subset'
 	@echo '                 e.g.: make package include_packages="amd64.deb"'
+	@echo '  secinfo      - extract security information from the binary (requires govulncheck)'
 	@echo ''
 	@echo 'Possible values for include_packages variable'
 	@$(foreach package,$(include_packages),echo "  $(package)";)
@@ -122,13 +125,14 @@ build_tools:
 	$(HOSTGO) build -o ./tools/readme_linter/readme_linter$(EXEEXT) ./tools/readme_linter
 
 embed_readme_%:
-	go generate -run="tools/config_includer/generator" ./plugins/$*/...
-	go generate -run="tools/readme_config_includer/generator" ./plugins/$*/...
+	$(HOSTGO) generate -run="tools/config_includer/generator" ./plugins/$*/...
+	$(HOSTGO) generate -run="tools/readme_config_includer/generator" ./plugins/$*/...
 
 .PHONY: config
 config:
 	@echo "generating default config"
-	go run ./cmd/telegraf config > etc/telegraf.conf
+	$(HOSTGO) run ./cmd/telegraf config > etc/telegraf.conf
+	echo "done"
 
 .PHONY: docs
 docs: build_tools embed_readme_common embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators embed_readme_secretstores
@@ -294,9 +298,16 @@ install: $(buildbin)
 # directory.
 .PHONY: $(buildbin)
 $(buildbin):
-	echo $(GOOS)
+	@echo $(GOOS)-$(GOARCH)$(GOARM)
 	@mkdir -pv $(dir $@)
-	CGO_ENABLED=0 go build -o $(dir $@) -tags "$(BUILDTAGS)" -ldflags "$(LDFLAGS)" ./cmd/telegraf
+
+	# Build stripped release binary
+	CGO_ENABLED=0 go build -o $(dir $@) -tags "$(BUILDTAGS)" -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
+
+.PHONY: vuln-extract
+vuln-extract: build
+	# Extract security information from unstripped binary
+	govulncheck --mode=extract telegraf > telegraf-$(version)-$(GOOS)-$(GOARCH)$(GOARM).jsonl
 
 # Define packages Telegraf supports, organized by architecture with a rule to echo the list to limit include_packages
 # e.g. make package include_packages="$(make amd64)"
@@ -365,10 +376,19 @@ package: docs config $(include_packages)
 
 .PHONY: $(include_packages)
 $(include_packages):
-	if [ "$(suffix $@)" = ".zip" ]; then go generate cmd/telegraf/telegraf_windows.go; fi
+	@if [ "$(suffix $@)" = ".zip" ]; then \
+		go generate cmd/telegraf/telegraf_windows.go; \
+	fi
+
+	@mkdir -p $(pkgdir)
+
+	@if [ "$(RELEASE)" = "true" ] && [ ! -f "$(pkgdir)/telegraf-$(version)-$(GOOS)-$(GOARCH)$(GOARM).jsonl.zip" ]; then \
+		echo "Updating security info for $(version)-$(GOOS)-$(GOARCH)$(GOARM)..."; \
+		$(MAKE) vuln-install vuln-extract; \
+		zip $(pkgdir)/telegraf-$(version)-$(GOOS)-$(GOARCH)$(GOARM).jsonl.zip telegraf-$(version)-$(GOOS)-$(GOARCH)$(GOARM).jsonl; \
+	fi
 
 	@$(MAKE) install
-	@mkdir -p $(pkgdir)
 
 	@if [ "$(suffix $@)" = ".rpm" ]; then \
 		echo "# DO NOT EDIT OR REMOVE" > $(DESTDIR)$(sysconfdir)/telegraf/telegraf.d/.ignore; \
@@ -514,4 +534,3 @@ windows_i386.zip windows_amd64.zip windows_arm64.zip: export EXEEXT := .exe
 
 %.deb %.rpm %.tar.gz %.zip: export DESTDIR = build/$(GOOS)-$(GOARCH)$(GOARM)-$(pkg)/telegraf-$(version)
 %.deb %.rpm %.tar.gz %.zip: export buildbin = build/$(GOOS)-$(GOARCH)$(GOARM)/telegraf$(EXEEXT)
-%.deb %.rpm %.tar.gz %.zip: export LDFLAGS = -w -s
