@@ -214,7 +214,7 @@ lint-branch:
 .PHONY: vuln-install
 vuln-install:
 	@echo "Installing govulncheck"
-	go install golang.org/x/vuln/cmd/govulncheck@latest
+	$(HOSTGO) install golang.org/x/vuln/cmd/govulncheck@latest
 
 .PHONY: vuln
 vuln:
