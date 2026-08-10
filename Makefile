@@ -133,7 +133,6 @@ embed_readme_%:
 config:
 	@echo "generating default config"
 	$(HOSTGO) run ./cmd/telegraf config > etc/telegraf.conf
-	echo "done"
 
 .PHONY: docs
 docs: build_tools embed_readme_common embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators embed_readme_secretstores
