@@ -178,7 +178,7 @@ processes:
 [[aggregators.basicstats]]
   namepass = ["procstat"]
   period   = "10s"    # Set this to the global telegraf interval
-  stats=["sum"]
+  stats    = ["sum"]
 ```
 This will emit an extra field for each numeric field, with the
 suffix `_sum`. Therefore, for our previous example, 
