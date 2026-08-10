@@ -204,13 +204,25 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 			}
 
 			// A batch of metrics can contain multiple values for a single
-			// Prometheus sample. If this metric is older than the existing
-			// sample then we can skip over it.
-			if m, found := entries[metrickey]; found {
-				if metric.Time().UnixMilli() < m.Samples[0].Timestamp {
+			// Prometheus series. Accumulate the samples on the existing time
+			// series instead of replacing it, so no samples are dropped.
+			if existing, found := entries[metrickey]; found {
+				tsSample := promts.Samples[0].Timestamp
+				tsExisting := existing.Samples[len(existing.Samples)-1].Timestamp
+				switch {
+				case tsSample < tsExisting:
+					// This sample is older than the latest one already
+					// registered, so we skip over it.
 					traceAndKeepErr("metric %q has samples with timestamp %v older than already registered before", metric.Name(), metric.Time())
 					continue
+				case tsSample == tsExisting:
+					// Duplicate timestamp, keep the latest value.
+					existing.Samples[len(existing.Samples)-1] = promts.Samples[0]
+				default:
+					existing.Samples = append(existing.Samples, promts.Samples[0])
 				}
+				entries[metrickey] = existing
+				continue
 			}
 			entries[metrickey] = promts
 		}
