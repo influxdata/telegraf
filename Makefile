@@ -248,6 +248,7 @@ check-deps:
 clean:
 	rm -f telegraf
 	rm -f telegraf.exe
+	rm -f telegraf-*.jsonl
 	rm -f etc/telegraf.conf
 	rm -rf build
 	rm -rf cmd/telegraf/resource.syso
