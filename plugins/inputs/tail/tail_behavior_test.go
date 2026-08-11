@@ -1031,12 +1031,9 @@ func TestLongLine(t *testing.T) {
 
 		offsets: maps.Clone(offsets),
 	}
-	var maxSize config.Size
-	require.NoError(t, maxSize.UnmarshalText([]byte("128KiB")))
 	plugin.SetParserFunc(func() (telegraf.Parser, error) {
 		parser := &grok.Parser{
 			Measurement: "tail_grok",
-			MaxLineSize: maxSize,
 			Patterns:    []string{`%{GREEDYDATA:message}`},
 			Log:         testutil.Logger{},
 		}
