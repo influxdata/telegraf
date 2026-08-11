@@ -153,7 +153,7 @@ plugin relies on the `id` command. This command must be available on the system,
 in the PATH and executable by Telegraf, otherwise the username cannot be
 resolved and the user-ID is used instead.
 
-### If multiple processes match the given pattern
+### Behavior for multiple processes matching
 
 If multiple processes match the given pattern then one record will be
 emitted for each process, and the output endpoint might keep only one.
