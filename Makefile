@@ -216,14 +216,6 @@ vuln-install:
 	@echo "Installing govulncheck"
 	$(HOSTGO) install golang.org/x/vuln/cmd/govulncheck@latest
 
-.PHONY: vuln
-vuln:
-	@which govulncheck >/dev/null 2>&1 || { \
-		echo "govulncheck not found, please run: make vuln-install"; \
-		exit 1; \
-	}
-	govulncheck ./...
-
 .PHONY: tidy
 tidy:
 	go mod verify
@@ -308,7 +300,7 @@ $(buildbin):
 .PHONY: vuln-extract
 vuln-extract: build
 	# Extract security information from unstripped binary
-	govulncheck --mode=extract telegraf$(EXEEXT) > telegraf-$(version)-$(GOOS)-$(GOARCH)$(GOARM).jsonl
+	govulncheck --mode=extract telegraf$(EXEEXT) > telegraf-$(version)_$(GOOS)_$(GOARCH)$(GOARM).jsonl
 
 # Define packages Telegraf supports, organized by architecture with a rule to echo the list to limit include_packages
 # e.g. make package include_packages="$(make amd64)"
@@ -383,10 +375,10 @@ $(include_packages):
 
 	@mkdir -p $(pkgdir)
 
-	@if [ "$(RELEASE)" = "true" ] && [ ! -f "$(pkgdir)/telegraf-$(version)-$(GOOS)-$(GOARCH)$(GOARM).jsonl.zip" ]; then \
-		echo "Updating security info for $(version)-$(GOOS)-$(GOARCH)$(GOARM)..."; \
+	@if [ "$(RELEASE)" = "true" ] && [ ! -f "$(pkgdir)/telegraf-$(version)_$(GOOS)_$(GOARCH)$(GOARM).jsonl.zip" ]; then \
+		echo "Updating security info for $(version)_$(GOOS)_$(GOARCH)$(GOARM)..."; \
 		$(MAKE) vuln-install vuln-extract; \
-		zip $(pkgdir)/telegraf-$(version)-$(GOOS)-$(GOARCH)$(GOARM).jsonl.zip telegraf-$(version)-$(GOOS)-$(GOARCH)$(GOARM).jsonl; \
+		zip $(pkgdir)/telegraf-$(version)_$(GOOS)_$(GOARCH)$(GOARM).jsonl.zip telegraf-$(version)_$(GOOS)_$(GOARCH)$(GOARM).jsonl; \
 	fi
 
 	@$(MAKE) install
