@@ -13,7 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/common/psutil"
+	"github.com/influxdata/telegraf/plugins/common/psutil/psutiltest"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -88,7 +88,7 @@ func TestMemStatsCollectExtended(t *testing.T) {
 			require.NoError(t, err)
 			t.Setenv("HOST_PROC", hostProc)
 
-			var mps psutil.MockPS
+			var mps psutiltest.MockPS
 			defer mps.AssertExpectations(t)
 
 			vms := &mem.VirtualMemoryStat{

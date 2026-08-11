@@ -16,12 +16,13 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/psutil"
+	"github.com/influxdata/telegraf/plugins/common/psutil/psutiltest"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestDiskUsage(t *testing.T) {
 	mck := &mock.Mock{}
-	mps := psutil.MockPSDisk{SystemPS: &psutil.SystemPS{PSDiskDeps: &psutil.MockDiskUsage{Mock: mck}}, Mock: mck}
+	mps := psutiltest.MockPSDisk{SystemPS: &psutil.SystemPS{PSDiskDeps: &psutiltest.MockDiskUsage{Mock: mck}}, Mock: mck}
 	defer mps.AssertExpectations(t)
 
 	var acc testutil.Accumulator
@@ -345,7 +346,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mck := &mock.Mock{}
-			mps := psutil.MockPSDisk{SystemPS: &psutil.SystemPS{PSDiskDeps: &psutil.MockDiskUsage{Mock: mck}}, Mock: mck}
+			mps := psutiltest.MockPSDisk{SystemPS: &psutil.SystemPS{PSDiskDeps: &psutiltest.MockDiskUsage{Mock: mck}}, Mock: mck}
 			defer mps.AssertExpectations(t)
 
 			var acc testutil.Accumulator
@@ -368,7 +369,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 }
 
 func TestDiskStats(t *testing.T) {
-	var mps psutil.MockPS
+	var mps psutiltest.MockPS
 	defer mps.AssertExpectations(t)
 	var acc testutil.Accumulator
 	var err error
@@ -698,7 +699,7 @@ func TestDiskUsageIssues(t *testing.T) {
 
 			// Mock the disk usage
 			mck := &mock.Mock{}
-			mps := psutil.MockPSDisk{SystemPS: &psutil.SystemPS{PSDiskDeps: &psutil.MockDiskUsage{Mock: mck}}, Mock: mck}
+			mps := psutiltest.MockPSDisk{SystemPS: &psutil.SystemPS{PSDiskDeps: &psutiltest.MockDiskUsage{Mock: mck}}, Mock: mck}
 			defer mps.AssertExpectations(t)
 
 			mps.On("Partitions", true).Return(partitions, nil)
