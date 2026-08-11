@@ -1,4 +1,7 @@
-package psutil
+// Package psutiltest provides mock implementations of the psutil interfaces
+// for testing. It is a separate package to keep the mocks and their testing
+// dependencies out of the shipped binary.
+package psutiltest
 
 import (
 	"os"
@@ -8,17 +11,19 @@ import (
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/shirou/gopsutil/v4/net"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/influxdata/telegraf/plugins/common/psutil"
 )
 
 // MockPS is a mock implementation of the PS interface for testing purposes.
 type MockPS struct {
 	mock.Mock
-	PSDiskDeps
+	psutil.PSDiskDeps
 }
 
 // MockPSDisk is a mock implementation of the PSDiskDeps interface for testing purposes.
 type MockPSDisk struct {
-	*SystemPS
+	*psutil.SystemPS
 	*mock.Mock
 }
 
