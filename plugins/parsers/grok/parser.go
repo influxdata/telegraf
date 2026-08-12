@@ -366,10 +366,15 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		return metrics, nil
 	}
 
-	scanner := bufio.NewScanner(bytes.NewReader(buf))
-	for scanner.Scan() {
-		line := scanner.Text()
-		m, err := p.ParseLine(line)
+	for line := range bytes.Lines(buf) {
+		end := len(line)
+		if end > 0 && line[end-1] == '\n' {
+			end--
+		}
+		if end > 0 && line[end-1] == '\r' {
+			end--
+		}
+		m, err := p.ParseLine(string(line[:end]))
 		if err != nil {
 			return nil, err
 		}

@@ -215,7 +215,7 @@ func (*dummygen) NewV1() (uuid.UUID, error) {
 	return uuid.UUID(id), nil
 }
 
-func (*dummygen) NewV3(_ uuid.UUID, _ string) uuid.UUID {
+func (*dummygen) NewV3(uuid.UUID, string) uuid.UUID {
 	return uuid.UUID([16]byte{})
 }
 
@@ -223,7 +223,7 @@ func (*dummygen) NewV4() (uuid.UUID, error) {
 	return uuid.UUID([16]byte{}), errors.New("wrong type")
 }
 
-func (*dummygen) NewV5(_ uuid.UUID, _ string) uuid.UUID {
+func (*dummygen) NewV5(uuid.UUID, string) uuid.UUID {
 	return uuid.UUID([16]byte{})
 }
 
@@ -235,15 +235,19 @@ func (*dummygen) NewV7() (uuid.UUID, error) {
 	return uuid.UUID([16]byte{}), errors.New("wrong type")
 }
 
-func (*dummygen) NewV1AtTime(_ time.Time) (uuid.UUID, error) {
+func (*dummygen) NewV1AtTime(time.Time) (uuid.UUID, error) {
 	return uuid.UUID([16]byte{}), errors.New("wrong type")
 }
 
-func (*dummygen) NewV6AtTime(_ time.Time) (uuid.UUID, error) {
+func (*dummygen) NewV6AtTime(time.Time) (uuid.UUID, error) {
 	return uuid.UUID([16]byte{}), errors.New("wrong type")
 }
 
-func (*dummygen) NewV7AtTime(_ time.Time) (uuid.UUID, error) {
+func (*dummygen) NewV7AtTime(time.Time) (uuid.UUID, error) {
+	return uuid.UUID([16]byte{}), errors.New("wrong type")
+}
+
+func (*dummygen) NewV8(_, _, _ []byte) (uuid.UUID, error) {
 	return uuid.UUID([16]byte{}), errors.New("wrong type")
 }
 

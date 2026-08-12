@@ -9,7 +9,7 @@ of Zabbix as long as the protocol doesn't change.
 💻 all
 
 [zabbix]: https://www.zabbix.com/
-[traps]: https://www.zabbix.com/documentation/current/en/manual/appendix/items/trapper
+[traps]: https://www.zabbix.com/documentation/current/en/manual/config/items/itemtypes/trapper
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
