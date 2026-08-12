@@ -128,6 +128,27 @@ func (w *WinEventLog) SetState(state interface{}) error {
 		return fmt.Errorf("invalid type %T for state", state)
 	}
 
+	// An empty state is what GetState returns if rendering the bookmark failed.
+	if bookmarkXML == "" {
+		return nil
+	}
+
+	// Bookmarks are only advanced for events we actually received, so a run that saw no event renders as a
+	// well-formed but positionless bookmark list. Passing such a bookmark to EvtSubscribe together with
+	// evtSubscribeStartAfterBookmark makes Windows start at the channel's oldest record and replay its whole
+	// history. As it carries no more information than no state at all, keep the bookmark and the subscription
+	// flag Init derived from from_beginning instead.
+	var bookmarkList struct {
+		Bookmarks []struct{} `xml:"Bookmark"`
+	}
+	if err := xml.Unmarshal([]byte(bookmarkXML), &bookmarkList); err != nil {
+		return fmt.Errorf("unmarshalling bookmark failed: %w", err)
+	}
+	if len(bookmarkList.Bookmarks) == 0 {
+		w.Log.Debug("Restored bookmark holds no position, keeping the configured subscription start")
+		return nil
+	}
+
 	ptr, err := syscall.UTF16PtrFromString(bookmarkXML)
 	if err != nil {
 		return fmt.Errorf("conversion to pointer failed: %w", err)
@@ -333,6 +354,17 @@ func (w *WinEventLog) evtSubscribe() (evtHandle, error) {
 		return 0, err
 	}
 
+	// Without an anchor the bookmark stays positionless until the first event arrives, so a state file written by
+	// a quiet run cannot resume anything and events showing up while Telegraf is stopped are lost on the next
+	// start. Anchoring costs nothing for the current run, as starting after the newest event collects the same
+	// events as subscribing to the future ones. Falling back to the configured start point on failure is safe,
+	// because that is the behavior without an anchor, and the subscription below reports a broken channel anyway.
+	if w.subscriptionFlag == evtSubscribeToFutureEvents {
+		if err := w.anchorBookmark(); err != nil {
+			w.Log.Warnf("Anchoring bookmark to the newest event failed: %v", err)
+		}
+	}
+
 	var bookmark evtHandle
 	if w.subscriptionFlag == evtSubscribeStartAfterBookmark {
 		bookmark = w.bookmark
@@ -343,6 +375,52 @@ func (w *WinEventLog) evtSubscribe() (evtHandle, error) {
 	}
 
 	return subsHandle, nil
+}
+
+// anchorBookmark points the bookmark at the newest event currently matching the query and switches the
+// subscription to start after it. A channel without any matching event leaves both untouched.
+func (w *WinEventLog) anchorBookmark() error {
+	// EvtQuery expects a NULL channel when the query names the channels itself
+	var logNamePtr *uint16
+	if w.EventlogName != "" {
+		var err error
+		if logNamePtr, err = syscall.UTF16PtrFromString(w.EventlogName); err != nil {
+			return err
+		}
+	}
+
+	xqueryPtr, err := syscall.UTF16PtrFromString(w.Query)
+	if err != nil {
+		return err
+	}
+
+	queryHandle, err := evtQuery(0, logNamePtr, xqueryPtr, evtQueryChannelPath|evtQueryReverseDirection)
+	if err != nil {
+		return fmt.Errorf("querying eventlog failed: %w", err)
+	}
+	//nolint:errcheck // ending the query, error can be ignored
+	defer evtClose(queryHandle)
+
+	var eventHandle evtHandle
+	var returned uint32
+	if err := evtNext(queryHandle, 1, &eventHandle, 0, 0, &returned); err != nil {
+		if errors.Is(err, errNoMoreItems) || errors.Is(err, errInvalidOperation) {
+			return nil
+		}
+		return fmt.Errorf("getting newest event failed: %w", err)
+	}
+	if returned == 0 || eventHandle == 0 {
+		return nil
+	}
+	//nolint:errcheck // ending the event, error can be ignored
+	defer evtClose(eventHandle)
+
+	if err := evtUpdateBookmark(w.bookmark, eventHandle); err != nil {
+		return fmt.Errorf("updating bookmark failed: %w", err)
+	}
+	w.subscriptionFlag = evtSubscribeStartAfterBookmark
+
+	return nil
 }
 
 func (w *WinEventLog) fetchEventHandles(subsHandle evtHandle) ([]evtHandle, error) {

@@ -6,7 +6,96 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
+
+func TestSetStateBookmark(t *testing.T) {
+	tests := []struct {
+		name         string
+		state        string
+		expectedFlag evtSubscribeFlag
+		expectedErr  string
+	}{
+		{
+			name:         "no state",
+			state:        "",
+			expectedFlag: evtSubscribeToFutureEvents,
+		},
+		{
+			// What a run that received no event persists
+			name:         "bookmark without position",
+			state:        "<BookmarkList>\r\n</BookmarkList>",
+			expectedFlag: evtSubscribeToFutureEvents,
+		},
+		{
+			name:         "empty bookmark list",
+			state:        "<BookmarkList/>",
+			expectedFlag: evtSubscribeToFutureEvents,
+		},
+		{
+			name:         "bookmark with position",
+			state:        "<BookmarkList>\r\n  <Bookmark Channel='Application' RecordId='1' IsCurrent='true'/>\r\n</BookmarkList>",
+			expectedFlag: evtSubscribeStartAfterBookmark,
+		},
+		{
+			name:        "malformed bookmark",
+			state:       "<BookmarkList>",
+			expectedErr: "unmarshalling bookmark failed",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &WinEventLog{EventlogName: "Application", Log: testutil.Logger{}}
+			require.NoError(t, plugin.Init())
+			require.Equal(t, evtSubscribeToFutureEvents, plugin.subscriptionFlag)
+
+			if tt.expectedErr != "" {
+				require.ErrorContains(t, plugin.SetState(tt.state), tt.expectedErr)
+				return
+			}
+			require.NoError(t, plugin.SetState(tt.state))
+			require.Equal(t, tt.expectedFlag, plugin.subscriptionFlag)
+		})
+	}
+}
+
+func TestSetStateBookmarkFromBeginning(t *testing.T) {
+	plugin := &WinEventLog{EventlogName: "Application", FromBeginning: true, Log: testutil.Logger{}}
+	require.NoError(t, plugin.Init())
+	require.Equal(t, evtSubscribeStartAtOldestRecord, plugin.subscriptionFlag)
+
+	require.NoError(t, plugin.SetState("<BookmarkList>\r\n</BookmarkList>"))
+	require.Equal(t, evtSubscribeStartAtOldestRecord, plugin.subscriptionFlag)
+}
+
+func TestStartAnchorsBookmark(t *testing.T) {
+	plugin := &WinEventLog{EventlogName: "Application", Log: testutil.Logger{}}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	require.Equal(t, evtSubscribeStartAfterBookmark, plugin.subscriptionFlag)
+	require.Contains(t, plugin.GetState(), "<Bookmark ")
+}
+
+func TestStartWithoutMatchingEvent(t *testing.T) {
+	plugin := &WinEventLog{
+		EventlogName: "Application",
+		Query:        "*[System[(EventID=999999)]]",
+		Log:          testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	require.Equal(t, evtSubscribeToFutureEvents, plugin.subscriptionFlag)
+}
 
 func TestWinEventLog_shouldExcludeEmptyField(t *testing.T) {
 	type args struct {
