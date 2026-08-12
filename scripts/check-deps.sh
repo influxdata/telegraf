@@ -48,6 +48,12 @@ done
 
 LC_ALL=C sort -u < "${tmpdir}/golist" | while IFS= read -r dep; do
 	case "${dep}" in
+		# Denylist: modules that must never appear in the shipped binary.
+		# These are test-only and shipping them bloats the binary and can
+		# add startup cost (e.g. an init() that scans the process table).
+		github.com/testcontainers/*|github.com/stretchr/testify/*)
+			echo "FORBIDDEN DEPENDENCY: ${dep}" >> "${tmpdir}/denylist_hits";;
+
 		# ignore ourselves
 		github.com/influxdata/telegraf) continue;;
 
@@ -76,6 +82,22 @@ done
 # in the list.  Remove duplicates again.
 mv "${tmpdir}/HEAD" "${tmpdir}/HEAD-dup"
 uniq "${tmpdir}/HEAD-dup" > "${tmpdir}/HEAD"
+
+# Fail the build if any test-only module leaked into the shipped binary.
+if [[ -s "${tmpdir}/denylist_hits" ]]; then
+	cat - <<EOF
+
+
+The telegraf binary must not depend on test-only modules. The following
+modules were found in the dependency graph and are forbidden:
+
+$(sort -u < "${tmpdir}/denylist_hits")
+
+Move the imports into _test.go files or a test-only package so they are
+not linked into the shipped binary.
+EOF
+	exit 1
+fi
 
 grep '^-' docs/LICENSE_OF_DEPENDENCIES.md | grep -v github.com/DataDog/datadog-agent | cut -f 2 -d' ' > "${tmpdir}/LICENSE_OF_DEPENDENCIES.md"
 
