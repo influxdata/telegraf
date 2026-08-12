@@ -225,10 +225,15 @@ docs](https://github.com/jackc/pgx) for more details.
 
 ### modernc.org/sqlite
 
-The DSN is a filename or url with scheme `file://`. See the
+The DSN is a filename or url with scheme `file:`. See the
 [driver docs][sqlite-driver] for details.
 
-[sqlite-driver]: (https://modernc.org/sqlite)
+> [!IMPORTANT]
+> The sqlite driver is not available on all architectures and platforms. Check
+> the driver's [support matrix][sqlite-supported-platforms] for details.
+
+[sqlite-driver]: https://modernc.org/sqlite
+[sqlite-supported-platforms]: https://pkg.go.dev/modernc.org/sqlite#hdr-Supported_platforms_and_architectures
 
 ### clickhouse
 
