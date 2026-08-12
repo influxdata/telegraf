@@ -367,8 +367,19 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 			count += len(g.processes)
 			level := strconv.Itoa(g.level)
 			for _, gp := range g.processes {
-				// Skip over non-running processes
-				if isRunning, err := gp.IsRunning(); err != nil || !isRunning {
+				// Skip over processes that vanished between filtering and now.
+				// Do not use 'IsRunning()' here as it compares the creation
+				// time of the process which is derived from the system's
+				// boot-time. When running in a container, that boot-time is
+				// only estimated from the current time and the uptime and thus
+				// jitters, causing the check to randomly fail for perfectly
+				// alive processes.
+				exists, err := gopsprocess.PidExists(gp.Pid)
+				if err != nil {
+					p.Log.Debugf("Checking existence of process %d in filter %q failed: %v", gp.Pid, f.Name, err)
+					continue
+				}
+				if !exists {
 					continue
 				}
 
