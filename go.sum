@@ -1123,6 +1123,8 @@ github.com/cyphar/filepath-securejoin v0.6.1 h1:5CeZ1jPXEiYt3+Z6zqprSAgSWiggmpVy
 github.com/cyphar/filepath-securejoin v0.6.1/go.mod h1:A8hd4EnAeyujCJRrICiOWqjS1AX0a9kM5XL+NwKoYSc=
 github.com/danieljoos/wincred v1.2.2 h1:774zMFJrqaeYCK2W57BgAem/MLi6mtSE47MB6BOJ0i0=
 github.com/danieljoos/wincred v1.2.2/go.mod h1:w7w4Utbrz8lqeMbDAK0lkNJUv5sAOkFi7nd/ogr0Uh8=
+github.com/databricks/zerobus-sdk/purego v0.1.0 h1:+ZwY8MsvE0YTAAuxm1+oTk3Qb2MpDzsF6O989j9uYgI=
+github.com/databricks/zerobus-sdk/purego v0.1.0/go.mod h1:XYUhcnzSb/Xm1MZLA/Vk3tIrhzms/EOb1K7zrt95tf4=
 github.com/datadope-io/go-zabbix/v2 v2.0.1 h1:kGlyzfFqbwhMph4Mo0hpYxxBHI14eHuV5TVy+7uNonE=
 github.com/datadope-io/go-zabbix/v2 v2.0.1/go.mod h1:hRbQWszykTUPoR6g5fJXfNwPFZpP3nDNSZ9HrEKuKCM=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
