@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"sync"
 
+	// The Elasticsearch v9 client depends on the v8 transport module.
 	elastictransport8 "github.com/elastic/elastic-transport-go/v8/elastictransport"
 	elasticsearch9 "github.com/elastic/go-elasticsearch/v9"
 	esapi9 "github.com/elastic/go-elasticsearch/v9/esapi"
