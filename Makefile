@@ -291,16 +291,13 @@ install: $(buildbin)
 # directory.
 .PHONY: $(buildbin)
 $(buildbin):
-	@echo $(GOOS)-$(GOARCH)$(GOARM)
+	@echo "building $(dir $@)..."
 	@mkdir -pv $(dir $@)
-
-	# Build stripped release binary
 	CGO_ENABLED=0 go build -o $(dir $@) -tags "$(BUILDTAGS)" -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
 
 .PHONY: vuln-extract
 vuln-extract: build
-	# Extract security information from unstripped binary
-	govulncheck --mode=extract telegraf$(EXEEXT) > telegraf-$(version)_$(GOOS)_$(GOARCH)$(GOARM).jsonl
+	govulncheck --mode=extract telegraf$(EXEEXT) > telegraf-$(FILETAG).jsonl
 
 # Define packages Telegraf supports, organized by architecture with a rule to echo the list to limit include_packages
 # e.g. make package include_packages="$(make amd64)"
@@ -375,10 +372,11 @@ $(include_packages):
 
 	@mkdir -p $(pkgdir)
 
-	@if [ "$(RELEASE)" = "true" ] && [ ! -f "$(pkgdir)/telegraf-$(version)_$(GOOS)_$(GOARCH)$(GOARM).jsonl.zip" ]; then \
-		echo "Updating security info for $(version)_$(GOOS)_$(GOARCH)$(GOARM)..."; \
+	@if [ "$(RELEASE)" = "true" ] && [ ! -f "$(pkgdir)/telegraf-$(version)_$(basename $(basename $@)).jsonl.zip" ]; then \
+		export FILETAG="$(version)_$(basename $(basename $@))"; \
+		echo "Updating security info for $(version)_$(basename $(basename $@))..."; \
 		$(MAKE) vuln-install vuln-extract; \
-		zip $(pkgdir)/telegraf-$(version)_$(GOOS)_$(GOARCH)$(GOARM).jsonl.zip telegraf-$(version)_$(GOOS)_$(GOARCH)$(GOARM).jsonl; \
+		zip $(pkgdir)/telegraf-$(version)_$(basename $(basename $@)).jsonl.zip telegraf-$(version)_$(basename $(basename $@)).jsonl; \
 	fi
 
 	@$(MAKE) install
