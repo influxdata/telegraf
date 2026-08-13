@@ -65,7 +65,6 @@ type OpenStack struct {
 	Username         string          `toml:"username"`
 	Password         string          `toml:"password"`
 	EnabledServices  []string        `toml:"enabled_services"`
-	ServerDiagnotics bool            `toml:"server_diagnotics" deprecated:"1.32.0;1.40.0;add 'serverdiagnostics' to 'enabled_services' instead"`
 	OutputSecrets    bool            `toml:"output_secrets"`
 	TagPrefix        string          `toml:"tag_prefix"`
 	TagValue         string          `toml:"tag_value"`
@@ -106,11 +105,6 @@ func (o *OpenStack) Init() error {
 	}
 	if o.TagValue == "" {
 		return errors.New("tag_value option can not be empty string")
-	}
-
-	// For backward compatibility
-	if o.ServerDiagnotics && !slices.Contains(o.EnabledServices, "serverdiagnostics") {
-		o.EnabledServices = append(o.EnabledServices, "serverdiagnostics")
 	}
 
 	// Check the enabled services
