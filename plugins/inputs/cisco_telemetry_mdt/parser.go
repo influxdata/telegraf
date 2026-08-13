@@ -420,7 +420,7 @@ func (s *state) parseRib(fields []*telemetry.TelemetryField, tags map[string]str
 			tags[subfield.Name] = decodeTag(subfield)
 		}
 		if value := decode(subfield); value != nil {
-			s.grouper.Add(s.path, tags, timestamp, subfield.Name, value)
+			s.grouper.Add(s.measurement, tags, timestamp, subfield.Name, value)
 		}
 		if subfield.Name != "nextHop" {
 			continue
@@ -435,7 +435,7 @@ func (s *state) parseRib(fields []*telemetry.TelemetryField, tags map[string]str
 				}
 				if value := decode(ff); value != nil {
 					name := "nextHop/" + ff.Name
-					s.grouper.Add(s.path, tags, timestamp, name, value)
+					s.grouper.Add(s.measurement, tags, timestamp, name, value)
 				}
 			}
 		}
@@ -469,7 +469,7 @@ func (s *state) parseMicroburst(fields []*telemetry.TelemetryField, tags map[str
 				tags[subf.Name] = decodeTag(subf)
 			}
 			if value := decode(subf); value != nil {
-				s.grouper.Add(s.path, tags, timestamp, subf.Name, value)
+				s.grouper.Add(s.measurement, tags, timestamp, subf.Name, value)
 			}
 		}
 	}

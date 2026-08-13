@@ -1,6 +1,15 @@
 <!-- markdownlint-disable MD013 MD024 -->
 # Changelog
 
+## unreleased
+
+### Important Changes
+
+- PR [#19440](https://github.com/influxdata/telegraf/pull/19440) fixes an issue
+  in `inputs.cisco_telemetry_mdt` by now respecting the configured aliases. This
+  might change the metric name for microburst and RIB data if set aliases.
+  Please check your metric names and remove aliases if necessary.
+
 ## v1.39.3 [2026-08-10]
 
 ### Bugfixes
