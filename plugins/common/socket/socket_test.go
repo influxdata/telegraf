@@ -855,7 +855,6 @@ func createClient(endpoint string, addr net.Addr, tlsCfg *tls.Config) (net.Conn,
 }
 
 func TestNewSocketServiceAddressParsing(t *testing.T) {
-	t.Parallel()
 	tests := []struct {
 		name          string
 		address       string
@@ -886,8 +885,8 @@ func TestNewSocketServiceAddressParsing(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			s, err := (&Config{}).NewSocket(tt.address, nil, testutil.Logger{})
+			var cfg Config
+			s, err := cfg.NewSocket(tt.address, nil, testutil.Logger{})
 			require.NoError(t, err)
 			require.Equal(t, tt.interfaceName, s.interfaceName)
 			require.Equal(t, tt.url, s.url.String())
@@ -896,7 +895,6 @@ func TestNewSocketServiceAddressParsing(t *testing.T) {
 }
 
 func TestInterfaceNameFromServiceAddressInvalid(t *testing.T) {
-	t.Parallel()
 	tests := []struct {
 		name    string
 		address string
@@ -909,7 +907,6 @@ func TestInterfaceNameFromServiceAddressInvalid(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			name, err := interfaceNameFromServiceAddress(tt.address)
 			require.Empty(t, name)
 			require.ErrorContains(t, err, tt.err)
