@@ -11,6 +11,8 @@ import (
 
 	sdkzerobus "github.com/databricks/zerobus-sdk/purego/zerobus"
 	"google.golang.org/protobuf/encoding/protowire"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/descriptorpb"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -46,8 +48,9 @@ type Zerobus struct {
 	ConnectTimeout    config.Duration `toml:"connect_timeout"`
 	Log               telegraf.Logger `toml:"-"`
 
-	sdk    *sdkzerobus.SDK
-	stream *sdkzerobus.Stream
+	sdk     *sdkzerobus.SDK
+	stream  *sdkzerobus.Stream
+	columns map[string]struct{}
 }
 
 func (*Zerobus) SampleConfig() string {
@@ -120,11 +123,6 @@ func (z *Zerobus) Write(metrics []telegraf.Metric) error {
 		return internal.ErrNotConnected
 	}
 
-	records, result := z.serializeMetrics(metrics)
-	if len(records) == 0 {
-		return result
-	}
-
 	// Telegraf connects only once, so a stream lost after startup is replaced here.
 	if z.stream == nil || z.stream.IsClosed() {
 		if err := z.openStream(); err != nil {
@@ -132,7 +130,16 @@ func (z *Zerobus) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	for _, chunk := range chunkRecords(records, maxBatchRecords, maxRecordBytes) {
+	records, result := z.serializeMetrics(metrics)
+	if len(records) == 0 {
+		return result
+	}
+
+	chunks, err := chunkRecords(records, maxBatchRecords, maxRecordBytes)
+	if err != nil {
+		return err
+	}
+	for _, chunk := range chunks {
 		if _, err := z.stream.IngestJSONRecordsOffset(chunk); err != nil {
 			return z.abortWrite("admitting batch", err)
 		}
@@ -162,26 +169,35 @@ func (z *Zerobus) openStream() error {
 	}
 	defer secret.Destroy()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(z.ConnectTimeout))
-	defer cancel()
+	timeout := time.Duration(z.ConnectTimeout)
 
+	fetchCtx, fetchCancel := context.WithTimeout(context.Background(), timeout)
 	// The descriptor is fetched per stream, so a stream opened after an ALTER
 	// TABLE picks up the new columns without restarting Telegraf.
-	descriptor, err := z.sdk.FetchProtoDescriptorFromUC(ctx, z.TableName, z.ClientID, secret.String())
+	descriptor, err := z.sdk.FetchProtoDescriptorFromUC(fetchCtx, z.TableName, z.ClientID, secret.String())
+	fetchCancel()
 	if err != nil {
 		return fmt.Errorf("fetching schema of table %q failed: %w", z.TableName, err)
 	}
+	columns, err := columnsFromDescriptor(descriptor)
+	if err != nil {
+		return fmt.Errorf("reading schema of table %q failed: %w", z.TableName, err)
+	}
 
-	z.stream, err = z.sdk.CreateStream(ctx, z.TableName, z.ClientID, secret.String(),
+	streamCtx, streamCancel := context.WithTimeout(context.Background(), timeout)
+	z.stream, err = z.sdk.CreateStream(streamCtx, z.TableName, z.ClientID, secret.String(),
 		sdkzerobus.WithProto(descriptor),
 		sdkzerobus.WithWaitForReady(),
+		sdkzerobus.WithRecovery(sdkzerobus.RecoveryDisabled),
 		// Pin the stream to the limits the plugin chunks against.
 		sdkzerobus.WithMaxBatchRecords(maxBatchRecords),
 		sdkzerobus.WithMaxPayloadBytes(maxPayloadBytes),
 	)
+	streamCancel()
 	if err != nil {
 		return fmt.Errorf("creating stream for table %q failed: %w", z.TableName, err)
 	}
+	z.columns = columns
 	z.Log.Debugf("Opened stream to table %q", z.TableName)
 
 	return nil
@@ -193,6 +209,7 @@ func (z *Zerobus) closeStream() error {
 	}
 	err := z.stream.Close()
 	z.stream = nil
+	z.columns = nil
 	return err
 }
 
@@ -212,7 +229,7 @@ func (z *Zerobus) serializeMetrics(metrics []telegraf.Metric) ([][]byte, error) 
 	var writeErr internal.PartialWriteError
 
 	for i, m := range metrics {
-		record, err := metricToTableSchemaJSON(m, z.TimestampColumn, z.MeasurementColumn)
+		record, err := metricToTableSchemaJSON(m, z.TimestampColumn, z.MeasurementColumn, z.columns)
 		if err == nil {
 			if size := recordSize(record); size > maxRecordBytes {
 				err = fmt.Errorf("serialized metric requires %d bytes, exceeding the request limit of %d bytes", size, maxRecordBytes)
@@ -237,7 +254,7 @@ func (z *Zerobus) serializeMetrics(metrics []telegraf.Metric) ([][]byte, error) 
 // Split the records into requests within the Zerobus record-count and size
 // limits. Oversized records are rejected during serialization, so every chunk
 // holds at least one record.
-func chunkRecords(records [][]byte, maxRecords, maxBytes int) [][][]byte {
+func chunkRecords(records [][]byte, maxRecords, maxBytes int) ([][][]byte, error) {
 	chunks := make([][][]byte, 0, (len(records)+maxRecords-1)/maxRecords)
 	for len(records) > 0 {
 		count, size := 0, 0
@@ -249,10 +266,30 @@ func chunkRecords(records [][]byte, maxRecords, maxBytes int) [][][]byte {
 			size = next
 			count++
 		}
+		if count == 0 {
+			return nil, fmt.Errorf("serialized record exceeds the request limit of %d bytes", maxBytes)
+		}
 		chunks = append(chunks, records[:count])
 		records = records[count:]
 	}
-	return chunks
+	return chunks, nil
+}
+
+func columnsFromDescriptor(raw []byte) (map[string]struct{}, error) {
+	var descriptor descriptorpb.DescriptorProto
+	if err := proto.Unmarshal(raw, &descriptor); err != nil {
+		return nil, fmt.Errorf("parsing protobuf descriptor failed: %w", err)
+	}
+	columns := make(map[string]struct{}, len(descriptor.Field))
+	for _, field := range descriptor.Field {
+		if name := field.GetName(); name != "" {
+			columns[name] = struct{}{}
+		}
+	}
+	if len(columns) == 0 {
+		return nil, errors.New("table schema descriptor has no columns")
+	}
+	return columns, nil
 }
 
 // Bytes a record occupies in the request, including its protobuf framing.

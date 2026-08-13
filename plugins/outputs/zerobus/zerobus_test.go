@@ -121,7 +121,7 @@ func TestMetricToTableSchemaJSONFlattensMetric(t *testing.T) {
 		time.Unix(1_700_000_000, 123_456_000),
 	)
 
-	record, err := metricToTableSchemaJSON(input, "event_time", "measurement")
+	record, err := metricToTableSchemaJSON(input, "event_time", "measurement", nil)
 	require.NoError(t, err)
 
 	var values map[string]json.RawMessage
@@ -135,7 +135,7 @@ func TestMetricToTableSchemaJSONFlattensMetric(t *testing.T) {
 	require.JSONEq(t, `true`, string(values["active"]))
 	require.JSONEq(t, `"ready"`, string(values["status"]))
 
-	record, err = metricToTableSchemaJSON(input, "", "")
+	record, err = metricToTableSchemaJSON(input, "", "", nil)
 	require.NoError(t, err)
 	values = nil
 	require.NoError(t, json.Unmarshal(record, &values))
@@ -209,7 +209,7 @@ func TestMetricToTableSchemaJSONRejectsInvalidMetric(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := metricToTableSchemaJSON(tt.metric, "timestamp", "")
+			_, err := metricToTableSchemaJSON(tt.metric, "timestamp", "", nil)
 			require.ErrorContains(t, err, tt.match)
 		})
 	}
@@ -260,27 +260,32 @@ func TestChunkRecords(t *testing.T) {
 	records := [][]byte{[]byte("first"), []byte("second"), []byte("third")}
 
 	t.Run("keeps a fitting batch together", func(t *testing.T) {
-		chunks := chunkRecords(records, maxBatchRecords, maxRecordBytes)
+		chunks, err := chunkRecords(records, maxBatchRecords, maxRecordBytes)
+		require.NoError(t, err)
 		require.Len(t, chunks, 1)
 		require.Equal(t, records, chunks[0])
 	})
 
 	t.Run("splits by record count", func(t *testing.T) {
-		chunks := chunkRecords(records, 2, maxRecordBytes)
+		chunks, err := chunkRecords(records, 2, maxRecordBytes)
+		require.NoError(t, err)
 		require.Len(t, chunks, 2)
 		require.Equal(t, records[:2], chunks[0])
 		require.Equal(t, records[2:], chunks[1])
 	})
 
 	t.Run("splits by payload size", func(t *testing.T) {
-		chunks := chunkRecords(records, maxBatchRecords, recordSize(records[0])+recordSize(records[1]))
+		chunks, err := chunkRecords(records, maxBatchRecords, recordSize(records[0])+recordSize(records[1]))
+		require.NoError(t, err)
 		require.Len(t, chunks, 2)
 		require.Equal(t, records[:2], chunks[0])
 		require.Equal(t, records[2:], chunks[1])
 	})
 
 	t.Run("handles an empty batch", func(t *testing.T) {
-		require.Empty(t, chunkRecords(nil, maxBatchRecords, maxRecordBytes))
+		chunks, err := chunkRecords(nil, maxBatchRecords, maxRecordBytes)
+		require.NoError(t, err)
+		require.Empty(t, chunks)
 	})
 }
 

@@ -76,14 +76,15 @@ to use them.
   ## Optional identifier appended to Telegraf's product token.
   # application_name = ""
 
-  ## Stream startup timeout.
+  ## Timeout for each stream startup request.
   # connect_timeout = "30s"
 ```
 
 The service principal identified by `client_id` needs the `USE CATALOG`,
 `USE SCHEMA`, `SELECT` and `MODIFY` [privileges][privileges] on the destination
-table. Startup waits up to `connect_timeout` for the stream, so network,
-authentication and permission errors surface before any metric is written.
+table. Startup waits up to `connect_timeout` for each of the schema fetch and
+the stream open, so network, authentication and permission errors surface
+before any metric is written.
 
 [privileges]: https://docs.databricks.com/aws/en/data-governance/unity-catalog/manage-privileges/privileges
 
@@ -95,7 +96,10 @@ destination table:
 - The metric timestamp is written to `timestamp_column` as Unix microseconds,
   which is the representation expected by a Delta `TIMESTAMP`. The default
   column name is `timestamp`. Set `timestamp_column = ""` to omit it.
-- Tags and fields become same-named columns.
+- Tags and fields become same-named columns. Names that are not columns of
+  the destination table are omitted, including Telegraf's default `host` tag.
+  Use `omit_hostname`, `tagexclude` or `fieldexclude` when those values should
+  not be collected at all.
 - The measurement name is omitted unless `measurement_column` is configured.
 
 For example, a metric with the tag `host` and field `usage` can target:
@@ -114,11 +118,11 @@ written: `uint64` values above `math.MaxInt64`, because Delta has no unsigned
 64-bit type, and non-finite `float64` values such as `NaN`, because JSON cannot
 represent them.
 
-All metrics of a plugin instance target the configured table and must match its
-schema. Use Telegraf filtering or processors when separate measurements need
-different tables or column layouts. The schema is read from Unity Catalog when
-the stream is opened, so altered columns are picked up by the next stream
-without restarting Telegraf.
+All metrics of a plugin instance target the configured table. Use Telegraf
+filtering or processors when separate measurements need different tables or
+column layouts. The schema is read from Unity Catalog when the stream is
+opened, so altered columns are picked up by the next stream without
+restarting Telegraf.
 
 ## Batching and durability
 
