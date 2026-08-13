@@ -56,7 +56,7 @@ func metricToTableSchemaJSON(metric telegraf.Metric, timestampColumn, measuremen
 
 	record, err := json.Marshal(values)
 	if err != nil {
-		return nil, fmt.Errorf("marshaling table-schema JSON record failed: %w", err)
+		return nil, fmt.Errorf("marshaling JSON record failed: %w", err)
 	}
 	return record, nil
 }

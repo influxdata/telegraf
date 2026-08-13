@@ -67,8 +67,7 @@ to use them.
   client_id = ""
   client_secret = ""
 
-  ## Column receiving the metric timestamp. Leave empty if the table has no
-  ## timestamp column.
+  ## Timestamp column. Set to "" to turn off.
   # timestamp_column = "timestamp"
 
   ## Column receiving the measurement name. The name is omitted if empty.
@@ -93,8 +92,9 @@ authentication and permission errors surface before any metric is written.
 The plugin writes one flat row per metric, taking the column layout from the
 destination table:
 
-- If configured, the metric timestamp is written to `timestamp_column` as Unix
-  microseconds, which is the representation expected by a Delta `TIMESTAMP`.
+- The metric timestamp is written to `timestamp_column` as Unix microseconds,
+  which is the representation expected by a Delta `TIMESTAMP`. The default
+  column name is `timestamp`. Set `timestamp_column = ""` to omit it.
 - Tags and fields become same-named columns.
 - The measurement name is omitted unless `measurement_column` is configured.
 
