@@ -9,6 +9,9 @@
   in `inputs.cisco_telemetry_mdt` by now respecting the configured aliases. This
   might change the metric name for microburst and RIB data if set aliases.
   Please check your metric names and remove aliases if necessary.
+- PR [#19451](https://github.com/influxdata/telegraf/pull/19451) fixes an issue
+  in `inputs.cisco_telemetry_mdt` by avoiding spurious metrics for RIB data.
+  Please check your metrics and queries for the mentioned data.
 
 ## v1.39.3 [2026-08-10]
 
