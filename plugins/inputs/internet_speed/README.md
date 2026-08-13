@@ -33,6 +33,10 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Caches the closest server location
   # cache = false
 
+  ## Bind to the given local IP address during server connection. Data will
+  ## attempt to be sent/received from this IP address.
+  # local_address = "192.168.1.101"
+
   ## Number of concurrent connections
   ## By default or set to zero, the number of CPU cores is used. Use this to
   ## reduce the impact on system performance or to increase the connections on
