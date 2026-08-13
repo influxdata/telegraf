@@ -1,6 +1,7 @@
 package internet_speed
 
 import (
+	"net"
 	"testing"
 	"time"
 
@@ -97,6 +98,68 @@ func TestSelectServerError(t *testing.T) {
 	}
 
 	require.ErrorContains(t, plugin.selectServer(), "filter excluded all servers")
+}
+
+func TestLocalAddress(t *testing.T) {
+	tests := []struct {
+		name         string
+		localAddress string
+		expected     *net.TCPAddr
+	}{
+		{
+			name:     "unset",
+			expected: nil,
+		},
+		{
+			name:         "IPv4 address",
+			localAddress: "127.0.0.1",
+			expected:     &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1)},
+		},
+		{
+			name:         "IPv6 address",
+			localAddress: "::1",
+			expected:     &net.TCPAddr{IP: net.IPv6loopback},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &InternetSpeed{
+				LocalAddress: tt.localAddress,
+				Log:          testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+			require.Equal(t, tt.expected, plugin.localAddr)
+		})
+	}
+}
+
+func TestLocalAddressInvalid(t *testing.T) {
+	tests := []struct {
+		name         string
+		localAddress string
+	}{
+		{
+			// The underlying library only accepts an interface name on Linux and
+			// silently falls back to the default route everywhere else
+			name:         "interface name",
+			localAddress: "eth0",
+		},
+		{
+			name:         "address with port",
+			localAddress: "127.0.0.1:8080",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &InternetSpeed{
+				LocalAddress: tt.localAddress,
+				Log:          testutil.Logger{},
+			}
+			require.ErrorContains(t, plugin.Init(), "resolving local address failed")
+		})
+	}
 }
 
 func TestGathering(t *testing.T) {
