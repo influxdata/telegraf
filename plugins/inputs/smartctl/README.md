@@ -57,7 +57,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ##   * sleep: check the device unless it is in sleep mode
     ##   * standby: check the device unless it is in sleep or standby mode
     ##   * idle: check the device unless it is in sleep, standby, or idle mode
-    # nocheck = "standby"
+    # no_check = "standby"
 
     ## Metric version changes the naming of tags in the smartctl_attributes
     ## outputs. Currently "smartctl_attribute" metrics include the attribute
