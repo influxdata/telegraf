@@ -113,6 +113,16 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		common.SetIfUsed("int", fields, "clocks_current_sm", gpu.Clocks.SmClock)
 		common.SetIfUsed("int", fields, "clocks_current_memory", gpu.Clocks.MemClock)
 		common.SetIfUsed("int", fields, "clocks_current_video", gpu.Clocks.VideoClock)
+		reasons := gpu.ClocksEventReasons
+		common.SetIfUsed("str", fields, "clocks_event_reason_sw_power_cap", reasons.ClocksEventReasonSwPowerCap)
+		common.SetIfUsed("str", fields, "clocks_event_reason_sw_thermal_slowdown", reasons.ClocksEventReasonSwThermalSlowdown)
+		common.SetIfUsed("str", fields, "clocks_event_reason_hw_thermal_slowdown", reasons.ClocksEventReasonHwThermalSlowdown)
+		common.SetIfUsed("str", fields, "clocks_event_reason_hw_power_brake_slowdown", reasons.ClocksEventReasonHwPowerBrakeSlowdown)
+		common.SetIfUsed("str", fields, "clocks_event_reason_hw_slowdown", reasons.ClocksEventReasonHwSlowdown)
+		common.SetIfUsed("str", fields, "clocks_event_reason_sync_boost", reasons.ClocksEventReasonSyncBoost)
+		common.SetIfUsed("str", fields, "clocks_event_reason_gpu_idle", reasons.ClocksEventReasonGpuIdle)
+		common.SetIfUsed("str", fields, "clocks_event_reason_applications_clocks_setting", reasons.ClocksEventReasonApplicationsClocksSetting)
+		common.SetIfUsed("str", fields, "clocks_event_reason_display_clocks_setting", reasons.ClocksEventReasonDisplayClocksSetting)
 		counters := gpu.ClocksEventReasonsCounters
 		common.SetIfUsed("int", fields, "clocks_event_reasons_counters_sw_power_cap", counters.ClocksEventReasonsCountersSwPowerCap)
 		common.SetIfUsed("int", fields, "clocks_event_reasons_counters_sw_therm_slowdown", counters.ClocksEventReasonsCountersSwThermSlowdown)
