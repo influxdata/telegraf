@@ -12,6 +12,9 @@
 - PR [#19451](https://github.com/influxdata/telegraf/pull/19451) fixes an issue
   in `inputs.cisco_telemetry_mdt` by avoiding spurious metrics for RIB data.
   Please check your metrics and queries for the mentioned data.
+- PR [#19456](https://github.com/influxdata/telegraf/pull/19456) fixes the row
+  numbering for table data in `inputs.cisco_telemetry_mdt`.
+  Please check your metrics and queries for the mentioned data.
 
 ## v1.39.3 [2026-08-10]
 
