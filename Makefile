@@ -373,9 +373,9 @@ $(include_packages):
 	@mkdir -p $(pkgdir)
 
 	@if [ "$(RELEASE)" = "true" ] && [ ! -f "$(pkgdir)/telegraf-$(version)_$(basename $(basename $@)).jsonl.zip" ]; then \
-		export FILETAG="$(version)_$(basename $(basename $@))"; \
-		echo "Updating security info for $(version)_$(basename $(basename $@))..."; \
-		$(MAKE) vuln-install vuln-extract; \
+		export FILETAG="$(version)_$(basename $(basename $@))" && \
+		echo "Updating security info for $(version)_$(basename $(basename $@))..." && \
+		$(MAKE) vuln-install vuln-extract && \
 		zip $(pkgdir)/telegraf-$(version)_$(basename $(basename $@)).jsonl.zip telegraf-$(version)_$(basename $(basename $@)).jsonl; \
 	fi
 
