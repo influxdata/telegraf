@@ -9,6 +9,7 @@ tag := $(shell git describe --exact-match --tags 2>/dev/null)
 branch := $(shell git rev-parse --abbrev-ref HEAD)
 commit := $(shell git rev-parse --short=8 HEAD)
 
+RELEASE := false
 ifdef NIGHTLY
 	version := $(next_version)
 	rpm_version := nightly
@@ -39,6 +40,7 @@ else
 	deb_version := $(version)-1
 	deb_iteration := 1
 	tar_version := $(version)
+	RELEASE = true
 endif
 
 MAKEFLAGS += --no-print-directory
@@ -48,10 +50,8 @@ HOSTGO := env -u GOOS -u GOARCH -u GOARM -- go
 INTERNAL_PKG=github.com/influxdata/telegraf/internal
 LDFLAGS := $(LDFLAGS) -X $(INTERNAL_PKG).Commit=$(commit) -X $(INTERNAL_PKG).Branch=$(branch)
 ifneq ($(tag),)
-	RELEASE = true
 	LDFLAGS += -X $(INTERNAL_PKG).Version=$(version)
 else
-	RELEASE = false
 	LDFLAGS += -X $(INTERNAL_PKG).Version=$(version)-$(commit)
 endif
 
