@@ -26,7 +26,7 @@ func TestDefaults(t *testing.T) {
 	require.Equal(t, "timestamp", plugin.TimestampColumn)
 	require.Empty(t, plugin.MeasurementColumn)
 	require.Empty(t, plugin.Application)
-	require.Equal(t, config.Duration(defaultConnectTimeout), plugin.Timeout)
+	require.Equal(t, config.Duration(30*time.Second), plugin.Timeout)
 	require.NotEmpty(t, plugin.SampleConfig())
 }
 
@@ -77,7 +77,7 @@ func TestInitColumnOptions(t *testing.T) {
 		plugin := validPlugin()
 		plugin.Timeout = 0
 		require.NoError(t, plugin.Init())
-		require.Equal(t, config.Duration(defaultConnectTimeout), plugin.Timeout)
+		require.Equal(t, config.Duration(30*time.Second), plugin.Timeout)
 	})
 
 	t.Run("rejects a negative timeout", func(t *testing.T) {
@@ -89,6 +89,13 @@ func TestInitColumnOptions(t *testing.T) {
 	t.Run("allows an omitted timestamp column", func(t *testing.T) {
 		plugin := validPlugin()
 		plugin.TimestampColumn = ""
+		require.NoError(t, plugin.Init())
+	})
+
+	t.Run("allows both timestamp and measurement columns to be empty", func(t *testing.T) {
+		plugin := validPlugin()
+		plugin.TimestampColumn = ""
+		plugin.MeasurementColumn = ""
 		require.NoError(t, plugin.Init())
 	})
 
@@ -298,7 +305,7 @@ func validPlugin() *Zerobus {
 		ClientSecret:    config.NewSecret([]byte("secret")),
 		Application:     "telegraf",
 		TimestampColumn: "timestamp",
-		Timeout:         config.Duration(defaultConnectTimeout),
+		Timeout:         config.Duration(30 * time.Second),
 		Log:             testutil.Logger{},
 	}
 }

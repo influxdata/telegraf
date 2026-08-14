@@ -6,7 +6,6 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	sdkzerobus "github.com/databricks/zerobus-sdk/purego/zerobus"
@@ -31,8 +30,6 @@ const (
 	// Bytes left for records after reserving headroom for the surrounding
 	// request fields.
 	maxRecordBytes = maxPayloadBytes - 1024
-
-	defaultConnectTimeout = 30 * time.Second
 )
 
 // Zerobus writes metrics to a Databricks table.
@@ -59,34 +56,29 @@ func (*Zerobus) SampleConfig() string {
 
 // Init the output plugin.
 func (z *Zerobus) Init() error {
-	z.TimestampColumn = strings.TrimSpace(z.TimestampColumn)
-	z.MeasurementColumn = strings.TrimSpace(z.MeasurementColumn)
-
-	required := []struct {
-		name  string
-		value string
-	}{
-		{"endpoint", z.Endpoint},
-		{"workspace", z.Workspace},
-		{"table", z.Table},
-		{"client_id", z.ClientID},
+	if z.Endpoint == "" {
+		return errors.New(`option "endpoint" must be set`)
 	}
-	for _, option := range required {
-		if strings.TrimSpace(option.value) == "" {
-			return fmt.Errorf("option %q must be set", option.name)
-		}
+	if z.Workspace == "" {
+		return errors.New(`option "workspace" must be set`)
+	}
+	if z.Table == "" {
+		return errors.New(`option "table" must be set`)
+	}
+	if z.ClientID == "" {
+		return errors.New(`option "client_id" must be set`)
 	}
 	if z.ClientSecret.Empty() {
 		return errors.New(`option "client_secret" must be set`)
 	}
-	if z.MeasurementColumn != "" && z.MeasurementColumn == z.TimestampColumn {
+	if z.TimestampColumn != "" && z.MeasurementColumn != "" && z.TimestampColumn == z.MeasurementColumn {
 		return errors.New(`options "measurement_column" and "timestamp_column" must be different`)
 	}
 	if z.Timeout < 0 {
 		return errors.New(`option "timeout" cannot be negative`)
 	}
 	if z.Timeout == 0 {
-		z.Timeout = config.Duration(defaultConnectTimeout)
+		z.Timeout = config.Duration(30 * time.Second)
 	}
 
 	return nil
@@ -301,7 +293,7 @@ func init() {
 	outputs.Add("zerobus", func() telegraf.Output {
 		return &Zerobus{
 			TimestampColumn: "timestamp",
-			Timeout:         config.Duration(defaultConnectTimeout),
+			Timeout:         config.Duration(30 * time.Second),
 		}
 	})
 }

@@ -14,6 +14,7 @@ the columns of the destination table.
 
 [pricing]: https://www.databricks.com/product/pricing/lakeflow-connect
 [zerobus]: https://docs.databricks.com/aws/en/ingestion/zerobus-ingest
+[zerobus-quotas]: https://docs.databricks.com/aws/en/ingestion/zerobus-quotas
 [uc-delta]: https://docs.databricks.com/aws/en/tables/managed
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
@@ -127,8 +128,9 @@ restarting Telegraf.
 
 ### Batching and durability
 
-Each batch is split into requests that stay within the Zerobus size limits and
-the write succeeds only once Databricks acknowledged every record. A metric that
+Each Telegraf batch is split into ingest requests that stay within the SDK's
+per-request limits and Zerobus's [record size][zerobus-quotas] limit. The write
+succeeds only once Databricks has acknowledged every record. A metric that
 cannot be encoded, for example because a tag and a field share a name, is
 rejected on its own so the rest of the batch is still written.
 
