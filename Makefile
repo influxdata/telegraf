@@ -376,7 +376,8 @@ $(include_packages):
 		export FILETAG="$(version)_$(basename $(basename $@))" && \
 		echo "Updating security info for $(version)_$(basename $(basename $@))..." && \
 		$(MAKE) vuln-install vuln-extract && \
-		zip $(pkgdir)/telegraf-$(version)_$(basename $(basename $@)).jsonl.zip telegraf-$(version)_$(basename $(basename $@)).jsonl; \
+		zip $(pkgdir)/telegraf-$(version)_$(basename $(basename $@)).jsonl.zip telegraf-$(version)_$(basename $(basename $@)).jsonl && \
+		rm -f telegraf-$(version)_$(basename $(basename $@)).jsonl; \
 	fi
 
 	@$(MAKE) install
