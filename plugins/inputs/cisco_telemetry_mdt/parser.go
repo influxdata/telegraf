@@ -276,12 +276,12 @@ func (s *state) parseField(field *telemetry.TelemetryField, prefix string, tags 
 }
 
 func (s *state) parseClassAttributeField(field *telemetry.TelemetryField, tags map[string]string, timestamp time.Time) []error {
-	if s.path == "rib" {
+	switch s.path {
+	case "rib":
 		// handle native data path rib
 		s.parseRib(field.Fields, tags, timestamp)
 		return nil
-	}
-	if s.path == "microburst" {
+	case "microburst":
 		s.parseMicroburst(field.Fields, tags, timestamp)
 		return nil
 	}
@@ -436,16 +436,26 @@ func (s *state) parseRib(fields []*telemetry.TelemetryField, tags map[string]str
 		s.grouper.Add(s.measurement, tags, timestamp, key, value)
 	}
 
+	if len(nextHopFields) == 0 {
+		return
+	}
+
 	// Now collect the next-hop information if any
-	metricFields = make(map[string]interface{}, len(nextHopFields))
 	for _, subfield := range nextHopFields {
-		switch subfield.Name {
-		case "address", "vrfName":
-			tags["nextHop/"+subfield.Name] = decodeTag(subfield)
-		default:
-			if value := decode(subfield); value != nil {
-				metricFields["nextHop/"+subfield.Name] = value
+		clear(metricFields)
+		for _, subSubField := range subfield.Fields {
+			switch subSubField.Name {
+			case "address", "vrfName":
+				tags["nextHop/"+subSubField.Name] = decodeTag(subSubField)
+			default:
+				if value := decode(subSubField); value != nil {
+					metricFields["nextHop/"+subSubField.Name] = value
+				}
 			}
+		}
+		// Add the fields to the metrics using the full tag set
+		for key, value := range metricFields {
+			s.grouper.Add(s.measurement, tags, timestamp, key, value)
 		}
 	}
 }
