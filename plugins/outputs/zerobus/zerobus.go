@@ -37,15 +37,15 @@ const (
 
 // Zerobus writes metrics to a Databricks table.
 type Zerobus struct {
-	ServerEndpoint    string          `toml:"server_endpoint"`
-	WorkspaceURL      string          `toml:"workspace_url"`
-	TableName         string          `toml:"table_name"`
+	Endpoint          string          `toml:"endpoint"`
+	Workspace         string          `toml:"workspace"`
+	Table             string          `toml:"table"`
 	ClientID          string          `toml:"client_id"`
 	ClientSecret      config.Secret   `toml:"client_secret"`
-	ApplicationName   string          `toml:"application_name"`
+	Application       string          `toml:"application"`
 	TimestampColumn   string          `toml:"timestamp_column"`
 	MeasurementColumn string          `toml:"measurement_column"`
-	ConnectTimeout    config.Duration `toml:"connect_timeout"`
+	Timeout           config.Duration `toml:"timeout"`
 	Log               telegraf.Logger `toml:"-"`
 
 	sdk     *sdkzerobus.SDK
@@ -66,9 +66,9 @@ func (z *Zerobus) Init() error {
 		name  string
 		value string
 	}{
-		{"server_endpoint", z.ServerEndpoint},
-		{"workspace_url", z.WorkspaceURL},
-		{"table_name", z.TableName},
+		{"endpoint", z.Endpoint},
+		{"workspace", z.Workspace},
+		{"table", z.Table},
 		{"client_id", z.ClientID},
 	}
 	for _, option := range required {
@@ -82,11 +82,11 @@ func (z *Zerobus) Init() error {
 	if z.MeasurementColumn != "" && z.MeasurementColumn == z.TimestampColumn {
 		return errors.New(`options "measurement_column" and "timestamp_column" must be different`)
 	}
-	if z.ConnectTimeout < 0 {
-		return errors.New(`option "connect_timeout" cannot be negative`)
+	if z.Timeout < 0 {
+		return errors.New(`option "timeout" cannot be negative`)
 	}
-	if z.ConnectTimeout == 0 {
-		z.ConnectTimeout = config.Duration(defaultConnectTimeout)
+	if z.Timeout == 0 {
+		z.Timeout = config.Duration(defaultConnectTimeout)
 	}
 
 	return nil
@@ -95,10 +95,10 @@ func (z *Zerobus) Init() error {
 // Connect to the Zerobus server.
 func (z *Zerobus) Connect() error {
 	applicationName := internal.ProductToken()
-	if name := strings.TrimSpace(z.ApplicationName); name != "" {
-		applicationName += " " + name
+	if z.Application != "" {
+		applicationName = z.Application
 	}
-	sdk, err := sdkzerobus.New(z.ServerEndpoint, z.WorkspaceURL, sdkzerobus.WithApplicationName(applicationName))
+	sdk, err := sdkzerobus.New(z.Endpoint, z.Workspace, sdkzerobus.WithApplicationName(applicationName))
 	if err != nil {
 		return fmt.Errorf("creating Zerobus SDK failed: %w", err)
 	}
@@ -169,23 +169,23 @@ func (z *Zerobus) openStream() error {
 	}
 	defer secret.Destroy()
 
-	timeout := time.Duration(z.ConnectTimeout)
+	timeout := time.Duration(z.Timeout)
 
 	fetchCtx, fetchCancel := context.WithTimeout(context.Background(), timeout)
 	// The descriptor is fetched per stream, so a stream opened after an ALTER
 	// TABLE picks up the new columns without restarting Telegraf.
-	descriptor, err := z.sdk.FetchProtoDescriptorFromUC(fetchCtx, z.TableName, z.ClientID, secret.String())
+	descriptor, err := z.sdk.FetchProtoDescriptorFromUC(fetchCtx, z.Table, z.ClientID, secret.String())
 	fetchCancel()
 	if err != nil {
-		return fmt.Errorf("fetching schema of table %q failed: %w", z.TableName, err)
+		return fmt.Errorf("fetching schema of table %q failed: %w", z.Table, err)
 	}
 	columns, err := columnsFromDescriptor(descriptor)
 	if err != nil {
-		return fmt.Errorf("reading schema of table %q failed: %w", z.TableName, err)
+		return fmt.Errorf("reading schema of table %q failed: %w", z.Table, err)
 	}
 
 	streamCtx, streamCancel := context.WithTimeout(context.Background(), timeout)
-	z.stream, err = z.sdk.CreateStream(streamCtx, z.TableName, z.ClientID, secret.String(),
+	z.stream, err = z.sdk.CreateStream(streamCtx, z.Table, z.ClientID, secret.String(),
 		sdkzerobus.WithProto(descriptor),
 		sdkzerobus.WithWaitForReady(),
 		sdkzerobus.WithRecovery(sdkzerobus.RecoveryDisabled),
@@ -195,10 +195,10 @@ func (z *Zerobus) openStream() error {
 	)
 	streamCancel()
 	if err != nil {
-		return fmt.Errorf("creating stream for table %q failed: %w", z.TableName, err)
+		return fmt.Errorf("creating stream for table %q failed: %w", z.Table, err)
 	}
 	z.columns = columns
-	z.Log.Debugf("Opened stream to table %q", z.TableName)
+	z.Log.Debugf("Opened stream to table %q", z.Table)
 
 	return nil
 }
@@ -301,7 +301,7 @@ func init() {
 	outputs.Add("zerobus", func() telegraf.Output {
 		return &Zerobus{
 			TimestampColumn: "timestamp",
-			ConnectTimeout:  config.Duration(defaultConnectTimeout),
+			Timeout:         config.Duration(defaultConnectTimeout),
 		}
 	})
 }

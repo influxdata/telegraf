@@ -25,8 +25,8 @@ func TestDefaults(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, "timestamp", plugin.TimestampColumn)
 	require.Empty(t, plugin.MeasurementColumn)
-	require.Empty(t, plugin.ApplicationName)
-	require.Equal(t, config.Duration(defaultConnectTimeout), plugin.ConnectTimeout)
+	require.Empty(t, plugin.Application)
+	require.Equal(t, config.Duration(defaultConnectTimeout), plugin.Timeout)
 	require.NotEmpty(t, plugin.SampleConfig())
 }
 
@@ -37,19 +37,19 @@ func TestInitRequiredOptions(t *testing.T) {
 		option string
 	}{
 		{
-			name:   "server endpoint",
-			mutate: func(z *Zerobus) { z.ServerEndpoint = "" },
-			option: "server_endpoint",
+			name:   "endpoint",
+			mutate: func(z *Zerobus) { z.Endpoint = "" },
+			option: "endpoint",
 		},
 		{
-			name:   "workspace URL",
-			mutate: func(z *Zerobus) { z.WorkspaceURL = "" },
-			option: "workspace_url",
+			name:   "workspace",
+			mutate: func(z *Zerobus) { z.Workspace = "" },
+			option: "workspace",
 		},
 		{
-			name:   "table name",
-			mutate: func(z *Zerobus) { z.TableName = "" },
-			option: "table_name",
+			name:   "table",
+			mutate: func(z *Zerobus) { z.Table = "" },
+			option: "table",
 		},
 		{
 			name:   "client ID",
@@ -73,17 +73,17 @@ func TestInitRequiredOptions(t *testing.T) {
 }
 
 func TestInitColumnOptions(t *testing.T) {
-	t.Run("defaults the connect timeout", func(t *testing.T) {
+	t.Run("defaults the timeout", func(t *testing.T) {
 		plugin := validPlugin()
-		plugin.ConnectTimeout = 0
+		plugin.Timeout = 0
 		require.NoError(t, plugin.Init())
-		require.Equal(t, config.Duration(defaultConnectTimeout), plugin.ConnectTimeout)
+		require.Equal(t, config.Duration(defaultConnectTimeout), plugin.Timeout)
 	})
 
-	t.Run("rejects a negative connect timeout", func(t *testing.T) {
+	t.Run("rejects a negative timeout", func(t *testing.T) {
 		plugin := validPlugin()
-		plugin.ConnectTimeout = -1
-		require.ErrorContains(t, plugin.Init(), "connect_timeout")
+		plugin.Timeout = -1
+		require.ErrorContains(t, plugin.Init(), "timeout")
 	})
 
 	t.Run("allows an omitted timestamp column", func(t *testing.T) {
@@ -291,14 +291,14 @@ func TestChunkRecords(t *testing.T) {
 
 func validPlugin() *Zerobus {
 	return &Zerobus{
-		ServerEndpoint:  "https://workspace.zerobus.example.com",
-		WorkspaceURL:    "https://workspace.example.com",
-		TableName:       "catalog.schema.metrics",
+		Endpoint:        "https://workspace.zerobus.example.com",
+		Workspace:       "https://workspace.example.com",
+		Table:           "catalog.schema.metrics",
 		ClientID:        "client",
 		ClientSecret:    config.NewSecret([]byte("secret")),
-		ApplicationName: "telegraf",
+		Application:     "telegraf",
 		TimestampColumn: "timestamp",
-		ConnectTimeout:  config.Duration(defaultConnectTimeout),
+		Timeout:         config.Duration(defaultConnectTimeout),
 		Log:             testutil.Logger{},
 	}
 }

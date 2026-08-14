@@ -39,12 +39,12 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	}
 
 	plugin := &Zerobus{
-		ServerEndpoint:    values["ZEROBUS_SERVER_ENDPOINT"],
-		WorkspaceURL:      values["DATABRICKS_WORKSPACE_URL"],
-		TableName:         values["ZEROBUS_TABLE_NAME"],
+		Endpoint:          values["ZEROBUS_SERVER_ENDPOINT"],
+		Workspace:         values["DATABRICKS_WORKSPACE_URL"],
+		Table:             values["ZEROBUS_TABLE_NAME"],
 		ClientID:          values["DATABRICKS_CLIENT_ID"],
 		ClientSecret:      config.NewSecret([]byte(values["DATABRICKS_CLIENT_SECRET"])),
-		ApplicationName:   "telegraf-integration-test",
+		Application:       "telegraf-integration-test",
 		TimestampColumn:   timestampColumn,
 		MeasurementColumn: os.Getenv("ZEROBUS_MEASUREMENT_COLUMN"),
 		Log:               testutil.Logger{},

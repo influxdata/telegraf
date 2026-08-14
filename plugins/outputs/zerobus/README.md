@@ -1,9 +1,8 @@
 # Zerobus Output Plugin
 
-This plugin writes metrics to a Unity Catalog Delta table using the
-[Databricks Zerobus Ingest][zerobus] service, which accepts records over gRPC
-and commits them into Delta directly. Tags and fields are mapped onto the
-columns of the destination table.
+This plugin writes metrics to a [Unity Catalog Delta table][uc-delta] using the
+[Databricks Zerobus Ingest][zerobus] service. Tags and fields are mapped onto
+the columns of the destination table.
 
 > [!IMPORTANT]
 > Be aware that this plugin accesses APIs that are [chargeable][pricing] and
@@ -15,6 +14,7 @@ columns of the destination table.
 
 [pricing]: https://www.databricks.com/product/pricing/lakeflow-connect
 [zerobus]: https://docs.databricks.com/aws/en/ingestion/zerobus-ingest
+[uc-delta]: https://docs.databricks.com/aws/en/tables/managed
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -54,14 +54,14 @@ to use them.
 ```toml @sample.conf
 # Configuration for sending metrics to Databricks Zerobus
 [[outputs.zerobus]]
-  ## Zerobus gRPC service endpoint.
-  server_endpoint = "https://<workspace-id>.zerobus.<region>.cloud.databricks.com"
+  ## Zerobus service endpoint.
+  endpoint = "https://<workspace-id>.zerobus.<region>.cloud.databricks.com"
 
   ## Databricks workspace URL used for OAuth authentication.
-  workspace_url = "https://<workspace>.cloud.databricks.com"
+  workspace = "https://<workspace>.cloud.databricks.com"
 
   ## Fully qualified Unity Catalog destination table.
-  table_name = "catalog.schema.telegraf_metrics"
+  table = "catalog.schema.telegraf_metrics"
 
   ## OAuth service-principal credentials.
   client_id = ""
@@ -73,22 +73,22 @@ to use them.
   ## Column receiving the measurement name. The name is omitted if empty.
   # measurement_column = ""
 
-  ## Optional identifier appended to Telegraf's product token.
-  # application_name = ""
+  ## Optional application name overriding Telegraf's product token.
+  # application = ""
 
   ## Timeout for each stream startup request.
-  # connect_timeout = "30s"
+  # timeout = "30s"
 ```
 
 The service principal identified by `client_id` needs the `USE CATALOG`,
 `USE SCHEMA`, `SELECT` and `MODIFY` [privileges][privileges] on the destination
-table. Startup waits up to `connect_timeout` for each of the schema fetch and
+table. Startup waits up to `timeout` for each of the schema fetch and
 the stream open, so network, authentication and permission errors surface
 before any metric is written.
 
 [privileges]: https://docs.databricks.com/aws/en/data-governance/unity-catalog/manage-privileges/privileges
 
-## Metric mapping
+### Metric mapping
 
 The plugin writes one flat row per metric, taking the column layout from the
 destination table:
@@ -124,7 +124,7 @@ column layouts. The schema is read from Unity Catalog when the stream is
 opened, so altered columns are picked up by the next stream without
 restarting Telegraf.
 
-## Batching and durability
+### Batching and durability
 
 Each batch is split into requests that stay within the Zerobus size limits and
 the write succeeds only once Databricks acknowledged every record. A metric that
