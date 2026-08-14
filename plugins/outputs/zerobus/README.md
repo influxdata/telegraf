@@ -97,9 +97,9 @@ destination table:
   which is the representation expected by a Delta `TIMESTAMP`. The default
   column name is `timestamp`. Set `timestamp_column = ""` to omit it.
 - Tags and fields become same-named columns. Names that are not columns of
-  the destination table are omitted, including Telegraf's default `host` tag.
-  Use `omit_hostname`, `tagexclude` or `fieldexclude` when those values should
-  not be collected at all.
+  the destination table are omitted. If a tag and a field share a name that
+  maps to a table column, that metric is rejected and the rest of the batch is
+  still written.
 - The measurement name is omitted unless `measurement_column` is configured.
 
 For example, a metric with the tag `host` and field `usage` can target:
@@ -113,10 +113,11 @@ CREATE TABLE catalog.schema.cpu_metrics (
 ```
 
 Declare columns as `BIGINT` for `int64` and `uint64`, `DOUBLE` for `float64`,
-`BOOLEAN` for `bool`, and `STRING` for `string`. Two value ranges cannot be
-written: `uint64` values above `math.MaxInt64`, because Delta has no unsigned
-64-bit type, and non-finite `float64` values such as `NaN`, because JSON cannot
-represent them.
+`BOOLEAN` for `bool`, and `STRING` for `string`. `uint64` values above
+`math.MaxInt64` cannot be written because Delta has no unsigned 64-bit type.
+Non-finite `float64` values such as `NaN` are also rejected: records are
+JSON-encoded before the SDK converts them to protobuf for ingest, and JSON
+cannot represent those values.
 
 All metrics of a plugin instance target the configured table. Use Telegraf
 filtering or processors when separate measurements need different tables or
