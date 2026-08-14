@@ -97,8 +97,6 @@ help:
 	@echo '  clean        - delete build artifacts'
 	@echo '  package      - build all supported packages, override include_packages to only build a subset'
 	@echo '                 e.g.: make package include_packages="amd64.deb"'
-	@echo '  vuln-install - install govulncheck'
-	@echo '  vuln-extract - extract security information from the binary (requires govulncheck)'
 	@echo ''
 	@echo 'Possible values for include_packages variable'
 	@$(foreach package,$(include_packages),echo "  $(package)";)
@@ -211,11 +209,6 @@ lint-branch:
 	}
 	golangci-lint run
 
-.PHONY: vuln-install
-vuln-install:
-	@echo "Installing govulncheck"
-	$(HOSTGO) install golang.org/x/vuln/cmd/govulncheck@latest
-
 .PHONY: tidy
 tidy:
 	go mod verify
@@ -293,11 +286,8 @@ install: $(buildbin)
 $(buildbin):
 	@echo "building $(dir $@)..."
 	@mkdir -pv $(dir $@)
-	CGO_ENABLED=0 go build -o $(dir $@) -tags "$(BUILDTAGS)" -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
 
-.PHONY: vuln-extract
-vuln-extract: build
-	govulncheck --mode=extract telegraf$(EXEEXT) > telegraf-$(FILETAG).jsonl
+	CGO_ENABLED=0 go build -o $(dir $@) -tags "$(BUILDTAGS)" -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
 
 # Define packages Telegraf supports, organized by architecture with a rule to echo the list to limit include_packages
 # e.g. make package include_packages="$(make amd64)"
@@ -372,12 +362,12 @@ $(include_packages):
 
 	@mkdir -p $(pkgdir)
 
-	@if [ "$(RELEASE)" = "true" ] && [ ! -f "$(pkgdir)/telegraf-$(version)_$(basename $(basename $@)).jsonl.zip" ]; then \
-		export FILETAG="$(version)_$(basename $(basename $@))" && \
-		echo "Updating security info for $(version)_$(basename $(basename $@))..." && \
-		$(MAKE) vuln-install vuln-extract && \
-		zip $(pkgdir)/telegraf-$(version)_$(basename $(basename $@)).jsonl.zip telegraf-$(version)_$(basename $(basename $@)).jsonl && \
-		rm -f telegraf-$(version)_$(basename $(basename $@)).jsonl; \
+	@if [ "$(RELEASE)" = "true" ]; then \
+	    echo "Updating security info for $(version)_$(basename $(basename $@))..." && \
+		$(HOSTGO) install golang.org/x/vuln/cmd/govulncheck@v1.7.0 && \
+		$(MAKE) build && \
+		govulncheck --mode=extract telegraf$(EXEEXT) > telegraf-$(version)_$(basename $(basename $@)).jsonl && \
+		zip -m $(pkgdir)/telegraf-$(version)_$(basename $(basename $@)).jsonl.zip telegraf-$(version)_$(basename $(basename $@)).jsonl; \
 	fi
 
 	@$(MAKE) install
