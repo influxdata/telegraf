@@ -73,11 +73,11 @@ func TestInitRequiredOptions(t *testing.T) {
 }
 
 func TestInitColumnOptions(t *testing.T) {
-	t.Run("defaults the timeout", func(t *testing.T) {
+	t.Run("allows a zero timeout", func(t *testing.T) {
 		plugin := validPlugin()
 		plugin.Timeout = 0
 		require.NoError(t, plugin.Init())
-		require.Equal(t, config.Duration(30*time.Second), plugin.Timeout)
+		require.Equal(t, config.Duration(0), plugin.Timeout)
 	})
 
 	t.Run("rejects a negative timeout", func(t *testing.T) {

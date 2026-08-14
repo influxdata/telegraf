@@ -54,7 +54,6 @@ func (*Zerobus) SampleConfig() string {
 	return sampleConfig
 }
 
-// Init the output plugin.
 func (z *Zerobus) Init() error {
 	if z.Endpoint == "" {
 		return errors.New(`option "endpoint" must be set`)
@@ -77,14 +76,10 @@ func (z *Zerobus) Init() error {
 	if z.Timeout < 0 {
 		return errors.New(`option "timeout" cannot be negative`)
 	}
-	if z.Timeout == 0 {
-		z.Timeout = config.Duration(30 * time.Second)
-	}
 
 	return nil
 }
 
-// Connect to the Zerobus server.
 func (z *Zerobus) Connect() error {
 	applicationName := internal.ProductToken()
 	if z.Application != "" {
@@ -99,14 +94,16 @@ func (z *Zerobus) Connect() error {
 	// Open the stream during startup so authentication, permission and network
 	// errors surface before the first metric is written.
 	if err := z.openStream(); err != nil {
-		startupErr := &internal.StartupError{Err: err, Retry: sdkzerobus.Retryable(err)}
+		startupErr := &internal.StartupError{
+			Err:   err,
+			Retry: sdkzerobus.Retryable(err),
+		}
 		return errors.Join(startupErr, z.Close())
 	}
 
 	return nil
 }
 
-// Write the metrics to the Zerobus server.
 func (z *Zerobus) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
@@ -144,7 +141,6 @@ func (z *Zerobus) Write(metrics []telegraf.Metric) error {
 	return result
 }
 
-// Close the Zerobus connection.
 func (z *Zerobus) Close() error {
 	errs := []error{z.closeStream()}
 	if z.sdk != nil {
@@ -161,13 +157,11 @@ func (z *Zerobus) openStream() error {
 	}
 	defer secret.Destroy()
 
-	timeout := time.Duration(z.Timeout)
-
-	fetchCtx, fetchCancel := context.WithTimeout(context.Background(), timeout)
+	fetchCtx, fetchCancel := z.connectContext()
+	defer fetchCancel()
 	// The descriptor is fetched per stream, so a stream opened after an ALTER
 	// TABLE picks up the new columns without restarting Telegraf.
 	descriptor, err := z.sdk.FetchProtoDescriptorFromUC(fetchCtx, z.Table, z.ClientID, secret.String())
-	fetchCancel()
 	if err != nil {
 		return fmt.Errorf("fetching schema of table %q failed: %w", z.Table, err)
 	}
@@ -176,7 +170,8 @@ func (z *Zerobus) openStream() error {
 		return fmt.Errorf("reading schema of table %q failed: %w", z.Table, err)
 	}
 
-	streamCtx, streamCancel := context.WithTimeout(context.Background(), timeout)
+	streamCtx, streamCancel := z.connectContext()
+	defer streamCancel()
 	z.stream, err = z.sdk.CreateStream(streamCtx, z.Table, z.ClientID, secret.String(),
 		sdkzerobus.WithProto(descriptor),
 		sdkzerobus.WithWaitForReady(),
@@ -185,7 +180,6 @@ func (z *Zerobus) openStream() error {
 		sdkzerobus.WithMaxBatchRecords(maxBatchRecords),
 		sdkzerobus.WithMaxPayloadBytes(maxPayloadBytes),
 	)
-	streamCancel()
 	if err != nil {
 		return fmt.Errorf("creating stream for table %q failed: %w", z.Table, err)
 	}
@@ -193,6 +187,15 @@ func (z *Zerobus) openStream() error {
 	z.Log.Debugf("Opened stream to table %q", z.Table)
 
 	return nil
+}
+
+// connectContext returns a context bounded by timeout, or cancellable background
+// when timeout is zero (no timeout).
+func (z *Zerobus) connectContext() (context.Context, context.CancelFunc) {
+	if z.Timeout == 0 {
+		return context.WithCancel(context.Background())
+	}
+	return context.WithTimeout(context.Background(), time.Duration(z.Timeout))
 }
 
 func (z *Zerobus) closeStream() error {
