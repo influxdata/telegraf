@@ -421,7 +421,6 @@ func (s *state) parseRib(fields []*telemetry.TelemetryField, tags map[string]str
 		switch subfield.Name {
 		case "vrfName", "address", "maskLen":
 			tags[subfield.Name] = decodeTag(subfield)
-			continue
 		case "nextHop":
 			nextHopFields = subfield.Fields
 		}
