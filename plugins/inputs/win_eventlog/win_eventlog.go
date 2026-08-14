@@ -21,6 +21,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -105,12 +106,20 @@ func (w *WinEventLog) Init() error {
 func (w *WinEventLog) Start(telegraf.Accumulator) error {
 	subscription, err := w.evtSubscribe()
 	if err != nil {
-		return fmt.Errorf("subscription of Windows Event Log failed: %w", err)
+		startupErr := fmt.Errorf("subscription of Windows Event Log failed: %w", err)
+		return &internal.StartupError{
+			Err:   startupErr,
+			Retry: isRetriableSubscriptionError(err),
+		}
 	}
 	w.subscription = subscription
 	w.Log.Debug("Subscription handle id:", w.subscription)
 
 	return nil
+}
+
+func isRetriableSubscriptionError(err error) bool {
+	return errors.Is(err, windows.ERROR_EVT_CHANNEL_NOT_FOUND)
 }
 
 func (w *WinEventLog) GetState() interface{} {
