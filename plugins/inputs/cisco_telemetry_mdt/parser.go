@@ -3,6 +3,7 @@ package cisco_telemetry_mdt
 import (
 	"encoding/json"
 	"errors"
+	"maps"
 	"path"
 	"strconv"
 	"strings"
@@ -203,7 +204,7 @@ func parseKeys(field *telemetry.TelemetryField, prefix string, tags map[string]s
 	}
 }
 
-func (s *state) parseField(field *telemetry.TelemetryField, prefix string, tags map[string]string, timestamp time.Time) []error {
+func (s *state) parseField(field *telemetry.TelemetryField, prefix string, parentTags map[string]string, timestamp time.Time) []error {
 	name := strings.ReplaceAll(field.Name, "-", "_")
 
 	// Exit early on fields to ignore
@@ -227,12 +228,13 @@ func (s *state) parseField(field *telemetry.TelemetryField, prefix string, tags 
 				value = val
 			}
 		}
-		s.grouper.Add(s.measurement, tags, timestamp, name, value)
+		s.grouper.Add(s.measurement, parentTags, timestamp, name, value)
 
 		return nil
 	}
 
 	// Get extra-tags defined by the user in embedded_tags
+	tags := maps.Clone(parentTags)
 	extraTags := s.extraTags[s.tagPrefix+name]
 	fields := make([]*telemetry.TelemetryField, 0, len(field.Fields))
 	for _, subfield := range field.Fields {
@@ -275,14 +277,14 @@ func (s *state) parseField(field *telemetry.TelemetryField, prefix string, tags 
 	return errs
 }
 
-func (s *state) parseClassAttributeField(field *telemetry.TelemetryField, tags map[string]string, timestamp time.Time) []error {
+func (s *state) parseClassAttributeField(field *telemetry.TelemetryField, parentTags map[string]string, timestamp time.Time) []error {
 	switch s.path {
 	case "rib":
 		// handle native data path rib
-		s.parseRib(field.Fields, tags, timestamp)
+		s.parseRib(field.Fields, parentTags, timestamp)
 		return nil
 	case "microburst":
-		s.parseMicroburst(field.Fields, tags, timestamp)
+		s.parseMicroburst(field.Fields, parentTags, timestamp)
 		return nil
 	}
 
@@ -303,6 +305,7 @@ func (s *state) parseClassAttributeField(field *telemetry.TelemetryField, tags m
 	nxAttributes := field.Fields[0].Fields[0].Fields[0].Fields[0]
 
 	// Find dn tag among list of attributes
+	tags := maps.Clone(parentTags)
 	for _, subfield := range nxAttributes.Fields {
 		if subfield.Name == "dn" {
 			tags["dn"] = decodeTag(subfield)
@@ -316,14 +319,11 @@ func (s *state) parseClassAttributeField(field *telemetry.TelemetryField, tags m
 		errs = append(errs, s.parseField(subfield, "", tags, timestamp)...)
 	}
 
-	// Delete dn tag to prevent it from being added to the next node's attributes
-	delete(tags, "dn")
-
 	return errs
 }
 
 // DME structure: https://developer.cisco.com/site/nxapi-dme-model-reference-api/
-func (s *state) parseDME(fields []*telemetry.TelemetryField, prefix string, tags map[string]string, timestamp time.Time) []error {
+func (s *state) parseDME(fields []*telemetry.TelemetryField, prefix string, parentTags map[string]string, timestamp time.Time) []error {
 	var errs []error
 
 	var rn string
@@ -338,6 +338,7 @@ func (s *state) parseDME(fields []*telemetry.TelemetryField, prefix string, tags
 	}
 
 	// Check for distinguished name being present
+	tags := maps.Clone(parentTags)
 	if rn != "" {
 		tags[prefix] = rn
 	} else if !dn {
@@ -349,12 +350,11 @@ func (s *state) parseDME(fields []*telemetry.TelemetryField, prefix string, tags
 			errs = append(errs, s.parseField(subfield, "", tags, timestamp)...)
 		}
 	}
-	delete(tags, prefix)
 
 	return errs
 }
 
-func (s *state) parseEvents(events []*telemetry.TelemetryField, prefix string, tags map[string]string, timestamp time.Time) []error {
+func (s *state) parseEvents(events []*telemetry.TelemetryField, prefix string, parentTags map[string]string, timestamp time.Time) []error {
 	var attrs *telemetry.TelemetryField
 	if events[0] != nil && len(events[0].Fields) >= 2 {
 		var attrFields []*telemetry.TelemetryField
@@ -373,19 +373,20 @@ func (s *state) parseEvents(events []*telemetry.TelemetryField, prefix string, t
 
 	// Parse the attribute subfields according to their class
 	if attrs != nil {
-		return s.parseDME(attrs.Fields, prefix, tags, timestamp)
+		return s.parseDME(attrs.Fields, prefix, parentTags, timestamp)
 	}
 
 	//nolint:prealloc // We expect errors to be empty by default
 	var errs []error
 	for _, sub := range events {
-		errs = append(errs, s.parseClassAttributeField(sub, tags, timestamp)...)
+		errs = append(errs, s.parseClassAttributeField(sub, parentTags, timestamp)...)
 	}
+
 	return errs
 }
 
 // NXAPI structure: https://developer.cisco.com/docs/cisco-nexus-9000-series-nx-api-cli-reference-release-9-2x/
-func (s *state) parseNXRows(rows []*telemetry.TelemetryField, prefix string, tags map[string]string, timestamp time.Time) []error {
+func (s *state) parseNXRows(rows []*telemetry.TelemetryField, prefix string, parentTags map[string]string, timestamp time.Time) []error {
 	var errs []error
 
 	for i, row := range rows {
@@ -394,6 +395,7 @@ func (s *state) parseNXRows(rows []*telemetry.TelemetryField, prefix string, tag
 		}
 
 		// First subfield contains the index, promote it from value to tag
+		tags := maps.Clone(parentTags)
 		tags[prefix] = decodeTag(row.Fields[0])
 		tags["row_number"] = strconv.FormatInt(int64(i), 10)
 
@@ -401,7 +403,6 @@ func (s *state) parseNXRows(rows []*telemetry.TelemetryField, prefix string, tag
 		// to make sure the metric is emitted
 		if len(row.Fields) == 1 {
 			errs = append(errs, s.parseField(row.Fields[0], "", tags, timestamp)...)
-			delete(tags, prefix)
 			continue
 		}
 
@@ -409,16 +410,16 @@ func (s *state) parseNXRows(rows []*telemetry.TelemetryField, prefix string, tag
 		for _, field := range row.Fields[1:] {
 			errs = append(errs, s.parseField(field, "", tags, timestamp)...)
 		}
-		delete(tags, prefix)
 	}
 
 	return errs
 }
 
-func (s *state) parseRib(fields []*telemetry.TelemetryField, tags map[string]string, timestamp time.Time) {
+func (s *state) parseRib(fields []*telemetry.TelemetryField, parentTags map[string]string, timestamp time.Time) {
 	// Collect the tags first as we need the complete set for assigning the
 	// values to the correct series through the series grouper
 	var nextHopFields []*telemetry.TelemetryField
+	tags := maps.Clone(parentTags)
 	metricFields := make(map[string]interface{}, len(fields))
 	for _, subfield := range fields {
 		switch subfield.Name {
@@ -444,11 +445,12 @@ func (s *state) parseRib(fields []*telemetry.TelemetryField, tags map[string]str
 
 	// Now collect the next-hop information if any
 	for _, subfield := range nextHopFields {
+		hopTags := maps.Clone(tags)
 		clear(metricFields)
 		for _, subSubField := range subfield.Fields {
 			switch subSubField.Name {
 			case "address", "vrfName":
-				tags["nextHop/"+subSubField.Name] = decodeTag(subSubField)
+				hopTags["nextHop/"+subSubField.Name] = decodeTag(subSubField)
 			default:
 				if value := decode(subSubField); value != nil {
 					metricFields["nextHop/"+subSubField.Name] = value
@@ -457,16 +459,17 @@ func (s *state) parseRib(fields []*telemetry.TelemetryField, tags map[string]str
 		}
 		// Add the fields to the metrics using the full tag set
 		for key, value := range metricFields {
-			s.grouper.Add(s.measurement, tags, timestamp, key, value)
+			s.grouper.Add(s.measurement, hopTags, timestamp, key, value)
 		}
 	}
 }
 
-func (s *state) parseMicroburst(fields []*telemetry.TelemetryField, tags map[string]string, timestamp time.Time) {
+func (s *state) parseMicroburst(fields []*telemetry.TelemetryField, parentTags map[string]string, timestamp time.Time) {
 	if len(fields) < 3 || len(fields[2].Fields) == 0 || len(fields[2].Fields[0].Fields) < 4 {
 		return
 	}
 
+	tags := maps.Clone(parentTags)
 	root := fields[2].Fields[0].Fields[3]
 	for _, subfield := range root.Fields {
 		if subfield.Name == "interfaceName" {
