@@ -276,12 +276,12 @@ func (s *state) parseField(field *telemetry.TelemetryField, prefix string, tags 
 }
 
 func (s *state) parseClassAttributeField(field *telemetry.TelemetryField, tags map[string]string, timestamp time.Time) []error {
-	if s.path == "rib" {
+	switch s.path {
+	case "rib":
 		// handle native data path rib
 		s.parseRib(field.Fields, tags, timestamp)
 		return nil
-	}
-	if s.path == "microburst" {
+	case "microburst":
 		s.parseMicroburst(field.Fields, tags, timestamp)
 		return nil
 	}
@@ -413,31 +413,48 @@ func (s *state) parseNXRows(rows []*telemetry.TelemetryField, prefix string, tag
 }
 
 func (s *state) parseRib(fields []*telemetry.TelemetryField, tags map[string]string, timestamp time.Time) {
+	// Collect the tags first as we need the complete set for assigning the
+	// values to the correct series through the series grouper
+	var nextHopFields []*telemetry.TelemetryField
+	metricFields := make(map[string]interface{}, len(fields))
 	for _, subfield := range fields {
-		// For Every table fill the keys which are vrfName, address and masklen
 		switch subfield.Name {
 		case "vrfName", "address", "maskLen":
 			tags[subfield.Name] = decodeTag(subfield)
+		case "nextHop":
+			nextHopFields = subfield.Fields
 		}
+
 		if value := decode(subfield); value != nil {
-			s.grouper.Add(s.measurement, tags, timestamp, subfield.Name, value)
+			metricFields[subfield.Name] = value
 		}
-		if subfield.Name != "nextHop" {
-			continue
-		}
-		// For next hop table fill the keys in the tag - which is address and vrfname
-		for _, subf := range subfield.Fields {
-			for _, ff := range subf.Fields {
-				switch ff.Name {
-				case "address", "vrfName":
-					key := "nextHop/" + ff.Name
-					tags[key] = decodeTag(ff)
-				}
-				if value := decode(ff); value != nil {
-					name := "nextHop/" + ff.Name
-					s.grouper.Add(s.measurement, tags, timestamp, name, value)
+	}
+
+	// Add the fields to the metrics using the full tag set
+	for key, value := range metricFields {
+		s.grouper.Add(s.measurement, tags, timestamp, key, value)
+	}
+
+	if len(nextHopFields) == 0 {
+		return
+	}
+
+	// Now collect the next-hop information if any
+	for _, subfield := range nextHopFields {
+		clear(metricFields)
+		for _, subSubField := range subfield.Fields {
+			switch subSubField.Name {
+			case "address", "vrfName":
+				tags["nextHop/"+subSubField.Name] = decodeTag(subSubField)
+			default:
+				if value := decode(subSubField); value != nil {
+					metricFields["nextHop/"+subSubField.Name] = value
 				}
 			}
+		}
+		// Add the fields to the metrics using the full tag set
+		for key, value := range metricFields {
+			s.grouper.Add(s.measurement, tags, timestamp, key, value)
 		}
 	}
 }
@@ -453,6 +470,9 @@ func (s *state) parseMicroburst(fields []*telemetry.TelemetryField, tags map[str
 			tags[subfield.Name] = decodeTag(subfield)
 		}
 
+		// Collect the tags and metricFields first as the tags must be complete for
+		// assigning the  field values to the correct series
+		metricFields := make(map[string]interface{}, len(subfield.Fields))
 		for _, subf := range subfield.Fields {
 			switch subf.Name {
 			case "sourceName":
@@ -469,8 +489,13 @@ func (s *state) parseMicroburst(fields []*telemetry.TelemetryField, tags map[str
 				tags[subf.Name] = decodeTag(subf)
 			}
 			if value := decode(subf); value != nil {
-				s.grouper.Add(s.measurement, tags, timestamp, subf.Name, value)
+				metricFields[subf.Name] = value
 			}
+		}
+
+		// Add the fields to the metrics using the full tag set
+		for key, value := range metricFields {
+			s.grouper.Add(s.measurement, tags, timestamp, key, value)
 		}
 	}
 }
