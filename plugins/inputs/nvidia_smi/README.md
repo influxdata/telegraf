@@ -89,8 +89,8 @@ Please include the output of this command if opening an GitHub issue.
     - `name` (type of GPU e.g. `GeForce GTX 1070 Ti`)
     - `arch` (Architecture of the GPU e.g. `Ampere`, schema v12+)
     - `compute_mode` (The compute mode of the GPU e.g. `Default`)
-    - `index` (Port index where the GPU is connected to the motherboard e.g. `1`)
-    - `pstate` (Overclocking state for the GPU e.g. `P0`)
+    - `index` (Index of the GPU in the nvidia-smi output e.g. `1`)
+    - `pstate` (Performance state of the GPU e.g. `P0`)
     - `uuid` (A unique identifier for the GPU e.g. `GPU-f9ba66fc-a7f5-94c5-da19-019ef2f9c665`)
   - fields
     - `driver_version` (string)
@@ -139,14 +139,16 @@ Please include the output of this command if opening an GitHub issue.
     - `temperature_slow_tlimit_threshold` (integer, degrees C, schema v13)
     - `temperature_max_gpu_tlimit_threshold` (integer, degrees C, schema v13)
     - `temperature_max_mem_tlimit_threshold` (integer, degrees C, schema v13)
-    - `power_draw` (float, W)
+    - `power_draw` (float, W, instantaneous value when the driver reports
+      `instant_power_draw`)
     - `power_draw_average` (float, W, schema v12+)
     - `power_limit` (float, W, the currently enforced limit)
     - `power_limit_default` (float, W, schema v12+)
     - `power_limit_min` (float, W, schema v12+)
     - `power_limit_max` (float, W, schema v12+)
     - `power_limit_requested` (float, W, schema v12+)
-    - `module_power_draw` (float, W, schema v12+)
+    - `module_power_draw` (float, W, schema v12+, instantaneous value when the
+      driver reports `instant_power_draw`)
     - `pcie_link_gen_current` (integer)
     - `pcie_link_width_current` (integer)
     - `pcie_rx_util` (integer, KB/s, schema v12+)
@@ -203,8 +205,7 @@ Please include the output of this command if opening an GitHub issue.
     - `memory_bar1_used` (integer, MiB)
     - `memory_bar1_total` (integer, MiB)
     - `sram_uncorrectable` (integer)
-- measurement: `nvidia_smi_process` (schema v12+, one point per compute
-  process)
+- measurement: `nvidia_smi_process` (schema v12+, one point per process and GPU)
   - tags
     - `name` (Name of the process e.g. `python`)
     - `type` (Context type, `C` for compute, `G` for graphics, or `C+G`)
