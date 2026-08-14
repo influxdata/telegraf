@@ -57,6 +57,20 @@ func TestSetIfUsed(t *testing.T) {
 			expected: map[string]interface{}{"driver_version": "595.84"},
 		},
 		{
+			name:     "multi-word value is preserved",
+			datatype: "str",
+			key:      "clocks_event_reason_hw_slowdown",
+			value:    "Not Active",
+			expected: map[string]interface{}{"clocks_event_reason_hw_slowdown": "Not Active"},
+		},
+		{
+			name:     "surrounding whitespace is trimmed",
+			datatype: "str",
+			key:      "display_mode",
+			value:    "  Enabled\n",
+			expected: map[string]interface{}{"display_mode": "Enabled"},
+		},
+		{
 			name:     "unsupported value is skipped",
 			datatype: "int",
 			key:      "memory_temp",

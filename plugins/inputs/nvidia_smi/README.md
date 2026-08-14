@@ -114,6 +114,15 @@ Please include the output of this command if opening an GitHub issue.
     - `clocks_current_sm` (integer, MHz)
     - `clocks_current_memory` (integer, MHz)
     - `clocks_current_video` (integer, MHz)
+    - `clocks_event_reason_sw_power_cap` (string)
+    - `clocks_event_reason_sw_thermal_slowdown` (string)
+    - `clocks_event_reason_hw_thermal_slowdown` (string)
+    - `clocks_event_reason_hw_power_brake_slowdown` (string)
+    - `clocks_event_reason_hw_slowdown` (string)
+    - `clocks_event_reason_sync_boost` (string)
+    - `clocks_event_reason_gpu_idle` (string)
+    - `clocks_event_reason_applications_clocks_setting` (string)
+    - `clocks_event_reason_display_clocks_setting` (string)
     - `clocks_event_reasons_counters_sw_power_cap` (integer, microseconds)
     - `clocks_event_reasons_counters_sw_therm_slowdown` (integer, microseconds)
     - `clocks_event_reasons_counters_hw_therm_slowdown` (integer, microseconds)
@@ -211,10 +220,18 @@ schema version the installed driver reports, which determines the upper bound of
 what can be collected. The `ecc_errors_*` and `clocks_event_reasons_counters_*`
 fields require schema v13.
 
+Drivers older than 535 report the throttle reasons under their former
+`clocks_throttle_reason_*` element names, but Telegraf emits those under
+more modern `clocks_event_reason_*` field names.
+
 > [!TIP]
-> The `clocks_event_reasons_counters_*` fields are increasing tallies rather
-> than the time spent throttling during the interval. Consider applying a rate
-> or derivative to them via the [derivative aggregator][derivative].
+> The `clocks_event_reason_*` fields report why a GPU is currently clocked
+> down, as `Active` or `Not Active`. On schema v13, five of these
+> also have `clocks_event_reasons_counters_*` fields that count the
+> microseconds spent in that state. The counters catch throttling that
+> starts and ends between collection intervals. They only ever increase,
+> ao consider using the [derivative aggregator][derivative] to turn
+> them into rates.
 
 [derivative]: /plugins/aggregators/derivative/README.md
 

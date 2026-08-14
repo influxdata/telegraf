@@ -9,26 +9,27 @@ type smi struct {
 
 // gpu defines the structure of the GPU portion of the smi output.
 type gpu struct {
-	Clocks        clockStats         `xml:"clocks"`
-	ComputeMode   string             `xml:"compute_mode"`
-	DisplayActive string             `xml:"display_active"`
-	DisplayMode   string             `xml:"display_mode"`
-	EccMode       eccMode            `xml:"ecc_mode"`
-	Encoder       encoderStats       `xml:"encoder_stats"`
-	FanSpeed      string             `xml:"fan_speed"` // int
-	FBC           fbcStats           `xml:"fbc_stats"`
-	Memory        memoryStats        `xml:"fb_memory_usage"`
-	PCI           pic                `xml:"pci"`
-	Power         powerReadings      `xml:"power_readings"`
-	ProdName      string             `xml:"product_name"`
-	PState        string             `xml:"performance_state"`
-	RemappedRows  memoryRemappedRows `xml:"remapped_rows"`
-	RetiredPages  memoryRetiredPages `xml:"retired_pages"`
-	Serial        string             `xml:"serial"`
-	Temp          tempStats          `xml:"temperature"`
-	Utilization   utilizationStats   `xml:"utilization"`
-	UUID          string             `xml:"uuid"`
-	VbiosVersion  string             `xml:"vbios_version"`
+	Clocks        clockStats            `xml:"clocks"`
+	Throttle      clocksThrottleReasons `xml:"clocks_throttle_reasons"`
+	ComputeMode   string                `xml:"compute_mode"`
+	DisplayActive string                `xml:"display_active"`
+	DisplayMode   string                `xml:"display_mode"`
+	EccMode       eccMode               `xml:"ecc_mode"`
+	Encoder       encoderStats          `xml:"encoder_stats"`
+	FanSpeed      string                `xml:"fan_speed"` // int
+	FBC           fbcStats              `xml:"fbc_stats"`
+	Memory        memoryStats           `xml:"fb_memory_usage"`
+	PCI           pic                   `xml:"pci"`
+	Power         powerReadings         `xml:"power_readings"`
+	ProdName      string                `xml:"product_name"`
+	PState        string                `xml:"performance_state"`
+	RemappedRows  memoryRemappedRows    `xml:"remapped_rows"`
+	RetiredPages  memoryRetiredPages    `xml:"retired_pages"`
+	Serial        string                `xml:"serial"`
+	Temp          tempStats             `xml:"temperature"`
+	Utilization   utilizationStats      `xml:"utilization"`
+	UUID          string                `xml:"uuid"`
+	VbiosVersion  string                `xml:"vbios_version"`
 }
 
 // eccMode defines the structure of the ecc portions in the smi output.
@@ -116,4 +117,18 @@ type clockStats struct {
 	SM       string `xml:"sm_clock"`       // int
 	Memory   string `xml:"mem_clock"`      // int
 	Video    string `xml:"video_clock"`    // int
+}
+
+// clocksThrottleReasons defines the structure of the clocks throttle reasons
+// portion of the smi output.
+type clocksThrottleReasons struct {
+	ApplicationsClocksSetting string `xml:"clocks_throttle_reason_applications_clocks_setting"` // Active, Not Active
+	DisplayClocksSetting      string `xml:"clocks_throttle_reason_display_clocks_setting"`      // Active, Not Active
+	GPUIdle                   string `xml:"clocks_throttle_reason_gpu_idle"`                    // Active, Not Active
+	HwPowerBrakeSlowdown      string `xml:"clocks_throttle_reason_hw_power_brake_slowdown"`     // Active, Not Active
+	HwSlowdown                string `xml:"clocks_throttle_reason_hw_slowdown"`                 // Active, Not Active
+	HwThermalSlowdown         string `xml:"clocks_throttle_reason_hw_thermal_slowdown"`         // Active, Not Active
+	SwPowerCap                string `xml:"clocks_throttle_reason_sw_power_cap"`                // Active, Not Active
+	SwThermalSlowdown         string `xml:"clocks_throttle_reason_sw_thermal_slowdown"`         // Active, Not Active
+	SyncBoost                 string `xml:"clocks_throttle_reason_sync_boost"`                  // Active, Not Active
 }
