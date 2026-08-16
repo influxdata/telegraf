@@ -1,11 +1,14 @@
 package nvidia_smi
+
 import (
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
 	"time"
+
 	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
@@ -13,6 +16,7 @@ import (
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
 )
+
 func TestProbe(t *testing.T) {
 	var binPath string
 	var nvidiaSMIArgsPrefix []string
@@ -23,6 +27,7 @@ func TestProbe(t *testing.T) {
 		binPath = "/bin/bash"
 		nvidiaSMIArgsPrefix = []string{"-c"}
 	}
+
 	for _, tt := range []struct {
 		name        string
 		args        string
@@ -59,6 +64,7 @@ func TestProbe(t *testing.T) {
 		})
 	}
 }
+
 func TestErrorBehaviorDefault(t *testing.T) {
 	// make sure we can't find nvidia-smi in $PATH somewhere
 	os.Unsetenv("PATH")
@@ -70,11 +76,13 @@ func TestErrorBehaviorDefault(t *testing.T) {
 		Name: "nvidia_smi",
 	})
 	require.NoError(t, model.Init())
+
 	var acc testutil.Accumulator
 	var ferr *internal.FatalError
 	require.NotErrorAs(t, model.Start(&acc), &ferr)
 	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
 }
+
 func TestErrorBehaviorError(t *testing.T) {
 	// make sure we can't find nvidia-smi in $PATH somewhere
 	os.Unsetenv("PATH")
@@ -87,11 +95,13 @@ func TestErrorBehaviorError(t *testing.T) {
 		StartupErrorBehavior: "error",
 	})
 	require.NoError(t, model.Init())
+
 	var acc testutil.Accumulator
 	var ferr *internal.FatalError
 	require.NotErrorAs(t, model.Start(&acc), &ferr)
 	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
 }
+
 func TestErrorBehaviorRetry(t *testing.T) {
 	// make sure we can't find nvidia-smi in $PATH somewhere
 	os.Unsetenv("PATH")
@@ -104,11 +114,13 @@ func TestErrorBehaviorRetry(t *testing.T) {
 		StartupErrorBehavior: "retry",
 	})
 	require.NoError(t, model.Init())
+
 	var acc testutil.Accumulator
 	var ferr *internal.FatalError
 	require.NotErrorAs(t, model.Start(&acc), &ferr)
 	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
 }
+
 func TestErrorBehaviorIgnore(t *testing.T) {
 	// make sure we can't find nvidia-smi in $PATH somewhere
 	os.Unsetenv("PATH")
@@ -121,11 +133,13 @@ func TestErrorBehaviorIgnore(t *testing.T) {
 		StartupErrorBehavior: "ignore",
 	})
 	require.NoError(t, model.Init())
+
 	var acc testutil.Accumulator
 	var ferr *internal.FatalError
 	require.ErrorAs(t, model.Start(&acc), &ferr)
 	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
 }
+
 func TestGatherValidXML(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -272,6 +286,7 @@ func TestGatherValidXML(t *testing.T) {
 						"uuid":         "GPU-396caaed-39ca-3199-2e68-717cdb786ec6",
 					},
 					map[string]interface{}{
+
 						"clocks_current_graphics":       139,
 						"clocks_current_memory":         405,
 						"clocks_current_sm":             139,
@@ -1022,7 +1037,9 @@ func TestGatherValidXML(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			octets, err := os.ReadFile(filepath.Join("testdata", tt.filename))
 			require.NoError(t, err)
+
 			plugin := &NvidiaSMI{Log: &testutil.Logger{}}
+
 			var acc testutil.Accumulator
 			require.NoError(t, plugin.parse(&acc, octets))
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
