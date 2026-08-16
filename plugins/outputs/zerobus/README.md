@@ -77,14 +77,14 @@ to use them.
   ## Optional application name overriding Telegraf's product token.
   # application = ""
 
-  ## Timeout for each stream startup request.
+  ## Timeout for stream startup (schema fetch and open).
   # timeout = "30s"
 ```
 
 The service principal identified by `client_id` needs the `USE CATALOG`,
 `USE SCHEMA`, `SELECT` and `MODIFY` [privileges][privileges] on the destination
-table. Startup waits up to `timeout` for each of the schema fetch and
-the stream open, so network, authentication and permission errors surface
+table. Startup waits up to `timeout` for opening the stream (including the
+schema fetch), so network, authentication and permission errors surface
 before any metric is written.
 
 [privileges]: https://docs.databricks.com/aws/en/data-governance/unity-catalog/manage-privileges/privileges

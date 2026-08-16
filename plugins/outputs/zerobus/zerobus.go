@@ -157,32 +157,32 @@ func (z *Zerobus) openStream() error {
 	}
 	defer secret.Destroy()
 
-	fetchCtx, fetchCancel := z.connectContext()
-	defer fetchCancel()
+	ctx, cancel := z.connectContext()
+	defer cancel()
+
 	// The descriptor is fetched per stream, so a stream opened after an ALTER
 	// TABLE picks up the new columns without restarting Telegraf.
-	descriptor, err := z.sdk.FetchProtoDescriptorFromUC(fetchCtx, z.Table, z.ClientID, secret.String())
+	descriptor, err := z.sdk.FetchProtoDescriptorFromUC(ctx, z.Table, z.ClientID, secret.String())
 	if err != nil {
 		return fmt.Errorf("fetching schema of table %q failed: %w", z.Table, err)
 	}
-	columns, err := columnsFromDescriptor(descriptor)
-	if err != nil {
-		return fmt.Errorf("reading schema of table %q failed: %w", z.Table, err)
-	}
 
-	streamCtx, streamCancel := z.connectContext()
-	defer streamCancel()
-	z.stream, err = z.sdk.CreateStream(streamCtx, z.Table, z.ClientID, secret.String(),
+	stream, err := z.sdk.CreateStream(ctx, z.Table, z.ClientID, secret.String(),
 		sdkzerobus.WithProto(descriptor),
 		sdkzerobus.WithWaitForReady(),
 		sdkzerobus.WithRecovery(sdkzerobus.RecoveryDisabled),
-		// Pin the stream to the limits the plugin chunks against.
-		sdkzerobus.WithMaxBatchRecords(maxBatchRecords),
-		sdkzerobus.WithMaxPayloadBytes(maxPayloadBytes),
 	)
 	if err != nil {
 		return fmt.Errorf("creating stream for table %q failed: %w", z.Table, err)
 	}
+
+	columns, err := columnsFromDescriptor(descriptor)
+	if err != nil {
+		_ = stream.Close()
+		return fmt.Errorf("reading schema of table %q failed: %w", z.Table, err)
+	}
+
+	z.stream = stream
 	z.columns = columns
 	z.Log.Debugf("Opened stream to table %q", z.Table)
 
