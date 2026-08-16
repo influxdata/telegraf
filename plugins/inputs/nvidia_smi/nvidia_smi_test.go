@@ -550,7 +550,7 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "/usr/lib/Xorg",
 						"type": "G",
-					"pid": "64",
+					"pid": "835",
 					},
 					map[string]interface{}{
 						"used_memory": int64(550),
@@ -561,7 +561,7 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "/usr/bin/gnome-shell",
 						"type": "G",
-					"pid": "64",
+					"pid": "1481",
 					},
 					map[string]interface{}{
 						"used_memory": int64(18),
@@ -579,7 +579,7 @@ func TestGatherValidXML(t *testing.T) {
 							"--field-trial-handle=0,i,3110290512380155730," +
 							"7457693378709978105,262144 --variations-seed-version",
 						"type": "G",
-					"pid": "64",
+					"pid": "2214",
 					},
 					map[string]interface{}{
 						"used_memory": int64(79),
@@ -590,7 +590,7 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "/usr/lib/firefox/firefox",
 						"type": "G",
-					"pid": "64",
+					"pid": "4044",
 					},
 					map[string]interface{}{
 						"used_memory": int64(541),
@@ -609,7 +609,7 @@ func TestGatherValidXML(t *testing.T) {
 							"4769839452661094675,262144 --disable-features=" +
 							"CalculateNativeWinOcclusion,SpareRendererForSitePerProcess",
 						"type": "G",
-					"pid": "64",
+					"pid": "42416",
 					},
 					map[string]interface{}{
 						"used_memory": int64(159),
