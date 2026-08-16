@@ -132,12 +132,12 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		}
 
 		for _, process := range gpu.Processes.ProcessInfo {
-			tags := make(map[string]string, 2)
+			tags := make(map[string]string, 3)
 			common.SetTagIfUsed(tags, "name", process.ProcessName)
 			common.SetTagIfUsed(tags, "type", process.Type)
+			common.SetTagIfUsed(tags, "pid", process.Pid)
 
-			fields := make(map[string]interface{}, 2)
-			common.SetIfUsed("int", fields, "pid", process.Pid)
+			fields := make(map[string]interface{}, 1)
 			common.SetIfUsed("int", fields, "used_memory", process.UsedMemory)
 
 			acc.AddFields("nvidia_smi_process", fields, tags, timestamp)
