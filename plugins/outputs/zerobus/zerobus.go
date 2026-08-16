@@ -94,11 +94,13 @@ func (z *Zerobus) Connect() error {
 	// Open the stream during startup so authentication, permission and network
 	// errors surface before the first metric is written.
 	if err := z.openStream(); err != nil {
-		startupErr := &internal.StartupError{
+		if closeErr := z.Close(); closeErr != nil {
+			z.Log.Debugf("Closing after failed startup: %s", closeErr)
+		}
+		return &internal.StartupError{
 			Err:   err,
 			Retry: sdkzerobus.Retryable(err),
 		}
-		return errors.Join(startupErr, z.Close())
 	}
 
 	return nil
@@ -107,9 +109,6 @@ func (z *Zerobus) Connect() error {
 func (z *Zerobus) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
-	}
-	if z.sdk == nil {
-		return internal.ErrNotConnected
 	}
 
 	// Telegraf connects only once, so a stream lost after startup is replaced here.

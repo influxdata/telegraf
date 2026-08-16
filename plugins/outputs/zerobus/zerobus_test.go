@@ -106,14 +106,6 @@ func TestInitColumnOptions(t *testing.T) {
 	})
 }
 
-func TestWriteWithoutConnection(t *testing.T) {
-	plugin := validPlugin()
-	require.NoError(t, plugin.Init())
-
-	require.NoError(t, plugin.Write(nil))
-	require.ErrorIs(t, plugin.Write([]telegraf.Metric{testutil.TestMetric(1)}), internal.ErrNotConnected)
-}
-
 func TestMetricToTableSchemaJSONFlattensMetric(t *testing.T) {
 	input := metric.New(
 		"cpu",
