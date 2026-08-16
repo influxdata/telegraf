@@ -1,14 +1,11 @@
 package nvidia_smi
-
 import (
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
 	"time"
-
 	"github.com/stretchr/testify/require"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
@@ -16,7 +13,6 @@ import (
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
 )
-
 func TestProbe(t *testing.T) {
 	var binPath string
 	var nvidiaSMIArgsPrefix []string
@@ -27,7 +23,6 @@ func TestProbe(t *testing.T) {
 		binPath = "/bin/bash"
 		nvidiaSMIArgsPrefix = []string{"-c"}
 	}
-
 	for _, tt := range []struct {
 		name        string
 		args        string
@@ -64,7 +59,6 @@ func TestProbe(t *testing.T) {
 		})
 	}
 }
-
 func TestErrorBehaviorDefault(t *testing.T) {
 	// make sure we can't find nvidia-smi in $PATH somewhere
 	os.Unsetenv("PATH")
@@ -76,13 +70,11 @@ func TestErrorBehaviorDefault(t *testing.T) {
 		Name: "nvidia_smi",
 	})
 	require.NoError(t, model.Init())
-
 	var acc testutil.Accumulator
 	var ferr *internal.FatalError
 	require.NotErrorAs(t, model.Start(&acc), &ferr)
 	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
 }
-
 func TestErrorBehaviorError(t *testing.T) {
 	// make sure we can't find nvidia-smi in $PATH somewhere
 	os.Unsetenv("PATH")
@@ -95,13 +87,11 @@ func TestErrorBehaviorError(t *testing.T) {
 		StartupErrorBehavior: "error",
 	})
 	require.NoError(t, model.Init())
-
 	var acc testutil.Accumulator
 	var ferr *internal.FatalError
 	require.NotErrorAs(t, model.Start(&acc), &ferr)
 	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
 }
-
 func TestErrorBehaviorRetry(t *testing.T) {
 	// make sure we can't find nvidia-smi in $PATH somewhere
 	os.Unsetenv("PATH")
@@ -114,13 +104,11 @@ func TestErrorBehaviorRetry(t *testing.T) {
 		StartupErrorBehavior: "retry",
 	})
 	require.NoError(t, model.Init())
-
 	var acc testutil.Accumulator
 	var ferr *internal.FatalError
 	require.NotErrorAs(t, model.Start(&acc), &ferr)
 	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
 }
-
 func TestErrorBehaviorIgnore(t *testing.T) {
 	// make sure we can't find nvidia-smi in $PATH somewhere
 	os.Unsetenv("PATH")
@@ -133,13 +121,11 @@ func TestErrorBehaviorIgnore(t *testing.T) {
 		StartupErrorBehavior: "ignore",
 	})
 	require.NoError(t, model.Init())
-
 	var acc testutil.Accumulator
 	var ferr *internal.FatalError
 	require.ErrorAs(t, model.Start(&acc), &ferr)
 	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
 }
-
 func TestGatherValidXML(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -286,7 +272,6 @@ func TestGatherValidXML(t *testing.T) {
 						"uuid":         "GPU-396caaed-39ca-3199-2e68-717cdb786ec6",
 					},
 					map[string]interface{}{
-
 						"clocks_current_graphics":       139,
 						"clocks_current_memory":         405,
 						"clocks_current_sm":             139,
@@ -565,9 +550,9 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "/usr/lib/Xorg",
 						"type": "G",
+					"pid": "64",
 					},
 					map[string]interface{}{
-						"pid":         int64(835),
 						"used_memory": int64(550),
 					},
 					time.Unix(1689872450, 0)),
@@ -576,9 +561,9 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "/usr/bin/gnome-shell",
 						"type": "G",
+					"pid": "64",
 					},
 					map[string]interface{}{
-						"pid":         int64(1481),
 						"used_memory": int64(18),
 					},
 					time.Unix(1689872450, 0)),
@@ -594,9 +579,9 @@ func TestGatherValidXML(t *testing.T) {
 							"--field-trial-handle=0,i,3110290512380155730," +
 							"7457693378709978105,262144 --variations-seed-version",
 						"type": "G",
+					"pid": "64",
 					},
 					map[string]interface{}{
-						"pid":         int64(2214),
 						"used_memory": int64(79),
 					},
 					time.Unix(1689872450, 0)),
@@ -605,9 +590,9 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "/usr/lib/firefox/firefox",
 						"type": "G",
+					"pid": "64",
 					},
 					map[string]interface{}{
-						"pid":         int64(4044),
 						"used_memory": int64(541),
 					},
 					time.Unix(1689872450, 0)),
@@ -624,9 +609,9 @@ func TestGatherValidXML(t *testing.T) {
 							"4769839452661094675,262144 --disable-features=" +
 							"CalculateNativeWinOcclusion,SpareRendererForSitePerProcess",
 						"type": "G",
+					"pid": "64",
 					},
 					map[string]interface{}{
-						"pid":         int64(42416),
 						"used_memory": int64(159),
 					},
 					time.Unix(1689872450, 0)),
@@ -991,9 +976,9 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "cosmic-comp",
 						"type": "G",
+					"pid": "1842",
 					},
 					map[string]interface{}{
-						"pid":         1842,
 						"used_memory": 410,
 					},
 					time.Unix(1785992620, 0)),
@@ -1002,9 +987,9 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "/usr/bin/code",
 						"type": "G",
+					"pid": "3190",
 					},
 					map[string]interface{}{
-						"pid":         3190,
 						"used_memory": 451,
 					},
 					time.Unix(1785992620, 0)),
@@ -1013,9 +998,9 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "python",
 						"type": "C",
+					"pid": "4937",
 					},
 					map[string]interface{}{
-						"pid":         4937,
 						"used_memory": 160,
 					},
 					time.Unix(1785992620, 0)),
@@ -1024,9 +1009,9 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "/usr/lib/chromium/chromium",
 						"type": "C+G",
+					"pid": "34626",
 					},
 					map[string]interface{}{
-						"pid":         34626,
 						"used_memory": 183,
 					},
 					time.Unix(1785992620, 0)),
@@ -1037,9 +1022,7 @@ func TestGatherValidXML(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			octets, err := os.ReadFile(filepath.Join("testdata", tt.filename))
 			require.NoError(t, err)
-
 			plugin := &NvidiaSMI{Log: &testutil.Logger{}}
-
 			var acc testutil.Accumulator
 			require.NoError(t, plugin.parse(&acc, octets))
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
