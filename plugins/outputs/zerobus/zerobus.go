@@ -264,6 +264,8 @@ func (z *Zerobus) serializeMetrics(metrics []telegraf.Metric, maxRecords, maxByt
 	return batches, &writeErr
 }
 
+// columnsFromDescriptor extracts the column names of the destination table.
+// TODO: Remove this once the Zerobus SDK exposes the columns itself.
 func columnsFromDescriptor(raw []byte) (map[string]struct{}, error) {
 	var descriptor descriptorpb.DescriptorProto
 	if err := proto.Unmarshal(raw, &descriptor); err != nil {
