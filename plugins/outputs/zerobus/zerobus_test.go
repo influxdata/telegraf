@@ -243,7 +243,7 @@ func TestSerializeMetricsRejectsOversizedMetric(t *testing.T) {
 	oversized := metric.New(
 		"cpu",
 		nil,
-		map[string]interface{}{"value": strings.Repeat("x", maxRecordBytes)},
+		map[string]interface{}{"value": strings.Repeat("x", maxRequestBytes)},
 		time.Now(),
 	)
 	records, err := plugin.serializeMetrics([]telegraf.Metric{oversized})
@@ -259,14 +259,14 @@ func TestChunkRecords(t *testing.T) {
 	records := [][]byte{[]byte("first"), []byte("second"), []byte("third")}
 
 	t.Run("keeps a fitting batch together", func(t *testing.T) {
-		chunks, err := chunkRecords(records, maxBatchRecords, maxRecordBytes)
+		chunks, err := chunkRecords(records, maxBatchRecords, maxRequestBytes)
 		require.NoError(t, err)
 		require.Len(t, chunks, 1)
 		require.Equal(t, records, chunks[0])
 	})
 
 	t.Run("splits by record count", func(t *testing.T) {
-		chunks, err := chunkRecords(records, 2, maxRecordBytes)
+		chunks, err := chunkRecords(records, 2, maxRequestBytes)
 		require.NoError(t, err)
 		require.Len(t, chunks, 2)
 		require.Equal(t, records[:2], chunks[0])
@@ -282,7 +282,7 @@ func TestChunkRecords(t *testing.T) {
 	})
 
 	t.Run("handles an empty batch", func(t *testing.T) {
-		chunks, err := chunkRecords(nil, maxBatchRecords, maxRecordBytes)
+		chunks, err := chunkRecords(nil, maxBatchRecords, maxRequestBytes)
 		require.NoError(t, err)
 		require.Empty(t, chunks)
 	})

@@ -25,11 +25,10 @@ var sampleConfig string
 const (
 	// Zerobus caps a request at 10 MiB and 100k records, so the plugin splits
 	// batches along the protocol limits instead of the agent's metric_batch_size.
+	// The byte budget applies to all records of a request together and reserves
+	// headroom for the surrounding request fields.
 	maxBatchRecords = 100_000
-	maxPayloadBytes = 10*1024*1024 - 64*1024
-	// Bytes left for records after reserving headroom for the surrounding
-	// request fields.
-	maxRecordBytes = maxPayloadBytes - 1024
+	maxRequestBytes = 10*1024*1024 - 64*1024 - 1024
 )
 
 // Zerobus writes metrics to a Databricks table.
@@ -123,7 +122,7 @@ func (z *Zerobus) Write(metrics []telegraf.Metric) error {
 		return result
 	}
 
-	chunks, err := chunkRecords(records, maxBatchRecords, maxRecordBytes)
+	chunks, err := chunkRecords(records, maxBatchRecords, maxRequestBytes)
 	if err != nil {
 		return err
 	}
@@ -231,9 +230,9 @@ func (z *Zerobus) serializeMetrics(metrics []telegraf.Metric) ([][]byte, error) 
 			writeErr.MetricsRejectErrors = append(writeErr.MetricsRejectErrors, err)
 			continue
 		}
-		if size := recordSize(record); size > maxRecordBytes {
+		if size := recordSize(record); size > maxRequestBytes {
 			writeErr.MetricsReject = append(writeErr.MetricsReject, i)
-			err := fmt.Errorf("serialized metric requires %d bytes, exceeding the request limit of %d bytes", size, maxRecordBytes)
+			err := fmt.Errorf("serialized metric requires %d bytes, exceeding the request limit of %d bytes", size, maxRequestBytes)
 			writeErr.MetricsRejectErrors = append(writeErr.MetricsRejectErrors, err)
 			continue
 		}
