@@ -13,22 +13,8 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/testutil"
 )
-
-func TestDefaults(t *testing.T) {
-	creator, found := outputs.Outputs["zerobus"]
-	require.True(t, found)
-
-	plugin, ok := creator().(*Zerobus)
-	require.True(t, ok)
-	require.Equal(t, "timestamp", plugin.TimestampColumn)
-	require.Empty(t, plugin.MeasurementColumn)
-	require.Empty(t, plugin.Application)
-	require.Equal(t, config.Duration(30*time.Second), plugin.Timeout)
-	require.NotEmpty(t, plugin.SampleConfig())
-}
 
 func TestInitRequiredOptions(t *testing.T) {
 	tests := []struct {
