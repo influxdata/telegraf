@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"bytes"
 	_ "embed"
+	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -53,6 +54,40 @@ type WinEventLog struct {
 	tagFilter        filter.Filter
 	fieldFilter      filter.Filter
 	fieldEmptyFilter filter.Filter
+
+	// Internal flags
+	atChannelStart bool
+}
+
+// persistedState is what the plugin stores between runs. Earlier Telegraf versions persisted the bookmark
+// XML as a plain string, which UnmarshalJSON still accepts.
+type persistedState struct {
+	Bookmark string `json:"bookmark"`
+
+	// AtChannelStart marks a bookmark that holds no position because the query had not matched any event
+	// yet, i.e. we left at the beginning of the stream. A positionless bookmark on its own does not tell
+	// us that, so the two must not be treated alike.
+	AtChannelStart bool `json:"at_channel_start"`
+}
+
+// UnmarshalJSON restores the state, accepting the plain bookmark string persisted by earlier Telegraf
+// versions as a state without the marker.
+func (s *persistedState) UnmarshalJSON(data []byte) error {
+	var bookmarkXML string
+	if err := json.Unmarshal(data, &bookmarkXML); err == nil {
+		s.Bookmark = bookmarkXML
+		return nil
+	}
+
+	// Alias the type to not recurse into this method
+	type state persistedState
+	var restored state
+	if err := json.Unmarshal(data, &restored); err != nil {
+		return err
+	}
+	*s = persistedState(restored)
+
+	return nil
 }
 
 func (*WinEventLog) SampleConfig() string {
@@ -117,39 +152,52 @@ func (w *WinEventLog) GetState() interface{} {
 	bookmarkXML, err := w.renderBookmark()
 	if err != nil {
 		w.Log.Errorf("State-persistence failed, cannot render bookmark: %v", err)
-		return ""
+		return persistedState{}
 	}
-	return bookmarkXML
+
+	positioned, err := bookmarkPositioned(bookmarkXML)
+	if err != nil {
+		w.Log.Errorf("State-persistence failed, cannot parse bookmark: %v", err)
+		return persistedState{}
+	}
+
+	return persistedState{Bookmark: bookmarkXML, AtChannelStart: !positioned && w.atChannelStart}
 }
 
 func (w *WinEventLog) SetState(state interface{}) error {
-	bookmarkXML, ok := state.(string)
+	restored, ok := state.(persistedState)
 	if !ok {
 		return fmt.Errorf("invalid type %T for state", state)
 	}
 
 	// An empty state is what GetState returns if rendering the bookmark failed.
-	if bookmarkXML == "" {
+	if restored.Bookmark == "" {
 		return nil
 	}
 
-	// Bookmarks are only advanced for events we actually received, so a run that saw no event renders as a
-	// well-formed but positionless bookmark list. Passing such a bookmark to EvtSubscribe together with
-	// evtSubscribeStartAfterBookmark makes Windows start at the channel's oldest record and replay its whole
-	// history. As it carries no more information than no state at all, keep the bookmark and the subscription
-	// flag Init derived from from_beginning instead.
-	var bookmarkList struct {
-		Bookmarks []struct{} `xml:"Bookmark"`
-	}
-	if err := xml.Unmarshal([]byte(bookmarkXML), &bookmarkList); err != nil {
+	positioned, err := bookmarkPositioned(restored.Bookmark)
+	if err != nil {
 		return fmt.Errorf("unmarshalling bookmark failed: %w", err)
 	}
-	if len(bookmarkList.Bookmarks) == 0 {
-		w.Log.Debug("Restored bookmark holds no position, keeping the configured subscription start")
+
+	// Passing a positionless bookmark to EvtSubscribe together with evtSubscribeStartAfterBookmark makes
+	// Windows start at the channel's oldest record and replay its whole history. Such a bookmark is only
+	// known to be the beginning of the stream if the state says so, and then that is where we continue.
+	// Without the marker, as written by earlier Telegraf versions, it carries no more information than no
+	// state at all, so keep the subscription flag Init derived from from_beginning instead.
+	if !positioned {
+		if !restored.AtChannelStart {
+			w.Log.Debug("Restored bookmark holds no position, keeping the configured subscription start")
+			return nil
+		}
+
+		w.atChannelStart = true
+		w.subscriptionFlag = evtSubscribeStartAtOldestRecord
+
 		return nil
 	}
 
-	ptr, err := syscall.UTF16PtrFromString(bookmarkXML)
+	ptr, err := syscall.UTF16PtrFromString(restored.Bookmark)
 	if err != nil {
 		return fmt.Errorf("conversion to pointer failed: %w", err)
 	}
@@ -357,11 +405,19 @@ func (w *WinEventLog) evtSubscribe() (evtHandle, error) {
 	// Without an anchor the bookmark stays positionless until the first event arrives, so a state file written by
 	// a quiet run cannot resume anything and events showing up while Telegraf is stopped are lost on the next
 	// start. Anchoring costs nothing for the current run, as starting after the newest event collects the same
-	// events as subscribing to the future ones. Falling back to the configured start point on failure is safe,
-	// because that is the behavior without an anchor, and the subscription below reports a broken channel anyway.
+	// events as subscribing to the future ones. A channel without a matching event has no position to anchor to,
+	// but knowing that we start at its beginning is what lets the next run continue there. Falling back to the
+	// configured start point on failure is safe, because that is the behavior without an anchor, and the
+	// subscription below reports a broken channel anyway.
 	if w.subscriptionFlag == evtSubscribeToFutureEvents {
-		if err := w.anchorBookmark(); err != nil {
+		anchored, err := w.anchorBookmark()
+		switch {
+		case err != nil:
 			w.Log.Warnf("Anchoring bookmark to the newest event failed: %v", err)
+		case anchored:
+			w.subscriptionFlag = evtSubscribeStartAfterBookmark
+		default:
+			w.atChannelStart = true
 		}
 	}
 
@@ -377,26 +433,26 @@ func (w *WinEventLog) evtSubscribe() (evtHandle, error) {
 	return subsHandle, nil
 }
 
-// anchorBookmark points the bookmark at the newest event currently matching the query and switches the
-// subscription to start after it. A channel without any matching event leaves both untouched.
-func (w *WinEventLog) anchorBookmark() error {
+// anchorBookmark points the bookmark at the newest event currently matching the query and reports whether it
+// did so. A channel without any matching event leaves the bookmark untouched.
+func (w *WinEventLog) anchorBookmark() (bool, error) {
 	// EvtQuery expects a NULL channel when the query names the channels itself
 	var logNamePtr *uint16
 	if w.EventlogName != "" {
 		var err error
 		if logNamePtr, err = syscall.UTF16PtrFromString(w.EventlogName); err != nil {
-			return err
+			return false, err
 		}
 	}
 
 	xqueryPtr, err := syscall.UTF16PtrFromString(w.Query)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	queryHandle, err := evtQuery(0, logNamePtr, xqueryPtr, evtQueryChannelPath|evtQueryReverseDirection)
 	if err != nil {
-		return fmt.Errorf("querying eventlog failed: %w", err)
+		return false, fmt.Errorf("querying eventlog failed: %w", err)
 	}
 	//nolint:errcheck // ending the query, error can be ignored
 	defer evtClose(queryHandle)
@@ -405,22 +461,35 @@ func (w *WinEventLog) anchorBookmark() error {
 	var returned uint32
 	if err := evtNext(queryHandle, 1, &eventHandle, 0, 0, &returned); err != nil {
 		if errors.Is(err, errNoMoreItems) || errors.Is(err, errInvalidOperation) {
-			return nil
+			return false, nil
 		}
-		return fmt.Errorf("getting newest event failed: %w", err)
+		return false, fmt.Errorf("getting newest event failed: %w", err)
 	}
 	if returned == 0 || eventHandle == 0 {
-		return nil
+		return false, nil
 	}
 	//nolint:errcheck // ending the event, error can be ignored
 	defer evtClose(eventHandle)
 
 	if err := evtUpdateBookmark(w.bookmark, eventHandle); err != nil {
-		return fmt.Errorf("updating bookmark failed: %w", err)
+		return false, fmt.Errorf("updating bookmark failed: %w", err)
 	}
-	w.subscriptionFlag = evtSubscribeStartAfterBookmark
 
-	return nil
+	return true, nil
+}
+
+// bookmarkPositioned reports whether a rendered bookmark holds a position. Bookmarks are only advanced for
+// events we actually received, so a run that saw neither an event nor an anchor renders as a well-formed but
+// empty bookmark list.
+func bookmarkPositioned(bookmarkXML string) (bool, error) {
+	var bookmarkList struct {
+		Bookmarks []struct{} `xml:"Bookmark"`
+	}
+	if err := xml.Unmarshal([]byte(bookmarkXML), &bookmarkList); err != nil {
+		return false, err
+	}
+
+	return len(bookmarkList.Bookmarks) > 0, nil
 }
 
 func (w *WinEventLog) fetchEventHandles(subsHandle evtHandle) ([]evtHandle, error) {

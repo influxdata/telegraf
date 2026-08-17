@@ -3,6 +3,7 @@
 package win_eventlog
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,34 +14,41 @@ import (
 func TestSetStateBookmark(t *testing.T) {
 	tests := []struct {
 		name         string
-		state        string
+		state        persistedState
 		expectedFlag evtSubscribeFlag
 		expectedErr  string
 	}{
 		{
 			name:         "no state",
-			state:        "",
+			state:        persistedState{},
 			expectedFlag: evtSubscribeToFutureEvents,
 		},
 		{
-			// What a run that received no event persists
+			// What earlier Telegraf versions persist for a run that received no event
 			name:         "bookmark without position",
-			state:        "<BookmarkList>\r\n</BookmarkList>",
+			state:        persistedState{Bookmark: "<BookmarkList>\r\n</BookmarkList>"},
 			expectedFlag: evtSubscribeToFutureEvents,
 		},
 		{
 			name:         "empty bookmark list",
-			state:        "<BookmarkList/>",
+			state:        persistedState{Bookmark: "<BookmarkList/>"},
 			expectedFlag: evtSubscribeToFutureEvents,
 		},
 		{
-			name:         "bookmark with position",
-			state:        "<BookmarkList>\r\n  <Bookmark Channel='Application' RecordId='1' IsCurrent='true'/>\r\n</BookmarkList>",
+			name:         "bookmark without position at the channel start",
+			state:        persistedState{Bookmark: "<BookmarkList>\r\n</BookmarkList>", AtChannelStart: true},
+			expectedFlag: evtSubscribeStartAtOldestRecord,
+		},
+		{
+			name: "bookmark with position",
+			state: persistedState{
+				Bookmark: "<BookmarkList>\r\n  <Bookmark Channel='Application' RecordId='1' IsCurrent='true'/>\r\n</BookmarkList>",
+			},
 			expectedFlag: evtSubscribeStartAfterBookmark,
 		},
 		{
 			name:        "malformed bookmark",
-			state:       "<BookmarkList>",
+			state:       persistedState{Bookmark: "<BookmarkList>"},
 			expectedErr: "unmarshalling bookmark failed",
 		},
 	}
@@ -66,8 +74,43 @@ func TestSetStateBookmarkFromBeginning(t *testing.T) {
 	require.NoError(t, plugin.Init())
 	require.Equal(t, evtSubscribeStartAtOldestRecord, plugin.subscriptionFlag)
 
-	require.NoError(t, plugin.SetState("<BookmarkList>\r\n</BookmarkList>"))
+	require.NoError(t, plugin.SetState(persistedState{Bookmark: "<BookmarkList>\r\n</BookmarkList>"}))
 	require.Equal(t, evtSubscribeStartAtOldestRecord, plugin.subscriptionFlag)
+}
+
+func TestSetStateInvalidType(t *testing.T) {
+	plugin := &WinEventLog{EventlogName: "Application", Log: testutil.Logger{}}
+	require.NoError(t, plugin.Init())
+
+	require.ErrorContains(t, plugin.SetState("<BookmarkList/>"), "invalid type string for state")
+}
+
+func TestStateUnmarshal(t *testing.T) {
+	tests := []struct {
+		name       string
+		serialized string
+		expected   persistedState
+	}{
+		{
+			// What earlier Telegraf versions write
+			name:       "plain bookmark",
+			serialized: `"<BookmarkList/>"`,
+			expected:   persistedState{Bookmark: "<BookmarkList/>"},
+		},
+		{
+			name:       "bookmark and marker",
+			serialized: `{"bookmark":"<BookmarkList/>","at_channel_start":true}`,
+			expected:   persistedState{Bookmark: "<BookmarkList/>", AtChannelStart: true},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var state persistedState
+			require.NoError(t, json.Unmarshal([]byte(tt.serialized), &state))
+			require.Equal(t, tt.expected, state)
+		})
+	}
 }
 
 func TestStartAnchorsBookmark(t *testing.T) {
@@ -79,7 +122,11 @@ func TestStartAnchorsBookmark(t *testing.T) {
 	defer plugin.Stop()
 
 	require.Equal(t, evtSubscribeStartAfterBookmark, plugin.subscriptionFlag)
-	require.Contains(t, plugin.GetState(), "<Bookmark ")
+
+	state, ok := plugin.GetState().(persistedState)
+	require.True(t, ok)
+	require.Contains(t, state.Bookmark, "<Bookmark ")
+	require.False(t, state.AtChannelStart)
 }
 
 func TestStartWithoutMatchingEvent(t *testing.T) {
@@ -95,6 +142,17 @@ func TestStartWithoutMatchingEvent(t *testing.T) {
 	defer plugin.Stop()
 
 	require.Equal(t, evtSubscribeToFutureEvents, plugin.subscriptionFlag)
+
+	state, ok := plugin.GetState().(persistedState)
+	require.True(t, ok)
+	require.NotContains(t, state.Bookmark, "<Bookmark ")
+	require.True(t, state.AtChannelStart)
+
+	// Restoring that state continues where the quiet run left, i.e. at the beginning of the channel
+	restarted := &WinEventLog{EventlogName: "Application", Query: plugin.Query, Log: testutil.Logger{}}
+	require.NoError(t, restarted.Init())
+	require.NoError(t, restarted.SetState(state))
+	require.Equal(t, evtSubscribeStartAtOldestRecord, restarted.subscriptionFlag)
 }
 
 func TestWinEventLog_shouldExcludeEmptyField(t *testing.T) {
