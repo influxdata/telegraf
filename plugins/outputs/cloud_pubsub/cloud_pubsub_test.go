@@ -56,10 +56,11 @@ func TestPubSub_WriteSingle(t *testing.T) {
 
 	expected := map[string]string{
 		"value_1": "test,tag1=value1 value=\"value_1\" 1257894000000000000\n",
-		"value_2": "test,tag1=value1 value=\"value_2\" 1257894000000000000\n",
 	}
-	for name, msg := range tpc.published {
-		require.Equalf(t, expected[name], string(msg.Data), "mismatch for %q", name)
+	for name, e := range expected {
+		msg := tpc.published[name]
+		require.NotNil(t, msg)
+		require.Equalf(t, e, string(msg.Data), "mismatch for %q", name)
 	}
 }
 
@@ -100,14 +101,15 @@ func TestPubSub_WriteWithAttribute(t *testing.T) {
 
 	expected := map[string]string{
 		"value_1": "test,tag1=value1 value=\"value_1\" 1257894000000000000\n",
-		"value_2": "test,tag1=value1 value=\"value_2\" 1257894000000000000\n",
 	}
 	expectedAttr := map[string]string{
 		"foo1": "bar1",
 		"foo2": "bar2",
 	}
-	for name, msg := range tpc.published {
-		require.Equalf(t, expected[name], string(msg.Data), "mismatch for %q", name)
+	for name, e := range expected {
+		msg := tpc.published[name]
+		require.NotNil(t, msg)
+		require.Equalf(t, e, string(msg.Data), "mismatch for %q", name)
 		require.Equalf(t, expectedAttr, msg.Attributes, "attribute mismatch for %q", name)
 	}
 }
@@ -151,8 +153,10 @@ func TestPubSub_WriteMultiple(t *testing.T) {
 		"value_1": "test,tag1=value1 value=\"value_1\" 1257894000000000000\n",
 		"value_2": "test,tag1=value1 value=\"value_2\" 1257894000000000000\n",
 	}
-	for name, msg := range tpc.published {
-		require.Equalf(t, expected[name], string(msg.Data), "mismatch for %q", name)
+	for name, e := range expected {
+		msg := tpc.published[name]
+		require.NotNil(t, msg)
+		require.Equalf(t, e, string(msg.Data), "mismatch for %q", name)
 	}
 	require.EqualValues(t, 1, tpc.bundleCount.Load(), "unexpected bundle count")
 }
@@ -200,8 +204,10 @@ func TestPubSub_WriteOverCountThreshold(t *testing.T) {
 		"value_3": "test,tag1=value1 value=\"value_3\" 1257894000000000000\n",
 		"value_4": "test,tag1=value1 value=\"value_4\" 1257894000000000000\n",
 	}
-	for name, msg := range tpc.published {
-		require.Equalf(t, expected[name], string(msg.Data), "mismatch for %q", name)
+	for name, e := range expected {
+		msg := tpc.published[name]
+		require.NotNil(t, msg)
+		require.Equalf(t, e, string(msg.Data), "mismatch for %q", name)
 	}
 	require.EqualValues(t, 2, tpc.bundleCount.Load(), "unexpected bundle count")
 }
@@ -245,8 +251,10 @@ func TestPubSub_WriteOverByteThreshold(t *testing.T) {
 		"value_1": "test,tag1=value1 value=\"value_1\" 1257894000000000000\n",
 		"value_2": "test,tag1=value1 value=\"value_2\" 1257894000000000000\n",
 	}
-	for name, msg := range tpc.published {
-		require.Equalf(t, expected[name], string(msg.Data), "mismatch for %q", name)
+	for name, e := range expected {
+		msg := tpc.published[name]
+		require.NotNil(t, msg)
+		require.Equalf(t, e, string(msg.Data), "mismatch for %q", name)
 	}
 	require.EqualValues(t, 2, tpc.bundleCount.Load(), "unexpected bundle count")
 }
@@ -292,8 +300,10 @@ func TestPubSub_WriteBase64Single(t *testing.T) {
 		"value_1": "dGVzdCx0YWcxPXZhbHVlMSB2YWx1ZT0idmFsdWVfMSIgMTI1Nzg5NDAwMDAwMDAwMDAwMAo=",
 		"value_2": "dGVzdCx0YWcxPXZhbHVlMSB2YWx1ZT0idmFsdWVfMiIgMTI1Nzg5NDAwMDAwMDAwMDAwMAo=",
 	}
-	for name, msg := range tpc.published {
-		require.Equalf(t, expected[name], string(msg.Data), "mismatch for %q", name)
+	for name, e := range expected {
+		msg := tpc.published[name]
+		require.NotNil(t, msg)
+		require.Equalf(t, e, string(msg.Data), "mismatch for %q", name)
 	}
 }
 
@@ -372,8 +382,10 @@ func TestPubSub_WriteGzipSingle(t *testing.T) {
 		"value_1": "1f8b080000096e8800ff003500caff746573742c746167313d76616c7565312076616c75653d2276616c75655f312220313235373839343030303030303030303030300a03001da5187935000000",
 		"value_2": "1f8b080000096e8800ff003500caff746573742c746167313d76616c7565312076616c75653d2276616c75655f322220313235373839343030303030303030303030300a0300209cfd0f35000000",
 	}
-	for name, msg := range tpc.published {
-		require.Equalf(t, expected[name], hex.EncodeToString(msg.Data), "mismatch for %q", name)
+	for name, e := range expected {
+		msg := tpc.published[name]
+		require.NotNil(t, msg)
+		require.Equalf(t, e, hex.EncodeToString(msg.Data), "mismatch for %q", name)
 	}
 }
 
@@ -419,8 +431,10 @@ func TestPubSub_WriteGzipAndBase64Single(t *testing.T) {
 		"value_1": "1f8b080000096e8800ff004800b7ff6447567a644378305957637850585a686248566c4d534232595778315a543069646d4673645756664d5349674d5449314e7a67354e4441774d4441774d4441774d4441774d416f3d03005ec5b25d48000000",
 		"value_2": "1f8b080000096e8800ff004800b7ff6447567a644378305957637850585a686248566c4d534232595778315a543069646d4673645756664d6949674d5449314e7a67354e4441774d4441774d4441774d4441774d416f3d030005c3b0de48000000",
 	}
-	for name, msg := range tpc.published {
-		require.Equalf(t, expected[name], hex.EncodeToString(msg.Data), "mismatch for %q", name)
+	for name, e := range expected {
+		msg := tpc.published[name]
+		require.NotNil(t, msg)
+		require.Equalf(t, e, hex.EncodeToString(msg.Data), "mismatch for %q", name)
 	}
 }
 
@@ -438,12 +452,11 @@ type stubResult struct {
 }
 
 type stubTopic struct {
-	Settings  pubsub.PublishSettings
-	ReturnErr map[string]bool
-	telegraf.Parser
-	*testing.T
+	Settings        pubsub.PublishSettings
+	ReturnErr       map[string]bool
 	Base64Data      bool
 	ContentEncoding string
+	*testing.T
 
 	stopped bool
 	pLock   sync.Mutex
@@ -528,6 +541,7 @@ func (t *stubTopic) sendBundle() func(items interface{}) {
 		defer t.bLock.Unlock()
 
 		bundled := items.([]*bundledMsg)
+		t.bundleCount.Add(1)
 
 		for _, msg := range bundled {
 			r := msg.stubResult
@@ -541,33 +555,24 @@ func (t *stubTopic) sendBundle() func(items interface{}) {
 				r.done <- struct{}{}
 			}
 		}
-
-		t.bundleCount.Add(1)
 	}
 }
 
 func (t *stubTopic) parseIDs(msg *pubsub.Message) []string {
 	p := influx.Parser{}
-	err := p.Init()
-	require.NoError(t, err)
+	require.NoError(t, p.Init())
 
 	decoder, err := internal.NewContentDecoder(t.ContentEncoding)
 	require.NoError(t, err)
 	d, err := decoder.Decode(msg.Data)
-	if err != nil {
-		t.Errorf("unable to decode message: %v", err)
-	}
+	require.NoError(t, err)
 	if t.Base64Data {
 		strData, err := base64.StdEncoding.DecodeString(string(d))
-		if err != nil {
-			t.Errorf("unable to base64 decode message: %v", err)
-		}
+		require.NoError(t, err)
 		d = strData
 	}
 	metrics, err := p.Parse(d)
-	if err != nil {
-		t.Fatalf("unexpected parsing error: %v", err)
-	}
+	require.NoError(t, err)
 
 	ids := make([]string, 0, len(metrics))
 	for _, met := range metrics {
