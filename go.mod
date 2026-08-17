@@ -194,7 +194,7 @@ require (
 	github.com/robinson/gos7 v0.0.0-20240315073918-1f14519e4846
 	github.com/safchain/ethtool v0.7.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
-	github.com/seancfoley/ipaddress-go v1.7.1
+	github.com/seancfoley/ipaddress-go v1.8.3
 	github.com/sensu/sensu-go/api/core/v2 v2.16.0
 	github.com/shirou/gopsutil/v4 v4.26.7
 	github.com/showwin/speedtest-go v1.7.11
@@ -539,7 +539,7 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/samber/lo v1.53.0 // indirect
-	github.com/seancfoley/bintree v1.3.1 // indirect
+	github.com/seancfoley/bintree v1.4.0 // indirect
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/signalfx/com_signalfx_metrics_protobuf v0.0.3 // indirect
