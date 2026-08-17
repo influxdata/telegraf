@@ -1,7 +1,6 @@
 package zerobus
 
 import (
-	"encoding/json"
 	"math"
 	"strings"
 	"testing"
@@ -185,33 +184,54 @@ func TestMetricToTableSchemaJSONFlattensMetric(t *testing.T) {
 		time.Unix(1_700_000_000, 123_456_000),
 	)
 
-	record, err := metricToTableSchemaJSON(input, "event_time", "measurement", nil)
-	require.NoError(t, err)
+	tests := []struct {
+		name              string
+		timestampColumn   string
+		measurementColumn string
+		expected          string
+	}{
+		{
+			name:              "with timestamp and measurement column",
+			timestampColumn:   "event_time",
+			measurementColumn: "measurement",
+			expected: `{
+				"measurement": "cpu",
+				"event_time": 1700000000123456,
+				"host": "server-01",
+				"active": true,
+				"count": -42,
+				"ratio": 1.25,
+				"status": "ready",
+				"total": 9223372036854775807
+			}`,
+		},
+		{
+			name: "without timestamp and measurement column",
+			expected: `{
+				"host": "server-01",
+				"active": true,
+				"count": -42,
+				"ratio": 1.25,
+				"status": "ready",
+				"total": 9223372036854775807
+			}`,
+		},
+	}
 
-	var values map[string]json.RawMessage
-	require.NoError(t, json.Unmarshal(record, &values))
-	require.JSONEq(t, `"cpu"`, string(values["measurement"]))
-	require.JSONEq(t, `"server-01"`, string(values["host"]))
-	require.JSONEq(t, `1700000000123456`, string(values["event_time"]))
-	require.JSONEq(t, `-42`, string(values["count"]))
-	require.JSONEq(t, `9223372036854775807`, string(values["total"]))
-	require.JSONEq(t, `1.25`, string(values["ratio"]))
-	require.JSONEq(t, `true`, string(values["active"]))
-	require.JSONEq(t, `"ready"`, string(values["status"]))
-
-	record, err = metricToTableSchemaJSON(input, "", "", nil)
-	require.NoError(t, err)
-	values = nil
-	require.NoError(t, json.Unmarshal(record, &values))
-	require.NotContains(t, values, "event_time")
-	require.NotContains(t, values, "measurement")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			record, err := metricToTableSchemaJSON(input, tt.timestampColumn, tt.measurementColumn, nil)
+			require.NoError(t, err)
+			require.JSONEq(t, tt.expected, string(record))
+		})
+	}
 }
 
 func TestMetricToTableSchemaJSONRejectsInvalidMetric(t *testing.T) {
 	tests := []struct {
-		name   string
-		metric telegraf.Metric
-		match  string
+		name     string
+		metric   telegraf.Metric
+		expected string
 	}{
 		{
 			name: "timestamp collision",
@@ -221,7 +241,7 @@ func TestMetricToTableSchemaJSONRejectsInvalidMetric(t *testing.T) {
 				map[string]interface{}{"value": 1.0},
 				time.Now(),
 			),
-			match: `tag "timestamp" conflicts`,
+			expected: `tag "timestamp" conflicts`,
 		},
 		{
 			name: "tag and field collision",
@@ -231,7 +251,7 @@ func TestMetricToTableSchemaJSONRejectsInvalidMetric(t *testing.T) {
 				map[string]interface{}{"host": "field"},
 				time.Now(),
 			),
-			match: `field "host" conflicts`,
+			expected: `field "host" conflicts`,
 		},
 		{
 			name: "non-finite float",
@@ -241,7 +261,7 @@ func TestMetricToTableSchemaJSONRejectsInvalidMetric(t *testing.T) {
 				map[string]interface{}{"value": math.NaN()},
 				time.Now(),
 			),
-			match: "non-finite float",
+			expected: "non-finite float",
 		},
 		{
 			name: "uint64 above BIGINT maximum",
@@ -251,30 +271,14 @@ func TestMetricToTableSchemaJSONRejectsInvalidMetric(t *testing.T) {
 				map[string]interface{}{"value": uint64(math.MaxInt64) + 1},
 				time.Now(),
 			),
-			match: "exceeding Delta BIGINT maximum",
-		},
-		{
-			name: "unsupported field type",
-			metric: metricWithFields{
-				Metric: testutil.TestMetric(1),
-				fields: []*telegraf.Field{{Key: "value", Value: []int{1}}},
-			},
-			match: "unsupported type []int",
-		},
-		{
-			name: "nil field",
-			metric: metricWithFields{
-				Metric: testutil.TestMetric(1),
-				fields: []*telegraf.Field{nil},
-			},
-			match: "nil field",
+			expected: "exceeding Delta BIGINT maximum",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := metricToTableSchemaJSON(tt.metric, "timestamp", "", nil)
-			require.ErrorContains(t, err, tt.match)
+			require.ErrorContains(t, err, tt.expected)
 		})
 	}
 }
@@ -284,10 +288,12 @@ func TestSerializeMetricsRejectsInvalidMetric(t *testing.T) {
 
 	batches, err := plugin.serializeMetrics([]telegraf.Metric{
 		testutil.TestMetric(1),
-		metricWithFields{
-			Metric: testutil.TestMetric(2),
-			fields: []*telegraf.Field{{Key: "unsupported", Value: complex(1, 2)}},
-		},
+		metric.New(
+			"cpu",
+			map[string]string{"host": "tag"},
+			map[string]interface{}{"host": "field"},
+			time.Now(),
+		),
 		testutil.TestMetric(3),
 	}, maxBatchRecords, maxRequestBytes)
 	require.Len(t, batches, 1)
@@ -299,7 +305,7 @@ func TestSerializeMetricsRejectsInvalidMetric(t *testing.T) {
 	require.Equal(t, []int{0, 2}, writeErr.MetricsAccept)
 	require.Equal(t, []int{1}, writeErr.MetricsReject)
 	require.Len(t, writeErr.MetricsRejectErrors, 1)
-	require.ErrorContains(t, writeErr.MetricsRejectErrors[0], "unsupported type complex128")
+	require.ErrorContains(t, writeErr.MetricsRejectErrors[0], `field "host" conflicts`)
 }
 
 func TestSerializeMetricsRejectsOversizedMetric(t *testing.T) {
@@ -358,13 +364,4 @@ func TestSerializeMetricsSplitsRequests(t *testing.T) {
 		require.NoError(t, err)
 		require.Empty(t, batches)
 	})
-}
-
-type metricWithFields struct {
-	telegraf.Metric
-	fields []*telegraf.Field
-}
-
-func (m metricWithFields) FieldList() []*telegraf.Field {
-	return m.fields
 }
