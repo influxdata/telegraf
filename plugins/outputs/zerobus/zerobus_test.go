@@ -18,78 +18,157 @@ import (
 
 func TestInitRequiredOptions(t *testing.T) {
 	tests := []struct {
-		name   string
-		mutate func(*Zerobus)
-		option string
+		name      string
+		endpoint  string
+		workspace string
+		table     string
+		clientID  string
+		secret    string
+		expected  string
 	}{
 		{
-			name:   "endpoint",
-			mutate: func(z *Zerobus) { z.Endpoint = "" },
-			option: "endpoint",
+			name:      "missing endpoint",
+			workspace: "https://workspace.example.com",
+			table:     "catalog.schema.metrics",
+			clientID:  "client",
+			secret:    "secret",
+			expected:  `option "endpoint" must be set`,
 		},
 		{
-			name:   "workspace",
-			mutate: func(z *Zerobus) { z.Workspace = "" },
-			option: "workspace",
+			name:     "missing workspace",
+			endpoint: "https://workspace.zerobus.example.com",
+			table:    "catalog.schema.metrics",
+			clientID: "client",
+			secret:   "secret",
+			expected: `option "workspace" must be set`,
 		},
 		{
-			name:   "table",
-			mutate: func(z *Zerobus) { z.Table = "" },
-			option: "table",
+			name:      "missing table",
+			endpoint:  "https://workspace.zerobus.example.com",
+			workspace: "https://workspace.example.com",
+			clientID:  "client",
+			secret:    "secret",
+			expected:  `option "table" must be set`,
 		},
 		{
-			name:   "client ID",
-			mutate: func(z *Zerobus) { z.ClientID = "" },
-			option: "client_id",
+			name:      "missing client ID",
+			endpoint:  "https://workspace.zerobus.example.com",
+			workspace: "https://workspace.example.com",
+			table:     "catalog.schema.metrics",
+			secret:    "secret",
+			expected:  `option "client_id" must be set`,
 		},
 		{
-			name:   "client secret",
-			mutate: func(z *Zerobus) { z.ClientSecret = config.Secret{} },
-			option: "client_secret",
+			name:      "missing client secret",
+			endpoint:  "https://workspace.zerobus.example.com",
+			workspace: "https://workspace.example.com",
+			table:     "catalog.schema.metrics",
+			clientID:  "client",
+			expected:  `option "client_secret" must be set`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			plugin := validPlugin()
-			tt.mutate(plugin)
-			require.ErrorContains(t, plugin.Init(), tt.option)
+			plugin := &Zerobus{
+				Endpoint:     tt.endpoint,
+				Workspace:    tt.workspace,
+				Table:        tt.table,
+				ClientID:     tt.clientID,
+				ClientSecret: config.NewSecret([]byte(tt.secret)),
+				Log:          testutil.Logger{},
+			}
+			require.ErrorContains(t, plugin.Init(), tt.expected)
 		})
 	}
 }
 
-func TestInitColumnOptions(t *testing.T) {
-	t.Run("allows a zero timeout", func(t *testing.T) {
-		plugin := validPlugin()
-		plugin.Timeout = 0
-		require.NoError(t, plugin.Init())
-		require.Equal(t, config.Duration(0), plugin.Timeout)
-	})
+func TestInitTimeout(t *testing.T) {
+	tests := []struct {
+		name     string
+		timeout  config.Duration
+		expected string
+	}{
+		{
+			name: "keeps a zero timeout",
+		},
+		{
+			name:    "keeps the configured timeout",
+			timeout: config.Duration(30 * time.Second),
+		},
+		{
+			name:     "rejects a negative timeout",
+			timeout:  config.Duration(-1),
+			expected: `option "timeout" cannot be negative`,
+		},
+	}
 
-	t.Run("rejects a negative timeout", func(t *testing.T) {
-		plugin := validPlugin()
-		plugin.Timeout = -1
-		require.ErrorContains(t, plugin.Init(), "timeout")
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &Zerobus{
+				Endpoint:        "https://workspace.zerobus.example.com",
+				Workspace:       "https://workspace.example.com",
+				Table:           "catalog.schema.metrics",
+				ClientID:        "client",
+				ClientSecret:    config.NewSecret([]byte("secret")),
+				TimestampColumn: "timestamp",
+				Timeout:         tt.timeout,
+				Log:             testutil.Logger{},
+			}
 
-	t.Run("allows an omitted timestamp column", func(t *testing.T) {
-		plugin := validPlugin()
-		plugin.TimestampColumn = ""
-		require.NoError(t, plugin.Init())
-	})
+			if tt.expected != "" {
+				require.ErrorContains(t, plugin.Init(), tt.expected)
+				return
+			}
+			require.NoError(t, plugin.Init())
+			require.Equal(t, tt.timeout, plugin.Timeout)
+		})
+	}
+}
 
-	t.Run("allows both timestamp and measurement columns to be empty", func(t *testing.T) {
-		plugin := validPlugin()
-		plugin.TimestampColumn = ""
-		plugin.MeasurementColumn = ""
-		require.NoError(t, plugin.Init())
-	})
+func TestInitColumns(t *testing.T) {
+	tests := []struct {
+		name              string
+		timestampColumn   string
+		measurementColumn string
+		expected          string
+	}{
+		{
+			name:              "allows an omitted timestamp column",
+			measurementColumn: "measurement",
+		},
+		{
+			name: "allows omitting both columns",
+		},
+		{
+			name:              "rejects colliding columns",
+			timestampColumn:   "timestamp",
+			measurementColumn: "timestamp",
+			expected:          `options "measurement_column" and "timestamp_column" must be different`,
+		},
+	}
 
-	t.Run("rejects colliding columns", func(t *testing.T) {
-		plugin := validPlugin()
-		plugin.MeasurementColumn = plugin.TimestampColumn
-		require.ErrorContains(t, plugin.Init(), "must be different")
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &Zerobus{
+				Endpoint:          "https://workspace.zerobus.example.com",
+				Workspace:         "https://workspace.example.com",
+				Table:             "catalog.schema.metrics",
+				ClientID:          "client",
+				ClientSecret:      config.NewSecret([]byte("secret")),
+				TimestampColumn:   tt.timestampColumn,
+				MeasurementColumn: tt.measurementColumn,
+				Timeout:           config.Duration(30 * time.Second),
+				Log:               testutil.Logger{},
+			}
+
+			if tt.expected != "" {
+				require.ErrorContains(t, plugin.Init(), tt.expected)
+				return
+			}
+			require.NoError(t, plugin.Init())
+		})
+	}
 }
 
 func TestMetricToTableSchemaJSONFlattensMetric(t *testing.T) {
@@ -201,8 +280,7 @@ func TestMetricToTableSchemaJSONRejectsInvalidMetric(t *testing.T) {
 }
 
 func TestSerializeMetricsRejectsInvalidMetric(t *testing.T) {
-	plugin := validPlugin()
-	require.NoError(t, plugin.Init())
+	plugin := &Zerobus{TimestampColumn: "timestamp", Log: testutil.Logger{}}
 
 	batches, err := plugin.serializeMetrics([]telegraf.Metric{
 		testutil.TestMetric(1),
@@ -225,8 +303,7 @@ func TestSerializeMetricsRejectsInvalidMetric(t *testing.T) {
 }
 
 func TestSerializeMetricsRejectsOversizedMetric(t *testing.T) {
-	plugin := validPlugin()
-	require.NoError(t, plugin.Init())
+	plugin := &Zerobus{TimestampColumn: "timestamp", Log: testutil.Logger{}}
 
 	oversized := metric.New(
 		"cpu",
@@ -244,8 +321,7 @@ func TestSerializeMetricsRejectsOversizedMetric(t *testing.T) {
 }
 
 func TestSerializeMetricsSplitsRequests(t *testing.T) {
-	plugin := validPlugin()
-	require.NoError(t, plugin.Init())
+	plugin := &Zerobus{TimestampColumn: "timestamp", Log: testutil.Logger{}}
 
 	metrics := []telegraf.Metric{testutil.TestMetric(1), testutil.TestMetric(2), testutil.TestMetric(3)}
 
@@ -282,20 +358,6 @@ func TestSerializeMetricsSplitsRequests(t *testing.T) {
 		require.NoError(t, err)
 		require.Empty(t, batches)
 	})
-}
-
-func validPlugin() *Zerobus {
-	return &Zerobus{
-		Endpoint:        "https://workspace.zerobus.example.com",
-		Workspace:       "https://workspace.example.com",
-		Table:           "catalog.schema.metrics",
-		ClientID:        "client",
-		ClientSecret:    config.NewSecret([]byte("secret")),
-		Application:     "telegraf",
-		TimestampColumn: "timestamp",
-		Timeout:         config.Duration(30 * time.Second),
-		Log:             testutil.Logger{},
-	}
 }
 
 type metricWithFields struct {
