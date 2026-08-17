@@ -337,9 +337,10 @@ func (s *state) parseDME(fields []*telemetry.TelemetryField, prefix string, tags
 		}
 	}
 
-	if len(rn) > 0 {
+	// Check for distinguished name being present
+	if rn != "" {
 		tags[prefix] = rn
-	} else if !dn { // Check for distinguished name being present
+	} else if !dn {
 		return []error{errors.New("failed while decoding NX-OS: missing 'dn' field")}
 	}
 
@@ -387,24 +388,26 @@ func (s *state) parseEvents(events []*telemetry.TelemetryField, prefix string, t
 func (s *state) parseNXRows(rows []*telemetry.TelemetryField, prefix string, tags map[string]string, timestamp time.Time) []error {
 	var errs []error
 
-	for _, row := range rows {
+	for i, row := range rows {
 		if len(row.Fields) == 0 {
 			continue
 		}
 
+		// First subfield contains the index, promote it from value to tag
 		tags[prefix] = decodeTag(row.Fields[0])
-		for i, field := range row.Fields {
-			if i == 0 { // First subfield contains the index, promote it from value to tag
-				// We can have subfield so recursively handle it.
-				if len(row.Fields) == 1 {
-					tags["row_number"] = strconv.FormatInt(int64(i), 10)
-					errs = append(errs, s.parseField(field, "", tags, timestamp)...)
-				}
-			} else {
-				errs = append(errs, s.parseField(field, "", tags, timestamp)...)
-			}
-			// Nxapi we can't identify keys always from prefix
-			tags["row_number"] = strconv.FormatInt(int64(i), 10)
+		tags["row_number"] = strconv.FormatInt(int64(i), 10)
+
+		// If we only have a single column in the row, add it as a field too
+		// to make sure the metric is emitted
+		if len(row.Fields) == 1 {
+			errs = append(errs, s.parseField(row.Fields[0], "", tags, timestamp)...)
+			delete(tags, prefix)
+			continue
+		}
+
+		// Add all other columns to the metric
+		for _, field := range row.Fields[1:] {
+			errs = append(errs, s.parseField(field, "", tags, timestamp)...)
 		}
 		delete(tags, prefix)
 	}
