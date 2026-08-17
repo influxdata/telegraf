@@ -91,6 +91,13 @@ func TestSetIfUsed(t *testing.T) {
 			value:    "Unknown Error",
 			expected: map[string]interface{}{},
 		},
+		{
+			name:     "deprecated value is skipped",
+			datatype: "str",
+			key:      "display_mode",
+			value:    "Requested functionality has been deprecated",
+			expected: map[string]interface{}{},
+		},
 	}
 
 	for _, tt := range tests {

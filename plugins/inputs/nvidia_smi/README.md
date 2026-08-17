@@ -115,6 +115,15 @@ Please include the output of this command if opening an GitHub issue.
     - `clocks_current_sm` (integer, MHz)
     - `clocks_current_memory` (integer, MHz)
     - `clocks_current_video` (integer, MHz)
+    - `clocks_event_reason_sw_power_cap` (string)
+    - `clocks_event_reason_sw_thermal_slowdown` (string)
+    - `clocks_event_reason_hw_thermal_slowdown` (string)
+    - `clocks_event_reason_hw_power_brake_slowdown` (string)
+    - `clocks_event_reason_hw_slowdown` (string)
+    - `clocks_event_reason_sync_boost` (string)
+    - `clocks_event_reason_gpu_idle` (string)
+    - `clocks_event_reason_applications_clocks_setting` (string)
+    - `clocks_event_reason_display_clocks_setting` (string)
     - `clocks_event_reasons_counters_sw_power_cap` (integer, microseconds,
       schema v13)
     - `clocks_event_reasons_counters_sw_therm_slowdown` (integer,
@@ -125,20 +134,6 @@ Please include the output of this command if opening an GitHub issue.
       schema v13)
     - `clocks_event_reasons_counters_sync_boost` (integer, microseconds,
       schema v13)
-    - `clocks_event_reason_sw_power_cap` (string)
-    - `clocks_event_reason_sw_thermal_slowdown` (string)
-    - `clocks_event_reason_hw_thermal_slowdown` (string)
-    - `clocks_event_reason_hw_power_brake_slowdown` (string)
-    - `clocks_event_reason_hw_slowdown` (string)
-    - `clocks_event_reason_sync_boost` (string)
-    - `clocks_event_reason_gpu_idle` (string)
-    - `clocks_event_reason_applications_clocks_setting` (string)
-    - `clocks_event_reason_display_clocks_setting` (string)
-    - `clocks_event_reasons_counters_sw_power_cap` (integer, microseconds)
-    - `clocks_event_reasons_counters_sw_therm_slowdown` (integer, microseconds)
-    - `clocks_event_reasons_counters_hw_therm_slowdown` (integer, microseconds)
-    - `clocks_event_reasons_counters_hw_power_brake` (integer, microseconds)
-    - `clocks_event_reasons_counters_sync_boost` (integer, microseconds)
     - `temperature_gpu` (integer, degrees C)
     - `temperature_memory` (integer, degrees C, schema v12+)
     - `temperature_gpu_target` (integer, degrees C, schema v12+)
@@ -242,7 +237,7 @@ more modern `clocks_event_reason_*` field names.
 > also have `clocks_event_reasons_counters_*` fields that count the
 > microseconds spent in that state. The counters catch throttling that
 > starts and ends between collection intervals. They only ever increase,
-> ao consider using the [derivative aggregator][derivative] to turn
+> so consider using the [derivative aggregator][derivative] to turn
 > them into rates.
 
 [derivative]: /plugins/aggregators/derivative/README.md

@@ -5,6 +5,11 @@ import (
 	"strings"
 )
 
+const (
+	notAvailable = "N/A"
+	deprecated   = "Requested functionality has been deprecated"
+)
+
 // SetTagIfUsed sets those tags whose value is different from empty string.
 func SetTagIfUsed(m map[string]string, k, v string) {
 	if v != "" {
@@ -12,10 +17,10 @@ func SetTagIfUsed(m map[string]string, k, v string) {
 	}
 }
 
-// SetIfUsed sets those fields whose value is different from empty string.
+// SetIfUsed sets those fields for which nvidia-smi reported a usable value.
 func SetIfUsed(t string, m map[string]interface{}, k, v string) {
 	v = strings.TrimSpace(v)
-	if v == "" || v == "N/A" {
+	if v == "" || v == notAvailable || v == deprecated {
 		return
 	}
 

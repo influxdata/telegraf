@@ -10,7 +10,6 @@ type smi struct {
 // gpu defines the structure of the GPU portion of the smi output.
 type gpu struct {
 	Clocks        clockStats            `xml:"clocks"`
-	Throttle      clocksThrottleReasons `xml:"clocks_throttle_reasons"`
 	ComputeMode   string                `xml:"compute_mode"`
 	DisplayActive string                `xml:"display_active"`
 	DisplayMode   string                `xml:"display_mode"`
@@ -27,6 +26,7 @@ type gpu struct {
 	RetiredPages  memoryRetiredPages    `xml:"retired_pages"`
 	Serial        string                `xml:"serial"`
 	Temp          tempStats             `xml:"temperature"`
+	Throttle      clocksThrottleReasons `xml:"clocks_throttle_reasons"`
 	Utilization   utilizationStats      `xml:"utilization"`
 	UUID          string                `xml:"uuid"`
 	VbiosVersion  string                `xml:"vbios_version"`
