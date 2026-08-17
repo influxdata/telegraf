@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	sdkzerobus "github.com/databricks/zerobus-sdk/purego/zerobus"
+	"github.com/databricks/zerobus-sdk/purego/zerobus"
 	"google.golang.org/protobuf/encoding/protowire"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
@@ -44,8 +44,8 @@ type Zerobus struct {
 	Timeout           config.Duration `toml:"timeout"`
 	Log               telegraf.Logger `toml:"-"`
 
-	sdk     *sdkzerobus.SDK
-	stream  *sdkzerobus.Stream
+	sdk     *zerobus.SDK
+	stream  *zerobus.Stream
 	columns map[string]struct{}
 }
 
@@ -91,7 +91,7 @@ func (z *Zerobus) Connect() error {
 	if z.Application != "" {
 		applicationName = z.Application
 	}
-	sdk, err := sdkzerobus.New(z.Endpoint, z.Workspace, sdkzerobus.WithApplicationName(applicationName))
+	sdk, err := zerobus.New(z.Endpoint, z.Workspace, zerobus.WithApplicationName(applicationName))
 	if err != nil {
 		return fmt.Errorf("creating Zerobus SDK failed: %w", err)
 	}
@@ -105,7 +105,7 @@ func (z *Zerobus) Connect() error {
 		}
 		return &internal.StartupError{
 			Err:   err,
-			Retry: sdkzerobus.Retryable(err),
+			Retry: zerobus.Retryable(err),
 		}
 	}
 
@@ -170,9 +170,9 @@ func (z *Zerobus) openStream() error {
 	}
 
 	stream, err := z.sdk.CreateStream(ctx, z.Table, z.ClientID, secret.String(),
-		sdkzerobus.WithProto(descriptor),
-		sdkzerobus.WithWaitForReady(),
-		sdkzerobus.WithRecovery(sdkzerobus.RecoveryDisabled),
+		zerobus.WithProto(descriptor),
+		zerobus.WithWaitForReady(),
+		zerobus.WithRecovery(zerobus.RecoveryDisabled),
 	)
 	if err != nil {
 		return fmt.Errorf("creating stream for table %q failed: %w", z.Table, err)
@@ -217,7 +217,7 @@ func (z *Zerobus) closeStream() {
 // already acknowledged by the failed attempt may therefore be written twice.
 func (z *Zerobus) abortWrite(operation string, err error) error {
 	z.closeStream()
-	return fmt.Errorf("%s failed (retryable=%t): %w", operation, sdkzerobus.Retryable(err), err)
+	return fmt.Errorf("%s failed (retryable=%t): %w", operation, zerobus.Retryable(err), err)
 }
 
 // Serialize the metrics into requests within the given record-count and size
