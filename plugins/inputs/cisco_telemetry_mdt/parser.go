@@ -401,6 +401,7 @@ func (s *state) parseNXRows(rows []*telemetry.TelemetryField, prefix string, tag
 		// to make sure the metric is emitted
 		if len(row.Fields) == 1 {
 			errs = append(errs, s.parseField(row.Fields[0], "", tags, timestamp)...)
+			delete(tags, prefix)
 			continue
 		}
 
