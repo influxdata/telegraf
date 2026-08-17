@@ -20,7 +20,6 @@ type clientV8 struct {
 	log             telegraf.Logger
 	cancelDiscovery context.CancelFunc
 	discoveryWG     sync.WaitGroup
-	closeOnce       sync.Once
 }
 
 func newClientV8(cfg clientConfig) (client, error) {
@@ -55,20 +54,21 @@ func newClientV8(cfg clientConfig) (client, error) {
 }
 
 func (c *clientV8) close() {
-	c.closeOnce.Do(func() {
-		if c.cancelDiscovery != nil {
-			c.cancelDiscovery()
-			c.discoveryWG.Wait()
+	if c.cancelDiscovery != nil {
+		c.cancelDiscovery()
+		c.discoveryWG.Wait()
+		c.cancelDiscovery = nil
+	}
+	if c.client != nil {
+		if err := c.client.Close(context.Background()); err != nil {
+			c.log.Errorf("Closing ElasticSearch client failed: %v", err)
 		}
-		if c.client != nil {
-			if err := c.client.Close(context.Background()); err != nil {
-				c.log.Errorf("Closing ElasticSearch client failed: %v", err)
-			}
-		}
-		if c.httpClient != nil {
-			c.httpClient.CloseIdleConnections()
-		}
-	})
+		c.client = nil
+	}
+	if c.httpClient != nil {
+		c.httpClient.CloseIdleConnections()
+		c.httpClient = nil
+	}
 }
 
 func (c *clientV8) getFieldMapping(ctx context.Context, index, field string) (map[string]interface{}, error) {
