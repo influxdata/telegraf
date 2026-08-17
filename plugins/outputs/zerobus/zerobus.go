@@ -141,12 +141,13 @@ func (z *Zerobus) Write(metrics []telegraf.Metric) error {
 }
 
 func (z *Zerobus) Close() error {
-	errs := []error{z.closeStream()}
-	if z.sdk != nil {
-		errs = append(errs, z.sdk.Close())
-		z.sdk = nil
+	z.closeStream()
+	if z.sdk == nil {
+		return nil
 	}
-	return errors.Join(errs...)
+	err := z.sdk.Close()
+	z.sdk = nil
+	return err
 }
 
 func (z *Zerobus) openStream() error {
@@ -177,7 +178,9 @@ func (z *Zerobus) openStream() error {
 
 	columns, err := columnsFromDescriptor(descriptor)
 	if err != nil {
-		_ = stream.Close()
+		if closeErr := stream.Close(); closeErr != nil {
+			z.Log.Debugf("Closing the stream to table %q: %s", z.Table, closeErr)
+		}
 		return fmt.Errorf("reading schema of table %q failed: %w", z.Table, err)
 	}
 
@@ -197,22 +200,21 @@ func (z *Zerobus) connectContext() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), time.Duration(z.Timeout))
 }
 
-func (z *Zerobus) closeStream() error {
+func (z *Zerobus) closeStream() {
 	if z.stream == nil {
-		return nil
+		return
 	}
-	err := z.stream.Close()
+	if err := z.stream.Close(); err != nil {
+		z.Log.Debugf("Closing the stream to table %q: %s", z.Table, err)
+	}
 	z.stream = nil
 	z.columns = nil
-	return err
 }
 
 // Drop the stream and let Telegraf retry the whole batch on a new one. Records
 // already acknowledged by the failed attempt may therefore be written twice.
 func (z *Zerobus) abortWrite(operation string, err error) error {
-	if closeErr := z.closeStream(); closeErr != nil {
-		z.Log.Debugf("Closing the failed stream: %s", closeErr)
-	}
+	z.closeStream()
 	return fmt.Errorf("%s failed (retryable=%t): %w", operation, sdkzerobus.Retryable(err), err)
 }
 
