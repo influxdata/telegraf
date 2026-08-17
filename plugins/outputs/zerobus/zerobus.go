@@ -226,13 +226,14 @@ func (z *Zerobus) serializeMetrics(metrics []telegraf.Metric) ([][]byte, error) 
 
 	for i, m := range metrics {
 		record, err := metricToTableSchemaJSON(m, z.TimestampColumn, z.MeasurementColumn, z.columns)
-		if err == nil {
-			if size := recordSize(record); size > maxRecordBytes {
-				err = fmt.Errorf("serialized metric requires %d bytes, exceeding the request limit of %d bytes", size, maxRecordBytes)
-			}
-		}
 		if err != nil {
 			writeErr.MetricsReject = append(writeErr.MetricsReject, i)
+			writeErr.MetricsRejectErrors = append(writeErr.MetricsRejectErrors, err)
+			continue
+		}
+		if size := recordSize(record); size > maxRecordBytes {
+			writeErr.MetricsReject = append(writeErr.MetricsReject, i)
+			err := fmt.Errorf("serialized metric requires %d bytes, exceeding the request limit of %d bytes", size, maxRecordBytes)
 			writeErr.MetricsRejectErrors = append(writeErr.MetricsRejectErrors, err)
 			continue
 		}
