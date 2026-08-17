@@ -218,15 +218,17 @@ func TestSerializeMetricsRejectsInvalidMetric(t *testing.T) {
 	plugin := validPlugin()
 	require.NoError(t, plugin.Init())
 
-	records, err := plugin.serializeMetrics([]telegraf.Metric{
+	batches, err := plugin.serializeMetrics([]telegraf.Metric{
 		testutil.TestMetric(1),
 		metricWithFields{
 			Metric: testutil.TestMetric(2),
 			fields: []*telegraf.Field{{Key: "unsupported", Value: complex(1, 2)}},
 		},
 		testutil.TestMetric(3),
-	})
-	require.Len(t, records, 2)
+	}, maxBatchRecords, maxRequestBytes)
+	require.Len(t, batches, 1)
+	require.Len(t, batches[0].records, 2)
+	require.Equal(t, []int{0, 2}, batches[0].indices)
 
 	var writeErr *internal.PartialWriteError
 	require.ErrorAs(t, err, &writeErr)
@@ -246,8 +248,8 @@ func TestSerializeMetricsRejectsOversizedMetric(t *testing.T) {
 		map[string]interface{}{"value": strings.Repeat("x", maxRequestBytes)},
 		time.Now(),
 	)
-	records, err := plugin.serializeMetrics([]telegraf.Metric{oversized})
-	require.Empty(t, records)
+	batches, err := plugin.serializeMetrics([]telegraf.Metric{oversized}, maxBatchRecords, maxRequestBytes)
+	require.Empty(t, batches)
 
 	var writeErr *internal.PartialWriteError
 	require.ErrorAs(t, err, &writeErr)
@@ -255,36 +257,44 @@ func TestSerializeMetricsRejectsOversizedMetric(t *testing.T) {
 	require.ErrorContains(t, err, "exceeding the request limit")
 }
 
-func TestChunkRecords(t *testing.T) {
-	records := [][]byte{[]byte("first"), []byte("second"), []byte("third")}
+func TestSerializeMetricsSplitsRequests(t *testing.T) {
+	plugin := validPlugin()
+	require.NoError(t, plugin.Init())
+
+	metrics := []telegraf.Metric{testutil.TestMetric(1), testutil.TestMetric(2), testutil.TestMetric(3)}
 
 	t.Run("keeps a fitting batch together", func(t *testing.T) {
-		chunks, err := chunkRecords(records, maxBatchRecords, maxRequestBytes)
+		batches, err := plugin.serializeMetrics(metrics, maxBatchRecords, maxRequestBytes)
 		require.NoError(t, err)
-		require.Len(t, chunks, 1)
-		require.Equal(t, records, chunks[0])
+		require.Len(t, batches, 1)
+		require.Equal(t, []int{0, 1, 2}, batches[0].indices)
 	})
 
 	t.Run("splits by record count", func(t *testing.T) {
-		chunks, err := chunkRecords(records, 2, maxRequestBytes)
+		batches, err := plugin.serializeMetrics(metrics, 2, maxRequestBytes)
 		require.NoError(t, err)
-		require.Len(t, chunks, 2)
-		require.Equal(t, records[:2], chunks[0])
-		require.Equal(t, records[2:], chunks[1])
+		require.Len(t, batches, 2)
+		require.Equal(t, []int{0, 1}, batches[0].indices)
+		require.Equal(t, []int{2}, batches[1].indices)
 	})
 
 	t.Run("splits by payload size", func(t *testing.T) {
-		chunks, err := chunkRecords(records, maxBatchRecords, recordSize(records[0])+recordSize(records[1]))
+		batches, err := plugin.serializeMetrics(metrics, maxBatchRecords, maxRequestBytes)
 		require.NoError(t, err)
-		require.Len(t, chunks, 2)
-		require.Equal(t, records[:2], chunks[0])
-		require.Equal(t, records[2:], chunks[1])
+		require.Len(t, batches, 1)
+		limit := recordSize(batches[0].records[0]) + recordSize(batches[0].records[1])
+
+		batches, err = plugin.serializeMetrics(metrics, maxBatchRecords, limit)
+		require.NoError(t, err)
+		require.Len(t, batches, 2)
+		require.Equal(t, []int{0, 1}, batches[0].indices)
+		require.Equal(t, []int{2}, batches[1].indices)
 	})
 
 	t.Run("handles an empty batch", func(t *testing.T) {
-		chunks, err := chunkRecords(nil, maxBatchRecords, maxRequestBytes)
+		batches, err := plugin.serializeMetrics(nil, maxBatchRecords, maxRequestBytes)
 		require.NoError(t, err)
-		require.Empty(t, chunks)
+		require.Empty(t, batches)
 	})
 }
 

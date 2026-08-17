@@ -49,6 +49,13 @@ type Zerobus struct {
 	columns map[string]struct{}
 }
 
+// Records of a single ingest request together with the indices of the metrics
+// they were serialized from.
+type batch struct {
+	records [][]byte
+	indices []int
+}
+
 func (*Zerobus) SampleConfig() string {
 	return sampleConfig
 }
@@ -117,17 +124,13 @@ func (z *Zerobus) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	records, result := z.serializeMetrics(metrics)
-	if len(records) == 0 {
+	batches, result := z.serializeMetrics(metrics, maxBatchRecords, maxRequestBytes)
+	if len(batches) == 0 {
 		return result
 	}
 
-	chunks, err := chunkRecords(records, maxBatchRecords, maxRequestBytes)
-	if err != nil {
-		return err
-	}
-	for _, chunk := range chunks {
-		if _, err := z.stream.IngestJSONRecordsOffset(chunk); err != nil {
+	for _, b := range batches {
+		if _, err := z.stream.IngestJSONRecordsOffset(b.records); err != nil {
 			return z.abortWrite("admitting batch", err)
 		}
 	}
@@ -217,12 +220,14 @@ func (z *Zerobus) abortWrite(operation string, err error) error {
 	return fmt.Errorf("%s failed (retryable=%t): %w", operation, sdkzerobus.Retryable(err), err)
 }
 
-// Serialize the metrics and reject the ones that cannot be encoded or do not fit
-// a single request, so the rest of the batch can still be written.
-func (z *Zerobus) serializeMetrics(metrics []telegraf.Metric) ([][]byte, error) {
-	records := make([][]byte, 0, len(metrics))
+// Serialize the metrics into requests within the given record-count and size
+// limits. Metrics that cannot be encoded or do not fit a single request are
+// rejected, so the rest of the batch can still be written.
+func (z *Zerobus) serializeMetrics(metrics []telegraf.Metric, maxRecords, maxBytes int) ([]batch, error) {
+	var batches []batch
 	var writeErr internal.PartialWriteError
 
+	size := 0
 	for i, m := range metrics {
 		record, err := metricToTableSchemaJSON(m, z.TimestampColumn, z.MeasurementColumn, z.columns)
 		if err != nil {
@@ -230,45 +235,33 @@ func (z *Zerobus) serializeMetrics(metrics []telegraf.Metric) ([][]byte, error) 
 			writeErr.MetricsRejectErrors = append(writeErr.MetricsRejectErrors, err)
 			continue
 		}
-		if size := recordSize(record); size > maxRequestBytes {
+		recordBytes := recordSize(record)
+		if recordBytes > maxBytes {
 			writeErr.MetricsReject = append(writeErr.MetricsReject, i)
-			err := fmt.Errorf("serialized metric requires %d bytes, exceeding the request limit of %d bytes", size, maxRequestBytes)
+			err := fmt.Errorf("serialized metric requires %d bytes, exceeding the request limit of %d bytes", recordBytes, maxBytes)
 			writeErr.MetricsRejectErrors = append(writeErr.MetricsRejectErrors, err)
 			continue
 		}
-		records = append(records, record)
-		writeErr.MetricsAccept = append(writeErr.MetricsAccept, i)
+
+		current := len(batches) - 1
+		if current < 0 || len(batches[current].records) >= maxRecords || size+recordBytes > maxBytes {
+			batches = append(batches, batch{})
+			current++
+			size = 0
+		}
+		batches[current].records = append(batches[current].records, record)
+		batches[current].indices = append(batches[current].indices, i)
+		size += recordBytes
 	}
 
 	if len(writeErr.MetricsReject) == 0 {
-		return records, nil
+		return batches, nil
+	}
+	for _, b := range batches {
+		writeErr.MetricsAccept = append(writeErr.MetricsAccept, b.indices...)
 	}
 	writeErr.Err = fmt.Errorf("rejected %d metric(s): %w", len(writeErr.MetricsReject), errors.Join(writeErr.MetricsRejectErrors...))
-	return records, &writeErr
-}
-
-// Split the records into requests within the Zerobus record-count and size
-// limits. Oversized records are rejected during serialization, so every chunk
-// holds at least one record.
-func chunkRecords(records [][]byte, maxRecords, maxBytes int) ([][][]byte, error) {
-	chunks := make([][][]byte, 0, (len(records)+maxRecords-1)/maxRecords)
-	for len(records) > 0 {
-		count, size := 0, 0
-		for count < len(records) && count < maxRecords {
-			next := size + recordSize(records[count])
-			if next > maxBytes {
-				break
-			}
-			size = next
-			count++
-		}
-		if count == 0 {
-			return nil, fmt.Errorf("serialized record exceeds the request limit of %d bytes", maxBytes)
-		}
-		chunks = append(chunks, records[:count])
-		records = records[count:]
-	}
-	return chunks, nil
+	return batches, &writeErr
 }
 
 func columnsFromDescriptor(raw []byte) (map[string]struct{}, error) {
