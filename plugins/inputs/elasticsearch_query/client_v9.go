@@ -8,37 +8,40 @@ import (
 	"net/http"
 	"sync"
 
-	elasticsearch8 "github.com/elastic/go-elasticsearch/v8"
-	esapi8 "github.com/elastic/go-elasticsearch/v8/esapi"
+	// The Elasticsearch v9 client depends on the v8 transport module.
+	elastictransport8 "github.com/elastic/elastic-transport-go/v8/elastictransport"
+	elasticsearch9 "github.com/elastic/go-elasticsearch/v9"
+	esapi9 "github.com/elastic/go-elasticsearch/v9/esapi"
 
 	"github.com/influxdata/telegraf"
 )
 
-type clientV8 struct {
-	client          *elasticsearch8.BaseClient
+type clientV9 struct {
+	client          *elasticsearch9.BaseClient
 	httpClient      *http.Client
 	log             telegraf.Logger
 	cancelDiscovery context.CancelFunc
 	discoveryWG     sync.WaitGroup
 }
 
-func newClientV8(cfg clientConfig) (client, error) {
+func newClientV9(cfg clientConfig) (client, error) {
 	// Use the base client to avoid retaining the full esapi API tree because this
 	// plugin only uses two request types.
-	c, err := elasticsearch8.NewBaseClient(elasticsearch8.Config{
-		Addresses: cfg.urls,
-		Username:  cfg.username,
-		Password:  cfg.password,
-		Transport: roundTripper{client: cfg.httpClient},
-	})
+	c, err := elasticsearch9.NewBase(
+		elasticsearch9.WithAddresses(cfg.urls...),
+		elasticsearch9.WithBasicAuth(cfg.username, cfg.password),
+		elasticsearch9.WithTransportOptions(
+			elastictransport8.WithTransport(roundTripper{client: cfg.httpClient}),
+		),
+	)
 	if err != nil {
 		cfg.httpClient.CloseIdleConnections()
 		return nil, fmt.Errorf("creating ElasticSearch client failed: %w", err)
 	}
 
-	client := &clientV8{client: c, httpClient: cfg.httpClient, log: cfg.log}
+	client := &clientV9{client: c, httpClient: cfg.httpClient, log: cfg.log}
 	if cfg.enableSniffer && cfg.discoveryInterval > 0 {
-		// The v8 base client exposes only DiscoverNodes(), so in-flight calls
+		// The v9 base client exposes only DiscoverNodes(), so in-flight calls
 		// cannot be canceled.
 		ctx, cancel := context.WithCancel(context.Background())
 		client.cancelDiscovery = cancel
@@ -53,7 +56,7 @@ func newClientV8(cfg clientConfig) (client, error) {
 	return client, nil
 }
 
-func (c *clientV8) close() {
+func (c *clientV9) close() {
 	if c.cancelDiscovery != nil {
 		c.cancelDiscovery()
 		c.discoveryWG.Wait()
@@ -71,8 +74,8 @@ func (c *clientV8) close() {
 	}
 }
 
-func (c *clientV8) getFieldMapping(ctx context.Context, index, field string) (map[string]interface{}, error) {
-	req := esapi8.IndicesGetFieldMappingRequest{
+func (c *clientV9) getFieldMapping(ctx context.Context, index, field string) (map[string]interface{}, error) {
+	req := esapi9.IndicesGetFieldMappingRequest{
 		Index:  []string{index},
 		Fields: []string{field},
 	}
@@ -93,13 +96,13 @@ func (c *clientV8) getFieldMapping(ctx context.Context, index, field string) (ma
 	return result, nil
 }
 
-func (c *clientV8) query(ctx context.Context, aggregation *aggregation) (interface{}, int64, error) {
+func (c *clientV9) query(ctx context.Context, aggregation *aggregation) (interface{}, int64, error) {
 	data, err := aggregation.buildSearchBody(c.log)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	req := esapi8.SearchRequest{
+	req := esapi9.SearchRequest{
 		Index:          []string{aggregation.Index},
 		Body:           bytes.NewReader(data),
 		TrackTotalHits: true,

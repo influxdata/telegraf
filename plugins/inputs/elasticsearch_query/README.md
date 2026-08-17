@@ -7,7 +7,7 @@ filtered by a query, aggregated per tag and to count the number of terms for a
 particular field.
 
 > [!IMPORTANT]
-> This plugin supports Elasticsearch 5.x to 8.x only.
+> This plugin supports Elasticsearch 5.x to 9.x only.
 > Node discovery is not supported with Elasticsearch 5.x.
 
 ⭐ Telegraf v1.20.0
