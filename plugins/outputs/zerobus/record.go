@@ -9,6 +9,12 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
+// Serialize a metric into a JSON record named after the table columns. The SDK
+// converts the record to protobuf against the table descriptor, so the plugin
+// does not have to build dynamic protobuf messages itself. Values are decoded
+// into the column type of the descriptor, keeping integers exact instead of
+// rounding them through a float as a schemaless JSON decoder would.
+//
 // Telegraf converts fields to a fixed set of types and never produces nil tags or
 // fields, but telegraf.Metric is an interface, so invalid values are rejected
 // rather than assumed away.
