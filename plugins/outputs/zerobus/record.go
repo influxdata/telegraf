@@ -9,6 +9,9 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
+// Telegraf converts fields to a fixed set of types and never produces nil tags or
+// fields, but telegraf.Metric is an interface, so invalid values are rejected
+// rather than assumed away.
 func metricToTableSchemaJSON(metric telegraf.Metric, timestampColumn, measurementColumn string, columns map[string]struct{}) ([]byte, error) {
 	values := make(map[string]interface{}, len(metric.TagList())+len(metric.FieldList())+2)
 	if timestampColumn != "" && keepColumn(timestampColumn, columns) {
