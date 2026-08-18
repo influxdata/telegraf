@@ -53,13 +53,6 @@ type Zerobus struct {
 	maxBytes   int
 }
 
-// Records of a single ingest request together with the indices of the metrics
-// they were serialized from.
-type batch struct {
-	records [][]byte
-	indices []int
-}
-
 func (*Zerobus) SampleConfig() string {
 	return sampleConfig
 }
@@ -128,16 +121,16 @@ func (z *Zerobus) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	batches, result := z.serializeMetrics(metrics)
-	if len(batches) == 0 {
+	records, result := z.serializeMetrics(metrics)
+	if len(records) == 0 {
 		return result
 	}
 
 	// Drop the stream on failure and let Telegraf retry the whole batch on a new
 	// one. Records already acknowledged by the failed attempt may therefore be
 	// written twice.
-	for _, b := range batches {
-		if _, err := z.stream.IngestJSONRecordsOffset(b.records); err != nil {
+	for _, batch := range z.batchRecords(records) {
+		if _, err := z.stream.IngestJSONRecordsOffset(batch); err != nil {
 			z.closeStream()
 			return fmt.Errorf("admitting batch failed (retryable=%t): %w", zerobus.Retryable(err), err)
 		}
@@ -214,13 +207,12 @@ func (z *Zerobus) closeStream() {
 	z.columns = nil
 }
 
-// Serialize the metrics into requests within the record-count and size limits.
-// Metrics that cannot be encoded or do not fit a single request are rejected,
-// so the rest of the batch can still be written.
-func (z *Zerobus) serializeMetrics(metrics []telegraf.Metric) ([]batch, error) {
-	var batches []batch
+// Serialize the metrics to the records of the destination table. Metrics that
+// cannot be encoded or do not fit a single request are rejected, so the rest of
+// the batch can still be written.
+func (z *Zerobus) serializeMetrics(metrics []telegraf.Metric) ([][]byte, error) {
+	records := make([][]byte, 0, len(metrics))
 	var writeErr internal.PartialWriteError
-	var size int
 
 	for i, m := range metrics {
 		// Serialize the metric to a record according to the table columns
@@ -232,36 +224,47 @@ func (z *Zerobus) serializeMetrics(metrics []telegraf.Metric) ([]batch, error) {
 		}
 
 		// Reject records that exceed the payload size of a whole request
-		recordBytes := recordSize(record)
-		if recordBytes > z.maxBytes {
+		if size := recordSize(record); size > z.maxBytes {
 			writeErr.MetricsReject = append(writeErr.MetricsReject, i)
-			err := fmt.Errorf("serialized metric requires %d bytes, exceeding the request limit of %d bytes", recordBytes, z.maxBytes)
+			err := fmt.Errorf("serialized metric requires %d bytes, exceeding the request limit of %d bytes", size, z.maxBytes)
 			writeErr.MetricsRejectErrors = append(writeErr.MetricsRejectErrors, err)
 			continue
 		}
 
-		// Start a new request once the record exceeds one of the limits
-		current := len(batches) - 1
-		if current < 0 || len(batches[current].records) >= z.maxRecords || size+recordBytes > z.maxBytes {
-			batches = append(batches, batch{})
-			current++
-			size = 0
-		}
-		batches[current].records = append(batches[current].records, record)
-		batches[current].indices = append(batches[current].indices, i)
-		size += recordBytes
+		records = append(records, record)
+		writeErr.MetricsAccept = append(writeErr.MetricsAccept, i)
 	}
 
+	// Report the rejected metrics alongside the records of the accepted ones
 	if len(writeErr.MetricsReject) == 0 {
-		return batches, nil
-	}
-
-	// Accept the metrics of all requests and report the rejected ones
-	for _, b := range batches {
-		writeErr.MetricsAccept = append(writeErr.MetricsAccept, b.indices...)
+		return records, nil
 	}
 	writeErr.Err = fmt.Errorf("rejected %d metric(s): %w", len(writeErr.MetricsReject), errors.Join(writeErr.MetricsRejectErrors...))
-	return batches, &writeErr
+	return records, &writeErr
+}
+
+// Group the records into requests within the record-count and size limits. Each
+// request holds at least one record as oversized ones are rejected during
+// serialization.
+func (z *Zerobus) batchRecords(records [][]byte) [][][]byte {
+	var batches [][][]byte
+
+	for len(records) > 0 {
+		// Add records to the request until one of the limits is reached
+		count, size := 1, recordSize(records[0])
+		for count < len(records) && count < z.maxRecords {
+			next := size + recordSize(records[count])
+			if next > z.maxBytes {
+				break
+			}
+			size = next
+			count++
+		}
+		batches = append(batches, records[:count])
+		records = records[count:]
+	}
+
+	return batches
 }
 
 // columnsFromDescriptor extracts the column names of the destination table.

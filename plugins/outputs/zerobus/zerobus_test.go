@@ -317,13 +317,8 @@ func TestSerializeMetricsRejectsMetrics(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			batches, err := plugin.serializeMetrics(tt.metrics)
-
-			var batched []int
-			for _, b := range batches {
-				batched = append(batched, b.indices...)
-			}
-			require.Equal(t, tt.accepted, batched)
+			records, err := plugin.serializeMetrics(tt.metrics)
+			require.Len(t, records, len(tt.accepted))
 
 			var writeErr *internal.PartialWriteError
 			require.ErrorAs(t, err, &writeErr)
@@ -334,49 +329,37 @@ func TestSerializeMetricsRejectsMetrics(t *testing.T) {
 	}
 }
 
-func TestSerializeMetricsSplitsRequests(t *testing.T) {
-	plugin := &Zerobus{
-		TimestampColumn: "timestamp",
-		Log:             testutil.Logger{},
-		columns:         map[string]bool{"timestamp": true, "tag1": true, "value": true},
-		maxRecords:      maxBatchRecords,
-		maxBytes:        maxRequestBytes,
-	}
-
-	// Determine the size of a request holding the first two metrics
-	metrics := []telegraf.Metric{testutil.TestMetric(1), testutil.TestMetric(2), testutil.TestMetric(3)}
-	batches, err := plugin.serializeMetrics(metrics)
-	require.NoError(t, err)
-	require.Len(t, batches, 1)
-	twoRecords := recordSize(batches[0].records[0]) + recordSize(batches[0].records[1])
+func TestBatchRecords(t *testing.T) {
+	records := [][]byte{[]byte(`{"value":1}`), []byte(`{"value":2}`), []byte(`{"value":3}`)}
+	twoRecords := recordSize(records[0]) + recordSize(records[1])
 
 	tests := []struct {
 		name       string
-		metrics    []telegraf.Metric
+		records    [][]byte
 		maxRecords int
 		maxBytes   int
-		expected   [][]int
+		expected   [][][]byte
 	}{
 		{
-			name:       "keeps a fitting batch together",
-			metrics:    metrics,
+			name:       "keeps fitting records in one request",
+			records:    records,
 			maxRecords: maxBatchRecords,
 			maxBytes:   maxRequestBytes,
-			expected:   [][]int{{0, 1, 2}},
+			expected:   [][][]byte{records},
 		},
 		{
 			name:       "splits by record count",
-			metrics:    metrics,
+			records:    records,
 			maxRecords: 2,
 			maxBytes:   maxRequestBytes,
-			expected:   [][]int{{0, 1}, {2}},
+			expected:   [][][]byte{records[:2], records[2:]},
 		},
 		{
 			name:       "splits by payload size",
-			metrics:    metrics,
+			records:    records,
 			maxRecords: maxBatchRecords,
 			maxBytes:   twoRecords,
-			expected:   [][]int{{0, 1}, {2}},
+			expected:   [][][]byte{records[:2], records[2:]},
 		},
 		{
 			name:       "handles an empty batch",
@@ -387,14 +370,12 @@ func TestSerializeMetricsSplitsRequests(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			plugin.maxRecords, plugin.maxBytes = tt.maxRecords, tt.maxBytes
-
-			batches, err := plugin.serializeMetrics(tt.metrics)
-			require.NoError(t, err)
-			require.Len(t, batches, len(tt.expected))
-			for i, indices := range tt.expected {
-				require.Equal(t, indices, batches[i].indices)
+			plugin := &Zerobus{
+				Log:        testutil.Logger{},
+				maxRecords: tt.maxRecords,
+				maxBytes:   tt.maxBytes,
 			}
+			require.Equal(t, tt.expected, plugin.batchRecords(tt.records))
 		})
 	}
 }
