@@ -154,7 +154,7 @@ func TestMetricToTableSchemaJSONFlattensMetric(t *testing.T) {
 			"status": "ready",
 			"total":  uint64(math.MaxInt64),
 		},
-		time.Unix(1_700_000_000, 123_456_000),
+		time.Unix(0, 1700000000123456000),
 	)
 	columns := map[string]bool{
 		"event_time":  true,
