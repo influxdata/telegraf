@@ -41,6 +41,7 @@ func metricToTableSchemaJSON(metric telegraf.Metric, timestampColumn, measuremen
 		values[tag.Key] = tag.Value
 	}
 
+	// Convert the field values to the types the table columns accept
 	for _, field := range metric.FieldList() {
 		if field == nil {
 			return nil, errors.New("metric contains a nil field")
@@ -69,6 +70,7 @@ func metricToTableSchemaJSON(metric telegraf.Metric, timestampColumn, measuremen
 		}
 	}
 
+	// Reject metrics sharing no name with the destination table
 	if len(values) == 0 {
 		return nil, errors.New("metric has no columns matching the table")
 	}
