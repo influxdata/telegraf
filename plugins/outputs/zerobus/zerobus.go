@@ -47,6 +47,10 @@ type Zerobus struct {
 	sdk     *zerobus.SDK
 	stream  *zerobus.Stream
 	columns map[string]bool
+
+	// Request limits the metrics are split along, lowered in tests
+	maxRecords int
+	maxBytes   int
 }
 
 // Records of a single ingest request together with the indices of the metrics
@@ -124,7 +128,7 @@ func (z *Zerobus) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	batches, result := z.serializeMetrics(metrics, maxBatchRecords, maxRequestBytes)
+	batches, result := z.serializeMetrics(metrics)
 	if len(batches) == 0 {
 		return result
 	}
@@ -210,10 +214,10 @@ func (z *Zerobus) closeStream() {
 	z.columns = nil
 }
 
-// Serialize the metrics into requests within the given record-count and size
-// limits. Metrics that cannot be encoded or do not fit a single request are
-// rejected, so the rest of the batch can still be written.
-func (z *Zerobus) serializeMetrics(metrics []telegraf.Metric, maxRecords, maxBytes int) ([]batch, error) {
+// Serialize the metrics into requests within the record-count and size limits.
+// Metrics that cannot be encoded or do not fit a single request are rejected,
+// so the rest of the batch can still be written.
+func (z *Zerobus) serializeMetrics(metrics []telegraf.Metric) ([]batch, error) {
 	var batches []batch
 	var writeErr internal.PartialWriteError
 	var size int
@@ -229,16 +233,16 @@ func (z *Zerobus) serializeMetrics(metrics []telegraf.Metric, maxRecords, maxByt
 
 		// Reject records that exceed the payload size of a whole request
 		recordBytes := recordSize(record)
-		if recordBytes > maxBytes {
+		if recordBytes > z.maxBytes {
 			writeErr.MetricsReject = append(writeErr.MetricsReject, i)
-			err := fmt.Errorf("serialized metric requires %d bytes, exceeding the request limit of %d bytes", recordBytes, maxBytes)
+			err := fmt.Errorf("serialized metric requires %d bytes, exceeding the request limit of %d bytes", recordBytes, z.maxBytes)
 			writeErr.MetricsRejectErrors = append(writeErr.MetricsRejectErrors, err)
 			continue
 		}
 
 		// Start a new request once the record exceeds one of the limits
 		current := len(batches) - 1
-		if current < 0 || len(batches[current].records) >= maxRecords || size+recordBytes > maxBytes {
+		if current < 0 || len(batches[current].records) >= z.maxRecords || size+recordBytes > z.maxBytes {
 			batches = append(batches, batch{})
 			current++
 			size = 0
@@ -289,6 +293,8 @@ func init() {
 		return &Zerobus{
 			TimestampColumn: "timestamp",
 			Timeout:         config.Duration(30 * time.Second),
+			maxRecords:      maxBatchRecords,
+			maxBytes:        maxRequestBytes,
 		}
 	})
 }

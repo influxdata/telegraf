@@ -300,6 +300,8 @@ func TestSerializeMetricsRejectsInvalidMetric(t *testing.T) {
 		TimestampColumn: "timestamp",
 		Log:             testutil.Logger{},
 		columns:         map[string]bool{"timestamp": true, "tag1": true, "value": true, "host": true},
+		maxRecords:      maxBatchRecords,
+		maxBytes:        maxRequestBytes,
 	}
 
 	batches, err := plugin.serializeMetrics([]telegraf.Metric{
@@ -311,7 +313,7 @@ func TestSerializeMetricsRejectsInvalidMetric(t *testing.T) {
 			time.Now(),
 		),
 		testutil.TestMetric(3),
-	}, maxBatchRecords, maxRequestBytes)
+	})
 	require.Len(t, batches, 1)
 	require.Len(t, batches[0].records, 2)
 	require.Equal(t, []int{0, 2}, batches[0].indices)
@@ -329,6 +331,8 @@ func TestSerializeMetricsRejectsOversizedMetric(t *testing.T) {
 		TimestampColumn: "timestamp",
 		Log:             testutil.Logger{},
 		columns:         map[string]bool{"timestamp": true, "value": true},
+		maxRecords:      maxBatchRecords,
+		maxBytes:        maxRequestBytes,
 	}
 
 	oversized := metric.New(
@@ -337,7 +341,7 @@ func TestSerializeMetricsRejectsOversizedMetric(t *testing.T) {
 		map[string]interface{}{"value": strings.Repeat("x", maxRequestBytes)},
 		time.Now(),
 	)
-	batches, err := plugin.serializeMetrics([]telegraf.Metric{oversized}, maxBatchRecords, maxRequestBytes)
+	batches, err := plugin.serializeMetrics([]telegraf.Metric{oversized})
 	require.Empty(t, batches)
 
 	var writeErr *internal.PartialWriteError
@@ -351,19 +355,25 @@ func TestSerializeMetricsSplitsRequests(t *testing.T) {
 		TimestampColumn: "timestamp",
 		Log:             testutil.Logger{},
 		columns:         map[string]bool{"timestamp": true, "tag1": true, "value": true},
+		maxRecords:      maxBatchRecords,
+		maxBytes:        maxRequestBytes,
 	}
 
 	metrics := []telegraf.Metric{testutil.TestMetric(1), testutil.TestMetric(2), testutil.TestMetric(3)}
 
 	t.Run("keeps a fitting batch together", func(t *testing.T) {
-		batches, err := plugin.serializeMetrics(metrics, maxBatchRecords, maxRequestBytes)
+		plugin.maxRecords, plugin.maxBytes = maxBatchRecords, maxRequestBytes
+
+		batches, err := plugin.serializeMetrics(metrics)
 		require.NoError(t, err)
 		require.Len(t, batches, 1)
 		require.Equal(t, []int{0, 1, 2}, batches[0].indices)
 	})
 
 	t.Run("splits by record count", func(t *testing.T) {
-		batches, err := plugin.serializeMetrics(metrics, 2, maxRequestBytes)
+		plugin.maxRecords, plugin.maxBytes = 2, maxRequestBytes
+
+		batches, err := plugin.serializeMetrics(metrics)
 		require.NoError(t, err)
 		require.Len(t, batches, 2)
 		require.Equal(t, []int{0, 1}, batches[0].indices)
@@ -371,12 +381,14 @@ func TestSerializeMetricsSplitsRequests(t *testing.T) {
 	})
 
 	t.Run("splits by payload size", func(t *testing.T) {
-		batches, err := plugin.serializeMetrics(metrics, maxBatchRecords, maxRequestBytes)
+		plugin.maxRecords, plugin.maxBytes = maxBatchRecords, maxRequestBytes
+
+		batches, err := plugin.serializeMetrics(metrics)
 		require.NoError(t, err)
 		require.Len(t, batches, 1)
-		limit := recordSize(batches[0].records[0]) + recordSize(batches[0].records[1])
+		plugin.maxBytes = recordSize(batches[0].records[0]) + recordSize(batches[0].records[1])
 
-		batches, err = plugin.serializeMetrics(metrics, maxBatchRecords, limit)
+		batches, err = plugin.serializeMetrics(metrics)
 		require.NoError(t, err)
 		require.Len(t, batches, 2)
 		require.Equal(t, []int{0, 1}, batches[0].indices)
@@ -384,7 +396,9 @@ func TestSerializeMetricsSplitsRequests(t *testing.T) {
 	})
 
 	t.Run("handles an empty batch", func(t *testing.T) {
-		batches, err := plugin.serializeMetrics(nil, maxBatchRecords, maxRequestBytes)
+		plugin.maxRecords, plugin.maxBytes = maxBatchRecords, maxRequestBytes
+
+		batches, err := plugin.serializeMetrics(nil)
 		require.NoError(t, err)
 		require.Empty(t, batches)
 	})
