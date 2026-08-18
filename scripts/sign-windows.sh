@@ -21,7 +21,7 @@ base64 -d "$SM_CLIENT_CERT_FILE.b64" > "$SM_CLIENT_CERT_FILE"
 # Loop through and sign + verify the binaries
 artifactDirectory="./dist"
 extractDirectory="$artifactDirectory/extracted"
-for file in "$artifactDirectory"/*windows*; do
+for file in "$artifactDirectory"/telegraf-*windows*.zip; do
     7zz x "$file" -o$extractDirectory
     subDirectoryPath=$(find $extractDirectory -mindepth 1 -maxdepth 1 -type d)
     telegrafExePath="$subDirectoryPath/telegraf.exe"
