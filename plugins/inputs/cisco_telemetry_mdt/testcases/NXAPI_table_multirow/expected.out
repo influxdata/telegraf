@@ -1,3 +1,4 @@
 interfaces,TABLE_interface=eth1/1,host=foobar,path=show\ interface\ brief,row_number=0,source=hostname,subscription=subscription proto="up",state="up",vlan="1" 1543236572000000000
 interfaces,TABLE_interface=eth1/2,host=foobar,path=show\ interface\ brief,row_number=1,source=hostname,subscription=subscription proto="down",state="down",vlan="1" 1543236572000000000
 interfaces,TABLE_interface=eth2/1,host=foobar,path=show\ interface\ brief,row_number=2,source=hostname,subscription=subscription proto="up",state="up",vlan="2" 1543236572000000000
+interfaces,host=foobar,path=show\ interface\ brief,source=hostname,subscription=subscription delete=false 1543236572000000000
