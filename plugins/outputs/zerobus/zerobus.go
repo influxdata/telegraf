@@ -46,7 +46,7 @@ type Zerobus struct {
 
 	sdk     *zerobus.SDK
 	stream  *zerobus.Stream
-	columns map[string]struct{}
+	columns map[string]bool
 }
 
 // Records of a single ingest request together with the indices of the metrics
@@ -266,15 +266,15 @@ func (z *Zerobus) serializeMetrics(metrics []telegraf.Metric, maxRecords, maxByt
 
 // columnsFromDescriptor extracts the column names of the destination table.
 // TODO: Remove this once the Zerobus SDK exposes the columns itself.
-func columnsFromDescriptor(raw []byte) (map[string]struct{}, error) {
+func columnsFromDescriptor(raw []byte) (map[string]bool, error) {
 	var descriptor descriptorpb.DescriptorProto
 	if err := proto.Unmarshal(raw, &descriptor); err != nil {
 		return nil, fmt.Errorf("parsing protobuf descriptor failed: %w", err)
 	}
-	columns := make(map[string]struct{}, len(descriptor.Field))
+	columns := make(map[string]bool, len(descriptor.Field))
 	for _, field := range descriptor.Field {
 		if name := field.GetName(); name != "" {
-			columns[name] = struct{}{}
+			columns[name] = true
 		}
 	}
 	if len(columns) == 0 {

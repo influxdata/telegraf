@@ -18,12 +18,12 @@ import (
 // Telegraf converts fields to a fixed set of types and never produces nil tags or
 // fields, but telegraf.Metric is an interface, so invalid values are rejected
 // rather than assumed away.
-func metricToTableSchemaJSON(metric telegraf.Metric, timestampColumn, measurementColumn string, columns map[string]struct{}) ([]byte, error) {
+func metricToTableSchemaJSON(metric telegraf.Metric, timestampColumn, measurementColumn string, columns map[string]bool) ([]byte, error) {
 	values := make(map[string]interface{}, len(metric.TagList())+len(metric.FieldList())+2)
-	if timestampColumn != "" && keepColumn(timestampColumn, columns) {
+	if timestampColumn != "" && (columns == nil || columns[timestampColumn]) {
 		values[timestampColumn] = metric.Time().UnixMicro()
 	}
-	if measurementColumn != "" && keepColumn(measurementColumn, columns) {
+	if measurementColumn != "" && (columns == nil || columns[measurementColumn]) {
 		values[measurementColumn] = metric.Name()
 	}
 
@@ -32,7 +32,7 @@ func metricToTableSchemaJSON(metric telegraf.Metric, timestampColumn, measuremen
 		if tag == nil {
 			return nil, errors.New("metric contains a nil tag")
 		}
-		if !keepColumn(tag.Key, columns) {
+		if columns != nil && !columns[tag.Key] {
 			continue
 		}
 		if _, found := values[tag.Key]; found {
@@ -45,7 +45,7 @@ func metricToTableSchemaJSON(metric telegraf.Metric, timestampColumn, measuremen
 		if field == nil {
 			return nil, errors.New("metric contains a nil field")
 		}
-		if !keepColumn(field.Key, columns) {
+		if columns != nil && !columns[field.Key] {
 			continue
 		}
 		if _, found := values[field.Key]; found {
@@ -78,12 +78,4 @@ func metricToTableSchemaJSON(metric telegraf.Metric, timestampColumn, measuremen
 		return nil, fmt.Errorf("marshaling JSON record failed: %w", err)
 	}
 	return record, nil
-}
-
-func keepColumn(name string, columns map[string]struct{}) bool {
-	if columns == nil {
-		return true
-	}
-	_, ok := columns[name]
-	return ok
 }
