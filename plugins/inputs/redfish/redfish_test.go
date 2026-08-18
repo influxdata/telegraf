@@ -927,6 +927,10 @@ func TestInvalidHPJSON(t *testing.T) {
 				}
 
 				switch r.URL.Path {
+				case "/redfish/v1/":
+					http.ServeFile(w, r, "testdata/base.json")
+				case "/redfish/v1/Systems/":
+					http.ServeFile(w, r, "testdata/hp/hp_available_systems.json")
 				case "/redfish/v1/Chassis/1/Thermal":
 					http.ServeFile(w, r, tt.thermalfilename)
 				case "/redfish/v1/Chassis/1/Power":
