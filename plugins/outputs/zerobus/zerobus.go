@@ -182,16 +182,13 @@ func (z *Zerobus) openStream() error {
 	if err != nil {
 		return fmt.Errorf("creating stream for table %q failed: %w", z.Table, err)
 	}
+	z.stream = stream
 
 	columns, err := columnsFromDescriptor(descriptor)
 	if err != nil {
-		if closeErr := stream.Close(); closeErr != nil {
-			z.Log.Debugf("Closing the stream to table %q: %s", z.Table, closeErr)
-		}
+		z.closeStream()
 		return fmt.Errorf("reading schema of table %q failed: %w", z.Table, err)
 	}
-
-	z.stream = stream
 	z.columns = columns
 	z.Log.Debugf("Opened stream to table %q", z.Table)
 
