@@ -729,6 +729,11 @@ func TestHPilo4Apis(t *testing.T) {
 }
 
 func checkAuth(r *http.Request, username, password string) bool {
+	// The base path requires no auth
+	if r.URL.Path == "/redfish/v1/" {
+		return true
+	}
+
 	user, pass, ok := r.BasicAuth()
 	if !ok {
 		return false
