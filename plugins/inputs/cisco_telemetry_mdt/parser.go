@@ -234,11 +234,10 @@ func (s *state) parseField(field *telemetry.TelemetryField, prefix string, paren
 	}
 
 	// Get extra-tags defined by the user in embedded_tags
-	tags := maps.Clone(parentTags)
-	extraTags := s.extraTags[s.tagPrefix+name]
+	tags := make(map[string]string)
 	fields := make([]*telemetry.TelemetryField, 0, len(field.Fields))
 	for _, subfield := range field.Fields {
-		if _, isExtraTag := extraTags[subfield.Name]; isExtraTag {
+		if _, isExtraTag := s.extraTags[s.tagPrefix+name][subfield.Name]; isExtraTag {
 			tags[name+"/"+strings.ReplaceAll(subfield.Name, "-", "_")] = decodeTag(subfield)
 		} else {
 			fields = append(fields, subfield)
@@ -248,6 +247,18 @@ func (s *state) parseField(field *telemetry.TelemetryField, prefix string, paren
 	// No more fields to process
 	if len(fields) == 0 {
 		return nil
+	}
+
+	// Prevent cloning on every node for performance reasons
+	if len(tags) == 0 {
+		tags = parentTags
+	} else {
+		// Copy over the parent tags, the extra tags take precedence
+		for k, v := range parentTags {
+			if _, found := tags[k]; !found {
+				tags[k] = v
+			}
+		}
 	}
 
 	// Extract special field elements
@@ -469,9 +480,9 @@ func (s *state) parseMicroburst(fields []*telemetry.TelemetryField, parentTags m
 		return
 	}
 
-	tags := maps.Clone(parentTags)
 	root := fields[2].Fields[0].Fields[3]
 	for _, subfield := range root.Fields {
+		tags := maps.Clone(parentTags)
 		if subfield.Name == "interfaceName" {
 			tags[subfield.Name] = decodeTag(subfield)
 		}
