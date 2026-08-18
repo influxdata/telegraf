@@ -29,7 +29,7 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		tags := map[string]string{
 			"index": strconv.Itoa(i),
 		}
-		fields := make(map[string]interface{}, 75)
+		fields := make(map[string]interface{}, 97)
 
 		common.SetTagIfUsed(tags, "pstate", gpu.PerformanceState)
 		common.SetTagIfUsed(tags, "name", gpu.ProductName)
@@ -113,6 +113,16 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		common.SetIfUsed("int", fields, "clocks_current_sm", gpu.Clocks.SmClock)
 		common.SetIfUsed("int", fields, "clocks_current_memory", gpu.Clocks.MemClock)
 		common.SetIfUsed("int", fields, "clocks_current_video", gpu.Clocks.VideoClock)
+		reasons := gpu.ClocksEventReasons
+		common.SetActiveIfUsed(fields, "clocks_event_reason_sw_power_cap", reasons.ClocksEventReasonSwPowerCap)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_sw_thermal_slowdown", reasons.ClocksEventReasonSwThermalSlowdown)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_hw_thermal_slowdown", reasons.ClocksEventReasonHwThermalSlowdown)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_hw_power_brake_slowdown", reasons.ClocksEventReasonHwPowerBrakeSlowdown)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_hw_slowdown", reasons.ClocksEventReasonHwSlowdown)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_sync_boost", reasons.ClocksEventReasonSyncBoost)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_gpu_idle", reasons.ClocksEventReasonGpuIdle)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_applications_clocks_setting", reasons.ClocksEventReasonApplicationsClocksSetting)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_display_clocks_setting", reasons.ClocksEventReasonDisplayClocksSetting)
 		counters := gpu.ClocksEventReasonsCounters
 		common.SetIfUsed("int", fields, "clocks_event_reasons_counters_sw_power_cap", counters.ClocksEventReasonsCountersSwPowerCap)
 		common.SetIfUsed("int", fields, "clocks_event_reasons_counters_sw_therm_slowdown", counters.ClocksEventReasonsCountersSwThermSlowdown)

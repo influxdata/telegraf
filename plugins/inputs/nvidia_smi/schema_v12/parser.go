@@ -29,7 +29,7 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		tags := map[string]string{
 			"index": strconv.Itoa(i),
 		}
-		fields := make(map[string]interface{}, 65)
+		fields := make(map[string]interface{}, 67)
 
 		common.SetTagIfUsed(tags, "pstate", gpu.PerformanceState)
 		common.SetTagIfUsed(tags, "name", gpu.ProductName)
@@ -87,6 +87,26 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		common.SetIfUsed("int", fields, "clocks_current_sm", gpu.Clocks.SmClock)
 		common.SetIfUsed("int", fields, "clocks_current_memory", gpu.Clocks.MemClock)
 		common.SetIfUsed("int", fields, "clocks_current_video", gpu.Clocks.VideoClock)
+		throttle := gpu.ClocksThrottleReasons
+		reasons := gpu.ClocksEventReasons
+		common.SetActiveIfUsed(fields, "clocks_event_reason_sw_power_cap", throttle.ClocksThrottleReasonSwPowerCap)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_sw_power_cap", reasons.ClocksEventReasonSwPowerCap)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_sw_thermal_slowdown", throttle.ClocksThrottleReasonSwThermalSlowdown)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_sw_thermal_slowdown", reasons.ClocksEventReasonSwThermalSlowdown)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_hw_thermal_slowdown", throttle.ClocksThrottleReasonHwThermalSlowdown)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_hw_thermal_slowdown", reasons.ClocksEventReasonHwThermalSlowdown)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_hw_power_brake_slowdown", throttle.ClocksThrottleReasonHwPowerBrakeSlowdown)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_hw_power_brake_slowdown", reasons.ClocksEventReasonHwPowerBrakeSlowdown)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_hw_slowdown", throttle.ClocksThrottleReasonHwSlowdown)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_hw_slowdown", reasons.ClocksEventReasonHwSlowdown)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_sync_boost", throttle.ClocksThrottleReasonSyncBoost)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_sync_boost", reasons.ClocksEventReasonSyncBoost)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_gpu_idle", throttle.ClocksThrottleReasonGpuIdle)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_gpu_idle", reasons.ClocksEventReasonGpuIdle)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_applications_clocks_setting", throttle.ClocksThrottleReasonApplicationsClocksSetting)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_applications_clocks_setting", reasons.ClocksEventReasonApplicationsClocksSetting)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_display_clocks_setting", throttle.ClocksThrottleReasonDisplayClocksSetting)
+		common.SetActiveIfUsed(fields, "clocks_event_reason_display_clocks_setting", reasons.ClocksEventReasonDisplayClocksSetting)
 		common.SetIfUsed("float", fields, "power_draw", gpu.PowerReadings.PowerDraw)
 		common.SetIfUsed("float", fields, "power_draw", gpu.PowerReadings.InstantPowerDraw)
 		common.SetIfUsed("float", fields, "power_limit", gpu.PowerReadings.PowerLimit)

@@ -57,6 +57,20 @@ func TestSetIfUsed(t *testing.T) {
 			expected: map[string]interface{}{"driver_version": "595.84"},
 		},
 		{
+			name:     "multi-word value is preserved",
+			datatype: "str",
+			key:      "clocks_event_reason_hw_slowdown",
+			value:    "Not Active",
+			expected: map[string]interface{}{"clocks_event_reason_hw_slowdown": "Not Active"},
+		},
+		{
+			name:     "surrounding whitespace is trimmed",
+			datatype: "str",
+			key:      "display_mode",
+			value:    "  Enabled\n",
+			expected: map[string]interface{}{"display_mode": "Enabled"},
+		},
+		{
 			name:     "unsupported value is skipped",
 			datatype: "int",
 			key:      "memory_temp",
@@ -77,12 +91,61 @@ func TestSetIfUsed(t *testing.T) {
 			value:    "Unknown Error",
 			expected: map[string]interface{}{},
 		},
+		{
+			name:     "deprecated value is skipped",
+			datatype: "str",
+			key:      "display_mode",
+			value:    "Requested functionality has been deprecated",
+			expected: map[string]interface{}{},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			actual := make(map[string]interface{})
 			SetIfUsed(tt.datatype, actual, tt.key, tt.value)
+			require.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
+func TestSetActiveIfUsed(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    string
+		expected map[string]interface{}
+	}{
+		{
+			name:     "active",
+			value:    "Active",
+			expected: map[string]interface{}{"clocks_event_reason_hw_slowdown": int64(1)},
+		},
+		{
+			name:     "not active",
+			value:    "Not Active",
+			expected: map[string]interface{}{"clocks_event_reason_hw_slowdown": int64(0)},
+		},
+		{
+			name:     "surrounding whitespace is trimmed",
+			value:    "  Not Active\n",
+			expected: map[string]interface{}{"clocks_event_reason_hw_slowdown": int64(0)},
+		},
+		{
+			name:     "unsupported value is skipped",
+			value:    "N/A",
+			expected: map[string]interface{}{},
+		},
+		{
+			name:     "empty value is skipped",
+			value:    "",
+			expected: map[string]interface{}{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := make(map[string]interface{})
+			SetActiveIfUsed(actual, "clocks_event_reason_hw_slowdown", tt.value)
 			require.Equal(t, tt.expected, actual)
 		})
 	}
