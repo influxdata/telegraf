@@ -183,6 +183,16 @@ func TestMetricToTableSchemaJSONFlattensMetric(t *testing.T) {
 		},
 		time.Unix(1_700_000_000, 123_456_000),
 	)
+	columns := map[string]bool{
+		"event_time":  true,
+		"measurement": true,
+		"host":        true,
+		"active":      true,
+		"count":       true,
+		"ratio":       true,
+		"status":      true,
+		"total":       true,
+	}
 
 	tests := []struct {
 		name              string
@@ -220,7 +230,7 @@ func TestMetricToTableSchemaJSONFlattensMetric(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			record, err := metricToTableSchemaJSON(input, tt.timestampColumn, tt.measurementColumn, nil)
+			record, err := metricToTableSchemaJSON(input, tt.timestampColumn, tt.measurementColumn, columns)
 			require.NoError(t, err)
 			require.JSONEq(t, tt.expected, string(record))
 		})
@@ -275,16 +285,22 @@ func TestMetricToTableSchemaJSONRejectsInvalidMetric(t *testing.T) {
 		},
 	}
 
+	columns := map[string]bool{"timestamp": true, "host": true, "value": true}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := metricToTableSchemaJSON(tt.metric, "timestamp", "", nil)
+			_, err := metricToTableSchemaJSON(tt.metric, "timestamp", "", columns)
 			require.ErrorContains(t, err, tt.expected)
 		})
 	}
 }
 
 func TestSerializeMetricsRejectsInvalidMetric(t *testing.T) {
-	plugin := &Zerobus{TimestampColumn: "timestamp", Log: testutil.Logger{}}
+	plugin := &Zerobus{
+		TimestampColumn: "timestamp",
+		Log:             testutil.Logger{},
+		columns:         map[string]bool{"timestamp": true, "tag1": true, "value": true, "host": true},
+	}
 
 	batches, err := plugin.serializeMetrics([]telegraf.Metric{
 		testutil.TestMetric(1),
@@ -309,7 +325,11 @@ func TestSerializeMetricsRejectsInvalidMetric(t *testing.T) {
 }
 
 func TestSerializeMetricsRejectsOversizedMetric(t *testing.T) {
-	plugin := &Zerobus{TimestampColumn: "timestamp", Log: testutil.Logger{}}
+	plugin := &Zerobus{
+		TimestampColumn: "timestamp",
+		Log:             testutil.Logger{},
+		columns:         map[string]bool{"timestamp": true, "value": true},
+	}
 
 	oversized := metric.New(
 		"cpu",
@@ -327,7 +347,11 @@ func TestSerializeMetricsRejectsOversizedMetric(t *testing.T) {
 }
 
 func TestSerializeMetricsSplitsRequests(t *testing.T) {
-	plugin := &Zerobus{TimestampColumn: "timestamp", Log: testutil.Logger{}}
+	plugin := &Zerobus{
+		TimestampColumn: "timestamp",
+		Log:             testutil.Logger{},
+		columns:         map[string]bool{"timestamp": true, "tag1": true, "value": true},
+	}
 
 	metrics := []telegraf.Metric{testutil.TestMetric(1), testutil.TestMetric(2), testutil.TestMetric(3)}
 
