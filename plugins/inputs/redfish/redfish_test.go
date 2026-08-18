@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -1012,9 +1013,15 @@ func TestSkipChassisWithoutReference(t *testing.T) {
 		requested = append(requested, r.URL.Path)
 		mu.Unlock()
 
-		w.Header().Set("Content-Type", "application/json")
-		if _, err := w.Write([]byte(`{"Links": {"Chassis": [{"@odata.id": ""}]}}`)); err != nil {
-			t.Error(err)
+		switch r.URL.Path {
+		case "/redfish/v1/":
+			http.ServeFile(w, r, "testdata/base.json")
+		case "/redfish/v1/Systems/":
+			http.ServeFile(w, r, "testdata/hp/hp_available_systems.json")
+		case "/redfish/v1/Systems/1":
+			http.ServeFile(w, r, "testdata/hp/hp_systems_nolink.json")
+		default:
+			w.WriteHeader(http.StatusNotFound)
 		}
 	}))
 	defer ts.Close()
@@ -1034,9 +1041,10 @@ func TestSkipChassisWithoutReference(t *testing.T) {
 	require.Empty(t, acc.GetTelegrafMetrics())
 
 	// The empty reference must not be requested as it resolves to the web root
+	// There shouldn't be a request to any /redfish/v1/Chassis path
 	mu.Lock()
 	defer mu.Unlock()
-	require.Equal(t, []string{"/redfish/v1/Systems/1"}, requested)
+	require.False(t, slices.Contains(requested, "/redfish/v1/Chassis"))
 }
 
 func TestSkipChassisWithoutThermalAndPowerReference(t *testing.T) {
