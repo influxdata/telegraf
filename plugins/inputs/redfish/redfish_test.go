@@ -944,7 +944,7 @@ func TestInvalidHPJSON(t *testing.T) {
 					http.ServeFile(w, r, tt.powerfilename)
 				case "/redfish/v1/Chassis/1/":
 					http.ServeFile(w, r, tt.chassisfilename)
-				case "/redfish/v1/Systems/System.Embedded.2":
+				case "/redfish/v1/Systems/1":
 					http.ServeFile(w, r, tt.hostnamefilename)
 				default:
 					w.WriteHeader(http.StatusNotFound)
@@ -956,7 +956,7 @@ func TestInvalidHPJSON(t *testing.T) {
 				Address:          ts.URL,
 				Username:         config.NewSecret([]byte("test")),
 				Password:         config.NewSecret([]byte("test")),
-				ComputerSystemID: "System.Embedded.2",
+				ComputerSystemID: "1",
 				IncludeMetrics:   []string{"thermal", "power"},
 			}
 
