@@ -31,8 +31,8 @@ type RDAP struct {
 	Timeout config.Duration `toml:"timeout"`
 	Log     telegraf.Logger `toml:"-"`
 
-	client *rdap.Client
-	server *url.URL
+	client    *rdap.Client
+	serverURL *url.URL
 }
 
 func (*RDAP) SampleConfig() string {
@@ -56,7 +56,7 @@ func (r *RDAP) Init() error {
 		if u.Scheme == "" || u.Host == "" {
 			return fmt.Errorf("server %q is not a valid URL", r.Server)
 		}
-		r.server = u
+		r.serverURL = u
 	}
 
 	r.client = &rdap.Client{UserAgent: "Telegraf/rdap"}
@@ -155,8 +155,8 @@ func (r *RDAP) query(domain string) (*rdap.Domain, string, error) {
 		Type:  rdap.DomainRequest,
 		Query: domain,
 	}
-	if r.server != nil {
-		req.Server = r.server
+	if r.serverURL != nil {
+		req.Server = r.serverURL
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(r.Timeout))

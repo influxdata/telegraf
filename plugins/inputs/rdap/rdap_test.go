@@ -66,11 +66,15 @@ func newMockServer(t *testing.T) *httptest.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/domain/example.com", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/rdap+json")
-		_, _ = w.Write([]byte(fullResponse))
+		if _, err := w.Write([]byte(fullResponse)); err != nil {
+			t.Error(err)
+		}
 	})
 	mux.HandleFunc("/domain/minimal.dev", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/rdap+json")
-		_, _ = w.Write([]byte(minimalResponse))
+		if _, err := w.Write([]byte(minimalResponse)); err != nil {
+			t.Error(err)
+		}
 	})
 	mux.HandleFunc("/domain/missing.com", func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "not found", http.StatusNotFound)
@@ -262,6 +266,6 @@ func TestExpiryIsCalculated(t *testing.T) {
 	require.True(t, ok)
 	// example.com expires in 2028, so from any realistic test clock the
 	// remaining time is well over a year and positive.
-	require.Greater(t, expiry, int64(0))
+	require.Positive(t, expiry)
 	require.False(t, strings.HasPrefix(m.Tags["status"], "unknown"))
 }
