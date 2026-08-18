@@ -221,12 +221,15 @@ func (z *Zerobus) serializeMetrics(metrics []telegraf.Metric, maxRecords, maxByt
 	var size int
 
 	for i, m := range metrics {
+		// Serialize the metric to a record according to the table columns
 		record, err := metricToTableSchemaJSON(m, z.TimestampColumn, z.MeasurementColumn, z.columns)
 		if err != nil {
 			writeErr.MetricsReject = append(writeErr.MetricsReject, i)
 			writeErr.MetricsRejectErrors = append(writeErr.MetricsRejectErrors, err)
 			continue
 		}
+
+		// Reject records that exceed the payload size of a whole request
 		recordBytes := recordSize(record)
 		if recordBytes > maxBytes {
 			writeErr.MetricsReject = append(writeErr.MetricsReject, i)
@@ -235,6 +238,7 @@ func (z *Zerobus) serializeMetrics(metrics []telegraf.Metric, maxRecords, maxByt
 			continue
 		}
 
+		// Start a new request once the record exceeds one of the limits
 		current := len(batches) - 1
 		if current < 0 || len(batches[current].records) >= maxRecords || size+recordBytes > maxBytes {
 			batches = append(batches, batch{})
@@ -249,6 +253,8 @@ func (z *Zerobus) serializeMetrics(metrics []telegraf.Metric, maxRecords, maxByt
 	if len(writeErr.MetricsReject) == 0 {
 		return batches, nil
 	}
+
+	// Accept the metrics of all requests and report the rejected ones
 	for _, b := range batches {
 		writeErr.MetricsAccept = append(writeErr.MetricsAccept, b.indices...)
 	}
