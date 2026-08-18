@@ -24,15 +24,6 @@ else ifeq ($(tag),)
 	deb_version := $(version)~$(commit)-0
 	deb_iteration := 0
 	tar_version := $(version)~$(commit)
-else ifneq ($(findstring -rc,$(tag)),)
-	version := $(word 1,$(subst -, ,$(tag)))
-	version := $(version:v%=%)
-	rc := $(word 2,$(subst -, ,$(tag)))
-	rpm_version := $(version)-0.$(rc)
-	rpm_iteration := 0.$(subst rc,,$(rc))
-	deb_version := $(version)~$(rc)-1
-	deb_iteration := 0
-	tar_version := $(version)~$(rc)
 else
 	version := $(tag:v%=%)
 	rpm_version := $(version)-1
