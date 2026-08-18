@@ -159,8 +159,13 @@ func (z *Zerobus) openStream() error {
 	}
 	defer secret.Destroy()
 
-	ctx, cancel := z.connectContext()
-	defer cancel()
+	// A zero timeout means the startup requests are not bounded.
+	ctx := context.Background()
+	if z.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(z.Timeout))
+		defer cancel()
+	}
 
 	// The descriptor is fetched per stream, so a stream opened after an ALTER
 	// TABLE picks up the new columns without restarting Telegraf.
@@ -192,16 +197,6 @@ func (z *Zerobus) openStream() error {
 
 	return nil
 }
-
-// connectContext returns a context bounded by timeout, or cancellable background
-// when timeout is zero (no timeout).
-func (z *Zerobus) connectContext() (context.Context, context.CancelFunc) {
-	if z.Timeout == 0 {
-		return context.WithCancel(context.Background())
-	}
-	return context.WithTimeout(context.Background(), time.Duration(z.Timeout))
-}
-
 func (z *Zerobus) closeStream() {
 	if z.stream == nil {
 		return
