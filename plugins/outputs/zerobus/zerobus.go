@@ -129,14 +129,19 @@ func (z *Zerobus) Write(metrics []telegraf.Metric) error {
 		return result
 	}
 
+	// Drop the stream on failure and let Telegraf retry the whole batch on a new
+	// one. Records already acknowledged by the failed attempt may therefore be
+	// written twice.
 	for _, b := range batches {
 		if _, err := z.stream.IngestJSONRecordsOffset(b.records); err != nil {
-			return z.abortWrite("admitting batch", err)
+			z.closeStream()
+			return fmt.Errorf("admitting batch failed (retryable=%t): %w", zerobus.Retryable(err), err)
 		}
 	}
 	// Report success only once Databricks acknowledged every record of the batch.
 	if err := z.stream.Flush(); err != nil {
-		return z.abortWrite("flushing batch", err)
+		z.closeStream()
+		return fmt.Errorf("flushing batch failed (retryable=%t): %w", zerobus.Retryable(err), err)
 	}
 
 	return result
@@ -203,13 +208,6 @@ func (z *Zerobus) closeStream() {
 	}
 	z.stream = nil
 	z.columns = nil
-}
-
-// Drop the stream and let Telegraf retry the whole batch on a new one. Records
-// already acknowledged by the failed attempt may therefore be written twice.
-func (z *Zerobus) abortWrite(operation string, err error) error {
-	z.closeStream()
-	return fmt.Errorf("%s failed (retryable=%t): %w", operation, zerobus.Retryable(err), err)
 }
 
 // Serialize the metrics into requests within the given record-count and size
