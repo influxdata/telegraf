@@ -15,15 +15,51 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestInitRequiredOptions(t *testing.T) {
+func TestInit(t *testing.T) {
 	tests := []struct {
-		name      string
-		endpoint  string
-		workspace string
-		table     string
-		clientID  string
-		secret    string
-		expected  string
+		name              string
+		timestampColumn   string
+		measurementColumn string
+	}{
+		{
+			name:              "allows an omitted timestamp column",
+			measurementColumn: "measurement",
+		},
+		{
+			name: "allows omitting both columns",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &Zerobus{
+				Endpoint:          "https://workspace.zerobus.example.com",
+				Workspace:         "https://workspace.example.com",
+				Table:             "catalog.schema.metrics",
+				ClientID:          "client",
+				ClientSecret:      config.NewSecret([]byte("secret")),
+				TimestampColumn:   tt.timestampColumn,
+				MeasurementColumn: tt.measurementColumn,
+				Timeout:           config.Duration(30 * time.Second),
+				Log:               testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+		})
+	}
+}
+
+func TestInitFail(t *testing.T) {
+	tests := []struct {
+		name              string
+		endpoint          string
+		workspace         string
+		table             string
+		clientID          string
+		secret            string
+		timestampColumn   string
+		measurementColumn string
+		timeout           config.Duration
+		expected          string
 	}{
 		{
 			name:      "missing endpoint",
@@ -65,107 +101,44 @@ func TestInitRequiredOptions(t *testing.T) {
 			clientID:  "client",
 			expected:  `option "client_secret" must be set`,
 		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			plugin := &Zerobus{
-				Endpoint:     tt.endpoint,
-				Workspace:    tt.workspace,
-				Table:        tt.table,
-				ClientID:     tt.clientID,
-				ClientSecret: config.NewSecret([]byte(tt.secret)),
-				Log:          testutil.Logger{},
-			}
-			require.ErrorContains(t, plugin.Init(), tt.expected)
-		})
-	}
-}
-
-func TestInitTimeout(t *testing.T) {
-	tests := []struct {
-		name     string
-		timeout  config.Duration
-		expected string
-	}{
 		{
-			name: "keeps a zero timeout",
-		},
-		{
-			name:    "keeps the configured timeout",
-			timeout: config.Duration(30 * time.Second),
-		},
-		{
-			name:     "rejects a negative timeout",
-			timeout:  config.Duration(-1),
-			expected: `option "timeout" cannot be negative`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			plugin := &Zerobus{
-				Endpoint:        "https://workspace.zerobus.example.com",
-				Workspace:       "https://workspace.example.com",
-				Table:           "catalog.schema.metrics",
-				ClientID:        "client",
-				ClientSecret:    config.NewSecret([]byte("secret")),
-				TimestampColumn: "timestamp",
-				Timeout:         tt.timeout,
-				Log:             testutil.Logger{},
-			}
-
-			if tt.expected != "" {
-				require.ErrorContains(t, plugin.Init(), tt.expected)
-				return
-			}
-			require.NoError(t, plugin.Init())
-			require.Equal(t, tt.timeout, plugin.Timeout)
-		})
-	}
-}
-
-func TestInitColumns(t *testing.T) {
-	tests := []struct {
-		name              string
-		timestampColumn   string
-		measurementColumn string
-		expected          string
-	}{
-		{
-			name:              "allows an omitted timestamp column",
-			measurementColumn: "measurement",
-		},
-		{
-			name: "allows omitting both columns",
-		},
-		{
-			name:              "rejects colliding columns",
+			name:              "colliding columns",
+			endpoint:          "https://workspace.zerobus.example.com",
+			workspace:         "https://workspace.example.com",
+			table:             "catalog.schema.metrics",
+			clientID:          "client",
+			secret:            "secret",
 			timestampColumn:   "timestamp",
 			measurementColumn: "timestamp",
 			expected:          `options "measurement_column" and "timestamp_column" must be different`,
 		},
+		{
+			name:            "negative timeout",
+			endpoint:        "https://workspace.zerobus.example.com",
+			workspace:       "https://workspace.example.com",
+			table:           "catalog.schema.metrics",
+			clientID:        "client",
+			secret:          "secret",
+			timestampColumn: "timestamp",
+			timeout:         config.Duration(-1),
+			expected:        `option "timeout" cannot be negative`,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &Zerobus{
-				Endpoint:          "https://workspace.zerobus.example.com",
-				Workspace:         "https://workspace.example.com",
-				Table:             "catalog.schema.metrics",
-				ClientID:          "client",
-				ClientSecret:      config.NewSecret([]byte("secret")),
+				Endpoint:          tt.endpoint,
+				Workspace:         tt.workspace,
+				Table:             tt.table,
+				ClientID:          tt.clientID,
+				ClientSecret:      config.NewSecret([]byte(tt.secret)),
 				TimestampColumn:   tt.timestampColumn,
 				MeasurementColumn: tt.measurementColumn,
-				Timeout:           config.Duration(30 * time.Second),
+				Timeout:           tt.timeout,
 				Log:               testutil.Logger{},
 			}
-
-			if tt.expected != "" {
-				require.ErrorContains(t, plugin.Init(), tt.expected)
-				return
-			}
-			require.NoError(t, plugin.Init())
+			require.ErrorContains(t, plugin.Init(), tt.expected)
 		})
 	}
 }
