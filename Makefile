@@ -365,7 +365,7 @@ $(include_packages):
 	    echo "Updating security info for $(version)_$(basename $(basename $@))..." && \
 		$(HOSTGO) install golang.org/x/vuln/cmd/govulncheck@v1.7.0 && \
 		$(MAKE) build && \
-		govulncheck --mode=extract telegraf$(EXEEXT) | gzip - > $(pkgdir)/telegraf-$(version)_$(basename $(basename $@)).jsonl.gz; \
+		govulncheck --mode=extract telegraf$(EXEEXT) | gzip - > $(pkgdir)/symbols-$(version)_$(basename $(basename $@)).jsonl.gz; \
 	fi
 
 	@$(MAKE) install
