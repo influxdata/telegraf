@@ -218,8 +218,8 @@ func (z *Zerobus) abortWrite(operation string, err error) error {
 func (z *Zerobus) serializeMetrics(metrics []telegraf.Metric, maxRecords, maxBytes int) ([]batch, error) {
 	var batches []batch
 	var writeErr internal.PartialWriteError
+	var size int
 
-	size := 0
 	for i, m := range metrics {
 		record, err := metricToTableSchemaJSON(m, z.TimestampColumn, z.MeasurementColumn, z.columns)
 		if err != nil {
