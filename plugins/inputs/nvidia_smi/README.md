@@ -115,15 +115,15 @@ Please include the output of this command if opening an GitHub issue.
     - `clocks_current_sm` (integer, MHz)
     - `clocks_current_memory` (integer, MHz)
     - `clocks_current_video` (integer, MHz)
-    - `clocks_event_reason_sw_power_cap` (string)
-    - `clocks_event_reason_sw_thermal_slowdown` (string)
-    - `clocks_event_reason_hw_thermal_slowdown` (string)
-    - `clocks_event_reason_hw_power_brake_slowdown` (string)
-    - `clocks_event_reason_hw_slowdown` (string)
-    - `clocks_event_reason_sync_boost` (string)
-    - `clocks_event_reason_gpu_idle` (string)
-    - `clocks_event_reason_applications_clocks_setting` (string)
-    - `clocks_event_reason_display_clocks_setting` (string)
+    - `clocks_event_reason_sw_power_cap` (integer, 1 when active)
+    - `clocks_event_reason_sw_thermal_slowdown` (integer, 1 when active)
+    - `clocks_event_reason_hw_thermal_slowdown` (integer, 1 when active)
+    - `clocks_event_reason_hw_power_brake_slowdown` (integer, 1 when active)
+    - `clocks_event_reason_hw_slowdown` (integer, 1 when active)
+    - `clocks_event_reason_sync_boost` (integer, 1 when active)
+    - `clocks_event_reason_gpu_idle` (integer, 1 when active)
+    - `clocks_event_reason_applications_clocks_setting` (integer, 1 when active)
+    - `clocks_event_reason_display_clocks_setting` (integer, 1 when active)
     - `clocks_event_reasons_counters_sw_power_cap` (integer, microseconds,
       schema v13)
     - `clocks_event_reasons_counters_sw_therm_slowdown` (integer,
@@ -222,10 +222,11 @@ Please include the output of this command if opening an GitHub issue.
     - `used_memory` (integer, MiB)
 
 Not every field is available on every GPU or driver. Fields are only emitted
-when `nvidia-smi` reports a value for them, so cards reporting `N/A` simply omit
-the field. The `schema v12+` and `schema v13` markers above refer to the XML
-schema version the installed driver reports, which determines the upper bound of
-what can be collected.
+when `nvidia-smi` reports a value for them, so cards reporting `N/A` or
+`Requested functionality has been deprecated` simply omit the field. The
+`schema v12+` and `schema v13` markers above refer to the XML schema version the
+installed driver reports, which determines the upper bound of what can be
+collected.
 
 Drivers older than 535 report the throttle reasons under their former
 `clocks_throttle_reason_*` element names, but Telegraf emits those under
@@ -233,7 +234,7 @@ more modern `clocks_event_reason_*` field names.
 
 > [!TIP]
 > The `clocks_event_reason_*` fields report why a GPU is currently clocked
-> down, as `Active` or `Not Active`. On schema v13, five of these
+> down, as `1` (Active) and `0` (Not Active). On schema v13, five of these
 > also have `clocks_event_reasons_counters_*` fields that count the
 > microseconds spent in that state. The counters catch throttling that
 > starts and ends between collection intervals. They only ever increase,

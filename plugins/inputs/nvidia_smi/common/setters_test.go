@@ -109,6 +109,48 @@ func TestSetIfUsed(t *testing.T) {
 	}
 }
 
+func TestSetActiveIfUsed(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    string
+		expected map[string]interface{}
+	}{
+		{
+			name:     "active",
+			value:    "Active",
+			expected: map[string]interface{}{"clocks_event_reason_hw_slowdown": int64(1)},
+		},
+		{
+			name:     "not active",
+			value:    "Not Active",
+			expected: map[string]interface{}{"clocks_event_reason_hw_slowdown": int64(0)},
+		},
+		{
+			name:     "surrounding whitespace is trimmed",
+			value:    "  Not Active\n",
+			expected: map[string]interface{}{"clocks_event_reason_hw_slowdown": int64(0)},
+		},
+		{
+			name:     "unsupported value is skipped",
+			value:    "N/A",
+			expected: map[string]interface{}{},
+		},
+		{
+			name:     "empty value is skipped",
+			value:    "",
+			expected: map[string]interface{}{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := make(map[string]interface{})
+			SetActiveIfUsed(actual, "clocks_event_reason_hw_slowdown", tt.value)
+			require.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
 func TestSetTagIfUsed(t *testing.T) {
 	actual := make(map[string]string)
 	SetTagIfUsed(actual, "name", "NVIDIA RTX 4000 SFF Ada Generation")

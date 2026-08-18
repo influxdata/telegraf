@@ -38,6 +38,16 @@ func SetIfUsed(t string, m map[string]interface{}, k, v string) {
 	}
 }
 
+// SetActiveIfUsed normalises binary nvidia-smi feilds from a str to 1 or 0.
+func SetActiveIfUsed(m map[string]interface{}, k, v string) {
+	switch strings.TrimSpace(v) {
+	case "Active":
+		m[k] = int64(1)
+	case "Not Active":
+		m[k] = int64(0)
+	}
+}
+
 // number strips the unit from a measurement such as "20475 MiB" or "16x".
 func number(v string) string {
 	return strings.TrimSuffix(strings.Fields(v)[0], "x")
