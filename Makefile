@@ -233,7 +233,6 @@ check-deps:
 clean:
 	rm -f telegraf
 	rm -f telegraf.exe
-	rm -f telegraf-*.jsonl
 	rm -f etc/telegraf.conf
 	rm -rf build
 	rm -rf cmd/telegraf/resource.syso
@@ -366,8 +365,7 @@ $(include_packages):
 	    echo "Updating security info for $(version)_$(basename $(basename $@))..." && \
 		$(HOSTGO) install golang.org/x/vuln/cmd/govulncheck@v1.7.0 && \
 		$(MAKE) build && \
-		govulncheck --mode=extract telegraf$(EXEEXT) > telegraf-$(version)_$(basename $(basename $@)).jsonl && \
-		zip -m $(pkgdir)/telegraf-$(version)_$(basename $(basename $@)).jsonl.zip telegraf-$(version)_$(basename $(basename $@)).jsonl; \
+		govulncheck --mode=extract telegraf$(EXEEXT) | gzip - > $(pkgdir)/telegraf-$(version)_$(basename $(basename $@)).jsonl.gz; \
 	fi
 
 	@$(MAKE) install
