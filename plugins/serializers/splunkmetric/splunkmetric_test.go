@@ -268,6 +268,185 @@ func TestSerializeOmitEvent(t *testing.T) {
 	require.Equal(t, expS, string(buf))
 }
 
+func TestSerializeMultiOmitMetricPrefix(t *testing.T) {
+	m := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"user":   42.0,
+			"system": 8.0,
+		},
+		time.Unix(0, 0),
+	)
+
+	metrics := []telegraf.Metric{m}
+	s := &Serializer{MultiMetric: true, OmitMetricNamePrefix: true}
+	buf, err := s.SerializeBatch(metrics)
+	require.NoError(t, err)
+
+	expS := `{"system":8,"time":0,"user":42}`
+	require.Equal(t, expS, string(buf))
+}
+
+func TestSerializeMultiOmitMetricPrefixHec(t *testing.T) {
+	m := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"usage":  42.0,
+			"system": 8.0,
+		},
+		time.Unix(0, 0),
+	)
+
+	metrics := []telegraf.Metric{m}
+	s := &Serializer{
+		HecRouting:           true,
+		MultiMetric:          true,
+		OmitMetricNamePrefix: true,
+	}
+	buf, err := s.SerializeBatch(metrics)
+	require.NoError(t, err)
+
+	expS := `{"time":0,"event":"metric","fields":{"system":8,"usage":42}}`
+	require.Equal(t, expS, string(buf))
+}
+
+func TestSerializeMultiDropStringValues(t *testing.T) {
+	m := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"processorType": "ARMv7 Processor rev 4 (v7l)",
+			"usage_idle":    42.0,
+		},
+		time.Unix(0, 0),
+	)
+
+	metrics := []telegraf.Metric{m}
+	s := &Serializer{MultiMetric: true} // PermitFieldStringValues defaults to false
+	buf, err := s.SerializeBatch(metrics)
+	require.NoError(t, err)
+
+	// String field should be dropped; only the numeric field appears
+	expS := `{"metric_name:cpu.usage_idle":42,"time":0}`
+	require.Equal(t, expS, string(buf))
+}
+
+func TestSerializeMultiPermitStringValues(t *testing.T) {
+	m := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"processorType": "ARMv7 Processor rev 4 (v7l)",
+			"usage_idle":    42.0,
+		},
+		time.Unix(0, 0),
+	)
+
+	metrics := []telegraf.Metric{m}
+	s := &Serializer{MultiMetric: true, PermitFieldStringValues: true}
+	buf, err := s.SerializeBatch(metrics)
+	require.NoError(t, err)
+
+	expS := `{"metric_name:cpu.processorType":"ARMv7 Processor rev 4 (v7l)","metric_name:cpu.usage_idle":42,"time":0}`
+	require.Equal(t, expS, string(buf))
+}
+
+func TestSerializeMultiAddMeasurementField(t *testing.T) {
+	m := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"user":   42.0,
+			"system": 8.0,
+		},
+		time.Unix(0, 0),
+	)
+
+	metrics := []telegraf.Metric{m}
+	s := &Serializer{MultiMetric: true, AddMeasurementField: true}
+	buf, err := s.SerializeBatch(metrics)
+	require.NoError(t, err)
+
+	expS := `{"measurement":"cpu","metric_name:cpu.system":8,"metric_name:cpu.user":42,"time":0}`
+	require.Equal(t, expS, string(buf))
+}
+
+func TestSerializeMultiAddMeasurementFieldHec(t *testing.T) {
+	m := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"user":   42.0,
+			"system": 8.0,
+		},
+		time.Unix(0, 0),
+	)
+
+	metrics := []telegraf.Metric{m}
+	s := &Serializer{
+		HecRouting:          true,
+		MultiMetric:         true,
+		AddMeasurementField: true,
+	}
+	buf, err := s.SerializeBatch(metrics)
+	require.NoError(t, err)
+
+	expS := `{"time":0,"event":"metric","fields":{"measurement":"cpu","metric_name:cpu.system":8,"metric_name:cpu.user":42}}`
+	require.Equal(t, expS, string(buf))
+}
+
+func TestSerializeMultiAddMeasurementFieldOmitMetricPrefix(t *testing.T) {
+	m := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"user":   42.0,
+			"system": 8.0,
+		},
+		time.Unix(0, 0),
+	)
+
+	metrics := []telegraf.Metric{m}
+	s := &Serializer{
+		MultiMetric:          true,
+		AddMeasurementField:  true,
+		OmitMetricNamePrefix: true,
+	}
+	buf, err := s.SerializeBatch(metrics)
+	require.NoError(t, err)
+
+	// Fields have no metric_name: prefix; measurement key is still added
+	expS := `{"measurement":"cpu","system":8,"time":0,"user":42}`
+	require.Equal(t, expS, string(buf))
+}
+
+func TestSerializeMultiAddMeasurementFieldOmitMetricPrefixHec(t *testing.T) {
+	m := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"user":   42.0,
+			"system": 8.0,
+		},
+		time.Unix(0, 0),
+	)
+
+	metrics := []telegraf.Metric{m}
+	s := &Serializer{
+		HecRouting:           true,
+		MultiMetric:          true,
+		AddMeasurementField:  true,
+		OmitMetricNamePrefix: true,
+	}
+	buf, err := s.SerializeBatch(metrics)
+	require.NoError(t, err)
+
+	expS := `{"time":0,"event":"metric","fields":{"measurement":"cpu","system":8,"user":42}}`
+	require.Equal(t, expS, string(buf))
+}
+
 func BenchmarkSerialize(b *testing.B) {
 	s := &Serializer{}
 	metrics := serializers.BenchmarkMetrics(b)
