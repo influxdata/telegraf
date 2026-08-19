@@ -121,7 +121,7 @@ func (z *Zerobus) Write(metrics []telegraf.Metric) error {
 
 	// Only log the metrics rejected during serialization for now. A failing write
 	// below returns an error for the whole batch, so Telegraf retries them
-	// together with the valid metrics until the write succeeds.
+	// together with the valid metrics.
 	records, err := z.serializeMetrics(metrics)
 	if err != nil {
 		z.Log.Errorf("Serializing metrics failed: %s", err)
