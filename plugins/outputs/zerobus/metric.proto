@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+package telegraf.zerobus.v1;
+
+option go_package = "github.com/influxdata/telegraf/plugins/outputs/zerobus";
+
+// TelegrafMetric maps one metric to a Delta row. Field numbers match column
+// order.
+message TelegrafMetric {
+  required string measurement = 1;
+  required int64 timestamp_ns = 2;
+  map<string, string> tags = 3;
+  // JSON object holding the metric fields; Zerobus stores it as VARIANT.
+  required string fields = 4;
+}
