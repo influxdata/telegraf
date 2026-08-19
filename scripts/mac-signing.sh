@@ -120,8 +120,8 @@ do
   tar -xzvf "${tarFile}" -C "TarRepackage"
   cp "${TelegrafBinPath}" "TarRepackage/${versionDir}/usr/bin/telegraf"
   tar  --owner 0 --group 0 -czvf "${tarFile}" -C "TarRepackage" "${versionDir}"
-  mkdir -p ~/project/build/dist
-  cp "${tarFile}" "~/project/build/dist"
+  mkdir -p "${HOME}/project/build/dist"
+  cp "${tarFile}" "${HOME}/project/build/dist"
 
   echo "Replaced tar binary with signed version!"
 
