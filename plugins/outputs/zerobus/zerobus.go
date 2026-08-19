@@ -256,7 +256,8 @@ func (z *Zerobus) batchRecords(records [][]byte) [][][]byte {
 
 	for len(records) > 0 {
 		// Add records to the request until one of the limits is reached
-		count, size := 1, recordSize(records[0])
+		count := 1
+		size := recordSize(records[0])
 		for count < len(records) && count < z.maxRecords {
 			next := size + recordSize(records[count])
 			if next > z.maxBytes {
