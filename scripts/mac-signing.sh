@@ -113,6 +113,18 @@ do
 
   printf "\n"
 
+  # Replace the telegraf binary with the signed version in the tar archive
+  versionDir=$(basename "${tarFile}")
+  versionDir=${versionDir/_*}
+  mkdir -p "TarRepackage"
+  tar -xzvf "${tarFile}" -C "TarRepackage"
+  cp "${TelegrafBinPath}" "TarRepackage/${versionDir}/usr/bin/telegraf"
+  tar  --owner 0 --group 0 -czvf "${tarFile}" -C "TarRepackage" "${versionDir}"
+  mkdir -p ~/project/build/dist
+  cp "${tarFile}" "~/project/build/dist"
+
+  echo "Replaced tar binary with signed version!"
+
   cp ~/project/scripts/telegraf_entry_mac "$RootAppDir"/MacOS
   cp ~/project/Info.plist "$RootAppDir"
   cp  ~/project/assets/windows/icon.icns "$RootAppDir/Resources"
@@ -136,15 +148,4 @@ do
   mv "$baseName".dmg ~/project/build/dist
 
   echo "$baseName.dmg signed and notarized!"
-
-  # Replace the telegraf binary with the signed version in the tar archive
-  versionDir=$(basename "${tarFile}")
-  versionDir=${versionDir/_*}
-  mkdir -p "$RootAppDir/Extracted"
-  tar -xzvf "${tarFile}" -C "$RootAppDir/Extracted"
-  cp "${TelegrafBinPath}" "$RootAppDir/Extracted/${versionDir}/usr/bin/telegraf"
-  tar -czvf "${tarFile}" -C "$RootAppDir/Extracted" "${versionDir}"
-
-  echo "Replaced tar binary with signed version!"
-
 done
