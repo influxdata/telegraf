@@ -111,7 +111,7 @@ func newParser(includeDelete bool, aliases, dmes map[string]string, embeddedTags
 	return p
 }
 
-func (s *parser) parse(
+func (p *parser) parse(
 	grouper *metric.SeriesGrouper,
 	content *telemetry.TelemetryField,
 	encodingPath string,
@@ -121,15 +121,15 @@ func (s *parser) parse(
 ) []error {
 	// Do alias lookup, to shorten measurement names
 	measurement := encodingPath
-	if alias, ok := s.aliases[encodingPath]; ok {
+	if alias, ok := p.aliases[encodingPath]; ok {
 		measurement = alias
 	} else {
-		s.Lock()
-		if !s.warned[encodingPath] {
-			s.log.Debugf("No measurement alias for encoding path: %s", encodingPath)
-			s.warned[encodingPath] = true
+		p.Lock()
+		if !p.warned[encodingPath] {
+			p.log.Debugf("No measurement alias for encoding path: %s", encodingPath)
+			p.warned[encodingPath] = true
 		}
-		s.Unlock()
+		p.Unlock()
 	}
 
 	// Determine what OS we are on and if the message encodes events
@@ -144,9 +144,9 @@ func (s *parser) parse(
 		tagPrefix:   strings.ReplaceAll(encodingPath, "-", "_") + "/",
 		isNXOS:      isNXOS,
 		isEvent:     isEvent,
-		extraTags:   s.extraTags,
-		propMap:     s.propMap,
-		nxpathMap:   s.nxpathMap[encodingPath],
+		extraTags:   p.extraTags,
+		propMap:     p.propMap,
+		nxpathMap:   p.nxpathMap[encodingPath],
 		grouper:     grouper,
 	}
 
@@ -172,7 +172,7 @@ func (s *parser) parse(
 	}
 
 	// Add a delete field if configured
-	if s.includeDelete {
+	if p.includeDelete {
 		grouper.Add(measurement, tags, timestamp, "delete", isDeleted)
 	}
 
