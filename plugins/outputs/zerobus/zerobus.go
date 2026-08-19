@@ -22,15 +22,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const (
-	// Zerobus caps a request at 10 MiB and 100k records, so the plugin splits
-	// batches along the protocol limits instead of the agent's metric_batch_size.
-	// The byte budget applies to all records of a request together and reserves
-	// headroom for the surrounding request fields.
-	maxBatchRecords = 100_000
-	maxRequestBytes = 10*1024*1024 - 64*1024 - 1024
-)
-
 // Zerobus writes metrics to a Databricks table.
 type Zerobus struct {
 	Endpoint          string          `toml:"endpoint"`
@@ -79,6 +70,13 @@ func (z *Zerobus) Init() error {
 	if z.Timeout < 0 {
 		return errors.New(`option "timeout" cannot be negative`)
 	}
+
+	// Zerobus caps a request at 10 MiB and 100k records, so the plugin splits
+	// batches along the protocol limits instead of the agent's metric_batch_size.
+	// The byte budget applies to all records of a request together and reserves
+	// headroom for the surrounding request fields.
+	z.maxRecords = 100000
+	z.maxBytes = 10*1024*1024 - 64*1024 - 1024
 
 	return nil
 }
@@ -296,8 +294,6 @@ func init() {
 		return &Zerobus{
 			TimestampColumn: "timestamp",
 			Timeout:         config.Duration(30 * time.Second),
-			maxRecords:      maxBatchRecords,
-			maxBytes:        maxRequestBytes,
 		}
 	})
 }

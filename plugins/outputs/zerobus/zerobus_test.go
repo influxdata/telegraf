@@ -298,7 +298,7 @@ func TestSerializeMetricsRejectsMetrics(t *testing.T) {
 				metric.New(
 					"cpu",
 					nil,
-					map[string]interface{}{"value": strings.Repeat("x", maxRequestBytes)},
+					map[string]interface{}{"value": strings.Repeat("x", 2048)},
 					time.Now(),
 				),
 			},
@@ -311,8 +311,8 @@ func TestSerializeMetricsRejectsMetrics(t *testing.T) {
 		TimestampColumn: "timestamp",
 		Log:             testutil.Logger{},
 		columns:         map[string]bool{"timestamp": true, "tag1": true, "value": true, "host": true},
-		maxRecords:      maxBatchRecords,
-		maxBytes:        maxRequestBytes,
+		maxRecords:      100,
+		maxBytes:        1024,
 	}
 
 	for _, tt := range tests {
@@ -343,28 +343,28 @@ func TestBatchRecords(t *testing.T) {
 		{
 			name:       "keeps fitting records in one request",
 			records:    records,
-			maxRecords: maxBatchRecords,
-			maxBytes:   maxRequestBytes,
+			maxRecords: 100,
+			maxBytes:   1024,
 			expected:   [][][]byte{records},
 		},
 		{
 			name:       "splits by record count",
 			records:    records,
 			maxRecords: 2,
-			maxBytes:   maxRequestBytes,
+			maxBytes:   1024,
 			expected:   [][][]byte{records[:2], records[2:]},
 		},
 		{
 			name:       "splits by payload size",
 			records:    records,
-			maxRecords: maxBatchRecords,
+			maxRecords: 100,
 			maxBytes:   twoRecords,
 			expected:   [][][]byte{records[:2], records[2:]},
 		},
 		{
 			name:       "handles an empty batch",
-			maxRecords: maxBatchRecords,
-			maxBytes:   maxRequestBytes,
+			maxRecords: 100,
+			maxBytes:   1024,
 		},
 	}
 
