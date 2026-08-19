@@ -200,6 +200,7 @@ func (z *Zerobus) openStream() error {
 
 	return nil
 }
+
 func (z *Zerobus) closeStream() {
 	if z.stream == nil {
 		return
@@ -236,10 +237,10 @@ func (z *Zerobus) serializeMetrics(metrics []telegraf.Metric) ([][]byte, error) 
 		}
 
 		records = append(records, record)
-		writeErr.MetricsAccept = append(writeErr.MetricsAccept, i)
 	}
 
-	// Report the rejected metrics alongside the records of the accepted ones
+	// Report the rejected metrics, the accepted ones are only known once the
+	// endpoint acknowledged the records
 	if len(writeErr.MetricsReject) == 0 {
 		return records, nil
 	}

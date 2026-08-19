@@ -272,7 +272,7 @@ func TestSerializeMetricsRejectsMetrics(t *testing.T) {
 	tests := []struct {
 		name     string
 		metrics  []telegraf.Metric
-		accepted []int
+		accepted int
 		rejected []int
 		expected string
 	}{
@@ -288,7 +288,7 @@ func TestSerializeMetricsRejectsMetrics(t *testing.T) {
 				),
 				testutil.TestMetric(3),
 			},
-			accepted: []int{0, 2},
+			accepted: 2,
 			rejected: []int{1},
 			expected: `field "host" conflicts`,
 		},
@@ -318,11 +318,10 @@ func TestSerializeMetricsRejectsMetrics(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			records, err := plugin.serializeMetrics(tt.metrics)
-			require.Len(t, records, len(tt.accepted))
+			require.Len(t, records, tt.accepted)
 
 			var writeErr *internal.PartialWriteError
 			require.ErrorAs(t, err, &writeErr)
-			require.Equal(t, tt.accepted, writeErr.MetricsAccept)
 			require.Equal(t, tt.rejected, writeErr.MetricsReject)
 			require.ErrorContains(t, err, tt.expected)
 		})
