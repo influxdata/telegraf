@@ -153,6 +153,38 @@ plugin relies on the `id` command. This command must be available on the system,
 in the PATH and executable by Telegraf, otherwise the username cannot be
 resolved and the user-ID is used instead.
 
+### Behavior for multiple processes matching
+
+If multiple processes match the given pattern then one record will be
+emitted for each process, and the output endpoint might keep only one.
+For example:
+```
+[[inputs.procstat]]
+  pid_finder = "native"
+  exe = "apache2"
+```
+will emit one record for each "apache2" process, at the same timestamp.
+Without a differentiating tag, InfluxDB will only keep the last record.
+For example **the `cpu_usage` stored will be the CPU usage 
+of a random "apache2" process.**
+
+One solution is to record a differentiating tag, for example `tag_with=["pid"]`.
+Then all processes are stored separately.
+This however is very heavy on the cardinality of the database.
+
+Another solution is to add an aggregator that records the cumulative sum of all
+processes:
+```
+[[aggregators.basicstats]]
+  namepass = ["procstat"]
+  period   = "10s"    # Set this to the global telegraf interval
+  stats    = ["sum"]
+```
+This will emit an extra field for each numeric field, with the
+suffix `_sum`. Therefore, for our previous example, 
+there will be a new field `cpu_usage_sum` that will
+record the cumulative CPU usage of all "apache2" processes.
+
 ## Metrics
 
 For descriptions of these tags and fields, consider reading one of the
