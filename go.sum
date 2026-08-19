@@ -1897,8 +1897,8 @@ github.com/mattn/go-runewidth v0.0.24 h1:cpokDiIn0MGnhdHwuWnJBITySJ20QyNGnY2kR/a
 github.com/mattn/go-runewidth v0.0.24/go.mod h1:XBkDxAl56ILZc9knddidhrOlY5R/pDhgLpndooCuJAs=
 github.com/mattn/go-sqlite3 v1.14.14/go.mod h1:NyWgC/yNuGj7Q9rpYnZvas74GogHl5/Z4A/KQRfk6bU=
 github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5Ld7szi9bcBfOoFv/3dc6xSMkL2PC0=
-github.com/mchrome/influxdb-observability/influx2otel v0.0.0-20260623155732-db200540d054 h1:WXWL5QDbST9SMghx58SgxKadDTS1YqFyngMS+7BHnPk=
-github.com/mchrome/influxdb-observability/influx2otel v0.0.0-20260623155732-db200540d054/go.mod h1:YgNF+ESSKXizCNRvkIAFMS8rWaP8t/86GLuycJ7vOTw=
+github.com/mchrome/influxdb-observability/influx2otel v0.0.0-20260819083430-6ad72fb9f7e8 h1:JdtBnUdaofSXdMth3CTg0UOL5YTX7W+r/gFPSD2/K2w=
+github.com/mchrome/influxdb-observability/influx2otel v0.0.0-20260819083430-6ad72fb9f7e8/go.mod h1:YgNF+ESSKXizCNRvkIAFMS8rWaP8t/86GLuycJ7vOTw=
 github.com/mdlayher/apcupsd v0.0.0-20220319200143-473c7b5f3c6a h1:JOlLsLUQnokTyWWwEvOVoKH3XUl6oDMP8jisO54l6J8=
 github.com/mdlayher/apcupsd v0.0.0-20220319200143-473c7b5f3c6a/go.mod h1:960H6oqSawdujauTeLX9BOx+ZdYX0TdG9xE9br5bino=
 github.com/mdlayher/ethtool v0.0.0-20210210192532-2b88debcdd43/go.mod h1:+t7E0lkKfbBsebllff1xdTmyJt8lH37niI6kwFk9OTo=
