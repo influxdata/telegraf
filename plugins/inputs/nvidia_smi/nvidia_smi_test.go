@@ -628,9 +628,9 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "/usr/lib/Xorg",
 						"type": "G",
+					"pid": "835",
 					},
 					map[string]interface{}{
-						"pid":         int64(835),
 						"used_memory": int64(550),
 					},
 					time.Unix(1689872450, 0)),
@@ -639,9 +639,9 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "/usr/bin/gnome-shell",
 						"type": "G",
+					"pid": "1481",
 					},
 					map[string]interface{}{
-						"pid":         int64(1481),
 						"used_memory": int64(18),
 					},
 					time.Unix(1689872450, 0)),
@@ -657,9 +657,9 @@ func TestGatherValidXML(t *testing.T) {
 							"--field-trial-handle=0,i,3110290512380155730," +
 							"7457693378709978105,262144 --variations-seed-version",
 						"type": "G",
+					"pid": "2214",
 					},
 					map[string]interface{}{
-						"pid":         int64(2214),
 						"used_memory": int64(79),
 					},
 					time.Unix(1689872450, 0)),
@@ -668,9 +668,9 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "/usr/lib/firefox/firefox",
 						"type": "G",
+					"pid": "4044",
 					},
 					map[string]interface{}{
-						"pid":         int64(4044),
 						"used_memory": int64(541),
 					},
 					time.Unix(1689872450, 0)),
@@ -687,9 +687,9 @@ func TestGatherValidXML(t *testing.T) {
 							"4769839452661094675,262144 --disable-features=" +
 							"CalculateNativeWinOcclusion,SpareRendererForSitePerProcess",
 						"type": "G",
+					"pid": "42416",
 					},
 					map[string]interface{}{
-						"pid":         int64(42416),
 						"used_memory": int64(159),
 					},
 					time.Unix(1689872450, 0)),
@@ -1088,9 +1088,9 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "cosmic-comp",
 						"type": "G",
+					"pid": "1842",
 					},
 					map[string]interface{}{
-						"pid":         1842,
 						"used_memory": 410,
 					},
 					time.Unix(1785992620, 0)),
@@ -1099,9 +1099,9 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "/usr/bin/code",
 						"type": "G",
+					"pid": "3190",
 					},
 					map[string]interface{}{
-						"pid":         3190,
 						"used_memory": 451,
 					},
 					time.Unix(1785992620, 0)),
@@ -1110,9 +1110,9 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "python",
 						"type": "C",
+					"pid": "4937",
 					},
 					map[string]interface{}{
-						"pid":         4937,
 						"used_memory": 160,
 					},
 					time.Unix(1785992620, 0)),
@@ -1121,9 +1121,9 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "/usr/lib/chromium/chromium",
 						"type": "C+G",
+					"pid": "34626",
 					},
 					map[string]interface{}{
-						"pid":         34626,
 						"used_memory": 183,
 					},
 					time.Unix(1785992620, 0)),
