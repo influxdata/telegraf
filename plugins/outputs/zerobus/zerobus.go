@@ -119,9 +119,15 @@ func (z *Zerobus) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	records, result := z.serializeMetrics(metrics)
+	// Only log the metrics rejected during serialization for now. A failing write
+	// below returns an error for the whole batch, so Telegraf retries them
+	// together with the valid metrics until the write succeeds.
+	records, err := z.serializeMetrics(metrics)
+	if err != nil {
+		z.Log.Errorf("Serializing metrics failed: %s", err)
+	}
 	if len(records) == 0 {
-		return result
+		return nil
 	}
 
 	// Drop the stream on failure and let Telegraf retry the whole batch on a new
@@ -139,7 +145,7 @@ func (z *Zerobus) Write(metrics []telegraf.Metric) error {
 		return fmt.Errorf("flushing batch failed (retryable=%t): %w", zerobus.Retryable(err), err)
 	}
 
-	return result
+	return nil
 }
 
 func (z *Zerobus) Close() error {
