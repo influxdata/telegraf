@@ -329,9 +329,6 @@ func TestSerializeMetricsRejectsMetrics(t *testing.T) {
 }
 
 func TestBatchRecords(t *testing.T) {
-	records := [][]byte{[]byte(`{"value":1}`), []byte(`{"value":2}`), []byte(`{"value":3}`)}
-	twoRecords := recordSize(records[0]) + recordSize(records[1])
-
 	tests := []struct {
 		name       string
 		records    [][]byte
@@ -341,24 +338,33 @@ func TestBatchRecords(t *testing.T) {
 	}{
 		{
 			name:       "keeps fitting records in one request",
-			records:    records,
+			records:    [][]byte{[]byte(`{"value":1}`), []byte(`{"value":2}`), []byte(`{"value":3}`)},
 			maxRecords: 100,
 			maxBytes:   1024,
-			expected:   [][][]byte{records},
+			expected: [][][]byte{
+				{[]byte(`{"value":1}`), []byte(`{"value":2}`), []byte(`{"value":3}`)},
+			},
 		},
 		{
 			name:       "splits by record count",
-			records:    records,
+			records:    [][]byte{[]byte(`{"value":1}`), []byte(`{"value":2}`), []byte(`{"value":3}`)},
 			maxRecords: 2,
 			maxBytes:   1024,
-			expected:   [][][]byte{records[:2], records[2:]},
+			expected: [][][]byte{
+				{[]byte(`{"value":1}`), []byte(`{"value":2}`)},
+				{[]byte(`{"value":3}`)},
+			},
 		},
 		{
 			name:       "splits by payload size",
-			records:    records,
+			records:    [][]byte{[]byte(`{"value":1}`), []byte(`{"value":2}`), []byte(`{"value":3}`)},
 			maxRecords: 100,
-			maxBytes:   twoRecords,
-			expected:   [][][]byte{records[:2], records[2:]},
+			// Each record requires 13 bytes including its protobuf framing
+			maxBytes: 26,
+			expected: [][][]byte{
+				{[]byte(`{"value":1}`), []byte(`{"value":2}`)},
+				{[]byte(`{"value":3}`)},
+			},
 		},
 		{
 			name:       "handles an empty batch",
