@@ -1,6 +1,6 @@
 package telegraf
 
-// SecretStore is an interface defining functions that a secret-store plugin must satisfy.
+// SecretStore is an interface defining functions that a secret store plugin must satisfy
 type SecretStore interface {
 	Initializer
 	PluginDescriber
@@ -8,14 +8,23 @@ type SecretStore interface {
 	// Get searches for the given key and return the secret
 	Get(key string) ([]byte, error)
 
-	// Set sets the given secret for the given key
-	Set(key, value string) error
-
 	// List lists all known secret keys
 	List() ([]string, error)
 
 	// GetResolver returns a function to resolve the given key.
 	GetResolver(key string) (ResolveFunc, error)
+}
+
+// SecretStoreEditor is an optional interface for secret stores that can create,
+// modify or erase secrets. Stores backed by a read-only source do not implement
+// it.
+type SecretStoreEditor interface {
+	// Set creates or modifies the secret for the given key
+	Set(key, value string) error
+
+	// Remove erases the secret for the given key and returns an error if there
+	// is no secret stored under that key
+	Remove(key string) error
 }
 
 // ResolveFunc is a function to resolve the secret.

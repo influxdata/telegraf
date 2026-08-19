@@ -67,6 +67,8 @@ func (o *OS) Get(key string) ([]byte, error) {
 	return item.Data, nil
 }
 
+var _ telegraf.SecretStoreEditor = (*OS)(nil)
+
 func (o *OS) Set(key, value string) error {
 	item := keyring.Item{
 		Key:  key,
@@ -74,6 +76,10 @@ func (o *OS) Set(key, value string) error {
 	}
 
 	return o.ring.Set(item)
+}
+
+func (o *OS) Remove(key string) error {
+	return o.ring.Remove(key)
 }
 
 func (o *OS) List() ([]string, error) {

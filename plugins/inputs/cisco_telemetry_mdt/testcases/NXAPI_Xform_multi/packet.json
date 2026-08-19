@@ -1,0 +1,68 @@
+{
+    "nodeIdStr": "hostname",
+    "subscriptionIdStr": "subscription",
+    "encodingPath": "sys/lldp",
+    "msgTimestamp": "1543236572000",
+    "dataGpbkv": [
+        {
+            "fields": [
+                {
+                    "name": "keys",
+                    "fields": [
+                        {
+                            "name": "foo",
+                            "stringValue": "bar"
+                        }
+                    ]
+                },
+                {
+                    "name": "content",
+                    "fields": [
+                        {
+                            "fields": [
+                                {
+                                    "name": "fooEntity",
+                                    "fields": [
+                                        {
+                                            "fields": [
+                                                {
+                                                    "name": "attributes",
+                                                    "fields": [
+                                                        {
+                                                            "fields": [
+                                                                {
+                                                                    "name": "rn",
+                                                                    "stringValue": "some-rn"
+                                                                },
+                                                                {
+                                                                    "name": "portIdV",
+                                                                    "uint32Value": 12
+                                                                },
+                                                                {
+                                                                    "name": "portDesc",
+                                                                    "uint64Value": "100"
+                                                                },
+                                                                {
+                                                                    "name": "test",
+                                                                    "uint64Value": "281474976710655"
+                                                                },
+                                                                {
+                                                                    "name": "subscriptionId",
+                                                                    "uint64Value": "2814749767106551"
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

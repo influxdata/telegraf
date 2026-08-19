@@ -8,10 +8,10 @@ func (*DiskIO) diskInfo(_ string) (map[string]string, error) {
 	return nil, nil
 }
 
-func resolveName(name string) string {
+func (*DiskIO) resolveName(name string) string {
 	return name
 }
 
-func getDeviceWWID(_ string) string {
+func (*DiskIO) getDeviceWWID(_ string) string {
 	return ""
 }

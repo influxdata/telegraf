@@ -63,7 +63,7 @@ type InfluxDBV2Listener struct {
 
 	totalUndeliveredMetrics atomic.Int64
 
-	timeFunc influx.TimeFunc
+	timeFunc func() time.Time
 	listener net.Listener
 
 	server http.Server

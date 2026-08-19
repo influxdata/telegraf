@@ -9,6 +9,7 @@ tag := $(shell git describe --exact-match --tags 2>/dev/null)
 branch := $(shell git rev-parse --abbrev-ref HEAD)
 commit := $(shell git rev-parse --short=8 HEAD)
 
+RELEASE := false
 ifdef NIGHTLY
 	version := $(next_version)
 	rpm_version := nightly
@@ -23,15 +24,6 @@ else ifeq ($(tag),)
 	deb_version := $(version)~$(commit)-0
 	deb_iteration := 0
 	tar_version := $(version)~$(commit)
-else ifneq ($(findstring -rc,$(tag)),)
-	version := $(word 1,$(subst -, ,$(tag)))
-	version := $(version:v%=%)
-	rc := $(word 2,$(subst -, ,$(tag)))
-	rpm_version := $(version)-0.$(rc)
-	rpm_iteration := 0.$(subst rc,,$(rc))
-	deb_version := $(version)~$(rc)-1
-	deb_iteration := 0
-	tar_version := $(version)~$(rc)
 else
 	version := $(tag:v%=%)
 	rpm_version := $(version)-1
@@ -39,6 +31,7 @@ else
 	deb_version := $(version)-1
 	deb_iteration := 1
 	tar_version := $(version)
+	RELEASE = true
 endif
 
 MAKEFLAGS += --no-print-directory
@@ -122,13 +115,13 @@ build_tools:
 	$(HOSTGO) build -o ./tools/readme_linter/readme_linter$(EXEEXT) ./tools/readme_linter
 
 embed_readme_%:
-	go generate -run="tools/config_includer/generator" ./plugins/$*/...
-	go generate -run="tools/readme_config_includer/generator" ./plugins/$*/...
+	$(HOSTGO) generate -run="tools/config_includer/generator" ./plugins/$*/...
+	$(HOSTGO) generate -run="tools/readme_config_includer/generator" ./plugins/$*/...
 
 .PHONY: config
 config:
 	@echo "generating default config"
-	go run ./cmd/telegraf config > etc/telegraf.conf
+	$(HOSTGO) run ./cmd/telegraf config > etc/telegraf.conf
 
 .PHONY: docs
 docs: build_tools embed_readme_common embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators embed_readme_secretstores
@@ -207,19 +200,6 @@ lint-branch:
 	}
 	golangci-lint run
 
-.PHONY: vuln-install
-vuln-install:
-	@echo "Installing govulncheck"
-	go install golang.org/x/vuln/cmd/govulncheck@latest
-
-.PHONY: vuln
-vuln:
-	@which govulncheck >/dev/null 2>&1 || { \
-		echo "govulncheck not found, please run: make vuln-install"; \
-		exit 1; \
-	}
-	govulncheck ./...
-
 .PHONY: tidy
 tidy:
 	go mod verify
@@ -294,9 +274,10 @@ install: $(buildbin)
 # directory.
 .PHONY: $(buildbin)
 $(buildbin):
-	echo $(GOOS)
+	@echo "building $(dir $@)..."
 	@mkdir -pv $(dir $@)
-	CGO_ENABLED=0 go build -o $(dir $@) -tags "$(BUILDTAGS)" -ldflags "$(LDFLAGS)" ./cmd/telegraf
+
+	CGO_ENABLED=0 go build -o $(dir $@) -tags "$(BUILDTAGS)" -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
 
 # Define packages Telegraf supports, organized by architecture with a rule to echo the list to limit include_packages
 # e.g. make package include_packages="$(make amd64)"
@@ -365,10 +346,20 @@ package: docs config $(include_packages)
 
 .PHONY: $(include_packages)
 $(include_packages):
-	if [ "$(suffix $@)" = ".zip" ]; then go generate cmd/telegraf/telegraf_windows.go; fi
+	@if [ "$(suffix $@)" = ".zip" ]; then \
+		go generate cmd/telegraf/telegraf_windows.go; \
+	fi
+
+	@mkdir -p $(pkgdir)
+
+	@if [ "$(RELEASE)" = "true" ]; then \
+	    echo "Updating security info for $(version)_$(basename $(basename $@))..." && \
+		$(HOSTGO) install golang.org/x/vuln/cmd/govulncheck@v1.7.0 && \
+		$(MAKE) build && \
+		govulncheck --mode=extract telegraf$(EXEEXT) | gzip - > $(pkgdir)/symbols-$(version)_$(basename $(basename $@)).jsonl.gz; \
+	fi
 
 	@$(MAKE) install
-	@mkdir -p $(pkgdir)
 
 	@if [ "$(suffix $@)" = ".rpm" ]; then \
 		echo "# DO NOT EDIT OR REMOVE" > $(DESTDIR)$(sysconfdir)/telegraf/telegraf.d/.ignore; \
@@ -426,7 +417,7 @@ $(include_packages):
 	elif [ "$(suffix $@)" = ".zip" ]; then \
 		(cd $(dir $(DESTDIR)) && zip -r - ./*) > $(pkgdir)/telegraf-$(tar_version)_$@ ;\
 	elif [ "$(suffix $@)" = ".gz" ]; then \
-		tar --owner 0 --group 0 -czvf $(pkgdir)/telegraf-$(tar_version)_$@ -C $(dir $(DESTDIR)) . ;\
+		tar --owner 0 --group 0 -czvf $(pkgdir)/telegraf-$(tar_version)_$@ -C $(dir $(DESTDIR)) $(notdir $(DESTDIR)) ;\
 	fi
 
 amd64.deb x86_64.rpm linux_amd64.tar.gz: export GOOS := linux
@@ -514,4 +505,3 @@ windows_i386.zip windows_amd64.zip windows_arm64.zip: export EXEEXT := .exe
 
 %.deb %.rpm %.tar.gz %.zip: export DESTDIR = build/$(GOOS)-$(GOARCH)$(GOARM)-$(pkg)/telegraf-$(version)
 %.deb %.rpm %.tar.gz %.zip: export buildbin = build/$(GOOS)-$(GOARCH)$(GOARM)/telegraf$(EXEEXT)
-%.deb %.rpm %.tar.gz %.zip: export LDFLAGS = -w -s

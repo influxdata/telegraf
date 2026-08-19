@@ -175,21 +175,23 @@ parsed:
   bucket = "replace_with_your_bucket_name"
 ```
 
-## Secret-store secrets
+## Secret store secrets
 
-Additional or instead of environment variables, you can use secret-stores
-to fill in credentials or similar. To do so, you need to configure one or more
-secret-store plugin(s) and then reference the secret in your plugin
+Additional or instead of environment variables, you can use secret stores to
+fill in credentials or similar. To do so, you need to configure one or more
+secret store plugin(s) and then reference the secret in your plugin
 configurations. A reference to a secret is specified in form
 `@{<secret store id>:<secret name>}`, where the `secret store id` is the unique
-ID you defined for your secret-store and `secret name` is the name of the secret
+ID you defined for your secret store and `secret name` is the name of the secret
 to use.
-**NOTE:** Both, the `secret store id` as well as the `secret name` can only
-consist of letters (both upper- and lowercase), numbers and underscores.
+
+>[!NOTE]
+> Both, the `secret store id` as well as the `secret name` can only
+> consist of letters (both upper- and lowercase), numbers and underscores.
 
 **Example**:
 
-This example illustrates the use of secret-store(s) in plugins
+This example illustrates the use of secret store(s) in plugins
 
 ```toml
 [global_tags]
@@ -357,6 +359,10 @@ The agent table configures Telegraf and the defaults used across all plugins.
   Ensure tags explicitly defined in the `global_tags` section will *always* pass
   tag-filtering   via `taginclude` or `tagexclude`. This removes the need to
   specify those tags twice.
+
+- **skip_processors_before_aggregators**:
+  By default, processors are run before aggregators. Changing
+  this setting to true will skip the first run of processors.
 
 - **skip_processors_after_aggregators**:
   By default, processors are run a second time after aggregators. Changing
@@ -759,6 +765,34 @@ tag.
 The inverse of `taginclude`. Tags with a tag key matching one of the patterns
 will be discarded from the metric.  Any tag can be filtered including global
 tags and the agent `host` tag.
+
+### Order of Operations
+
+The time at which filters are applied depends on the plugin type. Understanding
+this ordering is important because it determines whether the filter acts on the
+metrics entering the plugin or on the metrics it produces.
+
+- **Input plugins** apply both selectors and modifiers *after* the plugin has
+  gathered its metrics. Only metrics that pass the selectors, with their tags
+  and fields adjusted by any modifiers, are emitted downstream.
+
+- **Processor plugins** apply filters *before* processing. Metrics matching the
+  selectors are handed to the processor (with modifiers already applied), while
+  metrics that do not match bypass the processor and are passed on unchanged.
+
+- **Aggregator plugins** apply filters *before* aggregation.
+  Selected metrics (with modifiers applied) are fed into the aggregation, while
+  metrics that do not match are passed downstream. Whether the original,
+  matching metrics are also forwarded to subsequent output plugins is controlled
+  by the aggregator's `drop_original` setting.
+
+- **Output plugins** apply filters *before* writing. Only metrics that pass the
+  selectors, with their tags and fields adjusted by any modifiers, are sent to
+  the remote destination.
+
+In all cases, [selectors](#selectors) determine *whether* a metric is handled
+by the plugin, while [modifiers](#modifiers)) determine *which tags and fields*
+remain on the metrics passed to the plugin.
 
 ### Filtering Examples
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
+	"time"
 
 	"github.com/prometheus/common/expfmt"
 	"google.golang.org/protobuf/proto"
@@ -14,34 +15,29 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
-func AcceptsContent(header http.Header) bool {
-	contentType := header.Get("Content-Type")
-	if contentType == "" {
-		return false
-	}
-	mediaType, params, err := mime.ParseMediaType(contentType)
-	if err != nil {
-		return false
-	}
-	switch mediaType {
-	case expfmt.OpenMetricsType:
-		return true
-	case "application/openmetrics-protobuf":
-		return params["version"] == "1.0.0"
-	}
-	return false
-}
-
 type Parser struct {
 	IgnoreTimestamp bool              `toml:"openmetrics_ignore_timestamp"`
 	MetricVersion   int               `toml:"openmetrics_metric_version"`
 	Header          http.Header       `toml:"-"` // set by the input plugin
 	DefaultTags     map[string]string `toml:"-"`
 	Log             telegraf.Logger   `toml:"-"`
+
+	timeFunc func() time.Time
 }
 
 func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
+}
+
+func (p *Parser) SetTimeFunc(f func() time.Time) {
+	p.timeFunc = f
+}
+
+func (p *Parser) Init() error {
+	if p.timeFunc == nil {
+		p.timeFunc = time.Now
+	}
+	return nil
 }
 
 func (p *Parser) Parse(data []byte) ([]telegraf.Metric, error) {
@@ -116,6 +112,24 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	return metrics[0], nil
+}
+
+func AcceptsContent(header http.Header) bool {
+	contentType := header.Get("Content-Type")
+	if contentType == "" {
+		return false
+	}
+	mediaType, params, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return false
+	}
+	switch mediaType {
+	case expfmt.OpenMetricsType:
+		return true
+	case "application/openmetrics-protobuf":
+		return params["version"] == "1.0.0"
+	}
+	return false
 }
 
 func getTagsFromLabels(m *Metric, defaultTags map[string]string) map[string]string {

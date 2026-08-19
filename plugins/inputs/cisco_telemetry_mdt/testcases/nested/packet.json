@@ -1,0 +1,50 @@
+{
+    "nodeIdStr": "hostname",
+    "subscriptionIdStr": "subscription",
+    "encodingPath": "type:model/nested/path",
+    "msgTimestamp": "1543236572000",
+    "dataGpbkv": [
+        {
+            "fields": [
+                {
+                    "name": "keys",
+                    "fields": [
+                        {
+                            "name": "nested",
+                            "fields": [
+                                {
+                                    "name": "key",
+                                    "fields": [
+                                        {
+                                            "name": "level",
+                                            "doubleValue": 3
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "content",
+                    "fields": [
+                        {
+                            "name": "nested",
+                            "fields": [
+                                {
+                                    "name": "value",
+                                    "fields": [
+                                        {
+                                            "name": "foo",
+                                            "stringValue": "bar"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

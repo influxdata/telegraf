@@ -10,12 +10,12 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/common/psutil"
+	"github.com/influxdata/telegraf/plugins/common/psutil/psutiltest"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestNetStats(t *testing.T) {
-	var mps psutil.MockPS
+	var mps psutiltest.MockPS
 	defer mps.AssertExpectations(t)
 	mps.On("NetConnections").Return([]net.ConnectionStat{
 		{

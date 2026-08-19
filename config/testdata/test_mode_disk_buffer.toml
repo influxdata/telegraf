@@ -1,0 +1,6 @@
+[agent]
+  buffer_strategy = "disk"
+  buffer_directory = "testdata/buffer-not-directory"
+
+[[outputs.serializer_test_new]]
+  data_format = "json"

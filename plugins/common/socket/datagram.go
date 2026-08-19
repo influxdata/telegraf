@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/alitto/pond"
+	"golang.org/x/net/ipv4"
+	"golang.org/x/net/ipv6"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -23,6 +25,7 @@ import (
 
 type packetListener struct {
 	AllowedSources       []net.IP
+	MulticastSource      string
 	Encoding             string
 	MaxDecompressionSize int64
 	SocketMode           string
@@ -36,9 +39,17 @@ type packetListener struct {
 	parsePool *pond.WorkerPool
 }
 
-func newPacketListener(encoding string, maxDecompressionSize config.Size, maxWorkers int, allowedSources []net.IP, logger telegraf.Logger) *packetListener {
+func newPacketListener(
+	encoding string,
+	maxDecompressionSize config.Size,
+	maxWorkers int,
+	allowedSources []net.IP,
+	multicastSource string,
+	logger telegraf.Logger,
+) *packetListener {
 	return &packetListener{
 		AllowedSources:       allowedSources,
+		MulticastSource:      multicastSource,
 		Encoding:             encoding,
 		Log:                  logger,
 		MaxDecompressionSize: int64(maxDecompressionSize),
@@ -202,8 +213,16 @@ func (l *packetListener) setupUDP(u *url.URL, ifname string, bufferSize int) err
 				return fmt.Errorf("resolving address of %q failed: %w", ifname, err)
 			}
 		}
-		conn, err = net.ListenMulticastUDP(u.Scheme, iface, addr)
+
+		if l.MulticastSource != "" {
+			conn, err = listenSSM(u.Scheme, iface, addr, l.MulticastSource)
+		} else {
+			conn, err = net.ListenMulticastUDP(u.Scheme, iface, addr)
+		}
 		if err != nil {
+			if conn != nil {
+				conn.Close()
+			}
 			return fmt.Errorf("listening (udp multicast) failed: %w", err)
 		}
 	} else {
@@ -279,4 +298,41 @@ func (l *packetListener) close() error {
 	l.parsePool.StopAndWait()
 
 	return nil
+}
+
+func listenSSM(network string, ifi *net.Interface, gaddr *net.UDPAddr, sourceAddr string) (*net.UDPConn, error) {
+	src := &net.UDPAddr{IP: net.ParseIP(sourceAddr)}
+	if src.IP == nil {
+		return nil, fmt.Errorf("invalid multicast_source address %q", sourceAddr)
+	}
+
+	if network == "udp" {
+		if gaddr.IP.To4() != nil {
+			network = "udp4"
+		} else {
+			network = "udp6"
+		}
+	}
+
+	conn, err := net.ListenUDP(network, gaddr)
+	if err != nil {
+		return nil, fmt.Errorf("creating UDP socket failed: %w", err)
+	}
+
+	switch network {
+	case "udp4":
+		p := ipv4.NewPacketConn(conn)
+		if err := p.JoinSourceSpecificGroup(ifi, gaddr, src); err != nil {
+			return conn, fmt.Errorf("joining SSM group (IGMPv3) failed: %w", err)
+		}
+	case "udp6":
+		p := ipv6.NewPacketConn(conn)
+		if err := p.JoinSourceSpecificGroup(ifi, gaddr, src); err != nil {
+			return conn, fmt.Errorf("joining SSM group (MLDv2) failed: %w", err)
+		}
+	default:
+		return conn, fmt.Errorf("ssm support failure for network %q, use udp4 or udp6", network)
+	}
+
+	return conn, nil
 }

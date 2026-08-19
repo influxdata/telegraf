@@ -198,6 +198,10 @@ func (px *Proxmox) gatherVMData(acc telegraf.Accumulator, rt resourceType) {
 			"disk_total":           diskMetrics.total,
 			"disk_free":            diskMetrics.free,
 			"disk_used_percentage": diskMetrics.usedPercentage,
+			"disk_read_bytes":      jsonNumberToInt64(currentVMStatus.DiskRead),
+			"disk_write_bytes":     jsonNumberToInt64(currentVMStatus.DiskWrite),
+			"net_in_bytes":         jsonNumberToInt64(currentVMStatus.NetIn),
+			"net_out_bytes":        jsonNumberToInt64(currentVMStatus.NetOut),
 		}
 		acc.AddFields("proxmox", fields, tags)
 	}

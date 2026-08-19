@@ -1,0 +1,192 @@
+//
+// Copyright 2018 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+syntax = "proto3";
+
+import "google/protobuf/duration.proto";
+
+// Package gnmi_ext defines a set of extensions messages which can be optionally
+// included with the request and response messages of gNMI RPCs. A set of
+// well-known extensions are defined within this file, along with a registry for
+// extensions defined outside of this package.
+package gnmi_ext;
+
+option go_package = "github.com/openconfig/gnmi/proto/gnmi_ext";
+
+// The Extension message contains a single gNMI extension.
+message Extension {
+  oneof ext {
+    RegisteredExtension registered_ext = 1;     // A registered extension.
+    // Well known extensions.
+    MasterArbitration master_arbitration = 2;   // Master arbitration extension.
+    History history = 3;                        // History extension.
+    Commit commit = 4;                          // Commit confirmed extension.
+    Depth depth = 5;                            // Depth extension.
+    ConfigSubscription config_subscription = 6; // Config Subscription extension.
+  }
+}
+
+// The RegisteredExtension message defines an extension which is defined outside
+// of this file.
+message RegisteredExtension {
+  ExtensionID id = 1;  // The unique ID assigned to this extension.
+  bytes msg = 2;       // The binary-marshalled protobuf extension payload.
+}
+
+// RegisteredExtension is an enumeration acting as a registry for extensions
+// defined by external sources.
+enum ExtensionID {
+  EID_UNSET = 0;
+  // New extensions are to be defined within this enumeration - their definition
+  // MUST link to a reference describing their implementation.
+
+  // An experimental extension that may be used during prototyping of a new
+  // extension.
+  EID_EXPERIMENTAL = 999;
+}
+
+// MasterArbitration is used to select the master among multiple gNMI clients
+// with the same Roles. The client with the largest election_id is honored as
+// the master.
+// The document about gNMI master arbitration can be found at
+// https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-master-arbitration.md
+message MasterArbitration {
+  Role role = 1;
+  Uint128 election_id = 2;
+}
+
+// Representation of unsigned 128-bit integer.
+message Uint128 {
+  uint64 high = 1;
+  uint64 low = 2;
+}
+
+// There can be one master for each role. The role is identified by its id.
+message Role {
+  string id = 1;
+  // More fields can be added if needed, for example, to specify what paths the
+  // role can read/write.
+}
+
+// The History extension allows clients to request historical data. Its
+// spec can be found at
+// https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-history.md
+message History {
+  oneof request {
+    int64 snapshot_time = 1;  // Nanoseconds since the epoch
+    TimeRange range = 2;
+  }
+}
+
+message TimeRange {
+  int64 start = 1;  // Nanoseconds since the epoch
+  int64 end = 2;    // Nanoseconds since the epoch
+}
+
+// Commit confirmed extension allows automated revert of the configuration after
+// certain duration if an explicit confirmation is not issued. It allows
+// explicit cancellation of the commit during the rollback window. There cannot
+// be more than one commit active at a given time. The document about gNMI
+// commit confirmed can be found at
+// https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-commit-confirmed.md
+message Commit {
+  // ID is provided by the client during the commit request. During confirm and
+  // cancel actions the provided ID should match the ID provided during commit.
+  // If ID is not passed in any actions server shall return error.
+  // Required.
+  string id = 1;
+  oneof action {
+    // commit action creates a new commit. If a commit is on-going, server
+    // returns error.
+    CommitRequest commit = 2;
+    // confirm action will confirm an on-going commit, the ID provided during
+    // confirm should match the on-going commit ID.
+    CommitConfirm confirm = 3;
+    // cancel action will cancel an on-going commit, the ID provided during
+    // cancel should match the on-going commit ID.
+    CommitCancel cancel = 4;
+    // set rollback duration action sets the rollback duration of an on-going commit
+    // to a new value.
+    // The ID provided with the Commit message should match the on-going commit ID.
+    CommitSetRollbackDuration set_rollback_duration = 5;
+  }
+}
+
+// CommitRequest is used to create a new confirmed commit. It hold additional
+// parameter requried for commit action.
+message CommitRequest {
+  // Maximum duration to wait for a confirmaton before reverting the commit.
+  google.protobuf.Duration rollback_duration = 1;
+}
+
+// CommitConfirm is used to confirm an on-going commit. It hold additional
+// parameter requried for confirm action.
+message CommitConfirm {}
+
+// CommitCancel is used to cancel an on-going commit. It hold additional
+// parameter requried for cancel action.
+message CommitCancel {}
+
+// CommitSetRollbackDuration is used to set the existing rollback duration value
+// of an on-going commit to a new desired value.
+message CommitSetRollbackDuration {
+  // Maximum duration to wait for a confirmaton before reverting the commit.
+  google.protobuf.Duration rollback_duration = 1;
+}
+
+// Depth allows clients to specify the depth of the subtree to be returned in
+// the response. The depth is specified as the number of levels below the
+// specified path.
+// The depth is applied to all paths in the Get or Subscribe request.
+// The document about gNMI depth can be found at
+// https://github.com/openconfig/reference/tree/master/rpc/gnmi/gnmi-depth.md
+message Depth {
+  // The level of the subtree to be returned in the response.
+  // Value of 0 means no depth limit and behaves the same as if the extension
+  // was not specified.
+  // Value of 1 means only the specified path and its direct children will be
+  // returned.
+  uint32 level = 1;
+}
+
+// ConfigSubscription extension allows clients to subscribe to configuration
+// schema nodes only.
+message ConfigSubscription {
+  oneof action {
+    // ConfigSubscriptionStart is sent by the client in the SubscribeRequest
+    ConfigSubscriptionStart start = 1;
+    // ConfigSubscriptionSyncDone is sent by the server in the SubscribeResponse
+    ConfigSubscriptionSyncDone sync_done = 2;
+  }
+}
+
+// ConfigSubscriptionStart is used to indicate to a target that for a given set
+// of paths in the SubscribeRequest, the client wishes to receive updates
+// for the configuration schema nodes only.
+message ConfigSubscriptionStart {}
+
+// ConfigSubscriptionSyncDone is sent by the server in the SubscribeResponse
+// after all the updates for the configuration schema nodes have been sent.
+message ConfigSubscriptionSyncDone {
+  // ID of a commit confirm operation as assigned by the client
+  // see Commit Confirm extension for more details.
+  string commit_confirm_id = 1;
+  // ID of a commit as might be assigned by the server
+  // when registering a commit operation.
+  string server_commit_id = 2;
+  // If true indicates that the server is done processing the updates related to the
+  // commit_confirm_id and/or server_commit_id.
+  bool done = 3;
+}

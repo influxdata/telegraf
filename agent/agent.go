@@ -418,7 +418,7 @@ func (a *Agent) runInputs(ctx context.Context, startTime time.Time, unit *inputU
 
 		// Overwrite agent collection_jitter if this plugin has its own.
 		jitter := time.Duration(a.Config.Agent.CollectionJitter)
-		if input.Config.CollectionJitter != 0 {
+		if input.Config.CollectionJitterSet {
 			jitter = input.Config.CollectionJitter
 		}
 

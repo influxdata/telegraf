@@ -6,8 +6,7 @@ first pass. It might take some time until you see a first review so please be
 patient.
 
 All pull requests should follow the style and best practices in the
-[CONTRIBUTING.md](https://github.com/influxdata/telegraf/blob/master/CONTRIBUTING.md)
-document.
+[CONTRIBUTING.md](/CONTRIBUTING.md) document.
 
 ## Process
 
@@ -33,12 +32,15 @@ Please read the review comments carefully, fix the related part of the code
 and/or respond in case there is anything unclear. Maintainers will add the
 `waiting for response` tag to PRs to make it clear we are waiting on the
 submitter for updates.
-__Once the tag is added, if there is no activity on a pull request or the
-contributor does not respond, our bot will automatically close the PR after two
-weeks!__ If you expect a longer period of inactivity or you want to abandon a
-pull request, please let us know.
 
-In case you still want to continue with the PR, feel free to reopen it.
+> [!IMPORTANT]
+> If there is no activity on a pull request or the contributor does not respond
+> after the tag was added, our bot will automatically close the PR after two
+> weeks! If you expect a longer period of inactivity or you want to abandon a
+> pull request, please let us know.
+
+In case you still want to continue with the PR, please drop a note in the PR
+so we can reopen it.
 
 ## Reviewing Plugin Code
 
@@ -120,12 +122,14 @@ In case you still want to continue with the PR, feel free to reopen it.
 ## Linting
 
 Each pull request will have the appropriate linters checking the files for any
-common mistakes. The github action Super Linter is used:
-[super-linter](https://github.com/github/super-linter). If it is failing you can
-click on the action and read the logs to figure out the issue. You can also run
-the github action locally by following these instructions:
-[run-linter-locally.md](https://github.com/github/super-linter/blob/main/docs/run-linter-locally.md).
-You can find more information on each of the linters in the super linter readme.
+common mistakes using the [Super Linter][superlinter] github action. If it is
+failing you can click on the action and read the logs to figure out the issue.
+You can also run the [github action locally][superlinter_local] for faster
+feedback. You can find more information on each of the linters in the super
+linter readme.
+
+[superlinter]: https://github.com/github/super-linter
+[superlinter_local]: https://github.com/github/super-linter/blob/main/docs/run-linter-locally.md
 
 ## Testing
 
@@ -151,8 +155,7 @@ require.Equal(t, lhs, rhs) # good
 
 The config file is the primary interface and should be carefully scrutinized.
 
-Ensure the [[SampleConfig]] and
-[README](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/EXAMPLE_README.md)
+Ensure the example configuration and [README](/plugins/inputs/EXAMPLE_README.md)
 match with the current standards.
 
 READMEs should:
@@ -160,23 +163,24 @@ READMEs should:
 - be spaces, not tabs
 - be indented consistently, matching other READMEs
 - have two `#` for comments
-- have one `#` for defaults, which should always match the default value of the plugin
+- have one `#` for optional options with the value being the default
 - include all appropriate types as a list for enumerable field types
 - include a useful example, avoiding "example", "test", etc.
 - include tips for any common problems
-- include example output from the plugin, if input/processor/aggregator/parser/serializer
+- include example output from the plugin if the plugin outputs data
 
 ## Metric Schema
 
 Telegraf metrics are heavily based on InfluxDB points, but have some
 extensions to support other outputs and metadata.
 
-New metrics must follow the recommended
-[schema design](https://docs.influxdata.com/influxdb/latest/concepts/schema_and_data_layout/).
+New metrics must follow the [recommended schema design][influx_schema_design].
 Each metric should be evaluated for _series cardinality_, proper use of tags vs
 fields, and should use existing patterns for encoding metrics.
 
 Metrics use `snake_case` naming style.
+
+[influx_schema_design]: https://docs.influxdata.com/influxdb/latest/concepts/schema_and_data_layout/
 
 ### Enumerations
 

@@ -112,6 +112,12 @@ telegraf  ALL=(ALL) NOPASSWD: NVME
 Defaults!NVME !logfile, !syslog, !pam_session
 ```
 
+> [!NOTE]
+> 🪲 If you are using `sudo-rs` instead of GNU `sudo`, the `Defaults!SMARTCTL`
+> and `Defaults!NVME` lines have to be removed as these logging options are not
+> currently supported and will cause errors running sudo until that is resolved.
+> See trifectatechfoundation/sudo-rs#1181.
+
 To run smartctl or nvme with `sudo` wrapper script can be
 created. `path_smartctl` or `path_nvme` in the configuration should be set to
 execute this script.

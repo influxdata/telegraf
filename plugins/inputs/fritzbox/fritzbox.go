@@ -23,6 +23,7 @@ import (
 	"github.com/tdrn-org/go-tr064/services/tr64desc/wandslifconfig"
 	"github.com/tdrn-org/go-tr064/services/tr64desc/wanpppconn"
 	"github.com/tdrn-org/go-tr064/services/tr64desc/wlanconfig"
+	"github.com/tdrn-org/go-tr064/services/tr64desc/x_wanfiber"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -94,6 +95,8 @@ func (f *Fritzbox) Init() error {
 			f.serviceHandlers[wanpppconn.ServiceShortType] = gatherPppInfo
 		case "dsl":
 			f.serviceHandlers[wandslifconfig.ServiceShortType] = gatherDslInfo
+		case "fiber":
+			f.serviceHandlers[x_wanfiber.ServiceShortType] = gatherFiberInfo
 		case "wlan":
 			f.serviceHandlers[wlanconfig.ServiceShortType] = gatherWlanInfo
 		case "hosts":
@@ -292,6 +295,53 @@ func gatherDslInfo(acc telegraf.Accumulator, deviceClient *tr064.Client, service
 		"atuc_crc_errors":         statisticsTotal.NewATUCCRCErrors,
 	}
 	acc.AddFields("fritzbox_dsl", fields, tags)
+	return nil
+}
+
+func gatherFiberInfo(acc telegraf.Accumulator, deviceClient *tr064.Client, service tr064.ServiceDescriptor) error {
+	serviceClient := x_wanfiber.ServiceClient{
+		TR064Client: deviceClient,
+		Service:     service,
+	}
+	info := &x_wanfiber.GetInfoResponse{}
+	if err := serviceClient.GetInfo(info); err != nil {
+		return fmt.Errorf("failed to query Fiber info: %w", err)
+	}
+	statistics := &x_wanfiber.GetStatisticsResponse{}
+	if err := serviceClient.GetStatistics(statistics); err != nil {
+		return fmt.Errorf("failed to query Fiber statistics: %w", err)
+	}
+	tags := map[string]string{
+		"source":  serviceClient.TR064Client.DeviceUrl.Hostname(),
+		"service": serviceClient.Service.ShortId(),
+	}
+	fields := map[string]interface{}{
+		"optical_signal_level":           info.NewOpticalSignalLevel,
+		"lower_optical_threshold":        info.NewLowerOpticalThreshold,
+		"upper_optical_threshold":        info.NewUpperOpticalThreshold,
+		"transmit_optical_level":         info.NewTransmitOpticalLevel,
+		"lower_transmit_power_threshold": info.NewLowerTransmitPowerThreshold,
+		"upper_transmit_power_threshold": info.NewUpperTransmitPowerThreshold,
+		"sfp_vendor":                     info.NewSFPVendor,
+		"sfp_part_number":                info.NewSFPPartNumber,
+		"sfp_serial_number":              info.NewSFPSerialNumber,
+		"sfp_type":                       info.NewSFPType,
+		"tx_wave_length":                 info.NewTXWaveLength,
+		"fiber_mode":                     info.NewFiberMode,
+		"bytes_sent":                     statistics.NewBytesSent,
+		"bytes_received":                 statistics.NewBytesReceived,
+		"packets_sent":                   statistics.NewPacketsSent,
+		"packets_received":               statistics.NewPacketsReceived,
+		"packet_errors_sent":             statistics.NewPacketErrorsSent,
+		"packet_errors_received":         statistics.NewPacketErrorsReceived,
+		"packets_multicast":              statistics.NewPacketsMulticast,
+		"connection_rate_down":           statistics.NewConnectionRateDown,
+		"connection_rate_up":             statistics.NewConnectionRateUp,
+		"best_train_state":               statistics.NewBestTrainState,
+		"resyncs":                        statistics.NewResyncs,
+		"minutes_in_showtime":            statistics.NewMinutesInShowtime,
+	}
+	acc.AddFields("fritzbox_fiber", fields, tags)
 	return nil
 }
 

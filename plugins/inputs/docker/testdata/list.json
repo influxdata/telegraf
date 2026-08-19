@@ -1,0 +1,131 @@
+[
+    {
+        "Id": "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
+        "Names": [
+            "/etcd"
+        ],
+        "Image": "quay.io/coreos/etcd:v3.3.25",
+        "ImageID": "",
+        "Command": "/etcd -name etcd0 -advertise-client-urls http://localhost:2379 -listen-client-urls http://0.0.0.0:2379",
+        "Created": 1455941930,
+        "Ports": [
+            {
+                "PrivatePort": 7001,
+                "Type": "tcp"
+            },
+            {
+                "PrivatePort": 4001,
+                "Type": "tcp"
+            },
+            {
+                "PrivatePort": 2380,
+                "Type": "tcp"
+            },
+            {
+                "IP": "0.0.0.0",
+                "PrivatePort": 2379,
+                "PublicPort": 2379,
+                "Type": "tcp"
+            }
+        ],
+        "Labels": {
+            "label1": "test_value_1",
+            "label2": "test_value_2"
+        },
+        "State": "running",
+        "Status": "Up 4 hours",
+        "HostConfig": {},
+        "NetworkSettings": null,
+        "Mounts": null
+    },
+    {
+        "Id": "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
+        "Names": [
+            "/etcd2"
+        ],
+        "Image": "quay.io:4443/coreos/etcd:v3.3.25",
+        "ImageID": "",
+        "Command": "/etcd -name etcd2 -advertise-client-urls http://localhost:2379 -listen-client-urls http://0.0.0.0:2379",
+        "Created": 1455941933,
+        "Ports": [
+            {
+                "PrivatePort": 7002,
+                "Type": "tcp"
+            },
+            {
+                "PrivatePort": 4002,
+                "Type": "tcp"
+            },
+            {
+                "PrivatePort": 2381,
+                "Type": "tcp"
+            },
+            {
+                "IP": "0.0.0.0",
+                "PrivatePort": 2382,
+                "PublicPort": 2382,
+                "Type": "tcp"
+            }
+        ],
+        "Labels": {
+            "label1": "test_value_1",
+            "label2": "test_value_2"
+        },
+        "State": "running",
+        "Status": "Up 4 hours",
+        "HostConfig": {},
+        "NetworkSettings": null,
+        "Mounts": null
+    },
+    {
+        "Id": "e8a713dd90604f5a257b97c15945e047ab60ed5b2c4397c5a6b5bf40e1bd2791",
+        "Names": [
+            "/acme"
+        ],
+        "Image": "",
+        "ImageID": "",
+        "Command": "",
+        "Created": 0,
+        "Ports": null,
+        "Labels": null,
+        "State": "running",
+        "Status": "",
+        "HostConfig": {},
+        "NetworkSettings": null,
+        "Mounts": null
+    },
+    {
+        "Id": "9bc6faf9ba8106fae32e8faafd38a1dd6f6d262bec172398cc10bc03c0d6841a",
+        "Names": [
+            "/acme-test"
+        ],
+        "Image": "",
+        "ImageID": "",
+        "Command": "",
+        "Created": 0,
+        "Ports": null,
+        "Labels": null,
+        "State": "running",
+        "Status": "",
+        "HostConfig": {},
+        "NetworkSettings": null,
+        "Mounts": null
+    },
+    {
+        "Id": "d4ccced494a1d5fe8ebdb0a86335a0dab069319912221e5838a132ab18a8bc84",
+        "Names": [
+            "/foo"
+        ],
+        "Image": "",
+        "ImageID": "",
+        "Command": "",
+        "Created": 0,
+        "Ports": null,
+        "Labels": null,
+        "State": "running",
+        "Status": "",
+        "HostConfig": {},
+        "NetworkSettings": null,
+        "Mounts": null
+    }
+]

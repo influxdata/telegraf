@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+<s:Body>
+<u:GetInfoResponse xmlns:u="urn:dslforum-org:service:X_AVM-DE_WANFiber:1">
+<NewOpticalSignalLevel>0</NewOpticalSignalLevel>
+<NewLowerOpticalThreshold>0</NewLowerOpticalThreshold>
+<NewUpperOpticalThreshold>-5900</NewUpperOpticalThreshold>
+<NewTransmitOpticalLevel>0</NewTransmitOpticalLevel>
+<NewLowerTransmitPowerThreshold>-500</NewLowerTransmitPowerThreshold>
+<NewUpperTransmitPowerThreshold>0</NewUpperTransmitPowerThreshold>
+<NewSFPVendor>XXXX XXx</NewSFPVendor>
+<NewSFPPartNumber></NewSFPPartNumber>
+<NewSFPSerialNumber>AB12345678901</NewSFPSerialNumber>
+<NewSFPType>0</NewSFPType>
+<NewTXWaveLength>1310</NewTXWaveLength>
+<NewFiberMode>Unknown</NewFiberMode>
+</u:GetInfoResponse>
+<u:GetStatisticsResponse xmlns:u="urn:dslforum-org:service:X_AVM-DE_WANFiber:1">
+<NewBytesSent>664548698</NewBytesSent>
+<NewBytesReceived>0</NewBytesReceived>
+<NewPacketsSent>1328165</NewPacketsSent>
+<NewPacketsReceived>0</NewPacketsReceived>
+<NewPacketErrorsSent>0</NewPacketErrorsSent>
+<NewPacketErrorsReceived>0</NewPacketErrorsReceived>
+<NewPacketsMulticast>2944821</NewPacketsMulticast>
+<NewConnectionRateDown>0</NewConnectionRateDown>
+<NewConnectionRateUp>1250000</NewConnectionRateUp>
+<NewBestTrainState>0</NewBestTrainState>
+<NewResyncs>0</NewResyncs>
+<NewMinutesInShowtime>0</NewMinutesInShowtime>
+</u:GetStatisticsResponse>
+</s:Body>
+</s:Envelope>

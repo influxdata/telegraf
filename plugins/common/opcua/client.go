@@ -20,6 +20,10 @@ import (
 
 type OpcUAWorkarounds struct {
 	AdditionalValidStatusCodes []string `toml:"additional_valid_status_codes"`
+	// MonitoredItemsBatchSize splits CreateMonitoredItems into batches of this
+	// size to stay below a server's negotiated maximum message size. It only
+	// applies to subscriptions (opcua_listener); the polling opcua input ignores it.
+	MonitoredItemsBatchSize int `toml:"monitored_items_batch_size"`
 }
 
 type ConnectionState opcua.ConnState
@@ -192,6 +196,9 @@ type OpcUAClient struct {
 
 	opts  []opcua.Option
 	codes []ua.StatusCode
+
+	// Internal flags
+	DisableAutoReconnect bool
 }
 
 // determineOrCreateCertificates handles certificate determination and generation logic
@@ -271,7 +278,11 @@ func (o *OpcUAClient) SetupOptions() error {
 		}
 	}
 
-	if o.Config.SecurityPolicy != "None" || o.Config.SecurityMode != "None" {
+	// A client certificate is only needed when the channel is actually secured.
+	// Setting either security_policy or security_mode to "None" collapses the
+	// channel to None, so skip certificate creation (which may fail on a
+	// read-only filesystem) unless both request security.
+	if o.Config.SecurityPolicy != "None" && o.Config.SecurityMode != "None" {
 		if err := o.determineOrCreateCertificates(); err != nil {
 			return err
 		}

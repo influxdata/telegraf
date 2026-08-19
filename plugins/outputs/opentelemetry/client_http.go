@@ -10,6 +10,7 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 )
 
@@ -18,6 +19,7 @@ type httpClient struct {
 	url          string
 	encodingType string
 	compress     string
+	token        *config.Secret
 	headers      map[string]string
 }
 
@@ -26,7 +28,13 @@ func (h *httpClient) Connect(cfg *clientConfig) error {
 	h.url = cfg.ServiceAddress
 	h.encodingType = cfg.Encoding
 	h.compress = cfg.Compression
+	h.token = cfg.Token
 	h.headers = cfg.Headers
+
+	proxyFunc, err := cfg.HTTPProxy.Proxy()
+	if err != nil {
+		return fmt.Errorf("creating proxy failed: %w", err)
+	}
 
 	tlsConfig, err := cfg.TLSConfig.TLSConfig()
 	if err != nil {
@@ -38,11 +46,10 @@ func (h *httpClient) Connect(cfg *clientConfig) error {
 		tlsConfig = &tls.Config{}
 	}
 
-	if tlsConfig != nil {
-		h.httpClient.Transport = &http.Transport{
-			TLSClientConfig: tlsConfig,
-		}
-	}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = tlsConfig
+	transport.Proxy = proxyFunc
+	h.httpClient.Transport = transport
 
 	return nil
 }
@@ -82,6 +89,14 @@ func (h *httpClient) Export(ctx context.Context, request pmetricotlp.ExportReque
 	}
 	for key, value := range h.headers {
 		httpRequest.Header.Set(key, value)
+	}
+	if h.token != nil && !h.token.Empty() {
+		secret, err := h.token.Get()
+		if err != nil {
+			return pmetricotlp.ExportResponse{}, fmt.Errorf("getting token secret failed: %w", err)
+		}
+		httpRequest.Header.Set("Authorization", "Bearer "+secret.String())
+		secret.Destroy()
 	}
 
 	httpRequest.Header.Set("Content-Type", encoding)

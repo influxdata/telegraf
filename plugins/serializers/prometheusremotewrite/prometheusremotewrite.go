@@ -2,6 +2,7 @@ package prometheusremotewrite
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"sort"
@@ -52,15 +53,12 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 		if metric.Type() == telegraf.Histogram {
 			if metrickey, data := tryConvertToNativeHistogram(metric, labels); data != nil {
 				// A batch of metrics can contain multiple values for a single
-				// Prometheus histogram. If this metric is older than the existing
-				// histogram then we can skip over it.
-				if m, found := entries[metrickey]; found {
-					if metric.Time().UnixMilli() < m.Histograms[0].Timestamp {
-						traceAndKeepErr("metric %q has histograms with timestamp %v older than already registered before", metric.Name(), metric.Time())
-						continue
-					}
+				// Prometheus histogram. Accumulate the histograms on the
+				// existing time series instead of replacing it, so none of
+				// them are dropped.
+				if err := accumulateHistogram(entries, metrickey, *data); err != nil {
+					traceAndKeepErr("dropping histogram of metric %q with timestamp %v: %w", metric.Name(), metric.Time(), err)
 				}
-				entries[metrickey] = *data
 				continue
 			}
 		}
@@ -148,9 +146,12 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 						Name:  "le",
 						Value: "+Inf",
 					}
+					// The +Inf bucket holds the same value as the count, so
+					// accumulate it here to keep it in sync with the other
+					// buckets of the histogram.
 					metrickeyinf, promtsinf := getPromTS(metricName+"_bucket", labels, float64(count), metric.Time(), extraLabel)
-					if minf, ok := entries[metrickeyinf]; !ok || minf.Samples[0].Value == 0 {
-						entries[metrickeyinf] = promtsinf
+					if err := accumulateSample(entries, metrickeyinf, promtsinf); err != nil {
+						traceAndKeepErr("dropping +Inf bucket of metric %q with timestamp %v: %w", metric.Name(), metric.Time(), err)
 					}
 
 					metrickey, promts = getPromTS(metricName+"_count", labels, float64(count), metric.Time())
@@ -204,15 +205,11 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 			}
 
 			// A batch of metrics can contain multiple values for a single
-			// Prometheus sample. If this metric is older than the existing
-			// sample then we can skip over it.
-			if m, found := entries[metrickey]; found {
-				if metric.Time().UnixMilli() < m.Samples[0].Timestamp {
-					traceAndKeepErr("metric %q has samples with timestamp %v older than already registered before", metric.Name(), metric.Time())
-					continue
-				}
+			// Prometheus series. Accumulate the samples on the existing time
+			// series instead of replacing it, so no samples are dropped.
+			if err := accumulateSample(entries, metrickey, promts); err != nil {
+				traceAndKeepErr("dropping sample of metric %q with timestamp %v: %w", metric.Name(), metric.Time(), err)
 			}
-			entries[metrickey] = promts
 		}
 	}
 
@@ -261,6 +258,62 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	encoded := snappy.Encode(nil, data)
 	buf.Write(encoded)
 	return buf.Bytes(), nil
+}
+
+// accumulateSample adds the sample of the given series to the series already
+// registered under the given key, keeping the samples in chronological order.
+// For a duplicated timestamp the later value wins.
+func accumulateSample(entries map[metricKey]prompb.TimeSeries, key metricKey, series prompb.TimeSeries) error {
+	entry, found := entries[key]
+	if !found {
+		entries[key] = series
+		return nil
+	}
+	if len(entry.Samples) == 0 {
+		return errors.New("series is already registered as native histogram")
+	}
+
+	sample := series.Samples[0]
+	last := len(entry.Samples) - 1
+	switch {
+	case sample.Timestamp < entry.Samples[last].Timestamp:
+		return errors.New("sample is older than the last registered one")
+	case sample.Timestamp == entry.Samples[last].Timestamp:
+		entry.Samples[last] = sample
+	default:
+		entry.Samples = append(entry.Samples, sample)
+	}
+	entries[key] = entry
+
+	return nil
+}
+
+// accumulateHistogram adds the native histogram of the given series to the
+// series already registered under the given key, keeping the histograms in
+// chronological order. For a duplicated timestamp the later histogram wins.
+func accumulateHistogram(entries map[metricKey]prompb.TimeSeries, key metricKey, series prompb.TimeSeries) error {
+	entry, found := entries[key]
+	if !found {
+		entries[key] = series
+		return nil
+	}
+	if len(entry.Histograms) == 0 {
+		return errors.New("series is already registered with samples")
+	}
+
+	hist := series.Histograms[0]
+	last := len(entry.Histograms) - 1
+	switch {
+	case hist.Timestamp < entry.Histograms[last].Timestamp:
+		return errors.New("histogram is older than the last registered one")
+	case hist.Timestamp == entry.Histograms[last].Timestamp:
+		entry.Histograms[last] = hist
+	default:
+		entry.Histograms = append(entry.Histograms, hist)
+	}
+	entries[key] = entry
+
+	return nil
 }
 
 func hasLabel(name string, labels []prompb.Label) bool {

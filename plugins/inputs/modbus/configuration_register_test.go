@@ -1193,3 +1193,71 @@ func TestRegisterHighAddresses(t *testing.T) {
 	require.NoError(t, modbus.Gather(&acc))
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
+
+func TestRegisterMaxRegistersWorkaround(t *testing.T) {
+	plugin := &Modbus{
+		Name:                  "Test",
+		Controller:            "tcp://localhost:1502",
+		ConfigurationType:     "register",
+		configurationOriginal: configurationOriginal{SlaveID: 1},
+		Log:                   &testutil.Logger{},
+		Workarounds: workarounds{
+			MaxBitRegistersPerRequest:  6,
+			MaxWordRegistersPerRequest: 8,
+		},
+	}
+	plugin.Coils = make([]fieldDefinition, 0, 10)
+	for i := range uint16(10) {
+		plugin.Coils = append(plugin.Coils,
+			fieldDefinition{
+				Measurement: "test",
+				Name:        fmt.Sprintf("field-coil-%d", i),
+				Address:     []uint16{i},
+			},
+		)
+	}
+	plugin.DiscreteInputs = make([]fieldDefinition, 0, 10)
+	for i := range uint16(10) {
+		plugin.DiscreteInputs = append(plugin.DiscreteInputs,
+			fieldDefinition{
+				Measurement: "test",
+				Name:        fmt.Sprintf("field-discrete-%d", i),
+				Address:     []uint16{i},
+			},
+		)
+	}
+	plugin.HoldingRegisters = make([]fieldDefinition, 0, 10)
+	for i := range uint16(10) {
+		plugin.HoldingRegisters = append(plugin.HoldingRegisters,
+			fieldDefinition{
+				Measurement: "test",
+				Name:        fmt.Sprintf("field-holding-%d", i),
+				Address:     []uint16{4 * i, 4*i + 1, 4*i + 2, 4*i + 3},
+				DataType:    "UINT64",
+				ByteOrder:   "ABCDEFGH",
+				Scale:       1.0,
+			},
+		)
+	}
+	plugin.InputRegisters = make([]fieldDefinition, 0, 10)
+	for i := range uint16(10) {
+		plugin.InputRegisters = append(plugin.InputRegisters,
+			fieldDefinition{
+				Measurement: "test",
+				Name:        fmt.Sprintf("field-input-%d", i),
+				Address:     []uint16{4 * i, 4*i + 1, 4*i + 2, 4*i + 3},
+				DataType:    "UINT64",
+				ByteOrder:   "ABCDEFGH",
+				Scale:       1.0,
+			},
+		)
+	}
+	require.NoError(t, plugin.Init())
+
+	require.Len(t, plugin.requests, 1)
+	require.Contains(t, plugin.requests, byte(1))
+	require.Len(t, plugin.requests[1].coil, 2, "coil")
+	require.Len(t, plugin.requests[1].discrete, 2, "discrete")
+	require.Len(t, plugin.requests[1].holding, 5, "holding")
+	require.Len(t, plugin.requests[1].input, 5, "input")
+}

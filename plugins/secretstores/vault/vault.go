@@ -21,12 +21,13 @@ import (
 var sampleConfig string
 
 type Vault struct {
-	ID         string   `toml:"id"`
-	Address    string   `toml:"address"`
-	MountPath  string   `toml:"mount_path"`
-	SecretPath string   `toml:"secret_path"`
-	Engine     string   `toml:"engine"`
-	AppRole    *appRole `toml:"approle"`
+	ID         string        `toml:"id"`
+	Address    string        `toml:"address"`
+	MountPath  string        `toml:"mount_path"`
+	SecretPath string        `toml:"secret_path"`
+	Engine     string        `toml:"engine"`
+	Token      config.Secret `toml:"token"`
+	AppRole    *appRole      `toml:"approle"`
 
 	client *vault.Client
 }
@@ -50,8 +51,13 @@ func (v *Vault) Init() error {
 		return fmt.Errorf("unsupported engine: %s", v.Engine)
 	}
 
-	if v.AppRole == nil {
-		return errors.New("approle configuration missing")
+	tokenSet := !v.Token.Empty()
+	approleSet := v.AppRole != nil
+	switch {
+	case !tokenSet && !approleSet:
+		return errors.New("authentication method missing: set either `token` or `approle`")
+	case tokenSet && approleSet:
+		return errors.New("only one authentication method may be set: `token` or `approle`")
 	}
 	if v.ID == "" {
 		return errors.New("id missing")
@@ -112,14 +118,58 @@ func (v *Vault) List() ([]string, error) {
 	return slices.Collect(maps.Keys(secret.Data)), nil
 }
 
+var _ telegraf.SecretStoreEditor = (*Vault)(nil)
+
 func (v *Vault) Set(key, value string) error {
-	secretsData := map[string]interface{}{key: value}
+	// Vault's Put replaces the whole secret at the path instead of merging into
+	// it, so read the existing secrets first and set the key on top of them to
+	// avoid removing the sibling keys.
+	secretsData := make(map[string]any)
+	switch secret, err := v.getSecret(); {
+	case err == nil && secret != nil && secret.Data != nil:
+		maps.Copy(secretsData, secret.Data)
+	case err != nil && !errors.Is(err, vault.ErrSecretNotFound):
+		return fmt.Errorf("unable to read secret: %w", err)
+	}
+	secretsData[key] = value
 
 	if v.Engine == "kv-v1" {
 		return v.client.KVv1(v.MountPath).Put(context.Background(), v.SecretPath, secretsData)
 	}
 
 	_, err := v.client.KVv2(v.MountPath).Put(context.Background(), v.SecretPath, secretsData)
+	return err
+}
+
+func (v *Vault) Remove(key string) error {
+	// Vault has no way to delete a single key, so read the existing secrets
+	// first and write back all of them except the one to remove.
+	secret, err := v.getSecret()
+	if err != nil {
+		return fmt.Errorf("unable to read secret: %w", err)
+	}
+	if secret == nil || secret.Data[key] == nil {
+		return fmt.Errorf("secret %q not found", key)
+	}
+	delete(secret.Data, key)
+
+	// The kv-v1 engine rejects writing a secret without any data, so delete the
+	// secret at the path once its last key is gone. Do the same for kv-v2 to
+	// keep both engines behaving alike.
+	if v.Engine == "kv-v1" {
+		kv := v.client.KVv1(v.MountPath)
+		if len(secret.Data) == 0 {
+			return kv.Delete(context.Background(), v.SecretPath)
+		}
+		return kv.Put(context.Background(), v.SecretPath, secret.Data)
+	}
+
+	kv := v.client.KVv2(v.MountPath)
+	if len(secret.Data) == 0 {
+		return kv.Delete(context.Background(), v.SecretPath)
+	}
+
+	_, err = kv.Put(context.Background(), v.SecretPath, secret.Data)
 	return err
 }
 
@@ -132,6 +182,16 @@ func (v *Vault) GetResolver(key string) (telegraf.ResolveFunc, error) {
 }
 
 func (v *Vault) authenticate() error {
+	if !v.Token.Empty() {
+		token, err := v.Token.Get()
+		if err != nil {
+			return fmt.Errorf("getting token failed: %w", err)
+		}
+		defer token.Destroy()
+		v.client.SetToken(token.String())
+		return nil
+	}
+
 	secret, err := v.AppRole.Secret.Get()
 	if err != nil {
 		return fmt.Errorf("getting secret failed: %w", err)

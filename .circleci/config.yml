@@ -178,6 +178,7 @@ jobs:
       - run:
           name: "Run integration tests"
           command: make test-integration
+          no_output_timeout: 30m
           environment:
             AZURE_EVENT_HUBS_EMULATOR_ACCEPT_EULA: yes
   test-go-mac:
@@ -199,6 +200,12 @@ jobs:
       - check-changed-files-or-halt
       - run: git config --system core.longpaths true
       - run: choco feature enable -n allowGlobalConfirmation
+      - run:
+          name: Disable Windows HNS excluded port ranges
+          shell: powershell.exe
+          command: |
+            reg add "HKLM\SYSTEM\CurrentControlSet\Services\hns\State" /v EnableExcludedPortRange /d 0 /f
+            Restart-Service hns -Force
       - run: 'sh ./scripts/installgo_windows.sh'
       - run: choco install mingw
       - run: echo 'export PATH="$PATH:/c/ProgramData/mingw64/mingw64/bin"' >> $BASH_ENV
@@ -354,26 +361,31 @@ jobs:
           nightly: << parameters.nightly >>
   nightly:
     executor: telegraf-ci
+    environment:
+      AWS_REGION: auto
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
     steps:
       - attach_workspace:
           at: '/build'
       - run:
           command: |
-            aws s3 sync /build/dist s3://dl.influxdata.com/telegraf/nightlies/ \
+            aws s3 sync /build/dist s3://dl-influxdata-com/telegraf/nightlies/ \
               --exclude "*" \
               --include "*.tar.gz" \
               --include "*.deb" \
               --include "*.rpm" \
-              --include "*.zip" \
-              --acl public-read
+              --include "*.zip"
   release:
     executor: telegraf-ci
+    environment:
+      AWS_REGION: auto
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
     steps:
       - attach_workspace:
           at: '/build'
       - run:
           command: |
-            aws s3 sync /build/dist s3://dl.influxdata.com/telegraf/releases/ \
+            aws s3 sync /build/dist s3://dl-influxdata-com/telegraf/releases/ \
               --exclude "*" \
               --include "telegraf*.DIGESTS" \
               --include "telegraf*.digests" \
@@ -382,8 +394,7 @@ jobs:
               --include "telegraf*.dmg" \
               --include "telegraf*.rpm" \
               --include "telegraf*.tar.gz" \
-              --include "telegraf*.zip" \
-              --acl public-read
+              --include "telegraf*.zip"
   docker-nightly:
     machine:
       image: ubuntu-2204:current

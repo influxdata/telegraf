@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/go-redis/redis/v8"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -42,7 +41,7 @@ func TestRedisConnectIntegration(t *testing.T) {
 	container := testutil.Container{
 		Image:        "redis:alpine",
 		ExposedPorts: []string{servicePort},
-		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
+		WaitingFor:   wait.ForListeningPort(servicePort),
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")

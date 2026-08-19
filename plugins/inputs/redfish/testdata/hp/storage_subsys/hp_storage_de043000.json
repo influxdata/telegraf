@@ -1,0 +1,48 @@
+{
+  "@odata.etag": "\"b4c11dca\"",
+  "@odata.id": "/redfish/v1/Systems/1/Storage/DE043000",
+  "@odata.type": "#Storage.v1_15_0.Storage",
+  "@Redfish.WriteableProperties": [
+    "AutoVolumeCreate"
+  ],
+  "Id": "DE043000",
+  "Name": "HPE Raid Controller",
+  "Actions": {
+    "#Storage.ResetToDefaults": {
+      "ResetType@Redfish.AllowableValues": [
+        "ResetAll",
+        "PreserveVolumes"
+      ],
+      "target": "/redfish/v1/Systems/1/Storage/DE043000/Actions/Storage.ResetToDefaults"
+    }
+  },
+  "Status": {
+    "State": "Enabled",
+    "HealthRollup": "OK"
+  },
+  "AutoVolumeCreate@Redfish.AllowableValues": [
+    "Disabled",
+    "NonRAID"
+  ],
+  "AutoVolumeCreate": "NonRAID",
+  "Controllers": {
+    "@odata.id": "/redfish/v1/Systems/1/Storage/DE043000/Controllers"
+  },
+  "Drives@odata.count": 1,
+  "Drives": [
+    {
+      "@odata.id": "/redfish/v1/Chassis/DE043000/Drives/0"
+    }
+  ],
+  "Links": {
+    "Enclosures@odata.count": 1,
+    "Enclosures": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/DE043000"
+      }
+    ]
+  },
+  "Volumes": {
+    "@odata.id": "/redfish/v1/Systems/1/Storage/DE043000/Volumes"
+  }
+}

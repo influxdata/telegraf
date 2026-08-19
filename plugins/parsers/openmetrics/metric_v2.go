@@ -11,7 +11,7 @@ import (
 )
 
 func (p *Parser) extractMetricsV2(ometrics *MetricFamily) []telegraf.Metric {
-	now := time.Now()
+	now := p.timeFunc()
 
 	// Convert each openmetric metric to a corresponding telegraf metric
 	// with one field each. The process will filter NaNs in values and skip

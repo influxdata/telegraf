@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/IBM/sarama"
+	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	kafkacontainer "github.com/testcontainers/testcontainers-go/modules/kafka"
@@ -201,6 +202,26 @@ func TestInit(t *testing.T) {
 			},
 			check: func(t *testing.T, plugin *KafkaConsumer) {
 				require.Equal(t, 1000*time.Millisecond, plugin.config.Consumer.MaxProcessingTime)
+			},
+		},
+		{
+			name: "custom consumer_fetch_min",
+			plugin: &KafkaConsumer{
+				ConsumerFetchMin: config.Size(1024),
+				Log:              testutil.Logger{},
+			},
+			check: func(t *testing.T, plugin *KafkaConsumer) {
+				require.Equal(t, int32(1024), plugin.config.Consumer.Fetch.Min)
+			},
+		},
+		{
+			name: "custom consumer_fetch_max_wait",
+			plugin: &KafkaConsumer{
+				ConsumerFetchMaxWait: config.Duration(250 * time.Millisecond),
+				Log:                  testutil.Logger{},
+			},
+			check: func(t *testing.T, plugin *KafkaConsumer) {
+				require.Equal(t, 250*time.Millisecond, plugin.config.Consumer.MaxWaitTime)
 			},
 		},
 	}
@@ -570,77 +591,60 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	var tests = []struct {
-		name                 string
-		connectionStrategy   string
-		topics               []string
-		topicRegexps         []string
-		topicRefreshInterval config.Duration
-	}{
-		{"connection strategy startup", "startup", []string{"Test"}, nil, config.Duration(0)},
-		{"connection strategy defer", "defer", []string{"Test"}, nil, config.Duration(0)},
+	kafkaContainer, err := kafkacontainer.Run(t.Context(), "confluentinc/confluent-local:7.5.0")
+	require.NoError(t, err)
+	defer kafkaContainer.Terminate(t.Context()) //nolint:errcheck // ignored
+
+	brokers, err := kafkaContainer.Brokers(t.Context())
+	require.NoError(t, err)
+
+	// Make kafka output
+	t.Logf("rt: starting output plugin")
+	creator := outputs.Outputs["kafka"]
+	output, ok := creator().(*outputs_kafka.Kafka)
+	require.True(t, ok)
+
+	s := &serializers_influx.Serializer{}
+	require.NoError(t, s.Init())
+	output.SetSerializer(s)
+	output.Brokers = brokers
+	output.Topic = "Test"
+	output.Log = testutil.Logger{}
+
+	require.NoError(t, output.Init())
+	require.NoError(t, output.Connect())
+
+	// Make kafka input
+	t.Logf("rt: starting input plugin")
+	input := KafkaConsumer{
+		Brokers:                brokers,
+		Log:                    testutil.Logger{},
+		Topics:                 []string{"Test"},
+		MaxUndeliveredMessages: 1,
 	}
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	input.SetParser(parser)
+	require.NoError(t, input.Init())
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			kafkaContainer, err := kafkacontainer.Run(t.Context(), "confluentinc/confluent-local:7.5.0")
-			require.NoError(t, err)
-			defer kafkaContainer.Terminate(t.Context()) //nolint:errcheck // ignored
+	acc := testutil.Accumulator{}
+	require.NoError(t, input.Start(&acc))
 
-			brokers, err := kafkaContainer.Brokers(t.Context())
-			require.NoError(t, err)
+	// Shove some metrics through
+	expected := testutil.MockMetrics()
+	t.Logf("rt: writing")
+	require.NoError(t, output.Write(expected))
 
-			// Make kafka output
-			t.Logf("rt: starting output plugin")
-			creator := outputs.Outputs["kafka"]
-			output, ok := creator().(*outputs_kafka.Kafka)
-			require.True(t, ok)
+	// Check that they were received
+	t.Logf("rt: expecting")
+	acc.Wait(len(expected))
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 
-			s := &serializers_influx.Serializer{}
-			require.NoError(t, s.Init())
-			output.SetSerializer(s)
-			output.Brokers = brokers
-			output.Topic = "Test"
-			output.Log = testutil.Logger{}
+	t.Logf("rt: shutdown")
+	require.NoError(t, output.Close())
+	input.Stop()
 
-			require.NoError(t, output.Init())
-			require.NoError(t, output.Connect())
-
-			// Make kafka input
-			t.Logf("rt: starting input plugin")
-			input := KafkaConsumer{
-				Brokers:                brokers,
-				Log:                    testutil.Logger{},
-				Topics:                 tt.topics,
-				TopicRegexps:           tt.topicRegexps,
-				MaxUndeliveredMessages: 1,
-				ConnectionStrategy:     tt.connectionStrategy,
-			}
-			parser := &influx.Parser{}
-			require.NoError(t, parser.Init())
-			input.SetParser(parser)
-			require.NoError(t, input.Init())
-
-			acc := testutil.Accumulator{}
-			require.NoError(t, input.Start(&acc))
-
-			// Shove some metrics through
-			expected := testutil.MockMetrics()
-			t.Logf("rt: writing")
-			require.NoError(t, output.Write(expected))
-
-			// Check that they were received
-			t.Logf("rt: expecting")
-			acc.Wait(len(expected))
-			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
-
-			t.Logf("rt: shutdown")
-			require.NoError(t, output.Close())
-			input.Stop()
-
-			t.Logf("rt: done")
-		})
-	}
+	t.Logf("rt: done")
 }
 
 func TestKafkaTimestampSourceIntegration(t *testing.T) {
@@ -734,9 +738,10 @@ func TestStartupErrorBehaviorErrorIntegration(t *testing.T) {
 	containerID := container.GetContainerID()
 	provider, err := testcontainers.NewDockerProvider()
 	require.NoError(t, err)
-	require.NoError(t, provider.Client().ContainerPause(t.Context(), containerID))
+	_, err = provider.Client().ContainerPause(t.Context(), containerID, client.ContainerPauseOptions{})
+	require.NoError(t, err)
 	//nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
-	defer provider.Client().ContainerUnpause(t.Context(), containerID)
+	defer provider.Client().ContainerUnpause(t.Context(), containerID, client.ContainerUnpauseOptions{})
 
 	// Setup the plugin and connect to the broker
 	plugin := &KafkaConsumer{
@@ -787,9 +792,10 @@ func TestStartupErrorBehaviorIgnoreIntegration(t *testing.T) {
 	containerID := container.GetContainerID()
 	provider, err := testcontainers.NewDockerProvider()
 	require.NoError(t, err)
-	require.NoError(t, provider.Client().ContainerPause(t.Context(), containerID))
+	_, err = provider.Client().ContainerPause(t.Context(), containerID, client.ContainerPauseOptions{})
+	require.NoError(t, err)
 	//nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
-	defer provider.Client().ContainerUnpause(t.Context(), containerID)
+	defer provider.Client().ContainerUnpause(t.Context(), containerID, client.ContainerUnpauseOptions{})
 
 	// Setup the plugin and connect to the broker
 	plugin := &KafkaConsumer{
@@ -846,9 +852,10 @@ func TestStartupErrorBehaviorRetryIntegration(t *testing.T) {
 	containerID := container.GetContainerID()
 	provider, err := testcontainers.NewDockerProvider()
 	require.NoError(t, err)
-	require.NoError(t, provider.Client().ContainerPause(t.Context(), containerID))
+	_, err = provider.Client().ContainerPause(t.Context(), containerID, client.ContainerPauseOptions{})
+	require.NoError(t, err)
 	//nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
-	defer provider.Client().ContainerUnpause(t.Context(), containerID)
+	defer provider.Client().ContainerUnpause(t.Context(), containerID, client.ContainerUnpauseOptions{})
 
 	// Setup the plugin and connect to the broker
 	plugin := &KafkaConsumer{
@@ -889,7 +896,8 @@ func TestStartupErrorBehaviorRetryIntegration(t *testing.T) {
 	require.Equal(t, int64(2), model.StartupErrors.Get())
 
 	// Unpause the container, now writes should succeed
-	require.NoError(t, provider.Client().ContainerUnpause(t.Context(), containerID))
+	_, err = provider.Client().ContainerUnpause(t.Context(), containerID, client.ContainerUnpauseOptions{})
+	require.NoError(t, err)
 	require.NoError(t, model.Gather(&acc))
 	defer model.Stop()
 	require.Equal(t, int64(2), model.StartupErrors.Get())

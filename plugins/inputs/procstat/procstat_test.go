@@ -397,7 +397,7 @@ func TestGather_NoPidTag(t *testing.T) {
 func TestGather_PidTag(t *testing.T) {
 	p := Procstat{
 		Exe:           exe,
-		PidTag:        true,
+		TagWith:       []string{"pid"},
 		PidFinder:     "test",
 		Properties:    []string{"cpu", "memory", "mmap"},
 		Log:           testutil.Logger{},
@@ -510,7 +510,7 @@ func TestGather_PercentFirstPass(t *testing.T) {
 
 	p := Procstat{
 		Pattern:       "foo",
-		PidTag:        true,
+		TagWith:       []string{"pid"},
 		PidFinder:     "test",
 		Properties:    []string{"cpu", "memory", "mmap"},
 		Log:           testutil.Logger{},
@@ -531,7 +531,7 @@ func TestGather_PercentSecondPass(t *testing.T) {
 
 	p := Procstat{
 		Pattern:       "foo",
-		PidTag:        true,
+		TagWith:       []string{"pid"},
 		PidFinder:     "test",
 		Properties:    []string{"cpu", "memory", "mmap"},
 		Log:           testutil.Logger{},

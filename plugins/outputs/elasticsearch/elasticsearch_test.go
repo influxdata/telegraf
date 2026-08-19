@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -31,7 +30,7 @@ func launchTestContainer(t *testing.T) *testutil.Container {
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("] mode [basic] - valid"),
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 		),
 	}
 	err := container.Start()

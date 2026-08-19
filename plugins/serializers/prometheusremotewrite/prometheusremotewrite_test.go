@@ -505,6 +505,35 @@ cpu_time_idle 43
 `),
 		},
 		{
+			name: "multiple samples for the same series",
+			metrics: []telegraf.Metric{
+				metric.New(
+					"cpu",
+					map[string]string{
+						"host": "one.example.org",
+					},
+					map[string]interface{}{
+						"time_idle": 1.0,
+					},
+					time.Unix(0, 0),
+				),
+				metric.New(
+					"cpu",
+					map[string]string{
+						"host": "one.example.org",
+					},
+					map[string]interface{}{
+						"time_idle": 2.0,
+					},
+					time.Unix(1, 0),
+				),
+			},
+			expected: []byte(`
+cpu_time_idle{host="one.example.org"} 1
+cpu_time_idle{host="one.example.org"} 2
+`),
+		},
+		{
 			name: "colons are not replaced in metric name from measurement",
 			metrics: []telegraf.Metric{
 				metric.New(
@@ -770,6 +799,286 @@ rpc_duration_seconds_sum 17560473
 	}
 }
 
+func TestRemoteWriteAccumulateSamples(t *testing.T) {
+	tests := []struct {
+		name     string
+		metrics  []telegraf.Metric
+		expected []prompb.TimeSeries
+	}{
+		{
+			name: "samples of a series are kept in order",
+			metrics: []telegraf.Metric{
+				metric.New(
+					"cpu",
+					map[string]string{"host": "one.example.org"},
+					map[string]interface{}{"time_idle": 1.0},
+					time.Unix(0, 0),
+				),
+				metric.New(
+					"cpu",
+					map[string]string{"host": "one.example.org"},
+					map[string]interface{}{"time_idle": 2.0},
+					time.Unix(1, 0),
+				),
+			},
+			expected: []prompb.TimeSeries{
+				{
+					Labels: []prompb.Label{
+						{Name: "__name__", Value: "cpu_time_idle"},
+						{Name: "host", Value: "one.example.org"},
+					},
+					Samples: []prompb.Sample{
+						{Value: 1, Timestamp: 0},
+						{Value: 2, Timestamp: 1000},
+					},
+				},
+			},
+		},
+		{
+			name: "duplicate timestamp keeps the last value",
+			metrics: []telegraf.Metric{
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{"time_idle": 1.0},
+					time.Unix(1, 0),
+				),
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{"time_idle": 2.0},
+					time.Unix(1, 0),
+				),
+			},
+			expected: []prompb.TimeSeries{
+				{
+					Labels:  []prompb.Label{{Name: "__name__", Value: "cpu_time_idle"}},
+					Samples: []prompb.Sample{{Value: 2, Timestamp: 1000}},
+				},
+			},
+		},
+		{
+			name: "sample older than the last one is dropped",
+			metrics: []telegraf.Metric{
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{"time_idle": 1.0},
+					time.Unix(1, 0),
+				),
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{"time_idle": 2.0},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []prompb.TimeSeries{
+				{
+					Labels:  []prompb.Label{{Name: "__name__", Value: "cpu_time_idle"}},
+					Samples: []prompb.Sample{{Value: 1, Timestamp: 1000}},
+				},
+			},
+		},
+		{
+			name: "every series of a histogram gets a sample per scrape",
+			metrics: []telegraf.Metric{
+				metric.New(
+					"prometheus",
+					map[string]string{"le": "0.05"},
+					map[string]interface{}{"http_request_duration_seconds_bucket": 0.0},
+					time.Unix(1, 0),
+					telegraf.Histogram,
+				),
+				metric.New(
+					"prometheus",
+					map[string]string{},
+					map[string]interface{}{
+						"http_request_duration_seconds_count": 0.0,
+						"http_request_duration_seconds_sum":   0.0,
+					},
+					time.Unix(1, 0),
+					telegraf.Histogram,
+				),
+				metric.New(
+					"prometheus",
+					map[string]string{"le": "0.05"},
+					map[string]interface{}{"http_request_duration_seconds_bucket": 3.0},
+					time.Unix(2, 0),
+					telegraf.Histogram,
+				),
+				metric.New(
+					"prometheus",
+					map[string]string{},
+					map[string]interface{}{
+						"http_request_duration_seconds_count": 5.0,
+						"http_request_duration_seconds_sum":   7.0,
+					},
+					time.Unix(2, 0),
+					telegraf.Histogram,
+				),
+			},
+			expected: []prompb.TimeSeries{
+				{
+					Labels: []prompb.Label{{Name: "__name__", Value: "http_request_duration_seconds_count"}},
+					Samples: []prompb.Sample{
+						{Value: 0, Timestamp: 1000},
+						{Value: 5, Timestamp: 2000},
+					},
+				},
+				{
+					Labels: []prompb.Label{{Name: "__name__", Value: "http_request_duration_seconds_sum"}},
+					Samples: []prompb.Sample{
+						{Value: 0, Timestamp: 1000},
+						{Value: 7, Timestamp: 2000},
+					},
+				},
+				{
+					Labels: []prompb.Label{
+						{Name: "__name__", Value: "http_request_duration_seconds_bucket"},
+						{Name: "le", Value: "+Inf"},
+					},
+					Samples: []prompb.Sample{
+						{Value: 0, Timestamp: 1000},
+						{Value: 5, Timestamp: 2000},
+					},
+				},
+				{
+					Labels: []prompb.Label{
+						{Name: "__name__", Value: "http_request_duration_seconds_bucket"},
+						{Name: "le", Value: "0.05"},
+					},
+					Samples: []prompb.Sample{
+						{Value: 0, Timestamp: 1000},
+						{Value: 3, Timestamp: 2000},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &Serializer{
+				Log:         &testutil.CaptureLogger{},
+				SortMetrics: true,
+			}
+			data, err := s.SerializeBatch(tt.metrics)
+			require.NoError(t, err)
+
+			actual, err := prompbToTimeseries(data)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
+func TestRemoteWriteAccumulateNativeHistograms(t *testing.T) {
+	nativeHistogram := func(timestamp time.Time, count float64) telegraf.Metric {
+		return metric.New(
+			"rpc_duration_seconds",
+			map[string]string{"host": "example.org"},
+			map[string]interface{}{
+				"count":                  count,
+				"sum":                    float64(10),
+				"schema":                 int64(0),
+				"counter_reset_hint":     uint64(1),
+				"zero_threshold":         float64(0.001),
+				"zero_count":             float64(2),
+				"positive_span_0_offset": int64(0),
+				"positive_span_0_length": uint64(2),
+				"positive_bucket_0":      float64(3),
+				"positive_bucket_1":      float64(5),
+			},
+			timestamp,
+			telegraf.Histogram,
+		)
+	}
+
+	s := &Serializer{
+		Log:         &testutil.CaptureLogger{},
+		SortMetrics: true,
+	}
+	data, err := s.SerializeBatch([]telegraf.Metric{
+		nativeHistogram(time.Unix(1, 0), 20),
+		nativeHistogram(time.Unix(2, 0), 30),
+	})
+	require.NoError(t, err)
+
+	series, err := prompbToTimeseries(data)
+	require.NoError(t, err)
+	require.Len(t, series, 1)
+	require.Len(t, series[0].Histograms, 2)
+	require.Equal(t, int64(1000), series[0].Histograms[0].Timestamp)
+	require.InDelta(t, float64(20), series[0].Histograms[0].ToFloatHistogram().Count, testutil.DefaultDelta)
+	require.Equal(t, int64(2000), series[0].Histograms[1].Timestamp)
+	require.InDelta(t, float64(30), series[0].Histograms[1].ToFloatHistogram().Count, testutil.DefaultDelta)
+}
+
+func TestRemoteWriteNativeHistogramNameCollision(t *testing.T) {
+	// Both metrics end up with the same name and labels, but one carries a
+	// sample and the other a native histogram, so the latter of the two has to
+	// be dropped instead of being merged into the series of the former.
+	nativeHistogram := metric.New(
+		"rpc_duration_seconds",
+		map[string]string{"host": "example.org"},
+		map[string]interface{}{
+			"count":                  float64(20),
+			"sum":                    float64(10),
+			"schema":                 int64(0),
+			"counter_reset_hint":     uint64(1),
+			"zero_threshold":         float64(0.001),
+			"zero_count":             float64(2),
+			"positive_span_0_offset": int64(0),
+			"positive_span_0_length": uint64(2),
+			"positive_bucket_0":      float64(3),
+			"positive_bucket_1":      float64(5),
+		},
+		time.Unix(1, 0),
+		telegraf.Histogram,
+	)
+	classic := metric.New(
+		"prometheus",
+		map[string]string{"host": "example.org"},
+		map[string]interface{}{"rpc_duration_seconds": 42.0},
+		time.Unix(2, 0),
+	)
+
+	tests := []struct {
+		name    string
+		metrics []telegraf.Metric
+	}{
+		{
+			name:    "native histogram first",
+			metrics: []telegraf.Metric{nativeHistogram, classic},
+		},
+		{
+			name:    "classic series first",
+			metrics: []telegraf.Metric{classic, nativeHistogram},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logger := &testutil.CaptureLogger{}
+			s := &Serializer{
+				Log:         logger,
+				SortMetrics: true,
+			}
+			data, err := s.SerializeBatch(tt.metrics)
+			require.NoError(t, err)
+
+			series, err := prompbToTimeseries(data)
+			require.NoError(t, err)
+			require.Len(t, series, 1)
+
+			warnings := logger.Warnings()
+			require.Len(t, warnings, 1)
+			require.Contains(t, warnings[0], "series is already registered")
+		})
+	}
+}
+
 func TestRemoteWriteSerializeNativeHistogram(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -844,6 +1153,19 @@ func prompbToText(data []byte) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+func prompbToTimeseries(data []byte) ([]prompb.TimeSeries, error) {
+	protobuff, err := snappy.Decode(nil, data)
+	if err != nil {
+		return nil, err
+	}
+	var req prompb.WriteRequest
+	if err := req.Unmarshal(protobuff); err != nil {
+		return nil, err
+	}
+
+	return req.Timeseries, nil
 }
 
 func protoToSamples(req *prompb.WriteRequest) model.Samples {

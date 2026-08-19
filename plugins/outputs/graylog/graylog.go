@@ -292,25 +292,37 @@ func (g *gelfTCP) Connect() error {
 
 func (g *gelfTCP) send(b []byte) error {
 	if g.conn == nil {
-		err := g.Connect()
-		if err != nil {
+		if err := g.Connect(); err != nil {
 			return err
 		}
 	}
 
-	_, err := g.conn.Write(b)
-	if err != nil {
-		_ = g.conn.Close()
-		g.conn = nil
-	} else {
-		_, err = g.conn.Write([]byte{0}) // message delimiter
-		if err != nil {
-			_ = g.conn.Close()
-			g.conn = nil
-		}
+	if err := g.writeFrame(b); err == nil {
+		return nil
 	}
 
-	return err
+	// The peer may have closed the connection without us noticing because we
+	// only ever write to it. Reconnect and retry the write once before
+	// reporting the error to avoid noisy logs on every graceful close.
+	if err := g.Connect(); err != nil {
+		g.conn = nil
+		return err
+	}
+	return g.writeFrame(b)
+}
+
+func (g *gelfTCP) writeFrame(b []byte) error {
+	if _, err := g.conn.Write(b); err != nil {
+		_ = g.conn.Close()
+		g.conn = nil
+		return err
+	}
+	if _, err := g.conn.Write([]byte{0}); err != nil { // message delimiter
+		_ = g.conn.Close()
+		g.conn = nil
+		return err
+	}
+	return nil
 }
 
 type Graylog struct {
@@ -347,6 +359,7 @@ func (g *Graylog) Connect() error {
 	}
 
 	if g.Reconnection {
+		g.wg.Add(1)
 		go g.connectRetry(tlsCfg)
 		return nil
 	}
@@ -371,11 +384,11 @@ func (g *Graylog) Connect() error {
 }
 
 func (g *Graylog) connectRetry(tlsCfg *tls.Config) {
+	defer g.wg.Done()
+
 	var writers []io.Writer
 	var closers []io.WriteCloser
 	var attempt int64
-
-	g.wg.Add(1)
 
 	servers := make([]string, 0, len(g.Servers))
 	servers = append(servers, g.Servers...)
@@ -407,8 +420,6 @@ func (g *Graylog) connectRetry(tlsCfg *tls.Config) {
 	g.writer = io.MultiWriter(writers...)
 	g.closers = closers
 	g.Unlock()
-
-	g.wg.Done()
 }
 
 func (g *Graylog) connectEndpoints(servers []string, tlsCfg *tls.Config) ([]string, []gelf) {

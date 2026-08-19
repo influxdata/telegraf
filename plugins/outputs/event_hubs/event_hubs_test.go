@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/azure/eventhubs"
@@ -234,16 +235,18 @@ func TestReconnectIntegration(t *testing.T) {
 	// container
 	require.NoError(t, plugin.Write(input))
 
-	// Instantiate a docker client to be able to pause/resume the container
-	client, err := testcontainers.NewDockerClientWithOpts(t.Context())
+	// Instantiate a docker dc to be able to pause/resume the container
+	dc, err := testcontainers.NewDockerClientWithOpts(t.Context())
 	require.NoError(t, err, "creating docker client failed")
 
 	// Pause the container to simulate connection loss. Subsequent writes
 	// should fail until the container is resumed
-	require.NoError(t, client.ContainerPause(t.Context(), emulator.GetContainerID()))
+	_, err = dc.ContainerPause(t.Context(), emulator.GetContainerID(), client.ContainerPauseOptions{})
+	require.NoError(t, err)
 	require.ErrorIs(t, plugin.Write(input), context.DeadlineExceeded)
 
 	// Resume the container to check if the plugin reconnects
-	require.NoError(t, client.ContainerUnpause(t.Context(), emulator.GetContainerID()))
+	_, err = dc.ContainerUnpause(t.Context(), emulator.GetContainerID(), client.ContainerUnpauseOptions{})
+	require.NoError(t, err)
 	require.NoError(t, plugin.Write(input))
 }

@@ -1,7 +1,9 @@
 package opcua
 
 import (
+	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/gopcua/opcua/ua"
 	"github.com/stretchr/testify/require"
@@ -227,7 +229,7 @@ func TestRemoteCertificateValidation(t *testing.T) {
 	}
 }
 
-func TestGenerateClientOptsWithLocales(t *testing.T) {
+func TestGenerateClientOptsExtras(t *testing.T) {
 	endpoints := []*ua.EndpointDescription{
 		{
 			EndpointURL:       "opc.tcp://localhost:4840",
@@ -240,30 +242,93 @@ func TestGenerateClientOptsWithLocales(t *testing.T) {
 		},
 	}
 
-	baseClient := &OpcUAClient{
-		Config: &OpcUAClientConfig{
-			Endpoint:       "opc.tcp://localhost:4840",
-			SecurityPolicy: "None",
-			SecurityMode:   "None",
-			AuthMethod:     "Anonymous",
-		},
-		Log: &testutil.Logger{},
+	newBaseClient := func() *OpcUAClient {
+		return &OpcUAClient{
+			Config: &OpcUAClientConfig{
+				Endpoint:       "opc.tcp://localhost:4840",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+			},
+			Log: &testutil.Logger{},
+		}
 	}
-	baseOpts, err := baseClient.generateClientOpts(endpoints)
+
+	baseOpts, err := newBaseClient().generateClientOpts(endpoints)
 	require.NoError(t, err)
 
-	localesClient := &OpcUAClient{
-		Config: &OpcUAClientConfig{
-			Endpoint:       "opc.tcp://localhost:4840",
-			SecurityPolicy: "None",
-			SecurityMode:   "None",
-			AuthMethod:     "Anonymous",
-			Locales:        []string{"en", "de"},
+	tests := []struct {
+		name   string
+		modify func(*OpcUAClient)
+	}{
+		{
+			name:   "locales",
+			modify: func(c *OpcUAClient) { c.Config.Locales = []string{"en", "de"} },
 		},
-		Log: &testutil.Logger{},
+		{
+			name:   "disable auto-reconnect",
+			modify: func(c *OpcUAClient) { c.DisableAutoReconnect = true },
+		},
 	}
-	localesOpts, err := localesClient.generateClientOpts(endpoints)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := newBaseClient()
+			tt.modify(client)
+			opts, err := client.generateClientOpts(endpoints)
+			require.NoError(t, err)
+			require.Len(t, opts, len(baseOpts)+1)
+		})
+	}
+}
+
+func TestGenerateClientOptsNoChannelCertForNoneChannel(t *testing.T) {
+	dir := t.TempDir()
+	certFile := filepath.Join(dir, "cert.pem")
+	keyFile := filepath.Join(dir, "key.pem")
+	_, _, err := generateCert("urn:telegraf:gopcua:client", 2048, certFile, keyFile, time.Hour)
 	require.NoError(t, err)
 
-	require.Len(t, localesOpts, len(baseOpts)+1)
+	endpoints := []*ua.EndpointDescription{
+		{
+			EndpointURL:        "opc.tcp://localhost:4840",
+			SecurityPolicyURI:  ua.SecurityPolicyURINone,
+			SecurityMode:       ua.MessageSecurityModeNone,
+			SecurityLevel:      0,
+			UserIdentityTokens: []*ua.UserTokenPolicy{{TokenType: ua.UserTokenTypeAnonymous}},
+		},
+		{
+			EndpointURL:        "opc.tcp://localhost:4840",
+			SecurityPolicyURI:  ua.SecurityPolicyURIPrefix + "Basic256Sha256",
+			SecurityMode:       ua.MessageSecurityModeSignAndEncrypt,
+			SecurityLevel:      100,
+			UserIdentityTokens: []*ua.UserTokenPolicy{{TokenType: ua.UserTokenTypeAnonymous}},
+		},
+	}
+
+	newClient := func(policy, mode string) *OpcUAClient {
+		return &OpcUAClient{
+			Config: &OpcUAClientConfig{
+				Endpoint:       "opc.tcp://localhost:4840",
+				SecurityPolicy: policy,
+				SecurityMode:   mode,
+				AuthMethod:     "Anonymous",
+				Certificate:    certFile,
+				PrivateKey:     keyFile,
+			},
+			Log: &testutil.Logger{},
+		}
+	}
+
+	// A genuinely secured channel attaches the client certificate and private key.
+	secureOpts, err := newClient("Basic256Sha256", "SignAndEncrypt").generateClientOpts(endpoints)
+	require.NoError(t, err)
+
+	// security_mode "None" collapses the channel to None. The client certificate
+	// must not be attached, otherwise the OpenSecureChannel request carries a
+	// SenderCertificate under security policy None and strict servers reject it.
+	noneOpts, err := newClient("Basic256Sha256", "None").generateClientOpts(endpoints)
+	require.NoError(t, err)
+
+	require.Len(t, noneOpts, len(secureOpts)-2)
 }

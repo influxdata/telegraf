@@ -5,6 +5,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"maps"
 	"sort"
 	"strings"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -34,9 +36,12 @@ type OpenTelemetry struct {
 	tls.ClientConfig
 	Timeout     config.Duration   `toml:"timeout"`
 	Compression string            `toml:"compression"`
+	Token       config.Secret     `toml:"token"`
 	Headers     map[string]string `toml:"headers"`
 	Attributes  map[string]string `toml:"attributes"`
 	Coralogix   *CoralogixConfig  `toml:"coralogix"`
+	proxy.HTTPProxy
+	proxy.TCPProxy
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -49,7 +54,10 @@ type clientConfig struct {
 	TLSConfig       *tls.ClientConfig
 	Compression     string
 	CoralogixConfig *CoralogixConfig
+	HTTPProxy       *proxy.HTTPProxy  // only for HTTP client
+	TCPProxy        *proxy.TCPProxy   // only for gRPC client
 	Encoding        string            // only for HTTP client
+	Token           *config.Secret    // only for HTTP client, gRPC client uses metadata
 	Headers         map[string]string // only for HTTP client, gRPC client uses metadata
 }
 
@@ -118,7 +126,10 @@ func (o *OpenTelemetry) Connect() error {
 		TLSConfig:       &o.ClientConfig,
 		Compression:     o.Compression,
 		CoralogixConfig: o.Coralogix,
+		HTTPProxy:       &o.HTTPProxy,
+		TCPProxy:        &o.TCPProxy,
 		Encoding:        o.EncodingType,
+		Token:           &o.Token,
 		Headers:         o.Headers,
 	}
 	err = o.otlpMetricClient.Connect(clientCfg)
@@ -199,11 +210,23 @@ func (o *OpenTelemetry) sendBatch(metrics []telegraf.Metric) error {
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Timeout))
-
-	if len(o.Headers) > 0 {
-		ctx = metadata.NewOutgoingContext(ctx, metadata.New(o.Headers))
-	}
 	defer cancel()
+
+	headers := maps.Clone(o.Headers)
+	if !o.Token.Empty() {
+		token, err := o.Token.Get()
+		if err != nil {
+			return fmt.Errorf("getting token secret failed: %w", err)
+		}
+		if headers == nil {
+			headers = make(map[string]string, 1)
+		}
+		headers["authorization"] = "Bearer " + token.String()
+		token.Destroy()
+	}
+	if len(headers) > 0 {
+		ctx = metadata.NewOutgoingContext(ctx, metadata.New(headers))
+	}
 	_, err := o.otlpMetricClient.Export(ctx, md)
 	return err
 }

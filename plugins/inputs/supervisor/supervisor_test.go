@@ -4,7 +4,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -143,7 +142,7 @@ func TestIntegration_BasicGathering(t *testing.T) {
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("entered RUNNING state").WithOccurrence(6),
-			wait.ForListeningPort(nat.Port(supervisorPort)),
+			wait.ForListeningPort(supervisorPort),
 		),
 	}
 	err = ctr.Start()

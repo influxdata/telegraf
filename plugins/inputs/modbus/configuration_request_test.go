@@ -1,6 +1,7 @@
 package modbus
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -3138,4 +3139,87 @@ func TestRequestAddressOverflow(t *testing.T) {
 		},
 	}
 	require.ErrorIs(t, plugin.Init(), errAddressOverflow)
+}
+
+func TestRequestMaxRegistersWorkaround(t *testing.T) {
+	plugin := &Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "request",
+		Log:               &testutil.Logger{},
+		Workarounds: workarounds{
+			MaxBitRegistersPerRequest:  6,
+			MaxWordRegistersPerRequest: 8,
+		},
+	}
+
+	fields := make([]requestFieldDefinition, 0, 10)
+	for i := range 10 {
+		fields = append(fields,
+			requestFieldDefinition{
+				Name:    fmt.Sprintf("field-coil-%d", i),
+				Address: uint16(i),
+			},
+		)
+	}
+	plugin.Requests = append(plugin.Requests, requestDefinition{
+		SlaveID:      1,
+		RegisterType: "coil",
+		Fields:       fields,
+	})
+
+	fields = make([]requestFieldDefinition, 0, 10)
+	for i := range 10 {
+		fields = append(fields,
+			requestFieldDefinition{
+				Name:    fmt.Sprintf("field-discrete-%d", i),
+				Address: uint16(i),
+			},
+		)
+	}
+	plugin.Requests = append(plugin.Requests, requestDefinition{
+		SlaveID:      1,
+		RegisterType: "discrete",
+		Fields:       fields,
+	})
+
+	fields = make([]requestFieldDefinition, 0, 10)
+	for i := range 10 {
+		fields = append(fields,
+			requestFieldDefinition{
+				Name:      fmt.Sprintf("field-holding-%d", i),
+				Address:   uint16(4 * i),
+				InputType: "UINT64",
+			},
+		)
+	}
+	plugin.Requests = append(plugin.Requests, requestDefinition{
+		SlaveID:      1,
+		RegisterType: "holding",
+		Fields:       fields,
+	})
+
+	fields = make([]requestFieldDefinition, 0, 10)
+	for i := range 10 {
+		fields = append(fields,
+			requestFieldDefinition{
+				Name:      fmt.Sprintf("field-input-%d", i),
+				Address:   uint16(4 * i),
+				InputType: "UINT64",
+			},
+		)
+	}
+	plugin.Requests = append(plugin.Requests, requestDefinition{
+		SlaveID:      1,
+		RegisterType: "input",
+		Fields:       fields,
+	})
+	require.NoError(t, plugin.Init())
+
+	require.Len(t, plugin.requests, 1)
+	require.Contains(t, plugin.requests, byte(1))
+	require.Len(t, plugin.requests[1].coil, 2, "coil")
+	require.Len(t, plugin.requests[1].discrete, 2, "discrete")
+	require.Len(t, plugin.requests[1].holding, 5, "holding")
+	require.Len(t, plugin.requests[1].input, 5, "input")
 }

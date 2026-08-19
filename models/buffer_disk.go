@@ -33,6 +33,10 @@ type DiskBuffer struct {
 	// transaction. Metrics at those offsets should not be contained in new
 	// batches.
 	mask []int
+
+	// Cache the buffer length for informatory calls to Len() e.g. when running
+	// Telegraf with --once. See https://github.com/influxdata/telegraf/issues/19248
+	closedLength *int
 }
 
 func NewDiskBuffer(id, path string, stats BufferStats, diskSync bool) (*DiskBuffer, error) {
@@ -60,6 +64,10 @@ func NewDiskBuffer(id, path string, stats BufferStats, diskSync bool) (*DiskBuff
 }
 
 func (b *DiskBuffer) Len() int {
+	if b.closedLength != nil {
+		return *b.closedLength
+	}
+
 	b.Lock()
 	defer b.Unlock()
 	return b.length()
@@ -262,9 +270,13 @@ func (b *DiskBuffer) Stats() BufferStats {
 }
 
 func (b *DiskBuffer) Close() error {
+	// Cache the length before closing the buffer
+	b.closedLength = new(b.Len())
+
 	if err := b.file.Close(); err != nil {
 		return fmt.Errorf("closing buffer failed: %w", err)
 	}
+
 	return nil
 }
 

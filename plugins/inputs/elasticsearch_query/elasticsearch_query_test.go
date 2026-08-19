@@ -2,20 +2,25 @@ package elasticsearch_query
 
 import (
 	"bufio"
+	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
+	elasticsearch5 "github.com/elastic/go-elasticsearch/v5"
+	esapi5 "github.com/elastic/go-elasticsearch/v5/esapi"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
-	elastic5 "gopkg.in/olivere/elastic.v5"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -29,491 +34,542 @@ const (
 	testindex   = "test-elasticsearch"
 )
 
-type esAggregationQueryTest struct {
-	queryName                 string
-	testAggregationQueryInput esAggregation
-	testAggregationQueryData  []aggregationQueryData
-	expectedMetrics           []telegraf.Metric
-	wantBuildQueryErr         bool
-	wantGetMetricFieldsErr    bool
-	wantQueryResErr           bool
-}
-
-var queryPeriod = config.Duration(time.Second * 600)
-
-var testEsAggregationData = []esAggregationQueryTest{
-	{
-		"query 1",
-		esAggregation{
-			Index:           testindex,
-			MeasurementName: "measurement1",
-			MetricFields:    []string{"size"},
-			FilterQuery:     "product_1",
-			MetricFunction:  "avg",
-			DateField:       "@timestamp",
-			QueryPeriod:     queryPeriod,
-			Tags:            []string{"URI.keyword"},
-			mapMetricFields: map[string]string{"size": "long"},
+func TestCheckForError(t *testing.T) {
+	tests := []struct {
+		name       string
+		statusCode int
+		body       string
+		expected   string
+	}{
+		{
+			name:       "informational response",
+			statusCode: http.StatusContinue,
+			expected:   "received error 100 (Continue)",
 		},
-		[]aggregationQueryData{
-			{
-				aggKey:   aggKey{measurement: "measurement1", name: "size_avg", function: "avg", field: "size"},
-				isParent: false,
-			},
-			{
-				aggKey:   aggKey{measurement: "measurement1", name: "URI_keyword", function: "terms", field: "URI.keyword"},
-				isParent: true,
-			},
+		{
+			name:       "type and reason",
+			statusCode: http.StatusNotFound,
+			body:       `{"error":{"type":"index_not_found_exception","reason":"no such index"}}`,
+			expected:   "received error 404 (Not Found): no such index [type=index_not_found_exception]",
 		},
-		[]telegraf.Metric{
-			metric.New(
-				"measurement1",
-				map[string]string{"URI_keyword": "/downloads/product_1"},
-				map[string]interface{}{"size_avg": float64(202.30038022813687), "doc_count": int64(263)},
-				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
-			),
+		{
+			name:       "reason without type",
+			statusCode: http.StatusBadGateway,
+			body:       `{"error":{"reason":"upstream failed"}}`,
+			expected:   "received error 502 (Bad Gateway): upstream failed",
 		},
-		false,
-		false,
-		false,
-	},
-	{
-		"query 2",
-		esAggregation{
-			Index:           testindex,
-			MeasurementName: "measurement2",
-			MetricFields:    []string{"size"},
-			FilterQuery:     "downloads",
-			MetricFunction:  "max",
-			DateField:       "@timestamp",
-			QueryPeriod:     queryPeriod,
-			Tags:            []string{"URI.keyword"},
-			mapMetricFields: map[string]string{"size": "long"},
+		{
+			name:       "unstructured response",
+			statusCode: http.StatusBadGateway,
+			body:       " proxy failed\n",
+			expected:   "received error 502 (Bad Gateway): proxy failed",
 		},
-		[]aggregationQueryData{
-			{
-				aggKey:   aggKey{measurement: "measurement2", name: "size_max", function: "max", field: "size"},
-				isParent: false,
-			},
-			{
-				aggKey:   aggKey{measurement: "measurement2", name: "URI_keyword", function: "terms", field: "URI.keyword"},
-				isParent: true,
-			},
+		{
+			name:       "empty response",
+			statusCode: http.StatusBadGateway,
+			expected:   "received error 502 (Bad Gateway)",
 		},
-		[]telegraf.Metric{
-			metric.New(
-				"measurement2",
-				map[string]string{"URI_keyword": "/downloads/product_1"},
-				map[string]interface{}{"size_max": float64(3301), "doc_count": int64(263)},
-				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
-			),
-			metric.New(
-				"measurement2",
-				map[string]string{"URI_keyword": "/downloads/product_2"},
-				map[string]interface{}{"size_max": float64(3318), "doc_count": int64(237)},
-				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
-			),
-		},
-		false,
-		false,
-		false,
-	},
-	{
-		"query 3",
-		esAggregation{
-			Index:           testindex,
-			MeasurementName: "measurement3",
-			MetricFields:    []string{"size"},
-			FilterQuery:     "downloads",
-			MetricFunction:  "sum",
-			DateField:       "@timestamp",
-			QueryPeriod:     queryPeriod,
-			Tags:            []string{"response.keyword"},
-			mapMetricFields: map[string]string{"size": "long"},
-		},
-		[]aggregationQueryData{
-			{
-				aggKey:   aggKey{measurement: "measurement3", name: "size_sum", function: "sum", field: "size"},
-				isParent: false,
-			},
-			{
-				aggKey:   aggKey{measurement: "measurement3", name: "response_keyword", function: "terms", field: "response.keyword"},
-				isParent: true,
-			},
-		},
-		[]telegraf.Metric{
-			metric.New(
-				"measurement3",
-				map[string]string{"response_keyword": "200"},
-				map[string]interface{}{"size_sum": float64(22790), "doc_count": int64(22)},
-				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
-			),
-			metric.New(
-				"measurement3",
-				map[string]string{"response_keyword": "304"},
-				map[string]interface{}{"size_sum": float64(0), "doc_count": int64(219)},
-				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
-			),
-			metric.New(
-				"measurement3",
-				map[string]string{"response_keyword": "404"},
-				map[string]interface{}{"size_sum": float64(86932), "doc_count": int64(259)},
-				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
-			),
-		},
-		false,
-		false,
-		false,
-	},
-	{
-		"query 4",
-		esAggregation{
-			Index:             testindex,
-			MeasurementName:   "measurement4",
-			MetricFields:      []string{"size", "response_time"},
-			FilterQuery:       "downloads",
-			MetricFunction:    "min",
-			DateField:         "@timestamp",
-			QueryPeriod:       queryPeriod,
-			IncludeMissingTag: true,
-			MissingTagValue:   "missing",
-			Tags:              []string{"response.keyword", "URI.keyword", "method.keyword"},
-			mapMetricFields:   map[string]string{"size": "long", "response_time": "long"},
-		},
-		[]aggregationQueryData{
-			{
-				aggKey:   aggKey{measurement: "measurement4", name: "size_min", function: "min", field: "size"},
-				isParent: false,
-			},
-			{
-				aggKey:   aggKey{measurement: "measurement4", name: "response_time_min", function: "min", field: "response_time"},
-				isParent: false,
-			},
-			{
-				aggKey:   aggKey{measurement: "measurement4", name: "response_keyword", function: "terms", field: "response.keyword"},
-				isParent: false,
-			},
-			{
-				aggKey:   aggKey{measurement: "measurement4", name: "URI_keyword", function: "terms", field: "URI.keyword"},
-				isParent: false,
-			},
-			{
-				aggKey:   aggKey{measurement: "measurement4", name: "method_keyword", function: "terms", field: "method.keyword"},
-				isParent: true,
-			},
-		},
-		[]telegraf.Metric{
-			metric.New(
-				"measurement4",
-				map[string]string{"response_keyword": "404", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
-				map[string]interface{}{"size_min": float64(318), "response_time_min": float64(126), "doc_count": int64(146)},
-				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
-			),
-			metric.New(
-				"measurement4",
-				map[string]string{"response_keyword": "304", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
-				map[string]interface{}{"size_min": float64(0), "response_time_min": float64(71), "doc_count": int64(113)},
-				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
-			),
-			metric.New(
-				"measurement4",
-				map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
-				map[string]interface{}{"size_min": float64(490), "response_time_min": float64(1514), "doc_count": int64(3)},
-				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
-			),
-			metric.New(
-				"measurement4",
-				map[string]string{"response_keyword": "404", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
-				map[string]interface{}{"size_min": float64(318), "response_time_min": float64(237), "doc_count": int64(113)},
-				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
-			),
-			metric.New(
-				"measurement4",
-				map[string]string{"response_keyword": "304", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
-				map[string]interface{}{"size_min": float64(0), "response_time_min": float64(134), "doc_count": int64(106)},
-				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
-			),
-			metric.New(
-				"measurement4",
-				map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
-				map[string]interface{}{"size_min": float64(490), "response_time_min": float64(2), "doc_count": int64(13)},
-				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
-			),
-			metric.New(
-				"measurement4",
-				map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1", "method_keyword": "HEAD"},
-				map[string]interface{}{"size_min": float64(0), "response_time_min": float64(8479), "doc_count": int64(1)},
-				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
-			),
-			metric.New(
-				"measurement4",
-				map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2", "method_keyword": "HEAD"},
-				map[string]interface{}{"size_min": float64(0), "response_time_min": float64(1059), "doc_count": int64(5)},
-				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
-			),
-		},
-		false,
-		false,
-		false,
-	},
-	{
-		"query 5",
-		esAggregation{
-			Index:           testindex,
-			MeasurementName: "measurement5",
-			FilterQuery:     "product_2",
-			DateField:       "@timestamp",
-			QueryPeriod:     queryPeriod,
-			Tags:            []string{"URI.keyword"},
-			mapMetricFields: map[string]string{},
-		},
-		[]aggregationQueryData{
-			{
-				aggKey:   aggKey{measurement: "measurement5", name: "URI_keyword", function: "terms", field: "URI.keyword"},
-				isParent: true,
-			},
-		},
-		[]telegraf.Metric{
-			metric.New(
-				"measurement5",
-				map[string]string{"URI_keyword": "/downloads/product_2"},
-				map[string]interface{}{"doc_count": int64(237)},
-				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
-			),
-		},
-		false,
-		false,
-		false,
-	},
-	{
-		"query 6",
-		esAggregation{
-			Index:           testindex,
-			MeasurementName: "measurement6",
-			FilterQuery:     "response: 200",
-			DateField:       "@timestamp",
-			QueryPeriod:     queryPeriod,
-			Tags:            []string{"URI.keyword", "response.keyword"},
-			mapMetricFields: map[string]string{},
-		},
-		[]aggregationQueryData{
-			{
-				aggKey:   aggKey{measurement: "measurement6", name: "URI_keyword", function: "terms", field: "URI.keyword"},
-				isParent: false,
-			},
-			{
-				aggKey:   aggKey{measurement: "measurement6", name: "response_keyword", function: "terms", field: "response.keyword"},
-				isParent: true,
-			},
-		},
-		[]telegraf.Metric{
-			metric.New(
-				"measurement6",
-				map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1"},
-				map[string]interface{}{"doc_count": int64(4)},
-				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
-			),
-			metric.New(
-				"measurement6",
-				map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2"},
-				map[string]interface{}{"doc_count": int64(18)},
-				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
-			),
-		},
-		false,
-		false,
-		false,
-	},
-	{
-		"query 7 - simple query",
-		esAggregation{
-			Index:           testindex,
-			MeasurementName: "measurement7",
-			FilterQuery:     "response: 200",
-			DateField:       "@timestamp",
-			QueryPeriod:     queryPeriod,
-			mapMetricFields: map[string]string{},
-		},
-		nil,
-		[]telegraf.Metric{
-			metric.New(
-				"measurement7",
-				map[string]string{},
-				map[string]interface{}{"doc_count": int64(22)},
-				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
-			),
-		},
-		false,
-		false,
-		false,
-	},
-	{
-		"query 8",
-		esAggregation{
-			Index:           testindex,
-			MeasurementName: "measurement8",
-			MetricFields:    []string{"size"},
-			FilterQuery:     "downloads",
-			MetricFunction:  "max",
-			DateField:       "@timestamp",
-			QueryPeriod:     queryPeriod,
-			mapMetricFields: map[string]string{"size": "long"},
-		},
-		[]aggregationQueryData{
-			{
-				aggKey:   aggKey{measurement: "measurement8", name: "size_max", function: "max", field: "size"},
-				isParent: true,
-			},
-		},
-		[]telegraf.Metric{
-			metric.New(
-				"measurement8",
-				map[string]string{},
-				map[string]interface{}{"size_max": float64(3318)},
-				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
-			),
-		},
-		false,
-		false,
-		false,
-	},
-	{
-		"query 9 - invalid function",
-		esAggregation{
-			Index:           testindex,
-			MeasurementName: "measurement9",
-			MetricFields:    []string{"size"},
-			FilterQuery:     "downloads",
-			MetricFunction:  "average",
-			DateField:       "@timestamp",
-			QueryPeriod:     queryPeriod,
-			mapMetricFields: map[string]string{"size": "long"},
-		},
-		nil,
-		nil,
-		true,
-		false,
-		true,
-	},
-	{
-		"query 10 - non-existing metric field",
-		esAggregation{
-			Index:           testindex,
-			MeasurementName: "measurement10",
-			MetricFields:    []string{"none"},
-			DateField:       "@timestamp",
-			QueryPeriod:     queryPeriod,
-			mapMetricFields: map[string]string{},
-		},
-		nil,
-		nil,
-		false,
-		false,
-		true,
-	},
-	{
-		"query 11 - non-existing index field",
-		esAggregation{
-			Index:           "notanindex",
-			MeasurementName: "measurement11",
-			DateField:       "@timestamp",
-			QueryPeriod:     queryPeriod,
-			mapMetricFields: map[string]string{},
-		},
-		nil,
-		nil,
-		false,
-		false,
-		true,
-	},
-	{
-		"query 12 - non-existing timestamp field",
-		esAggregation{
-			Index:           testindex,
-			MeasurementName: "measurement12",
-			MetricFields:    []string{"size"},
-			MetricFunction:  "avg",
-			DateField:       "@notatimestamp",
-			QueryPeriod:     queryPeriod,
-			mapMetricFields: map[string]string{"size": "long"},
-		},
-		[]aggregationQueryData{
-			{
-				aggKey:   aggKey{measurement: "measurement12", name: "size_avg", function: "avg", field: "size"},
-				isParent: true,
-			},
-		},
-		[]telegraf.Metric{
-			metric.New(
-				"measurement12",
-				map[string]string{},
-				map[string]interface{}{"size_avg": float64(0)},
-				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
-			),
-		},
-		false,
-		false,
-		false,
-	},
-	{
-		"query 13 - non-existing tag field",
-		esAggregation{
-			Index:             testindex,
-			MeasurementName:   "measurement13",
-			MetricFields:      []string{"size"},
-			MetricFunction:    "avg",
-			DateField:         "@timestamp",
-			QueryPeriod:       queryPeriod,
-			IncludeMissingTag: false,
-			Tags:              []string{"nothere"},
-			mapMetricFields:   map[string]string{"size": "long"},
-		},
-		[]aggregationQueryData{
-			{
-				aggKey:   aggKey{measurement: "measurement13", name: "size_avg", function: "avg", field: "size"},
-				isParent: false,
-			},
-			{
-				aggKey:   aggKey{measurement: "measurement13", name: "nothere", function: "terms", field: "nothere"},
-				isParent: true,
-			},
-		},
-		nil,
-		false,
-		false,
-		false,
-	},
-	{
-		"query 14 - non-existing custom date/time format",
-		esAggregation{
-			Index:           testindex,
-			MeasurementName: "measurement14",
-			DateField:       "@timestamp",
-			DateFieldFormat: "yyyy",
-			QueryPeriod:     queryPeriod,
-			mapMetricFields: map[string]string{},
-		},
-		nil,
-		nil,
-		false,
-		false,
-		true,
-	},
-}
-
-func setupIntegrationTest(t *testing.T) (*testutil.Container, error) {
-	type nginxlog struct {
-		IPaddress    string    `json:"IP"`
-		Timestamp    time.Time `json:"@timestamp"`
-		Method       string    `json:"method"`
-		URI          string    `json:"URI"`
-		Httpversion  string    `json:"http_version"`
-		Response     string    `json:"response"`
-		Size         float64   `json:"size"`
-		ResponseTime float64   `json:"response_time"`
 	}
 
-	container := testutil.Container{
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.EqualError(t, checkForError(tt.statusCode, strings.NewReader(tt.body)), tt.expected)
+		})
+	}
+}
+
+func TestGetMetricField(t *testing.T) {
+	field := map[string]interface{}{
+		"full_name": "size",
+		"mapping": map[string]interface{}{
+			"size": map[string]interface{}{"type": "long"},
+		},
+	}
+	tests := []struct {
+		name     string
+		mappings map[string]interface{}
+		expected map[string]string
+	}{
+		{
+			name: "typed mapping",
+			mappings: map[string]interface{}{
+				"document": map[string]interface{}{"size": field},
+			},
+			expected: map[string]string{"size": "long"},
+		},
+		{
+			name:     "typeless mapping",
+			mappings: map[string]interface{}{"size": field},
+			expected: map[string]string{"size": "long"},
+		},
+		{
+			name: "typed mapping with field-entry key names",
+			mappings: map[string]interface{}{
+				"document": map[string]interface{}{
+					"full_name": map[string]interface{}{
+						"full_name": "full_name",
+						"mapping": map[string]interface{}{
+							"full_name": map[string]interface{}{"type": "keyword"},
+						},
+					},
+					"mapping": map[string]interface{}{
+						"full_name": "mapping",
+						"mapping": map[string]interface{}{
+							"mapping": map[string]interface{}{"type": "long"},
+						},
+					},
+				},
+			},
+			expected: map[string]string{"full_name": "keyword", "mapping": "long"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response := map[string]interface{}{
+				"index": map[string]interface{}{"mappings": tt.mappings},
+			}
+
+			actual, err := getMetricField(response)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
+func TestGetMetricFieldError(t *testing.T) {
+	tests := []struct {
+		name          string
+		mappings      map[string]interface{}
+		expectedError string
+	}{
+		{
+			name: "typed invalid full name",
+			mappings: map[string]interface{}{
+				"document": map[string]interface{}{
+					"size": map[string]interface{}{
+						"full_name": 42,
+						"mapping": map[string]interface{}{
+							"size": map[string]interface{}{"type": "long"},
+						},
+					},
+				},
+			},
+			expectedError: "unexpected type int for full_name field",
+		},
+		{
+			name: "typeless invalid mapping",
+			mappings: map[string]interface{}{
+				"size": map[string]interface{}{
+					"full_name": "size",
+					"mapping":   42,
+				},
+			},
+			expectedError: "unexpected type int for mapping field",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response := map[string]interface{}{
+				"index": map[string]interface{}{"mappings": tt.mappings},
+			}
+
+			_, err := getMetricField(response)
+			require.ErrorContains(t, err, tt.expectedError)
+		})
+	}
+}
+
+func TestClientV5Sniffer(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if _, err := w.Write([]byte(`{"version":{"number":"5.6.16"}}`)); err != nil {
+			t.Error(err)
+		}
+	}))
+	defer server.Close()
+
+	logger := &testutil.CaptureLogger{}
+	plugin := &ElasticsearchQuery{
+		URLs:          []string{server.URL},
+		EnableSniffer: true,
+		Log:           logger,
+	}
+
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	warnings := logger.Warnings()
+	require.Len(t, warnings, 1)
+	require.Contains(t, warnings[0], "'enable_sniffer' is not supported")
+}
+
+func TestClientV6Sniffer(t *testing.T) {
+	discovered := make(chan struct{}, 1)
+
+	var server *httptest.Server
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/_nodes/http" {
+			http.NotFound(w, r)
+			return
+		}
+
+		response := map[string]interface{}{
+			"nodes": map[string]interface{}{
+				"node": map[string]interface{}{
+					"name":  "node",
+					"roles": []string{"data", "ingest"},
+					"http": map[string]string{
+						"publish_address": strings.TrimPrefix(server.URL, "http://"),
+					},
+				},
+			},
+		}
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			t.Error(err)
+			return
+		}
+		discovered <- struct{}{}
+	}))
+	defer server.Close()
+
+	c, err := newClientV6(clientConfig{
+		urls:              []string{server.URL},
+		enableSniffer:     true,
+		discoveryInterval: time.Hour,
+		httpClient:        server.Client(),
+		log:               testutil.Logger{},
+	})
+	require.NoError(t, err)
+
+	select {
+	case <-discovered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for node discovery")
+	}
+
+	stopped := make(chan struct{})
+	go func() {
+		c.close()
+		close(stopped)
+	}()
+
+	select {
+	case <-stopped:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out stopping node discovery")
+	}
+}
+
+func TestClientV7PlusDiscovery(t *testing.T) {
+	tests := []struct {
+		name      string
+		newClient func(clientConfig) (client, error)
+	}{
+		{
+			name:      "v7",
+			newClient: newClientV7,
+		},
+		{
+			name:      "v8",
+			newClient: newClientV8,
+		},
+		{
+			name:      "v9",
+			newClient: newClientV9,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			discovered := make(chan struct{}, 1)
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/_nodes/http" {
+					http.NotFound(w, r)
+					return
+				}
+
+				const response = `{
+  "nodes": {
+    "node": {
+      "name": "node",
+      "roles": ["data", "ingest"],
+      "http": {
+        "publish_address": "127.0.0.1:9200"
+      }
+    }
+  }
+}`
+				if _, err := w.Write([]byte(response)); err != nil {
+					t.Error(err)
+					return
+				}
+				discovered <- struct{}{}
+			}))
+			defer server.Close()
+
+			c, err := tt.newClient(clientConfig{
+				urls:              []string{server.URL},
+				enableSniffer:     true,
+				discoveryInterval: time.Hour,
+				httpClient:        server.Client(),
+				log:               testutil.Logger{},
+			})
+			require.NoError(t, err)
+			defer c.close()
+
+			select {
+			case <-discovered:
+			case <-time.After(5 * time.Second):
+				t.Fatal("timed out waiting for node discovery")
+			}
+		})
+	}
+}
+
+func TestClientQuery(t *testing.T) {
+	tests := []struct {
+		name                   string
+		newClient              func(clientConfig) (client, error)
+		response               string
+		expectedTrackTotalHits string
+	}{
+		{
+			name:      "v5",
+			newClient: newClientV5,
+			response:  `{"hits":{"total":12345},"aggregations":{}}`,
+		},
+		{
+			name:      "v6",
+			newClient: newClientV6,
+			response:  `{"hits":{"total":12345},"aggregations":{}}`,
+		},
+		{
+			name:                   "v7",
+			newClient:              newClientV7,
+			response:               `{"hits":{"total":{"value":12345,"relation":"eq"}},"aggregations":{}}`,
+			expectedTrackTotalHits: "true",
+		},
+		{
+			name:                   "v8",
+			newClient:              newClientV8,
+			response:               `{"hits":{"total":{"value":12345,"relation":"eq"}},"aggregations":{}}`,
+			expectedTrackTotalHits: "true",
+		},
+		{
+			name:                   "v9",
+			newClient:              newClientV9,
+			response:               `{"hits":{"total":{"value":12345,"relation":"eq"}},"aggregations":{}}`,
+			expectedTrackTotalHits: "true",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var trackTotalHits string
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set("X-Elastic-Product", "Elasticsearch")
+				switch r.URL.Path {
+				case "/": // The V7 client performs an implicit product check before searching.
+					if _, err := w.Write([]byte("{}")); err != nil {
+						t.Error(err)
+					}
+				case "/test/_search":
+					trackTotalHits = r.URL.Query().Get("track_total_hits")
+					if _, err := w.Write([]byte(tt.response)); err != nil {
+						t.Error(err)
+					}
+				default:
+					http.NotFound(w, r)
+				}
+			}))
+			defer server.Close()
+
+			c, err := tt.newClient(clientConfig{
+				urls:       []string{server.URL},
+				httpClient: server.Client(),
+				log:        testutil.Logger{},
+			})
+			require.NoError(t, err)
+			defer c.close()
+
+			agg := &aggregation{
+				Index:       "test",
+				DateField:   "@timestamp",
+				FilterQuery: "*",
+				QueryPeriod: config.Duration(time.Minute),
+				queries:     make([]queryData, 0),
+			}
+			result, hits, err := c.query(t.Context(), agg)
+			require.NoError(t, err)
+			require.Nil(t, result)
+			require.EqualValues(t, 12345, hits)
+			require.Equal(t, tt.expectedTrackTotalHits, trackTotalHits)
+		})
+	}
+}
+
+type nginxlog struct {
+	IPaddress    string    `json:"IP"`
+	Timestamp    time.Time `json:"@timestamp"`
+	Method       string    `json:"method"`
+	URI          string    `json:"URI"`
+	Httpversion  string    `json:"http_version"`
+	Response     string    `json:"response"`
+	Size         float64   `json:"size"`
+	ResponseTime float64   `json:"response_time"`
+}
+
+func TestGatherIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Define expectations
+	expectedFields := []map[string]string{
+		{"size": "long"},
+		{"size": "long"},
+		{"size": "long"},
+		{"size": "long", "response_time": "long"},
+		{},
+		{},
+		{},
+		{"size": "long"},
+		{"size": "long"},
+		{"size": "long"},
+	}
+
+	expectedMetrics := []telegraf.Metric{
+		metric.New(
+			"measurement1",
+			map[string]string{"URI_keyword": "/downloads/product_1"},
+			map[string]interface{}{"size_avg": float64(202.30038022813687), "doc_count": int64(263)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement2",
+			map[string]string{"URI_keyword": "/downloads/product_1"},
+			map[string]interface{}{"size_max": float64(3301), "doc_count": int64(263)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement2",
+			map[string]string{"URI_keyword": "/downloads/product_2"},
+			map[string]interface{}{"size_max": float64(3318), "doc_count": int64(237)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement3",
+			map[string]string{"response_keyword": "200"},
+			map[string]interface{}{"size_sum": float64(22790), "doc_count": int64(22)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement3",
+			map[string]string{"response_keyword": "304"},
+			map[string]interface{}{"size_sum": float64(0), "doc_count": int64(219)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement3",
+			map[string]string{"response_keyword": "404"},
+			map[string]interface{}{"size_sum": float64(86932), "doc_count": int64(259)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "404", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
+			map[string]interface{}{"size_min": float64(318), "response_time_min": float64(126), "doc_count": int64(146)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "304", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
+			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(71), "doc_count": int64(113)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
+			map[string]interface{}{"size_min": float64(490), "response_time_min": float64(1514), "doc_count": int64(3)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "404", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
+			map[string]interface{}{"size_min": float64(318), "response_time_min": float64(237), "doc_count": int64(113)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "304", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
+			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(134), "doc_count": int64(106)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
+			map[string]interface{}{"size_min": float64(490), "response_time_min": float64(2), "doc_count": int64(13)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1", "method_keyword": "HEAD"},
+			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(8479), "doc_count": int64(1)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2", "method_keyword": "HEAD"},
+			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(1059), "doc_count": int64(5)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement5",
+			map[string]string{"URI_keyword": "/downloads/product_2"},
+			map[string]interface{}{"doc_count": int64(237)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement6",
+			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1"},
+			map[string]interface{}{"doc_count": int64(4)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement6",
+			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2"},
+			map[string]interface{}{"doc_count": int64(18)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement7",
+			map[string]string{},
+			map[string]interface{}{"doc_count": int64(22)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement8",
+			map[string]string{},
+			map[string]interface{}{"size_max": float64(3318)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement12",
+			map[string]string{},
+			map[string]interface{}{"size_avg": float64(0)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+	}
+
+	// Setup the container
+	container := &testutil.Container{
 		Image:        "elasticsearch:6.8.23",
 		ExposedPorts: []string{servicePort},
 		Env: map[string]string{
@@ -521,17 +577,114 @@ func setupIntegrationTest(t *testing.T) (*testutil.Container, error) {
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("] mode [basic] - valid"),
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 		),
 	}
-	err := container.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
 
-	url := fmt.Sprintf(
-		"http://%s:%s", container.Address, container.Ports[servicePort],
-	)
-	e := &ElasticsearchQuery{
-		URLs: []string{url},
+	addr := "http://" + container.Address + ":" + container.Ports[servicePort]
+
+	// Fill the database
+	require.NoError(t, sendData(t.Context(), addr))
+
+	// Setup the plugin
+	plugin := &ElasticsearchQuery{
+		URLs: []string{addr},
+		Aggregations: []aggregation{
+			{
+				Index:           testindex,
+				MeasurementName: "measurement1",
+				MetricFields:    []string{"size"},
+				FilterQuery:     "product_1",
+				MetricFunction:  "avg",
+				DateField:       "@timestamp",
+				QueryPeriod:     config.Duration(time.Second * 600),
+				Tags:            []string{"URI.keyword"},
+			},
+			{
+				Index:           testindex,
+				MeasurementName: "measurement2",
+				MetricFields:    []string{"size"},
+				FilterQuery:     "downloads",
+				MetricFunction:  "max",
+				DateField:       "@timestamp",
+				QueryPeriod:     config.Duration(time.Second * 600),
+				Tags:            []string{"URI.keyword"},
+			},
+			{
+				Index:           testindex,
+				MeasurementName: "measurement3",
+				MetricFields:    []string{"size"},
+				FilterQuery:     "downloads",
+				MetricFunction:  "sum",
+				DateField:       "@timestamp",
+				QueryPeriod:     config.Duration(time.Second * 600),
+				Tags:            []string{"response.keyword"},
+			},
+			{
+				Index:             testindex,
+				MeasurementName:   "measurement4",
+				MetricFields:      []string{"size", "response_time"},
+				FilterQuery:       "downloads",
+				MetricFunction:    "min",
+				DateField:         "@timestamp",
+				QueryPeriod:       config.Duration(time.Second * 600),
+				IncludeMissingTag: true,
+				MissingTagValue:   "missing",
+				Tags:              []string{"response.keyword", "URI.keyword", "method.keyword"},
+			},
+			{
+				Index:           testindex,
+				MeasurementName: "measurement5",
+				FilterQuery:     "product_2",
+				DateField:       "@timestamp",
+				QueryPeriod:     config.Duration(time.Second * 600),
+				Tags:            []string{"URI.keyword"},
+			},
+			{
+				Index:           testindex,
+				MeasurementName: "measurement6",
+				FilterQuery:     "response: 200",
+				DateField:       "@timestamp",
+				QueryPeriod:     config.Duration(time.Second * 600),
+				Tags:            []string{"URI.keyword", "response.keyword"},
+			},
+			{
+				Index:           testindex,
+				MeasurementName: "measurement7",
+				FilterQuery:     "response: 200",
+				DateField:       "@timestamp",
+				QueryPeriod:     config.Duration(time.Second * 600),
+			},
+			{
+				Index:           testindex,
+				MeasurementName: "measurement8",
+				MetricFields:    []string{"size"},
+				FilterQuery:     "downloads",
+				MetricFunction:  "max",
+				DateField:       "@timestamp",
+				QueryPeriod:     config.Duration(time.Second * 600),
+			},
+			{
+				Index:           testindex,
+				MeasurementName: "measurement12",
+				MetricFields:    []string{"size"},
+				MetricFunction:  "avg",
+				DateField:       "@notatimestamp",
+				QueryPeriod:     config.Duration(time.Second * 600),
+			},
+			{
+				Index:             testindex,
+				MeasurementName:   "measurement13",
+				MetricFields:      []string{"size"},
+				MetricFunction:    "avg",
+				DateField:         "@timestamp",
+				QueryPeriod:       config.Duration(time.Second * 600),
+				IncludeMissingTag: false,
+				Tags:              []string{"nothere"},
+			},
+		},
 		HTTPClientConfig: common_http.HTTPClientConfig{
 			Timeout: config.Duration(30 * time.Second),
 			TransportConfig: common_http.TransportConfig{
@@ -540,32 +693,854 @@ func setupIntegrationTest(t *testing.T) (*testutil.Container, error) {
 		},
 		Log: testutil.Logger{},
 	}
+	require.NoError(t, plugin.Init())
 
-	err = e.connectToES()
-	if err != nil {
-		return &container, err
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Check the ES field mapping
+	for i, agg := range plugin.Aggregations {
+		actual := agg.mapMetricFields
+		expected := expectedFields[i]
+		require.Equalf(t, expected, actual, "mismatch in aggregation %d", i)
 	}
 
-	bulkRequest := e.esClient.Bulk()
+	// Collect metrics and check
+	require.NoError(t, acc.GatherError(plugin.Gather))
+	require.Empty(t, acc.Errors)
 
-	// populate elasticsearch with nginx_logs test data file
-	file, err := os.Open("testdata/nginx_logs")
-	if err != nil {
-		return &container, err
+	// Check the metrics
+	testutil.RequireMetricsEqual(t, expectedMetrics, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
+}
+
+func TestGatherV5Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
 	}
 
+	// Define expectations
+	expectedFields := []map[string]string{
+		{"size": "long"},
+		{"size": "long"},
+		{"size": "long"},
+		{"size": "long", "response_time": "long"},
+		{},
+		{},
+		{},
+		{"size": "long"},
+		{"size": "long"},
+		{"size": "long"},
+	}
+
+	expectedMetrics := []telegraf.Metric{
+		metric.New(
+			"measurement1",
+			map[string]string{"URI_keyword": "/downloads/product_1"},
+			map[string]interface{}{"size_avg": float64(202.30038022813687), "doc_count": int64(263)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement2",
+			map[string]string{"URI_keyword": "/downloads/product_1"},
+			map[string]interface{}{"size_max": float64(3301), "doc_count": int64(263)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement2",
+			map[string]string{"URI_keyword": "/downloads/product_2"},
+			map[string]interface{}{"size_max": float64(3318), "doc_count": int64(237)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement3",
+			map[string]string{"response_keyword": "200"},
+			map[string]interface{}{"size_sum": float64(22790), "doc_count": int64(22)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement3",
+			map[string]string{"response_keyword": "304"},
+			map[string]interface{}{"size_sum": float64(0), "doc_count": int64(219)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement3",
+			map[string]string{"response_keyword": "404"},
+			map[string]interface{}{"size_sum": float64(86932), "doc_count": int64(259)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "404", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
+			map[string]interface{}{"size_min": float64(318), "response_time_min": float64(126), "doc_count": int64(146)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "304", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
+			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(71), "doc_count": int64(113)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
+			map[string]interface{}{"size_min": float64(490), "response_time_min": float64(1514), "doc_count": int64(3)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "404", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
+			map[string]interface{}{"size_min": float64(318), "response_time_min": float64(237), "doc_count": int64(113)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "304", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
+			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(134), "doc_count": int64(106)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
+			map[string]interface{}{"size_min": float64(490), "response_time_min": float64(2), "doc_count": int64(13)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1", "method_keyword": "HEAD"},
+			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(8479), "doc_count": int64(1)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2", "method_keyword": "HEAD"},
+			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(1059), "doc_count": int64(5)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement5",
+			map[string]string{"URI_keyword": "/downloads/product_2"},
+			map[string]interface{}{"doc_count": int64(237)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement6",
+			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1"},
+			map[string]interface{}{"doc_count": int64(4)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement6",
+			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2"},
+			map[string]interface{}{"doc_count": int64(18)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement7",
+			map[string]string{},
+			map[string]interface{}{"doc_count": int64(22)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement8",
+			map[string]string{},
+			map[string]interface{}{"size_max": float64(3318)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement12",
+			map[string]string{},
+			map[string]interface{}{"size_avg": float64(0)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+	}
+
+	// Setup the container
+	container := &testutil.Container{
+		Image:        "elasticsearch:5.6.16",
+		ExposedPorts: []string{servicePort},
+		Env:          map[string]string{"ES_JAVA_OPTS": "-Xms512m -Xmx512m"},
+		WaitingFor:   wait.ForHTTP("/").WithPort(servicePort).WithStartupTimeout(5 * time.Minute),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	addr := "http://" + container.Address + ":" + container.Ports[servicePort]
+
+	// Fill the database
+	require.NoError(t, sendData(t.Context(), addr))
+
+	// Setup the plugin
+	plugin := &ElasticsearchQuery{
+		URLs: []string{addr},
+		Aggregations: []aggregation{
+			{
+				Index:           testindex,
+				MeasurementName: "measurement1",
+				MetricFields:    []string{"size"},
+				FilterQuery:     "product_1",
+				MetricFunction:  "avg",
+				DateField:       "@timestamp",
+				QueryPeriod:     config.Duration(time.Second * 600),
+				Tags:            []string{"URI.keyword"},
+			},
+			{
+				Index:           testindex,
+				MeasurementName: "measurement2",
+				MetricFields:    []string{"size"},
+				FilterQuery:     "downloads",
+				MetricFunction:  "max",
+				DateField:       "@timestamp",
+				QueryPeriod:     config.Duration(time.Second * 600),
+				Tags:            []string{"URI.keyword"},
+			},
+			{
+				Index:           testindex,
+				MeasurementName: "measurement3",
+				MetricFields:    []string{"size"},
+				FilterQuery:     "downloads",
+				MetricFunction:  "sum",
+				DateField:       "@timestamp",
+				QueryPeriod:     config.Duration(time.Second * 600),
+				Tags:            []string{"response.keyword"},
+			},
+			{
+				Index:             testindex,
+				MeasurementName:   "measurement4",
+				MetricFields:      []string{"size", "response_time"},
+				FilterQuery:       "downloads",
+				MetricFunction:    "min",
+				DateField:         "@timestamp",
+				QueryPeriod:       config.Duration(time.Second * 600),
+				IncludeMissingTag: true,
+				MissingTagValue:   "missing",
+				Tags:              []string{"response.keyword", "URI.keyword", "method.keyword"},
+			},
+			{
+				Index:           testindex,
+				MeasurementName: "measurement5",
+				FilterQuery:     "product_2",
+				DateField:       "@timestamp",
+				QueryPeriod:     config.Duration(time.Second * 600),
+				Tags:            []string{"URI.keyword"},
+			},
+			{
+				Index:           testindex,
+				MeasurementName: "measurement6",
+				FilterQuery:     "response: 200",
+				DateField:       "@timestamp",
+				QueryPeriod:     config.Duration(time.Second * 600),
+				Tags:            []string{"URI.keyword", "response.keyword"},
+			},
+			{
+				Index:           testindex,
+				MeasurementName: "measurement7",
+				FilterQuery:     "response: 200",
+				DateField:       "@timestamp",
+				QueryPeriod:     config.Duration(time.Second * 600),
+			},
+			{
+				Index:           testindex,
+				MeasurementName: "measurement8",
+				MetricFields:    []string{"size"},
+				FilterQuery:     "downloads",
+				MetricFunction:  "max",
+				DateField:       "@timestamp",
+				QueryPeriod:     config.Duration(time.Second * 600),
+			},
+			{
+				Index:           testindex,
+				MeasurementName: "measurement12",
+				MetricFields:    []string{"size"},
+				MetricFunction:  "avg",
+				DateField:       "@notatimestamp",
+				QueryPeriod:     config.Duration(time.Second * 600),
+			},
+			{
+				Index:             testindex,
+				MeasurementName:   "measurement13",
+				MetricFields:      []string{"size"},
+				MetricFunction:    "avg",
+				DateField:         "@timestamp",
+				QueryPeriod:       config.Duration(time.Second * 600),
+				IncludeMissingTag: false,
+				Tags:              []string{"nothere"},
+			},
+		},
+		HTTPClientConfig: common_http.HTTPClientConfig{
+			Timeout: config.Duration(30 * time.Second),
+			TransportConfig: common_http.TransportConfig{
+				ResponseHeaderTimeout: config.Duration(30 * time.Second),
+			},
+		},
+		Log: testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Check the ES field mapping
+	for i, agg := range plugin.Aggregations {
+		actual := agg.mapMetricFields
+		expected := expectedFields[i]
+		require.Equalf(t, expected, actual, "mismatch in aggregation %d", i)
+	}
+
+	// Collect metrics and check
+	require.NoError(t, acc.GatherError(plugin.Gather))
+	require.Empty(t, acc.Errors)
+
+	// Check the metrics
+	testutil.RequireMetricsEqual(t, expectedMetrics, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
+}
+
+func TestGatherV7PlusIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	tests := []struct {
+		name  string
+		image string
+		env   map[string]string
+	}{
+		{
+			name:  "v7",
+			image: "docker.elastic.co/elasticsearch/elasticsearch:7.17.29",
+			env: map[string]string{
+				"discovery.type": "single-node",
+				"ES_JAVA_OPTS":   "-Xms1g -Xmx1g",
+			},
+		},
+		// Security is enabled by default starting with Elasticsearch 8.
+		{
+			name:  "v8",
+			image: "docker.elastic.co/elasticsearch/elasticsearch:8.19.18",
+			env: map[string]string{
+				"discovery.type":         "single-node",
+				"xpack.security.enabled": "false",
+				"ES_JAVA_OPTS":           "-Xms1g -Xmx1g",
+			},
+		},
+		{
+			name:  "v9",
+			image: "docker.elastic.co/elasticsearch/elasticsearch:9.4.3",
+			env: map[string]string{
+				"discovery.type":         "single-node",
+				"xpack.security.enabled": "false",
+				"ES_JAVA_OPTS":           "-Xms1g -Xmx1g",
+			},
+		},
+	}
+
+	// Define expectations
+	expectedFields := []map[string]string{
+		{"size": "long"},
+		{"size": "long"},
+		{"size": "long"},
+		{"size": "long", "response_time": "long"},
+		{},
+		{},
+		{},
+		{"size": "long"},
+		{"size": "long"},
+		{"size": "long"},
+	}
+
+	expectedMetrics := []telegraf.Metric{
+		metric.New(
+			"measurement1",
+			map[string]string{"URI_keyword": "/downloads/product_1"},
+			map[string]interface{}{"size_avg": float64(202.30038022813687), "doc_count": int64(263)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement2",
+			map[string]string{"URI_keyword": "/downloads/product_1"},
+			map[string]interface{}{"size_max": float64(3301), "doc_count": int64(263)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement2",
+			map[string]string{"URI_keyword": "/downloads/product_2"},
+			map[string]interface{}{"size_max": float64(3318), "doc_count": int64(237)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement3",
+			map[string]string{"response_keyword": "200"},
+			map[string]interface{}{"size_sum": float64(22790), "doc_count": int64(22)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement3",
+			map[string]string{"response_keyword": "304"},
+			map[string]interface{}{"size_sum": float64(0), "doc_count": int64(219)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement3",
+			map[string]string{"response_keyword": "404"},
+			map[string]interface{}{"size_sum": float64(86932), "doc_count": int64(259)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "404", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
+			map[string]interface{}{"size_min": float64(318), "response_time_min": float64(126), "doc_count": int64(146)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "304", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
+			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(71), "doc_count": int64(113)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
+			map[string]interface{}{"size_min": float64(490), "response_time_min": float64(1514), "doc_count": int64(3)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "404", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
+			map[string]interface{}{"size_min": float64(318), "response_time_min": float64(237), "doc_count": int64(113)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "304", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
+			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(134), "doc_count": int64(106)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
+			map[string]interface{}{"size_min": float64(490), "response_time_min": float64(2), "doc_count": int64(13)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1", "method_keyword": "HEAD"},
+			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(8479), "doc_count": int64(1)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement4",
+			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2", "method_keyword": "HEAD"},
+			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(1059), "doc_count": int64(5)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement5",
+			map[string]string{"URI_keyword": "/downloads/product_2"},
+			map[string]interface{}{"doc_count": int64(237)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement6",
+			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1"},
+			map[string]interface{}{"doc_count": int64(4)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement6",
+			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2"},
+			map[string]interface{}{"doc_count": int64(18)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement7",
+			map[string]string{},
+			map[string]interface{}{"doc_count": int64(22)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement8",
+			map[string]string{},
+			map[string]interface{}{"size_max": float64(3318)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+		metric.New(
+			"measurement12",
+			map[string]string{},
+			map[string]interface{}{"size_avg": float64(0)},
+			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+		),
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup the container
+			container := &testutil.Container{
+				Image:        tt.image,
+				ExposedPorts: []string{servicePort},
+				Env:          tt.env,
+				WaitingFor:   wait.ForHTTP("/").WithPort(servicePort).WithStartupTimeout(120 * time.Second),
+			}
+			require.NoError(t, container.Start(), "failed to start container")
+			defer container.Terminate()
+
+			addr := "http://" + container.Address + ":" + container.Ports[servicePort]
+
+			// Fill the database
+			require.NoError(t, sendData(t.Context(), addr))
+
+			// Setup the plugin
+			plugin := &ElasticsearchQuery{
+				URLs: []string{addr},
+				Aggregations: []aggregation{
+					{
+						Index:           testindex,
+						MeasurementName: "measurement1",
+						MetricFields:    []string{"size"},
+						FilterQuery:     "product_1",
+						MetricFunction:  "avg",
+						DateField:       "@timestamp",
+						QueryPeriod:     config.Duration(time.Second * 600),
+						Tags:            []string{"URI.keyword"},
+					},
+					{
+						Index:           testindex,
+						MeasurementName: "measurement2",
+						MetricFields:    []string{"size"},
+						FilterQuery:     "downloads",
+						MetricFunction:  "max",
+						DateField:       "@timestamp",
+						QueryPeriod:     config.Duration(time.Second * 600),
+						Tags:            []string{"URI.keyword"},
+					},
+					{
+						Index:           testindex,
+						MeasurementName: "measurement3",
+						MetricFields:    []string{"size"},
+						FilterQuery:     "downloads",
+						MetricFunction:  "sum",
+						DateField:       "@timestamp",
+						QueryPeriod:     config.Duration(time.Second * 600),
+						Tags:            []string{"response.keyword"},
+					},
+					{
+						Index:             testindex,
+						MeasurementName:   "measurement4",
+						MetricFields:      []string{"size", "response_time"},
+						FilterQuery:       "downloads",
+						MetricFunction:    "min",
+						DateField:         "@timestamp",
+						QueryPeriod:       config.Duration(time.Second * 600),
+						IncludeMissingTag: true,
+						MissingTagValue:   "missing",
+						Tags:              []string{"response.keyword", "URI.keyword", "method.keyword"},
+					},
+					{
+						Index:           testindex,
+						MeasurementName: "measurement5",
+						FilterQuery:     "product_2",
+						DateField:       "@timestamp",
+						QueryPeriod:     config.Duration(time.Second * 600),
+						Tags:            []string{"URI.keyword"},
+					},
+					{
+						Index:           testindex,
+						MeasurementName: "measurement6",
+						FilterQuery:     "response: 200",
+						DateField:       "@timestamp",
+						QueryPeriod:     config.Duration(time.Second * 600),
+						Tags:            []string{"URI.keyword", "response.keyword"},
+					},
+					{
+						Index:           testindex,
+						MeasurementName: "measurement7",
+						FilterQuery:     "response: 200",
+						DateField:       "@timestamp",
+						QueryPeriod:     config.Duration(time.Second * 600),
+					},
+					{
+						Index:           testindex,
+						MeasurementName: "measurement8",
+						MetricFields:    []string{"size"},
+						FilterQuery:     "downloads",
+						MetricFunction:  "max",
+						DateField:       "@timestamp",
+						QueryPeriod:     config.Duration(time.Second * 600),
+					},
+					{
+						Index:           testindex,
+						MeasurementName: "measurement12",
+						MetricFields:    []string{"size"},
+						MetricFunction:  "avg",
+						DateField:       "@notatimestamp",
+						QueryPeriod:     config.Duration(time.Second * 600),
+					},
+					{
+						Index:             testindex,
+						MeasurementName:   "measurement13",
+						MetricFields:      []string{"size"},
+						MetricFunction:    "avg",
+						DateField:         "@timestamp",
+						QueryPeriod:       config.Duration(time.Second * 600),
+						IncludeMissingTag: false,
+						Tags:              []string{"nothere"},
+					},
+				},
+				HTTPClientConfig: common_http.HTTPClientConfig{
+					Timeout: config.Duration(30 * time.Second),
+					TransportConfig: common_http.TransportConfig{
+						ResponseHeaderTimeout: config.Duration(30 * time.Second),
+					},
+				},
+				Log: testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
+
+			// Check the ES field mapping
+			for i, agg := range plugin.Aggregations {
+				actual := agg.mapMetricFields
+				expected := expectedFields[i]
+				require.Equalf(t, expected, actual, "mismatch in aggregation %d", i)
+			}
+
+			// Collect metrics and check
+			require.NoError(t, acc.GatherError(plugin.Gather))
+			require.Empty(t, acc.Errors)
+
+			// Check the metrics
+			testutil.RequireMetricsEqual(t, expectedMetrics, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
+		})
+	}
+}
+
+func TestGatherFailStartIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Setup the container
+	container := &testutil.Container{
+		Image:        "elasticsearch:6.8.23",
+		ExposedPorts: []string{servicePort},
+		Env: map[string]string{
+			"discovery.type": "single-node",
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("] mode [basic] - valid"),
+			wait.ForListeningPort(servicePort),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	addr := "http://" + container.Address + ":" + container.Ports[servicePort]
+
+	// Fill the database
+	require.NoError(t, sendData(t.Context(), addr))
+
+	tests := []struct {
+		name     string
+		agg      aggregation
+		expected string
+	}{
+		{
+			name: "invalid function",
+			agg: aggregation{
+				Index:           testindex,
+				MeasurementName: "measurement9",
+				MetricFields:    []string{"size"},
+				FilterQuery:     "downloads",
+				MetricFunction:  "average",
+				DateField:       "@timestamp",
+				QueryPeriod:     config.Duration(time.Second * 600),
+			},
+			expected: `aggregation function "average" not supported`,
+		},
+		{
+			name: "non-existing field",
+			agg: aggregation{
+				Index:           testindex,
+				MeasurementName: "measurement10",
+				MetricFields:    []string{"none"},
+				DateField:       "@timestamp",
+				QueryPeriod:     config.Duration(time.Second * 600),
+			},
+			expected: `metric field "none" not found on index`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup plugin
+			plugin := &ElasticsearchQuery{
+				URLs:         []string{addr},
+				Aggregations: []aggregation{tt.agg},
+				HTTPClientConfig: common_http.HTTPClientConfig{
+					Timeout: config.Duration(30 * time.Second),
+					TransportConfig: common_http.TransportConfig{
+						ResponseHeaderTimeout: config.Duration(30 * time.Second),
+					},
+				},
+				Log: testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.ErrorContains(t, plugin.Start(&acc), tt.expected)
+			defer plugin.Stop()
+		})
+	}
+}
+
+func TestGatherFailGatherIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Setup the container
+	container := &testutil.Container{
+		Image:        "elasticsearch:6.8.23",
+		ExposedPorts: []string{servicePort},
+		Env: map[string]string{
+			"discovery.type": "single-node",
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("] mode [basic] - valid"),
+			wait.ForListeningPort(servicePort),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	addr := "http://" + container.Address + ":" + container.Ports[servicePort]
+
+	// Fill the database
+	require.NoError(t, sendData(t.Context(), addr))
+
+	tests := []struct {
+		name     string
+		agg      aggregation
+		expected string
+	}{
+		{
+			name: "invalid index",
+			agg: aggregation{
+				Index:           "notanindex",
+				MeasurementName: "measurement11",
+				DateField:       "@timestamp",
+				QueryPeriod:     config.Duration(time.Second * 600),
+			},
+			expected: "404 (Not Found): no such index",
+		},
+		{
+			name: "invalid time format",
+			agg: aggregation{
+				Index:           testindex,
+				MeasurementName: "measurement14",
+				DateField:       "@timestamp",
+				DateFieldFormat: "yyyy",
+				QueryPeriod:     config.Duration(time.Second * 600),
+			},
+			expected: "400 (Bad Request): all shards failed",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup plugin
+			plugin := &ElasticsearchQuery{
+				URLs:         []string{addr},
+				Aggregations: []aggregation{tt.agg},
+				HTTPClientConfig: common_http.HTTPClientConfig{
+					Timeout: config.Duration(30 * time.Second),
+					TransportConfig: common_http.TransportConfig{
+						ResponseHeaderTimeout: config.Duration(30 * time.Second),
+					},
+				},
+				Log: testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
+
+			// Gather data and check error
+			require.ErrorContains(t, acc.GatherError(plugin.Gather), tt.expected)
+		})
+	}
+}
+
+func TestInvalidServerVersion(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if _, err := w.Write([]byte(`{"version":{"number":"invalid"}}`)); err != nil {
+			t.Error(err)
+		}
+	}))
+	defer server.Close()
+
+	plugin := &ElasticsearchQuery{
+		URLs: []string{server.URL},
+		Log:  testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	err := plugin.Start(&acc)
+	require.ErrorContains(t, err, `parsing server version "invalid" failed`)
+	require.Nil(t, plugin.client)
+}
+
+func TestStartupFailureReleasesClient(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if _, err := w.Write([]byte(`{"version": {"number": "10.1.2"}}`)); err != nil {
+			t.Error(err)
+		}
+	}))
+	defer server.Close()
+
+	plugin := &ElasticsearchQuery{
+		URLs:                []string{server.URL},
+		HealthCheckInterval: config.Duration(10 * time.Second),
+		Log:                 testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.ErrorContains(t, plugin.Start(&acc), "not supported")
+
+	// The failed start must not retain a client.
+	require.Nil(t, plugin.client)
+}
+
+func sendData(ctx context.Context, url string) error {
+	// Read the data
+	file, err := os.Open(filepath.Join("testdata", "nginx_logs"))
+	if err != nil {
+		return fmt.Errorf("reading nginx logs failed: %w", err)
+	}
 	defer file.Close()
 
+	var logs []nginxlog
 	scanner := bufio.NewScanner(file)
-
 	for scanner.Scan() {
 		parts := strings.Split(scanner.Text(), " ")
 		size, err := strconv.Atoi(parts[9])
-		require.NoError(t, err)
+		if err != nil {
+			return fmt.Errorf("parsing size failed: %w", err)
+		}
 		responseTime, err := strconv.Atoi(parts[len(parts)-1])
-		require.NoError(t, err)
+		if err != nil {
+			return fmt.Errorf("parsing response-time failed: %w", err)
+		}
 
-		logline := nginxlog{
+		logs = append(logs, nginxlog{
 			IPaddress:    parts[0],
 			Timestamp:    time.Now().UTC(),
 			Method:       strings.ReplaceAll(parts[5], `"`, ""),
@@ -574,194 +1549,140 @@ func setupIntegrationTest(t *testing.T) (*testutil.Container, error) {
 			Response:     parts[8],
 			Size:         float64(size),
 			ResponseTime: float64(responseTime),
-		}
-
-		bulkRequest.Add(elastic5.NewBulkIndexRequest().
-			Index(testindex).
-			Type("testquery_data").
-			Doc(logline))
+		})
 	}
-	if scanner.Err() != nil {
-		return &container, err
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("scanning nginx logs failed: %w", err)
 	}
 
-	_, err = bulkRequest.Do(t.Context())
+	// Create the client
+	client, err := newTestIndexer(ctx, url)
 	if err != nil {
-		return &container, err
+		return fmt.Errorf("creating client failed: %w", err)
 	}
 
-	// force elastic to refresh indexes to get new batch data
-	_, err = e.esClient.Refresh().Do(t.Context())
+	// Create bulk request for the data
+	if err := client.bulkIndex(ctx, testindex, logs); err != nil {
+		return fmt.Errorf("sending bulk request failed: %w", err)
+	}
+
+	// Force elastic to refresh indexes to get new batch data
+	if err := client.refresh(ctx); err != nil {
+		return fmt.Errorf("refreshing indices failed: %w", err)
+	}
+
+	return nil
+}
+
+type testIndexer struct {
+	client *elasticsearch5.Client
+	major  int
+}
+
+func newTestIndexer(ctx context.Context, baseURL string) (*testIndexer, error) {
+	client, err := elasticsearch5.NewClient(elasticsearch5.Config{
+		Addresses: []string{baseURL},
+		Transport: &http.Transport{
+			ResponseHeaderTimeout: 30 * time.Second,
+		},
+	})
 	if err != nil {
-		return &container, err
+		return nil, err
 	}
 
-	return &container, nil
+	idx := &testIndexer{client: client}
+	major, err := idx.probeMajor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	idx.major = major
+
+	return idx, nil
 }
 
-func TestElasticsearchQueryIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
+func (idx *testIndexer) bulkIndex(ctx context.Context, index string, docs []nginxlog) error {
+	meta := map[string]any{
+		"_index": index,
+	}
+	if idx.major <= 6 {
+		meta["_type"] = "testquery_data"
+	}
+	metaLine, err := json.Marshal(map[string]any{"index": meta})
+	if err != nil {
+		return err
 	}
 
-	container, err := setupIntegrationTest(t)
-	require.NoError(t, err)
-	defer container.Terminate()
-
-	var acc testutil.Accumulator
-	e := &ElasticsearchQuery{
-		URLs: []string{
-			fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
-		},
-		HTTPClientConfig: common_http.HTTPClientConfig{
-			Timeout: config.Duration(30 * time.Second),
-			TransportConfig: common_http.TransportConfig{
-				ResponseHeaderTimeout: config.Duration(30 * time.Second),
-			},
-		},
-		Log: testutil.Logger{},
-	}
-
-	err = e.connectToES()
-	require.NoError(t, err)
-
-	var aggs []esAggregation
-	var aggsErr []esAggregation
-
-	for _, agg := range testEsAggregationData {
-		if !agg.wantQueryResErr {
-			aggs = append(aggs, agg.testAggregationQueryInput)
+	var body bytes.Buffer
+	encoder := json.NewEncoder(&body)
+	for _, doc := range docs {
+		body.Write(metaLine)
+		body.WriteByte('\n')
+		if err := encoder.Encode(doc); err != nil {
+			return err
 		}
 	}
-	e.Aggregations = aggs
 
-	require.NoError(t, e.Init())
-	require.NoError(t, e.Gather(&acc))
-
-	if len(acc.Errors) > 0 {
-		t.Errorf("%s", acc.Errors)
+	var result struct {
+		Errors bool `json:"errors"`
+	}
+	res, err := idx.client.Bulk(
+		&body,
+		idx.client.Bulk.WithContext(ctx),
+	)
+	if err := idx.handleResponse(res, err, &result); err != nil {
+		return err
+	}
+	if result.Errors {
+		return errors.New("bulk indexing reported item errors")
 	}
 
-	var expectedMetrics []telegraf.Metric
-	for _, result := range testEsAggregationData {
-		expectedMetrics = append(expectedMetrics, result.expectedMetrics...)
-	}
-	testutil.RequireMetricsEqual(t, expectedMetrics, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
+	return nil
+}
 
-	// aggregations that should return an error
-	for _, agg := range testEsAggregationData {
-		if agg.wantQueryResErr {
-			aggsErr = append(aggsErr, agg.testAggregationQueryInput)
+func (idx *testIndexer) refresh(ctx context.Context) error {
+	res, err := idx.client.Indices.Refresh(
+		idx.client.Indices.Refresh.WithContext(ctx),
+	)
+	return idx.handleResponse(res, err, nil)
+}
+
+func (idx *testIndexer) probeMajor(ctx context.Context) (int, error) {
+	var info struct {
+		Version struct {
+			Number string `json:"number"`
+		} `json:"version"`
+	}
+
+	res, err := idx.client.Info(idx.client.Info.WithContext(ctx))
+	if err := idx.handleResponse(res, err, &info); err != nil {
+		return 0, err
+	}
+
+	majorText, _, _ := strings.Cut(info.Version.Number, ".")
+	major, err := strconv.Atoi(majorText)
+	if err != nil {
+		return 0, fmt.Errorf("parsing Elasticsearch version %q failed: %w", info.Version.Number, err)
+	}
+
+	return major, nil
+}
+
+func (*testIndexer) handleResponse(res *esapi5.Response, err error, out any) error {
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.IsError() {
+		data, err := io.ReadAll(res.Body)
+		if err != nil {
+			return err
 		}
+		return fmt.Errorf("%s: %s", res.Status(), strings.TrimSpace(string(data)))
 	}
-	e.Aggregations = aggsErr
-	require.NoError(t, e.Init())
-	require.NoError(t, e.Gather(&acc))
-
-	if len(acc.Errors) != len(aggsErr) {
-		t.Errorf("expecting %v query result errors, got %v: %s", len(aggsErr), len(acc.Errors), acc.Errors)
-	}
-}
-
-func TestElasticsearchQueryIntegration_getMetricFields(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
+	if out != nil {
+		return json.NewDecoder(res.Body).Decode(out)
 	}
 
-	container, err := setupIntegrationTest(t)
-	require.NoError(t, err)
-	defer container.Terminate()
-
-	type args struct {
-		ctx         context.Context
-		aggregation esAggregation
-	}
-
-	e := &ElasticsearchQuery{
-		URLs: []string{
-			fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
-		},
-		HTTPClientConfig: common_http.HTTPClientConfig{
-			Timeout: config.Duration(30 * time.Second),
-			TransportConfig: common_http.TransportConfig{
-				ResponseHeaderTimeout: config.Duration(30 * time.Second),
-			},
-		},
-		Log: testutil.Logger{},
-	}
-
-	err = e.connectToES()
-	require.NoError(t, err)
-
-	type test struct {
-		name    string
-		e       *ElasticsearchQuery
-		args    args
-		want    map[string]string
-		wantErr bool
-	}
-
-	tests := make([]test, 0, len(testEsAggregationData))
-	for _, d := range testEsAggregationData {
-		tests = append(tests, test{
-			"getMetricFields " + d.queryName,
-			e,
-			args{t.Context(), d.testAggregationQueryInput},
-			d.testAggregationQueryInput.mapMetricFields,
-			d.wantGetMetricFieldsErr,
-		})
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.e.getMetricFields(tt.args.ctx, tt.args.aggregation)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ElasticsearchQuery.buildAggregationQuery() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if !cmp.Equal(got, tt.want) {
-				t.Errorf("ElasticsearchQuery.getMetricFields() = error = %s", cmp.Diff(got, tt.want))
-			}
-		})
-	}
-}
-
-func TestElasticsearchQuery_buildAggregationQuery(t *testing.T) {
-	type test struct {
-		name        string
-		aggregation esAggregation
-		want        []aggregationQueryData
-		wantErr     bool
-	}
-
-	tests := make([]test, 0, len(testEsAggregationData))
-	for _, d := range testEsAggregationData {
-		tests = append(tests, test{
-			"build " + d.queryName,
-			d.testAggregationQueryInput,
-			d.testAggregationQueryData,
-			d.wantBuildQueryErr,
-		})
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.aggregation.buildAggregationQuery()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ElasticsearchQuery.buildAggregationQuery() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			opts := []cmp.Option{
-				cmp.AllowUnexported(aggKey{}, aggregationQueryData{}),
-				cmpopts.IgnoreFields(aggregationQueryData{}, "aggregation"),
-				cmpopts.SortSlices(func(x, y aggregationQueryData) bool { return x.aggKey.name > y.aggKey.name }),
-			}
-
-			if !cmp.Equal(tt.aggregation.aggregationQueryList, tt.want, opts...) {
-				t.Errorf("ElasticsearchQuery.buildAggregationQuery(): %s error = %s ", tt.name, cmp.Diff(tt.aggregation.aggregationQueryList, tt.want, opts...))
-			}
-		})
-	}
+	return nil
 }

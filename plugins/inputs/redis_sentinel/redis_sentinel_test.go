@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/network"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -38,14 +37,14 @@ func TestRedisSentinelConnectIntegration(t *testing.T) {
 
 	firstSentinel := createSentinelContainer(redis.Name, net.Name, wait.ForAll(
 		wait.ForLog("+monitor master"),
-		wait.ForListeningPort(nat.Port(sentinelServicePort)),
+		wait.ForListeningPort(sentinelServicePort),
 	))
 	require.NoError(t, firstSentinel.Start(), "failed to start container")
 	defer firstSentinel.Terminate()
 
 	secondSentinel := createSentinelContainer(redis.Name, net.Name, wait.ForAll(
 		wait.ForLog("+sentinel sentinel"),
-		wait.ForListeningPort(nat.Port(sentinelServicePort)),
+		wait.ForListeningPort(sentinelServicePort),
 	))
 	require.NoError(t, secondSentinel.Start(), "failed to start container")
 	defer secondSentinel.Terminate()
@@ -350,7 +349,7 @@ func createRedisContainer(networkName string) testutil.Container {
 		ExposedPorts: []string{"6379"},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("Ready to accept connections"),
-			wait.ForListeningPort(nat.Port("6379")),
+			wait.ForListeningPort("6379"),
 		),
 	}
 }

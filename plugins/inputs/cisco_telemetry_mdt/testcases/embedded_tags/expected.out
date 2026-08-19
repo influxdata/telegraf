@@ -1,0 +1,2 @@
+extra,foo=bar,list/name=entry1,path=type:model/extra,source=hostname,subscription=subscription list/test="foo" 1543236572000000000
+extra,foo=bar,list/name=entry2,path=type:model/extra,source=hostname,subscription=subscription list/test="bar" 1543236572000000000

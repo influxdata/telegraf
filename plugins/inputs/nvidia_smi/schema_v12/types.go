@@ -48,6 +48,17 @@ type smi struct {
 			ClocksEventReasonSwThermalSlowdown         string `xml:"clocks_event_reason_sw_thermal_slowdown"`
 			ClocksEventReasonSyncBoost                 string `xml:"clocks_event_reason_sync_boost"`
 		} `xml:"clocks_event_reasons"`
+		ClocksThrottleReasons struct {
+			ClocksThrottleReasonApplicationsClocksSetting string `xml:"clocks_throttle_reason_applications_clocks_setting"`
+			ClocksThrottleReasonDisplayClocksSetting      string `xml:"clocks_throttle_reason_display_clocks_setting"`
+			ClocksThrottleReasonGpuIdle                   string `xml:"clocks_throttle_reason_gpu_idle"`
+			ClocksThrottleReasonHwPowerBrakeSlowdown      string `xml:"clocks_throttle_reason_hw_power_brake_slowdown"`
+			ClocksThrottleReasonHwSlowdown                string `xml:"clocks_throttle_reason_hw_slowdown"`
+			ClocksThrottleReasonHwThermalSlowdown         string `xml:"clocks_throttle_reason_hw_thermal_slowdown"`
+			ClocksThrottleReasonSwPowerCap                string `xml:"clocks_throttle_reason_sw_power_cap"`
+			ClocksThrottleReasonSwThermalSlowdown         string `xml:"clocks_throttle_reason_sw_thermal_slowdown"`
+			ClocksThrottleReasonSyncBoost                 string `xml:"clocks_throttle_reason_sync_boost"`
+		} `xml:"clocks_throttle_reasons"`
 		ComputeMode               string `xml:"compute_mode"`
 		DefaultApplicationsClocks struct {
 			GraphicsClock string `xml:"graphics_clock"`

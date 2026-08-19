@@ -21,6 +21,23 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Startup error behavior options <!-- @/docs/includes/startup_error_behavior.md -->
+
+In addition to the plugin-specific and global configuration settings the plugin
+supports options for specifying the behavior when experiencing startup errors
+using the `startup_error_behavior` setting. Available values are:
+
+- `error`:  Telegraf with stop and exit in case of startup errors. This is the
+            default behavior.
+- `ignore`: Telegraf will ignore startup errors for this plugin and disables it
+            but continues processing for all other plugins.
+- `retry`:  Telegraf will try to startup the plugin in every gather or write
+            cycle in case of startup errors. The plugin is disabled until
+            the startup succeeds.
+- `probe`:  Telegraf will probe the plugin's function (if possible) and disables
+            the plugin in case probing fails. If the plugin does not support
+            probing, Telegraf will behave as if `ignore` was set instead.
+
 ## Configuration
 
 ```toml @sample.conf
@@ -129,9 +146,9 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ### Required parameters
 
-* `urls`: A list containing the full HTTP URL of one or more nodes from your
+- `urls`: A list containing the full HTTP URL of one or more nodes from your
   OpenSearch instance.
-* `index_name`: The target index for metrics. You can use the date format
+- `index_name`: The target index for metrics. You can use the date format
 
 For example: "telegraf-{{.Time.Format \"2006-01-02\"}}" would set it to
 "telegraf-2023-07-27". You can also specify metric name (`{{ .Name }}`), tag

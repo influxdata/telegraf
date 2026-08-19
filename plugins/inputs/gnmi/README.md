@@ -33,10 +33,10 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
-## Secret-store support
+## Secret store support
 
-This plugin supports secrets from secret-stores for the `username` and
-`password` options. See the [secret-store documentation][SECRETSTORE] for more
+This plugin supports secrets from secret stores for the `username` and
+`password` options. See the [secret store documentation][SECRETSTORE] for more
 details on how to use them.
 
 [SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
@@ -78,22 +78,17 @@ details on how to use them.
   ## see https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-depth.md
   # depth = 0
 
+  ## Emit a metric for "delete" messages
+  # emit_delete_metrics = false
+
   ## Enable to get the canonical path as field-name
   # canonical_field_names = false
 
   ## Remove leading slashes and dots in field-name
   # trim_field_names = false
 
-  ## Only receive updates for the state, also suppresses receiving the initial state
-  # updates_only = false
-
-  ## Emit a metric for "delete" messages
-  # emit_delete_metrics = false
-
-  ## Enforces the namespace of the first element as origin for aliases and
-  ## response paths, required for backward compatibility.
-  ## NOTE: Set to 'false' if possible but be aware that this might change the path tag!
-  # enforce_first_namespace_as_origin = true
+  ## Prefix tags from path keys with the path element
+  # prefix_tag_key_with_path = false
 
   ## Guess the path-tag if an update does not contain a prefix-path
   ## Supported values are
@@ -102,8 +97,26 @@ details on how to use them.
   ##   subscription -- use the subscription path
   # path_guessing_strategy = "none"
 
-  ## Prefix tags from path keys with the path element
-  # prefix_tag_key_with_path = false
+  ## Vendor specific options
+  ## This defines what vendor specific options to load.
+  ## * Juniper Header Extension (juniper_header): some sensors are directly managed by
+  ##   Linecard, which adds the Juniper GNMI Header Extension. Enabling this
+  ##   allows the decoding of the Extension header if present. Currently this knob
+  ##   adds component, component_id & sub_component_id as additional tags
+  # vendor_specific = []
+
+  ## YANG model paths for decoding IETF JSON payloads
+  ## Model files are loaded recursively from the given directories. Disabled if
+  ## no models are specified.
+  # yang_model_paths = []
+
+  ## Only receive updates for the state, also suppresses receiving the initial state
+  # updates_only = false
+
+  ## Enforces the namespace of the first element as origin for aliases and
+  ## response paths, required for backward compatibility.
+  ## NOTE: Set to 'false' if possible but be aware that this might change the path tag!
+  # enforce_first_namespace_as_origin = true
 
   ## Optional client-side TLS to authenticate the device
   ## Set to true/false to enforce TLS being enabled/disabled. If not set,
@@ -136,19 +149,6 @@ details on how to use them.
   # origin = ""
   # prefix = ""
   # target = ""
-
-  ## Vendor specific options
-  ## This defines what vendor specific options to load.
-  ## * Juniper Header Extension (juniper_header): some sensors are directly managed by
-  ##   Linecard, which adds the Juniper GNMI Header Extension. Enabling this
-  ##   allows the decoding of the Extension header if present. Currently this knob
-  ##   adds component, component_id & sub_component_id as additional tags
-  # vendor_specific = []
-
-  ## YANG model paths for decoding IETF JSON payloads
-  ## Model files are loaded recursively from the given directories. Disabled if
-  ## no models are specified.
-  # yang_model_paths = []
 
   ## Define additional aliases to map encoding paths to measurement names
   # [inputs.gnmi.aliases]

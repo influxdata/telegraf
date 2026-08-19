@@ -90,7 +90,7 @@ func (p *Postgresql) Init() error {
 		}
 		p.Query[i] = q
 	}
-	p.Config.IsPgBouncer = !p.PreparedStatements
+	p.Config.SimpleProtocol = !p.PreparedStatements
 
 	// Create a service to access the PostgreSQL server
 	service, err := p.Config.CreateService()

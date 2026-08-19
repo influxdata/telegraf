@@ -18,7 +18,6 @@ import (
 	gopsprocess "github.com/shirou/gopsutil/v4/process"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -36,15 +35,12 @@ type Procstat struct {
 	Exe                    string          `toml:"exe"`
 	Pattern                string          `toml:"pattern"`
 	Prefix                 string          `toml:"prefix"`
-	CmdLineTag             bool            `toml:"cmdline_tag" deprecated:"1.29.0;1.40.0;use 'tag_with' instead"`
 	ProcessName            string          `toml:"process_name"`
 	User                   string          `toml:"user"`
 	SystemdUnit            string          `toml:"systemd_unit"`
-	SupervisorUnit         []string        `toml:"supervisor_unit" deprecated:"1.29.0;1.40.0;use 'supervisor_units' instead"`
 	SupervisorUnits        []string        `toml:"supervisor_units"`
 	IncludeSystemdChildren bool            `toml:"include_systemd_children"`
 	CGroup                 string          `toml:"cgroup"`
-	PidTag                 bool            `toml:"pid_tag" deprecated:"1.29.0;1.40.0;use 'tag_with' instead"`
 	WinService             string          `toml:"win_service"`
 	Mode                   string          `toml:"mode"`
 	Properties             []string        `toml:"properties"`
@@ -84,14 +80,6 @@ func (*Procstat) SampleConfig() string {
 }
 
 func (p *Procstat) Init() error {
-	// Keep the old settings for compatibility
-	if p.PidTag && !choice.Contains("pid", p.TagWith) {
-		p.TagWith = append(p.TagWith, "pid")
-	}
-	if p.CmdLineTag && !choice.Contains("cmdline", p.TagWith) {
-		p.TagWith = append(p.TagWith, "cmdline")
-	}
-
 	// Configure metric collection features
 	p.cfg.solarisMode = strings.EqualFold(p.Mode, "solaris")
 
@@ -146,13 +134,6 @@ func (p *Procstat) Init() error {
 	// operation mode.
 	p.oldMode = len(p.Filter) == 0
 	if p.oldMode {
-		// Keep the old settings for compatibility
-		for _, u := range p.SupervisorUnit {
-			if !choice.Contains(u, p.SupervisorUnits) {
-				p.SupervisorUnits = append(p.SupervisorUnits, u)
-			}
-		}
-
 		// Check filtering
 		switch {
 		case len(p.SupervisorUnits) > 0, p.SystemdUnit != "", p.WinService != "",
@@ -189,8 +170,8 @@ func (p *Procstat) Init() error {
 		// Check for mixed mode
 		switch {
 		case p.PidFile != "", p.Exe != "", p.Pattern != "", p.User != "",
-			p.SystemdUnit != "", len(p.SupervisorUnit) > 0,
-			len(p.SupervisorUnits) > 0, p.CGroup != "", p.WinService != "":
+			p.SystemdUnit != "", len(p.SupervisorUnits) > 0, p.CGroup != "",
+			p.WinService != "":
 			return errors.New("cannot operate in mixed mode with filters and old-style config")
 		}
 
@@ -367,8 +348,19 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 			count += len(g.processes)
 			level := strconv.Itoa(g.level)
 			for _, gp := range g.processes {
-				// Skip over non-running processes
-				if isRunning, err := gp.IsRunning(); err != nil || !isRunning {
+				// Skip over processes that vanished between filtering and now.
+				// Do not use 'IsRunning()' here as it compares the creation
+				// time of the process which is derived from the system's
+				// boot-time. When running in a container, that boot-time is
+				// only estimated from the current time and the uptime and thus
+				// jitters, causing the check to randomly fail for perfectly
+				// alive processes.
+				exists, err := gopsprocess.PidExists(gp.Pid)
+				if err != nil {
+					p.Log.Debugf("Checking existence of process %d in filter %q failed: %v", gp.Pid, f.Name, err)
+					continue
+				}
+				if !exists {
 					continue
 				}
 

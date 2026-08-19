@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -44,7 +43,7 @@ func TestGetDataBadNodeContainerIntegration(t *testing.T) {
 		Image:        "open62541/open62541",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("TCP network layer listening on opc.tcp://"),
 		),
 	}
@@ -92,6 +91,57 @@ func TestGetDataBadNodeContainerIntegration(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestReadClientBrowseDiscoveryIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "open62541/open62541",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(servicePort),
+			wait.ForLog("TCP network layer listening on opc.tcp://"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	readConfig := readClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName: "browse_test",
+			Browse: input.BrowseConfig{
+				Depth: 5,
+				Paths: []input.BrowsePathSettings{
+					{Pattern: "Server/**", MetricName: "server_vars"},
+				},
+			},
+		},
+	}
+
+	client, err := readConfig.createReadClient(testutil.Logger{})
+	require.NoError(t, err)
+
+	require.NoError(t, client.connect())
+	require.NotEmpty(t, client.NodeMetricMapping, "browse should discover at least one variable under Server/**")
+
+	// Reconnect re-runs discovery against an unchanged server; mapping size
+	// must stay bounded rather than grow with each reconnect.
+	mappingSize := len(client.NodeMetricMapping)
+	require.NoError(t, client.Disconnect(t.Context()))
+	require.NoError(t, client.connect())
+	require.Len(t, client.NodeMetricMapping, mappingSize, "rediscovery must not grow the mapping")
+}
+
 func TestReadClientIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -101,7 +151,7 @@ func TestReadClientIntegration(t *testing.T) {
 		Image:        "open62541/open62541",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("TCP network layer listening on opc.tcp://"),
 		),
 	}
@@ -159,7 +209,7 @@ func TestReadClientIntegrationAdditionalFields(t *testing.T) {
 		Image:        "open62541/open62541",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("TCP network layer listening on opc.tcp://"),
 		),
 	}
@@ -248,7 +298,7 @@ func TestReadClientIntegrationWithPasswordAuth(t *testing.T) {
 		Entrypoint:   []string{"/opt/open62541/build/bin/examples/access_control_server"},
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("TCP network layer listening on opc.tcp://"),
 		),
 	}
@@ -444,7 +494,7 @@ func TestUnregisteredReadsAndSessionRecoveryIntegration(t *testing.T) {
 		Image:        "open62541/open62541",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("TCP network layer listening on opc.tcp://"),
 		),
 	}
@@ -532,7 +582,7 @@ func TestConsecutiveSessionErrorRecoveryIntegration(t *testing.T) {
 		Image:        "open62541/open62541",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("TCP network layer listening on opc.tcp://"),
 		),
 	}
@@ -613,6 +663,89 @@ func TestConsecutiveSessionErrorRecoveryIntegration(t *testing.T) {
 	require.Equal(t, uint64(0), o.consecutiveErrors, "Should reset consecutive errors after recovery")
 }
 
+func TestStopWithoutConnect(t *testing.T) {
+	o := &OpcUA{
+		readClientConfig: readClientConfig{
+			InputClientConfig: input.InputClientConfig{
+				OpcUAClientConfig: opcua.OpcUAClientConfig{
+					Endpoint:       "opc.tcp://localhost:4840",
+					SecurityPolicy: "None",
+					SecurityMode:   "None",
+					AuthMethod:     "Anonymous",
+					ConnectTimeout: config.Duration(10 * time.Second),
+					RequestTimeout: config.Duration(1 * time.Second),
+				},
+				MetricName: "testing",
+				RootNodes: []input.NodeSettings{
+					mapOPCTag(opcTags{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"}),
+				},
+			},
+		},
+		Log: testutil.Logger{},
+	}
+
+	require.NoError(t, o.Init())
+
+	// Stop before any successful connect must be a no-op and must not panic.
+	require.NotPanics(t, o.Stop)
+	require.Equal(t, opcua.Disconnected, o.client.State())
+}
+
+func TestStopClosesSessionIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "open62541/open62541",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(servicePort),
+			wait.ForLog("TCP network layer listening on opc.tcp://"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	o := &OpcUA{
+		readClientConfig: readClientConfig{
+			InputClientConfig: input.InputClientConfig{
+				OpcUAClientConfig: opcua.OpcUAClientConfig{
+					Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+					SecurityPolicy: "None",
+					SecurityMode:   "None",
+					AuthMethod:     "Anonymous",
+					ConnectTimeout: config.Duration(10 * time.Second),
+					RequestTimeout: config.Duration(1 * time.Second),
+				},
+				MetricName: "testing",
+				RootNodes: []input.NodeSettings{
+					mapOPCTag(opcTags{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"}),
+				},
+			},
+		},
+		Log: testutil.Logger{},
+	}
+
+	require.NoError(t, o.Init())
+
+	var acc testutil.Accumulator
+	// The first gather establishes the session.
+	require.NoError(t, o.Gather(&acc))
+	require.Equal(t, opcua.Connected, o.client.State())
+
+	// Stop must release the session instead of leaving it orphaned on the server.
+	o.Stop()
+	require.Equal(t, opcua.Disconnected, o.client.State())
+
+	// A subsequent gather must reconnect lazily so a stop/restart cycle (such as
+	// a config reload) keeps collecting.
+	acc.ClearMetrics()
+	require.NoError(t, o.Gather(&acc))
+	require.Equal(t, opcua.Connected, o.client.State())
+	require.Len(t, acc.Metrics, 1)
+}
+
 func TestReconnectErrorThresholdDefaultIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -622,7 +755,7 @@ func TestReconnectErrorThresholdDefaultIntegration(t *testing.T) {
 		Image:        "open62541/open62541",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("TCP network layer listening on opc.tcp://"),
 		),
 	}
@@ -692,7 +825,7 @@ func TestReconnectErrorThresholdZeroIntegration(t *testing.T) {
 		Image:        "open62541/open62541",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("TCP network layer listening on opc.tcp://"),
 		),
 	}
@@ -759,7 +892,7 @@ func TestReconnectErrorThresholdThreeIntegration(t *testing.T) {
 		Image:        "open62541/open62541",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForListeningPort(servicePort),
 			wait.ForLog("TCP network layer listening on opc.tcp://"),
 		),
 	}

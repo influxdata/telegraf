@@ -853,3 +853,63 @@ func createClient(endpoint string, addr net.Addr, tlsCfg *tls.Config) (net.Conn,
 	}
 	return tls.Dial(protocol, addr.String(), tlsCfg)
 }
+
+func TestNewSocketServiceAddressParsing(t *testing.T) {
+	tests := []struct {
+		name          string
+		address       string
+		url           string
+		interfaceName string
+	}{
+		{name: "tcp localhost no interface name", address: "tcp://localhost:400", url: "tcp://localhost:400"},
+		{name: "tcp all addresses no interface name", address: "tcp://:8094", url: "tcp://:8094"},
+		{name: "tcp4 all addresses no interface name", address: "tcp4://:8094", url: "tcp4://:8094"},
+		{name: "tcp6 all addresses no interface name", address: "tcp6://:8094", url: "tcp6://:8094"},
+		{name: "tcp6 ipv6 with port no interface name", address: "tcp6://[2001:db8::1]:8094", url: "tcp6://[2001:db8::1]:8094"},
+		{name: "udp all addresses no interface name", address: "udp://:8094", url: "udp://:8094"},
+		{name: "udp4 all interfaces no interface name", address: "udp4://:8094", url: "udp4://:8094"},
+		{name: "udp6 all interfaces no interface name", address: "udp6://:8094", url: "udp6://:8094"},
+		{name: "vsock with port", address: "vsock://cid:80", url: "vsock://cid:80"},
+		{name: "unix no interface name", address: "unix:///tmp/telegraf.sock", url: "unix:///tmp/telegraf.sock"},
+		{name: "unixgram no interface name", address: "unixgram:///tmp/telegraf.sock", url: "unixgram:///tmp/telegraf.sock"},
+		{name: "udp6 multicast no interface name", address: "udp6://[ff02::1]:8094", url: "udp6://[ff02::1]:8094"},
+		{name: "udp6 multicast with zone id", address: "udp6://[ff02::1%eth0]:8094", interfaceName: "eth0", url: "udp6://[ff02::1]:8094"},
+		{name: "udp6 ipv4 mapped host", address: "udp6://[::ffff:239.0.0.1]:8094%eth0",
+			url: "udp6://[::ffff:239.0.0.1]:8094", interfaceName: "eth0"},
+		{name: "udp4 multicast with interface name", address: "udp4://239.0.0.1:40000%enp101s0f1np1",
+			interfaceName: "enp101s0f1np1", url: "udp4://239.0.0.1:40000"},
+		{name: "tcp6 ipv6 with interface name", address: "tcp6://[2001:db8::1]:8094%br-interface",
+			interfaceName: "br-interface", url: "tcp6://[2001:db8::1]:8094"},
+		{name: "tcp all addresses with interface name with period", address: "tcp://:8094%dev.name", interfaceName: "dev.name", url: "tcp://:8094"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cfg Config
+			s, err := cfg.NewSocket(tt.address, nil, testutil.Logger{})
+			require.NoError(t, err)
+			require.Equal(t, tt.interfaceName, s.interfaceName)
+			require.Equal(t, tt.url, s.url.String())
+		})
+	}
+}
+
+func TestInterfaceNameFromServiceAddressInvalid(t *testing.T) {
+	tests := []struct {
+		name    string
+		address string
+		err     string
+	}{
+		{name: "empty string not allowed", address: "tcp://localhost:400%", err: "is not valid"},
+		{name: "udp6 multicast with zone id and interface name", address: "udp6://[ff02::1%eth0]:8094%enp0",
+			err: "ipv6 zone id and interface name are mutually exclusive"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			name, err := interfaceNameFromServiceAddress(tt.address)
+			require.Empty(t, name)
+			require.ErrorContains(t, err, tt.err)
+		})
+	}
+}

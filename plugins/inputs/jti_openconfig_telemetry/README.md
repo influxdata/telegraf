@@ -53,18 +53,13 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## When identifier is used, we can provide a list of space separated sensors.
   ## A single subscription will be created with all these sensors and data will
   ## be saved to measurement with this identifier name
+  ## We allow specifying sensor group level reporting rate. To do this, specify the
+  ## reporting rate in Duration at the beginning of sensor paths / collection
+  ## name. For entries without reporting rate, we use configured sample frequency.
   sensors = [
    "/interfaces/",
    "collection /components/ /lldp",
-  ]
-
-  ## We allow specifying sensor group level reporting rate. To do this, specify the
-  ## reporting rate in Duration at the beginning of sensor paths / collection
-  ## name. For entries without reporting rate, we use configured sample frequency
-  sensors = [
    "1000ms customReporting /interfaces /lldp",
-   "2000ms collection /components",
-   "/interfaces",
   ]
 
   ## Timestamp Source

@@ -18,6 +18,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -32,15 +33,18 @@ type MongoDB struct {
 	MetricGranularity   string          `toml:"granularity"`
 	Username            config.Secret   `toml:"username"`
 	Password            config.Secret   `toml:"password"`
+	WriteBatch          bool            `toml:"write_batch"`
+	MetadataKeys        []string        `toml:"metadata_keys"`
+	MetadataTagStrategy string          `toml:"metadata_tag_strategy"`
 	ServerSelectTimeout config.Duration `toml:"timeout"`
 	TTL                 config.Duration `toml:"ttl"`
-	WriteBatch          bool            `toml:"write_batch"`
 	Log                 telegraf.Logger `toml:"-"`
 	tls.ClientConfig
 
-	client      *mongo.Client
-	options     *options.ClientOptions
-	collections map[string]bool
+	client         *mongo.Client
+	options        *options.ClientOptions
+	collections    map[string]bool
+	metadataFilter filter.Filter
 }
 
 func (*MongoDB) SampleConfig() string {
@@ -48,6 +52,7 @@ func (*MongoDB) SampleConfig() string {
 }
 
 func (s *MongoDB) Init() error {
+	// Set defaults
 	if s.MetricDatabase == "" {
 		s.MetricDatabase = "telegraf"
 	}
@@ -59,7 +64,15 @@ func (s *MongoDB) Init() error {
 		return errors.New("invalid time series collection granularity. please specify \"seconds\", \"minutes\", or \"hours\"")
 	}
 
-	// do some basic Dsn checks
+	switch s.MetadataTagStrategy {
+	case "":
+		s.MetadataTagStrategy = "keep"
+	case "keep", "move", "clear":
+	default:
+		return fmt.Errorf("invalid 'metadata_tag_strategy' %q", s.MetadataTagStrategy)
+	}
+
+	// Do some basic Dsn checks
 	if !strings.HasPrefix(s.Dsn, "mongodb://") && !strings.HasPrefix(s.Dsn, "mongodb+srv://") {
 		return errors.New("invalid connection string. expected mongodb://host:port/?{options} or mongodb+srv://host:port/?{options}")
 	}
@@ -177,6 +190,16 @@ func (s *MongoDB) Init() error {
 	}
 
 	s.options.ApplyURI(s.Dsn)
+
+	// Setup metadata filter if given
+	if len(s.MetadataKeys) > 0 {
+		f, err := filter.Compile(s.MetadataKeys)
+		if err != nil {
+			return fmt.Errorf("creating metadata filter failed: %w", err)
+		}
+		s.metadataFilter = f
+	}
+
 	return nil
 }
 
@@ -241,7 +264,7 @@ func (s *MongoDB) writeIndividual(ctx context.Context, metrics []telegraf.Metric
 				return fmt.Errorf("creating time series collection %q failed: %w", name, err)
 			}
 		}
-		doc := marshal(metric)
+		doc := s.marshal(metric)
 
 		collection := s.client.Database(s.MetricDatabase).Collection(name)
 		if _, err := collection.InsertOne(ctx, &doc); err != nil {
@@ -256,7 +279,7 @@ func (s *MongoDB) writeBatch(ctx context.Context, metrics []telegraf.Metric) err
 	batches := make(map[string][]interface{})
 	for _, m := range metrics {
 		name := m.Name()
-		batches[name] = append(batches[name], marshal(m))
+		batches[name] = append(batches[name], s.marshal(m))
 	}
 
 	// Write all metrics of a collection at a time
@@ -281,7 +304,11 @@ func (s *MongoDB) createCollection(ctx context.Context, name string) error {
 	// Setup a new timeseries collection for the given metric name
 	series := options.TimeSeries()
 	series.SetTimeField("timestamp")
-	series.SetMetaField("tags")
+	if s.metadataFilter != nil {
+		series.SetMetaField("metadata")
+	} else {
+		series.SetMetaField("tags")
+	}
 	series.SetGranularity(s.MetricGranularity)
 
 	collection := options.CreateCollection()
@@ -300,21 +327,39 @@ func (s *MongoDB) createCollection(ctx context.Context, name string) error {
 }
 
 // Convert a metric into a MongoDB document with all fields being parent level
-// of document and the metadata field is named "tags". MongoDB stores timestamp
-// as UTC so conversion should be performed on the query or aggregation side.
-func marshal(metric telegraf.Metric) bson.D {
+// of document. Metadata and/or tags will be added as subdocument. MongoDB
+// stores timestamp as UTC so conversion should be performed on the query or
+// aggregation side.
+func (s *MongoDB) marshal(metric telegraf.Metric) bson.D {
 	doc := make(bson.D, 0, len(metric.FieldList())+2)
+	doc = append(doc, primitive.E{Key: "timestamp", Value: metric.Time()})
+
+	tags := make(bson.D, 0, len(metric.TagList()))
+	metadata := make(bson.D, 0, len(s.MetadataKeys))
+	for _, t := range metric.TagList() {
+		// Add metadata if specified any
+		if s.metadataFilter != nil && s.metadataFilter.Match(t.Key) {
+			metadata = append(metadata, primitive.E{Key: t.Key, Value: t.Value})
+			if s.MetadataTagStrategy == "keep" {
+				tags = append(tags, primitive.E{Key: t.Key, Value: t.Value})
+			}
+		} else if s.MetadataTagStrategy != "clear" {
+			tags = append(tags, primitive.E{Key: t.Key, Value: t.Value})
+		}
+	}
+
+	if s.metadataFilter != nil {
+		doc = append(doc, primitive.E{Key: "metadata", Value: metadata})
+	}
+
+	if s.metadataFilter == nil || s.MetadataTagStrategy != "clear" {
+		doc = append(doc, primitive.E{Key: "tags", Value: tags})
+	}
+
 	for _, f := range metric.FieldList() {
 		doc = append(doc, primitive.E{Key: f.Key, Value: f.Value})
 	}
-	tags := make(bson.D, 0, len(metric.TagList()))
-	for _, t := range metric.TagList() {
-		tags = append(tags, primitive.E{Key: t.Key, Value: t.Value})
-	}
-	doc = append(doc,
-		primitive.E{Key: "tags", Value: tags},
-		primitive.E{Key: "timestamp", Value: metric.Time()},
-	)
+
 	return doc
 }
 

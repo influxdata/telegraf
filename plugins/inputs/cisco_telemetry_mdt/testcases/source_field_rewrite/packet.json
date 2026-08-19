@@ -1,0 +1,30 @@
+{
+    "nodeIdStr": "hostname",
+    "subscriptionIdStr": "subscription",
+    "encodingPath": "type:model/some/path",
+    "msgTimestamp": "1543236572000",
+    "dataGpbkv": [
+        {
+            "fields": [
+                {
+                    "name": "keys",
+                    "fields": [
+                        {
+                            "name": "source",
+                            "stringValue": "str"
+                        }
+                    ]
+                },
+                {
+                    "name": "content",
+                    "fields": [
+                        {
+                            "name": "bool",
+                            "boolValue": false
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

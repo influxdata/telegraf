@@ -87,6 +87,50 @@ func TestInitFail(t *testing.T) {
 	}
 }
 
+func TestInitScopeDefaulting(t *testing.T) {
+	tests := []struct {
+		name     string
+		plugin   *GoogleCloud
+		scopes   []string
+		expected []string
+	}{
+		{
+			name: "service account without scopes defaults to cloud-platform",
+			plugin: &GoogleCloud{
+				Log:             testutil.Logger{},
+				CredentialsFile: "./testdata/service-account-key.json",
+			},
+			expected: []string{"https://www.googleapis.com/auth/cloud-platform"},
+		},
+		{
+			name: "service account with scopes is not overwritten",
+			plugin: &GoogleCloud{
+				Log:             testutil.Logger{},
+				CredentialsFile: "./testdata/service-account-key.json",
+			},
+			scopes:   []string{"https://www.googleapis.com/auth/devstorage.read_only"},
+			expected: []string{"https://www.googleapis.com/auth/devstorage.read_only"},
+		},
+		{
+			name: "non service account without scopes stays empty",
+			plugin: &GoogleCloud{
+				Log:             testutil.Logger{},
+				CredentialsFile: "./testdata/gdch.json",
+				STSAudience:     "https://localhost",
+			},
+			expected: nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.plugin.Scopes = tc.scopes
+			require.NoError(t, tc.plugin.Init())
+			require.Equal(t, tc.expected, tc.plugin.Scopes)
+		})
+	}
+}
+
 func TestGetSuccess(t *testing.T) {
 	plugin := &GoogleCloud{
 		credentials: auth.NewCredentials(&auth.CredentialsOptions{

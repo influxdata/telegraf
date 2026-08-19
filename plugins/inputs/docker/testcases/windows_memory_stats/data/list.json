@@ -1,0 +1,41 @@
+[
+    {
+        "Id": "123456789",
+        "Names": [
+            "redis"
+        ],
+        "Image": "redis/image/6",
+        "ImageID": "",
+        "Command": "/redis",
+        "Created": 1455941930,
+        "Ports": [
+            {
+                "PrivatePort": 7001,
+                "Type": "tcp"
+            },
+            {
+                "PrivatePort": 4001,
+                "Type": "tcp"
+            },
+            {
+                "PrivatePort": 2380,
+                "Type": "tcp"
+            },
+            {
+                "IP": "0.0.0.0",
+                "PrivatePort": 2379,
+                "PublicPort": 2379,
+                "Type": "tcp"
+            }
+        ],
+        "Labels": {
+            "label1": "test_value_1",
+            "label2": "test_value_2"
+        },
+        "State": "running",
+        "Status": "Up 4 hours",
+        "HostConfig": {},
+        "NetworkSettings": null,
+        "Mounts": null
+    }
+]

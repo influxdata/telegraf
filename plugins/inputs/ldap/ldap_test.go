@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/go-ldap/ldap/v3"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -20,8 +19,7 @@ const (
 	servicePortOpenLDAP       = "1389"
 	servicePortOpenLDAPSecure = "1636"
 
-	servicePort389DS       = "3389"
-	servicePort389DSSecure = "3636"
+	servicePort389DS = "3389"
 )
 
 func TestMockResult(t *testing.T) {
@@ -156,7 +154,7 @@ func TestOpenLDAPIntegration(t *testing.T) {
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("slapd starting"),
-			wait.ForListeningPort(nat.Port(servicePortOpenLDAP)),
+			wait.ForListeningPort(servicePortOpenLDAP),
 		),
 	}
 	require.NoError(t, container.Start(), "failed to start container")
@@ -247,7 +245,7 @@ func TestOpenLDAPReverseDNIntegration(t *testing.T) {
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("slapd starting"),
-			wait.ForListeningPort(nat.Port(servicePortOpenLDAP)),
+			wait.ForListeningPort(servicePortOpenLDAP),
 		),
 	}
 	require.NoError(t, container.Start(), "failed to start container")
@@ -352,7 +350,7 @@ func TestOpenLDAPStartTLSIntegration(t *testing.T) {
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("slapd starting"),
-			wait.ForListeningPort(nat.Port(servicePortOpenLDAP)),
+			wait.ForListeningPort(servicePortOpenLDAP),
 		),
 	}
 	require.NoError(t, container.Start(), "failed to start container")
@@ -460,7 +458,7 @@ func TestOpenLDAPLDAPSIntegration(t *testing.T) {
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("slapd starting"),
-			wait.ForListeningPort(nat.Port(servicePortOpenLDAPSecure)),
+			wait.ForListeningPort(servicePortOpenLDAPSecure),
 		),
 	}
 	require.NoError(t, container.Start(), "failed to start container")
@@ -553,7 +551,7 @@ func Test389dsIntegration(t *testing.T) {
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForLog("389-ds-container started"),
-			wait.ForListeningPort(nat.Port(servicePort389DS)),
+			wait.ForListeningPort(servicePort389DS),
 		),
 	}
 	require.NoError(t, container.Start(), "failed to start container")

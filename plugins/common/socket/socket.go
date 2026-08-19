@@ -3,6 +3,7 @@ package socket
 import (
 	"bufio"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -38,6 +39,7 @@ type Config struct {
 	MaxDecompressionSize config.Size      `toml:"max_decompression_size"`
 	MaxParallelParsers   int              `toml:"max_parallel_parsers"`
 	AllowedSources       []net.IP         `toml:"allowed_sources"`
+	MulticastSource      string           `toml:"multicast_source"`
 	common_tls.ServerConfig
 }
 
@@ -51,6 +53,43 @@ type Socket struct {
 
 	splitter bufio.SplitFunc
 	listener listener
+}
+
+// extractIfNameRegex extracts and validates matches these case:
+//
+// 1. IPv6 with zone id
+// 2. IPv6 with zone id and trailing interface name
+// 3. IPv6 with trailing interface name
+// 4. Any other hostname with trailing interface name (hostname does not contain a % or ])
+var extractIfNameRegex = regexp.MustCompile(
+	`\[[^%]+%([^]]*)][^%]*$|\[[^%]+%([^]]*)][^%]*%(.*)$|\[[^%]]+][^%]*%(.*)$|[^%]]*%(.*)$`,
+)
+
+// interfaceNameFromServiceAddress extracts interface names
+func interfaceNameFromServiceAddress(address string) (string, error) {
+	matches := extractIfNameRegex.FindStringSubmatch(address)
+	if len(matches) < 2 {
+		return "", nil
+	}
+
+	ifName := ""
+	matchCount := 0
+	for _, match := range matches[1:] {
+		if match != "" {
+			if matchCount > 0 {
+				return "", errors.New("ipv6 zone id and interface name are mutually exclusive")
+			}
+
+			ifName = match
+			matchCount++
+		}
+	}
+
+	if ifName == "" {
+		return "", fmt.Errorf("address %q is not valid", address)
+	}
+
+	return ifName, nil
 }
 
 func (cfg *Config) NewSocket(address string, splitcfg *SplitConfig, logger telegraf.Logger) (*Socket, error) {
@@ -69,9 +108,13 @@ func (cfg *Config) NewSocket(address string, splitcfg *SplitConfig, logger teleg
 	}
 
 	// Resolve the interface to an address if any given
-	ifregex := regexp.MustCompile(`%([\w\.]+)`)
-	if matches := ifregex.FindStringSubmatch(address); len(matches) == 2 {
-		s.interfaceName = matches[1]
+	ifName, ifNameErr := interfaceNameFromServiceAddress(address)
+	if ifNameErr != nil {
+		return nil, ifNameErr
+	}
+
+	if ifName != "" {
+		s.interfaceName = ifName
 		address = strings.Replace(address, "%"+s.interfaceName, "", 1)
 	}
 
@@ -125,19 +168,19 @@ func (s *Socket) Setup() error {
 		}
 		s.listener = l
 	case "udp", "udp4", "udp6":
-		l := newPacketListener(s.ContentEncoding, s.MaxDecompressionSize, s.MaxParallelParsers, s.AllowedSources, s.log)
+		l := newPacketListener(s.ContentEncoding, s.MaxDecompressionSize, s.MaxParallelParsers, s.AllowedSources, s.MulticastSource, s.log)
 		if err := l.setupUDP(s.url, s.interfaceName, int(s.ReadBufferSize)); err != nil {
 			return err
 		}
 		s.listener = l
 	case "ip", "ip4", "ip6":
-		l := newPacketListener(s.ContentEncoding, s.MaxDecompressionSize, s.MaxParallelParsers, s.AllowedSources, s.log)
+		l := newPacketListener(s.ContentEncoding, s.MaxDecompressionSize, s.MaxParallelParsers, s.AllowedSources, s.MulticastSource, s.log)
 		if err := l.setupIP(s.url); err != nil {
 			return err
 		}
 		s.listener = l
 	case "unixgram":
-		l := newPacketListener(s.ContentEncoding, s.MaxDecompressionSize, s.MaxParallelParsers, s.AllowedSources, s.log)
+		l := newPacketListener(s.ContentEncoding, s.MaxDecompressionSize, s.MaxParallelParsers, s.AllowedSources, s.MulticastSource, s.log)
 		if err := l.setupUnixgram(s.url, s.SocketMode, int(s.ReadBufferSize)); err != nil {
 			return err
 		}

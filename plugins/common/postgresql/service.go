@@ -2,10 +2,8 @@ package postgresql
 
 import (
 	"database/sql"
+	"database/sql/driver"
 	"time"
-
-	// Blank import required to register driver
-	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 // Service common functionality shared between the postgresql and postgresql_extensible
@@ -15,18 +13,14 @@ type Service struct {
 	SanitizedAddress   string
 	ConnectionDatabase string
 
-	dsn         string
+	connector   driver.Connector
 	maxIdle     int
 	maxOpen     int
 	maxLifetime time.Duration
 }
 
 func (p *Service) Start() error {
-	db, err := sql.Open("pgx", p.dsn)
-	if err != nil {
-		return err
-	}
-	p.DB = db
+	p.DB = sql.OpenDB(p.connector)
 
 	p.DB.SetMaxOpenConns(p.maxOpen)
 	p.DB.SetMaxIdleConns(p.maxIdle)

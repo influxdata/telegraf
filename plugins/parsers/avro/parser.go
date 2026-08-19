@@ -39,7 +39,9 @@ type Parser struct {
 	UnionMode        string            `toml:"avro_union_mode"`
 	DefaultTags      map[string]string `toml:"tags"`
 	Log              telegraf.Logger   `toml:"-"`
-	registryObj      *schemaRegistry
+
+	registryObj *schemaRegistry
+	timeFunc    func() time.Time
 }
 
 func (p *Parser) Init() error {
@@ -51,6 +53,7 @@ func (p *Parser) Init() error {
 	default:
 		return fmt.Errorf("unknown 'avro_format' %q", p.Format)
 	}
+
 	switch p.UnionMode {
 	case "":
 		p.UnionMode = "flatten"
@@ -63,6 +66,7 @@ func (p *Parser) Init() error {
 	if (p.Schema == "" && p.SchemaRegistry == "") || (p.Schema != "" && p.SchemaRegistry != "") {
 		return errors.New("exactly one of 'schema_registry' or 'schema' must be specified")
 	}
+
 	switch p.TimestampFormat {
 	case "":
 		p.TimestampFormat = "unix"
@@ -79,7 +83,15 @@ func (p *Parser) Init() error {
 		p.registryObj = registry
 	}
 
+	if p.timeFunc == nil {
+		p.timeFunc = time.Now
+	}
+
 	return nil
+}
+
+func (p *Parser) SetTimeFunc(fn func() time.Time) {
+	p.timeFunc = fn
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
@@ -313,15 +325,24 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 	}
 	separator := "."
 	if name == "" {
+		// If the root of the schema is an array and it doesn't have a non-standard
+		// name attribute, take the name from the record describing its elements.
+		nameObj := schemaObj
+		if _, hasName := schemaObj["name"]; !hasName && schemaObj["type"] == "array" {
+			if items, ok := schemaObj["items"].(map[string]interface{}); ok {
+				nameObj = items
+			}
+		}
+
 		// Try using the namespace defined in the schema. In case there
 		// is none, just use the schema's name definition.
-		nsStr, ok := schemaObj["namespace"].(string)
+		nsStr, ok := nameObj["namespace"].(string)
 		// namespace is optional
 		if !ok {
 			separator = ""
 		}
 
-		nStr, ok := schemaObj["name"].(string)
+		nStr, ok := nameObj["name"].(string)
 		if !ok {
 			return nil, fmt.Errorf("could not determine name from schema %s", schema)
 		}
@@ -345,8 +366,9 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 			return nil, fmt.Errorf("could not parse '%s' to '%s'", rawTime, p.TimestampFormat)
 		}
 	} else {
-		timestamp = time.Now()
+		timestamp = p.timeFunc()
 	}
+
 	return metric.New(name, tags, fields, timestamp), nil
 }
 

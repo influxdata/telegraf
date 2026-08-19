@@ -25,6 +25,8 @@ type Parser struct {
 	DefaultTags       map[string]string `toml:"-"`
 	Log               telegraf.Logger   `toml:"-"`
 
+	timeFunc func() time.Time
+
 	// **** The struct fields below this comment are used for processing individual configs ****
 
 	// measurementName is the name of the current config used in each line protocol
@@ -100,10 +102,19 @@ type metricNode struct {
 	gjson.Result
 }
 
+func (p *Parser) SetTimeFunc(f func() time.Time) {
+	p.timeFunc = f
+}
+
 func (p *Parser) Init() error {
 	if len(p.Configs) == 0 {
 		return errors.New("no configuration provided")
 	}
+
+	if p.timeFunc == nil {
+		p.timeFunc = time.Now
+	}
+
 	// Propagate the default metric name to the configs in case it is not set there
 	for i, cfg := range p.Configs {
 		if cfg.MeasurementName == "" {
@@ -152,7 +163,7 @@ func (p *Parser) parseCriticalPath(input []byte) ([]telegraf.Metric, error) {
 
 	var metrics []telegraf.Metric
 	// timestamp defaults to current time
-	now := time.Now()
+	now := p.timeFunc()
 
 	for _, c := range p.Configs {
 		// Measurement name can either be hardcoded, or parsed from the JSON using a GJSON path expression
@@ -522,6 +533,10 @@ func (p *Parser) processObjects(input []byte, objects []Object, timestamp time.T
 	var t []telegraf.Metric
 	for _, c := range objects {
 		p.objectConfig = c
+
+		// The path results of a previous object are relative to that object's
+		// JSON and must not be matched against this one.
+		p.subPathResults = nil
 
 		if c.Path == "" {
 			return nil, errors.New("the GJSON path is required")

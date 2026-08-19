@@ -153,6 +153,7 @@ func TestCases(t *testing.T) {
 
 func BenchmarkParsingMetricVersion1(b *testing.B) {
 	plugin := &Parser{MetricVersion: 1}
+	require.NoError(b, plugin.Init())
 
 	benchmarkData, err := os.ReadFile(filepath.FromSlash("testcases/benchmark/input.txt"))
 	require.NoError(b, err)
@@ -166,6 +167,7 @@ func BenchmarkParsingMetricVersion1(b *testing.B) {
 
 func BenchmarkParsingMetricVersion2(b *testing.B) {
 	plugin := &Parser{MetricVersion: 2}
+	require.NoError(b, plugin.Init())
 
 	benchmarkData, err := os.ReadFile(filepath.FromSlash("testcases/benchmark/input.txt"))
 	require.NoError(b, err)

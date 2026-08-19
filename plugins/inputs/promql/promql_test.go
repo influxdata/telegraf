@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -2596,7 +2595,7 @@ func TestIntegrationInstant(t *testing.T) {
 			"--web.enable-remote-write-receiver",
 		},
 		WaitingFor: wait.ForAll(
-			wait.ForMappedPort(nat.Port("9090")),
+			wait.ForMappedPort("9090"),
 			wait.ForLog("Server is ready to receive web requests."),
 		),
 	}
@@ -2786,7 +2785,7 @@ func TestIntegrationRange(t *testing.T) {
 			"--web.enable-remote-write-receiver",
 		},
 		WaitingFor: wait.ForAll(
-			wait.ForMappedPort(nat.Port("9090")),
+			wait.ForMappedPort("9090"),
 			wait.ForLog("Server is ready to receive web requests."),
 		),
 	}

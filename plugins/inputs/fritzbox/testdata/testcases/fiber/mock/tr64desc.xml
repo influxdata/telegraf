@@ -1,0 +1,13 @@
+<root xmlns="urn:dslforum-org:device-1-0">
+    <device>
+        <serviceList>
+            <service>
+                <serviceType>urn:dslforum-org:service:X_AVM-DE_WANFiber:1</serviceType>
+                <serviceId>urn:X_AVM-DE_WANFiber-com:serviceId:X_AVM-DE_WANFiber1</serviceId>
+                <controlURL>/x_wanfiber</controlURL>
+                <SCPDURL>/dummySCPD.xml</SCPDURL>
+            </service>
+        </serviceList>
+        <deviceList/>
+    </device>
+</root>

@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -22,7 +21,7 @@ func TestMemcachedGeneratesMetricsIntegration(t *testing.T) {
 	container := testutil.Container{
 		Image:        "memcached",
 		ExposedPorts: []string{servicePort},
-		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
+		WaitingFor:   wait.ForListeningPort(servicePort),
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")

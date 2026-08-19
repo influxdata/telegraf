@@ -3,13 +3,13 @@ set -eux
 
 # Install dependencies
 sudo apt update && sudo apt install --yes 7zip default-jre-headless osslsigncode wget
-wget https://github.com/ebourg/jsign/releases/download/5.0/jsign_5.0_all.deb
-sha256sum="9877a0949a9c9ac4485155bbb8679ac863d3ec3d67e0a380b880eed650d06854"
-if ! echo "${sha256sum}  jsign_5.0_all.deb" | sha256sum --check -; then
+wget https://github.com/ebourg/jsign/releases/download/7.5/jsign_7.5_all.deb
+sha256sum="7b4a01ba81e9ee866f09a5e45d40c928707eb5286f4e20d4042c67a141ae5e62"
+if ! echo "${sha256sum}  jsign_7.5_all.deb" | sha256sum --check -; then
     echo "Checksum for jsign deb failed" >&2
     exit 1
 fi
-sudo dpkg -i jsign_5.0_all.deb
+sudo dpkg -i jsign_7.5_all.deb
 
 # Load certificates
 touch "$SM_CLIENT_CERT_FILE"
@@ -21,7 +21,7 @@ base64 -d "$SM_CLIENT_CERT_FILE.b64" > "$SM_CLIENT_CERT_FILE"
 # Loop through and sign + verify the binaries
 artifactDirectory="./dist"
 extractDirectory="$artifactDirectory/extracted"
-for file in "$artifactDirectory"/*windows*; do
+for file in "$artifactDirectory"/telegraf-*windows*.zip; do
     7zz x "$file" -o$extractDirectory
     subDirectoryPath=$(find $extractDirectory -mindepth 1 -maxdepth 1 -type d)
     telegrafExePath="$subDirectoryPath/telegraf.exe"

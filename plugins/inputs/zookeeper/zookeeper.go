@@ -30,7 +30,6 @@ type Zookeeper struct {
 	Timeout     config.Duration `toml:"timeout"`
 	ParseFloats string          `toml:"parse_floats"`
 
-	EnableTLS bool `toml:"enable_tls" deprecated:"1.37.0;1.40.0;use 'tls_enable' instead"`
 	common_tls.ClientConfig
 
 	tlsConfig *tls.Config
@@ -41,7 +40,6 @@ func (*Zookeeper) SampleConfig() string {
 }
 
 func (z *Zookeeper) Init() error {
-	z.ClientConfig.Enable = &z.EnableTLS
 	tlsConfig, err := z.ClientConfig.TLSConfig()
 	if err != nil {
 		return err

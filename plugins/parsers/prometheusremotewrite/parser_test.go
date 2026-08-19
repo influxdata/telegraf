@@ -30,6 +30,94 @@ const (
 	configFilename   = "telegraf.conf"
 )
 
+var benchmarkData = prompb.WriteRequest{
+	Timeseries: []prompb.TimeSeries{
+		{
+			Labels: []prompb.Label{
+				{Name: "__name__", Value: "benchmark_a"},
+				{Name: "source", Value: "myhost"},
+				{Name: "tags_platform", Value: "python"},
+				{Name: "tags_sdkver", Value: "3.11.5"},
+			},
+			Samples: []prompb.Sample{
+				{Value: 5.0, Timestamp: time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC).UnixMilli()},
+			},
+		},
+		{
+			Labels: []prompb.Label{
+				{Name: "__name__", Value: "benchmark_b"},
+				{Name: "source", Value: "myhost"},
+				{Name: "tags_platform", Value: "python"},
+				{Name: "tags_sdkver", Value: "3.11.4"},
+			},
+			Samples: []prompb.Sample{
+				{Value: 4.0, Timestamp: time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC).UnixMilli()},
+			},
+		},
+	},
+}
+
+func TestParse(t *testing.T) {
+	prompbInput := prompb.WriteRequest{
+		Timeseries: []prompb.TimeSeries{
+			{
+				Labels: []prompb.Label{
+					{Name: "__name__", Value: "go_gc_duration_seconds"},
+					{Name: "quantile", Value: "0.99"},
+				},
+				Samples: []prompb.Sample{
+					{Value: 4.63, Timestamp: time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC).UnixNano()},
+				},
+			},
+			{
+				Labels: []prompb.Label{
+					{Name: "__name__", Value: "prometheus_target_interval_length_seconds"},
+					{Name: "job", Value: "prometheus"},
+				},
+				Samples: []prompb.Sample{
+					{Value: 14.99, Timestamp: time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC).UnixNano()},
+				},
+			},
+		},
+	}
+
+	inoutBytes, err := prompbInput.Marshal()
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"prometheus_remote_write",
+			map[string]string{
+				"quantile": "0.99",
+			},
+			map[string]interface{}{
+				"go_gc_duration_seconds": float64(4.63),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"prometheus_remote_write",
+			map[string]string{
+				"job": "prometheus",
+			},
+			map[string]interface{}{
+				"prometheus_target_interval_length_seconds": float64(14.99),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	parser := &Parser{
+		DefaultTags: map[string]string{},
+	}
+	require.NoError(t, parser.Init())
+
+	metrics, err := parser.Parse(inoutBytes)
+	require.NoError(t, err)
+	require.Len(t, metrics, 2)
+	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
 func TestCases(t *testing.T) {
 	// Get all directories in testcases
 	folders, err := os.ReadDir(testCasesDir)
@@ -83,136 +171,6 @@ func TestCases(t *testing.T) {
 				testutil.RequireMetricsEqual(t, expected, parsed, testutil.SortMetrics(), testutil.IgnoreType())
 			})
 		}
-	}
-}
-
-func BenchmarkParsingMetricVersion1(b *testing.B) {
-	parser := &Parser{
-		MetricVersion: 1,
-	}
-
-	benchmarkData, err := os.ReadFile(filepath.Join(testCasesDir, benchmarkFolder, inputFilename))
-	require.NoError(b, err)
-	require.NotEmpty(b, benchmarkData)
-
-	for n := 0; n < b.N; n++ {
-		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
-		parser.Parse(benchmarkData)
-	}
-}
-
-func BenchmarkParsingMetricVersion2(b *testing.B) {
-	parser := &Parser{
-		MetricVersion: 2,
-	}
-
-	benchmarkData, err := os.ReadFile(filepath.Join(testCasesDir, benchmarkFolder, inputFilename))
-	require.NoError(b, err)
-	require.NotEmpty(b, benchmarkData)
-
-	for n := 0; n < b.N; n++ {
-		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
-		parser.Parse(benchmarkData)
-	}
-}
-
-func TestParse(t *testing.T) {
-	prompbInput := prompb.WriteRequest{
-		Timeseries: []prompb.TimeSeries{
-			{
-				Labels: []prompb.Label{
-					{Name: "__name__", Value: "go_gc_duration_seconds"},
-					{Name: "quantile", Value: "0.99"},
-				},
-				Samples: []prompb.Sample{
-					{Value: 4.63, Timestamp: time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC).UnixNano()},
-				},
-			},
-			{
-				Labels: []prompb.Label{
-					{Name: "__name__", Value: "prometheus_target_interval_length_seconds"},
-					{Name: "job", Value: "prometheus"},
-				},
-				Samples: []prompb.Sample{
-					{Value: 14.99, Timestamp: time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC).UnixNano()},
-				},
-			},
-		},
-	}
-
-	inoutBytes, err := prompbInput.Marshal()
-	require.NoError(t, err)
-
-	expected := []telegraf.Metric{
-		metric.New(
-			"prometheus_remote_write",
-			map[string]string{
-				"quantile": "0.99",
-			},
-			map[string]interface{}{
-				"go_gc_duration_seconds": float64(4.63),
-			},
-			time.Unix(0, 0),
-		),
-		metric.New(
-			"prometheus_remote_write",
-			map[string]string{
-				"job": "prometheus",
-			},
-			map[string]interface{}{
-				"prometheus_target_interval_length_seconds": float64(14.99),
-			},
-			time.Unix(0, 0),
-		),
-	}
-
-	parser := Parser{
-		DefaultTags: map[string]string{},
-	}
-
-	metrics, err := parser.Parse(inoutBytes)
-	require.NoError(t, err)
-	require.Len(t, metrics, 2)
-	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
-}
-
-func generateTestHistogram(i int) *histogram.Histogram {
-	return &histogram.Histogram{
-		Count:         12 + uint64(i*9),
-		ZeroCount:     2 + uint64(i),
-		ZeroThreshold: 0.001,
-		Sum:           18.4 * float64(i+1),
-		Schema:        1,
-		PositiveSpans: []histogram.Span{
-			{Offset: 0, Length: 2},
-			{Offset: 1, Length: 2},
-		},
-		PositiveBuckets: []int64{int64(i + 1), 1, -1, 0},
-		NegativeSpans: []histogram.Span{
-			{Offset: 0, Length: 2},
-			{Offset: 1, Length: 2},
-		},
-		NegativeBuckets: []int64{int64(i + 1), 1, -1, 0},
-	}
-}
-
-func generateTestFloatHistogram(i int) *histogram.FloatHistogram {
-	return &histogram.FloatHistogram{
-		Count:         12 + float64(i*9),
-		ZeroCount:     2 + float64(i),
-		ZeroThreshold: 0.001,
-		Sum:           18.4 * float64(i+1),
-		Schema:        1,
-		PositiveSpans: []histogram.Span{
-			{Offset: 0, Length: 2},
-			{Offset: 1, Length: 2},
-		},
-		PositiveBuckets: []float64{float64(i + 1), float64(i + 2), float64(i + 1), float64(i + 1)},
-		NegativeSpans: []histogram.Span{
-			{Offset: 0, Length: 2},
-			{Offset: 1, Length: 2},
-		},
-		NegativeBuckets: []float64{float64(i + 1), float64(i + 2), float64(i + 1), float64(i + 1)},
 	}
 }
 
@@ -276,9 +234,11 @@ func TestHistograms(t *testing.T) {
 		),
 	}
 
-	parser := Parser{
+	parser := &Parser{
 		DefaultTags: map[string]string{},
 	}
+	require.NoError(t, parser.Init())
+
 	metrics, err := parser.Parse(inoutBytes)
 	require.NoError(t, err)
 	require.Len(t, metrics, 22)
@@ -317,11 +277,12 @@ func TestDefaultTags(t *testing.T) {
 		),
 	}
 
-	parser := Parser{
+	parser := &Parser{
 		DefaultTags: map[string]string{
 			"defaultTag": "defaultTagValue",
 		},
 	}
+	require.NoError(t, parser.Init())
 
 	metrics, err := parser.Parse(inoutBytes)
 	require.NoError(t, err)
@@ -361,41 +322,15 @@ func TestMetricsWithTimestamp(t *testing.T) {
 			testTime,
 		),
 	}
-	parser := Parser{
+	parser := &Parser{
 		DefaultTags: map[string]string{},
 	}
+	require.NoError(t, parser.Init())
 
 	metrics, err := parser.Parse(inoutBytes)
 	require.NoError(t, err)
 	require.Len(t, metrics, 1)
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.SortMetrics())
-}
-
-var benchmarkData = prompb.WriteRequest{
-	Timeseries: []prompb.TimeSeries{
-		{
-			Labels: []prompb.Label{
-				{Name: "__name__", Value: "benchmark_a"},
-				{Name: "source", Value: "myhost"},
-				{Name: "tags_platform", Value: "python"},
-				{Name: "tags_sdkver", Value: "3.11.5"},
-			},
-			Samples: []prompb.Sample{
-				{Value: 5.0, Timestamp: time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC).UnixMilli()},
-			},
-		},
-		{
-			Labels: []prompb.Label{
-				{Name: "__name__", Value: "benchmark_b"},
-				{Name: "source", Value: "myhost"},
-				{Name: "tags_platform", Value: "python"},
-				{Name: "tags_sdkver", Value: "3.11.4"},
-			},
-			Samples: []prompb.Sample{
-				{Value: 4.0, Timestamp: time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC).UnixMilli()},
-			},
-		},
-	},
 }
 
 func TestBenchmarkData(t *testing.T) {
@@ -430,9 +365,43 @@ func TestBenchmarkData(t *testing.T) {
 	require.NoError(t, err)
 
 	plugin := &Parser{}
+	require.NoError(t, plugin.Init())
+
 	actual, err := plugin.Parse(benchmarkData)
 	require.NoError(t, err)
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
+}
+
+func BenchmarkParsingMetricVersion1(b *testing.B) {
+	parser := &Parser{
+		MetricVersion: 1,
+	}
+	require.NoError(b, parser.Init())
+
+	benchmarkData, err := os.ReadFile(filepath.Join(testCasesDir, benchmarkFolder, inputFilename))
+	require.NoError(b, err)
+	require.NotEmpty(b, benchmarkData)
+
+	for n := 0; n < b.N; n++ {
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		parser.Parse(benchmarkData)
+	}
+}
+
+func BenchmarkParsingMetricVersion2(b *testing.B) {
+	parser := &Parser{
+		MetricVersion: 2,
+	}
+	require.NoError(b, parser.Init())
+
+	benchmarkData, err := os.ReadFile(filepath.Join(testCasesDir, benchmarkFolder, inputFilename))
+	require.NoError(b, err)
+	require.NotEmpty(b, benchmarkData)
+
+	for n := 0; n < b.N; n++ {
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		parser.Parse(benchmarkData)
+	}
 }
 
 func BenchmarkParsing(b *testing.B) {
@@ -440,10 +409,51 @@ func BenchmarkParsing(b *testing.B) {
 	require.NoError(b, err)
 
 	plugin := &Parser{}
+	require.NoError(b, plugin.Init())
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
 		plugin.Parse(benchmarkData)
+	}
+}
+
+func generateTestHistogram(i int) *histogram.Histogram {
+	return &histogram.Histogram{
+		Count:         12 + uint64(i*9),
+		ZeroCount:     2 + uint64(i),
+		ZeroThreshold: 0.001,
+		Sum:           18.4 * float64(i+1),
+		Schema:        1,
+		PositiveSpans: []histogram.Span{
+			{Offset: 0, Length: 2},
+			{Offset: 1, Length: 2},
+		},
+		PositiveBuckets: []int64{int64(i + 1), 1, -1, 0},
+		NegativeSpans: []histogram.Span{
+			{Offset: 0, Length: 2},
+			{Offset: 1, Length: 2},
+		},
+		NegativeBuckets: []int64{int64(i + 1), 1, -1, 0},
+	}
+}
+
+func generateTestFloatHistogram(i int) *histogram.FloatHistogram {
+	return &histogram.FloatHistogram{
+		Count:         12 + float64(i*9),
+		ZeroCount:     2 + float64(i),
+		ZeroThreshold: 0.001,
+		Sum:           18.4 * float64(i+1),
+		Schema:        1,
+		PositiveSpans: []histogram.Span{
+			{Offset: 0, Length: 2},
+			{Offset: 1, Length: 2},
+		},
+		PositiveBuckets: []float64{float64(i + 1), float64(i + 2), float64(i + 1), float64(i + 1)},
+		NegativeSpans: []histogram.Span{
+			{Offset: 0, Length: 2},
+			{Offset: 1, Length: 2},
+		},
+		NegativeBuckets: []float64{float64(i + 1), float64(i + 2), float64(i + 1), float64(i + 1)},
 	}
 }

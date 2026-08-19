@@ -8,7 +8,7 @@ The `source_tag` option in the Configuration file is used to send contextual
 information from Point Tags to the API. Besides from this, the plugin currently
 does not send any additional associated Point Tags.
 
-> [!IMPOTANT]
+> [!IMPORTANT]
 > If the point value being sent cannot be converted to a `float64`, the metric
 > is skipped.
 
@@ -27,11 +27,11 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
-## Secret-store support
+## Secret store support
 
-This plugin supports secrets from secret-stores for the `api_user` and
+This plugin supports secrets from secret stores for the `api_user` and
 `api_token` option.
-See the [secret-store documentation][SECRETSTORE] for more details on how
+See the [secret store documentation][SECRETSTORE] for more details on how
 to use them.
 
 [SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets

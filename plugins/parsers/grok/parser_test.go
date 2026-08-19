@@ -3,6 +3,7 @@ package grok
 import (
 	"log"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,10 +19,9 @@ func TestGrokParse(t *testing.T) {
 		Measurement: "t_met",
 		Patterns:    []string{"%{COMMON_LOG_FORMAT}"},
 	}
-	err := parser.Compile()
-	require.NoError(t, err)
+	require.NoError(t, parser.Init())
 
-	_, err = parser.Parse([]byte(`127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`))
+	_, err := parser.Parse([]byte(`127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`))
 	require.NoError(t, err)
 }
 
@@ -34,7 +34,7 @@ func TestParsePatternsWithLookahead(t *testing.T) {
 			MYLOG %{NUMBER:num:int} %{NOBOT:client}
 		`,
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	_, err := p.ParseLine(`1466004605359052000 bot`)
 	require.Error(t, err)
@@ -44,7 +44,7 @@ func TestMeasurementName(t *testing.T) {
 	p := &Parser{
 		Patterns: []string{"%{COMMON_LOG_FORMAT}"},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	// Parse an influxdb POST request
 	m, err := p.ParseLine(`127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`)
@@ -67,7 +67,7 @@ func TestCLF_IPv6(t *testing.T) {
 	p := &Parser{
 		Patterns: []string{"%{COMMON_LOG_FORMAT}"},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	m, err := p.ParseLine(`2001:0db8:85a3:0000:0000:8a2e:0370:7334 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`)
 	require.NotNil(t, m)
@@ -104,7 +104,7 @@ func TestCustomInfluxdbHttpd(t *testing.T) {
 	p := &Parser{
 		Patterns: []string{`\[httpd\] %{COMBINED_LOG_FORMAT} %{UUID:uuid:drop} %{NUMBER:response_time_us:int}`},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	// Parse an influxdb POST request
 	m, err := p.ParseLine(
@@ -161,7 +161,7 @@ func TestBuiltinCommonLogFormat(t *testing.T) {
 	p := &Parser{
 		Patterns: []string{"%{COMMON_LOG_FORMAT}"},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	// Parse an influxdb POST request
 	m, err := p.ParseLine(`127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`)
@@ -186,7 +186,7 @@ func TestBuiltinCommonLogFormatWithNumbers(t *testing.T) {
 	p := &Parser{
 		Patterns: []string{"%{COMMON_LOG_FORMAT}"},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	// Parse an influxdb POST request
 	m, err := p.ParseLine(`127.0.0.1 user1234 frank1234 [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`)
@@ -211,7 +211,7 @@ func TestBuiltinCombinedLogFormat(t *testing.T) {
 	p := &Parser{
 		Patterns: []string{"%{COMBINED_LOG_FORMAT}"},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	// Parse an influxdb POST request
 	m, err := p.ParseLine(`127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326 "-" "Mozilla"`)
@@ -242,7 +242,7 @@ func TestCompileStringAndParse(t *testing.T) {
 			TEST_LOG_A %{NUMBER:myfloat:float} %{RESPONSE_CODE} %{IPORHOST:clientip} %{RESPONSE_TIME}
 		`,
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	metricA, err := p.ParseLine(`1.25 200 192.168.1.1 5.432µs`)
 	require.NotNil(t, metricA)
@@ -267,7 +267,7 @@ func TestCompileErrorsOnInvalidPattern(t *testing.T) {
 			TEST_LOG_A %{NUMBER:myfloat:float} %{RESPONSE_CODE} %{IPORHOST:clientip} %{RESPONSE_TIME}
 		`,
 	}
-	require.Error(t, p.Compile())
+	require.Error(t, p.Init())
 
 	metricA, err := p.ParseLine(`1.25 200 192.168.1.1 5.432µs`)
 	require.Error(t, err)
@@ -278,7 +278,7 @@ func TestParsePatternsWithoutCustom(t *testing.T) {
 	p := &Parser{
 		Patterns: []string{"%{POSINT:ts:ts-epochnano} response_time=%{POSINT:response_time:int} mymetric=%{NUMBER:metric:float}"},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	metricA, err := p.ParseLine(`1466004605359052000 response_time=20821 mymetric=10890.645`)
 	require.NotNil(t, metricA)
@@ -300,7 +300,7 @@ func TestParseEpochMilli(t *testing.T) {
 			MYAPP %{POSINT:ts:ts-epochmilli} response_time=%{POSINT:response_time:int} mymetric=%{NUMBER:metric:float}
 		`,
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	metricA, err := p.ParseLine(`1568540909963 response_time=20821 mymetric=10890.645`)
 	require.NotNil(t, metricA)
@@ -322,7 +322,7 @@ func TestParseEpochNano(t *testing.T) {
 			MYAPP %{POSINT:ts:ts-epochnano} response_time=%{POSINT:response_time:int} mymetric=%{NUMBER:metric:float}
 		`,
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	metricA, err := p.ParseLine(`1466004605359052000 response_time=20821 mymetric=10890.645`)
 	require.NotNil(t, metricA)
@@ -344,7 +344,7 @@ func TestParseEpoch(t *testing.T) {
 			MYAPP %{POSINT:ts:ts-epoch} response_time=%{POSINT:response_time:int} mymetric=%{NUMBER:metric:float}
 		`,
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	metricA, err := p.ParseLine(`1466004605 response_time=20821 mymetric=10890.645`)
 	require.NotNil(t, metricA)
@@ -411,7 +411,7 @@ func TestParseEpochDecimal(t *testing.T) {
 			parser := &Parser{
 				Patterns: []string{"%{NUMBER:ts:ts-epoch} value=%{NUMBER:value:int}"},
 			}
-			require.NoError(t, parser.Compile())
+			require.NoError(t, parser.Init())
 			m, err := parser.ParseLine(tt.line)
 
 			if tt.noMatch {
@@ -438,7 +438,7 @@ func TestParseEpochErrors(t *testing.T) {
 		`,
 		Log: testutil.Logger{},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	_, err := p.ParseLine(`foobar response_time=20821 mymetric=10890.645`)
 	require.NoError(t, err)
@@ -450,7 +450,7 @@ func TestParseEpochErrors(t *testing.T) {
 		`,
 		Log: testutil.Logger{},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	_, err = p.ParseLine(`foobar response_time=20821 mymetric=10890.645`)
 	require.NoError(t, err)
@@ -460,7 +460,7 @@ func TestParseGenericTimestamp(t *testing.T) {
 	p := &Parser{
 		Patterns: []string{`\[%{HTTPDATE:ts:ts}\] response_time=%{POSINT:response_time:int} mymetric=%{NUMBER:metric:float}`},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	metricA, err := p.ParseLine(`[09/Jun/2016:03:37:03 +0000] response_time=20821 mymetric=10890.645`)
 	require.NotNil(t, metricA)
@@ -492,7 +492,7 @@ func TestParseGenericTimestampNotFound(t *testing.T) {
 		Patterns: []string{`\[%{NOTSPACE:ts:ts}\] response_time=%{POSINT:response_time:int} mymetric=%{NUMBER:metric:float}`},
 		Log:      testutil.Logger{},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	metricA, err := p.ParseLine(`[foobar] response_time=20821 mymetric=10890.645`)
 	require.NotNil(t, metricA)
@@ -511,7 +511,7 @@ func TestCompileFileAndParse(t *testing.T) {
 		Patterns:           []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},
 		CustomPatternFiles: []string{"./testdata/test-patterns"},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	metricA, err := p.ParseLine(`[04/Jun/2016:12:41:45 +0100] 1.25 200 192.168.1.1 5.432µs 101`)
 	require.NotNil(t, metricA)
@@ -553,7 +553,7 @@ func TestCompileNoModifiersAndParse(t *testing.T) {
 			TEST_LOG_C %{NUMBER:myfloat} %{NUMBER} %{IPORHOST:clientip} %{DURATION:rt}
 		`,
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	metricA, err := p.ParseLine(`1.25 200 192.168.1.1 5.432µs`)
 	require.NotNil(t, metricA)
@@ -577,7 +577,7 @@ func TestCompileNoNamesAndParse(t *testing.T) {
 		`,
 		Log: testutil.Logger{},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	metricA, err := p.ParseLine(`1.25 200 192.168.1.1 5.432µs`)
 	require.Nil(t, metricA)
@@ -590,7 +590,7 @@ func TestParseNoMatch(t *testing.T) {
 		CustomPatternFiles: []string{"./testdata/test-patterns"},
 		Log:                testutil.Logger{},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	metricA, err := p.ParseLine(`[04/Jun/2016:12:41:45 +0100] notnumber 200 192.168.1.1 5.432µs 101`)
 	require.NoError(t, err)
@@ -605,14 +605,14 @@ func TestCompileErrors(t *testing.T) {
 			TEST_LOG_A %{HTTPDATE:ts1:ts-httpd} %{HTTPDATE:ts2:ts-httpd} %{NUMBER:mynum:int}
 		`,
 	}
-	require.Error(t, p.Compile())
+	require.Error(t, p.Init())
 
 	// Compile fails because file doesn't exist:
 	p = &Parser{
 		Patterns:           []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},
 		CustomPatternFiles: []string{"/tmp/foo/bar/baz"},
 	}
-	require.Error(t, p.Compile())
+	require.Error(t, p.Init())
 }
 
 func TestParseErrors_MissingPattern(t *testing.T) {
@@ -623,7 +623,7 @@ func TestParseErrors_MissingPattern(t *testing.T) {
 			TEST_LOG_A %{HTTPDATE:ts:ts-httpd} %{WORD:myword:int} %{}
 		`,
 	}
-	require.Error(t, p.Compile())
+	require.Error(t, p.Init())
 	_, err := p.ParseLine(`[04/Jun/2016:12:41:45 +0100] notnumber 200 192.168.1.1 5.432µs 101`)
 	require.Error(t, err)
 }
@@ -637,7 +637,7 @@ func TestParseErrors_WrongIntegerType(t *testing.T) {
 		`,
 		Log: testutil.Logger{},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 	m, err := p.ParseLine(`0 notnumber`)
 	require.NoError(t, err)
 	testutil.RequireMetricEqual(t,
@@ -654,7 +654,7 @@ func TestParseErrors_WrongFloatType(t *testing.T) {
 		`,
 		Log: testutil.Logger{},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 	m, err := p.ParseLine(`0 notnumber`)
 	require.NoError(t, err)
 	testutil.RequireMetricEqual(t,
@@ -671,7 +671,7 @@ func TestParseErrors_WrongDurationType(t *testing.T) {
 		`,
 		Log: testutil.Logger{},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 	m, err := p.ParseLine(`0 notnumber`)
 	require.NoError(t, err)
 	testutil.RequireMetricEqual(t,
@@ -688,7 +688,7 @@ func TestParseErrors_WrongTimeLayout(t *testing.T) {
 		`,
 		Log: testutil.Logger{},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 	m, err := p.ParseLine(`0 notnumber`)
 	require.NoError(t, err)
 	testutil.RequireMetricEqual(t,
@@ -705,7 +705,7 @@ func TestParseInteger_Base16(t *testing.T) {
 			TEST_LOG_C %{NUMBER:myfloat} %{BASE10OR16NUM:response_code:int} %{IPORHOST:clientip} %{DURATION:rt}
 		`,
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	metricA, err := p.ParseLine(`1.25 0xc8 192.168.1.1 5.432µs`)
 	require.NotNil(t, metricA)
@@ -795,7 +795,7 @@ func TestShortPatternRegression(t *testing.T) {
 		`,
 		Log: testutil.Logger{},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	m, err := p.ParseLine(`Wed Apr 12 13:10:34 MST 2017 42`)
 	require.NoError(t, err)
@@ -814,7 +814,7 @@ func TestTimezoneEmptyCompileFileAndParse(t *testing.T) {
 		CustomPatternFiles: []string{"./testdata/test-patterns"},
 		Timezone:           "",
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	metricA, err := p.ParseLine(`[04/Jun/2016:12:41:45 +0100] 1.25 200 192.168.1.1 5.432µs 101`)
 	require.NotNil(t, metricA)
@@ -851,7 +851,7 @@ func TestTimezoneMalformedCompileFileAndParse(t *testing.T) {
 		Timezone:           "Something/Weird",
 		Log:                testutil.Logger{},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	metricA, err := p.ParseLine(`[04/Jun/2016:12:41:45 +0100] 1.25 200 192.168.1.1 5.432µs 101`)
 	require.NotNil(t, metricA)
@@ -887,7 +887,7 @@ func TestTimezoneEuropeCompileFileAndParse(t *testing.T) {
 		CustomPatternFiles: []string{"./testdata/test-patterns"},
 		Timezone:           "Europe/Berlin",
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	metricA, err := p.ParseLine(`[04/Jun/2016:12:41:45 +0100] 1.25 200 192.168.1.1 5.432µs 101`)
 	require.NotNil(t, metricA)
@@ -923,7 +923,7 @@ func TestTimezoneAmericasCompileFileAndParse(t *testing.T) {
 		CustomPatternFiles: []string{"./testdata/test-patterns"},
 		Timezone:           "Canada/Eastern",
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	metricA, err := p.ParseLine(`[04/Jun/2016:12:41:45 +0100] 1.25 200 192.168.1.1 5.432µs 101`)
 	require.NotNil(t, metricA)
@@ -959,7 +959,7 @@ func TestTimezoneLocalCompileFileAndParse(t *testing.T) {
 		CustomPatternFiles: []string{"./testdata/test-patterns"},
 		Timezone:           "Local",
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	metricA, err := p.ParseLine(`[04/Jun/2016:12:41:45 +0100] 1.25 200 192.168.1.1 5.432µs 101`)
 	require.NotNil(t, metricA)
@@ -995,7 +995,7 @@ func TestNewlineInPatterns(t *testing.T) {
 			%{SYSLOGTIMESTAMP:timestamp}
 		`},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 	m, err := p.ParseLine("Apr 10 05:11:57")
 	require.NoError(t, err)
 	require.NotNil(t, m)
@@ -1020,14 +1020,13 @@ func TestMultilinePatterns(t *testing.T) {
 		Multiline:   true,
 		Log:         testutil.Logger{},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 	actual, err := p.Parse(buf)
 	require.NoError(t, err)
 	testutil.RequireMetricsEqual(t, expected, actual)
 }
 
 func TestSyslogTimestamp(t *testing.T) {
-	currentYear := time.Now().Year()
 	tests := []struct {
 		name     string
 		line     string
@@ -1036,17 +1035,17 @@ func TestSyslogTimestamp(t *testing.T) {
 		{
 			name:     "two digit day of month",
 			line:     "Sep 25 09:01:55 value=42",
-			expected: time.Date(currentYear, time.September, 25, 9, 1, 55, 0, time.UTC),
+			expected: time.Date(2017, time.September, 25, 9, 1, 55, 0, time.UTC),
 		},
 		{
 			name:     "one digit day of month single space",
 			line:     "Sep 2 09:01:55 value=42",
-			expected: time.Date(currentYear, time.September, 2, 9, 1, 55, 0, time.UTC),
+			expected: time.Date(2017, time.September, 2, 9, 1, 55, 0, time.UTC),
 		},
 		{
 			name:     "one digit day of month double space",
 			line:     "Sep  2 09:01:55 value=42",
-			expected: time.Date(currentYear, time.September, 2, 9, 1, 55, 0, time.UTC),
+			expected: time.Date(2017, time.September, 2, 9, 1, 55, 0, time.UTC),
 		},
 	}
 	for _, tt := range tests {
@@ -1055,7 +1054,7 @@ func TestSyslogTimestamp(t *testing.T) {
 				Patterns: []string{`%{SYSLOGTIMESTAMP:timestamp:ts-syslog} value=%{NUMBER:value:int}`},
 				timeFunc: func() time.Time { return time.Date(2017, time.April, 1, 0, 0, 0, 0, time.UTC) },
 			}
-			require.NoError(t, p.Compile())
+			require.NoError(t, p.Init())
 			m, err := p.ParseLine(tt.line)
 			require.NoError(t, err)
 			require.NotNil(t, m)
@@ -1069,7 +1068,7 @@ func TestReplaceTimestampComma(t *testing.T) {
 		Patterns: []string{`%{TIMESTAMP_ISO8601:timestamp:ts-"2006-01-02 15:04:05.000"} successfulMatches=%{NUMBER:value:int}`},
 	}
 
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 	m, err := p.ParseLine("2018-02-21 13:10:34,555 successfulMatches=1")
 	require.NoError(t, err)
 	require.NotNil(t, m)
@@ -1087,7 +1086,7 @@ func TestDynamicMeasurementModifier(t *testing.T) {
 		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD:test:measurement}",
 	}
 
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 	m, err := p.ParseLine("4 5 hello")
 	require.NoError(t, err)
 	require.Equal(t, "hello", m.Name())
@@ -1098,7 +1097,7 @@ func TestStaticMeasurementModifier(t *testing.T) {
 		Patterns: []string{"%{WORD:hi:measurement} %{NUMBER:num:string}"},
 	}
 
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 	m, err := p.ParseLine("test_name 42")
 	log.Printf("%v", m)
 	require.NoError(t, err)
@@ -1112,7 +1111,7 @@ func TestTwoMeasurementModifier(t *testing.T) {
 		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:measurement} %{WORD:var3:measurement}",
 	}
 
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 	m, err := p.ParseLine("4 5 hello")
 	require.NoError(t, err)
 	require.Equal(t, "4 5 hello", m.Name())
@@ -1124,7 +1123,7 @@ func TestMeasurementModifierNoName(t *testing.T) {
 		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD:hi:measurement}",
 	}
 
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 	m, err := p.ParseLine("4 5 hello")
 	require.NoError(t, err)
 	require.Equal(t, "hello", m.Name())
@@ -1140,7 +1139,7 @@ func TestEmptyYearInTimestamp(t *testing.T) {
 		APP_NAME [a-zA-Z0-9\.]+
 		`,
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 	_, err := p.ParseLine("Nov  6 13:57:03 generic iTunes[6504]: info> Scale factor of main display = 2.0")
 	require.NoError(t, err)
 	m, err := p.ParseLine("Nov  6 13:57:03 generic iTunes[6504]: objc[6504]: Object descriptor was null.")
@@ -1154,7 +1153,7 @@ func TestTrimRegression(t *testing.T) {
 	p := &Parser{
 		Patterns: []string{`%{GREEDYDATA:message:string}`},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 
 	actual, err := p.ParseLine(`level=info msg="ok"`)
 	require.NoError(t, err)
@@ -1180,10 +1179,28 @@ func TestMultilineNilMetric(t *testing.T) {
 		Multiline:   true,
 		Log:         testutil.Logger{},
 	}
-	require.NoError(t, p.Compile())
+	require.NoError(t, p.Init())
 	actual, err := p.Parse(buf)
 	require.NoError(t, err)
 	require.Empty(t, actual)
+}
+
+func TestLongLine(t *testing.T) {
+	parser := Parser{
+		Measurement: "test",
+		Patterns:    []string{"%{GREEDYDATA:message}"},
+		Log:         &testutil.Logger{},
+	}
+	require.NoError(t, parser.Init())
+
+	msg := strings.Repeat("Long", 20000) + " message" // 80,008 characters
+	m, err := parser.Parse([]byte(msg + "\n"))
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		metric.New("test", map[string]string{}, map[string]interface{}{"message": msg}, time.Unix(0, 0)),
+	}
+	testutil.RequireMetricsEqual(t, expected, m, testutil.IgnoreTime())
 }
 
 const benchmarkData = `benchmark 5 1653643421 source=myhost tags_platform=python tags_sdkver=3.11.5

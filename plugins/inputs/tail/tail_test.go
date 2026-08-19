@@ -338,13 +338,13 @@ cpu,42
 	plugin.InitialReadOffset = "beginning"
 	plugin.Files = []string{tmpfile}
 	plugin.SetParserFunc(func() (telegraf.Parser, error) {
-		parser := csv.Parser{
+		parser := &csv.Parser{
 			MeasurementColumn: "measurement",
 			HeaderRowCount:    1,
-			TimeFunc:          func() time.Time { return time.Unix(0, 0) },
 		}
+		parser.SetTimeFunc(func() time.Time { return time.Unix(0, 0) })
 		err := parser.Init()
-		return &parser, err
+		return parser, err
 	})
 	require.NoError(t, plugin.Init())
 
@@ -412,15 +412,15 @@ skip2,mem,100
 	plugin.InitialReadOffset = "beginning"
 	plugin.Files = []string{tmpfile}
 	plugin.SetParserFunc(func() (telegraf.Parser, error) {
-		parser := csv.Parser{
+		parser := &csv.Parser{
 			MeasurementColumn: "measurement1",
 			HeaderRowCount:    2,
 			SkipRows:          1,
 			SkipColumns:       1,
-			TimeFunc:          func() time.Time { return time.Unix(0, 0) },
 		}
+		parser.SetTimeFunc(func() time.Time { return time.Unix(0, 0) })
 		err := parser.Init()
-		return &parser, err
+		return parser, err
 	})
 	require.NoError(t, plugin.Init())
 
@@ -996,56 +996,19 @@ func TestInvalidInitialReadOffset(t *testing.T) {
 	require.ErrorContains(t, plugin.Init(), "invalid 'initial_read_offset' setting")
 }
 
-func TestSetInitialValueForInitialReadOffset(t *testing.T) {
-	tests := []struct {
-		name              string
-		InitialReadOffset string
-		FromBeginning     bool
-		expected          string
-	}{
-		{
-			name:          "Set InitialReadOffset to beginning when from_beginning set to true and initial_read_offset not set",
-			FromBeginning: true,
-			expected:      "beginning",
-		},
-		{
-			name:     "Set InitialReadOffset to saved-or-end when from_beginning set to false and initial_read_offset not set",
-			expected: "saved-or-end",
-		},
-		{
-			name:              "Ignore from_beginning when initial_read_offset is set",
-			InitialReadOffset: "end",
-			expected:          "end",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			tt := newTail()
-			tt.FromBeginning = test.FromBeginning
-			tt.InitialReadOffset = test.InitialReadOffset
-			require.NoError(t, tt.Init())
-			require.Equal(t, test.expected, tt.InitialReadOffset)
-		})
-	}
-}
-
 func TestInitInitialReadOffset(t *testing.T) {
 	tests := []struct {
 		name              string
-		InitialReadOffset string
-		FromBeginning     bool
+		initialReadOffset string
 		expected          string
 	}{
 		{
-			name:          "Set InitialReadOffset to beginning when from_beginning set to true and initial_read_offset not set",
-			FromBeginning: true,
-			expected:      "beginning",
+			name:     "Default to saved-or-end when initial_read_offset not set",
+			expected: "saved-or-end",
 		},
 		{
-			name:              "Ignore from_beginning when initial_read_offset is set",
-			FromBeginning:     true,
-			InitialReadOffset: "end",
+			name:              "Keep initial_read_offset when set",
+			initialReadOffset: "end",
 			expected:          "end",
 		},
 	}
@@ -1053,8 +1016,7 @@ func TestInitInitialReadOffset(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			tt := newTail()
-			tt.FromBeginning = test.FromBeginning
-			tt.InitialReadOffset = test.InitialReadOffset
+			tt.InitialReadOffset = test.initialReadOffset
 			require.NoError(t, tt.Init())
 			require.Equal(t, test.expected, tt.InitialReadOffset)
 		})

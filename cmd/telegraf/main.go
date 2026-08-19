@@ -134,7 +134,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		},
 		&cli.StringFlag{
 			Name:  "secretstore-filter",
-			Usage: "filter the secret-stores to enable, separator is ':'",
+			Usage: "filter the secret stores to enable, separator is ':'",
 		},
 		&cli.BoolFlag{
 			Name:  "strict-env-handling",
@@ -334,7 +334,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				},
 				&cli.StringFlag{
 					Name:  "password",
-					Usage: "password to unlock secret-stores",
+					Usage: "password to unlock secret stores",
 				},
 				//
 				// Bool flags

@@ -268,6 +268,105 @@ func TestTopicTag(t *testing.T) {
 	}
 }
 
+func TestHeaders(t *testing.T) {
+	tests := []struct {
+		name     string
+		headers  map[string]string
+		expected []sarama.RecordHeader
+	}{
+		{
+			name: "none",
+		},
+		{
+			name:    "static string",
+			headers: map[string]string{"agent": "telegraf"},
+			expected: []sarama.RecordHeader{
+				{
+					Key:   []byte("agent"),
+					Value: []byte("telegraf"),
+				},
+			},
+		},
+		{
+			name:    "metric name header",
+			headers: map[string]string{"metric": "{{ .Name }}"},
+			expected: []sarama.RecordHeader{
+				{
+					Key:   []byte("metric"),
+					Value: []byte("cpu"),
+				},
+			},
+		},
+		{
+			name: "complex",
+			headers: map[string]string{
+				"source": `{{ .Tag "source" }}:{{ .Tag "topic"}}`,
+				"device": `{{ .Name }}-{{ .Field "id" }}`,
+			},
+			expected: []sarama.RecordHeader{
+				{
+					Key:   []byte("source"),
+					Value: []byte("server:xyzzy"),
+				},
+				{
+					Key:   []byte("device"),
+					Value: []byte("cpu-3254345daab4"),
+				},
+			},
+		},
+	}
+
+	// Define an input metric for writing
+	input := []telegraf.Metric{
+		metric.New(
+			"cpu",
+			map[string]string{
+				"topic":  "xyzzy",
+				"source": "server",
+			},
+			map[string]interface{}{
+				"id":    "3254345daab4",
+				"value": 42.0,
+				"hours": 255,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup the serializer
+			s := &influx.Serializer{}
+			require.NoError(t, s.Init())
+
+			// Setup the plugin under test
+			plugin := &Kafka{
+				Brokers:      []string{"127.0.0.1"},
+				Topic:        "telegraf",
+				Headers:      tt.headers,
+				Log:          testutil.Logger{},
+				producerFunc: newMockProducer,
+			}
+			plugin.SetSerializer(s)
+			require.NoError(t, plugin.Init())
+
+			// Connect and write a metric
+			require.NoError(t, plugin.Connect())
+			require.NoError(t, plugin.Write(input))
+
+			// Check the content that would be sent by the producer
+			producer, ok := plugin.producer.(*mockProducer)
+			require.True(t, ok, "invalid producer type")
+
+			producer.Lock()
+			message := producer.sent[0]
+			producer.Unlock()
+
+			require.ElementsMatch(t, tt.expected, message.Headers)
+		})
+	}
+}
+
 type mockProducer struct {
 	sent []*sarama.ProducerMessage
 	sarama.SyncProducer

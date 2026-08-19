@@ -318,14 +318,13 @@ func (s *IoTDB) writeRecordsWithTags(rwt *recordsWithTags) error {
 		return err
 	}
 	// write to IoTDB server
-	status, err := s.session.InsertRecords(rwt.DeviceIDList, rwt.MeasurementsList,
-		rwt.DataTypesList, rwt.ValuesList, rwt.TimestampList)
-	if status != nil {
-		if verifyResult := client.VerifySuccess(status); verifyResult != nil {
-			s.Log.Debug(verifyResult)
-		}
-	}
-	return err
+	return s.session.InsertRecords(
+		rwt.DeviceIDList,
+		rwt.MeasurementsList,
+		rwt.DataTypesList,
+		rwt.ValuesList,
+		rwt.TimestampList,
+	)
 }
 
 func init() {
