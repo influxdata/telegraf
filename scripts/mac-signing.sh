@@ -82,8 +82,8 @@ sudo security import MacCertificate.p12 -k /Library/Keychains/System.keychain -P
 base64 -D -o AppleSigningAuthorityCertificate.cer <<< "$AppleSigningAuthorityCertificate"
 sudo security import AppleSigningAuthorityCertificate.cer -k '/Library/Keychains/System.keychain' -A
 
-amdFile=$(find "$HOME/project/dist" -name "*darwin_amd64.tar*")
-armFile=$(find "$HOME/project/dist" -name "*darwin_arm64.tar*")
+amdFile=$(find "$HOME/project/dist" -name "telegraf-*darwin_amd64.tar.gz")
+armFile=$(find "$HOME/project/dist" -name "telegraf-*darwin_arm64.tar.gz")
 macFiles=("${amdFile}" "${armFile}")
 
 version=$(make version)
@@ -136,4 +136,15 @@ do
   mv "$baseName".dmg ~/project/build/dist
 
   echo "$baseName.dmg signed and notarized!"
+
+  # Replace the telegraf binary with the signed version in the tar archive
+  versionDir=$(basename "${tarFile}")
+  versionDir=${versionDir/_*}
+  mkdir -p "$RootAppDir/Extracted"
+  tar -xzvf "$tarFile" -C "$RootAppDir/Extracted"
+  cp "${TelegrafBinPath}" "$RootAppDir/Extracted/${versionDir}/usr/bin/telegraf"
+  tar -czvf "$tarFile" -C "$RootAppDir/Extracted" ${versionDir}
+
+  echo "Replaced tar binary with signed version!"
+
 done
