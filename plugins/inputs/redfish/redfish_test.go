@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -1045,7 +1044,7 @@ func TestSkipChassisWithoutReference(t *testing.T) {
 	// There shouldn't be a request to any /redfish/v1/Chassis path
 	mu.Lock()
 	defer mu.Unlock()
-	require.False(t, slices.Contains(requested, "/redfish/v1/Chassis"))
+	require.NotContains(t, requested, "/redfish/v1/Chassis")
 }
 
 func TestSkipChassisWithoutThermalAndPowerReference(t *testing.T) {
