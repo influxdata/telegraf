@@ -141,9 +141,9 @@ do
   versionDir=$(basename "${tarFile}")
   versionDir=${versionDir/_*}
   mkdir -p "$RootAppDir/Extracted"
-  tar -xzvf "$tarFile" -C "$RootAppDir/Extracted"
+  tar -xzvf "${tarFile}" -C "$RootAppDir/Extracted"
   cp "${TelegrafBinPath}" "$RootAppDir/Extracted/${versionDir}/usr/bin/telegraf"
-  tar -czvf "$tarFile" -C "$RootAppDir/Extracted" ${versionDir}
+  tar -czvf "${tarFile}" -C "$RootAppDir/Extracted" "${versionDir}"
 
   echo "Replaced tar binary with signed version!"
 
