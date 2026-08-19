@@ -124,7 +124,7 @@ func (z *Zerobus) Write(metrics []telegraf.Metric) error {
 	// together with the valid metrics.
 	records, err := z.serializeMetrics(metrics)
 	if err != nil {
-		z.Log.Errorf("Serializing metrics failed: %s", err)
+		z.Log.Errorf("Serializing metrics failed: %v; dropping the rejected metrics", err)
 	}
 	if len(records) == 0 {
 		return nil
@@ -136,13 +136,13 @@ func (z *Zerobus) Write(metrics []telegraf.Metric) error {
 	for _, batch := range z.batchRecords(records) {
 		if _, err := z.stream.IngestJSONRecordsOffset(batch); err != nil {
 			z.closeStream()
-			return fmt.Errorf("admitting batch failed (retryable=%t): %w", zerobus.Retryable(err), err)
+			return fmt.Errorf("admitting batch failed: %w", err)
 		}
 	}
 	// Report success only once Databricks acknowledged every record of the batch.
 	if err := z.stream.Flush(); err != nil {
 		z.closeStream()
-		return fmt.Errorf("flushing batch failed (retryable=%t): %w", zerobus.Retryable(err), err)
+		return fmt.Errorf("flushing batch failed: %w", err)
 	}
 
 	return nil
@@ -180,6 +180,10 @@ func (z *Zerobus) openStream() error {
 		return fmt.Errorf("fetching schema of table %q failed: %w", z.Table, err)
 	}
 
+	// Recovery is disabled as the SDK would reconnect and replay the records it
+	// received no acknowledgement for, while Telegraf resends the same batch from
+	// its buffer. A broken stream is therefore terminal and replaced on the next
+	// write, leaving the retry to the agent alone.
 	stream, err := z.sdk.CreateStream(ctx, z.Table, z.ClientID, secret.String(),
 		zerobus.WithProto(descriptor),
 		zerobus.WithWaitForReady(),
