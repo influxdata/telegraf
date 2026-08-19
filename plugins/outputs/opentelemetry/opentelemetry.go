@@ -109,8 +109,8 @@ func (o *OpenTelemetry) Connect() error {
 		o.Headers["Authorization"] = "Bearer " + o.Coralogix.PrivateKey
 	}
 
-	config := &influx2otel.LineProtocolToOtelMetricsConfig{Logger: logger, NameSeparator: o.NameSeparator}
-	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(config)
+	converterConfig := &influx2otel.LineProtocolToOtelMetricsConfig{Logger: logger, NameSeparator: o.NameSeparator}
+	metricsConverter, err := influx2otel.NewLineProtocolToOtelMetrics(converterConfig)
 	if err != nil {
 		return err
 	}
