@@ -159,6 +159,10 @@ func (z *Zerobus) Close() error {
 }
 
 func (z *Zerobus) openStream() error {
+	// Release a stream that failed on its own, the SDK holds it including the
+	// records it did not acknowledge until the stream is closed.
+	z.closeStream()
+
 	secret, err := z.ClientSecret.Get()
 	if err != nil {
 		return fmt.Errorf("resolving client secret failed: %w", err)
