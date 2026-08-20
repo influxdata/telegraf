@@ -87,6 +87,11 @@ table. Startup waits up to `timeout` for opening the stream (including the
 schema fetch), so network, authentication and permission errors surface
 before any metric is written.
 
+Writing is bounded by the Zerobus SDK instead of `timeout`. The SDK ends a
+stream that received no acknowledgement for 60 seconds and waits at most five
+minutes for the acknowledgements of a batch, so a stalled endpoint delays this
+output for that long before the metrics are buffered and retried.
+
 [privileges]: https://docs.databricks.com/aws/en/data-governance/unity-catalog/manage-privileges/privileges
 
 ### Metric mapping
