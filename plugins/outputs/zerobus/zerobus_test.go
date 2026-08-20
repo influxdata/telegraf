@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/descriptorpb"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -324,6 +326,78 @@ func TestSerializeMetricsRejectsMetrics(t *testing.T) {
 			require.ErrorAs(t, err, &writeErr)
 			require.Equal(t, tt.rejected, writeErr.MetricsReject)
 			require.ErrorContains(t, err, tt.expected)
+		})
+	}
+}
+
+func TestColumnsFromDescriptor(t *testing.T) {
+	tests := []struct {
+		name       string
+		descriptor *descriptorpb.DescriptorProto
+		expected   map[string]bool
+	}{
+		{
+			name: "reads the columns of the table",
+			descriptor: &descriptorpb.DescriptorProto{
+				Name: proto.String("metrics"),
+				Field: []*descriptorpb.FieldDescriptorProto{
+					{Name: proto.String("timestamp")},
+					{Name: proto.String("host")},
+					{Name: proto.String("value")},
+				},
+			},
+			expected: map[string]bool{"timestamp": true, "host": true, "value": true},
+		},
+		{
+			name: "skips fields without a name",
+			descriptor: &descriptorpb.DescriptorProto{
+				Name: proto.String("metrics"),
+				Field: []*descriptorpb.FieldDescriptorProto{
+					{Name: proto.String("value")},
+					{},
+				},
+			},
+			expected: map[string]bool{"value": true},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			raw, err := proto.Marshal(tt.descriptor)
+			require.NoError(t, err)
+
+			columns, err := columnsFromDescriptor(raw)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, columns)
+		})
+	}
+}
+
+func TestColumnsFromDescriptorFail(t *testing.T) {
+	tests := []struct {
+		name     string
+		raw      []byte
+		expected string
+	}{
+		{
+			name: "unparseable descriptor",
+			// The wire type 7 of the first byte does not exist
+			raw:      []byte{0xff, 0xff, 0xff},
+			expected: "parsing protobuf descriptor failed",
+		},
+		{
+			name: "descriptor without fields",
+			// An empty payload is a descriptor without any field
+			raw:      nil,
+			expected: "table schema descriptor has no columns",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			columns, err := columnsFromDescriptor(tt.raw)
+			require.ErrorContains(t, err, tt.expected)
+			require.Nil(t, columns)
 		})
 	}
 }
