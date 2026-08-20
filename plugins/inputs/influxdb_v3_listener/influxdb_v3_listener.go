@@ -68,6 +68,7 @@ type InfluxDBV3Listener struct {
 	countLock               sync.Mutex
 	totalUndeliveredMetrics atomic.Int64
 
+	tlsConf   *tls.Config
 	listener  net.Listener
 	server    http.Server
 	mux       http.ServeMux
@@ -94,6 +95,12 @@ func (h *InfluxDBV3Listener) Init() error {
 	default:
 		return fmt.Errorf("invalid parser type %q", h.ParserType)
 	}
+
+	tlsConf, err := h.ServerConfig.TLSConfig()
+	if err != nil {
+		return fmt.Errorf("creating TLS config failed: %w", err)
+	}
+	h.tlsConf = tlsConf
 
 	tags := map[string]string{"address": h.ServiceAddress}
 	h.bytesRecv = h.Statistics.Register("influxdb_v3_listener", "bytes_received", tags)
@@ -151,21 +158,17 @@ func (h *InfluxDBV3Listener) Start(acc telegraf.Accumulator) error {
 		}()
 	}
 
-	tlsConf, err := h.ServerConfig.TLSConfig()
-	if err != nil {
-		return err
-	}
-
 	h.server = http.Server{
 		Addr:         h.ServiceAddress,
 		Handler:      h,
-		TLSConfig:    tlsConf,
+		TLSConfig:    h.tlsConf,
 		ReadTimeout:  time.Duration(h.ReadTimeout),
 		WriteTimeout: time.Duration(h.WriteTimeout),
 	}
 
-	if tlsConf != nil {
-		h.listener, err = tls.Listen("tcp", h.ServiceAddress, tlsConf)
+	var err error
+	if h.tlsConf != nil {
+		h.listener, err = tls.Listen("tcp", h.ServiceAddress, h.tlsConf)
 	} else {
 		h.listener, err = net.Listen("tcp", h.ServiceAddress)
 	}
@@ -422,20 +425,25 @@ func (h *InfluxDBV3Listener) handleWrite() http.HandlerFunc {
 }
 
 // readBody returns the request body, limited to the maximum body size and
-// decompressed if the client sent it compressed.
+// decompressed if the client sent it compressed. The limit is applied to the
+// decompressed data, as a compressed body of a few megabytes can otherwise
+// expand to an arbitrary amount of memory.
 func (h *InfluxDBV3Listener) readBody(res http.ResponseWriter, req *http.Request) ([]byte, error) {
-	body := http.MaxBytesReader(res, req.Body, int64(h.MaxBodySize))
 	if req.Header.Get("Content-Encoding") == "gzip" {
-		reader, err := gzip.NewReader(body)
+		reader, err := gzip.NewReader(req.Body)
 		if err != nil {
 			return nil, fmt.Errorf("decompressing request body failed: %w", err)
 		}
 		defer reader.Close()
 
-		return io.ReadAll(reader)
+		body, err := io.ReadAll(http.MaxBytesReader(res, reader, int64(h.MaxBodySize)))
+		if err != nil {
+			return nil, fmt.Errorf("reading decompressed request body failed: %w", err)
+		}
+		return body, nil
 	}
 
-	return io.ReadAll(body)
+	return io.ReadAll(http.MaxBytesReader(res, req.Body, int64(h.MaxBodySize)))
 }
 
 func (h *InfluxDBV3Listener) newParser(r io.Reader, precision time.Duration) (streamParser, error) {
@@ -547,6 +555,7 @@ type lineError struct {
 // requestToken extracts the token from an authorization header using one of the
 // schemes InfluxDB 3 supports.
 func requestToken(header string) ([]byte, error) {
+	// InfluxDB splits the header on spaces and requires exactly two parts
 	scheme, credentials, found := strings.Cut(header, " ")
 	if !found || strings.Contains(credentials, " ") {
 		return nil, errors.New("authorization header is not in the form of 'Authorization: <auth-scheme> <token>'")
@@ -560,7 +569,9 @@ func requestToken(header string) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("decoding basic credentials failed: %w", err)
 		}
-		// The token is the password part, the username is ignored
+		// The token is the password part, the username is ignored. InfluxDB
+		// splits at the last colon and rejects a username containing one, so
+		// credentials with more than one colon are rejected either way.
 		_, token, found := strings.Cut(string(decoded), ":")
 		if !found || strings.Contains(token, ":") {
 			return nil, errors.New("basic credentials are not in the form of '<username>:<token>'")

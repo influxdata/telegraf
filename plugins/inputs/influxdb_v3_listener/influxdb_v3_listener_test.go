@@ -528,6 +528,32 @@ func TestWriteGzippedBody(t *testing.T) {
 	require.Len(t, acc.GetTelegrafMetrics(), 1)
 }
 
+func TestWriteGzippedBodyTooLarge(t *testing.T) {
+	var buf bytes.Buffer
+	writer := gzip.NewWriter(&buf)
+	_, err := writer.Write([]byte(strings.Repeat(testMsg, 10000)))
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	listener := newTestListener()
+	listener.MaxBodySize = config.Size(4096)
+
+	var acc testutil.Accumulator
+	startListener(t, listener, &acc)
+
+	// The compressed body is well below the limit, only the decompressed one
+	// is above it
+	require.Less(t, int64(buf.Len()), int64(listener.MaxBodySize))
+
+	req, err := http.NewRequest("POST", listenerURL(listener, "http", "/api/v3/write_lp", "db=mydb"), &buf)
+	require.NoError(t, err)
+	req.Header.Set("Content-Encoding", "gzip")
+
+	resp := do(t, http.DefaultClient, req)
+	require.Equal(t, http.StatusRequestEntityTooLarge, resp.status)
+	require.Empty(t, acc.GetTelegrafMetrics())
+}
+
 func TestWriteBodyTooLarge(t *testing.T) {
 	listener := newTestListener()
 	listener.MaxBodySize = config.Size(len(testMsg) - 1)
@@ -716,6 +742,34 @@ func TestUnknownPath(t *testing.T) {
 
 	resp := getFrom(t, listenerURL(listener, "http", "/api/v2/write", "bucket=mybucket"))
 	require.Equal(t, http.StatusNotFound, resp.status)
+}
+
+func TestUnsupportedMethod(t *testing.T) {
+	tests := []struct {
+		method string
+		path   string
+	}{
+		{method: "GET", path: "/api/v3/write_lp"},
+		{method: "PUT", path: "/api/v3/write_lp"},
+		{method: "POST", path: "/health"},
+		{method: "POST", path: "/api/v1/health"},
+		{method: "PUT", path: "/ping"},
+	}
+
+	listener := newTestListener()
+
+	var acc testutil.Accumulator
+	startListener(t, listener, &acc)
+
+	for _, tt := range tests {
+		t.Run(tt.method+" "+tt.path, func(t *testing.T) {
+			req, err := http.NewRequest(tt.method, listenerURL(listener, "http", tt.path, ""), nil)
+			require.NoError(t, err)
+
+			resp := do(t, http.DefaultClient, req)
+			require.Equal(t, http.StatusNotFound, resp.status)
+		})
+	}
 }
 
 func TestUnknownPathRequiresAuth(t *testing.T) {

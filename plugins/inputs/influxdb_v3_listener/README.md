@@ -110,6 +110,9 @@ If a `token` is configured, writes have to carry it in the `Authorization`
 header as `Bearer <token>`, `Token <token>` or as the password part of a
 `Basic` credential. The health and ping endpoints are always unauthenticated.
 
+Any other path, and any of the endpoints above requested with a method that is
+not listed for it, is answered with HTTP status 404 as InfluxDB does.
+
 ### Write parameters
 
 The `/api/v3/write_lp` endpoint accepts the query parameters of the InfluxDB 3
@@ -174,8 +177,13 @@ following points:
 - Database names are only required to be non-empty, the character and length
   restrictions of InfluxDB are not enforced.
 - The query, catalog and processing engine endpoints are not served, a request
-  to any of them is answered with HTTP status 404. Requesting a served endpoint
-  with the wrong method gives HTTP status 405 rather than 404.
+  to any of them is answered with HTTP status 404.
+- The health and ping endpoints are unauthenticated, matching the other
+  Telegraf listeners. InfluxDB requires a token for them unless it is started
+  with authorization disabled for those paths.
+- Cross-origin requests are not handled. InfluxDB answers an `OPTIONS`
+  preflight with a permissive set of CORS headers before authenticating, this
+  plugin treats it like any other unknown request.
 - Writes without a timestamp are stamped with the current time in nanosecond
   precision. InfluxDB truncates that time to the requested precision.
 - The health endpoint reports HTTP status 503 once `max_undelivered_metrics`
