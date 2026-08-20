@@ -107,6 +107,14 @@ type namedSet struct {
 	Name   string `json:"name"`
 	Table  string `json:"table"`
 	Elem   []elem `json:"elem,omitempty"`
+	Count  *int64 `json:"count,omitempty"`
+}
+
+func (s *namedSet) count() int64 {
+	if s.Count != nil {
+		return *s.Count
+	}
+	return int64(len(s.Elem))
 }
 
 type elem struct{}

@@ -25,7 +25,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # binary = "nft"
 
   ## Use sudo for command execution, can be restricted to
-  ## "nft --json list table"
+  ## "nft --version", "nft --json list table" and
+  ## "nft --terse --json list table"
   # use_sudo = false
 
   ## Tables to monitor (may use "family table" format, e.g., "inet filter")
@@ -44,7 +45,9 @@ required to transmit the capabilities bounding set to the forked process.
 You may edit your sudo configuration with the following:
 
 ```sudo
+telegraf ALL=(root) NOPASSWD: /usr/bin/nft --version
 telegraf ALL=(root) NOPASSWD: /usr/bin/nft --json list table *
+telegraf ALL=(root) NOPASSWD: /usr/bin/nft --terse --json list table *
 ```
 
 ## Metrics
