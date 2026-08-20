@@ -96,12 +96,15 @@ destination table:
 
 - The metric timestamp is written to `timestamp_column` as Unix microseconds,
   which is the representation expected by a Delta `TIMESTAMP`. The default
-  column name is `timestamp`. Set `timestamp_column = ""` to omit it.
+  column name is `timestamp`. Set `timestamp_column = ""` to omit it. Tables
+  without that column receive the metrics without a timestamp and a warning is
+  logged.
 - Tags and fields become same-named columns. Names that are not columns of
   the destination table are omitted. If a tag and a field share a name that
   maps to a table column, that metric is rejected and the rest of the batch is
   still written.
-- The measurement name is omitted unless `measurement_column` is configured.
+- The measurement name is omitted unless `measurement_column` is configured. The
+  configured column must exist in the destination table.
 
 For example, a metric with the tag `host` and field `usage` can target:
 

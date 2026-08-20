@@ -203,6 +203,18 @@ func (z *Zerobus) openStream() error {
 		z.closeStream()
 		return fmt.Errorf("reading schema of table %q failed: %w", z.Table, err)
 	}
+
+	// The timestamp column is set by default, so a table without it is a valid
+	// destination and only warned about
+	if z.TimestampColumn != "" && !columns[z.TimestampColumn] {
+		z.Log.Warnf("Table %q has no column %q, writing the metrics without a timestamp", z.Table, z.TimestampColumn)
+	}
+	// A measurement column is only set explicitly, so a missing one is a
+	// misconfiguration silently dropping the measurement name from every record
+	if z.MeasurementColumn != "" && !columns[z.MeasurementColumn] {
+		z.closeStream()
+		return fmt.Errorf("table %q has no column %q set as measurement column", z.Table, z.MeasurementColumn)
+	}
 	z.columns = columns
 	z.Log.Debugf("Opened stream to table %q", z.Table)
 
