@@ -1,6 +1,7 @@
 package amqp
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -8,6 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/serializers/influx"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 type MockClient struct {
@@ -157,4 +160,28 @@ func TestConnect(t *testing.T) {
 			tt.errFunc(t, tt.output, err)
 		})
 	}
+}
+
+func TestWriteReturnsErrorWhenBrokerUnavailable(t *testing.T) {
+	serializer := &influx.Serializer{}
+	require.NoError(t, serializer.Init())
+
+	q := &AMQP{
+		Brokers:      []string{DefaultURL},
+		ExchangeType: DefaultExchangeType,
+		AuthMethod:   DefaultAuthMethod,
+		Timeout:      config.Duration(5 * time.Second),
+		Log:          testutil.Logger{},
+		connect: func(*ClientConfig) (Client, error) {
+			return nil, errors.New("could not connect to any broker")
+		},
+	}
+	require.NoError(t, q.Init())
+	q.SetSerializer(serializer)
+
+	// The broker is unreachable, so publish() calls connect() (q.client is
+	// nil) and gets back a plain error that is not amqp.ErrClosed. Write must
+	// surface that error so the framework keeps the metrics buffered for
+	// retry instead of silently dropping them.
+	require.Error(t, q.Write(testutil.MockMetrics()))
 }
