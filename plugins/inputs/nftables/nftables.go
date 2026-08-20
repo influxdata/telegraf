@@ -19,10 +19,11 @@ import (
 var sampleConfig string
 
 type Nftables struct {
-	UseSudo bool     `toml:"use_sudo"`
-	Binary  string   `toml:"binary"`
-	Tables  []string `toml:"tables"`
-	Include []string `toml:"include"`
+	UseSudo  bool     `toml:"use_sudo"`
+	UseTerse string   `toml:"use_terse"`
+	Binary   string   `toml:"binary"`
+	Tables   []string `toml:"tables"`
+	Include  []string `toml:"include"`
 
 	args []string
 }
@@ -58,11 +59,27 @@ func (n *Nftables) Init() error {
 		}
 	}
 
+	// Determine if individual set elements can be omitted using nft --terse
+	var terse bool
+	switch n.UseTerse {
+	case "", "never":
+		terse = false
+	case "auto":
+		terse = !includesSet["sets"]
+	case "always":
+		terse = true
+	default:
+		return fmt.Errorf("unknown use_terse setting %q", n.UseTerse)
+	}
+
 	// Construct the command
-	n.args = make([]string, 0, 3)
+	n.args = make([]string, 0, 4)
 	if n.UseSudo {
 		n.args = append(n.args, n.Binary)
 		n.Binary = "sudo"
+	}
+	if terse {
+		n.args = append(n.args, "--terse")
 	}
 	n.args = append(n.args, "--json", "list", "table")
 	return nil
@@ -137,7 +154,7 @@ func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 		case "sets":
 			for _, set := range nftable.Sets {
 				fields := map[string]interface{}{
-					"count": len(set.Elem),
+					"count": set.count(),
 				}
 				tags := map[string]string{
 					"table": set.Table,

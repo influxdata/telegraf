@@ -101,11 +101,12 @@ func TestCases(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	// Mimic the nft command line arguments
-	var mock, jsonMode bool
+	var mock, jsonMode, terse bool
 	var testcase string
 	flag.BoolVar(&mock, "mock", false, "run test as mock")
 	flag.StringVar(&testcase, "testcase", "", "path to the test directory")
 	flag.BoolVar(&jsonMode, "json", false, "output as JSON")
+	flag.BoolVar(&terse, "terse", false, "omit set elements")
 	flag.Parse()
 
 	if !mock {
