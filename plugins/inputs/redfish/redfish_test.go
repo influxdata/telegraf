@@ -1044,7 +1044,9 @@ func TestSkipChassisWithoutReference(t *testing.T) {
 	// There shouldn't be a request to any /redfish/v1/Chassis path
 	mu.Lock()
 	defer mu.Unlock()
-	require.NotContains(t, requested, "/redfish/v1/Chassis")
+	for _, path := range requested {
+		require.NotContains(t, path, "/redfish/v1/Chassis")
+	}
 }
 
 func TestSkipChassisWithoutThermalAndPowerReference(t *testing.T) {
