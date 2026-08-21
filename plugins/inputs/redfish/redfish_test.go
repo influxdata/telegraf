@@ -776,7 +776,7 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 	u, err := url.Parse(ts.URL)
 	require.NoError(t, err)
 	err = r.Gather(&acc)
-	require.ErrorContains(t, err, "401")
+	require.ErrorContains(t, err, "received status code 401")
 	require.ErrorContains(t, err, "http://"+u.Host+"/redfish/v1/Systems/")
 }
 func TestNoUsernameorPasswordConfiguration(t *testing.T) {
