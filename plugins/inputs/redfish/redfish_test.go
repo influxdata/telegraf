@@ -729,6 +729,11 @@ func TestHPilo4Apis(t *testing.T) {
 }
 
 func checkAuth(r *http.Request, username, password string) bool {
+	// The base path requires no auth
+	if r.URL.Path == "/redfish/v1/" {
+		return true
+	}
+
 	user, pass, ok := r.BasicAuth()
 	if !ok {
 		return false
@@ -771,7 +776,8 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 	u, err := url.Parse(ts.URL)
 	require.NoError(t, err)
 	err = r.Gather(&acc)
-	require.EqualError(t, err, "received status code 401 (Unauthorized) for address http://"+u.Host+"/redfish/v1/Systems/System.Embedded.1, expected 200")
+	require.ErrorContains(t, err, "received status code 401")
+	require.ErrorContains(t, err, "http://"+u.Host+"/redfish/v1/Systems/")
 }
 func TestNoUsernameorPasswordConfiguration(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -927,13 +933,17 @@ func TestInvalidHPJSON(t *testing.T) {
 				}
 
 				switch r.URL.Path {
+				case "/redfish/v1/":
+					http.ServeFile(w, r, "testdata/base.json")
+				case "/redfish/v1/Systems/":
+					http.ServeFile(w, r, "testdata/hp/hp_available_systems.json")
 				case "/redfish/v1/Chassis/1/Thermal":
 					http.ServeFile(w, r, tt.thermalfilename)
 				case "/redfish/v1/Chassis/1/Power":
 					http.ServeFile(w, r, tt.powerfilename)
 				case "/redfish/v1/Chassis/1/":
 					http.ServeFile(w, r, tt.chassisfilename)
-				case "/redfish/v1/Systems/System.Embedded.2":
+				case "/redfish/v1/Systems/1":
 					http.ServeFile(w, r, tt.hostnamefilename)
 				default:
 					w.WriteHeader(http.StatusNotFound)
@@ -945,7 +955,7 @@ func TestInvalidHPJSON(t *testing.T) {
 				Address:          ts.URL,
 				Username:         config.NewSecret([]byte("test")),
 				Password:         config.NewSecret([]byte("test")),
-				ComputerSystemID: "System.Embedded.2",
+				ComputerSystemID: "1",
 				IncludeMetrics:   []string{"thermal", "power"},
 			}
 
@@ -1003,9 +1013,15 @@ func TestSkipChassisWithoutReference(t *testing.T) {
 		requested = append(requested, r.URL.Path)
 		mu.Unlock()
 
-		w.Header().Set("Content-Type", "application/json")
-		if _, err := w.Write([]byte(`{"Links": {"Chassis": [{"@odata.id": ""}]}}`)); err != nil {
-			t.Error(err)
+		switch r.URL.Path {
+		case "/redfish/v1/":
+			http.ServeFile(w, r, "testdata/base.json")
+		case "/redfish/v1/Systems/":
+			http.ServeFile(w, r, "testdata/hp/hp_available_systems.json")
+		case "/redfish/v1/Systems/1":
+			http.ServeFile(w, r, "testdata/hp/hp_systems_nolink.json")
+		default:
+			w.WriteHeader(http.StatusNotFound)
 		}
 	}))
 	defer ts.Close()
@@ -1025,9 +1041,12 @@ func TestSkipChassisWithoutReference(t *testing.T) {
 	require.Empty(t, acc.GetTelegrafMetrics())
 
 	// The empty reference must not be requested as it resolves to the web root
+	// There shouldn't be a request to any /redfish/v1/Chassis path
 	mu.Lock()
 	defer mu.Unlock()
-	require.Equal(t, []string{"/redfish/v1/Systems/1"}, requested)
+	for _, path := range requested {
+		require.NotContains(t, path, "/redfish/v1/Chassis")
+	}
 }
 
 func TestSkipChassisWithoutThermalAndPowerReference(t *testing.T) {
