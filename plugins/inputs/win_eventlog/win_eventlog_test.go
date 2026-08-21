@@ -6,7 +6,49 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
+
+func TestStartAnchorsBookmark(t *testing.T) {
+	plugin := &WinEventLog{EventlogName: "Application", Log: testutil.Logger{}}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	require.Equal(t, evtSubscribeStartAfterBookmark, plugin.subscriptionFlag)
+
+	state, ok := plugin.GetState().(string)
+	require.True(t, ok)
+	require.Contains(t, state, "<Bookmark ")
+}
+
+func TestStartWithoutMatchingEvent(t *testing.T) {
+	plugin := &WinEventLog{
+		EventlogName: "Application",
+		Query:        "*[System[(EventID=999999)]]",
+		Log:          testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	require.Equal(t, evtSubscribeToFutureEvents, plugin.subscriptionFlag)
+
+	// The bookmark holds no position, which is what makes the next run continue at the channel start
+	state, ok := plugin.GetState().(string)
+	require.True(t, ok)
+	require.NotContains(t, state, "<Bookmark ")
+
+	restarted := &WinEventLog{EventlogName: "Application", Query: plugin.Query, Log: testutil.Logger{}}
+	require.NoError(t, restarted.Init())
+	require.NoError(t, restarted.SetState(state))
+	require.Equal(t, evtSubscribeStartAfterBookmark, restarted.subscriptionFlag)
+}
 
 func TestWinEventLog_shouldExcludeEmptyField(t *testing.T) {
 	type args struct {
