@@ -16,12 +16,20 @@ import (
 
 type recordHandler func(ctx context.Context, shard string, r *types.Record)
 
+// kinesisAPI is the subset of the Kinesis API used by the consumer. It
+// exists so the iterator-expiry handling can be exercised with a fake
+// client in tests; *kinesis.Client satisfies it.
+type kinesisAPI interface {
+	GetRecords(ctx context.Context, params *kinesis.GetRecordsInput, optFns ...func(*kinesis.Options)) (*kinesis.GetRecordsOutput, error)
+	GetShardIterator(ctx context.Context, params *kinesis.GetShardIteratorInput, optFns ...func(*kinesis.Options)) (*kinesis.GetShardIteratorOutput, error)
+}
+
 type shardConsumer struct {
 	seqnr    string
 	interval time.Duration
 	log      telegraf.Logger
 
-	client *kinesis.Client
+	client kinesisAPI
 	params *kinesis.GetShardIteratorInput
 
 	onMessage recordHandler
@@ -55,6 +63,16 @@ func (c *shardConsumer) consume(ctx context.Context, shard string) ([]types.Chil
 				continue
 			case errors.As(err, &expiredIterErr):
 				c.log.Tracef("iterator expired for shard %s...", shard)
+				// Recreate the iterator from the latest consumed sequence
+				// number. The startup sequence number (from the checkpoint
+				// store) can be hours or weeks old; a shard iterator
+				// recreated from it rewinds consumption to that position
+				// and all records in between are delivered again.
+				if c.seqnr != "" {
+					seqnr := c.seqnr
+					c.params.ShardIteratorType = types.ShardIteratorTypeAfterSequenceNumber
+					c.params.StartingSequenceNumber = &seqnr
+				}
 				if iter, err = c.iterator(ctx); err != nil {
 					return nil, fmt.Errorf("getting shard iterator failed: %w", err)
 				}
