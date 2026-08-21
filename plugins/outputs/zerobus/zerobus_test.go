@@ -309,16 +309,16 @@ func TestSerializeMetricsRejectsMetrics(t *testing.T) {
 		},
 	}
 
-	plugin := &Zerobus{
-		TimestampColumn: "timestamp",
-		Log:             testutil.Logger{},
-		columns:         map[string]bool{"timestamp": true, "tag1": true, "value": true, "host": true},
-		maxRecords:      100,
-		maxBytes:        1024,
-	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			plugin := &Zerobus{
+				TimestampColumn: "timestamp",
+				Log:             testutil.Logger{},
+				columns:         map[string]bool{"timestamp": true, "tag1": true, "value": true, "host": true},
+				maxRecords:      100,
+				maxBytes:        1024,
+			}
+
 			records, serialized, writeErr := plugin.serializeMetrics(tt.metrics)
 			require.Len(t, records, len(tt.serialized))
 			require.Equal(t, tt.serialized, serialized)
