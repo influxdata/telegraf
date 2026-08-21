@@ -303,7 +303,7 @@ func TestSerializeMetricsRejectsMetrics(t *testing.T) {
 					time.Now(),
 				),
 			},
-			serialized: []int{},
+			serialized: make([]int, 0),
 			rejected:   []int{0},
 			expected:   "exceeding the request limit",
 		},
