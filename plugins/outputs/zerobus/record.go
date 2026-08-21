@@ -20,10 +20,10 @@ import (
 // rather than assumed away.
 func metricToTableSchemaJSON(metric telegraf.Metric, timestampColumn, measurementColumn string, columns map[string]bool) ([]byte, error) {
 	values := make(map[string]interface{}, len(metric.TagList())+len(metric.FieldList())+2)
-	if timestampColumn != "" && columns[timestampColumn] {
+	if timestampColumn != "" {
 		values[timestampColumn] = metric.Time().UnixMicro()
 	}
-	if measurementColumn != "" && columns[measurementColumn] {
+	if measurementColumn != "" {
 		values[measurementColumn] = metric.Name()
 	}
 
