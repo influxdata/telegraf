@@ -25,7 +25,7 @@ type shardConsumer struct {
 	params *kinesis.GetShardIteratorInput
 
 	recoverySeqnr func(context.Context, string) (string, error)
-	onMessage recordHandler
+	onMessage     recordHandler
 }
 
 func (c *shardConsumer) consume(ctx context.Context, shard string) ([]types.ChildShard, error) {
@@ -135,8 +135,8 @@ type consumer struct {
 	shardUpdateInterval time.Duration
 	log                 telegraf.Logger
 
-	onMessage recordHandler
-	position  func(shard string) string
+	onMessage     recordHandler
+	position      func(shard string) string
 	recoverySeqnr func(context.Context, string) (string, error)
 
 	client *kinesis.Client
@@ -329,11 +329,11 @@ func (c *consumer) updateShardConsumers(ctx context.Context) error {
 func (c *consumer) startShardConsumer(ctx context.Context, id, seqnr string) {
 	c.log.Tracef("starting consumer for shard %s at sequence number %q...", id, seqnr)
 	sc := &shardConsumer{
-		seqnr:     seqnr,
-		interval:  c.pollInterval,
-		log:       c.log,
-		onMessage: c.onMessage,
-		client:    c.client,
+		seqnr:         seqnr,
+		interval:      c.pollInterval,
+		log:           c.log,
+		onMessage:     c.onMessage,
+		client:        c.client,
 		recoverySeqnr: c.recoverySeqnr,
 		params: &kinesis.GetShardIteratorInput{
 			ShardId:           &id,

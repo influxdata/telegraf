@@ -176,6 +176,7 @@ func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
 }
 
+//nolint:bodyclose // AWS SDK consumes and closes the mocked response bodies
 func TestExpiredIteratorUsesCheckpoint(t *testing.T) {
 	const shardID = "shard-000"
 
@@ -184,6 +185,11 @@ func TestExpiredIteratorUsesCheckpoint(t *testing.T) {
 		jsonResponse(http.StatusBadRequest, `{"__type":"ExpiredIteratorException","message":"expired"}`),
 		jsonResponse(http.StatusOK, `{"ShardIterator":"iterator-2"}`),
 		jsonResponse(http.StatusOK, `{"Records":[]}`),
+	}
+	for _, response := range responses {
+		t.Cleanup(func() {
+			require.NoError(t, response.Body.Close())
+		})
 	}
 	client := kinesis.NewFromConfig(aws.Config{
 		Region:       "us-east-1",
@@ -216,7 +222,7 @@ func TestExpiredIteratorUsesCheckpoint(t *testing.T) {
 	_, err := consumer.consume(context.Background(), shardID)
 	require.NoError(t, err)
 	require.Equal(t, 1, recoveryCalls)
-	require.Equal(t, "checkpoint-123", consumer.params.StartingSequenceNumber)
+	require.Equal(t, "checkpoint-123", aws.ToString(consumer.params.StartingSequenceNumber))
 }
 
 func jsonResponse(status int, body string) *http.Response {
