@@ -413,8 +413,6 @@ following works:
 - github.com/spiffe/go-spiffe [Apache License 2.0](https://github.com/spiffe/go-spiffe/blob/main/LICENSE)
 - github.com/srebhan/cborquery [MIT License](https://github.com/srebhan/cborquery/blob/main/LICENSE)
 - github.com/srebhan/protobufquery [MIT License](https://github.com/srebhan/protobufquery/blob/master/LICENSE)
-- github.com/stretchr/objx [MIT License](https://github.com/stretchr/objx/blob/master/LICENSE)
-- github.com/stretchr/testify [MIT License](https://github.com/stretchr/testify/blob/master/LICENSE)
 - github.com/tdrn-org/go-hue [MIT License](https://github.com/tdrn-org/go-log/blob/main/LICENSE)
 - github.com/tdrn-org/go-nsdp [MIT License](https://github.com/tdrn-org/go-nsdp/blob/main/LICENSE)
 - github.com/tdrn-org/go-tr064 [Apache License 2.0](https://github.com/tdrn-org/go-tr064/blob/main/LICENSE)
