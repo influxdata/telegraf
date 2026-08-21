@@ -389,7 +389,7 @@ func (w *WinEventLog) anchorBookmark() (bool, error) {
 	var eventHandle evtHandle
 	var returned uint32
 	if err := evtNext(queryHandle, 1, &eventHandle, 0, 0, &returned); err != nil {
-		if errors.Is(err, errNoMoreItems) || errors.Is(err, errInvalidOperation) {
+		if errors.Is(err, errNoMoreItems) || (errors.Is(err, errInvalidOperation) && returned == 0) {
 			return false, nil
 		}
 		return false, fmt.Errorf("getting newest event failed: %w", err)
