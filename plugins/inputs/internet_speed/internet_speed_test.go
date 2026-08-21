@@ -113,12 +113,17 @@ func TestLocalAddress(t *testing.T) {
 		{
 			name:         "IPv4 address",
 			localAddress: "127.0.0.1",
-			expected:     &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1)},
+			expected:     &net.TCPAddr{IP: net.IP{127, 0, 0, 1}},
 		},
 		{
 			name:         "IPv6 address",
 			localAddress: "::1",
 			expected:     &net.TCPAddr{IP: net.IPv6loopback},
+		},
+		{
+			name:         "IPv6 address with zone",
+			localAddress: "fe80::1%eth0",
+			expected:     &net.TCPAddr{IP: net.ParseIP("fe80::1"), Zone: "eth0"},
 		},
 	}
 
@@ -157,7 +162,7 @@ func TestLocalAddressInvalid(t *testing.T) {
 				LocalAddress: tt.localAddress,
 				Log:          testutil.Logger{},
 			}
-			require.ErrorContains(t, plugin.Init(), "resolving local address failed")
+			require.ErrorContains(t, plugin.Init(), "parsing local address failed")
 		})
 	}
 }

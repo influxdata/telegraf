@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"net"
+	"net/netip"
 	"os"
 	"time"
 
@@ -65,14 +66,17 @@ func (is *InternetSpeed) Init() error {
 		return fmt.Errorf("error compiling server ID filters: %w", err)
 	}
 
-	// The speedtest library only logs a resolution failure in its debug output
-	// and then silently uses the default route, so resolve the address the same
-	// way it does to reject unusable values here.
+	// The speedtest library only logs an unusable local address in its debug
+	// output and then silently uses the default route, so reject such values
+	// here. The address is parsed instead of resolved to keep Init off the
+	// network; whether it is assigned is left to the bind during the tests,
+	// which is retried every interval.
 	if is.LocalAddress != "" {
-		is.localAddr, err = net.ResolveTCPAddr("tcp", net.JoinHostPort(is.LocalAddress, "0"))
+		addr, err := netip.ParseAddr(is.LocalAddress)
 		if err != nil {
-			return fmt.Errorf("resolving local address failed: %w", err)
+			return fmt.Errorf("parsing local address failed: %w", err)
 		}
+		is.localAddr = net.TCPAddrFromAddrPort(netip.AddrPortFrom(addr, 0))
 	}
 
 	return nil
