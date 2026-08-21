@@ -73,8 +73,9 @@ func (z *Zerobus) Init() error {
 
 	// Zerobus caps a request at 10 MiB and 100k records, so the plugin splits
 	// batches along the protocol limits instead of the agent's metric_batch_size.
-	// The byte budget applies to all records of a request together and reserves
-	// headroom for the surrounding request fields.
+	// The byte budget applies to all records of a request together and repeats the
+	// 64 KiB the SDK keeps below the service limit, as its constants are internal.
+	// The kilobyte on top covers the request fields recordSize does not measure.
 	z.maxRecords = 100000
 	z.maxBytes = 10*1024*1024 - 64*1024 - 1024
 
