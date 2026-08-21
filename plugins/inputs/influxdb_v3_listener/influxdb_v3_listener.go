@@ -425,25 +425,27 @@ func (h *InfluxDBV3Listener) handleWrite() http.HandlerFunc {
 }
 
 // readBody returns the request body, limited to the maximum body size and
-// decompressed if the client sent it compressed. The limit is applied to the
-// decompressed data, as a compressed body of a few megabytes can otherwise
-// expand to an arbitrary amount of memory.
+// decompressed if the client sent it compressed. A compressed body is limited
+// on both ends, as InfluxDB does: the compressed size bounds how much of an
+// endless stream is read, the decompressed size keeps a small body from
+// expanding to an arbitrary amount of memory.
 func (h *InfluxDBV3Listener) readBody(res http.ResponseWriter, req *http.Request) ([]byte, error) {
+	body := http.MaxBytesReader(res, req.Body, int64(h.MaxBodySize))
 	if req.Header.Get("Content-Encoding") == "gzip" {
-		reader, err := gzip.NewReader(req.Body)
+		reader, err := gzip.NewReader(body)
 		if err != nil {
 			return nil, fmt.Errorf("decompressing request body failed: %w", err)
 		}
 		defer reader.Close()
 
-		body, err := io.ReadAll(http.MaxBytesReader(res, reader, int64(h.MaxBodySize)))
+		decompressed, err := io.ReadAll(http.MaxBytesReader(res, reader, int64(h.MaxBodySize)))
 		if err != nil {
 			return nil, fmt.Errorf("reading decompressed request body failed: %w", err)
 		}
-		return body, nil
+		return decompressed, nil
 	}
 
-	return io.ReadAll(http.MaxBytesReader(res, req.Body, int64(h.MaxBodySize)))
+	return io.ReadAll(body)
 }
 
 func (h *InfluxDBV3Listener) newParser(r io.Reader, precision time.Duration) (streamParser, error) {
