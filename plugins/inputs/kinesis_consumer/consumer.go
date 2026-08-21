@@ -94,9 +94,20 @@ func (c *shardConsumer) consume(ctx context.Context, shard string) ([]types.Chil
 	}
 }
 
+func (c *shardConsumer) iteratorParams() *kinesis.GetShardIteratorInput {
+	params := *c.params
+	if c.seqnr != "" {
+		seqnr := c.seqnr
+		params.ShardIteratorType = types.ShardIteratorTypeAfterSequenceNumber
+		params.StartingSequenceNumber = &seqnr
+	}
+
+	return &params
+}
+
 func (c *shardConsumer) iterator(ctx context.Context) (*string, error) {
 	for {
-		resp, err := c.client.GetShardIterator(ctx, c.params)
+		resp, err := c.client.GetShardIterator(ctx, c.iteratorParams())
 		if err != nil {
 			var throughputErr *types.ProvisionedThroughputExceededException
 			if errors.As(err, &throughputErr) {
@@ -325,10 +336,6 @@ func (c *consumer) startShardConsumer(ctx context.Context, id, seqnr string) {
 			ShardIteratorType: c.iterType,
 			StreamName:        &c.stream,
 		},
-	}
-	if seqnr != "" {
-		sc.params.ShardIteratorType = types.ShardIteratorTypeAfterSequenceNumber
-		sc.params.StartingSequenceNumber = &seqnr
 	}
 
 	c.Lock()
