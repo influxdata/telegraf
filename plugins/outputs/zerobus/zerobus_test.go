@@ -12,7 +12,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -272,11 +271,11 @@ func TestMetricToTableSchemaJSONRejectsInvalidMetric(t *testing.T) {
 
 func TestSerializeMetricsRejectsMetrics(t *testing.T) {
 	tests := []struct {
-		name     string
-		metrics  []telegraf.Metric
-		accepted int
-		rejected []int
-		expected string
+		name       string
+		metrics    []telegraf.Metric
+		serialized []int
+		rejected   []int
+		expected   string
 	}{
 		{
 			name: "tag and field of the same name",
@@ -290,9 +289,9 @@ func TestSerializeMetricsRejectsMetrics(t *testing.T) {
 				),
 				testutil.TestMetric(3),
 			},
-			accepted: 2,
-			rejected: []int{1},
-			expected: `field "host" conflicts`,
+			serialized: []int{0, 2},
+			rejected:   []int{1},
+			expected:   `field "host" conflicts`,
 		},
 		{
 			name: "metric exceeding the request limit",
@@ -304,8 +303,9 @@ func TestSerializeMetricsRejectsMetrics(t *testing.T) {
 					time.Now(),
 				),
 			},
-			rejected: []int{0},
-			expected: "exceeding the request limit",
+			serialized: []int{},
+			rejected:   []int{0},
+			expected:   "exceeding the request limit",
 		},
 	}
 
@@ -319,13 +319,13 @@ func TestSerializeMetricsRejectsMetrics(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			records, err := plugin.serializeMetrics(tt.metrics)
-			require.Len(t, records, tt.accepted)
+			records, serialized, writeErr := plugin.serializeMetrics(tt.metrics)
+			require.Len(t, records, len(tt.serialized))
+			require.Equal(t, tt.serialized, serialized)
 
-			var writeErr *internal.PartialWriteError
-			require.ErrorAs(t, err, &writeErr)
+			require.NotNil(t, writeErr)
 			require.Equal(t, tt.rejected, writeErr.MetricsReject)
-			require.ErrorContains(t, err, tt.expected)
+			require.ErrorContains(t, writeErr, tt.expected)
 		})
 	}
 }

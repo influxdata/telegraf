@@ -139,7 +139,8 @@ Each Telegraf batch is split into ingest requests that stay within the SDK's
 per-request limits and Zerobus's [record size][zerobus-quotas] limit. The write
 succeeds only once Databricks has acknowledged every record. A metric that
 cannot be encoded, for example because a tag and a field share a name, is
-rejected on its own so the rest of the batch is still written.
+rejected on its own so the rest of the batch is still written. Rejected metrics
+are dropped instead of being retried, as they would fail again.
 
 A failing write returns an error and Telegraf retries the buffered batch on a
 new stream. Records the failed attempt already got acknowledged can therefore be

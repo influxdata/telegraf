@@ -119,16 +119,9 @@ func (z *Zerobus) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	// Only log the metrics rejected during serialization for now. A failing write
-	// below returns an error for the whole batch, so Telegraf retries them
-	// together with the valid metrics.
-	records, err := z.serializeMetrics(metrics)
-	if err != nil {
-		z.Log.Errorf("Serializing metrics failed: %v; dropping the rejected metrics", err)
-	}
-	if len(records) == 0 {
-		return nil
-	}
+	// Metrics that cannot be serialized are rejected below, so Telegraf drops
+	// them instead of retrying metrics that fail the same way again.
+	records, serialized, writeErr := z.serializeMetrics(metrics)
 
 	// Drop the stream on failure and let Telegraf retry the whole batch on a new
 	// one. Records already acknowledged by the failed attempt may therefore be
@@ -140,12 +133,20 @@ func (z *Zerobus) Write(metrics []telegraf.Metric) error {
 		}
 	}
 	// Report success only once Databricks acknowledged every record of the batch.
+	// Without records to wait for, this reports a stream that failed on its own.
 	if err := z.stream.Flush(); err != nil {
 		z.closeStream()
 		return fmt.Errorf("flushing batch failed: %w", err)
 	}
+	if writeErr == nil {
+		return nil
+	}
 
-	return nil
+	// The acknowledged records prove the metrics behind them were written, so
+	// accept those and let Telegraf drop the rejected ones instead of counting
+	// them as written.
+	writeErr.MetricsAccept = serialized
+	return writeErr
 }
 
 func (z *Zerobus) Close() error {
@@ -231,11 +232,12 @@ func (z *Zerobus) closeStream() {
 	z.columns = nil
 }
 
-// Serialize the metrics to the records of the destination table. Metrics that
-// cannot be encoded or do not fit a single request are rejected, so the rest of
-// the batch can still be written.
-func (z *Zerobus) serializeMetrics(metrics []telegraf.Metric) ([][]byte, error) {
+// Serialize the metrics to the records of the destination table and report the
+// metrics behind them. Metrics that cannot be encoded or do not fit a single
+// request are rejected, so the rest of the batch can still be written.
+func (z *Zerobus) serializeMetrics(metrics []telegraf.Metric) ([][]byte, []int, *internal.PartialWriteError) {
 	records := make([][]byte, 0, len(metrics))
+	serialized := make([]int, 0, len(metrics))
 	var writeErr internal.PartialWriteError
 
 	for i, m := range metrics {
@@ -256,15 +258,16 @@ func (z *Zerobus) serializeMetrics(metrics []telegraf.Metric) ([][]byte, error) 
 		}
 
 		records = append(records, record)
+		serialized = append(serialized, i)
 	}
 
-	// Report the rejected metrics, the accepted ones are only known once the
-	// endpoint acknowledged the records
+	// Report the rejected metrics, the serialized ones are only accepted once the
+	// endpoint acknowledged their records
 	if len(writeErr.MetricsReject) == 0 {
-		return records, nil
+		return records, serialized, nil
 	}
 	writeErr.Err = fmt.Errorf("rejected %d metric(s): %w", len(writeErr.MetricsReject), errors.Join(writeErr.MetricsRejectErrors...))
-	return records, &writeErr
+	return records, serialized, &writeErr
 }
 
 // Group the records into requests within the record-count and size limits. Each
