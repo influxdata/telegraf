@@ -14,8 +14,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
+	testutil_serializers "github.com/influxdata/telegraf/testutil/serializers"
 )
 
 func BenchmarkRemoteWrite(b *testing.B) {
@@ -1230,7 +1230,7 @@ func prompbToHistogramText(data []byte) ([]byte, error) {
 
 func BenchmarkSerialize(b *testing.B) {
 	s := &Serializer{Log: &testutil.CaptureLogger{}}
-	metrics := serializers.BenchmarkMetrics(b)
+	metrics := testutil_serializers.BenchmarkMetrics()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := s.Serialize(metrics[i%len(metrics)])
@@ -1240,7 +1240,7 @@ func BenchmarkSerialize(b *testing.B) {
 
 func BenchmarkSerializeBatch(b *testing.B) {
 	s := &Serializer{Log: &testutil.CaptureLogger{}}
-	m := serializers.BenchmarkMetrics(b)
+	m := testutil_serializers.BenchmarkMetrics()
 	metrics := m[:]
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

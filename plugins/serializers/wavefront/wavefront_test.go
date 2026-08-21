@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	testutil_serializers "github.com/influxdata/telegraf/testutil/serializers"
 )
 
 func TestBuildTags(t *testing.T) {
@@ -291,7 +291,7 @@ func TestSerializeMetricPrefix(t *testing.T) {
 
 func BenchmarkSerialize(b *testing.B) {
 	s := &Serializer{}
-	metrics := serializers.BenchmarkMetrics(b)
+	metrics := testutil_serializers.BenchmarkMetrics()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := s.Serialize(metrics[i%len(metrics)])
@@ -301,7 +301,7 @@ func BenchmarkSerialize(b *testing.B) {
 
 func BenchmarkSerializeBatch(b *testing.B) {
 	s := &Serializer{}
-	m := serializers.BenchmarkMetrics(b)
+	m := testutil_serializers.BenchmarkMetrics()
 	metrics := m[:]
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
