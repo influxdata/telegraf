@@ -1,10 +1,17 @@
 package kinesis_consumer
 
 import (
+	"context"
 	"encoding/base64"
+	"io"
+	"net/http"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/kinesis"
 	"github.com/aws/aws-sdk-go-v2/service/kinesis/types"
 	"github.com/stretchr/testify/require"
 
@@ -160,5 +167,72 @@ func TestOnMessage(t *testing.T) {
 				require.Contains(t, message, tt.expectedContent)
 			}
 		})
+	}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+//nolint:bodyclose // AWS SDK consumes and closes the mocked response bodies
+func TestExpiredIteratorUsesCheckpoint(t *testing.T) {
+	const shardID = "shard-000"
+
+	responses := []*http.Response{
+		jsonResponse(http.StatusOK, `{"ShardIterator":"iterator-1"}`),
+		jsonResponse(http.StatusBadRequest, `{"__type":"ExpiredIteratorException","message":"expired"}`),
+		jsonResponse(http.StatusOK, `{"ShardIterator":"iterator-2"}`),
+		jsonResponse(http.StatusOK, `{"Records":[]}`),
+	}
+	for _, response := range responses {
+		t.Cleanup(func() {
+			require.NoError(t, response.Body.Close())
+		})
+	}
+	client := kinesis.NewFromConfig(aws.Config{
+		Region:       "us-east-1",
+		Credentials:  credentials.NewStaticCredentialsProvider("key", "secret", ""),
+		BaseEndpoint: aws.String("http://kinesis.test"),
+		HTTPClient: &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+			response := responses[0]
+			responses = responses[1:]
+			return response, nil
+		})},
+	})
+
+	recoveryCalls := 0
+	consumer := &shardConsumer{
+		interval: time.Millisecond,
+		log:      &testutil.Logger{},
+		client:   client,
+		params: &kinesis.GetShardIteratorInput{
+			ShardId:           aws.String(shardID),
+			ShardIteratorType: types.ShardIteratorTypeTrimHorizon,
+			StreamName:        aws.String("stream"),
+		},
+		recoverySeqnr: func(_ context.Context, shard string) (string, error) {
+			recoveryCalls++
+			require.Equal(t, shardID, shard)
+			return "checkpoint-123", nil
+		},
+	}
+
+	_, err := consumer.consume(context.Background(), shardID)
+	require.NoError(t, err)
+	require.Equal(t, 1, recoveryCalls)
+	require.Equal(t, "checkpoint-123", aws.ToString(consumer.params.StartingSequenceNumber))
+}
+
+func jsonResponse(status int, body string) *http.Response {
+	header := http.Header{"Content-Type": {"application/x-amz-json-1.1"}}
+	if status != http.StatusOK {
+		header.Set("X-Amzn-Errortype", "ExpiredIteratorException")
+	}
+	return &http.Response{
+		StatusCode: status,
+		Header:     header,
+		Body:       io.NopCloser(strings.NewReader(body)),
 	}
 }

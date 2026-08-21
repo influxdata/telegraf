@@ -24,7 +24,8 @@ type shardConsumer struct {
 	client *kinesis.Client
 	params *kinesis.GetShardIteratorInput
 
-	onMessage recordHandler
+	recoverySeqnr func(context.Context, string) (string, error)
+	onMessage     recordHandler
 }
 
 func (c *shardConsumer) consume(ctx context.Context, shard string) ([]types.ChildShard, error) {
@@ -54,7 +55,19 @@ func (c *shardConsumer) consume(ctx context.Context, shard string) ([]types.Chil
 				time.Sleep(time.Second)
 				continue
 			case errors.As(err, &expiredIterErr):
+				// recover iterator according to user configuration in callback
 				c.log.Tracef("iterator expired for shard %s...", shard)
+				if c.recoverySeqnr != nil {
+					seqnr, err := c.recoverySeqnr(ctx, shard)
+					switch {
+					case errors.Is(err, context.Canceled):
+					case err != nil:
+						c.log.Warnf("could not retrieve DynamoDB checkpoint for shard %s; using initial seqnr: %v", shard, err)
+					default:
+						c.params.ShardIteratorType = types.ShardIteratorTypeAfterSequenceNumber
+						c.params.StartingSequenceNumber = aws.String(seqnr)
+					}
+				}
 				if iter, err = c.iterator(ctx); err != nil {
 					return nil, fmt.Errorf("getting shard iterator failed: %w", err)
 				}
@@ -122,8 +135,9 @@ type consumer struct {
 	shardUpdateInterval time.Duration
 	log                 telegraf.Logger
 
-	onMessage recordHandler
-	position  func(shard string) string
+	onMessage     recordHandler
+	position      func(shard string) string
+	recoverySeqnr func(context.Context, string) (string, error)
 
 	client *kinesis.Client
 
@@ -315,11 +329,12 @@ func (c *consumer) updateShardConsumers(ctx context.Context) error {
 func (c *consumer) startShardConsumer(ctx context.Context, id, seqnr string) {
 	c.log.Tracef("starting consumer for shard %s at sequence number %q...", id, seqnr)
 	sc := &shardConsumer{
-		seqnr:     seqnr,
-		interval:  c.pollInterval,
-		log:       c.log,
-		onMessage: c.onMessage,
-		client:    c.client,
+		seqnr:         seqnr,
+		interval:      c.pollInterval,
+		log:           c.log,
+		onMessage:     c.onMessage,
+		client:        c.client,
+		recoverySeqnr: c.recoverySeqnr,
 		params: &kinesis.GetShardIteratorInput{
 			ShardId:           &id,
 			ShardIteratorType: c.iterType,
