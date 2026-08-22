@@ -51,6 +51,40 @@ func TestIteratorParamsFollowConsumedSequenceNumber(t *testing.T) {
 	require.Nil(t, sc.params.StartingSequenceNumber)
 }
 
+func TestIteratorParamsPreferCheckpointedSequenceNumber(t *testing.T) {
+	var checkpoint string
+	sc := &shardConsumer{
+		params: &kinesis.GetShardIteratorInput{
+			ShardId:           aws.String("shard-000"),
+			ShardIteratorType: types.ShardIteratorTypeLatest,
+			StreamName:        aws.String("foo"),
+		},
+		position: func() string { return checkpoint },
+	}
+
+	params := sc.iteratorParams()
+	require.Equal(t, types.ShardIteratorTypeLatest, params.ShardIteratorType)
+	require.Nil(t, params.StartingSequenceNumber)
+
+	sc.seqnr = "200"
+	params = sc.iteratorParams()
+	require.Equal(t, types.ShardIteratorTypeAfterSequenceNumber, params.ShardIteratorType)
+	require.NotNil(t, params.StartingSequenceNumber)
+	require.Equal(t, "200", *params.StartingSequenceNumber)
+
+	checkpoint = "100"
+	params = sc.iteratorParams()
+	require.Equal(t, types.ShardIteratorTypeAfterSequenceNumber, params.ShardIteratorType)
+	require.NotNil(t, params.StartingSequenceNumber)
+	require.Equal(t, "100", *params.StartingSequenceNumber)
+
+	checkpoint = "300"
+	params = sc.iteratorParams()
+	require.Equal(t, types.ShardIteratorTypeAfterSequenceNumber, params.ShardIteratorType)
+	require.NotNil(t, params.StartingSequenceNumber)
+	require.Equal(t, "300", *params.StartingSequenceNumber)
+}
+
 func TestOnMessage(t *testing.T) {
 	// Prepare messages
 	zlibBytpes, err := base64.StdEncoding.DecodeString(

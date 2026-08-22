@@ -21,8 +21,9 @@ type shardConsumer struct {
 	interval time.Duration
 	log      telegraf.Logger
 
-	client *kinesis.Client
-	params *kinesis.GetShardIteratorInput
+	client   *kinesis.Client
+	params   *kinesis.GetShardIteratorInput
+	position func() string
 
 	onMessage recordHandler
 }
@@ -95,9 +96,15 @@ func (c *shardConsumer) consume(ctx context.Context, shard string) ([]types.Chil
 }
 
 func (c *shardConsumer) iteratorParams() *kinesis.GetShardIteratorInput {
+	seqnr := c.seqnr
+	if c.position != nil {
+		if checkpoint := c.position(); checkpoint != "" {
+			seqnr = checkpoint
+		}
+	}
+
 	params := *c.params
-	if c.seqnr != "" {
-		seqnr := c.seqnr
+	if seqnr != "" {
 		params.ShardIteratorType = types.ShardIteratorTypeAfterSequenceNumber
 		params.StartingSequenceNumber = &seqnr
 	}
@@ -107,7 +114,8 @@ func (c *shardConsumer) iteratorParams() *kinesis.GetShardIteratorInput {
 
 func (c *shardConsumer) iterator(ctx context.Context) (*string, error) {
 	for {
-		resp, err := c.client.GetShardIterator(ctx, c.iteratorParams())
+		params := c.iteratorParams()
+		resp, err := c.client.GetShardIterator(ctx, params)
 		if err != nil {
 			var throughputErr *types.ProvisionedThroughputExceededException
 			if errors.As(err, &throughputErr) {
@@ -120,7 +128,7 @@ func (c *shardConsumer) iterator(ctx context.Context) (*string, error) {
 
 			return nil, err
 		}
-		c.log.Tracef("successfully updated iterator for shard %s (%s)...", *c.params.ShardId, c.seqnr)
+		c.log.Tracef("successfully updated iterator for shard %s (%s)...", *c.params.ShardId, aws.ToString(params.StartingSequenceNumber))
 		return resp.ShardIterator, nil
 	}
 }
@@ -336,6 +344,9 @@ func (c *consumer) startShardConsumer(ctx context.Context, id, seqnr string) {
 			ShardIteratorType: c.iterType,
 			StreamName:        &c.stream,
 		},
+	}
+	if c.position != nil {
+		sc.position = func() string { return c.position(id) }
 	}
 
 	c.Lock()
