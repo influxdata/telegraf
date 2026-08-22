@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/kinesis"
 	"github.com/aws/aws-sdk-go-v2/service/kinesis/types"
 	"github.com/stretchr/testify/require"
 
@@ -19,6 +20,69 @@ func TestInvalidCoding(t *testing.T) {
 		ContentEncoding: "notsupported",
 	}
 	require.ErrorContains(t, plugin.Init(), "unknown content encoding")
+}
+
+func TestIteratorParamsFollowConsumedSequenceNumber(t *testing.T) {
+	sc := &shardConsumer{
+		params: &kinesis.GetShardIteratorInput{
+			ShardId:           aws.String("shard-000"),
+			ShardIteratorType: types.ShardIteratorTypeLatest,
+			StreamName:        aws.String("foo"),
+		},
+	}
+
+	params := sc.iteratorParams()
+	require.Equal(t, types.ShardIteratorTypeLatest, params.ShardIteratorType)
+	require.Nil(t, params.StartingSequenceNumber)
+
+	sc.seqnr = "100"
+	params = sc.iteratorParams()
+	require.Equal(t, types.ShardIteratorTypeAfterSequenceNumber, params.ShardIteratorType)
+	require.NotNil(t, params.StartingSequenceNumber)
+	require.Equal(t, "100", *params.StartingSequenceNumber)
+
+	sc.seqnr = "200"
+	params = sc.iteratorParams()
+	require.Equal(t, types.ShardIteratorTypeAfterSequenceNumber, params.ShardIteratorType)
+	require.NotNil(t, params.StartingSequenceNumber)
+	require.Equal(t, "200", *params.StartingSequenceNumber)
+
+	require.Equal(t, types.ShardIteratorTypeLatest, sc.params.ShardIteratorType)
+	require.Nil(t, sc.params.StartingSequenceNumber)
+}
+
+func TestIteratorParamsPreferCheckpointedSequenceNumber(t *testing.T) {
+	var checkpoint string
+	sc := &shardConsumer{
+		params: &kinesis.GetShardIteratorInput{
+			ShardId:           aws.String("shard-000"),
+			ShardIteratorType: types.ShardIteratorTypeLatest,
+			StreamName:        aws.String("foo"),
+		},
+		position: func() string { return checkpoint },
+	}
+
+	params := sc.iteratorParams()
+	require.Equal(t, types.ShardIteratorTypeLatest, params.ShardIteratorType)
+	require.Nil(t, params.StartingSequenceNumber)
+
+	sc.seqnr = "200"
+	params = sc.iteratorParams()
+	require.Equal(t, types.ShardIteratorTypeAfterSequenceNumber, params.ShardIteratorType)
+	require.NotNil(t, params.StartingSequenceNumber)
+	require.Equal(t, "200", *params.StartingSequenceNumber)
+
+	checkpoint = "100"
+	params = sc.iteratorParams()
+	require.Equal(t, types.ShardIteratorTypeAfterSequenceNumber, params.ShardIteratorType)
+	require.NotNil(t, params.StartingSequenceNumber)
+	require.Equal(t, "100", *params.StartingSequenceNumber)
+
+	checkpoint = "300"
+	params = sc.iteratorParams()
+	require.Equal(t, types.ShardIteratorTypeAfterSequenceNumber, params.ShardIteratorType)
+	require.NotNil(t, params.StartingSequenceNumber)
+	require.Equal(t, "300", *params.StartingSequenceNumber)
 }
 
 func TestOnMessage(t *testing.T) {
