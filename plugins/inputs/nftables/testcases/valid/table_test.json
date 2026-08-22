@@ -202,6 +202,19 @@
     {
       "set": {
         "family": "inet",
+        "name": "terse_set",
+        "table": "test",
+        "type": "ipv6_addr",
+        "handle": 19,
+        "comment": "automatically managed",
+        "size": 10000000000,
+        "count": 8765432100,
+        "flags": []
+      }
+    },
+    {
+      "set": {
+        "family": "inet",
         "name": "empty_set",
         "table": "test",
         "type": "ipv4_addr",
