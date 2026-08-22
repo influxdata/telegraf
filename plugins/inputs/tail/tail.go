@@ -320,7 +320,7 @@ func (t *Tail) tailNewFiles() error {
 					Pipe:      t.Pipe,
 					Logger:    tail.DiscardingLogger,
 					OpenReaderFunc: func(rd io.Reader) io.Reader {
-						r, _ := utfbom.Skip(t.decoder.Reader(rd))
+						r, _ := utfbom.Skip(t.decoder.Reader(newRetryingReader(rd)))
 						return r
 					},
 				})
