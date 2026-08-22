@@ -33,6 +33,13 @@ type WriteConfig struct {
 	MaxRetry         int  `toml:"max_retry"`
 	MaxMessageBytes  int  `toml:"max_message_bytes"`
 	IdempotentWrites bool `toml:"idempotent_writes"`
+
+	// Timeouts bounding a produce request. All default to the sarama defaults
+	// when unset (zero).
+	NetDialTimeout  config.Duration `toml:"net_dial_timeout"`
+	NetReadTimeout  config.Duration `toml:"net_read_timeout"`
+	NetWriteTimeout config.Duration `toml:"net_write_timeout"`
+	ProducerTimeout config.Duration `toml:"producer_timeout"`
 }
 
 // SetConfig on the sarama.Config object from the WriteConfig struct.
@@ -47,6 +54,22 @@ func (k *WriteConfig) SetConfig(cfg *sarama.Config, log telegraf.Logger) error {
 	if cfg.Producer.Idempotent {
 		cfg.Net.MaxOpenRequests = 1
 	}
+
+	// Only override the sarama defaults if the user configured a value. Sarama
+	// rejects non-positive values for all of these in its own validation.
+	if k.NetDialTimeout > 0 {
+		cfg.Net.DialTimeout = time.Duration(k.NetDialTimeout)
+	}
+	if k.NetReadTimeout > 0 {
+		cfg.Net.ReadTimeout = time.Duration(k.NetReadTimeout)
+	}
+	if k.NetWriteTimeout > 0 {
+		cfg.Net.WriteTimeout = time.Duration(k.NetWriteTimeout)
+	}
+	if k.ProducerTimeout > 0 {
+		cfg.Producer.Timeout = time.Duration(k.ProducerTimeout)
+	}
+
 	return k.Config.SetConfig(cfg, log)
 }
 
