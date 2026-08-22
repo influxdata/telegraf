@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net"
+	"net/netip"
 	"os"
 	"time"
 
@@ -42,6 +44,7 @@ type InternetSpeed struct {
 	server       *speedtest.Server // The main(best) server
 	servers      speedtest.Servers // Auxiliary servers
 	serverFilter filter.Filter
+	localAddr    *net.TCPAddr
 }
 
 func (*InternetSpeed) SampleConfig() string {
@@ -63,6 +66,19 @@ func (is *InternetSpeed) Init() error {
 		return fmt.Errorf("error compiling server ID filters: %w", err)
 	}
 
+	// The speedtest library only logs an unusable local address in its debug
+	// output and then silently uses the default route, so reject such values
+	// here. The address is parsed instead of resolved to keep Init off the
+	// network; whether it is assigned is left to the bind during the tests,
+	// which is retried every interval.
+	if is.LocalAddress != "" {
+		addr, err := netip.ParseAddr(is.LocalAddress)
+		if err != nil {
+			return fmt.Errorf("parsing local address failed: %w", err)
+		}
+		is.localAddr = net.TCPAddrFromAddrPort(netip.AddrPortFrom(addr, 0))
+	}
+
 	return nil
 }
 
@@ -81,10 +97,23 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("ping test failed: %w", err)
 	}
 
-	analyzer := speedtest.NewPacketLossAnalyzer(&speedtest.PacketLossAnalyzerOptions{
+	// The analyzer creates its own dialers and does not use the source address
+	// of the client, so set the dialers explicitly to keep the packet-loss test
+	// on the same link as the other measurements. The sending timeout is set to
+	// the library default as it is also the timeout of those dialers.
+	options := &speedtest.PacketLossAnalyzerOptions{
 		PacketSendingInterval: time.Millisecond * 100,
+		PacketSendingTimeout:  time.Second * 5,
 		SamplingDuration:      time.Second * 15,
-	})
+	}
+	if is.localAddr != nil {
+		options.TCPDialer = &net.Dialer{Timeout: options.PacketSendingTimeout, LocalAddr: is.localAddr}
+		options.UDPDialer = &net.Dialer{
+			Timeout:   options.PacketSendingTimeout,
+			LocalAddr: &net.UDPAddr{IP: is.localAddr.IP, Zone: is.localAddr.Zone},
+		}
+	}
+	analyzer := speedtest.NewPacketLossAnalyzer(options)
 
 	var pLoss *transport.PLoss
 
