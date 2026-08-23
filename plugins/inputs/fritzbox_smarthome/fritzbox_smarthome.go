@@ -112,14 +112,22 @@ func gatherDeviceInfo(acc telegraf.Accumulator, smarthomeClient *fritzsmarthome.
 		"product_category": string(device.ProductCategory),
 		"power_source":     getDevicePowerSource(device),
 	}
+	connected := 0
+	if device.IsConnected {
+		connected = 1
+	}
 	batteryValue, batteryLow := getDeviceBatteryValue(device)
+	updateAvailable := 0
+	if device.IsUpdateAvailable != nil && *device.IsUpdateAvailable {
+		updateAvailable = 1
+	}
 	fields := map[string]interface{}{
 		"name":             device.Name,
 		"product_name":     device.ProductName,
-		"connected":        device.IsConnected,
+		"connected":        connected,
 		"battery_value":    batteryValue,
 		"battery_low":      batteryLow,
-		"update_available": device.IsUpdateAvailable,
+		"update_available": updateAvailable,
 	}
 	acc.AddFields("fritzbox_smarthome_device", fields, tags)
 }
@@ -131,7 +139,7 @@ func gatherUnitInfo(acc telegraf.Accumulator, smarthomeClient *fritzsmarthome.Cl
 		"group":  getUnitGroupName(unit, groups),
 	}
 	gatherUnitInfoLevelControl(acc, tags, unit)
-	gatherUnitInfoMultiMeter(acc, tags, unit)
+	gatherUnitInfoMultimeter(acc, tags, unit)
 	gatherUnitInfoOnOff(acc, tags, unit)
 }
 
@@ -150,7 +158,7 @@ func gatherUnitInfoLevelControl(acc telegraf.Accumulator, tags map[string]string
 	acc.AddFields("fritzbox_smarthome_level_control", fields, tags)
 }
 
-func gatherUnitInfoMultiMeter(acc telegraf.Accumulator, tags map[string]string, unit *api.EndpointOverviewMultipleUnits) {
+func gatherUnitInfoMultimeter(acc telegraf.Accumulator, tags map[string]string, unit *api.EndpointOverviewMultipleUnits) {
 	if unit.Interfaces.MultimeterInterface == nil {
 		return
 	}
@@ -177,7 +185,7 @@ func gatherUnitInfoMultiMeter(acc telegraf.Accumulator, tags map[string]string, 
 		"power":   power,
 		"voltage": voltage,
 	}
-	acc.AddFields("fritzbox_smarthome_multi_meter", fields, tags)
+	acc.AddFields("fritzbox_smarthome_multimeter", fields, tags)
 }
 
 func gatherUnitInfoOnOff(acc telegraf.Accumulator, tags map[string]string, unit *api.EndpointOverviewMultipleUnits) {
@@ -205,13 +213,13 @@ func getDevicePowerSource(device *api.EndpointOverviewMultipleDevices) string {
 	return powerSource
 }
 
-func getDeviceBatteryValue(device *api.EndpointOverviewMultipleDevices) (int, bool) {
-	batteryValue, batteryLow := -1, false
+func getDeviceBatteryValue(device *api.EndpointOverviewMultipleDevices) (int, int) {
+	batteryValue, batteryLow := -1, 0
 	if device.BatteryValue != nil {
 		batteryValue = *device.BatteryValue
 	}
-	if device.IsBatteryLow != nil {
-		batteryLow = *device.IsBatteryLow
+	if device.IsBatteryLow != nil && *device.IsBatteryLow {
+		batteryLow = 1
 	}
 	return batteryValue, batteryLow
 }
