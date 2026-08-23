@@ -192,9 +192,9 @@ func gatherUnitInfoOnOff(acc telegraf.Accumulator, tags map[string]string, unit 
 	if unit.Interfaces.OnOffInterface == nil {
 		return
 	}
-	active := false
-	if unit.Interfaces.OnOffInterface.Active != nil {
-		active = *unit.Interfaces.OnOffInterface.Active
+	active := 0
+	if unit.Interfaces.OnOffInterface.Active != nil && *unit.Interfaces.OnOffInterface.Active {
+		active = 1
 	}
 	fields := map[string]interface{}{
 		"name":   unit.Name,
