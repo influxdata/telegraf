@@ -181,7 +181,7 @@ func NewHTTPClient(cfg HTTPConfig) (*httpClient, error) {
 		}
 	case "unix":
 		transport = &http.Transport{
-			Dial: func(_, _ string) (net.Conn, error) {
+			DialContext: func(context.Context, string, string) (net.Conn, error) {
 				return net.DialTimeout(
 					cfg.URL.Scheme,
 					cfg.URL.Path,
