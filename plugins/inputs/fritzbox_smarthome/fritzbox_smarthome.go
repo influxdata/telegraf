@@ -112,22 +112,13 @@ func gatherDeviceInfo(acc telegraf.Accumulator, smarthomeClient *fritzsmarthome.
 		"product_category": string(device.ProductCategory),
 		"power_source":     getDevicePowerSource(device),
 	}
-	connected := 0
-	if device.IsConnected {
-		connected = 1
-	}
-	batteryValue, batteryLow := getDeviceBatteryValue(device)
-	updateAvailable := 0
-	if device.IsUpdateAvailable != nil && *device.IsUpdateAvailable {
-		updateAvailable = 1
-	}
 	fields := map[string]interface{}{
 		"name":             device.Name,
 		"product_name":     device.ProductName,
-		"connected":        connected,
-		"battery_value":    batteryValue,
-		"battery_low":      batteryLow,
-		"update_available": updateAvailable,
+		"connected":        mapBool(device.IsConnected),
+		"battery_value":    getOptionalInt(device.BatteryValue, 0),
+		"battery_low":      mapOptionalBool(device.IsBatteryLow, 0),
+		"update_available": mapOptionalBool(device.IsUpdateAvailable, 0),
 	}
 	acc.AddFields("fritzbox_smarthome_device", fields, tags)
 }
@@ -147,13 +138,9 @@ func gatherUnitInfoLevelControl(acc telegraf.Accumulator, tags map[string]string
 	if unit.Interfaces.LevelControlInterface == nil {
 		return
 	}
-	level := 0
-	if unit.Interfaces.LevelControlInterface.Level != nil {
-		level = *unit.Interfaces.LevelControlInterface.Level
-	}
 	fields := map[string]interface{}{
 		"name":  unit.Name,
-		"level": level,
+		"level": getOptionalInt(unit.Interfaces.LevelControlInterface.Level, 0),
 	}
 	acc.AddFields("fritzbox_smarthome_level_control", fields, tags)
 }
@@ -162,28 +149,12 @@ func gatherUnitInfoMultimeter(acc telegraf.Accumulator, tags map[string]string, 
 	if unit.Interfaces.MultimeterInterface == nil {
 		return
 	}
-	current := 0
-	if unit.Interfaces.MultimeterInterface.Current != nil {
-		current = *unit.Interfaces.MultimeterInterface.Current
-	}
-	energy := 0
-	if unit.Interfaces.MultimeterInterface.Energy != nil {
-		energy = *unit.Interfaces.MultimeterInterface.Energy
-	}
-	power := 0
-	if unit.Interfaces.MultimeterInterface.Power != nil {
-		power = *unit.Interfaces.MultimeterInterface.Power
-	}
-	voltage := 0
-	if unit.Interfaces.MultimeterInterface.Voltage != nil {
-		voltage = *unit.Interfaces.MultimeterInterface.Voltage
-	}
 	fields := map[string]interface{}{
 		"name":    unit.Name,
-		"current": current,
-		"energy":  energy,
-		"power":   power,
-		"voltage": voltage,
+		"current": getOptionalInt(unit.Interfaces.MultimeterInterface.Current, 0),
+		"energy":  getOptionalInt(unit.Interfaces.MultimeterInterface.Energy, 0),
+		"power":   getOptionalInt(unit.Interfaces.MultimeterInterface.Power, 0),
+		"voltage": getOptionalInt(unit.Interfaces.MultimeterInterface.Voltage, 0),
 	}
 	acc.AddFields("fritzbox_smarthome_multimeter", fields, tags)
 }
@@ -192,13 +163,9 @@ func gatherUnitInfoOnOff(acc telegraf.Accumulator, tags map[string]string, unit 
 	if unit.Interfaces.OnOffInterface == nil {
 		return
 	}
-	active := 0
-	if unit.Interfaces.OnOffInterface.Active != nil && *unit.Interfaces.OnOffInterface.Active {
-		active = 1
-	}
 	fields := map[string]interface{}{
 		"name":   unit.Name,
-		"active": active,
+		"active": mapOptionalBool(unit.Interfaces.OnOffInterface.Active, 0),
 	}
 	acc.AddFields("fritzbox_smarthome_on_off", fields, tags)
 }
@@ -213,17 +180,6 @@ func getDevicePowerSource(device *api.EndpointOverviewMultipleDevices) string {
 	return powerSource
 }
 
-func getDeviceBatteryValue(device *api.EndpointOverviewMultipleDevices) (int, int) {
-	batteryValue, batteryLow := -1, 0
-	if device.BatteryValue != nil {
-		batteryValue = *device.BatteryValue
-	}
-	if device.IsBatteryLow != nil && *device.IsBatteryLow {
-		batteryLow = 1
-	}
-	return batteryValue, batteryLow
-}
-
 func getUnitGroupName(unit *api.EndpointOverviewMultipleUnits, groups []api.EndpointOverviewGroup) string {
 	groupName := "<none>"
 	if unit.GroupUid != nil {
@@ -235,6 +191,28 @@ func getUnitGroupName(unit *api.EndpointOverviewMultipleUnits, groups []api.Endp
 		}
 	}
 	return groupName
+}
+
+func mapBool(b bool) int {
+	if b {
+		return 1
+	} else {
+		return 0
+	}
+}
+
+func mapOptionalBool(p *bool, defaultValue int) int {
+	if p == nil {
+		return defaultValue
+	}
+	return mapBool(*p)
+}
+
+func getOptionalInt(p *int, defaultValue int) int {
+	if p == nil {
+		return defaultValue
+	}
+	return *p
 }
 
 func init() {

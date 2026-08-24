@@ -45,20 +45,52 @@ specification][aha].
 
 - `fritzbox_smarthome_device`
   - tags
-    - `source` - The name of the device (this metric has been queried from)
-    - `manufacturer` - The manufacturer of the smarthome device
+    - `source`           - The name of the device (this metric has been queried from)
+    - `manufacturer`     - The manufacturer of the smarthome device
     - `product_category` - The category of the smarthome device (e.g. sensor, button)
-    - `power_source` - The power source of the smarthome device (internal, external, battery)
+    - `power_source`     - The power source of the smarthome device (internal, external, battery)
   - fields
     - `name`             (string) - Device's name (as given by user).
     - `product_name`     (string) - Device's product name.
-    - `connected`        (bool)   - Device's connected status.
+    - `connected`        (int)    - Device's connected status (0|1).
     - `battery_value`    (string) - Device's battery level (0-100).
-    - `battery_low`      (bool)   - Device's battery low state.
-    - `update_available` (bool)   - Device's software update available state.
+    - `battery_low`      (int)    - Device's battery low state (0|1).
+    - `update_available` (int)    - Device's software update available state (0|1).
+- `fritzbox_smarthome_multimeter`
+  - tags
+    - `source` - The name of the device (this metric has been queried from)
+    - `group`  - The name of the group this unit is assigned to (&lt;none&gt; if not assigned to a group)
+    - `type`   - The type of the unit (as reported by the API; e.g. dimmableLight)
+  - fields
+    - `energy`  (int) - Overall engergy consumption (Wh).
+    - `power`   (int) - Latest power consumption (mW).
+    - `voltage` (int) - Latest voltage (mV).
+    - `current` (int) - Latest current (mA).
+- `fritzbox_smarthome_level_control`
+  - tags
+    - `source` - The name of the device (this metric has been queried from)
+    - `group`  - The name of the group this unit is assigned to (&lt;none&gt; if not assigned to a group)
+    - `type`   - The type of the unit (as reported by the API; e.g. dimmableLight)
+  - fields
+    - `name`  (string) - The name of the unit or group.
+    - `level` (int)    - The current light level (0-100).
+- `fritzbox_smarthome_on_off`
+  - tags
+    - `source` - The name of the device (this metric has been queried from)
+    - `group`  - The name of the group this unit is assigned to (&lt;none&gt; if not assigned to a group)
+    - `type`   - The type of the unit (as reported by the API; e.g. dimmableLight)
+  - fields
+    - `name`  (string) - The name of the unit or group.
+    - `active`(int)    - The current active state (0|1).
 
 ## Example Output
 
 ```text
-TODO
+fritzbox_smarthome_device,manufacturer=AVM,power_source=battery,product_category=sensor,source=127.0.0.1 connected=1i,battery_value=100i,battery_low=0i,update_available=0i,name="Name#1",product_name="FRITZ!Smart Energy 250" 1787604406292123000
+
+fritzbox_smarthome_multimeter,group=<none>,source=127.0.0.1,type=avmMeter energy=325528i,power=289130i,voltage=0i,name="Name#1",current=0i 1787604406292152000
+
+fritzbox_smarthome_level_control,group=Name#3,source=127.0.0.1,type=dimmableLight name="Name#2",level=100i 1787604406292154000
+
+fritzbox_smarthome_on_off,group=Name#3,source=127.0.0.1,type=dimmableLight name="Name#2",active=0i 1787604406292156000
 ```
