@@ -8,7 +8,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/testutil/serializers"
 )
 
 func TestSerializeMetricFloat(t *testing.T) {
@@ -270,7 +270,7 @@ func TestSerializeOmitEvent(t *testing.T) {
 
 func BenchmarkSerialize(b *testing.B) {
 	s := &Serializer{}
-	metrics := serializers.BenchmarkMetrics(b)
+	metrics := serializers.BenchmarkMetrics()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := s.Serialize(metrics[i%len(metrics)])
@@ -280,7 +280,7 @@ func BenchmarkSerialize(b *testing.B) {
 
 func BenchmarkSerializeBatch(b *testing.B) {
 	s := &Serializer{}
-	m := serializers.BenchmarkMetrics(b)
+	m := serializers.BenchmarkMetrics()
 	metrics := m[:]
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

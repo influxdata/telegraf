@@ -17,8 +17,8 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
-	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/influxdata/telegraf/testutil/serializers"
 )
 
 func TestSerializeMetricFloat(t *testing.T) {
@@ -493,7 +493,7 @@ func loadJSON(filename string) (interface{}, error) {
 func BenchmarkSerialize(b *testing.B) {
 	s := &Serializer{}
 	require.NoError(b, s.Init())
-	metrics := serializers.BenchmarkMetrics(b)
+	metrics := serializers.BenchmarkMetrics()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := s.Serialize(metrics[i%len(metrics)])
@@ -504,7 +504,7 @@ func BenchmarkSerialize(b *testing.B) {
 func BenchmarkSerializeBatch(b *testing.B) {
 	s := &Serializer{}
 	require.NoError(b, s.Init())
-	m := serializers.BenchmarkMetrics(b)
+	m := serializers.BenchmarkMetrics()
 	metrics := m[:]
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
