@@ -57,7 +57,7 @@ type parsedDResp struct {
 // getRPCReqFromDiscoveryRequest - utility function to map between aliyun request primitives
 // discoveryRequest represents different type of discovery requests
 func getRPCReqFromDiscoveryRequest(req discoveryRequest) (*requests.RpcRequest, error) {
-	if reflect.ValueOf(req).Type().Kind() != reflect.Ptr ||
+	if reflect.ValueOf(req).Type().Kind() != reflect.Pointer ||
 		reflect.ValueOf(req).IsNil() {
 		return nil, fmt.Errorf("unexpected type of the discovery request object: %q, %q", reflect.ValueOf(req).Type(), reflect.ValueOf(req).Kind())
 	}
