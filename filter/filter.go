@@ -6,6 +6,8 @@ import (
 	"github.com/gobwas/glob"
 )
 
+const WildcardCharacters = "*?{}[]!"
+
 type Filter interface {
 	Match(string) bool
 }

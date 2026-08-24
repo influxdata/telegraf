@@ -51,13 +51,14 @@ type CloudWatch struct {
 	Log                   telegraf.Logger     `toml:"-"`
 	common_aws.CredentialConfig
 
-	client          cloudwatchClient
-	nsFilter        filter.Filter
-	statFilter      filter.Filter
-	cache           *metricCache
-	queryDimensions map[string]*map[string]string
-	windowStart     time.Time
-	windowEnd       time.Time
+	client             cloudwatchClient
+	nsFilter           filter.Filter
+	statFilter         filter.Filter
+	cache              *metricCache
+	queryDimensions    map[string]*map[string]string
+	windowStart        time.Time
+	windowEnd          time.Time
+	wildcardNamespaces bool
 }
 
 type cloudwatchMetric struct {
@@ -161,6 +162,14 @@ func (c *CloudWatch) Init() error {
 		return fmt.Errorf("creating statistics filter failed: %w", err)
 	}
 
+	// Determine if the namespaces contain wildcards
+	for _, ns := range c.Namespaces {
+		if strings.ContainsAny(ns, filter.WildcardCharacters) {
+			c.wildcardNamespaces = true
+			break
+		}
+	}
+
 	// Initialize namespace filter
 	c.nsFilter, err = filter.Compile(c.Namespaces)
 	if err != nil {
@@ -228,61 +237,16 @@ func (c *CloudWatch) getFilteredMetrics() ([]filteredMetric, error) {
 		return c.cache.metrics, nil
 	}
 
-	// Get all metrics from cloudwatch for filtering
-	params := &cloudwatch.ListMetricsInput{
-		IncludeLinkedAccounts: &c.IncludeLinkedAccounts,
-	}
-	if c.RecentlyActive == "PT3H" {
-		params.RecentlyActive = types.RecentlyActivePt3h
-	}
-
-	// Return the subset of metrics matching the namespace and at one of the
-	// metric definitions if any
 	var metrics []types.Metric
 	var accounts []string
-	for {
-		resp, err := c.client.ListMetrics(context.Background(), params)
-		if err != nil {
-			c.Log.Errorf("failed to list metrics: %v", err)
-			break
+	if c.wildcardNamespaces {
+		metrics, accounts = c.queryMetrics(nil)
+	} else {
+		for _, ns := range c.Namespaces {
+			m, a := c.queryMetrics(&ns)
+			metrics = append(metrics, m...)
+			accounts = append(accounts, a...)
 		}
-		c.Log.Tracef("got %d metrics with %d accounts", len(resp.Metrics), len(resp.OwningAccounts))
-		for i, m := range resp.Metrics {
-			if c.Log.Level().Includes(telegraf.Trace) {
-				dims := make([]string, 0, len(m.Dimensions))
-				for _, d := range m.Dimensions {
-					dims = append(dims, *d.Name+"="+*d.Value)
-				}
-				a := "none"
-				if len(resp.OwningAccounts) > 0 {
-					a = resp.OwningAccounts[i]
-				}
-				c.Log.Tracef("  metric %3d: %s (%s): %s [%s]\n", i, *m.MetricName, *m.Namespace, strings.Join(dims, ", "), a)
-			}
-
-			if c.nsFilter != nil && !c.nsFilter.Match(*m.Namespace) {
-				c.Log.Trace("  -> rejected by namespace")
-				continue
-			}
-
-			if len(c.Metrics) > 0 && !slices.ContainsFunc(c.Metrics, func(cm *cloudwatchMetric) bool {
-				return metricMatch(cm, m)
-			}) {
-				c.Log.Trace("  -> rejected by metric mismatch")
-				continue
-			}
-			c.Log.Trace("  -> keeping metric")
-
-			metrics = append(metrics, m)
-			if len(resp.OwningAccounts) > 0 {
-				accounts = append(accounts, resp.OwningAccounts[i])
-			}
-		}
-
-		if resp.NextToken == nil {
-			break
-		}
-		params.NextToken = resp.NextToken
 	}
 
 	var filtered []filteredMetric
@@ -331,6 +295,72 @@ func (c *CloudWatch) getFilteredMetrics() ([]filteredMetric, error) {
 	}
 
 	return filtered, nil
+}
+
+func (c *CloudWatch) queryMetrics(namespace *string) ([]types.Metric, []string) {
+	// Get all metrics from cloudwatch for filtering
+	params := &cloudwatch.ListMetricsInput{
+		IncludeLinkedAccounts: &c.IncludeLinkedAccounts,
+		Namespace:             namespace,
+	}
+	if c.RecentlyActive == "PT3H" {
+		params.RecentlyActive = types.RecentlyActivePt3h
+	}
+
+	// Return the subset of metrics matching the namespace and at one of the
+	// metric definitions if any
+	var metrics []types.Metric
+	var accounts []string
+	for {
+		resp, err := c.client.ListMetrics(context.Background(), params)
+		if err != nil {
+			c.Log.Errorf("failed to list metrics: %v", err)
+			break
+		}
+		if namespace == nil {
+			c.Log.Tracef("got %d metrics with %d accounts", len(resp.Metrics), len(resp.OwningAccounts))
+		} else {
+			c.Log.Tracef("got %d metrics with %d accounts for namespace %q", len(resp.Metrics), len(resp.OwningAccounts), *namespace)
+		}
+		for i, m := range resp.Metrics {
+			if c.Log.Level().Includes(telegraf.Trace) {
+				dims := make([]string, 0, len(m.Dimensions))
+				for _, d := range m.Dimensions {
+					dims = append(dims, *d.Name+"="+*d.Value)
+				}
+				a := "none"
+				if len(resp.OwningAccounts) > 0 {
+					a = resp.OwningAccounts[i]
+				}
+				c.Log.Tracef("  metric %3d: %s (%s): %s [%s]\n", i, *m.MetricName, *m.Namespace, strings.Join(dims, ", "), a)
+			}
+
+			if c.nsFilter != nil && !c.nsFilter.Match(*m.Namespace) {
+				c.Log.Trace("  -> rejected by namespace")
+				continue
+			}
+
+			if len(c.Metrics) > 0 && !slices.ContainsFunc(c.Metrics, func(cm *cloudwatchMetric) bool {
+				return metricMatch(cm, m)
+			}) {
+				c.Log.Trace("  -> rejected by metric mismatch")
+				continue
+			}
+			c.Log.Trace("  -> keeping metric")
+
+			metrics = append(metrics, m)
+			if len(resp.OwningAccounts) > 0 {
+				accounts = append(accounts, resp.OwningAccounts[i])
+			}
+		}
+
+		if resp.NextToken == nil {
+			break
+		}
+		params.NextToken = resp.NextToken
+	}
+
+	return metrics, accounts
 }
 
 func (c *CloudWatch) updateWindow(relativeTo time.Time) {
