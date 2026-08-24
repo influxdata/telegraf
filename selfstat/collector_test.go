@@ -14,7 +14,7 @@ import (
 )
 
 func TestCollectorRegisterIncrSet(t *testing.T) {
-	defer maps.Clear(registry.stats)
+	defer clear(registry.stats)
 
 	// Create a new collector with global tags
 	collector := NewCollector(map[string]string{"global": "zoo"})
@@ -80,7 +80,7 @@ func TestCollectorRegisterIncrSet(t *testing.T) {
 }
 
 func TestCollectorRegisterTimingIncrSet(t *testing.T) {
-	defer maps.Clear(registry.stats)
+	defer clear(registry.stats)
 
 	// Create a new collector with global tags
 	collector := NewCollector(map[string]string{"global": "zoo"})

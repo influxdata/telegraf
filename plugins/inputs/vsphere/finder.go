@@ -193,7 +193,7 @@ func (f *finder) descend(ctx context.Context, root types.ManagedObjectReference,
 
 func objectContentToTypedArray(objs map[string]types.ObjectContent, dst interface{}) error {
 	rt := reflect.TypeOf(dst)
-	if rt == nil || rt.Kind() != reflect.Ptr {
+	if rt == nil || rt.Kind() != reflect.Pointer {
 		panic("need pointer")
 	}
 
