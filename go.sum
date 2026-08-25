@@ -1563,8 +1563,8 @@ github.com/gopacket/gopacket v1.7.1 h1:1C7/wrJ5HyiEAYDtStJHQk4rV0ChpanZDV9+3Ov3g
 github.com/gopacket/gopacket v1.7.1/go.mod h1:QKowPlTLrQU2rqV5C5I14Aoaid3l8da3kbddibc/Wgk=
 github.com/gopcua/opcua v0.9.1 h1:Qp40I5JmiiKXYIWmk7xECYNrXs5unohH24jKWnSRyIE=
 github.com/gopcua/opcua v0.9.1/go.mod h1:Z6aellk0gIzznZd2UX+Syd/hUMBt65gRlTakpGo6se8=
-github.com/gophercloud/gophercloud/v2 v2.13.0 h1:yEyJG+kABd8x2ttTqLsomihU6Kg2YheJSZhvP/QSx+8=
-github.com/gophercloud/gophercloud/v2 v2.13.0/go.mod h1:KZRLVs6gcoy/pEFdkZqFjdYqnS0emMHv66UqdM5lMjU=
+github.com/gophercloud/gophercloud/v2 v2.14.0 h1:xGxKCvyaOxJDc5FqrnKDNqtdYn43ocQPuJ2Cm4KX/cs=
+github.com/gophercloud/gophercloud/v2 v2.14.0/go.mod h1:4fs5I9VH6Wg2LyocDL9xf0ASb8VD63tyLA8sgAX/69U=
 github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1/go.mod h1:wJfORRmW1u3UXTncJ5qlYoELFm8eSnnEO6hX4iZ3EWY=
 github.com/gopherjs/gopherjs v0.0.0-20200217142428-fce0ec30dd00 h1:l5lAOZEym3oK3SQ2HBHWsJUfbNBiTXJDeW2QDxw9AQ0=
 github.com/gopherjs/gopherjs v0.0.0-20200217142428-fce0ec30dd00/go.mod h1:wJfORRmW1u3UXTncJ5qlYoELFm8eSnnEO6hX4iZ3EWY=
