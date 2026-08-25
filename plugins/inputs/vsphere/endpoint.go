@@ -933,7 +933,7 @@ func (e *endpoint) loadCustomAttributes(entity mo.ManagedEntity) map[string]stri
 }
 
 func (e *endpoint) loadCustomProperties(entity interface{}, propertyInclude []string) map[string]interface{} {
-	cvs := make(map[string]interface{})
+	cvs := make(map[string]interface{}, len(propertiesInclude))
 	for _, property := range propertyInclude {
 		value := e.getExtraProperty(entity, property)
 		if value != nil {
@@ -1284,7 +1284,6 @@ func (e *endpoint) collectChunk(
 			nValues := 0
 			alignedInfo, alignedValues := e.alignSamples(em.SampleInfo, v.Value, interval)
 			globalFields := populateGlobalFields(objectRef)
-
 			if len(globalFields) != 0 {
 				mn, fn := e.makeMetricIdentifier(prefix, "internal")
 				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(latestSample.UnixNano(), 10)
