@@ -3,12 +3,12 @@
 This plugin gathers status information from Smarthome capable [FRITZ!][fritz]
 routers using the device's [AVM Home Automation][aha] interface.
 
-⭐ Telegraf v1.xx.x
+⭐ Telegraf v1.40.0
 🏷️ network, iot
 💻 all
 
 [fritz]: https://fritz.com/
-[tr064]: https://fritz.com/en/pages/interfaces
+[aha]: https://fritz.com/en/pages/interfaces
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -45,10 +45,10 @@ specification][aha].
 
 - `fritzbox_smarthome_device`
   - tags
-    - `source`           - The name of the router (this metric has been queried from)
+    - `source`           - The hostname of the router
     - `manufacturer`     - The manufacturer of the smarthome device
-    - `product_category` - The category of the smarthome device (e.g. sensor, button)
-    - `power_source`     - The power source of the smarthome device (internal, external, battery)
+    - `product_category` - The category (e.g. sensor, button)
+    - `power_source`     - The power source (internal, external, battery)
   - fields
     - `name`             (string) - Device's name (as given by user).
     - `product_name`     (string) - Device's product name.
@@ -59,7 +59,7 @@ specification][aha].
 - `fritzbox_smarthome_multimeter`
   - tags
     - `source` - The name of the router (this metric has been queried from)
-    - `group`  - The name of the group this unit is assigned to (&lt;none&gt; if not assigned to a group)
+    - `group`  - The group this unit is assigned to (&lt;none&gt; if unassigned)
     - `type`   - The type of the unit (as reported by the API; e.g. dimmableLight)
   - fields
     - `name`    (string) - The name of the unit or group.
@@ -70,7 +70,7 @@ specification][aha].
 - `fritzbox_smarthome_level_control`
   - tags
     - `source` - The name of the router (this metric has been queried from)
-    - `group`  - The name of the group this unit is assigned to (&lt;none&gt; if not assigned to a group)
+    - `group`  - The group this unit is assigned to (&lt;none&gt; if unassigned)
     - `type`   - The type of the unit (as reported by the API; e.g. dimmableLight)
   - fields
     - `name`  (string) - The name of the unit or group.
@@ -78,7 +78,7 @@ specification][aha].
 - `fritzbox_smarthome_on_off`
   - tags
     - `source` - The name of the router (this metric has been queried from)
-    - `group`  - The name of the group this unit is assigned to (&lt;none&gt; if not assigned to a group)
+    - `group`  - The group this unit is assigned to (&lt;none&gt; if unassigned)
     - `type`   - The type of the unit (as reported by the API; e.g. dimmableLight)
   - fields
     - `name`  (string) - The name of the unit or group.
