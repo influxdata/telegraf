@@ -119,7 +119,8 @@ func (f *finder) descend(ctx context.Context, root types.ManagedObjectReference,
 			fields = append(fields, af...)
 		}
 		fields = append(fields, resource.customFields...)
-		uniqueFields := removeDuplicates(fields)
+		slices.Sort(fields)
+		uniqueFields := slices.Compact(fields)
 		if recurse {
 			// Special case: The last token is a recursive wildcard, so we can grab everything
 			// recursively in a single call.
