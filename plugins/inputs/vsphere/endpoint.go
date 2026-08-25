@@ -1381,20 +1381,15 @@ func (e *endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	if found {
 		t[resource.parentTag] = parent.name
 		if resourceType == "vm" {
+			if objectRef.guest != "" {
+				t["guest"] = objectRef.guest
+			}
+			if gh := objectRef.lookup["guesthostname"]; gh != "" {
+				t["guesthostname"] = gh
+			}
 			if c, ok := e.resourceKinds["cluster"].objects[parent.parentRef.Value]; ok {
 				t["clustername"] = c.name
 			}
-		}
-	}
-	if resourceType == "vm" {
-		if objectRef.guest != "" {
-			t["guest"] = objectRef.guest
-		}
-		if gh := objectRef.lookup["guesthostname"]; gh != "" {
-			t["guesthostname"] = gh
-		}
-		if c, ok := e.resourceKinds["cluster"].objects[parent.parentRef.Value]; ok {
-			t["clustername"] = c.name
 		}
 	}
 
