@@ -289,8 +289,3 @@ func init() {
 		"VirtualApp":      nil,
 	}
 }
-
-func removeDuplicates(input []string) []string {
-	slices.Sort(input)
-	return slices.Compact(input)
-}
