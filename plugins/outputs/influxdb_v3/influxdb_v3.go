@@ -101,6 +101,7 @@ func (i *InfluxDB) Close() error {
 func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	ctx := context.Background()
 
+	//nolint:gosec // False-positive G404 as this doesn't require strong RNG
 	for _, n := range rand.Perm(len(i.clients)) {
 		client := i.clients[n]
 		if err := client.write(ctx, metrics); err != nil {
