@@ -2389,8 +2389,8 @@ github.com/t3rm1n4l/go-mega v0.0.0-20260717075258-c6acd6a5bd04/go.mod h1:BF/l2jN
 github.com/tailscale/depaware v0.0.0-20210622194025-720c4b409502/go.mod h1:p9lPsd+cx33L3H9nNoecRRxPssFKUwwI50I3pZ0yT+8=
 github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62 h1:Oj2e7Sae4XrOsk3ij21QjjEgAcVSeo9nkp0dI//cD2o=
 github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62/go.mod h1:qUzPVlSj2UgxJkVbH0ZwuuiR46U8RBMDT5KLY78Ifpw=
-github.com/tdrn-org/go-fritzsmarthome v0.0.2-0.20260824194944-2c59f48d0de3 h1:JI6PLjmhMiOzTwS6E+iZzcGmhzA3bNvg0higal3+Pt8=
-github.com/tdrn-org/go-fritzsmarthome v0.0.2-0.20260824194944-2c59f48d0de3/go.mod h1:N1/1WHCTOOLLKa1xLCgC3Lje2oe4Dv68kGX9rsaIu9s=
+github.com/tdrn-org/go-fritzsmarthome v0.1.0 h1:MWSS2U1sLpauPTeLOKJ+eCsYN7iEluQXkCkXZaQL7uE=
+github.com/tdrn-org/go-fritzsmarthome v0.1.0/go.mod h1:N1/1WHCTOOLLKa1xLCgC3Lje2oe4Dv68kGX9rsaIu9s=
 github.com/tdrn-org/go-hue v1.2.0 h1:GjLkbOhDCgK/i/Kp+d9S5gJ8DKSsLk8edpn5PNBHnHs=
 github.com/tdrn-org/go-hue v1.2.0/go.mod h1:WW/nt+xwuz7f2XIfe6aMMKzmqN0jXjeSEA6c0F9j6js=
 github.com/tdrn-org/go-nsdp v0.5.1 h1:w80Y5zF02nEopj/ycTcsDzeq5DgYeKquvGe8xuWXcEM=

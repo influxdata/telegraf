@@ -45,7 +45,7 @@ specification][aha].
 
 - `fritzbox_smarthome_device`
   - tags
-    - `source`           - The name of the device (this metric has been queried from)
+    - `source`           - The name of the router (this metric has been queried from)
     - `manufacturer`     - The manufacturer of the smarthome device
     - `product_category` - The category of the smarthome device (e.g. sensor, button)
     - `power_source`     - The power source of the smarthome device (internal, external, battery)
@@ -53,22 +53,23 @@ specification][aha].
     - `name`             (string) - Device's name (as given by user).
     - `product_name`     (string) - Device's product name.
     - `connected`        (int)    - Device's connected status (0|1).
-    - `battery_value`    (string) - Device's battery level (0-100).
+    - `battery_value`    (int)    - Device's battery level (0-100).
     - `battery_low`      (int)    - Device's battery low state (0|1).
     - `update_available` (int)    - Device's software update available state (0|1).
 - `fritzbox_smarthome_multimeter`
   - tags
-    - `source` - The name of the device (this metric has been queried from)
+    - `source` - The name of the router (this metric has been queried from)
     - `group`  - The name of the group this unit is assigned to (&lt;none&gt; if not assigned to a group)
     - `type`   - The type of the unit (as reported by the API; e.g. dimmableLight)
   - fields
-    - `energy`  (int) - Overall engergy consumption (Wh).
-    - `power`   (int) - Latest power consumption (mW).
-    - `voltage` (int) - Latest voltage (mV).
-    - `current` (int) - Latest current (mA).
+    - `name`    (string) - The name of the unit or group.
+    - `energy`  (int)    - Overall energy consumption (Wh).
+    - `power`   (int)    - Latest power consumption (mW).
+    - `voltage` (int)    - Latest voltage (mV).
+    - `current` (int)    - Latest current (mA).
 - `fritzbox_smarthome_level_control`
   - tags
-    - `source` - The name of the device (this metric has been queried from)
+    - `source` - The name of the router (this metric has been queried from)
     - `group`  - The name of the group this unit is assigned to (&lt;none&gt; if not assigned to a group)
     - `type`   - The type of the unit (as reported by the API; e.g. dimmableLight)
   - fields
@@ -76,7 +77,7 @@ specification][aha].
     - `level` (int)    - The current light level (0-100).
 - `fritzbox_smarthome_on_off`
   - tags
-    - `source` - The name of the device (this metric has been queried from)
+    - `source` - The name of the router (this metric has been queried from)
     - `group`  - The name of the group this unit is assigned to (&lt;none&gt; if not assigned to a group)
     - `type`   - The type of the unit (as reported by the API; e.g. dimmableLight)
   - fields

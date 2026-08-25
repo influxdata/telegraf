@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.fritzbox
+//go:build !custom || inputs || inputs.fritzbox_smarthome
 
 package all
 
