@@ -1284,8 +1284,7 @@ func (e *endpoint) collectChunk(
 
 			nValues := 0
 			alignedInfo, alignedValues := e.alignSamples(em.SampleInfo, v.Value, interval)
-			globalFields := maps.Clone(objectRef.customProperties)
-			if len(globalFields) != 0 {
+			if len(objectRef.customProperties) != 0 {
 				mn, fn := e.makeMetricIdentifier(prefix, "internal")
 				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(latestSample.UnixNano(), 10)
 				_, found := buckets[bKey]
@@ -1296,7 +1295,7 @@ func (e *endpoint) collectChunk(
 					for k, v := range t {
 						tags[k] = v
 					}
-					for k, v := range globalFields {
+					for k, v := range objectRef.customProperties {
 						tags[k] = fmt.Sprintf("%v", v)
 					}
 					bucket := metricEntry{name: mn, ts: latestSample, fields: fields, tags: tags}
