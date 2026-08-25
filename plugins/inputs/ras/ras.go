@@ -38,8 +38,8 @@ type Ras struct {
 
 	db                *sql.DB
 	latestTimestamp   time.Time
-	cpuSocketCounters map[int]metricCounters
-	serverCounters    metricCounters
+	cpuSocketCounters map[int]map[string]int64
+	serverCounters    map[string]int64
 }
 
 type machineCheckError struct {
@@ -50,8 +50,6 @@ type machineCheckError struct {
 	mciStatusMsg string
 }
 
-type metricCounters map[string]int64
-
 func (*Ras) SampleConfig() string {
 	return sampleConfig
 }
@@ -61,7 +59,7 @@ func (r *Ras) Init() error {
 	if r.DBPath == "" {
 		r.DBPath = "/var/lib/rasdaemon/ras-mc_event.db"
 	}
-	r.cpuSocketCounters = map[int]metricCounters{0: {}}
+	r.cpuSocketCounters = map[int]map[string]int64{0: make(map[string]int64)}
 	r.serverCounters = map[string]int64{
 		"cache_l2_errors": 0,
 		"upi_errors":      0,
@@ -168,7 +166,7 @@ func (r *Ras) updateCounters(mcError *machineCheckError) {
 	}
 
 	if _, ok := r.cpuSocketCounters[mcError.socketID]; !ok {
-		r.cpuSocketCounters[mcError.socketID] = metricCounters{}
+		r.cpuSocketCounters[mcError.socketID] = make(map[string]int64)
 	}
 	r.updateSocketCounters(mcError)
 	r.updateServerCounters(mcError)
