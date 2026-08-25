@@ -3,150 +3,14 @@
 package ras
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
 )
-
-func TestUpdateCounters(t *testing.T) {
-	ras := newRas()
-	for i := range testData {
-		ras.updateCounters(&testData[i])
-	}
-
-	require.Len(t, ras.cpuSocketCounters, 1, "Should contain counters only for single socket")
-
-	for metric, value := range ras.cpuSocketCounters[0] {
-		if metric == processorBase {
-			// processor_base_errors is sum of other seven errors: internal_timer_errors, smm_handler_code_access_violation_errors,
-			// internal_parity_errors, frc_errors, external_mce_errors, microcode_rom_parity_errors and unclassified_mce_errors
-			require.Equal(t, int64(7), value, processorBase+" should have value of 7")
-		} else {
-			require.Equal(t, int64(1), value, metric+" should have value of 1")
-		}
-	}
-
-	for metric, value := range ras.serverCounters {
-		require.Equal(t, int64(1), value, metric+" should have value of 1")
-	}
-}
-
-func TestUpdateLatestTimestamp(t *testing.T) {
-	ras := newRas()
-	ts := "2020-08-01 15:13:27 +0200"
-	testData = append(testData, []machineCheckError{
-		{
-			timestamp:    "2019-05-20 08:25:55 +0200",
-			socketID:     0,
-			errorMsg:     "",
-			mciStatusMsg: "",
-		},
-		{
-			timestamp:    "2018-02-21 12:27:22 +0200",
-			socketID:     0,
-			errorMsg:     "",
-			mciStatusMsg: "",
-		},
-		{
-			timestamp:    ts,
-			socketID:     0,
-			errorMsg:     "",
-			mciStatusMsg: "",
-		},
-	}...)
-	for _, mce := range testData {
-		err := ras.updateLatestTimestamp(mce.timestamp)
-		require.NoError(t, err)
-	}
-	require.Equal(t, ts, ras.latestTimestamp.Format(dateLayout))
-}
-
-func TestMultipleSockets(t *testing.T) {
-	ras := newRas()
-	cacheL2 := "Instruction CACHE Level-2 Generic Error"
-	overflow := "Error_overflow Corrected_error"
-	testData = []machineCheckError{
-		{
-			timestamp:    "2019-05-20 08:25:55 +0200",
-			socketID:     0,
-			errorMsg:     cacheL2,
-			mciStatusMsg: overflow,
-		},
-		{
-			timestamp:    "2018-02-21 12:27:22 +0200",
-			socketID:     1,
-			errorMsg:     cacheL2,
-			mciStatusMsg: overflow,
-		},
-		{
-			timestamp:    "2020-03-21 14:17:28 +0200",
-			socketID:     2,
-			errorMsg:     cacheL2,
-			mciStatusMsg: overflow,
-		},
-		{
-			timestamp:    "2020-03-21 17:24:18 +0200",
-			socketID:     3,
-			errorMsg:     cacheL2,
-			mciStatusMsg: overflow,
-		},
-	}
-	for i := range testData {
-		ras.updateCounters(&testData[i])
-	}
-	require.Len(t, ras.cpuSocketCounters, 4, "Should contain counters for four sockets")
-
-	for _, metricData := range ras.cpuSocketCounters {
-		for metric, value := range metricData {
-			if metric == levelTwoCache {
-				require.Equal(t, int64(1), value, levelTwoCache+" should have value of 1")
-			} else {
-				require.Equal(t, int64(0), value, metric+" should have value of 0")
-			}
-		}
-	}
-}
-
-func TestMissingDatabase(t *testing.T) {
-	var acc testutil.Accumulator
-	ras := newRas()
-	ras.DBPath = "/nonexistent/ras.db"
-	err := ras.Start(&acc)
-	require.Error(t, err)
-}
-
-func TestEmptyDatabase(t *testing.T) {
-	ras := newRas()
-
-	require.Len(t, ras.cpuSocketCounters, 1, "Should contain default counters for one socket")
-	require.Len(t, ras.serverCounters, 2, "Should contain default counters for server")
-
-	for metric, value := range ras.cpuSocketCounters[0] {
-		require.Equal(t, int64(0), value, metric+" should have value of 0")
-	}
-
-	for metric, value := range ras.serverCounters {
-		require.Equal(t, int64(0), value, metric+" should have value of 0")
-	}
-}
-
-func newRas() *Ras {
-	//nolint:errcheck // known timestamp
-	defaultTimestamp, _ := parseDate("1970-01-01 00:00:01 -0700")
-	return &Ras{
-		DBPath:          defaultDBPath,
-		latestTimestamp: defaultTimestamp,
-		cpuSocketCounters: map[int]metricCounters{
-			0: *newMetricCounters(),
-		},
-		serverCounters: map[string]int64{
-			levelTwoCache: 0,
-			upi:           0,
-		},
-	}
-}
 
 var testData = []machineCheckError{
 	{
@@ -251,4 +115,157 @@ var testData = []machineCheckError{
 		errorMsg:     "Instruction CACHE Level-2 Generic Error",
 		mciStatusMsg: "Error_overflow Corrected_error",
 	},
+}
+
+func TestUpdateCounters(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ras-mc_event.db")
+	require.NoError(t, os.WriteFile(path, nil, 0600))
+
+	ras := &Ras{
+		DBPath: path,
+		Log:    &testutil.Logger{},
+	}
+	require.NoError(t, ras.Init())
+
+	for i := range testData {
+		ras.updateCounters(&testData[i])
+	}
+
+	require.Len(t, ras.cpuSocketCounters, 1, "Should contain counters only for single socket")
+
+	for metric, value := range ras.cpuSocketCounters[0] {
+		if metric == "processor_base_errors" {
+			// processor_base_errors is sum of other seven errors: internal_timer_errors, smm_handler_code_access_violation_errors,
+			// internal_parity_errors, frc_errors, external_mce_errors, microcode_rom_parity_errors and unclassified_mce_errors
+			require.Equal(t, int64(7), value, "processor_base_errors should have value of 7")
+		} else {
+			require.Equal(t, int64(1), value, metric+" should have value of 1")
+		}
+	}
+
+	for metric, value := range ras.serverCounters {
+		require.Equal(t, int64(1), value, metric+" should have value of 1")
+	}
+}
+
+func TestUpdateLatestTimestamp(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ras-mc_event.db")
+	require.NoError(t, os.WriteFile(path, nil, 0600))
+
+	ras := &Ras{
+		DBPath: path,
+		Log:    &testutil.Logger{},
+	}
+	require.NoError(t, ras.Init())
+
+	ts := "2020-08-01 15:13:27 +0200"
+	testData = append(testData, []machineCheckError{
+		{
+			timestamp:    "2019-05-20 08:25:55 +0200",
+			socketID:     0,
+			errorMsg:     "",
+			mciStatusMsg: "",
+		},
+		{
+			timestamp:    "2018-02-21 12:27:22 +0200",
+			socketID:     0,
+			errorMsg:     "",
+			mciStatusMsg: "",
+		},
+		{
+			timestamp:    ts,
+			socketID:     0,
+			errorMsg:     "",
+			mciStatusMsg: "",
+		},
+	}...)
+	for _, mce := range testData {
+		err := ras.updateLatestTimestamp(mce.timestamp)
+		require.NoError(t, err)
+	}
+	require.Equal(t, ts, ras.latestTimestamp.Format(dateLayout))
+}
+
+func TestMultipleSockets(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ras-mc_event.db")
+	require.NoError(t, os.WriteFile(path, nil, 0600))
+
+	ras := &Ras{
+		DBPath: path,
+		Log:    &testutil.Logger{},
+	}
+	require.NoError(t, ras.Init())
+
+	cacheL2 := "Instruction CACHE Level-2 Generic Error"
+	overflow := "Error_overflow Corrected_error"
+	testData = []machineCheckError{
+		{
+			timestamp:    "2019-05-20 08:25:55 +0200",
+			socketID:     0,
+			errorMsg:     cacheL2,
+			mciStatusMsg: overflow,
+		},
+		{
+			timestamp:    "2018-02-21 12:27:22 +0200",
+			socketID:     1,
+			errorMsg:     cacheL2,
+			mciStatusMsg: overflow,
+		},
+		{
+			timestamp:    "2020-03-21 14:17:28 +0200",
+			socketID:     2,
+			errorMsg:     cacheL2,
+			mciStatusMsg: overflow,
+		},
+		{
+			timestamp:    "2020-03-21 17:24:18 +0200",
+			socketID:     3,
+			errorMsg:     cacheL2,
+			mciStatusMsg: overflow,
+		},
+	}
+	for i := range testData {
+		ras.updateCounters(&testData[i])
+	}
+	require.Len(t, ras.cpuSocketCounters, 4, "Should contain counters for four sockets")
+
+	for _, metricData := range ras.cpuSocketCounters {
+		for metric, value := range metricData {
+			if metric == "cache_l2_errors" {
+				require.Equal(t, int64(1), value, "cache_l2_errors should have value of 1")
+			} else {
+				require.Equal(t, int64(0), value, metric+" should have value of 0")
+			}
+		}
+	}
+}
+
+func TestMissingDatabase(t *testing.T) {
+	ras := &Ras{
+		DBPath: "/nonexistent/ras.db",
+		Log:    &testutil.Logger{},
+	}
+	require.ErrorContains(t, ras.Init(), "does not exist")
+}
+
+func TestEmptyDatabase(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ras-mc_event.db")
+	require.NoError(t, os.WriteFile(path, nil, 0600))
+
+	ras := &Ras{
+		DBPath: path,
+		Log:    &testutil.Logger{},
+	}
+	require.NoError(t, ras.Init())
+
+	require.Len(t, ras.cpuSocketCounters, 1, "Should contain default counters for one socket")
+	require.Len(t, ras.serverCounters, 2, "Should contain default counters for server")
+
+	for metric, value := range ras.cpuSocketCounters[0] {
+		require.Equal(t, int64(0), value, metric+" should have value of 0")
+	}
+
+	for metric, value := range ras.serverCounters {
+		require.Equal(t, int64(0), value, metric+" should have value of 0")
+	}
 }
