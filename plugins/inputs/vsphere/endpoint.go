@@ -1495,7 +1495,15 @@ func (e *endpoint) getExtraProperty(entity interface{}, fieldPath string) interf
 		v = v.Elem()
 	}
 
-	fields := strings.Split(capitalizeAfterDot(fieldPath), ".")
+	var result []rune
+	for i, r := range fieldPath {
+		if i == 0 || fieldPath[i-1] == '.' {
+			result = append(result, unicode.ToUpper(r))
+		} else {
+			result = append(result, r)
+		}
+	}
+	fields := strings.Split(string(result), ".")
 	for _, field := range fields {
 		if v.Kind() != reflect.Struct {
 			e.parent.Log.Warnf("Field %s in %s of %s not struct %s. Skipping", field, fieldPath, reflect.TypeOf(entity), v.Kind())
@@ -1525,14 +1533,3 @@ func (e *endpoint) makePropertyIdentifier(input string) string {
 	return strings.ReplaceAll(input, ".", e.parent.Separator)
 }
 
-func capitalizeAfterDot(input string) string {
-	var result []rune
-	for i, r := range input {
-		if i == 0 || input[i-1] == '.' {
-			result = append(result, unicode.ToUpper(r))
-		} else {
-			result = append(result, r)
-		}
-	}
-	return string(result)
-}
