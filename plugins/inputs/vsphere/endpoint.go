@@ -1283,7 +1283,7 @@ func (e *endpoint) collectChunk(
 
 			nValues := 0
 			alignedInfo, alignedValues := e.alignSamples(em.SampleInfo, v.Value, interval)
-			globalFields := populateGlobalFields(objectRef)
+			globalFields := maps.Clone(objectRef.customProperties)
 			if len(globalFields) != 0 {
 				mn, fn := e.makeMetricIdentifier(prefix, "internal")
 				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(latestSample.UnixNano(), 10)
@@ -1448,14 +1448,6 @@ func (e *endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 			t[k] = v
 		}
 	}
-}
-
-func populateGlobalFields(objectRef *objectRef) map[string]interface{} {
-	globalFields := make(map[string]interface{})
-	for k, v := range objectRef.customProperties {
-		globalFields[k] = v
-	}
-	return globalFields
 }
 
 func (e *endpoint) makeMetricIdentifier(prefix, metric string) (metricName, fieldName string) {
