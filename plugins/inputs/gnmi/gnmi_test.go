@@ -661,7 +661,7 @@ func TestNotification(t *testing.T) {
 												{Name: "low-threshold"},
 											}},
 										Val: &gnmi.TypedValue{
-											Value: &gnmi.TypedValue_FloatVal{FloatVal: 0},
+											Value: &gnmi.TypedValue_DoubleVal{DoubleVal: 0},
 										},
 									},
 									{
@@ -700,7 +700,7 @@ func TestNotification(t *testing.T) {
 												{Name: "critical-high-threshold"},
 											}},
 										Val: &gnmi.TypedValue{
-											Value: &gnmi.TypedValue_FloatVal{FloatVal: 94},
+											Value: &gnmi.TypedValue_DoubleVal{DoubleVal: 94},
 										},
 									},
 									{
@@ -710,7 +710,7 @@ func TestNotification(t *testing.T) {
 												{Name: "current"},
 											}},
 										Val: &gnmi.TypedValue{
-											Value: &gnmi.TypedValue_FloatVal{FloatVal: 29},
+											Value: &gnmi.TypedValue_DoubleVal{DoubleVal: 29},
 										},
 									},
 									{
@@ -720,7 +720,7 @@ func TestNotification(t *testing.T) {
 												{Name: "high-threshold"},
 											}},
 										Val: &gnmi.TypedValue{
-											Value: &gnmi.TypedValue_FloatVal{FloatVal: 90},
+											Value: &gnmi.TypedValue_DoubleVal{DoubleVal: 90},
 										},
 									},
 								},

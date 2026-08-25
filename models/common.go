@@ -18,7 +18,7 @@ func logName(pluginType, name, alias string) string {
 func SetLoggerOnPlugin(i interface{}, logger telegraf.Logger) {
 	valI := reflect.ValueOf(i)
 
-	if valI.Type().Kind() != reflect.Ptr {
+	if valI.Type().Kind() != reflect.Pointer {
 		valI = reflect.New(reflect.TypeOf(i))
 	}
 

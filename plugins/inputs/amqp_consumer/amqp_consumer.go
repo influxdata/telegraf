@@ -233,6 +233,7 @@ func (a *AMQPConsumer) createConfig() (*amqp.Config, error) {
 func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, error) {
 	brokers := a.Brokers
 
+	//nolint:gosec // False-positive for G404 as we don't need strong random numbers
 	p := rand.Perm(len(brokers))
 	for _, n := range p {
 		broker := brokers[n]

@@ -173,7 +173,7 @@ func (b *Burrow) createClient() (*http.Client, error) {
 	}
 
 	timeout := time.Duration(b.ResponseTimeout)
-	dialContext := net.Dialer{Timeout: timeout, DualStack: true}
+	dialContext := net.Dialer{Timeout: timeout}
 	transport := http.Transport{
 		DialContext:     dialContext.DialContext,
 		TLSClientConfig: tlsCfg,
