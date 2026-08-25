@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"math/rand"
 	"net/url"
@@ -933,7 +934,7 @@ func (e *endpoint) loadCustomAttributes(entity mo.ManagedEntity) map[string]stri
 }
 
 func (e *endpoint) loadCustomProperties(entity interface{}, propertyInclude []string) map[string]interface{} {
-	cvs := make(map[string]interface{}, len(propertiesInclude))
+	cvs := make(map[string]interface{}, len(propertyInclude))
 	for _, property := range propertyInclude {
 		value := e.getExtraProperty(entity, property)
 		if value != nil {
