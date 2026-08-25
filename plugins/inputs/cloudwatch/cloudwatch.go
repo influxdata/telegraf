@@ -147,6 +147,11 @@ func (c *CloudWatch) Init() error {
 		})
 		// Initialize filter for metric dimensions to include
 		for _, dimension := range m.Dimensions {
+			// If no value is given, match all by not assigning a filter
+			if dimension.Value == "" {
+				continue
+			}
+
 			matcher, err := filter.NewIncludeExcludeFilter([]string{dimension.Value}, nil)
 			if err != nil {
 				return fmt.Errorf("creating dimension filter for dimension %q failed: %w", dimension, err)
