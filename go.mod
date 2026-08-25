@@ -260,7 +260,7 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 	k8s.io/api v0.36.4
 	k8s.io/apimachinery v0.36.4
-	k8s.io/client-go v0.36.3
+	k8s.io/client-go v0.36.4
 	layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68
 	modernc.org/sqlite v1.56.0
 	software.sslmate.com/src/go-pkcs12 v0.7.3
