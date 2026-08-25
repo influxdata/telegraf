@@ -699,7 +699,9 @@ func isDir(path string) (bool, error) {
 }
 
 func (p *Procstat) winServicePIDs() ([]pid, error) {
+	//nolint:staticcheck,nolintlint // False-positive as this can return nil for certain architectures
 	processID, err := queryPidWithWinServiceName(p.WinService)
+	//nolint:staticcheck,nolintlint // False-positive as this can return nil for certain architectures
 	if err != nil {
 		return nil, err
 	}

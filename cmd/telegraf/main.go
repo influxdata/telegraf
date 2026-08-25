@@ -160,6 +160,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		// Load external plugins, if requested.
 		if cCtx.String("plugin-directory") != "" {
 			log.Printf("I! Loading external plugins from: %s", cCtx.String("plugin-directory"))
+			//nolint:staticcheck // False-positive as this can return nil if plugins are enabled
 			if err := goplugin.LoadExternalPlugins(cCtx.String("plugin-directory")); err != nil {
 				return err
 			}
