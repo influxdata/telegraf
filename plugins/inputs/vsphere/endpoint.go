@@ -1525,4 +1525,3 @@ func (e *endpoint) getExtraProperty(entity interface{}, fieldPath string) interf
 func (e *endpoint) makePropertyIdentifier(input string) string {
 	return strings.ReplaceAll(input, ".", e.parent.Separator)
 }
-
