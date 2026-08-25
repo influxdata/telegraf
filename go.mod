@@ -262,7 +262,7 @@ require (
 	k8s.io/apimachinery v0.36.4
 	k8s.io/client-go v0.36.4
 	layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68
-	modernc.org/sqlite v1.56.0
+	modernc.org/sqlite v1.57.0
 	software.sslmate.com/src/go-pkcs12 v0.7.3
 )
 
