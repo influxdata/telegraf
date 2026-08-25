@@ -56,7 +56,6 @@ func TestNode(t *testing.T) {
 										OSImage:                 "Container Linux by CoreOS 1745.7.0 (Rhyolite)",
 										ContainerRuntimeVersion: "docker://18.3.1",
 										KubeletVersion:          "v1.10.3",
-										KubeProxyVersion:        "v1.10.3",
 									},
 									Phase: "Running",
 									Capacity: corev1.ResourceList{

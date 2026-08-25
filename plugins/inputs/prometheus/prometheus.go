@@ -518,7 +518,7 @@ func (p *Prometheus) gatherURL(u urlAndAddress, acc telegraf.Accumulator) (map[s
 			Transport: &http.Transport{
 				TLSClientConfig:   tlsCfg,
 				DisableKeepAlives: true,
-				Dial: func(string, string) (net.Conn, error) {
+				DialContext: func(context.Context, string, string) (net.Conn, error) {
 					c, err := net.Dial("unix", u.url.Path)
 					return c, err
 				},
