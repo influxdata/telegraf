@@ -187,7 +187,7 @@ require (
 	github.com/prometheus/common v0.70.1
 	github.com/prometheus/procfs v0.21.1
 	github.com/prometheus/prometheus v0.314.0
-	github.com/rabbitmq/amqp091-go v1.13.0
+	github.com/rabbitmq/amqp091-go v1.14.0
 	github.com/rclone/rclone v1.75.0
 	github.com/redis/go-redis/v9 v9.22.0
 	github.com/riemann/riemann-go-client v0.5.1-0.20211206220514-f58f10cdce16
