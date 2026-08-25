@@ -1284,7 +1284,6 @@ func (e *endpoint) collectChunk(
 			nValues := 0
 			alignedInfo, alignedValues := e.alignSamples(em.SampleInfo, v.Value, interval)
 			globalFields := populateGlobalFields(objectRef)
-
 			if len(globalFields) != 0 {
 				mn, fn := e.makeMetricIdentifier(prefix, "internal")
 				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(latestSample.UnixNano(), 10)
