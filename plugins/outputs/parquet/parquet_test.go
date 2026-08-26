@@ -470,3 +470,34 @@ func TestColumnOrderIsDeterministic(t *testing.T) {
 	}
 	require.Equal(t, []string{"alpha", "charlie", "delta", "zone", "timestamp"}, names)
 }
+
+func TestUnsupportedFieldTypeDoesNotStallOutput(t *testing.T) {
+	dir := t.TempDir()
+	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", Log: testutil.Logger{}}
+	require.NoError(t, p.Init())
+
+	poisoned := metric.New("demo", nil, map[string]interface{}{"value": int64(1)}, time.Now())
+	poisoned.AddField("unsupported", struct{ x int }{1})
+	require.NoError(t, p.Write([]telegraf.Metric{poisoned}))
+
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]interface{}{"value": int64(2)}, time.Now()),
+	}))
+	require.NoError(t, p.Close())
+
+	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, written, 1)
+
+	reader, err := file.OpenParquetFile(written[0], false)
+	require.NoError(t, err)
+	defer reader.Close()
+	require.Equal(t, int64(2), reader.NumRows())
+
+	schema := reader.MetaData().Schema
+	names := make([]string, 0, schema.NumColumns())
+	for i := 0; i < schema.NumColumns(); i++ {
+		names = append(names, schema.Column(i).Name())
+	}
+	require.Equal(t, []string{"value", "timestamp"}, names)
+}

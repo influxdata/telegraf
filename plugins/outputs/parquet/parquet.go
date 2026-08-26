@@ -102,10 +102,7 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 	for name, metrics := range groupedMetrics {
 		if _, ok := p.metricGroups[name]; !ok {
 			filename := fmt.Sprintf("%s/%s-%s-%s.parquet", p.Directory, name, now.Format("2006-01-02"), strconv.FormatInt(now.Unix(), 10))
-			schema, err := p.createSchema(metrics)
-			if err != nil {
-				return fmt.Errorf("failed to create schema for file %q: %w", name, err)
-			}
+			schema := p.createSchema(metrics)
 			writer, err := p.createWriter(name, filename, schema)
 			if err != nil {
 				return fmt.Errorf("failed to create writer for file %q: %w", name, err)
@@ -282,17 +279,19 @@ func appendTyped[T any](builder array.Builder, value T) bool {
 	return true
 }
 
-func (p *Parquet) createSchema(metrics []telegraf.Metric) (*arrow.Schema, error) {
+func (p *Parquet) createSchema(metrics []telegraf.Metric) *arrow.Schema {
 	rawFields := make(map[string]arrow.DataType, 0)
 	for _, metric := range metrics {
 		for _, field := range metric.FieldList() {
-			if _, ok := rawFields[field.Key]; !ok {
-				arrowType, err := goToArrowType(field.Value)
-				if err != nil {
-					return nil, fmt.Errorf("error converting '%s=%s' field to arrow type: %w", field.Key, field.Value, err)
-				}
-				rawFields[field.Key] = arrowType
+			if _, known := rawFields[field.Key]; known {
+				continue
 			}
+			arrowType, err := goToArrowType(field.Value)
+			if err != nil {
+				p.Log.Warnf("Skipping field %q of metric %q: %v", field.Key, metric.Name(), err)
+				continue
+			}
+			rawFields[field.Key] = arrowType
 		}
 		for _, tag := range metric.TagList() {
 			if _, ok := rawFields[tag.Key]; !ok {
@@ -334,7 +333,7 @@ func (p *Parquet) createSchema(metrics []telegraf.Metric) (*arrow.Schema, error)
 		})
 	}
 
-	return arrow.NewSchema(fields, nil), nil
+	return arrow.NewSchema(fields, nil)
 }
 
 func (p *Parquet) createWriter(name, filename string, schema *arrow.Schema) (*pqarrow.FileWriter, error) {
