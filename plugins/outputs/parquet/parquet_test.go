@@ -501,3 +501,29 @@ func TestUnsupportedFieldTypeDoesNotStallOutput(t *testing.T) {
 	}
 	require.Equal(t, []string{"value", "timestamp"}, names)
 }
+
+func TestExistingFilesAreNeverOverwritten(t *testing.T) {
+	dir := t.TempDir()
+
+	for i := 1; i <= 3; i++ {
+		p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", Log: testutil.Logger{}}
+		require.NoError(t, p.Init())
+		require.NoError(t, p.Write([]telegraf.Metric{
+			metric.New("demo", nil, map[string]interface{}{"value": int64(i)}, time.Now()),
+		}))
+		require.NoError(t, p.Close())
+	}
+
+	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, written, 3)
+
+	var total int64
+	for _, name := range written {
+		reader, err := file.OpenParquetFile(name, false)
+		require.NoError(t, err)
+		total += reader.NumRows()
+		require.NoError(t, reader.Close())
+	}
+	require.Equal(t, int64(3), total)
+}

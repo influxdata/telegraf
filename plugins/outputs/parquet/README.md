@@ -30,8 +30,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # A plugin that writes metrics to parquet files
 [[outputs.parquet]]
-  ## Directory to write parquet files in. If a file already exists the output
-  ## will attempt to continue using the existing file.
+  ## Directory to write parquet files in. Existing files are never modified.
+  ## A new file is created at startup and on rotation.
   # directory = "."
 
   ## Files are rotated after the time interval specified. When set to 0 no time
@@ -96,8 +96,8 @@ the [rename processor][rename].
 
 [rename]: /plugins/processors/rename/README.md
 
-If a file with the same target name exists at start, the existing file is
-rotated to avoid over-writing it or conflicting schema.
+File names carry the time the file was created with a counter if two files
+are created in the same timestamp to avoid loss of data. 
 
 File rotation is available via a time based interval that a user can optionally
 set. Due to the usage of a buffered writer, a size based rotation is not
