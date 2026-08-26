@@ -51,7 +51,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 Parquet files require a schema when writing files. To generate a schema,
 Telegraf will go through all grouped metrics and generate an Apache Arrow schema
 based on the union of all fields and tags. If a field and tag have the same name
-then the field takes precedence.
+then the field takes precedence. Columns are ordered by name with
+the timestamp column last.
 
 The consequence of schema generation is that the very first flush sequence a
 metric is seen takes much longer due to the additional looping through the
@@ -61,6 +62,14 @@ faster.
 When writing to a file, the schema is used to look for each value and if it is
 not present a null value is added. The result is that if additional fields are
 present after the first metric flush those fields are omitted.
+
+Since column types are fixed at file creation, when an unknown value is logged
+it will be logged as `null` and once per column. 
+Inputs that collide with reserved columns like `timestamp_field_name` are
+dropped and logged. Rename `timestamp_field_name` or your field to fix it.
+
+Since parquet column schemas are fixed at file creation, new values that 
+do not fit the column schema are written as `null` and logged once per column.
 
 ### Write
 
@@ -81,6 +90,11 @@ If Telegraf were to crash while writing parquet files there is the possibility
 of this occurring.
 
 ## File Rotation
+
+Measurement names determine the file name and can be customized with 
+the [rename processor][rename].
+
+[rename]: /plugins/processors/rename/README.md
 
 If a file with the same target name exists at start, the existing file is
 rotated to avoid over-writing it or conflicting schema.
