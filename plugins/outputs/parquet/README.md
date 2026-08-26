@@ -62,13 +62,9 @@ When writing to a file, the schema is used to look for each value and if it is
 not present a null value is added. The result is that if additional fields are
 present after the first metric flush those fields are omitted.
 
-Since column types are fixed at file creation, when an unknown value is logged
-it will be logged as `null` and once per column. 
-Inputs that collide with reserved columns like `timestamp_field_name` are
-dropped and logged. Rename `timestamp_field_name` or your field to fix it.
-
-Since parquet column schemas are fixed at file creation, new values that 
-do not fit the column schema are written as `null` and logged once per column.
+The `timestamp_field_name` column holds the metric time, so a field or tag with
+that same name is dropped and logged. Set `timestamp_field_name` to another name
+or rename the field or tag to keep both.
 
 ### Write
 
