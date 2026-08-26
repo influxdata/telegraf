@@ -43,6 +43,10 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Field name to use to store the timestamp. If set to an empty string, then
   ## the timestamp is omitted.
   # timestamp_field_name = "timestamp"
+
+  ## Maximum number of columns a file may grow to. Fields and tags beyond this
+  ## limit are dropped and logged. Set to 0 for no limit.
+  # max_columns = 1000
 ```
 
 ## Building Parquet Files
@@ -80,6 +84,19 @@ as `null` and logged once per column.
 Since output files can have different schemas, a reader can take the first 
 file's schema and ignore columns that appear in later ones. Or if you use 
 DuckDB, use `union_by_name = true` to avoid this.
+Columns are never removed from a group either, so a measurement that keeps
+producing new field or tag names grows its schema without bound. `max_columns`
+caps that growth; names arriving once the limit is reached are dropped and
+logged, which is the behaviour of earlier versions for every late column.
+
+A column type is fixed when the file is created. A value that does not fit its
+column is written as null and logged once per column. This happens when a field
+changes type between flushes, or when a name arrives as a tag on one metric and
+as a field on another.
+
+Files in one directory can therefore have different columns. A reader may take
+the schema of the first file and ignore columns that only appear in later ones;
+DuckDB needs `union_by_name = true` to avoid this.
 
 ### Write
 

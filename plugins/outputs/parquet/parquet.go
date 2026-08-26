@@ -29,11 +29,14 @@ var sampleConfig string
 
 var defaultTimestampFieldName = "timestamp"
 
+const defaultMaxColumns = 1000
+
 type metricGroup struct {
 	name     string
 	filename string
 	created  time.Time
 	columns  map[string]arrow.DataType
+	limited  bool
 	warned   map[string]bool
 	builder  *array.RecordBuilder
 	schema   *arrow.Schema
@@ -44,6 +47,7 @@ type Parquet struct {
 	Directory          string          `toml:"directory"`
 	RotationInterval   config.Duration `toml:"rotation_interval"`
 	TimestampFieldName string          `toml:"timestamp_field_name"`
+	MaxColumns         int             `toml:"max_columns"`
 	Log                telegraf.Logger `toml:"-"`
 
 	metricGroups     map[string]*metricGroup
@@ -123,7 +127,23 @@ func (p *Parquet) groupFor(name string, metrics []telegraf.Metric) (*metricGroup
 
 	group, found := p.metricGroups[name]
 	if !found {
-		group = &metricGroup{name: name, columns: columns, warned: make(map[string]bool)}
+		group = &metricGroup{
+			name:    name,
+			columns: make(map[string]arrow.DataType, len(columns)),
+			warned:  make(map[string]bool),
+		}
+	}
+
+	added, dropped := group.addColumns(columns, p.MaxColumns)
+	if len(dropped) > 0 && !group.limited {
+		group.limited = true
+		p.Log.Warnf(
+			"Dropping column(s) %s from %q, which is at the %d column limit; raise 'max_columns' to keep them",
+			strings.Join(dropped, ", "), name, p.MaxColumns,
+		)
+	}
+
+	if !found {
 		if err := p.openFile(group); err != nil {
 			return nil, err
 		}
@@ -132,7 +152,6 @@ func (p *Parquet) groupFor(name string, metrics []telegraf.Metric) (*metricGroup
 		return group, nil
 	}
 
-	added := group.addColumns(columns)
 	if len(added) == 0 {
 		return group, p.rotateIfNeeded(group)
 	}
@@ -145,17 +164,28 @@ func (p *Parquet) groupFor(name string, metrics []telegraf.Metric) (*metricGroup
 	return group, nil
 }
 
-func (g *metricGroup) addColumns(columns map[string]arrow.DataType) []string {
-	added := make([]string, 0, len(columns))
-	for column, datatype := range columns {
+func (g *metricGroup) addColumns(columns map[string]arrow.DataType, limit int) (added, dropped []string) {
+	candidates := make([]string, 0, len(columns))
+	for column := range columns {
 		if _, known := g.columns[column]; !known {
-			g.columns[column] = datatype
-			added = append(added, column)
+			candidates = append(candidates, column)
 		}
 	}
-	slices.Sort(added)
+	slices.Sort(candidates)
 
-	return added
+	room := len(candidates)
+	if limit > 0 && len(g.columns)+room > limit {
+		room = limit - len(g.columns)
+		if room < 0 {
+			room = 0
+		}
+	}
+
+	for _, column := range candidates[:room] {
+		g.columns[column] = columns[column]
+	}
+
+	return candidates[:room], candidates[room:]
 }
 
 const maxMeasurementLen = 255 - len("-2006-01-02-1234567890-999.parquet")
@@ -441,6 +471,7 @@ func init() {
 	outputs.Add("parquet", func() telegraf.Output {
 		return &Parquet{
 			TimestampFieldName: defaultTimestampFieldName,
+			MaxColumns:         defaultMaxColumns,
 		}
 	})
 }

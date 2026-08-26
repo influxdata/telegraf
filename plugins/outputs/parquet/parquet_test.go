@@ -1,6 +1,7 @@
 package parquet
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -627,4 +628,43 @@ func TestOmittedFieldKeepsTheSameFile(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, written, 1)
 	require.Equal(t, []string{"a", "b", "timestamp"}, columnNames(t, written[0]))
+}
+
+func TestMaxColumnsCapsTheSchema(t *testing.T) {
+	dir := t.TempDir()
+	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", MaxColumns: 3, Log: testutil.Logger{}}
+	require.NoError(t, p.Init())
+
+	fields := make(map[string]interface{}, 10)
+	for i := 0; i < 10; i++ {
+		fields[fmt.Sprintf("f%02d", i)] = int64(i)
+	}
+	require.NoError(t, p.Write([]telegraf.Metric{metric.New("demo", nil, fields, time.Now())}))
+
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]interface{}{"late": int64(1)}, time.Now()),
+	}))
+	require.NoError(t, p.Close())
+
+	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, written, 1)
+	require.Equal(t, []string{"f00", "f01", "f02", "timestamp"}, columnNames(t, written[0]))
+}
+
+func TestMaxColumnsZeroMeansUnlimited(t *testing.T) {
+	dir := t.TempDir()
+	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", MaxColumns: 0, Log: testutil.Logger{}}
+	require.NoError(t, p.Init())
+
+	fields := make(map[string]interface{}, 50)
+	for i := 0; i < 50; i++ {
+		fields[fmt.Sprintf("f%02d", i)] = int64(i)
+	}
+	require.NoError(t, p.Write([]telegraf.Metric{metric.New("demo", nil, fields, time.Now())}))
+	require.NoError(t, p.Close())
+
+	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, columnNames(t, written[0]), 51)
 }
