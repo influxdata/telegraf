@@ -64,6 +64,11 @@ present after the first metric flush those fields are omitted.
 
 Since column types are fixed at file creation, when an unknown value is logged
 it will be logged as `null` and once per column. 
+Inputs that collide with reserved columns like `timestamp_field_name` are
+dropped and logged. Rename `timestamp_field_name` or your field to fix it.
+
+Since parquet column schemas are fixed at file creation, new values that 
+do not fit the column schema are written as `null` and logged once per column.
 
 ### Write
 
