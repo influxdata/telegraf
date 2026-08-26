@@ -20,6 +20,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -41,8 +42,7 @@ type Parquet struct {
 	TimestampFieldName string          `toml:"timestamp_field_name"`
 	Log                telegraf.Logger `toml:"-"`
 
-	metricGroups     map[string]*metricGroup
-	warnedOnFilename bool
+	metricGroups map[string]*metricGroup
 }
 
 func (*Parquet) SampleConfig() string {
@@ -91,8 +91,15 @@ func (p *Parquet) Close() error {
 
 func (p *Parquet) Write(metrics []telegraf.Metric) error {
 	groupedMetrics := make(map[string][]telegraf.Metric)
-	for _, metric := range metrics {
-		name := p.metricToFile(metric.Name())
+	var writeErr internal.PartialWriteError
+	for i, metric := range metrics {
+		name := metric.Name()
+		if !usableAsFilename(name) {
+			writeErr.MetricsReject = append(writeErr.MetricsReject, i)
+			writeErr.MetricsRejectErrors = append(writeErr.MetricsRejectErrors, fmt.Errorf("measurement %q cannot be used as a file name", name))
+			continue
+		}
+		writeErr.MetricsAccept = append(writeErr.MetricsAccept, i)
 		groupedMetrics[name] = append(groupedMetrics[name], metric)
 	}
 
@@ -132,29 +139,18 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 		record.Release()
 	}
 
-	return nil
+	if len(writeErr.MetricsReject) == 0 {
+		return nil
+	}
+	writeErr.Err = fmt.Errorf("rejected %d metric(s): %w", len(writeErr.MetricsReject), errors.Join(writeErr.MetricsRejectErrors...))
+
+	return &writeErr
 }
 
 const maxMeasurementLen = 255 - len("-2006-01-02-1234567890.parquet")
 
-func (p *Parquet) metricToFile(name string) string {
-	safe := strings.Map(func(r rune) rune {
-		if reservedInFilename(r) {
-			return '_'
-		}
-		return r
-	}, name)
-
-	if len(safe) > maxMeasurementLen {
-		safe = strings.ToValidUTF8(safe[:maxMeasurementLen], "")
-	}
-
-	if safe != name && !p.warnedOnFilename {
-		p.warnedOnFilename = true
-		p.Log.Warnf("Metric %q is not usable as a file name, writing to %q instead; use the rename processor to choose the name", name, safe)
-	}
-
-	return safe
+func usableAsFilename(name string) bool {
+	return name != "" && len(name) <= maxMeasurementLen && !strings.ContainsFunc(name, reservedInFilename)
 }
 
 func reservedInFilename(r rune) bool {

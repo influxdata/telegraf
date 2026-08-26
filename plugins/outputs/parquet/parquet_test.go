@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -279,23 +281,26 @@ func TestMissingValuesReadBackAsNull(t *testing.T) {
 	}
 }
 
-func TestMetricToFile(t *testing.T) {
+func TestUsableAsFilename(t *testing.T) {
 	tests := []struct {
-		name     string
-		expected string
+		name   string
+		usable bool
 	}{
-		{"cpu", "cpu"},
-		{"../../etc/passwd", ".._.._etc_passwd"},
-		{`a/b\c`, "a_b_c"},
-		{"nul\x00byte", "nul_byte"},
-		{"tab\tnewline\n", "tab_newline_"},
-		{strings.Repeat("a", 300), strings.Repeat("a", maxMeasurementLen)},
+		{"cpu", true},
+		{"disk.io", true},
+		{"..", true},
+		{"", false},
+		{"../../etc/passwd", false},
+		{`a\b`, false},
+		{"nul\x00byte", false},
+		{"tab\tnewline\n", false},
+		{strings.Repeat("a", maxMeasurementLen), true},
+		{strings.Repeat("a", maxMeasurementLen+1), false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &Parquet{Log: testutil.Logger{}}
-			require.Equal(t, tt.expected, p.metricToFile(tt.name))
+			require.Equal(t, tt.usable, usableAsFilename(tt.name))
 		})
 	}
 }
@@ -305,8 +310,7 @@ func TestWindowsReservedCharacters(t *testing.T) {
 		t.Skip("windows only")
 	}
 
-	p := &Parquet{Log: testutil.Logger{}}
-	require.Equal(t, "a_b_c", p.metricToFile(`a<b>c`))
+	require.False(t, usableAsFilename(`a<b>c`))
 }
 
 func TestMeasurementNamesCannotEscapeDirectory(t *testing.T) {
@@ -318,9 +322,9 @@ func TestMeasurementNamesCannotEscapeDirectory(t *testing.T) {
 	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", Log: testutil.Logger{}}
 	require.NoError(t, p.Init())
 
-	for _, name := range []string{"../../../../tmp/evil", "..", "../evil", `a\..\..\b`} {
+	for _, name := range []string{"../../../../tmp/evil", "../evil", `a\..\..\b`, "nul\x00byte"} {
 		m := metric.New(name, nil, map[string]interface{}{"value": int64(1)}, time.Now())
-		require.NoError(t, p.Write([]telegraf.Metric{m}))
+		require.ErrorAs(t, p.Write([]telegraf.Metric{m}), new(*internal.PartialWriteError))
 	}
 	require.NoError(t, p.Close())
 
@@ -330,26 +334,55 @@ func TestMeasurementNamesCannotEscapeDirectory(t *testing.T) {
 
 	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
 	require.NoError(t, err)
-	require.Len(t, written, 4)
+	require.Empty(t, written)
 }
 
-func TestLongMeasurementNameKeepsOutputWriting(t *testing.T) {
+func TestUnusableMeasurementNameKeepsOutputWriting(t *testing.T) {
 	dir := t.TempDir()
 	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", Log: testutil.Logger{}}
 	require.NoError(t, p.Init())
 
-	require.NoError(t, p.Write([]telegraf.Metric{
+	require.ErrorAs(t, p.Write([]telegraf.Metric{
 		metric.New(strings.Repeat("a", 300), nil, map[string]interface{}{"value": int64(1)}, time.Now()),
-	}))
-	require.NoError(t, p.Write([]telegraf.Metric{
+	}), new(*internal.PartialWriteError))
+
+	for i := 0; i < 8; i++ {
+		require.NoError(t, p.Write([]telegraf.Metric{
+			metric.New("good", nil, map[string]interface{}{"value": int64(i)}, time.Now()),
+		}))
+	}
+	require.NoError(t, p.Close())
+
+	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, written, 1)
+	require.Contains(t, filepath.Base(written[0]), "good")
+}
+
+func TestRejectedMetricsReportEveryIndexExactlyOnce(t *testing.T) {
+	dir := t.TempDir()
+	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", Log: testutil.Logger{}}
+	require.NoError(t, p.Init())
+
+	metrics := []telegraf.Metric{
+		metric.New("../evil", nil, map[string]interface{}{"value": int64(1)}, time.Now()),
 		metric.New("good", nil, map[string]interface{}{"value": int64(2)}, time.Now()),
-	}))
+		metric.New("nul\x00byte", nil, map[string]interface{}{"value": int64(3)}, time.Now()),
+		metric.New("alsogood", nil, map[string]interface{}{"value": int64(4)}, time.Now()),
+	}
+
+	var writeErr *internal.PartialWriteError
+	require.ErrorAs(t, p.Write(metrics), &writeErr)
+	require.Equal(t, []int{0, 2}, writeErr.MetricsReject)
+	require.Equal(t, []int{1, 3}, writeErr.MetricsAccept)
+	require.Len(t, writeErr.MetricsRejectErrors, 2)
+	require.ElementsMatch(t,
+		[]int{0, 1, 2, 3},
+		append(slices.Clone(writeErr.MetricsAccept), writeErr.MetricsReject...),
+	)
 	require.NoError(t, p.Close())
 
 	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
 	require.NoError(t, err)
 	require.Len(t, written, 2)
-	for _, name := range written {
-		require.LessOrEqual(t, len(filepath.Base(name)), 255)
-	}
 }
