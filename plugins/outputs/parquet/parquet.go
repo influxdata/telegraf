@@ -32,6 +32,7 @@ var defaultTimestampFieldName = "timestamp"
 type metricGroup struct {
 	name     string
 	filename string
+	created  time.Time
 	warned   map[string]bool
 	builder  *array.RecordBuilder
 	schema   *arrow.Schema
@@ -107,9 +108,7 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 				return err
 			}
 			p.metricGroups[name] = group
-		}
-
-		if err := p.rotateIfNeeded(group); err != nil {
+		} else if err := p.rotateIfNeeded(group); err != nil {
 			return err
 		}
 
@@ -155,15 +154,7 @@ func reservedInFilename(r rune) bool {
 }
 
 func (p *Parquet) rotateIfNeeded(group *metricGroup) error {
-	if p.RotationInterval == 0 {
-		return nil
-	}
-
-	fileInfo, err := os.Stat(group.filename)
-	if err != nil {
-		return fmt.Errorf("failed to stat file %q: %w", group.filename, err)
-	}
-	if time.Now().Before(fileInfo.ModTime().Add(time.Duration(p.RotationInterval))) {
+	if p.RotationInterval == 0 || time.Since(group.created) < time.Duration(p.RotationInterval) {
 		return nil
 	}
 
@@ -196,6 +187,7 @@ func (p *Parquet) openFile(group *metricGroup, schema *arrow.Schema) error {
 	group.schema = schema
 	group.builder = array.NewRecordBuilder(memory.DefaultAllocator, schema)
 	group.filename = p.unusedFilename(group.name)
+	group.created = time.Now()
 
 	f, err := os.Create(group.filename)
 	if err != nil {

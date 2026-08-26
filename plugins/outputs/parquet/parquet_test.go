@@ -527,3 +527,28 @@ func TestExistingFilesAreNeverOverwritten(t *testing.T) {
 	}
 	require.Equal(t, int64(3), total)
 }
+
+func TestRotationSurvivesAMissingFile(t *testing.T) {
+	dir := t.TempDir()
+	p := &Parquet{
+		Directory:          dir,
+		RotationInterval:   config.Duration(time.Nanosecond),
+		TimestampFieldName: "timestamp",
+		Log:                testutil.Logger{},
+	}
+	require.NoError(t, p.Init())
+
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]interface{}{"value": int64(1)}, time.Now()),
+	}))
+
+	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, written, 1)
+	require.NoError(t, os.Remove(written[0]))
+
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]interface{}{"value": int64(2)}, time.Now()),
+	}))
+	require.NoError(t, p.Close())
+}

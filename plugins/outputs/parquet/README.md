@@ -100,8 +100,9 @@ File names carry the time the file was created with a counter if two files
 are created in the same timestamp to avoid loss of data. 
 
 File rotation is available via a time based interval that a user can optionally
-set. Due to the usage of a buffered writer, a size based rotation is not
-possible as the file may not actually get data at each interval.
+set, measured from the time the current file was created. Due to the usage
+of a buffered writer, a size based rotation is not possible as the file may
+not actually get data at each interval.
 
 ## Explore Parquet Files
 
