@@ -261,8 +261,9 @@ func (p *Parquet) createSchema(metrics []telegraf.Metric) (*arrow.Schema, error)
 	fields := make([]arrow.Field, 0)
 	for key, value := range rawFields {
 		fields = append(fields, arrow.Field{
-			Name: key,
-			Type: value,
+			Name:     key,
+			Type:     value,
+			Nullable: true,
 		})
 	}
 

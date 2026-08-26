@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestCases(t *testing.T) {
@@ -244,4 +245,34 @@ func TestTimestampDifferentName(t *testing.T) {
 	metadata := reader.MetaData()
 	require.Equal(t, 1, int(metadata.NumRows))
 	require.Equal(t, 2, metadata.Schema.NumColumns())
+}
+
+func TestMissingValuesReadBackAsNull(t *testing.T) {
+	dir := t.TempDir()
+	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", Log: testutil.Logger{}}
+	require.NoError(t, p.Init())
+
+	now := time.Now()
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]interface{}{"a": int64(1), "b": int64(2)}, now),
+		metric.New("demo", nil, map[string]interface{}{"a": int64(3)}, now),
+	}))
+	require.NoError(t, p.Close())
+
+	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, written, 1)
+
+	reader, err := file.OpenParquetFile(written[0], false)
+	require.NoError(t, err)
+	defer reader.Close()
+
+	schema := reader.MetaData().Schema
+	for i := 0; i < schema.NumColumns(); i++ {
+		column := schema.Column(i)
+		if column.Name() == "timestamp" {
+			continue
+		}
+		require.Equalf(t, int16(1), column.MaxDefinitionLevel(), "column %q is required, nulls would be written as zero", column.Name())
+	}
 }
