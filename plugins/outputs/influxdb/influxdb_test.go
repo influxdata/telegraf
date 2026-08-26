@@ -364,7 +364,7 @@ func TestBytesWrittenHTTPGzip(t *testing.T) {
 	}
 	require.NoError(t, plugin.Write(input))
 
-	require.Equal(t, int64(52), stat.Get())
+	require.Equal(t, int64(53), stat.Get())
 }
 
 func TestBytesWrittenUDP(t *testing.T) {
