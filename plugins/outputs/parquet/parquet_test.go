@@ -373,12 +373,15 @@ func TestConflictingValueTypesDoNotPanic(t *testing.T) {
 
 	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
 	require.NoError(t, err)
-	require.Len(t, written, 1)
 
-	reader, err := file.OpenParquetFile(written[0], false)
-	require.NoError(t, err)
-	defer reader.Close()
-	require.Equal(t, int64(2), reader.NumRows())
+	var total int64
+	for _, name := range written {
+		reader, err := file.OpenParquetFile(name, false)
+		require.NoError(t, err)
+		total += reader.NumRows()
+		require.NoError(t, reader.Close())
+	}
+	require.Equal(t, int64(2), total)
 }
 
 func TestEveryConvertibleTypeRoundTrips(t *testing.T) {
@@ -459,16 +462,7 @@ func TestColumnOrderIsDeterministic(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, written, 1)
 
-	reader, err := file.OpenParquetFile(written[0], false)
-	require.NoError(t, err)
-	defer reader.Close()
-
-	schema := reader.MetaData().Schema
-	names := make([]string, 0, schema.NumColumns())
-	for i := 0; i < schema.NumColumns(); i++ {
-		names = append(names, schema.Column(i).Name())
-	}
-	require.Equal(t, []string{"alpha", "charlie", "delta", "zone", "timestamp"}, names)
+	require.Equal(t, []string{"alpha", "charlie", "delta", "zone", "timestamp"}, columnNames(t, written[0]))
 }
 
 func TestUnsupportedFieldTypeDoesNotStallOutput(t *testing.T) {
@@ -574,4 +568,63 @@ func TestFieldTakesPrecedenceOverTagOfTheSameName(t *testing.T) {
 
 	schema := reader.MetaData().Schema
 	require.Equal(t, parquet.Types.Int64, schema.Column(schema.ColumnIndexByName("k")).PhysicalType())
+}
+
+func columnNames(t *testing.T, path string) []string {
+	t.Helper()
+
+	reader, err := file.OpenParquetFile(path, false)
+	require.NoError(t, err)
+	defer reader.Close()
+
+	schema := reader.MetaData().Schema
+	names := make([]string, 0, schema.NumColumns())
+	for i := 0; i < schema.NumColumns(); i++ {
+		names = append(names, schema.Column(i).Name())
+	}
+
+	return names
+}
+
+func TestNewColumnStartsANewFile(t *testing.T) {
+	dir := t.TempDir()
+	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", Log: testutil.Logger{}}
+	require.NoError(t, p.Init())
+
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]interface{}{"a": int64(1)}, time.Now()),
+	}))
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]interface{}{"a": int64(2), "b": int64(3)}, time.Now()),
+	}))
+	require.NoError(t, p.Close())
+
+	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, written, 2)
+
+	schemas := make([][]string, 0, len(written))
+	for _, name := range written {
+		schemas = append(schemas, columnNames(t, name))
+	}
+	require.ElementsMatch(t, [][]string{{"a", "timestamp"}, {"a", "b", "timestamp"}}, schemas)
+}
+
+func TestOmittedFieldKeepsTheSameFile(t *testing.T) {
+	dir := t.TempDir()
+	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", Log: testutil.Logger{}}
+	require.NoError(t, p.Init())
+
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]interface{}{"a": int64(1), "b": int64(2)}, time.Now()),
+	}))
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]interface{}{"a": int64(3)}, time.Now()),
+	}))
+	require.NoError(t, p.Close())
+
+	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, written, 1)
+	require.Equal(t, []string{"a", "b", "timestamp"}, columnNames(t, written[0]))
 }

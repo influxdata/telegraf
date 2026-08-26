@@ -4,7 +4,8 @@ This plugin writes metrics to [parquet][parquet] files. By default, metrics are
 grouped by metric name and written all to the same file.
 
 > [!IMPORTANT]
-> If a metric schema does not match the schema in the file it will be dropped.
+> A parquet file fixes its schema when it is created. When the column schema
+> changes, the plugin starts a new file. See [schema changes](#schema-changes).
 
 To lean more about the parquet format, check out the [parquet docs][docs] as
 well as a blog post on [querying parquet][querying].
@@ -31,7 +32,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # A plugin that writes metrics to parquet files
 [[outputs.parquet]]
   ## Directory to write parquet files in. Existing files are never modified.
-  ## A new file is created at startup and on rotation.
+  ## A new file is created at startup, on rotation, and on schema change.
   # directory = "."
 
   ## Files are rotated after the time interval specified. When set to 0 no time
@@ -54,22 +55,31 @@ based on the union of all fields and tags. If a field and tag have the same name
 then the field takes precedence. Columns are ordered by name with
 the timestamp column last.
 
-The consequence of schema generation is that the very first flush sequence a
-metric is seen takes much longer due to the additional looping through the
-metrics to generate the schema. Subsequent flush intervals are significantly
-faster.
+Every flush walks its metrics to pick up columns the current file does not have
+yet, so the cost of schema generation is spread across flushes rather than paid
+entirely on the first one.
 
 When writing to a file, the schema is used to look for each value and if it is
-not present a null value is added. The result is that if additional fields are
-present after the first metric flush those fields are omitted.
+not present a null value is written.
 
-Since column types are fixed at file creation, when an unknown value is logged
-it will be logged as `null` and once per column. 
+Since parquet column schemas are fixed at file creation, new values that do 
+not fit the column schema are written as `null` and logged once per column.
+
 Inputs that collide with reserved columns like `timestamp_field_name` are
 dropped and logged. Rename `timestamp_field_name` or your field to fix it.
 
-Since parquet column schemas are fixed at file creation, new values that 
-do not fit the column schema are written as `null` and logged once per column.
+### Schema changes
+
+Since parquet column schemas are set at file creation, schema changes have to
+rotate to a new file with the extra column. Rotation events are logged. 
+
+Columns are only added, never dropped so a missing metric writes out as 
+`null`. Column types are fixed. Values that don't fit the fype are written 
+as `null` and logged once per column. 
+
+Since output files can have different schemas, a reader can take the first 
+file's schema and ignore columns that appear in later ones. Or if you use 
+DuckDB, use `union_by_name = true` to avoid this.
 
 ### Write
 
@@ -91,13 +101,13 @@ of this occurring.
 
 ## File Rotation
 
-Measurement names determine the file name and can be customized with 
+Measurement names determine the file name and can be customized with
 the [rename processor][rename].
 
 [rename]: /plugins/processors/rename/README.md
 
 File names carry the time the file was created with a counter if two files
-are created in the same timestamp to avoid loss of data. 
+are created in the same timestamp to avoid loss of data.
 
 File rotation is available via a time based interval that a user can optionally
 set, measured from the time the current file was created. Due to the usage
