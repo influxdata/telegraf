@@ -3,6 +3,9 @@ package parquet
 import (
 	"os"
 	"path/filepath"
+	"runtime"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -400,4 +403,67 @@ func TestTimestampFieldNameCollisionKeepsOneColumn(t *testing.T) {
 	}
 	require.ElementsMatch(t, []string{"value", "timestamp"}, names)
 	require.Equal(t, parquet.Types.Int64, schema.Column(schema.ColumnIndexByName("timestamp")).PhysicalType())
+}
+
+func TestInvalidFilename(t *testing.T) {
+	tests := []struct {
+		name   string
+		metric string
+		os     []string
+	}{
+		{
+			name:   "too long",
+			metric: strings.Repeat("a", 255),
+		},
+		{
+			name:   "null byte",
+			metric: "nul\x00byte",
+		},
+		{
+			name:   "dots",
+			metric: "..",
+		},
+		{
+			name:   "backslash",
+			metric: `a\b`,
+			os:     []string{"windows"},
+		},
+		{
+			name:   "tab",
+			metric: "a\tb",
+			os:     []string{"windows"},
+		},
+		{
+			name:   "a<b>c",
+			metric: "brackets",
+			os:     []string{"windows"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if len(tt.os) != 0 && !slices.Contains(tt.os, runtime.GOOS) {
+				t.Skip("Skipping due to unaffected OS...")
+			}
+
+			metrics := []telegraf.Metric{
+				metric.New(
+					tt.metric,
+					map[string]string{},
+					map[string]interface{}{"value": 1.0},
+					time.Now(),
+				),
+			}
+
+			testDir := t.TempDir()
+			plugin := &Parquet{
+				Directory:          testDir,
+				TimestampFieldName: "time",
+			}
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
+			require.ErrorContains(t, plugin.Write(metrics), "failed to create file")
+		})
+	}
 }
