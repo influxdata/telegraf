@@ -111,6 +111,8 @@ func (cms *CloudWatchMetricStreams) Init() error {
 		cms.WriteTimeout = config.Duration(time.Second * 10)
 	}
 
+	cms.close = make(chan struct{})
+
 	return nil
 }
 
