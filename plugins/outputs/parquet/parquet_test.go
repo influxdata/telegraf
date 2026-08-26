@@ -3,7 +3,6 @@ package parquet
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -281,60 +280,73 @@ func TestMissingValuesReadBackAsNull(t *testing.T) {
 	}
 }
 
-func TestUsableAsFilename(t *testing.T) {
+func TestUnusableMeasurementNamesAreRejected(t *testing.T) {
 	tests := []struct {
-		name   string
-		usable bool
+		name     string
+		rejected bool
 	}{
-		{"cpu", true},
-		{"disk.io", true},
-		{"..", true},
+		{"cpu", false},
+		{"disk.io", false},
+		{"..", false},
+		{"../evil", true},
+		{"../../../../tmp/evil", true},
+		{"/etc/evil", true},
 		{"", false},
-		{"../../etc/passwd", false},
-		{`a\b`, false},
-		{"nul\x00byte", false},
-		{"tab\tnewline\n", false},
-		{strings.Repeat("a", maxMeasurementLen), true},
-		{strings.Repeat("a", maxMeasurementLen+1), false},
+		{"nul\x00byte", true},
+		{strings.Repeat("a", 300), true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.usable, usableAsFilename(tt.name))
+			dir := t.TempDir()
+			p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", Log: testutil.Logger{}}
+			require.NoError(t, p.Init())
+
+			err := p.Write([]telegraf.Metric{
+				metric.New(tt.name, nil, map[string]interface{}{"value": int64(1)}, time.Now()),
+			})
+			require.NoError(t, p.Close())
+
+			written, globErr := filepath.Glob(filepath.Join(dir, "*.parquet"))
+			require.NoError(t, globErr)
+
+			escaped, globErr := filepath.Glob(filepath.Join(filepath.Dir(dir), "*.parquet"))
+			require.NoError(t, globErr)
+			require.Empty(t, escaped)
+
+			if !tt.rejected {
+				require.NoError(t, err)
+				require.Len(t, written, 1)
+				return
+			}
+
+			var writeErr *internal.PartialWriteError
+			require.ErrorAs(t, err, &writeErr)
+			require.Equal(t, []int{0}, writeErr.MetricsReject)
+			require.Empty(t, writeErr.MetricsAccept)
+			require.Empty(t, written)
 		})
 	}
 }
 
-func TestWindowsReservedCharacters(t *testing.T) {
-	if runtime.GOOS != "windows" {
-		t.Skip("windows only")
-	}
-
-	require.False(t, usableAsFilename(`a<b>c`))
-}
-
-func TestMeasurementNamesCannotEscapeDirectory(t *testing.T) {
+func TestSymlinkedMeasurementNameCannotEscapeDirectory(t *testing.T) {
 	dir := t.TempDir()
-	outside := filepath.Dir(dir)
-	before, err := filepath.Glob(filepath.Join(outside, "*.parquet"))
-	require.NoError(t, err)
+	outside := t.TempDir()
+	require.NoError(t, os.Symlink(outside, filepath.Join(dir, "link")))
 
 	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", Log: testutil.Logger{}}
 	require.NoError(t, p.Init())
 
-	for _, name := range []string{"../../../../tmp/evil", "../evil", `a\..\..\b`, "nul\x00byte"} {
-		m := metric.New(name, nil, map[string]interface{}{"value": int64(1)}, time.Now())
-		require.ErrorAs(t, p.Write([]telegraf.Metric{m}), new(*internal.PartialWriteError))
-	}
+	err := p.Write([]telegraf.Metric{
+		metric.New("link/escaped", nil, map[string]interface{}{"value": int64(1)}, time.Now()),
+	})
 	require.NoError(t, p.Close())
 
-	after, err := filepath.Glob(filepath.Join(outside, "*.parquet"))
-	require.NoError(t, err)
-	require.Equal(t, before, after)
+	require.ErrorAs(t, err, new(*internal.PartialWriteError))
 
-	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
-	require.NoError(t, err)
-	require.Empty(t, written)
+	escaped, globErr := filepath.Glob(filepath.Join(outside, "*"))
+	require.NoError(t, globErr)
+	require.Empty(t, escaped)
 }
 
 func TestUnusableMeasurementNameKeepsOutputWriting(t *testing.T) {
@@ -373,8 +385,8 @@ func TestRejectedMetricsReportEveryIndexExactlyOnce(t *testing.T) {
 
 	var writeErr *internal.PartialWriteError
 	require.ErrorAs(t, p.Write(metrics), &writeErr)
-	require.Equal(t, []int{0, 2}, writeErr.MetricsReject)
-	require.Equal(t, []int{1, 3}, writeErr.MetricsAccept)
+	require.ElementsMatch(t, []int{0, 2}, writeErr.MetricsReject)
+	require.ElementsMatch(t, []int{1, 3}, writeErr.MetricsAccept)
 	require.Len(t, writeErr.MetricsRejectErrors, 2)
 	require.ElementsMatch(t,
 		[]int{0, 1, 2, 3},
