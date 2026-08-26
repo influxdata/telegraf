@@ -43,6 +43,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 
 	// Use a map for the new plugin and fill in the data
 	plugin["service_address"] = old.ServiceAddress
+	plugin["protocol"] = "sflow v5"
 	if old.ReadBufferSize != "" {
 		plugin["read_buffer_size"] = old.ReadBufferSize
 	}
