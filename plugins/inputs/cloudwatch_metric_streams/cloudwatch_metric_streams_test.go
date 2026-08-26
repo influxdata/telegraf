@@ -5,110 +5,55 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"net/http"
-	"net/url"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
-const (
-	badMsg       = "blahblahblah: 42\n"
-	emptyMsg     = ""
-	accessKey    = "super-secure-password!"
-	badAccessKey = "super-insecure-password!"
-	maxBodySize  = 524288000
-)
-
-var (
-	pki = testutil.NewPKI("../../../testutil/pki")
-)
-
-func newTestCloudWatchMetricStreams() *CloudWatchMetricStreams {
-	metricStream := &CloudWatchMetricStreams{
-		Log:            testutil.Logger{},
-		ServiceAddress: "localhost:8080",
-		Paths:          []string{"/write"},
-		MaxBodySize:    config.Size(maxBodySize),
-		close:          make(chan struct{}),
-	}
-	return metricStream
-}
-
-func newTestMetricStreamAuth() *CloudWatchMetricStreams {
-	metricStream := newTestCloudWatchMetricStreams()
-	metricStream.AccessKey = accessKey
-	return metricStream
-}
-
-func newTestMetricStreamHTTPS() *CloudWatchMetricStreams {
-	metricStream := newTestCloudWatchMetricStreams()
-	metricStream.ServerConfig = *pki.TLSServerConfig()
-
-	return metricStream
-}
-
-func newTestCompatibleCloudWatchMetricStreams() *CloudWatchMetricStreams {
-	metricStream := newTestCloudWatchMetricStreams()
-	metricStream.APICompatability = true
-	return metricStream
-}
-
-func getHTTPSClient() *http.Client {
-	tlsConfig, err := pki.TLSClientConfig().TLSConfig()
-	if err != nil {
-		panic(err)
-	}
-	return &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsConfig,
-		},
-	}
-}
-
-func createURL(scheme, path string) string {
-	u := url.URL{
-		Scheme:   scheme,
-		Host:     "localhost:8080",
-		Path:     path,
-		RawQuery: "",
-	}
-	return u.String()
-}
-
-func readJSON(t *testing.T, jsonFilePath string) []byte {
-	data, err := os.ReadFile(jsonFilePath)
-	require.NoErrorf(t, err, "could not read from data file %s", jsonFilePath)
-
-	return data
-}
+var pki = testutil.NewPKI("../../../testutil/pki")
 
 func TestInvalidListenerConfig(t *testing.T) {
-	metricStream := newTestCloudWatchMetricStreams()
-	metricStream.ServiceAddress = "address_without_port"
+	plugin := &CloudWatchMetricStreams{
+		Log:            testutil.Logger{},
+		ServiceAddress: "address_without_port",
+		Paths:          []string{"/write"},
+	}
+	require.NoError(t, plugin.Init())
 
-	acc := &testutil.Accumulator{}
-	require.Error(t, metricStream.Start(acc))
+	var acc testutil.Accumulator
+	require.Error(t, plugin.Start(&acc))
 
 	// Stop is called when any ServiceInput fails to start; it must succeed regardless of state
-	metricStream.Stop()
+	plugin.Stop()
 }
 
 func TestWriteHTTPSNoClientAuth(t *testing.T) {
-	metricStream := newTestMetricStreamHTTPS()
-	metricStream.TLSAllowedCACerts = nil
+	plugin := &CloudWatchMetricStreams{
+		Log:            testutil.Logger{},
+		ServiceAddress: "localhost:0",
+		ServerConfig:   *pki.TLSServerConfig(),
+		Paths:          []string{"/write"},
+	}
+	plugin.TLSAllowedCACerts = nil
+	require.NoError(t, plugin.Init())
 
-	acc := &testutil.Accumulator{}
-	require.NoError(t, metricStream.Init())
-	require.NoError(t, metricStream.Start(acc))
-	defer metricStream.Stop()
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
 
+	addr := "https://" + plugin.listener.Addr().String() + "/write"
+
+	// post single message to the metric stream listener
 	cas := x509.NewCertPool()
 	cas.AppendCertsFromPEM([]byte(pki.ReadServerCert()))
-	noClientAuthClient := &http.Client{
+	client := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
 				RootCAs: cas,
@@ -116,46 +61,74 @@ func TestWriteHTTPSNoClientAuth(t *testing.T) {
 		},
 	}
 
-	// post single message to the metric stream listener
-	record := readJSON(t, "testdata/record.json")
-	resp, err := noClientAuthClient.Post(createURL("https", "/write"), "", bytes.NewBuffer(record))
+	records, err := os.ReadFile("testdata/record.json")
+	require.NoError(t, err)
+
+	resp, err := client.Post(addr, "", bytes.NewBuffer(records))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 200, resp.StatusCode)
+	require.EqualValues(t, http.StatusOK, resp.StatusCode)
 }
 
 func TestWriteHTTPSWithClientAuth(t *testing.T) {
-	metricStream := newTestMetricStreamHTTPS()
+	plugin := &CloudWatchMetricStreams{
+		Log:            testutil.Logger{},
+		ServiceAddress: "localhost:0",
+		ServerConfig:   *pki.TLSServerConfig(),
+		Paths:          []string{"/write"},
+	}
+	require.NoError(t, plugin.Init())
 
-	acc := &testutil.Accumulator{}
-	require.NoError(t, metricStream.Init())
-	require.NoError(t, metricStream.Start(acc))
-	defer metricStream.Stop()
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	addr := "https://" + plugin.listener.Addr().String() + "/write"
 
 	// post single message to the metric stream listener
-	record := readJSON(t, "testdata/record.json")
-	resp, err := getHTTPSClient().Post(createURL("https", "/write"), "", bytes.NewBuffer(record))
+	tlsConfig, err := pki.TLSClientConfig().TLSConfig()
+	if err != nil {
+		panic(err)
+	}
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
+	}
+
+	records, err := os.ReadFile("testdata/record.json")
+	require.NoError(t, err)
+
+	resp, err := client.Post(addr, "", bytes.NewBuffer(records))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 200, resp.StatusCode)
+	require.EqualValues(t, http.StatusOK, resp.StatusCode)
 }
 
 func TestWriteHTTPSuccessfulAuth(t *testing.T) {
-	metricStream := newTestMetricStreamAuth()
+	plugin := &CloudWatchMetricStreams{
+		Log:            testutil.Logger{},
+		ServiceAddress: "localhost:0",
+		AccessKey:      "super-secure-password!",
+		Paths:          []string{"/write"},
+	}
+	require.NoError(t, plugin.Init())
 
-	acc := &testutil.Accumulator{}
-	require.NoError(t, metricStream.Init())
-	require.NoError(t, metricStream.Start(acc))
-	defer metricStream.Stop()
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
 
-	client := &http.Client{}
-
-	record := readJSON(t, "testdata/record.json")
-	req, err := http.NewRequest("POST", createURL("http", "/write"), bytes.NewBuffer(record))
-	require.NoError(t, err)
-	req.Header.Set("X-Amz-Firehose-Access-Key", accessKey)
+	addr := "http://" + plugin.listener.Addr().String() + "/write"
 
 	// post single message to the metric stream listener
+	client := &http.Client{}
+
+	records, err := os.ReadFile("testdata/record.json")
+	require.NoError(t, err)
+
+	req, err := http.NewRequest("POST", addr, bytes.NewBuffer(records))
+	require.NoError(t, err)
+	req.Header.Set("X-Amz-Firehose-Access-Key", "super-secure-password!")
 	resp, err := client.Do(req)
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
@@ -163,21 +136,29 @@ func TestWriteHTTPSuccessfulAuth(t *testing.T) {
 }
 
 func TestWriteHTTPFailedAuth(t *testing.T) {
-	metricStream := newTestMetricStreamAuth()
+	plugin := &CloudWatchMetricStreams{
+		Log:            testutil.Logger{},
+		ServiceAddress: "localhost:0",
+		AccessKey:      "super-secure-password!",
+		Paths:          []string{"/write"},
+	}
+	require.NoError(t, plugin.Init())
 
-	acc := &testutil.Accumulator{}
-	require.NoError(t, metricStream.Init())
-	require.NoError(t, metricStream.Start(acc))
-	defer metricStream.Stop()
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
 
-	client := &http.Client{}
-
-	record := readJSON(t, "testdata/record.json")
-	req, err := http.NewRequest("POST", createURL("http", "/write"), bytes.NewBuffer(record))
-	require.NoError(t, err)
-	req.Header.Set("X-Amz-Firehose-Access-Key", badAccessKey)
+	addr := "http://" + plugin.listener.Addr().String() + "/write"
 
 	// post single message to the metric stream listener
+	client := &http.Client{}
+
+	records, err := os.ReadFile("testdata/record.json")
+	require.NoError(t, err)
+
+	req, err := http.NewRequest("POST", addr, bytes.NewBuffer(records))
+	require.NoError(t, err)
+	req.Header.Set("X-Amz-Firehose-Access-Key", "super-insecure-password!")
 	resp, err := client.Do(req)
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
@@ -185,124 +166,187 @@ func TestWriteHTTPFailedAuth(t *testing.T) {
 }
 
 func TestWriteHTTP(t *testing.T) {
-	metricStream := newTestCloudWatchMetricStreams()
+	plugin := &CloudWatchMetricStreams{
+		Log:            testutil.Logger{},
+		ServiceAddress: "localhost:0",
+		Paths:          []string{"/write"},
+	}
+	require.NoError(t, plugin.Init())
 
-	acc := &testutil.Accumulator{}
-	require.NoError(t, metricStream.Init())
-	require.NoError(t, metricStream.Start(acc))
-	defer metricStream.Stop()
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	addr := "http://" + plugin.listener.Addr().String() + "/write"
 
 	// post single message to the metric stream listener
-	record := readJSON(t, "testdata/record.json")
-	resp, err := http.Post(createURL("http", "/write"), "", bytes.NewBuffer(record))
+	records, err := os.ReadFile("testdata/record.json")
+	require.NoError(t, err)
+
+	//nolint:gosec // We must construct the address from the server due to dynamic port assignment
+	resp, err := http.Post(addr, "", bytes.NewBuffer(records))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 200, resp.StatusCode)
+	require.EqualValues(t, http.StatusOK, resp.StatusCode)
 }
 
 func TestWriteHTTPMultipleRecords(t *testing.T) {
-	metricStream := newTestCloudWatchMetricStreams()
+	plugin := &CloudWatchMetricStreams{
+		Log:            testutil.Logger{},
+		ServiceAddress: "localhost:0",
+		Paths:          []string{"/write"},
+	}
+	require.NoError(t, plugin.Init())
 
-	acc := &testutil.Accumulator{}
-	require.NoError(t, metricStream.Init())
-	require.NoError(t, metricStream.Start(acc))
-	defer metricStream.Stop()
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	addr := "http://" + plugin.listener.Addr().String() + "/write"
 
 	// post multiple records to the metric stream listener
-	records := readJSON(t, "testdata/records.json")
-	resp, err := http.Post(createURL("http", "/write"), "", bytes.NewBuffer(records))
+	records, err := os.ReadFile("testdata/record.json")
+	require.NoError(t, err)
+
+	//nolint:gosec // We must construct the address from the server due to dynamic port assignment
+	resp, err := http.Post(addr, "", bytes.NewBuffer(records))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 200, resp.StatusCode)
+	require.EqualValues(t, http.StatusOK, resp.StatusCode)
 }
 
 func TestWriteHTTPExactMaxBodySize(t *testing.T) {
-	metricStream := newTestCloudWatchMetricStreams()
-	record := readJSON(t, "testdata/record.json")
-	metricStream.MaxBodySize = config.Size(len(record))
+	plugin := &CloudWatchMetricStreams{
+		Log:            testutil.Logger{},
+		ServiceAddress: "localhost:0",
+		Paths:          []string{"/write"},
+		MaxBodySize:    config.Size(616),
+	}
+	require.NoError(t, plugin.Init())
 
-	acc := &testutil.Accumulator{}
-	require.NoError(t, metricStream.Init())
-	require.NoError(t, metricStream.Start(acc))
-	defer metricStream.Stop()
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	addr := "http://" + plugin.listener.Addr().String() + "/write"
 
 	// post single message to the metric stream listener
-	resp, err := http.Post(createURL("http", "/write"), "", bytes.NewBuffer(record))
+	records, err := os.ReadFile("testdata/record.json")
+	require.NoError(t, err)
+
+	//nolint:gosec // We must construct the address from the server due to dynamic port assignment
+	resp, err := http.Post(addr, "", bytes.NewBuffer(records))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 200, resp.StatusCode)
+	require.EqualValues(t, http.StatusOK, resp.StatusCode)
 }
 
 func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
-	metricStream := newTestCloudWatchMetricStreams()
-	metricStream.MaxBodySize = config.Size(512)
+	plugin := &CloudWatchMetricStreams{
+		Log:            testutil.Logger{},
+		ServiceAddress: "localhost:0",
+		Paths:          []string{"/write"},
+		MaxBodySize:    config.Size(512),
+	}
+	require.NoError(t, plugin.Init())
 
-	acc := &testutil.Accumulator{}
-	require.NoError(t, metricStream.Init())
-	require.NoError(t, metricStream.Start(acc))
-	defer metricStream.Stop()
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	addr := "http://" + plugin.listener.Addr().String() + "/write"
 
 	// post single message to the metric stream listener
-	record := readJSON(t, "testdata/record.json")
-	resp, err := http.Post(createURL("http", "/write"), "", bytes.NewBuffer(record))
+	records, err := os.ReadFile("testdata/record.json")
+	require.NoError(t, err)
+
+	//nolint:gosec // We must construct the address from the server due to dynamic port assignment
+	resp, err := http.Post(addr, "", bytes.NewBuffer(records))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 413, resp.StatusCode)
+	require.EqualValues(t, http.StatusRequestEntityTooLarge, resp.StatusCode)
 }
 
 func TestReceive404ForInvalidEndpoint(t *testing.T) {
-	metricStream := newTestCloudWatchMetricStreams()
+	plugin := &CloudWatchMetricStreams{
+		Log:            testutil.Logger{},
+		ServiceAddress: "localhost:0",
+		Paths:          []string{"/write"},
+	}
+	require.NoError(t, plugin.Init())
 
-	acc := &testutil.Accumulator{}
-	require.NoError(t, metricStream.Init())
-	require.NoError(t, metricStream.Start(acc))
-	defer metricStream.Stop()
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	addr := "http://" + plugin.listener.Addr().String() + "/foobar"
 
 	// post single message to the metric stream listener
-	record := readJSON(t, "testdata/record.json")
-	resp, err := http.Post(createURL("http", "/foobar"), "", bytes.NewBuffer(record))
+	records, err := os.ReadFile("testdata/record.json")
+	require.NoError(t, err)
+
+	//nolint:gosec // We must construct the address from the server due to dynamic port assignment
+	resp, err := http.Post(addr, "", bytes.NewBuffer(records))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 404, resp.StatusCode)
 }
 
 func TestWriteHTTPInvalid(t *testing.T) {
-	metricStream := newTestCloudWatchMetricStreams()
+	plugin := &CloudWatchMetricStreams{
+		Log:            testutil.Logger{},
+		ServiceAddress: "localhost:0",
+		Paths:          []string{"/write"},
+	}
+	require.NoError(t, plugin.Init())
 
-	acc := &testutil.Accumulator{}
-	require.NoError(t, metricStream.Init())
-	require.NoError(t, metricStream.Start(acc))
-	defer metricStream.Stop()
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	addr := "http://" + plugin.listener.Addr().String() + "/write"
 
 	// post a badly formatted message to the metric stream listener
-	resp, err := http.Post(createURL("http", "/write"), "", bytes.NewBufferString(badMsg))
+	//nolint:gosec // We must construct the address from the server due to dynamic port assignment
+	resp, err := http.Post(addr, "", bytes.NewBufferString("blahblahblah: 42\n"))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 400, resp.StatusCode)
+	require.EqualValues(t, http.StatusBadRequest, resp.StatusCode)
 }
 
 func TestWriteHTTPEmpty(t *testing.T) {
-	metricStream := newTestCloudWatchMetricStreams()
+	plugin := &CloudWatchMetricStreams{
+		Log:            testutil.Logger{},
+		ServiceAddress: "localhost:0",
+		Paths:          []string{"/write"},
+	}
+	require.NoError(t, plugin.Init())
 
-	acc := &testutil.Accumulator{}
-	require.NoError(t, metricStream.Init())
-	require.NoError(t, metricStream.Start(acc))
-	defer metricStream.Stop()
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	addr := "http://" + plugin.listener.Addr().String() + "/write"
 
 	// post empty message to the metric stream listener
-	resp, err := http.Post(createURL("http", "/write"), "", bytes.NewBufferString(emptyMsg))
+	//nolint:gosec // We must construct the address from the server due to dynamic port assignment
+	resp, err := http.Post(addr, "", bytes.NewBufferString(""))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 400, resp.StatusCode)
+	require.EqualValues(t, http.StatusBadRequest, resp.StatusCode)
 }
 
 func TestComposeMetrics(t *testing.T) {
-	metricStream := newTestCloudWatchMetricStreams()
+	plugin := &CloudWatchMetricStreams{
+		Log:            testutil.Logger{},
+		ServiceAddress: "localhost:0",
+		Paths:          []string{"/write"},
+	}
+	require.NoError(t, plugin.Init())
 
-	acc := &testutil.Accumulator{}
-	require.NoError(t, metricStream.Init())
-	require.NoError(t, metricStream.Start(acc))
-	defer metricStream.Stop()
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
 
 	// compose a data object for writing
 	data := data{
@@ -318,22 +362,45 @@ func TestComposeMetrics(t *testing.T) {
 	}
 
 	// Compose the metrics from data
-	metricStream.composeMetrics(data)
+	plugin.composeMetrics(data)
 
-	acc.Wait(1)
-	acc.AssertContainsTaggedFields(t, "aws_ec2_cpuutilization",
-		map[string]interface{}{"max": 0.4366666666666666, "min": 0.3683333333333333, "sum": 1.9399999999999997, "count": 5.0},
-		map[string]string{"AutoScalingGroupName": "test-autoscaling-group", "accountId": "546734499701", "region": "us-west-2"},
-	)
+	expected := []telegraf.Metric{
+		metric.New(
+			"aws_ec2_cpuutilization",
+			map[string]string{
+				"AutoScalingGroupName": "test-autoscaling-group",
+				"accountId":            "546734499701",
+				"region":               "us-west-2",
+			},
+			map[string]interface{}{
+				"max":   0.4366666666666666,
+				"min":   0.3683333333333333,
+				"sum":   1.9399999999999997,
+				"count": 5.0,
+			},
+			time.Unix(1651679400, 0),
+		),
+	}
+
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= uint64(len(expected))
+	}, 1*time.Second, 100*time.Millisecond)
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
 
 func TestComposeAPICompatibleMetrics(t *testing.T) {
-	metricStream := newTestCompatibleCloudWatchMetricStreams()
+	plugin := &CloudWatchMetricStreams{
+		Log:              testutil.Logger{},
+		ServiceAddress:   "localhost:8080",
+		Paths:            []string{"/write"},
+		MaxBodySize:      config.Size(524288000),
+		APICompatability: true,
+	}
+	require.NoError(t, plugin.Init())
 
-	acc := &testutil.Accumulator{}
-	require.NoError(t, metricStream.Init())
-	require.NoError(t, metricStream.Start(acc))
-	defer metricStream.Stop()
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
 
 	// compose a data object for writing
 	data := data{
@@ -349,28 +416,51 @@ func TestComposeAPICompatibleMetrics(t *testing.T) {
 	}
 
 	// Compose the metrics from data
-	metricStream.composeMetrics(data)
+	plugin.composeMetrics(data)
 
-	acc.Wait(1)
-	acc.AssertContainsTaggedFields(t, "aws_ec2_cpuutilization",
-		map[string]interface{}{"maximum": 0.4366666666666666, "minimum": 0.3683333333333333, "sum": 1.9399999999999997, "samplecount": 5.0},
-		map[string]string{"AutoScalingGroupName": "test-autoscaling-group", "accountId": "546734499701", "region": "us-west-2"},
-	)
+	expected := []telegraf.Metric{
+		metric.New(
+			"aws_ec2_cpuutilization",
+			map[string]string{
+				"AutoScalingGroupName": "test-autoscaling-group",
+				"accountId":            "546734499701",
+				"region":               "us-west-2",
+			},
+			map[string]interface{}{
+				"maximum":     0.4366666666666666,
+				"minimum":     0.3683333333333333,
+				"sum":         1.9399999999999997,
+				"samplecount": 5.0,
+			},
+			time.Unix(1651679400, 0),
+		),
+	}
+
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= uint64(len(expected))
+	}, 1*time.Second, 100*time.Millisecond)
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
 
 // post GZIP encoded data to the metric stream listener
 func TestWriteHTTPGzippedData(t *testing.T) {
-	metricStream := newTestCloudWatchMetricStreams()
+	plugin := &CloudWatchMetricStreams{
+		Log:            testutil.Logger{},
+		ServiceAddress: "localhost:0",
+		Paths:          []string{"/write"},
+	}
+	require.NoError(t, plugin.Init())
 
-	acc := &testutil.Accumulator{}
-	require.NoError(t, metricStream.Init())
-	require.NoError(t, metricStream.Start(acc))
-	defer metricStream.Stop()
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	addr := "http://" + plugin.listener.Addr().String() + "/write"
 
 	data, err := os.ReadFile("./testdata/records.gz")
 	require.NoError(t, err)
 
-	req, err := http.NewRequest("POST", createURL("http", "/write"), bytes.NewBuffer(data))
+	req, err := http.NewRequest("POST", addr, bytes.NewBuffer(data))
 	require.NoError(t, err)
 	req.Header.Set("Content-Encoding", "gzip")
 
@@ -378,5 +468,5 @@ func TestWriteHTTPGzippedData(t *testing.T) {
 	resp, err := client.Do(req)
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 200, resp.StatusCode)
+	require.EqualValues(t, http.StatusOK, resp.StatusCode)
 }
