@@ -258,6 +258,17 @@ func (p *Parquet) createSchema(metrics []telegraf.Metric) (*arrow.Schema, error)
 		}
 	}
 
+	if p.TimestampFieldName != "" {
+		if _, taken := rawFields[p.TimestampFieldName]; taken {
+			delete(rawFields, p.TimestampFieldName)
+			p.Log.Warnf(
+				"Ignoring the %q field or tag as that column holds the metric time; "+
+					"set 'timestamp_field_name' to another name to keep it",
+				p.TimestampFieldName,
+			)
+		}
+	}
+
 	fields := make([]arrow.Field, 0)
 	for key, value := range rawFields {
 		fields = append(fields, arrow.Field{
