@@ -82,6 +82,11 @@ of this occurring.
 
 ## File Rotation
 
+Measurement names determine the file name and can be customized with 
+the [rename processor][rename].
+
+[rename]: /plugins/processors/rename/README.md
+
 If a file with the same target name exists at start, the existing file is
 rotated to avoid over-writing it or conflicting schema.
 

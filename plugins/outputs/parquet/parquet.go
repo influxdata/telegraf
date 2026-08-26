@@ -6,8 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 	"strconv"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/apache/arrow-go/v18/arrow"
 	"github.com/apache/arrow-go/v18/arrow/array"
@@ -38,7 +41,8 @@ type Parquet struct {
 	TimestampFieldName string          `toml:"timestamp_field_name"`
 	Log                telegraf.Logger `toml:"-"`
 
-	metricGroups map[string]*metricGroup
+	metricGroups     map[string]*metricGroup
+	warnedOnFilename bool
 }
 
 func (*Parquet) SampleConfig() string {
@@ -88,7 +92,8 @@ func (p *Parquet) Close() error {
 func (p *Parquet) Write(metrics []telegraf.Metric) error {
 	groupedMetrics := make(map[string][]telegraf.Metric)
 	for _, metric := range metrics {
-		groupedMetrics[metric.Name()] = append(groupedMetrics[metric.Name()], metric)
+		name := p.metricToFile(metric.Name())
+		groupedMetrics[name] = append(groupedMetrics[name], metric)
 	}
 
 	now := time.Now()
@@ -128,6 +133,36 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 	}
 
 	return nil
+}
+
+const maxMeasurementLen = 255 - len("-2006-01-02-1234567890.parquet")
+
+func (p *Parquet) metricToFile(name string) string {
+	safe := strings.Map(func(r rune) rune {
+		if reservedInFilename(r) {
+			return '_'
+		}
+		return r
+	}, name)
+
+	if len(safe) > maxMeasurementLen {
+		safe = strings.ToValidUTF8(safe[:maxMeasurementLen], "")
+	}
+
+	if safe != name && !p.warnedOnFilename {
+		p.warnedOnFilename = true
+		p.Log.Warnf("Metric %q is not usable as a file name, writing to %q instead; use the rename processor to choose the name", name, safe)
+	}
+
+	return safe
+}
+
+func reservedInFilename(r rune) bool {
+	if r == '/' || r == '\\' || unicode.IsControl(r) {
+		return true
+	}
+
+	return runtime.GOOS == "windows" && strings.ContainsRune(`<>:"|?*`, r)
 }
 
 func (p *Parquet) rotateIfNeeded(name string) error {
