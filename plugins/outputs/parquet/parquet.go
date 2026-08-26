@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -311,11 +312,17 @@ func (p *Parquet) createSchema(metrics []telegraf.Metric) (*arrow.Schema, error)
 		}
 	}
 
-	fields := make([]arrow.Field, 0)
-	for key, value := range rawFields {
+	names := make([]string, 0, len(rawFields))
+	for name := range rawFields {
+		names = append(names, name)
+	}
+	slices.Sort(names)
+
+	fields := make([]arrow.Field, 0, len(names)+1)
+	for _, name := range names {
 		fields = append(fields, arrow.Field{
-			Name:     key,
-			Type:     value,
+			Name:     name,
+			Type:     rawFields[name],
 			Nullable: true,
 		})
 	}

@@ -439,3 +439,34 @@ func TestTimestampFieldNameCollisionKeepsOneColumn(t *testing.T) {
 	require.ElementsMatch(t, []string{"value", "timestamp"}, names)
 	require.Equal(t, parquet.Types.Int64, schema.Column(schema.ColumnIndexByName("timestamp")).PhysicalType())
 }
+
+func TestColumnOrderIsDeterministic(t *testing.T) {
+	dir := t.TempDir()
+	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", Log: testutil.Logger{}}
+	require.NoError(t, p.Init())
+
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New(
+			"demo",
+			map[string]string{"zone": "a"},
+			map[string]interface{}{"delta": int64(1), "alpha": int64(2), "charlie": int64(3)},
+			time.Now(),
+		),
+	}))
+	require.NoError(t, p.Close())
+
+	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, written, 1)
+
+	reader, err := file.OpenParquetFile(written[0], false)
+	require.NoError(t, err)
+	defer reader.Close()
+
+	schema := reader.MetaData().Schema
+	names := make([]string, 0, schema.NumColumns())
+	for i := 0; i < schema.NumColumns(); i++ {
+		names = append(names, schema.Column(i).Name())
+	}
+	require.Equal(t, []string{"alpha", "charlie", "delta", "zone", "timestamp"}, names)
+}

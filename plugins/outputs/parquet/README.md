@@ -51,7 +51,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 Parquet files require a schema when writing files. To generate a schema,
 Telegraf will go through all grouped metrics and generate an Apache Arrow schema
 based on the union of all fields and tags. If a field and tag have the same name
-then the field takes precedence.
+then the field takes precedence. Columns are ordered by name with
+the timestamp column last.
 
 The consequence of schema generation is that the very first flush sequence a
 metric is seen takes much longer due to the additional looping through the
