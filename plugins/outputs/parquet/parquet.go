@@ -309,7 +309,7 @@ func appendTyped[T any](builder array.Builder, value T) bool {
 }
 
 func (p *Parquet) createSchema(metrics []telegraf.Metric) *arrow.Schema {
-	rawFields := make(map[string]arrow.DataType, 0)
+	rawFields := make(map[string]arrow.DataType)
 	for _, metric := range metrics {
 		for _, field := range metric.FieldList() {
 			if _, known := rawFields[field.Key]; known {
@@ -322,8 +322,11 @@ func (p *Parquet) createSchema(metrics []telegraf.Metric) *arrow.Schema {
 			}
 			rawFields[field.Key] = arrowType
 		}
+	}
+
+	for _, metric := range metrics {
 		for _, tag := range metric.TagList() {
-			if _, ok := rawFields[tag.Key]; !ok {
+			if _, known := rawFields[tag.Key]; !known {
 				rawFields[tag.Key] = arrow.BinaryTypes.String
 			}
 		}

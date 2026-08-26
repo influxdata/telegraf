@@ -552,3 +552,26 @@ func TestRotationSurvivesAMissingFile(t *testing.T) {
 	}))
 	require.NoError(t, p.Close())
 }
+
+func TestFieldTakesPrecedenceOverTagOfTheSameName(t *testing.T) {
+	dir := t.TempDir()
+	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", Log: testutil.Logger{}}
+	require.NoError(t, p.Init())
+
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", map[string]string{"k": "from tag"}, map[string]interface{}{"other": int64(0)}, time.Now()),
+		metric.New("demo", nil, map[string]interface{}{"k": int64(1)}, time.Now()),
+	}))
+	require.NoError(t, p.Close())
+
+	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, written, 1)
+
+	reader, err := file.OpenParquetFile(written[0], false)
+	require.NoError(t, err)
+	defer reader.Close()
+
+	schema := reader.MetaData().Schema
+	require.Equal(t, parquet.Types.Int64, schema.Column(schema.ColumnIndexByName("k")).PhysicalType())
+}
