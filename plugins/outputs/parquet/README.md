@@ -82,7 +82,7 @@ of this occurring.
 
 ## File Rotation
 
-Measurement names determine the file name and can be customized with 
+Measurement names determine the file name and can be customized with
 the [rename processor][rename].
 
 [rename]: /plugins/processors/rename/README.md
