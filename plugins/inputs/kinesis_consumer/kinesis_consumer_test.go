@@ -22,8 +22,17 @@ func TestInvalidCoding(t *testing.T) {
 	require.ErrorContains(t, plugin.Init(), "unknown content encoding")
 }
 
+func TestInvalidRestartPosition(t *testing.T) {
+	plugin := &KinesisConsumer{
+		StreamName:      "foo",
+		RestartPosition: "notsupported",
+	}
+	require.ErrorContains(t, plugin.Init(), `invalid shard iterator restart position "notsupported"`)
+}
+
 func TestIteratorParamsFollowConsumedSequenceNumber(t *testing.T) {
 	sc := &shardConsumer{
+		restart: restartPositionLastProcessed,
 		params: &kinesis.GetShardIteratorInput{
 			ShardId:           aws.String("shard-000"),
 			ShardIteratorType: types.ShardIteratorTypeLatest,
@@ -54,6 +63,7 @@ func TestIteratorParamsFollowConsumedSequenceNumber(t *testing.T) {
 func TestIteratorParamsPreferCheckpointedSequenceNumber(t *testing.T) {
 	var checkpoint string
 	sc := &shardConsumer{
+		restart: restartPositionCheckpoint,
 		params: &kinesis.GetShardIteratorInput{
 			ShardId:           aws.String("shard-000"),
 			ShardIteratorType: types.ShardIteratorTypeLatest,
@@ -83,6 +93,25 @@ func TestIteratorParamsPreferCheckpointedSequenceNumber(t *testing.T) {
 	require.Equal(t, types.ShardIteratorTypeAfterSequenceNumber, params.ShardIteratorType)
 	require.NotNil(t, params.StartingSequenceNumber)
 	require.Equal(t, "300", *params.StartingSequenceNumber)
+}
+
+func TestIteratorParamsKeepConfiguredPosition(t *testing.T) {
+	sc := &shardConsumer{
+		seqnr:   "200",
+		restart: restartPositionIteratorType,
+		params: &kinesis.GetShardIteratorInput{
+			ShardId:                aws.String("shard-000"),
+			ShardIteratorType:      types.ShardIteratorTypeAfterSequenceNumber,
+			StartingSequenceNumber: aws.String("100"),
+			StreamName:             aws.String("foo"),
+		},
+		position: func() string { return "300" },
+	}
+
+	params := sc.iteratorParams()
+	require.Equal(t, types.ShardIteratorTypeAfterSequenceNumber, params.ShardIteratorType)
+	require.NotNil(t, params.StartingSequenceNumber)
+	require.Equal(t, "100", *params.StartingSequenceNumber)
 }
 
 func TestOnMessage(t *testing.T) {

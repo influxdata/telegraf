@@ -16,6 +16,12 @@ import (
 
 type recordHandler func(ctx context.Context, shard string, r *types.Record)
 
+const (
+	restartPositionCheckpoint    = "checkpoint"
+	restartPositionLastProcessed = "last_processed"
+	restartPositionIteratorType  = "shard_iterator_type"
+)
+
 type shardConsumer struct {
 	seqnr    string
 	interval time.Duration
@@ -24,6 +30,7 @@ type shardConsumer struct {
 	client   *kinesis.Client
 	params   *kinesis.GetShardIteratorInput
 	position func() string
+	restart  string
 
 	onMessage recordHandler
 }
@@ -96,18 +103,25 @@ func (c *shardConsumer) consume(ctx context.Context, shard string) ([]types.Chil
 }
 
 func (c *shardConsumer) iteratorParams() *kinesis.GetShardIteratorInput {
-	seqnr := c.seqnr
-	if c.position != nil {
-		if checkpoint := c.position(); checkpoint != "" {
-			seqnr = checkpoint
+	var seqnr string
+	switch c.restart {
+	case restartPositionCheckpoint:
+		if c.position != nil {
+			seqnr = c.position()
 		}
+		if seqnr == "" {
+			seqnr = c.seqnr
+		}
+	case restartPositionLastProcessed:
+		seqnr = c.seqnr
+	}
+	if seqnr == "" {
+		return c.params
 	}
 
 	params := *c.params
-	if seqnr != "" {
-		params.ShardIteratorType = types.ShardIteratorTypeAfterSequenceNumber
-		params.StartingSequenceNumber = &seqnr
-	}
+	params.ShardIteratorType = types.ShardIteratorTypeAfterSequenceNumber
+	params.StartingSequenceNumber = &seqnr
 
 	return &params
 }
@@ -137,6 +151,7 @@ type consumer struct {
 	config              aws.Config
 	stream              string
 	iterType            types.ShardIteratorType
+	restart             string
 	pollInterval        time.Duration
 	shardUpdateInterval time.Duration
 	log                 telegraf.Logger
@@ -339,11 +354,16 @@ func (c *consumer) startShardConsumer(ctx context.Context, id, seqnr string) {
 		log:       c.log,
 		onMessage: c.onMessage,
 		client:    c.client,
+		restart:   c.restart,
 		params: &kinesis.GetShardIteratorInput{
 			ShardId:           &id,
 			ShardIteratorType: c.iterType,
 			StreamName:        &c.stream,
 		},
+	}
+	if seqnr != "" {
+		sc.params.ShardIteratorType = types.ShardIteratorTypeAfterSequenceNumber
+		sc.params.StartingSequenceNumber = &seqnr
 	}
 	if c.position != nil {
 		sc.position = func() string { return c.position(id) }
