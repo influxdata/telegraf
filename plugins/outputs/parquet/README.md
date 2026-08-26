@@ -62,6 +62,9 @@ When writing to a file, the schema is used to look for each value and if it is
 not present a null value is added. The result is that if additional fields are
 present after the first metric flush those fields are omitted.
 
+Since column types are fixed at file creation, when an unknown value is logged
+it will be logged as `null` and once per column. 
+
 ### Write
 
 The plugin makes use of the buffered writer. This may buffer some metrics into
