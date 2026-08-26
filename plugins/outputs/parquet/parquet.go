@@ -125,13 +125,7 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 	now := time.Now()
 	for name, metrics := range groupedMetrics {
 		if _, ok := p.metricGroups[name]; !ok {
-			schema, err := p.createSchema(metrics)
-			if err != nil {
-				perr.MetricsReject = append(perr.MetricsReject, metricIndices[name]...)
-				perr.MetricsRejectErrors = append(perr.MetricsRejectErrors, fmt.Errorf("failed to create schema for file %q: %w", name, err))
-				perr.Err = fmt.Errorf("failed to create schema for file %q: %w", name, err)
-				continue
-			}
+			schema := p.createSchema(metrics)
 			writer, filename, err := p.createWriter(name, schema, now)
 			if err != nil {
 				perr.MetricsReject = append(perr.MetricsReject, metricIndices[name]...)
@@ -400,17 +394,19 @@ func (p *Parquet) createRecordBatch(metrics []telegraf.Metric, builder *array.Re
 	return record, nil
 }
 
-func (p *Parquet) createSchema(metrics []telegraf.Metric) (*arrow.Schema, error) {
+func (p *Parquet) createSchema(metrics []telegraf.Metric) *arrow.Schema {
 	rawFields := make(map[string]arrow.DataType, 0)
 	for _, metric := range metrics {
 		for _, field := range metric.FieldList() {
-			if _, ok := rawFields[field.Key]; !ok {
-				arrowType, err := goToArrowType(field.Value)
-				if err != nil {
-					return nil, fmt.Errorf("error converting '%s=%s' field to arrow type: %w", field.Key, field.Value, err)
-				}
-				rawFields[field.Key] = arrowType
+			if _, known := rawFields[field.Key]; known {
+				continue
 			}
+			arrowType, err := goToArrowType(field.Value)
+			if err != nil {
+				p.Log.Warnf("Skipping field %q of metric %q: %v", field.Key, metric.Name(), err)
+				continue
+			}
+			rawFields[field.Key] = arrowType
 		}
 	}
 	for _, metric := range metrics {
@@ -443,7 +439,7 @@ func (p *Parquet) createSchema(metrics []telegraf.Metric) (*arrow.Schema, error)
 		})
 	}
 
-	return arrow.NewSchema(fields, nil), nil
+	return arrow.NewSchema(fields, nil)
 }
 
 func (p *Parquet) createWriter(name string, schema *arrow.Schema, now time.Time) (*pqarrow.FileWriter, string, error) {
