@@ -27,6 +27,7 @@ var defaultTimestampFieldName = "timestamp"
 
 type metricGroup struct {
 	filename string
+	warned   map[string]bool
 	builder  *array.RecordBuilder
 	schema   *arrow.Schema
 	writer   *pqarrow.FileWriter
@@ -106,6 +107,7 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 			p.metricGroups[name] = &metricGroup{
 				builder:  array.NewRecordBuilder(memory.DefaultAllocator, schema),
 				filename: filename,
+				warned:   make(map[string]bool),
 				schema:   schema,
 				writer:   writer,
 			}
@@ -117,14 +119,13 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 			}
 		}
 
-		record, err := p.createRecordBatch(metrics, p.metricGroups[name].builder, p.metricGroups[name].schema)
-		if err != nil {
-			return fmt.Errorf("failed to create record for file %q: %w", p.metricGroups[name].filename, err)
-		}
-		if err = p.metricGroups[name].writer.WriteBuffered(record); err != nil {
-			return fmt.Errorf("failed to write to file %q: %w", p.metricGroups[name].filename, err)
-		}
+		group := p.metricGroups[name]
+		record := p.createRecordBatch(group, metrics)
+		err := group.writer.WriteBuffered(record)
 		record.Release()
+		if err != nil {
+			return fmt.Errorf("failed to write to file %q: %w", group.filename, err)
+		}
 	}
 
 	return nil
@@ -154,89 +155,95 @@ func (p *Parquet) rotateIfNeeded(name string) error {
 	return nil
 }
 
-func (p *Parquet) createRecordBatch(metrics []telegraf.Metric, builder *array.RecordBuilder, schema *arrow.Schema) (arrow.RecordBatch, error) {
-	for index, col := range schema.Fields() {
+func (p *Parquet) createRecordBatch(group *metricGroup, metrics []telegraf.Metric) arrow.RecordBatch {
+	for index, column := range group.schema.Fields() {
+		builder := group.builder.Field(index)
+
 		for _, m := range metrics {
-			if p.TimestampFieldName != "" && col.Name == p.TimestampFieldName {
-				builder.Field(index).(*array.Int64Builder).Append(m.Time().UnixNano())
-				continue
-			}
-
-			// Try to get the value from a field first, then from a tag.
-			var value any
-			var ok bool
-			value, ok = m.GetField(col.Name)
-			if !ok {
-				value, ok = m.GetTag(col.Name)
-			}
-
-			// if neither field nor tag exists, append a null value
-			if !ok {
-				switch col.Type {
-				case arrow.PrimitiveTypes.Int8:
-					builder.Field(index).(*array.Int8Builder).AppendNull()
-				case arrow.PrimitiveTypes.Int16:
-					builder.Field(index).(*array.Int16Builder).AppendNull()
-				case arrow.PrimitiveTypes.Int32:
-					builder.Field(index).(*array.Int32Builder).AppendNull()
-				case arrow.PrimitiveTypes.Int64:
-					builder.Field(index).(*array.Int64Builder).AppendNull()
-				case arrow.PrimitiveTypes.Uint8:
-					builder.Field(index).(*array.Uint8Builder).AppendNull()
-				case arrow.PrimitiveTypes.Uint16:
-					builder.Field(index).(*array.Uint16Builder).AppendNull()
-				case arrow.PrimitiveTypes.Uint32:
-					builder.Field(index).(*array.Uint32Builder).AppendNull()
-				case arrow.PrimitiveTypes.Uint64:
-					builder.Field(index).(*array.Uint64Builder).AppendNull()
-				case arrow.PrimitiveTypes.Float32:
-					builder.Field(index).(*array.Float32Builder).AppendNull()
-				case arrow.PrimitiveTypes.Float64:
-					builder.Field(index).(*array.Float64Builder).AppendNull()
-				case arrow.BinaryTypes.String:
-					builder.Field(index).(*array.StringBuilder).AppendNull()
-				case arrow.FixedWidthTypes.Boolean:
-					builder.Field(index).(*array.BooleanBuilder).AppendNull()
-				default:
-					return nil, fmt.Errorf("unsupported type: %T", value)
-				}
-
-				continue
-			}
-
-			switch col.Type {
-			case arrow.PrimitiveTypes.Int8:
-				builder.Field(index).(*array.Int8Builder).Append(value.(int8))
-			case arrow.PrimitiveTypes.Int16:
-				builder.Field(index).(*array.Int16Builder).Append(value.(int16))
-			case arrow.PrimitiveTypes.Int32:
-				builder.Field(index).(*array.Int32Builder).Append(value.(int32))
-			case arrow.PrimitiveTypes.Int64:
-				builder.Field(index).(*array.Int64Builder).Append(value.(int64))
-			case arrow.PrimitiveTypes.Uint8:
-				builder.Field(index).(*array.Uint8Builder).Append(value.(uint8))
-			case arrow.PrimitiveTypes.Uint16:
-				builder.Field(index).(*array.Uint16Builder).Append(value.(uint16))
-			case arrow.PrimitiveTypes.Uint32:
-				builder.Field(index).(*array.Uint32Builder).Append(value.(uint32))
-			case arrow.PrimitiveTypes.Uint64:
-				builder.Field(index).(*array.Uint64Builder).Append(value.(uint64))
-			case arrow.PrimitiveTypes.Float32:
-				builder.Field(index).(*array.Float32Builder).Append(value.(float32))
-			case arrow.PrimitiveTypes.Float64:
-				builder.Field(index).(*array.Float64Builder).Append(value.(float64))
-			case arrow.BinaryTypes.String:
-				builder.Field(index).(*array.StringBuilder).Append(value.(string))
-			case arrow.FixedWidthTypes.Boolean:
-				builder.Field(index).(*array.BooleanBuilder).Append(value.(bool))
-			default:
-				return nil, fmt.Errorf("unsupported type: %T", value)
+			value := p.valueFor(m, column.Name)
+			if !appendValue(builder, value) {
+				p.warnOncef(
+					group, column.Name,
+					"Writing null for column %q of file %q as a %T value does not fit its %s column",
+					column.Name, group.filename, value, column.Type,
+				)
 			}
 		}
 	}
 
-	record := builder.NewRecordBatch()
-	return record, nil
+	return group.builder.NewRecordBatch()
+}
+
+func (p *Parquet) valueFor(m telegraf.Metric, column string) interface{} {
+	if p.TimestampFieldName != "" && column == p.TimestampFieldName {
+		return m.Time().UnixNano()
+	}
+	if value, found := m.GetField(column); found {
+		return value
+	}
+	if value, found := m.GetTag(column); found {
+		return value
+	}
+
+	return nil
+}
+
+func (p *Parquet) warnOncef(group *metricGroup, column, format string, args ...interface{}) {
+	if group.warned[column] {
+		return
+	}
+	group.warned[column] = true
+	p.Log.Warnf(format, args...)
+}
+
+func appendValue(builder array.Builder, value interface{}) bool {
+	switch v := value.(type) {
+	case nil:
+		builder.AppendNull()
+		return true
+	case int8:
+		return appendTyped(builder, v)
+	case int16:
+		return appendTyped(builder, v)
+	case int32:
+		return appendTyped(builder, v)
+	case int64:
+		return appendTyped(builder, v)
+	case int:
+		return appendTyped(builder, int64(v))
+	case uint8:
+		return appendTyped(builder, v)
+	case uint16:
+		return appendTyped(builder, v)
+	case uint32:
+		return appendTyped(builder, v)
+	case uint64:
+		return appendTyped(builder, v)
+	case uint:
+		return appendTyped(builder, uint64(v))
+	case float32:
+		return appendTyped(builder, v)
+	case float64:
+		return appendTyped(builder, v)
+	case string:
+		return appendTyped(builder, v)
+	case bool:
+		return appendTyped(builder, v)
+	default:
+		builder.AppendNull()
+		return false
+	}
+}
+
+func appendTyped[T any](builder array.Builder, value T) bool {
+	column, ok := builder.(interface{ Append(T) })
+	if !ok {
+		builder.AppendNull()
+		return false
+	}
+	column.Append(value)
+
+	return true
 }
 
 func (p *Parquet) createSchema(metrics []telegraf.Metric) (*arrow.Schema, error) {

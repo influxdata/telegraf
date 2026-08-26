@@ -66,6 +66,9 @@ The `timestamp_field_name` column holds the metric time, so a field or tag with
 that same name is dropped and logged. Set `timestamp_field_name` to another name
 or rename the field or tag to keep both.
 
+Since column types are fixed at file creation, when an unknown value is logged
+it will be logged as `null` and once per column.
+
 ### Write
 
 The plugin makes use of the buffered writer. This may buffer some metrics into

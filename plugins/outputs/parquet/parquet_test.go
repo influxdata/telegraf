@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apache/arrow-go/v18/arrow"
+	"github.com/apache/arrow-go/v18/arrow/array"
+	"github.com/apache/arrow-go/v18/arrow/memory"
 	"github.com/apache/arrow-go/v18/parquet"
 	"github.com/apache/arrow-go/v18/parquet/file"
 	"github.com/stretchr/testify/require"
@@ -303,4 +306,59 @@ func TestTimestampFieldNameCollisionKeepsOneColumn(t *testing.T) {
 	}
 	require.ElementsMatch(t, []string{"value", "timestamp"}, names)
 	require.Equal(t, parquet.Types.Int64, schema.Column(schema.ColumnIndexByName("timestamp")).PhysicalType())
+}
+
+func TestConflictingValueTypesDoNotPanic(t *testing.T) {
+	dir := t.TempDir()
+	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", Log: testutil.Logger{}}
+	require.NoError(t, p.Init())
+
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]interface{}{"k": int64(1)}, time.Now()),
+	}))
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", map[string]string{"k": "v"}, map[string]interface{}{"other": int64(2)}, time.Now()),
+	}))
+	require.NoError(t, p.Close())
+
+	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, written, 1)
+
+	reader, err := file.OpenParquetFile(written[0], false)
+	require.NoError(t, err)
+	defer reader.Close()
+	require.Equal(t, int64(2), reader.NumRows())
+}
+
+func TestEveryConvertibleTypeRoundTrips(t *testing.T) {
+	values := map[string]interface{}{
+		"int8": int8(1), "int16": int16(2), "int32": int32(3), "int64": int64(4), "int": 5,
+		"uint8": uint8(6), "uint16": uint16(7), "uint32": uint32(8), "uint64": uint64(9), "uint": uint(10),
+		"float32": float32(11), "float64": float64(12),
+		"string": "thirteen", "bool": true,
+	}
+
+	for name, value := range values {
+		t.Run(name, func(t *testing.T) {
+			datatype, err := goToArrowType(value)
+			require.NoError(t, err)
+
+			builder := array.NewBuilder(memory.DefaultAllocator, datatype)
+			defer builder.Release()
+
+			require.True(t, appendValue(builder, value))
+			require.Equal(t, 0, builder.NullN())
+		})
+	}
+}
+
+func TestAppendValueNullsWhatItCannotWrite(t *testing.T) {
+	builder := array.NewBuilder(memory.DefaultAllocator, arrow.PrimitiveTypes.Int64)
+	defer builder.Release()
+
+	require.False(t, appendValue(builder, "not an int"))
+	require.False(t, appendValue(builder, []string{"unsupported"}))
+	require.True(t, appendValue(builder, nil))
+	require.Equal(t, 3, builder.NullN())
 }
