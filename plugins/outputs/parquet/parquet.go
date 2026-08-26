@@ -6,8 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strconv"
+	"path/filepath"
+	"runtime"
+	"slices"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/apache/arrow-go/v18/arrow"
 	"github.com/apache/arrow-go/v18/arrow/array"
@@ -25,8 +29,15 @@ var sampleConfig string
 
 var defaultTimestampFieldName = "timestamp"
 
+const defaultMaxColumns = 1000
+
 type metricGroup struct {
+	name     string
 	filename string
+	created  time.Time
+	columns  map[string]arrow.DataType
+	limited  bool
+	warned   map[string]bool
 	builder  *array.RecordBuilder
 	schema   *arrow.Schema
 	writer   *pqarrow.FileWriter
@@ -36,9 +47,11 @@ type Parquet struct {
 	Directory          string          `toml:"directory"`
 	RotationInterval   config.Duration `toml:"rotation_interval"`
 	TimestampFieldName string          `toml:"timestamp_field_name"`
+	MaxColumns         int             `toml:"max_columns"`
 	Log                telegraf.Logger `toml:"-"`
 
-	metricGroups map[string]*metricGroup
+	metricGroups     map[string]*metricGroup
+	warnedOnFilename bool
 }
 
 func (*Parquet) SampleConfig() string {
@@ -71,9 +84,9 @@ func (*Parquet) Connect() error {
 func (p *Parquet) Close() error {
 	var errorOccurred bool
 
-	for _, metrics := range p.metricGroups {
-		if err := metrics.writer.Close(); err != nil {
-			p.Log.Errorf("failed to close file %q: %v", metrics.filename, err)
+	for _, group := range p.metricGroups {
+		if err := group.close(); err != nil {
+			p.Log.Errorf("Failed to close file %q: %v", group.filename, err)
 			errorOccurred = true
 		}
 	}
@@ -88,181 +101,328 @@ func (p *Parquet) Close() error {
 func (p *Parquet) Write(metrics []telegraf.Metric) error {
 	groupedMetrics := make(map[string][]telegraf.Metric)
 	for _, metric := range metrics {
-		groupedMetrics[metric.Name()] = append(groupedMetrics[metric.Name()], metric)
+		name := p.metricToFile(metric.Name())
+		groupedMetrics[name] = append(groupedMetrics[name], metric)
 	}
 
-	now := time.Now()
 	for name, metrics := range groupedMetrics {
-		if _, ok := p.metricGroups[name]; !ok {
-			filename := fmt.Sprintf("%s/%s-%s-%s.parquet", p.Directory, name, now.Format("2006-01-02"), strconv.FormatInt(now.Unix(), 10))
-			schema, err := p.createSchema(metrics)
-			if err != nil {
-				return fmt.Errorf("failed to create schema for file %q: %w", name, err)
-			}
-			writer, err := p.createWriter(name, filename, schema)
-			if err != nil {
-				return fmt.Errorf("failed to create writer for file %q: %w", name, err)
-			}
-			p.metricGroups[name] = &metricGroup{
-				builder:  array.NewRecordBuilder(memory.DefaultAllocator, schema),
-				filename: filename,
-				schema:   schema,
-				writer:   writer,
-			}
-		}
-
-		if p.RotationInterval != 0 {
-			if err := p.rotateIfNeeded(name); err != nil {
-				return fmt.Errorf("failed to rotate file %q: %w", p.metricGroups[name].filename, err)
-			}
-		}
-
-		record, err := p.createRecordBatch(metrics, p.metricGroups[name].builder, p.metricGroups[name].schema)
+		group, err := p.groupFor(name, metrics)
 		if err != nil {
-			return fmt.Errorf("failed to create record for file %q: %w", p.metricGroups[name].filename, err)
+			return err
 		}
-		if err = p.metricGroups[name].writer.WriteBuffered(record); err != nil {
-			return fmt.Errorf("failed to write to file %q: %w", p.metricGroups[name].filename, err)
-		}
+
+		record := p.createRecordBatch(group, metrics)
+		err = group.writer.WriteBuffered(record)
 		record.Release()
+		if err != nil {
+			return fmt.Errorf("failed to write to file %q: %w", group.filename, err)
+		}
 	}
 
 	return nil
 }
 
-func (p *Parquet) rotateIfNeeded(name string) error {
-	fileInfo, err := os.Stat(p.metricGroups[name].filename)
-	if err != nil {
-		return fmt.Errorf("failed to stat file %q: %w", p.metricGroups[name].filename, err)
+func (p *Parquet) groupFor(name string, metrics []telegraf.Metric) (*metricGroup, error) {
+	columns := p.collectColumns(metrics)
+
+	group, found := p.metricGroups[name]
+	if !found {
+		group = &metricGroup{
+			name:    name,
+			columns: make(map[string]arrow.DataType, len(columns)),
+			warned:  make(map[string]bool),
+		}
 	}
 
-	expireTime := fileInfo.ModTime().Add(time.Duration(p.RotationInterval))
-	if time.Now().Before(expireTime) {
+	added, dropped := group.addColumns(columns, p.MaxColumns)
+	if len(dropped) > 0 && !group.limited {
+		group.limited = true
+		p.Log.Warnf(
+			"Dropping column(s) %s from %q, which is at the %d column limit; raise 'max_columns' to keep them",
+			strings.Join(dropped, ", "), name, p.MaxColumns,
+		)
+	}
+
+	if !found {
+		if err := p.openFile(group); err != nil {
+			return nil, err
+		}
+		p.metricGroups[name] = group
+
+		return group, nil
+	}
+
+	if len(added) == 0 {
+		return group, p.rotateIfNeeded(group)
+	}
+
+	p.Log.Infof("Starting a new file for %q to add column(s) %s", name, strings.Join(added, ", "))
+	if err := p.reopen(group); err != nil {
+		return nil, err
+	}
+
+	return group, nil
+}
+
+func (g *metricGroup) addColumns(columns map[string]arrow.DataType, limit int) (added, dropped []string) {
+	candidates := make([]string, 0, len(columns))
+	for column := range columns {
+		if _, known := g.columns[column]; !known {
+			candidates = append(candidates, column)
+		}
+	}
+	slices.Sort(candidates)
+
+	room := len(candidates)
+	if limit > 0 && len(g.columns)+room > limit {
+		room = limit - len(g.columns)
+		if room < 0 {
+			room = 0
+		}
+	}
+
+	for _, column := range candidates[:room] {
+		g.columns[column] = columns[column]
+	}
+
+	return candidates[:room], candidates[room:]
+}
+
+const maxMeasurementLen = 255 - len("-2006-01-02-1234567890-999.parquet")
+
+func (p *Parquet) metricToFile(name string) string {
+	safe := strings.Map(func(r rune) rune {
+		if reservedInFilename(r) {
+			return '_'
+		}
+		return r
+	}, name)
+
+	if len(safe) > maxMeasurementLen {
+		safe = strings.ToValidUTF8(safe[:maxMeasurementLen], "")
+	}
+
+	if safe != name && !p.warnedOnFilename {
+		p.warnedOnFilename = true
+		p.Log.Warnf("Metric %q is not usable as a file name, writing to %q instead; use the rename processor to choose the name", name, safe)
+	}
+
+	return safe
+}
+
+func reservedInFilename(r rune) bool {
+	if r == '/' || r == '\\' || unicode.IsControl(r) {
+		return true
+	}
+
+	return runtime.GOOS == "windows" && strings.ContainsRune(`<>:"|?*`, r)
+}
+
+func (p *Parquet) rotateIfNeeded(group *metricGroup) error {
+	if p.RotationInterval == 0 || time.Since(group.created) < time.Duration(p.RotationInterval) {
 		return nil
 	}
 
-	if err := p.metricGroups[name].writer.Close(); err != nil {
-		return fmt.Errorf("failed to close file for rotation %q: %w", p.metricGroups[name].filename, err)
+	return p.reopen(group)
+}
+
+func (p *Parquet) reopen(group *metricGroup) error {
+	if err := group.close(); err != nil {
+		delete(p.metricGroups, group.name)
+		return fmt.Errorf("failed to close file %q: %w", group.filename, err)
 	}
 
-	writer, err := p.createWriter(name, p.metricGroups[name].filename, p.metricGroups[name].schema)
-	if err != nil {
-		return fmt.Errorf("failed to create new writer for file %q: %w", p.metricGroups[name].filename, err)
+	if err := p.openFile(group); err != nil {
+		delete(p.metricGroups, group.name)
+		return err
 	}
-	p.metricGroups[name].writer = writer
 
 	return nil
 }
 
-func (p *Parquet) createRecordBatch(metrics []telegraf.Metric, builder *array.RecordBuilder, schema *arrow.Schema) (arrow.RecordBatch, error) {
-	for index, col := range schema.Fields() {
-		for _, m := range metrics {
-			if p.TimestampFieldName != "" && col.Name == p.TimestampFieldName {
-				builder.Field(index).(*array.Int64Builder).Append(m.Time().UnixNano())
-				continue
-			}
+func (g *metricGroup) close() error {
+	err := g.writer.Close()
+	g.builder.Release()
 
-			// Try to get the value from a field first, then from a tag.
-			var value any
-			var ok bool
-			value, ok = m.GetField(col.Name)
-			if !ok {
-				value, ok = m.GetTag(col.Name)
-			}
-
-			// if neither field nor tag exists, append a null value
-			if !ok {
-				switch col.Type {
-				case arrow.PrimitiveTypes.Int8:
-					builder.Field(index).(*array.Int8Builder).AppendNull()
-				case arrow.PrimitiveTypes.Int16:
-					builder.Field(index).(*array.Int16Builder).AppendNull()
-				case arrow.PrimitiveTypes.Int32:
-					builder.Field(index).(*array.Int32Builder).AppendNull()
-				case arrow.PrimitiveTypes.Int64:
-					builder.Field(index).(*array.Int64Builder).AppendNull()
-				case arrow.PrimitiveTypes.Uint8:
-					builder.Field(index).(*array.Uint8Builder).AppendNull()
-				case arrow.PrimitiveTypes.Uint16:
-					builder.Field(index).(*array.Uint16Builder).AppendNull()
-				case arrow.PrimitiveTypes.Uint32:
-					builder.Field(index).(*array.Uint32Builder).AppendNull()
-				case arrow.PrimitiveTypes.Uint64:
-					builder.Field(index).(*array.Uint64Builder).AppendNull()
-				case arrow.PrimitiveTypes.Float32:
-					builder.Field(index).(*array.Float32Builder).AppendNull()
-				case arrow.PrimitiveTypes.Float64:
-					builder.Field(index).(*array.Float64Builder).AppendNull()
-				case arrow.BinaryTypes.String:
-					builder.Field(index).(*array.StringBuilder).AppendNull()
-				case arrow.FixedWidthTypes.Boolean:
-					builder.Field(index).(*array.BooleanBuilder).AppendNull()
-				default:
-					return nil, fmt.Errorf("unsupported type: %T", value)
-				}
-
-				continue
-			}
-
-			switch col.Type {
-			case arrow.PrimitiveTypes.Int8:
-				builder.Field(index).(*array.Int8Builder).Append(value.(int8))
-			case arrow.PrimitiveTypes.Int16:
-				builder.Field(index).(*array.Int16Builder).Append(value.(int16))
-			case arrow.PrimitiveTypes.Int32:
-				builder.Field(index).(*array.Int32Builder).Append(value.(int32))
-			case arrow.PrimitiveTypes.Int64:
-				builder.Field(index).(*array.Int64Builder).Append(value.(int64))
-			case arrow.PrimitiveTypes.Uint8:
-				builder.Field(index).(*array.Uint8Builder).Append(value.(uint8))
-			case arrow.PrimitiveTypes.Uint16:
-				builder.Field(index).(*array.Uint16Builder).Append(value.(uint16))
-			case arrow.PrimitiveTypes.Uint32:
-				builder.Field(index).(*array.Uint32Builder).Append(value.(uint32))
-			case arrow.PrimitiveTypes.Uint64:
-				builder.Field(index).(*array.Uint64Builder).Append(value.(uint64))
-			case arrow.PrimitiveTypes.Float32:
-				builder.Field(index).(*array.Float32Builder).Append(value.(float32))
-			case arrow.PrimitiveTypes.Float64:
-				builder.Field(index).(*array.Float64Builder).Append(value.(float64))
-			case arrow.BinaryTypes.String:
-				builder.Field(index).(*array.StringBuilder).Append(value.(string))
-			case arrow.FixedWidthTypes.Boolean:
-				builder.Field(index).(*array.BooleanBuilder).Append(value.(bool))
-			default:
-				return nil, fmt.Errorf("unsupported type: %T", value)
-			}
-		}
-	}
-
-	record := builder.NewRecordBatch()
-	return record, nil
+	return err
 }
 
-func (p *Parquet) createSchema(metrics []telegraf.Metric) (*arrow.Schema, error) {
-	rawFields := make(map[string]arrow.DataType, 0)
-	for _, metric := range metrics {
-		for _, field := range metric.FieldList() {
-			if _, ok := rawFields[field.Key]; !ok {
-				arrowType, err := goToArrowType(field.Value)
-				if err != nil {
-					return nil, fmt.Errorf("error converting '%s=%s' field to arrow type: %w", field.Key, field.Value, err)
-				}
-				rawFields[field.Key] = arrowType
-			}
+func (p *Parquet) openFile(group *metricGroup) error {
+	group.schema = p.createSchema(group.columns)
+	group.builder = array.NewRecordBuilder(memory.DefaultAllocator, group.schema)
+	group.filename = p.unusedFilename(group.name)
+	group.created = time.Now()
+
+	f, err := os.Create(group.filename)
+	if err != nil {
+		return fmt.Errorf("failed to create file %q: %w", group.filename, err)
+	}
+
+	writer, err := pqarrow.NewFileWriter(group.schema, f, parquet.NewWriterProperties(), pqarrow.DefaultWriterProps())
+	if err != nil {
+		f.Close()
+		return fmt.Errorf("failed to create parquet writer for file %q: %w", group.filename, err)
+	}
+	group.writer = writer
+
+	return nil
+}
+
+func (p *Parquet) unusedFilename(name string) string {
+	now := time.Now()
+	prefix := filepath.Join(p.Directory, fmt.Sprintf("%s-%s-%d", name, now.Format("2006-01-02"), now.Unix()))
+
+	filename := prefix + ".parquet"
+	for suffix := 1; ; suffix++ {
+		if _, err := os.Stat(filename); err != nil {
+			return filename
 		}
-		for _, tag := range metric.TagList() {
-			if _, ok := rawFields[tag.Key]; !ok {
-				rawFields[tag.Key] = arrow.BinaryTypes.String
+		filename = fmt.Sprintf("%s-%d.parquet", prefix, suffix)
+	}
+}
+
+func (p *Parquet) createRecordBatch(group *metricGroup, metrics []telegraf.Metric) arrow.RecordBatch {
+	for index, column := range group.schema.Fields() {
+		builder := group.builder.Field(index)
+
+		for _, m := range metrics {
+			value := p.valueFor(m, column.Name)
+			if !appendValue(builder, value) {
+				p.warnOncef(
+					group, column.Name,
+					"Writing null for column %q of file %q as a %T value does not fit its %s column",
+					column.Name, group.filename, value, column.Type,
+				)
 			}
 		}
 	}
 
-	fields := make([]arrow.Field, 0)
-	for key, value := range rawFields {
+	return group.builder.NewRecordBatch()
+}
+
+func (p *Parquet) valueFor(m telegraf.Metric, column string) interface{} {
+	if p.TimestampFieldName != "" && column == p.TimestampFieldName {
+		return m.Time().UnixNano()
+	}
+	if value, found := m.GetField(column); found {
+		return value
+	}
+	if value, found := m.GetTag(column); found {
+		return value
+	}
+
+	return nil
+}
+
+func (p *Parquet) warnOncef(group *metricGroup, column, format string, args ...interface{}) {
+	if group.warned[column] {
+		return
+	}
+	group.warned[column] = true
+	p.Log.Warnf(format, args...)
+}
+
+func appendValue(builder array.Builder, value interface{}) bool {
+	switch v := value.(type) {
+	case nil:
+		builder.AppendNull()
+		return true
+	case int8:
+		return appendTyped(builder, v)
+	case int16:
+		return appendTyped(builder, v)
+	case int32:
+		return appendTyped(builder, v)
+	case int64:
+		return appendTyped(builder, v)
+	case int:
+		return appendTyped(builder, int64(v))
+	case uint8:
+		return appendTyped(builder, v)
+	case uint16:
+		return appendTyped(builder, v)
+	case uint32:
+		return appendTyped(builder, v)
+	case uint64:
+		return appendTyped(builder, v)
+	case uint:
+		return appendTyped(builder, uint64(v))
+	case float32:
+		return appendTyped(builder, v)
+	case float64:
+		return appendTyped(builder, v)
+	case string:
+		return appendTyped(builder, v)
+	case bool:
+		return appendTyped(builder, v)
+	default:
+		builder.AppendNull()
+		return false
+	}
+}
+
+func appendTyped[T any](builder array.Builder, value T) bool {
+	column, ok := builder.(interface{ Append(T) })
+	if !ok {
+		builder.AppendNull()
+		return false
+	}
+	column.Append(value)
+
+	return true
+}
+
+func (p *Parquet) collectColumns(metrics []telegraf.Metric) map[string]arrow.DataType {
+	columns := make(map[string]arrow.DataType)
+	for _, metric := range metrics {
+		for _, field := range metric.FieldList() {
+			if _, known := columns[field.Key]; known {
+				continue
+			}
+			datatype, err := goToArrowType(field.Value)
+			if err != nil {
+				p.Log.Warnf("Skipping field %q of metric %q: %v", field.Key, metric.Name(), err)
+				continue
+			}
+			columns[field.Key] = datatype
+		}
+	}
+
+	for _, metric := range metrics {
+		for _, tag := range metric.TagList() {
+			if _, known := columns[tag.Key]; !known {
+				columns[tag.Key] = arrow.BinaryTypes.String
+			}
+		}
+	}
+
+	if p.TimestampFieldName != "" {
+		if _, taken := columns[p.TimestampFieldName]; taken {
+			delete(columns, p.TimestampFieldName)
+			p.Log.Warnf(
+				"Ignoring the %q field or tag as that column holds the metric time; "+
+					"set 'timestamp_field_name' to another name to keep it",
+				p.TimestampFieldName,
+			)
+		}
+	}
+
+	return columns
+}
+
+func (p *Parquet) createSchema(columns map[string]arrow.DataType) *arrow.Schema {
+	names := make([]string, 0, len(columns))
+	for name := range columns {
+		names = append(names, name)
+	}
+	slices.Sort(names)
+
+	fields := make([]arrow.Field, 0, len(names)+1)
+	for _, name := range names {
 		fields = append(fields, arrow.Field{
-			Name: key,
-			Type: value,
+			Name:     name,
+			Type:     columns[name],
+			Nullable: true,
 		})
 	}
 
@@ -273,28 +433,7 @@ func (p *Parquet) createSchema(metrics []telegraf.Metric) (*arrow.Schema, error)
 		})
 	}
 
-	return arrow.NewSchema(fields, nil), nil
-}
-
-func (p *Parquet) createWriter(name, filename string, schema *arrow.Schema) (*pqarrow.FileWriter, error) {
-	if _, err := os.Stat(filename); err == nil {
-		now := time.Now()
-		rotatedFilename := fmt.Sprintf("%s/%s-%s-%s.parquet", p.Directory, name, now.Format("2006-01-02"), strconv.FormatInt(now.Unix(), 10))
-		if err := os.Rename(filename, rotatedFilename); err != nil {
-			return nil, fmt.Errorf("failed to rename file %q: %w", filename, err)
-		}
-	}
-	file, err := os.Create(filename)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create file %q: %w", filename, err)
-	}
-
-	writer, err := pqarrow.NewFileWriter(schema, file, parquet.NewWriterProperties(), pqarrow.DefaultWriterProps())
-	if err != nil {
-		return nil, fmt.Errorf("failed to create parquet writer for file %q: %w", filename, err)
-	}
-
-	return writer, nil
+	return arrow.NewSchema(fields, nil)
 }
 
 func goToArrowType(value interface{}) (arrow.DataType, error) {
@@ -332,6 +471,7 @@ func init() {
 	outputs.Add("parquet", func() telegraf.Output {
 		return &Parquet{
 			TimestampFieldName: defaultTimestampFieldName,
+			MaxColumns:         defaultMaxColumns,
 		}
 	})
 }
