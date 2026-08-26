@@ -3,6 +3,8 @@ package parquet
 import (
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -274,5 +276,80 @@ func TestMissingValuesReadBackAsNull(t *testing.T) {
 			continue
 		}
 		require.Equalf(t, int16(1), column.MaxDefinitionLevel(), "column %q is required, nulls would be written as zero", column.Name())
+	}
+}
+
+func TestMetricToFile(t *testing.T) {
+	tests := []struct {
+		name     string
+		expected string
+	}{
+		{"cpu", "cpu"},
+		{"../../etc/passwd", ".._.._etc_passwd"},
+		{`a/b\c`, "a_b_c"},
+		{"nul\x00byte", "nul_byte"},
+		{"tab\tnewline\n", "tab_newline_"},
+		{strings.Repeat("a", 300), strings.Repeat("a", maxMeasurementLen)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &Parquet{Log: testutil.Logger{}}
+			require.Equal(t, tt.expected, p.metricToFile(tt.name))
+		})
+	}
+}
+
+func TestWindowsReservedCharacters(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("windows only")
+	}
+
+	p := &Parquet{Log: testutil.Logger{}}
+	require.Equal(t, "a_b_c", p.metricToFile(`a<b>c`))
+}
+
+func TestMeasurementNamesCannotEscapeDirectory(t *testing.T) {
+	dir := t.TempDir()
+	outside := filepath.Dir(dir)
+	before, err := filepath.Glob(filepath.Join(outside, "*.parquet"))
+	require.NoError(t, err)
+
+	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", Log: testutil.Logger{}}
+	require.NoError(t, p.Init())
+
+	for _, name := range []string{"../../../../tmp/evil", "..", "../evil", `a\..\..\b`} {
+		m := metric.New(name, nil, map[string]interface{}{"value": int64(1)}, time.Now())
+		require.NoError(t, p.Write([]telegraf.Metric{m}))
+	}
+	require.NoError(t, p.Close())
+
+	after, err := filepath.Glob(filepath.Join(outside, "*.parquet"))
+	require.NoError(t, err)
+	require.Equal(t, before, after)
+
+	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, written, 4)
+}
+
+func TestLongMeasurementNameKeepsOutputWriting(t *testing.T) {
+	dir := t.TempDir()
+	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", Log: testutil.Logger{}}
+	require.NoError(t, p.Init())
+
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New(strings.Repeat("a", 300), nil, map[string]interface{}{"value": int64(1)}, time.Now()),
+	}))
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("good", nil, map[string]interface{}{"value": int64(2)}, time.Now()),
+	}))
+	require.NoError(t, p.Close())
+
+	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, written, 2)
+	for _, name := range written {
+		require.LessOrEqual(t, len(filepath.Base(name)), 255)
 	}
 }
