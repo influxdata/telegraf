@@ -417,12 +417,8 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 		}
 	}
 
-	tags["pod_name"] = pod.Name
-	podNamespace := "namespace"
-	if p.PodNamespaceLabelName != "" {
-		podNamespace = p.PodNamespaceLabelName
-	}
-	tags[podNamespace] = pod.Namespace
+	tags[p.PodNameLabelName] = pod.Name
+	tags[p.PodNamespaceLabelName] = pod.Namespace
 
 	// add labels as metrics tags, subject to include/exclude filters
 	for k, v := range pod.Labels {

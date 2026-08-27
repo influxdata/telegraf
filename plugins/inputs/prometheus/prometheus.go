@@ -66,6 +66,7 @@ type Prometheus struct {
 	PodScrapeInterval           int                 `toml:"pod_scrape_interval"`
 	PodNamespace                string              `toml:"monitor_kubernetes_pods_namespace"`
 	PodNamespaceLabelName       string              `toml:"pod_namespace_label_name"`
+	PodNameLabelName            string              `toml:"pod_name_label_name"`
 	KubernetesServices          []string            `toml:"kubernetes_services"`
 	KubeConfig                  string              `toml:"kube_config"`
 	KubernetesLabelSelector     string              `toml:"kubernetes_label_selector"`
@@ -187,6 +188,14 @@ func (p *Prometheus) Init() error {
 
 	if p.MonitorKubernetesPodsMethod == monitorMethodNone {
 		p.MonitorKubernetesPodsMethod = monitorMethodAnnotations
+	}
+
+	if p.PodNamespaceLabelName == "" {
+		p.PodNamespaceLabelName = "namespace"
+	}
+
+	if p.PodNameLabelName == "" {
+		p.PodNameLabelName = "pod_name"
 	}
 
 	// Parse label and field selectors - will be used to filter pods after cAdvisor call
