@@ -29,7 +29,7 @@ type FritzboxSmarthome struct {
 	Log     telegraf.Logger `toml:"-"`
 	tls.ClientConfig
 
-	smarthomeClients []*fritzsmarthome.Client
+	clients []*fritzsmarthome.Client
 }
 
 func (*FritzboxSmarthome) SampleConfig() string {
@@ -55,7 +55,7 @@ func (f *FritzboxSmarthome) Init() error {
 	}
 
 	// Initialize the smarthome clients
-	f.smarthomeClients = make([]*fritzsmarthome.Client, 0, len(f.URLs))
+	f.clients = make([]*fritzsmarthome.Client, 0, len(f.URLs))
 	for _, rawURL := range f.URLs {
 		parsedURL, err := url.Parse(rawURL)
 		if err != nil {
@@ -65,7 +65,7 @@ func (f *FritzboxSmarthome) Init() error {
 		if err != nil {
 			return fmt.Errorf("creating smarthome for URL %q failed: %w", rawURL, err)
 		}
-		f.smarthomeClients = append(f.smarthomeClients, client)
+		f.clients = append(f.clients, client)
 	}
 
 	return nil
@@ -73,41 +73,40 @@ func (f *FritzboxSmarthome) Init() error {
 
 func (f *FritzboxSmarthome) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
-	for _, smarthomeClient := range f.smarthomeClients {
+	for _, client := range f.clients {
 		wg.Add(1)
-		// Pass smarthomeClient as parameter to avoid any race conditions
+		// Pass client as parameter to avoid any race conditions
 		go func(client *fritzsmarthome.Client) {
 			defer wg.Done()
 			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(f.Timeout))
 			defer cancel()
-			f.gatherClient(ctx, acc, client)
-		}(smarthomeClient)
+			acc.AddError(f.gatherClient(ctx, acc, client))
+		}(client)
 	}
 	wg.Wait()
 	return nil
 }
 
-func (f *FritzboxSmarthome) gatherClient(ctx context.Context, acc telegraf.Accumulator, smarthomeClient *fritzsmarthome.Client) {
-	response, err := smarthomeClient.GetOverview(ctx)
+func (f *FritzboxSmarthome) gatherClient(ctx context.Context, acc telegraf.Accumulator, client *fritzsmarthome.Client) error {
+	response, err := client.GetOverview(ctx)
 	if err != nil {
-		acc.AddError(err)
-		return
+		return err
 	}
 	if response.HTTPResponse.StatusCode != http.StatusOK {
-		acc.AddError(fmt.Errorf("requesting Smarthome status failed: %d %s", response.HTTPResponse.StatusCode, response.HTTPResponse.Status))
-		return
+		return fmt.Errorf("requesting Smarthome status failed: %d %s", response.HTTPResponse.StatusCode, response.HTTPResponse.Status)
 	}
 	for _, device := range (*response.JSON200).Devices {
-		gatherDeviceInfo(acc, smarthomeClient, &device)
+		gatherDeviceInfo(acc, client, &device)
 	}
 	for _, unit := range (*response.JSON200).Units {
-		gatherUnitInfo(acc, smarthomeClient, &unit, (*response.JSON200).Groups)
+		gatherUnitInfo(acc, client, &unit, (*response.JSON200).Groups)
 	}
+	return nil
 }
 
-func gatherDeviceInfo(acc telegraf.Accumulator, smarthomeClient *fritzsmarthome.Client, device *api.EndpointOverviewMultipleDevices) {
+func gatherDeviceInfo(acc telegraf.Accumulator, client *fritzsmarthome.Client, device *api.EndpointOverviewMultipleDevices) {
 	tags := map[string]string{
-		"source":           smarthomeClient.BaseURL().Hostname(),
+		"source":           client.BaseURL().Hostname(),
 		"manufacturer":     device.Manufacturer,
 		"product_category": string(device.ProductCategory),
 		"power_source":     getDevicePowerSource(device),
@@ -115,17 +114,17 @@ func gatherDeviceInfo(acc telegraf.Accumulator, smarthomeClient *fritzsmarthome.
 	fields := map[string]interface{}{
 		"name":             device.Name,
 		"product_name":     device.ProductName,
-		"connected":        mapBool(device.IsConnected),
-		"battery_value":    getOptionalInt(device.BatteryValue, 0),
-		"battery_low":      mapOptionalBool(device.IsBatteryLow, 0),
-		"update_available": mapOptionalBool(device.IsUpdateAvailable, 0),
+		"connected":        device.IsConnected,
+		"battery_value":    getOptionalInt(device.BatteryValue),
+		"battery_low":      getOptionalBool(device.IsBatteryLow),
+		"update_available": getOptionalBool(device.IsUpdateAvailable),
 	}
 	acc.AddFields("fritzbox_smarthome_device", fields, tags)
 }
 
-func gatherUnitInfo(acc telegraf.Accumulator, smarthomeClient *fritzsmarthome.Client, unit *api.EndpointOverviewMultipleUnits, groups []api.EndpointOverviewGroup) {
+func gatherUnitInfo(acc telegraf.Accumulator, client *fritzsmarthome.Client, unit *api.EndpointOverviewMultipleUnits, groups []api.EndpointOverviewGroup) {
 	tags := map[string]string{
-		"source": smarthomeClient.BaseURL().Hostname(),
+		"source": client.BaseURL().Hostname(),
 		"type":   string(unit.UnitType),
 		"group":  getUnitGroupName(unit, groups),
 	}
@@ -140,7 +139,7 @@ func gatherUnitInfoLevelControl(acc telegraf.Accumulator, tags map[string]string
 	}
 	fields := map[string]interface{}{
 		"name":  unit.Name,
-		"level": getOptionalInt(unit.Interfaces.LevelControlInterface.Level, 0),
+		"level": getOptionalInt(unit.Interfaces.LevelControlInterface.Level),
 	}
 	acc.AddFields("fritzbox_smarthome_level_control", fields, tags)
 }
@@ -151,10 +150,10 @@ func gatherUnitInfoMultimeter(acc telegraf.Accumulator, tags map[string]string, 
 	}
 	fields := map[string]interface{}{
 		"name":    unit.Name,
-		"current": getOptionalInt(unit.Interfaces.MultimeterInterface.Current, 0),
-		"energy":  getOptionalInt(unit.Interfaces.MultimeterInterface.Energy, 0),
-		"power":   getOptionalInt(unit.Interfaces.MultimeterInterface.Power, 0),
-		"voltage": getOptionalInt(unit.Interfaces.MultimeterInterface.Voltage, 0),
+		"current": getOptionalInt(unit.Interfaces.MultimeterInterface.Current),
+		"energy":  getOptionalInt(unit.Interfaces.MultimeterInterface.Energy),
+		"power":   getOptionalInt(unit.Interfaces.MultimeterInterface.Power),
+		"voltage": getOptionalInt(unit.Interfaces.MultimeterInterface.Voltage),
 	}
 	acc.AddFields("fritzbox_smarthome_multimeter", fields, tags)
 }
@@ -165,7 +164,7 @@ func gatherUnitInfoOnOff(acc telegraf.Accumulator, tags map[string]string, unit 
 	}
 	fields := map[string]interface{}{
 		"name":   unit.Name,
-		"active": mapOptionalBool(unit.Interfaces.OnOffInterface.Active, 0),
+		"active": getOptionalBool(unit.Interfaces.OnOffInterface.Active),
 	}
 	acc.AddFields("fritzbox_smarthome_on_off", fields, tags)
 }
@@ -193,24 +192,16 @@ func getUnitGroupName(unit *api.EndpointOverviewMultipleUnits, groups []api.Endp
 	return groupName
 }
 
-func mapBool(b bool) int {
-	if b {
-		return 1
-	} else {
+func getOptionalBool(p *bool) bool {
+	if p == nil {
+		return false
+	}
+	return *p
+}
+
+func getOptionalInt(p *int) int {
+	if p == nil {
 		return 0
-	}
-}
-
-func mapOptionalBool(p *bool, defaultValue int) int {
-	if p == nil {
-		return defaultValue
-	}
-	return mapBool(*p)
-}
-
-func getOptionalInt(p *int, defaultValue int) int {
-	if p == nil {
-		return defaultValue
 	}
 	return *p
 }

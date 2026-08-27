@@ -52,10 +52,10 @@ specification][aha].
   - fields
     - `name`             (string) - Device's name (as given by user).
     - `product_name`     (string) - Device's product name.
-    - `connected`        (int)    - Device's connected status (0|1).
+    - `connected`        (bool)   - Device's connected status.
     - `battery_value`    (int)    - Device's battery level (0-100).
-    - `battery_low`      (int)    - Device's battery low state (0|1).
-    - `update_available` (int)    - Device's software update available state (0|1).
+    - `battery_low`      (bool)   - Device's battery low state.
+    - `update_available` (bool)   - Device's software update available state.
 - `fritzbox_smarthome_multimeter`
   - tags
     - `source` - The name of the router (this metric has been queried from)
@@ -82,7 +82,7 @@ specification][aha].
     - `type`   - The type of the unit (as reported by the API; e.g. dimmableLight)
   - fields
     - `name`  (string) - The name of the unit or group.
-    - `active`(int)    - The current active state (0|1).
+    - `active`(bool)   - The current active state.
 
 ## Example Output
 
