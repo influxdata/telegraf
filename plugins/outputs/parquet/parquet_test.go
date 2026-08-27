@@ -422,6 +422,7 @@ func TestInvalidFilename(t *testing.T) {
 		{
 			name:   "dots",
 			metric: "..",
+			os:     []string{"windows"},
 		},
 		{
 			name:   "backslash",
@@ -464,6 +465,55 @@ func TestInvalidFilename(t *testing.T) {
 			require.NoError(t, plugin.Connect())
 			defer plugin.Close()
 			require.ErrorContains(t, plugin.Write(metrics), "failed to create file")
+		})
+	}
+}
+
+func TestCannotEscapeDirectory(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "test")
+	malicious := filepath.Join(tmp, "foo")
+	maliciousAbs, err := filepath.Abs(malicious)
+	require.NoError(t, err)
+	require.NoError(t, os.MkdirAll(path, 0700))
+	require.NoError(t, os.MkdirAll(malicious, 0700))
+
+	tests := []struct {
+		name   string
+		metric string
+	}{
+		{
+			name:   "relative",
+			metric: filepath.Join("..", "foo"),
+		},
+		{
+			name:   "absolute",
+			metric: maliciousAbs,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			metrics := []telegraf.Metric{
+				metric.New(
+					tt.metric,
+					map[string]string{},
+					map[string]interface{}{"value": 1.0},
+					time.Now(),
+				),
+			}
+
+			testDir := t.TempDir()
+			plugin := &Parquet{
+				Directory:          testDir,
+				TimestampFieldName: "time",
+			}
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
+
+			var perr *os.PathError
+			require.ErrorAs(t, plugin.Write(metrics), &perr)
 		})
 	}
 }
