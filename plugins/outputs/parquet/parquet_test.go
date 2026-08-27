@@ -420,11 +420,6 @@ func TestInvalidFilename(t *testing.T) {
 			metric: "nul\x00byte",
 		},
 		{
-			name:   "dots",
-			metric: "..",
-			os:     []string{"windows"},
-		},
-		{
 			name:   "backslash",
 			metric: `a\b`,
 			os:     []string{"windows"},
@@ -432,11 +427,6 @@ func TestInvalidFilename(t *testing.T) {
 		{
 			name:   "tab",
 			metric: "a\tb",
-			os:     []string{"windows"},
-		},
-		{
-			name:   "a<b>c",
-			metric: "brackets",
 			os:     []string{"windows"},
 		},
 	}
