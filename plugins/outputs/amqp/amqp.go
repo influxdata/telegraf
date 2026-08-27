@@ -155,19 +155,18 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 			// Only a closed connection on the first attempt is recoverable:
 			// reconnect and retry once. Any other error must be returned so
 			// the metrics stay buffered for retry instead of being dropped.
+			if q.client != nil {
+				if err := q.client.Close(); err != nil {
+					q.Log.Errorf("Closing connection failed: %v", err)
+				}
+			}
+			q.client = nil
+
 			var aerr *amqp.Error
 			recoverable := first && errors.As(err, &aerr) && errors.Is(aerr, amqp.ErrClosed)
 			if !recoverable {
-				if q.client != nil {
-					if err := q.client.Close(); err != nil {
-						q.Log.Errorf("Closing connection failed: %v", err)
-					}
-					q.client = nil
-				}
 				return err
 			}
-
-			q.client = nil
 			if err := q.publish(key, body); err != nil {
 				return err
 			}
