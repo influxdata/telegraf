@@ -3,6 +3,7 @@ package redfish
 
 import (
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -10,12 +11,13 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/stmcginnis/gofish"
+	"github.com/stmcginnis/gofish/schemas"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/stmcginnis/gofish"
-	"github.com/stmcginnis/gofish/schemas"
 )
 
 //go:embed sample.conf
@@ -131,14 +133,14 @@ func (r *Redfish) gofishSetup() (*gofish.Service, error) {
 	pass := password.String()
 	password.Destroy()
 
-	config := gofish.ClientConfig{
+	gofishConfig := gofish.ClientConfig{
 		Endpoint:   r.Address,
 		Username:   user,
 		Password:   pass,
 		BasicAuth:  true,
 		HTTPClient: &r.client,
 	}
-	c, err := gofish.Connect(config)
+	c, err := gofish.Connect(gofishConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -148,21 +150,21 @@ func (r *Redfish) gofishSetup() (*gofish.Service, error) {
 }
 
 func (r *Redfish) Gather(acc telegraf.Accumulator) error {
-	redfishUrl, _ := url.Parse(r.Address)
-	address, _, err := net.SplitHostPort(redfishUrl.Host)
+	var address string
+	redfishURL, err := url.Parse(r.Address)
 	if err != nil {
-		address = redfishUrl.Host
+		address = redfishURL.Host
+	} else {
+		address, _, err = net.SplitHostPort(redfishURL.Host)
+	}
+
+	if err != nil {
+		address = redfishURL.Host
 	}
 
 	systems, err := r.gf.Systems()
 	if err != nil {
-		var collectionError *schemas.CollectionError
-		if errors.As(err, &collectionError) {
-			return fmt.Errorf("received status code 401 (Unauthorized) for address %s/redfish/v1/Systems/System.Embedded.1, expected 200", r.Address)
-		} else {
-
-		}
-		return fmt.Errorf("error parsing input from %s: %w", address, err)
+		return r.parseGofishError(err)
 	}
 
 	// Process only the system defined via ComputerSystemID in the config
@@ -170,8 +172,13 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 	for _, system := range systems {
 		if system.ID == r.ComputerSystemID {
 			chassisList, err := system.Chassis()
-			if err != nil || chassisList == nil {
-				return fmt.Errorf("error parsing input from %s: %w", address, err)
+			if err != nil {
+				return r.parseGofishError(err)
+			}
+
+			if len(chassisList) == 0 {
+				r.Log.Warn("No chassis found, no metric can be produced")
+				return nil
 			}
 
 			for _, chassis := range chassisList {
@@ -194,6 +201,26 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 	return nil
+}
+
+func (r *Redfish) parseGofishError(err error) error {
+	var collectionError *schemas.CollectionError
+	if errors.As(err, &collectionError) {
+		for f, v := range collectionError.Failures {
+			var parseError *json.SyntaxError
+			var queryError *schemas.Error
+			if errors.As(v, &parseError) {
+				return fmt.Errorf("error parsing input from %s: %w", r.Address, err)
+			}
+			if errors.As(v, &queryError) {
+				return fmt.Errorf("received status code %d for address %s%s, expected 200",
+					queryError.HTTPReturnedStatusCode,
+					r.Address,
+					f)
+			}
+		}
+	}
+	return fmt.Errorf("error parsing input from %s: %w", r.Address, err)
 }
 
 func setChassisTags(chassis *schemas.Chassis, tags map[string]string) {

@@ -3,8 +3,9 @@ package redfish
 import (
 	"fmt"
 
-	"github.com/influxdata/telegraf"
 	"github.com/stmcginnis/gofish/schemas"
+
+	"github.com/influxdata/telegraf"
 )
 
 func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
@@ -13,8 +14,13 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *
 
 func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
 	power, err := chassis.Power()
-	if err != nil || power == nil {
+	if err != nil {
 		return fmt.Errorf("error parsing input from %s: %w", address, err)
+	}
+
+	if power == nil {
+		r.Log.Warnf("Skipping thermal data of chassis %q. Is only the new subsys api available?", chassis.ID)
+		return nil
 	}
 
 	for _, j := range power.PowerControl {
@@ -49,14 +55,14 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, s
 		acc.AddFields("redfish_power_powercontrol", fields, tags)
 	}
 
-	for _, j := range power.PowerSupplies {
+	for i := range len(power.PowerSupplies) {
 		tags := make(map[string]string, 19)
-		tags["member_id"] = j.MemberID
+		tags["member_id"] = power.PowerSupplies[i].MemberID
 		tags["address"] = address
-		tags["name"] = j.Name
+		tags["name"] = power.PowerSupplies[i].Name
 		tags["source"] = system.HostName
-		tags["state"] = string(j.Status.State)
-		tags["health"] = string(j.Status.Health)
+		tags["state"] = string(power.PowerSupplies[i].Status.State)
+		tags["health"] = string(power.PowerSupplies[i].Status.Health)
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
 			tags["datacenter"] = ""
 			tags["room"] = chassis.Location.PostalAddress.Room
@@ -68,11 +74,11 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, s
 		}
 
 		fields := make(map[string]interface{})
-		fields["power_input_watts"] = j.PowerInputWatts
-		fields["power_output_watts"] = j.PowerOutputWatts
-		fields["line_input_voltage"] = j.LineInputVoltage
-		fields["last_power_output_watts"] = j.LastPowerOutputWatts
-		fields["power_capacity_watts"] = j.PowerCapacityWatts
+		fields["power_input_watts"] = power.PowerSupplies[i].PowerInputWatts
+		fields["power_output_watts"] = power.PowerSupplies[i].PowerOutputWatts
+		fields["line_input_voltage"] = power.PowerSupplies[i].LineInputVoltage
+		fields["last_power_output_watts"] = power.PowerSupplies[i].LastPowerOutputWatts
+		fields["power_capacity_watts"] = power.PowerSupplies[i].PowerCapacityWatts
 		acc.AddFields("redfish_power_powersupplies", fields, tags)
 	}
 
