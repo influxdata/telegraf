@@ -14,7 +14,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"unicode"
 
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/performance"
@@ -1298,7 +1297,7 @@ func (e *endpoint) collectChunk(
 					for k, v := range objectRef.customProperties {
 						sv, err := internal.ToString(v)
 						if err != nil {
-							return fmt.Errorf("conversion error for %v: %w", v, err)
+							e.log.Errorf("conversion error for %v: %w", v, err)
 						} else {
 							tags[k] = sv
 						}
