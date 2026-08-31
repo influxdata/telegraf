@@ -1,41 +1,23 @@
 package redfish
 
 import (
-	"net/url"
+	"encoding/json"
+	"fmt"
 
 	"github.com/influxdata/telegraf"
+	"github.com/stmcginnis/gofish/schemas"
 )
 
-type thermal struct {
-	Fans []struct {
-		Name                   string
-		MemberID               string
-		FanName                string
-		CurrentReading         *int64
-		Reading                *int64
-		ReadingUnits           *string
-		UpperThresholdCritical *int64
-		UpperThresholdFatal    *int64
-		LowerThresholdCritical *int64
-		LowerThresholdFatal    *int64
-		Status                 status
-	}
-	Temperatures []struct {
-		Name                   string
-		MemberID               string
-		ReadingCelsius         *float64
-		UpperThresholdCritical *float64
-		UpperThresholdFatal    *float64
-		LowerThresholdCritical *float64
-		LowerThresholdFatal    *float64
-		Status                 status
-	}
+func (r *Redfish) gatherThermal(acc telegraf.Accumulator, address string, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
+	// Gather metrics via the legacy api
+	// TODO: Add thermal metric gatering via the new thermalSubsys API
+	return r.gatherThermalMetrics(acc, address, system, chassis)
 }
 
-func (r *Redfish) gatherThermal(acc telegraf.Accumulator, address string, system *system, chassis *chassis) error {
-	thermal, err := r.getThermal(chassis.Thermal.Ref)
-	if err != nil {
-		return err
+func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, address string, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
+	thermal, err := chassis.Thermal()
+	if err != nil || thermal == nil {
+		return fmt.Errorf("error parsing input from %s: %w", address, err)
 	}
 
 	for _, j := range thermal.Temperatures {
@@ -43,11 +25,11 @@ func (r *Redfish) gatherThermal(acc telegraf.Accumulator, address string, system
 		tags["member_id"] = j.MemberID
 		tags["address"] = address
 		tags["name"] = j.Name
-		tags["source"] = system.Hostname
-		tags["state"] = j.Status.State
-		tags["health"] = j.Status.Health
-		if _, ok := r.tagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
-			tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
+		tags["source"] = system.HostName
+		tags["state"] = string(j.Status.State)
+		tags["health"] = string(j.Status.Health)
+		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
+			tags["datacenter"] = "" // Not in the standard, keeping for backward compatibility
 			tags["room"] = chassis.Location.PostalAddress.Room
 			tags["rack"] = chassis.Location.Placement.Rack
 			tags["row"] = chassis.Location.Placement.Row
@@ -70,15 +52,18 @@ func (r *Redfish) gatherThermal(acc telegraf.Accumulator, address string, system
 		fields := make(map[string]interface{}, 5)
 		tags["member_id"] = j.MemberID
 		tags["address"] = address
-		tags["name"] = j.Name
-		if j.FanName != "" {
+
+		// FanName is Deprecated but kept around for ilo4 support
+		if j.Name == "" {
 			tags["name"] = j.FanName
+		} else {
+			tags["name"] = j.Name
 		}
-		tags["source"] = system.Hostname
-		tags["state"] = j.Status.State
-		tags["health"] = j.Status.Health
-		if _, ok := r.tagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
-			tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
+		tags["source"] = system.HostName
+		tags["state"] = string(j.Status.State)
+		tags["health"] = string(j.Status.Health)
+		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
+			tags["datacenter"] = "" // Not in the standard, keeping for backward compatibility
 			tags["room"] = chassis.Location.PostalAddress.Room
 			tags["rack"] = chassis.Location.Placement.Rack
 			tags["row"] = chassis.Location.Placement.Row
@@ -87,29 +72,29 @@ func (r *Redfish) gatherThermal(acc telegraf.Accumulator, address string, system
 			setChassisTags(chassis, tags)
 		}
 
-		if j.ReadingUnits != nil && *j.ReadingUnits == "RPM" {
-			fields["upper_threshold_critical"] = j.UpperThresholdCritical
-			fields["upper_threshold_fatal"] = j.UpperThresholdFatal
-			fields["lower_threshold_critical"] = j.LowerThresholdCritical
-			fields["lower_threshold_fatal"] = j.LowerThresholdFatal
-			fields["reading_rpm"] = j.Reading
-		} else if j.CurrentReading != nil {
-			fields["reading_percent"] = j.CurrentReading
+		// Due to ILO4 not being fully readfish compatible we have to do this parsing manually
+		var ilo4ReadingPercent struct {
+			CurrentReading *int64
+		}
+		json.Unmarshal(j.RawData, &ilo4ReadingPercent)
+
+		if ilo4ReadingPercent.CurrentReading != nil {
+			fields["reading_percent"] = ilo4ReadingPercent.CurrentReading
 		} else {
-			fields["reading_percent"] = j.Reading
+			if j.ReadingUnits == "RPM" {
+				fields["upper_threshold_critical"] = j.UpperThresholdCritical
+				fields["upper_threshold_fatal"] = j.UpperThresholdFatal
+				fields["lower_threshold_critical"] = j.LowerThresholdCritical
+				fields["lower_threshold_fatal"] = j.LowerThresholdFatal
+				fields["reading_rpm"] = j.Reading
+			} else if j.Reading != nil {
+				fields["reading_percent"] = j.Reading
+			} else {
+				fields["reading_percent"] = j.Reading
+			}
 		}
 		acc.AddFields("redfish_thermal_fans", fields, tags)
 	}
 
 	return nil
-}
-
-func (r *Redfish) getThermal(ref string) (*thermal, error) {
-	loc := r.baseURL.ResolveReference(&url.URL{Path: ref})
-	thermal := &thermal{}
-	err := r.getData(loc.String(), thermal)
-	if err != nil {
-		return nil, err
-	}
-	return thermal, nil
 }
