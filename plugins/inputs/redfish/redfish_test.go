@@ -991,10 +991,8 @@ func TestParseErrorIncludesContext(t *testing.T) {
 		ComputerSystemID: "System.Embedded.1",
 		IncludeMetrics:   []string{"thermal", "power"},
 	}
-	require.NoError(t, plugin.Init())
+	err := plugin.Init()
 
-	var acc testutil.Accumulator
-	err := plugin.Gather(&acc)
 	require.ErrorContains(t, err, ts.URL+"/redfish/v1/Systems/System.Embedded.1")
 	require.ErrorContains(t, err, "text/html")
 }
