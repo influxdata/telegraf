@@ -49,6 +49,27 @@ func (*Redfish) SampleConfig() string {
 }
 
 func (r *Redfish) Init() error {
+	err := r.checkConfig()
+	if err != nil {
+		return err
+	}
+
+	r.gf, err = r.gofishSetup()
+	if err != nil {
+		return fmt.Errorf("error parsing input from %s. This is likely due to the BMC response being in text/html: %w",
+			r.Address+"/redfish/v1/Systems/"+r.ComputerSystemID,
+			err)
+	}
+
+	r.tagSet = make(map[string]bool, len(r.IncludeTagSets))
+	for _, setLabel := range r.IncludeTagSets {
+		r.tagSet[setLabel] = true
+	}
+
+	return nil
+}
+
+func (r *Redfish) checkConfig() error {
 	if r.Address == "" {
 		return errors.New("did not provide IP")
 	}
@@ -79,22 +100,15 @@ func (r *Redfish) Init() error {
 			return fmt.Errorf("unknown workaround requested: %s", workaround)
 		}
 	}
-	r.tagSet = make(map[string]bool, len(r.IncludeTagSets))
-	for _, setLabel := range r.IncludeTagSets {
-		r.tagSet[setLabel] = true
-	}
 
-	var err error
-	r.baseURL, err = url.Parse(r.Address)
-	if err != nil {
-		return err
-	}
+	return nil
+}
 
+func (r *Redfish) gofishSetup() (*gofish.Service, error) {
 	tlsCfg, err := r.ClientConfig.TLSConfig()
 	if err != nil {
-		return err
+		return nil, err
 	}
-
 	r.client = http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
@@ -103,7 +117,34 @@ func (r *Redfish) Init() error {
 		Timeout: time.Duration(r.Timeout),
 	}
 
-	return nil
+	username, err := r.Username.Get()
+	if err != nil {
+		return nil, fmt.Errorf("getting username failed: %w", err)
+	}
+	user := username.String()
+	username.Destroy()
+
+	password, err := r.Password.Get()
+	if err != nil {
+		return nil, fmt.Errorf("getting password failed: %w", err)
+	}
+	pass := password.String()
+	password.Destroy()
+
+	config := gofish.ClientConfig{
+		Endpoint:   r.Address,
+		Username:   user,
+		Password:   pass,
+		BasicAuth:  true,
+		HTTPClient: &r.client,
+	}
+	c, err := gofish.Connect(config)
+	if err != nil {
+		return nil, err
+	}
+
+	// Retrieve the service root
+	return c.Service, nil
 }
 
 func (r *Redfish) Gather(acc telegraf.Accumulator) error {
