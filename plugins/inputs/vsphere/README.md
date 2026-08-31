@@ -84,8 +84,7 @@ to use them.
   # vm_instances = true ## true by default
   ## Custom VM properties to collect.
   ## If the properties are text-based, they will be added as tags; otherwise, they will be added as metrics.
-  ## example: vm_property_include = ["runtime.powerState", "summary.config.MemorySizeMB", "summary.config.MemoryReservation"]
-  # vm_property_include = []
+  # vm_property_include = ["runtime.powerState", "summary.config.MemorySizeMB", "summary.config.MemoryReservation"]
 
   ## Hosts
   ## Typical host metrics (if omitted or empty, all metrics are collected)

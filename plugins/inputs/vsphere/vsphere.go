@@ -164,6 +164,7 @@ func init() {
 			ResourcePoolInclude:         []string{"/*/host/**"},
 			VMInstances:                 true,
 			VMInclude:                   []string{"/*/vm/**"},
+			VMPropertyInclude:			 []string{"runtime.powerState", "summary.config.MemorySizeMB", "summary.config.MemoryReservation"},
 			DatastoreInclude:            []string{"/*/datastore/**"},
 			VSANMetricExclude:           []string{"*"},
 			VSANClusterInclude:          []string{"/*/host/**"},
