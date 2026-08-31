@@ -1296,7 +1296,12 @@ func (e *endpoint) collectChunk(
 						tags[k] = v
 					}
 					for k, v := range objectRef.customProperties {
-						tags[k] = internal.ToString(v)
+						sv, err := internal.ToString(v)
+						if err != nil {
+							return fmt.Errorf("conversion error for %v: %w", v, err)
+						} else {
+							tags[k] = sv
+						}
 					}
 					bucket := metricEntry{name: mn, ts: latestSample, fields: fields, tags: tags}
 					buckets[bKey] = bucket
