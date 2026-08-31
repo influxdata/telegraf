@@ -1486,16 +1486,9 @@ func (e *endpoint) getExtraProperty(entity interface{}, fieldPath string) interf
 		v = v.Elem()
 	}
 
-	var result []rune
-	for i, r := range fieldPath {
-		if i == 0 || fieldPath[i-1] == '.' {
-			result = append(result, unicode.ToUpper(r))
-		} else {
-			result = append(result, r)
-		}
-	}
-	fields := strings.Split(string(result), ".")
+	fields := strings.Split(fieldPath, ".")
 	for _, field := range fields {
+		field = strings.Title(field)
 		if v.Kind() != reflect.Struct {
 			e.parent.Log.Warnf("Field %s in %s of %s not struct %s. Skipping", field, fieldPath, reflect.TypeOf(entity), v.Kind())
 			return nil
