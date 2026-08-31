@@ -62,6 +62,10 @@ When writing to a file, the schema is used to look for each value and if it is
 not present a null value is added. The result is that if additional fields are
 present after the first metric flush those fields are omitted.
 
+The `timestamp_field_name` column holds the metric time, so a field or tag with
+that same name is dropped and logged. Set `timestamp_field_name` to another name
+or rename the field or tag to keep both.
+
 ### Write
 
 The plugin makes use of the buffered writer. This may buffer some metrics into
