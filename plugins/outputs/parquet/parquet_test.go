@@ -166,7 +166,7 @@ func TestPartialWrite(t *testing.T) {
 			noPermissions: true,
 			metrics: []telegraf.Metric{
 				metric.New(
-					"test",
+					"test/sub",
 					map[string]string{},
 					map[string]interface{}{
 						"value": 1.0,
@@ -214,12 +214,7 @@ func TestPartialWrite(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := t.TempDir()
-			path := tmpDir
-			if tt.noPermissions {
-				path = filepath.Join(tmpDir, "no_permissions")
-				require.NoError(t, os.MkdirAll(path, 0500))
-			}
+			path := t.TempDir()
 
 			plugin := &Parquet{
 				Directory:          path,
