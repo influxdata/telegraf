@@ -15,6 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -308,7 +309,7 @@ func TestTimestampFieldNameCollisionKeepsOneColumn(t *testing.T) {
 	require.Equal(t, parquet.Types.Int64, schema.Column(schema.ColumnIndexByName("timestamp")).PhysicalType())
 }
 
-func TestConflictingValueTypesDoNotPanic(t *testing.T) {
+func TestConflictingValueTypesAreRejected(t *testing.T) {
 	dir := t.TempDir()
 	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", Log: testutil.Logger{}}
 	require.NoError(t, p.Init())
@@ -316,8 +317,16 @@ func TestConflictingValueTypesDoNotPanic(t *testing.T) {
 	require.NoError(t, p.Write([]telegraf.Metric{
 		metric.New("demo", nil, map[string]interface{}{"k": int64(1)}, time.Now()),
 	}))
-	require.NoError(t, p.Write([]telegraf.Metric{
+
+	var writeErr *internal.PartialWriteError
+	require.ErrorAs(t, p.Write([]telegraf.Metric{
 		metric.New("demo", map[string]string{"k": "v"}, map[string]interface{}{"other": int64(2)}, time.Now()),
+	}), &writeErr)
+	require.Equal(t, []int{0}, writeErr.MetricsReject)
+	require.Empty(t, writeErr.MetricsAccept)
+
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]interface{}{"k": int64(3)}, time.Now()),
 	}))
 	require.NoError(t, p.Close())
 
@@ -329,6 +338,31 @@ func TestConflictingValueTypesDoNotPanic(t *testing.T) {
 	require.NoError(t, err)
 	defer reader.Close()
 	require.Equal(t, int64(2), reader.NumRows())
+}
+
+func TestFieldTakesPrecedenceOverTag(t *testing.T) {
+	p := &Parquet{TimestampFieldName: "timestamp", Log: testutil.Logger{}}
+	m := metric.New("demo", map[string]string{"k": "tag"}, map[string]interface{}{"k": int64(1)}, time.Now())
+
+	require.Equal(t, int64(1), p.valueFor(m, "k"))
+}
+
+func TestRejectedMetricsReportEveryIndexExactlyOnce(t *testing.T) {
+	dir := t.TempDir()
+	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", Log: testutil.Logger{}}
+	require.NoError(t, p.Init())
+
+	var writeErr *internal.PartialWriteError
+	require.ErrorAs(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]interface{}{"k": int64(1)}, time.Now()),
+		metric.New("demo", map[string]string{"k": "v"}, map[string]interface{}{"other": int64(2)}, time.Now()),
+		metric.New("other", nil, map[string]interface{}{"v": int64(3)}, time.Now()),
+	}), &writeErr)
+	require.NoError(t, p.Close())
+
+	require.ElementsMatch(t, []int{1}, writeErr.MetricsReject)
+	require.ElementsMatch(t, []int{0, 2}, writeErr.MetricsAccept)
+	require.Len(t, writeErr.MetricsRejectErrors, 1)
 }
 
 func TestEveryConvertibleTypeRoundTrips(t *testing.T) {
@@ -347,7 +381,7 @@ func TestEveryConvertibleTypeRoundTrips(t *testing.T) {
 			builder := array.NewBuilder(memory.DefaultAllocator, datatype)
 			defer builder.Release()
 
-			require.True(t, appendValue(builder, value))
+			appendValue(builder, value)
 			require.Equal(t, 0, builder.NullN())
 		})
 	}
@@ -357,8 +391,8 @@ func TestAppendValueNullsWhatItCannotWrite(t *testing.T) {
 	builder := array.NewBuilder(memory.DefaultAllocator, arrow.PrimitiveTypes.Int64)
 	defer builder.Release()
 
-	require.False(t, appendValue(builder, "not an int"))
-	require.False(t, appendValue(builder, []string{"unsupported"}))
-	require.True(t, appendValue(builder, nil))
+	appendValue(builder, "not an int")
+	appendValue(builder, []string{"unsupported"})
+	appendValue(builder, nil)
 	require.Equal(t, 3, builder.NullN())
 }

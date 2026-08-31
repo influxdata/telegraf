@@ -66,8 +66,8 @@ The `timestamp_field_name` column holds the metric time, so a field or tag with
 that same name is dropped and logged. Set `timestamp_field_name` to another name
 or rename the field or tag to keep both.
 
-Since column types are fixed at file creation, when an unknown value is logged
-it will be logged as `null` and once per column.
+Since column types are fixed at file creation, an unknown value that doesn't
+match the column cannot be written and is dropped and reported.
 
 ### Write
 

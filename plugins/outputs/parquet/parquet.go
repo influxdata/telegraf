@@ -17,6 +17,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -27,7 +28,6 @@ var defaultTimestampFieldName = "timestamp"
 
 type metricGroup struct {
 	filename string
-	warned   map[string]bool
 	builder  *array.RecordBuilder
 	schema   *arrow.Schema
 	writer   *pqarrow.FileWriter
@@ -87,16 +87,24 @@ func (p *Parquet) Close() error {
 }
 
 func (p *Parquet) Write(metrics []telegraf.Metric) error {
-	groupedMetrics := make(map[string][]telegraf.Metric)
-	for _, metric := range metrics {
-		groupedMetrics[metric.Name()] = append(groupedMetrics[metric.Name()], metric)
+	grouped := make(map[string][]int)
+	for i, m := range metrics {
+		grouped[m.Name()] = append(grouped[m.Name()], i)
 	}
 
+	var writeErr internal.PartialWriteError
+
 	now := time.Now()
-	for name, metrics := range groupedMetrics {
-		if _, ok := p.metricGroups[name]; !ok {
+	for name, indices := range grouped {
+		group, found := p.metricGroups[name]
+		if !found {
+			batch := make([]telegraf.Metric, 0, len(indices))
+			for _, i := range indices {
+				batch = append(batch, metrics[i])
+			}
+
 			filename := fmt.Sprintf("%s/%s-%s-%s.parquet", p.Directory, name, now.Format("2006-01-02"), strconv.FormatInt(now.Unix(), 10))
-			schema, err := p.createSchema(metrics)
+			schema, err := p.createSchema(batch)
 			if err != nil {
 				return fmt.Errorf("failed to create schema for file %q: %w", name, err)
 			}
@@ -104,27 +112,62 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 			if err != nil {
 				return fmt.Errorf("failed to create writer for file %q: %w", name, err)
 			}
-			p.metricGroups[name] = &metricGroup{
+
+			group = &metricGroup{
 				builder:  array.NewRecordBuilder(memory.DefaultAllocator, schema),
 				filename: filename,
-				warned:   make(map[string]bool),
 				schema:   schema,
 				writer:   writer,
 			}
+			p.metricGroups[name] = group
 		}
 
 		if p.RotationInterval != 0 {
 			if err := p.rotateIfNeeded(name); err != nil {
-				return fmt.Errorf("failed to rotate file %q: %w", p.metricGroups[name].filename, err)
+				return fmt.Errorf("failed to rotate file %q: %w", group.filename, err)
 			}
 		}
 
-		group := p.metricGroups[name]
-		record := p.createRecordBatch(group, metrics)
+		accepted := make([]telegraf.Metric, 0, len(indices))
+		for _, i := range indices {
+			if err := p.checkSchema(group, metrics[i]); err != nil {
+				writeErr.MetricsReject = append(writeErr.MetricsReject, i)
+				writeErr.MetricsRejectErrors = append(writeErr.MetricsRejectErrors, err)
+				continue
+			}
+			accepted = append(accepted, metrics[i])
+			writeErr.MetricsAccept = append(writeErr.MetricsAccept, i)
+		}
+
+		record := p.createRecordBatch(group, accepted)
 		err := group.writer.WriteBuffered(record)
 		record.Release()
 		if err != nil {
 			return fmt.Errorf("failed to write to file %q: %w", group.filename, err)
+		}
+	}
+
+	if len(writeErr.MetricsReject) == 0 {
+		return nil
+	}
+	writeErr.Err = fmt.Errorf("rejected %d metric(s): %w", len(writeErr.MetricsReject), errors.Join(writeErr.MetricsRejectErrors...))
+
+	return &writeErr
+}
+
+func (p *Parquet) checkSchema(group *metricGroup, m telegraf.Metric) error {
+	for _, column := range group.schema.Fields() {
+		value := p.valueFor(m, column.Name)
+		if value == nil {
+			continue
+		}
+
+		datatype, err := goToArrowType(value)
+		if err != nil {
+			return fmt.Errorf("column %q of file %q: %w", column.Name, group.filename, err)
+		}
+		if !arrow.TypeEqual(datatype, column.Type) {
+			return fmt.Errorf("column %q of file %q holds %s but the metric has a %s value", column.Name, group.filename, column.Type, datatype)
 		}
 	}
 
@@ -160,14 +203,7 @@ func (p *Parquet) createRecordBatch(group *metricGroup, metrics []telegraf.Metri
 		builder := group.builder.Field(index)
 
 		for _, m := range metrics {
-			value := p.valueFor(m, column.Name)
-			if !appendValue(builder, value) {
-				p.warnOncef(
-					group, column.Name,
-					"Writing null for column %q of file %q as a %T value does not fit its %s column",
-					column.Name, group.filename, value, column.Type,
-				)
-			}
+			appendValue(builder, p.valueFor(m, column.Name))
 		}
 	}
 
@@ -188,62 +224,50 @@ func (p *Parquet) valueFor(m telegraf.Metric, column string) interface{} {
 	return nil
 }
 
-func (p *Parquet) warnOncef(group *metricGroup, column, format string, args ...interface{}) {
-	if group.warned[column] {
-		return
-	}
-	group.warned[column] = true
-	p.Log.Warnf(format, args...)
-}
-
-func appendValue(builder array.Builder, value interface{}) bool {
+func appendValue(builder array.Builder, value interface{}) {
 	switch v := value.(type) {
 	case nil:
 		builder.AppendNull()
-		return true
 	case int8:
-		return appendTyped(builder, v)
+		appendTyped(builder, v)
 	case int16:
-		return appendTyped(builder, v)
+		appendTyped(builder, v)
 	case int32:
-		return appendTyped(builder, v)
+		appendTyped(builder, v)
 	case int64:
-		return appendTyped(builder, v)
+		appendTyped(builder, v)
 	case int:
-		return appendTyped(builder, int64(v))
+		appendTyped(builder, int64(v))
 	case uint8:
-		return appendTyped(builder, v)
+		appendTyped(builder, v)
 	case uint16:
-		return appendTyped(builder, v)
+		appendTyped(builder, v)
 	case uint32:
-		return appendTyped(builder, v)
+		appendTyped(builder, v)
 	case uint64:
-		return appendTyped(builder, v)
+		appendTyped(builder, v)
 	case uint:
-		return appendTyped(builder, uint64(v))
+		appendTyped(builder, uint64(v))
 	case float32:
-		return appendTyped(builder, v)
+		appendTyped(builder, v)
 	case float64:
-		return appendTyped(builder, v)
+		appendTyped(builder, v)
 	case string:
-		return appendTyped(builder, v)
+		appendTyped(builder, v)
 	case bool:
-		return appendTyped(builder, v)
+		appendTyped(builder, v)
 	default:
 		builder.AppendNull()
-		return false
 	}
 }
 
-func appendTyped[T any](builder array.Builder, value T) bool {
+func appendTyped[T any](builder array.Builder, value T) {
 	column, ok := builder.(interface{ Append(T) })
 	if !ok {
 		builder.AppendNull()
-		return false
+		return
 	}
 	column.Append(value)
-
-	return true
 }
 
 func (p *Parquet) createSchema(metrics []telegraf.Metric) (*arrow.Schema, error) {
