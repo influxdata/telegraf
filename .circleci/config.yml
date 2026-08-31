@@ -395,6 +395,11 @@ jobs:
               --include "telegraf*.rpm" \
               --include "telegraf*.tar.gz" \
               --include "telegraf*.zip"
+      - run:
+          command: |
+            aws s3 sync /build/dist s3://dl-influxdata-com/telegraf/debug/ \
+              --exclude "*" \
+              --include "symbols-*.jsonl.gz"
   docker-nightly:
     machine:
       image: ubuntu-2204:current
