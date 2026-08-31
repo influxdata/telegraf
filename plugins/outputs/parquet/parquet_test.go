@@ -12,19 +12,18 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestCases(t *testing.T) {
-	type testcase struct {
+func TestGather(t *testing.T) {
+	tests := []struct {
 		name       string
 		metrics    []telegraf.Metric
 		numRows    int
 		numColumns int
-	}
-
-	var testcases = []testcase{
+	}{
 		{
 			name: "basic single metric",
 			metrics: []telegraf.Metric{
@@ -124,8 +123,8 @@ func TestCases(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testcases {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			testDir := t.TempDir()
 			plugin := &Parquet{
 				Directory:          testDir,
@@ -133,7 +132,7 @@ func TestCases(t *testing.T) {
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
-			require.NoError(t, plugin.Write(tc.metrics))
+			require.NoError(t, plugin.Write(tt.metrics))
 			require.NoError(t, plugin.Close())
 
 			// Read metrics from parquet file
@@ -145,8 +144,113 @@ func TestCases(t *testing.T) {
 			defer reader.Close()
 
 			metadata := reader.MetaData()
-			require.Equal(t, tc.numRows, int(metadata.NumRows))
-			require.Equal(t, tc.numColumns, metadata.Schema.NumColumns())
+			require.Equal(t, tt.numRows, int(metadata.NumRows))
+			require.Equal(t, tt.numColumns, metadata.Schema.NumColumns())
+		})
+	}
+}
+
+func TestPartialWrite(t *testing.T) {
+	tests := []struct {
+		name          string
+		noPermissions bool
+		metrics       []telegraf.Metric
+		numRows       int
+		numColumns    int
+		expected      string
+		accepted      []int
+		rejected      []int
+	}{
+		{
+			name:          "create writer failed",
+			noPermissions: true,
+			metrics: []telegraf.Metric{
+				metric.New(
+					"test",
+					map[string]string{},
+					map[string]interface{}{
+						"value": 1.0,
+					},
+					time.Now(),
+				),
+			},
+			expected: "failed to create writer for file",
+		},
+		{
+			name: "schema mismatch",
+			metrics: []telegraf.Metric{
+				metric.New(
+					"test",
+					map[string]string{},
+					map[string]interface{}{
+						"value": int8(1),
+					},
+					time.Now(),
+				),
+				metric.New(
+					"test",
+					map[string]string{},
+					map[string]interface{}{
+						"value": "2",
+					},
+					time.Now(),
+				),
+				metric.New(
+					"test",
+					map[string]string{},
+					map[string]interface{}{
+						"value": int8(3),
+					},
+					time.Now(),
+				),
+			},
+			numRows:    2,
+			numColumns: 2,
+			expected:   "invalid value 2 (string) for column \"value\" (int64)",
+			accepted:   []int{0, 2},
+			rejected:   []int{1},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			path := tmpDir
+			if tt.noPermissions {
+				path = filepath.Join(tmpDir, "no_permissions")
+				require.NoError(t, os.MkdirAll(path, 0500))
+			}
+
+			plugin := &Parquet{
+				Directory:          path,
+				TimestampFieldName: defaultTimestampFieldName,
+			}
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
+			var perr *internal.PartialWriteError
+			require.ErrorAs(t, plugin.Write(tt.metrics), &perr)
+			require.NoError(t, plugin.Close())
+			require.ErrorContains(t, perr.Err, tt.expected)
+			require.ElementsMatch(t, perr.MetricsAccept, tt.accepted)
+			require.ElementsMatch(t, perr.MetricsReject, tt.rejected)
+
+			// Read metrics from parquet file
+			files, err := os.ReadDir(path)
+			require.NoError(t, err)
+			if tt.numRows == 0 {
+				require.Empty(t, files)
+				return
+			}
+			require.Len(t, files, 1)
+
+			reader, err := file.OpenParquetFile(filepath.Join(path, files[0].Name()), false)
+			require.NoError(t, err)
+			defer reader.Close()
+
+			metadata := reader.MetaData()
+			require.Equal(t, tt.numRows, int(metadata.NumRows), "wrong number of rows")
+			require.Equal(t, tt.numColumns, metadata.Schema.NumColumns(), "wrong number of columns")
 		})
 	}
 }
