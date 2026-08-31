@@ -10,7 +10,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"path"
 	"slices"
 	"strings"
 	"time"
@@ -19,6 +18,8 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/stmcginnis/gofish"
+	"github.com/stmcginnis/gofish/schemas"
 )
 
 //go:embed sample.conf
@@ -44,50 +45,7 @@ type Redfish struct {
 	tagSet map[string]bool
 	client http.Client
 	tls.ClientConfig
-	baseURL *url.URL
-}
-
-type system struct {
-	Hostname string `json:"hostname"`
-	Links    struct {
-		Chassis []struct {
-			Ref string `json:"@odata.id"`
-		}
-	}
-}
-
-type chassis struct {
-	ChassisType  string
-	Location     *location
-	Manufacturer string
-	Model        string
-	PartNumber   string
-	Power        struct {
-		Ref string `json:"@odata.id"`
-	}
-	PowerState   string
-	SKU          string
-	SerialNumber string
-	Status       status
-	Thermal      struct {
-		Ref string `json:"@odata.id"`
-	}
-}
-
-type location struct {
-	PostalAddress struct {
-		DataCenter string
-		Room       string
-	}
-	Placement struct {
-		Rack string
-		Row  string
-	}
-}
-
-type status struct {
-	State  string
-	Health string
+	gf *gofish.Service
 }
 
 func (*Redfish) SampleConfig() string {
