@@ -148,7 +148,7 @@ func TestIntegration(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
 
-func TestStartupErrorBehaviorError(t *testing.T) {
+func TestStartupErrorBehaviorErrorIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -210,7 +210,7 @@ func TestStartupErrorBehaviorError(t *testing.T) {
 	require.ErrorContains(t, model.Start(&acc), "could not connect to any broker")
 }
 
-func TestStartupErrorBehaviorIgnore(t *testing.T) {
+func TestStartupErrorBehaviorIgnoreIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -277,7 +277,7 @@ func TestStartupErrorBehaviorIgnore(t *testing.T) {
 	require.ErrorAs(t, err, &fatalErr)
 }
 
-func TestStartupErrorBehaviorRetry(t *testing.T) {
+func TestStartupErrorBehaviorRetryIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
