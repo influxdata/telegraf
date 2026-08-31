@@ -1,6 +1,6 @@
 module github.com/influxdata/telegraf
 
-go 1.26.0
+go 1.27.0
 
 godebug x509negativeserial=1
 
