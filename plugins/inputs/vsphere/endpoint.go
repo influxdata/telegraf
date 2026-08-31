@@ -23,6 +23,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal"
 )
 
 var isolateLUN = regexp.MustCompile(`.*/([^/]+)/?$`)
