@@ -1295,7 +1295,7 @@ func (e *endpoint) collectChunk(
 						tags[k] = v
 					}
 					for k, v := range objectRef.customProperties {
-						tags[k] = fmt.Sprintf("%v", v)
+						tags[k] = internal.ToString(v)
 					}
 					bucket := metricEntry{name: mn, ts: latestSample, fields: fields, tags: tags}
 					buckets[bKey] = bucket
