@@ -148,65 +148,64 @@ func (r *Redfish) gofishSetup() (*gofish.Service, error) {
 }
 
 func (r *Redfish) Gather(acc telegraf.Accumulator) error {
-	address, _, err := net.SplitHostPort(r.baseURL.Host)
+	redfishUrl, _ := url.Parse(r.Address)
+	address, _, err := net.SplitHostPort(redfishUrl.Host)
 	if err != nil {
-		address = r.baseURL.Host
+		address = redfishUrl.Host
 	}
 
-	system, err := r.getComputerSystem(r.ComputerSystemID)
+	systems, err := r.gf.Systems()
 	if err != nil {
-		return err
+		var collectionError *schemas.CollectionError
+		if errors.As(err, &collectionError) {
+			return fmt.Errorf("received status code 401 (Unauthorized) for address %s/redfish/v1/Systems/System.Embedded.1, expected 200", r.Address)
+		} else {
+
+		}
+		return fmt.Errorf("error parsing input from %s: %w", address, err)
 	}
 
-	for _, link := range system.Links.Chassis {
-		// References are resolved against the configured address, so an empty
-		// one would request the device's web root instead of a Redfish resource
-		if link.Ref == "" {
-			r.Log.Warn("Skipping chassis without reference")
-			continue
-		}
-
-		chassis, err := r.getChassis(link.Ref)
-		if err != nil {
-			return err
-		}
-
-		for _, metric := range r.IncludeMetrics {
-			var err error
-			switch metric {
-			case "thermal":
-				if chassis.Thermal.Ref == "" {
-					r.Log.Warnf("Skipping thermal data of chassis %q without reference", link.Ref)
-					continue
-				}
-				err = r.gatherThermal(acc, address, system, chassis)
-			case "power":
-				if chassis.Power.Ref == "" {
-					r.Log.Warnf("Skipping power data of chassis %q without reference", link.Ref)
-					continue
-				}
-				err = r.gatherPower(acc, address, system, chassis)
-			default:
-				return fmt.Errorf("unknown metric requested: %s", metric)
+	// Process only the system defined via ComputerSystemID in the config
+	// Collect configured metrics on every chassis
+	for _, system := range systems {
+		if system.ID == r.ComputerSystemID {
+			chassisList, err := system.Chassis()
+			if err != nil || chassisList == nil {
+				return fmt.Errorf("error parsing input from %s: %w", address, err)
 			}
-			if err != nil {
-				return err
+
+			for _, chassis := range chassisList {
+				for _, metric := range r.IncludeMetrics {
+					var err error
+					switch metric {
+					case "thermal":
+						err = r.gatherThermal(acc, address, system, chassis)
+					case "power":
+						err = r.gatherPower(acc, address, system, chassis)
+					default:
+						return fmt.Errorf("unknown metric requested: %s", metric)
+					}
+					if err != nil {
+						return err
+					}
+				}
 			}
+			break
 		}
 	}
 	return nil
 }
 
-func setChassisTags(chassis *chassis, tags map[string]string) {
-	tags["chassis_chassistype"] = chassis.ChassisType
+func setChassisTags(chassis *schemas.Chassis, tags map[string]string) {
+	tags["chassis_chassistype"] = string(chassis.ChassisType)
 	tags["chassis_manufacturer"] = chassis.Manufacturer
 	tags["chassis_model"] = chassis.Model
 	tags["chassis_partnumber"] = chassis.PartNumber
-	tags["chassis_powerstate"] = chassis.PowerState
+	tags["chassis_powerstate"] = string(chassis.PowerState)
 	tags["chassis_sku"] = chassis.SKU
 	tags["chassis_serialnumber"] = chassis.SerialNumber
-	tags["chassis_state"] = chassis.Status.State
-	tags["chassis_health"] = chassis.Status.Health
+	tags["chassis_state"] = string(chassis.Status.State)
+	tags["chassis_health"] = string(chassis.Status.Health)
 }
 
 func init() {
