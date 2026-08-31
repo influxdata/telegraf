@@ -3,15 +3,11 @@ package redfish
 
 import (
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"net/url"
-	"slices"
-	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -158,82 +154,6 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 	return nil
-}
-
-func (r *Redfish) getData(address string, payload interface{}) error {
-	req, err := http.NewRequest("GET", address, nil)
-	if err != nil {
-		return err
-	}
-
-	username, err := r.Username.Get()
-	if err != nil {
-		return fmt.Errorf("getting username failed: %w", err)
-	}
-	user := username.String()
-	username.Destroy()
-
-	password, err := r.Password.Get()
-	if err != nil {
-		return fmt.Errorf("getting password failed: %w", err)
-	}
-	pass := password.String()
-	password.Destroy()
-
-	req.SetBasicAuth(user, pass)
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("OData-Version", "4.0")
-
-	// workaround for iLO4 thermal data
-	if slices.Contains(r.Workarounds, "ilo4-thermal") && strings.Contains(address, "/Thermal") {
-		req.Header.Del("OData-Version")
-	}
-
-	resp, err := r.client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("received status code %d (%s) for address %s, expected 200",
-			resp.StatusCode,
-			http.StatusText(resp.StatusCode),
-			address)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(body, &payload)
-	if err != nil {
-		return fmt.Errorf("error parsing input from %s (Content-Type %q): %w", address, resp.Header.Get("Content-Type"), err)
-	}
-
-	return nil
-}
-
-func (r *Redfish) getComputerSystem(id string) (*system, error) {
-	loc := r.baseURL.ResolveReference(&url.URL{Path: path.Join("/redfish/v1/Systems/", id)})
-	system := &system{}
-	err := r.getData(loc.String(), system)
-	if err != nil {
-		return nil, err
-	}
-	return system, nil
-}
-
-func (r *Redfish) getChassis(ref string) (*chassis, error) {
-	loc := r.baseURL.ResolveReference(&url.URL{Path: ref})
-	chassis := &chassis{}
-	err := r.getData(loc.String(), chassis)
-	if err != nil {
-		return nil, err
-	}
-	return chassis, nil
 }
 
 func setChassisTags(chassis *chassis, tags map[string]string) {
