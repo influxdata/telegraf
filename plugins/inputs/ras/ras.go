@@ -59,7 +59,25 @@ func (r *Ras) Init() error {
 	if r.DBPath == "" {
 		r.DBPath = "/var/lib/rasdaemon/ras-mc_event.db"
 	}
-	r.cpuSocketCounters = map[int]map[string]int64{0: make(map[string]int64)}
+	r.cpuSocketCounters = map[int]map[string]int64{
+		0: {
+			"memory_read_corrected_errors":             0,
+			"memory_read_uncorrectable_errors":         0,
+			"memory_write_corrected_errors":            0,
+			"memory_write_uncorrectable_errors":        0,
+			"cache_l0_l1_errors":                       0,
+			"tlb_instruction_errors":                   0,
+			"processor_base_errors":                    0,
+			"processor_bus_errors":                     0,
+			"internal_timer_errors":                    0,
+			"smm_handler_code_access_violation_errors": 0,
+			"internal_parity_errors":                   0,
+			"frc_errors":                               0,
+			"external_mce_errors":                      0,
+			"microcode_rom_parity_errors":              0,
+			"unclassified_mce_errors":                  0,
+		},
+	}
 	r.serverCounters = map[string]int64{
 		"cache_l2_errors": 0,
 		"upi_errors":      0,
@@ -166,7 +184,23 @@ func (r *Ras) updateCounters(mcError *machineCheckError) {
 	}
 
 	if _, ok := r.cpuSocketCounters[mcError.socketID]; !ok {
-		r.cpuSocketCounters[mcError.socketID] = make(map[string]int64)
+		r.cpuSocketCounters[mcError.socketID] = map[string]int64{
+			"memory_read_corrected_errors":             0,
+			"memory_read_uncorrectable_errors":         0,
+			"memory_write_corrected_errors":            0,
+			"memory_write_uncorrectable_errors":        0,
+			"cache_l0_l1_errors":                       0,
+			"tlb_instruction_errors":                   0,
+			"processor_base_errors":                    0,
+			"processor_bus_errors":                     0,
+			"internal_timer_errors":                    0,
+			"smm_handler_code_access_violation_errors": 0,
+			"internal_parity_errors":                   0,
+			"frc_errors":                               0,
+			"external_mce_errors":                      0,
+			"microcode_rom_parity_errors":              0,
+			"unclassified_mce_errors":                  0,
+		}
 	}
 	r.updateSocketCounters(mcError)
 	r.updateServerCounters(mcError)
