@@ -93,7 +93,7 @@ require (
 	github.com/elastic/go-elasticsearch/v7 v7.17.10
 	github.com/elastic/go-elasticsearch/v8 v8.19.7
 	github.com/elastic/go-elasticsearch/v9 v9.5.1
-	github.com/emiago/sipgo v1.5.0
+	github.com/emiago/sipgo v1.6.0
 	github.com/facebook/time v0.0.0-20250903103710-a5911c32cdb9
 	github.com/fatih/color v1.19.0
 	github.com/go-ldap/ldap/v3 v3.4.14
