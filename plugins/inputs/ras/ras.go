@@ -22,15 +22,12 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const (
-	mceQuery = `
-		SELECT
-			id, timestamp, error_msg, mcistatus_msg, socketid
-		FROM mce_record
-		WHERE timestamp > ?
-		`
-	dateLayout = "2006-01-02 15:04:05 -0700"
-)
+const mceQuery = `
+	SELECT
+		id, timestamp, error_msg, mcistatus_msg, socketid
+	FROM mce_record
+	WHERE timestamp > ?
+`
 
 type Ras struct {
 	DBPath string          `toml:"db_path"`
@@ -167,7 +164,7 @@ func (r *Ras) Gather(acc telegraf.Accumulator) error {
 }
 
 func (r *Ras) updateLatestTimestamp(timestamp string) error {
-	ts, err := time.Parse(dateLayout, timestamp)
+	ts, err := time.Parse("2006-01-02 15:04:05 -0700", timestamp)
 	if err != nil {
 		return err
 	}
