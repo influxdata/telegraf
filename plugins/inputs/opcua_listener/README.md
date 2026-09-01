@@ -543,7 +543,7 @@ You can define multiple groups for the event streaming to subscribe to different
 event types. Each group allows to specify defaults for `namespace` and
 `identifier_type` being overwritten by settings in `node_ids`. The group
 defaults for node information will not affected the `event_type_node` setting
-and all paramters must be set in this section.
+and all parameters must be set in this section.
 
 This example group configuration shows how to use group settings:
 
