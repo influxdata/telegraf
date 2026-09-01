@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -195,7 +196,99 @@ func TestMultiAccountGather(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
-func TestGatherMultipleNamespaces(t *testing.T) {
+func TestGatherMultipleNamespacesWildcard(t *testing.T) {
+	plugin := &CloudWatch{
+		CredentialConfig: common_aws.CredentialConfig{
+			Region: "us-east-1",
+		},
+		Namespaces: []string{"AWS/E*"},
+		Delay:      config.Duration(1 * time.Minute),
+		Period:     config.Duration(1 * time.Minute),
+		RateLimit:  200,
+		BatchSize:  500,
+		Log:        testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	plugin.client = defaultMockClient("AWS/ELB", "AWS/EC2")
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(plugin.Gather))
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"cloudwatch_aws_elb",
+			map[string]string{
+				"region":             "us-east-1",
+				"load_balancer_name": "p-example1",
+			},
+			map[string]interface{}{
+				"latency_minimum":      0.1,
+				"latency_maximum":      0.3,
+				"latency_average":      0.2,
+				"latency_sum":          123.0,
+				"latency_sample_count": 100.0,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"cloudwatch_aws_elb",
+			map[string]string{
+				"region":             "us-east-1",
+				"load_balancer_name": "p-example2",
+			},
+			map[string]interface{}{
+				"latency_minimum":      0.1,
+				"latency_maximum":      0.3,
+				"latency_average":      0.2,
+				"latency_sum":          124.0,
+				"latency_sample_count": 100.0,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"cloudwatch_aws_ec2",
+			map[string]string{
+				"region":             "us-east-1",
+				"load_balancer_name": "p-example1",
+			},
+			map[string]interface{}{
+				"latency_minimum":      0.1,
+				"latency_maximum":      0.3,
+				"latency_average":      0.2,
+				"latency_sum":          123.0,
+				"latency_sample_count": 100.0,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"cloudwatch_aws_ec2",
+			map[string]string{
+				"region":             "us-east-1",
+				"load_balancer_name": "p-example2",
+			},
+			map[string]interface{}{
+				"latency_minimum":      0.1,
+				"latency_maximum":      0.3,
+				"latency_average":      0.2,
+				"latency_sum":          124.0,
+				"latency_sample_count": 100.0,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	option := []cmp.Option{
+		testutil.IgnoreTime(),
+		testutil.SortMetrics(),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), option...)
+
+	// Make sure the query did NOT contain the namespace
+	require.False(t, plugin.client.(*mockClient).withNamespace.Load())
+}
+
+func TestGatherMultipleNamespacesExplicitNamespace(t *testing.T) {
 	plugin := &CloudWatch{
 		CredentialConfig: common_aws.CredentialConfig{
 			Region: "us-east-1",
@@ -282,6 +375,9 @@ func TestGatherMultipleNamespaces(t *testing.T) {
 	}
 
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), option...)
+
+	// Make sure the query contained the namespace
+	require.True(t, plugin.client.(*mockClient).withNamespace.Load())
 }
 
 func TestSelectMetrics(t *testing.T) {
@@ -507,7 +603,8 @@ func TestCombineNamespaces(t *testing.T) {
 
 // INTERNAL mock client implementation
 type mockClient struct {
-	metrics []types.Metric
+	metrics       []types.Metric
+	withNamespace atomic.Bool
 }
 
 func defaultMockClient(namespaces ...string) *mockClient {
@@ -594,6 +691,9 @@ func (c *mockClient) ListMetrics(
 	if params.IncludeLinkedAccounts != nil && *params.IncludeLinkedAccounts {
 		response.OwningAccounts = []string{"123456789012", "923456789017"}
 	}
+
+	c.withNamespace.Store(params.Namespace != nil)
+
 	return response, nil
 }
 
