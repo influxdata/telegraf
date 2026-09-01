@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/gobwas/glob"
@@ -37,12 +38,9 @@ func Compile(filters []string, separators ...rune) (Filter, error) {
 
 	// check if we can compile a non-glob filter
 	wildcards := len(separators) != 0
-	for _, filter := range filters {
-		if strings.ContainsAny(filter, "*?[") {
-			wildcards = true
-			break
-		}
-	}
+	wildcards = wildcards || slices.ContainsFunc(filters, func(filter string) bool {
+		return strings.ContainsAny(filter, WildcardCharacters)
+	})
 
 	switch {
 	case !wildcards && len(filters) == 1:
