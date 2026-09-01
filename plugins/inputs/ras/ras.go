@@ -123,7 +123,7 @@ func (r *Ras) Gather(acc telegraf.Accumulator) error {
 	// Execute the query
 	rows, err := r.db.Query(mceQuery, r.latestTimestamp)
 	if err != nil {
-		return err
+		return fmt.Errorf("querying failed: %w", err)
 	}
 	defer rows.Close()
 
