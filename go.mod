@@ -180,7 +180,7 @@ require (
 	github.com/pborman/ansi v1.3.0
 	github.com/pcolladosoto/goslurm v0.1.0
 	github.com/peterbourgon/unixtransport v0.0.7
-	github.com/pion/dtls/v3 v3.1.5
+	github.com/pion/dtls/v3 v3.1.6
 	github.com/prometheus-community/pro-bing v0.9.1
 	github.com/prometheus/client_golang v1.24.1
 	github.com/prometheus/client_model v0.6.2
