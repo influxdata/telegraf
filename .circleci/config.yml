@@ -181,6 +181,12 @@ jobs:
           no_output_timeout: 30m
           environment:
             AZURE_EVENT_HUBS_EMULATOR_ACCEPT_EULA: yes
+            # The job runs on an ephemeral VM, so ryuk provides no cleanup value.
+            # Disabling it avoids a reaper lifecycle race: all packages of one
+            # "go test ./..." run share a single ryuk container, which exits 10s
+            # after the last test process disconnects; the next package then finds
+            # the dead container and times out waiting for it to become ready.
+            TESTCONTAINERS_RYUK_DISABLED: "true"
   test-go-mac:
     executor: mac
     steps:
