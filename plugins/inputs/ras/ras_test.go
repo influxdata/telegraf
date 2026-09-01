@@ -12,111 +12,6 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-var testData = []machineCheckError{
-	{
-		timestamp:    "2020-05-20 07:34:53 +0200",
-		socketID:     0,
-		errorMsg:     "MEMORY CONTROLLER RD_CHANNEL0_ERR Transaction: Memory read error",
-		mciStatusMsg: "Error_overflow Corrected_error",
-	},
-	{
-		timestamp:    "2020-05-20 07:35:11 +0200",
-		socketID:     0,
-		errorMsg:     "MEMORY CONTROLLER RD_CHANNEL0_ERR Transaction: Memory read error",
-		mciStatusMsg: "Uncorrected_error",
-	},
-	{
-		timestamp:    "2020-05-20 07:37:50 +0200",
-		socketID:     0,
-		errorMsg:     "MEMORY CONTROLLER RD_CHANNEL2_ERR Transaction: Memory write error",
-		mciStatusMsg: "Uncorrected_error",
-	},
-	{
-		timestamp:    "2020-05-20 08:14:51 +0200",
-		socketID:     0,
-		errorMsg:     "MEMORY CONTROLLER WR_CHANNEL2_ERR Transaction: Memory write error",
-		mciStatusMsg: "Error_overflow Corrected_error",
-	},
-	{
-		timestamp:    "2020-05-20 08:15:31 +0200",
-		socketID:     0,
-		errorMsg:     "corrected filtering (some unreported errors in same region) Instruction CACHE Level-0 Read Error",
-		mciStatusMsg: "Error_overflow Corrected_error",
-	},
-	{
-		timestamp:    "2020-05-20 08:16:32 +0200",
-		socketID:     0,
-		errorMsg:     "Instruction TLB Level-0 Error",
-		mciStatusMsg: "Error_overflow Corrected_error",
-	},
-	{
-		timestamp:    "2020-05-20 08:16:56 +0200",
-		socketID:     0,
-		errorMsg:     "No Error",
-		mciStatusMsg: "Error_overflow Corrected_error",
-	},
-	{
-		timestamp:    "2020-05-20 08:17:24 +0200",
-		socketID:     0,
-		errorMsg:     "Unclassified",
-		mciStatusMsg: "Error_overflow Corrected_error",
-	},
-	{
-		timestamp:    "2020-05-20 08:17:41 +0200",
-		socketID:     0,
-		errorMsg:     "Microcode ROM parity error",
-		mciStatusMsg: "Error_overflow Corrected_error",
-	},
-	{
-		timestamp:    "2020-05-20 08:17:48 +0200",
-		socketID:     0,
-		errorMsg:     "FRC error",
-		mciStatusMsg: "Error_overflow Corrected_error",
-	},
-	{
-		timestamp:    "2020-05-20 08:18:18 +0200",
-		socketID:     0,
-		errorMsg:     "Internal parity error",
-		mciStatusMsg: "Error_overflow Corrected_error",
-	},
-	{
-		timestamp:    "2020-05-20 08:18:34 +0200",
-		socketID:     0,
-		errorMsg:     "SMM Handler Code Access Violation",
-		mciStatusMsg: "Error_overflow Corrected_error",
-	},
-	{
-		timestamp:    "2020-05-20 08:18:54 +0200",
-		socketID:     0,
-		errorMsg:     "Internal Timer error",
-		mciStatusMsg: "Error_overflow Corrected_error",
-	},
-	{
-		timestamp:    "2020-05-20 08:21:23 +0200",
-		socketID:     0,
-		errorMsg:     "BUS Level-3 Generic Generic IO Request-did-not-timeout Error",
-		mciStatusMsg: "Error_overflow Corrected_error",
-	},
-	{
-		timestamp:    "2020-05-20 08:23:23 +0200",
-		socketID:     0,
-		errorMsg:     "External error",
-		mciStatusMsg: "Error_overflow Corrected_error",
-	},
-	{
-		timestamp:    "2020-05-20 08:25:31 +0200",
-		socketID:     0,
-		errorMsg:     "UPI: COR LL Rx detected CRC error - successful LLR without Phy Reinit",
-		mciStatusMsg: "Error_overflow Corrected_error",
-	},
-	{
-		timestamp:    "2020-05-20 08:25:55 +0200",
-		socketID:     0,
-		errorMsg:     "Instruction CACHE Level-2 Generic Error",
-		mciStatusMsg: "Error_overflow Corrected_error",
-	},
-}
-
 func TestUpdateCounters(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "ras-mc_event.db")
 	require.NoError(t, os.WriteFile(path, nil, 0600))
@@ -127,6 +22,110 @@ func TestUpdateCounters(t *testing.T) {
 	}
 	require.NoError(t, ras.Init())
 
+	testData := []machineCheckError{
+		{
+			timestamp:    "2020-05-20 07:34:53 +0200",
+			socketID:     0,
+			errorMsg:     "MEMORY CONTROLLER RD_CHANNEL0_ERR Transaction: Memory read error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 07:35:11 +0200",
+			socketID:     0,
+			errorMsg:     "MEMORY CONTROLLER RD_CHANNEL0_ERR Transaction: Memory read error",
+			mciStatusMsg: "Uncorrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 07:37:50 +0200",
+			socketID:     0,
+			errorMsg:     "MEMORY CONTROLLER RD_CHANNEL2_ERR Transaction: Memory write error",
+			mciStatusMsg: "Uncorrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:14:51 +0200",
+			socketID:     0,
+			errorMsg:     "MEMORY CONTROLLER WR_CHANNEL2_ERR Transaction: Memory write error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:15:31 +0200",
+			socketID:     0,
+			errorMsg:     "corrected filtering (some unreported errors in same region) Instruction CACHE Level-0 Read Error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:16:32 +0200",
+			socketID:     0,
+			errorMsg:     "Instruction TLB Level-0 Error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:16:56 +0200",
+			socketID:     0,
+			errorMsg:     "No Error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:17:24 +0200",
+			socketID:     0,
+			errorMsg:     "Unclassified",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:17:41 +0200",
+			socketID:     0,
+			errorMsg:     "Microcode ROM parity error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:17:48 +0200",
+			socketID:     0,
+			errorMsg:     "FRC error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:18:18 +0200",
+			socketID:     0,
+			errorMsg:     "Internal parity error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:18:34 +0200",
+			socketID:     0,
+			errorMsg:     "SMM Handler Code Access Violation",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:18:54 +0200",
+			socketID:     0,
+			errorMsg:     "Internal Timer error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:21:23 +0200",
+			socketID:     0,
+			errorMsg:     "BUS Level-3 Generic Generic IO Request-did-not-timeout Error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:23:23 +0200",
+			socketID:     0,
+			errorMsg:     "External error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:25:31 +0200",
+			socketID:     0,
+			errorMsg:     "UPI: COR LL Rx detected CRC error - successful LLR without Phy Reinit",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:25:55 +0200",
+			socketID:     0,
+			errorMsg:     "Instruction CACHE Level-2 Generic Error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+	}
 	for i := range testData {
 		ras.updateCounters(&testData[i])
 	}
@@ -159,7 +158,109 @@ func TestUpdateLatestTimestamp(t *testing.T) {
 	require.NoError(t, ras.Init())
 
 	ts := "2020-08-01 15:13:27 +0200"
-	testData = append(testData, []machineCheckError{
+	testData := []machineCheckError{
+		{
+			timestamp:    "2020-05-20 07:34:53 +0200",
+			socketID:     0,
+			errorMsg:     "MEMORY CONTROLLER RD_CHANNEL0_ERR Transaction: Memory read error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 07:35:11 +0200",
+			socketID:     0,
+			errorMsg:     "MEMORY CONTROLLER RD_CHANNEL0_ERR Transaction: Memory read error",
+			mciStatusMsg: "Uncorrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 07:37:50 +0200",
+			socketID:     0,
+			errorMsg:     "MEMORY CONTROLLER RD_CHANNEL2_ERR Transaction: Memory write error",
+			mciStatusMsg: "Uncorrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:14:51 +0200",
+			socketID:     0,
+			errorMsg:     "MEMORY CONTROLLER WR_CHANNEL2_ERR Transaction: Memory write error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:15:31 +0200",
+			socketID:     0,
+			errorMsg:     "corrected filtering (some unreported errors in same region) Instruction CACHE Level-0 Read Error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:16:32 +0200",
+			socketID:     0,
+			errorMsg:     "Instruction TLB Level-0 Error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:16:56 +0200",
+			socketID:     0,
+			errorMsg:     "No Error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:17:24 +0200",
+			socketID:     0,
+			errorMsg:     "Unclassified",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:17:41 +0200",
+			socketID:     0,
+			errorMsg:     "Microcode ROM parity error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:17:48 +0200",
+			socketID:     0,
+			errorMsg:     "FRC error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:18:18 +0200",
+			socketID:     0,
+			errorMsg:     "Internal parity error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:18:34 +0200",
+			socketID:     0,
+			errorMsg:     "SMM Handler Code Access Violation",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:18:54 +0200",
+			socketID:     0,
+			errorMsg:     "Internal Timer error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:21:23 +0200",
+			socketID:     0,
+			errorMsg:     "BUS Level-3 Generic Generic IO Request-did-not-timeout Error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:23:23 +0200",
+			socketID:     0,
+			errorMsg:     "External error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:25:31 +0200",
+			socketID:     0,
+			errorMsg:     "UPI: COR LL Rx detected CRC error - successful LLR without Phy Reinit",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:25:55 +0200",
+			socketID:     0,
+			errorMsg:     "Instruction CACHE Level-2 Generic Error",
+			mciStatusMsg: "Error_overflow Corrected_error",
+		},
 		{
 			timestamp:    "2019-05-20 08:25:55 +0200",
 			socketID:     0,
@@ -178,7 +279,7 @@ func TestUpdateLatestTimestamp(t *testing.T) {
 			errorMsg:     "",
 			mciStatusMsg: "",
 		},
-	}...)
+	}
 	for _, mce := range testData {
 		err := ras.updateLatestTimestamp(mce.timestamp)
 		require.NoError(t, err)
@@ -198,7 +299,7 @@ func TestMultipleSockets(t *testing.T) {
 
 	cacheL2 := "Instruction CACHE Level-2 Generic Error"
 	overflow := "Error_overflow Corrected_error"
-	testData = []machineCheckError{
+	testData := []machineCheckError{
 		{
 			timestamp:    "2019-05-20 08:25:55 +0200",
 			socketID:     0,
