@@ -163,12 +163,9 @@ func (c *CloudWatch) Init() error {
 	}
 
 	// Determine if the namespaces contain wildcards
-	for _, ns := range c.Namespaces {
-		if strings.ContainsAny(ns, filter.WildcardCharacters) {
-			c.wildcardNamespaces = true
-			break
-		}
-	}
+	c.wildcardNamespaces = len(c.Namespaces) == 0 || slices.ContainsFunc(c.Namespaces, func(ns string) bool {
+		return strings.ContainsAny(ns, filter.WildcardCharacters)
+	})
 
 	// Initialize namespace filter
 	c.nsFilter, err = filter.Compile(c.Namespaces)
