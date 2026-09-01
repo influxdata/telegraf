@@ -201,7 +201,7 @@ require (
 	github.com/showwin/speedtest-go v1.7.11
 	github.com/signalfx/golib/v3 v3.3.54
 	github.com/sijms/go-ora/v2 v2.9.0
-	github.com/sirupsen/logrus v1.10.1
+	github.com/sirupsen/logrus v1.10.2
 	github.com/sleepinggenius2/gosmi v0.4.4
 	github.com/snowflakedb/gosnowflake v1.19.1
 	github.com/srebhan/cborquery v1.0.4
