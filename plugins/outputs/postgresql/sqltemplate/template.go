@@ -115,6 +115,7 @@ package sqltemplate
 import (
 	"bytes"
 	"encoding/base32"
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"strings"
@@ -390,6 +391,13 @@ func (t *Template) UnmarshalText(text []byte) error {
 }
 
 func (t *Template) Render(table *Table, newColumns []utils.Column, metricTable, tagTable *Table) ([]byte, error) {
+	// NewTable returns nil for an empty table name, and every template needs a
+	// table to render against, so report that instead of dereferencing it and
+	// taking the agent down with a segfault.
+	if table == nil {
+		return nil, errors.New("cannot render template without a table")
+	}
+
 	tcs := NewColumns(newColumns).Sorted()
 	data := map[string]interface{}{
 		"table":       table,
