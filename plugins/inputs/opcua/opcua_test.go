@@ -200,6 +200,72 @@ func TestReadClientIntegration(t *testing.T) {
 	}
 }
 
+func TestReadClientBatchedReadsIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "open62541/open62541",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(servicePort),
+			wait.ForLog("TCP network layer listening on opc.tcp://"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	testopctags := []opcTags{
+		{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"},
+		{"ProductUri", "0", "i", "2262", "http://open62541.org"},
+		{"ManufacturerName", "0", "i", "2263", "open62541"},
+		{"badnode", "1", "i", "1337", nil},
+		{"goodnode", "1", "s", "the.answer", int32(42)},
+		{"DateTime", "1", "i", "51037", "0001-01-01T00:00:00Z"},
+	}
+
+	readConfig := readClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName: "testing",
+			RootNodes:  make([]input.NodeSettings, 0),
+			Groups:     make([]input.NodeGroupSettings, 0),
+		},
+	}
+
+	for _, tags := range testopctags {
+		readConfig.RootNodes = append(readConfig.RootNodes, mapOPCTag(tags))
+	}
+
+	client, err := readConfig.createReadClient(testutil.Logger{})
+	require.NoError(t, err)
+	require.NoError(t, client.connect())
+
+	// Clear the values received on connect so the assertions below prove the
+	// batched read actually updated every node
+	for i := range client.LastReceivedData {
+		client.LastReceivedData[i].Value = nil
+	}
+
+	// Force splitting the six nodes into unevenly sized read batches,
+	// regardless of the limit reported by the server
+	client.maxNodesPerRead = 4
+	require.NoError(t, client.read())
+
+	for i, v := range client.LastReceivedData {
+		require.Equal(t, testopctags[i].want, v.Value)
+	}
+}
+
 func TestReadClientIntegrationAdditionalFields(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")

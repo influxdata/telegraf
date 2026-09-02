@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
+	"slices"
 	"time"
 
+	"github.com/gopcua/opcua/id"
 	"github.com/gopcua/opcua/ua"
 
 	"github.com/influxdata/telegraf"
@@ -39,9 +42,10 @@ type readClient struct {
 	Workarounds             readClientWorkarounds
 
 	// Internal flags
-	reqIDs         []*ua.ReadValueID
-	ctx            context.Context
-	forceReconnect bool
+	reqIDs          []*ua.ReadValueID
+	maxNodesPerRead int
+	ctx             context.Context
+	forceReconnect  bool
 }
 
 func (rc *readClientConfig) createReadClient(log telegraf.Logger) (*readClient, error) {
@@ -95,6 +99,28 @@ func (o *readClient) connect() error {
 	if err := o.OpcUAClient.UpdateNamespaceArray(o.ctx); err != nil {
 		o.Log.Warnf("Failed to fetch namespace array: %v", err)
 		// Continue anyway - this is only needed if using namespace URIs
+	}
+
+	// Query the server-imposed limit on nodes per read request so large node
+	// sets can be split accordingly. The property is optional and zero means
+	// "no limit"; in both cases all nodes are sent in a single request.
+	o.maxNodesPerRead = 0
+	limits, err := o.Client.Read(o.ctx, &ua.ReadRequest{
+		NodesToRead: []*ua.ReadValueID{{
+			NodeID: ua.NewNumericNodeID(0, id.Server_ServerCapabilities_OperationLimits_MaxNodesPerRead),
+		}},
+	})
+	switch {
+	case err != nil:
+		o.Log.Debugf("Querying the server's read limit failed: %v", err)
+	case len(limits.Results) == 1 && limits.Results[0].Status == ua.StatusOK && limits.Results[0].Value != nil:
+		if v, ok := limits.Results[0].Value.Value().(uint32); ok && v > 0 {
+			// Clamp to avoid overflowing int on 32-bit platforms
+			o.maxNodesPerRead = int(min(v, math.MaxInt32))
+			o.Log.Debugf("Server limits read requests to %d nodes", v)
+		}
+	default:
+		o.Log.Debug("Server does not report a read limit")
 	}
 
 	// Browse-based discovery runs on every connect so server-side schema
@@ -200,10 +226,15 @@ func (o *readClient) currentValues() ([]telegraf.Metric, error) {
 }
 
 func (o *readClient) read() error {
-	req := &ua.ReadRequest{
-		MaxAge:             2000,
-		TimestampsToReturn: ua.TimestampsToReturnBoth,
-		NodesToRead:        o.reqIDs,
+	// Split the nodes into multiple requests if the server limits the number
+	// of nodes per read; a single request holds everything otherwise.
+	var batches [][]*ua.ReadValueID
+	if o.maxNodesPerRead > 0 {
+		for chunk := range slices.Chunk(o.reqIDs, o.maxNodesPerRead) {
+			batches = append(batches, chunk)
+		}
+	} else {
+		batches = [][]*ua.ReadValueID{o.reqIDs}
 	}
 
 	var count uint64
@@ -212,21 +243,36 @@ func (o *readClient) read() error {
 		count++
 
 		// Try to update the values for all registered nodes
-		o.Log.Tracef("Sending OPC UA read request for %d %s nodes (attempt %d)...",
-			len(o.reqIDs), nodeTypeLabel(o.Workarounds.UseUnregisteredReads), count)
+		o.Log.Tracef("Sending %d OPC UA read request(s) for %d %s nodes (attempt %d)...",
+			len(batches), len(o.reqIDs), nodeTypeLabel(o.Workarounds.UseUnregisteredReads), count)
 		requestStart := time.Now()
-		resp, err := o.Client.Read(o.ctx, req)
+		var err error
+		var updated int
+		for _, batch := range batches {
+			var resp *ua.ReadResponse
+			resp, err = o.Client.Read(o.ctx, &ua.ReadRequest{
+				MaxAge:             2000,
+				TimestampsToReturn: ua.TimestampsToReturnBoth,
+				NodesToRead:        batch,
+			})
+			if err != nil {
+				break
+			}
+			if len(resp.Results) != len(batch) {
+				err = fmt.Errorf("server returned %d results for %d requested nodes", len(resp.Results), len(batch))
+				break
+			}
+			for i, d := range resp.Results {
+				o.UpdateNodeValue(updated+i, d)
+			}
+			updated += len(batch)
+		}
 		plcDuration := time.Since(requestStart)
 		if err == nil {
-			// Success, update the node values and exit
+			// Success, exit with all node values updated
 			o.ReadSuccess.Incr(1)
 			o.forceReconnect = false
-			o.Log.Tracef("OPC UA read response received in %s, updating %d node values...", plcDuration, len(resp.Results))
-			updateStart := time.Now()
-			for i, d := range resp.Results {
-				o.UpdateNodeValue(i, d)
-			}
-			o.Log.Tracef("Node value update took %s", time.Since(updateStart))
+			o.Log.Tracef("OPC UA read completed in %s, updated %d node values", plcDuration, updated)
 			return nil
 		}
 
