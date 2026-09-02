@@ -244,11 +244,11 @@ func (c *CloudWatch) getFilteredMetrics() ([]filteredMetric, error) {
 	} else {
 		for _, ns := range c.Namespaces {
 			m, a, err := c.queryMetrics(&ns)
-			metrics = append(metrics, m...)
-			accounts = append(accounts, a...)
 			if err != nil {
 				return nil, fmt.Errorf("querying metrics for namespace %q failed: %w", ns, err)
 			}
+			metrics = append(metrics, m...)
+			accounts = append(accounts, a...)
 		}
 	}
 
@@ -317,7 +317,7 @@ func (c *CloudWatch) queryMetrics(namespace *string) ([]types.Metric, []string, 
 	for {
 		resp, err := c.client.ListMetrics(context.Background(), params)
 		if err != nil {
-			return metrics, accounts, fmt.Errorf("failed to list metrics: %w", err)
+			return metrics, accounts, err
 		}
 		if namespace == nil {
 			c.Log.Tracef("got %d metrics with %d accounts", len(resp.Metrics), len(resp.OwningAccounts))

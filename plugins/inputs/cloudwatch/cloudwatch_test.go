@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -646,9 +645,7 @@ func TestFailedListDoesntCache(t *testing.T) {
 	plugin.client = client
 
 	// Make the list call fail
-	client.Lock()
 	client.listErr = errors.New("operation error")
-	client.Unlock()
 
 	// Check that we don't have any entry in the cache
 	require.Empty(t, plugin.cache)
@@ -661,9 +658,7 @@ func TestFailedListDoesntCache(t *testing.T) {
 	require.Empty(t, plugin.cache)
 
 	// The next list call should succeed
-	client.Lock()
 	client.listErr = nil
-	client.Unlock()
 
 	// Make sure the listing is called and we get the metrics
 	require.NoError(t, acc.GatherError(plugin.Gather))
@@ -713,7 +708,6 @@ type mockClient struct {
 
 	withNamespace atomic.Bool
 	listCalls     atomic.Uint32
-	sync.Mutex
 }
 
 func defaultMockClient(namespaces ...string) *mockClient {
@@ -795,11 +789,8 @@ func (c *mockClient) ListMetrics(
 ) (*cloudwatch.ListMetricsOutput, error) {
 	c.listCalls.Add(1)
 
-	c.Lock()
-	err := c.listErr
-	c.Unlock()
-	if err != nil {
-		return nil, err
+	if c.listErr != nil {
+		return nil, c.listErr
 	}
 
 	response := &cloudwatch.ListMetricsOutput{
