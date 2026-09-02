@@ -152,18 +152,16 @@ func TestGather(t *testing.T) {
 
 func TestPartialWrite(t *testing.T) {
 	tests := []struct {
-		name          string
-		noPermissions bool
-		metrics       []telegraf.Metric
-		numRows       int
-		numColumns    int
-		expected      string
-		accepted      []int
-		rejected      []int
+		name       string
+		metrics    []telegraf.Metric
+		numRows    int
+		numColumns int
+		expected   string
+		accepted   []int
+		rejected   []int
 	}{
 		{
-			name:          "create writer failed",
-			noPermissions: true,
+			name: "create writer failed",
 			metrics: []telegraf.Metric{
 				metric.New(
 					"test/sub",

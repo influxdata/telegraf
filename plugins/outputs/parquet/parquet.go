@@ -245,63 +245,56 @@ func (p *Parquet) createRecordBatch(metrics []telegraf.Metric, builder *array.Re
 			case int8:
 				if ctype != arrow.PrimitiveTypes.Int8 {
 					err = fmt.Errorf("invalid value %v (%T) for column %q (%s)", value, value, name, ctype.Name())
-					break
 				}
 			case int16:
 				if ctype != arrow.PrimitiveTypes.Int16 {
 					err = fmt.Errorf("invalid value %v (%T) for column %q (%s)", value, value, name, ctype.Name())
-					break
 				}
 			case int32:
 				if ctype != arrow.PrimitiveTypes.Int32 {
 					err = fmt.Errorf("invalid value %v (%T) for column %q (%s)", value, value, name, ctype.Name())
-					break
 				}
 			case int64:
 				if ctype != arrow.PrimitiveTypes.Int64 {
 					err = fmt.Errorf("invalid value %v (%T) for column %q (%s)", value, value, name, ctype.Name())
-					break
 				}
 			case uint8:
 				if ctype != arrow.PrimitiveTypes.Uint8 {
 					err = fmt.Errorf("invalid value %v (%T) for column %q (%s)", value, value, name, ctype.Name())
-					break
 				}
 			case uint16:
 				if ctype != arrow.PrimitiveTypes.Uint16 {
 					err = fmt.Errorf("invalid value %v (%T) for column %q (%s)", value, value, name, ctype.Name())
-					break
 				}
 			case uint32:
 				if ctype != arrow.PrimitiveTypes.Uint32 {
 					err = fmt.Errorf("invalid value %v (%T) for column %q (%s)", value, value, name, ctype.Name())
-					break
 				}
 			case uint64:
 				if ctype != arrow.PrimitiveTypes.Uint64 {
 					err = fmt.Errorf("invalid value %v (%T) for column %q (%s)", value, value, name, ctype.Name())
-					break
 				}
 			case float32:
 				if ctype != arrow.PrimitiveTypes.Float32 {
 					err = fmt.Errorf("invalid value %v (%T) for column %q (%s)", value, value, name, ctype.Name())
-					break
 				}
 			case float64:
 				if ctype != arrow.PrimitiveTypes.Float64 {
 					err = fmt.Errorf("invalid value %v (%T) for column %q (%s)", value, value, name, ctype.Name())
-					break
 				}
 			case string:
 				if ctype != arrow.BinaryTypes.String {
 					err = fmt.Errorf("invalid value %v (%T) for column %q (%s)", value, value, name, ctype.Name())
-					break
 				}
 			case bool:
 				if ctype != arrow.FixedWidthTypes.Boolean {
 					err = fmt.Errorf("invalid value %v (%T) for column %q (%s)", value, value, name, ctype.Name())
-					break
 				}
+			default:
+				err = fmt.Errorf("unknown field value type %T for column %q", value, name)
+			}
+			if err != nil {
+				break
 			}
 		}
 		if err != nil {
