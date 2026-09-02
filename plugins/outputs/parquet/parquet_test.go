@@ -176,6 +176,41 @@ func TestPartialWrite(t *testing.T) {
 				),
 			},
 			expected: "failed to create writer for file",
+			rejected: []int{0},
+		},
+		{
+			name: "create writer failed in between",
+			metrics: []telegraf.Metric{
+				metric.New(
+					"test",
+					map[string]string{},
+					map[string]interface{}{
+						"value": int8(1),
+					},
+					time.Now(),
+				),
+				metric.New(
+					"test/sub",
+					map[string]string{},
+					map[string]interface{}{
+						"value": int8(2),
+					},
+					time.Now(),
+				),
+				metric.New(
+					"test",
+					map[string]string{},
+					map[string]interface{}{
+						"value": int8(3),
+					},
+					time.Now(),
+				),
+			},
+			numRows:    2,
+			numColumns: 2,
+			expected:   "failed to create writer for file",
+			accepted:   []int{0, 2},
+			rejected:   []int{1},
 		},
 		{
 			name: "schema mismatch",
@@ -463,8 +498,6 @@ func TestCannotEscapeDirectory(t *testing.T) {
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "test")
 	malicious := filepath.Join(tmp, "foo")
-	maliciousAbs, err := filepath.Abs(malicious)
-	require.NoError(t, err)
 	require.NoError(t, os.MkdirAll(path, 0700))
 	require.NoError(t, os.MkdirAll(malicious, 0700))
 
@@ -478,7 +511,7 @@ func TestCannotEscapeDirectory(t *testing.T) {
 		},
 		{
 			name:   "absolute",
-			metric: maliciousAbs,
+			metric: malicious,
 		},
 	}
 
@@ -493,9 +526,8 @@ func TestCannotEscapeDirectory(t *testing.T) {
 				),
 			}
 
-			testDir := t.TempDir()
 			plugin := &Parquet{
-				Directory:          testDir,
+				Directory:          path,
 				TimestampFieldName: "time",
 			}
 			require.NoError(t, plugin.Init())

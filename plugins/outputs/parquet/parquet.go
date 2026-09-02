@@ -62,9 +62,13 @@ func (p *Parquet) Init() error {
 
 	// Create the directory if it doesn't exist and check it actually is a directory
 	stat, err := os.Stat(p.Directory)
-	if os.IsNotExist(err) {
-		if err := os.MkdirAll(p.Directory, 0750); err != nil {
-			return fmt.Errorf("failed to create directory %q: %w", p.Directory, err)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			if err := os.MkdirAll(p.Directory, 0750); err != nil {
+				return fmt.Errorf("failed to create directory %q: %w", p.Directory, err)
+			}
+		} else {
+			return fmt.Errorf("failed to stat directory %q: %w", p.Directory, err)
 		}
 	} else if !stat.IsDir() {
 		return fmt.Errorf("provided directory %q is not a directory", p.Directory)
@@ -87,8 +91,11 @@ func (*Parquet) Connect() error {
 }
 
 func (p *Parquet) Close() error {
-	var errorOccurred bool
+	if p.root != nil {
+		p.root.Close()
+	}
 
+	var errorOccurred bool
 	for _, metrics := range p.metricGroups {
 		if err := metrics.writer.Close(); err != nil {
 			p.Log.Errorf("failed to close file %q: %v", metrics.filename, err)
@@ -98,10 +105,6 @@ func (p *Parquet) Close() error {
 
 	if errorOccurred {
 		return errors.New("failed closing one or more parquet files")
-	}
-
-	if p.root != nil {
-		p.root.Close()
 	}
 
 	return nil
@@ -130,8 +133,10 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 			}
 			writer, err := p.createWriter(name, filename, schema)
 			if err != nil {
+				perr.MetricsReject = append(perr.MetricsReject, metricIndices[name]...)
+				perr.MetricsRejectErrors = append(perr.MetricsRejectErrors, fmt.Errorf("failed to create writer for file %q: %w", name, err))
 				perr.Err = fmt.Errorf("failed to create writer for file %q: %w", name, err)
-				return &perr
+				continue
 			}
 			p.metricGroups[name] = &metricGroup{
 				builder:  array.NewRecordBuilder(memory.DefaultAllocator, schema),
@@ -143,8 +148,10 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 
 		if p.RotationInterval != 0 {
 			if err := p.rotateIfNeeded(name); err != nil {
+				perr.MetricsReject = append(perr.MetricsReject, metricIndices[name]...)
+				perr.MetricsRejectErrors = append(perr.MetricsRejectErrors, fmt.Errorf("failed to rotate file %q: %w", p.metricGroups[name].filename, err))
 				perr.Err = fmt.Errorf("failed to rotate file %q: %w", p.metricGroups[name].filename, err)
-				return &perr
+				continue
 			}
 		}
 
