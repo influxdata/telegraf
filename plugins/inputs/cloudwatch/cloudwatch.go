@@ -236,10 +236,17 @@ func (c *CloudWatch) getFilteredMetrics() ([]filteredMetric, error) {
 	var metrics []types.Metric
 	var accounts []string
 	if c.wildcardNamespaces {
-		metrics, accounts = c.queryMetrics(nil)
+		var err error
+		metrics, accounts, err = c.queryMetrics(nil)
+		if err != nil {
+			return nil, fmt.Errorf("querying metrics failed: %w", err)
+		}
 	} else {
 		for _, ns := range c.Namespaces {
-			m, a := c.queryMetrics(&ns)
+			m, a, err := c.queryMetrics(&ns)
+			if err != nil {
+				return nil, fmt.Errorf("querying metrics for namespace %q failed: %w", ns, err)
+			}
 			metrics = append(metrics, m...)
 			accounts = append(accounts, a...)
 		}
@@ -293,7 +300,7 @@ func (c *CloudWatch) getFilteredMetrics() ([]filteredMetric, error) {
 	return filtered, nil
 }
 
-func (c *CloudWatch) queryMetrics(namespace *string) ([]types.Metric, []string) {
+func (c *CloudWatch) queryMetrics(namespace *string) ([]types.Metric, []string, error) {
 	// Get all metrics from cloudwatch for filtering
 	params := &cloudwatch.ListMetricsInput{
 		IncludeLinkedAccounts: &c.IncludeLinkedAccounts,
@@ -310,8 +317,7 @@ func (c *CloudWatch) queryMetrics(namespace *string) ([]types.Metric, []string) 
 	for {
 		resp, err := c.client.ListMetrics(context.Background(), params)
 		if err != nil {
-			c.Log.Errorf("failed to list metrics: %v", err)
-			break
+			return metrics, accounts, err
 		}
 		if namespace == nil {
 			c.Log.Tracef("got %d metrics with %d accounts", len(resp.Metrics), len(resp.OwningAccounts))
@@ -356,7 +362,7 @@ func (c *CloudWatch) queryMetrics(namespace *string) ([]types.Metric, []string) 
 		params.NextToken = resp.NextToken
 	}
 
-	return metrics, accounts
+	return metrics, accounts, nil
 }
 
 func (c *CloudWatch) updateWindow(relativeTo time.Time) {
