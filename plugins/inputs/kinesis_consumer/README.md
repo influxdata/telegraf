@@ -114,6 +114,10 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #   table_name = "default"
   #   ## Interval for persisting data to limit write operations
   #   # interval = "10s"
+  #   ## Preferred method for fetching new iterator on expiry ("initial" for
+  #   ## first sequence number seen by this plugin, "checkpoint" for the sequence
+  #   ## number stored in this DynamoDB backend)
+  #   # expired_iterator_recovery = "initial"
 ```
 
 ### Required AWS IAM permissions
