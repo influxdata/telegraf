@@ -134,7 +134,7 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 			if errors.As(err, &crbErr) {
 				accepted = make([]int, 0, len(perr.MetricsAccept))
 				for _, idx := range crbErr.MetricsAccept {
-					perr.MetricsAccept = append(perr.MetricsAccept, metricIndices[name][idx])
+					accepted = append(accepted, metricIndices[name][idx])
 				}
 				for _, idx := range crbErr.MetricsReject {
 					perr.MetricsReject = append(perr.MetricsReject, metricIndices[name][idx])
@@ -146,9 +146,9 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 				perr.MetricsRejectErrors = append(perr.MetricsRejectErrors, fmt.Errorf("failed to create record for file %q: %w", name, err))
 			}
 			perr.Err = fmt.Errorf("failed to create record for file %q: %w", p.metricGroups[name].filename, err)
-			if len(accepted) > 0 {
-				continue
-			}
+		}
+		if len(accepted) == 0 || record == nil {
+			continue
 		}
 		if err := p.metricGroups[name].writer.WriteBuffered(record); err != nil {
 			perr.Err = fmt.Errorf("failed to write to file %q: %w", p.metricGroups[name].filename, err)
