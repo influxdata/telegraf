@@ -19,6 +19,7 @@ import (
 	"google.golang.org/genproto/googleapis/api/distribution"
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
 	monitoredrespb "google.golang.org/genproto/googleapis/api/monitoredres"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -227,7 +228,9 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-// Write the metrics to Google Cloud Stackdriver.
+// sendBatch writes one timestamp group in chunks of at most 200 time series.
+// Permanently rejected chunks are dropped so the following chunks are still
+// sent; a retryable failure is returned so Telegraf replays the batch.
 func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 	ctx := context.Background()
 
@@ -413,17 +416,16 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 		}
 
 		// Create the time series in Stackdriver.
-		err := s.client.CreateTimeSeries(ctx, timeSeriesRequest)
-		if err != nil {
-			if errStatus, ok := status.FromError(err); ok {
-				if errStatus.Code().String() == "InvalidArgument" {
-					s.Log.Warnf("Unable to write to Stackdriver - dropping metrics: %s", err)
-					return nil
-				}
+		if err := s.client.CreateTimeSeries(ctx, timeSeriesRequest); err != nil {
+			// status.Code also handles non-gRPC errors, unlike status.FromError
+			if isRetryable(status.Code(err)) {
+				s.Log.Errorf("Unable to write to Stackdriver: %s", err)
+				return err
 			}
 
-			s.Log.Errorf("Unable to write to Stackdriver: %s", err)
-			return err
+			// Nothing will replay a permanent rejection, so drop this chunk and
+			// continue; the remaining chunks are separate requests.
+			s.Log.Warnf("Unable to write to Stackdriver - dropping metrics: %s", err)
 		}
 	}
 
@@ -721,6 +723,27 @@ func (s *Stackdriver) Close() error {
 
 func newStackdriver() *Stackdriver {
 	return &Stackdriver{}
+}
+
+// isRetryable reports whether replaying a CreateTimeSeries call can plausibly
+// succeed. This is an allowlist of transient conditions rather than a denylist
+// of rejection reasons, so an unrecognised code is dropped as a permanent
+// rejection instead of becoming an infinite retry.
+func isRetryable(code codes.Code) bool {
+	switch code {
+	case codes.Unavailable, // transient backend or connection failure
+		codes.DeadlineExceeded,  // exceeded the client's call timeout
+		codes.ResourceExhausted, // quota exhausted; succeeds once refilled
+		codes.Aborted,           // concurrency conflict
+		codes.Internal,          // server-side fault
+		codes.Unknown,           // unclassified, including non-gRPC errors
+		codes.Unauthenticated,   // credential refresh or key rotation in flight
+		codes.PermissionDenied,  // IAM grant not yet propagated
+		codes.NotFound:          // project missing or not yet visible
+		return true
+	default:
+		return false
+	}
 }
 
 func init() {
