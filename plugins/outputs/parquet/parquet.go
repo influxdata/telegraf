@@ -63,12 +63,11 @@ func (p *Parquet) Init() error {
 	// Create the directory if it doesn't exist and check it actually is a directory
 	stat, err := os.Stat(p.Directory)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			if err := os.MkdirAll(p.Directory, 0750); err != nil {
-				return fmt.Errorf("failed to create directory %q: %w", p.Directory, err)
-			}
-		} else {
+		if !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("failed to stat directory %q: %w", p.Directory, err)
+		}
+		if err := os.MkdirAll(p.Directory, 0750); err != nil {
+			return fmt.Errorf("failed to create directory %q: %w", p.Directory, err)
 		}
 	} else if !stat.IsDir() {
 		return fmt.Errorf("provided directory %q is not a directory", p.Directory)
