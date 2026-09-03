@@ -365,7 +365,6 @@ func TestStartupErrorBehaviorRetryIntegration(t *testing.T) {
 type producer struct {
 	conn    *amqp091.Connection
 	channel *amqp091.Channel
-	queue   amqp091.Queue
 }
 
 func newProducer(url string) (*producer, error) {
@@ -400,7 +399,6 @@ func newProducer(url string) (*producer, error) {
 	return &producer{
 		conn:    conn,
 		channel: channel,
-		queue:   queue,
 	}, nil
 }
 
