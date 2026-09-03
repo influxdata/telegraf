@@ -368,10 +368,7 @@ type producer struct {
 }
 
 func newProducer(url string) (*producer, error) {
-	cfg := amqp091.Config{
-		Vhost:      "/",
-		Properties: amqp091.NewConnectionProperties(),
-	}
+	cfg := amqp091.Config{Properties: amqp091.NewConnectionProperties()}
 	cfg.Properties.SetClientConnectionName("test-producer")
 	conn, err := amqp091.DialConfig(url, cfg)
 	if err != nil {
