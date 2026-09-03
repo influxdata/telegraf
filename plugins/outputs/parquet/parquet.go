@@ -244,7 +244,7 @@ func (p *Parquet) rotateFile(name string) error {
 	return nil
 }
 
-func (_ *Parquet) newColumns(schema *arrow.Schema, metrics []telegraf.Metric) ([]arrow.Field, []string, error) {
+func (*Parquet) newColumns(schema *arrow.Schema, metrics []telegraf.Metric) ([]arrow.Field, []string, error) {
 	known := make(map[string]struct{}, len(schema.Fields()))
 	for _, field := range schema.Fields() {
 		known[field.Name] = struct{}{}
