@@ -130,6 +130,20 @@ func TestUpdateCounters(t *testing.T) {
 			errorMsg:     "Instruction CACHE Level-2 Generic Error",
 			mciStatusMsg: "Error_overflow Corrected_error",
 		},
+		{
+			timestamp:    "2020-05-20 08:25:56 +0200",
+			socketID:     0,
+			errorMsg:     "Corrected error, no action required.",
+			mciStatusMsg: "Error_overflow CECC",
+			mcaStatusMsg: "DRAM ECC error. Ext Err Code: 0 Memory Error 'mem-tx: generic read, tx: generic, level: L3/generic'",
+		},
+		{
+			timestamp:    "2020-05-20 08:25:58 +0200",
+			socketID:     0,
+			errorMsg:     "Uncorrected error.",
+			mciStatusMsg: "Error_overflow CECC",
+			mcaStatusMsg: "DRAM ECC error. Ext Err Code: 0 Memory Error 'mem-tx: generic read, tx: generic, level: L3/generic'",
+		},
 	}
 	for i := range testData {
 		ras.updateCounters(&testData[i])
@@ -148,12 +162,7 @@ func TestUpdateCounters(t *testing.T) {
 	}
 
 	for metric, value := range ras.serverCounters {
-		expected := int64(1)
-		switch metric {
-		case "memory_ecc_corrected_errors", "memory_ecc_uncorrectable_errors":
-			expected = 0
-		}
-		require.Equal(t, expected, value, metric+" should have value of 1")
+		require.Equal(t, int64(1), value, metric+" should have value of 1")
 	}
 }
 
@@ -269,7 +278,7 @@ func TestEmptyDatabase(t *testing.T) {
 	require.NoError(t, ras.Init())
 
 	require.Len(t, ras.cpuSocketCounters, 1, "Should contain default counters for one socket")
-	require.Len(t, ras.serverCounters, 4, "Should contain default counters for server")
+	require.Len(t, ras.serverCounters, 2, "Should contain default counters for server")
 
 	for metric, value := range ras.cpuSocketCounters[0] {
 		require.Equal(t, int64(0), value, metric+" should have value of 0")

@@ -59,6 +59,8 @@ func (r *Ras) Init() error {
 	}
 	r.cpuSocketCounters = map[int]map[string]int64{
 		0: {
+			"memory_ecc_corrected_errors":              0,
+			"memory_ecc_uncorrectable_errors":          0,
 			"memory_read_corrected_errors":             0,
 			"memory_read_uncorrectable_errors":         0,
 			"memory_write_corrected_errors":            0,
@@ -77,10 +79,8 @@ func (r *Ras) Init() error {
 		},
 	}
 	r.serverCounters = map[string]int64{
-		"cache_l2_errors":                 0,
-		"memory_ecc_corrected_errors":     0,
-		"memory_ecc_uncorrectable_errors": 0,
-		"upi_errors":                      0,
+		"cache_l2_errors": 0,
+		"upi_errors":      0,
 	}
 
 	// Check the database readability
@@ -192,6 +192,8 @@ func (r *Ras) updateCounters(mcError *machineCheckError) {
 
 	if _, ok := r.cpuSocketCounters[mcError.socketID]; !ok {
 		r.cpuSocketCounters[mcError.socketID] = map[string]int64{
+			"memory_ecc_corrected_errors":              0,
+			"memory_ecc_uncorrectable_errors":          0,
 			"memory_read_corrected_errors":             0,
 			"memory_read_uncorrectable_errors":         0,
 			"memory_write_corrected_errors":            0,
@@ -235,12 +237,6 @@ func (r *Ras) updateServerCounters(mcError *machineCheckError) {
 		r.serverCounters["cache_l2_errors"]++
 	case strings.Contains(mcError.errorMsg, "UPI:"):
 		r.serverCounters["upi_errors"]++
-	case strings.Contains(mcError.mcaStatusMsg, "DRAM ECC error"):
-		if strings.Contains(mcError.errorMsg, "Corrected error") {
-			r.serverCounters["memory_ecc_corrected_errors"]++
-		} else {
-			r.serverCounters["memory_ecc_uncorrectable_errors"]++
-		}
 	}
 }
 
@@ -283,6 +279,12 @@ func (r *Ras) updateMemoryCounters(mcError *machineCheckError) {
 			r.cpuSocketCounters[mcError.socketID]["memory_write_corrected_errors"]++
 		} else {
 			r.cpuSocketCounters[mcError.socketID]["memory_write_uncorrectable_errors"]++
+		}
+	case strings.Contains(mcError.mcaStatusMsg, "DRAM ECC error"):
+		if strings.Contains(mcError.errorMsg, "Corrected error") {
+			r.cpuSocketCounters[mcError.socketID]["memory_ecc_corrected_errors"]++
+		} else {
+			r.cpuSocketCounters[mcError.socketID]["memory_ecc_uncorrectable_errors"]++
 		}
 	}
 }
