@@ -539,3 +539,92 @@ func TestCannotEscapeDirectory(t *testing.T) {
 		})
 	}
 }
+
+func columnNames(t *testing.T, path string) []string {
+	t.Helper()
+
+	reader, err := file.OpenParquetFile(path, false)
+	require.NoError(t, err)
+	defer reader.Close()
+
+	schema := reader.MetaData().Schema
+	names := make([]string, 0, schema.NumColumns())
+	for i := 0; i < schema.NumColumns(); i++ {
+		names = append(names, schema.Column(i).Name())
+	}
+
+	return names
+}
+
+func TestNewColumnStartsANewFile(t *testing.T) {
+	dir := t.TempDir()
+	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", Log: testutil.Logger{}}
+	require.NoError(t, p.Init())
+
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]interface{}{"a": int64(1)}, time.Now()),
+	}))
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]interface{}{"a": int64(2), "b": int64(3)}, time.Now()),
+	}))
+	require.NoError(t, p.Close())
+
+	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, written, 2)
+
+	schemas := make([][]string, 0, len(written))
+	var rows int64
+	for _, name := range written {
+		schemas = append(schemas, columnNames(t, name))
+		reader, err := file.OpenParquetFile(name, false)
+		require.NoError(t, err)
+		rows += reader.NumRows()
+		require.NoError(t, reader.Close())
+	}
+	require.ElementsMatch(t, [][]string{{"a", "timestamp"}, {"a", "b", "timestamp"}}, schemas)
+	require.Equal(t, int64(2), rows)
+}
+
+func TestNewTagStartsANewFile(t *testing.T) {
+	dir := t.TempDir()
+	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", Log: testutil.Logger{}}
+	require.NoError(t, p.Init())
+
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]interface{}{"a": int64(1)}, time.Now()),
+	}))
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", map[string]string{"host": "box"}, map[string]interface{}{"a": int64(2)}, time.Now()),
+	}))
+	require.NoError(t, p.Close())
+
+	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, written, 2)
+
+	schemas := make([][]string, 0, len(written))
+	for _, name := range written {
+		schemas = append(schemas, columnNames(t, name))
+	}
+	require.ElementsMatch(t, [][]string{{"a", "timestamp"}, {"a", "host", "timestamp"}}, schemas)
+}
+
+func TestOmittedFieldKeepsTheSameFile(t *testing.T) {
+	dir := t.TempDir()
+	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", Log: testutil.Logger{}}
+	require.NoError(t, p.Init())
+
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]interface{}{"a": int64(1), "b": int64(2)}, time.Now()),
+	}))
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]interface{}{"a": int64(3)}, time.Now()),
+	}))
+	require.NoError(t, p.Close())
+
+	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, written, 1)
+	require.ElementsMatch(t, []string{"a", "b", "timestamp"}, columnNames(t, written[0]))
+}
