@@ -227,6 +227,8 @@ func TestReconnectIntegration(t *testing.T) {
 	// corresponding message
 	require.NoError(t, container.Stop())
 	require.Eventually(t, func() bool {
+		plugin.Lock()
+		defer plugin.Unlock()
 		return plugin.conn.IsClosed()
 	}, 30*time.Second, 100*time.Millisecond, "plugin never lost connection")
 	require.Eventually(t, func() bool {
@@ -256,6 +258,8 @@ func TestReconnectIntegration(t *testing.T) {
 	plugin.Brokers = []string{url}
 
 	require.Eventually(t, func() bool {
+		plugin.Lock()
+		defer plugin.Unlock()
 		return !plugin.conn.IsClosed()
 	}, 15*time.Second, 100*time.Millisecond, "plugin never reconnected")
 

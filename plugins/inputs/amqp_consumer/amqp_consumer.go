@@ -61,6 +61,10 @@ type AMQPConsumer struct {
 	wg      *sync.WaitGroup
 	cancel  context.CancelFunc
 	decoder internal.ContentDecoder
+
+	// This lock is only required for testing to prevent a race for the
+	// connection `conn` during reconnect.
+	sync.Mutex
 }
 
 // Mechanism represents the authentication mechanism used for AMQP connections.
@@ -245,7 +249,9 @@ func (a *AMQPConsumer) connect() (<-chan amqp.Delivery, error) {
 		a.Log.Debugf("Connecting to %q", broker)
 		conn, err := amqp.DialConfig(broker, *cfg)
 		if err == nil {
+			a.Lock()
 			a.conn = conn
+			a.Unlock()
 			a.Log.Debugf("Connected to %q", broker)
 			break
 		}
