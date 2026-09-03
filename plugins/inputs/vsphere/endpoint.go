@@ -1302,7 +1302,7 @@ func (e *endpoint) collectChunk(
 							tags[k] = sv
 						}
 					}
-					bucket := metricEntry{name: mn, ts: latestSample, fields: fields, tags: tags}
+					bucket := metricEntry{name: mn, ts: time.Now(), fields: fields, tags: tags}
 					buckets[bKey] = bucket
 				}
 			}
