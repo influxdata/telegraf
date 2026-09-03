@@ -213,8 +213,14 @@ func (d *reverseDNSCache) doLookup(ip string) {
 
 	names, err := d.resolver.LookupAddr(ctx, ip)
 	if err != nil {
-		d.abandonLookup(ip, err)
-		return
+		var dnsErr *net.DNSError
+		if !errors.As(err, &dnsErr) || !dnsErr.IsNotFound {
+			d.abandonLookup(ip, err)
+			return
+		}
+
+		// Treat NXDOMAIN errors for hosts that cannot be resolved as responses without names
+		names = nil
 	}
 
 	d.rwLock.Lock()
