@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -40,6 +41,7 @@ type Parquet struct {
 	Log                telegraf.Logger `toml:"-"`
 
 	metricGroups map[string]*metricGroup
+	root         *os.Root
 }
 
 func (*Parquet) SampleConfig() string {
@@ -51,14 +53,32 @@ func (p *Parquet) Init() error {
 		p.Directory = "."
 	}
 
+	// Get the absolute path of the directory
+	d, err := filepath.Abs(p.Directory)
+	if err != nil {
+		return fmt.Errorf("getting absolute path for directory %q failed: %w", p.Directory, err)
+	}
+	p.Directory = d
+
+	// Create the directory if it doesn't exist and check it actually is a directory
 	stat, err := os.Stat(p.Directory)
-	if os.IsNotExist(err) {
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("failed to stat directory %q: %w", p.Directory, err)
+		}
 		if err := os.MkdirAll(p.Directory, 0750); err != nil {
 			return fmt.Errorf("failed to create directory %q: %w", p.Directory, err)
 		}
 	} else if !stat.IsDir() {
 		return fmt.Errorf("provided directory %q is not a directory", p.Directory)
 	}
+
+	// Make sure we cannot leave the given directory
+	root, err := os.OpenRoot(p.Directory)
+	if err != nil {
+		return fmt.Errorf("opening directory %q as root failed: %w", p.Directory, err)
+	}
+	p.root = root
 
 	p.metricGroups = make(map[string]*metricGroup)
 
@@ -70,8 +90,11 @@ func (*Parquet) Connect() error {
 }
 
 func (p *Parquet) Close() error {
-	var errorOccurred bool
+	if p.root != nil {
+		p.root.Close()
+	}
 
+	var errorOccurred bool
 	for _, metrics := range p.metricGroups {
 		if err := metrics.writer.Close(); err != nil {
 			p.Log.Errorf("failed to close file %q: %v", metrics.filename, err)
@@ -99,7 +122,7 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 	now := time.Now()
 	for name, metrics := range groupedMetrics {
 		if _, ok := p.metricGroups[name]; !ok {
-			filename := fmt.Sprintf("%s/%s-%s-%s.parquet", p.Directory, name, now.Format("2006-01-02"), strconv.FormatInt(now.Unix(), 10))
+			filename := fmt.Sprintf("%s-%s-%s.parquet", name, now.Format("2006-01-02"), strconv.FormatInt(now.Unix(), 10))
 			schema, err := p.createSchema(metrics)
 			if err != nil {
 				perr.MetricsReject = append(perr.MetricsReject, metricIndices[name]...)
@@ -109,8 +132,10 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 			}
 			writer, err := p.createWriter(name, filename, schema)
 			if err != nil {
+				perr.MetricsReject = append(perr.MetricsReject, metricIndices[name]...)
+				perr.MetricsRejectErrors = append(perr.MetricsRejectErrors, fmt.Errorf("failed to create writer for file %q: %w", name, err))
 				perr.Err = fmt.Errorf("failed to create writer for file %q: %w", name, err)
-				return &perr
+				continue
 			}
 			p.metricGroups[name] = &metricGroup{
 				builder:  array.NewRecordBuilder(memory.DefaultAllocator, schema),
@@ -122,8 +147,10 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 
 		if p.RotationInterval != 0 {
 			if err := p.rotateIfNeeded(name); err != nil {
+				perr.MetricsReject = append(perr.MetricsReject, metricIndices[name]...)
+				perr.MetricsRejectErrors = append(perr.MetricsRejectErrors, fmt.Errorf("failed to rotate file %q: %w", p.metricGroups[name].filename, err))
 				perr.Err = fmt.Errorf("failed to rotate file %q: %w", p.metricGroups[name].filename, err)
-				return &perr
+				continue
 			}
 		}
 
@@ -165,7 +192,7 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 }
 
 func (p *Parquet) rotateIfNeeded(name string) error {
-	fileInfo, err := os.Stat(p.metricGroups[name].filename)
+	fileInfo, err := p.root.Stat(p.metricGroups[name].filename)
 	if err != nil {
 		return fmt.Errorf("failed to stat file %q: %w", p.metricGroups[name].filename, err)
 	}
@@ -419,14 +446,14 @@ func (p *Parquet) createSchema(metrics []telegraf.Metric) (*arrow.Schema, error)
 }
 
 func (p *Parquet) createWriter(name, filename string, schema *arrow.Schema) (*pqarrow.FileWriter, error) {
-	if _, err := os.Stat(filename); err == nil {
+	if _, err := p.root.Stat(filename); err == nil {
 		now := time.Now()
-		rotatedFilename := fmt.Sprintf("%s/%s-%s-%s.parquet", p.Directory, name, now.Format("2006-01-02"), strconv.FormatInt(now.Unix(), 10))
-		if err := os.Rename(filename, rotatedFilename); err != nil {
+		rotatedFilename := fmt.Sprintf("%s-%s-%s.parquet", name, now.Format("2006-01-02"), strconv.FormatInt(now.Unix(), 10))
+		if err := p.root.Rename(filename, rotatedFilename); err != nil {
 			return nil, fmt.Errorf("failed to rename file %q: %w", filename, err)
 		}
 	}
-	file, err := os.Create(filename)
+	file, err := p.root.Create(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create file %q: %w", filename, err)
 	}
