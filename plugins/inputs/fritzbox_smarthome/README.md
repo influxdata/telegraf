@@ -87,8 +87,8 @@ specification][aha].
 ## Example Output
 
 ```text
-fritzbox_smarthome_device,manufacturer=AVM,power_source=battery,product_category=sensor,source=127.0.0.1 connected=1i,battery_value=100i,battery_low=0i,update_available=0i,name="Name#1",product_name="FRITZ!Smart Energy 250" 1787604406292123000
+fritzbox_smarthome_device,manufacturer=AVM,power_source=battery,product_category=sensor,source=127.0.0.1 connected=true,battery_value=100i,battery_low=false,update_available=false,name="Name#1",product_name="FRITZ!Smart Energy 250" 1787604406292123000
 fritzbox_smarthome_multimeter,group=<none>,source=127.0.0.1,type=avmMeter energy=325528i,power=289130i,voltage=0i,name="Name#1",current=0i 1787604406292152000
 fritzbox_smarthome_level_control,group=Name#3,source=127.0.0.1,type=dimmableLight name="Name#2",level=100i 1787604406292154000
-fritzbox_smarthome_on_off,group=Name#3,source=127.0.0.1,type=dimmableLight name="Name#2",active=0i 1787604406292156000
+fritzbox_smarthome_on_off,group=Name#3,source=127.0.0.1,type=dimmableLight name="Name#2",active=false 1787604406292156000
 ```

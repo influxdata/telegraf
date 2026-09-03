@@ -63,7 +63,7 @@ func (f *FritzboxSmarthome) Init() error {
 		}
 		client, err := fritzsmarthome.NewClient(parsedURL, fritzsmarthome.WithHttpClient(httpClient))
 		if err != nil {
-			return fmt.Errorf("creating smarthome for URL %q failed: %w", rawURL, err)
+			return fmt.Errorf("creating smarthome client for URL %q failed: %w", rawURL, err)
 		}
 		f.clients = append(f.clients, client)
 	}
@@ -78,27 +78,26 @@ func (f *FritzboxSmarthome) Gather(acc telegraf.Accumulator) error {
 		// Pass client as parameter to avoid any race conditions
 		go func(client *fritzsmarthome.Client) {
 			defer wg.Done()
-			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(f.Timeout))
-			defer cancel()
-			acc.AddError(f.gatherClient(ctx, acc, client))
+			acc.AddError(gatherClient(context.Background(), acc, client))
 		}(client)
 	}
 	wg.Wait()
 	return nil
 }
 
-func (f *FritzboxSmarthome) gatherClient(ctx context.Context, acc telegraf.Accumulator, client *fritzsmarthome.Client) error {
+func gatherClient(ctx context.Context, acc telegraf.Accumulator, client *fritzsmarthome.Client) error {
 	response, err := client.GetOverview(ctx)
 	if err != nil {
 		return err
 	}
-	if response.HTTPResponse.StatusCode != http.StatusOK {
-		return fmt.Errorf("requesting Smarthome status failed: %d %s", response.HTTPResponse.StatusCode, response.HTTPResponse.Status)
+	// err == nil always implies http.StatusOK
+	if response.JSON200 == nil {
+		return fmt.Errorf("empty or non-JSON response received from URL %q", client.BaseURL().String())
 	}
-	for _, device := range (*response.JSON200).Devices {
+	for _, device := range response.JSON200.Devices {
 		gatherDeviceInfo(acc, client, &device)
 	}
-	for _, unit := range (*response.JSON200).Units {
+	for _, unit := range response.JSON200.Units {
 		gatherUnitInfo(acc, client, &unit, (*response.JSON200).Groups)
 	}
 	return nil
@@ -183,7 +182,7 @@ func getUnitGroupName(unit *api.EndpointOverviewMultipleUnits, groups []api.Endp
 	groupName := "<none>"
 	if unit.GroupUid != nil {
 		for _, group := range groups {
-			if group.UID == *unit.GroupUid {
+			if unit.GroupUid != nil && group.Name != nil && group.UID == *unit.GroupUid {
 				groupName = *group.Name
 				break
 			}
