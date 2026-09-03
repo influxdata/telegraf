@@ -237,7 +237,7 @@ func TestReadClientBatchedReads(t *testing.T) {
 	}
 
 	require.NoError(t, srv.Start(t.Context()))
-	t.Cleanup(func() { _ = srv.Close() })
+	defer srv.Close()
 	require.Eventually(t, func() bool {
 		c, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), 100*time.Millisecond)
 		if err != nil {
