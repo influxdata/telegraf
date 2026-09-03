@@ -98,20 +98,20 @@ func TestIntegrationV1(t *testing.T) {
 				"vault", "read", "-field", "role_id", "auth/approle/role/my-role/role-id",
 			})
 			require.NoError(t, err)
-			require.Zero(t, rc)
 			buf, err := io.ReadAll(reader)
 			require.NoError(t, err)
-			roleId := string(buf[8:])
+			require.Zero(t, rc, string(buf))
+			roleID := string(buf[8:])
 
 			rc, reader, err = container.Exec([]string{
 				"vault", "write", "-field", "secret_id", "-force", "auth/approle/role/my-role/secret-id",
 			})
 			require.NoError(t, err)
-			require.Zero(t, rc)
 			buf, err = io.ReadAll(reader)
 			require.NoError(t, err)
-			secretId := config.NewSecret(buf[8:])
-			defer secretId.Destroy()
+			require.Zero(t, rc, string(buf))
+			secretID := config.NewSecret(buf[8:])
+			defer secretID.Destroy()
 
 			// Setup plugin
 			plugin := &Vault{
@@ -121,8 +121,8 @@ func TestIntegrationV1(t *testing.T) {
 				SecretPath: "my-secret-path",
 				Engine:     engine,
 				AppRole: &appRole{
-					RoleID: roleId,
-					Secret: secretId,
+					RoleID: roleID,
+					Secret: secretID,
 				},
 			}
 			require.NoError(t, plugin.Init())
@@ -179,20 +179,20 @@ func TestIntegrationV2(t *testing.T) {
 				"vault", "read", "-field", "role_id", "auth/approle/role/my-role/role-id",
 			})
 			require.NoError(t, err)
-			require.Zero(t, rc)
 			buf, err := io.ReadAll(reader)
 			require.NoError(t, err)
-			roleId := string(buf[8:])
+			require.Zero(t, rc, string(buf))
+			roleID := string(buf[8:])
 
 			rc, reader, err = container.Exec([]string{
 				"vault", "write", "-field", "secret_id", "-force", "auth/approle/role/my-role/secret-id",
 			})
 			require.NoError(t, err)
-			require.Zero(t, rc)
 			buf, err = io.ReadAll(reader)
 			require.NoError(t, err)
-			secretId := config.NewSecret(buf[8:])
-			defer secretId.Destroy()
+			require.Zero(t, rc, string(buf))
+			secretID := config.NewSecret(buf[8:])
+			defer secretID.Destroy()
 
 			// Setup plugin
 			plugin := &Vault{
@@ -202,8 +202,8 @@ func TestIntegrationV2(t *testing.T) {
 				SecretPath: "my-secret-path",
 				Engine:     engine,
 				AppRole: &appRole{
-					RoleID: roleId,
-					Secret: secretId,
+					RoleID: roleID,
+					Secret: secretID,
 				},
 			}
 			require.NoError(t, plugin.Init())
@@ -259,10 +259,10 @@ func TestIntegrationAppRoleSecretWrapped(t *testing.T) {
 		"vault", "read", "-field", "role_id", "auth/approle/role/my-role/role-id",
 	})
 	require.NoError(t, err)
-	require.Zero(t, rc)
 	buf, err := io.ReadAll(reader)
 	require.NoError(t, err)
-	roleId := string(buf[8:])
+	require.Zero(t, rc, string(buf))
+	roleID := string(buf[8:])
 
 	rc, reader, err = container.Exec([]string{
 		"vault", "write", "-wrap-ttl=60s", "-force", "-format=json", "auth/approle/role/my-role/secret-id",
@@ -270,6 +270,7 @@ func TestIntegrationAppRoleSecretWrapped(t *testing.T) {
 	require.NoError(t, err)
 	buf, err = io.ReadAll(reader)
 	require.NoError(t, err)
+	require.Zero(t, rc, string(buf))
 
 	// Trim some junk characters in the response first.
 	// "json"/"raw" format may still contain some non-JSON prefix/suffix
@@ -283,8 +284,8 @@ func TestIntegrationAppRoleSecretWrapped(t *testing.T) {
 		} `json:"wrap_info"`
 	}
 	require.NoError(t, json.Unmarshal(buf, &resp))
-	secretId := config.NewSecret([]byte(resp.WrapInfo.Token))
-	defer secretId.Destroy()
+	secretID := config.NewSecret([]byte(resp.WrapInfo.Token))
+	defer secretID.Destroy()
 
 	// Setup plugin
 	plugin := &Vault{
@@ -293,8 +294,8 @@ func TestIntegrationAppRoleSecretWrapped(t *testing.T) {
 		MountPath:  "my-mount-path",
 		SecretPath: "my-secret-path",
 		AppRole: &appRole{
-			RoleID:          roleId,
-			Secret:          secretId,
+			RoleID:          roleID,
+			Secret:          secretID,
 			ResponseWrapped: true,
 		},
 	}
