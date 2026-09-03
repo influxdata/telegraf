@@ -24,7 +24,7 @@ var sampleConfig string
 
 const mceQuery = `
 	SELECT
-		id, timestamp, error_msg, mcistatus_msg, socketid
+		id, timestamp, error_msg, mcistatus_msg, mcastatus_msg, socketid
 	FROM mce_record
 	WHERE timestamp > ?
 `
@@ -45,6 +45,7 @@ type machineCheckError struct {
 	socketID     int
 	errorMsg     string
 	mciStatusMsg string
+	mcaStatusMsg string
 }
 
 func (*Ras) SampleConfig() string {
@@ -58,6 +59,8 @@ func (r *Ras) Init() error {
 	}
 	r.cpuSocketCounters = map[int]map[string]int64{
 		0: {
+			"memory_ecc_corrected_errors":              0,
+			"memory_ecc_uncorrectable_errors":          0,
 			"memory_read_corrected_errors":             0,
 			"memory_read_uncorrectable_errors":         0,
 			"memory_write_corrected_errors":            0,
@@ -127,7 +130,14 @@ func (r *Ras) Gather(acc telegraf.Accumulator) error {
 	// Parse the data and corresponding events
 	for rows.Next() {
 		data := &machineCheckError{}
-		if err := rows.Scan(&data.id, &data.timestamp, &data.errorMsg, &data.mciStatusMsg, &data.socketID); err != nil {
+		if err := rows.Scan(
+			&data.id,
+			&data.timestamp,
+			&data.errorMsg,
+			&data.mciStatusMsg,
+			&data.mcaStatusMsg,
+			&data.socketID,
+		); err != nil {
 			return fmt.Errorf("scanning row failed: %w", err)
 		}
 
@@ -182,6 +192,8 @@ func (r *Ras) updateCounters(mcError *machineCheckError) {
 
 	if _, ok := r.cpuSocketCounters[mcError.socketID]; !ok {
 		r.cpuSocketCounters[mcError.socketID] = map[string]int64{
+			"memory_ecc_corrected_errors":              0,
+			"memory_ecc_uncorrectable_errors":          0,
 			"memory_read_corrected_errors":             0,
 			"memory_read_uncorrectable_errors":         0,
 			"memory_write_corrected_errors":            0,
@@ -207,81 +219,72 @@ func (r *Ras) updateSocketCounters(mcError *machineCheckError) {
 	r.updateMemoryCounters(mcError)
 	r.updateProcessorBaseCounters(mcError)
 
-	if strings.Contains(mcError.errorMsg, "Instruction TLB") && strings.Contains(mcError.errorMsg, "Error") {
-		r.cpuSocketCounters[mcError.socketID]["tlb_instruction_errors"]++
-	}
-
-	if strings.Contains(mcError.errorMsg, "BUS") && strings.Contains(mcError.errorMsg, "Error") {
-		r.cpuSocketCounters[mcError.socketID]["processor_bus_errors"]++
-	}
-
-	if (strings.Contains(mcError.errorMsg, "CACHE Level-0") ||
-		strings.Contains(mcError.errorMsg, "CACHE Level-1")) &&
-		strings.Contains(mcError.errorMsg, "Error") {
-		r.cpuSocketCounters[mcError.socketID]["cache_l0_l1_errors"]++
+	if strings.Contains(mcError.errorMsg, "Error") {
+		switch {
+		case strings.Contains(mcError.errorMsg, "Instruction TLB"):
+			r.cpuSocketCounters[mcError.socketID]["tlb_instruction_errors"]++
+		case strings.Contains(mcError.errorMsg, "BUS"):
+			r.cpuSocketCounters[mcError.socketID]["processor_bus_errors"]++
+		case strings.Contains(mcError.errorMsg, "CACHE Level-0"), strings.Contains(mcError.errorMsg, "CACHE Level-1"):
+			r.cpuSocketCounters[mcError.socketID]["cache_l0_l1_errors"]++
+		}
 	}
 }
 
 func (r *Ras) updateServerCounters(mcError *machineCheckError) {
-	if strings.Contains(mcError.errorMsg, "CACHE Level-2") && strings.Contains(mcError.errorMsg, "Error") {
+	switch {
+	case strings.Contains(mcError.errorMsg, "CACHE Level-2") && strings.Contains(mcError.errorMsg, "Error"):
 		r.serverCounters["cache_l2_errors"]++
-	}
-
-	if strings.Contains(mcError.errorMsg, "UPI:") {
+	case strings.Contains(mcError.errorMsg, "UPI:"):
 		r.serverCounters["upi_errors"]++
 	}
 }
 
 func (r *Ras) updateProcessorBaseCounters(mcError *machineCheckError) {
-	if strings.Contains(mcError.errorMsg, "Internal Timer error") {
+	switch {
+	case strings.Contains(mcError.errorMsg, "Internal Timer error"):
 		r.cpuSocketCounters[mcError.socketID]["internal_timer_errors"]++
 		r.cpuSocketCounters[mcError.socketID]["processor_base_errors"]++
-	}
-
-	if strings.Contains(mcError.errorMsg, "SMM Handler Code Access Violation") {
+	case strings.Contains(mcError.errorMsg, "SMM Handler Code Access Violation"):
 		r.cpuSocketCounters[mcError.socketID]["smm_handler_code_access_violation_errors"]++
 		r.cpuSocketCounters[mcError.socketID]["processor_base_errors"]++
-	}
-
-	if strings.Contains(mcError.errorMsg, "Internal parity error") {
+	case strings.Contains(mcError.errorMsg, "Internal parity error"):
 		r.cpuSocketCounters[mcError.socketID]["internal_parity_errors"]++
 		r.cpuSocketCounters[mcError.socketID]["processor_base_errors"]++
-	}
-
-	if strings.Contains(mcError.errorMsg, "FRC error") {
+	case strings.Contains(mcError.errorMsg, "FRC error"):
 		r.cpuSocketCounters[mcError.socketID]["frc_errors"]++
 		r.cpuSocketCounters[mcError.socketID]["processor_base_errors"]++
-	}
-
-	if strings.Contains(mcError.errorMsg, "External error") {
+	case strings.Contains(mcError.errorMsg, "External error"):
 		r.cpuSocketCounters[mcError.socketID]["external_mce_errors"]++
 		r.cpuSocketCounters[mcError.socketID]["processor_base_errors"]++
-	}
-
-	if strings.Contains(mcError.errorMsg, "Microcode ROM parity error") {
+	case strings.Contains(mcError.errorMsg, "Microcode ROM parity error"):
 		r.cpuSocketCounters[mcError.socketID]["microcode_rom_parity_errors"]++
 		r.cpuSocketCounters[mcError.socketID]["processor_base_errors"]++
-	}
-
-	if strings.Contains(mcError.errorMsg, "Unclassified") || strings.Contains(mcError.errorMsg, "Internal unclassified") {
+	case strings.Contains(mcError.errorMsg, "Unclassified"), strings.Contains(mcError.errorMsg, "Internal unclassified"):
 		r.cpuSocketCounters[mcError.socketID]["unclassified_mce_errors"]++
 		r.cpuSocketCounters[mcError.socketID]["processor_base_errors"]++
 	}
 }
 
 func (r *Ras) updateMemoryCounters(mcError *machineCheckError) {
-	if strings.Contains(mcError.errorMsg, "Memory read error") {
+	switch {
+	case strings.Contains(mcError.errorMsg, "Memory read error"):
 		if strings.Contains(mcError.mciStatusMsg, "Corrected_error") {
 			r.cpuSocketCounters[mcError.socketID]["memory_read_corrected_errors"]++
 		} else {
 			r.cpuSocketCounters[mcError.socketID]["memory_read_uncorrectable_errors"]++
 		}
-	}
-	if strings.Contains(mcError.errorMsg, "Memory write error") {
+	case strings.Contains(mcError.errorMsg, "Memory write error"):
 		if strings.Contains(mcError.mciStatusMsg, "Corrected_error") {
 			r.cpuSocketCounters[mcError.socketID]["memory_write_corrected_errors"]++
 		} else {
 			r.cpuSocketCounters[mcError.socketID]["memory_write_uncorrectable_errors"]++
+		}
+	case strings.Contains(mcError.mcaStatusMsg, "DRAM ECC error"):
+		if strings.Contains(mcError.errorMsg, "Corrected error") {
+			r.cpuSocketCounters[mcError.socketID]["memory_ecc_corrected_errors"]++
+		} else {
+			r.cpuSocketCounters[mcError.socketID]["memory_ecc_uncorrectable_errors"]++
 		}
 	}
 }

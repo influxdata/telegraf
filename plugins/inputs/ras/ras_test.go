@@ -7,8 +7,13 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -124,6 +129,20 @@ func TestUpdateCounters(t *testing.T) {
 			socketID:     0,
 			errorMsg:     "Instruction CACHE Level-2 Generic Error",
 			mciStatusMsg: "Error_overflow Corrected_error",
+		},
+		{
+			timestamp:    "2020-05-20 08:25:56 +0200",
+			socketID:     0,
+			errorMsg:     "Corrected error, no action required.",
+			mciStatusMsg: "Error_overflow CECC",
+			mcaStatusMsg: "DRAM ECC error. Ext Err Code: 0 Memory Error 'mem-tx: generic read, tx: generic, level: L3/generic'",
+		},
+		{
+			timestamp:    "2020-05-20 08:25:58 +0200",
+			socketID:     0,
+			errorMsg:     "Uncorrected error.",
+			mciStatusMsg: "Error_overflow CECC",
+			mcaStatusMsg: "DRAM ECC error. Ext Err Code: 0 Memory Error 'mem-tx: generic read, tx: generic, level: L3/generic'",
 		},
 	}
 	for i := range testData {
@@ -267,5 +286,62 @@ func TestEmptyDatabase(t *testing.T) {
 
 	for metric, value := range ras.serverCounters {
 		require.Equal(t, int64(0), value, metric+" should have value of 0")
+	}
+}
+
+func TestCases(t *testing.T) {
+	// Get all directories in testdata
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err)
+
+	// Register the plugin
+	inputs.Add("ras", func() telegraf.Input { return &Ras{} })
+
+	// Prepare the influx parser for expectations
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+
+	// Set the testing options
+	options := []cmp.Option{
+		testutil.IgnoreTime(),
+		testutil.IgnoreType(),
+		testutil.SortMetrics(),
+	}
+
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
+		}
+		testcasePath := filepath.Join("testcases", f.Name())
+		configFilename := filepath.Join(testcasePath, "telegraf.conf")
+		expectedFilename := filepath.Join(testcasePath, "expected.out")
+
+		t.Run(f.Name(), func(t *testing.T) {
+			// Read the expected output
+			expected, err := testutil.ParseMetricsFromFile(expectedFilename, parser)
+			require.NoError(t, err)
+
+			// Configure and initialize the plugin
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Inputs, 1)
+
+			plugin := cfg.Inputs[0].Input.(*Ras)
+			plugin.DBPath = filepath.Join(testcasePath, "ras-mc_event.db")
+			require.NoError(t, plugin.Init())
+
+			// Start the plugin
+			require.NoError(t, plugin.Start(nil))
+			defer plugin.Stop()
+
+			// Collect the metrics
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Gather(&acc))
+
+			// Check the result
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, expected, actual, options...)
+		})
 	}
 }
