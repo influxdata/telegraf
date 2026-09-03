@@ -3,6 +3,7 @@ package amqp_consumer
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -140,6 +141,139 @@ func TestIntegration(t *testing.T) {
 
 	client.close()
 	plugin.Stop()
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+}
+
+func TestReconnectIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Define common properties
+	servicePort := "5672"
+
+	// Setup the container
+	container := testutil.Container{
+		Image:        "rabbitmq",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(servicePort),
+			wait.ForLog("Server startup complete"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+	url := fmt.Sprintf("amqp://%s:%s/", container.Address, container.Ports[servicePort])
+
+	// Setup a AMQP producer to send messages
+	client, err := newProducer(url)
+	require.NoError(t, err)
+	defer client.close()
+
+	// Setup the plugin with an Influx line-protocol parser
+	logger := &testutil.CaptureLogger{}
+	plugin := &AMQPConsumer{
+		Brokers:      []string{url},
+		Username:     config.NewSecret([]byte("guest")),
+		Password:     config.NewSecret([]byte("guest")),
+		Timeout:      config.Duration(500 * time.Millisecond),
+		Exchange:     "telegraf",
+		ExchangeType: "direct",
+		Queue:        "test",
+		BindingKey:   "test",
+		Log:          logger,
+	}
+
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+	require.NoError(t, plugin.Init())
+
+	// Setup the metrics
+	metrics := []string{
+		"test,source=A value=0i 1712780301000000000",
+		"test,source=B value=1i 1712780301000000100",
+		"test,source=C value=2i 1712780301000000200",
+	}
+	expected := make([]telegraf.Metric, 0, len(metrics))
+	for _, x := range metrics {
+		m, err := parser.Parse([]byte(x))
+		require.NoError(t, err)
+		expected = append(expected, m...)
+	}
+
+	// Start the plugin
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Write metrics
+	for _, x := range metrics {
+		require.NoError(t, client.write(t.Context(), []byte(x)))
+	}
+
+	// Verify that the metrics were actually written
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= uint64(len(expected))
+	}, 3*time.Second, 100*time.Millisecond)
+	client.close()
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+
+	// Remove the metrics to make sure we can receive after reconnecting
+	acc.ClearMetrics()
+	require.Empty(t, acc.GetTelegrafMetrics())
+
+	// Stop the container to force the plugin to disconnect and wait for the
+	// corresponding message
+	require.NoError(t, container.Stop())
+	require.Eventually(t, func() bool {
+		return plugin.conn.IsClosed()
+	}, 30*time.Second, 100*time.Millisecond, "plugin never lost connection")
+	require.Eventually(t, func() bool {
+		var disconnected, firstAttempt bool
+		for _, msg := range logger.Messages() {
+			// Check for the disconnect message
+			if msg.Level == testutil.LevelInfo &&
+				strings.Contains(msg.Text, "Connection closed") &&
+				strings.Contains(msg.Text, "trying to reconnect") {
+				disconnected = true
+				continue
+			}
+
+			// Check for the first attempt to reconnect
+			if msg.Level == testutil.LevelError && strings.Contains(msg.Text, "AMQP connection failed") {
+				firstAttempt = true
+			}
+		}
+		return disconnected && firstAttempt
+	}, 3*time.Second, 100*time.Millisecond)
+
+	// Restart the container and wait for the plugin to reconnect with a long
+	// timeout. This is necessary because the plugin has a fixed reconnect
+	// interval of 10 seconds so give it some tries.
+	require.NoError(t, container.Start())
+	url = fmt.Sprintf("amqp://%s:%s/", container.Address, container.Ports[servicePort])
+	plugin.Brokers = []string{url}
+
+	require.Eventually(t, func() bool {
+		return !plugin.conn.IsClosed()
+	}, 15*time.Second, 100*time.Millisecond, "plugin never reconnected")
+
+	// Setup another AMQP producer to send messages
+	client2, err := newProducer(url)
+	require.NoError(t, err)
+	defer client2.close()
+
+	// Write metrics
+	for _, x := range metrics {
+		require.NoError(t, client2.write(t.Context(), []byte(x)))
+	}
+
+	// Verify that the metrics were actually written
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= uint64(len(expected))
+	}, 3*time.Second, 100*time.Millisecond)
+	client2.close()
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
 

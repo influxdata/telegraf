@@ -104,6 +104,10 @@ func (c *Container) Start() error {
 	return nil
 }
 
+func (c *Container) Stop() error {
+	return c.container.Stop(c.ctx, nil)
+}
+
 // LookupMappedPorts creates a lookup table of exposed ports to mapped ports
 func (c *Container) LookupMappedPorts() error {
 	if len(c.ExposedPorts) == 0 {

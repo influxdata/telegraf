@@ -115,21 +115,17 @@ func (a *AMQPConsumer) SetParser(parser telegraf.Parser) {
 }
 
 func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
-	amqpConf, err := a.createConfig()
-	if err != nil {
-		return err
-	}
-
 	var options []internal.DecodingOption
 	if a.MaxDecompressionSize > 0 {
 		options = append(options, internal.WithMaxDecompressionSize(int64(a.MaxDecompressionSize)))
 	}
-	a.decoder, err = internal.NewContentDecoder(a.ContentEncoding, options...)
+	dec, err := internal.NewContentDecoder(a.ContentEncoding, options...)
 	if err != nil {
 		return err
 	}
+	a.decoder = dec
 
-	msgs, err := a.connect(amqpConf)
+	msgs, err := a.connect()
 	if err != nil {
 		return err
 	}
@@ -153,7 +149,7 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 
 			a.Log.Infof("Connection closed: %s; trying to reconnect", err)
 			for {
-				msgs, err := a.connect(amqpConf)
+				msgs, err := a.connect()
 				if err != nil {
 					a.Log.Errorf("AMQP connection failed: %s", err)
 					time.Sleep(10 * time.Second)
@@ -230,7 +226,16 @@ func (a *AMQPConsumer) createConfig() (*amqp.Config, error) {
 	return &amqpConfig, nil
 }
 
-func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, error) {
+func (a *AMQPConsumer) connect() (<-chan amqp.Delivery, error) {
+	if a.conn != nil {
+		a.conn.Close()
+	}
+
+	cfg, err := a.createConfig()
+	if err != nil {
+		return nil, fmt.Errorf("creating configuration failed: %w", err)
+	}
+
 	brokers := a.Brokers
 
 	//nolint:gosec // False-positive for G404 as we don't need strong random numbers
@@ -238,7 +243,7 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 	for _, n := range p {
 		broker := brokers[n]
 		a.Log.Debugf("Connecting to %q", broker)
-		conn, err := amqp.DialConfig(broker, *amqpConf)
+		conn, err := amqp.DialConfig(broker, *cfg)
 		if err == nil {
 			a.conn = conn
 			a.Log.Debugf("Connected to %q", broker)
