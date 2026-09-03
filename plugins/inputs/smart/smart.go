@@ -984,7 +984,8 @@ func parseRawValue(rawVal string) (interface{}, error) {
 		}
 	}
 
-	// Duration: 65h+33m+09.259s
+	// Duration: 65h+33m+09.259s, reported as whole hours to match drives
+	// reporting a plain hour count for the same attribute
 	unit := regexp.MustCompile("^(.*)([hms])$")
 	parts := strings.Split(rawVal, "+")
 	if len(parts) == 0 {
@@ -1009,7 +1010,7 @@ func parseRawValue(rawVal string) (interface{}, error) {
 			// Unknown, ignore
 		}
 	}
-	return duration, nil
+	return duration / 3600, nil
 }
 
 func parseBytesWritten(acc telegraf.Accumulator, fields map[string]interface{}, tags map[string]string, str string) error {
