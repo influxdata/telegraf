@@ -2,8 +2,10 @@ package cloudwatch
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/url"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -195,7 +197,99 @@ func TestMultiAccountGather(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
-func TestGatherMultipleNamespaces(t *testing.T) {
+func TestGatherMultipleNamespacesWildcard(t *testing.T) {
+	plugin := &CloudWatch{
+		CredentialConfig: common_aws.CredentialConfig{
+			Region: "us-east-1",
+		},
+		Namespaces: []string{"AWS/E*"},
+		Delay:      config.Duration(1 * time.Minute),
+		Period:     config.Duration(1 * time.Minute),
+		RateLimit:  200,
+		BatchSize:  500,
+		Log:        testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	plugin.client = defaultMockClient("AWS/ELB", "AWS/EC2")
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(plugin.Gather))
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"cloudwatch_aws_elb",
+			map[string]string{
+				"region":             "us-east-1",
+				"load_balancer_name": "p-example1",
+			},
+			map[string]interface{}{
+				"latency_minimum":      0.1,
+				"latency_maximum":      0.3,
+				"latency_average":      0.2,
+				"latency_sum":          123.0,
+				"latency_sample_count": 100.0,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"cloudwatch_aws_elb",
+			map[string]string{
+				"region":             "us-east-1",
+				"load_balancer_name": "p-example2",
+			},
+			map[string]interface{}{
+				"latency_minimum":      0.1,
+				"latency_maximum":      0.3,
+				"latency_average":      0.2,
+				"latency_sum":          124.0,
+				"latency_sample_count": 100.0,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"cloudwatch_aws_ec2",
+			map[string]string{
+				"region":             "us-east-1",
+				"load_balancer_name": "p-example1",
+			},
+			map[string]interface{}{
+				"latency_minimum":      0.1,
+				"latency_maximum":      0.3,
+				"latency_average":      0.2,
+				"latency_sum":          123.0,
+				"latency_sample_count": 100.0,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"cloudwatch_aws_ec2",
+			map[string]string{
+				"region":             "us-east-1",
+				"load_balancer_name": "p-example2",
+			},
+			map[string]interface{}{
+				"latency_minimum":      0.1,
+				"latency_maximum":      0.3,
+				"latency_average":      0.2,
+				"latency_sum":          124.0,
+				"latency_sample_count": 100.0,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	option := []cmp.Option{
+		testutil.IgnoreTime(),
+		testutil.SortMetrics(),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), option...)
+
+	// Make sure the query did NOT contain the namespace
+	require.False(t, plugin.client.(*mockClient).withNamespace.Load())
+}
+
+func TestGatherMultipleNamespacesExplicitNamespace(t *testing.T) {
 	plugin := &CloudWatch{
 		CredentialConfig: common_aws.CredentialConfig{
 			Region: "us-east-1",
@@ -282,6 +376,9 @@ func TestGatherMultipleNamespaces(t *testing.T) {
 	}
 
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), option...)
+
+	// Make sure the query contained the namespace
+	require.True(t, plugin.client.(*mockClient).withNamespace.Load())
 }
 
 func TestSelectMetrics(t *testing.T) {
@@ -351,6 +448,34 @@ func TestSelectMetricsSummaryOnly(t *testing.T) {
 
 	// We've asked for the non-AU specific metrics only so this should be
 	// 2 (out of 4) metrics for all 3 load balancers but no AZ.
+	require.Len(t, filtered[0].metrics, 6)
+}
+
+func TestSelectMetricsNoValueMatchesAll(t *testing.T) {
+	plugin := &CloudWatch{
+		CredentialConfig: common_aws.CredentialConfig{
+			Region: "us-east-1",
+		},
+		Namespaces: []string{"AWS/ELB"},
+		Delay:      config.Duration(1 * time.Minute),
+		Period:     config.Duration(1 * time.Minute),
+		RateLimit:  200,
+		BatchSize:  500,
+		Metrics: []*cloudwatchMetric{
+			{
+				MetricNames: []string{"Latency", "RequestCount"},
+				Dimensions:  []*dimension{{Name: "LoadBalancerName"}},
+			},
+		},
+		Log: testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	plugin.client = selectedMockClient()
+	filtered, err := plugin.getFilteredMetrics()
+	require.NoError(t, err)
+
+	// Without a value we should match all metrics with the corresponding metric
+	// names so 2 (out of 4) metrics for all 3 load balancers
 	require.Len(t, filtered[0].metrics, 6)
 }
 
@@ -505,9 +630,112 @@ func TestCombineNamespaces(t *testing.T) {
 	require.Equal(t, []string{"AWS/EC2", "AWS/Billing"}, plugin.Namespaces)
 }
 
+func TestFailedListDoesntCache(t *testing.T) {
+	plugin := &CloudWatch{
+		CredentialConfig: common_aws.CredentialConfig{
+			Region: "us-east-1",
+		},
+		Namespaces: []string{"AWS/ELB"},
+		Delay:      config.Duration(1 * time.Minute),
+		Period:     config.Duration(1 * time.Minute),
+		CacheTTL:   config.Duration(1 * time.Hour),
+		RateLimit:  200,
+		BatchSize:  500,
+		Log:        testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	// Setup the mock client
+	client := &mockClient{
+		metrics: []types.Metric{
+			{
+				Namespace:  aws.String("AWS/ELB"),
+				MetricName: aws.String("Latency"),
+				Dimensions: []types.Dimension{
+					{
+						Name:  aws.String("LoadBalancerName"),
+						Value: aws.String("p-example1"),
+					},
+				},
+			},
+			{
+				Namespace:  aws.String("AWS/ELB"),
+				MetricName: aws.String("Latency"),
+				Dimensions: []types.Dimension{
+					{
+						Name:  aws.String("LoadBalancerName"),
+						Value: aws.String("p-example2"),
+					},
+				},
+			},
+		},
+	}
+	plugin.client = client
+
+	// Make the list call fail
+	client.listErr = errors.New("operation error")
+
+	// Check that we don't have any entry in the cache
+	require.Empty(t, plugin.cache)
+
+	// Gather and get the error; make sure listing got called and we did not
+	// cache anything
+	var acc testutil.Accumulator
+	require.ErrorContains(t, acc.GatherError(plugin.Gather), "operation error")
+	require.EqualValues(t, 1, client.listCalls.Load())
+	require.Empty(t, plugin.cache)
+
+	// The next list call should succeed
+	client.listErr = nil
+
+	// Make sure the listing is called and we get the metrics
+	require.NoError(t, acc.GatherError(plugin.Gather))
+	require.EqualValues(t, 2, client.listCalls.Load())
+	require.NotEmpty(t, plugin.cache)
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"cloudwatch_aws_elb",
+			map[string]string{
+				"region":             "us-east-1",
+				"load_balancer_name": "p-example1",
+			},
+			map[string]interface{}{
+				"latency_minimum":      0.1,
+				"latency_maximum":      0.3,
+				"latency_average":      0.2,
+				"latency_sum":          123.0,
+				"latency_sample_count": 100.0,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"cloudwatch_aws_elb",
+			map[string]string{
+				"region":             "us-east-1",
+				"load_balancer_name": "p-example2",
+			},
+			map[string]interface{}{
+				"latency_minimum":      0.1,
+				"latency_maximum":      0.3,
+				"latency_average":      0.2,
+				"latency_sum":          124.0,
+				"latency_sample_count": 100.0,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+}
+
 // INTERNAL mock client implementation
 type mockClient struct {
 	metrics []types.Metric
+	listErr error
+
+	withNamespace atomic.Bool
+	listCalls     atomic.Uint32
 }
 
 func defaultMockClient(namespaces ...string) *mockClient {
@@ -587,6 +815,12 @@ func (c *mockClient) ListMetrics(
 	params *cloudwatch.ListMetricsInput,
 	_ ...func(*cloudwatch.Options),
 ) (*cloudwatch.ListMetricsOutput, error) {
+	c.listCalls.Add(1)
+
+	if c.listErr != nil {
+		return nil, c.listErr
+	}
+
 	response := &cloudwatch.ListMetricsOutput{
 		Metrics: c.metrics,
 	}
@@ -594,6 +828,9 @@ func (c *mockClient) ListMetrics(
 	if params.IncludeLinkedAccounts != nil && *params.IncludeLinkedAccounts {
 		response.OwningAccounts = []string{"123456789012", "923456789017"}
 	}
+
+	c.withNamespace.Store(params.Namespace != nil)
+
 	return response, nil
 }
 

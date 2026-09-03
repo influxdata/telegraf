@@ -116,6 +116,9 @@ and `bearer_token_string` option. See the
   ## The name of the label for the pod that is being scraped.
   ## Default is 'namespace' but this can conflict with metrics that have the label 'namespace'
   # pod_namespace_label_name = "namespace"
+  ## The name of the tag carrying the name of the pod that is being scraped.
+  ## Default is 'pod_name' but this can conflict with metrics that have the label 'pod_name'
+  # pod_name_label_name = "pod_name"
   # label selector to target pods which have the label
   # kubernetes_label_selector = "env=dev,app=nginx"
   # field selector to target pods
@@ -274,6 +277,12 @@ pods you are scraping.
 The setting `pod_namespace_label_name` allows you to change the label name for
 the namespace of the pod you are scraping. The default is `namespace`, but this
 will overwrite a label with the name `namespace` from a metric scraped.
+
+Metrics scraped from a discovered pod are always tagged with the name of that
+pod, which allows distinguishing metrics originating from different replicas of
+the same workload. The setting `pod_name_label_name` allows you to change the
+label name used for it. The default is `pod_name`, but this will overwrite a
+label with the name `pod_name` from a metric scraped.
 
 Using `pod_scrape_scope = "node"` allows more scalable scraping for pods which
 will scrape pods only in the node that telegraf is running. It will fetch the
