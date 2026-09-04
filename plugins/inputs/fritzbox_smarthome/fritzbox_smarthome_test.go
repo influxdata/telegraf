@@ -105,10 +105,12 @@ func TestGather(t *testing.T) {
 func TestUnexpectedResponse(t *testing.T) {
 	// Start dummy API backend
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v0/smarthome/overview", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/v0/smarthome/overview", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`<html><body>Please login</body></html>`))
+		if _, err := w.Write([]byte(`<html><body>Please login</body></html>`)); err != nil {
+			t.Error(err)
+		}
 	})
 	server := httptest.NewServer(mux)
 	defer server.Close()
