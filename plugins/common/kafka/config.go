@@ -55,18 +55,19 @@ func (k *WriteConfig) SetConfig(cfg *sarama.Config, log telegraf.Logger) error {
 		cfg.Net.MaxOpenRequests = 1
 	}
 
-	// Only override the sarama defaults if the user configured a value. Sarama
-	// rejects non-positive values for all of these in its own validation.
-	if k.NetDialTimeout > 0 {
+	// Only override the sarama defaults if the user configured a value.
+	// Negative values are passed through so sarama's own validation
+	// rejects them instead of silently keeping the default.
+	if k.NetDialTimeout != 0 {
 		cfg.Net.DialTimeout = time.Duration(k.NetDialTimeout)
 	}
-	if k.NetReadTimeout > 0 {
+	if k.NetReadTimeout != 0 {
 		cfg.Net.ReadTimeout = time.Duration(k.NetReadTimeout)
 	}
-	if k.NetWriteTimeout > 0 {
+	if k.NetWriteTimeout != 0 {
 		cfg.Net.WriteTimeout = time.Duration(k.NetWriteTimeout)
 	}
-	if k.ProducerTimeout > 0 {
+	if k.ProducerTimeout != 0 {
 		cfg.Producer.Timeout = time.Duration(k.ProducerTimeout)
 	}
 

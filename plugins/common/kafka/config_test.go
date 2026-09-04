@@ -56,3 +56,41 @@ func TestWriteConfigTimeouts(t *testing.T) {
 	require.Equal(t, 4*time.Second, cfg.Producer.Timeout)
 	require.NoError(t, cfg.Validate())
 }
+
+func TestWriteConfigTimeoutsNegative(t *testing.T) {
+	tests := []struct {
+		name     string
+		config   WriteConfig
+		expected string
+	}{
+		{
+			name:     "dial",
+			config:   WriteConfig{NetDialTimeout: config.Duration(-time.Second)},
+			expected: "Net.DialTimeout must be > 0",
+		},
+		{
+			name:     "read",
+			config:   WriteConfig{NetReadTimeout: config.Duration(-time.Second)},
+			expected: "Net.ReadTimeout must be > 0",
+		},
+		{
+			name:     "write",
+			config:   WriteConfig{NetWriteTimeout: config.Duration(-time.Second)},
+			expected: "Net.WriteTimeout must be > 0",
+		},
+		{
+			name:     "producer",
+			config:   WriteConfig{ProducerTimeout: config.Duration(-time.Second)},
+			expected: "Producer.Timeout must be > 0",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Negative values must reach sarama's validation instead of
+			// silently falling back to the default
+			cfg := sarama.NewConfig()
+			require.NoError(t, tt.config.SetConfig(cfg, testutil.Logger{}))
+			require.ErrorContains(t, cfg.Validate(), tt.expected)
+		})
+	}
+}
