@@ -124,7 +124,7 @@ following works:
 - github.com/coreos/go-systemd [Apache License 2.0](https://github.com/coreos/go-systemd/blob/main/LICENSE)
 - github.com/couchbase/go-couchbase [MIT License](https://github.com/couchbase/go-couchbase/blob/master/LICENSE)
 - github.com/couchbase/gomemcached [MIT License](https://github.com/couchbase/gomemcached/blob/master/LICENSE)
-- github.com/couchbase/goutils [Apache License 2.0](https://github.com/couchbase/goutils/blob/master/LICENSE.md)
+- github.com/couchbase/goutils [Apache License 2.0](https://github.com/couchbase/goutils/blob/master/LICENSE.txt)
 - github.com/cpuguy83/go-md2man [MIT License](https://github.com/cpuguy83/go-md2man/blob/master/LICENSE.md)
 - github.com/danieljoos/wincred [MIT License](https://github.com/danieljoos/wincred/blob/master/LICENSE)
 - github.com/databricks/zerobus-sdk/purego [Apache License 2.0](https://github.com/databricks/zerobus-sdk/blob/main/LICENSE)

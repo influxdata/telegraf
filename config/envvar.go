@@ -78,21 +78,21 @@ func (t *trimmer) process() error {
 }
 
 func (t *trimmer) hasNQuotes(ref byte, limit int64) bool {
-	var count int64
+	var count, unmatched int64
 	// Look ahead check if the next characters are what we expect
 	for count = 0; count < limit; count++ {
 		c, err := t.input.ReadByte()
-		if err != nil || c != ref {
+		if err != nil {
+			break
+		}
+		if c != ref {
+			// We also need to unread the non-matching character
+			unmatched = 1
 			break
 		}
 	}
-	// We also need to unread the non-matching character
-	offset := -count
-	if count < limit {
-		offset--
-	}
 	//nolint:errcheck // Unread the already matched characters
-	t.input.Seek(offset, io.SeekCurrent)
+	t.input.Seek(-(count + unmatched), io.SeekCurrent)
 	return count >= limit
 }
 
