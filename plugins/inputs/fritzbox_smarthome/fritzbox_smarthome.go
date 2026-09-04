@@ -98,7 +98,7 @@ func gatherClient(ctx context.Context, acc telegraf.Accumulator, client *fritzsm
 		gatherDeviceInfo(acc, client, &device)
 	}
 	for _, unit := range response.JSON200.Units {
-		gatherUnitInfo(acc, client, &unit, (*response.JSON200).Groups)
+		gatherUnitInfo(acc, client, &unit, response.JSON200.Groups)
 	}
 	return nil
 }
@@ -182,7 +182,7 @@ func getUnitGroupName(unit *api.EndpointOverviewMultipleUnits, groups []api.Endp
 	groupName := "<none>"
 	if unit.GroupUid != nil {
 		for _, group := range groups {
-			if unit.GroupUid != nil && group.Name != nil && group.UID == *unit.GroupUid {
+			if group.UID == *unit.GroupUid && group.Name != nil {
 				groupName = *group.Name
 				break
 			}
