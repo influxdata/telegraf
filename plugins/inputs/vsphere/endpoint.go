@@ -1297,7 +1297,7 @@ func (e *endpoint) collectChunk(
 					for k, v := range objectRef.customProperties {
 						sv, err := internal.ToString(v)
 						if err != nil {
-							e.log.Errorf(fmt.Errorf("conversion error for %v: %w", v, err))
+							e.log.Errorf("conversion error for %v: %s", v, err)
 						} else {
 							tags[k] = sv
 						}
