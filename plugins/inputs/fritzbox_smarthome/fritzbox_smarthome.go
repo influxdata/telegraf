@@ -90,10 +90,7 @@ func gatherClient(ctx context.Context, acc telegraf.Accumulator, client *fritzsm
 	if err != nil {
 		return err
 	}
-	// err == nil always implies http.StatusOK
-	if response.JSON200 == nil {
-		return fmt.Errorf("empty or non-JSON response received from URL %q", client.BaseURL().String())
-	}
+	// err == nil always implies http.StatusOK and a non-empty response
 	for _, device := range response.JSON200.Devices {
 		gatherDeviceInfo(acc, client, &device)
 	}

@@ -1,6 +1,8 @@
 package fritzbox_smarthome
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -98,4 +100,40 @@ func TestGather(t *testing.T) {
 
 	// Verify metrics are as expected
 	testutil.RequireMetricsEqual(t, expectedMetrics, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.IgnoreType(), testutil.SortMetrics())
+}
+
+func TestUnexpectedResponse(t *testing.T) {
+	// Start dummy API backend
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v0/smarthome/overview", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`<html><body>Please login</body></html>`))
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	// Register the plugin
+	inputs.Add("fritzbox_smarthome", func() telegraf.Input {
+		return &FritzboxSmarthome{Timeout: config.Duration(10 * time.Second)}
+	})
+
+	// Load plugin from config
+	conf := config.NewConfig()
+	require.NoError(t, conf.LoadConfig("testdata/gather/telegraf.conf"))
+	require.Len(t, conf.Inputs, 1)
+	f, ok := conf.Inputs[0].Input.(*FritzboxSmarthome)
+	require.True(t, ok)
+
+	// Target plugin at dummy server
+	f.URLs = []string{server.URL}
+	f.Log = &testutil.Logger{Name: "fritzbox_smarthome"}
+
+	// Verify successful Init
+	require.NoError(t, f.Init())
+
+	// Verify Gather fails with error
+	acc := &testutil.Accumulator{}
+	err := acc.GatherError(f.Gather)
+	require.ErrorContains(t, err, "empty or unexpected response")
 }
