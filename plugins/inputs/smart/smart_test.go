@@ -258,6 +258,93 @@ func TestGatherSATAInfo75(t *testing.T) {
 	}
 }
 
+func TestGatherSATAInfoHoursDuration(t *testing.T) {
+	runCmd = func(config.Duration, bool, string, ...string) ([]byte, error) {
+		return []byte(seagateSMRSATAInfoData75), nil
+	}
+
+	var acc testutil.Accumulator
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	sampleSmart.gatherDisk(&acc, "/dev/sdc", wg)
+
+	// Attributes reported as "182h+39m+24.879s" keep their raw value in
+	// seconds but must end up as whole hours in power_on_hours, consistent
+	// with drives reporting a plain hour count
+	expected := []telegraf.Metric{
+		metric.New(
+			"smart_device",
+			map[string]string{
+				"capacity": "2000398934016",
+				"device":   "sdc",
+				"enabled":  "Enabled",
+				"model":    "ST2000DM008-2UB102",
+			},
+			map[string]interface{}{
+				"command_timeout":            int64(0),
+				"end_to_end_error":           int64(0),
+				"exit_status":                int(0),
+				"health_ok":                  bool(true),
+				"pending_sector_count":       int64(0),
+				"power_cycle_count":          int64(3),
+				"power_on_hours":             int64(182),
+				"read_error_rate":            float64(0),
+				"reallocated_sectors_count":  int64(0),
+				"seek_error_rate":            float64(0),
+				"spin_retry_count":           int64(0),
+				"temp_c":                     int64(35),
+				"udma_crc_errors":            int64(0),
+				"uncorrectable_errors":       int64(0),
+				"uncorrectable_sector_count": int64(0),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"smart_attribute",
+			map[string]string{
+				"capacity": "2000398934016",
+				"device":   "sdc",
+				"enabled":  "Enabled",
+				"fail":     "-",
+				"flags":    "-O--CK",
+				"id":       "9",
+				"model":    "ST2000DM008-2UB102",
+				"name":     "Power_On_Hours",
+			},
+			map[string]interface{}{
+				"exit_status": int(0),
+				"raw_value":   int64(657564),
+				"threshold":   int64(0),
+				"value":       int64(100),
+				"worst":       int64(100),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"smart_attribute",
+			map[string]string{
+				"capacity": "2000398934016",
+				"device":   "sdc",
+				"enabled":  "Enabled",
+				"fail":     "-",
+				"flags":    "------",
+				"id":       "240",
+				"model":    "ST2000DM008-2UB102",
+				"name":     "Head_Flying_Hours",
+			},
+			map[string]interface{}{
+				"exit_status": int(0),
+				"raw_value":   int64(650902),
+				"threshold":   int64(0),
+				"value":       int64(100),
+				"worst":       int64(253),
+			},
+			time.Unix(0, 0),
+		),
+	}
+	testutil.RequireMetricsSubset(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+}
+
 func TestGatherHgstSAS(t *testing.T) {
 	runCmd = func(config.Duration, bool, string, ...string) ([]byte, error) {
 		return []byte(hgstSASInfoData), nil
@@ -2836,6 +2923,64 @@ ps    0 : mp:25.00W operational enlat:0 exlat:0 rrt:0 rrl:0
           rwt:0 rwl:0 idle_power:- active_power:-
 `
 	// Mock data for standby drive
+	seagateSMRSATAInfoData75 = `smartctl 7.5 2025-04-30 r5714 [x86_64-linux-6.18.12-gentoo] (local build)
+Copyright (C) 2002-25, Bruce Allen, Christian Franke, www.smartmontools.org
+
+=== START OF INFORMATION SECTION ===
+Model Family:     Seagate BarraCuda 3.5 (SMR)
+Device Model:     ST2000DM008-2UB102
+Firmware Version: 0001
+User Capacity:    2,000,398,934,016 bytes [2.00 TB]
+Sector Sizes:     512 bytes logical, 4096 bytes physical
+Rotation Rate:    7200 rpm
+Form Factor:      3.5 inches
+TRIM Command:     Available
+Device is:        In smartctl database 7.5/6204
+ATA Version is:   ACS-3 T13/2161-D revision 5
+SATA Version is:  SATA 3.1, 6.0 Gb/s (current: 6.0 Gb/s)
+Local Time is:    Wed Aug 26 12:14:48 2026 EDT
+SMART support is: Available - device has SMART capability.
+SMART support is: Enabled
+
+=== START OF READ SMART DATA SECTION ===
+SMART overall-health self-assessment test result: PASSED
+
+SMART Attributes Data Structure revision number: 10
+Vendor Specific SMART Attributes with Thresholds:
+ID# ATTRIBUTE_NAME          FLAGS    VALUE WORST THRESH FAIL RAW_VALUE
+  1 Raw_Read_Error_Rate     POSR--   080   066   006    -    0/96644691
+  3 Spin_Up_Time            PO----   099   099   000    -    0
+  4 Start_Stop_Count        -O--CK   100   100   020    -    3
+  5 Reallocated_Sector_Ct   PO--CK   100   100   010    -    0
+  7 Seek_Error_Rate         POSR--   100   253   045    -    0/320294
+  9 Power_On_Hours          -O--CK   100   100   000    -    182h+39m+24.879s
+ 10 Spin_Retry_Count        PO--C-   100   100   097    -    0
+ 12 Power_Cycle_Count       -O--CK   100   100   020    -    3
+183 Runtime_Bad_Block       -O--CK   100   100   000    -    0
+184 End-to-End_Error        -O--CK   100   100   099    -    0
+187 Reported_Uncorrect      -O--CK   100   100   000    -    0
+188 Command_Timeout         -O--CK   100   100   000    -    0 0 0
+189 High_Fly_Writes         -O-RCK   100   100   000    -    0
+190 Airflow_Temperature_Cel -O---K   065   063   040    -    35 (Min/Max 34/37)
+191 G-Sense_Error_Rate      -O--CK   100   100   000    -    0
+192 Power-Off_Retract_Count -O--CK   100   100   000    -    6
+193 Load_Cycle_Count        -O--CK   100   100   000    -    27
+194 Temperature_Celsius     -O---K   035   040   000    -    35 (0 28 0 0 0)
+195 ECC_On_the_Fly_Count    -O-RC-   080   066   000    -    0/96644691
+197 Current_Pending_Sector  -O--C-   100   100   000    -    0
+198 Offline_Uncorrectable   ----C-   100   100   000    -    0
+199 UDMA_CRC_Error_Count    -OSRCK   200   200   000    -    0
+240 Head_Flying_Hours       ------   100   253   000    -    180h+48m+22.033s
+241 Total_LBAs_Written      ------   100   253   000    -    96526512
+242 Total_LBAs_Read         ------   100   253   000    -    118179
+                            ||||||_ K auto-keep
+                            |||||__ C event count
+                            ||||___ R error rate
+                            |||____ S speed/performance
+                            ||_____ O updated online
+                            |______ P prefailure warning
+`
+
 	mockStandbyData = `smartctl 7.4 2023-08-01 r5530 [x86_64-linux-6.12.24-Unraid] (local build)
 Copyright (C) 2002-23, Bruce Allen, Christian Franke, www.smartmontools.org
 

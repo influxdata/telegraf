@@ -881,6 +881,11 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 			// save the raw value to a field.
 			if field, ok := deviceFieldIDs[attr[1]]; ok {
 				if val, err := parseRawValue(attr[8]); err == nil {
+					// Durations like 182h+39m+24.879s are parsed into seconds
+					// but only occur for hour attributes, so report hours
+					if v, ok := val.(int64); ok && strings.Contains(attr[8], "h+") {
+						val = v / 3600
+					}
 					deviceFields[field] = val
 				}
 			}

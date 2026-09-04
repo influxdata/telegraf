@@ -18,6 +18,11 @@
 - PR [#19463](https://github.com/influxdata/telegraf/pull/19463) fixes an issue
   in `inputs.cisco_telemetry_mdt` by avoiding spurious tags leaking into parent
   metrics. Please check your metrics and queries for the mentioned data.
+- PR [#19624](https://github.com/influxdata/telegraf/pull/19624) fixes the unit
+  of `power_on_hours` in `inputs.smart` for drives reporting the attribute as
+  a duration (e.g. `182h+39m+24.879s`). The value was previously reported in
+  seconds and is now reported in hours. Please check your queries and
+  dashboards for the mentioned field.
 
 ## v1.39.3 [2026-08-10]
 
