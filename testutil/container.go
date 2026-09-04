@@ -39,7 +39,7 @@ type Container struct {
 
 	Address string
 	Ports   map[string]string
-	Logs    *TestLogConsumer
+	Logs    TestLogConsumer
 	Quiet   bool
 
 	container testcontainers.Container
@@ -47,25 +47,19 @@ type Container struct {
 }
 
 func (c *Container) Start() error {
-	if c.ctx == nil {
-		c.ctx = context.Background()
+	c.ctx = context.Background()
+
+	files := make([]testcontainers.ContainerFile, 0, len(c.Files))
+	for k, v := range c.Files {
+		files = append(files, testcontainers.ContainerFile{
+			ContainerFilePath: k,
+			HostFilePath:      v,
+			FileMode:          0o755,
+		})
 	}
 
-	if c.Logs == nil {
-		c.Logs = &TestLogConsumer{}
-	}
-
-	if c.container == nil {
-		files := make([]testcontainers.ContainerFile, 0, len(c.Files))
-		for k, v := range c.Files {
-			files = append(files, testcontainers.ContainerFile{
-				ContainerFilePath: k,
-				HostFilePath:      v,
-				FileMode:          0o755,
-			})
-		}
-
-		req := testcontainers.GenericContainerRequest{
+	req := testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
 			Entrypoint:         c.Entrypoint,
 			Env:                c.Env,
 			ExposedPorts:       c.ExposedPorts,
@@ -78,24 +72,23 @@ func (c *Container) Start() error {
 			Hostname:           c.Hostname,
 			Networks:           c.Networks,
 			WaitingFor:         c.WaitingFor,
-			LogConsumerCfg: &testcontainers.LogConsumerConfig{
-				Consumers: []testcontainers.LogConsumer{c.Logs},
-			},
-			Started: true,
-		}
-
-		cntnr, err := testcontainers.GenericContainer(c.ctx, req)
-		if err != nil {
-			return fmt.Errorf("container failed to start: %w", err)
-		}
-		c.container = cntnr
-		c.Address = "localhost"
-	} else {
-		c.Ports = make(map[string]string)
-		if err := c.container.Start(c.ctx); err != nil {
-			return fmt.Errorf("container failed to restart: %w", err)
-		}
+		},
+		Started: true,
 	}
+
+	cntnr, err := testcontainers.GenericContainer(c.ctx, req)
+	if err != nil {
+		return fmt.Errorf("container failed to start: %w", err)
+	}
+	c.container = cntnr
+
+	c.Logs = TestLogConsumer{}
+	c.container.FollowOutput(&c.Logs)
+	if err := c.container.StartLogProducer(c.ctx); err != nil {
+		return fmt.Errorf("log producer failed: %w", err)
+	}
+
+	c.Address = "localhost"
 
 	info, err := c.GetInfo()
 	if err != nil {
@@ -109,10 +102,6 @@ func (c *Container) Start() error {
 	}
 
 	return nil
-}
-
-func (c *Container) Stop() error {
-	return c.container.Stop(c.ctx, nil)
 }
 
 // LookupMappedPorts creates a lookup table of exposed ports to mapped ports

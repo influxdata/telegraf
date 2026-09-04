@@ -76,7 +76,7 @@ func TestIntegration(t *testing.T) {
 	servicePort := "5672"
 
 	// Setup the container
-	container := testutil.Container{
+	container := &testutil.Container{
 		Image:        "rabbitmq",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
@@ -153,7 +153,7 @@ func TestReconnectIntegration(t *testing.T) {
 	servicePort := "5672"
 
 	// Setup the container
-	container := testutil.Container{
+	container := &testutil.Container{
 		Image:        "rabbitmq",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
@@ -163,6 +163,7 @@ func TestReconnectIntegration(t *testing.T) {
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
+
 	url := fmt.Sprintf("amqp://%s:%s/", container.Address, container.Ports[servicePort])
 
 	// Setup a AMQP producer to send messages
@@ -176,11 +177,12 @@ func TestReconnectIntegration(t *testing.T) {
 		Brokers:      []string{url},
 		Username:     config.NewSecret([]byte("guest")),
 		Password:     config.NewSecret([]byte("guest")),
-		Timeout:      config.Duration(500 * time.Millisecond),
 		Exchange:     "telegraf",
 		ExchangeType: "direct",
 		Queue:        "test",
 		BindingKey:   "test",
+		Timeout:      config.Duration(500 * time.Millisecond),
+		Heartbeat:    config.Duration(time.Second),
 		Log:          logger,
 	}
 
@@ -229,12 +231,7 @@ func TestReconnectIntegration(t *testing.T) {
 
 	// Stop the container to force the plugin to disconnect and wait for the
 	// corresponding message
-	require.NoError(t, container.Stop())
-	require.Eventually(t, func() bool {
-		plugin.Lock()
-		defer plugin.Unlock()
-		return plugin.conn.IsClosed()
-	}, 30*time.Second, 100*time.Millisecond, "plugin never lost connection")
+	require.NoError(t, container.Pause())
 	require.Eventually(t, func() bool {
 		var disconnected, firstAttempt bool
 		for _, msg := range logger.Messages() {
@@ -243,29 +240,30 @@ func TestReconnectIntegration(t *testing.T) {
 				strings.Contains(msg.Text, "Connection closed") &&
 				strings.Contains(msg.Text, "trying to reconnect") {
 				disconnected = true
-				continue
 			}
 
 			// Check for the first attempt to reconnect
-			if msg.Level == testutil.LevelError && strings.Contains(msg.Text, "AMQP connection failed") {
+			if msg.Level == testutil.LevelError && strings.Contains(msg.Text, "AMQP reconnection failed") {
 				firstAttempt = true
 			}
 		}
 		return disconnected && firstAttempt
-	}, 3*time.Second, 100*time.Millisecond)
+	}, 15*time.Second, 1*time.Second, "plugin never disconnected")
 
 	// Restart the container and wait for the plugin to reconnect with a long
 	// timeout. This is necessary because the plugin has a fixed reconnect
 	// interval of 10 seconds so give it some tries.
-	require.NoError(t, container.Start())
-	url = fmt.Sprintf("amqp://%s:%s/", container.Address, container.Ports[servicePort])
-	plugin.Brokers = []string{url}
+	require.NoError(t, container.Resume())
 
 	require.Eventually(t, func() bool {
-		plugin.Lock()
-		defer plugin.Unlock()
-		return !plugin.conn.IsClosed()
-	}, 15*time.Second, 100*time.Millisecond, "plugin never reconnected")
+		for _, msg := range logger.Messages() {
+			// Check for the reconnect message
+			if msg.Level == testutil.LevelInfo && strings.Contains(msg.Text, "Successfully reconnected") {
+				return true
+			}
+		}
+		return false
+	}, 15*time.Second, 1*time.Second, "plugin never reconnected")
 
 	// Setup another AMQP producer to send messages
 	client2, err := newProducer(url)
@@ -281,7 +279,6 @@ func TestReconnectIntegration(t *testing.T) {
 	require.Eventually(t, func() bool {
 		return acc.NMetrics() >= uint64(len(expected))
 	}, 3*time.Second, 100*time.Millisecond)
-	client2.close()
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
 
@@ -294,7 +291,7 @@ func TestStartupErrorBehaviorErrorIntegration(t *testing.T) {
 	servicePort := "5672"
 
 	// Setup the container
-	container := testutil.Container{
+	container := &testutil.Container{
 		Image:        "rabbitmq",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
@@ -351,7 +348,7 @@ func TestStartupErrorBehaviorIgnoreIntegration(t *testing.T) {
 	servicePort := "5672"
 
 	// Setup the container
-	container := testutil.Container{
+	container := &testutil.Container{
 		Image:        "rabbitmq",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
@@ -413,7 +410,7 @@ func TestStartupErrorBehaviorRetryIntegration(t *testing.T) {
 	servicePort := "5672"
 
 	// Setup the container
-	container := testutil.Container{
+	container := &testutil.Container{
 		Image:        "rabbitmq",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
