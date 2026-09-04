@@ -4,7 +4,8 @@ This plugin writes metrics to [parquet][parquet] files. By default, metrics are
 grouped by metric name and written all to the same file.
 
 > [!IMPORTANT]
-> If a metric schema does not match the schema in the file it will be dropped.
+> A parquet file fixes its schema when it is created. When new fields or tags
+> appear, the plugin starts a new file so those columns are not dropped.
 
 To lean more about the parquet format, check out the [parquet docs][docs] as
 well as a blog post on [querying parquet][querying].
@@ -35,7 +36,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # directory = "."
 
   ## Files are rotated after the time interval specified. When set to 0 no time
-  ## based rotation is performed.
+  ## based rotation is performed. Files also rotate when new fields or tags
+  ## appear so those columns are written instead of dropped.
   # rotation_interval = "0h"
 
   ## Timestamp field name
@@ -59,8 +61,13 @@ metrics to generate the schema. Subsequent flush intervals are significantly
 faster.
 
 When writing to a file, the schema is used to look for each value and if it is
-not present a null value is added. The result is that if additional fields are
-present after the first metric flush those fields are omitted.
+not present a null value is added. If additional fields or tags appear after
+the file is created, the plugin closes that file and starts a new one whose
+schema includes the new columns. Earlier columns are kept so missing values
+are still written as null. Rotation for a schema change is logged.
+
+Because files in the directory can have different columns, readers should join
+by column name (for example DuckDB `union_by_name = true`).
 
 The `timestamp_field_name` column holds the metric time, so a field or tag with
 that same name is dropped and logged. Set `timestamp_field_name` to another name
@@ -90,8 +97,9 @@ If a file with the same target name exists at start, the existing file is
 rotated to avoid over-writing it or conflicting schema.
 
 File rotation is available via a time based interval that a user can optionally
-set. Due to the usage of a buffered writer, a size based rotation is not
-possible as the file may not actually get data at each interval.
+set. Files are also rotated when the column schema grows. Due to the usage of a
+buffered writer, a size based rotation is not possible as the file may not
+actually get data at each interval.
 
 ## Explore Parquet Files
 

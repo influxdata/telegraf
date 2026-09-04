@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/apache/arrow-go/v18/arrow"
@@ -143,6 +145,11 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 				schema:   schema,
 				writer:   writer,
 			}
+		} else if err := p.rotateIfSchemaChanged(name, metrics); err != nil {
+			perr.MetricsReject = append(perr.MetricsReject, metricIndices[name]...)
+			perr.MetricsRejectErrors = append(perr.MetricsRejectErrors, fmt.Errorf("failed to rotate file %q: %w", p.metricGroups[name].filename, err))
+			perr.Err = fmt.Errorf("failed to rotate file %q: %w", p.metricGroups[name].filename, err)
+			continue
 		}
 
 		if p.RotationInterval != 0 {
@@ -202,6 +209,28 @@ func (p *Parquet) rotateIfNeeded(name string) error {
 		return nil
 	}
 
+	return p.rotateFile(name)
+}
+
+func (p *Parquet) rotateIfSchemaChanged(name string, metrics []telegraf.Metric) error {
+	extra, added, err := p.newColumns(p.metricGroups[name].schema, metrics)
+	if err != nil {
+		return err
+	}
+	if len(extra) == 0 {
+		return nil
+	}
+
+	slices.Sort(added)
+	p.Log.Infof("Starting a new file for %q to add column(s) %s", name, strings.Join(added, ", "))
+
+	p.metricGroups[name].builder.Release()
+	p.metricGroups[name].schema = p.schemaWithNewColumns(p.metricGroups[name].schema, extra)
+	p.metricGroups[name].builder = array.NewRecordBuilder(memory.DefaultAllocator, p.metricGroups[name].schema)
+	return p.rotateFile(name)
+}
+
+func (p *Parquet) rotateFile(name string) error {
 	if err := p.metricGroups[name].writer.Close(); err != nil {
 		return fmt.Errorf("failed to close file for rotation %q: %w", p.metricGroups[name].filename, err)
 	}
@@ -213,6 +242,69 @@ func (p *Parquet) rotateIfNeeded(name string) error {
 	p.metricGroups[name].writer = writer
 
 	return nil
+}
+
+func (*Parquet) newColumns(schema *arrow.Schema, metrics []telegraf.Metric) ([]arrow.Field, []string, error) {
+	known := make(map[string]struct{}, len(schema.Fields()))
+	for _, field := range schema.Fields() {
+		known[field.Name] = struct{}{}
+	}
+
+	var extra []arrow.Field
+	var added []string
+	for _, metric := range metrics {
+		for _, field := range metric.FieldList() {
+			if _, exists := known[field.Key]; exists {
+				continue
+			}
+			arrowType, err := goToArrowType(field.Value)
+			if err != nil {
+				return nil, nil, fmt.Errorf("error converting '%s=%s' field to arrow type: %w", field.Key, field.Value, err)
+			}
+			known[field.Key] = struct{}{}
+			added = append(added, field.Key)
+			extra = append(extra, arrow.Field{
+				Name:     field.Key,
+				Type:     arrowType,
+				Nullable: true,
+			})
+		}
+		for _, tag := range metric.TagList() {
+			if _, exists := known[tag.Key]; exists {
+				continue
+			}
+			known[tag.Key] = struct{}{}
+			added = append(added, tag.Key)
+			extra = append(extra, arrow.Field{
+				Name:     tag.Key,
+				Type:     arrow.BinaryTypes.String,
+				Nullable: true,
+			})
+		}
+	}
+
+	return extra, added, nil
+}
+
+func (p *Parquet) schemaWithNewColumns(schema *arrow.Schema, extra []arrow.Field) *arrow.Schema {
+	old := schema.Fields()
+	fields := make([]arrow.Field, 0, len(old)+len(extra))
+	var timestamp arrow.Field
+	hasTimestamp := false
+	for _, field := range old {
+		if p.TimestampFieldName != "" && field.Name == p.TimestampFieldName {
+			timestamp = field
+			hasTimestamp = true
+			continue
+		}
+		fields = append(fields, field)
+	}
+	fields = append(fields, extra...)
+	if hasTimestamp {
+		fields = append(fields, timestamp)
+	}
+
+	return arrow.NewSchema(fields, nil)
 }
 
 func (p *Parquet) createRecordBatch(metrics []telegraf.Metric, builder *array.RecordBuilder, schema *arrow.Schema) (arrow.RecordBatch, error) {
@@ -445,11 +537,21 @@ func (p *Parquet) createSchema(metrics []telegraf.Metric) (*arrow.Schema, error)
 	return arrow.NewSchema(fields, nil), nil
 }
 
+func (p *Parquet) unusedFilename(name string) string {
+	now := time.Now()
+	prefix := fmt.Sprintf("%s-%s-%s", name, now.Format("2006-01-02"), strconv.FormatInt(now.Unix(), 10))
+	filename := prefix + ".parquet"
+	for n := 1; ; n++ {
+		if _, err := p.root.Stat(filename); err != nil {
+			return filename
+		}
+		filename = fmt.Sprintf("%s-%d.parquet", prefix, n)
+	}
+}
+
 func (p *Parquet) createWriter(name, filename string, schema *arrow.Schema) (*pqarrow.FileWriter, error) {
 	if _, err := p.root.Stat(filename); err == nil {
-		now := time.Now()
-		rotatedFilename := fmt.Sprintf("%s-%s-%s.parquet", name, now.Format("2006-01-02"), strconv.FormatInt(now.Unix(), 10))
-		if err := p.root.Rename(filename, rotatedFilename); err != nil {
+		if err := p.root.Rename(filename, p.unusedFilename(name)); err != nil {
 			return nil, fmt.Errorf("failed to rename file %q: %w", filename, err)
 		}
 	}
