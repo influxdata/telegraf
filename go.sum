@@ -1673,8 +1673,6 @@ github.com/hashicorp/packer-plugin-sdk v0.3.2/go.mod h1:XZRvL9kRqJJtB6rf9Lu2zWLJ
 github.com/hashicorp/serf v0.8.2/go.mod h1:6hOLApaqBFA1NXqRQAsxw9QxuDEvNxSQRwA/JwenrHc=
 github.com/hashicorp/serf v0.10.4 h1:TCQOrJXHZ1Xf80c4WBhMM9OwUFgDaIP0R+YvoQUKadI=
 github.com/hashicorp/serf v0.10.4/go.mod h1:l+s5Q1OSPWU6b9l9m7ODJzTp7mLevSaVzAI03Nka2F0=
-github.com/hashicorp/vault-client-go v0.4.3 h1:zG7STGVgn/VK6rnZc0k8PGbfv2x/sJExRKHSUg3ljWc=
-github.com/hashicorp/vault-client-go v0.4.3/go.mod h1:4tDw7Uhq5XOxS1fO+oMtotHL7j4sB9cp0T7U6m4FzDY=
 github.com/hashicorp/vault/api v1.23.0 h1:gXgluBsSECfRWTSW9niY2jwg2e9mMJc4WoHNv4g3h6A=
 github.com/hashicorp/vault/api v1.23.0/go.mod h1:zransKiB9ftp+kgY8ydjnvCU7Wk8i9L0DYWpXeMj9ko=
 github.com/hashicorp/vault/api/auth/approle v0.12.0 h1:PhF7jrQjydK1DC05EboosXmZg31GDUIKL8bjyilsJ+E=
@@ -2402,8 +2400,6 @@ github.com/testcontainers/testcontainers-go/modules/azure v0.44.0 h1:TdEQKNZcFuQ
 github.com/testcontainers/testcontainers-go/modules/azure v0.44.0/go.mod h1:VF3c5PrpknPYRaOIPIfjAhhMJpOjOCqkfIAhaQRxkPQ=
 github.com/testcontainers/testcontainers-go/modules/kafka v0.44.0 h1:KOyj22XaB0X2RsyQKQKthzcWObKtni0kLrV1HqFVeec=
 github.com/testcontainers/testcontainers-go/modules/kafka v0.44.0/go.mod h1:OP4szEj4BpOH/UZhbtNER1ERRSj4YJ6hu2x+FIBdo5o=
-github.com/testcontainers/testcontainers-go/modules/vault v0.44.0 h1:lrIV4oEPtBeiTYeWtUdhozf4FIktglP8Hb0JVeyssXE=
-github.com/testcontainers/testcontainers-go/modules/vault v0.44.0/go.mod h1:1uXTUa/fbboegLYSLc26pRxt3N4vpcOongjTarasmI8=
 github.com/thomasklein94/packer-plugin-libvirt v0.5.0 h1:aj2HLHZZM/ClGLIwVp9rrgh+2TOU/w4EiaZHAwCpOgs=
 github.com/thomasklein94/packer-plugin-libvirt v0.5.0/go.mod h1:GwN82FQ6KxCNKtS8LNUgLbwTZs90GGhBzCmTNkrTCrY=
 github.com/tidwall/gjson v1.10.2/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
