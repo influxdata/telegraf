@@ -78,11 +78,11 @@ func TestCases(t *testing.T) {
 			require.NoError(t, cfg.LoadConfig(configFilename))
 			require.Len(t, cfg.Inputs, 1)
 
-			// Mock the nft executable
+			// Mock the nft executable, prepending arguments for the mock
 			plugin := cfg.Inputs[0].Input.(*Nftables)
 			plugin.Binary = exe
+			plugin.args = []string{"--mock", "--testcase", testcasePath}
 			require.NoError(t, plugin.Init())
-			plugin.args = append([]string{"--mock", "--testcase", testcasePath}, plugin.args...)
 
 			// Gather the metrics and compare the output
 			var acc testutil.Accumulator
@@ -101,11 +101,13 @@ func TestCases(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	// Mimic the nft command line arguments
-	var mock, jsonMode bool
+	var mock, jsonMode, terse, version bool
 	var testcase string
 	flag.BoolVar(&mock, "mock", false, "run test as mock")
 	flag.StringVar(&testcase, "testcase", "", "path to the test directory")
+	flag.BoolVar(&version, "version", false, "output the version")
 	flag.BoolVar(&jsonMode, "json", false, "output as JSON")
+	flag.BoolVar(&terse, "terse", false, "omit set elements")
 	flag.Parse()
 
 	if !mock {
@@ -114,6 +116,20 @@ func TestMain(m *testing.M) {
 	}
 
 	// Run as a mock program
+	if version {
+		if nargs := len(flag.Args()); nargs != 0 {
+			fmt.Fprintf(os.Stderr, "expected no extra arguments for --version, got %d\n", nargs)
+			os.Exit(1)
+		}
+		buf, err := os.ReadFile(filepath.Join(testcase, "version.txt"))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "reading version failed: %v", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(buf))
+		os.Exit(0)
+	}
+
 	if !jsonMode {
 		fmt.Fprintln(os.Stderr, "JSON mode not set")
 		os.Exit(1)
@@ -133,7 +149,11 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	filename := filepath.Join(testcase, "table_"+args[2]+".json")
+	suffix := ".json"
+	if terse {
+		suffix = ".terse.json"
+	}
+	filename := filepath.Join(testcase, "table_"+args[2]+suffix)
 	buf, err := os.ReadFile(filename)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
