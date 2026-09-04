@@ -19,7 +19,7 @@ import (
 	_ "github.com/microsoft/go-mssqldb"                     // mssql (sql server)
 	_ "github.com/microsoft/go-mssqldb/integratedauth/krb5" // integrated auth for mssql
 	_ "github.com/sijms/go-ora/v2"                          // oracle
-	_ "github.com/snowflakedb/gosnowflake"                  // snowflake
+	_ "github.com/snowflakedb/gosnowflake/v2"               // snowflake
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
