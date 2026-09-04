@@ -1493,7 +1493,7 @@ func (e *endpoint) getExtraProperty(entity interface{}, fieldPath string) interf
 
 	fields := strings.Split(fieldPath, ".")
 	for _, field := range fields {
-		field = strings.Title(field)
+		field = strings.ToUpper(field[:1]) + field[1:]
 		if v.Kind() != reflect.Struct {
 			e.parent.Log.Warnf("Field %s in %s of %s not struct %s. Skipping", field, fieldPath, reflect.TypeOf(entity), v.Kind())
 			return nil
