@@ -341,11 +341,9 @@ func (w *WinEventLog) evtSubscribe() (evtHandle, error) {
 	// while Telegraf was down. Falling back to the configured start point on failure is safe, because that is
 	// the behavior without an anchor, and the subscription below reports a broken channel anyway.
 	if w.subscriptionFlag == evtSubscribeToFutureEvents {
-		anchored, err := w.anchorBookmark()
-		switch {
-		case err != nil:
+		if anchored, err := w.anchorBookmark(); err != nil {
 			w.Log.Warnf("Anchoring bookmark to the newest event failed: %v", err)
-		case anchored:
+		} else if anchored {
 			w.subscriptionFlag = evtSubscribeStartAfterBookmark
 		}
 	}

@@ -48,6 +48,11 @@ func TestStartWithoutMatchingEvent(t *testing.T) {
 	require.NoError(t, restarted.Init())
 	require.NoError(t, restarted.SetState(state))
 	require.Equal(t, evtSubscribeStartAfterBookmark, restarted.subscriptionFlag)
+
+	// Subscribing after a positionless bookmark must work, as this is how
+	// the next run continues at the channel start
+	require.NoError(t, restarted.Start(&acc))
+	restarted.Stop()
 }
 
 func TestWinEventLog_shouldExcludeEmptyField(t *testing.T) {
