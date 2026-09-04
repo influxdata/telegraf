@@ -141,6 +141,9 @@ to use them.
   ## Timeout for establishing the connection to a broker
   # timeout = "30s"
 
+  ## Heartbeat interval; uses the server configured value if less than a second
+  # heartbeat = "0s"
+
   ## Auth method. PLAIN and EXTERNAL are supported
   ## Using EXTERNAL requires enabling the rabbitmq_auth_mechanism_ssl plugin as
   ## described here: https://www.rabbitmq.com/plugins.html
