@@ -23,6 +23,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/cookie"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -57,6 +58,7 @@ type HTTPResponse struct {
 	// HTTP Basic Auth Credentials
 	Username config.Secret `toml:"username"`
 	Password config.Secret `toml:"password"`
+	proxy.Socks5ProxyConfig
 	tls.ClientConfig
 	cookie.CookieAuthConfig
 
@@ -180,11 +182,19 @@ func (h *HTTPResponse) createHTTPClient(address url.URL) (*http.Client, error) {
 			return nil, err
 		}
 	}
+	dialContext := dialer.DialContext
+	if h.Socks5ProxyEnabled {
+		proxyDialer, err := h.Socks5ProxyConfig.GetDialerWithForward(dialer)
+		if err != nil {
+			return nil, fmt.Errorf("creating SOCKS5 proxy dialer failed: %w", err)
+		}
+		dialContext = proxyDialer.DialContext
+	}
 
 	client := &http.Client{
 		Transport: &http.Transport{
 			Proxy:             getProxyFunc(h.HTTPProxy),
-			DialContext:       dialer.DialContext,
+			DialContext:       dialContext,
 			DisableKeepAlives: true,
 			TLSClientConfig:   tlsCfg,
 		},

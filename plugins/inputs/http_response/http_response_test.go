@@ -11,12 +11,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/armon/go-socks5"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
+	commonproxy "github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -560,6 +562,65 @@ func TestInterface(t *testing.T) {
 	}
 	absentFields := []string{"response_string_match"}
 	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
+}
+
+func TestSocks5Proxy(t *testing.T) {
+	const (
+		proxyUsername = "user"
+		proxyPassword = "password"
+	)
+
+	mux := setUpTestMux()
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	proxyListener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer proxyListener.Close()
+
+	proxyServer, err := socks5.New(&socks5.Config{
+		AuthMethods: []socks5.Authenticator{socks5.UserPassAuthenticator{
+			Credentials: socks5.StaticCredentials{proxyUsername: proxyPassword},
+		}},
+	})
+	require.NoError(t, err)
+	go func() {
+		if err := proxyServer.Serve(proxyListener); err != nil && !errors.Is(err, net.ErrClosed) {
+			t.Error(err)
+		}
+	}()
+
+	h := &HTTPResponse{
+		Log:             testutil.Logger{},
+		URLs:            []string{ts.URL + "/good"},
+		Method:          "GET",
+		ResponseTimeout: config.Duration(time.Second * 20),
+		Socks5ProxyConfig: commonproxy.Socks5ProxyConfig{
+			Socks5ProxyEnabled:  true,
+			Socks5ProxyAddress:  proxyListener.Addr().String(),
+			Socks5ProxyUsername: proxyUsername,
+			Socks5ProxyPassword: proxyPassword,
+		},
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
+
+	expectedFields := map[string]interface{}{
+		"http_response_code": http.StatusOK,
+		"result_type":        "success",
+		"result_code":        0,
+		"response_time":      nil,
+		"content_length":     nil,
+	}
+	expectedTags := map[string]interface{}{
+		"server":      nil,
+		"method":      "GET",
+		"status_code": "200",
+		"result":      "success",
+	}
+	checkOutput(t, &acc, expectedFields, expectedTags, []string{"response_string_match"}, nil)
 }
 
 func TestRedirects(t *testing.T) {
