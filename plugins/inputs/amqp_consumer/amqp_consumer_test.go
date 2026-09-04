@@ -217,7 +217,11 @@ func TestReconnectIntegration(t *testing.T) {
 		return acc.NMetrics() >= uint64(len(expected))
 	}, 3*time.Second, 100*time.Millisecond)
 	client.close()
-	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual)
+	for _, m := range actual {
+		m.Accept()
+	}
 
 	// Remove the metrics to make sure we can receive after reconnecting
 	acc.ClearMetrics()
