@@ -881,6 +881,11 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 			// save the raw value to a field.
 			if field, ok := deviceFieldIDs[attr[1]]; ok {
 				if val, err := parseRawValue(attr[8]); err == nil {
+					// Durations like 182h+39m+24.879s are parsed into seconds
+					// but only occur for hour attributes, so report hours
+					if v, ok := val.(int64); ok && strings.Contains(attr[8], "h+") {
+						val = v / 3600
+					}
 					deviceFields[field] = val
 				}
 			}
@@ -984,8 +989,7 @@ func parseRawValue(rawVal string) (interface{}, error) {
 		}
 	}
 
-	// Duration: 65h+33m+09.259s, reported as whole hours to match drives
-	// reporting a plain hour count for the same attribute
+	// Duration: 65h+33m+09.259s
 	unit := regexp.MustCompile("^(.*)([hms])$")
 	parts := strings.Split(rawVal, "+")
 	if len(parts) == 0 {
@@ -1010,7 +1014,7 @@ func parseRawValue(rawVal string) (interface{}, error) {
 			// Unknown, ignore
 		}
 	}
-	return duration / 3600, nil
+	return duration, nil
 }
 
 func parseBytesWritten(acc telegraf.Accumulator, fields map[string]interface{}, tags map[string]string, str string) error {

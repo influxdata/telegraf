@@ -268,8 +268,9 @@ func TestGatherSATAInfoHoursDuration(t *testing.T) {
 	wg.Add(1)
 	sampleSmart.gatherDisk(&acc, "/dev/sdc", wg)
 
-	// Attributes reported as "182h+39m+24.879s" must end up as whole hours,
-	// consistent with drives reporting a plain hour count
+	// Attributes reported as "182h+39m+24.879s" keep their raw value in
+	// seconds but must end up as whole hours in power_on_hours, consistent
+	// with drives reporting a plain hour count
 	expected := []telegraf.Metric{
 		metric.New(
 			"smart_device",
@@ -312,7 +313,7 @@ func TestGatherSATAInfoHoursDuration(t *testing.T) {
 			},
 			map[string]interface{}{
 				"exit_status": int(0),
-				"raw_value":   int64(182),
+				"raw_value":   int64(657564),
 				"threshold":   int64(0),
 				"value":       int64(100),
 				"worst":       int64(100),
@@ -333,7 +334,7 @@ func TestGatherSATAInfoHoursDuration(t *testing.T) {
 			},
 			map[string]interface{}{
 				"exit_status": int(0),
-				"raw_value":   int64(180),
+				"raw_value":   int64(650902),
 				"threshold":   int64(0),
 				"value":       int64(100),
 				"worst":       int64(253),
@@ -978,7 +979,7 @@ var (
 				"value":       int64(100),
 				"worst":       int64(253),
 				"threshold":   int64(0),
-				"raw_value":   int64(6585),
+				"raw_value":   int64(23709323),
 				"exit_status": int(0),
 			},
 			map[string]string{
