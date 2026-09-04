@@ -463,6 +463,70 @@ func TestPod(t *testing.T) {
 	}
 }
 
+func TestPodInitContainerResources(t *testing.T) {
+	ki := &KubernetesInventory{}
+	require.NoError(t, ki.createSelectorFilters())
+
+	restartPolicy := corev1.ContainerRestartPolicyAlways
+	acc := new(testutil.Accumulator)
+	ki.gatherPod(&corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			CreationTimestamp: metav1.Now(),
+			Name:              "pod1",
+			Namespace:         "ns1",
+		},
+		Spec: corev1.PodSpec{
+			NodeName: "node1",
+			InitContainers: []corev1.Container{
+				{
+					Name:          "sidecar",
+					Image:         "image1:latest",
+					RestartPolicy: &restartPolicy,
+					Resources: corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							"memory": resource.MustParse("256Mi"),
+						},
+					},
+				},
+				{Name: "init", Image: "image2"},
+			},
+		},
+		Status: corev1.PodStatus{
+			Phase: "Succeeded",
+			InitContainerStatuses: []corev1.ContainerStatus{
+				{
+					Name: "sidecar",
+					State: corev1.ContainerState{
+						Terminated: &corev1.ContainerStateTerminated{Reason: "Completed"},
+					},
+				},
+				{Name: "init"},
+			},
+		},
+	}, acc)
+
+	require.Len(t, acc.Metrics, 1)
+	acc.AssertContainsTaggedFields(t, podContainerMeasurement,
+		map[string]interface{}{
+			"restarts_total":               int32(0),
+			"state_code":                   1,
+			"state_reason":                 "Completed",
+			"terminated_reason":            "Completed",
+			"resource_limits_memory_bytes": int64(268435456),
+		},
+		map[string]string{
+			"container_name": "sidecar",
+			"image":          "image1",
+			"namespace":      "ns1",
+			"node_name":      "node1",
+			"pod_name":       "pod1",
+			"phase":          "Succeeded",
+			"readiness":      "unready",
+			"state":          "terminated",
+			"version":        "latest",
+		})
+}
+
 func TestPodSelectorFilter(t *testing.T) {
 	cli := &client{}
 	now := time.Now()
