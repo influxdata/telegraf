@@ -420,6 +420,77 @@ func TestIntegrationSetCreatesNewPath(t *testing.T) {
 	}
 }
 
+func TestIntegrationOpenBAONamespace(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	tests := []struct {
+		namespace string
+		expected  string
+	}{
+		{
+			namespace: "namespaceA",
+			expected:  "secret-some-value",
+		},
+		{
+			namespace: "namespaceB",
+			expected:  "secret-another-value",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.namespace, func(t *testing.T) {
+			// Commands for preparing the container
+			commands := []string{
+				// Authenticate
+				"bao login telegraf",
+				// Create namespaces and add secrets
+				"bao namespace create namespaceA",
+				"bao secrets enable -namespace=namespaceA -path=my-mount-path kv-v2",
+				"bao kv put -namespace=namespaceA -mount=my-mount-path my-secret-path secret-some-name=secret-some-value",
+				"bao namespace create namespaceB",
+				"bao secrets enable -namespace=namespaceB -path=my-mount-path kv-v2",
+				"bao kv put -namespace=namespaceB -mount=my-mount-path my-secret-path secret-some-name=secret-another-value",
+			}
+
+			// Setup the container
+			container := &testutil.Container{
+				Image:        "openbao/openbao",
+				ExposedPorts: []string{"8200"},
+				Env: map[string]string{
+					"BAO_ADDR":              "http://localhost:8200",
+					"BAO_DEV_ROOT_TOKEN_ID": "telegraf",
+					"BAO_TOKEN":             "telegraf",
+				},
+				WaitingFor: wait.ForAll(
+					wait.ForHTTP("/v1/sys/health").WithPort("8200"),
+					wait.ForExec([]string{"/bin/sh", "-c", strings.Join(commands, " && ")}),
+				),
+			}
+			require.NoError(t, container.Start(), "failed to start container")
+			defer container.Terminate()
+
+			addr := "http://" + container.Address + ":" + container.Ports["8200"]
+
+			plugin := &Vault{
+				ID:         "test_integration_namespace",
+				Address:    addr,
+				MountPath:  "my-mount-path",
+				SecretPath: "my-secret-path",
+				Namespace:  tt.namespace,
+				Token:      config.NewSecret([]byte("telegraf")),
+			}
+
+			require.NoError(t, plugin.Init())
+
+			secret, err := plugin.Get("secret-some-name")
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, string(secret))
+		})
+	}
+}
+
 func readInfo(container *testutil.Container, command []string) ([]byte, error) {
 	rc, reader, err := container.Exec(command, exec.Multiplexed())
 	if err != nil {

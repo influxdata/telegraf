@@ -25,6 +25,7 @@ type Vault struct {
 	Address    string        `toml:"address"`
 	MountPath  string        `toml:"mount_path"`
 	SecretPath string        `toml:"secret_path"`
+	Namespace  string        `toml:"namespace"`
 	Engine     string        `toml:"engine"`
 	Token      config.Secret `toml:"token"`
 	AppRole    *appRole      `toml:"approle"`
@@ -77,6 +78,9 @@ func (v *Vault) Init() error {
 	client, err := vault.NewClient(cfg)
 	if err != nil {
 		return fmt.Errorf("error creating Vault client: %w", err)
+	}
+	if v.Namespace != "" {
+		client.SetNamespace(v.Namespace)
 	}
 
 	v.client = client
