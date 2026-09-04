@@ -1,8 +1,7 @@
 package vault
 
 import (
-	"bytes"
-	"encoding/json"
+	"fmt"
 	"io"
 	"path/filepath"
 	"slices"
@@ -10,10 +9,16 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/exec"
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
+)
+
+const (
+	vaultImageV1 = "hashicorp/vault:1.20.4"
+	vaultImageV2 = "hashicorp/vault:2.1"
 )
 
 func TestInitFail(t *testing.T) {
@@ -53,13 +58,40 @@ func TestInitFail(t *testing.T) {
 	}
 }
 
-func TestIntegrationV1(t *testing.T) {
+func TestIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	for _, engine := range []string{"kv-v1", "kv-v2"} {
-		t.Run(engine, func(t *testing.T) {
+	tests := []struct {
+		name   string
+		image  string
+		engine string
+	}{
+		{
+			name:   "v1.x with kv-v1",
+			image:  vaultImageV1,
+			engine: "kv-v1",
+		},
+		{
+			name:   "v1.x with kv-v2",
+			image:  vaultImageV1,
+			engine: "kv-v2",
+		},
+		{
+			name:   "v2.x with kv-v1",
+			image:  vaultImageV2,
+			engine: "kv-v1",
+		},
+		{
+			name:   "v2.x with kv-v2",
+			image:  vaultImageV2,
+			engine: "kv-v2",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			// Commands for preparing the container
 			commands := []string{
 				// Enable authentication via approle
@@ -67,15 +99,15 @@ func TestIntegrationV1(t *testing.T) {
 				"vault policy write my-policy /tmp/policy.hcl",
 				"vault write auth/approle/role/my-role policies=my-policy",
 				// Enable KV engine and add secrets
-				"vault secrets enable -path=my-mount-path " + engine,
+				"vault secrets enable -path=my-mount-path " + tt.engine,
 				"vault kv put -mount=my-mount-path my-secret-path secret-some-name=secret-some-value",
 			}
 
 			// Setup the container
 			policyPath, err := filepath.Abs("testdata/policy.hcl")
 			require.NoError(t, err)
-			container := testutil.Container{
-				Image:        "hashicorp/vault:1.21",
+			container := &testutil.Container{
+				Image:        tt.image,
 				ExposedPorts: []string{"8200"},
 				Env: map[string]string{
 					"VAULT_ADDR":              "http://localhost:8200",
@@ -94,113 +126,25 @@ func TestIntegrationV1(t *testing.T) {
 			addr := "http://" + container.Address + ":" + container.Ports["8200"]
 
 			// Determine credentials from container
-			rc, reader, err := container.Exec([]string{
+			buf, err := readInfo(container, []string{
 				"vault", "read", "-field", "role_id", "auth/approle/role/my-role/role-id",
 			})
 			require.NoError(t, err)
-			buf, err := io.ReadAll(reader)
-			require.NoError(t, err)
-			require.Zero(t, rc, string(buf))
-			roleID := string(buf[8:])
-
-			rc, reader, err = container.Exec([]string{
+			roleID := string(buf)
+			buf, err = readInfo(container, []string{
 				"vault", "write", "-field", "secret_id", "-force", "auth/approle/role/my-role/secret-id",
 			})
 			require.NoError(t, err)
-			buf, err = io.ReadAll(reader)
-			require.NoError(t, err)
-			require.Zero(t, rc, string(buf))
-			secretID := config.NewSecret(buf[8:])
+			secretID := config.NewSecret(buf)
 			defer secretID.Destroy()
 
 			// Setup plugin
 			plugin := &Vault{
-				ID:         "test_integration_" + engine,
+				ID:         "test_integration_" + tt.engine,
 				Address:    addr,
 				MountPath:  "my-mount-path",
 				SecretPath: "my-secret-path",
-				Engine:     engine,
-				AppRole: &appRole{
-					RoleID: roleID,
-					Secret: secretID,
-				},
-			}
-			require.NoError(t, plugin.Init())
-
-			// Check if we can retrieve the secret
-			secret, err := plugin.Get("secret-some-name")
-			require.NoError(t, err)
-			require.Equal(t, "secret-some-value", string(secret))
-		})
-	}
-}
-func TestIntegrationV2(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	for _, engine := range []string{"kv-v1", "kv-v2"} {
-		t.Run(engine, func(t *testing.T) {
-			// Commands for preparing the container
-			commands := []string{
-				// Enable authentication via approle
-				"vault auth enable approle",
-				"vault policy write my-policy /tmp/policy.hcl",
-				"vault write auth/approle/role/my-role policies=my-policy",
-				// Enable KV engine and add secrets
-				"vault secrets enable -path=my-mount-path " + engine,
-				"vault kv put -mount=my-mount-path my-secret-path secret-some-name=secret-some-value",
-			}
-
-			// Setup the container
-			policyPath, err := filepath.Abs("testdata/policy.hcl")
-			require.NoError(t, err)
-			container := testutil.Container{
-				Image:        "hashicorp/vault:2.1",
-				ExposedPorts: []string{"8200"},
-				Env: map[string]string{
-					"VAULT_ADDR":              "http://localhost:8200",
-					"VAULT_DEV_ROOT_TOKEN_ID": "telegraf",
-					"VAULT_TOKEN":             "telegraf",
-				},
-				Files: map[string]string{"/tmp/policy.hcl": policyPath},
-				WaitingFor: wait.ForAll(
-					wait.ForHTTP("/v1/sys/health").WithPort("8200"),
-					wait.ForExec([]string{"/bin/sh", "-c", strings.Join(commands, " && ")}),
-				),
-			}
-			require.NoError(t, container.Start(), "failed to start container")
-			defer container.Terminate()
-
-			addr := "http://" + container.Address + ":" + container.Ports["8200"]
-
-			// Determine credentials from container
-			rc, reader, err := container.Exec([]string{
-				"vault", "read", "-field", "role_id", "auth/approle/role/my-role/role-id",
-			})
-			require.NoError(t, err)
-			buf, err := io.ReadAll(reader)
-			require.NoError(t, err)
-			require.Zero(t, rc, string(buf))
-			roleID := string(buf[8:])
-
-			rc, reader, err = container.Exec([]string{
-				"vault", "write", "-field", "secret_id", "-force", "auth/approle/role/my-role/secret-id",
-			})
-			require.NoError(t, err)
-			buf, err = io.ReadAll(reader)
-			require.NoError(t, err)
-			require.Zero(t, rc, string(buf))
-			secretID := config.NewSecret(buf[8:])
-			defer secretID.Destroy()
-
-			// Setup plugin
-			plugin := &Vault{
-				ID:         "test_integration_" + engine,
-				Address:    addr,
-				MountPath:  "my-mount-path",
-				SecretPath: "my-secret-path",
-				Engine:     engine,
+				Engine:     tt.engine,
 				AppRole: &appRole{
 					RoleID: roleID,
 					Secret: secretID,
@@ -235,8 +179,8 @@ func TestIntegrationAppRoleSecretWrapped(t *testing.T) {
 	// Setup the container
 	policyPath, err := filepath.Abs("testdata/policy.hcl")
 	require.NoError(t, err)
-	container := testutil.Container{
-		Image:        "hashicorp/vault:1.20.4",
+	container := &testutil.Container{
+		Image:        vaultImageV1,
 		ExposedPorts: []string{"8200"},
 		Env: map[string]string{
 			"VAULT_ADDR":              "http://localhost:8200",
@@ -255,36 +199,16 @@ func TestIntegrationAppRoleSecretWrapped(t *testing.T) {
 	addr := "http://" + container.Address + ":" + container.Ports["8200"]
 
 	// Determine credentials from container
-	rc, reader, err := container.Exec([]string{
+	buf, err := readInfo(container, []string{
 		"vault", "read", "-field", "role_id", "auth/approle/role/my-role/role-id",
 	})
 	require.NoError(t, err)
-	buf, err := io.ReadAll(reader)
-	require.NoError(t, err)
-	require.Zero(t, rc, string(buf))
-	roleID := string(buf[8:])
-
-	rc, reader, err = container.Exec([]string{
-		"vault", "write", "-wrap-ttl=60s", "-force", "-format=json", "auth/approle/role/my-role/secret-id",
+	roleID := string(buf)
+	buf, err = readInfo(container, []string{
+		"vault", "write", "-wrap-ttl=60s", "-force", "-field", "wrapping_token", "auth/approle/role/my-role/secret-id",
 	})
 	require.NoError(t, err)
-	buf, err = io.ReadAll(reader)
-	require.NoError(t, err)
-	require.Zero(t, rc, string(buf))
-
-	// Trim some junk characters in the response first.
-	// "json"/"raw" format may still contain some non-JSON prefix/suffix
-	startIndex := bytes.IndexByte(buf, byte('{'))
-	endIndex := bytes.LastIndexByte(buf, byte('}'))
-	buf = buf[startIndex : endIndex+1]
-
-	var resp struct {
-		WrapInfo struct {
-			Token string `json:"token"`
-		} `json:"wrap_info"`
-	}
-	require.NoError(t, json.Unmarshal(buf, &resp))
-	secretID := config.NewSecret([]byte(resp.WrapInfo.Token))
+	secretID := config.NewSecret(buf)
 	defer secretID.Destroy()
 
 	// Setup plugin
@@ -322,8 +246,8 @@ func TestIntegrationSetKeepsSiblings(t *testing.T) {
 			}
 
 			// Setup the container
-			container := testutil.Container{
-				Image:        "hashicorp/vault:1.20.4",
+			container := &testutil.Container{
+				Image:        vaultImageV1,
 				ExposedPorts: []string{"8200"},
 				Env: map[string]string{
 					"VAULT_ADDR":              "http://localhost:8200",
@@ -392,8 +316,8 @@ func TestIntegrationRemove(t *testing.T) {
 			}
 
 			// Setup the container
-			container := testutil.Container{
-				Image:        "hashicorp/vault:1.20.4",
+			container := &testutil.Container{
+				Image:        vaultImageV1,
 				ExposedPorts: []string{"8200"},
 				Env: map[string]string{
 					"VAULT_ADDR":              "http://localhost:8200",
@@ -457,8 +381,8 @@ func TestIntegrationSetCreatesNewPath(t *testing.T) {
 			}
 
 			// Setup the container
-			container := testutil.Container{
-				Image:        "hashicorp/vault:1.20.4",
+			container := &testutil.Container{
+				Image:        vaultImageV1,
 				ExposedPorts: []string{"8200"},
 				Env: map[string]string{
 					"VAULT_ADDR":              "http://localhost:8200",
@@ -494,4 +418,19 @@ func TestIntegrationSetCreatesNewPath(t *testing.T) {
 			require.Equal(t, "three", string(value))
 		})
 	}
+}
+
+func readInfo(container *testutil.Container, command []string) ([]byte, error) {
+	rc, reader, err := container.Exec(command, exec.Multiplexed())
+	if err != nil {
+		return nil, fmt.Errorf("executing command failed: %w", err)
+	}
+	buf, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, fmt.Errorf("reading output failed: %w", err)
+	}
+	if rc != 0 {
+		return nil, fmt.Errorf("command returned %d: %s", rc, string(buf))
+	}
+	return buf, nil
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
 	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/exec"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
@@ -136,8 +137,8 @@ func (c *Container) LookupMappedPorts() error {
 	return nil
 }
 
-func (c *Container) Exec(cmds []string) (int, io.Reader, error) {
-	return c.container.Exec(c.ctx, cmds)
+func (c *Container) Exec(cmds []string, options ...exec.ProcessOption) (int, io.Reader, error) {
+	return c.container.Exec(c.ctx, cmds, options...)
 }
 
 func (c *Container) PrintLogs() {
