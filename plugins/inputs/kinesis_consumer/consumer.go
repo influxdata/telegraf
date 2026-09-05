@@ -16,13 +16,21 @@ import (
 
 type recordHandler func(ctx context.Context, shard string, r *types.Record)
 
+const (
+	restartPositionCheckpoint    = "checkpoint"
+	restartPositionLastProcessed = "last_processed"
+	restartPositionIteratorType  = "shard_iterator_type"
+)
+
 type shardConsumer struct {
 	seqnr    string
 	interval time.Duration
 	log      telegraf.Logger
 
-	client *kinesis.Client
-	params *kinesis.GetShardIteratorInput
+	client   *kinesis.Client
+	params   *kinesis.GetShardIteratorInput
+	position func() string
+	restart  string
 
 	onMessage recordHandler
 }
@@ -94,9 +102,34 @@ func (c *shardConsumer) consume(ctx context.Context, shard string) ([]types.Chil
 	}
 }
 
+func (c *shardConsumer) iteratorParams() *kinesis.GetShardIteratorInput {
+	var seqnr string
+	switch c.restart {
+	case restartPositionCheckpoint:
+		if c.position != nil {
+			seqnr = c.position()
+		}
+		if seqnr == "" {
+			seqnr = c.seqnr
+		}
+	case restartPositionLastProcessed:
+		seqnr = c.seqnr
+	}
+	if seqnr == "" {
+		return c.params
+	}
+
+	params := *c.params
+	params.ShardIteratorType = types.ShardIteratorTypeAfterSequenceNumber
+	params.StartingSequenceNumber = &seqnr
+
+	return &params
+}
+
 func (c *shardConsumer) iterator(ctx context.Context) (*string, error) {
 	for {
-		resp, err := c.client.GetShardIterator(ctx, c.params)
+		params := c.iteratorParams()
+		resp, err := c.client.GetShardIterator(ctx, params)
 		if err != nil {
 			var throughputErr *types.ProvisionedThroughputExceededException
 			if errors.As(err, &throughputErr) {
@@ -109,7 +142,7 @@ func (c *shardConsumer) iterator(ctx context.Context) (*string, error) {
 
 			return nil, err
 		}
-		c.log.Tracef("successfully updated iterator for shard %s (%s)...", *c.params.ShardId, c.seqnr)
+		c.log.Tracef("successfully updated iterator for shard %s (%s)...", *c.params.ShardId, aws.ToString(params.StartingSequenceNumber))
 		return resp.ShardIterator, nil
 	}
 }
@@ -118,6 +151,7 @@ type consumer struct {
 	config              aws.Config
 	stream              string
 	iterType            types.ShardIteratorType
+	restart             string
 	pollInterval        time.Duration
 	shardUpdateInterval time.Duration
 	log                 telegraf.Logger
@@ -320,6 +354,7 @@ func (c *consumer) startShardConsumer(ctx context.Context, id, seqnr string) {
 		log:       c.log,
 		onMessage: c.onMessage,
 		client:    c.client,
+		restart:   c.restart,
 		params: &kinesis.GetShardIteratorInput{
 			ShardId:           &id,
 			ShardIteratorType: c.iterType,
@@ -329,6 +364,9 @@ func (c *consumer) startShardConsumer(ctx context.Context, id, seqnr string) {
 	if seqnr != "" {
 		sc.params.ShardIteratorType = types.ShardIteratorTypeAfterSequenceNumber
 		sc.params.StartingSequenceNumber = &seqnr
+	}
+	if c.position != nil {
+		sc.position = func() string { return c.position(id) }
 	}
 
 	c.Lock()

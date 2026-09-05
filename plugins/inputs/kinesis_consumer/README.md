@@ -76,6 +76,15 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Available options: 'TRIM_HORIZON' (first in non-expired) and 'LATEST'
   # shard_iterator_type = "TRIM_HORIZON"
 
+  ## Position for recreating an expired shard iterator
+  ## Available options:
+  ##   'checkpoint'          -- sequence number stored in the checkpoint
+  ##                            backend, falls back to 'last_processed' if no
+  ##                            checkpoint is available
+  ##   'last_processed'      -- last sequence number read from the shard
+  ##   'shard_iterator_type' -- position determined by 'shard_iterator_type'
+  # shard_iterator_restart_position = "checkpoint"
+
   ## Interval for checking for new records
   ## Please consider limits for getting records documented here:
   ## https://docs.aws.amazon.com/streams/latest/dev/service-sizes-and-limits.html

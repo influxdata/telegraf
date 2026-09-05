@@ -27,6 +27,7 @@ var once sync.Once
 type KinesisConsumer struct {
 	StreamName             string          `toml:"streamname"`
 	ShardIteratorType      string          `toml:"shard_iterator_type"`
+	RestartPosition        string          `toml:"shard_iterator_restart_position"`
 	PollInterval           config.Duration `toml:"poll_interval"`
 	ShardUpdateInterval    config.Duration `toml:"shard_update_interval"`
 	DynamoDB               *dynamoDB       `toml:"checkpoint_dynamodb"`
@@ -76,6 +77,9 @@ func (k *KinesisConsumer) Init() error {
 	if k.ShardIteratorType == "" {
 		k.ShardIteratorType = "TRIM_HORIZON"
 	}
+	if k.RestartPosition == "" {
+		k.RestartPosition = restartPositionCheckpoint
+	}
 	if k.ContentEncoding == "" {
 		k.ContentEncoding = "identity"
 	}
@@ -83,6 +87,12 @@ func (k *KinesisConsumer) Init() error {
 	// Check input params
 	if k.StreamName == "" {
 		return errors.New("stream name cannot be empty")
+	}
+
+	switch k.RestartPosition {
+	case restartPositionCheckpoint, restartPositionLastProcessed, restartPositionIteratorType:
+	default:
+		return fmt.Errorf("invalid shard iterator restart position %q", k.RestartPosition)
 	}
 
 	f, err := getDecodingFunc(k.ContentEncoding)
@@ -137,6 +147,7 @@ func (k *KinesisConsumer) Start(acc telegraf.Accumulator) error {
 		config:              k.cfg,
 		stream:              k.StreamName,
 		iterType:            types.ShardIteratorType(k.ShardIteratorType),
+		restart:             k.RestartPosition,
 		pollInterval:        time.Duration(k.PollInterval),
 		shardUpdateInterval: time.Duration(k.ShardUpdateInterval),
 		log:                 k.Log,
