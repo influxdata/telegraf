@@ -46,6 +46,17 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## Master socket support (experimental)
+  ## When enabled, the plugin will try to query the HAProxy master socket
+  ## for worker PIDs and request statistics from each worker. This helps to
+  ## collect metrics from old worker processes that continue handling
+  ## connections after a reload.
+  # use_master = false
+  # master_socket = "/run/haproxy-master.sock" # optional - plugin will try common locations if empty
+  # aggregate_workers = false # if true, aggregate (sum) stats across workers per proxy/service
+  # add_source_tag = false # if true, adds a `source` tag like "master:pid=1234" or "master:aggregated"
+  # concurrency = 4 # max concurrent requests to workers via master socket
 ```
 
 ### HAProxy Configuration
@@ -94,6 +105,22 @@ The following renames are made:
 - `hrsp_5xx` -> `http_response.5xx`
 - `hrsp_other` -> `http_response.other`
 
+## Master socket and worker aggregation
+
+When HAProxy is reloaded it may spawn new worker processes while old workers
+continue handling existing connections. Those old workers expose statistics via
+the master socket using `@!<pid> show stat` which allows collecting metrics for
+workers that otherwise would be invisible to the admin socket paths. The
+plugin can optionally query the master socket and request stats for each
+worker process.
+
+- use_master (bool) - enable master-socket based collection. Default: false
+- master_socket (string) - path to master socket. If empty the plugin will try
+  common locations like `/run/haproxy-master.sock` and `/run/haproxy/master.sock`
+- aggregate_workers (bool) - if true, sum stats across workers per proxy/service
+- add_source_tag (bool) - if true, adds a `source` tag like `master:pid=1234`
+- concurrency (int) - maximum concurrent requests to the master socket (default 4)
+
 ## Metrics
 
 For more details about collected metrics reference the [HAProxy CSV format
@@ -105,6 +132,8 @@ documentation][6].
     - `proxy` - proxy name
     - `sv` - service name
     - `type` - proxy session type
+    - `source` - (optional) when gathering via master socket, identifies the
+      worker pid or `master:aggregated`
   - fields:
     - `status` (string)
     - `check_status` (string)
@@ -123,5 +152,7 @@ documentation][6].
 ## Example Output
 
 ```text
-haproxy,server=/run/haproxy/admin.sock,proxy=public,sv=FRONTEND,type=frontend http_response.other=0i,req_rate_max=1i,comp_byp=0i,status="OPEN",rate_lim=0i,dses=0i,req_rate=0i,comp_rsp=0i,bout=9287i,comp_in=0i,mode="http",smax=1i,slim=2000i,http_response.1xx=0i,conn_rate=0i,dreq=0i,ereq=0i,iid=2i,rate_max=1i,http_response.2xx=1i,comp_out=0i,intercepted=1i,stot=2i,pid=1i,http_response.5xx=1i,http_response.3xx=0i,http_response.4xx=0i,conn_rate_max=1i,conn_tot=2i,dcon=0i,bin=294i,rate=0i,sid=0i,req_tot=2i,scur=0i,dresp=0i 1513293519000000000
+haproxy,server=/run/haproxy/admin.sock,proxy=public,sv=FRONTEND,type=frontend http_response.other=0i,req_rate_max=1i,comp_byp=0i,status="OPEN",rate_lim=0i,dses=0i,req_rate=0i,comp_rsp=0i,bout=9287i,co[...]
+```
+
 ```

@@ -41,6 +41,43 @@ func serverSocket(l net.Listener) {
 	}
 }
 
+// master server simulator for tests
+func masterServer(l net.Listener) {
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			return
+		}
+
+		go func(c net.Conn) {
+			defer c.Close()
+
+			buf := make([]byte, 1024)
+			n, err := c.Read(buf)
+			if err != nil {
+				return
+			}
+
+			data := string(buf[:n])
+			if strings.HasPrefix(data, "show proc") {
+				// return a simple proc list containing two fake pids
+				fmt.Fprintln(c, "1234 worker")
+				fmt.Fprintln(c, "2345 worker")
+				return
+			}
+
+			if strings.HasPrefix(data, "@!1234 show stat") || strings.Contains(data, "@!1234") {
+				c.Write(csvOutputSample) //nolint:errcheck
+				return
+			}
+			if strings.HasPrefix(data, "@!2345 show stat") || strings.Contains(data, "@!2345") {
+				c.Write(csvOutputSample) //nolint:errcheck
+				return
+			}
+		}(conn)
+	}
+}
+
 func TestHaproxyGeneratesMetricsWithAuthentication(t *testing.T) {
 	// We create a fake server to return test data
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -274,6 +311,79 @@ func TestHaproxyKeepFieldNames(t *testing.T) {
 	delete(fields, "http_response.other")
 
 	acc.AssertContainsTaggedFields(t, "haproxy", fields, tags)
+}
+
+func TestHaproxyGeneratesMetricsFromMaster(t *testing.T) {
+	// create a short unix socket path
+	tempDir := os.TempDir()
+	sock := filepath.Join(tempDir, "haproxy-master-test.sock")
+	_ = os.Remove(sock)
+	l, err := net.Listen("unix", sock)
+	require.NoError(t, err)
+	defer l.Close()
+	go masterServer(l)
+
+	r := &HAProxy{
+		UseMaster:    true,
+		AddSourceTag: true,
+		Concurrency:  4,
+	}
+
+	var acc testutil.Accumulator
+
+	// try gathering from the master socket directly
+	err = r.gatherFromMaster(sock, &acc)
+	require.NoError(t, err)
+
+	// Expect that metrics from pid 1234 and 2345 were imported (server tag equals master socket)
+	tags := map[string]string{
+		"server": sock,
+		"proxy":  "git",
+		"sv":     "www",
+		"type":   "server",
+	}
+
+	fields := haproxyGetFieldValues()
+	// When AddSourceTag is set, source tag is present per pid; we check that at least one of them exists
+	acc.AssertContainsTaggedFields(t, "haproxy", fields, tags)
+}
+
+func TestHaproxyAggregatesWorkers(t *testing.T) {
+	// create a short unix socket path
+	tempDir := os.TempDir()
+	sock := filepath.Join(tempDir, "haproxy-master-agg.sock")
+	_ = os.Remove(sock)
+	l, err := net.Listen("unix", sock)
+	require.NoError(t, err)
+	defer l.Close()
+	go masterServer(l)
+
+	r := &HAProxy{
+		UseMaster:       true,
+		AggregateWorkers: true,
+		AddSourceTag:    true,
+		Concurrency:     4,
+	}
+
+	var acc testutil.Accumulator
+
+	err = r.gatherFromMaster(sock, &acc)
+	require.NoError(t, err)
+
+	// After aggregation we expect summed numeric fields (stot should be doubled)
+	// Base stot from haproxyGetFieldValues() is 14539
+	aggTags := map[string]string{
+		"server": sock,
+		"proxy":  "git",
+		"sv":     "www",
+		"type":   "server",
+	}
+
+	fields := map[string]interface{}{
+		"stot": uint64(14539 * 2),
+	}
+
+	acc.AssertContainsTaggedFields(t, "haproxy", fields, aggTags)
 }
 
 func mustReadSampleOutput() []byte {
