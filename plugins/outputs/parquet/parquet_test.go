@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apache/arrow-go/v18/arrow"
 	"github.com/apache/arrow-go/v18/parquet"
 	"github.com/apache/arrow-go/v18/parquet/file"
 	"github.com/stretchr/testify/require"
@@ -536,6 +537,46 @@ func TestCannotEscapeDirectory(t *testing.T) {
 
 			var perr *os.PathError
 			require.ErrorAs(t, plugin.Write(metrics), &perr)
+		})
+	}
+}
+
+func TestFieldTakesPrecedenceOverTagInAnyOrder(t *testing.T) {
+	tagged := metric.New(
+		"test",
+		map[string]string{"shared": "from-tag"},
+		map[string]interface{}{"other": int64(1)},
+		time.Now(),
+	)
+	fielded := metric.New(
+		"test",
+		map[string]string{},
+		map[string]interface{}{"shared": int64(42)},
+		time.Now(),
+	)
+
+	orders := map[string][]telegraf.Metric{
+		"tag first":   {tagged, fielded},
+		"field first": {fielded, tagged},
+	}
+
+	for name, metrics := range orders {
+		t.Run(name, func(t *testing.T) {
+			plugin := &Parquet{
+				Directory:          t.TempDir(),
+				TimestampFieldName: defaultTimestampFieldName,
+				Log:                testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+			defer plugin.Close()
+
+			schema, err := plugin.createSchema(metrics)
+			require.NoError(t, err)
+
+			shared, ok := schema.FieldsByName("shared")
+			require.True(t, ok)
+			require.Len(t, shared, 1)
+			require.Equal(t, arrow.PrimitiveTypes.Int64, shared[0].Type)
 		})
 	}
 }
