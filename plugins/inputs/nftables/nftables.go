@@ -86,12 +86,7 @@ func (n *Nftables) Init() error {
 }
 
 func (n *Nftables) version() (*semver.Version, error) {
-	args := make([]string, 0, 2)
-	if n.UseSudo {
-		// Keep the binary which is stored as the first argument
-		args = append(args, n.args[0])
-	}
-	args = append(args, "--version")
+	args := append(slices.Clone(n.args), "--version")
 	out, err := exec.Command(n.Binary, args...).Output()
 	if err != nil {
 		var oserr *exec.ExitError
