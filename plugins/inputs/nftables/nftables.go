@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
-	"slices"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -81,12 +80,11 @@ func (n *Nftables) Init() error {
 			n.args = append(n.args, "--terse")
 		}
 	}
-	n.args = append(n.args, "--json", "list", "table")
 	return nil
 }
 
 func (n *Nftables) version() (*semver.Version, error) {
-	args := append(slices.Clone(n.args), "--version")
+	args := append(n.args, "--version")
 	out, err := exec.Command(n.Binary, args...).Output()
 	if err != nil {
 		var oserr *exec.ExitError
@@ -114,7 +112,7 @@ func (n *Nftables) Gather(acc telegraf.Accumulator) error {
 
 func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 	// Run the nft command
-	args := append(n.args, name)
+	args := append(n.args, "--json", "list", "table", name)
 	c := exec.Command(n.Binary, args...)
 	out, err := c.Output()
 	if err != nil {

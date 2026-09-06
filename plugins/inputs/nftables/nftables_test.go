@@ -78,7 +78,7 @@ func TestCases(t *testing.T) {
 			require.NoError(t, cfg.LoadConfig(configFilename))
 			require.Len(t, cfg.Inputs, 1)
 
-			// Mock the nft executable, prepending arguments for the mock
+			// Mock the nft executable
 			plugin := cfg.Inputs[0].Input.(*Nftables)
 			plugin.Binary = exe
 			plugin.args = []string{"--mock", "--testcase", testcasePath}
