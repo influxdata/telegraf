@@ -86,8 +86,8 @@ of this occurring.
 
 ## File Rotation
 
-If a file with the same target name exists at start, the existing file is
-rotated to avoid over-writing it or conflicting schema.
+Existing files are never modified. If the target name is already taken, a
+numeric suffix is appended until an unused name is found.
 
 File rotation is available via a time based interval that a user can optionally
 set. Due to the usage of a buffered writer, a size based rotation is not
