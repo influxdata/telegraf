@@ -1,53 +1,26 @@
 package redfish
 
 import (
-	"net/url"
+	"fmt"
+
+	"github.com/stmcginnis/gofish/schemas"
 
 	"github.com/influxdata/telegraf"
 )
 
-type power struct {
-	PowerControl []struct {
-		Name                string
-		MemberID            string
-		PowerAllocatedWatts *float64
-		PowerAvailableWatts *float64
-		PowerCapacityWatts  *float64
-		PowerConsumedWatts  *float64
-		PowerRequestedWatts *float64
-		PowerMetrics        struct {
-			AverageConsumedWatts *float64
-			IntervalInMin        int
-			MaxConsumedWatts     *float64
-			MinConsumedWatts     *float64
-		}
-	}
-	PowerSupplies []struct {
-		Name                 string
-		MemberID             string
-		PowerInputWatts      *float64
-		PowerCapacityWatts   *float64
-		PowerOutputWatts     *float64
-		LastPowerOutputWatts *float64
-		Status               status
-		LineInputVoltage     *float64
-	}
-	Voltages []struct {
-		Name                   string
-		MemberID               string
-		ReadingVolts           *float64
-		UpperThresholdCritical *float64
-		UpperThresholdFatal    *float64
-		LowerThresholdCritical *float64
-		LowerThresholdFatal    *float64
-		Status                 status
-	}
+func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
+	return r.gatherPowerMetrics(acc, address, system, chassis)
 }
 
-func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *system, chassis *chassis) error {
-	power, err := r.getPower(chassis.Power.Ref)
+func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
+	power, err := chassis.Power()
 	if err != nil {
-		return err
+		return fmt.Errorf("error parsing input from %s: %w", address, err)
+	}
+
+	if power == nil {
+		r.Log.Warnf("Skipping thermal data of chassis %q. Is only the new subsys api available?", chassis.ID)
+		return nil
 	}
 
 	for _, j := range power.PowerControl {
@@ -55,10 +28,10 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *
 			"member_id": j.MemberID,
 			"address":   address,
 			"name":      j.Name,
-			"source":    system.Hostname,
+			"source":    system.HostName,
 		}
-		if _, ok := r.tagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
-			tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
+		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
+			tags["datacenter"] = ""
 			tags["room"] = chassis.Location.PostalAddress.Room
 			tags["rack"] = chassis.Location.Placement.Rack
 			tags["row"] = chassis.Location.Placement.Row
@@ -74,7 +47,7 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *
 			"power_consumed_watts":   j.PowerConsumedWatts,
 			"power_requested_watts":  j.PowerRequestedWatts,
 			"average_consumed_watts": j.PowerMetrics.AverageConsumedWatts,
-			"interval_in_min":        j.PowerMetrics.IntervalInMin,
+			"interval_in_min":        int64(*j.PowerMetrics.IntervalInMin),
 			"max_consumed_watts":     j.PowerMetrics.MaxConsumedWatts,
 			"min_consumed_watts":     j.PowerMetrics.MinConsumedWatts,
 		}
@@ -82,16 +55,16 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *
 		acc.AddFields("redfish_power_powercontrol", fields, tags)
 	}
 
-	for _, j := range power.PowerSupplies {
+	for i := range len(power.PowerSupplies) {
 		tags := make(map[string]string, 19)
-		tags["member_id"] = j.MemberID
+		tags["member_id"] = power.PowerSupplies[i].MemberID
 		tags["address"] = address
-		tags["name"] = j.Name
-		tags["source"] = system.Hostname
-		tags["state"] = j.Status.State
-		tags["health"] = j.Status.Health
-		if _, ok := r.tagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
-			tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
+		tags["name"] = power.PowerSupplies[i].Name
+		tags["source"] = system.HostName
+		tags["state"] = string(power.PowerSupplies[i].Status.State)
+		tags["health"] = string(power.PowerSupplies[i].Status.Health)
+		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
+			tags["datacenter"] = ""
 			tags["room"] = chassis.Location.PostalAddress.Room
 			tags["rack"] = chassis.Location.Placement.Rack
 			tags["row"] = chassis.Location.Placement.Row
@@ -101,11 +74,11 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *
 		}
 
 		fields := make(map[string]interface{})
-		fields["power_input_watts"] = j.PowerInputWatts
-		fields["power_output_watts"] = j.PowerOutputWatts
-		fields["line_input_voltage"] = j.LineInputVoltage
-		fields["last_power_output_watts"] = j.LastPowerOutputWatts
-		fields["power_capacity_watts"] = j.PowerCapacityWatts
+		fields["power_input_watts"] = power.PowerSupplies[i].PowerInputWatts
+		fields["power_output_watts"] = power.PowerSupplies[i].PowerOutputWatts
+		fields["line_input_voltage"] = power.PowerSupplies[i].LineInputVoltage
+		fields["last_power_output_watts"] = power.PowerSupplies[i].LastPowerOutputWatts
+		fields["power_capacity_watts"] = power.PowerSupplies[i].PowerCapacityWatts
 		acc.AddFields("redfish_power_powersupplies", fields, tags)
 	}
 
@@ -114,11 +87,11 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *
 		tags["member_id"] = j.MemberID
 		tags["address"] = address
 		tags["name"] = j.Name
-		tags["source"] = system.Hostname
-		tags["state"] = j.Status.State
-		tags["health"] = j.Status.Health
-		if _, ok := r.tagSet[tagSetChassisLocation]; ok && chassis.Location != nil {
-			tags["datacenter"] = chassis.Location.PostalAddress.DataCenter
+		tags["source"] = system.HostName
+		tags["state"] = string(j.Status.State)
+		tags["health"] = string(j.Status.Health)
+		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
+			tags["datacenter"] = ""
 			tags["room"] = chassis.Location.PostalAddress.Room
 			tags["rack"] = chassis.Location.Placement.Rack
 			tags["row"] = chassis.Location.Placement.Row
@@ -137,14 +110,4 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *
 	}
 
 	return nil
-}
-
-func (r *Redfish) getPower(ref string) (*power, error) {
-	loc := r.baseURL.ResolveReference(&url.URL{Path: ref})
-	power := &power{}
-	err := r.getData(loc.String(), power)
-	if err != nil {
-		return nil, err
-	}
-	return power, nil
 }

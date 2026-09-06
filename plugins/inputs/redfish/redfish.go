@@ -6,14 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"net/url"
-	"path"
-	"slices"
-	"strings"
 	"time"
+
+	"github.com/stmcginnis/gofish"
+	"github.com/stmcginnis/gofish/schemas"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -44,50 +43,7 @@ type Redfish struct {
 	tagSet map[string]bool
 	client http.Client
 	tls.ClientConfig
-	baseURL *url.URL
-}
-
-type system struct {
-	Hostname string `json:"hostname"`
-	Links    struct {
-		Chassis []struct {
-			Ref string `json:"@odata.id"`
-		}
-	}
-}
-
-type chassis struct {
-	ChassisType  string
-	Location     *location
-	Manufacturer string
-	Model        string
-	PartNumber   string
-	Power        struct {
-		Ref string `json:"@odata.id"`
-	}
-	PowerState   string
-	SKU          string
-	SerialNumber string
-	Status       status
-	Thermal      struct {
-		Ref string `json:"@odata.id"`
-	}
-}
-
-type location struct {
-	PostalAddress struct {
-		DataCenter string
-		Room       string
-	}
-	Placement struct {
-		Rack string
-		Row  string
-	}
-}
-
-type status struct {
-	State  string
-	Health string
+	gf *gofish.Service
 }
 
 func (*Redfish) SampleConfig() string {
@@ -95,6 +51,27 @@ func (*Redfish) SampleConfig() string {
 }
 
 func (r *Redfish) Init() error {
+	err := r.checkConfig()
+	if err != nil {
+		return err
+	}
+
+	r.gf, err = r.gofishSetup()
+	if err != nil {
+		return fmt.Errorf("error parsing input from %s. This is likely due to the BMC response being in text/html: %w",
+			r.Address+"/redfish/v1/Systems/"+r.ComputerSystemID,
+			err)
+	}
+
+	r.tagSet = make(map[string]bool, len(r.IncludeTagSets))
+	for _, setLabel := range r.IncludeTagSets {
+		r.tagSet[setLabel] = true
+	}
+
+	return nil
+}
+
+func (r *Redfish) checkConfig() error {
 	if r.Address == "" {
 		return errors.New("did not provide IP")
 	}
@@ -125,22 +102,15 @@ func (r *Redfish) Init() error {
 			return fmt.Errorf("unknown workaround requested: %s", workaround)
 		}
 	}
-	r.tagSet = make(map[string]bool, len(r.IncludeTagSets))
-	for _, setLabel := range r.IncludeTagSets {
-		r.tagSet[setLabel] = true
-	}
 
-	var err error
-	r.baseURL, err = url.Parse(r.Address)
-	if err != nil {
-		return err
-	}
+	return nil
+}
 
+func (r *Redfish) gofishSetup() (*gofish.Service, error) {
 	tlsCfg, err := r.ClientConfig.TLSConfig()
 	if err != nil {
-		return err
+		return nil, err
 	}
-
 	r.client = http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
@@ -149,145 +119,120 @@ func (r *Redfish) Init() error {
 		Timeout: time.Duration(r.Timeout),
 	}
 
-	return nil
-}
-
-func (r *Redfish) Gather(acc telegraf.Accumulator) error {
-	address, _, err := net.SplitHostPort(r.baseURL.Host)
-	if err != nil {
-		address = r.baseURL.Host
-	}
-
-	system, err := r.getComputerSystem(r.ComputerSystemID)
-	if err != nil {
-		return err
-	}
-
-	for _, link := range system.Links.Chassis {
-		// References are resolved against the configured address, so an empty
-		// one would request the device's web root instead of a Redfish resource
-		if link.Ref == "" {
-			r.Log.Warn("Skipping chassis without reference")
-			continue
-		}
-
-		chassis, err := r.getChassis(link.Ref)
-		if err != nil {
-			return err
-		}
-
-		for _, metric := range r.IncludeMetrics {
-			var err error
-			switch metric {
-			case "thermal":
-				if chassis.Thermal.Ref == "" {
-					r.Log.Warnf("Skipping thermal data of chassis %q without reference", link.Ref)
-					continue
-				}
-				err = r.gatherThermal(acc, address, system, chassis)
-			case "power":
-				if chassis.Power.Ref == "" {
-					r.Log.Warnf("Skipping power data of chassis %q without reference", link.Ref)
-					continue
-				}
-				err = r.gatherPower(acc, address, system, chassis)
-			default:
-				return fmt.Errorf("unknown metric requested: %s", metric)
-			}
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (r *Redfish) getData(address string, payload interface{}) error {
-	req, err := http.NewRequest("GET", address, nil)
-	if err != nil {
-		return err
-	}
-
 	username, err := r.Username.Get()
 	if err != nil {
-		return fmt.Errorf("getting username failed: %w", err)
+		return nil, fmt.Errorf("getting username failed: %w", err)
 	}
 	user := username.String()
 	username.Destroy()
 
 	password, err := r.Password.Get()
 	if err != nil {
-		return fmt.Errorf("getting password failed: %w", err)
+		return nil, fmt.Errorf("getting password failed: %w", err)
 	}
 	pass := password.String()
 	password.Destroy()
 
-	req.SetBasicAuth(user, pass)
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("OData-Version", "4.0")
-
-	// workaround for iLO4 thermal data
-	if slices.Contains(r.Workarounds, "ilo4-thermal") && strings.Contains(address, "/Thermal") {
-		req.Header.Del("OData-Version")
+	gofishConfig := gofish.ClientConfig{
+		Endpoint:   r.Address,
+		Username:   user,
+		Password:   pass,
+		BasicAuth:  true,
+		HTTPClient: &r.client,
 	}
-
-	resp, err := r.client.Do(req)
+	c, err := gofish.Connect(gofishConfig)
 	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("received status code %d (%s) for address %s, expected 200",
-			resp.StatusCode,
-			http.StatusText(resp.StatusCode),
-			address)
+		return nil, err
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	// Retrieve the service root
+	return c.Service, nil
+}
+
+func (r *Redfish) Gather(acc telegraf.Accumulator) error {
+	var address string
+	redfishURL, err := url.Parse(r.Address)
 	if err != nil {
-		return err
+		address = redfishURL.Host
+	} else {
+		address, _, err = net.SplitHostPort(redfishURL.Host)
 	}
 
-	err = json.Unmarshal(body, &payload)
 	if err != nil {
-		return fmt.Errorf("error parsing input from %s (Content-Type %q): %w", address, resp.Header.Get("Content-Type"), err)
+		address = redfishURL.Host
 	}
 
+	systems, err := r.gf.Systems()
+	if err != nil {
+		return r.parseGofishError(err)
+	}
+
+	// Process only the system defined via ComputerSystemID in the config
+	// Collect configured metrics on every chassis
+	for _, system := range systems {
+		if system.ID == r.ComputerSystemID {
+			chassisList, err := system.Chassis()
+			if err != nil {
+				return r.parseGofishError(err)
+			}
+
+			if len(chassisList) == 0 {
+				r.Log.Warn("No chassis found, no metric can be produced")
+				return nil
+			}
+
+			for _, chassis := range chassisList {
+				for _, metric := range r.IncludeMetrics {
+					var err error
+					switch metric {
+					case "thermal":
+						err = r.gatherThermal(acc, address, system, chassis)
+					case "power":
+						err = r.gatherPower(acc, address, system, chassis)
+					default:
+						return fmt.Errorf("unknown metric requested: %s", metric)
+					}
+					if err != nil {
+						return err
+					}
+				}
+			}
+			break
+		}
+	}
 	return nil
 }
 
-func (r *Redfish) getComputerSystem(id string) (*system, error) {
-	loc := r.baseURL.ResolveReference(&url.URL{Path: path.Join("/redfish/v1/Systems/", id)})
-	system := &system{}
-	err := r.getData(loc.String(), system)
-	if err != nil {
-		return nil, err
+func (r *Redfish) parseGofishError(err error) error {
+	var collectionError *schemas.CollectionError
+	if errors.As(err, &collectionError) {
+		for f, v := range collectionError.Failures {
+			var parseError *json.SyntaxError
+			var queryError *schemas.Error
+			if errors.As(v, &parseError) {
+				return fmt.Errorf("error parsing input from %s: %w", r.Address, err)
+			}
+			if errors.As(v, &queryError) {
+				return fmt.Errorf("received status code %d for address %s%s, expected 200",
+					queryError.HTTPReturnedStatusCode,
+					r.Address,
+					f)
+			}
+		}
 	}
-	return system, nil
+	return fmt.Errorf("error parsing input from %s: %w", r.Address, err)
 }
 
-func (r *Redfish) getChassis(ref string) (*chassis, error) {
-	loc := r.baseURL.ResolveReference(&url.URL{Path: ref})
-	chassis := &chassis{}
-	err := r.getData(loc.String(), chassis)
-	if err != nil {
-		return nil, err
-	}
-	return chassis, nil
-}
-
-func setChassisTags(chassis *chassis, tags map[string]string) {
-	tags["chassis_chassistype"] = chassis.ChassisType
+func setChassisTags(chassis *schemas.Chassis, tags map[string]string) {
+	tags["chassis_chassistype"] = string(chassis.ChassisType)
 	tags["chassis_manufacturer"] = chassis.Manufacturer
 	tags["chassis_model"] = chassis.Model
 	tags["chassis_partnumber"] = chassis.PartNumber
-	tags["chassis_powerstate"] = chassis.PowerState
+	tags["chassis_powerstate"] = string(chassis.PowerState)
 	tags["chassis_sku"] = chassis.SKU
 	tags["chassis_serialnumber"] = chassis.SerialNumber
-	tags["chassis_state"] = chassis.Status.State
-	tags["chassis_health"] = chassis.Status.Health
+	tags["chassis_state"] = string(chassis.Status.State)
+	tags["chassis_health"] = string(chassis.Status.Health)
 }
 
 func init() {
