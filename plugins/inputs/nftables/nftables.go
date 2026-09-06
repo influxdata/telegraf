@@ -71,17 +71,15 @@ func (n *Nftables) Init() error {
 
 	// Avoid dumping the elements of sets using --terse, unless sets are
 	// monitored and the nft version does not support counting elements.
-	terse := !includesSet["sets"]
-	if !terse {
+	if !includesSet["sets"] {
+		n.args = append(n.args, "--terse")
+	} else {
 		version, err := n.version()
 		if err != nil {
 			n.Log.Warnf("Failed to determine nft --version, will not use --terse: %v", err)
-		} else {
-			terse = version.GreaterThanEqual(semver.New(1, 1, 7, "", ""))
+		} else if version.GreaterThanEqual(semver.New(1, 1, 7, "", "")) {
+			n.args = append(n.args, "--terse")
 		}
-	}
-	if terse {
-		n.args = append(n.args, "--terse")
 	}
 	n.args = append(n.args, "--json", "list", "table")
 	return nil
