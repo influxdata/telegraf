@@ -593,3 +593,34 @@ func TestFieldTakesPrecedenceOverTagInAnyOrder(t *testing.T) {
 		})
 	}
 }
+
+func TestNeverOverwritesAnExistingFile(t *testing.T) {
+	testDir := t.TempDir()
+	plugin := &Parquet{
+		Directory:          testDir,
+		TimestampFieldName: defaultTimestampFieldName,
+		Log:                testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	schema, err := plugin.createSchema([]telegraf.Metric{
+		metric.New("test", map[string]string{}, map[string]interface{}{"value": 1.0}, time.Now()),
+	})
+	require.NoError(t, err)
+
+	first, firstName, err := plugin.createWriter("test", schema)
+	require.NoError(t, err)
+	require.NoError(t, first.Close())
+	require.NoError(t, os.WriteFile(filepath.Join(testDir, firstName), []byte("sentinel"), 0640))
+
+	second, secondName, err := plugin.createWriter("test", schema)
+	require.NoError(t, err)
+	require.NoError(t, second.Close())
+
+	require.NotEqual(t, firstName, secondName)
+	preserved, err := os.ReadFile(filepath.Join(testDir, firstName))
+	require.NoError(t, err)
+	require.Equal(t, "sentinel", string(preserved))
+}
