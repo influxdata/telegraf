@@ -137,33 +137,11 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 	a.cancel = cancel
 
 	processingCtx, processingCancel := context.WithCancel(ctx)
-	var processingWg sync.WaitGroup
 	a.wg.Add(1)
-	processingWg.Add(1)
 	go func() {
 		defer a.wg.Done()
-		defer processingWg.Done()
 		a.process(processingCtx, msgs, acc)
 	}()
-
-	if a.Log.Level().Includes(telegraf.Trace) {
-		a.wg.Add(1)
-		go func() {
-			defer a.wg.Done()
-			notifications := make(chan *amqp.StateChanged, 10)
-			a.conn.NotifyStateChange(notifications)
-			select {
-			case <-ctx.Done():
-				return
-			case n := <-notifications:
-				var reason string
-				if n.Err != nil {
-					reason = " (" + n.Err.Error() + ")"
-				}
-				a.Log.Tracef("Connection state changed for %q to %q%s", n.From, n.To, reason)
-			}
-		}()
-	}
 
 	go func() {
 		for {
@@ -174,20 +152,19 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 
 			a.Log.Infof("Connection closed: %s; trying to reconnect...", err)
 			processingCancel()
-			processingWg.Wait()
+			a.wg.Wait()
 			for {
 				msgs, err := a.connect()
 				if err != nil {
 					a.Log.Errorf("AMQP reconnection failed: %s; retrying...", err)
+					time.Sleep(10 * time.Second)
 					continue
 				}
 
 				processingCtx, processingCancel = context.WithCancel(ctx)
 				a.wg.Add(1)
-				processingWg.Add(1)
 				go func() {
 					defer a.wg.Done()
-					defer processingWg.Done()
 					a.process(processingCtx, msgs, acc)
 				}()
 				break
@@ -204,20 +181,15 @@ func (*AMQPConsumer) Gather(_ telegraf.Accumulator) error {
 }
 
 func (a *AMQPConsumer) Stop() {
-	// We did not connect successfully so there is nothing to do here.
-	if a.conn == nil || a.conn.IsClosed() {
-		return
-	}
 	if a.cancel != nil {
 		a.cancel()
 	}
-	a.cancel()
 	a.wg.Wait()
 
-	err := a.conn.Close()
-	if err != nil && !errors.Is(err, amqp.ErrClosed) {
-		a.Log.Errorf("Error closing AMQP connection: %s", err)
-		return
+	if a.conn != nil && !a.conn.IsClosed() {
+		if err := a.conn.Close(); err != nil && !errors.Is(err, amqp.ErrClosed) {
+			a.Log.Errorf("Error closing AMQP connection: %s", err)
+		}
 	}
 }
 
