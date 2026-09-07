@@ -240,7 +240,7 @@ require (
 	go.starlark.net v0.0.0-20260708150628-5395d018f003
 	go.step.sm/crypto v0.89.0
 	go.yaml.in/yaml/v3 v3.0.5
-	golang.org/x/crypto v0.55.0
+	golang.org/x/crypto v0.56.0
 	golang.org/x/exp v0.0.0-20260824195058-e88cd73687aa
 	golang.org/x/mod v0.40.0
 	golang.org/x/net v0.58.0
