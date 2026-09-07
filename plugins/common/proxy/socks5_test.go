@@ -44,7 +44,7 @@ func TestSocks5ProxyConfigIntegration(t *testing.T) {
 		Socks5ProxyUsername: proxyUsername,
 		Socks5ProxyPassword: proxyPassword,
 	}
-	dialer, err := conf.GetDialer()
+	dialer, err := conf.GetDialer(nil)
 	require.NoError(t, err)
 
 	var proxyConn net.Conn

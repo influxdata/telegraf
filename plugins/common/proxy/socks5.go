@@ -11,13 +11,9 @@ type Socks5ProxyConfig struct {
 	Socks5ProxyPassword string `toml:"socks5_password"`
 }
 
-func (c *Socks5ProxyConfig) GetDialer() (proxy.Dialer, error) {
-	return c.GetDialerWithForward(proxy.Direct)
-}
-
-// GetDialerWithForward creates a SOCKS5 dialer using the given dialer to
-// connect to the proxy server.
-func (c *Socks5ProxyConfig) GetDialerWithForward(forward proxy.Dialer) (*ProxiedDialer, error) {
+// GetDialer creates a SOCKS5 dialer using the given dialer to connect to the
+// proxy server. If forward is nil, a default net.Dialer is used.
+func (c *Socks5ProxyConfig) GetDialer(forward proxy.Dialer) (*ProxiedDialer, error) {
 	var auth *proxy.Auth
 	if c.Socks5ProxyPassword != "" || c.Socks5ProxyUsername != "" {
 		auth = new(proxy.Auth)

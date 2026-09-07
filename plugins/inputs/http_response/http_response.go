@@ -184,7 +184,7 @@ func (h *HTTPResponse) createHTTPClient(address url.URL) (*http.Client, error) {
 	}
 	dialContext := dialer.DialContext
 	if h.Socks5ProxyEnabled {
-		proxyDialer, err := h.Socks5ProxyConfig.GetDialerWithForward(dialer)
+		proxyDialer, err := h.Socks5ProxyConfig.GetDialer(dialer)
 		if err != nil {
 			return nil, fmt.Errorf("creating SOCKS5 proxy dialer failed: %w", err)
 		}

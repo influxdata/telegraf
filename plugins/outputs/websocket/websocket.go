@@ -82,7 +82,7 @@ func (w *WebSocket) Connect() error {
 	}
 
 	if w.Socks5ProxyEnabled {
-		netDialer, err := w.Socks5ProxyConfig.GetDialer()
+		netDialer, err := w.Socks5ProxyConfig.GetDialer(nil)
 		if err != nil {
 			return fmt.Errorf("error connecting to socks5 proxy: %w", err)
 		}
