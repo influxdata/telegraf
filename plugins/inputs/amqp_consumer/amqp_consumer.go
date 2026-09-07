@@ -136,35 +136,52 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	a.cancel = cancel
 
+	var processingWg sync.WaitGroup
 	processingCtx, processingCancel := context.WithCancel(ctx)
 	a.wg.Add(1)
+	processingWg.Add(1)
 	go func() {
 		defer a.wg.Done()
+		defer processingWg.Done()
 		a.process(processingCtx, msgs, acc)
 	}()
 
+	a.wg.Add(1)
 	go func() {
+		defer a.wg.Done()
 		for {
-			err := <-a.conn.NotifyClose(make(chan *amqp.Error))
-			if err == nil {
-				break
+			select {
+			case <-ctx.Done():
+				a.close()
+				return
+			case err := <-a.conn.NotifyClose(make(chan *amqp.Error)):
+				if err == nil {
+					return
+				}
 			}
 
 			a.Log.Infof("Connection closed: %s; trying to reconnect...", err)
 			processingCancel()
-			a.wg.Wait()
+			processingWg.Wait()
 			for {
 				msgs, err := a.connect()
 				if err != nil {
 					a.Log.Errorf("AMQP reconnection failed: %s; retrying...", err)
-					time.Sleep(10 * time.Second)
-					continue
+					select {
+					case <-ctx.Done():
+						a.close()
+						return
+					case <-time.After(10 * time.Second):
+						continue
+					}
 				}
 
 				processingCtx, processingCancel = context.WithCancel(ctx)
 				a.wg.Add(1)
+				processingWg.Add(1)
 				go func() {
 					defer a.wg.Done()
+					defer processingWg.Done()
 					a.process(processingCtx, msgs, acc)
 				}()
 				break
@@ -176,7 +193,7 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (*AMQPConsumer) Gather(_ telegraf.Accumulator) error {
+func (*AMQPConsumer) Gather(telegraf.Accumulator) error {
 	return nil
 }
 
@@ -186,11 +203,7 @@ func (a *AMQPConsumer) Stop() {
 	}
 	a.wg.Wait()
 
-	if a.conn != nil && !a.conn.IsClosed() {
-		if err := a.conn.Close(); err != nil && !errors.Is(err, amqp.ErrClosed) {
-			a.Log.Errorf("Error closing AMQP connection: %s", err)
-		}
-	}
+	a.close()
 }
 
 func (a *AMQPConsumer) createConfig() (*amqp.Config, error) {
@@ -335,6 +348,13 @@ func (a *AMQPConsumer) connect() (<-chan amqp.Delivery, error) {
 	}
 
 	return msgs, err
+}
+func (a *AMQPConsumer) close() {
+	if a.conn != nil && !a.conn.IsClosed() {
+		if err := a.conn.Close(); err != nil && !errors.Is(err, amqp.ErrClosed) {
+			a.Log.Errorf("Error closing AMQP connection: %s", err)
+		}
+	}
 }
 
 func (a *AMQPConsumer) declareExchange(
