@@ -47,6 +47,7 @@ store usage.
   secret_path = ""
 
   ## Namespace of the secrets; no namespace is used when empty
+  ## Ignored if the server does not support namespaces such as Vault Community
   # namespace = ""
 
   ## Secret store engine to use.
