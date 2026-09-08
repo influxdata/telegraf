@@ -539,3 +539,57 @@ func TestCannotEscapeDirectory(t *testing.T) {
 		})
 	}
 }
+
+func TestFieldTakesPrecedenceOverTagInAnyOrder(t *testing.T) {
+	tagged := metric.New(
+		"test",
+		map[string]string{"shared": "from-tag"},
+		map[string]interface{}{"other": int64(1)},
+		time.Now(),
+	)
+	fielded := metric.New(
+		"test",
+		map[string]string{},
+		map[string]interface{}{"shared": int64(42)},
+		time.Now(),
+	)
+
+	tests := []struct {
+		name     string
+		metrics  []telegraf.Metric
+		accepted []int
+		rejected []int
+	}{
+		{
+			name:     "tag first",
+			metrics:  []telegraf.Metric{tagged, fielded},
+			accepted: []int{1},
+			rejected: []int{0},
+		},
+		{
+			name:     "field first",
+			metrics:  []telegraf.Metric{fielded, tagged},
+			accepted: []int{0},
+			rejected: []int{1},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &Parquet{
+				Directory:          t.TempDir(),
+				TimestampFieldName: defaultTimestampFieldName,
+				Log:                testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
+
+			var perr *internal.PartialWriteError
+			require.ErrorAs(t, plugin.Write(tt.metrics), &perr)
+			require.ErrorContains(t, perr.Err, `invalid value from-tag (string) for column "shared" (int64)`)
+			require.ElementsMatch(t, perr.MetricsAccept, tt.accepted)
+			require.ElementsMatch(t, perr.MetricsReject, tt.rejected)
+		})
+	}
+}
