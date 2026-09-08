@@ -98,19 +98,6 @@ to use them.
   ## AzureSQLMIDatabaseIO, AzureSQLMIServerProperties, AzureSQLMIOsWaitstats,
   ## AzureSQLMIMemoryClerks, AzureSQLMIPerformanceCounters, AzureSQLMIRequests, AzureSQLMISchedulers
 
-  ## Following are old config settings
-  ## You may use them only if you are using the earlier flavor of queries, however it is recommended to use
-  ## the new mechanism of identifying the database_type there by use it's corresponding queries
-
-  ## Optional parameter, setting this to 2 will use a new version
-  ## of the collection queries that break compatibility with the original
-  ## dashboards.
-  ## Version 2 - is compatible from SQL Server 2012 and later versions and also for SQL Azure DB
-  # query_version = 2
-
-  ## If you are using AzureDB, setting this to true will gather resource utilization metrics
-  # azuredb = false
-
   ## Toggling this to true will emit an additional metric called "sqlserver_telegraf_health".
   ## This metric tracks the count of attempted queries and successful queries for each SQL instance specified in "servers".
   ## The purpose of this metric is to assist with identifying and diagnosing any connectivity or query issues.
@@ -348,10 +335,6 @@ metrics queries.
 
 ### Query Version 1
 
-> [!CAUTION]
-> The `query_version` option was **deprecated** in Telegraf v1.16. All future
-> development will be under configuration option`database_type`.
-
 The original metrics queries provide:
 
 - *Performance counters*: 1000+ metrics from `sys.dm_os_performance_counters`
@@ -371,10 +354,6 @@ If you are using the original queries all stats have the following tags:
 - `type`: type of stats to easily filter measurements
 
 ### Query Version 2
-
-> [!CAUTION]
-> The `query_version` option was **deprecated** in Telegraf v1.16. All future
-> development will be under configuration option`database_type`.
 
 The new (version 2) metrics provide:
 

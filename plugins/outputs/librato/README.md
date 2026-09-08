@@ -4,10 +4,6 @@ This plugin writes metrics to the [Librato][librato] service. It requires an
 `api_user` and `api_token` which can be obtained on the [website][tokens] for
 your account.
 
-The `source_tag` option in the Configuration file is used to send contextual
-information from Point Tags to the API. Besides from this, the plugin currently
-does not send any additional associated Point Tags.
-
 > [!IMPORTANT]
 > If the point value being sent cannot be converted to a `float64`, the metric
 > is skipped.
