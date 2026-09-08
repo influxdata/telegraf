@@ -414,6 +414,8 @@ func (p *Parquet) createSchema(metrics []telegraf.Metric) (*arrow.Schema, error)
 				rawFields[field.Key] = arrowType
 			}
 		}
+	}
+	for _, metric := range metrics {
 		for _, tag := range metric.TagList() {
 			if _, ok := rawFields[tag.Key]; !ok {
 				rawFields[tag.Key] = arrow.BinaryTypes.String
