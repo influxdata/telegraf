@@ -23,20 +23,15 @@
   a duration (e.g. `182h+39m+24.879s`). The value was previously reported in
   seconds and is now reported in hours. Please check your queries and
   dashboards for the mentioned field.
-
-### Breaking Changes
-
-- [#19125](https://github.com/influxdata/telegraf/pull/19125) `inputs.aerospike` Remove deprecated plugin
-- [#19451](https://github.com/influxdata/telegraf/pull/19451) `inputs.cisco_telemetry_mdt` Avoid spurious metrics by collecting tags first
-- [#19456](https://github.com/influxdata/telegraf/pull/19456) `inputs.cisco_telemetry_mdt` Emit correct row numbers
-- [#19463](https://github.com/influxdata/telegraf/pull/19463) `inputs.cisco_telemetry_mdt` Prevent tags leaking to parent structures
-- [#19440](https://github.com/influxdata/telegraf/pull/19440) `inputs.cisco_telemetry_mdt` Respect aliases for RIB and microburst metric names
-- [#19131](https://github.com/influxdata/telegraf/pull/19131) `inputs.kafka_consumer` Remove deprecated connection_strategy option
-- [#19130](https://github.com/influxdata/telegraf/pull/19130) `inputs.openstack` Remove deprecated server_diagnotics option
-- [#19118](https://github.com/influxdata/telegraf/pull/19118) `inputs.procstat` Remove deprecated options
-- [#19124](https://github.com/influxdata/telegraf/pull/19124) `inputs.sflow` Remove deprecated plugin
-- [#19132](https://github.com/influxdata/telegraf/pull/19132) `inputs.tail` Remove deprecated from_beginning option
-- [#19123](https://github.com/influxdata/telegraf/pull/19123) `outputs.amon` Remove deprecated plugin
+- Removal of deprecated plugins:
+  - [#19123](https://github.com/influxdata/telegraf/pull/19123) `outputs.amon` Remove deprecated plugin
+  - [#19124](https://github.com/influxdata/telegraf/pull/19124) `inputs.sflow` Remove deprecated plugin
+  - [#19125](https://github.com/influxdata/telegraf/pull/19125) `inputs.aerospike` Remove deprecated plugin
+- Removal of deprecated plugin options:
+  - [#19118](https://github.com/influxdata/telegraf/pull/19118) `inputs.procstat` Remove deprecated `cmdline_tag`, `pid_tag` and `supervisor_unit` options
+  - [#19130](https://github.com/influxdata/telegraf/pull/19130) `inputs.openstack` Remove deprecated `server_diagnotics` option
+  - [#19131](https://github.com/influxdata/telegraf/pull/19131) `inputs.kafka_consumer` Remove deprecated `connection_strategy` option
+  - [#19132](https://github.com/influxdata/telegraf/pull/19132) `inputs.tail` Remove deprecated `from_beginning` option
 
 ### New Plugins
 
