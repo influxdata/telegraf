@@ -396,18 +396,20 @@ func TestRequestTypesCoil(t *testing.T) {
 		},
 	}
 
+	ctx := t.Context()
+
 	serv := mbserver.NewServer()
 	require.NoError(t, serv.ListenTCP("localhost:1502"))
 	defer serv.Close()
 
 	handler := mb.NewTCPClientHandler("localhost:1502")
-	require.NoError(t, handler.Connect())
+	require.NoError(t, handler.Connect(ctx))
 	defer handler.Close()
 	client := mb.NewClient(handler)
 
 	for _, hrt := range tests {
 		t.Run(hrt.name, func(t *testing.T) {
-			_, err := client.WriteSingleCoil(hrt.address, hrt.write)
+			_, err := client.WriteSingleCoil(ctx, hrt.address, hrt.write)
 			require.NoError(t, err)
 
 			modbus := Modbus{
@@ -1020,19 +1022,21 @@ func TestRequestTypesHoldingABCD(t *testing.T) {
 		},
 	}
 
+	ctx := t.Context()
+
 	serv := mbserver.NewServer()
 	require.NoError(t, serv.ListenTCP("localhost:1502"))
 	defer serv.Close()
 
 	handler := mb.NewTCPClientHandler("localhost:1502")
-	require.NoError(t, handler.Connect())
+	require.NoError(t, handler.Connect(ctx))
 	defer handler.Close()
 	client := mb.NewClient(handler)
 
 	for _, hrt := range tests {
 		t.Run(hrt.name, func(t *testing.T) {
 			quantity := uint16(len(hrt.write) / 2)
-			_, err := client.WriteMultipleRegisters(hrt.address, quantity, hrt.write)
+			_, err := client.WriteMultipleRegisters(ctx, hrt.address, quantity, hrt.write)
 			require.NoError(t, err)
 
 			modbus := Modbus{
@@ -1632,12 +1636,14 @@ func TestRequestTypesHoldingDCBA(t *testing.T) {
 		},
 	}
 
+	ctx := t.Context()
+
 	serv := mbserver.NewServer()
 	require.NoError(t, serv.ListenTCP("localhost:1502"))
 	defer serv.Close()
 
 	handler := mb.NewTCPClientHandler("localhost:1502")
-	require.NoError(t, handler.Connect())
+	require.NoError(t, handler.Connect(ctx))
 	defer handler.Close()
 	client := mb.NewClient(handler)
 
@@ -1653,7 +1659,7 @@ func TestRequestTypesHoldingDCBA(t *testing.T) {
 				// Put in raw data for strings
 				invert = append(invert, hrt.write...)
 			}
-			_, err := client.WriteMultipleRegisters(hrt.address, quantity, invert)
+			_, err := client.WriteMultipleRegisters(ctx, hrt.address, quantity, invert)
 			require.NoError(t, err)
 
 			modbus := Modbus{
@@ -2128,15 +2134,17 @@ func TestRequestStartingWithOmits(t *testing.T) {
 	require.NotNil(t, modbus.requests[1])
 	require.Equal(t, uint16(0), modbus.requests[1].holding[0].address)
 
+	ctx := t.Context()
+
 	serv := mbserver.NewServer()
 	require.NoError(t, serv.ListenTCP("localhost:1502"))
 	defer serv.Close()
 
 	handler := mb.NewTCPClientHandler("localhost:1502")
-	require.NoError(t, handler.Connect())
+	require.NoError(t, handler.Connect(ctx))
 	defer handler.Close()
 	client := mb.NewClient(handler)
-	_, err := client.WriteMultipleRegisters(uint16(0), 3, []byte{0x00, 0x01, 0x00, 0x02, 0x00, 0x03})
+	_, err := client.WriteMultipleRegisters(ctx, uint16(0), 3, []byte{0x00, 0x01, 0x00, 0x02, 0x00, 0x03})
 	require.NoError(t, err)
 
 	expected := []telegraf.Metric{

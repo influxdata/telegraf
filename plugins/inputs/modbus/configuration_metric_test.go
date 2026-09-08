@@ -167,18 +167,20 @@ func TestMetricResult(t *testing.T) {
 		0x4d, 0x6f, 0x64, 0x62, 0x75, 0x73, 0x20, 0x53, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x00, // String "Modbus String"
 	}
 
+	ctx := t.Context()
+
 	// Write the data to a fake server
 	serv := mbserver.NewServer()
 	require.NoError(t, serv.ListenTCP("localhost:1502"))
 	defer serv.Close()
 
 	handler := mb.NewTCPClientHandler("localhost:1502")
-	require.NoError(t, handler.Connect())
+	require.NoError(t, handler.Connect(ctx))
 	defer handler.Close()
 	client := mb.NewClient(handler)
 
 	quantity := uint16(len(data) / 2)
-	_, err := client.WriteMultipleRegisters(1, quantity, data)
+	_, err := client.WriteMultipleRegisters(ctx, 1, quantity, data)
 	require.NoError(t, err)
 
 	// Setup the plugin

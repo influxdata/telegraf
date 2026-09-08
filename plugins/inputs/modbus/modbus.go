@@ -2,6 +2,7 @@
 package modbus
 
 import (
+	"context"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -230,15 +231,16 @@ func (m *Modbus) Init() error {
 }
 
 func (m *Modbus) Gather(acc telegraf.Accumulator) error {
+	ctx := context.Background()
 	if !m.isConnected {
-		if err := m.connect(); err != nil {
+		if err := m.connect(ctx); err != nil {
 			return err
 		}
 	}
 
 	for slaveID, requests := range m.requests {
 		m.Log.Debugf("Reading slave %d for %s...", slaveID, m.Controller)
-		if err := m.readSlaveData(slaveID, requests); err != nil {
+		if err := m.readSlaveData(ctx, slaveID, requests); err != nil {
 			acc.AddError(fmt.Errorf("slave %d on controller %q: %w", slaveID, m.Controller, err))
 			var mbErr *mb.Error
 			if !errors.As(err, &mbErr) || mbErr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
@@ -246,7 +248,7 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 				if err := m.disconnect(); err != nil {
 					return fmt.Errorf("disconnecting failed for controller %q: %w", m.Controller, err)
 				}
-				if err := m.connect(); err != nil {
+				if err := m.connect(ctx); err != nil {
 					return fmt.Errorf("slave %d on controller %q: connecting failed: %w", slaveID, m.Controller, err)
 				}
 			}
@@ -384,8 +386,8 @@ func (m *Modbus) initClient() error {
 }
 
 // Connect to a MODBUS Slave device via Modbus/[TCP|RTU|ASCII]
-func (m *Modbus) connect() error {
-	err := m.handler.Connect()
+func (m *Modbus) connect(ctx context.Context) error {
+	err := m.handler.Connect(ctx)
 	m.isConnected = err == nil
 	if m.isConnected && m.Workarounds.AfterConnectPause != 0 {
 		nextRequest := time.Now().Add(time.Duration(m.Workarounds.AfterConnectPause))
@@ -400,11 +402,11 @@ func (m *Modbus) disconnect() error {
 	return err
 }
 
-func (m *Modbus) readSlaveData(slaveID byte, requests requestSet) error {
+func (m *Modbus) readSlaveData(ctx context.Context, slaveID byte, requests requestSet) error {
 	m.handler.SetSlave(slaveID)
 
 	for retry := 0; retry < m.Retries; retry++ {
-		err := m.gatherFields(requests)
+		err := m.gatherFields(ctx, requests)
 		if err == nil {
 			// Reading was successful
 			return nil
@@ -420,26 +422,26 @@ func (m *Modbus) readSlaveData(slaveID byte, requests requestSet) error {
 		m.Log.Infof("Device busy! Retrying %d more time(s) on controller %q...", m.Retries-retry, m.Controller)
 		time.Sleep(time.Duration(m.RetriesWaitTime))
 	}
-	return m.gatherFields(requests)
+	return m.gatherFields(ctx, requests)
 }
 
-func (m *Modbus) gatherFields(requests requestSet) error {
-	if err := m.gatherRequestsCoil(requests.coil); err != nil {
+func (m *Modbus) gatherFields(ctx context.Context, requests requestSet) error {
+	if err := m.gatherRequestsCoil(ctx, requests.coil); err != nil {
 		return err
 	}
-	if err := m.gatherRequestsDiscrete(requests.discrete); err != nil {
+	if err := m.gatherRequestsDiscrete(ctx, requests.discrete); err != nil {
 		return err
 	}
-	if err := m.gatherRequestsHolding(requests.holding); err != nil {
+	if err := m.gatherRequestsHolding(ctx, requests.holding); err != nil {
 		return err
 	}
-	return m.gatherRequestsInput(requests.input)
+	return m.gatherRequestsInput(ctx, requests.input)
 }
 
-func (m *Modbus) gatherRequestsCoil(requests []request) error {
+func (m *Modbus) gatherRequestsCoil(ctx context.Context, requests []request) error {
 	for _, request := range requests {
 		m.Log.Debugf("trying to read coil@%v[%v]...", request.address, request.length)
-		bytes, err := m.client.ReadCoils(request.address, request.length)
+		bytes, err := m.client.ReadCoils(ctx, request.address, request.length)
 		if err != nil {
 			return err
 		}
@@ -463,10 +465,10 @@ func (m *Modbus) gatherRequestsCoil(requests []request) error {
 	return nil
 }
 
-func (m *Modbus) gatherRequestsDiscrete(requests []request) error {
+func (m *Modbus) gatherRequestsDiscrete(ctx context.Context, requests []request) error {
 	for _, request := range requests {
 		m.Log.Debugf("trying to read discrete@%v[%v]...", request.address, request.length)
-		bytes, err := m.client.ReadDiscreteInputs(request.address, request.length)
+		bytes, err := m.client.ReadDiscreteInputs(ctx, request.address, request.length)
 		if err != nil {
 			return err
 		}
@@ -490,10 +492,10 @@ func (m *Modbus) gatherRequestsDiscrete(requests []request) error {
 	return nil
 }
 
-func (m *Modbus) gatherRequestsHolding(requests []request) error {
+func (m *Modbus) gatherRequestsHolding(ctx context.Context, requests []request) error {
 	for _, request := range requests {
 		m.Log.Debugf("trying to read holding@%v[%v]...", request.address, request.length)
-		bytes, err := m.client.ReadHoldingRegisters(request.address, request.length)
+		bytes, err := m.client.ReadHoldingRegisters(ctx, request.address, request.length)
 		if err != nil {
 			return err
 		}
@@ -517,10 +519,10 @@ func (m *Modbus) gatherRequestsHolding(requests []request) error {
 	return nil
 }
 
-func (m *Modbus) gatherRequestsInput(requests []request) error {
+func (m *Modbus) gatherRequestsInput(ctx context.Context, requests []request) error {
 	for _, request := range requests {
 		m.Log.Debugf("trying to read input@%v[%v]...", request.address, request.length)
-		bytes, err := m.client.ReadInputRegisters(request.address, request.length)
+		bytes, err := m.client.ReadInputRegisters(ctx, request.address, request.length)
 		if err != nil {
 			return err
 		}

@@ -709,16 +709,18 @@ func TestWorkaroundsStringRegisterLocation(t *testing.T) {
 			}
 			require.NoError(t, plugin.Init())
 
+			ctx := t.Context()
+
 			// Create a mock server and fill in the data
 			serv := mbserver.NewServer()
 			require.NoError(t, serv.ListenTCP("localhost:1502"))
 			defer serv.Close()
 
 			handler := mb.NewTCPClientHandler("localhost:1502")
-			require.NoError(t, handler.Connect())
+			require.NoError(t, handler.Connect(ctx))
 			defer handler.Close()
 			client := mb.NewClient(handler)
-			_, err := client.WriteMultipleRegisters(addr, length, tt.content)
+			_, err := client.WriteMultipleRegisters(ctx, addr, length, tt.content)
 			require.NoError(t, err)
 
 			// Gather the data
