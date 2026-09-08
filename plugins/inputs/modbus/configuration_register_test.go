@@ -160,18 +160,20 @@ func TestRegisterCoils(t *testing.T) {
 		},
 	}
 
+	ctx := t.Context()
+
 	serv := mbserver.NewServer()
 	require.NoError(t, serv.ListenTCP("localhost:1502"))
 	defer serv.Close()
 
 	handler := mb.NewTCPClientHandler("localhost:1502")
-	require.NoError(t, handler.Connect())
+	require.NoError(t, handler.Connect(ctx))
 	defer handler.Close()
 	client := mb.NewClient(handler)
 
 	for _, ct := range coilTests {
 		t.Run(ct.name, func(t *testing.T) {
-			_, err := client.WriteMultipleCoils(ct.address, ct.quantity, ct.write)
+			_, err := client.WriteMultipleCoils(ctx, ct.address, ct.quantity, ct.write)
 			require.NoError(t, err)
 
 			modbus := Modbus{
@@ -794,18 +796,20 @@ func TestRegisterHoldingRegisters(t *testing.T) {
 		},
 	}
 
+	ctx := t.Context()
+
 	serv := mbserver.NewServer()
 	require.NoError(t, serv.ListenTCP("localhost:1502"))
 	defer serv.Close()
 
 	handler := mb.NewTCPClientHandler("localhost:1502")
-	require.NoError(t, handler.Connect())
+	require.NoError(t, handler.Connect(ctx))
 	defer handler.Close()
 	client := mb.NewClient(handler)
 
 	for _, hrt := range holdingRegisterTests {
 		t.Run(hrt.name, func(t *testing.T) {
-			_, err := client.WriteMultipleRegisters(hrt.address[0], hrt.quantity, hrt.write)
+			_, err := client.WriteMultipleRegisters(ctx, hrt.address[0], hrt.quantity, hrt.write)
 			require.NoError(t, err)
 
 			modbus := Modbus{
@@ -850,12 +854,14 @@ func TestRegisterHoldingRegisters(t *testing.T) {
 }
 
 func TestRegisterReadMultipleCoilWithHole(t *testing.T) {
+	ctx := t.Context()
+
 	serv := mbserver.NewServer()
 	require.NoError(t, serv.ListenTCP("localhost:1502"))
 	defer serv.Close()
 
 	handler := mb.NewTCPClientHandler("localhost:1502")
-	require.NoError(t, handler.Connect())
+	require.NoError(t, handler.Connect(ctx))
 	defer handler.Close()
 	client := mb.NewClient(handler)
 
@@ -869,7 +875,7 @@ func TestRegisterReadMultipleCoilWithHole(t *testing.T) {
 		fc.Address = []uint16{uint16(i)}
 		fcs = append(fcs, fc)
 
-		_, err := client.WriteSingleCoil(fc.Address[0], writeValue)
+		_, err := client.WriteSingleCoil(ctx, fc.Address[0], writeValue)
 		require.NoError(t, err)
 
 		expectedFields[fc.Name] = readValue
@@ -882,7 +888,7 @@ func TestRegisterReadMultipleCoilWithHole(t *testing.T) {
 		fc.Address = []uint16{uint16(i)}
 		fcs = append(fcs, fc)
 
-		_, err := client.WriteSingleCoil(fc.Address[0], writeValue)
+		_, err := client.WriteSingleCoil(ctx, fc.Address[0], writeValue)
 		require.NoError(t, err)
 
 		expectedFields[fc.Name] = readValue
@@ -895,7 +901,7 @@ func TestRegisterReadMultipleCoilWithHole(t *testing.T) {
 		fc.Address = []uint16{uint16(i)}
 		fcs = append(fcs, fc)
 
-		_, err := client.WriteSingleCoil(fc.Address[0], writeValue)
+		_, err := client.WriteSingleCoil(ctx, fc.Address[0], writeValue)
 		require.NoError(t, err)
 
 		expectedFields[fc.Name] = readValue
@@ -935,12 +941,14 @@ func TestRegisterReadMultipleCoilWithHole(t *testing.T) {
 }
 
 func TestRegisterReadMultipleCoilLimit(t *testing.T) {
+	ctx := t.Context()
+
 	serv := mbserver.NewServer()
 	require.NoError(t, serv.ListenTCP("localhost:1502"))
 	defer serv.Close()
 
 	handler := mb.NewTCPClientHandler("localhost:1502")
-	require.NoError(t, handler.Connect())
+	require.NoError(t, handler.Connect(ctx))
 	defer handler.Close()
 	client := mb.NewClient(handler)
 
@@ -954,7 +962,7 @@ func TestRegisterReadMultipleCoilLimit(t *testing.T) {
 		fc.Address = []uint16{uint16(i)}
 		fcs = append(fcs, fc)
 
-		_, err := client.WriteSingleCoil(fc.Address[0], writeValue)
+		_, err := client.WriteSingleCoil(ctx, fc.Address[0], writeValue)
 		require.NoError(t, err)
 
 		expectedFields[fc.Name] = readValue
@@ -994,12 +1002,14 @@ func TestRegisterReadMultipleCoilLimit(t *testing.T) {
 }
 
 func TestRegisterReadMultipleHoldingRegisterWithHole(t *testing.T) {
+	ctx := t.Context()
+
 	serv := mbserver.NewServer()
 	require.NoError(t, serv.ListenTCP("localhost:1502"))
 	defer serv.Close()
 
 	handler := mb.NewTCPClientHandler("localhost:1502")
-	require.NoError(t, handler.Connect())
+	require.NoError(t, handler.Connect(ctx))
 	defer handler.Close()
 	client := mb.NewClient(handler)
 
@@ -1015,7 +1025,7 @@ func TestRegisterReadMultipleHoldingRegisterWithHole(t *testing.T) {
 		}
 		fcs = append(fcs, fc)
 
-		_, err := client.WriteSingleRegister(fc.Address[0], uint16(i))
+		_, err := client.WriteSingleRegister(ctx, fc.Address[0], uint16(i))
 		require.NoError(t, err)
 
 		expectedFields[fc.Name] = int64(i)
@@ -1030,7 +1040,7 @@ func TestRegisterReadMultipleHoldingRegisterWithHole(t *testing.T) {
 		}
 		fcs = append(fcs, fc)
 
-		_, err := client.WriteSingleRegister(fc.Address[0], uint16(i))
+		_, err := client.WriteSingleRegister(ctx, fc.Address[0], uint16(i))
 		require.NoError(t, err)
 
 		expectedFields[fc.Name] = int64(i)
@@ -1068,12 +1078,14 @@ func TestRegisterReadMultipleHoldingRegisterWithHole(t *testing.T) {
 }
 
 func TestRegisterReadMultipleHoldingRegisterLimit(t *testing.T) {
+	ctx := t.Context()
+
 	serv := mbserver.NewServer()
 	require.NoError(t, serv.ListenTCP("localhost:1502"))
 	defer serv.Close()
 
 	handler := mb.NewTCPClientHandler("localhost:1502")
-	require.NoError(t, handler.Connect())
+	require.NoError(t, handler.Connect(ctx))
 	defer handler.Close()
 	client := mb.NewClient(handler)
 
@@ -1088,7 +1100,7 @@ func TestRegisterReadMultipleHoldingRegisterLimit(t *testing.T) {
 		fc.Address = []uint16{uint16(i)}
 		fcs = append(fcs, fc)
 
-		_, err := client.WriteSingleRegister(fc.Address[0], uint16(i))
+		_, err := client.WriteSingleRegister(ctx, fc.Address[0], uint16(i))
 		require.NoError(t, err)
 
 		expectedFields[fc.Name] = int64(i)
@@ -1126,6 +1138,7 @@ func TestRegisterReadMultipleHoldingRegisterLimit(t *testing.T) {
 
 func TestRegisterHighAddresses(t *testing.T) {
 	// Test case for issue https://github.com/influxdata/telegraf/issues/15138
+	ctx := t.Context()
 
 	// Setup a server
 	serv := mbserver.NewServer()
@@ -1133,7 +1146,7 @@ func TestRegisterHighAddresses(t *testing.T) {
 	defer serv.Close()
 
 	handler := mb.NewTCPClientHandler("localhost:1502")
-	require.NoError(t, handler.Connect())
+	require.NoError(t, handler.Connect(ctx))
 	defer handler.Close()
 	client := mb.NewClient(handler)
 
@@ -1143,9 +1156,9 @@ func TestRegisterHighAddresses(t *testing.T) {
 		0x74, 0x72, 0x69, 0x6e, 0x67, 0x20, 0x48, 0x65,
 		0x6c, 0x6c, 0x6f, 0x00,
 	}
-	_, err := client.WriteMultipleRegisters(65524, 10, data)
+	_, err := client.WriteMultipleRegisters(ctx, 65524, 10, data)
 	require.NoError(t, err)
-	_, err = client.WriteMultipleRegisters(65534, 1, []byte{0x10, 0x92})
+	_, err = client.WriteMultipleRegisters(ctx, 65534, 1, []byte{0x10, 0x92})
 	require.NoError(t, err)
 
 	modbus := Modbus{
