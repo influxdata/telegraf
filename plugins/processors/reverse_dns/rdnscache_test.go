@@ -3,6 +3,7 @@ package reverse_dns
 import (
 	"context"
 	"errors"
+	"net"
 	"sync"
 	"testing"
 	"time"
@@ -121,6 +122,47 @@ func TestLookupTimeout(t *testing.T) {
 	_, err := d.lookup("127.0.0.1")
 	require.Error(t, err)
 	require.EqualValues(t, 1, d.getStats().requestsAbandoned)
+}
+
+func TestLookupNotFoundIsCached(t *testing.T) {
+	d := newReverseDNSCache(60*time.Second, 1*time.Second, -1)
+	defer d.stop()
+
+	d.resolver = &errorResolver{err: &net.DNSError{Err: "no such host", IsNotFound: true}}
+	names, err := d.lookup("192.0.2.1")
+	require.NoError(t, err)
+	require.Empty(t, names)
+	require.Len(t, d.cache, 1)
+
+	// The negative result must be served from the cache without a worker
+	require.NoError(t, blockAllWorkers(t.Context(), d))
+	names, err = d.lookup("192.0.2.1")
+	require.NoError(t, err)
+	require.Empty(t, names)
+
+	stats := d.getStats()
+	require.EqualValues(t, 1, stats.cacheHit)
+	require.EqualValues(t, 1, stats.requestsFilled)
+	require.EqualValues(t, 0, stats.requestsAbandoned)
+}
+
+func TestLookupTemporaryFailureIsNotCached(t *testing.T) {
+	d := newReverseDNSCache(60*time.Second, 1*time.Second, -1)
+	defer d.stop()
+
+	d.resolver = &errorResolver{err: &net.DNSError{Err: "server misbehaving", IsTemporary: true}}
+	_, err := d.lookup("192.0.2.1")
+	require.Error(t, err)
+	require.Empty(t, d.cache)
+	require.EqualValues(t, 1, d.getStats().requestsAbandoned)
+}
+
+type errorResolver struct {
+	err error
+}
+
+func (r *errorResolver) LookupAddr(context.Context, string) (names []string, err error) {
+	return nil, r.err
 }
 
 type timeoutResolver struct{}
