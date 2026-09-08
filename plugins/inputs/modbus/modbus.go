@@ -317,16 +317,19 @@ func (m *Modbus) initClient() error {
 		case "", "auto", "TCP":
 			handler := mb.NewTCPClientHandler(host + ":" + port)
 			handler.Timeout = time.Duration(m.Timeout)
+			handler.Dial = (&net.Dialer{Timeout: handler.Timeout}).DialContext
 			handler.Logger = tracelog
 			m.handler = handler
 		case "RTUoverTCP":
 			handler := mb.NewRTUOverTCPClientHandler(host + ":" + port)
 			handler.Timeout = time.Duration(m.Timeout)
+			handler.Dial = (&net.Dialer{Timeout: handler.Timeout}).DialContext
 			handler.Logger = tracelog
 			m.handler = handler
 		case "ASCIIoverTCP":
 			handler := mb.NewASCIIOverTCPClientHandler(host + ":" + port)
 			handler.Timeout = time.Duration(m.Timeout)
+			handler.Dial = (&net.Dialer{Timeout: handler.Timeout}).DialContext
 			handler.Logger = tracelog
 			m.handler = handler
 		default:
