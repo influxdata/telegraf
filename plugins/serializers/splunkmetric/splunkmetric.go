@@ -9,9 +9,21 @@ import (
 )
 
 type Serializer struct {
-	HecRouting   bool `toml:"splunkmetric_hec_routing"`
-	MultiMetric  bool `toml:"splunkmetric_multimetric"`
+	// HecRouting routes metrics through the Splunk HTTP Event Collector (HEC) envelope format.
+	HecRouting bool `toml:"splunkmetric_hec_routing"`
+	// MultiMetric emits all fields of a metric in a single event instead of one event per field.
+	MultiMetric bool `toml:"splunkmetric_multimetric"`
+	// OmitEventTag omits the "event":"metric" tag from HEC output.
 	OmitEventTag bool `toml:"splunkmetric_omit_event_tag"`
+	// OmitMetricNamePrefix omits the "metric_name:measurementName" prefix from field keys.
+	// Only applies when MultiMetric (splunkmetric_multimetric) is true.
+	OmitMetricNamePrefix bool `toml:"splunkmetric_omit_metric_name_prefix"`
+	// PermitFieldStringValues allows string-valued fields; by default string fields are dropped.
+	// Only applies when MultiMetric (splunkmetric_multimetric) is true.
+	PermitFieldStringValues bool `toml:"splunkmetric_permit_field_string_values"`
+	// AddMeasurementField adds a "measurement" field containing the measurement name (metric.Name()).
+	// Only applies when MultiMetric (splunkmetric_multimetric) is true.
+	AddMeasurementField bool `toml:"splunkmetric_add_measurement_field"`
 }
 
 type commonTags struct {
@@ -56,7 +68,8 @@ func (s *Serializer) createMulti(metric telegraf.Metric, dataGroup hecTimeSeries
 	** event payload. This only works when the time, host, and dimensions are the same for every name=value pair
 	** in the timeseries data.
 	**
-	** The format for multimetric data is 'metric_name:nameOfMetric = valueOfMetric'
+	** The format for multimetric data is 'metric_name:measurementName.fieldKey: fieldValue' unless OmitMetricNamePrefix is true,
+	** then the format is 'fieldKey: fieldValue'.
 	 */
 	var metricJSON []byte
 
@@ -69,16 +82,22 @@ func (s *Serializer) createMulti(metric telegraf.Metric, dataGroup hecTimeSeries
 	dataGroup.Index = commonTags.Index
 	dataGroup.Source = commonTags.Source
 	dataGroup.Fields = commonTags.Fields
+	if s.AddMeasurementField {
+		dataGroup.Fields["measurement"] = metric.Name()
+	}
 
 	// Stuff the metric data into the structure.
 	for _, field := range metric.FieldList() {
-		value, valid := verifyValue(field.Value)
+		value, valid := s.verifyValue(field.Value)
 
 		if !valid {
 			log.Printf("D! Can not parse value: %v for key: %v", field.Value, field.Key)
 			continue
 		}
-
+		if s.OmitMetricNamePrefix {
+			dataGroup.Fields[field.Key] = value
+			continue
+		}
 		dataGroup.Fields["metric_name:"+metric.Name()+"."+field.Key] = value
 	}
 
@@ -110,7 +129,7 @@ func (s *Serializer) createSingle(metric telegraf.Metric, dataGroup hecTimeSerie
 	var metricJSON []byte
 
 	for _, field := range metric.FieldList() {
-		value, valid := verifyValue(field.Value)
+		value, valid := s.verifyValue(field.Value)
 
 		if !valid {
 			log.Printf("D! Can not parse value: %v for key: %v", field.Value, field.Key)
@@ -186,11 +205,16 @@ func (s *Serializer) createObject(metric telegraf.Metric) ([]byte, error) {
 	return s.createSingle(metric, dataGroup, commonTags)
 }
 
-func verifyValue(v interface{}) (value interface{}, valid bool) {
+func (s *Serializer) verifyValue(v interface{}) (value interface{}, valid bool) {
 	switch v.(type) {
 	case string:
-		valid = false
-		value = v
+		if s.MultiMetric && s.PermitFieldStringValues {
+			valid = true
+			value = v
+		} else {
+			valid = false
+			value = v
+		}
 	case bool:
 		if v == bool(true) {
 			// Store 1 for a "true" value

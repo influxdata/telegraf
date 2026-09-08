@@ -61,8 +61,22 @@ your CPU stats in one JSON struct, an example event looks like:
 }
 ```
 
-In order to enable this mode, there's a new option `splunkmetric_multimetric`
-that you set in the appropriate output module you plan on using.
+In order to enable this mode, set `splunkmetric_multimetric = true` in the
+appropriate output plugin configuration.
+
+### Omitting the metric name prefix
+
+By default, multi-metric field keys are prefixed with `metric_name:measurementName.`
+(e.g. `metric_name:cpu.usage_idle`). If your Splunk schema does not require this
+prefix, you can omit it with `splunkmetric_omit_metric_name_prefix = true`, which
+will emit the bare field key instead (e.g. `usage_idle`).
+
+### Adding a measurement field
+
+Setting `splunkmetric_add_measurement_field = true` adds a `"measurement"` field
+to the event containing the measurement name (e.g. `"measurement": "cpu"`). This
+can be useful for filtering or grouping in Splunk when the metric name prefix has
+been omitted.
 
 ## Using with the HTTP output
 
@@ -102,6 +116,9 @@ sample config for an HTTP output:
   splunkmetric_hec_routing = true
   # splunkmetric_multimetric = true
   # splunkmetric_omit_event_tag = false
+  # splunkmetric_omit_metric_name_prefix = false
+  # splunkmetric_permit_field_string_values = false
+  # splunkmetric_add_measurement_field = false
 
   ## Additional HTTP headers
   [outputs.http.headers]
@@ -187,14 +204,28 @@ An example configuration of a file based output is:
    splunkmetric_hec_routing = false
    splunkmetric_multimetric = true
    splunkmetric_omit_event_tag = false
+   # splunkmetric_omit_metric_name_prefix = false
+   # splunkmetric_permit_field_string_values = false
+   # splunkmetric_add_measurement_field = false
 ```
 
 ## Non-numeric metric values
 
-Splunk supports only numeric field values, so serializer would silently drop
-metrics with the string values. For some cases it is possible to workaround
-using the [enum processor][enum_plugin]. Example, provided below doing this for
-the `docker_container_health.health_status` metric:
+Splunk's metric store requires `_value` to be numeric. The serializer therefore
+drops string-valued fields by default. There are two ways to overcome this limitation:
+
+**Option 1:** Use `splunkmetric_permit_field_string_values = true` (multi-metric
+mode only) to allow string-valued fields to be emitted directly:
+
+```toml
+data_format = "splunkmetric"
+splunkmetric_multimetric = true
+splunkmetric_permit_field_string_values = true
+```
+
+**Option 2:** Map string values to integers before serialization using the
+[enum processor][enum_plugin]. This works in both single and multi-metric mode.
+Example for `docker_container_health.health_status`:
 
 ```toml
 # splunkmetric does not support string values
