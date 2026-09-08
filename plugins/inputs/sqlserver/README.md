@@ -335,10 +335,6 @@ metrics queries.
 
 ### Query Version 1
 
-> [!CAUTION]
-> The `query_version` option was **deprecated** in Telegraf v1.16 and has since
-> been **removed**. Setting it now fails at startup. Use `database_type`.
-
 The original metrics queries provide:
 
 - *Performance counters*: 1000+ metrics from `sys.dm_os_performance_counters`
@@ -358,10 +354,6 @@ If you are using the original queries all stats have the following tags:
 - `type`: type of stats to easily filter measurements
 
 ### Query Version 2
-
-> [!CAUTION]
-> The `query_version` option was **deprecated** in Telegraf v1.16 and has since
-> been **removed**. Setting it now fails at startup. Use `database_type`.
 
 The new (version 2) metrics provide:
 
