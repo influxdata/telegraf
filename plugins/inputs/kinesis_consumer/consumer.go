@@ -58,12 +58,11 @@ func (c *shardConsumer) consume(ctx context.Context, shard string) ([]types.Chil
 				// recover iterator according to user configuration in callback
 				c.log.Tracef("iterator expired for shard %s...", shard)
 				if c.recoverySeqnr != nil {
-					seqnr, err := c.recoverySeqnr(ctx, shard)
-					switch {
-					case errors.Is(err, context.Canceled):
-					case err != nil:
-						c.log.Warnf("could not retrieve DynamoDB checkpoint for shard %s; using initial seqnr: %v", shard, err)
-					default:
+					if seqnr, err := c.recoverySeqnr(ctx, shard); err != nil {
+						if !errors.Is(err, context.Canceled) {
+							c.log.Warnf("could not retrieve DynamoDB checkpoint for shard %s; using initial seqnr: %v", shard, err)
+						}
+					} else {
 						c.params.ShardIteratorType = types.ShardIteratorTypeAfterSequenceNumber
 						c.params.StartingSequenceNumber = aws.String(seqnr)
 					}

@@ -98,14 +98,9 @@ func (k *KinesisConsumer) Init() error {
 		}
 
 		switch k.DynamoDB.ExpiredIteratorRecovery {
-		case "":
-			k.DynamoDB.ExpiredIteratorRecovery = "initial"
-		case "checkpoint", "initial":
+		case "", "initial", "checkpoint":
 		default:
-			return fmt.Errorf(
-				"invalid expired iterator recovery value: %q",
-				k.DynamoDB.ExpiredIteratorRecovery,
-			)
+			return fmt.Errorf("invalid expired iterator recovery %q", k.DynamoDB.ExpiredIteratorRecovery)
 		}
 		k.iteratorStore = newStore(k.DynamoDB.AppName, k.DynamoDB.TableName, time.Duration(k.DynamoDB.Interval), k.Log)
 	}
@@ -181,12 +176,7 @@ func (k *KinesisConsumer) Start(acc telegraf.Accumulator) error {
 			return seqnr
 		}
 		if k.DynamoDB.ExpiredIteratorRecovery == "checkpoint" {
-			k.consumer.recoverySeqnr = func(
-				ctx context.Context,
-				shard string,
-			) (string, error) {
-				return k.iteratorStore.get(ctx, k.StreamName, shard)
-			}
+			k.consumer.recoverySeqnr = k.iteratorStore.get
 		}
 	}
 	if err := k.consumer.init(); err != nil {
