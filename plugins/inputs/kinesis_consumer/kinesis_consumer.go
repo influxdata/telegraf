@@ -54,10 +54,9 @@ type KinesisConsumer struct {
 }
 
 type dynamoDB struct {
-	AppName                 string          `toml:"app_name"`
-	TableName               string          `toml:"table_name"`
-	Interval                config.Duration `toml:"interval"`
-	ExpiredIteratorRecovery string          `toml:"expired_iterator_recovery"`
+	AppName   string          `toml:"app_name"`
+	TableName string          `toml:"table_name"`
+	Interval  config.Duration `toml:"interval"`
 }
 
 func (*KinesisConsumer) SampleConfig() string {
@@ -95,12 +94,6 @@ func (k *KinesisConsumer) Init() error {
 	if k.DynamoDB != nil {
 		if k.DynamoDB.Interval <= 0 {
 			k.DynamoDB.Interval = config.Duration(10 * time.Second)
-		}
-
-		switch k.DynamoDB.ExpiredIteratorRecovery {
-		case "", "initial", "checkpoint":
-		default:
-			return fmt.Errorf("invalid expired iterator recovery %q", k.DynamoDB.ExpiredIteratorRecovery)
 		}
 		k.iteratorStore = newStore(k.DynamoDB.AppName, k.DynamoDB.TableName, time.Duration(k.DynamoDB.Interval), k.Log)
 	}
@@ -175,8 +168,8 @@ func (k *KinesisConsumer) Start(acc telegraf.Accumulator) error {
 
 			return seqnr
 		}
-		if k.DynamoDB.ExpiredIteratorRecovery == "checkpoint" {
-			k.consumer.recoverySeqnr = k.iteratorStore.get
+		k.consumer.recoverySeqnr = func(ctx context.Context, shard string) (string, error) {
+			return k.iteratorStore.get(ctx, k.StreamName, shard)
 		}
 	}
 	if err := k.consumer.init(); err != nil {
