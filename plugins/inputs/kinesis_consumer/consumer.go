@@ -24,7 +24,7 @@ type shardConsumer struct {
 	client *kinesis.Client
 	params *kinesis.GetShardIteratorInput
 
-	recoverySeqnr func(context.Context, string) (string, error)
+	recoverySeqnr func(context.Context, string, string) (string, error)
 	onMessage     recordHandler
 }
 
@@ -122,9 +122,9 @@ func (c *shardConsumer) recoverIterator(ctx context.Context, shard string) {
 		return
 	}
 
-	if seqnr, err := c.recoverySeqnr(ctx, shard); err != nil {
+	if seqnr, err := c.recoverySeqnr(ctx, *c.params.StreamName, shard); err != nil {
 		if !errors.Is(err, context.Canceled) {
-			c.log.Warnf("could not retrieve DynamoDB checkpoint for shard %s; using initial seqnr: %v", shard, err)
+			c.log.Warnf("could not recover checkpoint for shard %q: %v; using initial sequence number", shard, err)
 		}
 	} else {
 		c.params.ShardIteratorType = types.ShardIteratorTypeAfterSequenceNumber
@@ -142,7 +142,7 @@ type consumer struct {
 
 	onMessage     recordHandler
 	position      func(shard string) string
-	recoverySeqnr func(context.Context, string) (string, error)
+	recoverySeqnr func(context.Context, string, string) (string, error)
 
 	client *kinesis.Client
 

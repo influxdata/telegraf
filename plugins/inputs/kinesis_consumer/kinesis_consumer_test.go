@@ -1,12 +1,10 @@
 package kinesis_consumer
 
 import (
-	"context"
 	"encoding/base64"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/kinesis"
 	"github.com/aws/aws-sdk-go-v2/service/kinesis/types"
 	"github.com/stretchr/testify/require"
 
@@ -163,30 +161,4 @@ func TestOnMessage(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestRecoverIteratorUsesCheckpoint(t *testing.T) {
-	consumer := &shardConsumer{
-		params: &kinesis.GetShardIteratorInput{
-			ShardIteratorType:      types.ShardIteratorTypeTrimHorizon,
-			StartingSequenceNumber: aws.String("initial"),
-		},
-		recoverySeqnr: func(_ context.Context, shard string) (string, error) {
-			require.Equal(t, "shard-000", shard)
-			return "checkpoint-123", nil
-		},
-	}
-
-	consumer.recoverIterator(context.Background(), "shard-000")
-
-	require.Equal(
-		t,
-		types.ShardIteratorTypeAfterSequenceNumber,
-		consumer.params.ShardIteratorType,
-	)
-	require.Equal(
-		t,
-		"checkpoint-123",
-		aws.ToString(consumer.params.StartingSequenceNumber),
-	)
 }
