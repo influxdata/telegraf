@@ -7,8 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gopcua/opcua/id"
 	"github.com/gopcua/opcua/server"
 	"github.com/gopcua/opcua/ua"
+	"github.com/gopcua/opcua/uasc"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -204,7 +206,7 @@ func TestReadClientIntegration(t *testing.T) {
 	}
 }
 
-func TestReadClientBatchedReads(t *testing.T) {
+func TestReadClientBatchedRequests(t *testing.T) {
 	// Bind a free port up front; close the listener so the server can
 	// claim it.
 	l, err := net.Listen("tcp", "127.0.0.1:0")
@@ -213,7 +215,7 @@ func TestReadClientBatchedReads(t *testing.T) {
 	require.NoError(t, l.Close())
 
 	// The in-process server reports a MaxNodesPerRead limit of 32, so
-	// registering more nodes than that makes the client split the read
+	// configuring more nodes than that makes the client split the read
 	// according to the limit it discovers on connect.
 	srv := server.New(
 		server.EnableSecurity("None", ua.MessageSecurityModeNone),
@@ -222,6 +224,35 @@ func TestReadClientBatchedReads(t *testing.T) {
 	)
 	ns := server.NewNodeNameSpace(srv, "telegraf-test")
 	srv.AddNamespace(ns)
+
+	// The server neither reports nor enforces a MaxNodesPerRegisterNodes
+	// limit on its own, so add the property and a handler rejecting
+	// register requests exceeding it to make sure the client splits them.
+	const maxNodesPerRegisterNodes = 16
+	ns0, err := srv.Namespace(0)
+	require.NoError(t, err)
+	ns0.AddNode(server.NewVariableNode(
+		ua.NewNumericNodeID(0, id.Server_ServerCapabilities_OperationLimits_MaxNodesPerRegisterNodes),
+		"MaxNodesPerRegisterNodes",
+		uint32(maxNodesPerRegisterNodes),
+	))
+	srv.RegisterHandler(id.RegisterNodesRequest_Encoding_DefaultBinary, func(_ *uasc.SecureChannel, r ua.Request, _ uint32) (ua.Response, error) {
+		req := r.(*ua.RegisterNodesRequest)
+		if len(req.NodesToRegister) > maxNodesPerRegisterNodes {
+			return nil, ua.StatusBadTooManyOperations
+		}
+		return &ua.RegisterNodesResponse{
+			// The encoder dereferences the nested header fields, so they
+			// must not be nil
+			ResponseHeader: &ua.ResponseHeader{
+				Timestamp:          time.Now(),
+				RequestHandle:      req.RequestHeader.RequestHandle,
+				ServiceDiagnostics: &ua.DiagnosticInfo{},
+				AdditionalHeader:   ua.NewExtensionObject(nil),
+			},
+			RegisteredNodeIDs: req.NodesToRegister,
+		}, nil
+	})
 
 	const nodes = 40
 	rootNodes := make([]input.NodeSettings, 0, nodes)
@@ -266,6 +297,8 @@ func TestReadClientBatchedReads(t *testing.T) {
 	require.NoError(t, client.connect())
 	defer client.Disconnect(t.Context())
 	require.Equal(t, 32, client.maxNodesPerRead)
+	require.Equal(t, maxNodesPerRegisterNodes, client.maxNodesPerRegisterNodes)
+	require.Len(t, client.reqIDs, nodes)
 
 	// Clear the values received on connect so the assertions below prove the
 	// batched read actually updated every node
