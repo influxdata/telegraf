@@ -38,6 +38,7 @@ const (
 	defaultSeparator           = "_"
 	defaultAllowPendingMessage = 10000
 )
+var defaultCalculatedTimerMetrics = []string{"count", "mean", "median", "stddev", "sum", "upper", "lower"}
 
 type Statsd struct {
 	// Protocol used on listener - udp or tcp
@@ -55,14 +56,16 @@ type Statsd struct {
 	// and histogram stats.
 	Percentiles     []Number `toml:"percentiles"`
 	PercentileLimit int      `toml:"percentile_limit"`
-	DeleteGauges    bool     `toml:"delete_gauges"`
-	DeleteCounters  bool     `toml:"delete_counters"`
-	DeleteSets      bool     `toml:"delete_sets"`
-	DeleteTimings   bool     `toml:"delete_timings"`
-	ConvertNames    bool     `toml:"convert_names"`
-	FloatCounters   bool     `toml:"float_counters"`
-	FloatTimings    bool     `toml:"float_timings"`
-	FloatSets       bool     `toml:"float_sets"`
+
+	CalculatedTimerMetrics []string `toml:"calculated_timer_metrics"`
+	DeleteGauges           bool     `toml:"delete_gauges"`
+	DeleteCounters         bool     `toml:"delete_counters"`
+	DeleteSets             bool     `toml:"delete_sets"`
+	DeleteTimings          bool     `toml:"delete_timings"`
+	ConvertNames           bool     `toml:"convert_names"`
+	FloatCounters          bool     `toml:"float_counters"`
+	FloatTimings           bool     `toml:"float_timings"`
+	FloatSets              bool     `toml:"float_sets"`
 
 	EnableAggregationTemporality bool `toml:"enable_aggregation_temporality"`
 
@@ -228,6 +231,10 @@ func (*Statsd) SampleConfig() string {
 func (s *Statsd) Start(ac telegraf.Accumulator) error {
 	s.acc = ac
 
+	if err := s.validateCalculatedTimerMetrics(); err != nil {
+		return err
+	}
+
 	// Make data structures
 	s.lastGatherTime = time.Now()
 	s.gauges = make(map[string]cachedgauge)
@@ -357,16 +364,30 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 			if fieldName != defaultFieldName {
 				prefix = fieldName + "_"
 			}
-			fields[prefix+"mean"] = stats.mean()
-			fields[prefix+"median"] = stats.median()
-			fields[prefix+"stddev"] = stats.stddev()
-			fields[prefix+"sum"] = stats.sum()
-			fields[prefix+"upper"] = stats.upper()
-			fields[prefix+"lower"] = stats.lower()
-			if s.FloatTimings {
-				fields[prefix+"count"] = float64(stats.count())
-			} else {
-				fields[prefix+"count"] = stats.count()
+			if s.calculatedTimerMetricEnabled("mean") {
+				fields[prefix+"mean"] = stats.mean()
+			}
+			if s.calculatedTimerMetricEnabled("median") {
+				fields[prefix+"median"] = stats.median()
+			}
+			if s.calculatedTimerMetricEnabled("stddev") {
+				fields[prefix+"stddev"] = stats.stddev()
+			}
+			if s.calculatedTimerMetricEnabled("sum") {
+				fields[prefix+"sum"] = stats.sum()
+			}
+			if s.calculatedTimerMetricEnabled("upper") {
+				fields[prefix+"upper"] = stats.upper()
+			}
+			if s.calculatedTimerMetricEnabled("lower") {
+				fields[prefix+"lower"] = stats.lower()
+			}
+			if s.calculatedTimerMetricEnabled("count") {
+				if s.FloatTimings {
+					fields[prefix+"count"] = float64(stats.count())
+				} else {
+					fields[prefix+"count"] = stats.count()
+				}
 			}
 			for _, percentile := range s.Percentiles {
 				name := fmt.Sprintf("%s%v_percentile", prefix, percentile)
@@ -839,6 +860,42 @@ func parseKeyValue(keyValue string) (key, val string) {
 	return key, val
 }
 
+// validateCalculatedTimerMetrics checks the calculated_timer_metrics option
+// contains only known field names.
+func (s *Statsd) validateCalculatedTimerMetrics() error {
+	allowed := map[string]bool{
+		"count":  true,
+		"mean":   true,
+		"median": true,
+		"stddev": true,
+		"sum":    true,
+		"upper":  true,
+		"lower":  true,
+	}
+
+	for _, name := range s.CalculatedTimerMetrics {
+		if !allowed[name] {
+			return fmt.Errorf("invalid calculated_timer_metrics field %q", name)
+		}
+	}
+	return nil
+}
+
+// calculatedTimerMetricEnabled returns true if the given timer/histogram field
+// should be calculated. An unset calculated_timer_metrics option enables all
+// fields.
+func (s *Statsd) calculatedTimerMetricEnabled(name string) bool {
+	if len(s.CalculatedTimerMetrics) == 0 {
+		return true
+	}
+	for _, enabled := range s.CalculatedTimerMetrics {
+		if enabled == name {
+			return true
+		}
+	}
+	return false
+}
+
 // aggregate takes in a metric. It then
 // aggregates and caches the current value(s). It does not deal with the
 // Delete* options, because those are dealt with in the Gather function.
@@ -1081,6 +1138,7 @@ func init() {
 			MaxTCPConnections:      250,
 			MetricSeparator:        "_",
 			AllowedPendingMessages: defaultAllowPendingMessage,
+			CalculatedTimerMetrics: defaultCalculatedTimerMetrics,
 			DeleteCounters:         true,
 			DeleteGauges:           true,
 			DeleteSets:             true,
