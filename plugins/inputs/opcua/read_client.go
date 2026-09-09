@@ -106,7 +106,8 @@ func (o *readClient) connect() error {
 	// request so large node sets can be split accordingly. The properties are
 	// optional and zero means "no limit"; in both cases all nodes are sent in
 	// a single request.
-	o.maxNodesPerRead, o.maxNodesPerRegisterNodes = 0, 0
+	o.maxNodesPerRead = 0
+	o.maxNodesPerRegisterNodes = 0
 	limits, err := o.Client.Read(o.ctx, &ua.ReadRequest{
 		NodesToRead: []*ua.ReadValueID{
 			{NodeID: ua.NewNumericNodeID(0, id.Server_ServerCapabilities_OperationLimits_MaxNodesPerRead)},
