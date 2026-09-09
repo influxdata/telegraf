@@ -38,6 +38,7 @@ const (
 	defaultSeparator           = "_"
 	defaultAllowPendingMessage = 10000
 )
+
 var defaultCalculatedTimerMetrics = []string{"count", "mean", "median", "stddev", "sum", "upper", "lower"}
 
 type Statsd struct {
