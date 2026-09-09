@@ -210,7 +210,7 @@ following works:
 - github.com/golang/groupcache [Apache License 2.0](https://github.com/golang/groupcache/blob/master/LICENSE)
 - github.com/golang/protobuf [BSD 3-Clause "New" or "Revised" License](https://github.com/golang/protobuf/blob/master/LICENSE)
 - github.com/golang/snappy [BSD 3-Clause "New" or "Revised" License](https://github.com/golang/snappy/blob/master/LICENSE)
-- github.com/google/cel-go [Apache License 2.0](https://github.com/google/cel-go/blob/master/LICENSE)
+- github.com/google/cel-go [Apache License 2.0](https://github.com/cel-expr/cel-go/blob/master/LICENSE)
 - github.com/google/flatbuffers [Apache License 2.0](https://github.com/google/flatbuffers/blob/master/LICENSE)
 - github.com/google/gnostic-models [Apache License 2.0](https://github.com/google/gnostic-models/blob/master/LICENSE)
 - github.com/google/gnxi [Apache License 2.0](https://github.com/google/gnxi/blob/master/LICENSE)

@@ -318,6 +318,6 @@ The following functions are available:
 [internal_plugin]: /plugins/inputs/internal/README.md
 
 [cel]: https://cel.dev
-[cel_encoder]: https://github.com/google/cel-go/blob/master/ext/README.md#encoders
-[cel_math]: https://github.com/google/cel-go/blob/master/ext/README.md#math
-[cel_strings]: https://github.com/google/cel-go/blob/master/ext/README.md#strings
+[cel_encoder]: https://github.com/cel-expr/cel-go/blob/master/ext/README.md#encoders
+[cel_math]: https://github.com/cel-expr/cel-go/blob/master/ext/README.md#math
+[cel_strings]: https://github.com/cel-expr/cel-go/blob/master/ext/README.md#strings
