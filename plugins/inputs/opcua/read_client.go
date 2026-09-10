@@ -42,10 +42,11 @@ type readClient struct {
 	Workarounds             readClientWorkarounds
 
 	// Internal flags
-	reqIDs          []*ua.ReadValueID
-	maxNodesPerRead int
-	ctx             context.Context
-	forceReconnect  bool
+	reqIDs                   []*ua.ReadValueID
+	maxNodesPerRead          int
+	maxNodesPerRegisterNodes int
+	ctx                      context.Context
+	forceReconnect           bool
 }
 
 func (rc *readClientConfig) createReadClient(log telegraf.Logger) (*readClient, error) {
@@ -101,26 +102,28 @@ func (o *readClient) connect() error {
 		// Continue anyway - this is only needed if using namespace URIs
 	}
 
-	// Query the server-imposed limit on nodes per read request so large node
-	// sets can be split accordingly. The property is optional and zero means
-	// "no limit"; in both cases all nodes are sent in a single request.
+	// Query the server-imposed limits on nodes per read and per register
+	// request so large node sets can be split accordingly. The properties are
+	// optional and zero means "no limit"; in both cases all nodes are sent in
+	// a single request.
 	o.maxNodesPerRead = 0
+	o.maxNodesPerRegisterNodes = 0
 	limits, err := o.Client.Read(o.ctx, &ua.ReadRequest{
-		NodesToRead: []*ua.ReadValueID{{
-			NodeID: ua.NewNumericNodeID(0, id.Server_ServerCapabilities_OperationLimits_MaxNodesPerRead),
-		}},
+		NodesToRead: []*ua.ReadValueID{
+			{NodeID: ua.NewNumericNodeID(0, id.Server_ServerCapabilities_OperationLimits_MaxNodesPerRead)},
+			{NodeID: ua.NewNumericNodeID(0, id.Server_ServerCapabilities_OperationLimits_MaxNodesPerRegisterNodes)},
+		},
 	})
 	switch {
 	case err != nil:
-		o.Log.Debugf("Querying the server's read limit failed: %v", err)
-	case len(limits.Results) == 1 && limits.Results[0].Status == ua.StatusOK && limits.Results[0].Value != nil:
-		if v, ok := limits.Results[0].Value.Value().(uint32); ok && v > 0 {
-			// Clamp to avoid overflowing int on 32-bit platforms
-			o.maxNodesPerRead = int(min(v, math.MaxInt32))
-			o.Log.Debugf("Server limits read requests to %d nodes", v)
-		}
+		o.Log.Debugf("Querying the server's operation limits failed: %v", err)
+	case len(limits.Results) != 2:
+		o.Log.Debugf("Server returned %d results for 2 requested operation limits", len(limits.Results))
 	default:
-		o.Log.Debug("Server does not report a read limit")
+		o.maxNodesPerRead = operationLimit(limits.Results[0])
+		o.maxNodesPerRegisterNodes = operationLimit(limits.Results[1])
+		o.Log.Debugf("Server limits requests to %d nodes per read and %d nodes per register (0 = unlimited)",
+			o.maxNodesPerRead, o.maxNodesPerRegisterNodes)
 	}
 
 	// Browse-based discovery runs on every connect so server-side schema
@@ -148,15 +151,27 @@ func (o *readClient) connect() error {
 			o.reqIDs = append(o.reqIDs, &ua.ReadValueID{NodeID: nid})
 		}
 	} else {
-		regResp, err := o.Client.RegisterNodes(o.ctx, &ua.RegisterNodesRequest{
-			NodesToRegister: o.NodeIDs,
-		})
-		if err != nil {
-			return fmt.Errorf("registering nodes failed: %w", err)
+		// Split the registration into multiple requests if the server limits
+		// the number of nodes per request; a single request holds everything
+		// otherwise.
+		batches := [][]*ua.NodeID{o.NodeIDs}
+		if o.maxNodesPerRegisterNodes > 0 {
+			batches = slices.Collect(slices.Chunk(o.NodeIDs, o.maxNodesPerRegisterNodes))
 		}
-
-		for _, v := range regResp.RegisteredNodeIDs {
-			o.reqIDs = append(o.reqIDs, &ua.ReadValueID{NodeID: v})
+		for _, batch := range batches {
+			regResp, err := o.Client.RegisterNodes(o.ctx, &ua.RegisterNodesRequest{
+				NodesToRegister: batch,
+			})
+			if err != nil {
+				return fmt.Errorf("registering nodes failed: %w", err)
+			}
+			if len(regResp.RegisteredNodeIDs) != len(batch) {
+				return fmt.Errorf("server returned %d registered node IDs for %d requested nodes",
+					len(regResp.RegisteredNodeIDs), len(batch))
+			}
+			for _, v := range regResp.RegisteredNodeIDs {
+				o.reqIDs = append(o.reqIDs, &ua.ReadValueID{NodeID: v})
+			}
 		}
 	}
 
@@ -228,13 +243,9 @@ func (o *readClient) currentValues() ([]telegraf.Metric, error) {
 func (o *readClient) read() error {
 	// Split the nodes into multiple requests if the server limits the number
 	// of nodes per read; a single request holds everything otherwise.
-	var batches [][]*ua.ReadValueID
+	batches := [][]*ua.ReadValueID{o.reqIDs}
 	if o.maxNodesPerRead > 0 {
-		for chunk := range slices.Chunk(o.reqIDs, o.maxNodesPerRead) {
-			batches = append(batches, chunk)
-		}
-	} else {
-		batches = [][]*ua.ReadValueID{o.reqIDs}
+		batches = slices.Collect(slices.Chunk(o.reqIDs, o.maxNodesPerRead))
 	}
 
 	var count uint64
@@ -303,6 +314,20 @@ func (o *readClient) read() error {
 				nodeTypeLabel(o.Workarounds.UseUnregisteredReads), err)
 		}
 	}
+}
+
+// operationLimit extracts a server operation limit from the read result of
+// the corresponding capability property. Zero means "no limit".
+func operationLimit(result *ua.DataValue) int {
+	if result.Status != ua.StatusOK || result.Value == nil {
+		return 0
+	}
+	limit, ok := result.Value.Value().(uint32)
+	if !ok {
+		return 0
+	}
+	// Clamp to avoid overflowing int on 32-bit platforms
+	return int(min(limit, math.MaxInt32))
 }
 
 // Helper function to provide more accurate error messages
