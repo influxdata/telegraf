@@ -243,6 +243,7 @@ func TestMaxQuery(t *testing.T) {
 }
 
 func testLookupVM(ctx context.Context, t *testing.T, f *finder, path string, expected int, expectedName string) {
+	poweredOn := types.VirtualMachinePowerState("poweredOn")
 	var vm []mo.VirtualMachine
 	ri := resourceInfo{
 		resMType: "VirtualMachine",
@@ -253,6 +254,10 @@ func testLookupVM(ctx context.Context, t *testing.T, f *finder, path string, exp
 	require.Len(t, vm, expected)
 	if expectedName != "" {
 		require.Equal(t, expectedName, vm[0].Name)
+	}
+	for i := range vm {
+		v := &vm[i]
+		require.Equal(t, poweredOn, v.Runtime.PowerState)
 	}
 }
 
