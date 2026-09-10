@@ -1,6 +1,15 @@
 <!-- markdownlint-disable MD013 MD024 -->
 # Changelog
 
+## unreleased
+
+### Important Changes
+
+- PR [#19291](https://github.com/influxdata/telegraf/pull/19291) now reports
+  powered-off VMs in the `inputs.vsphere` plugin. Please drop those machines
+  using `tagpass = {"powerstate" = ["poweredOn"]}` in your config if you don't
+  need them.
+
 ## v1.38.3 [2026-04-20]
 
 ### Bugfixes
