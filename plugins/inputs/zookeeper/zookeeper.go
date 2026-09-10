@@ -105,7 +105,10 @@ func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegr
 		parts := zookeeperFormatRE.FindStringSubmatch(line)
 
 		if len(parts) != 3 {
-			return fmt.Errorf("unexpected line in mntr response: %q", line)
+			// ZooKeeper 3.6+ may output Prometheus-style summary metrics
+			// (e.g., zk_om_commit_process_time_ms{quantile="0.5"}\tNaN).
+			// Skip these lines instead of failing the whole plugin.
+			continue
 		}
 
 		measurement := strings.TrimPrefix(parts[1], "zk_")
