@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Intel Corporation
+// SPDX-License-Identifier: MIT
+
 package libvirt
 
 import (
@@ -12,6 +15,8 @@ import (
 var (
 	cpuCacheMonitorRegexp            = regexp.MustCompile(`^cache\.monitor\..+?\.(name|vcpus|bank_count)$`)
 	cpuCacheMonitorBankRegexp        = regexp.MustCompile(`^cache\.monitor\..+?\.bank\..+?\.(id|bytes)$`)
+	cpuEnergyMonitorRegexp           = regexp.MustCompile(`^energy\.monitor\..+?\.(name|vcpus|pkg_count)$`)
+	cpuEnergyMonitorPkgRegexp        = regexp.MustCompile(`^energy\.monitor\..+?\.pkg\..+?\.(id|core_energy|activity)$`)
 	memoryBandwidthMonitorRegexp     = regexp.MustCompile(`^bandwidth\.monitor\..+?\.(name|vcpus|node_count)$`)
 	memoryBandwidthMonitorNodeRegexp = regexp.MustCompile(`^bandwidth\.monitor\..+?\.node\..+?\.(id|bytes_local|bytes_total)$`)
 )
@@ -104,9 +109,12 @@ func addStateMetrics(metrics map[string]golibvirt.TypedParamValue, domainName st
 func addCPUMetrics(metrics map[string]golibvirt.TypedParamValue, domainName string, acc telegraf.Accumulator) {
 	var cpuFields = make(map[string]interface{})
 	var cpuCacheMonitorTotalFields = make(map[string]interface{})
+	var cpuEnergyMonitorTotalFields = make(map[string]interface{})
 
 	var cpuCacheMonitorData = make(map[string]map[string]interface{})
 	var cpuCacheMonitorBankData = make(map[string]map[string]map[string]interface{})
+	var cpuEnergyMonitorData = make(map[string]map[string]interface{})
+	var cpuEnergyMonitorPkgData = make(map[string]map[string]map[string]interface{})
 
 	var cpuTags = map[string]string{
 		"domain_name": domainName,
@@ -120,9 +128,13 @@ func addCPUMetrics(metrics map[string]golibvirt.TypedParamValue, domainName stri
 			cpuFields[strings.ReplaceAll(key, ".", "_")] = metric.I
 		case "cache.monitor.count":
 			cpuCacheMonitorTotalFields["count"] = metric.I
+		case "energy.monitor.count":
+			cpuEnergyMonitorTotalFields["count"] = metric.I
 		default:
 			if strings.Contains(key, "bank.count") {
 				key = strings.ReplaceAll(key, "bank.count", "bank_count")
+			} else if strings.Contains(key, "pkg.count") {
+				key = strings.ReplaceAll(key, "pkg.count", "pkg_count")
 			}
 
 			cpuStat := strings.Split(key, ".")
@@ -152,6 +164,32 @@ func addCPUMetrics(metrics map[string]golibvirt.TypedParamValue, domainName stri
 				}
 
 				bankFields[cpuStat[5]] = metric.I
+			} else if len(cpuStat) == 4 && cpuEnergyMonitorRegexp.MatchString(key) {
+				cpuEnergyMonitorID := cpuStat[2]
+				cpuEnergyMonitorFields, ok := cpuEnergyMonitorData[cpuEnergyMonitorID]
+				if !ok {
+					cpuEnergyMonitorFields = make(map[string]interface{})
+					cpuEnergyMonitorData[cpuEnergyMonitorID] = cpuEnergyMonitorFields
+				}
+
+				cpuEnergyMonitorFields[cpuStat[3]] = metric.I
+			} else if len(cpuStat) == 6 && cpuEnergyMonitorPkgRegexp.MatchString(key) {
+				cpuEnergyMonitorID := cpuStat[2]
+				pkgIndex := cpuStat[4]
+
+				pkgData, ok := cpuEnergyMonitorPkgData[cpuEnergyMonitorID]
+				if !ok {
+					pkgData = make(map[string]map[string]interface{})
+					cpuEnergyMonitorPkgData[cpuEnergyMonitorID] = pkgData
+				}
+
+				pkgFields, ok := pkgData[pkgIndex]
+				if !ok {
+					pkgFields = make(map[string]interface{})
+					pkgData[pkgIndex] = pkgFields
+				}
+
+				pkgFields[cpuStat[5]] = metric.I
 			}
 		}
 	}
@@ -184,6 +222,29 @@ func addCPUMetrics(metrics map[string]golibvirt.TypedParamValue, domainName stri
 				}
 				acc.AddFields("libvirt_cpu_cache_monitor_bank", bankFields, bankTags)
 			}
+		}
+	}
+
+	if len(cpuEnergyMonitorTotalFields) > 0 {
+		acc.AddFields("libvirt_cpu_energy_monitor_total", cpuEnergyMonitorTotalFields, cpuTags)
+	}
+
+	for cpuEnergyMonitorID, fields := range cpuEnergyMonitorData {
+		tags := map[string]string{
+			"domain_name":       domainName,
+			"energy_monitor_id": cpuEnergyMonitorID,
+		}
+		acc.AddFields("libvirt_cpu_energy_monitor", fields, tags)
+	}
+
+	for cpuEnergyMonitorID, pkgData := range cpuEnergyMonitorPkgData {
+		for pkgIndex, fields := range pkgData {
+			tags := map[string]string{
+				"domain_name":       domainName,
+				"energy_monitor_id": cpuEnergyMonitorID,
+				"pkg_index":         pkgIndex,
+			}
+			acc.AddFields("libvirt_cpu_energy_monitor_pkg", fields, tags)
 		}
 	}
 }
