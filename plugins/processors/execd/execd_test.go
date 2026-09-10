@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -219,6 +220,12 @@ func TestCases(t *testing.T) {
 		return &Execd{RestartDelay: config.Duration(10 * time.Second)}
 	})
 
+	// Use the test executable to mock the external program so no helper
+	// needs to be compiled when starting the cases
+	exe, err := os.Executable()
+	require.NoError(t, err)
+	t.Setenv("PLUGINS_PROCESSORS_EXECD_TEST_EXECUTABLE", exe)
+
 	for _, f := range folders {
 		// Only handle folders
 		if !f.IsDir() {
@@ -391,7 +398,7 @@ func TestTracking(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	var testcase, field string
-	flag.StringVar(&testcase, "case", "", "test-case to mock [multiply, long]")
+	flag.StringVar(&testcase, "case", "", "test-case to mock [multiply, long, pass-through]")
 	flag.StringVar(&field, "field", "count", "name of the field to multiply")
 	flag.Parse()
 
@@ -404,6 +411,8 @@ func TestMain(m *testing.M) {
 		os.Exit(runTestCaseMultiply(field))
 	case "long":
 		os.Exit(runTestCaseLong(field))
+	case "pass-through":
+		os.Exit(runTestCasePassThrough())
 	}
 	os.Exit(5)
 }
@@ -489,4 +498,12 @@ func runTestCaseLong(field string) int {
 		}
 		fmt.Fprint(os.Stdout, string(b))
 	}
+}
+
+func runTestCasePassThrough() int {
+	if _, err := io.Copy(os.Stdout, os.Stdin); err != nil {
+		fmt.Fprintf(os.Stderr, "ERR %v\n", err)
+		return 1
+	}
+	return 0
 }
