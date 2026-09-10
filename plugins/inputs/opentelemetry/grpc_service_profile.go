@@ -76,19 +76,52 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 		for _, sp := range rp.ScopeProfiles {
 			for _, p := range sp.Profiles {
 				for i, sample := range p.Samples {
+					if sample.StackIndex < 0 || int(sample.StackIndex) >= len(pd.StackTable) {
+						buf, err := protojson.Marshal(req)
+						if err != nil {
+							s.logger.Errorf("Cannot marshal request: %v", err)
+						}
+						s.logger.Errorf("invalid stack index %d in request: %s", sample.StackIndex, buf)
+						continue
+					}
+
 					stack := pd.StackTable[sample.StackIndex]
 					for _, locIdx := range stack.LocationIndices {
 						for validx, value := range sample.Values {
 							loc := pd.LocationTable[locIdx]
 							locations := make([]string, 0, len(loc.Lines))
 							for _, line := range loc.Lines {
+								if line.FunctionIndex < 0 || int(line.FunctionIndex) >= len(pd.FunctionTable) {
+									buf, err := protojson.Marshal(req)
+									if err != nil {
+										s.logger.Errorf("Cannot marshal request: %v", err)
+									}
+									s.logger.Errorf("invalid function index %d in request: %s", line.FunctionIndex, buf)
+									continue
+								}
 								f := pd.FunctionTable[line.FunctionIndex]
+								if f.FilenameStrindex < 0 || int(f.FilenameStrindex) >= len(pd.StringTable) {
+									buf, err := protojson.Marshal(req)
+									if err != nil {
+										s.logger.Errorf("Cannot marshal request: %v", err)
+									}
+									s.logger.Errorf("invalid filename index %d in request: %s", f.FilenameStrindex, buf)
+									continue
+								}
 								fileloc := pd.StringTable[f.FilenameStrindex]
 								if f.StartLine > 0 {
 									if fileloc != "" {
 										fileloc += " "
 									}
 									fileloc += "line " + strconv.FormatInt(f.StartLine, 10)
+								}
+								if f.NameStrindex < 0 || int(f.NameStrindex) >= len(pd.StringTable) {
+									buf, err := protojson.Marshal(req)
+									if err != nil {
+										s.logger.Errorf("Cannot marshal request: %v", err)
+									}
+									s.logger.Errorf("invalid function name index %d in request: %s", f.NameStrindex, buf)
+									continue
 								}
 								l := pd.StringTable[f.NameStrindex]
 								if fileloc != "" {
@@ -97,8 +130,59 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 								locations = append(locations, l)
 							}
 							mapping := &otlp.Mapping{}
+
+							// Check the indices of the following lookups
+							if loc.MappingIndex < 0 || int(loc.MappingIndex) >= len(pd.MappingTable) {
+								buf, err := protojson.Marshal(req)
+								if err != nil {
+									s.logger.Errorf("Cannot marshal request: %v", err)
+								}
+								s.logger.Errorf("invalid mapping index %d in request: %s", loc.MappingIndex, buf)
+								continue
+							}
+							if p.PeriodType.TypeStrindex < 0 || int(p.PeriodType.TypeStrindex) >= len(pd.StringTable) {
+								buf, err := protojson.Marshal(req)
+								if err != nil {
+									s.logger.Errorf("Cannot marshal request: %v", err)
+								}
+								s.logger.Errorf("invalid mapping period name index %d in request: %s", p.PeriodType.TypeStrindex, buf)
+								continue
+							}
+							if p.PeriodType.UnitStrindex < 0 || int(p.PeriodType.UnitStrindex) >= len(pd.StringTable) {
+								buf, err := protojson.Marshal(req)
+								if err != nil {
+									s.logger.Errorf("Cannot marshal request: %v", err)
+								}
+								s.logger.Errorf("invalid mapping period unit index %d in request: %s", p.PeriodType.UnitStrindex, buf)
+								continue
+							}
+							if p.SampleType.TypeStrindex < 0 || int(p.SampleType.TypeStrindex) >= len(pd.StringTable) {
+								buf, err := protojson.Marshal(req)
+								if err != nil {
+									s.logger.Errorf("Cannot marshal request: %v", err)
+								}
+								s.logger.Errorf("invalid mapping sample name index %d in request: %s", p.PeriodType.TypeStrindex, buf)
+								continue
+							}
+							if p.SampleType.UnitStrindex < 0 || int(p.SampleType.UnitStrindex) >= len(pd.StringTable) {
+								buf, err := protojson.Marshal(req)
+								if err != nil {
+									s.logger.Errorf("Cannot marshal request: %v", err)
+								}
+								s.logger.Errorf("invalid mapping sample unit index %d in request: %s", p.SampleType.UnitStrindex, buf)
+								continue
+							}
+							if mapping.FilenameStrindex < 0 || int(mapping.FilenameStrindex) >= len(pd.StringTable) {
+								buf, err := protojson.Marshal(req)
+								if err != nil {
+									s.logger.Errorf("Cannot marshal request: %v", err)
+								}
+								s.logger.Errorf("invalid mapping filename index %d in request: %s", mapping.FilenameStrindex, buf)
+								continue
+							}
+
 							// MappingIndex of 0 means unknown or unapplicable mapping, as the
-							// first entry in the  mapping table is always a null mapping.
+							// first entry in the mapping table is always a null mapping.
 							if loc.MappingIndex != 0 {
 								mapping = pd.MappingTable[loc.MappingIndex]
 							}
@@ -126,6 +210,14 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 							}
 							for _, idx := range sample.AttributeIndices {
 								attr := pd.AttributeTable[idx]
+								if attr.KeyStrindex < 0 || int(attr.KeyStrindex) >= len(pd.StringTable) {
+									buf, err := protojson.Marshal(req)
+									if err != nil {
+										s.logger.Errorf("Cannot marshal request: %v", err)
+									}
+									s.logger.Errorf("invalid attribute index %d in request: %s", attr.KeyStrindex, buf)
+									continue
+								}
 								key := pd.StringTable[attr.KeyStrindex]
 								fields[key] = attr.GetValue().Value
 							}
