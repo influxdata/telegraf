@@ -68,13 +68,8 @@ func (d *DNSQuery) Init() error {
 		d.Network = "udp"
 	}
 
-	if d.RecordType == "" {
-		d.RecordType = "NS"
-	}
-
 	if len(d.Domains) == 0 {
 		d.Domains = []string{"."}
-		d.RecordType = "NS"
 	}
 
 	if d.Port < 1 {
@@ -83,6 +78,8 @@ func (d *DNSQuery) Init() error {
 
 	// Convert the record type
 	switch d.RecordType {
+	case "":
+		d.RecordType = "NS"
 	case "A":
 		d.record = dns.TypeA
 	case "AAAA":
