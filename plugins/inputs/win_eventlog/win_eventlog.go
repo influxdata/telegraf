@@ -106,20 +106,15 @@ func (w *WinEventLog) Init() error {
 func (w *WinEventLog) Start(telegraf.Accumulator) error {
 	subscription, err := w.evtSubscribe()
 	if err != nil {
-		startupErr := fmt.Errorf("subscription of Windows Event Log failed: %w", err)
 		return &internal.StartupError{
-			Err:   startupErr,
-			Retry: isRetriableSubscriptionError(err),
+			Err:   fmt.Errorf("subscription of Windows Event Log failed: %w", err),
+			Retry: errors.Is(err, windows.ERROR_EVT_CHANNEL_NOT_FOUND),
 		}
 	}
 	w.subscription = subscription
 	w.Log.Debug("Subscription handle id:", w.subscription)
 
 	return nil
-}
-
-func isRetriableSubscriptionError(err error) bool {
-	return errors.Is(err, windows.ERROR_EVT_CHANNEL_NOT_FOUND)
 }
 
 func (w *WinEventLog) GetState() interface{} {
