@@ -80,6 +80,7 @@ func (d *DNSQuery) Init() error {
 	switch d.RecordType {
 	case "":
 		d.RecordType = "NS"
+		d.record = dns.TypeNS
 	case "A":
 		d.record = dns.TypeA
 	case "AAAA":

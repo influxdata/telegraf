@@ -96,6 +96,10 @@ func TestRecordTypeParser(t *testing.T) {
 		expected uint16
 	}{
 		{
+			record:   "",
+			expected: dns.TypeNS,
+		},
+		{
 			record:   "A",
 			expected: dns.TypeA,
 		},
