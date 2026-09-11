@@ -37,7 +37,10 @@ func newPlugin(t *testing.T, baseURL string) *FXMacroData {
 func TestGatherIndicator(t *testing.T) {
 	server := newServer(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(indicatorBody))
+		if _, err := w.Write([]byte(indicatorBody)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+		}
 	})
 
 	plugin := newPlugin(t, server.URL)
@@ -57,7 +60,10 @@ func TestPointIsStampedWithThePublicationInstant(t *testing.T) {
 	// point must not be stamped with collection time when the API reports the
 	// publication instant.
 	server := newServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(indicatorBody))
+		if _, err := w.Write([]byte(indicatorBody)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+		}
 	})
 
 	plugin := newPlugin(t, server.URL)
@@ -73,7 +79,10 @@ func TestNullValueIsSkipped(t *testing.T) {
 	// A null means the period was not reported. Recording zero would be
 	// indistinguishable from a real reading of zero.
 	server := newServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`{"data":[{"date":"2026-07-31","val":null}]}`))
+		if _, err := w.Write([]byte(`{"data":[{"date":"2026-07-31","val":null}]}`)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+		}
 	})
 
 	plugin := newPlugin(t, server.URL)
@@ -86,7 +95,10 @@ func TestNullValueIsSkipped(t *testing.T) {
 
 func TestEmptySeriesProducesNoMetric(t *testing.T) {
 	server := newServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`{"data":[]}`))
+		if _, err := w.Write([]byte(`{"data":[]}`)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+		}
 	})
 
 	plugin := newPlugin(t, server.URL)
@@ -102,7 +114,10 @@ func TestAPIKeyTravelsAsAHeaderNotAQueryParameter(t *testing.T) {
 	server := newServer(t, func(w http.ResponseWriter, r *http.Request) {
 		gotHeader = r.Header.Get("X-API-Key")
 		gotQuery = r.URL.RawQuery
-		_, _ = w.Write([]byte(indicatorBody))
+		if _, err := w.Write([]byte(indicatorBody)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+		}
 	})
 
 	plugin := newPlugin(t, server.URL)
@@ -120,7 +135,10 @@ func TestNoAuthHeaderWithoutAKey(t *testing.T) {
 	var hadHeader bool
 	server := newServer(t, func(w http.ResponseWriter, r *http.Request) {
 		_, hadHeader = r.Header["X-Api-Key"]
-		_, _ = w.Write([]byte(indicatorBody))
+		if _, err := w.Write([]byte(indicatorBody)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+		}
 	})
 
 	plugin := newPlugin(t, server.URL)
@@ -137,7 +155,10 @@ func TestOneUncoveredCurrencyDoesNotLoseTheOthers(t *testing.T) {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		_, _ = w.Write([]byte(indicatorBody))
+		if _, err := w.Write([]byte(indicatorBody)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+		}
 	})
 
 	plugin := newPlugin(t, server.URL)
@@ -153,7 +174,10 @@ func TestOneUncoveredCurrencyDoesNotLoseTheOthers(t *testing.T) {
 
 func TestGatherFX(t *testing.T) {
 	server := newServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`{"data":[{"date":"2026-09-10","val":1.1616}]}`))
+		if _, err := w.Write([]byte(`{"data":[{"date":"2026-09-10","val":1.1616}]}`)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+		}
 	})
 
 	plugin := &FXMacroData{
