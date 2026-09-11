@@ -92,7 +92,7 @@ func (k *Kafka) Init() error {
 	if k.Socks5ProxyEnabled {
 		cfg.Net.Proxy.Enable = true
 
-		dialer, err := k.Socks5ProxyConfig.GetDialer()
+		dialer, err := k.Socks5ProxyConfig.GetDialer(nil)
 		if err != nil {
 			return fmt.Errorf("connecting to proxy server failed: %w", err)
 		}
