@@ -121,7 +121,7 @@ func BenchmarkFilterSingleNoGlobFalse(b *testing.B) {
 	f, err := Compile([]string{"cpu"})
 	require.NoError(b, err)
 	var tmp bool
-	for n := 0; n < b.N; n++ {
+	for b.Loop() {
 		tmp = f.Match("network")
 	}
 	benchbool = tmp
@@ -131,7 +131,7 @@ func BenchmarkFilterSingleNoGlobTrue(b *testing.B) {
 	f, err := Compile([]string{"cpu"})
 	require.NoError(b, err)
 	var tmp bool
-	for n := 0; n < b.N; n++ {
+	for b.Loop() {
 		tmp = f.Match("cpu")
 	}
 	benchbool = tmp
@@ -141,7 +141,7 @@ func BenchmarkFilter(b *testing.B) {
 	f, err := Compile([]string{"cpu", "mem", "net*"})
 	require.NoError(b, err)
 	var tmp bool
-	for n := 0; n < b.N; n++ {
+	for b.Loop() {
 		tmp = f.Match("network")
 	}
 	benchbool = tmp
@@ -151,29 +151,33 @@ func BenchmarkFilterNoGlob(b *testing.B) {
 	f, err := Compile([]string{"cpu", "mem", "net"})
 	require.NoError(b, err)
 	var tmp bool
-	for n := 0; n < b.N; n++ {
+	for b.Loop() {
 		tmp = f.Match("net")
 	}
 	benchbool = tmp
 }
 
-func BenchmarkFilter2(b *testing.B) {
-	f, err := Compile([]string{"aa", "bb", "c", "ad", "ar", "at", "aq",
-		"aw", "az", "axxx", "ab", "cpu", "mem", "net*"})
+func BenchmarkFilterMany(b *testing.B) {
+	f, err := Compile([]string{
+		"aa", "bb", "c", "ad", "ar", "at", "aq",
+		"aw", "az", "axxx", "ab", "cpu", "mem", "net*",
+	})
 	require.NoError(b, err)
 	var tmp bool
-	for n := 0; n < b.N; n++ {
+	for b.Loop() {
 		tmp = f.Match("network")
 	}
 	benchbool = tmp
 }
 
-func BenchmarkFilter2NoGlob(b *testing.B) {
-	f, err := Compile([]string{"aa", "bb", "c", "ad", "ar", "at", "aq",
-		"aw", "az", "axxx", "ab", "cpu", "mem", "net"})
+func BenchmarkFilterManyNoGlob(b *testing.B) {
+	f, err := Compile([]string{
+		"aa", "bb", "c", "ad", "ar", "at", "aq",
+		"aw", "az", "axxx", "ab", "cpu", "mem", "net",
+	})
 	require.NoError(b, err)
 	var tmp bool
-	for n := 0; n < b.N; n++ {
+	for b.Loop() {
 		tmp = f.Match("net")
 	}
 	benchbool = tmp
