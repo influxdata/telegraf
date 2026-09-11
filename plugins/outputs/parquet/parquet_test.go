@@ -593,3 +593,74 @@ func TestFieldTakesPrecedenceOverTagInAnyOrder(t *testing.T) {
 		})
 	}
 }
+
+func TestRotationIgnoresExternalModifications(t *testing.T) {
+	testDir := t.TempDir()
+	plugin := &Parquet{
+		Directory:          testDir,
+		RotationInterval:   config.Duration(time.Second),
+		TimestampFieldName: defaultTimestampFieldName,
+		Log:                testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+
+	write := func(value float64) {
+		require.NoError(t, plugin.Write([]telegraf.Metric{
+			metric.New("test", map[string]string{}, map[string]interface{}{"value": value}, time.Now()),
+		}))
+	}
+
+	write(1.0)
+
+	stale := time.Now().Add(-time.Hour)
+	require.NoError(t, os.Chtimes(filepath.Join(testDir, plugin.metricGroups["test"].filename), stale, stale))
+
+	write(2.0)
+	require.NoError(t, plugin.Close())
+
+	files, err := os.ReadDir(testDir)
+	require.NoError(t, err)
+	require.Len(t, files, 1)
+
+	reader, err := file.OpenParquetFile(filepath.Join(testDir, files[0].Name()), false)
+	require.NoError(t, err)
+	defer reader.Close()
+	require.Equal(t, 2, int(reader.MetaData().NumRows))
+}
+
+func TestDeletedFileReappearsOnlyOnRotation(t *testing.T) {
+	testDir := t.TempDir()
+	plugin := &Parquet{
+		Directory:          testDir,
+		RotationInterval:   config.Duration(time.Hour),
+		TimestampFieldName: defaultTimestampFieldName,
+		Log:                testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	write := func(value float64) {
+		require.NoError(t, plugin.Write([]telegraf.Metric{
+			metric.New("test", map[string]string{}, map[string]interface{}{"value": value}, time.Now()),
+		}))
+	}
+
+	write(1.0)
+
+	group := plugin.metricGroups["test"]
+	require.NoError(t, os.Remove(filepath.Join(testDir, group.filename)))
+
+	write(2.0)
+	files, err := os.ReadDir(testDir)
+	require.NoError(t, err)
+	require.Empty(t, files, "the delete goes unnoticed, so the write lands in the removed file")
+
+	group.created = group.created.Add(-2 * time.Hour)
+	write(3.0)
+
+	files, err = os.ReadDir(testDir)
+	require.NoError(t, err)
+	require.Len(t, files, 1, "the rotation opens a new file")
+}
