@@ -141,7 +141,7 @@ func (f *FXMacroData) gatherIndicator(acc telegraf.Accumulator, currency, indica
 		fields["reference_date"] = row.Date
 	}
 
-	acc.AddFields("fxmacrodata_indicator", fields, tags, f.timestamp(row))
+	acc.AddFields("fxmacrodata_indicator", fields, tags, timestamp(row))
 
 	return nil
 }
@@ -167,7 +167,7 @@ func (f *FXMacroData) gatherFX(acc telegraf.Accumulator, base, quote string) err
 		fields["reference_date"] = row.Date
 	}
 
-	acc.AddFields("fxmacrodata_fx", fields, tags, f.timestamp(row))
+	acc.AddFields("fxmacrodata_fx", fields, tags, timestamp(row))
 
 	return nil
 }
@@ -178,7 +178,7 @@ func (f *FXMacroData) gatherFX(acc telegraf.Accumulator, base, quote string) err
 // for a given month is not knowable during that month. Stamping the point with
 // the publication instant keeps that usable in a time series, and falls back to
 // now only when the API does not report one.
-func (f *FXMacroData) timestamp(row observation) time.Time {
+func timestamp(row observation) time.Time {
 	if row.AnnouncementDatetime != nil && *row.AnnouncementDatetime > 0 {
 		return time.Unix(*row.AnnouncementDatetime, 0).UTC()
 	}
