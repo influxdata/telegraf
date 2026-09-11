@@ -11,7 +11,8 @@ permissions:
 
 jobs:
   run-readme-linter:
-    runs-on: ubuntu-latest
+    runs-on:
+      group: self-hosted
     steps:
       - uses: actions/setup-go@v7
         with:

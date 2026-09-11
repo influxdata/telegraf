@@ -11,7 +11,8 @@ permissions:
 jobs:
   milestone_job:
     if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
+    runs-on:
+      group: self-hosted
     name: Assign milestones to PRs
     steps:
       - name: Checkout code
