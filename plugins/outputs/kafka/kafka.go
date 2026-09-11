@@ -15,6 +15,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/common/proxy"
@@ -83,21 +84,21 @@ func (k *Kafka) Init() error {
 	}
 
 	// Create new configuration
-	config := sarama.NewConfig()
-	if err := k.SetConfig(config, k.Log); err != nil {
+	cfg := sarama.NewConfig()
+	if err := k.SetConfig(cfg, k.Log); err != nil {
 		return err
 	}
 
 	if k.Socks5ProxyEnabled {
-		config.Net.Proxy.Enable = true
+		cfg.Net.Proxy.Enable = true
 
 		dialer, err := k.Socks5ProxyConfig.GetDialer()
 		if err != nil {
 			return fmt.Errorf("connecting to proxy server failed: %w", err)
 		}
-		config.Net.Proxy.Dialer = dialer
+		cfg.Net.Proxy.Dialer = dialer
 	}
-	k.saramaConfig = config
+	k.saramaConfig = cfg
 
 	switch k.ProducerTimestamp {
 	case "":
@@ -266,11 +267,13 @@ func (k *Kafka) routingKey(metric telegraf.Metric) (string, error) {
 func init() {
 	outputs.Add("kafka", func() telegraf.Output {
 		return &Kafka{
-			WriteConfig: kafka.WriteConfig{
-				MaxRetry:     3,
-				RequiredAcks: -1,
-			},
-			producerFunc: sarama.NewSyncProducer,
+			MaxRetry:        3,
+			RequiredAcks:    -1,
+			NetDialTimeout:  config.Duration(30 * time.Second),
+			NetReadTimeout:  config.Duration(30 * time.Second),
+			NetWriteTimeout: config.Duration(30 * time.Second),
+			ProducerTimeout: config.Duration(10 * time.Second),
+			producerFunc:    sarama.NewSyncProducer,
 		}
 	})
 }
