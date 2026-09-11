@@ -6,7 +6,7 @@ orbs:
 executors:
   telegraf-ci:
     working_directory: '/go/src/github.com/influxdata/telegraf'
-    resource_class: large
+    resource_class: runner-ns/docker-large
     docker:
       - image: 'quay.io/influxdb/telegraf-ci:1.27.0'
     environment:
@@ -482,6 +482,7 @@ jobs:
   package-consolidate:
     docker:
      - image: alpine
+    resource_class: runner-ns/docker
     steps:
       - attach_workspace:
           at: '.'
@@ -496,6 +497,7 @@ jobs:
             echo "This job contains all the final artifacts."
   share-artifacts:
     executor: aws-cli/default
+    resource_class: runner-ns/docker
     steps:
       - checkout
       - check-changed-files-or-halt
@@ -511,6 +513,7 @@ jobs:
         auth:
           username: $QUAY_RSIGN_USERNAME
           password: $QUAY_RSIGN_PASSWORD
+    resource_class: medium.gen2
     steps:
       - add_ssh_keys:
           fingerprints:
