@@ -766,6 +766,16 @@ func (*Agent) push(ctx context.Context, aggregator *models.RunningAggregator, ac
 
 		select {
 		case <-time.After(until):
+			// With round_interval the window end is a wall-clock time while
+			// the timer sleeps on the monotonic clock, so the timer can fire
+			// before the wall clock reaches the window end. Re-arm for the
+			// remainder rather than pushing early, which would reset the
+			// window onto the same slot and push it twice. A remainder of a
+			// full period or more is a clock adjustment, which Push handles
+			// by resetting the window, so let that through.
+			if remaining := time.Until(aggregator.EndPeriod()); remaining > 0 && remaining < aggregator.Period() {
+				continue
+			}
 			aggregator.Push(acc)
 		case <-ctx.Done():
 			aggregator.Push(acc)
