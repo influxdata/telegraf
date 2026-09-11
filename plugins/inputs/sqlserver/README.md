@@ -61,7 +61,7 @@ to use them.
   ## that should be used to authenticate to the Azure SQL server.
   # client_id = ""
 
-  ## "database_type" enables a specific set of queries depending on the database type. If specified, it replaces azuredb = true/false and query_version = 2
+  ## "database_type" enables a specific set of queries depending on the database type.
   ## In the config file, the sql server plugin section should be repeated each with a set of servers for a specific database_type.
   ## Possible values for database_type are - "SQLServer" or "AzureSQLDB" or "AzureSQLManagedInstance" or "AzureSQLPool"
   database_type = "SQLServer"
@@ -323,105 +323,18 @@ set to "AAD"
 
 ## Metrics
 
-To provide backwards compatibility, this plugin support two versions of
-metrics queries.
+The queries run depend on the configured `database_type`.
 
 > [!NOTE]
-> Version 2 queries are not backwards compatible with the old queries. Any
-> dashboards or queries based on the old query format will not work with the new
-> format. The version 2 queries only report raw metrics, no math has been done
-> to calculate deltas. To graph this data you must calculate deltas in your
-> dashboarding software.
-
-### Query Version 1
-
-The original metrics queries provide:
-
-- *Performance counters*: 1000+ metrics from `sys.dm_os_performance_counters`
-- *Performance metrics*: special performance and ratio metrics
-- *Wait stats*: wait tasks categorized from `sys.dm_os_wait_stats`
-- *Memory clerk*: memory breakdown from `sys.dm_os_memory_clerks`
-- *Database size*: databases size trend from `sys.dm_io_virtual_file_stats`
-- *Database IO*: databases I/O from `sys.dm_io_virtual_file_stats`
-- *Database latency*: databases latency from `sys.dm_io_virtual_file_stats`
-- *Database properties*: databases properties, state and recovery model, from `sys.databases`
-- *OS Volume*: available, used and total space from `sys.dm_os_volume_stats`
-- *CPU*: cpu usage from `sys.dm_os_ring_buffers`
-
-If you are using the original queries all stats have the following tags:
-
-- `servername`:  hostname:instance
-- `type`: type of stats to easily filter measurements
-
-### Query Version 2
-
-The new (version 2) metrics provide:
-
-- *Database IO*: IO stats from `sys.dm_io_virtual_file_stats`.
-- *Memory Clerk*: Memory clerk breakdown from `sys.dm_os_memory_clerks`, most
-                  clerks have been given a friendly name.
-- *Performance Counters*:  A select list of performance counters from
-                           `sys.dm_os_performance_counters`. Some of the
-                           important metrics included:
-  - *Activity*:            Transactions/sec/database, Batch requests/sec,
-                           blocked processes and more
-  - *Availability Groups*: Bytes sent to replica, Bytes received from replica,
-                           Log bytes received, Log send queue, transaction delay
-                           and more
-  - *Log activity*:        Log bytes flushed/sec, Log flushes/sec, Log Flush
-                           Wait Time
-  - *Memory*:              PLE, Page reads/sec, Page writes/sec and more
-  - *TempDB*:              Free space, Version store usage, Active temp tables,
-                           temp table creation rate and more
-  - *Resource Governor*:   CPU Usage, Requests/sec, Queued Requests, and Blocked
-                           tasks per workload group and more
-- *Server properties*:     Number of databases in all possible states (online,
-                           offline, suspect, etc.), cpu count, total physical
-                           memory, available physical memory, SQL Server service
-                           uptime, SQL Server SPID, and SQL Server version. In
-                           the case of Azure SQL relevant properties such as
-                           Tier, #Vcores, Memory etc.
-- *Wait stats*:            Wait time in ms, number of waiting tasks, resource
-                           wait time, signal wait time, max wait time in ms,
-                           wait type, and wait category. The waits are
-                           categorized using the same categories used in
-                           Query Store.
-- *Schedulers*:            This captures `sys.dm_os_schedulers`.
-- *SqlRequests*:           This captures a snapshot of `sys.dm_exec_requests`
-                           and `sys.dm_exec_sessions` that gives you running
-                           requests as well as wait types and blocking sessions.
-                           Telegraf's monitoring request is omitted unless it is
-                           a heading blocker. Also includes sleeping sessions
-                           with open transactions.
-- *VolumeSpace*:           uses `sys.dm_os_volume_stats` to get total, used and
-                           occupied space on every disk that contains a data or
-                           log file. (Note that even if enabled it won't get any
-                           data from Azure SQL Database or SQL Managed Instance).
-                           It is pointless to run this with high frequency
-                           (ie: every 10s), but it won't cause any problem.
-- *Cpu*:                   uses the buffer ring (`sys.dm_os_ring_buffers`) to
-                           get CPU data, the table is updated once per minute.
-                           (Note that even if enabled it won't get any data from
-                           Azure SQL Database or SQL Managed Instance).
-
-  In order to allow tracking on a per statement basis this query produces a
-  unique tag for each query.  Depending on the database workload, this may
-  result in a high cardinality series.  Reference the FAQ for tips on
-  [managing series cardinality][cardinality].
-
-- *Azure Managed Instances*
-  - Stats from `sys.server_resource_stats`
-  - Resource governance stats from `sys.dm_instance_resource_governance`
-- *Azure SQL Database* in addition to other stats
-  - Stats from `sys.dm_db_wait_stats`
-  - Resource governance stats from `sys.dm_user_db_resource_governance`
-  - Stats from `sys.dm_db_resource_stats`
+> The queries only report raw metrics, no math has been done to calculate
+> deltas. To graph this data you must calculate deltas in your dashboarding
+> software.
 
 ### Database Type "AzureSQLDB"
 
 These are metrics for Azure SQL Database (single database) and are very
-similar to version 2 but split out for maintenance reasons, better ability
-to test,differences in DMVs:
+similar to the "SQLServer" database type but split out for maintenance
+reasons, better ability to test, differences in DMVs:
 
 - *AzureSQLDBDatabaseIO*:          IO stats from `sys.dm_io_virtual_file_stats`
                                    including resource governance time, RBPEX, IO
@@ -587,21 +500,20 @@ The guiding principal is that all data collected from the same primary DMV ends
 up in the same measure irrespective of database_type.
 
 - `sqlserver_database_io`       - Used by AzureSQLDBDatabaseIO,
-                                  AzureSQLMIDatabaseIO, SQLServerDatabaseIO,
-                                  DatabaseIO given the data is from `sys.dm_io_virtual_file_stats`
-- `sqlserver_waitstats`         - Used by WaitStatsCategorized,
+                                  AzureSQLMIDatabaseIO, SQLServerDatabaseIO
+                                  given the data is from `sys.dm_io_virtual_file_stats`
+- `sqlserver_waitstats`         - Used by SQLServerWaitStatsCategorized,
                                   AzureSQLDBOsWaitstats, AzureSQLMIOsWaitstats
 - `sqlserver_server_properties` - Used by SQLServerProperties,
                                   AzureSQLDBServerProperties,
-                                  AzureSQLMIServerProperties, ServerProperties
+                                  AzureSQLMIServerProperties
 - `sqlserver_memory_clerks`     - Used by SQLServerMemoryClerks,
-                                  AzureSQLDBMemoryClerks, AzureSQLMIMemoryClerks,
-                                  MemoryClerk
+                                  AzureSQLDBMemoryClerks, AzureSQLMIMemoryClerks
 - `sqlserver_performance`       - Used by SQLServerPerformanceCounters,
                                   AzureSQLDBPerformanceCounters,
-                                  AzureSQLMIPerformanceCounters, PerformanceCounters
-- `sys.dm_os_schedulers`        - Used by SQLServerSchedulers,
-                                  AzureSQLDBServerSchedulers, AzureSQLMIServerSchedulers
+                                  AzureSQLMIPerformanceCounters
+- `sqlserver_schedulers`        - Used by SQLServerSchedulers,
+                                  AzureSQLDBSchedulers, AzureSQLMISchedulers
 
 The following Performance counter metrics can be used directly, with no delta
 calculations:
@@ -641,7 +553,7 @@ calculations:
 - SQLServer:Workload Group Stats\Queued requests
 - SQLServer:Workload Group Stats\Requests completed/sec
 
-Version 2 queries have the following tags:
+All queries have the following tags:
 
 - `sql_instance`:  Physical host and instance name (hostname:instance)
 - `database_name`: For Azure SQLDB, database_name denotes the name of the
@@ -649,11 +561,10 @@ Version 2 queries have the following tags:
 
 ### Health Metric
 
-All collection versions (version 1, version 2, and database_type) support an
-optional plugin health metric called `sqlserver_telegraf_health`. This metric
-tracks if connections to SQL Server are succeeding or failing. Users can
-leverage this metric to detect if their SQL Server monitoring is not working
-as intended.
+All database types support an optional plugin health metric called
+`sqlserver_telegraf_health`. This metric tracks if connections to SQL Server
+are succeeding or failing. Users can leverage this metric to detect if their
+SQL Server monitoring is not working as intended.
 
 In the configuration file, toggling `health_metric` to `true` will enable
 collection of this metric. By default, this value is set to `false` and
@@ -677,16 +588,13 @@ The health metric emits the following fields:
 - `attempted_queries`  - Number of queries that were attempted for this connection
 - `successful_queries` - Number of queries that completed successfully for this
                          connection
-- `database_type`      - Type of database as specified by `database_type`.
-                         If `database_type` is empty, the `QueryVersion` and
-                         `AzureDB` fields are concatenated instead
+- `database_type`      - Type of database as specified by `database_type`,
+                         `SQLServer` if not configured
 
 If `attempted_queries` and `successful_queries` are not equal for
 a given connection, some metrics were not successfully gathered for
 that connection. If `successful_queries` is 0, no metrics were successfully
 gathered.
-
-[cardinality]: /docs/FAQ.md#user-content-q-how-can-i-manage-series-cardinality
 
 ## Example Output
 
