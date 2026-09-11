@@ -29,29 +29,29 @@ import (
 var sampleConfig string
 
 type Elasticsearch struct {
-	AuthBearerToken     config.Secret          `toml:"auth_bearer_token"`
-	DefaultPipeline     string                 `toml:"default_pipeline"`
-	DefaultTagValue     string                 `toml:"default_tag_value"`
-	EnableGzip          bool                   `toml:"enable_gzip"`
-	EnableSniffer       bool                   `toml:"enable_sniffer"`
-	FloatHandling       string                 `toml:"float_handling"`
-	FloatReplacement    float64                `toml:"float_replacement_value"`
-	ForceDocumentID     bool                   `toml:"force_document_id"`
-	HealthCheckInterval config.Duration        `toml:"health_check_interval"`
-	HealthCheckTimeout  config.Duration        `toml:"health_check_timeout"`
-	IndexName           string                 `toml:"index_name"`
-	IndexTemplate       map[string]interface{} `toml:"template_index_settings"`
-	ManageTemplate      bool                   `toml:"manage_template"`
-	OverwriteTemplate   bool                   `toml:"overwrite_template"`
-	UseOpTypeCreate     bool                   `toml:"use_optype_create"`
-	Username            config.Secret          `toml:"username"`
-	Password            config.Secret          `toml:"password"`
-	TemplateName        string                 `toml:"template_name"`
-	Timeout             config.Duration        `toml:"timeout"`
-	URLs                []string               `toml:"urls"`
-	UsePipeline         string                 `toml:"use_pipeline"`
-	Headers             map[string]interface{} `toml:"headers"`
-	Log                 telegraf.Logger        `toml:"-"`
+	AuthBearerToken     config.Secret   `toml:"auth_bearer_token"`
+	DefaultPipeline     string          `toml:"default_pipeline"`
+	DefaultTagValue     string          `toml:"default_tag_value"`
+	EnableGzip          bool            `toml:"enable_gzip"`
+	EnableSniffer       bool            `toml:"enable_sniffer"`
+	FloatHandling       string          `toml:"float_handling"`
+	FloatReplacement    float64         `toml:"float_replacement_value"`
+	ForceDocumentID     bool            `toml:"force_document_id"`
+	HealthCheckInterval config.Duration `toml:"health_check_interval"`
+	HealthCheckTimeout  config.Duration `toml:"health_check_timeout"`
+	IndexName           string          `toml:"index_name"`
+	IndexTemplate       map[string]any  `toml:"template_index_settings"`
+	ManageTemplate      bool            `toml:"manage_template"`
+	OverwriteTemplate   bool            `toml:"overwrite_template"`
+	UseOpTypeCreate     bool            `toml:"use_optype_create"`
+	Username            config.Secret   `toml:"username"`
+	Password            config.Secret   `toml:"password"`
+	TemplateName        string          `toml:"template_name"`
+	Timeout             config.Duration `toml:"timeout"`
+	URLs                []string        `toml:"urls"`
+	UsePipeline         string          `toml:"use_pipeline"`
+	Headers             map[string]any  `toml:"headers"`
+	Log                 telegraf.Logger `toml:"-"`
 	majorReleaseNumber  int
 	pipelineName        string
 	pipelineTagKeys     []string
@@ -262,10 +262,10 @@ func (a *Elasticsearch) processHeaders() http.Header {
 				RemovalIn: "1.45.0",
 				Notice:    "Use array syntax instead: [\"value1\", \"value2\"]",
 			})
-			for _, headerValue := range strings.Split(v, ",") {
+			for headerValue := range strings.SplitSeq(v, ",") {
 				headers.Add(key, strings.TrimSpace(headerValue))
 			}
-		case []interface{}:
+		case []any:
 			// TOML might parse arrays as []interface{}
 			for _, headerValue := range v {
 				if strVal, ok := headerValue.(string); ok {
@@ -309,7 +309,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		indexName := a.GetIndexName(a.IndexName, metric.Time(), a.tagKeys, metric.Tags())
 
 		// Handle NaN and inf field-values
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		for k, value := range metric.Fields() {
 			v, ok := value.(float64)
 			if !ok || a.FloatHandling == "none" || !(math.IsNaN(v) || math.IsInf(v, 0)) {
@@ -327,7 +327,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 			}
 		}
 
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 
 		m["@timestamp"] = metric.Time()
 		m["measurement_name"] = name
@@ -495,7 +495,7 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagK
 		indexName = dateReplacer.Replace(indexName)
 	}
 
-	tagValues := make([]interface{}, 0, len(tagKeys))
+	tagValues := make([]any, 0, len(tagKeys))
 	for _, key := range tagKeys {
 		if value, ok := metricTags[key]; ok {
 			tagValues = append(tagValues, value)
@@ -513,7 +513,7 @@ func (a *Elasticsearch) getPipelineName(pipelineInput string, tagKeys []string, 
 		return pipelineInput
 	}
 
-	var tagValues []interface{}
+	var tagValues []any
 
 	for _, key := range tagKeys {
 		if value, ok := metricTags[key]; ok {

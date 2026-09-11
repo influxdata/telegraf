@@ -194,9 +194,9 @@ func parseChassisPowerStatus(acc telegraf.Accumulator, hostname string, cmdOut [
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.Contains(line, "Chassis Power is on") {
-			acc.AddFields("ipmi_sensor", map[string]interface{}{"value": 1}, map[string]string{"name": "chassis_power_status", "server": hostname}, measuredAt)
+			acc.AddFields("ipmi_sensor", map[string]any{"value": 1}, map[string]string{"name": "chassis_power_status", "server": hostname}, measuredAt)
 		} else if strings.Contains(line, "Chassis Power is off") {
-			acc.AddFields("ipmi_sensor", map[string]interface{}{"value": 0}, map[string]string{"name": "chassis_power_status", "server": hostname}, measuredAt)
+			acc.AddFields("ipmi_sensor", map[string]any{"value": 0}, map[string]string{"name": "chassis_power_status", "server": hostname}, measuredAt)
 		}
 	}
 
@@ -222,7 +222,7 @@ func (m *Ipmi) parseDCMIPowerReading(acc telegraf.Accumulator, hostname string, 
 			tags["server"] = hostname
 		}
 
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		valunit := strings.Split(ipmiFields["value"], " ")
 		if len(valunit) != 2 {
 			continue
@@ -262,7 +262,7 @@ func (m *Ipmi) parseV1(acc telegraf.Accumulator, hostname string, cmdOut []byte,
 			tags["server"] = hostname
 		}
 
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		if strings.EqualFold("ok", trim(ipmiFields["status_code"])) {
 			fields["status"] = 1
 		} else {
@@ -322,7 +322,7 @@ func (m *Ipmi) parseV2(acc telegraf.Accumulator, hostname string, cmdOut []byte,
 		}
 		tags["entity_id"] = transform(ipmiFields["entity_id"])
 		tags["status_code"] = trim(ipmiFields["status_code"])
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		descriptionResults := m.extractFieldsFromRegex(reV2ParseDescription, trim(ipmiFields["description"]))
 		// This is an analog value with a unit
 		if descriptionResults["analogValue"] != "" && len(descriptionResults["analogUnit"]) >= 1 {

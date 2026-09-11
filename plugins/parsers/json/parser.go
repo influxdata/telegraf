@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"strconv"
 	"time"
 
@@ -93,7 +94,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		return make([]telegraf.Metric, 0), nil
 	}
 
-	var data interface{}
+	var data any
 	err := json.Unmarshal(buf, &data)
 	if err != nil {
 		return nil, err
@@ -101,9 +102,9 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	timestamp := p.timeFunc().UTC()
 	switch v := data.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		return p.parseObject(v, timestamp)
-	case []interface{}:
+	case []any:
 		return p.parseArray(v, timestamp)
 	case nil:
 		return nil, nil
@@ -130,12 +131,12 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }
 
-func (p *Parser) parseArray(data []interface{}, timestamp time.Time) ([]telegraf.Metric, error) {
+func (p *Parser) parseArray(data []any, timestamp time.Time) ([]telegraf.Metric, error) {
 	results := make([]telegraf.Metric, 0)
 
 	for _, item := range data {
 		switch v := item.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			metrics, err := p.parseObject(v, timestamp)
 			if err != nil {
 				if p.Strict {
@@ -152,11 +153,9 @@ func (p *Parser) parseArray(data []interface{}, timestamp time.Time) ([]telegraf
 	return results, nil
 }
 
-func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) ([]telegraf.Metric, error) {
+func (p *Parser) parseObject(data map[string]any, timestamp time.Time) ([]telegraf.Metric, error) {
 	tags := make(map[string]string)
-	for k, v := range p.DefaultTags {
-		tags[k] = v
-	}
+	maps.Copy(tags, p.DefaultTags)
 
 	f := JSONFlattener{}
 	err := f.FullFlattenJSON("", data, true, true)
@@ -208,7 +207,7 @@ func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) (
 // search for tag-keys that match fieldnames and add them to tags
 // will delete any strings/bools that shouldn't be fields
 // assumes that any non-numeric values in TagKeys should be displayed as tags
-func (p *Parser) switchFieldToTag(tags map[string]string, fields map[string]interface{}) (map[string]string, map[string]interface{}) {
+func (p *Parser) switchFieldToTag(tags map[string]string, fields map[string]any) (map[string]string, map[string]any) {
 	for name, value := range fields {
 		if p.tagFilter == nil {
 			continue

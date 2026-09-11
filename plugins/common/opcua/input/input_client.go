@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -153,10 +154,8 @@ func (e *EventGroupSettings) Validate() error {
 	if len(e.Fields) == 0 {
 		return errors.New("at least one Field must be specified")
 	}
-	for _, field := range e.Fields {
-		if field == "" {
-			return errors.New("empty field name in fields stanza")
-		}
+	if slices.Contains(e.Fields, "") {
+		return errors.New("empty field name in fields stanza")
 	}
 	return nil
 }
@@ -368,7 +367,7 @@ type EventNodeMetricMapping struct {
 // NodeValue The received value for a node
 type NodeValue struct {
 	TagName    string
-	Value      interface{}
+	Value      any
 	Quality    ua.StatusCode
 	ServerTime time.Time
 	SourceTime time.Time
@@ -447,9 +446,7 @@ type metricParts struct {
 func newMP(n *NodeMetricMapping) metricParts {
 	// Include the node ID as the "id" tag since MetricForNode always adds it
 	tags := map[string]string{"id": n.idStr}
-	for k, v := range n.MetricTags {
-		tags[k] = v
-	}
+	maps.Copy(tags, n.MetricTags)
 	keys := make([]string, 0, len(tags))
 	for key := range tags {
 		keys = append(keys, key)
@@ -681,11 +678,9 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 	tags := map[string]string{
 		"id": nmm.idStr,
 	}
-	for k, v := range nmm.MetricTags {
-		tags[k] = v
-	}
+	maps.Copy(tags, nmm.MetricTags)
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	if o.LastReceivedData[nodeIdx].Value != nil {
 		// Simple scalar types can be stored directly under the field name while
 		// arrays (see 5.2.5) and structures (see 5.2.6) must be unpacked.
@@ -728,18 +723,15 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 				o.Log.Errorf("could not unpack variant array of type: %T", typedValue)
 			}
 		} else {
-			fields = map[string]interface{}{
+			fields = map[string]any{
 				nmm.Tag.FieldName: o.LastReceivedData[nodeIdx].Value,
 			}
 		}
 	}
 
 	fields["Quality"] = strings.TrimSpace(o.LastReceivedData[nodeIdx].Quality.Error())
-	for _, field := range o.Config.OptionalFields {
-		if field == "DataType" {
-			fields["DataType"] = strings.Replace(o.LastReceivedData[nodeIdx].DataType.String(), "TypeID", "", 1)
-			break
-		}
+	if slices.Contains(o.Config.OptionalFields, "DataType") {
+		fields["DataType"] = strings.Replace(o.LastReceivedData[nodeIdx].DataType.String(), "TypeID", "", 1)
 	}
 	if !o.StatusCodeOK(o.LastReceivedData[nodeIdx].Quality) {
 		mp := newMP(nmm)
@@ -760,8 +752,8 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 	return metric.New(nmm.metricName, tags, fields, t)
 }
 
-func unpack[Slice ~[]E, E any](prefix string, value Slice) map[string]interface{} {
-	fields := make(map[string]interface{}, len(value))
+func unpack[Slice ~[]E, E any](prefix string, value Slice) map[string]any {
+	fields := make(map[string]any, len(value))
 	for i, v := range value {
 		key := fmt.Sprintf("%s[%d]", prefix, i)
 		fields[key] = v
@@ -771,7 +763,7 @@ func unpack[Slice ~[]E, E any](prefix string, value Slice) map[string]interface{
 
 func (o *OpcUAInputClient) MetricForEvent(nodeIdx int, event *ua.EventFieldList) telegraf.Metric {
 	node := o.EventNodeMetricMapping[nodeIdx]
-	fields := make(map[string]interface{}, len(event.EventFields))
+	fields := make(map[string]any, len(event.EventFields))
 	var sourceTime, serverTime time.Time
 	for i, field := range event.EventFields {
 		name := node.Fields[i]

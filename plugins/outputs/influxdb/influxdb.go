@@ -203,8 +203,7 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 
 		i.Log.Errorf("When writing to [%s]: %v", client.URL(), err)
 
-		var apiError *DatabaseNotFoundError
-		if errors.As(err, &apiError) {
+		if apiError, ok := errors.AsType[*DatabaseNotFoundError](err); ok {
 			if i.SkipDatabaseCreation {
 				continue
 			}

@@ -19,8 +19,8 @@ type aggregationFunction struct {
 
 // MarshalJSON serializes the aggregationFunction into JSON format.
 func (a *aggregationFunction) MarshalJSON() ([]byte, error) {
-	agg := make(map[string]interface{})
-	field := map[string]interface{}{"field": a.field}
+	agg := make(map[string]any)
+	field := map[string]any{"field": a.field}
 	if t := getAggregationFunctionType(a.aggType); t == "bucket" {
 		// We'll use the default size of 10 if it hasn't been set; size == 0 is illegal in a bucket aggregation
 		if a.size == 0 {

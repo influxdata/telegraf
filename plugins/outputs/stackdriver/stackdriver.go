@@ -7,7 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"hash/fnv"
+	"maps"
 	"path"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -169,8 +171,8 @@ func (s *Stackdriver) Connect() error {
 // allowed.
 func sorted(metrics []telegraf.Metric) []telegraf.Metric {
 	batch := make([]telegraf.Metric, 0, len(metrics))
-	for i := len(metrics) - 1; i >= 0; i-- {
-		batch = append(batch, metrics[i])
+	for _, metric := range slices.Backward(metrics) {
+		batch = append(batch, metric)
 	}
 	sort.Slice(batch, func(i, j int) bool {
 		return batch[i].Time().Before(batch[j].Time())
@@ -215,7 +217,7 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 	}
 
 	// sort the timestamps we collected
-	sort.Slice(timestamps, func(i, j int) bool { return timestamps[i] < timestamps[j] })
+	slices.Sort(timestamps)
 
 	s.Log.Debugf("received %d metrics", len(metrics))
 	s.Log.Debugf("split into %d groups by timestamp", len(metricBatch))
@@ -257,9 +259,7 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 		// Convert any declared tag to a resource label and remove it from
 		// the metric
 		resourceLabels := make(map[string]string, len(s.ResourceLabels)+len(s.TagsAsResourceLabels))
-		for k, v := range s.ResourceLabels {
-			resourceLabels[k] = v
-		}
+		maps.Copy(resourceLabels, s.ResourceLabels)
 		for _, tag := range s.TagsAsResourceLabels {
 			if val, ok := m.GetTag(tag); ok {
 				resourceLabels[tag] = val
@@ -389,7 +389,7 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 	for k := range buckets {
 		keys = append(keys, k)
 	}
-	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
+	slices.Sort(keys)
 
 	for len(buckets) != 0 {
 		// can send up to 200 time series to stackdriver
@@ -525,7 +525,7 @@ func getStackdriverMetricKind(vt telegraf.ValueType) (metricpb.MetricDescriptor_
 	}
 }
 
-func (s *Stackdriver) getStackdriverTypedValue(value interface{}) (*monitoringpb.TypedValue, error) {
+func (s *Stackdriver) getStackdriverTypedValue(value any) (*monitoringpb.TypedValue, error) {
 	if s.MetricDataType == "double" {
 		v, err := internal.ToFloat64(value)
 		if err != nil {
@@ -629,12 +629,8 @@ func buildHistogram(m telegraf.Metric) (*monitoringpb.TypedValue, error) {
 		bucketCounts = append(bucketCounts, count)
 	}
 
-	sort.Slice(buckets, func(i, j int) bool {
-		return buckets[i] < buckets[j]
-	})
-	sort.Slice(bucketCounts, func(i, j int) bool {
-		return bucketCounts[i] < bucketCounts[j]
-	})
+	slices.Sort(buckets)
+	slices.Sort(bucketCounts)
 
 	// Bucket counts contain the count for a specific bucket, not the running
 	// total like Prometheus histograms use. Loop backwards to determine the

@@ -10,7 +10,7 @@ import (
 )
 
 // Create an fcgi client
-func newFcgiClient(timeout time.Duration, h string, args ...interface{}) (*conn, error) {
+func newFcgiClient(timeout time.Duration, h string, args ...any) (*conn, error) {
 	var con net.Conn
 	if len(args) != 1 {
 		return nil, errors.New("fcgi: not enough params")

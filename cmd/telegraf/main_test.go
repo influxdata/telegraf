@@ -295,9 +295,7 @@ func TestDeprecationListFlag(t *testing.T) {
 	mC.ExpectedDeprecatedPlugins = make(map[string][]config.PluginDeprecationInfo)
 	mC.ExpectedDeprecatedPlugins["inputs"] = []config.PluginDeprecationInfo{
 		{
-			DeprecationInfo: config.DeprecationInfo{
-				Name: "test",
-			},
+			Name: "test",
 		},
 	}
 	err := runApp(args, buf, mS, mC, NewMockTelegraf())

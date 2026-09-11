@@ -187,18 +187,14 @@ func (n *NatsConsumer) Start(acc telegraf.Accumulator) error {
 	n.cancel = cancel
 
 	// Start goroutine to handle delivery notifications from accumulator.
-	n.wg.Add(1)
-	go func() {
-		defer n.wg.Done()
+	n.wg.Go(func() {
 		n.waitForDelivery(ctx)
-	}()
+	})
 
 	// Start the message reader
-	n.wg.Add(1)
-	go func() {
-		defer n.wg.Done()
+	n.wg.Go(func() {
 		go n.receiver(ctx)
-	}()
+	})
 
 	n.Log.Infof("Started the NATS consumer service, nats: %v, subjects: %v, jssubjects: %v, queue: %v",
 		n.conn.ConnectedUrl(), n.Subjects, n.JsSubjects, n.QueueGroup)

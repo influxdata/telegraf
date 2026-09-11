@@ -133,8 +133,7 @@ func (s *Syslog) Write(metrics []telegraf.Metric) (err error) {
 			continue
 		}
 		if _, err = s.Conn.Write(msgBytesWithFraming); err != nil {
-			var netErr net.Error
-			if errors.As(err, &netErr) {
+			if netErr, ok := errors.AsType[net.Error](err); ok {
 				s.Close()
 				s.Conn = nil
 				return fmt.Errorf("closing connection: %w", netErr)

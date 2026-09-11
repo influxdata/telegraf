@@ -81,8 +81,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	for _, m := range metrics {
 		err := s.write(&s.buf, m)
 		if err != nil {
-			var mErr *metricError
-			if errors.As(err, &mErr) {
+			if _, ok := errors.AsType[*metricError](err); ok {
 				continue
 			}
 			return nil, err
@@ -155,7 +154,7 @@ func (s *Serializer) buildFooter(m telegraf.Metric) {
 	s.footer = append(s.footer, '\n')
 }
 
-func (s *Serializer) buildFieldPair(key string, value interface{}) error {
+func (s *Serializer) buildFieldPair(key string, value any) error {
 	s.pair = s.pair[:0]
 	key = escape(key)
 
@@ -266,7 +265,7 @@ func (s *Serializer) newMetricError(reason string) *metricError {
 	return &metricError{reason: reason}
 }
 
-func (s *Serializer) appendFieldValue(buf []byte, value interface{}) ([]byte, error) {
+func (s *Serializer) appendFieldValue(buf []byte, value any) ([]byte, error) {
 	switch v := value.(type) {
 	case uint64:
 		if s.UintSupport {

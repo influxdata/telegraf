@@ -11,7 +11,7 @@ import (
 
 type measurementResult struct {
 	tags   map[string]string
-	fields map[string]interface{}
+	fields map[string]any
 }
 
 func TestPfctlInvocation(t *testing.T) {
@@ -151,7 +151,7 @@ Counters
 `,
 			measurements: []measurementResult{
 				{
-					fields: map[string]interface{}{
+					fields: map[string]any{
 						"entries":        int64(2),
 						"searches":       int64(11325),
 						"inserts":        int64(5),
@@ -211,7 +211,7 @@ Counters
 `,
 			measurements: []measurementResult{
 				{
-					fields: map[string]interface{}{
+					fields: map[string]any{
 						"entries":        int64(649),
 						"searches":       int64(18421725761),
 						"inserts":        int64(156762508),

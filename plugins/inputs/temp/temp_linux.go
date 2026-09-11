@@ -1,5 +1,4 @@
 //go:build linux
-// +build linux
 
 package temp
 
@@ -24,7 +23,7 @@ type temperatureStat struct {
 	label       string
 	device      string
 	temperature float64
-	additional  map[string]interface{}
+	additional  map[string]any
 }
 
 func (t *Temperature) Init() error {
@@ -81,7 +80,7 @@ func (t *Temperature) createMetricsV1(acc telegraf.Accumulator, temperatures []t
 		if t.DeviceTag {
 			tags["device"] = temp.device
 		}
-		acc.AddFields("temp", map[string]interface{}{"temp": temp.temperature}, tags)
+		acc.AddFields("temp", map[string]any{"temp": temp.temperature}, tags)
 
 		// Optional values values
 		for measurement, value := range temp.additional {
@@ -89,7 +88,7 @@ func (t *Temperature) createMetricsV1(acc telegraf.Accumulator, temperatures []t
 			if t.DeviceTag {
 				tags["device"] = temp.device
 			}
-			acc.AddFields("temp", map[string]interface{}{"temp": value}, tags)
+			acc.AddFields("temp", map[string]any{"temp": value}, tags)
 		}
 	}
 }
@@ -106,7 +105,7 @@ func (t *Temperature) createMetricsV2(acc telegraf.Accumulator, temperatures []t
 		if t.DeviceTag {
 			tags["device"] = temp.device
 		}
-		acc.AddFields("temp", map[string]interface{}{"temp": temp.temperature}, tags)
+		acc.AddFields("temp", map[string]any{"temp": temp.temperature}, tags)
 	}
 }
 
@@ -136,7 +135,7 @@ func (t *Temperature) gatherHwmon(syspath string) ([]temperatureStat, error) {
 	for _, s := range sensors {
 		// Get the sensor directory and the temperature prefix from the path
 		path := filepath.Dir(s)
-		prefix := strings.SplitN(filepath.Base(s), "_", 2)[0]
+		prefix, _, _ := strings.Cut(filepath.Base(s), "_")
 
 		// Read the sensor and device name
 		deviceName, err := os.Readlink(filepath.Join(path, "device"))
@@ -162,7 +161,7 @@ func (t *Temperature) gatherHwmon(syspath string) ([]temperatureStat, error) {
 			name:       name,
 			label:      strings.ToLower(label),
 			device:     deviceName,
-			additional: make(map[string]interface{}),
+			additional: make(map[string]any),
 		}
 
 		// Temperature (mandatory). Use a non-blocking read as the underlying

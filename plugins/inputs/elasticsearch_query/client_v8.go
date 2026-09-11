@@ -42,13 +42,11 @@ func newClientV8(cfg clientConfig) (client, error) {
 		// cannot be canceled.
 		ctx, cancel := context.WithCancel(context.Background())
 		client.cancelDiscovery = cancel
-		client.discoveryWG.Add(1)
-		go func() {
-			defer client.discoveryWG.Done()
+		client.discoveryWG.Go(func() {
 			startDiscovery(ctx, cfg.discoveryInterval, func(context.Context) error {
 				return c.DiscoverNodes()
 			}, cfg.log)
-		}()
+		})
 	}
 	return client, nil
 }
@@ -71,7 +69,7 @@ func (c *clientV8) close() {
 	}
 }
 
-func (c *clientV8) getFieldMapping(ctx context.Context, index, field string) (map[string]interface{}, error) {
+func (c *clientV8) getFieldMapping(ctx context.Context, index, field string) (map[string]any, error) {
 	req := esapi8.IndicesGetFieldMappingRequest{
 		Index:  []string{index},
 		Fields: []string{field},
@@ -86,14 +84,14 @@ func (c *clientV8) getFieldMapping(ctx context.Context, index, field string) (ma
 		return nil, err
 	}
 
-	var result map[string]interface{}
+	var result map[string]any
 	if err := json.NewDecoder(res.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("decoding message body failed: %w", err)
 	}
 	return result, nil
 }
 
-func (c *clientV8) query(ctx context.Context, aggregation *aggregation) (interface{}, int64, error) {
+func (c *clientV8) query(ctx context.Context, aggregation *aggregation) (any, int64, error) {
 	data, err := aggregation.buildSearchBody(c.log)
 	if err != nil {
 		return nil, 0, err

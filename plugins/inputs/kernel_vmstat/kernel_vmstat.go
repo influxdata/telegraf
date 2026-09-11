@@ -31,7 +31,7 @@ func (k *KernelVmstat) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 
 	dataFields := bytes.Fields(data)
 	for i, field := range dataFields {

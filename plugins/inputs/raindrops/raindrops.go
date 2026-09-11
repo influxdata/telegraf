@@ -90,7 +90,7 @@ func (r *Raindrops) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 		return err
 	}
 	tags := getTags(addr)
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"calling": calling,
 		"writing": writing,
 	}
@@ -106,7 +106,7 @@ func (r *Raindrops) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 		// Listen
 		var tags map[string]string
 
-		lis := map[string]interface{}{
+		lis := map[string]any{
 			"active": 0,
 			"queued": 0,
 		}

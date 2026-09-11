@@ -18,7 +18,7 @@ import (
 )
 
 func TestMemStatsCollectExtended(t *testing.T) {
-	baseFields := map[string]interface{}{
+	baseFields := map[string]any{
 		"total":             uint64(12400),
 		"available":         uint64(7600),
 		"used":              uint64(5000),
@@ -62,12 +62,12 @@ func TestMemStatsCollectExtended(t *testing.T) {
 	tests := []struct {
 		name        string
 		testdataDir string
-		overrides   map[string]interface{}
+		overrides   map[string]any
 	}{
 		{
 			name:        "normal",
 			testdataDir: "normal",
-			overrides: map[string]interface{}{
+			overrides: map[string]any{
 				"unevictable": uint64(143360),
 				"percpu":      uint64(5767168),
 			},
@@ -75,7 +75,7 @@ func TestMemStatsCollectExtended(t *testing.T) {
 		{
 			name:        "missing fields",
 			testdataDir: "missing_fields",
-			overrides: map[string]interface{}{
+			overrides: map[string]any{
 				"unevictable": uint64(0),
 				"percpu":      uint64(0),
 			},

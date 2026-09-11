@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"strings"
 	"sync"
 	"time"
@@ -68,9 +69,7 @@ func tailStream(
 	defer reader.Close()
 
 	tags := make(map[string]string, len(baseTags)+1)
-	for k, v := range baseTags {
-		tags[k] = v
-	}
+	maps.Copy(tags, baseTags)
 	tags["stream"] = stream
 
 	r := bufio.NewReaderSize(reader, 64*1024)
@@ -83,7 +82,7 @@ func tailStream(
 			if err != nil {
 				acc.AddError(err)
 			} else {
-				acc.AddFields("docker_log", map[string]interface{}{
+				acc.AddFields("docker_log", map[string]any{
 					"container_id": containerID,
 					"message":      message,
 				}, tags, ts)
@@ -110,25 +109,21 @@ func tailMultiplexed(acc telegraf.Accumulator, tags map[string]string, container
 
 	var tsStdout, tsStderr time.Time
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		var err error
 		tsStdout, err = tailStream(acc, tags, containerID, outReader, "stdout")
 		if err != nil {
 			acc.AddError(err)
 		}
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		var err error
 		tsStderr, err = tailStream(acc, tags, containerID, errReader, "stderr")
 		if err != nil {
 			acc.AddError(err)
 		}
-	}()
+	})
 
 	_, err := stdcopy.StdCopy(outWriter, errWriter, src)
 

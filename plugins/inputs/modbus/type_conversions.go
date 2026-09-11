@@ -7,11 +7,11 @@ import (
 func determineUntypedConverter(outType string) (fieldConverterFunc, error) {
 	switch outType {
 	case "", "UINT16":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return uint16(b[0])
 		}, nil
 	case "BOOL":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return b[0] != 0
 		}, nil
 	}

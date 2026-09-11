@@ -24,57 +24,57 @@ func (l Logger) Level() telegraf.LogLevel {
 }
 
 // AddAttribute is not supported by the test-logger
-func (Logger) AddAttribute(string, interface{}) {}
+func (Logger) AddAttribute(string, any) {}
 
-func (l Logger) Errorf(format string, args ...interface{}) {
+func (l Logger) Errorf(format string, args ...any) {
 	log.Printf("E! ["+l.Name+"] "+format, args...)
 }
 
-func (l Logger) Error(args ...interface{}) {
-	log.Print(append([]interface{}{"E! [" + l.Name + "] "}, args...)...)
+func (l Logger) Error(args ...any) {
+	log.Print(append([]any{"E! [" + l.Name + "] "}, args...)...)
 }
 
-func (l Logger) Warnf(format string, args ...interface{}) {
+func (l Logger) Warnf(format string, args ...any) {
 	log.Printf("W! ["+l.Name+"] "+format, args...)
 }
 
-func (l Logger) Warn(args ...interface{}) {
-	log.Print(append([]interface{}{"W! [" + l.Name + "] "}, args...)...)
+func (l Logger) Warn(args ...any) {
+	log.Print(append([]any{"W! [" + l.Name + "] "}, args...)...)
 }
 
-func (l Logger) Infof(format string, args ...interface{}) {
+func (l Logger) Infof(format string, args ...any) {
 	if !l.Quiet {
 		log.Printf("I! ["+l.Name+"] "+format, args...)
 	}
 }
 
-func (l Logger) Info(args ...interface{}) {
+func (l Logger) Info(args ...any) {
 	if !l.Quiet {
-		log.Print(append([]interface{}{"I! [" + l.Name + "] "}, args...)...)
+		log.Print(append([]any{"I! [" + l.Name + "] "}, args...)...)
 	}
 }
 
-func (l Logger) Debugf(format string, args ...interface{}) {
+func (l Logger) Debugf(format string, args ...any) {
 	if !l.Quiet {
 		log.Printf("D! ["+l.Name+"] "+format, args...)
 	}
 }
 
-func (l Logger) Debug(args ...interface{}) {
+func (l Logger) Debug(args ...any) {
 	if !l.Quiet {
-		log.Print(append([]interface{}{"D! [" + l.Name + "] "}, args...)...)
+		log.Print(append([]any{"D! [" + l.Name + "] "}, args...)...)
 	}
 }
 
-func (l Logger) Tracef(format string, args ...interface{}) {
+func (l Logger) Tracef(format string, args ...any) {
 	if !l.Quiet {
 		log.Printf("T! ["+l.Name+"] "+format, args...)
 	}
 }
 
 // Trace logs a trace message, patterned after log.Print.
-func (l Logger) Trace(args ...interface{}) {
+func (l Logger) Trace(args ...any) {
 	if !l.Quiet {
-		log.Print(append([]interface{}{"T! [" + l.Name + "] "}, args...)...)
+		log.Print(append([]any{"T! [" + l.Name + "] "}, args...)...)
 	}
 }

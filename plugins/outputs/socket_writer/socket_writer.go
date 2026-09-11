@@ -155,8 +155,7 @@ func (sw *SocketWriter) Write(metrics []telegraf.Metric) error {
 
 		if _, err := sw.Conn.Write(bs); err != nil {
 			// TODO log & keep going with remaining strings
-			var netErr net.Error
-			if errors.As(err, &netErr) {
+			if netErr, ok := errors.AsType[net.Error](err); ok {
 				// permanent error. close the connection
 				sw.Close()
 				sw.Conn = nil

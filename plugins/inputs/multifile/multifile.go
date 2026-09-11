@@ -48,7 +48,7 @@ func (m *MultiFile) Init() error {
 
 func (m *MultiFile) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	tags := make(map[string]string)
 
 	for _, file := range m.Files {
@@ -68,7 +68,7 @@ func (m *MultiFile) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 
-		var value interface{}
+		var value any
 
 		var d int
 		if _, errfmt := fmt.Sscanf(file.Conversion, "float(%d)", &d); errfmt == nil || file.Conversion == "float" {

@@ -25,11 +25,9 @@ func NewUnordered(
 	}
 
 	// start workers
-	p.wg.Add(1)
-	go func() {
+	p.wg.Go(func() {
 		p.startWorkers(workerCount)
-		p.wg.Done()
-	}()
+	})
 
 	return p
 }
@@ -37,7 +35,7 @@ func NewUnordered(
 func (p *Unordered) startWorkers(count int) {
 	wg := sync.WaitGroup{}
 	wg.Add(count)
-	for i := 0; i < count; i++ {
+	for range count {
 		go func() {
 			for metric := range p.inQueue {
 				for _, m := range p.fn(metric) {

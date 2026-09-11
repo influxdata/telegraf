@@ -21,7 +21,7 @@ func TestSimpleReverseLookupIntegration(t *testing.T) {
 	now := time.Now()
 	m := metric.New("name", map[string]string{
 		"dest_ip": "1.1.1.1",
-	}, map[string]interface{}{
+	}, map[string]any{
 		"source_ip": "127.0.0.1",
 	}, now)
 
@@ -56,9 +56,9 @@ func TestSimpleReverseLookupIntegration(t *testing.T) {
 
 func TestTracking(t *testing.T) {
 	inputRaw := []telegraf.Metric{
-		metric.New("foo", map[string]string{}, map[string]interface{}{"ip": "1.1.1.1"}, time.Unix(0, 0)),
-		metric.New("bar", map[string]string{}, map[string]interface{}{"ip": "1.1.1.1"}, time.Unix(0, 0)),
-		metric.New("baz", map[string]string{}, map[string]interface{}{"ip": "1.1.1.1"}, time.Unix(0, 0)),
+		metric.New("foo", map[string]string{}, map[string]any{"ip": "1.1.1.1"}, time.Unix(0, 0)),
+		metric.New("bar", map[string]string{}, map[string]any{"ip": "1.1.1.1"}, time.Unix(0, 0)),
+		metric.New("baz", map[string]string{}, map[string]any{"ip": "1.1.1.1"}, time.Unix(0, 0)),
 	}
 
 	var mu sync.Mutex
@@ -79,19 +79,19 @@ func TestTracking(t *testing.T) {
 		metric.New(
 			"foo",
 			map[string]string{},
-			map[string]interface{}{"ip": "1.1.1.1", "name": "one.one.one.one."},
+			map[string]any{"ip": "1.1.1.1", "name": "one.one.one.one."},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"bar",
 			map[string]string{},
-			map[string]interface{}{"ip": "1.1.1.1", "name": "one.one.one.one."},
+			map[string]any{"ip": "1.1.1.1", "name": "one.one.one.one."},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"baz",
 			map[string]string{},
-			map[string]interface{}{"ip": "1.1.1.1", "name": "one.one.one.one."},
+			map[string]any{"ip": "1.1.1.1", "name": "one.one.one.one."},
 			time.Unix(0, 0),
 		),
 	}

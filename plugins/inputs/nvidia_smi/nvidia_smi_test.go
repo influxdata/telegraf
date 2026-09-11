@@ -159,7 +159,7 @@ func TestGatherValidXML(t *testing.T) {
 						"pstate":       "P8",
 						"uuid":         "GPU-f9ba66fc-a7f5-94c5-da19-019ef2f9c665",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"clocks_current_graphics":       135,
 						"clocks_current_memory":         405,
 						"clocks_current_sm":             135,
@@ -193,7 +193,7 @@ func TestGatherValidXML(t *testing.T) {
 						"pstate":       "P8",
 						"uuid":         "GPU-304a277d-3545-63b8-3a36-dfde3c992989",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"clocks_current_graphics":                         300,
 						"clocks_current_memory":                           405,
 						"clocks_current_sm":                               300,
@@ -248,7 +248,7 @@ func TestGatherValidXML(t *testing.T) {
 						"pstate":       "P8",
 						"uuid":         "GPU-8f750be4-dfbc-23b9-b33f-da729a536494",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"clocks_current_graphics":                         139,
 						"clocks_current_memory":                           405,
 						"clocks_current_sm":                               139,
@@ -303,7 +303,7 @@ func TestGatherValidXML(t *testing.T) {
 						"pstate":       "P8",
 						"uuid":         "GPU-396caaed-39ca-3199-2e68-717cdb786ec6",
 					},
-					map[string]interface{}{
+					map[string]any{
 
 						"clocks_current_graphics":                         139,
 						"clocks_current_memory":                           405,
@@ -371,7 +371,7 @@ func TestGatherValidXML(t *testing.T) {
 						"pstate":       "P0",
 						"uuid":         "GPU-d37e67a5-91dd-3774-a5cb-99096249601a",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"clocks_current_graphics":                         585,
 						"clocks_current_memory":                           5000,
 						"clocks_current_sm":                               585,
@@ -432,7 +432,7 @@ func TestGatherValidXML(t *testing.T) {
 						"pstate":       "P8",
 						"uuid":         "GPU-9a9a6c50-2a47-2f51-a902-b82c3b127e94",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"clocks_current_graphics":                         210,
 						"clocks_current_memory":                           405,
 						"clocks_current_sm":                               210,
@@ -495,7 +495,7 @@ func TestGatherValidXML(t *testing.T) {
 						"pstate":       "P8",
 						"uuid":         "GPU-d6889ff6-2523-9142-ca3c-1ca3f396a625",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"clocks_current_graphics":                         210,
 						"clocks_current_memory":                           405,
 						"clocks_current_sm":                               210,
@@ -568,7 +568,7 @@ func TestGatherValidXML(t *testing.T) {
 						"pstate":       "P8",
 						"uuid":         "GPU-19d6d965-2acc-f646-00f8-4c76979aabb4",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"clocks_current_graphics":                         210,
 						"clocks_current_memory":                           405,
 						"clocks_current_sm":                               210,
@@ -629,7 +629,7 @@ func TestGatherValidXML(t *testing.T) {
 						"name": "/usr/lib/Xorg",
 						"type": "G",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"pid":         int64(835),
 						"used_memory": int64(550),
 					},
@@ -640,7 +640,7 @@ func TestGatherValidXML(t *testing.T) {
 						"name": "/usr/bin/gnome-shell",
 						"type": "G",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"pid":         int64(1481),
 						"used_memory": int64(18),
 					},
@@ -658,7 +658,7 @@ func TestGatherValidXML(t *testing.T) {
 							"7457693378709978105,262144 --variations-seed-version",
 						"type": "G",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"pid":         int64(2214),
 						"used_memory": int64(79),
 					},
@@ -669,7 +669,7 @@ func TestGatherValidXML(t *testing.T) {
 						"name": "/usr/lib/firefox/firefox",
 						"type": "G",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"pid":         int64(4044),
 						"used_memory": int64(541),
 					},
@@ -688,7 +688,7 @@ func TestGatherValidXML(t *testing.T) {
 							"CalculateNativeWinOcclusion,SpareRendererForSitePerProcess",
 						"type": "G",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"pid":         int64(42416),
 						"used_memory": int64(159),
 					},
@@ -709,7 +709,7 @@ func TestGatherValidXML(t *testing.T) {
 						"pstate":       "P2",
 						"uuid":         "GPU-19d6d965-2acc-f646-00f8-4c76979aabb4",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"clocks_current_graphics":                         1950,
 						"clocks_current_memory":                           9251,
 						"clocks_current_sm":                               1950,
@@ -788,7 +788,7 @@ func TestGatherValidXML(t *testing.T) {
 						"pstate":       "P8",
 						"uuid":         "GPU-12345678-aaaa-bbbb-cccc-0123456789ab",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"clocks_current_graphics":                         0,
 						"clocks_current_memory":                           405,
 						"clocks_current_sm":                               0,
@@ -856,7 +856,7 @@ func TestGatherValidXML(t *testing.T) {
 						"pstate":       "P0",
 						"uuid":         "GPU-513536b6-7d19-9063-b049-1e69664bb298",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"clocks_current_graphics":                         1275,
 						"clocks_current_memory":                           1593,
 						"clocks_current_sm":                               1275,
@@ -917,7 +917,7 @@ func TestGatherValidXML(t *testing.T) {
 						"compute_index": "0",
 						"gpu_index":     "3",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"memory_bar1_free":   32767,
 						"memory_bar1_total":  32767,
 						"memory_bar1_used":   0,
@@ -940,7 +940,7 @@ func TestGatherValidXML(t *testing.T) {
 						"compute_index": "0",
 						"gpu_index":     "4",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"memory_bar1_free":   32767,
 						"memory_bar1_total":  32767,
 						"memory_bar1_used":   0,
@@ -963,7 +963,7 @@ func TestGatherValidXML(t *testing.T) {
 						"compute_index": "0",
 						"gpu_index":     "5",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"memory_bar1_free":   32767,
 						"memory_bar1_total":  32767,
 						"memory_bar1_used":   0,
@@ -986,7 +986,7 @@ func TestGatherValidXML(t *testing.T) {
 						"compute_index": "0",
 						"gpu_index":     "6",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"memory_bar1_free":   32767,
 						"memory_bar1_total":  32767,
 						"memory_bar1_used":   0,
@@ -1013,7 +1013,7 @@ func TestGatherValidXML(t *testing.T) {
 						"pstate":       "P8",
 						"uuid":         "GPU-37037c3f-65c8-ec4d-24a9-420204ad8026",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"clocks_current_graphics":                         210,
 						"clocks_current_memory":                           405,
 						"clocks_current_sm":                               210,
@@ -1089,7 +1089,7 @@ func TestGatherValidXML(t *testing.T) {
 						"name": "cosmic-comp",
 						"type": "G",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"pid":         1842,
 						"used_memory": 410,
 					},
@@ -1100,7 +1100,7 @@ func TestGatherValidXML(t *testing.T) {
 						"name": "/usr/bin/code",
 						"type": "G",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"pid":         3190,
 						"used_memory": 451,
 					},
@@ -1111,7 +1111,7 @@ func TestGatherValidXML(t *testing.T) {
 						"name": "python",
 						"type": "C",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"pid":         4937,
 						"used_memory": 160,
 					},
@@ -1122,7 +1122,7 @@ func TestGatherValidXML(t *testing.T) {
 						"name": "/usr/lib/chromium/chromium",
 						"type": "C+G",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"pid":         34626,
 						"used_memory": 183,
 					},

@@ -12,19 +12,19 @@ var helper = &gos7.Helper{}
 func determineConversion(dtype string) converterFunc {
 	switch dtype {
 	case "X":
-		return func(buf []byte) interface{} {
+		return func(buf []byte) any {
 			return buf[0] != 0
 		}
 	case "B":
-		return func(buf []byte) interface{} {
+		return func(buf []byte) any {
 			return buf[0]
 		}
 	case "C":
-		return func(buf []byte) interface{} {
+		return func(buf []byte) any {
 			return string(buf[0])
 		}
 	case "S":
-		return func(buf []byte) interface{} {
+		return func(buf []byte) any {
 			if len(buf) <= 2 {
 				return ""
 			}
@@ -37,37 +37,37 @@ func determineConversion(dtype string) converterFunc {
 			return string(buf[2:])
 		}
 	case "W":
-		return func(buf []byte) interface{} {
+		return func(buf []byte) any {
 			return binary.BigEndian.Uint16(buf)
 		}
 	case "I":
-		return func(buf []byte) interface{} {
+		return func(buf []byte) any {
 			return int16(binary.BigEndian.Uint16(buf))
 		}
 	case "DW":
-		return func(buf []byte) interface{} {
+		return func(buf []byte) any {
 			return binary.BigEndian.Uint32(buf)
 		}
 	case "DI":
-		return func(buf []byte) interface{} {
+		return func(buf []byte) any {
 			return int32(binary.BigEndian.Uint32(buf))
 		}
 	case "LI":
-		return func(buf []byte) interface{} {
+		return func(buf []byte) any {
 			return int64(binary.BigEndian.Uint64(buf))
 		}
 	case "R":
-		return func(buf []byte) interface{} {
+		return func(buf []byte) any {
 			x := binary.BigEndian.Uint32(buf)
 			return math.Float32frombits(x)
 		}
 	case "LR":
-		return func(buf []byte) interface{} {
+		return func(buf []byte) any {
 			x := binary.BigEndian.Uint64(buf)
 			return math.Float64frombits(x)
 		}
 	case "DT":
-		return func(buf []byte) interface{} {
+		return func(buf []byte) any {
 			return helper.GetDateTimeAt(buf, 0).UnixNano()
 		}
 	}

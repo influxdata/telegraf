@@ -266,10 +266,8 @@ func (k *Kafka) routingKey(metric telegraf.Metric) (string, error) {
 func init() {
 	outputs.Add("kafka", func() telegraf.Output {
 		return &Kafka{
-			WriteConfig: kafka.WriteConfig{
-				MaxRetry:     3,
-				RequiredAcks: -1,
-			},
+			MaxRetry:     3,
+			RequiredAcks: -1,
 			producerFunc: sarama.NewSyncProducer,
 		}
 	})

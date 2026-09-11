@@ -177,7 +177,7 @@ func TestPluginOptionValueDeprecation(t *testing.T) {
 		name          string
 		since         string
 		removal       string
-		value         interface{}
+		value         any
 		expected      string
 		expectedLevel telegraf.LogLevel
 	}{

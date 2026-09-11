@@ -81,8 +81,7 @@ func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 	c := exec.Command(n.Binary, args...)
 	out, err := c.Output()
 	if err != nil {
-		var oserr *exec.ExitError
-		if errors.As(err, &oserr) {
+		if oserr, ok := errors.AsType[*exec.ExitError](err); ok {
 			buf, _, _ := bytes.Cut(oserr.Stderr, []byte("\n"))
 			msg := string(bytes.TrimSpace(buf))
 			if msg == "Error: No such file or directory" {
@@ -110,7 +109,7 @@ func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 					if expr.Cntr == nil || expr.Cntr.isNamedRef {
 						continue
 					}
-					fields := map[string]interface{}{
+					fields := map[string]any{
 						"bytes": expr.Cntr.Bytes,
 						"pkts":  expr.Cntr.Packets,
 					}
@@ -124,7 +123,7 @@ func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 			}
 		case "counters":
 			for _, counter := range nftable.Counters {
-				fields := map[string]interface{}{
+				fields := map[string]any{
 					"bytes": counter.Bytes,
 					"pkts":  counter.Packets,
 				}
@@ -136,7 +135,7 @@ func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 			}
 		case "sets":
 			for _, set := range nftable.Sets {
-				fields := map[string]interface{}{
+				fields := map[string]any{
 					"count": len(set.Elem),
 				}
 				tags := map[string]string{

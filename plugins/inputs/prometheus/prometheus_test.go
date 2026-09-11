@@ -216,7 +216,7 @@ test_counter{label="test"} 1 1685443805885`
 		metric.New(
 			"test_counter",
 			map[string]string{"address": tsAddress, "label": "test"},
-			map[string]interface{}{"counter": float64(1.0)},
+			map[string]any{"counter": float64(1.0)},
 			time.UnixMilli(1685443805885),
 			telegraf.Counter,
 		),
@@ -485,7 +485,7 @@ go_gc_duration_seconds_count 42`
 			map[string]string{
 				"quantile": "0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"go_gc_duration_seconds": math.NaN(),
 			},
 			time.Unix(0, 0),
@@ -496,7 +496,7 @@ go_gc_duration_seconds_count 42`
 			map[string]string{
 				"quantile": "1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"go_gc_duration_seconds": math.NaN(),
 			},
 			time.Unix(0, 0),
@@ -505,7 +505,7 @@ go_gc_duration_seconds_count 42`
 		metric.New(
 			"prometheus",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"go_gc_duration_seconds_sum":   float64(42.0),
 				"go_gc_duration_seconds_count": float64(42),
 			},
@@ -515,7 +515,7 @@ go_gc_duration_seconds_count 42`
 		metric.New(
 			"prometheus_request",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"content_length": int64(1),
 				"response_time":  float64(0),
 			},
@@ -692,7 +692,7 @@ test_counter{label="test"} 1 1685443805885`
 			map[string]string{
 				"address": tsAddress,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"content_length": int64(1),
 				"response_time":  float64(0),
 			},
@@ -739,7 +739,7 @@ func TestPrometheusInternalContentBadFormat(t *testing.T) {
 			map[string]string{
 				"address": tsAddress,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"content_length": int64(94),
 				"response_time":  float64(0),
 			},
@@ -777,7 +777,7 @@ func TestPrometheusInternalNoWeb(t *testing.T) {
 			map[string]string{
 				"address": tsAddress,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"content_length": int64(94),
 				"response_time":  float64(0),
 			},
@@ -832,21 +832,21 @@ go_memstats_heap_alloc_bytes 1.581062048e+09
 		metric.New(
 			"openmetric",
 			map[string]string{},
-			map[string]interface{}{"go_memstats_gc_cpu_fraction": float64(-0.00014404354379774563)},
+			map[string]any{"go_memstats_gc_cpu_fraction": float64(-0.00014404354379774563)},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"openmetric",
 			map[string]string{},
-			map[string]interface{}{"go_memstats_gc_sys_bytes": 6.0936192e+07},
+			map[string]any{"go_memstats_gc_sys_bytes": 6.0936192e+07},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"openmetric",
 			map[string]string{},
-			map[string]interface{}{"go_memstats_heap_alloc_bytes": 1.581062048e+09},
+			map[string]any{"go_memstats_heap_alloc_bytes": 1.581062048e+09},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
@@ -885,21 +885,21 @@ func TestOpenmetricsProtobuf(t *testing.T) {
 		metric.New(
 			"openmetric",
 			map[string]string{},
-			map[string]interface{}{"go_memstats_gc_cpu_fraction": float64(-0.00014404354379774563)},
+			map[string]any{"go_memstats_gc_cpu_fraction": float64(-0.00014404354379774563)},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"openmetric",
 			map[string]string{},
-			map[string]interface{}{"go_memstats_gc_sys_bytes": 6.0936192e+07},
+			map[string]any{"go_memstats_gc_sys_bytes": 6.0936192e+07},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"openmetric",
 			map[string]string{},
-			map[string]interface{}{"go_memstats_heap_alloc_bytes": 1.581062048e+09},
+			map[string]any{"go_memstats_heap_alloc_bytes": 1.581062048e+09},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
@@ -949,21 +949,21 @@ go_memstats_heap_alloc_bytes 1.581062048e+09
 		metric.New(
 			"openmetric",
 			map[string]string{},
-			map[string]interface{}{"go_memstats_gc_cpu_fraction": float64(-0.00014404354379774563)},
+			map[string]any{"go_memstats_gc_cpu_fraction": float64(-0.00014404354379774563)},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"openmetric",
 			map[string]string{},
-			map[string]interface{}{"go_memstats_gc_sys_bytes": 6.0936192e+07},
+			map[string]any{"go_memstats_gc_sys_bytes": 6.0936192e+07},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"openmetric",
 			map[string]string{},
-			map[string]interface{}{"go_memstats_heap_alloc_bytes": 1.581062048e+09},
+			map[string]any{"go_memstats_heap_alloc_bytes": 1.581062048e+09},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),

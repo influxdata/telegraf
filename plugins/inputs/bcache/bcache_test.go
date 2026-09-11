@@ -76,7 +76,7 @@ func TestBcacheGeneratesMetrics(t *testing.T) {
 	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_readaheads", []byte(cacheReadaheads), 0640)
 	require.NoError(t, err)
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"dirty_data":            uint64(1610612736),
 		"bypassed":              uint64(5167704440832),
 		"cache_bypass_hits":     uint64(146155333),

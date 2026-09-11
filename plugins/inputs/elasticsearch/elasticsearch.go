@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"regexp"
 	"sort"
@@ -66,15 +67,15 @@ type nodeStat struct {
 	Name       string            `json:"name"`
 	Roles      []string          `json:"roles"`
 	Attributes map[string]string `json:"attributes"`
-	Indices    interface{}       `json:"indices"`
-	OS         interface{}       `json:"os"`
-	Process    interface{}       `json:"process"`
-	JVM        interface{}       `json:"jvm"`
-	ThreadPool interface{}       `json:"thread_pool"`
-	FS         interface{}       `json:"fs"`
-	Transport  interface{}       `json:"transport"`
-	HTTP       interface{}       `json:"http"`
-	Breakers   interface{}       `json:"breakers"`
+	Indices    any               `json:"indices"`
+	OS         any               `json:"os"`
+	Process    any               `json:"process"`
+	JVM        any               `json:"jvm"`
+	ThreadPool any               `json:"thread_pool"`
+	FS         any               `json:"fs"`
+	Transport  any               `json:"transport"`
+	HTTP       any               `json:"http"`
+	Breakers   any               `json:"breakers"`
 }
 
 type clusterHealth struct {
@@ -125,17 +126,17 @@ type indexHealth struct {
 }
 
 type clusterStats struct {
-	NodeName    string      `json:"node_name"`
-	ClusterName string      `json:"cluster_name"`
-	Status      string      `json:"status"`
-	Indices     interface{} `json:"indices"`
-	Nodes       interface{} `json:"nodes"`
+	NodeName    string `json:"node_name"`
+	ClusterName string `json:"cluster_name"`
+	Status      string `json:"status"`
+	Indices     any    `json:"indices"`
+	Nodes       any    `json:"nodes"`
 }
 
 type indexStat struct {
-	Primaries interface{}              `json:"primaries"`
-	Total     interface{}              `json:"total"`
-	Shards    map[string][]interface{} `json:"shards"`
+	Primaries any              `json:"primaries"`
+	Total     any              `json:"total"`
+	Shards    map[string][]any `json:"shards"`
 }
 type serverInfo struct {
 	nodeID   string
@@ -330,7 +331,7 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 			tags["node_attribute_"+k] = v
 		}
 
-		stats := map[string]interface{}{
+		stats := map[string]any{
 			"indices":     n.Indices,
 			"os":          n.OS,
 			"process":     n.Process,
@@ -367,7 +368,7 @@ func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator
 		return err
 	}
 	measurementTime := time.Now()
-	clusterFields := map[string]interface{}{
+	clusterFields := map[string]any{
 		"active_primary_shards":            healthStats.ActivePrimaryShards,
 		"active_shards":                    healthStats.ActiveShards,
 		"active_shards_percent_as_number":  healthStats.ActiveShardsPercentAsNumber,
@@ -392,7 +393,7 @@ func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator
 	)
 
 	for name, health := range healthStats.Indices {
-		indexFields := map[string]interface{}{
+		indexFields := map[string]any{
 			"active_primary_shards": health.ActivePrimaryShards,
 			"active_shards":         health.ActiveShards,
 			"initializing_shards":   health.InitializingShards,
@@ -421,7 +422,7 @@ func (e *Elasticsearch) gatherEnrichStats(url string, acc telegraf.Accumulator) 
 	measurementTime := time.Now()
 
 	for _, coordinator := range enrichStats.CoordinatorStats {
-		coordinatorFields := map[string]interface{}{
+		coordinatorFields := map[string]any{
 			"queue_size":              coordinator.QueueSize,
 			"remote_requests_current": coordinator.RemoteRequestsCurrent,
 			"remote_requests_total":   coordinator.RemoteRequestsTotal,
@@ -436,7 +437,7 @@ func (e *Elasticsearch) gatherEnrichStats(url string, acc telegraf.Accumulator) 
 	}
 
 	for _, cache := range enrichStats.CacheStats {
-		cacheFields := map[string]interface{}{
+		cacheFields := map[string]any{
 			"count":     cache.Count,
 			"hits":      cache.Hits,
 			"misses":    cache.Misses,
@@ -465,7 +466,7 @@ func (e *Elasticsearch) gatherClusterStats(url string, acc telegraf.Accumulator)
 		"status":       clusterStats.Status,
 	}
 
-	stats := map[string]interface{}{
+	stats := map[string]any{
 		"nodes":   clusterStats.Nodes,
 		"indices": clusterStats.Indices,
 	}
@@ -485,9 +486,9 @@ func (e *Elasticsearch) gatherClusterStats(url string, acc telegraf.Accumulator)
 
 func (e *Elasticsearch) gatherIndicesStats(url string, acc telegraf.Accumulator) error {
 	indicesStats := &struct {
-		Shards  map[string]interface{} `json:"_shards"`
-		All     map[string]interface{} `json:"_all"`
-		Indices map[string]indexStat   `json:"indices"`
+		Shards  map[string]any       `json:"_shards"`
+		All     map[string]any       `json:"_all"`
+		Indices map[string]indexStat `json:"indices"`
 	}{}
 
 	if err := e.gatherJSONData(url, indicesStats); err != nil {
@@ -496,10 +497,8 @@ func (e *Elasticsearch) gatherIndicesStats(url string, acc telegraf.Accumulator)
 	now := time.Now()
 
 	// Total Shards Stats
-	shardsStats := make(map[string]interface{}, len(indicesStats.Shards))
-	for k, v := range indicesStats.Shards {
-		shardsStats[k] = v
-	}
+	shardsStats := make(map[string]any, len(indicesStats.Shards))
+	maps.Copy(shardsStats, indicesStats.Shards)
 	acc.AddFields("elasticsearch_indices_stats_shards_total", shardsStats, make(map[string]string), now)
 
 	// All Stats
@@ -582,7 +581,7 @@ func (e *Elasticsearch) categorizeIndices(indices map[string]indexStat) map[stri
 
 func (e *Elasticsearch) gatherSingleIndexStats(name string, index indexStat, now time.Time, acc telegraf.Accumulator) error {
 	indexTag := map[string]string{"index_name": name}
-	stats := map[string]interface{}{
+	stats := map[string]any{
 		"primaries": index.Primaries,
 		"total":     index.Total,
 	}
@@ -680,12 +679,12 @@ func (e *Elasticsearch) getCatMaster(url string) (string, error) {
 		return "", err
 	}
 
-	masterID := strings.Split(string(response), " ")[0]
+	masterID, _, _ := strings.Cut(string(response), " ")
 
 	return masterID, nil
 }
 
-func (e *Elasticsearch) gatherJSONData(url string, v interface{}) error {
+func (e *Elasticsearch) gatherJSONData(url string, v any) error {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
@@ -768,12 +767,8 @@ func newElasticsearch() *Elasticsearch {
 	return &Elasticsearch{
 		ClusterStatsOnlyFromMaster: true,
 		ClusterHealthLevel:         "indices",
-		HTTPClientConfig: common_http.HTTPClientConfig{
-			Timeout: config.Duration(5 * time.Second),
-			TransportConfig: common_http.TransportConfig{
-				ResponseHeaderTimeout: config.Duration(5 * time.Second),
-			},
-		},
+		Timeout:                    config.Duration(5 * time.Second),
+		ResponseHeaderTimeout:      config.Duration(5 * time.Second),
 	}
 }
 

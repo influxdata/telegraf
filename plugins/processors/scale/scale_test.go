@@ -54,44 +54,44 @@ func TestMinMax(t *testing.T) {
 			},
 			inputs: []telegraf.Metric{
 				metric.New("Name1", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test1": int64(0),
 						"test2": uint64(1),
 					}, time.Unix(0, 0)),
 				metric.New("Name2", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test1": "0.5",
 						"test2": float32(-0.5),
 					}, time.Unix(0, 0)),
 				metric.New("Name3", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test3": int64(-3),
 						"test4": uint64(0),
 					}, time.Unix(0, 0)),
 				metric.New("Name4", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test3": int64(-5),
 						"test4": float32(-0.5),
 					}, time.Unix(0, 0)),
 			},
 			expected: []telegraf.Metric{
 				metric.New("Name1", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test1": float64(50),
 						"test2": float64(100),
 					}, time.Unix(0, 0)),
 				metric.New("Name2", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test1": float64(75),
 						"test2": float32(25),
 					}, time.Unix(0, 0)),
 				metric.New("Name3", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test3": float64(4.6),
 						"test4": float64(10),
 					}, time.Unix(0, 0)),
 				metric.New("Name4", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test3": float64(1),
 						"test4": float64(9.1),
 					}, time.Unix(0, 0)),
@@ -110,7 +110,7 @@ func TestMinMax(t *testing.T) {
 			},
 			inputs: []telegraf.Metric{
 				metric.New("Name1", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test1": int64(0),
 						"test2": uint64(1),
 						"test3": int64(1),
@@ -118,7 +118,7 @@ func TestMinMax(t *testing.T) {
 			},
 			expected: []telegraf.Metric{
 				metric.New("Name1", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test1": float64(50),
 						"test2": float64(100),
 						"test3": int64(1),
@@ -138,14 +138,14 @@ func TestMinMax(t *testing.T) {
 			},
 			inputs: []telegraf.Metric{
 				metric.New("Name1", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test1": int64(-2),
 						"test2": uint64(2),
 					}, time.Unix(0, 0)),
 			},
 			expected: []telegraf.Metric{
 				metric.New("Name1", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test1": float64(-50),
 						"test2": float64(150),
 					}, time.Unix(0, 0)),
@@ -164,13 +164,13 @@ func TestMinMax(t *testing.T) {
 			},
 			inputs: []telegraf.Metric{
 				metric.New("Name1", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test1": int64(0),
 					}, time.Unix(0, 0)),
 			},
 			expected: []telegraf.Metric{
 				metric.New("Name1", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test1": float64(50),
 					}, time.Unix(0, 0)),
 			},
@@ -223,44 +223,44 @@ func TestFactor(t *testing.T) {
 			},
 			inputs: []telegraf.Metric{
 				metric.New("Name1", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test1": int64(0),
 						"test2": uint64(1),
 					}, time.Unix(0, 0)),
 				metric.New("Name2", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test1": "0.5",
 						"test2": float32(-0.5),
 					}, time.Unix(0, 0)),
 				metric.New("Name3", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test3": int64(-3),
 						"test4": uint64(0),
 					}, time.Unix(0, 0)),
 				metric.New("Name4", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test3": int64(-5),
 						"test4": float32(-0.5),
 					}, time.Unix(0, 0)),
 			},
 			expected: []telegraf.Metric{
 				metric.New("Name1", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test1": float64(50),
 						"test2": float64(100),
 					}, time.Unix(0, 0)),
 				metric.New("Name2", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test1": float64(75),
 						"test2": float32(25),
 					}, time.Unix(0, 0)),
 				metric.New("Name3", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test3": float64(4.2),
 						"test4": float64(9),
 					}, time.Unix(0, 0)),
 				metric.New("Name4", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test3": float64(1),
 						"test4": float64(8.2),
 					}, time.Unix(0, 0)),
@@ -277,7 +277,7 @@ func TestFactor(t *testing.T) {
 			},
 			inputs: []telegraf.Metric{
 				metric.New("Name1", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test1": int64(0),
 						"test2": uint64(1),
 						"test3": int64(1),
@@ -285,7 +285,7 @@ func TestFactor(t *testing.T) {
 			},
 			expected: []telegraf.Metric{
 				metric.New("Name1", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test1": float64(50),
 						"test2": float64(100),
 						"test3": int64(1),
@@ -303,13 +303,13 @@ func TestFactor(t *testing.T) {
 			},
 			inputs: []telegraf.Metric{
 				metric.New("Name1", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test1": int64(0),
 					}, time.Unix(0, 0)),
 			},
 			expected: []telegraf.Metric{
 				metric.New("Name1", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test1": float64(50),
 					}, time.Unix(0, 0)),
 			},
@@ -324,13 +324,13 @@ func TestFactor(t *testing.T) {
 			},
 			inputs: []telegraf.Metric{
 				metric.New("Name1", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test1": int64(1),
 					}, time.Unix(0, 0)),
 			},
 			expected: []telegraf.Metric{
 				metric.New("Name1", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test1": float64(50),
 					}, time.Unix(0, 0)),
 			},
@@ -345,13 +345,13 @@ func TestFactor(t *testing.T) {
 			},
 			inputs: []telegraf.Metric{
 				metric.New("Name1", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test1": int64(1),
 					}, time.Unix(0, 0)),
 			},
 			expected: []telegraf.Metric{
 				metric.New("Name1", map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"test1": float64(51),
 					}, time.Unix(0, 0)),
 			},
@@ -476,9 +476,9 @@ func TestErrorCasesMinMax(t *testing.T) {
 
 func TestTracking(t *testing.T) {
 	inputRaw := []telegraf.Metric{
-		metric.New("foo", map[string]string{}, map[string]interface{}{"value": 42}, time.Unix(0, 0)),
-		metric.New("bar", map[string]string{}, map[string]interface{}{"value": 99}, time.Unix(0, 0)),
-		metric.New("baz", map[string]string{}, map[string]interface{}{"value": 1}, time.Unix(0, 0)),
+		metric.New("foo", map[string]string{}, map[string]any{"value": 42}, time.Unix(0, 0)),
+		metric.New("bar", map[string]string{}, map[string]any{"value": 99}, time.Unix(0, 0)),
+		metric.New("baz", map[string]string{}, map[string]any{"value": 1}, time.Unix(0, 0)),
 	}
 
 	var mu sync.Mutex
@@ -499,19 +499,19 @@ func TestTracking(t *testing.T) {
 		metric.New(
 			"foo",
 			map[string]string{},
-			map[string]interface{}{"value": float64(92)},
+			map[string]any{"value": float64(92)},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"bar",
 			map[string]string{},
-			map[string]interface{}{"value": float64(149)},
+			map[string]any{"value": float64(149)},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"baz",
 			map[string]string{},
-			map[string]interface{}{"value": float64(51)},
+			map[string]any{"value": float64(51)},
 			time.Unix(0, 0),
 		),
 	}

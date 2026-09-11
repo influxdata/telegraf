@@ -14,7 +14,7 @@ import (
 // Migration function to migrate multiple deprecated Docker options
 func migrate(tbl *ast.Table) ([]byte, string, error) {
 	// Decode the old data structure
-	var plugin map[string]interface{}
+	var plugin map[string]any
 	if err := toml.UnmarshalTable(tbl, &plugin); err != nil {
 		return nil, "", err
 	}
@@ -104,9 +104,9 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 		if !totalBool {
 			if existingInclude, exists := plugin["total_include"]; exists {
 				// total=false means only cpu (following plugin logic)
-				var existing []interface{}
+				var existing []any
 				switch v := existingInclude.(type) {
-				case []interface{}:
+				case []any:
 					existing = v
 				case []string:
 					for _, name := range v {
@@ -117,7 +117,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 				}
 
 				// Keep only cpu if present, remove others
-				var cpuOnly []interface{}
+				var cpuOnly []any
 				for _, item := range existing {
 					if str, ok := item.(string); ok && str == "cpu" {
 						cpuOnly = append(cpuOnly, "cpu")

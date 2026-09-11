@@ -126,7 +126,7 @@ func (t *trimmer) singleQuote() error {
 }
 
 func (t *trimmer) tripleSingleQuote() error {
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		//nolint:errcheck // Consume the known starting quotes
 		t.readWriteByte()
 	}
@@ -175,7 +175,7 @@ func (t *trimmer) doubleQuote() error {
 }
 
 func (t *trimmer) tripleDoubleQuote() error {
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		//nolint:errcheck // Consume the known starting quotes
 		t.readWriteByte()
 	}
@@ -254,7 +254,7 @@ func substituteEnvironmentStrict(contents []byte, oldReplacementBehavior bool) (
 	envMap := utils.GetAsEqualsMap(os.Environ())
 
 	// Walk the AST and find string items to replace
-	if err := walk(tree, func(n interface{}) error {
+	if err := walk(tree, func(n any) error {
 		v, ok := n.(*ast.String)
 		if !ok {
 			return nil
@@ -277,7 +277,7 @@ func substituteEnvironmentStrict(contents []byte, oldReplacementBehavior bool) (
 	return tree, nil
 }
 
-func walk(node interface{}, f func(interface{}) error) error {
+func walk(node any, f func(any) error) error {
 	switch n := node.(type) {
 	case *ast.Table:
 		for k, v := range n.Fields {

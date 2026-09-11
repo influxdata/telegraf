@@ -17,7 +17,7 @@ func TestSerializeMetricFloat(t *testing.T) {
 	tags := map[string]string{
 		"cpu": "cpu0",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": float64(91.5),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -36,7 +36,7 @@ func TestSerializeMetricFloatHec(t *testing.T) {
 	tags := map[string]string{
 		"cpu": "cpu0",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": float64(91.5),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -54,7 +54,7 @@ func TestSerializeMetricInt(t *testing.T) {
 	tags := map[string]string{
 		"cpu": "cpu0",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": int64(90),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -73,7 +73,7 @@ func TestSerializeMetricIntHec(t *testing.T) {
 	tags := map[string]string{
 		"cpu": "cpu0",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": int64(90),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -92,7 +92,7 @@ func TestSerializeMetricBool(t *testing.T) {
 	tags := map[string]string{
 		"container-name": "telegraf-test",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"oomkiller": true,
 	}
 	m := metric.New("docker", tags, fields, now)
@@ -111,7 +111,7 @@ func TestSerializeMetricBoolHec(t *testing.T) {
 	tags := map[string]string{
 		"container-name": "telegraf-test",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"oomkiller": false,
 	}
 	m := metric.New("docker", tags, fields, now)
@@ -130,7 +130,7 @@ func TestSerializeMetricString(t *testing.T) {
 	tags := map[string]string{
 		"cpu": "cpu0",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"processorType": "ARMv7 Processor rev 4 (v7l)",
 		"usage_idle":    int64(5),
 	}
@@ -150,7 +150,7 @@ func TestSerializeBatch(t *testing.T) {
 	m := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": 42.0,
 		},
 		time.Unix(0, 0),
@@ -159,7 +159,7 @@ func TestSerializeBatch(t *testing.T) {
 	n := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": 92.0,
 		},
 		time.Unix(0, 0),
@@ -178,7 +178,7 @@ func TestSerializeMulti(t *testing.T) {
 	m := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"user":   42.0,
 			"system": 8.0,
 		},
@@ -198,7 +198,7 @@ func TestSerializeBatchHec(t *testing.T) {
 	m := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": 42.0,
 		},
 		time.Unix(0, 0),
@@ -206,7 +206,7 @@ func TestSerializeBatchHec(t *testing.T) {
 	n := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": 92.0,
 		},
 		time.Unix(0, 0),
@@ -225,7 +225,7 @@ func TestSerializeMultiHec(t *testing.T) {
 	m := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"usage":  42.0,
 			"system": 8.0,
 		},
@@ -248,7 +248,7 @@ func TestSerializeOmitEvent(t *testing.T) {
 	m := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"usage":  42.0,
 			"system": 8.0,
 		},

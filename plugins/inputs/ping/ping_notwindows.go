@@ -32,7 +32,7 @@ type statistics struct {
 
 func (p *Ping) pingToURL(acc telegraf.Accumulator, u string) {
 	tags := map[string]string{"url": u}
-	fields := map[string]interface{}{"result_code": 0}
+	fields := map[string]any{"result_code": 0}
 
 	out, err := p.pingHost(p.Binary, 60.0, p.args(u, runtime.GOOS)...)
 	if err != nil {
@@ -41,8 +41,7 @@ func (p *Ping) pingToURL(acc telegraf.Accumulator, u string) {
 		// the output.
 		// Linux iputils-ping returns 1, BSD-derived ping returns 2.
 		status := -1
-		var exitError *exec.ExitError
-		if errors.As(err, &exitError) {
+		if exitError, ok := errors.AsType[*exec.ExitError](err); ok {
 			if ws, ok := exitError.Sys().(syscall.WaitStatus); ok {
 				status = ws.ExitStatus()
 				fields["result_code"] = status
@@ -188,18 +187,16 @@ func processPingOutput(out string) (statistics, error) {
 		packetsTransmitted: 0,
 		packetsReceived:    0,
 		ttl:                -1,
-		roundTripTimeStats: roundTripTimeStats{
-			min:    -1.0,
-			avg:    -1.0,
-			max:    -1.0,
-			stddev: -1.0,
-		},
+		min:                -1.0,
+		avg:                -1.0,
+		max:                -1.0,
+		stddev:             -1.0,
 	}
 
 	// Set this error to nil if we find a 'transmitted' line
 	err := errors.New("fatal error processing ping output")
-	lines := strings.Split(out, "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(out, "\n")
+	for line := range lines {
 		// Reading only first TTL, ignoring other TTL messages
 		if stats.ttl == -1 && (strings.Contains(line, "ttl=") || strings.Contains(line, "hlim=")) {
 			stats.ttl, err = getTTL(line)
@@ -280,7 +277,7 @@ func freeBSDMajorVersion() int {
 		return -1
 	}
 
-	majorVersionStr := strings.Split(string(out), ".")[0]
+	majorVersionStr, _, _ := strings.Cut(string(out), ".")
 	majorVersion, err := strconv.Atoi(majorVersionStr)
 	if err != nil {
 		return -1

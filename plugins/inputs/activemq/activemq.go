@@ -201,7 +201,7 @@ func (a *ActiveMQ) getMetrics(u string) ([]byte, error) {
 
 func (a *ActiveMQ) gatherQueuesMetrics(acc telegraf.Accumulator, queues queues) {
 	for _, queue := range queues.QueueItems {
-		records := make(map[string]interface{})
+		records := make(map[string]any)
 		tags := make(map[string]string)
 
 		tags["name"] = strings.TrimSpace(queue.Name)
@@ -219,7 +219,7 @@ func (a *ActiveMQ) gatherQueuesMetrics(acc telegraf.Accumulator, queues queues) 
 
 func (a *ActiveMQ) gatherTopicsMetrics(acc telegraf.Accumulator, topics topics) {
 	for _, topic := range topics.TopicItems {
-		records := make(map[string]interface{})
+		records := make(map[string]any)
 		tags := make(map[string]string)
 
 		tags["name"] = topic.Name
@@ -237,7 +237,7 @@ func (a *ActiveMQ) gatherTopicsMetrics(acc telegraf.Accumulator, topics topics) 
 
 func (a *ActiveMQ) gatherSubscribersMetrics(acc telegraf.Accumulator, subscribers subscribers) {
 	for _, subscriber := range subscribers.SubscriberItems {
-		records := make(map[string]interface{})
+		records := make(map[string]any)
 		tags := make(map[string]string)
 
 		tags["client_id"] = subscriber.ClientID

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 	"time"
@@ -258,7 +259,7 @@ func (e *endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 			var timeStamps []time.Time
 			// 1. Construct a timestamp list from sample info
 			formattedEntityName := hyphenReplacer.Replace(entityName)
-			for _, t := range strings.Split(em.SampleInfo, ",") {
+			for t := range strings.SplitSeq(em.SampleInfo, ",") {
 				// Parse the input string to a time.Time object
 				utcTimeStamp, err := time.Parse("2006-01-02 15:04:05", t)
 				if err != nil {
@@ -282,7 +283,7 @@ func (e *endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 					bucket, found := buckets[bKey]
 					if !found {
 						mn := vsanPerfMetricsName + e.parent.Separator + formattedEntityName
-						bucket = metricEntry{name: mn, ts: ts, fields: make(map[string]interface{}), tags: tags}
+						bucket = metricEntry{name: mn, ts: ts, fields: make(map[string]any), tags: tags}
 						buckets[bKey] = bucket
 					}
 					if v, err := strconv.ParseFloat(values, 32); err == nil {
@@ -321,7 +322,7 @@ func (e *endpoint) queryDiskUsage(ctx context.Context, vsanClient *soap.Client, 
 	if err != nil {
 		return err
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"free_capacity_byte":  resp.Returnval.FreeCapacityB,
 		"total_capacity_byte": resp.Returnval.TotalCapacityB,
 	}
@@ -364,7 +365,7 @@ func (e *endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Clie
 		}
 	}
 
-	fields := map[string]interface{}{"overall_health": val}
+	fields := map[string]any{"overall_health": val}
 	tags := populateClusterTags(make(map[string]string), clusterRef, e.url.Host)
 	acc.AddFields(vsanSummaryMetricsName, fields, tags)
 	return nil
@@ -408,7 +409,7 @@ func (e *endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Clie
 	if err != nil {
 		return err
 	}
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	fields["total_bytes_to_sync"] = resp.Returnval.TotalBytesToSync
 	fields["total_objects_to_sync"] = resp.Returnval.TotalObjectsToSync
 	fields["total_recovery_eta"] = resp.Returnval.TotalRecoveryETA
@@ -421,9 +422,7 @@ func (e *endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Clie
 func populateClusterTags(tags map[string]string, clusterRef *objectRef, vcenter string) map[string]string {
 	newTags := make(map[string]string)
 	// deep copy
-	for k, v := range tags {
-		newTags[k] = v
-	}
+	maps.Copy(newTags, tags)
 	newTags["vcenter"] = vcenter
 	newTags["dcname"] = clusterRef.dcname
 	newTags["clustername"] = clusterRef.name
@@ -436,9 +435,7 @@ func populateClusterTags(tags map[string]string, clusterRef *objectRef, vcenter 
 func populateCMMDSTags(tags map[string]string, entityName, uuid string, cmmds map[string]cmmdsEntity) map[string]string {
 	newTags := make(map[string]string)
 	// deep copy
-	for k, v := range tags {
-		newTags[k] = v
-	}
+	maps.Copy(newTags, tags)
 	// There are cases when the uuid is missing. (Usually happens when performance service is just enabled or disabled)
 	// We need this check to avoid index-out-of-range error
 	if uuid == "*" || uuid == "" {

@@ -123,8 +123,8 @@ func (c *Clarify) processMetrics(metrics []telegraf.Metric) (views.DataFrame, ma
 				frame[id] = views.DataSeries{ts: value}
 			}
 
-			s := views.SignalSave{}
-			s.Name = m.Name() + "." + f.Key
+			s := views.SignalSave{
+				Name: m.Name() + "." + f.Key}
 
 			for _, t := range m.TagList() {
 				labelName := strings.ReplaceAll(t.Key, " ", "-")

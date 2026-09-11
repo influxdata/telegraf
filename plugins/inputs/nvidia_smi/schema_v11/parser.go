@@ -21,7 +21,7 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		tags := map[string]string{
 			"index": strconv.Itoa(i),
 		}
-		fields := make(map[string]interface{}, 48)
+		fields := make(map[string]any, 48)
 
 		common.SetTagIfUsed(tags, "pstate", gpu.PState)
 		common.SetTagIfUsed(tags, "name", gpu.ProdName)

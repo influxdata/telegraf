@@ -17,12 +17,12 @@ type Translator interface {
 		err error,
 	)
 
-	SnmpFormatEnum(oid string, value interface{}, full bool) (
+	SnmpFormatEnum(oid string, value any, full bool) (
 		formatted string,
 		err error,
 	)
 
-	SnmpFormatDisplayHint(oid string, value interface{}) (
+	SnmpFormatDisplayHint(oid string, value any) (
 		formatted string,
 		err error,
 	)

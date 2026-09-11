@@ -2,12 +2,13 @@ package jolokia2
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
 type point struct {
 	Tags   map[string]string
-	Fields map[string]interface{}
+	Fields map[string]any
 }
 
 type pointBuilder struct {
@@ -27,13 +28,13 @@ func NewPointBuilder(metric Metric, attributes []string, path string) *pointBuil
 }
 
 // Build generates a point for a given mbean name/pattern and value object.
-func (pb *pointBuilder) Build(mbean string, value interface{}) ([]point, error) {
+func (pb *pointBuilder) Build(mbean string, value any) ([]point, error) {
 	hasPattern := strings.Contains(mbean, "*")
 	if !hasPattern || value == nil {
-		value = map[string]interface{}{mbean: value}
+		value = map[string]any{mbean: value}
 	}
 
-	valueMap, ok := value.(map[string]interface{})
+	valueMap, ok := value.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("the response of %s's value should be a map", mbean)
 	}
@@ -65,13 +66,7 @@ func (pb *pointBuilder) extractTags(mbean string) map[string]string {
 }
 
 func (pb *pointBuilder) includeTag(tagName string) bool {
-	for _, t := range pb.metric.TagKeys {
-		if tagName == t {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(pb.metric.TagKeys, tagName)
 }
 
 func (pb *pointBuilder) formatTagName(tagName string) string {
@@ -88,9 +83,9 @@ func (pb *pointBuilder) formatTagName(tagName string) string {
 
 // extractFields generates the map of fields for a given mbean name
 // and value object.
-func (pb *pointBuilder) extractFields(mbean string, value interface{}) map[string]interface{} {
-	fieldMap := make(map[string]interface{})
-	valueMap, ok := value.(map[string]interface{})
+func (pb *pointBuilder) extractFields(mbean string, value any) map[string]any {
+	fieldMap := make(map[string]any)
+	valueMap, ok := value.(map[string]any)
 
 	if ok {
 		// complex value
@@ -151,11 +146,11 @@ func (pb *pointBuilder) formatFieldName(attribute, path string) string {
 
 // FillFields recurses into the supplied value object, generating a named field
 // for every value it discovers.
-func (pb *pointBuilder) FillFields(name string, value interface{}, fieldMap map[string]interface{}) {
-	if valueMap, ok := value.(map[string]interface{}); ok {
+func (pb *pointBuilder) FillFields(name string, value any, fieldMap map[string]any) {
+	if valueMap, ok := value.(map[string]any); ok {
 		// keep going until we get to something that is not a map
 		for key, innerValue := range valueMap {
-			if _, ok := innerValue.([]interface{}); ok {
+			if _, ok := innerValue.([]any); ok {
 				continue
 			}
 
@@ -172,7 +167,7 @@ func (pb *pointBuilder) FillFields(name string, value interface{}, fieldMap map[
 		return
 	}
 
-	if _, ok := value.([]interface{}); ok {
+	if _, ok := value.([]any); ok {
 		return
 	}
 
@@ -192,7 +187,7 @@ func (pb *pointBuilder) FillFields(name string, value interface{}, fieldMap map[
 
 // applySubstitutions updates all the keys in the supplied map
 // of fields to account for $1-style substitution instructions.
-func (pb *pointBuilder) applySubstitutions(mbean string, fieldMap map[string]interface{}) {
+func (pb *pointBuilder) applySubstitutions(mbean string, fieldMap map[string]any) {
 	properties := makePropertyMap(mbean)
 
 	for i, subKey := range pb.substitutions[1:] {
@@ -219,7 +214,7 @@ func makePropertyMap(mbean string) map[string]string {
 	if domain != "" && len(object) == 2 {
 		list := object[1]
 
-		for _, keyProperty := range strings.Split(list, ",") {
+		for keyProperty := range strings.SplitSeq(list, ",") {
 			pair := strings.SplitN(keyProperty, "=", 2)
 
 			if len(pair) != 2 {
@@ -249,7 +244,7 @@ func makeSubstitutionList(mbean string) []string {
 		subs = append(subs, domain)
 		list := object[1]
 
-		for _, keyProperty := range strings.Split(list, ",") {
+		for keyProperty := range strings.SplitSeq(list, ",") {
 			pair := strings.SplitN(keyProperty, "=", 2)
 
 			if len(pair) != 2 {

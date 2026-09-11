@@ -17,7 +17,7 @@ func TestMetricSerialization(t *testing.T) {
 			"tag_1": "ABC",
 			"tag_2": "1.63",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"addr_2":     7,
 			"addr_3":     17001,
 			"addr_4_5":   617001,

@@ -54,7 +54,7 @@ func (c *client) init() error {
 	return c.doGet(context.Background(), jobPath, new(jobResponse))
 }
 
-func (c *client) doGet(ctx context.Context, url string, v interface{}) error {
+func (c *client) doGet(ctx context.Context, url string, v any) error {
 	req, err := createGetRequest(c.baseURL+url, c.username, c.password, c.sessionCookie)
 	if err != nil {
 		return err

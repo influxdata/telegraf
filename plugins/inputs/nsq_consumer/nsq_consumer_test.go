@@ -63,7 +63,7 @@ func TestReadsMetricsFromNSQ(t *testing.T) {
 
 	point := acc.Metrics[0]
 	require.Equal(t, "cpu_load_short", point.Measurement)
-	require.Equal(t, map[string]interface{}{"value": 23422.0}, point.Fields)
+	require.Equal(t, map[string]any{"value": 23422.0}, point.Fields)
 	require.Equal(t, map[string]string{
 		"host":      "server01",
 		"direction": "in",

@@ -36,14 +36,14 @@ func TestInitSuccess(t *testing.T) {
 		{
 			name: "no authentication",
 			plugin: &LogQL{
-				InstantQueries: []InstantQuery{{query: query{Query: `{job="varlogs"}`}}},
+				InstantQueries: []InstantQuery{{Query: `{job="varlogs"}`}},
 			},
 		},
 		{
 			name: "basic auth without password",
 			plugin: &LogQL{
 				Username:       username,
-				InstantQueries: []InstantQuery{{query: query{Query: `{job="varlogs"}`}}},
+				InstantQueries: []InstantQuery{{Query: `{job="varlogs"}`}},
 			},
 		},
 		{
@@ -51,14 +51,14 @@ func TestInitSuccess(t *testing.T) {
 			plugin: &LogQL{
 				Username:       username,
 				Password:       password,
-				InstantQueries: []InstantQuery{{query: query{Query: `{job="varlogs"}`}}},
+				InstantQueries: []InstantQuery{{Query: `{job="varlogs"}`}},
 			},
 		},
 		{
 			name: "token auth",
 			plugin: &LogQL{
 				Token:          token,
-				InstantQueries: []InstantQuery{{query: query{Query: `{job="varlogs"}`}}},
+				InstantQueries: []InstantQuery{{Query: `{job="varlogs"}`}},
 			},
 		},
 		{
@@ -68,7 +68,7 @@ func TestInitSuccess(t *testing.T) {
 					{
 						Start: config.Duration(5 * time.Minute),
 						End:   config.Duration(-1 * time.Minute),
-						query: query{Query: `{job="varlogs"}`},
+						Query: `{job="varlogs"}`,
 					},
 				},
 			},
@@ -104,7 +104,7 @@ func TestInitFail(t *testing.T) {
 		{
 			name: "invalid sorting",
 			plugin: &LogQL{
-				InstantQueries: []InstantQuery{{query: query{Query: `{job="varlogs"}`, Sorting: "random"}}},
+				InstantQueries: []InstantQuery{{Query: `{job="varlogs"}`, Sorting: "random"}},
 			},
 			expected: "invalid sorting direction",
 		},
@@ -113,7 +113,7 @@ func TestInitFail(t *testing.T) {
 			plugin: &LogQL{
 				RangeQueries: []RangeQuery{
 					{
-						query: query{Query: `{job="varlogs"}`},
+						Query: `{job="varlogs"}`,
 					},
 				},
 			},
@@ -126,7 +126,7 @@ func TestInitFail(t *testing.T) {
 					{
 						Start: config.Duration(5 * time.Minute),
 						End:   config.Duration(15 * time.Minute),
-						query: query{Query: `{job="varlogs"}`},
+						Query: `{job="varlogs"}`,
 					},
 				},
 			},
@@ -138,7 +138,7 @@ func TestInitFail(t *testing.T) {
 				RangeQueries: []RangeQuery{
 					{
 						Start: config.Duration(-5 * time.Minute),
-						query: query{Query: `{job="varlogs"}`},
+						Query: `{job="varlogs"}`,
 					},
 				},
 			},
@@ -151,7 +151,7 @@ func TestInitFail(t *testing.T) {
 					{
 						Start: config.Duration(5 * time.Minute),
 						Step:  config.Duration(-1 * time.Minute),
-						query: query{Query: `{job="varlogs"}`},
+						Query: `{job="varlogs"}`,
 					},
 				},
 			},
@@ -164,7 +164,7 @@ func TestInitFail(t *testing.T) {
 					{
 						Start:    config.Duration(5 * time.Minute),
 						Interval: config.Duration(-5 * time.Minute),
-						query:    query{Query: `{job="varlogs"}`},
+						Query:    `{job="varlogs"}`,
 					},
 				},
 			},
@@ -174,7 +174,7 @@ func TestInitFail(t *testing.T) {
 			name: "password without username",
 			plugin: &LogQL{
 				Password:       password,
-				InstantQueries: []InstantQuery{{query: query{Query: `{job="varlogs"}`}}},
+				InstantQueries: []InstantQuery{{Query: `{job="varlogs"}`}},
 			},
 			expected: "expecting username for basic authentication",
 		},
@@ -183,7 +183,7 @@ func TestInitFail(t *testing.T) {
 			plugin: &LogQL{
 				Username:       username,
 				Token:          token,
-				InstantQueries: []InstantQuery{{query: query{Query: `{job="varlogs"}`}}},
+				InstantQueries: []InstantQuery{{Query: `{job="varlogs"}`}},
 			},
 			expected: "cannot use both basic and bearer authentication",
 		},
@@ -224,7 +224,7 @@ func TestSigleTenant(t *testing.T) {
 	// Configure and initialize the plugin
 	plugin := &LogQL{
 		URL:            ts.URL,
-		InstantQueries: []InstantQuery{{query: query{Query: `{job="varlogs"}`}}},
+		InstantQueries: []InstantQuery{{Query: `{job="varlogs"}`}},
 		Log:            &testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
@@ -269,7 +269,7 @@ func TestMultiTenant(t *testing.T) {
 	plugin := &LogQL{
 		URL:            ts.URL,
 		Organizations:  []string{"CompanyA", "CompanyB"},
-		InstantQueries: []InstantQuery{{query: query{Query: `{job="varlogs"}`}}},
+		InstantQueries: []InstantQuery{{Query: `{job="varlogs"}`}},
 		Log:            &testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())

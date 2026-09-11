@@ -44,8 +44,7 @@ func (n *netsnmpTranslator) execCmd(arg0 string, args ...string) ([]byte, error)
 
 	out, err := execCommand(arg0, args...).Output()
 	if err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 			return nil, fmt.Errorf("%s: %w", bytes.TrimRight(exitErr.Stderr, "\r\n"), err)
 		}
 		return nil, err
@@ -115,7 +114,7 @@ func (n *netsnmpTranslator) snmpTableCall(oid string) (
 				continue
 			}
 			line = line[:i]
-			for _, col := range strings.Split(line, ", ") {
+			for col := range strings.SplitSeq(line, ", ") {
 				tagOids[mibPrefix+col] = struct{}{}
 			}
 		}
@@ -132,7 +131,7 @@ func (n *netsnmpTranslator) snmpTableCall(oid string) (
 	if len(cols) == 0 {
 		return "", "", "", nil, errors.New("could not find any columns in table")
 	}
-	for _, col := range strings.Split(cols, " ") {
+	for col := range strings.SplitSeq(cols, " ") {
 		if len(col) == 0 {
 			continue
 		}
@@ -229,19 +228,19 @@ func (n *netsnmpTranslator) snmpTranslateCall(oid string) (mibName string, oidNu
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		if strings.HasPrefix(line, "  -- TEXTUAL CONVENTION ") {
-			tc := strings.TrimPrefix(line, "  -- TEXTUAL CONVENTION ")
+		if after, ok0 := strings.CutPrefix(line, "  -- TEXTUAL CONVENTION "); ok0 {
+			tc := after
 			switch tc {
 			case "MacAddress", "PhysAddress":
 				conversion = "hwaddr"
 			case "InetAddressIPv4", "InetAddressIPv6", "InetAddress", "IPSIpAddress":
 				conversion = "ipaddr"
 			}
-		} else if strings.HasPrefix(line, "::= { ") {
-			objs := strings.TrimPrefix(line, "::= { ")
+		} else if after, ok0 := strings.CutPrefix(line, "::= { "); ok0 {
+			objs := after
 			objs = strings.TrimSuffix(objs, " }")
 
-			for _, obj := range strings.Split(objs, " ") {
+			for obj := range strings.SplitSeq(objs, " ") {
 				if len(obj) == 0 {
 					continue
 				}
@@ -267,10 +266,10 @@ func (n *netsnmpTranslator) snmpTranslateCall(oid string) (mibName string, oidNu
 	return mibName, oidNum, oidText, conversion, nil
 }
 
-func (*netsnmpTranslator) SnmpFormatEnum(string, interface{}, bool) (string, error) {
+func (*netsnmpTranslator) SnmpFormatEnum(string, any, bool) (string, error) {
 	return "", errors.New("not implemented in netsnmp translator")
 }
 
-func (*netsnmpTranslator) SnmpFormatDisplayHint(string, interface{}) (string, error) {
+func (*netsnmpTranslator) SnmpFormatDisplayHint(string, any) (string, error) {
 	return "", errors.New("not implemented in netsnmp translator")
 }

@@ -152,7 +152,7 @@ func gatherDeviceInfo(acc telegraf.Accumulator, deviceClient *tr064.Client, serv
 		"source":  serviceClient.TR064Client.DeviceUrl.Hostname(),
 		"service": serviceClient.Service.ShortId(),
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"uptime":           info.NewUpTime,
 		"model_name":       info.NewModelName,
 		"serial_number":    info.NewSerialNumber,
@@ -213,7 +213,7 @@ func gatherWanInfo(acc telegraf.Accumulator, deviceClient *tr064.Client, service
 		"source":  serviceClient.TR064Client.DeviceUrl.Hostname(),
 		"service": serviceClient.Service.ShortId(),
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"layer1_upstream_max_bit_rate":   commonLinkProperties.NewLayer1UpstreamMaxBitRate,
 		"layer1_downstream_max_bit_rate": commonLinkProperties.NewLayer1DownstreamMaxBitRate,
 		"upstream_current_max_speed":     commonLinkProperties.NewX_AVM_DE_UpstreamCurrentMaxSpeed,
@@ -238,7 +238,7 @@ func gatherPppInfo(acc telegraf.Accumulator, deviceClient *tr064.Client, service
 		"source":  serviceClient.TR064Client.DeviceUrl.Hostname(),
 		"service": serviceClient.Service.ShortId(),
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"uptime":                  info.NewUptime,
 		"upstream_max_bit_rate":   info.NewUpstreamMaxBitRate,
 		"downstream_max_bit_rate": info.NewDownstreamMaxBitRate,
@@ -267,7 +267,7 @@ func gatherDslInfo(acc telegraf.Accumulator, deviceClient *tr064.Client, service
 		"service": serviceClient.Service.ShortId(),
 		"status":  info.NewStatus,
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"upstream_curr_rate":      info.NewUpstreamCurrRate,
 		"downstream_curr_rate":    info.NewDownstreamCurrRate,
 		"upstream_max_rate":       info.NewUpstreamMaxRate,
@@ -315,7 +315,7 @@ func gatherFiberInfo(acc telegraf.Accumulator, deviceClient *tr064.Client, servi
 		"source":  serviceClient.TR064Client.DeviceUrl.Hostname(),
 		"service": serviceClient.Service.ShortId(),
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"optical_signal_level":           info.NewOpticalSignalLevel,
 		"lower_optical_threshold":        info.NewLowerOpticalThreshold,
 		"upper_optical_threshold":        info.NewUpperOpticalThreshold,
@@ -368,7 +368,7 @@ func gatherWlanInfo(acc telegraf.Accumulator, deviceClient *tr064.Client, servic
 		"channel": strconv.Itoa(int(info.NewChannel)),
 		"band":    wlanBandFromInfo(info),
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"total_associations": totalAssociations.NewTotalAssociations,
 	}
 	acc.AddGauge("fritzbox_wlan", fields, tags)
@@ -411,7 +411,7 @@ func gatherHostsInfo(acc telegraf.Accumulator, deviceClient *tr064.Client, servi
 			"link_type":    connection.InterfaceType,
 			"link_name":    connection.InterfaceName,
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"max_data_rate_tx": connection.MaxDataRateTx,
 			"max_data_rate_rx": connection.MaxDataRateRx,
 			"cur_data_rate_tx": connection.CurDataRateTx,

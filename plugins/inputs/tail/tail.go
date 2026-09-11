@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"strings"
 	"sync"
@@ -122,9 +123,7 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 
 	t.ctx, t.cancel = context.WithCancel(context.Background())
 
-	t.wg.Add(1)
-	go func() {
-		defer t.wg.Done()
+	t.wg.Go(func() {
 		for {
 			select {
 			case <-t.ctx.Done():
@@ -133,7 +132,7 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 				<-t.sem
 			}
 		}
-	}()
+	})
 
 	var err error
 	t.multiline, err = t.MultilineConfig.newMultiline()
@@ -186,18 +185,16 @@ func (t *Tail) getSeekInfo(file string) (*tail.SeekInfo, error) {
 	}
 }
 
-func (t *Tail) GetState() interface{} {
+func (t *Tail) GetState() any {
 	return t.offsets
 }
 
-func (t *Tail) SetState(state interface{}) error {
+func (t *Tail) SetState(state any) error {
 	offsetsState, ok := state.(map[string]int64)
 	if !ok {
 		return errors.New("state has to be of type 'map[string]int64'")
 	}
-	for k, v := range offsetsState {
-		t.offsets[k] = v
-	}
+	maps.Copy(t.offsets, offsetsState)
 	return nil
 }
 
@@ -234,9 +231,7 @@ func (t *Tail) Stop() {
 
 	// persist offsets
 	offsetsMutex.Lock()
-	for k, v := range t.offsets {
-		offsets[k] = v
-	}
+	maps.Copy(offsets, t.offsets)
 	offsetsMutex.Unlock()
 }
 
@@ -539,9 +534,7 @@ func (t *Tail) receiver(parser telegraf.Parser, tailer *tail.Tail) {
 func newTail() *Tail {
 	offsetsMutex.Lock()
 	offsetsCopy := make(map[string]int64, len(offsets))
-	for k, v := range offsets {
-		offsetsCopy[k] = v
-	}
+	maps.Copy(offsetsCopy, offsets)
 	offsetsMutex.Unlock()
 
 	return &Tail{

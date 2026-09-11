@@ -110,13 +110,13 @@ func (p *Postgresql) accRow(row *sql.Rows, acc telegraf.Accumulator, columns []s
 	var dbname bytes.Buffer
 
 	// this is where we'll store the column name with its *interface{}
-	columnMap := make(map[string]*interface{})
+	columnMap := make(map[string]*any)
 
 	for _, column := range columns {
-		columnMap[column] = new(interface{})
+		columnMap[column] = new(any)
 	}
 
-	columnVars := make([]interface{}, 0, len(columnMap))
+	columnVars := make([]any, 0, len(columnMap))
 	// populate the array of interface{} with the pointers in the right order
 	for i := 0; i < len(columnMap); i++ {
 		columnVars = append(columnVars, columnMap[columns[i]])
@@ -141,7 +141,7 @@ func (p *Postgresql) accRow(row *sql.Rows, acc telegraf.Accumulator, columns []s
 	tagAddress := p.service.SanitizedAddress
 	tags := map[string]string{"server": tagAddress, "db": dbname.String()}
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for col, val := range columnMap {
 		_, ignore := ignoredColumns[col]
 		if !ignore {
@@ -156,10 +156,8 @@ func (p *Postgresql) accRow(row *sql.Rows, acc telegraf.Accumulator, columns []s
 func init() {
 	inputs.Add("postgresql", func() telegraf.Input {
 		return &Postgresql{
-			Config: postgresql.Config{
-				MaxIdle: 1,
-				MaxOpen: 1,
-			},
+			MaxIdle:            1,
+			MaxOpen:            1,
 			PreparedStatements: true,
 		}
 	})

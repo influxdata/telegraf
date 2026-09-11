@@ -1,6 +1,5 @@
 //go:generate ../../../tools/readme_config_includer/generator
 //go:build linux
-// +build linux
 
 package intel_dlb
 
@@ -140,7 +139,7 @@ func (d *IntelDLB) gatherRasMetrics(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (d *IntelDLB) readRasMetrics(devicePath, metricPath string) (map[string]interface{}, error) {
+func (d *IntelDLB) readRasMetrics(devicePath, metricPath string) (map[string]any, error) {
 	deviceMetricPath := filepath.Join(devicePath, metricPath)
 
 	data, err := d.rasReader.readFromFile(deviceMetricPath)
@@ -150,7 +149,7 @@ func (d *IntelDLB) readRasMetrics(devicePath, metricPath string) (map[string]int
 
 	metrics := strings.Split(strings.TrimSpace(string(data)), "\n")
 
-	rasMetric := make(map[string]interface{})
+	rasMetric := make(map[string]any)
 	for _, metric := range metrics {
 		metricPart := strings.Split(metric, " ")
 		if len(metricPart) < 2 {
@@ -181,7 +180,7 @@ func (d *IntelDLB) gatherMetricsFromSocket(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
-		var statsWithValue = make(map[string]interface{})
+		var statsWithValue = make(map[string]any)
 		for _, commandBody := range parsedDeviceXstats {
 			for metricName, metricValue := range commandBody {
 				statsWithValue[metricName] = metricValue
@@ -226,7 +225,7 @@ func (d *IntelDLB) gatherCommandsWithDeviceIndex() ([]string, error) {
 	return commandsWithIndex, nil
 }
 
-func (d *IntelDLB) gatherCommandsResult(command string, deviceToParse interface{}) error {
+func (d *IntelDLB) gatherCommandsResult(command string, deviceToParse any) error {
 	err := d.ensureConnected()
 	if err != nil {
 		return err
@@ -343,7 +342,7 @@ func (d *IntelDLB) writeReadSocketMessage(messageToWrite string) (int, []byte, e
 	return replyMsgLen, socketReply, nil
 }
 
-func (d *IntelDLB) parseJSON(replyMsgLen int, socketReply []byte, parsedDeviceInfo interface{}) error {
+func (d *IntelDLB) parseJSON(replyMsgLen int, socketReply []byte, parsedDeviceInfo any) error {
 	if len(socketReply) == 0 {
 		return d.closeSocketAndThrowError("json", errors.New("socket reply is empty"))
 	}

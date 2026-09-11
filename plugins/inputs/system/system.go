@@ -31,9 +31,9 @@ type System struct {
 	DMICacheTTL config.Duration `toml:"dmi_cache_ttl"`
 	Log         telegraf.Logger `toml:"-"`
 
-	osCache     map[string]interface{}
+	osCache     map[string]any
 	osCachedAt  time.Time
-	dmiFields   map[string]interface{}
+	dmiFields   map[string]any
 	dmiCachedAt time.Time
 }
 
@@ -74,7 +74,7 @@ func (s *System) Init() error {
 
 func (s *System) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
-	fields := make(map[string]interface{}, 8)
+	fields := make(map[string]any, 8)
 
 	for _, incl := range s.Include {
 		switch incl {
@@ -179,7 +179,7 @@ func (s *System) gatherLegacy(acc telegraf.Accumulator, now time.Time) error {
 		return fmt.Errorf("reading physical CPU count: %w", err)
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"load1":           loadavg.Load1,
 		"load5":           loadavg.Load5,
 		"load15":          loadavg.Load15,
@@ -202,8 +202,8 @@ func (s *System) gatherLegacy(acc telegraf.Accumulator, now time.Time) error {
 		return fmt.Errorf("reading uptime: %w", err)
 	}
 
-	acc.AddCounter("system", map[string]interface{}{"uptime": uptime}, nil, now)
-	acc.AddFields("system", map[string]interface{}{"uptime_format": formatUptime(uptime)}, nil, now)
+	acc.AddCounter("system", map[string]any{"uptime": uptime}, nil, now)
+	acc.AddFields("system", map[string]any{"uptime_format": formatUptime(uptime)}, nil, now)
 
 	return nil
 }
@@ -211,7 +211,7 @@ func (s *System) gatherLegacy(acc telegraf.Accumulator, now time.Time) error {
 // gatherOS reads OS release and uname information via gopsutil, skipping
 // host.Info() to avoid the unrelated virtualization, boot-time and
 // process-count probes.
-func gatherOS() (map[string]interface{}, error) {
+func gatherOS() (map[string]any, error) {
 	platform, family, version, err := host.PlatformInformation()
 	if err != nil && !strings.Contains(err.Error(), "not implemented") {
 		return nil, fmt.Errorf("reading platform information: %w", err)
@@ -228,7 +228,7 @@ func gatherOS() (map[string]interface{}, error) {
 		arch = runtime.GOARCH
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"os":               runtime.GOOS,
 		"arch":             arch,
 		"platform":         platform,
@@ -239,12 +239,12 @@ func gatherOS() (map[string]interface{}, error) {
 }
 
 // gatherDMI reads BIOS, baseboard, chassis and product DMI/SMBIOS information.
-func gatherDMI() (map[string]interface{}, error) {
+func gatherDMI() (map[string]any, error) {
 	ctx := ghw.ContextFromEnv()
 	ctx = ghw.WithDisableWarnings()(ctx)
 	ctx = ghw.WithDisableTools()(ctx)
 
-	fields := make(map[string]interface{}, 21)
+	fields := make(map[string]any, 21)
 
 	bios, err := ghw.BIOS(ctx)
 	if err != nil && !strings.Contains(err.Error(), "not implemented") {

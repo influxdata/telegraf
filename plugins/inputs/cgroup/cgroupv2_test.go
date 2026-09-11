@@ -26,7 +26,7 @@ func TestCgroupV2Cpu(t *testing.T) {
 		metric.New(
 			"cgroup",
 			map[string]string{"path": `testdata/v2`},
-			map[string]interface{}{
+			map[string]any{
 
 				"cpu.idle": int64(0),
 
@@ -76,7 +76,7 @@ func TestCgroupV2Memory(t *testing.T) {
 		metric.New(
 			"cgroup",
 			map[string]string{"path": `testdata/v2`},
-			map[string]interface{}{
+			map[string]any{
 				"memory.current":                               int64(13071106048),
 				"memory.events.high":                           int64(0),
 				"memory.events.local.high":                     int64(0),
@@ -231,7 +231,7 @@ func TestCgroupV2Io(t *testing.T) {
 		metric.New(
 			"cgroup",
 			map[string]string{"path": `testdata/v2`},
-			map[string]interface{}{
+			map[string]any{
 				"io.bfq.weight.default":   int64(100),
 				"io.pressure.full.avg10":  float64(0),
 				"io.pressure.full.avg300": float64(0),
@@ -268,7 +268,7 @@ func TestCgroupV2Hugetlb(t *testing.T) {
 		metric.New(
 			"cgroup",
 			map[string]string{"path": `testdata/v2`},
-			map[string]interface{}{
+			map[string]any{
 				"hugetlb.1GB.current":         int64(0),
 				"hugetlb.1GB.events.0":        int64(math.MaxInt64),
 				"hugetlb.1GB.events.1":        int64(0),
@@ -312,7 +312,7 @@ func TestCgroupV2Pids(t *testing.T) {
 		metric.New(
 			"cgroup",
 			map[string]string{"path": `testdata/v2`},
-			map[string]interface{}{
+			map[string]any{
 				"pids.current":  int64(592),
 				"pids.events.0": int64(math.MaxInt64),
 				"pids.events.1": int64(0),

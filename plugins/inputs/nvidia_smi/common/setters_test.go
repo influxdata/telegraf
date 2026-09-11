@@ -12,97 +12,97 @@ func TestSetIfUsed(t *testing.T) {
 		datatype string
 		key      string
 		value    string
-		expected map[string]interface{}
+		expected map[string]any
 	}{
 		{
 			name:     "unit is stripped",
 			datatype: "int",
 			key:      "memory_total",
 			value:    "20475 MiB",
-			expected: map[string]interface{}{"memory_total": int64(20475)},
+			expected: map[string]any{"memory_total": int64(20475)},
 		},
 		{
 			name:     "value exceeding 32 bit",
 			datatype: "int",
 			key:      "clocks_event_reasons_counters_sw_power_cap",
 			value:    "4251825415 us",
-			expected: map[string]interface{}{"clocks_event_reasons_counters_sw_power_cap": int64(4251825415)},
+			expected: map[string]any{"clocks_event_reasons_counters_sw_power_cap": int64(4251825415)},
 		},
 		{
 			name:     "negative value",
 			datatype: "int",
 			key:      "temperature_max_tlimit_threshold",
 			value:    "-7 C",
-			expected: map[string]interface{}{"temperature_max_tlimit_threshold": int64(-7)},
+			expected: map[string]any{"temperature_max_tlimit_threshold": int64(-7)},
 		},
 		{
 			name:     "link width suffix is stripped",
 			datatype: "int",
 			key:      "pcie_link_width_current",
 			value:    "16x",
-			expected: map[string]interface{}{"pcie_link_width_current": int64(16)},
+			expected: map[string]any{"pcie_link_width_current": int64(16)},
 		},
 		{
 			name:     "float",
 			datatype: "float",
 			key:      "power_draw",
 			value:    "8.44 W",
-			expected: map[string]interface{}{"power_draw": 8.44},
+			expected: map[string]any{"power_draw": 8.44},
 		},
 		{
 			name:     "string",
 			datatype: "str",
 			key:      "driver_version",
 			value:    "595.84",
-			expected: map[string]interface{}{"driver_version": "595.84"},
+			expected: map[string]any{"driver_version": "595.84"},
 		},
 		{
 			name:     "multi-word value is preserved",
 			datatype: "str",
 			key:      "clocks_event_reason_hw_slowdown",
 			value:    "Not Active",
-			expected: map[string]interface{}{"clocks_event_reason_hw_slowdown": "Not Active"},
+			expected: map[string]any{"clocks_event_reason_hw_slowdown": "Not Active"},
 		},
 		{
 			name:     "surrounding whitespace is trimmed",
 			datatype: "str",
 			key:      "display_mode",
 			value:    "  Enabled\n",
-			expected: map[string]interface{}{"display_mode": "Enabled"},
+			expected: map[string]any{"display_mode": "Enabled"},
 		},
 		{
 			name:     "unsupported value is skipped",
 			datatype: "int",
 			key:      "memory_temp",
 			value:    "N/A",
-			expected: map[string]interface{}{},
+			expected: map[string]any{},
 		},
 		{
 			name:     "empty value is skipped",
 			datatype: "int",
 			key:      "fan_speed",
 			value:    "",
-			expected: map[string]interface{}{},
+			expected: map[string]any{},
 		},
 		{
 			name:     "unparsable value is skipped",
 			datatype: "int",
 			key:      "fan_speed",
 			value:    "Unknown Error",
-			expected: map[string]interface{}{},
+			expected: map[string]any{},
 		},
 		{
 			name:     "deprecated value is skipped",
 			datatype: "str",
 			key:      "display_mode",
 			value:    "Requested functionality has been deprecated",
-			expected: map[string]interface{}{},
+			expected: map[string]any{},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := make(map[string]interface{})
+			actual := make(map[string]any)
 			SetIfUsed(tt.datatype, actual, tt.key, tt.value)
 			require.Equal(t, tt.expected, actual)
 		})
@@ -113,38 +113,38 @@ func TestSetActiveIfUsed(t *testing.T) {
 	tests := []struct {
 		name     string
 		value    string
-		expected map[string]interface{}
+		expected map[string]any
 	}{
 		{
 			name:     "active",
 			value:    "Active",
-			expected: map[string]interface{}{"clocks_event_reason_hw_slowdown": int64(1)},
+			expected: map[string]any{"clocks_event_reason_hw_slowdown": int64(1)},
 		},
 		{
 			name:     "not active",
 			value:    "Not Active",
-			expected: map[string]interface{}{"clocks_event_reason_hw_slowdown": int64(0)},
+			expected: map[string]any{"clocks_event_reason_hw_slowdown": int64(0)},
 		},
 		{
 			name:     "surrounding whitespace is trimmed",
 			value:    "  Not Active\n",
-			expected: map[string]interface{}{"clocks_event_reason_hw_slowdown": int64(0)},
+			expected: map[string]any{"clocks_event_reason_hw_slowdown": int64(0)},
 		},
 		{
 			name:     "unsupported value is skipped",
 			value:    "N/A",
-			expected: map[string]interface{}{},
+			expected: map[string]any{},
 		},
 		{
 			name:     "empty value is skipped",
 			value:    "",
-			expected: map[string]interface{}{},
+			expected: map[string]any{},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := make(map[string]interface{})
+			actual := make(map[string]any)
 			SetActiveIfUsed(actual, "clocks_event_reason_hw_slowdown", tt.value)
 			require.Equal(t, tt.expected, actual)
 		})

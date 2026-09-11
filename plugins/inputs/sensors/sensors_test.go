@@ -29,14 +29,14 @@ func TestGatherDefault(t *testing.T) {
 
 	var tests = []struct {
 		tags   map[string]string
-		fields map[string]interface{}
+		fields map[string]any
 	}{
 		{
 			map[string]string{
 				"chip":    "acpitz-virtual-0",
 				"feature": "temp1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"temp_input": 8.3,
 				"temp_crit":  31.3,
 			},
@@ -46,7 +46,7 @@ func TestGatherDefault(t *testing.T) {
 				"chip":    "power_meter-acpi-0",
 				"feature": "power1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"power_average":          0.0,
 				"power_average_interval": 300.0,
 			},
@@ -56,7 +56,7 @@ func TestGatherDefault(t *testing.T) {
 				"chip":    "coretemp-isa-0000",
 				"feature": "physical_id_0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"temp_input":      77.0,
 				"temp_max":        82.0,
 				"temp_crit":       92.0,
@@ -68,7 +68,7 @@ func TestGatherDefault(t *testing.T) {
 				"chip":    "coretemp-isa-0000",
 				"feature": "core_0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"temp_input":      75.0,
 				"temp_max":        82.0,
 				"temp_crit":       92.0,
@@ -80,7 +80,7 @@ func TestGatherDefault(t *testing.T) {
 				"chip":    "coretemp-isa-0000",
 				"feature": "core_1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"temp_input":      77.0,
 				"temp_max":        82.0,
 				"temp_crit":       92.0,
@@ -92,7 +92,7 @@ func TestGatherDefault(t *testing.T) {
 				"chip":    "coretemp-isa-0001",
 				"feature": "physical_id_1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"temp_input":      70.0,
 				"temp_max":        82.0,
 				"temp_crit":       92.0,
@@ -104,7 +104,7 @@ func TestGatherDefault(t *testing.T) {
 				"chip":    "coretemp-isa-0001",
 				"feature": "core_0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"temp_input":      66.0,
 				"temp_max":        82.0,
 				"temp_crit":       92.0,
@@ -116,7 +116,7 @@ func TestGatherDefault(t *testing.T) {
 				"chip":    "coretemp-isa-0001",
 				"feature": "core_1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"temp_input":      70.0,
 				"temp_max":        82.0,
 				"temp_crit":       92.0,
@@ -128,7 +128,7 @@ func TestGatherDefault(t *testing.T) {
 				"chip":    "atk0110-acpi-0",
 				"feature": "vcore_voltage",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in_input": 1.136,
 				"in_min":   0.800,
 				"in_max":   1.600,
@@ -139,7 +139,7 @@ func TestGatherDefault(t *testing.T) {
 				"chip":    "atk0110-acpi-0",
 				"feature": "+3.3_voltage",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in_input": 3.360,
 				"in_min":   2.970,
 				"in_max":   3.630,
@@ -168,14 +168,14 @@ func TestGatherNotRemoveNumbers(t *testing.T) {
 
 	var tests = []struct {
 		tags   map[string]string
-		fields map[string]interface{}
+		fields map[string]any
 	}{
 		{
 			map[string]string{
 				"chip":    "acpitz-virtual-0",
 				"feature": "temp1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"temp1_input": 8.3,
 				"temp1_crit":  31.3,
 			},
@@ -185,7 +185,7 @@ func TestGatherNotRemoveNumbers(t *testing.T) {
 				"chip":    "power_meter-acpi-0",
 				"feature": "power1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"power1_average":          0.0,
 				"power1_average_interval": 300.0,
 			},
@@ -195,7 +195,7 @@ func TestGatherNotRemoveNumbers(t *testing.T) {
 				"chip":    "coretemp-isa-0000",
 				"feature": "physical_id_0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"temp1_input":      77.0,
 				"temp1_max":        82.0,
 				"temp1_crit":       92.0,
@@ -207,7 +207,7 @@ func TestGatherNotRemoveNumbers(t *testing.T) {
 				"chip":    "coretemp-isa-0000",
 				"feature": "core_0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"temp2_input":      75.0,
 				"temp2_max":        82.0,
 				"temp2_crit":       92.0,
@@ -219,7 +219,7 @@ func TestGatherNotRemoveNumbers(t *testing.T) {
 				"chip":    "coretemp-isa-0000",
 				"feature": "core_1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"temp3_input":      77.0,
 				"temp3_max":        82.0,
 				"temp3_crit":       92.0,
@@ -231,7 +231,7 @@ func TestGatherNotRemoveNumbers(t *testing.T) {
 				"chip":    "coretemp-isa-0001",
 				"feature": "physical_id_1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"temp1_input":      70.0,
 				"temp1_max":        82.0,
 				"temp1_crit":       92.0,
@@ -243,7 +243,7 @@ func TestGatherNotRemoveNumbers(t *testing.T) {
 				"chip":    "coretemp-isa-0001",
 				"feature": "core_0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"temp2_input":      66.0,
 				"temp2_max":        82.0,
 				"temp2_crit":       92.0,
@@ -255,7 +255,7 @@ func TestGatherNotRemoveNumbers(t *testing.T) {
 				"chip":    "coretemp-isa-0001",
 				"feature": "core_1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"temp3_input":      70.0,
 				"temp3_max":        82.0,
 				"temp3_crit":       92.0,
@@ -267,7 +267,7 @@ func TestGatherNotRemoveNumbers(t *testing.T) {
 				"chip":    "atk0110-acpi-0",
 				"feature": "vcore_voltage",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in0_input": 1.136,
 				"in0_min":   0.800,
 				"in0_max":   1.600,
@@ -278,7 +278,7 @@ func TestGatherNotRemoveNumbers(t *testing.T) {
 				"chip":    "atk0110-acpi-0",
 				"feature": "+3.3_voltage",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in1_input": 3.360,
 				"in1_min":   2.970,
 				"in1_max":   3.630,

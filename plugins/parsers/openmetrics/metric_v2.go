@@ -1,6 +1,7 @@
 package openmetrics
 
 import (
+	"maps"
 	"math"
 	"strconv"
 	"strings"
@@ -52,7 +53,7 @@ func (p *Parser) extractMetricsV2(ometrics *MetricFamily) []telegraf.Metric {
 				if math.IsNaN(value) {
 					continue
 				}
-				fields := map[string]interface{}{metricName: value}
+				fields := map[string]any{metricName: value}
 				metrics = append(metrics, metric.New("openmetric", tags, fields, t, telegraf.Untyped))
 			case MetricType_GAUGE:
 				x := omp.GetGaugeValue().GetValue()
@@ -69,7 +70,7 @@ func (p *Parser) extractMetricsV2(ometrics *MetricFamily) []telegraf.Metric {
 				if math.IsNaN(value) {
 					continue
 				}
-				fields := map[string]interface{}{metricName: value}
+				fields := map[string]any{metricName: value}
 				metrics = append(metrics, metric.New("openmetric", tags, fields, t, telegraf.Gauge))
 			case MetricType_COUNTER:
 				x := omp.GetCounterValue().GetTotal()
@@ -86,7 +87,7 @@ func (p *Parser) extractMetricsV2(ometrics *MetricFamily) []telegraf.Metric {
 				if math.IsNaN(value) {
 					continue
 				}
-				fields := map[string]interface{}{metricName: value}
+				fields := map[string]any{metricName: value}
 				metrics = append(metrics, metric.New("openmetric", tags, fields, t, telegraf.Counter))
 			case MetricType_STATE_SET:
 				stateset := omp.GetStateSetValue()
@@ -94,25 +95,23 @@ func (p *Parser) extractMetricsV2(ometrics *MetricFamily) []telegraf.Metric {
 				// Add one metric per state
 				for _, state := range stateset.GetStates() {
 					sn := strings.ReplaceAll(state.GetName(), " ", "_")
-					fields := map[string]interface{}{metricName + "_" + sn: state.GetEnabled()}
+					fields := map[string]any{metricName + "_" + sn: state.GetEnabled()}
 					metrics = append(metrics, metric.New("openmetric", tags, fields, t, telegraf.Untyped))
 				}
 			case MetricType_INFO:
 				info := omp.GetInfoValue().GetInfo()
 				mptags := make(map[string]string, len(tags)+len(info))
-				for k, v := range tags {
-					mptags[k] = v
-				}
+				maps.Copy(mptags, tags)
 				for _, itag := range info {
 					mptags[itag.Name] = itag.Value
 				}
-				fields := map[string]interface{}{metricName + "_info": uint64(1)}
+				fields := map[string]any{metricName + "_info": uint64(1)}
 				metrics = append(metrics, metric.New("openmetric", mptags, fields, t, telegraf.Untyped))
 			case MetricType_HISTOGRAM, MetricType_GAUGE_HISTOGRAM:
 				histogram := omp.GetHistogramValue()
 
 				// Add an overall metric containing the number of samples and and its sum
-				histFields := make(map[string]interface{})
+				histFields := make(map[string]any)
 				histFields[metricName+"_count"] = float64(histogram.GetCount())
 				if s := histogram.GetSum(); s != nil {
 					switch v := s.(type) {
@@ -132,7 +131,7 @@ func (p *Parser) extractMetricsV2(ometrics *MetricFamily) []telegraf.Metric {
 				for _, b := range histogram.GetBuckets() {
 					bucketTags := tags
 					bucketTags["le"] = strconv.FormatFloat(b.GetUpperBound(), 'g', -1, 64)
-					bucketFields := map[string]interface{}{
+					bucketFields := map[string]any{
 						metricName + "_bucket": float64(b.GetCount()),
 					}
 					m := metric.New("openmetric", bucketTags, bucketFields, t, telegraf.Histogram)
@@ -146,7 +145,7 @@ func (p *Parser) extractMetricsV2(ometrics *MetricFamily) []telegraf.Metric {
 				if !infSeen {
 					infTags := tags
 					infTags["le"] = "+Inf"
-					infFields := map[string]interface{}{
+					infFields := map[string]any{
 						metricName + "_bucket": float64(histogram.GetCount()),
 					}
 					m := metric.New("openmetric", infTags, infFields, t, telegraf.Histogram)
@@ -156,7 +155,7 @@ func (p *Parser) extractMetricsV2(ometrics *MetricFamily) []telegraf.Metric {
 				summary := omp.GetSummaryValue()
 
 				// Add an overall metric containing the number of samples and and its sum
-				summaryFields := make(map[string]interface{})
+				summaryFields := make(map[string]any)
 				summaryFields[metricName+"_count"] = float64(summary.GetCount())
 
 				if s := summary.GetSum(); s != nil {
@@ -176,7 +175,7 @@ func (p *Parser) extractMetricsV2(ometrics *MetricFamily) []telegraf.Metric {
 				for _, q := range summary.Quantile {
 					quantileTags := tags
 					quantileTags["quantile"] = strconv.FormatFloat(q.GetQuantile(), 'g', -1, 64)
-					quantileFields := map[string]interface{}{
+					quantileFields := map[string]any{
 						metricName: q.GetValue(),
 					}
 					m := metric.New("openmetric", quantileTags, quantileFields, t, telegraf.Summary)

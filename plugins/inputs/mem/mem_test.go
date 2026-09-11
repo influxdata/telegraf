@@ -72,7 +72,7 @@ func TestMemStats(t *testing.T) {
 		metric.New(
 			"mem",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"total":             uint64(12400),
 				"available":         uint64(7600),
 				"used":              uint64(5000),

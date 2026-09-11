@@ -188,7 +188,7 @@ func (p *Postgresql) Connect() error {
 	if maxConns > 1 {
 		p.writeChan = make(chan *TableSource)
 		p.writeWaitGroup = utils.NewWaitGroup()
-		for i := 0; i < maxConns; i++ {
+		for range maxConns {
 			p.writeWaitGroup.Add(1)
 			go p.writeWorker(p.dbContext)
 		}
@@ -259,8 +259,7 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 		err = p.writeSequential(tableSources)
 	}
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 			// PgError doesn't include .Detail in Error(), so we concat it onto .Message.
 			if pgErr.Detail != "" {
 				pgErr.Message += "; " + pgErr.Detail

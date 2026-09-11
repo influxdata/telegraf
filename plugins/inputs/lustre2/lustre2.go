@@ -35,7 +35,7 @@ type Lustre2 struct {
 	rootdir string
 
 	// allFields maps an OST name to the metric fields associated with that OST
-	allFields map[tags]map[string]interface{}
+	allFields map[tags]map[string]any
 }
 
 type tags struct {
@@ -47,7 +47,7 @@ func (*Lustre2) SampleConfig() string {
 }
 
 func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
-	l.allFields = make(map[tags]map[string]interface{})
+	l.allFields = make(map[tags]map[string]any)
 
 	err := l.getLustreHealth()
 	if err != nil {
@@ -198,10 +198,10 @@ func (l *Lustre2) getLustreHealth() error {
 	}
 
 	t := tags{}
-	var fields map[string]interface{}
+	var fields map[string]any
 	fields, ok := l.allFields[t]
 	if !ok {
-		fields = make(map[string]interface{})
+		fields = make(map[string]any)
 		l.allFields[t] = fields
 	}
 
@@ -247,8 +247,8 @@ func (l *Lustre2) getLustreProcStats(fileglob string, wantedFields []*mapping) e
 			continue
 		}
 
-		jobs := strings.Split(string(wholeFile), "- ")
-		for _, job := range jobs {
+		jobs := strings.SplitSeq(string(wholeFile), "- ")
+		for job := range jobs {
 			lines := strings.Split(job, "\n")
 			jobid := ""
 
@@ -269,10 +269,10 @@ func (l *Lustre2) getLustreProcStats(fileglob string, wantedFields []*mapping) e
 					parts = parts[1:]
 				}
 
-				var fields map[string]interface{}
+				var fields map[string]any
 				fields, ok := l.allFields[tags{name, "", "", jobid, client}]
 				if !ok {
-					fields = make(map[string]interface{})
+					fields = make(map[string]any)
 					l.allFields[tags{name, "", "", jobid, client}] = fields
 				}
 
@@ -384,7 +384,7 @@ func (l *Lustre2) getLustreProcBrwStats(fileglob string, wantedFields []*mapping
 				tag := tags{name, reportName, bucket, "", ""}
 				fields, ok := l.allFields[tag]
 				if !ok {
-					fields = make(map[string]interface{})
+					fields = make(map[string]any)
 					l.allFields[tag] = fields
 				}
 
@@ -426,7 +426,7 @@ func (l *Lustre2) getLustreEvictionCount(fileglob string) error {
 		tag := tags{name, "", "", "", ""}
 		fields, ok := l.allFields[tag]
 		if !ok {
-			fields = make(map[string]interface{})
+			fields = make(map[string]any)
 			l.allFields[tag] = fields
 		}
 

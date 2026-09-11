@@ -131,6 +131,6 @@ func uniqueValues(values []string) []string {
 	return result
 }
 
-func isEmpty(value interface{}) bool {
+func isEmpty(value any) bool {
 	return value == nil || (reflect.ValueOf(value).Kind() == reflect.Pointer && reflect.ValueOf(value).IsNil())
 }

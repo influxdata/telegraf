@@ -135,18 +135,14 @@ func (ps *PubSub) Start(ac telegraf.Accumulator) error {
 
 	ps.wg = &sync.WaitGroup{}
 	// Start goroutine to handle delivery notifications from accumulator.
-	ps.wg.Add(1)
-	go func() {
-		defer ps.wg.Done()
+	ps.wg.Go(func() {
 		ps.waitForDelivery(ctx)
-	}()
+	})
 
 	// Start goroutine for subscription receiver.
-	ps.wg.Add(1)
-	go func() {
-		defer ps.wg.Done()
+	ps.wg.Go(func() {
 		ps.receiveWithRetry(ctx)
-	}()
+	})
 
 	return nil
 }

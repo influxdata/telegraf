@@ -14,7 +14,7 @@ import (
 var testProtoBufCongestionRecord1 = &pb.LanzRecord{
 	CongestionRecord: &pb.CongestionRecord{
 		Timestamp:          proto.Uint64(100000000000000),
-		IntfName:           proto.String("eth1"),
+		IntfName:           new("eth1"),
 		SwitchId:           proto.Uint32(1),
 		PortId:             proto.Uint32(1),
 		QueueSize:          proto.Uint32(1),
@@ -23,13 +23,13 @@ var testProtoBufCongestionRecord1 = &pb.LanzRecord{
 		TimeOfMaxQLen:      proto.Uint64(100000000000000),
 		TxLatency:          proto.Uint32(100),
 		QDropCount:         proto.Uint32(1),
-		FabricPeerIntfName: proto.String("FabricPeerIntfName1"),
+		FabricPeerIntfName: new("FabricPeerIntfName1"),
 	},
 }
 var testProtoBufCongestionRecord2 = &pb.LanzRecord{
 	CongestionRecord: &pb.CongestionRecord{
 		Timestamp:          proto.Uint64(200000000000000),
-		IntfName:           proto.String("eth2"),
+		IntfName:           new("eth2"),
 		SwitchId:           proto.Uint32(2),
 		PortId:             proto.Uint32(2),
 		QueueSize:          proto.Uint32(2),
@@ -38,7 +38,7 @@ var testProtoBufCongestionRecord2 = &pb.LanzRecord{
 		TimeOfMaxQLen:      proto.Uint64(200000000000000),
 		TxLatency:          proto.Uint32(200),
 		QDropCount:         proto.Uint32(2),
-		FabricPeerIntfName: proto.String("FabricPeerIntfName2"),
+		FabricPeerIntfName: new("FabricPeerIntfName2"),
 	},
 }
 
@@ -70,7 +70,7 @@ func TestLanzGeneratesMetrics(t *testing.T) {
 	msgToAccumulator(&acc, testProtoBufCongestionRecord1, deviceURL1)
 	acc.Wait(1)
 
-	vals1 := map[string]interface{}{
+	vals1 := map[string]any{
 		"timestamp":        int64(100000000000000),
 		"queue_size":       int64(1),
 		"time_of_max_qlen": int64(100000000000000),
@@ -95,7 +95,7 @@ func TestLanzGeneratesMetrics(t *testing.T) {
 	msgToAccumulator(&acc, testProtoBufCongestionRecord2, deviceURL2)
 	acc.Wait(1)
 
-	vals2 := map[string]interface{}{
+	vals2 := map[string]any{
 		"timestamp":        int64(200000000000000),
 		"queue_size":       int64(2),
 		"time_of_max_qlen": int64(200000000000000),
@@ -120,7 +120,7 @@ func TestLanzGeneratesMetrics(t *testing.T) {
 	msgToAccumulator(&acc, testProtoBufGlobalBufferUsageRecord, deviceURL1)
 	acc.Wait(1)
 
-	gburVals1 := map[string]interface{}{
+	gburVals1 := map[string]any{
 		"timestamp":   int64(100000000000000),
 		"buffer_size": int64(1),
 		"duration":    int64(10),

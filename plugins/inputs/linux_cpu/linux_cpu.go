@@ -75,7 +75,7 @@ func (g *LinuxCPU) Init() error {
 
 func (g *LinuxCPU) Gather(acc telegraf.Accumulator) error {
 	for _, cpu := range g.cpus {
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		tags := map[string]string{"cpu": cpu.id}
 
 		failed := false

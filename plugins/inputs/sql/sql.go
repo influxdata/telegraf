@@ -384,8 +384,8 @@ func (q *query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time, l
 	}
 
 	// Prepare the list of datapoints according to the received row
-	columnData := make([]interface{}, len(columnNames))
-	columnDataPtr := make([]interface{}, len(columnNames))
+	columnData := make([]any, len(columnNames))
+	columnDataPtr := make([]any, len(columnNames))
 
 	for i := range columnData {
 		columnDataPtr[i] = &columnData[i]
@@ -396,7 +396,7 @@ func (q *query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time, l
 		measurement := q.Measurement
 		timestamp := t
 		tags := make(map[string]string)
-		fields := make(map[string]interface{}, len(columnNames))
+		fields := make(map[string]any, len(columnNames))
 
 		// Do the parsing with (hopefully) automatic type conversion
 		if err := rows.Scan(columnDataPtr...); err != nil {
@@ -416,7 +416,7 @@ func (q *query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time, l
 			}
 
 			if q.TimeColumn != "" && name == q.TimeColumn {
-				var fieldvalue interface{}
+				var fieldvalue any
 				var skipParsing bool
 
 				switch v := columnData[i].(type) {
@@ -503,7 +503,7 @@ func (q *query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time, l
 
 			// Try automatic conversion for all remaining fields
 			if q.fieldFilter.Match(name) {
-				var fieldvalue interface{}
+				var fieldvalue any
 				switch v := columnData[i].(type) {
 				case string, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool:
 					fieldvalue = v

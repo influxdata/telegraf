@@ -243,10 +243,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 	k.startErrorAdder(acc)
 
 	// Start consumer goroutine
-	k.wg.Add(1)
-	go func() {
-		defer k.wg.Done()
-
+	k.wg.Go(func() {
 		for ctx.Err() == nil {
 			handler := newConsumerGroupHandler(acc, k.MaxUndeliveredMessages, k.parser, k.Log)
 			handler.maxMessageLen = k.MaxMessageLen
@@ -280,7 +277,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 		if err := k.consumer.Close(); err != nil {
 			acc.AddError(fmt.Errorf("close: %w", err))
 		}
-	}()
+	})
 
 	return nil
 }
@@ -391,13 +388,11 @@ func (k *KafkaConsumer) create() error {
 }
 
 func (k *KafkaConsumer) startErrorAdder(acc telegraf.Accumulator) {
-	k.wg.Add(1)
-	go func() {
-		defer k.wg.Done()
+	k.wg.Go(func() {
 		for err := range k.consumer.Errors() {
 			acc.AddError(fmt.Errorf("channel: %w", err))
 		}
-	}()
+	})
 }
 
 func newConsumerGroupHandler(acc telegraf.Accumulator, maxUndelivered int, parser telegraf.Parser, log telegraf.Logger) *consumerGroupHandler {
@@ -418,11 +413,9 @@ func (h *consumerGroupHandler) Setup(sarama.ConsumerGroupSession) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	h.cancel = cancel
 
-	h.wg.Add(1)
-	go func() {
-		defer h.wg.Done()
+	h.wg.Go(func() {
 		h.run(ctx)
-	}()
+	})
 	return nil
 }
 

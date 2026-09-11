@@ -143,7 +143,7 @@ func (d *DNSQuery) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (d *DNSQuery) query(domain, server string) (map[string]interface{}, map[string]string, error) {
+func (d *DNSQuery) query(domain, server string) (map[string]any, map[string]string, error) {
 	tags := map[string]string{
 		"server":      server,
 		"domain":      domain,
@@ -151,7 +151,7 @@ func (d *DNSQuery) query(domain, server string) (map[string]interface{}, map[str
 		"result":      "error",
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"query_time_ms": float64(0),
 		"result_code":   uint64(errorResult),
 	}

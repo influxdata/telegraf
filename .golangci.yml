@@ -47,6 +47,7 @@ linters:
     - unparam
     - unused
     - usetesting
+    - modernize
 
   # All available settings of specific linters.
   settings:
@@ -105,6 +106,7 @@ linters:
       # List of functions to exclude from checking, where each entry is a single function to exclude.
       # See https://github.com/kisielk/errcheck#excluding-functions for details.
       exclude-functions:
+        - 'errors.AsType'
         - '(*hash/maphash.Hash).Write'
         - '(*hash/maphash.Hash).WriteByte'
         - '(*hash/maphash.Hash).WriteString'

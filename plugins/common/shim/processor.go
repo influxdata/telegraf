@@ -44,14 +44,12 @@ func (s *Shim) RunProcessor() error {
 	}
 
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		err := s.writeProcessedMetrics()
 		if err != nil {
 			s.log.Warn(err.Error())
 		}
-		wg.Done()
-	}()
+	})
 
 	parser := influx.NewStreamParser(s.stdin)
 	for {
@@ -60,8 +58,7 @@ func (s *Shim) RunProcessor() error {
 			if errors.Is(err, influx.EOF) {
 				break // stream ended
 			}
-			var parseErr *influx.ParseError
-			if errors.As(err, &parseErr) {
+			if parseErr, ok := errors.AsType[*influx.ParseError](err); ok {
 				fmt.Fprintf(s.stderr, "Failed to parse metric: %s\b", parseErr)
 				continue
 			}

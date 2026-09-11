@@ -34,7 +34,7 @@ func (cg *CGroup) Gather(acc telegraf.Accumulator) error {
 }
 
 func (cg *CGroup) gatherDir(acc telegraf.Accumulator, dir string) error {
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 
 	list := make(chan pathInfo)
 	go cg.generateFiles(dir, list)
@@ -156,7 +156,7 @@ func (fd *fileData) format() (*fileFormat, error) {
 	return nil, fmt.Errorf("%v: unknown file format", fd.path)
 }
 
-func (fd *fileData) parse(fields map[string]interface{}) error {
+func (fd *fileData) parse(fields map[string]any) error {
 	format, err := fd.format()
 	if err != nil {
 		return err
@@ -171,7 +171,7 @@ func (fd *fileData) parse(fields map[string]interface{}) error {
 type fileFormat struct {
 	name    string
 	pattern string
-	parser  func(measurement string, fields map[string]interface{}, b []byte)
+	parser  func(measurement string, fields map[string]any, b []byte)
 }
 
 const keyPattern = "[[:alnum:]:_.]+"
@@ -182,7 +182,7 @@ var fileFormats = [...]fileFormat{
 	{
 		name:    "Single value",
 		pattern: "^" + valuePattern + "\n$",
-		parser: func(measurement string, fields map[string]interface{}, b []byte) {
+		parser: func(measurement string, fields map[string]any, b []byte) {
 			re := regexp.MustCompile("^(" + valuePattern + ")\n$")
 			matches := re.FindAllStringSubmatch(string(b), -1)
 			fields[measurement] = numberOrString(matches[0][1])
@@ -194,7 +194,7 @@ var fileFormats = [...]fileFormat{
 	{
 		name:    "New line separated values",
 		pattern: "^(" + valuePattern + "\n){2,}$",
-		parser: func(measurement string, fields map[string]interface{}, b []byte) {
+		parser: func(measurement string, fields map[string]any, b []byte) {
 			re := regexp.MustCompile("(" + valuePattern + ")\n")
 			matches := re.FindAllStringSubmatch(string(b), -1)
 			for i, v := range matches {
@@ -206,7 +206,7 @@ var fileFormats = [...]fileFormat{
 	{
 		name:    "Space separated values",
 		pattern: "^(" + valuePattern + " ?)+\n$",
-		parser: func(measurement string, fields map[string]interface{}, b []byte) {
+		parser: func(measurement string, fields map[string]any, b []byte) {
 			re := regexp.MustCompile("(" + valuePattern + ")")
 			matches := re.FindAllStringSubmatch(string(b), -1)
 			for i, v := range matches {
@@ -220,7 +220,7 @@ var fileFormats = [...]fileFormat{
 	{
 		name:    "Space separated keys and value, separated by new line",
 		pattern: "^((" + keyPattern + " )+" + valuePattern + "\n)+$",
-		parser: func(measurement string, fields map[string]interface{}, b []byte) {
+		parser: func(measurement string, fields map[string]any, b []byte) {
 			re := regexp.MustCompile("((?:" + keyPattern + " ?)+) (" + valuePattern + ")\n")
 			matches := re.FindAllStringSubmatch(string(b), -1)
 			for _, v := range matches {
@@ -235,9 +235,9 @@ var fileFormats = [...]fileFormat{
 	{
 		name:    "Equal sign separated key-value pairs,  multiple lines with name",
 		pattern: fmt.Sprintf("^(%s( %s=%s)+\n)+$", keyPattern, keyPattern, valuePattern),
-		parser: func(measurement string, fields map[string]interface{}, b []byte) {
-			lines := strings.Split(string(b), "\n")
-			for _, line := range lines {
+		parser: func(measurement string, fields map[string]any, b []byte) {
+			lines := strings.SplitSeq(string(b), "\n")
+			for line := range lines {
 				f := strings.Fields(line)
 				if len(f) == 0 {
 					continue
@@ -256,7 +256,7 @@ var fileFormats = [...]fileFormat{
 	{
 		name:    "Equal sign separated key-value pairs on a single line",
 		pattern: fmt.Sprintf("^(%s=%s ?)+\n$", keyPattern, valuePattern),
-		parser: func(measurement string, fields map[string]interface{}, b []byte) {
+		parser: func(measurement string, fields map[string]any, b []byte) {
 			f := strings.Fields(string(b))
 			if len(f) == 0 {
 				return
@@ -271,7 +271,7 @@ var fileFormats = [...]fileFormat{
 	},
 }
 
-func numberOrString(s string) interface{} {
+func numberOrString(s string) any {
 	i, err := strconv.ParseInt(s, 10, 64)
 	if err == nil {
 		return i

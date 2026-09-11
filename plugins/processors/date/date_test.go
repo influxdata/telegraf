@@ -31,15 +31,15 @@ func TestMonthTag(t *testing.T) {
 	month := now.Format("Jan")
 
 	input := []telegraf.Metric{
-		metric.New("foo", map[string]string{}, map[string]interface{}{"value": 42}, now),
-		metric.New("bar", map[string]string{}, map[string]interface{}{"value": 42}, now),
-		metric.New("baz", map[string]string{}, map[string]interface{}{"value": 42}, now),
+		metric.New("foo", map[string]string{}, map[string]any{"value": 42}, now),
+		metric.New("bar", map[string]string{}, map[string]any{"value": 42}, now),
+		metric.New("baz", map[string]string{}, map[string]any{"value": 42}, now),
 	}
 
 	expected := []telegraf.Metric{
-		metric.New("foo", map[string]string{"month": month}, map[string]interface{}{"value": 42}, now),
-		metric.New("bar", map[string]string{"month": month}, map[string]interface{}{"value": 42}, now),
-		metric.New("baz", map[string]string{"month": month}, map[string]interface{}{"value": 42}, now),
+		metric.New("foo", map[string]string{"month": month}, map[string]any{"value": 42}, now),
+		metric.New("bar", map[string]string{"month": month}, map[string]any{"value": 42}, now),
+		metric.New("baz", map[string]string{"month": month}, map[string]any{"value": 42}, now),
 	}
 
 	plugin := &Date{
@@ -57,15 +57,15 @@ func TestMonthField(t *testing.T) {
 	month := now.Format("Jan")
 
 	input := []telegraf.Metric{
-		metric.New("foo", map[string]string{}, map[string]interface{}{"value": 42}, now),
-		metric.New("bar", map[string]string{}, map[string]interface{}{"value": 42}, now),
-		metric.New("baz", map[string]string{}, map[string]interface{}{"value": 42}, now),
+		metric.New("foo", map[string]string{}, map[string]any{"value": 42}, now),
+		metric.New("bar", map[string]string{}, map[string]any{"value": 42}, now),
+		metric.New("baz", map[string]string{}, map[string]any{"value": 42}, now),
 	}
 
 	expected := []telegraf.Metric{
-		metric.New("foo", map[string]string{}, map[string]interface{}{"value": 42, "month": month}, now),
-		metric.New("bar", map[string]string{}, map[string]interface{}{"value": 42, "month": month}, now),
-		metric.New("baz", map[string]string{}, map[string]interface{}{"value": 42, "month": month}, now),
+		metric.New("foo", map[string]string{}, map[string]any{"value": 42, "month": month}, now),
+		metric.New("bar", map[string]string{}, map[string]any{"value": 42, "month": month}, now),
+		metric.New("baz", map[string]string{}, map[string]any{"value": 42, "month": month}, now),
 	}
 
 	plugin := &Date{
@@ -82,15 +82,15 @@ func TestOldDateTag(t *testing.T) {
 	now := time.Date(1993, 05, 27, 0, 0, 0, 0, time.UTC)
 
 	input := []telegraf.Metric{
-		metric.New("foo", map[string]string{}, map[string]interface{}{"value": 42}, now),
-		metric.New("bar", map[string]string{}, map[string]interface{}{"value": 42}, now),
-		metric.New("baz", map[string]string{}, map[string]interface{}{"value": 42}, now),
+		metric.New("foo", map[string]string{}, map[string]any{"value": 42}, now),
+		metric.New("bar", map[string]string{}, map[string]any{"value": 42}, now),
+		metric.New("baz", map[string]string{}, map[string]any{"value": 42}, now),
 	}
 
 	expected := []telegraf.Metric{
-		metric.New("foo", map[string]string{"year": "1993"}, map[string]interface{}{"value": 42}, now),
-		metric.New("bar", map[string]string{"year": "1993"}, map[string]interface{}{"value": 42}, now),
-		metric.New("baz", map[string]string{"year": "1993"}, map[string]interface{}{"value": 42}, now),
+		metric.New("foo", map[string]string{"year": "1993"}, map[string]any{"value": 42}, now),
+		metric.New("bar", map[string]string{"year": "1993"}, map[string]any{"value": 42}, now),
+		metric.New("baz", map[string]string{"year": "1993"}, map[string]any{"value": 42}, now),
 	}
 
 	plugin := &Date{
@@ -108,15 +108,15 @@ func TestFieldUnix(t *testing.T) {
 	ts := now.Unix()
 
 	input := []telegraf.Metric{
-		metric.New("foo", map[string]string{}, map[string]interface{}{"value": 42}, now),
-		metric.New("bar", map[string]string{}, map[string]interface{}{"value": 42}, now),
-		metric.New("baz", map[string]string{}, map[string]interface{}{"value": 42}, now),
+		metric.New("foo", map[string]string{}, map[string]any{"value": 42}, now),
+		metric.New("bar", map[string]string{}, map[string]any{"value": 42}, now),
+		metric.New("baz", map[string]string{}, map[string]any{"value": 42}, now),
 	}
 
 	expected := []telegraf.Metric{
-		metric.New("foo", map[string]string{}, map[string]interface{}{"value": 42, "unix": ts}, now),
-		metric.New("bar", map[string]string{}, map[string]interface{}{"value": 42, "unix": ts}, now),
-		metric.New("baz", map[string]string{}, map[string]interface{}{"value": 42, "unix": ts}, now),
+		metric.New("foo", map[string]string{}, map[string]any{"value": 42, "unix": ts}, now),
+		metric.New("bar", map[string]string{}, map[string]any{"value": 42, "unix": ts}, now),
+		metric.New("baz", map[string]string{}, map[string]any{"value": 42, "unix": ts}, now),
 	}
 
 	plugin := &Date{
@@ -134,15 +134,15 @@ func TestFieldUnixNano(t *testing.T) {
 	ts := now.UnixNano()
 
 	input := []telegraf.Metric{
-		metric.New("foo", map[string]string{}, map[string]interface{}{"value": 42}, now),
-		metric.New("bar", map[string]string{}, map[string]interface{}{"value": 42}, now),
-		metric.New("baz", map[string]string{}, map[string]interface{}{"value": 42}, now),
+		metric.New("foo", map[string]string{}, map[string]any{"value": 42}, now),
+		metric.New("bar", map[string]string{}, map[string]any{"value": 42}, now),
+		metric.New("baz", map[string]string{}, map[string]any{"value": 42}, now),
 	}
 
 	expected := []telegraf.Metric{
-		metric.New("foo", map[string]string{}, map[string]interface{}{"value": 42, "unix_ns": ts}, now),
-		metric.New("bar", map[string]string{}, map[string]interface{}{"value": 42, "unix_ns": ts}, now),
-		metric.New("baz", map[string]string{}, map[string]interface{}{"value": 42, "unix_ns": ts}, now),
+		metric.New("foo", map[string]string{}, map[string]any{"value": 42, "unix_ns": ts}, now),
+		metric.New("bar", map[string]string{}, map[string]any{"value": 42, "unix_ns": ts}, now),
+		metric.New("baz", map[string]string{}, map[string]any{"value": 42, "unix_ns": ts}, now),
 	}
 
 	plugin := &Date{
@@ -160,15 +160,15 @@ func TestFieldUnixMillis(t *testing.T) {
 	ts := now.UnixMilli()
 
 	input := []telegraf.Metric{
-		metric.New("foo", map[string]string{}, map[string]interface{}{"value": 42}, now),
-		metric.New("bar", map[string]string{}, map[string]interface{}{"value": 42}, now),
-		metric.New("baz", map[string]string{}, map[string]interface{}{"value": 42}, now),
+		metric.New("foo", map[string]string{}, map[string]any{"value": 42}, now),
+		metric.New("bar", map[string]string{}, map[string]any{"value": 42}, now),
+		metric.New("baz", map[string]string{}, map[string]any{"value": 42}, now),
 	}
 
 	expected := []telegraf.Metric{
-		metric.New("foo", map[string]string{}, map[string]interface{}{"value": 42, "unix_ms": ts}, now),
-		metric.New("bar", map[string]string{}, map[string]interface{}{"value": 42, "unix_ms": ts}, now),
-		metric.New("baz", map[string]string{}, map[string]interface{}{"value": 42, "unix_ms": ts}, now),
+		metric.New("foo", map[string]string{}, map[string]any{"value": 42, "unix_ms": ts}, now),
+		metric.New("bar", map[string]string{}, map[string]any{"value": 42, "unix_ms": ts}, now),
+		metric.New("baz", map[string]string{}, map[string]any{"value": 42, "unix_ms": ts}, now),
 	}
 
 	plugin := &Date{
@@ -186,15 +186,15 @@ func TestFieldUnixMicros(t *testing.T) {
 	ts := now.UnixMicro()
 
 	input := []telegraf.Metric{
-		metric.New("foo", map[string]string{}, map[string]interface{}{"value": 42}, now),
-		metric.New("bar", map[string]string{}, map[string]interface{}{"value": 42}, now),
-		metric.New("baz", map[string]string{}, map[string]interface{}{"value": 42}, now),
+		metric.New("foo", map[string]string{}, map[string]any{"value": 42}, now),
+		metric.New("bar", map[string]string{}, map[string]any{"value": 42}, now),
+		metric.New("baz", map[string]string{}, map[string]any{"value": 42}, now),
 	}
 
 	expected := []telegraf.Metric{
-		metric.New("foo", map[string]string{}, map[string]interface{}{"value": 42, "unix_us": ts}, now),
-		metric.New("bar", map[string]string{}, map[string]interface{}{"value": 42, "unix_us": ts}, now),
-		metric.New("baz", map[string]string{}, map[string]interface{}{"value": 42, "unix_us": ts}, now),
+		metric.New("foo", map[string]string{}, map[string]any{"value": 42, "unix_us": ts}, now),
+		metric.New("bar", map[string]string{}, map[string]any{"value": 42, "unix_us": ts}, now),
+		metric.New("baz", map[string]string{}, map[string]any{"value": 42, "unix_us": ts}, now),
 	}
 
 	plugin := &Date{
@@ -218,7 +218,7 @@ func TestDateOffset(t *testing.T) {
 	input := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"time_idle": 42.0,
 		},
 		time.Unix(1578603600, 0),
@@ -230,7 +230,7 @@ func TestDateOffset(t *testing.T) {
 			map[string]string{
 				"hour": "23",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle": 42.0,
 			},
 			time.Unix(1578603600, 0),
@@ -246,9 +246,9 @@ func TestTracking(t *testing.T) {
 	ts := now.UnixMicro()
 
 	inputRaw := []telegraf.Metric{
-		metric.New("foo", map[string]string{}, map[string]interface{}{"value": 42}, now),
-		metric.New("bar", map[string]string{}, map[string]interface{}{"value": 42}, now),
-		metric.New("baz", map[string]string{}, map[string]interface{}{"value": 42}, now),
+		metric.New("foo", map[string]string{}, map[string]any{"value": 42}, now),
+		metric.New("bar", map[string]string{}, map[string]any{"value": 42}, now),
+		metric.New("baz", map[string]string{}, map[string]any{"value": 42}, now),
 	}
 
 	var mu sync.Mutex

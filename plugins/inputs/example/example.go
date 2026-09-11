@@ -90,7 +90,7 @@ func (m *Example) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// For illustration, we gather three metrics in one go
-	for run := 0; run < 3; run++ {
+	for run := range 3 {
 		// Imagine an error occurs here, but you want to keep the other
 		// metrics, then you cannot simply return, as this would drop
 		// all later metrics. Simply accumulate errors in this case
@@ -101,7 +101,7 @@ func (m *Example) Gather(acc telegraf.Accumulator) error {
 		}
 
 		// Construct the fields
-		fields := map[string]interface{}{"count": m.count}
+		fields := map[string]any{"count": m.count}
 		for i := int64(1); i < m.NumberFields; i++ {
 			name := fmt.Sprintf("field%d", i)
 			var err error

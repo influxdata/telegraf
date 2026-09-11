@@ -81,7 +81,7 @@ func TestEmulatorIntegration(t *testing.T) {
 				"division": "A",
 				"type":     "temperature",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 23,
 			},
 			time.Unix(0, 0),
@@ -93,7 +93,7 @@ func TestEmulatorIntegration(t *testing.T) {
 				"division": "A",
 				"type":     "humidity",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 59,
 			},
 			time.Unix(0, 0),
@@ -105,7 +105,7 @@ func TestEmulatorIntegration(t *testing.T) {
 				"division": "B",
 				"type":     "temperature",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42,
 			},
 			time.Unix(0, 0),
@@ -117,7 +117,7 @@ func TestEmulatorIntegration(t *testing.T) {
 				"division": "B",
 				"type":     "humidity",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 87,
 			},
 			time.Unix(0, 0),
@@ -188,7 +188,7 @@ func TestReconnectIntegration(t *testing.T) {
 				"division": "A",
 				"type":     "temperature",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 23,
 			},
 			time.Unix(0, 0),
@@ -200,7 +200,7 @@ func TestReconnectIntegration(t *testing.T) {
 				"division": "A",
 				"type":     "humidity",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 59,
 			},
 			time.Unix(0, 0),
@@ -212,7 +212,7 @@ func TestReconnectIntegration(t *testing.T) {
 				"division": "B",
 				"type":     "temperature",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42,
 			},
 			time.Unix(0, 0),
@@ -224,7 +224,7 @@ func TestReconnectIntegration(t *testing.T) {
 				"division": "B",
 				"type":     "humidity",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 87,
 			},
 			time.Unix(0, 0),

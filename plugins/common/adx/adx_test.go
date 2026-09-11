@@ -117,12 +117,12 @@ func TestPushMetricsOutputs(t *testing.T) {
 			ingestionType:   ManagedIngestion,
 		},
 	}
-	var expectedMetric = map[string]interface{}{
+	var expectedMetric = map[string]any{
 		"metricName": "test1",
-		"fields": map[string]interface{}{
+		"fields": map[string]any{
 			"value": 1.0,
 		},
-		"tags": map[string]interface{}{
+		"tags": map[string]any{
 			"tag1": "value1",
 		},
 		"timestamp": float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).UnixNano() / int64(time.Second)),
@@ -195,7 +195,7 @@ func TestAlreadyClosed(t *testing.T) {
 // Internal
 
 type fakeIngestor struct {
-	actualOutputMetric map[string]interface{}
+	actualOutputMetric map[string]any
 }
 
 func (f *fakeIngestor) FromReader(_ context.Context, reader io.Reader, _ ...azkustoingest.FileOption) (*azkustoingest.Result, error) {

@@ -209,7 +209,7 @@ func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 	return gauges, nil
 }
 
-func verifyValue(v interface{}) bool {
+func verifyValue(v any) bool {
 	switch v.(type) {
 	case string:
 		return false
@@ -218,7 +218,7 @@ func verifyValue(v interface{}) bool {
 	}
 }
 
-func (g *Gauge) setValue(v interface{}) error {
+func (g *Gauge) setValue(v any) error {
 	switch d := v.(type) {
 	case int64:
 		g.Value = float64(d)

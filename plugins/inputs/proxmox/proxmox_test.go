@@ -83,7 +83,7 @@ func TestGatherLxcData(t *testing.T) {
 				"vm_fqdn":   "container1.test.example.com",
 				"vm_type":   "lxc",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"status":               "running",
 				"uptime":               int64(2078164),
 				"cpuload":              float64(0.00371567669193613),
@@ -131,7 +131,7 @@ func TestGatherQemuData(t *testing.T) {
 				"vm_fqdn":   "qemu1.test.example.com",
 				"vm_type":   "qemu",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"status":               "running",
 				"uptime":               int64(2159739),
 				"cpuload":              float64(0.029336643550795),
@@ -181,7 +181,7 @@ func TestGatherLxcDataWithID(t *testing.T) {
 				"vm_type":   "lxc",
 				"vm_id":     "111",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"status":               "running",
 				"uptime":               int64(2078164),
 				"cpuload":              float64(0.00371567669193613),
@@ -231,7 +231,7 @@ func TestGatherQemuDataWithID(t *testing.T) {
 				"vm_type":   "qemu",
 				"vm_id":     "113",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"status":               "running",
 				"uptime":               int64(2159739),
 				"cpuload":              float64(0.029336643550795),

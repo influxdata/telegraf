@@ -15,6 +15,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"regexp"
 	"slices"
@@ -252,7 +253,7 @@ func (o *OpenStack) Start(telegraf.Accumulator) error {
 
 func (o *OpenStack) Gather(acc telegraf.Accumulator) error {
 	ctx := context.Background()
-	callDuration := make(map[string]interface{}, len(o.services))
+	callDuration := make(map[string]any, len(o.services))
 
 	for service := range o.services {
 		var err error
@@ -265,7 +266,7 @@ func (o *OpenStack) Gather(acc telegraf.Accumulator) error {
 				tags := map[string]string{
 					"name": service.Type,
 				}
-				fields := map[string]interface{}{
+				fields := map[string]any{
 					"service_id":      service.ID,
 					"service_enabled": service.Enabled,
 				}
@@ -313,7 +314,7 @@ func (o *OpenStack) Gather(acc telegraf.Accumulator) error {
 
 	if o.MeasureRequest {
 		for service, duration := range callDuration {
-			acc.AddFields("openstack_request_duration", map[string]interface{}{service: duration}, make(map[string]string))
+			acc.AddFields("openstack_request_duration", map[string]any{service: duration}, make(map[string]string))
 		}
 	}
 
@@ -394,7 +395,7 @@ func (o *OpenStack) gatherStacks(ctx context.Context, acc telegraf.Accumulator) 
 		for _, stackTag := range stack.Tags {
 			tags[o.TagPrefix+stackTag] = o.TagValue
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"status":        strings.ToLower(stack.Status),
 			"id":            stack.ID,
 			"status_reason": stack.StatusReason,
@@ -425,7 +426,7 @@ func (o *OpenStack) gatherNovaServices(ctx context.Context, acc telegraf.Accumul
 			"status":       strings.ToLower(novaService.Status),
 			"zone":         novaService.Zone,
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"id":              novaService.ID,
 			"disabled_reason": novaService.DisabledReason,
 			"forced_down":     novaService.ForcedDown,
@@ -456,7 +457,7 @@ func (o *OpenStack) gatherCinderServices(ctx context.Context, acc telegraf.Accum
 			"status":       strings.ToLower(cinderService.Status),
 			"zone":         cinderService.Zone,
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"id":                 cinderService.ActiveBackendID,
 			"disabled_reason":    cinderService.DisabledReason,
 			"frozen":             cinderService.Frozen,
@@ -500,7 +501,7 @@ func (o *OpenStack) gatherSubnets(ctx context.Context, acc telegraf.Accumulator)
 		for _, subnetTag := range subnet.Tags {
 			tags[o.TagPrefix+subnetTag] = o.TagValue
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"id":               subnet.ID,
 			"dhcp_enabled":     subnet.EnableDHCP,
 			"dns_nameservers":  strings.Join(subnet.DNSNameservers[:], ","),
@@ -535,7 +536,7 @@ func (o *OpenStack) gatherPorts(ctx context.Context, acc telegraf.Accumulator) e
 		for _, portTag := range port.Tags {
 			tags[o.TagPrefix+portTag] = o.TagValue
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"id":                    port.ID,
 			"mac_address":           port.MACAddress,
 			"admin_state_up":        port.AdminStateUp,
@@ -577,7 +578,7 @@ func (o *OpenStack) gatherNetworks(ctx context.Context, acc telegraf.Accumulator
 		for _, networkTag := range network.Tags {
 			tags[o.TagPrefix+networkTag] = o.TagValue
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"id":                      network.ID,
 			"admin_state_up":          network.AdminStateUp,
 			"subnets":                 len(network.Subnets),
@@ -617,7 +618,7 @@ func (o *OpenStack) gatherAgents(ctx context.Context, acc telegraf.Accumulator) 
 			"agent_host":        agent.Host,
 			"topic":             agent.Topic,
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"id":                  agent.ID,
 			"admin_state_up":      agent.AdminStateUp,
 			"alive":               agent.Alive,
@@ -646,7 +647,7 @@ func (o *OpenStack) gatherAggregates(ctx context.Context, acc telegraf.Accumulat
 			"availability_zone": aggregate.AvailabilityZone,
 			"name":              aggregate.Name,
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"id":              aggregate.ID,
 			"aggregate_hosts": len(aggregate.Hosts),
 			"deleted":         aggregate.Deleted,
@@ -687,7 +688,7 @@ func (o *OpenStack) gatherProjects(ctx context.Context, acc telegraf.Accumulator
 		for _, projectTag := range project.Tags {
 			tags[o.TagPrefix+projectTag] = o.TagValue
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"id":        project.ID,
 			"is_domain": project.IsDomain,
 			"enabled":   project.Enabled,
@@ -726,7 +727,7 @@ func (o *OpenStack) gatherHypervisors(ctx context.Context, acc telegraf.Accumula
 		for _, cpuFeature := range hypervisor.CPUInfo.Features {
 			tags["cpu_feature_"+cpuFeature] = "true"
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"id":                   hypervisor.ID,
 			"host_ip":              hypervisor.HostIP,
 			"cpu_topology_sockets": hypervisor.CPUInfo.Topology.Sockets,
@@ -766,7 +767,7 @@ func (o *OpenStack) gatherFlavors(ctx context.Context, acc telegraf.Accumulator)
 			"name":      flavor.Name,
 			"is_public": strconv.FormatBool(flavor.IsPublic),
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"id":          flavor.ID,
 			"disk":        flavor.Disk,
 			"ram":         flavor.RAM,
@@ -803,7 +804,7 @@ func (o *OpenStack) gatherVolumes(ctx context.Context, acc telegraf.Accumulator)
 			"replication_status":   strings.ToLower(volume.ReplicationStatus),
 			"consistency_group_id": volume.ConsistencyGroupID,
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"id":                volume.ID,
 			"size":              volume.Size,
 			"total_attachments": len(volume.Attachments),
@@ -853,7 +854,7 @@ func (o *OpenStack) gatherStoragePools(ctx context.Context, acc telegraf.Accumul
 			"vendor_name":         storagePool.Capabilities.VendorName,
 			"volume_backend_name": storagePool.Capabilities.VolumeBackendName,
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"total_capacity_gb": storagePool.Capabilities.TotalCapacityGB,
 			"free_capacity_gb":  storagePool.Capabilities.FreeCapacityGB,
 		}
@@ -920,7 +921,7 @@ func (o *OpenStack) gatherServers(ctx context.Context, acc telegraf.Accumulator)
 				tags["image"] = imageID
 			}
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"id":               server.ID,
 			"progress":         server.Progress,
 			"accessIPv4":       server.AccessIPv4,
@@ -977,8 +978,8 @@ func (o *OpenStack) gatherServerDiagnostics(ctx context.Context, acc telegraf.Ac
 
 		portName := make(map[string]bool)
 		storageName := make(map[string]bool)
-		memoryStats := make(map[string]interface{})
-		cpus := make(map[string]interface{})
+		memoryStats := make(map[string]any)
+		cpus := make(map[string]any)
 		for k, v := range diagnostic {
 			if typePort.MatchString(k) {
 				portName[strings.Split(k, "_")[0]] = true
@@ -994,15 +995,13 @@ func (o *OpenStack) gatherServerDiagnostics(ctx context.Context, acc telegraf.Ac
 		nDisks := strconv.Itoa(len(storageName))
 
 		// Add metrics for disks
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"memory":         memoryStats["memory"],
 			"memory-actual":  memoryStats["memory-actual"],
 			"memory-rss":     memoryStats["memory-rss"],
 			"memory-swap_in": memoryStats["memory-swap_in"],
 		}
-		for k, v := range cpus {
-			fields[k] = v
-		}
+		maps.Copy(fields, cpus)
 		for key := range storageName {
 			fields["disk_errors"] = diagnostic[key+"_errors"]
 			fields["disk_read"] = diagnostic[key+"_read"]
@@ -1019,15 +1018,13 @@ func (o *OpenStack) gatherServerDiagnostics(ctx context.Context, acc telegraf.Ac
 		}
 
 		// Add metrics for network ports
-		fields = map[string]interface{}{
+		fields = map[string]any{
 			"memory":         memoryStats["memory"],
 			"memory-actual":  memoryStats["memory-actual"],
 			"memory-rss":     memoryStats["memory-rss"],
 			"memory-swap_in": memoryStats["memory-swap_in"],
 		}
-		for k, v := range cpus {
-			fields[k] = v
-		}
+		maps.Copy(fields, cpus)
 		for key := range portName {
 			fields["port_rx"] = diagnostic[key+"_rx"]
 			fields["port_rx_drop"] = diagnostic[key+"_rx_drop"]
@@ -1050,7 +1047,7 @@ func (o *OpenStack) gatherServerDiagnostics(ctx context.Context, acc telegraf.Ac
 }
 
 // convertTimeFormat, to convert time format based on HumanReadableTS
-func (o *OpenStack) convertTimeFormat(t time.Time) interface{} {
+func (o *OpenStack) convertTimeFormat(t time.Time) any {
 	if o.HumanReadableTS {
 		return t.Format("2006-01-02T15:04:05.999999999Z07:00")
 	}

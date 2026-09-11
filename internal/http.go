@@ -42,7 +42,7 @@ func (h *jwtAuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 	bearer := strings.TrimPrefix(authHeader, "Bearer ")
-	token, err := jwt.Parse(bearer, func(t *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(bearer, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Method)
 		}
@@ -113,8 +113,8 @@ func (h *basicAuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 	var reqUsername, reqPassword string
 	var ok bool
 	authHeader := req.Header.Get("Authorization")
-	if strings.HasPrefix(authHeader, "Token ") {
-		token := strings.TrimPrefix(authHeader, "Token ")
+	if after, ok0 := strings.CutPrefix(authHeader, "Token "); ok0 {
+		token := after
 		reqUsername, reqPassword, ok = strings.Cut(token, ":")
 	} else {
 		reqUsername, reqPassword, ok = req.BasicAuth()

@@ -8,7 +8,7 @@ import (
 type query struct {
 	Size         int                `json:"size"`
 	Aggregations aggregationRequest `json:"aggregations"`
-	Query        interface{}        `json:"query,omitempty"`
+	Query        any                `json:"query,omitempty"`
 }
 
 type boolQuery struct {
@@ -22,7 +22,7 @@ type boolQuery struct {
 // MarshalJSON customizes the JSON marshaling for boolQuery.
 func (b *boolQuery) MarshalJSON() ([]byte, error) {
 	// Construct range
-	dateTimeRange := map[string]interface{}{
+	dateTimeRange := map[string]any{
 		"from":          b.TimeRangeFrom,
 		"to":            b.TimeRangeTo,
 		"include_lower": true,
@@ -31,15 +31,15 @@ func (b *boolQuery) MarshalJSON() ([]byte, error) {
 	if b.DateFieldFormat != "" {
 		dateTimeRange["format"] = b.DateFieldFormat
 	}
-	rangeFilter := map[string]map[string]interface{}{"range": {b.TimestampField: dateTimeRange}}
+	rangeFilter := map[string]map[string]any{"range": {b.TimestampField: dateTimeRange}}
 
 	// Construct Filter
-	queryFilter := map[string]map[string]interface{}{
+	queryFilter := map[string]map[string]any{
 		"query_string": {"query": b.FilterQueryString},
 	}
 
 	// Construct boolean query
-	bq := map[string]map[string]interface{}{"bool": {"filter": []interface{}{rangeFilter, queryFilter}}}
+	bq := map[string]map[string]any{"bool": {"filter": []any{rangeFilter, queryFilter}}}
 
 	return json.Marshal(&bq)
 }

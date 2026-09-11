@@ -77,7 +77,7 @@ func (m *message) extractTagsFromCommonAttributes(req *http.Request, tagkeys []s
 		return tags, nil
 	}
 
-	var params map[string]interface{}
+	var params map[string]any
 	if err := json.Unmarshal([]byte(h), &params); err != nil {
 		m.responseCode = http.StatusBadRequest
 		return nil, fmt.Errorf("decoding x-amz-firehose-common-attributes header failed: %w", err)
@@ -89,7 +89,7 @@ func (m *message) extractTagsFromCommonAttributes(req *http.Request, tagkeys []s
 		return nil, errors.New("commonAttributes not found in x-amz-firehose-common-attributes header")
 	}
 
-	attributes, ok := raw.(map[string]interface{})
+	attributes, ok := raw.(map[string]any)
 	if !ok {
 		m.responseCode = http.StatusBadRequest
 		return nil, errors.New("parse parameters data failed")

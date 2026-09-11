@@ -6,10 +6,10 @@ package ctrlx_datalayer
 // sseEventData represents the json structure send by the ctrlX CORE
 // server on an "update" event.
 type sseEventData struct {
-	Node      string      `json:"node"`
-	Timestamp int64       `json:"timestamp"`
-	Type      string      `json:"type"`
-	Value     interface{} `json:"value"`
+	Node      string `json:"node"`
+	Timestamp int64  `json:"timestamp"`
+	Type      string `json:"type"`
+	Value     any    `json:"value"`
 }
 
 // sseEventError represents the json structure send by the ctrlX CORE

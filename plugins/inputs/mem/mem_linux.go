@@ -8,12 +8,12 @@ import (
 
 const extendedMemorySupported = true
 
-func getExtendedMemoryFields() (map[string]interface{}, error) {
+func getExtendedMemoryFields() (map[string]any, error) {
 	exVM, err := mem.NewExLinux().VirtualMemory()
 	if err != nil {
 		return nil, err
 	}
-	return map[string]interface{}{
+	return map[string]any{
 		"active_file":   exVM.ActiveFile,
 		"inactive_file": exVM.InactiveFile,
 		"active_anon":   exVM.ActiveAnon,

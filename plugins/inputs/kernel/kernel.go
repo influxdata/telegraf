@@ -78,7 +78,7 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 
 	fields["entropy_avail"] = entropyValue
 

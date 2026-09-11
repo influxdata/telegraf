@@ -144,7 +144,7 @@ func (s *SignalFx) ConvertToSignalFx(metrics []telegraf.Metric) ([]*datapoint.Da
 				}
 
 				// We've already type checked field, so set property with value
-				metricProps := map[string]interface{}{"message": val}
+				metricProps := map[string]any{"message": val}
 				var ev = event.NewWithProperties(metricName,
 					event.AGENT,
 					metricDims,

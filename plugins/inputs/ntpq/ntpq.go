@@ -202,7 +202,7 @@ func (n *NTPQ) gatherServer(acc telegraf.Accumulator, server string) {
 		}
 
 		tags := make(map[string]string)
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 
 		if prefix != "" {
 			tags["state_prefix"] = prefix

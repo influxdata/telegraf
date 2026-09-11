@@ -136,7 +136,7 @@ func TestTableBuildWalkNetsnmp(t *testing.T) {
 			"myfield1": "foo",
 			"index":    "0",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 1,
 			"myfield3": float64(0.123),
 			"myfield4": 11,
@@ -150,7 +150,7 @@ func TestTableBuildWalkNetsnmp(t *testing.T) {
 			"myfield1": "bar",
 			"index":    "1",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 2,
 			"myfield3": float64(0.456),
 			"myfield4": 22,
@@ -161,7 +161,7 @@ func TestTableBuildWalkNetsnmp(t *testing.T) {
 		Tags: map[string]string{
 			"index": "2",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 0,
 			"myfield3": float64(0.0),
 		},
@@ -170,7 +170,7 @@ func TestTableBuildWalkNetsnmp(t *testing.T) {
 		Tags: map[string]string{
 			"index": "3",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield3": float64(9.999),
 		},
 	}
@@ -221,7 +221,7 @@ func TestTableBuildNoWalkNetsnmp(t *testing.T) {
 
 	rtr := RTableRow{
 		Tags:   map[string]string{"myfield1": "baz", "myfield3": "234"},
-		Fields: map[string]interface{}{"myfield2": 234, "myfield4": "testTableEntry.7"},
+		Fields: map[string]any{"myfield2": 234, "myfield4": "testTableEntry.7"},
 	}
 	require.Len(t, tb.Rows, 1)
 	require.Contains(t, tb.Rows, rtr)

@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"regexp"
 	"strconv"
@@ -189,13 +190,11 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		return nil, nil
 	}
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	tags := make(map[string]string)
 
 	// add default tags
-	for k, v := range p.DefaultTags {
-		tags[k] = v
-	}
+	maps.Copy(tags, p.DefaultTags)
 
 	timestamp := p.timeFunc()
 	for k, v := range values {
@@ -406,7 +405,7 @@ func (p *Parser) compileCustomPatterns() error {
 	var err error
 	// check if the pattern contains a subpattern that is already defined
 	// replace it with the subpattern for modifier inheritance.
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		for name, pattern := range p.patternsMap {
 			subNames := patternOnlyRe.FindAllStringSubmatch(pattern, -1)
 			for _, subName := range subNames {
@@ -544,10 +543,7 @@ func (t *tsModder) tsMod(ts time.Time) time.Time {
 	if t.incrn == 999 && t.incr > time.Nanosecond {
 		t.rollover = t.incr * t.incrn
 		t.incrn = 1
-		t.incr = t.incr / 1000
-		if t.incr < time.Nanosecond {
-			t.incr = time.Nanosecond
-		}
+		t.incr = max(t.incr/1000, time.Nanosecond)
 	}
 	return ts.Add(t.incr*t.incrn + t.rollover)
 }

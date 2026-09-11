@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"maps"
 	"strconv"
 	"time"
 
@@ -33,8 +34,8 @@ type pointParser struct {
 	parent   *Parser
 }
 
-func newPointParserFactory(p *Parser) func() interface{} {
-	return func() interface{} {
+func newPointParserFactory(p *Parser) func() any {
+	return func() any {
 		wsParser := whiteSpaceParser{}
 		wsParserNextOpt := whiteSpaceParser{nextOptional: true}
 		repeatParser := loopedParser{wrappedParser: &tagParser{}, wsParser: &wsParser}
@@ -95,16 +96,12 @@ func (p *pointParser) convertPointToTelegrafMetric(points []point) ([]telegraf.M
 
 	for _, point := range points {
 		tags := make(map[string]string)
-		for k, v := range point.Tags {
-			tags[k] = v
-		}
+		maps.Copy(tags, point.Tags)
 		// apply default tags after parsed tags
-		for k, v := range p.parent.DefaultTags {
-			tags[k] = v
-		}
+		maps.Copy(tags, p.parent.DefaultTags)
 
 		// single field for value
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		v, err := strconv.ParseFloat(point.Value, 64)
 		if err != nil {
 			return nil, err

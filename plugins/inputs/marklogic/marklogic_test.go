@@ -48,7 +48,7 @@ func TestMarklogic(t *testing.T) {
 	require.NoError(t, err)
 
 	// Expect the correct values for all known keys
-	expectFields := map[string]interface{}{
+	expectFields := map[string]any{
 		"online":                    true,
 		"total_load":                0.00429263804107904,
 		"ncpus":                     1,

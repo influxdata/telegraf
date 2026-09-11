@@ -10,7 +10,7 @@ import (
 // Migration function to migrate cisco_telemetry_gnmi to gnmi
 func migrate(tbl *ast.Table) ([]byte, string, error) {
 	// Decode the old plugin configuration
-	var plugin map[string]interface{}
+	var plugin map[string]any
 	if err := toml.UnmarshalTable(tbl, &plugin); err != nil {
 		return nil, "", err
 	}

@@ -43,9 +43,7 @@ func (p *Prometheus) startHTTPSD(ctx context.Context) error {
 		return err
 	}
 
-	p.wg.Add(1)
-	go func() {
-		defer p.wg.Done()
+	p.wg.Go(func() {
 		client := &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig:   tlsCfg,
@@ -67,7 +65,7 @@ func (p *Prometheus) startHTTPSD(ctx context.Context) error {
 				}
 			}
 		}
-	}()
+	})
 
 	return nil
 }

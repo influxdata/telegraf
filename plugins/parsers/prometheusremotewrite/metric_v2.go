@@ -2,6 +2,7 @@ package prometheusremotewrite
 
 import (
 	"fmt"
+	"maps"
 	"math"
 	"time"
 
@@ -21,9 +22,7 @@ func (p *Parser) extractMetricsV2(ts *prompb.TimeSeries) ([]telegraf.Metric, err
 	metrics := make([]telegraf.Metric, 0)
 
 	tags := make(map[string]string, len(p.DefaultTags)+len(ts.Labels))
-	for key, value := range p.DefaultTags {
-		tags[key] = value
-	}
+	maps.Copy(tags, p.DefaultTags)
 	for _, l := range ts.Labels {
 		tags[l.Name] = l.Value
 	}
@@ -39,7 +38,7 @@ func (p *Parser) extractMetricsV2(ts *prompb.TimeSeries) ([]telegraf.Metric, err
 			continue
 		}
 		// converting to telegraf metric
-		fields := map[string]interface{}{metricName: s.Value}
+		fields := map[string]any{metricName: s.Value}
 		if s.Timestamp > 0 {
 			t = time.Unix(0, s.Timestamp*1000000)
 		}
@@ -78,9 +77,7 @@ func (p *Parser) extractMetricsV2(ts *prompb.TimeSeries) ([]telegraf.Metric, err
 
 			localTags := make(map[string]string, len(tags)+1)
 			localTags[metricName+"_le"] = fmt.Sprintf("%g", bucket.Upper)
-			for k, v := range tags {
-				localTags[k] = v
-			}
+			maps.Copy(localTags, tags)
 
 			m := metric.New("prometheus_remote_write", localTags, fields, t)
 			metrics = append(metrics, m)

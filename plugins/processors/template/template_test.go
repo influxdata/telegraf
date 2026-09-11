@@ -25,7 +25,7 @@ func TestName(t *testing.T) {
 		metric.New(
 			"cpu",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle": 42,
 			},
 			time.Unix(0, 0),
@@ -39,7 +39,7 @@ func TestName(t *testing.T) {
 			map[string]string{
 				"measurement": "cpu",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle": 42,
 			},
 			time.Unix(0, 0),
@@ -61,7 +61,7 @@ func TestNameTemplate(t *testing.T) {
 		metric.New(
 			"cpu",
 			map[string]string{"foo": "measurement"},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle": 42,
 			},
 			time.Unix(0, 0),
@@ -76,7 +76,7 @@ func TestNameTemplate(t *testing.T) {
 				"foo":         "measurement",
 				"measurement": "cpu",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle": 42,
 			},
 			time.Unix(0, 0),
@@ -147,7 +147,7 @@ func TestTagAndFieldConcatenate(t *testing.T) {
 	}
 
 	// create metric for testing
-	m1 := metric.New("weather", map[string]string{"location": "us-midwest"}, map[string]interface{}{"temperature": "too warm"}, now)
+	m1 := metric.New("weather", map[string]string{"location": "us-midwest"}, map[string]any{"temperature": "too warm"}, now)
 
 	// act
 	actual := tmp.Apply(m1)
@@ -157,7 +157,7 @@ func TestTagAndFieldConcatenate(t *testing.T) {
 		metric.New(
 			"weather",
 			map[string]string{"location": "us-midwest", "LocalTemp": "us-midwest is too warm"},
-			map[string]interface{}{"temperature": "too warm"},
+			map[string]any{"temperature": "too warm"},
 			now,
 		),
 	}
@@ -289,7 +289,7 @@ func TestSprig(t *testing.T) {
 		metric.New(
 			"cpu",
 			map[string]string{"foo": "MEASUREMENT"},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle": 42,
 			},
 			time.Unix(0, 0),
@@ -304,7 +304,7 @@ func TestSprig(t *testing.T) {
 				"foo":         "MEASUREMENT",
 				"measurement": "CPU",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle": 42,
 			},
 			time.Unix(0, 0),

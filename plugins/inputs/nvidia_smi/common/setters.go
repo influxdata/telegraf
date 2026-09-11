@@ -18,7 +18,7 @@ func SetTagIfUsed(m map[string]string, k, v string) {
 }
 
 // SetIfUsed sets those fields for which nvidia-smi reported a usable value.
-func SetIfUsed(t string, m map[string]interface{}, k, v string) {
+func SetIfUsed(t string, m map[string]any, k, v string) {
 	v = strings.TrimSpace(v)
 	if v == "" || v == notAvailable || v == deprecated {
 		return
@@ -39,7 +39,7 @@ func SetIfUsed(t string, m map[string]interface{}, k, v string) {
 }
 
 // SetActiveIfUsed normalises binary nvidia-smi feilds from a str to 1 or 0.
-func SetActiveIfUsed(m map[string]interface{}, k, v string) {
+func SetActiveIfUsed(m map[string]any, k, v string) {
 	switch strings.TrimSpace(v) {
 	case "Active":
 		m[k] = int64(1)

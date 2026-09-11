@@ -85,7 +85,7 @@ func receive(acc telegraf.Accumulator, in <-chan *pb.LanzRecord, deviceURL *url.
 func msgToAccumulator(acc telegraf.Accumulator, msg *pb.LanzRecord, deviceURL *url.URL) {
 	cr := msg.GetCongestionRecord()
 	if cr != nil {
-		vals := map[string]interface{}{
+		vals := map[string]any{
 			"timestamp":        int64(cr.GetTimestamp()),
 			"queue_size":       int64(cr.GetQueueSize()),
 			"time_of_max_qlen": int64(cr.GetTimeOfMaxQLen()),
@@ -107,7 +107,7 @@ func msgToAccumulator(acc telegraf.Accumulator, msg *pb.LanzRecord, deviceURL *u
 
 	gbur := msg.GetGlobalBufferUsageRecord()
 	if gbur != nil {
-		vals := map[string]interface{}{
+		vals := map[string]any{
 			"timestamp":   int64(gbur.GetTimestamp()),
 			"buffer_size": int64(gbur.GetBufferSize()),
 			"duration":    int64(gbur.GetDuration()),

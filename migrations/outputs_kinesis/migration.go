@@ -13,7 +13,7 @@ import (
 // Migration function
 func migrate(tbl *ast.Table) ([]byte, string, error) {
 	// Decode the old data structure
-	var plugin map[string]interface{}
+	var plugin map[string]any
 	if err := toml.UnmarshalTable(tbl, &plugin); err != nil {
 		return nil, "", err
 	}
@@ -99,16 +99,16 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	return output, "", err
 }
 
-func getPartition(plugin map[string]interface{}) (map[string]interface{}, error) {
+func getPartition(plugin map[string]any) (map[string]any, error) {
 	rawPartition := plugin["partition"]
 	if rawPartition == nil {
 		// Create a new partition if it does not exist
-		partition := make(map[string]interface{})
+		partition := make(map[string]any)
 		plugin["partition"] = partition
 		return partition, nil
 	}
 
-	partition, ok := rawPartition.(map[string]interface{})
+	partition, ok := rawPartition.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("unexpected type %T for 'partition'", rawPartition)
 	}

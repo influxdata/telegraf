@@ -18,7 +18,7 @@ func TestDecodeUTF16(t *testing.T) {
 	var bytesUtf16 bytes.Buffer
 	writer := io.Writer(&bytesUtf16)
 	lb := len(utf16s)
-	for i := 0; i < lb; i++ {
+	for i := range lb {
 		word := make([]byte, 2)
 		binary.LittleEndian.PutUint16(word, utf16s[i])
 		_, err := writer.Write(word)

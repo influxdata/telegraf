@@ -15,7 +15,7 @@ import (
 func createTestMetric() telegraf.Metric {
 	m := metric.New("m1",
 		map[string]string{"metric_tag": "from_metric"},
-		map[string]interface{}{"value": int64(1)},
+		map[string]any{"value": int64(1)},
 		time.Now(),
 	)
 	return m
@@ -87,19 +87,19 @@ func TestTracking(t *testing.T) {
 		metric.New(
 			"zero_uint64",
 			map[string]string{},
-			map[string]interface{}{"value": uint64(3)},
+			map[string]any{"value": uint64(3)},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"zero_int64",
 			map[string]string{},
-			map[string]interface{}{"value": int64(4)},
+			map[string]any{"value": int64(4)},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"zero_float",
 			map[string]string{},
-			map[string]interface{}{"value": float64(5.5)},
+			map[string]any{"value": float64(5.5)},
 			time.Unix(0, 0),
 		),
 	}
@@ -108,19 +108,19 @@ func TestTracking(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{},
-			map[string]interface{}{"value": uint64(3)},
+			map[string]any{"value": uint64(3)},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"test",
 			map[string]string{},
-			map[string]interface{}{"value": int64(4)},
+			map[string]any{"value": int64(4)},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"test",
 			map[string]string{},
-			map[string]interface{}{"value": float64(5.5)},
+			map[string]any{"value": float64(5.5)},
 			time.Unix(0, 0),
 		),
 	}

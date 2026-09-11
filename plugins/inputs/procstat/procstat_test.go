@@ -3,6 +3,7 @@ package procstat
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -144,7 +145,7 @@ func (p *testProc) metrics(prefix string, cfg *collectionConfig, t time.Time) ([
 		prefix += "_"
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		prefix + "num_fds":                      int32(0),
 		prefix + "num_threads":                  int32(0),
 		prefix + "voluntary_context_switches":   int64(0),
@@ -174,9 +175,7 @@ func (p *testProc) metrics(prefix string, cfg *collectionConfig, t time.Time) ([
 	tags := map[string]string{
 		"process_name": "test_proc",
 	}
-	for k, v := range p.tags {
-		tags[k] = v
-	}
+	maps.Copy(tags, p.tags)
 
 	// Add the tags as requested by the user
 	if cfg.tagging["cmdline"] {
@@ -258,7 +257,7 @@ func TestGather_CreateProcessErrorOk(t *testing.T) {
 				"pid_finder": "test",
 				"result":     "success",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"pid_count":   int64(1),
 				"result_code": int64(0),
 				"running":     int64(0),
@@ -293,7 +292,7 @@ func TestGather_ProcessName(t *testing.T) {
 				"exe":          "foo",
 				"process_name": "custom_name",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"child_major_faults":           uint64(0),
 				"child_minor_faults":           uint64(0),
 				"cmdline":                      "test_proc",
@@ -330,7 +329,7 @@ func TestGather_ProcessName(t *testing.T) {
 				"pid_finder": "test",
 				"result":     "success",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"pid_count":   int64(1),
 				"result_code": int64(0),
 				"running":     int64(1),

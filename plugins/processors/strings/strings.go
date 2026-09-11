@@ -115,11 +115,11 @@ func (c *converter) convertTagKey(metric telegraf.Metric) {
 }
 
 func (c *converter) convertField(metric telegraf.Metric) {
-	var fields map[string]interface{}
+	var fields map[string]any
 	if c.Field == "*" {
 		fields = metric.Fields()
 	} else {
-		fields = make(map[string]interface{})
+		fields = make(map[string]any)
 		fv, ok := metric.GetField(c.Field)
 		if !ok {
 			return
@@ -138,11 +138,11 @@ func (c *converter) convertField(metric telegraf.Metric) {
 }
 
 func (c *converter) convertFieldKey(metric telegraf.Metric) {
-	var fields map[string]interface{}
+	var fields map[string]any
 	if c.FieldKey == "*" {
 		fields = metric.Fields()
 	} else {
-		fields = make(map[string]interface{})
+		fields = make(map[string]any)
 		fv, ok := metric.GetField(c.FieldKey)
 		if !ok {
 			return

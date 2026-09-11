@@ -30,7 +30,7 @@ func getMetric() telegraf.Metric {
 	m := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": 42.0,
 		},
 		time.Unix(0, 0),
@@ -42,14 +42,14 @@ func getMetrics() []telegraf.Metric {
 	const count = 100
 	var metrics = make([]telegraf.Metric, count)
 
-	for i := 0; i < count; i++ {
+	for i := range count {
 		m := metric.New(
 			fmt.Sprintf("cpu-%d", i),
 			map[string]string{
 				"ec2_instance": "aws-129038123",
 				"image":        "aws-ami-1234567890",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"idle":   5876876,
 				"steal":  5876876,
 				"system": 5876876,
@@ -634,14 +634,14 @@ func TestMaxRequestBodySize(t *testing.T) {
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
 			var (
-				requestCount int32
-				linesCount   int32
+				requestCount atomic.Int32
+				linesCount   atomic.Int32
 			)
 			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				atomic.AddInt32(&requestCount, 1)
+				requestCount.Add(1)
 
 				if tt.expectedMetricLinesCount != 0 {
-					atomic.AddInt32(&linesCount, int32(countLines(t, r.Body)))
+					linesCount.Add(int32(countLines(t, r.Body)))
 				}
 
 				w.WriteHeader(http.StatusOK)
@@ -664,8 +664,8 @@ func TestMaxRequestBodySize(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tt.expectedRequestCount, atomic.LoadInt32(&requestCount))
-				require.Equal(t, tt.expectedMetricLinesCount, atomic.LoadInt32(&linesCount))
+				require.Equal(t, tt.expectedRequestCount, requestCount.Load())
+				require.Equal(t, tt.expectedMetricLinesCount, linesCount.Load())
 			}
 		})
 	}

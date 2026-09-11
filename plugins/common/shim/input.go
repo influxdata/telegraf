@@ -53,14 +53,12 @@ func (s *Shim) RunInput(pollInterval time.Duration) error {
 	}()
 
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		err := s.writeProcessedMetrics()
 		if err != nil {
 			s.log.Warn(err.Error())
 		}
-		wg.Done()
-	}()
+	})
 
 	go func() {
 		scanner := bufio.NewScanner(s.stdin)

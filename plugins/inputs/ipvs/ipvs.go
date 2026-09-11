@@ -45,7 +45,7 @@ func (i *IPVS) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("failed to list IPVS services: %w", err)
 	}
 	for _, s := range services {
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"connections": s.Stats.Connections,
 			"pkts_in":     s.Stats.PacketsIn,
 			"pkts_out":    s.Stats.PacketsOut,
@@ -64,7 +64,7 @@ func (i *IPVS) Gather(acc telegraf.Accumulator) error {
 		}
 
 		for _, d := range destinations {
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"active_connections":   d.ActiveConnections,
 				"inactive_connections": d.InactiveConnections,
 				"connections":          d.Stats.Connections,

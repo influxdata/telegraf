@@ -104,15 +104,15 @@ func (f *Fail2ban) Gather(acc telegraf.Accumulator) error {
 		if jail == "" {
 			continue
 		}
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		cmd := execCommand(name, append(args, jail)...)
 		out, err := cmd.Output()
 		if err != nil {
 			return fmt.Errorf("failed to run command %q: %w - %s", strings.Join(cmd.Args, " "), err, string(out))
 		}
 
-		lines := strings.Split(string(out), "\n")
-		for _, line := range lines {
+		lines := strings.SplitSeq(string(out), "\n")
+		for line := range lines {
 			key, value := extractCount(line)
 			if key != "" {
 				fields[key] = value

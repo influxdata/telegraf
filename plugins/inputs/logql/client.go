@@ -88,7 +88,7 @@ func (c *client) ready(ctx context.Context) (bool, string, error) {
 	return resp.StatusCode == 200, string(body), nil
 }
 
-func (c *client) execute(ctx context.Context, u string) (interface{}, error) {
+func (c *client) execute(ctx context.Context, u string) (any, error) {
 	// Prepare the request
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {

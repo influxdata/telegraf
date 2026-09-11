@@ -104,12 +104,9 @@ func (z *Zipkin) Start(acc telegraf.Accumulator) error {
 	z.address = ln.Addr().String()
 	z.Log.Infof("Started the zipkin listener on %s", z.address)
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
+	wg.Go(func() {
 		z.listen(ln, acc)
-	}()
+	})
 
 	return nil
 }

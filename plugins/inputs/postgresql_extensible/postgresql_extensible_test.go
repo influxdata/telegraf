@@ -10,7 +10,6 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/postgresql"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -38,13 +37,11 @@ func queryRunner(t *testing.T, q []query) *testutil.Accumulator {
 	)
 
 	p := &Postgresql{
-		Log: testutil.Logger{},
-		Config: postgresql.Config{
-			Address:     config.NewSecret([]byte(addr)),
-			IsPgBouncer: false,
-		},
-		Databases: []string{"postgres"},
-		Query:     q,
+		Log:         testutil.Logger{},
+		Address:     config.NewSecret([]byte(addr)),
+		IsPgBouncer: false,
+		Databases:   []string{"postgres"},
+		Query:       q,
 	}
 	require.NoError(t, p.Init())
 
@@ -236,13 +233,11 @@ func TestPostgresqlSqlScript(t *testing.T) {
 	)
 
 	p := &Postgresql{
-		Log: testutil.Logger{},
-		Config: postgresql.Config{
-			Address:     config.NewSecret([]byte(addr)),
-			IsPgBouncer: false,
-		},
-		Databases: []string{"postgres"},
-		Query:     q,
+		Log:         testutil.Logger{},
+		Address:     config.NewSecret([]byte(addr)),
+		IsPgBouncer: false,
+		Databases:   []string{"postgres"},
+		Query:       q,
 	}
 	require.NoError(t, p.Init())
 
@@ -263,10 +258,8 @@ func TestPostgresqlIgnoresUnwantedColumnsIntegration(t *testing.T) {
 	)
 
 	p := &Postgresql{
-		Log: testutil.Logger{},
-		Config: postgresql.Config{
-			Address: config.NewSecret([]byte(addr)),
-		},
+		Log:     testutil.Logger{},
+		Address: config.NewSecret([]byte(addr)),
 	}
 	require.NoError(t, p.Init())
 
@@ -283,11 +276,9 @@ func TestPostgresqlIgnoresUnwantedColumnsIntegration(t *testing.T) {
 
 func TestAccRow(t *testing.T) {
 	p := Postgresql{
-		Log: testutil.Logger{},
-		Config: postgresql.Config{
-			Address:       config.NewSecret(nil),
-			OutputAddress: "server",
-		},
+		Log:           testutil.Logger{},
+		Address:       config.NewSecret(nil),
+		OutputAddress: "server",
 	}
 	require.NoError(t, p.Init())
 
@@ -301,21 +292,21 @@ func TestAccRow(t *testing.T) {
 	}{
 		{
 			fields: fakeRow{
-				fields: []interface{}{1, "gato"},
+				fields: []any{1, "gato"},
 			},
 			dbName: "postgres",
 			server: "server",
 		},
 		{
 			fields: fakeRow{
-				fields: []interface{}{nil, "gato"},
+				fields: []any{nil, "gato"},
 			},
 			dbName: "postgres",
 			server: "server",
 		},
 		{
 			fields: fakeRow{
-				fields: []interface{}{"name", "gato"},
+				fields: []any{"name", "gato"},
 			},
 			dbName: "name",
 			server: "server",
@@ -333,17 +324,17 @@ func TestAccRow(t *testing.T) {
 }
 
 type fakeRow struct {
-	fields []interface{}
+	fields []any
 }
 
-func (f fakeRow) Scan(dest ...interface{}) error {
+func (f fakeRow) Scan(dest ...any) error {
 	if len(f.fields) != len(dest) {
 		return errors.New("nada matchy buddy")
 	}
 
 	for i, d := range dest {
 		switch d := d.(type) {
-		case *interface{}:
+		case *any:
 			*d = f.fields[i]
 		default:
 			return fmt.Errorf("bad type %T", d)

@@ -203,9 +203,9 @@ func TestWriteCompact(t *testing.T) {
 	require.Len(t, rows, 1)
 	require.Contains(t, rows[0], "json")
 
-	var row interface{}
+	var row any
 	require.NoError(t, json.Unmarshal(rows[0]["json"], &row))
-	require.Equal(t, map[string]interface{}{
+	require.Equal(t, map[string]any{
 		"timestamp": "2009-11-10T23:00:00Z",
 		"name":      "test1",
 		"tags":      `{"tag1":"value1"}`,

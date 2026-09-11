@@ -18,7 +18,7 @@ func TestSerializeMetricFloat(t *testing.T) {
 	tags := map[string]string{
 		"cpu": "cpu0",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": float64(91.5),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -68,7 +68,7 @@ func TestSerialize_TimestampUnits(t *testing.T) {
 			m := metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42.0,
 				},
 				time.Unix(1525478795, 123456789),
@@ -86,7 +86,7 @@ func TestSerializeMetricInt(t *testing.T) {
 	tags := map[string]string{
 		"cpu": "cpu0",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": int64(90),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -110,7 +110,7 @@ func TestSerializeMetricString(t *testing.T) {
 	tags := map[string]string{
 		"cpu": "cpu0",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": "foobar",
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -128,7 +128,7 @@ func TestSerializeMultiFields(t *testing.T) {
 	tags := map[string]string{
 		"cpu": "cpu0",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle":  int64(90),
 		"usage_total": 8559615,
 	}
@@ -160,7 +160,7 @@ func TestSerializeMetricWithEscapes(t *testing.T) {
 	tags := map[string]string{
 		"cpu tag": "cpu0",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"U,age=Idle": int64(90),
 	}
 	m := metric.New("My CPU", tags, fields, now)
@@ -182,7 +182,7 @@ func TestSerializeBatch(t *testing.T) {
 	m := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": 42.0,
 		},
 		time.Unix(0, 0),
@@ -203,7 +203,7 @@ func TestSerializeJSONv2Format(t *testing.T) {
 	m := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": 42.0,
 		},
 		time.Unix(0, 0),
@@ -222,7 +222,7 @@ func TestSerializeJSONv2FormatBatch(t *testing.T) {
 	m := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": 42.0,
 		},
 		time.Unix(0, 0),

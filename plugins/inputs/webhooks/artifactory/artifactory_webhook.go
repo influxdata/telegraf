@@ -44,7 +44,7 @@ func (awh *Webhook) eventHandler(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bodyFields := make(map[string]interface{})
+	bodyFields := make(map[string]any)
 	err = json.Unmarshal(data, &bodyFields)
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)

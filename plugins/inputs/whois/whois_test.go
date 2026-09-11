@@ -186,9 +186,7 @@ func (s *server) start() (string, error) {
 	s.listener = listener
 
 	addr := listener.Addr().String()
-	s.wg.Add(1)
-	go func() {
-		defer s.wg.Done()
+	s.wg.Go(func() {
 		for {
 			conn, err := s.listener.Accept()
 			if err != nil {
@@ -218,7 +216,7 @@ func (s *server) start() (string, error) {
 				}
 			}(conn)
 		}
-	}()
+	})
 	return addr, nil
 }
 

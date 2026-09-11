@@ -80,11 +80,9 @@ func (s *Suricata) Start(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	s.cancel = cancel
 	s.inputListener.SetUnlinkOnClose(true)
-	s.wg.Add(1)
-	go func() {
-		defer s.wg.Done()
+	s.wg.Go(func() {
 		go s.handleServerConnection(ctx, acc)
-	}()
+	})
 	return nil
 }
 
@@ -151,9 +149,9 @@ func (s *Suricata) handleServerConnection(ctx context.Context, acc telegraf.Accu
 	}
 }
 
-func flexFlatten(outmap map[string]interface{}, field string, v interface{}, delimiter string) error {
+func flexFlatten(outmap map[string]any, field string, v any, delimiter string) error {
 	switch t := v.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		for k, v := range t {
 			var err error
 			if field == "" {
@@ -165,7 +163,7 @@ func flexFlatten(outmap map[string]interface{}, field string, v interface{}, del
 				return err
 			}
 		}
-	case []interface{}:
+	case []any:
 		for _, v := range t {
 			err := flexFlatten(outmap, field, v, delimiter)
 			if err != nil {
@@ -182,14 +180,14 @@ func flexFlatten(outmap map[string]interface{}, field string, v interface{}, del
 	return nil
 }
 
-func (s *Suricata) parseAlert(acc telegraf.Accumulator, result map[string]interface{}) {
-	if _, ok := result["alert"].(map[string]interface{}); !ok {
+func (s *Suricata) parseAlert(acc telegraf.Accumulator, result map[string]any) {
+	if _, ok := result["alert"].(map[string]any); !ok {
 		s.Log.Debug("'alert' sub-object does not have required structure")
 		return
 	}
 
-	totalmap := make(map[string]interface{})
-	for k, v := range result["alert"].(map[string]interface{}) {
+	totalmap := make(map[string]any)
+	for k, v := range result["alert"].(map[string]any) {
 		// source and target fields are maps
 		err := flexFlatten(totalmap, k, v, s.Delimiter)
 		if err != nil {
@@ -203,20 +201,20 @@ func (s *Suricata) parseAlert(acc telegraf.Accumulator, result map[string]interf
 	acc.AddFields("suricata_alert", totalmap, nil)
 }
 
-func (s *Suricata) parseStats(acc telegraf.Accumulator, result map[string]interface{}) {
-	if _, ok := result["stats"].(map[string]interface{}); !ok {
+func (s *Suricata) parseStats(acc telegraf.Accumulator, result map[string]any) {
+	if _, ok := result["stats"].(map[string]any); !ok {
 		s.Log.Debug("The 'stats' sub-object does not have required structure")
 		return
 	}
 
-	fields := make(map[string]map[string]interface{})
-	totalmap := make(map[string]interface{})
-	for k, v := range result["stats"].(map[string]interface{}) {
+	fields := make(map[string]map[string]any)
+	totalmap := make(map[string]any)
+	for k, v := range result["stats"].(map[string]any) {
 		if k == "threads" {
-			if v, ok := v.(map[string]interface{}); ok {
+			if v, ok := v.(map[string]any); ok {
 				for k, t := range v {
-					outmap := make(map[string]interface{})
-					if threadStruct, ok := t.(map[string]interface{}); ok {
+					outmap := make(map[string]any)
+					if threadStruct, ok := t.(map[string]any); ok {
 						err := flexFlatten(outmap, "", threadStruct, s.Delimiter)
 						if err != nil {
 							s.Log.Debugf("Flattening alert failed: %v", err)
@@ -249,7 +247,7 @@ func (s *Suricata) parseStats(acc telegraf.Accumulator, result map[string]interf
 	}
 }
 
-func (s *Suricata) parseGeneric(acc telegraf.Accumulator, result map[string]interface{}) error {
+func (s *Suricata) parseGeneric(acc telegraf.Accumulator, result map[string]any) error {
 	eventType := ""
 	if _, ok := result["event_type"]; !ok {
 		return fmt.Errorf("unable to determine event type of message: %s", result)
@@ -273,12 +271,12 @@ func (s *Suricata) parseGeneric(acc telegraf.Accumulator, result map[string]inte
 	}
 
 	// Make sure the event key exists first
-	if _, ok := result[eventType].(map[string]interface{}); !ok {
+	if _, ok := result[eventType].(map[string]any); !ok {
 		return fmt.Errorf("unable to find key %q in %s", eventType, result)
 	}
 
-	fields := make(map[string]interface{})
-	for k, v := range result[eventType].(map[string]interface{}) {
+	fields := make(map[string]any)
+	for k, v := range result[eventType].(map[string]any) {
 		err := flexFlatten(fields, k, v, s.Delimiter)
 		if err != nil {
 			s.Log.Debugf("Flattening %q failed: %v", eventType, err)
@@ -320,7 +318,7 @@ func (s *Suricata) parseGeneric(acc telegraf.Accumulator, result map[string]inte
 
 func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) error {
 	// initial parsing
-	var result map[string]interface{}
+	var result map[string]any
 	err := json.Unmarshal(sjson, &result)
 	if err != nil {
 		return err

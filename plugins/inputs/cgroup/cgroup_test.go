@@ -35,7 +35,7 @@ func TestCgroupStatistics_1(t *testing.T) {
 			map[string]string{
 				"path": "testdata/memory",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"memory.stat.cache":           int64(1739362304123123123),
 				"memory.stat.rss":             int64(1775325184),
 				"memory.stat.rss_huge":        int64(778043392),
@@ -73,7 +73,7 @@ func TestCgroupStatistics_2(t *testing.T) {
 			map[string]string{
 				"path": "testdata/cpu",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"cpu.stat.core_sched.force_idle_usec": int64(0),
 				"cpu.stat.system_usec":                int64(103537582650),
 				"cpu.stat.usage_usec":                 int64(614953149468),
@@ -97,7 +97,7 @@ func TestCgroupStatistics_3(t *testing.T) {
 		Files: []string{"memory.limit_in_bytes"},
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"memory.limit_in_bytes": int64(223372036854771712),
 	}
 
@@ -131,7 +131,7 @@ func TestCgroupStatistics_4(t *testing.T) {
 		Files: []string{"memory.limit_in_bytes"},
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"memory.limit_in_bytes": int64(223372036854771712),
 	}
 
@@ -166,7 +166,7 @@ func TestCgroupStatistics_4(t *testing.T) {
 			map[string]string{
 				"path": "testdata/memory/group_2",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"memory.limit_in_bytes": int64(223372036854771712),
 			},
 			time.Unix(0, 0),
@@ -190,7 +190,7 @@ func TestCgroupStatistics_5(t *testing.T) {
 			map[string]string{
 				"path": "testdata/memory/group_1/group_1_1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"memory.limit_in_bytes": int64(223372036854771712),
 			},
 			time.Unix(0, 0),
@@ -200,7 +200,7 @@ func TestCgroupStatistics_5(t *testing.T) {
 			map[string]string{
 				"path": "testdata/memory/group_2/group_1_1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"memory.limit_in_bytes": int64(223372036854771712),
 			},
 			time.Unix(0, 0),
@@ -224,7 +224,7 @@ func TestCgroupStatistics_6(t *testing.T) {
 			map[string]string{
 				"path": "testdata/memory",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"memory.usage_in_bytes":      int64(3513667584),
 				"memory.use_hierarchy":       "12-781",
 				"memory.kmem.limit_in_bytes": int64(9223372036854771712),
@@ -250,7 +250,7 @@ func TestCgroupStatistics_7(t *testing.T) {
 			map[string]string{
 				"path": "testdata/blkio",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"blkio.throttle.io_serviced.11:0.Read":  int64(0),
 				"blkio.throttle.io_serviced.11:0.Write": int64(0),
 				"blkio.throttle.io_serviced.11:0.Sync":  int64(0),
@@ -405,7 +405,7 @@ func TestCgroupStatistics_8(t *testing.T) {
 		metric.New(
 			"cgroup",
 			map[string]string{"path": "testdata/broken"},
-			map[string]interface{}{"memory.limit_in_bytes": int64(1)},
+			map[string]any{"memory.limit_in_bytes": int64(1)},
 			time.Unix(0, 0),
 		),
 	}
@@ -430,7 +430,7 @@ func TestCgroupEscapeDir(t *testing.T) {
 		metric.New(
 			"cgroup",
 			map[string]string{"path": `testdata/backslash/machine-qemu-1-ubuntu`},
-			map[string]interface{}{
+			map[string]any{
 				"cpu.stat.core_sched.force_idle_usec": int64(0),
 				"cpu.stat.system_usec":                int64(103537582650),
 				"cpu.stat.usage_usec":                 int64(614953149468),

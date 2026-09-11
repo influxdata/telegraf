@@ -191,7 +191,7 @@ func (s *Varnish) prepareCmdArgs() (adm, stats []string) {
 }
 
 func (s *Varnish) processMetricsV1(acc telegraf.Accumulator, out *bytes.Buffer) error {
-	sectionMap := make(map[string]map[string]interface{})
+	sectionMap := make(map[string]map[string]any)
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
 		cols := strings.Fields(scanner.Text())
@@ -215,7 +215,7 @@ func (s *Varnish) processMetricsV1(acc telegraf.Accumulator, out *bytes.Buffer) 
 
 		// Init the section if necessary
 		if _, ok := sectionMap[section]; !ok {
-			sectionMap[section] = make(map[string]interface{})
+			sectionMap[section] = make(map[string]any)
 		}
 
 		var err error
@@ -240,7 +240,7 @@ func (s *Varnish) processMetricsV1(acc telegraf.Accumulator, out *bytes.Buffer) 
 
 // metrics version 2 - parsing json
 func (s *Varnish) processMetricsV2(activeVcl string, acc telegraf.Accumulator, out *bytes.Buffer) error {
-	rootJSON := make(map[string]interface{})
+	rootJSON := make(map[string]any)
 	dec := json.NewDecoder(out)
 	dec.UseNumber()
 	if err := dec.Decode(&rootJSON); err != nil {
@@ -255,13 +255,13 @@ func (s *Varnish) processMetricsV2(activeVcl string, acc telegraf.Accumulator, o
 		if s.filter != nil && !s.filter.Match(fieldName) {
 			continue
 		}
-		data, ok := raw.(map[string]interface{})
+		data, ok := raw.(map[string]any)
 		if !ok {
 			acc.AddError(fmt.Errorf("unexpected data from json: %s: %#v", fieldName, raw))
 			continue
 		}
 
-		var metricValue interface{}
+		var metricValue any
 		var parseError error
 		flag := data["flag"]
 
@@ -294,7 +294,7 @@ func (s *Varnish) processMetricsV2(activeVcl string, acc telegraf.Accumulator, o
 			continue
 		}
 
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		fields[metric.fieldName] = metricValue
 		switch flag {
 		case "c", "a":
@@ -317,7 +317,7 @@ func getActiveVCLJson(out io.Reader) (string, error) {
 	// workaround for non valid json in varnish 6.6.1 https://github.com/varnishcache/varnish-cache/issues/3687
 	output = strings.TrimPrefix(output, "200")
 
-	var jsonOut []interface{}
+	var jsonOut []any
 	err := json.Unmarshal([]byte(output), &jsonOut)
 	if err != nil {
 		return "", err
@@ -325,12 +325,12 @@ func getActiveVCLJson(out io.Reader) (string, error) {
 
 	for _, item := range jsonOut {
 		switch s := item.(type) {
-		case []interface{}:
+		case []any:
 			command := s[0]
 			if command != "vcl.list" {
 				return "", fmt.Errorf("unsupported varnishadm command %v", jsonOut[1])
 			}
-		case map[string]interface{}:
+		case map[string]any:
 			if s["status"] == "active" {
 				return s["name"].(string), nil
 			}
@@ -343,10 +343,10 @@ func getActiveVCLJson(out io.Reader) (string, error) {
 }
 
 // Gets the "counters" section from varnishstat json (there is change in schema structure in varnish 6.5+)
-func getCountersJSON(rootJSON map[string]interface{}) map[string]interface{} {
+func getCountersJSON(rootJSON map[string]any) map[string]any {
 	// version 1 contains "counters" wrapper
 	if counters, exists := rootJSON["counters"]; exists {
-		return counters.(map[string]interface{})
+		return counters.(map[string]any)
 	}
 	return rootJSON
 }

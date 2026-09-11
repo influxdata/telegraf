@@ -372,7 +372,7 @@ func TestComposeMetrics(t *testing.T) {
 				"accountId":            "546734499701",
 				"region":               "us-west-2",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"max":   0.4366666666666666,
 				"min":   0.3683333333333333,
 				"sum":   1.9399999999999997,
@@ -426,7 +426,7 @@ func TestComposeAPICompatibleMetrics(t *testing.T) {
 				"accountId":            "546734499701",
 				"region":               "us-west-2",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"maximum":     0.4366666666666666,
 				"minimum":     0.3683333333333333,
 				"sum":         1.9399999999999997,

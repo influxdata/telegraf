@@ -15,9 +15,9 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-var masterMetrics map[string]interface{}
+var masterMetrics map[string]any
 var masterTestServer *httptest.Server
-var slaveMetrics map[string]interface{}
+var slaveMetrics map[string]any
 
 var slaveTestServer *httptest.Server
 
@@ -270,12 +270,12 @@ var slaveMetricNames = []string{
 }
 
 func generateMetrics() {
-	masterMetrics = make(map[string]interface{})
+	masterMetrics = make(map[string]any)
 	for _, k := range masterMetricNames {
 		masterMetrics[k] = rand.Float64()
 	}
 
-	slaveMetrics = make(map[string]interface{})
+	slaveMetrics = make(map[string]any)
 	for _, k := range slaveMetricNames {
 		slaveMetrics[k] = rand.Float64()
 	}

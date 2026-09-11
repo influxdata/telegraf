@@ -59,7 +59,7 @@ func Test_BeatStats(t *testing.T) {
 	beat6StatsAccumulator.AssertContainsTaggedFields(
 		t,
 		"beat",
-		map[string]interface{}{
+		map[string]any{
 			"cpu_system_ticks":      float64(626970),
 			"cpu_system_time_ms":    float64(626972),
 			"cpu_total_ticks":       float64(5215010),
@@ -85,7 +85,7 @@ func Test_BeatStats(t *testing.T) {
 	beat6StatsAccumulator.AssertContainsTaggedFields(
 		t,
 		"beat_filebeat",
-		map[string]interface{}{
+		map[string]any{
 			"events_active":             float64(0),
 			"events_added":              float64(182990),
 			"events_done":               float64(182990),
@@ -108,7 +108,7 @@ func Test_BeatStats(t *testing.T) {
 	beat6StatsAccumulator.AssertContainsTaggedFields(
 		t,
 		"beat_libbeat",
-		map[string]interface{}{
+		map[string]any{
 			"config_module_running":     float64(0),
 			"config_module_starts":      float64(0),
 			"config_module_stops":       float64(0),
@@ -148,7 +148,7 @@ func Test_BeatStats(t *testing.T) {
 	beat6StatsAccumulator.AssertContainsTaggedFields(
 		t,
 		"beat_system",
-		map[string]interface{}{
+		map[string]any{
 			"cpu_cores":    float64(32),
 			"load_1":       float64(32.49),
 			"load_15":      float64(41.9),

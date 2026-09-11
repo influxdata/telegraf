@@ -46,7 +46,7 @@ func TestTengineGeneratesMetrics(t *testing.T) {
 
 	require.NoError(t, errTengine)
 
-	fieldsTengine := map[string]interface{}{
+	fieldsTengine := map[string]any{
 		"bytes_in":                 uint64(784),
 		"bytes_out":                uint64(1511),
 		"conn_total":               uint64(2),

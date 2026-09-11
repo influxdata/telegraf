@@ -169,7 +169,7 @@ func buildTags(tags []*telegraf.Tag) []string {
 	return tagsString
 }
 
-func buildValue(v interface{}) (string, error) {
+func buildValue(v any) (string, error) {
 	var retv string
 	switch p := v.(type) {
 	case int64:

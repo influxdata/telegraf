@@ -36,7 +36,7 @@ func TestBasic(t *testing.T) {
 	require.NoError(t, acc.GatherError(plugin.Gather))
 
 	require.Len(t, acc.Metrics, 3)
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		// JSON will truncate floats to integer representations.
 		// Since there's no distinction in JSON, we can't assume it's an int.
 		"i": -1.0,
@@ -50,7 +50,7 @@ func TestBasic(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t, "influxdb_foo", fields, tags)
 
-	fields = map[string]interface{}{
+	fields = map[string]any{
 		"x": "x",
 	}
 	tags = map[string]string{
@@ -60,7 +60,7 @@ func TestBasic(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "influxdb_bar", fields, tags)
 
 	acc.AssertContainsTaggedFields(t, "influxdb",
-		map[string]interface{}{
+		map[string]any{
 			"n_shards": 0,
 		}, map[string]string{})
 }
@@ -91,7 +91,7 @@ func TestInfluxDB(t *testing.T) {
 
 	require.Len(t, acc.Metrics, 36)
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"heap_inuse":      int64(18046976),
 		"heap_released":   int64(3473408),
 		"mspan_inuse":     int64(97440),
@@ -126,7 +126,7 @@ func TestInfluxDB(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t, "influxdb_memstats", fields, tags)
 
-	fields = map[string]interface{}{
+	fields = map[string]any{
 		"current_time": "2023-01-11T16:51:52.723166944Z",
 		"started":      "2023-01-11T16:51:23.355766023Z",
 		"uptime":       uint64(29),
@@ -134,7 +134,7 @@ func TestInfluxDB(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "influxdb_system", fields, tags)
 
 	acc.AssertContainsTaggedFields(t, "influxdb",
-		map[string]interface{}{
+		map[string]any{
 			"n_shards": 1,
 		}, map[string]string{})
 }
@@ -167,11 +167,11 @@ func TestInfluxDB2(t *testing.T) {
 	require.Len(t, acc.Metrics, 36)
 
 	acc.AssertContainsTaggedFields(t, "influxdb",
-		map[string]interface{}{
+		map[string]any{
 			"n_shards": 1,
 		}, map[string]string{})
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"current_time": "2023-01-11T17:04:59.928454705Z",
 		"started":      "2023-01-11T16:51:23.355766023Z",
 		"uptime":       uint64(816),

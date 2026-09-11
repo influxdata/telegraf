@@ -107,7 +107,7 @@ func TestGatherValidJSON(t *testing.T) {
 						"gpu_unique_id": "0x2150e7d042a1124",
 						"name":          "card0",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"card_model":                  "0xc1e",
 						"card_vendor":                 "Advanced",
 						"driver_version":              5925,
@@ -139,7 +139,7 @@ func TestGatherValidJSON(t *testing.T) {
 						"gpu_unique_id": "0x2f048617326b1ea",
 						"name":          "card0",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"card_model":                  "0x834",
 						"card_series":                 "Radeon",
 						"card_vendor":                 "Advanced",
@@ -175,7 +175,7 @@ func TestGatherValidJSON(t *testing.T) {
 						"gpu_unique_id": "N/A",
 						"name":          "card0",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"card_model":                  "0x0c34",
 						"card_series":                 "Arcturus",
 						"card_vendor":                 "Advanced",
@@ -203,7 +203,7 @@ func TestGatherValidJSON(t *testing.T) {
 						"gpu_unique_id": "N/A",
 						"name":          "card1",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"card_model":                  "0x0c34",
 						"card_series":                 "Arcturus",
 						"card_vendor":                 "Advanced",
@@ -231,7 +231,7 @@ func TestGatherValidJSON(t *testing.T) {
 						"gpu_unique_id": "N/A",
 						"name":          "card2",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"card_model":                  "0x0c34",
 						"card_series":                 "Arcturus",
 						"card_vendor":                 "Advanced",
@@ -259,7 +259,7 @@ func TestGatherValidJSON(t *testing.T) {
 						"gpu_unique_id": "N/A",
 						"name":          "card3",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"card_model":                  "0x0c34",
 						"card_series":                 "Arcturus",
 						"card_vendor":                 "Advanced",
@@ -287,7 +287,7 @@ func TestGatherValidJSON(t *testing.T) {
 						"gpu_unique_id": "N/A",
 						"name":          "card4",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"card_model":                  "0x0c34",
 						"card_series":                 "Arcturus",
 						"card_vendor":                 "Advanced",
@@ -315,7 +315,7 @@ func TestGatherValidJSON(t *testing.T) {
 						"gpu_unique_id": "N/A",
 						"name":          "card5",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"card_model":                  "0x0c34",
 						"card_series":                 "Arcturus",
 						"card_vendor":                 "Advanced",
@@ -349,7 +349,7 @@ func TestGatherValidJSON(t *testing.T) {
 						"gpu_unique_id": "0x79ccd55167a2124a",
 						"name":          "card0",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"card_model":                  "0x0c34",
 						"card_series":                 "Arcturus",
 						"card_vendor":                 "Advanced",
@@ -377,7 +377,7 @@ func TestGatherValidJSON(t *testing.T) {
 						"gpu_unique_id": "0x4edfb117a17a07d",
 						"name":          "card1",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"card_model":                  "0x0c34",
 						"card_series":                 "Arcturus",
 						"card_vendor":                 "Advanced",
@@ -405,7 +405,7 @@ func TestGatherValidJSON(t *testing.T) {
 						"gpu_unique_id": "0xd4a9ec48d03d261d",
 						"name":          "card2",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"card_model":                  "0x0c34",
 						"card_series":                 "Arcturus",
 						"card_vendor":                 "Advanced",
@@ -433,7 +433,7 @@ func TestGatherValidJSON(t *testing.T) {
 						"gpu_unique_id": "0x1b9dd972253c3736",
 						"name":          "card3",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"card_model":                  "0x0c34",
 						"card_series":                 "Arcturus",
 						"card_vendor":                 "Advanced",
@@ -467,7 +467,7 @@ func TestGatherValidJSON(t *testing.T) {
 						"gpu_unique_id": "N/A",
 						"name":          "card0",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"card_model":                  "0x1002",
 						"card_series":                 "0x1002",
 						"card_vendor":                 "0x1002",
@@ -502,7 +502,7 @@ func TestGatherValidJSON(t *testing.T) {
 						"gpu_unique_id": "N/A",
 						"name":          "card0",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"card_model":                  "0x6601",
 						"card_series":                 "Navi",
 						"card_vendor":                 "Advanced",
@@ -537,7 +537,7 @@ func TestGatherValidJSON(t *testing.T) {
 						"gpu_unique_id": "N/A",
 						"name":          "card0",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"card_model":                  "0x6601",
 						"card_series":                 "Navi",
 						"card_vendor":                 "Advanced",
@@ -571,7 +571,7 @@ func TestGatherValidJSON(t *testing.T) {
 						"gpu_unique_id": "N/A",
 						"name":          "card0",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"card_model":                  "0x73df",
 						"card_series":                 "Navi",
 						"card_vendor":                 "Advanced",

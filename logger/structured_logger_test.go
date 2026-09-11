@@ -46,12 +46,12 @@ func TestStructuredFile(t *testing.T) {
 	buf, err := os.ReadFile(filename)
 	require.NoError(t, err)
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"level": "INFO",
 		"msg":   "TEST",
 	}
 
-	var actual map[string]interface{}
+	var actual map[string]any
 	require.NoError(t, json.Unmarshal(buf, &actual))
 
 	require.Contains(t, actual, "time")
@@ -77,12 +77,12 @@ func TestStructuredFileDebug(t *testing.T) {
 	buf, err := os.ReadFile(filename)
 	require.NoError(t, err)
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"level": "DEBUG",
 		"msg":   "TEST",
 	}
 
-	var actual map[string]interface{}
+	var actual map[string]any
 	require.NoError(t, json.Unmarshal(buf, &actual))
 
 	require.Contains(t, actual, "time")
@@ -110,12 +110,12 @@ func TestStructuredFileError(t *testing.T) {
 	require.NoError(t, err)
 	require.Greater(t, len(buf), 19)
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"level": "ERROR",
 		"msg":   "TEST",
 	}
 
-	var actual map[string]interface{}
+	var actual map[string]any
 	require.NoError(t, json.Unmarshal(buf, &actual))
 
 	require.Contains(t, actual, "time")
@@ -141,12 +141,12 @@ func TestStructuredAddDefaultLogLevel(t *testing.T) {
 	buf, err := os.ReadFile(filename)
 	require.NoError(t, err)
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"level": "INFO",
 		"msg":   "TEST",
 	}
 
-	var actual map[string]interface{}
+	var actual map[string]any
 	require.NoError(t, json.Unmarshal(buf, &actual))
 
 	require.Contains(t, actual, "time")
@@ -174,14 +174,14 @@ func TestStructuredDerivedLogger(t *testing.T) {
 	buf, err := os.ReadFile(filename)
 	require.NoError(t, err)
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"level":    "INFO",
 		"msg":      "TEST",
 		"category": "testing",
 		"plugin":   "test",
 	}
 
-	var actual map[string]interface{}
+	var actual map[string]any
 	require.NoError(t, json.Unmarshal(buf, &actual))
 
 	require.Contains(t, actual, "time")
@@ -212,7 +212,7 @@ func TestStructuredDerivedLoggerWithAttributes(t *testing.T) {
 	buf, err := os.ReadFile(filename)
 	require.NoError(t, err)
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"level":     "INFO",
 		"msg":       "TEST",
 		"category":  "testing",
@@ -221,7 +221,7 @@ func TestStructuredDerivedLoggerWithAttributes(t *testing.T) {
 		"device_id": float64(123),
 	}
 
-	var actual map[string]interface{}
+	var actual map[string]any
 	require.NoError(t, json.Unmarshal(buf, &actual))
 
 	require.Contains(t, actual, "time")
@@ -247,12 +247,12 @@ func TestStructuredWriteToTruncatedFile(t *testing.T) {
 	buf, err := os.ReadFile(filename)
 	require.NoError(t, err)
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"level": "INFO",
 		"msg":   "TEST",
 	}
 
-	var actual map[string]interface{}
+	var actual map[string]any
 	require.NoError(t, json.Unmarshal(buf, &actual))
 
 	require.Contains(t, actual, "time")
@@ -267,7 +267,7 @@ func TestStructuredWriteToTruncatedFile(t *testing.T) {
 	buf, err = os.ReadFile(filename)
 	require.NoError(t, err)
 
-	expected = map[string]interface{}{
+	expected = map[string]any{
 		"level": "INFO",
 		"msg":   "SHOULD BE FIRST",
 	}
@@ -320,14 +320,14 @@ func TestStructuredLogMessageKey(t *testing.T) {
 	buf, err := os.ReadFile(filename)
 	require.NoError(t, err)
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"level":    "INFO",
 		"message":  "TEST",
 		"category": "testing",
 		"plugin":   "test",
 	}
 
-	var actual map[string]interface{}
+	var actual map[string]any
 	require.NoError(t, json.Unmarshal(buf, &actual))
 
 	require.Contains(t, actual, "time")
@@ -353,12 +353,12 @@ func TestStructuredFileCreateDir(t *testing.T) {
 	buf, err := os.ReadFile(filename)
 	require.NoError(t, err)
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"level": "INFO",
 		"msg":   "TEST",
 	}
 
-	var actual map[string]interface{}
+	var actual map[string]any
 	require.NoError(t, json.Unmarshal(buf, &actual))
 
 	require.Contains(t, actual, "time")

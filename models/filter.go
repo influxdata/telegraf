@@ -142,7 +142,7 @@ func (f *Filter) Select(metric telegraf.Metric) (bool, error) {
 	}
 
 	if f.metricFilter != nil {
-		result, _, err := f.metricFilter.Eval(map[string]interface{}{
+		result, _, err := f.metricFilter.Eval(map[string]any{
 			"name":   metric.Name(),
 			"tags":   metric.Tags(),
 			"fields": metric.Fields(),

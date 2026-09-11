@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"strconv"
 	"strings"
@@ -23,8 +24,7 @@ import (
 	"github.com/influxdata/telegraf/internal/limiter"
 )
 
-type discoveryRequest interface {
-}
+type discoveryRequest any
 
 type aliyunSdkClient interface {
 	ProcessCommonRequest(req *requests.CommonRequest) (response *responses.CommonResponse, err error)
@@ -40,15 +40,15 @@ type discoveryTool struct {
 	respRootKey     string // Root key in JSON response where to look for discovery data
 	respObjectIDKey string // Key in element of array under root key, that stores object ID
 	// for, the majority of cases it would be InstanceId, for OSS it is BucketName. This key is also used in dimension filtering
-	wg       sync.WaitGroup              // WG for primary discovery goroutine
-	interval time.Duration               // Discovery interval
-	done     chan bool                   // Done channel to stop primary discovery goroutine
-	dataChan chan map[string]interface{} // Discovery data
-	lg       telegraf.Logger             // Telegraf logger (should be provided)
+	wg       sync.WaitGroup      // WG for primary discovery goroutine
+	interval time.Duration       // Discovery interval
+	done     chan bool           // Done channel to stop primary discovery goroutine
+	dataChan chan map[string]any // Discovery data
+	lg       telegraf.Logger     // Telegraf logger (should be provided)
 }
 
 type parsedDResp struct {
-	data       []interface{}
+	data       []any
 	totalCount int
 	pageSize   int
 	pageNumber int
@@ -64,16 +64,16 @@ func getRPCReqFromDiscoveryRequest(req discoveryRequest) (*requests.RpcRequest, 
 
 	ptrV := reflect.Indirect(reflect.ValueOf(req))
 
-	for i := 0; i < ptrV.NumField(); i++ {
-		if ptrV.Field(i).Type().String() == "*requests.RpcRequest" {
-			if !ptrV.Field(i).CanInterface() {
-				return nil, fmt.Errorf("can't get interface of %q", ptrV.Field(i))
+	for _, field := range ptrV.Fields() {
+		if field.Type().String() == "*requests.RpcRequest" {
+			if !field.CanInterface() {
+				return nil, fmt.Errorf("can't get interface of %q", field)
 			}
 
-			rpcReq, ok := ptrV.Field(i).Interface().(*requests.RpcRequest)
+			rpcReq, ok := reflect.TypeAssert[*requests.RpcRequest](field)
 
 			if !ok {
-				return nil, fmt.Errorf("can't convert interface of %q to '*requests.RpcRequest' type", ptrV.Field(i).Interface())
+				return nil, fmt.Errorf("can't convert interface of %q to '*requests.RpcRequest' type", field.Interface())
 			}
 
 			return rpcReq, nil
@@ -245,14 +245,14 @@ func newDiscoveryTool(
 		rateLimit:          rateLimit,
 		interval:           discoveryInterval,
 		reqDefaultPageSize: 20,
-		dataChan:           make(chan map[string]interface{}, 1),
+		dataChan:           make(chan map[string]any, 1),
 		lg:                 lg,
 	}, nil
 }
 
 func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) (*parsedDResp, error) {
 	var (
-		fullOutput    = make(map[string]interface{})
+		fullOutput    = make(map[string]any)
 		data          []byte
 		foundDataItem bool
 		foundRootKey  bool
@@ -272,14 +272,14 @@ func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) 
 		switch key {
 		case dt.respRootKey:
 			foundRootKey = true
-			rootKeyVal, ok := val.(map[string]interface{})
+			rootKeyVal, ok := val.(map[string]any)
 			if !ok {
 				return nil, fmt.Errorf("content of root key %q, is not an object: %q", key, val)
 			}
 
 			// It should contain the array with discovered data
 			for _, item := range rootKeyVal {
-				if pdResp.data, foundDataItem = item.([]interface{}); foundDataItem {
+				if pdResp.data, foundDataItem = item.([]any); foundDataItem {
 					break
 				}
 			}
@@ -301,12 +301,12 @@ func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) 
 	return pdResp, nil
 }
 
-func (dt *discoveryTool) getDiscoveryData(cli aliyunSdkClient, req *requests.CommonRequest, lmtr chan bool) (map[string]interface{}, error) {
+func (dt *discoveryTool) getDiscoveryData(cli aliyunSdkClient, req *requests.CommonRequest, lmtr chan bool) (map[string]any, error) {
 	var (
 		err           error
 		resp          *responses.CommonResponse
 		pDResp        *parsedDResp
-		discoveryData []interface{}
+		discoveryData []any
 		totalCount    int
 		pageNumber    int
 	)
@@ -336,10 +336,10 @@ func (dt *discoveryTool) getDiscoveryData(cli aliyunSdkClient, req *requests.Com
 
 		if len(discoveryData) == totalCount { // All data received
 			// Map data to the appropriate shape before return
-			preparedData := make(map[string]interface{}, len(discoveryData))
+			preparedData := make(map[string]any, len(discoveryData))
 
 			for _, raw := range discoveryData {
-				elem, ok := raw.(map[string]interface{})
+				elem, ok := raw.(map[string]any)
 				if !ok {
 					return nil, errors.New("can't parse input data element, not a map[string]interface{} type")
 				}
@@ -352,8 +352,8 @@ func (dt *discoveryTool) getDiscoveryData(cli aliyunSdkClient, req *requests.Com
 	}
 }
 
-func (dt *discoveryTool) getDiscoveryDataAcrossRegions(lmtr chan bool) (map[string]interface{}, error) {
-	resultData := make(map[string]interface{})
+func (dt *discoveryTool) getDiscoveryDataAcrossRegions(lmtr chan bool) (map[string]any, error) {
+	resultData := make(map[string]any)
 
 	for region, cli := range dt.cli {
 		// Building common request, as the code below is the same no matter
@@ -385,9 +385,7 @@ func (dt *discoveryTool) getDiscoveryDataAcrossRegions(lmtr chan bool) (map[stri
 			return nil, err
 		}
 
-		for k, v := range data {
-			resultData[k] = v
-		}
+		maps.Copy(resultData, data)
 	}
 	return resultData, nil
 }
@@ -396,17 +394,14 @@ func (dt *discoveryTool) getDiscoveryDataAcrossRegions(lmtr chan bool) (map[stri
 func (dt *discoveryTool) start() {
 	var (
 		err      error
-		data     map[string]interface{}
-		lastData map[string]interface{}
+		data     map[string]any
+		lastData map[string]any
 	)
 
 	// Initializing channel
 	dt.done = make(chan bool)
 
-	dt.wg.Add(1)
-	go func() {
-		defer dt.wg.Done()
-
+	dt.wg.Go(func() {
 		ticker := time.NewTicker(dt.interval)
 		defer ticker.Stop()
 
@@ -425,17 +420,15 @@ func (dt *discoveryTool) start() {
 				}
 
 				if !reflect.DeepEqual(data, lastData) {
-					lastData = make(map[string]interface{}, len(data))
-					for k, v := range data {
-						lastData[k] = v
-					}
+					lastData = make(map[string]any, len(data))
+					maps.Copy(lastData, data)
 
 					// send discovery data in blocking mode
 					dt.dataChan <- data
 				}
 			}
 		}
-	}()
+	})
 }
 
 // stop the discovery loop, making sure all data is read from 'dataChan'

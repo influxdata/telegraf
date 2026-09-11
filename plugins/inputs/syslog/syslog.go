@@ -296,11 +296,11 @@ func tags(msg syslog.Message, src string) map[string]string {
 	return tags
 }
 
-func fields(msg syslog.Message, separator string) map[string]interface{} {
-	var fields map[string]interface{}
+func fields(msg syslog.Message, separator string) map[string]any {
+	var fields map[string]any
 	switch msg := msg.(type) {
 	case *rfc5424.SyslogMessage:
-		fields = map[string]interface{}{
+		fields = map[string]any{
 			"facility_code": int(*msg.Facility),
 			"severity_code": int(*msg.Severity),
 			"version":       msg.Version,
@@ -332,7 +332,7 @@ func fields(msg syslog.Message, separator string) map[string]interface{} {
 			}
 		}
 	case *rfc3164.SyslogMessage:
-		fields = map[string]interface{}{
+		fields = map[string]any{
 			"facility_code": int(*msg.Facility),
 			"severity_code": int(*msg.Severity),
 		}

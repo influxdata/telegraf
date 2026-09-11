@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"slices"
 
 	"go.starlark.net/starlark"
 
@@ -123,20 +124,13 @@ func (s *Starlark) Add(origMetric telegraf.Metric, acc telegraf.Accumulator) err
 func (*Starlark) Stop() {}
 
 func containsMetric(metrics []telegraf.Metric, target telegraf.Metric) bool {
-	for _, m := range metrics {
-		if m == target {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(metrics, target)
 }
 
 func init() {
 	processors.AddStreaming("starlark", func() telegraf.StreamingProcessor {
 		return &Starlark{
-			Common: common.Common{
-				StarlarkLoadFunc: common.LoadFunc,
-			},
+			StarlarkLoadFunc: common.LoadFunc,
 		}
 	})
 }

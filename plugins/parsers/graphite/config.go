@@ -78,7 +78,7 @@ func (c *Config) validateTemplates() error {
 
 		if tags != "" {
 			// Validate tags
-			for _, tagStr := range strings.Split(tags, ",") {
+			for tagStr := range strings.SplitSeq(tags, ",") {
 				if err := validateTag(tagStr); err != nil {
 					return err
 				}
@@ -90,7 +90,7 @@ func (c *Config) validateTemplates() error {
 
 func validateTemplate(template string) error {
 	hasMeasurement := false
-	for _, p := range strings.Split(template, ".") {
+	for p := range strings.SplitSeq(template, ".") {
 		if p == "measurement" || p == "measurement*" {
 			hasMeasurement = true
 		}
@@ -104,7 +104,7 @@ func validateTemplate(template string) error {
 }
 
 func validateFilter(filter string) error {
-	for _, p := range strings.Split(filter, ".") {
+	for p := range strings.SplitSeq(filter, ".") {
 		if p == "" {
 			return fmt.Errorf("filter contains blank section: %s", filter)
 		}

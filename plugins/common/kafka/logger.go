@@ -16,15 +16,15 @@ var (
 
 type debugLogger struct{}
 
-func (*debugLogger) Print(v ...interface{}) {
+func (*debugLogger) Print(v ...any) {
 	log.Trace(v...)
 }
 
-func (*debugLogger) Printf(format string, v ...interface{}) {
+func (*debugLogger) Printf(format string, v ...any) {
 	log.Tracef(format, v...)
 }
 
-func (l *debugLogger) Println(v ...interface{}) {
+func (l *debugLogger) Println(v ...any) {
 	l.Print(v...)
 }
 

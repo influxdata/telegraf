@@ -22,11 +22,11 @@ type logEvent struct {
 	timestamp  time.Time
 	level      telegraf.LogLevel
 	source     string
-	attributes map[string]interface{}
+	attributes map[string]any
 	msg        string
 }
 
-func (h *Heartbeat) handleLogEvent(level telegraf.LogLevel, ts time.Time, source string, attr map[string]interface{}, args ...interface{}) {
+func (h *Heartbeat) handleLogEvent(level telegraf.LogLevel, ts time.Time, source string, attr map[string]any, args ...any) {
 	// Fill the statistics
 	h.stats.Lock()
 	switch level {

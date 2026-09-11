@@ -38,7 +38,7 @@ func (p *Parser) extractMetricsV1(prommetrics *dto.MetricFamily) []telegraf.Metr
 			summary := pm.GetSummary()
 
 			// Collect the fields
-			fields := make(map[string]interface{}, len(summary.Quantile)+2)
+			fields := make(map[string]any, len(summary.Quantile)+2)
 			fields["count"] = float64(summary.GetSampleCount())
 			fields["sum"] = summary.GetSampleSum()
 			for _, q := range summary.Quantile {
@@ -52,7 +52,7 @@ func (p *Parser) extractMetricsV1(prommetrics *dto.MetricFamily) []telegraf.Metr
 			histogram := pm.GetHistogram()
 
 			// Collect the fields
-			fields := make(map[string]interface{}, len(histogram.Bucket)+2)
+			fields := make(map[string]any, len(histogram.Bucket)+2)
 			fields["count"] = float64(pm.GetHistogram().GetSampleCount())
 			fields["sum"] = pm.GetHistogram().GetSampleSum()
 			for _, b := range histogram.Bucket {
@@ -74,7 +74,7 @@ func (p *Parser) extractMetricsV1(prommetrics *dto.MetricFamily) []telegraf.Metr
 				v = untyped.GetValue()
 			}
 			if fname != "" && !math.IsNaN(v) {
-				fields := map[string]interface{}{fname: v}
+				fields := map[string]any{fname: v}
 				vtype := mapValueType(metricType)
 				metrics = append(metrics, metric.New(metricName, tags, fields, t, vtype))
 			}

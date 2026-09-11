@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"maps"
 	"mime"
 	"net/http"
 	"time"
@@ -135,9 +136,7 @@ func AcceptsContent(header http.Header) bool {
 func getTagsFromLabels(m *Metric, defaultTags map[string]string) map[string]string {
 	result := make(map[string]string, len(defaultTags)+len(m.Labels))
 
-	for key, value := range defaultTags {
-		result[key] = value
-	}
+	maps.Copy(result, defaultTags)
 
 	for _, label := range m.Labels {
 		if v := label.GetValue(); v != "" {

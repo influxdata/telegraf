@@ -9,7 +9,7 @@ import (
 type group struct {
 	name    string
 	rows    int
-	columns map[string][]interface{}
+	columns map[string][]any
 }
 
 func (g *group) add(m telegraf.Metric) {
@@ -20,7 +20,7 @@ func (g *group) add(m telegraf.Metric) {
 	for _, f := range m.FieldList() {
 		if _, found := g.columns[f.Key]; !found {
 			// Backfill column with nil for previous rows
-			g.columns[f.Key] = make([]interface{}, g.rows)
+			g.columns[f.Key] = make([]any, g.rows)
 		}
 		g.columns[f.Key] = append(g.columns[f.Key], f.Value)
 		set[f.Key] = true
@@ -30,7 +30,7 @@ func (g *group) add(m telegraf.Metric) {
 	for _, f := range m.TagList() {
 		if _, found := g.columns[f.Key]; !found {
 			// Backfill column with nil for previous rows
-			g.columns[f.Key] = make([]interface{}, g.rows)
+			g.columns[f.Key] = make([]any, g.rows)
 		}
 		g.columns[f.Key] = append(g.columns[f.Key], f.Value)
 		set[f.Key] = true
@@ -50,7 +50,7 @@ func (g *group) add(m telegraf.Metric) {
 	g.rows++
 }
 
-func (g *group) produceMessage() (map[string]interface{}, error) {
+func (g *group) produceMessage() (map[string]any, error) {
 	// Verify all columns have the same number of rows
 	for k, v := range g.columns {
 		if len(v) != g.rows {
@@ -62,7 +62,7 @@ func (g *group) produceMessage() (map[string]interface{}, error) {
 	}
 
 	// Return the columnar data in Arc's expected format
-	return map[string]interface{}{
+	return map[string]any{
 		"m":       g.name,
 		"columns": g.columns,
 	}, nil

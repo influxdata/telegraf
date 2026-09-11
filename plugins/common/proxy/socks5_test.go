@@ -48,7 +48,7 @@ func TestSocks5ProxyConfigIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	var proxyConn net.Conn
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		proxyConn, err = dialer.Dial("tcp", l.Addr().String())
 		if err == nil {
 			break

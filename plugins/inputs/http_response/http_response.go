@@ -131,7 +131,7 @@ func (h *HTTPResponse) Init() error {
 func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 	for _, c := range h.clients {
 		// Prepare data
-		var fields map[string]interface{}
+		var fields map[string]any
 		var tags map[string]string
 
 		// Gather data
@@ -256,7 +256,7 @@ func isIPNetInIPv6(address *net.IPNet) bool {
 	return err == nil && ipAddr.ToIPv6() != nil
 }
 
-func setResult(resultString string, fields map[string]interface{}, tags map[string]string) {
+func setResult(resultString string, fields map[string]any, tags map[string]string) {
 	resultCodes := map[string]int{
 		"success":                       0,
 		"response_string_mismatch":      1,
@@ -272,7 +272,7 @@ func setResult(resultString string, fields map[string]interface{}, tags map[stri
 	fields["result_code"] = resultCodes[resultString]
 }
 
-func setError(err error, fields map[string]interface{}, tags map[string]string) error {
+func setError(err error, fields map[string]any, tags map[string]string) error {
 	var timeoutError net.Error
 	if errors.As(err, &timeoutError) && timeoutError.Timeout() {
 		setResult("timeout", fields, tags)
@@ -284,15 +284,11 @@ func setError(err error, fields map[string]interface{}, tags map[string]string) 
 		return nil
 	}
 
-	var opErr *net.OpError
-	if errors.As(urlErr, &opErr) {
-		var dnsErr *net.DNSError
-		var parseErr *net.ParseError
-
-		if errors.As(opErr, &dnsErr) {
+	if opErr, ok := errors.AsType[*net.OpError](urlErr); ok {
+		if dnsErr, ok := errors.AsType[*net.DNSError](opErr); ok {
 			setResult("dns_error", fields, tags)
 			return dnsErr
-		} else if errors.As(opErr, &parseErr) {
+		} else if parseErr, ok := errors.AsType[*net.ParseError](opErr); ok {
 			// Parse error has to do with parsing of IP addresses, so we
 			// group it with address errors
 			setResult("address_error", fields, tags)
@@ -304,9 +300,9 @@ func setError(err error, fields map[string]interface{}, tags map[string]string) 
 }
 
 // HTTPGather gathers all fields and returns any errors it encounters
-func (h *HTTPResponse) httpGather(cl client) (map[string]interface{}, map[string]string, error) {
+func (h *HTTPResponse) httpGather(cl client) (map[string]any, map[string]string, error) {
 	// Prepare fields and tags
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	tags := map[string]string{"server": cl.address, "method": h.Method}
 
 	var body io.Reader
@@ -455,7 +451,7 @@ func (h *HTTPResponse) httpGather(cl client) (map[string]interface{}, map[string
 }
 
 // Set result in case of a body read error
-func (h *HTTPResponse) setBodyReadError(errorMsg string, bodyBytes []byte, fields map[string]interface{}, tags map[string]string) {
+func (h *HTTPResponse) setBodyReadError(errorMsg string, bodyBytes []byte, fields map[string]any, tags map[string]string) {
 	h.Log.Debug(errorMsg)
 	setResult("body_read_error", fields, tags)
 	fields["content_length"] = len(bodyBytes)

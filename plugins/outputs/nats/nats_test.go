@@ -320,7 +320,7 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			sendMetrics: []telegraf.Metric{metric.New(
 				"test1",
 				map[string]string{"tag1": "foo", "tag2": "bar"},
-				map[string]interface{}{"value": 1.0},
+				map[string]any{"value": 1.0},
 				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 			)},
 			expectedSubjects: []string{
@@ -333,7 +333,7 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			sendMetrics: []telegraf.Metric{metric.New(
 				"test1",
 				map[string]string{"tag1": "foo", "tag2": "bar"},
-				map[string]interface{}{"value": 1.0},
+				map[string]any{"value": 1.0},
 				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 			)},
 			expectedSubjects: []string{
