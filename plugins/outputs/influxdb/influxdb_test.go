@@ -2,9 +2,11 @@ package influxdb_test
 
 import (
 	"context"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -313,9 +315,16 @@ func TestBytesWrittenHTTP(t *testing.T) {
 }
 
 func TestBytesWrittenHTTPGzip(t *testing.T) {
-	// Setup a test server
+	// Setup a test server counting the bytes received on the wire
+	var received atomic.Int64
 	ts := httptest.NewServer(
-		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			n, err := io.Copy(io.Discard, r.Body)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			received.Add(n)
 			w.WriteHeader(http.StatusNoContent)
 		}),
 	)
@@ -364,7 +373,10 @@ func TestBytesWrittenHTTPGzip(t *testing.T) {
 	}
 	require.NoError(t, plugin.Write(input))
 
-	require.Equal(t, int64(53), stat.Get())
+	// The compressed size depends on the compression library so compare
+	// against what the server actually received instead of a fixed value
+	require.Positive(t, received.Load())
+	require.Equal(t, received.Load(), stat.Get())
 }
 
 func TestBytesWrittenUDP(t *testing.T) {
