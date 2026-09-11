@@ -10,6 +10,9 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"strings"
+
+	"github.com/Masterminds/semver/v3"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -19,10 +22,11 @@ import (
 var sampleConfig string
 
 type Nftables struct {
-	UseSudo bool     `toml:"use_sudo"`
-	Binary  string   `toml:"binary"`
-	Tables  []string `toml:"tables"`
-	Include []string `toml:"include"`
+	UseSudo bool            `toml:"use_sudo"`
+	Binary  string          `toml:"binary"`
+	Tables  []string        `toml:"tables"`
+	Include []string        `toml:"include"`
+	Log     telegraf.Logger `toml:"-"`
 
 	args []string
 }
@@ -59,13 +63,44 @@ func (n *Nftables) Init() error {
 	}
 
 	// Construct the command
-	n.args = make([]string, 0, 3)
 	if n.UseSudo {
 		n.args = append(n.args, n.Binary)
 		n.Binary = "sudo"
 	}
-	n.args = append(n.args, "--json", "list", "table")
+
+	// Avoid dumping the elements of sets using --terse, unless sets are
+	// monitored and the nft version does not support counting elements.
+	if !includesSet["sets"] {
+		n.args = append(n.args, "--terse")
+	} else {
+		version, err := n.version()
+		if err != nil {
+			n.Log.Warnf("Failed to determine nft --version, will not use --terse: %v", err)
+		} else if version.GreaterThanEqual(semver.New(1, 1, 7, "", "")) {
+			n.args = append(n.args, "--terse")
+		}
+	}
 	return nil
+}
+
+func (n *Nftables) version() (*semver.Version, error) {
+	args := append(n.args, "--version")
+	out, err := exec.Command(n.Binary, args...).Output()
+	if err != nil {
+		var oserr *exec.ExitError
+		if errors.As(err, &oserr) {
+			buf, _, _ := bytes.Cut(oserr.Stderr, []byte("\n"))
+			return nil, fmt.Errorf("error executing nft --version command: %w (%s)", err, bytes.TrimSpace(buf))
+		}
+		return nil, fmt.Errorf("error executing nft --version command: %w", err)
+	}
+
+	// Parse version from output like "nftables v1.1.6 (Commodore Bullmoose #7)"
+	fields := strings.Fields(string(out))
+	if len(fields) < 2 || fields[0] != "nftables" {
+		return nil, fmt.Errorf("unexpected version output %q", strings.TrimSpace(string(out)))
+	}
+	return semver.NewVersion(fields[1])
 }
 
 func (n *Nftables) Gather(acc telegraf.Accumulator) error {
@@ -77,7 +112,7 @@ func (n *Nftables) Gather(acc telegraf.Accumulator) error {
 
 func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 	// Run the nft command
-	args := append(n.args, name)
+	args := append(n.args, "--json", "list", "table", name)
 	c := exec.Command(n.Binary, args...)
 	out, err := c.Output()
 	if err != nil {
@@ -137,7 +172,7 @@ func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 		case "sets":
 			for _, set := range nftable.Sets {
 				fields := map[string]interface{}{
-					"count": len(set.Elem),
+					"count": set.count(),
 				}
 				tags := map[string]string{
 					"table": set.Table,
