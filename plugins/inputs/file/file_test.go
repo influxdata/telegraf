@@ -122,7 +122,7 @@ func TestCharacterEncoding(t *testing.T) {
 				"hop":  "1",
 				"ip":   "12.122.114.5",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"avg":    21.55,
 				"best":   19.34,
 				"loss":   0.0,
@@ -139,7 +139,7 @@ func TestCharacterEncoding(t *testing.T) {
 				"hop":  "2",
 				"ip":   "192.205.32.238",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"avg":    25.11,
 				"best":   20.8,
 				"loss":   0.0,
@@ -156,7 +156,7 @@ func TestCharacterEncoding(t *testing.T) {
 				"hop":  "3",
 				"ip":   "152.195.85.133",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"avg":    20.18,
 				"best":   19.75,
 				"loss":   0.0,
@@ -173,7 +173,7 @@ func TestCharacterEncoding(t *testing.T) {
 				"hop":  "4",
 				"ip":   "93.184.216.34",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"avg":    24.02,
 				"best":   19.75,
 				"loss":   0.0,
@@ -282,7 +282,7 @@ func TestStatefulParsers(t *testing.T) {
 				"hop":  "1",
 				"ip":   "12.122.114.5",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"avg":    21.55,
 				"best":   19.34,
 				"loss":   0.0,
@@ -299,7 +299,7 @@ func TestStatefulParsers(t *testing.T) {
 				"hop":  "2",
 				"ip":   "192.205.32.238",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"avg":    25.11,
 				"best":   20.8,
 				"loss":   0.0,
@@ -316,7 +316,7 @@ func TestStatefulParsers(t *testing.T) {
 				"hop":  "3",
 				"ip":   "152.195.85.133",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"avg":    20.18,
 				"best":   19.75,
 				"loss":   0.0,
@@ -333,7 +333,7 @@ func TestStatefulParsers(t *testing.T) {
 				"hop":  "4",
 				"ip":   "93.184.216.34",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"avg":    24.02,
 				"best":   19.75,
 				"loss":   0.0,
@@ -420,7 +420,7 @@ func TestCSVBehavior(t *testing.T) {
 		metric.New(
 			"file",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"a": int64(1),
 				"b": int64(2),
 			},
@@ -429,7 +429,7 @@ func TestCSVBehavior(t *testing.T) {
 		metric.New(
 			"file",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"a": int64(3),
 				"b": int64(4),
 			},
@@ -438,7 +438,7 @@ func TestCSVBehavior(t *testing.T) {
 		metric.New(
 			"file",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"a": int64(1),
 				"b": int64(2),
 			},
@@ -447,7 +447,7 @@ func TestCSVBehavior(t *testing.T) {
 		metric.New(
 			"file",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"a": int64(3),
 				"b": int64(4),
 			},

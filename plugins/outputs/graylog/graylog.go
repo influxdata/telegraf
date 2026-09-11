@@ -14,6 +14,7 @@ import (
 	"math"
 	"net"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -479,7 +480,7 @@ func (g *Graylog) Write(metrics []telegraf.Metric) error {
 }
 
 func (g *Graylog) serialize(metric telegraf.Metric) ([]string, error) {
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	m["version"] = "1.1"
 	m["timestamp"] = float64(metric.Time().UnixNano()) / 1_000_000_000
 	m["short_message"] = "telegraf"
@@ -530,13 +531,7 @@ func (g *Graylog) serialize(metric telegraf.Metric) ([]string, error) {
 }
 
 func fieldInSpec(field string) bool {
-	for _, specField := range defaultSpecFields {
-		if specField == field {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(defaultSpecFields, field)
 }
 
 func init() {

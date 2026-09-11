@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 
@@ -166,7 +167,7 @@ func (e *Ethtool) gatherEthtoolStats(iface namespacedInterface, acc telegraf.Acc
 
 	tags[tagDriverName] = driverName
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	stats, err := e.command.stats(iface)
 	if err != nil {
 		acc.AddError(fmt.Errorf("%q stats: %w", iface.Name, err))
@@ -227,13 +228,7 @@ func camelCase2SnakeCase(value string) string {
 }
 
 func inStringSlice(slice []string, value string) bool {
-	for _, item := range slice {
-		if item == value {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(slice, value)
 }
 
 func isLoopback(iface namespacedInterface) bool {

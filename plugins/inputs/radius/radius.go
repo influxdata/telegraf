@@ -77,7 +77,7 @@ func (r *Radius) pollServer(acc telegraf.Accumulator, server string) error {
 		return fmt.Errorf("splitting host and port failed: %w", err)
 	}
 	tags := map[string]string{"source": host, "source_port": port}
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 
 	secret, err := r.Secret.Get()
 	if err != nil {

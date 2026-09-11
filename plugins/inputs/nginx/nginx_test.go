@@ -73,7 +73,7 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 	require.NoError(t, accNginx.GatherError(n.Gather))
 	require.NoError(t, accTengine.GatherError(nt.Gather))
 
-	fieldsNginx := map[string]interface{}{
+	fieldsNginx := map[string]any{
 		"active":   uint64(585),
 		"accepts":  uint64(85340),
 		"handled":  uint64(85340),
@@ -83,7 +83,7 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 		"waiting":  uint64(446),
 	}
 
-	fieldsTengine := map[string]interface{}{
+	fieldsTengine := map[string]any{
 		"active":   uint64(403),
 		"accepts":  uint64(853),
 		"handled":  uint64(8533),

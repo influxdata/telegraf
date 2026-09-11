@@ -8,6 +8,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -176,7 +177,7 @@ func gatherFromHugepagePath(acc telegraf.Accumulator, measurement, path string, 
 			return fmt.Errorf("reading metric dir failed: %w", err)
 		}
 
-		metrics := make(map[string]interface{})
+		metrics := make(map[string]any)
 		for _, metricFile := range metricFiles {
 			metricName, ok := fileFilter[metricFile.Name()]
 			if mode := metricFile.Type(); !mode.IsRegular() || !ok {
@@ -202,9 +203,7 @@ func gatherFromHugepagePath(acc telegraf.Accumulator, measurement, path string, 
 		}
 
 		tags := make(map[string]string)
-		for key, value := range defaultTags {
-			tags[key] = value
-		}
+		maps.Copy(tags, defaultTags)
 		tags["size_kb"] = hugepagesSize
 
 		acc.AddFields(measurement, metrics, tags)
@@ -219,9 +218,9 @@ func (h *Hugepages) gatherStatsFromMeminfo(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	metrics := make(map[string]interface{})
-	lines := bytes.Split(meminfo, newlineByte)
-	for _, line := range lines {
+	metrics := make(map[string]any)
+	lines := bytes.SplitSeq(meminfo, newlineByte)
+	for line := range lines {
 		fields := bytes.Fields(line)
 		if len(fields) < 2 {
 			continue

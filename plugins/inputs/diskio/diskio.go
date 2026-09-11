@@ -4,9 +4,11 @@ package diskio
 import (
 	_ "embed"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -120,20 +122,15 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 		}
 
 		if d.deviceFilter != nil && !match {
-			for _, devLink := range devLinks {
-				if d.deviceFilter.Match(devLink) {
-					match = true
-					break
-				}
+			if slices.ContainsFunc(devLinks, d.deviceFilter.Match) {
+				match = true
 			}
 			if !match {
 				continue
 			}
 		}
 
-		for t, v := range d.diskTags(io.Name) {
-			tags[t] = v
-		}
+		maps.Copy(tags, d.diskTags(io.Name))
 
 		if !d.SkipSerialNumber {
 			serial := sanitizeSerialNumber(io.SerialNumber)
@@ -144,7 +141,7 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"reads":            io.ReadCount,
 			"writes":           io.WriteCount,
 			"read_bytes":       io.ReadBytes,

@@ -88,12 +88,10 @@ func (c *Config) incrementPluginOptionDeprecations(category string) {
 	c.Deprecations[category] = newcounts
 }
 
-func (c *Config) collectDeprecationInfo(category, name string, plugin interface{}, all bool) PluginDeprecationInfo {
+func (c *Config) collectDeprecationInfo(category, name string, plugin any, all bool) PluginDeprecationInfo {
 	info := PluginDeprecationInfo{
-		DeprecationInfo: DeprecationInfo{
-			Name:     category + "." + name,
-			logLevel: telegraf.None,
-		},
+		Name:     category + "." + name,
+		logLevel: telegraf.None,
 	}
 
 	// First check if the whole plugin is deprecated
@@ -166,7 +164,7 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 	return info
 }
 
-func (c *Config) printUserDeprecation(category, name string, plugin interface{}) error {
+func (c *Config) printUserDeprecation(category, name string, plugin any) error {
 	info := c.collectDeprecationInfo(category, name, plugin, false)
 	printPluginDeprecationNotice(info.logLevel, info.Name, info.info)
 
@@ -371,7 +369,7 @@ func PrintOptionDeprecationNotice(plugin, option string, info telegraf.Deprecati
 	}
 }
 
-func PrintOptionValueDeprecationNotice(plugin, option string, value interface{}, info telegraf.DeprecationInfo) {
+func PrintOptionValueDeprecationNotice(plugin, option string, value any, info telegraf.DeprecationInfo) {
 	// Determine the log-level
 	di := &DeprecationInfo{
 		Name: plugin,

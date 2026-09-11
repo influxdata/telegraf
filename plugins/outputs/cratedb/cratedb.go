@@ -106,7 +106,7 @@ func (c *CrateDB) Write(metrics []telegraf.Metric) error {
 func insertSQL(table, keyReplacement string, metrics []telegraf.Metric) (string, error) {
 	rows := make([]string, 0, len(metrics))
 	for _, m := range metrics {
-		cols := []interface{}{
+		cols := []any{
 			hashID(m),
 			m.Time().UTC(),
 			m.Name(),
@@ -140,7 +140,7 @@ VALUES
 // inputs.
 //
 // [1] https://github.com/influxdata/telegraf/pull/3210#issuecomment-339273371
-func escapeValue(val interface{}, keyReplacement string) (string, error) {
+func escapeValue(val any, keyReplacement string) (string, error) {
 	switch t := val.(type) {
 	case string:
 		return escapeString(t, `'`), nil
@@ -161,7 +161,7 @@ func escapeValue(val interface{}, keyReplacement string) (string, error) {
 		return escapeValue(t.Format("2006-01-02T15:04:05.999-0700"), keyReplacement)
 	case map[string]string:
 		return escapeObject(convertMap(t), keyReplacement)
-	case map[string]interface{}:
+	case map[string]any:
 		return escapeObject(t, keyReplacement)
 	default:
 		// This might be panic worthy under normal circumstances, but it's probably
@@ -173,15 +173,15 @@ func escapeValue(val interface{}, keyReplacement string) (string, error) {
 
 // convertMap converts m from map[string]string to map[string]interface{} by
 // copying it. Generics, oh generics where art thou?
-func convertMap(m map[string]string) map[string]interface{} {
-	c := make(map[string]interface{}, len(m))
+func convertMap(m map[string]string) map[string]any {
+	c := make(map[string]any, len(m))
 	for k, v := range m {
 		c[k] = v
 	}
 	return c
 }
 
-func escapeObject(m map[string]interface{}, keyReplacement string) (string, error) {
+func escapeObject(m map[string]any, keyReplacement string) (string, error) {
 	// There is a decent chance that the implementation below doesn't catch all
 	// edge cases, but it's hard to tell since the format seems to be a bit
 	// underspecified.

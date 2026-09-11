@@ -8,12 +8,12 @@ import (
 
 const extendedMemorySupported = true
 
-func getExtendedMemoryFields() (map[string]interface{}, error) {
+func getExtendedMemoryFields() (map[string]any, error) {
 	exVM, err := mem.NewExWindows().VirtualMemory()
 	if err != nil {
 		return nil, err
 	}
-	return map[string]interface{}{
+	return map[string]any{
 		"commit_limit":    exVM.CommitLimit,
 		"commit_total":    exVM.CommitTotal,
 		"virtual_total":   exVM.VirtualTotal,

@@ -20,125 +20,125 @@ func TestMetric(t *testing.T) {
 		Controller:        "tcp://localhost:1502",
 		ConfigurationType: "metric",
 		Log:               testutil.Logger{},
-	}
-	plugin.Metrics = []metricDefinition{
-		{
-			SlaveID:     1,
-			ByteOrder:   "ABCD",
-			Measurement: "test",
-			Fields: []metricFieldDefinition{
-				{
-					Name:         "coil-0",
-					Address:      uint16(0),
-					RegisterType: "coil",
-				},
-				{
-					Name:         "coil-1",
-					Address:      uint16(1),
-					RegisterType: "coil",
-				},
-				{
-					Name:      "holding-0",
-					Address:   uint16(0),
-					InputType: "INT16",
-				},
-				{
-					Name:         "holding-1",
-					Address:      uint16(1),
-					InputType:    "UINT16",
-					RegisterType: "holding",
-				},
-			},
-		},
-		{
-			SlaveID:   1,
-			ByteOrder: "ABCD",
-			Fields: []metricFieldDefinition{
-				{
-					Name:         "coil-0",
-					Address:      uint16(2),
-					RegisterType: "coil",
-				},
-				{
-					Name:         "coil-1",
-					Address:      uint16(3),
-					RegisterType: "coil",
-				},
-				{
-					Name:       "holding-0",
-					Address:    uint16(2),
-					InputType:  "INT64",
-					Scale:      1.2,
-					OutputType: "FLOAT64",
+
+		Metrics: []metricDefinition{
+			{
+				SlaveID:     1,
+				ByteOrder:   "ABCD",
+				Measurement: "test",
+				Fields: []metricFieldDefinition{
+					{
+						Name:         "coil-0",
+						Address:      uint16(0),
+						RegisterType: "coil",
+					},
+					{
+						Name:         "coil-1",
+						Address:      uint16(1),
+						RegisterType: "coil",
+					},
+					{
+						Name:      "holding-0",
+						Address:   uint16(0),
+						InputType: "INT16",
+					},
+					{
+						Name:         "holding-1",
+						Address:      uint16(1),
+						InputType:    "UINT16",
+						RegisterType: "holding",
+					},
 				},
 			},
-			Tags: map[string]string{
-				"location": "main building",
-				"device":   "mydevice",
-			},
-		},
-		{
-			SlaveID: 2,
-			Fields: []metricFieldDefinition{
-				{
-					Name:         "coil-6",
-					Address:      uint16(6),
-					RegisterType: "coil",
+			{
+				SlaveID:   1,
+				ByteOrder: "ABCD",
+				Fields: []metricFieldDefinition{
+					{
+						Name:         "coil-0",
+						Address:      uint16(2),
+						RegisterType: "coil",
+					},
+					{
+						Name:         "coil-1",
+						Address:      uint16(3),
+						RegisterType: "coil",
+					},
+					{
+						Name:       "holding-0",
+						Address:    uint16(2),
+						InputType:  "INT64",
+						Scale:      1.2,
+						OutputType: "FLOAT64",
+					},
 				},
-				{
-					Name:         "coil-7",
-					Address:      uint16(7),
-					RegisterType: "coil",
-				},
-				{
-					Name:         "discrete-0",
-					Address:      uint16(0),
-					RegisterType: "discrete",
-				},
-				{
-					Name:      "holding-99",
-					Address:   uint16(99),
-					InputType: "INT16",
+				Tags: map[string]string{
+					"location": "main building",
+					"device":   "mydevice",
 				},
 			},
-		},
-		{
-			SlaveID: 2,
-			Fields: []metricFieldDefinition{
-				{
-					Name:         "coil-4",
-					Address:      uint16(4),
-					RegisterType: "coil",
-				},
-				{
-					Name:         "coil-5",
-					Address:      uint16(5),
-					RegisterType: "coil",
-				},
-				{
-					Name:         "input-0",
-					Address:      uint16(0),
-					RegisterType: "input",
-					InputType:    "UINT16",
-				},
-				{
-					Name:         "input-1",
-					Address:      uint16(2),
-					RegisterType: "input",
-					InputType:    "UINT16",
-				},
-				{
-					Name:      "holding-9",
-					Address:   uint16(9),
-					InputType: "INT16",
+			{
+				SlaveID: 2,
+				Fields: []metricFieldDefinition{
+					{
+						Name:         "coil-6",
+						Address:      uint16(6),
+						RegisterType: "coil",
+					},
+					{
+						Name:         "coil-7",
+						Address:      uint16(7),
+						RegisterType: "coil",
+					},
+					{
+						Name:         "discrete-0",
+						Address:      uint16(0),
+						RegisterType: "discrete",
+					},
+					{
+						Name:      "holding-99",
+						Address:   uint16(99),
+						InputType: "INT16",
+					},
 				},
 			},
-			Tags: map[string]string{
-				"location": "main building",
-				"device":   "mydevice",
+			{
+				SlaveID: 2,
+				Fields: []metricFieldDefinition{
+					{
+						Name:         "coil-4",
+						Address:      uint16(4),
+						RegisterType: "coil",
+					},
+					{
+						Name:         "coil-5",
+						Address:      uint16(5),
+						RegisterType: "coil",
+					},
+					{
+						Name:         "input-0",
+						Address:      uint16(0),
+						RegisterType: "input",
+						InputType:    "UINT16",
+					},
+					{
+						Name:         "input-1",
+						Address:      uint16(2),
+						RegisterType: "input",
+						InputType:    "UINT16",
+					},
+					{
+						Name:      "holding-9",
+						Address:   uint16(9),
+						InputType: "INT16",
+					},
+				},
+				Tags: map[string]string{
+					"location": "main building",
+					"device":   "mydevice",
+				},
 			},
-		},
-	}
+		}}
 
 	require.NoError(t, plugin.Init())
 	require.NotEmpty(t, plugin.requests)
@@ -189,107 +189,107 @@ func TestMetricResult(t *testing.T) {
 		Controller:        "tcp://localhost:1502",
 		ConfigurationType: "metric",
 		Log:               testutil.Logger{},
-	}
-	plugin.Metrics = []metricDefinition{
-		{
-			SlaveID:     1,
-			ByteOrder:   "ABCD",
-			Measurement: "machine",
-			Fields: []metricFieldDefinition{
-				{
-					Name:         "hours",
-					Address:      uint16(1),
-					InputType:    "UINT16",
-					RegisterType: "holding",
+
+		Metrics: []metricDefinition{
+			{
+				SlaveID:     1,
+				ByteOrder:   "ABCD",
+				Measurement: "machine",
+				Fields: []metricFieldDefinition{
+					{
+						Name:         "hours",
+						Address:      uint16(1),
+						InputType:    "UINT16",
+						RegisterType: "holding",
+					},
+					{
+						Name:         "temperature",
+						Address:      uint16(2),
+						InputType:    "INT16",
+						RegisterType: "holding",
+					},
+					{
+						Name:         "comment",
+						Address:      uint16(11),
+						Length:       7,
+						InputType:    "STRING",
+						RegisterType: "holding",
+					},
 				},
-				{
-					Name:         "temperature",
-					Address:      uint16(2),
-					InputType:    "INT16",
-					RegisterType: "holding",
-				},
-				{
-					Name:         "comment",
-					Address:      uint16(11),
-					Length:       7,
-					InputType:    "STRING",
-					RegisterType: "holding",
-				},
-			},
-			Tags: map[string]string{
-				"location": "main building",
-				"device":   "machine A",
-			},
-		},
-		{
-			SlaveID:     1,
-			ByteOrder:   "ABCD",
-			Measurement: "machine",
-			Fields: []metricFieldDefinition{
-				{
-					Name:      "hours",
-					Address:   uint16(3),
-					InputType: "UINT32",
-					Scale:     0.01,
-				},
-				{
-					Name:      "temperature",
-					Address:   uint16(5),
-					InputType: "INT32",
-					Scale:     0.02,
-				},
-				{
-					Name:      "output",
-					Address:   uint16(7),
-					InputType: "UINT32",
+				Tags: map[string]string{
+					"location": "main building",
+					"device":   "machine A",
 				},
 			},
-			Tags: map[string]string{
-				"location": "main building",
-				"device":   "machine B",
-			},
-		},
-		{
-			SlaveID: 1,
-			Fields: []metricFieldDefinition{
-				{
-					Name:      "pi",
-					Address:   uint16(9),
-					InputType: "FLOAT32",
+			{
+				SlaveID:     1,
+				ByteOrder:   "ABCD",
+				Measurement: "machine",
+				Fields: []metricFieldDefinition{
+					{
+						Name:      "hours",
+						Address:   uint16(3),
+						InputType: "UINT32",
+						Scale:     0.01,
+					},
+					{
+						Name:      "temperature",
+						Address:   uint16(5),
+						InputType: "INT32",
+						Scale:     0.02,
+					},
+					{
+						Name:      "output",
+						Address:   uint16(7),
+						InputType: "UINT32",
+					},
+				},
+				Tags: map[string]string{
+					"location": "main building",
+					"device":   "machine B",
 				},
 			},
-		},
-		{
-			SlaveID:     1,
-			Measurement: "bitvalues",
-			Fields: []metricFieldDefinition{
-				{
-					Name:      "bit 0",
-					Address:   uint16(1),
-					InputType: "BIT",
-					Bit:       0,
-				},
-				{
-					Name:      "bit 1",
-					Address:   uint16(1),
-					InputType: "BIT",
-					Bit:       1,
-				},
-				{
-					Name:      "bit 2",
-					Address:   uint16(1),
-					InputType: "BIT",
-					Bit:       2,
-				},
-				{
-					Name:      "bit 3",
-					Address:   uint16(1),
-					InputType: "BIT",
-					Bit:       3,
+			{
+				SlaveID: 1,
+				Fields: []metricFieldDefinition{
+					{
+						Name:      "pi",
+						Address:   uint16(9),
+						InputType: "FLOAT32",
+					},
 				},
 			},
-		},
-	}
+			{
+				SlaveID:     1,
+				Measurement: "bitvalues",
+				Fields: []metricFieldDefinition{
+					{
+						Name:      "bit 0",
+						Address:   uint16(1),
+						InputType: "BIT",
+						Bit:       0,
+					},
+					{
+						Name:      "bit 1",
+						Address:   uint16(1),
+						InputType: "BIT",
+						Bit:       1,
+					},
+					{
+						Name:      "bit 2",
+						Address:   uint16(1),
+						InputType: "BIT",
+						Bit:       2,
+					},
+					{
+						Name:      "bit 3",
+						Address:   uint16(1),
+						InputType: "BIT",
+						Bit:       3,
+					},
+				},
+			},
+		}}
 	require.NoError(t, plugin.Init())
 
 	// Check the generated requests
@@ -314,7 +314,7 @@ func TestMetricResult(t *testing.T) {
 				"slave_id": "1",
 				"type":     "holding_register",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"hours":       uint64(10),
 				"temperature": int64(42),
 				"comment":     "Modbus String",
@@ -330,7 +330,7 @@ func TestMetricResult(t *testing.T) {
 				"slave_id": "1",
 				"type":     "holding_register",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"hours":       float64(22.0),
 				"temperature": float64(44.02),
 				"output":      uint64(2202),
@@ -344,7 +344,7 @@ func TestMetricResult(t *testing.T) {
 				"slave_id": "1",
 				"type":     "holding_register",
 			},
-			map[string]interface{}{"pi": float64(3.1415927410125732421875)},
+			map[string]any{"pi": float64(3.1415927410125732421875)},
 			time.Unix(0, 0),
 		),
 		metric.New(
@@ -354,7 +354,7 @@ func TestMetricResult(t *testing.T) {
 				"slave_id": "1",
 				"type":     "holding_register",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"bit 0": uint64(0),
 				"bit 1": uint64(1),
 				"bit 2": uint64(0),
@@ -376,22 +376,22 @@ func TestMetricAddressOverflow(t *testing.T) {
 		ConfigurationType: "metric",
 		Log:               logger,
 		Workarounds:       workarounds{ReadCoilsStartingAtZero: true},
-	}
-	plugin.Metrics = []metricDefinition{
-		{
-			SlaveID:     1,
-			ByteOrder:   "ABCD",
-			Measurement: "test",
-			Fields: []metricFieldDefinition{
-				{
-					Name:         "field",
-					Address:      uint16(65534),
-					InputType:    "UINT64",
-					RegisterType: "holding",
+
+		Metrics: []metricDefinition{
+			{
+				SlaveID:     1,
+				ByteOrder:   "ABCD",
+				Measurement: "test",
+				Fields: []metricFieldDefinition{
+					{
+						Name:         "field",
+						Address:      uint16(65534),
+						InputType:    "UINT64",
+						RegisterType: "holding",
+					},
 				},
 			},
-		},
-	}
+		}}
 	require.ErrorIs(t, plugin.Init(), errAddressOverflow)
 }
 

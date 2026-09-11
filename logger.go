@@ -76,26 +76,26 @@ type Logger interface { //nolint:interfacebloat // All functions are required
 	Level() LogLevel
 
 	// AddAttribute allows to add a key-value attribute to the logging output
-	AddAttribute(key string, value interface{})
+	AddAttribute(key string, value any)
 
 	// Errorf logs an error message, patterned after log.Printf.
-	Errorf(format string, args ...interface{})
+	Errorf(format string, args ...any)
 	// Error logs an error message, patterned after log.Print.
-	Error(args ...interface{})
+	Error(args ...any)
 	// Warnf logs a warning message, patterned after log.Printf.
-	Warnf(format string, args ...interface{})
+	Warnf(format string, args ...any)
 	// Warn logs a warning message, patterned after log.Print.
-	Warn(args ...interface{})
+	Warn(args ...any)
 	// Infof logs an information message, patterned after log.Printf.
-	Infof(format string, args ...interface{})
+	Infof(format string, args ...any)
 	// Info logs an information message, patterned after log.Print.
-	Info(args ...interface{})
+	Info(args ...any)
 	// Debugf logs a debug message, patterned after log.Printf.
-	Debugf(format string, args ...interface{})
+	Debugf(format string, args ...any)
 	// Debug logs a debug message, patterned after log.Print.
-	Debug(args ...interface{})
+	Debug(args ...any)
 	// Tracef logs a trace message, patterned after log.Printf.
-	Tracef(format string, args ...interface{})
+	Tracef(format string, args ...any)
 	// Trace logs a trace message, patterned after log.Print.
-	Trace(args ...interface{})
+	Trace(args ...any)
 }

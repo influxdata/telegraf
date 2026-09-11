@@ -211,7 +211,7 @@ func (ch *ClickHouse) commonMetrics(acc telegraf.Accumulator, conn *connect, met
 	}
 
 	tags := makeDefaultTags(conn)
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 
 	if commonMetricsIsFloat[metric] {
 		if err := ch.execQuery(conn.url, commonMetrics[metric], &floatResult); err != nil {
@@ -252,7 +252,7 @@ func (ch *ClickHouse) zookeeper(acc telegraf.Accumulator, conn *connect) error {
 		}
 
 		acc.AddFields("clickhouse_zookeeper",
-			map[string]interface{}{
+			map[string]any{
 				"root_nodes": uint64(zkRootNodes[0].ZkRootNodes),
 			},
 			tags,
@@ -282,7 +282,7 @@ func (ch *ClickHouse) replicationQueue(acc telegraf.Accumulator, conn *connect) 
 		}
 
 		acc.AddFields("clickhouse_replication_queue",
-			map[string]interface{}{
+			map[string]any{
 				"too_many_tries_replicas": uint64(replicationTooManyTries[0].TooManyTriesReplicas),
 				"num_tries_replicas":      uint64(replicationTooManyTries[0].NumTriesReplicas),
 			},
@@ -303,7 +303,7 @@ func (ch *ClickHouse) detachedParts(acc telegraf.Accumulator, conn *connect) err
 	if len(detachedParts) > 0 {
 		tags := makeDefaultTags(conn)
 		acc.AddFields("clickhouse_detached_parts",
-			map[string]interface{}{
+			map[string]any{
 				"detached_parts": uint64(detachedParts[0].DetachedParts),
 			},
 			tags,
@@ -333,7 +333,7 @@ func (ch *ClickHouse) dictionaries(acc telegraf.Accumulator, conn *connect) erro
 		if dict.Origin != "" {
 			tags["dict_origin"] = dict.Origin
 			acc.AddFields("clickhouse_dictionaries",
-				map[string]interface{}{
+				map[string]any{
 					"is_loaded":       isLoaded,
 					"bytes_allocated": uint64(dict.BytesAllocated),
 				},
@@ -359,7 +359,7 @@ func (ch *ClickHouse) mutations(acc telegraf.Accumulator, conn *connect) error {
 		tags := makeDefaultTags(conn)
 
 		acc.AddFields("clickhouse_mutations",
-			map[string]interface{}{
+			map[string]any{
 				"failed":    uint64(mutationsStatus[0].Failed),
 				"running":   uint64(mutationsStatus[0].Running),
 				"completed": uint64(mutationsStatus[0].Completed),
@@ -389,7 +389,7 @@ func (ch *ClickHouse) disks(acc telegraf.Accumulator, conn *connect) error {
 		tags["path"] = disk.Path
 
 		acc.AddFields("clickhouse_disks",
-			map[string]interface{}{
+			map[string]any{
 				"free_space_percent":      uint64(disk.FreePercent),
 				"keep_free_space_percent": uint64(disk.KeepFreePercent),
 			},
@@ -417,7 +417,7 @@ func (ch *ClickHouse) processes(acc telegraf.Accumulator, conn *connect) error {
 		tags["query_type"] = process.QueryType
 
 		acc.AddFields("clickhouse_processes",
-			map[string]interface{}{
+			map[string]any{
 				"percentile_50":   process.Percentile50,
 				"percentile_90":   process.Percentile90,
 				"longest_running": process.LongestRunning,
@@ -451,7 +451,7 @@ func (ch *ClickHouse) textLog(acc telegraf.Accumulator, conn *connect) error {
 			tags := makeDefaultTags(conn)
 			tags["level"] = textLogItem.Level
 			acc.AddFields("clickhouse_text_log",
-				map[string]interface{}{
+				map[string]any{
 					"messages_last_10_min": uint64(textLogItem.MessagesLast10Min),
 				},
 				tags,
@@ -479,7 +479,7 @@ func (ch *ClickHouse) tables(acc telegraf.Accumulator, conn *connect) error {
 		tags["table"] = part.Table
 		tags["database"] = part.Database
 		acc.AddFields("clickhouse_tables",
-			map[string]interface{}{
+			map[string]any{
 				"bytes": uint64(part.Bytes),
 				"parts": uint64(part.Parts),
 				"rows":  uint64(part.Rows),
@@ -512,7 +512,7 @@ func (e *clickhouseError) Error() string {
 	return fmt.Sprintf("received error code %d: %s", e.StatusCode, e.body)
 }
 
-func (ch *ClickHouse) execQuery(address *url.URL, query string, i interface{}) error {
+func (ch *ClickHouse) execQuery(address *url.URL, query string, i any) error {
 	q := address.Query()
 	q.Set("query", query+" FORMAT JSON")
 	address.RawQuery = q.Encode()
@@ -630,11 +630,9 @@ var _ telegraf.ServiceInput = &ClickHouse{}
 func init() {
 	inputs.Add("clickhouse", func() telegraf.Input {
 		return &ClickHouse{
-			AutoDiscovery: true,
-			ClientConfig: tls.ClientConfig{
-				InsecureSkipVerify: false,
-			},
-			Timeout: config.Duration(defaultTimeout),
+			AutoDiscovery:      true,
+			InsecureSkipVerify: false,
+			Timeout:            config.Duration(defaultTimeout),
 		}
 	})
 }

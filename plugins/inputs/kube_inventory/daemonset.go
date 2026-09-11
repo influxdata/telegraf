@@ -20,7 +20,7 @@ func collectDaemonSets(ctx context.Context, acc telegraf.Accumulator, ki *Kubern
 }
 
 func (ki *KubernetesInventory) gatherDaemonSet(d *apps.DaemonSet, acc telegraf.Accumulator) {
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"generation":               d.Generation,
 		"current_number_scheduled": d.Status.CurrentNumberScheduled,
 		"desired_number_scheduled": d.Status.DesiredNumberScheduled,

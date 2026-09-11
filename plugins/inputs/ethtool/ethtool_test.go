@@ -585,15 +585,15 @@ func setup() {
 	}
 }
 
-func toStringMapInterface(in map[string]uint64) map[string]interface{} {
-	m := map[string]interface{}{}
+func toStringMapInterface(in map[string]uint64) map[string]any {
+	m := map[string]any{}
 	for k, v := range in {
 		m[k] = v
 	}
 	return m
 }
 
-func toStringMapUint(in map[string]interface{}) map[string]uint64 {
+func toStringMapUint(in map[string]any) map[string]uint64 {
 	m := map[string]uint64{}
 	for k, v := range in {
 		t := v.(uint64)
@@ -853,20 +853,20 @@ func TestGatherIgnoreNamespaces(t *testing.T) {
 
 type testCase struct {
 	normalization  []string
-	stats          map[string]interface{}
-	expectedFields map[string]interface{}
+	stats          map[string]any
+	expectedFields map[string]any
 }
 
 func TestNormalizedKeys(t *testing.T) {
 	cases := []testCase{
 		{
 			normalization: []string{"underscore"},
-			stats: map[string]interface{}{
+			stats: map[string]any{
 				"port rx":      uint64(1),
 				" Port_tx":     uint64(0),
 				"interface_up": uint64(0),
 			},
-			expectedFields: map[string]interface{}{
+			expectedFields: map[string]any{
 				"port_rx":              uint64(1),
 				"_Port_tx":             uint64(0),
 				"interface_up":         true,
@@ -875,12 +875,12 @@ func TestNormalizedKeys(t *testing.T) {
 		},
 		{
 			normalization: []string{"underscore", "lower"},
-			stats: map[string]interface{}{
+			stats: map[string]any{
 				"Port rx":      uint64(1),
 				" Port_tx":     uint64(0),
 				"interface_up": uint64(0),
 			},
-			expectedFields: map[string]interface{}{
+			expectedFields: map[string]any{
 				"port_rx":              uint64(1),
 				"_port_tx":             uint64(0),
 				"interface_up":         true,
@@ -889,12 +889,12 @@ func TestNormalizedKeys(t *testing.T) {
 		},
 		{
 			normalization: []string{"underscore", "lower", "trim"},
-			stats: map[string]interface{}{
+			stats: map[string]any{
 				"  Port RX ":   uint64(1),
 				" Port_tx":     uint64(0),
 				"interface_up": uint64(0),
 			},
-			expectedFields: map[string]interface{}{
+			expectedFields: map[string]any{
 				"port_rx":              uint64(1),
 				"port_tx":              uint64(0),
 				"interface_up":         true,
@@ -903,12 +903,12 @@ func TestNormalizedKeys(t *testing.T) {
 		},
 		{
 			normalization: []string{"underscore", "lower", "snakecase", "trim"},
-			stats: map[string]interface{}{
+			stats: map[string]any{
 				"  Port RX ":   uint64(1),
 				" Port_tx":     uint64(0),
 				"interface_up": uint64(0),
 			},
-			expectedFields: map[string]interface{}{
+			expectedFields: map[string]any{
 				"port_rx":              uint64(1),
 				"port_tx":              uint64(0),
 				"interface_up":         true,
@@ -917,12 +917,12 @@ func TestNormalizedKeys(t *testing.T) {
 		},
 		{
 			normalization: []string{"snakecase"},
-			stats: map[string]interface{}{
+			stats: map[string]any{
 				"  PortRX ":    uint64(1),
 				" PortTX":      uint64(0),
 				"interface_up": uint64(0),
 			},
-			expectedFields: map[string]interface{}{
+			expectedFields: map[string]any{
 				"port_rx":              uint64(1),
 				"port_tx":              uint64(0),
 				"interface_up":         true,
@@ -930,12 +930,12 @@ func TestNormalizedKeys(t *testing.T) {
 			},
 		},
 		{
-			stats: map[string]interface{}{
+			stats: map[string]any{
 				"  Port RX ":   uint64(1),
 				" Port_tx":     uint64(0),
 				"interface_up": uint64(0),
 			},
-			expectedFields: map[string]interface{}{
+			expectedFields: map[string]any{
 				"  Port RX ":           uint64(1),
 				" Port_tx":             uint64(0),
 				"interface_up":         true,
@@ -943,11 +943,11 @@ func TestNormalizedKeys(t *testing.T) {
 			},
 		},
 		{
-			stats: map[string]interface{}{
+			stats: map[string]any{
 				"  Port RX ": uint64(1),
 				" Port_tx":   uint64(0),
 			},
-			expectedFields: map[string]interface{}{
+			expectedFields: map[string]any{
 				"  Port RX ":   uint64(1),
 				" Port_tx":     uint64(0),
 				"interface_up": true,

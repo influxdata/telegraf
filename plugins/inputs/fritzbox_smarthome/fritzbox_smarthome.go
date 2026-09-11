@@ -107,7 +107,7 @@ func gatherDeviceInfo(acc telegraf.Accumulator, client *fritzsmarthome.Client, d
 		"product_category": string(device.ProductCategory),
 		"power_source":     getDevicePowerSource(device),
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"name":             device.Name,
 		"product_name":     device.ProductName,
 		"connected":        device.IsConnected,
@@ -133,7 +133,7 @@ func gatherUnitInfoLevelControl(acc telegraf.Accumulator, tags map[string]string
 	if unit.Interfaces.LevelControlInterface == nil {
 		return
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"name":  unit.Name,
 		"level": getOptionalInt(unit.Interfaces.LevelControlInterface.Level),
 	}
@@ -144,7 +144,7 @@ func gatherUnitInfoMultimeter(acc telegraf.Accumulator, tags map[string]string, 
 	if unit.Interfaces.MultimeterInterface == nil {
 		return
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"name":    unit.Name,
 		"current": getOptionalInt(unit.Interfaces.MultimeterInterface.Current),
 		"energy":  getOptionalInt(unit.Interfaces.MultimeterInterface.Energy),
@@ -158,7 +158,7 @@ func gatherUnitInfoOnOff(acc telegraf.Accumulator, tags map[string]string, unit 
 	if unit.Interfaces.OnOffInterface == nil {
 		return
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"name":   unit.Name,
 		"active": getOptionalBool(unit.Interfaces.OnOffInterface.Active),
 	}

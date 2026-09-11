@@ -27,11 +27,11 @@ type Devices struct {
 	Type       string `json:"type"`
 	Enabled    bool   `json:"enabled"`
 	Properties struct {
-		BatteryLevel *string     `json:"batteryLevel"`
-		Dead         string      `json:"dead"`
-		Energy       *string     `json:"energy"`
-		Power        *string     `json:"power"`
-		Value        interface{} `json:"value"`
-		Value2       *string     `json:"value2"`
+		BatteryLevel *string `json:"batteryLevel"`
+		Dead         string  `json:"dead"`
+		Energy       *string `json:"energy"`
+		Power        *string `json:"power"`
+		Value        any     `json:"value"`
+		Value2       *string `json:"value2"`
 	} `json:"properties"`
 }

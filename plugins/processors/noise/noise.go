@@ -77,7 +77,7 @@ func (p *Noise) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 // generates a random noise value depending on the defined probability density
 // function and adds that to the original value. If any integer overflows
 // happen during the calculation, the result is set to MaxInt or 0 (for uint)
-func (p *Noise) addNoise(value interface{}) interface{} {
+func (p *Noise) addNoise(value any) any {
 	n := p.generator.Rand()
 	switch v := value.(type) {
 	case int:

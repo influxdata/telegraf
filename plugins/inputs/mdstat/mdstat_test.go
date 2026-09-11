@@ -21,7 +21,7 @@ func TestFullMdstatProcFile(t *testing.T) {
 	err := k.Gather(&acc)
 	require.NoError(t, err)
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"BlocksSynced":           int64(10620027200),
 		"BlocksSyncedFinishTime": float64(101.6),
 		"BlocksSyncedPct":        float64(94.3),
@@ -46,7 +46,7 @@ func TestMdstatSyncStart(t *testing.T) {
 	err := k.Gather(&acc)
 	require.NoError(t, err)
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"BlocksSynced":           int64(10620027200),
 		"BlocksSyncedFinishTime": float64(101.6),
 		"BlocksSyncedPct":        float64(1.5),
@@ -73,7 +73,7 @@ func TestFailedDiskMdStatProcFile1(t *testing.T) {
 	err := k.Gather(&acc)
 	require.NoError(t, err)
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"BlocksSynced":           int64(5860144128),
 		"BlocksSyncedFinishTime": float64(0),
 		"BlocksSyncedPct":        float64(0),

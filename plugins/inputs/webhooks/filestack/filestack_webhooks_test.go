@@ -31,7 +31,7 @@ func TestDialogEvent(t *testing.T) {
 		t.Errorf("POST returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"id": "102",
 	}
 
@@ -58,7 +58,7 @@ func TestUploadEvent(t *testing.T) {
 		t.Errorf("POST returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"id": "100946",
 	}
 

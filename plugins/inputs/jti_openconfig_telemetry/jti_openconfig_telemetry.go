@@ -198,7 +198,7 @@ func spitTagsNPath(xmlpath string) (string, map[string]string) {
 
 			// If we have multiple keys in give path like /events/event[id=2 and type=3]/,
 			// we must emit multiple tags
-			for _, kv := range strings.Split(sub[2], " and ") {
+			for kv := range strings.SplitSeq(sub[2], " and ") {
 				key := tagKey + strings.TrimSpace(strings.Split(kv, "=")[0])
 				tagValue := strings.ReplaceAll(strings.Split(kv, "=")[1], "'", "")
 				tags[key] = tagValue
@@ -219,7 +219,7 @@ func (m *OpenConfigTelemetry) extractData(r *telemetry.OpenConfigData, grpcServe
 
 	dgroups := make([]dataGroup, 0, 5*len(r.Kv))
 	for _, v := range r.Kv {
-		kv := make(map[string]interface{})
+		kv := make(map[string]any)
 
 		if v.Key == "__prefix__" {
 			prefix = v.GetStrValue()
@@ -261,13 +261,13 @@ func (m *OpenConfigTelemetry) extractData(r *telemetry.OpenConfigData, grpcServe
 
 		// Insert data from message header
 		dgroups = collectionByKeys(dgroups).insert(finaltags,
-			map[string]interface{}{"_sequence": r.SequenceNumber})
+			map[string]any{"_sequence": r.SequenceNumber})
 		dgroups = collectionByKeys(dgroups).insert(finaltags,
-			map[string]interface{}{"_timestamp": r.Timestamp})
+			map[string]any{"_timestamp": r.Timestamp})
 		dgroups = collectionByKeys(dgroups).insert(finaltags,
-			map[string]interface{}{"_component_id": r.ComponentId})
+			map[string]any{"_component_id": r.ComponentId})
 		dgroups = collectionByKeys(dgroups).insert(finaltags,
-			map[string]interface{}{"_subcomponent_id": r.SubComponentId})
+			map[string]any{"_subcomponent_id": r.SubComponentId})
 	}
 
 	return dgroups

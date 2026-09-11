@@ -152,17 +152,11 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 	resources := make([]transit.MonitoredResource, 0, len(resourceToServicesMap))
 	for resourceName, services := range resourceToServicesMap {
 		resources = append(resources, transit.MonitoredResource{
-			BaseResource: transit.BaseResource{
-				BaseInfo: transit.BaseInfo{
-					Name: resourceName,
-					Type: transit.ResourceTypeHost,
-				},
-			},
-			MonitoredInfo: transit.MonitoredInfo{
-				Status:        transit.HostUp,
-				LastCheckTime: transit.NewTimestamp(),
-			},
-			Services: services,
+			Name:          resourceName,
+			Type:          transit.ResourceTypeHost,
+			Status:        transit.HostUp,
+			LastCheckTime: transit.NewTimestamp(),
+			Services:      services,
 		})
 	}
 
@@ -227,12 +221,10 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (metricMeta, *transit.M
 	lastCheckTime := transit.NewTimestamp()
 	lastCheckTime.Time = metric.Time()
 	serviceObject := transit.MonitoredService{
-		BaseInfo: transit.BaseInfo{
-			Name:       service,
-			Type:       transit.ResourceTypeService,
-			Owner:      resource,
-			Properties: make(map[string]transit.TypedValue),
-		},
+		Name:       service,
+		Type:       transit.ResourceTypeService,
+		Owner:      resource,
+		Properties: make(map[string]transit.TypedValue),
 		MonitoredInfo: transit.MonitoredInfo{
 			Status:        transit.MonitorStatus(g.DefaultServiceState),
 			LastCheckTime: lastCheckTime,
@@ -282,7 +274,7 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (metricMeta, *transit.M
 		}
 
 		var thresholds []transit.ThresholdValue
-		addCriticalThreshold := func(v interface{}) {
+		addCriticalThreshold := func(v any) {
 			if tv := transit.NewTypedValue(v); tv != nil {
 				thresholds = append(thresholds, transit.ThresholdValue{
 					SampleType: transit.Critical,
@@ -291,7 +283,7 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (metricMeta, *transit.M
 				})
 			}
 		}
-		addWarningThreshold := func(v interface{}) {
+		addWarningThreshold := func(v any) {
 			if tv := transit.NewTypedValue(v); tv != nil {
 				thresholds = append(thresholds, transit.ThresholdValue{
 					SampleType: transit.Warning,

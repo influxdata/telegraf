@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"strings"
@@ -47,19 +48,19 @@ type Logstash struct {
 }
 
 type processStats struct {
-	ID      string      `json:"id"`
-	Process interface{} `json:"process"`
-	Name    string      `json:"name"`
-	Host    string      `json:"host"`
-	Version string      `json:"version"`
+	ID      string `json:"id"`
+	Process any    `json:"process"`
+	Name    string `json:"name"`
+	Host    string `json:"host"`
+	Version string `json:"version"`
 }
 
 type jvmStats struct {
-	ID      string      `json:"id"`
-	JVM     interface{} `json:"jvm"`
-	Name    string      `json:"name"`
-	Host    string      `json:"host"`
-	Version string      `json:"version"`
+	ID      string `json:"id"`
+	JVM     any    `json:"jvm"`
+	Name    string `json:"name"`
+	Host    string `json:"host"`
+	Version string `json:"version"`
 }
 
 type pipelinesStats struct {
@@ -79,19 +80,19 @@ type pipelineStats struct {
 }
 
 type pipeline struct {
-	Events  interface{}     `json:"events"`
+	Events  any             `json:"events"`
 	Plugins pipelinePlugins `json:"plugins"`
-	Reloads interface{}     `json:"reloads"`
+	Reloads any             `json:"reloads"`
 	Queue   pipelineQueue   `json:"queue"`
 }
 
 type plugin struct {
-	ID           string                 `json:"id"`
-	Events       interface{}            `json:"events"`
-	Name         string                 `json:"name"`
-	Failures     *int64                 `json:"failures,omitempty"`
-	BulkRequests map[string]interface{} `json:"bulk_requests"`
-	Documents    map[string]interface{} `json:"documents"`
+	ID           string         `json:"id"`
+	Events       any            `json:"events"`
+	Name         string         `json:"name"`
+	Failures     *int64         `json:"failures,omitempty"`
+	BulkRequests map[string]any `json:"bulk_requests"`
+	Documents    map[string]any `json:"documents"`
 }
 
 type pipelinePlugins struct {
@@ -101,13 +102,13 @@ type pipelinePlugins struct {
 }
 
 type pipelineQueue struct {
-	Events              float64     `json:"events"`
-	EventsCount         *float64    `json:"events_count"`
-	Type                string      `json:"type"`
-	Capacity            interface{} `json:"capacity"`
-	Data                interface{} `json:"data"`
-	QueueSizeInBytes    *float64    `json:"queue_size_in_bytes"`
-	MaxQueueSizeInBytes *float64    `json:"max_queue_size_in_bytes"`
+	Events              float64  `json:"events"`
+	EventsCount         *float64 `json:"events_count"`
+	Type                string   `json:"type"`
+	Capacity            any      `json:"capacity"`
+	Data                any      `json:"data"`
+	QueueSizeInBytes    *float64 `json:"queue_size_in_bytes"`
+	MaxQueueSizeInBytes *float64 `json:"max_queue_size_in_bytes"`
 }
 
 func (*Logstash) SampleConfig() string {
@@ -192,7 +193,7 @@ func (logstash *Logstash) createHTTPClient() (*http.Client, error) {
 }
 
 // gatherJSONData query the data source and parse the response JSON
-func (logstash *Logstash) gatherJSONData(address string, value interface{}) error {
+func (logstash *Logstash) gatherJSONData(address string, value any) error {
 	request, err := http.NewRequest("GET", address, nil)
 	if err != nil {
 		return err
@@ -290,9 +291,7 @@ func gatherPluginsStats(plugins []plugin, pluginType string, tags map[string]str
 			"plugin_id":   plugin.ID,
 			"plugin_type": pluginType,
 		}
-		for tag, value := range tags {
-			pluginTags[tag] = value
-		}
+		maps.Copy(pluginTags, tags)
 		flattener := parsers_json.JSONFlattener{}
 		err := flattener.FlattenJSON("", plugin.Events)
 		if err != nil {
@@ -300,7 +299,7 @@ func gatherPluginsStats(plugins []plugin, pluginType string, tags map[string]str
 		}
 		accumulator.AddFields("logstash_plugins", flattener.Fields, pluginTags)
 		if plugin.Failures != nil {
-			failuresFields := map[string]interface{}{"failures": *plugin.Failures}
+			failuresFields := map[string]any{"failures": *plugin.Failures}
 			accumulator.AddFields("logstash_plugins", failuresFields, pluginTags)
 		}
 		/*
@@ -369,16 +368,14 @@ func gatherQueueStats(queue pipelineQueue, tags map[string]string, acc telegraf.
 	queueTags := map[string]string{
 		"queue_type": queue.Type,
 	}
-	for tag, value := range tags {
-		queueTags[tag] = value
-	}
+	maps.Copy(queueTags, tags)
 
 	events := queue.Events
 	if queue.EventsCount != nil {
 		events = *queue.EventsCount
 	}
 
-	queueFields := map[string]interface{}{
+	queueFields := map[string]any{
 		"events": events,
 	}
 
@@ -392,9 +389,7 @@ func gatherQueueStats(queue pipelineQueue, tags map[string]string, acc telegraf.
 		if err != nil {
 			return err
 		}
-		for field, value := range flattener.Fields {
-			queueFields[field] = value
-		}
+		maps.Copy(queueFields, flattener.Fields)
 
 		if queue.MaxQueueSizeInBytes != nil {
 			queueFields["max_queue_size_in_bytes"] = *queue.MaxQueueSizeInBytes
@@ -506,9 +501,7 @@ func newLogstash() *Logstash {
 		URL:     "http://127.0.0.1:9600",
 		Collect: []string{"pipelines", "process", "jvm"},
 		Headers: make(map[string]string),
-		HTTPClientConfig: common_http.HTTPClientConfig{
-			Timeout: config.Duration(5 * time.Second),
-		},
+		Timeout: config.Duration(5 * time.Second),
 	}
 }
 

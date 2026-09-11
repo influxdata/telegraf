@@ -166,8 +166,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 		// Serialize the metrics with the remaining limit, exit early if nothing was serialized
 		used, err := batch.serialize(c.serializer, limit, c.encoder)
 		if err != nil {
-			var werr *internal.PartialWriteError
-			if errors.As(err, &werr) {
+			if werr, ok := errors.AsType[*internal.PartialWriteError](err); ok {
 				writeErr.MetricsReject = append(writeErr.MetricsReject, werr.MetricsReject...)
 				writeErr.MetricsRejectErrors = append(writeErr.MetricsRejectErrors, werr.MetricsRejectErrors...)
 				writeErr.Err = werr.Err
@@ -216,8 +215,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 			c.rateLimiter.Accept(ratets, int64(len(batch.payload)))
 			batch.processed = true
 			if err := c.writeBatch(ctx, batch); err != nil {
-				var terr *ThrottleError
-				if errors.As(err, &terr) {
+				if terr, ok := errors.AsType[*ThrottleError](err); ok {
 					if terr.StatusCode == http.StatusRequestEntityTooLarge {
 						splitMu.Lock()
 						split = append(split, i)

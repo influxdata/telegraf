@@ -80,19 +80,19 @@ func TestCloseRemovesDiagMsgListener(t *testing.T) {
 func TestAggregateMetricCreated(t *testing.T) {
 	tests := []struct {
 		name                        string
-		fields                      map[string]interface{}
+		fields                      map[string]any
 		valueField                  string
 		countField                  string
 		additionalMetricValueFields []string
 	}{
-		{"value and count", map[string]interface{}{"value": 16.5, "count": 23}, "value", "count", nil},
-		{"value and samples", map[string]interface{}{"value": 16.5, "samples": 23}, "value", "samples", nil},
-		{"sum and count", map[string]interface{}{"sum": 16.5, "count": 23}, "sum", "count", nil},
-		{"sum and samples", map[string]interface{}{"samples": 23, "sum": 16.5}, "sum", "samples", nil},
-		{"value and count, sum is wrong type", map[string]interface{}{"sum": "J23", "value": 16.5, "count": 23}, "value", "count", nil},
+		{"value and count", map[string]any{"value": 16.5, "count": 23}, "value", "count", nil},
+		{"value and samples", map[string]any{"value": 16.5, "samples": 23}, "value", "samples", nil},
+		{"sum and count", map[string]any{"sum": 16.5, "count": 23}, "sum", "count", nil},
+		{"sum and samples", map[string]any{"samples": 23, "sum": 16.5}, "sum", "samples", nil},
+		{"value and count, sum is wrong type", map[string]any{"sum": "J23", "value": 16.5, "count": 23}, "value", "count", nil},
 		{
 			"with aggregates",
-			map[string]interface{}{
+			map[string]any{
 				"value":  16.5,
 				"count":  23,
 				"min":    -2.1,
@@ -105,7 +105,7 @@ func TestAggregateMetricCreated(t *testing.T) {
 		},
 		{
 			"some aggregates with invalid values",
-			map[string]interface{}{
+			map[string]any{
 				"value": 16.5,
 				"count": 23,
 				"min":   "min",
@@ -121,7 +121,7 @@ func TestAggregateMetricCreated(t *testing.T) {
 		},
 		{
 			"aggregate with additional fields",
-			map[string]interface{}{"value": 16.5, "samples": 23, "alpha": -34e12, "bravo": -3, "charlie": "charlie"},
+			map[string]any{"value": 16.5, "samples": 23, "alpha": -34e12, "bravo": -3, "charlie": "charlie"},
 			"value",
 			"samples",
 			[]string{"alpha", "bravo"},
@@ -176,21 +176,21 @@ func TestAggregateMetricCreated(t *testing.T) {
 func TestSimpleMetricCreated(t *testing.T) {
 	tests := []struct {
 		name                        string
-		fields                      map[string]interface{}
+		fields                      map[string]any
 		primaryMetricValueField     string
 		additionalMetricValueFields []string
 	}{
-		{"just a single value field", map[string]interface{}{"value": 16.5}, "value", nil},
-		{"single field not named value", map[string]interface{}{"first": 32.9}, "first", nil},
-		{"value but no count", map[string]interface{}{"value": 16.5, "other": "bulba"}, "", []string{"value"}},
-		{"count but no value", map[string]interface{}{"v1": "v1Val", "count": 23}, "", []string{"count"}},
-		{"neither value nor count", map[string]interface{}{"v1": "alpha", "v2": 45.8}, "", []string{"v2"}},
-		{"value is of wrong type", map[string]interface{}{"value": "alpha", "count": 15}, "", []string{"count"}},
-		{"count is of wrong type", map[string]interface{}{"value": 23.77, "count": 7.5}, "", []string{"count", "value"}},
-		{"count is out of range", map[string]interface{}{"value": -98.45e4, "count": float64(math.MaxUint64 - uint64(20))}, "", []string{"value", "count"}},
+		{"just a single value field", map[string]any{"value": 16.5}, "value", nil},
+		{"single field not named value", map[string]any{"first": 32.9}, "first", nil},
+		{"value but no count", map[string]any{"value": 16.5, "other": "bulba"}, "", []string{"value"}},
+		{"count but no value", map[string]any{"v1": "v1Val", "count": 23}, "", []string{"count"}},
+		{"neither value nor count", map[string]any{"v1": "alpha", "v2": 45.8}, "", []string{"v2"}},
+		{"value is of wrong type", map[string]any{"value": "alpha", "count": 15}, "", []string{"count"}},
+		{"count is of wrong type", map[string]any{"value": 23.77, "count": 7.5}, "", []string{"count", "value"}},
+		{"count is out of range", map[string]any{"value": -98.45e4, "count": float64(math.MaxUint64 - uint64(20))}, "", []string{"value", "count"}},
 		{
 			"several additional fields",
-			map[string]interface{}{"alpha": 10, "bravo": "bravo", "charlie": 30, "delta": 40.7},
+			map[string]any{"alpha": 10, "bravo": "bravo", "charlie": 30, "delta": 40.7},
 			"",
 			[]string{"alpha", "charlie", "delta"},
 		},
@@ -254,13 +254,13 @@ func TestSimpleMetricCreated(t *testing.T) {
 func TestTagsAppliedToTelemetry(t *testing.T) {
 	tests := []struct {
 		name              string
-		fields            map[string]interface{}
+		fields            map[string]any
 		tags              map[string]string
 		metricValueFields []string
 	}{
 		{
 			"value but no count",
-			map[string]interface{}{"value": 16.5, "alpha": 3.5, "bravo": 17},
+			map[string]any{"value": 16.5, "alpha": 3.5, "bravo": 17},
 			map[string]string{"alpha": "a tag is not a field", "charlie": "charlie"},
 			[]string{"value", "alpha", "bravo"},
 		},
@@ -313,7 +313,7 @@ func TestContextTagsSetOnSimpleTelemetry(t *testing.T) {
 	m := metric.New(
 		"SimpleMetric",
 		map[string]string{"kubernetes_container_name": "atcsvc", "kubernetes_pod_name": "bunkie17554"},
-		map[string]interface{}{"value": 23.0},
+		map[string]any{"value": 23.0},
 		now,
 	)
 
@@ -350,7 +350,7 @@ func TestContextTagsSetOnAggregateTelemetry(t *testing.T) {
 	m := metric.New(
 		"AggregateMetric",
 		map[string]string{"kubernetes_container_name": "atcsvc", "kubernetes_pod_name": "bunkie17554"},
-		map[string]interface{}{"value": 23.0, "count": 5},
+		map[string]any{"value": 23.0, "count": 5},
 		now,
 	)
 

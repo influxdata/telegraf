@@ -30,7 +30,7 @@ func TestSelfPlugin(t *testing.T) {
 	require.NoError(t, s.Gather(acc))
 
 	acc.AssertContainsTaggedFields(t, "internal_mytest",
-		map[string]interface{}{
+		map[string]any{
 			"test": int64(3),
 		},
 		map[string]string{
@@ -44,7 +44,7 @@ func TestSelfPlugin(t *testing.T) {
 	stat.Set(101)
 	require.NoError(t, s.Gather(acc))
 	acc.AssertContainsTaggedFields(t, "internal_mytest",
-		map[string]interface{}{
+		map[string]any{
 			"test": int64(101),
 		},
 		map[string]string{
@@ -62,7 +62,7 @@ func TestSelfPlugin(t *testing.T) {
 	timing.Incr(200)
 	require.NoError(t, s.Gather(acc))
 	acc.AssertContainsTaggedFields(t, "internal_mytest",
-		map[string]interface{}{
+		map[string]any{
 			"test":    int64(101),
 			"test_ns": int64(150),
 		},
@@ -161,19 +161,19 @@ func TestPerInstance(t *testing.T) {
 		metric.New(
 			"internal_mytest",
 			map[string]string{"_id": "id-0", "test": "foo", "version": "unknown"},
-			map[string]interface{}{"calls": 100, "writes": 300},
+			map[string]any{"calls": 100, "writes": 300},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"internal_mytest",
 			map[string]string{"_id": "id-1", "test": "foo", "version": "unknown"},
-			map[string]interface{}{"calls": 101, "writes": 303},
+			map[string]any{"calls": 101, "writes": 303},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"internal_mytest",
 			map[string]string{"_id": "id-2", "test": "foo", "version": "unknown"},
-			map[string]interface{}{"calls": 102, "writes": 306},
+			map[string]any{"calls": 102, "writes": 306},
 			time.Unix(0, 0),
 		),
 	}
@@ -245,13 +245,13 @@ func TestAccumulatedPerType(t *testing.T) {
 		metric.New(
 			"internal_mytest",
 			map[string]string{"test": "foo", "version": "unknown"},
-			map[string]interface{}{"calls": 21, "writes": 63},
+			map[string]any{"calls": 21, "writes": 63},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"internal_mytest",
 			map[string]string{"test": "bar", "version": "unknown"},
-			map[string]interface{}{"calls": 201, "writes": 402},
+			map[string]any{"calls": 201, "writes": 402},
 			time.Unix(0, 0),
 		),
 	}

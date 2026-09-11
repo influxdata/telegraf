@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/plugins/common/adx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -27,10 +26,8 @@ func TestEventHouseConnectSuccess(t *testing.T) {
 			// Setup plugin
 			plugin := &eventhouse{
 				connectionString: tt.endpoint,
-				Config: adx.Config{
-					Database: tt.database,
-				},
-				log: testutil.Logger{},
+				Database:         tt.database,
+				log:              testutil.Logger{},
 			}
 			require.NoError(t, plugin.init())
 

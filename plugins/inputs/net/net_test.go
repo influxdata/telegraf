@@ -43,7 +43,7 @@ func TestNetIOStats(t *testing.T) {
 		metric.New(
 			"net",
 			map[string]string{"interface": "eth0"},
-			map[string]interface{}{
+			map[string]any{
 				"bytes_sent":   uint64(1123),
 				"bytes_recv":   uint64(8734422),
 				"packets_sent": uint64(781),
@@ -90,7 +90,7 @@ func TestNetIOStatsSpeedUnsupported(t *testing.T) {
 		metric.New(
 			"net",
 			map[string]string{"interface": "eth1"},
-			map[string]interface{}{
+			map[string]any{
 				"bytes_sent":   uint64(1123),
 				"bytes_recv":   uint64(8734422),
 				"packets_sent": uint64(781),
@@ -137,7 +137,7 @@ func TestNetIOStatsNoSpeedFile(t *testing.T) {
 		metric.New(
 			"net",
 			map[string]string{"interface": "eth2"},
-			map[string]interface{}{
+			map[string]any{
 				"bytes_sent":   uint64(1123),
 				"bytes_recv":   uint64(8734422),
 				"packets_sent": uint64(781),

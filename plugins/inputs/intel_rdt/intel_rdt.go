@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -407,9 +408,9 @@ func parseCoresConfig(cores []string) ([]string, error) {
 	parsedCores := make([]string, 0, len(cores))
 	for _, singleCoreGroup := range cores {
 		var actualGroupOfCores []int
-		separatedCores := strings.Split(singleCoreGroup, ",")
+		separatedCores := strings.SplitSeq(singleCoreGroup, ",")
 
-		for _, coreStr := range separatedCores {
+		for coreStr := range separatedCores {
 			actualCores, err := validateAndParseCores(coreStr)
 			if err != nil {
 				return nil, fmt.Errorf("wrong cores input config data format: %w", err)
@@ -529,10 +530,8 @@ func arrayToString(array []int) string {
 
 func checkForDuplicates(values, valuesToCheck []int) bool {
 	for _, value := range values {
-		for _, valueToCheck := range valuesToCheck {
-			if value == valueToCheck {
-				return true
-			}
+		if slices.Contains(valuesToCheck, value) {
+			return true
 		}
 	}
 	return false

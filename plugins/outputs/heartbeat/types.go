@@ -19,11 +19,11 @@ type statsEntry struct {
 }
 
 type logEntry struct {
-	Timestamp  string                 `json:"time"`
-	Level      string                 `json:"level"`
-	Source     string                 `json:"source"`
-	Attributes map[string]interface{} `json:"attributes,omitempty"`
-	Message    string                 `json:"message"`
+	Timestamp  string         `json:"time"`
+	Level      string         `json:"level"`
+	Source     string         `json:"source"`
+	Attributes map[string]any `json:"attributes,omitempty"`
+	Message    string         `json:"message"`
 
 	// Internal
 	index int

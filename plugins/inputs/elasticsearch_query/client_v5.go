@@ -39,7 +39,7 @@ func (c *clientV5) close() {
 	}
 }
 
-func (c *clientV5) getFieldMapping(ctx context.Context, index, field string) (map[string]interface{}, error) {
+func (c *clientV5) getFieldMapping(ctx context.Context, index, field string) (map[string]any, error) {
 	res, err := c.client.Indices.GetFieldMapping(
 		[]string{field},
 		c.client.Indices.GetFieldMapping.WithContext(ctx),
@@ -54,14 +54,14 @@ func (c *clientV5) getFieldMapping(ctx context.Context, index, field string) (ma
 		return nil, err
 	}
 
-	var result map[string]interface{}
+	var result map[string]any
 	if err := json.NewDecoder(res.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("decoding message body failed: %w", err)
 	}
 	return result, nil
 }
 
-func (c *clientV5) query(ctx context.Context, aggregation *aggregation) (interface{}, int64, error) {
+func (c *clientV5) query(ctx context.Context, aggregation *aggregation) (any, int64, error) {
 	data, err := aggregation.buildSearchBody(c.log)
 	if err != nil {
 		return nil, 0, err

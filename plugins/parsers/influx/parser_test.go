@@ -35,7 +35,7 @@ var ptests = []struct {
 			metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42.0,
 				},
 				time.Unix(0, 0),
@@ -50,7 +50,7 @@ var ptests = []struct {
 			metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42.0,
 				},
 				time.Unix(0, 0),
@@ -65,7 +65,7 @@ var ptests = []struct {
 			metric.New(
 				"c pu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42.0,
 				},
 				time.Unix(42, 0),
@@ -80,7 +80,7 @@ var ptests = []struct {
 			metric.New(
 				"c,pu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42.0,
 				},
 				time.Unix(42, 0),
@@ -98,7 +98,7 @@ var ptests = []struct {
 					"cpu":  "cpu0",
 					"host": "localhost",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42.0,
 				},
 				time.Unix(42, 0),
@@ -115,7 +115,7 @@ var ptests = []struct {
 				map[string]string{
 					`ho\st`: "localhost",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42.0,
 				},
 				time.Unix(42, 0),
@@ -132,7 +132,7 @@ var ptests = []struct {
 				map[string]string{
 					"ho=st": "localhost",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42.0,
 				},
 				time.Unix(42, 0),
@@ -149,7 +149,7 @@ var ptests = []struct {
 				map[string]string{
 					"ho,st": "localhost",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42.0,
 				},
 				time.Unix(42, 0),
@@ -166,7 +166,7 @@ var ptests = []struct {
 				map[string]string{
 					"host": "two words",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42.0,
 				},
 				time.Unix(42, 0),
@@ -183,7 +183,7 @@ var ptests = []struct {
 				map[string]string{
 					"host": `two\ words`,
 				},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42.0,
 				},
 				time.Unix(42, 0),
@@ -200,7 +200,7 @@ var ptests = []struct {
 				map[string]string{
 					"host": `two\\ words`,
 				},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42.0,
 				},
 				time.Unix(42, 0),
@@ -215,7 +215,7 @@ var ptests = []struct {
 			metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					`va\lue`: 42.0,
 				},
 				time.Unix(42, 0),
@@ -230,7 +230,7 @@ var ptests = []struct {
 			metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					`va=lue`: 42.0,
 				},
 				time.Unix(42, 0),
@@ -245,7 +245,7 @@ var ptests = []struct {
 			metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					`va,lue`: 42.0,
 				},
 				time.Unix(42, 0),
@@ -260,7 +260,7 @@ var ptests = []struct {
 			metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					`va lue`: 42.0,
 				},
 				time.Unix(42, 0),
@@ -275,7 +275,7 @@ var ptests = []struct {
 			metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42,
 				},
 				time.Unix(42, 0),
@@ -302,7 +302,7 @@ var ptests = []struct {
 			metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": int64(9223372036854775807),
 				},
 				time.Unix(42, 0),
@@ -317,7 +317,7 @@ var ptests = []struct {
 			metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": uint64(42),
 				},
 				time.Unix(42, 0),
@@ -344,7 +344,7 @@ var ptests = []struct {
 			metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": uint64(18446744073709551615),
 				},
 				time.Unix(42, 0),
@@ -359,7 +359,7 @@ var ptests = []struct {
 			metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": true,
 				},
 				time.Unix(42, 0),
@@ -374,7 +374,7 @@ var ptests = []struct {
 			metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": "42",
 				},
 				time.Unix(42, 0),
@@ -389,7 +389,7 @@ var ptests = []struct {
 			metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					`value`: `how"dy`,
 				},
 				time.Unix(42, 0),
@@ -404,7 +404,7 @@ var ptests = []struct {
 			metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					`value`: `how\dy`,
 				},
 				time.Unix(42, 0),
@@ -419,7 +419,7 @@ var ptests = []struct {
 			metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": "4\n2",
 				},
 				time.Unix(42, 0),
@@ -434,7 +434,7 @@ var ptests = []struct {
 			metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42.0,
 				},
 				time.Unix(42, 0),
@@ -452,7 +452,7 @@ var ptests = []struct {
 			metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42.0,
 				},
 				time.Unix(42, 123456789),
@@ -467,7 +467,7 @@ var ptests = []struct {
 			metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42.0,
 				},
 				time.Unix(42, 0),
@@ -475,7 +475,7 @@ var ptests = []struct {
 			metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42.0,
 				},
 				time.Unix(42, 0),
@@ -517,7 +517,7 @@ var ptests = []struct {
 					"exe":          "bash",
 					"process_name": "bash",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"cpu_time":                      0,
 					"cpu_time_guest":                float64(0),
 					"cpu_time_guest_nice":           float64(0),
@@ -784,7 +784,7 @@ func TestSeriesParser(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{},
+					map[string]any{},
 					time.Unix(0, 0),
 				),
 			},
@@ -799,7 +799,7 @@ func TestSeriesParser(t *testing.T) {
 						"a": "x",
 						"b": "y",
 					},
-					map[string]interface{}{},
+					map[string]any{},
 					time.Unix(0, 0),
 				),
 			},
@@ -939,7 +939,7 @@ func TestStreamParserErrorString(t *testing.T) {
 			parser := NewStreamParser(bytes.NewBuffer(tt.input))
 
 			var errs []error
-			for i := 0; i < 20; i++ {
+			for range 20 {
 				_, err := parser.Next()
 				if errors.Is(err, EOF) {
 					break
@@ -1023,7 +1023,7 @@ func TestBenchmarkData(t *testing.T) {
 				"tags_platform": "python",
 				"tags_sdkver":   "3.11.5",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(5),
 			},
 			time.Unix(1653643422, 0),
@@ -1035,7 +1035,7 @@ func TestBenchmarkData(t *testing.T) {
 				"tags_platform": "python",
 				"tags_sdkver":   "3.11.4",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(4),
 			},
 			time.Unix(1653643422, 0),

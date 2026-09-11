@@ -229,7 +229,7 @@ func TestWriteHTTP(t *testing.T) {
 
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
-		map[string]interface{}{"value": float64(12)},
+		map[string]any{"value": float64(12)},
 		map[string]string{"host": "server01"},
 	)
 
@@ -244,7 +244,7 @@ func TestWriteHTTP(t *testing.T) {
 		"server04", "server05", "server06"}
 	for _, hostTag := range hostTags {
 		acc.AssertContainsTaggedFields(t, "cpu_load_short",
-			map[string]interface{}{"value": float64(12)},
+			map[string]any{"value": float64(12)},
 			map[string]string{"host": hostTag},
 		)
 	}
@@ -257,7 +257,7 @@ func TestWriteHTTP(t *testing.T) {
 
 	acc.Wait(3)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
-		map[string]interface{}{"value": float64(12)},
+		map[string]any{"value": float64(12)},
 		map[string]string{"host": "server01"},
 	)
 }
@@ -281,7 +281,7 @@ func TestWriteHTTPWithPathTag(t *testing.T) {
 
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
-		map[string]interface{}{"value": float64(12)},
+		map[string]any{"value": float64(12)},
 		map[string]string{"host": "server01", "http_listener_v2_path": "/write"},
 	)
 }
@@ -329,12 +329,12 @@ func TestWriteHTTPWithMultiplePaths(t *testing.T) {
 
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
-		map[string]interface{}{"value": float64(12)},
+		map[string]any{"value": float64(12)},
 		map[string]string{"host": "server01", "http_listener_v2_path": "/write"},
 	)
 
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
-		map[string]interface{}{"value": float64(12)},
+		map[string]any{"value": float64(12)},
 		map[string]string{"host": "server01", "http_listener_v2_path": "/alternative_write"},
 	)
 }
@@ -357,7 +357,7 @@ func TestWriteHTTPNoNewline(t *testing.T) {
 
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
-		map[string]interface{}{"value": float64(12)},
+		map[string]any{"value": float64(12)},
 		map[string]string{"host": "server01"},
 	)
 }
@@ -443,7 +443,7 @@ func TestWriteHTTPGzippedData(t *testing.T) {
 	acc.Wait(len(hostTags))
 	for _, hostTag := range hostTags {
 		acc.AssertContainsTaggedFields(t, "cpu_load_short",
-			map[string]interface{}{"value": float64(12)},
+			map[string]any{"value": float64(12)},
 			map[string]string{"host": hostTag},
 		)
 	}
@@ -480,7 +480,7 @@ func TestWriteHTTPSnappyData(t *testing.T) {
 
 	for _, hostTag := range hostTags {
 		acc.AssertContainsTaggedFields(t, "cpu_load_short",
-			map[string]interface{}{"value": float64(12)},
+			map[string]any{"value": float64(12)},
 			map[string]string{"host": hostTag},
 		)
 	}
@@ -501,11 +501,11 @@ func TestWriteHTTPHighTraffic(t *testing.T) {
 
 	// post many messages to listener
 	var wg sync.WaitGroup
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		wg.Add(1)
 		go func(innerwg *sync.WaitGroup) {
 			defer innerwg.Done()
-			for i := 0; i < 500; i++ {
+			for range 500 {
 				resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBufferString(testMsgs))
 				if err != nil {
 					return
@@ -602,7 +602,7 @@ func TestWriteHTTPTransformHeaderValuesToTagsSingleWrite(t *testing.T) {
 
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
-		map[string]interface{}{"value": float64(12)},
+		map[string]any{"value": float64(12)},
 		map[string]string{"host": "server01", "presentMeasurementKey1": "PRESENT_HTTP_VALUE_1", "presentMeasurementKey2": "PRESENT_HTTP_VALUE_2"},
 	)
 
@@ -614,7 +614,7 @@ func TestWriteHTTPTransformHeaderValuesToTagsSingleWrite(t *testing.T) {
 
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
-		map[string]interface{}{"value": float64(12)},
+		map[string]any{"value": float64(12)},
 		map[string]string{"host": "server01", "presentMeasurementKey1": "PRESENT_HTTP_VALUE_1", "presentMeasurementKey2": "PRESENT_HTTP_VALUE_2"},
 	)
 }
@@ -648,7 +648,7 @@ func TestWriteHTTPTransformHeaderValuesToTagsBulkWrite(t *testing.T) {
 	hostTags := []string{"server02", "server03", "server04", "server05", "server06"}
 	for _, hostTag := range hostTags {
 		acc.AssertContainsTaggedFields(t, "cpu_load_short",
-			map[string]interface{}{"value": float64(12)},
+			map[string]any{"value": float64(12)},
 			map[string]string{"host": hostTag, "presentMeasurementKey1": "PRESENT_HTTP_VALUE_1", "presentMeasurementKey2": "PRESENT_HTTP_VALUE_2"},
 		)
 	}
@@ -678,7 +678,7 @@ func TestWriteHTTPQueryParams(t *testing.T) {
 
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "query_measurement",
-		map[string]interface{}{"fieldKey": float64(42)},
+		map[string]any{"fieldKey": float64(42)},
 		map[string]string{"tagKey": "tagValue"},
 	)
 }
@@ -709,7 +709,7 @@ func TestWriteHTTPFormData(t *testing.T) {
 
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "query_measurement",
-		map[string]interface{}{"fieldKey": float64(42)},
+		map[string]any{"fieldKey": float64(42)},
 		map[string]string{"tagKey": "tagValue"},
 	)
 }

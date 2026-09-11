@@ -20,7 +20,7 @@ type parser struct {
 	includeDelete bool
 	aliases       map[string]string
 	extraTags     map[string]map[string]bool
-	propMap       map[string]func(*telemetry.TelemetryField) interface{}
+	propMap       map[string]func(*telemetry.TelemetryField) any
 	nxpathMap     map[string]map[string]string // per path map
 
 	log telegraf.Logger
@@ -37,7 +37,7 @@ type state struct {
 	isEvent     bool
 
 	extraTags map[string]map[string]bool
-	propMap   map[string]func(*telemetry.TelemetryField) interface{}
+	propMap   map[string]func(*telemetry.TelemetryField) any
 	nxpathMap map[string]string // per path map
 
 	grouper *metric.SeriesGrouper
@@ -48,7 +48,7 @@ func newParser(includeDelete bool, aliases, dmes map[string]string, embeddedTags
 		includeDelete: includeDelete,
 		aliases:       make(map[string]string, len(aliases)),
 		extraTags:     make(map[string]map[string]bool),
-		propMap:       make(map[string]func(field *telemetry.TelemetryField) interface{}, len(dmes)+4),
+		propMap:       make(map[string]func(field *telemetry.TelemetryField) any, len(dmes)+4),
 		nxpathMap:     createDatabase(),
 		warned:        make(map[string]bool),
 		log:           log,
@@ -431,7 +431,7 @@ func (s *state) parseRib(fields []*telemetry.TelemetryField, parentTags map[stri
 	// values to the correct series through the series grouper
 	var nextHopFields []*telemetry.TelemetryField
 	tags := maps.Clone(parentTags)
-	metricFields := make(map[string]interface{}, len(fields))
+	metricFields := make(map[string]any, len(fields))
 	for _, subfield := range fields {
 		switch subfield.Name {
 		case "vrfName", "address", "maskLen":
@@ -489,7 +489,7 @@ func (s *state) parseMicroburst(fields []*telemetry.TelemetryField, parentTags m
 
 		// Collect the tags and metricFields first as the tags must be complete for
 		// assigning the  field values to the correct series
-		metricFields := make(map[string]interface{}, len(subfield.Fields))
+		metricFields := make(map[string]any, len(subfield.Fields))
 		for _, subf := range subfield.Fields {
 			switch subf.Name {
 			case "sourceName":

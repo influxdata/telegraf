@@ -45,7 +45,7 @@ func TestSuccessfulReceive(t *testing.T) {
 					map[string]string{
 						"host": "hostname",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(0),
 					},
 					time.Unix(1522082244, 0),
@@ -73,7 +73,7 @@ func TestSuccessfulReceive(t *testing.T) {
 					map[string]string{
 						"host": "hostname",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": "3.1415",
 					},
 					time.Unix(1522082244, 0),
@@ -101,7 +101,7 @@ func TestSuccessfulReceive(t *testing.T) {
 					map[string]string{
 						"host": "hostname",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": "some value",
 					},
 					time.Unix(1522082244, 0),
@@ -129,7 +129,7 @@ func TestSuccessfulReceive(t *testing.T) {
 					map[string]string{
 						"host": "hostname",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"valueTrue":  true,
 						"valueFalse": false,
 					},
@@ -162,7 +162,7 @@ func TestSuccessfulReceive(t *testing.T) {
 				metric.New(
 					"name",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": "x",
 					},
 					time.Unix(1522082244, 0),
@@ -191,7 +191,7 @@ func TestSuccessfulReceive(t *testing.T) {
 						"host": "hostname",
 						"foo":  "bar",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(0),
 					},
 					time.Unix(1522082244, 0),
@@ -221,7 +221,7 @@ func TestSuccessfulReceive(t *testing.T) {
 						"zparam": "last",
 						"aparam": "first",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(0),
 					},
 					time.Unix(1522082244, 0),
@@ -249,7 +249,7 @@ func TestSuccessfulReceive(t *testing.T) {
 					map[string]string{
 						"host": "hostname",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"valueA": int64(0),
 						"valueB": int64(1),
 					},
@@ -284,7 +284,7 @@ func TestSuccessfulReceive(t *testing.T) {
 					map[string]string{
 						"host": "hostname",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(0),
 					},
 					time.Unix(1522082244, 0),
@@ -294,7 +294,7 @@ func TestSuccessfulReceive(t *testing.T) {
 					map[string]string{
 						"host": "hostname",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(0),
 					},
 					time.Unix(1522082244, 0),
@@ -328,7 +328,7 @@ func TestSuccessfulReceive(t *testing.T) {
 					map[string]string{
 						"host": "hostnameA",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(0),
 					},
 					time.Unix(1522082244, 0),
@@ -338,7 +338,7 @@ func TestSuccessfulReceive(t *testing.T) {
 					map[string]string{
 						"host": "hostnameB",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(0),
 					},
 					time.Unix(1522082244, 0),
@@ -373,7 +373,7 @@ func TestSuccessfulReceive(t *testing.T) {
 					map[string]string{
 						"host": "hostname",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(0),
 					},
 					time.Unix(1522082244, 0),
@@ -402,7 +402,7 @@ func TestSuccessfulReceive(t *testing.T) {
 					map[string]string{
 						"host": "hostname",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(0),
 					},
 					time.Unix(1522082244, 0),
@@ -431,7 +431,7 @@ func TestSuccessfulReceive(t *testing.T) {
 					map[string]string{
 						"host": "hostname",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(0),
 					},
 					time.Unix(1522082244, 0),
@@ -459,7 +459,7 @@ func TestSuccessfulReceive(t *testing.T) {
 					map[string]string{
 						"host": "hostnameD",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(0),
 					},
 					time.Unix(4444444444, 0),
@@ -469,7 +469,7 @@ func TestSuccessfulReceive(t *testing.T) {
 					map[string]string{
 						"host": "hostnameC",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(0),
 					},
 					time.Unix(3333333333, 0),
@@ -479,7 +479,7 @@ func TestSuccessfulReceive(t *testing.T) {
 					map[string]string{
 						"host": "hostnameA",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(0),
 					},
 					time.Unix(1111111111, 0),
@@ -489,7 +489,7 @@ func TestSuccessfulReceive(t *testing.T) {
 					map[string]string{
 						"host": "hostnameB",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(0),
 					},
 					time.Unix(2222222222, 0),
@@ -537,11 +537,9 @@ func TestSuccessfulReceive(t *testing.T) {
 			defer server.close()
 
 			var wg sync.WaitGroup
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				server.listen()
-			}()
+			})
 
 			// Setup the plugin
 			plugin := &Zabbix{
@@ -586,7 +584,7 @@ func TestInvalidData(t *testing.T) {
 			map[string]string{
 				"host": "hostname",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": []int{1, 2},
 			},
 			time.Unix(1522082244, 0),
@@ -599,11 +597,9 @@ func TestInvalidData(t *testing.T) {
 	defer server.close()
 
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		server.listen()
-	}()
+	})
 
 	// Setup the plugin
 	plugin := &Zabbix{
@@ -640,14 +636,14 @@ func TestLLD(t *testing.T) {
 	m := metric.New(
 		"name",
 		map[string]string{"host": "hostA", "foo": "bar"},
-		map[string]interface{}{"value": int64(0)},
+		map[string]any{"value": int64(0)},
 		time.Unix(0, 0),
 	)
 
 	mNew := metric.New(
 		"name",
 		map[string]string{"host": "hostA", "foo": "moo"},
-		map[string]interface{}{"value": int64(0)},
+		map[string]any{"value": int64(0)},
 		time.Unix(0, 0),
 	)
 
@@ -766,11 +762,9 @@ func TestLLD(t *testing.T) {
 	defer server.close()
 
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		server.listen()
-	}()
+	})
 
 	// Setup plugin
 	plugin := &Zabbix{
@@ -852,13 +846,13 @@ func TestAutoRegister(t *testing.T) {
 		metric.New(
 			"name",
 			map[string]string{"host": "hostA"},
-			map[string]interface{}{"value": int64(0)},
+			map[string]any{"value": int64(0)},
 			now,
 		),
 		metric.New(
 			"name",
 			map[string]string{"host": "hostB"},
-			map[string]interface{}{"value": int64(42)},
+			map[string]any{"value": int64(42)},
 			now,
 		),
 	}
@@ -899,11 +893,9 @@ func TestAutoRegister(t *testing.T) {
 	defer server.close()
 
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		server.listen()
-	}()
+	})
 
 	// Setup plugin
 	plugin := &Zabbix{
@@ -954,7 +946,7 @@ func TestBuildZabbixMetric(t *testing.T) {
 
 		"name",
 		map[string]string{hostTag: "hostA", "foo": "bar", "a": "b"},
-		map[string]interface{}{},
+		map[string]any{},
 		time.Now()),
 		"value",
 		1,
@@ -966,7 +958,7 @@ func TestBuildZabbixMetric(t *testing.T) {
 
 		"name",
 		map[string]string{hostTag: "hostA"},
-		map[string]interface{}{},
+		map[string]any{},
 		time.Now()),
 		"value",
 		1,
@@ -1011,7 +1003,7 @@ func TestGetHostname(t *testing.T) {
 
 				"name",
 				test.Tags,
-				map[string]interface{}{},
+				map[string]any{},
 				time.Now(),
 			)
 
@@ -1091,11 +1083,9 @@ func TestCases(t *testing.T) {
 			defer server.close()
 
 			var wg sync.WaitGroup
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				server.listen()
-			}()
+			})
 			defer server.listener.Close()
 
 			// Setup the plugin

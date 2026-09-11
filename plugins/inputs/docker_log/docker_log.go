@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"sync"
 	"time"
@@ -136,26 +137,22 @@ func (d *DockerLogs) Stop() {
 	d.wg.Wait()
 }
 
-func (d *DockerLogs) GetState() interface{} {
+func (d *DockerLogs) GetState() any {
 	d.lastRecordMtx.Lock()
 	recordOffsets := make(map[string]time.Time, len(d.lastRecord))
-	for k, v := range d.lastRecord {
-		recordOffsets[k] = v
-	}
+	maps.Copy(recordOffsets, d.lastRecord)
 	d.lastRecordMtx.Unlock()
 
 	return recordOffsets
 }
 
-func (d *DockerLogs) SetState(state interface{}) error {
+func (d *DockerLogs) SetState(state any) error {
 	recordOffsets, ok := state.(map[string]time.Time)
 	if !ok {
 		return fmt.Errorf("state has wrong type %T", state)
 	}
 	d.lastRecordMtx.Lock()
-	for k, v := range recordOffsets {
-		d.lastRecord[k] = v
-	}
+	maps.Copy(d.lastRecord, recordOffsets)
 	d.lastRecordMtx.Unlock()
 
 	return nil

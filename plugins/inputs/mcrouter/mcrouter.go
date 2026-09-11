@@ -227,7 +227,7 @@ func gatherServer(ctx context.Context, address string, acc telegraf.Accumulator)
 	tags := map[string]string{"server": address}
 
 	// Process values
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for key, sType := range sendMetrics {
 		if value, ok := values[key]; ok {
 			switch sType {

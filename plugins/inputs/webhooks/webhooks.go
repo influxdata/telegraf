@@ -110,14 +110,12 @@ func (wb *Webhooks) Stop() {
 func (wb *Webhooks) availableWebhooks() []Webhook {
 	webhooks := make([]Webhook, 0)
 	s := reflect.ValueOf(wb).Elem()
-	for i := 0; i < s.NumField(); i++ {
-		f := s.Field(i)
-
+	for _, f := range s.Fields() {
 		if !f.CanInterface() {
 			continue
 		}
 
-		if wbPlugin, ok := f.Interface().(Webhook); ok {
+		if wbPlugin, ok := reflect.TypeAssert[Webhook](f); ok {
 			if !reflect.ValueOf(wbPlugin).IsNil() {
 				webhooks = append(webhooks, wbPlugin)
 			}

@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"fmt"
+	"maps"
 	"reflect"
 	"sync"
 	"sync/atomic"
@@ -18,7 +19,7 @@ import (
 type Metric struct {
 	Measurement string
 	Tags        map[string]string
-	Fields      map[string]interface{}
+	Fields      map[string]any
 	Time        time.Time
 	Type        telegraf.ValueType
 }
@@ -29,7 +30,7 @@ func (p *Metric) String() string {
 
 // Accumulator defines a mocked out accumulator
 type Accumulator struct {
-	nMetrics    uint64 // Needs to be first to avoid unaligned atomic operations on 32-bit archs
+	nMetrics    atomic.Uint64 // Needs to be first to avoid unaligned atomic operations on 32-bit archs
 	Metrics     []*Metric
 	accumulated []telegraf.Metric
 	Discard     bool
@@ -46,7 +47,7 @@ type Accumulator struct {
 }
 
 func (a *Accumulator) NMetrics() uint64 {
-	return atomic.LoadUint64(&a.nMetrics)
+	return a.nMetrics.Load()
 }
 
 func (a *Accumulator) NDelivered() int {
@@ -83,7 +84,7 @@ func (a *Accumulator) FirstError() error {
 func (a *Accumulator) ClearMetrics() {
 	a.Lock()
 	defer a.Unlock()
-	atomic.StoreUint64(&a.nMetrics, 0)
+	a.nMetrics.Store(0)
 	a.Metrics = make([]*Metric, 0)
 	a.accumulated = make([]telegraf.Metric, 0)
 }
@@ -91,13 +92,13 @@ func (a *Accumulator) ClearMetrics() {
 func (a *Accumulator) addMeasurement(
 	measurement string,
 	tags map[string]string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tp telegraf.ValueType,
 	timestamp ...time.Time,
 ) {
 	a.Lock()
 	defer a.Unlock()
-	atomic.AddUint64(&a.nMetrics, 1)
+	a.nMetrics.Add(1)
 	if a.Cond != nil {
 		a.Cond.Broadcast()
 	}
@@ -110,14 +111,10 @@ func (a *Accumulator) addMeasurement(
 	}
 
 	tagsCopy := make(map[string]string, len(tags))
-	for k, v := range tags {
-		tagsCopy[k] = v
-	}
+	maps.Copy(tagsCopy, tags)
 
-	fieldsCopy := make(map[string]interface{}, len(fields))
-	for k, v := range fields {
-		fieldsCopy[k] = v
-	}
+	fieldsCopy := make(map[string]any, len(fields))
+	maps.Copy(fieldsCopy, fields)
 
 	var t time.Time
 	if len(timestamp) > 0 {
@@ -145,7 +142,7 @@ func (a *Accumulator) addMeasurement(
 // AddFields adds a measurement point with a specified timestamp.
 func (a *Accumulator) AddFields(
 	measurement string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
@@ -154,7 +151,7 @@ func (a *Accumulator) AddFields(
 
 func (a *Accumulator) AddCounter(
 	measurement string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
@@ -163,7 +160,7 @@ func (a *Accumulator) AddCounter(
 
 func (a *Accumulator) AddGauge(
 	measurement string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
@@ -178,7 +175,7 @@ func (a *Accumulator) AddMetrics(metrics []telegraf.Metric) {
 
 func (a *Accumulator) AddSummary(
 	measurement string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
@@ -187,7 +184,7 @@ func (a *Accumulator) AddSummary(
 
 func (a *Accumulator) AddHistogram(
 	measurement string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
@@ -197,7 +194,7 @@ func (a *Accumulator) AddHistogram(
 func (a *Accumulator) AddMetric(m telegraf.Metric) {
 	a.Lock()
 	defer a.Unlock()
-	atomic.AddUint64(&a.nMetrics, 1)
+	a.nMetrics.Add(1)
 	if a.Cond != nil {
 		a.Cond.Broadcast()
 	}
@@ -379,7 +376,7 @@ func (a *Accumulator) WaitError(n int) {
 func (a *Accumulator) AssertContainsTaggedFields(
 	t *testing.T,
 	measurement string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tags map[string]string,
 ) {
 	a.Lock()
@@ -406,7 +403,7 @@ func (a *Accumulator) AssertContainsTaggedFields(
 func (a *Accumulator) AssertDoesNotContainsTaggedFields(
 	t *testing.T,
 	measurement string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tags map[string]string,
 ) {
 	a.Lock()
@@ -424,7 +421,7 @@ func (a *Accumulator) AssertDoesNotContainsTaggedFields(
 func (a *Accumulator) AssertContainsFields(
 	t *testing.T,
 	measurement string,
-	fields map[string]interface{},
+	fields map[string]any,
 ) {
 	a.Lock()
 	defer a.Unlock()
@@ -441,7 +438,7 @@ func (a *Accumulator) HasPoint(
 	measurement string,
 	tags map[string]string,
 	fieldKey string,
-	fieldValue interface{},
+	fieldValue any,
 ) bool {
 	a.Lock()
 	defer a.Unlock()
@@ -751,15 +748,15 @@ func (a *Accumulator) BoolField(measurement, field string) (v, ok bool) {
 // telegraf accumulator machinery.
 type NopAccumulator struct{}
 
-func (*NopAccumulator) AddFields(string, map[string]interface{}, map[string]string, ...time.Time) {
+func (*NopAccumulator) AddFields(string, map[string]any, map[string]string, ...time.Time) {
 }
-func (*NopAccumulator) AddGauge(string, map[string]interface{}, map[string]string, ...time.Time) {
+func (*NopAccumulator) AddGauge(string, map[string]any, map[string]string, ...time.Time) {
 }
-func (*NopAccumulator) AddCounter(string, map[string]interface{}, map[string]string, ...time.Time) {
+func (*NopAccumulator) AddCounter(string, map[string]any, map[string]string, ...time.Time) {
 }
-func (*NopAccumulator) AddSummary(string, map[string]interface{}, map[string]string, ...time.Time) {
+func (*NopAccumulator) AddSummary(string, map[string]any, map[string]string, ...time.Time) {
 }
-func (*NopAccumulator) AddHistogram(string, map[string]interface{}, map[string]string, ...time.Time) {
+func (*NopAccumulator) AddHistogram(string, map[string]any, map[string]string, ...time.Time) {
 }
 func (*NopAccumulator) AddMetric(telegraf.Metric)                     {}
 func (*NopAccumulator) SetPrecision(time.Duration)                    {}

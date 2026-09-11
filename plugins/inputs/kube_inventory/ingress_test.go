@@ -26,7 +26,7 @@ func TestIngress(t *testing.T) {
 		{
 			name: "no ingress",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/ingress/": netv1.IngressList{},
 				},
 			},
@@ -35,7 +35,7 @@ func TestIngress(t *testing.T) {
 		{
 			name: "collect ingress",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/ingress/": netv1.IngressList{
 						Items: []netv1.Ingress{
 							{
@@ -53,17 +53,15 @@ func TestIngress(t *testing.T) {
 									Rules: []netv1.IngressRule{
 										{
 											Host: "ui.internal",
-											IngressRuleValue: netv1.IngressRuleValue{
-												HTTP: &netv1.HTTPIngressRuleValue{
-													Paths: []netv1.HTTPIngressPath{
-														{
-															Path: "/",
-															Backend: netv1.IngressBackend{
-																Service: &netv1.IngressServiceBackend{
-																	Name: "chronografd",
-																	Port: netv1.ServiceBackendPort{
-																		Number: 8080,
-																	},
+											HTTP: &netv1.HTTPIngressRuleValue{
+												Paths: []netv1.HTTPIngressPath{
+													{
+														Path: "/",
+														Backend: netv1.IngressBackend{
+															Service: &netv1.IngressServiceBackend{
+																Name: "chronografd",
+																Port: netv1.ServiceBackendPort{
+																	Number: 8080,
 																},
 															},
 														},
@@ -73,12 +71,10 @@ func TestIngress(t *testing.T) {
 										},
 									},
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									Generation:        12,
-									Namespace:         "ns1",
-									Name:              "ui-lb",
-									CreationTimestamp: metav1.Time{Time: now},
-								},
+								Generation:        12,
+								Namespace:         "ns1",
+								Name:              "ui-lb",
+								CreationTimestamp: metav1.Time{Time: now},
 							},
 						},
 					},
@@ -96,7 +92,7 @@ func TestIngress(t *testing.T) {
 						"host":                 "ui.internal",
 						"path":                 "/",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"tls":                  false,
 						"backend_service_port": int32(8080),
 						"generation":           int64(12),
@@ -110,7 +106,7 @@ func TestIngress(t *testing.T) {
 		{
 			name: "no HTTPIngressRuleValue",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/ingress/": netv1.IngressList{
 						Items: []netv1.Ingress{
 							{
@@ -128,18 +124,14 @@ func TestIngress(t *testing.T) {
 									Rules: []netv1.IngressRule{
 										{
 											Host: "ui.internal",
-											IngressRuleValue: netv1.IngressRuleValue{
-												HTTP: nil,
-											},
+											HTTP: nil,
 										},
 									},
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									Generation:        12,
-									Namespace:         "ns1",
-									Name:              "ui-lb",
-									CreationTimestamp: metav1.Time{Time: now},
-								},
+								Generation:        12,
+								Namespace:         "ns1",
+								Name:              "ui-lb",
+								CreationTimestamp: metav1.Time{Time: now},
 							},
 						},
 					},
@@ -150,7 +142,7 @@ func TestIngress(t *testing.T) {
 		{
 			name: "no IngressServiceBackend",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/ingress/": netv1.IngressList{
 						Items: []netv1.Ingress{
 							{
@@ -168,14 +160,12 @@ func TestIngress(t *testing.T) {
 									Rules: []netv1.IngressRule{
 										{
 											Host: "ui.internal",
-											IngressRuleValue: netv1.IngressRuleValue{
-												HTTP: &netv1.HTTPIngressRuleValue{
-													Paths: []netv1.HTTPIngressPath{
-														{
-															Path: "/",
-															Backend: netv1.IngressBackend{
-																Service: nil,
-															},
+											HTTP: &netv1.HTTPIngressRuleValue{
+												Paths: []netv1.HTTPIngressPath{
+													{
+														Path: "/",
+														Backend: netv1.IngressBackend{
+															Service: nil,
 														},
 													},
 												},
@@ -183,12 +173,10 @@ func TestIngress(t *testing.T) {
 										},
 									},
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									Generation:        12,
-									Namespace:         "ns1",
-									Name:              "ui-lb",
-									CreationTimestamp: metav1.Time{Time: now},
-								},
+								Generation:        12,
+								Namespace:         "ns1",
+								Name:              "ui-lb",
+								CreationTimestamp: metav1.Time{Time: now},
 							},
 						},
 					},
@@ -205,7 +193,7 @@ func TestIngress(t *testing.T) {
 						"host":         "ui.internal",
 						"path":         "/",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"tls":        false,
 						"generation": int64(12),
 						"created":    now.UnixNano(),

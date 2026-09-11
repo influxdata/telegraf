@@ -10,7 +10,6 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/postgresql"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -77,11 +76,9 @@ func TestPostgresqlIdleConnectionPingIntegration(t *testing.T) {
 	// connection-pool defaults of the plugin factory as keeping the connection
 	// idle and reusing it is the precondition for the driver's liveness check
 	p := &Postgresql{
-		Config: postgresql.Config{
-			Address: config.NewSecret([]byte(addr)),
-			MaxIdle: 1,
-			MaxOpen: 1,
-		},
+		Address:            config.NewSecret([]byte(addr)),
+		MaxIdle:            1,
+		MaxOpen:            1,
 		Databases:          []string{"postgres"},
 		PreparedStatements: false,
 	}
@@ -113,11 +110,9 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 	)
 
 	p := &Postgresql{
-		Config: postgresql.Config{
-			Address:     config.NewSecret([]byte(addr)),
-			IsPgBouncer: false,
-		},
-		Databases: []string{"postgres"},
+		Address:     config.NewSecret([]byte(addr)),
+		IsPgBouncer: false,
+		Databases:   []string{"postgres"},
 	}
 	require.NoError(t, p.Init())
 
@@ -199,9 +194,7 @@ func TestPostgresqlTagsMetricsWithDatabaseNameIntegration(t *testing.T) {
 	)
 
 	p := &Postgresql{
-		Config: postgresql.Config{
-			Address: config.NewSecret([]byte(addr)),
-		},
+		Address:   config.NewSecret([]byte(addr)),
 		Databases: []string{"postgres"},
 	}
 	require.NoError(t, p.Init())
@@ -232,9 +225,7 @@ func TestPostgresqlDefaultsToAllDatabasesIntegration(t *testing.T) {
 	)
 
 	p := &Postgresql{
-		Config: postgresql.Config{
-			Address: config.NewSecret([]byte(addr)),
-		},
+		Address: config.NewSecret([]byte(addr)),
 	}
 	require.NoError(t, p.Init())
 
@@ -272,9 +263,7 @@ func TestPostgresqlIgnoresUnwantedColumnsIntegration(t *testing.T) {
 	)
 
 	p := &Postgresql{
-		Config: postgresql.Config{
-			Address: config.NewSecret([]byte(addr)),
-		},
+		Address: config.NewSecret([]byte(addr)),
 	}
 	require.NoError(t, p.Init())
 
@@ -303,9 +292,7 @@ func TestPostgresqlDatabaseWhitelistTestIntegration(t *testing.T) {
 	)
 
 	p := &Postgresql{
-		Config: postgresql.Config{
-			Address: config.NewSecret([]byte(addr)),
-		},
+		Address:   config.NewSecret([]byte(addr)),
 		Databases: []string{"template0"},
 	}
 	require.NoError(t, p.Init())
@@ -350,9 +337,7 @@ func TestPostgresqlDatabaseBlacklistTestIntegration(t *testing.T) {
 	)
 
 	p := &Postgresql{
-		Config: postgresql.Config{
-			Address: config.NewSecret([]byte(addr)),
-		},
+		Address:          config.NewSecret([]byte(addr)),
 		IgnoredDatabases: []string{"template0"},
 	}
 	require.NoError(t, p.Init())
@@ -412,9 +397,7 @@ func TestInitialConnectivityIssueIntegration(t *testing.T) {
 	// not connect immediately but on the first query/access to the server
 	addr := fmt.Sprintf("host=%s port=%s user=postgres sslmode=disable connect_timeout=1", container.Address, container.Ports[servicePort])
 	plugin := &Postgresql{
-		Config: postgresql.Config{
-			Address: config.NewSecret([]byte(addr)),
-		},
+		Address:          config.NewSecret([]byte(addr)),
 		IgnoredDatabases: []string{"template0"},
 	}
 	require.NoError(t, plugin.Init())

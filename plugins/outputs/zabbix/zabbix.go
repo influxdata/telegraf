@@ -180,7 +180,7 @@ func (z Zabbix) processMetric(metric telegraf.Metric) []*zabbix.Metric {
 }
 
 // buildZabbixMetric builds a Zabbix metric from a Telegraf metric, for one particular value.
-func (z Zabbix) buildZabbixMetric(metric telegraf.Metric, fieldName string, value interface{}) (*zabbix.Metric, error) {
+func (z Zabbix) buildZabbixMetric(metric telegraf.Metric, fieldName string, value any) (*zabbix.Metric, error) {
 	hostname, err := getHostname(z.HostTag, metric)
 	if err != nil {
 		return nil, fmt.Errorf("error getting hostname: %w", err)

@@ -3,6 +3,7 @@
 package zfs
 
 import (
+	"maps"
 	"os"
 	"path/filepath"
 	"testing"
@@ -466,8 +467,8 @@ func TestCases(t *testing.T) {
 	}
 }
 
-func getKstatMetricsArcOnly() map[string]interface{} {
-	return map[string]interface{}{
+func getKstatMetricsArcOnly() map[string]any {
+	return map[string]any{
 		"arcstats_hits":                     int64(5968846374),
 		"arcstats_misses":                   int64(1659178751),
 		"arcstats_demand_data_hits":         int64(4860247322),
@@ -557,8 +558,8 @@ func getKstatMetricsArcOnly() map[string]interface{} {
 	}
 }
 
-func getKstatMetricsAll() map[string]interface{} {
-	otherMetrics := map[string]interface{}{
+func getKstatMetricsAll() map[string]any {
+	otherMetrics := map[string]any{
 		"zfetchstats_hits":                  int64(7812959060),
 		"zfetchstats_misses":                int64(4154484207),
 		"zfetchstats_colinear_hits":         int64(1366368),
@@ -621,14 +622,12 @@ func getKstatMetricsAll() map[string]interface{} {
 		"abdstats_scatter_sg_table_retry":   int64(99221),
 	}
 	arcMetrics := getKstatMetricsArcOnly()
-	for k, v := range otherMetrics {
-		arcMetrics[k] = v
-	}
+	maps.Copy(arcMetrics, otherMetrics)
 	return arcMetrics
 }
 
-func getPoolMetrics() map[string]interface{} {
-	return map[string]interface{}{
+func getPoolMetrics() map[string]any {
+	return map[string]any{
 		"nread":    int64(1884160),
 		"nwritten": int64(6450688),
 		"reads":    int64(22),
@@ -644,8 +643,8 @@ func getPoolMetrics() map[string]interface{} {
 	}
 }
 
-func getPoolMetricsNewFormat() map[string]interface{} {
-	return map[string]interface{}{
+func getPoolMetricsNewFormat() map[string]any {
+	return map[string]any{
 		"nread":     int64(1884160),
 		"nunlinked": int64(14147),
 		"nunlinks":  int64(14148),
@@ -655,8 +654,8 @@ func getPoolMetricsNewFormat() map[string]interface{} {
 	}
 }
 
-func getPoolMetricsNewFormatV22() map[string]interface{} {
-	return map[string]interface{}{
+func getPoolMetricsNewFormatV22() map[string]any {
+	return map[string]any{
 		"nread":                         int64(1884160),
 		"nunlinked":                     int64(14147),
 		"nunlinks":                      int64(14148),

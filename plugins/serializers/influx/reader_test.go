@@ -28,7 +28,7 @@ func TestReader(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42.0,
 					},
 					time.Unix(0, 0),
@@ -44,7 +44,7 @@ func TestReader(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42.0,
 					},
 					time.Unix(0, 0),
@@ -52,7 +52,7 @@ func TestReader(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42.0,
 					},
 					time.Unix(0, 0),
@@ -68,7 +68,7 @@ func TestReader(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42.0,
 					},
 					time.Unix(0, 0),
@@ -84,7 +84,7 @@ func TestReader(t *testing.T) {
 				metric.New(
 					"",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42.0,
 					},
 					time.Unix(0, 0),
@@ -92,7 +92,7 @@ func TestReader(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42.0,
 					},
 					time.Unix(0, 0),
@@ -108,7 +108,7 @@ func TestReader(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42.0,
 					},
 					time.Unix(0, 0),
@@ -116,7 +116,7 @@ func TestReader(t *testing.T) {
 				metric.New(
 					"",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42.0,
 					},
 					time.Unix(0, 0),
@@ -158,7 +158,7 @@ func TestZeroLengthBufferNoError(t *testing.T) {
 	m := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": 42.0,
 		},
 		time.Unix(0, 0),
@@ -182,7 +182,7 @@ func BenchmarkReader(b *testing.B) {
 			"exe":          "bash",
 			"process_name": "bash",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"cpu_time":                      0,
 			"cpu_time_guest":                float64(0),
 			"cpu_time_guest_nice":           float64(0),
@@ -239,7 +239,7 @@ func BenchmarkReader(b *testing.B) {
 		time.Unix(0, 1517620624000000000),
 	)
 	metrics := make([]telegraf.Metric, 0, 1000)
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		metrics = append(metrics, m)
 	}
 

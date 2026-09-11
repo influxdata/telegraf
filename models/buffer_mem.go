@@ -104,7 +104,7 @@ func (b *MemoryBuffer) EndTransaction(tx *Transaction) {
 
 		// Restore the metrics that fit into the buffer
 		current := b.first
-		for i := 0; i < restore; i++ {
+		for i := range restore {
 			b.buf[current] = tx.Batch[keep[i]]
 			current = b.next(current)
 		}

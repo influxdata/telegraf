@@ -113,7 +113,7 @@ func TestDiskUsage(t *testing.T) {
 		"mode":   "ro",
 	}
 
-	fields1 := map[string]interface{}{
+	fields1 := map[string]any{
 		"total":               uint64(128),
 		"used":                uint64(100),
 		"free":                uint64(23),
@@ -123,7 +123,7 @@ func TestDiskUsage(t *testing.T) {
 		"used_percent":        float64(81.30081300813008),
 		"inodes_used_percent": float64(81.03727714748784),
 	}
-	fields2 := map[string]interface{}{
+	fields2 := map[string]any{
 		"total":               uint64(256),
 		"used":                uint64(200),
 		"free":                uint64(46),
@@ -133,7 +133,7 @@ func TestDiskUsage(t *testing.T) {
 		"used_percent":        float64(81.30081300813008),
 		"inodes_used_percent": float64(81.03727714748784),
 	}
-	fields3 := map[string]interface{}{
+	fields3 := map[string]any{
 		"total":               uint64(128),
 		"used":                uint64(100),
 		"free":                uint64(23),
@@ -172,7 +172,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 		usageStats      []*disk.UsageStat
 		hostMountPrefix string
 		expectedTags    map[string]string
-		expectedFields  map[string]interface{}
+		expectedFields  map[string]any
 	}{
 		{
 			name: "no host mount prefix",
@@ -196,7 +196,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 				"fstype": "ext4",
 				"mode":   "ro",
 			},
-			expectedFields: map[string]interface{}{
+			expectedFields: map[string]any{
 				"total":               uint64(42),
 				"used":                uint64(0),
 				"free":                uint64(0),
@@ -230,7 +230,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 				"fstype": "ext4",
 				"mode":   "ro",
 			},
-			expectedFields: map[string]interface{}{
+			expectedFields: map[string]any{
 				"total":               uint64(42),
 				"used":                uint64(0),
 				"free":                uint64(0),
@@ -264,7 +264,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 				"fstype": "ext4",
 				"mode":   "ro",
 			},
-			expectedFields: map[string]interface{}{
+			expectedFields: map[string]any{
 				"total":               uint64(42),
 				"used":                uint64(0),
 				"free":                uint64(0),
@@ -297,7 +297,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 				"fstype": "tmpfs",
 				"mode":   "rw",
 			},
-			expectedFields: map[string]interface{}{
+			expectedFields: map[string]any{
 				"total":               uint64(42),
 				"used":                uint64(0),
 				"free":                uint64(0),
@@ -330,7 +330,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 				"fstype": "sysfs",
 				"mode":   "ro",
 			},
-			expectedFields: map[string]interface{}{
+			expectedFields: map[string]any{
 				"total":               uint64(42),
 				"used":                uint64(0),
 				"free":                uint64(0),
@@ -510,7 +510,7 @@ func TestDiskStats(t *testing.T) {
 		"mode":   "rw",
 	}
 
-	fields1 := map[string]interface{}{
+	fields1 := map[string]any{
 		"total":               uint64(128),
 		"used":                uint64(100),
 		"free":                uint64(23),
@@ -520,7 +520,7 @@ func TestDiskStats(t *testing.T) {
 		"used_percent":        float64(81.30081300813008),
 		"inodes_used_percent": float64(81.03727714748784),
 	}
-	fields2 := map[string]interface{}{
+	fields2 := map[string]any{
 		"total":               uint64(256),
 		"used":                uint64(200),
 		"free":                uint64(46),
@@ -582,7 +582,7 @@ func TestDiskUsageIssues(t *testing.T) {
 						"mode":   "rw",
 						"path":   "/tmp",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"total":               uint64(256),
 						"used":                uint64(200),
 						"free":                uint64(46),
@@ -603,7 +603,7 @@ func TestDiskUsageIssues(t *testing.T) {
 						"mode":   "rw",
 						"path":   "/",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"total":               uint64(256),
 						"used":                uint64(200),
 						"free":                uint64(46),
@@ -639,7 +639,7 @@ func TestDiskUsageIssues(t *testing.T) {
 						"mode":   "rw",
 						"path":   "/",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"total":               uint64(256),
 						"used":                uint64(200),
 						"free":                uint64(46),
@@ -661,7 +661,7 @@ func TestDiskUsageIssues(t *testing.T) {
 						"mode":   "rw",
 						"path":   "/mnt/storage",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"total":               uint64(256),
 						"used":                uint64(200),
 						"free":                uint64(46),

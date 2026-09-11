@@ -176,14 +176,14 @@ func TestRetrySuccessful(t *testing.T) {
 		Controller: "tcp://localhost:1502",
 		Retries:    maxretries,
 		Log:        testutil.Logger{Quiet: true},
-	}
-	modbus.SlaveID = 1
-	modbus.Coils = []fieldDefinition{
-		{
-			Name:    "retry_success",
-			Address: []uint16{0},
-		},
-	}
+
+		SlaveID: 1,
+		Coils: []fieldDefinition{
+			{
+				Name:    "retry_success",
+				Address: []uint16{0},
+			},
+		}}
 
 	expected := []telegraf.Metric{
 		metric.New(
@@ -193,7 +193,7 @@ func TestRetrySuccessful(t *testing.T) {
 				"slave_id": strconv.Itoa(int(modbus.SlaveID)),
 				"name":     modbus.Name,
 			},
-			map[string]interface{}{"retry_success": uint16(value)},
+			map[string]any{"retry_success": uint16(value)},
 			time.Unix(0, 0),
 		),
 	}
@@ -229,14 +229,14 @@ func TestRetryFailExhausted(t *testing.T) {
 		Controller: "tcp://localhost:1502",
 		Retries:    maxretries,
 		Log:        testutil.Logger{Quiet: true},
-	}
-	modbus.SlaveID = 1
-	modbus.Coils = []fieldDefinition{
-		{
-			Name:    "retry_fail",
-			Address: []uint16{0},
-		},
-	}
+
+		SlaveID: 1,
+		Coils: []fieldDefinition{
+			{
+				Name:    "retry_fail",
+				Address: []uint16{0},
+			},
+		}}
 
 	var acc testutil.Accumulator
 	require.NoError(t, modbus.Init())
@@ -272,14 +272,14 @@ func TestRetryFailIllegal(t *testing.T) {
 		Controller: "tcp://localhost:1502",
 		Retries:    maxretries,
 		Log:        testutil.Logger{Quiet: true},
-	}
-	modbus.SlaveID = 1
-	modbus.Coils = []fieldDefinition{
-		{
-			Name:    "retry_fail",
-			Address: []uint16{0},
-		},
-	}
+
+		SlaveID: 1,
+		Coils: []fieldDefinition{
+			{
+				Name:    "retry_fail",
+				Address: []uint16{0},
+			},
+		}}
 
 	var acc testutil.Accumulator
 	require.NoError(t, modbus.Init())
@@ -492,45 +492,45 @@ func TestRegisterWorkaroundsOneRequestPerField(t *testing.T) {
 		ConfigurationType: "register",
 		Log:               testutil.Logger{Quiet: true},
 		Workarounds:       workarounds{OnRequestPerField: true},
-	}
-	plugin.SlaveID = 1
-	plugin.HoldingRegisters = []fieldDefinition{
-		{
-			ByteOrder: "AB",
-			DataType:  "INT16",
-			Name:      "holding-1",
-			Address:   []uint16{1},
-			Scale:     1.0,
-		},
-		{
-			ByteOrder: "AB",
-			DataType:  "INT16",
-			Name:      "holding-2",
-			Address:   []uint16{2},
-			Scale:     1.0,
-		},
-		{
-			ByteOrder: "AB",
-			DataType:  "INT16",
-			Name:      "holding-3",
-			Address:   []uint16{3},
-			Scale:     1.0,
-		},
-		{
-			ByteOrder: "AB",
-			DataType:  "INT16",
-			Name:      "holding-4",
-			Address:   []uint16{4},
-			Scale:     1.0,
-		},
-		{
-			ByteOrder: "AB",
-			DataType:  "INT16",
-			Name:      "holding-5",
-			Address:   []uint16{5},
-			Scale:     1.0,
-		},
-	}
+
+		SlaveID: 1,
+		HoldingRegisters: []fieldDefinition{
+			{
+				ByteOrder: "AB",
+				DataType:  "INT16",
+				Name:      "holding-1",
+				Address:   []uint16{1},
+				Scale:     1.0,
+			},
+			{
+				ByteOrder: "AB",
+				DataType:  "INT16",
+				Name:      "holding-2",
+				Address:   []uint16{2},
+				Scale:     1.0,
+			},
+			{
+				ByteOrder: "AB",
+				DataType:  "INT16",
+				Name:      "holding-3",
+				Address:   []uint16{3},
+				Scale:     1.0,
+			},
+			{
+				ByteOrder: "AB",
+				DataType:  "INT16",
+				Name:      "holding-4",
+				Address:   []uint16{4},
+				Scale:     1.0,
+			},
+			{
+				ByteOrder: "AB",
+				DataType:  "INT16",
+				Name:      "holding-5",
+				Address:   []uint16{5},
+				Scale:     1.0,
+			},
+		}}
 	require.NoError(t, plugin.Init())
 	require.Len(t, plugin.requests[1].holding, len(plugin.HoldingRegisters))
 }
@@ -542,18 +542,18 @@ func TestRequestsWorkaroundsReadCoilsStartingAtZeroRegister(t *testing.T) {
 		ConfigurationType: "register",
 		Log:               testutil.Logger{Quiet: true},
 		Workarounds:       workarounds{ReadCoilsStartingAtZero: true},
-	}
-	plugin.SlaveID = 1
-	plugin.Coils = []fieldDefinition{
-		{
-			Name:    "coil-8",
-			Address: []uint16{8},
-		},
-		{
-			Name:    "coil-new-group",
-			Address: []uint16{maxQuantityCoils},
-		},
-	}
+
+		SlaveID: 1,
+		Coils: []fieldDefinition{
+			{
+				Name:    "coil-8",
+				Address: []uint16{8},
+			},
+			{
+				Name:    "coil-new-group",
+				Address: []uint16{maxQuantityCoils},
+			},
+		}}
 	require.NoError(t, plugin.Init())
 	require.Len(t, plugin.requests[1].coil, 2)
 
@@ -676,7 +676,7 @@ func TestWorkaroundsStringRegisterLocation(t *testing.T) {
 						"slave_id": "1",
 						"type":     "holding_register",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": tt.expected,
 					},
 					time.Unix(0, 0),
@@ -689,19 +689,17 @@ func TestWorkaroundsStringRegisterLocation(t *testing.T) {
 				ConfigurationType: "request",
 				Log:               testutil.Logger{Quiet: true},
 				Workarounds:       workarounds{StringRegisterLocation: tt.location},
-				configurationPerRequest: configurationPerRequest{
-					Requests: []requestDefinition{
-						{
-							SlaveID:      1,
-							ByteOrder:    tt.order,
-							RegisterType: "holding",
-							Fields: []requestFieldDefinition{
-								{
-									Address:   addr,
-									Name:      "value",
-									InputType: "STRING",
-									Length:    length,
-								},
+				Requests: []requestDefinition{
+					{
+						SlaveID:      1,
+						ByteOrder:    tt.order,
+						RegisterType: "holding",
+						Fields: []requestFieldDefinition{
+							{
+								Address:   addr,
+								Name:      "value",
+								InputType: "STRING",
+								Length:    length,
 							},
 						},
 					},

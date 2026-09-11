@@ -1,6 +1,9 @@
 package jolokia2
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 // A MetricConfig represents a TOML form of
 // a Metric with some optional fields.
@@ -103,13 +106,7 @@ func (m Metric) MatchAttributeAndPath(attribute, innerPath string) bool {
 		path = path + "/" + innerPath
 	}
 
-	for i := range m.Paths {
-		if path == m.Paths[i] {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(m.Paths, path)
 }
 
 func parseMbeanObjectName(name string) (string, []string) {

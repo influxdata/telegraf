@@ -11,7 +11,7 @@ import (
 )
 
 func TestInfiniband(t *testing.T) {
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"excessive_buffer_overrun_errors": uint64(0),
 		"link_downed":                     uint64(0),
 		"link_error_recovery":             uint64(0),
@@ -135,7 +135,7 @@ func TestInfiniband(t *testing.T) {
 }
 
 func TestInfinibandRDMA(t *testing.T) {
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"duplicate_request":          uint64(0),
 		"implied_nak_seq_err":        uint64(0),
 		"lifespan":                   uint64(10),

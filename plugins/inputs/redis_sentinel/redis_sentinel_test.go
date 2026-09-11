@@ -79,7 +79,7 @@ func TestRedisSentinelMasters(t *testing.T) {
 	}
 
 	// has_quorum is a custom field
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"config_epoch":            0,
 		"down_after_milliseconds": 30000,
 		"failover_timeout":        180000,
@@ -148,7 +148,7 @@ func TestRedisSentinels(t *testing.T) {
 		"sentinel_port": "26380",
 		"master":        masterName,
 	}
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"name":                    "adfd343f6b6ecc77e2b9636de6d9f28d4b827521",
 		"flags":                   "sentinel",
 		"link_pending_commands":   0,
@@ -203,7 +203,7 @@ func TestRedisSentinelReplicas(t *testing.T) {
 		"replica_port": "6380",
 		"master":       masterName,
 	}
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"down_after_milliseconds": 30000,
 		"flags":                   "slave",
 		"info_refresh":            8476,
@@ -273,7 +273,7 @@ func TestRedisSentinelInfoAll(t *testing.T) {
 		"source": "redis.io",
 	}
 
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"lru_clock":     int64(15585808),
 		"uptime_ns":     int64(901000000000),
 		"redis_version": "5.0.5",

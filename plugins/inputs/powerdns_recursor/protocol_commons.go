@@ -10,8 +10,8 @@ import (
 	"github.com/influxdata/telegraf/internal"
 )
 
-func parseResponse(metrics string) map[string]interface{} {
-	values := make(map[string]interface{})
+func parseResponse(metrics string) map[string]any {
+	values := make(map[string]any)
 
 	s := strings.Split(metrics, "\n")
 

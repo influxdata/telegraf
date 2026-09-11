@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"slices"
 	"strconv"
 	"time"
 
@@ -257,16 +258,10 @@ func getIntTelemetryPropertyValue(
 }
 
 func contains(set []string, val string) bool {
-	for _, elem := range set {
-		if elem == val {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(set, val)
 }
 
-func toFloat64(value interface{}) (float64, error) {
+func toFloat64(value any) (float64, error) {
 	// Out of all Golang numerical types Telegraf only uses int64, unit64 and float64 for fields
 	switch v := value.(type) {
 	case int64:
@@ -280,7 +275,7 @@ func toFloat64(value interface{}) (float64, error) {
 	return 0.0, fmt.Errorf("[%s] cannot be converted to a float64 value", value)
 }
 
-func toInt(value interface{}) (int, error) {
+func toInt(value any) (int, error) {
 	// Out of all Golang numerical types Telegraf only uses int64, unit64 and float64 for fields
 	switch v := value.(type) {
 	case uint64:

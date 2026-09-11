@@ -23,9 +23,7 @@ func newThrottledExecutor(limit int) *throttledExecutor {
 
 // run schedules a job for execution as soon as possible while respecting the maximum concurrency limit.
 func (t *throttledExecutor) run(ctx context.Context, job func()) {
-	t.wg.Add(1)
-	go func() {
-		defer t.wg.Done()
+	t.wg.Go(func() {
 		select {
 		case t.limiter <- struct{}{}:
 			defer func() {
@@ -35,7 +33,7 @@ func (t *throttledExecutor) run(ctx context.Context, job func()) {
 		case <-ctx.Done():
 			return
 		}
-	}()
+	})
 }
 
 // wait blocks until all scheduled jobs have finished

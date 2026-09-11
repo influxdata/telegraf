@@ -2,6 +2,7 @@ package inputs_jolokia
 
 import (
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/influxdata/toml"
@@ -136,8 +137,8 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 		// Construct the new path from the old attribute/path setting
 		contained := len(mbean) <= 1
 		if oldm.Attribute != "" {
-			attributes := strings.Split(oldm.Attribute, ",")
-			for _, a := range attributes {
+			attributes := strings.SplitSeq(oldm.Attribute, ",")
+			for a := range attributes {
 				if !contained && a == mbean[1] {
 					contained = true
 				}
@@ -169,7 +170,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	}
 
 	// Create the corresponding plugin configurations
-	var newcfg interface{}
+	var newcfg any
 	if old.Mode == "proxy" {
 		// Create a new proxy setup
 		cfg := migrations.CreateTOMLStruct("inputs", "jolokia2_proxy")
@@ -254,9 +255,7 @@ func (j *jolokiaAgent) fillCommon(o common.InputOptions) {
 		if j.Tags == nil {
 			j.Tags = make(map[string]string, len(o.Tags))
 		}
-		for k, v := range o.Tags {
-			j.Tags[k] = v
-		}
+		maps.Copy(j.Tags, o.Tags)
 	}
 
 	if len(o.NamePass) > 0 {
@@ -273,15 +272,11 @@ func (j *jolokiaAgent) fillCommon(o common.InputOptions) {
 	}
 	if len(o.TagPassFilters) > 0 {
 		j.TagPassFilters = make(map[string][]string, len(o.TagPassFilters))
-		for k, v := range o.TagPassFilters {
-			j.TagPassFilters[k] = v
-		}
+		maps.Copy(j.TagPassFilters, o.TagPassFilters)
 	}
 	if len(o.TagDropFilters) > 0 {
 		j.TagDropFilters = make(map[string][]string, len(o.TagDropFilters))
-		for k, v := range o.TagDropFilters {
-			j.TagDropFilters[k] = v
-		}
+		maps.Copy(j.TagDropFilters, o.TagDropFilters)
 	}
 	if len(o.TagExclude) > 0 {
 		j.TagExclude = append(j.TagExclude, o.TagExclude...)
@@ -309,9 +304,7 @@ func (j *jolokiaProxy) fillCommon(o common.InputOptions) {
 		if j.Tags == nil {
 			j.Tags = make(map[string]string, len(o.Tags))
 		}
-		for k, v := range o.Tags {
-			j.Tags[k] = v
-		}
+		maps.Copy(j.Tags, o.Tags)
 	}
 
 	if len(o.NamePass) > 0 {
@@ -328,15 +321,11 @@ func (j *jolokiaProxy) fillCommon(o common.InputOptions) {
 	}
 	if len(o.TagPassFilters) > 0 {
 		j.TagPassFilters = make(map[string][]string, len(o.TagPassFilters))
-		for k, v := range o.TagPassFilters {
-			j.TagPassFilters[k] = v
-		}
+		maps.Copy(j.TagPassFilters, o.TagPassFilters)
 	}
 	if len(o.TagDropFilters) > 0 {
 		j.TagDropFilters = make(map[string][]string, len(o.TagDropFilters))
-		for k, v := range o.TagDropFilters {
-			j.TagDropFilters[k] = v
-		}
+		maps.Copy(j.TagDropFilters, o.TagDropFilters)
 	}
 	if len(o.TagExclude) > 0 {
 		j.TagExclude = append(j.TagExclude, o.TagExclude...)

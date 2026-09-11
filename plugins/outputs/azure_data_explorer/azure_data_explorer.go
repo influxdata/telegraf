@@ -108,9 +108,8 @@ func (adx *AzureDataExplorer) writeSingleTable(metrics []telegraf.Metric) error 
 func init() {
 	outputs.Add("azure_data_explorer", func() telegraf.Output {
 		return &AzureDataExplorer{
-			Config: common_adx.Config{
-				CreateTables: true,
-				Timeout:      config.Duration(20 * time.Second)},
+			CreateTables: true,
+			Timeout:      config.Duration(20 * time.Second),
 		}
 	})
 }

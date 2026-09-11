@@ -29,19 +29,19 @@ func determineConverterI8L(outType, byteOrder string) (fieldConverterFunc, error
 
 	switch outType {
 	case "native":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return int8(b[idx])
 		}, nil
 	case "INT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return int64(int8(b[idx]))
 		}, nil
 	case "UINT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return uint64(int8(b[idx]))
 		}, nil
 	case "FLOAT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return float64(int8(b[idx]))
 		}, nil
 	}
@@ -57,19 +57,19 @@ func determineConverterI8H(outType, byteOrder string) (fieldConverterFunc, error
 
 	switch outType {
 	case "native":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return int8(b[idx])
 		}, nil
 	case "INT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return int64(int8(b[idx]))
 		}, nil
 	case "UINT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return uint64(int8(b[idx]))
 		}, nil
 	case "FLOAT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return float64(int8(b[idx]))
 		}, nil
 	}
@@ -85,19 +85,19 @@ func determineConverterU8L(outType, byteOrder string) (fieldConverterFunc, error
 
 	switch outType {
 	case "native":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return b[idx]
 		}, nil
 	case "INT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return int64(b[idx])
 		}, nil
 	case "UINT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return uint64(b[idx])
 		}, nil
 	case "FLOAT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return float64(b[idx])
 		}, nil
 	}
@@ -113,19 +113,19 @@ func determineConverterU8H(outType, byteOrder string) (fieldConverterFunc, error
 
 	switch outType {
 	case "native":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return b[idx]
 		}, nil
 	case "INT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return int64(b[idx])
 		}, nil
 	case "UINT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return uint64(b[idx])
 		}, nil
 	case "FLOAT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return float64(b[idx])
 		}, nil
 	}
@@ -141,22 +141,22 @@ func determineConverterI8LScale(outType, byteOrder string, scale float64) (field
 
 	switch outType {
 	case "native":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			in := int8(b[idx])
 			return int8(float64(in) * scale)
 		}, nil
 	case "INT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			in := int8(b[idx])
 			return int64(float64(in) * scale)
 		}, nil
 	case "UINT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			in := int8(b[idx])
 			return uint64(float64(in) * scale)
 		}, nil
 	case "FLOAT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			in := int8(b[idx])
 			return float64(in) * scale
 		}, nil
@@ -173,22 +173,22 @@ func determineConverterI8HScale(outType, byteOrder string, scale float64) (field
 
 	switch outType {
 	case "native":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			in := int8(b[idx])
 			return int8(float64(in) * scale)
 		}, nil
 	case "INT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			in := int8(b[idx])
 			return int64(float64(in) * scale)
 		}, nil
 	case "UINT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			in := int8(b[idx])
 			return uint64(float64(in) * scale)
 		}, nil
 	case "FLOAT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			in := int8(b[idx])
 			return float64(in) * scale
 		}, nil
@@ -205,19 +205,19 @@ func determineConverterU8LScale(outType, byteOrder string, scale float64) (field
 
 	switch outType {
 	case "native":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return uint8(float64(b[idx]) * scale)
 		}, nil
 	case "INT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return int64(float64(b[idx]) * scale)
 		}, nil
 	case "UINT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return uint64(float64(b[idx]) * scale)
 		}, nil
 	case "FLOAT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return float64(b[idx]) * scale
 		}, nil
 	}
@@ -233,19 +233,19 @@ func determineConverterU8HScale(outType, byteOrder string, scale float64) (field
 
 	switch outType {
 	case "native":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return uint8(float64(b[idx]) * scale)
 		}, nil
 	case "INT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return int64(float64(b[idx]) * scale)
 		}, nil
 	case "UINT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return uint64(float64(b[idx]) * scale)
 		}, nil
 	case "FLOAT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return float64(b[idx]) * scale
 		}, nil
 	}

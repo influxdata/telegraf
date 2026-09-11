@@ -174,7 +174,7 @@ VALUES
 }
 
 type escapeValueTest struct {
-	Value interface{}
+	Value any
 	Want  string
 }
 
@@ -200,12 +200,12 @@ func escapeValueTests() []escapeValueTest {
 		{map[string]string{"foo": "bar", "one": "more"}, `{"foo" = 'bar', "one" = 'more'}`},
 		{map[string]string{"f.oo": "bar", "o.n.e": "more"}, `{"f_oo" = 'bar', "o_n_e" = 'more'}`},
 		// map[string]interface{}
-		{map[string]interface{}{}, `{}`},
-		{map[string]interface{}(nil), `{}`},
-		{map[string]interface{}{"foo": "bar"}, `{"foo" = 'bar'}`},
-		{map[string]interface{}{"foo": "bar", "one": "more"}, `{"foo" = 'bar', "one" = 'more'}`},
-		{map[string]interface{}{"foo": map[string]interface{}{"one": "more"}}, `{"foo" = {"one" = 'more'}}`},
-		{map[string]interface{}{`fo"o`: `b'ar`, `ab'c`: `xy"z`, `on"""e`: `mo'''re`}, `{"ab'c" = 'xy"z', "fo""o" = 'b''ar', "on""""""e" = 'mo''''''re'}`},
+		{map[string]any{}, `{}`},
+		{map[string]any(nil), `{}`},
+		{map[string]any{"foo": "bar"}, `{"foo" = 'bar'}`},
+		{map[string]any{"foo": "bar", "one": "more"}, `{"foo" = 'bar', "one" = 'more'}`},
+		{map[string]any{"foo": map[string]any{"one": "more"}}, `{"foo" = {"one" = 'more'}}`},
+		{map[string]any{`fo"o`: `b'ar`, `ab'c`: `xy"z`, `on"""e`: `mo'''re`}, `{"ab'c" = 'xy"z', "fo""o" = 'b''ar', "on""""""e" = 'mo''''''re'}`},
 	}
 }
 
@@ -229,7 +229,7 @@ func TestEscapeValueIntegration(t *testing.T) {
 
 		// This is a smoke test that will blow up if our escaping causing a SQL
 		// syntax error, which may allow for an attack.=
-		var reply interface{}
+		var reply any
 		row := db.QueryRow("SELECT ?", got)
 		require.NoError(t, row.Scan(&reply))
 	}
@@ -245,7 +245,7 @@ func TestEscapeValue(t *testing.T) {
 }
 
 func TestCircumventingStringEscape(t *testing.T) {
-	value, err := escapeObject(map[string]interface{}{"a.b": "c"}, `_"`)
+	value, err := escapeObject(map[string]any{"a.b": "c"}, `_"`)
 	require.NoError(t, err)
 	require.Equal(t, `{"a_""b" = 'c'}`, value)
 }
@@ -254,13 +254,13 @@ func Test_hashID(t *testing.T) {
 	tests := []struct {
 		Name   string
 		Tags   map[string]string
-		Fields map[string]interface{}
+		Fields map[string]any
 		Want   int64
 	}{
 		{
 			Name:   "metric1",
 			Tags:   map[string]string{"tag1": "val1", "tag2": "val2"},
-			Fields: map[string]interface{}{"field1": "val1", "field2": "val2"},
+			Fields: map[string]any{"field1": "val1", "field2": "val2"},
 			Want:   8973971082006474188,
 		},
 
@@ -270,7 +270,7 @@ func Test_hashID(t *testing.T) {
 		{
 			Name:   "metric1",
 			Tags:   map[string]string{"tag2": "val2", "tag1": "val1"},
-			Fields: map[string]interface{}{"field3": "val3"},
+			Fields: map[string]any{"field3": "val3"},
 			Want:   8973971082006474188,
 		},
 
@@ -278,7 +278,7 @@ func Test_hashID(t *testing.T) {
 		{
 			Name:   "metric2",
 			Tags:   map[string]string{"tag1": "val1", "tag2": "val2"},
-			Fields: map[string]interface{}{"field1": "val1", "field2": "val2"},
+			Fields: map[string]any{"field1": "val1", "field2": "val2"},
 			Want:   306487682448261783,
 		},
 
@@ -286,7 +286,7 @@ func Test_hashID(t *testing.T) {
 		{
 			Name:   "metric1",
 			Tags:   map[string]string{"tag1": "new-val", "tag2": "val2"},
-			Fields: map[string]interface{}{"field1": "val1", "field2": "val2"},
+			Fields: map[string]any{"field1": "val1", "field2": "val2"},
 			Want:   1938713695181062970,
 		},
 
@@ -294,7 +294,7 @@ func Test_hashID(t *testing.T) {
 		{
 			Name:   "metric1",
 			Tags:   map[string]string{"new-key": "val1", "tag2": "val2"},
-			Fields: map[string]interface{}{"field1": "val1", "field2": "val2"},
+			Fields: map[string]any{"field1": "val1", "field2": "val2"},
 			Want:   7678889081527706328,
 		},
 	}

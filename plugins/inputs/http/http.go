@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 
@@ -175,13 +176,7 @@ func (h *HTTP) gatherURL(acc telegraf.Accumulator, url string) error {
 	}
 	defer resp.Body.Close()
 
-	responseHasSuccessCode := false
-	for _, statusCode := range h.SuccessStatusCodes {
-		if resp.StatusCode == statusCode {
-			responseHasSuccessCode = true
-			break
-		}
-	}
+	responseHasSuccessCode := slices.Contains(h.SuccessStatusCodes, resp.StatusCode)
 
 	if !responseHasSuccessCode {
 		return fmt.Errorf("received status code %d (%s), expected any value out of %v",

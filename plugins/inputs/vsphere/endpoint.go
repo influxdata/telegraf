@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"math/rand"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -88,7 +90,7 @@ type metricEntry struct {
 	tags   map[string]string
 	name   string
 	ts     time.Time
-	fields map[string]interface{}
+	fields map[string]any
 }
 
 type objectMap map[string]*objectRef
@@ -265,12 +267,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 }
 
 func anythingEnabled(ex []string) bool {
-	for _, s := range ex {
-		if s == "*" {
-			return false
-		}
-	}
-	return true
+	return !slices.Contains(ex, "*")
 }
 
 func newFilterOrPanic(include, exclude []string) filter.Filter {
@@ -591,7 +588,7 @@ func (e *endpoint) complexMetadataSelect(ctx context.Context, res *resourceKind,
 	n := len(sampledObjects)
 	if n > maxMetadataSamples {
 		// Shuffle samples into the maxMetadataSamples positions
-		for i := 0; i < maxMetadataSamples; i++ {
+		for i := range maxMetadataSamples {
 			j := int(rand.Int31n(int32(i + 1))) //nolint:gosec // G404: not security critical
 			t := sampledObjects[i]
 			sampledObjects[i] = sampledObjects[j]
@@ -1004,10 +1001,7 @@ func submitChunkJob(ctx context.Context, te *throttledExecutor, job queryJob, pq
 
 func (e *endpoint) chunkify(ctx context.Context, res *resourceKind, now, latest time.Time, job queryJob) {
 	te := newThrottledExecutor(e.parent.CollectConcurrency)
-	maxMetrics := e.parent.MaxQueryMetrics
-	if maxMetrics < 1 {
-		maxMetrics = 1
-	}
+	maxMetrics := max(e.parent.MaxQueryMetrics, 1)
 
 	// Workaround for vCenter weirdness. Cluster metrics seem to count multiple times
 	// when checking query size, so keep it at a low value.
@@ -1116,10 +1110,7 @@ func (e *endpoint) collectResource(ctx context.Context, resourceType string, acc
 		s := time.Duration(res.sampling) * time.Second
 		rawInterval := localNow.Sub(res.lastColl)
 		paddedInterval := rawInterval + time.Duration(res.sampling/2)*time.Second
-		estInterval = paddedInterval.Truncate(s)
-		if estInterval < s {
-			estInterval = s
-		}
+		estInterval = max(paddedInterval.Truncate(s), s)
 		e.log.Debugf("Raw interval %s, padded: %s, estimated: %s", rawInterval, paddedInterval, estInterval)
 	}
 	e.log.Debugf("Interval estimated to %s", estInterval)
@@ -1292,10 +1283,8 @@ func (e *endpoint) collectChunk(
 				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(ts.UnixNano(), 10)
 				bucket, found := buckets[bKey]
 				if !found {
-					fields := make(map[string]interface{})
-					for k, v := range globalFields {
-						fields[k] = v
-					}
+					fields := make(map[string]any)
+					maps.Copy(fields, globalFields)
 					bucket = metricEntry{name: mn, ts: ts, fields: fields, tags: t}
 					buckets[bKey] = bucket
 				}
@@ -1423,8 +1412,8 @@ func (e *endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	}
 }
 
-func (e *endpoint) populateGlobalFields(objectRef *objectRef, resourceType, prefix string) map[string]interface{} {
-	globalFields := make(map[string]interface{})
+func (e *endpoint) populateGlobalFields(objectRef *objectRef, resourceType, prefix string) map[string]any {
+	globalFields := make(map[string]any)
 	if resourceType == "vm" && objectRef.memorySizeMB != 0 {
 		_, fieldName := e.makeMetricIdentifier(prefix, "memorySizeMB")
 		globalFields[fieldName] = strconv.Itoa(int(objectRef.memorySizeMB))

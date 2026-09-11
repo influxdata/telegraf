@@ -19,17 +19,17 @@ type Enum struct {
 }
 
 type mapping struct {
-	Tag     string      `toml:"tag" deprecated:"1.35.0;1.40.0;use 'tags' instead"`
-	Field   string      `toml:"field" deprecated:"1.35.0;1.40.0;use 'fields' instead"`
-	Tags    []string    `toml:"tags"`
-	Fields  []string    `toml:"fields"`
-	Dest    string      `toml:"dest"`
-	Default interface{} `toml:"default"`
+	Tag     string   `toml:"tag" deprecated:"1.35.0;1.40.0;use 'tags' instead"`
+	Field   string   `toml:"field" deprecated:"1.35.0;1.40.0;use 'fields' instead"`
+	Tags    []string `toml:"tags"`
+	Fields  []string `toml:"fields"`
+	Dest    string   `toml:"dest"`
+	Default any      `toml:"default"`
 
 	fieldFilter filter.Filter
 	tagFilter   filter.Filter
 
-	ValueMappings map[string]interface{}
+	ValueMappings map[string]any
 }
 
 func (*Enum) SampleConfig() string {
@@ -65,14 +65,14 @@ func (mapper *Enum) Init() error {
 }
 
 func (mapper *Enum) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	for i := 0; i < len(in); i++ {
+	for i := range in {
 		in[i] = mapper.applyMappings(in[i])
 	}
 	return in
 }
 
 func (mapper *Enum) applyMappings(metric telegraf.Metric) telegraf.Metric {
-	newFields := make(map[string]interface{})
+	newFields := make(map[string]any)
 	newTags := make(map[string]string)
 
 	for _, mapping := range mapper.Mappings {
@@ -95,7 +95,7 @@ func (mapper *Enum) applyMappings(metric telegraf.Metric) telegraf.Metric {
 	return metric
 }
 
-func fieldMapping(metric telegraf.Metric, mapping *mapping, newFields map[string]interface{}) {
+func fieldMapping(metric telegraf.Metric, mapping *mapping, newFields map[string]any) {
 	fields := metric.FieldList()
 	for _, f := range fields {
 		if !mapping.fieldFilter.Match(f.Key) {
@@ -126,7 +126,7 @@ func tagMapping(metric telegraf.Metric, mapping *mapping, newTags map[string]str
 	}
 }
 
-func adjustValue(in interface{}) interface{} {
+func adjustValue(in any) any {
 	switch val := in.(type) {
 	case bool:
 		return strconv.FormatBool(val)
@@ -141,7 +141,7 @@ func adjustValue(in interface{}) interface{} {
 	}
 }
 
-func (mapping *mapping) mapValue(original string) (interface{}, bool) {
+func (mapping *mapping) mapValue(original string) (any, bool) {
 	if mapped, found := mapping.ValueMappings[original]; found {
 		return mapped, true
 	}
@@ -158,7 +158,7 @@ func (mapping *mapping) getDestination(defaultDest string) string {
 	return defaultDest
 }
 
-func writeField(metric telegraf.Metric, name string, value interface{}) {
+func writeField(metric telegraf.Metric, name string, value any) {
 	metric.RemoveField(name)
 	metric.AddField(name, value)
 }

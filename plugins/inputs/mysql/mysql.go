@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -575,7 +576,7 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, servtag string, acc telegraf.A
 
 	// parse DSN and save server tag
 	tags := map[string]string{"server": servtag}
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for rows.Next() {
 		if err := rows.Scan(&key, &val); err != nil {
 			return err
@@ -604,7 +605,7 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, servtag string, acc telegraf.A
 		// Send 20 fields at a time
 		if len(fields) >= 20 {
 			acc.AddFields("mysql_variables", fields, tags)
-			fields = make(map[string]interface{})
+			fields = make(map[string]any)
 		}
 	}
 	// Send any remaining fields
@@ -614,7 +615,7 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, servtag string, acc telegraf.A
 	return nil
 }
 
-func (m *Mysql) parseGlobalVariables(key string, value sql.RawBytes) (interface{}, error) {
+func (m *Mysql) parseGlobalVariables(key string, value sql.RawBytes) (any, error) {
 	if m.MetricVersion < 2 {
 		return v1.ParseValue(value)
 	}
@@ -637,7 +638,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, servtag string, acc telegraf.Acc
 	defer rows.Close()
 
 	tags := map[string]string{"server": servtag}
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 
 	// for each channel record
 	for rows.Next() {
@@ -651,7 +652,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, servtag string, acc telegraf.Acc
 		}
 
 		vals := make([]sql.RawBytes, len(cols))
-		valPtrs := make([]interface{}, len(cols))
+		valPtrs := make([]any, len(cols))
 		// fill the array with sql.Rawbytes
 		for i := range vals {
 			vals[i] = sql.RawBytes{}
@@ -758,7 +759,7 @@ func gatherBinaryLogs(db *sql.DB, servtag string, acc telegraf.Accumulator) erro
 		size += fileSize
 		count++
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"binary_size_bytes":  size,
 		"binary_files_count": count,
 	}
@@ -780,7 +781,7 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, servtag string, acc telegraf.Ac
 
 	// parse the DSN and save host name as a tag
 	tags := map[string]string{"server": servtag}
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for rows.Next() {
 		var key string
 		var val sql.RawBytes
@@ -819,7 +820,7 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, servtag string, acc telegraf.Ac
 			// Send 20 fields at a time
 			if len(fields) >= 20 {
 				acc.AddFields("mysql", fields, tags)
-				fields = make(map[string]interface{})
+				fields = make(map[string]any)
 			}
 			if found {
 				continue
@@ -884,7 +885,7 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, servtag string, acc telegraf.Ac
 		// Send 20 fields at a time
 		if len(fields) >= 20 {
 			acc.AddFields("mysql", fields, tags)
-			fields = make(map[string]interface{})
+			fields = make(map[string]any)
 		}
 	}
 	// Send any remaining fields
@@ -911,14 +912,12 @@ func (m *Mysql) gatherProcessListStatuses(db *sql.DB, servtag string, acc telegr
 		count   uint32
 	)
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 
 	// mapping of state with its counts
 	stateCounts := make(map[string]uint32, len(generalThreadStates))
 	// set map with keys and default values
-	for k, v := range generalThreadStates {
-		stateCounts[k] = v
-	}
+	maps.Copy(stateCounts, generalThreadStates)
 
 	for rows.Next() {
 		err = rows.Scan(&command, &state, &count)
@@ -958,7 +957,7 @@ func (m *Mysql) gatherProcessListStatuses(db *sql.DB, servtag string, acc telegr
 		}
 
 		tags := map[string]string{"server": servtag, "user": user}
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 
 		fields["connections"] = connections
 		acc.AddFields("mysql_users", fields, tags)
@@ -999,7 +998,7 @@ func (m *Mysql) gatherUserStatisticsStatuses(db *sql.DB, servtag string, acc tel
 		}
 
 		tags := map[string]string{"server": servtag, "user": *read[0].(*string)}
-		fields := make(map[string]interface{}, len(cols))
+		fields := make(map[string]any, len(cols))
 
 		for i := range cols {
 			if i == 0 {
@@ -1022,8 +1021,8 @@ func (m *Mysql) gatherUserStatisticsStatuses(db *sql.DB, servtag string, acc tel
 }
 
 // parseKeyValues converts multi-value maps to a per-value entry in fields
-func parseKeyValues(fields map[string]interface{}, key string, value interface{}) {
-	if valueToMap, ok := value.(map[string]interface{}); ok {
+func parseKeyValues(fields map[string]any, key string, value any) {
+	if valueToMap, ok := value.(map[string]any); ok {
 		for mapKey, mapValue := range valueToMap {
 			fields[key+"_"+mapKey] = mapValue
 		}
@@ -1046,7 +1045,7 @@ func columnsToLower(s []string, e error) ([]string, error) {
 }
 
 // getColSlice returns an in interface slice that can be used in the row.Scan().
-func getColSlice(rows *sql.Rows) ([]interface{}, error) {
+func getColSlice(rows *sql.Rows) ([]any, error) {
 	columnTypes, err := rows.ColumnTypes()
 	if err != nil {
 		return nil, err
@@ -1090,7 +1089,7 @@ func getColSlice(rows *sql.Rows) ([]interface{}, error) {
 
 	switch l {
 	case 23: // maria5
-		return []interface{}{
+		return []any{
 			&user,
 			&totalConnections,
 			&concurrentConnections,
@@ -1116,7 +1115,7 @@ func getColSlice(rows *sql.Rows) ([]interface{}, error) {
 			&emptyQueries,
 		}, nil
 	case 25: // maria10
-		return []interface{}{
+		return []any{
 			&user,
 			&totalConnections,
 			&concurrentConnections,
@@ -1144,7 +1143,7 @@ func getColSlice(rows *sql.Rows) ([]interface{}, error) {
 			&maxStatementTimeExceeded,
 		}, nil
 	case 21: // mysql 5.5
-		return []interface{}{
+		return []any{
 			&user,
 			&totalConnections,
 			&concurrentConnections,
@@ -1168,7 +1167,7 @@ func getColSlice(rows *sql.Rows) ([]interface{}, error) {
 			&emptyQueries,
 		}, nil
 	case 22: // percona
-		cols := make([]interface{}, 0, 22)
+		cols := make([]any, 0, 22)
 		for i, ct := range columnTypes {
 			// The first column is the user and has to be a string
 			if i == 0 {
@@ -1223,7 +1222,7 @@ func gatherPerfTableIOWaits(db *sql.DB, servtag string, acc telegraf.Accumulator
 			"name":   objName,
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"table_io_waits_total_fetch":          countFetch,
 			"table_io_waits_total_insert":         countInsert,
 			"table_io_waits_total_update":         countUpdate,
@@ -1269,7 +1268,7 @@ func gatherPerfIndexIOWaits(db *sql.DB, servtag string, acc telegraf.Accumulator
 			"name":   objName,
 			"index":  indexName,
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"index_io_waits_total_fetch":         countFetch,
 			"index_io_waits_seconds_total_fetch": timeFetch / picoSeconds,
 		}
@@ -1313,7 +1312,7 @@ func (m *Mysql) gatherInfoSchemaAutoIncStatuses(db *sql.DB, servtag string, acc 
 			"table":  table,
 			"column": column,
 		}
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		fields["auto_increment_column"] = incValue
 		fields["auto_increment_column_max"] = maxInt
 
@@ -1348,7 +1347,7 @@ func (m *Mysql) gatherInnoDBMetrics(db *sql.DB, servtag string, acc telegraf.Acc
 
 	// parse DSN and save server tag
 	tags := map[string]string{"server": servtag}
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for rows.Next() {
 		var key string
 		var val sql.RawBytes
@@ -1368,7 +1367,7 @@ func (m *Mysql) gatherInnoDBMetrics(db *sql.DB, servtag string, acc telegraf.Acc
 		// Send 20 fields at a time
 		if len(fields) >= 20 {
 			acc.AddFields("mysql_innodb", fields, tags)
-			fields = make(map[string]interface{})
+			fields = make(map[string]any)
 		}
 	}
 	// Send any remaining fields
@@ -1414,7 +1413,7 @@ func (m *Mysql) gatherPerfSummaryPerAccountPerEvent(db *sql.DB, servtag string, 
 		sumNoGoodIndexUsed      float64
 	)
 
-	var events []interface{}
+	var events []any
 	// if we have perf_summary_events set - select only listed events (adding filter criteria for rows)
 	if len(m.PerfSummaryEvents) > 0 {
 		var sqlQueryBuilder strings.Builder
@@ -1481,7 +1480,7 @@ func (m *Mysql) gatherPerfSummaryPerAccountPerEvent(db *sql.DB, servtag string, 
 		sqlLWTags["src_user"] = srcUser
 		sqlLWTags["src_host"] = srcHost
 		sqlLWTags["event"] = eventName
-		sqlLWFields := map[string]interface{}{
+		sqlLWFields := map[string]any{
 			"count_star":                  countStar,
 			"sum_timer_wait":              sumTimerWait,
 			"min_timer_wait":              minTimerWait,
@@ -1598,7 +1597,7 @@ func gatherPerfTableLockWaits(db *sql.DB, servtag string, acc telegraf.Accumulat
 
 		sqlLWTags := copyTags(tags)
 		sqlLWTags["perf_query"] = "sql_lock_waits_total"
-		sqlLWFields := map[string]interface{}{
+		sqlLWFields := map[string]any{
 			"read_normal":             countReadNormal,
 			"read_with_shared_locks":  countReadWithSharedLocks,
 			"read_high_priority":      countReadHighPriority,
@@ -1612,7 +1611,7 @@ func gatherPerfTableLockWaits(db *sql.DB, servtag string, acc telegraf.Accumulat
 
 		externalLWTags := copyTags(tags)
 		externalLWTags["perf_query"] = "external_lock_waits_total"
-		externalLWFields := map[string]interface{}{
+		externalLWFields := map[string]any{
 			"read":  countReadExternal,
 			"write": countWriteExternal,
 		}
@@ -1620,7 +1619,7 @@ func gatherPerfTableLockWaits(db *sql.DB, servtag string, acc telegraf.Accumulat
 
 		sqlLWSecTotalTags := copyTags(tags)
 		sqlLWSecTotalTags["perf_query"] = "sql_lock_waits_seconds_total"
-		sqlLWSecTotalFields := map[string]interface{}{
+		sqlLWSecTotalFields := map[string]any{
 			"read_normal":             timeReadNormal / picoSeconds,
 			"read_with_shared_locks":  timeReadWithSharedLocks / picoSeconds,
 			"read_high_priority":      timeReadHighPriority / picoSeconds,
@@ -1634,7 +1633,7 @@ func gatherPerfTableLockWaits(db *sql.DB, servtag string, acc telegraf.Accumulat
 
 		externalLWSecTotalTags := copyTags(tags)
 		externalLWSecTotalTags["perf_query"] = "external_lock_waits_seconds_total"
-		externalLWSecTotalFields := map[string]interface{}{
+		externalLWSecTotalFields := map[string]any{
 			"read":  timeReadExternal / picoSeconds,
 			"write": timeWriteExternal / picoSeconds,
 		}
@@ -1664,7 +1663,7 @@ func gatherPerfEventWaits(db *sql.DB, servtag string, acc telegraf.Accumulator) 
 			return err
 		}
 		tags["event_name"] = event
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"events_waits_total":         starCount,
 			"events_waits_seconds_total": timeWait / picoSeconds,
 		}
@@ -1705,7 +1704,7 @@ func gatherPerfFileEventsStatuses(db *sql.DB, servtag string, acc telegraf.Accum
 		}
 
 		tags["event_name"] = eventName
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 
 		miscTags := copyTags(tags)
 		miscTags["mode"] = "misc"
@@ -1777,7 +1776,7 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, servtag string, acc teleg
 		tags["digest"] = digest
 		tags["digest_text"] = digestText
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"events_statements_total":                   count,
 			"events_statements_seconds_total":           queryTime / picoSeconds,
 			"events_statements_errors_total":            errs,
@@ -1875,34 +1874,34 @@ func (m *Mysql) gatherSchemaForDB(db *sql.DB, database, servtag string, acc tele
 
 		if m.MetricVersion < 2 {
 			acc.AddFields(newNamespace("info_schema", "table_rows"),
-				map[string]interface{}{"value": tableRows}, tags)
+				map[string]any{"value": tableRows}, tags)
 
 			dlTags := copyTags(tags)
 			dlTags["component"] = "data_length"
 			acc.AddFields(newNamespace("info_schema", "table_size", "data_length"),
-				map[string]interface{}{"value": dataLength}, dlTags)
+				map[string]any{"value": dataLength}, dlTags)
 
 			ilTags := copyTags(tags)
 			ilTags["component"] = "index_length"
 			acc.AddFields(newNamespace("info_schema", "table_size", "index_length"),
-				map[string]interface{}{"value": indexLength}, ilTags)
+				map[string]any{"value": indexLength}, ilTags)
 
 			dfTags := copyTags(tags)
 			dfTags["component"] = "data_free"
 			acc.AddFields(newNamespace("info_schema", "table_size", "data_free"),
-				map[string]interface{}{"value": dataFree}, dfTags)
+				map[string]any{"value": dataFree}, dfTags)
 		} else {
 			acc.AddFields("mysql_table_schema",
-				map[string]interface{}{"rows": tableRows}, tags)
+				map[string]any{"rows": tableRows}, tags)
 
 			acc.AddFields("mysql_table_schema",
-				map[string]interface{}{"data_length": dataLength}, tags)
+				map[string]any{"data_length": dataLength}, tags)
 
 			acc.AddFields("mysql_table_schema",
-				map[string]interface{}{"index_length": indexLength}, tags)
+				map[string]any{"index_length": indexLength}, tags)
 
 			acc.AddFields("mysql_table_schema",
-				map[string]interface{}{"data_free": dataFree}, tags)
+				map[string]any{"data_free": dataFree}, tags)
 		}
 
 		versionTags := copyTags(tags)
@@ -1913,16 +1912,16 @@ func (m *Mysql) gatherSchemaForDB(db *sql.DB, database, servtag string, acc tele
 
 		if m.MetricVersion < 2 {
 			acc.AddFields(newNamespace("info_schema", "table_version"),
-				map[string]interface{}{"value": version}, versionTags)
+				map[string]any{"value": version}, versionTags)
 		} else {
 			acc.AddFields("mysql_table_schema_version",
-				map[string]interface{}{"table_version": version}, versionTags)
+				map[string]any{"table_version": version}, versionTags)
 		}
 	}
 	return nil
 }
 
-func (m *Mysql) parseValueByDatabaseTypeName(value sql.RawBytes, databaseTypeName string) (interface{}, error) {
+func (m *Mysql) parseValueByDatabaseTypeName(value sql.RawBytes, databaseTypeName string) (any, error) {
 	if m.MetricVersion < 2 {
 		return v1.ParseValue(value)
 	}
@@ -1983,9 +1982,7 @@ func newNamespace(words ...string) string {
 
 func copyTags(in map[string]string) map[string]string {
 	out := make(map[string]string)
-	for k, v := range in {
-		out[k] = v
-	}
+	maps.Copy(out, in)
 	return out
 }
 

@@ -23,7 +23,7 @@ func TestIndividualSerializer(t *testing.T) {
 				"machine":  "A",
 				"status":   "ok",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 123,
 				"temperature":     25.0,
 				"pressure":        1023.4,
@@ -38,7 +38,7 @@ func TestIndividualSerializer(t *testing.T) {
 				"machine":  "B",
 				"status":   "failed",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 8430,
 				"temperature":     65.2,
 				"pressure":        985.9,
@@ -53,7 +53,7 @@ func TestIndividualSerializer(t *testing.T) {
 				"machine":  "C",
 				"status":   "warning",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 6765,
 				"temperature":     42.5,
 				"pressure":        986.1,
@@ -66,7 +66,7 @@ func TestIndividualSerializer(t *testing.T) {
 				"source":   "localhost",
 				"location": "factory_north",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"status": "ok",
 			},
 			time.Unix(1722443556, 0),
@@ -79,7 +79,7 @@ func TestIndividualSerializer(t *testing.T) {
 				"machine":  "A",
 				"status":   "ok",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 5544,
 				"temperature":     18.6,
 				"pressure":        1069.4,
@@ -94,7 +94,7 @@ func TestIndividualSerializer(t *testing.T) {
 				"machine":  "B",
 				"status":   "ok",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 65,
 				"temperature":     29.7,
 				"pressure":        1101.2,
@@ -107,7 +107,7 @@ func TestIndividualSerializer(t *testing.T) {
 				"source":   "gateway_af43e",
 				"location": "factory_south",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"status": "ok",
 			},
 			time.Unix(1722443559, 0),
@@ -120,7 +120,7 @@ func TestIndividualSerializer(t *testing.T) {
 				"machine":  "C",
 				"status":   "off",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 0,
 				"temperature":     0.0,
 				"pressure":        0.0,
@@ -179,7 +179,7 @@ func TestIndividualSerializerFirstTooBig(t *testing.T) {
 				"machine":  "A",
 				"status":   "ok",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 123,
 				"temperature":     25.0,
 				"pressure":        1023.4,
@@ -194,7 +194,7 @@ func TestIndividualSerializerFirstTooBig(t *testing.T) {
 				"machine":  "B",
 				"status":   "failed",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 8430,
 				"temperature":     65.2,
 				"pressure":        985.9,
@@ -225,7 +225,7 @@ func TestIndividualSerializerUnlimited(t *testing.T) {
 				"machine":  "A",
 				"status":   "ok",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 123,
 				"temperature":     25.0,
 				"pressure":        1023.4,
@@ -240,7 +240,7 @@ func TestIndividualSerializerUnlimited(t *testing.T) {
 				"machine":  "B",
 				"status":   "failed",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 8430,
 				"temperature":     65.2,
 				"pressure":        985.9,
@@ -255,7 +255,7 @@ func TestIndividualSerializerUnlimited(t *testing.T) {
 				"machine":  "C",
 				"status":   "warning",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 6765,
 				"temperature":     42.5,
 				"pressure":        986.1,
@@ -268,7 +268,7 @@ func TestIndividualSerializerUnlimited(t *testing.T) {
 				"source":   "localhost",
 				"location": "factory_north",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"status": "ok",
 			},
 			time.Unix(1722443556, 0),
@@ -281,7 +281,7 @@ func TestIndividualSerializerUnlimited(t *testing.T) {
 				"machine":  "A",
 				"status":   "ok",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 5544,
 				"temperature":     18.6,
 				"pressure":        1069.4,
@@ -296,7 +296,7 @@ func TestIndividualSerializerUnlimited(t *testing.T) {
 				"machine":  "B",
 				"status":   "ok",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 65,
 				"temperature":     29.7,
 				"pressure":        1101.2,
@@ -309,7 +309,7 @@ func TestIndividualSerializerUnlimited(t *testing.T) {
 				"source":   "gateway_af43e",
 				"location": "factory_south",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"status": "ok",
 			},
 			time.Unix(1722443559, 0),
@@ -322,7 +322,7 @@ func TestIndividualSerializerUnlimited(t *testing.T) {
 				"machine":  "C",
 				"status":   "off",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 0,
 				"temperature":     0.0,
 				"pressure":        0.0,

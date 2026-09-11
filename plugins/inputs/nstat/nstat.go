@@ -114,8 +114,8 @@ func (ns *Nstat) loadPaths() {
 
 // loadGoodTable can be used to parse string heap that
 // headers and values are arranged in right order
-func (ns *Nstat) loadGoodTable(table []byte) map[string]interface{} {
-	entries := make(map[string]interface{})
+func (ns *Nstat) loadGoodTable(table []byte) map[string]any {
+	entries := make(map[string]any)
 	fields := bytes.Fields(table)
 	var value int64
 	var err error
@@ -142,8 +142,8 @@ func (ns *Nstat) loadGoodTable(table []byte) map[string]interface{} {
 
 // loadUglyTable can be used to parse string heap that
 // the headers and values are split with a newline
-func (ns *Nstat) loadUglyTable(table []byte) map[string]interface{} {
-	entries := make(map[string]interface{})
+func (ns *Nstat) loadUglyTable(table []byte) map[string]any {
+	entries := make(map[string]any)
 	// split the lines by newline
 	lines := bytes.Split(table, newLineByte)
 	var value int64

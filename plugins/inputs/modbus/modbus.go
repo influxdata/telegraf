@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"net/url"
 	"path/filepath"
@@ -87,7 +88,7 @@ type rs485Config struct {
 	RxDuringTx         bool            `toml:"rx_during_tx"`
 }
 
-type fieldConverterFunc func(bytes []byte) interface{}
+type fieldConverterFunc func(bytes []byte) any
 
 type requestSet struct {
 	coil     []request
@@ -111,7 +112,7 @@ type field struct {
 	length      uint16
 	omit        bool
 	converter   fieldConverterFunc
-	value       interface{}
+	value       any
 	tags        map[string]string
 }
 
@@ -554,12 +555,8 @@ func collectFields(grouper *metric.SeriesGrouper, timestamp time.Time, tags map[
 		for _, field := range request.fields {
 			// Collect tags from global and per-request
 			ftags := make(map[string]string, len(tags)+len(field.tags))
-			for k, v := range tags {
-				ftags[k] = v
-			}
-			for k, v := range field.tags {
-				ftags[k] = v
-			}
+			maps.Copy(ftags, tags)
+			maps.Copy(ftags, field.tags)
 			// In case no measurement was specified we use "modbus" as default
 			measurement := "modbus"
 			if field.measurement != "" {
@@ -573,7 +570,7 @@ func collectFields(grouper *metric.SeriesGrouper, timestamp time.Time, tags map[
 }
 
 // Printf implements the logger interface of the modbus client
-func (m *Modbus) Printf(format string, v ...interface{}) {
+func (m *Modbus) Printf(format string, v ...any) {
 	m.Log.Tracef(format, v...)
 }
 

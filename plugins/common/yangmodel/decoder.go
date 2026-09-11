@@ -148,7 +148,7 @@ func (d *Decoder) FindLeaf(name, identifier string) (*yang.Leaf, error) {
 	return nil, ErrNotFound
 }
 
-func DecodeLeafValue(leaf *yang.Leaf, value interface{}) (interface{}, error) {
+func DecodeLeafValue(leaf *yang.Leaf, value any) (any, error) {
 	schema := leaf.Type.YangType
 
 	// Ignore all non-string values as the types seem already converted...
@@ -232,7 +232,7 @@ func DecodeLeafValue(leaf *yang.Leaf, value interface{}) (interface{}, error) {
 	return value, nil
 }
 
-func (d *Decoder) DecodeLeafElement(namespace, identifier string, value interface{}) (interface{}, error) {
+func (d *Decoder) DecodeLeafElement(namespace, identifier string, value any) (any, error) {
 	leaf, err := d.FindLeaf(namespace, identifier)
 	if err != nil {
 		return nil, fmt.Errorf("finding %s failed: %w", identifier, err)
@@ -241,7 +241,7 @@ func (d *Decoder) DecodeLeafElement(namespace, identifier string, value interfac
 	return DecodeLeafValue(leaf, value)
 }
 
-func (d *Decoder) DecodePathElement(origin, path string, value interface{}) (interface{}, error) {
+func (d *Decoder) DecodePathElement(origin, path string, value any) (any, error) {
 	rootNodes, found := d.rootNodes[origin]
 	if !found || len(rootNodes) == 0 {
 		return value, nil

@@ -12,7 +12,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -49,16 +48,12 @@ func TestInitSuccess(t *testing.T) {
 			"mdns://12345678:secret@/",
 			"remote://12345678:secret@localhost/",
 		},
-		remoteClientConfig: remoteClientConfig{
-			RemoteClientID:     mock.MockClientId,
-			RemoteClientSecret: mock.MockClientSecret,
-			RemoteTokenDir:     ".",
-		},
-		ClientConfig: tls.ClientConfig{
-			InsecureSkipVerify: true,
-		},
-		Timeout: config.Duration(10 * time.Second),
-		Log:     &testutil.Logger{Name: "huebridge"},
+		RemoteClientID:     mock.MockClientId,
+		RemoteClientSecret: mock.MockClientSecret,
+		RemoteTokenDir:     ".",
+		InsecureSkipVerify: true,
+		Timeout:            config.Duration(10 * time.Second),
+		Log:                &testutil.Logger{Name: "huebridge"},
 	}
 
 	// Verify successful Init

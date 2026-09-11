@@ -73,7 +73,7 @@ func TestIntegrationSendReceive(t *testing.T) {
 						"source":  "foo",
 						"subject": "telegraf",
 					},
-					map[string]interface{}{"value": int64(42)},
+					map[string]any{"value": int64(42)},
 					time.Unix(0, 0),
 				),
 			},
@@ -97,7 +97,7 @@ func TestIntegrationSendReceive(t *testing.T) {
 						"source":  "foo",
 						"subject": "telegraf",
 					},
-					map[string]interface{}{"value": int64(42)},
+					map[string]any{"value": int64(42)},
 					time.Unix(0, 0),
 				),
 				metric.New(
@@ -106,7 +106,7 @@ func TestIntegrationSendReceive(t *testing.T) {
 						"source":  "bar",
 						"subject": "telegraf",
 					},
-					map[string]interface{}{"value": int64(23)},
+					map[string]any{"value": int64(23)},
 					time.Unix(0, 0),
 				),
 				metric.New(
@@ -115,7 +115,7 @@ func TestIntegrationSendReceive(t *testing.T) {
 						"part":    "front",
 						"subject": "hitchhiker",
 					},
-					map[string]interface{}{"named": true},
+					map[string]any{"named": true},
 					time.Unix(0, 0),
 				),
 				metric.New(
@@ -124,7 +124,7 @@ func TestIntegrationSendReceive(t *testing.T) {
 						"part":    "back",
 						"subject": "hitchhiker",
 					},
-					map[string]interface{}{"named": false},
+					map[string]any{"named": false},
 					time.Unix(0, 0),
 				),
 			},
@@ -258,7 +258,7 @@ func TestJetStreamIntegrationSendReceive(t *testing.T) {
 				"source":  "js",
 				"subject": subject,
 			},
-			map[string]interface{}{"value": int64(99)},
+			map[string]any{"value": int64(99)},
 			time.Unix(0, 0),
 		),
 	}

@@ -1,26 +1,27 @@
 package selfstat
 
 import (
+	"maps"
 	"sync/atomic"
 )
 
 type stat struct {
-	v           int64
+	v           atomic.Int64
 	measurement string
 	field       string
 	tags        map[string]string
 }
 
 func (s *stat) Incr(v int64) {
-	atomic.AddInt64(&s.v, v)
+	s.v.Add(v)
 }
 
 func (s *stat) Set(v int64) {
-	atomic.StoreInt64(&s.v, v)
+	s.v.Store(v)
 }
 
 func (s *stat) Get() int64 {
-	return atomic.LoadInt64(&s.v)
+	return s.v.Load()
 }
 
 func (s *stat) Name() string {
@@ -35,9 +36,7 @@ func (s *stat) FieldName() string {
 // NOTE this allocates a new map every time it is called.
 func (s *stat) Tags() map[string]string {
 	m := make(map[string]string, len(s.tags))
-	for k, v := range s.tags {
-		m[k] = v
-	}
+	maps.Copy(m, s.tags)
 	return m
 }
 

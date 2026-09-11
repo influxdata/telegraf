@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"net/http"
 	"net/url"
@@ -93,7 +94,7 @@ func (n *NginxVTS) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("%s returned HTTP status %s", addr.String(), resp.Status)
 	}
-	contentType := strings.Split(resp.Header.Get("Content-Type"), ";")[0]
+	contentType, _, _ := strings.Cut(resp.Header.Get("Content-Type"), ";")
 	switch contentType {
 	case "application/json":
 		return gatherStatusURL(bufio.NewReader(resp.Body), getTags(addr), acc)
@@ -185,7 +186,7 @@ func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accum
 		return errors.New("error while decoding JSON response")
 	}
 
-	acc.AddFields("nginx_vts_connections", map[string]interface{}{
+	acc.AddFields("nginx_vts_connections", map[string]any{
 		"active":   status.Connections.Active,
 		"reading":  status.Connections.Reading,
 		"writing":  status.Connections.Writing,
@@ -197,12 +198,10 @@ func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accum
 
 	for zoneName, zone := range status.ServerZones {
 		zoneTags := make(map[string]string, len(tags)+1)
-		for k, v := range tags {
-			zoneTags[k] = v
-		}
+		maps.Copy(zoneTags, tags)
 		zoneTags["zone"] = zoneName
 
-		acc.AddFields("nginx_vts_server", map[string]interface{}{
+		acc.AddFields("nginx_vts_server", map[string]any{
 			"requests":     zone.RequestCounter,
 			"request_time": zone.RequestMsec,
 			"in_bytes":     zone.InBytes,
@@ -228,13 +227,11 @@ func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accum
 	for filterName, filters := range status.FilterZones {
 		for filterKey, upstream := range filters {
 			filterTags := make(map[string]string, len(tags)+2)
-			for k, v := range tags {
-				filterTags[k] = v
-			}
+			maps.Copy(filterTags, tags)
 			filterTags["filter_key"] = filterKey
 			filterTags["filter_name"] = filterName
 
-			acc.AddFields("nginx_vts_filter", map[string]interface{}{
+			acc.AddFields("nginx_vts_filter", map[string]any{
 				"requests":     upstream.RequestCounter,
 				"request_time": upstream.RequestMsec,
 				"in_bytes":     upstream.InBytes,
@@ -261,12 +258,10 @@ func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accum
 	for upstreamName, upstreams := range status.UpstreamZones {
 		for _, upstream := range upstreams {
 			upstreamServerTags := make(map[string]string, len(tags)+2)
-			for k, v := range tags {
-				upstreamServerTags[k] = v
-			}
+			maps.Copy(upstreamServerTags, tags)
 			upstreamServerTags["upstream"] = upstreamName
 			upstreamServerTags["upstream_address"] = upstream.Server
-			acc.AddFields("nginx_vts_upstream", map[string]interface{}{
+			acc.AddFields("nginx_vts_upstream", map[string]any{
 				"requests":      upstream.RequestCounter,
 				"request_time":  upstream.RequestMsec,
 				"response_time": upstream.ResponseMsec,
@@ -290,12 +285,10 @@ func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accum
 
 	for zoneName, zone := range status.CacheZones {
 		zoneTags := make(map[string]string, len(tags)+1)
-		for k, v := range tags {
-			zoneTags[k] = v
-		}
+		maps.Copy(zoneTags, tags)
 		zoneTags["zone"] = zoneName
 
-		acc.AddFields("nginx_vts_cache", map[string]interface{}{
+		acc.AddFields("nginx_vts_cache", map[string]any{
 			"max_bytes":  zone.MaxSize,
 			"used_bytes": zone.UsedSize,
 			"in_bytes":   zone.InBytes,

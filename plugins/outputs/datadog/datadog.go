@@ -226,7 +226,7 @@ func buildTags(tagList []*telegraf.Tag) []string {
 	return tags
 }
 
-func verifyValue(v interface{}) bool {
+func verifyValue(v any) bool {
 	switch v := v.(type) {
 	case string:
 		return false
@@ -251,7 +251,7 @@ func isRateable(statsDMetricType, fieldName string) bool {
 	}
 }
 
-func (p *Point) setValue(v interface{}) error {
+func (p *Point) setValue(v any) error {
 	switch d := v.(type) {
 	case int64:
 		p[1] = float64(d)

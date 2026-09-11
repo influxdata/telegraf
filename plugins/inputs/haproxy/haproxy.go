@@ -217,7 +217,7 @@ func (h *HAProxy) importCsvResult(r io.Reader, acc telegraf.Accumulator, host st
 			return err
 		}
 
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		tags := map[string]string{
 			"server": host,
 		}

@@ -244,7 +244,7 @@ func (k *Mdstat) Gather(acc telegraf.Accumulator) error {
 				}
 			}
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"DisksActive":            sts.active,
 			"DisksFailed":            fail,
 			"DisksSpare":             spare,

@@ -19,16 +19,16 @@ type commonTags struct {
 	Host   string
 	Index  string
 	Source string
-	Fields map[string]interface{}
+	Fields map[string]any
 }
 
 type hecTimeSeries struct {
-	Time   float64                `json:"time"`
-	Event  string                 `json:"event,omitempty"`
-	Host   string                 `json:"host,omitempty"`
-	Index  string                 `json:"index,omitempty"`
-	Source string                 `json:"source,omitempty"`
-	Fields map[string]interface{} `json:"fields"`
+	Time   float64        `json:"time"`
+	Event  string         `json:"event,omitempty"`
+	Host   string         `json:"host,omitempty"`
+	Index  string         `json:"index,omitempty"`
+	Source string         `json:"source,omitempty"`
+	Fields map[string]any `json:"fields"`
 }
 
 func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
@@ -165,7 +165,7 @@ func (s *Serializer) createObject(metric telegraf.Metric) ([]byte, error) {
 	// The tags are common to all events in this timeseries
 	commonTags := commonTags{}
 
-	commonTags.Fields = make(map[string]interface{}, len(metric.Tags()))
+	commonTags.Fields = make(map[string]any, len(metric.Tags()))
 
 	// Break tags out into key(n)=value(t) pairs
 	for n, t := range metric.Tags() {
@@ -186,7 +186,7 @@ func (s *Serializer) createObject(metric telegraf.Metric) ([]byte, error) {
 	return s.createSingle(metric, dataGroup, commonTags)
 }
 
-func verifyValue(v interface{}) (value interface{}, valid bool) {
+func verifyValue(v any) (value any, valid bool) {
 	switch v.(type) {
 	case string:
 		valid = false

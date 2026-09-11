@@ -243,7 +243,7 @@ func (a *AzureMonitor) Push() []telegraf.Metric {
 
 			m := metric.New(agg.name,
 				tags,
-				map[string]interface{}{
+				map[string]any{
 					"min":   agg.min,
 					"max":   agg.max,
 					"sum":   agg.sum,

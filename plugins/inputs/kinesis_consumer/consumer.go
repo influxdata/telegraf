@@ -98,8 +98,7 @@ func (c *shardConsumer) iterator(ctx context.Context) (*string, error) {
 	for {
 		resp, err := c.client.GetShardIterator(ctx, c.params)
 		if err != nil {
-			var throughputErr *types.ProvisionedThroughputExceededException
-			if errors.As(err, &throughputErr) {
+			if _, ok := errors.AsType[*types.ProvisionedThroughputExceededException](err); ok {
 				// We called the function too often and should wait a bit
 				// until trying again
 				c.log.Tracef("throughput exceeded when getting iterator for shard %s...", *c.params.ShardId)
@@ -365,11 +364,9 @@ func (c *consumer) startShardConsumer(ctx context.Context, id, seqnr string) {
 		if c.position != nil {
 			cseqnr = c.position(cid)
 		}
-		c.wg.Add(1)
-		go func() {
-			defer c.wg.Done()
+		c.wg.Go(func() {
 			c.startShardConsumer(ctx, cid, cseqnr)
-		}()
+		})
 	}
 }
 

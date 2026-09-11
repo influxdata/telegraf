@@ -30,7 +30,7 @@ func TestNewItem(t *testing.T) {
 		t.Errorf("POST new_item returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"id": 272716944,
 	}
 
@@ -53,7 +53,7 @@ func TestOccurrence(t *testing.T) {
 		t.Errorf("POST occurrence returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"id": 402860571,
 	}
 
@@ -76,7 +76,7 @@ func TestDeploy(t *testing.T) {
 		t.Errorf("POST deploy returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"id": 187585,
 	}
 

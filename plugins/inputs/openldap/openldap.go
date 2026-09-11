@@ -130,7 +130,7 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 }
 
 func gatherSearchResult(sr *ldap.SearchResult, o *Openldap, acc telegraf.Accumulator) {
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	tags := map[string]string{
 		"server": o.Host,
 		"port":   strconv.Itoa(o.Port),

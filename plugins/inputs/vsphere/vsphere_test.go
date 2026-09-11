@@ -16,7 +16,6 @@ import (
 	"github.com/vmware/govmomi/vim25/types"
 
 	"github.com/influxdata/telegraf/config"
-	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -129,7 +128,7 @@ func defaultVSphere() *VSphere {
 		DatacenterMetricInclude:   nil,
 		DatacenterMetricExclude:   nil,
 		DatacenterInclude:         []string{"/**"},
-		ClientConfig:              common_tls.ClientConfig{InsecureSkipVerify: true},
+		InsecureSkipVerify:        true,
 
 		MaxQueryObjects:         256,
 		MaxQueryMetrics:         256,
@@ -164,7 +163,7 @@ func testAlignUniform(t *testing.T, n int) {
 	now := time.Now().Truncate(60 * time.Second)
 	info := make([]types.PerfSampleInfo, 0, n)
 	values := make([]int64, 0, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		info = append(info, types.PerfSampleInfo{
 			Timestamp: now.Add(time.Duration(20*i) * time.Second),
 			Interval:  20,
@@ -190,7 +189,7 @@ func TestAlignMetrics(t *testing.T) {
 	now := time.Now().Truncate(60 * time.Second)
 	info := make([]types.PerfSampleInfo, 0, n)
 	values := make([]int64, 0, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		info = append(info, types.PerfSampleInfo{
 			Timestamp: now.Add(time.Duration(20*i) * time.Second),
 			Interval:  20,

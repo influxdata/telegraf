@@ -128,7 +128,7 @@ func (s *Solr) collect(acc telegraf.Accumulator, cfg *apiConfig, server string) 
 
 	var wg sync.WaitGroup
 	for core, metrics := range coreStatus.Status {
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"deleted_docs":  metrics.Index.DeletedDocs,
 			"max_docs":      metrics.Index.MaxDoc,
 			"num_docs":      metrics.Index.NumDocs,
@@ -160,7 +160,7 @@ func (s *Solr) collect(acc telegraf.Accumulator, cfg *apiConfig, server string) 
 	wg.Wait()
 }
 
-func (s *Solr) query(endpoint string, v interface{}) error {
+func (s *Solr) query(endpoint string, v any) error {
 	req, reqErr := http.NewRequest(http.MethodGet, endpoint, nil)
 	if reqErr != nil {
 		return reqErr
@@ -186,7 +186,7 @@ func (s *Solr) query(endpoint string, v interface{}) error {
 
 func (s *Solr) determineServerAPIVersion(server string) (int, error) {
 	endpoint := server + "/solr/admin/info/system?wt=json"
-	var info map[string]interface{}
+	var info map[string]any
 	if err := s.query(endpoint, &info); err != nil {
 		return 0, err
 	}
@@ -195,7 +195,7 @@ func (s *Solr) determineServerAPIVersion(server string) (int, error) {
 	if !found {
 		return 0, nil
 	}
-	lucene, ok := lraw.(map[string]interface{})
+	lucene, ok := lraw.(map[string]any)
 	if !ok {
 		return 0, nil
 	}

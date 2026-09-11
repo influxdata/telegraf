@@ -133,7 +133,7 @@ func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *sysMetrics) error {
 			tags[key] = convertedVal
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"count":  counters.Count,
 			"rate":   counters.Rate,
 			"sum":    counters.Sum,
@@ -155,7 +155,7 @@ func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *sysMetrics) error {
 			tags[key] = convertedVal
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"value": gauges.Value,
 		}
 
@@ -172,7 +172,7 @@ func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *sysMetrics) error {
 			tags[key] = convertedVal
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"count":  summary.Count,
 			"rate":   summary.Rate,
 			"sum":    summary.Sum,
@@ -190,11 +190,7 @@ func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *sysMetrics) error {
 func init() {
 	inputs.Add("vault", func() telegraf.Input {
 		return &Vault{
-			HTTPClientConfig: common_http.HTTPClientConfig{
-				TransportConfig: common_http.TransportConfig{
-					ResponseHeaderTimeout: config.Duration(5 * time.Second),
-				},
-			},
+			ResponseHeaderTimeout: config.Duration(5 * time.Second),
 		}
 	})
 }

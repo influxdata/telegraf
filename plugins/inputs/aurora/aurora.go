@@ -45,7 +45,7 @@ var (
 	defaultRoles   = []string{"leader", "follower"}
 )
 
-type vars map[string]interface{}
+type vars map[string]any
 
 type Aurora struct {
 	Schedulers []string        `toml:"schedulers"`
@@ -215,7 +215,7 @@ func (a *Aurora) gatherScheduler(
 		return fmt.Errorf("decoding response: %w", err)
 	}
 
-	var fields = make(map[string]interface{}, len(metrics))
+	var fields = make(map[string]any, len(metrics))
 	for k, v := range metrics {
 		switch v := v.(type) {
 		case json.Number:

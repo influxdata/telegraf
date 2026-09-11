@@ -155,7 +155,7 @@ func (r *Ras) Gather(acc telegraf.Accumulator) error {
 		tags := map[string]string{
 			"socket_id": strconv.Itoa(socketID),
 		}
-		fields := make(map[string]interface{}, len(data))
+		fields := make(map[string]any, len(data))
 		for name, count := range data {
 			fields[name] = count
 		}
@@ -164,7 +164,7 @@ func (r *Ras) Gather(acc telegraf.Accumulator) error {
 
 	// Add the server metrics
 	tags := make(map[string]string)
-	fields := make(map[string]interface{}, len(r.serverCounters))
+	fields := make(map[string]any, len(r.serverCounters))
 	for name, count := range r.serverCounters {
 		fields[name] = count
 	}

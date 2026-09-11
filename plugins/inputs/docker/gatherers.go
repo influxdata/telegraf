@@ -40,7 +40,7 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 		"engine_host":    d.engineHost,
 		"server_version": d.serverVersion,
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"n_cpus":                  info.NCPU,
 		"n_used_file_descriptors": info.NFd,
 		"n_containers":            info.Containers,
@@ -54,15 +54,15 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 
 	// Add metrics
 	acc.AddFields("docker", fields, tags, now)
-	acc.AddFields("docker", map[string]interface{}{"memory_total": info.MemTotal}, tags, now)
+	acc.AddFields("docker", map[string]any{"memory_total": info.MemTotal}, tags, now)
 
 	// Get storage metrics
 	tags["unit"] = "bytes"
 
 	var poolName string
-	deviceMapperFields := make(map[string]interface{}, len(info.DriverStatus))
-	dataFields := make(map[string]interface{})
-	metadataFields := make(map[string]interface{})
+	deviceMapperFields := make(map[string]any, len(info.DriverStatus))
+	dataFields := make(map[string]any)
+	metadataFields := make(map[string]any)
 	for _, rawData := range info.DriverStatus {
 		name := strings.ToLower(strings.ReplaceAll(rawData[0], " ", "_"))
 		if name == "pool_name" {
@@ -93,14 +93,14 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 		// Legacy devicemapper measurements
 		if name == "pool_blocksize" {
 			// pool blocksize
-			acc.AddFields("docker", map[string]interface{}{"pool_blocksize": value}, tags, now)
-		} else if strings.HasPrefix(name, "data_space_") {
+			acc.AddFields("docker", map[string]any{"pool_blocksize": value}, tags, now)
+		} else if after, ok := strings.CutPrefix(name, "data_space_"); ok {
 			// data space
-			fieldName := strings.TrimPrefix(name, "data_space_")
+			fieldName := after
 			dataFields[fieldName] = value
-		} else if strings.HasPrefix(name, "metadata_space_") {
+		} else if after, ok := strings.CutPrefix(name, "metadata_space_"); ok {
 			// metadata space
-			fieldName := strings.TrimPrefix(name, "metadata_space_")
+			fieldName := after
 			metadataFields[fieldName] = value
 		}
 	}
@@ -159,7 +159,7 @@ func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
 
 		for _, service := range services.Items {
 			tags := make(map[string]string, 3)
-			fields := make(map[string]interface{}, 2)
+			fields := make(map[string]any, 2)
 			now := time.Now()
 			tags["service_id"] = service.ID
 			tags["service_name"] = service.Spec.Name
@@ -207,7 +207,7 @@ func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator) error {
 	now := time.Now()
 
 	// Layers size
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"layers_size": du.Images.TotalSize,
 	}
 
@@ -220,7 +220,7 @@ func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator) error {
 
 	// Containers
 	for _, cntnr := range du.Containers.Items {
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"size_rw":      cntnr.SizeRw,
 			"size_root_fs": cntnr.SizeRootFs,
 		}
@@ -244,7 +244,7 @@ func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator) error {
 
 	// Images
 	for _, image := range du.Images.Items {
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"size":        image.Size,
 			"shared_size": image.SharedSize,
 		}
@@ -266,7 +266,7 @@ func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator) error {
 
 	// Volumes
 	for _, volume := range du.Volumes.Items {
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"size": volume.UsageData.Size,
 		}
 
@@ -386,7 +386,7 @@ func (d *Docker) gatherContainerStats(acc telegraf.Accumulator, tags map[string]
 }
 
 func addStateMetric(acc telegraf.Accumulator, info *container.InspectResponse, tags map[string]string, id string) {
-	statefields := map[string]interface{}{
+	statefields := map[string]any{
 		"oomkilled":     info.State.OOMKilled,
 		"pid":           info.State.Pid,
 		"exitcode":      info.State.ExitCode,
@@ -421,7 +421,7 @@ func addHealthMetric(acc telegraf.Accumulator, info *container.InspectResponse, 
 		return
 	}
 
-	healthfields := map[string]interface{}{
+	healthfields := map[string]any{
 		"health_status":  string(info.State.Health.Status),
 		"failing_streak": info.State.Health.FailingStreak,
 	}
@@ -429,7 +429,7 @@ func addHealthMetric(acc telegraf.Accumulator, info *container.InspectResponse, 
 }
 
 func addMemoryMetrics(acc telegraf.Accumulator, stats *container.StatsResponse, tags map[string]string, id string, ts time.Time) {
-	memfields := map[string]interface{}{
+	memfields := map[string]any{
 		"container_id": id,
 	}
 
@@ -492,7 +492,7 @@ func addMemoryMetrics(acc telegraf.Accumulator, stats *container.StatsResponse, 
 
 func (d *Docker) addCPUMetrics(acc telegraf.Accumulator, stats *container.StatsResponse, tags map[string]string, id string, ts time.Time) {
 	if slices.Contains(d.TotalInclude, "cpu") {
-		cpufields := map[string]interface{}{
+		cpufields := map[string]any{
 			"usage_total":                  stats.CPUStats.CPUUsage.TotalUsage,
 			"usage_in_usermode":            stats.CPUStats.CPUUsage.UsageInUsermode,
 			"usage_in_kernelmode":          stats.CPUStats.CPUUsage.UsageInKernelmode,
@@ -530,7 +530,7 @@ func (d *Docker) addCPUMetrics(acc telegraf.Accumulator, stats *container.StatsR
 		for i, percpu := range percpuusage {
 			percputags := maps.Clone(tags)
 			percputags["cpu"] = fmt.Sprintf("cpu%d", i)
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"usage_total":  percpu,
 				"container_id": id,
 			}
@@ -543,7 +543,7 @@ func (d *Docker) addCPUMetrics(acc telegraf.Accumulator, stats *container.StatsR
 func (d *Docker) addNetworkMetrics(acc telegraf.Accumulator, stats *container.StatsResponse, tags map[string]string, id string, ts time.Time) {
 	totalNetworkStatMap := make(map[string]uint64)
 	for network, netstats := range stats.Networks {
-		netfields := map[string]interface{}{
+		netfields := map[string]any{
 			"rx_dropped":   netstats.RxDropped,
 			"rx_bytes":     netstats.RxBytes,
 			"rx_errors":    netstats.RxErrors,
@@ -587,7 +587,7 @@ func (d *Docker) addNetworkMetrics(acc telegraf.Accumulator, stats *container.St
 		nettags := maps.Clone(tags)
 		nettags["network"] = "total"
 
-		fields := make(map[string]interface{}, len(totalNetworkStatMap)+1)
+		fields := make(map[string]any, len(totalNetworkStatMap)+1)
 		fields["container_id"] = id
 		for k, v := range totalNetworkStatMap {
 			fields[k] = v
@@ -598,11 +598,11 @@ func (d *Docker) addNetworkMetrics(acc telegraf.Accumulator, stats *container.St
 
 func (d *Docker) addBlockIOMetrics(acc telegraf.Accumulator, stat *container.StatsResponse, tags map[string]string, id string, ts time.Time) {
 	// Make a map of devices to their block io ioStats
-	ioStats := make(map[string]map[string]interface{})
+	ioStats := make(map[string]map[string]any)
 	for _, metric := range stat.BlkioStats.IoServiceBytesRecursive {
 		device := fmt.Sprintf("%d:%d", metric.Major, metric.Minor)
 		if _, ok := ioStats[device]; !ok {
-			ioStats[device] = make(map[string]interface{})
+			ioStats[device] = make(map[string]any)
 		}
 		field := "io_service_bytes_recursive_" + strings.ToLower(metric.Op)
 		ioStats[device][field] = metric.Value
@@ -610,7 +610,7 @@ func (d *Docker) addBlockIOMetrics(acc telegraf.Accumulator, stat *container.Sta
 	for _, metric := range stat.BlkioStats.IoServicedRecursive {
 		device := fmt.Sprintf("%d:%d", metric.Major, metric.Minor)
 		if _, ok := ioStats[device]; !ok {
-			ioStats[device] = make(map[string]interface{}, 1)
+			ioStats[device] = make(map[string]any, 1)
 		}
 		field := "io_serviced_recursive_" + strings.ToLower(metric.Op)
 		ioStats[device][field] = metric.Value
@@ -678,7 +678,7 @@ func (d *Docker) addBlockIOMetrics(acc telegraf.Accumulator, stat *container.Sta
 		iotags := maps.Clone(tags)
 		iotags["device"] = "total"
 
-		fields := make(map[string]interface{}, len(totalStatMap)+1)
+		fields := make(map[string]any, len(totalStatMap)+1)
 		fields["container_id"] = id
 		for k, v := range totalStatMap {
 			fields[k] = v

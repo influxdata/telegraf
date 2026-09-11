@@ -465,14 +465,14 @@ func (m *mockKinesisPutRecords) SetupResponse(
 
 func (m *mockKinesisPutRecords) SetupGenericResponse(successfulRecordCount uint32, failedRecordCount int32) {
 	records := make([]types.PutRecordsResultEntry, 0, int32(successfulRecordCount)+failedRecordCount)
-	for i := uint32(0); i < successfulRecordCount; i++ {
+	for range successfulRecordCount {
 		records = append(records, types.PutRecordsResultEntry{
 			SequenceNumber: aws.String(testSequenceNumber),
 			ShardId:        aws.String(testShardID),
 		})
 	}
 
-	for i := int32(0); i < failedRecordCount; i++ {
+	for range failedRecordCount {
 		records = append(records, types.PutRecordsResultEntry{
 			ErrorCode:    aws.String("InternalFailure"),
 			ErrorMessage: aws.String("Internal Service Failure"),
@@ -555,7 +555,7 @@ func createTestMetrics(t *testing.T, count uint32, serializer telegraf.Serialize
 	metrics := make([]telegraf.Metric, 0, count)
 	metricsData := make([][]byte, 0, count)
 
-	for i := uint32(0); i < count; i++ {
+	for i := range count {
 		name := fmt.Sprintf("metric%d", i)
 		metric, data := createTestMetric(t, name, serializer)
 		metrics = append(metrics, metric)

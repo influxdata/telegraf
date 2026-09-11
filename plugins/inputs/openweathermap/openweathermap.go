@@ -140,7 +140,7 @@ func (n *OpenWeatherMap) gatherWeather(acc telegraf.Accumulator, city string) er
 	// Construct the metric
 	tm := time.Unix(e.Dt, 0)
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"cloudiness":   e.Clouds.All,
 		"humidity":     e.Main.Humidity,
 		"pressure":     e.Main.Pressure,
@@ -195,7 +195,7 @@ func (n *OpenWeatherMap) gatherForecast(acc telegraf.Accumulator, city string) e
 	}
 	for i, e := range status.List {
 		tm := time.Unix(e.Dt, 0)
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"cloudiness":   e.Clouds.All,
 			"humidity":     e.Main.Humidity,
 			"pressure":     e.Main.Pressure,

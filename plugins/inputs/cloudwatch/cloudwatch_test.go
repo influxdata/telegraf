@@ -19,7 +19,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/metric"
-	common_aws "github.com/influxdata/telegraf/plugins/common/aws"
 	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -31,9 +30,7 @@ func TestSnakeCase(t *testing.T) {
 
 func TestGather(t *testing.T) {
 	plugin := &CloudWatch{
-		CredentialConfig: common_aws.CredentialConfig{
-			Region: "us-east-1",
-		},
+		Region:     "us-east-1",
 		Namespaces: []string{"AWS/ELB"},
 		Delay:      config.Duration(1 * time.Minute),
 		Period:     config.Duration(1 * time.Minute),
@@ -54,7 +51,7 @@ func TestGather(t *testing.T) {
 				"region":             "us-east-1",
 				"load_balancer_name": "p-example1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"latency_minimum":      0.1,
 				"latency_maximum":      0.3,
 				"latency_average":      0.2,
@@ -69,7 +66,7 @@ func TestGather(t *testing.T) {
 				"region":             "us-east-1",
 				"load_balancer_name": "p-example2",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"latency_minimum":      0.1,
 				"latency_maximum":      0.3,
 				"latency_average":      0.2,
@@ -85,9 +82,7 @@ func TestGather(t *testing.T) {
 
 func TestGatherDenseMetric(t *testing.T) {
 	plugin := &CloudWatch{
-		CredentialConfig: common_aws.CredentialConfig{
-			Region: "us-east-1",
-		},
+		Region:       "us-east-1",
 		Namespaces:   []string{"AWS/ELB"},
 		Delay:        config.Duration(1 * time.Minute),
 		Period:       config.Duration(1 * time.Minute),
@@ -110,7 +105,7 @@ func TestGatherDenseMetric(t *testing.T) {
 				"load_balancer_name": "p-example1",
 				"metric_name":        "latency",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"minimum":      0.1,
 				"maximum":      0.3,
 				"average":      0.2,
@@ -126,7 +121,7 @@ func TestGatherDenseMetric(t *testing.T) {
 				"load_balancer_name": "p-example2",
 				"metric_name":        "latency",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"minimum":      0.1,
 				"maximum":      0.3,
 				"average":      0.2,
@@ -142,9 +137,7 @@ func TestGatherDenseMetric(t *testing.T) {
 
 func TestMultiAccountGather(t *testing.T) {
 	plugin := &CloudWatch{
-		CredentialConfig: common_aws.CredentialConfig{
-			Region: "us-east-1",
-		},
+		Region:                "us-east-1",
 		Namespaces:            []string{"AWS/ELB"},
 		Delay:                 config.Duration(1 * time.Minute),
 		Period:                config.Duration(1 * time.Minute),
@@ -167,7 +160,7 @@ func TestMultiAccountGather(t *testing.T) {
 				"load_balancer_name": "p-example1",
 				"account":            "123456789012",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"latency_minimum":      0.1,
 				"latency_maximum":      0.3,
 				"latency_average":      0.2,
@@ -183,7 +176,7 @@ func TestMultiAccountGather(t *testing.T) {
 				"load_balancer_name": "p-example2",
 				"account":            "923456789017",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"latency_minimum":      0.1,
 				"latency_maximum":      0.3,
 				"latency_average":      0.2,
@@ -199,9 +192,7 @@ func TestMultiAccountGather(t *testing.T) {
 
 func TestGatherMultipleNamespacesWildcard(t *testing.T) {
 	plugin := &CloudWatch{
-		CredentialConfig: common_aws.CredentialConfig{
-			Region: "us-east-1",
-		},
+		Region:     "us-east-1",
 		Namespaces: []string{"AWS/E*"},
 		Delay:      config.Duration(1 * time.Minute),
 		Period:     config.Duration(1 * time.Minute),
@@ -222,7 +213,7 @@ func TestGatherMultipleNamespacesWildcard(t *testing.T) {
 				"region":             "us-east-1",
 				"load_balancer_name": "p-example1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"latency_minimum":      0.1,
 				"latency_maximum":      0.3,
 				"latency_average":      0.2,
@@ -237,7 +228,7 @@ func TestGatherMultipleNamespacesWildcard(t *testing.T) {
 				"region":             "us-east-1",
 				"load_balancer_name": "p-example2",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"latency_minimum":      0.1,
 				"latency_maximum":      0.3,
 				"latency_average":      0.2,
@@ -252,7 +243,7 @@ func TestGatherMultipleNamespacesWildcard(t *testing.T) {
 				"region":             "us-east-1",
 				"load_balancer_name": "p-example1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"latency_minimum":      0.1,
 				"latency_maximum":      0.3,
 				"latency_average":      0.2,
@@ -267,7 +258,7 @@ func TestGatherMultipleNamespacesWildcard(t *testing.T) {
 				"region":             "us-east-1",
 				"load_balancer_name": "p-example2",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"latency_minimum":      0.1,
 				"latency_maximum":      0.3,
 				"latency_average":      0.2,
@@ -291,9 +282,7 @@ func TestGatherMultipleNamespacesWildcard(t *testing.T) {
 
 func TestGatherMultipleNamespacesExplicitNamespace(t *testing.T) {
 	plugin := &CloudWatch{
-		CredentialConfig: common_aws.CredentialConfig{
-			Region: "us-east-1",
-		},
+		Region:     "us-east-1",
 		Namespaces: []string{"AWS/ELB", "AWS/EC2"},
 		Delay:      config.Duration(1 * time.Minute),
 		Period:     config.Duration(1 * time.Minute),
@@ -314,7 +303,7 @@ func TestGatherMultipleNamespacesExplicitNamespace(t *testing.T) {
 				"region":             "us-east-1",
 				"load_balancer_name": "p-example1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"latency_minimum":      0.1,
 				"latency_maximum":      0.3,
 				"latency_average":      0.2,
@@ -329,7 +318,7 @@ func TestGatherMultipleNamespacesExplicitNamespace(t *testing.T) {
 				"region":             "us-east-1",
 				"load_balancer_name": "p-example2",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"latency_minimum":      0.1,
 				"latency_maximum":      0.3,
 				"latency_average":      0.2,
@@ -344,7 +333,7 @@ func TestGatherMultipleNamespacesExplicitNamespace(t *testing.T) {
 				"region":             "us-east-1",
 				"load_balancer_name": "p-example1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"latency_minimum":      0.1,
 				"latency_maximum":      0.3,
 				"latency_average":      0.2,
@@ -359,7 +348,7 @@ func TestGatherMultipleNamespacesExplicitNamespace(t *testing.T) {
 				"region":             "us-east-1",
 				"load_balancer_name": "p-example2",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"latency_minimum":      0.1,
 				"latency_maximum":      0.3,
 				"latency_average":      0.2,
@@ -383,9 +372,7 @@ func TestGatherMultipleNamespacesExplicitNamespace(t *testing.T) {
 
 func TestSelectMetrics(t *testing.T) {
 	plugin := &CloudWatch{
-		CredentialConfig: common_aws.CredentialConfig{
-			Region: "us-east-1",
-		},
+		Region:     "us-east-1",
 		Namespaces: []string{"AWS/ELB"},
 		Delay:      config.Duration(1 * time.Minute),
 		Period:     config.Duration(1 * time.Minute),
@@ -420,9 +407,7 @@ func TestSelectMetrics(t *testing.T) {
 
 func TestSelectMetricsSummaryOnly(t *testing.T) {
 	plugin := &CloudWatch{
-		CredentialConfig: common_aws.CredentialConfig{
-			Region: "us-east-1",
-		},
+		Region:     "us-east-1",
 		Namespaces: []string{"AWS/ELB"},
 		Delay:      config.Duration(1 * time.Minute),
 		Period:     config.Duration(1 * time.Minute),
@@ -453,9 +438,7 @@ func TestSelectMetricsSummaryOnly(t *testing.T) {
 
 func TestSelectMetricsNoValueMatchesAll(t *testing.T) {
 	plugin := &CloudWatch{
-		CredentialConfig: common_aws.CredentialConfig{
-			Region: "us-east-1",
-		},
+		Region:     "us-east-1",
 		Namespaces: []string{"AWS/ELB"},
 		Delay:      config.Duration(1 * time.Minute),
 		Period:     config.Duration(1 * time.Minute),
@@ -632,9 +615,7 @@ func TestCombineNamespaces(t *testing.T) {
 
 func TestFailedListDoesntCache(t *testing.T) {
 	plugin := &CloudWatch{
-		CredentialConfig: common_aws.CredentialConfig{
-			Region: "us-east-1",
-		},
+		Region:     "us-east-1",
 		Namespaces: []string{"AWS/ELB"},
 		Delay:      config.Duration(1 * time.Minute),
 		Period:     config.Duration(1 * time.Minute),
@@ -700,7 +681,7 @@ func TestFailedListDoesntCache(t *testing.T) {
 				"region":             "us-east-1",
 				"load_balancer_name": "p-example1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"latency_minimum":      0.1,
 				"latency_maximum":      0.3,
 				"latency_average":      0.2,
@@ -715,7 +696,7 @@ func TestFailedListDoesntCache(t *testing.T) {
 				"region":             "us-east-1",
 				"load_balancer_name": "p-example2",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"latency_minimum":      0.1,
 				"latency_maximum":      0.3,
 				"latency_average":      0.2,

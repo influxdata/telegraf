@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -238,11 +239,9 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 			errorLine = scanner.Text()
 		}
 
-		for _, nonRetryableStatusCode := range h.NonRetryableStatusCodes {
-			if resp.StatusCode == nonRetryableStatusCode {
-				h.Log.Errorf("Received non-retryable status %v. Metrics are lost. body: %s", resp.StatusCode, errorLine)
-				return nil
-			}
+		if slices.Contains(h.NonRetryableStatusCodes, resp.StatusCode) {
+			h.Log.Errorf("Received non-retryable status %v. Metrics are lost. body: %s", resp.StatusCode, errorLine)
+			return nil
 		}
 
 		return fmt.Errorf("when writing to [%s] received status code: %d. body: %s", h.URL, resp.StatusCode, errorLine)

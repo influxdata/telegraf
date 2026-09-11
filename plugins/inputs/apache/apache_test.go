@@ -49,7 +49,7 @@ func TestHTTPApache(t *testing.T) {
 	err := acc.GatherError(a.Gather)
 	require.NoError(t, err)
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"TotalAccesses":        float64(1.29811861e+08),
 		"TotalkBytes":          float64(5.213701865e+09),
 		"CPULoad":              float64(6.51929),

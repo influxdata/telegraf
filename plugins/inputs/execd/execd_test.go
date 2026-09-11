@@ -147,7 +147,7 @@ test{handler="execd",quantile="0.5"} 42.0
 		metric.New(
 			"prometheus",
 			map[string]string{"handler": "execd", "quantile": "0.5"},
-			map[string]interface{}{"test": float64(42.0)},
+			map[string]any{"test": float64(42.0)},
 			time.Unix(0, 0),
 		),
 	}
@@ -252,7 +252,7 @@ func TestLoggingNoPrefix(t *testing.T) {
 
 	// Check the metric
 	expected := []telegraf.Metric{
-		metric.New("test", map[string]string{}, map[string]interface{}{"value": int64(0)}, time.Unix(0, 0)),
+		metric.New("test", map[string]string{}, map[string]any{"value": int64(0)}, time.Unix(0, 0)),
 	}
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 
@@ -324,7 +324,7 @@ func TestLoggingWithPrefix(t *testing.T) {
 
 			// Check the metric
 			expected := []telegraf.Metric{
-				metric.New("test", map[string]string{}, map[string]interface{}{"value": int64(0)}, time.Unix(0, 0)),
+				metric.New("test", map[string]string{}, map[string]any{"value": int64(0)}, time.Unix(0, 0)),
 			}
 			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 
@@ -423,7 +423,7 @@ func runCounterProgram() error {
 	for scanner.Scan() {
 		m := metric.New(envMetricName,
 			map[string]string{},
-			map[string]interface{}{"count": i},
+			map[string]any{"count": i},
 			time.Now(),
 		)
 		i++

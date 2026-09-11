@@ -136,7 +136,7 @@ func (q *RangeQuery) execute(ctx context.Context, acc telegraf.Accumulator, t ti
 	return q.convertResult(acc, result)
 }
 
-func (q *query) convertResult(acc telegraf.Accumulator, result interface{}) error {
+func (q *query) convertResult(acc telegraf.Accumulator, result any) error {
 	// Determine the default name
 	name := "logql"
 	if q.Name != "" {
@@ -149,7 +149,7 @@ func (q *query) convertResult(acc telegraf.Accumulator, result interface{}) erro
 			// Cleanup labels
 			maps.DeleteFunc(r.Labels, isInternal)
 
-			fields := map[string]interface{}{"value": r.Value.value}
+			fields := map[string]any{"value": r.Value.value}
 			acc.AddFields(name, fields, r.Labels, r.Value.timestamp)
 		}
 	case []matrix:
@@ -158,7 +158,7 @@ func (q *query) convertResult(acc telegraf.Accumulator, result interface{}) erro
 			maps.DeleteFunc(r.Labels, isInternal)
 
 			for _, v := range r.Values {
-				fields := map[string]interface{}{"value": v.value}
+				fields := map[string]any{"value": v.value}
 				acc.AddFields(name, fields, r.Labels, v.timestamp)
 			}
 		}
@@ -168,7 +168,7 @@ func (q *query) convertResult(acc telegraf.Accumulator, result interface{}) erro
 			maps.DeleteFunc(r.Labels, isInternal)
 
 			for _, v := range r.Lines {
-				fields := map[string]interface{}{"message": v.message}
+				fields := map[string]any{"message": v.message}
 				acc.AddFields(name, fields, r.Labels, v.timestamp)
 			}
 		}

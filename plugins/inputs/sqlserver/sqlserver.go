@@ -90,7 +90,7 @@ type healthMetric struct {
 }
 
 type scanner interface {
-	Scan(dest ...interface{}) error
+	Scan(dest ...any) error
 }
 
 func (*SQLServer) SampleConfig() string {
@@ -347,8 +347,7 @@ func (s *SQLServer) gatherServer(pool *sql.DB, query query, acc telegraf.Accumul
 		serverName, databaseName := getConnectionIdentifiers(connectionString)
 
 		// Error msg based on the format in SSMS. SQLErrorClass() is another term for severity/level: http://msdn.microsoft.com/en-us/library/dd304156.aspx
-		var sqlErr mssql.Error
-		if errors.As(err, &sqlErr) {
+		if sqlErr, ok := errors.AsType[mssql.Error](err); ok {
 			return fmt.Errorf("query %s failed for server: %s and database: %s with Msg %d, Level %d, State %d:, Line %d, Error: %w", query.ScriptName,
 				serverName, databaseName, sqlErr.SQLErrorNumber(), sqlErr.SQLErrorClass(), sqlErr.SQLErrorState(), sqlErr.SQLErrorLineNo(), err)
 		}
@@ -374,15 +373,15 @@ func (s *SQLServer) gatherServer(pool *sql.DB, query query, acc telegraf.Accumul
 }
 
 func (s *SQLServer) accRow(query query, acc telegraf.Accumulator, row scanner) error {
-	var fields = make(map[string]interface{})
+	var fields = make(map[string]any)
 
 	// store the column name with its *interface{}
-	columnMap := make(map[string]*interface{})
+	columnMap := make(map[string]*any)
 	for _, column := range query.OrderedColumns {
-		columnMap[column] = new(interface{})
+		columnMap[column] = new(any)
 	}
 
-	columnVars := make([]interface{}, 0, len(columnMap))
+	columnVars := make([]any, 0, len(columnMap))
 	// populate the array of interface{} with the pointers in the right order
 	for i := 0; i < len(columnMap); i++ {
 		columnVars = append(columnVars, columnMap[query.OrderedColumns[i]])
@@ -414,7 +413,7 @@ func (s *SQLServer) accRow(query query, acc telegraf.Accumulator, row scanner) e
 	if query.ResultByRow {
 		// add measurement to Accumulator
 		acc.AddFields(measurement,
-			map[string]interface{}{"value": *columnMap["value"]},
+			map[string]any{"value": *columnMap["value"]},
 			tags, time.Now())
 	} else {
 		// values
@@ -446,7 +445,7 @@ func (s *SQLServer) accHealth(healthMetrics map[string]*healthMetric, acc telegr
 	for connectionString, connectionStats := range healthMetrics {
 		sqlInstance, databaseName := getConnectionIdentifiers(connectionString)
 		tags := map[string]string{healthMetricInstanceTag: sqlInstance, healthMetricDatabaseTag: databaseName}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			healthMetricAttemptedQueries:  connectionStats.attemptedQueries,
 			healthMetricSuccessfulQueries: connectionStats.successfulQueries,
 			healthMetricDatabaseType:      s.DatabaseType,

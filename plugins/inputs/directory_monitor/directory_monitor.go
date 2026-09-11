@@ -156,11 +156,9 @@ func (monitor *DirectoryMonitor) Start(acc telegraf.Accumulator) error {
 	}()
 
 	// Monitor the files channel and read what they receive.
-	monitor.waitGroup.Add(1)
-	go func() {
+	monitor.waitGroup.Go(func() {
 		monitor.monitor()
-		monitor.waitGroup.Done()
-	}()
+	})
 
 	return nil
 }
@@ -276,8 +274,7 @@ func (monitor *DirectoryMonitor) processFile(path string) {
 func (monitor *DirectoryMonitor) read(filePath string) {
 	// Open, read, and parse the contents of the file.
 	err := monitor.ingestFile(filePath)
-	var pathErr *os.PathError
-	if errors.As(err, &pathErr) {
+	if _, ok := errors.AsType[*os.PathError](err); ok {
 		return
 	}
 

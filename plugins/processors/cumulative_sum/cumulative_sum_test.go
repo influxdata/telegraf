@@ -27,7 +27,7 @@ func TestApply(t *testing.T) {
 				metric.New(
 					"foo",
 					map[string]string{"tag": "some tag"},
-					map[string]interface{}{
+					map[string]any{
 						"healthy":       false,
 						"value":         float64(1.1),
 						"error_counter": int64(10),
@@ -38,7 +38,7 @@ func TestApply(t *testing.T) {
 				metric.New(
 					"bar",
 					map[string]string{"tag": "another tag"},
-					map[string]interface{}{
+					map[string]any{
 						"healthy": true,
 						"value":   float64(4.4),
 					},
@@ -49,7 +49,7 @@ func TestApply(t *testing.T) {
 				metric.New(
 					"foo",
 					map[string]string{"tag": "some tag"},
-					map[string]interface{}{
+					map[string]any{
 						"healthy":           false,
 						"healthy_sum":       float64(0),
 						"value":             float64(1.1),
@@ -63,7 +63,7 @@ func TestApply(t *testing.T) {
 				metric.New(
 					"bar",
 					map[string]string{"tag": "another tag"},
-					map[string]interface{}{
+					map[string]any{
 						"healthy":     true,
 						"healthy_sum": float64(1),
 						"value":       float64(4.4),
@@ -80,7 +80,7 @@ func TestApply(t *testing.T) {
 				metric.New(
 					"foo",
 					map[string]string{"tag": "some tag"},
-					map[string]interface{}{
+					map[string]any{
 						"healthy":       false,
 						"value":         float64(1.1),
 						"error_counter": int64(10),
@@ -91,7 +91,7 @@ func TestApply(t *testing.T) {
 				metric.New(
 					"bar",
 					map[string]string{"tag": "another tag"},
-					map[string]interface{}{
+					map[string]any{
 						"healthy": true,
 						"value":   float64(4.4),
 					},
@@ -102,7 +102,7 @@ func TestApply(t *testing.T) {
 				metric.New(
 					"foo",
 					map[string]string{"tag": "some tag"},
-					map[string]interface{}{
+					map[string]any{
 						"healthy":       false,
 						"value":         float64(1.1),
 						"value_sum":     float64(1.1),
@@ -114,7 +114,7 @@ func TestApply(t *testing.T) {
 				metric.New(
 					"bar",
 					map[string]string{"tag": "another tag"},
-					map[string]interface{}{
+					map[string]any{
 						"healthy":   true,
 						"value":     float64(4.4),
 						"value_sum": float64(4.4),
@@ -130,25 +130,25 @@ func TestApply(t *testing.T) {
 				metric.New(
 					"foo",
 					map[string]string{"tag": "some tag"},
-					map[string]interface{}{"value": float64(1.1)},
+					map[string]any{"value": float64(1.1)},
 					now,
 				),
 				metric.New(
 					"foo",
 					map[string]string{"tag": "another tag"},
-					map[string]interface{}{"value": float64(4.4)},
+					map[string]any{"value": float64(4.4)},
 					now,
 				),
 				metric.New(
 					"foo",
 					map[string]string{"tag": "some tag"},
-					map[string]interface{}{"value": float64(1.1)},
+					map[string]any{"value": float64(1.1)},
 					now.Add(time.Second),
 				),
 				metric.New(
 					"foo",
 					map[string]string{"tag": "some tag"},
-					map[string]interface{}{"value": float64(0.8)},
+					map[string]any{"value": float64(0.8)},
 					now.Add(2*time.Second),
 				),
 			},
@@ -156,7 +156,7 @@ func TestApply(t *testing.T) {
 				metric.New(
 					"foo",
 					map[string]string{"tag": "some tag"},
-					map[string]interface{}{
+					map[string]any{
 						"value":     float64(1.1),
 						"value_sum": float64(1.1),
 					},
@@ -165,7 +165,7 @@ func TestApply(t *testing.T) {
 				metric.New(
 					"foo",
 					map[string]string{"tag": "another tag"},
-					map[string]interface{}{
+					map[string]any{
 						"value":     float64(4.4),
 						"value_sum": float64(4.4),
 					},
@@ -174,7 +174,7 @@ func TestApply(t *testing.T) {
 				metric.New(
 					"foo",
 					map[string]string{"tag": "some tag"},
-					map[string]interface{}{
+					map[string]any{
 						"value":     float64(1.1),
 						"value_sum": float64(2.2),
 					},
@@ -183,7 +183,7 @@ func TestApply(t *testing.T) {
 				metric.New(
 					"foo",
 					map[string]string{"tag": "some tag"},
-					map[string]interface{}{
+					map[string]any{
 						"value":     float64(0.8),
 						"value_sum": float64(3.0),
 					},
@@ -214,13 +214,13 @@ func TestCacheExpiry(t *testing.T) {
 		metric.New(
 			"foo",
 			map[string]string{"tag": "some tag"},
-			map[string]interface{}{"value": float64(1.1)},
+			map[string]any{"value": float64(1.1)},
 			now,
 		),
 		metric.New(
 			"foo",
 			map[string]string{"tag": "another tag"},
-			map[string]interface{}{"value": float64(4.4)},
+			map[string]any{"value": float64(4.4)},
 			now,
 		),
 	}
@@ -245,7 +245,7 @@ func TestCacheExpiry(t *testing.T) {
 		metric.New(
 			"foo",
 			map[string]string{"tag": "some tag"},
-			map[string]interface{}{
+			map[string]any{
 				"value":     float64(1.1),
 				"value_sum": float64(2.1), // init 1 + 1.1 from metric
 			},
@@ -254,7 +254,7 @@ func TestCacheExpiry(t *testing.T) {
 		metric.New(
 			"foo",
 			map[string]string{"tag": "another tag"},
-			map[string]interface{}{
+			map[string]any{
 				"value":     float64(4.4),
 				"value_sum": float64(5.4), // init 1 + 4.4 from metric
 			},
@@ -276,7 +276,7 @@ func TestCacheExpiry(t *testing.T) {
 		metric.New(
 			"foo",
 			map[string]string{"tag": "some tag"},
-			map[string]interface{}{
+			map[string]any{
 				"value":     float64(1.1),
 				"value_sum": float64(3.2), // init 1 + 1.1 + 1.1
 			},
@@ -294,7 +294,7 @@ func TestCacheExpiry(t *testing.T) {
 		metric.New(
 			"foo",
 			map[string]string{"tag": "some tag"},
-			map[string]interface{}{
+			map[string]any{
 				"value":     float64(1.1),
 				"value_sum": float64(4.3),
 			},
@@ -303,7 +303,7 @@ func TestCacheExpiry(t *testing.T) {
 		metric.New(
 			"foo",
 			map[string]string{"tag": "another tag"},
-			map[string]interface{}{
+			map[string]any{
 				"value":     float64(4.4),
 				"value_sum": float64(4.4),
 			},

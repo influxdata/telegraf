@@ -24,7 +24,7 @@ func (*testClient) info() *redis.StringCmd {
 	return nil
 }
 
-func (*testClient) do(string, ...interface{}) (interface{}, error) {
+func (*testClient) do(string, ...any) (any, error) {
 	return 2, nil
 }
 
@@ -67,7 +67,7 @@ func TestRedis_Commands(t *testing.T) {
 	tc := &testClient{}
 
 	rc := &redisCommand{
-		Command: []interface{}{"llen", "test-list"},
+		Command: []any{"llen", "test-list"},
 		Field:   redisListKey,
 		Type:    "integer",
 	}
@@ -80,7 +80,7 @@ func TestRedis_Commands(t *testing.T) {
 	err := r.gatherCommandValues(tc, &acc)
 	require.NoError(t, err)
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		redisListKey: 2,
 	}
 
@@ -96,7 +96,7 @@ func TestRedis_ParseMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	tags = map[string]string{"host": "redis.net", "replication_role": "master"}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"uptime":                          int64(238),
 		"lru_clock":                       int64(2364819),
 		"clients":                         int64(1),
@@ -222,7 +222,7 @@ func TestRedis_ParseMetrics(t *testing.T) {
 		2) // allow for 2 seconds worth of offset
 
 	keyspaceTags := map[string]string{"host": "redis.net", "replication_role": "master", "database": "db0"}
-	keyspaceFields := map[string]interface{}{
+	keyspaceFields := map[string]any{
 		"avg_ttl": int64(0),
 		"expires": int64(0),
 		"keys":    int64(2),
@@ -231,7 +231,7 @@ func TestRedis_ParseMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "redis_keyspace", keyspaceFields, keyspaceTags)
 
 	cmdstatSetTags := map[string]string{"host": "redis.net", "replication_role": "master", "command": "set"}
-	cmdstatSetFields := map[string]interface{}{
+	cmdstatSetFields := map[string]any{
 		"calls":         int64(261265),
 		"usec":          int64(1634157),
 		"usec_per_call": float64(6.25),
@@ -239,7 +239,7 @@ func TestRedis_ParseMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "redis_cmdstat", cmdstatSetFields, cmdstatSetTags)
 
 	cmdstatCommandTags := map[string]string{"host": "redis.net", "replication_role": "master", "command": "command"}
-	cmdstatCommandFields := map[string]interface{}{
+	cmdstatCommandFields := map[string]any{
 		"calls":         int64(1),
 		"usec":          int64(990),
 		"usec_per_call": float64(990.0),
@@ -247,7 +247,7 @@ func TestRedis_ParseMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "redis_cmdstat", cmdstatCommandFields, cmdstatCommandTags)
 
 	cmdstatPublishTags := map[string]string{"host": "redis.net", "replication_role": "master", "command": "publish"}
-	cmdstatPublishFields := map[string]interface{}{
+	cmdstatPublishFields := map[string]any{
 		"calls":          int64(488662),
 		"usec":           int64(8573493),
 		"usec_per_call":  float64(17.54),
@@ -257,7 +257,7 @@ func TestRedis_ParseMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "redis_cmdstat", cmdstatPublishFields, cmdstatPublishTags)
 
 	latencyZaddTags := map[string]string{"host": "redis.net", "replication_role": "master", "command": "zadd"}
-	latencyZaddFields := map[string]interface{}{
+	latencyZaddFields := map[string]any{
 		"p50":   float64(9.023),
 		"p99":   float64(28.031),
 		"p99.9": float64(43.007),
@@ -265,7 +265,7 @@ func TestRedis_ParseMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "redis_latency_percentiles_usec", latencyZaddFields, latencyZaddTags)
 
 	latencyHgetallTags := map[string]string{"host": "redis.net", "replication_role": "master", "command": "hgetall"}
-	latencyHgetallFields := map[string]interface{}{
+	latencyHgetallFields := map[string]any{
 		"p50":   float64(11.007),
 		"p99":   float64(34.047),
 		"p99.9": float64(66.047),
@@ -280,7 +280,7 @@ func TestRedis_ParseMetrics(t *testing.T) {
 		"replica_port":     "7379",
 		"state":            "online",
 	}
-	replicationFields := map[string]interface{}{
+	replicationFields := map[string]any{
 		"lag":    int64(0),
 		"offset": int64(4556468),
 	}
@@ -295,7 +295,7 @@ func TestRedis_ParseMetrics(t *testing.T) {
 		"replica_port":     "8379",
 		"state":            "send_bulk",
 	}
-	replicationFields = map[string]interface{}{
+	replicationFields = map[string]any{
 		"lag":    int64(1),
 		"offset": int64(0),
 	}
@@ -303,7 +303,7 @@ func TestRedis_ParseMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "redis_replication", replicationFields, replicationTags)
 
 	errorStatsTags := map[string]string{"host": "redis.net", "replication_role": "master", "err": "MOVED"}
-	errorStatsFields := map[string]interface{}{"total": int64(3628)}
+	errorStatsFields := map[string]any{"total": int64(3628)}
 
 	acc.AssertContainsTaggedFields(t, "redis_errorstat", errorStatsFields, errorStatsTags)
 }

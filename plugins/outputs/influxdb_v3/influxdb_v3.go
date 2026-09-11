@@ -122,11 +122,7 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 func init() {
 	outputs.Add("influxdb_v3", func() telegraf.Output {
 		return &InfluxDB{
-			clientConfig: clientConfig{
-				HTTPClientConfig: common_http.HTTPClientConfig{
-					Timeout: config.Duration(5 * time.Second),
-				},
-			},
+			Timeout: config.Duration(5 * time.Second),
 		}
 	})
 }

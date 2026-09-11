@@ -42,7 +42,7 @@ func TestFireboard(t *testing.T) {
 	require.NoError(t, err)
 
 	// Expect the correct values for all known keys
-	expectFields := map[string]interface{}{
+	expectFields := map[string]any{
 		"temperature": float64(79.9),
 	}
 	// Expect the correct values for all tags

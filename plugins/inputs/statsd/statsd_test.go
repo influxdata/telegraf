@@ -221,16 +221,14 @@ func BenchmarkUDPThreads4(b *testing.B) {
 
 	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for i := 0; i < 1000; i++ {
+		wg.Go(func() {
+			for range 1000 {
 				if _, err := conn.Write([]byte(testMsg)); err != nil {
 					b.Error(err)
 					return
 				}
 			}
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -259,16 +257,14 @@ func BenchmarkUDPThreads8(b *testing.B) {
 
 	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for i := 0; i < 1000; i++ {
+		wg.Go(func() {
+			for range 1000 {
 				if _, err := conn.Write([]byte(testMsg)); err != nil {
 					b.Error(err)
 					return
 				}
 			}
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -297,16 +293,14 @@ func BenchmarkUDPThreads16(b *testing.B) {
 
 	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for i := 0; i < 1000; i++ {
+		wg.Go(func() {
+			for range 1000 {
 				if _, err := conn.Write([]byte(testMsg)); err != nil {
 					b.Error(err)
 					return
 				}
 			}
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -319,7 +313,7 @@ func BenchmarkUDPThreads16(b *testing.B) {
 
 func sendRequests(conn net.Conn, wg *sync.WaitGroup) {
 	defer wg.Done()
-	for i := 0; i < 25000; i++ {
+	for range 25000 {
 		fmt.Fprint(conn, testMsg)
 	}
 }
@@ -542,7 +536,7 @@ func TestParse_Sets_SetsAsFloat(t *testing.T) {
 		metric.New(
 			"unique_user_ids",
 			map[string]string{"metric_type": "set"},
-			map[string]interface{}{"value": 2.0},
+			map[string]any{"value": 2.0},
 			time.Now(),
 			telegraf.Untyped,
 		),
@@ -680,42 +674,42 @@ func TestParse_CountersAsFloat(t *testing.T) {
 		metric.New(
 			"small_inc",
 			map[string]string{"metric_type": "counter"},
-			map[string]interface{}{"value": 2.0},
+			map[string]any{"value": 2.0},
 			time.Now(),
 			telegraf.Counter,
 		),
 		metric.New(
 			"big_inc",
 			map[string]string{"metric_type": "counter"},
-			map[string]interface{}{"value": 1100101.0},
+			map[string]any{"value": 1100101.0},
 			time.Now(),
 			telegraf.Counter,
 		),
 		metric.New(
 			"zero_init",
 			map[string]string{"metric_type": "counter"},
-			map[string]interface{}{"value": 0.0},
+			map[string]any{"value": 0.0},
 			time.Now(),
 			telegraf.Counter,
 		),
 		metric.New(
 			"sample_rate",
 			map[string]string{"metric_type": "counter"},
-			map[string]interface{}{"value": 11.0},
+			map[string]any{"value": 11.0},
 			time.Now(),
 			telegraf.Counter,
 		),
 		metric.New(
 			"scientific_notation",
 			map[string]string{"metric_type": "counter"},
-			map[string]interface{}{"value": 469600.0},
+			map[string]any{"value": 469600.0},
 			time.Now(),
 			telegraf.Counter,
 		),
 		metric.New(
 			"negative_test",
 			map[string]string{"metric_type": "counter"},
-			map[string]interface{}{"value": 95.0},
+			map[string]any{"value": 95.0},
 			time.Now(),
 			telegraf.Counter,
 		),
@@ -753,7 +747,7 @@ func TestParse_Timings(t *testing.T) {
 
 	require.NoError(t, s.Gather(acc))
 
-	valid := map[string]interface{}{
+	valid := map[string]any{
 		"90_percentile": float64(11),
 		"count":         int64(5),
 		"lower":         float64(1),
@@ -788,7 +782,7 @@ func TestParse_Timings_TimingsAsFloat(t *testing.T) {
 
 	require.NoError(t, s.Gather(acc))
 
-	valid := map[string]interface{}{
+	valid := map[string]any{
 		"90_percentile": float64(100),
 		"count":         float64(1),
 		"lower":         float64(100),
@@ -853,7 +847,7 @@ func TestParse_Distributions(t *testing.T) {
 	s.DataDogExtensions = true
 	parseMetrics()
 	for key, value := range validMeasurementMap {
-		field := map[string]interface{}{
+		field := map[string]any{
 			"value": value,
 		}
 		acc.AssertContainsFields(t, key, field)
@@ -1265,7 +1259,7 @@ func TestParse_DataDogTags(t *testing.T) {
 						"host":        "localhost",
 						"metric_type": "counter",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 1,
 					},
 					time.Now(),
@@ -1283,7 +1277,7 @@ func TestParse_DataDogTags(t *testing.T) {
 						"live":        "true",
 						"metric_type": "gauge",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 10.1,
 					},
 					time.Now(),
@@ -1301,7 +1295,7 @@ func TestParse_DataDogTags(t *testing.T) {
 						"host":        "localhost",
 						"metric_type": "set",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 1,
 					},
 					time.Now(),
@@ -1319,7 +1313,7 @@ func TestParse_DataDogTags(t *testing.T) {
 						"live":        "true",
 						"metric_type": "timing",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"count":  10,
 						"lower":  float64(3),
 						"mean":   float64(3),
@@ -1341,7 +1335,7 @@ func TestParse_DataDogTags(t *testing.T) {
 					map[string]string{
 						"metric_type": "counter",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42,
 					},
 					time.Now(),
@@ -1390,7 +1384,7 @@ func TestParse_DataDogContainerID(t *testing.T) {
 						"metric_type": "counter",
 						"container":   "f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 1,
 					},
 					time.Now(),
@@ -1410,7 +1404,7 @@ func TestParse_DataDogContainerID(t *testing.T) {
 						"metric_type": "gauge",
 						"container":   "f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 10.1,
 					},
 					time.Now(),
@@ -1430,7 +1424,7 @@ func TestParse_DataDogContainerID(t *testing.T) {
 						"metric_type": "set",
 						"container":   "f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 1,
 					},
 					time.Now(),
@@ -1450,7 +1444,7 @@ func TestParse_DataDogContainerID(t *testing.T) {
 						"metric_type": "timing",
 						"container":   "f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"count":  10,
 						"lower":  float64(3),
 						"mean":   float64(3),
@@ -1474,7 +1468,7 @@ func TestParse_DataDogContainerID(t *testing.T) {
 						"metric_type": "counter",
 						"container":   "f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42,
 					},
 					time.Now(),
@@ -1494,7 +1488,7 @@ func TestParse_DataDogContainerID(t *testing.T) {
 						"live":        "true",
 						"metric_type": "counter",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42,
 					},
 					time.Now(),
@@ -1636,7 +1630,7 @@ func TestCachesExpireAfterMaxTTL(t *testing.T) {
 				map[string]string{
 					"metric_type": "counter",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"value": 90,
 				},
 				time.Now(),
@@ -1647,7 +1641,7 @@ func TestCachesExpireAfterMaxTTL(t *testing.T) {
 				map[string]string{
 					"metric_type": "counter",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"value": 90,
 				},
 				time.Now(),
@@ -1658,7 +1652,7 @@ func TestCachesExpireAfterMaxTTL(t *testing.T) {
 				map[string]string{
 					"metric_type": "counter",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"value": 45,
 				},
 				time.Now(),
@@ -1795,7 +1789,7 @@ func TestParse_TimingsMultipleFieldsWithTemplate(t *testing.T) {
 	}
 	require.NoError(t, s.Gather(acc))
 
-	valid := map[string]interface{}{
+	valid := map[string]any{
 		"success_90_percentile": float64(11),
 		"success_count":         int64(5),
 		"success_lower":         float64(1),
@@ -1849,7 +1843,7 @@ func TestParse_TimingsMultipleFieldsWithoutTemplate(t *testing.T) {
 	}
 	require.NoError(t, s.Gather(acc))
 
-	expectedSuccess := map[string]interface{}{
+	expectedSuccess := map[string]any{
 		"90_percentile": float64(11),
 		"count":         int64(5),
 		"lower":         float64(1),
@@ -1859,7 +1853,7 @@ func TestParse_TimingsMultipleFieldsWithoutTemplate(t *testing.T) {
 		"sum":           float64(15),
 		"upper":         float64(11),
 	}
-	expectedError := map[string]interface{}{
+	expectedError := map[string]any{
 		"90_percentile": float64(22),
 		"count":         int64(5),
 		"lower":         float64(2),
@@ -2253,7 +2247,7 @@ func TestTCP(t *testing.T) {
 				map[string]string{
 					"metric_type": "counter",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42,
 				},
 				time.Now(),
@@ -2298,7 +2292,7 @@ func TestUdp(t *testing.T) {
 				map[string]string{
 					"metric_type": "counter",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42,
 				},
 				time.Now(),
@@ -2326,7 +2320,7 @@ func TestUdpFillQueue(t *testing.T) {
 	conn, err := net.Dial("udp", plugin.UDPlistener.LocalAddr().String())
 	require.NoError(t, err)
 	numberToSend := plugin.AllowedPendingMessages
-	for i := 0; i < numberToSend; i++ {
+	for i := range numberToSend {
 		_, _ = fmt.Fprintf(conn, "cpu.time_idle:%d|c\n", i)
 	}
 	require.NoError(t, conn.Close())
@@ -2489,7 +2483,7 @@ func TestParse_InvalidAndRecoverIntegration(t *testing.T) {
 			map[string]string{
 				"metric_type": "counter",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42,
 			},
 			time.Now(),
@@ -2539,7 +2533,7 @@ func TestParse_DeltaCounter(t *testing.T) {
 				"metric_type": "counter",
 				"temporality": "delta",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42,
 			},
 			time.Now(),

@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"maps"
 	"math"
 	"net"
 	"net/http"
@@ -135,16 +136,14 @@ func (cms *CloudWatchMetricStreams) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	cms.wg.Add(1)
-	go func() {
-		defer cms.wg.Done()
+	cms.wg.Go(func() {
 		if err := server.Serve(cms.listener); err != nil {
 			if !errors.Is(err, net.ErrClosed) {
 				cms.Log.Errorf("Serve failed: %v", err)
 			}
 			close(cms.close)
 		}
-	}()
+	})
 
 	cms.Log.Infof("Listening on %s", cms.listener.Addr().String())
 
@@ -331,7 +330,7 @@ func (cms *CloudWatchMetricStreams) serveWrite(res http.ResponseWriter, req *htt
 }
 
 func (cms *CloudWatchMetricStreams) composeMetrics(data data) {
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	tags := make(map[string]string)
 	timestamp := time.Unix(data.Timestamp/1000, 0)
 
@@ -363,9 +362,7 @@ func (cms *CloudWatchMetricStreams) composeMetrics(data data) {
 	tags["accountId"] = data.AccountID
 	tags["region"] = data.Region
 
-	for dimension, value := range data.Dimensions {
-		tags[dimension] = value
-	}
+	maps.Copy(tags, data.Dimensions)
 
 	cms.acc.AddFields(measurement, fields, tags, timestamp)
 }

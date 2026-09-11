@@ -30,7 +30,7 @@ func TestServiceCheckGather(t *testing.T) {
 						"check_name": "my.service.check",
 						"source":     "default-hostname",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status":      int64(0),
 						"status_text": "ok",
 					},
@@ -49,7 +49,7 @@ func TestServiceCheckGather(t *testing.T) {
 						"check_name": "jmxfetch-config.can_connect",
 						"source":     "default-hostname",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status":      int64(1),
 						"status_text": "warning",
 					},
@@ -68,7 +68,7 @@ func TestServiceCheckGather(t *testing.T) {
 						"check_name": "disk.check",
 						"source":     "default-hostname",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status":      int64(2),
 						"status_text": "critical",
 					},
@@ -87,7 +87,7 @@ func TestServiceCheckGather(t *testing.T) {
 						"check_name": "network.check",
 						"source":     "default-hostname",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status":      int64(3),
 						"status_text": "unknown",
 					},
@@ -106,7 +106,7 @@ func TestServiceCheckGather(t *testing.T) {
 						"check_name": "my.check",
 						"source":     "default-hostname",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status":      int64(0),
 						"status_text": "ok",
 						"message":     "Service is healthy",
@@ -126,7 +126,7 @@ func TestServiceCheckGather(t *testing.T) {
 						"check_name": "my.check",
 						"source":     "custom-host",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status":      int64(0),
 						"status_text": "ok",
 					},
@@ -147,7 +147,7 @@ func TestServiceCheckGather(t *testing.T) {
 						"env":        "prod",
 						"service":    "web",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status":      int64(0),
 						"status_text": "ok",
 					},
@@ -168,7 +168,7 @@ func TestServiceCheckGather(t *testing.T) {
 						"env":        "test",
 						"region":     "us-west",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status":      int64(2),
 						"status_text": "critical",
 						"message":     "Connection failed",
@@ -188,7 +188,7 @@ func TestServiceCheckGather(t *testing.T) {
 						"check_name": "my.check",
 						"source":     "default-hostname",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status":      int64(1),
 						"status_text": "warning",
 						"message":     "Line1\nLine2",
@@ -208,7 +208,7 @@ func TestServiceCheckGather(t *testing.T) {
 						"check_name": "my.check",
 						"source":     "taghost",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status":      int64(0),
 						"status_text": "ok",
 					},
@@ -227,7 +227,7 @@ func TestServiceCheckGather(t *testing.T) {
 						"check_name": "my.check",
 						"source":     "default-hostname",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status":      int64(0),
 						"status_text": "ok",
 					},
@@ -245,7 +245,7 @@ func TestServiceCheckGather(t *testing.T) {
 					map[string]string{
 						"check_name": "my.check",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status":      int64(0),
 						"status_text": "ok",
 					},
@@ -312,7 +312,7 @@ func TestEventGather(t *testing.T) {
 	type expected struct {
 		title  string
 		tags   map[string]string
-		fields map[string]interface{}
+		fields map[string]any
 	}
 	tests := []struct {
 		name     string
@@ -330,7 +330,7 @@ func TestEventGather(t *testing.T) {
 		expected: expected{
 			title: "test title",
 			tags:  map[string]string{"source": "default-hostname"},
-			fields: map[string]interface{}{
+			fields: map[string]any{
 				"priority":   priorityNormal,
 				"alert_type": "info",
 				"text":       "test text",
@@ -346,7 +346,7 @@ func TestEventGather(t *testing.T) {
 			expected: expected{
 				title: "test title",
 				tags:  map[string]string{"source": "default-hostname"},
-				fields: map[string]interface{}{
+				fields: map[string]any{
 					"priority":   priorityNormal,
 					"alert_type": "info",
 					"text":       "test\\line1\nline2\nline3",
@@ -362,7 +362,7 @@ func TestEventGather(t *testing.T) {
 			expected: expected{
 				title: "test title",
 				tags:  map[string]string{"source": "default-hostname"},
-				fields: map[string]interface{}{
+				fields: map[string]any{
 					"priority":   priorityNormal,
 					"alert_type": "info",
 					"text":       "test text",
@@ -407,14 +407,14 @@ func TestEvents(t *testing.T) {
 	}
 	type expected struct {
 		title          string
-		text           interface{}
+		text           any
 		now            time.Time
-		ts             interface{}
+		ts             any
 		priority       string
 		source         string
-		alertType      interface{}
+		alertType      any
 		aggregationKey string
-		sourceTypeName interface{}
+		sourceTypeName any
 		checkTags      map[string]string
 	}
 

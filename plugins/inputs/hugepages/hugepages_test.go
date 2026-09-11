@@ -61,7 +61,7 @@ func TestGather(t *testing.T) {
 		acc := &testutil.Accumulator{}
 		require.NoError(t, h.Gather(acc))
 
-		expectedFields := map[string]interface{}{
+		expectedFields := map[string]any{
 			"free":       883,
 			"reserved":   0,
 			"surplus":    0,
@@ -71,7 +71,7 @@ func TestGather(t *testing.T) {
 		}
 		acc.AssertContainsTaggedFields(t, "hugepages_root", expectedFields, map[string]string{"size_kb": "2048"})
 
-		expectedFields = map[string]interface{}{
+		expectedFields = map[string]any{
 			"free":       0,
 			"reserved":   0,
 			"surplus":    0,
@@ -91,28 +91,28 @@ func TestGather(t *testing.T) {
 		acc := &testutil.Accumulator{}
 		require.NoError(t, h.Gather(acc))
 
-		expectedFields := map[string]interface{}{
+		expectedFields := map[string]any{
 			"free":    434,
 			"surplus": 0,
 			"total":   1024,
 		}
 		acc.AssertContainsTaggedFields(t, "hugepages_per_node", expectedFields, map[string]string{"size_kb": "2048", "node": "0"})
 
-		expectedFields = map[string]interface{}{
+		expectedFields = map[string]any{
 			"free":    449,
 			"surplus": 0,
 			"total":   1024,
 		}
 		acc.AssertContainsTaggedFields(t, "hugepages_per_node", expectedFields, map[string]string{"size_kb": "2048", "node": "1"})
 
-		expectedFields = map[string]interface{}{
+		expectedFields = map[string]any{
 			"free":    0,
 			"surplus": 0,
 			"total":   4,
 		}
 		acc.AssertContainsTaggedFields(t, "hugepages_per_node", expectedFields, map[string]string{"size_kb": "1048576", "node": "0"})
 
-		expectedFields = map[string]interface{}{
+		expectedFields = map[string]any{
 			"free":    0,
 			"surplus": 0,
 			"total":   4,
@@ -129,7 +129,7 @@ func TestGather(t *testing.T) {
 		acc := &testutil.Accumulator{}
 		require.NoError(t, h.Gather(acc))
 
-		expectedFields := map[string]interface{}{
+		expectedFields := map[string]any{
 			"anonymous_kb": 0,
 			"shared_kb":    0,
 			"file_kb":      0,

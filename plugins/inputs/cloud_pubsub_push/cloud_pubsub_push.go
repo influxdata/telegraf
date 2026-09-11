@@ -110,15 +110,11 @@ func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
 	p.undelivered = make(map[telegraf.TrackingID]chan bool)
 	p.mu = &sync.Mutex{}
 
-	p.wg.Add(1)
-	go func() {
-		defer p.wg.Done()
+	p.wg.Go(func() {
 		p.receiveDelivered()
-	}()
+	})
 
-	p.wg.Add(1)
-	go func() {
-		defer p.wg.Done()
+	p.wg.Go(func() {
 		if tlsConf != nil {
 			if err := p.server.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
 				p.Log.Errorf("listening and serving TLS failed: %v", err)
@@ -128,7 +124,7 @@ func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
 				p.Log.Errorf("listening and serving TLS failed: %v", err)
 			}
 		}
-	}()
+	})
 
 	return nil
 }

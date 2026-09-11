@@ -24,7 +24,7 @@ func newLineProtocolConverter(acc telegraf.Accumulator) *lineProtocolConverter {
 // it takes a trace as input, and adds it to an internal telegraf.Accumulator.
 func (l *lineProtocolConverter) record(t trace.Trace) error {
 	for _, s := range t {
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"duration_ns": s.Duration.Nanoseconds(),
 		}
 

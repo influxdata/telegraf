@@ -276,7 +276,7 @@ func (s *MongoDB) writeIndividual(ctx context.Context, metrics []telegraf.Metric
 
 func (s *MongoDB) writeBatch(ctx context.Context, metrics []telegraf.Metric) error {
 	// Collect metrics by name
-	batches := make(map[string][]interface{})
+	batches := make(map[string][]any)
 	for _, m := range metrics {
 		name := m.Name()
 		batches[name] = append(batches[name], s.marshal(m))

@@ -51,7 +51,7 @@ func TestGetExitCode(t *testing.T) {
 type metricBuilder struct {
 	name      string
 	tags      map[string]string
-	fields    map[string]interface{}
+	fields    map[string]any
 	timestamp time.Time
 }
 
@@ -64,9 +64,9 @@ func (b *metricBuilder) n(v string) *metricBuilder {
 	return b
 }
 
-func (b *metricBuilder) f(k string, v interface{}) *metricBuilder {
+func (b *metricBuilder) f(k string, v any) *metricBuilder {
 	if b.fields == nil {
-		b.fields = make(map[string]interface{})
+		b.fields = make(map[string]any)
 	}
 	b.fields[k] = v
 	return b
@@ -81,7 +81,7 @@ func (b *metricBuilder) b() telegraf.Metric {
 // of the entries matters.
 func assertEqual(t *testing.T, exp, actual []telegraf.Metric) {
 	require.Len(t, actual, len(exp))
-	for i := 0; i < len(exp); i++ {
+	for i := range exp {
 		ok := testutil.MetricEqual(exp[i], actual[i])
 		require.True(t, ok)
 	}
@@ -209,7 +209,7 @@ func TestTryAddState(t *testing.T) {
 	}
 }
 
-func assertNagiosState(t *testing.T, m telegraf.Metric, f map[string]interface{}) {
+func assertNagiosState(t *testing.T, m telegraf.Metric, f map[string]any) {
 	require.Equal(t, map[string]string{}, m.Tags())
 	require.Equal(t, f, m.Fields())
 }
@@ -234,7 +234,7 @@ with three lines
 					"unit":     "ms",
 					"perfdata": "rta",
 				}, metrics[0].Tags())
-				require.Equal(t, map[string]interface{}{
+				require.Equal(t, map[string]any{
 					"value":       float64(0.298),
 					"warning_lt":  float64(0),
 					"warning_gt":  float64(4000),
@@ -248,7 +248,7 @@ with three lines
 					"unit":     "%",
 					"perfdata": "pl",
 				}, metrics[1].Tags())
-				require.Equal(t, map[string]interface{}{
+				require.Equal(t, map[string]any{
 					"value":       float64(0),
 					"warning_lt":  float64(0),
 					"warning_gt":  float64(80),
@@ -258,7 +258,7 @@ with three lines
 					"max":         float64(100),
 				}, metrics[1].Fields())
 
-				assertNagiosState(t, metrics[2], map[string]interface{}{
+				assertNagiosState(t, metrics[2], map[string]any{
 					"service_output":      "PING OK - Packet loss = 0%, RTA = 0.30 ms",
 					"long_service_output": "This is a long output\nwith three lines",
 				})
@@ -275,13 +275,13 @@ with three lines
 					"unit":     "s",
 					"perfdata": "time",
 				}, metrics[0].Tags())
-				require.Equal(t, map[string]interface{}{
+				require.Equal(t, map[string]any{
 					"value": float64(0.008457),
 					"min":   float64(0),
 					"max":   float64(10),
 				}, metrics[0].Fields())
 
-				assertNagiosState(t, metrics[1], map[string]interface{}{
+				assertNagiosState(t, metrics[1], map[string]any{
 					"service_output": "TCP OK - 0.008 second response time on port 80",
 				})
 			},
@@ -296,11 +296,11 @@ with three lines
 				require.Equal(t, map[string]string{
 					"perfdata": "time",
 				}, metrics[0].Tags())
-				require.Equal(t, map[string]interface{}{
+				require.Equal(t, map[string]any{
 					"value": float64(0.008457),
 				}, metrics[0].Fields())
 
-				assertNagiosState(t, metrics[1], map[string]interface{}{
+				assertNagiosState(t, metrics[1], map[string]any{
 					"service_output": "TCP OK - 0.008 second response time on port 80",
 				})
 			},
@@ -315,7 +315,7 @@ with three lines
 				require.Equal(t, map[string]string{
 					"perfdata": "load1",
 				}, metrics[0].Tags())
-				require.Equal(t, map[string]interface{}{
+				require.Equal(t, map[string]any{
 					"value":       float64(0.00),
 					"warning_lt":  MinFloat64,
 					"warning_gt":  float64(4),
@@ -328,7 +328,7 @@ with three lines
 				require.Equal(t, map[string]string{
 					"perfdata": "load5",
 				}, metrics[1].Tags())
-				require.Equal(t, map[string]interface{}{
+				require.Equal(t, map[string]any{
 					"value":       float64(0.01),
 					"warning_gt":  float64(3),
 					"warning_lt":  float64(0),
@@ -341,7 +341,7 @@ with three lines
 				require.Equal(t, map[string]string{
 					"perfdata": "load15",
 				}, metrics[2].Tags())
-				require.Equal(t, map[string]interface{}{
+				require.Equal(t, map[string]any{
 					"value":       float64(0.05),
 					"warning_lt":  float64(0),
 					"warning_gt":  float64(2),
@@ -350,7 +350,7 @@ with three lines
 					"min":         float64(0),
 				}, metrics[2].Fields())
 
-				assertNagiosState(t, metrics[3], map[string]interface{}{
+				assertNagiosState(t, metrics[3], map[string]any{
 					"service_output": "OK: Load average: 0.00, 0.01, 0.05",
 				})
 			},
@@ -362,7 +362,7 @@ with three lines
 				require.NoError(t, err)
 				require.Len(t, metrics, 1)
 
-				assertNagiosState(t, metrics[0], map[string]interface{}{
+				assertNagiosState(t, metrics[0], map[string]any{
 					"service_output": "PING OK - Packet loss = 0%, RTA = 0.30 ms",
 				})
 			},
@@ -374,7 +374,7 @@ with three lines
 				require.NoError(t, err)
 				require.Len(t, metrics, 1)
 
-				assertNagiosState(t, metrics[0], map[string]interface{}{
+				assertNagiosState(t, metrics[0], map[string]any{
 					"service_output": "PING OK - Packet loss = 0%, RTA = 0.30 ms",
 				})
 			},
@@ -397,7 +397,7 @@ with three lines
 					"unit":     "MB",
 					"perfdata": "/",
 				}, metrics[0].Tags())
-				require.Equal(t, map[string]interface{}{
+				require.Equal(t, map[string]any{
 					"value":       float64(2643),
 					"warning_lt":  float64(0),
 					"warning_gt":  float64(5948),
@@ -412,7 +412,7 @@ with three lines
 					"unit":     "MB",
 					"perfdata": "/boot",
 				}, metrics[1].Tags())
-				require.Equal(t, map[string]interface{}{
+				require.Equal(t, map[string]any{
 					"value":       float64(68),
 					"warning_lt":  float64(0),
 					"warning_gt":  float64(88),
@@ -427,7 +427,7 @@ with three lines
 					"unit":     "MB",
 					"perfdata": "/home",
 				}, metrics[2].Tags())
-				require.Equal(t, map[string]interface{}{
+				require.Equal(t, map[string]any{
 					"value":       float64(69357),
 					"warning_lt":  float64(0),
 					"warning_gt":  float64(253404),
@@ -442,7 +442,7 @@ with three lines
 					"unit":     "MB",
 					"perfdata": "/var/log",
 				}, metrics[3].Tags())
-				require.Equal(t, map[string]interface{}{
+				require.Equal(t, map[string]any{
 					"value":       float64(818),
 					"warning_lt":  float64(0),
 					"warning_gt":  float64(970),
@@ -452,7 +452,7 @@ with three lines
 					"max":         float64(980),
 				}, metrics[3].Fields())
 
-				assertNagiosState(t, metrics[4], map[string]interface{}{
+				assertNagiosState(t, metrics[4], map[string]any{
 					"service_output":      "DISK OK - free space: / 3326 MB (56%);",
 					"long_service_output": "/ 15272 MB (77%);\n/boot 68 MB (69%);\n/home 69357 MB (27%);\n/var/log 819 MB (84%);",
 				})
@@ -539,7 +539,7 @@ func TestBenchmarkData(t *testing.T) {
 				"perfdata": "/",
 				"unit":     "MB",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"critical_gt": 5958.0,
 				"critical_lt": 0.0,
 				"min":         0.0,
@@ -553,7 +553,7 @@ func TestBenchmarkData(t *testing.T) {
 		metric.New(
 			"nagios_state",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"long_service_output": "/ 15272 MB (77%);\n/boot 68 MB (69%);",
 				"service_output":      "DISK OK - free space: / 3326 MB (56%);",
 			},

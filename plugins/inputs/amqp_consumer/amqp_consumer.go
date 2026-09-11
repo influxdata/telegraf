@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"math/rand"
 	"strings"
 	"sync"
@@ -31,28 +32,28 @@ type externalAuth struct{}
 type semaphore chan empty
 
 type AMQPConsumer struct {
-	Brokers                []string               `toml:"brokers"`
-	Username               config.Secret          `toml:"username"`
-	Password               config.Secret          `toml:"password"`
-	Exchange               string                 `toml:"exchange"`
-	ExchangeType           string                 `toml:"exchange_type"`
-	ExchangeDurability     string                 `toml:"exchange_durability"`
-	ExchangePassive        bool                   `toml:"exchange_passive"`
-	ExchangeArguments      map[string]string      `toml:"exchange_arguments"`
-	MaxUndeliveredMessages int                    `toml:"max_undelivered_messages"`
-	Queue                  string                 `toml:"queue"`
-	QueueDurability        string                 `toml:"queue_durability"`
-	QueuePassive           bool                   `toml:"queue_passive"`
-	QueueArguments         map[string]interface{} `toml:"queue_arguments"`
-	QueueConsumeArguments  map[string]string      `toml:"queue_consume_arguments"`
-	BindingKey             string                 `toml:"binding_key"`
-	PrefetchCount          int                    `toml:"prefetch_count"`
-	AuthMethod             string                 `toml:"auth_method"`
-	ContentEncoding        string                 `toml:"content_encoding"`
-	MaxDecompressionSize   config.Size            `toml:"max_decompression_size"`
-	Timeout                config.Duration        `toml:"timeout"`
-	Heartbeat              config.Duration        `toml:"heartbeat"`
-	Log                    telegraf.Logger        `toml:"-"`
+	Brokers                []string          `toml:"brokers"`
+	Username               config.Secret     `toml:"username"`
+	Password               config.Secret     `toml:"password"`
+	Exchange               string            `toml:"exchange"`
+	ExchangeType           string            `toml:"exchange_type"`
+	ExchangeDurability     string            `toml:"exchange_durability"`
+	ExchangePassive        bool              `toml:"exchange_passive"`
+	ExchangeArguments      map[string]string `toml:"exchange_arguments"`
+	MaxUndeliveredMessages int               `toml:"max_undelivered_messages"`
+	Queue                  string            `toml:"queue"`
+	QueueDurability        string            `toml:"queue_durability"`
+	QueuePassive           bool              `toml:"queue_passive"`
+	QueueArguments         map[string]any    `toml:"queue_arguments"`
+	QueueConsumeArguments  map[string]string `toml:"queue_consume_arguments"`
+	BindingKey             string            `toml:"binding_key"`
+	PrefetchCount          int               `toml:"prefetch_count"`
+	AuthMethod             string            `toml:"auth_method"`
+	ContentEncoding        string            `toml:"content_encoding"`
+	MaxDecompressionSize   config.Size       `toml:"max_decompression_size"`
+	Timeout                config.Duration   `toml:"timeout"`
+	Heartbeat              config.Duration   `toml:"heartbeat"`
+	Log                    telegraf.Logger   `toml:"-"`
 	tls.ClientConfig
 
 	deliveries map[telegraf.TrackingID]amqp.Delivery
@@ -146,9 +147,7 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 		a.process(processingCtx, msgs, acc)
 	}()
 
-	a.wg.Add(1)
-	go func() {
-		defer a.wg.Done()
+	a.wg.Go(func() {
 		for {
 			select {
 			case <-ctx.Done():
@@ -188,7 +187,7 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 			}
 			a.Log.Info("Successfully reconnected")
 		}
-	}()
+	})
 
 	return nil
 }
@@ -400,9 +399,7 @@ func (a *AMQPConsumer) declareQueue(channel *amqp.Channel) (*amqp.Queue, error) 
 	}
 
 	queueArgs := make(amqp.Table, len(a.QueueArguments))
-	for k, v := range a.QueueArguments {
-		queueArgs[k] = v
-	}
+	maps.Copy(queueArgs, a.QueueArguments)
 
 	if a.QueuePassive {
 		queue, err = channel.QueueDeclarePassive(

@@ -2,16 +2,14 @@
 // plugin options that must be one of several values.
 package choice
 
-import "fmt"
+import (
+	"fmt"
+	"slices"
+)
 
 // Contains return true if the choice in the list of choices.
 func Contains(choice string, choices []string) bool {
-	for _, item := range choices {
-		if item == choice {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(choices, choice)
 }
 
 // Check returns an error if a choice is not one of

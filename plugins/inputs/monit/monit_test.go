@@ -47,7 +47,7 @@ func TestServiceType(t *testing.T) {
 						"monitoring_mode":   "active",
 						"pending_action":    "none",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_code":            0,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   0,
@@ -80,7 +80,7 @@ func TestServiceType(t *testing.T) {
 						"monitoring_mode":   "active",
 						"pending_action":    "none",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_code":            0,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   0,
@@ -107,7 +107,7 @@ func TestServiceType(t *testing.T) {
 						"monitoring_mode":   "active",
 						"pending_action":    "none",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_code":            0,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   0,
@@ -135,7 +135,7 @@ func TestServiceType(t *testing.T) {
 						"monitoring_mode":   "active",
 						"pending_action":    "none",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_code":            0,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   0,
@@ -171,7 +171,7 @@ func TestServiceType(t *testing.T) {
 						"monitoring_mode":   "active",
 						"pending_action":    "none",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_code":            0,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   0,
@@ -203,7 +203,7 @@ func TestServiceType(t *testing.T) {
 						"monitoring_mode":   "active",
 						"pending_action":    "none",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_code":            0,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   0,
@@ -239,7 +239,7 @@ func TestServiceType(t *testing.T) {
 						"monitoring_mode":   "active",
 						"pending_action":    "none",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_code":            0,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   0,
@@ -266,7 +266,7 @@ func TestServiceType(t *testing.T) {
 						"monitoring_mode":   "active",
 						"pending_action":    "none",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_code":            0,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   0,
@@ -294,7 +294,7 @@ func TestServiceType(t *testing.T) {
 						"monitoring_mode":   "active",
 						"pending_action":    "none",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_code":            0,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   0,
@@ -368,7 +368,7 @@ func TestMonitFailure(t *testing.T) {
 						"monitoring_mode":   "active",
 						"pending_action":    "none",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_code":            8388608,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   0,
@@ -409,7 +409,7 @@ func TestMonitFailure(t *testing.T) {
 						"monitoring_mode":   "passive",
 						"pending_action":    "none",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_code":            0,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   1,
@@ -450,7 +450,7 @@ func TestMonitFailure(t *testing.T) {
 						"monitoring_mode":   "active",
 						"pending_action":    "none",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_code":            0,
 						"monitoring_status_code": 2,
 						"monitoring_mode_code":   0,
@@ -491,7 +491,7 @@ func TestMonitFailure(t *testing.T) {
 						"monitoring_mode":   "active",
 						"pending_action":    "exec",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_code":            0,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   0,

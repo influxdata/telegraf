@@ -35,19 +35,19 @@ func TestListenData(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
-			map[string]interface{}{"v": int64(1)},
+			map[string]any{"v": int64(1)},
 			time.Unix(0, 123456789),
 		),
 		metric.New(
 			"test",
 			map[string]string{"foo": "baz"},
-			map[string]interface{}{"v": int64(2)},
+			map[string]any{"v": int64(2)},
 			time.Unix(0, 123456790),
 		),
 		metric.New(
 			"test",
 			map[string]string{"foo": "zab"},
-			map[string]interface{}{"v": int64(3)},
+			map[string]any{"v": int64(3)},
 			time.Unix(0, 123456791),
 		),
 	}
@@ -237,19 +237,19 @@ func TestListenConnection(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
-			map[string]interface{}{"v": int64(1)},
+			map[string]any{"v": int64(1)},
 			time.Unix(0, 123456789),
 		),
 		metric.New(
 			"test",
 			map[string]string{"foo": "baz"},
-			map[string]interface{}{"v": int64(2)},
+			map[string]any{"v": int64(2)},
 			time.Unix(0, 123456790),
 		),
 		metric.New(
 			"test",
 			map[string]string{"foo": "zab"},
-			map[string]interface{}{"v": int64(3)},
+			map[string]any{"v": int64(3)},
 			time.Unix(0, 123456791),
 		),
 	}
@@ -642,19 +642,19 @@ func TestNoSplitter(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
-			map[string]interface{}{"v": int64(1)},
+			map[string]any{"v": int64(1)},
 			time.Unix(0, 123456789),
 		),
 		metric.New(
 			"test",
 			map[string]string{"foo": "baz"},
-			map[string]interface{}{"v": int64(2)},
+			map[string]any{"v": int64(2)},
 			time.Unix(0, 123456790),
 		),
 		metric.New(
 			"test",
 			map[string]string{"foo": "zab"},
-			map[string]interface{}{"v": int64(3)},
+			map[string]any{"v": int64(3)},
 			time.Unix(0, 123456791),
 		),
 	}
@@ -793,15 +793,13 @@ func TestTLSMemLeak(t *testing.T) {
 		var errs []error
 		var wg sync.WaitGroup
 		for count := 1; count < connections; count++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				if err := write(); err != nil {
 					mu.Lock()
 					errs = append(errs, err)
 					mu.Unlock()
 				}
-			}()
+			})
 			if count%maxConcurrency == 0 {
 				wg.Wait()
 				mu.Lock()

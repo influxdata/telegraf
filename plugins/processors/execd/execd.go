@@ -147,8 +147,7 @@ func (e *Execd) cmdReadOutStream(out io.Reader) {
 				break
 			}
 
-			var parseErr *influx.ParseError
-			if errors.As(err, &parseErr) {
+			if parseErr, ok := errors.AsType[*influx.ParseError](err); ok {
 				// Continue past parse errors.
 				e.acc.AddError(parseErr)
 				continue

@@ -126,7 +126,7 @@ func contentDecoder(r *http.Request) (codec.Decoder, error) {
 		return &json_v1.JSON{}, nil
 	}
 
-	for _, v := range strings.Split(contentType, ",") {
+	for v := range strings.SplitSeq(contentType, ",") {
 		t, _, err := mime.ParseMediaType(v)
 		if err != nil {
 			break

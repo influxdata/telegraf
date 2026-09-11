@@ -87,16 +87,16 @@ func (p *PgBouncer) Stop() {
 	p.service.Stop()
 }
 
-func (p *PgBouncer) accRow(row *sql.Rows, columns []string) (map[string]string, map[string]*interface{}, error) {
+func (p *PgBouncer) accRow(row *sql.Rows, columns []string) (map[string]string, map[string]*any, error) {
 	var dbname bytes.Buffer
 
 	// this is where we'll store the column name with its *interface{}
-	columnMap := make(map[string]*interface{})
+	columnMap := make(map[string]*any)
 	for _, column := range columns {
-		columnMap[column] = new(interface{})
+		columnMap[column] = new(any)
 	}
 
-	columnVars := make([]interface{}, 0, len(columnMap))
+	columnVars := make([]any, 0, len(columnMap))
 	// populate the array of interface{} with the pointers in the right order
 	for i := 0; i < len(columnMap); i++ {
 		columnVars = append(columnVars, columnMap[columns[i]])
@@ -143,7 +143,7 @@ func (p *PgBouncer) showStats(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		for col, val := range columnMap {
 			_, ignore := ignoredColumns[col]
 			if ignore {
@@ -203,7 +203,7 @@ func (p *PgBouncer) showPools(acc telegraf.Accumulator) error {
 			}
 		}
 
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		for col, val := range columnMap {
 			_, ignore := ignoredColumns[col]
 			if !ignore {
@@ -231,7 +231,7 @@ func (p *PgBouncer) showLists(acc telegraf.Accumulator) error {
 		return fmt.Errorf("don't get column names 'show lists': %w", err)
 	}
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	tags := make(map[string]string)
 	for rows.Next() {
 		tag, columnMap, err := p.accRow(rows, columns)
@@ -292,7 +292,7 @@ func (p *PgBouncer) showDatabase(acc telegraf.Accumulator) error {
 			}
 		}
 
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		for col, val := range columnMap {
 			_, ignore := ignoredColumns[col]
 			if !ignore {
@@ -307,11 +307,9 @@ func (p *PgBouncer) showDatabase(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("pgbouncer", func() telegraf.Input {
 		return &PgBouncer{
-			Config: postgresql.Config{
-				MaxIdle:     1,
-				MaxOpen:     1,
-				IsPgBouncer: true,
-			},
+			MaxIdle:     1,
+			MaxOpen:     1,
+			IsPgBouncer: true,
 		}
 	})
 }

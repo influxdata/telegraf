@@ -222,7 +222,7 @@ func TestGatheringRootDomain(t *testing.T) {
 				"rcode":       "NOERROR",
 				"result":      "success",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"rcode_value":   0,
 				"result_code":   uint64(0),
 				"query_time_ms": queryTime,
@@ -262,7 +262,7 @@ func TestMetricContainsServerAndDomainAndRecordTypeTags(t *testing.T) {
 				"rcode":       "NOERROR",
 				"result":      "success",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"rcode_value":   0,
 				"result_code":   uint64(0),
 				"query_time_ms": queryTime,

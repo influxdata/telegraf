@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -174,16 +175,14 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 
 	server := h.createHTTPServer()
 
-	h.wg.Add(1)
-	go func() {
-		defer h.wg.Done()
+	h.wg.Go(func() {
 		if err := server.Serve(h.listener); err != nil {
 			if !errors.Is(err, net.ErrClosed) {
 				h.Log.Errorf("Serve failed: %v", err)
 			}
 			close(h.close)
 		}
-	}()
+	})
 
 	h.Log.Infof("Listening on %s", h.listener.Addr().String())
 
@@ -243,13 +242,7 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 	}
 
 	// Check if the requested HTTP method was specified in config.
-	isAcceptedMethod := false
-	for _, method := range h.Methods {
-		if req.Method == method {
-			isAcceptedMethod = true
-			break
-		}
-	}
+	isAcceptedMethod := slices.Contains(h.Methods, req.Method)
 	if !isAcceptedMethod {
 		if err := methodNotAllowed(res); err != nil {
 			h.Log.Debugf("error in method-not-allowed: %v", err)

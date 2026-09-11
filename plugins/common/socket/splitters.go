@@ -77,7 +77,7 @@ func (cfg *SplitConfig) NewSplitter() (bufio.SplitFunc, error) {
 				if order == binary.BigEndian {
 					start = 8 - len(b)
 				}
-				for i := 0; i < len(b); i++ {
+				for i := range b {
 					buf[start+i] = b[i]
 				}
 				return int(order.Uint64(buf))
