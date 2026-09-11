@@ -24,7 +24,6 @@ type shardConsumer struct {
 	client *kinesis.Client
 	params *kinesis.GetShardIteratorInput
 
-	recoverySeqnr func(context.Context, string, string) (string, error)
 	onMessage     recordHandler
 }
 
@@ -55,9 +54,7 @@ func (c *shardConsumer) consume(ctx context.Context, shard string) ([]types.Chil
 				time.Sleep(time.Second)
 				continue
 			case errors.As(err, &expiredIterErr):
-				// recover iterator from DynamoDB if possible
 				c.log.Tracef("iterator expired for shard %s...", shard)
-				c.recoverIterator(ctx, shard)
 				if iter, err = c.iterator(ctx); err != nil {
 					return nil, fmt.Errorf("getting shard iterator failed: %w", err)
 				}
@@ -99,6 +96,11 @@ func (c *shardConsumer) consume(ctx context.Context, shard string) ([]types.Chil
 
 func (c *shardConsumer) iterator(ctx context.Context) (*string, error) {
 	for {
+		// update starting seqnr to match last consumed record
+		if c.seqnr != "" {
+			c.params.ShardIteratorType = types.ShardIteratorTypeAfterSequenceNumber
+			c.params.StartingSequenceNumber = aws.String(c.seqnr)
+		}
 		resp, err := c.client.GetShardIterator(ctx, c.params)
 		if err != nil {
 			var throughputErr *types.ProvisionedThroughputExceededException
@@ -112,23 +114,8 @@ func (c *shardConsumer) iterator(ctx context.Context) (*string, error) {
 
 			return nil, err
 		}
-		c.log.Tracef("successfully updated iterator for shard %s (%s)...", *c.params.ShardId, c.seqnr)
+		c.log.Tracef("successfully updated iterator for shard %s (%s)...", *c.params.ShardId, aws.ToString(c.params.StartingSequenceNumber))
 		return resp.ShardIterator, nil
-	}
-}
-
-func (c *shardConsumer) recoverIterator(ctx context.Context, shard string) {
-	if c.recoverySeqnr == nil {
-		return
-	}
-
-	if seqnr, err := c.recoverySeqnr(ctx, *c.params.StreamName, shard); err != nil {
-		if !errors.Is(err, context.Canceled) {
-			c.log.Warnf("could not recover checkpoint for shard %q: %v; using initial sequence number", shard, err)
-		}
-	} else {
-		c.params.ShardIteratorType = types.ShardIteratorTypeAfterSequenceNumber
-		c.params.StartingSequenceNumber = aws.String(seqnr)
 	}
 }
 
@@ -142,7 +129,6 @@ type consumer struct {
 
 	onMessage     recordHandler
 	position      func(shard string) string
-	recoverySeqnr func(context.Context, string, string) (string, error)
 
 	client *kinesis.Client
 
@@ -339,7 +325,6 @@ func (c *consumer) startShardConsumer(ctx context.Context, id, seqnr string) {
 		log:           c.log,
 		onMessage:     c.onMessage,
 		client:        c.client,
-		recoverySeqnr: c.recoverySeqnr,
 		params: &kinesis.GetShardIteratorInput{
 			ShardId:           &id,
 			ShardIteratorType: c.iterType,

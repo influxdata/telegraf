@@ -168,7 +168,6 @@ func (k *KinesisConsumer) Start(acc telegraf.Accumulator) error {
 
 			return seqnr
 		}
-		k.consumer.recoverySeqnr = k.iteratorStore.get
 	}
 	if err := k.consumer.init(); err != nil {
 		return fmt.Errorf("initializing consumer failed: %w", err)
