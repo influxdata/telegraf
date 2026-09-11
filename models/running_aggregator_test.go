@@ -244,17 +244,18 @@ func TestRunningAggregatorPushAdvancesWindowWhenFiringEarly(t *testing.T) {
 	ra := NewRunningAggregator(&mockAggregator{}, &AggregatorConfig{
 		Name:   "TestRunningAggregator",
 		Filter: Filter{NamePass: []string{"*"}},
-		Period: time.Second,
+		Period: 10 * time.Second,
 	})
 	require.NoError(t, ra.Config.Filter.Compile())
 	acc := testutil.Accumulator{}
 
-	// Simulate a timer firing slightly before periodEnd: set periodEnd
-	// 500ms in the future so time.Now() inside Push falls within the
-	// current window. Before the drift safeguard was loosened, this
-	// tripped the reset and left periodEnd unchanged, causing a second
-	// Push for the same period.
-	windowEnd := time.Now().Add(500 * time.Millisecond)
+	// Simulate a timer firing before periodEnd: set periodEnd in the
+	// future so time.Now() inside Push falls within the current window.
+	// Before the drift safeguard was loosened, this tripped the reset and
+	// left periodEnd unchanged, causing a second Push for the same period.
+	// The lead has to stay below one period or the safeguard resets the
+	// window for the wrong reason, so keep it well inside that bound.
+	windowEnd := time.Now().Add(5 * time.Second)
 	ra.UpdateWindow(windowEnd.Add(-ra.Config.Period), windowEnd)
 
 	ra.Push(&acc)
@@ -271,7 +272,7 @@ func TestRunningAggregatorPushResetsWindowOnLargeForwardJump(t *testing.T) {
 	ra := NewRunningAggregator(&mockAggregator{}, &AggregatorConfig{
 		Name:   "TestRunningAggregator",
 		Filter: Filter{NamePass: []string{"*"}},
-		Period: time.Second,
+		Period: 10 * time.Second,
 	})
 	require.NoError(t, ra.Config.Filter.Compile())
 	acc := testutil.Accumulator{}
@@ -281,8 +282,8 @@ func TestRunningAggregatorPushResetsWindowOnLargeForwardJump(t *testing.T) {
 
 	ra.Push(&acc)
 
-	require.Less(t, time.Since(ra.EndPeriod()).Abs(), 2*ra.Config.Period,
-		"expected safeguard to reset window near current time, got %v", ra.EndPeriod())
+	// After a reset the new window end lands in (now, now+period].
+	require.WithinDuration(t, time.Now(), ra.EndPeriod(), ra.Config.Period)
 }
 
 type mockAggregator struct {

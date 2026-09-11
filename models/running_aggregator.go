@@ -183,7 +183,7 @@ func (r *RunningAggregator) Push(acc telegraf.Accumulator) {
 	until := r.periodEnd.Add(r.Config.Period)
 
 	// Reset the window only when the current wall-clock time is outside
-	// the next aggregation window by at least one full period, which
+	// the next aggregation window by more than one full period, which
 	// indicates the clock was adjusted or the machine hibernated. Smaller
 	// skew (e.g., a Go timer firing a few ms early) is not a clock jump;
 	// resetting in that case would recompute the same slot and cause Push
