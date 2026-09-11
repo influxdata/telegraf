@@ -183,5 +183,5 @@ func TestWriteReturnsErrorWhenBrokerUnavailable(t *testing.T) {
 	// nil) and gets back a plain error that is not amqp.ErrClosed. Write must
 	// surface that error so the framework keeps the metrics buffered for
 	// retry instead of silently dropping them.
-	require.Error(t, q.Write(testutil.MockMetrics()))
+	require.ErrorContains(t, q.Write(testutil.MockMetrics()), "could not connect to any broker")
 }
