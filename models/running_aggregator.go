@@ -116,6 +116,8 @@ func (r *RunningAggregator) Period() time.Duration {
 }
 
 func (r *RunningAggregator) EndPeriod() time.Time {
+	r.Lock()
+	defer r.Unlock()
 	return r.periodEnd
 }
 

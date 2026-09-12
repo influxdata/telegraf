@@ -270,3 +270,72 @@ func collect(ctx context.Context, a *Agent, wait time.Duration) ([]telegraf.Metr
 	}
 	return received, nil
 }
+
+// pushRecorder reports the wall-clock time of the first Push.
+type pushRecorder struct {
+	pushed chan time.Time
+}
+
+func (*pushRecorder) SampleConfig() string { return "" }
+func (*pushRecorder) Add(telegraf.Metric)  {}
+func (*pushRecorder) Reset()               {}
+func (r *pushRecorder) Push(telegraf.Accumulator) {
+	select {
+	case r.pushed <- time.Now():
+	default:
+	}
+}
+
+// pushAfterWindowShift runs the aggregator push loop against a window that
+// ends 500ms out, then moves the window end forward by shift while the loop
+// is asleep on its timer. From the loop's point of view that is the same as
+// the wall clock stepping back by shift while it waited. It returns the time
+// of the first Push and the shifted window end.
+func pushAfterWindowShift(t *testing.T, shift time.Duration) (pushed, windowEnd time.Time) {
+	rec := &pushRecorder{pushed: make(chan time.Time, 1)}
+	ra := models.NewRunningAggregator(rec, &models.AggregatorConfig{
+		Name:   "test",
+		Filter: models.Filter{NamePass: []string{"*"}},
+		Period: time.Second,
+	})
+	require.NoError(t, ra.Config.Filter.Compile())
+
+	// Strip the monotonic reading, as AlignTime does under round_interval.
+	end := time.Now().Add(500 * time.Millisecond).Truncate(-1)
+	ra.UpdateWindow(end.Add(-ra.Period()), end)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	var acc testutil.Accumulator
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		(&Agent{}).push(ctx, ra, &acc)
+	}()
+
+	// Give the loop time to arm its timer before moving the deadline under
+	// it; the shift has to land while the timer is pending.
+	time.Sleep(50 * time.Millisecond)
+	windowEnd = end.Add(shift)
+	ra.Lock()
+	ra.UpdateWindow(windowEnd.Add(-ra.Period()), windowEnd)
+	ra.Unlock()
+
+	select {
+	case pushed = <-rec.pushed:
+	case <-time.After(5 * time.Second):
+		t.Fatal("no push within 5s")
+	}
+	cancel()
+	<-done
+	return pushed, windowEnd
+}
+
+func TestAggregatorPushWaitsForWindowEndOnEarlyTimer(t *testing.T) {
+	pushed, windowEnd := pushAfterWindowShift(t, 500*time.Millisecond)
+	require.False(t, pushed.Before(windowEnd), "pushed at %v, before the window end %v", pushed, windowEnd)
+}
+
+func TestAggregatorPushDoesNotWaitOutClockAdjustment(t *testing.T) {
+	pushed, windowEnd := pushAfterWindowShift(t, 2*time.Second)
+	require.True(t, pushed.Before(windowEnd), "pushed at %v, waited for the window end %v", pushed, windowEnd)
+}
