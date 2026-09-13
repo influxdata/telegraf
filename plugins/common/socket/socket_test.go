@@ -913,3 +913,36 @@ func TestInterfaceNameFromServiceAddressInvalid(t *testing.T) {
 		})
 	}
 }
+
+func TestVsockAddressParsing(t *testing.T) {
+	tests := []struct {
+		name    string
+		address string
+		err     string
+	}{
+		{name: "valid CID and port", address: "vsock://2:8790"},
+		{name: "missing port", address: "vsock://2", err: "port and/or CID number missing"},
+		{name: "invalid CID", address: "vsock://cid:8790", err: "failed to parse CID cid"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cfg Config
+			s, err := cfg.NewSocket(tt.address, nil, testutil.Logger{})
+			require.NoError(t, err)
+
+			l := newStreamListener(s.Config, nil, testutil.Logger{})
+			err = l.setupVsock(s.url)
+			if tt.err != "" {
+				require.ErrorContains(t, err, tt.err)
+				return
+			}
+			if err != nil {
+				require.NotContains(t, err.Error(), "failed to parse")
+				require.NotContains(t, err.Error(), "missing")
+				t.Skipf("vsock not available on this host: %v", err)
+			}
+			require.NoError(t, l.listener.Close())
+		})
+	}
+}
