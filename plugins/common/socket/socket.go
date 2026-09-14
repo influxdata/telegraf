@@ -8,7 +8,6 @@ import (
 	"io"
 	"net"
 	"net/url"
-	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -55,34 +54,26 @@ type Socket struct {
 	listener listener
 }
 
-// extractIfNameRegex extracts and validates matches these case:
-//
-// 1. IPv6 with zone id
-// 2. IPv6 with zone id and trailing interface name
-// 3. IPv6 with trailing interface name
-// 4. Any other hostname with trailing interface name (hostname does not contain a % or ])
-var extractIfNameRegex = regexp.MustCompile(
-	`\[[^%]+%([^]]*)][^%]*$|\[[^%]+%([^]]*)][^%]*%(.*)$|\[[^%]]+][^%]*%(.*)$|[^%]]*%(.*)$`,
-)
-
-// interfaceNameFromServiceAddress extracts interface names
+// interfaceNameFromServiceAddress extracts the interface name given either as
+// IPv6 zone id (e.g. "[ff02::1%eth0]:8094") or trailing the address
+// (e.g. "239.0.0.1:8094%eth0"), both at the same time are not allowed.
 func interfaceNameFromServiceAddress(address string) (string, error) {
-	matches := extractIfNameRegex.FindStringSubmatch(address)
-	if len(matches) < 2 {
-		return "", nil
+	// Split off the bracketed IPv6 host so its zone id is not taken as trailing name
+	var host string
+	rest := address
+	if idx := strings.LastIndex(address, "]"); idx >= 0 {
+		host, rest = address[:idx], address[idx+1:]
 	}
+	_, zone, hasZone := strings.Cut(host, "%")
+	_, ifName, hasIfName := strings.Cut(rest, "%")
 
-	ifName := ""
-	matchCount := 0
-	for _, match := range matches[1:] {
-		if match != "" {
-			if matchCount > 0 {
-				return "", errors.New("ipv6 zone id and interface name are mutually exclusive")
-			}
-
-			ifName = match
-			matchCount++
-		}
+	switch {
+	case hasZone && hasIfName:
+		return "", errors.New("ipv6 zone id and interface name are mutually exclusive")
+	case hasZone:
+		ifName = zone
+	case !hasIfName:
+		return "", nil
 	}
 
 	if ifName == "" {
