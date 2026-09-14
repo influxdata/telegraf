@@ -1299,7 +1299,7 @@ func (c *Config) setupProcessor(name string, creator processors.StreamingCreator
 
 	streamingProcessor := creator()
 
-	var processor interface{}
+	var processor any
 	if p, ok := streamingProcessor.(processors.HasUnwrap); ok {
 		processor = p.Unwrap()
 	} else {
@@ -1425,7 +1425,7 @@ func (c *Config) addOutput(name, source string, table *ast.Table) error {
 		return err
 	}
 
-	if c, ok := interface{}(output).(interface{ TLSConfig() (*tls.Config, error) }); ok {
+	if c, ok := any(output).(interface{ TLSConfig() (*tls.Config, error) }); ok {
 		if _, err := c.TLSConfig(); err != nil {
 			return err
 		}
@@ -1520,7 +1520,7 @@ func (c *Config) addInput(name, source string, table *ast.Table) error {
 		return err
 	}
 
-	if c, ok := interface{}(input).(interface{ TLSConfig() (*tls.Config, error) }); ok {
+	if c, ok := any(input).(interface{ TLSConfig() (*tls.Config, error) }); ok {
 		if _, err := c.TLSConfig(); err != nil {
 			return err
 		}

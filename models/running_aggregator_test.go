@@ -28,7 +28,7 @@ func TestRunningAggregatorAdd(t *testing.T) {
 
 	m := metric.New("RITest",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": int64(101),
 		},
 		time.Now().Add(time.Millisecond*150),
@@ -56,7 +56,7 @@ func TestRunningAggregatorAddMetricsOutsideCurrentPeriod(t *testing.T) {
 
 	m := metric.New("RITest",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": int64(101),
 		},
 		now.Add(-time.Hour),
@@ -67,7 +67,7 @@ func TestRunningAggregatorAddMetricsOutsideCurrentPeriod(t *testing.T) {
 	// metric after current period
 	m = metric.New("RITest",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": int64(101),
 		},
 		now.Add(time.Hour),
@@ -78,7 +78,7 @@ func TestRunningAggregatorAddMetricsOutsideCurrentPeriod(t *testing.T) {
 	// "now" metric
 	m = metric.New("RITest",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": int64(101),
 		},
 		time.Now().Add(time.Millisecond*50),
@@ -107,7 +107,7 @@ func TestRunningAggregatorAddMetricsOutsideCurrentPeriodWithGrace(t *testing.T) 
 
 	m := metric.New("RITest",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": int64(101),
 		},
 		now.Add(-time.Hour),
@@ -118,7 +118,7 @@ func TestRunningAggregatorAddMetricsOutsideCurrentPeriodWithGrace(t *testing.T) 
 	// metric before current period (late)
 	m = metric.New("RITest",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": int64(100),
 		},
 		now.Add(-time.Millisecond*1000),
@@ -129,7 +129,7 @@ func TestRunningAggregatorAddMetricsOutsideCurrentPeriodWithGrace(t *testing.T) 
 	// metric before current period, but within grace period (late)
 	m = metric.New("RITest",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": int64(102),
 		},
 		now.Add(-time.Millisecond*200),
@@ -140,7 +140,7 @@ func TestRunningAggregatorAddMetricsOutsideCurrentPeriodWithGrace(t *testing.T) 
 	// "now" metric
 	m = metric.New("RITest",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": int64(101),
 		},
 		time.Now().Add(time.Millisecond*50),
@@ -169,7 +169,7 @@ func TestRunningAggregatorAddAndPushOnePeriod(t *testing.T) {
 
 	m := metric.New("RITest",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": int64(101),
 		},
 		time.Now().Add(time.Millisecond*100),
@@ -178,7 +178,7 @@ func TestRunningAggregatorAddAndPushOnePeriod(t *testing.T) {
 
 	ra.Push(&acc)
 
-	acc.AssertContainsFields(t, "TestMetric", map[string]interface{}{"sum": int64(101)})
+	acc.AssertContainsFields(t, "TestMetric", map[string]any{"sum": int64(101)})
 }
 
 func TestRunningAggregatorAddDropOriginal(t *testing.T) {
@@ -196,7 +196,7 @@ func TestRunningAggregatorAddDropOriginal(t *testing.T) {
 
 	m := metric.New("RITest",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": int64(101),
 		},
 		now,
@@ -206,7 +206,7 @@ func TestRunningAggregatorAddDropOriginal(t *testing.T) {
 	// this metric name doesn't match the filter, so Add will return false
 	m2 := metric.New("foobar",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": int64(101),
 		},
 		now,
@@ -229,7 +229,7 @@ func TestRunningAggregatorAddDoesNotModifyMetric(t *testing.T) {
 	m := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"a": int64(42),
 			"b": int64(42),
 		},
@@ -254,7 +254,7 @@ func (t *mockAggregator) Reset() {
 
 func (t *mockAggregator) Push(acc telegraf.Accumulator) {
 	acc.AddFields("TestMetric",
-		map[string]interface{}{"sum": t.sum},
+		map[string]any{"sum": t.sum},
 		map[string]string{},
 	)
 }
