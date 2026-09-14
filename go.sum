@@ -2280,8 +2280,8 @@ github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 h1:nn5Wsu0esKSJiIVhscUt
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg65j358z/aeFdxmN0P9QXhEzd20vsDc=
 github.com/seancfoley/bintree v1.4.0 h1:Voxh1yBkOMWTXR4dP/hOrLYVq/yVwxaRVPc6pIj3kME=
 github.com/seancfoley/bintree v1.4.0/go.mod h1:hIUabL8OFYyFVTQ6azeajbopogQc2l5C/hiXMcemWNU=
-github.com/seancfoley/ipaddress-go v1.8.3 h1:gk9LKhvVAIWqOqLQ7X2RHQtpIhdESRGYATiPd/NikCk=
-github.com/seancfoley/ipaddress-go v1.8.3/go.mod h1:eUgkV6XW0J4u07aANfX3Fr9PozlFkdwLde5aEVQfeqk=
+github.com/seancfoley/ipaddress-go v1.8.4 h1:o1pxYJ0hsxgjtBVYJfqtyIZlsDIjNaePJyYYrI9eCjU=
+github.com/seancfoley/ipaddress-go v1.8.4/go.mod h1:82ztygvPl5HAjSoz/mBcJNjTgTpCGH5hL/m8XeXFU3g=
 github.com/segmentio/asm v1.2.1 h1:DTNbBqs57ioxAD4PrArqftgypG4/qNpXoJx8TVXxPR0=
 github.com/segmentio/asm v1.2.1/go.mod h1:BqMnlJP91P8d+4ibuonYZw9mfnzI9HfxselHZr5aAcs=
 github.com/sensu/sensu-go/api/core/v2 v2.16.0 h1:HOq4rFkQ1S5ZjxmMTLc5J5mAbECrnKWvtXXbMqr3j9s=
