@@ -27,19 +27,27 @@ func (l Logger) Level() telegraf.LogLevel {
 func (Logger) AddAttribute(string, interface{}) {}
 
 func (l Logger) Errorf(format string, args ...interface{}) {
-	log.Printf("E! ["+l.Name+"] "+format, args...)
+	if !l.Quiet {
+		log.Printf("E! ["+l.Name+"] "+format, args...)
+	}
 }
 
 func (l Logger) Error(args ...interface{}) {
-	log.Print(append([]interface{}{"E! [" + l.Name + "] "}, args...)...)
+	if !l.Quiet {
+		log.Print(append([]interface{}{"E! [" + l.Name + "] "}, args...)...)
+	}
 }
 
 func (l Logger) Warnf(format string, args ...interface{}) {
-	log.Printf("W! ["+l.Name+"] "+format, args...)
+	if !l.Quiet {
+		log.Printf("W! ["+l.Name+"] "+format, args...)
+	}
 }
 
 func (l Logger) Warn(args ...interface{}) {
-	log.Print(append([]interface{}{"W! [" + l.Name + "] "}, args...)...)
+	if !l.Quiet {
+		log.Print(append([]interface{}{"W! [" + l.Name + "] "}, args...)...)
+	}
 }
 
 func (l Logger) Infof(format string, args ...interface{}) {
