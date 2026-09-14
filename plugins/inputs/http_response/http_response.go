@@ -18,6 +18,7 @@ import (
 
 	"github.com/benbjohnson/clock"
 	"github.com/seancfoley/ipaddress-go/ipaddr"
+	xproxy "golang.org/x/net/proxy"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -188,7 +189,11 @@ func (h *HTTPResponse) createHTTPClient(address url.URL) (*http.Client, error) {
 		if err != nil {
 			return nil, fmt.Errorf("creating SOCKS5 proxy dialer failed: %w", err)
 		}
-		dialContext = proxyDialer.DialContext
+		contextDialer, ok := proxyDialer.(xproxy.ContextDialer)
+		if !ok {
+			return nil, errors.New("SOCKS5 proxy dialer does not support context")
+		}
+		dialContext = contextDialer.DialContext
 	}
 
 	client := &http.Client{

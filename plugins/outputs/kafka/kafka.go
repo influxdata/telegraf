@@ -13,6 +13,7 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/gofrs/uuid/v5"
+	xproxy "golang.org/x/net/proxy"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -91,7 +92,7 @@ func (k *Kafka) Init() error {
 	if k.Socks5ProxyEnabled {
 		config.Net.Proxy.Enable = true
 
-		dialer, err := k.Socks5ProxyConfig.GetDialer(nil)
+		dialer, err := k.Socks5ProxyConfig.GetDialer(xproxy.Direct)
 		if err != nil {
 			return fmt.Errorf("connecting to proxy server failed: %w", err)
 		}

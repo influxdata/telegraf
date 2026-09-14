@@ -10,6 +10,7 @@ import (
 	"time"
 
 	ws "github.com/gorilla/websocket"
+	xproxy "golang.org/x/net/proxy"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -82,7 +83,7 @@ func (w *WebSocket) Connect() error {
 	}
 
 	if w.Socks5ProxyEnabled {
-		netDialer, err := w.Socks5ProxyConfig.GetDialer(nil)
+		netDialer, err := w.Socks5ProxyConfig.GetDialer(xproxy.Direct)
 		if err != nil {
 			return fmt.Errorf("error connecting to socks5 proxy: %w", err)
 		}

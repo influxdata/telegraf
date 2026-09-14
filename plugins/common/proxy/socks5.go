@@ -13,16 +13,12 @@ type Socks5ProxyConfig struct {
 
 // GetDialer creates a SOCKS5 dialer using the given dialer to connect to the
 // proxy server. If forward is nil, a default net.Dialer is used.
-func (c *Socks5ProxyConfig) GetDialer(forward proxy.Dialer) (*ProxiedDialer, error) {
+func (c *Socks5ProxyConfig) GetDialer(forward proxy.Dialer) (proxy.Dialer, error) {
 	var auth *proxy.Auth
 	if c.Socks5ProxyPassword != "" || c.Socks5ProxyUsername != "" {
 		auth = new(proxy.Auth)
 		auth.User = c.Socks5ProxyUsername
 		auth.Password = c.Socks5ProxyPassword
 	}
-	dialer, err := proxy.SOCKS5("tcp", c.Socks5ProxyAddress, auth, forward)
-	if err != nil {
-		return nil, err
-	}
-	return &ProxiedDialer{dialer: dialer}, nil
+	return proxy.SOCKS5("tcp", c.Socks5ProxyAddress, auth, forward)
 }
