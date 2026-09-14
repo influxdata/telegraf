@@ -191,7 +191,7 @@ func (h *HTTPResponse) createHTTPClient(address url.URL) (*http.Client, error) {
 		}
 		contextDialer, ok := proxyDialer.(xproxy.ContextDialer)
 		if !ok {
-			return nil, errors.New("SOCKS5 proxy dialer does not support context")
+			return nil, errors.New("socks5 proxy dialer does not support context")
 		}
 		dialContext = contextDialer.DialContext
 	}
