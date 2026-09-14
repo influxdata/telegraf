@@ -216,7 +216,7 @@ func InsertField(bucket, fieldName string) string {
 	return strings.Replace(bucket, "FIELDNAME", fieldName, 1)
 }
 
-func formatValue(value interface{}) string {
+func formatValue(value any) string {
 	switch v := value.(type) {
 	case string:
 		return ""

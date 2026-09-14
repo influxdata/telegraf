@@ -35,7 +35,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"cpu",
 						map[string]string{},
-						map[string]interface{}{
+						map[string]any{
 							"time_idle": 42.0,
 						},
 						time.Unix(0, 0),
@@ -66,7 +66,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"cpu",
 						map[string]string{},
-						map[string]interface{}{
+						map[string]any{
 							"time_idle": 42.0,
 						},
 						time.Unix(0, 0),
@@ -77,7 +77,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"cpu",
 						map[string]string{},
-						map[string]interface{}{
+						map[string]any{
 							"time_idle": 43.0,
 						},
 						time.Unix(12, 0),
@@ -108,7 +108,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"cpu",
 						map[string]string{},
-						map[string]interface{}{
+						map[string]any{
 							"time_idle": 42.0,
 						},
 						time.Unix(12, 0),
@@ -118,7 +118,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"cpu",
 						map[string]string{},
-						map[string]interface{}{
+						map[string]any{
 							"time_idle": 43.0,
 						},
 						time.Unix(0, 0),
@@ -149,7 +149,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"cpu",
 						map[string]string{},
-						map[string]interface{}{
+						map[string]any{
 							"time_idle": 42.0,
 						},
 						time.Unix(0, 0),
@@ -168,7 +168,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"cpu",
 						map[string]string{},
-						map[string]interface{}{
+						map[string]any{
 							"time_idle": 42.0,
 						},
 						time.Unix(0, 0),
@@ -178,7 +178,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"cpu",
 						map[string]string{},
-						map[string]interface{}{
+						map[string]any{
 							"time_guest": 42.0,
 						},
 						time.Unix(15, 0),
@@ -209,7 +209,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{},
-						map[string]interface{}{
+						map[string]any{
 							"http_request_duration_seconds_sum":   10.0,
 							"http_request_duration_seconds_count": 2,
 						},
@@ -221,7 +221,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "0.05"},
-						map[string]interface{}{
+						map[string]any{
 							"http_request_duration_seconds_bucket": 1.0,
 						},
 						time.Unix(0, 0),
@@ -232,7 +232,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "+Inf"},
-						map[string]interface{}{
+						map[string]any{
 							"http_request_duration_seconds_bucket": 1.0,
 						},
 						time.Unix(0, 0),
@@ -244,7 +244,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{},
-						map[string]interface{}{
+						map[string]any{
 							"http_request_duration_seconds_sum":   20.0,
 							"http_request_duration_seconds_count": 4,
 						},
@@ -256,7 +256,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "0.05"},
-						map[string]interface{}{
+						map[string]any{
 							"http_request_duration_seconds_bucket": 2.0,
 						},
 						time.Unix(0, 0),
@@ -267,7 +267,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "+Inf"},
-						map[string]interface{}{
+						map[string]any{
 							"http_request_duration_seconds_bucket": 2.0,
 						},
 						time.Unix(0, 0),
@@ -312,7 +312,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{},
-						map[string]interface{}{
+						map[string]any{
 							"http_request_duration_seconds_sum":   10.0,
 							"http_request_duration_seconds_count": 2,
 						},
@@ -324,7 +324,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "0.05"},
-						map[string]interface{}{
+						map[string]any{
 							"http_request_duration_seconds_bucket": 1.0,
 						},
 						time.Unix(0, 0),
@@ -335,7 +335,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "+Inf"},
-						map[string]interface{}{
+						map[string]any{
 							"http_request_duration_seconds_bucket": 1.0,
 						},
 						time.Unix(0, 0),
@@ -355,7 +355,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "+Inf"},
-						map[string]interface{}{
+						map[string]any{
 							"http_request_duration_seconds_bucket": 1.0,
 						},
 						time.Unix(0, 0),
@@ -366,7 +366,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{},
-						map[string]interface{}{
+						map[string]any{
 							"http_request_duration_seconds_sum":   10.0,
 							"http_request_duration_seconds_count": 2,
 						},
@@ -378,7 +378,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "0.05"},
-						map[string]interface{}{
+						map[string]any{
 							"http_request_duration_seconds_bucket": 1.0,
 						},
 						time.Unix(0, 0),
@@ -423,7 +423,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{},
-						map[string]interface{}{
+						map[string]any{
 							"rpc_duration_seconds_sum":   1.0,
 							"rpc_duration_seconds_count": 1,
 						},
@@ -435,7 +435,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{"quantile": "0.01"},
-						map[string]interface{}{
+						map[string]any{
 							"rpc_duration_seconds": 1.0,
 						},
 						time.Unix(0, 0),
@@ -447,7 +447,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{},
-						map[string]interface{}{
+						map[string]any{
 							"rpc_duration_seconds_sum":   2.0,
 							"rpc_duration_seconds_count": 2,
 						},
@@ -459,7 +459,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{"quantile": "0.01"},
-						map[string]interface{}{
+						map[string]any{
 							"rpc_duration_seconds": 2.0,
 						},
 						time.Unix(0, 0),
@@ -500,7 +500,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{},
-						map[string]interface{}{
+						map[string]any{
 							"rpc_duration_seconds_sum":   1.0,
 							"rpc_duration_seconds_count": 1,
 						},
@@ -512,7 +512,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{"quantile": "0.01"},
-						map[string]interface{}{
+						map[string]any{
 							"rpc_duration_seconds": 1.0,
 						},
 						time.Unix(0, 0),
@@ -532,7 +532,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{},
-						map[string]interface{}{
+						map[string]any{
 							"rpc_duration_seconds_sum":   1.0,
 							"rpc_duration_seconds_count": 1,
 						},
@@ -544,7 +544,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{"quantile": "0.5"},
-						map[string]interface{}{
+						map[string]any{
 							"rpc_duration_seconds": 10.0,
 						},
 						time.Unix(0, 0),
@@ -555,7 +555,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{"quantile": "0.01"},
-						map[string]interface{}{
+						map[string]any{
 							"rpc_duration_seconds": 1.0,
 						},
 						time.Unix(0, 0),
@@ -600,7 +600,7 @@ func TestCollectionExpire(t *testing.T) {
 					metric: metric.New(
 						"cpu",
 						map[string]string{},
-						map[string]interface{}{
+						map[string]any{
 							"time_idle": 42.0,
 						},
 						time.Unix(0, 0),
@@ -655,7 +655,7 @@ func TestExportTimestamps(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{},
-						map[string]interface{}{
+						map[string]any{
 							"http_request_duration_seconds_sum":   10.0,
 							"http_request_duration_seconds_count": 2,
 						},
@@ -667,7 +667,7 @@ func TestExportTimestamps(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "0.05"},
-						map[string]interface{}{
+						map[string]any{
 							"http_request_duration_seconds_bucket": 1.0,
 						},
 						time.Unix(15, 0),
@@ -678,7 +678,7 @@ func TestExportTimestamps(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "+Inf"},
-						map[string]interface{}{
+						map[string]any{
 							"http_request_duration_seconds_bucket": 1.0,
 						},
 						time.Unix(15, 0),
@@ -690,7 +690,7 @@ func TestExportTimestamps(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{},
-						map[string]interface{}{
+						map[string]any{
 							"http_request_duration_seconds_sum":   20.0,
 							"http_request_duration_seconds_count": 4,
 						},
@@ -702,7 +702,7 @@ func TestExportTimestamps(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "0.05"},
-						map[string]interface{}{
+						map[string]any{
 							"http_request_duration_seconds_bucket": 2.0,
 						},
 						time.Unix(20, 0), // Updated timestamp
@@ -713,7 +713,7 @@ func TestExportTimestamps(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{"le": "+Inf"},
-						map[string]interface{}{
+						map[string]any{
 							"http_request_duration_seconds_bucket": 2.0,
 						},
 						time.Unix(20, 0), // Updated timestamp
@@ -759,7 +759,7 @@ func TestExportTimestamps(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{},
-						map[string]interface{}{
+						map[string]any{
 							"rpc_duration_seconds_sum":   1.0,
 							"rpc_duration_seconds_count": 1,
 						},
@@ -771,7 +771,7 @@ func TestExportTimestamps(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{"quantile": "0.01"},
-						map[string]interface{}{
+						map[string]any{
 							"rpc_duration_seconds": 1.0,
 						},
 						time.Unix(15, 0),
@@ -783,7 +783,7 @@ func TestExportTimestamps(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{},
-						map[string]interface{}{
+						map[string]any{
 							"rpc_duration_seconds_sum":   2.0,
 							"rpc_duration_seconds_count": 2,
 						},
@@ -795,7 +795,7 @@ func TestExportTimestamps(t *testing.T) {
 					metric: metric.New(
 						"prometheus",
 						map[string]string{"quantile": "0.01"},
-						map[string]interface{}{
+						map[string]any{
 							"rpc_duration_seconds": 2.0,
 						},
 						time.Unix(20, 0), // Updated timestamp
@@ -850,7 +850,7 @@ func TestCollectionLegacyDropsUTF8OnlyNames(t *testing.T) {
 		metric.New(
 			"温度-指标",
 			map[string]string{"主机-名": "example.org"},
-			map[string]interface{}{"数值-值": 42.0},
+			map[string]any{"数值-值": 42.0},
 			time.Unix(0, 0),
 		),
 		time.Unix(0, 0),
@@ -869,7 +869,7 @@ func TestCollectionUTF8NameSanitization(t *testing.T) {
 		metric.New(
 			"温度-指标",
 			map[string]string{"主机-名": "example.org"},
-			map[string]interface{}{"数值-值": 42.0},
+			map[string]any{"数值-值": 42.0},
 			time.Unix(0, 0),
 		),
 		time.Unix(0, 0),
@@ -905,7 +905,7 @@ func TestCollectionUTF8FallbackForInvalidUTF8(t *testing.T) {
 			map[string]string{
 				string([]byte{0xff, 'h', '-', '1'}): "example.org",
 			},
-			map[string]interface{}{
+			map[string]any{
 				string([]byte{0xff, 't', '-', 'x'}): 42.0,
 			},
 			time.Unix(0, 0),
@@ -946,7 +946,7 @@ func TestCollectionUTF8DropWhenFallbackBecomesEmpty(t *testing.T) {
 			metric: metric.New(
 				string([]byte{0xff}),
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					string([]byte{0xff}): 42.0,
 				},
 				time.Unix(0, 0),
@@ -960,7 +960,7 @@ func TestCollectionUTF8DropWhenFallbackBecomesEmpty(t *testing.T) {
 				map[string]string{
 					string([]byte{0xff}): "example.org",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"time_idle": 42.0,
 				},
 				time.Unix(0, 0),

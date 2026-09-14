@@ -7,7 +7,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 )
 
-func (e *Entry) convertToString(value interface{}, _ binary.ByteOrder) ([]byte, error) {
+func (e *Entry) convertToString(value any, _ binary.ByteOrder) ([]byte, error) {
 	v, err := internal.ToString(value)
 	if err != nil {
 		return nil, err
@@ -27,7 +27,7 @@ func (e *Entry) convertToString(value interface{}, _ binary.ByteOrder) ([]byte, 
 	return buf, nil
 }
 
-func convertToUint64(value interface{}, order binary.ByteOrder) ([]byte, error) {
+func convertToUint64(value any, order binary.ByteOrder) ([]byte, error) {
 	buf := make([]byte, 8)
 
 	v, err := internal.ToUint64(value)
@@ -35,7 +35,7 @@ func convertToUint64(value interface{}, order binary.ByteOrder) ([]byte, error) 
 	return buf, err
 }
 
-func convertToUint32(value interface{}, order binary.ByteOrder) ([]byte, error) {
+func convertToUint32(value any, order binary.ByteOrder) ([]byte, error) {
 	buf := make([]byte, 4)
 
 	v, err := internal.ToUint32(value)
@@ -43,7 +43,7 @@ func convertToUint32(value interface{}, order binary.ByteOrder) ([]byte, error) 
 	return buf, err
 }
 
-func convertToUint16(value interface{}, order binary.ByteOrder) ([]byte, error) {
+func convertToUint16(value any, order binary.ByteOrder) ([]byte, error) {
 	buf := make([]byte, 2)
 
 	v, err := internal.ToUint16(value)
@@ -51,12 +51,12 @@ func convertToUint16(value interface{}, order binary.ByteOrder) ([]byte, error) 
 	return buf, err
 }
 
-func convertToUint8(value interface{}, _ binary.ByteOrder) ([]byte, error) {
+func convertToUint8(value any, _ binary.ByteOrder) ([]byte, error) {
 	v, err := internal.ToUint8(value)
 	return []byte{v}, err
 }
 
-func convertToInt64(value interface{}, order binary.ByteOrder) ([]byte, error) {
+func convertToInt64(value any, order binary.ByteOrder) ([]byte, error) {
 	buf := make([]byte, 8)
 
 	v, err := internal.ToInt64(value)
@@ -64,7 +64,7 @@ func convertToInt64(value interface{}, order binary.ByteOrder) ([]byte, error) {
 	return buf, err
 }
 
-func convertToInt32(value interface{}, order binary.ByteOrder) ([]byte, error) {
+func convertToInt32(value any, order binary.ByteOrder) ([]byte, error) {
 	buf := make([]byte, 4)
 
 	v, err := internal.ToInt32(value)
@@ -72,7 +72,7 @@ func convertToInt32(value interface{}, order binary.ByteOrder) ([]byte, error) {
 	return buf, err
 }
 
-func convertToInt16(value interface{}, order binary.ByteOrder) ([]byte, error) {
+func convertToInt16(value any, order binary.ByteOrder) ([]byte, error) {
 	buf := make([]byte, 2)
 
 	v, err := internal.ToInt16(value)
@@ -80,12 +80,12 @@ func convertToInt16(value interface{}, order binary.ByteOrder) ([]byte, error) {
 	return buf, err
 }
 
-func convertToInt8(value interface{}, _ binary.ByteOrder) ([]byte, error) {
+func convertToInt8(value any, _ binary.ByteOrder) ([]byte, error) {
 	v, err := internal.ToInt8(value)
 	return []byte{uint8(v)}, err
 }
 
-func convertToFloat64(value interface{}, order binary.ByteOrder) ([]byte, error) {
+func convertToFloat64(value any, order binary.ByteOrder) ([]byte, error) {
 	v, err := internal.ToFloat64(value)
 	if err != nil {
 		return nil, err
@@ -97,7 +97,7 @@ func convertToFloat64(value interface{}, order binary.ByteOrder) ([]byte, error)
 	return buf, nil
 }
 
-func convertToFloat32(value interface{}, order binary.ByteOrder) ([]byte, error) {
+func convertToFloat32(value any, order binary.ByteOrder) ([]byte, error) {
 	v, err := internal.ToFloat32(value)
 	if err != nil {
 		return nil, err

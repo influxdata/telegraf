@@ -28,7 +28,7 @@ func BenchmarkRemoteWrite(b *testing.B) {
 				"C":    "D",
 				"A":    "B",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle": 42.0,
 			},
 			time.Unix(0, 0),
@@ -56,7 +56,7 @@ func TestRemoteWriteSerialize(t *testing.T) {
 				map[string]string{
 					"host": "example.org",
 				},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(0, 0),
 			),
 			expected: []byte(``),
@@ -68,7 +68,7 @@ func TestRemoteWriteSerialize(t *testing.T) {
 				map[string]string{
 					"": "example.org",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"time_idle": 42.0,
 				},
 				time.Unix(0, 0),
@@ -84,7 +84,7 @@ cpu_time_idle 42
 				map[string]string{
 					"host": "example.org",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"time_idle": 42.0,
 				},
 				time.Unix(0, 0),
@@ -101,7 +101,7 @@ cpu_time_idle{host="example.org"} 42
 					"code":   "400",
 					"method": "post",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"http_requests_total": 3.0,
 				},
 				time.Unix(0, 0),
@@ -119,7 +119,7 @@ http_requests_total{code="400", method="post"} 3
 					"code":   "400",
 					"method": "post",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"http_requests_total": 3.0,
 				},
 				time.Unix(0, 0),
@@ -137,7 +137,7 @@ http_requests_total{code="400", method="post"} 3
 					"code":   "400",
 					"method": "post",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"http_requests_total": 3.0,
 				},
 				time.Unix(0, 0),
@@ -152,7 +152,7 @@ http_requests_total{code="400", method="post"} 3
 			metric: metric.New(
 				"prometheus",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"http_request_duration_seconds_sum":   53423,
 					"http_request_duration_seconds_count": 144320,
 				},
@@ -172,7 +172,7 @@ http_request_duration_seconds_bucket{le="+Inf"} 144320
 				map[string]string{
 					"le": "0.5",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"http_request_duration_seconds_bucket": 129389.0,
 				},
 				time.Unix(0, 0),
@@ -220,12 +220,12 @@ func TestRemoteWriteSerializeNegative(t *testing.T) {
 		clog.Clear()
 	}
 
-	m := metric.New("@@!!", nil, map[string]interface{}{"!!": "@@"}, time.Unix(0, 0))
+	m := metric.New("@@!!", nil, map[string]any{"!!": "@@"}, time.Unix(0, 0))
 	_, err := s.Serialize(m)
 	assert("failed to parse metric name \"@@!!_!!\"", err)
 
 	m = metric.New("prometheus", nil,
-		map[string]interface{}{
+		map[string]any{
 			"http_requests_total": "asd",
 		},
 		time.Unix(0, 0),
@@ -238,7 +238,7 @@ func TestRemoteWriteSerializeNegative(t *testing.T) {
 		map[string]string{
 			"le": "0.5",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"http_request_duration_seconds_bucket": "asd",
 		},
 		time.Unix(0, 0),
@@ -253,7 +253,7 @@ func TestRemoteWriteSerializeNegative(t *testing.T) {
 			"code":   "400",
 			"method": "post",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"http_requests_total":        3.0,
 			"http_requests_errors_total": "3.0",
 		},
@@ -266,7 +266,7 @@ func TestRemoteWriteSerializeNegative(t *testing.T) {
 	m = metric.New(
 		"prometheus",
 		map[string]string{"quantile": "0.01a"},
-		map[string]interface{}{
+		map[string]any{
 			"rpc_duration_seconds": 3102.0,
 		},
 		time.Unix(0, 0),
@@ -291,7 +291,7 @@ func TestRemoteWriteSerializeBatch(t *testing.T) {
 					map[string]string{
 						"host": "one.example.org",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42.0,
 					},
 					time.Unix(0, 0),
@@ -301,7 +301,7 @@ func TestRemoteWriteSerializeBatch(t *testing.T) {
 					map[string]string{
 						"host": "two.example.org",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42.0,
 					},
 					time.Unix(0, 0),
@@ -320,7 +320,7 @@ cpu_time_idle{host="two.example.org"} 42
 					map[string]string{
 						"host": "one.example.org",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle":  42.0,
 						"time_guest": 42.0,
 					},
@@ -338,7 +338,7 @@ cpu_time_idle{host="one.example.org"} 42
 				metric.New(
 					"prometheus",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"http_request_duration_seconds_sum":   53423,
 						"http_request_duration_seconds_count": 144320,
 					},
@@ -348,7 +348,7 @@ cpu_time_idle{host="one.example.org"} 42
 				metric.New(
 					"prometheus",
 					map[string]string{"le": "0.05"},
-					map[string]interface{}{
+					map[string]any{
 						"http_request_duration_seconds_bucket": 24054.0,
 					},
 					time.Unix(0, 0),
@@ -357,7 +357,7 @@ cpu_time_idle{host="one.example.org"} 42
 				metric.New(
 					"prometheus",
 					map[string]string{"le": "0.1"},
-					map[string]interface{}{
+					map[string]any{
 						"http_request_duration_seconds_bucket": 33444.0,
 					},
 					time.Unix(0, 0),
@@ -366,7 +366,7 @@ cpu_time_idle{host="one.example.org"} 42
 				metric.New(
 					"prometheus",
 					map[string]string{"le": "0.2"},
-					map[string]interface{}{
+					map[string]any{
 						"http_request_duration_seconds_bucket": 100392.0,
 					},
 					time.Unix(0, 0),
@@ -375,7 +375,7 @@ cpu_time_idle{host="one.example.org"} 42
 				metric.New(
 					"prometheus",
 					map[string]string{"le": "0.5"},
-					map[string]interface{}{
+					map[string]any{
 						"http_request_duration_seconds_bucket": 129389.0,
 					},
 					time.Unix(0, 0),
@@ -384,7 +384,7 @@ cpu_time_idle{host="one.example.org"} 42
 				metric.New(
 					"prometheus",
 					map[string]string{"le": "1.0"},
-					map[string]interface{}{
+					map[string]any{
 						"http_request_duration_seconds_bucket": 133988.0,
 					},
 					time.Unix(0, 0),
@@ -393,7 +393,7 @@ cpu_time_idle{host="one.example.org"} 42
 				metric.New(
 					"prometheus",
 					map[string]string{"le": "+Inf"},
-					map[string]interface{}{
+					map[string]any{
 						"http_request_duration_seconds_bucket": 144320.0,
 					},
 					time.Unix(0, 0),
@@ -417,7 +417,7 @@ http_request_duration_seconds_bucket{le="1"} 133988
 				metric.New(
 					"prometheus",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"rpc_duration_seconds_sum":   1.7560473e+07,
 						"rpc_duration_seconds_count": 2693,
 					},
@@ -427,7 +427,7 @@ http_request_duration_seconds_bucket{le="1"} 133988
 				metric.New(
 					"prometheus",
 					map[string]string{"quantile": "0.01"},
-					map[string]interface{}{
+					map[string]any{
 						"rpc_duration_seconds": 3102.0,
 					},
 					time.Unix(0, 0),
@@ -436,7 +436,7 @@ http_request_duration_seconds_bucket{le="1"} 133988
 				metric.New(
 					"prometheus",
 					map[string]string{"quantile": "0.05"},
-					map[string]interface{}{
+					map[string]any{
 						"rpc_duration_seconds": 3272.0,
 					},
 					time.Unix(0, 0),
@@ -445,7 +445,7 @@ http_request_duration_seconds_bucket{le="1"} 133988
 				metric.New(
 					"prometheus",
 					map[string]string{"quantile": "0.5"},
-					map[string]interface{}{
+					map[string]any{
 						"rpc_duration_seconds": 4773.0,
 					},
 					time.Unix(0, 0),
@@ -454,7 +454,7 @@ http_request_duration_seconds_bucket{le="1"} 133988
 				metric.New(
 					"prometheus",
 					map[string]string{"quantile": "0.9"},
-					map[string]interface{}{
+					map[string]any{
 						"rpc_duration_seconds": 9001.0,
 					},
 					time.Unix(0, 0),
@@ -463,7 +463,7 @@ http_request_duration_seconds_bucket{le="1"} 133988
 				metric.New(
 					"prometheus",
 					map[string]string{"quantile": "0.99"},
-					map[string]interface{}{
+					map[string]any{
 						"rpc_duration_seconds": 76656.0,
 					},
 					time.Unix(0, 0),
@@ -486,7 +486,7 @@ rpc_duration_seconds{quantile="0.99"} 76656
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 43.0,
 					},
 					time.Unix(1, 0),
@@ -494,7 +494,7 @@ rpc_duration_seconds{quantile="0.99"} 76656
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42.0,
 					},
 					time.Unix(0, 0),
@@ -512,7 +512,7 @@ cpu_time_idle 43
 					map[string]string{
 						"host": "one.example.org",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 1.0,
 					},
 					time.Unix(0, 0),
@@ -522,7 +522,7 @@ cpu_time_idle 43
 					map[string]string{
 						"host": "one.example.org",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 2.0,
 					},
 					time.Unix(1, 0),
@@ -539,7 +539,7 @@ cpu_time_idle{host="one.example.org"} 2
 				metric.New(
 					"cpu::xyzzy",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42.0,
 					},
 					time.Unix(0, 0),
@@ -555,7 +555,7 @@ cpu::xyzzy_time_idle 42
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time:idle": 42.0,
 					},
 					time.Unix(0, 0),
@@ -573,7 +573,7 @@ cpu_time:idle 42
 					map[string]string{
 						"host-name": "example.org",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42.0,
 					},
 					time.Unix(0, 0),
@@ -591,7 +591,7 @@ cpu_time_idle{host_name="example.org"} 42
 					map[string]string{
 						"host:name": "example.org",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42.0,
 					},
 					time.Unix(0, 0),
@@ -607,7 +607,7 @@ cpu_time_idle{host_name="example.org"} 42
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42.0,
 						"cpu":       "cpu0",
 					},
@@ -625,7 +625,7 @@ cpu_time_idle 42
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42.0,
 						"cpu":       "cpu0",
 					},
@@ -645,7 +645,7 @@ cpu_time_idle{cpu="cpu0"} 42
 					map[string]string{
 						"cpu": "cpu0",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42.0,
 						"cpu":       "cpu1",
 					},
@@ -663,7 +663,7 @@ cpu_time_idle{cpu="cpu0"} 42
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"host:name": "example.org",
 						"time_idle": 42.0,
 					},
@@ -682,7 +682,7 @@ cpu_time_idle{host_name="example.org"} 42
 					map[string]string{
 						"cpu": "cpu0",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"time_guest":  8106.04,
 						"time_system": 26271.4,
 						"time_user":   92904.33,
@@ -694,7 +694,7 @@ cpu_time_idle{host_name="example.org"} 42
 					map[string]string{
 						"cpu": "cpu1",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"time_guest":  8181.63,
 						"time_system": 25351.49,
 						"time_user":   96912.57,
@@ -706,7 +706,7 @@ cpu_time_idle{host_name="example.org"} 42
 					map[string]string{
 						"cpu": "cpu2",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"time_guest":  7470.04,
 						"time_system": 24998.43,
 						"time_user":   96034.08,
@@ -718,7 +718,7 @@ cpu_time_idle{host_name="example.org"} 42
 					map[string]string{
 						"cpu": "cpu3",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"time_guest":  7517.95,
 						"time_system": 24970.82,
 						"time_user":   94148,
@@ -747,7 +747,7 @@ cpu_time_user{cpu="cpu3"} 94148
 				metric.New(
 					"prometheus",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"rpc_duration_seconds_sum":   1.7560473e+07,
 						"rpc_duration_seconds_count": 2693,
 					},
@@ -769,7 +769,7 @@ rpc_duration_seconds_sum 17560473
 					map[string]string{
 						"cpu": "",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42.0,
 					},
 					time.Unix(0, 0),
@@ -811,13 +811,13 @@ func TestRemoteWriteAccumulateSamples(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{"host": "one.example.org"},
-					map[string]interface{}{"time_idle": 1.0},
+					map[string]any{"time_idle": 1.0},
 					time.Unix(0, 0),
 				),
 				metric.New(
 					"cpu",
 					map[string]string{"host": "one.example.org"},
-					map[string]interface{}{"time_idle": 2.0},
+					map[string]any{"time_idle": 2.0},
 					time.Unix(1, 0),
 				),
 			},
@@ -840,13 +840,13 @@ func TestRemoteWriteAccumulateSamples(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{"time_idle": 1.0},
+					map[string]any{"time_idle": 1.0},
 					time.Unix(1, 0),
 				),
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{"time_idle": 2.0},
+					map[string]any{"time_idle": 2.0},
 					time.Unix(1, 0),
 				),
 			},
@@ -863,13 +863,13 @@ func TestRemoteWriteAccumulateSamples(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{"time_idle": 1.0},
+					map[string]any{"time_idle": 1.0},
 					time.Unix(1, 0),
 				),
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{"time_idle": 2.0},
+					map[string]any{"time_idle": 2.0},
 					time.Unix(0, 0),
 				),
 			},
@@ -886,14 +886,14 @@ func TestRemoteWriteAccumulateSamples(t *testing.T) {
 				metric.New(
 					"prometheus",
 					map[string]string{"le": "0.05"},
-					map[string]interface{}{"http_request_duration_seconds_bucket": 0.0},
+					map[string]any{"http_request_duration_seconds_bucket": 0.0},
 					time.Unix(1, 0),
 					telegraf.Histogram,
 				),
 				metric.New(
 					"prometheus",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"http_request_duration_seconds_count": 0.0,
 						"http_request_duration_seconds_sum":   0.0,
 					},
@@ -903,14 +903,14 @@ func TestRemoteWriteAccumulateSamples(t *testing.T) {
 				metric.New(
 					"prometheus",
 					map[string]string{"le": "0.05"},
-					map[string]interface{}{"http_request_duration_seconds_bucket": 3.0},
+					map[string]any{"http_request_duration_seconds_bucket": 3.0},
 					time.Unix(2, 0),
 					telegraf.Histogram,
 				),
 				metric.New(
 					"prometheus",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"http_request_duration_seconds_count": 5.0,
 						"http_request_duration_seconds_sum":   7.0,
 					},
@@ -978,7 +978,7 @@ func TestRemoteWriteAccumulateNativeHistograms(t *testing.T) {
 		return metric.New(
 			"rpc_duration_seconds",
 			map[string]string{"host": "example.org"},
-			map[string]interface{}{
+			map[string]any{
 				"count":                  count,
 				"sum":                    float64(10),
 				"schema":                 int64(0),
@@ -1022,7 +1022,7 @@ func TestRemoteWriteNativeHistogramNameCollision(t *testing.T) {
 	nativeHistogram := metric.New(
 		"rpc_duration_seconds",
 		map[string]string{"host": "example.org"},
-		map[string]interface{}{
+		map[string]any{
 			"count":                  float64(20),
 			"sum":                    float64(10),
 			"schema":                 int64(0),
@@ -1040,7 +1040,7 @@ func TestRemoteWriteNativeHistogramNameCollision(t *testing.T) {
 	classic := metric.New(
 		"prometheus",
 		map[string]string{"host": "example.org"},
-		map[string]interface{}{"rpc_duration_seconds": 42.0},
+		map[string]any{"rpc_duration_seconds": 42.0},
 		time.Unix(2, 0),
 	)
 
@@ -1093,7 +1093,7 @@ func TestRemoteWriteSerializeNativeHistogram(t *testing.T) {
 					"host": "example.org",
 					"node": "node1",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"count":                  float64(20),
 					"sum":                    float64(10),
 					"schema":                 int64(0),
