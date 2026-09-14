@@ -162,7 +162,7 @@ func importMetric(stat []byte, acc telegraf.Accumulator) error {
 	tags := map[string]string{
 		"passenger_version": p.PassengerVersion,
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"process_count":      p.ProcessCount,
 		"max":                p.Max,
 		"capacity_used":      p.CapacityUsed,
@@ -174,7 +174,7 @@ func importMetric(stat []byte, acc telegraf.Accumulator) error {
 		tags := map[string]string{
 			"name": sg.Name,
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"get_wait_list_size": sg.GetWaitListSize,
 			"capacity_used":      sg.CapacityUsed,
 		}
@@ -186,7 +186,7 @@ func importMetric(stat []byte, acc telegraf.Accumulator) error {
 				"app_root": group.AppRoot,
 				"app_type": group.AppType,
 			}
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"get_wait_list_size":      group.GetWaitListSize,
 				"capacity_used":           group.CapacityUsed,
 				"processes_being_spawned": group.ProcessesBeingSpawned,
@@ -203,7 +203,7 @@ func importMetric(stat []byte, acc telegraf.Accumulator) error {
 					"life_status":      process.LifeStatus,
 					"process_group_id": process.ProcessGroupID,
 				}
-				fields := map[string]interface{}{
+				fields := map[string]any{
 					"concurrency":           process.Concurrency,
 					"sessions":              process.Sessions,
 					"busyness":              process.Busyness,

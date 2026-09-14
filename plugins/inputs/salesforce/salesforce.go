@@ -62,7 +62,7 @@ func (s *Salesforce) Gather(acc telegraf.Accumulator) error {
 		"host":            s.serverURL.Host,
 	}
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for k, v := range limits {
 		key := internal.SnakeCase(k)
 		fields[key+"_max"] = v.Max

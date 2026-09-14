@@ -55,7 +55,7 @@ type resultObject struct {
 
 type resultCIB struct {
 	Results []struct {
-		Status map[string]interface{} `json:"status"`
+		Status map[string]any `json:"status"`
 	} `json:"results"`
 }
 
@@ -135,7 +135,7 @@ func (i *Icinga2) Gather(acc telegraf.Accumulator) error {
 		tags := map[string]string{
 			"component": statusType,
 		}
-		var fields map[string]interface{}
+		var fields map[string]any
 
 		switch statusType {
 		case "ApiListener":
@@ -168,7 +168,7 @@ func (i *Icinga2) gatherObjects(acc telegraf.Accumulator, checks resultObject, o
 
 		state := int64(check.Attrs.State)
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"name":       check.Attrs.Name,
 			"state_code": state,
 		}
@@ -240,7 +240,7 @@ func parseObjectResponse(resp *http.Response, result *resultObject) error {
 	return nil
 }
 
-func parseCIBResponse(resp *http.Response) (map[string]interface{}, error) {
+func parseCIBResponse(resp *http.Response) (map[string]any, error) {
 	result := resultCIB{}
 
 	err := json.NewDecoder(resp.Body).Decode(&result)
@@ -256,7 +256,7 @@ func parseCIBResponse(resp *http.Response) (map[string]interface{}, error) {
 	return result.Results[0].Status, nil
 }
 
-func parsePerfdataResponse(resp *http.Response) (map[string]interface{}, error) {
+func parsePerfdataResponse(resp *http.Response) (map[string]any, error) {
 	result := resultPerfdata{}
 
 	err := json.NewDecoder(resp.Body).Decode(&result)
@@ -269,7 +269,7 @@ func parsePerfdataResponse(resp *http.Response) (map[string]interface{}, error) 
 		return nil, errors.New("no results in Icinga2 API response")
 	}
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for _, item := range result.Results[0].Perfdata {
 		i := strings.Index(item.Label, "-")
 		if i > 0 {

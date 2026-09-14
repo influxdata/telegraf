@@ -282,7 +282,7 @@ func (e *endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 					bucket, found := buckets[bKey]
 					if !found {
 						mn := vsanPerfMetricsName + e.parent.Separator + formattedEntityName
-						bucket = metricEntry{name: mn, ts: ts, fields: make(map[string]interface{}), tags: tags}
+						bucket = metricEntry{name: mn, ts: ts, fields: make(map[string]any), tags: tags}
 						buckets[bKey] = bucket
 					}
 					if v, err := strconv.ParseFloat(values, 32); err == nil {
@@ -321,7 +321,7 @@ func (e *endpoint) queryDiskUsage(ctx context.Context, vsanClient *soap.Client, 
 	if err != nil {
 		return err
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"free_capacity_byte":  resp.Returnval.FreeCapacityB,
 		"total_capacity_byte": resp.Returnval.TotalCapacityB,
 	}
@@ -364,7 +364,7 @@ func (e *endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Clie
 		}
 	}
 
-	fields := map[string]interface{}{"overall_health": val}
+	fields := map[string]any{"overall_health": val}
 	tags := populateClusterTags(make(map[string]string), clusterRef, e.url.Host)
 	acc.AddFields(vsanSummaryMetricsName, fields, tags)
 	return nil
@@ -408,7 +408,7 @@ func (e *endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Clie
 	if err != nil {
 		return err
 	}
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	fields["total_bytes_to_sync"] = resp.Returnval.TotalBytesToSync
 	fields["total_objects_to_sync"] = resp.Returnval.TotalObjectsToSync
 	fields["total_recovery_eta"] = resp.Returnval.TotalRecoveryETA

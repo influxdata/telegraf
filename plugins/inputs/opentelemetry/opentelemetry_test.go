@@ -95,7 +95,7 @@ func TestOpenTelemetry(t *testing.T) {
 				"telemetry.sdk.name":     "opentelemetry",
 				"telemetry.sdk.version":  "1.27.0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"counter": 7,
 			},
 			time.Unix(0, 0),

@@ -135,7 +135,7 @@ func gatherStats(buf *bytes.Buffer, acc telegraf.Accumulator, host, qtype string
 		}
 		val := strings.Split(vals[i], "\t")
 
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		tags := map[string]string{"server": host, "type": qtype}
 
 		if qtype != "global" {

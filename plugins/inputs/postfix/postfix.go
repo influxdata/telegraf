@@ -59,7 +59,7 @@ func getQueueDirectory() (string, error) {
 	return strings.TrimSpace(string(qd)), nil
 }
 
-func qScan(path string, acc telegraf.Accumulator) (map[string]interface{}, error) {
+func qScan(path string, acc telegraf.Accumulator) (map[string]any, error) {
 	var length, size int64
 	var oldest time.Time
 
@@ -97,7 +97,7 @@ func qScan(path string, acc telegraf.Accumulator) (map[string]interface{}, error
 		age = -1
 	}
 
-	fields := map[string]interface{}{"length": length, "size": size}
+	fields := map[string]any{"length": length, "size": size}
 	if age != -1 {
 		fields["age"] = age
 	}

@@ -83,7 +83,7 @@ func tailStream(
 			if err != nil {
 				acc.AddError(err)
 			} else {
-				acc.AddFields("docker_log", map[string]interface{}{
+				acc.AddFields("docker_log", map[string]any{
 					"container_id": containerID,
 					"message":      message,
 				}, tags, ts)

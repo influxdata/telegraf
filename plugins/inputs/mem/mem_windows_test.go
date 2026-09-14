@@ -28,7 +28,7 @@ func TestMemStatsCollectExtended(t *testing.T) {
 		metric.New(
 			"mem",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"total":             uint64(0),
 				"available":         uint64(0),
 				"used":              uint64(0),

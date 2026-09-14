@@ -182,7 +182,7 @@ func (xio *XtremIO) gatherBBUs(acc telegraf.Accumulator, url string, wg *sync.Wa
 		"name":          data.Content.Name,
 		"model_name":    data.Content.ModelName,
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"bbus_power":                        data.Content.BBUPower,
 		"bbus_average_daily_temp":           data.Content.BBUDailyTemp,
 		"bbus_enabled":                      (data.Content.BBUEnabled == "enabled"),
@@ -215,7 +215,7 @@ func (xio *XtremIO) gatherClusters(acc telegraf.Accumulator, url string, wg *syn
 		"name":                   data.Content.Name,
 		"sys_psnt_serial_number": data.Content.SerialNumber,
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"clusters_compression_factor":        data.Content.CompressionFactor,
 		"clusters_percent_memory_in_use":     data.Content.MemoryUsed,
 		"clusters_read_iops":                 data.Content.ReadIops,
@@ -252,7 +252,7 @@ func (xio *XtremIO) gatherSSDs(acc telegraf.Accumulator, url string, wg *sync.Wa
 		"sys_name":         data.Content.SysName,
 		"serial_number":    data.Content.SerialNumber,
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"ssds_ssd_size":         data.Content.Size,
 		"ssds_ssd_space_in_use": data.Content.SpaceUsed,
 		"ssds_write_iops":       data.Content.WriteIops,
@@ -285,7 +285,7 @@ func (xio *XtremIO) gatherVolumes(acc telegraf.Accumulator, url string, wg *sync
 		"sys_name": data.Content.SysName,
 		"name":     data.Content.Name,
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"volumes_read_iops":            data.Content.ReadIops,
 		"volumes_write_iops":           data.Content.WriteIops,
 		"volumes_read_latency":         data.Content.ReadLatency,
@@ -319,7 +319,7 @@ func (xio *XtremIO) gatherXMS(acc telegraf.Accumulator, url string, wg *sync.Wai
 		"version": data.Content.Version,
 		"xms_ip":  data.Content.IP,
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"xms_write_iops":               data.Content.WriteIops,
 		"xms_read_iops":                data.Content.ReadIops,
 		"xms_overall_efficiency_ratio": data.Content.EfficiencyRatio,

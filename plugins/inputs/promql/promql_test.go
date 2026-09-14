@@ -149,7 +149,7 @@ func TestInstantQueries(t *testing.T) {
 				metric.New(
 					"promql",
 					map[string]string{},
-					map[string]interface{}{"value": float64(3.14)},
+					map[string]any{"value": float64(3.14)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
@@ -191,7 +191,7 @@ func TestInstantQueries(t *testing.T) {
 				metric.New(
 					"vector_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(3.14)},
+					map[string]any{"value": float64(3.14)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
@@ -229,21 +229,21 @@ func TestInstantQueries(t *testing.T) {
 				metric.New(
 					"vector_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(3.14)},
+					map[string]any{"value": float64(3.14)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"vector_metric",
 					map[string]string{"job": "staging"},
-					map[string]interface{}{"value": float64(23.0)},
+					map[string]any{"value": float64(23.0)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"vector_metric",
 					map[string]string{"job": "production"},
-					map[string]interface{}{"value": float64(42.42)},
+					map[string]any{"value": float64(42.42)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
@@ -300,7 +300,7 @@ func TestInstantQueries(t *testing.T) {
 				metric.New(
 					"vector_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{
+					map[string]any{
 						"2":  float64(10),
 						"4":  float64(20),
 						"6":  float64(30),
@@ -344,21 +344,21 @@ func TestInstantQueries(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(1.1)},
+					map[string]any{"value": float64(1.1)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(2.2)},
+					map[string]any{"value": float64(2.2)},
 					time.Unix(ts, 0).Add(1*time.Second),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(3.3)},
+					map[string]any{"value": float64(3.3)},
 					time.Unix(ts, 0).Add(2*time.Second),
 					telegraf.Gauge,
 				),
@@ -408,21 +408,21 @@ func TestInstantQueries(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(1.1)},
+					map[string]any{"value": float64(1.1)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "staging"},
-					map[string]interface{}{"value": float64(2.2)},
+					map[string]any{"value": float64(2.2)},
 					time.Unix(ts, 0).Add(1*time.Second),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "production"},
-					map[string]interface{}{"value": float64(3.3)},
+					map[string]any{"value": float64(3.3)},
 					time.Unix(ts, 0).Add(2*time.Second),
 					telegraf.Gauge,
 				),
@@ -555,7 +555,7 @@ func TestInstantQueries(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{
+					map[string]any{
 						"2":  float64(10),
 						"4":  float64(20),
 						"6":  float64(30),
@@ -568,7 +568,7 @@ func TestInstantQueries(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{
+					map[string]any{
 						"2":  float64(110),
 						"4":  float64(120),
 						"6":  float64(130),
@@ -581,7 +581,7 @@ func TestInstantQueries(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{
+					map[string]any{
 						"5":  float64(210),
 						"10": float64(220),
 						"15": float64(230),
@@ -733,28 +733,28 @@ func TestInstantQueries(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "sampling"},
-					map[string]interface{}{"value": float64(1.1)},
+					map[string]any{"value": float64(1.1)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "sampling"},
-					map[string]interface{}{"value": float64(2.2)},
+					map[string]any{"value": float64(2.2)},
 					time.Unix(ts, 0).Add(1*time.Second),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "sampling"},
-					map[string]interface{}{"value": float64(3.3)},
+					map[string]any{"value": float64(3.3)},
 					time.Unix(ts, 0).Add(2*time.Second),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "sampling"},
-					map[string]interface{}{
+					map[string]any{
 						"2":  float64(10),
 						"4":  float64(20),
 						"6":  float64(30),
@@ -767,7 +767,7 @@ func TestInstantQueries(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "sampling"},
-					map[string]interface{}{
+					map[string]any{
 						"2":  float64(110),
 						"4":  float64(120),
 						"6":  float64(130),
@@ -780,7 +780,7 @@ func TestInstantQueries(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "sampling"},
-					map[string]interface{}{
+					map[string]any{
 						"5":  float64(210),
 						"10": float64(220),
 						"15": float64(230),
@@ -938,28 +938,28 @@ func TestInstantQueries(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "sampling"},
-					map[string]interface{}{"value": float64(1.1)},
+					map[string]any{"value": float64(1.1)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "sampling"},
-					map[string]interface{}{"value": float64(2.2)},
+					map[string]any{"value": float64(2.2)},
 					time.Unix(ts, 0).Add(1*time.Second),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "sampling"},
-					map[string]interface{}{"value": float64(3.3)},
+					map[string]any{"value": float64(3.3)},
 					time.Unix(ts, 0).Add(2*time.Second),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{
+					map[string]any{
 						"2":  float64(10),
 						"4":  float64(20),
 						"6":  float64(30),
@@ -972,7 +972,7 @@ func TestInstantQueries(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{
+					map[string]any{
 						"2":  float64(110),
 						"4":  float64(120),
 						"6":  float64(130),
@@ -985,7 +985,7 @@ func TestInstantQueries(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{
+					map[string]any{
 						"5":  float64(210),
 						"10": float64(220),
 						"15": float64(230),
@@ -1023,21 +1023,21 @@ func TestInstantQueries(t *testing.T) {
 				metric.New(
 					"promql",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(1.1)},
+					map[string]any{"value": float64(1.1)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"promql",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(2.2)},
+					map[string]any{"value": float64(2.2)},
 					time.Unix(ts, 0).Add(1*time.Second),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"promql",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(3.3)},
+					map[string]any{"value": float64(3.3)},
 					time.Unix(ts, 0).Add(2*time.Second),
 					telegraf.Gauge,
 				),
@@ -1048,9 +1048,9 @@ func TestInstantQueries(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Construct the response
-			response := map[string]interface{}{
+			response := map[string]any{
 				"status": "success",
-				"data": map[string]interface{}{
+				"data": map[string]any{
 					"resultType": tt.data.Type().String(),
 					"result":     tt.data,
 				},
@@ -1134,7 +1134,7 @@ func TestRangeQueries(t *testing.T) {
 				metric.New(
 					"promql",
 					map[string]string{},
-					map[string]interface{}{"value": float64(3.14)},
+					map[string]any{"value": float64(3.14)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
@@ -1176,7 +1176,7 @@ func TestRangeQueries(t *testing.T) {
 				metric.New(
 					"vector_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(3.14)},
+					map[string]any{"value": float64(3.14)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
@@ -1214,21 +1214,21 @@ func TestRangeQueries(t *testing.T) {
 				metric.New(
 					"vector_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(3.14)},
+					map[string]any{"value": float64(3.14)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"vector_metric",
 					map[string]string{"job": "staging"},
-					map[string]interface{}{"value": float64(23.0)},
+					map[string]any{"value": float64(23.0)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"vector_metric",
 					map[string]string{"job": "production"},
-					map[string]interface{}{"value": float64(42.42)},
+					map[string]any{"value": float64(42.42)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
@@ -1285,7 +1285,7 @@ func TestRangeQueries(t *testing.T) {
 				metric.New(
 					"vector_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{
+					map[string]any{
 						"2":  float64(10),
 						"4":  float64(20),
 						"6":  float64(30),
@@ -1329,21 +1329,21 @@ func TestRangeQueries(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(1.1)},
+					map[string]any{"value": float64(1.1)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(2.2)},
+					map[string]any{"value": float64(2.2)},
 					time.Unix(ts, 0).Add(1*time.Second),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(3.3)},
+					map[string]any{"value": float64(3.3)},
 					time.Unix(ts, 0).Add(2*time.Second),
 					telegraf.Gauge,
 				),
@@ -1393,21 +1393,21 @@ func TestRangeQueries(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(1.1)},
+					map[string]any{"value": float64(1.1)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "staging"},
-					map[string]interface{}{"value": float64(2.2)},
+					map[string]any{"value": float64(2.2)},
 					time.Unix(ts, 0).Add(1*time.Second),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "production"},
-					map[string]interface{}{"value": float64(3.3)},
+					map[string]any{"value": float64(3.3)},
 					time.Unix(ts, 0).Add(2*time.Second),
 					telegraf.Gauge,
 				),
@@ -1540,7 +1540,7 @@ func TestRangeQueries(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{
+					map[string]any{
 						"2":  float64(10),
 						"4":  float64(20),
 						"6":  float64(30),
@@ -1553,7 +1553,7 @@ func TestRangeQueries(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{
+					map[string]any{
 						"2":  float64(110),
 						"4":  float64(120),
 						"6":  float64(130),
@@ -1566,7 +1566,7 @@ func TestRangeQueries(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{
+					map[string]any{
 						"5":  float64(210),
 						"10": float64(220),
 						"15": float64(230),
@@ -1718,28 +1718,28 @@ func TestRangeQueries(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "sampling"},
-					map[string]interface{}{"value": float64(1.1)},
+					map[string]any{"value": float64(1.1)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "sampling"},
-					map[string]interface{}{"value": float64(2.2)},
+					map[string]any{"value": float64(2.2)},
 					time.Unix(ts, 0).Add(1*time.Second),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "sampling"},
-					map[string]interface{}{"value": float64(3.3)},
+					map[string]any{"value": float64(3.3)},
 					time.Unix(ts, 0).Add(2*time.Second),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "sampling"},
-					map[string]interface{}{
+					map[string]any{
 						"2":  float64(10),
 						"4":  float64(20),
 						"6":  float64(30),
@@ -1752,7 +1752,7 @@ func TestRangeQueries(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "sampling"},
-					map[string]interface{}{
+					map[string]any{
 						"2":  float64(110),
 						"4":  float64(120),
 						"6":  float64(130),
@@ -1765,7 +1765,7 @@ func TestRangeQueries(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "sampling"},
-					map[string]interface{}{
+					map[string]any{
 						"5":  float64(210),
 						"10": float64(220),
 						"15": float64(230),
@@ -1923,28 +1923,28 @@ func TestRangeQueries(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "sampling"},
-					map[string]interface{}{"value": float64(1.1)},
+					map[string]any{"value": float64(1.1)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "sampling"},
-					map[string]interface{}{"value": float64(2.2)},
+					map[string]any{"value": float64(2.2)},
 					time.Unix(ts, 0).Add(1*time.Second),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "sampling"},
-					map[string]interface{}{"value": float64(3.3)},
+					map[string]any{"value": float64(3.3)},
 					time.Unix(ts, 0).Add(2*time.Second),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{
+					map[string]any{
 						"2":  float64(10),
 						"4":  float64(20),
 						"6":  float64(30),
@@ -1957,7 +1957,7 @@ func TestRangeQueries(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{
+					map[string]any{
 						"2":  float64(110),
 						"4":  float64(120),
 						"6":  float64(130),
@@ -1970,7 +1970,7 @@ func TestRangeQueries(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{
+					map[string]any{
 						"5":  float64(210),
 						"10": float64(220),
 						"15": float64(230),
@@ -1986,9 +1986,9 @@ func TestRangeQueries(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Construct the response
-			response := map[string]interface{}{
+			response := map[string]any{
 				"status": "success",
-				"data": map[string]interface{}{
+				"data": map[string]any{
 					"resultType": tt.data.Type().String(),
 					"result":     tt.data,
 				},
@@ -2134,7 +2134,7 @@ func TestMetricNameOverride(t *testing.T) {
 				metric.New(
 					"promql",
 					map[string]string{},
-					map[string]interface{}{"value": float64(3.14)},
+					map[string]any{"value": float64(3.14)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
@@ -2151,7 +2151,7 @@ func TestMetricNameOverride(t *testing.T) {
 				metric.New(
 					"foobar",
 					map[string]string{},
-					map[string]interface{}{"value": float64(3.14)},
+					map[string]any{"value": float64(3.14)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
@@ -2173,7 +2173,7 @@ func TestMetricNameOverride(t *testing.T) {
 				metric.New(
 					"vector_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(3.14)},
+					map[string]any{"value": float64(3.14)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
@@ -2194,7 +2194,7 @@ func TestMetricNameOverride(t *testing.T) {
 				metric.New(
 					"promql",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(3.14)},
+					map[string]any{"value": float64(3.14)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
@@ -2217,7 +2217,7 @@ func TestMetricNameOverride(t *testing.T) {
 				metric.New(
 					"vector_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(3.14)},
+					map[string]any{"value": float64(3.14)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
@@ -2239,7 +2239,7 @@ func TestMetricNameOverride(t *testing.T) {
 				metric.New(
 					"foobar",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(3.14)},
+					map[string]any{"value": float64(3.14)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
@@ -2273,21 +2273,21 @@ func TestMetricNameOverride(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(1.1)},
+					map[string]any{"value": float64(1.1)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(2.2)},
+					map[string]any{"value": float64(2.2)},
 					time.Unix(ts, 0).Add(1*time.Second),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(3.3)},
+					map[string]any{"value": float64(3.3)},
 					time.Unix(ts, 0).Add(2*time.Second),
 					telegraf.Gauge,
 				),
@@ -2320,21 +2320,21 @@ func TestMetricNameOverride(t *testing.T) {
 				metric.New(
 					"promql",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(1.1)},
+					map[string]any{"value": float64(1.1)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"promql",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(2.2)},
+					map[string]any{"value": float64(2.2)},
 					time.Unix(ts, 0).Add(1*time.Second),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"promql",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(3.3)},
+					map[string]any{"value": float64(3.3)},
 					time.Unix(ts, 0).Add(2*time.Second),
 					telegraf.Gauge,
 				),
@@ -2369,21 +2369,21 @@ func TestMetricNameOverride(t *testing.T) {
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(1.1)},
+					map[string]any{"value": float64(1.1)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(2.2)},
+					map[string]any{"value": float64(2.2)},
 					time.Unix(ts, 0).Add(1*time.Second),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"matrix_metric",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(3.3)},
+					map[string]any{"value": float64(3.3)},
 					time.Unix(ts, 0).Add(2*time.Second),
 					telegraf.Gauge,
 				),
@@ -2417,21 +2417,21 @@ func TestMetricNameOverride(t *testing.T) {
 				metric.New(
 					"foobar",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(1.1)},
+					map[string]any{"value": float64(1.1)},
 					time.Unix(ts, 0),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"foobar",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(2.2)},
+					map[string]any{"value": float64(2.2)},
 					time.Unix(ts, 0).Add(1*time.Second),
 					telegraf.Gauge,
 				),
 				metric.New(
 					"foobar",
 					map[string]string{"job": "testing"},
-					map[string]interface{}{"value": float64(3.3)},
+					map[string]any{"value": float64(3.3)},
 					time.Unix(ts, 0).Add(2*time.Second),
 					telegraf.Gauge,
 				),
@@ -2442,9 +2442,9 @@ func TestMetricNameOverride(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Construct the response
-			response := map[string]interface{}{
+			response := map[string]any{
 				"status": "success",
-				"data": map[string]interface{}{
+				"data": map[string]any{
 					"resultType": tt.data.Type().String(),
 					"result":     tt.data,
 				},
@@ -2519,9 +2519,9 @@ func TestMetricNameOverride(t *testing.T) {
 
 func TestWarnings(t *testing.T) {
 	// Construct the response
-	response := map[string]interface{}{
+	response := map[string]any{
 		"status": "success",
-		"data": map[string]interface{}{
+		"data": map[string]any{
 			"resultType": "scalar",
 			"result": &model.Scalar{
 				Value:     model.SampleValue(3.14),
@@ -2610,112 +2610,112 @@ func TestIntegrationInstant(t *testing.T) {
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"requests_total": 1440},
+			map[string]any{"requests_total": 1440},
 			ts.Add(-300*time.Second),
 			telegraf.Counter,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"requests_total": 890},
+			map[string]any{"requests_total": 890},
 			ts.Add(-270*time.Second),
 			telegraf.Counter,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"requests_total": 550},
+			map[string]any{"requests_total": 550},
 			ts.Add(-240*time.Second),
 			telegraf.Counter,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"requests_total": 340},
+			map[string]any{"requests_total": 340},
 			ts.Add(-210*time.Second),
 			telegraf.Counter,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"requests_total": 210},
+			map[string]any{"requests_total": 210},
 			ts.Add(-180*time.Second),
 			telegraf.Counter,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"requests_total": 130},
+			map[string]any{"requests_total": 130},
 			ts.Add(-150*time.Second),
 			telegraf.Counter,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"requests_total": 80},
+			map[string]any{"requests_total": 80},
 			ts.Add(-120*time.Second),
 			telegraf.Counter,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"requests_total": 50},
+			map[string]any{"requests_total": 50},
 			ts.Add(-90*time.Second),
 			telegraf.Counter,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"requests_total": 30},
+			map[string]any{"requests_total": 30},
 			ts.Add(-60*time.Second),
 			telegraf.Counter,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"requests_total": 20},
+			map[string]any{"requests_total": 20},
 			ts.Add(-30*time.Second),
 			telegraf.Counter,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"requests_total": 10},
+			map[string]any{"requests_total": 10},
 			ts,
 			telegraf.Counter,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "remote"},
-			map[string]interface{}{"requests_total": 5},
+			map[string]any{"requests_total": 5},
 			ts.Add(-5*time.Minute),
 			telegraf.Counter,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "remote"},
-			map[string]interface{}{"requests_total": 2},
+			map[string]any{"requests_total": 2},
 			ts.Add(-4*time.Minute),
 			telegraf.Counter,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "remote"},
-			map[string]interface{}{"requests_total": 3},
+			map[string]any{"requests_total": 3},
 			ts.Add(-3*time.Minute),
 			telegraf.Counter,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "remote"},
-			map[string]interface{}{"requests_total": 2},
+			map[string]any{"requests_total": 2},
 			ts.Add(-2*time.Minute),
 			telegraf.Counter,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "remote"},
-			map[string]interface{}{"requests_total": 1},
+			map[string]any{"requests_total": 1},
 			ts,
 			telegraf.Counter,
 		),
@@ -2724,14 +2724,14 @@ func TestIntegrationInstant(t *testing.T) {
 		metric.New(
 			"test_http_requests_total",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"value": float64(10)},
+			map[string]any{"value": float64(10)},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http_requests_total",
 			map[string]string{"instance": "remote"},
-			map[string]interface{}{"value": float64(1)},
+			map[string]any{"value": float64(1)},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
@@ -2800,112 +2800,112 @@ func TestIntegrationRange(t *testing.T) {
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"requests": 1440},
+			map[string]any{"requests": 1440},
 			ts.Add(-300*time.Second),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"requests": 890},
+			map[string]any{"requests": 890},
 			ts.Add(-270*time.Second),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"requests": 550},
+			map[string]any{"requests": 550},
 			ts.Add(-240*time.Second),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"requests": 340},
+			map[string]any{"requests": 340},
 			ts.Add(-210*time.Second),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"requests": 210},
+			map[string]any{"requests": 210},
 			ts.Add(-180*time.Second),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"requests": 130},
+			map[string]any{"requests": 130},
 			ts.Add(-150*time.Second),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"requests": 80},
+			map[string]any{"requests": 80},
 			ts.Add(-120*time.Second),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"requests": 50},
+			map[string]any{"requests": 50},
 			ts.Add(-90*time.Second),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"requests": 30},
+			map[string]any{"requests": 30},
 			ts.Add(-60*time.Second),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"requests": 20},
+			map[string]any{"requests": 20},
 			ts.Add(-30*time.Second),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"requests": 10},
+			map[string]any{"requests": 10},
 			ts,
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "remote"},
-			map[string]interface{}{"requests": 5},
+			map[string]any{"requests": 5},
 			ts.Add(-5*time.Minute),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "remote"},
-			map[string]interface{}{"requests": 2},
+			map[string]any{"requests": 2},
 			ts.Add(-4*time.Minute),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "remote"},
-			map[string]interface{}{"requests": 3},
+			map[string]any{"requests": 3},
 			ts.Add(-3*time.Minute),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "remote"},
-			map[string]interface{}{"requests": 2},
+			map[string]any{"requests": 2},
 			ts.Add(-2*time.Minute),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http",
 			map[string]string{"instance": "remote"},
-			map[string]interface{}{"requests": 1},
+			map[string]any{"requests": 1},
 			ts,
 			telegraf.Gauge,
 		),
@@ -2914,84 +2914,84 @@ func TestIntegrationRange(t *testing.T) {
 		metric.New(
 			"test_http_requests",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"value": float64(10)},
+			map[string]any{"value": float64(10)},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http_requests",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"value": float64(30)},
+			map[string]any{"value": float64(30)},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http_requests",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"value": float64(80)},
+			map[string]any{"value": float64(80)},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http_requests",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"value": float64(210)},
+			map[string]any{"value": float64(210)},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http_requests",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"value": float64(550)},
+			map[string]any{"value": float64(550)},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http_requests",
 			map[string]string{"instance": "localhost"},
-			map[string]interface{}{"value": float64(1440)},
+			map[string]any{"value": float64(1440)},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http_requests",
 			map[string]string{"instance": "remote"},
-			map[string]interface{}{"value": float64(1)},
+			map[string]any{"value": float64(1)},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http_requests",
 			map[string]string{"instance": "remote"},
-			map[string]interface{}{"value": float64(2)},
+			map[string]any{"value": float64(2)},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http_requests",
 			map[string]string{"instance": "remote"},
-			map[string]interface{}{"value": float64(2)},
+			map[string]any{"value": float64(2)},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http_requests",
 			map[string]string{"instance": "remote"},
-			map[string]interface{}{"value": float64(2)},
+			map[string]any{"value": float64(2)},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http_requests",
 			map[string]string{"instance": "remote"},
-			map[string]interface{}{"value": float64(3)},
+			map[string]any{"value": float64(3)},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),
 		metric.New(
 			"test_http_requests",
 			map[string]string{"instance": "remote"},
-			map[string]interface{}{"value": float64(5)},
+			map[string]any{"value": float64(5)},
 			time.Unix(0, 0),
 			telegraf.Gauge,
 		),

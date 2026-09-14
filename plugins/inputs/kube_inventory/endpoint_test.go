@@ -27,7 +27,7 @@ func TestEndpoint(t *testing.T) {
 		{
 			name: "no endpoints",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/endpoints/": &discoveryv1.EndpointSliceList{},
 				},
 			},
@@ -36,7 +36,7 @@ func TestEndpoint(t *testing.T) {
 		{
 			name: "collect ready endpoints",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/endpoints/": &discoveryv1.EndpointSliceList{
 						Items: []discoveryv1.EndpointSlice{
 							{
@@ -83,7 +83,7 @@ func TestEndpoint(t *testing.T) {
 						"port_protocol": "TCP",
 						"pod":           "storage-6",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"ready":      true,
 						"port":       int32(8080),
 						"generation": int64(12),
@@ -97,7 +97,7 @@ func TestEndpoint(t *testing.T) {
 		{
 			name: "collect notready endpoints",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/endpoints/": &discoveryv1.EndpointSliceList{
 						Items: []discoveryv1.EndpointSlice{
 							{
@@ -144,7 +144,7 @@ func TestEndpoint(t *testing.T) {
 						"port_protocol": "TCP",
 						"pod":           "storage-6",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"ready":      false,
 						"port":       int32(8080),
 						"generation": int64(12),
@@ -158,7 +158,7 @@ func TestEndpoint(t *testing.T) {
 		{
 			name: "endpoints missing node_name",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/endpoints/": &discoveryv1.EndpointSliceList{
 						Items: []discoveryv1.EndpointSlice{
 							{
@@ -213,7 +213,7 @@ func TestEndpoint(t *testing.T) {
 						"port_protocol": "TCP",
 						"pod":           "storage-6",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"ready":      false,
 						"port":       int32(8080),
 						"generation": int64(12),
@@ -231,7 +231,7 @@ func TestEndpoint(t *testing.T) {
 						"port_protocol": "TCP",
 						"pod":           "storage-12",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"ready":      true,
 						"port":       int32(8080),
 						"generation": int64(12),
@@ -245,7 +245,7 @@ func TestEndpoint(t *testing.T) {
 		{
 			name: "endpoints null",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/endpoints/": &discoveryv1.EndpointSliceList{
 						Items: []discoveryv1.EndpointSlice{
 							{
@@ -274,7 +274,7 @@ func TestEndpoint(t *testing.T) {
 		{
 			name: "default port name",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/endpoints/": &discoveryv1.EndpointSliceList{
 						Items: []discoveryv1.EndpointSlice{
 							{
@@ -319,7 +319,7 @@ func TestEndpoint(t *testing.T) {
 						"port_protocol": "TCP",
 						"pod":           "storage-6",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"ready":      false,
 						"port":       int32(8080),
 						"generation": int64(12),
@@ -333,7 +333,7 @@ func TestEndpoint(t *testing.T) {
 		{
 			name: "ports null",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/endpoints/": &discoveryv1.EndpointSliceList{
 						Items: []discoveryv1.EndpointSlice{
 							{
@@ -377,7 +377,7 @@ func TestEndpoint(t *testing.T) {
 		{
 			name: "endpoints and ports null",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/endpoints/": &discoveryv1.EndpointSliceList{
 						Items: []discoveryv1.EndpointSlice{
 							{
@@ -400,7 +400,7 @@ func TestEndpoint(t *testing.T) {
 		{
 			name: "empty conditions",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/endpoints/": &discoveryv1.EndpointSliceList{
 						Items: []discoveryv1.EndpointSlice{
 							{
@@ -443,7 +443,7 @@ func TestEndpoint(t *testing.T) {
 						"port_protocol": "TCP",
 						"pod":           "storage-6",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"ready":      true,
 						"port":       int32(8080),
 						"generation": int64(12),

@@ -73,7 +73,7 @@ func (s *Sensors) Gather(acc telegraf.Accumulator) error {
 // and parses the output to add it to the telegraf.Accumulator.
 func (s *Sensors) parse(acc telegraf.Accumulator) error {
 	tags := make(map[string]string)
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	chip := ""
 	cmd := execCommand(s.path, "-A", "-u")
 	out, err := internal.StdOutputTimeout(cmd, time.Duration(s.Timeout))
@@ -86,7 +86,7 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 			acc.AddFields("sensors", fields, tags)
 			chip = ""
 			tags = make(map[string]string)
-			fields = make(map[string]interface{})
+			fields = make(map[string]any)
 			continue
 		}
 		if len(chip) == 0 {
@@ -98,7 +98,7 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 			if len(tags) > 1 {
 				acc.AddFields("sensors", fields, tags)
 			}
-			fields = make(map[string]interface{})
+			fields = make(map[string]any)
 			tags = map[string]string{
 				"chip":    chip,
 				"feature": strings.TrimRight(snake(line), ":"),

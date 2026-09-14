@@ -111,7 +111,7 @@ func (n *Apache) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 	tags := getTags(addr)
 
 	sc := bufio.NewScanner(resp.Body)
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for sc.Scan() {
 		line := sc.Text()
 		if strings.Contains(line, ":") {
@@ -137,7 +137,7 @@ func (n *Apache) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 	return nil
 }
 
-func gatherScores(data string) map[string]interface{} {
+func gatherScores(data string) map[string]any {
 	var waiting, open = 0, 0
 	var s, r, w, k, d, c, l, g, i = 0, 0, 0, 0, 0, 0, 0, 0, 0
 
@@ -168,7 +168,7 @@ func gatherScores(data string) map[string]interface{} {
 		}
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"scboard_waiting":      float64(waiting),
 		"scboard_starting":     float64(s),
 		"scboard_reading":      float64(r),

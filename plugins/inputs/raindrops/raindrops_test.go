@@ -71,7 +71,7 @@ func TestRaindropsGeneratesMetrics(t *testing.T) {
 	err := acc.GatherError(n.Gather)
 	require.NoError(t, err)
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"calling": uint64(100),
 		"writing": uint64(200),
 	}
@@ -99,7 +99,7 @@ func TestRaindropsGeneratesMetrics(t *testing.T) {
 		"port": "8081",
 		"ip":   "0.0.0.0",
 	}
-	fields = map[string]interface{}{
+	fields = map[string]any{
 		"active": uint64(3),
 		"queued": uint64(4),
 	}

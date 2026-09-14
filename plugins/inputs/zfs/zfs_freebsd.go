@@ -73,7 +73,7 @@ func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// Gather information form the kernel using sysctl
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	var removeIndices []int
 	for i, metric := range z.KstatMetrics {
 		stdout, err := z.sysctl(metric)
@@ -125,7 +125,7 @@ func (z *Zfs) gatherPoolStats(acc telegraf.Accumulator) (string, error) {
 		}
 
 		tags := map[string]string{"pool": col[0], "health": col[1]}
-		fields := map[string]interface{}{}
+		fields := map[string]any{}
 
 		if tags["health"] == "UNAVAIL" {
 			fields["size"] = int64(0)
@@ -199,7 +199,7 @@ func (z *Zfs) gatherDatasetStats(acc telegraf.Accumulator) (string, error) {
 		}
 
 		tags := map[string]string{"dataset": col[0]}
-		fields := map[string]interface{}{}
+		fields := map[string]any{}
 
 		for i, key := range properties[1:] {
 			// Treat '-' entries as zero

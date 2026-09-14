@@ -30,7 +30,7 @@ func (ki *KubernetesInventory) gatherPersistentVolumeClaim(pvc corev1.Persistent
 	case "pending":
 		phaseType = 2
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"phase_type": phaseType,
 	}
 	tags := map[string]string{

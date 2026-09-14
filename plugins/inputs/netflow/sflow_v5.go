@@ -56,7 +56,7 @@ func (d *sflowv5Decoder) decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 
 		switch sample := s.(type) {
 		case sflow.FlowSample:
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"ip_version":        decodeSflowIPVersion(msg.IPVersion),
 				"sys_uptime":        msg.Uptime,
 				"agent_subid":       msg.SubAgentId,
@@ -95,7 +95,7 @@ func (d *sflowv5Decoder) decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 			}
 			metrics = append(metrics, metric.New("netflow", tags, fields, t))
 		case sflow.ExpandedFlowSample:
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"ip_version":        decodeSflowIPVersion(msg.IPVersion),
 				"sys_uptime":        msg.Uptime,
 				"agent_subid":       msg.SubAgentId,
@@ -134,7 +134,7 @@ func (d *sflowv5Decoder) decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 			}
 			metrics = append(metrics, metric.New("netflow", tags, fields, t))
 		case sflow.CounterSample:
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"ip_version":  decodeSflowIPVersion(msg.IPVersion),
 				"sys_uptime":  msg.Uptime,
 				"agent_subid": msg.SubAgentId,
@@ -160,7 +160,7 @@ func (d *sflowv5Decoder) decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 			}
 			metrics = append(metrics, metric.New("netflow", tags, fields, t))
 		case sflow.DropSample:
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"ip_version":     decodeSflowIPVersion(msg.IPVersion),
 				"sys_uptime":     msg.Uptime,
 				"agent_subid":    msg.SubAgentId,
@@ -204,8 +204,8 @@ func (d *sflowv5Decoder) decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 	return metrics, nil
 }
 
-func (d *sflowv5Decoder) decodeFlowRecords(records []sflow.FlowRecord) (map[string]interface{}, error) {
-	fields := make(map[string]interface{})
+func (d *sflowv5Decoder) decodeFlowRecords(records []sflow.FlowRecord) (map[string]any, error) {
+	fields := make(map[string]any)
 	for _, r := range records {
 		if r.Data == nil {
 			continue
@@ -332,7 +332,7 @@ func (d *sflowv5Decoder) decodeFlowRecords(records []sflow.FlowRecord) (map[stri
 	return fields, nil
 }
 
-func (d *sflowv5Decoder) decodeRawHeaderSample(record *sflow.SampledHeader) (map[string]interface{}, error) {
+func (d *sflowv5Decoder) decodeRawHeaderSample(record *sflow.SampledHeader) (map[string]any, error) {
 	var packet gopacket.Packet
 	switch record.Protocol {
 	case 1: // ETHERNET-ISO8023
@@ -365,7 +365,7 @@ func (d *sflowv5Decoder) decodeRawHeaderSample(record *sflow.SampledHeader) (map
 		return nil, fmt.Errorf("unhandled protocol %d", record.Protocol)
 	}
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for _, pkt := range packet.Layers() {
 		switch l := pkt.(type) {
 		case *layers.Ethernet:
@@ -467,8 +467,8 @@ func (d *sflowv5Decoder) decodeRawHeaderSample(record *sflow.SampledHeader) (map
 	return fields, nil
 }
 
-func (d *sflowv5Decoder) decodeCounterRecords(records []sflow.CounterRecord) (map[string]interface{}, error) {
-	fields := make(map[string]interface{})
+func (d *sflowv5Decoder) decodeCounterRecords(records []sflow.CounterRecord) (map[string]any, error) {
+	fields := make(map[string]any)
 	for _, r := range records {
 		if r.Data == nil {
 			continue

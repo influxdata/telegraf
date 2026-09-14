@@ -286,8 +286,8 @@ func mustReadSampleOutput() []byte {
 	return data
 }
 
-func haproxyGetFieldValues() map[string]interface{} {
-	fields := map[string]interface{}{
+func haproxyGetFieldValues() map[string]any {
+	fields := map[string]any{
 		"active_servers":      uint64(1),
 		"backup_servers":      uint64(0),
 		"bin":                 uint64(5228218),

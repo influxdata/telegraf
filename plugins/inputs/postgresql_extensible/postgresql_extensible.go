@@ -48,7 +48,7 @@ type query struct {
 }
 
 type scanner interface {
-	Scan(dest ...interface{}) error
+	Scan(dest ...any) error
 }
 
 func (*Postgresql) SampleConfig() string {
@@ -156,13 +156,13 @@ func (p *Postgresql) gatherMetricsFromQuery(acc telegraf.Accumulator, q query, t
 
 func (p *Postgresql) accRow(acc telegraf.Accumulator, row scanner, columns []string, q query, timestamp time.Time) error {
 	// this is where we'll store the column name with its *interface{}
-	columnMap := make(map[string]*interface{})
+	columnMap := make(map[string]*any)
 
 	for _, column := range columns {
-		columnMap[column] = new(interface{})
+		columnMap[column] = new(any)
 	}
 
-	columnVars := make([]interface{}, 0, len(columnMap))
+	columnVars := make([]any, 0, len(columnMap))
 	// populate the array of interface{} with the pointers in the right order
 	for i := 0; i < len(columnMap); i++ {
 		columnVars = append(columnVars, columnMap[columns[i]])
@@ -192,7 +192,7 @@ func (p *Postgresql) accRow(acc telegraf.Accumulator, row scanner, columns []str
 		"db":     dbname.String(),
 	}
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for col, val := range columnMap {
 		p.Log.Debugf("Column: %s = %T: %v\n", col, *val, *val)
 		_, ignore := ignoredColumns[col]

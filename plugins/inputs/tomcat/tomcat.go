@@ -123,7 +123,7 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// add tomcat_jvm_memory measurements
-	tcm := map[string]interface{}{
+	tcm := map[string]any{
 		"free":  status.TomcatJvm.JvmMemory.Free,
 		"total": status.TomcatJvm.JvmMemory.Total,
 		"max":   status.TomcatJvm.JvmMemory.Max,
@@ -138,7 +138,7 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 			"source": s.URL,
 		}
 
-		tcmpFields := map[string]interface{}{
+		tcmpFields := map[string]any{
 			"init":      mp.UsageInit,
 			"committed": mp.UsageCommitted,
 			"max":       mp.UsageMax,
@@ -160,7 +160,7 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 			"source": s.URL,
 		}
 
-		tccFields := map[string]interface{}{
+		tccFields := map[string]any{
 			"max_threads":          c.ThreadInfo.MaxThreads,
 			"current_thread_count": c.ThreadInfo.CurrentThreadCount,
 			"current_threads_busy": c.ThreadInfo.CurrentThreadsBusy,

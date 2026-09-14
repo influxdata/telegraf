@@ -104,7 +104,7 @@ func (f *Fail2ban) Gather(acc telegraf.Accumulator) error {
 		if jail == "" {
 			continue
 		}
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		cmd := execCommand(name, append(args, jail)...)
 		out, err := cmd.Output()
 		if err != nil {

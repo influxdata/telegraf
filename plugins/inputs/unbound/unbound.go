@@ -53,8 +53,8 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// Process values
-	fields := make(map[string]interface{})
-	fieldsThreads := make(map[string]map[string]interface{})
+	fields := make(map[string]any)
+	fieldsThreads := make(map[string]map[string]any)
 
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
@@ -89,7 +89,7 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 					// re-define stat
 					field := strings.Join(threadTokens[:], "_")
 					if fieldsThreads[threadID] == nil {
-						fieldsThreads[threadID] = make(map[string]interface{})
+						fieldsThreads[threadID] = make(map[string]any)
 					}
 					fieldsThreads[threadID][field] = fieldValue
 				}

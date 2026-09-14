@@ -20,7 +20,7 @@ type totalHits struct {
 	Value    int64  `json:"value"`
 }
 
-type metricAggregation map[string]interface{}
+type metricAggregation map[string]any
 
 type aggregateValue struct {
 	metrics metricAggregation
@@ -40,7 +40,7 @@ func (a *aggregationResponse) getMetrics(acc telegraf.Accumulator, measurement s
 	// Simple case (no aggregations)
 	if a.Aggregations == nil {
 		tags := make(map[string]string)
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"doc_count": a.Hits.TotalHits.Value,
 		}
 		acc.AddFields(measurement, fields, tags)
@@ -52,7 +52,7 @@ func (a *aggregationResponse) getMetrics(acc telegraf.Accumulator, measurement s
 
 func (a *aggregation) getMetrics(acc telegraf.Accumulator, measurement string, docCount int64, tags map[string]string) error {
 	var err error
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for name, agg := range *a {
 		if agg.isAggregation() {
 			for _, bucket := range agg.buckets {
@@ -69,7 +69,7 @@ func (a *aggregation) getMetrics(acc telegraf.Accumulator, measurement string, d
 		}
 		for metric, value := range agg.metrics {
 			switch value := value.(type) {
-			case map[string]interface{}:
+			case map[string]any:
 				for k, v := range value {
 					fields[name+"_"+metric+"_"+k] = v
 				}

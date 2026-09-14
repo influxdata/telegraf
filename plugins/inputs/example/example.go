@@ -101,7 +101,7 @@ func (m *Example) Gather(acc telegraf.Accumulator) error {
 		}
 
 		// Construct the fields
-		fields := map[string]interface{}{"count": m.count}
+		fields := map[string]any{"count": m.count}
 		for i := int64(1); i < m.NumberFields; i++ {
 			name := fmt.Sprintf("field%d", i)
 			var err error

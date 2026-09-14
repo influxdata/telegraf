@@ -186,11 +186,11 @@ func (t *Tail) getSeekInfo(file string) (*tail.SeekInfo, error) {
 	}
 }
 
-func (t *Tail) GetState() interface{} {
+func (t *Tail) GetState() any {
 	return t.offsets
 }
 
-func (t *Tail) SetState(state interface{}) error {
+func (t *Tail) SetState(state any) error {
 	offsetsState, ok := state.(map[string]int64)
 	if !ok {
 		return errors.New("state has to be of type 'map[string]int64'")

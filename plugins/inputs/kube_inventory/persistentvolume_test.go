@@ -26,7 +26,7 @@ func TestPersistentVolume(t *testing.T) {
 		{
 			name: "no pv",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/persistentvolumes/": &corev1.PersistentVolumeList{},
 				},
 			},
@@ -35,7 +35,7 @@ func TestPersistentVolume(t *testing.T) {
 		{
 			name: "collect pvs",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/persistentvolumes/": &corev1.PersistentVolumeList{
 						Items: []corev1.PersistentVolume{
 							{
@@ -66,7 +66,7 @@ func TestPersistentVolume(t *testing.T) {
 						"storageclass": "ebs-1",
 						"phase":        "pending",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"phase_type": 2,
 					},
 					time.Unix(0, 0),
