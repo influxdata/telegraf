@@ -20,6 +20,28 @@ func TestInit(t *testing.T) {
 		expected *DNSQuery
 	}{
 		{
+			name:   "empty",
+			plugin: &DNSQuery{},
+			expected: &DNSQuery{
+				Network:    "udp",
+				RecordType: "NS",
+				Domains:    []string{"."},
+				Port:       53,
+			},
+		},
+		{
+			name: "record type",
+			plugin: &DNSQuery{
+				RecordType: "A",
+			},
+			expected: &DNSQuery{
+				Network:    "udp",
+				RecordType: "A",
+				Domains:    []string{"."},
+				Port:       53,
+			},
+		},
+		{
 			name: "domain",
 			plugin: &DNSQuery{
 				Domains: []string{"google.com"},
@@ -27,6 +49,19 @@ func TestInit(t *testing.T) {
 			expected: &DNSQuery{
 				Network:    "udp",
 				RecordType: "NS",
+				Domains:    []string{"google.com"},
+				Port:       53,
+			},
+		},
+		{
+			name: "record type and domain",
+			plugin: &DNSQuery{
+				RecordType: "A",
+				Domains:    []string{"google.com"},
+			},
+			expected: &DNSQuery{
+				Network:    "udp",
+				RecordType: "A",
 				Domains:    []string{"google.com"},
 				Port:       53,
 			},
@@ -60,6 +95,10 @@ func TestRecordTypeParser(t *testing.T) {
 		record   string
 		expected uint16
 	}{
+		{
+			record:   "",
+			expected: dns.TypeNS,
+		},
 		{
 			record:   "A",
 			expected: dns.TypeA,
@@ -122,7 +161,6 @@ func TestRecordTypeParser(t *testing.T) {
 func TestRecordTypeParserError(t *testing.T) {
 	plugin := &DNSQuery{
 		Timeout:    config.Duration(2 * time.Second),
-		Domains:    []string{"example.com"},
 		RecordType: "nil",
 	}
 	require.ErrorContains(t, plugin.Init(), "record type \"nil\" not recognized")
