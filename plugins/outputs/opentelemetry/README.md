@@ -50,6 +50,9 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Supports: "gzip", "none"
   # compression = "gzip"
 
+  ## Characters for separating LineProtocol's metric name and field when converting to OpenTelemetry's metric name
+  # name_separator = "_"
+
   ## Optional proxy settings for HTTP endpoints (service_address starts with http:// or https://)
   # use_system_proxy = false
   # http_proxy_url = ""
