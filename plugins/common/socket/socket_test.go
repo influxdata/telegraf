@@ -35,19 +35,19 @@ func TestListenData(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
-			map[string]interface{}{"v": int64(1)},
+			map[string]any{"v": int64(1)},
 			time.Unix(0, 123456789),
 		),
 		metric.New(
 			"test",
 			map[string]string{"foo": "baz"},
-			map[string]interface{}{"v": int64(2)},
+			map[string]any{"v": int64(2)},
 			time.Unix(0, 123456790),
 		),
 		metric.New(
 			"test",
 			map[string]string{"foo": "zab"},
-			map[string]interface{}{"v": int64(3)},
+			map[string]any{"v": int64(3)},
 			time.Unix(0, 123456791),
 		),
 	}
@@ -237,19 +237,19 @@ func TestListenConnection(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
-			map[string]interface{}{"v": int64(1)},
+			map[string]any{"v": int64(1)},
 			time.Unix(0, 123456789),
 		),
 		metric.New(
 			"test",
 			map[string]string{"foo": "baz"},
-			map[string]interface{}{"v": int64(2)},
+			map[string]any{"v": int64(2)},
 			time.Unix(0, 123456790),
 		),
 		metric.New(
 			"test",
 			map[string]string{"foo": "zab"},
-			map[string]interface{}{"v": int64(3)},
+			map[string]any{"v": int64(3)},
 			time.Unix(0, 123456791),
 		),
 	}
@@ -642,19 +642,19 @@ func TestNoSplitter(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
-			map[string]interface{}{"v": int64(1)},
+			map[string]any{"v": int64(1)},
 			time.Unix(0, 123456789),
 		),
 		metric.New(
 			"test",
 			map[string]string{"foo": "baz"},
-			map[string]interface{}{"v": int64(2)},
+			map[string]any{"v": int64(2)},
 			time.Unix(0, 123456790),
 		),
 		metric.New(
 			"test",
 			map[string]string{"foo": "zab"},
-			map[string]interface{}{"v": int64(3)},
+			map[string]any{"v": int64(3)},
 			time.Unix(0, 123456791),
 		),
 	}

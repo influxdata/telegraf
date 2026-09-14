@@ -105,7 +105,7 @@ func (f *Field) Init(tr Translator) error {
 }
 
 // Convert converts from any type according to the conv specification
-func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
+func (f *Field) Convert(ent gosnmp.SnmpPDU) (any, error) {
 	v := ent.Value
 
 	// snmptranslate table field value here

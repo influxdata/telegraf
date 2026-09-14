@@ -20,7 +20,7 @@ func TestOrderedJobsStayOrdered(t *testing.T) {
 	for i := 0; i < 20000; i++ {
 		m := metric.New("test",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"val": i,
 			},
 			now,
@@ -52,7 +52,7 @@ func TestUnorderedJobsDontDropAnyJobs(t *testing.T) {
 		expectedTotal += i
 		m := metric.New("test",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"val": i,
 			},
 			now,
@@ -79,7 +79,7 @@ func BenchmarkOrdered(b *testing.B) {
 
 	m := metric.New("test",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"val": 1,
 		},
 		time.Now(),
@@ -99,7 +99,7 @@ func BenchmarkUnordered(b *testing.B) {
 
 	m := metric.New("test",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"val": 1,
 		},
 		time.Now(),

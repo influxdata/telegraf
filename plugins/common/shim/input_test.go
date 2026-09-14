@@ -93,7 +93,7 @@ func (*testInput) SampleConfig() string {
 
 func (i *testInput) Gather(acc telegraf.Accumulator) error {
 	acc.AddFields("measurement",
-		map[string]interface{}{
+		map[string]any{
 			"field": 1,
 		},
 		map[string]string{
@@ -122,7 +122,7 @@ func (*serviceInput) SampleConfig() string {
 
 func (*serviceInput) Gather(acc telegraf.Accumulator) error {
 	acc.AddFields("measurement",
-		map[string]interface{}{
+		map[string]any{
 			"field": 1,
 		},
 		map[string]string{
