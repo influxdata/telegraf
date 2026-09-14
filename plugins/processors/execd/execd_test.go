@@ -59,7 +59,7 @@ func TestExternalProcessorWorks(t *testing.T) {
 		m := metric.New(
 			"test",
 			map[string]string{"city": "Toronto"},
-			map[string]interface{}{"population": 6000000, "count": 1},
+			map[string]any{"population": 6000000, "count": 1},
 			now.Add(time.Duration(i)),
 		)
 		input = append(input, m)
@@ -117,7 +117,7 @@ func TestParseLinesWithNewLines(t *testing.T) {
 		map[string]string{
 			"author": "Mr. Gopher",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"phrase": "Gophers are amazing creatures.\nAbsolutely amazing.",
 			"count":  3,
 		},
@@ -127,7 +127,7 @@ func TestParseLinesWithNewLines(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"author": "Mr. Gopher"},
-			map[string]interface{}{
+			map[string]any{
 				"phrase": "Gophers are amazing creatures.\nAbsolutely amazing.",
 				"count":  6,
 			},
@@ -179,14 +179,14 @@ func TestLongLinesForLineProtocol(t *testing.T) {
 	input := metric.New(
 		"test",
 		map[string]string{"author": "Mr. Gopher"},
-		map[string]interface{}{"count": 3},
+		map[string]any{"count": 3},
 		now,
 	)
 	expected := []telegraf.Metric{
 		metric.New(
 			"test",
 			map[string]string{"author": "Mr. Gopher"},
-			map[string]interface{}{
+			map[string]any{
 				"long":  strings.Repeat("foobar", 280_000/6),
 				"count": 3,
 			},
@@ -284,7 +284,7 @@ func TestTracking(t *testing.T) {
 			map[string]string{
 				"city": "Toronto",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"population": 6000000,
 				"count":      1,
 			},
@@ -295,7 +295,7 @@ func TestTracking(t *testing.T) {
 			map[string]string{
 				"city": "Tokio",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"population": 14000000,
 				"count":      8,
 			},
@@ -309,7 +309,7 @@ func TestTracking(t *testing.T) {
 			map[string]string{
 				"city": "Toronto",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"population": 6000000,
 				"count":      2,
 			},
@@ -320,7 +320,7 @@ func TestTracking(t *testing.T) {
 			map[string]string{
 				"city": "Tokio",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"population": 14000000,
 				"count":      16,
 			},

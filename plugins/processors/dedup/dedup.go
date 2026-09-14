@@ -99,7 +99,7 @@ func (d *Dedup) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	return metrics
 }
 
-func (d *Dedup) GetState() interface{} {
+func (d *Dedup) GetState() any {
 	s := &serializers_influx.Serializer{}
 	v := make([]telegraf.Metric, 0, len(d.cache))
 	for _, value := range d.cache {
@@ -112,7 +112,7 @@ func (d *Dedup) GetState() interface{} {
 	return state
 }
 
-func (d *Dedup) SetState(state interface{}) error {
+func (d *Dedup) SetState(state any) error {
 	p := &influx.Parser{}
 	if err := p.Init(); err != nil {
 		return err
