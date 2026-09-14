@@ -1,6 +1,7 @@
 package http_response
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -564,8 +565,19 @@ func TestInterface(t *testing.T) {
 	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
 }
 
+type socks5TestResolver map[string]net.IP
+
+func (r socks5TestResolver) Resolve(ctx context.Context, name string) (context.Context, net.IP, error) {
+	ip, ok := r[name]
+	if !ok {
+		return ctx, nil, fmt.Errorf("unknown hostname %q", name)
+	}
+	return ctx, ip, nil
+}
+
 func TestSocks5Proxy(t *testing.T) {
 	const (
+		proxyHostname = "telegraf.invalid"
 		proxyUsername = "user"
 		proxyPassword = "password"
 	)
@@ -573,6 +585,14 @@ func TestSocks5Proxy(t *testing.T) {
 	mux := setUpTestMux()
 	ts := httptest.NewServer(mux)
 	defer ts.Close()
+
+	// Only the SOCKS5 proxy can resolve this hostname, so a direct dial fails.
+	serverURL, err := url.Parse(ts.URL)
+	require.NoError(t, err)
+	serverIP := net.ParseIP(serverURL.Hostname())
+	require.NotNil(t, serverIP)
+	serverURL.Host = net.JoinHostPort(proxyHostname, serverURL.Port())
+	serverURL.Path = "/good"
 
 	proxyListener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
@@ -582,6 +602,7 @@ func TestSocks5Proxy(t *testing.T) {
 		AuthMethods: []socks5.Authenticator{socks5.UserPassAuthenticator{
 			Credentials: socks5.StaticCredentials{proxyUsername: proxyPassword},
 		}},
+		Resolver: socks5TestResolver{proxyHostname: serverIP},
 	})
 	require.NoError(t, err)
 	go func() {
@@ -592,7 +613,7 @@ func TestSocks5Proxy(t *testing.T) {
 
 	h := &HTTPResponse{
 		Log:             testutil.Logger{},
-		URLs:            []string{ts.URL + "/good"},
+		URLs:            []string{serverURL.String()},
 		Method:          "GET",
 		ResponseTimeout: config.Duration(time.Second * 20),
 		Socks5ProxyConfig: commonproxy.Socks5ProxyConfig{
@@ -605,6 +626,8 @@ func TestSocks5Proxy(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NoError(t, h.Init())
+	// Keep ambient HTTP proxy settings from changing the SOCKS5 destination.
+	h.clients[0].httpClient.(*http.Client).Transport.(*http.Transport).Proxy = nil
 	require.NoError(t, h.Gather(&acc))
 
 	expectedFields := map[string]interface{}{
