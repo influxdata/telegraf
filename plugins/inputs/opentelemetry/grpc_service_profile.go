@@ -161,6 +161,14 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 							mapping := &otlp.Mapping{}
 
 							// Check the indices of the following lookups
+							if p.PeriodType == nil {
+								s.logger.Errorf("invalid nil period type in request: %s", buf)
+								continue
+							}
+							if p.SampleType == nil {
+								s.logger.Errorf("invalid nil sample type in request: %s", buf)
+								continue
+							}
 							if p.PeriodType.TypeStrindex < 0 || int(p.PeriodType.TypeStrindex) >= len(pd.GetStringTable()) {
 								s.logger.Errorf("invalid mapping period name index %d in request: %s", p.PeriodType.TypeStrindex, buf)
 								continue
@@ -226,20 +234,27 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 								"file_offset":          mapping.FileOffset,
 								"value":                value,
 							}
-							for _, idx := range sample.AttributeIndices {
-								attr := pd.AttributeTable[idx]
-								if attr.KeyStrindex < 0 || int(attr.KeyStrindex) >= len(pd.StringTable) {
-									buf, err := protojson.Marshal(req)
-									if err != nil {
-										s.logger.Errorf("Cannot marshal request: %v", err)
-									}
+							for _, idx := range sample.GetAttributeIndices() {
+								if idx < 0 || int(idx) >= len(pd.GetAttributeTable()) {
+									s.logger.Errorf("invalid attribute table index %d in request: %s", idx, buf)
+									continue
+								}
+								attr := pd.GetAttributeTable()[idx]
+								if attr == nil || attr.Value == nil {
+									continue
+								}
+								if attr.KeyStrindex < 0 || int(attr.KeyStrindex) >= len(pd.GetStringTable()) {
 									s.logger.Errorf("invalid attribute index %d in request: %s", attr.KeyStrindex, buf)
 									continue
 								}
-								key := pd.StringTable[attr.KeyStrindex]
+								key := pd.GetStringTable()[attr.KeyStrindex]
 								fields[key] = attr.GetValue().Value
 							}
-							ts := sample.TimestampsUnixNano[validIdx]
+							if validIdx >= len(sample.GetTimestampsUnixNano()) {
+								s.logger.Errorf("invalid timestamp index %d in request: %s", validIdx, buf)
+								continue
+							}
+							ts := sample.GetTimestampsUnixNano()[validIdx]
 							s.acc.AddFields("profiles", fields, tags, time.Unix(0, int64(ts)))
 						}
 					}
