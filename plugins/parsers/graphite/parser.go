@@ -120,7 +120,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		return nil, fmt.Errorf(`field %q value: %w`, fields[0], err)
 	}
 
-	fieldValues := make(map[string]interface{}, 1)
+	fieldValues := make(map[string]any, 1)
 	if field != "" {
 		fieldValues[field] = v
 	} else {

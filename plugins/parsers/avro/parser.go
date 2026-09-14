@@ -131,7 +131,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		}
 	}
 
-	var native interface{}
+	var native any
 	switch p.Format {
 	case "binary":
 		native, _, err = codec.NativeFromBinary(message)
@@ -146,16 +146,16 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	// Handle single records and arrays at root level
 	switch v := native.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		m, err := p.createMetric(v, schema)
 		if err != nil {
 			return nil, err
 		}
 		return []telegraf.Metric{m}, nil
-	case []interface{}:
+	case []any:
 		metrics := make([]telegraf.Metric, 0, len(v))
 		for idx, item := range v {
-			record, ok := item.(map[string]interface{})
+			record, ok := item.(map[string]any)
 			if !ok {
 				p.Log.Warnf("Skipping non-record array element at index %d (type %T)", idx, item)
 				continue
@@ -191,10 +191,10 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }
 
-func (p *Parser) flattenField(fldName string, fldVal map[string]interface{}) map[string]interface{} {
+func (p *Parser) flattenField(fldName string, fldVal map[string]any) map[string]any {
 	// Helper function for the "nullable" and "any" p.UnionModes
 	// fldVal is a one-item map of string-to-something
-	ret := make(map[string]interface{})
+	ret := make(map[string]any)
 	if p.UnionMode == "nullable" {
 		_, ok := fldVal["null"]
 		if ok {
@@ -210,16 +210,16 @@ func (p *Parser) flattenField(fldName string, fldVal map[string]interface{}) map
 	return ret
 }
 
-func (p *Parser) flattenItem(fld string, fldVal interface{}) (map[string]interface{}, error) {
+func (p *Parser) flattenItem(fld string, fldVal any) (map[string]any, error) {
 	sep := flatten.SeparatorStyle{
 		Before: "",
 		Middle: p.FieldSeparator,
 		After:  "",
 	}
-	candidate := make(map[string]interface{})
+	candidate := make(map[string]any)
 	candidate[fld] = fldVal
 
-	var flat map[string]interface{}
+	var flat map[string]any
 	var err error
 	// Exactly how we flatten is decided by p.UnionMode
 	if p.UnionMode == "flatten" {
@@ -229,7 +229,7 @@ func (p *Parser) flattenItem(fld string, fldVal interface{}) (map[string]interfa
 		}
 	} else {
 		// "nullable" or "any"
-		typedVal, ok := candidate[fld].(map[string]interface{})
+		typedVal, ok := candidate[fld].(map[string]any)
 		if !ok {
 			// the "key" is not a string, so ...
 			// most likely an array?  Do the default thing
@@ -245,10 +245,10 @@ func (p *Parser) flattenItem(fld string, fldVal interface{}) (map[string]interfa
 	return flat, nil
 }
 
-func (p *Parser) createMetric(data map[string]interface{}, schema string) (telegraf.Metric, error) {
+func (p *Parser) createMetric(data map[string]any, schema string) (telegraf.Metric, error) {
 	// Tags differ from fields, in that tags are inherently strings.
 	// fields can be of any type.
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	tags := make(map[string]string)
 
 	// Set default tag values
@@ -295,7 +295,7 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 			fields[k] = v
 		}
 	}
-	var schemaObj map[string]interface{}
+	var schemaObj map[string]any
 	if err := json.Unmarshal([]byte(schema), &schemaObj); err != nil {
 		return nil, fmt.Errorf("unmarshalling schema failed: %w", err)
 	}
@@ -329,7 +329,7 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 		// name attribute, take the name from the record describing its elements.
 		nameObj := schemaObj
 		if _, hasName := schemaObj["name"]; !hasName && schemaObj["type"] == "array" {
-			if items, ok := schemaObj["items"].(map[string]interface{}); ok {
+			if items, ok := schemaObj["items"].(map[string]any); ok {
 				nameObj = items
 			}
 		}

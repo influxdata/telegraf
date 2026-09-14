@@ -25,7 +25,7 @@ func (p *AuthMap) Password(user string) (string, error) {
 type metricData struct {
 	name   string
 	tags   map[string]string
-	fields map[string]interface{}
+	fields map[string]any
 }
 
 type testCase struct {
@@ -58,7 +58,7 @@ var singleMetric = testCase{
 				"instance":      "1",
 				"type":          "cpu",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(42),
 			},
 		},
@@ -91,7 +91,7 @@ var multiMetric = testCase{
 				"instance":      "0",
 				"type":          "cpu",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(42),
 			},
 		},
@@ -103,7 +103,7 @@ var multiMetric = testCase{
 				"instance":      "0",
 				"type":          "cpu",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(42),
 			},
 		},
@@ -360,7 +360,7 @@ func TestBenchmarkData(t *testing.T) {
 				"type":          "cpu",
 				"type_instance": "user",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 4.0,
 			},
 			time.Unix(0, 0),
@@ -373,7 +373,7 @@ func TestBenchmarkData(t *testing.T) {
 				"type":          "cpu",
 				"type_instance": "user",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 5.0,
 			},
 			time.Unix(0, 0),

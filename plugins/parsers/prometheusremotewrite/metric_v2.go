@@ -39,7 +39,7 @@ func (p *Parser) extractMetricsV2(ts *prompb.TimeSeries) ([]telegraf.Metric, err
 			continue
 		}
 		// converting to telegraf metric
-		fields := map[string]interface{}{metricName: s.Value}
+		fields := map[string]any{metricName: s.Value}
 		if s.Timestamp > 0 {
 			t = time.Unix(0, s.Timestamp*1000000)
 		}
