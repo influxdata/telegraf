@@ -96,6 +96,11 @@ func (c *shardConsumer) consume(ctx context.Context, shard string) ([]types.Chil
 
 func (c *shardConsumer) iterator(ctx context.Context) (*string, error) {
 	for {
+		// update starting seqnr to match last consumed record
+		if c.seqnr != "" {
+			c.params.ShardIteratorType = types.ShardIteratorTypeAfterSequenceNumber
+			c.params.StartingSequenceNumber = aws.String(c.seqnr)
+		}
 		resp, err := c.client.GetShardIterator(ctx, c.params)
 		if err != nil {
 			var throughputErr *types.ProvisionedThroughputExceededException
@@ -109,7 +114,7 @@ func (c *shardConsumer) iterator(ctx context.Context) (*string, error) {
 
 			return nil, err
 		}
-		c.log.Tracef("successfully updated iterator for shard %s (%s)...", *c.params.ShardId, c.seqnr)
+		c.log.Tracef("successfully updated iterator for shard %s (%s)...", *c.params.ShardId, aws.ToString(c.params.StartingSequenceNumber))
 		return resp.ShardIterator, nil
 	}
 }
