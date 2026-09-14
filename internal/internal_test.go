@@ -404,7 +404,7 @@ func TestParseTimestamp(t *testing.T) {
 	tests := []struct {
 		name      string
 		format    string
-		timestamp interface{}
+		timestamp any
 		location  string
 		separator []string
 		expected  time.Time
@@ -815,7 +815,7 @@ func TestParseTimestampInvalid(t *testing.T) {
 	tests := []struct {
 		name      string
 		format    string
-		timestamp interface{}
+		timestamp any
 		expected  string
 	}{
 		{

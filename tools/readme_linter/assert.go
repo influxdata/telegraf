@@ -21,7 +21,7 @@ type T struct {
 }
 
 // called by all assert functions that involve a node
-func (t *T) printFailedAssertf(n ast.Node, format string, args ...interface{}) {
+func (t *T) printFailedAssertf(n ast.Node, format string, args ...any) {
 	t.printFile(n)
 	fmt.Printf(format+"\n", args...)
 	t.printRule(3)
@@ -29,18 +29,18 @@ func (t *T) printFailedAssertf(n ast.Node, format string, args ...interface{}) {
 }
 
 // Assert function that doesnt involve a node, for example if something is missing
-func (t *T) assertf(format string, args ...interface{}) {
+func (t *T) assertf(format string, args ...any) {
 	t.printFileLine(0) // There's no line number associated, so use the first
 	fmt.Printf(format+"\n", args...)
 	t.printRule(3)
 	t.fails++
 }
 
-func (t *T) assertNodef(n ast.Node, format string, args ...interface{}) {
+func (t *T) assertNodef(n ast.Node, format string, args ...any) {
 	t.printFailedAssertf(n, format, args...)
 }
 
-func (t *T) assertNodeLineOffsetf(n ast.Node, offset int, format string, args ...interface{}) {
+func (t *T) assertNodeLineOffsetf(n ast.Node, offset int, format string, args ...any) {
 	t.printFileOffset(n, offset)
 	fmt.Printf(format+"\n", args...)
 	t.printRule(3)

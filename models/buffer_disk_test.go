@@ -27,7 +27,7 @@ func TestDiskBufferTruncate(t *testing.T) {
 	// Add some metrics to the buffer
 	expected := make([]telegraf.Metric, 0, 10)
 	for i := range 10 {
-		m := metric.New("test", map[string]string{}, map[string]interface{}{"value": i}, time.Now())
+		m := metric.New("test", map[string]string{}, map[string]any{"value": i}, time.Now())
 		buf.Add(m)
 		expected = append(expected, m)
 	}
@@ -85,7 +85,7 @@ func TestDiskBufferEmptyReuse(t *testing.T) {
 	// Add some metrics to the buffer
 	expected := make([]telegraf.Metric, 0, 5)
 	for i := range 5 {
-		m := metric.New("test", map[string]string{}, map[string]interface{}{"value": i}, time.Now())
+		m := metric.New("test", map[string]string{}, map[string]any{"value": i}, time.Now())
 		buf.Add(m)
 		expected = append(expected, m)
 	}
@@ -107,7 +107,7 @@ func TestDiskBufferEmptyReuse(t *testing.T) {
 	buf.EndTransaction(tx)
 
 	// Now add another set of metrics and make sure we can read it
-	m := metric.New("test", map[string]string{}, map[string]interface{}{"value": 42}, time.Now())
+	m := metric.New("test", map[string]string{}, map[string]any{"value": 42}, time.Now())
 	buf.Add(m)
 
 	// Read the complete set of metrics such that the buffer is empty again
@@ -135,7 +135,7 @@ func TestDiskBufferEmptyClose(t *testing.T) {
 	// Add some metrics to the buffer
 	expected := make([]telegraf.Metric, 0, 5)
 	for i := range 5 {
-		m := metric.New("test", map[string]string{}, map[string]interface{}{"value": i}, time.Now())
+		m := metric.New("test", map[string]string{}, map[string]any{"value": i}, time.Now())
 		buf.Add(m)
 		expected = append(expected, m)
 	}
@@ -167,7 +167,7 @@ func TestDiskBufferEmptyClose(t *testing.T) {
 
 	// However, adding a new metric to the buffer should work
 	// Now add another set of metrics and make sure we can read it
-	m := metric.New("test", map[string]string{}, map[string]interface{}{"value": 42}, time.Now())
+	m := metric.New("test", map[string]string{}, map[string]any{"value": 42}, time.Now())
 	reopened.Add(m)
 
 	// Read the complete set of metrics such that the buffer is empty again
@@ -178,7 +178,7 @@ func TestDiskBufferEmptyClose(t *testing.T) {
 }
 
 func TestDiskBufferRetainsTrackingInformation(t *testing.T) {
-	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
+	m := metric.New("cpu", map[string]string{}, map[string]any{"value": 42.0}, time.Unix(0, 0))
 
 	var delivered int
 	mm, _ := metric.WithTracking(m, func(telegraf.DeliveryInfo) { delivered++ })
@@ -198,23 +198,23 @@ func TestDiskBufferRetainsTrackingInformation(t *testing.T) {
 }
 
 func TestDiskBufferTrackingDroppedFromOldWal(t *testing.T) {
-	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
+	m := metric.New("cpu", map[string]string{}, map[string]any{"value": 42.0}, time.Unix(0, 0))
 
 	tm, _ := metric.WithTracking(m, func(telegraf.DeliveryInfo) {})
 	metrics := []telegraf.Metric{
 		// Basic metric with 1 field, 0 timestamp
-		metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0)),
+		metric.New("cpu", map[string]string{}, map[string]any{"value": 42.0}, time.Unix(0, 0)),
 		// Basic metric with 1 field, different timestamp
-		metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 20.0}, time.Now()),
+		metric.New("cpu", map[string]string{}, map[string]any{"value": 20.0}, time.Now()),
 		// Metric with a field
-		metric.New("cpu", map[string]string{"x": "y"}, map[string]interface{}{"value": 18.0}, time.Now()),
+		metric.New("cpu", map[string]string{"x": "y"}, map[string]any{"value": 18.0}, time.Now()),
 		// Tracking metric
 		tm,
 		// Metric with lots of tag types
 		metric.New(
 			"cpu",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value_f64":        20.0,
 				"value_uint64":     uint64(10),
 				"value_int16":      int16(5),
@@ -283,7 +283,7 @@ func TestDiskBufferTrackingOnOutputOutage(t *testing.T) {
 		m := metric.New(
 			"cpu",
 			map[string]string{},
-			map[string]interface{}{"value": i},
+			map[string]any{"value": i},
 			time.Unix(0, 0),
 		)
 		tm, tid := metric.WithTracking(m, func(di telegraf.DeliveryInfo) {

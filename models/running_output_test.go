@@ -796,7 +796,7 @@ func TestRunningOutputInternalMetrics(t *testing.T) {
 				"output": "test_name",
 				"alias":  "test_alias",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"buffer_limit":     10,
 				"buffer_size":      0,
 				"errors":           0,

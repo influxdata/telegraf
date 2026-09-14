@@ -169,7 +169,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	}
 
 	// Create the corresponding plugin configurations
-	var newcfg interface{}
+	var newcfg any
 	if old.Mode == "proxy" {
 		// Create a new proxy setup
 		cfg := migrations.CreateTOMLStruct("inputs", "jolokia2_proxy")

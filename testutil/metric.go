@@ -376,7 +376,7 @@ func ToTestMetric(tm telegraf.Metric) *Metric {
 	}
 
 	fieldList := tm.FieldList()
-	fields := make(map[string]interface{}, len(fieldList))
+	fields := make(map[string]any, len(fieldList))
 	for _, f := range fieldList {
 		fields[f.Key] = f.Value
 	}
