@@ -13,12 +13,12 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/gofrs/uuid/v5"
-	xproxy "golang.org/x/net/proxy"
+	"golang.org/x/net/proxy"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
-	"github.com/influxdata/telegraf/plugins/common/proxy"
+	common_proxy "github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -39,7 +39,7 @@ type Kafka struct {
 	MetricNameHeader  string            `toml:"metric_name_header" deprecated:"1.39.0;1.45.0;please use 'headers' instead"`
 	Headers           map[string]string `toml:"headers"`
 	Log               telegraf.Logger   `toml:"-"`
-	proxy.Socks5ProxyConfig
+	common_proxy.Socks5ProxyConfig
 	kafka.WriteConfig
 
 	saramaConfig *sarama.Config
@@ -92,7 +92,7 @@ func (k *Kafka) Init() error {
 	if k.Socks5ProxyEnabled {
 		config.Net.Proxy.Enable = true
 
-		dialer, err := k.Socks5ProxyConfig.GetDialer(xproxy.Direct)
+		dialer, err := k.Socks5ProxyConfig.GetDialer(proxy.Direct)
 		if err != nil {
 			return fmt.Errorf("connecting to proxy server failed: %w", err)
 		}

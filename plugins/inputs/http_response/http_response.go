@@ -18,13 +18,13 @@ import (
 
 	"github.com/benbjohnson/clock"
 	"github.com/seancfoley/ipaddress-go/ipaddr"
-	xproxy "golang.org/x/net/proxy"
+	"golang.org/x/net/proxy"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/cookie"
-	"github.com/influxdata/telegraf/plugins/common/proxy"
+	common_proxy "github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -59,7 +59,7 @@ type HTTPResponse struct {
 	// HTTP Basic Auth Credentials
 	Username config.Secret `toml:"username"`
 	Password config.Secret `toml:"password"`
-	proxy.Socks5ProxyConfig
+	common_proxy.Socks5ProxyConfig
 	tls.ClientConfig
 	cookie.CookieAuthConfig
 
@@ -189,7 +189,7 @@ func (h *HTTPResponse) createHTTPClient(address url.URL) (*http.Client, error) {
 		if err != nil {
 			return nil, fmt.Errorf("creating SOCKS5 proxy dialer failed: %w", err)
 		}
-		contextDialer, ok := proxyDialer.(xproxy.ContextDialer)
+		contextDialer, ok := proxyDialer.(proxy.ContextDialer)
 		if !ok {
 			return nil, errors.New("socks5 proxy dialer does not support context")
 		}
