@@ -822,7 +822,7 @@ func TestDifferentIndexSettings(t *testing.T) {
 	e := &Elasticsearch{
 		TemplateName: "test",
 		IndexName:    "telegraf-%Y.%m.%d",
-		IndexTemplate: map[string]interface{}{
+		IndexTemplate: map[string]any{
 			"refresh_interval":           "20s",
 			"mapping.total_fields.limit": 1000,
 			"codec":                      "best_compression",
@@ -843,7 +843,7 @@ func TestDifferentIndexSettings(t *testing.T) {
 func TestProcessHeaders(t *testing.T) {
 	tests := []struct {
 		name           string
-		headers        map[string]interface{}
+		headers        map[string]any
 		expectedResult map[string][]string
 		description    string
 	}{
@@ -855,13 +855,13 @@ func TestProcessHeaders(t *testing.T) {
 		},
 		{
 			name:           "empty headers map",
-			headers:        map[string]interface{}{},
+			headers:        map[string]any{},
 			expectedResult: map[string][]string{},
 			description:    "Empty headers map should return empty http.Header",
 		},
 		{
 			name: "single strings - basic and with commas (deprecated behavior)",
-			headers: map[string]interface{}{
+			headers: map[string]any{
 				"Content-Type":        "application/json",
 				"Authorization":       "Bearer token123",
 				"VL-Stream-Fields":    "tag.Source,tag.Channel,tag.EventID",
@@ -887,12 +887,12 @@ func TestProcessHeaders(t *testing.T) {
 		},
 		{
 			name: "string arrays - basic and with whitespace",
-			headers: map[string]interface{}{
-				"Accept":        []interface{}{"application/json", "application/xml", "text/plain"},
-				"Cache-Control": []interface{}{"no-cache", "must-revalidate"},
-				"X-Debug-Tags":  []interface{}{"performance", "security", "monitoring"},
-				"X-With-Spaces": []interface{}{" application/json ", "  application/xml  ", "text/plain"},
-				"X-Empty-Array": make([]interface{}, 0),
+			headers: map[string]any{
+				"Accept":        []any{"application/json", "application/xml", "text/plain"},
+				"Cache-Control": []any{"no-cache", "must-revalidate"},
+				"X-Debug-Tags":  []any{"performance", "security", "monitoring"},
+				"X-With-Spaces": []any{" application/json ", "  application/xml  ", "text/plain"},
+				"X-Empty-Array": make([]any, 0),
 			},
 			expectedResult: map[string][]string{
 				"Accept":        {"application/json", "application/xml", "text/plain"},
@@ -905,10 +905,10 @@ func TestProcessHeaders(t *testing.T) {
 		},
 		{
 			name: "interface arrays - TOML parsing and mixed types",
-			headers: map[string]interface{}{
-				"X-Forwarded-For":   []interface{}{"192.168.1.1", "10.0.0.1", "172.16.0.1"},
-				"X-Mixed-Types":     []interface{}{"string-value", 123, true, "another-string"},
-				"X-Empty-Interface": make([]interface{}, 0),
+			headers: map[string]any{
+				"X-Forwarded-For":   []any{"192.168.1.1", "10.0.0.1", "172.16.0.1"},
+				"X-Mixed-Types":     []any{"string-value", 123, true, "another-string"},
+				"X-Empty-Interface": make([]any, 0),
 			},
 			expectedResult: map[string][]string{
 				"X-Forwarded-For": {"192.168.1.1", "10.0.0.1", "172.16.0.1"},
@@ -919,7 +919,7 @@ func TestProcessHeaders(t *testing.T) {
 		},
 		{
 			name: "invalid types",
-			headers: map[string]interface{}{
+			headers: map[string]any{
 				"X-Numeric": 123,
 				"X-Boolean": true,
 				"X-Float":   45.67,
@@ -932,16 +932,16 @@ func TestProcessHeaders(t *testing.T) {
 		},
 		{
 			name: "comprehensive mixed scenario",
-			headers: map[string]interface{}{
+			headers: map[string]any{
 				// VictoriaLogs use case - strings with commas (deprecated behavior)
 				"VL-Stream-Fields": "tag.Source,tag.Channel,tag.EventID",
 				"VL-Time-Field":    "@timestamp",
 				"Authorization":    "Bearer token123",
-				"Accept":           []interface{}{"application/json", "text/plain"},
-				"X-Debug-Tags":     []interface{}{"performance", "security"},
-				"X-IPs":            []interface{}{"1.1.1.1", "2.2.2.2"},
+				"Accept":           []any{"application/json", "text/plain"},
+				"X-Debug-Tags":     []any{"performance", "security"},
+				"X-IPs":            []any{"1.1.1.1", "2.2.2.2"},
 				"X-Empty-String":   "",
-				"X-Empty-Array":    make([]interface{}, 0),
+				"X-Empty-Array":    make([]any, 0),
 			},
 			expectedResult: map[string][]string{
 				"Vl-Stream-Fields": {"tag.Source", "tag.Channel", "tag.EventID"}, // Split on commas (deprecated)
@@ -977,5 +977,5 @@ type esTemplate struct {
 }
 
 type esSettings struct {
-	Index map[string]interface{} `json:"index"`
+	Index map[string]any `json:"index"`
 }

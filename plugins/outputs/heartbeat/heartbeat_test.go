@@ -464,7 +464,7 @@ func TestIncludedExtraData(t *testing.T) {
 			schema, err := jsonschema.Compile(fmt.Sprintf("schema_v%d.json", jsonSchemaVersion))
 			require.NoError(t, err)
 
-			var v interface{}
+			var v any
 			require.NoError(t, json.Unmarshal([]byte(actual), &v))
 			require.NoError(t, schema.Validate(v))
 		})
@@ -491,7 +491,7 @@ func TestDetailedLogging(t *testing.T) {
 	tests := []struct {
 		name     string
 		source   string
-		attrs    map[string]interface{}
+		attrs    map[string]any
 		logcfg   LogsConfig
 		logs     []logEvent
 		expected string
@@ -1920,7 +1920,7 @@ func TestStatusComputation(t *testing.T) {
 			defer actualMu.Unlock()
 
 			// Check heartbeat message against the JSON schema
-			var v interface{}
+			var v any
 			require.NoError(t, json.Unmarshal([]byte(actual), &v))
 			require.NoError(t, schema.Validate(v))
 			require.JSONEq(t, expected, actual, actual)
@@ -1997,7 +1997,7 @@ func TestSending(t *testing.T) {
 	require.JSONEq(t, expected, actual, actual)
 
 	// Check heartbeat message against the JSON schema
-	var v interface{}
+	var v any
 	require.NoError(t, json.Unmarshal([]byte(actual), &v))
 	require.NoError(t, schema.Validate(v))
 }
@@ -2143,7 +2143,7 @@ func TestSendingFail(t *testing.T) {
 	require.JSONEq(t, expected, actual, actual)
 
 	// Check heartbeat message against the JSON schema
-	var v interface{}
+	var v any
 	require.NoError(t, json.Unmarshal([]byte(actual), &v))
 	require.NoError(t, schema.Validate(v))
 

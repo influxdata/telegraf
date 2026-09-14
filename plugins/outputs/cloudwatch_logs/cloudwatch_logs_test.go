@@ -357,7 +357,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						"message":      "Sorted: message #1",
 					},
@@ -372,7 +372,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						"message":      "Sorted: message #2",
 					},
@@ -395,7 +395,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						"message":      "Unsorted: message #1",
 					},
@@ -410,7 +410,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						"message":      "Unsorted: message #2",
 					},
@@ -432,7 +432,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						"message":      "message #1",
 					},
@@ -447,7 +447,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						"message":      "message #2",
 					},
@@ -469,7 +469,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						// Here comes very long message
 						"message": RandStringBytes(maxLogMessageLength + 1),
@@ -493,7 +493,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						// Here comes very long message to cause message batching
 						"message": "batch1 message1:" + RandStringBytes(maxLogMessageLength-16),
@@ -509,7 +509,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						// Here comes very long message to cause message batching
 						"message": "batch1 message2:" + RandStringBytes(maxLogMessageLength-16),
@@ -525,7 +525,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						// Here comes very long message to cause message batching
 						"message": "batch1 message3:" + RandStringBytes(maxLogMessageLength-16),
@@ -541,7 +541,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						// Here comes very long message to cause message batching
 						"message": "batch1 message4:" + RandStringBytes(maxLogMessageLength-16),
@@ -557,7 +557,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						"message":      "batch2 message1",
 					},

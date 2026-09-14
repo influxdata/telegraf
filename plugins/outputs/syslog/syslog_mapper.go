@@ -154,7 +154,7 @@ func mapTimestamp(metric telegraf.Metric, msg *rfc5424.SyslogMessage) {
 	msg.SetTimestamp(timestamp.Format(time.RFC3339))
 }
 
-func formatValue(value interface{}) string {
+func formatValue(value any) string {
 	switch v := value.(type) {
 	case string:
 		return v

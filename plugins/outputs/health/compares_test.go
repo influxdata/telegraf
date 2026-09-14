@@ -20,7 +20,7 @@ func TestFieldNotFoundIsSuccess(t *testing.T) {
 		metric.New(
 			"cpu",
 			map[string]string{},
-			map[string]interface{}{},
+			map[string]any{},
 			time.Now()),
 	}
 
@@ -37,7 +37,7 @@ func TestStringFieldIsFailure(t *testing.T) {
 		metric.New(
 			"cpu",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle": "foo",
 			},
 			time.Now()),
@@ -63,7 +63,7 @@ func TestFloatConvert(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": int64(42.0),
 					},
 					time.Now()),
@@ -76,7 +76,7 @@ func TestFloatConvert(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": uint64(42.0),
 					},
 					time.Now()),
@@ -89,7 +89,7 @@ func TestFloatConvert(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": float64(42.0),
 					},
 					time.Now()),
@@ -102,7 +102,7 @@ func TestFloatConvert(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": true,
 					},
 					time.Now()),
@@ -115,7 +115,7 @@ func TestFloatConvert(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": false,
 					},
 					time.Now()),
@@ -128,7 +128,7 @@ func TestFloatConvert(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": "42.0",
 					},
 					time.Now()),
@@ -257,7 +257,7 @@ func TestOperators(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42.0,
 					},
 					time.Now()),

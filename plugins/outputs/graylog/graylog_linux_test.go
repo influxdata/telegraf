@@ -133,7 +133,7 @@ func TestWriteTCP(t *testing.T) {
 	}
 }
 
-type GelfObject map[string]interface{}
+type GelfObject map[string]any
 
 func UDPServer(t *testing.T, wg *sync.WaitGroup, namefieldnoprefix bool) string {
 	udpServer, err := net.ListenPacket("udp", "127.0.0.1:0")

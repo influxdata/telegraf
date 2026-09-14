@@ -33,7 +33,7 @@ func TestGather(t *testing.T) {
 				metric.New(
 					"test",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": 1.0,
 					},
 					time.Now(),
@@ -50,7 +50,7 @@ func TestGather(t *testing.T) {
 					map[string]string{
 						"tag": "tag",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 1.0,
 					},
 					time.Now(),
@@ -60,7 +60,7 @@ func TestGather(t *testing.T) {
 					map[string]string{
 						"tag": "tag2",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 2.0,
 					},
 					time.Now(),
@@ -77,7 +77,7 @@ func TestGather(t *testing.T) {
 					map[string]string{
 						"host": "tag",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value_old": 1.0,
 					},
 					time.Now(),
@@ -87,7 +87,7 @@ func TestGather(t *testing.T) {
 					map[string]string{
 						"tag": "tag2",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value_new": 2.0,
 					},
 					time.Now(),
@@ -102,7 +102,7 @@ func TestGather(t *testing.T) {
 				metric.New(
 					"test",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"int":     int(0),
 						"int8":    int8(1),
 						"int16":   int16(2),
@@ -169,7 +169,7 @@ func TestPartialWrite(t *testing.T) {
 				metric.New(
 					"test/sub",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": 1.0,
 					},
 					time.Now(),
@@ -184,7 +184,7 @@ func TestPartialWrite(t *testing.T) {
 				metric.New(
 					"test",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": int8(1),
 					},
 					time.Now(),
@@ -192,7 +192,7 @@ func TestPartialWrite(t *testing.T) {
 				metric.New(
 					"test/sub",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": int8(2),
 					},
 					time.Now(),
@@ -200,7 +200,7 @@ func TestPartialWrite(t *testing.T) {
 				metric.New(
 					"test",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": int8(3),
 					},
 					time.Now(),
@@ -218,7 +218,7 @@ func TestPartialWrite(t *testing.T) {
 				metric.New(
 					"test",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": int8(1),
 					},
 					time.Now(),
@@ -226,7 +226,7 @@ func TestPartialWrite(t *testing.T) {
 				metric.New(
 					"test",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": "2",
 					},
 					time.Now(),
@@ -234,7 +234,7 @@ func TestPartialWrite(t *testing.T) {
 				metric.New(
 					"test",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": int8(3),
 					},
 					time.Now(),
@@ -291,7 +291,7 @@ func TestRotation(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": 1.0,
 			},
 			time.Now(),
@@ -321,7 +321,7 @@ func TestOmitTimestamp(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": 1.0,
 			},
 			time.Now(),
@@ -354,7 +354,7 @@ func TestTimestampDifferentName(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": 1.0,
 			},
 			time.Now(),
@@ -390,8 +390,8 @@ func TestMissingValuesReadBackAsNull(t *testing.T) {
 
 	now := time.Now()
 	require.NoError(t, p.Write([]telegraf.Metric{
-		metric.New("demo", nil, map[string]interface{}{"a": int64(1), "b": int64(2)}, now),
-		metric.New("demo", nil, map[string]interface{}{"a": int64(3)}, now),
+		metric.New("demo", nil, map[string]any{"a": int64(1), "b": int64(2)}, now),
+		metric.New("demo", nil, map[string]any{"a": int64(3)}, now),
 	}))
 	require.NoError(t, p.Close())
 
@@ -419,7 +419,7 @@ func TestTimestampFieldNameCollisionKeepsOneColumn(t *testing.T) {
 	require.NoError(t, p.Init())
 
 	require.NoError(t, p.Write([]telegraf.Metric{
-		metric.New("demo", nil, map[string]interface{}{"timestamp": "x", "value": int64(1)}, time.Now()),
+		metric.New("demo", nil, map[string]any{"timestamp": "x", "value": int64(1)}, time.Now()),
 	}))
 	require.NoError(t, p.Close())
 
@@ -476,7 +476,7 @@ func TestInvalidFilename(t *testing.T) {
 				metric.New(
 					tt.metric,
 					map[string]string{},
-					map[string]interface{}{"value": 1.0},
+					map[string]any{"value": 1.0},
 					time.Now(),
 				),
 			}
@@ -521,7 +521,7 @@ func TestCannotEscapeDirectory(t *testing.T) {
 				metric.New(
 					tt.metric,
 					map[string]string{},
-					map[string]interface{}{"value": 1.0},
+					map[string]any{"value": 1.0},
 					time.Now(),
 				),
 			}
@@ -544,13 +544,13 @@ func TestFieldTakesPrecedenceOverTagInAnyOrder(t *testing.T) {
 	tagged := metric.New(
 		"test",
 		map[string]string{"shared": "from-tag"},
-		map[string]interface{}{"other": int64(1)},
+		map[string]any{"other": int64(1)},
 		time.Now(),
 	)
 	fielded := metric.New(
 		"test",
 		map[string]string{},
-		map[string]interface{}{"shared": int64(42)},
+		map[string]any{"shared": int64(42)},
 		time.Now(),
 	)
 
