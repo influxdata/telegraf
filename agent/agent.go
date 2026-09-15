@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"slices"
 	"sync"
 	"time"
 
@@ -619,9 +620,7 @@ func (*Agent) startProcessors(dst chan<- telegraf.Metric, runningProcessors mode
 	// processor-list is sorted by order and/or by appearance in the config,
 	// i.e. in input-to-output direction. Therefore, reverse the processor list
 	// to reflect the order/definition order in the processing chain.
-	for i := len(runningProcessors) - 1; i >= 0; i-- {
-		processor := runningProcessors[i]
-
+	for _, processor := range slices.Backward(runningProcessors) {
 		src = make(chan telegraf.Metric, 100)
 		acc := NewAccumulator(processor, dst)
 

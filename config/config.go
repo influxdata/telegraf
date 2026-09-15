@@ -462,12 +462,7 @@ func (c *Config) ListTags() string {
 }
 
 func sliceContains(name string, list []string) bool {
-	for _, b := range list {
-		if b == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(list, name)
 }
 
 // WalkDirectory collects all toml files that need to be loaded
@@ -1853,14 +1848,14 @@ func (c *Config) setLocalMissingTomlFieldTracker(counter map[string]int) {
 		// should just be hit once anyway. Therefore, we mark them with a
 		// high number to handle them correctly later.
 		pt := reflect.PointerTo(t)
-		root := pt.Implements(reflect.TypeOf((*telegraf.Input)(nil)).Elem())
-		root = root || pt.Implements(reflect.TypeOf((*telegraf.ServiceInput)(nil)).Elem())
-		root = root || pt.Implements(reflect.TypeOf((*telegraf.Output)(nil)).Elem())
-		root = root || pt.Implements(reflect.TypeOf((*telegraf.Aggregator)(nil)).Elem())
-		root = root || pt.Implements(reflect.TypeOf((*telegraf.Processor)(nil)).Elem())
-		root = root || pt.Implements(reflect.TypeOf((*telegraf.StreamingProcessor)(nil)).Elem())
-		root = root || pt.Implements(reflect.TypeOf((*telegraf.Parser)(nil)).Elem())
-		root = root || pt.Implements(reflect.TypeOf((*telegraf.Serializer)(nil)).Elem())
+		root := pt.Implements(reflect.TypeFor[telegraf.Input]())
+		root = root || pt.Implements(reflect.TypeFor[telegraf.ServiceInput]())
+		root = root || pt.Implements(reflect.TypeFor[telegraf.Output]())
+		root = root || pt.Implements(reflect.TypeFor[telegraf.Aggregator]())
+		root = root || pt.Implements(reflect.TypeFor[telegraf.Processor]())
+		root = root || pt.Implements(reflect.TypeFor[telegraf.StreamingProcessor]())
+		root = root || pt.Implements(reflect.TypeFor[telegraf.Parser]())
+		root = root || pt.Implements(reflect.TypeFor[telegraf.Serializer]())
 
 		c, ok := counter[key]
 		if !root {

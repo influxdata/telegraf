@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 
@@ -227,13 +228,7 @@ func camelCase2SnakeCase(value string) string {
 }
 
 func inStringSlice(slice []string, value string) bool {
-	for _, item := range slice {
-		if item == value {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(slice, value)
 }
 
 func isLoopback(iface namespacedInterface) bool {

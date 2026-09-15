@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"reflect"
+	"slices"
 	"sort"
 	"testing"
 	"time"
@@ -170,12 +171,7 @@ func IgnoreType() cmp.Option {
 func IgnoreFields(names ...string) cmp.Option {
 	return cmpopts.IgnoreSliceElements(
 		func(f *telegraf.Field) bool {
-			for _, n := range names {
-				if f.Key == n {
-					return true
-				}
-			}
-			return false
+			return slices.Contains(names, f.Key)
 		},
 	)
 }
@@ -185,12 +181,7 @@ func IgnoreFields(names ...string) cmp.Option {
 func IgnoreTags(names ...string) cmp.Option {
 	return cmpopts.IgnoreSliceElements(
 		func(f *telegraf.Tag) bool {
-			for _, n := range names {
-				if f.Key == n {
-					return true
-				}
-			}
-			return false
+			return slices.Contains(names, f.Key)
 		},
 	)
 }

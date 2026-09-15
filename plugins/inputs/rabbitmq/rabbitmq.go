@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -705,13 +706,7 @@ func (r *RabbitMQ) shouldGatherNode(node *node) bool {
 		return true
 	}
 
-	for _, name := range r.Nodes {
-		if name == node.Name {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(r.Nodes, node.Name)
 }
 
 func (r *RabbitMQ) createQueueFilter() error {
@@ -745,13 +740,7 @@ func (r *RabbitMQ) shouldGatherExchange(exchangeName string) bool {
 		return true
 	}
 
-	for _, name := range r.Exchanges {
-		if name == exchangeName {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(r.Exchanges, exchangeName)
 }
 
 func (r *RabbitMQ) shouldGatherFederationLink(link federationLink) bool {
