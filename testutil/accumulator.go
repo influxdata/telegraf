@@ -29,7 +29,7 @@ func (p *Metric) String() string {
 
 // Accumulator defines a mocked out accumulator
 type Accumulator struct {
-	nMetrics    atomic.Uint64 // Needs to be first to avoid unaligned atomic operations on 32-bit archs
+	nMetrics    atomic.Uint64
 	Metrics     []*Metric
 	accumulated []telegraf.Metric
 	Discard     bool
