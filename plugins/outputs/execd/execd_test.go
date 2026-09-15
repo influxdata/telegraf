@@ -232,8 +232,7 @@ func runOutputConsumerProgram() {
 			if errors.Is(err, influx.EOF) {
 				break // stream ended
 			}
-			var parseErr *influx.ParseError
-			if errors.As(err, &parseErr) {
+			if parseErr, ok := errors.AsType[*influx.ParseError](err); ok {
 				fmt.Fprintf(os.Stderr, "parse ERR %v\n", parseErr)
 				//nolint:revive // error code is important for this "test"
 				os.Exit(1)

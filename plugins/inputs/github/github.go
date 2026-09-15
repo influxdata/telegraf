@@ -146,11 +146,10 @@ func (g *GitHub) newGithubClient(httpClient *http.Client) (*github.Client, error
 }
 
 func (g *GitHub) handleRateLimit(response *github.Response, err error) {
-	var rlErr *github.RateLimitError
 	if err == nil {
 		g.rateLimit.Set(int64(response.Rate.Limit))
 		g.rateRemaining.Set(int64(response.Rate.Remaining))
-	} else if errors.As(err, &rlErr) {
+	} else if _, ok := errors.AsType[*github.RateLimitError](err); ok {
 		g.rateLimitErrors.Incr(1)
 	}
 }
