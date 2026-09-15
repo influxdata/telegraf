@@ -259,7 +259,7 @@ func TestCases(t *testing.T) {
 	}
 }
 
-func TestMalformedProfileExportDoentPanic(t *testing.T) {
+func TestMalformedProfileExportDoesntPanic(t *testing.T) {
 	tests := []struct {
 		name    string
 		message *otlpprofiles.ExportProfilesServiceRequest
