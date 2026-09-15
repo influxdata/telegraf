@@ -85,7 +85,7 @@ func (l *utilsImpl) gatherVcpuMapping(domain golibvirt.Domain, pCPUs int, should
 	}
 
 	var vcpuAffinities []vcpuAffinity
-	for i := 0; i < int(vCPUs); i++ {
+	for i := range int(vCPUs) {
 		var coresAffinity []string
 		for j := range pCPUs {
 			aByte := (i * bytesToHoldPCPUs) + (j / 8)
