@@ -168,7 +168,7 @@ func TestInstantQueries(t *testing.T) {
 					metric.New(
 						"promql",
 						map[string]string{},
-						map[string]interface{}{"value": "foobar"},
+						map[string]any{"value": "foobar"},
 						time.Unix(ts, 0),
 						telegraf.Gauge,
 					),
@@ -1153,7 +1153,7 @@ func TestRangeQueries(t *testing.T) {
 					metric.New(
 						"promql",
 						map[string]string{},
-						map[string]interface{}{"value": "foobar"},
+						map[string]any{"value": "foobar"},
 						time.Unix(ts, 0),
 						telegraf.Gauge,
 					),

@@ -109,7 +109,7 @@ func (p *Postgresql) Stop() {
 func (p *Postgresql) accRow(row *sql.Rows, acc telegraf.Accumulator, columns []string) error {
 	var dbname bytes.Buffer
 
-	// this is where we'll store the column name with its *interface{}
+	// this is where we'll store the column name with its *any
 	columnMap := make(map[string]*any)
 
 	for _, column := range columns {
@@ -117,7 +117,7 @@ func (p *Postgresql) accRow(row *sql.Rows, acc telegraf.Accumulator, columns []s
 	}
 
 	columnVars := make([]any, 0, len(columnMap))
-	// populate the array of interface{} with the pointers in the right order
+	// populate the array of any with the pointers in the right order
 	for i := 0; i < len(columnMap); i++ {
 		columnVars = append(columnVars, columnMap[columns[i]])
 	}

@@ -376,14 +376,14 @@ func (s *SQLServer) gatherServer(pool *sql.DB, query query, acc telegraf.Accumul
 func (s *SQLServer) accRow(query query, acc telegraf.Accumulator, row scanner) error {
 	var fields = make(map[string]any)
 
-	// store the column name with its *interface{}
+	// store the column name with its *any
 	columnMap := make(map[string]*any)
 	for _, column := range query.OrderedColumns {
 		columnMap[column] = new(any)
 	}
 
 	columnVars := make([]any, 0, len(columnMap))
-	// populate the array of interface{} with the pointers in the right order
+	// populate the array of any with the pointers in the right order
 	for i := 0; i < len(columnMap); i++ {
 		columnVars = append(columnVars, columnMap[query.OrderedColumns[i]])
 	}
