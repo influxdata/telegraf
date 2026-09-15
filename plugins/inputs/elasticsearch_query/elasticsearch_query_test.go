@@ -25,7 +25,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
-	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -685,13 +684,9 @@ func TestGatherIntegration(t *testing.T) {
 				Tags:              []string{"nothere"},
 			},
 		},
-		HTTPClientConfig: common_http.HTTPClientConfig{
-			Timeout: config.Duration(30 * time.Second),
-			TransportConfig: common_http.TransportConfig{
-				ResponseHeaderTimeout: config.Duration(30 * time.Second),
-			},
-		},
-		Log: testutil.Logger{},
+		Timeout:               config.Duration(30 * time.Second),
+		ResponseHeaderTimeout: config.Duration(30 * time.Second),
+		Log:                   testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 
@@ -968,13 +963,9 @@ func TestGatherV5Integration(t *testing.T) {
 				Tags:              []string{"nothere"},
 			},
 		},
-		HTTPClientConfig: common_http.HTTPClientConfig{
-			Timeout: config.Duration(30 * time.Second),
-			TransportConfig: common_http.TransportConfig{
-				ResponseHeaderTimeout: config.Duration(30 * time.Second),
-			},
-		},
-		Log: testutil.Logger{},
+		Timeout:               config.Duration(30 * time.Second),
+		ResponseHeaderTimeout: config.Duration(30 * time.Second),
+		Log:                   testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 
@@ -1286,13 +1277,9 @@ func TestGatherV7PlusIntegration(t *testing.T) {
 						Tags:              []string{"nothere"},
 					},
 				},
-				HTTPClientConfig: common_http.HTTPClientConfig{
-					Timeout: config.Duration(30 * time.Second),
-					TransportConfig: common_http.TransportConfig{
-						ResponseHeaderTimeout: config.Duration(30 * time.Second),
-					},
-				},
-				Log: testutil.Logger{},
+				Timeout:               config.Duration(30 * time.Second),
+				ResponseHeaderTimeout: config.Duration(30 * time.Second),
+				Log:                   testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 
@@ -1377,15 +1364,11 @@ func TestGatherFailStartIntegration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup plugin
 			plugin := &ElasticsearchQuery{
-				URLs:         []string{addr},
-				Aggregations: []aggregation{tt.agg},
-				HTTPClientConfig: common_http.HTTPClientConfig{
-					Timeout: config.Duration(30 * time.Second),
-					TransportConfig: common_http.TransportConfig{
-						ResponseHeaderTimeout: config.Duration(30 * time.Second),
-					},
-				},
-				Log: testutil.Logger{},
+				URLs:                  []string{addr},
+				Aggregations:          []aggregation{tt.agg},
+				Timeout:               config.Duration(30 * time.Second),
+				ResponseHeaderTimeout: config.Duration(30 * time.Second),
+				Log:                   testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 
@@ -1453,15 +1436,11 @@ func TestGatherFailGatherIntegration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup plugin
 			plugin := &ElasticsearchQuery{
-				URLs:         []string{addr},
-				Aggregations: []aggregation{tt.agg},
-				HTTPClientConfig: common_http.HTTPClientConfig{
-					Timeout: config.Duration(30 * time.Second),
-					TransportConfig: common_http.TransportConfig{
-						ResponseHeaderTimeout: config.Duration(30 * time.Second),
-					},
-				},
-				Log: testutil.Logger{},
+				URLs:                  []string{addr},
+				Aggregations:          []aggregation{tt.agg},
+				Timeout:               config.Duration(30 * time.Second),
+				ResponseHeaderTimeout: config.Duration(30 * time.Second),
+				Log:                   testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 

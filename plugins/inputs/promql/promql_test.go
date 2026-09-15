@@ -40,7 +40,7 @@ func TestInitSuccess(t *testing.T) {
 			name: "no authentication",
 			plugin: &PromQL{
 				URL:            "http://localhost:9090",
-				InstantQueries: []InstantQuery{{query: query{Query: "prometheus_http_requests_total"}}},
+				InstantQueries: []InstantQuery{{Query: "prometheus_http_requests_total"}},
 			},
 		},
 		{
@@ -48,7 +48,7 @@ func TestInitSuccess(t *testing.T) {
 			plugin: &PromQL{
 				URL:            "http://localhost:9090",
 				Username:       username,
-				InstantQueries: []InstantQuery{{query: query{Query: "prometheus_http_requests_total"}}},
+				InstantQueries: []InstantQuery{{Query: "prometheus_http_requests_total"}},
 			},
 		},
 		{
@@ -57,7 +57,7 @@ func TestInitSuccess(t *testing.T) {
 				URL:            "http://localhost:9090",
 				Username:       username,
 				Password:       password,
-				InstantQueries: []InstantQuery{{query: query{Query: "prometheus_http_requests_total"}}},
+				InstantQueries: []InstantQuery{{Query: "prometheus_http_requests_total"}},
 			},
 		},
 		{
@@ -65,7 +65,7 @@ func TestInitSuccess(t *testing.T) {
 			plugin: &PromQL{
 				URL:            "http://localhost:9090",
 				Token:          token,
-				InstantQueries: []InstantQuery{{query: query{Query: "prometheus_http_requests_total"}}},
+				InstantQueries: []InstantQuery{{Query: "prometheus_http_requests_total"}},
 			},
 		},
 	}
@@ -107,7 +107,7 @@ func TestInitFail(t *testing.T) {
 			plugin: &PromQL{
 				URL:            "http://localhost:9090",
 				Password:       password,
-				InstantQueries: []InstantQuery{{query: query{Query: "prometheus_http_requests_total"}}},
+				InstantQueries: []InstantQuery{{Query: "prometheus_http_requests_total"}},
 			},
 			expected: "expecting username for basic authentication",
 		},
@@ -117,7 +117,7 @@ func TestInitFail(t *testing.T) {
 				URL:            "http://localhost:9090",
 				Username:       username,
 				Token:          token,
-				InstantQueries: []InstantQuery{{query: query{Query: "prometheus_http_requests_total"}}},
+				InstantQueries: []InstantQuery{{Query: "prometheus_http_requests_total"}},
 			},
 			expected: "cannot use both basic and bearer authentication",
 		},
@@ -1095,7 +1095,7 @@ func TestInstantQueries(t *testing.T) {
 			// Setup the plugin and start it
 			plugin := &PromQL{
 				URL:            server.URL,
-				InstantQueries: []InstantQuery{{query: query{Query: "dummy"}}},
+				InstantQueries: []InstantQuery{{Query: "dummy"}},
 				Timeout:        config.Duration(1 * time.Second),
 				Log:            testutil.Logger{},
 			}
@@ -2089,7 +2089,7 @@ func TestRangeQueries(t *testing.T) {
 				URL: server.URL,
 				RangeQueries: []RangeQuery{
 					{
-						query: query{Query: "dummy"},
+						Query: "dummy",
 						Start: config.Duration(6 * time.Minute),
 						End:   config.Duration(1 * time.Minute),
 						Step:  config.Duration(1 * time.Minute),
@@ -2491,10 +2491,8 @@ func TestMetricNameOverride(t *testing.T) {
 				URL: server.URL,
 				InstantQueries: []InstantQuery{
 					{
-						query: query{
-							Query: "dummy",
-							Name:  tt.queryName,
-						},
+						Query: "dummy",
+						Name:  tt.queryName,
 					},
 				},
 				Timeout: config.Duration(1 * time.Second),
@@ -2550,7 +2548,7 @@ func TestWarnings(t *testing.T) {
 	logger := &testutil.CaptureLogger{Name: "inputs.promql"}
 	plugin := &PromQL{
 		URL:            server.URL,
-		InstantQueries: []InstantQuery{{query: query{Query: "dummy"}}},
+		InstantQueries: []InstantQuery{{Query: "dummy"}},
 		Timeout:        config.Duration(1 * time.Second),
 		Log:            logger,
 	}
@@ -2746,7 +2744,7 @@ func TestIntegrationInstant(t *testing.T) {
 		URL: addr,
 		InstantQueries: []InstantQuery{
 			{
-				query: query{Query: `test_http_requests_total`},
+				Query: `test_http_requests_total`,
 			},
 		},
 		Timeout: config.Duration(5 * time.Second),
@@ -3008,7 +3006,7 @@ func TestIntegrationRange(t *testing.T) {
 		URL: addr,
 		RangeQueries: []RangeQuery{
 			{
-				query: query{Query: `test_http_requests`},
+				Query: `test_http_requests`,
 				Start: config.Duration(6 * time.Minute),
 				Step:  config.Duration(1 * time.Minute),
 			},

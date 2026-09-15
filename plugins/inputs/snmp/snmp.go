@@ -203,15 +203,13 @@ func (s *Snmp) getConnection(idx int) (snmp.Connection, error) {
 func init() {
 	inputs.Add("snmp", func() telegraf.Input {
 		return &Snmp{
-			Name: "snmp",
-			ClientConfig: snmp.ClientConfig{
-				Retries:        3,
-				MaxRepetitions: 10,
-				Timeout:        config.Duration(5 * time.Second),
-				Version:        2,
-				Path:           []string{"/usr/share/snmp/mibs"},
-				Community:      "public",
-			},
+			Name:           "snmp",
+			Retries:        3,
+			MaxRepetitions: 10,
+			Timeout:        config.Duration(5 * time.Second),
+			Version:        2,
+			Path:           []string{"/usr/share/snmp/mibs"},
+			Community:      "public",
 		}
 	})
 }

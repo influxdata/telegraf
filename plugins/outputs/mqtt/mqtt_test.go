@@ -51,11 +51,9 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	s := &serializers_influx.Serializer{}
 	require.NoError(t, s.Init())
 	m := &MQTT{
-		MqttConfig: mqtt.MqttConfig{
-			Servers:   []string{url},
-			KeepAlive: 30,
-			Timeout:   config.Duration(5 * time.Second),
-		},
+		Servers:    []string{url},
+		KeepAlive:  30,
+		Timeout:    config.Duration(5 * time.Second),
 		serializer: s,
 		Log:        testutil.Logger{Name: "mqtt-default-integration-test"},
 	}
@@ -83,12 +81,10 @@ func TestConnectAndWriteIntegrationMQTTv3(t *testing.T) {
 	require.NoError(t, s.Init())
 
 	m := &MQTT{
-		MqttConfig: mqtt.MqttConfig{
-			Servers:   []string{url},
-			Protocol:  "3.1.1",
-			KeepAlive: 30,
-			Timeout:   config.Duration(5 * time.Second),
-		},
+		Servers:    []string{url},
+		Protocol:   "3.1.1",
+		KeepAlive:  30,
+		Timeout:    config.Duration(5 * time.Second),
 		serializer: s,
 		Log:        testutil.Logger{Name: "mqttv311-integration-test"},
 	}
@@ -116,12 +112,10 @@ func TestConnectAndWriteIntegrationMQTTv5(t *testing.T) {
 	require.NoError(t, s.Init())
 
 	m := &MQTT{
-		MqttConfig: mqtt.MqttConfig{
-			Servers:   []string{url},
-			Protocol:  "5",
-			KeepAlive: 30,
-			Timeout:   config.Duration(5 * time.Second),
-		},
+		Servers:    []string{url},
+		Protocol:   "5",
+		KeepAlive:  30,
+		Timeout:    config.Duration(5 * time.Second),
 		serializer: s,
 		Log:        testutil.Logger{Name: "mqttv5-integration-test"},
 	}
@@ -163,15 +157,13 @@ func TestIntegrationMQTTv3(t *testing.T) {
 	url := fmt.Sprintf("tcp://%s:%s", container.Address, container.Ports[servicePort])
 	topic := "testv3"
 	plugin := &MQTT{
-		MqttConfig: mqtt.MqttConfig{
-			Servers:       []string{url},
-			KeepAlive:     30,
-			Timeout:       config.Duration(5 * time.Second),
-			AutoReconnect: true,
-		},
-		Topic:  topic + "/{{.Name}}",
-		Layout: "non-batch",
-		Log:    testutil.Logger{Name: "mqttv3-integration-test"},
+		Servers:       []string{url},
+		KeepAlive:     30,
+		Timeout:       config.Duration(5 * time.Second),
+		AutoReconnect: true,
+		Topic:         topic + "/{{.Name}}",
+		Layout:        "non-batch",
+		Log:           testutil.Logger{Name: "mqttv3-integration-test"},
 	}
 	plugin.SetSerializer(serializer)
 	require.NoError(t, plugin.Init())
@@ -259,15 +251,13 @@ func TestMQTTv5Properties(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &MQTT{
-				MqttConfig: mqtt.MqttConfig{
-					Servers:       []string{url},
-					Protocol:      "5",
-					KeepAlive:     30,
-					Timeout:       config.Duration(5 * time.Second),
-					AutoReconnect: true,
-				},
-				Topic: topic,
-				Log:   testutil.Logger{Name: "mqttv5-integration-test"},
+				Servers:       []string{url},
+				Protocol:      "5",
+				KeepAlive:     30,
+				Timeout:       config.Duration(5 * time.Second),
+				AutoReconnect: true,
+				Topic:         topic,
+				Log:           testutil.Logger{Name: "mqttv5-integration-test"},
 			}
 
 			// Setup the metric serializer
@@ -315,15 +305,13 @@ func TestIntegrationMQTTLayoutNonBatch(t *testing.T) {
 	url := fmt.Sprintf("tcp://%s:%s", container.Address, container.Ports[servicePort])
 	topic := "test_nonbatch"
 	plugin := &MQTT{
-		MqttConfig: mqtt.MqttConfig{
-			Servers:       []string{url},
-			KeepAlive:     30,
-			Timeout:       config.Duration(5 * time.Second),
-			AutoReconnect: true,
-		},
-		Topic:  topic + "/{{.Name}}",
-		Layout: "non-batch",
-		Log:    testutil.Logger{Name: "mqttv3-integration-test"},
+		Servers:       []string{url},
+		KeepAlive:     30,
+		Timeout:       config.Duration(5 * time.Second),
+		AutoReconnect: true,
+		Topic:         topic + "/{{.Name}}",
+		Layout:        "non-batch",
+		Log:           testutil.Logger{Name: "mqttv3-integration-test"},
 	}
 	plugin.SetSerializer(serializer)
 	require.NoError(t, plugin.Init())
@@ -402,15 +390,13 @@ func TestIntegrationMQTTLayoutBatch(t *testing.T) {
 	url := fmt.Sprintf("tcp://%s:%s", container.Address, container.Ports[servicePort])
 	topic := "test_batch"
 	plugin := &MQTT{
-		MqttConfig: mqtt.MqttConfig{
-			Servers:       []string{url},
-			KeepAlive:     30,
-			Timeout:       config.Duration(5 * time.Second),
-			AutoReconnect: true,
-		},
-		Topic:  topic + "/{{.Name}}",
-		Layout: "batch",
-		Log:    testutil.Logger{Name: "mqttv3-integration-test-"},
+		Servers:       []string{url},
+		KeepAlive:     30,
+		Timeout:       config.Duration(5 * time.Second),
+		AutoReconnect: true,
+		Topic:         topic + "/{{.Name}}",
+		Layout:        "batch",
+		Log:           testutil.Logger{Name: "mqttv3-integration-test-"},
 	}
 	plugin.SetSerializer(serializer)
 	require.NoError(t, plugin.Init())
@@ -486,15 +472,13 @@ func TestIntegrationMQTTLayoutField(t *testing.T) {
 	url := fmt.Sprintf("tcp://%s:%s", container.Address, container.Ports[servicePort])
 	topic := "test_field"
 	plugin := &MQTT{
-		MqttConfig: mqtt.MqttConfig{
-			Servers:       []string{url},
-			KeepAlive:     30,
-			Timeout:       config.Duration(5 * time.Second),
-			AutoReconnect: true,
-		},
-		Topic:  topic + `/{{.Name}}/{{.Tag "source"}}`,
-		Layout: "field",
-		Log:    testutil.Logger{Name: "mqttv3-integration-test-"},
+		Servers:       []string{url},
+		KeepAlive:     30,
+		Timeout:       config.Duration(5 * time.Second),
+		AutoReconnect: true,
+		Topic:         topic + `/{{.Name}}/{{.Tag "source"}}`,
+		Layout:        "field",
+		Log:           testutil.Logger{Name: "mqttv3-integration-test-"},
 	}
 	require.NoError(t, plugin.Init())
 
@@ -601,12 +585,10 @@ func TestIntegrationMQTTLayoutHomieV4(t *testing.T) {
 	url := fmt.Sprintf("tcp://%s:%s", container.Address, container.Ports[servicePort])
 	topic := "homie"
 	plugin := &MQTT{
-		MqttConfig: mqtt.MqttConfig{
-			Servers:       []string{url},
-			KeepAlive:     30,
-			Timeout:       config.Duration(5 * time.Second),
-			AutoReconnect: true,
-		},
+		Servers:         []string{url},
+		KeepAlive:       30,
+		Timeout:         config.Duration(5 * time.Second),
+		AutoReconnect:   true,
 		Topic:           topic + "/{{.Name}}",
 		HomieDeviceName: `{{.Name}}`,
 		HomieNodeID:     `{{.Tag "source"}}`,
@@ -845,11 +827,9 @@ func TestMQTTTopicGenerationTemplateIsValid(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := &MQTT{
-				Log:   testutil.Logger{},
-				Topic: tt.topic,
-				MqttConfig: mqtt.MqttConfig{
-					Servers: []string{"tcp://localhost:1883"},
-				},
+				Log:     testutil.Logger{},
+				Topic:   tt.topic,
+				Servers: []string{"tcp://localhost:1883"},
 			}
 			err := m.Init()
 			if tt.expectedError != "" {
@@ -866,11 +846,9 @@ func TestGenerateTopicName(t *testing.T) {
 	require.NoError(t, s.Init())
 
 	m := &MQTT{
-		MqttConfig: mqtt.MqttConfig{
-			Servers:   []string{"tcp://localhost:1883"},
-			KeepAlive: 30,
-			Timeout:   config.Duration(5 * time.Second),
-		},
+		Servers:    []string{"tcp://localhost:1883"},
+		KeepAlive:  30,
+		Timeout:    config.Duration(5 * time.Second),
 		serializer: s,
 		Log:        testutil.Logger{},
 	}

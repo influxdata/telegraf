@@ -389,12 +389,10 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 	}
 	if strings.Contains(desc, errStringDatabaseNotFound) {
 		return &DatabaseNotFoundError{
-			APIError: APIError{
-				StatusCode:  resp.StatusCode,
-				Title:       resp.Status,
-				Description: desc,
-			},
-			Database: db,
+			StatusCode:  resp.StatusCode,
+			Title:       resp.Status,
+			Description: desc,
+			Database:    db,
 		}
 	}
 

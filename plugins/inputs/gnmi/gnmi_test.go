@@ -352,13 +352,11 @@ func TestNotification(t *testing.T) {
 				Redial:   config.Duration(1 * time.Second),
 				TagSubscriptions: []common_gnmi.TagSubscription{
 					{
-						Subscription: common_gnmi.Subscription{
-							Name:             "oc-neigh-desc",
-							Origin:           "openconfig",
-							Path:             "/network-instances/network-instance/protocols/protocol/bgp/neighbors/neighbor/state/description",
-							SubscriptionMode: "on_change",
-						},
-						Elements: []string{"network-instance", "protocol", "neighbor"},
+						Name:             "oc-neigh-desc",
+						Origin:           "openconfig",
+						Path:             "/network-instances/network-instance/protocols/protocol/bgp/neighbors/neighbor/state/description",
+						SubscriptionMode: "on_change",
+						Elements:         []string{"network-instance", "protocol", "neighbor"},
 					},
 				},
 				Subscriptions: []common_gnmi.Subscription{
@@ -754,11 +752,9 @@ func TestNotification(t *testing.T) {
 		{
 			name: "Juniper Extension",
 			plugin: &GNMI{
-				Log:      testutil.Logger{},
-				Encoding: "proto",
-				HandlerConfig: common_gnmi.HandlerConfig{
-					VendorExt: []string{"juniper_header"},
-				},
+				Log:                           testutil.Logger{},
+				Encoding:                      "proto",
+				VendorExt:                     []string{"juniper_header"},
 				Redial:                        config.Duration(1 * time.Second),
 				EnforceFirstNamespaceAsOrigin: true,
 				Subscriptions: []common_gnmi.Subscription{

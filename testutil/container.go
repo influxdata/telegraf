@@ -59,21 +59,19 @@ func (c *Container) Start() error {
 	}
 
 	req := testcontainers.GenericContainerRequest{
-		ContainerRequest: testcontainers.ContainerRequest{
-			Entrypoint:         c.Entrypoint,
-			Env:                c.Env,
-			ExposedPorts:       c.ExposedPorts,
-			Files:              files,
-			HostAccessPorts:    c.HostAccessPorts,
-			HostConfigModifier: c.HostConfigModifier,
-			Cmd:                c.Cmd,
-			Image:              c.Image,
-			Name:               c.Name,
-			Hostname:           c.Hostname,
-			Networks:           c.Networks,
-			WaitingFor:         c.WaitingFor,
-		},
-		Started: true,
+		Entrypoint:         c.Entrypoint,
+		Env:                c.Env,
+		ExposedPorts:       c.ExposedPorts,
+		Files:              files,
+		HostAccessPorts:    c.HostAccessPorts,
+		HostConfigModifier: c.HostConfigModifier,
+		Cmd:                c.Cmd,
+		Image:              c.Image,
+		Name:               c.Name,
+		Hostname:           c.Hostname,
+		Networks:           c.Networks,
+		WaitingFor:         c.WaitingFor,
+		Started:            true,
 	}
 
 	cntnr, err := testcontainers.GenericContainer(c.ctx, req)
