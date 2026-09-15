@@ -123,7 +123,7 @@ func (p *Parser) unmarshalValueList(vl *api.ValueList) []telegraf.Metric {
 		for i := range vl.Values {
 			name := fmt.Sprintf("%s_%s", vl.Identifier.Plugin, vl.DSName(i))
 			tags := make(map[string]string)
-			fields := make(map[string]interface{})
+			fields := make(map[string]any)
 
 			// Convert interface back to actual type, then to float64
 			switch value := vl.Values[i].(type) {
@@ -156,7 +156,7 @@ func (p *Parser) unmarshalValueList(vl *api.ValueList) []telegraf.Metric {
 	case "join":
 		name := vl.Identifier.Plugin
 		tags := make(map[string]string)
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		for i := range vl.Values {
 			switch value := vl.Values[i].(type) {
 			case api.Gauge:

@@ -345,7 +345,7 @@ func parseCSV(p *Parser, r io.Reader) ([]telegraf.Metric, error) {
 }
 
 func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
-	recordFields := make(map[string]interface{})
+	recordFields := make(map[string]any)
 	tags := make(map[string]string)
 
 	if p.TagOverwrite {
@@ -397,7 +397,7 @@ outer:
 					return nil, errors.New("column type: column count exceeded")
 				}
 
-				var val interface{}
+				var val any
 				var err error
 
 				switch p.ColumnTypes[i] {
@@ -474,7 +474,7 @@ outer:
 // ParseTimestamp return a timestamp, if there is no timestamp on the csv it
 // will be the current timestamp, else it will try to parse the time according
 // to the format.
-func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface{},
+func parseTimestamp(timeFunc func() time.Time, recordFields map[string]any,
 	timestampColumn, timestampFormat string, timezone *time.Location,
 ) (time.Time, error) {
 	if timestampColumn != "" {

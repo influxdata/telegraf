@@ -47,7 +47,7 @@ func (p *Parser) extractMetricsV1(ts *prompb.TimeSeries) ([]telegraf.Metric, err
 		}
 		// In prometheus remote write,
 		// You won't know if it's a counter or gauge or a sub-counter in a histogram
-		fields := map[string]interface{}{"value": s.Value}
+		fields := map[string]any{"value": s.Value}
 		if s.Timestamp > 0 {
 			t = time.Unix(0, s.Timestamp*1000000)
 		}

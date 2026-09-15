@@ -33,8 +33,8 @@ type pointParser struct {
 	parent   *Parser
 }
 
-func newPointParserFactory(p *Parser) func() interface{} {
-	return func() interface{} {
+func newPointParserFactory(p *Parser) func() any {
+	return func() any {
 		wsParser := whiteSpaceParser{}
 		wsParserNextOpt := whiteSpaceParser{nextOptional: true}
 		repeatParser := loopedParser{wrappedParser: &tagParser{}, wsParser: &wsParser}
@@ -104,7 +104,7 @@ func (p *pointParser) convertPointToTelegrafMetric(points []point) ([]telegraf.M
 		}
 
 		// single field for value
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		v, err := strconv.ParseFloat(point.Value, 64)
 		if err != nil {
 			return nil, err

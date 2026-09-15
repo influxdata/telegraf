@@ -424,7 +424,7 @@ func TestParseNaN(t *testing.T) {
 	expected := metric.New(
 		"servers.localhost.cpu_load",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": math.NaN(),
 		},
 		time.Unix(1435077219, 0),
@@ -443,7 +443,7 @@ func TestParseInf(t *testing.T) {
 	expected := metric.New(
 		"servers.localhost.cpu_load",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": math.Inf(1),
 		},
 		time.Unix(1435077219, 0),
@@ -458,7 +458,7 @@ func TestFilterMatchDefault(t *testing.T) {
 
 	exp := metric.New("miss.servers.localhost.cpu_load",
 		map[string]string{},
-		map[string]interface{}{"value": float64(11)},
+		map[string]any{"value": float64(11)},
 		time.Unix(1435077219, 0))
 
 	m, err := p.ParseLine("miss.servers.localhost.cpu_load 11 1435077219")
@@ -475,7 +475,7 @@ func TestFilterMatchMultipleMeasurement(t *testing.T) {
 
 	exp := metric.New("cpu.cpu_load.10",
 		map[string]string{"host": "localhost"},
-		map[string]interface{}{"value": float64(11)},
+		map[string]any{"value": float64(11)},
 		time.Unix(1435077219, 0))
 
 	m, err := p.ParseLine("servers.localhost.cpu.cpu_load.10 11 1435077219")
@@ -493,7 +493,7 @@ func TestFilterMatchMultipleMeasurementSeparator(t *testing.T) {
 
 	exp := metric.New("cpu_cpu_load_10",
 		map[string]string{"host": "localhost"},
-		map[string]interface{}{"value": float64(11)},
+		map[string]any{"value": float64(11)},
 		time.Unix(1435077219, 0))
 
 	m, err := p.ParseLine("servers.localhost.cpu.cpu_load.10 11 1435077219")
@@ -508,7 +508,7 @@ func TestFilterMatchSingle(t *testing.T) {
 
 	exp := metric.New("cpu_load",
 		map[string]string{"host": "localhost"},
-		map[string]interface{}{"value": float64(11)},
+		map[string]any{"value": float64(11)},
 		time.Unix(1435077219, 0))
 
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
@@ -525,7 +525,7 @@ func TestParseNoMatch(t *testing.T) {
 
 	exp := metric.New("servers.localhost.memory.VmallocChunk",
 		map[string]string{},
-		map[string]interface{}{"value": float64(11)},
+		map[string]any{"value": float64(11)},
 		time.Unix(1435077219, 0))
 
 	m, err := p.ParseLine("servers.localhost.memory.VmallocChunk 11 1435077219")
@@ -540,7 +540,7 @@ func TestFilterMatchWildcard(t *testing.T) {
 
 	exp := metric.New("cpu_load",
 		map[string]string{"host": "localhost"},
-		map[string]interface{}{"value": float64(11)},
+		map[string]any{"value": float64(11)},
 		time.Unix(1435077219, 0))
 
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
@@ -559,7 +559,7 @@ func TestFilterMatchExactBeforeWildcard(t *testing.T) {
 
 	exp := metric.New("cpu_load",
 		map[string]string{"host": "localhost"},
-		map[string]interface{}{"value": float64(11)},
+		map[string]any{"value": float64(11)},
 		time.Unix(1435077219, 0))
 
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
@@ -605,7 +605,7 @@ func TestFilterMatchMultipleWildcards(t *testing.T) {
 
 	exp := metric.New("cpu_load",
 		map[string]string{"host": "server01"},
-		map[string]interface{}{"value": float64(11)},
+		map[string]any{"value": float64(11)},
 		time.Unix(1435077219, 0))
 
 	m, err := p.ParseLine("servers.server01.cpu_load 11 1435077219")

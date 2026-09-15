@@ -51,7 +51,7 @@ func TestMeasurementName(t *testing.T) {
 	require.NotNil(t, m)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"resp_bytes":   int64(2326),
 			"auth":         "frank",
 			"client_ip":    "127.0.0.1",
@@ -73,7 +73,7 @@ func TestCLF_IPv6(t *testing.T) {
 	require.NotNil(t, m)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"resp_bytes":   int64(2326),
 			"auth":         "frank",
 			"client_ip":    "2001:0db8:85a3:0000:0000:8a2e:0370:7334",
@@ -88,7 +88,7 @@ func TestCLF_IPv6(t *testing.T) {
 	require.NotNil(t, m)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"resp_bytes":   int64(2326),
 			"auth":         "frank",
 			"client_ip":    "::1",
@@ -114,7 +114,7 @@ func TestCustomInfluxdbHttpd(t *testing.T) {
 	require.NotNil(t, m)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"resp_bytes":       int64(0),
 			"auth":             "-",
 			"client_ip":        "::1",
@@ -139,7 +139,7 @@ func TestCustomInfluxdbHttpd(t *testing.T) {
 	require.NotNil(t, m)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"resp_bytes":   int64(578),
 			"auth":         "-",
 			"client_ip":    "::1",
@@ -168,7 +168,7 @@ func TestBuiltinCommonLogFormat(t *testing.T) {
 	require.NotNil(t, m)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"resp_bytes":   int64(2326),
 			"auth":         "frank",
 			"client_ip":    "127.0.0.1",
@@ -193,7 +193,7 @@ func TestBuiltinCommonLogFormatWithNumbers(t *testing.T) {
 	require.NotNil(t, m)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"resp_bytes":   int64(2326),
 			"auth":         "frank1234",
 			"client_ip":    "127.0.0.1",
@@ -218,7 +218,7 @@ func TestBuiltinCombinedLogFormat(t *testing.T) {
 	require.NotNil(t, m)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"resp_bytes":   int64(2326),
 			"auth":         "frank",
 			"client_ip":    "127.0.0.1",
@@ -248,7 +248,7 @@ func TestCompileStringAndParse(t *testing.T) {
 	require.NotNil(t, metricA)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"clientip":      "192.168.1.1",
 			"myfloat":       float64(1.25),
 			"response_time": int64(5432),
@@ -284,7 +284,7 @@ func TestParsePatternsWithoutCustom(t *testing.T) {
 	require.NotNil(t, metricA)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"response_time": int64(20821),
 			"metric":        float64(10890.645),
 		},
@@ -306,7 +306,7 @@ func TestParseEpochMilli(t *testing.T) {
 	require.NotNil(t, metricA)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"response_time": int64(20821),
 			"metric":        float64(10890.645),
 		},
@@ -328,7 +328,7 @@ func TestParseEpochNano(t *testing.T) {
 	require.NotNil(t, metricA)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"response_time": int64(20821),
 			"metric":        float64(10890.645),
 		},
@@ -350,7 +350,7 @@ func TestParseEpoch(t *testing.T) {
 	require.NotNil(t, metricA)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"response_time": int64(20821),
 			"metric":        float64(10890.645),
 		},
@@ -366,14 +366,14 @@ func TestParseEpochDecimal(t *testing.T) {
 		noMatch bool
 		err     error
 		tags    map[string]string
-		fields  map[string]interface{}
+		fields  map[string]any
 		time    time.Time
 	}{
 		{
 			name: "ns precision",
 			line: "1466004605.359052000 value=42",
 			tags: map[string]string{},
-			fields: map[string]interface{}{
+			fields: map[string]any{
 				"value": int64(42),
 			},
 			time: time.Unix(0, 1466004605359052000),
@@ -382,7 +382,7 @@ func TestParseEpochDecimal(t *testing.T) {
 			name: "ms precision",
 			line: "1466004605.359 value=42",
 			tags: map[string]string{},
-			fields: map[string]interface{}{
+			fields: map[string]any{
 				"value": int64(42),
 			},
 			time: time.Unix(0, 1466004605359000000),
@@ -391,7 +391,7 @@ func TestParseEpochDecimal(t *testing.T) {
 			name: "second precision",
 			line: "1466004605 value=42",
 			tags: map[string]string{},
-			fields: map[string]interface{}{
+			fields: map[string]any{
 				"value": int64(42),
 			},
 			time: time.Unix(0, 1466004605000000000),
@@ -400,7 +400,7 @@ func TestParseEpochDecimal(t *testing.T) {
 			name: "sub ns precision",
 			line: "1466004605.123456789123 value=42",
 			tags: map[string]string{},
-			fields: map[string]interface{}{
+			fields: map[string]any{
 				"value": int64(42),
 			},
 			time: time.Unix(0, 1466004605123456789),
@@ -466,7 +466,7 @@ func TestParseGenericTimestamp(t *testing.T) {
 	require.NotNil(t, metricA)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"response_time": int64(20821),
 			"metric":        float64(10890.645),
 		},
@@ -478,7 +478,7 @@ func TestParseGenericTimestamp(t *testing.T) {
 	require.NotNil(t, metricB)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"response_time": int64(20821),
 			"metric":        float64(10890.645),
 		},
@@ -498,7 +498,7 @@ func TestParseGenericTimestampNotFound(t *testing.T) {
 	require.NotNil(t, metricA)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"response_time": int64(20821),
 			"metric":        float64(10890.645),
 		},
@@ -517,7 +517,7 @@ func TestCompileFileAndParse(t *testing.T) {
 	require.NotNil(t, metricA)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"clientip":      "192.168.1.1",
 			"myfloat":       float64(1.25),
 			"response_time": int64(5432),
@@ -533,7 +533,7 @@ func TestCompileFileAndParse(t *testing.T) {
 	require.NotNil(t, metricB)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"myfloat":    1.25,
 			"mystring":   "mystring",
 			"nomodifier": "nomodifier",
@@ -559,7 +559,7 @@ func TestCompileNoModifiersAndParse(t *testing.T) {
 	require.NotNil(t, metricA)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"clientip": "192.168.1.1",
 			"myfloat":  "1.25",
 			"rt":       "5.432µs",
@@ -642,7 +642,7 @@ func TestParseErrors_WrongIntegerType(t *testing.T) {
 	require.NoError(t, err)
 	testutil.RequireMetricEqual(t,
 		m,
-		metric.New("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
+		metric.New("grok", map[string]string{}, map[string]any{}, time.Unix(0, 0)))
 }
 
 func TestParseErrors_WrongFloatType(t *testing.T) {
@@ -659,7 +659,7 @@ func TestParseErrors_WrongFloatType(t *testing.T) {
 	require.NoError(t, err)
 	testutil.RequireMetricEqual(t,
 		m,
-		metric.New("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
+		metric.New("grok", map[string]string{}, map[string]any{}, time.Unix(0, 0)))
 }
 
 func TestParseErrors_WrongDurationType(t *testing.T) {
@@ -676,7 +676,7 @@ func TestParseErrors_WrongDurationType(t *testing.T) {
 	require.NoError(t, err)
 	testutil.RequireMetricEqual(t,
 		m,
-		metric.New("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
+		metric.New("grok", map[string]string{}, map[string]any{}, time.Unix(0, 0)))
 }
 
 func TestParseErrors_WrongTimeLayout(t *testing.T) {
@@ -693,7 +693,7 @@ func TestParseErrors_WrongTimeLayout(t *testing.T) {
 	require.NoError(t, err)
 	testutil.RequireMetricEqual(t,
 		m,
-		metric.New("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
+		metric.New("grok", map[string]string{}, map[string]any{}, time.Unix(0, 0)))
 }
 
 func TestParseInteger_Base16(t *testing.T) {
@@ -711,7 +711,7 @@ func TestParseInteger_Base16(t *testing.T) {
 	require.NotNil(t, metricA)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"clientip":      "192.168.1.1",
 			"response_code": int64(200),
 			"myfloat":       "1.25",
@@ -802,7 +802,7 @@ func TestShortPatternRegression(t *testing.T) {
 	require.NotNil(t, m)
 
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"value": int64(42),
 		},
 		m.Fields())
@@ -820,7 +820,7 @@ func TestTimezoneEmptyCompileFileAndParse(t *testing.T) {
 	require.NotNil(t, metricA)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"clientip":      "192.168.1.1",
 			"myfloat":       float64(1.25),
 			"response_time": int64(5432),
@@ -834,7 +834,7 @@ func TestTimezoneEmptyCompileFileAndParse(t *testing.T) {
 	require.NotNil(t, metricB)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"myfloat":    1.25,
 			"mystring":   "mystring",
 			"nomodifier": "nomodifier",
@@ -857,7 +857,7 @@ func TestTimezoneMalformedCompileFileAndParse(t *testing.T) {
 	require.NotNil(t, metricA)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"clientip":      "192.168.1.1",
 			"myfloat":       float64(1.25),
 			"response_time": int64(5432),
@@ -871,7 +871,7 @@ func TestTimezoneMalformedCompileFileAndParse(t *testing.T) {
 	require.NotNil(t, metricB)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"myfloat":    1.25,
 			"mystring":   "mystring",
 			"nomodifier": "nomodifier",
@@ -893,7 +893,7 @@ func TestTimezoneEuropeCompileFileAndParse(t *testing.T) {
 	require.NotNil(t, metricA)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"clientip":      "192.168.1.1",
 			"myfloat":       float64(1.25),
 			"response_time": int64(5432),
@@ -907,7 +907,7 @@ func TestTimezoneEuropeCompileFileAndParse(t *testing.T) {
 	require.NotNil(t, metricB)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"myfloat":    1.25,
 			"mystring":   "mystring",
 			"nomodifier": "nomodifier",
@@ -929,7 +929,7 @@ func TestTimezoneAmericasCompileFileAndParse(t *testing.T) {
 	require.NotNil(t, metricA)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"clientip":      "192.168.1.1",
 			"myfloat":       float64(1.25),
 			"response_time": int64(5432),
@@ -943,7 +943,7 @@ func TestTimezoneAmericasCompileFileAndParse(t *testing.T) {
 	require.NotNil(t, metricB)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"myfloat":    1.25,
 			"mystring":   "mystring",
 			"nomodifier": "nomodifier",
@@ -965,7 +965,7 @@ func TestTimezoneLocalCompileFileAndParse(t *testing.T) {
 	require.NotNil(t, metricA)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"clientip":      "192.168.1.1",
 			"myfloat":       float64(1.25),
 			"response_time": int64(5432),
@@ -979,7 +979,7 @@ func TestTimezoneLocalCompileFileAndParse(t *testing.T) {
 	require.NotNil(t, metricB)
 	require.NoError(t, err)
 	require.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"myfloat":    1.25,
 			"mystring":   "mystring",
 			"nomodifier": "nomodifier",
@@ -1009,7 +1009,7 @@ func TestMultilinePatterns(t *testing.T) {
 		metric.New(
 			"multiline",
 			map[string]string{},
-			map[string]interface{}{"text": "Error A long and\n    multiline\n    message"},
+			map[string]any{"text": "Error A long and\n    multiline\n    message"},
 			time.Date(2022, time.December, 1, 12, 41, 45, 0, time.UTC),
 		),
 	}
@@ -1161,7 +1161,7 @@ func TestTrimRegression(t *testing.T) {
 	expected := metric.New(
 		"",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"message": `level=info msg="ok"`,
 		},
 		actual.Time(),
@@ -1198,7 +1198,7 @@ func TestLongLine(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
-		metric.New("test", map[string]string{}, map[string]interface{}{"message": msg}, time.Unix(0, 0)),
+		metric.New("test", map[string]string{}, map[string]any{"message": msg}, time.Unix(0, 0)),
 	}
 	testutil.RequireMetricsEqual(t, expected, m, testutil.IgnoreTime())
 }
@@ -1222,7 +1222,7 @@ func TestBenchmarkData(t *testing.T) {
 				"tags_platform": "python",
 				"tags_sdkver":   "3.11.5",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 5.0,
 			},
 			time.Unix(1653643421, 0),
@@ -1234,7 +1234,7 @@ func TestBenchmarkData(t *testing.T) {
 				"tags_platform": "python",
 				"tags_sdkver":   "3.11.4",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 4.0,
 			},
 			time.Unix(1653643422, 0),
