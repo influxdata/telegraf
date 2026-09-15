@@ -14,7 +14,6 @@ import (
 
 	"github.com/openconfig/gnmi/proto/gnmi"
 	"github.com/openconfig/gnmi/proto/gnmi_ext"
-	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/influxdata/telegraf"
@@ -218,16 +217,14 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 			}
 
 			h := subscriber{
-				handler:    c.handler,
-				host:       host,
-				port:       port,
-				maxMsgSize: int(c.MaxMsgSize),
-				log:        c.Log,
-				ClientParameters: keepalive.ClientParameters{
-					Time:                time.Duration(c.KeepaliveTime),
-					Timeout:             time.Duration(c.KeepaliveTimeout),
-					PermitWithoutStream: false,
-				},
+				handler:             c.handler,
+				host:                host,
+				port:                port,
+				maxMsgSize:          int(c.MaxMsgSize),
+				log:                 c.Log,
+				Time:                time.Duration(c.KeepaliveTime),
+				Timeout:             time.Duration(c.KeepaliveTimeout),
+				PermitWithoutStream: false,
 			}
 			for ctx.Err() == nil {
 				if err := h.subscribe(ctx, acc, tlscfg, request); err != nil && ctx.Err() == nil {

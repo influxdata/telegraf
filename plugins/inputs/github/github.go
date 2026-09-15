@@ -197,10 +197,8 @@ func getFields(repositoryInfo *github.Repository) map[string]interface{} {
 func (g *GitHub) getPullRequestFields(ctx context.Context, owner, repo string) (map[string]interface{}, error) {
 	options := github.SearchOptions{
 		TextMatch: false,
-		ListOptions: github.ListOptions{
-			PerPage: 100,
-			Page:    1,
-		},
+		PerPage:   100,
+		Page:      1,
 	}
 
 	classes := []string{"open", "closed"}

@@ -17,7 +17,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
-	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -38,8 +37,8 @@ func TestInit(t *testing.T) {
 		{
 			name: "valid config",
 			arc: &Arc{
-				URL:              "http://localhost:8000/api/v1/write/msgpack",
-				HTTPClientConfig: common_http.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
+				URL:     "http://localhost:8000/api/v1/write/msgpack",
+				Timeout: config.Duration(5 * time.Second),
 			},
 			expectError: false,
 		},
@@ -159,12 +158,12 @@ func TestWrite(t *testing.T) {
 
 			// Configure Arc plugin
 			plugin := &Arc{
-				URL:              ts.URL,
-				HTTPClientConfig: common_http.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
-				APIKey:           config.NewSecret([]byte("test-api-key")),
-				Headers:          make(map[string]string),
-				ContentEncoding:  tt.contentEncoding,
-				Log:              testutil.Logger{},
+				URL:             ts.URL,
+				Timeout:         config.Duration(5 * time.Second),
+				APIKey:          config.NewSecret([]byte("test-api-key")),
+				Headers:         make(map[string]string),
+				ContentEncoding: tt.contentEncoding,
+				Log:             testutil.Logger{},
 			}
 
 			require.NoError(t, plugin.Init())
@@ -217,10 +216,10 @@ func TestWriteWithAPIKey(t *testing.T) {
 	defer ts.Close()
 
 	plugin := &Arc{
-		URL:              ts.URL,
-		HTTPClientConfig: common_http.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
-		APIKey:           config.NewSecret([]byte(expectedAPIKey)),
-		Log:              testutil.Logger{},
+		URL:     ts.URL,
+		Timeout: config.Duration(5 * time.Second),
+		APIKey:  config.NewSecret([]byte(expectedAPIKey)),
+		Log:     testutil.Logger{},
 	}
 
 	require.NoError(t, plugin.Init())
@@ -248,9 +247,9 @@ func TestWriteServerError(t *testing.T) {
 	defer ts.Close()
 
 	plugin := &Arc{
-		URL:              ts.URL,
-		HTTPClientConfig: common_http.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
-		Log:              testutil.Logger{},
+		URL:     ts.URL,
+		Timeout: config.Duration(5 * time.Second),
+		Log:     testutil.Logger{},
 	}
 
 	require.NoError(t, plugin.Init())
@@ -283,10 +282,10 @@ func TestMessagePackEncoding(t *testing.T) {
 	defer ts.Close()
 
 	plugin := &Arc{
-		URL:              ts.URL,
-		HTTPClientConfig: common_http.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
-		ContentEncoding:  "identity",
-		Log:              testutil.Logger{},
+		URL:             ts.URL,
+		Timeout:         config.Duration(5 * time.Second),
+		ContentEncoding: "identity",
+		Log:             testutil.Logger{},
 	}
 
 	require.NoError(t, plugin.Init())
@@ -385,10 +384,10 @@ func TestMultipleMeasurements(t *testing.T) {
 	defer ts.Close()
 
 	plugin := &Arc{
-		URL:              ts.URL,
-		HTTPClientConfig: common_http.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
-		ContentEncoding:  "identity",
-		Log:              testutil.Logger{},
+		URL:             ts.URL,
+		Timeout:         config.Duration(5 * time.Second),
+		ContentEncoding: "identity",
+		Log:             testutil.Logger{},
 	}
 
 	require.NoError(t, plugin.Init())

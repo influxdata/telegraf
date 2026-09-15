@@ -19,8 +19,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
-	common_proxy "github.com/influxdata/telegraf/plugins/common/proxy"
-	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -635,17 +633,15 @@ func TestSocks5Proxy(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			h := &HTTPResponse{
-				Log:             testutil.Logger{},
-				URLs:            []string{tt.url},
-				HTTPProxy:       tt.httpProxy,
-				Method:          "GET",
-				ResponseTimeout: config.Duration(time.Second * 20),
-				Socks5ProxyConfig: common_proxy.Socks5ProxyConfig{
-					Socks5ProxyEnabled:  true,
-					Socks5ProxyAddress:  proxyListener.Addr().String(),
-					Socks5ProxyUsername: proxyUsername,
-					Socks5ProxyPassword: proxyPassword,
-				},
+				Log:                 testutil.Logger{},
+				URLs:                []string{tt.url},
+				HTTPProxy:           tt.httpProxy,
+				Method:              "GET",
+				ResponseTimeout:     config.Duration(time.Second * 20),
+				Socks5ProxyEnabled:  true,
+				Socks5ProxyAddress:  proxyListener.Addr().String(),
+				Socks5ProxyUsername: proxyUsername,
+				Socks5ProxyPassword: proxyPassword,
 			}
 
 			var acc testutil.Accumulator
@@ -1526,14 +1522,12 @@ func TestSNI(t *testing.T) {
 	defer ts.Close()
 
 	h := &HTTPResponse{
-		Log:             testutil.Logger{},
-		URLs:            []string{ts.URL + "/good"},
-		Method:          "GET",
-		ResponseTimeout: config.Duration(time.Second * 20),
-		ClientConfig: tls.ClientConfig{
-			InsecureSkipVerify: true,
-			ServerName:         "super-special-hostname.example.com",
-		},
+		Log:                testutil.Logger{},
+		URLs:               []string{ts.URL + "/good"},
+		Method:             "GET",
+		ResponseTimeout:    config.Duration(time.Second * 20),
+		InsecureSkipVerify: true,
+		ServerName:         "super-special-hostname.example.com",
 	}
 
 	var acc testutil.Accumulator

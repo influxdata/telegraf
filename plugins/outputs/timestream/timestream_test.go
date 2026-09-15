@@ -1274,10 +1274,10 @@ func TestTransformMetricsUnsupportedFieldsAreSkipped(t *testing.T) {
 func TestCustomEndpoint(t *testing.T) {
 	customEndpoint := "http://test.custom.endpoint.com"
 	plugin := Timestream{
-		MappingMode:      MappingModeMultiTable,
-		DatabaseName:     tsDBName,
-		Log:              testutil.Logger{},
-		CredentialConfig: common_aws.CredentialConfig{EndpointURL: customEndpoint},
+		MappingMode:  MappingModeMultiTable,
+		DatabaseName: tsDBName,
+		Log:          testutil.Logger{},
+		EndpointURL:  customEndpoint,
 	}
 
 	// validate config correctness

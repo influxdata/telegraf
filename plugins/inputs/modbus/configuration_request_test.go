@@ -22,156 +22,156 @@ func TestRequest(t *testing.T) {
 		Controller:        "tcp://localhost:1502",
 		ConfigurationType: "request",
 		Log:               testutil.Logger{},
-	}
-	modbus.Requests = []requestDefinition{
-		{
-			SlaveID:      1,
-			ByteOrder:    "ABCD",
-			RegisterType: "coil",
-			Fields: []requestFieldDefinition{
-				{
-					Name:    "coil-0",
-					Address: uint16(0),
-				},
-				{
-					Name:    "coil-1",
-					Address: uint16(1),
-					Omit:    true,
-				},
-				{
-					Name:        "coil-2",
-					Address:     uint16(2),
-					InputType:   "INT64",
-					Scale:       1.2,
-					OutputType:  "UINT16",
-					Measurement: "modbus",
-				},
-				{
-					Name:        "coil-3",
-					Address:     uint16(3),
-					InputType:   "INT64",
-					Scale:       1.2,
-					OutputType:  "BOOL",
-					Measurement: "modbus",
-				},
-			},
-		},
-		{
-			SlaveID:      1,
-			RegisterType: "coil",
-			Fields: []requestFieldDefinition{
-				{
-					Name:    "coil-4",
-					Address: uint16(6),
-				},
-				{
-					Name:    "coil-5",
-					Address: uint16(7),
-					Omit:    true,
-				},
-				{
-					Name:        "coil-6",
-					Address:     uint16(8),
-					InputType:   "INT64",
-					Scale:       1.2,
-					OutputType:  "UINT16",
-					Measurement: "modbus",
-				},
-				{
-					Name:        "coil-7",
-					Address:     uint16(9),
-					InputType:   "INT64",
-					Scale:       1.2,
-					OutputType:  "BOOL",
-					Measurement: "modbus",
+
+		Requests: []requestDefinition{
+			{
+				SlaveID:      1,
+				ByteOrder:    "ABCD",
+				RegisterType: "coil",
+				Fields: []requestFieldDefinition{
+					{
+						Name:    "coil-0",
+						Address: uint16(0),
+					},
+					{
+						Name:    "coil-1",
+						Address: uint16(1),
+						Omit:    true,
+					},
+					{
+						Name:        "coil-2",
+						Address:     uint16(2),
+						InputType:   "INT64",
+						Scale:       1.2,
+						OutputType:  "UINT16",
+						Measurement: "modbus",
+					},
+					{
+						Name:        "coil-3",
+						Address:     uint16(3),
+						InputType:   "INT64",
+						Scale:       1.2,
+						OutputType:  "BOOL",
+						Measurement: "modbus",
+					},
 				},
 			},
-		},
-		{
-			SlaveID:      1,
-			ByteOrder:    "ABCD",
-			RegisterType: "discrete",
-			Fields: []requestFieldDefinition{
-				{
-					Name:    "discrete-0",
-					Address: uint16(0),
-				},
-				{
-					Name:    "discrete-1",
-					Address: uint16(1),
-					Omit:    true,
-				},
-				{
-					Name:        "discrete-2",
-					Address:     uint16(2),
-					InputType:   "INT64",
-					Scale:       1.2,
-					OutputType:  "UINT16",
-					Measurement: "modbus",
-				},
-				{
-					Name:        "discrete-3",
-					Address:     uint16(3),
-					InputType:   "INT64",
-					Scale:       1.2,
-					OutputType:  "BOOL",
-					Measurement: "modbus",
-				},
-			},
-		},
-		{
-			SlaveID:      1,
-			ByteOrder:    "ABCD",
-			RegisterType: "holding",
-			Fields: []requestFieldDefinition{
-				{
-					Name:      "holding-0",
-					Address:   uint16(0),
-					InputType: "INT16",
-				},
-				{
-					Name:      "holding-1",
-					Address:   uint16(1),
-					InputType: "UINT16",
-					Omit:      true,
-				},
-				{
-					Name:        "holding-2",
-					Address:     uint16(2),
-					InputType:   "INT64",
-					Scale:       1.2,
-					OutputType:  "FLOAT64",
-					Measurement: "modbus",
+			{
+				SlaveID:      1,
+				RegisterType: "coil",
+				Fields: []requestFieldDefinition{
+					{
+						Name:    "coil-4",
+						Address: uint16(6),
+					},
+					{
+						Name:    "coil-5",
+						Address: uint16(7),
+						Omit:    true,
+					},
+					{
+						Name:        "coil-6",
+						Address:     uint16(8),
+						InputType:   "INT64",
+						Scale:       1.2,
+						OutputType:  "UINT16",
+						Measurement: "modbus",
+					},
+					{
+						Name:        "coil-7",
+						Address:     uint16(9),
+						InputType:   "INT64",
+						Scale:       1.2,
+						OutputType:  "BOOL",
+						Measurement: "modbus",
+					},
 				},
 			},
-		},
-		{
-			SlaveID:      1,
-			ByteOrder:    "ABCD",
-			RegisterType: "input",
-			Fields: []requestFieldDefinition{
-				{
-					Name:      "input-0",
-					Address:   uint16(0),
-					InputType: "INT16",
-				},
-				{
-					Name:      "input-1",
-					Address:   uint16(1),
-					InputType: "UINT16",
-					Omit:      true,
-				},
-				{
-					Name:        "input-2",
-					Address:     uint16(2),
-					InputType:   "INT64",
-					Scale:       1.2,
-					OutputType:  "FLOAT64",
-					Measurement: "modbus",
+			{
+				SlaveID:      1,
+				ByteOrder:    "ABCD",
+				RegisterType: "discrete",
+				Fields: []requestFieldDefinition{
+					{
+						Name:    "discrete-0",
+						Address: uint16(0),
+					},
+					{
+						Name:    "discrete-1",
+						Address: uint16(1),
+						Omit:    true,
+					},
+					{
+						Name:        "discrete-2",
+						Address:     uint16(2),
+						InputType:   "INT64",
+						Scale:       1.2,
+						OutputType:  "UINT16",
+						Measurement: "modbus",
+					},
+					{
+						Name:        "discrete-3",
+						Address:     uint16(3),
+						InputType:   "INT64",
+						Scale:       1.2,
+						OutputType:  "BOOL",
+						Measurement: "modbus",
+					},
 				},
 			},
-		},
-	}
+			{
+				SlaveID:      1,
+				ByteOrder:    "ABCD",
+				RegisterType: "holding",
+				Fields: []requestFieldDefinition{
+					{
+						Name:      "holding-0",
+						Address:   uint16(0),
+						InputType: "INT16",
+					},
+					{
+						Name:      "holding-1",
+						Address:   uint16(1),
+						InputType: "UINT16",
+						Omit:      true,
+					},
+					{
+						Name:        "holding-2",
+						Address:     uint16(2),
+						InputType:   "INT64",
+						Scale:       1.2,
+						OutputType:  "FLOAT64",
+						Measurement: "modbus",
+					},
+				},
+			},
+			{
+				SlaveID:      1,
+				ByteOrder:    "ABCD",
+				RegisterType: "input",
+				Fields: []requestFieldDefinition{
+					{
+						Name:      "input-0",
+						Address:   uint16(0),
+						InputType: "INT16",
+					},
+					{
+						Name:      "input-1",
+						Address:   uint16(1),
+						InputType: "UINT16",
+						Omit:      true,
+					},
+					{
+						Name:        "input-2",
+						Address:     uint16(2),
+						InputType:   "INT64",
+						Scale:       1.2,
+						OutputType:  "FLOAT64",
+						Measurement: "modbus",
+					},
+				},
+			},
+		}}
 
 	require.NoError(t, modbus.Init())
 	require.NotEmpty(t, modbus.requests)
@@ -188,157 +188,157 @@ func TestRequestWithTags(t *testing.T) {
 		Controller:        "tcp://localhost:1502",
 		ConfigurationType: "request",
 		Log:               testutil.Logger{},
-	}
-	modbus.Requests = []requestDefinition{
-		{
-			SlaveID:      1,
-			ByteOrder:    "ABCD",
-			RegisterType: "coil",
-			Fields: []requestFieldDefinition{
-				{
-					Name:    "coil-0",
-					Address: uint16(0),
+
+		Requests: []requestDefinition{
+			{
+				SlaveID:      1,
+				ByteOrder:    "ABCD",
+				RegisterType: "coil",
+				Fields: []requestFieldDefinition{
+					{
+						Name:    "coil-0",
+						Address: uint16(0),
+					},
+					{
+						Name:    "coil-1",
+						Address: uint16(1),
+						Omit:    true,
+					},
+					{
+						Name:        "coil-2",
+						Address:     uint16(2),
+						InputType:   "INT64",
+						Scale:       1.2,
+						OutputType:  "UINT16",
+						Measurement: "modbus",
+					},
 				},
-				{
-					Name:    "coil-1",
-					Address: uint16(1),
-					Omit:    true,
-				},
-				{
-					Name:        "coil-2",
-					Address:     uint16(2),
-					InputType:   "INT64",
-					Scale:       1.2,
-					OutputType:  "UINT16",
-					Measurement: "modbus",
-				},
-			},
-			Tags: map[string]string{
-				"first":  "a",
-				"second": "bb",
-				"third":  "ccc",
-			},
-		},
-		{
-			SlaveID:      1,
-			RegisterType: "coil",
-			Fields: []requestFieldDefinition{
-				{
-					Name:    "coil-3",
-					Address: uint16(6),
-				},
-				{
-					Name:    "coil-4",
-					Address: uint16(7),
-					Omit:    true,
-				},
-				{
-					Name:        "coil-5",
-					Address:     uint16(8),
-					InputType:   "INT64",
-					Scale:       1.2,
-					OutputType:  "UINT16",
-					Measurement: "modbus",
+				Tags: map[string]string{
+					"first":  "a",
+					"second": "bb",
+					"third":  "ccc",
 				},
 			},
-			Tags: map[string]string{
-				"first":  "a",
-				"second": "bb",
-				"third":  "ccc",
-			},
-		},
-		{
-			SlaveID:      1,
-			ByteOrder:    "ABCD",
-			RegisterType: "discrete",
-			Fields: []requestFieldDefinition{
-				{
-					Name:    "discrete-0",
-					Address: uint16(0),
+			{
+				SlaveID:      1,
+				RegisterType: "coil",
+				Fields: []requestFieldDefinition{
+					{
+						Name:    "coil-3",
+						Address: uint16(6),
+					},
+					{
+						Name:    "coil-4",
+						Address: uint16(7),
+						Omit:    true,
+					},
+					{
+						Name:        "coil-5",
+						Address:     uint16(8),
+						InputType:   "INT64",
+						Scale:       1.2,
+						OutputType:  "UINT16",
+						Measurement: "modbus",
+					},
 				},
-				{
-					Name:    "discrete-1",
-					Address: uint16(1),
-					Omit:    true,
-				},
-				{
-					Name:        "discrete-2",
-					Address:     uint16(2),
-					InputType:   "INT64",
-					Scale:       1.2,
-					OutputType:  "UINT16",
-					Measurement: "modbus",
-				},
-			},
-			Tags: map[string]string{
-				"first":  "a",
-				"second": "bb",
-				"third":  "ccc",
-			},
-		},
-		{
-			SlaveID:      1,
-			ByteOrder:    "ABCD",
-			RegisterType: "holding",
-			Fields: []requestFieldDefinition{
-				{
-					Name:      "holding-0",
-					Address:   uint16(0),
-					InputType: "INT16",
-				},
-				{
-					Name:      "holding-1",
-					Address:   uint16(1),
-					InputType: "UINT16",
-					Omit:      true,
-				},
-				{
-					Name:        "holding-2",
-					Address:     uint16(2),
-					InputType:   "INT64",
-					Scale:       1.2,
-					OutputType:  "FLOAT64",
-					Measurement: "modbus",
+				Tags: map[string]string{
+					"first":  "a",
+					"second": "bb",
+					"third":  "ccc",
 				},
 			},
-			Tags: map[string]string{
-				"first":  "a",
-				"second": "bb",
-				"third":  "ccc",
-			},
-		},
-		{
-			SlaveID:      1,
-			ByteOrder:    "ABCD",
-			RegisterType: "input",
-			Fields: []requestFieldDefinition{
-				{
-					Name:      "input-0",
-					Address:   uint16(0),
-					InputType: "INT16",
+			{
+				SlaveID:      1,
+				ByteOrder:    "ABCD",
+				RegisterType: "discrete",
+				Fields: []requestFieldDefinition{
+					{
+						Name:    "discrete-0",
+						Address: uint16(0),
+					},
+					{
+						Name:    "discrete-1",
+						Address: uint16(1),
+						Omit:    true,
+					},
+					{
+						Name:        "discrete-2",
+						Address:     uint16(2),
+						InputType:   "INT64",
+						Scale:       1.2,
+						OutputType:  "UINT16",
+						Measurement: "modbus",
+					},
 				},
-				{
-					Name:      "input-1",
-					Address:   uint16(1),
-					InputType: "UINT16",
-					Omit:      true,
-				},
-				{
-					Name:        "input-2",
-					Address:     uint16(2),
-					InputType:   "INT64",
-					Scale:       1.2,
-					OutputType:  "FLOAT64",
-					Measurement: "modbus",
+				Tags: map[string]string{
+					"first":  "a",
+					"second": "bb",
+					"third":  "ccc",
 				},
 			},
-			Tags: map[string]string{
-				"first":  "a",
-				"second": "bb",
-				"third":  "ccc",
+			{
+				SlaveID:      1,
+				ByteOrder:    "ABCD",
+				RegisterType: "holding",
+				Fields: []requestFieldDefinition{
+					{
+						Name:      "holding-0",
+						Address:   uint16(0),
+						InputType: "INT16",
+					},
+					{
+						Name:      "holding-1",
+						Address:   uint16(1),
+						InputType: "UINT16",
+						Omit:      true,
+					},
+					{
+						Name:        "holding-2",
+						Address:     uint16(2),
+						InputType:   "INT64",
+						Scale:       1.2,
+						OutputType:  "FLOAT64",
+						Measurement: "modbus",
+					},
+				},
+				Tags: map[string]string{
+					"first":  "a",
+					"second": "bb",
+					"third":  "ccc",
+				},
 			},
-		},
-	}
+			{
+				SlaveID:      1,
+				ByteOrder:    "ABCD",
+				RegisterType: "input",
+				Fields: []requestFieldDefinition{
+					{
+						Name:      "input-0",
+						Address:   uint16(0),
+						InputType: "INT16",
+					},
+					{
+						Name:      "input-1",
+						Address:   uint16(1),
+						InputType: "UINT16",
+						Omit:      true,
+					},
+					{
+						Name:        "input-2",
+						Address:     uint16(2),
+						InputType:   "INT64",
+						Scale:       1.2,
+						OutputType:  "FLOAT64",
+						Measurement: "modbus",
+					},
+				},
+				Tags: map[string]string{
+					"first":  "a",
+					"second": "bb",
+					"third":  "ccc",
+				},
+			},
+		}}
 
 	require.NoError(t, modbus.Init())
 	require.NotEmpty(t, modbus.requests)
@@ -417,21 +417,21 @@ func TestRequestTypesCoil(t *testing.T) {
 				Controller:        "tcp://localhost:1502",
 				ConfigurationType: "request",
 				Log:               testutil.Logger{},
-			}
-			modbus.Requests = []requestDefinition{
-				{
-					SlaveID:      1,
-					ByteOrder:    "ABCD",
-					RegisterType: "coil",
-					Fields: []requestFieldDefinition{
-						{
-							Name:       hrt.name,
-							OutputType: hrt.dataTypeOut,
-							Address:    hrt.address,
+
+				Requests: []requestDefinition{
+					{
+						SlaveID:      1,
+						ByteOrder:    "ABCD",
+						RegisterType: "coil",
+						Fields: []requestFieldDefinition{
+							{
+								Name:       hrt.name,
+								OutputType: hrt.dataTypeOut,
+								Address:    hrt.address,
+							},
 						},
 					},
-				},
-			}
+				}}
 
 			expected := []telegraf.Metric{
 				metric.New(
@@ -1044,25 +1044,25 @@ func TestRequestTypesHoldingABCD(t *testing.T) {
 				Controller:        "tcp://localhost:1502",
 				ConfigurationType: "request",
 				Log:               testutil.Logger{},
-			}
-			modbus.Requests = []requestDefinition{
-				{
-					SlaveID:      1,
-					ByteOrder:    byteOrder,
-					RegisterType: "holding",
-					Fields: []requestFieldDefinition{
-						{
-							Name:       hrt.name,
-							InputType:  hrt.dataTypeIn,
-							OutputType: hrt.dataTypeOut,
-							Scale:      hrt.scale,
-							Address:    hrt.address,
-							Length:     hrt.length,
-							Bit:        hrt.bit,
+
+				Requests: []requestDefinition{
+					{
+						SlaveID:      1,
+						ByteOrder:    byteOrder,
+						RegisterType: "holding",
+						Fields: []requestFieldDefinition{
+							{
+								Name:       hrt.name,
+								InputType:  hrt.dataTypeIn,
+								OutputType: hrt.dataTypeOut,
+								Scale:      hrt.scale,
+								Address:    hrt.address,
+								Length:     hrt.length,
+								Bit:        hrt.bit,
+							},
 						},
 					},
-				},
-			}
+				}}
 
 			expected := []telegraf.Metric{
 				metric.New(
@@ -1667,24 +1667,24 @@ func TestRequestTypesHoldingDCBA(t *testing.T) {
 				Controller:        "tcp://localhost:1502",
 				ConfigurationType: "request",
 				Log:               testutil.Logger{},
-			}
-			modbus.Requests = []requestDefinition{
-				{
-					SlaveID:      1,
-					ByteOrder:    byteOrder,
-					RegisterType: "holding",
-					Fields: []requestFieldDefinition{
-						{
-							Name:       hrt.name,
-							InputType:  hrt.dataTypeIn,
-							OutputType: hrt.dataTypeOut,
-							Scale:      hrt.scale,
-							Address:    hrt.address,
-							Length:     hrt.length,
+
+				Requests: []requestDefinition{
+					{
+						SlaveID:      1,
+						ByteOrder:    byteOrder,
+						RegisterType: "holding",
+						Fields: []requestFieldDefinition{
+							{
+								Name:       hrt.name,
+								InputType:  hrt.dataTypeIn,
+								OutputType: hrt.dataTypeOut,
+								Scale:      hrt.scale,
+								Address:    hrt.address,
+								Length:     hrt.length,
+							},
 						},
 					},
-				},
-			}
+				}}
 
 			expected := []telegraf.Metric{
 				metric.New(
@@ -2087,8 +2087,8 @@ func TestRequestFail(t *testing.T) {
 				Controller:        "tcp://localhost:1502",
 				ConfigurationType: "request",
 				Log:               testutil.Logger{},
-			}
-			plugin.Requests = tt.requests
+
+				Requests: tt.requests}
 
 			require.ErrorContains(t, plugin.Init(), tt.errormsg)
 			require.Empty(t, plugin.requests)
@@ -2102,33 +2102,33 @@ func TestRequestStartingWithOmits(t *testing.T) {
 		Controller:        "tcp://localhost:1502",
 		ConfigurationType: "request",
 		Log:               testutil.Logger{},
-	}
-	modbus.Requests = []requestDefinition{
-		{
-			SlaveID:      1,
-			ByteOrder:    "ABCD",
-			RegisterType: "holding",
-			Fields: []requestFieldDefinition{
-				{
-					Name:      "holding-0",
-					Address:   uint16(0),
-					InputType: "INT16",
-					Omit:      true,
-				},
-				{
-					Name:      "holding-1",
-					Address:   uint16(1),
-					InputType: "UINT16",
-					Omit:      true,
-				},
-				{
-					Name:      "holding-2",
-					Address:   uint16(2),
-					InputType: "INT16",
+
+		Requests: []requestDefinition{
+			{
+				SlaveID:      1,
+				ByteOrder:    "ABCD",
+				RegisterType: "holding",
+				Fields: []requestFieldDefinition{
+					{
+						Name:      "holding-0",
+						Address:   uint16(0),
+						InputType: "INT16",
+						Omit:      true,
+					},
+					{
+						Name:      "holding-1",
+						Address:   uint16(1),
+						InputType: "UINT16",
+						Omit:      true,
+					},
+					{
+						Name:      "holding-2",
+						Address:   uint16(2),
+						InputType: "INT16",
+					},
 				},
 			},
-		},
-	}
+		}}
 	require.NoError(t, modbus.Init())
 	require.NotEmpty(t, modbus.requests)
 	require.NotNil(t, modbus.requests[1])
@@ -2172,34 +2172,34 @@ func TestRequestWithOmittedFieldsOnly(t *testing.T) {
 		Controller:        "tcp://localhost:1502",
 		ConfigurationType: "request",
 		Log:               testutil.Logger{},
-	}
-	modbus.Requests = []requestDefinition{
-		{
-			SlaveID:      1,
-			ByteOrder:    "ABCD",
-			RegisterType: "holding",
-			Fields: []requestFieldDefinition{
-				{
-					Name:      "holding-0",
-					Address:   uint16(0),
-					InputType: "INT16",
-					Omit:      true,
-				},
-				{
-					Name:      "holding-1",
-					Address:   uint16(1),
-					InputType: "UINT16",
-					Omit:      true,
-				},
-				{
-					Name:      "holding-2",
-					Address:   uint16(2),
-					InputType: "INT16",
-					Omit:      true,
+
+		Requests: []requestDefinition{
+			{
+				SlaveID:      1,
+				ByteOrder:    "ABCD",
+				RegisterType: "holding",
+				Fields: []requestFieldDefinition{
+					{
+						Name:      "holding-0",
+						Address:   uint16(0),
+						InputType: "INT16",
+						Omit:      true,
+					},
+					{
+						Name:      "holding-1",
+						Address:   uint16(1),
+						InputType: "UINT16",
+						Omit:      true,
+					},
+					{
+						Name:      "holding-2",
+						Address:   uint16(2),
+						InputType: "INT16",
+						Omit:      true,
+					},
 				},
 			},
-		},
-	}
+		}}
 	require.NoError(t, modbus.Init())
 	require.Empty(t, modbus.requests)
 }
@@ -2210,39 +2210,39 @@ func TestRequestGroupWithOmittedFieldsOnly(t *testing.T) {
 		Controller:        "tcp://localhost:1502",
 		ConfigurationType: "request",
 		Log:               testutil.Logger{},
-	}
-	modbus.Requests = []requestDefinition{
-		{
-			SlaveID:      1,
-			ByteOrder:    "ABCD",
-			RegisterType: "holding",
-			Fields: []requestFieldDefinition{
-				{
-					Name:      "holding-0",
-					Address:   uint16(0),
-					InputType: "INT16",
-					Omit:      true,
-				},
-				{
-					Name:      "holding-1",
-					Address:   uint16(1),
-					InputType: "UINT16",
-					Omit:      true,
-				},
-				{
-					Name:      "holding-2",
-					Address:   uint16(2),
-					InputType: "INT16",
-					Omit:      true,
-				},
-				{
-					Name:      "holding-8",
-					Address:   uint16(8),
-					InputType: "INT16",
+
+		Requests: []requestDefinition{
+			{
+				SlaveID:      1,
+				ByteOrder:    "ABCD",
+				RegisterType: "holding",
+				Fields: []requestFieldDefinition{
+					{
+						Name:      "holding-0",
+						Address:   uint16(0),
+						InputType: "INT16",
+						Omit:      true,
+					},
+					{
+						Name:      "holding-1",
+						Address:   uint16(1),
+						InputType: "UINT16",
+						Omit:      true,
+					},
+					{
+						Name:      "holding-2",
+						Address:   uint16(2),
+						InputType: "INT16",
+						Omit:      true,
+					},
+					{
+						Name:      "holding-8",
+						Address:   uint16(8),
+						InputType: "INT16",
+					},
 				},
 			},
-		},
-	}
+		}}
 	require.NoError(t, modbus.Init())
 	require.Len(t, modbus.requests, 1)
 	require.NotNil(t, modbus.requests[1])
@@ -2257,14 +2257,14 @@ func TestRequestEmptyFields(t *testing.T) {
 		Controller:        "tcp://localhost:1502",
 		ConfigurationType: "request",
 		Log:               testutil.Logger{},
-	}
-	modbus.Requests = []requestDefinition{
-		{
-			SlaveID:      1,
-			ByteOrder:    "ABCD",
-			RegisterType: "holding",
-		},
-	}
+
+		Requests: []requestDefinition{
+			{
+				SlaveID:      1,
+				ByteOrder:    "ABCD",
+				RegisterType: "holding",
+			},
+		}}
 	err := modbus.Init()
 	require.ErrorContains(t, err, `found request section without fields`)
 }
@@ -2276,45 +2276,45 @@ func TestRequestMultipleSlavesOneFail(t *testing.T) {
 		Retries:           1,
 		ConfigurationType: "request",
 		Log:               testutil.Logger{},
-	}
-	modbus.Requests = []requestDefinition{
-		{
-			SlaveID:      1,
-			ByteOrder:    "ABCD",
-			RegisterType: "holding",
-			Fields: []requestFieldDefinition{
-				{
-					Name:      "holding-0",
-					Address:   uint16(0),
-					InputType: "INT16",
+
+		Requests: []requestDefinition{
+			{
+				SlaveID:      1,
+				ByteOrder:    "ABCD",
+				RegisterType: "holding",
+				Fields: []requestFieldDefinition{
+					{
+						Name:      "holding-0",
+						Address:   uint16(0),
+						InputType: "INT16",
+					},
 				},
 			},
-		},
-		{
-			SlaveID:      2,
-			ByteOrder:    "ABCD",
-			RegisterType: "holding",
-			Fields: []requestFieldDefinition{
-				{
-					Name:      "holding-0",
-					Address:   uint16(0),
-					InputType: "INT16",
+			{
+				SlaveID:      2,
+				ByteOrder:    "ABCD",
+				RegisterType: "holding",
+				Fields: []requestFieldDefinition{
+					{
+						Name:      "holding-0",
+						Address:   uint16(0),
+						InputType: "INT16",
+					},
 				},
 			},
-		},
-		{
-			SlaveID:      3,
-			ByteOrder:    "ABCD",
-			RegisterType: "holding",
-			Fields: []requestFieldDefinition{
-				{
-					Name:      "holding-0",
-					Address:   uint16(0),
-					InputType: "INT16",
+			{
+				SlaveID:      3,
+				ByteOrder:    "ABCD",
+				RegisterType: "holding",
+				Fields: []requestFieldDefinition{
+					{
+						Name:      "holding-0",
+						Address:   uint16(0),
+						InputType: "INT16",
+					},
 				},
 			},
-		},
-	}
+		}}
 	require.NoError(t, modbus.Init())
 
 	serv := mbserver.NewServer()
@@ -2569,16 +2569,16 @@ func TestRequestOptimizationShrink(t *testing.T) {
 				Controller:        "tcp://localhost:1502",
 				ConfigurationType: "request",
 				Log:               testutil.Logger{},
-			}
-			plugin.Requests = []requestDefinition{
-				{
-					SlaveID:      slaveID,
-					ByteOrder:    "ABCD",
-					RegisterType: "holding",
-					Optimization: "shrink",
-					Fields:       requestFields,
-				},
-			}
+
+				Requests: []requestDefinition{
+					{
+						SlaveID:      slaveID,
+						ByteOrder:    "ABCD",
+						RegisterType: "holding",
+						Optimization: "shrink",
+						Fields:       requestFields,
+					},
+				}}
 			require.NoError(t, plugin.Init())
 			require.NotEmpty(t, plugin.requests)
 			require.Contains(t, plugin.requests, slaveID)
@@ -2770,16 +2770,16 @@ func TestRequestOptimizationRearrange(t *testing.T) {
 				Controller:        "tcp://localhost:1502",
 				ConfigurationType: "request",
 				Log:               testutil.Logger{},
-			}
-			plugin.Requests = []requestDefinition{
-				{
-					SlaveID:      slaveID,
-					ByteOrder:    "ABCD",
-					RegisterType: "holding",
-					Optimization: "rearrange",
-					Fields:       requestFields,
-				},
-			}
+
+				Requests: []requestDefinition{
+					{
+						SlaveID:      slaveID,
+						ByteOrder:    "ABCD",
+						RegisterType: "holding",
+						Optimization: "rearrange",
+						Fields:       requestFields,
+					},
+				}}
 			require.NoError(t, plugin.Init())
 			require.NotEmpty(t, plugin.requests)
 			require.Contains(t, plugin.requests, slaveID)
@@ -2841,8 +2841,8 @@ func TestRequestOptimizationMaxExtraRegisterFail(t *testing.T) {
 				Controller:        "tcp://localhost:1502",
 				ConfigurationType: "request",
 				Log:               testutil.Logger{},
-			}
-			plugin.Requests = tt.requests
+
+				Requests: tt.requests}
 
 			require.ErrorContains(t, plugin.Init(), tt.errormsg)
 			require.Empty(t, plugin.requests)
@@ -2964,17 +2964,17 @@ func TestRequestOptimizationMaxInsertSmall(t *testing.T) {
 				Controller:        "tcp://localhost:1502",
 				ConfigurationType: "request",
 				Log:               testutil.Logger{},
-			}
-			plugin.Requests = []requestDefinition{
-				{
-					SlaveID:           slaveID,
-					ByteOrder:         "ABCD",
-					RegisterType:      "holding",
-					Optimization:      "max_insert",
-					MaxExtraRegisters: maxExtraRegisters,
-					Fields:            requestFields,
-				},
-			}
+
+				Requests: []requestDefinition{
+					{
+						SlaveID:           slaveID,
+						ByteOrder:         "ABCD",
+						RegisterType:      "holding",
+						Optimization:      "max_insert",
+						MaxExtraRegisters: maxExtraRegisters,
+						Fields:            requestFields,
+					},
+				}}
 			require.NoError(t, plugin.Init())
 			require.NotEmpty(t, plugin.requests)
 			require.Contains(t, plugin.requests, slaveID)
@@ -2989,41 +2989,41 @@ func TestRequestWorkaroundsOneRequestPerField(t *testing.T) {
 		ConfigurationType: "request",
 		Log:               testutil.Logger{},
 		Workarounds:       workarounds{OnRequestPerField: true},
-	}
-	plugin.Requests = []requestDefinition{
-		{
-			SlaveID:      1,
-			ByteOrder:    "ABCD",
-			RegisterType: "holding",
-			Fields: []requestFieldDefinition{
-				{
-					Name:      "holding-1",
-					Address:   uint16(1),
-					InputType: "INT16",
-				},
-				{
-					Name:      "holding-2",
-					Address:   uint16(2),
-					InputType: "INT16",
-				},
-				{
-					Name:      "holding-3",
-					Address:   uint16(3),
-					InputType: "INT16",
-				},
-				{
-					Name:      "holding-4",
-					Address:   uint16(4),
-					InputType: "INT16",
-				},
-				{
-					Name:      "holding-5",
-					Address:   uint16(5),
-					InputType: "INT16",
+
+		Requests: []requestDefinition{
+			{
+				SlaveID:      1,
+				ByteOrder:    "ABCD",
+				RegisterType: "holding",
+				Fields: []requestFieldDefinition{
+					{
+						Name:      "holding-1",
+						Address:   uint16(1),
+						InputType: "INT16",
+					},
+					{
+						Name:      "holding-2",
+						Address:   uint16(2),
+						InputType: "INT16",
+					},
+					{
+						Name:      "holding-3",
+						Address:   uint16(3),
+						InputType: "INT16",
+					},
+					{
+						Name:      "holding-4",
+						Address:   uint16(4),
+						InputType: "INT16",
+					},
+					{
+						Name:      "holding-5",
+						Address:   uint16(5),
+						InputType: "INT16",
+					},
 				},
 			},
-		},
-	}
+		}}
 	require.NoError(t, plugin.Init())
 	require.Len(t, plugin.requests[1].holding, len(plugin.Requests[0].Fields))
 }
@@ -3035,24 +3035,24 @@ func TestRequestWorkaroundsReadCoilsStartingAtZeroRequest(t *testing.T) {
 		ConfigurationType: "request",
 		Log:               testutil.Logger{},
 		Workarounds:       workarounds{ReadCoilsStartingAtZero: true},
-	}
-	plugin.SlaveID = 1
-	plugin.Requests = []requestDefinition{
-		{
-			SlaveID:      1,
-			RegisterType: "coil",
-			Fields: []requestFieldDefinition{
-				{
-					Name:    "coil-8",
-					Address: uint16(8),
-				},
-				{
-					Name:    "coil-new-group",
-					Address: maxQuantityCoils,
+
+		SlaveID: 1,
+		Requests: []requestDefinition{
+			{
+				SlaveID:      1,
+				RegisterType: "coil",
+				Fields: []requestFieldDefinition{
+					{
+						Name:    "coil-8",
+						Address: uint16(8),
+					},
+					{
+						Name:    "coil-new-group",
+						Address: maxQuantityCoils,
+					},
 				},
 			},
-		},
-	}
+		}}
 	require.NoError(t, plugin.Init())
 	require.Len(t, plugin.requests[1].coil, 2)
 
@@ -3074,37 +3074,37 @@ func TestRequestOverlap(t *testing.T) {
 		ConfigurationType: "request",
 		Log:               logger,
 		Workarounds:       workarounds{ReadCoilsStartingAtZero: true},
-	}
-	plugin.Requests = []requestDefinition{
-		{
-			SlaveID:           1,
-			RegisterType:      "holding",
-			Optimization:      "max_insert",
-			MaxExtraRegisters: 16,
-			Fields: []requestFieldDefinition{
-				{
-					Name:      "field-1",
-					InputType: "UINT32",
-					Address:   uint16(1),
-				},
-				{
-					Name:      "field-2",
-					InputType: "UINT64",
-					Address:   uint16(3),
-				},
-				{
-					Name:      "field-3",
-					InputType: "UINT32",
-					Address:   uint16(5),
-				},
-				{
-					Name:      "field-4",
-					InputType: "UINT32",
-					Address:   uint16(7),
+
+		Requests: []requestDefinition{
+			{
+				SlaveID:           1,
+				RegisterType:      "holding",
+				Optimization:      "max_insert",
+				MaxExtraRegisters: 16,
+				Fields: []requestFieldDefinition{
+					{
+						Name:      "field-1",
+						InputType: "UINT32",
+						Address:   uint16(1),
+					},
+					{
+						Name:      "field-2",
+						InputType: "UINT64",
+						Address:   uint16(3),
+					},
+					{
+						Name:      "field-3",
+						InputType: "UINT32",
+						Address:   uint16(5),
+					},
+					{
+						Name:      "field-4",
+						InputType: "UINT32",
+						Address:   uint16(7),
+					},
 				},
 			},
-		},
-	}
+		}}
 	require.NoError(t, plugin.Init())
 
 	require.Eventually(t, func() bool {
@@ -3132,20 +3132,20 @@ func TestRequestAddressOverflow(t *testing.T) {
 		ConfigurationType: "request",
 		Log:               logger,
 		Workarounds:       workarounds{ReadCoilsStartingAtZero: true},
-	}
-	plugin.Requests = []requestDefinition{
-		{
-			SlaveID:      1,
-			RegisterType: "holding",
-			Fields: []requestFieldDefinition{
-				{
-					Name:      "field",
-					InputType: "UINT64",
-					Address:   uint16(65534),
+
+		Requests: []requestDefinition{
+			{
+				SlaveID:      1,
+				RegisterType: "holding",
+				Fields: []requestFieldDefinition{
+					{
+						Name:      "field",
+						InputType: "UINT64",
+						Address:   uint16(65534),
+					},
 				},
 			},
-		},
-	}
+		}}
 	require.ErrorIs(t, plugin.Init(), errAddressOverflow)
 }
 
