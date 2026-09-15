@@ -64,8 +64,7 @@ func (s *Synproxy) getSynproxyStat() (map[string]interface{}, error) {
 	if scanner.Scan() {
 		line := scanner.Text()
 		// Parse fields separated by whitespace
-		dataFields := strings.FieldsSeq(line)
-		for val := range dataFields {
+		for val := range strings.FieldsSeq(line) {
 			if !inSlice(counters, val) {
 				val = ""
 			}
