@@ -129,7 +129,7 @@ func BenchmarkHttpSend(b *testing.B) {
 	const batchSize = 50
 	const metricsCount = 4 * batchSize
 	metrics := make([]telegraf.Metric, 0, metricsCount)
-	for i := 0; i < metricsCount; i++ {
+	for range metricsCount {
 		metrics = append(metrics, testutil.TestMetric(1.0))
 	}
 

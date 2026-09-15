@@ -164,7 +164,7 @@ func testAlignUniform(t *testing.T, n int) {
 	now := time.Now().Truncate(60 * time.Second)
 	info := make([]types.PerfSampleInfo, 0, n)
 	values := make([]int64, 0, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		info = append(info, types.PerfSampleInfo{
 			Timestamp: now.Add(time.Duration(20*i) * time.Second),
 			Interval:  20,
@@ -190,7 +190,7 @@ func TestAlignMetrics(t *testing.T) {
 	now := time.Now().Truncate(60 * time.Second)
 	info := make([]types.PerfSampleInfo, 0, n)
 	values := make([]int64, 0, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		info = append(info, types.PerfSampleInfo{
 			Timestamp: now.Add(time.Duration(20*i) * time.Second),
 			Interval:  20,

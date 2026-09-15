@@ -939,7 +939,7 @@ func TestStreamParserErrorString(t *testing.T) {
 			parser := NewStreamParser(bytes.NewBuffer(tt.input))
 
 			var errs []error
-			for i := 0; i < 20; i++ {
+			for range 20 {
 				_, err := parser.Next()
 				if errors.Is(err, EOF) {
 					break

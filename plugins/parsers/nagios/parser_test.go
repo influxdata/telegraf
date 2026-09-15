@@ -81,7 +81,7 @@ func (b *metricBuilder) b() telegraf.Metric {
 // of the entries matters.
 func assertEqual(t *testing.T, exp, actual []telegraf.Metric) {
 	require.Len(t, actual, len(exp))
-	for i := 0; i < len(exp); i++ {
+	for i := range exp {
 		ok := testutil.MetricEqual(exp[i], actual[i])
 		require.True(t, ok)
 	}

@@ -53,9 +53,9 @@ func TestExternalProcessorWorks(t *testing.T) {
 
 	// Setup the input and expected output metrucs
 	now := time.Now()
-	var input []telegraf.Metric
-	var expected []telegraf.Metric
-	for i := 0; i < 10; i++ {
+	input := make([]telegraf.Metric, 0, 10)
+	expected := make([]telegraf.Metric, 0, 10)
+	for i := range 10 {
 		m := metric.New(
 			"test",
 			map[string]string{"city": "Toronto"},

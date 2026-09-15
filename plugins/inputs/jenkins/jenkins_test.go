@@ -1319,7 +1319,7 @@ func TestGatherBuildsCappedAt20(t *testing.T) {
 
 	// Build the job response with 25 builds (newest-first)
 	builds := make([]jobBuild, totalBuilds)
-	for i := 0; i < totalBuilds; i++ {
+	for i := range totalBuilds {
 		builds[i] = jobBuild{Number: int64(totalBuilds - i)}
 	}
 

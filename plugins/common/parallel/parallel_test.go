@@ -17,7 +17,7 @@ func TestOrderedJobsStayOrdered(t *testing.T) {
 
 	p := parallel.NewOrdered(acc, jobFunc, 10000, 10)
 	now := time.Now()
-	for i := 0; i < 20000; i++ {
+	for i := range 20000 {
 		m := metric.New("test",
 			map[string]string{},
 			map[string]interface{}{
@@ -48,7 +48,7 @@ func TestUnorderedJobsDontDropAnyJobs(t *testing.T) {
 	now := time.Now()
 
 	expectedTotal := 0
-	for i := 0; i < 20000; i++ {
+	for i := range 20000 {
 		expectedTotal += i
 		m := metric.New("test",
 			map[string]string{},

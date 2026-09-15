@@ -42,7 +42,7 @@ func getMetrics() []telegraf.Metric {
 	const count = 100
 	var metrics = make([]telegraf.Metric, count)
 
-	for i := 0; i < count; i++ {
+	for i := range count {
 		m := metric.New(
 			fmt.Sprintf("cpu-%d", i),
 			map[string]string{

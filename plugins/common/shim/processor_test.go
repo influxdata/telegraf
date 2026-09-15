@@ -23,7 +23,7 @@ func TestProcessorShim(t *testing.T) {
 func TestProcessorShimWithLargerThanDefaultScannerBufferSize(t *testing.T) {
 	letters := []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 	b := make([]rune, 0, bufio.MaxScanTokenSize*2)
-	for i := 0; i < bufio.MaxScanTokenSize*2; i++ {
+	for range bufio.MaxScanTokenSize * 2 {
 		b = append(b, letters[rand.Intn(len(letters))])
 	}
 

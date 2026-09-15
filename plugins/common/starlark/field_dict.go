@@ -223,7 +223,7 @@ func asStarlarkValue(value interface{}) (starlark.Value, error) {
 	case reflect.Slice:
 		length := v.Len()
 		array := make([]starlark.Value, 0, length)
-		for i := 0; i < length; i++ {
+		for i := range length {
 			sVal, err := asStarlarkValue(v.Index(i).Interface())
 			if err != nil {
 				return starlark.None, err

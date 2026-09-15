@@ -241,7 +241,7 @@ func TestTrackedMetricNotLost(t *testing.T) {
 	}
 	input := make([]telegraf.Metric, 0, 3)
 	expected := make([]telegraf.Metric, 0, 6)
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		strI := strconv.Itoa(i)
 
 		m := metric.New("m"+strI, map[string]string{}, map[string]interface{}{"x": int64(1), "y": int64(2)}, time.Unix(0, 0))
