@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"maps"
 	"strconv"
 	"time"
 
@@ -95,13 +96,9 @@ func (p *pointParser) convertPointToTelegrafMetric(points []point) ([]telegraf.M
 
 	for _, point := range points {
 		tags := make(map[string]string)
-		for k, v := range point.Tags {
-			tags[k] = v
-		}
+		maps.Copy(tags, point.Tags)
 		// apply default tags after parsed tags
-		for k, v := range p.parent.DefaultTags {
-			tags[k] = v
-		}
+		maps.Copy(tags, p.parent.DefaultTags)
 
 		// single field for value
 		fields := make(map[string]any)

@@ -3,6 +3,7 @@ package histogram
 
 import (
 	_ "embed"
+	"maps"
 	"slices"
 	"sort"
 	"strconv"
@@ -267,9 +268,7 @@ func convert(in any) (float64, bool) {
 // copyTags copies tags
 func copyTags(tags map[string]string) map[string]string {
 	copiedTags := make(map[string]string, len(tags))
-	for key, val := range tags {
-		copiedTags[key] = val
-	}
+	maps.Copy(copiedTags, tags)
 
 	return copiedTags
 }

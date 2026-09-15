@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
+	"maps"
 	"net/url"
 	"reflect"
 	"regexp"
@@ -347,9 +348,7 @@ func (r *redisClient) info() *redis.StringCmd {
 
 func (r *redisClient) baseTags() map[string]string {
 	tags := make(map[string]string)
-	for k, v := range r.tags {
-		tags[k] = v
-	}
+	maps.Copy(tags, r.tags)
 	return tags
 }
 
@@ -502,9 +501,7 @@ func gatherKeyspaceLine(name, line string, acc telegraf.Accumulator, globalTags 
 	if strings.Contains(line, "keys=") {
 		fields := make(map[string]any)
 		tags := make(map[string]string)
-		for k, v := range globalTags {
-			tags[k] = v
-		}
+		maps.Copy(tags, globalTags)
 		tags["database"] = name
 		for dbp := range strings.SplitSeq(line, ",") {
 			kv := strings.Split(dbp, "=")
@@ -530,9 +527,7 @@ func gatherCommandStateLine(name, line string, acc telegraf.Accumulator, globalT
 
 	fields := make(map[string]any)
 	tags := make(map[string]string)
-	for k, v := range globalTags {
-		tags[k] = v
-	}
+	maps.Copy(tags, globalTags)
 	tags["command"] = strings.TrimPrefix(name, "cmdstat_")
 	for part := range strings.SplitSeq(line, ",") {
 		kv := strings.Split(part, "=")
@@ -571,9 +566,7 @@ func gatherLatencyStatsLine(name, line string, acc telegraf.Accumulator, globalT
 
 	fields := make(map[string]any)
 	tags := make(map[string]string)
-	for k, v := range globalTags {
-		tags[k] = v
-	}
+	maps.Copy(tags, globalTags)
 	tags["command"] = strings.TrimPrefix(name, "latency_percentiles_usec_")
 	for part := range strings.SplitSeq(line, ",") {
 		kv := strings.Split(part, "=")
@@ -601,9 +594,7 @@ func gatherLatencyStatsLine(name, line string, acc telegraf.Accumulator, globalT
 func gatherReplicationLine(name, line string, acc telegraf.Accumulator, globalTags map[string]string) {
 	fields := make(map[string]any)
 	tags := make(map[string]string)
-	for k, v := range globalTags {
-		tags[k] = v
-	}
+	maps.Copy(tags, globalTags)
 
 	tags["replica_id"] = strings.TrimLeft(name, "slave")
 	tags["replication_role"] = "slave"
@@ -639,9 +630,7 @@ func gatherReplicationLine(name, line string, acc telegraf.Accumulator, globalTa
 // errorstat_MOVED:count=3626
 func gatherErrorStatsLine(name, line string, acc telegraf.Accumulator, globalTags map[string]string) {
 	tags := make(map[string]string, len(globalTags)+1)
-	for k, v := range globalTags {
-		tags[k] = v
-	}
+	maps.Copy(tags, globalTags)
 	tags["err"] = strings.TrimPrefix(name, "errorstat_")
 	kv := strings.Split(line, "=")
 	if len(kv) < 2 {

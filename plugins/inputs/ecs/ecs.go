@@ -3,6 +3,7 @@ package ecs
 
 import (
 	_ "embed"
+	"maps"
 	"os"
 	"strings"
 	"time"
@@ -178,18 +179,14 @@ func (ecs *Ecs) accContainers(task *ecsTask, taskTags map[string]string, acc tel
 // returns a new map with the same content values as the input map
 func copyTags(in map[string]string) map[string]string {
 	out := make(map[string]string)
-	for k, v := range in {
-		out[k] = v
-	}
+	maps.Copy(out, in)
 	return out
 }
 
 // returns a new map with the merged content values of the two input maps
 func mergeTags(a, b map[string]string) map[string]string {
 	c := copyTags(a)
-	for k, v := range b {
-		c[k] = v
-	}
+	maps.Copy(c, b)
 	return c
 }
 

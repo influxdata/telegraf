@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"regexp"
 	"sort"
@@ -497,9 +498,7 @@ func (e *Elasticsearch) gatherIndicesStats(url string, acc telegraf.Accumulator)
 
 	// Total Shards Stats
 	shardsStats := make(map[string]any, len(indicesStats.Shards))
-	for k, v := range indicesStats.Shards {
-		shardsStats[k] = v
-	}
+	maps.Copy(shardsStats, indicesStats.Shards)
 	acc.AddFields("elasticsearch_indices_stats_shards_total", shardsStats, make(map[string]string), now)
 
 	// All Stats

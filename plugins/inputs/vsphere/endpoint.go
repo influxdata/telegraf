@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"math/rand"
 	"net/url"
@@ -1285,9 +1286,7 @@ func (e *endpoint) collectChunk(
 				bucket, found := buckets[bKey]
 				if !found {
 					fields := make(map[string]any)
-					for k, v := range globalFields {
-						fields[k] = v
-					}
+					maps.Copy(fields, globalFields)
 					bucket = metricEntry{name: mn, ts: ts, fields: fields, tags: t}
 					buckets[bKey] = bucket
 				}

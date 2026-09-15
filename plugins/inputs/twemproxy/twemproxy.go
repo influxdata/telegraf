@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"maps"
 	"net"
 	"time"
 
@@ -115,9 +116,7 @@ func processServer(acc telegraf.Accumulator, tags map[string]string, data map[st
 // Tags is not expected to be mutated after passing to Add.
 func copyTags(tags map[string]string) map[string]string {
 	newTags := make(map[string]string)
-	for k, v := range tags {
-		newTags[k] = v
-	}
+	maps.Copy(newTags, tags)
 	return newTags
 }
 

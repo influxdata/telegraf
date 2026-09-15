@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 	"time"
@@ -421,9 +422,7 @@ func (e *endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Clie
 func populateClusterTags(tags map[string]string, clusterRef *objectRef, vcenter string) map[string]string {
 	newTags := make(map[string]string)
 	// deep copy
-	for k, v := range tags {
-		newTags[k] = v
-	}
+	maps.Copy(newTags, tags)
 	newTags["vcenter"] = vcenter
 	newTags["dcname"] = clusterRef.dcname
 	newTags["clustername"] = clusterRef.name
@@ -436,9 +435,7 @@ func populateClusterTags(tags map[string]string, clusterRef *objectRef, vcenter 
 func populateCMMDSTags(tags map[string]string, entityName, uuid string, cmmds map[string]cmmdsEntity) map[string]string {
 	newTags := make(map[string]string)
 	// deep copy
-	for k, v := range tags {
-		newTags[k] = v
-	}
+	maps.Copy(newTags, tags)
 	// There are cases when the uuid is missing. (Usually happens when performance service is just enabled or disabled)
 	// We need this check to avoid index-out-of-range error
 	if uuid == "*" || uuid == "" {
