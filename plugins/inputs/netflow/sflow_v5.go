@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"maps"
 	"net"
 	"strconv"
 	"strings"
@@ -90,9 +91,7 @@ func (d *sflowv5Decoder) decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 			if err != nil {
 				return nil, err
 			}
-			for k, v := range recordFields {
-				fields[k] = v
-			}
+			maps.Copy(fields, recordFields)
 			metrics = append(metrics, metric.New("netflow", tags, fields, t))
 		case sflow.ExpandedFlowSample:
 			fields := map[string]interface{}{
@@ -129,9 +128,7 @@ func (d *sflowv5Decoder) decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 			if err != nil {
 				return nil, err
 			}
-			for k, v := range recordFields {
-				fields[k] = v
-			}
+			maps.Copy(fields, recordFields)
 			metrics = append(metrics, metric.New("netflow", tags, fields, t))
 		case sflow.CounterSample:
 			fields := map[string]interface{}{
@@ -155,9 +152,7 @@ func (d *sflowv5Decoder) decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 			if err != nil {
 				return nil, err
 			}
-			for k, v := range recordFields {
-				fields[k] = v
-			}
+			maps.Copy(fields, recordFields)
 			metrics = append(metrics, metric.New("netflow", tags, fields, t))
 		case sflow.DropSample:
 			fields := map[string]interface{}{
@@ -191,9 +186,7 @@ func (d *sflowv5Decoder) decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 			if err != nil {
 				return nil, err
 			}
-			for k, v := range recordFields {
-				fields[k] = v
-			}
+			maps.Copy(fields, recordFields)
 			metrics = append(metrics, metric.New("netflow", tags, fields, t))
 
 		default:
@@ -218,9 +211,7 @@ func (d *sflowv5Decoder) decodeFlowRecords(records []sflow.FlowRecord) (map[stri
 			if err != nil {
 				return nil, err
 			}
-			for k, v := range pktfields {
-				fields[k] = v
-			}
+			maps.Copy(fields, pktfields)
 		case sflow.SampledEthernet:
 			var err error
 			fields["eth_total_len"] = record.Length

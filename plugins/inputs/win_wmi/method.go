@@ -5,6 +5,7 @@ package win_wmi
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"runtime"
 
 	"github.com/go-ole/go-ole"
@@ -186,12 +187,8 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
-		for k, v := range propTags {
-			tags[k] = v
-		}
-		for k, v := range propFields {
-			fields[k] = v
-		}
+		maps.Copy(tags, propTags)
+		maps.Copy(fields, propFields)
 		return nil
 	}); err != nil {
 		return fmt.Errorf("cannot iterate the output properties: %w", err)

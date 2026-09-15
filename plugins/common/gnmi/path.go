@@ -1,6 +1,7 @@
 package gnmi
 
 import (
+	"maps"
 	"strings"
 
 	"github.com/google/gnxi/utils/xpath"
@@ -126,9 +127,7 @@ func newInfoFromPath(paths ...*gnmi.Path) *pathInfo {
 				path: info.String(),
 				kv:   make(map[string]string, len(elem.Key)),
 			}
-			for k, v := range elem.Key {
-				keyInfo.kv[k] = v
-			}
+			maps.Copy(keyInfo.kv, elem.Key)
 			info.keyValues = append(info.keyValues, keyInfo)
 		}
 	}
@@ -156,9 +155,7 @@ func (pi *pathInfo) append(paths ...*gnmi.Path) *pathInfo {
 			path: elem.path,
 			kv:   make(map[string]string, len(elem.kv)),
 		}
-		for k, v := range elem.kv {
-			keyInfo.kv[k] = v
-		}
+		maps.Copy(keyInfo.kv, elem.kv)
 		path.keyValues = append(path.keyValues, keyInfo)
 	}
 
@@ -177,9 +174,7 @@ func (pi *pathInfo) append(paths ...*gnmi.Path) *pathInfo {
 				path: path.String(),
 				kv:   make(map[string]string, len(elem.Key)),
 			}
-			for k, v := range elem.Key {
-				keyInfo.kv[k] = v
-			}
+			maps.Copy(keyInfo.kv, elem.Key)
 			path.keyValues = append(path.keyValues, keyInfo)
 		}
 	}
@@ -203,9 +198,7 @@ func (pi *pathInfo) appendSegments(segments ...string) *pathInfo {
 			path: elem.path,
 			kv:   make(map[string]string, len(elem.kv)),
 		}
-		for k, v := range elem.kv {
-			keyInfo.kv[k] = v
-		}
+		maps.Copy(keyInfo.kv, elem.kv)
 		path.keyValues = append(path.keyValues, keyInfo)
 	}
 

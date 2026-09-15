@@ -447,9 +447,7 @@ type metricParts struct {
 func newMP(n *NodeMetricMapping) metricParts {
 	// Include the node ID as the "id" tag since MetricForNode always adds it
 	tags := map[string]string{"id": n.idStr}
-	for k, v := range n.MetricTags {
-		tags[k] = v
-	}
+	maps.Copy(tags, n.MetricTags)
 	keys := make([]string, 0, len(tags))
 	for key := range tags {
 		keys = append(keys, key)
@@ -681,9 +679,7 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 	tags := map[string]string{
 		"id": nmm.idStr,
 	}
-	for k, v := range nmm.MetricTags {
-		tags[k] = v
-	}
+	maps.Copy(tags, nmm.MetricTags)
 
 	fields := make(map[string]interface{})
 	if o.LastReceivedData[nodeIdx].Value != nil {

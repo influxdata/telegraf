@@ -2,6 +2,7 @@ package opensearch_query
 
 import (
 	"encoding/json"
+	"maps"
 
 	"github.com/influxdata/telegraf"
 )
@@ -57,9 +58,7 @@ func (a *aggregation) getMetrics(acc telegraf.Accumulator, measurement string, d
 		if agg.isAggregation() {
 			for _, bucket := range agg.buckets {
 				tt := map[string]string{name: bucket.Key}
-				for k, v := range tags {
-					tt[k] = v
-				}
+				maps.Copy(tt, tags)
 				err = bucket.subaggregation.getMetrics(acc, measurement, bucket.DocumentCount, tt)
 				if err != nil {
 					return err

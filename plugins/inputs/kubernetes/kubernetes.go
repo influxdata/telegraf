@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 	"strings"
@@ -307,9 +308,7 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item, labelFilter
 					}
 				}
 			}
-			for k, v := range podLabels {
-				tags[k] = v
-			}
+			maps.Copy(tags, podLabels)
 			fields := make(map[string]interface{})
 			fields["cpu_usage_nanocores"] = container.CPU.UsageNanoCores
 			fields["cpu_usage_core_nanoseconds"] = container.CPU.UsageCoreNanoSeconds
@@ -334,9 +333,7 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item, labelFilter
 				"namespace":   pod.PodRef.Namespace,
 				"volume_name": volume.Name,
 			}
-			for k, v := range podLabels {
-				tags[k] = v
-			}
+			maps.Copy(tags, podLabels)
 			fields := make(map[string]interface{})
 			fields["available_bytes"] = volume.AvailableBytes
 			fields["capacity_bytes"] = volume.CapacityBytes
@@ -349,9 +346,7 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item, labelFilter
 			"pod_name":  pod.PodRef.Name,
 			"namespace": pod.PodRef.Namespace,
 		}
-		for k, v := range podLabels {
-			tags[k] = v
-		}
+		maps.Copy(tags, podLabels)
 		fields := make(map[string]interface{})
 		fields["rx_bytes"] = pod.Network.RXBytes
 		fields["rx_errors"] = pod.Network.RXErrors

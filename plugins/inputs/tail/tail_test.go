@@ -1,6 +1,7 @@
 package tail
 
 import (
+	"maps"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -33,9 +34,7 @@ func newInfluxParser() (telegraf.Parser, error) {
 func newTestTail() *Tail {
 	offsetsMutex.Lock()
 	offsetsCopy := make(map[string]int64, len(offsets))
-	for k, v := range offsets {
-		offsetsCopy[k] = v
-	}
+	maps.Copy(offsetsCopy, offsets)
 	offsetsMutex.Unlock()
 
 	watchMethod := "inotify"

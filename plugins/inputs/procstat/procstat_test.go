@@ -3,6 +3,7 @@ package procstat
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -174,9 +175,7 @@ func (p *testProc) metrics(prefix string, cfg *collectionConfig, t time.Time) ([
 	tags := map[string]string{
 		"process_name": "test_proc",
 	}
-	for k, v := range p.tags {
-		tags[k] = v
-	}
+	maps.Copy(tags, p.tags)
 
 	// Add the tags as requested by the user
 	if cfg.tagging["cmdline"] {

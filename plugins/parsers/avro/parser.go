@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/jeremywohl/flatten/v2"
@@ -252,9 +253,7 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 	tags := make(map[string]string)
 
 	// Set default tag values
-	for k, v := range p.DefaultTags {
-		tags[k] = v
-	}
+	maps.Copy(tags, p.DefaultTags)
 	// Avro doesn't have a Tag/Field distinction, so we have to tell
 	// Telegraf which items are our tags.
 	for _, tag := range p.Tags {
@@ -291,9 +290,7 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 		if err != nil {
 			return nil, fmt.Errorf("flatten field %q failed: %w", fld, err)
 		}
-		for k, v := range flat {
-			fields[k] = v
-		}
+		maps.Copy(fields, flat)
 	}
 	var schemaObj map[string]interface{}
 	if err := json.Unmarshal([]byte(schema), &schemaObj); err != nil {

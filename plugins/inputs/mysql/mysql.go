@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -916,9 +917,7 @@ func (m *Mysql) gatherProcessListStatuses(db *sql.DB, servtag string, acc telegr
 	// mapping of state with its counts
 	stateCounts := make(map[string]uint32, len(generalThreadStates))
 	// set map with keys and default values
-	for k, v := range generalThreadStates {
-		stateCounts[k] = v
-	}
+	maps.Copy(stateCounts, generalThreadStates)
 
 	for rows.Next() {
 		err = rows.Scan(&command, &state, &count)
@@ -1983,9 +1982,7 @@ func newNamespace(words ...string) string {
 
 func copyTags(in map[string]string) map[string]string {
 	out := make(map[string]string)
-	for k, v := range in {
-		out[k] = v
-	}
+	maps.Copy(out, in)
 	return out
 }
 

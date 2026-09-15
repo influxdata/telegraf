@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -251,14 +252,10 @@ func (c *CtrlXDataLayer) createMetric(em *sseEventData, sub *subscription) (tele
 	}
 
 	// add tags of subscription if user has defined
-	for key, value := range sub.Tags {
-		tags[key] = value
-	}
+	maps.Copy(tags, sub.Tags)
 
 	// add tags of node if user has defined
-	for key, value := range node.Tags {
-		tags[key] = value
-	}
+	maps.Copy(tags, node.Tags)
 
 	// set measurement of subscription
 	measurement := sub.Measurement

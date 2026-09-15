@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"strconv"
 	"strings"
@@ -428,12 +429,8 @@ func (s *Stackdriver) gatherTimeSeries(ctx context.Context, grouper *lockedSerie
 		tags := map[string]string{
 			"resource_type": tsDesc.Resource.Type,
 		}
-		for k, v := range tsDesc.Resource.Labels {
-			tags[k] = v
-		}
-		for k, v := range tsDesc.Metric.Labels {
-			tags[k] = v
-		}
+		maps.Copy(tags, tsDesc.Resource.Labels)
+		maps.Copy(tags, tsDesc.Metric.Labels)
 
 		for _, p := range tsDesc.Points {
 			ts := time.Unix(p.Interval.EndTime.Seconds, 0)
