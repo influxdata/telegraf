@@ -42,11 +42,9 @@ func (r *RethinkDB) Gather(acc telegraf.Accumulator) error {
 			// fallback to simple string based address (i.e. "10.0.0.1:10000")
 			u.Host = serv
 		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			acc.AddError(gatherServer(&server{url: u}, acc))
-		}()
+		})
 	}
 
 	wg.Wait()

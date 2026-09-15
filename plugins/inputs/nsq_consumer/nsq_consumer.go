@@ -125,11 +125,9 @@ func (n *NSQConsumer) Start(ac telegraf.Accumulator) error {
 		}
 	}
 
-	n.wg.Add(1)
-	go func() {
-		defer n.wg.Done()
+	n.wg.Go(func() {
 		n.onDelivery(ctx, acc, sem)
-	}()
+	})
 	return nil
 }
 

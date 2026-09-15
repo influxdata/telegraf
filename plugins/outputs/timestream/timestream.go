@@ -226,15 +226,13 @@ func (t *Timestream) Write(metrics []telegraf.Metric) error {
 	start := time.Now()
 
 	for i := 0; i < maxWriteJobs; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for writeJob := range writeJobs {
 				if err := t.writeToTimestream(writeJob, true); err != nil {
 					errs <- err
 				}
 			}
-		}()
+		})
 	}
 
 	for i := range writeRecordsInputs {

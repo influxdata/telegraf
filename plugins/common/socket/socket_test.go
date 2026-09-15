@@ -793,15 +793,13 @@ func TestTLSMemLeak(t *testing.T) {
 		var errs []error
 		var wg sync.WaitGroup
 		for count := 1; count < connections; count++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				if err := write(); err != nil {
 					mu.Lock()
 					errs = append(errs, err)
 					mu.Unlock()
 				}
-			}()
+			})
 			if count%maxConcurrency == 0 {
 				wg.Wait()
 				mu.Lock()

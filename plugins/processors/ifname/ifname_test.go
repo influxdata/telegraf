@@ -129,12 +129,10 @@ func TestGetMap(t *testing.T) {
 	ch := make(chan item, thMax)
 	var wg sync.WaitGroup
 	for range thMax {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			m, age, err := d.getMap("agent")
 			ch <- item{entry: m, age: age, err: err}
-		}()
+		})
 	}
 
 	wg.Wait()

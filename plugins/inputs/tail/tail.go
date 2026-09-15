@@ -122,9 +122,7 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 
 	t.ctx, t.cancel = context.WithCancel(context.Background())
 
-	t.wg.Add(1)
-	go func() {
-		defer t.wg.Done()
+	t.wg.Go(func() {
 		for {
 			select {
 			case <-t.ctx.Done():
@@ -133,7 +131,7 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 				<-t.sem
 			}
 		}
-	}()
+	})
 
 	var err error
 	t.multiline, err = t.MultilineConfig.newMultiline()

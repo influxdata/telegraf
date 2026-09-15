@@ -247,10 +247,7 @@ func (l *streamListener) listenData(onData CallbackData, onError CallbackError) 
 	ctx, cancel := context.WithCancel(context.Background())
 	l.cancel = cancel
 
-	l.wg.Add(1)
-	go func() {
-		defer l.wg.Done()
-
+	l.wg.Go(func() {
 		for {
 			conn, err := l.listener.Accept()
 			if err != nil {
@@ -283,7 +280,7 @@ func (l *streamListener) listenData(onData CallbackData, onError CallbackError) 
 			l.wg.Add(1)
 			go l.handleReaderConn(ctx, conn, onData, onError)
 		}
-	}()
+	})
 }
 
 func (l *streamListener) handleReaderConn(ctx context.Context, conn net.Conn, onData CallbackData, onError CallbackError) {
@@ -312,10 +309,7 @@ func (l *streamListener) listenConnection(onConnection CallbackConnection, onErr
 	ctx, cancel := context.WithCancel(context.Background())
 	l.cancel = cancel
 
-	l.wg.Add(1)
-	go func() {
-		defer l.wg.Done()
-
+	l.wg.Go(func() {
 		for {
 			conn, err := l.listener.Accept()
 			if err != nil {
@@ -357,7 +351,7 @@ func (l *streamListener) listenConnection(onConnection CallbackConnection, onErr
 				}
 			}(conn)
 		}
-	}()
+	})
 }
 
 func (l *streamListener) read(conn net.Conn, onData CallbackData) error {
