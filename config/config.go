@@ -462,12 +462,7 @@ func (c *Config) ListTags() string {
 }
 
 func sliceContains(name string, list []string) bool {
-	for _, b := range list {
-		if b == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(list, name)
 }
 
 // WalkDirectory collects all toml files that need to be loaded

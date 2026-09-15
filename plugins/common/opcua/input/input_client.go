@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -153,10 +154,8 @@ func (e *EventGroupSettings) Validate() error {
 	if len(e.Fields) == 0 {
 		return errors.New("at least one Field must be specified")
 	}
-	for _, field := range e.Fields {
-		if field == "" {
-			return errors.New("empty field name in fields stanza")
-		}
+	if slices.Contains(e.Fields, "") {
+		return errors.New("empty field name in fields stanza")
 	}
 	return nil
 }
@@ -735,11 +734,8 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 	}
 
 	fields["Quality"] = strings.TrimSpace(o.LastReceivedData[nodeIdx].Quality.Error())
-	for _, field := range o.Config.OptionalFields {
-		if field == "DataType" {
-			fields["DataType"] = strings.Replace(o.LastReceivedData[nodeIdx].DataType.String(), "TypeID", "", 1)
-			break
-		}
+	if slices.Contains(o.Config.OptionalFields, "DataType") {
+		fields["DataType"] = strings.Replace(o.LastReceivedData[nodeIdx].DataType.String(), "TypeID", "", 1)
 	}
 	if !o.StatusCodeOK(o.LastReceivedData[nodeIdx].Quality) {
 		mp := newMP(nmm)

@@ -3,6 +3,7 @@ package graylog
 import (
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 
@@ -103,13 +104,7 @@ func (c *mockHTTPClient) makeRequest(req *http.Request) (*http.Response, error) 
 
 	// basic error checking on request method
 	allowedMethods := []string{"GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT"}
-	methodValid := false
-	for _, method := range allowedMethods {
-		if req.Method == method {
-			methodValid = true
-			break
-		}
-	}
+	methodValid := slices.Contains(allowedMethods, req.Method)
 
 	if !methodValid {
 		resp.StatusCode = 405 // Method not allowed

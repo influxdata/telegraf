@@ -604,8 +604,7 @@ func (p *Parser) debugEmptyQuery(operation string, root dataNode, initialquery s
 		if len(parts) < 1 {
 			return
 		}
-		for i := len(parts) - 1; i >= 0; i-- {
-			q := parts[i]
+		for _, q := range slices.Backward(parts) {
 			nodes, err := p.document.QueryAll(root, q)
 			if err != nil {
 				p.Log.Tracef("executing query %q in %s failed: %v", q, operation, err)

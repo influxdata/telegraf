@@ -14,6 +14,7 @@ import (
 	"math"
 	"net"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -530,13 +531,7 @@ func (g *Graylog) serialize(metric telegraf.Metric) ([]string, error) {
 }
 
 func fieldInSpec(field string) bool {
-	for _, specField := range defaultSpecFields {
-		if specField == field {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(defaultSpecFields, field)
 }
 
 func init() {

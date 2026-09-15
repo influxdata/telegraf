@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -494,10 +495,8 @@ func (m *WinPerfCounters) parseConfig() error {
 func (m *WinPerfCounters) checkError(err error) error {
 	var pdhErr *pdhError
 	if errors.As(err, &pdhErr) {
-		for _, ignoredErrors := range m.IgnoredErrors {
-			if pdhErrors[pdhErr.errorCode] == ignoredErrors {
-				return nil
-			}
+		if slices.Contains(m.IgnoredErrors, pdhErrors[pdhErr.errorCode]) {
+			return nil
 		}
 
 		return err

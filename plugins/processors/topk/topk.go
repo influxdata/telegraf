@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"math"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -73,13 +74,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		m.Accept()
 
 		// Check if the metric has any of the fields over which we are aggregating
-		hasField := false
-		for _, f := range t.Fields {
-			if m.HasField(f) {
-				hasField = true
-				break
-			}
-		}
+		hasField := slices.ContainsFunc(t.Fields, m.HasField)
 		if !hasField {
 			continue
 		}

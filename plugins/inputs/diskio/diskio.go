@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -120,11 +121,8 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 		}
 
 		if d.deviceFilter != nil && !match {
-			for _, devLink := range devLinks {
-				if d.deviceFilter.Match(devLink) {
-					match = true
-					break
-				}
+			if slices.ContainsFunc(devLinks, d.deviceFilter.Match) {
+				match = true
 			}
 			if !match {
 				continue

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"os"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -33,7 +33,7 @@ func (i *lldInfo) hash() uint64 {
 	for id := range i.Data {
 		ids = append(ids, id)
 	}
-	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
+	slices.Sort(ids)
 
 	h := fnv.New64a()
 	//nolint:errcheck // Write cannot fail
