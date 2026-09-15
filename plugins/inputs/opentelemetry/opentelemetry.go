@@ -108,13 +108,11 @@ func (o *OpenTelemetry) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	o.wg.Add(1)
-	go func() {
-		defer o.wg.Done()
+	o.wg.Go(func() {
 		if err := o.grpcServer.Serve(o.listener); err != nil {
 			acc.AddError(fmt.Errorf("failed to stop OpenTelemetry gRPC service: %w", err))
 		}
-	}()
+	})
 
 	return nil
 }

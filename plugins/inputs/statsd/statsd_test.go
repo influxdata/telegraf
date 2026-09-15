@@ -221,16 +221,14 @@ func BenchmarkUDPThreads4(b *testing.B) {
 
 	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for i := 0; i < 1000; i++ {
 				if _, err := conn.Write([]byte(testMsg)); err != nil {
 					b.Error(err)
 					return
 				}
 			}
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -259,16 +257,14 @@ func BenchmarkUDPThreads8(b *testing.B) {
 
 	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for i := 0; i < 1000; i++ {
 				if _, err := conn.Write([]byte(testMsg)); err != nil {
 					b.Error(err)
 					return
 				}
 			}
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -297,16 +293,14 @@ func BenchmarkUDPThreads16(b *testing.B) {
 
 	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for i := 0; i < 1000; i++ {
 				if _, err := conn.Write([]byte(testMsg)); err != nil {
 					b.Error(err)
 					return
 				}
 			}
-		}()
+		})
 	}
 	wg.Wait()
 

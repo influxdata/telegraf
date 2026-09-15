@@ -403,10 +403,7 @@ func (dt *discoveryTool) start() {
 	// Initializing channel
 	dt.done = make(chan bool)
 
-	dt.wg.Add(1)
-	go func() {
-		defer dt.wg.Done()
-
+	dt.wg.Go(func() {
 		ticker := time.NewTicker(dt.interval)
 		defer ticker.Stop()
 
@@ -435,7 +432,7 @@ func (dt *discoveryTool) start() {
 				}
 			}
 		}
-	}()
+	})
 }
 
 // stop the discovery loop, making sure all data is read from 'dataChan'
