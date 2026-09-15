@@ -182,7 +182,7 @@ func decodeIPv4Options(b []byte) (interface{}, error) {
 	flags := binary.BigEndian.Uint32(b)
 
 	var result []string
-	for i := 0; i < 32; i++ {
+	for i := range 32 {
 		name := ipv4OptionMapping[i]
 		if name == "" {
 			name = fmt.Sprintf("UA%d", i)

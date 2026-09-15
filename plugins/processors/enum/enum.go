@@ -65,7 +65,7 @@ func (mapper *Enum) Init() error {
 }
 
 func (mapper *Enum) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	for i := 0; i < len(in); i++ {
+	for i := range in {
 		in[i] = mapper.applyMappings(in[i])
 	}
 	return in

@@ -224,7 +224,7 @@ func BenchmarkUDPThreads4(b *testing.B) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for i := 0; i < 1000; i++ {
+			for range 1000 {
 				if _, err := conn.Write([]byte(testMsg)); err != nil {
 					b.Error(err)
 					return
@@ -262,7 +262,7 @@ func BenchmarkUDPThreads8(b *testing.B) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for i := 0; i < 1000; i++ {
+			for range 1000 {
 				if _, err := conn.Write([]byte(testMsg)); err != nil {
 					b.Error(err)
 					return
@@ -300,7 +300,7 @@ func BenchmarkUDPThreads16(b *testing.B) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for i := 0; i < 1000; i++ {
+			for range 1000 {
 				if _, err := conn.Write([]byte(testMsg)); err != nil {
 					b.Error(err)
 					return
@@ -319,7 +319,7 @@ func BenchmarkUDPThreads16(b *testing.B) {
 
 func sendRequests(conn net.Conn, wg *sync.WaitGroup) {
 	defer wg.Done()
-	for i := 0; i < 25000; i++ {
+	for range 25000 {
 		fmt.Fprint(conn, testMsg)
 	}
 }
@@ -2326,7 +2326,7 @@ func TestUdpFillQueue(t *testing.T) {
 	conn, err := net.Dial("udp", plugin.UDPlistener.LocalAddr().String())
 	require.NoError(t, err)
 	numberToSend := plugin.AllowedPendingMessages
-	for i := 0; i < numberToSend; i++ {
+	for i := range numberToSend {
 		_, _ = fmt.Fprintf(conn, "cpu.time_idle:%d|c\n", i)
 	}
 	require.NoError(t, conn.Close())

@@ -120,7 +120,7 @@ func structPrinter(s *state, acc telegraf.Accumulator, tags map[string]string) {
 		name := e.Type().Field(tLevelFNum).Name
 		nameNumField := e.FieldByName(name).NumField()
 
-		for sLevelFNum := 0; sLevelFNum < nameNumField; sLevelFNum++ {
+		for sLevelFNum := range nameNumField {
 			sName := e.FieldByName(name).Type().Field(sLevelFNum).Name
 			sValue := e.FieldByName(name).Field(sLevelFNum).Interface()
 

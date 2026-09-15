@@ -278,7 +278,7 @@ func TestMultipleEntitiesSingleCounterRead(t *testing.T) {
 			createCounter("foo", 0, p4_config.CounterSpec_BOTH),
 		)
 
-		for i := 0; i < totalNumOfEntries; i++ {
+		for i := range totalNumOfEntries {
 			counterEntry := &p4.Entity{
 				Entity: createEntityCounterEntry(
 					0,

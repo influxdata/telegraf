@@ -489,9 +489,8 @@ func addDistribution(dist *distributionpb.Distribution, tags map[string]string, 
 	}
 	numBuckets := bucket.amount()
 
-	var i int32
 	var count int64
-	for i = 0; i < numBuckets; i++ {
+	for i := range numBuckets {
 		// The last bucket is the overflow bucket, and includes all values
 		// greater than the previous bound.
 		if i == numBuckets-1 {

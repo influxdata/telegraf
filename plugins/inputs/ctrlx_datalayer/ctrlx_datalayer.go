@@ -300,7 +300,7 @@ func (c *CtrlXDataLayer) createMetric(em *sseEventData, sub *subscription) (tele
 		"artimestamp":
 		fields := make(map[string]interface{})
 		values := em.Value.([]interface{})
-		for i := 0; i < len(values); i++ {
+		for i := range values {
 			index := strconv.Itoa(i)
 			key := fieldKey + "_" + index
 			fields[key] = values[i]

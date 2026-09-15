@@ -406,7 +406,7 @@ func (p *Parser) compileCustomPatterns() error {
 	var err error
 	// check if the pattern contains a subpattern that is already defined
 	// replace it with the subpattern for modifier inheritance.
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		for name, pattern := range p.patternsMap {
 			subNames := patternOnlyRe.FindAllStringSubmatch(pattern, -1)
 			for _, subName := range subNames {
