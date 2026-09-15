@@ -136,7 +136,7 @@ func (d *DockerLogs) Stop() {
 	d.wg.Wait()
 }
 
-func (d *DockerLogs) GetState() interface{} {
+func (d *DockerLogs) GetState() any {
 	d.lastRecordMtx.Lock()
 	recordOffsets := make(map[string]time.Time, len(d.lastRecord))
 	for k, v := range d.lastRecord {
@@ -147,7 +147,7 @@ func (d *DockerLogs) GetState() interface{} {
 	return recordOffsets
 }
 
-func (d *DockerLogs) SetState(state interface{}) error {
+func (d *DockerLogs) SetState(state any) error {
 	recordOffsets, ok := state.(map[string]time.Time)
 	if !ok {
 		return fmt.Errorf("state has wrong type %T", state)

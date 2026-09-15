@@ -77,7 +77,7 @@ func (ds *Disk) Gather(acc telegraf.Accumulator) error {
 				(float64(du.InodesUsed) + float64(du.InodesFree)) * 100
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"total":               du.Total,
 			"free":                du.Free,
 			"used":                du.Used,

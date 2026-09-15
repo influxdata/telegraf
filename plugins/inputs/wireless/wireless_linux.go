@@ -53,13 +53,13 @@ func (w *Wireless) Gather(acc telegraf.Accumulator) error {
 		tags := map[string]string{
 			"interface": w.Interface,
 		}
-		fieldsG := map[string]interface{}{
+		fieldsG := map[string]any{
 			"status": w.Status,
 			"link":   w.Link,
 			"level":  w.Level,
 			"noise":  w.Noise,
 		}
-		fieldsC := map[string]interface{}{
+		fieldsC := map[string]any{
 			"nwid":   w.Nwid,
 			"crypt":  w.Crypt,
 			"frag":   w.Frag,

@@ -214,7 +214,7 @@ func TestDLB_parseJSON(t *testing.T) {
 			}
 			mockConn.On("Close").Return(nil).Once()
 
-			err := dlb.parseJSON(testCase.replyMsgLen, testCase.socketReply, make(map[string]interface{}))
+			err := dlb.parseJSON(testCase.replyMsgLen, testCase.socketReply, make(map[string]any))
 
 			require.Error(t, err)
 			require.Contains(t, err.Error(), testCase.errMsg)
@@ -486,7 +486,7 @@ func TestDLB_processCommandResult(t *testing.T) {
 				map[string]string{
 					"command": "/eventdev/dev_xstats,0",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"dev_rx_ok": int64(0),
 				},
 				time.Unix(0, 0),
@@ -1043,7 +1043,7 @@ var (
 				"device":      "0000:00:00.0",
 				"metric_file": aerCorrectableFileName,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"RxErr":         uint64(1),
 				"BadTLP":        uint64(0),
 				"BadDLLP":       uint64(0),
@@ -1062,7 +1062,7 @@ var (
 				"device":      "0000:00:00.0",
 				"metric_file": aerFatalFileName,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"Undefined":        uint64(0),
 				"DLP":              uint64(1),
 				"SDES":             uint64(0),
@@ -1091,7 +1091,7 @@ var (
 				"device":      "0000:00:00.0",
 				"metric_file": aerNonFatalFileName,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"Undefined":          uint64(0),
 				"DLP":                uint64(0),
 				"SDES":               uint64(0),
@@ -1122,7 +1122,7 @@ var (
 			map[string]string{
 				"command": "/eventdev/dev_xstats,0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"dev_rx_ok": int64(0),
 			},
 			time.Unix(0, 0),

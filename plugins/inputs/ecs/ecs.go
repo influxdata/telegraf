@@ -138,7 +138,7 @@ func resolveEndpoint(ecs *Ecs) {
 }
 
 func accTask(task *ecsTask, tags map[string]string, acc telegraf.Accumulator) {
-	taskFields := map[string]interface{}{
+	taskFields := map[string]any{
 		"desired_status": task.DesiredStatus,
 		"known_status":   task.KnownStatus,
 		"limit_cpu":      task.Limits["CPU"],

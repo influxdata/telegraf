@@ -49,8 +49,8 @@ func (s *NSD) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// Process values
-	fields := make(map[string]interface{})
-	fieldsServers := make(map[string]map[string]interface{})
+	fields := make(map[string]any)
+	fieldsServers := make(map[string]map[string]any)
 
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
@@ -79,7 +79,7 @@ func (s *NSD) Gather(acc telegraf.Accumulator) error {
 					serverTokens := statTokens[1:]
 					field := strings.Join(serverTokens[:], "_")
 					if fieldsServers[serverID] == nil {
-						fieldsServers[serverID] = make(map[string]interface{})
+						fieldsServers[serverID] = make(map[string]any)
 					}
 					fieldsServers[serverID][field] = fieldValue
 				}

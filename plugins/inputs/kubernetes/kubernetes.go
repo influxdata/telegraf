@@ -167,7 +167,7 @@ func buildSystemContainerMetrics(summaryMetrics *summaryMetrics, acc telegraf.Ac
 			"node_name":      summaryMetrics.Node.NodeName,
 			"container_name": container.Name,
 		}
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		fields["cpu_usage_nanocores"] = container.CPU.UsageNanoCores
 		fields["cpu_usage_core_nanoseconds"] = container.CPU.UsageCoreNanoSeconds
 		fields["memory_usage_bytes"] = container.Memory.UsageBytes
@@ -187,7 +187,7 @@ func buildNodeMetrics(summaryMetrics *summaryMetrics, acc telegraf.Accumulator, 
 	tags := map[string]string{
 		"node_name": summaryMetrics.Node.NodeName,
 	}
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	fields["cpu_usage_nanocores"] = summaryMetrics.Node.CPU.UsageNanoCores
 	fields["cpu_usage_core_nanoseconds"] = summaryMetrics.Node.CPU.UsageCoreNanoSeconds
 	fields["memory_available_bytes"] = summaryMetrics.Node.Memory.AvailableBytes
@@ -220,7 +220,7 @@ func (k *Kubernetes) gatherPodInfo(baseURL string) ([]item, error) {
 	return podInfos, nil
 }
 
-func (k *Kubernetes) loadJSON(url string, v interface{}) error {
+func (k *Kubernetes) loadJSON(url string, v any) error {
 	var req, err = http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
@@ -310,7 +310,7 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item, labelFilter
 			for k, v := range podLabels {
 				tags[k] = v
 			}
-			fields := make(map[string]interface{})
+			fields := make(map[string]any)
 			fields["cpu_usage_nanocores"] = container.CPU.UsageNanoCores
 			fields["cpu_usage_core_nanoseconds"] = container.CPU.UsageCoreNanoSeconds
 			fields["memory_usage_bytes"] = container.Memory.UsageBytes
@@ -337,7 +337,7 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item, labelFilter
 			for k, v := range podLabels {
 				tags[k] = v
 			}
-			fields := make(map[string]interface{})
+			fields := make(map[string]any)
 			fields["available_bytes"] = volume.AvailableBytes
 			fields["capacity_bytes"] = volume.CapacityBytes
 			fields["used_bytes"] = volume.UsedBytes
@@ -352,7 +352,7 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item, labelFilter
 		for k, v := range podLabels {
 			tags[k] = v
 		}
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		fields["rx_bytes"] = pod.Network.RXBytes
 		fields["rx_errors"] = pod.Network.RXErrors
 		fields["tx_bytes"] = pod.Network.TXBytes

@@ -493,10 +493,10 @@ func (p *Prometheus) getAllURLs() (map[string]urlAndAddress, error) {
 	return allURLs, nil
 }
 
-func (p *Prometheus) gatherURL(u urlAndAddress, acc telegraf.Accumulator) (map[string]interface{}, map[string]string, error) {
+func (p *Prometheus) gatherURL(u urlAndAddress, acc telegraf.Accumulator) (map[string]any, map[string]string, error) {
 	var req *http.Request
 	var uClient *http.Client
-	requestFields := make(map[string]interface{})
+	requestFields := make(map[string]any)
 	tags := make(map[string]string, len(u.tags)+2)
 	if p.URLTag != "" {
 		tags[p.URLTag] = u.originalURL.String()

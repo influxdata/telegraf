@@ -275,7 +275,7 @@ func (c *CtrlXDataLayer) createMetric(em *sseEventData, sub *subscription) (tele
 		if err != nil {
 			return nil, err
 		}
-		fields := map[string]interface{}{fieldKey: string(b)}
+		fields := map[string]any{fieldKey: string(b)}
 		m := metric.New(measurement, tags, fields, t)
 		return m, nil
 	}
@@ -298,8 +298,8 @@ func (c *CtrlXDataLayer) createMetric(em *sseEventData, sub *subscription) (tele
 		"arfloat", "ardouble",
 		"arstring",
 		"artimestamp":
-		fields := make(map[string]interface{})
-		values := em.Value.([]interface{})
+		fields := make(map[string]any)
+		values := em.Value.([]any)
 		for i := 0; i < len(values); i++ {
 			index := strconv.Itoa(i)
 			key := fieldKey + "_" + index
@@ -315,7 +315,7 @@ func (c *CtrlXDataLayer) createMetric(em *sseEventData, sub *subscription) (tele
 		"float", "double",
 		"string",
 		"timestamp":
-		fields := map[string]interface{}{fieldKey: em.Value}
+		fields := map[string]any{fieldKey: em.Value}
 		m := metric.New(measurement, tags, fields, t)
 		return m, nil
 	}

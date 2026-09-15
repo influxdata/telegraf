@@ -115,7 +115,7 @@ func (m *WinServices) Gather(acc telegraf.Accumulator) error {
 			tags["display_name"] = service.DisplayName
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"state":        service.State,
 			"startup_mode": service.StartUpMode,
 		}

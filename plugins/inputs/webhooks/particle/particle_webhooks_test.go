@@ -31,7 +31,7 @@ func TestNewItem(t *testing.T) {
 		t.Errorf("POST new_item returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"temp_c":    26.680000,
 		"temp_f":    80.024001,
 		"infrared":  528.0,
@@ -69,7 +69,7 @@ func TestDefaultMeasurementName(t *testing.T) {
 		t.Errorf("POST new_item returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"temp_c": 26.680000,
 	}
 

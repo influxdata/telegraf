@@ -80,7 +80,7 @@ func (i *Ipset) Gather(acc telegraf.Accumulator) error {
 				"rule": data[2],
 			}
 
-			fields := make(map[string]interface{}, 3)
+			fields := make(map[string]any, 3)
 			for i, field := range data {
 				switch field {
 				case "timeout":

@@ -331,7 +331,7 @@ func (cms *CloudWatchMetricStreams) serveWrite(res http.ResponseWriter, req *htt
 }
 
 func (cms *CloudWatchMetricStreams) composeMetrics(data data) {
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	tags := make(map[string]string)
 	timestamp := time.Unix(data.Timestamp/1000, 0)
 

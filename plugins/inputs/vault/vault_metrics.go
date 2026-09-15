@@ -8,8 +8,8 @@ type sysMetrics struct {
 }
 
 type baseInfo struct {
-	Name   string                 `json:"Name"`
-	Labels map[string]interface{} `json:"Labels"`
+	Name   string         `json:"Name"`
+	Labels map[string]any `json:"Labels"`
 }
 
 type gauge struct {

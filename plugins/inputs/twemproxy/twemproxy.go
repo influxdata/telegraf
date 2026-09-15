@@ -35,7 +35,7 @@ func (t *Twemproxy) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	var stats map[string]interface{}
+	var stats map[string]any
 	if err = json.Unmarshal(body, &stats); err != nil {
 		return errors.New("error decoding JSON response")
 	}
@@ -48,14 +48,14 @@ func (t *Twemproxy) Gather(acc telegraf.Accumulator) error {
 }
 
 // Process Twemproxy server stats
-func (t *Twemproxy) processStat(acc telegraf.Accumulator, tags map[string]string, data map[string]interface{}) {
+func (t *Twemproxy) processStat(acc telegraf.Accumulator, tags map[string]string, data map[string]any) {
 	if source, ok := data["source"]; ok {
 		if val, ok := source.(string); ok {
 			tags["source"] = val
 		}
 	}
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	metrics := []string{"total_connections", "curr_connections", "timestamp"}
 	for _, m := range metrics {
 		if value, ok := data[m]; ok {
@@ -68,7 +68,7 @@ func (t *Twemproxy) processStat(acc telegraf.Accumulator, tags map[string]string
 
 	for _, pool := range t.Pools {
 		if poolStat, ok := data[pool]; ok {
-			if data, ok := poolStat.(map[string]interface{}); ok {
+			if data, ok := poolStat.(map[string]any); ok {
 				poolTags := copyTags(tags)
 				poolTags["pool"] = pool
 				processPool(acc, poolTags, data)
@@ -78,10 +78,10 @@ func (t *Twemproxy) processStat(acc telegraf.Accumulator, tags map[string]string
 }
 
 // Process pool data in Twemproxy stats
-func processPool(acc telegraf.Accumulator, tags map[string]string, data map[string]interface{}) {
+func processPool(acc telegraf.Accumulator, tags map[string]string, data map[string]any) {
 	serverTags := make(map[string]map[string]string)
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for key, value := range data {
 		switch key {
 		case "client_connections", "forward_error", "client_err", "server_ejects", "fragments", "client_eof":
@@ -89,7 +89,7 @@ func processPool(acc telegraf.Accumulator, tags map[string]string, data map[stri
 				fields[key] = val
 			}
 		default:
-			if data, ok := value.(map[string]interface{}); ok {
+			if data, ok := value.(map[string]any); ok {
 				if _, ok := serverTags[key]; !ok {
 					serverTags[key] = copyTags(tags)
 					serverTags[key]["server"] = key
@@ -102,8 +102,8 @@ func processPool(acc telegraf.Accumulator, tags map[string]string, data map[stri
 }
 
 // Process backend server(redis/memcached) stats
-func processServer(acc telegraf.Accumulator, tags map[string]string, data map[string]interface{}) {
-	fields := make(map[string]interface{})
+func processServer(acc telegraf.Accumulator, tags map[string]string, data map[string]any) {
+	fields := make(map[string]any)
 	for key, value := range data {
 		if val, ok := value.(float64); ok {
 			fields[key] = val

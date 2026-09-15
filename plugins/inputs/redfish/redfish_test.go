@@ -60,7 +60,7 @@ func TestDellApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"lower_threshold_critical": 3.0,
 				"lower_threshold_fatal":    3.0,
 				"reading_celsius":          40.0,
@@ -79,7 +79,7 @@ func TestDellApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"reading_rpm":              17760,
 				"lower_threshold_critical": 600,
 				"lower_threshold_fatal":    600,
@@ -96,7 +96,7 @@ func TestDellApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"lower_threshold_critical": 600,
 				"lower_threshold_fatal":    600,
 				"reading_rpm":              15360,
@@ -113,7 +113,7 @@ func TestDellApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"lower_threshold_critical": 600,
 				"lower_threshold_fatal":    600,
 				"reading_rpm":              17880,
@@ -130,7 +130,7 @@ func TestDellApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"lower_threshold_critical": 600,
 				"lower_threshold_fatal":    600,
 				"reading_rpm":              15120,
@@ -147,7 +147,7 @@ func TestDellApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"lower_threshold_critical": 600,
 				"lower_threshold_fatal":    600,
 				"reading_rpm":              18000,
@@ -164,7 +164,7 @@ func TestDellApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"lower_threshold_critical": 600,
 				"lower_threshold_fatal":    600,
 				"reading_rpm":              15600,
@@ -181,7 +181,7 @@ func TestDellApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"lower_threshold_critical": 600,
 				"lower_threshold_fatal":    600,
 				"reading_rpm":              17280,
@@ -198,7 +198,7 @@ func TestDellApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"lower_threshold_critical": 600,
 				"lower_threshold_fatal":    600,
 				"reading_rpm":              15360,
@@ -215,7 +215,7 @@ func TestDellApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"lower_threshold_critical": 600,
 				"lower_threshold_fatal":    600,
 				"reading_rpm":              17640,
@@ -232,7 +232,7 @@ func TestDellApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"lower_threshold_critical": 600,
 				"lower_threshold_fatal":    600,
 				"reading_rpm":              15600,
@@ -249,7 +249,7 @@ func TestDellApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"lower_threshold_critical": 600,
 				"lower_threshold_fatal":    600,
 				"reading_rpm":              17760,
@@ -266,7 +266,7 @@ func TestDellApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"lower_threshold_critical": 600,
 				"lower_threshold_fatal":    600,
 				"reading_rpm":              15600,
@@ -283,7 +283,7 @@ func TestDellApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"lower_threshold_critical": 600,
 				"lower_threshold_fatal":    600,
 				"reading_rpm":              17400,
@@ -300,7 +300,7 @@ func TestDellApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"lower_threshold_critical": 600,
 				"lower_threshold_fatal":    600,
 				"reading_rpm":              15720,
@@ -317,7 +317,7 @@ func TestDellApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"lower_threshold_critical": 600,
 				"lower_threshold_fatal":    600,
 				"reading_rpm":              18000,
@@ -334,7 +334,7 @@ func TestDellApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"lower_threshold_critical": 600,
 				"lower_threshold_fatal":    600,
 				"reading_rpm":              15840,
@@ -349,7 +349,7 @@ func TestDellApis(t *testing.T) {
 				"member_id": "PowerControl",
 				"address":   address,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"average_consumed_watts": 426.0,
 				"interval_in_min":        int64(1),
 				"max_consumed_watts":     436.0,
@@ -372,7 +372,7 @@ func TestDellApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"power_capacity_watts": 750.00,
 				"power_input_watts":    900.0,
 				"power_output_watts":   203.0,
@@ -390,7 +390,7 @@ func TestDellApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"reading_volts": 1.0,
 			},
 			time.Unix(0, 0),
@@ -405,7 +405,7 @@ func TestDellApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"reading_volts": 1.0,
 			},
 			time.Unix(0, 0),
@@ -421,7 +421,7 @@ func TestDellApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"reading_volts": 1.0,
 			},
 			time.Unix(0, 0),
@@ -487,7 +487,7 @@ func TestHPApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"reading_celsius":          19.0,
 				"upper_threshold_critical": 42.0,
 				"upper_threshold_fatal":    47.0,
@@ -504,7 +504,7 @@ func TestHPApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"reading_celsius":          34.0,
 				"upper_threshold_critical": 75.0,
 				"upper_threshold_fatal":    80.0,
@@ -521,7 +521,7 @@ func TestHPApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"reading_percent": 23,
 			},
 			time.Unix(0, 0),
@@ -536,7 +536,7 @@ func TestHPApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"reading_percent": 23,
 			},
 			time.Unix(0, 0),
@@ -551,7 +551,7 @@ func TestHPApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"reading_percent": 23,
 			},
 			time.Unix(0, 0),
@@ -564,7 +564,7 @@ func TestHPApis(t *testing.T) {
 				"member_id": "0",
 				"address":   address,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"average_consumed_watts": 221.0,
 				"interval_in_min":        int64(20),
 				"max_consumed_watts":     252.0,
@@ -584,7 +584,7 @@ func TestHPApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"power_capacity_watts":    800.0,
 				"line_input_voltage":      205.0,
 				"last_power_output_watts": 0.0,
@@ -601,7 +601,7 @@ func TestHPApis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"power_capacity_watts":    800.0,
 				"line_input_voltage":      205.0,
 				"last_power_output_watts": 90.0,
@@ -670,7 +670,7 @@ func TestHPilo4Apis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"reading_celsius":          19.0,
 				"upper_threshold_critical": 42.0,
 				"upper_threshold_fatal":    47.0,
@@ -687,7 +687,7 @@ func TestHPilo4Apis(t *testing.T) {
 				"health":    "OK",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"reading_celsius":          34.0,
 				"upper_threshold_critical": 75.0,
 				"upper_threshold_fatal":    80.0,
@@ -704,7 +704,7 @@ func TestHPilo4Apis(t *testing.T) {
 				"source":    "tpa-hostname",
 				"state":     "Enabled",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"reading_percent": 17,
 			},
 			time.Unix(0, 0),
@@ -1160,7 +1160,7 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 				"chassis_state":        "Enabled",
 				"chassis_health":       "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"reading_celsius":          19.0,
 				"upper_threshold_critical": 42.0,
 				"upper_threshold_fatal":    47.0,
@@ -1190,7 +1190,7 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 				"chassis_state":        "Enabled",
 				"chassis_health":       "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"reading_celsius":          34.0,
 				"upper_threshold_critical": 75.0,
 				"upper_threshold_fatal":    80.0,
@@ -1220,7 +1220,7 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 				"chassis_state":        "Enabled",
 				"chassis_health":       "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"reading_percent": 23,
 			},
 			time.Unix(0, 0),
@@ -1248,7 +1248,7 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 				"chassis_state":        "Enabled",
 				"chassis_health":       "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"reading_percent": 23,
 			},
 			time.Unix(0, 0),
@@ -1276,7 +1276,7 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 				"chassis_state":        "Enabled",
 				"chassis_health":       "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"reading_percent": 23,
 			},
 			time.Unix(0, 0),
@@ -1302,7 +1302,7 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 				"chassis_state":        "Enabled",
 				"chassis_health":       "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"average_consumed_watts": 221.0,
 				"interval_in_min":        int64(20),
 				"max_consumed_watts":     252.0,
@@ -1335,7 +1335,7 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 				"chassis_state":        "Enabled",
 				"chassis_health":       "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"power_capacity_watts":    800.0,
 				"line_input_voltage":      205.0,
 				"last_power_output_watts": 0.0,
@@ -1365,7 +1365,7 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 				"chassis_state":        "Enabled",
 				"chassis_health":       "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"power_capacity_watts":    800.0,
 				"line_input_voltage":      205.0,
 				"last_power_output_watts": 90.0,

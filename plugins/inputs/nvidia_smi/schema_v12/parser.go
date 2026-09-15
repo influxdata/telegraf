@@ -29,7 +29,7 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		tags := map[string]string{
 			"index": strconv.Itoa(i),
 		}
-		fields := make(map[string]interface{}, 67)
+		fields := make(map[string]any, 67)
 
 		common.SetTagIfUsed(tags, "pstate", gpu.PerformanceState)
 		common.SetTagIfUsed(tags, "name", gpu.ProductName)
@@ -138,7 +138,7 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 			common.SetTagIfUsed(tags, "uuid", gpu.UUID)
 			common.SetTagIfUsed(tags, "compute_mode", gpu.ComputeMode)
 
-			fields := make(map[string]interface{}, 8)
+			fields := make(map[string]any, 8)
 			common.SetIfUsed("int", fields, "sram_uncorrectable", device.EccErrorCount.VolatileCount.SramUncorrectable)
 			common.SetIfUsed("int", fields, "memory_fb_total", device.FbMemoryUsage.Total)
 			common.SetIfUsed("int", fields, "memory_fb_reserved", device.FbMemoryUsage.Reserved)
@@ -156,7 +156,7 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 			common.SetTagIfUsed(tags, "name", process.ProcessName)
 			common.SetTagIfUsed(tags, "type", process.Type)
 
-			fields := make(map[string]interface{}, 2)
+			fields := make(map[string]any, 2)
 			common.SetIfUsed("int", fields, "pid", process.Pid)
 			common.SetIfUsed("int", fields, "used_memory", process.UsedMemory)
 

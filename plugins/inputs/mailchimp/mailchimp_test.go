@@ -46,7 +46,7 @@ func TestMailChimpGatherReports(t *testing.T) {
 	tags["id"] = "42694e9e57"
 	tags["campaign_title"] = "Freddie's Jokes Vol. 1"
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"emails_sent":              200,
 		"abuse_reports":            0,
 		"unsubscribed":             2,
@@ -115,7 +115,7 @@ func TestMailChimpGatherReport(t *testing.T) {
 	tags["id"] = "42694e9e57"
 	tags["campaign_title"] = "Freddie's Jokes Vol. 1"
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"emails_sent":              int(200),
 		"abuse_reports":            int(0),
 		"unsubscribed":             int(2),

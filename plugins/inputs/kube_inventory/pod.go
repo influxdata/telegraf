@@ -73,7 +73,7 @@ func (ki *KubernetesInventory) gatherPodContainer(p *corev1.Pod, cs corev1.Conta
 		readiness = "ready"
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"restarts_total": cs.RestartCount,
 		"state_code":     stateCode,
 	}
@@ -158,7 +158,7 @@ func (ki *KubernetesInventory) gatherPodContainer(p *corev1.Pod, cs corev1.Conta
 			}
 			running = 2
 		}
-		conditionfields := map[string]interface{}{
+		conditionfields := map[string]any{
 			"status_condition": running,
 			"ready":            podready,
 		}

@@ -114,7 +114,7 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 							for k, v := range attrtags {
 								tags[k] = v
 							}
-							fields := map[string]interface{}{
+							fields := map[string]any{
 								"start_time_unix_nano": int64(p.TimeUnixNano),
 								"end_time_unix_nano":   int64(p.TimeUnixNano + p.DurationNano),
 								"location":             strings.Join(locations, ","),

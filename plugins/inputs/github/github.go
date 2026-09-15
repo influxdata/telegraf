@@ -182,8 +182,8 @@ func getTags(repositoryInfo *github.Repository) map[string]string {
 	}
 }
 
-func getFields(repositoryInfo *github.Repository) map[string]interface{} {
-	return map[string]interface{}{
+func getFields(repositoryInfo *github.Repository) map[string]any {
+	return map[string]any{
 		"stars":       repositoryInfo.GetStargazersCount(),
 		"subscribers": repositoryInfo.GetSubscribersCount(),
 		"watchers":    repositoryInfo.GetWatchersCount(),
@@ -194,7 +194,7 @@ func getFields(repositoryInfo *github.Repository) map[string]interface{} {
 	}
 }
 
-func (g *GitHub) getPullRequestFields(ctx context.Context, owner, repo string) (map[string]interface{}, error) {
+func (g *GitHub) getPullRequestFields(ctx context.Context, owner, repo string) (map[string]any, error) {
 	options := github.SearchOptions{
 		TextMatch: false,
 		ListOptions: github.ListOptions{
@@ -204,7 +204,7 @@ func (g *GitHub) getPullRequestFields(ctx context.Context, owner, repo string) (
 	}
 
 	classes := []string{"open", "closed"}
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for _, class := range classes {
 		q := fmt.Sprintf("repo:%s/%s is:pr is:%s", owner, repo, class)
 		searchResult, response, err := g.githubClient.Search.Issues(ctx, q, &options)

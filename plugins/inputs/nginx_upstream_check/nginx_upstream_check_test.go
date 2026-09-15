@@ -69,7 +69,7 @@ func TestNginxUpstreamCheckData(test *testing.T) {
 	accumulator.AssertContainsTaggedFields(
 		test,
 		"nginx_upstream_check",
-		map[string]interface{}{
+		map[string]any{
 			"status":      "up",
 			"status_code": uint8(1),
 			"rise":        uint64(1000),
@@ -86,7 +86,7 @@ func TestNginxUpstreamCheckData(test *testing.T) {
 	accumulator.AssertContainsTaggedFields(
 		test,
 		"nginx_upstream_check",
-		map[string]interface{}{
+		map[string]any{
 			"status":      "down",
 			"status_code": uint8(2),
 			"rise":        uint64(0),

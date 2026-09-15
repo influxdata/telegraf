@@ -33,7 +33,7 @@ func TestFileTypes(t *testing.T) {
 	require.NoError(t, m.Init())
 	require.NoError(t, m.Gather(&acc))
 	require.Equal(t, map[string]string{"exampletag": "test"}, acc.Metrics[0].Tags)
-	require.Equal(t, map[string]interface{}{
+	require.Equal(t, map[string]any{
 		"examplebool":   true,
 		"examplestring": "hello world",
 		"exampleint":    int64(123456),
@@ -62,7 +62,7 @@ func failEarly(failEarly bool, t *testing.T) error {
 	err = m.Gather(&acc)
 
 	if err == nil {
-		require.Equal(t, map[string]interface{}{
+		require.Equal(t, map[string]any{
 			"exampleint": int64(123456),
 		}, acc.Metrics[0].Fields)
 	}

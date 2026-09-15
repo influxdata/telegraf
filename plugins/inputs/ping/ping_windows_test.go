@@ -74,7 +74,7 @@ func TestPingGather(t *testing.T) {
 
 	require.NoError(t, acc.GatherError(p.Gather))
 	tags := map[string]string{"url": "www.google.com"}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"packets_transmitted": 4,
 		"packets_received":    4,
 		"reply_received":      4,
@@ -121,7 +121,7 @@ func TestBadPingGather(t *testing.T) {
 	require.NoError(t, err)
 
 	tags := map[string]string{"url": "www.amazon.com"}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"packets_transmitted": 4,
 		"packets_received":    0,
 		"reply_received":      0,
@@ -200,7 +200,7 @@ func TestLossyPingGather(t *testing.T) {
 	require.NoError(t, err)
 
 	tags := map[string]string{"url": "www.google.com"}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"packets_transmitted": 9,
 		"packets_received":    7,
 		"reply_received":      7,
@@ -311,7 +311,7 @@ func TestUnreachablePingGather(t *testing.T) {
 	require.NoError(t, err)
 
 	tags := map[string]string{"url": "www.google.com"}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"packets_transmitted": 4,
 		"packets_received":    1,
 		"reply_received":      0,
@@ -360,7 +360,7 @@ func TestTTLExpiredPingGather(t *testing.T) {
 	require.NoError(t, err)
 
 	tags := map[string]string{"url": "www.google.com"}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"packets_transmitted": 4,
 		"packets_received":    1,
 		"reply_received":      0,

@@ -94,7 +94,7 @@ func TestSuricataAlerts(t *testing.T) {
 		metric.New(
 			"suricata_alert",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"action":       "allowed",
 				"category":     "Misc activity",
 				"gid":          float64(1),
@@ -145,7 +145,7 @@ func TestSuricata(t *testing.T) {
 			map[string]string{
 				"thread": "total",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"capture.kernel_packets":       float64(905344474),
 				"capture.kernel_drops":         float64(78355440),
 				"capture.kernel_packets_delta": float64(2376742),
@@ -195,7 +195,7 @@ func TestThreadStats(t *testing.T) {
 			map[string]string{
 				"thread": "W#05-wlp4s0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"capture.kernel_packets": float64(905344474),
 				"capture.kernel_drops":   float64(78355440),
 			},
@@ -354,7 +354,7 @@ func TestSuricataParse(t *testing.T) {
 				map[string]string{
 					"thread": "W#01-ens2f1",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"detect_alert":                float64(0),
 					"detect_engines_id":           float64(0),
 					"detect_engines_last_reload":  "2021-06-08T06:33:05.084872+0000",
@@ -397,7 +397,7 @@ func TestSuricataParseVersion2(t *testing.T) {
 						"in_iface":   "s1-suricata",
 						"proto":      "TCP",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"action":       "allowed",
 						"category":     "Misc activity",
 						"dest_ip":      "179.60.192.3",
@@ -428,7 +428,7 @@ func TestSuricataParseVersion2(t *testing.T) {
 						"in_iface":   "eth1",
 						"proto":      "UDP",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"dest_ip":   "192.168.0.1",
 						"dest_port": int64(53),
 						"id":        float64(7145),
@@ -453,7 +453,7 @@ func TestSuricataParseVersion2(t *testing.T) {
 						"in_iface":   "eth1",
 						"proto":      "TCP",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"dest_ip":   "54.192.18.125",
 						"dest_port": int64(443),
 						"ipid":      float64(62316),
@@ -483,7 +483,7 @@ func TestSuricataParseVersion2(t *testing.T) {
 						"in_iface":   "eth1",
 						"proto":      "TCP",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"age":       float64(0),
 						"dest_ip":   "142.251.130.3",
 						"dest_port": int64(443),
@@ -505,7 +505,7 @@ func TestSuricataParseVersion2(t *testing.T) {
 						"in_iface":   "eth2",
 						"proto":      "TCP",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"dest_ip":           "203.205.239.179",
 						"dest_port":         int64(80),
 						"hostname":          "hkminorshort.weixin.qq.com",
@@ -531,7 +531,7 @@ func TestSuricataParseVersion2(t *testing.T) {
 					map[string]string{
 						"event_type": "stats",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"captureerrors":          float64(0),
 						"capturekernel_drops":    float64(0),
 						"capturekernel_packets":  float64(522),
