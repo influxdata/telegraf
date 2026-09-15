@@ -63,6 +63,7 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 	}
 
 	pd := req.GetDictionary()
+	logged := make(map[string]bool)
 
 	for _, rp := range req.GetResourceProfiles() {
 		if rp == nil {
@@ -90,11 +91,17 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 						continue
 					}
 					if pd.GetStackTable() == nil {
-						s.logger.Errorf("invalid nil stack table: %s", buf)
+						if !logged["nil stack table"] {
+							s.logger.Errorf("invalid nil stack table: %s", buf)
+							logged["nil stack table"] = true
+						}
 						continue
 					}
 					if sample.StackIndex < 0 || int(sample.StackIndex) >= len(pd.GetStackTable()) {
-						s.logger.Errorf("invalid stack index %d in request: %s", sample.StackIndex, buf)
+						if !logged["stack index"] {
+							s.logger.Errorf("invalid stack index %d in request: %s", sample.StackIndex, buf)
+							logged["stack index"] = true
+						}
 						continue
 					}
 					stack := pd.GetStackTable()[sample.StackIndex]
@@ -103,11 +110,17 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 					}
 					for _, locIdx := range stack.GetLocationIndices() {
 						if pd.GetLocationTable() == nil {
-							s.logger.Errorf("invalid nil location table: %s", buf)
+							if !logged["nil location table"] {
+								s.logger.Errorf("invalid nil location table: %s", buf)
+								logged["nil location table"] = true
+							}
 							continue
 						}
 						if locIdx < 0 || int(locIdx) >= len(pd.GetLocationTable()) {
-							s.logger.Errorf("invalid location table index %d in request: %s", locIdx, buf)
+							if !logged["location table index"] {
+								s.logger.Errorf("invalid location table index %d in request: %s", locIdx, buf)
+								logged["location table index"] = true
+							}
 							continue
 						}
 						loc := pd.GetLocationTable()[locIdx]
@@ -121,24 +134,39 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 									continue
 								}
 								if pd.GetFunctionTable() == nil {
-									s.logger.Errorf("invalid nil function table: %s", buf)
+									if !logged["nil function table"] {
+										s.logger.Errorf("invalid nil function table: %s", buf)
+										logged["nil function table"] = true
+									}
 									continue
 								}
 								if line.FunctionIndex < 0 || int(line.FunctionIndex) >= len(pd.GetFunctionTable()) {
-									s.logger.Errorf("invalid function index %d in request: %s", line.FunctionIndex, buf)
+									if !logged["function index"] {
+										s.logger.Errorf("invalid function index %d in request: %s", line.FunctionIndex, buf)
+										logged["function index"] = true
+									}
 									continue
 								}
 								f := pd.GetFunctionTable()[line.FunctionIndex]
 								if f == nil {
-									s.logger.Errorf("invalid nil function: %s", buf)
+									if !logged["nil function"] {
+										s.logger.Errorf("invalid nil function: %s", buf)
+										logged["nil function"] = true
+									}
 									continue
 								}
 								if pd.GetStringTable() == nil {
-									s.logger.Errorf("invalid nil string table: %s", buf)
+									if !logged["nil string table"] {
+										s.logger.Errorf("invalid nil string table: %s", buf)
+										logged["nil string table"] = true
+									}
 									continue
 								}
 								if f.FilenameStrindex < 0 || int(f.FilenameStrindex) >= len(pd.GetStringTable()) {
-									s.logger.Errorf("invalid filename index %d in request: %s", f.FilenameStrindex, buf)
+									if !logged["filename index"] {
+										s.logger.Errorf("invalid filename index %d in request: %s", f.FilenameStrindex, buf)
+										logged["filename index"] = true
+									}
 									continue
 								}
 								fileloc := pd.GetStringTable()[f.FilenameStrindex]
@@ -149,7 +177,10 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 									fileloc += "line " + strconv.FormatInt(f.StartLine, 10)
 								}
 								if f.NameStrindex < 0 || int(f.NameStrindex) >= len(pd.GetStringTable()) {
-									s.logger.Errorf("invalid function name index %d in request: %s", f.NameStrindex, buf)
+									if !logged["function name index"] {
+										s.logger.Errorf("invalid function name index %d in request: %s", f.NameStrindex, buf)
+										logged["function name index"] = true
+									}
 									continue
 								}
 								l := pd.GetStringTable()[f.NameStrindex]
@@ -162,31 +193,52 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 
 							// Check the indices of the following lookups
 							if p.PeriodType == nil {
-								s.logger.Errorf("invalid nil period type in request: %s", buf)
+								if !logged["nil period type"] {
+									s.logger.Errorf("invalid nil period type in request: %s", buf)
+									logged["nil period type"] = true
+								}
 								continue
 							}
 							if p.SampleType == nil {
-								s.logger.Errorf("invalid nil sample type in request: %s", buf)
+								if !logged["nil sample type"] {
+									s.logger.Errorf("invalid nil sample type in request: %s", buf)
+									logged["nil sample type"] = true
+								}
 								continue
 							}
 							if p.PeriodType.TypeStrindex < 0 || int(p.PeriodType.TypeStrindex) >= len(pd.GetStringTable()) {
-								s.logger.Errorf("invalid mapping period name index %d in request: %s", p.PeriodType.TypeStrindex, buf)
+								if !logged["period name index"] {
+									s.logger.Errorf("invalid mapping period name index %d in request: %s", p.PeriodType.TypeStrindex, buf)
+									logged["period name index"] = true
+								}
 								continue
 							}
 							if p.PeriodType.UnitStrindex < 0 || int(p.PeriodType.UnitStrindex) >= len(pd.GetStringTable()) {
-								s.logger.Errorf("invalid mapping period unit index %d in request: %s", p.PeriodType.UnitStrindex, buf)
+								if !logged["period unit index"] {
+									s.logger.Errorf("invalid mapping period unit index %d in request: %s", p.PeriodType.UnitStrindex, buf)
+									logged["period unit index"] = true
+								}
 								continue
 							}
 							if p.SampleType.TypeStrindex < 0 || int(p.SampleType.TypeStrindex) >= len(pd.GetStringTable()) {
-								s.logger.Errorf("invalid mapping sample name index %d in request: %s", p.SampleType.TypeStrindex, buf)
+								if !logged["sample name index"] {
+									s.logger.Errorf("invalid mapping sample name index %d in request: %s", p.SampleType.TypeStrindex, buf)
+									logged["sample name index"] = true
+								}
 								continue
 							}
 							if p.SampleType.UnitStrindex < 0 || int(p.SampleType.UnitStrindex) >= len(pd.GetStringTable()) {
-								s.logger.Errorf("invalid mapping sample unit index %d in request: %s", p.SampleType.UnitStrindex, buf)
+								if !logged["sample unit index"] {
+									s.logger.Errorf("invalid mapping sample unit index %d in request: %s", p.SampleType.UnitStrindex, buf)
+									logged["sample unit index"] = true
+								}
 								continue
 							}
 							if mapping.FilenameStrindex < 0 || int(mapping.FilenameStrindex) >= len(pd.GetStringTable()) {
-								s.logger.Errorf("invalid mapping filename index %d in request: %s", mapping.FilenameStrindex, buf)
+								if !logged["mapping filename index"] {
+									s.logger.Errorf("invalid mapping filename index %d in request: %s", mapping.FilenameStrindex, buf)
+									logged["mapping filename index"] = true
+								}
 								continue
 							}
 
@@ -194,11 +246,17 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 							// first entry in the mapping table is always a null mapping.
 							if loc.MappingIndex != 0 {
 								if pd.GetMappingTable() == nil {
-									s.logger.Errorf("invalid nil mapping table: %s", buf)
+									if !logged["nil mapping table"] {
+										s.logger.Errorf("invalid nil mapping table: %s", buf)
+										logged["nil mapping table"] = true
+									}
 									continue
 								}
 								if loc.MappingIndex < 0 || int(loc.MappingIndex) >= len(pd.GetMappingTable()) {
-									s.logger.Errorf("invalid mapping index %d in request: %s", loc.MappingIndex, buf)
+									if !logged["mapping index"] {
+										s.logger.Errorf("invalid mapping index %d in request: %s", loc.MappingIndex, buf)
+										logged["mapping index"] = true
+									}
 									continue
 								}
 								mapping = pd.GetMappingTable()[loc.MappingIndex]
@@ -236,7 +294,10 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 							}
 							for _, idx := range sample.GetAttributeIndices() {
 								if idx < 0 || int(idx) >= len(pd.GetAttributeTable()) {
-									s.logger.Errorf("invalid attribute table index %d in request: %s", idx, buf)
+									if !logged["attribute table index"] {
+										s.logger.Errorf("invalid attribute table index %d in request: %s", idx, buf)
+										logged["attribute table index"] = true
+									}
 									continue
 								}
 								attr := pd.GetAttributeTable()[idx]
@@ -244,14 +305,20 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 									continue
 								}
 								if attr.KeyStrindex < 0 || int(attr.KeyStrindex) >= len(pd.GetStringTable()) {
-									s.logger.Errorf("invalid attribute index %d in request: %s", attr.KeyStrindex, buf)
+									if !logged["attribute key index"] {
+										s.logger.Errorf("invalid attribute key index %d in request: %s", attr.KeyStrindex, buf)
+										logged["attribute key index"] = true
+									}
 									continue
 								}
 								key := pd.GetStringTable()[attr.KeyStrindex]
 								fields[key] = attr.GetValue().Value
 							}
 							if validIdx >= len(sample.GetTimestampsUnixNano()) {
-								s.logger.Errorf("invalid timestamp index %d in request: %s", validIdx, buf)
+								if !logged["timestamp index"] {
+									s.logger.Errorf("invalid timestamp index %d in request: %s", validIdx, buf)
+									logged["timestamp index"] = true
+								}
 								continue
 							}
 							ts := sample.GetTimestampsUnixNano()[validIdx]
