@@ -237,7 +237,7 @@ func TestWrite(t *testing.T) {
 			map[string]string{
 				"bucket": "foobar",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42.123,
 			},
 			time.Unix(0, 0),
@@ -298,7 +298,7 @@ func TestWriteWithPartialSerializationError(t *testing.T) {
 			map[string]string{
 				"type": "invalid",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": math.NaN,
 			},
 			time.Unix(0, 0),
@@ -309,7 +309,7 @@ func TestWriteWithPartialSerializationError(t *testing.T) {
 			map[string]string{
 				"type": "valid",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42.123,
 			},
 			time.Unix(0, 0),
@@ -320,7 +320,7 @@ func TestWriteWithPartialSerializationError(t *testing.T) {
 			map[string]string{
 				"type": "invalid",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": math.Inf,
 			},
 			time.Unix(0, 0),
@@ -388,7 +388,7 @@ func TestWriteWithPartialSerializationAndSendError(t *testing.T) {
 			map[string]string{
 				"type": "invalid",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": math.NaN,
 			},
 			time.Unix(0, 0),
@@ -399,7 +399,7 @@ func TestWriteWithPartialSerializationAndSendError(t *testing.T) {
 			map[string]string{
 				"type": "valid",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42.123,
 			},
 			time.Unix(0, 0),
@@ -410,7 +410,7 @@ func TestWriteWithPartialSerializationAndSendError(t *testing.T) {
 			map[string]string{
 				"type": "invalid",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": math.Inf,
 			},
 			time.Unix(0, 0),
@@ -488,7 +488,7 @@ func TestWriteBucketTagWorksOnRetry(t *testing.T) {
 			map[string]string{
 				"bucket": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42.0,
 			},
 			time.Unix(0, 0),
@@ -553,7 +553,7 @@ func TestTooLargeWriteRetry(t *testing.T) {
 			map[string]string{
 				"bucket": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42.0,
 			},
 			time.Unix(0, 0),
@@ -563,7 +563,7 @@ func TestTooLargeWriteRetry(t *testing.T) {
 			map[string]string{
 				"bucket": "bar",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 99.0,
 			},
 			time.Unix(0, 0),
@@ -578,7 +578,7 @@ func TestTooLargeWriteRetry(t *testing.T) {
 			map[string]string{
 				"bucket": "foobar",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 123.456,
 			},
 			time.Unix(0, 0),
@@ -588,7 +588,7 @@ func TestTooLargeWriteRetry(t *testing.T) {
 			map[string]string{
 				"bucket": "fizzbuzzbang",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 999.999,
 			},
 			time.Unix(0, 0),
@@ -647,7 +647,7 @@ func TestRateLimit(t *testing.T) {
 		metric.New(
 			"cpu",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42.0,
 			},
 			time.Unix(0, 1),
@@ -655,7 +655,7 @@ func TestRateLimit(t *testing.T) {
 		metric.New(
 			"cpu",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": 99.0,
 			},
 			time.Unix(0, 2),
@@ -665,7 +665,7 @@ func TestRateLimit(t *testing.T) {
 			map[string]string{
 				"machine": "A",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 123.456,
 			},
 			time.Unix(0, 3),
@@ -675,7 +675,7 @@ func TestRateLimit(t *testing.T) {
 			map[string]string{
 				"machine": "B",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"temp":      48.235,
 				"remaining": 999.999,
 			},
@@ -753,7 +753,7 @@ func TestStatusCodeNonRetryable4xx(t *testing.T) {
 					map[string]string{
 						"bucket": "foo",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 0.0,
 					},
 					time.Unix(0, 0),
@@ -763,7 +763,7 @@ func TestStatusCodeNonRetryable4xx(t *testing.T) {
 					map[string]string{
 						"bucket": "my_bucket",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42.0,
 					},
 					time.Unix(0, 1),
@@ -773,7 +773,7 @@ func TestStatusCodeNonRetryable4xx(t *testing.T) {
 					map[string]string{
 						"bucket": "my_bucket",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 43.0,
 					},
 					time.Unix(0, 2),
@@ -783,7 +783,7 @@ func TestStatusCodeNonRetryable4xx(t *testing.T) {
 					map[string]string{
 						"bucket": "foo",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 0.0,
 					},
 					time.Unix(0, 3),
@@ -845,7 +845,7 @@ func TestStatusCodeInvalidAuthentication(t *testing.T) {
 					map[string]string{
 						"bucket": "foo",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 0.0,
 					},
 					time.Unix(0, 0),
@@ -855,7 +855,7 @@ func TestStatusCodeInvalidAuthentication(t *testing.T) {
 					map[string]string{
 						"bucket": "my_bucket",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42.0,
 					},
 					time.Unix(0, 1),
@@ -865,7 +865,7 @@ func TestStatusCodeInvalidAuthentication(t *testing.T) {
 					map[string]string{
 						"bucket": "my_bucket",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 43.0,
 					},
 					time.Unix(0, 2),
@@ -875,7 +875,7 @@ func TestStatusCodeInvalidAuthentication(t *testing.T) {
 					map[string]string{
 						"bucket": "foo",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 0.0,
 					},
 					time.Unix(0, 3),
@@ -941,7 +941,7 @@ func TestStatusCodeServiceUnavailable(t *testing.T) {
 					map[string]string{
 						"bucket": "foo",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 0.0,
 					},
 					time.Unix(0, 0),
@@ -951,7 +951,7 @@ func TestStatusCodeServiceUnavailable(t *testing.T) {
 					map[string]string{
 						"bucket": "my_bucket",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42.0,
 					},
 					time.Unix(0, 1),
@@ -961,7 +961,7 @@ func TestStatusCodeServiceUnavailable(t *testing.T) {
 					map[string]string{
 						"bucket": "my_bucket",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 43.0,
 					},
 					time.Unix(0, 2),
@@ -971,7 +971,7 @@ func TestStatusCodeServiceUnavailable(t *testing.T) {
 					map[string]string{
 						"bucket": "foo",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 0.0,
 					},
 					time.Unix(0, 3),
@@ -1031,7 +1031,7 @@ func TestStatusCodeUnexpected(t *testing.T) {
 					map[string]string{
 						"bucket": "foo",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 0.0,
 					},
 					time.Unix(0, 0),
@@ -1041,7 +1041,7 @@ func TestStatusCodeUnexpected(t *testing.T) {
 					map[string]string{
 						"bucket": "my_bucket",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42.0,
 					},
 					time.Unix(0, 1),
@@ -1051,7 +1051,7 @@ func TestStatusCodeUnexpected(t *testing.T) {
 					map[string]string{
 						"bucket": "my_bucket",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 43.0,
 					},
 					time.Unix(0, 2),
@@ -1061,7 +1061,7 @@ func TestStatusCodeUnexpected(t *testing.T) {
 					map[string]string{
 						"bucket": "foo",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 0.0,
 					},
 					time.Unix(0, 3),
@@ -1113,7 +1113,7 @@ func TestUseDynamicSecret(t *testing.T) {
 			map[string]string{
 				"bucket": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 0.0,
 			},
 			time.Unix(0, 3),
@@ -1182,7 +1182,7 @@ func TestConcurrentWrites(t *testing.T) {
 			map[string]string{
 				"bucket": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(i),
 			},
 			time.Unix(0, 0),
@@ -1221,7 +1221,7 @@ func BenchmarkWrite1k(b *testing.B) {
 			map[string]string{
 				"bucket": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(i),
 			},
 			time.Unix(0, 0),
@@ -1265,7 +1265,7 @@ func BenchmarkWrite5k(b *testing.B) {
 			map[string]string{
 				"bucket": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(i),
 			},
 			time.Unix(0, 0),
@@ -1309,7 +1309,7 @@ func BenchmarkWrite10k(b *testing.B) {
 			map[string]string{
 				"bucket": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(i),
 			},
 			time.Unix(0, 0),
@@ -1353,7 +1353,7 @@ func BenchmarkWrite25k(b *testing.B) {
 			map[string]string{
 				"bucket": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(i),
 			},
 			time.Unix(0, 0),
@@ -1397,7 +1397,7 @@ func BenchmarkWrite50k(b *testing.B) {
 			map[string]string{
 				"bucket": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(i),
 			},
 			time.Unix(0, 0),
@@ -1441,7 +1441,7 @@ func BenchmarkWrite100k(b *testing.B) {
 			map[string]string{
 				"bucket": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(i),
 			},
 			time.Unix(0, 0),
@@ -1486,7 +1486,7 @@ func BenchmarkWriteConcurrent100k_4(b *testing.B) {
 			map[string]string{
 				"bucket": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(i),
 			},
 			time.Unix(0, 0),
@@ -1531,7 +1531,7 @@ func BenchmarkWriteConcurrent100k_8(b *testing.B) {
 			map[string]string{
 				"bucket": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(i),
 			},
 			time.Unix(0, 0),
@@ -1576,7 +1576,7 @@ func BenchmarkWriteConcurrent100k_16(b *testing.B) {
 			map[string]string{
 				"bucket": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(i),
 			},
 			time.Unix(0, 0),

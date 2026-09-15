@@ -535,8 +535,8 @@ func (r *stubResult) Get(ctx context.Context) (string, error) {
 	}
 }
 
-func (t *stubTopic) sendBundle() func(items interface{}) {
-	return func(items interface{}) {
+func (t *stubTopic) sendBundle() func(items any) {
+	return func(items any) {
 		t.bLock.Lock()
 		defer t.bLock.Unlock()
 

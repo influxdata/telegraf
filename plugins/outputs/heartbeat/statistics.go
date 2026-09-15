@@ -16,12 +16,12 @@ type statistics struct {
 	lastUpdate       time.Time
 	lastUpdateFailed bool
 
-	lastAgent      map[string]interface{}
-	lastInputs     map[string][]map[string]interface{}
-	lastOutputs    map[string][]map[string]interface{}
-	currentAgent   map[string]interface{}
-	currentInputs  map[string][]map[string]interface{}
-	currentOutputs map[string][]map[string]interface{}
+	lastAgent      map[string]any
+	lastInputs     map[string][]map[string]any
+	lastOutputs    map[string][]map[string]any
+	currentAgent   map[string]any
+	currentInputs  map[string][]map[string]any
+	currentOutputs map[string][]map[string]any
 
 	// Internal flags
 	includeInternal bool
@@ -43,9 +43,9 @@ func (s *statistics) snapshot() *statistics {
 		lastAgent:      s.currentAgent,
 		lastInputs:     s.currentInputs,
 		lastOutputs:    s.currentOutputs,
-		currentAgent:   make(map[string]interface{}),
-		currentInputs:  make(map[string][]map[string]interface{}),
-		currentOutputs: make(map[string][]map[string]interface{}),
+		currentAgent:   make(map[string]any),
+		currentInputs:  make(map[string][]map[string]any),
+		currentOutputs: make(map[string][]map[string]any),
 	}
 
 	if !s.includeInternal {
@@ -119,12 +119,12 @@ func (s *statistics) remove(snap *statistics, ts time.Time) {
 	s.currentOutputs = snap.currentOutputs
 }
 
-func (s *statistics) variables() map[string]interface{} {
+func (s *statistics) variables() map[string]any {
 	s.RLock()
 	defer s.RUnlock()
 
 	// Add the raw statistics
-	vars := map[string]interface{}{
+	vars := map[string]any{
 		"metrics":      s.metrics,
 		"log_errors":   s.logErrors,
 		"log_warnings": s.logWarnings,

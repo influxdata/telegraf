@@ -60,7 +60,7 @@ func TestExternalOutputBatch(t *testing.T) {
 	m := metric.New(
 		"cpu",
 		map[string]string{"name": "cpu1"},
-		map[string]interface{}{"idle": 50, "sys": 30},
+		map[string]any{"idle": 50, "sys": 30},
 		now,
 	)
 
@@ -86,7 +86,7 @@ func TestExternalOutputNoBatch(t *testing.T) {
 	m := metric.New(
 		"cpu",
 		map[string]string{"name": "cpu1"},
-		map[string]interface{}{"idle": 50, "sys": 30},
+		map[string]any{"idle": 50, "sys": 30},
 		now,
 	)
 

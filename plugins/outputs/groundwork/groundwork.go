@@ -282,7 +282,7 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (metricMeta, *transit.M
 		}
 
 		var thresholds []transit.ThresholdValue
-		addCriticalThreshold := func(v interface{}) {
+		addCriticalThreshold := func(v any) {
 			if tv := transit.NewTypedValue(v); tv != nil {
 				thresholds = append(thresholds, transit.ThresholdValue{
 					SampleType: transit.Critical,
@@ -291,7 +291,7 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (metricMeta, *transit.M
 				})
 			}
 		}
-		addWarningThreshold := func(v interface{}) {
+		addWarningThreshold := func(v any) {
 			if tv := transit.NewTypedValue(v); tv != nil {
 				thresholds = append(thresholds, transit.ThresholdValue{
 					SampleType: transit.Warning,

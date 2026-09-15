@@ -16,7 +16,7 @@ import (
 type HTTPMetric struct {
 	Metric    string            `json:"metric"`
 	Timestamp int64             `json:"timestamp"`
-	Value     interface{}       `json:"value"`
+	Value     any               `json:"value"`
 	Tags      map[string]string `json:"tags"`
 }
 

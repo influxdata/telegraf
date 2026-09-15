@@ -209,7 +209,7 @@ func TestWrite(t *testing.T) {
 			map[string]string{
 				"database": "foobar",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42.123,
 			},
 			time.Unix(0, 0),
@@ -258,7 +258,7 @@ func TestWriteDefaultSync(t *testing.T) {
 			map[string]string{
 				"database": "foobar",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42.123,
 			},
 			time.Unix(0, 0),
@@ -308,7 +308,7 @@ func TestWriteExplicitSync(t *testing.T) {
 			map[string]string{
 				"database": "foobar",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42.123,
 			},
 			time.Unix(0, 0),
@@ -368,7 +368,7 @@ func TestWriteNotConvertUint(t *testing.T) {
 		metric.New(
 			"cpu",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": uint64(42),
 			},
 			time.Unix(0, 0),
@@ -429,7 +429,7 @@ func TestWriteConvertUint(t *testing.T) {
 		metric.New(
 			"cpu",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": uint64(42),
 			},
 			time.Unix(0, 0),
@@ -479,7 +479,7 @@ func TestWriteExplicitNoSync(t *testing.T) {
 			map[string]string{
 				"database": "foobar",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42.123,
 			},
 			time.Unix(0, 0),
@@ -549,7 +549,7 @@ func TestWriteDatabaseTagWorksOnRetry(t *testing.T) {
 			map[string]string{
 				"database": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42.0,
 			},
 			time.Unix(0, 0),
@@ -616,7 +616,7 @@ func TestTooLargeWriteRetry(t *testing.T) {
 			map[string]string{
 				"database": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42.0,
 			},
 			time.Unix(0, 0),
@@ -626,7 +626,7 @@ func TestTooLargeWriteRetry(t *testing.T) {
 			map[string]string{
 				"database": "bar",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 99.0,
 			},
 			time.Unix(0, 0),
@@ -641,7 +641,7 @@ func TestTooLargeWriteRetry(t *testing.T) {
 			map[string]string{
 				"database": "foobar",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 123.456,
 			},
 			time.Unix(0, 0),
@@ -651,7 +651,7 @@ func TestTooLargeWriteRetry(t *testing.T) {
 			map[string]string{
 				"database": "fizzbuzzbang",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 999.999,
 			},
 			time.Unix(0, 0),
@@ -712,7 +712,7 @@ func TestRateLimit(t *testing.T) {
 		metric.New(
 			"cpu",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42.0,
 			},
 			time.Unix(0, 1),
@@ -720,7 +720,7 @@ func TestRateLimit(t *testing.T) {
 		metric.New(
 			"cpu",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": 99.0,
 			},
 			time.Unix(0, 2),
@@ -730,7 +730,7 @@ func TestRateLimit(t *testing.T) {
 			map[string]string{
 				"machine": "A",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 123.456,
 			},
 			time.Unix(0, 3),
@@ -740,7 +740,7 @@ func TestRateLimit(t *testing.T) {
 			map[string]string{
 				"machine": "B",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"temp":      48.235,
 				"remaining": 999.999,
 			},
@@ -819,7 +819,7 @@ func TestStatusCodeNonRetryable4xx(t *testing.T) {
 					map[string]string{
 						"database": "foo",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 0.0,
 					},
 					time.Unix(0, 0),
@@ -829,7 +829,7 @@ func TestStatusCodeNonRetryable4xx(t *testing.T) {
 					map[string]string{
 						"database": "my_database",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42.0,
 					},
 					time.Unix(0, 1),
@@ -839,7 +839,7 @@ func TestStatusCodeNonRetryable4xx(t *testing.T) {
 					map[string]string{
 						"database": "my_database",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 43.0,
 					},
 					time.Unix(0, 2),
@@ -849,7 +849,7 @@ func TestStatusCodeNonRetryable4xx(t *testing.T) {
 					map[string]string{
 						"database": "foo",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 0.0,
 					},
 					time.Unix(0, 3),
@@ -913,7 +913,7 @@ func TestStatusCodeInvalidAuthentication(t *testing.T) {
 					map[string]string{
 						"database": "foo",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 0.0,
 					},
 					time.Unix(0, 0),
@@ -923,7 +923,7 @@ func TestStatusCodeInvalidAuthentication(t *testing.T) {
 					map[string]string{
 						"database": "my_database",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42.0,
 					},
 					time.Unix(0, 1),
@@ -933,7 +933,7 @@ func TestStatusCodeInvalidAuthentication(t *testing.T) {
 					map[string]string{
 						"database": "my_database",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 43.0,
 					},
 					time.Unix(0, 2),
@@ -943,7 +943,7 @@ func TestStatusCodeInvalidAuthentication(t *testing.T) {
 					map[string]string{
 						"database": "foo",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 0.0,
 					},
 					time.Unix(0, 3),
@@ -1010,7 +1010,7 @@ func TestStatusCodeServiceUnavailable(t *testing.T) {
 					map[string]string{
 						"database": "foo",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 0.0,
 					},
 					time.Unix(0, 0),
@@ -1020,7 +1020,7 @@ func TestStatusCodeServiceUnavailable(t *testing.T) {
 					map[string]string{
 						"database": "my_database",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42.0,
 					},
 					time.Unix(0, 1),
@@ -1030,7 +1030,7 @@ func TestStatusCodeServiceUnavailable(t *testing.T) {
 					map[string]string{
 						"database": "my_database",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 43.0,
 					},
 					time.Unix(0, 2),
@@ -1040,7 +1040,7 @@ func TestStatusCodeServiceUnavailable(t *testing.T) {
 					map[string]string{
 						"database": "foo",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 0.0,
 					},
 					time.Unix(0, 3),
@@ -1101,7 +1101,7 @@ func TestStatusCodeUnexpected(t *testing.T) {
 					map[string]string{
 						"database": "foo",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 0.0,
 					},
 					time.Unix(0, 0),
@@ -1111,7 +1111,7 @@ func TestStatusCodeUnexpected(t *testing.T) {
 					map[string]string{
 						"database": "my_database",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42.0,
 					},
 					time.Unix(0, 1),
@@ -1121,7 +1121,7 @@ func TestStatusCodeUnexpected(t *testing.T) {
 					map[string]string{
 						"database": "my_database",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 43.0,
 					},
 					time.Unix(0, 2),
@@ -1131,7 +1131,7 @@ func TestStatusCodeUnexpected(t *testing.T) {
 					map[string]string{
 						"database": "foo",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 0.0,
 					},
 					time.Unix(0, 3),
@@ -1190,19 +1190,19 @@ func TestCoreIntegration(t *testing.T) {
 		metric.New(
 			"cpu",
 			map[string]string{},
-			map[string]interface{}{"value": 0.0},
+			map[string]any{"value": 0.0},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"cpu",
 			map[string]string{},
-			map[string]interface{}{"value": 42.0},
+			map[string]any{"value": 42.0},
 			time.Unix(0, 1),
 		),
 		metric.New(
 			"cpu",
 			map[string]string{},
-			map[string]interface{}{"value": 43.0},
+			map[string]any{"value": 43.0},
 			time.Unix(0, 2),
 		),
 	}

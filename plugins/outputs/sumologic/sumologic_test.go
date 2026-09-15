@@ -30,7 +30,7 @@ func getMetric() telegraf.Metric {
 	m := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": 42.0,
 		},
 		time.Unix(0, 0),
@@ -49,7 +49,7 @@ func getMetrics() []telegraf.Metric {
 				"ec2_instance": "aws-129038123",
 				"image":        "aws-ami-1234567890",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"idle":   5876876,
 				"steal":  5876876,
 				"system": 5876876,

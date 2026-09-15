@@ -525,7 +525,7 @@ func getStackdriverMetricKind(vt telegraf.ValueType) (metricpb.MetricDescriptor_
 	}
 }
 
-func (s *Stackdriver) getStackdriverTypedValue(value interface{}) (*monitoringpb.TypedValue, error) {
+func (s *Stackdriver) getStackdriverTypedValue(value any) (*monitoringpb.TypedValue, error) {
 	if s.MetricDataType == "double" {
 		v, err := internal.ToFloat64(value)
 		if err != nil {

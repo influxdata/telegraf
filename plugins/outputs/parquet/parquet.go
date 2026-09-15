@@ -468,7 +468,7 @@ func (p *Parquet) createWriter(name, filename string, schema *arrow.Schema) (*pq
 	return writer, nil
 }
 
-func goToArrowType(value interface{}) (arrow.DataType, error) {
+func goToArrowType(value any) (arrow.DataType, error) {
 	switch value.(type) {
 	case int8:
 		return arrow.PrimitiveTypes.Int8, nil

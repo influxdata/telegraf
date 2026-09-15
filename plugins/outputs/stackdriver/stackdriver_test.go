@@ -144,7 +144,7 @@ func TestWriteTagsAsResourceLabels(t *testing.T) {
 				"job_name": "cpu",
 				"mytag":    "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42,
 			},
 			time.Unix(2, 0),
@@ -155,7 +155,7 @@ func TestWriteTagsAsResourceLabels(t *testing.T) {
 				"job_name": "mem",
 				"mytag":    "bar",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42,
 			},
 			time.Unix(2, 0),
@@ -210,21 +210,21 @@ func TestWriteMetricTypesOfficial(t *testing.T) {
 	input := []telegraf.Metric{
 		metric.New("mem_g",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42,
 			},
 			time.Unix(3, 0),
 		),
 		metric.New("mem_c",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42,
 			},
 			time.Unix(3, 0),
 		),
 		metric.New("mem_h",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"sum":   1,
 				"count": 1,
 				"5.0":   0.0,
@@ -286,14 +286,14 @@ func TestWriteMetricTypesPath(t *testing.T) {
 	input := []telegraf.Metric{
 		metric.New("mem_g",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42,
 			},
 			time.Unix(3, 0),
 		),
 		metric.New("mem_c",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42,
 			},
 			time.Unix(3, 0),
@@ -341,14 +341,14 @@ func TestWriteAscendingTime(t *testing.T) {
 	input := []telegraf.Metric{
 		metric.New("cpu",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42,
 			},
 			time.Unix(2, 0),
 		),
 		metric.New("cpu",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": 43,
 			},
 			time.Unix(1, 0),
@@ -401,7 +401,7 @@ func TestWriteBatchable(t *testing.T) {
 			map[string]string{
 				"foo": "bar",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42,
 			},
 			time.Unix(2, 0),
@@ -410,7 +410,7 @@ func TestWriteBatchable(t *testing.T) {
 			map[string]string{
 				"foo": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 43,
 			},
 			time.Unix(3, 0),
@@ -419,7 +419,7 @@ func TestWriteBatchable(t *testing.T) {
 			map[string]string{
 				"foo": "bar",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 41,
 			},
 			time.Unix(1, 0),
@@ -428,7 +428,7 @@ func TestWriteBatchable(t *testing.T) {
 			map[string]string{
 				"foo": "bar",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 44,
 			},
 			time.Unix(4, 0),
@@ -437,7 +437,7 @@ func TestWriteBatchable(t *testing.T) {
 			map[string]string{
 				"foo": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 45,
 			},
 			time.Unix(5, 0),
@@ -446,7 +446,7 @@ func TestWriteBatchable(t *testing.T) {
 			map[string]string{
 				"foo": "bar",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 43,
 			},
 			time.Unix(3, 0),
@@ -455,7 +455,7 @@ func TestWriteBatchable(t *testing.T) {
 			map[string]string{
 				"foo": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 43,
 			},
 			time.Unix(3, 0),
@@ -464,7 +464,7 @@ func TestWriteBatchable(t *testing.T) {
 			map[string]string{
 				"foo": "bar",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 41,
 			},
 			time.Unix(1, 0),
@@ -724,7 +724,7 @@ func TestWriteSendsRemainingChunksAfterPermanentFailure(t *testing.T) {
 		input = append(input, metric.New(
 			fmt.Sprintf("series_%03d", i),
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42,
 			},
 			time.Unix(1, 0),
@@ -770,7 +770,7 @@ func TestWriteSendsRemainingTimestampGroupsAfterPermanentFailure(t *testing.T) {
 		metric.New(
 			"first",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42,
 			},
 			time.Unix(1, 0),
@@ -778,7 +778,7 @@ func TestWriteSendsRemainingTimestampGroupsAfterPermanentFailure(t *testing.T) {
 		metric.New(
 			"second",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": 43,
 			},
 			time.Unix(2, 0),
@@ -815,7 +815,7 @@ func TestWriteRetryableOnLaterChunkPropagates(t *testing.T) {
 		input = append(input, metric.New(
 			fmt.Sprintf("series_%03d", i),
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42,
 			},
 			time.Unix(1, 0),
@@ -853,7 +853,7 @@ func TestWritePermanentThenRetryableReturnsError(t *testing.T) {
 		input = append(input, metric.New(
 			fmt.Sprintf("series_%03d", i),
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42,
 			},
 			time.Unix(1, 0),
@@ -950,7 +950,7 @@ func TestIntervalEndpoints(t *testing.T) {
 			map[string]string{
 				"foo": "bar",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42,
 			},
 			now,
@@ -960,7 +960,7 @@ func TestIntervalEndpoints(t *testing.T) {
 			map[string]string{
 				"foo": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 43,
 			},
 			later,
@@ -970,7 +970,7 @@ func TestIntervalEndpoints(t *testing.T) {
 			map[string]string{
 				"foo": "bar",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42,
 			},
 			now,
@@ -980,7 +980,7 @@ func TestIntervalEndpoints(t *testing.T) {
 			map[string]string{
 				"foo": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 43,
 			},
 			later,
@@ -1026,7 +1026,7 @@ func TestTypedValuesSource(t *testing.T) {
 	tests := []struct {
 		name     string
 		key      string
-		expected interface{}
+		expected any
 		value    any
 	}{
 		{
@@ -1067,7 +1067,7 @@ func TestTypedValuesInt64(t *testing.T) {
 	tests := []struct {
 		name     string
 		key      string
-		expected interface{}
+		expected any
 		value    any
 	}{
 		{
@@ -1125,7 +1125,7 @@ func TestMetricNamePath(t *testing.T) {
 		map[string]string{
 			"foo": "bar",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"value": 42,
 		},
 		time.Now(),
@@ -1148,7 +1148,7 @@ func TestMetricNameOfficial(t *testing.T) {
 			metric: metric.New(
 				"uptime",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42,
 				},
 				time.Now(),
@@ -1162,7 +1162,7 @@ func TestMetricNameOfficial(t *testing.T) {
 			metric: metric.New(
 				"uptime",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42,
 				},
 				time.Now(),
@@ -1176,7 +1176,7 @@ func TestMetricNameOfficial(t *testing.T) {
 			metric: metric.New(
 				"uptime",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42,
 				},
 				time.Now(),
@@ -1190,7 +1190,7 @@ func TestMetricNameOfficial(t *testing.T) {
 			metric: metric.New(
 				"uptime",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42,
 				},
 				time.Now(),
@@ -1204,7 +1204,7 @@ func TestMetricNameOfficial(t *testing.T) {
 			metric: metric.New(
 				"uptime",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42,
 				},
 				time.Now(),
@@ -1246,7 +1246,7 @@ func TestGenerateHistogramName(t *testing.T) {
 			metric: metric.New(
 				"uptime",
 				map[string]string{},
-				map[string]interface{}{"value": 42},
+				map[string]any{"value": 42},
 				time.Now(),
 				telegraf.Histogram,
 			),
@@ -1260,7 +1260,7 @@ func TestGenerateHistogramName(t *testing.T) {
 			metric: metric.New(
 				"uptime",
 				map[string]string{},
-				map[string]interface{}{"value": 42},
+				map[string]any{"value": 42},
 				time.Now(),
 				telegraf.Histogram,
 			),
@@ -1274,7 +1274,7 @@ func TestGenerateHistogramName(t *testing.T) {
 			metric: metric.New(
 				"uptime",
 				map[string]string{},
-				map[string]interface{}{"value": 42},
+				map[string]any{"value": 42},
 				time.Now(),
 				telegraf.Histogram,
 			),
@@ -1288,7 +1288,7 @@ func TestGenerateHistogramName(t *testing.T) {
 			metric: metric.New(
 				"uptime",
 				map[string]string{},
-				map[string]interface{}{"value": 42},
+				map[string]any{"value": 42},
 				time.Now(),
 				telegraf.Histogram,
 			),
@@ -1302,7 +1302,7 @@ func TestGenerateHistogramName(t *testing.T) {
 			metric: metric.New(
 				"uptime",
 				map[string]string{},
-				map[string]interface{}{"value": 42},
+				map[string]any{"value": 42},
 				time.Now(),
 				telegraf.Histogram,
 			),
@@ -1316,7 +1316,7 @@ func TestGenerateHistogramName(t *testing.T) {
 			metric: metric.New(
 				"uptime",
 				map[string]string{},
-				map[string]interface{}{"value": 42},
+				map[string]any{"value": 42},
 				time.Now(),
 				telegraf.Histogram,
 			),
@@ -1391,7 +1391,7 @@ func TestBuildHistogram(t *testing.T) {
 	m := metric.New(
 		"http_server_duration",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"sum":   1,
 			"count": 2,
 			"5.0":   0.0,

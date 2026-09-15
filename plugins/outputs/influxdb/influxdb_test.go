@@ -223,7 +223,7 @@ func TestWriteRecreateDatabaseIfDatabaseNotFound(t *testing.T) {
 	m := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": 42.0,
 		},
 		time.Unix(0, 0),
@@ -303,7 +303,7 @@ func TestBytesWrittenHTTP(t *testing.T) {
 			map[string]string{
 				"database": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(42),
 			},
 			time.Unix(0, 0),
@@ -365,7 +365,7 @@ func TestBytesWrittenHTTPGzip(t *testing.T) {
 			map[string]string{
 				"database": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(42),
 			},
 			time.Unix(0, 0),
@@ -421,7 +421,7 @@ func TestBytesWrittenUDP(t *testing.T) {
 			map[string]string{
 				"database": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(42),
 			},
 			time.Unix(0, 0),
@@ -474,7 +474,7 @@ func BenchmarkWrite1k(b *testing.B) {
 			map[string]string{
 				"database": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(i),
 			},
 			time.Unix(0, 0),
@@ -531,7 +531,7 @@ func BenchmarkWrite5k(b *testing.B) {
 			map[string]string{
 				"database": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(i),
 			},
 			time.Unix(0, 0),
@@ -588,7 +588,7 @@ func BenchmarkWrite10k(b *testing.B) {
 			map[string]string{
 				"database": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(i),
 			},
 			time.Unix(0, 0),
@@ -645,7 +645,7 @@ func BenchmarkWrite25k(b *testing.B) {
 			map[string]string{
 				"database": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(i),
 			},
 			time.Unix(0, 0),
@@ -702,7 +702,7 @@ func BenchmarkWrite50k(b *testing.B) {
 			map[string]string{
 				"database": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(i),
 			},
 			time.Unix(0, 0),
@@ -759,7 +759,7 @@ func BenchmarkWrite100k(b *testing.B) {
 			map[string]string{
 				"database": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(i),
 			},
 			time.Unix(0, 0),
