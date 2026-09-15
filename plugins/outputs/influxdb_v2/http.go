@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/alitto/pond/v2"
-	"golang.org/x/net/http2"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -97,11 +96,14 @@ func (c *httpClient) Init() error {
 			TLSClientConfig: c.tlsConfig,
 			DialContext:     dialerFunc,
 		}
+
 		if c.readIdleTimeout != 0 || c.pingTimeout != 0 {
-			http2Trans, err := http2.ConfigureTransports(transport)
-			if err == nil {
-				http2Trans.ReadIdleTimeout = time.Duration(c.readIdleTimeout)
-				http2Trans.PingTimeout = time.Duration(c.pingTimeout)
+			transport.Protocols = &http.Protocols{}
+			transport.Protocols.SetHTTP1(true)
+			transport.Protocols.SetHTTP2(true)
+			transport.HTTP2 = &http.HTTP2Config{
+				SendPingTimeout: time.Duration(c.readIdleTimeout),
+				PingTimeout:     time.Duration(c.pingTimeout),
 			}
 		}
 	case "unix":
