@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Intel Corporation
+// SPDX-License-Identifier: MIT
+
 package libvirt
 
 import (
@@ -388,6 +391,16 @@ var (
 				{Field: "cpu.cache.monitor.1.bank.0.bytes", Value: *golibvirt.NewTypedParamValueLlong(720896)},
 				{Field: "cpu.cache.monitor.1.bank.1.id", Value: *golibvirt.NewTypedParamValueLlong(1)},
 				{Field: "cpu.cache.monitor.1.bank.1.bytes", Value: *golibvirt.NewTypedParamValueLlong(8200192)},
+				{Field: "cpu.energy.monitor.count", Value: *golibvirt.NewTypedParamValueUint(1)},
+				{Field: "cpu.energy.monitor.0.name", Value: *golibvirt.NewTypedParamValueString("all_vcpus")},
+				{Field: "cpu.energy.monitor.0.vcpus", Value: *golibvirt.NewTypedParamValueString("0-9")},
+				{Field: "cpu.energy.monitor.0.pkg.count", Value: *golibvirt.NewTypedParamValueUint(2)},
+				{Field: "cpu.energy.monitor.0.pkg.0.id", Value: *golibvirt.NewTypedParamValueUint(0)},
+				{Field: "cpu.energy.monitor.0.pkg.0.core_energy", Value: *golibvirt.NewTypedParamValueDouble(1234.5)},
+				{Field: "cpu.energy.monitor.0.pkg.0.activity", Value: *golibvirt.NewTypedParamValueDouble(5678.25)},
+				{Field: "cpu.energy.monitor.0.pkg.1.id", Value: *golibvirt.NewTypedParamValueUint(1)},
+				{Field: "cpu.energy.monitor.0.pkg.1.core_energy", Value: *golibvirt.NewTypedParamValueDouble(9012.75)},
+				{Field: "cpu.energy.monitor.0.pkg.1.activity", Value: *golibvirt.NewTypedParamValueDouble(3456.5)},
 			},
 		},
 	}
@@ -695,6 +708,36 @@ var (
 			map[string]interface{}{
 				"id":    1,
 				"bytes": 8200192,
+			},
+			time.Now()),
+		metric.New("libvirt_cpu_energy_monitor_total",
+			map[string]string{"domain_name": "Droplet-844329"},
+			map[string]interface{}{
+				"count": uint64(1),
+			},
+			time.Now()),
+		metric.New("libvirt_cpu_energy_monitor",
+			map[string]string{"domain_name": "Droplet-844329", "energy_monitor_id": "0"},
+			map[string]interface{}{
+				"name":      "all_vcpus",
+				"vcpus":     "0-9",
+				"pkg_count": uint64(2),
+			},
+			time.Now()),
+		metric.New("libvirt_cpu_energy_monitor_pkg",
+			map[string]string{"domain_name": "Droplet-844329", "energy_monitor_id": "0", "pkg_index": "0"},
+			map[string]interface{}{
+				"id":          uint64(0),
+				"core_energy": 1234.5,
+				"activity":    5678.25,
+			},
+			time.Now()),
+		metric.New("libvirt_cpu_energy_monitor_pkg",
+			map[string]string{"domain_name": "Droplet-844329", "energy_monitor_id": "0", "pkg_index": "1"},
+			map[string]interface{}{
+				"id":          uint64(1),
+				"core_energy": 9012.75,
+				"activity":    3456.5,
 			},
 			time.Now()),
 	}
