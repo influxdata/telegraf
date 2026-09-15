@@ -16,7 +16,7 @@ func TestRetainsTags(t *testing.T) {
 	input := metric.New(
 		"m1",
 		map[string]string{"metric_tag": "from_metric"},
-		map[string]interface{}{"value": int64(1)},
+		map[string]any{"value": int64(1)},
 		time.Unix(0, 0),
 	)
 
@@ -24,13 +24,13 @@ func TestRetainsTags(t *testing.T) {
 		metric.New(
 			"m1",
 			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value": int64(1)},
+			map[string]any{"value": int64(1)},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"m1",
 			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value": int64(1)},
+			map[string]any{"value": int64(1)},
 			time.Unix(0, 0),
 		),
 	}
@@ -44,7 +44,7 @@ func TestAddTags(t *testing.T) {
 	input := metric.New(
 		"m1",
 		map[string]string{"metric_tag": "from_metric"},
-		map[string]interface{}{"value": int64(1)},
+		map[string]any{"value": int64(1)},
 		time.Unix(0, 0),
 	)
 
@@ -56,13 +56,13 @@ func TestAddTags(t *testing.T) {
 				"added_tag":   "from_config",
 				"another_tag": "",
 			},
-			map[string]interface{}{"value": int64(1)},
+			map[string]any{"value": int64(1)},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"m1",
 			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value": int64(1)},
+			map[string]any{"value": int64(1)},
 			time.Unix(0, 0),
 		),
 	}
@@ -81,7 +81,7 @@ func TestOverwritesPresentTagValues(t *testing.T) {
 	input := metric.New(
 		"m1",
 		map[string]string{"metric_tag": "from_metric"},
-		map[string]interface{}{"value": int64(1)},
+		map[string]any{"value": int64(1)},
 		time.Unix(0, 0),
 	)
 
@@ -89,13 +89,13 @@ func TestOverwritesPresentTagValues(t *testing.T) {
 		metric.New(
 			"m1",
 			map[string]string{"metric_tag": "from_config"},
-			map[string]interface{}{"value": int64(1)},
+			map[string]any{"value": int64(1)},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"m1",
 			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value": int64(1)},
+			map[string]any{"value": int64(1)},
 			time.Unix(0, 0),
 		),
 	}
@@ -111,7 +111,7 @@ func TestOverridesName(t *testing.T) {
 	input := metric.New(
 		"m1",
 		map[string]string{"metric_tag": "from_metric"},
-		map[string]interface{}{"value": int64(1)},
+		map[string]any{"value": int64(1)},
 		time.Unix(0, 0),
 	)
 
@@ -119,13 +119,13 @@ func TestOverridesName(t *testing.T) {
 		metric.New(
 			"overridden",
 			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value": int64(1)},
+			map[string]any{"value": int64(1)},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"m1",
 			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value": int64(1)},
+			map[string]any{"value": int64(1)},
 			time.Unix(0, 0),
 		),
 	}
@@ -139,7 +139,7 @@ func TestNamePrefix(t *testing.T) {
 	input := metric.New(
 		"m1",
 		map[string]string{"metric_tag": "from_metric"},
-		map[string]interface{}{"value": int64(1)},
+		map[string]any{"value": int64(1)},
 		time.Unix(0, 0),
 	)
 
@@ -147,13 +147,13 @@ func TestNamePrefix(t *testing.T) {
 		metric.New(
 			"Pre-m1",
 			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value": int64(1)},
+			map[string]any{"value": int64(1)},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"m1",
 			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value": int64(1)},
+			map[string]any{"value": int64(1)},
 			time.Unix(0, 0),
 		),
 	}
@@ -167,7 +167,7 @@ func TestNameSuffix(t *testing.T) {
 	input := metric.New(
 		"m1",
 		map[string]string{"metric_tag": "from_metric"},
-		map[string]interface{}{"value": int64(1)},
+		map[string]any{"value": int64(1)},
 		time.Unix(0, 0),
 	)
 
@@ -175,13 +175,13 @@ func TestNameSuffix(t *testing.T) {
 		metric.New(
 			"m1-suff",
 			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value": int64(1)},
+			map[string]any{"value": int64(1)},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"m1",
 			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value": int64(1)},
+			map[string]any{"value": int64(1)},
 			time.Unix(0, 0),
 		),
 	}
@@ -196,13 +196,13 @@ func TestTracking(t *testing.T) {
 		metric.New(
 			"m1",
 			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value": int64(1)},
+			map[string]any{"value": int64(1)},
 			time.Now(),
 		),
 		metric.New(
 			"m2",
 			map[string]string{"metric_tag": "foo_metric"},
-			map[string]interface{}{"value": int64(2)},
+			map[string]any{"value": int64(2)},
 			time.Now(),
 		),
 	}

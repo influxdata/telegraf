@@ -179,7 +179,7 @@ func (t *TopK) groupBy(m telegraf.Metric) {
 	}
 }
 
-func convert(in interface{}) (float64, bool) {
+func convert(in any) (float64, bool) {
 	switch v := in.(type) {
 	case float64:
 		return v, true
