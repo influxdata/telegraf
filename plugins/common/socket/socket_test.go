@@ -869,7 +869,7 @@ func TestNewSocketServiceAddressParsing(t *testing.T) {
 		{name: "udp all addresses no interface name", address: "udp://:8094", url: "udp://:8094"},
 		{name: "udp4 all interfaces no interface name", address: "udp4://:8094", url: "udp4://:8094"},
 		{name: "udp6 all interfaces no interface name", address: "udp6://:8094", url: "udp6://:8094"},
-		{name: "vsock with port", address: "vsock://cid:80", url: "vsock://cid:80"},
+		{name: "vsock with port", address: "vsock://3:80", url: "vsock://3:80"},
 		{name: "unix no interface name", address: "unix:///tmp/telegraf.sock", url: "unix:///tmp/telegraf.sock"},
 		{name: "unixgram no interface name", address: "unixgram:///tmp/telegraf.sock", url: "unixgram:///tmp/telegraf.sock"},
 		{name: "udp6 multicast no interface name", address: "udp6://[ff02::1]:8094", url: "udp6://[ff02::1]:8094"},
@@ -944,12 +944,12 @@ func TestVsockAddressParsing(t *testing.T) {
 
 func TestVsockAddressParsingInvalid(t *testing.T) {
 	tests := []struct {
-		name    string
-		address string
-		err     string
+		name     string
+		address  string
+		expected string
 	}{
-		{name: "missing port", address: "vsock://2", err: "port and/or CID number missing"},
-		{name: "invalid CID", address: "vsock://cid:8790", err: "failed to parse CID cid"},
+		{name: "missing port", address: "vsock://2", expected: "port and/or CID number missing"},
+		{name: "invalid CID", address: "vsock://cid:8790", expected: "failed to parse CID cid"},
 	}
 
 	for _, tt := range tests {
@@ -959,8 +959,7 @@ func TestVsockAddressParsingInvalid(t *testing.T) {
 			require.NoError(t, err)
 
 			l := newStreamListener(s.Config, nil, testutil.Logger{})
-			err = l.setupVsock(s.url)
-			require.ErrorContains(t, err, tt.err)
+			require.ErrorContains(t, l.setupVsock(s.url), tt.expected)
 		})
 	}
 }
