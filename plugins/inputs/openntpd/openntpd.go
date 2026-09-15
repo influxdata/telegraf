@@ -127,8 +127,8 @@ func (n *Openntpd) Gather(acc telegraf.Accumulator) error {
 func parseStatusLine(line string, acc telegraf.Accumulator) {
 	fields := make(map[string]interface{}, 7)
 
-	parts := strings.Split(line, ", ")
-	for _, part := range parts {
+	parts := strings.SplitSeq(line, ", ")
+	for part := range parts {
 		part = strings.TrimSpace(part)
 		switch {
 		case strings.HasSuffix(part, "peers valid"):

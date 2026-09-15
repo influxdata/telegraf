@@ -262,7 +262,7 @@ func (a *Elasticsearch) processHeaders() http.Header {
 				RemovalIn: "1.45.0",
 				Notice:    "Use array syntax instead: [\"value1\", \"value2\"]",
 			})
-			for _, headerValue := range strings.Split(v, ",") {
+			for headerValue := range strings.SplitSeq(v, ",") {
 				headers.Add(key, strings.TrimSpace(headerValue))
 			}
 		case []interface{}:

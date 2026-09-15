@@ -25,7 +25,7 @@ func TestShimWorks(t *testing.T) {
 	out, err := r.ReadString('\n')
 	require.NoError(t, err)
 	require.Contains(t, out, "\n")
-	metricLine := strings.Split(out, "\n")[0]
+	metricLine, _, _ := strings.Cut(out, "\n")
 	require.Equal(t, "measurement,tag=tag field=1i 1234000005678", metricLine)
 }
 

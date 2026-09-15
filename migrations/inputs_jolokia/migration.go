@@ -136,8 +136,8 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 		// Construct the new path from the old attribute/path setting
 		contained := len(mbean) <= 1
 		if oldm.Attribute != "" {
-			attributes := strings.Split(oldm.Attribute, ",")
-			for _, a := range attributes {
+			attributes := strings.SplitSeq(oldm.Attribute, ",")
+			for a := range attributes {
 				if !contained && a == mbean[1] {
 					contained = true
 				}

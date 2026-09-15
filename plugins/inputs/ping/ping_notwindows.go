@@ -198,8 +198,8 @@ func processPingOutput(out string) (statistics, error) {
 
 	// Set this error to nil if we find a 'transmitted' line
 	err := errors.New("fatal error processing ping output")
-	lines := strings.Split(out, "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(out, "\n")
+	for line := range lines {
 		// Reading only first TTL, ignoring other TTL messages
 		if stats.ttl == -1 && (strings.Contains(line, "ttl=") || strings.Contains(line, "hlim=")) {
 			stats.ttl, err = getTTL(line)
@@ -280,7 +280,7 @@ func freeBSDMajorVersion() int {
 		return -1
 	}
 
-	majorVersionStr := strings.Split(string(out), ".")[0]
+	majorVersionStr, _, _ := strings.Cut(string(out), ".")
 	majorVersion, err := strconv.Atoi(majorVersionStr)
 	if err != nil {
 		return -1

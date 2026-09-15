@@ -526,7 +526,7 @@ func (m *Smart) scanDevices(ignoreExcludes bool, scanArgs ...string) ([]string, 
 		return nil, fmt.Errorf("failed to run command '%s %s': %w - %s", m.PathSmartctl, scanArgs, err, string(out))
 	}
 	var devices []string
-	for _, line := range strings.Split(string(out), "\n") {
+	for line := range strings.SplitSeq(string(out), "\n") {
 		dev := strings.Split(line, " ")
 		if len(dev) <= 1 {
 			continue
@@ -772,7 +772,7 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 			deviceTags["device_type"] = strings.TrimPrefix(deviceNode[1], "-d ")
 		}
 	} else {
-		deviceNode := strings.Split(device, " ")[0]
+		deviceNode, _, _ := strings.Cut(device, " ")
 		deviceTags["device"] = path.Base(deviceNode)
 	}
 
@@ -1111,7 +1111,7 @@ func parsePercentageInt(fields, deviceFields map[string]interface{}, str string)
 
 func parseDataUnits(fields, deviceFields map[string]interface{}, str string) error {
 	// Remove everything after '['
-	units := strings.Split(str, "[")[0]
+	units, _, _ := strings.Cut(str, "[")
 	return parseCommaSeparatedInt(fields, deviceFields, units)
 }
 

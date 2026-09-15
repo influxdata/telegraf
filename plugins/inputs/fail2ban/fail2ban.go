@@ -111,8 +111,8 @@ func (f *Fail2ban) Gather(acc telegraf.Accumulator) error {
 			return fmt.Errorf("failed to run command %q: %w - %s", strings.Join(cmd.Args, " "), err, string(out))
 		}
 
-		lines := strings.Split(string(out), "\n")
-		for _, line := range lines {
+		lines := strings.SplitSeq(string(out), "\n")
+		for line := range lines {
 			key, value := extractCount(line)
 			if key != "" {
 				fields[key] = value

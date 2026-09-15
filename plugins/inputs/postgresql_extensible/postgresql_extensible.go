@@ -84,7 +84,7 @@ func (p *Postgresql) Init() error {
 
 		q.additionalTags = make(map[string]bool)
 		if q.Tagvalue != "" {
-			for _, tag := range strings.Split(q.Tagvalue, ",") {
+			for tag := range strings.SplitSeq(q.Tagvalue, ",") {
 				q.additionalTags[tag] = true
 			}
 		}

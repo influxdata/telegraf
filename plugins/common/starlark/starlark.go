@@ -250,7 +250,7 @@ func (s *Common) Call(name string) (starlark.Value, error) {
 func (s *Common) LogError(err error) {
 	var evalErr *starlark.EvalError
 	if errors.As(err, &evalErr) {
-		for _, line := range strings.Split(evalErr.Backtrace(), "\n") {
+		for line := range strings.SplitSeq(evalErr.Backtrace(), "\n") {
 			s.Log.Error(line)
 		}
 	} else {

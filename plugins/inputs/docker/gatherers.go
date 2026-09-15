@@ -94,13 +94,13 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 		if name == "pool_blocksize" {
 			// pool blocksize
 			acc.AddFields("docker", map[string]interface{}{"pool_blocksize": value}, tags, now)
-		} else if strings.HasPrefix(name, "data_space_") {
+		} else if after, ok := strings.CutPrefix(name, "data_space_"); ok {
 			// data space
-			fieldName := strings.TrimPrefix(name, "data_space_")
+			fieldName := after
 			dataFields[fieldName] = value
-		} else if strings.HasPrefix(name, "metadata_space_") {
+		} else if after, ok := strings.CutPrefix(name, "metadata_space_"); ok {
 			// metadata space
-			fieldName := strings.TrimPrefix(name, "metadata_space_")
+			fieldName := after
 			metadataFields[fieldName] = value
 		}
 	}

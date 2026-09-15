@@ -30,8 +30,8 @@ func (e *eventhouse) init() error {
 
 	// Parse the connection string by splitting it into key-value pairs
 	// and extract the extra keys used for plugin configuration
-	pairs := strings.Split(e.connectionString, ";")
-	for _, pair := range pairs {
+	pairs := strings.SplitSeq(e.connectionString, ";")
+	for pair := range pairs {
 		// Skip empty pairs
 		if strings.TrimSpace(pair) == "" {
 			continue

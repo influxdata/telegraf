@@ -236,8 +236,8 @@ var fileFormats = [...]fileFormat{
 		name:    "Equal sign separated key-value pairs,  multiple lines with name",
 		pattern: fmt.Sprintf("^(%s( %s=%s)+\n)+$", keyPattern, keyPattern, valuePattern),
 		parser: func(measurement string, fields map[string]interface{}, b []byte) {
-			lines := strings.Split(string(b), "\n")
-			for _, line := range lines {
+			lines := strings.SplitSeq(string(b), "\n")
+			for line := range lines {
 				f := strings.Fields(line)
 				if len(f) == 0 {
 					continue

@@ -680,7 +680,7 @@ func (e *Elasticsearch) getCatMaster(url string) (string, error) {
 		return "", err
 	}
 
-	masterID := strings.Split(string(response), " ")[0]
+	masterID, _, _ := strings.Cut(string(response), " ")
 
 	return masterID, nil
 }
