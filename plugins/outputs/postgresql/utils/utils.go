@@ -84,7 +84,7 @@ func GetTagID(metric telegraf.Metric) int64 {
 
 // WaitGroup is similar to sync.WaitGroup, but allows interruptible waiting (e.g. a timeout).
 type WaitGroup struct {
-	count int32
+	count atomic.Int32
 	done  chan struct{}
 }
 
@@ -100,11 +100,11 @@ func (wg *WaitGroup) Add(i int32) {
 		panic("use of an already-done WaitGroup")
 	default:
 	}
-	atomic.AddInt32(&wg.count, i)
+	wg.count.Add(i)
 }
 
 func (wg *WaitGroup) Done() {
-	i := atomic.AddInt32(&wg.count, -1)
+	i := wg.count.Add(-1)
 	if i == 0 {
 		close(wg.done)
 	}
