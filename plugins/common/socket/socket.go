@@ -55,14 +55,18 @@ type Socket struct {
 }
 
 // interfaceNameFromServiceAddress extracts the interface name given either as
-// IPv6 zone id (e.g. "[ff02::1%eth0]:8094") or trailing the address
-// (e.g. "239.0.0.1:8094%eth0"), both at the same time are not allowed.
+// an IPv6 zone id (e.g. "[ff02::1%eth0]:8094") or trailing the address
+// (e.g. "239.0.0.1:8094%eth0"). Both at the same time are not allowed.
 func interfaceNameFromServiceAddress(address string) (string, error) {
-	// Split off the bracketed IPv6 host so its zone id is not taken as trailing name
+	// Split off a bracketed IPv6 host so its zone id is not taken as trailing
+	// name, the trailing name itself might contain brackets
 	var host string
 	rest := address
-	if idx := strings.LastIndex(address, "]"); idx >= 0 {
-		host, rest = address[:idx], address[idx+1:]
+	if _, after, found := strings.Cut(address, "://"); found {
+		rest = after
+	}
+	if strings.HasPrefix(rest, "[") {
+		host, rest, _ = strings.Cut(rest, "]")
 	}
 	_, zone, hasZone := strings.Cut(host, "%")
 	_, ifName, hasIfName := strings.Cut(rest, "%")

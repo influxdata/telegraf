@@ -881,7 +881,8 @@ func TestNewSocketServiceAddressParsing(t *testing.T) {
 		{name: "tcp6 ipv6 with interface name", address: "tcp6://[2001:db8::1]:8094%br-interface",
 			interfaceName: "br-interface", url: "tcp6://[2001:db8::1]:8094"},
 		{name: "tcp all addresses with interface name with period", address: "tcp://:8094%dev.name", interfaceName: "dev.name", url: "tcp://:8094"},
-		{name: "udp6 multicast with interface name", address: "udp6://[ff02::1]:8094%eth0", interfaceName: "eth0", url: "udp6://[ff02::1]:8094"},
+		{name: "udp4 multicast with interface name with brackets", address: "udp4://239.0.0.1:40000%Ethernet [2]",
+			interfaceName: "Ethernet [2]", url: "udp4://239.0.0.1:40000"},
 		{name: "udp4 multicast with interface name with spaces", address: "udp4://239.0.0.1:40000%vEthernet (Default Switch)",
 			interfaceName: "vEthernet (Default Switch)", url: "udp4://239.0.0.1:40000"},
 	}
