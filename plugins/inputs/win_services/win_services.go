@@ -145,8 +145,7 @@ func (m *WinServices) listServices(scmgr winServiceManager) ([]string, error) {
 }
 
 func isPermission(err error) bool {
-	var serviceErr *serviceError
-	if errors.As(err, &serviceErr) {
+	if serviceErr, ok := errors.AsType[*serviceError](err); ok {
 		return errors.Is(serviceErr, fs.ErrPermission)
 	}
 	return false

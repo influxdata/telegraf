@@ -492,8 +492,7 @@ func (m *WinPerfCounters) parseConfig() error {
 }
 
 func (m *WinPerfCounters) checkError(err error) error {
-	var pdhErr *pdhError
-	if errors.As(err, &pdhErr) {
+	if pdhErr, ok := errors.AsType[*pdhError](err); ok {
 		for _, ignoredErrors := range m.IgnoredErrors {
 			if pdhErrors[pdhErr.errorCode] == ignoredErrors {
 				return nil

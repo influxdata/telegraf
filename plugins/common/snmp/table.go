@@ -219,8 +219,7 @@ func (t Table) Build(gs Connection, walk bool) (*RTable, error) {
 				// Our callback always wraps errors in a walkError.
 				// If this error isn't a walkError, we know it's not
 				// from the callback
-				var walkErr *walkError
-				if !errors.As(err, &walkErr) {
+				if _, ok := errors.AsType[*walkError](err); !ok {
 					return nil, fmt.Errorf("performing bulk walk for field %s: %w", f.Name, err)
 				}
 			}
