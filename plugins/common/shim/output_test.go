@@ -40,7 +40,7 @@ func TestOutputShim(t *testing.T) {
 		map[string]string{
 			"a": "b",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"v": 1,
 		},
 		time.Now(),
@@ -86,7 +86,7 @@ func TestOutputShimWithBatchSize(t *testing.T) {
 		map[string]string{
 			"a": "b",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"v": 1,
 		},
 		time.Now(),
@@ -144,7 +144,7 @@ func TestOutputShimWithFlushTimeout(t *testing.T) {
 		map[string]string{
 			"a": "b",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"v": 1,
 		},
 		time.Now(),

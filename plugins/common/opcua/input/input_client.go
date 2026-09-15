@@ -368,7 +368,7 @@ type EventNodeMetricMapping struct {
 // NodeValue The received value for a node
 type NodeValue struct {
 	TagName    string
-	Value      interface{}
+	Value      any
 	Quality    ua.StatusCode
 	ServerTime time.Time
 	SourceTime time.Time
@@ -685,7 +685,7 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 		tags[k] = v
 	}
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	if o.LastReceivedData[nodeIdx].Value != nil {
 		// Simple scalar types can be stored directly under the field name while
 		// arrays (see 5.2.5) and structures (see 5.2.6) must be unpacked.
@@ -728,7 +728,7 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 				o.Log.Errorf("could not unpack variant array of type: %T", typedValue)
 			}
 		} else {
-			fields = map[string]interface{}{
+			fields = map[string]any{
 				nmm.Tag.FieldName: o.LastReceivedData[nodeIdx].Value,
 			}
 		}
@@ -760,8 +760,8 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 	return metric.New(nmm.metricName, tags, fields, t)
 }
 
-func unpack[Slice ~[]E, E any](prefix string, value Slice) map[string]interface{} {
-	fields := make(map[string]interface{}, len(value))
+func unpack[Slice ~[]E, E any](prefix string, value Slice) map[string]any {
+	fields := make(map[string]any, len(value))
 	for i, v := range value {
 		key := fmt.Sprintf("%s[%d]", prefix, i)
 		fields[key] = v
@@ -771,7 +771,7 @@ func unpack[Slice ~[]E, E any](prefix string, value Slice) map[string]interface{
 
 func (o *OpcUAInputClient) MetricForEvent(nodeIdx int, event *ua.EventFieldList) telegraf.Metric {
 	node := o.EventNodeMetricMapping[nodeIdx]
-	fields := make(map[string]interface{}, len(event.EventFields))
+	fields := make(map[string]any, len(event.EventFields))
 	var sourceTime, serverTime time.Time
 	for i, field := range event.EventFields {
 		name := node.Fields[i]

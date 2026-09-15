@@ -267,10 +267,10 @@ func (n *netsnmpTranslator) snmpTranslateCall(oid string) (mibName string, oidNu
 	return mibName, oidNum, oidText, conversion, nil
 }
 
-func (*netsnmpTranslator) SnmpFormatEnum(string, interface{}, bool) (string, error) {
+func (*netsnmpTranslator) SnmpFormatEnum(string, any, bool) (string, error) {
 	return "", errors.New("not implemented in netsnmp translator")
 }
 
-func (*netsnmpTranslator) SnmpFormatDisplayHint(string, interface{}) (string, error) {
+func (*netsnmpTranslator) SnmpFormatDisplayHint(string, any) (string, error) {
 	return "", errors.New("not implemented in netsnmp translator")
 }

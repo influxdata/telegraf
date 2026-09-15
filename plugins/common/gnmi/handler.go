@@ -364,7 +364,7 @@ func (h *Handler) handleDeletes(acc telegraf.Accumulator, deletes []*gnmi.Path, 
 			tags["path"] = aliasInfo.String()
 		}
 
-		fields := map[string]interface{}{"operation": "delete"}
+		fields := map[string]any{"operation": "delete"}
 		acc.AddFields(name, fields, tags, timestamp)
 	}
 }
