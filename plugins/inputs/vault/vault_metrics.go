@@ -14,16 +14,16 @@ type baseInfo struct {
 
 type gauge struct {
 	baseInfo
-	Value int `json:"Value"`
+	Value float64 `json:"Value"`
 }
 
 type counter struct {
 	baseInfo
 	Count  int     `json:"Count"`
 	Rate   float64 `json:"Rate"`
-	Sum    int     `json:"Sum"`
-	Min    int     `json:"Min"`
-	Max    int     `json:"Max"`
+	Sum    float64 `json:"Sum"`
+	Min    float64 `json:"Min"`
+	Max    float64 `json:"Max"`
 	Mean   float64 `json:"Mean"`
 	Stddev float64 `json:"Stddev"`
 }

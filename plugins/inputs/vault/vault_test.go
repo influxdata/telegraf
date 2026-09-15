@@ -33,9 +33,9 @@ func TestVaultStats(t *testing.T) {
 					map[string]interface{}{
 						"count":  int(130),
 						"rate":   float64(0.2),
-						"sum":    int(2),
-						"min":    int(0),
-						"max":    int(1),
+						"sum":    float64(2),
+						"min":    float64(0),
+						"max":    float64(1),
 						"mean":   float64(0.015384615384615385),
 						"stddev": float64(0.12355304447984486),
 					},
@@ -48,7 +48,16 @@ func TestVaultStats(t *testing.T) {
 						"cluster": "vault-cluster-23b671c7",
 					},
 					map[string]interface{}{
-						"value": int(1),
+						"value": float64(1),
+					},
+					time.Unix(1638287340, 0),
+					2,
+				),
+				metric.New(
+					"vault.wal.write_controller.idle_secs",
+					map[string]string{},
+					map[string]interface{}{
+						"value": float64(679114.3),
 					},
 					time.Unix(1638287340, 0),
 					2,
@@ -119,9 +128,9 @@ func TestRedirect(t *testing.T) {
 			map[string]interface{}{
 				"count":  int(130),
 				"rate":   float64(0.2),
-				"sum":    int(2),
-				"min":    int(0),
-				"max":    int(1),
+				"sum":    float64(2),
+				"min":    float64(0),
+				"max":    float64(1),
 				"mean":   float64(0.015384615384615385),
 				"stddev": float64(0.12355304447984486),
 			},
@@ -134,7 +143,16 @@ func TestRedirect(t *testing.T) {
 				"cluster": "vault-cluster-23b671c7",
 			},
 			map[string]interface{}{
-				"value": int(1),
+				"value": float64(1),
+			},
+			time.Unix(1638287340, 0),
+			2,
+		),
+		metric.New(
+			"vault.wal.write_controller.idle_secs",
+			map[string]string{},
+			map[string]interface{}{
+				"value": float64(679114.3),
 			},
 			time.Unix(1638287340, 0),
 			2,
