@@ -41,8 +41,7 @@ func (p *Ping) pingToURL(acc telegraf.Accumulator, u string) {
 		// the output.
 		// Linux iputils-ping returns 1, BSD-derived ping returns 2.
 		status := -1
-		var exitError *exec.ExitError
-		if errors.As(err, &exitError) {
+		if exitError, ok := errors.AsType[*exec.ExitError](err); ok {
 			if ws, ok := exitError.Sys().(syscall.WaitStatus); ok {
 				status = ws.ExitStatus()
 				fields["result_code"] = status
