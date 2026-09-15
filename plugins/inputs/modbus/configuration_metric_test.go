@@ -20,7 +20,6 @@ func TestMetric(t *testing.T) {
 		Controller:        "tcp://localhost:1502",
 		ConfigurationType: "metric",
 		Log:               testutil.Logger{},
-
 		Metrics: []metricDefinition{
 			{
 				SlaveID:     1,
@@ -138,7 +137,8 @@ func TestMetric(t *testing.T) {
 					"device":   "mydevice",
 				},
 			},
-		}}
+		},
+	}
 
 	require.NoError(t, plugin.Init())
 	require.NotEmpty(t, plugin.requests)
@@ -189,7 +189,6 @@ func TestMetricResult(t *testing.T) {
 		Controller:        "tcp://localhost:1502",
 		ConfigurationType: "metric",
 		Log:               testutil.Logger{},
-
 		Metrics: []metricDefinition{
 			{
 				SlaveID:     1,
@@ -289,7 +288,8 @@ func TestMetricResult(t *testing.T) {
 					},
 				},
 			},
-		}}
+		},
+	}
 	require.NoError(t, plugin.Init())
 
 	// Check the generated requests
@@ -376,7 +376,6 @@ func TestMetricAddressOverflow(t *testing.T) {
 		ConfigurationType: "metric",
 		Log:               logger,
 		Workarounds:       workarounds{ReadCoilsStartingAtZero: true},
-
 		Metrics: []metricDefinition{
 			{
 				SlaveID:     1,
@@ -391,7 +390,8 @@ func TestMetricAddressOverflow(t *testing.T) {
 					},
 				},
 			},
-		}}
+		},
+	}
 	require.ErrorIs(t, plugin.Init(), errAddressOverflow)
 }
 

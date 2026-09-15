@@ -176,14 +176,14 @@ func TestRetrySuccessful(t *testing.T) {
 		Controller: "tcp://localhost:1502",
 		Retries:    maxretries,
 		Log:        testutil.Logger{Quiet: true},
-
-		SlaveID: 1,
+		SlaveID:    1,
 		Coils: []fieldDefinition{
 			{
 				Name:    "retry_success",
 				Address: []uint16{0},
 			},
-		}}
+		},
+	}
 
 	expected := []telegraf.Metric{
 		metric.New(
@@ -229,14 +229,14 @@ func TestRetryFailExhausted(t *testing.T) {
 		Controller: "tcp://localhost:1502",
 		Retries:    maxretries,
 		Log:        testutil.Logger{Quiet: true},
-
-		SlaveID: 1,
+		SlaveID:    1,
 		Coils: []fieldDefinition{
 			{
 				Name:    "retry_fail",
 				Address: []uint16{0},
 			},
-		}}
+		},
+	}
 
 	var acc testutil.Accumulator
 	require.NoError(t, modbus.Init())
@@ -272,14 +272,14 @@ func TestRetryFailIllegal(t *testing.T) {
 		Controller: "tcp://localhost:1502",
 		Retries:    maxretries,
 		Log:        testutil.Logger{Quiet: true},
-
-		SlaveID: 1,
+		SlaveID:    1,
 		Coils: []fieldDefinition{
 			{
 				Name:    "retry_fail",
 				Address: []uint16{0},
 			},
-		}}
+		},
+	}
 
 	var acc testutil.Accumulator
 	require.NoError(t, modbus.Init())
@@ -492,8 +492,7 @@ func TestRegisterWorkaroundsOneRequestPerField(t *testing.T) {
 		ConfigurationType: "register",
 		Log:               testutil.Logger{Quiet: true},
 		Workarounds:       workarounds{OnRequestPerField: true},
-
-		SlaveID: 1,
+		SlaveID:           1,
 		HoldingRegisters: []fieldDefinition{
 			{
 				ByteOrder: "AB",
@@ -530,7 +529,8 @@ func TestRegisterWorkaroundsOneRequestPerField(t *testing.T) {
 				Address:   []uint16{5},
 				Scale:     1.0,
 			},
-		}}
+		},
+	}
 	require.NoError(t, plugin.Init())
 	require.Len(t, plugin.requests[1].holding, len(plugin.HoldingRegisters))
 }
@@ -542,8 +542,7 @@ func TestRequestsWorkaroundsReadCoilsStartingAtZeroRegister(t *testing.T) {
 		ConfigurationType: "register",
 		Log:               testutil.Logger{Quiet: true},
 		Workarounds:       workarounds{ReadCoilsStartingAtZero: true},
-
-		SlaveID: 1,
+		SlaveID:           1,
 		Coils: []fieldDefinition{
 			{
 				Name:    "coil-8",
@@ -553,7 +552,8 @@ func TestRequestsWorkaroundsReadCoilsStartingAtZeroRegister(t *testing.T) {
 				Name:    "coil-new-group",
 				Address: []uint16{maxQuantityCoils},
 			},
-		}}
+		},
+	}
 	require.NoError(t, plugin.Init())
 	require.Len(t, plugin.requests[1].coil, 2)
 

@@ -22,7 +22,6 @@ func TestRequest(t *testing.T) {
 		Controller:        "tcp://localhost:1502",
 		ConfigurationType: "request",
 		Log:               testutil.Logger{},
-
 		Requests: []requestDefinition{
 			{
 				SlaveID:      1,
@@ -171,7 +170,8 @@ func TestRequest(t *testing.T) {
 					},
 				},
 			},
-		}}
+		},
+	}
 
 	require.NoError(t, modbus.Init())
 	require.NotEmpty(t, modbus.requests)
@@ -188,7 +188,6 @@ func TestRequestWithTags(t *testing.T) {
 		Controller:        "tcp://localhost:1502",
 		ConfigurationType: "request",
 		Log:               testutil.Logger{},
-
 		Requests: []requestDefinition{
 			{
 				SlaveID:      1,
@@ -338,7 +337,8 @@ func TestRequestWithTags(t *testing.T) {
 					"third":  "ccc",
 				},
 			},
-		}}
+		},
+	}
 
 	require.NoError(t, modbus.Init())
 	require.NotEmpty(t, modbus.requests)
@@ -417,7 +417,6 @@ func TestRequestTypesCoil(t *testing.T) {
 				Controller:        "tcp://localhost:1502",
 				ConfigurationType: "request",
 				Log:               testutil.Logger{},
-
 				Requests: []requestDefinition{
 					{
 						SlaveID:      1,
@@ -431,7 +430,8 @@ func TestRequestTypesCoil(t *testing.T) {
 							},
 						},
 					},
-				}}
+				},
+			}
 
 			expected := []telegraf.Metric{
 				metric.New(
@@ -1044,7 +1044,6 @@ func TestRequestTypesHoldingABCD(t *testing.T) {
 				Controller:        "tcp://localhost:1502",
 				ConfigurationType: "request",
 				Log:               testutil.Logger{},
-
 				Requests: []requestDefinition{
 					{
 						SlaveID:      1,
@@ -1062,7 +1061,8 @@ func TestRequestTypesHoldingABCD(t *testing.T) {
 							},
 						},
 					},
-				}}
+				},
+			}
 
 			expected := []telegraf.Metric{
 				metric.New(
@@ -1667,7 +1667,6 @@ func TestRequestTypesHoldingDCBA(t *testing.T) {
 				Controller:        "tcp://localhost:1502",
 				ConfigurationType: "request",
 				Log:               testutil.Logger{},
-
 				Requests: []requestDefinition{
 					{
 						SlaveID:      1,
@@ -1684,7 +1683,8 @@ func TestRequestTypesHoldingDCBA(t *testing.T) {
 							},
 						},
 					},
-				}}
+				},
+			}
 
 			expected := []telegraf.Metric{
 				metric.New(
@@ -2087,8 +2087,7 @@ func TestRequestFail(t *testing.T) {
 				Controller:        "tcp://localhost:1502",
 				ConfigurationType: "request",
 				Log:               testutil.Logger{},
-
-				Requests: tt.requests}
+				Requests:          tt.requests}
 
 			require.ErrorContains(t, plugin.Init(), tt.errormsg)
 			require.Empty(t, plugin.requests)
@@ -2102,7 +2101,6 @@ func TestRequestStartingWithOmits(t *testing.T) {
 		Controller:        "tcp://localhost:1502",
 		ConfigurationType: "request",
 		Log:               testutil.Logger{},
-
 		Requests: []requestDefinition{
 			{
 				SlaveID:      1,
@@ -2128,7 +2126,8 @@ func TestRequestStartingWithOmits(t *testing.T) {
 					},
 				},
 			},
-		}}
+		},
+	}
 	require.NoError(t, modbus.Init())
 	require.NotEmpty(t, modbus.requests)
 	require.NotNil(t, modbus.requests[1])
@@ -2172,7 +2171,6 @@ func TestRequestWithOmittedFieldsOnly(t *testing.T) {
 		Controller:        "tcp://localhost:1502",
 		ConfigurationType: "request",
 		Log:               testutil.Logger{},
-
 		Requests: []requestDefinition{
 			{
 				SlaveID:      1,
@@ -2199,7 +2197,8 @@ func TestRequestWithOmittedFieldsOnly(t *testing.T) {
 					},
 				},
 			},
-		}}
+		},
+	}
 	require.NoError(t, modbus.Init())
 	require.Empty(t, modbus.requests)
 }
@@ -2210,7 +2209,6 @@ func TestRequestGroupWithOmittedFieldsOnly(t *testing.T) {
 		Controller:        "tcp://localhost:1502",
 		ConfigurationType: "request",
 		Log:               testutil.Logger{},
-
 		Requests: []requestDefinition{
 			{
 				SlaveID:      1,
@@ -2242,7 +2240,8 @@ func TestRequestGroupWithOmittedFieldsOnly(t *testing.T) {
 					},
 				},
 			},
-		}}
+		},
+	}
 	require.NoError(t, modbus.Init())
 	require.Len(t, modbus.requests, 1)
 	require.NotNil(t, modbus.requests[1])
@@ -2257,14 +2256,14 @@ func TestRequestEmptyFields(t *testing.T) {
 		Controller:        "tcp://localhost:1502",
 		ConfigurationType: "request",
 		Log:               testutil.Logger{},
-
 		Requests: []requestDefinition{
 			{
 				SlaveID:      1,
 				ByteOrder:    "ABCD",
 				RegisterType: "holding",
 			},
-		}}
+		},
+	}
 	err := modbus.Init()
 	require.ErrorContains(t, err, `found request section without fields`)
 }
@@ -2276,7 +2275,6 @@ func TestRequestMultipleSlavesOneFail(t *testing.T) {
 		Retries:           1,
 		ConfigurationType: "request",
 		Log:               testutil.Logger{},
-
 		Requests: []requestDefinition{
 			{
 				SlaveID:      1,
@@ -2314,7 +2312,8 @@ func TestRequestMultipleSlavesOneFail(t *testing.T) {
 					},
 				},
 			},
-		}}
+		},
+	}
 	require.NoError(t, modbus.Init())
 
 	serv := mbserver.NewServer()
@@ -2569,7 +2568,6 @@ func TestRequestOptimizationShrink(t *testing.T) {
 				Controller:        "tcp://localhost:1502",
 				ConfigurationType: "request",
 				Log:               testutil.Logger{},
-
 				Requests: []requestDefinition{
 					{
 						SlaveID:      slaveID,
@@ -2578,7 +2576,8 @@ func TestRequestOptimizationShrink(t *testing.T) {
 						Optimization: "shrink",
 						Fields:       requestFields,
 					},
-				}}
+				},
+			}
 			require.NoError(t, plugin.Init())
 			require.NotEmpty(t, plugin.requests)
 			require.Contains(t, plugin.requests, slaveID)
@@ -2770,7 +2769,6 @@ func TestRequestOptimizationRearrange(t *testing.T) {
 				Controller:        "tcp://localhost:1502",
 				ConfigurationType: "request",
 				Log:               testutil.Logger{},
-
 				Requests: []requestDefinition{
 					{
 						SlaveID:      slaveID,
@@ -2779,7 +2777,8 @@ func TestRequestOptimizationRearrange(t *testing.T) {
 						Optimization: "rearrange",
 						Fields:       requestFields,
 					},
-				}}
+				},
+			}
 			require.NoError(t, plugin.Init())
 			require.NotEmpty(t, plugin.requests)
 			require.Contains(t, plugin.requests, slaveID)
@@ -2841,8 +2840,7 @@ func TestRequestOptimizationMaxExtraRegisterFail(t *testing.T) {
 				Controller:        "tcp://localhost:1502",
 				ConfigurationType: "request",
 				Log:               testutil.Logger{},
-
-				Requests: tt.requests}
+				Requests:          tt.requests}
 
 			require.ErrorContains(t, plugin.Init(), tt.errormsg)
 			require.Empty(t, plugin.requests)
@@ -2964,7 +2962,6 @@ func TestRequestOptimizationMaxInsertSmall(t *testing.T) {
 				Controller:        "tcp://localhost:1502",
 				ConfigurationType: "request",
 				Log:               testutil.Logger{},
-
 				Requests: []requestDefinition{
 					{
 						SlaveID:           slaveID,
@@ -2974,7 +2971,8 @@ func TestRequestOptimizationMaxInsertSmall(t *testing.T) {
 						MaxExtraRegisters: maxExtraRegisters,
 						Fields:            requestFields,
 					},
-				}}
+				},
+			}
 			require.NoError(t, plugin.Init())
 			require.NotEmpty(t, plugin.requests)
 			require.Contains(t, plugin.requests, slaveID)
@@ -2989,7 +2987,6 @@ func TestRequestWorkaroundsOneRequestPerField(t *testing.T) {
 		ConfigurationType: "request",
 		Log:               testutil.Logger{},
 		Workarounds:       workarounds{OnRequestPerField: true},
-
 		Requests: []requestDefinition{
 			{
 				SlaveID:      1,
@@ -3023,7 +3020,8 @@ func TestRequestWorkaroundsOneRequestPerField(t *testing.T) {
 					},
 				},
 			},
-		}}
+		},
+	}
 	require.NoError(t, plugin.Init())
 	require.Len(t, plugin.requests[1].holding, len(plugin.Requests[0].Fields))
 }
@@ -3035,8 +3033,7 @@ func TestRequestWorkaroundsReadCoilsStartingAtZeroRequest(t *testing.T) {
 		ConfigurationType: "request",
 		Log:               testutil.Logger{},
 		Workarounds:       workarounds{ReadCoilsStartingAtZero: true},
-
-		SlaveID: 1,
+		SlaveID:           1,
 		Requests: []requestDefinition{
 			{
 				SlaveID:      1,
@@ -3052,7 +3049,8 @@ func TestRequestWorkaroundsReadCoilsStartingAtZeroRequest(t *testing.T) {
 					},
 				},
 			},
-		}}
+		},
+	}
 	require.NoError(t, plugin.Init())
 	require.Len(t, plugin.requests[1].coil, 2)
 
@@ -3074,7 +3072,6 @@ func TestRequestOverlap(t *testing.T) {
 		ConfigurationType: "request",
 		Log:               logger,
 		Workarounds:       workarounds{ReadCoilsStartingAtZero: true},
-
 		Requests: []requestDefinition{
 			{
 				SlaveID:           1,
@@ -3104,7 +3101,8 @@ func TestRequestOverlap(t *testing.T) {
 					},
 				},
 			},
-		}}
+		},
+	}
 	require.NoError(t, plugin.Init())
 
 	require.Eventually(t, func() bool {
@@ -3132,7 +3130,6 @@ func TestRequestAddressOverflow(t *testing.T) {
 		ConfigurationType: "request",
 		Log:               logger,
 		Workarounds:       workarounds{ReadCoilsStartingAtZero: true},
-
 		Requests: []requestDefinition{
 			{
 				SlaveID:      1,
@@ -3145,7 +3142,8 @@ func TestRequestAddressOverflow(t *testing.T) {
 					},
 				},
 			},
-		}}
+		},
+	}
 	require.ErrorIs(t, plugin.Init(), errAddressOverflow)
 }
 
