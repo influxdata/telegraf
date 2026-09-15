@@ -199,7 +199,7 @@ func escapeValueTests() []escapeValueTest {
 		{map[string]string{"foo": "bar"}, `{"foo" = 'bar'}`},
 		{map[string]string{"foo": "bar", "one": "more"}, `{"foo" = 'bar', "one" = 'more'}`},
 		{map[string]string{"f.oo": "bar", "o.n.e": "more"}, `{"f_oo" = 'bar', "o_n_e" = 'more'}`},
-		// map[string]interface{}
+		// map[string]any
 		{map[string]any{}, `{}`},
 		{map[string]any(nil), `{}`},
 		{map[string]any{"foo": "bar"}, `{"foo" = 'bar'}`},

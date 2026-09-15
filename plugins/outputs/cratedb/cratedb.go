@@ -171,7 +171,7 @@ func escapeValue(val any, keyReplacement string) (string, error) {
 	}
 }
 
-// convertMap converts m from map[string]string to map[string]interface{} by
+// convertMap converts m from map[string]string to map[string]any by
 // copying it. Generics, oh generics where art thou?
 func convertMap(m map[string]string) map[string]any {
 	c := make(map[string]any, len(m))

@@ -266,7 +266,7 @@ func (a *Elasticsearch) processHeaders() http.Header {
 				headers.Add(key, strings.TrimSpace(headerValue))
 			}
 		case []any:
-			// TOML might parse arrays as []interface{}
+			// TOML might parse arrays as []any
 			for _, headerValue := range v {
 				if strVal, ok := headerValue.(string); ok {
 					headers.Add(key, strings.TrimSpace(strVal))
