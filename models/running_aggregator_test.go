@@ -240,6 +240,27 @@ func TestRunningAggregatorAddDoesNotModifyMetric(t *testing.T) {
 	testutil.RequireMetricEqual(t, expected, m)
 }
 
+func TestRunningAggregatorPushResetsWindowOnLargeForwardJump(t *testing.T) {
+	// Regression guard for PR #16375: the drift safeguard must reset the
+	// window when the wall clock is beyond the expected window, such as
+	// after hibernation.
+	ra := NewRunningAggregator(&mockAggregator{}, &AggregatorConfig{
+		Name:   "TestRunningAggregator",
+		Filter: Filter{NamePass: []string{"*"}},
+		Period: 10 * time.Second,
+	})
+	require.NoError(t, ra.Config.Filter.Compile())
+	acc := testutil.Accumulator{}
+
+	staleEnd := time.Now().Add(-2 * time.Minute)
+	ra.UpdateWindow(staleEnd.Add(-ra.Config.Period), staleEnd)
+
+	ra.Push(&acc)
+
+	// After a reset the new window end lands in (now, now+period].
+	require.WithinDuration(t, time.Now(), ra.EndPeriod(), ra.Config.Period)
+}
+
 type mockAggregator struct {
 	sum int64
 }
