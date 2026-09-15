@@ -301,12 +301,8 @@ func (n *NeoomBeaam) queryThing(acc telegraf.Accumulator, thing thingDefinition)
 func init() {
 	inputs.Add("neoom_beaam", func() telegraf.Input {
 		return &NeoomBeaam{
-			HTTPClientConfig: chttp.HTTPClientConfig{
-				Timeout: config.Duration(5 * time.Second),
-				TransportConfig: chttp.TransportConfig{
-					ResponseHeaderTimeout: config.Duration(5 * time.Second),
-				},
-			},
+			Timeout:               config.Duration(5 * time.Second),
+			ResponseHeaderTimeout: config.Duration(5 * time.Second),
 		}
 	})
 }

@@ -363,7 +363,7 @@ func init() {
 			ImmediateFlush:       true,
 			SendInternalMetrics:  true,
 			HTTPMaximumBatchSize: 10000,
-			HTTPClientConfig:     common_http.HTTPClientConfig{Timeout: config.Duration(10 * time.Second)},
+			Timeout:              config.Duration(10 * time.Second),
 			CSPBaseURL:           "https://console.cloud.vmware.com",
 		}
 	})

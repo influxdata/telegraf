@@ -106,11 +106,9 @@ func TestPod(t *testing.T) {
 									Volumes: []corev1.Volume{
 										{
 											Name: "vol1",
-											VolumeSource: corev1.VolumeSource{
-												PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-													ClaimName: "pc1",
-													ReadOnly:  true,
-												},
+											PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+												ClaimName: "pc1",
+												ReadOnly:  true,
 											},
 										},
 										{
@@ -188,24 +186,22 @@ func TestPod(t *testing.T) {
 										},
 									},
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									OwnerReferences: []metav1.OwnerReference{
-										{
-											APIVersion: "apps/v1",
-											Kind:       "DaemonSet",
-											Name:       "forwarder",
-											Controller: new(true),
-										},
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "apps/v1",
+										Kind:       "DaemonSet",
+										Name:       "forwarder",
+										Controller: new(true),
 									},
-									Generation: 11232,
-									Namespace:  "ns1",
-									Name:       "pod1",
-									Labels: map[string]string{
-										"lab1": "v1",
-										"lab2": "v2",
-									},
-									CreationTimestamp: metav1.Time{Time: created},
 								},
+								Generation: 11232,
+								Namespace:  "ns1",
+								Name:       "pod1",
+								Labels: map[string]string{
+									"lab1": "v1",
+									"lab2": "v2",
+								},
+								CreationTimestamp: metav1.Time{Time: created},
 							},
 						},
 					},
@@ -500,11 +496,9 @@ func TestPodSelectorFilter(t *testing.T) {
 						Volumes: []corev1.Volume{
 							{
 								Name: "vol1",
-								VolumeSource: corev1.VolumeSource{
-									PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-										ClaimName: "pc1",
-										ReadOnly:  true,
-									},
+								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+									ClaimName: "pc1",
+									ReadOnly:  true,
 								},
 							},
 							{
@@ -554,24 +548,22 @@ func TestPodSelectorFilter(t *testing.T) {
 							},
 						},
 					},
-					ObjectMeta: metav1.ObjectMeta{
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "apps/v1",
-								Kind:       "DaemonSet",
-								Name:       "forwarder",
-								Controller: new(true),
-							},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "apps/v1",
+							Kind:       "DaemonSet",
+							Name:       "forwarder",
+							Controller: new(true),
 						},
-						Generation: 11232,
-						Namespace:  "ns1",
-						Name:       "pod1",
-						Labels: map[string]string{
-							"lab1": "v1",
-							"lab2": "v2",
-						},
-						CreationTimestamp: metav1.Time{Time: created},
 					},
+					Generation: 11232,
+					Namespace:  "ns1",
+					Name:       "pod1",
+					Labels: map[string]string{
+						"lab1": "v1",
+						"lab2": "v2",
+					},
+					CreationTimestamp: metav1.Time{Time: created},
 				},
 			},
 		},
@@ -757,11 +749,9 @@ func TestPodPendingContainers(t *testing.T) {
 									Volumes: []corev1.Volume{
 										{
 											Name: "vol1",
-											VolumeSource: corev1.VolumeSource{
-												PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-													ClaimName: "pc1",
-													ReadOnly:  true,
-												},
+											PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+												ClaimName: "pc1",
+												ReadOnly:  true,
 											},
 										},
 										{
@@ -797,24 +787,22 @@ func TestPodPendingContainers(t *testing.T) {
 										},
 									},
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									OwnerReferences: []metav1.OwnerReference{
-										{
-											APIVersion: "apps/v1",
-											Kind:       "DaemonSet",
-											Name:       "forwarder",
-											Controller: new(true),
-										},
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "apps/v1",
+										Kind:       "DaemonSet",
+										Name:       "forwarder",
+										Controller: new(true),
 									},
-									Generation: 11232,
-									Namespace:  "ns1",
-									Name:       "pod1",
-									Labels: map[string]string{
-										"lab1": "v1",
-										"lab2": "v2",
-									},
-									CreationTimestamp: metav1.Time{Time: created},
 								},
+								Generation: 11232,
+								Namespace:  "ns1",
+								Name:       "pod1",
+								Labels: map[string]string{
+									"lab1": "v1",
+									"lab2": "v2",
+								},
+								CreationTimestamp: metav1.Time{Time: created},
 							},
 						},
 					},

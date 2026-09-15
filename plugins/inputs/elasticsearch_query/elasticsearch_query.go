@@ -302,13 +302,9 @@ func getMetricField(response map[string]interface{}) (map[string]string, error) 
 func init() {
 	inputs.Add("elasticsearch_query", func() telegraf.Input {
 		return &ElasticsearchQuery{
-			HealthCheckInterval: config.Duration(15 * time.Minute),
-			HTTPClientConfig: common_http.HTTPClientConfig{
-				Timeout: config.Duration(5 * time.Second),
-				TransportConfig: common_http.TransportConfig{
-					ResponseHeaderTimeout: config.Duration(5 * time.Second),
-				},
-			},
+			HealthCheckInterval:   config.Duration(15 * time.Minute),
+			Timeout:               config.Duration(5 * time.Second),
+			ResponseHeaderTimeout: config.Duration(5 * time.Second),
 		}
 	})
 }

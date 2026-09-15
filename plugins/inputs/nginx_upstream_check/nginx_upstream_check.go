@@ -185,9 +185,7 @@ func newNginxUpstreamCheck() *NginxUpstreamCheck {
 		Method:     "GET",
 		Headers:    make(map[string]string),
 		HostHeader: "",
-		HTTPClientConfig: common_http.HTTPClientConfig{
-			Timeout: config.Duration(time.Second * 5),
-		},
+		Timeout:    config.Duration(time.Second * 5),
 	}
 }
 

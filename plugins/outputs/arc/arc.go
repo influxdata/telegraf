@@ -200,9 +200,7 @@ func (a *Arc) Write(metrics []telegraf.Metric) error {
 func init() {
 	outputs.Add("arc", func() telegraf.Output {
 		return &Arc{
-			HTTPClientConfig: common_http.HTTPClientConfig{
-				Timeout: config.Duration(5 * time.Second),
-			},
+			Timeout: config.Duration(5 * time.Second),
 		}
 	})
 }
