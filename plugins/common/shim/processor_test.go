@@ -63,7 +63,7 @@ func testSendAndReceive(t *testing.T, fieldKey, fieldValue string) {
 		map[string]string{
 			"a": "b",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"v":      1,
 			fieldKey: fieldValue,
 		},
