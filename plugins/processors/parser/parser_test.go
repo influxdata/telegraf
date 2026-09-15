@@ -51,7 +51,7 @@ func TestApply(t *testing.T) {
 				map[string]string{
 					"some": "tag",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"sample": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
 				},
 				time.Unix(1773239679, 0)),
@@ -64,7 +64,7 @@ func TestApply(t *testing.T) {
 						"msg":    "http request",
 						"method": "POST",
 					},
-					map[string]interface{}{},
+					map[string]any{},
 					time.Unix(0, 0)),
 			},
 			undefinedTimestamp: true,
@@ -87,7 +87,7 @@ func TestApply(t *testing.T) {
 				map[string]string{
 					"some": "tag",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"sample": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
 				},
 				time.Unix(1773239679, 0)),
@@ -101,7 +101,7 @@ func TestApply(t *testing.T) {
 						"msg":    "http request",
 						"method": "POST",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"sample": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
 					},
 					time.Unix(1773239679, 0)),
@@ -124,7 +124,7 @@ func TestApply(t *testing.T) {
 				map[string]string{
 					"some": "tag",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"sample": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
 				},
 				time.Unix(1773239679, 0)),
@@ -134,7 +134,7 @@ func TestApply(t *testing.T) {
 					map[string]string{
 						"some": "tag",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"sample": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
 					},
 					time.Unix(0, 0)),
@@ -146,7 +146,7 @@ func TestApply(t *testing.T) {
 						"msg":    "http request",
 						"method": "POST",
 					},
-					map[string]interface{}{},
+					map[string]any{},
 					time.Unix(0, 0)),
 			},
 			undefinedTimestamp: true,
@@ -159,7 +159,7 @@ func TestApply(t *testing.T) {
 			input: metric.New(
 				"influxField",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"message": "deal,computer_name=hosta message=\"stuff\" 1530654676316265790",
 				},
 				time.Unix(1773239679, 0)),
@@ -167,7 +167,7 @@ func TestApply(t *testing.T) {
 				metric.New(
 					"influxField",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"message": "deal,computer_name=hosta message=\"stuff\" 1530654676316265790",
 					},
 					time.Unix(0, 0)),
@@ -176,7 +176,7 @@ func TestApply(t *testing.T) {
 					map[string]string{
 						"computer_name": "hosta",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message": "stuff",
 					},
 					time.Unix(0, 0)),
@@ -194,7 +194,7 @@ func TestApply(t *testing.T) {
 				map[string]string{
 					"some": "tag",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"message": "deal,computer_name=hosta message=\"stuff\" 1530654676316265790",
 				},
 				time.Unix(1773239679, 0)),
@@ -205,7 +205,7 @@ func TestApply(t *testing.T) {
 						"computer_name": "hosta",
 						"some":          "tag",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message": "stuff",
 					},
 					time.Unix(1773239679, 0)),
@@ -221,7 +221,7 @@ func TestApply(t *testing.T) {
 			input: metric.New(
 				"success",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"grokSample": "127.0.0.1 - - [11/Dec/2013:00:01:45 -0800] \"" +
 						"GET /xampp/status.php HTTP/1.1\" 200 3891 \"http://cadenza/xampp/navi.php\" \"Mozilla/5.0 (Macintosh; " +
 						"Intel Mac OS X 10.9; rv:25.0) Gecko/20100101 Firefox/25.0\"",
@@ -234,7 +234,7 @@ func TestApply(t *testing.T) {
 						"resp_code": "200",
 						"verb":      "GET",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"resp_bytes":   int64(3891),
 						"auth":         "-",
 						"request":      "/xampp/status.php",
@@ -258,7 +258,7 @@ func TestApply(t *testing.T) {
 			input: metric.New(
 				"bigMeasure",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"field_1": `{"lvl":"info","msg":"http request"}`,
 					"field_2": `{"err":"fatal","fatal":"security threat"}`,
 				},
@@ -269,14 +269,14 @@ func TestApply(t *testing.T) {
 					map[string]string{
 						"lvl": "info",
 					},
-					map[string]interface{}{},
+					map[string]any{},
 					time.Unix(0, 0)),
 				metric.New(
 					"bigMeasure",
 					map[string]string{
 						"err": "fatal",
 					},
-					map[string]interface{}{},
+					map[string]any{},
 					time.Unix(0, 0)),
 			},
 			undefinedTimestamp: true,
@@ -292,7 +292,7 @@ func TestApply(t *testing.T) {
 			input: metric.New(
 				"bigMeasure",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"field_1": `{"lvl":"info","msg":"http request"}`,
 					"field_2": `{"err":"fatal","fatal":"security threat"}`,
 				},
@@ -306,7 +306,7 @@ func TestApply(t *testing.T) {
 						"err":   "fatal",
 						"fatal": "security threat",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"field_1": `{"lvl":"info","msg":"http request"}`,
 						"field_2": `{"err":"fatal","fatal":"security threat"}`,
 					},
@@ -323,7 +323,7 @@ func TestApply(t *testing.T) {
 			input: metric.New(
 				"bigMeasure",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"field_1": `{"lvl":"info","msg":"http request"}`,
 					"field_2": `{"err":"fatal","fatal":"security threat"}`,
 				},
@@ -332,7 +332,7 @@ func TestApply(t *testing.T) {
 				metric.New(
 					"bigMeasure",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"field_1": `{"lvl":"info","msg":"http request"}`,
 						"field_2": `{"err":"fatal","fatal":"security threat"}`,
 					},
@@ -343,7 +343,7 @@ func TestApply(t *testing.T) {
 						"lvl": "info",
 						"msg": "http request",
 					},
-					map[string]interface{}{},
+					map[string]any{},
 					time.Unix(0, 0)),
 				metric.New(
 					"bigMeasure",
@@ -351,7 +351,7 @@ func TestApply(t *testing.T) {
 						"err":   "fatal",
 						"fatal": "security threat",
 					},
-					map[string]interface{}{},
+					map[string]any{},
 					time.Unix(0, 0)),
 			},
 			undefinedTimestamp: true,
@@ -367,13 +367,13 @@ func TestApply(t *testing.T) {
 					"some":   "tag",
 					"sample": `ts=2018-07-24T19:43:40.275Z`,
 				},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"singleTag",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"ts": "2018-07-24T19:43:40.275Z",
 					},
 					time.Unix(0, 0)),
@@ -392,7 +392,7 @@ func TestApply(t *testing.T) {
 					"some":   "tag",
 					"sample": `ts=2018-07-24T19:43:40.275Z`,
 				},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
@@ -401,7 +401,7 @@ func TestApply(t *testing.T) {
 						"some":   "tag",
 						"sample": `ts=2018-07-24T19:43:40.275Z`,
 					},
-					map[string]interface{}{
+					map[string]any{
 						"ts": "2018-07-24T19:43:40.275Z",
 					},
 					time.Unix(1773239679, 0)),
@@ -418,7 +418,7 @@ func TestApply(t *testing.T) {
 					"some":   "tag",
 					"sample": `ts=2018-07-24T19:43:40.275Z`,
 				},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
@@ -427,12 +427,12 @@ func TestApply(t *testing.T) {
 						"some":   "tag",
 						"sample": `ts=2018-07-24T19:43:40.275Z`,
 					},
-					map[string]interface{}{},
+					map[string]any{},
 					time.Unix(0, 0)),
 				metric.New(
 					"singleTag",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"ts": "2018-07-24T19:43:40.275Z",
 					},
 					time.Unix(0, 0)),
@@ -449,7 +449,7 @@ func TestApply(t *testing.T) {
 			input: metric.New(
 				"success",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"good": `{"lvl":"info"}`,
 					"bad":  "why",
 				},
@@ -458,7 +458,7 @@ func TestApply(t *testing.T) {
 				metric.New(
 					"success",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"good": `{"lvl":"info"}`,
 						"bad":  "why",
 					},
@@ -468,7 +468,7 @@ func TestApply(t *testing.T) {
 					map[string]string{
 						"lvl": "info",
 					},
-					map[string]interface{}{},
+					map[string]any{},
 					time.Unix(0, 0)),
 			},
 			undefinedTimestamp: true,
@@ -483,7 +483,7 @@ func TestApply(t *testing.T) {
 			input: metric.New(
 				"success",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"bad":  "why",
 					"good": `{"lvl":"info"}`,
 					"ok":   `{"thing":"thang"}`,
@@ -493,7 +493,7 @@ func TestApply(t *testing.T) {
 				metric.New(
 					"success",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"bad":  "why",
 						"good": `{"lvl":"info"}`,
 						"ok":   `{"thing":"thang"}`,
@@ -504,14 +504,14 @@ func TestApply(t *testing.T) {
 					map[string]string{
 						"lvl": "info",
 					},
-					map[string]interface{}{},
+					map[string]any{},
 					time.Unix(0, 0)),
 				metric.New(
 					"success",
 					map[string]string{
 						"thing": "thang",
 					},
-					map[string]interface{}{},
+					map[string]any{},
 					time.Unix(0, 0)),
 			},
 			undefinedTimestamp: true,
@@ -529,7 +529,7 @@ func TestApply(t *testing.T) {
 				map[string]string{
 					"a": "tag",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"good": `{"lvl":"info"}`,
 					"bad":  "why",
 				},
@@ -541,7 +541,7 @@ func TestApply(t *testing.T) {
 						"a":   "tag",
 						"lvl": "info",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"good": `{"lvl":"info"}`,
 						"bad":  "why",
 					},
@@ -560,7 +560,7 @@ func TestApply(t *testing.T) {
 				map[string]string{
 					"thing": "tag",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"good": `{"lvl":"info"}`,
 					"bad":  "why",
 				},
@@ -571,7 +571,7 @@ func TestApply(t *testing.T) {
 					map[string]string{
 						"lvl": "info",
 					},
-					map[string]interface{}{},
+					map[string]any{},
 					time.Unix(0, 0)),
 			},
 			undefinedTimestamp: true,
@@ -591,13 +591,13 @@ func TestApply(t *testing.T) {
 			input: metric.New(
 				"myname",
 				map[string]string{},
-				map[string]interface{}{"value": "7.2"},
+				map[string]any{"value": "7.2"},
 				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"myname",
 					map[string]string{},
-					map[string]interface{}{"value": float64(7.2)},
+					map[string]any{"value": float64(7.2)},
 					time.Unix(1773239679, 0)),
 			},
 		},
@@ -610,13 +610,13 @@ func TestApply(t *testing.T) {
 			input: metric.New(
 				"myname",
 				map[string]string{},
-				map[string]interface{}{"value": "test value=7.2"},
+				map[string]any{"value": "test value=7.2"},
 				time.Unix(1773239679, 0)),
 			expected: []telegraf.Metric{
 				metric.New(
 					"test",
 					map[string]string{},
-					map[string]interface{}{"value": float64(7.2)},
+					map[string]any{"value": float64(7.2)},
 					time.Unix(1773239679, 0)),
 			},
 		},
@@ -631,7 +631,7 @@ func TestApply(t *testing.T) {
 			input: metric.New(
 				"myname",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": `{"timestamp": "2020-06-27 19:43:40", "value": 42.1}`,
 				},
 				time.Unix(1773239679, 0)),
@@ -639,7 +639,7 @@ func TestApply(t *testing.T) {
 				metric.New(
 					"myname",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": float64(42.1),
 					},
 					time.Unix(1593287020, 0)),
@@ -653,7 +653,7 @@ func TestApply(t *testing.T) {
 			input: metric.New(
 				"myname",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": `{"value": 42.1}`,
 				},
 				time.Unix(1773239679, 0)),
@@ -661,7 +661,7 @@ func TestApply(t *testing.T) {
 				metric.New(
 					"myname",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": float64(42.1),
 					},
 					time.Unix(1773239679, 0)),
@@ -679,7 +679,7 @@ func TestApply(t *testing.T) {
 			input: metric.New(
 				"myname",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": `{"timestamp": "2020-06-27 19:43:40", "a": 42.1, "b": 23.5}`,
 				},
 				time.Unix(1773239679, 0)),
@@ -687,7 +687,7 @@ func TestApply(t *testing.T) {
 				metric.New(
 					"myname",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": `{"timestamp": "2020-06-27 19:43:40", "a": 42.1, "b": 23.5}`,
 						"a":     float64(42.1),
 						"b":     float64(23.5),
@@ -704,7 +704,7 @@ func TestApply(t *testing.T) {
 			input: metric.New(
 				"myname",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": `{"a": 42.1, "b": 23.5}`,
 				},
 				time.Unix(1773239679, 0)),
@@ -712,7 +712,7 @@ func TestApply(t *testing.T) {
 				metric.New(
 					"myname",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": `{"a": 42.1, "b": 23.5}`,
 						"a":     float64(42.1),
 						"b":     float64(23.5),
@@ -776,7 +776,7 @@ func TestApply(t *testing.T) {
 			input: metric.New(
 				"myname",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": uint8(13),
 				},
 				time.Unix(1593287020, 0)),
@@ -784,7 +784,7 @@ func TestApply(t *testing.T) {
 				metric.New(
 					"myname",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value":   uint8(13),
 						"alarm_0": false,
 						"alarm_1": false,
@@ -812,7 +812,7 @@ func TestApply(t *testing.T) {
 				map[string]string{
 					"some": "tag",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"sample": `eyJ0ZXh0IjogInRlc3QgYmFzZTY0In0=`,
 				},
 				time.Unix(1773239679, 0)),
@@ -822,7 +822,7 @@ func TestApply(t *testing.T) {
 					map[string]string{
 						"text": "test base64",
 					},
-					map[string]interface{}{},
+					map[string]any{},
 					time.Unix(0, 0)),
 			},
 			undefinedTimestamp: true,
@@ -837,7 +837,7 @@ func TestApply(t *testing.T) {
 			input: metric.New(
 				"bigMeasure",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"field_1": `eyJsdmwiOiJpbmZvIiwibXNnIjoiaHR0cCByZXF1ZXN0In0=`,
 					"field_2": `eyJlcnIiOiJmYXRhbCIsImZhdGFsIjoic2VjdXJpdHkgdGhyZWF0In0=`,
 				},
@@ -849,7 +849,7 @@ func TestApply(t *testing.T) {
 						"lvl": "info",
 						"msg": "http request",
 					},
-					map[string]interface{}{},
+					map[string]any{},
 					time.Unix(0, 0)),
 				metric.New(
 					"bigMeasure",
@@ -857,7 +857,7 @@ func TestApply(t *testing.T) {
 						"err":   "fatal",
 						"fatal": "security threat",
 					},
-					map[string]interface{}{},
+					map[string]any{},
 					time.Unix(0, 0)),
 			},
 			undefinedTimestamp: true,
@@ -873,7 +873,7 @@ func TestApply(t *testing.T) {
 			input: metric.New(
 				"bigMeasure",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"field_1": `eyJsdmwiOiJpbmZvIiwibXNnIjoiaHR0cCByZXF1ZXN0In0=`,
 					"field_2": `{"err":"fatal","fatal":"security threat"}`,
 				},
@@ -885,7 +885,7 @@ func TestApply(t *testing.T) {
 						"lvl": "info",
 						"msg": "http request",
 					},
-					map[string]interface{}{},
+					map[string]any{},
 					time.Unix(0, 0)),
 				metric.New(
 					"bigMeasure",
@@ -893,7 +893,7 @@ func TestApply(t *testing.T) {
 						"err":   "fatal",
 						"fatal": "security threat",
 					},
-					map[string]interface{}{},
+					map[string]any{},
 					time.Unix(0, 0)),
 			},
 			undefinedTimestamp: true,
@@ -955,7 +955,7 @@ metric,status=fault value=42i 1773239679300000000
 					map[string]string{
 						"status": "ok",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(1),
 					},
 					time.Unix(0, 1773239679000000000),
@@ -965,7 +965,7 @@ metric,status=fault value=42i 1773239679300000000
 					map[string]string{
 						"status": "warn",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(23),
 					},
 					time.Unix(0, 1773239679100000000),
@@ -975,7 +975,7 @@ metric,status=fault value=42i 1773239679300000000
 					map[string]string{
 						"status": "ok",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(19),
 					},
 					time.Unix(0, 1773239679200000000),
@@ -985,7 +985,7 @@ metric,status=fault value=42i 1773239679300000000
 					map[string]string{
 						"status": "fault",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(42),
 					},
 					time.Unix(0, 1773239679300000000),
@@ -994,7 +994,7 @@ metric,status=fault value=42i 1773239679300000000
 				metric.New(
 					"test",
 					map[string]string{"source": "foo"},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"additional": true,
 					},
@@ -1019,7 +1019,7 @@ metric,status=fault value=42i 1773239679300000000
 						"source": "foo",
 						"status": "fault",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value":      int64(42),
 						"additional": true,
@@ -1045,7 +1045,7 @@ metric,status=fault value4=42i 1773239679300000000
 						"source": "foo",
 						"status": "fault",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value1":     int64(1),
 						"value2":     int64(23),
@@ -1074,7 +1074,7 @@ metric,status=fault value=42i 1773239679300000000
 						"source": "foo",
 						"status": "fault",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value":      int64(42),
 						"additional": true,
@@ -1100,7 +1100,7 @@ metric,status=fault value4=42i 1773239679300000000
 						"source": "foo",
 						"status": "fault",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value1":     int64(1),
 						"value2":     int64(23),
@@ -1129,7 +1129,7 @@ metric,status=fault value=42i 1773239679300000000
 						"source": "foo",
 						"status": "ok",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value":      int64(1),
 						"additional": true,
@@ -1142,7 +1142,7 @@ metric,status=fault value=42i 1773239679300000000
 						"source": "foo",
 						"status": "warn",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value":      int64(23),
 						"additional": true,
@@ -1155,7 +1155,7 @@ metric,status=fault value=42i 1773239679300000000
 						"source": "foo",
 						"status": "ok",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value":      int64(19),
 						"additional": true,
@@ -1168,7 +1168,7 @@ metric,status=fault value=42i 1773239679300000000
 						"source": "foo",
 						"status": "fault",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value":      int64(42),
 						"additional": true,
@@ -1179,7 +1179,7 @@ metric,status=fault value=42i 1773239679300000000
 				metric.New(
 					"test",
 					map[string]string{"source": "foo"},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"additional": true,
 					},
@@ -1204,7 +1204,7 @@ metric,status=fault value4=42i 1773239679300000000
 						"source": "foo",
 						"status": "ok",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value1":     int64(1),
 						"additional": true,
@@ -1217,7 +1217,7 @@ metric,status=fault value4=42i 1773239679300000000
 						"source": "foo",
 						"status": "warn",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value2":     int64(23),
 						"additional": true,
@@ -1230,7 +1230,7 @@ metric,status=fault value4=42i 1773239679300000000
 						"source": "foo",
 						"status": "ok",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value3":     int64(19),
 						"additional": true,
@@ -1243,7 +1243,7 @@ metric,status=fault value4=42i 1773239679300000000
 						"source": "foo",
 						"status": "fault",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value4":     int64(42),
 						"additional": true,
@@ -1254,7 +1254,7 @@ metric,status=fault value4=42i 1773239679300000000
 				metric.New(
 					"test",
 					map[string]string{"source": "foo"},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"additional": true,
 					},
@@ -1279,7 +1279,7 @@ metric,status=fault value=42i 1773239679300000000
 						"source": "foo",
 						"status": "ok",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value":      int64(1),
 						"additional": true,
@@ -1292,7 +1292,7 @@ metric,status=fault value=42i 1773239679300000000
 						"source": "foo",
 						"status": "warn",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value":      int64(23),
 						"additional": true,
@@ -1305,7 +1305,7 @@ metric,status=fault value=42i 1773239679300000000
 						"source": "foo",
 						"status": "ok",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value":      int64(19),
 						"additional": true,
@@ -1318,7 +1318,7 @@ metric,status=fault value=42i 1773239679300000000
 						"source": "foo",
 						"status": "fault",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value":      int64(42),
 						"additional": true,
@@ -1329,7 +1329,7 @@ metric,status=fault value=42i 1773239679300000000
 				metric.New(
 					"test",
 					map[string]string{"source": "foo"},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"additional": true,
 					},
@@ -1351,25 +1351,25 @@ metric,status=fault value=42i 1773239679300000000
 				metric.New(
 					"metric",
 					map[string]string{"status": "ok"},
-					map[string]interface{}{"value": int64(1)},
+					map[string]any{"value": int64(1)},
 					time.Unix(0, 1773239679000000000),
 				),
 				metric.New(
 					"metric",
 					map[string]string{"status": "warn"},
-					map[string]interface{}{"value": int64(23)},
+					map[string]any{"value": int64(23)},
 					time.Unix(0, 1773239679100000000),
 				),
 				metric.New(
 					"metric",
 					map[string]string{"status": "ok"},
-					map[string]interface{}{"value": int64(19)},
+					map[string]any{"value": int64(19)},
 					time.Unix(0, 1773239679200000000),
 				),
 				metric.New(
 					"metric",
 					map[string]string{"status": "fault"},
-					map[string]interface{}{"value": int64(42)},
+					map[string]any{"value": int64(42)},
 					time.Unix(0, 1773239679300000000),
 				),
 			},
@@ -1389,7 +1389,7 @@ metric,status=fault value=42i 1773239679300000000
 				metric.New(
 					"metric",
 					map[string]string{"status": "fault"},
-					map[string]interface{}{"value": int64(42)},
+					map[string]any{"value": int64(42)},
 					time.Unix(0, 1773239679000000000),
 				),
 			},
@@ -1409,7 +1409,7 @@ metric,status=fault value4=42i 1773239679300000000
 				metric.New(
 					"metric",
 					map[string]string{"status": "fault"},
-					map[string]interface{}{
+					map[string]any{
 						"value1": int64(1),
 						"value2": int64(23),
 						"value3": int64(19),
@@ -1434,7 +1434,7 @@ metric,status=fault value=42i 1773239679300000000
 				metric.New(
 					"metric",
 					map[string]string{"status": "fault"},
-					map[string]interface{}{"value": int64(42)},
+					map[string]any{"value": int64(42)},
 					time.Unix(0, 1773239679300000000),
 				),
 			},
@@ -1454,7 +1454,7 @@ metric,status=fault value4=42i 1773239679300000000
 				metric.New(
 					"metric",
 					map[string]string{"status": "fault"},
-					map[string]interface{}{
+					map[string]any{
 						"value1": int64(1),
 						"value2": int64(23),
 						"value3": int64(19),
@@ -1482,7 +1482,7 @@ metric,status=fault value=42i 1773239679300000000
 						"source": "foo",
 						"status": "ok",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value":      int64(1),
 						"additional": true,
@@ -1495,7 +1495,7 @@ metric,status=fault value=42i 1773239679300000000
 						"source": "foo",
 						"status": "warn",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value":      int64(23),
 						"additional": true,
@@ -1508,7 +1508,7 @@ metric,status=fault value=42i 1773239679300000000
 						"source": "foo",
 						"status": "ok",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value":      int64(19),
 						"additional": true,
@@ -1521,7 +1521,7 @@ metric,status=fault value=42i 1773239679300000000
 						"source": "foo",
 						"status": "fault",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value":      int64(42),
 						"additional": true,
@@ -1548,7 +1548,7 @@ metric,status=fault value4=42i 1773239679300000000
 						"source": "foo",
 						"status": "ok",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value1":     int64(1),
 						"additional": true,
@@ -1561,7 +1561,7 @@ metric,status=fault value4=42i 1773239679300000000
 						"source": "foo",
 						"status": "warn",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value2":     int64(23),
 						"additional": true,
@@ -1574,7 +1574,7 @@ metric,status=fault value4=42i 1773239679300000000
 						"source": "foo",
 						"status": "ok",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value3":     int64(19),
 						"additional": true,
@@ -1587,7 +1587,7 @@ metric,status=fault value4=42i 1773239679300000000
 						"source": "foo",
 						"status": "fault",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value4":     int64(42),
 						"additional": true,
@@ -1614,7 +1614,7 @@ metric,status=fault value=42i 1773239679300000000
 						"source": "foo",
 						"status": "ok",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value":      int64(1),
 						"additional": true,
@@ -1627,7 +1627,7 @@ metric,status=fault value=42i 1773239679300000000
 						"source": "foo",
 						"status": "warn",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value":      int64(23),
 						"additional": true,
@@ -1640,7 +1640,7 @@ metric,status=fault value=42i 1773239679300000000
 						"source": "foo",
 						"status": "ok",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value":      int64(19),
 						"additional": true,
@@ -1653,7 +1653,7 @@ metric,status=fault value=42i 1773239679300000000
 						"source": "foo",
 						"status": "fault",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message":    "<msg>",
 						"value":      int64(42),
 						"additional": true,
@@ -1684,7 +1684,7 @@ metric,status=fault value=42i 1773239679300000000
 			input := metric.New(
 				"test",
 				map[string]string{"source": "foo"},
-				map[string]interface{}{
+				map[string]any{
 					"message":    tt.msg,
 					"additional": true,
 				},
@@ -1728,7 +1728,7 @@ func TestBadApply(t *testing.T) {
 			input: metric.New(
 				"bad",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"some_field": 5,
 				},
 				time.Unix(0, 0)),
@@ -1736,7 +1736,7 @@ func TestBadApply(t *testing.T) {
 				metric.New(
 					"bad",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"some_field": 5,
 					},
 					time.Unix(0, 0)),
@@ -1749,7 +1749,7 @@ func TestBadApply(t *testing.T) {
 			input: metric.New(
 				"bad",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"some_field": 5,
 				},
 				time.Unix(0, 0)),
@@ -1757,7 +1757,7 @@ func TestBadApply(t *testing.T) {
 				metric.New(
 					"bad",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"some_field": 5,
 					},
 					time.Unix(0, 0)),
@@ -1788,7 +1788,7 @@ func TestBase64FieldValidation(t *testing.T) {
 	testMetric := metric.New(
 		"test",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"b": `eyJsdmwiOiJpbmZvIiwibXNnIjoiaHR0cCByZXF1ZXN0In0=`,
 		},
 		time.Unix(0, 0))
@@ -1863,7 +1863,7 @@ func TestTracking(t *testing.T) {
 			testMetric := metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"payload": tt.payload,
 				},
 				time.Unix(0, 0),
@@ -1928,7 +1928,7 @@ func BenchmarkFieldListing(b *testing.B) {
 		map[string]string{
 			"some": "tag",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"field0": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
 			"field1": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
 			"field2": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
@@ -1950,7 +1950,7 @@ func BenchmarkFields(b *testing.B) {
 		map[string]string{
 			"some": "tag",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"field0": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
 			"field1": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
 			"field2": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
@@ -1968,7 +1968,7 @@ func BenchmarkFields(b *testing.B) {
 
 // Internal
 
-func getMetricFields(m telegraf.Metric) interface{} {
+func getMetricFields(m telegraf.Metric) any {
 	key := "field3"
 	if v, ok := m.Fields()[key]; ok {
 		return v
@@ -1976,7 +1976,7 @@ func getMetricFields(m telegraf.Metric) interface{} {
 	return nil
 }
 
-func getMetricFieldList(m telegraf.Metric) interface{} {
+func getMetricFieldList(m telegraf.Metric) any {
 	key := "field3"
 	fields := m.FieldList()
 	for _, field := range fields {
