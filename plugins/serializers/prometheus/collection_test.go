@@ -7,7 +7,6 @@ import (
 
 	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
@@ -285,16 +284,16 @@ func TestCollectionExpire(t *testing.T) {
 						{
 							Label: make([]*dto.LabelPair, 0),
 							Histogram: &dto.Histogram{
-								SampleCount: proto.Uint64(4),
+								SampleCount: new(uint64(4)),
 								SampleSum:   new(20.0),
 								Bucket: []*dto.Bucket{
 									{
 										UpperBound:      new(0.05),
-										CumulativeCount: proto.Uint64(2),
+										CumulativeCount: new(uint64(2)),
 									},
 									{
 										UpperBound:      new(math.Inf(1)),
-										CumulativeCount: proto.Uint64(2),
+										CumulativeCount: new(uint64(2)),
 									},
 								},
 							},
@@ -396,16 +395,16 @@ func TestCollectionExpire(t *testing.T) {
 						{
 							Label: make([]*dto.LabelPair, 0),
 							Histogram: &dto.Histogram{
-								SampleCount: proto.Uint64(2),
+								SampleCount: new(uint64(2)),
 								SampleSum:   new(10.0),
 								Bucket: []*dto.Bucket{
 									{
 										UpperBound:      new(math.Inf(1)),
-										CumulativeCount: proto.Uint64(1),
+										CumulativeCount: new(uint64(1)),
 									},
 									{
 										UpperBound:      new(0.05),
-										CumulativeCount: proto.Uint64(1),
+										CumulativeCount: new(uint64(1)),
 									},
 								},
 							},
@@ -477,12 +476,12 @@ func TestCollectionExpire(t *testing.T) {
 						{
 							Label: make([]*dto.LabelPair, 0),
 							Summary: &dto.Summary{
-								SampleCount: proto.Uint64(2),
+								SampleCount: new(uint64(2)),
 								SampleSum:   new(2.0),
 								Quantile: []*dto.Quantile{
 									{
 										Quantile: new(0.01),
-										Value:    proto.Float64(2),
+										Value:    new(2.0),
 									},
 								},
 							},
@@ -573,16 +572,16 @@ func TestCollectionExpire(t *testing.T) {
 						{
 							Label: make([]*dto.LabelPair, 0),
 							Summary: &dto.Summary{
-								SampleSum:   proto.Float64(1),
-								SampleCount: proto.Uint64(1),
+								SampleSum:   new(1.0),
+								SampleCount: new(uint64(1)),
 								Quantile: []*dto.Quantile{
 									{
 										Quantile: new(0.5),
-										Value:    proto.Float64(10),
+										Value:    new(10.0),
 									},
 									{
 										Quantile: new(0.01),
-										Value:    proto.Float64(1),
+										Value:    new(1.0),
 									},
 								},
 							},
@@ -732,16 +731,16 @@ func TestExportTimestamps(t *testing.T) {
 							Label:       make([]*dto.LabelPair, 0),
 							TimestampMs: new(time.Unix(20, 0).UnixNano() / int64(time.Millisecond)),
 							Histogram: &dto.Histogram{
-								SampleCount: proto.Uint64(4),
+								SampleCount: new(uint64(4)),
 								SampleSum:   new(20.0),
 								Bucket: []*dto.Bucket{
 									{
 										UpperBound:      new(0.05),
-										CumulativeCount: proto.Uint64(2),
+										CumulativeCount: new(uint64(2)),
 									},
 									{
 										UpperBound:      new(math.Inf(1)),
-										CumulativeCount: proto.Uint64(2),
+										CumulativeCount: new(uint64(2)),
 									},
 								},
 							},
@@ -814,12 +813,12 @@ func TestExportTimestamps(t *testing.T) {
 							Label:       make([]*dto.LabelPair, 0),
 							TimestampMs: new(time.Unix(20, 0).UnixNano() / int64(time.Millisecond)),
 							Summary: &dto.Summary{
-								SampleCount: proto.Uint64(2),
+								SampleCount: new(uint64(2)),
 								SampleSum:   new(2.0),
 								Quantile: []*dto.Quantile{
 									{
 										Quantile: new(0.01),
-										Value:    proto.Float64(2),
+										Value:    new(2.0),
 									},
 								},
 							},
@@ -888,7 +887,7 @@ func TestCollectionUTF8NameSanitization(t *testing.T) {
 							Value: new("example.org"),
 						},
 					},
-					Untyped: &dto.Untyped{Value: proto.Float64(42)},
+					Untyped: &dto.Untyped{Value: new(42.0)},
 				},
 			},
 		},
@@ -926,7 +925,7 @@ func TestCollectionUTF8FallbackForInvalidUTF8(t *testing.T) {
 							Value: new("example.org"),
 						},
 					},
-					Untyped: &dto.Untyped{Value: proto.Float64(42)},
+					Untyped: &dto.Untyped{Value: new(42.0)},
 				},
 			},
 		},
@@ -973,7 +972,7 @@ func TestCollectionUTF8DropWhenFallbackBecomesEmpty(t *testing.T) {
 					Metric: []*dto.Metric{
 						{
 							Label:   make([]*dto.LabelPair, 0),
-							Untyped: &dto.Untyped{Value: proto.Float64(42)},
+							Untyped: &dto.Untyped{Value: new(42.0)},
 						},
 					},
 				},
