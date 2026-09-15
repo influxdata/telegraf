@@ -323,10 +323,7 @@ func (pi *pathInfo) relative(path *pathInfo, withNamespace bool) string {
 }
 
 func (pi *pathInfo) keepCommonPart(path *pathInfo) {
-	shortestLen := len(pi.segments)
-	if len(path.segments) < shortestLen {
-		shortestLen = len(path.segments)
-	}
+	shortestLen := min(len(path.segments), len(pi.segments))
 
 	// Compare the elements and stop as soon as they do mismatch
 	var matchLen int
