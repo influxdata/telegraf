@@ -62,7 +62,7 @@ func TestExternalOutputWorks(t *testing.T) {
 	m := metric.New(
 		"cpu",
 		map[string]string{"name": "cpu1"},
-		map[string]interface{}{"idle": 50, "sys": 30},
+		map[string]any{"idle": 50, "sys": 30},
 		now,
 	)
 
@@ -110,14 +110,14 @@ func TestBatchOutputWorks(t *testing.T) {
 	m := metric.New(
 		"cpu",
 		map[string]string{"name": "cpu1"},
-		map[string]interface{}{"idle": 50, "sys": 30},
+		map[string]any{"idle": 50, "sys": 30},
 		now,
 	)
 
 	m2 := metric.New(
 		"cpu",
 		map[string]string{"name": "cpu1"},
-		map[string]interface{}{"idle": 50, "sys": 30},
+		map[string]any{"idle": 50, "sys": 30},
 		now,
 	)
 
@@ -148,14 +148,14 @@ func TestPartiallyUnserializableThrowError(t *testing.T) {
 	m1 := metric.New(
 		"cpu",
 		map[string]string{"name": "cpu1"},
-		map[string]interface{}{"idle": 50, "sys": 30},
+		map[string]any{"idle": 50, "sys": 30},
 		now,
 	)
 
 	m2 := metric.New(
 		"cpu",
 		map[string]string{"name": "cpu2"},
-		map[string]interface{}{},
+		map[string]any{},
 		now,
 	)
 
@@ -185,14 +185,14 @@ func TestPartiallyUnserializableCanBeSkipped(t *testing.T) {
 	m1 := metric.New(
 		"cpu",
 		map[string]string{"name": "cpu1"},
-		map[string]interface{}{"idle": 50, "sys": 30},
+		map[string]any{"idle": 50, "sys": 30},
 		now,
 	)
 
 	m2 := metric.New(
 		"cpu",
 		map[string]string{"name": "cpu2"},
-		map[string]interface{}{},
+		map[string]any{},
 		now,
 	)
 
@@ -246,7 +246,7 @@ func runOutputConsumerProgram() {
 
 		expected := metric.New(metricName,
 			map[string]string{"name": "cpu1"},
-			map[string]interface{}{"idle": 50, "sys": 30},
+			map[string]any{"idle": 50, "sys": 30},
 			now,
 		)
 

@@ -18,7 +18,7 @@ func TestSyslogMapperWithDefaults(t *testing.T) {
 	m1 := metric.New(
 		"testmetric",
 		map[string]string{},
-		map[string]interface{}{},
+		map[string]any{},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	hostname, err := os.Hostname()
@@ -42,7 +42,7 @@ func TestSyslogMapperWithHostname(t *testing.T) {
 			"source":   "sourcevalue",
 			"host":     "hostvalue",
 		},
-		map[string]interface{}{},
+		map[string]any{},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	syslogMessage, err := s.mapper.MapMetricToSyslogMessage(m1)
@@ -62,7 +62,7 @@ func TestSyslogMapperWithHostnameSourceFallback(t *testing.T) {
 			"source": "sourcevalue",
 			"host":   "hostvalue",
 		},
-		map[string]interface{}{},
+		map[string]any{},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	syslogMessage, err := s.mapper.MapMetricToSyslogMessage(m1)
@@ -82,7 +82,7 @@ func TestSyslogMapperWithHostnameHostFallback(t *testing.T) {
 		map[string]string{
 			"host": "hostvalue",
 		},
-		map[string]interface{}{},
+		map[string]any{},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	syslogMessage, err := s.mapper.MapMetricToSyslogMessage(m1)
@@ -106,7 +106,7 @@ func TestSyslogMapperWithDefaultSdid(t *testing.T) {
 			"tag1":               "bar",
 			"default@32473_tag2": "foobar",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"severity_code":        uint64(3),
 			"facility_code":        uint64(3),
 			"msg":                  "Test message",
@@ -150,7 +150,7 @@ func TestSyslogMapperWithDefaultSdidAndOtherSdids(t *testing.T) {
 			"default@32473_tag2": "foobar",
 			"bar@123_tag3":       "barfoobar",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"severity_code":        uint64(1),
 			"facility_code":        uint64(3),
 			"msg":                  "Test message",
@@ -195,7 +195,7 @@ func TestSyslogMapperWithNoSdids(t *testing.T) {
 			"bar@123_tag3":       "barfoobar",
 			"foo@456_tag4":       "foobarfoo",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"severity_code":        uint64(2),
 			"facility_code":        uint64(3),
 			"msg":                  "Test message",

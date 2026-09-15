@@ -100,7 +100,7 @@ func TestNewRelic_Write(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var auditLog map[string]interface{}
+			var auditLog map[string]any
 			nr := &NewRelic{}
 			var err error
 			nr.harvestor, err = telemetry.NewHarvester(
@@ -109,7 +109,7 @@ func TestNewRelic_Write(t *testing.T) {
 					cfg.APIKey = "dummyTestKey"
 					cfg.HarvestPeriod = 0
 					cfg.HarvestTimeout = 0
-					cfg.AuditLogger = func(e map[string]interface{}) {
+					cfg.AuditLogger = func(e map[string]any) {
 						auditLog = e
 					}
 				})

@@ -50,7 +50,7 @@ func (i *lldInfo) metric(hostTag string) (telegraf.Metric, error) {
 	for _, v := range i.Data {
 		values = append(values, v)
 	}
-	data := map[string]interface{}{"data": values}
+	data := map[string]any{"data": values}
 	buf, err := json.Marshal(data)
 	if err != nil {
 		return nil, err
@@ -61,7 +61,7 @@ func (i *lldInfo) metric(hostTag string) (telegraf.Metric, error) {
 		map[string]string{
 			hostTag: i.Hostname,
 		},
-		map[string]interface{}{
+		map[string]any{
 			i.Key: buf,
 		},
 		time.Now(),
@@ -140,7 +140,7 @@ func (zl *zabbixLLD) Push() []telegraf.Metric {
 			map[string]string{
 				zl.hostTag: info.Hostname,
 			},
-			map[string]interface{}{
+			map[string]any{
 				info.Key: []byte(empty),
 			},
 			time.Now(),

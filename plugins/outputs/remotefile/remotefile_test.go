@@ -25,7 +25,7 @@ func TestStaticFileCreation(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"source": "localhost"},
-			map[string]interface{}{"value": 42},
+			map[string]any{"value": 42},
 			time.Unix(1719410485, 0),
 		),
 	}
@@ -114,7 +114,7 @@ func TestStaticFileAppend(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"source": "localhost"},
-			map[string]interface{}{"value": 42},
+			map[string]any{"value": 42},
 			time.Unix(1719410485, 0),
 		),
 	}
@@ -168,37 +168,37 @@ func TestDynamicFiles(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"source": "localhost"},
-			map[string]interface{}{"value": 23},
+			map[string]any{"value": 23},
 			time.Unix(1719410465, 0),
 		),
 		metric.New(
 			"test",
 			map[string]string{"source": "remotehost"},
-			map[string]interface{}{"value": 21},
+			map[string]any{"value": 21},
 			time.Unix(1719410465, 0),
 		),
 		metric.New(
 			"test",
 			map[string]string{"source": "localhost"},
-			map[string]interface{}{"value": 42},
+			map[string]any{"value": 42},
 			time.Unix(1719410485, 0),
 		),
 		metric.New(
 			"test",
 			map[string]string{"source": "remotehost"},
-			map[string]interface{}{"value": 66},
+			map[string]any{"value": 66},
 			time.Unix(1719410485, 0),
 		),
 		metric.New(
 			"test",
 			map[string]string{"source": "remotehost"},
-			map[string]interface{}{"value": 55},
+			map[string]any{"value": 55},
 			time.Unix(1716310124, 0),
 		),
 		metric.New(
 			"test",
 			map[string]string{"source": "remotehost"},
-			map[string]interface{}{"value": 1},
+			map[string]any{"value": 1},
 			time.Unix(1716310174, 0),
 		),
 	}
@@ -276,7 +276,7 @@ func TestCustomTemplateFunctions(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"source": "localhost"},
-			map[string]interface{}{"value": 42},
+			map[string]any{"value": 42},
 			time.Unix(1587686400, 0),
 		),
 	}
@@ -323,13 +323,13 @@ func TestCSVSerialization(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"source": "a"},
-			map[string]interface{}{"value": 42},
+			map[string]any{"value": 42},
 			time.Unix(1587686400, 0),
 		),
 		metric.New(
 			"test",
 			map[string]string{"source": "b"},
-			map[string]interface{}{"value": 23},
+			map[string]any{"value": 23},
 			time.Unix(1587686400, 0),
 		),
 	}
@@ -386,13 +386,13 @@ func TestForgettingFiles(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"source": "a"},
-			map[string]interface{}{"value": 42},
+			map[string]any{"value": 42},
 			time.Unix(1587686400, 0),
 		),
 		metric.New(
 			"test",
 			map[string]string{"source": "b"},
-			map[string]interface{}{"value": 23},
+			map[string]any{"value": 23},
 			time.Unix(1587686400, 0),
 		),
 	}
@@ -440,37 +440,37 @@ func TestTrackingMetrics(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"source": "localhost"},
-			map[string]interface{}{"value": 23},
+			map[string]any{"value": 23},
 			time.Unix(1719410465, 0),
 		),
 		metric.New(
 			"test",
 			map[string]string{"source": "remotehost"},
-			map[string]interface{}{"value": 21},
+			map[string]any{"value": 21},
 			time.Unix(1719410465, 0),
 		),
 		metric.New(
 			"test",
 			map[string]string{"source": "localhost"},
-			map[string]interface{}{"value": 42},
+			map[string]any{"value": 42},
 			time.Unix(1719410485, 0),
 		),
 		metric.New(
 			"test",
 			map[string]string{"source": "remotehost"},
-			map[string]interface{}{"value": 66},
+			map[string]any{"value": 66},
 			time.Unix(1719410485, 0),
 		),
 		metric.New(
 			"test",
 			map[string]string{"source": "remotehost"},
-			map[string]interface{}{"value": 55},
+			map[string]any{"value": 55},
 			time.Unix(1716310124, 0),
 		),
 		metric.New(
 			"test",
 			map[string]string{"source": "remotehost"},
-			map[string]interface{}{"value": 1},
+			map[string]any{"value": 1},
 			time.Unix(1716310174, 0),
 		),
 	}

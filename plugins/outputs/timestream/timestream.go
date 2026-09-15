@@ -565,7 +565,7 @@ func getTimestreamTime(t time.Time) (timeUnit types.TimeUnit, timeValue string) 
 
 // convertValue converts single Field value from Telegraf Metric and produces
 // value, valueType Timestream representation.
-func convertValue(v interface{}) (value string, valueType types.MeasureValueType, ok bool) {
+func convertValue(v any) (value string, valueType types.MeasureValueType, ok bool) {
 	ok = true
 
 	switch t := v.(type) {

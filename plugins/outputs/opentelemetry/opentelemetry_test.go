@@ -68,7 +68,7 @@ func TestOpenTelemetry(t *testing.T) {
 			"otel.library.name": "My Library Name",
 			"host.name":         "potato",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"gauge": 87.332,
 		},
 		time.Unix(0, 1622848686000000000),
@@ -167,7 +167,7 @@ func TestOpenTelemetryHTTPProtobuf(t *testing.T) {
 			"otel.library.name": "My Library Name",
 			"host.name":         "potato",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"gauge": 87.332,
 		},
 		time.Unix(0, 1622848686000000000),
@@ -265,7 +265,7 @@ func TestOpenTelemetryHTTPJSON(t *testing.T) {
 			"otel.library.name": "My Library Name",
 			"host.name":         "potato",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"gauge": 87.332,
 		},
 		time.Unix(0, 1622848686000000000),

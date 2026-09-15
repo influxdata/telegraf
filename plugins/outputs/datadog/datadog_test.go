@@ -279,7 +279,7 @@ func TestNaNIsSkipped(t *testing.T) {
 		metric.New(
 			"cpu",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle": math.NaN(),
 			},
 			time.Now()),
@@ -300,7 +300,7 @@ func TestInfIsSkipped(t *testing.T) {
 		metric.New(
 			"cpu",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle": math.Inf(0),
 			},
 			time.Now()),
@@ -327,7 +327,7 @@ func TestNonZeroRateIntervalConvertsRatesToCount(t *testing.T) {
 					map[string]string{
 						"metric_type": "counter",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 100,
 					},
 					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
@@ -359,7 +359,7 @@ func TestNonZeroRateIntervalConvertsRatesToCount(t *testing.T) {
 					map[string]string{
 						"metric_type": "timing",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"count":  1,
 						"lower":  float64(10),
 						"mean":   float64(10),
@@ -481,7 +481,7 @@ func TestNonZeroRateIntervalConvertsRatesToCount(t *testing.T) {
 					map[string]string{
 						"metric_type": "histogram",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"count":  1,
 						"lower":  float64(10),
 						"mean":   float64(10),
@@ -623,7 +623,7 @@ func TestZeroRateIntervalConvertsRatesToCount(t *testing.T) {
 					map[string]string{
 						"metric_type": "counter",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 100,
 					},
 					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
@@ -655,7 +655,7 @@ func TestZeroRateIntervalConvertsRatesToCount(t *testing.T) {
 					map[string]string{
 						"metric_type": "timing",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"count":  1,
 						"lower":  float64(10),
 						"mean":   float64(10),
@@ -777,7 +777,7 @@ func TestZeroRateIntervalConvertsRatesToCount(t *testing.T) {
 					map[string]string{
 						"metric_type": "histogram",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"count":  1,
 						"lower":  float64(10),
 						"mean":   float64(10),
