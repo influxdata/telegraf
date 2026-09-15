@@ -21,8 +21,7 @@ func TestRegister(t *testing.T) {
 		Controller:        "tcp://localhost:1502",
 		ConfigurationType: "register",
 		Log:               testutil.Logger{},
-
-		SlaveID: 1,
+		SlaveID:           1,
 		Coils: []fieldDefinition{
 			{
 				Name:    "coil",
@@ -52,7 +51,8 @@ func TestRegister(t *testing.T) {
 				ByteOrder: "AB",
 				Scale:     1.0,
 			},
-		}}
+		},
+	}
 
 	require.NoError(t, modbus.Init())
 	require.NotEmpty(t, modbus.requests)
@@ -180,15 +180,15 @@ func TestRegisterCoils(t *testing.T) {
 				Name:       "TestCoils",
 				Controller: "tcp://localhost:1502",
 				Log:        testutil.Logger{},
-
-				SlaveID: 1,
+				SlaveID:    1,
 				Coils: []fieldDefinition{
 					{
 						Name:     ct.name,
 						Address:  []uint16{ct.address},
 						DataType: ct.dtype,
 					},
-				}}
+				},
+			}
 
 			expected := []telegraf.Metric{
 				metric.New(
@@ -816,8 +816,7 @@ func TestRegisterHoldingRegisters(t *testing.T) {
 				Name:       "TestHoldingRegisters",
 				Controller: "tcp://localhost:1502",
 				Log:        testutil.Logger{},
-
-				SlaveID: 1,
+				SlaveID:    1,
 				HoldingRegisters: []fieldDefinition{
 					{
 						Name:      hrt.name,
@@ -827,7 +826,8 @@ func TestRegisterHoldingRegisters(t *testing.T) {
 						Address:   hrt.address,
 						Bit:       hrt.bit,
 					},
-				}}
+				},
+			}
 
 			expected := []telegraf.Metric{
 				metric.New(
@@ -914,9 +914,8 @@ func TestRegisterReadMultipleCoilWithHole(t *testing.T) {
 		Name:       "TestReadMultipleCoilWithHole",
 		Controller: "tcp://localhost:1502",
 		Log:        testutil.Logger{Name: "modbus:MultipleCoilWithHole"},
-
-		SlaveID: 1,
-		Coils:   fcs}
+		SlaveID:    1,
+		Coils:      fcs}
 
 	expected := []telegraf.Metric{
 		metric.New(
@@ -975,9 +974,8 @@ func TestRegisterReadMultipleCoilLimit(t *testing.T) {
 		Name:       "TestReadCoils",
 		Controller: "tcp://localhost:1502",
 		Log:        testutil.Logger{},
-
-		SlaveID: 1,
-		Coils:   fcs}
+		SlaveID:    1,
+		Coils:      fcs}
 
 	expected := []telegraf.Metric{
 		metric.New(
@@ -1048,10 +1046,9 @@ func TestRegisterReadMultipleHoldingRegisterWithHole(t *testing.T) {
 	require.Len(t, expectedFields, len(fcs))
 
 	modbus := Modbus{
-		Name:       "TestHoldingRegister",
-		Controller: "tcp://localhost:1502",
-		Log:        testutil.Logger{},
-
+		Name:             "TestHoldingRegister",
+		Controller:       "tcp://localhost:1502",
+		Log:              testutil.Logger{},
 		SlaveID:          1,
 		HoldingRegisters: fcs}
 
@@ -1107,10 +1104,9 @@ func TestRegisterReadMultipleHoldingRegisterLimit(t *testing.T) {
 	}
 
 	modbus := Modbus{
-		Name:       "TestHoldingRegister",
-		Controller: "tcp://localhost:1502",
-		Log:        testutil.Logger{},
-
+		Name:             "TestHoldingRegister",
+		Controller:       "tcp://localhost:1502",
+		Log:              testutil.Logger{},
 		SlaveID:          1,
 		HoldingRegisters: fcs}
 
@@ -1165,8 +1161,7 @@ func TestRegisterHighAddresses(t *testing.T) {
 		Name:       "Issue-15138",
 		Controller: "tcp://localhost:1502",
 		Log:        testutil.Logger{},
-
-		SlaveID: 1,
+		SlaveID:    1,
 		HoldingRegisters: []fieldDefinition{
 			{
 				Name:      "DeviceName",
@@ -1181,7 +1176,8 @@ func TestRegisterHighAddresses(t *testing.T) {
 				Address:   []uint16{65534},
 				Scale:     1,
 			},
-		}}
+		},
+	}
 
 	expected := []telegraf.Metric{
 		metric.New(
