@@ -6,38 +6,37 @@ import (
 	"testing"
 
 	pb "github.com/aristanetworks/goarista/lanz/proto"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf/testutil"
 )
 
 var testProtoBufCongestionRecord1 = &pb.LanzRecord{
 	CongestionRecord: &pb.CongestionRecord{
-		Timestamp:          proto.Uint64(100000000000000),
+		Timestamp:          new(uint64(100000000000000)),
 		IntfName:           new("eth1"),
-		SwitchId:           proto.Uint32(1),
-		PortId:             proto.Uint32(1),
-		QueueSize:          proto.Uint32(1),
+		SwitchId:           new(uint32(1)),
+		PortId:             new(uint32(1)),
+		QueueSize:          new(uint32(1)),
 		EntryType:          pb.CongestionRecord_EntryType.Enum(1),
-		TrafficClass:       proto.Uint32(1),
-		TimeOfMaxQLen:      proto.Uint64(100000000000000),
-		TxLatency:          proto.Uint32(100),
-		QDropCount:         proto.Uint32(1),
+		TrafficClass:       new(uint32(1)),
+		TimeOfMaxQLen:      new(uint64(100000000000000)),
+		TxLatency:          new(uint32(100)),
+		QDropCount:         new(uint32(1)),
 		FabricPeerIntfName: new("FabricPeerIntfName1"),
 	},
 }
 var testProtoBufCongestionRecord2 = &pb.LanzRecord{
 	CongestionRecord: &pb.CongestionRecord{
-		Timestamp:          proto.Uint64(200000000000000),
+		Timestamp:          new(uint64(200000000000000)),
 		IntfName:           new("eth2"),
-		SwitchId:           proto.Uint32(2),
-		PortId:             proto.Uint32(2),
-		QueueSize:          proto.Uint32(2),
+		SwitchId:           new(uint32(2)),
+		PortId:             new(uint32(2)),
+		QueueSize:          new(uint32(2)),
 		EntryType:          pb.CongestionRecord_EntryType.Enum(2),
-		TrafficClass:       proto.Uint32(2),
-		TimeOfMaxQLen:      proto.Uint64(200000000000000),
-		TxLatency:          proto.Uint32(200),
-		QDropCount:         proto.Uint32(2),
+		TrafficClass:       new(uint32(2)),
+		TimeOfMaxQLen:      new(uint64(200000000000000)),
+		TxLatency:          new(uint32(200)),
+		QDropCount:         new(uint32(2)),
 		FabricPeerIntfName: new("FabricPeerIntfName2"),
 	},
 }
@@ -45,9 +44,9 @@ var testProtoBufCongestionRecord2 = &pb.LanzRecord{
 var testProtoBufGlobalBufferUsageRecord = &pb.LanzRecord{
 	GlobalBufferUsageRecord: &pb.GlobalBufferUsageRecord{
 		EntryType:  pb.GlobalBufferUsageRecord_EntryType.Enum(1),
-		Timestamp:  proto.Uint64(100000000000000),
-		BufferSize: proto.Uint32(1),
-		Duration:   proto.Uint32(10),
+		Timestamp:  new(uint64(100000000000000)),
+		BufferSize: new(uint32(1)),
+		Duration:   new(uint32(10)),
 	},
 }
 
