@@ -14,7 +14,7 @@ func TestSerialization(t *testing.T) {
 	tests := []struct {
 		name     string
 		entry    *Entry
-		input    interface{}
+		input    any
 		expected map[binary.ByteOrder][]byte
 		overflow bool
 	}{
@@ -216,7 +216,7 @@ func TestNoNameSerialization(t *testing.T) {
 func BenchmarkSerialization(b *testing.B) {
 	entries := []struct {
 		entry *Entry
-		input interface{}
+		input any
 	}{
 		{
 			entry: &Entry{Name: "test", DataFormat: "int32"},
