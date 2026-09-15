@@ -189,7 +189,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		return nil, nil
 	}
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	tags := make(map[string]string)
 
 	// add default tags

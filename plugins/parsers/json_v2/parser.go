@@ -279,7 +279,7 @@ func (p *Parser) processMetric(input []byte, data []DataSet, tag bool, timestamp
 			Metric: metric.New(
 				p.measurementName,
 				make(map[string]string),
-				make(map[string]interface{}),
+				make(map[string]any),
 				timestamp,
 			),
 			Result:      result,
@@ -403,7 +403,7 @@ func (p *Parser) expandArray(result metricNode, timestamp time.Time) ([]telegraf
 			m := metric.New(
 				p.measurementName,
 				make(map[string]string),
-				make(map[string]interface{}),
+				make(map[string]any),
 				timestamp,
 			)
 			if val.IsObject() {
@@ -582,7 +582,7 @@ func (p *Parser) processObjects(input []byte, objects []Object, timestamp time.T
 			Metric: metric.New(
 				p.measurementName,
 				make(map[string]string),
-				make(map[string]interface{}),
+				make(map[string]any),
 				timestamp,
 			),
 			Result:      result,
@@ -719,7 +719,7 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 }
 
 // convertType will convert the value parsed from the input JSON to the specified type in the config
-func convertType(input gjson.Result, desiredType, name string) (interface{}, error) {
+func convertType(input gjson.Result, desiredType, name string) (any, error) {
 	// Handle JSON objects and arrays when type is "string"
 	if desiredType == "string" && (input.IsObject() || input.IsArray()) {
 		return input.Raw, nil

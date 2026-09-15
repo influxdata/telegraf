@@ -70,7 +70,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		return nil, fmt.Errorf("parsing field %q value failed: %w", measurement, err)
 	}
 
-	fieldValues := map[string]interface{}{"value": v}
+	fieldValues := map[string]any{"value": v}
 
 	// Parse timestamp.
 	ts, err := strconv.ParseInt(tsStr, 10, 64)

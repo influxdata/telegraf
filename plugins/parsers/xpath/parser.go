@@ -23,7 +23,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
-type dataNode interface{}
+type dataNode any
 
 type dataDocument interface {
 	Parse(buf []byte) (dataNode, error)
@@ -341,7 +341,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, cfg Con
 	}
 
 	// Query fields
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 
 	// Handle the field batch definitions if any.
 	if len(cfg.FieldSelection) > 0 {
@@ -471,7 +471,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, cfg Con
 	return metric.New(metricname, tags, fields, timestamp), nil
 }
 
-func (p *Parser) executeQuery(doc, selected dataNode, query string) (r interface{}, err error) {
+func (p *Parser) executeQuery(doc, selected dataNode, query string) (r any, err error) {
 	// Check if the query is relative or absolute and set the root for the query
 	root := selected
 	if strings.HasPrefix(query, "/") {
