@@ -115,46 +115,36 @@ func TestIncludeExclude(t *testing.T) {
 	require.Equal(t, []string{"best", "timeseries", "ever"}, tags)
 }
 
-var benchbool bool
-
 func BenchmarkFilterSingleNoGlobFalse(b *testing.B) {
 	f, err := Compile([]string{"cpu"})
 	require.NoError(b, err)
-	var tmp bool
 	for b.Loop() {
-		tmp = f.Match("network")
+		f.Match("network")
 	}
-	benchbool = tmp
 }
 
 func BenchmarkFilterSingleNoGlobTrue(b *testing.B) {
 	f, err := Compile([]string{"cpu"})
 	require.NoError(b, err)
-	var tmp bool
 	for b.Loop() {
-		tmp = f.Match("cpu")
+		f.Match("cpu")
 	}
-	benchbool = tmp
 }
 
 func BenchmarkFilter(b *testing.B) {
 	f, err := Compile([]string{"cpu", "mem", "net*"})
 	require.NoError(b, err)
-	var tmp bool
 	for b.Loop() {
-		tmp = f.Match("network")
+		f.Match("network")
 	}
-	benchbool = tmp
 }
 
 func BenchmarkFilterNoGlob(b *testing.B) {
 	f, err := Compile([]string{"cpu", "mem", "net"})
 	require.NoError(b, err)
-	var tmp bool
 	for b.Loop() {
-		tmp = f.Match("net")
+		f.Match("net")
 	}
-	benchbool = tmp
 }
 
 func BenchmarkFilterMany(b *testing.B) {
@@ -163,11 +153,9 @@ func BenchmarkFilterMany(b *testing.B) {
 		"aw", "az", "axxx", "ab", "cpu", "mem", "net*",
 	})
 	require.NoError(b, err)
-	var tmp bool
 	for b.Loop() {
-		tmp = f.Match("network")
+		f.Match("network")
 	}
-	benchbool = tmp
 }
 
 func BenchmarkFilterManyNoGlob(b *testing.B) {
@@ -176,9 +164,7 @@ func BenchmarkFilterManyNoGlob(b *testing.B) {
 		"aw", "az", "axxx", "ab", "cpu", "mem", "net",
 	})
 	require.NoError(b, err)
-	var tmp bool
 	for b.Loop() {
-		tmp = f.Match("net")
+		f.Match("net")
 	}
-	benchbool = tmp
 }
