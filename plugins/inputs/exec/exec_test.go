@@ -599,7 +599,7 @@ func TestTruncate(t *testing.T) {
 			name: "should truncate to the maxStderrBytes",
 			bufF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				for i := 0; i < 2*maxStderrBytes; i++ {
+				for range 2 * maxStderrBytes {
 					b.WriteByte('b')
 				}
 				return &b

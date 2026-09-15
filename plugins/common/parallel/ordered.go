@@ -59,7 +59,7 @@ func (p *Ordered) readQueue(acc telegraf.Accumulator) {
 
 func (p *Ordered) startWorkers(count int) {
 	p.wg.Add(count)
-	for i := 0; i < count; i++ {
+	for range count {
 		go func() {
 			for job := range p.workerQueue {
 				job.future <- p.fn(job.metric)

@@ -44,7 +44,7 @@ func unmarshalThrift(body []byte) ([]*zipkincore.Span, error) {
 	}
 
 	spans := make([]*zipkincore.Span, 0, size)
-	for i := 0; i < size; i++ {
+	for range size {
 		zs := &zipkincore.Span{}
 		if err := zs.Read(context.Background(), transport); err != nil {
 			return nil, err

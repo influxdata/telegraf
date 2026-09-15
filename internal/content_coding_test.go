@@ -202,7 +202,7 @@ func TestCompressionLevel(t *testing.T) {
 		})
 
 		// Check known levels 0..9
-		for level := 0; level < 10; level++ {
+		for level := range 10 {
 			name := fmt.Sprintf("%s level %d", tt.algorithm, level)
 			t.Run(name, func(t *testing.T) {
 				var valid bool

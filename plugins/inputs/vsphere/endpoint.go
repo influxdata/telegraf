@@ -591,7 +591,7 @@ func (e *endpoint) complexMetadataSelect(ctx context.Context, res *resourceKind,
 	n := len(sampledObjects)
 	if n > maxMetadataSamples {
 		// Shuffle samples into the maxMetadataSamples positions
-		for i := 0; i < maxMetadataSamples; i++ {
+		for i := range maxMetadataSamples {
 			j := int(rand.Int31n(int32(i + 1))) //nolint:gosec // G404: not security critical
 			t := sampledObjects[i]
 			sampledObjects[i] = sampledObjects[j]
