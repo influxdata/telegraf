@@ -268,7 +268,7 @@ func CompressWithGzip(data io.Reader) io.ReadCloser {
 // The location is a location string suitable for time.LoadLocation.  Unix
 // times do not use the location string, a unix time is always return in the
 // UTC location.
-func ParseTimestamp(format string, timestamp interface{}, location *time.Location, separator ...string) (time.Time, error) {
+func ParseTimestamp(format string, timestamp any, location *time.Location, separator ...string) (time.Time, error) {
 	switch format {
 	case "unix", "unix_ms", "unix_us", "unix_ns":
 		sep := []string{",", "."}
@@ -294,7 +294,7 @@ func ParseTimestamp(format string, timestamp interface{}, location *time.Locatio
 }
 
 // parseTime parses a timestamp in unix format with different resolutions
-func parseUnix(format string, timestamp interface{}, separator []string) (time.Time, error) {
+func parseUnix(format string, timestamp any, separator []string) (time.Time, error) {
 	// Extract the scaling factor to nanoseconds from "format"
 	var factor int64
 	switch format {

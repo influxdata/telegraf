@@ -19,7 +19,7 @@ const udpPacketSizeMsg = `
 `
 
 // Define "old" data structure
-type udpListener map[string]interface{}
+type udpListener map[string]any
 
 // Migration function
 func migrate(tbl *ast.Table) ([]byte, string, error) {
@@ -32,7 +32,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	// Copy the setting except the special plugin ones to preserve
 	// all parser settings of the existing (deprecated) config.
 	var msg string
-	plugin := make(map[string]interface{}, len(old))
+	plugin := make(map[string]any, len(old))
 	for k, v := range old {
 		switch k {
 		case "service_address":

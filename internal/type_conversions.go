@@ -9,7 +9,7 @@ import (
 
 var ErrOutOfRange = strconv.ErrRange
 
-func ToFloat64(value interface{}) (float64, error) {
+func ToFloat64(value any) (float64, error) {
 	switch v := value.(type) {
 	case string:
 		return strconv.ParseFloat(v, 64)
@@ -52,7 +52,7 @@ func ToFloat64(value interface{}) (float64, error) {
 	return 0, fmt.Errorf("type \"%T\" unsupported", value)
 }
 
-func ToFloat32(value interface{}) (float32, error) {
+func ToFloat32(value any) (float32, error) {
 	switch v := value.(type) {
 	case string:
 		x, err := strconv.ParseFloat(v, 32)
@@ -101,7 +101,7 @@ func ToFloat32(value interface{}) (float32, error) {
 	return 0, fmt.Errorf("type \"%T\" unsupported", value)
 }
 
-func ToUint64(value interface{}) (uint64, error) {
+func ToUint64(value any) (uint64, error) {
 	switch v := value.(type) {
 	case string:
 		if strings.HasPrefix(v, "0x") {
@@ -168,7 +168,7 @@ func ToUint64(value interface{}) (uint64, error) {
 	return 0, fmt.Errorf("type \"%T\" unsupported", value)
 }
 
-func ToUint32(value interface{}) (uint32, error) {
+func ToUint32(value any) (uint32, error) {
 	switch v := value.(type) {
 	case string:
 		if strings.HasPrefix(v, "0x") {
@@ -242,7 +242,7 @@ func ToUint32(value interface{}) (uint32, error) {
 	return 0, fmt.Errorf("type \"%T\" unsupported", value)
 }
 
-func ToUint16(value interface{}) (uint16, error) {
+func ToUint16(value any) (uint16, error) {
 	switch v := value.(type) {
 	case string:
 		if strings.HasPrefix(v, "0x") {
@@ -319,7 +319,7 @@ func ToUint16(value interface{}) (uint16, error) {
 	return 0, fmt.Errorf("type \"%T\" unsupported", value)
 }
 
-func ToUint8(value interface{}) (uint8, error) {
+func ToUint8(value any) (uint8, error) {
 	switch v := value.(type) {
 	case string:
 		if strings.HasPrefix(v, "0x") {
@@ -399,7 +399,7 @@ func ToUint8(value interface{}) (uint8, error) {
 	return 0, fmt.Errorf("type \"%T\" unsupported", value)
 }
 
-func ToInt64(value interface{}) (int64, error) {
+func ToInt64(value any) (int64, error) {
 	switch v := value.(type) {
 	case string:
 		if strings.HasPrefix(v, "0x") {
@@ -457,7 +457,7 @@ func ToInt64(value interface{}) (int64, error) {
 	return 0, fmt.Errorf("type \"%T\" unsupported", value)
 }
 
-func ToInt32(value interface{}) (int32, error) {
+func ToInt32(value any) (int32, error) {
 	switch v := value.(type) {
 	case string:
 		if strings.HasPrefix(v, "0x") {
@@ -528,7 +528,7 @@ func ToInt32(value interface{}) (int32, error) {
 	return 0, fmt.Errorf("type \"%T\" unsupported", value)
 }
 
-func ToInt16(value interface{}) (int16, error) {
+func ToInt16(value any) (int16, error) {
 	switch v := value.(type) {
 	case string:
 		if strings.HasPrefix(v, "0x") {
@@ -602,7 +602,7 @@ func ToInt16(value interface{}) (int16, error) {
 	return 0, fmt.Errorf("type \"%T\" unsupported", value)
 }
 
-func ToInt8(value interface{}) (int8, error) {
+func ToInt8(value any) (int8, error) {
 	switch v := value.(type) {
 	case string:
 		if strings.HasPrefix(v, "0x") {
@@ -682,7 +682,7 @@ func ToInt8(value interface{}) (int8, error) {
 	return 0, fmt.Errorf("type \"%T\" unsupported", value)
 }
 
-func ToString(value interface{}) (string, error) {
+func ToString(value any) (string, error) {
 	switch v := value.(type) {
 	case string:
 		return v, nil
@@ -722,7 +722,7 @@ func ToString(value interface{}) (string, error) {
 	return "", fmt.Errorf("type \"%T\" unsupported", value)
 }
 
-func ToBool(value interface{}) (bool, error) {
+func ToBool(value any) (bool, error) {
 	switch v := value.(type) {
 	case string:
 		return strconv.ParseBool(v)

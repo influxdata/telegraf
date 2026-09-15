@@ -23,7 +23,7 @@ type metric struct {
 func New(
 	name string,
 	tags map[string]string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tm time.Time,
 	tp ...telegraf.ValueType,
 ) telegraf.Metric {
@@ -107,8 +107,8 @@ func (m *metric) TagList() []*telegraf.Tag {
 	return m.MetricTags
 }
 
-func (m *metric) Fields() map[string]interface{} {
-	fields := make(map[string]interface{}, len(m.MetricFields))
+func (m *metric) Fields() map[string]any {
+	fields := make(map[string]any, len(m.MetricFields))
 	for _, field := range m.MetricFields {
 		fields[field.Key] = field.Value
 	}
@@ -194,7 +194,7 @@ func (m *metric) RemoveTag(key string) {
 	}
 }
 
-func (m *metric) AddField(key string, value interface{}) {
+func (m *metric) AddField(key string, value any) {
 	for i, field := range m.MetricFields {
 		if key == field.Key {
 			m.MetricFields[i] = &telegraf.Field{Key: key, Value: convertField(value)}
@@ -213,7 +213,7 @@ func (m *metric) HasField(key string) bool {
 	return false
 }
 
-func (m *metric) GetField(key string) (interface{}, bool) {
+func (m *metric) GetField(key string) (any, bool) {
 	for _, field := range m.MetricFields {
 		if field.Key == key {
 			return field.Value, true
@@ -222,7 +222,7 @@ func (m *metric) GetField(key string) (interface{}, bool) {
 	return nil, false
 }
 
-func (m *metric) Field(key string) interface{} {
+func (m *metric) Field(key string) any {
 	if v, found := m.GetField(key); found {
 		return v
 	}
@@ -316,7 +316,7 @@ func (*metric) Drop() {
 }
 
 // Convert field to a supported type or nil if inconvertible
-func convertField(v interface{}) interface{} {
+func convertField(v any) any {
 	switch v := v.(type) {
 	case float64:
 		return v
