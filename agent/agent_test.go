@@ -249,16 +249,14 @@ func collect(ctx context.Context, a *Agent, wait time.Duration) ([]telegraf.Metr
 	src := make(chan telegraf.Metric, 100)
 
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for m := range src {
 			mu.Lock()
 			received = append(received, m)
 			mu.Unlock()
 			m.Reject()
 		}
-	}()
+	})
 
 	if err := a.runTest(ctx, wait, src); err != nil {
 		return nil, err

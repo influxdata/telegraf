@@ -172,39 +172,29 @@ func (a *Agent) Run(ctx context.Context) error {
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		a.runOutputs(ou)
-	}()
+	})
 
 	if au != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			a.runProcessors(apu)
-		}()
+		})
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			a.runAggregators(startTime, au)
-		}()
+		})
 	}
 
 	if pu != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			a.runProcessors(pu)
-		}()
+		})
 	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		a.runInputs(ctx, startTime, iu)
-	}()
+	})
 
 	wg.Wait()
 
@@ -697,9 +687,7 @@ func (a *Agent) runAggregators(
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for metric := range unit.src {
 			var dropOriginal bool
 			for _, agg := range a.Config.Aggregators {
@@ -715,7 +703,7 @@ func (a *Agent) runAggregators(
 			}
 		}
 		cancel()
-	}()
+	})
 
 	for _, agg := range a.Config.Aggregators {
 		wg.Add(1)
@@ -948,9 +936,7 @@ func (a *Agent) Test(ctx context.Context, wait time.Duration) error {
 	src := make(chan telegraf.Metric, 100)
 
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		s := &influx.Serializer{SortFields: true, UintSupport: true}
 		for metric := range src {
 			octets, err := s.Serialize(metric)
@@ -959,7 +945,7 @@ func (a *Agent) Test(ctx context.Context, wait time.Duration) error {
 			}
 			metric.Reject()
 		}
-	}()
+	})
 
 	err := a.runTest(ctx, wait, src)
 	if err != nil {
@@ -1024,32 +1010,24 @@ func (a *Agent) runTest(ctx context.Context, wait time.Duration, outputC chan<- 
 
 	var wg sync.WaitGroup
 	if au != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			a.runProcessors(apu)
-		}()
+		})
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			a.runAggregators(startTime, au)
-		}()
+		})
 	}
 
 	if pu != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			a.runProcessors(pu)
-		}()
+		})
 	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		a.testRunInputs(ctx, wait, iu)
-	}()
+	})
 
 	wg.Wait()
 
@@ -1130,39 +1108,29 @@ func (a *Agent) runOnce(ctx context.Context, wait time.Duration) error {
 	iu := a.testStartInputs(next, a.Config.Inputs)
 
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		a.runOutputs(ou)
-	}()
+	})
 
 	if au != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			a.runProcessors(apu)
-		}()
+		})
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			a.runAggregators(startTime, au)
-		}()
+		})
 	}
 
 	if pu != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			a.runProcessors(pu)
-		}()
+		})
 	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		a.testRunInputs(ctx, wait, iu)
-	}()
+	})
 
 	wg.Wait()
 

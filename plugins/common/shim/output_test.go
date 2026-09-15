@@ -25,13 +25,11 @@ func TestOutputShim(t *testing.T) {
 	require.NoError(t, s.AddOutput(o))
 
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		if err := s.RunOutput(); err != nil {
 			t.Error(err)
 		}
-		wg.Done()
-	}()
+	})
 
 	serializer := &influx.Serializer{}
 	require.NoError(t, serializer.Init())
@@ -71,13 +69,11 @@ func TestOutputShimWithBatchSize(t *testing.T) {
 
 	// Start the output processing
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		if err := s.RunOutput(); err != nil {
 			t.Error(err)
 		}
-		wg.Done()
-	}()
+	})
 
 	// Serialize the test metric
 	serializer := &influx.Serializer{}
@@ -129,13 +125,11 @@ func TestOutputShimWithFlushTimeout(t *testing.T) {
 
 	// Start the output processing
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		if err := s.RunOutput(); err != nil {
 			t.Error(err)
 		}
-		wg.Done()
-	}()
+	})
 
 	// Serialize the test metric
 	serializer := &influx.Serializer{}

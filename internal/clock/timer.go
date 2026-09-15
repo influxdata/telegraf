@@ -53,11 +53,9 @@ func NewTimer(interval, jitter time.Duration, opt ...Option) *Timer {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.cancel = cancel
 
-	t.wg.Add(1)
-	go func() {
-		defer t.wg.Done()
+	t.wg.Go(func() {
 		t.run(ctx)
-	}()
+	})
 
 	return t
 }

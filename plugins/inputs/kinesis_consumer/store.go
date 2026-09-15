@@ -66,10 +66,7 @@ func (s *store) run(ctx context.Context) error {
 
 	// Start the go-routine that pushes the states out to DynamoDB on a
 	// regular interval
-	s.wg.Add(1)
-	go func() {
-		defer s.wg.Done()
-
+	s.wg.Go(func() {
 		ticker := time.NewTicker(s.interval)
 		defer ticker.Stop()
 
@@ -81,7 +78,7 @@ func (s *store) run(ctx context.Context) error {
 				s.write(rctx)
 			}
 		}
-	}()
+	})
 
 	return nil
 }
