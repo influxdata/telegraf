@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"regexp"
 	"sort"
@@ -753,9 +754,7 @@ func (s *Statsd) parseStatsdLine(p *graphite.Parser, line string) error {
 			m.tags["metric_type"] = "distribution"
 		}
 		if len(lineTags) > 0 {
-			for k, v := range lineTags {
-				m.tags[k] = v
-			}
+			maps.Copy(m.tags, lineTags)
 		}
 
 		// Make a unique key for the measurement name/tags

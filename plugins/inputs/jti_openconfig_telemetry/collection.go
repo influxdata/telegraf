@@ -1,6 +1,9 @@
 package jti_openconfig_telemetry
 
-import "sort"
+import (
+	"maps"
+	"sort"
+)
 
 type dataGroup struct {
 	numKeys int
@@ -48,9 +51,7 @@ func (a collectionByKeys) isAvailable(tags map[string]string) *dataGroup {
 func (a collectionByKeys) insert(tags map[string]string, data map[string]interface{}) collectionByKeys {
 	// If there is already a group with this set of tags, insert into it. Otherwise create a new group and insert
 	if group := a.isAvailable(tags); group != nil {
-		for k, v := range data {
-			group.data[k] = v
-		}
+		maps.Copy(group.data, data)
 	} else {
 		a = append(a, dataGroup{len(tags), tags, data})
 	}

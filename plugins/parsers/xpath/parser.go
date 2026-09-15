@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"slices"
 	"strconv"
@@ -336,9 +337,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, cfg Con
 	}
 
 	// Add default tags
-	for name, v := range p.DefaultTags {
-		tags[name] = v
-	}
+	maps.Copy(tags, p.DefaultTags)
 
 	// Query fields
 	fields := make(map[string]interface{})

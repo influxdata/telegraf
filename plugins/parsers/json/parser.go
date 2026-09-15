@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"strconv"
 	"time"
 
@@ -154,9 +155,7 @@ func (p *Parser) parseArray(data []interface{}, timestamp time.Time) ([]telegraf
 
 func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) ([]telegraf.Metric, error) {
 	tags := make(map[string]string)
-	for k, v := range p.DefaultTags {
-		tags[k] = v
-	}
+	maps.Copy(tags, p.DefaultTags)
 
 	f := JSONFlattener{}
 	err := f.FullFlattenJSON("", data, true, true)

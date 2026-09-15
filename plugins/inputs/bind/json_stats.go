@@ -3,6 +3,7 @@ package bind
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net"
 	"net/http"
 	"net/url"
@@ -54,9 +55,7 @@ func addJSONCounter(acc telegraf.Accumulator, commonTags map[string]string, stat
 		tags := make(map[string]string)
 
 		// Create local copy of tags since maps are reference types
-		for k, v := range commonTags {
-			tags[k] = v
-		}
+		maps.Copy(tags, commonTags)
 
 		grouper.Add("bind_counter", tags, ts, name, value)
 	}

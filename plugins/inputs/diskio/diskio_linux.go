@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -71,9 +72,7 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 
 	devInfo, err := readDevData(sysBlockPath, d.sysPath)
 	if err == nil {
-		for k, v := range devInfo {
-			info[k] = v
-		}
+		maps.Copy(info, devInfo)
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}

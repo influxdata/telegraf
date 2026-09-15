@@ -4,6 +4,7 @@ package diskio
 import (
 	_ "embed"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -131,9 +132,7 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 
-		for t, v := range d.diskTags(io.Name) {
-			tags[t] = v
-		}
+		maps.Copy(tags, d.diskTags(io.Name))
 
 		if !d.SkipSerialNumber {
 			serial := sanitizeSerialNumber(io.SerialNumber)

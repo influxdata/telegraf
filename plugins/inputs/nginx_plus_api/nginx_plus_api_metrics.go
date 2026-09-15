@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net"
 	"net/http"
 	"net/url"
@@ -150,9 +151,7 @@ func (n *NginxPlusAPI) gatherSlabsMetrics(addr *url.URL, acc telegraf.Accumulato
 
 	for zoneName, slab := range slabs {
 		slabTags := make(map[string]string, len(tags)+1)
-		for k, v := range tags {
-			slabTags[k] = v
-		}
+		maps.Copy(slabTags, tags)
 		slabTags["zone"] = zoneName
 
 		acc.AddFields(
@@ -166,9 +165,7 @@ func (n *NginxPlusAPI) gatherSlabsMetrics(addr *url.URL, acc telegraf.Accumulato
 
 		for slotID, slot := range slab.Slots {
 			slotTags := make(map[string]string, len(slabTags)+1)
-			for k, v := range slabTags {
-				slotTags[k] = v
-			}
+			maps.Copy(slotTags, slabTags)
 			slotTags["slot"] = slotID
 
 			acc.AddFields(
@@ -251,9 +248,7 @@ func (n *NginxPlusAPI) gatherHTTPServerZonesMetrics(addr *url.URL, acc telegraf.
 	tags := getTags(addr)
 	for zoneName, zone := range httpServerZones {
 		zoneTags := make(map[string]string, len(tags)+1)
-		for k, v := range tags {
-			zoneTags[k] = v
-		}
+		maps.Copy(zoneTags, tags)
 		zoneTags["zone"] = zoneName
 		acc.AddFields(
 			"nginx_plus_api_http_server_zones",
@@ -299,9 +294,7 @@ func (n *NginxPlusAPI) gatherHTTPLocationZonesMetrics(addr *url.URL, acc telegra
 
 	for zoneName, zone := range httpLocationZones {
 		zoneTags := make(map[string]string, len(tags)+1)
-		for k, v := range tags {
-			zoneTags[k] = v
-		}
+		maps.Copy(zoneTags, tags)
 		zoneTags["zone"] = zoneName
 		acc.AddFields(
 			"nginx_plus_api_http_location_zones",
@@ -345,9 +338,7 @@ func (n *NginxPlusAPI) gatherHTTPUpstreamsMetrics(addr *url.URL, acc telegraf.Ac
 
 	for upstreamName, upstream := range httpUpstreams {
 		upstreamTags := make(map[string]string, len(tags)+1)
-		for k, v := range tags {
-			upstreamTags[k] = v
-		}
+		maps.Copy(upstreamTags, tags)
 		upstreamTags["upstream"] = upstreamName
 		upstreamFields := map[string]interface{}{
 			"keepalive": upstream.Keepalive,
@@ -400,9 +391,7 @@ func (n *NginxPlusAPI) gatherHTTPUpstreamsMetrics(addr *url.URL, acc telegraf.Ac
 				peerFields["max_conns"] = *peer.MaxConns
 			}
 			peerTags := make(map[string]string, len(upstreamTags)+2)
-			for k, v := range upstreamTags {
-				peerTags[k] = v
-			}
+			maps.Copy(peerTags, upstreamTags)
 			peerTags["upstream_address"] = peer.Server
 			if peer.ID != nil {
 				peerTags["id"] = strconv.Itoa(*peer.ID)
@@ -429,9 +418,7 @@ func (n *NginxPlusAPI) gatherHTTPCachesMetrics(addr *url.URL, acc telegraf.Accum
 
 	for cacheName, cache := range httpCaches {
 		cacheTags := make(map[string]string, len(tags)+1)
-		for k, v := range tags {
-			cacheTags[k] = v
-		}
+		maps.Copy(cacheTags, tags)
 		cacheTags["cache"] = cacheName
 		acc.AddFields(
 			"nginx_plus_api_http_caches",
@@ -483,9 +470,7 @@ func (n *NginxPlusAPI) gatherStreamServerZonesMetrics(addr *url.URL, acc telegra
 
 	for zoneName, zone := range streamServerZones {
 		zoneTags := make(map[string]string, len(tags)+1)
-		for k, v := range tags {
-			zoneTags[k] = v
-		}
+		maps.Copy(zoneTags, tags)
 		zoneTags["zone"] = zoneName
 		acc.AddFields(
 			"nginx_plus_api_stream_server_zones",
@@ -519,9 +504,7 @@ func (n *NginxPlusAPI) gatherResolverZonesMetrics(addr *url.URL, acc telegraf.Ac
 
 	for zoneName, resolver := range resolverZones {
 		zoneTags := make(map[string]string, len(tags)+1)
-		for k, v := range tags {
-			zoneTags[k] = v
-		}
+		maps.Copy(zoneTags, tags)
 		zoneTags["zone"] = zoneName
 		acc.AddFields(
 			"nginx_plus_api_resolver_zones",
@@ -562,9 +545,7 @@ func (n *NginxPlusAPI) gatherStreamUpstreamsMetrics(addr *url.URL, acc telegraf.
 
 	for upstreamName, upstream := range streamUpstreams {
 		upstreamTags := make(map[string]string, len(tags)+1)
-		for k, v := range tags {
-			upstreamTags[k] = v
-		}
+		maps.Copy(upstreamTags, tags)
 		upstreamTags["upstream"] = upstreamName
 		acc.AddFields(
 			"nginx_plus_api_stream_upstreams",
@@ -602,9 +583,7 @@ func (n *NginxPlusAPI) gatherStreamUpstreamsMetrics(addr *url.URL, acc telegraf.
 				peerFields["response_time"] = *peer.ResponseTime
 			}
 			peerTags := make(map[string]string, len(upstreamTags)+2)
-			for k, v := range upstreamTags {
-				peerTags[k] = v
-			}
+			maps.Copy(peerTags, upstreamTags)
 			peerTags["upstream_address"] = peer.Server
 			peerTags["id"] = strconv.Itoa(peer.ID)
 
@@ -632,9 +611,7 @@ func (n *NginxPlusAPI) gatherHTTPLimitReqsMetrics(addr *url.URL, acc telegraf.Ac
 
 	for limitReqName, limit := range httpLimitReqs {
 		limitReqsTags := make(map[string]string, len(tags)+1)
-		for k, v := range tags {
-			limitReqsTags[k] = v
-		}
+		maps.Copy(limitReqsTags, tags)
 		limitReqsTags["limit"] = limitReqName
 		acc.AddFields(
 			"nginx_plus_api_http_limit_reqs",

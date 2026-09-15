@@ -3,6 +3,7 @@ package procstat
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"regexp"
 	"strconv"
 	"strings"
@@ -198,9 +199,7 @@ func (f *filter) applyFilter() ([]processGroup, error) {
 				}
 
 				tags := make(map[string]string, len(group.tags)+1)
-				for k, v := range group.tags {
-					tags[k] = v
-				}
+				maps.Copy(tags, group.tags)
 				tags["parent_pid"] = strconv.FormatInt(int64(p.Pid), 10)
 
 				children = append(children, processGroup{

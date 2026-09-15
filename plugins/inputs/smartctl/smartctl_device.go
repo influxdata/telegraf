@@ -3,6 +3,7 @@ package smartctl
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -133,9 +134,7 @@ func (s *Smartctl) scanDevice(acc telegraf.Accumulator, deviceName, deviceType s
 	// Check for ATA specific attribute fields
 	for _, attribute := range device.AtaSmartAttributes.Table {
 		attributeTags := make(map[string]string, len(tags)+1)
-		for k, v := range tags {
-			attributeTags[k] = v
-		}
+		maps.Copy(attributeTags, tags)
 
 		attributeTags[s.attributeTagName] = attribute.Name
 
@@ -152,9 +151,7 @@ func (s *Smartctl) scanDevice(acc telegraf.Accumulator, deviceName, deviceType s
 	// Check for SCSI error counter entries
 	if device.Device.Type == "scsi" {
 		counterTags := make(map[string]string, len(tags)+1)
-		for k, v := range tags {
-			counterTags[k] = v
-		}
+		maps.Copy(counterTags, tags)
 
 		counterTags["page"] = "read"
 		fields := map[string]interface{}{

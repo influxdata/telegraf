@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"regexp"
 	"strconv"
@@ -193,9 +194,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	tags := make(map[string]string)
 
 	// add default tags
-	for k, v := range p.DefaultTags {
-		tags[k] = v
-	}
+	maps.Copy(tags, p.DefaultTags)
 
 	timestamp := p.timeFunc()
 	for k, v := range values {

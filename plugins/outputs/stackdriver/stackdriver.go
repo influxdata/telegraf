@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"hash/fnv"
+	"maps"
 	"path"
 	"sort"
 	"strconv"
@@ -257,9 +258,7 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 		// Convert any declared tag to a resource label and remove it from
 		// the metric
 		resourceLabels := make(map[string]string, len(s.ResourceLabels)+len(s.TagsAsResourceLabels))
-		for k, v := range s.ResourceLabels {
-			resourceLabels[k] = v
-		}
+		maps.Copy(resourceLabels, s.ResourceLabels)
 		for _, tag := range s.TagsAsResourceLabels {
 			if val, ok := m.GetTag(tag); ok {
 				resourceLabels[tag] = val
