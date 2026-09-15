@@ -49,7 +49,7 @@ func Compile(filters []string, separators ...rune) (Filter, error) {
 	case wildcards && len(filters) == 1:
 		return glob.Compile(filters[0], separators...)
 	default:
-		// Implement this manually as it is significatly faster than using
+		// Implement this manually as it is significantly faster than using
 		// gobwas/glob's pattern list
 		return newFilterGlobMultiple(filters, separators...)
 	}
