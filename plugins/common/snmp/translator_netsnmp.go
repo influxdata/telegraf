@@ -229,16 +229,14 @@ func (n *netsnmpTranslator) snmpTranslateCall(oid string) (mibName string, oidNu
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		if after, ok0 := strings.CutPrefix(line, "  -- TEXTUAL CONVENTION "); ok0 {
-			tc := after
+		if tc, found := strings.CutPrefix(line, "  -- TEXTUAL CONVENTION "); found {
 			switch tc {
 			case "MacAddress", "PhysAddress":
 				conversion = "hwaddr"
 			case "InetAddressIPv4", "InetAddressIPv6", "InetAddress", "IPSIpAddress":
 				conversion = "ipaddr"
 			}
-		} else if after, ok0 := strings.CutPrefix(line, "::= { "); ok0 {
-			objs := after
+		} else if objs, found := strings.CutPrefix(line, "::= { "); found {
 			objs = strings.TrimSuffix(objs, " }")
 
 			for obj := range strings.SplitSeq(objs, " ") {

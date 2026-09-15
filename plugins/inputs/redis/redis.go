@@ -506,8 +506,7 @@ func gatherKeyspaceLine(name, line string, acc telegraf.Accumulator, globalTags 
 			tags[k] = v
 		}
 		tags["database"] = name
-		dbparts := strings.SplitSeq(line, ",")
-		for dbp := range dbparts {
+		for dbp := range strings.SplitSeq(line, ",") {
 			kv := strings.Split(dbp, "=")
 			ival, err := strconv.ParseInt(kv[1], 10, 64)
 			if err == nil {
@@ -535,8 +534,7 @@ func gatherCommandStateLine(name, line string, acc telegraf.Accumulator, globalT
 		tags[k] = v
 	}
 	tags["command"] = strings.TrimPrefix(name, "cmdstat_")
-	parts := strings.SplitSeq(line, ",")
-	for part := range parts {
+	for part := range strings.SplitSeq(line, ",") {
 		kv := strings.Split(part, "=")
 		if len(kv) != 2 {
 			continue
@@ -577,8 +575,7 @@ func gatherLatencyStatsLine(name, line string, acc telegraf.Accumulator, globalT
 		tags[k] = v
 	}
 	tags["command"] = strings.TrimPrefix(name, "latency_percentiles_usec_")
-	parts := strings.SplitSeq(line, ",")
-	for part := range parts {
+	for part := range strings.SplitSeq(line, ",") {
 		kv := strings.Split(part, "=")
 		if len(kv) != 2 {
 			continue
@@ -611,8 +608,7 @@ func gatherReplicationLine(name, line string, acc telegraf.Accumulator, globalTa
 	tags["replica_id"] = strings.TrimLeft(name, "slave")
 	tags["replication_role"] = "slave"
 
-	parts := strings.SplitSeq(line, ",")
-	for part := range parts {
+	for part := range strings.SplitSeq(line, ",") {
 		kv := strings.Split(part, "=")
 		if len(kv) != 2 {
 			continue

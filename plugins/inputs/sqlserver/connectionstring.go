@@ -21,8 +21,7 @@ func getConnectionIdentifiers(connectionString string) (sqlInstance, databaseNam
 	trimmedConnectionString := strings.TrimSpace(connectionString)
 
 	if after, ok := strings.CutPrefix(trimmedConnectionString, "odbc:"); ok {
-		connectionStringWithoutOdbc := after
-		return parseConnectionStringKeyValue(connectionStringWithoutOdbc)
+		return parseConnectionStringKeyValue(after)
 	}
 	if strings.HasPrefix(trimmedConnectionString, "sqlserver://") {
 		return parseConnectionStringURL(trimmedConnectionString)
@@ -35,8 +34,7 @@ func parseConnectionStringKeyValue(connectionString string) (sqlInstance, databa
 	sqlInstance = ""
 	databaseName = ""
 
-	keyValuePairs := strings.SplitSeq(connectionString, ";")
-	for keyValuePair := range keyValuePairs {
+	for keyValuePair := range strings.SplitSeq(connectionString, ";") {
 		if len(keyValuePair) == 0 {
 			continue
 		}

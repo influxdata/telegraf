@@ -198,8 +198,7 @@ func processPingOutput(out string) (statistics, error) {
 
 	// Set this error to nil if we find a 'transmitted' line
 	err := errors.New("fatal error processing ping output")
-	lines := strings.SplitSeq(out, "\n")
-	for line := range lines {
+	for line := range strings.SplitSeq(out, "\n") {
 		// Reading only first TTL, ignoring other TTL messages
 		if stats.ttl == -1 && (strings.Contains(line, "ttl=") || strings.Contains(line, "hlim=")) {
 			stats.ttl, err = getTTL(line)
