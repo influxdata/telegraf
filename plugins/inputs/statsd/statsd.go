@@ -627,8 +627,7 @@ func (s *Statsd) parseStatsdLine(p *graphite.Parser, line string) error {
 		// users.online:1|c|#sometagwithnovalue
 		// we will split on the pipe and remove any elements that are datadog
 		// tags, parse them, and rebuild the line sans the datadog tags
-		pipesplit := strings.Split(line, "|")
-		for _, segment := range pipesplit {
+		for segment := range strings.SplitSeq(line, "|") {
 			if len(segment) > 0 && segment[0] == '#' {
 				// we have ourselves a tag; they are comma separated
 				parseDataDogTags(lineTags, segment[1:])

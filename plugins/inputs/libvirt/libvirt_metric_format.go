@@ -70,7 +70,7 @@ func translateMetrics(stats []golibvirt.DomainStatsRecord) map[string]map[string
 			}
 
 			for _, params := range stat.Params {
-				statGroup := strings.Split(params.Field, ".")[0]
+				statGroup, _, _ := strings.Cut(params.Field, ".")
 				if metrics[stat.Dom.Name][statGroup] == nil {
 					metrics[stat.Dom.Name][statGroup] = make(map[string]golibvirt.TypedParamValue)
 				}

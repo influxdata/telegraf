@@ -220,8 +220,7 @@ func (h *Hugepages) gatherStatsFromMeminfo(acc telegraf.Accumulator) error {
 	}
 
 	metrics := make(map[string]interface{})
-	lines := bytes.Split(meminfo, newlineByte)
-	for _, line := range lines {
+	for line := range bytes.SplitSeq(meminfo, newlineByte) {
 		fields := bytes.Fields(line)
 		if len(fields) < 2 {
 			continue
