@@ -2029,7 +2029,7 @@ func TestRangeQueries(t *testing.T) {
 					return
 				}
 				params := make(map[string]time.Time, 2)
-				for _, e := range strings.Split(string(body), "&") {
+				for e := range strings.SplitSeq(string(body), "&") {
 					key, value, found := strings.Cut(e, "=")
 					if !found {
 						w.WriteHeader(http.StatusInternalServerError)

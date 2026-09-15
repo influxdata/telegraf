@@ -2,6 +2,7 @@ package inputs_udp_listener
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
@@ -31,7 +32,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 
 	// Copy the setting except the special plugin ones to preserve
 	// all parser settings of the existing (deprecated) config.
-	var msg string
+	var msg strings.Builder
 	plugin := make(map[string]any, len(old))
 	for k, v := range old {
 		switch k {
@@ -42,9 +43,9 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 			}
 			plugin["service_address"] = "udp://" + addr
 		case "allowed_pending_messages":
-			msg += allowPendingMessagesMsg
+			msg.WriteString(allowPendingMessagesMsg)
 		case "udp_packet_size":
-			msg += udpPacketSizeMsg
+			msg.WriteString(udpPacketSizeMsg)
 		case "udp_buffer_size":
 			plugin["read_buffer_size"] = v
 		default:
@@ -64,7 +65,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	buf = append(buf, []byte("\n")...)
 
 	// Create the new content to output
-	return buf, msg, nil
+	return buf, msg.String(), nil
 }
 
 // Register the migration function for the plugin type

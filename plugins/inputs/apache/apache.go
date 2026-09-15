@@ -141,7 +141,7 @@ func gatherScores(data string) map[string]interface{} {
 	var waiting, open = 0, 0
 	var s, r, w, k, d, c, l, g, i = 0, 0, 0, 0, 0, 0, 0, 0, 0
 
-	for _, str := range strings.Split(data, "") {
+	for str := range strings.SplitSeq(data, "") {
 		switch str {
 		case "_":
 			waiting++

@@ -19,7 +19,7 @@ func fakePassengerStatus(stat string) (string, error) {
 		fileExtension = ".bat"
 		var sb strings.Builder
 		sb.WriteString("@echo off\n")
-		for _, line := range strings.Split(strings.TrimSuffix(stat, "\n"), "\n") {
+		for line := range strings.SplitSeq(strings.TrimSuffix(stat, "\n"), "\n") {
 			sb.WriteString("for /f \"delims=\" %%A in (\"")
 			sb.WriteString(line)
 			sb.WriteString("\") do echo %%~A\n")

@@ -323,7 +323,7 @@ func metadata(t *T, root ast.Node) error {
 					continue
 				}
 
-				for _, tag := range strings.Split(remainder, ",") {
+				for tag := range strings.SplitSeq(remainder, ",") {
 					tag = metaComment.ReplaceAllString(tag, "")
 					if !slices.Contains(validTags, strings.TrimSpace(tag)) {
 						t.assertNodeLineOffsetf(n, counter-1, "unknown tag %q", tag)
@@ -331,7 +331,7 @@ func metadata(t *T, root ast.Node) error {
 				}
 				positions = append(positions, "tags")
 			case "💻":
-				for _, os := range strings.Split(remainder, ",") {
+				for os := range strings.SplitSeq(remainder, ",") {
 					os = metaComment.ReplaceAllString(os, "")
 					if !slices.Contains(metaOSes, strings.TrimSpace(os)) {
 						t.assertNodeLineOffsetf(n, counter-1, "unknown operating system %q", os)

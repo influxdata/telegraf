@@ -113,8 +113,8 @@ func (h *basicAuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 	var reqUsername, reqPassword string
 	var ok bool
 	authHeader := req.Header.Get("Authorization")
-	if strings.HasPrefix(authHeader, "Token ") {
-		token := strings.TrimPrefix(authHeader, "Token ")
+	if after, ok0 := strings.CutPrefix(authHeader, "Token "); ok0 {
+		token := after
 		reqUsername, reqPassword, ok = strings.Cut(token, ":")
 	} else {
 		reqUsername, reqPassword, ok = req.BasicAuth()

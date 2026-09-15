@@ -80,8 +80,8 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("failed to run command %q: %w - %s", strings.Join(cmd.Args, " "), err, string(out))
 	}
-	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(strings.TrimSpace(string(out)), "\n")
+	for line := range lines {
 		if len(line) == 0 {
 			acc.AddFields("sensors", fields, tags)
 			chip = ""
