@@ -2,6 +2,7 @@ package jolokia2
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -65,13 +66,7 @@ func (pb *pointBuilder) extractTags(mbean string) map[string]string {
 }
 
 func (pb *pointBuilder) includeTag(tagName string) bool {
-	for _, t := range pb.metric.TagKeys {
-		if tagName == t {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(pb.metric.TagKeys, tagName)
 }
 
 func (pb *pointBuilder) formatTagName(tagName string) string {

@@ -3,6 +3,7 @@ package histogram
 
 import (
 	_ "embed"
+	"slices"
 	"sort"
 	"strconv"
 	"time"
@@ -236,13 +237,7 @@ func isBucketExists(field string, cfg bucketConfig) bool {
 		return true
 	}
 
-	for _, fl := range cfg.Fields {
-		if fl == field {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(cfg.Fields, field)
 }
 
 // sortBuckets sorts the buckets if it is needed

@@ -4,6 +4,7 @@ package disk
 import (
 	_ "embed"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/shirou/gopsutil/v4/disk"
@@ -105,12 +106,7 @@ func (opts mountOptions) mode() string {
 }
 
 func (opts mountOptions) exists(opt string) bool {
-	for _, o := range opts {
-		if o == opt {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(opts, opt)
 }
 
 func init() {

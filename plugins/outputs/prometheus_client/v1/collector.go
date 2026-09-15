@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -196,8 +197,8 @@ func (c *Collector) addMetricFamily(point telegraf.Metric, sample *Sample, mname
 // allowed.
 func sorted(metrics []telegraf.Metric) []telegraf.Metric {
 	batch := make([]telegraf.Metric, 0, len(metrics))
-	for i := len(metrics) - 1; i >= 0; i-- {
-		batch = append(batch, metrics[i])
+	for _, metric := range slices.Backward(metrics) {
+		batch = append(batch, metric)
 	}
 	sort.Slice(batch, func(i, j int) bool {
 		return batch[i].Time().Before(batch[j].Time())

@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -545,10 +546,8 @@ func (m *Smart) scanDevices(ignoreExcludes bool, scanArgs ...string) ([]string, 
 func excludedDev(excludes []string, deviceLine string) bool {
 	device := strings.Split(deviceLine, " ")
 	if len(device) != 0 {
-		for _, exclude := range excludes {
-			if device[0] == exclude {
-				return true
-			}
+		if slices.Contains(excludes, device[0]) {
+			return true
 		}
 	}
 	return false
@@ -952,12 +951,7 @@ func exitStatus(err error) (int, error) {
 }
 
 func contains(args []string, element string) bool {
-	for _, arg := range args {
-		if arg == element {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(args, element)
 }
 
 func difference(a, b []string) []string {

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"slices"
 	"strconv"
 	"time"
 
@@ -257,13 +258,7 @@ func getIntTelemetryPropertyValue(
 }
 
 func contains(set []string, val string) bool {
-	for _, elem := range set {
-		if elem == val {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(set, val)
 }
 
 func toFloat64(value interface{}) (float64, error) {

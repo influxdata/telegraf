@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -265,12 +266,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 }
 
 func anythingEnabled(ex []string) bool {
-	for _, s := range ex {
-		if s == "*" {
-			return false
-		}
-	}
-	return true
+	return !slices.Contains(ex, "*")
 }
 
 func newFilterOrPanic(include, exclude []string) filter.Filter {

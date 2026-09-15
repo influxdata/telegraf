@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -262,12 +263,7 @@ func (d *Dynatrace) getTypeOption(metric telegraf.Metric, field *telegraf.Field)
 }
 
 func isCounterMetricsMatch(counterMetrics []string, metricName string) bool {
-	for _, i := range counterMetrics {
-		if i == metricName {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(counterMetrics, metricName)
 }
 
 func isCounterMetricsPatternsMatch(counterPatterns []string, metricName string) bool {

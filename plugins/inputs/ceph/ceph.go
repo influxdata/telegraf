@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -264,11 +265,11 @@ type metric struct {
 // Pops names of pathStack to build the flattened name for a metric
 func (m *metric) name() string {
 	buf := bytes.Buffer{}
-	for i := len(m.pathStack) - 1; i >= 0; i-- {
+	for _, v := range slices.Backward(m.pathStack) {
 		if buf.Len() > 0 {
 			buf.WriteString(".")
 		}
-		buf.WriteString(m.pathStack[i])
+		buf.WriteString(v)
 	}
 	return buf.String()
 }

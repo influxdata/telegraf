@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/influxdata/toml"
@@ -178,11 +179,8 @@ func (s *selection) extractPluginsFromConfig(buf []byte) error {
 		// Check if we should handle the category, i.e. it contains plugins
 		// to configure.
 		var valid bool
-		for _, c := range categories {
-			if c == category {
-				valid = true
-				break
-			}
+		if slices.Contains(categories, category) {
+			valid = true
 		}
 		if !valid {
 			continue

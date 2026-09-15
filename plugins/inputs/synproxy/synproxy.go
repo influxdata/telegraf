@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -101,12 +102,7 @@ func (s *Synproxy) getSynproxyStat() (map[string]interface{}, error) {
 }
 
 func inSlice(haystack []string, needle string) bool {
-	for _, val := range haystack {
-		if needle == val {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(haystack, needle)
 }
 
 func init() {
