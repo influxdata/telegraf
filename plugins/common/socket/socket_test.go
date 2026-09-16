@@ -869,7 +869,7 @@ func TestNewSocketServiceAddressParsing(t *testing.T) {
 		{name: "udp all addresses no interface name", address: "udp://:8094", url: "udp://:8094"},
 		{name: "udp4 all interfaces no interface name", address: "udp4://:8094", url: "udp4://:8094"},
 		{name: "udp6 all interfaces no interface name", address: "udp6://:8094", url: "udp6://:8094"},
-		{name: "vsock with port", address: "vsock://cid:80", url: "vsock://cid:80"},
+		{name: "vsock with port", address: "vsock://3:80", url: "vsock://3:80"},
 		{name: "unix no interface name", address: "unix:///tmp/telegraf.sock", url: "unix:///tmp/telegraf.sock"},
 		{name: "unixgram no interface name", address: "unixgram:///tmp/telegraf.sock", url: "unixgram:///tmp/telegraf.sock"},
 		{name: "udp6 multicast no interface name", address: "udp6://[ff02::1]:8094", url: "udp6://[ff02::1]:8094"},
@@ -910,6 +910,56 @@ func TestInterfaceNameFromServiceAddressInvalid(t *testing.T) {
 			name, err := interfaceNameFromServiceAddress(tt.address)
 			require.Empty(t, name)
 			require.ErrorContains(t, err, tt.err)
+		})
+	}
+}
+
+func TestVsockAddressParsing(t *testing.T) {
+	tests := []struct {
+		name    string
+		address string
+	}{
+		{name: "valid CID and port", address: "vsock://2:8790"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cfg Config
+			s, err := cfg.NewSocket(tt.address, nil, testutil.Logger{})
+			require.NoError(t, err)
+
+			l := newStreamListener(s.Config, nil, testutil.Logger{})
+			err = l.setupVsock(s.url)
+			if err != nil {
+				// The address parsed correctly; the only remaining failure is the
+				// host lacking vsock support, which is not what this test covers.
+				require.NotContains(t, err.Error(), "failed to parse")
+				require.NotContains(t, err.Error(), "missing")
+				t.Skipf("vsock not available on this host: %v", err)
+			}
+			require.NoError(t, l.listener.Close())
+		})
+	}
+}
+
+func TestVsockAddressParsingInvalid(t *testing.T) {
+	tests := []struct {
+		name     string
+		address  string
+		expected string
+	}{
+		{name: "missing port", address: "vsock://2", expected: "port and/or CID number missing"},
+		{name: "invalid CID", address: "vsock://cid:8790", expected: "failed to parse CID cid"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cfg Config
+			s, err := cfg.NewSocket(tt.address, nil, testutil.Logger{})
+			require.NoError(t, err)
+
+			l := newStreamListener(s.Config, nil, testutil.Logger{})
+			require.ErrorContains(t, l.setupVsock(s.url), tt.expected)
 		})
 	}
 }
