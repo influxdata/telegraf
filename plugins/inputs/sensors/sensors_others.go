@@ -6,6 +6,9 @@ import "github.com/influxdata/telegraf"
 
 func (s *Sensors) Init() error {
 	s.Log.Warn("Current platform is not supported")
+	// Used on Linux only; referenced here so the unused linter is quiet.
+	_ = measurement
+	_ = s.path
 	return nil
 }
 
