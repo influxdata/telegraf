@@ -3,6 +3,7 @@ package sensors
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -13,12 +14,12 @@ import (
 	"github.com/influxdata/telegraf/filter"
 )
 
-type runner func(binary string, timeout config.Duration) (*bytes.Buffer, error)
+type runner func(binary string, timeout config.Duration) (*bytes.Buffer, error) //nolint:unused // OpenBSD backend and tests
 
 // Sensor status strings as printed by print_sensor() in OpenBSD's
 // sbin/sysctl/sysctl.c; sensors with an unspecified status omit it.
 // Numeric codes match enum sensor_status (SENSOR_S_OK = 1, ...).
-var sensorStatuses = map[string]float64{
+var sensorStatuses = map[string]float64{ //nolint:unused // OpenBSD backend and tests
 	"OK":       1,
 	"WARNING":  2,
 	"CRITICAL": 3,
@@ -28,7 +29,7 @@ var sensorStatuses = map[string]float64{
 // Drive state strings as printed by print_sensor() and the matching
 // SENSOR_DRIVE_* values from sys/sys/sensors.h. value is emitted as well
 // as state because Prometheus cannot store string-only metrics.
-var driveStates = map[string]float64{
+var driveStates = map[string]float64{ //nolint:unused // OpenBSD backend and tests
 	"empty":         1,
 	"ready":         2,
 	"powering up":   3,
@@ -41,10 +42,10 @@ var driveStates = map[string]float64{
 	"degraded":      10,
 }
 
-func (s *Sensors) initOpenBSD() error {
+func (s *Sensors) initOpenBSD() error { //nolint:unused // OpenBSD backend and tests
 	switch s.MetricVersion {
 	case 1:
-		return fmt.Errorf("metric_version = 1 is not supported on OpenBSD; use 2")
+		return errors.New("metric_version = 1 is not supported on OpenBSD; use 2")
 	case 0:
 		s.MetricVersion = 2
 	case 2:
@@ -67,9 +68,9 @@ func (s *Sensors) initOpenBSD() error {
 	return nil
 }
 
-func (s *Sensors) gatherOpenBSD(acc telegraf.Accumulator) error {
+func (s *Sensors) gatherOpenBSD(acc telegraf.Accumulator) error { //nolint:unused // OpenBSD backend and tests
 	if s.run == nil {
-		return fmt.Errorf("error gathering metrics: sysctl runner is not configured")
+		return errors.New("error gathering metrics: sysctl runner is not configured")
 	}
 	out, err := s.run(s.Binary, s.Timeout)
 	if err != nil {
@@ -100,7 +101,7 @@ func (s *Sensors) gatherOpenBSD(acc telegraf.Accumulator) error {
 //	hw.sensors.cpu0.temp0=43.00 degC
 //	hw.sensors.softraid0.drive0=online (sd2), OK
 //	hw.sensors.nmea0.timedelta0=-0.000104 secs (GPS differential), OK, Sun Jul 19 23:16:01.999
-func (s *Sensors) parseLine(line string, acc telegraf.Accumulator) {
+func (s *Sensors) parseLine(line string, acc telegraf.Accumulator) { //nolint:unused // OpenBSD backend and tests
 	name, value, found := strings.Cut(line, "=")
 	if !found {
 		acc.AddError(fmt.Errorf("unexpected line %q", line))
