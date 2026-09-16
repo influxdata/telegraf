@@ -1,6 +1,7 @@
 package http_response
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -11,12 +12,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/armon/go-socks5"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
+	common_proxy "github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -560,6 +563,117 @@ func TestInterface(t *testing.T) {
 	}
 	absentFields := []string{"response_string_match"}
 	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
+}
+
+type socks5TestResolver map[string]net.IP
+
+func (r socks5TestResolver) Resolve(ctx context.Context, name string) (context.Context, net.IP, error) {
+	ip, ok := r[name]
+	if !ok {
+		return ctx, nil, fmt.Errorf("unknown hostname %q", name)
+	}
+	return ctx, ip, nil
+}
+
+func TestSocks5Proxy(t *testing.T) {
+	const (
+		proxyHostname     = "telegraf.invalid"
+		httpProxyHostname = "http-proxy.telegraf.invalid"
+		proxyUsername     = "user"
+		proxyPassword     = "password"
+	)
+
+	mux := setUpTestMux()
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	// Only the SOCKS5 proxy can resolve this hostname, so a direct dial fails.
+	serverURL, err := url.Parse(ts.URL)
+	require.NoError(t, err)
+	serverIP := net.ParseIP(serverURL.Hostname())
+	require.NotNil(t, serverIP)
+	serverURL.Path = "/good"
+	targetURL := *serverURL
+	targetURL.Host = net.JoinHostPort(proxyHostname, serverURL.Port())
+
+	proxyListener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer proxyListener.Close()
+
+	proxyServer, err := socks5.New(&socks5.Config{
+		AuthMethods: []socks5.Authenticator{socks5.UserPassAuthenticator{
+			Credentials: socks5.StaticCredentials{proxyUsername: proxyPassword},
+		}},
+		Resolver: socks5TestResolver{proxyHostname: serverIP, httpProxyHostname: serverIP},
+	})
+	require.NoError(t, err)
+	go func() {
+		if err := proxyServer.Serve(proxyListener); err != nil && !errors.Is(err, net.ErrClosed) {
+			t.Error(err)
+		}
+	}()
+
+	tests := []struct {
+		name      string
+		url       string
+		httpProxy string
+	}{
+		{
+			name: "without http proxy",
+			url:  targetURL.String(),
+		},
+		{
+			// The test server also acts as the HTTP proxy as it serves the
+			// absolute request URL by path. The target hostname is unknown to
+			// everyone, so the request only succeeds through both proxies.
+			name:      "chained http proxy",
+			url:       "http://target.telegraf.invalid/good",
+			httpProxy: "http://" + net.JoinHostPort(httpProxyHostname, serverURL.Port()),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := &HTTPResponse{
+				Log:             testutil.Logger{},
+				URLs:            []string{tt.url},
+				HTTPProxy:       tt.httpProxy,
+				Method:          "GET",
+				ResponseTimeout: config.Duration(time.Second * 20),
+				Socks5ProxyConfig: common_proxy.Socks5ProxyConfig{
+					Socks5ProxyEnabled:  true,
+					Socks5ProxyAddress:  proxyListener.Addr().String(),
+					Socks5ProxyUsername: proxyUsername,
+					Socks5ProxyPassword: proxyPassword,
+				},
+			}
+
+			var acc testutil.Accumulator
+			require.NoError(t, h.Init())
+
+			// The system wide proxy settings must be ignored with SOCKS5. We cannot
+			// check this via HTTP_PROXY as net/http reads it only once per process.
+			transport := h.clients[0].httpClient.(*http.Client).Transport.(*http.Transport)
+			require.Equal(t, tt.httpProxy != "", transport.Proxy != nil)
+
+			require.NoError(t, h.Gather(&acc))
+
+			expectedFields := map[string]interface{}{
+				"http_response_code": http.StatusOK,
+				"result_type":        "success",
+				"result_code":        0,
+				"response_time":      nil,
+				"content_length":     nil,
+			}
+			expectedTags := map[string]interface{}{
+				"server":      nil,
+				"method":      "GET",
+				"status_code": "200",
+				"result":      "success",
+			}
+			checkOutput(t, &acc, expectedFields, expectedTags, []string{"response_string_match"}, nil)
+		})
+	}
 }
 
 func TestRedirects(t *testing.T) {

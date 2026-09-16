@@ -10,10 +10,11 @@ import (
 	"time"
 
 	ws "github.com/gorilla/websocket"
+	"golang.org/x/net/proxy"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/proxy"
+	common_proxy "github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -36,8 +37,8 @@ type WebSocket struct {
 	Headers        map[string]*config.Secret `toml:"headers"`
 	UseTextFrames  bool                      `toml:"use_text_frames"`
 	Log            telegraf.Logger           `toml:"-"`
-	proxy.HTTPProxy
-	proxy.Socks5ProxyConfig
+	common_proxy.HTTPProxy
+	common_proxy.Socks5ProxyConfig
 	tls.ClientConfig
 
 	conn       *ws.Conn
@@ -82,7 +83,7 @@ func (w *WebSocket) Connect() error {
 	}
 
 	if w.Socks5ProxyEnabled {
-		netDialer, err := w.Socks5ProxyConfig.GetDialer()
+		netDialer, err := w.Socks5ProxyConfig.GetDialer(proxy.Direct)
 		if err != nil {
 			return fmt.Errorf("error connecting to socks5 proxy: %w", err)
 		}
