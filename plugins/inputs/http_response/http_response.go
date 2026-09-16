@@ -184,6 +184,7 @@ func (h *HTTPResponse) createHTTPClient(address url.URL) (*http.Client, error) {
 		}
 	}
 	dialContext := dialer.DialContext
+	proxyFunc := getProxyFunc(h.HTTPProxy)
 	if h.Socks5ProxyEnabled {
 		proxyDialer, err := h.Socks5ProxyConfig.GetDialer(dialer)
 		if err != nil {
@@ -194,11 +195,17 @@ func (h *HTTPResponse) createHTTPClient(address url.URL) (*http.Client, error) {
 			return nil, errors.New("socks5 proxy dialer does not support context")
 		}
 		dialContext = contextDialer.DialContext
+
+		// Only chain an explicitly configured HTTP proxy behind SOCKS5 and
+		// ignore the system wide proxy settings otherwise
+		if h.HTTPProxy == "" {
+			proxyFunc = nil
+		}
 	}
 
 	client := &http.Client{
 		Transport: &http.Transport{
-			Proxy:             getProxyFunc(h.HTTPProxy),
+			Proxy:             proxyFunc,
 			DialContext:       dialContext,
 			DisableKeepAlives: true,
 			TLSClientConfig:   tlsCfg,
