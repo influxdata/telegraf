@@ -19,7 +19,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
-	commonproxy "github.com/influxdata/telegraf/plugins/common/proxy"
+	common_proxy "github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -616,7 +616,7 @@ func TestSocks5Proxy(t *testing.T) {
 		URLs:            []string{serverURL.String()},
 		Method:          "GET",
 		ResponseTimeout: config.Duration(time.Second * 20),
-		Socks5ProxyConfig: commonproxy.Socks5ProxyConfig{
+		Socks5ProxyConfig: common_proxy.Socks5ProxyConfig{
 			Socks5ProxyEnabled:  true,
 			Socks5ProxyAddress:  proxyListener.Addr().String(),
 			Socks5ProxyUsername: proxyUsername,
