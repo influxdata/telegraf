@@ -2087,7 +2087,8 @@ func TestRequestFail(t *testing.T) {
 				Controller:        "tcp://localhost:1502",
 				ConfigurationType: "request",
 				Log:               testutil.Logger{},
-				Requests:          tt.requests}
+				Requests:          tt.requests,
+			}
 
 			require.ErrorContains(t, plugin.Init(), tt.errormsg)
 			require.Empty(t, plugin.requests)
@@ -2840,7 +2841,8 @@ func TestRequestOptimizationMaxExtraRegisterFail(t *testing.T) {
 				Controller:        "tcp://localhost:1502",
 				ConfigurationType: "request",
 				Log:               testutil.Logger{},
-				Requests:          tt.requests}
+				Requests:          tt.requests,
+			}
 
 			require.ErrorContains(t, plugin.Init(), tt.errormsg)
 			require.Empty(t, plugin.requests)

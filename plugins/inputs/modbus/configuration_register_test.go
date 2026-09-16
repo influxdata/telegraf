@@ -915,7 +915,8 @@ func TestRegisterReadMultipleCoilWithHole(t *testing.T) {
 		Controller: "tcp://localhost:1502",
 		Log:        testutil.Logger{Name: "modbus:MultipleCoilWithHole"},
 		SlaveID:    1,
-		Coils:      fcs}
+		Coils:      fcs,
+	}
 
 	expected := []telegraf.Metric{
 		metric.New(
@@ -975,7 +976,8 @@ func TestRegisterReadMultipleCoilLimit(t *testing.T) {
 		Controller: "tcp://localhost:1502",
 		Log:        testutil.Logger{},
 		SlaveID:    1,
-		Coils:      fcs}
+		Coils:      fcs,
+	}
 
 	expected := []telegraf.Metric{
 		metric.New(
@@ -1050,7 +1052,8 @@ func TestRegisterReadMultipleHoldingRegisterWithHole(t *testing.T) {
 		Controller:       "tcp://localhost:1502",
 		Log:              testutil.Logger{},
 		SlaveID:          1,
-		HoldingRegisters: fcs}
+		HoldingRegisters: fcs,
+	}
 
 	expected := []telegraf.Metric{
 		metric.New(
@@ -1108,7 +1111,8 @@ func TestRegisterReadMultipleHoldingRegisterLimit(t *testing.T) {
 		Controller:       "tcp://localhost:1502",
 		Log:              testutil.Logger{},
 		SlaveID:          1,
-		HoldingRegisters: fcs}
+		HoldingRegisters: fcs,
+	}
 
 	expected := []telegraf.Metric{
 		metric.New(
