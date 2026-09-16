@@ -117,7 +117,7 @@ func (l *streamListener) setupUnix(u *url.URL, tlsCfg *tls.Config, socketMode st
 func (l *streamListener) setupVsock(u *url.URL) error {
 	var err error
 
-	addrTuple := strings.SplitN(u.String(), ":", 2)
+	addrTuple := strings.SplitN(u.Host, ":", 2)
 
 	// Check address string for containing two tokens
 	if len(addrTuple) < 2 {
