@@ -130,7 +130,7 @@ sensors,device=k10temp-pci-00c3,sensor=temp1,type=temp temp_crit=70,temp_input=2
 sensors,device=power_meter-acpi-0,sensor=power1,type=power power_average=0,power_average_interval=300 1466751326000000000
 ```
 
-### OpenBSD
+### OpenBSD example
 
 ```text
 sensors,device=cpu0,sensor=temp0,type=temp value=43 1752956161000000000
