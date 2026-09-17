@@ -77,28 +77,31 @@ feature name with trailing digits removed (e.g. `temp1` -> `temp`).
 ### OpenBSD
 
 One metric is emitted per sensor. Values are reported in the natural unit of
-the sensor type as printed by `sysctl` (e.g. degrees Celsius for `temp`,
-Hz for `frequency`, volts for `volt`, RPM for `fan`, percent for `percent`
-and `humidity`, seconds for `timedelta`).
+the sensor type as printed by `sysctl`, and that unit is kept as a tag.
 
 - sensors
   - tags:
     - device (sensor device, e.g. `cpu0`, `acpitz0` or `softraid0`)
     - sensor (sensor name, e.g. `temp0` or `drive1`)
     - type (sensor type, e.g. `temp`, `frequency` or `drive`)
+    - unit (unit of `value`, e.g. `degC`, `Hz`, `RPM`, `VDC` or `%`;
+      omitted for `drive` and `indicator` sensors and for generic
+      integers, which have no unit)
     - description (sensor description, e.g. `zone temperature`;
       omitted when absent)
   - fields:
     - value (sensor value; `indicator` sensors report `On` as 1 and
       `Off` as 0; `drive` sensors report the kernel `SENSOR_DRIVE_*`
-      enum, e.g. `online` is 4 and `failed` is 9; `float`)
-    - state (drive state, e.g. `online` or `failed`; `drive` sensors
-      only; `string`)
+      enum, e.g. `online` is 4 and `failed` is 9; omitted when the
+      kernel reports the value as unknown; `float`)
+    - state (human readable value of `drive` and `indicator` sensors,
+      e.g. `online`, `failed`, `On` or `Off`; `string`)
     - status (sensor status, one of `OK`, `WARNING`, `CRITICAL` or
       `UNKNOWN`; omitted when the sensor does not report a status; `string`)
     - status_code (numeric form of `status`, matching OpenBSD
-      `SENSOR_S_*`: OK=1, WARNING=2, CRITICAL=3, UNKNOWN=4; only set
-      when the sensor value is unknown but a status is present; `float`)
+      `SENSOR_S_*`: OK=1, WARNING=2, CRITICAL=3, UNKNOWN=4; emitted
+      whenever `status` is, since Prometheus drops string-only
+      fields; `float`)
 
 ## Example Output
 
@@ -132,10 +135,12 @@ sensors,device=power_meter-acpi-0,sensor=power1,type=power power_average=0,power
 ### OpenBSD example
 
 ```text
-sensors,device=cpu0,sensor=temp0,type=temp value=43 1752956161000000000
-sensors,device=cpu0,sensor=frequency0,type=frequency value=2250000000 1752956161000000000
-sensors,device=acpitz0,sensor=temp0,type=temp,description=zone\ temperature value=27.8 1752956161000000000
-sensors,device=softraid0,sensor=drive0,type=drive,description=sd2 value=4,state="online",status="OK" 1752956161000000000
-sensors,device=nmea0,sensor=indicator0,type=indicator,description=Signal value=1,status="OK" 1752956161000000000
-sensors,device=foo0,sensor=temp1,type=temp status="UNKNOWN",status_code=4 1752956161000000000
+sensors,device=cpu0,sensor=temp0,type=temp,unit=degC value=36 1758122408000000000
+sensors,device=cpu0,sensor=frequency0,type=frequency,unit=Hz value=1000000000 1758122408000000000
+sensors,description=zone\ temperature,device=acpitz0,sensor=temp0,type=temp,unit=degC value=27.8 1758122408000000000
+sensors,description=VCore,device=lm1,sensor=volt0,type=volt,unit=VDC value=1.34 1758122408000000000
+sensors,description=sd3,device=softraid0,sensor=drive0,type=drive state="degraded",status="WARNING",status_code=2,value=10 1758122408000000000
+sensors,description=Signal,device=nmea0,sensor=indicator0,type=indicator state="On",status="OK",status_code=1,value=1 1758122408000000000
+sensors,description=GPS\ differential,device=nmea0,sensor=timedelta0,type=timedelta,unit=secs status="OK",status_code=1,value=-0.000006 1758122408000000000
+sensors,device=foo0,sensor=temp1,type=temp status="UNKNOWN",status_code=4 1758122408000000000
 ```

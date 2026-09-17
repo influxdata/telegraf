@@ -83,7 +83,18 @@ func (s *Sensors) Gather(acc telegraf.Accumulator) error {
 		if line == "" {
 			continue
 		}
-		s.parseLine(line, acc)
+
+		tags, fields, err := parseLine(line)
+		if err != nil {
+			return err
+		}
+		if len(fields) == 0 {
+			continue
+		}
+		if s.deviceFilter != nil && !s.deviceFilter.Match(tags["device"]) {
+			continue
+		}
+		acc.AddFields("sensors", fields, tags)
 	}
 
 	return scanner.Err()
@@ -99,107 +110,117 @@ func (s *Sensors) Gather(acc telegraf.Accumulator) error {
 //	hw.sensors.cpu0.temp0=43.00 degC
 //	hw.sensors.softraid0.drive0=online (sd2), OK
 //	hw.sensors.nmea0.timedelta0=-0.000104 secs (GPS differential), OK, Sun Jul 19 23:16:01.999
-func (s *Sensors) parseLine(line string, acc telegraf.Accumulator) {
+func parseLine(line string) (map[string]string, map[string]any, error) {
 	name, value, found := strings.Cut(line, "=")
 	if !found {
-		acc.AddError(fmt.Errorf("unexpected line %q", line))
-		return
+		return nil, nil, fmt.Errorf("unexpected line %q", line)
 	}
 
 	rest, found := strings.CutPrefix(name, "hw.sensors.")
 	if !found {
-		acc.AddError(fmt.Errorf("unexpected sensor name %q", name))
-		return
+		return nil, nil, fmt.Errorf("unexpected sensor name %q", name)
 	}
 	device, sensor, found := strings.Cut(rest, ".")
 	if !found {
-		acc.AddError(fmt.Errorf("unexpected sensor name %q", name))
-		return
-	}
-
-	if s.deviceFilter != nil && !s.deviceFilter.Match(device) {
-		return
+		return nil, nil, fmt.Errorf("unexpected sensor name %q", name)
 	}
 
 	// The sensor type is the sensor name without the trailing index digits,
 	// e.g. "temp0" -> "temp"
 	sensorType := strings.TrimRightFunc(sensor, unicode.IsDigit)
 
-	// Split off the optional ", <STATUS>" and ", <timestamp>" suffixes. The
-	// timestamp (last value change, printed e.g. for timedelta sensors) is
-	// deliberately discarded as it is no metric.
-	parts := strings.Split(value, ", ")
-	payload := parts[0]
-
+	// Peel off the optional ", <STATUS>" and ", <timestamp>" suffixes from the
+	// right. Neither of them contains ", " and both follow the description, so
+	// a description is present exactly when what remains ends in ")". The
+	// timestamp records the last value change and is no metric.
 	var status string
-	for _, part := range parts[1:] {
-		if _, ok := sensorStatuses[part]; ok {
-			status = part
+	for range 2 {
+		if strings.HasSuffix(value, ")") {
 			break
 		}
+		idx := strings.LastIndex(value, ", ")
+		if idx < 0 {
+			break
+		}
+		if _, ok := sensorStatuses[value[idx+2:]]; ok {
+			status = value[idx+2:]
+		}
+		value = value[:idx]
 	}
 
 	// Split off the optional trailing "(<description>)", e.g.
-	// "27.80 degC (zone temperature)"
-	var description string
+	// "27.80 degC (zone temperature)". Descriptions are printed unescaped and
+	// may contain parentheses themselves, e.g. "+1.5V (Vccp)", so they start
+	// at the first " (" and not the last one.
+	payload, description := value, ""
 	if strings.HasSuffix(payload, ")") {
-		if idx := strings.LastIndex(payload, " ("); idx >= 0 {
+		if idx := strings.Index(payload, " ("); idx >= 0 {
 			description = payload[idx+2 : len(payload)-1]
 			payload = payload[:idx]
 		}
 	}
 
-	fields := make(map[string]interface{}, 3)
-	switch {
-	case payload == "unknown":
-		// SENSOR_FUNKNOWN: the kernel has no value. Do not invent one.
-		// If a status is present, emit status_code so Prometheus has a
-		// numeric field (string-only metrics are dropped).
-		if code, ok := sensorStatuses[status]; ok {
-			fields["status_code"] = code
-		}
-	case sensorType == "drive":
+	// print_sensor() prints "unknown" for any sensor flagged SENSOR_FUNKNOWN,
+	// whatever its type, and for a drive state outside SENSOR_DRIVE_*. It must
+	// therefore be handled per type instead of ahead of the type switch.
+	var unit string
+	fields := make(map[string]any, 4)
+	switch sensorType {
+	case "drive":
+		// Includes "unknown", so a drive that cannot be read stays visible
 		fields["state"] = payload
 		if v, ok := driveStates[payload]; ok {
 			fields["value"] = v
-		} else {
-			acc.AddError(fmt.Errorf("unrecognized drive state %q of sensor %q", payload, name))
 		}
-	case sensorType == "indicator":
+	case "indicator":
 		// Boolean indicator printed as "On" or "Off"
-		if payload == "On" {
+		fields["state"] = payload
+		switch payload {
+		case "On":
 			fields["value"] = float64(1)
-		} else {
+		case "Off":
 			fields["value"] = float64(0)
 		}
 	default:
-		// Numeric value optionally followed by a unit (e.g. "43.00 degC");
-		// percent and humidity sensors have the unit attached (e.g. "49.50%")
-		number, _, _ := strings.Cut(payload, " ")
-		number = strings.TrimSuffix(number, "%")
-		v, err := strconv.ParseFloat(number, 64)
-		if err != nil {
-			acc.AddError(fmt.Errorf("cannot parse value %q of sensor %q: %w", payload, name, err))
-			return
+		if payload != "unknown" {
+			// Numeric value optionally followed by a unit, e.g. "43.00 degC".
+			// Percent and humidity sensors print the unit attached to the
+			// number instead, e.g. "49.50%".
+			number, suffix, _ := strings.Cut(payload, " ")
+			if strings.HasSuffix(number, "%") {
+				number, suffix = strings.TrimSuffix(number, "%"), "%"
+			}
+			v, err := strconv.ParseFloat(number, 64)
+			if err != nil {
+				return nil, nil, fmt.Errorf("cannot parse value %q of sensor %q: %w", payload, name, err)
+			}
+			fields["value"] = v
+			unit = suffix
 		}
-		fields["value"] = v
 	}
 
 	if status != "" {
+		// status_code is emitted as well because Prometheus drops string-only
+		// fields, leaving no way to alert on the status otherwise.
 		fields["status"] = status
+		fields["status_code"] = sensorStatuses[status]
 	}
 	if len(fields) == 0 {
 		// Unknown value without status: nothing numeric or named to report
-		return
+		return nil, nil, nil
 	}
 
-	tags := make(map[string]string, 4)
-	tags["device"] = device
-	tags["sensor"] = sensor
-	tags["type"] = sensorType
+	tags := map[string]string{
+		"device": device,
+		"sensor": sensor,
+		"type":   sensorType,
+	}
 	if description != "" {
 		tags["description"] = description
 	}
+	if unit != "" {
+		tags["unit"] = unit
+	}
 
-	acc.AddFields("sensors", fields, tags)
+	return tags, fields, nil
 }
