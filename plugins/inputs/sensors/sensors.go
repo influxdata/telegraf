@@ -29,8 +29,8 @@ type Sensors struct {
 	Log                 telegraf.Logger `toml:"-"`
 
 	path         string
-	deviceFilter filter.Filter //nolint:unused // OpenBSD backend and tests
-	run          runner        //nolint:unused // OpenBSD backend and tests
+	deviceFilter filter.Filter
+	run          runner //nolint:unused // OpenBSD backend and tests
 }
 
 func (*Sensors) SampleConfig() string {

@@ -13,6 +13,7 @@ import (
 	"unicode"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 )
 
@@ -36,6 +37,12 @@ func (s *Sensors) Init() error {
 		return fmt.Errorf("no path specified for %q", cmd)
 	}
 
+	f, err := filter.Compile(s.Devices)
+	if err != nil {
+		return fmt.Errorf("compiling device filter failed: %w", err)
+	}
+	s.deviceFilter = f
+
 	return nil
 }
 
@@ -56,6 +63,7 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 	tags := make(map[string]string)
 	fields := make(map[string]interface{})
 	chip := ""
+	skip := false
 	cmd := execCommand(s.path, "-A", "-u")
 	out, err := internal.StdOutputTimeout(cmd, time.Duration(s.Timeout))
 	if err != nil {
@@ -64,19 +72,24 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 	for _, line := range lines {
 		if len(line) == 0 {
-			acc.AddFields(measurement, fields, tags)
+			if !skip {
+				acc.AddFields(measurement, fields, tags)
+			}
 			chip = ""
+			skip = false
 			tags = make(map[string]string)
 			fields = make(map[string]interface{})
 			continue
 		}
 		if len(chip) == 0 {
 			chip = line
+			// The chip line names the device, e.g. "k10temp-pci-00c3"
+			skip = s.deviceFilter != nil && !s.deviceFilter.Match(chip)
 			s.setLinuxDeviceTag(tags, chip)
 			continue
 		}
 		if !strings.HasPrefix(line, "  ") {
-			if len(tags) > 1 {
+			if len(tags) > 1 && !skip {
 				acc.AddFields(measurement, fields, tags)
 			}
 			fields = make(map[string]interface{})
@@ -94,7 +107,9 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 			fields[fieldName] = fieldValue
 		}
 	}
-	acc.AddFields(measurement, fields, tags)
+	if !skip {
+		acc.AddFields(measurement, fields, tags)
+	}
 	return nil
 }
 
