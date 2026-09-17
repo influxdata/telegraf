@@ -58,7 +58,7 @@ func TestSingleMetricTDigest(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
-			map[string]interface{}{
+			map[string]any{
 				"a_025": 24.75,
 				"a_050": 49.50,
 				"a_075": 74.25,
@@ -90,7 +90,7 @@ func TestSingleMetricTDigest(t *testing.T) {
 		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
-			map[string]interface{}{
+			map[string]any{
 				"a":  int32(i),
 				"b":  int64(i),
 				"c":  uint32(i),
@@ -128,7 +128,7 @@ func TestMultipleMetricsTDigest(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"series": "foo"},
-			map[string]interface{}{
+			map[string]any{
 				"a_025": 24.75, "a_050": 49.50, "a_075": 74.25,
 				"b_025": 24.75, "b_050": 49.50, "b_075": 74.25,
 			},
@@ -137,7 +137,7 @@ func TestMultipleMetricsTDigest(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"series": "bar"},
-			map[string]interface{}{
+			map[string]any{
 				"a_025": 49.50, "a_050": 99.00, "a_075": 148.50,
 				"b_025": 49.50, "b_050": 99.00, "b_075": 148.50,
 			},
@@ -151,14 +151,14 @@ func TestMultipleMetricsTDigest(t *testing.T) {
 		metricsA = append(metricsA, metric.New(
 			"test",
 			map[string]string{"series": "foo"},
-			map[string]interface{}{"a": int64(i), "b": float64(i), "x1": "string", "x2": true},
+			map[string]any{"a": int64(i), "b": float64(i), "x1": "string", "x2": true},
 			time.Now(),
 		))
 
 		metricsB = append(metricsB, metric.New(
 			"test",
 			map[string]string{"series": "bar"},
-			map[string]interface{}{"a": int64(2 * i), "b": float64(2 * i), "x1": "string", "x2": true},
+			map[string]any{"a": int64(2 * i), "b": float64(2 * i), "x1": "string", "x2": true},
 			time.Now(),
 		))
 	}
@@ -190,7 +190,7 @@ func TestSingleMetricExactR7(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
-			map[string]interface{}{
+			map[string]any{
 				"a_025": 24.75,
 				"a_050": 49.50,
 				"a_075": 74.25,
@@ -222,7 +222,7 @@ func TestSingleMetricExactR7(t *testing.T) {
 		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
-			map[string]interface{}{
+			map[string]any{
 				"a":  int32(i),
 				"b":  int64(i),
 				"c":  uint32(i),
@@ -260,7 +260,7 @@ func TestMultipleMetricsExactR7(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"series": "foo"},
-			map[string]interface{}{
+			map[string]any{
 				"a_025": 24.75, "a_050": 49.50, "a_075": 74.25,
 				"b_025": 24.75, "b_050": 49.50, "b_075": 74.25,
 			},
@@ -269,7 +269,7 @@ func TestMultipleMetricsExactR7(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"series": "bar"},
-			map[string]interface{}{
+			map[string]any{
 				"a_025": 49.50, "a_050": 99.00, "a_075": 148.50,
 				"b_025": 49.50, "b_050": 99.00, "b_075": 148.50,
 			},
@@ -283,14 +283,14 @@ func TestMultipleMetricsExactR7(t *testing.T) {
 		metricsA = append(metricsA, metric.New(
 			"test",
 			map[string]string{"series": "foo"},
-			map[string]interface{}{"a": int64(i), "b": float64(i), "x1": "string", "x2": true},
+			map[string]any{"a": int64(i), "b": float64(i), "x1": "string", "x2": true},
 			time.Now(),
 		))
 
 		metricsB = append(metricsB, metric.New(
 			"test",
 			map[string]string{"series": "bar"},
-			map[string]interface{}{"a": int64(2 * i), "b": float64(2 * i), "x1": "string", "x2": true},
+			map[string]any{"a": int64(2 * i), "b": float64(2 * i), "x1": "string", "x2": true},
 			time.Now(),
 		))
 	}
@@ -322,7 +322,7 @@ func TestSingleMetricExactR8(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
-			map[string]interface{}{
+			map[string]any{
 				"a_025": 24.417,
 				"a_050": 49.500,
 				"a_075": 74.583,
@@ -354,7 +354,7 @@ func TestSingleMetricExactR8(t *testing.T) {
 		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
-			map[string]interface{}{
+			map[string]any{
 				"a":  int32(i),
 				"b":  int64(i),
 				"c":  uint32(i),
@@ -392,7 +392,7 @@ func TestMultipleMetricsExactR8(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"series": "foo"},
-			map[string]interface{}{
+			map[string]any{
 				"a_025": 24.417, "a_050": 49.500, "a_075": 74.583,
 				"b_025": 24.417, "b_050": 49.500, "b_075": 74.583,
 			},
@@ -401,7 +401,7 @@ func TestMultipleMetricsExactR8(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"series": "bar"},
-			map[string]interface{}{
+			map[string]any{
 				"a_025": 48.833, "a_050": 99.000, "a_075": 149.167,
 				"b_025": 48.833, "b_050": 99.000, "b_075": 149.167,
 			},
@@ -415,14 +415,14 @@ func TestMultipleMetricsExactR8(t *testing.T) {
 		metricsA = append(metricsA, metric.New(
 			"test",
 			map[string]string{"series": "foo"},
-			map[string]interface{}{"a": int64(i), "b": float64(i), "x1": "string", "x2": true},
+			map[string]any{"a": int64(i), "b": float64(i), "x1": "string", "x2": true},
 			time.Now(),
 		))
 
 		metricsB = append(metricsB, metric.New(
 			"test",
 			map[string]string{"series": "bar"},
-			map[string]interface{}{"a": int64(2 * i), "b": float64(2 * i), "x1": "string", "x2": true},
+			map[string]any{"a": int64(2 * i), "b": float64(2 * i), "x1": "string", "x2": true},
 			time.Now(),
 		))
 	}
@@ -446,7 +446,7 @@ func BenchmarkDefaultTDigest(b *testing.B) {
 		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
-			map[string]interface{}{
+			map[string]any{
 				"a":  rand.Int31(),
 				"b":  rand.Int63(),
 				"c":  rand.Uint32(),
@@ -482,7 +482,7 @@ func BenchmarkDefaultTDigest100Q(b *testing.B) {
 		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
-			map[string]interface{}{
+			map[string]any{
 				"a":  rand.Int31(),
 				"b":  rand.Int63(),
 				"c":  rand.Uint32(),
@@ -523,7 +523,7 @@ func BenchmarkDefaultExactR7(b *testing.B) {
 		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
-			map[string]interface{}{
+			map[string]any{
 				"a":  rand.Int31(),
 				"b":  rand.Int63(),
 				"c":  rand.Uint32(),
@@ -559,7 +559,7 @@ func BenchmarkDefaultExactR7100Q(b *testing.B) {
 		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
-			map[string]interface{}{
+			map[string]any{
 				"a":  rand.Int31(),
 				"b":  rand.Int63(),
 				"c":  rand.Uint32(),
@@ -600,7 +600,7 @@ func BenchmarkDefaultExactR8(b *testing.B) {
 		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
-			map[string]interface{}{
+			map[string]any{
 				"a":  rand.Int31(),
 				"b":  rand.Int63(),
 				"c":  rand.Uint32(),
@@ -636,7 +636,7 @@ func BenchmarkDefaultExactR8100Q(b *testing.B) {
 		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
-			map[string]interface{}{
+			map[string]any{
 				"a":  rand.Int31(),
 				"b":  rand.Int63(),
 				"c":  rand.Uint32(),

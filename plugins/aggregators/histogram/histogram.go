@@ -258,7 +258,7 @@ func sortBuckets(buckets []float64) []float64 {
 }
 
 // convert converts interface to concrete type
-func convert(in interface{}) (float64, bool) {
+func convert(in any) (float64, bool) {
 	switch v := in.(type) {
 	case float64:
 		return v, true
@@ -295,8 +295,8 @@ func isTagsIdentical(originalTags, checkedTags map[string]string) bool {
 }
 
 // makeFieldsWithCount assigns count value to all metric fields
-func makeFieldsWithCount(fieldsWithCountIn map[string]int64) map[string]interface{} {
-	fieldsWithCountOut := make(map[string]interface{}, len(fieldsWithCountIn))
+func makeFieldsWithCount(fieldsWithCountIn map[string]int64) map[string]any {
+	fieldsWithCountOut := make(map[string]any, len(fieldsWithCountIn))
 	for field, count := range fieldsWithCountIn {
 		fieldsWithCountOut[field+"_bucket"] = count
 	}
