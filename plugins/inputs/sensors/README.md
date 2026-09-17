@@ -26,7 +26,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
-# Monitor hardware sensors (lm-sensors on Linux, hw.sensors on OpenBSD)
+# Monitor hardware sensors
+# This plugin ONLY supports Linux and OpenBSD
 [[inputs.sensors]]
   ## (Linux only) Remove numbers from field names.
   ## If true, a field name like 'temp1_input' will be changed to 'temp_input'.
