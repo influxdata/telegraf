@@ -19,11 +19,12 @@ import (
 
 func TestVaultStats(t *testing.T) {
 	var applyTests = []struct {
-		name     string
-		expected []telegraf.Metric
+		name        string
+		floatValues *bool
+		expected    []telegraf.Metric
 	}{
 		{
-			name: "Metrics",
+			name: "integer values by default",
 			expected: []telegraf.Metric{
 				metric.New(
 					"vault.raft.replication.appendEntries.logs",
@@ -33,9 +34,9 @@ func TestVaultStats(t *testing.T) {
 					map[string]interface{}{
 						"count":  int(130),
 						"rate":   float64(0.2),
-						"sum":    int(2),
-						"min":    int(0),
-						"max":    int(1),
+						"sum":    int64(2),
+						"min":    int64(0),
+						"max":    int64(1),
 						"mean":   float64(0.015384615384615385),
 						"stddev": float64(0.12355304447984486),
 					},
@@ -48,7 +49,74 @@ func TestVaultStats(t *testing.T) {
 						"cluster": "vault-cluster-23b671c7",
 					},
 					map[string]interface{}{
-						"value": int(1),
+						"value": int64(1),
+					},
+					time.Unix(1638287340, 0),
+					2,
+				),
+				metric.New(
+					"vault.wal.write_controller.idle_secs",
+					map[string]string{},
+					map[string]interface{}{
+						"value": int64(679114),
+					},
+					time.Unix(1638287340, 0),
+					2,
+				),
+				metric.New(
+					"vault.token.lookup",
+					map[string]string{},
+					map[string]interface{}{
+						"count":  int(5135),
+						"max":    float64(16.22449493408203),
+						"mean":   float64(0.1698389152269865),
+						"min":    float64(0.06690400093793869),
+						"rate":   float64(87.21228296905755),
+						"stddev": float64(0.24637634000854705),
+						"sum":    float64(872.1228296905756),
+					},
+					time.Unix(1638287340, 0),
+					1,
+				),
+			},
+		},
+		{
+			name:        "float values",
+			floatValues: new(true),
+			expected: []telegraf.Metric{
+				metric.New(
+					"vault.raft.replication.appendEntries.logs",
+					map[string]string{
+						"peer_id": "clustnode-02",
+					},
+					map[string]interface{}{
+						"count":  int(130),
+						"rate":   float64(0.2),
+						"sum":    float64(2),
+						"min":    float64(0),
+						"max":    float64(1),
+						"mean":   float64(0.015384615384615385),
+						"stddev": float64(0.12355304447984486),
+					},
+					time.Unix(1638287340, 0),
+					1,
+				),
+				metric.New(
+					"vault.core.unsealed",
+					map[string]string{
+						"cluster": "vault-cluster-23b671c7",
+					},
+					map[string]interface{}{
+						"value": float64(1),
+					},
+					time.Unix(1638287340, 0),
+					2,
+				),
+				metric.New(
+					"vault.wal.write_controller.idle_secs",
+					map[string]string{},
+					map[string]interface{}{
+						"value": float64(679114.3),
 					},
 					time.Unix(1638287340, 0),
 					2,
@@ -94,8 +162,10 @@ func TestVaultStats(t *testing.T) {
 			defer ts.Close()
 
 			plugin := &Vault{
-				URL:   ts.URL,
-				Token: "s.CDDrgg5zPv5ssI0Z2P4qxJj2",
+				URL:         ts.URL,
+				Token:       "s.CDDrgg5zPv5ssI0Z2P4qxJj2",
+				FloatValues: tt.floatValues,
+				Log:         testutil.Logger{},
 			}
 			err := plugin.Init()
 			require.NoError(t, err)
@@ -119,9 +189,9 @@ func TestRedirect(t *testing.T) {
 			map[string]interface{}{
 				"count":  int(130),
 				"rate":   float64(0.2),
-				"sum":    int(2),
-				"min":    int(0),
-				"max":    int(1),
+				"sum":    int64(2),
+				"min":    int64(0),
+				"max":    int64(1),
 				"mean":   float64(0.015384615384615385),
 				"stddev": float64(0.12355304447984486),
 			},
@@ -134,7 +204,16 @@ func TestRedirect(t *testing.T) {
 				"cluster": "vault-cluster-23b671c7",
 			},
 			map[string]interface{}{
-				"value": int(1),
+				"value": int64(1),
+			},
+			time.Unix(1638287340, 0),
+			2,
+		),
+		metric.New(
+			"vault.wal.write_controller.idle_secs",
+			map[string]string{},
+			map[string]interface{}{
+				"value": int64(679114),
 			},
 			time.Unix(1638287340, 0),
 			2,
@@ -179,6 +258,7 @@ func TestRedirect(t *testing.T) {
 	plugin := &Vault{
 		URL:   server.URL,
 		Token: "s.CDDrgg5zPv5ssI0Z2P4qxJj2",
+		Log:   testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 
@@ -216,6 +296,7 @@ func TestIntegration(t *testing.T) {
 	plugin := &Vault{
 		URL:   "http://" + cntnr.Address + ":" + port,
 		Token: "root",
+		Log:   testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 

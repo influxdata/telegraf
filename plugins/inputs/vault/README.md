@@ -34,6 +34,11 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## OR
   token = "s.CDDrgg5zPv5ssI0Z2P4qxJj2"
 
+  ## Output gauge values and the sum, min and max of counters as floats as
+  ## reported by Vault instead of truncating them to integers. The default
+  ## will change to true in v1.45.0.
+  # float_values = false
+
   ## Set response_timeout (default 5 seconds)
   # response_timeout = "5s"
 
@@ -57,5 +62,6 @@ documentation.
 ```text
 vault.raft.replication.appendEntries.logs,peer_id=clustnode-02 count=130i,max=1i,mean=0.015384615384615385,min=0i,rate=0.2,stddev=0.12355304447984486,sum=2i 1638287340000000000
 vault.core.unsealed,cluster=vault-cluster-23b671c7 value=1i 1638287340000000000
+vault.wal.write_controller.idle_secs value=679114i 1638287340000000000
 vault.token.lookup count=5135i,max=16.22449493408203,mean=0.1698389152269865,min=0.06690400093793869,rate=87.21228296905755,stddev=0.24637634000854705,sum=872.1228296905756 1638287340000000000
 ```
