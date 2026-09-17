@@ -6,6 +6,11 @@
 			"Labels": {
 				"cluster": "vault-cluster-23b671c7"
 			}
+		},
+		{
+			"Name": "vault.wal.write_controller.idle_secs",
+			"Value": 679114.3,
+			"Labels": {}
 		}
 	],
 	"Counters": [
