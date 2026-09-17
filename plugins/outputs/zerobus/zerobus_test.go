@@ -339,11 +339,11 @@ func TestColumnsFromDescriptor(t *testing.T) {
 		{
 			name: "reads the columns of the table",
 			descriptor: &descriptorpb.DescriptorProto{
-				Name: proto.String("metrics"),
+				Name: new("metrics"),
 				Field: []*descriptorpb.FieldDescriptorProto{
-					{Name: proto.String("timestamp")},
-					{Name: proto.String("host")},
-					{Name: proto.String("value")},
+					{Name: new("timestamp")},
+					{Name: new("host")},
+					{Name: new("value")},
 				},
 			},
 			expected: map[string]bool{"timestamp": true, "host": true, "value": true},
@@ -351,9 +351,9 @@ func TestColumnsFromDescriptor(t *testing.T) {
 		{
 			name: "skips fields without a name",
 			descriptor: &descriptorpb.DescriptorProto{
-				Name: proto.String("metrics"),
+				Name: new("metrics"),
 				Field: []*descriptorpb.FieldDescriptorProto{
-					{Name: proto.String("value")},
+					{Name: new("value")},
 					{},
 				},
 			},
