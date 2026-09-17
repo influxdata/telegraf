@@ -86,7 +86,7 @@ func TestSingleMetricTDigest(t *testing.T) {
 	}
 
 	metrics := make([]telegraf.Metric, 0, 100)
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
@@ -147,7 +147,7 @@ func TestMultipleMetricsTDigest(t *testing.T) {
 
 	metricsA := make([]telegraf.Metric, 0, 100)
 	metricsB := make([]telegraf.Metric, 0, 100)
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		metricsA = append(metricsA, metric.New(
 			"test",
 			map[string]string{"series": "foo"},
@@ -218,7 +218,7 @@ func TestSingleMetricExactR7(t *testing.T) {
 	}
 
 	metrics := make([]telegraf.Metric, 0, 100)
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
@@ -279,7 +279,7 @@ func TestMultipleMetricsExactR7(t *testing.T) {
 
 	metricsA := make([]telegraf.Metric, 0, 100)
 	metricsB := make([]telegraf.Metric, 0, 100)
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		metricsA = append(metricsA, metric.New(
 			"test",
 			map[string]string{"series": "foo"},
@@ -350,7 +350,7 @@ func TestSingleMetricExactR8(t *testing.T) {
 	}
 
 	metrics := make([]telegraf.Metric, 0, 100)
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
@@ -411,7 +411,7 @@ func TestMultipleMetricsExactR8(t *testing.T) {
 
 	metricsA := make([]telegraf.Metric, 0, 100)
 	metricsB := make([]telegraf.Metric, 0, 100)
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		metricsA = append(metricsA, metric.New(
 			"test",
 			map[string]string{"series": "foo"},
@@ -442,7 +442,7 @@ func TestMultipleMetricsExactR8(t *testing.T) {
 
 func BenchmarkDefaultTDigest(b *testing.B) {
 	metrics := make([]telegraf.Metric, 0, 100)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
@@ -478,7 +478,7 @@ func BenchmarkDefaultTDigest(b *testing.B) {
 
 func BenchmarkDefaultTDigest100Q(b *testing.B) {
 	metrics := make([]telegraf.Metric, 0, 100)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
@@ -496,7 +496,7 @@ func BenchmarkDefaultTDigest100Q(b *testing.B) {
 		))
 	}
 	quantiles := make([]float64, 0, 100)
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		quantiles = append(quantiles, 0.01*float64(i))
 	}
 
@@ -519,7 +519,7 @@ func BenchmarkDefaultTDigest100Q(b *testing.B) {
 
 func BenchmarkDefaultExactR7(b *testing.B) {
 	metrics := make([]telegraf.Metric, 0, 100)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
@@ -555,7 +555,7 @@ func BenchmarkDefaultExactR7(b *testing.B) {
 
 func BenchmarkDefaultExactR7100Q(b *testing.B) {
 	metrics := make([]telegraf.Metric, 0, 100)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
@@ -573,7 +573,7 @@ func BenchmarkDefaultExactR7100Q(b *testing.B) {
 		))
 	}
 	quantiles := make([]float64, 0, 100)
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		quantiles = append(quantiles, 0.01*float64(i))
 	}
 
@@ -596,7 +596,7 @@ func BenchmarkDefaultExactR7100Q(b *testing.B) {
 
 func BenchmarkDefaultExactR8(b *testing.B) {
 	metrics := make([]telegraf.Metric, 0, 100)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
@@ -632,7 +632,7 @@ func BenchmarkDefaultExactR8(b *testing.B) {
 
 func BenchmarkDefaultExactR8100Q(b *testing.B) {
 	metrics := make([]telegraf.Metric, 0, 100)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		metrics = append(metrics, metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
@@ -650,7 +650,7 @@ func BenchmarkDefaultExactR8100Q(b *testing.B) {
 		))
 	}
 	quantiles := make([]float64, 0, 100)
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		quantiles = append(quantiles, 0.01*float64(i))
 	}
 

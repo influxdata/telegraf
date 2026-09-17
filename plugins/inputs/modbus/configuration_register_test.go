@@ -869,7 +869,7 @@ func TestRegisterReadMultipleCoilWithHole(t *testing.T) {
 	expectedFields := make(map[string]interface{})
 	writeValue := uint16(0)
 	readValue := uint16(0)
-	for i := 0; i < 14; i++ {
+	for i := range 14 {
 		fc := fieldDefinition{}
 		fc.Name = fmt.Sprintf("coil-%v", i)
 		fc.Address = []uint16{uint16(i)}
@@ -956,7 +956,7 @@ func TestRegisterReadMultipleCoilLimit(t *testing.T) {
 	expectedFields := make(map[string]interface{})
 	writeValue := uint16(0)
 	readValue := uint16(0)
-	for i := 0; i < 4000; i++ {
+	for i := range 4000 {
 		fc := fieldDefinition{}
 		fc.Name = fmt.Sprintf("coil-%v", i)
 		fc.Address = []uint16{uint16(i)}
@@ -1015,7 +1015,7 @@ func TestRegisterReadMultipleHoldingRegisterWithHole(t *testing.T) {
 
 	fcs := make([]fieldDefinition, 0, 20)
 	expectedFields := make(map[string]interface{})
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		fc := fieldDefinition{
 			Name:      fmt.Sprintf("HoldingRegister-%v", i),
 			ByteOrder: "AB",

@@ -886,7 +886,7 @@ func createSocketForTest(t *testing.T, dirPath string) (string, net.Listener) {
 }
 
 func createMultipleSocketsForTest(t *testing.T, numSockets int, dirPath string) (socketsPaths []string, sockets []net.Listener) {
-	for i := 0; i < numSockets; i++ {
+	for range numSockets {
 		pathToSocket, socket := createSocketForTest(t, dirPath)
 		dirPath = filepath.Dir(pathToSocket)
 		socketsPaths = append(socketsPaths, pathToSocket)

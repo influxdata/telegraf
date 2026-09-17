@@ -211,7 +211,7 @@ func gatherV1(lines []string) (map[string]interface{}, error) {
 	}
 
 	fields := make(map[string]interface{})
-	for i := 0; i < len(keys); i++ {
+	for i := range keys {
 		value, err := strconv.ParseInt(values[i], 10, 64)
 		if err != nil {
 			return nil, err

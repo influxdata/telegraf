@@ -188,7 +188,7 @@ func (p *Postgresql) Connect() error {
 	if maxConns > 1 {
 		p.writeChan = make(chan *TableSource)
 		p.writeWaitGroup = utils.NewWaitGroup()
-		for i := 0; i < maxConns; i++ {
+		for range maxConns {
 			p.writeWaitGroup.Add(1)
 			go p.writeWorker(p.dbContext)
 		}

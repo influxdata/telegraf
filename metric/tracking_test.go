@@ -25,13 +25,13 @@ func TestNewTrackingID(t *testing.T) {
 
 	wg.Add(2)
 	go func() {
-		for i := 0; i < len(a); i++ {
+		for i := range a {
 			a[i] = newTrackingID()
 		}
 		wg.Done()
 	}()
 	go func() {
-		for i := 0; i < len(b); i++ {
+		for i := range b {
 			b[i] = newTrackingID()
 		}
 		wg.Done()
