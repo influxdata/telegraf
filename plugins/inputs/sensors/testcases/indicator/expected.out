@@ -1,0 +1,3 @@
+sensors,description=Signal,device=nmea0,sensor=indicator0,type=indicator state="On",status="OK",status_code=1,value=1
+sensors,description=Signal,device=nmea0,sensor=indicator1,type=indicator state="Off",value=0
+sensors,device=foo0,sensor=indicator0,type=indicator state="unknown"

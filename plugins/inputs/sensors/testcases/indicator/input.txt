@@ -1,0 +1,3 @@
+hw.sensors.nmea0.indicator0=On (Signal), OK
+hw.sensors.nmea0.indicator1=Off (Signal)
+hw.sensors.foo0.indicator0=unknown
