@@ -225,6 +225,32 @@ func TestGatherNewTagNames(t *testing.T) {
 	}
 }
 
+func TestGatherDeviceFilter(t *testing.T) {
+	s := Sensors{
+		RemoveNumbers:       true,
+		LinuxLegacyTagNames: true,
+		Devices:             []string{"coretemp-*", "atk0110-acpi-0"},
+		Timeout:             defaultTimeout,
+		path:                "sensors",
+	}
+	execCommand = fakeExecCommand
+	defer func() { execCommand = exec.Command }()
+	var acc testutil.Accumulator
+
+	require.NoError(t, s.Init())
+	require.NoError(t, s.Gather(&acc))
+
+	chips := make(map[string]bool)
+	for _, m := range acc.GetTelegrafMetrics() {
+		chips[m.Tags()["chip"]] = true
+	}
+	require.Equal(t, map[string]bool{
+		"coretemp-isa-0000": true,
+		"coretemp-isa-0001": true,
+		"atk0110-acpi-0":    true,
+	}, chips)
+}
+
 func TestGatherNotRemoveNumbers(t *testing.T) {
 	s := Sensors{
 		RemoveNumbers:       false,

@@ -36,8 +36,11 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## If set to "false" the new "device", "sensor", and "type" tags are used.
   # linux_legacy_tag_names = true
 
-  ## OpenBSD only: sysctl binary and optional device glob filter
+  ## (OpenBSD only) Path to the sysctl binary.
   # binary = "/sbin/sysctl"
+
+  ## Filter devices by name, glob patterns are supported.
+  ## Matches the chip name on Linux and the sensor device on OpenBSD.
   # devices = ["cpu*", "acpitz0"]
 
   ## Timeout is the maximum amount of time that the sensors command can run.
