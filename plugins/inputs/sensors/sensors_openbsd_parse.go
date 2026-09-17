@@ -43,10 +43,6 @@ var driveStates = map[string]float64{ //nolint:unused // OpenBSD backend and tes
 }
 
 func (s *Sensors) initOpenBSD() error { //nolint:unused // OpenBSD backend and tests
-	if s.Binary == "" {
-		s.Binary = defaultBinary
-	}
-
 	if len(s.Devices) > 0 {
 		f, err := filter.Compile(s.Devices)
 		if err != nil {
@@ -62,7 +58,7 @@ func (s *Sensors) gatherOpenBSD(acc telegraf.Accumulator) error { //nolint:unuse
 	if s.run == nil {
 		return errors.New("error gathering metrics: sysctl runner is not configured")
 	}
-	out, err := s.run(s.Binary, s.Timeout)
+	out, err := s.run(s.path, s.Timeout)
 	if err != nil {
 		return fmt.Errorf("error gathering metrics: %w", err)
 	}
