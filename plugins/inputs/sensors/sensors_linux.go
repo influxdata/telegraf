@@ -73,7 +73,7 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 	for _, line := range lines {
 		if len(line) == 0 {
 			if !skip {
-				acc.AddFields(measurement, fields, tags)
+				acc.AddFields("sensors", fields, tags)
 			}
 			chip = ""
 			skip = false
@@ -90,7 +90,7 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 		}
 		if !strings.HasPrefix(line, "  ") {
 			if len(tags) > 1 && !skip {
-				acc.AddFields(measurement, fields, tags)
+				acc.AddFields("sensors", fields, tags)
 			}
 			fields = make(map[string]interface{})
 			tags = s.linuxTags(chip, strings.TrimRight(snake(line), ":"))
@@ -108,7 +108,7 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 		}
 	}
 	if !skip {
-		acc.AddFields(measurement, fields, tags)
+		acc.AddFields("sensors", fields, tags)
 	}
 	return nil
 }
