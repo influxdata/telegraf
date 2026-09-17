@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/apache/arrow-go/v18/arrow"
@@ -15,6 +14,7 @@ import (
 	"github.com/apache/arrow-go/v18/arrow/memory"
 	"github.com/apache/arrow-go/v18/parquet"
 	"github.com/apache/arrow-go/v18/parquet/pqarrow"
+	"github.com/gofrs/uuid/v5"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -26,8 +26,6 @@ import (
 var sampleConfig string
 
 var defaultTimestampFieldName = "timestamp"
-
-const maxFilenameAttempts = 1000
 
 type metricGroup struct {
 	filename string
@@ -449,33 +447,24 @@ func (p *Parquet) createSchema(metrics []telegraf.Metric) (*arrow.Schema, error)
 }
 
 func (p *Parquet) createWriter(name string, schema *arrow.Schema) (*pqarrow.FileWriter, string, error) {
-	now := time.Now()
-	prefix := fmt.Sprintf("%s-%s-%s", name, now.Format("2006-01-02"), strconv.FormatInt(now.Unix(), 10))
+	id, err := uuid.NewV6()
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to generate identifier for file %q: %w", name, err)
+	}
+	filename := fmt.Sprintf("%s-%s-%s.parquet", name, time.Now().Format("20060102150405"), id)
 
-	for attempt := 0; attempt < maxFilenameAttempts; attempt++ {
-		filename := prefix + ".parquet"
-		if attempt > 0 {
-			filename = fmt.Sprintf("%s-%d.parquet", prefix, attempt)
-		}
-
-		f, err := p.root.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0640)
-		if errors.Is(err, os.ErrExist) {
-			continue
-		}
-		if err != nil {
-			return nil, "", fmt.Errorf("failed to create file %q: %w", filename, err)
-		}
-
-		writer, err := pqarrow.NewFileWriter(schema, f, parquet.NewWriterProperties(), pqarrow.DefaultWriterProps())
-		if err != nil {
-			f.Close()
-			return nil, "", fmt.Errorf("failed to create parquet writer for file %q: %w", filename, err)
-		}
-
-		return writer, filename, nil
+	f, err := p.root.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0640)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to create file %q: %w", filename, err)
 	}
 
-	return nil, "", fmt.Errorf("no unused file name available for %q after %d attempts", name, maxFilenameAttempts)
+	writer, err := pqarrow.NewFileWriter(schema, f, parquet.NewWriterProperties(), pqarrow.DefaultWriterProps())
+	if err != nil {
+		f.Close()
+		return nil, "", fmt.Errorf("failed to create parquet writer for file %q: %w", filename, err)
+	}
+
+	return writer, filename, nil
 }
 
 func goToArrowType(value any) (arrow.DataType, error) {

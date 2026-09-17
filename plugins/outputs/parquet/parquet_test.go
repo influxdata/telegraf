@@ -594,33 +594,25 @@ func TestFieldTakesPrecedenceOverTagInAnyOrder(t *testing.T) {
 	}
 }
 
-func TestNeverOverwritesAnExistingFile(t *testing.T) {
+func TestMultipleWritersToSameDirectory(t *testing.T) {
 	testDir := t.TempDir()
-	plugin := &Parquet{
-		Directory:          testDir,
-		TimestampFieldName: defaultTimestampFieldName,
-		Log:                testutil.Logger{},
+	metrics := []telegraf.Metric{
+		metric.New("test", map[string]string{}, map[string]any{"value": 1.0}, time.Now()),
 	}
-	require.NoError(t, plugin.Init())
-	require.NoError(t, plugin.Connect())
-	defer plugin.Close()
 
-	schema, err := plugin.createSchema([]telegraf.Metric{
-		metric.New("test", map[string]string{}, map[string]interface{}{"value": 1.0}, time.Now()),
-	})
-	require.NoError(t, err)
+	for range 3 {
+		plugin := &Parquet{
+			Directory:          testDir,
+			TimestampFieldName: defaultTimestampFieldName,
+			Log:                testutil.Logger{},
+		}
+		require.NoError(t, plugin.Init())
+		require.NoError(t, plugin.Connect())
+		require.NoError(t, plugin.Write(metrics))
+		require.NoError(t, plugin.Close())
+	}
 
-	first, firstName, err := plugin.createWriter("test", schema)
+	files, err := filepath.Glob(filepath.Join(testDir, "*.parquet"))
 	require.NoError(t, err)
-	require.NoError(t, first.Close())
-	require.NoError(t, os.WriteFile(filepath.Join(testDir, firstName), []byte("sentinel"), 0640))
-
-	second, secondName, err := plugin.createWriter("test", schema)
-	require.NoError(t, err)
-	require.NoError(t, second.Close())
-
-	require.NotEqual(t, firstName, secondName)
-	preserved, err := os.ReadFile(filepath.Join(testDir, firstName))
-	require.NoError(t, err)
-	require.Equal(t, "sentinel", string(preserved))
+	require.Len(t, files, 3)
 }
