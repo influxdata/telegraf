@@ -1283,30 +1283,6 @@ func (e *endpoint) collectChunk(
 
 			nValues := 0
 			alignedInfo, alignedValues := e.alignSamples(em.SampleInfo, v.Value, interval)
-			if len(objectRef.customProperties) != 0 {
-				mn, fn := e.makeMetricIdentifier(prefix, "internal")
-				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(latestSample.UnixNano(), 10)
-				_, found := buckets[bKey]
-				if !found {
-					fields := make(map[string]interface{})
-					fields[fn] = int64(1.0)
-					tags := make(map[string]string)
-					for k, v := range t {
-						tags[k] = v
-					}
-					for k, v := range objectRef.customProperties {
-						sv, err := internal.ToString(v)
-						if err != nil {
-							e.log.Errorf("conversion error for %v: %s", v, err)
-						} else {
-							tags[k] = sv
-						}
-					}
-					bucket := metricEntry{name: mn, ts: time.Now(), fields: fields, tags: tags}
-					buckets[bKey] = bucket
-				}
-			}
-
 			for idx, sample := range alignedInfo {
 				// According to the docs, SampleInfo and Value should have the same length, but we've seen corrupted
 				// data coming back with missing values. Take care of that gracefully!
@@ -1350,6 +1326,29 @@ func (e *endpoint) collectChunk(
 				// Update hiwater marks
 				adjTS := ts.Add(interval).Truncate(interval).Add(-time.Second)
 				e.hwMarks.put(moid, name, adjTS)
+			}
+			if len(objectRef.customProperties) != 0 {
+				mn, fn := e.makeMetricIdentifier(prefix, "internal")
+				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(latestSample.UnixNano(), 10)
+				_, found := buckets[bKey]
+				if !found {
+					fields := make(map[string]interface{})
+					fields[fn] = int64(1.0)
+					tags := make(map[string]string)
+					for k, v := range t {
+						tags[k] = v
+					}
+					for k, v := range objectRef.customProperties {
+						sv, err := internal.ToString(v)
+						if err != nil {
+							e.log.Errorf("conversion error for %v: %s", v, err)
+						} else {
+							tags[k] = sv
+						}
+					}
+					bucket := metricEntry{name: mn, ts: latestSample, fields: fields, tags: tags}
+					buckets[bKey] = bucket
+				}
 			}
 			if nValues == 0 {
 				e.log.Debugf("Missing value for: %s, %s", name, objectRef.name)
