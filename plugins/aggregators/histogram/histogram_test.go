@@ -13,7 +13,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-type fields map[string]interface{}
+type fields map[string]any
 type tags map[string]string
 
 // newTestHistogram creates new test histogram aggregation with specified config
@@ -533,7 +533,7 @@ func TestHistogramMetricExpiration(t *testing.T) {
 }
 
 // assertContainsTaggedField is help functions to test histogram data
-func assertContainsTaggedField(t *testing.T, acc *testutil.Accumulator, metricName string, fields map[string]interface{}, tags map[string]string) {
+func assertContainsTaggedField(t *testing.T, acc *testutil.Accumulator, metricName string, fields map[string]any, tags map[string]string) {
 	acc.Lock()
 	defer acc.Unlock()
 
