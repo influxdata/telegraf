@@ -31,7 +31,7 @@ type Transaction struct {
 	valid bool
 
 	// Internal state that can be used by the buffer implementation
-	state interface{}
+	state any
 }
 
 func (tx *Transaction) AcceptAll() {

@@ -33,7 +33,7 @@ func (l *structuredLogger) Close() error {
 	return nil
 }
 
-func (l *structuredLogger) Print(level telegraf.LogLevel, ts time.Time, _ string, attr map[string]interface{}, args ...interface{}) {
+func (l *structuredLogger) Print(level telegraf.LogLevel, ts time.Time, _ string, attr map[string]any, args ...any) {
 	record := slog.Record{
 		Time:    ts,
 		Message: fmt.Sprint(args...),

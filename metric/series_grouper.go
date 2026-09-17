@@ -41,7 +41,7 @@ func (g *SeriesGrouper) Add(
 	tags map[string]string,
 	tm time.Time,
 	field string,
-	fieldValue interface{},
+	fieldValue any,
 ) {
 	taglist := make([]*telegraf.Tag, 0, len(tags))
 	for k, v := range tags {
@@ -53,7 +53,7 @@ func (g *SeriesGrouper) Add(
 	id := groupID(g.hashSeed, measurement, taglist, tm)
 	m := g.metrics[id]
 	if m == nil {
-		m = New(measurement, tags, map[string]interface{}{field: fieldValue}, tm)
+		m = New(measurement, tags, map[string]any{field: fieldValue}, tm)
 		g.metrics[id] = m
 		g.ordered = append(g.ordered, m)
 	} else {
