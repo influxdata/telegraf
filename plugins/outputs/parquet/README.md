@@ -86,8 +86,8 @@ of this occurring.
 
 ## File Rotation
 
-Existing files are never modified. If the target name is already taken, a
-numeric suffix is appended until an unused name is found.
+Files are named `<measurement>-<YYYYMMDDhhmmss>-<uuid>.parquet`, so existing
+files are never opened for writing and support multiple writers.
 
 File rotation is available via a time based interval that a user can optionally
 set, measured from the time the current file was created. Due to the usage of a
