@@ -18,12 +18,9 @@ const measurement = "sensors"
 
 var defaultTimeout = config.Duration(5 * time.Second)
 
-const defaultBinary = "/sbin/sysctl"
-
 type Sensors struct {
 	RemoveNumbers       bool            `toml:"remove_numbers"`
 	LinuxLegacyTagNames bool            `toml:"linux_legacy_tag_names"`
-	Binary              string          `toml:"binary"`
 	Devices             []string        `toml:"devices"`
 	Timeout             config.Duration `toml:"timeout"`
 	Log                 telegraf.Logger `toml:"-"`
@@ -43,7 +40,6 @@ func init() {
 			RemoveNumbers:       true,
 			LinuxLegacyTagNames: true,
 			Timeout:             defaultTimeout,
-			Binary:              defaultBinary,
 		}
 	})
 }

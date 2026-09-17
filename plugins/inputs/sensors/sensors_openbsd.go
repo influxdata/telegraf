@@ -13,7 +13,17 @@ import (
 	"github.com/influxdata/telegraf/internal"
 )
 
+const cmd = "sysctl"
+
 func (s *Sensors) Init() error {
+	if s.path == "" {
+		path, err := exec.LookPath(cmd)
+		if err != nil {
+			return fmt.Errorf("looking up %q failed: %w", cmd, err)
+		}
+		s.path = path
+	}
+
 	if s.run == nil {
 		s.run = sysctlRunner
 	}
