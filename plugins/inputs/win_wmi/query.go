@@ -129,7 +129,7 @@ func (q *query) execute(acc telegraf.Accumulator) error {
 	count := countRaw.Val
 	defer countRaw.Clear()
 
-	for i := int64(0); i < count; i++ {
+	for i := range count {
 		itemRaw, err := oleutil.CallMethod(result, "ItemIndex", i)
 		if err != nil {
 			return fmt.Errorf("failed calling method ItemIndex: %w", err)

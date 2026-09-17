@@ -1332,7 +1332,7 @@ func TestConcurrentGather(t *testing.T) {
 	var wg sync.WaitGroup
 	errors := make(chan error, numConcurrent)
 
-	for i := 0; i < numConcurrent; i++ {
+	for i := range numConcurrent {
 		wg.Add(1)
 		go func(iteration int) {
 			defer wg.Done()
@@ -1391,7 +1391,7 @@ func TestRaceDetector(t *testing.T) {
 	var wg sync.WaitGroup
 	errors := make(chan error, iterations)
 
-	for i := 0; i < iterations; i++ {
+	for range iterations {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

@@ -1068,7 +1068,7 @@ func TestTailNoLeak(t *testing.T) {
 
 	// Call Gather multiple times to simulate multiple collection intervals
 	// This is where we test for file descriptor leaks during normal operation
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		require.NoError(t, acc.GatherError(tt.Gather))
 
 		// After each Gather, verify we still have exactly one tailer

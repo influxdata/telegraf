@@ -126,7 +126,7 @@ func (t *trimmer) singleQuote() error {
 }
 
 func (t *trimmer) tripleSingleQuote() error {
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		//nolint:errcheck // Consume the known starting quotes
 		t.readWriteByte()
 	}
@@ -175,7 +175,7 @@ func (t *trimmer) doubleQuote() error {
 }
 
 func (t *trimmer) tripleDoubleQuote() error {
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		//nolint:errcheck // Consume the known starting quotes
 		t.readWriteByte()
 	}

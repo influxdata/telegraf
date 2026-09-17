@@ -501,11 +501,11 @@ func TestWriteHTTPHighTraffic(t *testing.T) {
 
 	// post many messages to listener
 	var wg sync.WaitGroup
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		wg.Add(1)
 		go func(innerwg *sync.WaitGroup) {
 			defer innerwg.Done()
-			for i := 0; i < 500; i++ {
+			for range 500 {
 				resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBufferString(testMsgs))
 				if err != nil {
 					return

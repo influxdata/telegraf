@@ -543,7 +543,7 @@ func TestExponentialBackoff(t *testing.T) {
 	t.Logf("elapsed %d", elapsed)
 
 	var expectedRetryDuration time.Duration
-	for i := 0; i < limit; i++ {
+	for i := range limit {
 		expectedRetryDuration += backoff * time.Duration(math.Pow(2, float64(i)))
 	}
 	t.Logf("expected > %d", expectedRetryDuration)

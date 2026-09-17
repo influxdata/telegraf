@@ -933,11 +933,11 @@ func TestStressConcurrencyIntegration(t *testing.T) {
 	pctl.Logger.emitLevel = tracelog.LogLevelWarn
 	require.NoError(t, pctl.Connect())
 
-	for i := 0; i < loops; i++ {
+	for range loops {
 		var wgStart, wgDone sync.WaitGroup
 		wgStart.Add(concurrency)
 		wgDone.Add(concurrency)
-		for j := 0; j < concurrency; j++ {
+		for range concurrency {
 			go func() {
 				mShuf := make([]telegraf.Metric, len(metrics))
 				copy(mShuf, metrics)
