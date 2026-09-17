@@ -24,14 +24,6 @@ var (
 const cmd = "sensors"
 
 func (s *Sensors) Init() error {
-	switch s.MetricVersion {
-	case 0:
-		s.MetricVersion = 1
-	case 1, 2:
-	default:
-		return fmt.Errorf("invalid metric_version %d, please use 1 or 2", s.MetricVersion)
-	}
-
 	if s.path == "" {
 		path, err := exec.LookPath(cmd)
 		if err != nil {
@@ -107,24 +99,24 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 }
 
 func (s *Sensors) setLinuxDeviceTag(tags map[string]string, chip string) {
-	if s.MetricVersion == 2 {
-		tags["device"] = chip
+	if s.LinuxLegacyTagNames {
+		tags["chip"] = chip
 		return
 	}
-	tags["chip"] = chip
+	tags["device"] = chip
 }
 
 func (s *Sensors) linuxTags(chip, feature string) map[string]string {
-	if s.MetricVersion == 2 {
+	if s.LinuxLegacyTagNames {
 		return map[string]string{
-			"device": chip,
-			"sensor": feature,
-			"type":   strings.TrimRightFunc(feature, unicode.IsDigit),
+			"chip":    chip,
+			"feature": feature,
 		}
 	}
 	return map[string]string{
-		"chip":    chip,
-		"feature": feature,
+		"device": chip,
+		"sensor": feature,
+		"type":   strings.TrimRightFunc(feature, unicode.IsDigit),
 	}
 }
 

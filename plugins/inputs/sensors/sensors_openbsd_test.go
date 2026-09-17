@@ -434,16 +434,6 @@ func TestEmptyOutput(t *testing.T) {
 	require.Empty(t, acc.Errors)
 }
 
-func TestOpenBSDRejectsMetricVersion1(t *testing.T) {
-	plugin := &Sensors{MetricVersion: 1}
-	require.ErrorContains(t, plugin.initOpenBSD(), "metric_version = 1")
-}
-
-func TestOpenBSDRejectsInvalidMetricVersion(t *testing.T) {
-	plugin := &Sensors{MetricVersion: 3}
-	require.ErrorContains(t, plugin.initOpenBSD(), "invalid metric_version")
-}
-
 var fullOutput = `hw.sensors.cpu0.temp0=43.00 degC
 hw.sensors.cpu0.frequency0=2250000000.00 Hz
 hw.sensors.cpu1.frequency0=1400000000.00 Hz
