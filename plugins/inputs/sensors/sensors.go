@@ -14,8 +14,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const measurement = "sensors"
-
 var defaultTimeout = config.Duration(5 * time.Second)
 
 type Sensors struct {
@@ -27,7 +25,6 @@ type Sensors struct {
 
 	path         string
 	deviceFilter filter.Filter
-	run          runner //nolint:unused // OpenBSD backend and tests
 }
 
 func (*Sensors) SampleConfig() string {

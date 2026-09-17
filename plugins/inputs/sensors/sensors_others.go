@@ -9,7 +9,6 @@ func (s *Sensors) Init() error {
 	// Used on Linux and OpenBSD only; referenced here so the unused linter
 	// is quiet. A //nolint:unused on the fields cannot be used instead, as
 	// nolintlint would then flag it as unnecessary on the other platforms.
-	_ = measurement
 	_ = s.path
 	_ = s.deviceFilter
 	return nil
