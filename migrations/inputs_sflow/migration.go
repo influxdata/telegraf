@@ -31,7 +31,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	}
 
 	// Fill common options
-	plugin := make(map[string]interface{})
+	plugin := make(map[string]any)
 	old.InputOptions.Migrate()
 	general, err := toml.Marshal(old.InputOptions)
 	if err != nil {

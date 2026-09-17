@@ -18,7 +18,7 @@ import (
 type Metric struct {
 	Measurement string
 	Tags        map[string]string
-	Fields      map[string]interface{}
+	Fields      map[string]any
 	Time        time.Time
 	Type        telegraf.ValueType
 }
@@ -91,7 +91,7 @@ func (a *Accumulator) ClearMetrics() {
 func (a *Accumulator) addMeasurement(
 	measurement string,
 	tags map[string]string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tp telegraf.ValueType,
 	timestamp ...time.Time,
 ) {
@@ -114,7 +114,7 @@ func (a *Accumulator) addMeasurement(
 		tagsCopy[k] = v
 	}
 
-	fieldsCopy := make(map[string]interface{}, len(fields))
+	fieldsCopy := make(map[string]any, len(fields))
 	for k, v := range fields {
 		fieldsCopy[k] = v
 	}
@@ -145,7 +145,7 @@ func (a *Accumulator) addMeasurement(
 // AddFields adds a measurement point with a specified timestamp.
 func (a *Accumulator) AddFields(
 	measurement string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
@@ -154,7 +154,7 @@ func (a *Accumulator) AddFields(
 
 func (a *Accumulator) AddCounter(
 	measurement string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
@@ -163,7 +163,7 @@ func (a *Accumulator) AddCounter(
 
 func (a *Accumulator) AddGauge(
 	measurement string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
@@ -178,7 +178,7 @@ func (a *Accumulator) AddMetrics(metrics []telegraf.Metric) {
 
 func (a *Accumulator) AddSummary(
 	measurement string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
@@ -187,7 +187,7 @@ func (a *Accumulator) AddSummary(
 
 func (a *Accumulator) AddHistogram(
 	measurement string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
@@ -379,7 +379,7 @@ func (a *Accumulator) WaitError(n int) {
 func (a *Accumulator) AssertContainsTaggedFields(
 	t *testing.T,
 	measurement string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tags map[string]string,
 ) {
 	a.Lock()
@@ -406,7 +406,7 @@ func (a *Accumulator) AssertContainsTaggedFields(
 func (a *Accumulator) AssertDoesNotContainsTaggedFields(
 	t *testing.T,
 	measurement string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tags map[string]string,
 ) {
 	a.Lock()
@@ -424,7 +424,7 @@ func (a *Accumulator) AssertDoesNotContainsTaggedFields(
 func (a *Accumulator) AssertContainsFields(
 	t *testing.T,
 	measurement string,
-	fields map[string]interface{},
+	fields map[string]any,
 ) {
 	a.Lock()
 	defer a.Unlock()
@@ -441,7 +441,7 @@ func (a *Accumulator) HasPoint(
 	measurement string,
 	tags map[string]string,
 	fieldKey string,
-	fieldValue interface{},
+	fieldValue any,
 ) bool {
 	a.Lock()
 	defer a.Unlock()
@@ -751,15 +751,15 @@ func (a *Accumulator) BoolField(measurement, field string) (v, ok bool) {
 // telegraf accumulator machinery.
 type NopAccumulator struct{}
 
-func (*NopAccumulator) AddFields(string, map[string]interface{}, map[string]string, ...time.Time) {
+func (*NopAccumulator) AddFields(string, map[string]any, map[string]string, ...time.Time) {
 }
-func (*NopAccumulator) AddGauge(string, map[string]interface{}, map[string]string, ...time.Time) {
+func (*NopAccumulator) AddGauge(string, map[string]any, map[string]string, ...time.Time) {
 }
-func (*NopAccumulator) AddCounter(string, map[string]interface{}, map[string]string, ...time.Time) {
+func (*NopAccumulator) AddCounter(string, map[string]any, map[string]string, ...time.Time) {
 }
-func (*NopAccumulator) AddSummary(string, map[string]interface{}, map[string]string, ...time.Time) {
+func (*NopAccumulator) AddSummary(string, map[string]any, map[string]string, ...time.Time) {
 }
-func (*NopAccumulator) AddHistogram(string, map[string]interface{}, map[string]string, ...time.Time) {
+func (*NopAccumulator) AddHistogram(string, map[string]any, map[string]string, ...time.Time) {
 }
 func (*NopAccumulator) AddMetric(telegraf.Metric)                     {}
 func (*NopAccumulator) SetPrecision(time.Duration)                    {}
