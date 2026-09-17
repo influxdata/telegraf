@@ -43,16 +43,6 @@ var driveStates = map[string]float64{ //nolint:unused // OpenBSD backend and tes
 }
 
 func (s *Sensors) initOpenBSD() error { //nolint:unused // OpenBSD backend and tests
-	switch s.MetricVersion {
-	case 1:
-		return errors.New("metric_version = 1 is not supported on OpenBSD; use 2")
-	case 0:
-		s.MetricVersion = 2
-	case 2:
-	default:
-		return fmt.Errorf("invalid metric_version %d, please use 2", s.MetricVersion)
-	}
-
 	if s.Binary == "" {
 		s.Binary = defaultBinary
 	}

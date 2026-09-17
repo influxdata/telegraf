@@ -15,9 +15,10 @@ import (
 
 func TestGatherDefault(t *testing.T) {
 	s := Sensors{
-		RemoveNumbers: true,
-		Timeout:       defaultTimeout,
-		path:          "sensors",
+		RemoveNumbers:       true,
+		LinuxLegacyTagNames: true,
+		Timeout:             defaultTimeout,
+		path:                "sensors",
 	}
 	// overwriting exec commands with mock commands
 	execCommand = fakeExecCommand
@@ -152,12 +153,12 @@ func TestGatherDefault(t *testing.T) {
 	}
 }
 
-func TestGatherMetricVersion2(t *testing.T) {
+func TestGatherNewTagNames(t *testing.T) {
 	s := Sensors{
-		RemoveNumbers: true,
-		MetricVersion: 2,
-		Timeout:       defaultTimeout,
-		path:          "sensors",
+		RemoveNumbers:       true,
+		LinuxLegacyTagNames: false,
+		Timeout:             defaultTimeout,
+		path:                "sensors",
 	}
 	execCommand = fakeExecCommand
 	defer func() { execCommand = exec.Command }()
@@ -224,19 +225,12 @@ func TestGatherMetricVersion2(t *testing.T) {
 	}
 }
 
-func TestInitInvalidMetricVersion(t *testing.T) {
-	s := Sensors{
-		MetricVersion: 3,
-		path:          "sensors",
-	}
-	require.ErrorContains(t, s.Init(), "invalid metric_version")
-}
-
 func TestGatherNotRemoveNumbers(t *testing.T) {
 	s := Sensors{
-		RemoveNumbers: false,
-		Timeout:       defaultTimeout,
-		path:          "sensors",
+		RemoveNumbers:       false,
+		LinuxLegacyTagNames: true,
+		Timeout:             defaultTimeout,
+		path:                "sensors",
 	}
 	// overwriting exec commands with mock commands
 	execCommand = fakeExecCommand

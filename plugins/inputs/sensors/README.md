@@ -28,13 +28,13 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Monitor hardware sensors (lm-sensors on Linux, hw.sensors on OpenBSD)
 [[inputs.sensors]]
-  ## Linux only: remove numbers from field names.
+  ## (Linux only) Remove numbers from field names.
   ## If true, a field name like 'temp1_input' will be changed to 'temp_input'.
   # remove_numbers = true
 
-  ## Metric version (Linux only). Default 1 keeps tags chip and feature.
-  ## Version 2 uses unified tags device, sensor, and type.
-  # metric_version = 1
+  ## (Linux only) Use legacy metric format with "chip" and "feature" tags.
+  ## If set to "false" the new "device", "sensor", and "type" tags are used.
+  # linux_legacy_tag_names = true
 
   ## OpenBSD only: sysctl binary and optional device glob filter
   # binary = "/sbin/sysctl"
@@ -44,14 +44,13 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # timeout = "5s"
 ```
 
-Linux `metric_version = 1` (the default) keeps the historical `chip` and
-`feature` tags so existing dashboards keep working. Set `metric_version = 2`
-to use the unified `device`, `sensor`, and `type` tags shared with OpenBSD.
-OpenBSD always emits version 2.
+> [!IMPORTANT]
+> OpenBSD will always emit the new metric format with unified `device`,
+> `sensor`, and `type` tags
 
 ## Metrics
 
-### Linux (metric_version = 1, default)
+### Linux with legacy tag names (default)
 
 Fields are created dynamically depending on the sensors. All fields are float.
 
@@ -62,10 +61,10 @@ Fields are created dynamically depending on the sensors. All fields are float.
   - fields:
     - depending on the available sensor information (float)
 
-### Linux (metric_version = 2)
+### Linux with new tag names
 
-Same fields as version 1. Tags use the unified names; `type` is the feature
-name with trailing digits removed (e.g. `temp1` -> `temp`).
+Same fields as with the legacy names. Tags use the unified names; `type` is the
+feature name with trailing digits removed (e.g. `temp1` -> `temp`).
 
 - sensors:
   - tags:
@@ -103,7 +102,7 @@ and `humidity`, seconds for `timedelta`).
 
 ## Example Output
 
-### Linux default (metric_version = 1)
+### Linux legacy tag names example
 
 ```text
 sensors,chip=power_meter-acpi-0,feature=power1 power_average=0,power_average_interval=300 1466751326000000000
@@ -123,7 +122,7 @@ sensors,chip=k10temp-pci-00d3,feature=temp1 temp1_input=29.5,temp1_max=70 146675
 sensors,chip=k10temp-pci-00db,feature=temp1 temp1_crit=70,temp1_crit_hyst=65,temp1_input=30,temp1_max=70 1466753424000000000
 ```
 
-### Linux metric_version = 2
+### Linux new tag names example
 
 ```text
 sensors,device=k10temp-pci-00c3,sensor=temp1,type=temp temp_crit=70,temp_input=29,temp_max=70 1466751326000000000

@@ -21,12 +21,12 @@ var defaultTimeout = config.Duration(5 * time.Second)
 const defaultBinary = "/sbin/sysctl"
 
 type Sensors struct {
-	RemoveNumbers bool            `toml:"remove_numbers"`
-	MetricVersion int             `toml:"metric_version"`
-	Binary        string          `toml:"binary"`
-	Devices       []string        `toml:"devices"`
-	Timeout       config.Duration `toml:"timeout"`
-	Log           telegraf.Logger `toml:"-"`
+	RemoveNumbers       bool            `toml:"remove_numbers"`
+	LinuxLegacyTagNames bool            `toml:"linux_legacy_tag_names"`
+	Binary              string          `toml:"binary"`
+	Devices             []string        `toml:"devices"`
+	Timeout             config.Duration `toml:"timeout"`
+	Log                 telegraf.Logger `toml:"-"`
 
 	path         string
 	deviceFilter filter.Filter //nolint:unused // OpenBSD backend and tests
@@ -40,9 +40,10 @@ func (*Sensors) SampleConfig() string {
 func init() {
 	inputs.Add("sensors", func() telegraf.Input {
 		return &Sensors{
-			RemoveNumbers: true,
-			Timeout:       defaultTimeout,
-			Binary:        defaultBinary,
+			RemoveNumbers:       true,
+			LinuxLegacyTagNames: true,
+			Timeout:             defaultTimeout,
+			Binary:              defaultBinary,
 		}
 	})
 }
