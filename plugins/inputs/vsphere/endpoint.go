@@ -1332,7 +1332,7 @@ func (e *endpoint) collectChunk(
 				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(latestSample.UnixNano(), 10)
 				_, found := buckets[bKey]
 				if !found {
-					fields := map[string]interface{}{fn: bool}
+					fields := map[string]interface{}{fn: true}
 					tags := make(map[string]string)
 					for k, v := range t {
 						tags[k] = v
