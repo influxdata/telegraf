@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -17,7 +18,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -184,9 +184,9 @@ func (s *SQL) Init() error {
 	}
 
 	availDrivers := dbsql.Drivers()
-	if !choice.Contains(s.driverName, availDrivers) {
+	if !slices.Contains(availDrivers, s.driverName) {
 		for d, r := range aliases {
-			if choice.Contains(r, availDrivers) {
+			if slices.Contains(availDrivers, r) {
 				availDrivers = append(availDrivers, d)
 			}
 		}
@@ -209,7 +209,7 @@ func (s *SQL) Init() error {
 		s.DisconnectedServersBehavior = "error"
 	}
 
-	if !choice.Contains(s.DisconnectedServersBehavior, disconnectedServersBehavior) {
+	if !slices.Contains(disconnectedServersBehavior, s.DisconnectedServersBehavior) {
 		return fmt.Errorf("%q is not a valid value for disconnected_servers_behavior", s.DisconnectedServersBehavior)
 	}
 

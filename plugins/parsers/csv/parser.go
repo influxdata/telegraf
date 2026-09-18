@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"maps"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -18,7 +19,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -179,7 +179,7 @@ func (p *Parser) Init() error {
 	if p.ResetMode == "" {
 		p.ResetMode = "none"
 	}
-	if !choice.Contains(p.ResetMode, []string{"none", "always"}) {
+	if !slices.Contains([]string{"none", "always"}, p.ResetMode) {
 		return fmt.Errorf("unknown reset mode %q", p.ResetMode)
 	}
 	p.Reset()

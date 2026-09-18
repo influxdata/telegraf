@@ -11,11 +11,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -123,7 +123,7 @@ func (g *LinuxCPU) discoverCpus() ([]cpu, error) {
 
 		var props []prop
 
-		if choice.Contains(cpufreq, g.Metrics) {
+		if slices.Contains(g.Metrics, cpufreq) {
 			props = append(props,
 				prop{name: "scaling_cur_freq", path: "cpufreq/scaling_cur_freq", optional: false},
 				prop{name: "scaling_min_freq", path: "cpufreq/scaling_min_freq", optional: false},
@@ -134,7 +134,7 @@ func (g *LinuxCPU) discoverCpus() ([]cpu, error) {
 			)
 		}
 
-		if choice.Contains(thermal, g.Metrics) {
+		if slices.Contains(g.Metrics, thermal) {
 			props = append(
 				props,
 				prop{name: "throttle_count", path: "thermal_throttle/core_throttle_count", optional: false},

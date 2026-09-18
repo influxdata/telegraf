@@ -2,11 +2,11 @@ package outputs_influxdb
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/migrations"
 )
 
@@ -39,7 +39,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 			return nil, "", fmt.Errorf("unexpected 'url' entry %v (%T)", ou, ou)
 		}
 
-		if !choice.Contains(ou, urls) {
+		if !slices.Contains(urls, ou) {
 			urls = append(urls, ou)
 		}
 
