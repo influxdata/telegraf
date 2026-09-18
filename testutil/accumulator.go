@@ -29,7 +29,7 @@ func (p *Metric) String() string {
 
 // Accumulator defines a mocked out accumulator
 type Accumulator struct {
-	nMetrics    uint64 // Needs to be first to avoid unaligned atomic operations on 32-bit archs
+	nMetrics    atomic.Uint64
 	Metrics     []*Metric
 	accumulated []telegraf.Metric
 	Discard     bool
@@ -46,7 +46,7 @@ type Accumulator struct {
 }
 
 func (a *Accumulator) NMetrics() uint64 {
-	return atomic.LoadUint64(&a.nMetrics)
+	return a.nMetrics.Load()
 }
 
 func (a *Accumulator) NDelivered() int {
@@ -83,7 +83,7 @@ func (a *Accumulator) FirstError() error {
 func (a *Accumulator) ClearMetrics() {
 	a.Lock()
 	defer a.Unlock()
-	atomic.StoreUint64(&a.nMetrics, 0)
+	a.nMetrics.Store(0)
 	a.Metrics = make([]*Metric, 0)
 	a.accumulated = make([]telegraf.Metric, 0)
 }
@@ -97,7 +97,7 @@ func (a *Accumulator) addMeasurement(
 ) {
 	a.Lock()
 	defer a.Unlock()
-	atomic.AddUint64(&a.nMetrics, 1)
+	a.nMetrics.Add(1)
 	if a.Cond != nil {
 		a.Cond.Broadcast()
 	}
@@ -197,7 +197,7 @@ func (a *Accumulator) AddHistogram(
 func (a *Accumulator) AddMetric(m telegraf.Metric) {
 	a.Lock()
 	defer a.Unlock()
-	atomic.AddUint64(&a.nMetrics, 1)
+	a.nMetrics.Add(1)
 	if a.Cond != nil {
 		a.Cond.Broadcast()
 	}

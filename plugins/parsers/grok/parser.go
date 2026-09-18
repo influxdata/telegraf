@@ -544,10 +544,7 @@ func (t *tsModder) tsMod(ts time.Time) time.Time {
 	if t.incrn == 999 && t.incr > time.Nanosecond {
 		t.rollover = t.incr * t.incrn
 		t.incrn = 1
-		t.incr = t.incr / 1000
-		if t.incr < time.Nanosecond {
-			t.incr = time.Nanosecond
-		}
+		t.incr = max(t.incr/1000, time.Nanosecond)
 	}
 	return ts.Add(t.incr*t.incrn + t.rollover)
 }
