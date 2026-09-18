@@ -407,9 +407,8 @@ func parseCoresConfig(cores []string) ([]string, error) {
 	parsedCores := make([]string, 0, len(cores))
 	for _, singleCoreGroup := range cores {
 		var actualGroupOfCores []int
-		separatedCores := strings.Split(singleCoreGroup, ",")
 
-		for _, coreStr := range separatedCores {
+		for coreStr := range strings.SplitSeq(singleCoreGroup, ",") {
 			actualCores, err := validateAndParseCores(coreStr)
 			if err != nil {
 				return nil, fmt.Errorf("wrong cores input config data format: %w", err)

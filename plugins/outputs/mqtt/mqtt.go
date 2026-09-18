@@ -75,7 +75,7 @@ func (m *MQTT) Init() error {
 	if err != nil {
 		return fmt.Errorf("creating topic template failed: %w", err)
 	}
-	for _, p := range strings.Split(topic, "/") {
+	for p := range strings.SplitSeq(topic, "/") {
 		if strings.ContainsAny(p, "#+") {
 			return fmt.Errorf("found forbidden character %s in the topic name %s", p, topic)
 		}
@@ -311,7 +311,7 @@ func (m *MQTT) generateTopic(metric telegraf.Metric) (string, error) {
 		return "", err
 	}
 	var ts []string
-	for _, p := range strings.Split(b.String(), "/") {
+	for p := range strings.SplitSeq(b.String(), "/") {
 		if p != "" {
 			ts = append(ts, p)
 		}

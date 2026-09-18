@@ -258,7 +258,7 @@ func (e *endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 			var timeStamps []time.Time
 			// 1. Construct a timestamp list from sample info
 			formattedEntityName := hyphenReplacer.Replace(entityName)
-			for _, t := range strings.Split(em.SampleInfo, ",") {
+			for t := range strings.SplitSeq(em.SampleInfo, ",") {
 				// Parse the input string to a time.Time object
 				utcTimeStamp, err := time.Parse("2006-01-02 15:04:05", t)
 				if err != nil {

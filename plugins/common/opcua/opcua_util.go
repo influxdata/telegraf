@@ -107,8 +107,7 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 		BasicConstraintsValid: true,
 	}
 
-	hosts := strings.Split(host, ",")
-	for _, h := range hosts {
+	for h := range strings.SplitSeq(host, ",") {
 		if ip := net.ParseIP(h); ip != nil {
 			template.IPAddresses = append(template.IPAddresses, ip)
 		} else {

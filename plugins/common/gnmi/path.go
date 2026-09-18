@@ -65,8 +65,8 @@ func newInfoFromString(path string) *pathInfo {
 	parts := strings.Split(path, "/")
 
 	var origin string
-	if strings.HasSuffix(parts[0], ":") {
-		origin = strings.TrimSuffix(parts[0], ":")
+	if before, ok := strings.CutSuffix(parts[0], ":"); ok {
+		origin = before
 		parts = parts[1:]
 	}
 

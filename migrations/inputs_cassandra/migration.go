@@ -103,7 +103,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 
 		params := make(map[string]string)
 		parts := strings.SplitN(bean, ":", 2)
-		for _, p := range strings.Split(parts[1], ",") {
+		for p := range strings.SplitSeq(parts[1], ",") {
 			x := strings.SplitN(p, "=", 2)
 			params[x[0]] = x[1]
 		}

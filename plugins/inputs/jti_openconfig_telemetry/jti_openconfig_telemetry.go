@@ -198,7 +198,7 @@ func spitTagsNPath(xmlpath string) (string, map[string]string) {
 
 			// If we have multiple keys in give path like /events/event[id=2 and type=3]/,
 			// we must emit multiple tags
-			for _, kv := range strings.Split(sub[2], " and ") {
+			for kv := range strings.SplitSeq(sub[2], " and ") {
 				key := tagKey + strings.TrimSpace(strings.Split(kv, "=")[0])
 				tagValue := strings.ReplaceAll(strings.Split(kv, "=")[1], "'", "")
 				tags[key] = tagValue

@@ -177,8 +177,7 @@ func gatherSysDetails(bondName string, files sysFiles, acc telegraf.Accumulator)
 	}
 
 	// Next we collect the number of bond slaves the system expects
-	slavesTmp := strings.Split(files.SlaveFile, " ")
-	for _, slave := range slavesTmp {
+	for slave := range strings.SplitSeq(files.SlaveFile, " ") {
 		if slave != "" {
 			slaves = append(slaves, slave)
 		}
