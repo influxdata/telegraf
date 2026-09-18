@@ -218,7 +218,7 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option, tmpfile string, ts tim
 	// groupData to accumulate data when Group=true
 	type groupData struct {
 		tags   map[string]string
-		fields map[string]interface{}
+		fields map[string]any
 	}
 	m := make(map[string]groupData)
 	for {
@@ -252,7 +252,7 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option, tmpfile string, ts tim
 			measurement = s.Options[option]
 			if _, ok := m[device]; !ok {
 				m[device] = groupData{
-					fields: make(map[string]interface{}),
+					fields: make(map[string]any),
 					tags:   make(map[string]string),
 				}
 			}
@@ -265,7 +265,7 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option, tmpfile string, ts tim
 			g.fields[escape(record[4])] = value
 		} else {
 			measurement = s.Options[option] + "_" + escape(record[4])
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"value": value,
 			}
 			acc.AddFields(measurement, fields, tags, ts)

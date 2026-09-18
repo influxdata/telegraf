@@ -37,7 +37,7 @@ func (m *testCounter) toCounterValue(raw bool) *counterValue {
 	if inst == "" {
 		inst = "--"
 	}
-	var val interface{}
+	var val any
 	if raw {
 		val = int64(m.value)
 	} else {
@@ -1220,7 +1220,7 @@ func TestSimpleGather(t *testing.T) {
 	err = m.Gather(&acc1)
 	require.NoError(t, err)
 
-	fields1 := map[string]interface{}{
+	fields1 := map[string]any{
 		"C": 1.2,
 	}
 	tags1 := map[string]string{
@@ -1273,7 +1273,7 @@ func TestSimpleGatherNoData(t *testing.T) {
 	require.NoError(t, err)
 
 	// fields would contain if the error was ignored, and we simply added garbage
-	fields1 := map[string]interface{}{
+	fields1 := map[string]any{
 		"C": 1.2,
 	}
 	// tags would contain if the error was ignored, and we simply added garbage
@@ -1326,7 +1326,7 @@ func TestSimpleGatherWithTimestamp(t *testing.T) {
 	err = m.Gather(&acc1)
 	require.NoError(t, err)
 
-	fields1 := map[string]interface{}{
+	fields1 := map[string]any{
 		"C": 1.2,
 	}
 	tags1 := map[string]string{
@@ -1412,7 +1412,7 @@ func TestGatherInvalidDataIgnore(t *testing.T) {
 	err = m.Gather(&acc1)
 	require.NoError(t, err)
 
-	fields1 := map[string]interface{}{
+	fields1 := map[string]any{
 		"C1": 1.2,
 		"C3": float64(0),
 	}
@@ -1474,7 +1474,7 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 
 	require.Len(t, acc1.Metrics, 2)
 
-	fields1 := map[string]interface{}{
+	fields1 := map[string]any{
 		"C1": 1.1,
 		"C2": 1.2,
 	}
@@ -1485,7 +1485,7 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 
-	fields2 := map[string]interface{}{
+	fields2 := map[string]any{
 		"C1": 1.3,
 		"C2": 1.4,
 	}
@@ -1511,7 +1511,7 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 	}
 	var acc2 testutil.Accumulator
 
-	fields3 := map[string]interface{}{
+	fields3 := map[string]any{
 		"C1": 1.5,
 		"C2": 1.6,
 	}
@@ -1580,7 +1580,7 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, acc1.Metrics, 2)
 
-	fields1 := map[string]interface{}{
+	fields1 := map[string]any{
 		"C1": 1.1,
 		"C2": 1.2,
 	}
@@ -1591,7 +1591,7 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 
-	fields2 := map[string]interface{}{
+	fields2 := map[string]any{
 		"C1": 1.3,
 		"C2": 1.4,
 	}
@@ -1625,7 +1625,7 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 
 	var acc2 testutil.Accumulator
 
-	fields3 := map[string]interface{}{
+	fields3 := map[string]any{
 		"C1": 1.5,
 		"C2": 1.6,
 	}
@@ -1677,7 +1677,7 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 	err = m.Gather(&acc3)
 	require.NoError(t, err)
 	require.Len(t, acc3.Metrics, 2)
-	fields4 := map[string]interface{}{
+	fields4 := map[string]any{
 		"C1": 1.1,
 		"C2": 1.2,
 		"C3": 1.3,
@@ -1687,7 +1687,7 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 		"objectname": "O",
 		"source":     hostname(),
 	}
-	fields5 := map[string]interface{}{
+	fields5 := map[string]any{
 		"C1": 1.4,
 		"C2": 1.5,
 		"C3": 1.6,
@@ -1739,7 +1739,7 @@ func TestGatherTotalNoExpansion(t *testing.T) {
 	require.True(t, ok)
 	require.Len(t, counters.counters, 2)
 	require.Len(t, acc1.Metrics, 2)
-	fields1 := map[string]interface{}{
+	fields1 := map[string]any{
 		"C1": 1.1,
 		"C2": 1.2,
 	}
@@ -1750,7 +1750,7 @@ func TestGatherTotalNoExpansion(t *testing.T) {
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 
-	fields2 := map[string]interface{}{
+	fields2 := map[string]any{
 		"C1": 1.3,
 		"C2": 1.4,
 	}
@@ -1840,7 +1840,7 @@ func TestGatherMultiComps(t *testing.T) {
 	err = m.Gather(&acc)
 	require.NoError(t, err)
 	require.Len(t, acc.Metrics, 6)
-	fields1 := map[string]interface{}{
+	fields1 := map[string]any{
 		"C1": 1.1,
 		"C2": 1.2,
 	}
@@ -1849,7 +1849,7 @@ func TestGatherMultiComps(t *testing.T) {
 		"objectname": "O",
 		"source":     hostname(),
 	}
-	fields2 := map[string]interface{}{
+	fields2 := map[string]any{
 		"C1": 1.3,
 		"C2": 1.4,
 	}
@@ -1860,7 +1860,7 @@ func TestGatherMultiComps(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t, "m", fields1, tags1)
 	acc.AssertContainsTaggedFields(t, "m", fields2, tags2)
-	fields3 := map[string]interface{}{
+	fields3 := map[string]any{
 		"C1": 2.1,
 		"C2": 2.2,
 	}
@@ -1869,7 +1869,7 @@ func TestGatherMultiComps(t *testing.T) {
 		"objectname": "O",
 		"source":     "cmp1",
 	}
-	fields4 := map[string]interface{}{
+	fields4 := map[string]any{
 		"C1": 2.3,
 		"C2": 2.4,
 	}
@@ -1880,7 +1880,7 @@ func TestGatherMultiComps(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t, "m1", fields3, tags3)
 	acc.AssertContainsTaggedFields(t, "m1", fields4, tags4)
-	fields5 := map[string]interface{}{
+	fields5 := map[string]any{
 		"C1": 3.1,
 		"C2": 3.2,
 	}
@@ -1889,7 +1889,7 @@ func TestGatherMultiComps(t *testing.T) {
 		"objectname": "O",
 		"source":     "cmp2",
 	}
-	fields6 := map[string]interface{}{
+	fields6 := map[string]any{
 		"C1": 3.3,
 		"C2": 3.4,
 	}
@@ -1937,7 +1937,7 @@ func TestGatherRaw(t *testing.T) {
 	require.True(t, ok)
 	require.Len(t, counters.counters, 2)
 	require.Len(t, acc1.Metrics, 2)
-	fields1 := map[string]interface{}{
+	fields1 := map[string]any{
 		"C1_Raw": int64(1),
 		"C2_Raw": int64(2),
 	}
@@ -1948,7 +1948,7 @@ func TestGatherRaw(t *testing.T) {
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 
-	fields2 := map[string]interface{}{
+	fields2 := map[string]any{
 		"C1_Raw": int64(3),
 		"C2_Raw": int64(4),
 	}

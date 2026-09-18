@@ -59,7 +59,7 @@ func TestHTTPTomcat8(t *testing.T) {
 	require.NoError(t, tc.Gather(&acc))
 
 	// tomcat_jvm_memory
-	jvmMemoryFields := map[string]interface{}{
+	jvmMemoryFields := map[string]any{
 		"free":  int64(17909336),
 		"total": int64(58195968),
 		"max":   int64(620756992),
@@ -76,7 +76,7 @@ func TestHTTPTomcat8(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "tomcat_jvm_memory", jvmMemoryFields, jvmMemoryTags)
 
 	// tomcat_jvm_memorypool
-	jvmMemoryPoolFields := map[string]interface{}{
+	jvmMemoryPoolFields := map[string]any{
 		"init":      int64(22020096),
 		"committed": int64(22020096),
 		"max":       int64(174063616),
@@ -90,7 +90,7 @@ func TestHTTPTomcat8(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "tomcat_jvm_memorypool", jvmMemoryPoolFields, jvmMemoryPoolTags)
 
 	// tomcat_connector
-	connectorFields := map[string]interface{}{
+	connectorFields := map[string]any{
 		"max_threads":          int64(200),
 		"current_thread_count": int64(5),
 		"current_threads_busy": int64(1),
@@ -147,7 +147,7 @@ func TestHTTPTomcat6(t *testing.T) {
 	require.NoError(t, tc.Gather(&acc))
 
 	// tomcat_jvm_memory
-	jvmMemoryFields := map[string]interface{}{
+	jvmMemoryFields := map[string]any{
 		"free":  int64(1942681600),
 		"total": int64(2040070144),
 		"max":   int64(2040070144),
@@ -155,7 +155,7 @@ func TestHTTPTomcat6(t *testing.T) {
 	acc.AssertContainsFields(t, "tomcat_jvm_memory", jvmMemoryFields)
 
 	// tomcat_connector
-	connectorFields := map[string]interface{}{
+	connectorFields := map[string]any{
 		"bytes_received":       int64(0),
 		"bytes_sent":           int64(550196),
 		"current_thread_count": int64(2),

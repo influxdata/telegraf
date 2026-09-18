@@ -88,7 +88,7 @@ type instanceGrouping struct {
 	objectName string
 }
 
-type fieldGrouping map[instanceGrouping]map[string]interface{}
+type fieldGrouping map[instanceGrouping]map[string]any
 
 func (*WinPerfCounters) SampleConfig() string {
 	return sampleConfig
@@ -506,7 +506,7 @@ func (m *WinPerfCounters) checkError(err error) error {
 }
 
 func (m *WinPerfCounters) gatherComputerCounters(hostCounterInfo *hostCountersInfo, acc telegraf.Accumulator) error {
-	var value interface{}
+	var value any
 	var err error
 	collectedFields := make(fieldGrouping)
 	// For iterate over the known metrics and get the samples.
@@ -599,10 +599,10 @@ func shouldIncludeMetric(metric *counter, cValue counterValue) bool {
 	return false
 }
 
-func addCounterMeasurement(metric *counter, instanceName string, value interface{}, collectFields fieldGrouping) {
+func addCounterMeasurement(metric *counter, instanceName string, value any, collectFields fieldGrouping) {
 	var instance = instanceGrouping{metric.measurement, instanceName, metric.objectName}
 	if collectFields[instance] == nil {
-		collectFields[instance] = make(map[string]interface{})
+		collectFields[instance] = make(map[string]any)
 	}
 	collectFields[instance][sanitizedChars.Replace(metric.counter)] = value
 }

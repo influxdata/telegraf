@@ -43,7 +43,7 @@ func (*Temperature) Gather(acc telegraf.Accumulator) error {
 	for _, temp := range temps {
 		acc.AddFields(
 			"temp",
-			map[string]interface{}{"temp": temp.Temperature},
+			map[string]any{"temp": temp.Temperature},
 			map[string]string{"sensor": temp.SensorKey},
 		)
 	}

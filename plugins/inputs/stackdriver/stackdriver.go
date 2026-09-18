@@ -444,7 +444,7 @@ func (s *Stackdriver) gatherTimeSeries(ctx context.Context, grouper *lockedSerie
 					return err
 				}
 			} else {
-				var value interface{}
+				var value any
 
 				// Types that are valid to be assigned to Value
 				// See: https://godoc.org/google.golang.org/genproto/googleapis/monitoring/v3#TypedValue
@@ -512,7 +512,7 @@ func addDistribution(dist *distributionpb.Distribution, tags map[string]string, 
 }
 
 // Add adds a field key and value to the series.
-func (g *lockedSeriesGrouper) Add(measurement string, tags map[string]string, tm time.Time, field string, fieldValue interface{}) {
+func (g *lockedSeriesGrouper) Add(measurement string, tags map[string]string, tm time.Time, field string, fieldValue any) {
 	g.Lock()
 	defer g.Unlock()
 	g.SeriesGrouper.Add(measurement, tags, tm, field, fieldValue)

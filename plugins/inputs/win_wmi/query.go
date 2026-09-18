@@ -26,7 +26,7 @@ type query struct {
 
 	host             string
 	query            string
-	connectionParams []interface{}
+	connectionParams []any
 	tagFilter        filter.Filter
 }
 
@@ -143,7 +143,7 @@ func (q *query) execute(acc telegraf.Accumulator) error {
 }
 
 func (q *query) extractProperties(acc telegraf.Accumulator, itemRaw *ole.VARIANT) error {
-	tags, fields := make(map[string]string), make(map[string]interface{})
+	tags, fields := make(map[string]string), make(map[string]any)
 
 	if q.host != "" {
 		tags["source"] = q.host

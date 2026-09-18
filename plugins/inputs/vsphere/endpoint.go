@@ -88,7 +88,7 @@ type metricEntry struct {
 	tags   map[string]string
 	name   string
 	ts     time.Time
-	fields map[string]interface{}
+	fields map[string]any
 }
 
 type objectMap map[string]*objectRef
@@ -1292,7 +1292,7 @@ func (e *endpoint) collectChunk(
 				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(ts.UnixNano(), 10)
 				bucket, found := buckets[bKey]
 				if !found {
-					fields := make(map[string]interface{})
+					fields := make(map[string]any)
 					for k, v := range globalFields {
 						fields[k] = v
 					}
@@ -1423,8 +1423,8 @@ func (e *endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	}
 }
 
-func (e *endpoint) populateGlobalFields(objectRef *objectRef, resourceType, prefix string) map[string]interface{} {
-	globalFields := make(map[string]interface{})
+func (e *endpoint) populateGlobalFields(objectRef *objectRef, resourceType, prefix string) map[string]any {
+	globalFields := make(map[string]any)
 	if resourceType == "vm" && objectRef.memorySizeMB != 0 {
 		_, fieldName := e.makeMetricIdentifier(prefix, "memorySizeMB")
 		globalFields[fieldName] = strconv.Itoa(int(objectRef.memorySizeMB))
