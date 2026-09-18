@@ -1333,13 +1333,12 @@ func (e *endpoint) collectChunk(
 				_, found := buckets[bKey]
 				if !found {
 					fields := map[string]interface{}{fn: bool}
-					tags := make(map[string]string)
+					tags := make(map[string]string, len(t)+len(objectRef.customProperties))
 					for k, v := range t {
 						tags[k] = v
 					}
 					for k, v := range objectRef.customProperties {
-						sv, err := internal.ToString(v)
-						if err != nil {
+						if sv, err := internal.ToString(v); err != nil {
 							e.log.Errorf("conversion error for %v: %s", v, err)
 						} else {
 							tags[k] = sv
