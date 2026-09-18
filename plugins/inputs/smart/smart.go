@@ -424,7 +424,7 @@ func (m *Smart) Init() error {
 		m.PathNVMe, _ = exec.LookPath("nvme")
 	}
 
-	if !contains(knownReadMethods, m.ReadMethod) {
+	if !slices.Contains(knownReadMethods, m.ReadMethod) {
 		return fmt.Errorf("provided read method %q is not valid", m.ReadMethod)
 	}
 
@@ -577,7 +577,7 @@ func (m *Smart) addVendorNVMeAttributes(acc telegraf.Accumulator, devices []stri
 	var wg sync.WaitGroup
 
 	for _, device := range nvmeDevices {
-		if contains(m.EnableExtensions, "auto-on") {
+		if slices.Contains(m.EnableExtensions, "auto-on") {
 			//nolint:revive // one case switch on purpose to demonstrate potential extensions
 			switch device.vendorID {
 			case intelVID:
@@ -591,7 +591,7 @@ func (m *Smart) addVendorNVMeAttributes(acc telegraf.Accumulator, devices []stri
 					wg.Done()
 				}
 			}
-		} else if contains(m.EnableExtensions, "Intel") && device.vendorID == intelVID {
+		} else if slices.Contains(m.EnableExtensions, "Intel") && device.vendorID == intelVID {
 			wg.Add(1)
 			switch m.ReadMethod {
 			case "concurrent":
@@ -948,10 +948,6 @@ func exitStatus(err error) (int, error) {
 		}
 	}
 	return 0, err
-}
-
-func contains(args []string, element string) bool {
-	return slices.Contains(args, element)
 }
 
 func difference(a, b []string) []string {

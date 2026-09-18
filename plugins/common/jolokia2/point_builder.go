@@ -56,17 +56,13 @@ func (pb *pointBuilder) extractTags(mbean string) map[string]string {
 	tagMap := make(map[string]string)
 
 	for key, value := range propertyMap {
-		if pb.includeTag(key) {
+		if slices.Contains(pb.metric.TagKeys, key) {
 			tagName := pb.formatTagName(key)
 			tagMap[tagName] = value
 		}
 	}
 
 	return tagMap
-}
-
-func (pb *pointBuilder) includeTag(tagName string) bool {
-	return slices.Contains(pb.metric.TagKeys, tagName)
 }
 
 func (pb *pointBuilder) formatTagName(tagName string) string {

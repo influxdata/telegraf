@@ -66,7 +66,7 @@ func (s *Synproxy) getSynproxyStat() (map[string]any, error) {
 		line := scanner.Text()
 		// Parse fields separated by whitespace
 		for val := range strings.FieldsSeq(line) {
-			if !inSlice(counters, val) {
+			if !slices.Contains(counters, val) {
 				val = ""
 			}
 			hname = append(hname, val)
@@ -98,10 +98,6 @@ func (s *Synproxy) getSynproxyStat() (map[string]any, error) {
 		}
 	}
 	return fields, nil
-}
-
-func inSlice(haystack []string, needle string) bool {
-	return slices.Contains(haystack, needle)
 }
 
 func init() {

@@ -121,10 +121,7 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 		}
 
 		if d.deviceFilter != nil && !match {
-			if slices.ContainsFunc(devLinks, d.deviceFilter.Match) {
-				match = true
-			}
-			if !match {
+			if !slices.ContainsFunc(devLinks, d.deviceFilter.Match) {
 				continue
 			}
 		}

@@ -244,8 +244,7 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 	}
 
 	// Check if the requested HTTP method was specified in config.
-	isAcceptedMethod := slices.Contains(h.Methods, req.Method)
-	if !isAcceptedMethod {
+	if !slices.Contains(h.Methods, req.Method) {
 		if err := methodNotAllowed(res); err != nil {
 			h.Log.Debugf("error in method-not-allowed: %v", err)
 		}

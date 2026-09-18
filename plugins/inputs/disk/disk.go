@@ -97,16 +97,12 @@ func (ds *Disk) Gather(acc telegraf.Accumulator) error {
 type mountOptions []string
 
 func (opts mountOptions) mode() string {
-	if opts.exists("rw") {
+	if slices.Contains(opts, "rw") {
 		return "rw"
-	} else if opts.exists("ro") {
+	} else if slices.Contains(opts, "ro") {
 		return "ro"
 	}
 	return "unknown"
-}
-
-func (opts mountOptions) exists(opt string) bool {
-	return slices.Contains(opts, opt)
 }
 
 func init() {

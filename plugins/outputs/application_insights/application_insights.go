@@ -184,7 +184,7 @@ func (a *ApplicationInsights) createTelemetryForUnusedFields(metric telegraf.Met
 	retval := make([]appinsights.Telemetry, 0, len(fields))
 
 	for fieldName := range fields {
-		if contains(usedFields, fieldName) {
+		if slices.Contains(usedFields, fieldName) {
 			continue
 		}
 
@@ -255,10 +255,6 @@ func getIntTelemetryPropertyValue(
 	}
 
 	return 0, errors.New("no field from the candidate list was found in the metric")
-}
-
-func contains(set []string, val string) bool {
-	return slices.Contains(set, val)
 }
 
 func toFloat64(value any) (float64, error) {

@@ -178,11 +178,7 @@ func (s *selection) extractPluginsFromConfig(buf []byte) error {
 	for category, subtbl := range table.Fields {
 		// Check if we should handle the category, i.e. it contains plugins
 		// to configure.
-		var valid bool
-		if slices.Contains(categories, category) {
-			valid = true
-		}
-		if !valid {
+		if !slices.Contains(categories, category) {
 			continue
 		}
 

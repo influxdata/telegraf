@@ -232,7 +232,7 @@ func init() {
 
 func (d *Dynatrace) getTypeOption(metric telegraf.Metric, field *telegraf.Field) dynatrace_metric.MetricOption {
 	metricName := metric.Name() + "." + field.Key
-	if isCounterMetricsMatch(d.AddCounterMetrics, metricName) ||
+	if slices.Contains(d.AddCounterMetrics, metricName) ||
 		isCounterMetricsPatternsMatch(d.AddCounterMetricsPatterns, metricName) {
 		switch v := field.Value.(type) {
 		case float64:
@@ -260,10 +260,6 @@ func (d *Dynatrace) getTypeOption(metric telegraf.Metric, field *telegraf.Field)
 	}
 
 	return nil
-}
-
-func isCounterMetricsMatch(counterMetrics []string, metricName string) bool {
-	return slices.Contains(counterMetrics, metricName)
 }
 
 func isCounterMetricsPatternsMatch(counterPatterns []string, metricName string) bool {

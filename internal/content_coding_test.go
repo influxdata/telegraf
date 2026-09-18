@@ -206,10 +206,7 @@ func TestCompressionLevel(t *testing.T) {
 		for level := range 10 {
 			name := fmt.Sprintf("%s level %d", tt.algorithm, level)
 			t.Run(name, func(t *testing.T) {
-				var valid bool
-				if slices.Contains(tt.validLevels, level) {
-					valid = true
-				}
+				valid := slices.Contains(tt.validLevels, level)
 
 				enc, err := NewContentEncoder(tt.algorithm, WithCompressionLevel(level))
 				if valid {

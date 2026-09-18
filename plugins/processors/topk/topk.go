@@ -74,8 +74,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		m.Accept()
 
 		// Check if the metric has any of the fields over which we are aggregating
-		hasField := slices.ContainsFunc(t.Fields, m.HasField)
-		if !hasField {
+		if !slices.ContainsFunc(t.Fields, m.HasField) {
 			continue
 		}
 

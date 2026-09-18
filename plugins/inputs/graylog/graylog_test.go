@@ -104,9 +104,7 @@ func (c *mockHTTPClient) makeRequest(req *http.Request) (*http.Response, error) 
 
 	// basic error checking on request method
 	allowedMethods := []string{"GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT"}
-	methodValid := slices.Contains(allowedMethods, req.Method)
-
-	if !methodValid {
+	if !slices.Contains(allowedMethods, req.Method) {
 		resp.StatusCode = 405 // Method not allowed
 	}
 

@@ -461,10 +461,6 @@ func (c *Config) ListTags() string {
 	return strings.Join(tags, " ")
 }
 
-func sliceContains(name string, list []string) bool {
-	return slices.Contains(list, name)
-}
-
 // WalkDirectory collects all toml files that need to be loaded
 func WalkDirectory(path string) ([]string, error) {
 	// Check permissions of the directly specified directories and error
@@ -1032,7 +1028,7 @@ func (c *Config) addAggregator(name, source string, table *ast.Table) error {
 }
 
 func (c *Config) addSecretStore(name, source string, table *ast.Table) error {
-	if len(c.SecretStoreFilters) > 0 && !sliceContains(name, c.SecretStoreFilters) {
+	if len(c.SecretStoreFilters) > 0 && !slices.Contains(c.SecretStoreFilters, name) {
 		return nil
 	}
 
@@ -1352,7 +1348,7 @@ func (c *Config) setupProcessor(name string, creator processors.StreamingCreator
 }
 
 func (c *Config) addOutput(name, source string, table *ast.Table) error {
-	if len(c.OutputFilters) > 0 && !sliceContains(name, c.OutputFilters) {
+	if len(c.OutputFilters) > 0 && !slices.Contains(c.OutputFilters, name) {
 		return nil
 	}
 
@@ -1446,7 +1442,7 @@ func (c *Config) addOutput(name, source string, table *ast.Table) error {
 }
 
 func (c *Config) addInput(name, source string, table *ast.Table) error {
-	if len(c.InputFilters) > 0 && !sliceContains(name, c.InputFilters) {
+	if len(c.InputFilters) > 0 && !slices.Contains(c.InputFilters, name) {
 		return nil
 	}
 
