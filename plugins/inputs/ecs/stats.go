@@ -28,7 +28,7 @@ func parseContainerStats(c *ecsContainer, acc telegraf.Accumulator, tags map[str
 }
 
 func metastats(id string, c *ecsContainer, acc telegraf.Accumulator, tags map[string]string, tm time.Time) {
-	metafields := map[string]interface{}{
+	metafields := map[string]any{
 		"container_id":   id,
 		"docker_name":    c.DockerName,
 		"image":          c.Image,
@@ -46,7 +46,7 @@ func metastats(id string, c *ecsContainer, acc telegraf.Accumulator, tags map[st
 }
 
 func memstats(id string, stats *container.StatsResponse, acc telegraf.Accumulator, tags map[string]string, tm time.Time) {
-	memfields := map[string]interface{}{
+	memfields := map[string]any{
 		"container_id": id,
 	}
 
@@ -103,7 +103,7 @@ func memstats(id string, stats *container.StatsResponse, acc telegraf.Accumulato
 }
 
 func cpustats(id string, stats *container.StatsResponse, acc telegraf.Accumulator, tags map[string]string, tm time.Time) {
-	cpufields := map[string]interface{}{
+	cpufields := map[string]any{
 		"usage_total":                  stats.CPUStats.CPUUsage.TotalUsage,
 		"usage_in_usermode":            stats.CPUStats.CPUUsage.UsageInUsermode,
 		"usage_in_kernelmode":          stats.CPUStats.CPUUsage.UsageInKernelmode,
@@ -135,7 +135,7 @@ func cpustats(id string, stats *container.StatsResponse, acc telegraf.Accumulato
 	for i, percpu := range percpuusage {
 		percputags := copyTags(tags)
 		percputags["cpu"] = fmt.Sprintf("cpu%d", i)
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"usage_total":  percpu,
 			"container_id": id,
 		}
@@ -144,9 +144,9 @@ func cpustats(id string, stats *container.StatsResponse, acc telegraf.Accumulato
 }
 
 func netstats(id string, stats *container.StatsResponse, acc telegraf.Accumulator, tags map[string]string, tm time.Time) {
-	totalNetworkStatMap := make(map[string]interface{})
+	totalNetworkStatMap := make(map[string]any)
 	for network, netstats := range stats.Networks {
-		netfields := map[string]interface{}{
+		netfields := map[string]any{
 			"rx_dropped":   netstats.RxDropped,
 			"rx_bytes":     netstats.RxBytes,
 			"rx_errors":    netstats.RxErrors,
@@ -198,13 +198,13 @@ func netstats(id string, stats *container.StatsResponse, acc telegraf.Accumulato
 func blkstats(id string, stats *container.StatsResponse, acc telegraf.Accumulator, tags map[string]string, tm time.Time) {
 	blkioStats := stats.BlkioStats
 	// Make a map of devices to their block io stats
-	deviceStatMap := make(map[string]map[string]interface{})
+	deviceStatMap := make(map[string]map[string]any)
 
 	for _, metric := range blkioStats.IoServiceBytesRecursive {
 		device := fmt.Sprintf("%d:%d", metric.Major, metric.Minor)
 		_, ok := deviceStatMap[device]
 		if !ok {
-			deviceStatMap[device] = make(map[string]interface{})
+			deviceStatMap[device] = make(map[string]any)
 		}
 
 		field := "io_service_bytes_recursive_" + strings.ToLower(metric.Op)
@@ -215,7 +215,7 @@ func blkstats(id string, stats *container.StatsResponse, acc telegraf.Accumulato
 		device := fmt.Sprintf("%d:%d", metric.Major, metric.Minor)
 		_, ok := deviceStatMap[device]
 		if !ok {
-			deviceStatMap[device] = make(map[string]interface{})
+			deviceStatMap[device] = make(map[string]any)
 		}
 
 		field := "io_serviced_recursive_" + strings.ToLower(metric.Op)
@@ -256,7 +256,7 @@ func blkstats(id string, stats *container.StatsResponse, acc telegraf.Accumulato
 		deviceStatMap[device]["sectors_recursive"] = metric.Value
 	}
 
-	totalStatMap := make(map[string]interface{})
+	totalStatMap := make(map[string]any)
 	for device, fields := range deviceStatMap {
 		fields["container_id"] = id
 

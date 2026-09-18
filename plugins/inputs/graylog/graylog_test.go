@@ -71,7 +71,7 @@ var validTags = map[string]map[string]string{
 	},
 }
 
-var expectedFields = map[string]map[string]interface{}{
+var expectedFields = map[string]map[string]any{
 	"jvm.cl.loaded": {
 		"value": float64(18910),
 	},

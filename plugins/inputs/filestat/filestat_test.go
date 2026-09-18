@@ -90,7 +90,7 @@ func TestNonExistentFile(t *testing.T) {
 	acc := testutil.Accumulator{}
 	require.NoError(t, acc.GatherError(fs.Gather))
 
-	acc.AssertContainsFields(t, "filestat", map[string]interface{}{"exists": int64(0)})
+	acc.AssertContainsFields(t, "filestat", map[string]any{"exists": int64(0)})
 	require.False(t, acc.HasField("filestat", "error"))
 	require.False(t, acc.HasField("filestat", "md5_sum"))
 	require.False(t, acc.HasField("filestat", "size_bytes"))

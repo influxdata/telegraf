@@ -128,7 +128,7 @@ const enrichStatsResponse = `
 }
 `
 
-var clusterHealthExpected = map[string]interface{}{
+var clusterHealthExpected = map[string]any{
 	"status":                           "green",
 	"status_code":                      1,
 	"timed_out":                        false,
@@ -146,7 +146,7 @@ var clusterHealthExpected = map[string]interface{}{
 	"active_shards_percent_as_number":  100.0,
 }
 
-var v1IndexExpected = map[string]interface{}{
+var v1IndexExpected = map[string]any{
 	"status":                "green",
 	"status_code":           1,
 	"number_of_shards":      10,
@@ -158,7 +158,7 @@ var v1IndexExpected = map[string]interface{}{
 	"unassigned_shards":     0,
 }
 
-var v2IndexExpected = map[string]interface{}{
+var v2IndexExpected = map[string]any{
 	"status":                "red",
 	"status_code":           3,
 	"number_of_shards":      10,
@@ -1102,7 +1102,7 @@ const nodeStatsResponseJVMProcess = `
 }
 `
 
-var nodestatsIndicesExpected = map[string]interface{}{
+var nodestatsIndicesExpected = map[string]any{
 	"id_cache_memory_size_in_bytes":             float64(0),
 	"completion_size_in_bytes":                  float64(0),
 	"suggest_total":                             float64(0),
@@ -1174,7 +1174,7 @@ var nodestatsIndicesExpected = map[string]interface{}{
 	"segments_fixed_bit_set_memory_in_bytes":    float64(0),
 }
 
-var nodestatsOsExpected = map[string]interface{}{
+var nodestatsOsExpected = map[string]any{
 	"load_average_0":           float64(0.01),
 	"load_average_1":           float64(0.04),
 	"load_average_2":           float64(0.05),
@@ -1189,7 +1189,7 @@ var nodestatsOsExpected = map[string]interface{}{
 	"mem_used_in_bytes":        float64(1621868544),
 }
 
-var nodestatsProcessExpected = map[string]interface{}{
+var nodestatsProcessExpected = map[string]any{
 	"mem_total_virtual_in_bytes": float64(4747890688),
 	"timestamp":                  float64(1436460392945),
 	"open_file_descriptors":      float64(160),
@@ -1199,7 +1199,7 @@ var nodestatsProcessExpected = map[string]interface{}{
 	"cpu_user_in_millis":         float64(13610),
 }
 
-var nodestatsJvmExpected = map[string]interface{}{
+var nodestatsJvmExpected = map[string]any{
 	"timestamp":                                     float64(1436460392945),
 	"uptime_in_millis":                              float64(202245),
 	"mem_non_heap_used_in_bytes":                    float64(39634576),
@@ -1234,7 +1234,7 @@ var nodestatsJvmExpected = map[string]interface{}{
 	"buffer_pools_mapped_total_capacity_in_bytes":   float64(0),
 }
 
-var nodestatsThreadPoolExpected = map[string]interface{}{
+var nodestatsThreadPoolExpected = map[string]any{
 	"merge_threads":                 float64(6),
 	"merge_queue":                   float64(4),
 	"merge_active":                  float64(5),
@@ -1339,7 +1339,7 @@ var nodestatsThreadPoolExpected = map[string]interface{}{
 	"flush_completed":               float64(3),
 }
 
-var nodestatsFsExpected = map[string]interface{}{
+var nodestatsFsExpected = map[string]any{
 	"data_0_total_in_bytes":     float64(19507089408),
 	"data_0_free_in_bytes":      float64(16909316096),
 	"data_0_available_in_bytes": float64(15894814720),
@@ -1349,7 +1349,7 @@ var nodestatsFsExpected = map[string]interface{}{
 	"total_total_in_bytes":      float64(19507089408),
 }
 
-var nodestatsTransportExpected = map[string]interface{}{
+var nodestatsTransportExpected = map[string]any{
 	"server_open":      float64(13),
 	"rx_count":         float64(6),
 	"rx_size_in_bytes": float64(1380),
@@ -1357,12 +1357,12 @@ var nodestatsTransportExpected = map[string]interface{}{
 	"tx_size_in_bytes": float64(1380),
 }
 
-var nodestatsHTTPExpected = map[string]interface{}{
+var nodestatsHTTPExpected = map[string]any{
 	"current_open": float64(3),
 	"total_opened": float64(3),
 }
 
-var nodestatsBreakersExpected = map[string]interface{}{
+var nodestatsBreakersExpected = map[string]any{
 	"fielddata_estimated_size_in_bytes": float64(0),
 	"fielddata_overhead":                float64(1.03),
 	"fielddata_tripped":                 float64(0),
@@ -1546,7 +1546,7 @@ const clusterStatsResponse = `
 }
 `
 
-var clusterstatsIndicesExpected = map[string]interface{}{
+var clusterstatsIndicesExpected = map[string]any{
 	"completion_size_in_bytes":                  float64(0),
 	"count":                                     float64(1),
 	"docs_count":                                float64(4),
@@ -1593,7 +1593,7 @@ var clusterstatsIndicesExpected = map[string]interface{}{
 	"store_throttle_time_in_millis":             float64(0),
 }
 
-var clusterstatsNodesExpected = map[string]interface{}{
+var clusterstatsNodesExpected = map[string]any{
 	"count_client":                      float64(0),
 	"count_data_only":                   float64(0),
 	"count_master_data":                 float64(1),
@@ -4158,7 +4158,7 @@ const dateStampedIndicesResponse = `
   }
 }`
 
-var clusterIndicesExpected = map[string]interface{}{
+var clusterIndicesExpected = map[string]any{
 	"completion_size_in_bytes":               float64(0),
 	"docs_count":                             float64(999),
 	"docs_deleted":                           float64(0),
@@ -5719,7 +5719,7 @@ const clusterIndicesShardsResponse = `
   }
 }`
 
-var clusterIndicesPrimaryShardsExpected = map[string]interface{}{
+var clusterIndicesPrimaryShardsExpected = map[string]any{
 	"commit_generation":                      float64(4),
 	"commit_num_docs":                        float64(340),
 	"completion_size_in_bytes":               float64(0),
@@ -5817,7 +5817,7 @@ var clusterIndicesPrimaryShardsExpected = map[string]interface{}{
 	"warmer_total_time_in_millis":            float64(0),
 }
 
-var clusterIndicesReplicaShardsExpected = map[string]interface{}{
+var clusterIndicesReplicaShardsExpected = map[string]any{
 	"commit_generation":                      float64(5),
 	"commit_num_docs":                        float64(352),
 	"completion_size_in_bytes":               float64(0),

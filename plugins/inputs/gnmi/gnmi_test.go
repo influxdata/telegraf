@@ -228,7 +228,7 @@ func TestNotification(t *testing.T) {
 						"name":   "str",
 						"uint64": "1234",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"some/path": int64(5678),
 					},
 					time.Unix(0, 0),
@@ -240,7 +240,7 @@ func TestNotification(t *testing.T) {
 						"source": "127.0.0.1",
 						"foo":    "bar",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"other/path": "foobar",
 						"other/this": "that",
 					},
@@ -255,7 +255,7 @@ func TestNotification(t *testing.T) {
 						"name":   "str2",
 						"uint64": "1234",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"some/path": "123",
 					},
 					time.Unix(0, 0),
@@ -267,7 +267,7 @@ func TestNotification(t *testing.T) {
 						"source": "127.0.0.1",
 						"foo":    "bar2",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"other/path": "foobar",
 						"other/this": "that",
 					},
@@ -337,7 +337,7 @@ func TestNotification(t *testing.T) {
 						"source":  "127.0.0.1",
 						"port_id": "1",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"oper_speed": 42,
 					},
 					time.Unix(0, 0),
@@ -495,7 +495,7 @@ func TestNotification(t *testing.T) {
 						"/network-instances/network-instance/protocols/protocol/name": "BGP",
 						"identifier": "BGP",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"session_state": "ESTABLISHED",
 					},
 					time.Unix(0, 0),
@@ -601,7 +601,7 @@ func TestNotification(t *testing.T) {
 						"source": "127.0.0.1",
 						"name":   "Ethernet1",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"in_broadcast_pkts":  uint64(0),
 						"in_discards":        uint64(0),
 						"in_errors":          uint64(0),
@@ -738,7 +738,7 @@ func TestNotification(t *testing.T) {
 						"source": "127.0.0.1",
 						"name":   "TEMP 1",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"temperature/timestamp":               "2022-11-18T11:39:26Z",
 						"temperature/low_threshold":           float64(0),
 						"temperature/current":                 float64(29),
@@ -832,7 +832,7 @@ func TestNotification(t *testing.T) {
 						"sub_component_id": "1",
 						"component":        "PICD",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"type": "LINECARD",
 					},
 					time.Unix(0, 0),

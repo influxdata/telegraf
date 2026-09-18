@@ -452,7 +452,7 @@ func TestHTTPWithCSVFormat(t *testing.T) {
 				"url": address,
 				"c":   "ok",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"a": 1.2,
 				"b": 3.1415,
 			},
@@ -530,7 +530,7 @@ func TestConnectionOverUnixSocket(t *testing.T) {
 				"url": address,
 				"c":   "ok",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"a": 1.2,
 				"b": 3.1415,
 			},

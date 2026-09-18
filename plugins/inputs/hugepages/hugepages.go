@@ -176,7 +176,7 @@ func gatherFromHugepagePath(acc telegraf.Accumulator, measurement, path string, 
 			return fmt.Errorf("reading metric dir failed: %w", err)
 		}
 
-		metrics := make(map[string]interface{})
+		metrics := make(map[string]any)
 		for _, metricFile := range metricFiles {
 			metricName, ok := fileFilter[metricFile.Name()]
 			if mode := metricFile.Type(); !mode.IsRegular() || !ok {
@@ -219,7 +219,7 @@ func (h *Hugepages) gatherStatsFromMeminfo(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	metrics := make(map[string]interface{})
+	metrics := make(map[string]any)
 	for line := range bytes.SplitSeq(meminfo, newlineByte) {
 		fields := bytes.Fields(line)
 		if len(fields) < 2 {

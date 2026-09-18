@@ -126,7 +126,7 @@ func TestGetFields(t *testing.T) {
 
 	getFieldsReturn := getFields(&repository)
 
-	correctFieldReturn := make(map[string]interface{})
+	correctFieldReturn := make(map[string]any)
 
 	correctFieldReturn["stars"] = 1
 	correctFieldReturn["forks"] = 2
