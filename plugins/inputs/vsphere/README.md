@@ -973,38 +973,11 @@ disk.capacity.usage.average
 * virtualDisk stats for VM
   * disk (name of virtual disk)
 
-#### Collect custom tag
+#### Collect additional properties
 
-`*_property_include` allow you to collect data that are not metrics.
-
-For example :
-
-```toml
-  host_property_include = ["summary.runtime.powerState", "summary.overallStatus", "summary.runtime.inMaintenanceMode", "summary.runtime.connectionState"]
-  vm_property_include = ["runtime.powerState"]
-  cluster_property_include = ["summary.overallStatus"]
-  datastore_property_include = ["summary.accessible"]
-  resource_pool_property_include = ["overallStatus"]
-```
-
-All that tag will be added to "internal" metric that always contain "1".
-It is recommended to use it with `processors.enum` to convert as metric.
-
-For example :
-
-```toml
-[[processors.enum]]
-  [[processors.enum.mapping]]
-    ## Names of the fields to map. Globs accepted.
-    tag = "powerstate"
-    default = 0
-
-    ## Table of mappings
-    [processors.enum.mapping.value_mappings]
-      poweredOn = 1
-      suspended = 2
-      poweredOff = 3
-```
+The `<entity>_property_include` settings allow to collect additional properties of the configured
+entity into an additional `_properties` metric. The properties are added as fields with the
+tag-set being identical to the one of the entity metrics.
 
 ## Add a vSAN extension
 
