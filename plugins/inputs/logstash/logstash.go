@@ -10,6 +10,7 @@ import (
 	"maps"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -137,7 +138,7 @@ func (logstash *Logstash) Gather(accumulator telegraf.Accumulator) error {
 		logstash.client = client
 	}
 
-	if choice.Contains("jvm", logstash.Collect) {
+	if slices.Contains(logstash.Collect, "jvm") {
 		jvmURL, err := url.Parse(logstash.URL + jvmStatsNode)
 		if err != nil {
 			return err
@@ -147,7 +148,7 @@ func (logstash *Logstash) Gather(accumulator telegraf.Accumulator) error {
 		}
 	}
 
-	if choice.Contains("process", logstash.Collect) {
+	if slices.Contains(logstash.Collect, "process") {
 		processURL, err := url.Parse(logstash.URL + processStatsNode)
 		if err != nil {
 			return err
@@ -157,7 +158,7 @@ func (logstash *Logstash) Gather(accumulator telegraf.Accumulator) error {
 		}
 	}
 
-	if choice.Contains("pipelines", logstash.Collect) {
+	if slices.Contains(logstash.Collect, "pipelines") {
 		if logstash.SinglePipeline {
 			pipelineURL, err := url.Parse(logstash.URL + pipelineStatsNode)
 			if err != nil {

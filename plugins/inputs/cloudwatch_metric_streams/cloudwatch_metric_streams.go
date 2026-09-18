@@ -12,6 +12,7 @@ import (
 	"math"
 	"net"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,7 +20,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal/choice"
 	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/selfstat"
@@ -170,7 +170,7 @@ func (cms *CloudWatchMetricStreams) ServeHTTP(res http.ResponseWriter, req *http
 
 	handler := cms.serveWrite
 
-	if !choice.Contains(req.URL.Path, cms.Paths) {
+	if !slices.Contains(cms.Paths, req.URL.Path) {
 		handler = http.NotFound
 	}
 
