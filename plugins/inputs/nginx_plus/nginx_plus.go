@@ -296,7 +296,7 @@ func (s *status) gatherProcessesMetrics(tags map[string]string, acc telegraf.Acc
 
 	acc.AddFields(
 		"nginx_plus_processes",
-		map[string]interface{}{
+		map[string]any{
 			"respawned": respawned,
 		},
 		tags,
@@ -306,7 +306,7 @@ func (s *status) gatherProcessesMetrics(tags map[string]string, acc telegraf.Acc
 func (s *status) gatherConnectionsMetrics(tags map[string]string, acc telegraf.Accumulator) {
 	acc.AddFields(
 		"nginx_plus_connections",
-		map[string]interface{}{
+		map[string]any{
 			"accepted": s.Connections.Accepted,
 			"dropped":  s.Connections.Dropped,
 			"active":   s.Connections.Active,
@@ -319,7 +319,7 @@ func (s *status) gatherConnectionsMetrics(tags map[string]string, acc telegraf.A
 func (s *status) gatherSslMetrics(tags map[string]string, acc telegraf.Accumulator) {
 	acc.AddFields(
 		"nginx_plus_ssl",
-		map[string]interface{}{
+		map[string]any{
 			"handshakes":        s.Ssl.Handshakes,
 			"handshakes_failed": s.Ssl.HandshakesFailed,
 			"session_reuses":    s.Ssl.SessionReuses,
@@ -331,7 +331,7 @@ func (s *status) gatherSslMetrics(tags map[string]string, acc telegraf.Accumulat
 func (s *status) gatherRequestMetrics(tags map[string]string, acc telegraf.Accumulator) {
 	acc.AddFields(
 		"nginx_plus_requests",
-		map[string]interface{}{
+		map[string]any{
 			"total":   s.Requests.Total,
 			"current": s.Requests.Current,
 		},
@@ -348,8 +348,8 @@ func (s *status) gatherZoneMetrics(tags map[string]string, acc telegraf.Accumula
 		zoneTags["zone"] = zoneName
 		acc.AddFields(
 			"nginx_plus_zone",
-			func() map[string]interface{} {
-				result := map[string]interface{}{
+			func() map[string]any {
+				result := map[string]any{
 					"processing":      zone.Processing,
 					"requests":        zone.Requests,
 					"responses_1xx":   zone.Responses.Responses1xx,
@@ -378,7 +378,7 @@ func (s *status) gatherUpstreamMetrics(tags map[string]string, acc telegraf.Accu
 			upstreamTags[k] = v
 		}
 		upstreamTags["upstream"] = upstreamName
-		upstreamFields := map[string]interface{}{
+		upstreamFields := map[string]any{
 			"keepalive": upstream.Keepalive,
 			"zombies":   upstream.Zombies,
 		}
@@ -399,7 +399,7 @@ func (s *status) gatherUpstreamMetrics(tags map[string]string, acc telegraf.Accu
 				selected = *peer.Selected
 			}
 
-			peerFields := map[string]interface{}{
+			peerFields := map[string]any{
 				"backup":                 peer.Backup,
 				"weight":                 peer.Weight,
 				"state":                  peer.State,
@@ -456,7 +456,7 @@ func (s *status) gatherCacheMetrics(tags map[string]string, acc telegraf.Accumul
 		cacheTags["cache"] = cacheName
 		acc.AddFields(
 			"nginx_plus_cache",
-			map[string]interface{}{
+			map[string]any{
 				"size":                      cache.Size,
 				"max_size":                  cache.MaxSize,
 				"cold":                      cache.Cold,
@@ -495,7 +495,7 @@ func (s *status) gatherStreamMetrics(tags map[string]string, acc telegraf.Accumu
 		zoneTags["zone"] = zoneName
 		acc.AddFields(
 			"nginx.stream.zone",
-			map[string]interface{}{
+			map[string]any{
 				"processing":  zone.Processing,
 				"connections": zone.Connections,
 				"received":    zone.Received,
@@ -512,13 +512,13 @@ func (s *status) gatherStreamMetrics(tags map[string]string, acc telegraf.Accumu
 		upstreamTags["upstream"] = upstreamName
 		acc.AddFields(
 			"nginx_plus_stream_upstream",
-			map[string]interface{}{
+			map[string]any{
 				"zombies": upstream.Zombies,
 			},
 			upstreamTags,
 		)
 		for _, peer := range upstream.Peers {
-			peerFields := map[string]interface{}{
+			peerFields := map[string]any{
 				"backup":                 peer.Backup,
 				"weight":                 peer.Weight,
 				"state":                  peer.State,

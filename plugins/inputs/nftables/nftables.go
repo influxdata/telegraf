@@ -110,7 +110,7 @@ func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 					if expr.Cntr == nil || expr.Cntr.isNamedRef {
 						continue
 					}
-					fields := map[string]interface{}{
+					fields := map[string]any{
 						"bytes": expr.Cntr.Bytes,
 						"pkts":  expr.Cntr.Packets,
 					}
@@ -124,7 +124,7 @@ func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 			}
 		case "counters":
 			for _, counter := range nftable.Counters {
-				fields := map[string]interface{}{
+				fields := map[string]any{
 					"bytes": counter.Bytes,
 					"pkts":  counter.Packets,
 				}
@@ -136,7 +136,7 @@ func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 			}
 		case "sets":
 			for _, set := range nftable.Sets {
-				fields := map[string]interface{}{
+				fields := map[string]any{
 					"count": len(set.Elem),
 				}
 				tags := map[string]string{

@@ -39,7 +39,7 @@ func TestNetStats(t *testing.T) {
 		metric.New(
 			"netstat",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"tcp_established": 2,
 				"tcp_syn_sent":    0,
 				"tcp_syn_recv":    0,

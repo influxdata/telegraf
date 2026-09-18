@@ -28,7 +28,7 @@ type statistics struct {
 
 func (p *Ping) pingToURL(acc telegraf.Accumulator, host string) {
 	tags := map[string]string{"url": host}
-	fields := map[string]interface{}{"result_code": 0}
+	fields := map[string]any{"result_code": 0}
 
 	args := p.args(host)
 	totalTimeout := 60.0

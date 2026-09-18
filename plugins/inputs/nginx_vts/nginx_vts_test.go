@@ -243,7 +243,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(
 		t,
 		"nginx_vts_connections",
-		map[string]interface{}{
+		map[string]any{
 			"accepted": uint64(555),
 			"active":   uint64(111),
 			"handled":  uint64(666),
@@ -260,7 +260,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(
 		t,
 		"nginx_vts_server",
-		map[string]interface{}{
+		map[string]any{
 			"requests":     uint64(1415887),
 			"request_time": uint64(13),
 			"in_bytes":     uint64(1296356607),
@@ -290,7 +290,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(
 		t,
 		"nginx_vts_filter",
-		map[string]interface{}{
+		map[string]any{
 			"requests":     uint64(60),
 			"request_time": uint64(69),
 			"in_bytes":     uint64(2570),
@@ -321,7 +321,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(
 		t,
 		"nginx_vts_server",
-		map[string]interface{}{
+		map[string]any{
 			"requests":     uint64(505),
 			"request_time": uint64(12),
 			"in_bytes":     uint64(171388),
@@ -351,7 +351,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(
 		t,
 		"nginx_vts_upstream",
-		map[string]interface{}{
+		map[string]any{
 			"requests":      uint64(2103849),
 			"request_time":  uint64(30),
 			"response_time": uint64(31),
@@ -380,7 +380,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(
 		t,
 		"nginx_vts_upstream",
-		map[string]interface{}{
+		map[string]any{
 			"requests":      uint64(8),
 			"request_time":  uint64(34),
 			"response_time": uint64(35),
@@ -409,7 +409,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(
 		t,
 		"nginx_vts_upstream",
-		map[string]interface{}{
+		map[string]any{
 			"requests":      uint64(7),
 			"request_time":  uint64(39),
 			"response_time": uint64(40),
@@ -438,7 +438,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(
 		t,
 		"nginx_vts_cache",
-		map[string]interface{}{
+		map[string]any{
 			"max_bytes":  uint64(9223372036854776000),
 			"used_bytes": uint64(68639232),
 			"in_bytes":   uint64(697138673),
@@ -462,7 +462,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(
 		t,
 		"nginx_vts_cache",
-		map[string]interface{}{
+		map[string]any{
 			"max_bytes":  uint64(9223372036854776000),
 			"used_bytes": uint64(569856),
 			"in_bytes":   uint64(551652333),

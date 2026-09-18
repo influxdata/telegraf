@@ -31,7 +31,7 @@ func TestFilterSomeStats(t *testing.T) {
 	acc.AssertContainsFields(t, "opensmtpd", parsedFullOutput)
 }
 
-var parsedFullOutput = map[string]interface{}{
+var parsedFullOutput = map[string]any{
 	"bounce_envelope":             float64(0),
 	"bounce_message":              float64(0),
 	"bounce_session":              float64(0),
