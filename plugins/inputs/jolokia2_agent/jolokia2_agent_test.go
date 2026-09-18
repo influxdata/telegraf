@@ -90,31 +90,31 @@ func TestScalarValues(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
 
-	acc.AssertContainsTaggedFields(t, "scalar_without_attribute", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "scalar_without_attribute", map[string]any{
 		"value": 123.0,
 	}, map[string]string{
 		"jolokia_agent_url": server.URL,
 	})
 
-	acc.AssertContainsTaggedFields(t, "scalar_with_attribute", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "scalar_with_attribute", map[string]any{
 		"biz": 456.0,
 	}, map[string]string{
 		"jolokia_agent_url": server.URL,
 	})
 
-	acc.AssertContainsTaggedFields(t, "scalar_with_attribute_and_path", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "scalar_with_attribute_and_path", map[string]any{
 		"biz.baz": 789.0,
 	}, map[string]string{
 		"jolokia_agent_url": server.URL,
 	})
 
-	acc.AssertContainsTaggedFields(t, "scalar_with_key_pattern", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "scalar_with_key_pattern", map[string]any{
 		"value": 123.0,
 	}, map[string]string{
 		"jolokia_agent_url": server.URL,
 		"test":              "foo",
 	})
-	acc.AssertContainsTaggedFields(t, "scalar_with_key_pattern", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "scalar_with_key_pattern", map[string]any{
 		"value": 456.0,
 	}, map[string]string{
 		"jolokia_agent_url": server.URL,
@@ -169,42 +169,42 @@ func TestObjectValues(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
 
-	acc.AssertContainsTaggedFields(t, "object_without_attribute", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "object_without_attribute", map[string]any{
 		"biz": 123.0,
 		"baz": 456.0,
 	}, map[string]string{
 		"jolokia_agent_url": server.URL,
 	})
 
-	acc.AssertContainsTaggedFields(t, "object_with_attribute", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "object_with_attribute", map[string]any{
 		"biz.fiz": 123.0,
 		"biz.faz": 456.0,
 	}, map[string]string{
 		"jolokia_agent_url": server.URL,
 	})
 
-	acc.AssertContainsTaggedFields(t, "object_with_attribute_and_path", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "object_with_attribute_and_path", map[string]any{
 		"biz.baz.bing": 123.0,
 		"biz.baz.bang": 456.0,
 	}, map[string]string{
 		"jolokia_agent_url": server.URL,
 	})
 
-	acc.AssertContainsTaggedFields(t, "object_with_branching_paths", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "object_with_branching_paths", map[string]any{
 		"foo.fiz.bing": 123.0,
 		"foo.faz.bang": 456.0,
 	}, map[string]string{
 		"jolokia_agent_url": server.URL,
 	})
 
-	acc.AssertContainsTaggedFields(t, "object_with_key_pattern", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "object_with_key_pattern", map[string]any{
 		"fiz": 123.0,
 	}, map[string]string{
 		"test":              "foo",
 		"jolokia_agent_url": server.URL,
 	})
 
-	acc.AssertContainsTaggedFields(t, "object_with_key_pattern", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "object_with_key_pattern", map[string]any{
 		"biz": 456.0,
 	}, map[string]string{
 		"test":              "bar",
@@ -257,7 +257,7 @@ func TestStatusCodes(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
 
-	acc.AssertContainsTaggedFields(t, "ok", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "ok", map[string]any{
 		"value": 1.0,
 	}, map[string]string{
 		"jolokia_agent_url": server.URL,
@@ -307,7 +307,7 @@ func TestTagRenaming(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
 
-	acc.AssertContainsTaggedFields(t, "default_tag_prefix", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "default_tag_prefix", map[string]any{
 		"value": 123.0,
 	}, map[string]string{
 		"DEFAULT_PREFIX_biz": "baz",
@@ -315,7 +315,7 @@ func TestTagRenaming(t *testing.T) {
 		"jolokia_agent_url":  server.URL,
 	})
 
-	acc.AssertContainsTaggedFields(t, "custom_tag_prefix", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "custom_tag_prefix", map[string]any{
 		"value": 123.0,
 	}, map[string]string{
 		"CUSTOM_PREFIX_biz": "baz",
@@ -400,26 +400,26 @@ func TestFieldRenaming(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
 
-	acc.AssertContainsTaggedFields(t, "default_field_modifiers", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "default_field_modifiers", map[string]any{
 		"DEFAULT_PREFIX_hello_DEFAULT_SEPARATOR_world": 123.0,
 	}, map[string]string{
 		"jolokia_agent_url": server.URL,
 	})
 
-	acc.AssertContainsTaggedFields(t, "custom_field_modifiers", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "custom_field_modifiers", map[string]any{
 		"CUSTOM_PREFIX_hello_CUSTOM_SEPARATOR_world": 123.0,
 	}, map[string]string{
 		"jolokia_agent_url": server.URL,
 	})
 
-	acc.AssertContainsTaggedFields(t, "field_prefix_substitution", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "field_prefix_substitution", map[string]any{
 		"biz_value": 123.0,
 		"baz_value": 456.0,
 	}, map[string]string{
 		"jolokia_agent_url": server.URL,
 	})
 
-	acc.AssertContainsTaggedFields(t, "field_name_substitution", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "field_name_substitution", map[string]any{
 		"biz": 123.0,
 		"baz": 456.0,
 	}, map[string]string{
@@ -508,26 +508,26 @@ func TestMetricMbeanMatching(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
 
-	acc.AssertContainsTaggedFields(t, "mbean_name_and_object_keys", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "mbean_name_and_object_keys", map[string]any{
 		"value": 123.0,
 	}, map[string]string{
 		"jolokia_agent_url": server.URL,
 	})
 
-	acc.AssertContainsTaggedFields(t, "mbean_name_and_unordered_object_keys", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "mbean_name_and_unordered_object_keys", map[string]any{
 		"value": 123.0,
 	}, map[string]string{
 		"jolokia_agent_url": server.URL,
 	})
 
-	acc.AssertContainsTaggedFields(t, "mbean_name_and_attributes", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "mbean_name_and_attributes", map[string]any{
 		"foo": 123.0,
 		"bar": 456.0,
 	}, map[string]string{
 		"jolokia_agent_url": server.URL,
 	})
 
-	acc.AssertContainsTaggedFields(t, "mbean_name_and_attribute_with_paths", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "mbean_name_and_attribute_with_paths", map[string]any{
 		"flavor.chocolate":  123.0,
 		"flavor.strawberry": 456.0,
 	}, map[string]string{
@@ -601,7 +601,7 @@ func TestMetricCompaction(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
 
-	acc.AssertContainsTaggedFields(t, "compact_metric", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "compact_metric", map[string]any{
 		"value": 123.0,
 		"foo":   456.0,
 		"bar":   789.0,
@@ -610,7 +610,7 @@ func TestMetricCompaction(t *testing.T) {
 		"jolokia_agent_url": server.URL,
 	})
 
-	acc.AssertContainsTaggedFields(t, "compact_metric", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "compact_metric", map[string]any{
 		"value": 999.0,
 	}, map[string]string{
 		"flavor":            "vanilla",
@@ -621,7 +621,7 @@ func TestMetricCompaction(t *testing.T) {
 func TestJolokia2_ClientAuthRequest(t *testing.T) {
 	var username string
 	var password string
-	var requests []map[string]interface{}
+	var requests []map[string]any
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		username, password, _ = r.BasicAuth()
@@ -664,22 +664,22 @@ func TestJolokia2_ClientAuthRequest(t *testing.T) {
 }
 
 func TestFillFields(t *testing.T) {
-	complexPoint := map[string]interface{}{"Value": []interface{}{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	complexPoint := map[string]any{"Value": []any{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}
-	scalarPoint := []interface{}{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	scalarPoint := []any{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
-	results := map[string]interface{}{}
+	results := map[string]any{}
 	common.NewPointBuilder(common.Metric{Name: "test", Mbean: "complex"}, []string{"this", "that"}, "/").FillFields("", complexPoint, results)
-	require.Equal(t, map[string]interface{}{}, results)
+	require.Equal(t, map[string]any{}, results)
 
-	results = map[string]interface{}{}
+	results = map[string]any{}
 	common.NewPointBuilder(common.Metric{Name: "test", Mbean: "scalar"}, []string{"this", "that"}, "/").FillFields("", scalarPoint, results)
-	require.Equal(t, map[string]interface{}{}, results)
+	require.Equal(t, map[string]any{}, results)
 }
 
 func TestIntegrationArtemis(t *testing.T) {
@@ -724,7 +724,7 @@ func TestIntegrationArtemis(t *testing.T) {
 				"queue":             "$sys.mqtt.sessions",
 				"subcomponent":      "queues",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"AcknowledgeAttempts":             float64(0),
 				"Address":                         "ExpiryQueue",
 				"AutoDelete":                      false,
@@ -782,7 +782,7 @@ func TestIntegrationArtemis(t *testing.T) {
 				"queue":             "ExpiryQueue",
 				"subcomponent":      "queues",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"AcknowledgeAttempts":             float64(0),
 				"Address":                         "ExpiryQueue",
 				"AutoDelete":                      false,
@@ -839,7 +839,7 @@ func TestIntegrationArtemis(t *testing.T) {
 				"queue":             "DLQ",
 				"subcomponent":      "queues",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"AcknowledgeAttempts":             float64(0),
 				"Address":                         "DLQ",
 				"AutoDelete":                      false,

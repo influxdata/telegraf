@@ -27,7 +27,7 @@ func TestDaemonSet(t *testing.T) {
 		{
 			name: "no daemon set",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/daemonsets/": &apps.DaemonSetList{},
 				},
 			},
@@ -36,7 +36,7 @@ func TestDaemonSet(t *testing.T) {
 		{
 			name: "collect daemonsets",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/daemonsets/": &apps.DaemonSetList{
 						Items: []apps.DaemonSet{
 							{
@@ -81,7 +81,7 @@ func TestDaemonSet(t *testing.T) {
 						"selector_select1": "s1",
 						"selector_select2": "s2",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"generation":               int64(11221),
 						"current_number_scheduled": int32(3),
 						"desired_number_scheduled": int32(5),
@@ -127,7 +127,7 @@ func TestDaemonSet(t *testing.T) {
 func TestDaemonSetSelectorFilter(t *testing.T) {
 	cli := &client{}
 
-	responseMap := map[string]interface{}{
+	responseMap := map[string]any{
 		"/daemonsets/": &apps.DaemonSetList{
 			Items: []apps.DaemonSet{
 				{

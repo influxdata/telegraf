@@ -396,7 +396,7 @@ func TestConsumerGroupHandlerConsumeClaim(t *testing.T) {
 		metric.New(
 			"cpu",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42,
 			},
 			time.Now(),
@@ -425,7 +425,7 @@ func TestConsumerGroupHandlerHandle(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42,
 					},
 					time.Now(),
@@ -462,7 +462,7 @@ func TestConsumerGroupHandlerHandle(t *testing.T) {
 					map[string]string{
 						"topic": "telegraf",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42,
 					},
 					time.Now(),
@@ -656,7 +656,7 @@ func TestKafkaTimestampSourceIntegration(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{},
-			map[string]interface{}{"value": 42},
+			map[string]any{"value": 42},
 			time.Unix(1704067200, 0),
 		),
 	}
@@ -923,7 +923,7 @@ func TestStartupErrorBehaviorRetryIntegration(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{},
-			map[string]interface{}{"value": 42},
+			map[string]any{"value": 42},
 			time.Unix(1704067200, 0),
 		),
 	}

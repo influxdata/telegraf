@@ -193,7 +193,7 @@ func TestRetrySuccessful(t *testing.T) {
 				"slave_id": strconv.Itoa(int(modbus.SlaveID)),
 				"name":     modbus.Name,
 			},
-			map[string]interface{}{"retry_success": uint16(value)},
+			map[string]any{"retry_success": uint16(value)},
 			time.Unix(0, 0),
 		),
 	}
@@ -676,7 +676,7 @@ func TestWorkaroundsStringRegisterLocation(t *testing.T) {
 						"slave_id": "1",
 						"type":     "holding_register",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": tt.expected,
 					},
 					time.Unix(0, 0),

@@ -70,7 +70,7 @@ func TestRegisterCoils(t *testing.T) {
 		dtype    string
 		quantity uint16
 		write    []byte
-		read     interface{}
+		read     any
 	}{
 		{
 			name:     "coil0_turn_off",
@@ -198,7 +198,7 @@ func TestRegisterCoils(t *testing.T) {
 						"slave_id": strconv.Itoa(int(modbus.SlaveID)),
 						"name":     modbus.Name,
 					},
-					map[string]interface{}{ct.name: ct.read},
+					map[string]any{ct.name: ct.read},
 					time.Unix(0, 0),
 				),
 			}
@@ -224,7 +224,7 @@ func TestRegisterHoldingRegisters(t *testing.T) {
 		dataType  string
 		scale     float64
 		write     []byte
-		read      interface{}
+		read      any
 	}{
 		{
 			name:      "register5_bit3",
@@ -837,7 +837,7 @@ func TestRegisterHoldingRegisters(t *testing.T) {
 						"slave_id": strconv.Itoa(int(modbus.SlaveID)),
 						"name":     modbus.Name,
 					},
-					map[string]interface{}{hrt.name: hrt.read},
+					map[string]any{hrt.name: hrt.read},
 					time.Unix(0, 0),
 				),
 			}
@@ -866,7 +866,7 @@ func TestRegisterReadMultipleCoilWithHole(t *testing.T) {
 	client := mb.NewClient(handler)
 
 	fcs := make([]fieldDefinition, 0, 26)
-	expectedFields := make(map[string]interface{})
+	expectedFields := make(map[string]any)
 	writeValue := uint16(0)
 	readValue := uint16(0)
 	for i := range 14 {
@@ -953,7 +953,7 @@ func TestRegisterReadMultipleCoilLimit(t *testing.T) {
 	client := mb.NewClient(handler)
 
 	fcs := make([]fieldDefinition, 0, 4000)
-	expectedFields := make(map[string]interface{})
+	expectedFields := make(map[string]any)
 	writeValue := uint16(0)
 	readValue := uint16(0)
 	for i := range 4000 {
@@ -1014,7 +1014,7 @@ func TestRegisterReadMultipleHoldingRegisterWithHole(t *testing.T) {
 	client := mb.NewClient(handler)
 
 	fcs := make([]fieldDefinition, 0, 20)
-	expectedFields := make(map[string]interface{})
+	expectedFields := make(map[string]any)
 	for i := range 10 {
 		fc := fieldDefinition{
 			Name:      fmt.Sprintf("HoldingRegister-%v", i),
@@ -1090,7 +1090,7 @@ func TestRegisterReadMultipleHoldingRegisterLimit(t *testing.T) {
 	client := mb.NewClient(handler)
 
 	fcs := make([]fieldDefinition, 0, 401)
-	expectedFields := make(map[string]interface{})
+	expectedFields := make(map[string]any)
 	for i := 0; i <= 400; i++ {
 		fc := fieldDefinition{}
 		fc.Name = fmt.Sprintf("HoldingRegister-%v", i)
@@ -1191,7 +1191,7 @@ func TestRegisterHighAddresses(t *testing.T) {
 				"slave_id": strconv.Itoa(int(modbus.SlaveID)),
 				"name":     modbus.Name,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"DeviceName":             "Modbus String Hello",
 				"DeviceConnectionStatus": uint16(4242),
 			},

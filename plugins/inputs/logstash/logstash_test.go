@@ -53,7 +53,7 @@ func Test_Logstash5GatherProcessStats(test *testing.T) {
 	logstash5accProcessStats.AssertContainsTaggedFields(
 		test,
 		"logstash_process",
-		map[string]interface{}{
+		map[string]any{
 			"open_file_descriptors":      float64(89.0),
 			"max_file_descriptors":       float64(1.048576e+06),
 			"cpu_percent":                float64(3.0),
@@ -101,7 +101,7 @@ func Test_Logstash6GatherProcessStats(test *testing.T) {
 	logstash6accProcessStats.AssertContainsTaggedFields(
 		test,
 		"logstash_process",
-		map[string]interface{}{
+		map[string]any{
 			"open_file_descriptors":      float64(133.0),
 			"max_file_descriptors":       float64(262144.0),
 			"cpu_percent":                float64(0.0),
@@ -150,7 +150,7 @@ func Test_Logstash5GatherPipelineStats(test *testing.T) {
 	logstash5accPipelineStats.AssertContainsTaggedFields(
 		test,
 		"logstash_events",
-		map[string]interface{}{
+		map[string]any{
 			"duration_in_millis": float64(1151.0),
 			"in":                 float64(1269.0),
 			"filtered":           float64(1269.0),
@@ -164,7 +164,7 @@ func Test_Logstash5GatherPipelineStats(test *testing.T) {
 		},
 	)
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	fields["queue_push_duration_in_millis"] = float64(32.0)
 	fields["out"] = float64(2.0)
 
@@ -186,7 +186,7 @@ func Test_Logstash5GatherPipelineStats(test *testing.T) {
 	logstash5accPipelineStats.AssertContainsTaggedFields(
 		test,
 		"logstash_plugins",
-		map[string]interface{}{
+		map[string]any{
 			"duration_in_millis": float64(360.0),
 			"in":                 float64(1269.0),
 			"out":                float64(1269.0),
@@ -205,7 +205,7 @@ func Test_Logstash5GatherPipelineStats(test *testing.T) {
 	logstash5accPipelineStats.AssertContainsTaggedFields(
 		test,
 		"logstash_plugins",
-		map[string]interface{}{
+		map[string]any{
 			"duration_in_millis": float64(228.0),
 			"in":                 float64(1269.0),
 			"out":                float64(1269.0),
@@ -248,7 +248,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 	err = logstashTest.gatherPipelinesStats(logstashTest.URL+pipelineStatsNode, &logstash6accPipelinesStats)
 	require.NoError(test, err, "Can't gather Pipeline stats")
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	fields["duration_in_millis"] = float64(8540751.0)
 	fields["queue_push_duration_in_millis"] = float64(366.0)
 	fields["in"] = float64(180659.0)
@@ -268,7 +268,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 		},
 	)
 
-	fields = make(map[string]interface{})
+	fields = make(map[string]any)
 	fields["queue_push_duration_in_millis"] = float64(366.0)
 	fields["out"] = float64(180659.0)
 
@@ -291,7 +291,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 	logstash6accPipelinesStats.AssertContainsTaggedFields(
 		test,
 		"logstash_plugins",
-		map[string]interface{}{
+		map[string]any{
 			"duration_in_millis": float64(2117.0),
 			"in":                 float64(27641.0),
 			"out":                float64(27641.0),
@@ -311,7 +311,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 	logstash6accPipelinesStats.AssertContainsTaggedFields(
 		test,
 		"logstash_plugins",
-		map[string]interface{}{
+		map[string]any{
 			"duration_in_millis": float64(2117.0),
 			"in":                 float64(27641.0),
 			"out":                float64(27641.0),
@@ -331,7 +331,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 	logstash6accPipelinesStats.AssertContainsTaggedFields(
 		test,
 		"logstash_plugins",
-		map[string]interface{}{
+		map[string]any{
 			"duration_in_millis": float64(13149.0),
 			"in":                 float64(180659.0),
 			"out":                float64(177549.0),
@@ -351,7 +351,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 	logstash6accPipelinesStats.AssertContainsTaggedFields(
 		test,
 		"logstash_plugins",
-		map[string]interface{}{
+		map[string]any{
 			"failures": int64(2),
 		},
 		map[string]string{
@@ -369,7 +369,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 	logstash6accPipelinesStats.AssertContainsTaggedFields(
 		test,
 		"logstash_plugins",
-		map[string]interface{}{
+		map[string]any{
 			"duration_in_millis": float64(2814.0),
 			"in":                 float64(76602.0),
 			"out":                float64(76602.0),
@@ -389,7 +389,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 	logstash6accPipelinesStats.AssertContainsTaggedFields(
 		test,
 		"logstash_plugins",
-		map[string]interface{}{
+		map[string]any{
 			"duration_in_millis": float64(9.0),
 			"in":                 float64(934.0),
 			"out":                float64(934.0),
@@ -409,7 +409,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 	logstash6accPipelinesStats.AssertContainsTaggedFields(
 		test,
 		"logstash_plugins",
-		map[string]interface{}{
+		map[string]any{
 			"duration_in_millis": float64(173.0),
 			"in":                 float64(3110.0),
 			"out":                float64(0.0),
@@ -429,7 +429,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 	logstash6accPipelinesStats.AssertContainsTaggedFields(
 		test,
 		"logstash_plugins",
-		map[string]interface{}{
+		map[string]any{
 			"duration_in_millis": float64(5605.0),
 			"in":                 float64(75482.0),
 			"out":                float64(75482.0),
@@ -449,7 +449,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 	logstash6accPipelinesStats.AssertContainsTaggedFields(
 		test,
 		"logstash_plugins",
-		map[string]interface{}{
+		map[string]any{
 			"duration_in_millis": float64(313992.0),
 			"in":                 float64(180659.0),
 			"out":                float64(180659.0),
@@ -469,7 +469,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 	logstash6accPipelinesStats.AssertContainsTaggedFields(
 		test,
 		"logstash_plugins",
-		map[string]interface{}{
+		map[string]any{
 			"duration_in_millis": float64(0.0),
 			"in":                 float64(0.0),
 			"out":                float64(0.0),
@@ -489,7 +489,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 	logstash6accPipelinesStats.AssertContainsTaggedFields(
 		test,
 		"logstash_plugins",
-		map[string]interface{}{
+		map[string]any{
 			"duration_in_millis": float64(651386.0),
 			"in":                 float64(177549.0),
 			"out":                float64(177549.0),
@@ -509,7 +509,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 	logstash6accPipelinesStats.AssertContainsTaggedFields(
 		test,
 		"logstash_plugins",
-		map[string]interface{}{
+		map[string]any{
 			"duration_in_millis": float64(186751.0),
 			"in":                 float64(177549.0),
 			"out":                float64(177549.0),
@@ -529,7 +529,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 	logstash6accPipelinesStats.AssertContainsTaggedFields(
 		test,
 		"logstash_plugins",
-		map[string]interface{}{
+		map[string]any{
 			"duration_in_millis": float64(7335196.0),
 			"in":                 float64(177549.0),
 			"out":                float64(177549.0),
@@ -549,7 +549,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 	logstash6accPipelinesStats.AssertContainsTaggedFields(
 		test,
 		"logstash_queue",
-		map[string]interface{}{
+		map[string]any{
 			"events":                  float64(103),
 			"free_space_in_bytes":     float64(36307369984),
 			"max_queue_size_in_bytes": float64(1073741824),
@@ -596,7 +596,7 @@ func Test_Logstash5GatherJVMStats(test *testing.T) {
 	logstash5accJVMStats.AssertContainsTaggedFields(
 		test,
 		"logstash_jvm",
-		map[string]interface{}{
+		map[string]any{
 			"mem_pools_young_max_in_bytes":                  float64(5.5836672e+08),
 			"mem_pools_young_committed_in_bytes":            float64(1.43261696e+08),
 			"mem_heap_committed_in_bytes":                   float64(5.1904512e+08),
@@ -663,7 +663,7 @@ func Test_Logstash6GatherJVMStats(test *testing.T) {
 	logstash6accJVMStats.AssertContainsTaggedFields(
 		test,
 		"logstash_jvm",
-		map[string]interface{}{
+		map[string]any{
 			"mem_pools_young_max_in_bytes":                  float64(1605304320.0),
 			"mem_pools_young_committed_in_bytes":            float64(71630848.0),
 			"mem_heap_committed_in_bytes":                   float64(824963072.0),
@@ -732,7 +732,7 @@ func Test_Logstash7GatherPipelinesQueueStats(test *testing.T) {
 		test.Logf("Can't gather Pipeline stats")
 	}
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	fields["duration_in_millis"] = float64(3032875.0)
 	fields["queue_push_duration_in_millis"] = float64(13300.0)
 	fields["in"] = float64(2665549.0)
@@ -755,7 +755,7 @@ func Test_Logstash7GatherPipelinesQueueStats(test *testing.T) {
 	logstash7accPipelinesStats.AssertContainsTaggedFields(
 		test,
 		"logstash_plugins",
-		map[string]interface{}{
+		map[string]any{
 			"duration_in_millis": float64(2802177.0),
 			"in":                 float64(2665549.0),
 			"out":                float64(2665549.0),
@@ -774,7 +774,7 @@ func Test_Logstash7GatherPipelinesQueueStats(test *testing.T) {
 	logstash7accPipelinesStats.AssertContainsTaggedFields(
 		test,
 		"logstash_plugins",
-		map[string]interface{}{
+		map[string]any{
 			"bulk_requests_successes":     float64(2870),
 			"bulk_requests_responses_200": float64(2870),
 			"bulk_requests_failures":      float64(262),
@@ -794,7 +794,7 @@ func Test_Logstash7GatherPipelinesQueueStats(test *testing.T) {
 	logstash7accPipelinesStats.AssertContainsTaggedFields(
 		test,
 		"logstash_plugins",
-		map[string]interface{}{
+		map[string]any{
 			"documents_successes":          float64(2665549),
 			"documents_retryable_failures": float64(13733),
 		},
@@ -813,7 +813,7 @@ func Test_Logstash7GatherPipelinesQueueStats(test *testing.T) {
 	logstash7accPipelinesStats.AssertContainsTaggedFields(
 		test,
 		"logstash_queue",
-		map[string]interface{}{
+		map[string]any{
 			"events":                  float64(0),
 			"max_queue_size_in_bytes": float64(4294967296),
 			"queue_size_in_bytes":     float64(32028566),

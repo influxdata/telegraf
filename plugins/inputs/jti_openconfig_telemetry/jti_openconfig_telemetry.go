@@ -219,7 +219,7 @@ func (m *OpenConfigTelemetry) extractData(r *telemetry.OpenConfigData, grpcServe
 
 	dgroups := make([]dataGroup, 0, 5*len(r.Kv))
 	for _, v := range r.Kv {
-		kv := make(map[string]interface{})
+		kv := make(map[string]any)
 
 		if v.Key == "__prefix__" {
 			prefix = v.GetStrValue()
@@ -261,13 +261,13 @@ func (m *OpenConfigTelemetry) extractData(r *telemetry.OpenConfigData, grpcServe
 
 		// Insert data from message header
 		dgroups = collectionByKeys(dgroups).insert(finaltags,
-			map[string]interface{}{"_sequence": r.SequenceNumber})
+			map[string]any{"_sequence": r.SequenceNumber})
 		dgroups = collectionByKeys(dgroups).insert(finaltags,
-			map[string]interface{}{"_timestamp": r.Timestamp})
+			map[string]any{"_timestamp": r.Timestamp})
 		dgroups = collectionByKeys(dgroups).insert(finaltags,
-			map[string]interface{}{"_component_id": r.ComponentId})
+			map[string]any{"_component_id": r.ComponentId})
 		dgroups = collectionByKeys(dgroups).insert(finaltags,
-			map[string]interface{}{"_subcomponent_id": r.SubComponentId})
+			map[string]any{"_subcomponent_id": r.SubComponentId})
 	}
 
 	return dgroups

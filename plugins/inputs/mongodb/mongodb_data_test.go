@@ -355,7 +355,7 @@ func TestStateTag(t *testing.T) {
 
 	d.addDefaultStats()
 	d.flush(&acc)
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"active_reads":                              int64(0),
 		"active_writes":                             int64(0),
 		"aggregate_command_failed":                  int64(0),

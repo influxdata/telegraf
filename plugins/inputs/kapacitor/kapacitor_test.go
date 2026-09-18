@@ -41,7 +41,7 @@ func TestKapacitor(t *testing.T) {
 
 	require.Len(t, acc.Metrics, 63)
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"alloc_bytes":         int64(6950624),
 		"buck_hash_sys_bytes": int64(1446737),
 		"frees":               int64(129656),
@@ -77,7 +77,7 @@ func TestKapacitor(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "kapacitor_memstats", fields, tags)
 
 	acc.AssertContainsTaggedFields(t, "kapacitor",
-		map[string]interface{}{
+		map[string]any{
 			"num_enabled_tasks": 5,
 			"num_subscriptions": 6,
 			"num_tasks":         5,
@@ -189,7 +189,7 @@ func TestNestedMetricsTagURL(t *testing.T) {
 				"kap_version": "1.1.0",
 				"url":         srv.URL,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"num_enabled_tasks": 1,
 				"num_subscriptions": 2,
 				"num_tasks":         3,
@@ -205,7 +205,7 @@ func TestNestedMetricsTagURL(t *testing.T) {
 				"measurement":      "m",
 				"url":              srv.URL,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"points_received": float64(42),
 			},
 			time.Unix(0, 0),
