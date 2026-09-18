@@ -219,7 +219,7 @@ func makePropertyMap(mbean string) map[string]string {
 	if domain != "" && len(object) == 2 {
 		list := object[1]
 
-		for _, keyProperty := range strings.Split(list, ",") {
+		for keyProperty := range strings.SplitSeq(list, ",") {
 			pair := strings.SplitN(keyProperty, "=", 2)
 
 			if len(pair) != 2 {
@@ -249,7 +249,7 @@ func makeSubstitutionList(mbean string) []string {
 		subs = append(subs, domain)
 		list := object[1]
 
-		for _, keyProperty := range strings.Split(list, ",") {
+		for keyProperty := range strings.SplitSeq(list, ",") {
 			pair := strings.SplitN(keyProperty, "=", 2)
 
 			if len(pair) != 2 {

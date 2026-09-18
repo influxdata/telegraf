@@ -136,7 +136,7 @@ func (t *Temperature) gatherHwmon(syspath string) ([]temperatureStat, error) {
 	for _, s := range sensors {
 		// Get the sensor directory and the temperature prefix from the path
 		path := filepath.Dir(s)
-		prefix := strings.SplitN(filepath.Base(s), "_", 2)[0]
+		prefix, _, _ := strings.Cut(filepath.Base(s), "_")
 
 		// Read the sensor and device name
 		deviceName, err := os.Readlink(filepath.Join(path, "device"))

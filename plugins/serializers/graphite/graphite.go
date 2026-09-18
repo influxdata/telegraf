@@ -168,8 +168,7 @@ func SerializeBucketName(measurement string, tags map[string]string, template, p
 	}
 
 	var out []string
-	templateParts := strings.Split(template, ".")
-	for _, templatePart := range templateParts {
+	for templatePart := range strings.SplitSeq(template, ".") {
 		switch templatePart {
 		case "measurement":
 			out = append(out, measurement)

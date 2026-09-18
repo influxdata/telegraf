@@ -71,7 +71,7 @@ func (n *NginxPlusAPI) gatherURL(addr *url.URL, path string) ([]byte, error) {
 		return nil, fmt.Errorf("%s returned HTTP status %s", address, resp.Status)
 	}
 
-	contentType := strings.Split(resp.Header.Get("Content-Type"), ";")[0]
+	contentType, _, _ := strings.Cut(resp.Header.Get("Content-Type"), ";")
 	switch contentType {
 	case "application/json":
 		body, err := io.ReadAll(resp.Body)
