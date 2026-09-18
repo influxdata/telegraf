@@ -125,7 +125,7 @@ func (n *Openntpd) Gather(acc telegraf.Accumulator) error {
 //
 //	12/12 peers valid, 1/1 sensors valid, constraint offset -1s, clock synced, stratum 1
 func parseStatusLine(line string, acc telegraf.Accumulator) {
-	fields := make(map[string]interface{}, 7)
+	fields := make(map[string]any, 7)
 
 	for part := range strings.SplitSeq(line, ", ") {
 		part = strings.TrimSpace(part)
@@ -196,7 +196,7 @@ func parsePeer(scanner *bufio.Scanner, headerLine string, acc telegraf.Accumulat
 		return
 	}
 
-	mFields := make(map[string]interface{}, 7)
+	mFields := make(map[string]any, 7)
 	tags := make(map[string]string, 3)
 
 	// DNS resolution error → keep DNS name as remote
@@ -295,7 +295,7 @@ func parseSensor(scanner *bufio.Scanner, headerLine string, acc telegraf.Accumul
 		statsFields = statsFields[1:]
 	}
 
-	mFields := make(map[string]interface{}, 7)
+	mFields := make(map[string]any, 7)
 
 	for key, index := range sensorIntI {
 		if index >= len(statsFields) || statsFields[index] == "-" {

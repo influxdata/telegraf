@@ -115,7 +115,7 @@ func (pa *PuppetAgent) Gather(acc telegraf.Accumulator) error {
 func structPrinter(s *state, acc telegraf.Accumulator, tags map[string]string) {
 	e := reflect.ValueOf(s).Elem()
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for tLevelFNum := 0; tLevelFNum < e.NumField(); tLevelFNum++ {
 		name := e.Type().Field(tLevelFNum).Name
 		nameNumField := e.FieldByName(name).NumField()

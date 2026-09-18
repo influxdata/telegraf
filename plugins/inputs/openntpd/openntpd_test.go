@@ -34,7 +34,7 @@ func TestParseSimpleOutput(t *testing.T) {
 				"remote":  "212.129.9.36",
 				"stratum": "3",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"wt":     int64(1),
 				"tl":     int64(10),
 				"next":   int64(56),
@@ -66,7 +66,7 @@ func TestParseSimpleOutputwithStatePrefix(t *testing.T) {
 				"stratum":      "2",
 				"state_prefix": "*",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"wt":     int64(1),
 				"tl":     int64(10),
 				"next":   int64(45),
@@ -97,7 +97,7 @@ func TestParseSimpleOutputInvalidPeer(t *testing.T) {
 				"remote":  "178.33.111.49",
 				"stratum": "-",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"wt":   int64(1),
 				"tl":   int64(2),
 				"next": int64(203),
@@ -125,7 +125,7 @@ func TestParseSimpleOutputServersDNSError(t *testing.T) {
 				"remote":  "pool.nl.ntp.org",
 				"stratum": "-",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"wt":   int64(1),
 				"tl":   int64(2),
 				"next": int64(2),
@@ -153,7 +153,7 @@ func TestParseSimpleOutputServerDNSError(t *testing.T) {
 				"remote":  "pool.fr.ntp.org",
 				"stratum": "-",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"wt":   int64(1),
 				"tl":   int64(2),
 				"next": int64(12),
@@ -178,7 +178,7 @@ func TestParseFullOutput(t *testing.T) {
 		metric.New(
 			"openntpd",
 			map[string]string{"remote": "212.129.9.36", "stratum": "3"},
-			map[string]interface{}{
+			map[string]any{
 				"wt": int64(1), "tl": int64(10), "next": int64(56), "poll": int64(63),
 				"offset": float64(9.271), "delay": float64(44.662), "jitter": float64(2.678),
 			},
@@ -187,7 +187,7 @@ func TestParseFullOutput(t *testing.T) {
 		metric.New(
 			"openntpd",
 			map[string]string{"remote": "163.172.25.19", "stratum": "2"},
-			map[string]interface{}{
+			map[string]any{
 				"wt": int64(1), "tl": int64(10), "next": int64(21), "poll": int64(64),
 				"offset": float64(-0.103), "delay": float64(53.199), "jitter": float64(9.046),
 			},
@@ -196,7 +196,7 @@ func TestParseFullOutput(t *testing.T) {
 		metric.New(
 			"openntpd",
 			map[string]string{"remote": "92.243.6.5", "stratum": "2", "state_prefix": "*"},
-			map[string]interface{}{
+			map[string]any{
 				"wt": int64(1), "tl": int64(10), "next": int64(45), "poll": int64(980),
 				"offset": float64(-9.901), "delay": float64(67.573), "jitter": float64(29.350),
 			},
@@ -205,7 +205,7 @@ func TestParseFullOutput(t *testing.T) {
 		metric.New(
 			"openntpd",
 			map[string]string{"remote": "178.33.111.49", "stratum": "-"},
-			map[string]interface{}{
+			map[string]any{
 				"wt": int64(1), "tl": int64(2), "next": int64(203), "poll": int64(300),
 			},
 			time.Unix(0, 0),
@@ -213,7 +213,7 @@ func TestParseFullOutput(t *testing.T) {
 		metric.New(
 			"openntpd",
 			map[string]string{"remote": "62.210.122.129", "stratum": "3"},
-			map[string]interface{}{
+			map[string]any{
 				"wt": int64(1), "tl": int64(10), "next": int64(4), "poll": int64(60),
 				"offset": float64(5.372), "delay": float64(53.690), "jitter": float64(14.700),
 			},
@@ -222,7 +222,7 @@ func TestParseFullOutput(t *testing.T) {
 		metric.New(
 			"openntpd",
 			map[string]string{"remote": "163.172.225.159", "stratum": "3"},
-			map[string]interface{}{
+			map[string]any{
 				"wt": int64(1), "tl": int64(10), "next": int64(38), "poll": int64(61),
 				"offset": float64(12.276), "delay": float64(40.631), "jitter": float64(1.282),
 			},
@@ -231,7 +231,7 @@ func TestParseFullOutput(t *testing.T) {
 		metric.New(
 			"openntpd",
 			map[string]string{"remote": "5.196.192.58", "stratum": "-"},
-			map[string]interface{}{
+			map[string]any{
 				"wt": int64(1), "tl": int64(2), "next": int64(0), "poll": int64(300),
 			},
 			time.Unix(0, 0),
@@ -239,7 +239,7 @@ func TestParseFullOutput(t *testing.T) {
 		metric.New(
 			"openntpd",
 			map[string]string{"remote": "129.250.35.250", "stratum": "2"},
-			map[string]interface{}{
+			map[string]any{
 				"wt": int64(1), "tl": int64(10), "next": int64(28), "poll": int64(63),
 				"offset": float64(11.236), "delay": float64(43.874), "jitter": float64(1.381),
 			},
@@ -248,7 +248,7 @@ func TestParseFullOutput(t *testing.T) {
 		metric.New(
 			"openntpd",
 			map[string]string{"remote": "2001:41d0:a:5a7::1", "stratum": "-"},
-			map[string]interface{}{
+			map[string]any{
 				"wt": int64(1), "tl": int64(2), "next": int64(5), "poll": int64(15),
 			},
 			time.Unix(0, 0),
@@ -256,7 +256,7 @@ func TestParseFullOutput(t *testing.T) {
 		metric.New(
 			"openntpd",
 			map[string]string{"remote": "2001:41d0:8:188d::16", "stratum": "-"},
-			map[string]interface{}{
+			map[string]any{
 				"wt": int64(1), "tl": int64(2), "next": int64(3), "poll": int64(15),
 			},
 			time.Unix(0, 0),
@@ -264,7 +264,7 @@ func TestParseFullOutput(t *testing.T) {
 		metric.New(
 			"openntpd",
 			map[string]string{"remote": "2001:4b98:dc0:41:216:3eff:fe69:46e3", "stratum": "-"},
-			map[string]interface{}{
+			map[string]any{
 				"wt": int64(1), "tl": int64(2), "next": int64(14), "poll": int64(15),
 			},
 			time.Unix(0, 0),
@@ -272,7 +272,7 @@ func TestParseFullOutput(t *testing.T) {
 		metric.New(
 			"openntpd",
 			map[string]string{"remote": "2a01:e0d:1:3:58bf:fa61:0:1", "stratum": "-"},
-			map[string]interface{}{
+			map[string]any{
 				"wt": int64(1), "tl": int64(2), "next": int64(9), "poll": int64(15),
 			},
 			time.Unix(0, 0),
@@ -280,7 +280,7 @@ func TestParseFullOutput(t *testing.T) {
 		metric.New(
 			"openntpd",
 			map[string]string{"remote": "163.172.179.38", "stratum": "2"},
-			map[string]interface{}{
+			map[string]any{
 				"wt": int64(1), "tl": int64(10), "next": int64(51), "poll": int64(65),
 				"offset": float64(-19.229), "delay": float64(85.404), "jitter": float64(48.734),
 			},
@@ -289,7 +289,7 @@ func TestParseFullOutput(t *testing.T) {
 		metric.New(
 			"openntpd",
 			map[string]string{"remote": "5.135.3.88", "stratum": "-"},
-			map[string]interface{}{
+			map[string]any{
 				"wt": int64(1), "tl": int64(2), "next": int64(173), "poll": int64(300),
 			},
 			time.Unix(0, 0),
@@ -297,7 +297,7 @@ func TestParseFullOutput(t *testing.T) {
 		metric.New(
 			"openntpd",
 			map[string]string{"remote": "195.154.41.195", "stratum": "2"},
-			map[string]interface{}{
+			map[string]any{
 				"wt": int64(1), "tl": int64(10), "next": int64(84), "poll": int64(1004),
 				"offset": float64(-3.956), "delay": float64(54.549), "jitter": float64(13.658),
 			},
@@ -306,7 +306,7 @@ func TestParseFullOutput(t *testing.T) {
 		metric.New(
 			"openntpd",
 			map[string]string{"remote": "62.210.81.130", "stratum": "2"},
-			map[string]interface{}{
+			map[string]any{
 				"wt": int64(1), "tl": int64(10), "next": int64(158), "poll": int64(1043),
 				"offset": float64(-42.593), "delay": float64(124.353), "jitter": float64(94.230),
 			},
@@ -315,7 +315,7 @@ func TestParseFullOutput(t *testing.T) {
 		metric.New(
 			"openntpd",
 			map[string]string{"remote": "149.202.97.123", "stratum": "-"},
-			map[string]interface{}{
+			map[string]any{
 				"wt": int64(1), "tl": int64(2), "next": int64(205), "poll": int64(300),
 			},
 			time.Unix(0, 0),
@@ -323,7 +323,7 @@ func TestParseFullOutput(t *testing.T) {
 		metric.New(
 			"openntpd",
 			map[string]string{"remote": "51.15.175.224", "stratum": "2"},
-			map[string]interface{}{
+			map[string]any{
 				"wt": int64(1), "tl": int64(10), "next": int64(9), "poll": int64(64),
 				"offset": float64(8.861), "delay": float64(46.640), "jitter": float64(0.668),
 			},
@@ -332,7 +332,7 @@ func TestParseFullOutput(t *testing.T) {
 		metric.New(
 			"openntpd",
 			map[string]string{"remote": "37.187.5.167", "stratum": "-"},
-			map[string]interface{}{
+			map[string]any{
 				"wt": int64(1), "tl": int64(2), "next": int64(105), "poll": int64(300),
 			},
 			time.Unix(0, 0),
@@ -340,7 +340,7 @@ func TestParseFullOutput(t *testing.T) {
 		metric.New(
 			"openntpd",
 			map[string]string{"remote": "194.57.169.1", "stratum": "2"},
-			map[string]interface{}{
+			map[string]any{
 				"wt": int64(1), "tl": int64(10), "next": int64(32), "poll": int64(63),
 				"offset": float64(6.589), "delay": float64(52.051), "jitter": float64(2.057),
 			},
@@ -363,7 +363,7 @@ func TestParseFullOutputAll(t *testing.T) {
 		metric.New(
 			"openntpd_status",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"peers_valid":         int64(12),
 				"peers_total":         int64(12),
 				"sensors_valid":       int64(1),
@@ -380,7 +380,7 @@ func TestParseFullOutputAll(t *testing.T) {
 				"remote":  "212.129.9.36",
 				"stratum": "3",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"wt":     int64(1),
 				"tl":     int64(10),
 				"next":   int64(56),
@@ -397,7 +397,7 @@ func TestParseFullOutputAll(t *testing.T) {
 				"remote":  "163.172.25.19",
 				"stratum": "2",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"wt":     int64(1),
 				"tl":     int64(10),
 				"next":   int64(21),
@@ -415,7 +415,7 @@ func TestParseFullOutputAll(t *testing.T) {
 				"stratum":      "2",
 				"state_prefix": "*",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"wt":     int64(1),
 				"tl":     int64(10),
 				"next":   int64(45),
@@ -432,7 +432,7 @@ func TestParseFullOutputAll(t *testing.T) {
 				"remote":  "178.33.111.49",
 				"stratum": "-",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"wt":   int64(1),
 				"tl":   int64(2),
 				"next": int64(203),
@@ -447,7 +447,7 @@ func TestParseFullOutputAll(t *testing.T) {
 				"refid":        "GPS",
 				"state_prefix": "*",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"wt":         int64(10),
 				"gd":         int64(1),
 				"st":         int64(0),
@@ -480,7 +480,7 @@ func TestParseStatusLineClockNotSynced(t *testing.T) {
 		metric.New(
 			"openntpd_status",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"peers_valid":         int64(0),
 				"peers_total":         int64(4),
 				"constraint_offset_s": int64(0),
@@ -494,7 +494,7 @@ func TestParseStatusLineClockNotSynced(t *testing.T) {
 				"remote":  "212.129.9.36",
 				"stratum": "-",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"wt":   int64(1),
 				"tl":   int64(2),
 				"next": int64(5),

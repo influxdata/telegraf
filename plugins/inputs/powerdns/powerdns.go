@@ -95,8 +95,8 @@ func (p *Powerdns) gatherServer(address string, acc telegraf.Accumulator) error 
 	return nil
 }
 
-func (p *Powerdns) parseResponse(metrics string) map[string]interface{} {
-	values := make(map[string]interface{})
+func (p *Powerdns) parseResponse(metrics string) map[string]any {
+	values := make(map[string]any)
 
 	s := strings.Split(metrics, ",")
 

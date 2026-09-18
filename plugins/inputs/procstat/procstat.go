@@ -203,7 +203,7 @@ func (p *Procstat) gatherOld(acc telegraf.Accumulator) error {
 	results, err := p.findPids()
 	if err != nil {
 		// Add lookup error-metric
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"pid_count":   0,
 			"running":     0,
 			"result_code": 1,
@@ -289,7 +289,7 @@ func (p *Procstat) gatherOld(acc telegraf.Accumulator) error {
 	}
 
 	// Add lookup statistics-metric
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"pid_count":   count,
 		"running":     len(running),
 		"result_code": 0,
@@ -319,7 +319,7 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 			// Add lookup error-metric
 			acc.AddFields(
 				"procstat_lookup",
-				map[string]interface{}{
+				map[string]any{
 					"pid_count":   0,
 					"running":     0,
 					"result_code": 1,
@@ -410,7 +410,7 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 				// Add lookup statistics-metric
 				acc.AddFields(
 					"procstat_lookup",
-					map[string]interface{}{
+					map[string]any{
 						"pid_count":   len(g.processes),
 						"running":     len(running),
 						"result_code": 0,
@@ -435,7 +435,7 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 		// Add lookup statistics-metric
 		acc.AddFields(
 			"procstat_lookup",
-			map[string]interface{}{
+			map[string]any{
 				"pid_count":   count,
 				"running":     len(running),
 				"result_code": 0,

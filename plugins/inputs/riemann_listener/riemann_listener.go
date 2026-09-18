@@ -280,7 +280,7 @@ func (rsl *riemannListener) read(conn net.Conn) {
 			tags["Host"] = m.Host
 			tags["Description"] = m.Description
 			tags["State"] = m.State
-			fieldValues := map[string]interface{}{
+			fieldValues := map[string]any{
 				"Metric": m.Metric,
 				"TTL":    m.TTL.Seconds(),
 			}

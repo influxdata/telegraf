@@ -78,7 +78,7 @@ func TestTCPError(t *testing.T) {
 	require.NoError(t, c.Gather(&acc))
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
-		map[string]interface{}{
+		map[string]any{
 			"result_code": uint64(2),
 			"result_type": "connection_failed",
 		},
@@ -119,7 +119,7 @@ func TestTCPOK1(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
-		map[string]interface{}{
+		map[string]any{
 			"result_code":   uint64(0),
 			"result_type":   "success",
 			"string_found":  true,
@@ -165,7 +165,7 @@ func TestTCPOK2(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
-		map[string]interface{}{
+		map[string]any{
 			"result_code":   uint64(4),
 			"result_type":   "string_mismatch",
 			"string_found":  false,
@@ -203,7 +203,7 @@ func TestUDPError(t *testing.T) {
 	// Error
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
-		map[string]interface{}{
+		map[string]any{
 			"result_code":   uint64(3),
 			"result_type":   "read_failed",
 			"response_time": 1.0,
@@ -247,7 +247,7 @@ func TestUDPOK1(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
-		map[string]interface{}{
+		map[string]any{
 			"result_code":   uint64(0),
 			"result_type":   "success",
 			"string_found":  true,

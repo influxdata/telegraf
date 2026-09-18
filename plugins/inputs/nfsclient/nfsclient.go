@@ -335,7 +335,7 @@ func (n *NFSClient) parseStat(mountpoint, export, version string, line []string,
 		"errors",
 	}
 
-	var fields = make(map[string]interface{})
+	var fields = make(map[string]any)
 
 	switch first {
 	case "READ", "WRITE":
