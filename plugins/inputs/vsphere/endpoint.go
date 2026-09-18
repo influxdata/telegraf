@@ -1328,7 +1328,7 @@ func (e *endpoint) collectChunk(
 				e.hwMarks.put(moid, name, adjTS)
 			}
 			if len(objectRef.customProperties) != 0 {
-				mn, fn := e.makeMetricIdentifier(prefix, "internal")
+				mn, fn := e.makeMetricIdentifier(prefix, "properties")
 				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(latestSample.UnixNano(), 10)
 				_, found := buckets[bKey]
 				if !found {
