@@ -115,7 +115,7 @@ func gatherTemps(s fireboardStats, acc telegraf.Accumulator) {
 			"channel": strconv.FormatInt(t.Channel, 10),
 			"scale":   scale(t.DegreeType),
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"temperature": t.Temp,
 		}
 		acc.AddFields("fireboard", fields, tags)
