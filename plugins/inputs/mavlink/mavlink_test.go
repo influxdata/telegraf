@@ -174,7 +174,7 @@ func TestMavlinkDecoding(t *testing.T) {
 					"sys_id": "1",
 					"source": "udpserver://",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"custom_mode":     uint32(3),
 					"mavlink_version": uint8(5),
 				},
@@ -204,7 +204,7 @@ func TestMavlinkDecoding(t *testing.T) {
 					"sys_id": "1",
 					"source": "udpserver://",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"pitch":        float32(0.463),
 					"roll":         float32(1.234),
 					"yaw":          float32(-0.112),
@@ -237,7 +237,7 @@ func TestMavlinkDecoding(t *testing.T) {
 					"sys_id": "1",
 					"source": "udpserver://",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"index":     uint8(0),
 					"time_usec": uint64(12345),
 					"current_1": float32(14.0),

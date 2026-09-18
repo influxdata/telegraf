@@ -314,7 +314,7 @@ func TestMetricResult(t *testing.T) {
 				"slave_id": "1",
 				"type":     "holding_register",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"hours":       uint64(10),
 				"temperature": int64(42),
 				"comment":     "Modbus String",
@@ -330,7 +330,7 @@ func TestMetricResult(t *testing.T) {
 				"slave_id": "1",
 				"type":     "holding_register",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"hours":       float64(22.0),
 				"temperature": float64(44.02),
 				"output":      uint64(2202),
@@ -344,7 +344,7 @@ func TestMetricResult(t *testing.T) {
 				"slave_id": "1",
 				"type":     "holding_register",
 			},
-			map[string]interface{}{"pi": float64(3.1415927410125732421875)},
+			map[string]any{"pi": float64(3.1415927410125732421875)},
 			time.Unix(0, 0),
 		),
 		metric.New(
@@ -354,7 +354,7 @@ func TestMetricResult(t *testing.T) {
 				"slave_id": "1",
 				"type":     "holding_register",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"bit 0": uint64(0),
 				"bit 1": uint64(1),
 				"bit 2": uint64(0),

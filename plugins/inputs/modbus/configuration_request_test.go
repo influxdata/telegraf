@@ -366,7 +366,7 @@ func TestRequestTypesCoil(t *testing.T) {
 		address     uint16
 		dataTypeOut string
 		write       uint16
-		read        interface{}
+		read        any
 	}{
 		{
 			name:    "coil-1-off",
@@ -441,7 +441,7 @@ func TestRequestTypesCoil(t *testing.T) {
 						"slave_id": "1",
 						"name":     modbus.Name,
 					},
-					map[string]interface{}{hrt.name: hrt.read},
+					map[string]any{hrt.name: hrt.read},
 					time.Unix(0, 0),
 				),
 			}
@@ -469,7 +469,7 @@ func TestRequestTypesHoldingABCD(t *testing.T) {
 		dataTypeOut string
 		scale       float64
 		write       []byte
-		read        interface{}
+		read        any
 	}{
 		{
 			name:       "register5_bit3",
@@ -1072,7 +1072,7 @@ func TestRequestTypesHoldingABCD(t *testing.T) {
 						"slave_id": "1",
 						"name":     modbus.Name,
 					},
-					map[string]interface{}{hrt.name: hrt.read},
+					map[string]any{hrt.name: hrt.read},
 					time.Unix(0, 0),
 				),
 			}
@@ -1099,7 +1099,7 @@ func TestRequestTypesHoldingDCBA(t *testing.T) {
 		dataTypeOut string
 		scale       float64
 		write       []byte
-		read        interface{}
+		read        any
 	}{
 		{
 			name:       "register10_uint8L",
@@ -1694,7 +1694,7 @@ func TestRequestTypesHoldingDCBA(t *testing.T) {
 						"slave_id": "1",
 						"name":     modbus.Name,
 					},
-					map[string]interface{}{hrt.name: hrt.read},
+					map[string]any{hrt.name: hrt.read},
 					time.Unix(0, 0),
 				),
 			}
@@ -2155,7 +2155,7 @@ func TestRequestStartingWithOmits(t *testing.T) {
 				"slave_id": strconv.Itoa(int(modbus.Requests[0].SlaveID)),
 				"name":     modbus.Name,
 			},
-			map[string]interface{}{"holding-2": int16(3)},
+			map[string]any{"holding-2": int16(3)},
 			time.Unix(0, 0),
 		),
 	}
@@ -2344,7 +2344,7 @@ func TestRequestMultipleSlavesOneFail(t *testing.T) {
 				"slave_id": "1",
 				"name":     modbus.Name,
 			},
-			map[string]interface{}{"holding-0": int16(0x42)},
+			map[string]any{"holding-0": int16(0x42)},
 			time.Unix(0, 0),
 		),
 		metric.New(
@@ -2354,7 +2354,7 @@ func TestRequestMultipleSlavesOneFail(t *testing.T) {
 				"slave_id": "3",
 				"name":     modbus.Name,
 			},
-			map[string]interface{}{"holding-0": int16(0x42)},
+			map[string]any{"holding-0": int16(0x42)},
 			time.Unix(0, 0),
 		),
 	}

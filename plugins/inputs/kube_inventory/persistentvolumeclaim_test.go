@@ -28,7 +28,7 @@ func TestPersistentVolumeClaim(t *testing.T) {
 		{
 			name: "no pv claims",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/persistentvolumeclaims/": &corev1.PersistentVolumeClaimList{},
 				},
 			},
@@ -37,7 +37,7 @@ func TestPersistentVolumeClaim(t *testing.T) {
 		{
 			name: "collect pv claims",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/persistentvolumeclaims/": &corev1.PersistentVolumeClaimList{
 						Items: []corev1.PersistentVolumeClaim{
 							{
@@ -79,7 +79,7 @@ func TestPersistentVolumeClaim(t *testing.T) {
 						"selector_select1": "s1",
 						"selector_select2": "s2",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"phase_type": 0,
 					},
 					time.Unix(0, 0),
@@ -91,7 +91,7 @@ func TestPersistentVolumeClaim(t *testing.T) {
 			name:     "no label selectors",
 			hasError: false,
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/persistentvolumeclaims/": &corev1.PersistentVolumeClaimList{
 						Items: []corev1.PersistentVolumeClaim{
 							{
@@ -126,7 +126,7 @@ func TestPersistentVolumeClaim(t *testing.T) {
 						"storageclass": "ebs-1",
 						"phase":        "bound",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"phase_type": 0,
 					},
 					time.Unix(0, 0),
@@ -136,7 +136,7 @@ func TestPersistentVolumeClaim(t *testing.T) {
 		{
 			name: "no storage class name",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/persistentvolumeclaims/": &corev1.PersistentVolumeClaimList{
 						Items: []corev1.PersistentVolumeClaim{
 							{
@@ -177,7 +177,7 @@ func TestPersistentVolumeClaim(t *testing.T) {
 						"selector_select1": "s1",
 						"selector_select2": "s2",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"phase_type": 0,
 					},
 					time.Unix(0, 0),
@@ -216,7 +216,7 @@ func TestPersistentVolumeClaimSelectorFilter(t *testing.T) {
 	now := time.Now()
 	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
 
-	responseMap := map[string]interface{}{
+	responseMap := map[string]any{
 		"/persistentvolumeclaims/": &corev1.PersistentVolumeClaimList{
 			Items: []corev1.PersistentVolumeClaim{
 				{

@@ -26,7 +26,7 @@ func TestIngress(t *testing.T) {
 		{
 			name: "no ingress",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/ingress/": netv1.IngressList{},
 				},
 			},
@@ -35,7 +35,7 @@ func TestIngress(t *testing.T) {
 		{
 			name: "collect ingress",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/ingress/": netv1.IngressList{
 						Items: []netv1.Ingress{
 							{
@@ -96,7 +96,7 @@ func TestIngress(t *testing.T) {
 						"host":                 "ui.internal",
 						"path":                 "/",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"tls":                  false,
 						"backend_service_port": int32(8080),
 						"generation":           int64(12),
@@ -110,7 +110,7 @@ func TestIngress(t *testing.T) {
 		{
 			name: "no HTTPIngressRuleValue",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/ingress/": netv1.IngressList{
 						Items: []netv1.Ingress{
 							{
@@ -150,7 +150,7 @@ func TestIngress(t *testing.T) {
 		{
 			name: "no IngressServiceBackend",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/ingress/": netv1.IngressList{
 						Items: []netv1.Ingress{
 							{
@@ -205,7 +205,7 @@ func TestIngress(t *testing.T) {
 						"host":         "ui.internal",
 						"path":         "/",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"tls":        false,
 						"generation": int64(12),
 						"created":    now.UnixNano(),

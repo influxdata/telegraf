@@ -47,19 +47,19 @@ type Logstash struct {
 }
 
 type processStats struct {
-	ID      string      `json:"id"`
-	Process interface{} `json:"process"`
-	Name    string      `json:"name"`
-	Host    string      `json:"host"`
-	Version string      `json:"version"`
+	ID      string `json:"id"`
+	Process any    `json:"process"`
+	Name    string `json:"name"`
+	Host    string `json:"host"`
+	Version string `json:"version"`
 }
 
 type jvmStats struct {
-	ID      string      `json:"id"`
-	JVM     interface{} `json:"jvm"`
-	Name    string      `json:"name"`
-	Host    string      `json:"host"`
-	Version string      `json:"version"`
+	ID      string `json:"id"`
+	JVM     any    `json:"jvm"`
+	Name    string `json:"name"`
+	Host    string `json:"host"`
+	Version string `json:"version"`
 }
 
 type pipelinesStats struct {
@@ -79,19 +79,19 @@ type pipelineStats struct {
 }
 
 type pipeline struct {
-	Events  interface{}     `json:"events"`
+	Events  any             `json:"events"`
 	Plugins pipelinePlugins `json:"plugins"`
-	Reloads interface{}     `json:"reloads"`
+	Reloads any             `json:"reloads"`
 	Queue   pipelineQueue   `json:"queue"`
 }
 
 type plugin struct {
-	ID           string                 `json:"id"`
-	Events       interface{}            `json:"events"`
-	Name         string                 `json:"name"`
-	Failures     *int64                 `json:"failures,omitempty"`
-	BulkRequests map[string]interface{} `json:"bulk_requests"`
-	Documents    map[string]interface{} `json:"documents"`
+	ID           string         `json:"id"`
+	Events       any            `json:"events"`
+	Name         string         `json:"name"`
+	Failures     *int64         `json:"failures,omitempty"`
+	BulkRequests map[string]any `json:"bulk_requests"`
+	Documents    map[string]any `json:"documents"`
 }
 
 type pipelinePlugins struct {
@@ -101,13 +101,13 @@ type pipelinePlugins struct {
 }
 
 type pipelineQueue struct {
-	Events              float64     `json:"events"`
-	EventsCount         *float64    `json:"events_count"`
-	Type                string      `json:"type"`
-	Capacity            interface{} `json:"capacity"`
-	Data                interface{} `json:"data"`
-	QueueSizeInBytes    *float64    `json:"queue_size_in_bytes"`
-	MaxQueueSizeInBytes *float64    `json:"max_queue_size_in_bytes"`
+	Events              float64  `json:"events"`
+	EventsCount         *float64 `json:"events_count"`
+	Type                string   `json:"type"`
+	Capacity            any      `json:"capacity"`
+	Data                any      `json:"data"`
+	QueueSizeInBytes    *float64 `json:"queue_size_in_bytes"`
+	MaxQueueSizeInBytes *float64 `json:"max_queue_size_in_bytes"`
 }
 
 func (*Logstash) SampleConfig() string {
@@ -192,7 +192,7 @@ func (logstash *Logstash) createHTTPClient() (*http.Client, error) {
 }
 
 // gatherJSONData query the data source and parse the response JSON
-func (logstash *Logstash) gatherJSONData(address string, value interface{}) error {
+func (logstash *Logstash) gatherJSONData(address string, value any) error {
 	request, err := http.NewRequest("GET", address, nil)
 	if err != nil {
 		return err
@@ -300,7 +300,7 @@ func gatherPluginsStats(plugins []plugin, pluginType string, tags map[string]str
 		}
 		accumulator.AddFields("logstash_plugins", flattener.Fields, pluginTags)
 		if plugin.Failures != nil {
-			failuresFields := map[string]interface{}{"failures": *plugin.Failures}
+			failuresFields := map[string]any{"failures": *plugin.Failures}
 			accumulator.AddFields("logstash_plugins", failuresFields, pluginTags)
 		}
 		/*
@@ -378,7 +378,7 @@ func gatherQueueStats(queue pipelineQueue, tags map[string]string, acc telegraf.
 		events = *queue.EventsCount
 	}
 
-	queueFields := map[string]interface{}{
+	queueFields := map[string]any{
 		"events": events,
 	}
 

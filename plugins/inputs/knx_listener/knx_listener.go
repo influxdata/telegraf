@@ -175,7 +175,7 @@ func (kl *KNXListener) listen(acc telegraf.Accumulator) {
 		// Convert the DatapointValue interface back to its basic type again
 		// as otherwise telegraf will not push out the metrics and eat it
 		// silently.
-		var value interface{}
+		var value any
 		if !target.asstring {
 			vi := reflect.Indirect(reflect.ValueOf(target.datapoint))
 			switch vi.Kind() {
@@ -198,7 +198,7 @@ func (kl *KNXListener) listen(acc telegraf.Accumulator) {
 		}
 
 		// Compose the actual data to be pushed out
-		fields := map[string]interface{}{"value": value}
+		fields := map[string]any{"value": value}
 		tags := map[string]string{
 			"groupaddress": ga,
 			"unit":         target.datapoint.(dpt.DatapointMeta).Unit(),
