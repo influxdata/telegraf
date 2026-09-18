@@ -13,7 +13,8 @@ permissions:
 jobs:
   check-target-master:
     name: master
-    runs-on: ubuntu-latest
+    runs-on:
+      group: self-hosted
     steps:
       - name: debug
         env:
