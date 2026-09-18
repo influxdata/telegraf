@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -528,10 +529,8 @@ func arrayToString(array []int) string {
 
 func checkForDuplicates(values, valuesToCheck []int) bool {
 	for _, value := range values {
-		for _, valueToCheck := range valuesToCheck {
-			if value == valueToCheck {
-				return true
-			}
+		if slices.Contains(valuesToCheck, value) {
+			return true
 		}
 	}
 	return false

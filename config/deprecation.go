@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 
@@ -195,7 +196,7 @@ func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFil
 
 	infos["inputs"] = make([]PluginDeprecationInfo, 0)
 	for name, creator := range inputs.Inputs {
-		if len(inFilter) > 0 && !sliceContains(name, inFilter) {
+		if len(inFilter) > 0 && !slices.Contains(inFilter, name) {
 			continue
 		}
 
@@ -209,7 +210,7 @@ func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFil
 
 	infos["outputs"] = make([]PluginDeprecationInfo, 0)
 	for name, creator := range outputs.Outputs {
-		if len(outFilter) > 0 && !sliceContains(name, outFilter) {
+		if len(outFilter) > 0 && !slices.Contains(outFilter, name) {
 			continue
 		}
 
@@ -223,7 +224,7 @@ func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFil
 
 	infos["processors"] = make([]PluginDeprecationInfo, 0)
 	for name, creator := range processors.Processors {
-		if len(procFilter) > 0 && !sliceContains(name, procFilter) {
+		if len(procFilter) > 0 && !slices.Contains(procFilter, name) {
 			continue
 		}
 
@@ -237,7 +238,7 @@ func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFil
 
 	infos["aggregators"] = make([]PluginDeprecationInfo, 0)
 	for name, creator := range aggregators.Aggregators {
-		if len(aggFilter) > 0 && !sliceContains(name, aggFilter) {
+		if len(aggFilter) > 0 && !slices.Contains(aggFilter, name) {
 			continue
 		}
 

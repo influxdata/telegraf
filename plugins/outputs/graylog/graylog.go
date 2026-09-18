@@ -14,6 +14,7 @@ import (
 	"math"
 	"net"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -504,7 +505,7 @@ func (g *Graylog) serialize(metric telegraf.Metric) ([]string, error) {
 			continue
 		}
 
-		if fieldInSpec(tag.Key) {
+		if slices.Contains(defaultSpecFields, tag.Key) {
 			m[tag.Key] = tag.Value
 		} else {
 			m["_"+tag.Key] = tag.Value
@@ -514,7 +515,7 @@ func (g *Graylog) serialize(metric telegraf.Metric) ([]string, error) {
 	for _, field := range metric.FieldList() {
 		if field.Key == g.ShortMessageField {
 			m["short_message"] = field.Value
-		} else if fieldInSpec(field.Key) {
+		} else if slices.Contains(defaultSpecFields, field.Key) {
 			m[field.Key] = field.Value
 		} else {
 			m["_"+field.Key] = field.Value
@@ -527,16 +528,6 @@ func (g *Graylog) serialize(metric telegraf.Metric) ([]string, error) {
 	}
 
 	return []string{string(serialized)}, nil
-}
-
-func fieldInSpec(field string) bool {
-	for _, specField := range defaultSpecFields {
-		if specField == field {
-			return true
-		}
-	}
-
-	return false
 }
 
 func init() {
