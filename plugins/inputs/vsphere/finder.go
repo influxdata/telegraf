@@ -15,7 +15,7 @@ var childTypes map[string][]string
 
 var addFields map[string][]string
 
-var containers map[string]interface{}
+var containers map[string]any
 
 // finder allows callers to find resources in vCenter given a query string.
 type finder struct {
@@ -32,7 +32,7 @@ type resourceFilter struct {
 }
 
 // findAll returns the union of resources found given the supplied resource type and paths.
-func (f *finder) findAll(ctx context.Context, resType string, paths, excludePaths []string, dst interface{}) error {
+func (f *finder) findAll(ctx context.Context, resType string, paths, excludePaths []string, dst any) error {
 	objs := make(map[string]types.ObjectContent)
 	for _, p := range paths {
 		if err := f.findResources(ctx, resType, p, objs); err != nil {
@@ -54,7 +54,7 @@ func (f *finder) findAll(ctx context.Context, resType string, paths, excludePath
 }
 
 // find returns the resources matching the specified path.
-func (f *finder) find(ctx context.Context, resType, path string, dst interface{}) error {
+func (f *finder) find(ctx context.Context, resType, path string, dst any) error {
 	objs := make(map[string]types.ObjectContent)
 	err := f.findResources(ctx, resType, path, objs)
 	if err != nil {
@@ -191,7 +191,7 @@ func (f *finder) descend(ctx context.Context, root types.ManagedObjectReference,
 	return nil
 }
 
-func objectContentToTypedArray(objs map[string]types.ObjectContent, dst interface{}) error {
+func objectContentToTypedArray(objs map[string]types.ObjectContent, dst any) error {
 	rt := reflect.TypeOf(dst)
 	if rt == nil || rt.Kind() != reflect.Pointer {
 		panic("need pointer")
@@ -223,7 +223,7 @@ func objectContentToTypedArray(objs map[string]types.ObjectContent, dst interfac
 }
 
 // findAll finds all resources matching the paths that were specified upon creation of the resourceFilter.
-func (r *resourceFilter) findAll(ctx context.Context, dst interface{}) error {
+func (r *resourceFilter) findAll(ctx context.Context, dst any) error {
 	return r.finder.findAll(ctx, r.resType, r.paths, r.excludePaths, dst)
 }
 
@@ -265,7 +265,7 @@ func init() {
 		"HostNumericSensorInfo":  {"parent", "temperature", "baseUnits"},
 	}
 
-	containers = map[string]interface{}{
+	containers = map[string]any{
 		"HostSystem":      nil,
 		"ComputeResource": nil,
 		"Datacenter":      nil,

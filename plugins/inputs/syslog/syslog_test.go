@@ -141,7 +141,7 @@ func TestUnixgram(t *testing.T) {
 				"hostname": "web1",
 				"appname":  "someservice",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"version":       uint16(1),
 				"timestamp":     time.Unix(1456029177, 0).UnixNano(),
 				"procid":        "2341",

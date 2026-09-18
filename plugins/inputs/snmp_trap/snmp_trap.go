@@ -245,7 +245,7 @@ func setTrapOid(tags map[string]string, oid string, e snmp.MibEntry) {
 
 func (s *SnmpTrap) handler(packet *gosnmp.SnmpPacket, addr *net.UDPAddr) {
 	tm := time.Now()
-	fields := make(map[string]interface{}, len(packet.Variables)+1)
+	fields := make(map[string]any, len(packet.Variables)+1)
 	tags := map[string]string{
 		"version": packet.Version.String(),
 		"source":  addr.IP.String(),
@@ -289,7 +289,7 @@ func (s *SnmpTrap) handler(packet *gosnmp.SnmpPacket, addr *net.UDPAddr) {
 	}
 
 	for _, v := range packet.Variables {
-		var value interface{}
+		var value any
 
 		// Use system mibs to resolve oids. Don't fall back to numeric oid
 		// because it's not useful enough to the end user and can be difficult

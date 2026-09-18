@@ -71,7 +71,7 @@ func (*Timex) Gather(acc telegraf.Accumulator) error {
 		"status": statusOutput,
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"offset_ns":                    int64(timex.Offset) * multiplier, //nolint:unconvert // Conversion needed for some architectures
 		"frequency_offset_ppm":         float64(timex.Freq) / ppm16,
 		"maxerror_ns":                  timex.Maxerror * 1000,
