@@ -39,7 +39,7 @@ func TestPSIStats(t *testing.T) {
 				"resource": "cpu",
 				"type":     "some",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"avg10":  float64(10),
 				"avg60":  float64(60),
 				"avg300": float64(300),
@@ -53,7 +53,7 @@ func TestPSIStats(t *testing.T) {
 				"resource": "cpu",
 				"type":     "some",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"total": uint64(114514),
 			},
 			time.Unix(0, 0),
@@ -65,7 +65,7 @@ func TestPSIStats(t *testing.T) {
 				"resource": "memory",
 				"type":     "some",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"avg10":  float64(10),
 				"avg60":  float64(60),
 				"avg300": float64(300),
@@ -79,7 +79,7 @@ func TestPSIStats(t *testing.T) {
 				"resource": "memory",
 				"type":     "some",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"total": uint64(114514),
 			},
 			time.Unix(0, 0),
@@ -91,7 +91,7 @@ func TestPSIStats(t *testing.T) {
 				"resource": "io",
 				"type":     "some",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"avg10":  float64(10),
 				"avg60":  float64(60),
 				"avg300": float64(300),
@@ -105,7 +105,7 @@ func TestPSIStats(t *testing.T) {
 				"resource": "io",
 				"type":     "some",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"total": uint64(114514),
 			},
 			time.Unix(0, 0),
@@ -117,7 +117,7 @@ func TestPSIStats(t *testing.T) {
 				"resource": "memory",
 				"type":     "full",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"avg10":  float64(1),
 				"avg60":  float64(6),
 				"avg300": float64(30),
@@ -131,7 +131,7 @@ func TestPSIStats(t *testing.T) {
 				"resource": "memory",
 				"type":     "full",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"total": uint64(11451),
 			},
 			time.Unix(0, 0),
@@ -143,7 +143,7 @@ func TestPSIStats(t *testing.T) {
 				"resource": "io",
 				"type":     "full",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"avg10":  float64(1),
 				"avg60":  float64(6),
 				"avg300": float64(30),
@@ -157,7 +157,7 @@ func TestPSIStats(t *testing.T) {
 				"resource": "io",
 				"type":     "full",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"total": uint64(11451),
 			},
 			time.Unix(0, 0),

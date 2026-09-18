@@ -71,7 +71,7 @@ func gatherReport(acc telegraf.Accumulator, report report, now time.Time) {
 	tags := make(map[string]string)
 	tags["id"] = report.ID
 	tags["campaign_title"] = report.CampaignTitle
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"emails_sent":              report.EmailsSent,
 		"abuse_reports":            report.AbuseReports,
 		"unsubscribed":             report.Unsubscribed,

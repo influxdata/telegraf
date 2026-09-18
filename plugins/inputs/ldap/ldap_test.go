@@ -45,7 +45,7 @@ func TestMockResult(t *testing.T) {
 				"server": "localhost",
 				"port":   "389",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"total_connections": int64(1),
 			},
 			time.Unix(0, 0),
@@ -87,7 +87,7 @@ func TestMockLDAPI(t *testing.T) {
 			map[string]string{
 				"path": "/tmp/socket?",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"total_connections": int64(1),
 			},
 			time.Unix(0, 0),
@@ -177,7 +177,7 @@ func TestOpenLDAPIntegration(t *testing.T) {
 				"server": container.Address,
 				"port":   port,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"abandon_operations_completed":     int64(0),
 				"abandon_operations_initiated":     int64(0),
 				"active_threads":                   int64(0),
@@ -269,7 +269,7 @@ func TestOpenLDAPReverseDNIntegration(t *testing.T) {
 				"server": container.Address,
 				"port":   port,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"connections_max_file_descriptors": int64(0),
 				"connections_total":                int64(0),
 				"connections_current":              int64(0),
@@ -377,7 +377,7 @@ func TestOpenLDAPStartTLSIntegration(t *testing.T) {
 				"server": container.Address,
 				"port":   port,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"abandon_operations_completed":     int64(0),
 				"abandon_operations_initiated":     int64(0),
 				"active_threads":                   int64(0),
@@ -484,7 +484,7 @@ func TestOpenLDAPLDAPSIntegration(t *testing.T) {
 				"server": container.Address,
 				"port":   port,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"abandon_operations_completed":     int64(0),
 				"abandon_operations_initiated":     int64(0),
 				"active_threads":                   int64(0),
@@ -575,7 +575,7 @@ func Test389dsIntegration(t *testing.T) {
 				"server": container.Address,
 				"port":   port,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"add_operations":                     int64(0),
 				"anonymous_binds":                    int64(0),
 				"backends":                           int64(0),

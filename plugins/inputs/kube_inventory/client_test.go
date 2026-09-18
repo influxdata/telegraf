@@ -10,7 +10,7 @@ import (
 )
 
 type mockHandler struct {
-	responseMap map[string]interface{}
+	responseMap map[string]any
 }
 
 func TestNewClient(t *testing.T) {

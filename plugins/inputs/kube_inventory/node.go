@@ -23,14 +23,14 @@ func collectNodes(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesI
 }
 
 func gatherNodeCount(count int, acc telegraf.Accumulator) {
-	fields := map[string]interface{}{"node_count": count}
+	fields := map[string]any{"node_count": count}
 	tags := make(map[string]string)
 
 	acc.AddFields(nodeMeasurement, fields, tags)
 }
 
 func (ki *KubernetesInventory) gatherNode(n *corev1.Node, acc telegraf.Accumulator) {
-	fields := make(map[string]interface{}, len(n.Status.Capacity)+len(n.Status.Allocatable)+1)
+	fields := make(map[string]any, len(n.Status.Capacity)+len(n.Status.Allocatable)+1)
 	tags := map[string]string{
 		"node_name":         n.Name,
 		"cluster_namespace": n.Annotations["cluster.x-k8s.io/cluster-namespace"],
@@ -82,7 +82,7 @@ func (ki *KubernetesInventory) gatherNode(n *corev1.Node, acc telegraf.Accumulat
 			}
 			running = 2
 		}
-		conditionfields := map[string]interface{}{
+		conditionfields := map[string]any{
 			"status_condition": running,
 			"ready":            nodeready,
 		}

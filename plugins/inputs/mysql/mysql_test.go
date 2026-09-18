@@ -430,7 +430,7 @@ func TestGatherGlobalVariables(t *testing.T) {
 	type fields []struct {
 		key         string
 		rawValue    string
-		parsedValue interface{}
+		parsedValue any
 	}
 	type tags map[string]string
 	testCases := []struct {

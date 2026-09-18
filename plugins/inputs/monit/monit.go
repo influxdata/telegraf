@@ -241,7 +241,7 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, service := range status.Services {
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		tags["status"] = serviceStatus(service)
 		fields["status_code"] = service.Status
 		tags["pending_action"] = pendingAction(service)
