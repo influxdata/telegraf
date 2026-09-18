@@ -99,7 +99,7 @@ func (n *NginxPlusAPI) gatherProcessesMetrics(addr *url.URL, acc telegraf.Accumu
 
 	acc.AddFields(
 		"nginx_plus_api_processes",
-		map[string]interface{}{
+		map[string]any{
 			"respawned": processes.Respawned,
 		},
 		getTags(addr),
@@ -122,7 +122,7 @@ func (n *NginxPlusAPI) gatherConnectionsMetrics(addr *url.URL, acc telegraf.Accu
 
 	acc.AddFields(
 		"nginx_plus_api_connections",
-		map[string]interface{}{
+		map[string]any{
 			"accepted": connections.Accepted,
 			"dropped":  connections.Dropped,
 			"active":   connections.Active,
@@ -157,7 +157,7 @@ func (n *NginxPlusAPI) gatherSlabsMetrics(addr *url.URL, acc telegraf.Accumulato
 
 		acc.AddFields(
 			"nginx_plus_api_slabs_pages",
-			map[string]interface{}{
+			map[string]any{
 				"used": slab.Pages.Used,
 				"free": slab.Pages.Free,
 			},
@@ -173,7 +173,7 @@ func (n *NginxPlusAPI) gatherSlabsMetrics(addr *url.URL, acc telegraf.Accumulato
 
 			acc.AddFields(
 				"nginx_plus_api_slabs_slots",
-				map[string]interface{}{
+				map[string]any{
 					"used":  slot.Used,
 					"free":  slot.Free,
 					"reqs":  slot.Reqs,
@@ -201,7 +201,7 @@ func (n *NginxPlusAPI) gatherSslMetrics(addr *url.URL, acc telegraf.Accumulator)
 
 	acc.AddFields(
 		"nginx_plus_api_ssl",
-		map[string]interface{}{
+		map[string]any{
 			"handshakes":        ssl.Handshakes,
 			"handshakes_failed": ssl.HandshakesFailed,
 			"session_reuses":    ssl.SessionReuses,
@@ -226,7 +226,7 @@ func (n *NginxPlusAPI) gatherHTTPRequestsMetrics(addr *url.URL, acc telegraf.Acc
 
 	acc.AddFields(
 		"nginx_plus_api_http_requests",
-		map[string]interface{}{
+		map[string]any{
 			"total":   httpRequests.Total,
 			"current": httpRequests.Current,
 		},
@@ -257,8 +257,8 @@ func (n *NginxPlusAPI) gatherHTTPServerZonesMetrics(addr *url.URL, acc telegraf.
 		zoneTags["zone"] = zoneName
 		acc.AddFields(
 			"nginx_plus_api_http_server_zones",
-			func() map[string]interface{} {
-				result := map[string]interface{}{
+			func() map[string]any {
+				result := map[string]any{
 					"processing":      zone.Processing,
 					"requests":        zone.Requests,
 					"responses_1xx":   zone.Responses.Responses1xx,
@@ -305,8 +305,8 @@ func (n *NginxPlusAPI) gatherHTTPLocationZonesMetrics(addr *url.URL, acc telegra
 		zoneTags["zone"] = zoneName
 		acc.AddFields(
 			"nginx_plus_api_http_location_zones",
-			func() map[string]interface{} {
-				result := map[string]interface{}{
+			func() map[string]any {
+				result := map[string]any{
 					"requests":        zone.Requests,
 					"responses_1xx":   zone.Responses.Responses1xx,
 					"responses_2xx":   zone.Responses.Responses2xx,
@@ -349,7 +349,7 @@ func (n *NginxPlusAPI) gatherHTTPUpstreamsMetrics(addr *url.URL, acc telegraf.Ac
 			upstreamTags[k] = v
 		}
 		upstreamTags["upstream"] = upstreamName
-		upstreamFields := map[string]interface{}{
+		upstreamFields := map[string]any{
 			"keepalive": upstream.Keepalive,
 			"zombies":   upstream.Zombies,
 		}
@@ -364,7 +364,7 @@ func (n *NginxPlusAPI) gatherHTTPUpstreamsMetrics(addr *url.URL, acc telegraf.Ac
 			upstreamTags,
 		)
 		for _, peer := range upstream.Peers {
-			peerFields := map[string]interface{}{
+			peerFields := map[string]any{
 				"backup":                 peer.Backup,
 				"weight":                 peer.Weight,
 				"state":                  peer.State,
@@ -435,7 +435,7 @@ func (n *NginxPlusAPI) gatherHTTPCachesMetrics(addr *url.URL, acc telegraf.Accum
 		cacheTags["cache"] = cacheName
 		acc.AddFields(
 			"nginx_plus_api_http_caches",
-			map[string]interface{}{
+			map[string]any{
 				"size":                      cache.Size,
 				"max_size":                  cache.MaxSize,
 				"cold":                      cache.Cold,
@@ -489,7 +489,7 @@ func (n *NginxPlusAPI) gatherStreamServerZonesMetrics(addr *url.URL, acc telegra
 		zoneTags["zone"] = zoneName
 		acc.AddFields(
 			"nginx_plus_api_stream_server_zones",
-			map[string]interface{}{
+			map[string]any{
 				"processing":  zone.Processing,
 				"connections": zone.Connections,
 				"received":    zone.Received,
@@ -525,7 +525,7 @@ func (n *NginxPlusAPI) gatherResolverZonesMetrics(addr *url.URL, acc telegraf.Ac
 		zoneTags["zone"] = zoneName
 		acc.AddFields(
 			"nginx_plus_api_resolver_zones",
-			map[string]interface{}{
+			map[string]any{
 				"name": resolver.Requests.Name,
 				"srv":  resolver.Requests.Srv,
 				"addr": resolver.Requests.Addr,
@@ -568,13 +568,13 @@ func (n *NginxPlusAPI) gatherStreamUpstreamsMetrics(addr *url.URL, acc telegraf.
 		upstreamTags["upstream"] = upstreamName
 		acc.AddFields(
 			"nginx_plus_api_stream_upstreams",
-			map[string]interface{}{
+			map[string]any{
 				"zombies": upstream.Zombies,
 			},
 			upstreamTags,
 		)
 		for _, peer := range upstream.Peers {
-			peerFields := map[string]interface{}{
+			peerFields := map[string]any{
 				"backup":                 peer.Backup,
 				"weight":                 peer.Weight,
 				"state":                  peer.State,
@@ -638,7 +638,7 @@ func (n *NginxPlusAPI) gatherHTTPLimitReqsMetrics(addr *url.URL, acc telegraf.Ac
 		limitReqsTags["limit"] = limitReqName
 		acc.AddFields(
 			"nginx_plus_api_http_limit_reqs",
-			map[string]interface{}{
+			map[string]any{
 				"passed":           limit.Passed,
 				"delayed":          limit.Delayed,
 				"rejected":         limit.Rejected,

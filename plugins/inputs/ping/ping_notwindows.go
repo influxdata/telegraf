@@ -32,7 +32,7 @@ type statistics struct {
 
 func (p *Ping) pingToURL(acc telegraf.Accumulator, u string) {
 	tags := map[string]string{"url": u}
-	fields := map[string]interface{}{"result_code": 0}
+	fields := map[string]any{"result_code": 0}
 
 	out, err := p.pingHost(p.Binary, 60.0, p.args(u, runtime.GOOS)...)
 	if err != nil {

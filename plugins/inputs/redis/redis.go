@@ -49,9 +49,9 @@ type Redis struct {
 }
 
 type redisCommand struct {
-	Command []interface{} `toml:"command"`
-	Field   string        `toml:"field"`
-	Type    string        `toml:"type"`
+	Command []any  `toml:"command"`
+	Field   string `toml:"field"`
+	Type    string `toml:"type"`
 }
 
 type redisClient struct {
@@ -171,7 +171,7 @@ type redisFieldTypes struct {
 }
 
 type client interface {
-	do(returnType string, args ...interface{}) (interface{}, error)
+	do(returnType string, args ...any) (any, error)
 	info() *redis.StringCmd
 	baseTags() map[string]string
 	close() error
@@ -307,7 +307,7 @@ func (r *Redis) connect() error {
 }
 
 func (r *Redis) gatherCommandValues(client client, acc telegraf.Accumulator) error {
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for _, command := range r.Commands {
 		val, err := client.do(command.Type, command.Command...)
 		if err != nil {
@@ -326,7 +326,7 @@ func (r *Redis) gatherCommandValues(client client, acc telegraf.Accumulator) err
 	return nil
 }
 
-func (r *redisClient) do(returnType string, args ...interface{}) (interface{}, error) {
+func (r *redisClient) do(returnType string, args ...any) (any, error) {
 	rawVal := r.client.Do(context.Background(), args...)
 
 	switch returnType {
@@ -372,7 +372,7 @@ func gatherInfoOutput(rdr io.Reader, acc telegraf.Accumulator, tags map[string]s
 	var keyspaceHits, keyspaceMisses int64
 
 	scanner := bufio.NewScanner(rdr)
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for scanner.Scan() {
 		line := scanner.Text()
 
@@ -500,7 +500,7 @@ func gatherInfoOutput(rdr io.Reader, acc telegraf.Accumulator, tags map[string]s
 // And there is one for each db on the redis instance
 func gatherKeyspaceLine(name, line string, acc telegraf.Accumulator, globalTags map[string]string) {
 	if strings.Contains(line, "keys=") {
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		tags := make(map[string]string)
 		for k, v := range globalTags {
 			tags[k] = v
@@ -528,7 +528,7 @@ func gatherCommandStateLine(name, line string, acc telegraf.Accumulator, globalT
 		return
 	}
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	tags := make(map[string]string)
 	for k, v := range globalTags {
 		tags[k] = v
@@ -569,7 +569,7 @@ func gatherLatencyStatsLine(name, line string, acc telegraf.Accumulator, globalT
 		return
 	}
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	tags := make(map[string]string)
 	for k, v := range globalTags {
 		tags[k] = v
@@ -599,7 +599,7 @@ func gatherLatencyStatsLine(name, line string, acc telegraf.Accumulator, globalT
 //
 // This line will only be visible when a node has a replica attached.
 func gatherReplicationLine(name, line string, acc telegraf.Accumulator, globalTags map[string]string) {
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	tags := make(map[string]string)
 	for k, v := range globalTags {
 		tags[k] = v
@@ -654,11 +654,11 @@ func gatherErrorStatsLine(name, line string, acc telegraf.Accumulator, globalTag
 		return
 	}
 
-	fields := map[string]interface{}{"total": ival}
+	fields := map[string]any{"total": ival}
 	acc.AddFields("redis_errorstat", fields, tags)
 }
 
-func setExistingFieldsFromStruct(fields map[string]interface{}, o *redisFieldTypes) {
+func setExistingFieldsFromStruct(fields map[string]any, o *redisFieldTypes) {
 	val := reflect.ValueOf(o).Elem()
 	typ := val.Type()
 
@@ -676,7 +676,7 @@ func setExistingFieldsFromStruct(fields map[string]interface{}, o *redisFieldTyp
 	}
 }
 
-func setStructFieldsFromObject(fields map[string]interface{}, o *redisFieldTypes) {
+func setStructFieldsFromObject(fields map[string]any, o *redisFieldTypes) {
 	val := reflect.ValueOf(o).Elem()
 	typ := val.Type()
 
@@ -695,7 +695,7 @@ func setStructFieldsFromObject(fields map[string]interface{}, o *redisFieldTypes
 	}
 }
 
-func coerceType(value interface{}, typ reflect.Type) reflect.Value {
+func coerceType(value any, typ reflect.Type) reflect.Value {
 	switch sourceType := value.(type) {
 	case bool:
 		switch typ.Kind() {

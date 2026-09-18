@@ -78,7 +78,7 @@ func TestParseXML(t *testing.T) {
 						"software": "5.04_7A18",
 						"hardware": "1.0",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"serial":         "AC5:12345",
 						"power_failed":   int64(1544814000000000000),
 						"power_restored": int64(1544833875000000000),
@@ -97,7 +97,7 @@ func TestParseXML(t *testing.T) {
 						"software":    "5.04_7A18",
 						"hardware":    "1.0",
 					},
-					map[string]interface{}{"state": "PF1"},
+					map[string]any{"state": "PF1"},
 					goodTime,
 				),
 				metric.New(
@@ -112,7 +112,7 @@ func TestParseXML(t *testing.T) {
 						"software":    "5.04_7A18",
 						"hardware":    "1.0",
 					},
-					map[string]interface{}{"state": "AOF"},
+					map[string]any{"state": "AOF"},
 					goodTime,
 				),
 				metric.New(
@@ -127,7 +127,7 @@ func TestParseXML(t *testing.T) {
 						"software":    "5.04_7A18",
 						"hardware":    "1.0",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"state": "AON",
 						"watt":  35.0,
 						"amp":   0.3,
@@ -146,7 +146,7 @@ func TestParseXML(t *testing.T) {
 						"software":    "5.04_7A18",
 						"hardware":    "1.0",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"state":   "TBL",
 						"xstatus": "OK",
 					},
@@ -164,7 +164,7 @@ func TestParseXML(t *testing.T) {
 						"software":    "5.04_7A18",
 						"hardware":    "1.0",
 					},
-					map[string]interface{}{"state": "AOF"},
+					map[string]any{"state": "AOF"},
 					goodTime,
 				),
 				metric.New(
@@ -179,7 +179,7 @@ func TestParseXML(t *testing.T) {
 						"software":    "5.04_7A18",
 						"hardware":    "1.0",
 					},
-					map[string]interface{}{"state": "AOF"},
+					map[string]any{"state": "AOF"},
 					goodTime,
 				),
 				metric.New(
@@ -192,7 +192,7 @@ func TestParseXML(t *testing.T) {
 						"software":   "5.04_7A18",
 						"hardware":   "1.0",
 					},
-					map[string]interface{}{"value": 30.1},
+					map[string]any{"value": 30.1},
 					goodTime,
 				),
 				metric.New(
@@ -204,7 +204,7 @@ func TestParseXML(t *testing.T) {
 						"software": "5.04_7A18",
 						"hardware": "1.0",
 					},
-					map[string]interface{}{"value": 115.0},
+					map[string]any{"value": 115.0},
 					goodTime,
 				),
 			},
@@ -234,7 +234,7 @@ func TestParseXML(t *testing.T) {
 						"hardware": "",
 						"software": "",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"serial":         "",
 						"power_restored": int64(1545548137000000000),
 					},
@@ -257,7 +257,7 @@ func TestParseXML(t *testing.T) {
 						"hardware": "",
 						"software": "",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"serial":       "",
 						"power_failed": int64(1545548137000000000),
 					},
@@ -291,7 +291,7 @@ func TestParseXML(t *testing.T) {
 						"hardware": "",
 						"software": "",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"serial":         "",
 						"power_failed":   int64(1545544537000000000),
 						"power_restored": int64(1545544537000000000),
@@ -320,7 +320,7 @@ func TestParseXML(t *testing.T) {
 						"hardware": "",
 						"software": "",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"serial":         "",
 						"power_failed":   int64(1545544537000000000),
 						"power_restored": int64(1545544537000000000),
@@ -348,7 +348,7 @@ func TestParseXML(t *testing.T) {
 						"hardware": "",
 						"software": "",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"serial":         "",
 						"power_failed":   int64(1545544537000000000),
 						"power_restored": int64(1545544537000000000),

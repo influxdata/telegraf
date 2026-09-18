@@ -93,7 +93,7 @@ func (n *Net) Gather(acc telegraf.Accumulator) error {
 			"interface": io.Name,
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"bytes_sent":   io.BytesSent,
 			"bytes_recv":   io.BytesRecv,
 			"packets_sent": io.PacketsSent,

@@ -29,7 +29,7 @@ type opcTags struct {
 	namespace      string
 	identifierType string
 	identifier     string
-	want           interface{}
+	want           any
 }
 
 func mapOPCTag(tags opcTags) (out input.NodeSettings) {
@@ -357,7 +357,7 @@ func TestReadClientIntegrationAdditionalFields(t *testing.T) {
 		tags := map[string]string{
 			"id": fmt.Sprintf("ns=%s;%s=%s", x.namespace, x.identifierType, x.identifier),
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			x.name:     x.want,
 			"Quality":  testopcquality[i],
 			"DataType": testopctypes[i],
