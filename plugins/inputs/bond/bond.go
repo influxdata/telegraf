@@ -92,7 +92,7 @@ func (bond *Bond) gatherBondInterface(bondName, rawFile string, acc telegraf.Acc
 }
 
 func (bond *Bond) gatherBondPart(bondName, rawFile string, acc telegraf.Accumulator) error {
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	tags := map[string]string{
 		"bond": bondName,
 	}
@@ -195,7 +195,7 @@ func gatherSysDetails(bondName string, files sysFiles, acc telegraf.Accumulator)
 		adPortCount = len(slaves)
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"slave_count":   len(slaves),
 		"ad_port_count": adPortCount,
 	}
@@ -207,7 +207,7 @@ func (bond *Bond) gatherSlavePart(bondName, rawFile string, acc telegraf.Accumul
 	tags := map[string]string{
 		"bond": bondName,
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"status": 0,
 	}
 	var scanPast bool
@@ -239,7 +239,7 @@ func (bond *Bond) gatherSlavePart(bondName, rawFile string, acc telegraf.Accumul
 			fields["failures"] = count
 			if !scanPast {
 				acc.AddFields("bond_slave", fields, tags)
-				fields = map[string]interface{}{
+				fields = map[string]any{
 					"status": 0,
 				}
 			}
@@ -259,7 +259,7 @@ func (bond *Bond) gatherSlavePart(bondName, rawFile string, acc telegraf.Accumul
 			fields["partner_churned"] = count
 			fields["total_churned"] = fields["actor_churned"].(int) + fields["partner_churned"].(int)
 			acc.AddFields("bond_slave", fields, tags)
-			fields = map[string]interface{}{
+			fields = map[string]any{
 				"status": 0,
 			}
 		}
@@ -267,7 +267,7 @@ func (bond *Bond) gatherSlavePart(bondName, rawFile string, acc telegraf.Accumul
 	tags = map[string]string{
 		"bond": bondName,
 	}
-	fields = map[string]interface{}{
+	fields = map[string]any{
 		"count": slaveCount,
 	}
 	acc.AddFields("bond_slave", fields, tags)

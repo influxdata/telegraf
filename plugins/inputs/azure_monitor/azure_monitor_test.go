@@ -779,12 +779,12 @@ func TestGather_Success(t *testing.T) {
 	require.NoError(t, am.Start(nil))
 
 	expectedResource1Metric1Name := "azure_monitor_microsoft_test_type1_metric1"
-	expectedResource1Metric1MetricFields := make(map[string]interface{})
+	expectedResource1Metric1MetricFields := make(map[string]any)
 	expectedResource1Metric1MetricFields["timeStamp"] = "2022-02-22T22:59:00Z"
 	expectedResource1Metric1MetricFields["total"] = 5.0
 	expectedResource1Metric1MetricFields["maximum"] = 5.0
 	expectedResource1Metric2Name := "azure_monitor_microsoft_test_type1_metric2"
-	expectedResource1Metric2MetricFields := make(map[string]interface{})
+	expectedResource1Metric2MetricFields := make(map[string]any)
 	expectedResource1Metric2MetricFields["timeStamp"] = "2022-02-22T22:59:00Z"
 	expectedResource1Metric2MetricFields["total"] = 2.5
 	expectedResource1Metric2MetricFields["maximum"] = 2.5
@@ -797,7 +797,7 @@ func TestGather_Success(t *testing.T) {
 	expectedResource1MetricsTags["unit"] = string(armmonitor.MetricUnitCount)
 
 	expectedResource2Metric1Name := "azure_monitor_microsoft_test_type2_metric1"
-	expectedResource2Metric1MetricFields := make(map[string]interface{})
+	expectedResource2Metric1MetricFields := make(map[string]any)
 	expectedResource2Metric1MetricFields["timeStamp"] = "2022-02-22T22:59:00Z"
 	expectedResource2Metric1MetricFields["total"] = 5.0
 	expectedResource2Metric1MetricFields["minimum"] = 2.5
@@ -810,7 +810,7 @@ func TestGather_Success(t *testing.T) {
 	expectedResource2MetricsTags["unit"] = string(armmonitor.MetricUnitCount)
 
 	expectedResource3Metric1Name := "azure_monitor_microsoft_test_type1_metric1"
-	expectedResource3Metric1MetricFields := make(map[string]interface{})
+	expectedResource3Metric1MetricFields := make(map[string]any)
 	expectedResource3Metric1MetricFields["timeStamp"] = "2022-02-22T22:58:00Z"
 	expectedResource3Metric1MetricFields["total"] = 2.5
 	expectedResource3Metric1MetricFields["minimum"] = 2.5

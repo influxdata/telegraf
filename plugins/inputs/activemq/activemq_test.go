@@ -33,7 +33,7 @@ func TestGatherQueuesMetrics(t *testing.T) {
 
 	require.NoError(t, xml.Unmarshal([]byte(s), &queues))
 
-	records := make(map[string]interface{})
+	records := make(map[string]any)
 	tags := make(map[string]string)
 
 	tags["name"] = "Test"
@@ -79,7 +79,7 @@ func TestGatherTopicsMetrics(t *testing.T) {
 
 	require.NoError(t, xml.Unmarshal([]byte(s), &topics))
 
-	records := make(map[string]interface{})
+	records := make(map[string]any)
 	tags := make(map[string]string)
 
 	tags["name"] = "ActiveMQ.Advisory.MasterBroker "
@@ -112,7 +112,7 @@ func TestGatherSubscribersMetrics(t *testing.T) {
 	subscribers := subscribers{}
 	require.NoError(t, xml.Unmarshal([]byte(s), &subscribers))
 
-	records := make(map[string]interface{})
+	records := make(map[string]any)
 	tags := make(map[string]string)
 
 	tags["client_id"] = "AAA"

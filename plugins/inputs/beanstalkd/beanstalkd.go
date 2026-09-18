@@ -75,7 +75,7 @@ func (b *Beanstalkd) gatherServerStats(connection *textproto.Conn, acc telegraf.
 	}
 
 	acc.AddFields("beanstalkd_overview",
-		map[string]interface{}{
+		map[string]any{
 			"binlog_current_index":     stats.BinlogCurrentIndex,
 			"binlog_max_size":          stats.BinlogMaxSize,
 			"binlog_oldest_index":      stats.BinlogOldestIndex,
@@ -140,7 +140,7 @@ func (b *Beanstalkd) gatherTubeStats(connection *textproto.Conn, tube string, ac
 	}
 
 	acc.AddFields("beanstalkd_tube",
-		map[string]interface{}{
+		map[string]any{
 			"cmd_delete":            stats.CmdDelete,
 			"cmd_pause_tube":        stats.CmdPauseTube,
 			"current_jobs_buried":   stats.CurrentJobsBuried,
@@ -164,7 +164,7 @@ func (b *Beanstalkd) gatherTubeStats(connection *textproto.Conn, tube string, ac
 	return nil
 }
 
-func runQuery(connection *textproto.Conn, cmd string, result interface{}) error {
+func runQuery(connection *textproto.Conn, cmd string, result any) error {
 	requestID, err := connection.Cmd("%s", cmd)
 	if err != nil {
 		return err

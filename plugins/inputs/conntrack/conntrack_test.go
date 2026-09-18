@@ -54,7 +54,7 @@ func TestDefaultsUsed(t *testing.T) {
 	acc := &testutil.Accumulator{}
 
 	require.NoError(t, c.Gather(acc))
-	acc.AssertContainsFields(t, inputName, map[string]interface{}{
+	acc.AssertContainsFields(t, inputName, map[string]any{
 		fname: float64(count)})
 }
 
@@ -89,7 +89,7 @@ func TestConfigsUsed(t *testing.T) {
 	}
 
 	acc.AssertContainsFields(t, inputName,
-		map[string]interface{}{
+		map[string]any{
 			fix(cntFname): float64(count),
 			fix(maxFname): float64(limit),
 		})
@@ -137,7 +137,7 @@ func TestCollectStats(t *testing.T) {
 		"cpu": "all",
 	}
 
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"entries":        uint32(1234),
 		"searched":       uint32(10),
 		"found":          uint32(1),
@@ -248,7 +248,7 @@ func TestCollectStatsPerCpu(t *testing.T) {
 	require.NoError(t, err)
 
 	// cpu0
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"entries":        uint32(59),
 		"searched":       uint32(10),
 		"found":          uint32(1),
@@ -274,7 +274,7 @@ func TestCollectStatsPerCpu(t *testing.T) {
 		})
 
 	// cpu1
-	expectedFields1 := map[string]interface{}{
+	expectedFields1 := map[string]any{
 		"entries":        uint32(79),
 		"searched":       uint32(10),
 		"found":          uint32(1),
@@ -299,7 +299,7 @@ func TestCollectStatsPerCpu(t *testing.T) {
 			"cpu": "cpu1",
 		})
 
-	allFields := map[string]interface{}{
+	allFields := map[string]any{
 		"entries":        uint32(129),
 		"searched":       uint32(20),
 		"found":          uint32(2),

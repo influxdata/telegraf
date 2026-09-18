@@ -77,7 +77,7 @@ func TestBurrowTopic(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	require.NoError(t, plugin.Gather(acc))
 
-	fields := []map[string]interface{}{
+	fields := []map[string]any{
 		// topicA
 		{"offset": int64(459178195)},
 		{"offset": int64(459178022)},
@@ -108,7 +108,7 @@ func TestBurrowPartition(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	require.NoError(t, plugin.Gather(acc))
 
-	fields := []map[string]interface{}{
+	fields := []map[string]any{
 		{
 			"status":      "OK",
 			"status_code": 1,
@@ -156,7 +156,7 @@ func TestBurrowGroup(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	require.NoError(t, plugin.Gather(acc))
 
-	fields := []map[string]interface{}{
+	fields := []map[string]any{
 		{
 			"status":          "OK",
 			"status_code":     1,
