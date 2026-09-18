@@ -52,7 +52,7 @@ func (f *FileStat) Gather(acc telegraf.Accumulator) error {
 		files := g.Match()
 		if len(files) == 0 {
 			acc.AddFields("filestat",
-				map[string]interface{}{
+				map[string]any{
 					"exists": int64(0),
 				},
 				map[string]string{
@@ -65,7 +65,7 @@ func (f *FileStat) Gather(acc telegraf.Accumulator) error {
 			tags := map[string]string{
 				"file": fileName,
 			}
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"exists": int64(1),
 			}
 			fileInfo, err := os.Stat(fileName)

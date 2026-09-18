@@ -1,9 +1,9 @@
 package influxdb
 
 type point struct {
-	Name   string                 `json:"name"`
-	Tags   map[string]string      `json:"tags"`
-	Values map[string]interface{} `json:"values"`
+	Name   string            `json:"name"`
+	Tags   map[string]string `json:"tags"`
+	Values map[string]any    `json:"values"`
 }
 
 type memstats struct {

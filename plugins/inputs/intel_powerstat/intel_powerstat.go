@@ -872,7 +872,7 @@ func (p *PowerStat) addUncoreFrequencyInitialLimits(acc telegraf.Accumulator, pa
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"uncore_frequency_limit_mhz_min": round(initMin),
 				"uncore_frequency_limit_mhz_max": round(initMax),
 			},
@@ -911,7 +911,7 @@ func (p *PowerStat) addUncoreFrequencyCurrentValues(acc telegraf.Accumulator, pa
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"uncore_frequency_limit_mhz_min": round(val.currMin),
 				"uncore_frequency_limit_mhz_max": round(val.currMax),
 				"uncore_frequency_mhz_cur":       uint64(val.curr),
@@ -1031,7 +1031,7 @@ func (p *PowerStat) addMaxTurboFreqLimits(acc telegraf.Accumulator, packageID in
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"max_turbo_frequency_mhz": v.Value,
 			},
 			// tags

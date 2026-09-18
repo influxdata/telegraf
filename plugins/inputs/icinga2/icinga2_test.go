@@ -74,7 +74,7 @@ func TestGatherServicesStatus(t *testing.T) {
 	requestURL, err := url.Parse(ts.URL)
 	require.NoError(t, err)
 
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"name":       "ef017af8-c684-4f3f-bb20-0dfe9fcd3dbe",
 		"state_code": int64(0),
 	}
@@ -141,7 +141,7 @@ func TestGatherHostsStatus(t *testing.T) {
 	err = icinga2.Gather(&acc)
 	require.NoError(t, err)
 
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"name":       "webserver",
 		"state_code": int64(2),
 	}
@@ -200,7 +200,7 @@ func TestGatherStatusCIB(t *testing.T) {
 	err := icinga2.Gather(&acc)
 	require.NoError(t, err)
 
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"active_host_checks": float64(3.6),
 		"avg_latency":        float64(2.187678621145969e-06),
 		"max_latency":        float64(0.001603841781616211),
@@ -273,7 +273,7 @@ func TestGatherStatusPgsql(t *testing.T) {
 	err := icinga2.Gather(&acc)
 	require.NoError(t, err)
 
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"pgsql_queries_rate":          float64(649.8666666666667),
 		"pgsql_query_queue_item_rate": float64(1295.1166666666666),
 	}

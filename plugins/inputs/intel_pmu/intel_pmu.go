@@ -382,7 +382,7 @@ func checkFiles(paths []string, fileInfo fileInfoProvider) error {
 
 func publishCoreMeasurements(metrics []coreMetric, acc telegraf.Accumulator) {
 	for _, m := range metrics {
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		tags := make(map[string]string)
 
 		fields["raw"] = m.values.Raw
@@ -402,7 +402,7 @@ func publishCoreMeasurements(metrics []coreMetric, acc telegraf.Accumulator) {
 
 func publishUncoreMeasurements(metrics []uncoreMetric, acc telegraf.Accumulator) {
 	for _, m := range metrics {
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		tags := make(map[string]string)
 
 		fields["raw"] = m.values.Raw

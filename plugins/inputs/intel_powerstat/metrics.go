@@ -185,7 +185,7 @@ type metricInfoProvider interface {
 	measurement() string
 
 	// fields returns a map of string keys with metric name and metric values.
-	fields() (map[string]interface{}, error)
+	fields() (map[string]any, error)
 
 	// tags returns a map of string key and string value to add additional metric-specific information.
 	tags() map[string]string
@@ -224,7 +224,7 @@ func addMetric(acc telegraf.Accumulator, m metricInfoProvider, logOnceMap map[st
 
 // metricCommon has metric information common to different types.
 type metricCommon struct {
-	metric interface{}
+	metric any
 	units  string
 }
 
@@ -261,13 +261,13 @@ type cpuMetric[T numeric] struct {
 	fetchFn   func(cpuID int) (T, error)
 }
 
-func (m *cpuMetric[T]) fields() (map[string]interface{}, error) {
+func (m *cpuMetric[T]) fields() (map[string]any, error) {
 	val, err := m.fetchFn(m.cpuID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get %q for CPU ID %v: %w", m.metric, m.cpuID, err)
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		fmt.Sprintf("%s_%s", m.metric, m.units): round(val),
 	}, nil
 }
@@ -289,13 +289,13 @@ type packageMetric[T numeric] struct {
 	fetchFn   func(packageID int) (T, error)
 }
 
-func (m *packageMetric[T]) fields() (map[string]interface{}, error) {
+func (m *packageMetric[T]) fields() (map[string]any, error) {
 	val, err := m.fetchFn(m.packageID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get %q for package ID %v: %w", m.metric, m.packageID, err)
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		fmt.Sprintf("%s_%s", m.metric, m.units): round(val),
 	}, nil
 }

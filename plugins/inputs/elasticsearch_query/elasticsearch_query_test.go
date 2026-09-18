@@ -79,43 +79,43 @@ func TestCheckForError(t *testing.T) {
 }
 
 func TestGetMetricField(t *testing.T) {
-	field := map[string]interface{}{
+	field := map[string]any{
 		"full_name": "size",
-		"mapping": map[string]interface{}{
-			"size": map[string]interface{}{"type": "long"},
+		"mapping": map[string]any{
+			"size": map[string]any{"type": "long"},
 		},
 	}
 	tests := []struct {
 		name     string
-		mappings map[string]interface{}
+		mappings map[string]any
 		expected map[string]string
 	}{
 		{
 			name: "typed mapping",
-			mappings: map[string]interface{}{
-				"document": map[string]interface{}{"size": field},
+			mappings: map[string]any{
+				"document": map[string]any{"size": field},
 			},
 			expected: map[string]string{"size": "long"},
 		},
 		{
 			name:     "typeless mapping",
-			mappings: map[string]interface{}{"size": field},
+			mappings: map[string]any{"size": field},
 			expected: map[string]string{"size": "long"},
 		},
 		{
 			name: "typed mapping with field-entry key names",
-			mappings: map[string]interface{}{
-				"document": map[string]interface{}{
-					"full_name": map[string]interface{}{
+			mappings: map[string]any{
+				"document": map[string]any{
+					"full_name": map[string]any{
 						"full_name": "full_name",
-						"mapping": map[string]interface{}{
-							"full_name": map[string]interface{}{"type": "keyword"},
+						"mapping": map[string]any{
+							"full_name": map[string]any{"type": "keyword"},
 						},
 					},
-					"mapping": map[string]interface{}{
+					"mapping": map[string]any{
 						"full_name": "mapping",
-						"mapping": map[string]interface{}{
-							"mapping": map[string]interface{}{"type": "long"},
+						"mapping": map[string]any{
+							"mapping": map[string]any{"type": "long"},
 						},
 					},
 				},
@@ -126,8 +126,8 @@ func TestGetMetricField(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			response := map[string]interface{}{
-				"index": map[string]interface{}{"mappings": tt.mappings},
+			response := map[string]any{
+				"index": map[string]any{"mappings": tt.mappings},
 			}
 
 			actual, err := getMetricField(response)
@@ -140,17 +140,17 @@ func TestGetMetricField(t *testing.T) {
 func TestGetMetricFieldError(t *testing.T) {
 	tests := []struct {
 		name          string
-		mappings      map[string]interface{}
+		mappings      map[string]any
 		expectedError string
 	}{
 		{
 			name: "typed invalid full name",
-			mappings: map[string]interface{}{
-				"document": map[string]interface{}{
-					"size": map[string]interface{}{
+			mappings: map[string]any{
+				"document": map[string]any{
+					"size": map[string]any{
 						"full_name": 42,
-						"mapping": map[string]interface{}{
-							"size": map[string]interface{}{"type": "long"},
+						"mapping": map[string]any{
+							"size": map[string]any{"type": "long"},
 						},
 					},
 				},
@@ -159,8 +159,8 @@ func TestGetMetricFieldError(t *testing.T) {
 		},
 		{
 			name: "typeless invalid mapping",
-			mappings: map[string]interface{}{
-				"size": map[string]interface{}{
+			mappings: map[string]any{
+				"size": map[string]any{
 					"full_name": "size",
 					"mapping":   42,
 				},
@@ -171,8 +171,8 @@ func TestGetMetricFieldError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			response := map[string]interface{}{
-				"index": map[string]interface{}{"mappings": tt.mappings},
+			response := map[string]any{
+				"index": map[string]any{"mappings": tt.mappings},
 			}
 
 			_, err := getMetricField(response)
@@ -218,9 +218,9 @@ func TestClientV6Sniffer(t *testing.T) {
 			return
 		}
 
-		response := map[string]interface{}{
-			"nodes": map[string]interface{}{
-				"node": map[string]interface{}{
+		response := map[string]any{
+			"nodes": map[string]any{
+				"node": map[string]any{
 					"name":  "node",
 					"roles": []string{"data", "ingest"},
 					"http": map[string]string{
@@ -449,121 +449,121 @@ func TestGatherIntegration(t *testing.T) {
 		metric.New(
 			"measurement1",
 			map[string]string{"URI_keyword": "/downloads/product_1"},
-			map[string]interface{}{"size_avg": float64(202.30038022813687), "doc_count": int64(263)},
+			map[string]any{"size_avg": float64(202.30038022813687), "doc_count": int64(263)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement2",
 			map[string]string{"URI_keyword": "/downloads/product_1"},
-			map[string]interface{}{"size_max": float64(3301), "doc_count": int64(263)},
+			map[string]any{"size_max": float64(3301), "doc_count": int64(263)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement2",
 			map[string]string{"URI_keyword": "/downloads/product_2"},
-			map[string]interface{}{"size_max": float64(3318), "doc_count": int64(237)},
+			map[string]any{"size_max": float64(3318), "doc_count": int64(237)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement3",
 			map[string]string{"response_keyword": "200"},
-			map[string]interface{}{"size_sum": float64(22790), "doc_count": int64(22)},
+			map[string]any{"size_sum": float64(22790), "doc_count": int64(22)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement3",
 			map[string]string{"response_keyword": "304"},
-			map[string]interface{}{"size_sum": float64(0), "doc_count": int64(219)},
+			map[string]any{"size_sum": float64(0), "doc_count": int64(219)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement3",
 			map[string]string{"response_keyword": "404"},
-			map[string]interface{}{"size_sum": float64(86932), "doc_count": int64(259)},
+			map[string]any{"size_sum": float64(86932), "doc_count": int64(259)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "404", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
-			map[string]interface{}{"size_min": float64(318), "response_time_min": float64(126), "doc_count": int64(146)},
+			map[string]any{"size_min": float64(318), "response_time_min": float64(126), "doc_count": int64(146)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "304", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
-			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(71), "doc_count": int64(113)},
+			map[string]any{"size_min": float64(0), "response_time_min": float64(71), "doc_count": int64(113)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
-			map[string]interface{}{"size_min": float64(490), "response_time_min": float64(1514), "doc_count": int64(3)},
+			map[string]any{"size_min": float64(490), "response_time_min": float64(1514), "doc_count": int64(3)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "404", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
-			map[string]interface{}{"size_min": float64(318), "response_time_min": float64(237), "doc_count": int64(113)},
+			map[string]any{"size_min": float64(318), "response_time_min": float64(237), "doc_count": int64(113)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "304", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
-			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(134), "doc_count": int64(106)},
+			map[string]any{"size_min": float64(0), "response_time_min": float64(134), "doc_count": int64(106)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
-			map[string]interface{}{"size_min": float64(490), "response_time_min": float64(2), "doc_count": int64(13)},
+			map[string]any{"size_min": float64(490), "response_time_min": float64(2), "doc_count": int64(13)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1", "method_keyword": "HEAD"},
-			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(8479), "doc_count": int64(1)},
+			map[string]any{"size_min": float64(0), "response_time_min": float64(8479), "doc_count": int64(1)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2", "method_keyword": "HEAD"},
-			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(1059), "doc_count": int64(5)},
+			map[string]any{"size_min": float64(0), "response_time_min": float64(1059), "doc_count": int64(5)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement5",
 			map[string]string{"URI_keyword": "/downloads/product_2"},
-			map[string]interface{}{"doc_count": int64(237)},
+			map[string]any{"doc_count": int64(237)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement6",
 			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1"},
-			map[string]interface{}{"doc_count": int64(4)},
+			map[string]any{"doc_count": int64(4)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement6",
 			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2"},
-			map[string]interface{}{"doc_count": int64(18)},
+			map[string]any{"doc_count": int64(18)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement7",
 			map[string]string{},
-			map[string]interface{}{"doc_count": int64(22)},
+			map[string]any{"doc_count": int64(22)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement8",
 			map[string]string{},
-			map[string]interface{}{"size_max": float64(3318)},
+			map[string]any{"size_max": float64(3318)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement12",
 			map[string]string{},
-			map[string]interface{}{"size_avg": float64(0)},
+			map[string]any{"size_avg": float64(0)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 	}
@@ -737,121 +737,121 @@ func TestGatherV5Integration(t *testing.T) {
 		metric.New(
 			"measurement1",
 			map[string]string{"URI_keyword": "/downloads/product_1"},
-			map[string]interface{}{"size_avg": float64(202.30038022813687), "doc_count": int64(263)},
+			map[string]any{"size_avg": float64(202.30038022813687), "doc_count": int64(263)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement2",
 			map[string]string{"URI_keyword": "/downloads/product_1"},
-			map[string]interface{}{"size_max": float64(3301), "doc_count": int64(263)},
+			map[string]any{"size_max": float64(3301), "doc_count": int64(263)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement2",
 			map[string]string{"URI_keyword": "/downloads/product_2"},
-			map[string]interface{}{"size_max": float64(3318), "doc_count": int64(237)},
+			map[string]any{"size_max": float64(3318), "doc_count": int64(237)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement3",
 			map[string]string{"response_keyword": "200"},
-			map[string]interface{}{"size_sum": float64(22790), "doc_count": int64(22)},
+			map[string]any{"size_sum": float64(22790), "doc_count": int64(22)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement3",
 			map[string]string{"response_keyword": "304"},
-			map[string]interface{}{"size_sum": float64(0), "doc_count": int64(219)},
+			map[string]any{"size_sum": float64(0), "doc_count": int64(219)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement3",
 			map[string]string{"response_keyword": "404"},
-			map[string]interface{}{"size_sum": float64(86932), "doc_count": int64(259)},
+			map[string]any{"size_sum": float64(86932), "doc_count": int64(259)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "404", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
-			map[string]interface{}{"size_min": float64(318), "response_time_min": float64(126), "doc_count": int64(146)},
+			map[string]any{"size_min": float64(318), "response_time_min": float64(126), "doc_count": int64(146)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "304", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
-			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(71), "doc_count": int64(113)},
+			map[string]any{"size_min": float64(0), "response_time_min": float64(71), "doc_count": int64(113)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
-			map[string]interface{}{"size_min": float64(490), "response_time_min": float64(1514), "doc_count": int64(3)},
+			map[string]any{"size_min": float64(490), "response_time_min": float64(1514), "doc_count": int64(3)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "404", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
-			map[string]interface{}{"size_min": float64(318), "response_time_min": float64(237), "doc_count": int64(113)},
+			map[string]any{"size_min": float64(318), "response_time_min": float64(237), "doc_count": int64(113)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "304", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
-			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(134), "doc_count": int64(106)},
+			map[string]any{"size_min": float64(0), "response_time_min": float64(134), "doc_count": int64(106)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
-			map[string]interface{}{"size_min": float64(490), "response_time_min": float64(2), "doc_count": int64(13)},
+			map[string]any{"size_min": float64(490), "response_time_min": float64(2), "doc_count": int64(13)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1", "method_keyword": "HEAD"},
-			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(8479), "doc_count": int64(1)},
+			map[string]any{"size_min": float64(0), "response_time_min": float64(8479), "doc_count": int64(1)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2", "method_keyword": "HEAD"},
-			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(1059), "doc_count": int64(5)},
+			map[string]any{"size_min": float64(0), "response_time_min": float64(1059), "doc_count": int64(5)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement5",
 			map[string]string{"URI_keyword": "/downloads/product_2"},
-			map[string]interface{}{"doc_count": int64(237)},
+			map[string]any{"doc_count": int64(237)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement6",
 			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1"},
-			map[string]interface{}{"doc_count": int64(4)},
+			map[string]any{"doc_count": int64(4)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement6",
 			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2"},
-			map[string]interface{}{"doc_count": int64(18)},
+			map[string]any{"doc_count": int64(18)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement7",
 			map[string]string{},
-			map[string]interface{}{"doc_count": int64(22)},
+			map[string]any{"doc_count": int64(22)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement8",
 			map[string]string{},
-			map[string]interface{}{"size_max": float64(3318)},
+			map[string]any{"size_max": float64(3318)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement12",
 			map[string]string{},
-			map[string]interface{}{"size_avg": float64(0)},
+			map[string]any{"size_avg": float64(0)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 	}
@@ -1054,121 +1054,121 @@ func TestGatherV7PlusIntegration(t *testing.T) {
 		metric.New(
 			"measurement1",
 			map[string]string{"URI_keyword": "/downloads/product_1"},
-			map[string]interface{}{"size_avg": float64(202.30038022813687), "doc_count": int64(263)},
+			map[string]any{"size_avg": float64(202.30038022813687), "doc_count": int64(263)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement2",
 			map[string]string{"URI_keyword": "/downloads/product_1"},
-			map[string]interface{}{"size_max": float64(3301), "doc_count": int64(263)},
+			map[string]any{"size_max": float64(3301), "doc_count": int64(263)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement2",
 			map[string]string{"URI_keyword": "/downloads/product_2"},
-			map[string]interface{}{"size_max": float64(3318), "doc_count": int64(237)},
+			map[string]any{"size_max": float64(3318), "doc_count": int64(237)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement3",
 			map[string]string{"response_keyword": "200"},
-			map[string]interface{}{"size_sum": float64(22790), "doc_count": int64(22)},
+			map[string]any{"size_sum": float64(22790), "doc_count": int64(22)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement3",
 			map[string]string{"response_keyword": "304"},
-			map[string]interface{}{"size_sum": float64(0), "doc_count": int64(219)},
+			map[string]any{"size_sum": float64(0), "doc_count": int64(219)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement3",
 			map[string]string{"response_keyword": "404"},
-			map[string]interface{}{"size_sum": float64(86932), "doc_count": int64(259)},
+			map[string]any{"size_sum": float64(86932), "doc_count": int64(259)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "404", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
-			map[string]interface{}{"size_min": float64(318), "response_time_min": float64(126), "doc_count": int64(146)},
+			map[string]any{"size_min": float64(318), "response_time_min": float64(126), "doc_count": int64(146)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "304", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
-			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(71), "doc_count": int64(113)},
+			map[string]any{"size_min": float64(0), "response_time_min": float64(71), "doc_count": int64(113)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1", "method_keyword": "GET"},
-			map[string]interface{}{"size_min": float64(490), "response_time_min": float64(1514), "doc_count": int64(3)},
+			map[string]any{"size_min": float64(490), "response_time_min": float64(1514), "doc_count": int64(3)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "404", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
-			map[string]interface{}{"size_min": float64(318), "response_time_min": float64(237), "doc_count": int64(113)},
+			map[string]any{"size_min": float64(318), "response_time_min": float64(237), "doc_count": int64(113)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "304", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
-			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(134), "doc_count": int64(106)},
+			map[string]any{"size_min": float64(0), "response_time_min": float64(134), "doc_count": int64(106)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2", "method_keyword": "GET"},
-			map[string]interface{}{"size_min": float64(490), "response_time_min": float64(2), "doc_count": int64(13)},
+			map[string]any{"size_min": float64(490), "response_time_min": float64(2), "doc_count": int64(13)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1", "method_keyword": "HEAD"},
-			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(8479), "doc_count": int64(1)},
+			map[string]any{"size_min": float64(0), "response_time_min": float64(8479), "doc_count": int64(1)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement4",
 			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2", "method_keyword": "HEAD"},
-			map[string]interface{}{"size_min": float64(0), "response_time_min": float64(1059), "doc_count": int64(5)},
+			map[string]any{"size_min": float64(0), "response_time_min": float64(1059), "doc_count": int64(5)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement5",
 			map[string]string{"URI_keyword": "/downloads/product_2"},
-			map[string]interface{}{"doc_count": int64(237)},
+			map[string]any{"doc_count": int64(237)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement6",
 			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_1"},
-			map[string]interface{}{"doc_count": int64(4)},
+			map[string]any{"doc_count": int64(4)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement6",
 			map[string]string{"response_keyword": "200", "URI_keyword": "/downloads/product_2"},
-			map[string]interface{}{"doc_count": int64(18)},
+			map[string]any{"doc_count": int64(18)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement7",
 			map[string]string{},
-			map[string]interface{}{"doc_count": int64(22)},
+			map[string]any{"doc_count": int64(22)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement8",
 			map[string]string{},
-			map[string]interface{}{"size_max": float64(3318)},
+			map[string]any{"size_max": float64(3318)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 		metric.New(
 			"measurement12",
 			map[string]string{},
-			map[string]interface{}{"size_avg": float64(0)},
+			map[string]any{"size_avg": float64(0)},
 			time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
 		),
 	}
