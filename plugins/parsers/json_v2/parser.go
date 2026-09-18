@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -518,10 +519,8 @@ func (p *Parser) existsInpathResults(index int) *pathResult {
 		}
 
 		// Indexes will be populated with all the elements that match on a `#(...)#` query
-		for _, i := range f.result.Indexes {
-			if i == index {
-				return &f
-			}
+		if slices.Contains(f.result.Indexes, index) {
+			return &f
 		}
 	}
 	return nil
@@ -644,13 +643,7 @@ func (p *Parser) combineObject(result metricNode, timestamp time.Time) ([]telegr
 				}
 			}
 
-			tag := false
-			for _, t := range p.objectConfig.Tags {
-				if setName == t {
-					tag = true
-					break
-				}
-			}
+			tag := slices.Contains(p.objectConfig.Tags, setName)
 
 			arrayNode.Tag = tag
 
@@ -702,12 +695,7 @@ func (p *Parser) isIncluded(key string, val gjson.Result) bool {
 }
 
 func (p *Parser) isExcluded(key string) bool {
-	for _, i := range p.objectConfig.ExcludedKeys {
-		if i == key {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(p.objectConfig.ExcludedKeys, key)
 }
 
 func (*Parser) ParseLine(string) (telegraf.Metric, error) {

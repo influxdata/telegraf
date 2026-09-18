@@ -556,14 +556,6 @@ func Test_checkForNVMeDevices(t *testing.T) {
 	require.Equal(t, expectedNVMeDevices, resultNVMeDevices)
 }
 
-func Test_contains(t *testing.T) {
-	devices := []string{"/dev/sda", "/dev/nvme1"}
-	device := "/dev/nvme1"
-	deviceNotIncluded := "/dev/nvme5"
-	require.True(t, contains(devices, device))
-	require.False(t, contains(devices, deviceNotIncluded))
-}
-
 func Test_difference(t *testing.T) {
 	devices := []string{"/dev/sda", "/dev/nvme1", "/dev/nvme2"}
 	secondDevices := []string{"/dev/sda", "/dev/nvme1"}

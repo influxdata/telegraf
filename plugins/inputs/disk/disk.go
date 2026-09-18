@@ -4,6 +4,7 @@ package disk
 import (
 	_ "embed"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/shirou/gopsutil/v4/disk"
@@ -96,21 +97,12 @@ func (ds *Disk) Gather(acc telegraf.Accumulator) error {
 type mountOptions []string
 
 func (opts mountOptions) mode() string {
-	if opts.exists("rw") {
+	if slices.Contains(opts, "rw") {
 		return "rw"
-	} else if opts.exists("ro") {
+	} else if slices.Contains(opts, "ro") {
 		return "ro"
 	}
 	return "unknown"
-}
-
-func (opts mountOptions) exists(opt string) bool {
-	for _, o := range opts {
-		if o == opt {
-			return true
-		}
-	}
-	return false
 }
 
 func init() {

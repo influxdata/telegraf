@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 	"testing"
 
@@ -205,13 +206,7 @@ func TestCompressionLevel(t *testing.T) {
 		for level := range 10 {
 			name := fmt.Sprintf("%s level %d", tt.algorithm, level)
 			t.Run(name, func(t *testing.T) {
-				var valid bool
-				for _, l := range tt.validLevels {
-					if l == level {
-						valid = true
-						break
-					}
-				}
+				valid := slices.Contains(tt.validLevels, level)
 
 				enc, err := NewContentEncoder(tt.algorithm, WithCompressionLevel(level))
 				if valid {

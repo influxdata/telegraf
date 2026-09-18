@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -182,13 +183,7 @@ func (h *HTTP) query() ([]byte, error) {
 	request.SetBasicAuth("---", "---")
 	request.Header.Set("Authorization", "---")
 
-	responseHasSuccessCode := false
-	for _, statusCode := range h.SuccessStatusCodes {
-		if resp.StatusCode == statusCode {
-			responseHasSuccessCode = true
-			break
-		}
-	}
+	responseHasSuccessCode := slices.Contains(h.SuccessStatusCodes, resp.StatusCode)
 
 	if !responseHasSuccessCode {
 		msg := "received status code %d (%s), expected any value out of %v"

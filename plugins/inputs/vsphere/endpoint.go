@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -127,7 +128,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 		initialized:       false,
 		clientFactory:     newClientFactory(address, parent),
 		customAttrFilter:  newFilterOrPanic(parent.CustomAttributeInclude, parent.CustomAttributeExclude),
-		customAttrEnabled: anythingEnabled(parent.CustomAttributeExclude),
+		customAttrEnabled: !slices.Contains(parent.CustomAttributeExclude, "*"),
 		log:               log,
 	}
 
@@ -137,7 +138,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			vcName:           "Datacenter",
 			pKey:             "dcname",
 			parentTag:        "",
-			enabled:          anythingEnabled(parent.DatacenterMetricExclude),
+			enabled:          !slices.Contains(parent.DatacenterMetricExclude, "*"),
 			realTime:         false,
 			sampling:         int32(time.Duration(parent.HistoricalInterval).Seconds()),
 			objects:          make(objectMap),
@@ -155,7 +156,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			vcName:           "ClusterComputeResource",
 			pKey:             "clustername",
 			parentTag:        "dcname",
-			enabled:          anythingEnabled(parent.ClusterMetricExclude),
+			enabled:          !slices.Contains(parent.ClusterMetricExclude, "*"),
 			realTime:         false,
 			sampling:         int32(time.Duration(parent.HistoricalInterval).Seconds()),
 			objects:          make(objectMap),
@@ -173,7 +174,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			vcName:           "ResourcePool",
 			pKey:             "rpname",
 			parentTag:        "clustername",
-			enabled:          anythingEnabled(parent.ResourcePoolMetricExclude),
+			enabled:          !slices.Contains(parent.ResourcePoolMetricExclude, "*"),
 			realTime:         false,
 			sampling:         int32(time.Duration(parent.HistoricalInterval).Seconds()),
 			objects:          make(objectMap),
@@ -191,7 +192,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			vcName:           "HostSystem",
 			pKey:             "esxhostname",
 			parentTag:        "clustername",
-			enabled:          anythingEnabled(parent.HostMetricExclude),
+			enabled:          !slices.Contains(parent.HostMetricExclude, "*"),
 			realTime:         true,
 			sampling:         20,
 			objects:          make(objectMap),
@@ -209,7 +210,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			vcName:           "VirtualMachine",
 			pKey:             "vmname",
 			parentTag:        "esxhostname",
-			enabled:          anythingEnabled(parent.VMMetricExclude),
+			enabled:          !slices.Contains(parent.VMMetricExclude, "*"),
 			realTime:         true,
 			sampling:         20,
 			objects:          make(objectMap),
@@ -226,7 +227,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			name:             "datastore",
 			vcName:           "Datastore",
 			pKey:             "dsname",
-			enabled:          anythingEnabled(parent.DatastoreMetricExclude),
+			enabled:          !slices.Contains(parent.DatastoreMetricExclude, "*"),
 			realTime:         false,
 			sampling:         int32(time.Duration(parent.HistoricalInterval).Seconds()),
 			objects:          make(objectMap),
@@ -244,7 +245,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			vcName:           "ClusterComputeResource",
 			pKey:             "clustername",
 			parentTag:        "dcname",
-			enabled:          anythingEnabled(parent.VSANMetricExclude),
+			enabled:          !slices.Contains(parent.VSANMetricExclude, "*"),
 			realTime:         false,
 			sampling:         int32(time.Duration(parent.VSANInterval).Seconds()),
 			objects:          make(objectMap),
@@ -262,15 +263,6 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 	err := e.init(ctx)
 
 	return &e, err
-}
-
-func anythingEnabled(ex []string) bool {
-	for _, s := range ex {
-		if s == "*" {
-			return false
-		}
-	}
-	return true
 }
 
 func newFilterOrPanic(include, exclude []string) filter.Filter {
