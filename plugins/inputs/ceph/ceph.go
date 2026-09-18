@@ -106,11 +106,11 @@ func (c *Ceph) gatherAdminSocketStats(acc telegraf.Accumulator) error {
 					switch valueType {
 					case telegraf.Counter:
 						acc.AddCounter(measurement,
-							map[string]interface{}{name: metric},
+							map[string]any{name: metric},
 							map[string]string{"type": s.sockType, "id": s.sockID, "collection": tag})
 					default:
 						acc.AddGauge(measurement,
-							map[string]interface{}{name: metric},
+							map[string]any{name: metric},
 							map[string]string{"type": s.sockType, "id": s.sockID, "collection": tag})
 					}
 				}
@@ -273,7 +273,7 @@ func (m *metric) name() string {
 	return buf.String()
 }
 
-type metricMap map[string]interface{}
+type metricMap map[string]any
 
 type taggedMetricMap map[string]metricMap
 
@@ -334,7 +334,7 @@ func parseSchema(rawSchema string) (perfSchemaMap, error) {
 // Parses a raw JSON string into a taggedMetricMap
 // Delegates the actual parsing to newTaggedMetricMap(..)
 func (c *Ceph) parseDump(dump string) (taggedMetricMap, error) {
-	data := make(map[string]interface{})
+	data := make(map[string]any)
 	err := json.Unmarshal([]byte(dump), &data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse json: %q: %w", dump, err)
@@ -345,7 +345,7 @@ func (c *Ceph) parseDump(dump string) (taggedMetricMap, error) {
 
 // Builds a TaggedMetricMap out of a generic string map.
 // The top-level key is used as a tag and all sub-keys are flattened into metrics
-func (c *Ceph) newTaggedMetricMap(data map[string]interface{}) taggedMetricMap {
+func (c *Ceph) newTaggedMetricMap(data map[string]any) taggedMetricMap {
 	tmm := make(taggedMetricMap)
 	for tag, datapoints := range data {
 		mm := make(metricMap)
@@ -361,7 +361,7 @@ func (c *Ceph) newTaggedMetricMap(data map[string]interface{}) taggedMetricMap {
 // Nested keys are flattened into ordered slices associated with a metric value.
 // The key slices are treated as stacks, and are expected to be reversed and concatenated
 // when passed as metrics to the accumulator. (see (*metric).name())
-func (c *Ceph) flatten(data interface{}) []*metric {
+func (c *Ceph) flatten(data any) []*metric {
 	var metrics []*metric
 
 	switch val := data.(type) {
@@ -371,7 +371,7 @@ func (c *Ceph) flatten(data interface{}) []*metric {
 				make([]string, 0, 1), val,
 			},
 		}
-	case map[string]interface{}:
+	case map[string]any:
 		metrics = make([]*metric, 0, len(val))
 		for k, v := range val {
 			for _, m := range c.flatten(v) {
@@ -501,7 +501,7 @@ func decodeStatus(acc telegraf.Accumulator, input string) error {
 
 // decodeStatusFsmap decodes the FS map portion of the output of 'ceph -s'
 func decodeStatusFsmap(acc telegraf.Accumulator, data *status) error {
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"in":         data.FSMap.NumIn,
 		"max":        data.FSMap.NumMax,
 		"up_standby": data.FSMap.NumUpStandby,
@@ -518,7 +518,7 @@ func decodeStatusHealth(acc telegraf.Accumulator, data *status) error {
 		"HEALTH_WARN": 1,
 		"HEALTH_OK":   2,
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"overall_status": data.Health.OverallStatus, // This field is no longer reported in ceph 10 and later
 		"status_code":    statusCodes[data.Health.Status],
 		"status":         data.Health.Status,
@@ -529,7 +529,7 @@ func decodeStatusHealth(acc telegraf.Accumulator, data *status) error {
 
 // decodeStatusMonmap decodes the Mon map portion of the output of 'ceph -s'
 func decodeStatusMonmap(acc telegraf.Accumulator, data *status) error {
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"num_mons": data.MonMap.NumMons,
 	}
 	acc.AddFields("ceph_monmap", fields, make(map[string]string))
@@ -538,7 +538,7 @@ func decodeStatusMonmap(acc telegraf.Accumulator, data *status) error {
 
 // decodeStatusOsdmap decodes the OSD map portion of the output of 'ceph -s'
 func decodeStatusOsdmap(acc telegraf.Accumulator, data *status) error {
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"epoch":            data.OSDMap.Epoch,
 		"num_in_osds":      data.OSDMap.NumInOSDs,
 		"num_osds":         data.OSDMap.NumOSDs,
@@ -546,7 +546,7 @@ func decodeStatusOsdmap(acc telegraf.Accumulator, data *status) error {
 		"num_up_osds":      data.OSDMap.NumUpOSDs,
 	}
 	if data.OSDMap.OSDMap.Epoch != 0 && data.OSDMap.OSDMap.NumOSDs != 0 {
-		fields = map[string]interface{}{
+		fields = map[string]any{
 			"epoch":            data.OSDMap.OSDMap.Epoch,
 			"full":             data.OSDMap.OSDMap.Full,
 			"nearfull":         data.OSDMap.OSDMap.NearFull,
@@ -563,7 +563,7 @@ func decodeStatusOsdmap(acc telegraf.Accumulator, data *status) error {
 
 // decodeStatusPgmap decodes the PG map portion of the output of 'ceph -s'
 func decodeStatusPgmap(acc telegraf.Accumulator, data *status) error {
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"bytes_avail":                data.PGMap.BytesAvail,
 		"bytes_total":                data.PGMap.BytesTotal,
 		"bytes_used":                 data.PGMap.BytesUsed,
@@ -598,7 +598,7 @@ func decodeStatusPgmapState(acc telegraf.Accumulator, data *status) error {
 		tags := map[string]string{
 			"state": pgState.StateName,
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"count": pgState.Count,
 		}
 		acc.AddFields("ceph_pgmap_state", fields, tags)
@@ -643,7 +643,7 @@ func decodeDf(acc telegraf.Accumulator, input string) error {
 	}
 
 	// ceph.usage: records global utilization and number of objects
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"num_osds":               data.Stats.NumOSDs,
 		"num_per_pool_omap_osds": data.Stats.NumPerPoolOmapOSDs,
 		"num_per_pool_osds":      data.Stats.NumPerPoolOSDs,
@@ -663,7 +663,7 @@ func decodeDf(acc telegraf.Accumulator, input string) error {
 		tags := map[string]string{
 			"class": class,
 		}
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		for key, value := range stats {
 			fields[key] = value
 		}
@@ -675,7 +675,7 @@ func decodeDf(acc telegraf.Accumulator, input string) error {
 		tags := map[string]string{
 			"name": pool.Name,
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"bytes_used":   pool.Stats.BytesUsed,
 			"kb_used":      pool.Stats.KBUsed,
 			"max_avail":    pool.Stats.MaxAvail,
@@ -726,7 +726,7 @@ func decodeOsdPoolStats(acc telegraf.Accumulator, input string) error {
 		tags := map[string]string{
 			"name": pool.PoolName,
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"degraded_objects":           pool.Recovery.DegradedObjects,
 			"degraded_ratio":             pool.Recovery.DegradedRatio,
 			"degraded_total":             pool.Recovery.DegradedTotal,

@@ -637,7 +637,7 @@ func Test_Gather(t *testing.T) {
 					"command": "/endpoint1",
 					"params":  "",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"": "myvalue",
 				},
 				time.Unix(0, 0),
@@ -665,7 +665,7 @@ func Test_Gather(t *testing.T) {
 					"command": "/endpoint1",
 					"params":  "",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"myvalue_0": float64(0),
 					"myvalue_1": float64(1),
 					"myvalue_2": float64(123),
@@ -702,7 +702,7 @@ func Test_Gather(t *testing.T) {
 					"command": "/endpoint1",
 					"params":  "",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"":                           "myvalue",
 					dpdkMetadataFieldPidName:     testInitMessage.Pid,
 					dpdkMetadataFieldVersionName: testInitMessage.Version,
@@ -739,7 +739,7 @@ func Test_Gather(t *testing.T) {
 					"command": "/endpoint1",
 					"params":  "",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"":                       "myvalue",
 					dpdkMetadataFieldPidName: testInitMessage.Pid,
 				},
@@ -774,7 +774,7 @@ func Test_Gather(t *testing.T) {
 					"command": "/endpoint1",
 					"params":  "",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"": "myvalue",
 				},
 				time.Unix(0, 0),
@@ -812,7 +812,7 @@ func Test_Gather_MultiSocket(t *testing.T) {
 					"command": "/endpoint1",
 					"params":  "",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"": "myvalue",
 				},
 				time.Unix(0, 0),
@@ -823,7 +823,7 @@ func Test_Gather_MultiSocket(t *testing.T) {
 					"command": "/endpoint1",
 					"params":  "",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"": "myvalue",
 				},
 				time.Unix(0, 0),

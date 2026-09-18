@@ -257,7 +257,7 @@ func (r *metricReceiver) collectMetrics(ctx context.Context, acc telegraf.Accumu
 				continue
 			}
 
-			fields := make(map[string]interface{}, 6)
+			fields := make(map[string]any, 6)
 			fields["timeStamp"] = data.TimeStamp.Format("2006-01-02T15:04:05Z07:00")
 			if data.Total != nil {
 				fields["total"] = *data.Total

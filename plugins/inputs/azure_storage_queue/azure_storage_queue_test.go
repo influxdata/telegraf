@@ -108,7 +108,7 @@ func TestEmulatorIntegration(t *testing.T) {
 				"account": azurite.AccountName,
 				"queue":   "test-one",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"oldest_message_age_ns": int64(0),
 				"size":                  int64(5),
 			},
@@ -120,7 +120,7 @@ func TestEmulatorIntegration(t *testing.T) {
 				"account": azurite.AccountName,
 				"queue":   "test-two",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"oldest_message_age_ns": int64(0),
 				"size":                  int64(3),
 			},

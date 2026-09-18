@@ -144,7 +144,7 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"reads":            io.ReadCount,
 			"writes":           io.WriteCount,
 			"read_bytes":       io.ReadBytes,
