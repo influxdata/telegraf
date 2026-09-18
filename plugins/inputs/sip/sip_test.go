@@ -348,7 +348,7 @@ func TestSIPServerSuccess(t *testing.T) {
 				"transport":   "udp",
 				"status_code": "200",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"response_time_s": float64(0),
 				"result":          "OK",
 			},
@@ -390,7 +390,7 @@ func TestSIPServerErrorResponse(t *testing.T) {
 				"transport":   "udp",
 				"status_code": "404",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"response_time_s": float64(0),
 				"result":          "Not Found",
 			},
@@ -433,7 +433,7 @@ func TestSIPServerTimeout(t *testing.T) {
 				"method":    "options",
 				"transport": "udp",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"response_time_s": float64(0),
 				"result":          "Timeout",
 			},
@@ -483,7 +483,7 @@ func TestSIPServerDelayedResponse(t *testing.T) {
 				"transport":   "udp",
 				"status_code": "200",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"response_time_s": float64(0),
 				"result":          "OK",
 			},
@@ -556,7 +556,7 @@ func TestSIPDifferentStatusCodes(t *testing.T) {
 						"transport":   "udp",
 						"status_code": strconv.Itoa(tt.statusCode),
 					},
-					map[string]interface{}{
+					map[string]any{
 						"response_time_s": float64(0),
 						"result":          tt.reason,
 					},
@@ -605,7 +605,7 @@ func TestSIPAuthenticationRequired(t *testing.T) {
 				"transport":   "udp",
 				"status_code": "401",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"response_time_s": float64(0),
 				"result":          "Unauthorized",
 			},
@@ -674,7 +674,7 @@ func TestSIPAuthenticationSuccess(t *testing.T) {
 				"transport":   "udp",
 				"status_code": "200",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"response_time_s": float64(0),
 				"result":          "OK",
 			},
@@ -733,7 +733,7 @@ func TestSIPMethodINVITE(t *testing.T) {
 				"transport":   "udp",
 				"status_code": "200",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"response_time_s": float64(0),
 				"result":          "OK",
 			},
@@ -779,7 +779,7 @@ func TestSIPMethodMESSAGE(t *testing.T) {
 				"transport":   "udp",
 				"status_code": "200",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"response_time_s": float64(0),
 				"result":          "OK",
 			},

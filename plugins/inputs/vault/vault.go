@@ -140,7 +140,7 @@ func (n *Vault) buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *sysMetri
 			tags[key] = convertedVal
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"count":  counters.Count,
 			"rate":   counters.Rate,
 			"sum":    counters.Sum,
@@ -172,7 +172,7 @@ func (n *Vault) buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *sysMetri
 			tags[key] = convertedVal
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"value": gauges.Value,
 		}
 		if !*n.FloatValues {
@@ -197,7 +197,7 @@ func (n *Vault) buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *sysMetri
 			tags[key] = convertedVal
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"count":  summary.Count,
 			"rate":   summary.Rate,
 			"sum":    summary.Sum,

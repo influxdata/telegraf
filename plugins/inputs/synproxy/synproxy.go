@@ -42,10 +42,10 @@ func (s *Synproxy) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *Synproxy) getSynproxyStat() (map[string]interface{}, error) {
+func (s *Synproxy) getSynproxyStat() (map[string]any, error) {
 	var hname []string
 	counters := []string{"entries", "syn_received", "cookie_invalid", "cookie_valid", "cookie_retrans", "conn_reopened"}
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 
 	// Open synproxy file in proc filesystem
 	file, err := os.Open(s.statFile)

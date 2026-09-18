@@ -57,7 +57,7 @@ func (s *Smartctl) scanDevice(acc telegraf.Accumulator, deviceName, deviceType s
 		tags["wwn"] = fmt.Sprintf("%01x%06x%09x", device.Wwn.Naa, device.Wwn.Oui, device.Wwn.ID)
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"capacity":    device.UserCapacity.Bytes,
 		"health_ok":   device.SmartStatus.Passed,
 		"temperature": device.Temperature.Current,
@@ -139,7 +139,7 @@ func (s *Smartctl) scanDevice(acc telegraf.Accumulator, deviceName, deviceType s
 
 		attributeTags[s.attributeTagName] = attribute.Name
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"raw_value": attribute.Raw.Value,
 			"worst":     attribute.Worst,
 			"threshold": attribute.Thresh,
@@ -157,7 +157,7 @@ func (s *Smartctl) scanDevice(acc telegraf.Accumulator, deviceName, deviceType s
 		}
 
 		counterTags["page"] = "read"
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"errors_corrected_by_eccfast":          device.ScsiErrorCounterLog.Read.ErrorsCorrectedByEccfast,
 			"errors_corrected_by_eccdelayed":       device.ScsiErrorCounterLog.Read.ErrorsCorrectedByEccdelayed,
 			"errors_corrected_by_rereads_rewrites": device.ScsiErrorCounterLog.Read.ErrorsCorrectedByRereadsRewrites,
@@ -169,7 +169,7 @@ func (s *Smartctl) scanDevice(acc telegraf.Accumulator, deviceName, deviceType s
 		acc.AddFields("smartctl_scsi_error_counter_log", fields, counterTags, t)
 
 		counterTags["page"] = "write"
-		fields = map[string]interface{}{
+		fields = map[string]any{
 			"errors_corrected_by_eccfast":          device.ScsiErrorCounterLog.Write.ErrorsCorrectedByEccfast,
 			"errors_corrected_by_eccdelayed":       device.ScsiErrorCounterLog.Write.ErrorsCorrectedByEccdelayed,
 			"errors_corrected_by_rereads_rewrites": device.ScsiErrorCounterLog.Write.ErrorsCorrectedByRereadsRewrites,
@@ -181,7 +181,7 @@ func (s *Smartctl) scanDevice(acc telegraf.Accumulator, deviceName, deviceType s
 		acc.AddFields("smartctl_scsi_error_counter_log", fields, counterTags, t)
 
 		counterTags["page"] = "verify"
-		fields = map[string]interface{}{
+		fields = map[string]any{
 			"errors_corrected_by_eccfast":          device.ScsiErrorCounterLog.Verify.ErrorsCorrectedByEccfast,
 			"errors_corrected_by_eccdelayed":       device.ScsiErrorCounterLog.Verify.ErrorsCorrectedByEccdelayed,
 			"errors_corrected_by_rereads_rewrites": device.ScsiErrorCounterLog.Verify.ErrorsCorrectedByRereadsRewrites,

@@ -99,7 +99,7 @@ func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegr
 		return fmt.Errorf("invalid service address: %s", address)
 	}
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for scanner.Scan() {
 		line := scanner.Text()
 		parts := zookeeperFormatRE.FindStringSubmatch(line)

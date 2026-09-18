@@ -31,7 +31,7 @@ func TestVaultStats(t *testing.T) {
 					map[string]string{
 						"peer_id": "clustnode-02",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"count":  int(130),
 						"rate":   float64(0.2),
 						"sum":    int64(2),
@@ -48,7 +48,7 @@ func TestVaultStats(t *testing.T) {
 					map[string]string{
 						"cluster": "vault-cluster-23b671c7",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(1),
 					},
 					time.Unix(1638287340, 0),
@@ -57,7 +57,7 @@ func TestVaultStats(t *testing.T) {
 				metric.New(
 					"vault.wal.write_controller.idle_secs",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(679114),
 					},
 					time.Unix(1638287340, 0),
@@ -66,7 +66,7 @@ func TestVaultStats(t *testing.T) {
 				metric.New(
 					"vault.token.lookup",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"count":  int(5135),
 						"max":    float64(16.22449493408203),
 						"mean":   float64(0.1698389152269865),
@@ -89,7 +89,7 @@ func TestVaultStats(t *testing.T) {
 					map[string]string{
 						"peer_id": "clustnode-02",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"count":  int(130),
 						"rate":   float64(0.2),
 						"sum":    float64(2),
@@ -106,7 +106,7 @@ func TestVaultStats(t *testing.T) {
 					map[string]string{
 						"cluster": "vault-cluster-23b671c7",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": float64(1),
 					},
 					time.Unix(1638287340, 0),
@@ -115,7 +115,7 @@ func TestVaultStats(t *testing.T) {
 				metric.New(
 					"vault.wal.write_controller.idle_secs",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": float64(679114.3),
 					},
 					time.Unix(1638287340, 0),
@@ -124,7 +124,7 @@ func TestVaultStats(t *testing.T) {
 				metric.New(
 					"vault.token.lookup",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"count":  int(5135),
 						"max":    float64(16.22449493408203),
 						"mean":   float64(0.1698389152269865),
@@ -186,7 +186,7 @@ func TestRedirect(t *testing.T) {
 			map[string]string{
 				"peer_id": "clustnode-02",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"count":  int(130),
 				"rate":   float64(0.2),
 				"sum":    int64(2),
@@ -203,7 +203,7 @@ func TestRedirect(t *testing.T) {
 			map[string]string{
 				"cluster": "vault-cluster-23b671c7",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": int64(1),
 			},
 			time.Unix(1638287340, 0),
@@ -212,7 +212,7 @@ func TestRedirect(t *testing.T) {
 		metric.New(
 			"vault.wal.write_controller.idle_secs",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": int64(679114),
 			},
 			time.Unix(1638287340, 0),
@@ -221,7 +221,7 @@ func TestRedirect(t *testing.T) {
 		metric.New(
 			"vault.token.lookup",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"count":  int(5135),
 				"max":    float64(16.22449493408203),
 				"mean":   float64(0.1698389152269865),
