@@ -169,10 +169,8 @@ func (s *Stackdriver) Connect() error {
 // made to avoid modifying the input metric slice since doing so is not
 // allowed.
 func sorted(metrics []telegraf.Metric) []telegraf.Metric {
-	batch := make([]telegraf.Metric, 0, len(metrics))
-	for _, metric := range slices.Backward(metrics) {
-		batch = append(batch, metric)
-	}
+	batch := slices.Clone(metrics)
+	slices.Reverse(batch)
 	sort.Slice(batch, func(i, j int) bool {
 		return batch[i].Time().Before(batch[j].Time())
 	})

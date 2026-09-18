@@ -1651,14 +1651,10 @@ func TestRequestTypesHoldingDCBA(t *testing.T) {
 	for _, hrt := range tests {
 		t.Run(hrt.name, func(t *testing.T) {
 			quantity := uint16(len(hrt.write) / 2)
-			invert := make([]byte, 0, len(hrt.write))
+			// Strings are written as raw data, everything else byte-inverted
+			invert := slices.Clone(hrt.write)
 			if hrt.dataTypeIn != "STRING" {
-				for _, v := range slices.Backward(hrt.write) {
-					invert = append(invert, v)
-				}
-			} else {
-				// Put in raw data for strings
-				invert = append(invert, hrt.write...)
+				slices.Reverse(invert)
 			}
 			_, err := client.WriteMultipleRegisters(ctx, hrt.address, quantity, invert)
 			require.NoError(t, err)
