@@ -250,7 +250,7 @@ func (p *Parser) createMetric(data map[string]any, schema string) (telegraf.Metr
 	// Tags differ from fields, in that tags are inherently strings.
 	// fields can be of any type.
 	fields := make(map[string]any)
-	tags := make(map[string]string)
+	tags := make(map[string]string, len(p.DefaultTags)+len(p.Tags))
 
 	// Set default tag values
 	maps.Copy(tags, p.DefaultTags)

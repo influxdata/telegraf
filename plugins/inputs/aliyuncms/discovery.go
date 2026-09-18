@@ -423,8 +423,7 @@ func (dt *discoveryTool) start() {
 				}
 
 				if !reflect.DeepEqual(data, lastData) {
-					lastData = make(map[string]any, len(data))
-					maps.Copy(lastData, data)
+					lastData = maps.Clone(data)
 
 					// send discovery data in blocking mode
 					dt.dataChan <- data

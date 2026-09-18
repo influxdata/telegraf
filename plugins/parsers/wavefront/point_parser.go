@@ -95,7 +95,7 @@ func (p *pointParser) convertPointToTelegrafMetric(points []point) ([]telegraf.M
 	metrics := make([]telegraf.Metric, 0, len(points))
 
 	for _, point := range points {
-		tags := make(map[string]string)
+		tags := make(map[string]string, len(point.Tags)+len(p.parent.DefaultTags))
 		maps.Copy(tags, point.Tags)
 		// apply default tags after parsed tags
 		maps.Copy(tags, p.parent.DefaultTags)

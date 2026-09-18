@@ -163,8 +163,7 @@ func SerializeBucketName(measurement string, tags map[string]string, template, p
 	if template == "" {
 		template = defaultTemplate
 	}
-	tagsCopy := make(map[string]string)
-	maps.Copy(tagsCopy, tags)
+	tagsCopy := maps.Clone(tags)
 
 	var out []string
 	for templatePart := range strings.SplitSeq(template, ".") {

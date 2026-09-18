@@ -191,7 +191,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	fields := make(map[string]any)
-	tags := make(map[string]string)
+	tags := make(map[string]string, len(p.DefaultTags))
 
 	// add default tags
 	maps.Copy(tags, p.DefaultTags)

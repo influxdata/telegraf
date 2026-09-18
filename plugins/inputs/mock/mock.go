@@ -98,8 +98,7 @@ func (m *Mock) Gather(acc telegraf.Accumulator) error {
 		fields[c.Name] = c.Value
 	}
 
-	tags := make(map[string]string)
-	maps.Copy(tags, m.Tags)
+	tags := maps.Clone(m.Tags)
 
 	acc.AddFields(m.MetricName, fields, tags)
 

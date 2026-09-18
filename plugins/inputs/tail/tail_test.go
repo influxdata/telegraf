@@ -33,8 +33,7 @@ func newInfluxParser() (telegraf.Parser, error) {
 
 func newTestTail() *Tail {
 	offsetsMutex.Lock()
-	offsetsCopy := make(map[string]int64, len(offsets))
-	maps.Copy(offsetsCopy, offsets)
+	offsetsCopy := maps.Clone(offsets)
 	offsetsMutex.Unlock()
 
 	watchMethod := "inotify"

@@ -347,9 +347,7 @@ func (r *redisClient) info() *redis.StringCmd {
 }
 
 func (r *redisClient) baseTags() map[string]string {
-	tags := make(map[string]string)
-	maps.Copy(tags, r.tags)
-	return tags
+	return maps.Clone(r.tags)
 }
 
 func (r *redisClient) close() error {
@@ -500,7 +498,7 @@ func gatherInfoOutput(rdr io.Reader, acc telegraf.Accumulator, tags map[string]s
 func gatherKeyspaceLine(name, line string, acc telegraf.Accumulator, globalTags map[string]string) {
 	if strings.Contains(line, "keys=") {
 		fields := make(map[string]any)
-		tags := make(map[string]string)
+		tags := make(map[string]string, len(globalTags)+1)
 		maps.Copy(tags, globalTags)
 		tags["database"] = name
 		for dbp := range strings.SplitSeq(line, ",") {
@@ -526,7 +524,7 @@ func gatherCommandStateLine(name, line string, acc telegraf.Accumulator, globalT
 	}
 
 	fields := make(map[string]any)
-	tags := make(map[string]string)
+	tags := make(map[string]string, len(globalTags)+1)
 	maps.Copy(tags, globalTags)
 	tags["command"] = strings.TrimPrefix(name, "cmdstat_")
 	for part := range strings.SplitSeq(line, ",") {
@@ -565,7 +563,7 @@ func gatherLatencyStatsLine(name, line string, acc telegraf.Accumulator, globalT
 	}
 
 	fields := make(map[string]any)
-	tags := make(map[string]string)
+	tags := make(map[string]string, len(globalTags)+1)
 	maps.Copy(tags, globalTags)
 	tags["command"] = strings.TrimPrefix(name, "latency_percentiles_usec_")
 	for part := range strings.SplitSeq(line, ",") {
@@ -593,7 +591,7 @@ func gatherLatencyStatsLine(name, line string, acc telegraf.Accumulator, globalT
 // This line will only be visible when a node has a replica attached.
 func gatherReplicationLine(name, line string, acc telegraf.Accumulator, globalTags map[string]string) {
 	fields := make(map[string]any)
-	tags := make(map[string]string)
+	tags := make(map[string]string, len(globalTags)+2)
 	maps.Copy(tags, globalTags)
 
 	tags["replica_id"] = strings.TrimLeft(name, "slave")

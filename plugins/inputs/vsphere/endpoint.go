@@ -1285,8 +1285,7 @@ func (e *endpoint) collectChunk(
 				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(ts.UnixNano(), 10)
 				bucket, found := buckets[bKey]
 				if !found {
-					fields := make(map[string]any)
-					maps.Copy(fields, globalFields)
+					fields := maps.Clone(globalFields)
 					bucket = metricEntry{name: mn, ts: ts, fields: fields, tags: t}
 					buckets[bKey] = bucket
 				}

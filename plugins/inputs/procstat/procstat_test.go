@@ -172,9 +172,9 @@ func (p *testProc) metrics(prefix string, cfg *collectionConfig, t time.Time) ([
 		fields[prefix+"memory_usage"] = float32(0)
 	}
 
-	tags := map[string]string{
-		"process_name": "test_proc",
-	}
+	// The process tags may override the default name
+	tags := make(map[string]string, len(p.tags)+1)
+	tags["process_name"] = "test_proc"
 	maps.Copy(tags, p.tags)
 
 	// Add the tags as requested by the user

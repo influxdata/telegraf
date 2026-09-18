@@ -915,9 +915,7 @@ func (m *Mysql) gatherProcessListStatuses(db *sql.DB, servtag string, acc telegr
 	fields := make(map[string]any)
 
 	// mapping of state with its counts
-	stateCounts := make(map[string]uint32, len(generalThreadStates))
-	// set map with keys and default values
-	maps.Copy(stateCounts, generalThreadStates)
+	stateCounts := maps.Clone(generalThreadStates)
 
 	for rows.Next() {
 		err = rows.Scan(&command, &state, &count)
@@ -1476,7 +1474,7 @@ func (m *Mysql) gatherPerfSummaryPerAccountPerEvent(db *sql.DB, servtag string, 
 		srcUser = strings.ToLower(srcUser)
 		srcHost = strings.ToLower(srcHost)
 
-		sqlLWTags := copyTags(tags)
+		sqlLWTags := maps.Clone(tags)
 		sqlLWTags["src_user"] = srcUser
 		sqlLWTags["src_host"] = srcHost
 		sqlLWTags["event"] = eventName
@@ -1595,7 +1593,7 @@ func gatherPerfTableLockWaits(db *sql.DB, servtag string, acc telegraf.Accumulat
 			"table":  objectName,
 		}
 
-		sqlLWTags := copyTags(tags)
+		sqlLWTags := maps.Clone(tags)
 		sqlLWTags["perf_query"] = "sql_lock_waits_total"
 		sqlLWFields := map[string]any{
 			"read_normal":             countReadNormal,
@@ -1609,7 +1607,7 @@ func gatherPerfTableLockWaits(db *sql.DB, servtag string, acc telegraf.Accumulat
 		}
 		acc.AddFields("mysql_perf_schema", sqlLWFields, sqlLWTags)
 
-		externalLWTags := copyTags(tags)
+		externalLWTags := maps.Clone(tags)
 		externalLWTags["perf_query"] = "external_lock_waits_total"
 		externalLWFields := map[string]any{
 			"read":  countReadExternal,
@@ -1617,7 +1615,7 @@ func gatherPerfTableLockWaits(db *sql.DB, servtag string, acc telegraf.Accumulat
 		}
 		acc.AddFields("mysql_perf_schema", externalLWFields, externalLWTags)
 
-		sqlLWSecTotalTags := copyTags(tags)
+		sqlLWSecTotalTags := maps.Clone(tags)
 		sqlLWSecTotalTags["perf_query"] = "sql_lock_waits_seconds_total"
 		sqlLWSecTotalFields := map[string]any{
 			"read_normal":             timeReadNormal / picoSeconds,
@@ -1631,7 +1629,7 @@ func gatherPerfTableLockWaits(db *sql.DB, servtag string, acc telegraf.Accumulat
 		}
 		acc.AddFields("mysql_perf_schema", sqlLWSecTotalFields, sqlLWSecTotalTags)
 
-		externalLWSecTotalTags := copyTags(tags)
+		externalLWSecTotalTags := maps.Clone(tags)
 		externalLWSecTotalTags["perf_query"] = "external_lock_waits_seconds_total"
 		externalLWSecTotalFields := map[string]any{
 			"read":  timeReadExternal / picoSeconds,
@@ -1706,20 +1704,20 @@ func gatherPerfFileEventsStatuses(db *sql.DB, servtag string, acc telegraf.Accum
 		tags["event_name"] = eventName
 		fields := make(map[string]any)
 
-		miscTags := copyTags(tags)
+		miscTags := maps.Clone(tags)
 		miscTags["mode"] = "misc"
 		fields["file_events_total"] = countWrite
 		fields["file_events_seconds_total"] = sumTimerMisc / picoSeconds
 		acc.AddFields("mysql_perf_schema", fields, miscTags)
 
-		readTags := copyTags(tags)
+		readTags := maps.Clone(tags)
 		readTags["mode"] = "read"
 		fields["file_events_total"] = countRead
 		fields["file_events_seconds_total"] = sumTimerRead / picoSeconds
 		fields["file_events_bytes_totals"] = sumNumBytesRead
 		acc.AddFields("mysql_perf_schema", fields, readTags)
 
-		writeTags := copyTags(tags)
+		writeTags := maps.Clone(tags)
 		writeTags["mode"] = "write"
 		fields["file_events_total"] = countWrite
 		fields["file_events_seconds_total"] = sumTimerWrite / picoSeconds
@@ -1876,17 +1874,17 @@ func (m *Mysql) gatherSchemaForDB(db *sql.DB, database, servtag string, acc tele
 			acc.AddFields(newNamespace("info_schema", "table_rows"),
 				map[string]any{"value": tableRows}, tags)
 
-			dlTags := copyTags(tags)
+			dlTags := maps.Clone(tags)
 			dlTags["component"] = "data_length"
 			acc.AddFields(newNamespace("info_schema", "table_size", "data_length"),
 				map[string]any{"value": dataLength}, dlTags)
 
-			ilTags := copyTags(tags)
+			ilTags := maps.Clone(tags)
 			ilTags["component"] = "index_length"
 			acc.AddFields(newNamespace("info_schema", "table_size", "index_length"),
 				map[string]any{"value": indexLength}, ilTags)
 
-			dfTags := copyTags(tags)
+			dfTags := maps.Clone(tags)
 			dfTags["component"] = "data_free"
 			acc.AddFields(newNamespace("info_schema", "table_size", "data_free"),
 				map[string]any{"value": dataFree}, dfTags)
@@ -1904,7 +1902,7 @@ func (m *Mysql) gatherSchemaForDB(db *sql.DB, database, servtag string, acc tele
 				map[string]any{"data_free": dataFree}, tags)
 		}
 
-		versionTags := copyTags(tags)
+		versionTags := maps.Clone(tags)
 		versionTags["type"] = tableType
 		versionTags["engine"] = engine
 		versionTags["row_format"] = rowFormat
@@ -1978,12 +1976,6 @@ func findThreadState(rawCommand, rawState string) string {
 // newNamespace can be used to make a namespace
 func newNamespace(words ...string) string {
 	return strings.ReplaceAll(strings.Join(words, "_"), " ", "_")
-}
-
-func copyTags(in map[string]string) map[string]string {
-	out := make(map[string]string)
-	maps.Copy(out, in)
-	return out
 }
 
 func getDSNTag(dsn string) string {

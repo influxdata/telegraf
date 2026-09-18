@@ -202,7 +202,7 @@ func gatherFromHugepagePath(acc telegraf.Accumulator, measurement, path string, 
 			continue
 		}
 
-		tags := make(map[string]string)
+		tags := make(map[string]string, len(defaultTags)+1)
 		maps.Copy(tags, defaultTags)
 		tags["size_kb"] = hugepagesSize
 

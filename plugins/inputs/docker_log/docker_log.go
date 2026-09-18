@@ -139,8 +139,7 @@ func (d *DockerLogs) Stop() {
 
 func (d *DockerLogs) GetState() any {
 	d.lastRecordMtx.Lock()
-	recordOffsets := make(map[string]time.Time, len(d.lastRecord))
-	maps.Copy(recordOffsets, d.lastRecord)
+	recordOffsets := maps.Clone(d.lastRecord)
 	d.lastRecordMtx.Unlock()
 
 	return recordOffsets

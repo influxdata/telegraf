@@ -154,9 +154,10 @@ func (h *Handler) handleUpdates(acc telegraf.Accumulator, updates []*gnmi.Update
 		}
 
 		// Prepare tags from prefix
-		tags := make(map[string]string, len(headerTags))
+		pathTags := fullPath.tags(h.TagPathPrefix)
+		tags := make(map[string]string, len(headerTags)+len(pathTags))
 		maps.Copy(tags, headerTags)
-		maps.Copy(tags, fullPath.tags(h.TagPathPrefix))
+		maps.Copy(tags, pathTags)
 
 		// TODO: Handle each field individually to allow in-JSON tags
 		var tagUpdate bool

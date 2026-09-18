@@ -203,8 +203,7 @@ func (j *jolokiaAgent) fillCommon(o common.InputOptions) {
 	j.NameOverride = o.NameOverride
 	j.Alias = o.Alias
 	if len(o.Tags) > 0 {
-		j.Tags = make(map[string]string, len(o.Tags))
-		maps.Copy(j.Tags, o.Tags)
+		j.Tags = maps.Clone(o.Tags)
 	}
 
 	if len(o.NamePass) > 0 {
@@ -220,12 +219,10 @@ func (j *jolokiaAgent) fillCommon(o common.InputOptions) {
 		j.FieldExclude = append(j.FieldExclude, o.FieldExclude...)
 	}
 	if len(o.TagPassFilters) > 0 {
-		j.TagPassFilters = make(map[string][]string, len(o.TagPassFilters))
-		maps.Copy(j.TagPassFilters, o.TagPassFilters)
+		j.TagPassFilters = maps.Clone(o.TagPassFilters)
 	}
 	if len(o.TagDropFilters) > 0 {
-		j.TagDropFilters = make(map[string][]string, len(o.TagDropFilters))
-		maps.Copy(j.TagDropFilters, o.TagDropFilters)
+		j.TagDropFilters = maps.Clone(o.TagDropFilters)
 	}
 	if len(o.TagExclude) > 0 {
 		j.TagExclude = append(j.TagExclude, o.TagExclude...)

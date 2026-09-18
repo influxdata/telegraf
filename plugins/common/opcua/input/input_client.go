@@ -343,7 +343,7 @@ type NodeMetricMapping struct {
 
 // NewNodeMetricMapping builds a new NodeMetricMapping from the given argument
 func NewNodeMetricMapping(metricName string, node NodeSettings, groupTags map[string]string) (*NodeMetricMapping, error) {
-	mergedTags := make(map[string]string)
+	mergedTags := make(map[string]string, len(groupTags)+len(node.DefaultTags))
 	maps.Copy(mergedTags, groupTags)
 	maps.Copy(mergedTags, node.DefaultTags)
 

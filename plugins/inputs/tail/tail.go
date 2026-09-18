@@ -535,8 +535,7 @@ func (t *Tail) receiver(parser telegraf.Parser, tailer *tail.Tail) {
 
 func newTail() *Tail {
 	offsetsMutex.Lock()
-	offsetsCopy := make(map[string]int64, len(offsets))
-	maps.Copy(offsetsCopy, offsets)
+	offsetsCopy := maps.Clone(offsets)
 	offsetsMutex.Unlock()
 
 	return &Tail{

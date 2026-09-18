@@ -400,8 +400,7 @@ func (a *AMQPConsumer) declareQueue(channel *amqp.Channel) (*amqp.Queue, error) 
 		queueDurable = false
 	}
 
-	queueArgs := make(amqp.Table, len(a.QueueArguments))
-	maps.Copy(queueArgs, a.QueueArguments)
+	queueArgs := amqp.Table(maps.Clone(a.QueueArguments))
 
 	if a.QueuePassive {
 		queue, err = channel.QueueDeclarePassive(

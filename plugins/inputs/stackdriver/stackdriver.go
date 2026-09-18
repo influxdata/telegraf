@@ -426,9 +426,9 @@ func (s *Stackdriver) gatherTimeSeries(ctx context.Context, grouper *lockedSerie
 	}
 
 	for tsDesc := range tsRespChan {
-		tags := map[string]string{
-			"resource_type": tsDesc.Resource.Type,
-		}
+		// Set the type first so labels can override it
+		tags := make(map[string]string, len(tsDesc.Resource.Labels)+len(tsDesc.Metric.Labels)+1)
+		tags["resource_type"] = tsDesc.Resource.Type
 		maps.Copy(tags, tsDesc.Resource.Labels)
 		maps.Copy(tags, tsDesc.Metric.Labels)
 
