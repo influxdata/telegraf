@@ -63,7 +63,7 @@ func (conn *dpdkConnector) connect() (*initMessage, error) {
 }
 
 // Add metadata fields to data
-func (conn *dpdkConnector) addMetadataFields(metadataFields []string, data map[string]interface{}) {
+func (conn *dpdkConnector) addMetadataFields(metadataFields []string, data map[string]any) {
 	if conn.initMessage == nil {
 		return
 	}
@@ -145,7 +145,7 @@ func (conn *dpdkConnector) processCommand(acc telegraf.Accumulator, log telegraf
 		return
 	}
 
-	var parsedResponse map[string]interface{}
+	var parsedResponse map[string]any
 	err = json.Unmarshal(buf, &parsedResponse)
 	if err != nil {
 		acc.AddError(fmt.Errorf("failed to unmarshal json response from %q command: %w", commandWithParams, err))

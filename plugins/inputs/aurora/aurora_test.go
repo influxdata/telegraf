@@ -54,7 +54,7 @@ func TestAurora(t *testing.T) {
 				require.Len(t, acc.Metrics, 1)
 				acc.AssertContainsTaggedFields(t,
 					"aurora",
-					map[string]interface{}{
+					map[string]any{
 						"variable_scrape_events":               int64(2958),
 						"variable_scrape_events_per_sec":       1.0,
 						"variable_scrape_micros_per_event":     1484.0,

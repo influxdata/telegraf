@@ -78,7 +78,7 @@ type DCOS struct {
 type point struct {
 	tags   map[string]string
 	labels map[string]string
-	fields map[string]interface{}
+	fields map[string]any
 }
 
 func (*DCOS) SampleConfig() string {
@@ -214,7 +214,7 @@ func createPoints(m *metrics) []*point {
 			p = &point{}
 			p.tags = tags
 			p.labels = make(map[string]string)
-			p.fields = make(map[string]interface{})
+			p.fields = make(map[string]any)
 			points[seriesKey] = p
 		}
 

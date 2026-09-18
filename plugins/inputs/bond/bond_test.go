@@ -128,66 +128,66 @@ func TestGatherBondInterface(t *testing.T) {
 	bond := &Bond{}
 
 	require.NoError(t, bond.gatherBondInterface("bondAB", sampleTestAB, &acc))
-	acc.AssertContainsTaggedFields(t, "bond", map[string]interface{}{"active_slave": "eth2", "status": 1}, map[string]string{"bond": "bondAB"})
+	acc.AssertContainsTaggedFields(t, "bond", map[string]any{"active_slave": "eth2", "status": 1}, map[string]string{"bond": "bondAB"})
 	acc.AssertContainsTaggedFields(
 		t,
 		"bond_slave",
-		map[string]interface{}{"failures": 2, "status": 0},
+		map[string]any{"failures": 2, "status": 0},
 		map[string]string{"bond": "bondAB", "interface": "eth3"},
 	)
 	acc.AssertContainsTaggedFields(
 		t,
 		"bond_slave",
-		map[string]interface{}{"failures": 0, "status": 1},
+		map[string]any{"failures": 0, "status": 1},
 		map[string]string{"bond": "bondAB", "interface": "eth2"},
 	)
-	acc.AssertContainsTaggedFields(t, "bond_slave", map[string]interface{}{"count": 2}, map[string]string{"bond": "bondAB"})
+	acc.AssertContainsTaggedFields(t, "bond_slave", map[string]any{"count": 2}, map[string]string{"bond": "bondAB"})
 
 	acc = testutil.Accumulator{}
 	require.NoError(t, bond.gatherBondInterface("bondLACP", sampleTestLACP, &acc))
 	gatherSysDetails("bondLACP", sysFiles{ModeFile: sampleSysMode, SlaveFile: sampleSysSlaves, ADPortsFile: sampleSysAdPorts}, &acc)
-	acc.AssertContainsTaggedFields(t, "bond", map[string]interface{}{"status": 1}, map[string]string{"bond": "bondLACP"})
+	acc.AssertContainsTaggedFields(t, "bond", map[string]any{"status": 1}, map[string]string{"bond": "bondLACP"})
 	acc.AssertContainsTaggedFields(
 		t,
 		"bond_slave",
-		map[string]interface{}{"failures": 2, "status": 1, "actor_churned": 2, "partner_churned": 0, "total_churned": 2},
+		map[string]any{"failures": 2, "status": 1, "actor_churned": 2, "partner_churned": 0, "total_churned": 2},
 		map[string]string{"bond": "bondLACP", "interface": "eth0"},
 	)
 	acc.AssertContainsTaggedFields(
 		t,
 		"bond_slave",
-		map[string]interface{}{"failures": 1, "status": 1, "actor_churned": 0, "partner_churned": 0, "total_churned": 0},
+		map[string]any{"failures": 1, "status": 1, "actor_churned": 0, "partner_churned": 0, "total_churned": 0},
 		map[string]string{"bond": "bondLACP", "interface": "eth1"},
 	)
-	acc.AssertContainsTaggedFields(t, "bond_slave", map[string]interface{}{"count": 2}, map[string]string{"bond": "bondLACP"})
+	acc.AssertContainsTaggedFields(t, "bond_slave", map[string]any{"count": 2}, map[string]string{"bond": "bondLACP"})
 	acc.AssertContainsTaggedFields(
 		t,
 		"bond_sys",
-		map[string]interface{}{"slave_count": 2, "ad_port_count": 2},
+		map[string]any{"slave_count": 2, "ad_port_count": 2},
 		map[string]string{"bond": "bondLACP", "mode": "802.3ad"},
 	)
 
 	acc = testutil.Accumulator{}
 	require.NoError(t, bond.gatherBondInterface("bondLACPUpDown", sampleTestLACPFirstUpSecondDown, &acc))
 	gatherSysDetails("bondLACPUpDown", sysFiles{ModeFile: sampleSysMode, SlaveFile: sampleSysSlaves, ADPortsFile: sampleSysAdPorts}, &acc)
-	acc.AssertContainsTaggedFields(t, "bond", map[string]interface{}{"status": 1}, map[string]string{"bond": "bondLACPUpDown"})
+	acc.AssertContainsTaggedFields(t, "bond", map[string]any{"status": 1}, map[string]string{"bond": "bondLACPUpDown"})
 	acc.AssertContainsTaggedFields(
 		t,
 		"bond_slave",
-		map[string]interface{}{"failures": 2, "status": 1, "actor_churned": 2, "partner_churned": 0, "total_churned": 2},
+		map[string]any{"failures": 2, "status": 1, "actor_churned": 2, "partner_churned": 0, "total_churned": 2},
 		map[string]string{"bond": "bondLACPUpDown", "interface": "eth0"},
 	)
 	acc.AssertContainsTaggedFields(
 		t,
 		"bond_slave",
-		map[string]interface{}{"failures": 1, "status": 0, "actor_churned": 0, "partner_churned": 0, "total_churned": 0},
+		map[string]any{"failures": 1, "status": 0, "actor_churned": 0, "partner_churned": 0, "total_churned": 0},
 		map[string]string{"bond": "bondLACPUpDown", "interface": "eth1"},
 	)
-	acc.AssertContainsTaggedFields(t, "bond_slave", map[string]interface{}{"count": 2}, map[string]string{"bond": "bondLACPUpDown"})
+	acc.AssertContainsTaggedFields(t, "bond_slave", map[string]any{"count": 2}, map[string]string{"bond": "bondLACPUpDown"})
 	acc.AssertContainsTaggedFields(
 		t,
 		"bond_sys",
-		map[string]interface{}{"slave_count": 2, "ad_port_count": 2},
+		map[string]any{"slave_count": 2, "ad_port_count": 2},
 		map[string]string{"bond": "bondLACPUpDown", "mode": "802.3ad"},
 	)
 }

@@ -79,7 +79,7 @@ func (c *CPU) Gather(acc telegraf.Accumulator) error {
 
 		if c.CollectCPUTime {
 			// Add cpu time metrics
-			fieldsC := map[string]interface{}{
+			fieldsC := map[string]any{
 				"time_user":       cts.User,
 				"time_system":     cts.System,
 				"time_idle":       cts.Idle,
@@ -120,7 +120,7 @@ func (c *CPU) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 
-		fieldsG := map[string]interface{}{
+		fieldsG := map[string]any{
 			"usage_user":       100 * (cts.User - lastCts.User - (cts.Guest - lastCts.Guest)) / totalDelta,
 			"usage_system":     100 * (cts.System - lastCts.System) / totalDelta,
 			"usage_idle":       100 * (cts.Idle - lastCts.Idle) / totalDelta,
