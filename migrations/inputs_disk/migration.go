@@ -2,11 +2,11 @@ package inputs_disk
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/migrations"
 )
 
@@ -38,7 +38,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 			}
 		}
 		for _, dmp := range deprecatedMountpoints {
-			if !choice.Contains(dmp, mountpoints) {
+			if !slices.Contains(mountpoints, dmp) {
 				mountpoints = append(mountpoints, dmp)
 			}
 		}

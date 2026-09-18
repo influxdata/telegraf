@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -419,7 +420,7 @@ func (d *IntelDLB) checkAndAddDLBDevice() error {
 
 		// check if it is DLB device
 		trimmedDeviceID := strings.TrimSpace(string(fileData))
-		if !choice.Contains(trimmedDeviceID, d.DLBDeviceIDs) {
+		if !slices.Contains(d.DLBDeviceIDs, trimmedDeviceID) {
 			continue
 		}
 		deviceDir := filepath.Dir(path)
