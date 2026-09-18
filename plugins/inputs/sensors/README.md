@@ -1,17 +1,19 @@
-# LM Sensors Input Plugin
+# Sensors Input Plugin
 
-This plugin collects metrics from hardware sensors using
-[lm-sensors][lmsensors].
+This plugin collects metrics from hardware sensors: [lm-sensors][lmsensors] on
+Linux and the [OpenBSD sensors framework][openbsd_sensors] via
+`sysctl hw.sensors`.
 
 > [!NOTE]
-> This plugin requires the lm-sensors package to be installed on the system
-> and `sensors` to be executable from Telegraf.
+> On Linux this plugin requires the lm-sensors package to be installed and
+> `sensors` to be executable from Telegraf. On OpenBSD it requires `sysctl`.
 
 ⭐ Telegraf v0.10.1
 🏷️ hardware, system
-💻 linux
+💻 linux, openbsd
 
 [lmsensors]: https://en.wikipedia.org/wiki/Lm_sensors
+[openbsd_sensors]: https://man.openbsd.org/sysctl.2#HW_SENSORS
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -24,18 +26,32 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
-# Monitor sensors, requires lm-sensors package
-# This plugin ONLY supports Linux
+# Monitor hardware sensors
+# This plugin ONLY supports Linux and OpenBSD
 [[inputs.sensors]]
-  ## Remove numbers from field names.
+  ## (Linux only) Remove numbers from field names.
   ## If true, a field name like 'temp1_input' will be changed to 'temp_input'.
   # remove_numbers = true
+
+  ## (Linux only) Use legacy metric format with "chip" and "feature" tags.
+  ## If set to "false" the new "device", "sensor", and "type" tags are used.
+  # linux_legacy_tag_names = true
+
+  ## Filter devices by name, glob patterns are supported.
+  ## Matches the chip name on Linux and the sensor device on OpenBSD.
+  # devices = ["cpu*", "acpitz0"]
 
   ## Timeout is the maximum amount of time that the sensors command can run.
   # timeout = "5s"
 ```
 
+> [!IMPORTANT]
+> OpenBSD will always emit the new metric format with unified `device`,
+> `sensor`, and `type` tags
+
 ## Metrics
+
+### Linux with legacy tag names (default)
 
 Fields are created dynamically depending on the sensors. All fields are float.
 
@@ -46,9 +62,51 @@ Fields are created dynamically depending on the sensors. All fields are float.
   - fields:
     - depending on the available sensor information (float)
 
+### Linux with new tag names
+
+Same fields as with the legacy names. Tags use the unified names; `type` is the
+feature name with trailing digits removed (e.g. `temp1` -> `temp`).
+
+- sensors:
+  - tags:
+    - device (formerly `chip`)
+    - sensor (formerly `feature`)
+    - type
+  - fields:
+    - depending on the available sensor information (float)
+
+### OpenBSD
+
+One metric is emitted per sensor. Values are reported in the natural unit of
+the sensor type as printed by `sysctl`, and that unit is kept as a tag.
+
+- sensors
+  - tags:
+    - device (sensor device, e.g. `cpu0`, `acpitz0` or `softraid0`)
+    - sensor (sensor name, e.g. `temp0` or `drive1`)
+    - type (sensor type, e.g. `temp`, `frequency` or `drive`)
+    - unit (unit of `value`, e.g. `degC`, `Hz`, `RPM`, `VDC` or `%`;
+      omitted for `drive` and `indicator` sensors and for generic
+      integers, which have no unit)
+    - description (sensor description, e.g. `zone temperature`;
+      omitted when absent)
+  - fields:
+    - value (sensor value; `indicator` sensors report `On` as 1 and
+      `Off` as 0; `drive` sensors report the kernel `SENSOR_DRIVE_*`
+      enum, e.g. `online` is 4 and `failed` is 9; omitted when the
+      kernel reports the value as unknown; `float`)
+    - state (human readable value of `drive` and `indicator` sensors,
+      e.g. `online`, `failed`, `On` or `Off`; `string`)
+    - status (sensor status, one of `OK`, `WARNING`, `CRITICAL` or
+      `UNKNOWN`; omitted when the sensor does not report a status; `string`)
+    - status_code (numeric form of `status`, matching OpenBSD
+      `SENSOR_S_*`: OK=1, WARNING=2, CRITICAL=3, UNKNOWN=4; emitted
+      whenever `status` is, since Prometheus drops string-only
+      fields; `float`)
+
 ## Example Output
 
-### Default
+### Linux legacy tag names example
 
 ```text
 sensors,chip=power_meter-acpi-0,feature=power1 power_average=0,power_average_interval=300 1466751326000000000
@@ -58,7 +116,7 @@ sensors,chip=k10temp-pci-00d3,feature=temp1 temp_input=27.5,temp_max=70 14667513
 sensors,chip=k10temp-pci-00db,feature=temp1 temp_crit=70,temp_crit_hyst=65,temp_input=29.5,temp_max=70 1466751326000000000
 ```
 
-### With remove_numbers=false
+### Linux with remove_numbers=false
 
 ```text
 sensors,chip=power_meter-acpi-0,feature=power1 power1_average=0,power1_average_interval=300 1466753424000000000
@@ -66,4 +124,24 @@ sensors,chip=k10temp-pci-00c3,feature=temp1 temp1_crit=70,temp1_crit_hyst=65,tem
 sensors,chip=k10temp-pci-00cb,feature=temp1 temp1_input=29,temp1_max=70 1466753424000000000
 sensors,chip=k10temp-pci-00d3,feature=temp1 temp1_input=29.5,temp1_max=70 1466753424000000000
 sensors,chip=k10temp-pci-00db,feature=temp1 temp1_crit=70,temp1_crit_hyst=65,temp1_input=30,temp1_max=70 1466753424000000000
+```
+
+### Linux new tag names example
+
+```text
+sensors,device=k10temp-pci-00c3,sensor=temp1,type=temp temp_crit=70,temp_input=29,temp_max=70 1466751326000000000
+sensors,device=power_meter-acpi-0,sensor=power1,type=power power_average=0,power_average_interval=300 1466751326000000000
+```
+
+### OpenBSD example
+
+```text
+sensors,device=cpu0,sensor=temp0,type=temp,unit=degC value=36 1758122408000000000
+sensors,device=cpu0,sensor=frequency0,type=frequency,unit=Hz value=1000000000 1758122408000000000
+sensors,description=zone\ temperature,device=acpitz0,sensor=temp0,type=temp,unit=degC value=27.8 1758122408000000000
+sensors,description=VCore,device=lm1,sensor=volt0,type=volt,unit=VDC value=1.34 1758122408000000000
+sensors,description=sd3,device=softraid0,sensor=drive0,type=drive state="degraded",status="WARNING",status_code=2,value=10 1758122408000000000
+sensors,description=Signal,device=nmea0,sensor=indicator0,type=indicator state="On",status="OK",status_code=1,value=1 1758122408000000000
+sensors,description=GPS\ differential,device=nmea0,sensor=timedelta0,type=timedelta,unit=secs status="OK",status_code=1,value=-0.000006 1758122408000000000
+sensors,device=foo0,sensor=temp1,type=temp status="UNKNOWN",status_code=4 1758122408000000000
 ```

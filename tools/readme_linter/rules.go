@@ -71,6 +71,7 @@ var (
 		"freebsd",
 		"linux",
 		"macos",
+		"openbsd",
 		"solaris",
 		"windows",
 	}
