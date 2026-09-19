@@ -15,7 +15,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs/influxdb"
 	"github.com/influxdata/telegraf/selfstat"
 	"github.com/influxdata/telegraf/testutil"
@@ -144,10 +143,8 @@ func TestConnectHTTPConfig(t *testing.T) {
 		HTTPHeaders: map[string]string{
 			"x": "y",
 		},
-		ContentEncoding: "gzip",
-		ClientConfig: tls.ClientConfig{
-			InsecureSkipVerify: true,
-		},
+		ContentEncoding:    "gzip",
+		InsecureSkipVerify: true,
 
 		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
 			actual = config
@@ -199,11 +196,9 @@ func TestWriteRecreateDatabaseIfDatabaseNotFound(t *testing.T) {
 				},
 				WriteF: func() error {
 					return &influxdb.DatabaseNotFoundError{
-						APIError: influxdb.APIError{
-							StatusCode:  http.StatusNotFound,
-							Title:       "404 Not Found",
-							Description: `database not found "telegraf"`,
-						},
+						StatusCode:  http.StatusNotFound,
+						Title:       "404 Not Found",
+						Description: `database not found "telegraf"`,
 					}
 				},
 				URLF: func() string {

@@ -23,7 +23,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -294,15 +293,15 @@ func TestConnectInvalidProxy(t *testing.T) {
 			name: "grpc",
 			plugin: &OpenTelemetry{
 				ServiceAddress: "localhost:4317",
-				TCPProxy:       proxy.TCPProxy{UseProxy: true, ProxyURL: "://invalid"},
-				Log:            testutil.Logger{},
+				UseProxy:       true, ProxyURL: "://invalid",
+				Log: testutil.Logger{},
 			},
 		},
 		{
 			name: "http",
 			plugin: &OpenTelemetry{
 				ServiceAddress: "http://localhost:4318",
-				HTTPProxy:      proxy.HTTPProxy{HTTPProxyURL: "://invalid"},
+				HTTPProxyURL:   "://invalid",
 				Log:            testutil.Logger{},
 			},
 		},

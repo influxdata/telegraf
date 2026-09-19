@@ -230,10 +230,8 @@ func (p *Postgresql) accRow(acc telegraf.Accumulator, row scanner, columns []str
 func init() {
 	inputs.Add("postgresql_extensible", func() telegraf.Input {
 		return &Postgresql{
-			Config: postgresql.Config{
-				MaxIdle: 1,
-				MaxOpen: 1,
-			},
+			MaxIdle:            1,
+			MaxOpen:            1,
 			PreparedStatements: true,
 		}
 	})

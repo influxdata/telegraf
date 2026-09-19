@@ -273,9 +273,7 @@ func mapHealthStatusToCode(s string) int {
 
 func newKibana() *Kibana {
 	return &Kibana{
-		HTTPClientConfig: common_http.HTTPClientConfig{
-			Timeout: config.Duration(5 * time.Second),
-		},
+		Timeout: config.Duration(5 * time.Second),
 	}
 }
 

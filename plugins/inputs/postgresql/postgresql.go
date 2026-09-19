@@ -156,10 +156,8 @@ func (p *Postgresql) accRow(row *sql.Rows, acc telegraf.Accumulator, columns []s
 func init() {
 	inputs.Add("postgresql", func() telegraf.Input {
 		return &Postgresql{
-			Config: postgresql.Config{
-				MaxIdle: 1,
-				MaxOpen: 1,
-			},
+			MaxIdle:            1,
+			MaxOpen:            1,
 			PreparedStatements: true,
 		}
 	})
