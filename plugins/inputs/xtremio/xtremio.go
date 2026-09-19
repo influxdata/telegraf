@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -53,7 +53,7 @@ func (xio *XtremIO) Init() error {
 	}
 
 	for _, collector := range xio.Collectors {
-		if !choice.Contains(collector, availableCollectors) {
+		if !slices.Contains(availableCollectors, collector) {
 			return fmt.Errorf("specified collector %q isn't supported", collector)
 		}
 	}

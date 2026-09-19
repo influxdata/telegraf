@@ -27,7 +27,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/choice"
 	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -206,7 +205,7 @@ func (h *HTTPListenerV2) Stop() {
 func (h *HTTPListenerV2) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	handler := h.serveWrite
 
-	if !choice.Contains(req.URL.Path, h.Paths) {
+	if !slices.Contains(h.Paths, req.URL.Path) {
 		handler = http.NotFound
 	}
 

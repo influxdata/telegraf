@@ -15,13 +15,12 @@ import (
 	"os/exec"
 	"regexp"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 	"unicode"
-
-	"github.com/influxdata/telegraf/internal/choice"
 )
 
 const alphanum string = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -366,7 +365,7 @@ func sanitizeTimestamp(timestamp string, decimalSeparator []string) string {
 	// Remove thousand-separators that are not used for decimal separation
 	sanitized := timestamp
 	for _, s := range []string{" ", ",", "."} {
-		if !choice.Contains(s, decimalSeparator) {
+		if !slices.Contains(decimalSeparator, s) {
 			sanitized = strings.ReplaceAll(sanitized, s, "")
 		}
 	}

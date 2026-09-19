@@ -8,8 +8,6 @@ import (
 
 	"github.com/99designs/keyring"
 	"github.com/stretchr/testify/require"
-
-	"github.com/influxdata/telegraf/internal/choice"
 )
 
 // In docker, access to the keyring is disabled by default see
@@ -57,7 +55,7 @@ func TestResolverInvalid(t *testing.T) {
 	testKey := "foobar secret key"
 	keys, err := plugin.List()
 	require.NoError(t, err)
-	for choice.Contains(testKey, keys) {
+	for slices.Contains(keys, testKey) {
 		testKey += "x"
 	}
 	// Get the resolver
@@ -83,7 +81,7 @@ func TestGetNonExisting(t *testing.T) {
 	testKey := "foobar secret key"
 	keys, err := plugin.List()
 	require.NoError(t, err)
-	for choice.Contains(testKey, keys) {
+	for slices.Contains(keys, testKey) {
 		testKey += "x"
 	}
 	_, err = plugin.Get(testKey)

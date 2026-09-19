@@ -2,6 +2,7 @@ package gnmi
 
 import (
 	"encoding/json"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -12,7 +13,6 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/gnmi/extensions/jnpr_gnmi_extention"
 	"github.com/influxdata/telegraf/plugins/common/yangmodel"
@@ -98,7 +98,7 @@ func (h *Handler) handleUpdateMetadata(
 		case eidJuniperTelemetryHeader:
 			// Juniper Header extension
 			// Decode it only if user requested it
-			if choice.Contains("juniper_header", h.VendorExt) {
+			if slices.Contains(h.VendorExt, "juniper_header") {
 				juniperHeader := &jnpr_gnmi_extention.GnmiJuniperTelemetryHeaderExtension{}
 				if err := proto.Unmarshal(currentExt, juniperHeader); err != nil {
 					h.log.Errorf("unmarshal gnmi Juniper Header extension failed: %v", err)
