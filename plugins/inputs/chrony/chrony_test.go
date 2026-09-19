@@ -1392,14 +1392,12 @@ func TestRaceDetector(t *testing.T) {
 	errors := make(chan error, iterations)
 
 	for range iterations {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			var acc testutil.Accumulator
 			if err := plugin.Gather(&acc); err != nil {
 				errors <- err
 			}
-		}()
+		})
 	}
 
 	wg.Wait()

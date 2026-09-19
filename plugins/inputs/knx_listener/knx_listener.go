@@ -116,13 +116,11 @@ func (kl *KNXListener) Start(acc telegraf.Accumulator) error {
 	kl.connected.Store(true)
 
 	// Listen to the KNX bus
-	kl.wg.Add(1)
-	go func() {
-		defer kl.wg.Done()
+	kl.wg.Go(func() {
 		kl.listen(acc)
 		kl.connected.Store(false)
 		acc.AddError(errors.New("disconnected from bus"))
-	}()
+	})
 
 	return nil
 }

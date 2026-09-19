@@ -80,11 +80,9 @@ func (s *Suricata) Start(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	s.cancel = cancel
 	s.inputListener.SetUnlinkOnClose(true)
-	s.wg.Add(1)
-	go func() {
-		defer s.wg.Done()
+	s.wg.Go(func() {
 		go s.handleServerConnection(ctx, acc)
-	}()
+	})
 	return nil
 }
 

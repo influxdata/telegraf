@@ -119,11 +119,9 @@ func (e *EventHub) Start(acc telegraf.Accumulator) error {
 	ctx, e.cancel = context.WithCancel(context.Background())
 
 	// Start tracking
-	e.wg.Add(1)
-	go func() {
-		defer e.wg.Done()
+	e.wg.Go(func() {
 		e.startTracking(ctx, acc)
-	}()
+	})
 
 	// Configure receiver options
 	receiveOpts := e.configureReceiver()

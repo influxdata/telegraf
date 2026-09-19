@@ -78,11 +78,9 @@ func (d *Disque) Gather(acc telegraf.Accumulator) error {
 			u.Host = serv
 			u.Path = ""
 		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			acc.AddError(d.gatherServer(u, acc))
-		}()
+		})
 	}
 
 	wg.Wait()
