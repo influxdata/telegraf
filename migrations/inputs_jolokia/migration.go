@@ -2,6 +2,7 @@ package inputs_jolokia
 
 import (
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/influxdata/toml"
@@ -253,9 +254,7 @@ func (j *jolokiaAgent) fillCommon(o common.InputOptions) {
 		if j.Tags == nil {
 			j.Tags = make(map[string]string, len(o.Tags))
 		}
-		for k, v := range o.Tags {
-			j.Tags[k] = v
-		}
+		maps.Copy(j.Tags, o.Tags)
 	}
 
 	if len(o.NamePass) > 0 {
@@ -271,16 +270,10 @@ func (j *jolokiaAgent) fillCommon(o common.InputOptions) {
 		j.FieldExclude = append(j.FieldExclude, o.FieldExclude...)
 	}
 	if len(o.TagPassFilters) > 0 {
-		j.TagPassFilters = make(map[string][]string, len(o.TagPassFilters))
-		for k, v := range o.TagPassFilters {
-			j.TagPassFilters[k] = v
-		}
+		j.TagPassFilters = maps.Clone(o.TagPassFilters)
 	}
 	if len(o.TagDropFilters) > 0 {
-		j.TagDropFilters = make(map[string][]string, len(o.TagDropFilters))
-		for k, v := range o.TagDropFilters {
-			j.TagDropFilters[k] = v
-		}
+		j.TagDropFilters = maps.Clone(o.TagDropFilters)
 	}
 	if len(o.TagExclude) > 0 {
 		j.TagExclude = append(j.TagExclude, o.TagExclude...)
@@ -308,9 +301,7 @@ func (j *jolokiaProxy) fillCommon(o common.InputOptions) {
 		if j.Tags == nil {
 			j.Tags = make(map[string]string, len(o.Tags))
 		}
-		for k, v := range o.Tags {
-			j.Tags[k] = v
-		}
+		maps.Copy(j.Tags, o.Tags)
 	}
 
 	if len(o.NamePass) > 0 {
@@ -326,16 +317,10 @@ func (j *jolokiaProxy) fillCommon(o common.InputOptions) {
 		j.FieldExclude = append(j.FieldExclude, o.FieldExclude...)
 	}
 	if len(o.TagPassFilters) > 0 {
-		j.TagPassFilters = make(map[string][]string, len(o.TagPassFilters))
-		for k, v := range o.TagPassFilters {
-			j.TagPassFilters[k] = v
-		}
+		j.TagPassFilters = maps.Clone(o.TagPassFilters)
 	}
 	if len(o.TagDropFilters) > 0 {
-		j.TagDropFilters = make(map[string][]string, len(o.TagDropFilters))
-		for k, v := range o.TagDropFilters {
-			j.TagDropFilters[k] = v
-		}
+		j.TagDropFilters = maps.Clone(o.TagDropFilters)
 	}
 	if len(o.TagExclude) > 0 {
 		j.TagExclude = append(j.TagExclude, o.TagExclude...)

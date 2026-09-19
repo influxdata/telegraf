@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"fmt"
+	"maps"
 	"reflect"
 	"sync"
 	"sync/atomic"
@@ -110,14 +111,10 @@ func (a *Accumulator) addMeasurement(
 	}
 
 	tagsCopy := make(map[string]string, len(tags))
-	for k, v := range tags {
-		tagsCopy[k] = v
-	}
+	maps.Copy(tagsCopy, tags)
 
 	fieldsCopy := make(map[string]any, len(fields))
-	for k, v := range fields {
-		fieldsCopy[k] = v
-	}
+	maps.Copy(fieldsCopy, fields)
 
 	var t time.Time
 	if len(timestamp) > 0 {

@@ -8,6 +8,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -201,10 +202,8 @@ func gatherFromHugepagePath(acc telegraf.Accumulator, measurement, path string, 
 			continue
 		}
 
-		tags := make(map[string]string)
-		for key, value := range defaultTags {
-			tags[key] = value
-		}
+		tags := make(map[string]string, len(defaultTags)+1)
+		maps.Copy(tags, defaultTags)
 		tags["size_kb"] = hugepagesSize
 
 		acc.AddFields(measurement, metrics, tags)

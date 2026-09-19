@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -213,9 +214,7 @@ func (p *Procstat) gatherOld(acc telegraf.Accumulator) error {
 			"result":     "lookup_error",
 		}
 		for _, pidTag := range results {
-			for key, value := range pidTag.Tags {
-				tags[key] = value
-			}
+			maps.Copy(tags, pidTag.Tags)
 		}
 		acc.AddFields("procstat_lookup", fields, tags, now)
 		return err
@@ -299,9 +298,7 @@ func (p *Procstat) gatherOld(acc telegraf.Accumulator) error {
 		"result":     "success",
 	}
 	for _, pidTag := range results {
-		for key, value := range pidTag.Tags {
-			tags[key] = value
-		}
+		maps.Copy(tags, pidTag.Tags)
 	}
 	if len(p.SupervisorUnits) > 0 {
 		tags["supervisor_unit"] = strings.Join(p.SupervisorUnits, ";")
@@ -377,9 +374,7 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 					// We've found a process that was not recorded before so add it
 					// to the list of processes
 					tags := make(map[string]string, len(g.tags)+2)
-					for k, v := range g.tags {
-						tags[k] = v
-					}
+					maps.Copy(tags, g.tags)
 					if p.ProcessName != "" {
 						tags["process_name"] = p.ProcessName
 					}

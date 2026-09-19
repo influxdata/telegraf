@@ -3,6 +3,7 @@ package histogram
 
 import (
 	_ "embed"
+	"maps"
 	"slices"
 	"sort"
 	"strconv"
@@ -138,7 +139,7 @@ func (h *Histogram) Push(acc telegraf.Accumulator) {
 		aggregate.updated = false
 		h.cache[id] = aggregate
 		for field, counts := range aggregate.histogramCollection {
-			h.groupFieldsByBuckets(&metricsWithGroupedFields, aggregate.name, field, copyTags(aggregate.tags), counts)
+			h.groupFieldsByBuckets(&metricsWithGroupedFields, aggregate.name, field, maps.Clone(aggregate.tags), counts)
 		}
 	}
 
@@ -180,7 +181,7 @@ func (h *Histogram) groupFieldsByBuckets(
 		}
 
 		sum += count
-		groupField(metricsWithGroupedFields, name, field, sum, copyTags(tags))
+		groupField(metricsWithGroupedFields, name, field, sum, maps.Clone(tags))
 	}
 }
 
@@ -262,16 +263,6 @@ func convert(in any) (float64, bool) {
 	default:
 		return 0, false
 	}
-}
-
-// copyTags copies tags
-func copyTags(tags map[string]string) map[string]string {
-	copiedTags := make(map[string]string, len(tags))
-	for key, val := range tags {
-		copiedTags[key] = val
-	}
-
-	return copiedTags
 }
 
 // isTagsIdentical checks the identity of two list of tags

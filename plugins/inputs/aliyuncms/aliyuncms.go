@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 	"sync"
@@ -311,9 +312,7 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 								continue NextDataPoint
 							}
 
-							for k, v := range metric.discoveryTags[value.(string)] {
-								tags[k] = v
-							}
+							maps.Copy(tags, metric.discoveryTags[value.(string)])
 						}
 					case "userId":
 						tags[key] = value.(string)

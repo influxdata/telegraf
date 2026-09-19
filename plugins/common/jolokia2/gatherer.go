@@ -2,6 +2,7 @@ package jolokia2
 
 import (
 	"fmt"
+	"maps"
 	"sort"
 	"strings"
 
@@ -160,9 +161,7 @@ func compactPoints(points []point) []point {
 			}
 
 			keepPoint = false
-			for key, val := range sourcePoint.Fields {
-				compactPoint.Fields[key] = val
-			}
+			maps.Copy(compactPoint.Fields, sourcePoint.Fields)
 		}
 
 		if keepPoint {

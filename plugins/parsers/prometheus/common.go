@@ -1,6 +1,8 @@
 package prometheus
 
 import (
+	"maps"
+
 	dto "github.com/prometheus/client_model/go"
 
 	"github.com/influxdata/telegraf"
@@ -23,9 +25,7 @@ func mapValueType(mt dto.MetricType) telegraf.ValueType {
 
 func getTagsFromLabels(m *dto.Metric, defaultTags map[string]string) map[string]string {
 	result := make(map[string]string, len(defaultTags)+len(m.Label))
-	for key, value := range defaultTags {
-		result[key] = value
-	}
+	maps.Copy(result, defaultTags)
 
 	for _, label := range m.Label {
 		if v := label.GetValue(); v != "" {
