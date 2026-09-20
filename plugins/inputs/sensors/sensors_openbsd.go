@@ -27,22 +27,6 @@ var sensorStatuses = map[string]float64{
 	"UNKNOWN":  4,
 }
 
-// Drive state strings as printed by print_sensor() and the matching
-// SENSOR_DRIVE_* values from sys/sys/sensors.h. value is emitted as well
-// as state because Prometheus cannot store string-only metrics.
-var driveStates = map[string]float64{
-	"empty":         1,
-	"ready":         2,
-	"powering up":   3,
-	"online":        4,
-	"idle":          5,
-	"active":        6,
-	"rebuilding":    7,
-	"powering down": 8,
-	"failed":        9,
-	"degraded":      10,
-}
-
 func (s *Sensors) Init() error {
 	if s.path == "" {
 		path, err := exec.LookPath("sysctl")
@@ -160,10 +144,33 @@ func parseLine(line string) (map[string]string, map[string]any, error) {
 	fields := make(map[string]any, 4)
 	switch sensorType {
 	case "drive":
-		// Includes "unknown", so a drive that cannot be read stays visible
+		// Drive state strings as printed by print_sensor() and the matching
+		// SENSOR_DRIVE_* values from sys/sys/sensors.h. value is emitted as
+		// well as state because Prometheus cannot store string-only metrics.
+		// "unknown" is kept as a state, so a drive that cannot be read stays
+		// visible.
 		fields["state"] = payload
-		if v, ok := driveStates[payload]; ok {
-			fields["value"] = v
+		switch payload {
+		case "empty":
+			fields["value"] = float64(1)
+		case "ready":
+			fields["value"] = float64(2)
+		case "powering up":
+			fields["value"] = float64(3)
+		case "online":
+			fields["value"] = float64(4)
+		case "idle":
+			fields["value"] = float64(5)
+		case "active":
+			fields["value"] = float64(6)
+		case "rebuilding":
+			fields["value"] = float64(7)
+		case "powering down":
+			fields["value"] = float64(8)
+		case "failed":
+			fields["value"] = float64(9)
+		case "degraded":
+			fields["value"] = float64(10)
 		}
 	case "indicator":
 		// Boolean indicator printed as "On" or "Off"
