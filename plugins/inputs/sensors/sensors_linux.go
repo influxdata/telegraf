@@ -61,7 +61,7 @@ func (s *Sensors) Gather(acc telegraf.Accumulator) error {
 // and parses the output to add it to the telegraf.Accumulator.
 func (s *Sensors) parse(acc telegraf.Accumulator) error {
 	tags := make(map[string]string)
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	chip := ""
 	skip := false
 	cmd := execCommand(s.path, "-A", "-u")
@@ -69,8 +69,7 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("failed to run command %q: %w - %s", strings.Join(cmd.Args, " "), err, string(out))
 	}
-	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
-	for _, line := range lines {
+	for line := range strings.SplitSeq(strings.TrimSpace(string(out)), "\n") {
 		if len(line) == 0 {
 			if !skip {
 				acc.AddFields("sensors", fields, tags)
@@ -78,7 +77,7 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 			chip = ""
 			skip = false
 			tags = make(map[string]string)
-			fields = make(map[string]interface{})
+			fields = make(map[string]any)
 			continue
 		}
 		if len(chip) == 0 {
@@ -92,7 +91,7 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 			if len(tags) > 1 && !skip {
 				acc.AddFields("sensors", fields, tags)
 			}
-			fields = make(map[string]interface{})
+			fields = make(map[string]any)
 			tags = s.linuxTags(chip, strings.TrimRight(snake(line), ":"))
 		} else {
 			splitted := strings.Split(line, ":")
