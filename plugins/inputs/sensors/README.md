@@ -91,10 +91,10 @@ the sensor type as printed by `sysctl`, and that unit is kept as a tag.
     - description (sensor description, e.g. `zone temperature`;
       omitted when absent)
   - fields:
-    - value (sensor value; `indicator` sensors report `On` as 1 and
-      `Off` as 0; `drive` sensors report the kernel `SENSOR_DRIVE_*`
+    - value (sensor value; `float`, except for `indicator` sensors which
+      report a `bool`; `drive` sensors report the kernel `SENSOR_DRIVE_*`
       enum, e.g. `online` is 4 and `failed` is 9; omitted when the
-      kernel reports the value as unknown; `float`)
+      kernel reports the value as unknown)
     - state (human readable value of `drive` and `indicator` sensors,
       e.g. `online`, `failed`, `On` or `Off`; `string`)
     - status (sensor status, one of `OK`, `WARNING`, `CRITICAL` or
@@ -141,7 +141,7 @@ sensors,device=cpu0,sensor=frequency0,type=frequency,unit=Hz value=1000000000 17
 sensors,description=zone\ temperature,device=acpitz0,sensor=temp0,type=temp,unit=degC value=27.8 1758122408000000000
 sensors,description=VCore,device=lm1,sensor=volt0,type=volt,unit=VDC value=1.34 1758122408000000000
 sensors,description=sd3,device=softraid0,sensor=drive0,type=drive state="degraded",status="WARNING",status_code=2,value=10 1758122408000000000
-sensors,description=Signal,device=nmea0,sensor=indicator0,type=indicator state="On",status="OK",status_code=1,value=1 1758122408000000000
+sensors,description=Signal,device=nmea0,sensor=indicator0,type=indicator state="On",status="OK",status_code=1,value=true 1758122408000000000
 sensors,description=GPS\ differential,device=nmea0,sensor=timedelta0,type=timedelta,unit=secs status="OK",status_code=1,value=-0.000006 1758122408000000000
 sensors,device=foo0,sensor=temp1,type=temp status="UNKNOWN",status_code=4 1758122408000000000
 ```

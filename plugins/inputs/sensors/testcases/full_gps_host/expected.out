@@ -9,7 +9,7 @@ sensors,device=pchtemp0,sensor=temp0,type=temp,unit=degC value=35
 sensors,description=sd2,device=softraid0,sensor=drive0,type=drive state="online",status="OK",status_code=1,value=4
 sensors,description=sd3,device=softraid0,sensor=drive1,type=drive state="online",status="OK",status_code=1,value=4
 sensors,description=sd4,device=softraid0,sensor=drive2,type=drive state="online",status="OK",status_code=1,value=4
-sensors,description=Signal,device=nmea0,sensor=indicator0,type=indicator state="On",status="OK",status_code=1,value=1
+sensors,description=Signal,device=nmea0,sensor=indicator0,type=indicator state="On",status="OK",status_code=1,value=true
 sensors,description=GPS\ differential,device=nmea0,sensor=timedelta0,type=timedelta,unit=secs status="OK",status_code=1,value=-0.000006
 sensors,description=Latitude,device=nmea0,sensor=angle0,type=angle,unit=degrees status="OK",status_code=1,value=51.4779
 sensors,description=Longitude,device=nmea0,sensor=angle1,type=angle,unit=degrees status="OK",status_code=1,value=-0.0015

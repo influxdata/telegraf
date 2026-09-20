@@ -177,9 +177,9 @@ func parseLine(line string) (map[string]string, map[string]any, error) {
 		fields["state"] = payload
 		switch payload {
 		case "On":
-			fields["value"] = float64(1)
+			fields["value"] = true
 		case "Off":
-			fields["value"] = float64(0)
+			fields["value"] = false
 		}
 	default:
 		if payload != "unknown" {
