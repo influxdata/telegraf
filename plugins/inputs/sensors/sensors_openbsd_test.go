@@ -15,9 +15,6 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-// mockOutputEnv names the file the mock sysctl process prints, see TestMain.
-const mockOutputEnv = "TELEGRAF_SENSORS_MOCK_OUTPUT"
-
 func TestCases(t *testing.T) {
 	// The test binary itself stands in for sysctl, see TestMain
 	exe, err := os.Executable()
@@ -62,7 +59,7 @@ func TestCases(t *testing.T) {
 			require.NoError(t, plugin.Init())
 
 			// Replace sysctl by a mock process printing the testcase input
-			t.Setenv(mockOutputEnv, inputFilename)
+			t.Setenv("TELEGRAF_SENSORS_MOCK_OUTPUT", inputFilename)
 			plugin.path = exe
 
 			var acc testutil.Accumulator
@@ -80,11 +77,11 @@ func TestCases(t *testing.T) {
 	}
 }
 
-// TestMain lets the test executable stand in for sysctl. When the mock output
-// environment variable is set the process prints the file it names instead of
-// running the tests, so Gather exercises the real command path.
+// TestMain lets the test executable stand in for sysctl. When
+// TELEGRAF_SENSORS_MOCK_OUTPUT is set the process prints the file it names
+// instead of running the tests, so Gather exercises the real command path.
 func TestMain(m *testing.M) {
-	output := os.Getenv(mockOutputEnv)
+	output := os.Getenv("TELEGRAF_SENSORS_MOCK_OUTPUT")
 	if output == "" {
 		os.Exit(m.Run())
 	}
