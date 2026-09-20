@@ -7,9 +7,11 @@ import (
 	"os"
 	"os/exec"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -17,7 +19,7 @@ func TestGatherDefault(t *testing.T) {
 	s := Sensors{
 		RemoveNumbers:       true,
 		LinuxLegacyTagNames: true,
-		Timeout:             defaultTimeout,
+		Timeout:             config.Duration(5 * time.Second),
 		path:                "sensors",
 	}
 	// overwriting exec commands with mock commands
@@ -157,7 +159,7 @@ func TestGatherNewTagNames(t *testing.T) {
 	s := Sensors{
 		RemoveNumbers:       true,
 		LinuxLegacyTagNames: false,
-		Timeout:             defaultTimeout,
+		Timeout:             config.Duration(5 * time.Second),
 		path:                "sensors",
 	}
 	execCommand = fakeExecCommand
@@ -230,7 +232,7 @@ func TestGatherDeviceFilter(t *testing.T) {
 		RemoveNumbers:       true,
 		LinuxLegacyTagNames: true,
 		Devices:             []string{"coretemp-*", "atk0110-acpi-0"},
-		Timeout:             defaultTimeout,
+		Timeout:             config.Duration(5 * time.Second),
 		path:                "sensors",
 	}
 	execCommand = fakeExecCommand
@@ -255,7 +257,7 @@ func TestGatherNotRemoveNumbers(t *testing.T) {
 	s := Sensors{
 		RemoveNumbers:       false,
 		LinuxLegacyTagNames: true,
-		Timeout:             defaultTimeout,
+		Timeout:             config.Duration(5 * time.Second),
 		path:                "sensors",
 	}
 	// overwriting exec commands with mock commands

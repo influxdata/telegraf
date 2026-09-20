@@ -17,8 +17,6 @@ import (
 	"github.com/influxdata/telegraf/internal"
 )
 
-const cmd = "sysctl"
-
 // Sensor status strings as printed by print_sensor() in OpenBSD's
 // sbin/sysctl/sysctl.c; sensors with an unspecified status omit it.
 // Numeric codes match enum sensor_status (SENSOR_S_OK = 1, ...).
@@ -47,9 +45,9 @@ var driveStates = map[string]float64{
 
 func (s *Sensors) Init() error {
 	if s.path == "" {
-		path, err := exec.LookPath(cmd)
+		path, err := exec.LookPath("sysctl")
 		if err != nil {
-			return fmt.Errorf("looking up %q failed: %w", cmd, err)
+			return fmt.Errorf("looking up \"sysctl\" failed: %w", err)
 		}
 		s.path = path
 	}
@@ -63,11 +61,6 @@ func (s *Sensors) Init() error {
 	return nil
 }
 
-// Gather forks the command:
-//
-//	sysctl hw.sensors
-//
-// and parses the output to add it to the telegraf.Accumulator.
 func (s *Sensors) Gather(acc telegraf.Accumulator) error {
 	cmd := exec.Command(s.path, "hw.sensors")
 	out, err := internal.StdOutputTimeout(cmd, time.Duration(s.Timeout))

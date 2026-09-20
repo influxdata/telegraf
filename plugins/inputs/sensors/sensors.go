@@ -14,8 +14,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-var defaultTimeout = config.Duration(5 * time.Second)
-
 type Sensors struct {
 	RemoveNumbers       bool            `toml:"remove_numbers"`
 	LinuxLegacyTagNames bool            `toml:"linux_legacy_tag_names"`
@@ -36,7 +34,7 @@ func init() {
 		return &Sensors{
 			RemoveNumbers:       true,
 			LinuxLegacyTagNames: true,
-			Timeout:             defaultTimeout,
+			Timeout:             config.Duration(5 * time.Second),
 		}
 	})
 }
