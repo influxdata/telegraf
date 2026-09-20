@@ -137,10 +137,18 @@ func parseLine(line string) (map[string]string, map[string]any, error) {
 		}
 	}
 
+	tags := map[string]string{
+		"device": device,
+		"sensor": sensor,
+		"type":   sensorType,
+	}
+	if description != "" {
+		tags["description"] = description
+	}
+
 	// print_sensor() prints "unknown" for any sensor flagged SENSOR_FUNKNOWN,
 	// whatever its type, and for a drive state outside SENSOR_DRIVE_*. It must
 	// therefore be handled per type instead of ahead of the type switch.
-	var unit string
 	fields := make(map[string]any, 4)
 	switch sensorType {
 	case "drive":
@@ -186,16 +194,18 @@ func parseLine(line string) (map[string]string, map[string]any, error) {
 			// Numeric value optionally followed by a unit, e.g. "43.00 degC".
 			// Percent and humidity sensors print the unit attached to the
 			// number instead, e.g. "49.50%".
-			number, suffix, _ := strings.Cut(payload, " ")
+			number, unit, _ := strings.Cut(payload, " ")
 			if strings.HasSuffix(number, "%") {
-				number, suffix = strings.TrimSuffix(number, "%"), "%"
+				number, unit = strings.TrimSuffix(number, "%"), "%"
 			}
 			v, err := strconv.ParseFloat(number, 64)
 			if err != nil {
 				return nil, nil, fmt.Errorf("cannot parse value %q of sensor %q: %w", payload, name, err)
 			}
 			fields["value"] = v
-			unit = suffix
+			if unit != "" { // generic integers print no unit
+				tags["unit"] = unit
+			}
 		}
 	}
 
@@ -208,18 +218,6 @@ func parseLine(line string) (map[string]string, map[string]any, error) {
 	if len(fields) == 0 {
 		// Unknown value without status: nothing numeric or named to report
 		return nil, nil, nil
-	}
-
-	tags := map[string]string{
-		"device": device,
-		"sensor": sensor,
-		"type":   sensorType,
-	}
-	if description != "" {
-		tags["description"] = description
-	}
-	if unit != "" {
-		tags["unit"] = unit
 	}
 
 	return tags, fields, nil
