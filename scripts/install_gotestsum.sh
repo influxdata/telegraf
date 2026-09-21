@@ -19,7 +19,9 @@ fi
 
 setup_gotestsum () {
     echo "installing gotestsum"
-    curl -L "https://github.com/gotestyourself/gotestsum/releases/download/v${VERSION}/gotestsum_${VERSION}_${OS}_${GO_ARCH}.tar.gz" --output gotestsum.tar.gz
+    curl -L --fail --retry 3 --retry-delay 2 --retry-all-errors \
+        "https://github.com/gotestyourself/gotestsum/releases/download/v${VERSION}/gotestsum_${VERSION}_${OS}_${GO_ARCH}.tar.gz" \
+        --output gotestsum.tar.gz
 
     if [ "$OS" = "windows" ]; then
         SHA=$WINDOWS_SHA

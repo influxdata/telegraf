@@ -23,7 +23,8 @@ sudo mkdir -p ${path}
 # it is slow to update and we can't pull specific minor versions.)
 setup_go () {
     echo "installing go"
-    curl -L "https://go.dev/dl/go${GO_VERSION}.${GO_ARCH}.tar.gz" --output "go${GO_VERSION}.${GO_ARCH}.tar.gz"
+    curl -L --fail --retry 3 --retry-delay 2 --retry-all-errors \
+        "https://go.dev/dl/go${GO_VERSION}.${GO_ARCH}.tar.gz" --output "go${GO_VERSION}.${GO_ARCH}.tar.gz"
     if ! echo "${GO_VERSION_SHA}  go${GO_VERSION}.${GO_ARCH}.tar.gz" | shasum --algorithm 256 --check -; then
         echo "Checksum failed" >&2
         exit 1
