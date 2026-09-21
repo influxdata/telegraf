@@ -32,6 +32,7 @@ linters:
     - lll
     - makezero
     - mirror
+    - modernize
     - nakedret
     - nilerr
     - nolintlint
@@ -262,6 +263,27 @@ linters:
       # Tab width in spaces.
       # Default: 1
       tab-width: 4
+
+    modernize:
+      # List of analyzers to disable.
+      # By default, all analyzers are enabled.
+      # Only analyzers whose rewrites are already applied to the codebase are enabled.
+      disable:
+        - atomictypes
+        - embedlit
+        - errorsastype
+        - importcomment
+        - mapsloop
+        - minmax
+        - omitzero
+        - plusbuild
+        - reflecttypeassert
+        - reflecttypefor
+        - slicesclip
+        - stditerators
+        - testingcontext
+        - unsafefuncs
+        - waitgroupgo
 
     nakedret:
       # Make an issue if func has more lines of code than this setting, and it has naked returns.
