@@ -116,7 +116,7 @@ func TestPackageMetric_String(t *testing.T) {
 
 func TestCPUMetricTypeFromString(t *testing.T) {
 	t.Run("Valid", func(t *testing.T) {
-		for m := cpuMetricType(0); m < cpuC0SubstateC0WaitPercent+1; m++ {
+		for m := range cpuC0SubstateC0WaitPercent + 1 {
 			val, err := cpuMetricTypeFromString(m.String())
 			require.NoError(t, err)
 			require.Equal(t, m, val)
@@ -132,7 +132,7 @@ func TestCPUMetricTypeFromString(t *testing.T) {
 
 func TestPackageMetricTypeFromString(t *testing.T) {
 	t.Run("Valid", func(t *testing.T) {
-		for m := packageMetricType(0); m < packageTurboLimit+1; m++ {
+		for m := range packageTurboLimit + 1 {
 			val, err := packageMetricTypeFromString(m.String())
 			require.NoError(t, err)
 			require.Equal(t, m, val)
