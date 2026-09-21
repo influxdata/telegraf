@@ -164,35 +164,37 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 	// Process only the system defined via ComputerSystemID in the config
 	// Collect configured metrics on every chassis
 	for _, system := range systems {
-		if system.ID == r.ComputerSystemID {
-			chassisList, err := system.Chassis()
-			if err != nil {
-				return err
-			}
+		if system.ID != r.ComputerSystemID {
+			continue
+		}
 
-			if len(chassisList) == 0 {
-				r.Log.Warn("No chassis found, no metric can be produced")
-				return nil
-			}
+		chassisList, err := system.Chassis()
+		if err != nil {
+			return err
+		}
 
-			for _, chassis := range chassisList {
-				for _, metric := range r.IncludeMetrics {
-					var err error
-					switch metric {
-					case "thermal":
-						err = r.gatherThermal(acc, r.host, system, chassis)
-					case "power":
-						err = r.gatherPower(acc, r.host, system, chassis)
-					default:
-						return fmt.Errorf("unknown metric requested: %s", metric)
-					}
-					if err != nil {
-						return err
-					}
+		if len(chassisList) == 0 {
+			r.Log.Warn("No chassis found, no metric can be produced")
+			return nil
+		}
+
+		for _, chassis := range chassisList {
+			for _, metric := range r.IncludeMetrics {
+				var err error
+				switch metric {
+				case "thermal":
+					err = r.gatherThermal(acc, r.host, system, chassis)
+				case "power":
+					err = r.gatherPower(acc, r.host, system, chassis)
+				default:
+					return fmt.Errorf("unknown metric requested: %s", metric)
+				}
+				if err != nil {
+					return err
 				}
 			}
-			break
 		}
+		break
 	}
 	return nil
 }
