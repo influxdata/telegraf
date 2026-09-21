@@ -586,10 +586,8 @@ func (p *PowerStat) addCPUFrequency(acc telegraf.Accumulator, cpuID, coreID, pac
 	addMetric(
 		acc,
 		&cpuMetric[float64]{
-			metricCommon: metricCommon{
-				metric: cpuFrequency,
-				units:  "mhz",
-			},
+			metric:    cpuFrequency,
+			units:     "mhz",
 			cpuID:     cpuID,
 			coreID:    coreID,
 			packageID: packageID,
@@ -604,10 +602,8 @@ func (p *PowerStat) addCPUTemperature(acc telegraf.Accumulator, cpuID, coreID, p
 	addMetric(
 		acc,
 		&cpuMetric[uint64]{
-			metricCommon: metricCommon{
-				metric: cpuTemperature,
-				units:  "celsius",
-			},
+			metric:    cpuTemperature,
+			units:     "celsius",
 			cpuID:     cpuID,
 			coreID:    coreID,
 			packageID: packageID,
@@ -622,10 +618,8 @@ func (p *PowerStat) addCPUC0StateResidency(acc telegraf.Accumulator, cpuID, core
 	addMetric(
 		acc,
 		&cpuMetric[float64]{
-			metricCommon: metricCommon{
-				metric: cpuC0StateResidency,
-				units:  "percent",
-			},
+			metric:    cpuC0StateResidency,
+			units:     "percent",
 			cpuID:     cpuID,
 			coreID:    coreID,
 			packageID: packageID,
@@ -640,10 +634,8 @@ func (p *PowerStat) addCPUC1StateResidency(acc telegraf.Accumulator, cpuID, core
 	addMetric(
 		acc,
 		&cpuMetric[float64]{
-			metricCommon: metricCommon{
-				metric: cpuC1StateResidency,
-				units:  "percent",
-			},
+			metric:    cpuC1StateResidency,
+			units:     "percent",
 			cpuID:     cpuID,
 			coreID:    coreID,
 			packageID: packageID,
@@ -658,10 +650,8 @@ func (p *PowerStat) addCPUC3StateResidency(acc telegraf.Accumulator, cpuID, core
 	addMetric(
 		acc,
 		&cpuMetric[float64]{
-			metricCommon: metricCommon{
-				metric: cpuC3StateResidency,
-				units:  "percent",
-			},
+			metric:    cpuC3StateResidency,
+			units:     "percent",
 			cpuID:     cpuID,
 			coreID:    coreID,
 			packageID: packageID,
@@ -676,10 +666,8 @@ func (p *PowerStat) addCPUC6StateResidency(acc telegraf.Accumulator, cpuID, core
 	addMetric(
 		acc,
 		&cpuMetric[float64]{
-			metricCommon: metricCommon{
-				metric: cpuC6StateResidency,
-				units:  "percent",
-			},
+			metric:    cpuC6StateResidency,
+			units:     "percent",
 			cpuID:     cpuID,
 			coreID:    coreID,
 			packageID: packageID,
@@ -694,10 +682,8 @@ func (p *PowerStat) addCPUC7StateResidency(acc telegraf.Accumulator, cpuID, core
 	addMetric(
 		acc,
 		&cpuMetric[float64]{
-			metricCommon: metricCommon{
-				metric: cpuC7StateResidency,
-				units:  "percent",
-			},
+			metric:    cpuC7StateResidency,
+			units:     "percent",
 			cpuID:     cpuID,
 			coreID:    coreID,
 			packageID: packageID,
@@ -712,10 +698,8 @@ func (p *PowerStat) addCPUBusyFrequency(acc telegraf.Accumulator, cpuID, coreID,
 	addMetric(
 		acc,
 		&cpuMetric[float64]{
-			metricCommon: metricCommon{
-				metric: cpuBusyFrequency,
-				units:  "mhz",
-			},
+			metric:    cpuBusyFrequency,
+			units:     "mhz",
 			cpuID:     cpuID,
 			coreID:    coreID,
 			packageID: packageID,
@@ -731,10 +715,8 @@ func (p *PowerStat) addCPUC0SubstateC01Percent(acc telegraf.Accumulator, cpuID, 
 	addMetric(
 		acc,
 		&cpuMetric[float64]{
-			metricCommon: metricCommon{
-				metric: cpuC0SubstateC01Percent,
-				units:  "percent",
-			},
+			metric:    cpuC0SubstateC01Percent,
+			units:     "percent",
 			cpuID:     cpuID,
 			coreID:    coreID,
 			packageID: packageID,
@@ -750,10 +732,8 @@ func (p *PowerStat) addCPUC0SubstateC02Percent(acc telegraf.Accumulator, cpuID, 
 	addMetric(
 		acc,
 		&cpuMetric[float64]{
-			metricCommon: metricCommon{
-				metric: cpuC0SubstateC02Percent,
-				units:  "percent",
-			},
+			metric:    cpuC0SubstateC02Percent,
+			units:     "percent",
 			cpuID:     cpuID,
 			coreID:    coreID,
 			packageID: packageID,
@@ -769,10 +749,8 @@ func (p *PowerStat) addCPUC0SubstateC0WaitPercent(acc telegraf.Accumulator, cpuI
 	addMetric(
 		acc,
 		&cpuMetric[float64]{
-			metricCommon: metricCommon{
-				metric: cpuC0SubstateC0WaitPercent,
-				units:  "percent",
-			},
+			metric:    cpuC0SubstateC0WaitPercent,
+			units:     "percent",
 			cpuID:     cpuID,
 			coreID:    coreID,
 			packageID: packageID,
@@ -787,10 +765,8 @@ func (p *PowerStat) addCurrentPackagePower(acc telegraf.Accumulator, packageID i
 	addMetric(
 		acc,
 		&packageMetric[float64]{
-			metricCommon: metricCommon{
-				metric: packageCurrentPowerConsumption,
-				units:  "watts",
-			},
+			metric:    packageCurrentPowerConsumption,
+			units:     "watts",
 			packageID: packageID,
 			fetchFn:   p.fetcher.GetCurrentPackagePowerConsumptionWatts,
 		},
@@ -803,10 +779,8 @@ func (p *PowerStat) addCurrentDramPower(acc telegraf.Accumulator, packageID int)
 	addMetric(
 		acc,
 		&packageMetric[float64]{
-			metricCommon: metricCommon{
-				metric: packageCurrentDramPowerConsumption,
-				units:  "watts",
-			},
+			metric:    packageCurrentDramPowerConsumption,
+			units:     "watts",
 			packageID: packageID,
 			fetchFn:   p.fetcher.GetCurrentDramPowerConsumptionWatts,
 		},
@@ -819,10 +793,8 @@ func (p *PowerStat) addThermalDesignPower(acc telegraf.Accumulator, packageID in
 	addMetric(
 		acc,
 		&packageMetric[float64]{
-			metricCommon: metricCommon{
-				metric: packageThermalDesignPower,
-				units:  "watts",
-			},
+			metric:    packageThermalDesignPower,
+			units:     "watts",
 			packageID: packageID,
 			fetchFn:   p.fetcher.GetPackageThermalDesignPowerWatts,
 		},
@@ -835,10 +807,8 @@ func (p *PowerStat) addCPUBaseFrequency(acc telegraf.Accumulator, packageID int)
 	addMetric(
 		acc,
 		&packageMetric[uint64]{
-			metricCommon: metricCommon{
-				metric: packageCPUBaseFrequency,
-				units:  "mhz",
-			},
+			metric:    packageCPUBaseFrequency,
+			units:     "mhz",
 			packageID: packageID,
 			fetchFn:   p.fetcher.GetCPUBaseFrequency,
 		},
