@@ -6,7 +6,6 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"math"
 	"net"
 	"strconv"
 	"strings"
@@ -73,15 +72,9 @@ func (sw *SocketWriter) Connect() error {
 		if err != nil {
 			return fmt.Errorf("failed to parse CID %s: %w", addrTuple[0], err)
 		}
-		if (cid >= uint64(math.Pow(2, 32))-1) && (cid <= 0) {
-			return fmt.Errorf("value of CID %d is out of range", cid)
-		}
 		port, err := strconv.ParseUint(addrTuple[1], 10, 32)
 		if err != nil {
 			return fmt.Errorf("failed to parse port number %s: %w", addrTuple[1], err)
-		}
-		if (port >= uint64(math.Pow(2, 32))-1) && (port <= 0) {
-			return fmt.Errorf("port number %d is out of range", port)
 		}
 		c, sockErr = vsock.Dial(uint32(cid), uint32(port), nil)
 	} else {
