@@ -56,13 +56,6 @@ func (r *Redfish) Init() error {
 		return err
 	}
 
-	r.gf, err = r.gofishSetup()
-	if err != nil {
-		return fmt.Errorf("error parsing input from %s. This is likely due to the BMC response being in text/html: %w",
-			r.Address+"/redfish/v1/Systems/"+r.ComputerSystemID,
-			err)
-	}
-
 	r.tagSet = make(map[string]bool, len(r.IncludeTagSets))
 	for _, setLabel := range r.IncludeTagSets {
 		r.tagSet[setLabel] = true
@@ -106,10 +99,11 @@ func (r *Redfish) checkConfig() error {
 	return nil
 }
 
-func (r *Redfish) gofishSetup() (*gofish.Service, error) {
+func (r *Redfish) Start(acc telegraf.Accumulator) error {
+	var err error
 	tlsCfg, err := r.ClientConfig.TLSConfig()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	r.client = http.Client{
 		Transport: &http.Transport{
@@ -121,32 +115,39 @@ func (r *Redfish) gofishSetup() (*gofish.Service, error) {
 
 	username, err := r.Username.Get()
 	if err != nil {
-		return nil, fmt.Errorf("getting username failed: %w", err)
+		return fmt.Errorf("getting username failed: %w", err)
 	}
 	user := username.String()
 	username.Destroy()
 
 	password, err := r.Password.Get()
 	if err != nil {
-		return nil, fmt.Errorf("getting password failed: %w", err)
+		return fmt.Errorf("getting password failed: %w", err)
 	}
 	pass := password.String()
 	password.Destroy()
 
 	gofishConfig := gofish.ClientConfig{
-		Endpoint:   r.Address,
-		Username:   user,
-		Password:   pass,
-		BasicAuth:  true,
-		HTTPClient: &r.client,
+		Endpoint:  r.Address,
+		Username:  user,
+		Password:  pass,
+		BasicAuth: true,
 	}
 	c, err := gofish.Connect(gofishConfig)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("error parsing input from %s. This is likely due to the BMC response being in text/html: %w",
+			r.Address+"/redfish/v1/Systems/"+r.ComputerSystemID,
+			err)
 	}
 
 	// Retrieve the service root
-	return c.Service, nil
+	r.gf = c.Service
+
+	return err
+}
+
+func (r *Redfish) Stop() {
+
 }
 
 func (r *Redfish) Gather(acc telegraf.Accumulator) error {

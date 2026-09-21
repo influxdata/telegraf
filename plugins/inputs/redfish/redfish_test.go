@@ -437,6 +437,7 @@ func TestDellApis(t *testing.T) {
 	require.NoError(t, plugin.Init())
 	var acc testutil.Accumulator
 
+	require.NoError(t, plugin.Start(&acc))
 	err = plugin.Gather(&acc)
 	require.NoError(t, err)
 	require.True(t, acc.HasMeasurement("redfish_thermal_temperatures"))
@@ -620,6 +621,7 @@ func TestHPApis(t *testing.T) {
 	require.NoError(t, hpPlugin.Init())
 	var hpAcc testutil.Accumulator
 
+	require.NoError(t, hpPlugin.Start(&hpAcc))
 	err = hpPlugin.Gather(&hpAcc)
 	require.NoError(t, err)
 	require.True(t, hpAcc.HasMeasurement("redfish_thermal_temperatures"))
@@ -721,6 +723,7 @@ func TestHPilo4Apis(t *testing.T) {
 	require.NoError(t, hpPlugin.Init())
 	var hpAcc testutil.Accumulator
 
+	require.NoError(t, hpPlugin.Start(&hpAcc))
 	err = hpPlugin.Gather(&hpAcc)
 	require.NoError(t, err)
 	require.True(t, hpAcc.HasMeasurement("redfish_thermal_temperatures"))
@@ -773,6 +776,7 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NoError(t, r.Init())
+	require.NoError(t, r.Start(&acc))
 	u, err := url.Parse(ts.URL)
 	require.NoError(t, err)
 	err = r.Gather(&acc)
@@ -887,6 +891,7 @@ func TestInvalidDellJSON(t *testing.T) {
 			require.NoError(t, plugin.Init())
 
 			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
 			err := plugin.Gather(&acc)
 			require.Error(t, err)
 			require.ErrorContains(t, err, "error parsing input from")
@@ -962,6 +967,7 @@ func TestInvalidHPJSON(t *testing.T) {
 			require.NoError(t, plugin.Init())
 
 			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
 			err := plugin.Gather(&acc)
 			require.Error(t, err)
 			require.ErrorContains(t, err, "error parsing input from")
@@ -991,7 +997,10 @@ func TestParseErrorIncludesContext(t *testing.T) {
 		ComputerSystemID: "System.Embedded.1",
 		IncludeMetrics:   []string{"thermal", "power"},
 	}
-	err := plugin.Init()
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	err := plugin.Start(&acc)
 
 	require.ErrorContains(t, err, ts.URL+"/redfish/v1/Systems/System.Embedded.1")
 	require.ErrorContains(t, err, "text/html")
@@ -1041,6 +1050,7 @@ func TestSkipChassisWithoutThermalAndPowerReference(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
 	require.NoError(t, plugin.Gather(&acc))
 	require.Empty(t, acc.GetTelegrafMetrics())
 
@@ -1335,6 +1345,7 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 	require.NoError(t, hpPlugin.Init())
 	var hpAcc testutil.Accumulator
 
+	require.NoError(t, hpPlugin.Start(&hpAcc))
 	err = hpPlugin.Gather(&hpAcc)
 	require.NoError(t, err)
 	require.True(t, hpAcc.HasMeasurement("redfish_thermal_temperatures"))
