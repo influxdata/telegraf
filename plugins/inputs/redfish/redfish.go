@@ -51,20 +51,8 @@ func (*Redfish) SampleConfig() string {
 }
 
 func (r *Redfish) Init() error {
-	err := r.checkConfig()
-	if err != nil {
-		return err
-	}
+	// Check all config values
 
-	r.tagSet = make(map[string]bool, len(r.IncludeTagSets))
-	for _, setLabel := range r.IncludeTagSets {
-		r.tagSet[setLabel] = true
-	}
-
-	return nil
-}
-
-func (r *Redfish) checkConfig() error {
 	if r.Address == "" {
 		return errors.New("did not provide IP")
 	}
@@ -94,6 +82,11 @@ func (r *Redfish) checkConfig() error {
 		default:
 			return fmt.Errorf("unknown workaround requested: %s", workaround)
 		}
+	}
+
+	r.tagSet = make(map[string]bool, len(r.IncludeTagSets))
+	for _, setLabel := range r.IncludeTagSets {
+		r.tagSet[setLabel] = true
 	}
 
 	return nil
