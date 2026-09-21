@@ -43,7 +43,8 @@ type Redfish struct {
 	tagSet map[string]bool
 	client http.Client
 	tls.ClientConfig
-	gf *gofish.Service
+	gf   *gofish.Service
+	host string
 }
 
 func (*Redfish) SampleConfig() string {
@@ -87,6 +88,18 @@ func (r *Redfish) Init() error {
 	r.tagSet = make(map[string]bool, len(r.IncludeTagSets))
 	for _, setLabel := range r.IncludeTagSets {
 		r.tagSet[setLabel] = true
+	}
+
+	// Remove all the fluff form the endpoint address to just have the hostname or IP
+	redfishURL, err := url.Parse(r.Address)
+	if err != nil {
+		r.host = redfishURL.Host
+	} else {
+		r.host, _, err = net.SplitHostPort(redfishURL.Host)
+	}
+
+	if err != nil {
+		r.host = redfishURL.Host
 	}
 
 	return nil
@@ -144,18 +157,6 @@ func (r *Redfish) Stop() {
 }
 
 func (r *Redfish) Gather(acc telegraf.Accumulator) error {
-	var address string
-	redfishURL, err := url.Parse(r.Address)
-	if err != nil {
-		address = redfishURL.Host
-	} else {
-		address, _, err = net.SplitHostPort(redfishURL.Host)
-	}
-
-	if err != nil {
-		address = redfishURL.Host
-	}
-
 	systems, err := r.gf.Systems()
 	if err != nil {
 		return r.parseGofishError(err)
@@ -180,9 +181,9 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 					var err error
 					switch metric {
 					case "thermal":
-						err = r.gatherThermal(acc, address, system, chassis)
+						err = r.gatherThermal(acc, r.host, system, chassis)
 					case "power":
-						err = r.gatherPower(acc, address, system, chassis)
+						err = r.gatherPower(acc, r.host, system, chassis)
 					default:
 						return fmt.Errorf("unknown metric requested: %s", metric)
 					}
