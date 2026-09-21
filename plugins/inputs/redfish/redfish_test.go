@@ -777,11 +777,13 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, r.Init())
 	require.NoError(t, r.Start(&acc))
-	u, err := url.Parse(ts.URL)
+	_, err := url.Parse(ts.URL)
 	require.NoError(t, err)
 	err = r.Gather(&acc)
-	require.ErrorContains(t, err, "received status code 401")
-	require.ErrorContains(t, err, "http://"+u.Host+"/redfish/v1/Systems/")
+
+	// EG: failed to retrieve some items: [{\"link\":\"/redfish/v1/Systems/\",\"error\":\"401: Unauthorized.\\n\"}]
+	require.ErrorContains(t, err, "401: Unauthorized")
+	require.ErrorContains(t, err, "/redfish/v1/Systems/")
 }
 func TestNoUsernameorPasswordConfiguration(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -894,7 +896,9 @@ func TestInvalidDellJSON(t *testing.T) {
 			require.NoError(t, plugin.Start(&acc))
 			err := plugin.Gather(&acc)
 			require.Error(t, err)
-			require.ErrorContains(t, err, "error parsing input from")
+
+			//EG: failed to retrieve some items: [{\"link\":\"/redfish/v1/Systems/1\",\"error\":\"invalid character '{' looking for beginning of object key string\"}]
+			require.ErrorContains(t, err, "invalid character")
 		})
 	}
 }
@@ -970,7 +974,9 @@ func TestInvalidHPJSON(t *testing.T) {
 			require.NoError(t, plugin.Start(&acc))
 			err := plugin.Gather(&acc)
 			require.Error(t, err)
-			require.ErrorContains(t, err, "error parsing input from")
+
+			//EG: failed to retrieve some items: [{\"link\":\"/redfish/v1/Systems/1\",\"error\":\"invalid character '{' looking for beginning of object key string\"}]
+			require.ErrorContains(t, err, "invalid character")
 		})
 	}
 }

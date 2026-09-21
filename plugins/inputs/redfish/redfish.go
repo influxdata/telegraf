@@ -3,7 +3,6 @@ package redfish
 
 import (
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -159,7 +158,7 @@ func (r *Redfish) Stop() {
 func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 	systems, err := r.gf.Systems()
 	if err != nil {
-		return r.parseGofishError(err)
+		return err
 	}
 
 	// Process only the system defined via ComputerSystemID in the config
@@ -168,7 +167,7 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 		if system.ID == r.ComputerSystemID {
 			chassisList, err := system.Chassis()
 			if err != nil {
-				return r.parseGofishError(err)
+				return err
 			}
 
 			if len(chassisList) == 0 {
@@ -196,26 +195,6 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 	return nil
-}
-
-func (r *Redfish) parseGofishError(err error) error {
-	var collectionError *schemas.CollectionError
-	if errors.As(err, &collectionError) {
-		for f, v := range collectionError.Failures {
-			var parseError *json.SyntaxError
-			var queryError *schemas.Error
-			if errors.As(v, &parseError) {
-				return fmt.Errorf("error parsing input from %s: %w", r.Address, err)
-			}
-			if errors.As(v, &queryError) {
-				return fmt.Errorf("received status code %d for address %s%s, expected 200",
-					queryError.HTTPReturnedStatusCode,
-					r.Address,
-					f)
-			}
-		}
-	}
-	return fmt.Errorf("error parsing input from %s: %w", r.Address, err)
 }
 
 func setChassisTags(chassis *schemas.Chassis, tags map[string]string) {
