@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/apache/arrow-go/v18/arrow"
@@ -15,6 +14,7 @@ import (
 	"github.com/apache/arrow-go/v18/arrow/memory"
 	"github.com/apache/arrow-go/v18/parquet"
 	"github.com/apache/arrow-go/v18/parquet/pqarrow"
+	"github.com/gofrs/uuid/v5"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -123,7 +123,6 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 	now := time.Now()
 	for name, metrics := range groupedMetrics {
 		if _, ok := p.metricGroups[name]; !ok {
-			filename := fmt.Sprintf("%s-%s-%s.parquet", name, now.Format("2006-01-02"), strconv.FormatInt(now.Unix(), 10))
 			schema, err := p.createSchema(metrics)
 			if err != nil {
 				perr.MetricsReject = append(perr.MetricsReject, metricIndices[name]...)
@@ -131,7 +130,7 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 				perr.Err = fmt.Errorf("failed to create schema for file %q: %w", name, err)
 				continue
 			}
-			writer, err := p.createWriter(name, filename, schema)
+			writer, filename, err := p.createWriter(name, schema, now)
 			if err != nil {
 				perr.MetricsReject = append(perr.MetricsReject, metricIndices[name]...)
 				perr.MetricsRejectErrors = append(perr.MetricsRejectErrors, fmt.Errorf("failed to create writer for file %q: %w", name, err))
@@ -147,7 +146,7 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 			}
 		}
 
-		if err := p.rotateIfNeeded(name); err != nil {
+		if err := p.rotateIfNeeded(name, now); err != nil {
 			perr.MetricsReject = append(perr.MetricsReject, metricIndices[name]...)
 			perr.MetricsRejectErrors = append(perr.MetricsRejectErrors, fmt.Errorf("failed to rotate file %q: %w", p.metricGroups[name].filename, err))
 			perr.Err = fmt.Errorf("failed to rotate file %q: %w", p.metricGroups[name].filename, err)
@@ -191,10 +190,10 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (p *Parquet) rotateIfNeeded(name string) error {
+func (p *Parquet) rotateIfNeeded(name string, now time.Time) error {
 	group := p.metricGroups[name]
 	interval := time.Duration(p.RotationInterval)
-	if interval == 0 || time.Since(group.created) < interval {
+	if interval == 0 || now.Sub(group.created) < interval {
 		return nil
 	}
 
@@ -202,12 +201,13 @@ func (p *Parquet) rotateIfNeeded(name string) error {
 		return fmt.Errorf("failed to close file for rotation %q: %w", group.filename, err)
 	}
 
-	writer, err := p.createWriter(name, group.filename, group.schema)
+	writer, filename, err := p.createWriter(name, group.schema, now)
 	if err != nil {
 		return fmt.Errorf("failed to create new writer for file %q: %w", group.filename, err)
 	}
 	group.writer = writer
-	group.created = time.Now()
+	group.filename = filename
+	group.created = now
 
 	return nil
 }
@@ -444,25 +444,25 @@ func (p *Parquet) createSchema(metrics []telegraf.Metric) (*arrow.Schema, error)
 	return arrow.NewSchema(fields, nil), nil
 }
 
-func (p *Parquet) createWriter(name, filename string, schema *arrow.Schema) (*pqarrow.FileWriter, error) {
-	if _, err := p.root.Stat(filename); err == nil {
-		now := time.Now()
-		rotatedFilename := fmt.Sprintf("%s-%s-%s.parquet", name, now.Format("2006-01-02"), strconv.FormatInt(now.Unix(), 10))
-		if err := p.root.Rename(filename, rotatedFilename); err != nil {
-			return nil, fmt.Errorf("failed to rename file %q: %w", filename, err)
-		}
-	}
-	file, err := p.root.Create(filename)
+func (p *Parquet) createWriter(name string, schema *arrow.Schema, now time.Time) (*pqarrow.FileWriter, string, error) {
+	id, err := uuid.NewV6()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create file %q: %w", filename, err)
+		return nil, "", fmt.Errorf("failed to generate identifier for file %q: %w", name, err)
+	}
+	filename := fmt.Sprintf("%s-%s-%s.parquet", name, now.Format("20060102150405"), id)
+
+	f, err := p.root.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0640)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to create file %q: %w", filename, err)
 	}
 
-	writer, err := pqarrow.NewFileWriter(schema, file, parquet.NewWriterProperties(), pqarrow.DefaultWriterProps())
+	writer, err := pqarrow.NewFileWriter(schema, f, parquet.NewWriterProperties(), pqarrow.DefaultWriterProps())
 	if err != nil {
-		return nil, fmt.Errorf("failed to create parquet writer for file %q: %w", filename, err)
+		f.Close()
+		return nil, "", fmt.Errorf("failed to create parquet writer for file %q: %w", filename, err)
 	}
 
-	return writer, nil
+	return writer, filename, nil
 }
 
 func goToArrowType(value any) (arrow.DataType, error) {

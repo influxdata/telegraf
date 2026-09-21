@@ -1,6 +1,17 @@
 <!-- markdownlint-disable MD013 MD024 -->
 # Changelog
 
+## unreleased
+
+### Important Changes
+
+- PR [#19558](https://github.com/influxdata/telegraf/pull/19558) changes the
+  filenames written by `outputs.parquet` from
+  `<measurement>-<YYYY-MM-DD>-<unix-seconds>.parquet` to
+  `<measurement>-<YYYYMMDDhhmmss>-<uuid>.parquet` and never reuses a file.
+  This fixes an edge case where dataloss could occur when auto rotating
+  parquet files and enables multiple writers to the same parquet schema.
+
 ## v1.40.0 [2026-09-07]
 
 ### Important Changes

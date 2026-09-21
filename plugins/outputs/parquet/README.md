@@ -86,8 +86,8 @@ of this occurring.
 
 ## File Rotation
 
-If a file with the same target name exists at start, the existing file is
-rotated to avoid over-writing it or conflicting schema.
+Files are named `<measurement>-<YYYYMMDDhhmmss>-<uuid>.parquet`, so existing
+files are never opened for writing and support multiple writers.
 
 File rotation is available via a time based interval that a user can optionally
 set, measured from the time the current file was created. Due to the usage of a
