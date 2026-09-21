@@ -198,17 +198,25 @@ func (i *InfluxDB) Close() error {
 func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	ctx := context.Background()
 
+	i.Log.Trace("Start writing metrics...")
+	defer i.Log.Trace("... end writing metrics")
+
 	//nolint:gosec // False-positive G404 as this doesn't require strong RNG
 	for _, n := range rand.Perm(len(i.clients)) {
 		client := i.clients[n]
+		i.Log.Tracef("  Writing %d metrics to %s...", len(metrics), client.url)
+		start := time.Now()
 		if err := client.Write(ctx, metrics); err != nil {
 			i.Log.Errorf("When writing to [%s]: %v", client.url, err)
 			var werr *internal.PartialWriteError
 			if errors.As(err, &werr) || errors.Is(err, internal.ErrSizeLimitReached) {
 				return err
 			}
+			i.Log.Tracef("  Writing to %q failed after %.3fms, trying other client...", client.url, time.Since(start).Seconds()*1000)
 			continue
 		}
+		i.Log.Tracef("  Writing to %q succeeded after %.3fms", client.url, time.Since(start).Seconds()*1000)
+
 		return nil
 	}
 
