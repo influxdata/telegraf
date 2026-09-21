@@ -18,11 +18,12 @@ func (r *Redfish) gatherThermal(acc telegraf.Accumulator, address string, system
 func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, address string, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
 	thermal, err := chassis.Thermal()
 	if err != nil {
-		return fmt.Errorf("error parsing input from %s: %w", address, err)
+		return fmt.Errorf("parsing thermal data from %q failed: %w", address, err)
 	}
-
+	// thermal is nil when the legacy thermal endpoints are not available
+	// The newer subsys endpoints should be used as a form of retry
 	if thermal == nil {
-		r.Log.Warnf("Skipping thermal data of chassis %q. Is only the new subsys api available?", chassis.ID)
+		r.Log.Warnf("Skipping thermal data of chassis %q. Only the legacy thermal API is supported at the moment", chassis.ID)
 		return nil
 	}
 
@@ -35,7 +36,13 @@ func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, address string,
 		tags["state"] = string(j.Status.State)
 		tags["health"] = string(j.Status.Health)
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
-			tags["datacenter"] = "" // Not in the standard, keeping for backward compatibility
+			// Location.PostalAddress.DataCenter is nowhere in the redfish standard
+			// We do some manual parsing in order to not break existing code
+			var datacenter datacenterTag
+			//nolint:errcheck // Ignore if the marshalling fails as this datapoint should not exist
+			json.Unmarshal(chassis.RawData, &datacenter)
+
+			tags["datacenter"] = datacenter.Location.PostalAddress.DataCenter
 			tags["room"] = chassis.Location.PostalAddress.Room
 			tags["rack"] = chassis.Location.Placement.Rack
 			tags["row"] = chassis.Location.Placement.Row
@@ -68,7 +75,13 @@ func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, address string,
 		tags["state"] = string(thermal.Fans[i].Status.State)
 		tags["health"] = string(thermal.Fans[i].Status.Health)
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
-			tags["datacenter"] = "" // Not in the standard, keeping for backward compatibility
+			// Location.PostalAddress.DataCenter is nowhere in the redfish standard
+			// We do some manual parsing in order to not break existing code
+			var datacenter datacenterTag
+			//nolint:errcheck // Ignore if the marshalling fails as this datapoint should not exist
+			json.Unmarshal(chassis.RawData, &datacenter)
+
+			tags["datacenter"] = datacenter.Location.PostalAddress.DataCenter
 			tags["room"] = chassis.Location.PostalAddress.Room
 			tags["rack"] = chassis.Location.Placement.Rack
 			tags["row"] = chassis.Location.Placement.Row

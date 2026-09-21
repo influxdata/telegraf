@@ -46,6 +46,14 @@ type Redfish struct {
 	host string
 }
 
+type datacenterTag struct {
+	Location struct {
+		PostalAddress struct {
+			DataCenter string
+		}
+	}
+}
+
 func (*Redfish) SampleConfig() string {
 	return sampleConfig
 }
@@ -82,6 +90,10 @@ func (r *Redfish) Init() error {
 		default:
 			return fmt.Errorf("unknown workaround requested: %s", workaround)
 		}
+	}
+
+	if len(r.IncludeTagSets) > 0 {
+		r.Log.Warn("The tag Datacenter (Chassis.Location.PostalAddress.DataCenter) is not part of DMTF's standard an will be removed in a future version")
 	}
 
 	r.tagSet = make(map[string]bool, len(r.IncludeTagSets))

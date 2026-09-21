@@ -1,6 +1,7 @@
 package redfish
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/stmcginnis/gofish/schemas"
@@ -15,11 +16,13 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *
 func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
 	power, err := chassis.Power()
 	if err != nil {
-		return fmt.Errorf("error parsing input from %s: %w", address, err)
+		return fmt.Errorf("parsing power data from %q failed: %w", address, err)
 	}
 
+	// power is nil when the legacy power endpoints are not available
+	// The newer subsys endpoints should be used as a form of retry
 	if power == nil {
-		r.Log.Warnf("Skipping thermal data of chassis %q. Is only the new subsys api available?", chassis.ID)
+		r.Log.Warnf("Skipping power data of chassis %q. Only the legacy power API is supported at the moment", chassis.ID)
 		return nil
 	}
 
@@ -31,7 +34,13 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, s
 			"source":    system.HostName,
 		}
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
-			tags["datacenter"] = ""
+			// Location.PostalAddress.DataCenter is nowhere in the redfish standard
+			// We do some manual parsing in order to not break existing code
+			var datacenter datacenterTag
+			//nolint:errcheck // Ignore if the marshalling fails as this datapoint should not exist
+			json.Unmarshal(chassis.RawData, &datacenter)
+
+			tags["datacenter"] = datacenter.Location.PostalAddress.DataCenter
 			tags["room"] = chassis.Location.PostalAddress.Room
 			tags["rack"] = chassis.Location.Placement.Rack
 			tags["row"] = chassis.Location.Placement.Row
@@ -64,7 +73,14 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, s
 		tags["state"] = string(power.PowerSupplies[i].Status.State)
 		tags["health"] = string(power.PowerSupplies[i].Status.Health)
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
-			tags["datacenter"] = ""
+			// Location.PostalAddress.DataCenter is nowhere in the redfish standard
+			// We do some manual parsing in order to not break existing code
+			var datacenter datacenterTag
+			//nolint:errcheck // Ignore if the marshalling fails as this datapoint should not exist
+			json.Unmarshal(chassis.RawData, &datacenter)
+			r.Log.Warnf("The datacenter tag will be removed in a future version as it does not conform to DTMF's standard.")
+
+			tags["datacenter"] = datacenter.Location.PostalAddress.DataCenter
 			tags["room"] = chassis.Location.PostalAddress.Room
 			tags["rack"] = chassis.Location.Placement.Rack
 			tags["row"] = chassis.Location.Placement.Row
@@ -91,7 +107,13 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, s
 		tags["state"] = string(j.Status.State)
 		tags["health"] = string(j.Status.Health)
 		if _, ok := r.tagSet[tagSetChassisLocation]; ok {
-			tags["datacenter"] = ""
+			// Location.PostalAddress.DataCenter is nowhere in the redfish standard
+			// We do some manual parsing in order to not break existing code
+			var datacenter datacenterTag
+			//nolint:errcheck // Ignore if the marshalling fails as this datapoint should not exist
+			json.Unmarshal(chassis.RawData, &datacenter)
+
+			tags["datacenter"] = datacenter.Location.PostalAddress.DataCenter
 			tags["room"] = chassis.Location.PostalAddress.Room
 			tags["rack"] = chassis.Location.Placement.Rack
 			tags["row"] = chassis.Location.Placement.Row
