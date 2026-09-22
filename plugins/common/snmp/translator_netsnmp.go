@@ -44,8 +44,7 @@ func (n *netsnmpTranslator) execCmd(arg0 string, args ...string) ([]byte, error)
 
 	out, err := execCommand(arg0, args...).Output()
 	if err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 			return nil, fmt.Errorf("%s: %w", bytes.TrimRight(exitErr.Stderr, "\r\n"), err)
 		}
 		return nil, err

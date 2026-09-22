@@ -368,8 +368,7 @@ func (*Agent) startInputs(dst chan<- telegraf.Metric, inputs []*models.RunningIn
 
 		if err := input.Start(acc); err != nil {
 			// If the model tells us to remove the plugin we do so without error
-			var fatalErr *internal.FatalError
-			if errors.As(err, &fatalErr) {
+			if _, ok := errors.AsType[*internal.FatalError](err); ok {
 				log.Printf("I! [agent] Failed to start %s, shutting down plugin: %s", input.LogName(), err)
 				continue
 			}
@@ -793,8 +792,7 @@ func (a *Agent) startOutputs(
 	unit := &outputUnit{src: src}
 	for _, output := range outputs {
 		if err := a.connectOutput(ctx, output); err != nil {
-			var fatalErr *internal.FatalError
-			if errors.As(err, &fatalErr) {
+			if _, ok := errors.AsType[*internal.FatalError](err); ok {
 				// If the model tells us to remove the plugin we do so without error
 				log.Printf("I! [agent] Failed to connect to [%s], error was %q;  shutting down plugin...", output.LogName(), err)
 				output.Close()

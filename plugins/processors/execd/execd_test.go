@@ -431,8 +431,7 @@ func runTestCaseMultiply(field string) int {
 			if errors.Is(err, influx.EOF) {
 				return 0
 			}
-			var parseErr *influx.ParseError
-			if errors.As(err, &parseErr) {
+			if parseErr, ok := errors.AsType[*influx.ParseError](err); ok {
 				fmt.Fprintf(os.Stderr, "parse ERR %v\n", parseErr)
 				return 1
 			}
@@ -480,8 +479,7 @@ func runTestCaseLong(field string) int {
 			if errors.Is(err, influx.EOF) {
 				return 0
 			}
-			var parseErr *influx.ParseError
-			if errors.As(err, &parseErr) {
+			if parseErr, ok := errors.AsType[*influx.ParseError](err); ok {
 				fmt.Fprintf(os.Stderr, "parse ERR %v\n", parseErr)
 				return 1
 			}

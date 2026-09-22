@@ -81,8 +81,7 @@ func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 	c := exec.Command(n.Binary, args...)
 	out, err := c.Output()
 	if err != nil {
-		var oserr *exec.ExitError
-		if errors.As(err, &oserr) {
+		if oserr, ok := errors.AsType[*exec.ExitError](err); ok {
 			buf, _, _ := bytes.Cut(oserr.Stderr, []byte("\n"))
 			msg := string(bytes.TrimSpace(buf))
 			if msg == "Error: No such file or directory" {

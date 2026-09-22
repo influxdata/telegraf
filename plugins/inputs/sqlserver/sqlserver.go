@@ -347,8 +347,7 @@ func (s *SQLServer) gatherServer(pool *sql.DB, query query, acc telegraf.Accumul
 		serverName, databaseName := getConnectionIdentifiers(connectionString)
 
 		// Error msg based on the format in SSMS. SQLErrorClass() is another term for severity/level: http://msdn.microsoft.com/en-us/library/dd304156.aspx
-		var sqlErr mssql.Error
-		if errors.As(err, &sqlErr) {
+		if sqlErr, ok := errors.AsType[mssql.Error](err); ok {
 			return fmt.Errorf("query %s failed for server: %s and database: %s with Msg %d, Level %d, State %d:, Line %d, Error: %w", query.ScriptName,
 				serverName, databaseName, sqlErr.SQLErrorNumber(), sqlErr.SQLErrorClass(), sqlErr.SQLErrorState(), sqlErr.SQLErrorLineNo(), err)
 		}

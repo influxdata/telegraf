@@ -157,8 +157,7 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 		record, err := p.createRecordBatch(metrics, p.metricGroups[name].builder, p.metricGroups[name].schema)
 		accepted := metricIndices[name]
 		if err != nil {
-			var crbErr *internal.PartialWriteError
-			if errors.As(err, &crbErr) {
+			if crbErr, ok := errors.AsType[*internal.PartialWriteError](err); ok {
 				accepted = make([]int, 0, len(perr.MetricsAccept))
 				for _, idx := range crbErr.MetricsAccept {
 					accepted = append(accepted, metricIndices[name][idx])

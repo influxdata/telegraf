@@ -276,8 +276,7 @@ func (monitor *DirectoryMonitor) processFile(path string) {
 func (monitor *DirectoryMonitor) read(filePath string) {
 	// Open, read, and parse the contents of the file.
 	err := monitor.ingestFile(filePath)
-	var pathErr *os.PathError
-	if errors.As(err, &pathErr) {
+	if _, ok := errors.AsType[*os.PathError](err); ok {
 		return
 	}
 

@@ -941,8 +941,7 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 // Command line parse errors are denoted by the exit code having the 0 bit set.
 // All other errors are drive/communication errors and should be ignored.
 func exitStatus(err error) (int, error) {
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
+	if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 		if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
 			return status.ExitStatus(), nil
 		}
