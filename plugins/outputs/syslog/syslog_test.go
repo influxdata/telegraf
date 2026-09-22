@@ -489,9 +489,7 @@ func TestCases(t *testing.T) {
 			require.NoError(t, err)
 
 			var wg sync.WaitGroup
-			wg.Go(func() {
-				server.listen()
-			})
+			wg.Go(server.listen)
 			defer server.close()
 
 			// Setup the plugin

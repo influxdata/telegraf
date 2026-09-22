@@ -130,9 +130,7 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 	switch c.Transport {
 	case "tcp":
 		// TCP dialout server accept routine
-		c.wg.Go(func() {
-			c.acceptTCPClients()
-		})
+		c.wg.Go(c.acceptTCPClients)
 	case "grpc":
 		c.grpcServer = grpc.NewServer(c.serverOptions...)
 		mdtdialout.RegisterGRPCMdtDialoutServer(c.grpcServer, c)

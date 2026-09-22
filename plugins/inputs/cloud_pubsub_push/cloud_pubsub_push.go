@@ -110,9 +110,7 @@ func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
 	p.undelivered = make(map[telegraf.TrackingID]chan bool)
 	p.mu = &sync.Mutex{}
 
-	p.wg.Go(func() {
-		p.receiveDelivered()
-	})
+	p.wg.Go(p.receiveDelivered)
 
 	p.wg.Go(func() {
 		if tlsConf != nil {

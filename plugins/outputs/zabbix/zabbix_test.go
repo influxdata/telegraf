@@ -537,9 +537,7 @@ func TestSuccessfulReceive(t *testing.T) {
 			defer server.close()
 
 			var wg sync.WaitGroup
-			wg.Go(func() {
-				server.listen()
-			})
+			wg.Go(server.listen)
 
 			// Setup the plugin
 			plugin := &Zabbix{
@@ -597,9 +595,7 @@ func TestInvalidData(t *testing.T) {
 	defer server.close()
 
 	var wg sync.WaitGroup
-	wg.Go(func() {
-		server.listen()
-	})
+	wg.Go(server.listen)
 
 	// Setup the plugin
 	plugin := &Zabbix{
@@ -762,9 +758,7 @@ func TestLLD(t *testing.T) {
 	defer server.close()
 
 	var wg sync.WaitGroup
-	wg.Go(func() {
-		server.listen()
-	})
+	wg.Go(server.listen)
 
 	// Setup plugin
 	plugin := &Zabbix{
@@ -893,9 +887,7 @@ func TestAutoRegister(t *testing.T) {
 	defer server.close()
 
 	var wg sync.WaitGroup
-	wg.Go(func() {
-		server.listen()
-	})
+	wg.Go(server.listen)
 
 	// Setup plugin
 	plugin := &Zabbix{
@@ -1083,9 +1075,7 @@ func TestCases(t *testing.T) {
 			defer server.close()
 
 			var wg sync.WaitGroup
-			wg.Go(func() {
-				server.listen()
-			})
+			wg.Go(server.listen)
 			defer server.listener.Close()
 
 			// Setup the plugin

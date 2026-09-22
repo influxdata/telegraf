@@ -185,9 +185,7 @@ func TestServeHTTP(t *testing.T) {
 		require.NoError(t, err)
 		pubPush.acc = agent.NewAccumulator(&testMetricMaker{}, dst).WithTracking(1)
 
-		wg.Go(func() {
-			pubPush.receiveDelivered()
-		})
+		wg.Go(pubPush.receiveDelivered)
 
 		wg.Add(1)
 		go func(d chan telegraf.Metric) {

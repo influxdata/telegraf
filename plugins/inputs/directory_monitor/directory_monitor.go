@@ -156,9 +156,7 @@ func (monitor *DirectoryMonitor) Start(acc telegraf.Accumulator) error {
 	}()
 
 	// Monitor the files channel and read what they receive.
-	monitor.waitGroup.Go(func() {
-		monitor.monitor()
-	})
+	monitor.waitGroup.Go(monitor.monitor)
 
 	return nil
 }
