@@ -2,6 +2,7 @@ package kube_inventory
 
 import (
 	"context"
+	"maps"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -66,9 +67,7 @@ func (ki *KubernetesInventory) gatherNode(n *corev1.Node, acc telegraf.Accumulat
 			"status":    string(val.Status),
 			"condition": string(val.Type),
 		}
-		for k, v := range tags {
-			conditiontags[k] = v
-		}
+		maps.Copy(conditiontags, tags)
 		running := 0
 		nodeready := 0
 		if val.Status == "True" {

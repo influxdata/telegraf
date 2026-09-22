@@ -3,6 +3,7 @@
 package zfs
 
 import (
+	"maps"
 	"os"
 	"path/filepath"
 	"testing"
@@ -621,9 +622,7 @@ func getKstatMetricsAll() map[string]any {
 		"abdstats_scatter_sg_table_retry":   int64(99221),
 	}
 	arcMetrics := getKstatMetricsArcOnly()
-	for k, v := range otherMetrics {
-		arcMetrics[k] = v
-	}
+	maps.Copy(arcMetrics, otherMetrics)
 	return arcMetrics
 }
 

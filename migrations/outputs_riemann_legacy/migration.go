@@ -1,6 +1,8 @@
 package outputs_riemann_legacy
 
 import (
+	"maps"
+
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 
@@ -80,16 +82,10 @@ func (j *riemann) fillCommon(o common.OutputOptions) {
 		j.FieldExclude = append(j.FieldExclude, o.FieldExclude...)
 	}
 	if len(o.TagPassFilters) > 0 {
-		j.TagPassFilters = make(map[string][]string, len(o.TagPassFilters))
-		for k, v := range o.TagPassFilters {
-			j.TagPassFilters[k] = v
-		}
+		j.TagPassFilters = maps.Clone(o.TagPassFilters)
 	}
 	if len(o.TagDropFilters) > 0 {
-		j.TagDropFilters = make(map[string][]string, len(o.TagDropFilters))
-		for k, v := range o.TagDropFilters {
-			j.TagDropFilters[k] = v
-		}
+		j.TagDropFilters = maps.Clone(o.TagDropFilters)
 	}
 	if len(o.TagExclude) > 0 {
 		j.TagExclude = append(j.TagExclude, o.TagExclude...)

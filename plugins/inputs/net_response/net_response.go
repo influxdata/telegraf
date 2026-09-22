@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"net/textproto"
 	"regexp"
@@ -106,9 +107,7 @@ func (n *NetResponse) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// Merge the tags
-	for k, v := range returnTags {
-		tags[k] = v
-	}
+	maps.Copy(tags, returnTags)
 	// Add metrics
 	acc.AddFields("net_response", fields, tags)
 	return nil

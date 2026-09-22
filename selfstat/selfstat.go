@@ -7,6 +7,7 @@ package selfstat
 
 import (
 	"hash/fnv"
+	"maps"
 	"sort"
 	"sync"
 	"time"
@@ -122,15 +123,10 @@ func (r *Registry) register(measurement, field string, tags map[string]string) S
 		return stat
 	}
 
-	t := make(map[string]string, len(tags))
-	for k, v := range tags {
-		t[k] = v
-	}
-
 	s := &stat{
 		measurement: measurement,
 		field:       field,
-		tags:        t,
+		tags:        maps.Clone(tags),
 	}
 	registry.set(key, s)
 	return s
@@ -145,15 +141,10 @@ func (r *Registry) registerTiming(measurement, field string, tags map[string]str
 		return stat
 	}
 
-	t := make(map[string]string, len(tags))
-	for k, v := range tags {
-		t[k] = v
-	}
-
 	s := &timingStat{
 		measurement: measurement,
 		field:       field,
-		tags:        t,
+		tags:        maps.Clone(tags),
 	}
 	registry.set(key, s)
 	return s
