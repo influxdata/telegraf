@@ -526,10 +526,7 @@ func partitionRecords(size int, records []types.Record) [][]types.Record {
 	partitions := make([][]types.Record, 0, numberOfPartitions)
 	for i := 0; i < numberOfPartitions; i++ {
 		start := size * i
-		end := size * (i + 1)
-		if end > len(records) {
-			end = len(records)
-		}
+		end := min(size*(i+1), len(records))
 
 		partitions = append(partitions, records[start:end])
 	}

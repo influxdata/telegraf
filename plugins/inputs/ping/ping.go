@@ -105,11 +105,7 @@ func (p *Ping) Init() error {
 	}
 
 	// The interval cannot be below 0.2 seconds, matching ping implementation: https://linux.die.net/man/8/ping
-	if time.Duration(p.PingInterval) < 200*time.Millisecond {
-		p.calcInterval = 200 * time.Millisecond
-	} else {
-		p.calcInterval = time.Duration(p.PingInterval)
-	}
+	p.calcInterval = max(time.Duration(p.PingInterval), 200*time.Millisecond)
 
 	if p.Method == "native" && p.Timeout > 0 {
 		p.Log.Warn(`"timeout" is ignored when method = "native"; use "deadline" to control the total runtime`)
