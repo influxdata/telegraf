@@ -88,9 +88,7 @@ func TestInit(t *testing.T) {
 		{
 			name: "wrong SNMP client config",
 			plugin: &SNMPLookup{
-				ClientConfig: snmp.ClientConfig{
-					Version: 99,
-				},
+				Version: 99,
 			},
 			expected: "parsing SNMP client config: invalid version",
 		},

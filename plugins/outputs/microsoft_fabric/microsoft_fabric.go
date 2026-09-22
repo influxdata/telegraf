@@ -10,7 +10,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/adx"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -58,10 +57,8 @@ func (m *MicrosoftFabric) Init() error {
 		m.Log.Debug("Detected EventHouse endpoint...")
 		eventhouse := &eventhouse{
 			connectionString: m.ConnectionString,
-			Config: adx.Config{
-				Timeout: m.Timeout,
-			},
-			log: m.Log,
+			Timeout:          m.Timeout,
+			log:              m.Log,
 		}
 		if err := eventhouse.init(); err != nil {
 			return fmt.Errorf("initializing EventHouse output failed: %w", err)

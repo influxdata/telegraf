@@ -36,13 +36,11 @@ type testCase struct {
 var singleMetric = testCase{
 	[]api.ValueList{
 		{
-			Identifier: api.Identifier{
-				Host:           "xyzzy",
-				Plugin:         "cpu",
-				PluginInstance: "1",
-				Type:           "cpu",
-				TypeInstance:   "user",
-			},
+			Host:           "xyzzy",
+			Plugin:         "cpu",
+			PluginInstance: "1",
+			Type:           "cpu",
+			TypeInstance:   "user",
 			Values: []api.Value{
 				api.Counter(42),
 			},
@@ -68,13 +66,11 @@ var singleMetric = testCase{
 var multiMetric = testCase{
 	[]api.ValueList{
 		{
-			Identifier: api.Identifier{
-				Host:           "xyzzy",
-				Plugin:         "cpu",
-				PluginInstance: "0",
-				Type:           "cpu",
-				TypeInstance:   "user",
-			},
+			Host:           "xyzzy",
+			Plugin:         "cpu",
+			PluginInstance: "0",
+			Type:           "cpu",
+			TypeInstance:   "user",
 			Values: []api.Value{
 				api.Derive(42),
 				api.Gauge(42),
@@ -323,26 +319,22 @@ func assertEqualMetrics(t *testing.T, expected []metricData, received []telegraf
 
 var benchmarkData = []api.ValueList{
 	{
-		Identifier: api.Identifier{
-			Host:           "xyzzy",
-			Plugin:         "cpu",
-			PluginInstance: "1",
-			Type:           "cpu",
-			TypeInstance:   "user",
-		},
+		Host:           "xyzzy",
+		Plugin:         "cpu",
+		PluginInstance: "1",
+		Type:           "cpu",
+		TypeInstance:   "user",
 		Values: []api.Value{
 			api.Counter(4),
 		},
 		DSNames: []string(nil),
 	},
 	{
-		Identifier: api.Identifier{
-			Host:           "xyzzy",
-			Plugin:         "cpu",
-			PluginInstance: "2",
-			Type:           "cpu",
-			TypeInstance:   "user",
-		},
+		Host:           "xyzzy",
+		Plugin:         "cpu",
+		PluginInstance: "2",
+		Type:           "cpu",
+		TypeInstance:   "user",
 		Values: []api.Value{
 			api.Counter(5),
 		},

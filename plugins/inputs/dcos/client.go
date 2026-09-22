@@ -319,10 +319,8 @@ func (c *clusterClient) toURL(path string) string {
 func createLoginToken(sa *serviceAccount) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims{
 		UID: sa.accountID,
-		RegisteredClaims: jwt.RegisteredClaims{
-			// How long we have to login with this token
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 5)),
-		},
+		// How long we have to login with this token
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 5)),
 	})
 	return token.SignedString(sa.privateKey)
 }

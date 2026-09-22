@@ -49,16 +49,14 @@ func TestDaemonSet(t *testing.T) {
 									NumberUnavailable:      1,
 									UpdatedNumberScheduled: 2,
 								},
-								ObjectMeta: meta.ObjectMeta{
-									Generation: 11221,
-									Namespace:  "ns1",
-									Name:       "daemon1",
-									Labels: map[string]string{
-										"lab1": "v1",
-										"lab2": "v2",
-									},
-									CreationTimestamp: meta.Time{Time: now},
+								Generation: 11221,
+								Namespace:  "ns1",
+								Name:       "daemon1",
+								Labels: map[string]string{
+									"lab1": "v1",
+									"lab2": "v2",
 								},
+								CreationTimestamp: meta.Time{Time: now},
 								Spec: apps.DaemonSetSpec{
 									Selector: &meta.LabelSelector{
 										MatchLabels: map[string]string{
@@ -140,16 +138,14 @@ func TestDaemonSetSelectorFilter(t *testing.T) {
 						NumberUnavailable:      1,
 						UpdatedNumberScheduled: 2,
 					},
-					ObjectMeta: meta.ObjectMeta{
-						Generation: 11221,
-						Namespace:  "ns1",
-						Name:       "daemon1",
-						Labels: map[string]string{
-							"lab1": "v1",
-							"lab2": "v2",
-						},
-						CreationTimestamp: meta.Time{Time: time.Now()},
+					Generation: 11221,
+					Namespace:  "ns1",
+					Name:       "daemon1",
+					Labels: map[string]string{
+						"lab1": "v1",
+						"lab2": "v2",
 					},
+					CreationTimestamp: meta.Time{Time: time.Now()},
 					Spec: apps.DaemonSetSpec{
 						Selector: &meta.LabelSelector{
 							MatchLabels: map[string]string{
