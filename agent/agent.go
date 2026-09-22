@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"slices"
 	"sync"
 	"time"
 
@@ -367,8 +368,7 @@ func (*Agent) startInputs(dst chan<- telegraf.Metric, inputs []*models.RunningIn
 
 		if err := input.Start(acc); err != nil {
 			// If the model tells us to remove the plugin we do so without error
-			var fatalErr *internal.FatalError
-			if errors.As(err, &fatalErr) {
+			if _, ok := errors.AsType[*internal.FatalError](err); ok {
 				log.Printf("I! [agent] Failed to start %s, shutting down plugin: %s", input.LogName(), err)
 				continue
 			}
@@ -619,9 +619,7 @@ func (*Agent) startProcessors(dst chan<- telegraf.Metric, runningProcessors mode
 	// processor-list is sorted by order and/or by appearance in the config,
 	// i.e. in input-to-output direction. Therefore, reverse the processor list
 	// to reflect the order/definition order in the processing chain.
-	for i := len(runningProcessors) - 1; i >= 0; i-- {
-		processor := runningProcessors[i]
-
+	for _, processor := range slices.Backward(runningProcessors) {
 		src = make(chan telegraf.Metric, 100)
 		acc := NewAccumulator(processor, dst)
 
@@ -766,6 +764,16 @@ func (*Agent) push(ctx context.Context, aggregator *models.RunningAggregator, ac
 
 		select {
 		case <-time.After(until):
+			// With round_interval the window end is a wall-clock time while
+			// the timer sleeps on the monotonic clock, so the timer can fire
+			// before the wall clock reaches the window end. Re-arm for the
+			// remainder rather than pushing early, which would reset the
+			// window onto the same slot and push it twice. A remainder of a
+			// full period or more is a clock adjustment, which Push handles
+			// by resetting the window, so let that through.
+			if remaining := time.Until(aggregator.EndPeriod()); remaining > 0 && remaining < aggregator.Period() {
+				continue
+			}
 			aggregator.Push(acc)
 		case <-ctx.Done():
 			aggregator.Push(acc)
@@ -784,8 +792,7 @@ func (a *Agent) startOutputs(
 	unit := &outputUnit{src: src}
 	for _, output := range outputs {
 		if err := a.connectOutput(ctx, output); err != nil {
-			var fatalErr *internal.FatalError
-			if errors.As(err, &fatalErr) {
+			if _, ok := errors.AsType[*internal.FatalError](err); ok {
 				// If the model tells us to remove the plugin we do so without error
 				log.Printf("I! [agent] Failed to connect to [%s], error was %q;  shutting down plugin...", output.LogName(), err)
 				output.Close()

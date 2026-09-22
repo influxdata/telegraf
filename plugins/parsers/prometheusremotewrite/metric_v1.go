@@ -2,6 +2,7 @@ package prometheusremotewrite
 
 import (
 	"fmt"
+	"maps"
 	"math"
 	"time"
 
@@ -28,9 +29,7 @@ func (p *Parser) extractMetricsV1(ts *prompb.TimeSeries) ([]telegraf.Metric, err
 	metrics := make([]telegraf.Metric, 0, len(ts.Samples)+len(ts.Histograms))
 
 	tags := make(map[string]string, len(p.DefaultTags)+len(ts.Labels))
-	for key, value := range p.DefaultTags {
-		tags[key] = value
-	}
+	maps.Copy(tags, p.DefaultTags)
 	for _, l := range ts.Labels {
 		tags[l.Name] = l.Value
 	}
@@ -47,7 +46,7 @@ func (p *Parser) extractMetricsV1(ts *prompb.TimeSeries) ([]telegraf.Metric, err
 		}
 		// In prometheus remote write,
 		// You won't know if it's a counter or gauge or a sub-counter in a histogram
-		fields := map[string]interface{}{"value": s.Value}
+		fields := map[string]any{"value": s.Value}
 		if s.Timestamp > 0 {
 			t = time.Unix(0, s.Timestamp*1000000)
 		}

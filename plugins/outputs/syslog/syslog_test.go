@@ -34,7 +34,7 @@ func TestGetSyslogMessageWithFramingOctetCounting(t *testing.T) {
 		map[string]string{
 			"hostname": "testhost",
 		},
-		map[string]interface{}{},
+		map[string]any{},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
@@ -59,7 +59,7 @@ func TestGetSyslogMessageWithFramingNonTransparent(t *testing.T) {
 		map[string]string{
 			"hostname": "testhost",
 		},
-		map[string]interface{}{},
+		map[string]any{},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
@@ -85,7 +85,7 @@ func TestGetSyslogMessageWithFramingNonTransparentNul(t *testing.T) {
 		map[string]string{
 			"hostname": "testhost",
 		},
-		map[string]interface{}{},
+		map[string]any{},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
@@ -132,7 +132,7 @@ func testSyslogWriteWithStream(t *testing.T, s *Syslog, lconn net.Conn) {
 	m1 := metric.New(
 		"testmetric",
 		map[string]string{},
-		map[string]interface{}{},
+		map[string]any{},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC))
 
 	metrics := []telegraf.Metric{m1}
@@ -155,7 +155,7 @@ func testSyslogWriteWithPacket(t *testing.T, s *Syslog, lconn net.PacketConn) {
 	m1 := metric.New(
 		"testmetric",
 		map[string]string{},
-		map[string]interface{}{},
+		map[string]any{},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC))
 
 	metrics := []telegraf.Metric{m1}

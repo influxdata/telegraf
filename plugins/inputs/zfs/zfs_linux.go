@@ -95,7 +95,7 @@ func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for _, metric := range z.KstatMetrics {
 		fn := filepath.Join(z.KstatPath, metric)
 		lines, err := internal.ReadLines(fn)
@@ -183,7 +183,7 @@ func (z *Zfs) gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
 		return err
 	}
 
-	var fields map[string]interface{}
+	var fields map[string]any
 	var gatherErr error
 	tags := map[string]string{"pool": pool.name}
 	switch pool.version {
@@ -203,15 +203,15 @@ func (z *Zfs) gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
 	return nil
 }
 
-func gatherV1(lines []string) (map[string]interface{}, error) {
+func gatherV1(lines []string) (map[string]any, error) {
 	fileLines := 3
 	keys, values, err := gather(lines, fileLines)
 	if err != nil {
 		return nil, err
 	}
 
-	fields := make(map[string]interface{})
-	for i := 0; i < len(keys); i++ {
+	fields := make(map[string]any)
+	for i := range keys {
 		value, err := strconv.ParseInt(values[i], 10, 64)
 		if err != nil {
 			return nil, err
@@ -249,7 +249,7 @@ func gather(lines []string, fileLines int) (keys, values []string, err error) {
 // nunlinked                       4    13848
 //
 // For explanation of the first line's values see https://github.com/openzfs/zfs/blob/master/module/os/linux/spl/spl-kstat.c#L61
-func (z *Zfs) gatherV2(lines []string, tags map[string]string) (map[string]interface{}, error) {
+func (z *Zfs) gatherV2(lines []string, tags map[string]string) (map[string]any, error) {
 	fields, err := z.processProcFile(lines)
 	if err != nil {
 		return nil, err
@@ -273,7 +273,7 @@ func (z *Zfs) gatherV2(lines []string, tags map[string]string) (map[string]inter
 	return fields, nil
 }
 
-func (z *Zfs) processProcFile(lines []string) (map[string]interface{}, error) {
+func (z *Zfs) processProcFile(lines []string) (map[string]any, error) {
 	// Ignore the first lines as it contains data in a different format
 	// The second line (index 1) does contain the column header and should read
 	// name				type	data
@@ -283,7 +283,7 @@ func (z *Zfs) processProcFile(lines []string) (map[string]interface{}, error) {
 	}
 
 	// Extract the data
-	data := make(map[string]interface{}, len(lines)-2)
+	data := make(map[string]any, len(lines)-2)
 	for i, line := range lines[2:] {
 		fields := strings.Fields(line)
 		if len(fields) != 3 {

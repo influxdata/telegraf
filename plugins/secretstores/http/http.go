@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -144,8 +145,7 @@ func (h *HTTP) download() error {
 
 	// Extract the data from the resulting data
 	if err := json.Unmarshal(data, &h.cache); err != nil {
-		var terr *json.UnmarshalTypeError
-		if errors.As(err, &terr) {
+		if _, ok := errors.AsType[*json.UnmarshalTypeError](err); ok {
 			return fmt.Errorf("%w; maybe missing or wrong data transformation", err)
 		}
 		return err
@@ -182,13 +182,7 @@ func (h *HTTP) query() ([]byte, error) {
 	request.SetBasicAuth("---", "---")
 	request.Header.Set("Authorization", "---")
 
-	responseHasSuccessCode := false
-	for _, statusCode := range h.SuccessStatusCodes {
-		if resp.StatusCode == statusCode {
-			responseHasSuccessCode = true
-			break
-		}
-	}
+	responseHasSuccessCode := slices.Contains(h.SuccessStatusCodes, resp.StatusCode)
 
 	if !responseHasSuccessCode {
 		msg := "received status code %d (%s), expected any value out of %v"

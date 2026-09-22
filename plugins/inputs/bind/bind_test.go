@@ -155,7 +155,7 @@ func TestBindJsonStats(t *testing.T) {
 				"port":   port,
 			}
 
-			fields := map[string]interface{}{}
+			fields := map[string]any{}
 
 			for _, val := range tc.values {
 				fields[val.fieldKey] = val.fieldValue
@@ -173,7 +173,7 @@ func TestBindJsonStats(t *testing.T) {
 			"port":   port,
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"block_size":   int64(13893632),
 			"context_size": int64(3685480),
 			"in_use":       int64(3064368),
@@ -361,7 +361,7 @@ func TestBindXmlStatsV2(t *testing.T) {
 				"port":   port,
 			}
 
-			fields := make(map[string]interface{}, len(tc.values))
+			fields := make(map[string]any, len(tc.values))
 			for _, val := range tc.values {
 				fields[val.fieldKey] = val.fieldValue
 			}
@@ -378,7 +378,7 @@ func TestBindXmlStatsV2(t *testing.T) {
 			"port":   port,
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"block_size":   int64(77070336),
 			"context_size": int64(6663840),
 			"in_use":       int64(20772579),
@@ -588,7 +588,7 @@ func TestBindXmlStatsV3(t *testing.T) {
 				"port":   port,
 			}
 
-			fields := make(map[string]interface{}, len(tc.values))
+			fields := make(map[string]any, len(tc.values))
 			for _, val := range tc.values {
 				fields[val.fieldKey] = val.fieldValue
 			}
@@ -604,7 +604,7 @@ func TestBindXmlStatsV3(t *testing.T) {
 			"port":   port,
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"block_size":   int64(45875200),
 			"context_size": int64(10037400),
 			"in_use":       int64(6000232),
@@ -649,7 +649,7 @@ func TestBindXmlStatsV3Signed(t *testing.T) {
 				"source": host,
 				"port":   port,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"block_size":   int64(45875200),
 				"context_size": int64(10037400),
 				"in_use":       int64(6000232),
@@ -668,7 +668,7 @@ func TestBindXmlStatsV3Signed(t *testing.T) {
 				"id":     "0x55fb2e042de0",
 				"name":   "main",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in_use": int64(1454904),
 				"total":  int64(2706043),
 			},
@@ -684,7 +684,7 @@ func TestBindXmlStatsV3Signed(t *testing.T) {
 				"id":     "0x55fb2e0507e0",
 				"name":   "dst",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in_use": int64(91776),
 				"total":  int64(387478),
 			},
@@ -700,7 +700,7 @@ func TestBindXmlStatsV3Signed(t *testing.T) {
 				"id":     "0x55fb2e0938e0",
 				"name":   "zonemgr-pool",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in_use": int64(143776),
 				"total":  int64(742986),
 			},
@@ -716,7 +716,7 @@ func TestBindXmlStatsV3Signed(t *testing.T) {
 				"id":     "0x7f19d00017d0",
 				"name":   "threadkey",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in_use": int64(0),
 				"total":  int64(0),
 			},
@@ -732,7 +732,7 @@ func TestBindXmlStatsV3Signed(t *testing.T) {
 				"id":     "0x7f19d00475f0",
 				"name":   "client",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in_use": int64(8760),
 				"total":  int64(267800),
 			},
@@ -748,7 +748,7 @@ func TestBindXmlStatsV3Signed(t *testing.T) {
 				"id":     "0x7f19d00dfca0",
 				"name":   "cache",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in_use": int64(83650),
 				"total":  int64(288938),
 			},
@@ -764,7 +764,7 @@ func TestBindXmlStatsV3Signed(t *testing.T) {
 				"id":     "0x7f19d00eaa30",
 				"name":   "cache_heap",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in_use": int64(132096),
 				"total":  int64(393216),
 			},
@@ -780,7 +780,7 @@ func TestBindXmlStatsV3Signed(t *testing.T) {
 				"id":     "0x7f19d01094e0",
 				"name":   "res0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in_use": int64(0),
 				"total":  int64(262144),
 			},
@@ -796,7 +796,7 @@ func TestBindXmlStatsV3Signed(t *testing.T) {
 				"id":     "0x7f19d0114270",
 				"name":   "res1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in_use": int64(0),
 				"total":  int64(0),
 			},
@@ -812,7 +812,7 @@ func TestBindXmlStatsV3Signed(t *testing.T) {
 				"id":     "0x7f19d011f000",
 				"name":   "res2",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in_use": int64(0),
 				"total":  int64(0),
 			},
@@ -827,7 +827,7 @@ func TestBindXmlStatsV3Signed(t *testing.T) {
 				"port":   port,
 				"type":   "opcode",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"IQUERY": int64(0),
 				"NOTIFY": int64(0),
 				"QUERY":  int64(74941),
@@ -844,7 +844,7 @@ func TestBindXmlStatsV3Signed(t *testing.T) {
 				"port":   port,
 				"type":   "qtype",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"A":     int64(63672),
 				"AAAA":  int64(5735),
 				"ANY":   int64(22),
@@ -866,7 +866,7 @@ func TestBindXmlStatsV3Signed(t *testing.T) {
 				"port":   port,
 				"type":   "nsstat",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"AuthQryRej":      int64(0),
 				"DNS64":           int64(0),
 				"ExpireOpt":       int64(0),
@@ -930,7 +930,7 @@ func TestBindXmlStatsV3Signed(t *testing.T) {
 				"port":   port,
 				"type":   "zonestat",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"AXFRReqv4":   int64(0),
 				"AXFRReqv6":   int64(0),
 				"IXFRReqv4":   int64(0),
@@ -955,7 +955,7 @@ func TestBindXmlStatsV3Signed(t *testing.T) {
 				"port":   port,
 				"type":   "sockstat",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"FDWatchClose":    int64(0),
 				"FDwatchConn":     int64(0),
 				"FDwatchConnFail": int64(0),
@@ -1030,7 +1030,7 @@ func TestBindXmlStatsV3Signed(t *testing.T) {
 				"type":   "resqtype",
 				"view":   "_default",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"A":      int64(61568),
 				"AAAA":   int64(3933),
 				"DNSKEY": int64(1699),
@@ -1052,7 +1052,7 @@ func TestBindXmlStatsV3Signed(t *testing.T) {
 				"type":   "resstats",
 				"view":   "_default",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"BadEDNSVersion":  int64(0),
 				"BucketSize":      int64(31),
 				"EDNS0Fail":       int64(0),
@@ -1107,7 +1107,7 @@ func TestBindXmlStatsV3Signed(t *testing.T) {
 				"type":   "adbstat",
 				"view":   "_default",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"entriescnt": int64(314),
 				"namescnt":   int64(316),
 				"nentries":   int64(1021),
@@ -1124,7 +1124,7 @@ func TestBindXmlStatsV3Signed(t *testing.T) {
 				"type":   "cachestats",
 				"view":   "_default",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"CacheBuckets": int64(519),
 				"CacheHits":    int64(1904593),
 				"CacheMisses":  int64(96),
@@ -1151,7 +1151,7 @@ func TestBindXmlStatsV3Signed(t *testing.T) {
 				"type":   "resstats",
 				"view":   "_bind",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"BadEDNSVersion":  int64(0),
 				"BucketSize":      int64(31),
 				"EDNS0Fail":       int64(0),
@@ -1206,7 +1206,7 @@ func TestBindXmlStatsV3Signed(t *testing.T) {
 				"type":   "adbstat",
 				"view":   "_bind",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"entriescnt": int64(0),
 				"namescnt":   int64(0),
 				"nentries":   int64(1021),
@@ -1223,7 +1223,7 @@ func TestBindXmlStatsV3Signed(t *testing.T) {
 				"type":   "cachestats",
 				"view":   "_bind",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"CacheBuckets": int64(64),
 				"CacheHits":    int64(0),
 				"CacheMisses":  int64(0),
@@ -1274,7 +1274,7 @@ func TestBindXmlStatsV3Unsigned(t *testing.T) {
 				"source": host,
 				"port":   port,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"block_size":   uint64(45875200),
 				"context_size": uint64(10037400),
 				"in_use":       uint64(6000232),
@@ -1293,7 +1293,7 @@ func TestBindXmlStatsV3Unsigned(t *testing.T) {
 				"id":     "0x55fb2e042de0",
 				"name":   "main",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in_use": uint64(1454904),
 				"total":  uint64(2706043),
 			},
@@ -1309,7 +1309,7 @@ func TestBindXmlStatsV3Unsigned(t *testing.T) {
 				"id":     "0x55fb2e0507e0",
 				"name":   "dst",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in_use": uint64(91776),
 				"total":  uint64(387478),
 			},
@@ -1325,7 +1325,7 @@ func TestBindXmlStatsV3Unsigned(t *testing.T) {
 				"id":     "0x55fb2e0938e0",
 				"name":   "zonemgr-pool",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in_use": uint64(143776),
 				"total":  uint64(742986),
 			},
@@ -1341,7 +1341,7 @@ func TestBindXmlStatsV3Unsigned(t *testing.T) {
 				"id":     "0x7f19d00017d0",
 				"name":   "threadkey",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in_use": uint64(0),
 				"total":  uint64(0),
 			},
@@ -1357,7 +1357,7 @@ func TestBindXmlStatsV3Unsigned(t *testing.T) {
 				"id":     "0x7f19d00475f0",
 				"name":   "client",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in_use": uint64(8760),
 				"total":  uint64(267800),
 			},
@@ -1373,7 +1373,7 @@ func TestBindXmlStatsV3Unsigned(t *testing.T) {
 				"id":     "0x7f19d00dfca0",
 				"name":   "cache",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in_use": uint64(83650),
 				"total":  uint64(288938),
 			},
@@ -1389,7 +1389,7 @@ func TestBindXmlStatsV3Unsigned(t *testing.T) {
 				"id":     "0x7f19d00eaa30",
 				"name":   "cache_heap",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in_use": uint64(132096),
 				"total":  uint64(393216),
 			},
@@ -1405,7 +1405,7 @@ func TestBindXmlStatsV3Unsigned(t *testing.T) {
 				"id":     "0x7f19d01094e0",
 				"name":   "res0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in_use": uint64(0),
 				"total":  uint64(262144),
 			},
@@ -1421,7 +1421,7 @@ func TestBindXmlStatsV3Unsigned(t *testing.T) {
 				"id":     "0x7f19d0114270",
 				"name":   "res1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in_use": uint64(0),
 				"total":  uint64(0),
 			},
@@ -1437,7 +1437,7 @@ func TestBindXmlStatsV3Unsigned(t *testing.T) {
 				"id":     "0x7f19d011f000",
 				"name":   "res2",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"in_use": uint64(0),
 				"total":  uint64(0),
 			},
@@ -1452,7 +1452,7 @@ func TestBindXmlStatsV3Unsigned(t *testing.T) {
 				"port":   port,
 				"type":   "opcode",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"IQUERY": uint64(0),
 				"NOTIFY": uint64(0),
 				"QUERY":  uint64(74941),
@@ -1469,7 +1469,7 @@ func TestBindXmlStatsV3Unsigned(t *testing.T) {
 				"port":   port,
 				"type":   "qtype",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"A":     uint64(63672),
 				"AAAA":  uint64(5735),
 				"ANY":   uint64(22),
@@ -1491,7 +1491,7 @@ func TestBindXmlStatsV3Unsigned(t *testing.T) {
 				"port":   port,
 				"type":   "nsstat",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"AuthQryRej":      uint64(0),
 				"DNS64":           uint64(0),
 				"ExpireOpt":       uint64(0),
@@ -1555,7 +1555,7 @@ func TestBindXmlStatsV3Unsigned(t *testing.T) {
 				"port":   port,
 				"type":   "zonestat",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"AXFRReqv4":   uint64(0),
 				"AXFRReqv6":   uint64(0),
 				"IXFRReqv4":   uint64(0),
@@ -1580,7 +1580,7 @@ func TestBindXmlStatsV3Unsigned(t *testing.T) {
 				"port":   port,
 				"type":   "sockstat",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"FDWatchClose":    uint64(0),
 				"FDwatchConn":     uint64(0),
 				"FDwatchConnFail": uint64(0),
@@ -1655,7 +1655,7 @@ func TestBindXmlStatsV3Unsigned(t *testing.T) {
 				"type":   "resqtype",
 				"view":   "_default",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"A":      uint64(61568),
 				"AAAA":   uint64(3933),
 				"DNSKEY": uint64(1699),
@@ -1677,7 +1677,7 @@ func TestBindXmlStatsV3Unsigned(t *testing.T) {
 				"type":   "resstats",
 				"view":   "_default",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"BadEDNSVersion":  uint64(0),
 				"BucketSize":      uint64(31),
 				"EDNS0Fail":       uint64(0),
@@ -1732,7 +1732,7 @@ func TestBindXmlStatsV3Unsigned(t *testing.T) {
 				"type":   "adbstat",
 				"view":   "_default",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"entriescnt": uint64(314),
 				"namescnt":   uint64(316),
 				"nentries":   uint64(1021),
@@ -1749,7 +1749,7 @@ func TestBindXmlStatsV3Unsigned(t *testing.T) {
 				"type":   "cachestats",
 				"view":   "_default",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"CacheBuckets": uint64(519),
 				"CacheHits":    uint64(1904593),
 				"CacheMisses":  uint64(96),
@@ -1776,7 +1776,7 @@ func TestBindXmlStatsV3Unsigned(t *testing.T) {
 				"type":   "resstats",
 				"view":   "_bind",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"BadEDNSVersion":  uint64(0),
 				"BucketSize":      uint64(31),
 				"EDNS0Fail":       uint64(0),
@@ -1831,7 +1831,7 @@ func TestBindXmlStatsV3Unsigned(t *testing.T) {
 				"type":   "adbstat",
 				"view":   "_bind",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"entriescnt": uint64(0),
 				"namescnt":   uint64(0),
 				"nentries":   uint64(1021),
@@ -1848,7 +1848,7 @@ func TestBindXmlStatsV3Unsigned(t *testing.T) {
 				"type":   "cachestats",
 				"view":   "_bind",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"CacheBuckets": uint64(64),
 				"CacheHits":    uint64(0),
 				"CacheMisses":  uint64(0),

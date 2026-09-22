@@ -331,7 +331,7 @@ func TestRadiusIntegrationInvalidSourceIP(t *testing.T) {
 			"source_port":   port,
 			"response_code": "timeout",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"responsetime_ms": 1000,
 		},
 		time.Time{},

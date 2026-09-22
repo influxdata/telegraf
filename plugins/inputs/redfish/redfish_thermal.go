@@ -52,7 +52,7 @@ func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, address string,
 			maps.Copy(tags, r.chassisTags)
 		}
 
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		fields["reading_celsius"] = j.ReadingCelsius
 		fields["upper_threshold_critical"] = j.UpperThresholdCritical
 		fields["upper_threshold_fatal"] = j.UpperThresholdFatal
@@ -63,7 +63,7 @@ func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, address string,
 
 	for i := range thermal.Fans {
 		tags := make(map[string]string, 20)
-		fields := make(map[string]interface{}, 5)
+		fields := make(map[string]any, 5)
 		tags["member_id"] = thermal.Fans[i].MemberID
 		tags["address"] = address
 

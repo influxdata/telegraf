@@ -38,7 +38,7 @@ type value struct {
 // UnmarshalJSON customizes the JSON parsing to decode the raw pair-array into
 // timestamp and the numeric value
 func (v *value) UnmarshalJSON(data []byte) error {
-	var raw []interface{}
+	var raw []any
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func (l *logline) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (r *response) parse() (interface{}, error) {
+func (r *response) parse() (any, error) {
 	if r.Status != "success" {
 		return nil, fmt.Errorf("invalid status %q", r.Status)
 	}

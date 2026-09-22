@@ -135,7 +135,7 @@ func (n *NSQ) gatherEndpoint(e string, acc telegraf.Accumulator) error {
 		`server_version`: data.Version,
 	}
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	if data.Health == `OK` {
 		fields["server_count"] = int64(1)
 	} else {
@@ -168,7 +168,7 @@ func gatherTopicStats(t topicStats, acc telegraf.Accumulator, host, version stri
 		"topic":          t.Name,
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"depth":         t.Depth,
 		"backend_depth": t.BackendDepth,
 		"message_count": t.MessageCount,
@@ -189,7 +189,7 @@ func gatherChannelStats(c channelStats, acc telegraf.Accumulator, host, version,
 		"channel":        c.Name,
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"depth":          c.Depth,
 		"backend_depth":  c.BackendDepth,
 		"inflight_count": c.InFlightCount,
@@ -225,7 +225,7 @@ func gatherClientStats(c clientStats, acc telegraf.Accumulator, host, version, t
 		tags["client_name"] = c.Name
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"ready_count":    c.ReadyCount,
 		"inflight_count": c.InFlightCount,
 		"message_count":  c.MessageCount,

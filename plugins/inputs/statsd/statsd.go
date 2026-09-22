@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"regexp"
 	"sort"
@@ -196,14 +197,14 @@ type cachedset struct {
 
 type cachedgauge struct {
 	name      string
-	fields    map[string]interface{}
+	fields    map[string]any
 	tags      map[string]string
 	expiresAt time.Time
 }
 
 type cachedcounter struct {
 	name      string
-	fields    map[string]interface{}
+	fields    map[string]any
 	tags      map[string]string
 	expiresAt time.Time
 }
@@ -262,7 +263,7 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 	s.accept = make(chan bool, s.MaxTCPConnections)
 	s.conns = make(map[string]*net.TCPConn)
 	s.bufPool = sync.Pool{
-		New: func() interface{} {
+		New: func() any {
 			return new(bytes.Buffer)
 		},
 	}
@@ -337,7 +338,7 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
 
 	for _, m := range s.distributions {
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			defaultFieldName: m.value,
 		}
 		if s.EnableAggregationTemporality {
@@ -351,7 +352,7 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 		// Defining a template to parse field names for timers allows us to split
 		// out multiple fields per timer. In this case we prefix each stat with the
 		// field name and store these all in a single measurement.
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		for fieldName, stats := range m.fields {
 			var prefix string
 			if fieldName != defaultFieldName {
@@ -411,7 +412,7 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, m := range s.sets {
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		for field, set := range m.fields {
 			if s.FloatSets {
 				fields[field] = float64(len(set))
@@ -627,8 +628,7 @@ func (s *Statsd) parseStatsdLine(p *graphite.Parser, line string) error {
 		// users.online:1|c|#sometagwithnovalue
 		// we will split on the pipe and remove any elements that are datadog
 		// tags, parse them, and rebuild the line sans the datadog tags
-		pipesplit := strings.Split(line, "|")
-		for _, segment := range pipesplit {
+		for segment := range strings.SplitSeq(line, "|") {
 			if len(segment) > 0 && segment[0] == '#' {
 				// we have ourselves a tag; they are comma separated
 				parseDataDogTags(lineTags, segment[1:])
@@ -753,9 +753,7 @@ func (s *Statsd) parseStatsdLine(p *graphite.Parser, line string) error {
 			m.tags["metric_type"] = "distribution"
 		}
 		if len(lineTags) > 0 {
-			for k, v := range lineTags {
-				m.tags[k] = v
-			}
+			maps.Copy(m.tags, lineTags)
 		}
 
 		// Make a unique key for the measurement name/tags
@@ -890,7 +888,7 @@ func (s *Statsd) aggregate(m rawMetric) {
 		if !ok {
 			cached = cachedcounter{
 				name:   m.name,
-				fields: make(map[string]interface{}),
+				fields: make(map[string]any),
 				tags:   m.tags,
 			}
 		}
@@ -908,7 +906,7 @@ func (s *Statsd) aggregate(m rawMetric) {
 		if !ok {
 			cached = cachedgauge{
 				name:   m.name,
-				fields: make(map[string]interface{}),
+				fields: make(map[string]any),
 				tags:   m.tags,
 			}
 		}

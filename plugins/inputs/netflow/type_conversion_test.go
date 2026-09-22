@@ -75,7 +75,7 @@ func TestDecodeBool(t *testing.T) {
 	tests := []struct {
 		name     string
 		in       []byte
-		expected interface{}
+		expected any
 	}{
 		{
 			name:     "zero",

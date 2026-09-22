@@ -115,6 +115,10 @@ func ParseMetricsFromFile(filename string, parser telegraf.Parser) ([]telegraf.M
 		}
 	}
 
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("parsing file %q failed: %w", filename, err)
+	}
+
 	return metrics, nil
 }
 
@@ -136,5 +140,8 @@ func ParseLinesFromFile(filename string) ([]string, error) {
 		lines = append(lines, line)
 	}
 
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("parsing file %q failed: %w", filename, err)
+	}
 	return lines, nil
 }

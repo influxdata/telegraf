@@ -29,7 +29,7 @@ func TestDeployment(t *testing.T) {
 		{
 			name: "no deployments",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/deployments/": &v1.DeploymentList{},
 				},
 			},
@@ -38,7 +38,7 @@ func TestDeployment(t *testing.T) {
 		{
 			name: "collect deployments",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/deployments/": &v1.DeploymentList{
 						Items: []v1.Deployment{
 							{
@@ -68,16 +68,14 @@ func TestDeployment(t *testing.T) {
 										},
 									},
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									Generation: 11221,
-									Namespace:  "ns1",
-									Name:       "deploy1",
-									Labels: map[string]string{
-										"lab1": "v1",
-										"lab2": "v2",
-									},
-									CreationTimestamp: metav1.Time{Time: now},
+								Generation: 11221,
+								Namespace:  "ns1",
+								Name:       "deploy1",
+								Labels: map[string]string{
+									"lab1": "v1",
+									"lab2": "v2",
 								},
+								CreationTimestamp: metav1.Time{Time: now},
 							},
 						},
 					},
@@ -92,7 +90,7 @@ func TestDeployment(t *testing.T) {
 						"selector_select1": "s1",
 						"selector_select2": "s2",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"replicas_available":   int32(1),
 						"replicas_unavailable": int32(4),
 						"created":              now.UnixNano(),
@@ -134,7 +132,7 @@ func TestDeploymentSelectorFilter(t *testing.T) {
 	now := time.Now()
 	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
 
-	responseMap := map[string]interface{}{
+	responseMap := map[string]any{
 		"/deployments/": &v1.DeploymentList{
 			Items: []v1.Deployment{
 				{
@@ -164,16 +162,14 @@ func TestDeploymentSelectorFilter(t *testing.T) {
 							},
 						},
 					},
-					ObjectMeta: metav1.ObjectMeta{
-						Generation: 11221,
-						Namespace:  "ns1",
-						Name:       "deploy1",
-						Labels: map[string]string{
-							"lab1": "v1",
-							"lab2": "v2",
-						},
-						CreationTimestamp: metav1.Time{Time: now},
+					Generation: 11221,
+					Namespace:  "ns1",
+					Name:       "deploy1",
+					Labels: map[string]string{
+						"lab1": "v1",
+						"lab2": "v2",
 					},
+					CreationTimestamp: metav1.Time{Time: now},
 				},
 			},
 		},

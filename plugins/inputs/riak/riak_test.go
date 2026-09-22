@@ -39,7 +39,7 @@ func TestRiak(t *testing.T) {
 	require.NoError(t, riak.Gather(acc))
 
 	// Expect the correct values for all known keys
-	expectFields := map[string]interface{}{
+	expectFields := map[string]any{
 		"cpu_avg1":                     int64(504),
 		"cpu_avg15":                    int64(294),
 		"cpu_avg5":                     int64(325),

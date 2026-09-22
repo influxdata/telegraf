@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type converterFunc func(value interface{}, order binary.ByteOrder) ([]byte, error)
+type converterFunc func(value any, order binary.ByteOrder) ([]byte, error)
 
 // Entry defines a single entry in the binary serializer configuration.
 type Entry struct {
@@ -106,7 +106,7 @@ func (e *Entry) fillDefaults() error {
 	return nil
 }
 
-func (e *Entry) serializeValue(value interface{}, order binary.ByteOrder) ([]byte, error) {
+func (e *Entry) serializeValue(value any, order binary.ByteOrder) ([]byte, error) {
 	// Handle normal fields, tags, etc
 	if e.ReadFrom != "time" {
 		return e.converter(value, order)

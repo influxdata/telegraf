@@ -779,12 +779,12 @@ func TestGather_Success(t *testing.T) {
 	require.NoError(t, am.Start(nil))
 
 	expectedResource1Metric1Name := "azure_monitor_microsoft_test_type1_metric1"
-	expectedResource1Metric1MetricFields := make(map[string]interface{})
+	expectedResource1Metric1MetricFields := make(map[string]any)
 	expectedResource1Metric1MetricFields["timeStamp"] = "2022-02-22T22:59:00Z"
 	expectedResource1Metric1MetricFields["total"] = 5.0
 	expectedResource1Metric1MetricFields["maximum"] = 5.0
 	expectedResource1Metric2Name := "azure_monitor_microsoft_test_type1_metric2"
-	expectedResource1Metric2MetricFields := make(map[string]interface{})
+	expectedResource1Metric2MetricFields := make(map[string]any)
 	expectedResource1Metric2MetricFields["timeStamp"] = "2022-02-22T22:59:00Z"
 	expectedResource1Metric2MetricFields["total"] = 2.5
 	expectedResource1Metric2MetricFields["maximum"] = 2.5
@@ -797,7 +797,7 @@ func TestGather_Success(t *testing.T) {
 	expectedResource1MetricsTags["unit"] = string(armmonitor.MetricUnitCount)
 
 	expectedResource2Metric1Name := "azure_monitor_microsoft_test_type2_metric1"
-	expectedResource2Metric1MetricFields := make(map[string]interface{})
+	expectedResource2Metric1MetricFields := make(map[string]any)
 	expectedResource2Metric1MetricFields["timeStamp"] = "2022-02-22T22:59:00Z"
 	expectedResource2Metric1MetricFields["total"] = 5.0
 	expectedResource2Metric1MetricFields["minimum"] = 2.5
@@ -810,7 +810,7 @@ func TestGather_Success(t *testing.T) {
 	expectedResource2MetricsTags["unit"] = string(armmonitor.MetricUnitCount)
 
 	expectedResource3Metric1Name := "azure_monitor_microsoft_test_type1_metric1"
-	expectedResource3Metric1MetricFields := make(map[string]interface{})
+	expectedResource3Metric1MetricFields := make(map[string]any)
 	expectedResource3Metric1MetricFields["timeStamp"] = "2022-02-22T22:58:00Z"
 	expectedResource3Metric1MetricFields["total"] = 2.5
 	expectedResource3Metric1MetricFields["minimum"] = 2.5
@@ -901,9 +901,7 @@ func (*mockClient) ResourcesList(context.Context, *armresources.ClientListOption
 	}
 
 	response := &armresources.ClientListResponse{
-		ResourceListResult: armresources.ResourceListResult{
-			Value: genericResourcesExpanded,
-		},
+		Value: genericResourcesExpanded,
 	}
 
 	return []*armresources.ClientListResponse{response}, nil
@@ -927,11 +925,9 @@ func (*mockClient) ResourcesListByResourceGroup(
 
 	if resourceGroup == "resourceGroup1" {
 		response := &armresources.ClientListByResourceGroupResponse{
-			ResourceListResult: armresources.ResourceListResult{
-				Value: []*armresources.GenericResourceExpanded{
-					genericResourcesExpanded[0],
-					genericResourcesExpanded[1],
-				},
+			Value: []*armresources.GenericResourceExpanded{
+				genericResourcesExpanded[0],
+				genericResourcesExpanded[1],
 			},
 		}
 
@@ -941,10 +937,8 @@ func (*mockClient) ResourcesListByResourceGroup(
 
 	if resourceGroup == "resourceGroup2" {
 		response := &armresources.ClientListByResourceGroupResponse{
-			ResourceListResult: armresources.ResourceListResult{
-				Value: []*armresources.GenericResourceExpanded{
-					genericResourcesExpanded[2],
-				},
+			Value: []*armresources.GenericResourceExpanded{
+				genericResourcesExpanded[2],
 			},
 		}
 
@@ -972,24 +966,18 @@ func (*mockClient) MetricDefinitionsList(
 	switch resourceID {
 	case "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type1/resource1":
 		return armmonitor.MetricDefinitionsClientListResponse{
-			MetricDefinitionCollection: armmonitor.MetricDefinitionCollection{
-				Value: metricDefinitions[0],
-			},
+			Value: metricDefinitions[0],
 		}, nil
 	case "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type2/resource2",
 		"/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type2/resource4",
 		"/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type2/resource5",
 		"/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type2/resource6":
 		return armmonitor.MetricDefinitionsClientListResponse{
-			MetricDefinitionCollection: armmonitor.MetricDefinitionCollection{
-				Value: metricDefinitions[1],
-			},
+			Value: metricDefinitions[1],
 		}, nil
 	case "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type1/resource3":
 		return armmonitor.MetricDefinitionsClientListResponse{
-			MetricDefinitionCollection: armmonitor.MetricDefinitionCollection{
-				Value: metricDefinitions[2],
-			},
+			Value: metricDefinitions[2],
 		}, nil
 	}
 

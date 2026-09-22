@@ -115,7 +115,7 @@ func (m *WinServices) Gather(acc telegraf.Accumulator) error {
 			tags["display_name"] = service.DisplayName
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"state":        service.State,
 			"startup_mode": service.StartUpMode,
 		}
@@ -145,8 +145,7 @@ func (m *WinServices) listServices(scmgr winServiceManager) ([]string, error) {
 }
 
 func isPermission(err error) bool {
-	var serviceErr *serviceError
-	if errors.As(err, &serviceErr) {
+	if serviceErr, ok := errors.AsType[*serviceError](err); ok {
 		return errors.Is(serviceErr, fs.ErrPermission)
 	}
 	return false

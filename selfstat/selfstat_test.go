@@ -140,7 +140,7 @@ func TestRegisterMetricsAndVerify(t *testing.T) {
 
 	// verify s1 & s2
 	acc.AssertContainsTaggedFields(t, "internal_test_timing",
-		map[string]interface{}{
+		map[string]any{
 			"test_field1_ns": int64(10),
 			"test_field2_ns": int64(15),
 		},
@@ -151,7 +151,7 @@ func TestRegisterMetricsAndVerify(t *testing.T) {
 
 	// verify s3
 	acc.AssertContainsTaggedFields(t, "internal_test_timing",
-		map[string]interface{}{
+		map[string]any{
 			"test_field1_ns": int64(10),
 		},
 		map[string]string{
@@ -161,7 +161,7 @@ func TestRegisterMetricsAndVerify(t *testing.T) {
 
 	// verify s4
 	acc.AssertContainsTaggedFields(t, "internal_test_timing",
-		map[string]interface{}{
+		map[string]any{
 			"test_field2_ns": int64(15),
 		},
 		map[string]string{
@@ -171,7 +171,7 @@ func TestRegisterMetricsAndVerify(t *testing.T) {
 
 	// verify s5
 	acc.AssertContainsTaggedFields(t, "internal_test",
-		map[string]interface{}{
+		map[string]any{
 			"test_field1": int64(28),
 		},
 		map[string]string{
@@ -181,7 +181,7 @@ func TestRegisterMetricsAndVerify(t *testing.T) {
 
 	// verify s6 & s7
 	acc.AssertContainsTaggedFields(t, "internal_test",
-		map[string]interface{}{
+		map[string]any{
 			"test_field2": int64(15),
 			"test_field3": int64(0),
 		},

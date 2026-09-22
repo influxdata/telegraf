@@ -216,7 +216,7 @@ func gatherServer(endpoint string, serverType serverType, acc telegraf.Accumulat
 	}
 	i := 0
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for scanner.Scan() {
 		key := keyMapping[serverType][i]
 		val, err := retrieveTokenAfterColon(scanner.Text())

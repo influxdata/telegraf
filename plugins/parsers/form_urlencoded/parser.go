@@ -3,6 +3,7 @@ package form_urlencoded
 import (
 	"bytes"
 	"errors"
+	"maps"
 	"net/url"
 	"strconv"
 	"time"
@@ -50,9 +51,7 @@ func (p Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	tags := p.extractTags(values)
 	fields := parseFields(values)
 
-	for key, value := range p.DefaultTags {
-		tags[key] = value
-	}
+	maps.Copy(tags, p.DefaultTags)
 
 	m := metric.New(p.MetricName, tags, fields, p.timeFunc())
 
@@ -94,8 +93,8 @@ func (p Parser) extractTags(values url.Values) map[string]string {
 	return tags
 }
 
-func parseFields(values url.Values) map[string]interface{} {
-	fields := make(map[string]interface{})
+func parseFields(values url.Values) map[string]any {
+	fields := make(map[string]any)
 
 	for key, value := range values {
 		if len(key) == 0 || len(value) == 0 {

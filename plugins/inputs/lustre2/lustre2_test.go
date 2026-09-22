@@ -105,7 +105,7 @@ func TestCacheStatsReportSamplesAndPages(t *testing.T) {
 	metrics := acc.GetTelegrafMetrics()
 	require.Len(t, metrics, 1)
 	require.Equal(t, map[string]string{"name": "OST0001"}, metrics[0].Tags())
-	require.Equal(t, map[string]interface{}{
+	require.Equal(t, map[string]any{
 		"cache_access":         uint64(14035947725),
 		"cache_access_samples": uint64(14035947725),
 		"cache_access_pages":   uint64(4102574238162),

@@ -9,7 +9,7 @@ tag := $(shell git describe --exact-match --tags 2>/dev/null)
 branch := $(shell git rev-parse --abbrev-ref HEAD)
 commit := $(shell git rev-parse --short=8 HEAD)
 
-RELEASE := false
+RELEASE ?= false
 ifdef NIGHTLY
 	version := $(next_version)
 	rpm_version := nightly
@@ -250,8 +250,8 @@ plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 
 .PHONY: ci
 ci:
-	docker build -t quay.io/influxdb/telegraf-ci:1.27.0 - < scripts/ci.docker
-	docker push quay.io/influxdb/telegraf-ci:1.27.0
+	docker build -t quay.io/influxdb/telegraf-ci:1.27.1 - < scripts/ci.docker
+	docker push quay.io/influxdb/telegraf-ci:1.27.1
 
 .PHONY: install
 install: $(buildbin)
@@ -352,7 +352,7 @@ $(include_packages):
 
 	@mkdir -p $(pkgdir)
 
-	@if [ "$(RELEASE)" = "true" ]; then \
+	@if [ "$(RELEASE)" = "true" ] && [ -n "$(filter %.tar.gz %.zip,$@)" ]; then \
 	    echo "Updating security info for $(version)_$(basename $(basename $@))..." && \
 		$(HOSTGO) install golang.org/x/vuln/cmd/govulncheck@v1.7.0 && \
 		$(MAKE) build && \

@@ -25,7 +25,7 @@ func TestSysctlFSGather(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, sfs.Gather(&acc))
 
-	acc.AssertContainsFields(t, "linux_sysctl_fs", map[string]interface{}{
+	acc.AssertContainsFields(t, "linux_sysctl_fs", map[string]any{
 		"aio-nr":             uint64(100),
 		"aio-max-nr":         uint64(101),
 		"super-nr":           uint64(102),

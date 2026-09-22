@@ -19,7 +19,7 @@ func TestMemoryBufferAcceptCallsMetricAccept(t *testing.T) {
 
 	var accept int
 	mm := &mockMetric{
-		Metric: metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0)),
+		Metric: metric.New("cpu", map[string]string{}, map[string]any{"value": 42.0}, time.Unix(0, 0)),
 		AcceptF: func() {
 			accept++
 		},
@@ -47,7 +47,7 @@ func TestDiscardBufferDropsMetrics(t *testing.T) {
 
 	var rejected int
 	mm := &mockMetric{
-		Metric: metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0)),
+		Metric: metric.New("cpu", map[string]string{}, map[string]any{"value": 42.0}, time.Unix(0, 0)),
 		RejectF: func() {
 			rejected++
 		},
@@ -67,7 +67,7 @@ func BenchmarkMemoryBufferAddMetrics(b *testing.B) {
 	buf.Stats().MetricsDropped.Set(0)
 	defer buf.Close()
 
-	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
+	m := metric.New("cpu", map[string]string{}, map[string]any{"value": 42.0}, time.Unix(0, 0))
 	for n := 0; n < b.N; n++ {
 		buf.Add(m)
 	}

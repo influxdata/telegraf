@@ -238,6 +238,10 @@ Using an IPv6 address with multicast, can be done by either specifying a
 zone id or using a trailing interface name. These options are mutually
 exclusive.
 
+With a `vsock` address the CID is only checked for being a number as the
+listener always binds the context ID of the machine it runs on. To reach the
+listener from another context use that machine's CID in the client address.
+
 ## Metrics
 
 The plugin accepts arbitrary input and parses it according to the `data_format`

@@ -101,7 +101,7 @@ func (p *P4runtime) Gather(acc telegraf.Accumulator) error {
 					continue
 				}
 
-				fields := map[string]interface{}{
+				fields := map[string]any{
 					"bytes":         ce.Data.ByteCount,
 					"packets":       ce.Data.PacketCount,
 					"counter_index": ce.Index.Index,

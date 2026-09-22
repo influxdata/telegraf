@@ -10,7 +10,7 @@ import (
 func newColumnParser(reader file.ColumnChunkReader) *columnParser {
 	batchSize := 128
 
-	var valueBuffer interface{}
+	var valueBuffer any
 	switch reader.(type) {
 	case *file.BooleanColumnChunkReader:
 		valueBuffer = make([]bool, batchSize)
@@ -50,7 +50,7 @@ type columnParser struct {
 	defLevels      []int16
 	repLevels      []int16
 
-	valueBuffer interface{}
+	valueBuffer any
 }
 
 func (c *columnParser) readNextBatch() error {
@@ -90,7 +90,7 @@ func (c *columnParser) HasNext() bool {
 	return c.levelOffset < c.levelsBuffered || c.reader.HasNext()
 }
 
-func (c *columnParser) Next() (interface{}, bool) {
+func (c *columnParser) Next() (any, bool) {
 	if c.levelOffset == c.levelsBuffered {
 		if !c.HasNext() {
 			return nil, false

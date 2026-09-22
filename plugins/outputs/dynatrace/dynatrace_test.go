@@ -141,14 +141,14 @@ func TestSendMetrics(t *testing.T) {
 		metric.New(
 			"simple_metric",
 			map[string]string{},
-			map[string]interface{}{"value": float64(3.14), "counter": 5},
+			map[string]any{"value": float64(3.14), "counter": 5},
 			time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 		),
 		// Even if Type() returns counter, all metrics are treated as a gauge unless explicitly added to additional_counters
 		metric.New(
 			"counter_type",
 			map[string]string{},
-			map[string]interface{}{"value": float64(3.14), "counter": 5},
+			map[string]any{"value": float64(3.14), "counter": 5},
 			time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 			telegraf.Counter,
 		),
@@ -156,7 +156,7 @@ func TestSendMetrics(t *testing.T) {
 		metric.New(
 			"complex_metric",
 			map[string]string{},
-			map[string]interface{}{"int": 1, "int64": int64(2), "float": 3.0, "float64": float64(4.0), "true": true, "false": false},
+			map[string]any{"int": 1, "int64": int64(2), "float": 3.0, "float64": float64(4.0), "true": true, "false": false},
 			time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 		),
 	}
@@ -232,34 +232,34 @@ func TestSendMetricsWithPatterns(t *testing.T) {
 		metric.New(
 			"simple_abc_metric",
 			map[string]string{},
-			map[string]interface{}{"value": float64(3.14), "counter": 5},
+			map[string]any{"value": float64(3.14), "counter": 5},
 			time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 		),
 		metric.New(
 			"simple_xyz_metric",
 			map[string]string{},
-			map[string]interface{}{"value": float64(3.14), "counter": 5},
+			map[string]any{"value": float64(3.14), "counter": 5},
 			time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 		),
 		// Even if Type() returns counter, all metrics are treated as a gauge unless pattern match with additional_counters_patterns
 		metric.New(
 			"counter_fan01_type",
 			map[string]string{},
-			map[string]interface{}{"value": float64(3.14), "counter": 5},
+			map[string]any{"value": float64(3.14), "counter": 5},
 			time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 			telegraf.Counter,
 		),
 		metric.New(
 			"counter_fanNaN_type",
 			map[string]string{},
-			map[string]interface{}{"value": float64(3.14), "counter": 5},
+			map[string]any{"value": float64(3.14), "counter": 5},
 			time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 			telegraf.Counter,
 		),
 		metric.New(
 			"complex_metric",
 			map[string]string{},
-			map[string]interface{}{"int": 1, "int64": int64(2), "float": 3.0, "float64": float64(4.0), "true": true, "false": false},
+			map[string]any{"int": 1, "int64": int64(2), "float": 3.0, "float64": float64(4.0), "true": true, "false": false},
 			time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 		),
 	}
@@ -404,7 +404,7 @@ func TestSendSingleMetricWithUnorderedTags(t *testing.T) {
 	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{"a": "test", "c": "test", "b": "test"},
-		map[string]interface{}{"myfield": float64(3.14)},
+		map[string]any{"myfield": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
@@ -455,7 +455,7 @@ func TestSendMetricWithoutTags(t *testing.T) {
 	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{},
-		map[string]interface{}{"myfield": float64(3.14)},
+		map[string]any{"myfield": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
@@ -537,7 +537,7 @@ func TestSendMetricWithUpperCaseTagKeys(t *testing.T) {
 	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{"AAA": "test", "CcC": "test", "B B": "test"},
-		map[string]interface{}{"myfield": float64(3.14)},
+		map[string]any{"myfield": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
@@ -598,7 +598,7 @@ func TestSendBooleanMetricWithoutTags(t *testing.T) {
 	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{},
-		map[string]interface{}{"yes": true, "no": false},
+		map[string]any{"yes": true, "no": false},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
@@ -669,7 +669,7 @@ func TestSendMetricWithDefaultDimensions(t *testing.T) {
 	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{},
-		map[string]interface{}{"value": 2},
+		map[string]any{"value": 2},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
@@ -739,7 +739,7 @@ func TestMetricDimensionsOverrideDefault(t *testing.T) {
 	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{"dim": "metric"},
-		map[string]interface{}{"value": 32},
+		map[string]any{"value": 32},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
@@ -806,7 +806,7 @@ func TestStaticDimensionsOverrideMetric(t *testing.T) {
 	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{"dim": "metric"},
-		map[string]interface{}{"value": 32},
+		map[string]any{"value": 32},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
@@ -822,7 +822,7 @@ type loggerStub struct {
 	testutil.Logger
 }
 
-func (loggerStub) Warnf(string, ...interface{}) {
+func (loggerStub) Warnf(string, ...any) {
 	warnfCalledTimes++
 }
 
@@ -850,7 +850,7 @@ func TestSendUnsupportedMetric(t *testing.T) {
 	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{},
-		map[string]interface{}{"metric1": "unsupported_type"},
+		map[string]any{"metric1": "unsupported_type"},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
@@ -869,7 +869,7 @@ func TestSendUnsupportedMetric(t *testing.T) {
 	m2 := metric.New(
 		"mymeasurement",
 		map[string]string{},
-		map[string]interface{}{"metric2": "unsupported_type"},
+		map[string]any{"metric2": "unsupported_type"},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 

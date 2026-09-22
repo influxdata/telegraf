@@ -160,10 +160,10 @@ type client interface {
 	ListUnitsByNamesContext(ctx context.Context, units []string) ([]dbus.UnitStatus, error)
 
 	// GetUnitTypePropertiesContext returns the extra properties for a unit, specific to the unit type.
-	GetUnitTypePropertiesContext(ctx context.Context, unit, unitType string) (map[string]interface{}, error)
+	GetUnitTypePropertiesContext(ctx context.Context, unit, unitType string) (map[string]any, error)
 
 	// GetUnitPropertiesContext takes the (unescaped) unit name and returns all of its dbus object properties.
-	GetUnitPropertiesContext(ctx context.Context, unit string) (map[string]interface{}, error)
+	GetUnitPropertiesContext(ctx context.Context, unit string) (map[string]any, error)
 
 	// ListUnitsContext returns an array with all currently loaded units.
 	ListUnitsContext(ctx context.Context) ([]dbus.UnitStatus, error)
@@ -383,7 +383,7 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 			tags["user"] = s.user
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"load_code":   load,
 			"active_code": active,
 			"sub_code":    subState,
@@ -399,7 +399,7 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 				}
 				// For other units we make up properties, usually those are
 				// disabled multi-instance units
-				properties = map[string]interface{}{
+				properties = map[string]any{
 					"StatusErrno": int64(-1),
 					"NRestarts":   uint64(0),
 				}

@@ -335,7 +335,7 @@ func (n *NFSClient) parseStat(mountpoint, export, version string, line []string,
 		"errors",
 	}
 
-	var fields = make(map[string]interface{})
+	var fields = make(map[string]any)
 
 	switch first {
 	case "READ", "WRITE":
@@ -495,8 +495,7 @@ func convertToUint64(line []string) ([]uint64, error) {
 	for _, l := range line[1:] {
 		val, err := strconv.ParseUint(l, 10, 64)
 		if err != nil {
-			var numError *strconv.NumError
-			if errors.As(err, &numError) {
+			if numError, ok := errors.AsType[*strconv.NumError](err); ok {
 				if errors.Is(numError.Err, strconv.ErrRange) {
 					return nil, fmt.Errorf("errrange: line:[%v] raw:[%v] -> parsed:[%v]", line, l, val)
 				}

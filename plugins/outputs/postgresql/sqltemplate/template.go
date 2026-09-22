@@ -126,12 +126,12 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs/postgresql/utils"
 )
 
-var templateFuncs = map[string]interface{}{
+var templateFuncs = map[string]any{
 	"quoteIdentifier": QuoteIdentifier,
 	"quoteLiteral":    QuoteLiteral,
 }
 
-func asString(obj interface{}) string {
+func asString(obj any) string {
 	switch obj := obj.(type) {
 	case string:
 		return obj
@@ -147,14 +147,14 @@ func asString(obj interface{}) string {
 // QuoteIdentifier quotes the given string as a Postgres identifier (double-quotes the value).
 //
 // QuoteIdentifier is accessible within templates as 'quoteIdentifier'.
-func QuoteIdentifier(name interface{}) string {
+func QuoteIdentifier(name any) string {
 	return utils.QuoteIdentifier(asString(name))
 }
 
 // QuoteLiteral quotes the given string as a Postgres literal (single-quotes the value).
 //
 // QuoteLiteral is accessible within templates as 'quoteLiteral'.
-func QuoteLiteral(str interface{}) string {
+func QuoteLiteral(str any) string {
 	return utils.QuoteLiteral(asString(str))
 }
 
@@ -391,7 +391,7 @@ func (t *Template) UnmarshalText(text []byte) error {
 
 func (t *Template) Render(table *Table, newColumns []utils.Column, metricTable, tagTable *Table) ([]byte, error) {
 	tcs := NewColumns(newColumns).Sorted()
-	data := map[string]interface{}{
+	data := map[string]any{
 		"table":       table,
 		"columns":     tcs,
 		"allColumns":  tcs.Concat(table.Columns).Sorted(),

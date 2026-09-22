@@ -59,7 +59,7 @@ func (pt *Webhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 				"host":  e.Hostname,
 				"event": payload.SavedSearch.Name,
 			}
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"count":       uint64(1),
 				"id":          e.ID,
 				"source_ip":   e.SourceIP,
@@ -82,7 +82,7 @@ func (pt *Webhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 					"host":  c.SourceName,
 					"event": payload.SavedSearch.Name,
 				}
-				fields := map[string]interface{}{
+				fields := map[string]any{
 					"count": count,
 				}
 				pt.acc.AddFields("papertrail", fields, tags, time.Unix(ts, 0))

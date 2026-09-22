@@ -14,7 +14,7 @@ type GlobPath struct {
 	hasMeta      bool
 	HasSuperMeta bool
 	rootGlob     string
-	g            glob.Glob
+	g            *glob.Pattern
 }
 
 func Compile(path string) (*GlobPath, error) {

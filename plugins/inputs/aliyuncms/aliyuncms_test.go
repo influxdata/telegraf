@@ -415,7 +415,7 @@ func TestGather(t *testing.T) {
 						"instanceId": "i-abcdefgh123456",
 						"userId":     "1234567898765432",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"instance_active_connection_minimum": float64(100),
 						"instance_active_connection_maximum": float64(200),
 						"instance_active_connection_average": float64(150),
@@ -446,7 +446,7 @@ func TestGetDiscoveryDataAcrossRegions(t *testing.T) {
 		project             string
 		region              string
 		httpResp            *http.Response
-		discData            map[string]interface{}
+		discData            map[string]any
 		totalCount          int
 		pageSize            int
 		pageNumber          int
@@ -484,7 +484,7 @@ func TestGetDiscoveryDataAcrossRegions(t *testing.T) {
 						"PageNumber": 1
 						}`)),
 			},
-			discData:            map[string]interface{}{"bla": map[string]interface{}{"LoadBalancerId": "bla"}},
+			discData:            map[string]any{"bla": map[string]any{"LoadBalancerId": "bla"}},
 			totalCount:          1,
 			pageSize:            1,
 			pageNumber:          1,

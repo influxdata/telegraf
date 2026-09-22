@@ -31,7 +31,7 @@ func TestPivot(t *testing.T) {
 					map[string]string{
 						"name": "idle_time",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(42),
 					},
 					now,
@@ -40,7 +40,7 @@ func TestPivot(t *testing.T) {
 			expected: []telegraf.Metric{
 				metric.New("cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"idle_time": int64(42),
 					},
 					now,
@@ -58,7 +58,7 @@ func TestPivot(t *testing.T) {
 					map[string]string{
 						"foo": "idle_time",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(42),
 					},
 					now,
@@ -69,7 +69,7 @@ func TestPivot(t *testing.T) {
 					map[string]string{
 						"foo": "idle_time",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(42),
 					},
 					now,
@@ -87,7 +87,7 @@ func TestPivot(t *testing.T) {
 					map[string]string{
 						"name": "idle_time",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"foo": int64(42),
 					},
 					now,
@@ -98,7 +98,7 @@ func TestPivot(t *testing.T) {
 					map[string]string{
 						"name": "idle_time",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"foo": int64(42),
 					},
 					now,
@@ -120,19 +120,19 @@ func TestTracking(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"name": "idle_time"},
-			map[string]interface{}{"value": uint64(3)},
+			map[string]any{"value": uint64(3)},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"test",
 			map[string]string{"name": "system_time"},
-			map[string]interface{}{"value": int64(4)},
+			map[string]any{"value": int64(4)},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"test",
 			map[string]string{"name": "user_time"},
-			map[string]interface{}{"value": float64(5.5)},
+			map[string]any{"value": float64(5.5)},
 			time.Unix(0, 0),
 		),
 	}
@@ -141,19 +141,19 @@ func TestTracking(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{},
-			map[string]interface{}{"idle_time": uint64(3)},
+			map[string]any{"idle_time": uint64(3)},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"test",
 			map[string]string{},
-			map[string]interface{}{"system_time": int64(4)},
+			map[string]any{"system_time": int64(4)},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"test",
 			map[string]string{},
-			map[string]interface{}{"user_time": float64(5.5)},
+			map[string]any{"user_time": float64(5.5)},
 			time.Unix(0, 0),
 		),
 	}

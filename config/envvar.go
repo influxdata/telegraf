@@ -78,21 +78,21 @@ func (t *trimmer) process() error {
 }
 
 func (t *trimmer) hasNQuotes(ref byte, limit int64) bool {
-	var count int64
+	var count, unmatched int64
 	// Look ahead check if the next characters are what we expect
 	for count = 0; count < limit; count++ {
 		c, err := t.input.ReadByte()
-		if err != nil || c != ref {
+		if err != nil {
+			break
+		}
+		if c != ref {
+			// We also need to unread the non-matching character
+			unmatched = 1
 			break
 		}
 	}
-	// We also need to unread the non-matching character
-	offset := -count
-	if count < limit {
-		offset--
-	}
 	//nolint:errcheck // Unread the already matched characters
-	t.input.Seek(offset, io.SeekCurrent)
+	t.input.Seek(-(count + unmatched), io.SeekCurrent)
 	return count >= limit
 }
 
@@ -126,7 +126,7 @@ func (t *trimmer) singleQuote() error {
 }
 
 func (t *trimmer) tripleSingleQuote() error {
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		//nolint:errcheck // Consume the known starting quotes
 		t.readWriteByte()
 	}
@@ -175,7 +175,7 @@ func (t *trimmer) doubleQuote() error {
 }
 
 func (t *trimmer) tripleDoubleQuote() error {
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		//nolint:errcheck // Consume the known starting quotes
 		t.readWriteByte()
 	}
@@ -254,7 +254,7 @@ func substituteEnvironmentStrict(contents []byte, oldReplacementBehavior bool) (
 	envMap := utils.GetAsEqualsMap(os.Environ())
 
 	// Walk the AST and find string items to replace
-	if err := walk(tree, func(n interface{}) error {
+	if err := walk(tree, func(n any) error {
 		v, ok := n.(*ast.String)
 		if !ok {
 			return nil
@@ -277,7 +277,7 @@ func substituteEnvironmentStrict(contents []byte, oldReplacementBehavior bool) (
 	return tree, nil
 }
 
-func walk(node interface{}, f func(interface{}) error) error {
+func walk(node any, f func(any) error) error {
 	switch n := node.(type) {
 	case *ast.Table:
 		for k, v := range n.Fields {

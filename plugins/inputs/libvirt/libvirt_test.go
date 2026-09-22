@@ -135,9 +135,9 @@ func TestLibvirt_Gather(t *testing.T) {
 
 	var successfulTests = []struct {
 		testName        string
-		allDomains      interface{}
+		allDomains      any
 		excludeDomains  []string
-		statsForDomains interface{}
+		statsForDomains any
 		expectedMetrics []telegraf.Metric
 		vcpuMapping     []vcpuAffinity
 	}{
@@ -186,9 +186,9 @@ func TestLibvirt_Gather(t *testing.T) {
 func TestLibvirt_GatherMetrics(t *testing.T) {
 	var successfulTests = []struct {
 		testName        string
-		allDomains      interface{}
+		allDomains      any
 		excludeDomains  []string
-		statsForDomains interface{}
+		statsForDomains any
 		expectedMetrics []telegraf.Metric
 		vcpuMapping     []vcpuAffinity
 	}{
@@ -565,14 +565,14 @@ var (
 	expectedMetrics = []telegraf.Metric{
 		metric.New("libvirt_state",
 			map[string]string{"domain_name": "Droplet-844329"},
-			map[string]interface{}{
+			map[string]any{
 				"reason": 2,
 				"state":  1,
 			},
 			time.Now()),
 		metric.New("libvirt_state",
 			map[string]string{"domain_name": "Droplet-33436"},
-			map[string]interface{}{
+			map[string]any{
 				"reason": 1,
 				"state":  1,
 			},
@@ -582,13 +582,13 @@ var (
 	expectedMemoryMetrics = []telegraf.Metric{
 		metric.New("libvirt_memory_bandwidth_monitor_total",
 			map[string]string{"domain_name": "Droplet-844329"},
-			map[string]interface{}{
+			map[string]any{
 				"count": 2,
 			},
 			time.Now()),
 		metric.New("libvirt_memory_bandwidth_monitor",
 			map[string]string{"domain_name": "Droplet-844329", "memory_bandwidth_monitor_id": "0"},
-			map[string]interface{}{
+			map[string]any{
 				"name":       "any_name_vcpus_0-4",
 				"vcpus":      "0-4",
 				"node_count": 2,
@@ -596,7 +596,7 @@ var (
 			time.Now()),
 		metric.New("libvirt_memory_bandwidth_monitor",
 			map[string]string{"domain_name": "Droplet-844329", "memory_bandwidth_monitor_id": "1"},
-			map[string]interface{}{
+			map[string]any{
 				"name":       "vcpus_7",
 				"vcpus":      "7",
 				"node_count": 2,
@@ -604,7 +604,7 @@ var (
 			time.Now()),
 		metric.New("libvirt_memory_bandwidth_monitor_node",
 			map[string]string{"domain_name": "Droplet-844329", "memory_bandwidth_monitor_id": "0", "controller_index": "0"},
-			map[string]interface{}{
+			map[string]any{
 				"id":          0,
 				"bytes_total": int64(10208067584),
 				"bytes_local": int64(4807114752),
@@ -612,7 +612,7 @@ var (
 			time.Now()),
 		metric.New("libvirt_memory_bandwidth_monitor_node",
 			map[string]string{"domain_name": "Droplet-844329", "memory_bandwidth_monitor_id": "0", "controller_index": "1"},
-			map[string]interface{}{
+			map[string]any{
 				"id":          1,
 				"bytes_total": int64(8693735424),
 				"bytes_local": int64(5850161152),
@@ -620,7 +620,7 @@ var (
 			time.Now()),
 		metric.New("libvirt_memory_bandwidth_monitor_node",
 			map[string]string{"domain_name": "Droplet-844329", "memory_bandwidth_monitor_id": "1", "controller_index": "0"},
-			map[string]interface{}{
+			map[string]any{
 				"id":          0,
 				"bytes_total": 853811200,
 				"bytes_local": 290701312,
@@ -628,7 +628,7 @@ var (
 			time.Now()),
 		metric.New("libvirt_memory_bandwidth_monitor_node",
 			map[string]string{"domain_name": "Droplet-844329", "memory_bandwidth_monitor_id": "1", "controller_index": "1"},
-			map[string]interface{}{
+			map[string]any{
 				"id":          1,
 				"bytes_total": 406044672,
 				"bytes_local": 229425152,
@@ -639,7 +639,7 @@ var (
 	expectedCPUMetrics = []telegraf.Metric{
 		metric.New("libvirt_cpu",
 			map[string]string{"domain_name": "Droplet-844329"},
-			map[string]interface{}{
+			map[string]any{
 				"time":                  int64(67419144867000),
 				"user":                  int64(63886161852000),
 				"system":                int64(3532983015000),
@@ -649,13 +649,13 @@ var (
 			time.Now()),
 		metric.New("libvirt_cpu_cache_monitor_total",
 			map[string]string{"domain_name": "Droplet-844329"},
-			map[string]interface{}{
+			map[string]any{
 				"count": 2,
 			},
 			time.Now()),
 		metric.New("libvirt_cpu_cache_monitor",
 			map[string]string{"domain_name": "Droplet-844329", "cache_monitor_id": "0"},
-			map[string]interface{}{
+			map[string]any{
 				"name":       "any_name_vcpus_0-3",
 				"vcpus":      "0-3",
 				"bank_count": 2,
@@ -663,7 +663,7 @@ var (
 			time.Now()),
 		metric.New("libvirt_cpu_cache_monitor",
 			map[string]string{"domain_name": "Droplet-844329", "cache_monitor_id": "1"},
-			map[string]interface{}{
+			map[string]any{
 				"name":       "vcpus_4-9",
 				"vcpus":      "4-9",
 				"bank_count": 2,
@@ -671,28 +671,28 @@ var (
 			time.Now()),
 		metric.New("libvirt_cpu_cache_monitor_bank",
 			map[string]string{"domain_name": "Droplet-844329", "cache_monitor_id": "0", "bank_index": "0"},
-			map[string]interface{}{
+			map[string]any{
 				"id":    0,
 				"bytes": 5406720,
 			},
 			time.Now()),
 		metric.New("libvirt_cpu_cache_monitor_bank",
 			map[string]string{"domain_name": "Droplet-844329", "cache_monitor_id": "0", "bank_index": "1"},
-			map[string]interface{}{
+			map[string]any{
 				"id":    1,
 				"bytes": 0,
 			},
 			time.Now()),
 		metric.New("libvirt_cpu_cache_monitor_bank",
 			map[string]string{"domain_name": "Droplet-844329", "cache_monitor_id": "1", "bank_index": "0"},
-			map[string]interface{}{
+			map[string]any{
 				"id":    0,
 				"bytes": 720896,
 			},
 			time.Now()),
 		metric.New("libvirt_cpu_cache_monitor_bank",
 			map[string]string{"domain_name": "Droplet-844329", "cache_monitor_id": "1", "bank_index": "1"},
-			map[string]interface{}{
+			map[string]any{
 				"id":    1,
 				"bytes": 8200192,
 			},
@@ -704,7 +704,7 @@ var (
 			map[string]string{
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "0"},
-			map[string]interface{}{
+			map[string]any{
 				"cpu_id": "0,1,2,3",
 			},
 			time.Now()),
@@ -712,7 +712,7 @@ var (
 			map[string]string{
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "1"},
-			map[string]interface{}{
+			map[string]any{
 				"cpu_id": "1,2,3,4",
 			},
 			time.Now()),
@@ -720,7 +720,7 @@ var (
 			map[string]string{
 				"domain_name": "Droplet-33436",
 				"vcpu_id":     "0"},
-			map[string]interface{}{
+			map[string]any{
 				"cpu_id": "0,1,2,3",
 			},
 			time.Now()),
@@ -728,7 +728,7 @@ var (
 			map[string]string{
 				"domain_name": "Droplet-33436",
 				"vcpu_id":     "1"},
-			map[string]interface{}{
+			map[string]any{
 				"cpu_id": "1,2,3,4",
 			},
 			time.Now()),
@@ -739,7 +739,7 @@ var (
 			map[string]string{
 				"domain_name": "Droplet-844329",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"current":         4194304,
 				"maximum":         4194304,
 				"swap_in":         0,
@@ -763,7 +763,7 @@ var (
 			map[string]string{
 				"domain_name": "Droplet-844329",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"cmt":                     19087360,
 				"mbmt":                    77168640,
 				"mbml":                    67788800,
@@ -795,7 +795,7 @@ var (
 			map[string]string{
 				"domain_name": "Droplet-844329",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"count": 1,
 			},
 			time.Now()),
@@ -804,7 +804,7 @@ var (
 				"domain_name":  "Droplet-844329",
 				"interface_id": "0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"name":     "vnet0",
 				"rx_bytes": 110,
 				"rx_pkts":  1,
@@ -823,7 +823,7 @@ var (
 			map[string]string{
 				"domain_name": "Droplet-844329",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"count": 2,
 			},
 			time.Now()),
@@ -832,7 +832,7 @@ var (
 				"domain_name": "Droplet-844329",
 				"block_id":    "0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"name":         "vda",
 				"backingIndex": 1,
 				"path":         "/tmp/ubuntu_image.img",
@@ -856,7 +856,7 @@ var (
 				"domain_name": "Droplet-844329",
 				"block_id":    "1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"name":         "vda1",
 				"backingIndex": 1,
 				"path":         "/tmp/ubuntu_image1.img",
@@ -882,7 +882,7 @@ var (
 			map[string]string{
 				"domain_name": "Droplet-844329",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"count": 2,
 			},
 			time.Now()),
@@ -891,7 +891,7 @@ var (
 				"domain_name": "Droplet-844329",
 				"iothread_id": "0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"poll_max_ns": 32768,
 				"poll_grow":   0,
 				"poll_shrink": 0,
@@ -902,7 +902,7 @@ var (
 				"domain_name": "Droplet-844329",
 				"iothread_id": "1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"poll_max_ns": 32769,
 				"poll_grow":   0,
 				"poll_shrink": 0,
@@ -915,7 +915,7 @@ var (
 			map[string]string{
 				"domain_name": "Droplet-844329",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"calc_status":          2,
 				"calc_start_time":      348414,
 				"calc_period":          1,
@@ -928,7 +928,7 @@ var (
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"megabytes_per_second": 1,
 			},
 			time.Now()),
@@ -937,7 +937,7 @@ var (
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"megabytes_per_second": 2,
 			},
 			time.Now()),
@@ -948,7 +948,7 @@ var (
 			map[string]string{
 				"domain_name": "Droplet-844329",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"current": 3,
 				"maximum": 3,
 			},
@@ -958,7 +958,7 @@ var (
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"state":    1,
 				"time":     int64(17943740000000),
 				"wait":     0,
@@ -972,7 +972,7 @@ var (
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"state":    1,
 				"time":     int64(17943740000000),
 				"wait":     0,
@@ -986,7 +986,7 @@ var (
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "2",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"state": 1,
 				"time":  int64(17943740000000),
 				"wait":  0,
@@ -1000,7 +1000,7 @@ var (
 			map[string]string{
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "0"},
-			map[string]interface{}{
+			map[string]any{
 				"cpu_id": "0,1,2,3",
 			},
 			time.Now()),
@@ -1008,7 +1008,7 @@ var (
 			map[string]string{
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "1"},
-			map[string]interface{}{
+			map[string]any{
 				"cpu_id": "1,2,3,4",
 			},
 			time.Now()),
@@ -1016,7 +1016,7 @@ var (
 			map[string]string{
 				"domain_name": "Droplet-844329",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"current": 3,
 				"maximum": 3,
 			},
@@ -1026,7 +1026,7 @@ var (
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"state":    1,
 				"time":     int64(17943740000000),
 				"wait":     0,
@@ -1041,7 +1041,7 @@ var (
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"state":    1,
 				"time":     int64(17943740000000),
 				"wait":     0,
@@ -1056,7 +1056,7 @@ var (
 				"domain_name": "Droplet-844329",
 				"vcpu_id":     "2",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"state": 1,
 				"time":  int64(17943740000000),
 				"wait":  0,

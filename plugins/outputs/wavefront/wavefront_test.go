@@ -39,7 +39,7 @@ func TestBuildMetrics(t *testing.T) {
 	testMetric1 := metric.New(
 		"test.simple.metric",
 		map[string]string{"tag1": "value1", "host": "testHost"},
-		map[string]interface{}{"value": 123},
+		map[string]any{"value": 123},
 		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
@@ -135,7 +135,7 @@ func TestBuildMetricsWithSimpleFields(t *testing.T) {
 	testMetric1 := metric.New(
 		"test.simple.metric",
 		map[string]string{"tag1": "value1"},
-		map[string]interface{}{"value": 123},
+		map[string]any{"value": 123},
 		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
@@ -275,7 +275,7 @@ func TestBuildValue(t *testing.T) {
 	w := defaultWavefront()
 
 	var valuetests = []struct {
-		value interface{}
+		value any
 		name  string
 		out   float64
 		isErr bool

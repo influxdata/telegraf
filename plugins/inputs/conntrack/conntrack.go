@@ -62,7 +62,7 @@ func (c *Conntrack) Init() error {
 
 func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 	var metricKey string
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 
 	for _, dir := range c.Dirs {
 		for _, file := range c.Files {
@@ -114,7 +114,7 @@ func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 				"cpu": cpuTag,
 			}
 
-			statFields := map[string]interface{}{
+			statFields := map[string]any{
 				"entries":        sts.Entries,       // entries in the conntrack table
 				"searched":       sts.Searched,      // conntrack table lookups performed
 				"found":          sts.Found,         // searched entries which were successful

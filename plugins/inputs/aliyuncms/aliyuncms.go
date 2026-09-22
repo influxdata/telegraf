@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 	"sync"
@@ -52,7 +53,7 @@ type (
 		windowEnd     time.Time
 		dt            *discoveryTool
 		dimensionKey  string
-		discoveryData map[string]interface{}
+		discoveryData map[string]any
 		measurement   string
 	}
 
@@ -283,7 +284,7 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 				break
 			}
 
-			var datapoints []map[string]interface{}
+			var datapoints []map[string]any
 			if err := json.Unmarshal([]byte(resp.Datapoints), &datapoints); err != nil {
 				return fmt.Errorf("failed to decode response datapoints: %w", err)
 			}
@@ -295,7 +296,7 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 
 		NextDataPoint:
 			for _, datapoint := range datapoints {
-				fields := make(map[string]interface{}, len(datapoint))
+				fields := make(map[string]any, len(datapoint))
 				tags := make(map[string]string, len(datapoint))
 				datapointTime := int64(0)
 				for key, value := range datapoint {
@@ -311,9 +312,7 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 								continue NextDataPoint
 							}
 
-							for k, v := range metric.discoveryTags[value.(string)] {
-								tags[k] = v
-							}
+							maps.Copy(tags, metric.discoveryTags[value.(string)])
 						}
 					case "userId":
 						tags[key] = value.(string)
@@ -334,7 +333,7 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 }
 
 // tag helper
-func parseTag(tagSpec string, data interface{}) (tagKey, tagValue string, err error) {
+func parseTag(tagSpec string, data any) (tagKey, tagValue string, err error) {
 	var (
 		ok        bool
 		queryPath = tagSpec

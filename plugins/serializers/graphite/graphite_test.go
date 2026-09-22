@@ -35,19 +35,19 @@ func TestGraphiteTags(t *testing.T) {
 	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
-		map[string]interface{}{"value": float64(3.14)},
+		map[string]any{"value": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	m2 := metric.New(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1", "afoo": "first", "bfoo": "second"},
-		map[string]interface{}{"value": float64(3.14)},
+		map[string]any{"value": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	m3 := metric.New(
 		"mymeasurement",
 		map[string]string{"afoo": "first", "bfoo": "second"},
-		map[string]interface{}{"value": float64(3.14)},
+		map[string]any{"value": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
@@ -66,7 +66,7 @@ func TestSerializeMetricNoHost(t *testing.T) {
 		"cpu":        "cpu0",
 		"datacenter": "us-west-2",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": float64(91.5),
 		"usage_busy": float64(8.5),
 	}
@@ -93,7 +93,7 @@ func TestSerializeMetricNoHostWithTagSupport(t *testing.T) {
 		"cpu":        "cpu0",
 		"datacenter": "us-west-2",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": float64(91.5),
 		"usage_busy": float64(8.5),
 	}
@@ -124,7 +124,7 @@ func TestSerializeMetricHost(t *testing.T) {
 		"cpu":        "cpu0",
 		"datacenter": "us-west-2",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": float64(91.5),
 		"usage_busy": float64(8.5),
 	}
@@ -153,7 +153,7 @@ func TestSerializeMetricHostWithMultipleTemplates(t *testing.T) {
 		"cpu":        "cpu0",
 		"datacenter": "us-west-2",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": float64(91.5),
 		"usage_busy": float64(8.5),
 	}
@@ -196,7 +196,7 @@ func TestSerializeMetricHostWithMultipleTemplatesWithDefault(t *testing.T) {
 		"cpu":        "cpu0",
 		"datacenter": "us-west-2",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": float64(91.5),
 		"usage_busy": float64(8.5),
 	}
@@ -239,7 +239,7 @@ func TestSerializeMetricHostWithTagSupport(t *testing.T) {
 		"cpu":        "cpu0",
 		"datacenter": "us-west-2",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": float64(91.5),
 		"usage_busy": float64(8.5),
 	}
@@ -272,7 +272,7 @@ func TestSerializeValueField(t *testing.T) {
 		"cpu":        "cpu0",
 		"datacenter": "us-west-2",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"value": float64(91.5),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -297,7 +297,7 @@ func TestSerializeValueFieldWithTagSupport(t *testing.T) {
 		"cpu":        "cpu0",
 		"datacenter": "us-west-2",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"value": float64(91.5),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -326,7 +326,7 @@ func TestSerializeValueField2(t *testing.T) {
 		"cpu":        "cpu0",
 		"datacenter": "us-west-2",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"value": float64(91.5),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -353,7 +353,7 @@ func TestSerializeValueString(t *testing.T) {
 		"cpu":        "cpu0",
 		"datacenter": "us-west-2",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"value": "asdasd",
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -376,7 +376,7 @@ func TestSerializeValueStringWithTagSupport(t *testing.T) {
 		"cpu":        "cpu0",
 		"datacenter": "us-west-2",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"value": "asdasd",
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -400,7 +400,7 @@ func TestSerializeValueBoolean(t *testing.T) {
 		"cpu":        "cpu0",
 		"datacenter": "us-west-2",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"enabled":  true,
 		"disabled": false,
 	}
@@ -431,7 +431,7 @@ func TestSerializeValueBooleanWithTagSupport(t *testing.T) {
 		"cpu":        "cpu0",
 		"datacenter": "us-west-2",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"enabled":  true,
 		"disabled": false,
 	}
@@ -459,7 +459,7 @@ func TestSerializeValueBooleanWithTagSupport(t *testing.T) {
 func TestSerializeValueUnsigned(t *testing.T) {
 	now := time.Unix(0, 0)
 	tags := map[string]string{}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"free": uint64(42),
 	}
 	m := metric.New("mem", tags, fields, now)
@@ -481,7 +481,7 @@ func TestSerializeFieldWithSpaces(t *testing.T) {
 		"cpu":        "cpu0",
 		"datacenter": "us-west-2",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		`field\ with\ spaces`: float64(91.5),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -508,7 +508,7 @@ func TestSerializeFieldWithSpacesWithTagSupport(t *testing.T) {
 		"cpu":        "cpu0",
 		"datacenter": "us-west-2",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		`field\ with\ spaces`: float64(91.5),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -537,7 +537,7 @@ func TestSerializeTagWithSpaces(t *testing.T) {
 		"cpu":        `cpu\ 0`,
 		"datacenter": "us-west-2",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		`field_with_spaces`: float64(91.5),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -564,7 +564,7 @@ func TestSerializeTagWithSpacesWithTagSupport(t *testing.T) {
 		"cpu":        `cpu\ 0`,
 		"datacenter": "us-west-2",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		`field_with_spaces`: float64(91.5),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -592,7 +592,7 @@ func TestSerializeTagWithSpacesWithTagSupportCompatibleSanitize(t *testing.T) {
 		"cpu":        `cpu\ 0`,
 		"datacenter": "us-west-2",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		`field_with_spaces`: float64(91.5),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -622,7 +622,7 @@ func TestSerializeValueField3(t *testing.T) {
 		"cpu":        "cpu0",
 		"datacenter": "us-west-2",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"value": float64(91.5),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -650,7 +650,7 @@ func TestSerializeValueField5(t *testing.T) {
 		"cpu":        "cpu0",
 		"datacenter": "us-west-2",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"value": float64(91.5),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -677,7 +677,7 @@ func TestSerializeMetricPrefix(t *testing.T) {
 		"cpu":        "cpu0",
 		"datacenter": "us-west-2",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": float64(91.5),
 		"usage_busy": float64(8.5),
 	}
@@ -706,7 +706,7 @@ func TestSerializeMetricPrefixWithTagSupport(t *testing.T) {
 		"cpu":        "cpu0",
 		"datacenter": "us-west-2",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": float64(91.5),
 		"usage_busy": float64(8.5),
 	}
@@ -740,7 +740,7 @@ func TestSerializeCustomRegex(t *testing.T) {
 		"cpu":        "cpu0",
 		"datacenter": "|us-west-2|",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"value": float64(91.5),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -766,7 +766,7 @@ func TestSerializeBucketNameNoHost(t *testing.T) {
 		"cpu":        "cpu0",
 		"datacenter": "us-west-2",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": float64(91.5),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -779,7 +779,7 @@ func TestSerializeBucketNameNoHost(t *testing.T) {
 
 func TestSerializeBucketNameHost(t *testing.T) {
 	now := time.Now()
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": float64(91.5),
 	}
 	m := metric.New("cpu", defaultTags, fields, now)
@@ -792,7 +792,7 @@ func TestSerializeBucketNameHost(t *testing.T) {
 
 func TestSerializeBucketNamePrefix(t *testing.T) {
 	now := time.Now()
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": float64(91.5),
 	}
 	m := metric.New("cpu", defaultTags, fields, now)
@@ -805,7 +805,7 @@ func TestSerializeBucketNamePrefix(t *testing.T) {
 
 func TestTemplate1(t *testing.T) {
 	now := time.Now()
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": float64(91.5),
 	}
 	m := metric.New("cpu", defaultTags, fields, now)
@@ -818,7 +818,7 @@ func TestTemplate1(t *testing.T) {
 
 func TestTemplate2(t *testing.T) {
 	now := time.Now()
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": float64(91.5),
 	}
 	m := metric.New("cpu", defaultTags, fields, now)
@@ -831,7 +831,7 @@ func TestTemplate2(t *testing.T) {
 
 func TestTemplate3(t *testing.T) {
 	now := time.Now()
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": float64(91.5),
 	}
 	m := metric.New("cpu", defaultTags, fields, now)
@@ -844,7 +844,7 @@ func TestTemplate3(t *testing.T) {
 
 func TestTemplate4(t *testing.T) {
 	now := time.Now()
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": float64(91.5),
 	}
 	m := metric.New("cpu", defaultTags, fields, now)
@@ -857,7 +857,7 @@ func TestTemplate4(t *testing.T) {
 
 func TestTemplate6(t *testing.T) {
 	now := time.Now()
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": float64(91.5),
 	}
 	m := metric.New("cpu", defaultTags, fields, now)
@@ -874,77 +874,77 @@ func TestClean(t *testing.T) {
 		name       string
 		metricName string
 		tags       map[string]string
-		fields     map[string]interface{}
+		fields     map[string]any
 		expected   string
 	}{
 		{
 			"Base metric",
 			"cpu",
 			map[string]string{"host": "localhost"},
-			map[string]interface{}{"usage_busy": float64(8.5)},
+			map[string]any{"usage_busy": float64(8.5)},
 			"localhost.cpu.usage_busy 8.5 1234567890\n",
 		},
 		{
 			"Dot and whitespace in tags",
 			"cpu",
 			map[string]string{"host": "localhost", "label.dot and space": "value with.dot"},
-			map[string]interface{}{"usage_busy": float64(8.5)},
+			map[string]any{"usage_busy": float64(8.5)},
 			"localhost.value_with_dot.cpu.usage_busy 8.5 1234567890\n",
 		},
 		{
 			"Field with space",
 			"system",
 			map[string]string{"host": "localhost"},
-			map[string]interface{}{"uptime_format": "20 days, 23:26"},
+			map[string]any{"uptime_format": "20 days, 23:26"},
 			"", // yes nothing. graphite don't serialize string fields
 		},
 		{
 			"Allowed punct",
 			"cpu",
 			map[string]string{"host": "localhost", "tag": "-_:="},
-			map[string]interface{}{"usage_busy": float64(10)},
+			map[string]any{"usage_busy": float64(10)},
 			"localhost.-_:=.cpu.usage_busy 10 1234567890\n",
 		},
 		{
 			"Special conversions to hyphen",
 			"cpu",
 			map[string]string{"host": "localhost", "tag": "/@*"},
-			map[string]interface{}{"usage_busy": float64(10)},
+			map[string]any{"usage_busy": float64(10)},
 			"localhost.---.cpu.usage_busy 10 1234567890\n",
 		},
 		{
 			"Special drop chars",
 			"cpu",
 			map[string]string{"host": "localhost", "tag": `\no slash`},
-			map[string]interface{}{"usage_busy": float64(10)},
+			map[string]any{"usage_busy": float64(10)},
 			"localhost.no_slash.cpu.usage_busy 10 1234567890\n",
 		},
 		{
 			"Empty tag & value field",
 			"cpu",
 			map[string]string{"host": "localhost"},
-			map[string]interface{}{"value": float64(10)},
+			map[string]any{"value": float64(10)},
 			"localhost.cpu 10 1234567890\n",
 		},
 		{
 			"Unicode Letters allowed",
 			"cpu",
 			map[string]string{"host": "localhost", "tag": "μnicodε_letters"},
-			map[string]interface{}{"value": float64(10)},
+			map[string]any{"value": float64(10)},
 			"localhost.μnicodε_letters.cpu 10 1234567890\n",
 		},
 		{
 			"Other Unicode not allowed",
 			"cpu",
 			map[string]string{"host": "localhost", "tag": "“☢”"},
-			map[string]interface{}{"value": float64(10)},
+			map[string]any{"value": float64(10)},
 			"localhost.___.cpu 10 1234567890\n",
 		},
 		{
 			"Newline in tags",
 			"cpu",
 			map[string]string{"host": "localhost", "label": "some\nthing\nwith\nnewline"},
-			map[string]interface{}{"usage_busy": float64(8.5)},
+			map[string]any{"usage_busy": float64(8.5)},
 			"localhost.some_thing_with_newline.cpu.usage_busy 8.5 1234567890\n",
 		},
 	}
@@ -968,77 +968,77 @@ func TestCleanWithTagsSupport(t *testing.T) {
 		name       string
 		metricName string
 		tags       map[string]string
-		fields     map[string]interface{}
+		fields     map[string]any
 		expected   string
 	}{
 		{
 			"Base metric",
 			"cpu",
 			map[string]string{"host": "localhost"},
-			map[string]interface{}{"usage_busy": float64(8.5)},
+			map[string]any{"usage_busy": float64(8.5)},
 			"cpu.usage_busy;host=localhost 8.5 1234567890\n",
 		},
 		{
 			"Dot and whitespace in tags",
 			"cpu",
 			map[string]string{"host": "localhost", "label.dot and space": "value with.dot"},
-			map[string]interface{}{"usage_busy": float64(8.5)},
+			map[string]any{"usage_busy": float64(8.5)},
 			"cpu.usage_busy;host=localhost;label.dot_and_space=value_with.dot 8.5 1234567890\n",
 		},
 		{
 			"Field with space",
 			"system",
 			map[string]string{"host": "localhost"},
-			map[string]interface{}{"uptime_format": "20 days, 23:26"},
+			map[string]any{"uptime_format": "20 days, 23:26"},
 			"", // yes nothing. graphite don't serialize string fields
 		},
 		{
 			"Allowed punct",
 			"cpu",
 			map[string]string{"host": "localhost", "tag": "-_:="},
-			map[string]interface{}{"usage_busy": float64(10)},
+			map[string]any{"usage_busy": float64(10)},
 			"cpu.usage_busy;host=localhost;tag=-_:= 10 1234567890\n",
 		},
 		{
 			"Special conversions to hyphen",
 			"cpu",
 			map[string]string{"host": "localhost", "tag": "/@*"},
-			map[string]interface{}{"usage_busy": float64(10)},
+			map[string]any{"usage_busy": float64(10)},
 			"cpu.usage_busy;host=localhost;tag=--- 10 1234567890\n",
 		},
 		{
 			"Special drop chars",
 			"cpu",
 			map[string]string{"host": "localhost", "tag": `\no slash`},
-			map[string]interface{}{"usage_busy": float64(10)},
+			map[string]any{"usage_busy": float64(10)},
 			"cpu.usage_busy;host=localhost;tag=no_slash 10 1234567890\n",
 		},
 		{
 			"Empty tag & value field",
 			"cpu",
 			map[string]string{"host": "localhost"},
-			map[string]interface{}{"value": float64(10)},
+			map[string]any{"value": float64(10)},
 			"cpu;host=localhost 10 1234567890\n",
 		},
 		{
 			"Unicode Letters allowed",
 			"cpu",
 			map[string]string{"host": "localhost", "tag": "μnicodε_letters"},
-			map[string]interface{}{"value": float64(10)},
+			map[string]any{"value": float64(10)},
 			"cpu;host=localhost;tag=μnicodε_letters 10 1234567890\n",
 		},
 		{
 			"Other Unicode not allowed",
 			"cpu",
 			map[string]string{"host": "localhost", "tag": "“☢”"},
-			map[string]interface{}{"value": float64(10)},
+			map[string]any{"value": float64(10)},
 			"cpu;host=localhost;tag=___ 10 1234567890\n",
 		},
 		{
 			"Newline in tags",
 			"cpu",
 			map[string]string{"host": "localhost", "label": "some\nthing\nwith\nnewline"},
-			map[string]interface{}{"usage_busy": float64(8.5)},
+			map[string]any{"usage_busy": float64(8.5)},
 			"cpu.usage_busy;host=localhost;label=some_thing_with_newline 8.5 1234567890\n",
 		},
 	}
@@ -1065,77 +1065,77 @@ func TestCleanWithTagsSupportCompatibleSanitize(t *testing.T) {
 		name       string
 		metricName string
 		tags       map[string]string
-		fields     map[string]interface{}
+		fields     map[string]any
 		expected   string
 	}{
 		{
 			"Base metric",
 			"cpu",
 			map[string]string{"host": "localhost"},
-			map[string]interface{}{"usage_busy": float64(8.5)},
+			map[string]any{"usage_busy": float64(8.5)},
 			"cpu.usage_busy;host=localhost 8.5 1234567890\n",
 		},
 		{
 			"Dot and whitespace in tags",
 			"cpu",
 			map[string]string{"host": "localhost", "label.dot and space": "value with.dot"},
-			map[string]interface{}{"usage_busy": float64(8.5)},
+			map[string]any{"usage_busy": float64(8.5)},
 			"cpu.usage_busy;host=localhost;label.dot and space=value with.dot 8.5 1234567890\n",
 		},
 		{
 			"Field with space",
 			"system",
 			map[string]string{"host": "localhost"},
-			map[string]interface{}{"uptime_format": "20 days, 23:26"},
+			map[string]any{"uptime_format": "20 days, 23:26"},
 			"", // yes nothing. graphite don't serialize string fields
 		},
 		{
 			"Allowed punct",
 			"cpu",
 			map[string]string{"host": "localhost", "tag": "-_:=!^~"},
-			map[string]interface{}{"usage_busy": float64(10)},
+			map[string]any{"usage_busy": float64(10)},
 			"cpu.usage_busy;host=localhost;tag=-_:=!^~ 10 1234567890\n",
 		},
 		{
 			"Special characters preserved",
 			"cpu",
 			map[string]string{"host": "localhost", "tag": "/@*"},
-			map[string]interface{}{"usage_busy": float64(10)},
+			map[string]any{"usage_busy": float64(10)},
 			"cpu.usage_busy;host=localhost;tag=/@* 10 1234567890\n",
 		},
 		{
 			"Special characters preserved 2",
 			"cpu",
 			map[string]string{"host": "localhost", "tag": `\no change to slash`},
-			map[string]interface{}{"usage_busy": float64(10)},
+			map[string]any{"usage_busy": float64(10)},
 			"cpu.usage_busy;host=localhost;tag=\\no change to slash 10 1234567890\n",
 		},
 		{
 			"Empty tag & value field",
 			"cpu",
 			map[string]string{"host": "localhost"},
-			map[string]interface{}{"value": float64(10)},
+			map[string]any{"value": float64(10)},
 			"cpu;host=localhost 10 1234567890\n",
 		},
 		{
 			"Unicode Letters allowed",
 			"cpu",
 			map[string]string{"host": "localhost", "tag": "μnicodε_letters"},
-			map[string]interface{}{"value": float64(10)},
+			map[string]any{"value": float64(10)},
 			"cpu;host=localhost;tag=μnicodε_letters 10 1234567890\n",
 		},
 		{
 			"Other Unicode not allowed",
 			"cpu",
 			map[string]string{"host": "localhost", "tag": "“☢”"},
-			map[string]interface{}{"value": float64(10)},
+			map[string]any{"value": float64(10)},
 			"cpu;host=localhost;tag=___ 10 1234567890\n",
 		},
 		{
 			"Newline in tags",
 			"cpu",
 			map[string]string{"host": "localhost", "label": "some\nthing\nwith\nnewline"},
-			map[string]interface{}{"usage_busy": float64(8.5)},
+			map[string]any{"usage_busy": float64(8.5)},
 			"cpu.usage_busy;host=localhost;label=some_thing_with_newline 8.5 1234567890\n",
 		},
 	}
@@ -1163,14 +1163,14 @@ func TestSerializeBatch(t *testing.T) {
 		name       string
 		metricName string
 		tags       map[string]string
-		fields     map[string]interface{}
+		fields     map[string]any
 		expected   string
 	}{
 		{
 			"Base metric",
 			"cpu",
 			map[string]string{"host": "localhost"},
-			map[string]interface{}{"usage_busy": float64(8.5)},
+			map[string]any{"usage_busy": float64(8.5)},
 			"localhost.cpu.usage_busy 8.5 1234567890\nlocalhost.cpu.usage_busy 8.5 1234567890\n",
 		},
 	}
@@ -1194,14 +1194,14 @@ func TestSerializeBatchWithTagsSupport(t *testing.T) {
 		name       string
 		metricName string
 		tags       map[string]string
-		fields     map[string]interface{}
+		fields     map[string]any
 		expected   string
 	}{
 		{
 			"Base metric",
 			"cpu",
 			map[string]string{"host": "localhost"},
-			map[string]interface{}{"usage_busy": float64(8.5)},
+			map[string]any{"usage_busy": float64(8.5)},
 			"cpu.usage_busy;host=localhost 8.5 1234567890\ncpu.usage_busy;host=localhost 8.5 1234567890\n",
 		},
 	}

@@ -7,6 +7,7 @@ package selfstat
 
 import (
 	"hash/fnv"
+	"maps"
 	"sort"
 	"sync"
 	"time"
@@ -90,7 +91,7 @@ func Metrics() []telegraf.Metric {
 		if len(stats) > 0 {
 			var tags map[string]string
 			var name string
-			fields := make(map[string]interface{}, len(stats))
+			fields := make(map[string]any, len(stats))
 			j := 0
 			for fieldname, stat := range stats {
 				if j == 0 {
@@ -122,15 +123,10 @@ func (r *Registry) register(measurement, field string, tags map[string]string) S
 		return stat
 	}
 
-	t := make(map[string]string, len(tags))
-	for k, v := range tags {
-		t[k] = v
-	}
-
 	s := &stat{
 		measurement: measurement,
 		field:       field,
-		tags:        t,
+		tags:        maps.Clone(tags),
 	}
 	registry.set(key, s)
 	return s
@@ -145,15 +141,10 @@ func (r *Registry) registerTiming(measurement, field string, tags map[string]str
 		return stat
 	}
 
-	t := make(map[string]string, len(tags))
-	for k, v := range tags {
-		t[k] = v
-	}
-
 	s := &timingStat{
 		measurement: measurement,
 		field:       field,
-		tags:        t,
+		tags:        maps.Clone(tags),
 	}
 	registry.set(key, s)
 	return s

@@ -57,7 +57,7 @@ type outputMetrics struct {
 type outputMetric struct {
 	Name      string       `json:"name"`
 	Tags      []*outputTag `json:"tags"`
-	Value     interface{}  `json:"value"`
+	Value     any          `json:"value"`
 	Timestamp int64        `json:"timestamp"`
 }
 
@@ -395,7 +395,7 @@ func (s *Sensu) getHandlers() []string {
 	return s.Metrics.Handlers
 }
 
-func getFloat(unk interface{}) float64 {
+func getFloat(unk any) float64 {
 	switch i := unk.(type) {
 	case float64:
 		return i

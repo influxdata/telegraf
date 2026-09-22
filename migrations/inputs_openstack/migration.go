@@ -16,7 +16,7 @@ import (
 // default is materialized before appending to preserve the original behavior.
 func migrate(tbl *ast.Table) ([]byte, string, error) {
 	// Decode the old data structure
-	var plugin map[string]interface{}
+	var plugin map[string]any
 	if err := toml.UnmarshalTable(tbl, &plugin); err != nil {
 		return nil, "", err
 	}
@@ -35,10 +35,10 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 		// Only a 'true' value had an effect, enabling the 'serverdiagnostics'
 		// service. A 'false' value is the default and can simply be dropped.
 		if oldValue {
-			services, _ := plugin["enabled_services"].([]interface{})
+			services, _ := plugin["enabled_services"].([]any)
 			if len(services) == 0 {
 				// Mirror the plugin's default set of enabled services
-				services = []interface{}{"services", "projects", "hypervisors", "flavors", "networks", "volumes"}
+				services = []any{"services", "projects", "hypervisors", "flavors", "networks", "volumes"}
 			}
 			if !slices.Contains(services, "serverdiagnostics") {
 				services = append(services, "serverdiagnostics")

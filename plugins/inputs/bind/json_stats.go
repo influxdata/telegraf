@@ -3,6 +3,7 @@ package bind
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net"
 	"net/http"
 	"net/url"
@@ -54,9 +55,7 @@ func addJSONCounter(acc telegraf.Accumulator, commonTags map[string]string, stat
 		tags := make(map[string]string)
 
 		// Create local copy of tags since maps are reference types
-		for k, v := range commonTags {
-			tags[k] = v
-		}
+		maps.Copy(tags, commonTags)
 
 		grouper.Add("bind_counter", tags, ts, name, value)
 	}
@@ -104,7 +103,7 @@ func (b *Bind) addStatsJSON(stats jsonStats, acc telegraf.Accumulator, urlTag st
 	addJSONCounter(acc, tags, stats.ZoneStats)
 
 	// Memory stats
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"total_use":    stats.Memory.TotalUse,
 		"in_use":       stats.Memory.InUse,
 		"block_size":   stats.Memory.BlockSize,
@@ -117,7 +116,7 @@ func (b *Bind) addStatsJSON(stats jsonStats, acc telegraf.Accumulator, urlTag st
 	if b.GatherMemoryContexts {
 		for _, c := range stats.Memory.Contexts {
 			tags := map[string]string{"url": urlTag, "id": c.ID, "name": c.Name, "source": host, "port": port}
-			fields := map[string]interface{}{"total": c.Total, "in_use": c.InUse}
+			fields := map[string]any{"total": c.Total, "in_use": c.InUse}
 
 			acc.AddGauge("bind_memory_context", fields, tags)
 		}

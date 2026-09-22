@@ -134,8 +134,7 @@ func (r *AwsEc2Processor) Start(acc telegraf.Accumulator) error {
 		_, err = r.ec2Client.DescribeTags(ctx, &ec2.DescribeTagsInput{
 			DryRun: aws.Bool(true),
 		})
-		var ae smithy.APIError
-		if errors.As(err, &ae) {
+		if ae, ok := errors.AsType[smithy.APIError](err); ok {
 			if ae.ErrorCode() != "DryRunOperation" {
 				return fmt.Errorf("instance doesn't have permissions to call DescribeTags: %w", err)
 			}

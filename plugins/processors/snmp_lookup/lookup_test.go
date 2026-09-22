@@ -88,9 +88,7 @@ func TestInit(t *testing.T) {
 		{
 			name: "wrong SNMP client config",
 			plugin: &SNMPLookup{
-				ClientConfig: snmp.ClientConfig{
-					Version: 99,
-				},
+				Version: 99,
 			},
 			expected: "parsing SNMP client config: invalid version",
 		},
@@ -142,7 +140,7 @@ func TestGetConnection(t *testing.T) {
 				map[string]string{
 					"source": "test://127.0.0.1",
 				},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(0, 0),
 			),
 			expected: "parsing agent tag: unsupported scheme: test",
@@ -156,7 +154,7 @@ func TestGetConnection(t *testing.T) {
 					"version":   "2c",
 					"community": "public",
 				},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(0, 0),
 			),
 		},
@@ -273,7 +271,7 @@ func TestAdd(t *testing.T) {
 				map[string]string{
 					"source": "127.0.0.1",
 				},
-				map[string]interface{}{"value": 42},
+				map[string]any{"value": 42},
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
@@ -282,7 +280,7 @@ func TestAdd(t *testing.T) {
 					map[string]string{
 						"source": "127.0.0.1",
 					},
-					map[string]interface{}{"value": 42},
+					map[string]any{"value": 42},
 					time.Unix(0, 0),
 				),
 			},
@@ -295,7 +293,7 @@ func TestAdd(t *testing.T) {
 					"source": "127.0.0.1",
 					"index":  "123",
 				},
-				map[string]interface{}{"value": 42},
+				map[string]any{"value": 42},
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
@@ -306,7 +304,7 @@ func TestAdd(t *testing.T) {
 						"index":  "123",
 						"ifName": "eth123",
 					},
-					map[string]interface{}{"value": 42},
+					map[string]any{"value": 42},
 					time.Unix(0, 0),
 				),
 			},
@@ -319,7 +317,7 @@ func TestAdd(t *testing.T) {
 					"source": "127.0.0.1",
 					"index":  "999",
 				},
-				map[string]interface{}{"value": 42},
+				map[string]any{"value": 42},
 				time.Unix(0, 0),
 			),
 			expected: []telegraf.Metric{
@@ -329,7 +327,7 @@ func TestAdd(t *testing.T) {
 						"source": "127.0.0.1",
 						"index":  "999",
 					},
-					map[string]interface{}{"value": 42},
+					map[string]any{"value": 42},
 					time.Unix(0, 0),
 				),
 			},
@@ -400,7 +398,7 @@ func TestExpiry(t *testing.T) {
 	m := metric.New(
 		"test",
 		map[string]string{"source": "127.0.0.1"},
-		map[string]interface{}{"value": 1.0},
+		map[string]any{"value": 1.0},
 		time.Unix(0, 0),
 	)
 
@@ -430,7 +428,7 @@ func TestExpiry(t *testing.T) {
 				"index":  "0",
 				"ifName": "eth0",
 			},
-			map[string]interface{}{"value": 1.0},
+			map[string]any{"value": 1.0},
 			time.Unix(0, 0),
 		),
 		metric.New(
@@ -440,7 +438,7 @@ func TestExpiry(t *testing.T) {
 				"index":  "1",
 				"ifName": "eth1",
 			},
-			map[string]interface{}{"value": 1.0},
+			map[string]any{"value": 1.0},
 			time.Unix(0, 0),
 		),
 		metric.New(
@@ -449,7 +447,7 @@ func TestExpiry(t *testing.T) {
 				"source": "127.0.0.1",
 				"index":  "123",
 			},
-			map[string]interface{}{"value": 1.0},
+			map[string]any{"value": 1.0},
 			time.Unix(0, 0),
 		),
 	}
@@ -476,7 +474,7 @@ func TestExpiry(t *testing.T) {
 				"index":  "0",
 				"ifName": "eth0",
 			},
-			map[string]interface{}{"value": 1.0},
+			map[string]any{"value": 1.0},
 			time.Unix(0, 0),
 		),
 	}
@@ -530,19 +528,19 @@ func TestOrdered(t *testing.T) {
 		metric.New(
 			"test1",
 			map[string]string{"source": "b.yourcompany.com"},
-			map[string]interface{}{"value": 1.0},
+			map[string]any{"value": 1.0},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"test2",
 			map[string]string{"source": "a.mycompany.com"},
-			map[string]interface{}{"value": 1.0},
+			map[string]any{"value": 1.0},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"test3",
 			map[string]string{"source": "127.0.0.1"},
-			map[string]interface{}{"value": 1.0},
+			map[string]any{"value": 1.0},
 			time.Unix(0, 0),
 		),
 	}
@@ -569,7 +567,7 @@ func TestOrdered(t *testing.T) {
 				"index":  "0",
 				"ifName": "eth0",
 			},
-			map[string]interface{}{"value": 1.0},
+			map[string]any{"value": 1.0},
 			time.Unix(0, 0),
 		),
 		metric.New(
@@ -579,7 +577,7 @@ func TestOrdered(t *testing.T) {
 				"index":  "1",
 				"ifName": "eth1",
 			},
-			map[string]interface{}{"value": 1.0},
+			map[string]any{"value": 1.0},
 			time.Unix(0, 0),
 		),
 		metric.New(
@@ -589,7 +587,7 @@ func TestOrdered(t *testing.T) {
 				"index":  "0",
 				"ifName": "eth0",
 			},
-			map[string]interface{}{"value": 1.0},
+			map[string]any{"value": 1.0},
 			time.Unix(0, 0),
 		),
 		metric.New(
@@ -599,7 +597,7 @@ func TestOrdered(t *testing.T) {
 				"index":  "1",
 				"ifName": "eth1",
 			},
-			map[string]interface{}{"value": 1.0},
+			map[string]any{"value": 1.0},
 			time.Unix(0, 0),
 		),
 		metric.New(
@@ -609,7 +607,7 @@ func TestOrdered(t *testing.T) {
 				"index":  "0",
 				"ifName": "eth0",
 			},
-			map[string]interface{}{"value": 1.0},
+			map[string]any{"value": 1.0},
 			time.Unix(0, 0),
 		),
 		metric.New(
@@ -619,7 +617,7 @@ func TestOrdered(t *testing.T) {
 				"index":  "1",
 				"ifName": "eth1",
 			},
-			map[string]interface{}{"value": 1.0},
+			map[string]any{"value": 1.0},
 			time.Unix(0, 0),
 		),
 	}
@@ -668,7 +666,7 @@ func TestNoReenqueAfterStop(t *testing.T) {
 				"source": "127.0.0.1",
 				"index":  "0",
 			},
-			map[string]interface{}{"value": 1},
+			map[string]any{"value": 1},
 			time.Now(),
 		)
 		require.NoError(t, plugin.Add(m, &acc))
@@ -747,7 +745,7 @@ func TestStopWithTaskInWorkerPool(t *testing.T) {
 			"source": "127.0.0.1",
 			"index":  "0",
 		},
-		map[string]interface{}{"value": 1},
+		map[string]any{"value": 1},
 		time.Now(),
 	)
 
@@ -839,7 +837,7 @@ func TestStopWithTaskInWorkerPoolWithGoTimeout(t *testing.T) {
 			"source": "127.0.0.1",
 			"index":  "0",
 		},
-		map[string]interface{}{"value": 1},
+		map[string]any{"value": 1},
 		time.Now(),
 	)
 	require.NoError(t, plugin.Add(m, &acc))

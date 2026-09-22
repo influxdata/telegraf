@@ -27,7 +27,7 @@ func TestNode(t *testing.T) {
 		{
 			name: "no nodes",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/nodes/": corev1.NodeList{},
 				},
 			},
@@ -35,7 +35,7 @@ func TestNode(t *testing.T) {
 				metric.New(
 					nodeMeasurement,
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"node_count": int64(0),
 					},
 					time.Unix(0, 0),
@@ -46,7 +46,7 @@ func TestNode(t *testing.T) {
 		{
 			name: "collect nodes",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/nodes/": corev1.NodeList{
 						Items: []corev1.Node{
 							{
@@ -93,19 +93,17 @@ func TestNode(t *testing.T) {
 										},
 									},
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									Generation: 11232,
-									Name:       "node1",
-									Labels: map[string]string{
-										"lab1": "v1",
-										"lab2": "v2",
-									},
-									Namespace: "ns1",
-									Annotations: map[string]string{
-										"cluster.x-k8s.io/cluster-namespace": "ns1",
-									},
-									CreationTimestamp: metav1.Time{Time: now},
+								Generation: 11232,
+								Name:       "node1",
+								Labels: map[string]string{
+									"lab1": "v1",
+									"lab2": "v2",
 								},
+								Namespace: "ns1",
+								Annotations: map[string]string{
+									"cluster.x-k8s.io/cluster-namespace": "ns1",
+								},
+								CreationTimestamp: metav1.Time{Time: now},
 							},
 						},
 					},
@@ -121,7 +119,7 @@ func TestNode(t *testing.T) {
 						"status":            "True",
 						"version":           "v1.10.3",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_condition": int64(1),
 						"ready":            int64(1),
 					},
@@ -134,7 +132,7 @@ func TestNode(t *testing.T) {
 						"cluster_namespace": "ns1",
 						"version":           "v1.10.3",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"capacity_cpu_cores":         int64(16),
 						"capacity_millicpu_cores":    int64(16000),
 						"capacity_memory_bytes":      int64(1.28837533696e+11),

@@ -46,103 +46,103 @@ func TestGather(t *testing.T) {
 	diskTags := map[string]string{"device": "sda", "vg": "rootvg"}
 	tests := []struct {
 		measurement string
-		fields      map[string]interface{}
+		fields      map[string]any
 		tags        map[string]string
 	}{
 		{
 			"cpu_pct_user",
-			map[string]interface{}{
+			map[string]any{
 				"value": 0.65,
 			},
 			cpuTags,
 		},
 		{
 			"cpu_pct_nice",
-			map[string]interface{}{
+			map[string]any{
 				"value": 0.0,
 			},
 			cpuTags,
 		},
 		{
 			"cpu_pct_system",
-			map[string]interface{}{
+			map[string]any{
 				"value": 0.10,
 			},
 			cpuTags,
 		},
 		{
 			"cpu_pct_iowait",
-			map[string]interface{}{
+			map[string]any{
 				"value": 0.15,
 			},
 			cpuTags,
 		},
 		{
 			"cpu_pct_steal",
-			map[string]interface{}{
+			map[string]any{
 				"value": 0.0,
 			},
 			cpuTags,
 		},
 		{
 			"cpu_pct_idle",
-			map[string]interface{}{
+			map[string]any{
 				"value": 99.1,
 			},
 			cpuTags,
 		},
 		{
 			"disk_tps",
-			map[string]interface{}{
+			map[string]any{
 				"value": 0.00,
 			},
 			diskTags,
 		},
 		{
 			"disk_rd_sec_per_s",
-			map[string]interface{}{
+			map[string]any{
 				"value": 0.00,
 			},
 			diskTags,
 		},
 		{
 			"disk_wr_sec_per_s",
-			map[string]interface{}{
+			map[string]any{
 				"value": 0.00,
 			},
 			diskTags,
 		},
 		{
 			"disk_avgrq-sz",
-			map[string]interface{}{
+			map[string]any{
 				"value": 0.00,
 			},
 			diskTags,
 		},
 		{
 			"disk_avgqu-sz",
-			map[string]interface{}{
+			map[string]any{
 				"value": 0.00,
 			},
 			diskTags,
 		},
 		{
 			"disk_await",
-			map[string]interface{}{
+			map[string]any{
 				"value": 0.00,
 			},
 			diskTags,
 		},
 		{
 			"disk_svctm",
-			map[string]interface{}{
+			map[string]any{
 				"value": 0.00,
 			},
 			diskTags,
 		},
 		{
 			"disk_pct_util",
-			map[string]interface{}{
+			map[string]any{
 				"value": 0.00,
 			},
 			diskTags,
@@ -183,12 +183,12 @@ func TestGatherGrouped(t *testing.T) {
 
 	var tests = []struct {
 		measurement string
-		fields      map[string]interface{}
+		fields      map[string]any
 		tags        map[string]string
 	}{
 		{
 			"cpu",
-			map[string]interface{}{
+			map[string]any{
 				"pct_user":   0.65,
 				"pct_nice":   0.0,
 				"pct_system": 0.10,
@@ -200,7 +200,7 @@ func TestGatherGrouped(t *testing.T) {
 		},
 		{
 			"disk",
-			map[string]interface{}{
+			map[string]any{
 				"tps":          0.00,
 				"rd_sec_per_s": 0.00,
 				"wr_sec_per_s": 0.00,
@@ -214,7 +214,7 @@ func TestGatherGrouped(t *testing.T) {
 		},
 		{
 			"disk",
-			map[string]interface{}{
+			map[string]any{
 				"tps":          2.01,
 				"rd_sec_per_s": 1.0,
 				"wr_sec_per_s": 0.00,

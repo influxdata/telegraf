@@ -18,11 +18,11 @@ var sampleConfig string
 
 // Plugin struct should be named the same as the plugin
 type Plugin struct {
-	Files            []string               `toml:"files"`
-	DefaultTags      map[string]string      `toml:"default_tag_defs"`
-	AdditionalParams map[string]interface{} `toml:"additional_params"`
-	Parser           telegraf.Parser        `toml:"-"`
-	Log              telegraf.Logger        `toml:"-"`
+	Files            []string          `toml:"files"`
+	DefaultTags      map[string]string `toml:"default_tag_defs"`
+	AdditionalParams map[string]any    `toml:"additional_params"`
+	Parser           telegraf.Parser   `toml:"-"`
+	Log              telegraf.Logger   `toml:"-"`
 
 	// Settings used by test-code
 	Path             string `toml:"-"` // start path for relative files

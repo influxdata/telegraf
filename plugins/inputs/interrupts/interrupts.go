@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"strconv"
 	"strings"
@@ -93,9 +94,9 @@ scan:
 	return irqs, nil
 }
 
-func gatherTagsFields(irq irq) (map[string]string, map[string]interface{}) {
+func gatherTagsFields(irq irq) (map[string]string, map[string]any) {
 	tags := map[string]string{"irq": irq.id, "type": irq.typ, "device": irq.device}
-	fields := map[string]interface{}{"total": irq.total}
+	fields := map[string]any{"total": irq.total}
 	for i := 0; i < len(irq.cpus); i++ {
 		cpu := fmt.Sprintf("CPU%d", i)
 		fields[cpu] = irq.cpus[i]
@@ -122,11 +123,10 @@ func reportMetrics(measurement string, irqs []irq, acc telegraf.Accumulator, cpu
 		tags, fields := gatherTagsFields(irq)
 		if cpusAsTags {
 			for cpu, count := range irq.cpus {
-				cpuTags := map[string]string{"cpu": fmt.Sprintf("cpu%d", cpu)}
-				for k, v := range tags {
-					cpuTags[k] = v
-				}
-				acc.AddFields(measurement, map[string]interface{}{"count": count}, cpuTags)
+				cpuTags := make(map[string]string, len(tags)+1)
+				maps.Copy(cpuTags, tags)
+				cpuTags["cpu"] = fmt.Sprintf("cpu%d", cpu)
+				acc.AddFields(measurement, map[string]any{"count": count}, cpuTags)
 			}
 		} else {
 			acc.AddFields(measurement, fields, tags)

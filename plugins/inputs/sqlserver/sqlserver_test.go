@@ -14,7 +14,7 @@ import (
 )
 
 func TestSqlServer_QueriesInclusionExclusion(t *testing.T) {
-	cases := []map[string]interface{}{
+	cases := []map[string]any{
 		{
 			"IncludeQuery": make([]string, 0),
 			"ExcludeQuery": []string{"SQLServerWaitStatsCategorized", "SQLServerDatabaseIO", "SQLServerProperties", "SQLServerMemoryClerks",
@@ -63,7 +63,7 @@ func TestSqlServer_ParseMetrics(t *testing.T) {
 
 	var headers, mock, row []string
 	var tags = make(map[string]string)
-	var fields = make(map[string]interface{})
+	var fields = make(map[string]any)
 
 	for _, query := range queries {
 		mock = strings.Split(query.Script, "\n")
@@ -87,10 +87,10 @@ func TestSqlServer_ParseMetrics(t *testing.T) {
 
 					// add value to Accumulator
 					acc.AddFields(measurement,
-						map[string]interface{}{"value": value},
+						map[string]any{"value": value},
 						tags, time.Now())
 					// assert
-					acc.AssertContainsTaggedFields(t, measurement, map[string]interface{}{"value": value}, tags)
+					acc.AssertContainsTaggedFields(t, measurement, map[string]any{"value": value}, tags)
 				} else {
 					// set fields
 					for i := 3; i < len(row); i++ {

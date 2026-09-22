@@ -9,7 +9,7 @@ import (
 
 var ErrOutOfRange = strconv.ErrRange
 
-func ToFloat64(value interface{}) (float64, error) {
+func ToFloat64(value any) (float64, error) {
 	switch v := value.(type) {
 	case string:
 		return strconv.ParseFloat(v, 64)
@@ -52,7 +52,7 @@ func ToFloat64(value interface{}) (float64, error) {
 	return 0, fmt.Errorf("type \"%T\" unsupported", value)
 }
 
-func ToFloat32(value interface{}) (float32, error) {
+func ToFloat32(value any) (float32, error) {
 	switch v := value.(type) {
 	case string:
 		x, err := strconv.ParseFloat(v, 32)
@@ -101,11 +101,11 @@ func ToFloat32(value interface{}) (float32, error) {
 	return 0, fmt.Errorf("type \"%T\" unsupported", value)
 }
 
-func ToUint64(value interface{}) (uint64, error) {
+func ToUint64(value any) (uint64, error) {
 	switch v := value.(type) {
 	case string:
-		if strings.HasPrefix(v, "0x") {
-			return strconv.ParseUint(strings.TrimPrefix(v, "0x"), 16, 64)
+		if after, ok := strings.CutPrefix(v, "0x"); ok {
+			return strconv.ParseUint(after, 16, 64)
 		}
 		return strconv.ParseUint(v, 10, 64)
 	case []byte:
@@ -168,11 +168,11 @@ func ToUint64(value interface{}) (uint64, error) {
 	return 0, fmt.Errorf("type \"%T\" unsupported", value)
 }
 
-func ToUint32(value interface{}) (uint32, error) {
+func ToUint32(value any) (uint32, error) {
 	switch v := value.(type) {
 	case string:
-		if strings.HasPrefix(v, "0x") {
-			x, err := strconv.ParseUint(strings.TrimPrefix(v, "0x"), 16, 32)
+		if after, ok := strings.CutPrefix(v, "0x"); ok {
+			x, err := strconv.ParseUint(after, 16, 32)
 			return uint32(x), err
 		}
 		x, err := strconv.ParseUint(v, 10, 32)
@@ -242,11 +242,11 @@ func ToUint32(value interface{}) (uint32, error) {
 	return 0, fmt.Errorf("type \"%T\" unsupported", value)
 }
 
-func ToUint16(value interface{}) (uint16, error) {
+func ToUint16(value any) (uint16, error) {
 	switch v := value.(type) {
 	case string:
-		if strings.HasPrefix(v, "0x") {
-			x, err := strconv.ParseUint(strings.TrimPrefix(v, "0x"), 16, 16)
+		if after, ok := strings.CutPrefix(v, "0x"); ok {
+			x, err := strconv.ParseUint(after, 16, 16)
 			return uint16(x), err
 		}
 		x, err := strconv.ParseUint(v, 10, 32)
@@ -319,11 +319,11 @@ func ToUint16(value interface{}) (uint16, error) {
 	return 0, fmt.Errorf("type \"%T\" unsupported", value)
 }
 
-func ToUint8(value interface{}) (uint8, error) {
+func ToUint8(value any) (uint8, error) {
 	switch v := value.(type) {
 	case string:
-		if strings.HasPrefix(v, "0x") {
-			x, err := strconv.ParseUint(strings.TrimPrefix(v, "0x"), 16, 8)
+		if after, ok := strings.CutPrefix(v, "0x"); ok {
+			x, err := strconv.ParseUint(after, 16, 8)
 			return uint8(x), err
 		}
 		x, err := strconv.ParseUint(v, 10, 32)
@@ -399,11 +399,11 @@ func ToUint8(value interface{}) (uint8, error) {
 	return 0, fmt.Errorf("type \"%T\" unsupported", value)
 }
 
-func ToInt64(value interface{}) (int64, error) {
+func ToInt64(value any) (int64, error) {
 	switch v := value.(type) {
 	case string:
-		if strings.HasPrefix(v, "0x") {
-			return strconv.ParseInt(strings.TrimPrefix(v, "0x"), 16, 64)
+		if after, ok := strings.CutPrefix(v, "0x"); ok {
+			return strconv.ParseInt(after, 16, 64)
 		}
 		return strconv.ParseInt(v, 10, 64)
 	case []byte:
@@ -457,11 +457,11 @@ func ToInt64(value interface{}) (int64, error) {
 	return 0, fmt.Errorf("type \"%T\" unsupported", value)
 }
 
-func ToInt32(value interface{}) (int32, error) {
+func ToInt32(value any) (int32, error) {
 	switch v := value.(type) {
 	case string:
-		if strings.HasPrefix(v, "0x") {
-			x, err := strconv.ParseInt(strings.TrimPrefix(v, "0x"), 16, 32)
+		if after, ok := strings.CutPrefix(v, "0x"); ok {
+			x, err := strconv.ParseInt(after, 16, 32)
 			return int32(x), err
 		}
 		x, err := strconv.ParseInt(v, 10, 32)
@@ -528,11 +528,11 @@ func ToInt32(value interface{}) (int32, error) {
 	return 0, fmt.Errorf("type \"%T\" unsupported", value)
 }
 
-func ToInt16(value interface{}) (int16, error) {
+func ToInt16(value any) (int16, error) {
 	switch v := value.(type) {
 	case string:
-		if strings.HasPrefix(v, "0x") {
-			x, err := strconv.ParseInt(strings.TrimPrefix(v, "0x"), 16, 16)
+		if after, ok := strings.CutPrefix(v, "0x"); ok {
+			x, err := strconv.ParseInt(after, 16, 16)
 			return int16(x), err
 		}
 		x, err := strconv.ParseInt(v, 10, 32)
@@ -602,11 +602,11 @@ func ToInt16(value interface{}) (int16, error) {
 	return 0, fmt.Errorf("type \"%T\" unsupported", value)
 }
 
-func ToInt8(value interface{}) (int8, error) {
+func ToInt8(value any) (int8, error) {
 	switch v := value.(type) {
 	case string:
-		if strings.HasPrefix(v, "0x") {
-			x, err := strconv.ParseInt(strings.TrimPrefix(v, "0x"), 16, 8)
+		if after, ok := strings.CutPrefix(v, "0x"); ok {
+			x, err := strconv.ParseInt(after, 16, 8)
 			return int8(x), err
 		}
 		x, err := strconv.ParseInt(v, 10, 32)
@@ -682,7 +682,7 @@ func ToInt8(value interface{}) (int8, error) {
 	return 0, fmt.Errorf("type \"%T\" unsupported", value)
 }
 
-func ToString(value interface{}) (string, error) {
+func ToString(value any) (string, error) {
 	switch v := value.(type) {
 	case string:
 		return v, nil
@@ -722,7 +722,7 @@ func ToString(value interface{}) (string, error) {
 	return "", fmt.Errorf("type \"%T\" unsupported", value)
 }
 
-func ToBool(value interface{}) (bool, error) {
+func ToBool(value any) (bool, error) {
 	switch v := value.(type) {
 	case string:
 		return strconv.ParseBool(v)

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net"
 	"net/http"
 	"net/url"
@@ -456,13 +457,9 @@ func (p *Prometheus) getAllURLs() (map[string]urlAndAddress, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	// add all services collected from consul
-	for k, v := range p.consulServices {
-		allURLs[k] = v
-	}
+	maps.Copy(allURLs, p.consulServices)
 	// add all services collected from http service discovery
-	for k, v := range p.httpServices {
-		allURLs[k] = v
-	}
+	maps.Copy(allURLs, p.httpServices)
 	// loop through all pods scraped via the prometheus annotation on the pods
 	for _, v := range p.kubernetesPods {
 		if namespaceAnnotationMatch(v.namespace, p) {
@@ -493,10 +490,10 @@ func (p *Prometheus) getAllURLs() (map[string]urlAndAddress, error) {
 	return allURLs, nil
 }
 
-func (p *Prometheus) gatherURL(u urlAndAddress, acc telegraf.Accumulator) (map[string]interface{}, map[string]string, error) {
+func (p *Prometheus) gatherURL(u urlAndAddress, acc telegraf.Accumulator) (map[string]any, map[string]string, error) {
 	var req *http.Request
 	var uClient *http.Client
-	requestFields := make(map[string]interface{})
+	requestFields := make(map[string]any)
 	tags := make(map[string]string, len(u.tags)+2)
 	if p.URLTag != "" {
 		tags[p.URLTag] = u.originalURL.String()
@@ -504,9 +501,7 @@ func (p *Prometheus) gatherURL(u urlAndAddress, acc telegraf.Accumulator) (map[s
 	if u.address != "" {
 		tags["address"] = u.address
 	}
-	for k, v := range u.tags {
-		tags[k] = v
-	}
+	maps.Copy(tags, u.tags)
 
 	if u.url.Scheme == "unix" {
 		path := u.url.Query().Get("path")
@@ -674,9 +669,7 @@ func (p *Prometheus) gatherURL(u urlAndAddress, acc telegraf.Accumulator) (map[s
 		if u.address != "" {
 			tags["address"] = u.address
 		}
-		for k, v := range u.tags {
-			tags[k] = v
-		}
+		maps.Copy(tags, u.tags)
 
 		switch metric.Type() {
 		case telegraf.Counter:

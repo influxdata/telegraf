@@ -213,8 +213,14 @@ func (d *reverseDNSCache) doLookup(ip string) {
 
 	names, err := d.resolver.LookupAddr(ctx, ip)
 	if err != nil {
-		d.abandonLookup(ip, err)
-		return
+		// Answers without names (NXDOMAIN) or containing invalid names, e.g. wildcard
+		// PTR records the resolver drops from the returned names, won't change on
+		// retry. Invalid names have no exported error, so match the error text of net.
+		var dnsErr *net.DNSError
+		if !errors.As(err, &dnsErr) || !(dnsErr.IsNotFound || dnsErr.Err == "DNS response contained records which contain invalid names") {
+			d.abandonLookup(ip, err)
+			return
+		}
 	}
 
 	d.rwLock.Lock()

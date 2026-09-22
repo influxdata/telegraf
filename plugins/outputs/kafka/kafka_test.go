@@ -151,7 +151,7 @@ func TestRoutingKeyStatic(t *testing.T) {
 	m := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": 42.0,
 		},
 		time.Unix(0, 0),
@@ -171,7 +171,7 @@ func TestRoutingKeyRandom(t *testing.T) {
 	m := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": 42.0,
 		},
 		time.Unix(0, 0),
@@ -223,7 +223,7 @@ func TestTopicTag(t *testing.T) {
 			map[string]string{
 				"topic": "xyzzy",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle": 42.0,
 			},
 			time.Unix(0, 0),
@@ -324,7 +324,7 @@ func TestHeaders(t *testing.T) {
 				"topic":  "xyzzy",
 				"source": "server",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"id":    "3254345daab4",
 				"value": 42.0,
 				"hours": 255,

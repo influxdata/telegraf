@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -42,10 +43,10 @@ func (s *Synproxy) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *Synproxy) getSynproxyStat() (map[string]interface{}, error) {
+func (s *Synproxy) getSynproxyStat() (map[string]any, error) {
 	var hname []string
 	counters := []string{"entries", "syn_received", "cookie_invalid", "cookie_valid", "cookie_retrans", "conn_reopened"}
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 
 	// Open synproxy file in proc filesystem
 	file, err := os.Open(s.statFile)
@@ -64,9 +65,8 @@ func (s *Synproxy) getSynproxyStat() (map[string]interface{}, error) {
 	if scanner.Scan() {
 		line := scanner.Text()
 		// Parse fields separated by whitespace
-		dataFields := strings.Fields(line)
-		for _, val := range dataFields {
-			if !inSlice(counters, val) {
+		for val := range strings.FieldsSeq(line) {
+			if !slices.Contains(counters, val) {
 				val = ""
 			}
 			hname = append(hname, val)
@@ -98,15 +98,6 @@ func (s *Synproxy) getSynproxyStat() (map[string]interface{}, error) {
 		}
 	}
 	return fields, nil
-}
-
-func inSlice(haystack []string, needle string) bool {
-	for _, val := range haystack {
-		if needle == val {
-			return true
-		}
-	}
-	return false
 }
 
 func init() {

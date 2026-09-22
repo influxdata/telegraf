@@ -50,7 +50,7 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, s
 			maps.Copy(tags, r.chassisTags)
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"power_allocated_watts":  j.PowerAllocatedWatts,
 			"power_available_watts":  j.PowerAvailableWatts,
 			"power_capacity_watts":   j.PowerCapacityWatts,
@@ -90,7 +90,7 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, s
 			maps.Copy(tags, r.chassisTags)
 		}
 
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		fields["power_input_watts"] = power.PowerSupplies[i].PowerInputWatts
 		fields["power_output_watts"] = power.PowerSupplies[i].PowerOutputWatts
 		fields["line_input_voltage"] = power.PowerSupplies[i].LineInputVoltage
@@ -123,7 +123,7 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, s
 			maps.Copy(tags, r.chassisTags)
 		}
 
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		fields["reading_volts"] = j.ReadingVolts
 		fields["upper_threshold_critical"] = j.UpperThresholdCritical
 		fields["upper_threshold_fatal"] = j.UpperThresholdFatal
