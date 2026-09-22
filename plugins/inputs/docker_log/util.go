@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"strings"
 	"sync"
 	"time"
@@ -68,9 +69,7 @@ func tailStream(
 	defer reader.Close()
 
 	tags := make(map[string]string, len(baseTags)+1)
-	for k, v := range baseTags {
-		tags[k] = v
-	}
+	maps.Copy(tags, baseTags)
 	tags["stream"] = stream
 
 	r := bufio.NewReaderSize(reader, 64*1024)

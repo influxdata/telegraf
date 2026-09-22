@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"strconv"
 	"strings"
@@ -384,9 +385,7 @@ func (dt *discoveryTool) getDiscoveryDataAcrossRegions(lmtr chan bool) (map[stri
 			return nil, err
 		}
 
-		for k, v := range data {
-			resultData[k] = v
-		}
+		maps.Copy(resultData, data)
 	}
 	return resultData, nil
 }
@@ -424,10 +423,7 @@ func (dt *discoveryTool) start() {
 				}
 
 				if !reflect.DeepEqual(data, lastData) {
-					lastData = make(map[string]any, len(data))
-					for k, v := range data {
-						lastData[k] = v
-					}
+					lastData = maps.Clone(data)
 
 					// send discovery data in blocking mode
 					dt.dataChan <- data

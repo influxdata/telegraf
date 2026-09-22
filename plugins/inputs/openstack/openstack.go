@@ -15,6 +15,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"regexp"
 	"slices"
@@ -1000,9 +1001,7 @@ func (o *OpenStack) gatherServerDiagnostics(ctx context.Context, acc telegraf.Ac
 			"memory-rss":     memoryStats["memory-rss"],
 			"memory-swap_in": memoryStats["memory-swap_in"],
 		}
-		for k, v := range cpus {
-			fields[k] = v
-		}
+		maps.Copy(fields, cpus)
 		for key := range storageName {
 			fields["disk_errors"] = diagnostic[key+"_errors"]
 			fields["disk_read"] = diagnostic[key+"_read"]
@@ -1025,9 +1024,7 @@ func (o *OpenStack) gatherServerDiagnostics(ctx context.Context, acc telegraf.Ac
 			"memory-rss":     memoryStats["memory-rss"],
 			"memory-swap_in": memoryStats["memory-swap_in"],
 		}
-		for k, v := range cpus {
-			fields[k] = v
-		}
+		maps.Copy(fields, cpus)
 		for key := range portName {
 			fields["port_rx"] = diagnostic[key+"_rx"]
 			fields["port_rx_drop"] = diagnostic[key+"_rx_drop"]

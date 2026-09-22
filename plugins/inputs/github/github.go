@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"strings"
 	"sync"
@@ -96,9 +97,7 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 						continue
 					}
 
-					for k, v := range addFields {
-						fields[k] = v
-					}
+					maps.Copy(fields, addFields)
 				default:
 					acc.AddError(fmt.Errorf("unknown additional field %q", field))
 					continue

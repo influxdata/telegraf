@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"sync"
 	"time"
 
@@ -146,9 +147,7 @@ func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmp.Connection, t snmp.
 	for _, tr := range rt.Rows {
 		if !walk {
 			// top-level table. Add tags to topTags.
-			for k, v := range tr.Tags {
-				topTags[k] = v
-			}
+			maps.Copy(topTags, tr.Tags)
 		} else {
 			// real table. Inherit any specified tags.
 			for _, k := range t.InheritTags {

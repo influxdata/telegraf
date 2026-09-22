@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"strconv"
 	"strings"
@@ -425,15 +426,11 @@ func (s *Stackdriver) gatherTimeSeries(ctx context.Context, grouper *lockedSerie
 	}
 
 	for tsDesc := range tsRespChan {
-		tags := map[string]string{
-			"resource_type": tsDesc.Resource.Type,
-		}
-		for k, v := range tsDesc.Resource.Labels {
-			tags[k] = v
-		}
-		for k, v := range tsDesc.Metric.Labels {
-			tags[k] = v
-		}
+		// Set the type first so labels can override it
+		tags := make(map[string]string, len(tsDesc.Resource.Labels)+len(tsDesc.Metric.Labels)+1)
+		tags["resource_type"] = tsDesc.Resource.Type
+		maps.Copy(tags, tsDesc.Resource.Labels)
+		maps.Copy(tags, tsDesc.Metric.Labels)
 
 		for _, p := range tsDesc.Points {
 			ts := time.Unix(p.Interval.EndTime.Seconds, 0)

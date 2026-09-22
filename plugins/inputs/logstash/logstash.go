@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"strings"
@@ -290,9 +291,7 @@ func gatherPluginsStats(plugins []plugin, pluginType string, tags map[string]str
 			"plugin_id":   plugin.ID,
 			"plugin_type": pluginType,
 		}
-		for tag, value := range tags {
-			pluginTags[tag] = value
-		}
+		maps.Copy(pluginTags, tags)
 		flattener := parsers_json.JSONFlattener{}
 		err := flattener.FlattenJSON("", plugin.Events)
 		if err != nil {
@@ -369,9 +368,7 @@ func gatherQueueStats(queue pipelineQueue, tags map[string]string, acc telegraf.
 	queueTags := map[string]string{
 		"queue_type": queue.Type,
 	}
-	for tag, value := range tags {
-		queueTags[tag] = value
-	}
+	maps.Copy(queueTags, tags)
 
 	events := queue.Events
 	if queue.EventsCount != nil {
@@ -392,9 +389,7 @@ func gatherQueueStats(queue pipelineQueue, tags map[string]string, acc telegraf.
 		if err != nil {
 			return err
 		}
-		for field, value := range flattener.Fields {
-			queueFields[field] = value
-		}
+		maps.Copy(queueFields, flattener.Fields)
 
 		if queue.MaxQueueSizeInBytes != nil {
 			queueFields["max_queue_size_in_bytes"] = *queue.MaxQueueSizeInBytes

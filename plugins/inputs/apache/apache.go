@@ -5,6 +5,7 @@ import (
 	"bufio"
 	_ "embed"
 	"fmt"
+	"maps"
 	"net"
 	"net/http"
 	"net/url"
@@ -120,9 +121,7 @@ func (n *Apache) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 
 			switch key {
 			case "Scoreboard":
-				for field, value := range gatherScores(part) {
-					fields[field] = value
-				}
+				maps.Copy(fields, gatherScores(part))
 			default:
 				value, err := strconv.ParseFloat(part, 64)
 				if err != nil {

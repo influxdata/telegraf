@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"net/url"
 	"path/filepath"
@@ -554,12 +555,8 @@ func collectFields(grouper *metric.SeriesGrouper, timestamp time.Time, tags map[
 		for _, field := range request.fields {
 			// Collect tags from global and per-request
 			ftags := make(map[string]string, len(tags)+len(field.tags))
-			for k, v := range tags {
-				ftags[k] = v
-			}
-			for k, v := range field.tags {
-				ftags[k] = v
-			}
+			maps.Copy(ftags, tags)
+			maps.Copy(ftags, field.tags)
 			// In case no measurement was specified we use "modbus" as default
 			measurement := "modbus"
 			if field.measurement != "" {

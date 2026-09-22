@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"maps"
 	"net"
 	"time"
 
@@ -69,7 +70,7 @@ func (t *Twemproxy) processStat(acc telegraf.Accumulator, tags map[string]string
 	for _, pool := range t.Pools {
 		if poolStat, ok := data[pool]; ok {
 			if data, ok := poolStat.(map[string]any); ok {
-				poolTags := copyTags(tags)
+				poolTags := maps.Clone(tags)
 				poolTags["pool"] = pool
 				processPool(acc, poolTags, data)
 			}
@@ -91,7 +92,7 @@ func processPool(acc telegraf.Accumulator, tags map[string]string, data map[stri
 		default:
 			if data, ok := value.(map[string]any); ok {
 				if _, ok := serverTags[key]; !ok {
-					serverTags[key] = copyTags(tags)
+					serverTags[key] = maps.Clone(tags)
 					serverTags[key]["server"] = key
 				}
 				processServer(acc, serverTags[key], data)
@@ -113,14 +114,6 @@ func processServer(acc telegraf.Accumulator, tags map[string]string, data map[st
 }
 
 // Tags is not expected to be mutated after passing to Add.
-func copyTags(tags map[string]string) map[string]string {
-	newTags := make(map[string]string)
-	for k, v := range tags {
-		newTags[k] = v
-	}
-	return newTags
-}
-
 func init() {
 	inputs.Add("twemproxy", func() telegraf.Input {
 		return &Twemproxy{}

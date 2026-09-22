@@ -3,6 +3,7 @@ package mock
 
 import (
 	_ "embed"
+	"maps"
 	"math"
 	"math/rand"
 	"time"
@@ -97,10 +98,7 @@ func (m *Mock) Gather(acc telegraf.Accumulator) error {
 		fields[c.Name] = c.Value
 	}
 
-	tags := make(map[string]string)
-	for key, value := range m.Tags {
-		tags[key] = value
-	}
+	tags := maps.Clone(m.Tags)
 
 	acc.AddFields(m.MetricName, fields, tags)
 

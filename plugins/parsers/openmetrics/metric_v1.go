@@ -1,6 +1,7 @@
 package openmetrics
 
 import (
+	"maps"
 	"math"
 	"strconv"
 	"strings"
@@ -103,9 +104,7 @@ func (p *Parser) extractMetricsV1(ometrics *MetricFamily) []telegraf.Metric {
 				info := omp.GetInfoValue().GetInfo()
 				fields := map[string]any{"info": uint64(1)}
 				mptags := make(map[string]string, len(tags)+len(info))
-				for k, v := range tags {
-					mptags[k] = v
-				}
+				maps.Copy(mptags, tags)
 				for _, itag := range info {
 					mptags[itag.Name] = itag.Value
 				}

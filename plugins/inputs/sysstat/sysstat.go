@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"os/exec"
 	"strconv"
@@ -241,9 +242,7 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option, tmpfile string, ts tim
 			tags["device"] = device
 			if addTags, ok := s.DeviceTags[device]; ok {
 				for _, tag := range addTags {
-					for k, v := range tag {
-						tags[k] = v
-					}
+					maps.Copy(tags, tag)
 				}
 			}
 		}
@@ -258,9 +257,7 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option, tmpfile string, ts tim
 			}
 			g := m[device]
 			if len(g.tags) == 0 {
-				for k, v := range tags {
-					g.tags[k] = v
-				}
+				maps.Copy(g.tags, tags)
 			}
 			g.fields[escape(record[4])] = value
 		} else {

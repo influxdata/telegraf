@@ -3,6 +3,7 @@ package bind
 import (
 	"encoding/xml"
 	"fmt"
+	"maps"
 	"net"
 	"net/http"
 	"net/url"
@@ -71,9 +72,7 @@ func addXMLv2Counter(acc telegraf.Accumulator, commonTags map[string]string, sta
 		tags := make(map[string]string)
 
 		// Create local copy of tags since maps are reference types
-		for k, v := range commonTags {
-			tags[k] = v
-		}
+		maps.Copy(tags, commonTags)
 
 		grouper.Add("bind_counter", tags, ts, c.Name, c.Value)
 	}

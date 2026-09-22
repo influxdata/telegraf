@@ -2,6 +2,7 @@ package gnmi
 
 import (
 	"fmt"
+	"maps"
 	"sort"
 	"strings"
 
@@ -126,16 +127,12 @@ func (s *tagStore) insert(subscription *TagSubscription, path *pathInfo, values 
 func (s *tagStore) lookup(path *pathInfo, metricTags map[string]string) map[string]string {
 	// Add all unconditional tags
 	tags := make(map[string]string, len(s.unconditional))
-	for k, v := range s.unconditional {
-		tags[k] = v
-	}
+	maps.Copy(tags, s.unconditional)
 
 	// Match names
 	key, found := metricTags["name"]
 	if found {
-		for k, v := range s.names[key] {
-			tags[k] = v
-		}
+		maps.Copy(tags, s.names[key])
 	}
 
 	// Match elements
@@ -144,9 +141,7 @@ func (s *tagStore) lookup(path *pathInfo, metricTags map[string]string) map[stri
 		if !match {
 			continue
 		}
-		for k, v := range s.elements.tags[key] {
-			tags[k] = v
-		}
+		maps.Copy(tags, s.elements.tags[key])
 	}
 
 	return tags

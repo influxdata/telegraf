@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"net/http"
 	"net/url"
@@ -179,9 +180,7 @@ func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accum
 
 	for zoneName, zone := range status.StreamServerZones {
 		zoneTags := make(map[string]string, len(tags)+1)
-		for k, v := range tags {
-			zoneTags[k] = v
-		}
+		maps.Copy(zoneTags, tags)
 		zoneTags["zone"] = zoneName
 
 		acc.AddFields("nginx_sts_server", map[string]any{
@@ -202,9 +201,7 @@ func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accum
 	for filterName, filters := range status.StreamFilterZones {
 		for filterKey, upstream := range filters {
 			filterTags := make(map[string]string, len(tags)+2)
-			for k, v := range tags {
-				filterTags[k] = v
-			}
+			maps.Copy(filterTags, tags)
 			filterTags["filter_key"] = filterKey
 			filterTags["filter_name"] = filterName
 
@@ -227,9 +224,7 @@ func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accum
 	for upstreamName, upstreams := range status.StreamUpstreamZones {
 		for _, upstream := range upstreams {
 			upstreamServerTags := make(map[string]string, len(tags)+2)
-			for k, v := range tags {
-				upstreamServerTags[k] = v
-			}
+			maps.Copy(upstreamServerTags, tags)
 			upstreamServerTags["upstream"] = upstreamName
 			upstreamServerTags["upstream_address"] = upstream.Server
 			acc.AddFields("nginx_sts_upstream", map[string]any{

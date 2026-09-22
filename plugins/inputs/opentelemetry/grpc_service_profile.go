@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 	"time"
@@ -279,9 +280,7 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 								"sample_type_unit": pd.StringTable[p.SampleType.UnitStrindex],
 								"address":          "0x" + strconv.FormatUint(loc.Address, 16),
 							}
-							for k, v := range attrtags {
-								tags[k] = v
-							}
+							maps.Copy(tags, attrtags)
 							fields := map[string]any{
 								"start_time_unix_nano": int64(p.TimeUnixNano),
 								"end_time_unix_nano":   int64(p.TimeUnixNano + p.DurationNano),

@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"strconv"
 	"strings"
@@ -122,10 +123,9 @@ func reportMetrics(measurement string, irqs []irq, acc telegraf.Accumulator, cpu
 		tags, fields := gatherTagsFields(irq)
 		if cpusAsTags {
 			for cpu, count := range irq.cpus {
-				cpuTags := map[string]string{"cpu": fmt.Sprintf("cpu%d", cpu)}
-				for k, v := range tags {
-					cpuTags[k] = v
-				}
+				cpuTags := make(map[string]string, len(tags)+1)
+				maps.Copy(cpuTags, tags)
+				cpuTags["cpu"] = fmt.Sprintf("cpu%d", cpu)
 				acc.AddFields(measurement, map[string]any{"count": count}, cpuTags)
 			}
 		} else {

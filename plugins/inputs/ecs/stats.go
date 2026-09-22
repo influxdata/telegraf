@@ -2,6 +2,7 @@ package ecs
 
 import (
 	"fmt"
+	"maps"
 	"strings"
 	"time"
 
@@ -119,7 +120,7 @@ func cpustats(id string, stats *container.StatsResponse, acc telegraf.Accumulato
 	cpuPercent := docker.CalculateCPUPercentUnix(previousCPU, previousSystem, stats)
 	cpufields["usage_percent"] = cpuPercent
 
-	cputags := copyTags(tags)
+	cputags := maps.Clone(tags)
 	cputags["cpu"] = "cpu-total"
 	acc.AddFields("ecs_container_cpu", cpufields, cputags, tm)
 
@@ -133,7 +134,7 @@ func cpustats(id string, stats *container.StatsResponse, acc telegraf.Accumulato
 	}
 
 	for i, percpu := range percpuusage {
-		percputags := copyTags(tags)
+		percputags := maps.Clone(tags)
 		percputags["cpu"] = fmt.Sprintf("cpu%d", i)
 		fields := map[string]any{
 			"usage_total":  percpu,
@@ -158,7 +159,7 @@ func netstats(id string, stats *container.StatsResponse, acc telegraf.Accumulato
 			"container_id": id,
 		}
 
-		nettags := copyTags(tags)
+		nettags := maps.Clone(tags)
 		nettags["network"] = network
 		acc.AddFields("ecs_container_net", netfields, nettags, tm)
 
@@ -188,7 +189,7 @@ func netstats(id string, stats *container.StatsResponse, acc telegraf.Accumulato
 
 	// totalNetworkStatMap could be empty if container is running with --net=host.
 	if len(totalNetworkStatMap) != 0 {
-		nettags := copyTags(tags)
+		nettags := maps.Clone(tags)
 		nettags["network"] = "total"
 		totalNetworkStatMap["container_id"] = id
 		acc.AddFields("ecs_container_net", totalNetworkStatMap, nettags, tm)
@@ -260,7 +261,7 @@ func blkstats(id string, stats *container.StatsResponse, acc telegraf.Accumulato
 	for device, fields := range deviceStatMap {
 		fields["container_id"] = id
 
-		iotags := copyTags(tags)
+		iotags := maps.Clone(tags)
 		iotags["device"] = device
 		acc.AddFields("ecs_container_blkio", fields, iotags, tm)
 
@@ -289,7 +290,7 @@ func blkstats(id string, stats *container.StatsResponse, acc telegraf.Accumulato
 	}
 
 	totalStatMap["container_id"] = id
-	iotags := copyTags(tags)
+	iotags := maps.Clone(tags)
 	iotags["device"] = "total"
 	acc.AddFields("ecs_container_blkio", totalStatMap, iotags, tm)
 }

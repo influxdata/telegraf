@@ -3,6 +3,7 @@ package graphite
 import (
 	"bytes"
 	"fmt"
+	"maps"
 	"math"
 	"regexp"
 	"sort"
@@ -162,10 +163,7 @@ func SerializeBucketName(measurement string, tags map[string]string, template, p
 	if template == "" {
 		template = defaultTemplate
 	}
-	tagsCopy := make(map[string]string)
-	for k, v := range tags {
-		tagsCopy[k] = v
-	}
+	tagsCopy := maps.Clone(tags)
 
 	var out []string
 	for templatePart := range strings.SplitSeq(template, ".") {

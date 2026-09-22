@@ -5,6 +5,7 @@ import (
 	"context"
 	_ "embed"
 	"errors"
+	"maps"
 	"net/url"
 	"os"
 	"sort"
@@ -233,9 +234,7 @@ func createPoints(m *metrics) []*point {
 				p.tags[k] = v
 			case map[string]string:
 				if k == "labels" {
-					for k, v := range v {
-						p.labels[k] = v
-					}
+					maps.Copy(p.labels, v)
 				}
 			}
 		}
@@ -258,9 +257,7 @@ func addMetrics(acc telegraf.Accumulator, cluster, mname string, m *metrics, tag
 				tags[tagkey] = v
 			}
 		}
-		for k, v := range p.labels {
-			tags[k] = v
-		}
+		maps.Copy(tags, p.labels)
 
 		acc.AddFields(mname, p.fields, tags, tm)
 	}
