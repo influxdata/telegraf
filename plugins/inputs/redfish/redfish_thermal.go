@@ -95,20 +95,19 @@ func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, address string,
 		var ilo4ReadingPercent struct {
 			CurrentReading *int64
 		}
-		json.Unmarshal(thermal.Fans[i].RawData, &ilo4ReadingPercent) //nolint:errcheck // Ignore if the marshalling fails as this legacy block should be removed
+		//nolint:errcheck // Ignore if the marshalling fails as this legacy block should be removed
+		json.Unmarshal(thermal.Fans[i].RawData, &ilo4ReadingPercent)
 
 		if ilo4ReadingPercent.CurrentReading != nil {
 			fields["reading_percent"] = ilo4ReadingPercent.CurrentReading
+		} else if thermal.Fans[i].ReadingUnits == "RPM" {
+			fields["upper_threshold_critical"] = thermal.Fans[i].UpperThresholdCritical
+			fields["upper_threshold_fatal"] = thermal.Fans[i].UpperThresholdFatal
+			fields["lower_threshold_critical"] = thermal.Fans[i].LowerThresholdCritical
+			fields["lower_threshold_fatal"] = thermal.Fans[i].LowerThresholdFatal
+			fields["reading_rpm"] = thermal.Fans[i].Reading
 		} else {
-			if thermal.Fans[i].ReadingUnits == "RPM" {
-				fields["upper_threshold_critical"] = thermal.Fans[i].UpperThresholdCritical
-				fields["upper_threshold_fatal"] = thermal.Fans[i].UpperThresholdFatal
-				fields["lower_threshold_critical"] = thermal.Fans[i].LowerThresholdCritical
-				fields["lower_threshold_fatal"] = thermal.Fans[i].LowerThresholdFatal
-				fields["reading_rpm"] = thermal.Fans[i].Reading
-			} else {
-				fields["reading_percent"] = thermal.Fans[i].Reading
-			}
+			fields["reading_percent"] = thermal.Fans[i].Reading
 		}
 		acc.AddFields("redfish_thermal_fans", fields, tags)
 	}

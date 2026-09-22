@@ -117,7 +117,7 @@ func (r *Redfish) Init() error {
 	return nil
 }
 
-func (r *Redfish) Start(acc telegraf.Accumulator) error {
+func (r *Redfish) Start(_ telegraf.Accumulator) error {
 	var err error
 	tlsCfg, err := r.ClientConfig.TLSConfig()
 	if err != nil {
@@ -164,6 +164,7 @@ func (r *Redfish) Start(acc telegraf.Accumulator) error {
 	return err
 }
 
+//nolint:revive // Part of the ServiceInput interface, but not required here
 func (r *Redfish) Stop() {
 
 }

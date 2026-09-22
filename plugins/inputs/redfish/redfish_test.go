@@ -897,7 +897,8 @@ func TestInvalidDellJSON(t *testing.T) {
 			err := plugin.Gather(&acc)
 			require.Error(t, err)
 
-			//EG: failed to retrieve some items: [{\"link\":\"/redfish/v1/Systems/1\",\"error\":\"invalid character '{' looking for beginning of object key string\"}]
+			//nolint:lll // Keep entire error message on one line
+			// Example: failed to retrieve some items: [{\"link\":\"/redfish/v1/Systems/1\",\"error\":\"invalid character '{' looking for beginning of object key string\"}]
 			require.ErrorContains(t, err, "invalid character")
 		})
 	}
@@ -975,7 +976,8 @@ func TestInvalidHPJSON(t *testing.T) {
 			err := plugin.Gather(&acc)
 			require.Error(t, err)
 
-			//EG: failed to retrieve some items: [{\"link\":\"/redfish/v1/Systems/1\",\"error\":\"invalid character '{' looking for beginning of object key string\"}]
+			//nolint:lll // Keep entire error message on one line
+			// Example : failed to retrieve some items: [{\"link\":\"/redfish/v1/Systems/1\",\"error\":\"invalid character '{' looking for beginning of object key string\"}]
 			require.ErrorContains(t, err, "invalid character")
 		})
 	}
