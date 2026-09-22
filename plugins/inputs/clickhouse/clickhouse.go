@@ -630,11 +630,9 @@ var _ telegraf.ServiceInput = &ClickHouse{}
 func init() {
 	inputs.Add("clickhouse", func() telegraf.Input {
 		return &ClickHouse{
-			AutoDiscovery: true,
-			ClientConfig: tls.ClientConfig{
-				InsecureSkipVerify: false,
-			},
-			Timeout: config.Duration(defaultTimeout),
+			AutoDiscovery:      true,
+			InsecureSkipVerify: false,
+			Timeout:            config.Duration(defaultTimeout),
 		}
 	})
 }

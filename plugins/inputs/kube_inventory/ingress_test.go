@@ -53,17 +53,15 @@ func TestIngress(t *testing.T) {
 									Rules: []netv1.IngressRule{
 										{
 											Host: "ui.internal",
-											IngressRuleValue: netv1.IngressRuleValue{
-												HTTP: &netv1.HTTPIngressRuleValue{
-													Paths: []netv1.HTTPIngressPath{
-														{
-															Path: "/",
-															Backend: netv1.IngressBackend{
-																Service: &netv1.IngressServiceBackend{
-																	Name: "chronografd",
-																	Port: netv1.ServiceBackendPort{
-																		Number: 8080,
-																	},
+											HTTP: &netv1.HTTPIngressRuleValue{
+												Paths: []netv1.HTTPIngressPath{
+													{
+														Path: "/",
+														Backend: netv1.IngressBackend{
+															Service: &netv1.IngressServiceBackend{
+																Name: "chronografd",
+																Port: netv1.ServiceBackendPort{
+																	Number: 8080,
 																},
 															},
 														},
@@ -73,12 +71,10 @@ func TestIngress(t *testing.T) {
 										},
 									},
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									Generation:        12,
-									Namespace:         "ns1",
-									Name:              "ui-lb",
-									CreationTimestamp: metav1.Time{Time: now},
-								},
+								Generation:        12,
+								Namespace:         "ns1",
+								Name:              "ui-lb",
+								CreationTimestamp: metav1.Time{Time: now},
 							},
 						},
 					},
@@ -128,18 +124,14 @@ func TestIngress(t *testing.T) {
 									Rules: []netv1.IngressRule{
 										{
 											Host: "ui.internal",
-											IngressRuleValue: netv1.IngressRuleValue{
-												HTTP: nil,
-											},
+											HTTP: nil,
 										},
 									},
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									Generation:        12,
-									Namespace:         "ns1",
-									Name:              "ui-lb",
-									CreationTimestamp: metav1.Time{Time: now},
-								},
+								Generation:        12,
+								Namespace:         "ns1",
+								Name:              "ui-lb",
+								CreationTimestamp: metav1.Time{Time: now},
 							},
 						},
 					},
@@ -168,14 +160,12 @@ func TestIngress(t *testing.T) {
 									Rules: []netv1.IngressRule{
 										{
 											Host: "ui.internal",
-											IngressRuleValue: netv1.IngressRuleValue{
-												HTTP: &netv1.HTTPIngressRuleValue{
-													Paths: []netv1.HTTPIngressPath{
-														{
-															Path: "/",
-															Backend: netv1.IngressBackend{
-																Service: nil,
-															},
+											HTTP: &netv1.HTTPIngressRuleValue{
+												Paths: []netv1.HTTPIngressPath{
+													{
+														Path: "/",
+														Backend: netv1.IngressBackend{
+															Service: nil,
 														},
 													},
 												},
@@ -183,12 +173,10 @@ func TestIngress(t *testing.T) {
 										},
 									},
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									Generation:        12,
-									Namespace:         "ns1",
-									Name:              "ui-lb",
-									CreationTimestamp: metav1.Time{Time: now},
-								},
+								Generation:        12,
+								Namespace:         "ns1",
+								Name:              "ui-lb",
+								CreationTimestamp: metav1.Time{Time: now},
 							},
 						},
 					},

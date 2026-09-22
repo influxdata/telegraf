@@ -104,13 +104,11 @@ func TestWriteTCP(t *testing.T) {
 			address := TCPServer(t, &wg, tlsServerConfig, errs)
 
 			plugin := Graylog{
-				ClientConfig: common_tls.ClientConfig{
-					InsecureSkipVerify: true,
-					ServerName:         "localhost",
-					TLSKey:             tlsClientConfig.TLSKey,
-					TLSCert:            tlsClientConfig.TLSCert,
-				},
-				Servers: []string{"tcp://" + address},
+				InsecureSkipVerify: true,
+				ServerName:         "localhost",
+				TLSKey:             tlsClientConfig.TLSKey,
+				TLSCert:            tlsClientConfig.TLSCert,
+				Servers:            []string{"tcp://" + address},
 			}
 			require.NoError(t, plugin.Connect())
 			defer plugin.Close()

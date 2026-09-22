@@ -21,36 +21,36 @@ func TestRegister(t *testing.T) {
 		Controller:        "tcp://localhost:1502",
 		ConfigurationType: "register",
 		Log:               testutil.Logger{},
-	}
-	modbus.SlaveID = 1
-	modbus.Coils = []fieldDefinition{
-		{
-			Name:    "coil",
-			Address: []uint16{0},
+		SlaveID:           1,
+		Coils: []fieldDefinition{
+			{
+				Name:    "coil",
+				Address: []uint16{0},
+			},
 		},
-	}
-	modbus.DiscreteInputs = []fieldDefinition{
-		{
-			Name:    "discrete",
-			Address: []uint16{0},
+		DiscreteInputs: []fieldDefinition{
+			{
+				Name:    "discrete",
+				Address: []uint16{0},
+			},
 		},
-	}
-	modbus.HoldingRegisters = []fieldDefinition{
-		{
-			Name:      "holding",
-			Address:   []uint16{0},
-			DataType:  "INT16",
-			ByteOrder: "AB",
-			Scale:     1.0,
+		HoldingRegisters: []fieldDefinition{
+			{
+				Name:      "holding",
+				Address:   []uint16{0},
+				DataType:  "INT16",
+				ByteOrder: "AB",
+				Scale:     1.0,
+			},
 		},
-	}
-	modbus.InputRegisters = []fieldDefinition{
-		{
-			Name:      "input",
-			Address:   []uint16{0},
-			DataType:  "INT16",
-			ByteOrder: "AB",
-			Scale:     1.0,
+		InputRegisters: []fieldDefinition{
+			{
+				Name:      "input",
+				Address:   []uint16{0},
+				DataType:  "INT16",
+				ByteOrder: "AB",
+				Scale:     1.0,
+			},
 		},
 	}
 
@@ -180,13 +180,13 @@ func TestRegisterCoils(t *testing.T) {
 				Name:       "TestCoils",
 				Controller: "tcp://localhost:1502",
 				Log:        testutil.Logger{},
-			}
-			modbus.SlaveID = 1
-			modbus.Coils = []fieldDefinition{
-				{
-					Name:     ct.name,
-					Address:  []uint16{ct.address},
-					DataType: ct.dtype,
+				SlaveID:    1,
+				Coils: []fieldDefinition{
+					{
+						Name:     ct.name,
+						Address:  []uint16{ct.address},
+						DataType: ct.dtype,
+					},
 				},
 			}
 
@@ -816,16 +816,16 @@ func TestRegisterHoldingRegisters(t *testing.T) {
 				Name:       "TestHoldingRegisters",
 				Controller: "tcp://localhost:1502",
 				Log:        testutil.Logger{},
-			}
-			modbus.SlaveID = 1
-			modbus.HoldingRegisters = []fieldDefinition{
-				{
-					Name:      hrt.name,
-					ByteOrder: hrt.byteOrder,
-					DataType:  hrt.dataType,
-					Scale:     hrt.scale,
-					Address:   hrt.address,
-					Bit:       hrt.bit,
+				SlaveID:    1,
+				HoldingRegisters: []fieldDefinition{
+					{
+						Name:      hrt.name,
+						ByteOrder: hrt.byteOrder,
+						DataType:  hrt.dataType,
+						Scale:     hrt.scale,
+						Address:   hrt.address,
+						Bit:       hrt.bit,
+					},
 				},
 			}
 
@@ -914,9 +914,9 @@ func TestRegisterReadMultipleCoilWithHole(t *testing.T) {
 		Name:       "TestReadMultipleCoilWithHole",
 		Controller: "tcp://localhost:1502",
 		Log:        testutil.Logger{Name: "modbus:MultipleCoilWithHole"},
+		SlaveID:    1,
+		Coils:      fcs,
 	}
-	modbus.SlaveID = 1
-	modbus.Coils = fcs
 
 	expected := []telegraf.Metric{
 		metric.New(
@@ -975,9 +975,9 @@ func TestRegisterReadMultipleCoilLimit(t *testing.T) {
 		Name:       "TestReadCoils",
 		Controller: "tcp://localhost:1502",
 		Log:        testutil.Logger{},
+		SlaveID:    1,
+		Coils:      fcs,
 	}
-	modbus.SlaveID = 1
-	modbus.Coils = fcs
 
 	expected := []telegraf.Metric{
 		metric.New(
@@ -1048,12 +1048,12 @@ func TestRegisterReadMultipleHoldingRegisterWithHole(t *testing.T) {
 	require.Len(t, expectedFields, len(fcs))
 
 	modbus := Modbus{
-		Name:       "TestHoldingRegister",
-		Controller: "tcp://localhost:1502",
-		Log:        testutil.Logger{},
+		Name:             "TestHoldingRegister",
+		Controller:       "tcp://localhost:1502",
+		Log:              testutil.Logger{},
+		SlaveID:          1,
+		HoldingRegisters: fcs,
 	}
-	modbus.SlaveID = 1
-	modbus.HoldingRegisters = fcs
 
 	expected := []telegraf.Metric{
 		metric.New(
@@ -1107,12 +1107,12 @@ func TestRegisterReadMultipleHoldingRegisterLimit(t *testing.T) {
 	}
 
 	modbus := Modbus{
-		Name:       "TestHoldingRegister",
-		Controller: "tcp://localhost:1502",
-		Log:        testutil.Logger{},
+		Name:             "TestHoldingRegister",
+		Controller:       "tcp://localhost:1502",
+		Log:              testutil.Logger{},
+		SlaveID:          1,
+		HoldingRegisters: fcs,
 	}
-	modbus.SlaveID = 1
-	modbus.HoldingRegisters = fcs
 
 	expected := []telegraf.Metric{
 		metric.New(
@@ -1165,21 +1165,21 @@ func TestRegisterHighAddresses(t *testing.T) {
 		Name:       "Issue-15138",
 		Controller: "tcp://localhost:1502",
 		Log:        testutil.Logger{},
-	}
-	modbus.SlaveID = 1
-	modbus.HoldingRegisters = []fieldDefinition{
-		{
-			Name:      "DeviceName",
-			ByteOrder: "AB",
-			DataType:  "STRING",
-			Address:   []uint16{65524, 65525, 65526, 65527, 65528, 65529, 65530, 65531, 65532, 65533},
-		},
-		{
-			Name:      "DeviceConnectionStatus",
-			ByteOrder: "AB",
-			DataType:  "UINT16",
-			Address:   []uint16{65534},
-			Scale:     1,
+		SlaveID:    1,
+		HoldingRegisters: []fieldDefinition{
+			{
+				Name:      "DeviceName",
+				ByteOrder: "AB",
+				DataType:  "STRING",
+				Address:   []uint16{65524, 65525, 65526, 65527, 65528, 65529, 65530, 65531, 65532, 65533},
+			},
+			{
+				Name:      "DeviceConnectionStatus",
+				ByteOrder: "AB",
+				DataType:  "UINT16",
+				Address:   []uint16{65534},
+				Scale:     1,
+			},
 		},
 	}
 
@@ -1209,11 +1209,11 @@ func TestRegisterHighAddresses(t *testing.T) {
 
 func TestRegisterMaxRegistersWorkaround(t *testing.T) {
 	plugin := &Modbus{
-		Name:                  "Test",
-		Controller:            "tcp://localhost:1502",
-		ConfigurationType:     "register",
-		configurationOriginal: configurationOriginal{SlaveID: 1},
-		Log:                   &testutil.Logger{},
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "register",
+		SlaveID:           1,
+		Log:               &testutil.Logger{},
 		Workarounds: workarounds{
 			MaxBitRegistersPerRequest:  6,
 			MaxWordRegistersPerRequest: 8,

@@ -17,7 +17,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -1412,14 +1411,12 @@ func TestSNI(t *testing.T) {
 	defer ts.Close()
 
 	h := &HTTPResponse{
-		Log:             testutil.Logger{},
-		URLs:            []string{ts.URL + "/good"},
-		Method:          "GET",
-		ResponseTimeout: config.Duration(time.Second * 20),
-		ClientConfig: tls.ClientConfig{
-			InsecureSkipVerify: true,
-			ServerName:         "super-special-hostname.example.com",
-		},
+		Log:                testutil.Logger{},
+		URLs:               []string{ts.URL + "/good"},
+		Method:             "GET",
+		ResponseTimeout:    config.Duration(time.Second * 20),
+		InsecureSkipVerify: true,
+		ServerName:         "super-special-hostname.example.com",
 	}
 
 	var acc testutil.Accumulator

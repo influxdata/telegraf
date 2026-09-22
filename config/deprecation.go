@@ -91,10 +91,8 @@ func (c *Config) incrementPluginOptionDeprecations(category string) {
 
 func (c *Config) collectDeprecationInfo(category, name string, plugin any, all bool) PluginDeprecationInfo {
 	info := PluginDeprecationInfo{
-		DeprecationInfo: DeprecationInfo{
-			Name:     category + "." + name,
-			logLevel: telegraf.None,
-		},
+		Name:     category + "." + name,
+		logLevel: telegraf.None,
 	}
 
 	// First check if the whole plugin is deprecated

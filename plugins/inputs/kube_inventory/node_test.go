@@ -93,19 +93,17 @@ func TestNode(t *testing.T) {
 										},
 									},
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									Generation: 11232,
-									Name:       "node1",
-									Labels: map[string]string{
-										"lab1": "v1",
-										"lab2": "v2",
-									},
-									Namespace: "ns1",
-									Annotations: map[string]string{
-										"cluster.x-k8s.io/cluster-namespace": "ns1",
-									},
-									CreationTimestamp: metav1.Time{Time: now},
+								Generation: 11232,
+								Name:       "node1",
+								Labels: map[string]string{
+									"lab1": "v1",
+									"lab2": "v2",
 								},
+								Namespace: "ns1",
+								Annotations: map[string]string{
+									"cluster.x-k8s.io/cluster-namespace": "ns1",
+								},
+								CreationTimestamp: metav1.Time{Time: now},
 							},
 						},
 					},

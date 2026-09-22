@@ -45,14 +45,12 @@ func TestPersistentVolume(t *testing.T) {
 								Spec: corev1.PersistentVolumeSpec{
 									StorageClassName: "ebs-1",
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									Name: "pv1",
-									Labels: map[string]string{
-										"lab1": "v1",
-										"lab2": "v2",
-									},
-									CreationTimestamp: metav1.Time{Time: now},
+								Name: "pv1",
+								Labels: map[string]string{
+									"lab1": "v1",
+									"lab2": "v2",
 								},
+								CreationTimestamp: metav1.Time{Time: now},
 							},
 						},
 					},

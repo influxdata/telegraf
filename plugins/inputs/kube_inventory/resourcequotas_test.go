@@ -52,16 +52,14 @@ func TestResourceQuota(t *testing.T) {
 										"pods":   resource.MustParse("0"),
 									},
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									Generation: 11232,
-									Namespace:  "ns1",
-									Name:       "rq1",
-									Labels: map[string]string{
-										"lab1": "v1",
-										"lab2": "v2",
-									},
-									CreationTimestamp: metav1.Time{Time: now},
+								Generation: 11232,
+								Namespace:  "ns1",
+								Name:       "rq1",
+								Labels: map[string]string{
+									"lab1": "v1",
+									"lab2": "v2",
 								},
+								CreationTimestamp: metav1.Time{Time: now},
 							},
 						},
 					},

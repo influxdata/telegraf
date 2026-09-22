@@ -501,9 +501,7 @@ func newLogstash() *Logstash {
 		URL:     "http://127.0.0.1:9600",
 		Collect: []string{"pipelines", "process", "jvm"},
 		Headers: make(map[string]string),
-		HTTPClientConfig: common_http.HTTPClientConfig{
-			Timeout: config.Duration(5 * time.Second),
-		},
+		Timeout: config.Duration(5 * time.Second),
 	}
 }
 

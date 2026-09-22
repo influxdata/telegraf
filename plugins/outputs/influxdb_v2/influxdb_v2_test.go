@@ -23,8 +23,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/common/ratelimiter"
-	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	influxdb "github.com/influxdata/telegraf/plugins/outputs/influxdb_v2"
 	"github.com/influxdata/telegraf/testutil"
@@ -54,10 +52,8 @@ func TestDefaultURL(t *testing.T) {
 func TestInit(t *testing.T) {
 	tests := []*influxdb.InfluxDB{
 		{
-			URLs: []string{"https://localhost:8080"},
-			ClientConfig: tls.ClientConfig{
-				TLSCA: "thing",
-			},
+			URLs:  []string{"https://localhost:8080"},
+			TLSCA: "thing",
 		},
 	}
 
@@ -632,11 +628,9 @@ func TestRateLimit(t *testing.T) {
 		URLs:            []string{"http://" + ts.Listener.Addr().String()},
 		Bucket:          "telegraf",
 		ContentEncoding: "identity",
-		RateLimitConfig: ratelimiter.RateLimitConfig{
-			Limit:  50,
-			Period: config.Duration(time.Second),
-		},
-		Log: &testutil.Logger{},
+		Limit:           50,
+		Period:          config.Duration(time.Second),
+		Log:             &testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())

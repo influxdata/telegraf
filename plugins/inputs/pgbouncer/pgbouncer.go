@@ -307,11 +307,9 @@ func (p *PgBouncer) showDatabase(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("pgbouncer", func() telegraf.Input {
 		return &PgBouncer{
-			Config: postgresql.Config{
-				MaxIdle:     1,
-				MaxOpen:     1,
-				IsPgBouncer: true,
-			},
+			MaxIdle:     1,
+			MaxOpen:     1,
+			IsPgBouncer: true,
 		}
 	})
 }

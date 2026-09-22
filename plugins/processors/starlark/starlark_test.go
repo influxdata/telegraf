@@ -3597,11 +3597,9 @@ def apply(metric):
 
 	// Configure the plugin
 	plugin := &Starlark{
-		Common: common.Common{
-			StarlarkLoadFunc: testLoadFunc,
-			Source:           source,
-			Log:              testutil.Logger{},
-		},
+		StarlarkLoadFunc: testLoadFunc,
+		Source:           source,
+		Log:              testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 
@@ -3674,11 +3672,9 @@ def apply(metric):
 
 	// Configure the plugin
 	plugin := &Starlark{
-		Common: common.Common{
-			StarlarkLoadFunc: testLoadFunc,
-			Source:           source,
-			Log:              testutil.Logger{},
-		},
+		StarlarkLoadFunc: testLoadFunc,
+		Source:           source,
+		Log:              testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 
@@ -3718,12 +3714,10 @@ def apply(metric):
 `
 	// Configure the plugin
 	plugin := &Starlark{
-		Common: common.Common{
-			StarlarkLoadFunc: testLoadFunc,
-			Source:           source,
-			Constants:        map[string]any{"state": "invalid"},
-			Log:              testutil.Logger{},
-		},
+		StarlarkLoadFunc: testLoadFunc,
+		Source:           source,
+		Constants:        map[string]any{"state": "invalid"},
+		Log:              testutil.Logger{},
 	}
 	require.ErrorContains(t, plugin.Init(), "'state' constant uses reserved name")
 }
@@ -3796,29 +3790,23 @@ func testNow(_ *starlark.Thread, _ *starlark.Builtin, _ starlark.Tuple, _ []star
 
 func newStarlarkFromSource(source string) *Starlark {
 	return &Starlark{
-		Common: common.Common{
-			StarlarkLoadFunc: testLoadFunc,
-			Log:              testutil.Logger{},
-			Source:           source,
-		},
+		StarlarkLoadFunc: testLoadFunc,
+		Log:              testutil.Logger{},
+		Source:           source,
 	}
 }
 
 func newStarlarkFromScript(script string) *Starlark {
 	return &Starlark{
-		Common: common.Common{
-			StarlarkLoadFunc: testLoadFunc,
-			Log:              testutil.Logger{},
-			Script:           script,
-		},
+		StarlarkLoadFunc: testLoadFunc,
+		Log:              testutil.Logger{},
+		Script:           script,
 	}
 }
 
 func newStarlarkNoScript() *Starlark {
 	return &Starlark{
-		Common: common.Common{
-			StarlarkLoadFunc: testLoadFunc,
-			Log:              testutil.Logger{},
-		},
+		StarlarkLoadFunc: testLoadFunc,
+		Log:              testutil.Logger{},
 	}
 }

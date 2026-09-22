@@ -116,14 +116,12 @@ func TestAESKDF(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.cipher, func(t *testing.T) {
 			decrypter := aesEncryptor{
-				Variant: strings.Split(tt.cipher, "/"),
-				kdfConfig: kdfConfig{
-					Algorithm:  "PBKDF2-HMAC-SHA256",
-					Passwd:     config.NewSecret([]byte(tt.password)),
-					Salt:       config.NewSecret([]byte(tt.salt)),
-					Iterations: tt.iterations,
-				},
-				Vec: config.NewSecret([]byte(iv)),
+				Variant:    strings.Split(tt.cipher, "/"),
+				Algorithm:  "PBKDF2-HMAC-SHA256",
+				Passwd:     config.NewSecret([]byte(tt.password)),
+				Salt:       config.NewSecret([]byte(tt.salt)),
+				Iterations: tt.iterations,
+				Vec:        config.NewSecret([]byte(iv)),
 			}
 			require.NoError(t, decrypter.init())
 			enc, err := hex.DecodeString(tt.encrypted)

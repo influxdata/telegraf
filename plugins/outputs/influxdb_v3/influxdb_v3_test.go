@@ -20,9 +20,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
-	"github.com/influxdata/telegraf/plugins/common/proxy"
-	"github.com/influxdata/telegraf/plugins/common/ratelimiter"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -96,16 +93,8 @@ func TestURLFail(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &InfluxDB{
-				URLs: []string{tt.url},
-				clientConfig: clientConfig{
-					HTTPClientConfig: httpconfig.HTTPClientConfig{
-						TransportConfig: httpconfig.TransportConfig{
-							HTTPProxy: proxy.HTTPProxy{
-								HTTPProxyURL: tt.proxy,
-							},
-						},
-					},
-				},
+				URLs:         []string{tt.url},
+				HTTPProxyURL: tt.proxy,
 			}
 			require.ErrorContains(t, plugin.Init(), tt.expected)
 		})
@@ -114,16 +103,8 @@ func TestURLFail(t *testing.T) {
 
 func TestURLSuccess(t *testing.T) {
 	plugin := &InfluxDB{
-		URLs: []string{"http://localhost:1234"},
-		clientConfig: clientConfig{
-			HTTPClientConfig: httpconfig.HTTPClientConfig{
-				TransportConfig: httpconfig.TransportConfig{
-					HTTPProxy: proxy.HTTPProxy{
-						HTTPProxyURL: "http://localhost:3128",
-					},
-				},
-			},
-		},
+		URLs:         []string{"http://localhost:1234"},
+		HTTPProxyURL: "http://localhost:3128",
 	}
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -136,13 +117,7 @@ func TestInfluxDBLocalAddress(t *testing.T) {
 	defer server.Close()
 
 	output := InfluxDB{
-		clientConfig: clientConfig{
-			HTTPClientConfig: httpconfig.HTTPClientConfig{
-				TransportConfig: httpconfig.TransportConfig{
-					LocalAddress: "localhost",
-				},
-			},
-		},
+		LocalAddress: "localhost",
 	}
 	require.NoError(t, output.Connect())
 	require.NoError(t, output.Close())
@@ -189,14 +164,12 @@ func TestWrite(t *testing.T) {
 
 	// Setup plugin and connect
 	plugin := &InfluxDB{
-		URLs: []string{"http://" + ts.Listener.Addr().String()},
-		clientConfig: clientConfig{
-			Database:           "telegraf",
-			DatabaseTag:        "database",
-			ExcludeDatabaseTag: true,
-			ContentEncoding:    "identity",
-		},
-		Log: &testutil.Logger{},
+		URLs:               []string{"http://" + ts.Listener.Addr().String()},
+		Database:           "telegraf",
+		DatabaseTag:        "database",
+		ExcludeDatabaseTag: true,
+		ContentEncoding:    "identity",
+		Log:                &testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -241,11 +214,9 @@ func TestWriteDefaultSync(t *testing.T) {
 
 	// Setup plugin and connect
 	plugin := &InfluxDB{
-		URLs: []string{"http://" + ts.Listener.Addr().String()},
-		clientConfig: clientConfig{
-			Database: "telegraf",
-		},
-		Log: &testutil.Logger{},
+		URLs:     []string{"http://" + ts.Listener.Addr().String()},
+		Database: "telegraf",
+		Log:      &testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -290,12 +261,10 @@ func TestWriteExplicitSync(t *testing.T) {
 	// Setup plugin and connect
 	sync := true
 	plugin := &InfluxDB{
-		URLs: []string{"http://" + ts.Listener.Addr().String()},
-		clientConfig: clientConfig{
-			Database: "telegraf",
-			Sync:     &sync,
-		},
-		Log: &testutil.Logger{},
+		URLs:     []string{"http://" + ts.Listener.Addr().String()},
+		Database: "telegraf",
+		Sync:     &sync,
+		Log:      &testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -352,12 +321,10 @@ func TestWriteNotConvertUint(t *testing.T) {
 
 	// Setup plugin and connect
 	plugin := &InfluxDB{
-		URLs: []string{"http://" + ts.Listener.Addr().String()},
-		clientConfig: clientConfig{
-			Database:        "telegraf",
-			ContentEncoding: "identity",
-		},
-		Log: &testutil.Logger{},
+		URLs:            []string{"http://" + ts.Listener.Addr().String()},
+		Database:        "telegraf",
+		ContentEncoding: "identity",
+		Log:             &testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -412,13 +379,11 @@ func TestWriteConvertUint(t *testing.T) {
 
 	// Setup plugin and connect
 	plugin := &InfluxDB{
-		URLs: []string{"http://" + ts.Listener.Addr().String()},
-		clientConfig: clientConfig{
-			Database:        "telegraf",
-			ConvertUint:     true,
-			ContentEncoding: "identity",
-		},
-		Log: &testutil.Logger{},
+		URLs:            []string{"http://" + ts.Listener.Addr().String()},
+		Database:        "telegraf",
+		ConvertUint:     true,
+		ContentEncoding: "identity",
+		Log:             &testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -461,12 +426,10 @@ func TestWriteExplicitNoSync(t *testing.T) {
 	// Setup plugin and connect
 	sync := false
 	plugin := &InfluxDB{
-		URLs: []string{"http://" + ts.Listener.Addr().String()},
-		clientConfig: clientConfig{
-			Database: "telegraf",
-			Sync:     &sync,
-		},
-		Log: &testutil.Logger{},
+		URLs:     []string{"http://" + ts.Listener.Addr().String()},
+		Database: "telegraf",
+		Sync:     &sync,
+		Log:      &testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -529,14 +492,12 @@ func TestWriteDatabaseTagWorksOnRetry(t *testing.T) {
 
 	// Setup plugin and connect
 	plugin := &InfluxDB{
-		URLs: []string{"http://" + ts.Listener.Addr().String()},
-		clientConfig: clientConfig{
-			Database:           "telegraf",
-			DatabaseTag:        "database",
-			ExcludeDatabaseTag: true,
-			ContentEncoding:    "identity",
-		},
-		Log: &testutil.Logger{},
+		URLs:               []string{"http://" + ts.Listener.Addr().String()},
+		Database:           "telegraf",
+		DatabaseTag:        "database",
+		ExcludeDatabaseTag: true,
+		ContentEncoding:    "identity",
+		Log:                &testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -596,14 +557,12 @@ func TestTooLargeWriteRetry(t *testing.T) {
 
 	// Setup plugin and connect
 	plugin := &InfluxDB{
-		URLs: []string{"http://" + ts.Listener.Addr().String()},
-		clientConfig: clientConfig{
-			Database:           "telegraf",
-			DatabaseTag:        "database",
-			ExcludeDatabaseTag: true,
-			ContentEncoding:    "identity",
-		},
-		Log: &testutil.Logger{},
+		URLs:               []string{"http://" + ts.Listener.Addr().String()},
+		Database:           "telegraf",
+		DatabaseTag:        "database",
+		ExcludeDatabaseTag: true,
+		ContentEncoding:    "identity",
+		Log:                &testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -692,16 +651,12 @@ func TestRateLimit(t *testing.T) {
 
 	// Setup plugin and connect
 	plugin := &InfluxDB{
-		URLs: []string{"http://" + ts.Listener.Addr().String()},
-		clientConfig: clientConfig{
-			Database:        "telegraf",
-			ContentEncoding: "identity",
-			RateLimitConfig: ratelimiter.RateLimitConfig{
-				Limit:  50,
-				Period: config.Duration(time.Second),
-			},
-		},
-		Log: &testutil.Logger{},
+		URLs:            []string{"http://" + ts.Listener.Addr().String()},
+		Database:        "telegraf",
+		ContentEncoding: "identity",
+		Limit:           50,
+		Period:          config.Duration(time.Second),
+		Log:             &testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -802,11 +757,9 @@ func TestStatusCodeNonRetryable4xx(t *testing.T) {
 
 			// Setup plugin and connect
 			plugin := &InfluxDB{
-				URLs: []string{"http://" + ts.Listener.Addr().String()},
-				clientConfig: clientConfig{
-					DatabaseTag: "database",
-				},
-				Log: &testutil.Logger{},
+				URLs:        []string{"http://" + ts.Listener.Addr().String()},
+				DatabaseTag: "database",
+				Log:         &testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -896,11 +849,9 @@ func TestStatusCodeInvalidAuthentication(t *testing.T) {
 
 			// Setup plugin and connect
 			plugin := &InfluxDB{
-				URLs: []string{"http://" + ts.Listener.Addr().String()},
-				clientConfig: clientConfig{
-					DatabaseTag: "database",
-				},
-				Log: &testutil.Logger{},
+				URLs:        []string{"http://" + ts.Listener.Addr().String()},
+				DatabaseTag: "database",
+				Log:         &testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -993,11 +944,9 @@ func TestStatusCodeServiceUnavailable(t *testing.T) {
 
 			// Setup plugin and connect
 			plugin := &InfluxDB{
-				URLs: []string{"http://" + ts.Listener.Addr().String()},
-				clientConfig: clientConfig{
-					DatabaseTag: "database",
-				},
-				Log: &testutil.Logger{},
+				URLs:        []string{"http://" + ts.Listener.Addr().String()},
+				DatabaseTag: "database",
+				Log:         &testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -1084,11 +1033,9 @@ func TestStatusCodeUnexpected(t *testing.T) {
 
 			// Setup plugin and connect
 			plugin := &InfluxDB{
-				URLs: []string{"http://" + ts.Listener.Addr().String()},
-				clientConfig: clientConfig{
-					DatabaseTag: "database",
-				},
-				Log: &testutil.Logger{},
+				URLs:        []string{"http://" + ts.Listener.Addr().String()},
+				DatabaseTag: "database",
+				Log:         &testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -1175,11 +1122,9 @@ func TestCoreIntegration(t *testing.T) {
 
 	// Setup plugin and connect
 	plugin := &InfluxDB{
-		URLs: []string{"http://" + container.Address + ":" + container.Ports["8181"]},
-		clientConfig: clientConfig{
-			Database: "test",
-		},
-		Log: &testutil.Logger{},
+		URLs:     []string{"http://" + container.Address + ":" + container.Ports["8181"]},
+		Database: "test",
+		Log:      &testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())

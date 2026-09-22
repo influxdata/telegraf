@@ -126,9 +126,7 @@ func (*Starlark) Stop() {}
 func init() {
 	processors.AddStreaming("starlark", func() telegraf.StreamingProcessor {
 		return &Starlark{
-			Common: common.Common{
-				StarlarkLoadFunc: common.LoadFunc,
-			},
+			StarlarkLoadFunc: common.LoadFunc,
 		}
 	})
 }

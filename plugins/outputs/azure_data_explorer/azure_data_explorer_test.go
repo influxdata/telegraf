@@ -11,11 +11,9 @@ import (
 
 func TestInit(t *testing.T) {
 	plugin := AzureDataExplorer{
-		Log:    testutil.Logger{},
-		client: &common_adx.Client{},
-		Config: common_adx.Config{
-			Endpoint: "someendpoint",
-		},
+		Log:      testutil.Logger{},
+		client:   &common_adx.Client{},
+		Endpoint: "someendpoint",
 	}
 
 	err := plugin.Init()

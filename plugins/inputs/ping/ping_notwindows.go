@@ -187,12 +187,10 @@ func processPingOutput(out string) (statistics, error) {
 		packetsTransmitted: 0,
 		packetsReceived:    0,
 		ttl:                -1,
-		roundTripTimeStats: roundTripTimeStats{
-			min:    -1.0,
-			avg:    -1.0,
-			max:    -1.0,
-			stddev: -1.0,
-		},
+		min:                -1.0,
+		avg:                -1.0,
+		max:                -1.0,
+		stddev:             -1.0,
 	}
 
 	// Set this error to nil if we find a 'transmitted' line

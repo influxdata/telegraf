@@ -16,7 +16,6 @@ import (
 	"github.com/vmware/govmomi/vim25/types"
 
 	"github.com/influxdata/telegraf/config"
-	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -129,7 +128,7 @@ func defaultVSphere() *VSphere {
 		DatacenterMetricInclude:   nil,
 		DatacenterMetricExclude:   nil,
 		DatacenterInclude:         []string{"/**"},
-		ClientConfig:              common_tls.ClientConfig{InsecureSkipVerify: true},
+		InsecureSkipVerify:        true,
 
 		MaxQueryObjects:         256,
 		MaxQueryMetrics:         256,

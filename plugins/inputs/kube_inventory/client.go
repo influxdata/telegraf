@@ -35,13 +35,11 @@ func newClient(baseURL, namespace, bearerTokenFile string, timeout time.Duration
 		}
 	} else {
 		clientConfig = &rest.Config{
-			TLSClientConfig: rest.TLSClientConfig{
-				ServerName: tlsConfig.ServerName,
-				Insecure:   tlsConfig.InsecureSkipVerify,
-				CAFile:     tlsConfig.TLSCA,
-				CertFile:   tlsConfig.TLSCert,
-				KeyFile:    tlsConfig.TLSKey,
-			},
+			ServerName:    tlsConfig.ServerName,
+			Insecure:      tlsConfig.InsecureSkipVerify,
+			CAFile:        tlsConfig.TLSCA,
+			CertFile:      tlsConfig.TLSCert,
+			KeyFile:       tlsConfig.TLSKey,
 			Host:          baseURL,
 			ContentConfig: rest.ContentConfig{},
 		}

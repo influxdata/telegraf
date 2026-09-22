@@ -129,11 +129,9 @@ func processPingOutput(out string) (statistics, error) {
 		packetsTransmitted: 0,
 		replyReceived:      0,
 		packetsReceived:    0,
-		roundTripTimeStats: roundTripTimeStats{
-			min: -1,
-			avg: -1,
-			max: -1,
-		},
+		min:                -1,
+		avg:                -1,
+		max:                -1,
 	}
 
 	// statsLine data should contain 4 members: entireExpression + ( Send, Receive, Lost )

@@ -105,9 +105,7 @@ func (s *Starlark) Reset() {
 func init() {
 	aggregators.Add("starlark", func() telegraf.Aggregator {
 		return &Starlark{
-			Common: common.Common{
-				StarlarkLoadFunc: common.LoadFunc,
-			},
+			StarlarkLoadFunc: common.LoadFunc,
 		}
 	})
 }

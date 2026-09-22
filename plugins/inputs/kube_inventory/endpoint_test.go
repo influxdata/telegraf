@@ -60,12 +60,10 @@ func TestEndpoint(t *testing.T) {
 										Port:     new(int32(8080)),
 									},
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									Generation:        12,
-									Namespace:         "ns1",
-									Name:              "storage",
-									CreationTimestamp: metav1.Time{Time: now},
-								},
+								Generation:        12,
+								Namespace:         "ns1",
+								Name:              "storage",
+								CreationTimestamp: metav1.Time{Time: now},
 							},
 						},
 					},
@@ -114,12 +112,10 @@ func TestEndpoint(t *testing.T) {
 										},
 									},
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									Generation:        12,
-									Namespace:         "ns1",
-									Name:              "storage",
-									CreationTimestamp: metav1.Time{Time: now},
-								},
+								Generation:        12,
+								Namespace:         "ns1",
+								Name:              "storage",
+								CreationTimestamp: metav1.Time{Time: now},
 								Ports: []discoveryv1.EndpointPort{
 									{
 										Name:     new("server"),
@@ -184,12 +180,10 @@ func TestEndpoint(t *testing.T) {
 										},
 									},
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									Generation:        12,
-									Namespace:         "ns1",
-									Name:              "storage",
-									CreationTimestamp: metav1.Time{Time: now},
-								},
+								Generation:        12,
+								Namespace:         "ns1",
+								Name:              "storage",
+								CreationTimestamp: metav1.Time{Time: now},
 								Ports: []discoveryv1.EndpointPort{
 									{
 										Name:     new("server"),
@@ -249,13 +243,11 @@ func TestEndpoint(t *testing.T) {
 					"/endpoints/": &discoveryv1.EndpointSliceList{
 						Items: []discoveryv1.EndpointSlice{
 							{
-								Endpoints: nil,
-								ObjectMeta: metav1.ObjectMeta{
-									Generation:        12,
-									Namespace:         "ns1",
-									Name:              "storage",
-									CreationTimestamp: metav1.Time{Time: now},
-								},
+								Endpoints:         nil,
+								Generation:        12,
+								Namespace:         "ns1",
+								Name:              "storage",
+								CreationTimestamp: metav1.Time{Time: now},
 								Ports: []discoveryv1.EndpointPort{
 									{
 										Name:     new("server"),
@@ -290,12 +282,10 @@ func TestEndpoint(t *testing.T) {
 										},
 									},
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									Generation:        12,
-									Namespace:         "ns1",
-									Name:              "storage",
-									CreationTimestamp: metav1.Time{Time: now},
-								},
+								Generation:        12,
+								Namespace:         "ns1",
+								Name:              "storage",
+								CreationTimestamp: metav1.Time{Time: now},
 								Ports: []discoveryv1.EndpointPort{
 									{
 										Name:     new(""),
@@ -359,13 +349,11 @@ func TestEndpoint(t *testing.T) {
 										},
 									},
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									Generation:        12,
-									Namespace:         "ns1",
-									Name:              "storage",
-									CreationTimestamp: metav1.Time{Time: now},
-								},
-								Ports: nil,
+								Generation:        12,
+								Namespace:         "ns1",
+								Name:              "storage",
+								CreationTimestamp: metav1.Time{Time: now},
+								Ports:             nil,
 							},
 						},
 					},
@@ -381,14 +369,12 @@ func TestEndpoint(t *testing.T) {
 					"/endpoints/": &discoveryv1.EndpointSliceList{
 						Items: []discoveryv1.EndpointSlice{
 							{
-								Endpoints: nil,
-								ObjectMeta: metav1.ObjectMeta{
-									Generation:        12,
-									Namespace:         "ns1",
-									Name:              "storage",
-									CreationTimestamp: metav1.Time{Time: now},
-								},
-								Ports: nil,
+								Endpoints:         nil,
+								Generation:        12,
+								Namespace:         "ns1",
+								Name:              "storage",
+								CreationTimestamp: metav1.Time{Time: now},
+								Ports:             nil,
 							},
 						},
 					},
@@ -414,12 +400,10 @@ func TestEndpoint(t *testing.T) {
 										Conditions: discoveryv1.EndpointConditions{},
 									},
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									Generation:        12,
-									Namespace:         "ns1",
-									Name:              "storage",
-									CreationTimestamp: metav1.Time{Time: now},
-								},
+								Generation:        12,
+								Namespace:         "ns1",
+								Name:              "storage",
+								CreationTimestamp: metav1.Time{Time: now},
 								Ports: []discoveryv1.EndpointPort{
 									{
 										Name:     new(""),

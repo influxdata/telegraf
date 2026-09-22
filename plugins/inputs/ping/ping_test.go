@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	ping "github.com/prometheus-community/pro-bing"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -276,16 +275,14 @@ func TestNativeIDsWaitOnFull(t *testing.T) {
 
 func fakeResult() (*pingStats, error) {
 	return &pingStats{
-		Statistics: ping.Statistics{
-			PacketsSent: 5,
-			PacketsRecv: 5,
-			Rtts: []time.Duration{
-				3 * time.Millisecond,
-				4 * time.Millisecond,
-				1 * time.Millisecond,
-				5 * time.Millisecond,
-				2 * time.Millisecond,
-			},
+		PacketsSent: 5,
+		PacketsRecv: 5,
+		Rtts: []time.Duration{
+			3 * time.Millisecond,
+			4 * time.Millisecond,
+			1 * time.Millisecond,
+			5 * time.Millisecond,
+			2 * time.Millisecond,
 		},
 		ttl: 1,
 	}, nil

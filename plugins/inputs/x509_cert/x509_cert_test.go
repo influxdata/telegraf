@@ -601,10 +601,8 @@ func TestClassification(t *testing.T) {
 	certURI := "file://" + filepath.Join(tmpDir, "cert.pem")
 	plugin := &X509Cert{
 		Sources: []string{certURI},
-		ClientConfig: common_tls.ClientConfig{
-			TLSCA: filepath.Join(tmpDir, "ca.pem"),
-		},
-		Log: testutil.Logger{},
+		TLSCA:   filepath.Join(tmpDir, "ca.pem"),
+		Log:     testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 

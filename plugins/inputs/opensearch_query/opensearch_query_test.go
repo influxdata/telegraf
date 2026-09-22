@@ -17,7 +17,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -517,12 +516,12 @@ func opensearchTestImages() []string {
 
 func newOpensearchQuery(url string) *OpensearchQuery {
 	return &OpensearchQuery{
-		URLs:         []string{url},
-		Timeout:      config.Duration(time.Second * 30),
-		Log:          testutil.Logger{},
-		Username:     config.NewSecret([]byte("admin")),
-		Password:     config.NewSecret([]byte("admin")),
-		ClientConfig: tls.ClientConfig{InsecureSkipVerify: true},
+		URLs:               []string{url},
+		Timeout:            config.Duration(time.Second * 30),
+		Log:                testutil.Logger{},
+		Username:           config.NewSecret([]byte("admin")),
+		Password:           config.NewSecret([]byte("admin")),
+		InsecureSkipVerify: true,
 	}
 }
 

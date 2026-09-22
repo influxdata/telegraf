@@ -59,10 +59,8 @@ func TestOptionsApply(t *testing.T) {
 				},
 				Rel: []relOpts{
 					{
-						baseOpts: baseOpts{
-							Field: "relField",
-							Tag:   "relTag",
-						},
+						Field:    "relField",
+						Tag:      "relTag",
 						BasePath: base,
 					},
 				},

@@ -215,11 +215,7 @@ func (n *Vault) buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *sysMetri
 func init() {
 	inputs.Add("vault", func() telegraf.Input {
 		return &Vault{
-			HTTPClientConfig: common_http.HTTPClientConfig{
-				TransportConfig: common_http.TransportConfig{
-					ResponseHeaderTimeout: config.Duration(5 * time.Second),
-				},
-			},
+			ResponseHeaderTimeout: config.Duration(5 * time.Second),
 		}
 	})
 }

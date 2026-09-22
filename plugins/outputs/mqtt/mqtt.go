@@ -331,11 +331,9 @@ func (m *MQTT) generateTopic(metric telegraf.Metric) (string, error) {
 func init() {
 	outputs.Add("mqtt", func() telegraf.Output {
 		return &MQTT{
-			MqttConfig: mqtt.MqttConfig{
-				KeepAlive:     30,
-				Timeout:       config.Duration(5 * time.Second),
-				AutoReconnect: true,
-			},
+			KeepAlive:     30,
+			Timeout:       config.Duration(5 * time.Second),
+			AutoReconnect: true,
 		}
 	})
 }
