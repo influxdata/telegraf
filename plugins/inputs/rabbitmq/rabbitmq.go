@@ -367,8 +367,7 @@ func (r *RabbitMQ) requestJSON(u string, target any) error {
 		return err
 	}
 	if err := json.Unmarshal(buf, target); err != nil {
-		var jsonErr *json.UnmarshalTypeError
-		if errors.As(err, &jsonErr) {
+		if _, ok := errors.AsType[*json.UnmarshalTypeError](err); ok {
 			// Try to get the error reason from the response
 			var errResponse errorResponse
 			if json.Unmarshal(buf, &errResponse) == nil && errResponse.Error != "" {

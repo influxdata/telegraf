@@ -145,8 +145,7 @@ func (h *HTTP) download() error {
 
 	// Extract the data from the resulting data
 	if err := json.Unmarshal(data, &h.cache); err != nil {
-		var terr *json.UnmarshalTypeError
-		if errors.As(err, &terr) {
+		if _, ok := errors.AsType[*json.UnmarshalTypeError](err); ok {
 			return fmt.Errorf("%w; maybe missing or wrong data transformation", err)
 		}
 		return err

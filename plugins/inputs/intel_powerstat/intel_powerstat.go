@@ -87,10 +87,9 @@ func (p *PowerStat) Start(_ telegraf.Accumulator) error {
 	})
 
 	var err error
-	var initErr *powertelemetry.MultiError
 	p.fetcher, err = powertelemetry.New(opts...)
 	if err != nil {
-		if !errors.As(err, &initErr) {
+		if _, ok := errors.AsType[*powertelemetry.MultiError](err); !ok {
 			// Error caused by failing to get information about the CPU, or CPU is not supported.
 			return fmt.Errorf("failed to initialize metric fetcher interface: %w", err)
 		}

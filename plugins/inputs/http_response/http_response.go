@@ -306,15 +306,11 @@ func setError(err error, fields map[string]any, tags map[string]string) error {
 		return nil
 	}
 
-	var opErr *net.OpError
-	if errors.As(urlErr, &opErr) {
-		var dnsErr *net.DNSError
-		var parseErr *net.ParseError
-
-		if errors.As(opErr, &dnsErr) {
+	if opErr, ok := errors.AsType[*net.OpError](urlErr); ok {
+		if dnsErr, ok := errors.AsType[*net.DNSError](opErr); ok {
 			setResult("dns_error", fields, tags)
 			return dnsErr
-		} else if errors.As(opErr, &parseErr) {
+		} else if parseErr, ok := errors.AsType[*net.ParseError](opErr); ok {
 			// Parse error has to do with parsing of IP addresses, so we
 			// group it with address errors
 			setResult("address_error", fields, tags)
