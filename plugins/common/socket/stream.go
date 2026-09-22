@@ -132,7 +132,10 @@ func (l *streamListener) setupVsock(u *url.URL) error {
 	}
 
 	l.listener, err = vsock.ListenContextID(uint32(cid), uint32(port), nil)
-	return err
+	if err != nil {
+		return fmt.Errorf("listening on CID %d failed: %w", cid, err)
+	}
+	return nil
 }
 
 func (l *streamListener) setupConnection(conn net.Conn) error {

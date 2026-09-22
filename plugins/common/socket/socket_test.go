@@ -10,7 +10,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"syscall"
 	"testing"
 	"time"
 
@@ -954,8 +953,10 @@ func TestVsockForeignContextID(t *testing.T) {
 	s, err := cfg.NewSocket("vsock://4294967294:8790", nil, testutil.Logger{})
 	require.NoError(t, err)
 
+	// The exact errno depends on the kernel, so only require that binding is
+	// refused and that the CID is named in the error.
 	l := newStreamListener(s.Config, nil, testutil.Logger{})
-	require.ErrorIs(t, l.setupVsock(s.url), syscall.EADDRNOTAVAIL)
+	require.ErrorContains(t, l.setupVsock(s.url), "listening on CID 4294967294 failed")
 }
 
 func TestVsockAddressParsingInvalid(t *testing.T) {
