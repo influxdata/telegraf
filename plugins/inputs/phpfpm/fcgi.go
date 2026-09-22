@@ -250,10 +250,7 @@ type streamWriter struct {
 func (w *streamWriter) Write(p []byte) (int, error) {
 	nn := 0
 	for len(p) > 0 {
-		n := len(p)
-		if n > maxWrite {
-			n = maxWrite
-		}
+		n := min(len(p), maxWrite)
 		if err := w.c.writeRecord(w.recType, w.reqID, p[:n]); err != nil {
 			return nn, err
 		}

@@ -997,10 +997,7 @@ func submitChunkJob(ctx context.Context, te *throttledExecutor, job queryJob, pq
 
 func (e *endpoint) chunkify(ctx context.Context, res *resourceKind, now, latest time.Time, job queryJob) {
 	te := newThrottledExecutor(e.parent.CollectConcurrency)
-	maxMetrics := e.parent.MaxQueryMetrics
-	if maxMetrics < 1 {
-		maxMetrics = 1
-	}
+	maxMetrics := max(e.parent.MaxQueryMetrics, 1)
 
 	// Workaround for vCenter weirdness. Cluster metrics seem to count multiple times
 	// when checking query size, so keep it at a low value.
@@ -1109,10 +1106,7 @@ func (e *endpoint) collectResource(ctx context.Context, resourceType string, acc
 		s := time.Duration(res.sampling) * time.Second
 		rawInterval := localNow.Sub(res.lastColl)
 		paddedInterval := rawInterval + time.Duration(res.sampling/2)*time.Second
-		estInterval = paddedInterval.Truncate(s)
-		if estInterval < s {
-			estInterval = s
-		}
+		estInterval = max(paddedInterval.Truncate(s), s)
 		e.log.Debugf("Raw interval %s, padded: %s, estimated: %s", rawInterval, paddedInterval, estInterval)
 	}
 	e.log.Debugf("Interval estimated to %s", estInterval)

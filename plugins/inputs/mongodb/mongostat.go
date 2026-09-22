@@ -1309,11 +1309,7 @@ func newStatLine(oldMongo, newMongo mongoStatus, key string, sampleSecs int64) *
 			if me.State == 2 {
 				// OptimeDate.Unix() type is int64
 				lag := master.OptimeDate.Unix() - me.OptimeDate.Unix()
-				if lag < 0 {
-					returnVal.ReplLag = 0
-				} else {
-					returnVal.ReplLag = lag
-				}
+				returnVal.ReplLag = max(lag, 0)
 			}
 
 			// Preparations for the average health state of the replica-set
