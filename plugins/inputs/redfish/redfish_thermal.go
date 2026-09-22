@@ -3,6 +3,7 @@ package redfish
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 
 	"github.com/stmcginnis/gofish/schemas"
 
@@ -48,7 +49,7 @@ func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, address string,
 			tags["row"] = chassis.Location.Placement.Row
 		}
 		if _, ok := r.tagSet[tagSetChassis]; ok {
-			setChassisTags(chassis, tags)
+			maps.Copy(tags, r.chassisTags)
 		}
 
 		fields := make(map[string]interface{})
@@ -87,7 +88,7 @@ func (r *Redfish) gatherThermalMetrics(acc telegraf.Accumulator, address string,
 			tags["row"] = chassis.Location.Placement.Row
 		}
 		if _, ok := r.tagSet[tagSetChassis]; ok {
-			setChassisTags(chassis, tags)
+			maps.Copy(tags, r.chassisTags)
 		}
 
 		// Due to ILO4 not being fully readfish compatible we have to do this parsing manually

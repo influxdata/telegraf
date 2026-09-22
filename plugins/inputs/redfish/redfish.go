@@ -42,8 +42,9 @@ type Redfish struct {
 	tagSet map[string]bool
 	client http.Client
 	tls.ClientConfig
-	gf   *gofish.Service
-	host string
+	gf          *gofish.Service
+	host        string
+	chassisTags map[string]string
 }
 
 type datacenterTag struct {
@@ -192,6 +193,8 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 
 		for _, chassis := range chassisList {
 			for _, metric := range r.IncludeMetrics {
+				r.chassisTags = setChassisTags(chassis)
+
 				var err error
 				switch metric {
 				case "thermal":
@@ -211,7 +214,8 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func setChassisTags(chassis *schemas.Chassis, tags map[string]string) {
+func setChassisTags(chassis *schemas.Chassis) map[string]string {
+	tags := make(map[string]string, 9)
 	tags["chassis_chassistype"] = string(chassis.ChassisType)
 	tags["chassis_manufacturer"] = chassis.Manufacturer
 	tags["chassis_model"] = chassis.Model
@@ -221,6 +225,8 @@ func setChassisTags(chassis *schemas.Chassis, tags map[string]string) {
 	tags["chassis_serialnumber"] = chassis.SerialNumber
 	tags["chassis_state"] = string(chassis.Status.State)
 	tags["chassis_health"] = string(chassis.Status.Health)
+
+	return tags
 }
 
 func init() {

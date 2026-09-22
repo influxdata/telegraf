@@ -3,6 +3,7 @@ package redfish
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 
 	"github.com/stmcginnis/gofish/schemas"
 
@@ -46,7 +47,7 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, s
 			tags["row"] = chassis.Location.Placement.Row
 		}
 		if _, ok := r.tagSet[tagSetChassis]; ok {
-			setChassisTags(chassis, tags)
+			maps.Copy(tags, r.chassisTags)
 		}
 
 		fields := map[string]interface{}{
@@ -86,7 +87,7 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, s
 			tags["row"] = chassis.Location.Placement.Row
 		}
 		if _, ok := r.tagSet[tagSetChassis]; ok {
-			setChassisTags(chassis, tags)
+			maps.Copy(tags, r.chassisTags)
 		}
 
 		fields := make(map[string]interface{})
@@ -119,7 +120,7 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, s
 			tags["row"] = chassis.Location.Placement.Row
 		}
 		if _, ok := r.tagSet[tagSetChassis]; ok {
-			setChassisTags(chassis, tags)
+			maps.Copy(tags, r.chassisTags)
 		}
 
 		fields := make(map[string]interface{})
