@@ -123,13 +123,10 @@ func (r *Registry) register(measurement, field string, tags map[string]string) S
 		return stat
 	}
 
-	t := make(map[string]string, len(tags))
-	maps.Copy(t, tags)
-
 	s := &stat{
 		measurement: measurement,
 		field:       field,
-		tags:        t,
+		tags:        maps.Clone(tags),
 	}
 	registry.set(key, s)
 	return s
@@ -144,13 +141,10 @@ func (r *Registry) registerTiming(measurement, field string, tags map[string]str
 		return stat
 	}
 
-	t := make(map[string]string, len(tags))
-	maps.Copy(t, tags)
-
 	s := &timingStat{
 		measurement: measurement,
 		field:       field,
-		tags:        t,
+		tags:        maps.Clone(tags),
 	}
 	registry.set(key, s)
 	return s

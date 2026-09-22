@@ -35,9 +35,7 @@ func (s *stat) FieldName() string {
 // Tags returns a copy of the stat's tags.
 // NOTE this allocates a new map every time it is called.
 func (s *stat) Tags() map[string]string {
-	m := make(map[string]string, len(s.tags))
-	maps.Copy(m, s.tags)
-	return m
+	return maps.Clone(s.tags)
 }
 
 // Unregister removes this stat from the registry only

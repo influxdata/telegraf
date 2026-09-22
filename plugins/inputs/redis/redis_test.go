@@ -16,10 +16,6 @@ import (
 
 type testClient struct{}
 
-func (*testClient) baseTags() map[string]string {
-	return map[string]string{"host": "redis.net"}
-}
-
 func (*testClient) info() *redis.StringCmd {
 	return nil
 }
@@ -74,10 +70,9 @@ func TestRedis_Commands(t *testing.T) {
 
 	r := &Redis{
 		Commands: []*redisCommand{rc},
-		clients:  []client{tc},
 	}
 
-	err := r.gatherCommandValues(tc, &acc)
+	err := r.gatherCommandValues(tc, map[string]string{"host": "redis.net"}, &acc)
 	require.NoError(t, err)
 
 	fields := map[string]any{

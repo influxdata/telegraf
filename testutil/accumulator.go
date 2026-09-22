@@ -113,8 +113,7 @@ func (a *Accumulator) addMeasurement(
 	tagsCopy := make(map[string]string, len(tags))
 	maps.Copy(tagsCopy, tags)
 
-	fieldsCopy := make(map[string]any, len(fields))
-	maps.Copy(fieldsCopy, fields)
+	fieldsCopy := maps.Clone(fields)
 
 	var t time.Time
 	if len(timestamp) > 0 {
