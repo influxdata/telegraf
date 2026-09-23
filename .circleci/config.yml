@@ -6,13 +6,11 @@ orbs:
 executors:
   telegraf-ci:
     working_directory: '/go/src/github.com/influxdata/telegraf'
-    resource_class: runner-ns/docker-large
+    resource_class: large
     docker:
       - image: 'quay.io/influxdb/telegraf-ci:1.27.1'
     environment:
       GOFLAGS: -p=4
-      GOPATH: /tmp/cargo/go
-      GOCACHE: /tmp/cargo/go-cache
   mac:
     working_directory: '~/go/src/github.com/influxdata/telegraf'
     resource_class: m4pro.medium
@@ -506,7 +504,6 @@ jobs:
             echo "This job contains all the final artifacts."
   share-artifacts:
     executor: aws-cli/default
-    resource_class: runner-ns/docker
     steps:
       - checkout
       - check-changed-files-or-halt
