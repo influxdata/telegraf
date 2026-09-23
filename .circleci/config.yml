@@ -421,7 +421,12 @@ jobs:
           command: docker login --username="${QUAY_USER}" --password="${QUAY_PASS}" quay.io
       - run:
           name: clone influxdata/influxdata-docker
-          command: git clone https://github.com/influxdata/influxdata-docker
+          # The self-hosted runner keeps the working directory between runs, and
+          # a rerun of a failed workflow lands in the same one, so drop any clone
+          # a previous attempt left behind.
+          command: |
+            rm -rf influxdata-docker
+            git clone https://github.com/influxdata/influxdata-docker
       - run:
           name: build and push telegraf:nightly
           command: |
