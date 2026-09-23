@@ -1,0 +1,17 @@
+hw.sensors.cpu0.temp0=36.00 degC
+hw.sensors.cpu0.frequency0=1000000000.00 Hz
+hw.sensors.cpu1.frequency0=1000000000.00 Hz
+hw.sensors.cpu2.frequency0=1000000000.00 Hz
+hw.sensors.cpu3.frequency0=1000000000.00 Hz
+hw.sensors.acpitz0.temp0=27.80 degC (zone temperature)
+hw.sensors.acpitz1.temp0=29.80 degC (zone temperature)
+hw.sensors.pchtemp0.temp0=35.00 degC
+hw.sensors.softraid0.drive0=online (sd2), OK
+hw.sensors.softraid0.drive1=online (sd3), OK
+hw.sensors.softraid0.drive2=online (sd4), OK
+hw.sensors.nmea0.indicator0=On (Signal), OK
+hw.sensors.nmea0.timedelta0=-0.000006 secs (GPS differential), OK, Thu Sep 17 18:20:08.999
+hw.sensors.nmea0.angle0=51.4779 degrees (Latitude), OK
+hw.sensors.nmea0.angle1=-0.0015 degrees (Longitude), OK
+hw.sensors.nmea0.distance0=47.000 m (Altitude), OK
+hw.sensors.nmea0.velocity0=0.000 m/s (Ground speed), OK

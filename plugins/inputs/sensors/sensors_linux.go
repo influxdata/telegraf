@@ -1,0 +1,140 @@
+//go:build linux
+
+package sensors
+
+import (
+	"errors"
+	"fmt"
+	"os/exec"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+	"unicode"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal"
+)
+
+var (
+	execCommand = exec.Command // execCommand is used to mock commands in tests.
+	numberRegp  = regexp.MustCompile("[0-9]+")
+)
+
+const cmd = "sensors"
+
+func (s *Sensors) Init() error {
+	if s.path == "" {
+		path, err := exec.LookPath(cmd)
+		if err != nil {
+			return fmt.Errorf("looking up %q failed: %w", cmd, err)
+		}
+		s.path = path
+	}
+
+	if s.path == "" {
+		return fmt.Errorf("no path specified for %q", cmd)
+	}
+
+	f, err := filter.Compile(s.Devices)
+	if err != nil {
+		return fmt.Errorf("compiling device filter failed: %w", err)
+	}
+	s.deviceFilter = f
+
+	return nil
+}
+
+func (s *Sensors) Gather(acc telegraf.Accumulator) error {
+	if len(s.path) == 0 {
+		return errors.New("sensors not found: verify that lm-sensors package is installed and that sensors is in your PATH")
+	}
+
+	return s.parse(acc)
+}
+
+// parse forks the command:
+//
+//	sensors -u -A
+//
+// and parses the output to add it to the telegraf.Accumulator.
+func (s *Sensors) parse(acc telegraf.Accumulator) error {
+	tags := make(map[string]string)
+	fields := make(map[string]any)
+	chip := ""
+	skip := false
+	cmd := execCommand(s.path, "-A", "-u")
+	out, err := internal.StdOutputTimeout(cmd, time.Duration(s.Timeout))
+	if err != nil {
+		return fmt.Errorf("failed to run command %q: %w - %s", strings.Join(cmd.Args, " "), err, string(out))
+	}
+	for line := range strings.SplitSeq(strings.TrimSpace(string(out)), "\n") {
+		if len(line) == 0 {
+			if !skip {
+				acc.AddFields("sensors", fields, tags)
+			}
+			chip = ""
+			skip = false
+			tags = make(map[string]string)
+			fields = make(map[string]any)
+			continue
+		}
+		if len(chip) == 0 {
+			chip = line
+			// The chip line names the device, e.g. "k10temp-pci-00c3"
+			skip = s.deviceFilter != nil && !s.deviceFilter.Match(chip)
+			s.setLinuxDeviceTag(tags, chip)
+			continue
+		}
+		if !strings.HasPrefix(line, "  ") {
+			if len(tags) > 1 && !skip {
+				acc.AddFields("sensors", fields, tags)
+			}
+			fields = make(map[string]any)
+			tags = s.linuxTags(chip, strings.TrimRight(snake(line), ":"))
+		} else {
+			splitted := strings.Split(line, ":")
+			fieldName := strings.TrimSpace(splitted[0])
+			if s.RemoveNumbers {
+				fieldName = numberRegp.ReplaceAllString(fieldName, "")
+			}
+			fieldValue, err := strconv.ParseFloat(strings.TrimSpace(splitted[1]), 64)
+			if err != nil {
+				return err
+			}
+			fields[fieldName] = fieldValue
+		}
+	}
+	if !skip {
+		acc.AddFields("sensors", fields, tags)
+	}
+	return nil
+}
+
+func (s *Sensors) setLinuxDeviceTag(tags map[string]string, chip string) {
+	if s.LinuxLegacyTagNames {
+		tags["chip"] = chip
+		return
+	}
+	tags["device"] = chip
+}
+
+func (s *Sensors) linuxTags(chip, feature string) map[string]string {
+	if s.LinuxLegacyTagNames {
+		return map[string]string{
+			"chip":    chip,
+			"feature": feature,
+		}
+	}
+	return map[string]string{
+		"device": chip,
+		"sensor": feature,
+		"type":   strings.TrimRightFunc(feature, unicode.IsDigit),
+	}
+}
+
+// snake converts string to snake case
+func snake(input string) string {
+	return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(input), " ", "_"))
+}

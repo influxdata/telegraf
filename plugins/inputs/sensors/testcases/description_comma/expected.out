@@ -1,0 +1,2 @@
+sensors,description=Exhaust\,\ right\ side,device=asmc0,sensor=fan0,type=fan,unit=RPM value=1234
+sensors,description=Intake\,\ left\ side,device=asmc0,sensor=fan1,type=fan,unit=RPM status="OK",status_code=1,value=1400
