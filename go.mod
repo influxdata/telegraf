@@ -252,7 +252,7 @@ require (
 	golang.org/x/tools v0.50.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	gonum.org/v1/gonum v0.17.0
-	google.golang.org/api v0.297.0
+	google.golang.org/api v0.298.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20260724162435-b2f20204f0df
 	google.golang.org/grpc v1.84.0
 	google.golang.org/protobuf v1.36.12
