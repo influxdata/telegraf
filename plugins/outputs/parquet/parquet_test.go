@@ -664,3 +664,47 @@ func TestDeletedFileReappearsOnlyOnRotation(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, files, 1, "the rotation opens a new file")
 }
+
+func TestColumnsSortedByNameWithTimestampLast(t *testing.T) {
+	metrics := []telegraf.Metric{
+		metric.New(
+			"cpu",
+			map[string]string{"region": "eu-west", "host": "web-01"},
+			map[string]any{
+				"usage_user":   6.0,
+				"usage_system": 4.0,
+				"usage_idle":   90.0,
+				"usage_iowait": 0.5,
+				"usage_steal":  0.25,
+			},
+			time.Now(),
+		),
+	}
+
+	testDir := t.TempDir()
+	plugin := &Parquet{
+		Directory:          testDir,
+		TimestampFieldName: defaultTimestampFieldName,
+		Log:                testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	require.NoError(t, plugin.Write(metrics))
+	require.NoError(t, plugin.Close())
+
+	files, err := os.ReadDir(testDir)
+	require.NoError(t, err)
+	require.Len(t, files, 1)
+	reader, err := file.OpenParquetFile(filepath.Join(testDir, files[0].Name()), false)
+	require.NoError(t, err)
+	defer reader.Close()
+
+	schema := reader.MetaData().Schema
+	names := make([]string, 0, schema.NumColumns())
+	for i := 0; i < schema.NumColumns(); i++ {
+		names = append(names, schema.Column(i).Name())
+	}
+	require.Equal(t, []string{
+		"host", "region", "usage_idle", "usage_iowait", "usage_steal", "usage_system", "usage_user", "timestamp",
+	}, names)
+}
