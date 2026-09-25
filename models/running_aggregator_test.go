@@ -1,6 +1,8 @@
 package models
 
 import (
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -286,4 +288,153 @@ func (t *mockAggregator) Add(in telegraf.Metric) {
 			t.sum += vi
 		}
 	}
+}
+
+// slowPushAggregator produces a configurable number of metrics on Push and
+// blocks for a configurable duration while doing so, simulating a
+// high-cardinality aggregation (e.g. many distinct tag combinations) that
+// takes a while to serialize.
+type slowPushAggregator struct {
+	metricsToPush int
+	pushDuration  time.Duration
+}
+
+func (*slowPushAggregator) SampleConfig() string { return "" }
+func (*slowPushAggregator) Reset()               {}
+func (*slowPushAggregator) Add(telegraf.Metric)  {}
+
+func (a *slowPushAggregator) Push(acc telegraf.Accumulator) {
+	perMetric := time.Duration(0)
+	if a.metricsToPush > 0 {
+		perMetric = a.pushDuration / time.Duration(a.metricsToPush)
+	}
+	for i := 0; i < a.metricsToPush; i++ {
+		time.Sleep(perMetric)
+		acc.AddFields("slow", map[string]any{"value": int64(i)}, map[string]string{})
+	}
+}
+
+// blockingAccumulator embeds testutil.Accumulator but blocks every call that
+// would normally deliver a metric downstream, until release() is called.
+// This stands in for a bounded channel to a slow/busy next stage.
+type blockingAccumulator struct {
+	testutil.Accumulator
+	blockUntil chan struct{}
+}
+
+func newBlockingAccumulator() *blockingAccumulator {
+	return &blockingAccumulator{blockUntil: make(chan struct{})}
+}
+
+func (a *blockingAccumulator) release() {
+	close(a.blockUntil)
+}
+
+func (a *blockingAccumulator) AddMetric(m telegraf.Metric) {
+	<-a.blockUntil
+	a.Accumulator.AddMetric(m)
+}
+
+func (a *blockingAccumulator) AddFields(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
+	<-a.blockUntil
+	a.Accumulator.AddFields(measurement, fields, tags, t...)
+}
+
+// TestRunningAggregatorAddNotBlockedByPush verifies that Add() can proceed
+// while Push() is still delivering the previous period's metrics downstream,
+// even if that delivery is blocked for a while. Before the fix, Push() held
+// the aggregator's lock for the entire delivery, so a slow or momentarily
+// full downstream stage (e.g. an output straining under a large,
+// high-cardinality aggregation) would stall every concurrent Add() call --
+// and, transitively, any input plugin (such as influxdb_listener) blocked
+// delivering a metric through Add(). That, in turn, could make upstream
+// clients experience request timeouts and silently lose metrics that never
+// made it into Telegraf, without Telegraf itself ever logging a drop.
+func TestRunningAggregatorAddNotBlockedByPush(t *testing.T) {
+	agg := &slowPushAggregator{metricsToPush: 50, pushDuration: 200 * time.Millisecond}
+	ra := NewRunningAggregator(agg, &AggregatorConfig{
+		Name: "TestRunningAggregator",
+		Filter: Filter{
+			NamePass: []string{"*"},
+		},
+		Period:       time.Minute,
+		DropOriginal: false,
+	})
+	require.NoError(t, ra.Config.Filter.Compile())
+
+	now := time.Now()
+	ra.UpdateWindow(now, now.Add(ra.Config.Period))
+
+	acc := newBlockingAccumulator()
+
+	var pushWG sync.WaitGroup
+	pushWG.Add(1)
+	go func() {
+		defer pushWG.Done()
+		ra.Push(acc)
+	}()
+
+	// Give Push() a head start so it is actively running (and, before the
+	// fix, holding the lock) when we call Add() below.
+	time.Sleep(20 * time.Millisecond)
+
+	m := metric.New("RITest",
+		map[string]string{},
+		map[string]interface{}{"value": int64(1)},
+		now.Add(time.Second),
+		telegraf.Untyped)
+
+	addDone := make(chan bool, 1)
+	go func() {
+		addDone <- ra.Add(m)
+	}()
+
+	select {
+	case dropOriginal := <-addDone:
+		require.False(t, dropOriginal)
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("Add() did not return while Push() was delivering metrics; " +
+			"it is stuck behind the aggregator's lock")
+	}
+
+	// Let Push() finish delivering so the goroutine and test can exit cleanly.
+	acc.release()
+	pushWG.Wait()
+
+	require.Len(t, acc.Metrics, 50)
+}
+
+// TestRunningAggregatorPushDeliversAllMetricsWithoutHoldingLock is a
+// regression test ensuring the lock-decoupling refactor of Push() still
+// delivers every metric produced by the aggregator, even when downstream
+// delivery is slow.
+func TestRunningAggregatorPushDeliversAllMetricsWithoutHoldingLock(t *testing.T) {
+	const metricsToPush = 25
+	agg := &slowPushAggregator{metricsToPush: metricsToPush, pushDuration: 50 * time.Millisecond}
+	ra := NewRunningAggregator(agg, &AggregatorConfig{
+		Name:   "TestRunningAggregator",
+		Filter: Filter{NamePass: []string{"*"}},
+		Period: time.Minute,
+	})
+	require.NoError(t, ra.Config.Filter.Compile())
+
+	now := time.Now()
+	ra.UpdateWindow(now, now.Add(ra.Config.Period))
+
+	acc := newBlockingAccumulator()
+	var delivered atomic.Int32
+	done := make(chan struct{})
+	go func() {
+		ra.Push(acc)
+		close(done)
+	}()
+
+	go func() {
+		time.Sleep(10 * time.Millisecond)
+		acc.release()
+	}()
+
+	<-done
+	delivered.Store(int32(len(acc.Metrics)))
+	require.EqualValues(t, metricsToPush, delivered.Load())
 }
