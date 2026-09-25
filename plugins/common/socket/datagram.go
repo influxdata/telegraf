@@ -58,11 +58,7 @@ func newPacketListener(
 }
 
 func (l *packetListener) listenData(onData CallbackData, onError CallbackError) {
-	l.wg.Add(1)
-
-	go func() {
-		defer l.wg.Done()
-
+	l.wg.Go(func() {
 		buf := make([]byte, l.ReadBufferSize)
 		for {
 			n, src, err := l.conn.ReadFrom(buf)
@@ -105,13 +101,11 @@ func (l *packetListener) listenData(onData CallbackData, onError CallbackError) 
 				onData(src, body, receiveTime)
 			})
 		}
-	}()
+	})
 }
 
 func (l *packetListener) listenConnection(onConnection CallbackConnection, onError CallbackError) {
-	l.wg.Add(1)
-	go func() {
-		defer l.wg.Done()
+	l.wg.Go(func() {
 		defer l.conn.Close()
 
 		buf := make([]byte, l.ReadBufferSize)
@@ -156,7 +150,7 @@ func (l *packetListener) listenConnection(onConnection CallbackConnection, onErr
 				writer.Close()
 			})
 		}
-	}()
+	})
 }
 
 func (l *packetListener) setupUnixgram(u *url.URL, socketMode string, bufferSize int) error {

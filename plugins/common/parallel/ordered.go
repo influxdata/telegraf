@@ -24,11 +24,9 @@ func NewOrdered(acc telegraf.Accumulator, fn func(telegraf.Metric) []telegraf.Me
 		queue:       make(chan futureMetric, orderedQueueSize),
 	}
 	p.startWorkers(workerCount)
-	p.wg.Add(1)
-	go func() {
+	p.wg.Go(func() {
 		p.readQueue(acc)
-		p.wg.Done()
-	}()
+	})
 	return p
 }
 

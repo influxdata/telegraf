@@ -175,16 +175,14 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 
 	server := h.createHTTPServer()
 
-	h.wg.Add(1)
-	go func() {
-		defer h.wg.Done()
+	h.wg.Go(func() {
 		if err := server.Serve(h.listener); err != nil {
 			if !errors.Is(err, net.ErrClosed) {
 				h.Log.Errorf("Serve failed: %v", err)
 			}
 			close(h.close)
 		}
-	}()
+	})
 
 	h.Log.Infof("Listening on %s", h.listener.Addr().String())
 

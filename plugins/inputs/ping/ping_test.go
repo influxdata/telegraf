@@ -119,10 +119,7 @@ func TestNativeIDs(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 			for range 10 {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-
+				wg.Go(func() {
 					plugin := &Ping{
 						Method: "native",
 						Urls:   targets,
@@ -145,7 +142,7 @@ func TestNativeIDs(t *testing.T) {
 					if err := plugin.Gather(&acc); err != nil {
 						t.Errorf("running gather failed: %v", err)
 					}
-				}()
+				})
 			}
 
 			// Wait for all plugins to reach the pinging function to ensure we have seen
@@ -203,10 +200,7 @@ func TestNativeIDsWaitOnFull(t *testing.T) {
 	seenIDs := make([]int, 0, len(targets))
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
+	wg.Go(func() {
 		plugin := &Ping{
 			Method: "native",
 			Urls:   targets,
@@ -229,7 +223,7 @@ func TestNativeIDsWaitOnFull(t *testing.T) {
 		if err := plugin.Gather(&acc); err != nil {
 			t.Errorf("running gather failed: %v", err)
 		}
-	}()
+	})
 
 	// All pingers should wait since the IDs are full
 	require.Never(t, func() bool {

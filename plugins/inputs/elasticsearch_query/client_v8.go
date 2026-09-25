@@ -42,13 +42,11 @@ func newClientV8(cfg clientConfig) (client, error) {
 		// cannot be canceled.
 		ctx, cancel := context.WithCancel(context.Background())
 		client.cancelDiscovery = cancel
-		client.discoveryWG.Add(1)
-		go func() {
-			defer client.discoveryWG.Done()
+		client.discoveryWG.Go(func() {
 			startDiscovery(ctx, cfg.discoveryInterval, func(context.Context) error {
 				return c.DiscoverNodes()
 			}, cfg.log)
-		}()
+		})
 	}
 	return client, nil
 }

@@ -45,13 +45,11 @@ func testSendAndReceive(t *testing.T, fieldKey, fieldValue string) {
 
 	wg := sync.WaitGroup{}
 
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		if err := s.RunProcessor(); err != nil {
 			t.Error(err)
 		}
-		wg.Done()
-	}()
+	})
 
 	serializer := &serializers_influx.Serializer{}
 	require.NoError(t, serializer.Init())

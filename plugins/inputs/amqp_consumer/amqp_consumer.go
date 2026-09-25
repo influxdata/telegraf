@@ -147,9 +147,7 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 		a.process(processingCtx, msgs, acc)
 	}()
 
-	a.wg.Add(1)
-	go func() {
-		defer a.wg.Done()
+	a.wg.Go(func() {
 		for {
 			select {
 			case <-ctx.Done():
@@ -189,7 +187,7 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 			}
 			a.Log.Info("Successfully reconnected")
 		}
-	}()
+	})
 
 	return nil
 }

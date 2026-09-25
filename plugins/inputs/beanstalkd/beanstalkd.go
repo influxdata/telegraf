@@ -43,14 +43,12 @@ func (b *Beanstalkd) Gather(acc telegraf.Accumulator) error {
 
 	var wg sync.WaitGroup
 
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		err := b.gatherServerStats(connection, acc)
 		if err != nil {
 			acc.AddError(err)
 		}
-		wg.Done()
-	}()
+	})
 
 	for _, tube := range tubes {
 		wg.Add(1)

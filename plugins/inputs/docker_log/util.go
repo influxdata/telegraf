@@ -109,25 +109,21 @@ func tailMultiplexed(acc telegraf.Accumulator, tags map[string]string, container
 
 	var tsStdout, tsStderr time.Time
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		var err error
 		tsStdout, err = tailStream(acc, tags, containerID, outReader, "stdout")
 		if err != nil {
 			acc.AddError(err)
 		}
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		var err error
 		tsStderr, err = tailStream(acc, tags, containerID, errReader, "stderr")
 		if err != nil {
 			acc.AddError(err)
 		}
-	}()
+	})
 
 	_, err := stdcopy.StdCopy(outWriter, errWriter, src)
 
