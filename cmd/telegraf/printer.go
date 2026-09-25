@@ -4,11 +4,11 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
+	"slices"
 	"sort"
 	"strings"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -118,7 +118,7 @@ func printSampleConfig(outputBuffer io.Writer, filters Filters) {
 	printFilteredGlobalSections(sectionFilters, outputBuffer)
 
 	// print secretstore plugins
-	if choice.Contains("secretstores", sectionFilters) {
+	if slices.Contains(sectionFilters, "secretstores") {
 		if len(secretstoreFilters) != 0 {
 			if len(secretstoreFilters) >= 3 && secretstoreFilters[1] != "none" {
 				fmt.Print(secretstoreHeader)
@@ -136,7 +136,7 @@ func printSampleConfig(outputBuffer io.Writer, filters Filters) {
 	}
 
 	// print output plugins
-	if choice.Contains("outputs", sectionFilters) {
+	if slices.Contains(sectionFilters, "outputs") {
 		if len(outputFilters) != 0 {
 			if len(outputFilters) >= 3 && outputFilters[1] != "none" {
 				outputBuffer.Write([]byte(outputHeader))
@@ -148,7 +148,7 @@ func printSampleConfig(outputBuffer io.Writer, filters Filters) {
 			// Print non-default outputs, commented
 			var pnames []string
 			for pname := range outputs.Outputs {
-				if !choice.Contains(pname, outputDefaults) {
+				if !slices.Contains(outputDefaults, pname) {
 					pnames = append(pnames, pname)
 				}
 			}
@@ -157,7 +157,7 @@ func printSampleConfig(outputBuffer io.Writer, filters Filters) {
 	}
 
 	// print processor plugins
-	if choice.Contains("processors", sectionFilters) {
+	if slices.Contains(sectionFilters, "processors") {
 		if len(processorFilters) != 0 {
 			if len(processorFilters) >= 3 && processorFilters[1] != "none" {
 				outputBuffer.Write([]byte(processorHeader))
@@ -174,7 +174,7 @@ func printSampleConfig(outputBuffer io.Writer, filters Filters) {
 	}
 
 	// print aggregator plugins
-	if choice.Contains("aggregators", sectionFilters) {
+	if slices.Contains(sectionFilters, "aggregators") {
 		if len(aggregatorFilters) != 0 {
 			if len(aggregatorFilters) >= 3 && aggregatorFilters[1] != "none" {
 				outputBuffer.Write([]byte(aggregatorHeader))
@@ -191,7 +191,7 @@ func printSampleConfig(outputBuffer io.Writer, filters Filters) {
 	}
 
 	// print input plugins
-	if choice.Contains("inputs", sectionFilters) {
+	if slices.Contains(sectionFilters, "inputs") {
 		if len(inputFilters) != 0 {
 			if len(inputFilters) >= 3 && inputFilters[1] != "none" {
 				outputBuffer.Write([]byte(inputHeader))
@@ -203,7 +203,7 @@ func printSampleConfig(outputBuffer io.Writer, filters Filters) {
 			// Print non-default inputs, commented
 			var pnames []string
 			for pname := range inputs.Inputs {
-				if !choice.Contains(pname, inputDefaults) {
+				if !slices.Contains(inputDefaults, pname) {
 					pnames = append(pnames, pname)
 				}
 			}
@@ -216,7 +216,7 @@ func printFilteredProcessors(processorFilters []string, commented bool, outputBu
 	// Filter processors
 	var pnames []string
 	for pname := range processors.Processors {
-		if choice.Contains(pname, processorFilters) {
+		if slices.Contains(processorFilters, pname) {
 			pnames = append(pnames, pname)
 		}
 	}
@@ -234,7 +234,7 @@ func printFilteredAggregators(aggregatorFilters []string, commented bool, output
 	// Filter outputs
 	var anames []string
 	for aname := range aggregators.Aggregators {
-		if choice.Contains(aname, aggregatorFilters) {
+		if slices.Contains(aggregatorFilters, aname) {
 			anames = append(anames, aname)
 		}
 	}
@@ -252,7 +252,7 @@ func printFilteredInputs(inputFilters []string, commented bool, outputBuffer io.
 	// Filter inputs
 	var pnames []string
 	for pname := range inputs.Inputs {
-		if choice.Contains(pname, inputFilters) {
+		if slices.Contains(inputFilters, pname) {
 			pnames = append(pnames, pname)
 		}
 	}
@@ -300,7 +300,7 @@ func printFilteredOutputs(outputFilters []string, commented bool, outputBuffer i
 	var influxdbV2 string
 
 	for oname := range outputs.Outputs {
-		if choice.Contains(oname, outputFilters) {
+		if slices.Contains(outputFilters, oname) {
 			// Make influxdb_v2 the exception and have it be first in the list
 			// Store it and add it later
 			if oname == "influxdb_v2" {
@@ -329,7 +329,7 @@ func printFilteredSecretstores(secretstoreFilters []string, commented bool, outp
 	// Filter secretstores
 	var snames []string
 	for sname := range secretstores.SecretStores {
-		if choice.Contains(sname, secretstoreFilters) {
+		if slices.Contains(secretstoreFilters, sname) {
 			snames = append(snames, sname)
 		}
 	}
@@ -344,11 +344,11 @@ func printFilteredSecretstores(secretstoreFilters []string, commented bool, outp
 }
 
 func printFilteredGlobalSections(sectionFilters []string, outputBuffer io.Writer) {
-	if choice.Contains("global_tags", sectionFilters) {
+	if slices.Contains(sectionFilters, "global_tags") {
 		outputBuffer.Write([]byte(globalTagsConfig))
 	}
 
-	if choice.Contains("agent", sectionFilters) {
+	if slices.Contains(sectionFilters, "agent") {
 		outputBuffer.Write([]byte(agentConfig))
 	}
 }
