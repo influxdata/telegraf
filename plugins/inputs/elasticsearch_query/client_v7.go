@@ -38,13 +38,11 @@ func newClientV7(cfg clientConfig) (client, error) {
 		// The v7 connection-pool discovery API accepts no context, so in-flight calls cannot be canceled.
 		ctx, cancel := context.WithCancel(context.Background())
 		client.cancelDiscovery = cancel
-		client.discoveryWG.Add(1)
-		go func() {
-			defer client.discoveryWG.Done()
+		client.discoveryWG.Go(func() {
 			startDiscovery(ctx, cfg.discoveryInterval, func(context.Context) error {
 				return c.DiscoverNodes()
 			}, cfg.log)
-		}()
+		})
 	}
 	return client, nil
 }

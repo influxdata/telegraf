@@ -136,16 +136,14 @@ func (cms *CloudWatchMetricStreams) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	cms.wg.Add(1)
-	go func() {
-		defer cms.wg.Done()
+	cms.wg.Go(func() {
 		if err := server.Serve(cms.listener); err != nil {
 			if !errors.Is(err, net.ErrClosed) {
 				cms.Log.Errorf("Serve failed: %v", err)
 			}
 			close(cms.close)
 		}
-	}()
+	})
 
 	cms.Log.Infof("Listening on %s", cms.listener.Addr().String())
 

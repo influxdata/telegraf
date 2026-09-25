@@ -415,9 +415,7 @@ func TestGosnmpWrapper_walk_retry(t *testing.T) {
 	// Even though simultaneous access is impossible because the server will be
 	// blocked on ReadFrom, without this the race detector gets unhappy.
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		buf := make([]byte, 256)
 		for {
 			_, addr, err := srvr.ReadFrom(buf)
@@ -431,7 +429,7 @@ func TestGosnmpWrapper_walk_retry(t *testing.T) {
 				return
 			}
 		}
-	}()
+	})
 
 	gs := &gosnmp.GoSNMP{
 		Target:    srvr.LocalAddr().(*net.UDPAddr).IP.String(),
@@ -468,9 +466,7 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 	// Even though simultaneous access is impossible because the server will be
 	// blocked on ReadFrom, without this the race detector gets unhappy.
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		buf := make([]byte, 256)
 		for {
 			_, addr, err := srvr.ReadFrom(buf)
@@ -484,7 +480,7 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 				return
 			}
 		}
-	}()
+	})
 
 	gs := &gosnmp.GoSNMP{
 		Target:    srvr.LocalAddr().(*net.UDPAddr).IP.String(),

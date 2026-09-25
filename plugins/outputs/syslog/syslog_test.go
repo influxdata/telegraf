@@ -406,10 +406,7 @@ func TestStartupErrorBehaviorRetry(t *testing.T) {
 	var wg sync.WaitGroup
 	buf := make([]byte, 256)
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
+	wg.Go(func() {
 		conn, err := listener.Accept()
 		if err != nil {
 			t.Logf("accepting connection failed: %v", err)
@@ -427,7 +424,7 @@ func TestStartupErrorBehaviorRetry(t *testing.T) {
 			t.Logf("reading failed: %v", err)
 			t.Fail()
 		}
-	}()
+	})
 
 	// Update the plugin's address and write again. This time the write should
 	// succeed.
@@ -492,11 +489,7 @@ func TestCases(t *testing.T) {
 			require.NoError(t, err)
 
 			var wg sync.WaitGroup
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				server.listen()
-			}()
+			wg.Go(server.listen)
 			defer server.close()
 
 			// Setup the plugin

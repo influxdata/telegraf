@@ -369,11 +369,9 @@ func (c *consumer) startShardConsumer(ctx context.Context, id, seqnr string) {
 		if c.position != nil {
 			cseqnr = c.position(cid)
 		}
-		c.wg.Add(1)
-		go func() {
-			defer c.wg.Done()
+		c.wg.Go(func() {
 			c.startShardConsumer(ctx, cid, cseqnr)
-		}()
+		})
 	}
 }
 

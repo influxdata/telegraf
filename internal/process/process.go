@@ -66,13 +66,11 @@ func (p *Process) Start() error {
 		return err
 	}
 
-	p.mainLoopWg.Add(1)
-	go func() {
-		defer p.mainLoopWg.Done()
+	p.mainLoopWg.Go(func() {
 		if err := p.cmdLoop(ctx); err != nil {
 			p.Log.Errorf("Process quit with message: %v", err)
 		}
-	}()
+	})
 
 	return nil
 }
@@ -175,27 +173,21 @@ func (p *Process) cmdWait(ctx context.Context) error {
 	processCtx, processCancel := context.WithCancel(context.Background())
 	defer processCancel()
 
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		p.ReadStdoutFn(p.Stdout)
-		wg.Done()
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		p.ReadStderrFn(p.Stderr)
-		wg.Done()
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		select {
 		case <-ctx.Done():
 			p.gracefulStop(processCtx, p.Cmd, 5*time.Second)
 		case <-processCtx.Done():
 		}
-		wg.Done()
-	}()
+	})
 
 	p.Lock()
 	err := p.Cmd.Wait()

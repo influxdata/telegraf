@@ -85,9 +85,7 @@ func (p *Prometheus) startK8s(ctx context.Context) error {
 		}
 	}
 
-	p.wg.Add(1)
-	go func() {
-		defer p.wg.Done()
+	p.wg.Go(func() {
 		for {
 			select {
 			case <-ctx.Done():
@@ -112,7 +110,7 @@ func (p *Prometheus) startK8s(ctx context.Context) error {
 				}
 			}
 		}
-	}()
+	})
 
 	return nil
 }

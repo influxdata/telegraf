@@ -258,14 +258,12 @@ func (p *PrometheusClient) Connect() error {
 
 	p.Log.Infof("Listening on %s", p.URL())
 
-	p.wg.Add(1)
-	go func() {
-		defer p.wg.Done()
+	p.wg.Go(func() {
 		err := p.server.Serve(listener)
 		if err != nil && err != http.ErrServerClosed {
 			p.Log.Errorf("Server error: %v", err)
 		}
-	}()
+	})
 
 	return nil
 }

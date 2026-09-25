@@ -124,16 +124,14 @@ func (d *DCOS) gatherNode(ctx context.Context, acc telegraf.Accumulator, cluster
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		m, err := d.client.getNodeMetrics(ctx, node)
 		if err != nil {
 			acc.AddError(err)
 			return
 		}
 		addNodeMetrics(acc, cluster, m)
-	}()
+	})
 
 	d.gatherContainers(ctx, acc, cluster, node)
 	wg.Wait()

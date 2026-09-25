@@ -25,11 +25,9 @@ func NewUnordered(
 	}
 
 	// start workers
-	p.wg.Add(1)
-	go func() {
+	p.wg.Go(func() {
 		p.startWorkers(workerCount)
-		p.wg.Done()
-	}()
+	})
 
 	return p
 }
