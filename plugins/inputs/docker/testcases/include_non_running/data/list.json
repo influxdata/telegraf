@@ -1,0 +1,10 @@
+[
+    {
+        "Id": "123456789",
+        "Names": [
+            "/stopped-container"
+        ],
+        "Image": "redis/image",
+        "State": "exited"
+    }
+]

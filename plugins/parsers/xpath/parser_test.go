@@ -210,7 +210,7 @@ func TestInvalidTypeQueries(t *testing.T) {
 			expected: metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"a": math.NaN(),
 				},
 				time.Unix(1577923199, 0),
@@ -231,7 +231,7 @@ func TestInvalidTypeQueries(t *testing.T) {
 			expected: metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"a": true,
 				},
 				time.Unix(1577923199, 0),
@@ -277,7 +277,7 @@ func TestParseTimestamps(t *testing.T) {
 			expected: metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(1577923199, 0),
 			),
 		},
@@ -294,7 +294,7 @@ func TestParseTimestamps(t *testing.T) {
 			expected: metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(1577923199, 0),
 			),
 		},
@@ -311,7 +311,7 @@ func TestParseTimestamps(t *testing.T) {
 			expected: metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(0, int64(1577923199128*1e6)),
 			),
 		},
@@ -328,7 +328,7 @@ func TestParseTimestamps(t *testing.T) {
 			expected: metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(0, int64(1577923199128256*1e3)),
 			),
 		},
@@ -345,7 +345,7 @@ func TestParseTimestamps(t *testing.T) {
 			expected: metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(0, int64(1577923199128256512)),
 			),
 		},
@@ -362,7 +362,7 @@ func TestParseTimestamps(t *testing.T) {
 			expected: metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(1577923199, 0),
 			),
 		},
@@ -412,7 +412,7 @@ func TestParseSingleValues(t *testing.T) {
 			expected: metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"a": "98247",
 					"b": "98695.81",
 					"c": "true",
@@ -439,7 +439,7 @@ func TestParseSingleValues(t *testing.T) {
 			expected: metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"a": 98247.0,
 					"b": 98695.81,
 					"c": true,
@@ -468,7 +468,7 @@ func TestParseSingleValues(t *testing.T) {
 			expected: metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"a": 98247,
 					"b": 98695.81,
 					"c": true,
@@ -493,7 +493,7 @@ func TestParseSingleValues(t *testing.T) {
 			expected: metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"x": "42",
 					"y": "23",
 				},
@@ -516,7 +516,7 @@ func TestParseSingleValues(t *testing.T) {
 			expected: metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"x": 42.0,
 					"y": 23.0,
 				},
@@ -539,7 +539,7 @@ func TestParseSingleValues(t *testing.T) {
 			expected: metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"x": 42,
 					"y": 23,
 				},
@@ -565,7 +565,7 @@ func TestParseSingleValues(t *testing.T) {
 					"state": "ok",
 					"name":  "TestDevice1",
 				},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(1577923199, 0),
 			),
 		},
@@ -609,7 +609,7 @@ func TestParseSingleAttributes(t *testing.T) {
 			expected: metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(1577923199, 0),
 			),
 		},
@@ -626,7 +626,7 @@ func TestParseSingleAttributes(t *testing.T) {
 			expected: metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(1577923199, 0),
 			),
 		},
@@ -648,7 +648,7 @@ func TestParseSingleAttributes(t *testing.T) {
 			expected: metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"a": "12345",
 					"b": "12345.678",
 					"c": "true",
@@ -675,7 +675,7 @@ func TestParseSingleAttributes(t *testing.T) {
 			expected: metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"a": 12345.0,
 					"b": 12345.678,
 					"c": true,
@@ -704,7 +704,7 @@ func TestParseSingleAttributes(t *testing.T) {
 			expected: metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"a": 12345,
 					"b": 12345.678,
 					"c": true,
@@ -728,7 +728,7 @@ func TestParseSingleAttributes(t *testing.T) {
 			expected: metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"name": "TestDevice1",
 				},
 				time.Unix(1577923199, 0),
@@ -753,7 +753,7 @@ func TestParseSingleAttributes(t *testing.T) {
 					"state": "ok",
 					"name":  "TestDevice1",
 				},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(1577923199, 0),
 			),
 		},
@@ -772,7 +772,7 @@ func TestParseSingleAttributes(t *testing.T) {
 			expected: metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"a": true,
 				},
 				time.Unix(1577923199, 0),
@@ -826,7 +826,7 @@ func TestParseMultiValues(t *testing.T) {
 			expected: metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"a": 1.0,
 					"b": 2.0,
 					"c": 3.0,
@@ -857,7 +857,7 @@ func TestParseMultiValues(t *testing.T) {
 			expected: metric.New(
 				"test",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"a": 1,
 					"b": 2,
 					"c": 3,
@@ -924,7 +924,7 @@ func TestParseMultiNodes(t *testing.T) {
 						"name":  "Device 1",
 						"state": "ok",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value":  42.0,
 						"active": true,
 						"mode":   0,
@@ -937,7 +937,7 @@ func TestParseMultiNodes(t *testing.T) {
 						"name":  "Device 2",
 						"state": "ok",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value":  42.1,
 						"active": false,
 						"mode":   1,
@@ -950,7 +950,7 @@ func TestParseMultiNodes(t *testing.T) {
 						"name":  "Device 3",
 						"state": "ok",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value":  42.2,
 						"active": true,
 						"mode":   2,
@@ -963,7 +963,7 @@ func TestParseMultiNodes(t *testing.T) {
 						"name":  "Device 4",
 						"state": "failed",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value":  42.3,
 						"active": false,
 						"mode":   3,
@@ -976,7 +976,7 @@ func TestParseMultiNodes(t *testing.T) {
 						"name":  "Device 5",
 						"state": "failed",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value":  42.4,
 						"active": true,
 						"mode":   4,
@@ -1029,7 +1029,7 @@ func TestParseMetricQuery(t *testing.T) {
 			expected: metric.New(
 				"state",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": "ok",
 				},
 				time.Unix(1577923199, 0),
@@ -1051,7 +1051,7 @@ func TestParseMetricQuery(t *testing.T) {
 			expected: metric.New(
 				"the_metric",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": "ok",
 				},
 				time.Unix(1577923199, 0),
@@ -1485,7 +1485,7 @@ func loadTestConfiguration(filename string) (*Config, []string, error) {
 	}
 
 	header := make([]string, 0)
-	for _, line := range strings.Split(string(buf), "\n") {
+	for line := range strings.SplitSeq(string(buf), "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "#") {
 			header = append(header, line)
@@ -1504,7 +1504,7 @@ var benchmarkExpectedMetrics = []telegraf.Metric{
 			"tags_platform": "python",
 			"tags_sdkver":   "3.11.5",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"value": 5.0,
 		},
 		time.Unix(1577923199, 0),
@@ -1516,7 +1516,7 @@ var benchmarkExpectedMetrics = []telegraf.Metric{
 			"tags_platform": "python",
 			"tags_sdkver":   "3.11.4",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"value": 4.0,
 		},
 		time.Unix(1577923199, 0),
@@ -1730,7 +1730,7 @@ func TestBenchmarkDataMsgPack(t *testing.T) {
 				"tags_platform": "python",
 				"tags_sdkver":   "3.11.5",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 5.0,
 			},
 			time.Unix(1653643421, 0),
@@ -1742,7 +1742,7 @@ func TestBenchmarkDataMsgPack(t *testing.T) {
 				"tags_platform": "python",
 				"tags_sdkver":   "3.11.4",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 4.0,
 			},
 			time.Unix(1653643421, 0),

@@ -74,7 +74,7 @@ func TestPingGather(t *testing.T) {
 
 	require.NoError(t, acc.GatherError(p.Gather))
 	tags := map[string]string{"url": "www.google.com"}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"packets_transmitted": 4,
 		"packets_received":    4,
 		"reply_received":      4,
@@ -121,7 +121,7 @@ func TestBadPingGather(t *testing.T) {
 	require.NoError(t, err)
 
 	tags := map[string]string{"url": "www.amazon.com"}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"packets_transmitted": 4,
 		"packets_received":    0,
 		"reply_received":      0,
@@ -143,6 +143,25 @@ func TestArguments(t *testing.T) {
 
 	actual := p.args("www.google.com")
 	require.Equal(t, actual, arguments)
+}
+
+func TestArgumentsInterface(t *testing.T) {
+	p := Ping{
+		Log:       testutil.Logger{},
+		Count:     2,
+		Interface: "192.168.1.1",
+	}
+
+	require.Equal(t, []string{"-n", "2", "-S", "192.168.1.1", "www.google.com"}, p.args("www.google.com"))
+}
+
+func TestArgumentsNoInterface(t *testing.T) {
+	p := Ping{
+		Log:   testutil.Logger{},
+		Count: 2,
+	}
+
+	require.NotContains(t, p.args("www.google.com"), "-S")
 }
 
 var lossyPingOutput = `
@@ -181,7 +200,7 @@ func TestLossyPingGather(t *testing.T) {
 	require.NoError(t, err)
 
 	tags := map[string]string{"url": "www.google.com"}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"packets_transmitted": 9,
 		"packets_received":    7,
 		"reply_received":      7,
@@ -292,7 +311,7 @@ func TestUnreachablePingGather(t *testing.T) {
 	require.NoError(t, err)
 
 	tags := map[string]string{"url": "www.google.com"}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"packets_transmitted": 4,
 		"packets_received":    1,
 		"reply_received":      0,
@@ -341,7 +360,7 @@ func TestTTLExpiredPingGather(t *testing.T) {
 	require.NoError(t, err)
 
 	tags := map[string]string{"url": "www.google.com"}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"packets_transmitted": 4,
 		"packets_received":    1,
 		"reply_received":      0,

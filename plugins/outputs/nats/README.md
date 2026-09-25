@@ -18,10 +18,10 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
-## Secret-store support
+## Secret store support
 
-This plugin supports secrets from secret-stores for the `username`, `password`
-and `credential` option. See the [secret-store documentation][SECRETSTORE] for
+This plugin supports secrets from secret stores for the `username`, `password`
+and `credential` option. See the [secret store documentation][SECRETSTORE] for
 more details on how to use them.
 
 [SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
@@ -83,7 +83,7 @@ more details on how to use them.
     ## Use asynchronous publishing for higher throughput, but note that it does not guarantee order within batches.
     # async_publish = false
 
-    ## Timeout for wating on acknowledgement on asynchronous publishing
+    ## Timeout for waiting on acknowledgement on asynchronous publishing
     ## String with valid units "ns", "us" (or "µs"), "ms", "s", "m", "h".
     # async_ack_timeout = "5s"
 

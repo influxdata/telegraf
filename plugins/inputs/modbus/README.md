@@ -362,11 +362,6 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## stay connected during gather and disconnect afterwards.
     # close_connection_after_gather = false
 
-    ## Force the plugin to read each field in a separate request.
-    ## This might be necessary for devices not conforming to the spec,
-    ## see https://github.com/influxdata/telegraf/issues/12071.
-    # one_request_per_field = false
-
     ## Enforce the starting address to be zero for the first request on
     ## coil registers. This is necessary for some devices see
     ## https://github.com/influxdata/telegraf/issues/8905
@@ -381,6 +376,21 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ##   upper -- use only upper byte of the register (XX00 XX00 XX00 XX00)
     ## By default both bytes of the register are used (XXXX XXXX).
     # string_register_location = ""
+
+    ## Force the plugin to read each field in a separate request.
+    ## This might be necessary for devices not conforming to the spec,
+    ## see https://github.com/influxdata/telegraf/issues/12071.
+    # one_request_per_field = false
+
+    ## Maximum number of coil or discrete-input registers to read per request
+    ## The specification defines this limit as 2000 but some devices only
+    ## support a smaller number per request
+    # max_bit_registers_per_request = 2000
+
+    ## Maximum number of input or holding registers to read per request
+    ## The specification defines this limit as 125 but some devices only
+    ## support a smaller number per request
+    # max_word_registers_per_request = 125
 ```
 
 ## Notes
@@ -399,8 +409,8 @@ collection interval. Note that pauses add up if multiple requests are sent!
 The modbus plugin supports multiple configuration styles that can be set using
 the `configuration_type` setting. The different styles are described
 below. Please note that styles cannot be mixed.
-Only the settings belonging to the configured `configuration_type` are used for constructing _modbus_
-requests and creation of metrics.
+Only the settings belonging to the configured `configuration_type` are used for
+constructing _modbus_ requests and creation of metrics.
 
 Directly jump to the styles:
 

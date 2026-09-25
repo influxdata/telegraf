@@ -2,19 +2,24 @@
 package kafka
 
 import (
+	"bytes"
 	_ "embed"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/IBM/sarama"
 	"github.com/gofrs/uuid/v5"
+	"golang.org/x/net/proxy"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
-	"github.com/influxdata/telegraf/plugins/common/proxy"
+	common_proxy "github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -24,27 +29,24 @@ var sampleConfig string
 var zeroTime = time.Unix(0, 0)
 
 type Kafka struct {
-	Brokers           []string        `toml:"brokers"`
-	Topic             string          `toml:"topic"`
-	TopicTag          string          `toml:"topic_tag"`
-	ExcludeTopicTag   bool            `toml:"exclude_topic_tag"`
-	TopicSuffix       TopicSuffix     `toml:"topic_suffix"`
-	RoutingTag        string          `toml:"routing_tag"`
-	RoutingKey        string          `toml:"routing_key"`
-	ProducerTimestamp string          `toml:"producer_timestamp"`
-	MetricNameHeader  string          `toml:"metric_name_header"`
-	Log               telegraf.Logger `toml:"-"`
-	proxy.Socks5ProxyConfig
+	Brokers           []string          `toml:"brokers"`
+	Topic             string            `toml:"topic"`
+	TopicTag          string            `toml:"topic_tag"`
+	ExcludeTopicTag   bool              `toml:"exclude_topic_tag"`
+	TopicSuffix       TopicSuffix       `toml:"topic_suffix"`
+	RoutingTag        string            `toml:"routing_tag"`
+	RoutingKey        string            `toml:"routing_key"`
+	ProducerTimestamp string            `toml:"producer_timestamp"`
+	MetricNameHeader  string            `toml:"metric_name_header" deprecated:"1.39.0;1.45.0;please use 'headers' instead"`
+	Headers           map[string]string `toml:"headers"`
+	Log               telegraf.Logger   `toml:"-"`
+	common_proxy.Socks5ProxyConfig
 	kafka.WriteConfig
-
-	// Legacy TLS config options
-	Certificate string `toml:"certificate" deprecated:"1.36.0;1.40.0;please use 'tls_cert' instead"`
-	Key         string `toml:"key" deprecated:"1.36.0;1.40.0;please use 'tls_cert' instead"`
-	CA          string `toml:"ca" deprecated:"1.36.0;1.40.0;please use 'tls_ca' instead"`
 
 	saramaConfig *sarama.Config
 	producerFunc func(addrs []string, config *sarama.Config) (sarama.SyncProducer, error)
 	producer     sarama.SyncProducer
+	headerTmpl   map[string]*template.Template
 
 	serializer telegraf.Serializer
 }
@@ -74,28 +76,30 @@ func (k *Kafka) Init() error {
 		return fmt.Errorf("unknown topic suffix method provided: %s", k.TopicSuffix.Method)
 	}
 
-	config := sarama.NewConfig()
-	if err := k.SetConfig(config, k.Log); err != nil {
+	// Legacy support for metric_name_header
+	if k.MetricNameHeader != "" {
+		if k.Headers == nil {
+			k.Headers = make(map[string]string, 1)
+		}
+		k.Headers[k.MetricNameHeader] = "{{ .Name }}"
+	}
+
+	// Create new configuration
+	cfg := sarama.NewConfig()
+	if err := k.SetConfig(cfg, k.Log); err != nil {
 		return err
 	}
 
-	// Legacy support ssl config
-	if k.Certificate != "" {
-		k.TLSCert = k.Certificate
-		k.TLSCA = k.CA
-		k.TLSKey = k.Key
-	}
-
 	if k.Socks5ProxyEnabled {
-		config.Net.Proxy.Enable = true
+		cfg.Net.Proxy.Enable = true
 
-		dialer, err := k.Socks5ProxyConfig.GetDialer()
+		dialer, err := k.Socks5ProxyConfig.GetDialer(proxy.Direct)
 		if err != nil {
 			return fmt.Errorf("connecting to proxy server failed: %w", err)
 		}
-		config.Net.Proxy.Dialer = dialer
+		cfg.Net.Proxy.Dialer = dialer
 	}
-	k.saramaConfig = config
+	k.saramaConfig = cfg
 
 	switch k.ProducerTimestamp {
 	case "":
@@ -103,6 +107,16 @@ func (k *Kafka) Init() error {
 	case "metric", "now":
 	default:
 		return fmt.Errorf("unknown producer_timestamp option: %s", k.ProducerTimestamp)
+	}
+
+	// Setup header templates
+	k.headerTmpl = make(map[string]*template.Template, len(k.Headers))
+	for name, expr := range k.Headers {
+		tmpl, err := template.New(name).Parse(expr)
+		if err != nil {
+			return fmt.Errorf("creating template for header %q failed: %w", name, err)
+		}
+		k.headerTmpl[name] = tmpl
 	}
 
 	return nil
@@ -136,17 +150,23 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 		}
 
 		m := &sarama.ProducerMessage{
-			Topic: topic,
-			Value: sarama.ByteEncoder(buf),
+			Topic:   topic,
+			Value:   sarama.ByteEncoder(buf),
+			Headers: make([]sarama.RecordHeader, 0, len(k.headerTmpl)),
 		}
 
-		if k.MetricNameHeader != "" {
-			m.Headers = []sarama.RecordHeader{
-				{
-					Key:   []byte(k.MetricNameHeader),
-					Value: []byte(metric.Name()),
-				},
+		// Set the message headers
+		var headerValue bytes.Buffer
+		for name, tmpl := range k.headerTmpl {
+			headerValue.Reset()
+			if err := tmpl.Execute(&headerValue, metric); err != nil {
+				k.Log.Errorf("adding header %q failed: %v", name, err)
+				continue
 			}
+			m.Headers = append(m.Headers, sarama.RecordHeader{
+				Key:   []byte(name),
+				Value: slices.Clone(headerValue.Bytes()),
+			})
 		}
 
 		// Negative timestamps are not allowed by the Kafka protocol.
@@ -154,14 +174,15 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 			m.Timestamp = metric.Time()
 		}
 
+		// Add the routing key if configured
 		key, err := k.routingKey(metric)
 		if err != nil {
 			return fmt.Errorf("could not generate routing key: %w", err)
 		}
-
 		if key != "" {
 			m.Key = sarama.StringEncoder(key)
 		}
+
 		msgs = append(msgs, m)
 	}
 
@@ -247,11 +268,13 @@ func (k *Kafka) routingKey(metric telegraf.Metric) (string, error) {
 func init() {
 	outputs.Add("kafka", func() telegraf.Output {
 		return &Kafka{
-			WriteConfig: kafka.WriteConfig{
-				MaxRetry:     3,
-				RequiredAcks: -1,
-			},
-			producerFunc: sarama.NewSyncProducer,
+			MaxRetry:        3,
+			RequiredAcks:    -1,
+			NetDialTimeout:  config.Duration(30 * time.Second),
+			NetReadTimeout:  config.Duration(30 * time.Second),
+			NetWriteTimeout: config.Duration(30 * time.Second),
+			ProducerTimeout: config.Duration(10 * time.Second),
+			producerFunc:    sarama.NewSyncProducer,
 		}
 	})
 }

@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"math/rand"
 	"net/url"
 	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -91,7 +93,7 @@ type metricEntry struct {
 	tags   map[string]string
 	name   string
 	ts     time.Time
-	fields map[string]interface{}
+	fields map[string]any
 }
 
 type objectMap map[string]*objectRef
@@ -129,7 +131,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 		initialized:       false,
 		clientFactory:     newClientFactory(address, parent),
 		customAttrFilter:  newFilterOrPanic(parent.CustomAttributeInclude, parent.CustomAttributeExclude),
-		customAttrEnabled: anythingEnabled(parent.CustomAttributeExclude),
+		customAttrEnabled: !slices.Contains(parent.CustomAttributeExclude, "*"),
 		log:               log,
 	}
 
@@ -139,7 +141,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			vcName:           "Datacenter",
 			pKey:             "dcname",
 			parentTag:        "",
-			enabled:          anythingEnabled(parent.DatacenterMetricExclude),
+			enabled:          !slices.Contains(parent.DatacenterMetricExclude, "*"),
 			realTime:         false,
 			sampling:         int32(time.Duration(parent.HistoricalInterval).Seconds()),
 			objects:          make(objectMap),
@@ -158,7 +160,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			vcName:           "ClusterComputeResource",
 			pKey:             "clustername",
 			parentTag:        "dcname",
-			enabled:          anythingEnabled(parent.ClusterMetricExclude),
+			enabled:          !slices.Contains(parent.ClusterMetricExclude, "*"),
 			realTime:         false,
 			sampling:         int32(time.Duration(parent.HistoricalInterval).Seconds()),
 			objects:          make(objectMap),
@@ -177,7 +179,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			vcName:           "ResourcePool",
 			pKey:             "rpname",
 			parentTag:        "clustername",
-			enabled:          anythingEnabled(parent.ResourcePoolMetricExclude),
+			enabled:          !slices.Contains(parent.ResourcePoolMetricExclude, "*"),
 			realTime:         false,
 			sampling:         int32(time.Duration(parent.HistoricalInterval).Seconds()),
 			objects:          make(objectMap),
@@ -196,7 +198,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			vcName:           "HostSystem",
 			pKey:             "esxhostname",
 			parentTag:        "clustername",
-			enabled:          anythingEnabled(parent.HostMetricExclude),
+			enabled:          !slices.Contains(parent.HostMetricExclude, "*"),
 			realTime:         true,
 			sampling:         20,
 			objects:          make(objectMap),
@@ -215,7 +217,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			vcName:           "VirtualMachine",
 			pKey:             "vmname",
 			parentTag:        "esxhostname",
-			enabled:          anythingEnabled(parent.VMMetricExclude),
+			enabled:          !slices.Contains(parent.VMMetricExclude, "*"),
 			realTime:         true,
 			sampling:         20,
 			objects:          make(objectMap),
@@ -233,7 +235,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			name:             "datastore",
 			vcName:           "Datastore",
 			pKey:             "dsname",
-			enabled:          anythingEnabled(parent.DatastoreMetricExclude),
+			enabled:          !slices.Contains(parent.DatastoreMetricExclude, "*"),
 			realTime:         false,
 			sampling:         int32(time.Duration(parent.HistoricalInterval).Seconds()),
 			objects:          make(objectMap),
@@ -252,7 +254,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			vcName:           "ClusterComputeResource",
 			pKey:             "clustername",
 			parentTag:        "dcname",
-			enabled:          anythingEnabled(parent.VSANMetricExclude),
+			enabled:          !slices.Contains(parent.VSANMetricExclude, "*"),
 			realTime:         false,
 			sampling:         int32(time.Duration(parent.VSANInterval).Seconds()),
 			objects:          make(objectMap),
@@ -271,15 +273,6 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 	err := e.init(ctx)
 
 	return &e, err
-}
-
-func anythingEnabled(ex []string) bool {
-	for _, s := range ex {
-		if s == "*" {
-			return false
-		}
-	}
-	return true
 }
 
 func newFilterOrPanic(include, exclude []string) filter.Filter {
@@ -602,7 +595,7 @@ func (e *endpoint) complexMetadataSelect(ctx context.Context, res *resourceKind,
 	n := len(sampledObjects)
 	if n > maxMetadataSamples {
 		// Shuffle samples into the maxMetadataSamples positions
-		for i := 0; i < maxMetadataSamples; i++ {
+		for i := range maxMetadataSamples {
 			j := int(rand.Int31n(int32(i + 1))) //nolint:gosec // G404: not security critical
 			t := sampledObjects[i]
 			sampledObjects[i] = sampledObjects[j]
@@ -1015,10 +1008,7 @@ func submitChunkJob(ctx context.Context, te *throttledExecutor, job queryJob, pq
 
 func (e *endpoint) chunkify(ctx context.Context, res *resourceKind, now, latest time.Time, job queryJob) {
 	te := newThrottledExecutor(e.parent.CollectConcurrency)
-	maxMetrics := e.parent.MaxQueryMetrics
-	if maxMetrics < 1 {
-		maxMetrics = 1
-	}
+	maxMetrics := max(e.parent.MaxQueryMetrics, 1)
 
 	// Workaround for vCenter weirdness. Cluster metrics seem to count multiple times
 	// when checking query size, so keep it at a low value.
@@ -1127,10 +1117,7 @@ func (e *endpoint) collectResource(ctx context.Context, resourceType string, acc
 		s := time.Duration(res.sampling) * time.Second
 		rawInterval := localNow.Sub(res.lastColl)
 		paddedInterval := rawInterval + time.Duration(res.sampling/2)*time.Second
-		estInterval = paddedInterval.Truncate(s)
-		if estInterval < s {
-			estInterval = s
-		}
+		estInterval = max(paddedInterval.Truncate(s), s)
 		e.log.Debugf("Raw interval %s, padded: %s, estimated: %s", rawInterval, paddedInterval, estInterval)
 	}
 	e.log.Debugf("Interval estimated to %s", estInterval)
@@ -1301,7 +1288,7 @@ func (e *endpoint) collectChunk(
 				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(ts.UnixNano(), 10)
 				bucket, found := buckets[bKey]
 				if !found {
-					fields := make(map[string]interface{})
+					fields := maps.Clone(globalFields)
 					bucket = metricEntry{name: mn, ts: ts, fields: fields, tags: t}
 					buckets[bKey] = bucket
 				}
@@ -1449,6 +1436,19 @@ func (e *endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 			t[k] = v
 		}
 	}
+}
+
+func (e *endpoint) populateGlobalFields(objectRef *objectRef, resourceType, prefix string) map[string]any {
+	globalFields := make(map[string]any)
+	if resourceType == "vm" && objectRef.memorySizeMB != 0 {
+		_, fieldName := e.makeMetricIdentifier(prefix, "memorySizeMB")
+		globalFields[fieldName] = strconv.Itoa(int(objectRef.memorySizeMB))
+	}
+	if resourceType == "vm" && objectRef.memoryReservation != 0 {
+		_, fieldName := e.makeMetricIdentifier(prefix, "memoryReservation")
+		globalFields[fieldName] = strconv.Itoa(int(objectRef.memoryReservation))
+	}
+	return globalFields
 }
 
 func (e *endpoint) makeMetricIdentifier(prefix, metric string) (metricName, fieldName string) {

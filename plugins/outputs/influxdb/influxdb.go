@@ -192,19 +192,18 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	ctx := context.Background()
 
 	allErrorsAreDatabaseNotFoundErrors := true
-	var err error
+	//nolint:gosec // False-positive G404 as this doesn't require strong RNG
 	p := rand.Perm(len(i.clients))
 	for _, n := range p {
 		client := i.clients[n]
-		err = client.Write(ctx, metrics)
+		err := client.Write(ctx, metrics)
 		if err == nil {
 			return nil
 		}
 
 		i.Log.Errorf("When writing to [%s]: %v", client.URL(), err)
 
-		var apiError *DatabaseNotFoundError
-		if errors.As(err, &apiError) {
+		if apiError, ok := errors.AsType[*DatabaseNotFoundError](err); ok {
 			if i.SkipDatabaseCreation {
 				continue
 			}

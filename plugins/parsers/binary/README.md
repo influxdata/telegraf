@@ -67,7 +67,7 @@ user-specified configurations.
     ]
 
     ## Optional: Filter evaluated before applying the configuration.
-    ## This option can be used to mange multiple configuration specific for
+    ## This option can be used to manage multiple configuration specific for
     ## a certain message type. If no filter is given, the configuration is applied.
     # [inputs.file.binary.filter]
     #   ## Filter message by the exact length in bytes (default: N/A).

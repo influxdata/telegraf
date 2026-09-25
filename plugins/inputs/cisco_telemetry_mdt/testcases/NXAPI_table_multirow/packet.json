@@ -1,0 +1,104 @@
+{
+    "nodeIdStr": "hostname",
+    "subscriptionIdStr": "subscription",
+    "encodingPath": "show interface brief",
+    "msgTimestamp": "1543236572000",
+    "dataGpbkv": [
+        {
+            "fields": [
+                {
+                    "name": "keys",
+                    "fields": [
+                        {
+                            "name": "host",
+                            "stringValue": "foobar"
+                        }
+                    ]
+                },
+                {
+                    "name": "content",
+                    "fields": [
+                        {
+                            "fields": [
+                                {
+                                    "name": "TABLE_interface",
+                                    "fields": [
+                                        {
+                                            "fields": [
+                                                {
+                                                    "name": "ROW_interface",
+                                                    "fields": [
+                                                        {
+                                                            "fields": [
+                                                                {
+                                                                    "name": "interface",
+                                                                    "stringValue": "eth1/1"
+                                                                },
+                                                                {
+                                                                    "name": "state",
+                                                                    "stringValue": "up"
+                                                                },
+                                                                {
+                                                                    "name": "proto",
+                                                                    "stringValue": "up"
+                                                                },
+                                                                {
+                                                                    "name": "vlan",
+                                                                    "stringValue": "1"
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "fields": [
+                                                                {
+                                                                    "name": "interface",
+                                                                    "stringValue": "eth1/2"
+                                                                },
+                                                                {
+                                                                    "name": "state",
+                                                                    "stringValue": "down"
+                                                                },
+                                                                {
+                                                                    "name": "proto",
+                                                                    "stringValue": "down"
+                                                                },
+                                                                {
+                                                                    "name": "vlan",
+                                                                    "stringValue": "1"
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "fields": [
+                                                                {
+                                                                    "name": "interface",
+                                                                    "stringValue": "eth2/1"
+                                                                },
+                                                                {
+                                                                    "name": "state",
+                                                                    "stringValue": "up"
+                                                                },
+                                                                {
+                                                                    "name": "proto",
+                                                                    "stringValue": "up"
+                                                                },
+                                                                {
+                                                                    "name": "vlan",
+                                                                    "stringValue": "2"
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

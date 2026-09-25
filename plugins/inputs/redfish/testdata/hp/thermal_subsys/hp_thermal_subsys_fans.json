@@ -1,0 +1,14 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#FanCollection.FanCollection",
+  "@odata.etag": "W/\"D5EC731D\"",
+  "@odata.id": "/redfish/v1/Chassis/1/ThermalSubsystem/Fans",
+  "@odata.type": "#FanCollection.FanCollection",
+  "Description": "Fan Collection View",
+  "Name": "Fan Collection",
+  "Members": [
+    {
+      "@odata.id": "/redfish/v1/Chassis/1/ThermalSubsystem/Fans/0"
+    }
+  ],
+  "Members@odata.count": 6
+}

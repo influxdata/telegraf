@@ -60,7 +60,7 @@ func getTableString(headers []string, data [][]any) string {
 
 	// Append rows
 	for _, row := range data {
-		processedRow := make([]interface{}, len(row))
+		processedRow := make([]any, len(row))
 		for i, col := range row {
 			switch v := col.(type) {
 			case []string: // Convert slices to multi-line strings

@@ -27,6 +27,7 @@ type Parser struct {
 	DefaultTags map[string]string ` toml:"-"`
 
 	templateEngine *templating.Engine
+	timeFunc       func() time.Time
 }
 
 func (p *Parser) Init() error {
@@ -45,7 +46,15 @@ func (p *Parser) Init() error {
 		return fmt.Errorf("creating template engine failed: %w ", err)
 	}
 
+	if p.timeFunc == nil {
+		p.timeFunc = time.Now
+	}
+
 	return nil
+}
+
+func (p *Parser) SetTimeFunc(fn func() time.Time) {
+	p.timeFunc = fn
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
@@ -111,7 +120,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		return nil, fmt.Errorf(`field %q value: %w`, fields[0], err)
 	}
 
-	fieldValues := make(map[string]interface{}, 1)
+	fieldValues := make(map[string]any, 1)
 	if field != "" {
 		fieldValues[field] = v
 	} else {
@@ -119,7 +128,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	// If no 3rd field, use now as timestamp
-	timestamp := time.Now().UTC()
+	timestamp := p.timeFunc()
 
 	if len(fields) == 3 {
 		// Parse timestamp.

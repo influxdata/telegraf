@@ -103,7 +103,7 @@ func TestExec(t *testing.T) {
 
 	// Setup plugin
 	plugin := &Exec{
-		Commands: []interface{}{[]string{"testcommand", "arg1"}},
+		Commands: []any{[]string{"testcommand", "arg1"}},
 		Log:      testutil.Logger{},
 	}
 	plugin.SetParser(parser)
@@ -118,7 +118,7 @@ func TestExec(t *testing.T) {
 		metric.New(
 			"exec",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"num_processes": float64(82),
 				"cpu_used":      float64(8234),
 				"cpu_free":      float64(32),
@@ -141,7 +141,7 @@ func TestExecMalformed(t *testing.T) {
 
 	// Setup plugin
 	plugin := &Exec{
-		Commands: []interface{}{[]string{"badcommand", "arg1"}},
+		Commands: []any{[]string{"badcommand", "arg1"}},
 		Log:      testutil.Logger{},
 	}
 	plugin.SetParser(parser)
@@ -161,7 +161,7 @@ func TestCommandError(t *testing.T) {
 
 	// Setup plugin
 	plugin := &Exec{
-		Commands: []interface{}{[]string{"badcommand"}},
+		Commands: []any{[]string{"badcommand"}},
 		Log:      testutil.Logger{},
 	}
 	plugin.SetParser(parser)
@@ -181,7 +181,7 @@ func TestCommandIgnoreError(t *testing.T) {
 
 	// Setup plugin
 	plugin := &Exec{
-		Commands:    []interface{}{[]string{"badcommand"}},
+		Commands:    []any{[]string{"badcommand"}},
 		IgnoreError: true,
 		Log:         testutil.Logger{},
 	}
@@ -201,7 +201,7 @@ func TestCommandIgnoreError(t *testing.T) {
 		metric.New(
 			"exec",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"num_processes": float64(82),
 				"cpu_used":      float64(8234),
 				"cpu_free":      float64(32),
@@ -227,7 +227,7 @@ func TestExecCommandWithGlob(t *testing.T) {
 
 	// Setup plugin
 	plugin := &Exec{
-		Commands: []interface{}{[]string{"/bin/ech[o]", "metric_value"}},
+		Commands: []any{[]string{"/bin/ech[o]", "metric_value"}},
 		Timeout:  config.Duration(5 * time.Second),
 		Log:      testutil.Logger{},
 	}
@@ -242,7 +242,7 @@ func TestExecCommandWithGlob(t *testing.T) {
 		metric.New(
 			"metric",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": "metric_value",
 			},
 			time.Unix(0, 0),
@@ -261,7 +261,7 @@ func TestExecCommandWithoutGlob(t *testing.T) {
 
 	// Setup plugin
 	plugin := &Exec{
-		Commands: []interface{}{[]string{"/bin/echo", "metric_value"}},
+		Commands: []any{[]string{"/bin/echo", "metric_value"}},
 		Timeout:  config.Duration(5 * time.Second),
 		Log:      testutil.Logger{},
 	}
@@ -276,7 +276,7 @@ func TestExecCommandWithoutGlob(t *testing.T) {
 		metric.New(
 			"metric",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": "metric_value",
 			},
 			time.Unix(0, 0),
@@ -295,7 +295,7 @@ func TestExecCommandWithoutGlobAndPath(t *testing.T) {
 
 	// Setup plugin
 	plugin := &Exec{
-		Commands: []interface{}{[]string{"echo", "metric_value"}},
+		Commands: []any{[]string{"echo", "metric_value"}},
 		Timeout:  config.Duration(5 * time.Second),
 		Log:      testutil.Logger{},
 	}
@@ -310,7 +310,7 @@ func TestExecCommandWithoutGlobAndPath(t *testing.T) {
 		metric.New(
 			"metric",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": "metric_value",
 			},
 			time.Unix(0, 0),
@@ -329,7 +329,7 @@ func TestExecCommandWithEnv(t *testing.T) {
 
 	// Setup plugin
 	plugin := &Exec{
-		Commands:    []interface{}{[]string{"/bin/sh", "-c", "echo ${METRIC_NAME}"}},
+		Commands:    []any{[]string{"/bin/sh", "-c", "echo ${METRIC_NAME}"}},
 		Environment: []string{"METRIC_NAME=metric_value"},
 		Timeout:     config.Duration(5 * time.Second),
 		Log:         testutil.Logger{},
@@ -345,7 +345,7 @@ func TestExecCommandWithEnv(t *testing.T) {
 		metric.New(
 			"metric",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": "metric_value",
 			},
 			time.Unix(0, 0),
@@ -379,7 +379,7 @@ func TestDeprecatedSingleCommand(t *testing.T) {
 		metric.New(
 			"metric",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": "metric_value",
 			},
 			time.Unix(0, 0),
@@ -398,7 +398,7 @@ func TestDeprecatedStringBasedCommands(t *testing.T) {
 
 	// Setup plugin
 	plugin := &Exec{
-		Commands: []interface{}{"/bin/sh -c 'echo metric_value'"},
+		Commands: []any{"/bin/sh -c 'echo metric_value'"},
 		Timeout:  config.Duration(5 * time.Second),
 		Log:      testutil.Logger{},
 	}
@@ -413,7 +413,7 @@ func TestDeprecatedStringBasedCommands(t *testing.T) {
 		metric.New(
 			"metric",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": "metric_value",
 			},
 			time.Unix(0, 0),
@@ -542,7 +542,7 @@ T! very detailed details
 
 			// Setup plugin
 			plugin := &Exec{
-				Commands:  []interface{}{[]string{"echo", "42"}},
+				Commands:  []any{[]string{"echo", "42"}},
 				LogStdErr: true,
 				Log:       logger,
 			}
@@ -563,7 +563,7 @@ T! very detailed details
 				metric.New(
 					"exec",
 					map[string]string{},
-					map[string]interface{}{"value": int64(42)},
+					map[string]any{"value": int64(42)},
 					time.Unix(0, 0),
 				),
 			}
@@ -599,7 +599,7 @@ func TestTruncate(t *testing.T) {
 			name: "should truncate to the maxStderrBytes",
 			bufF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				for i := 0; i < 2*maxStderrBytes; i++ {
+				for range 2 * maxStderrBytes {
 					b.WriteByte('b')
 				}
 				return &b
@@ -628,7 +628,7 @@ func TestCSVBehavior(t *testing.T) {
 
 	// Setup the plugin
 	plugin := &Exec{
-		Commands: []interface{}{[]string{"echo", "a,b\n1,2\n3,4"}},
+		Commands: []any{[]string{"echo", "a,b\n1,2\n3,4"}},
 		Timeout:  config.Duration(5 * time.Second),
 		Log:      testutil.Logger{},
 	}
@@ -639,7 +639,7 @@ func TestCSVBehavior(t *testing.T) {
 		metric.New(
 			"exec",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"a": int64(1),
 				"b": int64(2),
 			},
@@ -648,7 +648,7 @@ func TestCSVBehavior(t *testing.T) {
 		metric.New(
 			"exec",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"a": int64(3),
 				"b": int64(4),
 			},
@@ -657,7 +657,7 @@ func TestCSVBehavior(t *testing.T) {
 		metric.New(
 			"exec",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"a": int64(1),
 				"b": int64(2),
 			},
@@ -666,7 +666,7 @@ func TestCSVBehavior(t *testing.T) {
 		metric.New(
 			"exec",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"a": int64(3),
 				"b": int64(4),
 			},
@@ -712,7 +712,7 @@ func TestCases(t *testing.T) {
 				metric.New(
 					"exec",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"a": int64(1),
 						"b": int64(2),
 					},
@@ -721,7 +721,7 @@ func TestCases(t *testing.T) {
 				metric.New(
 					"exec",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"a": int64(3),
 						"b": int64(4),
 					},
@@ -730,7 +730,7 @@ func TestCases(t *testing.T) {
 				metric.New(
 					"exec",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"a": int64(1),
 						"b": int64(2),
 					},
@@ -739,7 +739,7 @@ func TestCases(t *testing.T) {
 				metric.New(
 					"exec",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"a": int64(3),
 						"b": int64(4),
 					},
@@ -759,7 +759,7 @@ func TestCases(t *testing.T) {
 				metric.New(
 					"exec",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"a": int64(1),
 						"b": int64(2),
 					},
@@ -768,7 +768,7 @@ func TestCases(t *testing.T) {
 				metric.New(
 					"exec",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"a": int64(3),
 						"b": int64(4),
 					},
@@ -777,7 +777,7 @@ func TestCases(t *testing.T) {
 				metric.New(
 					"exec",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"a": int64(1),
 						"b": int64(2),
 					},
@@ -786,7 +786,7 @@ func TestCases(t *testing.T) {
 				metric.New(
 					"exec",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"a": int64(3),
 						"b": int64(4),
 					},
@@ -806,7 +806,7 @@ func TestCases(t *testing.T) {
 				metric.New(
 					"exec",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"a": int64(1),
 						"b": int64(2),
 					},
@@ -815,7 +815,7 @@ func TestCases(t *testing.T) {
 				metric.New(
 					"exec",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"a": int64(3),
 						"b": int64(4),
 					},
@@ -824,7 +824,7 @@ func TestCases(t *testing.T) {
 				metric.New(
 					"exec",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"a": int64(1),
 						"b": int64(2),
 					},
@@ -833,7 +833,7 @@ func TestCases(t *testing.T) {
 				metric.New(
 					"exec",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"a": int64(3),
 						"b": int64(4),
 					},

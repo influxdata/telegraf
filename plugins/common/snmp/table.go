@@ -48,7 +48,7 @@ type RTableRow struct {
 	// Tags are all the Field values which had IsTag=true.
 	Tags map[string]string
 	// Fields are all the Field values which had IsTag=false.
-	Fields map[string]interface{}
+	Fields map[string]any
 }
 
 // Init builds & initializes the nested fields.
@@ -151,7 +151,7 @@ func (t Table) Build(gs Connection, walk bool) (*RTable, error) {
 		}
 
 		// ifv contains a mapping of table OID index to field value
-		ifv := make(map[string]interface{})
+		ifv := make(map[string]any)
 
 		if !walk {
 			// This is used when fetching non-table fields. Fields configured a the top
@@ -219,8 +219,7 @@ func (t Table) Build(gs Connection, walk bool) (*RTable, error) {
 				// Our callback always wraps errors in a walkError.
 				// If this error isn't a walkError, we know it's not
 				// from the callback
-				var walkErr *walkError
-				if !errors.As(err, &walkErr) {
+				if _, ok := errors.AsType[*walkError](err); !ok {
 					return nil, fmt.Errorf("performing bulk walk for field %s: %w", f.Name, err)
 				}
 			}
@@ -241,7 +240,7 @@ func (t Table) Build(gs Connection, walk bool) (*RTable, error) {
 			if !ok {
 				rtr = RTableRow{}
 				rtr.Tags = make(map[string]string)
-				rtr.Fields = make(map[string]interface{})
+				rtr.Fields = make(map[string]any)
 				rows[idx] = rtr
 			}
 			if t.IndexAsTag && idx != "" {

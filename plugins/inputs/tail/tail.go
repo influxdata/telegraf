@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"strings"
 	"sync"
@@ -39,7 +40,6 @@ var (
 
 type Tail struct {
 	Files               []string `toml:"files"`
-	FromBeginning       bool     `toml:"from_beginning" deprecated:"1.34.0;1.40.0;use 'initial_read_offset' with value 'beginning' instead"`
 	InitialReadOffset   string   `toml:"initial_read_offset"`
 	Pipe                bool     `toml:"pipe"`
 	WatchMethod         string   `toml:"watch_method"`
@@ -82,15 +82,6 @@ func (t *Tail) SetParserFunc(fn telegraf.ParserFunc) {
 }
 
 func (t *Tail) Init() error {
-	// Backward compatibility setting
-	if t.InitialReadOffset == "" {
-		if t.FromBeginning {
-			t.InitialReadOffset = "beginning"
-		} else {
-			t.InitialReadOffset = "saved-or-end"
-		}
-	}
-
 	// Check settings
 	switch t.InitialReadOffset {
 	case "":
@@ -132,9 +123,7 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 
 	t.ctx, t.cancel = context.WithCancel(context.Background())
 
-	t.wg.Add(1)
-	go func() {
-		defer t.wg.Done()
+	t.wg.Go(func() {
 		for {
 			select {
 			case <-t.ctx.Done():
@@ -143,7 +132,7 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 				<-t.sem
 			}
 		}
-	}()
+	})
 
 	var err error
 	t.multiline, err = t.MultilineConfig.newMultiline()
@@ -196,18 +185,16 @@ func (t *Tail) getSeekInfo(file string) (*tail.SeekInfo, error) {
 	}
 }
 
-func (t *Tail) GetState() interface{} {
+func (t *Tail) GetState() any {
 	return t.offsets
 }
 
-func (t *Tail) SetState(state interface{}) error {
+func (t *Tail) SetState(state any) error {
 	offsetsState, ok := state.(map[string]int64)
 	if !ok {
 		return errors.New("state has to be of type 'map[string]int64'")
 	}
-	for k, v := range offsetsState {
-		t.offsets[k] = v
-	}
+	maps.Copy(t.offsets, offsetsState)
 	return nil
 }
 
@@ -244,9 +231,7 @@ func (t *Tail) Stop() {
 
 	// persist offsets
 	offsetsMutex.Lock()
-	for k, v := range t.offsets {
-		offsets[k] = v
-	}
+	maps.Copy(offsets, t.offsets)
 	offsetsMutex.Unlock()
 }
 
@@ -534,11 +519,12 @@ func (t *Tail) receiver(parser telegraf.Parser, tailer *tail.Tail) {
 		select {
 		case <-t.ctx.Done():
 			return
-		// Tail is trying to close so drain the sem to allow the receiver
-		// to exit. This condition is hit when the tailer may have hit the
-		// maximum undelivered lines and is trying to close.
+		// The tailer is closing, e.g. on shutdown or when the file is rotated
+		// or removed. Drop the current line but keep draining tailer.Lines so
+		// the tailer can stop. Do not release t.sem here: freeing a slot
+		// without a matching delivery lets another tailer add to an already
+		// full delivery channel and panic with "channel is full" (#19073).
 		case <-tailer.Dying():
-			<-t.sem
 		case t.sem <- empty{}:
 			t.acc.AddTrackingMetricGroup(metrics)
 		}
@@ -547,10 +533,7 @@ func (t *Tail) receiver(parser telegraf.Parser, tailer *tail.Tail) {
 
 func newTail() *Tail {
 	offsetsMutex.Lock()
-	offsetsCopy := make(map[string]int64, len(offsets))
-	for k, v := range offsets {
-		offsetsCopy[k] = v
-	}
+	offsetsCopy := maps.Clone(offsets)
 	offsetsMutex.Unlock()
 
 	return &Tail{

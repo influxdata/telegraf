@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"strconv"
 	"time"
 
@@ -36,17 +37,106 @@ type Parser struct {
 	DefaultTags map[string]string `toml:"-"`
 	Log         telegraf.Logger   `toml:"-"`
 
+	timeFunc     func() time.Time
 	location     *time.Location
 	tagFilter    filter.Filter
 	stringFilter filter.Filter
 }
 
-func (p *Parser) parseArray(data []interface{}, timestamp time.Time) ([]telegraf.Metric, error) {
+func (p *Parser) SetTimeFunc(f func() time.Time) {
+	p.timeFunc = f
+}
+
+func (p *Parser) Init() error {
+	var err error
+
+	p.stringFilter, err = filter.Compile(p.StringFields)
+	if err != nil {
+		return fmt.Errorf("compiling string-fields filter failed: %w", err)
+	}
+
+	p.tagFilter, err = filter.Compile(p.TagKeys)
+	if err != nil {
+		return fmt.Errorf("compiling tag-key filter failed: %w", err)
+	}
+
+	if p.timeFunc == nil {
+		p.timeFunc = time.Now
+	}
+
+	if p.Timezone != "" {
+		loc, err := time.LoadLocation(p.Timezone)
+		if err != nil {
+			return fmt.Errorf("invalid timezone: %w", err)
+		}
+		p.location = loc
+	}
+
+	return nil
+}
+
+func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
+	if p.Query != "" {
+		result := gjson.GetBytes(buf, p.Query)
+		buf = []byte(result.Raw)
+		if !result.IsArray() && !result.IsObject() && result.Type != gjson.Null {
+			err := fmt.Errorf("query path must lead to a JSON object, array of objects or null, but lead to: %v", result.Type)
+			return nil, err
+		}
+		if result.Type == gjson.Null {
+			return nil, nil
+		}
+	}
+
+	buf = bytes.TrimSpace(buf)
+	buf = bytes.TrimPrefix(buf, utf8BOM)
+	if len(buf) == 0 {
+		return make([]telegraf.Metric, 0), nil
+	}
+
+	var data any
+	err := json.Unmarshal(buf, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	timestamp := p.timeFunc().UTC()
+	switch v := data.(type) {
+	case map[string]any:
+		return p.parseObject(v, timestamp)
+	case []any:
+		return p.parseArray(v, timestamp)
+	case nil:
+		return nil, nil
+	default:
+		return nil, ErrWrongType
+	}
+}
+
+func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
+	metrics, err := p.Parse([]byte(line + "\n"))
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(metrics) < 1 {
+		return nil, fmt.Errorf("can not parse the line: %s, for data format: json ", line)
+	}
+
+	return metrics[0], nil
+}
+
+func (p *Parser) SetDefaultTags(tags map[string]string) {
+	p.DefaultTags = tags
+}
+
+func (p *Parser) parseArray(data []any, timestamp time.Time) ([]telegraf.Metric, error) {
 	results := make([]telegraf.Metric, 0)
 
 	for _, item := range data {
 		switch v := item.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			metrics, err := p.parseObject(v, timestamp)
 			if err != nil {
 				if p.Strict {
@@ -63,11 +153,9 @@ func (p *Parser) parseArray(data []interface{}, timestamp time.Time) ([]telegraf
 	return results, nil
 }
 
-func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) ([]telegraf.Metric, error) {
-	tags := make(map[string]string)
-	for k, v := range p.DefaultTags {
-		tags[k] = v
-	}
+func (p *Parser) parseObject(data map[string]any, timestamp time.Time) ([]telegraf.Metric, error) {
+	tags := make(map[string]string, len(p.DefaultTags))
+	maps.Copy(tags, p.DefaultTags)
 
 	f := JSONFlattener{}
 	err := f.FullFlattenJSON("", data, true, true)
@@ -105,7 +193,7 @@ func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) (
 
 		// if the year is 0, set to current year
 		if timestamp.Year() == 0 {
-			timestamp = timestamp.AddDate(time.Now().Year(), 0, 0)
+			timestamp = timestamp.AddDate(p.timeFunc().Year(), 0, 0)
 		}
 	}
 
@@ -119,7 +207,7 @@ func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) (
 // search for tag-keys that match fieldnames and add them to tags
 // will delete any strings/bools that shouldn't be fields
 // assumes that any non-numeric values in TagKeys should be displayed as tags
-func (p *Parser) switchFieldToTag(tags map[string]string, fields map[string]interface{}) (map[string]string, map[string]interface{}) {
+func (p *Parser) switchFieldToTag(tags map[string]string, fields map[string]any) (map[string]string, map[string]any) {
 	for name, value := range fields {
 		if p.tagFilter == nil {
 			continue
@@ -155,86 +243,6 @@ func (p *Parser) switchFieldToTag(tags map[string]string, fields map[string]inte
 		}
 	}
 	return tags, fields
-}
-
-func (p *Parser) Init() error {
-	var err error
-
-	p.stringFilter, err = filter.Compile(p.StringFields)
-	if err != nil {
-		return fmt.Errorf("compiling string-fields filter failed: %w", err)
-	}
-
-	p.tagFilter, err = filter.Compile(p.TagKeys)
-	if err != nil {
-		return fmt.Errorf("compiling tag-key filter failed: %w", err)
-	}
-
-	if p.Timezone != "" {
-		loc, err := time.LoadLocation(p.Timezone)
-		if err != nil {
-			return fmt.Errorf("invalid timezone: %w", err)
-		}
-		p.location = loc
-	}
-
-	return nil
-}
-
-func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	if p.Query != "" {
-		result := gjson.GetBytes(buf, p.Query)
-		buf = []byte(result.Raw)
-		if !result.IsArray() && !result.IsObject() && result.Type != gjson.Null {
-			err := fmt.Errorf("query path must lead to a JSON object, array of objects or null, but lead to: %v", result.Type)
-			return nil, err
-		}
-		if result.Type == gjson.Null {
-			return nil, nil
-		}
-	}
-
-	buf = bytes.TrimSpace(buf)
-	buf = bytes.TrimPrefix(buf, utf8BOM)
-	if len(buf) == 0 {
-		return make([]telegraf.Metric, 0), nil
-	}
-
-	var data interface{}
-	err := json.Unmarshal(buf, &data)
-	if err != nil {
-		return nil, err
-	}
-
-	timestamp := time.Now().UTC()
-	switch v := data.(type) {
-	case map[string]interface{}:
-		return p.parseObject(v, timestamp)
-	case []interface{}:
-		return p.parseArray(v, timestamp)
-	case nil:
-		return nil, nil
-	default:
-		return nil, ErrWrongType
-	}
-}
-
-func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
-	metrics, err := p.Parse([]byte(line + "\n"))
-
-	if err != nil {
-		return nil, err
-	}
-
-	if len(metrics) < 1 {
-		return nil, fmt.Errorf("can not parse the line: %s, for data format: json ", line)
-	}
-
-	return metrics[0], nil
-}
-
-func (p *Parser) SetDefaultTags(tags map[string]string) {
-	p.DefaultTags = tags
 }
 
 func init() {

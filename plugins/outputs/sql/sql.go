@@ -18,7 +18,8 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"                      // pgx (postgres)
 	_ "github.com/microsoft/go-mssqldb"                     // mssql (sql server)
 	_ "github.com/microsoft/go-mssqldb/integratedauth/krb5" // integrated auth for mssql
-	_ "github.com/snowflakedb/gosnowflake"                  // snowflake
+	_ "github.com/sijms/go-ora/v2"                          // oracle
+	_ "github.com/snowflakedb/gosnowflake/v2"               // snowflake
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -79,7 +80,11 @@ func (*SQL) SampleConfig() string {
 func (p *SQL) Init() error {
 	// Set defaults
 	if p.TableExistsTemplate == "" {
-		p.TableExistsTemplate = "SELECT 1 FROM {TABLE} LIMIT 1"
+		if p.Driver == "oracle" {
+			p.TableExistsTemplate = "SELECT 1 FROM {TABLE} FETCH FIRST 1 ROWS ONLY"
+		} else {
+			p.TableExistsTemplate = "SELECT 1 FROM {TABLE} LIMIT 1"
+		}
 	}
 
 	if p.TableTemplate == "" {
@@ -90,18 +95,18 @@ func (p *SQL) Init() error {
 		}
 	}
 
-	p.tableListColumnsTemplate = "SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME={TABLE}"
-	if p.Driver == "sqlite" {
-		p.tableListColumnsTemplate = "SELECT name AS column_name FROM pragma_table_info({TABLE})"
-	}
-
-	// Check for a valid driver
 	switch p.Driver {
+	case "sqlite":
+		p.tableListColumnsTemplate = "SELECT name AS column_name FROM pragma_table_info({TABLE})"
 	case "clickhouse":
+		p.tableListColumnsTemplate = "SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME={TABLE}"
+
 		// Convert v1-style Clickhouse DSN to v2-style
 		p.convertClickHouseDsn()
-	case "mssql", "mysql", "pgx", "snowflake", "sqlite":
-		// Do nothing, those are valid
+	case "oracle":
+		p.tableListColumnsTemplate = "SELECT column_name FROM all_tab_columns WHERE table_name = {TABLE}"
+	case "mssql", "mysql", "pgx", "snowflake":
+		p.tableListColumnsTemplate = "SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME={TABLE}"
 	default:
 		return fmt.Errorf("unknown driver %q", p.Driver)
 	}
@@ -149,7 +154,11 @@ func (p *SQL) Close() error {
 }
 
 // Quote an identifier (table or column name)
-func quoteIdent(name string) string {
+func (p *SQL) quoteIdent(name string) string {
+	if p.Driver == "mysql" {
+		return "`" + strings.ReplaceAll(sanitizeQuoted(name), "`", "``") + "`"
+	}
+
 	return `"` + strings.ReplaceAll(sanitizeQuoted(name), `"`, `""`) + `"`
 }
 
@@ -173,7 +182,7 @@ func sanitizeQuoted(in string) string {
 	}, in)
 }
 
-func (p *SQL) deriveDatatype(value interface{}) string {
+func (p *SQL) deriveDatatype(value any) string {
 	var datatype string
 
 	switch value.(type) {
@@ -207,34 +216,34 @@ func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	tagColumnNames := make([]string, 0, len(metric.TagList()))
 
 	if p.TimestampColumn != "" {
-		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(p.TimestampColumn), p.Convert.Timestamp))
+		columns = append(columns, fmt.Sprintf("%s %s", p.quoteIdent(p.TimestampColumn), p.Convert.Timestamp))
 	}
 
 	for _, tag := range metric.TagList() {
-		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(tag.Key), p.Convert.Text))
-		tagColumnNames = append(tagColumnNames, quoteIdent(tag.Key))
+		columns = append(columns, fmt.Sprintf("%s %s", p.quoteIdent(tag.Key), p.Convert.Text))
+		tagColumnNames = append(tagColumnNames, p.quoteIdent(tag.Key))
 	}
 
 	var datatype string
 	for _, field := range metric.FieldList() {
 		datatype = p.deriveDatatype(field.Value)
-		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(field.Key), datatype))
+		columns = append(columns, fmt.Sprintf("%s %s", p.quoteIdent(field.Key), datatype))
 	}
 
 	query := p.TableTemplate
-	query = strings.ReplaceAll(query, "{TABLE}", quoteIdent(metric.Name()))
+	query = strings.ReplaceAll(query, "{TABLE}", p.quoteIdent(metric.Name()))
 	query = strings.ReplaceAll(query, "{TABLELITERAL}", quoteStr(metric.Name()))
 	query = strings.ReplaceAll(query, "{COLUMNS}", strings.Join(columns, ","))
 	query = strings.ReplaceAll(query, "{TAG_COLUMN_NAMES}", strings.Join(tagColumnNames, ","))
-	query = strings.ReplaceAll(query, "{TIMESTAMP_COLUMN_NAME}", quoteIdent(p.TimestampColumn))
+	query = strings.ReplaceAll(query, "{TIMESTAMP_COLUMN_NAME}", p.quoteIdent(p.TimestampColumn))
 
 	return query
 }
 
 func (p *SQL) generateAddColumn(tablename, column, columnType string) string {
 	query := p.TableUpdateTemplate
-	query = strings.ReplaceAll(query, "{TABLE}", quoteIdent(tablename))
-	query = strings.ReplaceAll(query, "{COLUMN}", quoteIdent(column)+" "+columnType)
+	query = strings.ReplaceAll(query, "{TABLE}", p.quoteIdent(tablename))
+	query = strings.ReplaceAll(query, "{COLUMN}", p.quoteIdent(column)+" "+columnType)
 
 	return query
 }
@@ -243,22 +252,29 @@ func (p *SQL) generateInsert(tablename string, columns []string) string {
 	placeholders := make([]string, 0, len(columns))
 	quotedColumns := make([]string, 0, len(columns))
 	for _, column := range columns {
-		quotedColumns = append(quotedColumns, quoteIdent(column))
+		quotedColumns = append(quotedColumns, p.quoteIdent(column))
 	}
-	if p.Driver == "pgx" {
+
+	switch p.Driver {
+	case "pgx":
 		// Postgres uses $1 $2 $3 as placeholders
-		for i := 0; i < len(columns); i++ {
+		for i := range columns {
 			placeholders = append(placeholders, fmt.Sprintf("$%d", i+1))
 		}
-	} else {
+	case "oracle":
+		// Oracle uses :1 :2 :3 as placeholder
+		for i := range columns {
+			placeholders = append(placeholders, fmt.Sprintf(":%d", i+1))
+		}
+	default:
 		// Everything else uses ? ? ? as placeholders
-		for i := 0; i < len(columns); i++ {
+		for range columns {
 			placeholders = append(placeholders, "?")
 		}
 	}
 
 	return fmt.Sprintf("INSERT INTO %s (%s) VALUES(%s)",
-		quoteIdent(tablename),
+		p.quoteIdent(tablename),
 		strings.Join(quotedColumns, ","),
 		strings.Join(placeholders, ","))
 }
@@ -308,7 +324,7 @@ func (p *SQL) createColumn(tablename, column, columnType string) error {
 }
 
 func (p *SQL) tableExists(tableName string) bool {
-	stmt := strings.ReplaceAll(p.TableExistsTemplate, "{TABLE}", quoteIdent(tableName))
+	stmt := strings.ReplaceAll(p.TableExistsTemplate, "{TABLE}", p.quoteIdent(tableName))
 
 	_, err := p.db.Exec(stmt)
 
@@ -356,12 +372,12 @@ func (p *SQL) updateTableCache(tablename string) error {
 	return nil
 }
 
-func (p *SQL) processMetric(metric telegraf.Metric) (string, []string, []interface{}) {
+func (p *SQL) processMetric(metric telegraf.Metric) (string, []string, []any) {
 	// Preallocate the columns and values. Note we always allocate for the
 	// timestamp column even if we don't need it but that's not an issue.
 	entries := len(metric.TagList()) + len(metric.FieldList()) + 1
 	columns := make([]string, 0, entries)
-	values := make([]interface{}, 0, entries)
+	values := make([]any, 0, entries)
 	if p.TimestampColumn != "" {
 		columns = append(columns, p.TimestampColumn)
 		values = append(values, metric.Time())
@@ -383,7 +399,7 @@ func (p *SQL) processMetric(metric telegraf.Metric) (string, []string, []interfa
 	return strings.Join(append([]string{metric.Name()}, columns...), "\n"), columns, values
 }
 
-func (p *SQL) sendIndividual(sql string, values []interface{}) error {
+func (p *SQL) sendIndividual(sql string, values []any) error {
 	switch p.Driver {
 	case "clickhouse":
 		// ClickHouse needs to batch inserts with prepared statements
@@ -415,7 +431,7 @@ func (p *SQL) sendIndividual(sql string, values []interface{}) error {
 	return nil
 }
 
-func (p *SQL) sendBatch(sql string, values [][]interface{}) error {
+func (p *SQL) sendBatch(sql string, values [][]any) error {
 	tx, err := p.db.Begin()
 	if err != nil {
 		return fmt.Errorf("begin failed: %w", err)
@@ -444,7 +460,7 @@ func (p *SQL) sendBatch(sql string, values [][]interface{}) error {
 }
 
 func (p *SQL) Write(metrics []telegraf.Metric) error {
-	batchedQueries := make(map[string][][]interface{})
+	batchedQueries := make(map[string][][]any)
 
 	for _, metric := range metrics {
 		tablename := metric.Name()

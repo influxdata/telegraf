@@ -134,8 +134,7 @@ func (r *AwsEc2Processor) Start(acc telegraf.Accumulator) error {
 		_, err = r.ec2Client.DescribeTags(ctx, &ec2.DescribeTagsInput{
 			DryRun: aws.Bool(true),
 		})
-		var ae smithy.APIError
-		if errors.As(err, &ae) {
+		if ae, ok := errors.AsType[smithy.APIError](err); ok {
 			if ae.ErrorCode() != "DryRunOperation" {
 				return fmt.Errorf("instance doesn't have permissions to call DescribeTags: %w", err)
 			}
@@ -289,7 +288,7 @@ func (r *AwsEc2Processor) lookupMetadata(metric telegraf.Metric) telegraf.Metric
 
 		value, err := io.ReadAll(resp.Content)
 		if err != nil {
-			r.Log.Errorf("Reading metadata reponse for %+v failed: %v", path, err)
+			r.Log.Errorf("Reading metadata response for %+v failed: %v", path, err)
 			continue
 		}
 		if len(value) > 0 {

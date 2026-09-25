@@ -32,7 +32,7 @@ type Example struct {
 	// Example of passing a duration option allowing the format of e.g. "100ms", "5m" or "1h"
 	Timeout config.Duration `toml:"timeout"`
 
-	// Example of passing a password/token/username or other sensitive data with the secret-store
+	// Example of passing a password/token/username or other sensitive data with the secret store
 	UserName config.Secret `toml:"username"`
 	Password config.Secret `toml:"password"`
 
@@ -63,13 +63,13 @@ func (m *Example) Init() error {
 		m.NumberFields = 2
 	}
 
-	// Check using the secret-store
+	// Check using the secret store
 	if m.UserName.Empty() {
 		// For example, use a default value
 		m.Log.Debug("using default username")
 	}
 
-	// Retrieve credentials using the secret-store
+	// Retrieve credentials using the secret store
 	password, err := m.Password.Get()
 	if err != nil {
 		return fmt.Errorf("getting password failed: %w", err)
@@ -90,7 +90,7 @@ func (m *Example) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// For illustration, we gather three metrics in one go
-	for run := 0; run < 3; run++ {
+	for run := range 3 {
 		// Imagine an error occurs here, but you want to keep the other
 		// metrics, then you cannot simply return, as this would drop
 		// all later metrics. Simply accumulate errors in this case
@@ -101,7 +101,7 @@ func (m *Example) Gather(acc telegraf.Accumulator) error {
 		}
 
 		// Construct the fields
-		fields := map[string]interface{}{"count": m.count}
+		fields := map[string]any{"count": m.count}
 		for i := int64(1); i < m.NumberFields; i++ {
 			name := fmt.Sprintf("field%d", i)
 			var err error

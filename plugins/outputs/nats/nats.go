@@ -133,7 +133,7 @@ func (n *NATS) Connect() error {
 		} else {
 			n.Log.Warn(
 				"Using a file for 'credentials' is deprecated since v1.37.0 and will be removed with v1.40.0! " +
-					"Use a secret-store instead to securely handle your credentials.",
+					"Use a secret store instead to securely handle your credentials.",
 			)
 			opts = append(opts, nats.UserCredentials(credentials))
 		}

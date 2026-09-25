@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 
@@ -88,12 +89,10 @@ func (c *Config) incrementPluginOptionDeprecations(category string) {
 	c.Deprecations[category] = newcounts
 }
 
-func (c *Config) collectDeprecationInfo(category, name string, plugin interface{}, all bool) PluginDeprecationInfo {
+func (c *Config) collectDeprecationInfo(category, name string, plugin any, all bool) PluginDeprecationInfo {
 	info := PluginDeprecationInfo{
-		DeprecationInfo: DeprecationInfo{
-			Name:     category + "." + name,
-			logLevel: telegraf.None,
-		},
+		Name:     category + "." + name,
+		logLevel: telegraf.None,
 	}
 
 	// First check if the whole plugin is deprecated
@@ -166,7 +165,7 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 	return info
 }
 
-func (c *Config) printUserDeprecation(category, name string, plugin interface{}) error {
+func (c *Config) printUserDeprecation(category, name string, plugin any) error {
 	info := c.collectDeprecationInfo(category, name, plugin, false)
 	printPluginDeprecationNotice(info.logLevel, info.Name, info.info)
 
@@ -195,7 +194,7 @@ func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFil
 
 	infos["inputs"] = make([]PluginDeprecationInfo, 0)
 	for name, creator := range inputs.Inputs {
-		if len(inFilter) > 0 && !sliceContains(name, inFilter) {
+		if len(inFilter) > 0 && !slices.Contains(inFilter, name) {
 			continue
 		}
 
@@ -209,7 +208,7 @@ func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFil
 
 	infos["outputs"] = make([]PluginDeprecationInfo, 0)
 	for name, creator := range outputs.Outputs {
-		if len(outFilter) > 0 && !sliceContains(name, outFilter) {
+		if len(outFilter) > 0 && !slices.Contains(outFilter, name) {
 			continue
 		}
 
@@ -223,7 +222,7 @@ func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFil
 
 	infos["processors"] = make([]PluginDeprecationInfo, 0)
 	for name, creator := range processors.Processors {
-		if len(procFilter) > 0 && !sliceContains(name, procFilter) {
+		if len(procFilter) > 0 && !slices.Contains(procFilter, name) {
 			continue
 		}
 
@@ -237,7 +236,7 @@ func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFil
 
 	infos["aggregators"] = make([]PluginDeprecationInfo, 0)
 	for name, creator := range aggregators.Aggregators {
-		if len(aggFilter) > 0 && !sliceContains(name, aggFilter) {
+		if len(aggFilter) > 0 && !slices.Contains(aggFilter, name) {
 			continue
 		}
 
@@ -371,7 +370,7 @@ func PrintOptionDeprecationNotice(plugin, option string, info telegraf.Deprecati
 	}
 }
 
-func PrintOptionValueDeprecationNotice(plugin, option string, value interface{}, info telegraf.DeprecationInfo) {
+func PrintOptionValueDeprecationNotice(plugin, option string, value any, info telegraf.DeprecationInfo) {
 	// Determine the log-level
 	di := &DeprecationInfo{
 		Name: plugin,

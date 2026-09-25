@@ -1,0 +1,66 @@
+{
+    "LayersSize": 10000000000,
+    "Images": [
+        {
+            "Containers": 0,
+            "Created": 0,
+            "Id": "sha256:some_imageid",
+            "Labels": null,
+            "ParentId": "",
+            "RepoDigests": null,
+            "RepoTags": [
+                "some_image_tag:1.0.0-alpine"
+            ],
+            "SharedSize": 0,
+            "Size": 123456789
+        },
+        {
+            "Containers": 0,
+            "Created": 0,
+            "Id": "sha256:7f4a1cc74046ce48cd918693cd6bf4b2683f4ce0d7be3f7148a21df9f06f5b5f",
+            "Labels": null,
+            "ParentId": "",
+            "RepoDigests": null,
+            "RepoTags": [
+                "telegraf:latest"
+            ],
+            "SharedSize": 0,
+            "Size": 425484494
+        }
+    ],
+    "Containers": [
+        {
+            "Id": "",
+            "Names": [
+                "/some_container"
+            ],
+            "Image": "some_image:1.0.0-alpine",
+            "ImageID": "",
+            "Command": "",
+            "Created": 0,
+            "Ports": null,
+            "SizeRootFs": 123456789,
+            "Labels": null,
+            "State": "",
+            "Status": "",
+            "HostConfig": {},
+            "NetworkSettings": null,
+            "Mounts": null
+        }
+    ],
+    "Volumes": [
+        {
+            "Driver": "",
+            "Labels": null,
+            "Mountpoint": "",
+            "Name": "some_volume",
+            "Options": null,
+            "Scope": "",
+            "UsageData": {
+                "RefCount": 0,
+                "Size": 123456789
+            }
+        }
+    ],
+    "BuildCache": null
+}

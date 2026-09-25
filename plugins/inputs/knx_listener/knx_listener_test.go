@@ -16,7 +16,7 @@ import (
 
 const epsilon = 1e-3
 
-func setValue(data dpt.DatapointValue, value interface{}) error {
+func setValue(data dpt.DatapointValue, value any) error {
 	d := reflect.Indirect(reflect.ValueOf(data))
 	if !d.CanSet() {
 		return fmt.Errorf("cannot set datapoint %v", data)
@@ -41,10 +41,10 @@ func setValue(data dpt.DatapointValue, value interface{}) error {
 type message struct {
 	address string
 	dpt     string
-	value   interface{}
+	value   any
 }
 
-func produceKnxEvent(t *testing.T, address, datapoint string, value interface{}) *knx.GroupEvent {
+func produceKnxEvent(t *testing.T, address, datapoint string, value any) *knx.GroupEvent {
 	addr, err := cemi.NewGroupAddrString(address)
 	require.NoError(t, err)
 
@@ -66,8 +66,8 @@ func TestRegularReceives_DPT(t *testing.T) {
 		address  string
 		dpt      string
 		asstring bool
-		value    interface{}
-		expected interface{}
+		value    any
+		expected any
 	}{
 		{"1/0/1", "1.001", false, true, true},
 		{"1/0/2", "1.002", false, false, false},
@@ -257,10 +257,12 @@ func TestReconnect(t *testing.T) {
 	require.Eventually(t, func() bool {
 		return !listener.connected.Load()
 	}, 3*time.Second, 100*time.Millisecond, "no disconnect")
-	acc.Lock()
-	err := acc.FirstError()
-	acc.Unlock()
-	require.ErrorContains(t, err, "disconnected from bus")
+	require.Eventually(t, func() bool {
+		acc.Lock()
+		defer acc.Unlock()
+		return acc.FirstError() != nil
+	}, 3*time.Second, 100*time.Millisecond, "no error message")
+	require.ErrorContains(t, acc.FirstError(), "disconnected from bus")
 
 	require.NoError(t, listener.Gather(&acc))
 	require.Eventually(t, func() bool {

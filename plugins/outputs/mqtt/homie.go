@@ -76,7 +76,7 @@ func normalizeID(raw string) string {
 	return strings.Trim(id, "-")
 }
 
-func convertType(value interface{}) (val, dtype string, err error) {
+func convertType(value any) (val, dtype string, err error) {
 	v, err := internal.ToString(value)
 	if err != nil {
 		return "", "", err

@@ -1,6 +1,7 @@
 package jose
 
 import (
+	"io/fs"
 	"os"
 	"testing"
 
@@ -101,6 +102,61 @@ func TestSetListGet(t *testing.T) {
 		require.True(t, found)
 		require.Equal(t, v, string(value))
 	}
+}
+
+func TestRemove(t *testing.T) {
+	secrets := map[string]string{
+		"a secret":    "I won't tell",
+		"another one": "secret",
+		"foo":         "bar",
+	}
+
+	// Create a temporary directory we can use to store the secrets
+	testdir := t.TempDir()
+
+	// Initialize the plugin
+	plugin := &Jose{
+		ID:       "test",
+		Password: config.NewSecret([]byte("test")),
+		Path:     testdir,
+	}
+	require.NoError(t, plugin.Init())
+
+	// Store the secrets
+	for k, v := range secrets {
+		require.NoError(t, plugin.Set(k, v))
+	}
+
+	// Remove one of the secrets and make sure the remaining ones are untouched
+	require.NoError(t, plugin.Remove("another one"))
+
+	keys, err := plugin.List()
+	require.NoError(t, err)
+	require.ElementsMatch(t, []string{"a secret", "foo"}, keys)
+
+	value, err := plugin.Get("foo")
+	require.NoError(t, err)
+	require.Equal(t, "bar", string(value))
+
+	// The removed secret must not be accessible anymore
+	_, err = plugin.Get("another one")
+	require.EqualError(t, err, "The specified item could not be found in the keyring")
+}
+
+func TestRemoveNonExistent(t *testing.T) {
+	// Create a temporary directory we can use to store the secrets
+	testdir := t.TempDir()
+
+	// Initialize the plugin
+	plugin := &Jose{
+		ID:       "test",
+		Password: config.NewSecret([]byte("test")),
+		Path:     testdir,
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Set("a secret", "I won't tell"))
+
+	require.ErrorIs(t, plugin.Remove("foo"), fs.ErrNotExist)
 }
 
 func TestResolver(t *testing.T) {

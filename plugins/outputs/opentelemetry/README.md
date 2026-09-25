@@ -50,6 +50,14 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Supports: "gzip", "none"
   # compression = "gzip"
 
+  ## Optional proxy settings for HTTP endpoints (service_address starts with http:// or https://)
+  # use_system_proxy = false
+  # http_proxy_url = ""
+
+  ## Optional proxy settings for gRPC endpoints (service_address is host:port)
+  # use_proxy = false
+  # proxy_url = ""
+
   ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
   ## plugin definition, otherwise additional config options are read as part of
   ## the table
@@ -69,7 +77,12 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # [outputs.opentelemetry.attributes]
   # "service.name" = "demo"
 
-  ## Additional gRPC request metadata
+  ## Optional Bearer token for authentication.
+  ## Supports secret-store references, e.g. @{<store-id>:<key>}, so tokens
+  ## fetched via the oauth2 secret store are refreshed automatically.
+  # token = ""
+
+  ## Additional gRPC request metadata / HTTP headers
   # [outputs.opentelemetry.headers]
   # key1 = "value1"
 ```

@@ -110,22 +110,6 @@ func TestInitFail(t *testing.T) {
 	}
 }
 
-func TestSetUnsupported(t *testing.T) {
-	plugin := &OAuth2{
-		Service:  "custom",
-		Endpoint: "http://localhost:8080",
-		TokenConfigs: []tokenConfig{
-			{
-				Key:          "test",
-				ClientID:     config.NewSecret([]byte("someone")),
-				ClientSecret: config.NewSecret([]byte("s3cr3t")),
-			},
-		},
-	}
-	require.NoError(t, plugin.Init())
-	require.ErrorContains(t, plugin.Set("foo", "bar"), "not supported")
-}
-
 func TestGetNonExisting(t *testing.T) {
 	plugin := &OAuth2{
 		Service:  "custom",

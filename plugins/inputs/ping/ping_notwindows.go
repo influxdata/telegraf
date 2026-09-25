@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/influxdata/telegraf"
 )
@@ -29,9 +30,9 @@ type statistics struct {
 	roundTripTimeStats
 }
 
-func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
+func (p *Ping) pingToURL(acc telegraf.Accumulator, u string) {
 	tags := map[string]string{"url": u}
-	fields := map[string]interface{}{"result_code": 0}
+	fields := map[string]any{"result_code": 0}
 
 	out, err := p.pingHost(p.Binary, 60.0, p.args(u, runtime.GOOS)...)
 	if err != nil {
@@ -40,8 +41,7 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 		// the output.
 		// Linux iputils-ping returns 1, BSD-derived ping returns 2.
 		status := -1
-		var exitError *exec.ExitError
-		if errors.As(err, &exitError) {
+		if exitError, ok := errors.AsType[*exec.ExitError](err); ok {
 			if ws, ok := exitError.Sys().(syscall.WaitStatus); ok {
 				status = ws.ExitStatus()
 				fields["result_code"] = status
@@ -113,42 +113,45 @@ func (p *Ping) args(url, system string) []string {
 	// build the ping command args based on toml config
 	args := []string{"-c", strconv.Itoa(p.Count), "-n", "-s", "16"}
 	if p.PingInterval > 0 {
-		args = append(args, "-i", strconv.FormatFloat(p.PingInterval, 'f', -1, 64))
+		interval := time.Duration(p.PingInterval).Seconds()
+		args = append(args, "-i", strconv.FormatFloat(interval, 'f', -1, 64))
 	}
 	if p.Timeout > 0 {
+		timeout := time.Duration(p.Timeout).Seconds()
 		switch system {
 		case "darwin":
-			args = append(args, "-W", strconv.FormatFloat(p.Timeout*1000, 'f', -1, 64))
+			args = append(args, "-W", strconv.FormatFloat(timeout*1000, 'f', -1, 64))
 		case "freebsd":
 			if strings.Contains(p.Binary, "ping6") && freeBSDMajorVersion() <= 12 {
-				args = append(args, "-x", strconv.FormatFloat(p.Timeout*1000, 'f', -1, 64))
+				args = append(args, "-x", strconv.FormatFloat(timeout*1000, 'f', -1, 64))
 			} else {
-				args = append(args, "-W", strconv.FormatFloat(p.Timeout*1000, 'f', -1, 64))
+				args = append(args, "-W", strconv.FormatFloat(timeout*1000, 'f', -1, 64))
 			}
 		case "netbsd", "openbsd":
-			args = append(args, "-W", strconv.FormatFloat(p.Timeout*1000, 'f', -1, 64))
+			args = append(args, "-W", strconv.FormatFloat(timeout*1000, 'f', -1, 64))
 		case "linux":
-			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', -1, 64))
+			args = append(args, "-W", strconv.FormatFloat(timeout, 'f', -1, 64))
 		default:
 			// Not sure the best option here, just assume GNU ping?
-			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', -1, 64))
+			args = append(args, "-W", strconv.FormatFloat(timeout, 'f', -1, 64))
 		}
 	}
 	if p.Deadline > 0 {
+		deadline := int(time.Duration(p.Deadline).Seconds())
 		switch system {
 		case "freebsd":
 			if strings.Contains(p.Binary, "ping6") && freeBSDMajorVersion() <= 12 {
-				args = append(args, "-X", strconv.Itoa(p.Deadline))
+				args = append(args, "-X", strconv.Itoa(deadline))
 			} else {
-				args = append(args, "-t", strconv.Itoa(p.Deadline))
+				args = append(args, "-t", strconv.Itoa(deadline))
 			}
 		case "darwin", "netbsd", "openbsd":
-			args = append(args, "-t", strconv.Itoa(p.Deadline))
+			args = append(args, "-t", strconv.Itoa(deadline))
 		case "linux":
-			args = append(args, "-w", strconv.Itoa(p.Deadline))
+			args = append(args, "-w", strconv.Itoa(deadline))
 		default:
 			// not sure the best option here, just assume gnu ping?
-			args = append(args, "-w", strconv.Itoa(p.Deadline))
+			args = append(args, "-w", strconv.Itoa(deadline))
 		}
 	}
 	if p.Interface != "" {
@@ -184,18 +187,15 @@ func processPingOutput(out string) (statistics, error) {
 		packetsTransmitted: 0,
 		packetsReceived:    0,
 		ttl:                -1,
-		roundTripTimeStats: roundTripTimeStats{
-			min:    -1.0,
-			avg:    -1.0,
-			max:    -1.0,
-			stddev: -1.0,
-		},
+		min:                -1.0,
+		avg:                -1.0,
+		max:                -1.0,
+		stddev:             -1.0,
 	}
 
 	// Set this error to nil if we find a 'transmitted' line
 	err := errors.New("fatal error processing ping output")
-	lines := strings.Split(out, "\n")
-	for _, line := range lines {
+	for line := range strings.SplitSeq(out, "\n") {
 		// Reading only first TTL, ignoring other TTL messages
 		if stats.ttl == -1 && (strings.Contains(line, "ttl=") || strings.Contains(line, "hlim=")) {
 			stats.ttl, err = getTTL(line)
@@ -276,7 +276,7 @@ func freeBSDMajorVersion() int {
 		return -1
 	}
 
-	majorVersionStr := strings.Split(string(out), ".")[0]
+	majorVersionStr, _, _ := strings.Cut(string(out), ".")
 	majorVersion, err := strconv.Atoi(majorVersionStr)
 	if err != nil {
 		return -1

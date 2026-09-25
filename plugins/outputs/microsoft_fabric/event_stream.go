@@ -33,8 +33,7 @@ type eventstream struct {
 func (e *eventstream) init() error {
 	// Parse the connection string by splitting it into key-value pairs
 	// and extract the extra keys used for plugin configuration
-	pairs := strings.Split(e.connectionString, ";")
-	for _, pair := range pairs {
+	for pair := range strings.SplitSeq(e.connectionString, ";") {
 		// Skip empty pairs
 		if strings.TrimSpace(pair) == "" {
 			continue

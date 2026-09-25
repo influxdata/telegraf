@@ -105,11 +105,9 @@ func (rsl *RiemannSocketListener) Start(acc telegraf.Accumulator) error {
 		}
 
 		rsl.wg = sync.WaitGroup{}
-		rsl.wg.Add(1)
-		go func() {
-			defer rsl.wg.Done()
+		rsl.wg.Go(func() {
 			rsl.listen(ctx)
-		}()
+		})
 	default:
 		return fmt.Errorf("unknown protocol %q in %q", protocol, rsl.ServiceAddress)
 	}
@@ -171,11 +169,9 @@ func (rsl *riemannListener) listen(ctx context.Context) {
 				rsl.Log.Errorf("Unable to configure keep alive %q: %s", rsl.ServiceAddress, err.Error())
 			}
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				rsl.read(c)
-			}()
+			})
 		}
 		rsl.closeAllConnections()
 		wg.Wait()
@@ -280,7 +276,7 @@ func (rsl *riemannListener) read(conn net.Conn) {
 			tags["Host"] = m.Host
 			tags["Description"] = m.Description
 			tags["State"] = m.State
-			fieldValues := map[string]interface{}{
+			fieldValues := map[string]any{
 				"Metric": m.Metric,
 				"TTL":    m.TTL.Seconds(),
 			}

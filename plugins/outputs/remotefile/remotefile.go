@@ -21,6 +21,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/slog"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -84,9 +85,8 @@ func (f *File) Init() error {
 		f.vfsopts.CacheMaxSize = fs.SizeSuffix(f.MaxCacheSize)
 	}
 
-	fs.LogOutput = func(level fs.LogLevel, text string) {
-		f.Log.Tracef("[%s] %s", level.String(), text)
-	}
+	// Route rclone's internal logging through the plugin logger
+	fs.SetLogger(slog.NewLogger(f.Log).Handler())
 
 	// Setup custom template functions
 	funcs := template.FuncMap{"now": time.Now}
@@ -144,7 +144,7 @@ func (f *File) Connect() error {
 		return fmt.Errorf("creating remote failed: %w", err)
 	}
 	f.fscancel = cancel
-	f.root = vfs.New(rootfs, &f.vfsopts)
+	f.root = vfs.New(ctx, rootfs, &f.vfsopts)
 
 	// Force connection to make sure we actually can connect
 	if _, err := f.root.Fs().List(ctx, "/"); err != nil {

@@ -43,7 +43,7 @@ func TestOriginalMode(t *testing.T) {
 			metrics: []telegraf.Metric{
 				metric.New("cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"idle_time": int64(42),
 					},
 					now,
@@ -54,7 +54,7 @@ func TestOriginalMode(t *testing.T) {
 					map[string]string{
 						"name": "idle_time",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(42),
 					},
 					now,
@@ -68,7 +68,7 @@ func TestOriginalMode(t *testing.T) {
 			metrics: []telegraf.Metric{
 				metric.New("cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"idle_time": int64(42),
 						"idle_user": int64(43),
 					},
@@ -80,7 +80,7 @@ func TestOriginalMode(t *testing.T) {
 					map[string]string{
 						"name": "idle_time",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(42),
 					},
 					now,
@@ -89,7 +89,7 @@ func TestOriginalMode(t *testing.T) {
 					map[string]string{
 						"name": "idle_user",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(43),
 					},
 					now,
@@ -129,7 +129,7 @@ func TestFieldMode(t *testing.T) {
 			metrics: []telegraf.Metric{
 				metric.New("cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"idle_time": int64(42),
 					},
 					now,
@@ -138,7 +138,7 @@ func TestFieldMode(t *testing.T) {
 			expected: []telegraf.Metric{
 				metric.New("idle_time",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(42),
 					},
 					now,
@@ -153,7 +153,7 @@ func TestFieldMode(t *testing.T) {
 			metrics: []telegraf.Metric{
 				metric.New("cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"idle_time": int64(42),
 						"idle_user": int64(43),
 					},
@@ -163,14 +163,14 @@ func TestFieldMode(t *testing.T) {
 			expected: []telegraf.Metric{
 				metric.New("idle_time",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(42),
 					},
 					now,
 				),
 				metric.New("idle_user",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(43),
 					},
 					now,
@@ -187,7 +187,7 @@ func TestFieldMode(t *testing.T) {
 					map[string]string{
 						"building": "5a",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"idle_time": int64(42),
 						"idle_user": int64(43),
 					},
@@ -199,7 +199,7 @@ func TestFieldMode(t *testing.T) {
 					map[string]string{
 						"building": "5a",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(42),
 					},
 					now,
@@ -208,7 +208,7 @@ func TestFieldMode(t *testing.T) {
 					map[string]string{
 						"building": "5a",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(43),
 					},
 					now,
@@ -241,15 +241,15 @@ func TestTrackedMetricNotLost(t *testing.T) {
 	}
 	input := make([]telegraf.Metric, 0, 3)
 	expected := make([]telegraf.Metric, 0, 6)
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		strI := strconv.Itoa(i)
 
-		m := metric.New("m"+strI, map[string]string{}, map[string]interface{}{"x": int64(1), "y": int64(2)}, time.Unix(0, 0))
+		m := metric.New("m"+strI, map[string]string{}, map[string]any{"x": int64(1), "y": int64(2)}, time.Unix(0, 0))
 		tm, _ := metric.WithTracking(m, notify)
 		input = append(input, tm)
 
-		unpivot1 := metric.New("m"+strI, map[string]string{"name": "x"}, map[string]interface{}{"value": int64(1)}, time.Unix(0, 0))
-		unpivot2 := metric.New("m"+strI, map[string]string{"name": "y"}, map[string]interface{}{"value": int64(2)}, time.Unix(0, 0))
+		unpivot1 := metric.New("m"+strI, map[string]string{"name": "x"}, map[string]any{"value": int64(1)}, time.Unix(0, 0))
+		unpivot2 := metric.New("m"+strI, map[string]string{"name": "y"}, map[string]any{"value": int64(2)}, time.Unix(0, 0))
 		expected = append(expected, unpivot1, unpivot2)
 	}
 
@@ -280,7 +280,7 @@ func BenchmarkAsTag(b *testing.B) {
 			"source":   "device A",
 			"location": "main building",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"field0": 0.1,
 			"field1": 1.2,
 			"field2": 2.3,
@@ -310,7 +310,7 @@ func BenchmarkAsMetric(b *testing.B) {
 			"source":   "device A",
 			"location": "main building",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"field0": 0.1,
 			"field1": 1.2,
 			"field2": 2.3,

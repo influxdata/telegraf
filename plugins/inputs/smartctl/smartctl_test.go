@@ -93,6 +93,9 @@ func TestScanHelperProcess(*testing.T) {
 		os.Exit(42)
 	}
 
+	// Emit a warning to stderr to ensure it does not corrupt the JSON parsed
+	// from stdout (see issue #19165)
+	fmt.Fprintln(os.Stderr, "/dev/sda: warning emitted to stderr")
 	fmt.Fprint(os.Stdout, string(scanBytes))
 	//nolint:revive // os.Exit called intentionally
 	os.Exit(0)
@@ -115,6 +118,7 @@ func TestCasesDevices(t *testing.T) {
 		testcasePath := filepath.Join("testcases_device", f.Name())
 		deviceFilename := filepath.Join(testcasePath, "device")
 		deviceTypeFilename := filepath.Join(testcasePath, "deviceType")
+		metricVersionFilename := filepath.Join(testcasePath, "metricVersion")
 		expectedFilename := filepath.Join(testcasePath, "expected.out")
 
 		t.Run(f.Name(), func(t *testing.T) {
@@ -135,12 +139,19 @@ func TestCasesDevices(t *testing.T) {
 			deviceTypeBytes, err := os.ReadFile(deviceTypeFilename)
 			require.NoError(t, err)
 
+			// Read the optional metric version, defaulting to the current one
+			var metricVersion int
+			if buf, err := os.ReadFile(metricVersionFilename); err == nil {
+				metricVersion, err = strconv.Atoi(strings.TrimSpace(string(buf)))
+				require.NoError(t, err)
+			}
+
 			// Update exec to return fake data.
 			execCommand = fakeDeviceExecCommand
 			defer func() { execCommand = exec.Command }()
 
 			// Configure the plugin
-			plugin := Smartctl{}
+			plugin := Smartctl{MetricVersion: metricVersion}
 			require.NoError(t, plugin.Init())
 
 			var acc testutil.Accumulator
@@ -160,6 +171,31 @@ func TestCasesDevices(t *testing.T) {
 			require.Empty(t, acc.Errors)
 		})
 	}
+}
+
+func TestInitMetricVersion(t *testing.T) {
+	tests := []struct {
+		name     string
+		version  int
+		expected int
+	}{
+		{name: "default", version: 0, expected: 1},
+		{name: "version 1", version: 1, expected: 1},
+		{name: "version 2", version: 2, expected: 2},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := Smartctl{MetricVersion: tt.version}
+			require.NoError(t, plugin.Init())
+			require.Equal(t, tt.expected, plugin.MetricVersion)
+		})
+	}
+}
+
+func TestInitInvalidMetricVersion(t *testing.T) {
+	plugin := Smartctl{MetricVersion: 3}
+	require.ErrorContains(t, plugin.Init(), "invalid metric_version")
 }
 
 func fakeDeviceExecCommand(command string, args ...string) *exec.Cmd {
@@ -195,6 +231,9 @@ func TestDeviceHelperProcess(t *testing.T) {
 
 	scanBytes, err := os.ReadFile(filename)
 	require.NoError(t, err)
+	// Emit a warning to stderr to ensure it does not corrupt the JSON parsed
+	// from stdout (see issue #19165)
+	fmt.Fprintln(os.Stderr, "/dev/sda: warning emitted to stderr")
 	fmt.Fprint(os.Stdout, string(scanBytes))
 	os.Exit(0) //nolint:revive // os.Exit called intentionally
 }

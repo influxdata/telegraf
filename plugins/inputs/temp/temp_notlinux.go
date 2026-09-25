@@ -1,5 +1,4 @@
 //go:build !linux
-// +build !linux
 
 package temp
 
@@ -22,14 +21,17 @@ func (t *Temperature) Init() error {
 		t.Log.Warn("Ignoring 'add_device_tag' on non-Linux platforms!")
 	}
 
+	if t.ThermalZones {
+		t.Log.Warn("Ignoring 'always_gather_zones' on non-Linux platforms!")
+	}
+
 	return nil
 }
 
 func (*Temperature) Gather(acc telegraf.Accumulator) error {
 	temps, err := sensors.SensorsTemperatures()
 	if err != nil {
-		var sensorsWarnings *sensors.Warnings
-		if !errors.As(err, &sensorsWarnings) {
+		if _, ok := errors.AsType[*sensors.Warnings](err); !ok {
 			if strings.Contains(err.Error(), "not implemented yet") {
 				return fmt.Errorf("plugin is not supported on this platform: %w", err)
 			}
@@ -39,7 +41,7 @@ func (*Temperature) Gather(acc telegraf.Accumulator) error {
 	for _, temp := range temps {
 		acc.AddFields(
 			"temp",
-			map[string]interface{}{"temp": temp.Temperature},
+			map[string]any{"temp": temp.Temperature},
 			map[string]string{"sensor": temp.SensorKey},
 		)
 	}

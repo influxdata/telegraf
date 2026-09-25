@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -24,6 +25,8 @@ type Parser struct {
 	DefaultMetricName string            `toml:"-"`
 	DefaultTags       map[string]string `toml:"-"`
 	Log               telegraf.Logger   `toml:"-"`
+
+	timeFunc func() time.Time
 
 	// **** The struct fields below this comment are used for processing individual configs ****
 
@@ -100,10 +103,19 @@ type metricNode struct {
 	gjson.Result
 }
 
+func (p *Parser) SetTimeFunc(f func() time.Time) {
+	p.timeFunc = f
+}
+
 func (p *Parser) Init() error {
 	if len(p.Configs) == 0 {
 		return errors.New("no configuration provided")
 	}
+
+	if p.timeFunc == nil {
+		p.timeFunc = time.Now
+	}
+
 	// Propagate the default metric name to the configs in case it is not set there
 	for i, cfg := range p.Configs {
 		if cfg.MeasurementName == "" {
@@ -152,7 +164,7 @@ func (p *Parser) parseCriticalPath(input []byte) ([]telegraf.Metric, error) {
 
 	var metrics []telegraf.Metric
 	// timestamp defaults to current time
-	now := time.Now()
+	now := p.timeFunc()
 
 	for _, c := range p.Configs {
 		// Measurement name can either be hardcoded, or parsed from the JSON using a GJSON path expression
@@ -268,7 +280,7 @@ func (p *Parser) processMetric(input []byte, data []DataSet, tag bool, timestamp
 			Metric: metric.New(
 				p.measurementName,
 				make(map[string]string),
-				make(map[string]interface{}),
+				make(map[string]any),
 				timestamp,
 			),
 			Result:      result,
@@ -392,7 +404,7 @@ func (p *Parser) expandArray(result metricNode, timestamp time.Time) ([]telegraf
 			m := metric.New(
 				p.measurementName,
 				make(map[string]string),
-				make(map[string]interface{}),
+				make(map[string]any),
 				timestamp,
 			)
 			if val.IsObject() {
@@ -507,10 +519,8 @@ func (p *Parser) existsInpathResults(index int) *pathResult {
 		}
 
 		// Indexes will be populated with all the elements that match on a `#(...)#` query
-		for _, i := range f.result.Indexes {
-			if i == index {
-				return &f
-			}
+		if slices.Contains(f.result.Indexes, index) {
+			return &f
 		}
 	}
 	return nil
@@ -522,6 +532,10 @@ func (p *Parser) processObjects(input []byte, objects []Object, timestamp time.T
 	var t []telegraf.Metric
 	for _, c := range objects {
 		p.objectConfig = c
+
+		// The path results of a previous object are relative to that object's
+		// JSON and must not be matched against this one.
+		p.subPathResults = nil
 
 		if c.Path == "" {
 			return nil, errors.New("the GJSON path is required")
@@ -567,7 +581,7 @@ func (p *Parser) processObjects(input []byte, objects []Object, timestamp time.T
 			Metric: metric.New(
 				p.measurementName,
 				make(map[string]string),
-				make(map[string]interface{}),
+				make(map[string]any),
 				timestamp,
 			),
 			Result:      result,
@@ -629,13 +643,7 @@ func (p *Parser) combineObject(result metricNode, timestamp time.Time) ([]telegr
 				}
 			}
 
-			tag := false
-			for _, t := range p.objectConfig.Tags {
-				if setName == t {
-					tag = true
-					break
-				}
-			}
+			tag := slices.Contains(p.objectConfig.Tags, setName)
 
 			arrayNode.Tag = tag
 
@@ -687,12 +695,7 @@ func (p *Parser) isIncluded(key string, val gjson.Result) bool {
 }
 
 func (p *Parser) isExcluded(key string) bool {
-	for _, i := range p.objectConfig.ExcludedKeys {
-		if i == key {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(p.objectConfig.ExcludedKeys, key)
 }
 
 func (*Parser) ParseLine(string) (telegraf.Metric, error) {
@@ -704,7 +707,7 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 }
 
 // convertType will convert the value parsed from the input JSON to the specified type in the config
-func convertType(input gjson.Result, desiredType, name string) (interface{}, error) {
+func convertType(input gjson.Result, desiredType, name string) (any, error) {
 	// Handle JSON objects and arrays when type is "string"
 	if desiredType == "string" && (input.IsObject() || input.IsArray()) {
 		return input.Raw, nil

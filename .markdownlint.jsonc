@@ -8,5 +8,8 @@
     "allowed_elements": [
       "br"
     ]
+  },
+  "MD060": {
+    "enabled": false
   }
 }

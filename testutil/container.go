@@ -11,6 +11,7 @@ import (
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
 	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/exec"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
@@ -58,21 +59,19 @@ func (c *Container) Start() error {
 	}
 
 	req := testcontainers.GenericContainerRequest{
-		ContainerRequest: testcontainers.ContainerRequest{
-			Entrypoint:         c.Entrypoint,
-			Env:                c.Env,
-			ExposedPorts:       c.ExposedPorts,
-			Files:              files,
-			HostAccessPorts:    c.HostAccessPorts,
-			HostConfigModifier: c.HostConfigModifier,
-			Cmd:                c.Cmd,
-			Image:              c.Image,
-			Name:               c.Name,
-			Hostname:           c.Hostname,
-			Networks:           c.Networks,
-			WaitingFor:         c.WaitingFor,
-		},
-		Started: true,
+		Entrypoint:         c.Entrypoint,
+		Env:                c.Env,
+		ExposedPorts:       c.ExposedPorts,
+		Files:              files,
+		HostAccessPorts:    c.HostAccessPorts,
+		HostConfigModifier: c.HostConfigModifier,
+		Cmd:                c.Cmd,
+		Image:              c.Image,
+		Name:               c.Name,
+		Hostname:           c.Hostname,
+		Networks:           c.Networks,
+		WaitingFor:         c.WaitingFor,
+		Started:            true,
 	}
 
 	cntnr, err := testcontainers.GenericContainer(c.ctx, req)
@@ -136,8 +135,8 @@ func (c *Container) LookupMappedPorts() error {
 	return nil
 }
 
-func (c *Container) Exec(cmds []string) (int, io.Reader, error) {
-	return c.container.Exec(c.ctx, cmds)
+func (c *Container) Exec(cmds []string, options ...exec.ProcessOption) (int, io.Reader, error) {
+	return c.container.Exec(c.ctx, cmds, options...)
 }
 
 func (c *Container) PrintLogs() {
@@ -180,6 +179,17 @@ func (c *Container) Resume() error {
 
 	_, err = provider.Client().ContainerUnpause(c.ctx, c.container.GetContainerID(), client.ContainerUnpauseOptions{})
 	return err
+}
+
+// RaiseNofileLimit is a HostConfigModifier that raises the container's nofile
+// ulimit. Some services (e.g. mongo) refuse to start when the inherited soft
+// limit is below their recommended minimum, which fails tests on CI hosts.
+func RaiseNofileLimit(hc *container.HostConfig) {
+	hc.Ulimits = append(hc.Ulimits, &container.Ulimit{
+		Name: "nofile",
+		Soft: 32768,
+		Hard: 32768,
+	})
 }
 
 func (c *Container) GetInfo() (string, error) {

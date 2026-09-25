@@ -6,12 +6,12 @@ import (
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/plugins/common/psutil"
+	"github.com/influxdata/telegraf/plugins/common/psutil/psutiltest"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestSwapStats(t *testing.T) {
-	var mps psutil.MockPS
+	var mps psutiltest.MockPS
 	var err error
 	defer mps.AssertExpectations(t)
 	var acc testutil.Accumulator
@@ -30,7 +30,7 @@ func TestSwapStats(t *testing.T) {
 	err = (&Swap{&mps}).Gather(&acc)
 	require.NoError(t, err)
 
-	swapfields := map[string]interface{}{
+	swapfields := map[string]any{
 		"total":        uint64(8123),
 		"used":         uint64(1232),
 		"used_percent": float64(12.2),

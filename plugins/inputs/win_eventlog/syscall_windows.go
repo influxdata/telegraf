@@ -23,6 +23,16 @@ const (
 	evtSubscribeStartAfterBookmark  evtSubscribeFlag = 3
 )
 
+// evtQueryFlag defines the possible values that specify what to query and in which order to return the results.
+type evtQueryFlag uint32
+
+// EVT_QUERY_FLAGS enumeration
+// https://learn.microsoft.com/en-us/windows/win32/api/winevt/ne-winevt-evt_query_flags
+const (
+	evtQueryChannelPath      evtQueryFlag = 0x1
+	evtQueryReverseDirection evtQueryFlag = 0x200
+)
+
 // evtRenderFlag uint32
 type evtRenderFlag uint32
 

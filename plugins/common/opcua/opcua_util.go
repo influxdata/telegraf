@@ -107,8 +107,7 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 		BasicConstraintsValid: true,
 	}
 
-	hosts := strings.Split(host, ",")
-	for _, h := range hosts {
+	for h := range strings.SplitSeq(host, ",") {
 		if ip := net.ParseIP(h); ip != nil {
 			template.IPAddresses = append(template.IPAddresses, ip)
 		} else {
@@ -183,7 +182,7 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 	return certFile, keyFile, nil
 }
 
-func publicKey(priv interface{}) interface{} {
+func publicKey(priv any) any {
 	switch k := priv.(type) {
 	case *rsa.PrivateKey:
 		return &k.PublicKey
@@ -194,7 +193,7 @@ func publicKey(priv interface{}) interface{} {
 	}
 }
 
-func pemBlockForKey(priv interface{}) (*pem.Block, error) {
+func pemBlockForKey(priv any) (*pem.Block, error) {
 	switch k := priv.(type) {
 	case *rsa.PrivateKey:
 		return &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(k)}, nil
@@ -240,7 +239,10 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 	mode := o.Config.SecurityMode
 	var err error
 	if certFile == "" && keyFile == "" {
-		if policy != "None" || mode != "None" {
+		// A certificate is only needed when the channel is actually secured.
+		// Setting either policy or mode to "None" collapses the channel to None
+		// (see below), so generate only when neither is "None".
+		if policy != "None" && mode != "None" {
 			certFile, keyFile, err = generateCert(appuri, 2048, certFile, keyFile, 365*24*time.Hour)
 			if err != nil {
 				return nil, err
@@ -262,7 +264,6 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 			}
 			pk = pkTemp
 			cert = c.Certificate[0]
-			opts = append(opts, opcua.PrivateKey(pk), opcua.Certificate(cert))
 		}
 	}
 
@@ -374,6 +375,15 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 	err = validateEndpointConfig(endpoints, secPolicy, secMode, authMode)
 	if err != nil {
 		return nil, fmt.Errorf("endpoint validation failed: %w", err)
+	}
+
+	// Attach the client certificate to the secure channel only when the
+	// negotiated channel actually uses security. On a None channel the OPN's
+	// SenderCertificate field must be empty; attaching it makes the OPN carry a
+	// certificate under security policy None, which strict servers reject with
+	// an ERRF, closing the connection.
+	if secMode != ua.MessageSecurityModeNone && cert != nil && pk != nil {
+		opts = append(opts, opcua.PrivateKey(pk), opcua.Certificate(cert))
 	}
 
 	opts = append(opts, opcua.SecurityFromEndpoint(serverEndpoint, authMode))

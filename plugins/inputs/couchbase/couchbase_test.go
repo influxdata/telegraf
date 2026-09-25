@@ -55,13 +55,13 @@ func TestGatherServer(t *testing.T) {
 	require.NoError(t, cb.gatherServer(&acc, fakeServer.URL))
 
 	acc.AssertContainsTaggedFields(t, "couchbase_node",
-		map[string]interface{}{"memory_free": 23181365248.0, "memory_total": 64424656896.0},
+		map[string]any{"memory_free": 23181365248.0, "memory_total": 64424656896.0},
 		map[string]string{"cluster": fakeServer.URL, "hostname": "172.16.10.187:8091"})
 	acc.AssertContainsTaggedFields(t, "couchbase_node",
-		map[string]interface{}{"memory_free": 23665811456.0, "memory_total": 64424656896.0},
+		map[string]any{"memory_free": 23665811456.0, "memory_total": 64424656896.0},
 		map[string]string{"cluster": fakeServer.URL, "hostname": "172.16.10.65:8091"})
 	acc.AssertContainsTaggedFields(t, "couchbase_bucket",
-		map[string]interface{}{
+		map[string]any{
 			"quota_percent_used": 68.85424936294555,
 			"ops_per_sec":        5686.789686789687,
 			"disk_fetches":       0.0,
@@ -152,7 +152,7 @@ func TestGatherDetailedBucketMetrics(t *testing.T) {
 				t.Fatal("parse bucketResponse", err)
 			}
 
-			fields := make(map[string]interface{})
+			fields := make(map[string]any)
 			err = cb.gatherDetailedBucketStats(fakeServer.URL, bucket, test.node, fields)
 			require.NoError(t, err)
 

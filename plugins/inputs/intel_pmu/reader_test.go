@@ -9,7 +9,8 @@ import (
 	"testing"
 	"time"
 
-	ia "github.com/intel/iaevents"
+	"github.com/intel/iaevents"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,8 +21,8 @@ func (moonClock) now() time.Time {
 }
 
 type eventWithValues struct {
-	activeEvent *ia.ActiveEvent
-	values      ia.CounterValue
+	activeEvent *iaevents.ActiveEvent
+	values      iaevents.CounterValue
 }
 
 func TestReadCoreEvents(t *testing.T) {
@@ -63,12 +64,12 @@ func TestReadCoreEvents(t *testing.T) {
 
 	t.Run("reading failed", func(t *testing.T) {
 		errMock := errors.New("mock error")
-		event := &ia.ActiveEvent{PerfEvent: &ia.PerfEvent{Name: "event1"}}
+		event := &iaevents.ActiveEvent{PerfEvent: &iaevents.PerfEvent{Name: "event1"}}
 
 		entity := &coreEventEntity{}
 
 		entity.activeEvents = append(entity.activeEvents, event)
-		mReader.On("readValue", event).Return(ia.CounterValue{}, errMock).Once()
+		mReader.On("readValue", event).Return(iaevents.CounterValue{}, errMock).Once()
 
 		metrics, err := mEntitiesReader.readCoreEvents(entity)
 
@@ -82,9 +83,9 @@ func TestReadCoreEvents(t *testing.T) {
 		entity := &coreEventEntity{}
 
 		tEvents := []eventWithValues{
-			{&ia.ActiveEvent{PerfEvent: &ia.PerfEvent{Name: "event1"}}, ia.CounterValue{Raw: 316, Enabled: 182060524, Running: 182060524}},
-			{&ia.ActiveEvent{PerfEvent: &ia.PerfEvent{Name: "event2"}}, ia.CounterValue{Raw: 1238901, Enabled: 18234123, Running: 18234123}},
-			{&ia.ActiveEvent{PerfEvent: &ia.PerfEvent{Name: "event3"}}, ia.CounterValue{Raw: 412323, Enabled: 1823132, Running: 1823180}},
+			{&iaevents.ActiveEvent{PerfEvent: &iaevents.PerfEvent{Name: "event1"}}, iaevents.CounterValue{Raw: 316, Enabled: 182060524, Running: 182060524}},
+			{&iaevents.ActiveEvent{PerfEvent: &iaevents.PerfEvent{Name: "event2"}}, iaevents.CounterValue{Raw: 1238901, Enabled: 18234123, Running: 18234123}},
+			{&iaevents.ActiveEvent{PerfEvent: &iaevents.PerfEvent{Name: "event3"}}, iaevents.CounterValue{Raw: 412323, Enabled: 1823132, Running: 1823180}},
 		}
 
 		expected := make([]coreMetric, 0, len(tEvents))
@@ -140,12 +141,12 @@ func TestReadMultiEventSeparately(t *testing.T) {
 
 	t.Run("reading failed", func(t *testing.T) {
 		errMock := errors.New("mock error")
-		perfEvent := &ia.PerfEvent{Name: "event"}
+		perfEvent := &iaevents.PerfEvent{Name: "event"}
 
-		event := &ia.ActiveEvent{PerfEvent: perfEvent}
-		multi := multiEvent{perfEvent: perfEvent, activeEvents: []*ia.ActiveEvent{event}}
+		event := &iaevents.ActiveEvent{PerfEvent: perfEvent}
+		multi := multiEvent{perfEvent: perfEvent, activeEvents: []*iaevents.ActiveEvent{event}}
 
-		mReader.On("readValue", event).Return(ia.CounterValue{}, errMock).Once()
+		mReader.On("readValue", event).Return(iaevents.CounterValue{}, errMock).Once()
 
 		metrics, err := mEntitiesReader.readMultiEventSeparately(multi)
 
@@ -156,13 +157,13 @@ func TestReadMultiEventSeparately(t *testing.T) {
 	})
 
 	t.Run("read active events values", func(t *testing.T) {
-		perfEvent := &ia.PerfEvent{Name: "event", PMUName: "pmu name"}
+		perfEvent := &iaevents.PerfEvent{Name: "event", PMUName: "pmu name"}
 		multi := multiEvent{perfEvent: perfEvent}
 
 		tEvents := []eventWithValues{
-			{&ia.ActiveEvent{PerfEvent: perfEvent}, ia.CounterValue{Raw: 316, Enabled: 182060524, Running: 182060524}},
-			{&ia.ActiveEvent{PerfEvent: perfEvent}, ia.CounterValue{Raw: 1238901, Enabled: 18234123, Running: 18234123}},
-			{&ia.ActiveEvent{PerfEvent: perfEvent}, ia.CounterValue{Raw: 412323, Enabled: 1823132, Running: 1823180}},
+			{&iaevents.ActiveEvent{PerfEvent: perfEvent}, iaevents.CounterValue{Raw: 316, Enabled: 182060524, Running: 182060524}},
+			{&iaevents.ActiveEvent{PerfEvent: perfEvent}, iaevents.CounterValue{Raw: 1238901, Enabled: 18234123, Running: 18234123}},
+			{&iaevents.ActiveEvent{PerfEvent: perfEvent}, iaevents.CounterValue{Raw: 412323, Enabled: 1823132, Running: 1823180}},
 		}
 
 		expected := make([]uncoreMetric, 0, len(tEvents))
@@ -207,13 +208,13 @@ func TestReadMultiEventAgg(t *testing.T) {
 		require.Contains(t, err.Error(), "event values reader or timer is nil")
 	})
 
-	perfEvent := &ia.PerfEvent{Name: "event", PMUName: "pmu name"}
+	perfEvent := &iaevents.PerfEvent{Name: "event", PMUName: "pmu name"}
 
 	tests := []struct {
 		name     string
 		multi    multiEvent
 		events   []eventWithValues
-		result   ia.CounterValue
+		result   iaevents.CounterValue
 		readFail bool
 		errMsg   string
 	}{
@@ -221,44 +222,44 @@ func TestReadMultiEventAgg(t *testing.T) {
 			name:   "no events",
 			multi:  multiEvent{perfEvent: perfEvent},
 			events: nil,
-			result: ia.CounterValue{},
+			result: iaevents.CounterValue{},
 			errMsg: "no active events or perf event is nil",
 		},
 		{
 			name:   "no perf event",
-			multi:  multiEvent{perfEvent: nil, activeEvents: []*ia.ActiveEvent{{}, {}}},
+			multi:  multiEvent{perfEvent: nil, activeEvents: []*iaevents.ActiveEvent{{}, {}}},
 			events: nil,
-			result: ia.CounterValue{},
+			result: iaevents.CounterValue{},
 			errMsg: "no active events or perf event is nil",
 		},
 		{
 			name:  "successful reading and aggregation",
 			multi: multiEvent{perfEvent: perfEvent},
 			events: []eventWithValues{
-				{&ia.ActiveEvent{PerfEvent: perfEvent}, ia.CounterValue{Raw: 5123, Enabled: 1231242, Running: 41123}},
-				{&ia.ActiveEvent{PerfEvent: perfEvent}, ia.CounterValue{Raw: 4500, Enabled: 1823423, Running: 182343}},
+				{&iaevents.ActiveEvent{PerfEvent: perfEvent}, iaevents.CounterValue{Raw: 5123, Enabled: 1231242, Running: 41123}},
+				{&iaevents.ActiveEvent{PerfEvent: perfEvent}, iaevents.CounterValue{Raw: 4500, Enabled: 1823423, Running: 182343}},
 			},
-			result: ia.CounterValue{Raw: 9623, Enabled: 3054665, Running: 223466},
+			result: iaevents.CounterValue{Raw: 9623, Enabled: 3054665, Running: 223466},
 			errMsg: "",
 		},
 		{
 			name:  "to big numbers",
 			multi: multiEvent{perfEvent: perfEvent},
 			events: []eventWithValues{
-				{&ia.ActiveEvent{PerfEvent: perfEvent}, ia.CounterValue{Raw: math.MaxUint64, Enabled: 0, Running: 0}},
-				{&ia.ActiveEvent{PerfEvent: perfEvent}, ia.CounterValue{Raw: 1, Enabled: 0, Running: 0}},
+				{&iaevents.ActiveEvent{PerfEvent: perfEvent}, iaevents.CounterValue{Raw: math.MaxUint64, Enabled: 0, Running: 0}},
+				{&iaevents.ActiveEvent{PerfEvent: perfEvent}, iaevents.CounterValue{Raw: 1, Enabled: 0, Running: 0}},
 			},
-			result: ia.CounterValue{},
+			result: iaevents.CounterValue{},
 			errMsg: fmt.Sprintf("cannot aggregate %q values, uint64 exceeding", perfEvent),
 		},
 		{
 			name:  "reading fail",
 			multi: multiEvent{perfEvent: perfEvent},
 			events: []eventWithValues{
-				{&ia.ActiveEvent{PerfEvent: perfEvent}, ia.CounterValue{Raw: 0, Enabled: 0, Running: 0}},
+				{&iaevents.ActiveEvent{PerfEvent: perfEvent}, iaevents.CounterValue{Raw: 0, Enabled: 0, Running: 0}},
 			},
 			readFail: true,
-			result:   ia.CounterValue{},
+			result:   iaevents.CounterValue{},
 			errMsg:   "failed to read uncore event",
 		},
 	}
@@ -268,7 +269,7 @@ func TestReadMultiEventAgg(t *testing.T) {
 			for _, eventWithValue := range test.events {
 				test.multi.activeEvents = append(test.multi.activeEvents, eventWithValue.activeEvent)
 				if test.readFail {
-					mReader.On("readValue", eventWithValue.activeEvent).Return(ia.CounterValue{}, errMock).Once()
+					mReader.On("readValue", eventWithValue.activeEvent).Return(iaevents.CounterValue{}, errMock).Once()
 					continue
 				}
 				mReader.On("readValue", eventWithValue.activeEvent).Return(eventWithValue.values, nil).Once()
@@ -310,18 +311,18 @@ func TestReadUncoreEvents(t *testing.T) {
 		mTimer := &moonClock{}
 		mEntitiesReader := &iaEntitiesValuesReader{mReader, mTimer}
 
-		perfEvent := &ia.PerfEvent{Name: "mock event", PMUName: "cbox", PMUTypes: []ia.NamedPMUType{{Name: "cbox"}}}
-		perfEvent2 := &ia.PerfEvent{Name: "mock event2", PMUName: "rad", PMUTypes: []ia.NamedPMUType{{Name: "rad2"}}}
+		perfEvent := &iaevents.PerfEvent{Name: "mock event", PMUName: "cbox", PMUTypes: []iaevents.NamedPMUType{{Name: "cbox"}}}
+		perfEvent2 := &iaevents.PerfEvent{Name: "mock event2", PMUName: "rad", PMUTypes: []iaevents.NamedPMUType{{Name: "rad2"}}}
 
 		multi := multiEvent{perfEvent: perfEvent}
 		events := []eventWithValues{
-			{&ia.ActiveEvent{PerfEvent: perfEvent}, ia.CounterValue{Raw: 2003}},
-			{&ia.ActiveEvent{PerfEvent: perfEvent}, ia.CounterValue{Raw: 4005}},
+			{&iaevents.ActiveEvent{PerfEvent: perfEvent}, iaevents.CounterValue{Raw: 2003}},
+			{&iaevents.ActiveEvent{PerfEvent: perfEvent}, iaevents.CounterValue{Raw: 4005}},
 		}
 		multi2 := multiEvent{perfEvent: perfEvent2}
 		events2 := []eventWithValues{
-			{&ia.ActiveEvent{PerfEvent: perfEvent2}, ia.CounterValue{Raw: 2003}},
-			{&ia.ActiveEvent{PerfEvent: perfEvent2}, ia.CounterValue{Raw: 123005}},
+			{&iaevents.ActiveEvent{PerfEvent: perfEvent2}, iaevents.CounterValue{Raw: 2003}},
+			{&iaevents.ActiveEvent{PerfEvent: perfEvent2}, iaevents.CounterValue{Raw: 123005}},
 		}
 		for _, event := range events {
 			multi.activeEvents = append(multi.activeEvents, event.activeEvent)
@@ -332,14 +333,14 @@ func TestReadUncoreEvents(t *testing.T) {
 			mReader.On("readValue", event.activeEvent).Return(event.values, nil).Once()
 		}
 		newMetric := uncoreMetric{
-			values:   ia.CounterValue{Raw: 6008, Enabled: 0, Running: 0},
+			values:   iaevents.CounterValue{Raw: 6008, Enabled: 0, Running: 0},
 			socket:   multi.socket,
 			unitType: perfEvent.PMUName,
 			name:     perfEvent.Name,
 			time:     mTimer.now(),
 		}
 		newMetric2 := uncoreMetric{
-			values:   ia.CounterValue{Raw: 125008, Enabled: 0, Running: 0},
+			values:   iaevents.CounterValue{Raw: 125008, Enabled: 0, Running: 0},
 			socket:   multi2.socket,
 			unitType: perfEvent2.PMUName,
 			name:     perfEvent2.Name,
@@ -355,10 +356,10 @@ func TestReadUncoreEvents(t *testing.T) {
 		mReader.AssertExpectations(t)
 
 		t.Run("reading error", func(t *testing.T) {
-			event := &ia.ActiveEvent{PerfEvent: perfEvent}
-			multi := multiEvent{perfEvent: perfEvent, activeEvents: []*ia.ActiveEvent{event}}
+			event := &iaevents.ActiveEvent{PerfEvent: perfEvent}
+			multi := multiEvent{perfEvent: perfEvent, activeEvents: []*iaevents.ActiveEvent{event}}
 
-			mReader.On("readValue", event).Return(ia.CounterValue{}, errMock).Once()
+			mReader.On("readValue", event).Return(iaevents.CounterValue{}, errMock).Once()
 
 			entityAgg := &uncoreEventEntity{Aggregate: true, activeMultiEvents: []multiEvent{multi}}
 			metrics, err = mEntitiesReader.readUncoreEvents(entityAgg)
@@ -374,18 +375,18 @@ func TestReadUncoreEvents(t *testing.T) {
 		mTimer := &moonClock{}
 		mEntitiesReader := &iaEntitiesValuesReader{mReader, mTimer}
 
-		perfEvent := &ia.PerfEvent{Name: "mock event", PMUName: "cbox", PMUTypes: []ia.NamedPMUType{{Name: "cbox"}}}
-		perfEvent2 := &ia.PerfEvent{Name: "mock event2", PMUName: "rad", PMUTypes: []ia.NamedPMUType{{Name: "rad2"}}}
+		perfEvent := &iaevents.PerfEvent{Name: "mock event", PMUName: "cbox", PMUTypes: []iaevents.NamedPMUType{{Name: "cbox"}}}
+		perfEvent2 := &iaevents.PerfEvent{Name: "mock event2", PMUName: "rad", PMUTypes: []iaevents.NamedPMUType{{Name: "rad2"}}}
 
 		multi := multiEvent{perfEvent: perfEvent, socket: 2}
 		events := []eventWithValues{
-			{&ia.ActiveEvent{PerfEvent: perfEvent}, ia.CounterValue{Raw: 2003}},
-			{&ia.ActiveEvent{PerfEvent: perfEvent}, ia.CounterValue{Raw: 4005}},
+			{&iaevents.ActiveEvent{PerfEvent: perfEvent}, iaevents.CounterValue{Raw: 2003}},
+			{&iaevents.ActiveEvent{PerfEvent: perfEvent}, iaevents.CounterValue{Raw: 4005}},
 		}
 		multi2 := multiEvent{perfEvent: perfEvent2, socket: 1}
 		events2 := []eventWithValues{
-			{&ia.ActiveEvent{PerfEvent: perfEvent2}, ia.CounterValue{Raw: 2003}},
-			{&ia.ActiveEvent{PerfEvent: perfEvent2}, ia.CounterValue{Raw: 123005}},
+			{&iaevents.ActiveEvent{PerfEvent: perfEvent2}, iaevents.CounterValue{Raw: 2003}},
+			{&iaevents.ActiveEvent{PerfEvent: perfEvent2}, iaevents.CounterValue{Raw: 123005}},
 		}
 
 		expected := make([]uncoreMetric, 0, len(events))
@@ -426,10 +427,10 @@ func TestReadUncoreEvents(t *testing.T) {
 		mReader.AssertExpectations(t)
 
 		t.Run("reading error", func(t *testing.T) {
-			event := &ia.ActiveEvent{PerfEvent: perfEvent}
-			multi := multiEvent{perfEvent: perfEvent, activeEvents: []*ia.ActiveEvent{event}}
+			event := &iaevents.ActiveEvent{PerfEvent: perfEvent}
+			multi := multiEvent{perfEvent: perfEvent, activeEvents: []*iaevents.ActiveEvent{event}}
 
-			mReader.On("readValue", event).Return(ia.CounterValue{}, errMock).Once()
+			mReader.On("readValue", event).Return(iaevents.CounterValue{}, errMock).Once()
 
 			entityAgg := &uncoreEventEntity{activeMultiEvents: []multiEvent{multi}}
 			metrics, err = mEntitiesReader.readUncoreEvents(entityAgg)
@@ -447,19 +448,19 @@ func TestReadEntities(t *testing.T) {
 	mEntitiesReader := &iaEntitiesValuesReader{mReader, mTimer}
 
 	t.Run("read entities", func(t *testing.T) {
-		values := ia.CounterValue{}
+		values := iaevents.CounterValue{}
 		socket := 0
 
-		corePerfEvent := &ia.PerfEvent{Name: "core event 1", PMUName: "cpu"}
-		activeCoreEvent := []*ia.ActiveEvent{{PerfEvent: corePerfEvent}}
+		corePerfEvent := &iaevents.PerfEvent{Name: "core event 1", PMUName: "cpu"}
+		activeCoreEvent := []*iaevents.ActiveEvent{{PerfEvent: corePerfEvent}}
 		coreMetric1 := coreMetric{values: values, name: corePerfEvent.Name, time: mTimer.now()}
 
-		corePerfEvent2 := &ia.PerfEvent{Name: "core event 2", PMUName: "cpu"}
-		activeCoreEvent2 := []*ia.ActiveEvent{{PerfEvent: corePerfEvent2}}
+		corePerfEvent2 := &iaevents.PerfEvent{Name: "core event 2", PMUName: "cpu"}
+		activeCoreEvent2 := []*iaevents.ActiveEvent{{PerfEvent: corePerfEvent2}}
 		coreMetric2 := coreMetric{values: values, name: corePerfEvent2.Name, time: mTimer.now()}
 
-		uncorePerfEvent := &ia.PerfEvent{Name: "uncore event 1", PMUName: "cbox"}
-		activeUncoreEvent := []*ia.ActiveEvent{{PerfEvent: uncorePerfEvent}}
+		uncorePerfEvent := &iaevents.PerfEvent{Name: "uncore event 1", PMUName: "cbox"}
+		activeUncoreEvent := []*iaevents.ActiveEvent{{PerfEvent: uncorePerfEvent}}
 		uncoreMetric1 := uncoreMetric{
 			values:   values,
 			name:     uncorePerfEvent.Name,
@@ -468,8 +469,8 @@ func TestReadEntities(t *testing.T) {
 			time:     mTimer.now(),
 		}
 
-		uncorePerfEvent2 := &ia.PerfEvent{Name: "uncore event 2", PMUName: "rig"}
-		activeUncoreEvent2 := []*ia.ActiveEvent{{PerfEvent: uncorePerfEvent2}}
+		uncorePerfEvent2 := &iaevents.PerfEvent{Name: "uncore event 2", PMUName: "rig"}
+		activeUncoreEvent2 := []*iaevents.ActiveEvent{{PerfEvent: uncorePerfEvent2}}
 		uncoreMetric2 := uncoreMetric{
 			values:   values,
 			name:     uncorePerfEvent2.Name,
@@ -520,4 +521,32 @@ func TestReadEntities(t *testing.T) {
 		require.Nil(t, coreMetrics)
 		require.Nil(t, uncoreMetrics)
 	})
+}
+
+// Mocking
+
+// mockValuesReader is an autogenerated mock type for the valuesReader type
+type mockValuesReader struct {
+	mock.Mock
+}
+
+// readValue provides a mock function with given fields: event
+func (_m *mockValuesReader) readValue(event *iaevents.ActiveEvent) (iaevents.CounterValue, error) {
+	ret := _m.Called(event)
+
+	var r0 iaevents.CounterValue
+	if rf, ok := ret.Get(0).(func(*iaevents.ActiveEvent) iaevents.CounterValue); ok {
+		r0 = rf(event)
+	} else {
+		r0 = ret.Get(0).(iaevents.CounterValue)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*iaevents.ActiveEvent) error); ok {
+		r1 = rf(event)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }

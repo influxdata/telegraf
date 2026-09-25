@@ -47,7 +47,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## When non-zero, converts count metrics submitted by inputs.statsd
   ## into rate, while dividing the metric value by this number.
-  ## Note that in order for metrics to be submitted simultaenously alongside
+  ## Note that in order for metrics to be submitted simultaneously alongside
   ## a Datadog agent, rate_interval has to match the interval used by the
   ## agent - which defaults to 10s
   # rate_interval = 0s

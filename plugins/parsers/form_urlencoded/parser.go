@@ -3,6 +3,7 @@ package form_urlencoded
 import (
 	"bytes"
 	"errors"
+	"maps"
 	"net/url"
 	"strconv"
 	"time"
@@ -19,6 +20,20 @@ type Parser struct {
 	MetricName  string            `toml:"-"`
 	TagKeys     []string          `toml:"form_urlencoded_tag_keys"`
 	DefaultTags map[string]string `toml:"-"`
+
+	timeFunc func() time.Time
+}
+
+func (p *Parser) Init() error {
+	if p.timeFunc == nil {
+		p.timeFunc = time.Now
+	}
+
+	return nil
+}
+
+func (p *Parser) SetTimeFunc(fn func() time.Time) {
+	p.timeFunc = fn
 }
 
 // Parse converts a slice of bytes in "application/x-www-form-urlencoded" format into metrics
@@ -36,11 +51,9 @@ func (p Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	tags := p.extractTags(values)
 	fields := parseFields(values)
 
-	for key, value := range p.DefaultTags {
-		tags[key] = value
-	}
+	maps.Copy(tags, p.DefaultTags)
 
-	m := metric.New(p.MetricName, tags, fields, time.Now().UTC())
+	m := metric.New(p.MetricName, tags, fields, p.timeFunc())
 
 	return []telegraf.Metric{m}, nil
 }
@@ -80,8 +93,8 @@ func (p Parser) extractTags(values url.Values) map[string]string {
 	return tags
 }
 
-func parseFields(values url.Values) map[string]interface{} {
-	fields := make(map[string]interface{})
+func parseFields(values url.Values) map[string]any {
+	fields := make(map[string]any)
 
 	for key, value := range values {
 		if len(key) == 0 || len(value) == 0 {

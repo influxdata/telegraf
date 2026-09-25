@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"net/textproto"
 	"regexp"
@@ -86,7 +87,7 @@ func (n *NetResponse) Gather(acc telegraf.Accumulator) error {
 
 	// Prepare data
 	tags := map[string]string{"server": host, "port": port}
-	var fields map[string]interface{}
+	var fields map[string]any
 	var returnTags map[string]string
 
 	// Gather data
@@ -106,18 +107,16 @@ func (n *NetResponse) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// Merge the tags
-	for k, v := range returnTags {
-		tags[k] = v
-	}
+	maps.Copy(tags, returnTags)
 	// Add metrics
 	acc.AddFields("net_response", fields, tags)
 	return nil
 }
 
-func (n *NetResponse) tcpGather() (map[string]string, map[string]interface{}, error) {
+func (n *NetResponse) tcpGather() (map[string]string, map[string]any, error) {
 	// Prepare returns
 	tags := make(map[string]string)
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	// Start Timer
 	start := time.Now()
 	// Connecting
@@ -177,10 +176,10 @@ func (n *NetResponse) tcpGather() (map[string]string, map[string]interface{}, er
 	return tags, fields, nil
 }
 
-func (n *NetResponse) udpGather() (map[string]string, map[string]interface{}, error) {
+func (n *NetResponse) udpGather() (map[string]string, map[string]any, error) {
 	// Prepare returns
 	tags := make(map[string]string)
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	// Start Timer
 	start := time.Now()
 	// Resolving
@@ -233,7 +232,7 @@ func (n *NetResponse) udpGather() (map[string]string, map[string]interface{}, er
 	return tags, fields, nil
 }
 
-func setResult(result resultType, fields map[string]interface{}, tags map[string]string, expect string) {
+func setResult(result resultType, fields map[string]any, tags map[string]string, expect string) {
 	var tag string
 	switch result {
 	case success:

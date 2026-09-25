@@ -33,7 +33,7 @@ func TestIpsetEntries(t *testing.T) {
 			map[string]string{
 				"set": "mylist",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"entries": 3,
 				"ips":     3,
 			},
@@ -73,7 +73,7 @@ func TestIpsetEntriesCidr(t *testing.T) {
 			map[string]string{
 				"set": "mylist0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"entries": 3,
 				"ips":     256,
 			},
@@ -85,7 +85,7 @@ func TestIpsetEntriesCidr(t *testing.T) {
 			map[string]string{
 				"set": "mylist1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"entries": 4,
 				"ips":     16777217,
 			},

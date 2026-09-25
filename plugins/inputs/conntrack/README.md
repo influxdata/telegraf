@@ -63,9 +63,9 @@ A detailed explanation of each fields can be found in
 [kerneldoc]: https://www.kernel.org/doc/Documentation/networking/nf_conntrack-sysctl.txt
 
 - conntrack
-  - `ip_conntrack_count` `(int, count)`: The number of entries in the conntrack table
-  - `ip_conntrack_max` `(int, size)`: The max capacity of the conntrack table
-  - `ip_conntrack_buckets`  `(int, size)`: The size of hash table.
+  - `ip_conntrack_count` `(int, count)`:   Number of entries in conntrack table
+  - `ip_conntrack_max` `(int, size)`:      Max capacity of the conntrack table
+  - `ip_conntrack_buckets`  `(int, size)`: Size of hash table
 
 With `collect = ["all"]`:
 

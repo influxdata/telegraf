@@ -16,7 +16,7 @@ func TestSerializer(t *testing.T) {
 			"verb": "GET",
 			"host": "hostname",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"full_message":  "full",
 			"short_message": "short",
 			"level":         "1",
@@ -33,7 +33,7 @@ func TestSerializer(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, r := range result {
-		obj := make(map[string]interface{})
+		obj := make(map[string]any)
 		err = json.Unmarshal([]byte(r), &obj)
 		require.NoError(t, err)
 

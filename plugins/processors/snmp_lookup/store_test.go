@@ -43,7 +43,12 @@ func TestLookup(t *testing.T) {
 	cacheTTL := config.Duration(10 * minUpdateInterval)
 	var notifyCount atomic.Uint64
 	s := newStore(defaultCacheSize, cacheTTL, defaultParallelLookups, config.Duration(minUpdateInterval))
+
+	var blockUpdate atomic.Bool
 	s.update = func(string) *tagMap {
+		for blockUpdate.Load() {
+			time.Sleep(100 * time.Millisecond)
+		}
 		return &tagMap{
 			created: time.Now(),
 			rows:    tmr,
@@ -91,9 +96,17 @@ func TestLookup(t *testing.T) {
 	time.Sleep(minUpdateInterval)
 
 	// Third lookup should directly update
+	// Block the update so we can check for the inflight flag. Make sure we
+	// unblock the update in case of error...
+	blockUpdate.Store(true)
+	defer blockUpdate.Store(false)
+
 	s.lookup("127.0.0.1", "999")
-	_, inflight := s.inflight.Load("127.0.0.1")
-	require.True(t, inflight)
+	require.Eventually(t, func() bool {
+		_, inflight := s.inflight.Load("127.0.0.1")
+		return inflight
+	}, time.Second, time.Millisecond)
+	blockUpdate.Store(false)
 	require.Eventually(t, func() bool {
 		return notifyCount.Load() == 4
 	}, time.Second, time.Millisecond)

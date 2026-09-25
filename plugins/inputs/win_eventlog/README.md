@@ -21,6 +21,23 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Startup error behavior options <!-- @/docs/includes/startup_error_behavior.md -->
+
+In addition to the plugin-specific and global configuration settings the plugin
+supports options for specifying the behavior when experiencing startup errors
+using the `startup_error_behavior` setting. Available values are:
+
+- `error`:  Telegraf with stop and exit in case of startup errors. This is the
+            default behavior.
+- `ignore`: Telegraf will ignore startup errors for this plugin and disables it
+            but continues processing for all other plugins.
+- `retry`:  Telegraf will try to startup the plugin in every gather or write
+            cycle in case of startup errors. The plugin is disabled until
+            the startup succeeds.
+- `probe`:  Telegraf will probe the plugin's function (if possible) and disables
+            the plugin in case probing fails. If the plugin does not support
+            probing, Telegraf will behave as if `ignore` was set instead.
+
 ## Configuration
 
 ```toml @sample.conf
@@ -137,7 +154,7 @@ There are three types of filtering: **Event Log** name, **XPath Query** and
 
 ```toml
   eventlog_name = "Application"
-  xpath_query = '''
+  xpath_query = ""
 ```
 
 For **XPath Query** filtering set the `xpath_query` value, and `eventlog_name`
@@ -170,9 +187,9 @@ amount of events you log.
 
 You can send any field, *System*, *Computed* or *XML* as tag field. List of
 those fields is in the `event_tags` config array. Globbing is supported in this
-array. For example, `Level*` matches all fields beginning with `Level`, and `L?vel` matches all
-fields where the name is `Level`, `L3vel`, `L@vel`, and so on. Tag fields are
-converted to strings automatically.
+array. For example, `Level*` matches all fields beginning with `Level`, and
+`L?vel` matches all fields where the name is `Level`, `L3vel`, `L@vel`, and so
+on. Tag fields are converted to strings automatically.
 
 By default, all other fields are sent, but you can limit that either by listing
 it in `event_fields` config array with globbing, or by adding some field name

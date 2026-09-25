@@ -3,6 +3,8 @@ package opentelemetry
 import (
 	"context"
 	ntls "crypto/tls"
+	"fmt"
+	"net"
 
 	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
 	"google.golang.org/grpc"
@@ -29,7 +31,18 @@ func (g *gRPCClient) Connect(cfg *clientConfig) error {
 		grpcTLSDialOption = grpc.WithTransportCredentials(insecure.NewCredentials())
 	}
 
-	grpcClientConn, err := grpc.NewClient(cfg.ServiceAddress, grpcTLSDialOption, grpc.WithUserAgent(userAgent))
+	dialOptions := []grpc.DialOption{grpcTLSDialOption, grpc.WithUserAgent(userAgent)}
+	if cfg.TCPProxy.UseProxy {
+		dialer, err := cfg.TCPProxy.Proxy()
+		if err != nil {
+			return fmt.Errorf("creating proxy failed: %w", err)
+		}
+		dialOptions = append(dialOptions, grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+			return dialer.DialContext(ctx, "tcp", addr)
+		}))
+	}
+
+	grpcClientConn, err := grpc.NewClient(cfg.ServiceAddress, dialOptions...)
 	if err != nil {
 		return err
 	}

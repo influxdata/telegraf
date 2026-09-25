@@ -49,7 +49,8 @@ type KafkaConsumer struct {
 	MsgHeaderAsMetricName                string          `toml:"msg_header_as_metric_name"`
 	TimestampSource                      string          `toml:"timestamp_source"`
 	ConsumerFetchDefault                 config.Size     `toml:"consumer_fetch_default"`
-	ConnectionStrategy                   string          `toml:"connection_strategy" deprecated:"1.33.0;1.40.0;use 'startup_error_behavior' instead"`
+	ConsumerFetchMin                     config.Size     `toml:"consumer_fetch_min"`
+	ConsumerFetchMaxWait                 config.Duration `toml:"consumer_fetch_max_wait"`
 	ResolveCanonicalBootstrapServersOnly bool            `toml:"resolve_canonical_bootstrap_servers_only"`
 	Log                                  telegraf.Logger `toml:"-"`
 	kafka.ReadConfig
@@ -190,10 +191,12 @@ func (k *KafkaConsumer) Init() error {
 		cfg.Consumer.Fetch.Default = int32(k.ConsumerFetchDefault)
 	}
 
-	switch strings.ToLower(k.ConnectionStrategy) {
-	default:
-		return fmt.Errorf("invalid connection strategy %q", k.ConnectionStrategy)
-	case "defer", "startup", "":
+	if k.ConsumerFetchMin != 0 {
+		cfg.Consumer.Fetch.Min = int32(k.ConsumerFetchMin)
+	}
+
+	if k.ConsumerFetchMaxWait != 0 {
+		cfg.Consumer.MaxWaitTime = time.Duration(k.ConsumerFetchMaxWait)
 	}
 
 	k.config = cfg
@@ -221,8 +224,6 @@ func (k *KafkaConsumer) SetParser(parser telegraf.Parser) {
 }
 
 func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
-	var err error
-
 	// If TopicRegexps is set, add matches to Topics
 	if len(k.TopicRegexps) > 0 {
 		if err := k.refreshTopics(); err != nil {
@@ -233,33 +234,16 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	k.cancel = cancel
 
-	if k.ConnectionStrategy != "defer" {
-		err = k.create()
-		if err != nil {
-			return &internal.StartupError{
-				Err:   fmt.Errorf("create consumer: %w", err),
-				Retry: errors.Is(err, sarama.ErrOutOfBrokers),
-			}
+	if err := k.create(); err != nil {
+		return &internal.StartupError{
+			Err:   fmt.Errorf("create consumer: %w", err),
+			Retry: errors.Is(err, sarama.ErrOutOfBrokers),
 		}
-		k.startErrorAdder(acc)
 	}
+	k.startErrorAdder(acc)
 
 	// Start consumer goroutine
-	k.wg.Add(1)
-	go func() {
-		var err error
-		defer k.wg.Done()
-
-		if k.consumer == nil {
-			err = k.create()
-			if err != nil {
-				acc.AddError(fmt.Errorf("create consumer async: %w", err))
-				return
-			}
-		}
-
-		k.startErrorAdder(acc)
-
+	k.wg.Go(func() {
 		for ctx.Err() == nil {
 			handler := newConsumerGroupHandler(acc, k.MaxUndeliveredMessages, k.parser, k.Log)
 			handler.maxMessageLen = k.MaxMessageLen
@@ -290,11 +274,10 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 				internal.SleepContext(ctx, reconnectDelay) //nolint:errcheck // ignore returned error as we cannot do anything about it anyway
 			}
 		}
-		err = k.consumer.Close()
-		if err != nil {
+		if err := k.consumer.Close(); err != nil {
 			acc.AddError(fmt.Errorf("close: %w", err))
 		}
-	}()
+	})
 
 	return nil
 }
@@ -405,13 +388,11 @@ func (k *KafkaConsumer) create() error {
 }
 
 func (k *KafkaConsumer) startErrorAdder(acc telegraf.Accumulator) {
-	k.wg.Add(1)
-	go func() {
-		defer k.wg.Done()
+	k.wg.Go(func() {
 		for err := range k.consumer.Errors() {
 			acc.AddError(fmt.Errorf("channel: %w", err))
 		}
-	}()
+	})
 }
 
 func newConsumerGroupHandler(acc telegraf.Accumulator, maxUndelivered int, parser telegraf.Parser, log telegraf.Logger) *consumerGroupHandler {
@@ -432,11 +413,9 @@ func (h *consumerGroupHandler) Setup(sarama.ConsumerGroupSession) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	h.cancel = cancel
 
-	h.wg.Add(1)
-	go func() {
-		defer h.wg.Done()
+	h.wg.Go(func() {
 		h.run(ctx)
-	}()
+	})
 	return nil
 }
 

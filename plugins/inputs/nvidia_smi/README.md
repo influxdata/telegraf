@@ -87,45 +87,168 @@ Please include the output of this command if opening an GitHub issue.
 - measurement: `nvidia_smi`
   - tags
     - `name` (type of GPU e.g. `GeForce GTX 1070 Ti`)
+    - `arch` (Architecture of the GPU e.g. `Ampere`, schema v12+)
     - `compute_mode` (The compute mode of the GPU e.g. `Default`)
-    - `index` (Port index where the GPU is connected to the motherboard e.g. `1`)
-    - `pstate` (Overclocking state for the GPU e.g. `P0`)
+    - `index` (Index of the GPU in the nvidia-smi output e.g. `1`)
+    - `pstate` (Performance state of the GPU e.g. `P0`)
     - `uuid` (A unique identifier for the GPU e.g. `GPU-f9ba66fc-a7f5-94c5-da19-019ef2f9c665`)
   - fields
+    - `driver_version` (string)
+    - `cuda_version` (string)
+    - `serial` (string)
+    - `vbios_version` (string)
+    - `display_active` (string)
+    - `display_mode` (string)
+    - `current_ecc` (string)
     - `fan_speed` (integer, percentage)
-    - `fbc_stats_session_count` (integer)
-    - `fbc_stats_average_fps` (integer)
-    - `fbc_stats_average_latency` (integer)
     - `memory_free` (integer, MiB)
     - `memory_used` (integer, MiB)
     - `memory_total` (integer, MiB)
     - `memory_reserved` (integer, MiB)
-    - `retired_pages_multiple_single_bit` (integer)
-    - `retired_pages_double_bit` (integer)
-    - `retired_pages_blacklist` (string)
-    - `retired_pages_pending` (string)
-    - `remapped_rows_correctable` (int)
-    - `remapped_rows_uncorrectable` (int)
-    - `remapped_rows_pending` (string)
-    - `remapped_rows_pending` (string)
-    - `remapped_rows_failure` (string)
-    - `power_draw` (float, W)
-    - `temperature_gpu` (integer, degrees C)
     - `utilization_gpu` (integer, percentage)
     - `utilization_memory` (integer, percentage)
     - `utilization_encoder` (integer, percentage)
     - `utilization_decoder` (integer, percentage)
-    - `pcie_link_gen_current` (integer)
-    - `pcie_link_width_current` (integer)
-    - `encoder_stats_session_count` (integer)
-    - `encoder_stats_average_fps` (integer)
-    - `encoder_stats_average_latency` (integer)
+    - `utilization_jpeg` (integer, percentage, schema v12+)
+    - `utilization_ofa` (integer, percentage, schema v12+)
     - `clocks_current_graphics` (integer, MHz)
     - `clocks_current_sm` (integer, MHz)
     - `clocks_current_memory` (integer, MHz)
     - `clocks_current_video` (integer, MHz)
-    - `driver_version` (string)
-    - `cuda_version` (string)
+    - `clocks_event_reason_sw_power_cap` (integer, 1 when active)
+    - `clocks_event_reason_sw_thermal_slowdown` (integer, 1 when active)
+    - `clocks_event_reason_hw_thermal_slowdown` (integer, 1 when active)
+    - `clocks_event_reason_hw_power_brake_slowdown` (integer, 1 when active)
+    - `clocks_event_reason_hw_slowdown` (integer, 1 when active)
+    - `clocks_event_reason_sync_boost` (integer, 1 when active)
+    - `clocks_event_reason_gpu_idle` (integer, 1 when active)
+    - `clocks_event_reason_applications_clocks_setting` (integer, 1 when active)
+    - `clocks_event_reason_display_clocks_setting` (integer, 1 when active)
+    - `clocks_event_reasons_counters_sw_power_cap` (integer, microseconds,
+      schema v13)
+    - `clocks_event_reasons_counters_sw_therm_slowdown` (integer,
+      microseconds, schema v13)
+    - `clocks_event_reasons_counters_hw_therm_slowdown` (integer,
+      microseconds, schema v13)
+    - `clocks_event_reasons_counters_hw_power_brake` (integer, microseconds,
+      schema v13)
+    - `clocks_event_reasons_counters_sync_boost` (integer, microseconds,
+      schema v13)
+    - `temperature_gpu` (integer, degrees C)
+    - `temperature_memory` (integer, degrees C, schema v12+)
+    - `temperature_gpu_target` (integer, degrees C, schema v12+)
+    - `temperature_gpu_target_min` (integer, degrees C, schema v12+)
+    - `temperature_gpu_target_max` (integer, degrees C, schema v12+)
+    - `temperature_max_threshold` (integer, degrees C, schema v12+)
+    - `temperature_slow_threshold` (integer, degrees C, schema v12+)
+    - `temperature_max_gpu_threshold` (integer, degrees C, schema v12+)
+    - `temperature_max_mem_threshold` (integer, degrees C, schema v12+)
+    - `temperature_gpu_tlimit` (integer, degrees C, schema v12+)
+    - `temperature_max_tlimit_threshold` (integer, degrees C, schema v13)
+    - `temperature_slow_tlimit_threshold` (integer, degrees C, schema v13)
+    - `temperature_max_gpu_tlimit_threshold` (integer, degrees C, schema v13)
+    - `temperature_max_mem_tlimit_threshold` (integer, degrees C, schema v13)
+    - `power_draw` (float, W, instantaneous value when the driver reports
+      `instant_power_draw`)
+    - `power_draw_average` (float, W, schema v12+)
+    - `power_limit` (float, W, the currently enforced limit)
+    - `power_limit_default` (float, W, schema v12+)
+    - `power_limit_min` (float, W, schema v12+)
+    - `power_limit_max` (float, W, schema v12+)
+    - `power_limit_requested` (float, W, schema v12+)
+    - `module_power_draw` (float, W, schema v12+, instantaneous value when the
+      driver reports `instant_power_draw`)
+    - `pcie_link_gen_current` (integer)
+    - `pcie_link_width_current` (integer)
+    - `pcie_rx_util` (integer, KB/s, schema v12+)
+    - `pcie_tx_util` (integer, KB/s, schema v12+)
+    - `encoder_stats_session_count` (integer)
+    - `encoder_stats_average_fps` (integer)
+    - `encoder_stats_average_latency` (integer)
+    - `fbc_stats_session_count` (integer)
+    - `fbc_stats_average_fps` (integer)
+    - `fbc_stats_average_latency` (integer)
+    - `retired_pages_multiple_single_bit` (integer)
+    - `retired_pages_double_bit` (integer)
+    - `retired_pages_blacklist` (string)
+    - `retired_pages_pending` (string)
+    - `remapped_rows_correctable` (integer)
+    - `remapped_rows_uncorrectable` (integer)
+    - `remapped_rows_pending` (string)
+    - `remapped_rows_failure` (string)
+    - `ecc_errors_volatile_dram_correctable` (integer, schema v13)
+    - `ecc_errors_volatile_dram_uncorrectable` (integer, schema v13)
+    - `ecc_errors_volatile_sram_correctable` (integer, schema v13)
+    - `ecc_errors_volatile_sram_uncorrectable` (integer, schema v13)
+    - `ecc_errors_volatile_sram_uncorrectable_parity` (integer, schema v13)
+    - `ecc_errors_volatile_sram_uncorrectable_secded` (integer, schema v13)
+    - `ecc_errors_aggregate_dram_correctable` (integer, schema v13)
+    - `ecc_errors_aggregate_dram_uncorrectable` (integer, schema v13)
+    - `ecc_errors_aggregate_sram_correctable` (integer, schema v13)
+    - `ecc_errors_aggregate_sram_uncorrectable` (integer, schema v13)
+    - `ecc_errors_aggregate_sram_uncorrectable_parity` (integer, schema v13)
+    - `ecc_errors_aggregate_sram_uncorrectable_secded` (integer, schema v13)
+    - `ecc_errors_aggregate_sram_uncorrectable_l2` (integer, schema v13)
+    - `ecc_errors_aggregate_sram_uncorrectable_microcontroller` (integer,
+      schema v13)
+    - `ecc_errors_aggregate_sram_uncorrectable_other` (integer, schema v13)
+    - `ecc_errors_aggregate_sram_uncorrectable_pcie` (integer, schema v13)
+    - `ecc_errors_aggregate_sram_uncorrectable_sm` (integer, schema v13)
+    - `ecc_errors_aggregate_sram_threshold_exceeded` (string, schema v13)
+    - `ecc_errors_channel_repair_pending` (string, schema v13)
+    - `ecc_errors_tpc_repair_pending` (string, schema v13)
+    - `ecc_errors_unrepairable_memory` (string, schema v13)
+- measurement: `nvidia_smi_mig` (schema v12+, one per MIG device)
+  - tags
+    - `index` (Index of the MIG device e.g. `0`)
+    - `gpu_index` (Index of the GPU instance e.g. `6`)
+    - `compute_index` (Index of the compute instance e.g. `0`)
+    - `name`, `arch`, `pstate`, `uuid`, `compute_mode` (as above, of the
+      hosting GPU)
+  - fields
+    - `memory_fb_free` (integer, MiB)
+    - `memory_fb_used` (integer, MiB)
+    - `memory_fb_total` (integer, MiB)
+    - `memory_fb_reserved` (integer, MiB)
+    - `memory_bar1_free` (integer, MiB)
+    - `memory_bar1_used` (integer, MiB)
+    - `memory_bar1_total` (integer, MiB)
+    - `sram_uncorrectable` (integer)
+- measurement: `nvidia_smi_process` (schema v12+, one point per process and GPU)
+  - tags
+    - `name` (Name of the process e.g. `python`)
+    - `type` (Context type, `C` for compute, `G` for graphics, or `C+G`)
+  - fields
+    - `pid` (integer)
+    - `used_memory` (integer, MiB)
+
+Not every field is available on every GPU or driver. Fields are only emitted
+when `nvidia-smi` reports a value for them, so cards reporting `N/A` or
+`Requested functionality has been deprecated` simply omit the field. The
+`schema v12+` and `schema v13` markers above refer to the XML schema version the
+installed driver reports, which determines the upper bound of what can be
+collected.
+
+Drivers older than 535 report the throttle reasons under their former
+`clocks_throttle_reason_*` element names, but Telegraf emits those under
+more modern `clocks_event_reason_*` field names.
+
+> [!TIP]
+> The `clocks_event_reason_*` fields report why a GPU is currently clocked
+> down, as `1` (Active) and `0` (Not Active). On schema v13, five of these
+> also have `clocks_event_reasons_counters_*` fields that count the
+> microseconds spent in that state. The counters catch throttling that
+> starts and ends between collection intervals. They only ever increase,
+> so consider using the [derivative aggregator][derivative] to turn
+> them into rates.
+
+[derivative]: /plugins/aggregators/derivative/README.md
+
+> [!NOTE]
+> The `*_tlimit*` temperatures are relative to the thermal limit of the GPU, so
+> `temperature_gpu_tlimit` counts down to zero as the GPU approaches
+> throttling. Cards not reporting a thermal limit expose the absolute
+> `temperature_max_threshold` variants instead.
 
 ## Example Output
 

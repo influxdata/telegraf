@@ -1,0 +1,13 @@
+{
+  "@odata.type": "#PowerSupplyCollection.PowerSupplyCollection",
+  "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies",
+  "Name": "Power Supply Collection",
+  "Description": "Collection of Power Supplies for this Chassis",
+  "Members@odata.count": 2,
+  "Members": [
+    {
+      "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/PowerSupply1"
+    }
+  ],
+  "@odata.etag": "W/\"6f54c3e8\""
+}

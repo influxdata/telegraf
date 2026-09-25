@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 	"time"
@@ -258,7 +259,7 @@ func (e *endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 			var timeStamps []time.Time
 			// 1. Construct a timestamp list from sample info
 			formattedEntityName := hyphenReplacer.Replace(entityName)
-			for _, t := range strings.Split(em.SampleInfo, ",") {
+			for t := range strings.SplitSeq(em.SampleInfo, ",") {
 				// Parse the input string to a time.Time object
 				utcTimeStamp, err := time.Parse("2006-01-02 15:04:05", t)
 				if err != nil {
@@ -282,7 +283,7 @@ func (e *endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 					bucket, found := buckets[bKey]
 					if !found {
 						mn := vsanPerfMetricsName + e.parent.Separator + formattedEntityName
-						bucket = metricEntry{name: mn, ts: ts, fields: make(map[string]interface{}), tags: tags}
+						bucket = metricEntry{name: mn, ts: ts, fields: make(map[string]any), tags: tags}
 						buckets[bKey] = bucket
 					}
 					if v, err := strconv.ParseFloat(values, 32); err == nil {
@@ -321,7 +322,7 @@ func (e *endpoint) queryDiskUsage(ctx context.Context, vsanClient *soap.Client, 
 	if err != nil {
 		return err
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"free_capacity_byte":  resp.Returnval.FreeCapacityB,
 		"total_capacity_byte": resp.Returnval.TotalCapacityB,
 	}
@@ -336,23 +337,35 @@ func (e *endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Clie
 		Type:  "VsanVcClusterHealthSystem",
 		Value: "vsan-cluster-health-system",
 	}
-	fetchFromCache := true
-	resp, err := vsanmethods.VsanQueryVcClusterHealthSummary(ctx, vsanClient,
-		&vsantypes.VsanQueryVcClusterHealthSummary{
-			This:           healthSystemRef,
-			Cluster:        &clusterRef.ref,
-			Fields:         []string{"overallHealth", "overallHealthDescription"},
-			FetchFromCache: &fetchFromCache,
-		})
-	if err != nil {
-		return err
-	}
-	healthStr := resp.Returnval.OverallHealth
 	healthMap := map[string]int{"red": 2, "yellow": 1, "green": 0}
-	fields := make(map[string]interface{})
-	if val, ok := healthMap[healthStr]; ok {
-		fields["overall_health"] = val
+
+	// Read vCenter's cached health summary first
+	summary := &vsantypes.VsanQueryVcClusterHealthSummary{
+		This:           healthSystemRef,
+		Cluster:        &clusterRef.ref,
+		Fields:         []string{"overallHealth", "overallHealthDescription"},
+		FetchFromCache: new(true),
 	}
+	cached, err := vsanmethods.VsanQueryVcClusterHealthSummary(ctx, vsanClient, summary)
+	if err != nil {
+		return fmt.Errorf("reading cached health value failed: %w", err)
+	}
+	val, found := healthMap[cached.Returnval.OverallHealth]
+	if !found {
+		// The cached health summary was empty, so force a recompute by turning the cache off
+		summary.FetchFromCache = new(false)
+		uncached, err := vsanmethods.VsanQueryVcClusterHealthSummary(ctx, vsanClient, summary)
+		if err != nil {
+			return fmt.Errorf("reading uncached health value failed: %w", err)
+		}
+		val, found = healthMap[uncached.Returnval.OverallHealth]
+		if !found {
+			e.parent.Log.Debugf("[vSAN] Skipping health summary for cluster %s due to invalid value %q", clusterRef.name, uncached.Returnval.OverallHealth)
+			return nil
+		}
+	}
+
+	fields := map[string]any{"overall_health": val}
 	tags := populateClusterTags(make(map[string]string), clusterRef, e.url.Host)
 	acc.AddFields(vsanSummaryMetricsName, fields, tags)
 	return nil
@@ -396,7 +409,7 @@ func (e *endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Clie
 	if err != nil {
 		return err
 	}
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	fields["total_bytes_to_sync"] = resp.Returnval.TotalBytesToSync
 	fields["total_objects_to_sync"] = resp.Returnval.TotalObjectsToSync
 	fields["total_recovery_eta"] = resp.Returnval.TotalRecoveryETA
@@ -407,11 +420,7 @@ func (e *endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Clie
 
 // populateClusterTags takes in a tag map, makes a copy, populates cluster related tags and returns the copy.
 func populateClusterTags(tags map[string]string, clusterRef *objectRef, vcenter string) map[string]string {
-	newTags := make(map[string]string)
-	// deep copy
-	for k, v := range tags {
-		newTags[k] = v
-	}
+	newTags := maps.Clone(tags)
 	newTags["vcenter"] = vcenter
 	newTags["dcname"] = clusterRef.dcname
 	newTags["clustername"] = clusterRef.name
@@ -422,11 +431,7 @@ func populateClusterTags(tags map[string]string, clusterRef *objectRef, vcenter 
 
 // populateCMMDSTags takes in a tag map, makes a copy, adds more tags using a cmmds map and returns the copy.
 func populateCMMDSTags(tags map[string]string, entityName, uuid string, cmmds map[string]cmmdsEntity) map[string]string {
-	newTags := make(map[string]string)
-	// deep copy
-	for k, v := range tags {
-		newTags[k] = v
-	}
+	newTags := maps.Clone(tags)
 	// There are cases when the uuid is missing. (Usually happens when performance service is just enabled or disabled)
 	// We need this check to avoid index-out-of-range error
 	if uuid == "*" || uuid == "" {

@@ -30,7 +30,7 @@ func TestParse(t *testing.T) {
 				metric.New(
 					"testlog",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"foo": "bar",
 					},
 					time.Unix(0, 0),
@@ -45,7 +45,7 @@ func TestParse(t *testing.T) {
 				metric.New(
 					"testlog",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"foo": "bar",
 					},
 					time.Unix(0, 0),
@@ -60,7 +60,7 @@ func TestParse(t *testing.T) {
 				metric.New(
 					"testlog",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"lvl":    "info",
 						"msg":    "http request",
 						"method": "POST",
@@ -80,7 +80,7 @@ func TestParse(t *testing.T) {
 				metric.New(
 					"testlog",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"lvl":    "info",
 						"msg":    "http request",
 						"method": "POST",
@@ -91,7 +91,7 @@ func TestParse(t *testing.T) {
 				metric.New(
 					"testlog",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"parent_id": "088876RL000",
 						"duration":  7.45,
 						"log_id":    "09R4e4Rl000",
@@ -125,16 +125,18 @@ func TestParse(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := Parser{
+			plugin := Parser{
 				metricName: tt.measurement,
 			}
-			got, err := l.Parse(tt.bytes)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Logfmt.Parse error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			require.NoError(t, plugin.Init())
 
-			testutil.RequireMetricsEqual(t, tt.want, got, testutil.IgnoreTime())
+			actual, err := plugin.Parse(tt.bytes)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				testutil.RequireMetricsEqual(t, tt.want, actual, testutil.IgnoreTime())
+			}
 		})
 	}
 }
@@ -149,7 +151,6 @@ func TestParseLine(t *testing.T) {
 	}{
 		{
 			name:    "No Metric In line",
-			want:    nil,
 			wantErr: true,
 		},
 		{
@@ -159,7 +160,7 @@ func TestParseLine(t *testing.T) {
 			want: metric.New(
 				"testlog",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"ts":     "2018-07-24T19:43:35.207268Z",
 					"lvl":    int64(5),
 					"msg":    "Write failed",
@@ -176,7 +177,7 @@ func TestParseLine(t *testing.T) {
 			want: metric.New(
 				"testlog",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"ts":     "2018-07-24T19:43:35.207268Z",
 					"lvl":    int64(5),
 					"msg":    "Write failed",
@@ -188,14 +189,18 @@ func TestParseLine(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := Parser{
+			plugin := Parser{
 				metricName: tt.measurement,
 			}
-			got, err := l.ParseLine(tt.s)
-			if (err != nil) != tt.wantErr {
-				t.Fatalf("Logfmt.Parse error = %v, wantErr %v", err, tt.wantErr)
+			require.NoError(t, plugin.Init())
+
+			actual, err := plugin.ParseLine(tt.s)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				testutil.RequireMetricEqual(t, tt.want, actual, testutil.IgnoreTime())
 			}
-			testutil.RequireMetricEqual(t, tt.want, got, testutil.IgnoreTime())
 		})
 	}
 }
@@ -219,7 +224,7 @@ func TestTags(t *testing.T) {
 				map[string]string{
 					"lvl": "info",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"msg":    "http request",
 					"method": "POST",
 					"ts":     "2018-07-24T19:43:40.275Z",
@@ -237,7 +242,7 @@ func TestTags(t *testing.T) {
 				map[string]string{
 					"lvl": "info",
 				},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(0, 0),
 			),
 		},
@@ -254,27 +259,27 @@ func TestTags(t *testing.T) {
 					"method": "POST",
 					"ts":     "2018-07-24T19:43:40.275Z",
 				},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(0, 0),
 			),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := &Parser{
+			plugin := &Parser{
 				metricName:  tt.measurement,
 				DefaultTags: map[string]string{},
 				TagKeys:     tt.tagKeys,
 			}
-			require.NoError(t, l.Init())
+			require.NoError(t, plugin.Init())
 
-			got, err := l.ParseLine(tt.s)
+			actual, err := plugin.ParseLine(tt.s)
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
 			}
-			testutil.RequireMetricEqual(t, tt.want, got, testutil.IgnoreTime())
+			testutil.RequireMetricEqual(t, tt.want, actual, testutil.IgnoreTime())
 		})
 	}
 }
@@ -297,7 +302,7 @@ func TestBenchmarkData(t *testing.T) {
 				"tags_platform": "python",
 				"tags_sdkver":   "3.11.5",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 5,
 			},
 			time.Unix(0, 0),
@@ -309,7 +314,7 @@ func TestBenchmarkData(t *testing.T) {
 				"tags_platform": "python",
 				"tags_sdkver":   "3.11.4",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 4,
 			},
 			time.Unix(0, 0),

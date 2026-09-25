@@ -6,7 +6,6 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"math"
 	"net"
 	"strconv"
 	"strings"
@@ -58,7 +57,7 @@ func (sw *SocketWriter) Connect() error {
 	}
 
 	var c net.Conn
-
+	var sockErr error
 	if spl[0] == "vsock" {
 		addrTuple := strings.SplitN(spl[1], ":", 2)
 
@@ -73,28 +72,23 @@ func (sw *SocketWriter) Connect() error {
 		if err != nil {
 			return fmt.Errorf("failed to parse CID %s: %w", addrTuple[0], err)
 		}
-		if (cid >= uint64(math.Pow(2, 32))-1) && (cid <= 0) {
-			return fmt.Errorf("value of CID %d is out of range", cid)
-		}
 		port, err := strconv.ParseUint(addrTuple[1], 10, 32)
 		if err != nil {
 			return fmt.Errorf("failed to parse port number %s: %w", addrTuple[1], err)
 		}
-		if (port >= uint64(math.Pow(2, 32))-1) && (port <= 0) {
-			return fmt.Errorf("port number %d is out of range", port)
-		}
-		c, err = vsock.Dial(uint32(cid), uint32(port), nil)
-		if err != nil {
-			return err
-		}
+		c, sockErr = vsock.Dial(uint32(cid), uint32(port), nil)
 	} else {
 		if tlsCfg == nil {
-			c, err = net.Dial(spl[0], spl[1])
+			c, sockErr = net.Dial(spl[0], spl[1])
 		} else {
-			c, err = tls.Dial(spl[0], spl[1], tlsCfg)
+			c, sockErr = tls.Dial(spl[0], spl[1], tlsCfg)
 		}
-		if err != nil {
-			return err
+	}
+
+	if sockErr != nil {
+		return &internal.StartupError{
+			Err:   sockErr,
+			Retry: true,
 		}
 	}
 
@@ -154,8 +148,7 @@ func (sw *SocketWriter) Write(metrics []telegraf.Metric) error {
 
 		if _, err := sw.Conn.Write(bs); err != nil {
 			// TODO log & keep going with remaining strings
-			var netErr net.Error
-			if errors.As(err, &netErr) {
+			if netErr, ok := errors.AsType[net.Error](err); ok {
 				// permanent error. close the connection
 				sw.Close()
 				sw.Conn = nil

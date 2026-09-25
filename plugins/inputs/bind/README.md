@@ -71,7 +71,7 @@ depending on your BIND version and configured statistics channel.
 Add the following to your named.conf if running Telegraf on the same host
 as the BIND daemon:
 
-```json
+```text
 statistics-channels {
     inet 127.0.0.1 port 8053;
 };

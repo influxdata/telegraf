@@ -3,8 +3,11 @@ package docker_log
 import (
 	"bufio"
 	"bytes"
+	"context"
+	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"strings"
 	"sync"
 	"time"
@@ -35,7 +38,6 @@ func parseLine(line []byte) (time.Time, string, error) {
 	}
 
 	tsString := string(parts[0])
-
 	// Keep any leading space, but remove whitespace from end of line.
 	// This preserves space in, for example, stacktraces, while removing
 	// annoying end of line characters and is similar to how other logging
@@ -67,9 +69,7 @@ func tailStream(
 	defer reader.Close()
 
 	tags := make(map[string]string, len(baseTags)+1)
-	for k, v := range baseTags {
-		tags[k] = v
-	}
+	maps.Copy(tags, baseTags)
 	tags["stream"] = stream
 
 	r := bufio.NewReaderSize(reader, 64*1024)
@@ -77,13 +77,12 @@ func tailStream(
 	var lastTS time.Time
 	for {
 		line, err := r.ReadBytes('\n')
-
 		if len(line) != 0 {
 			ts, message, err := parseLine(line)
 			if err != nil {
 				acc.AddError(err)
 			} else {
-				acc.AddFields("docker_log", map[string]interface{}{
+				acc.AddFields("docker_log", map[string]any{
 					"container_id": containerID,
 					"message":      message,
 				}, tags, ts)
@@ -96,7 +95,7 @@ func tailStream(
 		}
 
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) || errors.Is(err, context.Canceled) {
 				return lastTS, nil
 			}
 			return time.Time{}, err
@@ -110,25 +109,21 @@ func tailMultiplexed(acc telegraf.Accumulator, tags map[string]string, container
 
 	var tsStdout, tsStderr time.Time
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		var err error
 		tsStdout, err = tailStream(acc, tags, containerID, outReader, "stdout")
 		if err != nil {
 			acc.AddError(err)
 		}
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		var err error
 		tsStderr, err = tailStream(acc, tags, containerID, errReader, "stderr")
 		if err != nil {
 			acc.AddError(err)
 		}
-	}()
+	})
 
 	_, err := stdcopy.StdCopy(outWriter, errWriter, src)
 
@@ -138,7 +133,7 @@ func tailMultiplexed(acc telegraf.Accumulator, tags map[string]string, container
 	_ = src.Close()
 	wg.Wait()
 
-	if err != nil {
+	if err != nil && !errors.Is(err, context.Canceled) {
 		return time.Time{}, err
 	}
 	if tsStdout.After(tsStderr) {

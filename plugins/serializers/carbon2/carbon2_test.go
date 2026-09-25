@@ -9,7 +9,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/testutil/serializers"
 )
 
 func TestSerializeMetricFloat(t *testing.T) {
@@ -17,7 +17,7 @@ func TestSerializeMetricFloat(t *testing.T) {
 	tags := map[string]string{
 		"cpu": "cpu0",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": float64(91.5),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -56,7 +56,7 @@ func TestSerializeMetricWithEmptyStringTag(t *testing.T) {
 	tags := map[string]string{
 		"cpu": "",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": float64(91.5),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -95,7 +95,7 @@ func TestSerializeWithSpaces(t *testing.T) {
 	tags := map[string]string{
 		"cpu 0": "cpu 0",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle 1": float64(91.5),
 	}
 	m := metric.New("cpu metric", tags, fields, now)
@@ -134,7 +134,7 @@ func TestSerializeMetricInt(t *testing.T) {
 	tags := map[string]string{
 		"cpu": "cpu0",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": int64(90),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -173,7 +173,7 @@ func TestSerializeMetricString(t *testing.T) {
 	tags := map[string]string{
 		"cpu": "cpu0",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": "foobar",
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -212,7 +212,7 @@ func TestSerializeMetricBool(t *testing.T) {
 		tags := map[string]string{
 			"tag_name": "tag_value",
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"java_lang_GarbageCollector_Valid": value,
 		}
 
@@ -269,7 +269,7 @@ func TestSerializeBatch(t *testing.T) {
 	m := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": 42,
 		},
 		time.Unix(0, 0),
@@ -322,7 +322,7 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 	}{
 		{
 			metricFunc: func() telegraf.Metric {
-				fields := map[string]interface{}{
+				fields := map[string]any{
 					"usage_idle": float64(91.5),
 				}
 				return metric.New("cpu=1", nil, fields, now)
@@ -332,7 +332,7 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 		},
 		{
 			metricFunc: func() telegraf.Metric {
-				fields := map[string]interface{}{
+				fields := map[string]any{
 					"usage_idle": float64(91.5),
 				}
 				return metric.New("cpu=1", nil, fields, now)
@@ -343,7 +343,7 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 		},
 		{
 			metricFunc: func() telegraf.Metric {
-				fields := map[string]interface{}{
+				fields := map[string]any{
 					"usage_idle": float64(91.5),
 				}
 				return metric.New("cpu=1=tmp$custom", nil, fields, now)
@@ -353,7 +353,7 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 		},
 		{
 			metricFunc: func() telegraf.Metric {
-				fields := map[string]interface{}{
+				fields := map[string]any{
 					"usage_idle": float64(91.5),
 				}
 				return metric.New("cpu=1=tmp$custom%namespace", nil, fields, now)
@@ -363,7 +363,7 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 		},
 		{
 			metricFunc: func() telegraf.Metric {
-				fields := map[string]interface{}{
+				fields := map[string]any{
 					"usage_idle": float64(91.5),
 				}
 				return metric.New("cpu=1=tmp$custom%namespace", nil, fields, now)
@@ -373,7 +373,7 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 		},
 		{
 			metricFunc: func() telegraf.Metric {
-				fields := map[string]interface{}{
+				fields := map[string]any{
 					"usage_idle": float64(91.5),
 				}
 				return metric.New("cpu=1=tmp$custom%namespace", nil, fields, now)
@@ -384,7 +384,7 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 		},
 		{
 			metricFunc: func() telegraf.Metric {
-				fields := map[string]interface{}{
+				fields := map[string]any{
 					"usage_idle": float64(91.5),
 				}
 				return metric.New("cpu=1=tmp$custom%namespace", nil, fields, now)
@@ -421,7 +421,7 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 func BenchmarkSerialize(b *testing.B) {
 	s := &Serializer{}
 	require.NoError(b, s.Init())
-	metrics := serializers.BenchmarkMetrics(b)
+	metrics := serializers.BenchmarkMetrics()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := s.Serialize(metrics[i%len(metrics)])
@@ -432,7 +432,7 @@ func BenchmarkSerialize(b *testing.B) {
 func BenchmarkSerializeBatch(b *testing.B) {
 	s := &Serializer{}
 	require.NoError(b, s.Init())
-	m := serializers.BenchmarkMetrics(b)
+	m := serializers.BenchmarkMetrics()
 	metrics := m[:]
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

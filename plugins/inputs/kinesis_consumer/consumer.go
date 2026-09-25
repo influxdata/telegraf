@@ -96,10 +96,14 @@ func (c *shardConsumer) consume(ctx context.Context, shard string) ([]types.Chil
 
 func (c *shardConsumer) iterator(ctx context.Context) (*string, error) {
 	for {
+		// update starting seqnr to match last consumed record
+		if c.seqnr != "" {
+			c.params.ShardIteratorType = types.ShardIteratorTypeAfterSequenceNumber
+			c.params.StartingSequenceNumber = aws.String(c.seqnr)
+		}
 		resp, err := c.client.GetShardIterator(ctx, c.params)
 		if err != nil {
-			var throughputErr *types.ProvisionedThroughputExceededException
-			if errors.As(err, &throughputErr) {
+			if _, ok := errors.AsType[*types.ProvisionedThroughputExceededException](err); ok {
 				// We called the function too often and should wait a bit
 				// until trying again
 				c.log.Tracef("throughput exceeded when getting iterator for shard %s...", *c.params.ShardId)
@@ -109,7 +113,7 @@ func (c *shardConsumer) iterator(ctx context.Context) (*string, error) {
 
 			return nil, err
 		}
-		c.log.Tracef("successfully updated iterator for shard %s (%s)...", *c.params.ShardId, c.seqnr)
+		c.log.Tracef("successfully updated iterator for shard %s (%s)...", *c.params.ShardId, aws.ToString(c.params.StartingSequenceNumber))
 		return resp.ShardIterator, nil
 	}
 }
@@ -146,6 +150,9 @@ func (c *consumer) init() error {
 	if c.onMessage == nil {
 		return errors.New("message handler is undefined")
 	}
+
+	c.Lock()
+	defer c.Unlock()
 
 	c.shardsConsumed = make(map[string]bool)
 	c.shardConsumers = make(map[string]*shardConsumer)
@@ -327,7 +334,10 @@ func (c *consumer) startShardConsumer(ctx context.Context, id, seqnr string) {
 		sc.params.ShardIteratorType = types.ShardIteratorTypeAfterSequenceNumber
 		sc.params.StartingSequenceNumber = &seqnr
 	}
+
+	c.Lock()
 	c.shardConsumers[id] = sc
+	c.Unlock()
 
 	childs, err := sc.consume(ctx, id)
 	if err != nil {
@@ -359,11 +369,9 @@ func (c *consumer) startShardConsumer(ctx context.Context, id, seqnr string) {
 		if c.position != nil {
 			cseqnr = c.position(cid)
 		}
-		c.wg.Add(1)
-		go func() {
-			defer c.wg.Done()
+		c.wg.Go(func() {
 			c.startShardConsumer(ctx, cid, cseqnr)
-		}()
+		})
 	}
 }
 

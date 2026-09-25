@@ -1,0 +1,11 @@
+# gNMI dial-out telemetry plugin
+[[inputs.gnmi_listener]]
+  ## Address and port of the gNMI GRPC server
+  address = "localhost:57400"
+
+  ## Protocol to use, available options:
+  ##   nokia -- Nokia SR OS dial-out protocol
+  # protocol = "nokia"
+
+{{template "/plugins/common/gnmi/handler.conf"}}
+{{template "/plugins/common/tls/server.conf"}}

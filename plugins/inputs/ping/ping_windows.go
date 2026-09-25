@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
 )
@@ -25,9 +26,9 @@ type statistics struct {
 	roundTripTimeStats
 }
 
-func (p *Ping) pingToURL(host string, acc telegraf.Accumulator) {
+func (p *Ping) pingToURL(acc telegraf.Accumulator, host string) {
 	tags := map[string]string{"url": host}
-	fields := map[string]interface{}{"result_code": 0}
+	fields := map[string]any{"result_code": 0}
 
 	args := p.args(host)
 	totalTimeout := 60.0
@@ -86,7 +87,12 @@ func (p *Ping) args(url string) []string {
 	args := []string{"-n", strconv.Itoa(p.Count)}
 
 	if p.Timeout > 0 {
-		args = append(args, "-w", strconv.FormatFloat(p.Timeout*1000, 'f', 0, 64))
+		timeout := time.Duration(p.Timeout).Seconds()
+		args = append(args, "-w", strconv.FormatFloat(timeout*1000, 'f', 0, 64))
+	}
+
+	if p.Interface != "" {
+		args = append(args, "-S", p.Interface)
 	}
 
 	args = append(args, url)
@@ -123,11 +129,9 @@ func processPingOutput(out string) (statistics, error) {
 		packetsTransmitted: 0,
 		replyReceived:      0,
 		packetsReceived:    0,
-		roundTripTimeStats: roundTripTimeStats{
-			min: -1,
-			avg: -1,
-			max: -1,
-		},
+		min:                -1,
+		avg:                -1,
+		max:                -1,
 	}
 
 	// statsLine data should contain 4 members: entireExpression + ( Send, Receive, Lost )
@@ -176,7 +180,7 @@ func (p *Ping) timeout() float64 {
 	// Add also one second interval
 
 	if p.Timeout > 0 {
-		return p.Timeout + 1
+		return time.Duration(p.Timeout).Seconds() + 1
 	}
 	return 4 + 1
 }

@@ -1,6 +1,7 @@
 package tail
 
 import (
+	"maps"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -32,10 +33,7 @@ func newInfluxParser() (telegraf.Parser, error) {
 
 func newTestTail() *Tail {
 	offsetsMutex.Lock()
-	offsetsCopy := make(map[string]int64, len(offsets))
-	for k, v := range offsets {
-		offsetsCopy[k] = v
-	}
+	offsetsCopy := maps.Clone(offsets)
 	offsetsMutex.Unlock()
 
 	watchMethod := "inotify"
@@ -101,11 +99,11 @@ func TestColoredLine(t *testing.T) {
 
 	acc.Wait(2)
 	acc.AssertContainsFields(t, "cpu",
-		map[string]interface{}{
+		map[string]any{
 			"usage_idle": float64(100),
 		})
 	acc.AssertContainsFields(t, "cpu2",
-		map[string]interface{}{
+		map[string]any{
 			"usage_idle": float64(200),
 		})
 }
@@ -133,11 +131,11 @@ func TestTailDosLineEndings(t *testing.T) {
 	}, time.Second, 100*time.Millisecond, "Did not receive 2 expected metrics")
 
 	acc.AssertContainsFields(t, "cpu",
-		map[string]interface{}{
+		map[string]any{
 			"usage_idle": float64(100),
 		})
 	acc.AssertContainsFields(t, "cpu2",
-		map[string]interface{}{
+		map[string]any{
 			"usage_idle": float64(200),
 		})
 }
@@ -170,7 +168,7 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 
 	expectedPath := filepath.Join("testdata", "test_multiline.log")
 	acc.AssertContainsTaggedFields(t, "tail_grok",
-		map[string]interface{}{
+		map[string]any{
 			"message": "HelloExample: This is debug",
 		},
 		map[string]string{
@@ -178,7 +176,7 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 			"loglevel": "DEBUG",
 		})
 	acc.AssertContainsTaggedFields(t, "tail_grok",
-		map[string]interface{}{
+		map[string]any{
 			"message": "HelloExample: This is info",
 		},
 		map[string]string{
@@ -186,7 +184,7 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 			"loglevel": "INFO",
 		})
 	acc.AssertContainsTaggedFields(t, "tail_grok",
-		map[string]interface{}{
+		map[string]any{
 			"message": "HelloExample: Sorry, something wrong! java.lang.ArithmeticException: / by zero\t" +
 				"at com.foo.HelloExample2.divide(HelloExample2.java:24)\tat com.foo.HelloExample2.main(HelloExample2.java:14)",
 		},
@@ -251,7 +249,7 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 	expectedPath := tmpfile.Name()
 
 	acc.AssertContainsTaggedFields(t, "tail_grok",
-		map[string]interface{}{
+		map[string]any{
 			"message": "HelloExample: This is info",
 		},
 		map[string]string{
@@ -259,7 +257,7 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 			"loglevel": "INFO",
 		})
 	acc.AssertContainsTaggedFields(t, "tail_grok",
-		map[string]interface{}{
+		map[string]any{
 			"message": "HelloExample: This is warn",
 		},
 		map[string]string{
@@ -303,7 +301,7 @@ func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *test
 
 	expectedPath := filepath.Join("testdata", "test_multiline.log")
 	acc.AssertContainsTaggedFields(t, "tail_grok",
-		map[string]interface{}{
+		map[string]any{
 			"message": "HelloExample: This is warn",
 		},
 		map[string]string{
@@ -338,13 +336,13 @@ cpu,42
 	plugin.InitialReadOffset = "beginning"
 	plugin.Files = []string{tmpfile}
 	plugin.SetParserFunc(func() (telegraf.Parser, error) {
-		parser := csv.Parser{
+		parser := &csv.Parser{
 			MeasurementColumn: "measurement",
 			HeaderRowCount:    1,
-			TimeFunc:          func() time.Time { return time.Unix(0, 0) },
 		}
+		parser.SetTimeFunc(func() time.Time { return time.Unix(0, 0) })
 		err := parser.Init()
-		return &parser, err
+		return parser, err
 	})
 	require.NoError(t, plugin.Init())
 
@@ -353,7 +351,7 @@ cpu,42
 			map[string]string{
 				"path": tmpfile,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle": 42,
 			},
 			time.Unix(0, 0)),
@@ -361,7 +359,7 @@ cpu,42
 			map[string]string{
 				"path": tmpfile,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle": 42,
 			},
 			time.Unix(0, 0)),
@@ -393,7 +391,7 @@ skip2,mem,100
 			map[string]string{
 				"path": tmpfile,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value2": 42,
 			},
 			time.Unix(0, 0)),
@@ -401,7 +399,7 @@ skip2,mem,100
 			map[string]string{
 				"path": tmpfile,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value2": 100,
 			},
 			time.Unix(0, 0)),
@@ -412,15 +410,15 @@ skip2,mem,100
 	plugin.InitialReadOffset = "beginning"
 	plugin.Files = []string{tmpfile}
 	plugin.SetParserFunc(func() (telegraf.Parser, error) {
-		parser := csv.Parser{
+		parser := &csv.Parser{
 			MeasurementColumn: "measurement1",
 			HeaderRowCount:    2,
 			SkipRows:          1,
 			SkipColumns:       1,
-			TimeFunc:          func() time.Time { return time.Unix(0, 0) },
 		}
+		parser.SetTimeFunc(func() time.Time { return time.Unix(0, 0) })
 		err := parser.Init()
-		return &parser, err
+		return parser, err
 	})
 	require.NoError(t, plugin.Init())
 
@@ -451,7 +449,7 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 			map[string]string{
 				"customPathTagMyFile": tmpfile,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle": 42.0,
 			},
 			time.Unix(0, 0)),
@@ -459,7 +457,7 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 			map[string]string{
 				"customPathTagMyFile": tmpfile,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle": 42.0,
 			},
 			time.Unix(0, 0)),
@@ -496,7 +494,7 @@ func TestCharacterEncoding(t *testing.T) {
 			map[string]string{
 				"cpu": "cpu0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"usage_active": 11.9,
 			},
 			time.Unix(0, 0),
@@ -505,7 +503,7 @@ func TestCharacterEncoding(t *testing.T) {
 			map[string]string{
 				"cpu": "cpu1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"usage_active": 26.0,
 			},
 			time.Unix(0, 0),
@@ -514,7 +512,7 @@ func TestCharacterEncoding(t *testing.T) {
 			map[string]string{
 				"cpu": "cpu2",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"usage_active": 14.0,
 			},
 			time.Unix(0, 0),
@@ -523,7 +521,7 @@ func TestCharacterEncoding(t *testing.T) {
 			map[string]string{
 				"cpu": "cpu3",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"usage_active": 20.4,
 			},
 			time.Unix(0, 0),
@@ -532,7 +530,7 @@ func TestCharacterEncoding(t *testing.T) {
 			map[string]string{
 				"cpu": "cpu-total",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"usage_active": 18.4,
 			},
 			time.Unix(0, 0),
@@ -661,11 +659,11 @@ func TestTailEOF(t *testing.T) {
 	}, time.Second, 100*time.Millisecond, "Did not receive second metric")
 
 	acc.AssertContainsFields(t, "cpu",
-		map[string]interface{}{
+		map[string]any{
 			"usage_idle": float64(100),
 		})
 	acc.AssertContainsFields(t, "cpu2",
-		map[string]interface{}{
+		map[string]any{
 			"usage_idle": float64(200),
 		})
 	require.NoError(t, tmpfile.Close())
@@ -709,7 +707,7 @@ func TestCSVBehavior(t *testing.T) {
 			map[string]string{
 				"path": input.Name(),
 			},
-			map[string]interface{}{
+			map[string]any{
 				"a": int64(1),
 				"b": int64(2),
 			},
@@ -720,7 +718,7 @@ func TestCSVBehavior(t *testing.T) {
 			map[string]string{
 				"path": input.Name(),
 			},
-			map[string]interface{}{
+			map[string]any{
 				"a": int64(3),
 				"b": int64(4),
 			},
@@ -777,12 +775,12 @@ func TestStatePersistence(t *testing.T) {
 	expected := []telegraf.Metric{
 		metric.New("metric",
 			map[string]string{"tag": "value"},
-			map[string]interface{}{"foo": 2},
+			map[string]any{"foo": 2},
 			time.Unix(1730478211, 0),
 		),
 		metric.New("metric",
 			map[string]string{"tag": "value"},
-			map[string]interface{}{"foo": 3},
+			map[string]any{"foo": 3},
 			time.Unix(1730478221, 0),
 		),
 	}
@@ -996,56 +994,19 @@ func TestInvalidInitialReadOffset(t *testing.T) {
 	require.ErrorContains(t, plugin.Init(), "invalid 'initial_read_offset' setting")
 }
 
-func TestSetInitialValueForInitialReadOffset(t *testing.T) {
-	tests := []struct {
-		name              string
-		InitialReadOffset string
-		FromBeginning     bool
-		expected          string
-	}{
-		{
-			name:          "Set InitialReadOffset to beginning when from_beginning set to true and initial_read_offset not set",
-			FromBeginning: true,
-			expected:      "beginning",
-		},
-		{
-			name:     "Set InitialReadOffset to saved-or-end when from_beginning set to false and initial_read_offset not set",
-			expected: "saved-or-end",
-		},
-		{
-			name:              "Ignore from_beginning when initial_read_offset is set",
-			InitialReadOffset: "end",
-			expected:          "end",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			tt := newTail()
-			tt.FromBeginning = test.FromBeginning
-			tt.InitialReadOffset = test.InitialReadOffset
-			require.NoError(t, tt.Init())
-			require.Equal(t, test.expected, tt.InitialReadOffset)
-		})
-	}
-}
-
 func TestInitInitialReadOffset(t *testing.T) {
 	tests := []struct {
 		name              string
-		InitialReadOffset string
-		FromBeginning     bool
+		initialReadOffset string
 		expected          string
 	}{
 		{
-			name:          "Set InitialReadOffset to beginning when from_beginning set to true and initial_read_offset not set",
-			FromBeginning: true,
-			expected:      "beginning",
+			name:     "Default to saved-or-end when initial_read_offset not set",
+			expected: "saved-or-end",
 		},
 		{
-			name:              "Ignore from_beginning when initial_read_offset is set",
-			FromBeginning:     true,
-			InitialReadOffset: "end",
+			name:              "Keep initial_read_offset when set",
+			initialReadOffset: "end",
 			expected:          "end",
 		},
 	}
@@ -1053,8 +1014,7 @@ func TestInitInitialReadOffset(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			tt := newTail()
-			tt.FromBeginning = test.FromBeginning
-			tt.InitialReadOffset = test.InitialReadOffset
+			tt.InitialReadOffset = test.initialReadOffset
 			require.NoError(t, tt.Init())
 			require.Equal(t, test.expected, tt.InitialReadOffset)
 		})
@@ -1094,7 +1054,7 @@ func TestTailNoLeak(t *testing.T) {
 
 	// Make sure we got the first metric
 	acc.AssertContainsFields(t, "cpu",
-		map[string]interface{}{
+		map[string]any{
 			"usage_idle": float64(100),
 		})
 
@@ -1106,7 +1066,7 @@ func TestTailNoLeak(t *testing.T) {
 
 	// Call Gather multiple times to simulate multiple collection intervals
 	// This is where we test for file descriptor leaks during normal operation
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		require.NoError(t, acc.GatherError(tt.Gather))
 
 		// After each Gather, verify we still have exactly one tailer
@@ -1138,7 +1098,7 @@ func TestTailNoLeak(t *testing.T) {
 
 	// Verify we got the new metric
 	acc.AssertContainsFields(t, "cpu",
-		map[string]interface{}{
+		map[string]any{
 			"usage_idle": float64(200),
 		})
 

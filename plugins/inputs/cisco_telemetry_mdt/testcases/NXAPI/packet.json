@@ -1,0 +1,68 @@
+{
+    "nodeIdStr": "hostname",
+    "subscriptionIdStr": "subscription",
+    "encodingPath": "show nxapi",
+    "msgTimestamp": "1543236572000",
+    "dataGpbkv": [
+        {
+            "fields": [
+                {
+                    "name": "keys",
+                    "fields": [
+                        {
+                            "name": "foo",
+                            "stringValue": "bar"
+                        }
+                    ]
+                },
+                {
+                    "name": "content",
+                    "fields": [
+                        {
+                            "fields": [
+                                {
+                                    "name": "TABLE_nxapi",
+                                    "fields": [
+                                        {
+                                            "fields": [
+                                                {
+                                                    "name": "ROW_nxapi",
+                                                    "fields": [
+                                                        {
+                                                            "fields": [
+                                                                {
+                                                                    "name": "index",
+                                                                    "stringValue": "i1"
+                                                                },
+                                                                {
+                                                                    "name": "value",
+                                                                    "stringValue": "foo"
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "fields": [
+                                                                {
+                                                                    "name": "index",
+                                                                    "stringValue": "i2"
+                                                                },
+                                                                {
+                                                                    "name": "value",
+                                                                    "stringValue": "bar"
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

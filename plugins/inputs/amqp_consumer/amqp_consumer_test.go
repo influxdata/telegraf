@@ -3,6 +3,7 @@ package amqp_consumer
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -46,7 +47,7 @@ func TestAutoEncoding(t *testing.T) {
 	// Simulate a message receive event
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.onMessage(&acc, msg))
-	acc.AssertContainsFields(t, "measurementName", map[string]interface{}{"fieldKey": "gzip"})
+	acc.AssertContainsFields(t, "measurementName", map[string]any{"fieldKey": "gzip"})
 
 	// Check the decoding
 	encIdentity, err := internal.NewIdentityEncoder()
@@ -63,7 +64,7 @@ func TestAutoEncoding(t *testing.T) {
 	// Simulate a message receive event
 	require.NoError(t, plugin.onMessage(&acc, msg))
 	require.NoError(t, err)
-	acc.AssertContainsFields(t, "measurementName2", map[string]interface{}{"fieldKey": "identity"})
+	acc.AssertContainsFields(t, "measurementName2", map[string]any{"fieldKey": "identity"})
 }
 
 func TestIntegration(t *testing.T) {
@@ -73,14 +74,9 @@ func TestIntegration(t *testing.T) {
 
 	// Define common properties
 	servicePort := "5672"
-	vhost := "/"
-	exchange := "telegraf"
-	exchangeType := "direct"
-	queueName := "test"
-	bindingKey := "test"
 
 	// Setup the container
-	container := testutil.Container{
+	container := &testutil.Container{
 		Image:        "rabbitmq",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
@@ -90,10 +86,10 @@ func TestIntegration(t *testing.T) {
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
-	url := fmt.Sprintf("amqp://%s:%s%s", container.Address, container.Ports[servicePort], vhost)
+	url := fmt.Sprintf("amqp://%s:%s/", container.Address, container.Ports[servicePort])
 
 	// Setup a AMQP producer to send messages
-	client, err := newProducer(url, vhost, exchange, exchangeType, queueName, bindingKey)
+	client, err := newProducer(url)
 	require.NoError(t, err)
 	defer client.close()
 
@@ -103,10 +99,10 @@ func TestIntegration(t *testing.T) {
 		Username:     config.NewSecret([]byte("guest")),
 		Password:     config.NewSecret([]byte("guest")),
 		Timeout:      config.Duration(3 * time.Second),
-		Exchange:     exchange,
-		ExchangeType: exchangeType,
-		Queue:        queueName,
-		BindingKey:   bindingKey,
+		Exchange:     "telegraf",
+		ExchangeType: "direct",
+		Queue:        "test",
+		BindingKey:   "test",
 		Log:          testutil.Logger{},
 	}
 
@@ -135,7 +131,7 @@ func TestIntegration(t *testing.T) {
 
 	// Write metrics
 	for _, x := range metrics {
-		require.NoError(t, client.write(t.Context(), exchange, queueName, []byte(x)))
+		require.NoError(t, client.write(t.Context(), []byte(x)))
 	}
 
 	// Verify that the metrics were actually written
@@ -148,21 +144,16 @@ func TestIntegration(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
 
-func TestStartupErrorBehaviorError(t *testing.T) {
+func TestReconnectIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
 	// Define common properties
 	servicePort := "5672"
-	vhost := "/"
-	exchange := "telegraf"
-	exchangeType := "direct"
-	queueName := "test"
-	bindingKey := "test"
 
 	// Setup the container
-	container := testutil.Container{
+	container := &testutil.Container{
 		Image:        "rabbitmq",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
@@ -172,7 +163,145 @@ func TestStartupErrorBehaviorError(t *testing.T) {
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
-	url := fmt.Sprintf("amqp://%s:%s%s", container.Address, container.Ports[servicePort], vhost)
+
+	url := fmt.Sprintf("amqp://%s:%s/", container.Address, container.Ports[servicePort])
+
+	// Setup a AMQP producer to send messages
+	client, err := newProducer(url)
+	require.NoError(t, err)
+	defer client.close()
+
+	// Setup the plugin with an Influx line-protocol parser
+	logger := &testutil.CaptureLogger{}
+	plugin := &AMQPConsumer{
+		Brokers:      []string{url},
+		Username:     config.NewSecret([]byte("guest")),
+		Password:     config.NewSecret([]byte("guest")),
+		Exchange:     "telegraf",
+		ExchangeType: "direct",
+		Queue:        "test",
+		BindingKey:   "test",
+		Timeout:      config.Duration(500 * time.Millisecond),
+		Heartbeat:    config.Duration(time.Second),
+		Log:          logger,
+	}
+
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+	require.NoError(t, plugin.Init())
+
+	// Setup the metrics
+	metrics := []string{
+		"test,source=A value=0i 1712780301000000000",
+		"test,source=B value=1i 1712780301000000100",
+		"test,source=C value=2i 1712780301000000200",
+	}
+	expected := make([]telegraf.Metric, 0, len(metrics))
+	for _, x := range metrics {
+		m, err := parser.Parse([]byte(x))
+		require.NoError(t, err)
+		expected = append(expected, m...)
+	}
+
+	// Start the plugin
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Write metrics
+	for _, x := range metrics {
+		require.NoError(t, client.write(t.Context(), []byte(x)))
+	}
+
+	// Verify that the metrics were actually written
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= uint64(len(expected))
+	}, 3*time.Second, 100*time.Millisecond)
+	client.close()
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual)
+	for _, m := range actual {
+		m.Accept()
+	}
+
+	// Remove the metrics to make sure we can receive after reconnecting
+	acc.ClearMetrics()
+	require.Empty(t, acc.GetTelegrafMetrics())
+
+	// Stop the container to force the plugin to disconnect and wait for the
+	// corresponding message
+	require.NoError(t, container.Pause())
+	require.Eventually(t, func() bool {
+		var disconnected, firstAttempt bool
+		for _, msg := range logger.Messages() {
+			// Check for the disconnect message
+			if msg.Level == testutil.LevelInfo &&
+				strings.Contains(msg.Text, "Connection closed") &&
+				strings.Contains(msg.Text, "trying to reconnect") {
+				disconnected = true
+			}
+
+			// Check for the first attempt to reconnect
+			if msg.Level == testutil.LevelError && strings.Contains(msg.Text, "AMQP reconnection failed") {
+				firstAttempt = true
+			}
+		}
+		return disconnected && firstAttempt
+	}, 15*time.Second, 1*time.Second, "plugin never disconnected")
+
+	// Restart the container and wait for the plugin to reconnect with a long
+	// timeout. This is necessary because the plugin has a fixed reconnect
+	// interval of 10 seconds so give it some tries.
+	require.NoError(t, container.Resume())
+
+	require.Eventually(t, func() bool {
+		for _, msg := range logger.Messages() {
+			// Check for the reconnect message
+			if msg.Level == testutil.LevelInfo && strings.Contains(msg.Text, "Successfully reconnected") {
+				return true
+			}
+		}
+		return false
+	}, 15*time.Second, 1*time.Second, "plugin never reconnected")
+
+	// Setup another AMQP producer to send messages
+	client2, err := newProducer(url)
+	require.NoError(t, err)
+	defer client2.close()
+
+	// Write metrics
+	for _, x := range metrics {
+		require.NoError(t, client2.write(t.Context(), []byte(x)))
+	}
+
+	// Verify that the metrics were actually written
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= uint64(len(expected))
+	}, 3*time.Second, 100*time.Millisecond)
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+}
+
+func TestStartupErrorBehaviorErrorIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Define common properties
+	servicePort := "5672"
+
+	// Setup the container
+	container := &testutil.Container{
+		Image:        "rabbitmq",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(servicePort),
+			wait.ForLog("Server startup complete"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+	url := fmt.Sprintf("amqp://%s:%s/", container.Address, container.Ports[servicePort])
 
 	// Pause the container for simulating connectivity issues
 	require.NoError(t, container.Pause())
@@ -184,10 +313,10 @@ func TestStartupErrorBehaviorError(t *testing.T) {
 		Username:     config.NewSecret([]byte("guest")),
 		Password:     config.NewSecret([]byte("guest")),
 		Timeout:      config.Duration(1 * time.Second),
-		Exchange:     exchange,
-		ExchangeType: exchangeType,
-		Queue:        queueName,
-		BindingKey:   bindingKey,
+		Exchange:     "telegraf",
+		ExchangeType: "direct",
+		Queue:        "test",
+		BindingKey:   "test",
 		Log:          testutil.Logger{},
 	}
 
@@ -210,21 +339,16 @@ func TestStartupErrorBehaviorError(t *testing.T) {
 	require.ErrorContains(t, model.Start(&acc), "could not connect to any broker")
 }
 
-func TestStartupErrorBehaviorIgnore(t *testing.T) {
+func TestStartupErrorBehaviorIgnoreIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
 	// Define common properties
 	servicePort := "5672"
-	vhost := "/"
-	exchange := "telegraf"
-	exchangeType := "direct"
-	queueName := "test"
-	bindingKey := "test"
 
 	// Setup the container
-	container := testutil.Container{
+	container := &testutil.Container{
 		Image:        "rabbitmq",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
@@ -234,7 +358,7 @@ func TestStartupErrorBehaviorIgnore(t *testing.T) {
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
-	url := fmt.Sprintf("amqp://%s:%s%s", container.Address, container.Ports[servicePort], vhost)
+	url := fmt.Sprintf("amqp://%s:%s/", container.Address, container.Ports[servicePort])
 
 	// Pause the container for simulating connectivity issues
 	require.NoError(t, container.Pause())
@@ -246,10 +370,10 @@ func TestStartupErrorBehaviorIgnore(t *testing.T) {
 		Username:     config.NewSecret([]byte("guest")),
 		Password:     config.NewSecret([]byte("guest")),
 		Timeout:      config.Duration(1 * time.Second),
-		Exchange:     exchange,
-		ExchangeType: exchangeType,
-		Queue:        queueName,
-		BindingKey:   bindingKey,
+		Exchange:     "telegraf",
+		ExchangeType: "direct",
+		Queue:        "test",
+		BindingKey:   "test",
 		Log:          testutil.Logger{},
 	}
 
@@ -277,21 +401,16 @@ func TestStartupErrorBehaviorIgnore(t *testing.T) {
 	require.ErrorAs(t, err, &fatalErr)
 }
 
-func TestStartupErrorBehaviorRetry(t *testing.T) {
+func TestStartupErrorBehaviorRetryIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
 	// Define common properties
 	servicePort := "5672"
-	vhost := "/"
-	exchange := "telegraf"
-	exchangeType := "direct"
-	queueName := "test"
-	bindingKey := "test"
 
 	// Setup the container
-	container := testutil.Container{
+	container := &testutil.Container{
 		Image:        "rabbitmq",
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
@@ -301,7 +420,7 @@ func TestStartupErrorBehaviorRetry(t *testing.T) {
 	}
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
-	url := fmt.Sprintf("amqp://%s:%s%s", container.Address, container.Ports[servicePort], vhost)
+	url := fmt.Sprintf("amqp://%s:%s/", container.Address, container.Ports[servicePort])
 
 	// Pause the container for simulating connectivity issues
 	require.NoError(t, container.Pause())
@@ -313,10 +432,10 @@ func TestStartupErrorBehaviorRetry(t *testing.T) {
 		Username:     config.NewSecret([]byte("guest")),
 		Password:     config.NewSecret([]byte("guest")),
 		Timeout:      config.Duration(1 * time.Second),
-		Exchange:     exchange,
-		ExchangeType: exchangeType,
-		Queue:        queueName,
-		BindingKey:   bindingKey,
+		Exchange:     "telegraf",
+		ExchangeType: "direct",
+		Queue:        "test",
+		BindingKey:   "test",
 		Log:          testutil.Logger{},
 	}
 
@@ -363,13 +482,13 @@ func TestStartupErrorBehaviorRetry(t *testing.T) {
 	require.NoError(t, model.Gather(&acc))
 
 	// Setup a AMQP producer and send messages
-	client, err := newProducer(url, vhost, exchange, exchangeType, queueName, bindingKey)
+	client, err := newProducer(url)
 	require.NoError(t, err)
 	defer client.close()
 
 	// Write metrics
 	for _, x := range metrics {
-		require.NoError(t, client.write(t.Context(), exchange, queueName, []byte(x)))
+		require.NoError(t, client.write(t.Context(), []byte(x)))
 	}
 
 	// Verify that the metrics were actually collected
@@ -385,14 +504,10 @@ func TestStartupErrorBehaviorRetry(t *testing.T) {
 type producer struct {
 	conn    *amqp091.Connection
 	channel *amqp091.Channel
-	queue   amqp091.Queue
 }
 
-func newProducer(url, vhost, exchange, exchangeType, queueName, key string) (*producer, error) {
-	cfg := amqp091.Config{
-		Vhost:      vhost,
-		Properties: amqp091.NewConnectionProperties(),
-	}
+func newProducer(url string) (*producer, error) {
+	cfg := amqp091.Config{Properties: amqp091.NewConnectionProperties()}
 	cfg.Properties.SetClientConnectionName("test-producer")
 	conn, err := amqp091.DialConfig(url, cfg)
 	if err != nil {
@@ -404,23 +519,22 @@ func newProducer(url, vhost, exchange, exchangeType, queueName, key string) (*pr
 		return nil, err
 	}
 
-	if err := channel.ExchangeDeclare(exchange, exchangeType, true, false, false, false, nil); err != nil {
+	if err := channel.ExchangeDeclare("telegraf", "direct", true, false, false, false, nil); err != nil {
 		return nil, err
 	}
 
-	queue, err := channel.QueueDeclare(queueName, true, false, false, false, nil)
+	queue, err := channel.QueueDeclare("test", true, false, false, false, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := channel.QueueBind(queue.Name, key, exchange, false, nil); err != nil {
+	if err := channel.QueueBind(queue.Name, "test", "telegraf", false, nil); err != nil {
 		return nil, err
 	}
 
 	return &producer{
 		conn:    conn,
 		channel: channel,
-		queue:   queue,
 	}, nil
 }
 
@@ -429,7 +543,7 @@ func (p *producer) close() {
 	p.conn.Close()
 }
 
-func (p *producer) write(testContext context.Context, exchange, key string, payload []byte) error {
+func (p *producer) write(testContext context.Context, payload []byte) error {
 	msg := amqp091.Publishing{
 		DeliveryMode: amqp091.Persistent,
 		Timestamp:    time.Now(),
@@ -440,5 +554,5 @@ func (p *producer) write(testContext context.Context, exchange, key string, payl
 	ctx, cancel := context.WithTimeout(testContext, 3*time.Second)
 	defer cancel()
 
-	return p.channel.PublishWithContext(ctx, exchange, key, true, false, msg)
+	return p.channel.PublishWithContext(ctx, "telegraf", "test", true, false, msg)
 }

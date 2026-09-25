@@ -92,11 +92,29 @@ following Helm charts:
 - [Chronograf][helm_chronograf]
 - [Kapacitor][helm_kapacitor]
 
+### RBAC Permissions
+
+When `url` is left empty (cluster mode), the plugin uses the Kubernetes API to
+discover all nodes in the cluster, then connects to each node's Kubelet
+on port 10250. This requires a `ClusterRole` with the following permissions:
+
+- **apiGroups**: `""` (core)
+- **resources**: `"nodes"`
+- **verbs**: `"list"`, `"get"`
+
+Refer to the [Kubernetes RBAC documentation][rbac] for creating the appropriate
+ClusterRole and ClusterRoleBinding.
+
+When `url` is explicitly set (e.g., `url = "http://127.0.0.1:10255"`), the plugin
+only talks to the local Kubelet API and does **not** use the Kubernetes API server,
+so no Kubernetes RBAC permissions are required.
+
 [k8s_telegraf_blog]: https://www.influxdata.com/blog/monitoring-kubernetes-architecture/
 [helm_telegraf]: https://github.com/helm/charts/tree/master/stable/telegraf
 [helm_influxdb]: https://github.com/helm/charts/tree/master/stable/influxdb
 [helm_chronograf]: https://github.com/helm/charts/tree/master/stable/chronograf
 [helm_kapacitor]: https://github.com/helm/charts/tree/master/stable/kapacitor
+[rbac]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
 
 ## Metrics
 

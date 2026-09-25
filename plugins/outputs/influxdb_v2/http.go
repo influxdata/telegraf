@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/alitto/pond/v2"
-	"golang.org/x/net/http2"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -97,21 +96,21 @@ func (c *httpClient) Init() error {
 			TLSClientConfig: c.tlsConfig,
 			DialContext:     dialerFunc,
 		}
+
 		if c.readIdleTimeout != 0 || c.pingTimeout != 0 {
-			http2Trans, err := http2.ConfigureTransports(transport)
-			if err == nil {
-				http2Trans.ReadIdleTimeout = time.Duration(c.readIdleTimeout)
-				http2Trans.PingTimeout = time.Duration(c.pingTimeout)
+			transport.Protocols = &http.Protocols{}
+			transport.Protocols.SetHTTP1(true)
+			transport.Protocols.SetHTTP2(true)
+			transport.HTTP2 = &http.HTTP2Config{
+				SendPingTimeout: time.Duration(c.readIdleTimeout),
+				PingTimeout:     time.Duration(c.pingTimeout),
 			}
 		}
 	case "unix":
+		socketPath := c.url.Path
 		transport = &http.Transport{
-			Dial: func(_, _ string) (net.Conn, error) {
-				return net.DialTimeout(
-					c.url.Scheme,
-					c.url.Path,
-					c.timeout,
-				)
+			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+				return (&net.Dialer{Timeout: c.timeout}).DialContext(ctx, "unix", socketPath)
 			},
 		}
 	default:
@@ -169,8 +168,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 		// Serialize the metrics with the remaining limit, exit early if nothing was serialized
 		used, err := batch.serialize(c.serializer, limit, c.encoder)
 		if err != nil {
-			var werr *internal.PartialWriteError
-			if errors.As(err, &werr) {
+			if werr, ok := errors.AsType[*internal.PartialWriteError](err); ok {
 				writeErr.MetricsReject = append(writeErr.MetricsReject, werr.MetricsReject...)
 				writeErr.MetricsRejectErrors = append(writeErr.MetricsRejectErrors, werr.MetricsRejectErrors...)
 				writeErr.Err = werr.Err
@@ -219,8 +217,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 			c.rateLimiter.Accept(ratets, int64(len(batch.payload)))
 			batch.processed = true
 			if err := c.writeBatch(ctx, batch); err != nil {
-				var terr *ThrottleError
-				if errors.As(err, &terr) {
+				if terr, ok := errors.AsType[*ThrottleError](err); ok {
 					if terr.StatusCode == http.StatusRequestEntityTooLarge {
 						splitMu.Lock()
 						split = append(split, i)

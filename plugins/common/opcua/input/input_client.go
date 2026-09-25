@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/opcua"
 )
@@ -152,10 +154,8 @@ func (e *EventGroupSettings) Validate() error {
 	if len(e.Fields) == 0 {
 		return errors.New("at least one Field must be specified")
 	}
-	for _, field := range e.Fields {
-		if field == "" {
-			return errors.New("empty field name in fields stanza")
-		}
+	if slices.Contains(e.Fields, "") {
+		return errors.New("empty field name in fields stanza")
 	}
 	return nil
 }
@@ -203,6 +203,30 @@ const (
 	TimestampSourceTelegraf TimestampSource = "gather"
 )
 
+// BrowsePathSettings is one pattern-based discovery rule.
+type BrowsePathSettings struct {
+	Pattern     string            `toml:"pattern"`
+	MetricName  string            `toml:"name"`
+	DefaultTags map[string]string `toml:"default_tags"`
+
+	// Internal fields
+	compiled filter.Filter
+}
+
+// BrowseConfig configures address-space discovery for the input client.
+// When Paths is empty, browse-based discovery is disabled and the existing
+// nodes/group/events configuration is used as-is.
+type BrowseConfig struct {
+	Root      string               `toml:"root"`
+	Depth     int                  `toml:"depth"`
+	MaxNodes  int                  `toml:"max_nodes"`
+	BatchSize int                  `toml:"batch_size"`
+	Paths     []BrowsePathSettings `toml:"paths"`
+
+	// Internal fields
+	parsedRoot *ua.NodeID
+}
+
 // InputClientConfig a configuration for the input client
 type InputClientConfig struct {
 	opcua.OpcUAClientConfig
@@ -212,6 +236,7 @@ type InputClientConfig struct {
 	RootNodes       []NodeSettings       `toml:"nodes"`
 	Groups          []NodeGroupSettings  `toml:"group"`
 	EventGroups     []EventGroupSettings `toml:"events"`
+	Browse          BrowseConfig         `toml:"browse"`
 }
 
 func (o *InputClientConfig) Validate() error {
@@ -230,12 +255,38 @@ func (o *InputClientConfig) Validate() error {
 		o.TimestampFormat = time.RFC3339Nano
 	}
 
-	if len(o.Groups) == 0 && len(o.RootNodes) == 0 && o.EventGroups == nil {
-		return errors.New("no groups, root nodes or events provided to gather from")
+	if len(o.Groups) == 0 && len(o.RootNodes) == 0 && o.EventGroups == nil && len(o.Browse.Paths) == 0 {
+		return errors.New("no groups, root nodes, browse paths or events provided to gather from")
 	}
 	for _, group := range o.Groups {
 		if len(group.Nodes) == 0 {
 			return errors.New("group has no nodes to collect from")
+		}
+	}
+
+	if len(o.Browse.Paths) > 0 {
+		if o.Browse.Root == "" {
+			// OPC UA Objects folder, the standard top of the user-visible address space.
+			o.Browse.Root = "ns=0;i=85"
+		}
+		rootID, err := ua.ParseNodeID(o.Browse.Root)
+		if err != nil {
+			return fmt.Errorf("invalid browse root %q: %w", o.Browse.Root, err)
+		}
+		o.Browse.parsedRoot = rootID
+		if o.Browse.BatchSize <= 0 {
+			o.Browse.BatchSize = 50
+		}
+		for i := range o.Browse.Paths {
+			p := &o.Browse.Paths[i]
+			if p.Pattern == "" {
+				return fmt.Errorf("browse path at index %d has empty pattern", i)
+			}
+			f, err := filter.Compile([]string{p.Pattern}, '/')
+			if err != nil {
+				return fmt.Errorf("invalid browse pattern at index %d: %w", i, err)
+			}
+			p.compiled = f
 		}
 	}
 
@@ -263,18 +314,21 @@ func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputC
 	}
 
 	c := &OpcUAInputClient{
-		OpcUAClient: opcClient,
-		Log:         log,
-		Config:      *o,
-		EventGroups: o.EventGroups,
+		OpcUAClient:    opcClient,
+		Log:            log,
+		Config:         *o,
+		EventGroups:    o.EventGroups,
+		userGroupCount: len(o.Groups),
 	}
 
-	log.Debug("Initialising node to metric mapping")
-	if err := c.InitNodeMetricMapping(); err != nil {
-		return nil, err
+	// Browse-based discovery defers metric mapping until after Connect.
+	// The discovered nodes are not known until the server is reachable.
+	if len(o.Browse.Paths) == 0 {
+		log.Debug("Initialising node to metric mapping")
+		if err := c.InitNodeMetricMapping(); err != nil {
+			return nil, err
+		}
 	}
-
-	c.initLastReceivedValues()
 
 	return c, nil
 }
@@ -289,7 +343,7 @@ type NodeMetricMapping struct {
 
 // NewNodeMetricMapping builds a new NodeMetricMapping from the given argument
 func NewNodeMetricMapping(metricName string, node NodeSettings, groupTags map[string]string) (*NodeMetricMapping, error) {
-	mergedTags := make(map[string]string)
+	mergedTags := make(map[string]string, len(groupTags)+len(node.DefaultTags))
 	maps.Copy(mergedTags, groupTags)
 	maps.Copy(mergedTags, node.DefaultTags)
 
@@ -313,7 +367,7 @@ type EventNodeMetricMapping struct {
 // NodeValue The received value for a node
 type NodeValue struct {
 	TagName    string
-	Value      interface{}
+	Value      any
 	Quality    ua.StatusCode
 	ServerTime time.Time
 	SourceTime time.Time
@@ -334,6 +388,40 @@ type OpcUAInputClient struct {
 	LastReceivedData       []NodeValue
 	EventGroups            []EventGroupSettings
 	EventNodeMetricMapping []EventNodeMetricMapping
+
+	// Internal fields
+	userGroupCount int
+}
+
+// DiscoverNodes walks the address space using the configured browse settings
+// and replaces any previously discovered node groups on the client's
+// configuration with the freshly resolved ones. User-supplied groups (those
+// present before any discovery) are preserved. Safe to call repeatedly across
+// reconnects so dynamically added or removed server nodes are picked up.
+// Browse failures bubble up as errors, but patterns that match no nodes only
+// produce a log entry so partial-server misconfiguration does not block
+// collection from explicit nodes.
+func (o *OpcUAInputClient) DiscoverNodes(ctx context.Context) error {
+	browser := &opcua.AddressSpaceBrowser{
+		Client:    o.Client,
+		Log:       o.Log,
+		MaxDepth:  o.Config.Browse.Depth,
+		MaxNodes:  o.Config.Browse.MaxNodes,
+		BatchSize: o.Config.Browse.BatchSize,
+	}
+	nodes, err := browser.Browse(ctx, o.Config.Browse.parsedRoot)
+	if err != nil {
+		return fmt.Errorf("browsing address space failed: %w", err)
+	}
+	o.Log.Infof("Browse discovered %d nodes from root %q", len(nodes), o.Config.Browse.Root)
+
+	groups, matched := ResolveBrowsedNodes(nodes, o.Config.Browse.Paths)
+	o.Log.Infof("Browse patterns matched %d variables", matched)
+
+	// Drop the previously discovered groups before re-appending, so the
+	// effective Groups slice stays bounded across reconnects.
+	o.Config.Groups = append(o.Config.Groups[:o.userGroupCount], groups...)
+	return nil
 }
 
 // Stop the connection to the client
@@ -358,9 +446,7 @@ type metricParts struct {
 func newMP(n *NodeMetricMapping) metricParts {
 	// Include the node ID as the "id" tag since MetricForNode always adds it
 	tags := map[string]string{"id": n.idStr}
-	for k, v := range n.MetricTags {
-		tags[k] = v
-	}
+	maps.Copy(tags, n.MetricTags)
 	keys := make([]string, 0, len(tags))
 	for key := range tags {
 		keys = append(keys, key)
@@ -439,8 +525,11 @@ func validateNodeToAdd(existing map[metricParts]struct{}, nmm *NodeMetricMapping
 	return nil
 }
 
-// InitNodeMetricMapping builds nodes from the configuration
+// InitNodeMetricMapping builds nodes from the configuration. Safe to call
+// repeatedly: any previous mappings are discarded so the result reflects the
+// current Config.RootNodes and Config.Groups.
 func (o *OpcUAInputClient) InitNodeMetricMapping() error {
+	o.NodeMetricMapping = nil
 	existing := make(map[metricParts]struct{}, len(o.Config.RootNodes))
 	for _, node := range o.Config.RootNodes {
 		nmm, err := NewNodeMetricMapping(o.Config.MetricName, node, make(map[string]string))
@@ -489,6 +578,7 @@ func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 		}
 	}
 
+	o.initLastReceivedValues()
 	return nil
 }
 
@@ -588,11 +678,9 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 	tags := map[string]string{
 		"id": nmm.idStr,
 	}
-	for k, v := range nmm.MetricTags {
-		tags[k] = v
-	}
+	maps.Copy(tags, nmm.MetricTags)
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	if o.LastReceivedData[nodeIdx].Value != nil {
 		// Simple scalar types can be stored directly under the field name while
 		// arrays (see 5.2.5) and structures (see 5.2.6) must be unpacked.
@@ -602,7 +690,7 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 			case []uint8:
 				fields = unpack(nmm.Tag.FieldName, typedValue)
 			case ua.ByteArray:
-				fields = unpack(nmm.Tag.FieldName, []byte(typedValue))
+				fields = unpack(nmm.Tag.FieldName, typedValue)
 			case []uint16:
 				fields = unpack(nmm.Tag.FieldName, typedValue)
 			case []uint32:
@@ -635,18 +723,15 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 				o.Log.Errorf("could not unpack variant array of type: %T", typedValue)
 			}
 		} else {
-			fields = map[string]interface{}{
+			fields = map[string]any{
 				nmm.Tag.FieldName: o.LastReceivedData[nodeIdx].Value,
 			}
 		}
 	}
 
 	fields["Quality"] = strings.TrimSpace(o.LastReceivedData[nodeIdx].Quality.Error())
-	for _, field := range o.Config.OptionalFields {
-		if field == "DataType" {
-			fields["DataType"] = strings.Replace(o.LastReceivedData[nodeIdx].DataType.String(), "TypeID", "", 1)
-			break
-		}
+	if slices.Contains(o.Config.OptionalFields, "DataType") {
+		fields["DataType"] = strings.Replace(o.LastReceivedData[nodeIdx].DataType.String(), "TypeID", "", 1)
 	}
 	if !o.StatusCodeOK(o.LastReceivedData[nodeIdx].Quality) {
 		mp := newMP(nmm)
@@ -667,8 +752,8 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 	return metric.New(nmm.metricName, tags, fields, t)
 }
 
-func unpack[Slice ~[]E, E any](prefix string, value Slice) map[string]interface{} {
-	fields := make(map[string]interface{}, len(value))
+func unpack[Slice ~[]E, E any](prefix string, value Slice) map[string]any {
+	fields := make(map[string]any, len(value))
 	for i, v := range value {
 		key := fmt.Sprintf("%s[%d]", prefix, i)
 		fields[key] = v
@@ -678,7 +763,7 @@ func unpack[Slice ~[]E, E any](prefix string, value Slice) map[string]interface{
 
 func (o *OpcUAInputClient) MetricForEvent(nodeIdx int, event *ua.EventFieldList) telegraf.Metric {
 	node := o.EventNodeMetricMapping[nodeIdx]
-	fields := make(map[string]interface{}, len(event.EventFields))
+	fields := make(map[string]any, len(event.EventFields))
 	var sourceTime, serverTime time.Time
 	for i, field := range event.EventFields {
 		name := node.Fields[i]

@@ -28,11 +28,11 @@ func (f *filterNoGlob) Match(s string) bool {
 }
 
 type filterGlobMultiple struct {
-	set []glob.Glob
+	set []*glob.Pattern
 }
 
 func newFilterGlobMultiple(filters []string, separators ...rune) (Filter, error) {
-	f := &filterGlobMultiple{set: make([]glob.Glob, 0, len(filters))}
+	f := &filterGlobMultiple{set: make([]*glob.Pattern, 0, len(filters))}
 
 	for _, pattern := range filters {
 		g, err := glob.Compile(pattern, separators...)

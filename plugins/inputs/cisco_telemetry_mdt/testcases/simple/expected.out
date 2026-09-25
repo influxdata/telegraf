@@ -1,0 +1,2 @@
+alias,name=str,path=type:model/some/path,source=hostname,subscription=subscription,uint64=1234 bool=true 1543236572000000000
+alias,name=str2,path=type:model/some/path,source=hostname,subscription=subscription bool=false 1543236572000000000

@@ -81,6 +81,8 @@ func (j *Jose) Get(key string) ([]byte, error) {
 	return item.Data, nil
 }
 
+var _ telegraf.SecretStoreEditor = (*Jose)(nil)
+
 func (j *Jose) Set(key, value string) error {
 	item := keyring.Item{
 		Key:  key,
@@ -88,6 +90,10 @@ func (j *Jose) Set(key, value string) error {
 	}
 
 	return j.ring.Set(item)
+}
+
+func (j *Jose) Remove(key string) error {
+	return j.ring.Remove(key)
 }
 
 func (j *Jose) List() ([]string, error) {

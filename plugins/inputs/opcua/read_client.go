@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
+	"slices"
 	"time"
 
+	"github.com/gopcua/opcua/id"
 	"github.com/gopcua/opcua/ua"
 
 	"github.com/influxdata/telegraf"
@@ -38,12 +41,12 @@ type readClient struct {
 	ReadError               selfstat.Stat
 	Workarounds             readClientWorkarounds
 
-	// internal values
-	reqIDs []*ua.ReadValueID
-	ctx    context.Context
-
-	// Track last session error to force reconnection
-	forceReconnect bool
+	// Internal flags
+	reqIDs                   []*ua.ReadValueID
+	maxNodesPerRead          int
+	maxNodesPerRegisterNodes int
+	ctx                      context.Context
+	forceReconnect           bool
 }
 
 func (rc *readClientConfig) createReadClient(log telegraf.Logger) (*readClient, error) {
@@ -99,6 +102,43 @@ func (o *readClient) connect() error {
 		// Continue anyway - this is only needed if using namespace URIs
 	}
 
+	// Query the server-imposed limits on nodes per read and per register
+	// request so large node sets can be split accordingly. The properties are
+	// optional and zero means "no limit"; in both cases all nodes are sent in
+	// a single request.
+	o.maxNodesPerRead = 0
+	o.maxNodesPerRegisterNodes = 0
+	limits, err := o.Client.Read(o.ctx, &ua.ReadRequest{
+		NodesToRead: []*ua.ReadValueID{
+			{NodeID: ua.NewNumericNodeID(0, id.Server_ServerCapabilities_OperationLimits_MaxNodesPerRead)},
+			{NodeID: ua.NewNumericNodeID(0, id.Server_ServerCapabilities_OperationLimits_MaxNodesPerRegisterNodes)},
+		},
+	})
+	switch {
+	case err != nil:
+		o.Log.Debugf("Querying the server's operation limits failed: %v", err)
+	case len(limits.Results) != 2:
+		o.Log.Debugf("Server returned %d results for 2 requested operation limits", len(limits.Results))
+	default:
+		o.maxNodesPerRead = operationLimit(limits.Results[0])
+		o.maxNodesPerRegisterNodes = operationLimit(limits.Results[1])
+		o.Log.Debugf("Server limits requests to %d nodes per read and %d nodes per register (0 = unlimited)",
+			o.maxNodesPerRead, o.maxNodesPerRegisterNodes)
+	}
+
+	// Browse-based discovery runs on every connect so server-side schema
+	// changes (added or removed nodes, renumbered namespaces) are picked up
+	// on reconnect. DiscoverNodes replaces the previously discovered groups
+	// and InitNodeMetricMapping rebuilds the mapping from scratch.
+	if len(o.Config.Browse.Paths) > 0 {
+		if err := o.OpcUAInputClient.DiscoverNodes(o.ctx); err != nil {
+			return fmt.Errorf("browse discovery failed: %w", err)
+		}
+		if err := o.OpcUAInputClient.InitNodeMetricMapping(); err != nil {
+			return fmt.Errorf("initializing node metric mapping failed: %w", err)
+		}
+	}
+
 	// Make sure we setup the node-ids correctly after reconnect
 	// as the server might be restarted and IDs changed
 	if err := o.OpcUAInputClient.InitNodeIDs(); err != nil {
@@ -111,15 +151,27 @@ func (o *readClient) connect() error {
 			o.reqIDs = append(o.reqIDs, &ua.ReadValueID{NodeID: nid})
 		}
 	} else {
-		regResp, err := o.Client.RegisterNodes(o.ctx, &ua.RegisterNodesRequest{
-			NodesToRegister: o.NodeIDs,
-		})
-		if err != nil {
-			return fmt.Errorf("registering nodes failed: %w", err)
+		// Split the registration into multiple requests if the server limits
+		// the number of nodes per request; a single request holds everything
+		// otherwise.
+		batches := [][]*ua.NodeID{o.NodeIDs}
+		if o.maxNodesPerRegisterNodes > 0 {
+			batches = slices.Collect(slices.Chunk(o.NodeIDs, o.maxNodesPerRegisterNodes))
 		}
-
-		for _, v := range regResp.RegisteredNodeIDs {
-			o.reqIDs = append(o.reqIDs, &ua.ReadValueID{NodeID: v})
+		for _, batch := range batches {
+			regResp, err := o.Client.RegisterNodes(o.ctx, &ua.RegisterNodesRequest{
+				NodesToRegister: batch,
+			})
+			if err != nil {
+				return fmt.Errorf("registering nodes failed: %w", err)
+			}
+			if len(regResp.RegisteredNodeIDs) != len(batch) {
+				return fmt.Errorf("server returned %d registered node IDs for %d requested nodes",
+					len(regResp.RegisteredNodeIDs), len(batch))
+			}
+			for _, v := range regResp.RegisteredNodeIDs {
+				o.reqIDs = append(o.reqIDs, &ua.ReadValueID{NodeID: v})
+			}
 		}
 	}
 
@@ -146,15 +198,19 @@ func (o *readClient) ensureConnected() error {
 }
 
 func (o *readClient) currentValues() ([]telegraf.Metric, error) {
+	connectStart := time.Now()
 	if err := o.ensureConnected(); err != nil {
 		return nil, err
 	}
+	o.Log.Tracef("Connection check took %s", time.Since(connectStart))
 
 	if state := o.State(); state != opcua.Connected {
 		return nil, fmt.Errorf("not connected, in state %q", state)
 	}
 
+	readStart := time.Now()
 	if err := o.read(); err != nil {
+		o.Log.Tracef("Read failed after %s: %v", time.Since(readStart), err)
 		// We do not return the disconnect error, as this would mask the
 		// original problem, but we do log it
 		if derr := o.Disconnect(context.Background()); derr != nil {
@@ -163,25 +219,33 @@ func (o *readClient) currentValues() ([]telegraf.Metric, error) {
 
 		return nil, err
 	}
+	o.Log.Tracef("OPC UA read of %d nodes took %s", len(o.NodeIDs), time.Since(readStart))
 
+	metricStart := time.Now()
 	metrics := make([]telegraf.Metric, 0, len(o.NodeMetricMapping))
+	var skipped int
 	// Parse the resulting data into metrics
 	for i := range o.NodeIDs {
 		if !o.StatusCodeOK(o.LastReceivedData[i].Quality) {
+			o.Log.Tracef("Skipping node %s: bad quality %v", o.NodeIDs[i], o.LastReceivedData[i].Quality)
+			skipped++
 			continue
 		}
 
 		metrics = append(metrics, o.MetricForNode(i))
 	}
+	o.Log.Tracef("Metric construction took %s (%d metrics, %d skipped due to bad quality)",
+		time.Since(metricStart), len(metrics), skipped)
 
 	return metrics, nil
 }
 
 func (o *readClient) read() error {
-	req := &ua.ReadRequest{
-		MaxAge:             2000,
-		TimestampsToReturn: ua.TimestampsToReturnBoth,
-		NodesToRead:        o.reqIDs,
+	// Split the nodes into multiple requests if the server limits the number
+	// of nodes per read; a single request holds everything otherwise.
+	batches := [][]*ua.ReadValueID{o.reqIDs}
+	if o.maxNodesPerRead > 0 {
+		batches = slices.Collect(slices.Chunk(o.reqIDs, o.maxNodesPerRead))
 	}
 
 	var count uint64
@@ -190,18 +254,41 @@ func (o *readClient) read() error {
 		count++
 
 		// Try to update the values for all registered nodes
-		resp, err := o.Client.Read(o.ctx, req)
+		o.Log.Tracef("Sending %d OPC UA read request(s) for %d %s nodes (attempt %d)...",
+			len(batches), len(o.reqIDs), nodeTypeLabel(o.Workarounds.UseUnregisteredReads), count)
+		requestStart := time.Now()
+		var err error
+		var updated int
+		for _, batch := range batches {
+			var resp *ua.ReadResponse
+			resp, err = o.Client.Read(o.ctx, &ua.ReadRequest{
+				MaxAge:             2000,
+				TimestampsToReturn: ua.TimestampsToReturnBoth,
+				NodesToRead:        batch,
+			})
+			if err != nil {
+				break
+			}
+			if len(resp.Results) != len(batch) {
+				err = fmt.Errorf("server returned %d results for %d requested nodes", len(resp.Results), len(batch))
+				break
+			}
+			for i, d := range resp.Results {
+				o.UpdateNodeValue(updated+i, d)
+			}
+			updated += len(batch)
+		}
+		plcDuration := time.Since(requestStart)
 		if err == nil {
-			// Success, update the node values and exit
+			// Success, exit with all node values updated
 			o.ReadSuccess.Incr(1)
 			o.forceReconnect = false
-			for i, d := range resp.Results {
-				o.UpdateNodeValue(i, d)
-			}
+			o.Log.Tracef("OPC UA read completed in %s, updated %d node values", plcDuration, updated)
 			return nil
 		}
 
 		o.ReadError.Incr(1)
+		o.Log.Tracef("OPC UA read request failed after %s: %v", plcDuration, err)
 
 		isSessionError := errors.Is(err, ua.StatusBadSessionIDInvalid) ||
 			errors.Is(err, ua.StatusBadSessionNotActivated) ||
@@ -227,6 +314,20 @@ func (o *readClient) read() error {
 				nodeTypeLabel(o.Workarounds.UseUnregisteredReads), err)
 		}
 	}
+}
+
+// operationLimit extracts a server operation limit from the read result of
+// the corresponding capability property. Zero means "no limit".
+func operationLimit(result *ua.DataValue) int {
+	if result.Status != ua.StatusOK || result.Value == nil {
+		return 0
+	}
+	limit, ok := result.Value.Value().(uint32)
+	if !ok {
+		return 0
+	}
+	// Clamp to avoid overflowing int on 32-bit platforms
+	return int(min(limit, math.MaxInt32))
 }
 
 // Helper function to provide more accurate error messages

@@ -1,4 +1,4 @@
-// Command handling for secret-stores' "secrets" command
+// Command handling for secret stores' "secrets" command
 package main
 
 import (
@@ -11,6 +11,8 @@ import (
 	"github.com/awnumar/memguard"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/term"
+
+	"github.com/influxdata/telegraf"
 )
 
 func processFilterOnlySecretStoreFlags(ctx *cli.Context) Filters {
@@ -20,7 +22,7 @@ func processFilterOnlySecretStoreFlags(ctx *cli.Context) Filters {
 	processorFilters := []string{"-"}
 	aggregatorFilters := []string{"-"}
 
-	// Only load the secret-stores
+	// Only load the secret stores
 	var secretstore string
 	if len(ctx.Lineage()) >= 2 {
 		parent := ctx.Lineage()[1] // ancestor contexts in order from child to parent
@@ -37,18 +39,18 @@ func getSecretStoreCommands(m App) []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:  "secrets",
-			Usage: "commands for listing, adding and removing secrets on all known secret-stores",
+			Usage: "commands for listing, adding and removing secrets on all known secret stores",
 			Subcommands: []*cli.Command{
 				{
 					Name:  "list",
-					Usage: "list known secrets and secret-stores",
+					Usage: "list known secrets and secret stores",
 					Description: `
 The 'list' command requires passing in your configuration file
-containing the secret-store definitions you want to access. To get a
-list of available secret-store plugins, please have a look at
+containing the secret store definitions you want to access. To get a
+list of available secret store plugins, please have a look at
 https://github.com/influxdata/telegraf/tree/master/plugins/secretstores.
 
-For help on how to define secret-stores, check the documentation of the
+For help on how to define secret stores, check the documentation of the
 different plugins.
 
 Assuming you use the default configuration file location, you can run
@@ -64,7 +66,7 @@ To get the keys of all known secrets in a particular store, you can run
 To also reveal the actual secret, i.e. the value, you can pass the
 '--reveal-secret' flag.
 `,
-					ArgsUsage: "[secret-store ID]...[secret-store ID]",
+					ArgsUsage: "[secret store ID]...[secret store ID]",
 					Flags: []cli.Flag{
 						&cli.BoolFlag{
 							Name:  "reveal-secret",
@@ -72,7 +74,7 @@ To also reveal the actual secret, i.e. the value, you can pass the
 						},
 					},
 					Action: func(cCtx *cli.Context) error {
-						// Only load the secret-stores
+						// Only load the secret stores
 						filters := processFilterOnlySecretStoreFlags(cCtx)
 						g := GlobalFlags{
 							config:     cCtx.StringSlice("config"),
@@ -91,7 +93,7 @@ To also reveal the actual secret, i.e. the value, you can pass the
 						} else {
 							ids, err := m.ListSecretStores()
 							if err != nil {
-								return fmt.Errorf("unable to determine secret-store IDs: %w", err)
+								return fmt.Errorf("unable to determine secret store IDs: %w", err)
 							}
 							storeIDs = ids
 						}
@@ -101,7 +103,7 @@ To also reveal the actual secret, i.e. the value, you can pass the
 						for _, storeID := range storeIDs {
 							store, err := m.GetSecretStore(storeID)
 							if err != nil {
-								return fmt.Errorf("unable to get secret-store %q: %w", storeID, err)
+								return fmt.Errorf("unable to get secret store %q: %w", storeID, err)
 							}
 							keys, err := store.List()
 							if err != nil {
@@ -130,13 +132,13 @@ To also reveal the actual secret, i.e. the value, you can pass the
 					Usage: "retrieves value of given secret from given store",
 					Description: `
 The 'get' command requires passing in your configuration file
-containing the secret-store definitions you want to access. To get a
-list of available secret-store plugins, please have a look at
+containing the secret store definitions you want to access. To get a
+list of available secret store plugins, please have a look at
 https://github.com/influxdata/telegraf/tree/master/plugins/secretstores.
 and use the 'secrets list' command to get the IDs of available stores and
 key(s) of available secrets.
 
-For help on how to define secret-stores, check the documentation of the
+For help on how to define secret stores, check the documentation of the
 different plugins.
 
 Assuming you use the default configuration file location, you can run
@@ -145,12 +147,12 @@ available stores
 
 > telegraf secrets get mystore mysecretkey
 
-This will fetch the secret with the key 'mysecretkey' from the secret-store
+This will fetch the secret with the key 'mysecretkey' from the secret store
 with the ID 'mystore'.
 `,
-					ArgsUsage: "<secret-store ID> <secret key>",
+					ArgsUsage: "<secret store ID> <secret key>",
 					Action: func(cCtx *cli.Context) error {
-						// Only load the secret-stores
+						// Only load the secret stores
 						filters := processFilterOnlySecretStoreFlags(cCtx)
 						g := GlobalFlags{
 							config:     cCtx.StringSlice("config"),
@@ -172,7 +174,7 @@ with the ID 'mystore'.
 
 						store, err := m.GetSecretStore(storeID)
 						if err != nil {
-							return fmt.Errorf("unable to get secret-store: %w", err)
+							return fmt.Errorf("unable to get secret store: %w", err)
 						}
 						value, err := store.Get(key)
 						if err != nil {
@@ -188,20 +190,20 @@ with the ID 'mystore'.
 					Usage: "create or modify a secret in the given store",
 					Description: `
 The 'set' command requires passing in your configuration file
-containing the secret-store definitions you want to access. To get a
-list of available secret-store plugins, please have a look at
+containing the secret store definitions you want to access. To get a
+list of available secret store plugins, please have a look at
 https://github.com/influxdata/telegraf/tree/master/plugins/secretstores.
 and use the 'secrets list' command to get the IDs of available stores and keys.
 
-For help on how to define secret-stores, check the documentation of the
+For help on how to define secret stores, check the documentation of the
 different plugins.
 
 Assuming you use the default configuration file location, you can run
-the following command to create a secret in anm available secret-store
+the following command to create a secret in anm available secret store
 
 > telegraf secrets set mystore mysecretkey mysecretvalue
 
-This will create a secret with the key 'mysecretkey' in the secret-store
+This will create a secret with the key 'mysecretkey' in the secret store
 with the ID 'mystore' with the value being set to 'mysecretvalue'. If a
 secret with that key ('mysecretkey') already existed in that store, its
 value will be modified.
@@ -212,9 +214,9 @@ When you leave out the value of the secret like
 
 you will be prompted to enter the value of the secret.
 `,
-					ArgsUsage: "<secret-store ID> <secret key>",
+					ArgsUsage: "<secret store ID> <secret key>",
 					Action: func(cCtx *cli.Context) error {
-						// Only load the secret-stores
+						// Only load the secret stores
 						filters := processFilterOnlySecretStoreFlags(cCtx)
 						g := GlobalFlags{
 							config:     cCtx.StringSlice("config"),
@@ -234,6 +236,16 @@ you will be prompted to enter the value of the secret.
 						storeID := args.First()
 						key := args.Get(1)
 						value := args.Get(2)
+
+						store, err := m.GetSecretStore(storeID)
+						if err != nil {
+							return fmt.Errorf("unable to get secret store: %w", err)
+						}
+						editor, ok := store.(telegraf.SecretStoreEditor)
+						if !ok {
+							return fmt.Errorf("secret store %q does not support setting secrets", storeID)
+						}
+
 						if value == "" {
 							fmt.Printf("Enter secret value: ")
 							b, err := term.ReadPassword(int(os.Stdin.Fd()))
@@ -244,12 +256,68 @@ you will be prompted to enter the value of the secret.
 							value = string(b)
 						}
 
+						if err := editor.Set(key, value); err != nil {
+							return fmt.Errorf("unable to set secret: %w", err)
+						}
+
+						return nil
+					},
+				},
+				{
+					Name:  "remove",
+					Usage: "remove a secret from the given store",
+					Description: `
+The 'remove' command requires passing in your configuration file
+containing the secret store definitions you want to access. To get a
+list of available secret store plugins, please have a look at
+https://github.com/influxdata/telegraf/tree/master/plugins/secretstores.
+and use the 'secrets list' command to get the IDs of available stores and keys.
+
+For help on how to define secret stores, check the documentation of the
+different plugins.
+
+Assuming you use the default configuration file location, you can run
+the following command to remove a secret from an available secret store
+
+> telegraf secrets remove mystore mysecretkey
+
+This will remove the secret with the key 'mysecretkey' from the secret
+store with the ID 'mystore'. Removing a key that does not exist in that
+store results in an error.
+`,
+					ArgsUsage: "<secret store ID> <secret key>",
+					Action: func(cCtx *cli.Context) error {
+						// Only load the secret stores
+						filters := processFilterOnlySecretStoreFlags(cCtx)
+						g := GlobalFlags{
+							config:     cCtx.StringSlice("config"),
+							configDir:  cCtx.StringSlice("config-directory"),
+							plugindDir: cCtx.String("plugin-directory"),
+							password:   cCtx.String("password"),
+							debug:      cCtx.Bool("debug"),
+						}
+						w := WindowFlags{}
+						m.Init(nil, filters, g, w)
+
+						args := cCtx.Args()
+						if !args.Present() || args.Len() != 2 {
+							return errors.New("invalid number of arguments")
+						}
+
+						storeID := args.First()
+						key := args.Get(1)
+
 						store, err := m.GetSecretStore(storeID)
 						if err != nil {
-							return fmt.Errorf("unable to get secret-store: %w", err)
+							return fmt.Errorf("unable to get secret store: %w", err)
 						}
-						if err := store.Set(key, value); err != nil {
-							return fmt.Errorf("unable to set secret: %w", err)
+						editor, ok := store.(telegraf.SecretStoreEditor)
+						if !ok {
+							return fmt.Errorf("secret store %q does not support removing secrets", storeID)
+						}
+
+						if err := editor.Remove(key); err != nil {
+							return fmt.Errorf("unable to remove secret: %w", err)
 						}
 
 						return nil

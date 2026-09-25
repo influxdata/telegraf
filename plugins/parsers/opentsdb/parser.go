@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 	"time"
@@ -70,7 +71,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		return nil, fmt.Errorf("parsing field %q value failed: %w", measurement, err)
 	}
 
-	fieldValues := map[string]interface{}{"value": v}
+	fieldValues := map[string]any{"value": v}
 
 	// Parse timestamp.
 	ts, err := strconv.ParseInt(tsStr, 10, 64)
@@ -88,9 +89,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	tags := make(map[string]string, len(p.DefaultTags)+len(tagStrs))
-	for k, v := range p.DefaultTags {
-		tags[k] = v
-	}
+	maps.Copy(tags, p.DefaultTags)
 
 	for _, tag := range tagStrs {
 		tagValue := strings.Split(tag, "=")

@@ -1,0 +1,60 @@
+{
+  "@odata.etag": "\"b3a391aa\"",
+  "@odata.id": "/redfish/v1/Chassis/DE043000/Drives/0",
+  "@odata.type": "#Drive.v1_17_0.Drive",
+  "Id": "0",
+  "Name": "HPE 1.60TB 22G SAS SSD",
+  "Status": {
+    "State": "Enabled",
+    "Health": "OK"
+  },
+  "Links": {
+    "Storage": {
+      "@odata.id": "/redfish/v1/Systems/1/Storage/DE043000"
+    },
+    "Chassis": {
+      "@odata.id": "/redfish/v1/Chassis/DE043000"
+    },
+    "Volumes@odata.count": 1,
+    "Volumes": [
+      {
+        "@odata.id": "/redfish/v1/Systems/1/Storage/DE043000/Volumes/1"
+      }
+    ]
+  },
+  "PhysicalLocation": {
+    "PartLocation": {
+      "ServiceLabel": "Slot=22:Port=2:Box=1:Bay=1",
+      "LocationType": "Bay",
+      "LocationOrdinalValue": 1
+    }
+  },
+  "BlockSizeBytes": 512,
+  "CapableSpeedGbs": 22.0,
+  "CapacityBytes": 1600,
+  "EncryptionAbility": "None",
+  "FailurePredicted": false,
+  "Identifiers": [
+    {
+      "DurableName": "DurableName",
+      "DurableNameFormat": "NAA"
+    }
+  ],
+  "MediaType": "SSD",
+  "Manufacturer": "HPE",
+  "Model": "Modelname",
+  "Multipath": false,
+  "NegotiatedSpeedGbs": 12.0,
+  "Operations": [],
+  "PredictedMediaLifeLeftPercent": 98.0,
+  "Protocol": "SAS",
+  "Revision": "HPD3",
+  "SerialNumber": "SERIALNUMBER",
+  "StatusIndicator": "OK",
+  "@Redfish.WriteableProperties": [
+    "LocationIndicatorActive"
+  ],
+  "HotspareType": "None",
+  "LocationIndicatorActive": false,
+  "WriteCacheEnabled": false
+}

@@ -31,8 +31,8 @@ type datapoint struct {
 }
 
 type state struct {
-	Key         string      `json:"key"`
-	Value       interface{} `json:"value"`
-	DataPointID string      `json:"dataPointId"`
-	Timestamp   float64     `json:"ts"`
+	Key         string  `json:"key"`
+	Value       any     `json:"value"`
+	DataPointID string  `json:"dataPointId"`
+	Timestamp   float64 `json:"ts"`
 }

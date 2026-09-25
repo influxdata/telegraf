@@ -12,9 +12,9 @@ import (
 
 // MetricHandler implements the Handler interface and produces telegraf.Metric.
 type MetricHandler struct {
-	timePrecision time.Duration
-	timeFunc      TimeFunc
 	metric        telegraf.Metric
+	timeFunc      func() time.Time
+	timePrecision time.Duration
 }
 
 func NewMetricHandler() *MetricHandler {
@@ -34,7 +34,7 @@ func (h *MetricHandler) SetTimePrecision(p time.Duration) {
 	// overloaded to hold the unit of measurement of the timestamp.
 }
 
-func (h *MetricHandler) SetTimeFunc(f TimeFunc) {
+func (h *MetricHandler) SetTimeFunc(f func() time.Time) {
 	h.timeFunc = f
 }
 
@@ -65,8 +65,7 @@ func (h *MetricHandler) AddInt(key, value []byte) error {
 	fk := unescape(key)
 	fv, err := parseIntBytes(bytes.TrimSuffix(value, []byte("i")), 10, 64)
 	if err != nil {
-		var numErr *strconv.NumError
-		if errors.As(err, &numErr) {
+		if numErr, ok := errors.AsType[*strconv.NumError](err); ok {
 			return numErr.Err
 		}
 		return err
@@ -79,8 +78,7 @@ func (h *MetricHandler) AddUint(key, value []byte) error {
 	fk := unescape(key)
 	fv, err := parseUintBytes(bytes.TrimSuffix(value, []byte("u")), 10, 64)
 	if err != nil {
-		var numErr *strconv.NumError
-		if errors.As(err, &numErr) {
+		if numErr, ok := errors.AsType[*strconv.NumError](err); ok {
 			return numErr.Err
 		}
 		return err
@@ -93,8 +91,7 @@ func (h *MetricHandler) AddFloat(key, value []byte) error {
 	fk := unescape(key)
 	fv, err := parseFloatBytes(value, 64)
 	if err != nil {
-		var numErr *strconv.NumError
-		if errors.As(err, &numErr) {
+		if numErr, ok := errors.AsType[*strconv.NumError](err); ok {
 			return numErr.Err
 		}
 		return err
@@ -123,8 +120,7 @@ func (h *MetricHandler) AddBool(key, value []byte) error {
 func (h *MetricHandler) SetTimestamp(tm []byte) error {
 	v, err := parseIntBytes(tm, 10, 64)
 	if err != nil {
-		var numErr *strconv.NumError
-		if errors.As(err, &numErr) {
+		if numErr, ok := errors.AsType[*strconv.NumError](err); ok {
 			return numErr.Err
 		}
 		return err

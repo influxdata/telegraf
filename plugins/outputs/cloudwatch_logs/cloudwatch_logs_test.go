@@ -15,7 +15,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/common/aws"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -103,11 +102,9 @@ func TestInit(t *testing.T) {
 			name:                "log group is not set",
 			expectedErrorString: "log group is not set",
 			plugin: &CloudWatchLogs{
-				CredentialConfig: aws.CredentialConfig{
-					Region:    "eu-central-1",
-					AccessKey: "dummy",
-					SecretKey: "dummy",
-				},
+				Region:       "eu-central-1",
+				AccessKey:    "dummy",
+				SecretKey:    "dummy",
 				LogGroup:     "",
 				LogStream:    "tag:source",
 				LDMetricName: "docker_log",
@@ -121,11 +118,9 @@ func TestInit(t *testing.T) {
 			name:                "log stream is not set",
 			expectedErrorString: "log stream is not set",
 			plugin: &CloudWatchLogs{
-				CredentialConfig: aws.CredentialConfig{
-					Region:    "eu-central-1",
-					AccessKey: "dummy",
-					SecretKey: "dummy",
-				},
+				Region:       "eu-central-1",
+				AccessKey:    "dummy",
+				SecretKey:    "dummy",
 				LogGroup:     "TestLogGroup",
 				LogStream:    "",
 				LDMetricName: "docker_log",
@@ -139,11 +134,9 @@ func TestInit(t *testing.T) {
 			name:                "log data metrics name is not set",
 			expectedErrorString: "log data metrics name is not set",
 			plugin: &CloudWatchLogs{
-				CredentialConfig: aws.CredentialConfig{
-					Region:    "eu-central-1",
-					AccessKey: "dummy",
-					SecretKey: "dummy",
-				},
+				Region:       "eu-central-1",
+				AccessKey:    "dummy",
+				SecretKey:    "dummy",
 				LogGroup:     "TestLogGroup",
 				LogStream:    "tag:source",
 				LDMetricName: "",
@@ -157,11 +150,9 @@ func TestInit(t *testing.T) {
 			name:                "log data source is not set",
 			expectedErrorString: "log data source is not set",
 			plugin: &CloudWatchLogs{
-				CredentialConfig: aws.CredentialConfig{
-					Region:    "eu-central-1",
-					AccessKey: "dummy",
-					SecretKey: "dummy",
-				},
+				Region:       "eu-central-1",
+				AccessKey:    "dummy",
+				SecretKey:    "dummy",
 				LogGroup:     "TestLogGroup",
 				LogStream:    "tag:source",
 				LDMetricName: "docker_log",
@@ -176,11 +167,9 @@ func TestInit(t *testing.T) {
 			expectedErrorString: "log data source is not properly formatted, ':' is missed.\n" +
 				"Should be 'tag:<tag_mame>' or 'field:<field_name>'",
 			plugin: &CloudWatchLogs{
-				CredentialConfig: aws.CredentialConfig{
-					Region:    "eu-central-1",
-					AccessKey: "dummy",
-					SecretKey: "dummy",
-				},
+				Region:       "eu-central-1",
+				AccessKey:    "dummy",
+				SecretKey:    "dummy",
 				LogGroup:     "TestLogGroup",
 				LogStream:    "tag:source",
 				LDMetricName: "docker_log",
@@ -195,11 +184,9 @@ func TestInit(t *testing.T) {
 			expectedErrorString: "log data source is not properly formatted.\n" +
 				"Should be 'tag:<tag_mame>' or 'field:<field_name>'",
 			plugin: &CloudWatchLogs{
-				CredentialConfig: aws.CredentialConfig{
-					Region:    "eu-central-1",
-					AccessKey: "dummy",
-					SecretKey: "dummy",
-				},
+				Region:       "eu-central-1",
+				AccessKey:    "dummy",
+				SecretKey:    "dummy",
 				LogGroup:     "TestLogGroup",
 				LogStream:    "tag:source",
 				LDMetricName: "docker_log",
@@ -212,11 +199,9 @@ func TestInit(t *testing.T) {
 		{
 			name: "valid config",
 			plugin: &CloudWatchLogs{
-				CredentialConfig: aws.CredentialConfig{
-					Region:    "eu-central-1",
-					AccessKey: "dummy",
-					SecretKey: "dummy",
-				},
+				Region:       "eu-central-1",
+				AccessKey:    "dummy",
+				SecretKey:    "dummy",
 				LogGroup:     "TestLogGroup",
 				LogStream:    "tag:source",
 				LDMetricName: "docker_log",
@@ -229,12 +214,10 @@ func TestInit(t *testing.T) {
 		{
 			name: "valid config with EndpointURL",
 			plugin: &CloudWatchLogs{
-				CredentialConfig: aws.CredentialConfig{
-					Region:      "eu-central-1",
-					AccessKey:   "dummy",
-					SecretKey:   "dummy",
-					EndpointURL: "https://test.com",
-				},
+				Region:       "eu-central-1",
+				AccessKey:    "dummy",
+				SecretKey:    "dummy",
+				EndpointURL:  "https://test.com",
 				LogGroup:     "TestLogGroup",
 				LogStream:    "tag:source",
 				LDMetricName: "docker_log",
@@ -278,12 +261,10 @@ func TestConnect(t *testing.T) {
 	defer ts.Close()
 
 	plugin := &CloudWatchLogs{
-		CredentialConfig: aws.CredentialConfig{
-			Region:      "eu-central-1",
-			AccessKey:   "dummy",
-			SecretKey:   "dummy",
-			EndpointURL: ts.URL,
-		},
+		Region:       "eu-central-1",
+		AccessKey:    "dummy",
+		SecretKey:    "dummy",
+		EndpointURL:  ts.URL,
 		LogGroup:     "TestLogGroup",
 		LogStream:    "tag:source",
 		LDMetricName: "docker_log",
@@ -318,12 +299,10 @@ func TestWrite(t *testing.T) {
 	defer ts.Close()
 
 	plugin := &CloudWatchLogs{
-		CredentialConfig: aws.CredentialConfig{
-			Region:      "eu-central-1",
-			AccessKey:   "dummy",
-			SecretKey:   "dummy",
-			EndpointURL: ts.URL,
-		},
+		Region:       "eu-central-1",
+		AccessKey:    "dummy",
+		SecretKey:    "dummy",
+		EndpointURL:  ts.URL,
 		LogGroup:     "TestLogGroup",
 		LogStream:    "tag:source",
 		LDMetricName: "docker_log",
@@ -357,7 +336,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						"message":      "Sorted: message #1",
 					},
@@ -372,7 +351,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						"message":      "Sorted: message #2",
 					},
@@ -395,7 +374,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						"message":      "Unsorted: message #1",
 					},
@@ -410,7 +389,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						"message":      "Unsorted: message #2",
 					},
@@ -432,7 +411,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						"message":      "message #1",
 					},
@@ -447,7 +426,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						"message":      "message #2",
 					},
@@ -469,7 +448,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						// Here comes very long message
 						"message": RandStringBytes(maxLogMessageLength + 1),
@@ -493,7 +472,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						// Here comes very long message to cause message batching
 						"message": "batch1 message1:" + RandStringBytes(maxLogMessageLength-16),
@@ -509,7 +488,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						// Here comes very long message to cause message batching
 						"message": "batch1 message2:" + RandStringBytes(maxLogMessageLength-16),
@@ -525,7 +504,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						// Here comes very long message to cause message batching
 						"message": "batch1 message3:" + RandStringBytes(maxLogMessageLength-16),
@@ -541,7 +520,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						// Here comes very long message to cause message batching
 						"message": "batch1 message4:" + RandStringBytes(maxLogMessageLength-16),
@@ -557,7 +536,7 @@ func TestWrite(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						"message":      "batch2 message1",
 					},

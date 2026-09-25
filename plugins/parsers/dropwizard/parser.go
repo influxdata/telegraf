@@ -30,9 +30,42 @@ type Parser struct {
 	Log                telegraf.Logger   `toml:"-"`
 
 	templateEngine *templating.Engine
+	seriesParser   *influx.Parser
+	timeFunc       func() time.Time
+}
 
-	// seriesParser parses line protocol measurement + tags
-	seriesParser *influx.Parser
+func (p *Parser) Init() error {
+	parser := &influx.Parser{
+		Type: "series",
+	}
+	err := parser.Init()
+	if err != nil {
+		return err
+	}
+	p.seriesParser = parser
+
+	if len(p.Templates) != 0 {
+		defaultTemplate, err := templating.NewDefaultTemplateWithPattern("measurement*")
+		if err != nil {
+			return err
+		}
+
+		templateEngine, err := templating.NewEngine(p.Separator, defaultTemplate, p.Templates)
+		if err != nil {
+			return err
+		}
+		p.templateEngine = templateEngine
+	}
+
+	if p.timeFunc == nil {
+		p.timeFunc = time.Now
+	}
+
+	return nil
+}
+
+func (p *Parser) SetTimeFunc(fn func() time.Time) {
+	p.timeFunc = fn
 }
 
 // Parse parses the input bytes to an array of metrics
@@ -72,24 +105,20 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	jsonTags := p.readTags(buf)
 
 	// fill json tags first
-	if len(jsonTags) > 0 {
+	for k, v := range jsonTags {
 		for _, m := range metrics {
-			for k, v := range jsonTags {
-				// only set the tag if it doesn't already exist:
-				if !m.HasTag(k) {
-					m.AddTag(k, v)
-				}
+			// only set the tag if it doesn't already exist:
+			if !m.HasTag(k) {
+				m.AddTag(k, v)
 			}
 		}
 	}
 	// fill default tags last
-	if len(p.DefaultTags) > 0 {
+	for k, v := range p.DefaultTags {
 		for _, m := range metrics {
-			for k, v := range p.DefaultTags {
-				// only set the default tag if it doesn't already exist:
-				if !m.HasTag(k) {
-					m.AddTag(k, v)
-				}
+			// only set the default tag if it doesn't already exist:
+			if !m.HasTag(k) {
+				m.AddTag(k, v)
 			}
 		}
 	}
@@ -148,10 +177,10 @@ func (p *Parser) parseTime(buf []byte) (time.Time, error) {
 		}
 		return t.UTC(), nil
 	}
-	return time.Now(), nil
+	return p.timeFunc(), nil
 }
 
-func (p *Parser) unmarshalMetrics(buf []byte) (map[string]interface{}, error) {
+func (p *Parser) unmarshalMetrics(buf []byte) (map[string]any, error) {
 	var registryBytes []byte
 	if p.MetricRegistryPath != "" {
 		regResult := gjson.GetBytes(buf, p.MetricRegistryPath)
@@ -167,7 +196,7 @@ func (p *Parser) unmarshalMetrics(buf []byte) (map[string]interface{}, error) {
 	} else {
 		registryBytes = buf
 	}
-	var jsonOut map[string]interface{}
+	var jsonOut map[string]any
 	err := json.Unmarshal(registryBytes, &jsonOut)
 	if err != nil {
 		err = fmt.Errorf("unable to parse dropwizard metric registry from JSON document, %w", err)
@@ -176,8 +205,8 @@ func (p *Parser) unmarshalMetrics(buf []byte) (map[string]interface{}, error) {
 	return jsonOut, nil
 }
 
-func (p *Parser) readDWMetrics(metricType string, dwms interface{}, metrics []telegraf.Metric, tm time.Time) ([]telegraf.Metric, error) {
-	if dwmsTyped, ok := dwms.(map[string]interface{}); ok {
+func (p *Parser) readDWMetrics(metricType string, dwms any, metrics []telegraf.Metric, tm time.Time) ([]telegraf.Metric, error) {
+	if dwmsTyped, ok := dwms.(map[string]any); ok {
 		for dwmName, dwmFields := range dwmsTyped {
 			measurementName := dwmName
 			tags := make(map[string]string)
@@ -196,7 +225,7 @@ func (p *Parser) readDWMetrics(metricType string, dwms interface{}, metrics []te
 			parsed, err := p.seriesParser.Parse([]byte(measurementName))
 			var m telegraf.Metric
 			if err != nil || len(parsed) != 1 {
-				m = metric.New(measurementName, make(map[string]string), make(map[string]interface{}), tm)
+				m = metric.New(measurementName, make(map[string]string), make(map[string]any), tm)
 			} else {
 				m = parsed[0]
 				m.SetTime(tm)
@@ -207,7 +236,7 @@ func (p *Parser) readDWMetrics(metricType string, dwms interface{}, metrics []te
 				m.AddTag(k, v)
 			}
 
-			if fields, ok := dwmFields.(map[string]interface{}); ok {
+			if fields, ok := dwmFields.(map[string]any); ok {
 				for k, v := range fields {
 					switch v := v.(type) {
 					case float64, string, bool:
@@ -223,32 +252,6 @@ func (p *Parser) readDWMetrics(metricType string, dwms interface{}, metrics []te
 	}
 
 	return metrics, nil
-}
-
-func (p *Parser) Init() error {
-	parser := &influx.Parser{
-		Type: "series",
-	}
-	err := parser.Init()
-	if err != nil {
-		return err
-	}
-	p.seriesParser = parser
-
-	if len(p.Templates) != 0 {
-		defaultTemplate, err := templating.NewDefaultTemplateWithPattern("measurement*")
-		if err != nil {
-			return err
-		}
-
-		templateEngine, err := templating.NewEngine(p.Separator, defaultTemplate, p.Templates)
-		if err != nil {
-			return err
-		}
-		p.templateEngine = templateEngine
-	}
-
-	return nil
 }
 
 func init() {

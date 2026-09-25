@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"sync"
 	"time"
@@ -25,6 +26,7 @@ const (
 type Kapacitor struct {
 	URLs    []string        `toml:"urls"`
 	Timeout config.Duration `toml:"timeout"`
+	TagURL  bool            `toml:"tag_url"`
 	tls.ClientConfig
 
 	client *http.Client
@@ -75,9 +77,9 @@ func (k *Kapacitor) createHTTPClient() (*http.Client, error) {
 }
 
 type object struct {
-	Name   string                 `json:"name"`
-	Values map[string]interface{} `json:"values"`
-	Tags   map[string]string      `json:"tags"`
+	Name   string            `json:"name"`
+	Values map[string]any    `json:"values"`
+	Tags   map[string]string `json:"tags"`
 }
 
 type memstats struct {
@@ -154,7 +156,7 @@ func (k *Kapacitor) gatherURL(
 
 	if s.MemStats != nil {
 		acc.AddFields("kapacitor_memstats",
-			map[string]interface{}{
+			map[string]any{
 				"alloc_bytes":         s.MemStats.Alloc,
 				"buck_hash_sys_bytes": s.MemStats.BuckHashSys,
 				"frees":               s.MemStats.Frees,
@@ -190,7 +192,7 @@ func (k *Kapacitor) gatherURL(
 	}
 
 	acc.AddFields("kapacitor",
-		map[string]interface{}{
+		map[string]any{
 			"num_enabled_tasks": s.NumEnabledTasks,
 			"num_subscriptions": s.NumSubscriptions,
 			"num_tasks":         s.NumTasks,
@@ -218,10 +220,20 @@ func (k *Kapacitor) gatherURL(
 				obj.Values["avg_exec_time_ns"] = d.Nanoseconds()
 			}
 
+			// Add url tag to distinguish nested metrics if configured
+			tags := obj.Tags
+			if k.TagURL {
+				tags = maps.Clone(obj.Tags)
+				if tags == nil {
+					tags = make(map[string]string, 1)
+				}
+				tags["url"] = url
+			}
+
 			acc.AddFields(
 				"kapacitor_"+obj.Name,
 				obj.Values,
-				obj.Tags,
+				tags,
 				now,
 			)
 		}

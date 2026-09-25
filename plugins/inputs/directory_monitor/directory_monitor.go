@@ -41,11 +41,12 @@ const (
 )
 
 type DirectoryMonitor struct {
-	Directory         string `toml:"directory"`
-	FinishedDirectory string `toml:"finished_directory"`
-	Recursive         bool   `toml:"recursive"`
-	ErrorDirectory    string `toml:"error_directory"`
-	FileTag           string `toml:"file_tag"`
+	Directory          string `toml:"directory"`
+	FinishedDirectory  string `toml:"finished_directory"`
+	Recursive          bool   `toml:"recursive"`
+	ErrorDirectory     string `toml:"error_directory"`
+	FileTag            string `toml:"file_tag"`
+	PreserveTimestamps bool   `toml:"preserve_timestamps"`
 
 	FilesToMonitor             []string        `toml:"files_to_monitor"`
 	FilesToIgnore              []string        `toml:"files_to_ignore"`
@@ -155,11 +156,7 @@ func (monitor *DirectoryMonitor) Start(acc telegraf.Accumulator) error {
 	}()
 
 	// Monitor the files channel and read what they receive.
-	monitor.waitGroup.Add(1)
-	go func() {
-		monitor.monitor()
-		monitor.waitGroup.Done()
-	}()
+	monitor.waitGroup.Go(monitor.monitor)
 
 	return nil
 }
@@ -275,8 +272,7 @@ func (monitor *DirectoryMonitor) processFile(path string) {
 func (monitor *DirectoryMonitor) read(filePath string) {
 	// Open, read, and parse the contents of the file.
 	err := monitor.ingestFile(filePath)
-	var pathErr *os.PathError
-	if errors.As(err, &pathErr) {
+	if _, ok := errors.AsType[*os.PathError](err); ok {
 		return
 	}
 
@@ -422,7 +418,6 @@ func (monitor *DirectoryMonitor) moveFile(srcPath, dstBaseDir string) {
 	if err != nil {
 		monitor.Log.Errorf("Could not open output file: %s", err)
 	}
-	defer outputFile.Close()
 
 	_, err = io.Copy(outputFile, inputFile)
 	if err != nil {
@@ -434,6 +429,21 @@ func (monitor *DirectoryMonitor) moveFile(srcPath, dstBaseDir string) {
 	// (see https://github.com/influxdata/telegraf/issues/12287)
 	if err := inputFile.Close(); err != nil {
 		monitor.Log.Errorf("Could not close input file: %s", err)
+	}
+
+	// Close the destination file
+	if err := outputFile.Close(); err != nil {
+		monitor.Log.Errorf("Could not close output file: %s", err)
+	}
+
+	// Restore the timestamps on the moved file to be able to keep track of the original file
+	if monitor.PreserveTimestamps {
+		srcTimes, err := times.Stat(srcPath)
+		if err != nil {
+			monitor.Log.Errorf("Could not read timestamps of %q: %v", srcPath, err)
+		} else if err := os.Chtimes(dstPath, srcTimes.AccessTime(), srcTimes.ModTime()); err != nil {
+			monitor.Log.Errorf("Could not preserve timestamps on %q: %v", dstPath, err)
+		}
 	}
 
 	if err := os.Remove(srcPath); err != nil {

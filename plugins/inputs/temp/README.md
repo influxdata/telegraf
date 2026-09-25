@@ -27,6 +27,9 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Add device tag to distinguish devices with the same name (Linux only)
   # add_device_tag = false
+
+  ## Always gather values from the thermal-zones even if some hwmon exists (Linux only)
+  # always_gather_zones = false
 ```
 
 ## Troubleshooting
@@ -49,7 +52,7 @@ be required to run as admin to get the values.
   - tags:
     - sensor
   - fields:
-    - temp (float, celcius)
+    - temp (float, celsius)
 
 ## Example Output
 

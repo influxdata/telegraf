@@ -43,6 +43,8 @@ type DNSQuery struct {
 	IncludeFields []string        `toml:"include_fields"`
 
 	fieldEnabled map[string]bool
+	client       *dns.Client
+	record       uint16
 }
 
 func (*DNSQuery) SampleConfig() string {
@@ -66,17 +68,49 @@ func (d *DNSQuery) Init() error {
 		d.Network = "udp"
 	}
 
-	if d.RecordType == "" {
-		d.RecordType = "NS"
-	}
-
 	if len(d.Domains) == 0 {
 		d.Domains = []string{"."}
-		d.RecordType = "NS"
 	}
 
 	if d.Port < 1 {
 		d.Port = 53
+	}
+
+	// Convert the record type
+	switch d.RecordType {
+	case "":
+		d.RecordType = "NS"
+		d.record = dns.TypeNS
+	case "A":
+		d.record = dns.TypeA
+	case "AAAA":
+		d.record = dns.TypeAAAA
+	case "ANY":
+		d.record = dns.TypeANY
+	case "CNAME":
+		d.record = dns.TypeCNAME
+	case "MX":
+		d.record = dns.TypeMX
+	case "NS":
+		d.record = dns.TypeNS
+	case "PTR":
+		d.record = dns.TypePTR
+	case "SOA":
+		d.record = dns.TypeSOA
+	case "SPF":
+		d.record = dns.TypeSPF
+	case "SRV":
+		d.record = dns.TypeSRV
+	case "TXT":
+		d.record = dns.TypeTXT
+	default:
+		return fmt.Errorf("record type %q not recognized", d.RecordType)
+	}
+
+	// Create a client for querying
+	d.client = &dns.Client{
+		ReadTimeout: time.Duration(d.Timeout),
+		Net:         d.Network,
 	}
 
 	return nil
@@ -107,7 +141,7 @@ func (d *DNSQuery) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (d *DNSQuery) query(domain, server string) (map[string]interface{}, map[string]string, error) {
+func (d *DNSQuery) query(domain, server string) (map[string]any, map[string]string, error) {
 	tags := map[string]string{
 		"server":      server,
 		"domain":      domain,
@@ -115,27 +149,17 @@ func (d *DNSQuery) query(domain, server string) (map[string]interface{}, map[str
 		"result":      "error",
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"query_time_ms": float64(0),
 		"result_code":   uint64(errorResult),
 	}
 
-	c := dns.Client{
-		ReadTimeout: time.Duration(d.Timeout),
-		Net:         d.Network,
-	}
-
-	recordType, err := d.parseRecordType()
-	if err != nil {
-		return fields, tags, err
-	}
-
 	var msg dns.Msg
-	msg.SetQuestion(dns.Fqdn(domain), recordType)
+	msg.SetQuestion(dns.Fqdn(domain), d.record)
 	msg.RecursionDesired = true
 
 	addr := net.JoinHostPort(server, strconv.Itoa(d.Port))
-	r, rtt, err := c.Exchange(&msg, addr)
+	r, rtt, err := d.client.Exchange(&msg, addr)
 	if err != nil {
 		var opErr *net.OpError
 		if errors.As(err, &opErr) && opErr.Timeout() {
@@ -199,40 +223,6 @@ func (d *DNSQuery) query(domain, server string) (map[string]interface{}, map[str
 	}
 
 	return fields, tags, nil
-}
-
-func (d *DNSQuery) parseRecordType() (uint16, error) {
-	var recordType uint16
-	var err error
-
-	switch d.RecordType {
-	case "A":
-		recordType = dns.TypeA
-	case "AAAA":
-		recordType = dns.TypeAAAA
-	case "ANY":
-		recordType = dns.TypeANY
-	case "CNAME":
-		recordType = dns.TypeCNAME
-	case "MX":
-		recordType = dns.TypeMX
-	case "NS":
-		recordType = dns.TypeNS
-	case "PTR":
-		recordType = dns.TypePTR
-	case "SOA":
-		recordType = dns.TypeSOA
-	case "SPF":
-		recordType = dns.TypeSPF
-	case "SRV":
-		recordType = dns.TypeSRV
-	case "TXT":
-		recordType = dns.TypeTXT
-	default:
-		err = fmt.Errorf("record type %s not recognized", d.RecordType)
-	}
-
-	return recordType, err
 }
 
 func extractIP(record dns.RR) (string, bool) {

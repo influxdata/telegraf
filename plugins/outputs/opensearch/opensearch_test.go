@@ -11,6 +11,8 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -306,6 +308,53 @@ func TestDisconnectedServerOnConnect(t *testing.T) {
 	// Close the server right before we try to connect.
 	ts.Close()
 	require.Error(t, e.Connect())
+}
+
+func TestConnectionIssueAtStartup(t *testing.T) {
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
+	defer ts.Close()
+
+	urls := []string{"http://" + ts.Listener.Addr().String()}
+
+	plugin := &Opensearch{
+		URLs:            urls,
+		ManageTemplate:  true,
+		TemplateName:    "telegraf",
+		IndexName:       `test-{{.Tag "tag1"}}-{{.Time.Format "2006-01-02"}}`,
+		Timeout:         config.Duration(time.Second * 5),
+		AuthBearerToken: config.NewSecret([]byte("0123456789abcdef")),
+		Log:             testutil.Logger{},
+	}
+	var err error
+	plugin.indexTmpl, err = template.New("index").Parse(plugin.IndexName)
+	require.NoError(t, err)
+
+	// Create a model to be able to use the startup retry strategy
+	model, err := models.NewRunningOutput(
+		plugin,
+		&models.OutputConfig{
+			Name:                 "opensearch",
+			StartupErrorBehavior: "retry",
+		},
+		1000, 1000,
+	)
+	require.NoError(t, err)
+	require.NoError(t, model.Init())
+	t.Cleanup(func() { model.Close() })
+
+	// The connect call should not fail even though the server is closed due to the "retry" strategy
+	require.NoError(t, model.Connect())
+
+	// Writing metrics in this state should fail since server is closed
+	metrics := testutil.MockMetrics()
+	for _, m := range metrics {
+		model.AddMetric(m)
+	}
+	require.ErrorIs(t, model.WriteBatch(), internal.ErrNotConnected)
+
+	// Start the server and check that writes succeed
+	ts.Start()
+	require.NoError(t, model.WriteBatch())
 }
 
 func TestDisconnectedServerOnWrite(t *testing.T) {

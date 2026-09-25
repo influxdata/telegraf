@@ -19,7 +19,7 @@ func Test_metastats(t *testing.T) {
 	mockAcc.AssertContainsTaggedFields(
 		t,
 		"ecs_container_meta",
-		map[string]interface{}{
+		map[string]any{
 			"container_id":   nginxStatsKey,
 			"docker_name":    "ecs-nginx-2-nginx",
 			"image":          "nginx:alpine",
@@ -48,7 +48,7 @@ func Test_memstats(t *testing.T) {
 	mockAcc.AssertContainsTaggedFields(
 		t,
 		"ecs_container_mem",
-		map[string]interface{}{
+		map[string]any{
 			"active_anon":               uint64(1597440),
 			"active_file":               uint64(1462272),
 			"cache":                     uint64(5787648),
@@ -95,7 +95,7 @@ func Test_cpustats(t *testing.T) {
 	mockAcc.AssertContainsTaggedFields(
 		t,
 		"ecs_container_cpu",
-		map[string]interface{}{
+		map[string]any{
 			"container_id":                 nginxStatsKey,
 			"throttling_periods":           uint64(0),
 			"throttling_throttled_periods": uint64(0),
@@ -114,7 +114,7 @@ func Test_cpustats(t *testing.T) {
 	mockAcc.AssertContainsTaggedFields(
 		t,
 		"ecs_container_cpu",
-		map[string]interface{}{
+		map[string]any{
 			"container_id": nginxStatsKey,
 			"usage_total":  uint64(65599511),
 		},
@@ -137,7 +137,7 @@ func Test_netstats(t *testing.T) {
 	mockAcc.AssertContainsTaggedFields(
 		t,
 		"ecs_container_net",
-		map[string]interface{}{
+		map[string]any{
 			"container_id": pauseStatsKey,
 			"rx_bytes":     uint64(5338),
 			"rx_dropped":   uint64(0),
@@ -156,7 +156,7 @@ func Test_netstats(t *testing.T) {
 	mockAcc.AssertContainsTaggedFields(
 		t,
 		"ecs_container_net",
-		map[string]interface{}{
+		map[string]any{
 			"container_id": pauseStatsKey,
 			"rx_bytes":     uint64(4641),
 			"rx_dropped":   uint64(0),
@@ -175,7 +175,7 @@ func Test_netstats(t *testing.T) {
 	mockAcc.AssertContainsTaggedFields(
 		t,
 		"ecs_container_net",
-		map[string]interface{}{
+		map[string]any{
 			"container_id": pauseStatsKey,
 			"rx_bytes":     uint64(9979),
 			"rx_dropped":   uint64(0),
@@ -205,7 +205,7 @@ func Test_blkstats(t *testing.T) {
 	mockAcc.AssertContainsTaggedFields(
 		t,
 		"ecs_container_blkio",
-		map[string]interface{}{
+		map[string]any{
 			"container_id":                     nginxStatsKey,
 			"io_service_bytes_recursive_read":  uint64(5730304),
 			"io_service_bytes_recursive_write": uint64(0),

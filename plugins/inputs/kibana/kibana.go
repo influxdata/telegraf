@@ -51,7 +51,7 @@ type version struct {
 
 type status struct {
 	Overall  overallStatus `json:"overall"`
-	Statuses interface{}   `json:"statuses"`
+	Statuses any           `json:"statuses"`
 }
 
 type overallStatus struct {
@@ -155,7 +155,7 @@ func (k *Kibana) gatherKibanaStatus(baseURL string, acc telegraf.Accumulator) er
 		return err
 	}
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	tags := make(map[string]string)
 
 	tags["name"] = kibanaStatus.Name
@@ -228,7 +228,7 @@ func mapKibana8xStatus(level string) string {
 	}
 }
 
-func (k *Kibana) gatherJSONData(url string, v interface{}) (host string, err error) {
+func (k *Kibana) gatherJSONData(url string, v any) (host string, err error) {
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return "", fmt.Errorf("unable to create new request %q: %w", url, err)
@@ -273,9 +273,7 @@ func mapHealthStatusToCode(s string) int {
 
 func newKibana() *Kibana {
 	return &Kibana{
-		HTTPClientConfig: common_http.HTTPClientConfig{
-			Timeout: config.Duration(5 * time.Second),
-		},
+		Timeout: config.Duration(5 * time.Second),
 	}
 }
 

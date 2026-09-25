@@ -48,7 +48,7 @@ type ReadRequest struct {
 
 type ReadResponse struct {
 	Status            int
-	Value             interface{}
+	Value             any
 	RequestMbean      string
 	RequestAttributes []string
 	RequestPath       string
@@ -66,7 +66,7 @@ type ReadResponse struct {
 type jolokiaRequest struct {
 	Type      string         `json:"type"`
 	Mbean     string         `json:"mbean"`
-	Attribute interface{}    `json:"attribute,omitempty"`
+	Attribute any            `json:"attribute,omitempty"`
 	Path      string         `json:"path,omitempty"`
 	Target    *jolokiaTarget `json:"target,omitempty"`
 }
@@ -119,7 +119,7 @@ type jolokiaOptions struct {
 //	}
 type jolokiaResponse struct {
 	Request jolokiaResponseRequest `json:"request"`
-	Value   interface{}            `json:"value"`
+	Value   any                    `json:"value"`
 	Status  int                    `json:"status"`
 }
 
@@ -264,7 +264,7 @@ func makeReadResponses(jresponses []jolokiaResponse) []ReadResponse {
 			if ok {
 				rrequest.Attributes = []string{attribute}
 			} else {
-				attributes, _ := attrValue.([]interface{})
+				attributes, _ := attrValue.([]any)
 				rrequest.Attributes = make([]string, 0, len(attributes))
 				for _, attr := range attributes {
 					rrequest.Attributes = append(rrequest.Attributes, attr.(string))

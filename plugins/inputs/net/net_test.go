@@ -10,12 +10,12 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/common/psutil"
+	"github.com/influxdata/telegraf/plugins/common/psutil/psutiltest"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestNetIOStats(t *testing.T) {
-	var mps psutil.MockPS
+	var mps psutiltest.MockPS
 	defer mps.AssertExpectations(t)
 
 	netio := net.IOCountersStat{
@@ -43,7 +43,7 @@ func TestNetIOStats(t *testing.T) {
 		metric.New(
 			"net",
 			map[string]string{"interface": "eth0"},
-			map[string]interface{}{
+			map[string]any{
 				"bytes_sent":   uint64(1123),
 				"bytes_recv":   uint64(8734422),
 				"packets_sent": uint64(781),
@@ -62,7 +62,7 @@ func TestNetIOStats(t *testing.T) {
 }
 
 func TestNetIOStatsSpeedUnsupported(t *testing.T) {
-	var mps psutil.MockPS
+	var mps psutiltest.MockPS
 	defer mps.AssertExpectations(t)
 
 	netio := net.IOCountersStat{
@@ -90,7 +90,7 @@ func TestNetIOStatsSpeedUnsupported(t *testing.T) {
 		metric.New(
 			"net",
 			map[string]string{"interface": "eth1"},
-			map[string]interface{}{
+			map[string]any{
 				"bytes_sent":   uint64(1123),
 				"bytes_recv":   uint64(8734422),
 				"packets_sent": uint64(781),
@@ -109,7 +109,7 @@ func TestNetIOStatsSpeedUnsupported(t *testing.T) {
 }
 
 func TestNetIOStatsNoSpeedFile(t *testing.T) {
-	var mps psutil.MockPS
+	var mps psutiltest.MockPS
 	defer mps.AssertExpectations(t)
 
 	netio := net.IOCountersStat{
@@ -137,7 +137,7 @@ func TestNetIOStatsNoSpeedFile(t *testing.T) {
 		metric.New(
 			"net",
 			map[string]string{"interface": "eth2"},
-			map[string]interface{}{
+			map[string]any{
 				"bytes_sent":   uint64(1123),
 				"bytes_recv":   uint64(8734422),
 				"packets_sent": uint64(781),

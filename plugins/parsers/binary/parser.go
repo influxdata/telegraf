@@ -24,6 +24,7 @@ type Parser struct {
 	metricName  string
 	defaultTags map[string]string
 	converter   binary.ByteOrder
+	timeFunc    func() time.Time
 }
 
 func (p *Parser) Init() error {
@@ -55,11 +56,19 @@ func (p *Parser) Init() error {
 		p.Configs[i] = cfg
 	}
 
+	if p.timeFunc == nil {
+		p.timeFunc = time.Now
+	}
+
 	return nil
 }
 
+func (p *Parser) SetTimeFunc(fn func() time.Time) {
+	p.timeFunc = fn
+}
+
 func (p *Parser) Parse(data []byte) ([]telegraf.Metric, error) {
-	t := time.Now()
+	t := p.timeFunc()
 
 	// If the data is encoded in HEX, we need to decode it first
 	buf := data

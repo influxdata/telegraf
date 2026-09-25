@@ -114,20 +114,20 @@ The corresponding table mapping would be like the following:
 .create-or-alter table ['table-name'] ingestion json mapping 'table-name_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'
 ```
 
-**Note**: This plugin will automatically create Azure Data Explorer tables and
-corresponding table mapping as per the above mentioned commands.
+> [!NOTE]
+> This plugin will automatically create Azure Data Explorer tables and
+> corresponding table mapping as per the above mentioned commands.
 
 ## Ingestion type
 
-**Note**:
-[Streaming ingestion](https://aka.ms/AAhlg6s)
-has to be enabled on ADX [configure the ADX cluster]
-in case of `managed` option.
-Refer the query below to check if streaming is enabled
+[Streaming ingestion][streaming] has to be enabled on ADX if using the `managed`
+ingestion type. Use the following query to check if streaming is enabled
 
 ```kql
 .show database <DB-Name> policy streamingingestion
 ```
+
+[streaming]: https://aka.ms/AAhlg6s
 
 ## Authentication
 
@@ -235,8 +235,8 @@ stored as dynamic data type, multiple ways to query this data-
   | distinct tostring(tags.database_name)
   ```
 
-  **Note** - This approach could have performance impact in case of large
-  volumes of data, use below mentioned approach for such cases.
+  This approach could have performance impact in case of large volumes of data,
+  use below mentioned approach for such cases.
 
 1. Use [Update
    policy](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/updatepolicy)**:
@@ -244,7 +244,7 @@ stored as dynamic data type, multiple ways to query this data-
    recommended performant way for querying over large volumes of data compared
    to querying directly over JSON attributes:
 
-  ```json
+  ```kql
   // Function to transform data
   .create-or-alter function Transform_TargetTableName() {
         SourceTableName

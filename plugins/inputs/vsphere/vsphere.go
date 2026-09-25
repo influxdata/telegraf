@@ -181,7 +181,7 @@ func init() {
 			HistoricalInterval:          config.Duration(time.Second * 300),
 			VSANInterval:                config.Duration(time.Second * 300),
 			DisconnectedServersBehavior: "error",
-			HTTPProxy:                   proxy.HTTPProxy{UseSystemProxy: true},
+			UseSystemProxy:              true,
 		}
 	})
 }

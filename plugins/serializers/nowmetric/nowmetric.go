@@ -17,7 +17,7 @@ type oiMetric struct {
 	Metric    string            `json:"metric_type"`
 	Resource  string            `json:"resource"`
 	Node      string            `json:"node"`
-	Value     interface{}       `json:"value"`
+	Value     any               `json:"value"`
 	Timestamp int64             `json:"timestamp"`
 	CiMapping map[string]string `json:"ci2metric_id"`
 	Source    string            `json:"source"`
@@ -124,7 +124,7 @@ func createObject(metric telegraf.Metric) oiMetrics {
 	return allmetrics
 }
 
-func verifyValue(v interface{}) bool {
+func verifyValue(v any) bool {
 	_, ok := v.(string)
 	return !ok
 }

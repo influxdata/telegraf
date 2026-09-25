@@ -5,9 +5,12 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs/kapacitor"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -38,7 +41,7 @@ func TestKapacitor(t *testing.T) {
 
 	require.Len(t, acc.Metrics, 63)
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"alloc_bytes":         int64(6950624),
 		"buck_hash_sys_bytes": int64(1446737),
 		"frees":               int64(129656),
@@ -74,7 +77,7 @@ func TestKapacitor(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "kapacitor_memstats", fields, tags)
 
 	acc.AssertContainsTaggedFields(t, "kapacitor",
-		map[string]interface{}{
+		map[string]any{
 			"num_enabled_tasks": 5,
 			"num_subscriptions": 6,
 			"num_tasks":         5,
@@ -140,4 +143,74 @@ func TestErrorHandling404(t *testing.T) {
 	require.NoError(t, plugin.Gather(&acc))
 	acc.WaitError(1)
 	require.Equal(t, uint64(0), acc.NMetrics())
+}
+
+func TestNestedMetricsTagURL(t *testing.T) {
+	// Minimal fixture: one nested ingress metric (+ top-level kapacitor).
+	response := []byte(`{
+		"version": "1.1.0",
+		"num_enabled_tasks": 1,
+		"num_subscriptions": 2,
+		"num_tasks": 3,
+		"kapacitor": {
+			"1": {
+				"name": "ingress",
+				"tags": {
+					"task_master": "main",
+					"database": "db",
+					"retention_policy": "rp",
+					"measurement": "m",
+					"host": "localhost",
+					"cluster_id": "c",
+					"server_id": "s"
+				},
+				"values": {"points_received": 42}
+			}
+		}
+	}`)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if _, err := w.Write(response); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+		}
+	}))
+	defer srv.Close()
+
+	// Opt-in: nested metrics get the url tag; high-cardinality tags stay stripped.
+	plugin := &kapacitor.Kapacitor{URLs: []string{srv.URL}, TagURL: true}
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"kapacitor",
+			map[string]string{
+				"kap_version": "1.1.0",
+				"url":         srv.URL,
+			},
+			map[string]any{
+				"num_enabled_tasks": 1,
+				"num_subscriptions": 2,
+				"num_tasks":         3,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"kapacitor_ingress",
+			map[string]string{
+				"task_master":      "main",
+				"database":         "db",
+				"retention_policy": "rp",
+				"measurement":      "m",
+				"url":              srv.URL,
+			},
+			map[string]any{
+				"points_received": float64(42),
+			},
+			time.Unix(0, 0),
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(),
+		testutil.IgnoreTime(), testutil.SortMetrics())
 }

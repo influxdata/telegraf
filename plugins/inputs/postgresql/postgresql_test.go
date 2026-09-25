@@ -2,13 +2,14 @@ package postgresql
 
 import (
 	"fmt"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/postgresql"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -35,6 +36,65 @@ func launchTestContainer(t *testing.T) *testutil.Container {
 	return &container
 }
 
+func TestPostgresqlIdleConnectionPingIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Log every statement to make the driver's liveness ping observable
+	container := testutil.Container{
+		Image:        "postgres:alpine",
+		ExposedPorts: []string{servicePort},
+		Env: map[string]string{
+			"POSTGRES_HOST_AUTH_METHOD": "trust",
+		},
+		Cmd: []string{"postgres", "-c", "log_statement=all"},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
+			wait.ForListeningPort(servicePort),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer func() {
+		container.Terminate()
+
+		// The container log can only be inspected after Terminate stopped the
+		// log streaming. PostgreSQL parses the "-- ping" liveness query just
+		// fine, so disabling prepared statements must not cost the connection
+		// its liveness check.
+		require.Contains(t, strings.Join(container.Logs.Msgs, ""), "statement: -- ping")
+	}()
+
+	addr := fmt.Sprintf(
+		"host=%s port=%s user=postgres sslmode=disable",
+		container.Address,
+		container.Ports[servicePort],
+	)
+
+	// Disabling prepared statements is what users configure to reach a server
+	// through a PgBouncer with pool_mode set to transaction. Mirror the
+	// connection-pool defaults of the plugin factory as keeping the connection
+	// idle and reusing it is the precondition for the driver's liveness check
+	p := &Postgresql{
+		Address:            config.NewSecret([]byte(addr)),
+		MaxIdle:            1,
+		MaxOpen:            1,
+		Databases:          []string{"postgres"},
+		PreparedStatements: false,
+	}
+	require.NoError(t, p.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, p.Start(&acc))
+	defer p.Stop()
+	require.NoError(t, p.Gather(&acc))
+
+	// Let the connection sit idle beyond the one-second threshold after which
+	// the driver checks connection liveness before reusing it
+	time.Sleep(1500 * time.Millisecond)
+	require.NoError(t, p.Gather(&acc))
+}
+
 func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -50,11 +110,9 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 	)
 
 	p := &Postgresql{
-		Config: postgresql.Config{
-			Address:     config.NewSecret([]byte(addr)),
-			IsPgBouncer: false,
-		},
-		Databases: []string{"postgres"},
+		Address:     config.NewSecret([]byte(addr)),
+		IsPgBouncer: false,
+		Databases:   []string{"postgres"},
 	}
 	require.NoError(t, p.Init())
 
@@ -136,9 +194,7 @@ func TestPostgresqlTagsMetricsWithDatabaseNameIntegration(t *testing.T) {
 	)
 
 	p := &Postgresql{
-		Config: postgresql.Config{
-			Address: config.NewSecret([]byte(addr)),
-		},
+		Address:   config.NewSecret([]byte(addr)),
 		Databases: []string{"postgres"},
 	}
 	require.NoError(t, p.Init())
@@ -169,9 +225,7 @@ func TestPostgresqlDefaultsToAllDatabasesIntegration(t *testing.T) {
 	)
 
 	p := &Postgresql{
-		Config: postgresql.Config{
-			Address: config.NewSecret([]byte(addr)),
-		},
+		Address: config.NewSecret([]byte(addr)),
 	}
 	require.NoError(t, p.Init())
 
@@ -209,9 +263,7 @@ func TestPostgresqlIgnoresUnwantedColumnsIntegration(t *testing.T) {
 	)
 
 	p := &Postgresql{
-		Config: postgresql.Config{
-			Address: config.NewSecret([]byte(addr)),
-		},
+		Address: config.NewSecret([]byte(addr)),
 	}
 	require.NoError(t, p.Init())
 
@@ -240,9 +292,7 @@ func TestPostgresqlDatabaseWhitelistTestIntegration(t *testing.T) {
 	)
 
 	p := &Postgresql{
-		Config: postgresql.Config{
-			Address: config.NewSecret([]byte(addr)),
-		},
+		Address:   config.NewSecret([]byte(addr)),
 		Databases: []string{"template0"},
 	}
 	require.NoError(t, p.Init())
@@ -287,9 +337,7 @@ func TestPostgresqlDatabaseBlacklistTestIntegration(t *testing.T) {
 	)
 
 	p := &Postgresql{
-		Config: postgresql.Config{
-			Address: config.NewSecret([]byte(addr)),
-		},
+		Address:          config.NewSecret([]byte(addr)),
 		IgnoredDatabases: []string{"template0"},
 	}
 	require.NoError(t, p.Init())
@@ -349,9 +397,7 @@ func TestInitialConnectivityIssueIntegration(t *testing.T) {
 	// not connect immediately but on the first query/access to the server
 	addr := fmt.Sprintf("host=%s port=%s user=postgres sslmode=disable connect_timeout=1", container.Address, container.Ports[servicePort])
 	plugin := &Postgresql{
-		Config: postgresql.Config{
-			Address: config.NewSecret([]byte(addr)),
-		},
+		Address:          config.NewSecret([]byte(addr)),
 		IgnoredDatabases: []string{"template0"},
 	}
 	require.NoError(t, plugin.Init())

@@ -1,0 +1,2 @@
+cpu,cpu=cpu0 usage_guest=0,usage_guest_nice=0,usage_idle=0,usage_iowait=80,usage_irq=1.9999999999999998,usage_nice=0,usage_softirq=0,usage_steal=0,usage_system=0,usage_user=18.000000000000004 1784293771279066203
+cpu,cpu=cpu-total usage_guest=0,usage_guest_nice=0,usage_idle=0,usage_iowait=80,usage_irq=1.9999999999999998,usage_nice=0,usage_softirq=0,usage_steal=0,usage_system=0,usage_user=18.000000000000004 1784293771279066203

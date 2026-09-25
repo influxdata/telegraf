@@ -88,6 +88,9 @@ type Config struct {
 	InputFilters       []string
 	OutputFilters      []string
 	SecretStoreFilters []string
+	// TestMode keeps output parsing in place while avoiding resources only
+	// needed when outputs are actually used.
+	TestMode bool
 
 	SecretStores      map[string]telegraf.SecretStore
 	secretStoreSource map[string][]string
@@ -293,6 +296,11 @@ type AgentConfig struct {
 	// this setting to true will skip the second run of processors.
 	SkipProcessorsAfterAggregators *bool `toml:"skip_processors_after_aggregators"`
 
+	// Flag to skip running processors before aggregators
+	// By default, processors are run a first time before aggregators. Changing
+	// this setting to true will skip the first run of processors.
+	SkipProcessorsBeforeAggregators bool `toml:"skip_processors_before_aggregators"`
+
 	// Number of attempts to obtain a remote configuration via a URL during
 	// startup. Set to -1 for unlimited attempts.
 	ConfigURLRetryAttempts int `toml:"config_url_retry_attempts"`
@@ -396,7 +404,7 @@ func (c *Config) OutputNamesWithSources() string {
 	return getPluginSourcesTable(plugins)
 }
 
-// SecretstoreNames returns a list of strings of the configured secret-stores.
+// SecretstoreNames returns a list of strings of the configured secret stores.
 func (c *Config) SecretstoreNames() []string {
 	names := make([]string, 0, len(c.SecretStores))
 	for name := range c.SecretStores {
@@ -451,15 +459,6 @@ func (c *Config) ListTags() string {
 	sort.Strings(tags)
 
 	return strings.Join(tags, " ")
-}
-
-func sliceContains(name string, list []string) bool {
-	for _, b := range list {
-		if b == name {
-			return true
-		}
-	}
-	return false
 }
 
 // WalkDirectory collects all toml files that need to be loaded
@@ -576,10 +575,18 @@ func (c *Config) LoadAll(configFiles ...string) error {
 		}
 	}
 
+	if c.Agent.SkipProcessorsBeforeAggregators && c.Agent.SkipProcessorsAfterAggregators != nil && *c.Agent.SkipProcessorsAfterAggregators {
+		return errors.New("cannot set both skip_processors_before_aggregators and skip_processors_after_aggregators as true")
+	}
+
 	// Sort the processors according to their `order` setting while
 	// using a stable sort to keep the file loading / file position order.
 	sort.Stable(c.Processors)
 	sort.Stable(c.AggProcessors)
+
+	if c.Agent.SkipProcessorsBeforeAggregators {
+		c.Processors = make(models.RunningProcessors, 0)
+	}
 
 	// Set snmp agent translator default
 	if c.Agent.SnmpTranslator == "" {
@@ -594,7 +601,7 @@ func (c *Config) LoadAll(configFiles ...string) error {
 	}
 	c.NumberSecrets = uint64(count)
 
-	// Let's link all secrets to their secret-stores
+	// Let's link all secrets to their secret stores
 	return c.LinkSecrets()
 }
 
@@ -903,7 +910,9 @@ func fetchConfig(u *url.URL, urlRetryAttempts int) ([]byte, error) {
 		return nil, err
 	}
 
-	if v, exists := os.LookupEnv("INFLUX_TOKEN"); exists {
+	if v, exists := os.LookupEnv("TELEGRAF_CONTROLLER_TOKEN"); exists {
+		req.Header.Add("Authorization", "Bearer "+v)
+	} else if v, exists := os.LookupEnv("INFLUX_TOKEN"); exists {
 		req.Header.Add("Authorization", "Token "+v)
 	}
 	req.Header.Add("Accept", "application/toml")
@@ -1019,7 +1028,7 @@ func (c *Config) addAggregator(name, source string, table *ast.Table) error {
 }
 
 func (c *Config) addSecretStore(name, source string, table *ast.Table) error {
-	if len(c.SecretStoreFilters) > 0 && !sliceContains(name, c.SecretStoreFilters) {
+	if len(c.SecretStoreFilters) > 0 && !slices.Contains(c.SecretStoreFilters, name) {
 		return nil
 	}
 
@@ -1033,10 +1042,10 @@ func (c *Config) addSecretStore(name, source string, table *ast.Table) error {
 
 	storeID := c.getFieldString(table, "id")
 	if storeID == "" {
-		return fmt.Errorf("%q secret-store without ID", name)
+		return fmt.Errorf("%q secret store without ID", name)
 	}
 	if !secretStorePattern.MatchString(storeID) {
-		return fmt.Errorf("invalid secret-store ID %q, must only contain letters, numbers or underscore", storeID)
+		return fmt.Errorf("invalid secret store ID %q, must only contain letters, numbers or underscore", storeID)
 	}
 
 	tags := map[string]string{
@@ -1068,7 +1077,7 @@ func (c *Config) addSecretStore(name, source string, table *ast.Table) error {
 	models.SetStatisticsOnPlugin(store, logger, tags)
 
 	if err := store.Init(); err != nil {
-		return fmt.Errorf("error initializing secret-store %q: %w", storeID, err)
+		return fmt.Errorf("error initializing secret store %q: %w", storeID, err)
 	}
 
 	if _, found := c.SecretStores[storeID]; found {
@@ -1090,7 +1099,7 @@ func (c *Config) LinkSecrets() error {
 			storeID, key := splitLink(ref)
 			store, found := c.SecretStores[storeID]
 			if !found {
-				return fmt.Errorf("unknown secret-store for %q", ref)
+				return fmt.Errorf("unknown secret store for %q", ref)
 			}
 			resolver, err := store.GetResolver(key)
 			if err != nil {
@@ -1281,7 +1290,7 @@ func (c *Config) setupProcessor(name string, creator processors.StreamingCreator
 
 	streamingProcessor := creator()
 
-	var processor interface{}
+	var processor any
 	if p, ok := streamingProcessor.(processors.HasUnwrap); ok {
 		processor = p.Unwrap()
 	} else {
@@ -1339,7 +1348,7 @@ func (c *Config) setupProcessor(name string, creator processors.StreamingCreator
 }
 
 func (c *Config) addOutput(name, source string, table *ast.Table) error {
-	if len(c.OutputFilters) > 0 && !sliceContains(name, c.OutputFilters) {
+	if len(c.OutputFilters) > 0 && !slices.Contains(c.OutputFilters, name) {
 		return nil
 	}
 
@@ -1407,7 +1416,7 @@ func (c *Config) addOutput(name, source string, table *ast.Table) error {
 		return err
 	}
 
-	if c, ok := interface{}(output).(interface{ TLSConfig() (*tls.Config, error) }); ok {
+	if c, ok := any(output).(interface{ TLSConfig() (*tls.Config, error) }); ok {
 		if _, err := c.TLSConfig(); err != nil {
 			return err
 		}
@@ -1433,7 +1442,7 @@ func (c *Config) addOutput(name, source string, table *ast.Table) error {
 }
 
 func (c *Config) addInput(name, source string, table *ast.Table) error {
-	if len(c.InputFilters) > 0 && !sliceContains(name, c.InputFilters) {
+	if len(c.InputFilters) > 0 && !slices.Contains(c.InputFilters, name) {
 		return nil
 	}
 
@@ -1502,7 +1511,7 @@ func (c *Config) addInput(name, source string, table *ast.Table) error {
 		return err
 	}
 
-	if c, ok := interface{}(input).(interface{ TLSConfig() (*tls.Config, error) }); ok {
+	if c, ok := any(input).(interface{ TLSConfig() (*tls.Config, error) }); ok {
 		if _, err := c.TLSConfig(); err != nil {
 			return err
 		}
@@ -1782,7 +1791,12 @@ func (c *Config) buildOutput(name, source string, tbl *ast.Table) (*models.Outpu
 		return nil, c.firstErr()
 	}
 
-	if oc.BufferStrategy == "disk_write_through" {
+	if err := models.CheckBufferSettings(oc.BufferStrategy); err != nil {
+		return nil, err
+	}
+	if c.TestMode {
+		oc.BufferStrategy = "discard"
+	} else if oc.BufferStrategy == "disk_write_through" {
 		log.Printf("W! Using disk-write-through buffer strategy for plugin outputs.%s, this is an experimental feature", name)
 	}
 
@@ -1808,7 +1822,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"pass", "period", "precision",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "startup_error_behavior", "labels":
 
-	// Secret-store options to ignore
+	// secret store options to ignore
 	case "id":
 
 	// Parser and serializer options to ignore
@@ -1971,24 +1985,33 @@ func (c *Config) getFieldStringSlice(tbl *ast.Table, fieldName string) []string 
 
 func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string) []models.TagFilter {
 	var target []models.TagFilter
-	if node, ok := tbl.Fields[fieldName]; ok {
-		if subTbl, ok := node.(*ast.Table); ok {
-			for name, val := range subTbl.Fields {
-				if kv, ok := val.(*ast.KeyValue); ok {
-					ary, ok := kv.Value.(*ast.Array)
-					if !ok {
-						c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting string array/slice format on each entry", fieldName))
-						return nil
-					}
 
-					tagFilter := models.TagFilter{Name: name}
-					for _, elem := range ary.Value {
-						if str, ok := elem.(*ast.String); ok {
-							tagFilter.Values = append(tagFilter.Values, str.Value)
-						}
-					}
-					target = append(target, tagFilter)
+	if node, ok := tbl.Fields[fieldName]; ok {
+		subTbl, ok := node.(*ast.Table)
+		if !ok {
+			c.addError(tbl, fmt.Errorf("invalid syntax for %q: expected a table of key=[values]", fieldName))
+			return nil
+		}
+
+		for name, val := range subTbl.Fields {
+			if kv, ok := val.(*ast.KeyValue); ok {
+				ary, ok := kv.Value.(*ast.Array)
+				if !ok {
+					c.addError(tbl, fmt.Errorf(
+						"found unexpected format while parsing %q, expecting string array/slice format on each entry",
+						fieldName,
+					))
+					return nil
 				}
+
+				tagFilter := models.TagFilter{Name: name}
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						tagFilter.Values = append(tagFilter.Values, str.Value)
+					}
+				}
+
+				target = append(target, tagFilter)
 			}
 		}
 	}

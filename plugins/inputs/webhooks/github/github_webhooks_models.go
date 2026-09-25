@@ -76,6 +76,7 @@ type pullRequestReviewComment struct {
 }
 
 type workflowJob struct {
+	RunID       int64     `json:"run_id"`
 	RunAttempt  int       `json:"run_attempt"`
 	HeadBranch  string    `json:"head_branch"`
 	CreatedAt   time.Time `json:"created_at"`
@@ -86,6 +87,7 @@ type workflowJob struct {
 }
 
 type workflowRun struct {
+	ID           int64     `json:"id"`
 	HeadBranch   string    `json:"head_branch"`
 	CreatedAt    time.Time `json:"created_at"`
 	RunStartedAt time.Time `json:"run_started_at"`
@@ -119,7 +121,7 @@ func (s commitCommentEvent) newMetric() telegraf.Metric {
 		"user":       s.Sender.User,
 		"admin":      strconv.FormatBool(s.Sender.Admin),
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"stars":   s.Repository.Stars,
 		"forks":   s.Repository.Forks,
 		"issues":  s.Repository.Issues,
@@ -146,7 +148,7 @@ func (s createEvent) newMetric() telegraf.Metric {
 		"user":       s.Sender.User,
 		"admin":      strconv.FormatBool(s.Sender.Admin),
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"stars":   s.Repository.Stars,
 		"forks":   s.Repository.Forks,
 		"issues":  s.Repository.Issues,
@@ -173,7 +175,7 @@ func (s deleteEvent) newMetric() telegraf.Metric {
 		"user":       s.Sender.User,
 		"admin":      strconv.FormatBool(s.Sender.Admin),
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"stars":   s.Repository.Stars,
 		"forks":   s.Repository.Forks,
 		"issues":  s.Repository.Issues,
@@ -199,7 +201,7 @@ func (s deploymentEvent) newMetric() telegraf.Metric {
 		"user":       s.Sender.User,
 		"admin":      strconv.FormatBool(s.Sender.Admin),
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"stars":       s.Repository.Stars,
 		"forks":       s.Repository.Forks,
 		"issues":      s.Repository.Issues,
@@ -228,7 +230,7 @@ func (s deploymentStatusEvent) newMetric() telegraf.Metric {
 		"user":       s.Sender.User,
 		"admin":      strconv.FormatBool(s.Sender.Admin),
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"stars":          s.Repository.Stars,
 		"forks":          s.Repository.Forks,
 		"issues":         s.Repository.Issues,
@@ -258,7 +260,7 @@ func (s forkEvent) newMetric() telegraf.Metric {
 		"user":       s.Sender.User,
 		"admin":      strconv.FormatBool(s.Sender.Admin),
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"stars":  s.Repository.Stars,
 		"forks":  s.Repository.Forks,
 		"issues": s.Repository.Issues,
@@ -284,7 +286,7 @@ func (s gollumEvent) newMetric() telegraf.Metric {
 		"user":       s.Sender.User,
 		"admin":      strconv.FormatBool(s.Sender.Admin),
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"stars":  s.Repository.Stars,
 		"forks":  s.Repository.Forks,
 		"issues": s.Repository.Issues,
@@ -310,7 +312,7 @@ func (s issueCommentEvent) newMetric() telegraf.Metric {
 		"admin":      strconv.FormatBool(s.Sender.Admin),
 		"issue":      strconv.Itoa(s.Issue.Number),
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"stars":    s.Repository.Stars,
 		"forks":    s.Repository.Forks,
 		"issues":   s.Repository.Issues,
@@ -340,7 +342,7 @@ func (s issuesEvent) newMetric() telegraf.Metric {
 		"issue":      strconv.Itoa(s.Issue.Number),
 		"action":     s.Action,
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"stars":    s.Repository.Stars,
 		"forks":    s.Repository.Forks,
 		"issues":   s.Repository.Issues,
@@ -366,7 +368,7 @@ func (s memberEvent) newMetric() telegraf.Metric {
 		"user":       s.Sender.User,
 		"admin":      strconv.FormatBool(s.Sender.Admin),
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"stars":           s.Repository.Stars,
 		"forks":           s.Repository.Forks,
 		"issues":          s.Repository.Issues,
@@ -392,7 +394,7 @@ func (s membershipEvent) newMetric() telegraf.Metric {
 		"admin":  strconv.FormatBool(s.Sender.Admin),
 		"action": s.Action,
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"newMember":       s.Member.User,
 		"newMemberStatus": s.Member.Admin,
 	}
@@ -414,7 +416,7 @@ func (s pageBuildEvent) newMetric() telegraf.Metric {
 		"user":       s.Sender.User,
 		"admin":      strconv.FormatBool(s.Sender.Admin),
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"stars":  s.Repository.Stars,
 		"forks":  s.Repository.Forks,
 		"issues": s.Repository.Issues,
@@ -437,7 +439,7 @@ func (s publicEvent) newMetric() telegraf.Metric {
 		"user":       s.Sender.User,
 		"admin":      strconv.FormatBool(s.Sender.Admin),
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"stars":  s.Repository.Stars,
 		"forks":  s.Repository.Forks,
 		"issues": s.Repository.Issues,
@@ -464,7 +466,7 @@ func (s pullRequestEvent) newMetric() telegraf.Metric {
 		"admin":      strconv.FormatBool(s.Sender.Admin),
 		"prNumber":   strconv.Itoa(s.PullRequest.Number),
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"stars":        s.Repository.Stars,
 		"forks":        s.Repository.Forks,
 		"issues":       s.Repository.Issues,
@@ -497,7 +499,7 @@ func (s pullRequestReviewCommentEvent) newMetric() telegraf.Metric {
 		"admin":      strconv.FormatBool(s.Sender.Admin),
 		"prNumber":   strconv.Itoa(s.PullRequest.Number),
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"stars":        s.Repository.Stars,
 		"forks":        s.Repository.Forks,
 		"issues":       s.Repository.Issues,
@@ -532,7 +534,7 @@ func (s pushEvent) newMetric() telegraf.Metric {
 		"user":       s.Sender.User,
 		"admin":      strconv.FormatBool(s.Sender.Admin),
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"stars":  s.Repository.Stars,
 		"forks":  s.Repository.Forks,
 		"issues": s.Repository.Issues,
@@ -559,7 +561,7 @@ func (s releaseEvent) newMetric() telegraf.Metric {
 		"user":       s.Sender.User,
 		"admin":      strconv.FormatBool(s.Sender.Admin),
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"stars":   s.Repository.Stars,
 		"forks":   s.Repository.Forks,
 		"issues":  s.Repository.Issues,
@@ -583,7 +585,7 @@ func (s repositoryEvent) newMetric() telegraf.Metric {
 		"user":       s.Sender.User,
 		"admin":      strconv.FormatBool(s.Sender.Admin),
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"stars":  s.Repository.Stars,
 		"forks":  s.Repository.Forks,
 		"issues": s.Repository.Issues,
@@ -608,7 +610,7 @@ func (s statusEvent) newMetric() telegraf.Metric {
 		"user":       s.Sender.User,
 		"admin":      strconv.FormatBool(s.Sender.Admin),
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"stars":  s.Repository.Stars,
 		"forks":  s.Repository.Forks,
 		"issues": s.Repository.Issues,
@@ -634,7 +636,7 @@ func (s teamAddEvent) newMetric() telegraf.Metric {
 		"user":       s.Sender.User,
 		"admin":      strconv.FormatBool(s.Sender.Admin),
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"stars":    s.Repository.Stars,
 		"forks":    s.Repository.Forks,
 		"issues":   s.Repository.Issues,
@@ -658,7 +660,7 @@ func (s watchEvent) newMetric() telegraf.Metric {
 		"user":       s.Sender.User,
 		"admin":      strconv.FormatBool(s.Sender.Admin),
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"stars":  s.Repository.Stars,
 		"forks":  s.Repository.Forks,
 		"issues": s.Repository.Issues,
@@ -695,11 +697,12 @@ func (s workflowJobEvent) newMetric() telegraf.Metric {
 	if s.Action == "completed" {
 		runTimeMs = s.WorkflowJob.CompletedAt.Sub(s.WorkflowJob.StartedAt).Milliseconds()
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"run_attempt": s.WorkflowJob.RunAttempt,
 		"queue_time":  queueTimeMs,
 		"run_time":    runTimeMs,
 		"head_branch": s.WorkflowJob.HeadBranch,
+		"run_id":      s.WorkflowJob.RunID,
 	}
 	m := metric.New(meas, t, f, time.Now())
 	return m
@@ -729,10 +732,11 @@ func (s workflowRunEvent) newMetric() telegraf.Metric {
 	if s.Action == "completed" {
 		runTimeMs = s.WorkflowRun.UpdatedAt.Sub(s.WorkflowRun.RunStartedAt).Milliseconds()
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"run_attempt": s.WorkflowRun.RunAttempt,
 		"run_time":    runTimeMs,
 		"head_branch": s.WorkflowRun.HeadBranch,
+		"run_id":      s.WorkflowRun.ID,
 	}
 	m := metric.New(meas, t, f, time.Now())
 	return m

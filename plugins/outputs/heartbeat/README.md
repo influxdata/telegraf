@@ -16,11 +16,11 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
-## Secret-store support
+## Secret store support
 
-This plugin supports secrets from secret-stores for the `url`, `token` and
+This plugin supports secrets from secret stores for the `url`, `token` and
 `headers` option.
-See the [secret-store documentation][SECRETSTORE] for more details on how
+See the [secret store documentation][SECRETSTORE] for more details on how
 to use them.
 
 [SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
@@ -318,6 +318,6 @@ The following functions are available:
 [internal_plugin]: /plugins/inputs/internal/README.md
 
 [cel]: https://cel.dev
-[cel_encoder]: https://github.com/google/cel-go/blob/master/ext/README.md#encoders
-[cel_math]: https://github.com/google/cel-go/blob/master/ext/README.md#math
-[cel_strings]: https://github.com/google/cel-go/blob/master/ext/README.md#strings
+[cel_encoder]: https://github.com/cel-expr/cel-go/blob/master/ext/README.md#encoders
+[cel_math]: https://github.com/cel-expr/cel-go/blob/master/ext/README.md#math
+[cel_strings]: https://github.com/cel-expr/cel-go/blob/master/ext/README.md#strings

@@ -1,0 +1,129 @@
+{
+    "read": "2026-04-27T15:49:54.493486224+02:00",
+    "preread": "0001-01-01T00:00:00Z",
+    "pids_stats": {},
+    "blkio_stats": {
+        "io_service_bytes_recursive": [
+            {
+                "major": 6,
+                "minor": 0,
+                "op": "read",
+                "value": 100
+            }
+        ],
+        "io_serviced_recursive": [
+            {
+                "major": 6,
+                "minor": 0,
+                "op": "write",
+                "value": 101
+            },
+            {
+                "major": 6,
+                "minor": 1,
+                "op": "write",
+                "value": 201
+            }
+        ],
+        "io_queue_recursive": null,
+        "io_service_time_recursive": null,
+        "io_wait_time_recursive": null,
+        "io_merged_recursive": null,
+        "io_time_recursive": null,
+        "sectors_recursive": null
+    },
+    "num_procs": 0,
+    "storage_stats": {},
+    "cpu_stats": {
+        "cpu_usage": {
+            "total_usage": 500,
+            "percpu_usage": [
+                1,
+                1002,
+                0,
+                0
+            ],
+            "usage_in_kernelmode": 200,
+            "usage_in_usermode": 100
+        },
+        "system_cpu_usage": 100,
+        "online_cpus": 2,
+        "throttling_data": {
+            "periods": 1,
+            "throttled_periods": 0,
+            "throttled_time": 0
+        }
+    },
+    "precpu_stats": {
+        "cpu_usage": {
+            "total_usage": 400,
+            "usage_in_kernelmode": 0,
+            "usage_in_usermode": 0
+        },
+        "system_cpu_usage": 50,
+        "throttling_data": {
+            "periods": 0,
+            "throttled_periods": 0,
+            "throttled_time": 0
+        }
+    },
+    "memory_stats": {
+        "usage": 1111,
+        "max_usage": 1001,
+        "stats": {
+            "active_anon": 0,
+            "active_file": 1,
+            "cache": 0,
+            "hierarchical_memory_limit": 0,
+            "inactive_anon": 0,
+            "inactive_file": 3,
+            "mapped_file": 0,
+            "pgfault": 2,
+            "pgmajfault": 0,
+            "pgpgin": 0,
+            "pgpgout": 0,
+            "rss": 0,
+            "rss_huge": 0,
+            "total_active_anon": 0,
+            "total_active_file": 0,
+            "total_cache": 0,
+            "total_inactive_anon": 0,
+            "total_inactive_file": 0,
+            "total_mapped_file": 0,
+            "total_pgfault": 0,
+            "total_pgmajfault": 0,
+            "total_pgpgin": 4,
+            "total_pgpgout": 0,
+            "total_rss": 44,
+            "total_rss_huge": 444,
+            "total_unevictable": 0,
+            "total_writeback": 55,
+            "unevictable": 0,
+            "writeback": 0
+        },
+        "failcnt": 1,
+        "limit": 2000
+    },
+    "networks": {
+        "eth0": {
+            "rx_bytes": 2,
+            "rx_packets": 2,
+            "rx_errors": 3,
+            "rx_dropped": 1,
+            "tx_bytes": 4,
+            "tx_packets": 4,
+            "tx_errors": 3,
+            "tx_dropped": 1
+        },
+        "eth1": {
+            "rx_bytes": 6,
+            "rx_packets": 6,
+            "rx_errors": 7,
+            "rx_dropped": 5,
+            "tx_bytes": 8,
+            "tx_packets": 8,
+            "tx_errors": 7,
+            "tx_dropped": 5
+        }
+    }
+}

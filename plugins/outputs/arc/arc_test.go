@@ -17,7 +17,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
-	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -38,8 +37,8 @@ func TestInit(t *testing.T) {
 		{
 			name: "valid config",
 			arc: &Arc{
-				URL:              "http://localhost:8000/api/v1/write/msgpack",
-				HTTPClientConfig: common_http.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
+				URL:     "http://localhost:8000/api/v1/write/msgpack",
+				Timeout: config.Duration(5 * time.Second),
 			},
 			expectError: false,
 		},
@@ -79,7 +78,7 @@ func TestWrite(t *testing.T) {
 						"host": "server01",
 						"cpu":  "cpu0",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"usage_idle":   float64(95.5),
 						"usage_system": float64(2.5),
 						"usage_user":   float64(2.0),
@@ -96,13 +95,13 @@ func TestWrite(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{"host": "server01"},
-					map[string]interface{}{"usage_idle": float64(95.5)},
+					map[string]any{"usage_idle": float64(95.5)},
 					time.Unix(1633024800, 0),
 				),
 				metric.New(
 					"cpu",
 					map[string]string{"host": "server02"},
-					map[string]interface{}{"usage_idle": float64(85.0)},
+					map[string]any{"usage_idle": float64(85.0)},
 					time.Unix(1633024801, 0),
 				),
 			},
@@ -159,12 +158,12 @@ func TestWrite(t *testing.T) {
 
 			// Configure Arc plugin
 			plugin := &Arc{
-				URL:              ts.URL,
-				HTTPClientConfig: common_http.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
-				APIKey:           config.NewSecret([]byte("test-api-key")),
-				Headers:          make(map[string]string),
-				ContentEncoding:  tt.contentEncoding,
-				Log:              testutil.Logger{},
+				URL:             ts.URL,
+				Timeout:         config.Duration(5 * time.Second),
+				APIKey:          config.NewSecret([]byte("test-api-key")),
+				Headers:         make(map[string]string),
+				ContentEncoding: tt.contentEncoding,
+				Log:             testutil.Logger{},
 			}
 
 			require.NoError(t, plugin.Init())
@@ -195,7 +194,7 @@ func TestWrite(t *testing.T) {
 			require.NotNil(t, decoded)
 
 			// Verify the structure is a map with measurement and columns
-			data, ok := decoded.(map[string]interface{})
+			data, ok := decoded.(map[string]any)
 			require.True(t, ok, "decoded data should be a map")
 			require.Contains(t, data, "m", "should have measurement name")
 			require.Contains(t, data, "columns", "should have columns")
@@ -217,10 +216,10 @@ func TestWriteWithAPIKey(t *testing.T) {
 	defer ts.Close()
 
 	plugin := &Arc{
-		URL:              ts.URL,
-		HTTPClientConfig: common_http.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
-		APIKey:           config.NewSecret([]byte(expectedAPIKey)),
-		Log:              testutil.Logger{},
+		URL:     ts.URL,
+		Timeout: config.Duration(5 * time.Second),
+		APIKey:  config.NewSecret([]byte(expectedAPIKey)),
+		Log:     testutil.Logger{},
 	}
 
 	require.NoError(t, plugin.Init())
@@ -230,7 +229,7 @@ func TestWriteWithAPIKey(t *testing.T) {
 		metric.New(
 			"cpu",
 			map[string]string{"host": "server01"},
-			map[string]interface{}{"usage_idle": float64(95.5)},
+			map[string]any{"usage_idle": float64(95.5)},
 			time.Now(),
 		),
 	}
@@ -248,9 +247,9 @@ func TestWriteServerError(t *testing.T) {
 	defer ts.Close()
 
 	plugin := &Arc{
-		URL:              ts.URL,
-		HTTPClientConfig: common_http.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
-		Log:              testutil.Logger{},
+		URL:     ts.URL,
+		Timeout: config.Duration(5 * time.Second),
+		Log:     testutil.Logger{},
 	}
 
 	require.NoError(t, plugin.Init())
@@ -260,7 +259,7 @@ func TestWriteServerError(t *testing.T) {
 		metric.New(
 			"cpu",
 			map[string]string{"host": "server01"},
-			map[string]interface{}{"usage_idle": float64(95.5)},
+			map[string]any{"usage_idle": float64(95.5)},
 			time.Now(),
 		),
 	}
@@ -283,10 +282,10 @@ func TestMessagePackEncoding(t *testing.T) {
 	defer ts.Close()
 
 	plugin := &Arc{
-		URL:              ts.URL,
-		HTTPClientConfig: common_http.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
-		ContentEncoding:  "identity",
-		Log:              testutil.Logger{},
+		URL:             ts.URL,
+		Timeout:         config.Duration(5 * time.Second),
+		ContentEncoding: "identity",
+		Log:             testutil.Logger{},
 	}
 
 	require.NoError(t, plugin.Init())
@@ -300,7 +299,7 @@ func TestMessagePackEncoding(t *testing.T) {
 				"cpu":         "cpu0",
 				"environment": "production",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"usage_idle":   float64(95.5),
 				"usage_system": float64(2.5),
 				"usage_user":   float64(2.0),
@@ -314,7 +313,7 @@ func TestMessagePackEncoding(t *testing.T) {
 				"cpu":         "cpu1",
 				"environment": "production",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"usage_idle":   float64(85.0),
 				"usage_system": float64(4.5),
 				"usage_user":   float64(10.5),
@@ -330,27 +329,27 @@ func TestMessagePackEncoding(t *testing.T) {
 	decodedIntf, err := reader.ReadIntf()
 	require.NoError(t, err)
 
-	decoded := decodedIntf.(map[string]interface{})
+	decoded := decodedIntf.(map[string]any)
 	require.Equal(t, "cpu", decoded["m"])
 	require.NotEmpty(t, decoded["columns"])
 
 	// Verify columns structure
-	columnsMap := decoded["columns"].(map[string]interface{})
+	columnsMap := decoded["columns"].(map[string]any)
 
 	// Verify time column
 	timeCol, ok := columnsMap["time"]
 	require.True(t, ok)
-	timeArray, ok := timeCol.([]interface{})
+	timeArray, ok := timeCol.([]any)
 	require.True(t, ok)
 	require.Len(t, timeArray, 2)
 
 	// Verify tag columns
-	hostCol := columnsMap["host"].([]interface{})
+	hostCol := columnsMap["host"].([]any)
 	require.Equal(t, "server01", hostCol[0])
 	require.Equal(t, "server02", hostCol[1])
 
 	// Verify field columns
-	usageIdleCol := columnsMap["usage_idle"].([]interface{})
+	usageIdleCol := columnsMap["usage_idle"].([]any)
 	require.InDelta(t, 95.5, usageIdleCol[0], 0.01)
 	require.InDelta(t, 85.0, usageIdleCol[1], 0.01)
 }
@@ -385,10 +384,10 @@ func TestMultipleMeasurements(t *testing.T) {
 	defer ts.Close()
 
 	plugin := &Arc{
-		URL:              ts.URL,
-		HTTPClientConfig: common_http.HTTPClientConfig{Timeout: config.Duration(5 * time.Second)},
-		ContentEncoding:  "identity",
-		Log:              testutil.Logger{},
+		URL:             ts.URL,
+		Timeout:         config.Duration(5 * time.Second),
+		ContentEncoding: "identity",
+		Log:             testutil.Logger{},
 	}
 
 	require.NoError(t, plugin.Init())
@@ -399,13 +398,13 @@ func TestMultipleMeasurements(t *testing.T) {
 		metric.New(
 			"cpu",
 			map[string]string{"host": "server01"},
-			map[string]interface{}{"usage_idle": float64(95.5)},
+			map[string]any{"usage_idle": float64(95.5)},
 			time.Unix(1633024800, 0),
 		),
 		metric.New(
 			"mem",
 			map[string]string{"host": "server01"},
-			map[string]interface{}{"usage_percent": float64(75.0)},
+			map[string]any{"usage_percent": float64(75.0)},
 			time.Unix(1633024800, 0),
 		),
 	}
@@ -417,13 +416,13 @@ func TestMultipleMeasurements(t *testing.T) {
 	decoded, err := reader.ReadIntf()
 	require.NoError(t, err)
 
-	columnarDataArray := decoded.([]interface{})
+	columnarDataArray := decoded.([]any)
 	require.Len(t, columnarDataArray, 2, "should have 2 measurements")
 
 	// Verify we have both cpu and mem measurements
 	measurementNames := make(map[string]bool)
 	for _, item := range columnarDataArray {
-		colData := item.(map[string]interface{})
+		colData := item.(map[string]any)
 		measurementNames[colData["m"].(string)] = true
 		require.NotEmpty(t, colData["columns"])
 	}

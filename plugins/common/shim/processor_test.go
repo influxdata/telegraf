@@ -23,7 +23,7 @@ func TestProcessorShim(t *testing.T) {
 func TestProcessorShimWithLargerThanDefaultScannerBufferSize(t *testing.T) {
 	letters := []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 	b := make([]rune, 0, bufio.MaxScanTokenSize*2)
-	for i := 0; i < bufio.MaxScanTokenSize*2; i++ {
+	for range bufio.MaxScanTokenSize * 2 {
 		b = append(b, letters[rand.Intn(len(letters))])
 	}
 
@@ -45,13 +45,11 @@ func testSendAndReceive(t *testing.T, fieldKey, fieldValue string) {
 
 	wg := sync.WaitGroup{}
 
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		if err := s.RunProcessor(); err != nil {
 			t.Error(err)
 		}
-		wg.Done()
-	}()
+	})
 
 	serializer := &serializers_influx.Serializer{}
 	require.NoError(t, serializer.Init())
@@ -63,7 +61,7 @@ func testSendAndReceive(t *testing.T, fieldKey, fieldValue string) {
 		map[string]string{
 			"a": "b",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"v":      1,
 			fieldKey: fieldValue,
 		},

@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"sync"
 	"time"
@@ -48,6 +49,7 @@ type DockerLogs struct {
 
 	// State of the plugin mapping container-ID to the timestamp of the
 	// last record processed
+	startupTime   string
 	lastRecord    map[string]time.Time
 	lastRecordMtx sync.Mutex
 }
@@ -120,7 +122,9 @@ func (d *DockerLogs) Init() error {
 }
 
 // Start is a noop which is required for a *DockerLogs to implement the telegraf.ServiceInput interface
-func (*DockerLogs) Start(telegraf.Accumulator) error {
+func (d *DockerLogs) Start(telegraf.Accumulator) error {
+	d.startupTime = time.Now().Format(time.RFC3339Nano)
+
 	return nil
 }
 
@@ -133,26 +137,21 @@ func (d *DockerLogs) Stop() {
 	d.wg.Wait()
 }
 
-func (d *DockerLogs) GetState() interface{} {
+func (d *DockerLogs) GetState() any {
 	d.lastRecordMtx.Lock()
-	recordOffsets := make(map[string]time.Time, len(d.lastRecord))
-	for k, v := range d.lastRecord {
-		recordOffsets[k] = v
-	}
+	recordOffsets := maps.Clone(d.lastRecord)
 	d.lastRecordMtx.Unlock()
 
 	return recordOffsets
 }
 
-func (d *DockerLogs) SetState(state interface{}) error {
+func (d *DockerLogs) SetState(state any) error {
 	recordOffsets, ok := state.(map[string]time.Time)
 	if !ok {
 		return fmt.Errorf("state has wrong type %T", state)
 	}
 	d.lastRecordMtx.Lock()
-	for k, v := range recordOffsets {
-		d.lastRecord[k] = v
-	}
+	maps.Copy(d.lastRecord, recordOffsets)
 	d.lastRecordMtx.Unlock()
 
 	return nil
@@ -257,22 +256,22 @@ func (d *DockerLogs) tailContainerLogs(
 		return err
 	}
 
-	since := time.Time{}.Format(time.RFC3339Nano)
-	if !d.FromBeginning {
-		d.lastRecordMtx.Lock()
-		if ts, ok := d.lastRecord[cntnr.ID]; ok {
-			since = ts.Format(time.RFC3339Nano)
-		}
-		d.lastRecordMtx.Unlock()
-	}
-
 	logOptions := client.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Timestamps: true,
 		Details:    false,
 		Follow:     true,
-		Since:      since,
+	}
+
+	if !d.FromBeginning {
+		since := d.startupTime
+		d.lastRecordMtx.Lock()
+		if ts, ok := d.lastRecord[cntnr.ID]; ok {
+			since = ts.Format(time.RFC3339Nano)
+		}
+		d.lastRecordMtx.Unlock()
+		logOptions.Since = since
 	}
 
 	logReader, err := d.client.ContainerLogs(ctx, cntnr.ID, logOptions)
@@ -296,11 +295,11 @@ func (d *DockerLogs) tailContainerLogs(
 		return err
 	}
 
+	d.lastRecordMtx.Lock()
 	if ts, ok := d.lastRecord[cntnr.ID]; !ok || ts.Before(last) {
-		d.lastRecordMtx.Lock()
 		d.lastRecord[cntnr.ID] = last
-		d.lastRecordMtx.Unlock()
 	}
+	d.lastRecordMtx.Unlock()
 
 	return nil
 }

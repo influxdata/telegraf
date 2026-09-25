@@ -141,7 +141,7 @@ func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
 	_globmask := filepath.Join(tempDir, "test-haproxy*.sock")
 	_badmask := filepath.Join(tempDir, "test-fail-haproxy*.sock")
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		require.NoError(t, binary.Read(rand.Reader, binary.LittleEndian, &randomNumber))
 		sockname := filepath.Join(tempDir, fmt.Sprintf("test-haproxy%d.sock", randomNumber))
 
@@ -286,8 +286,8 @@ func mustReadSampleOutput() []byte {
 	return data
 }
 
-func haproxyGetFieldValues() map[string]interface{} {
-	fields := map[string]interface{}{
+func haproxyGetFieldValues() map[string]any {
+	fields := map[string]any{
 		"active_servers":      uint64(1),
 		"backup_servers":      uint64(0),
 		"bin":                 uint64(5228218),

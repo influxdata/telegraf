@@ -211,7 +211,7 @@ func cleanTags(tags map[string]string) map[string]string {
 	return tagSet
 }
 
-func buildValue(v interface{}) (string, error) {
+func buildValue(v any) (string, error) {
 	var retv string
 	switch p := v.(type) {
 	case int64:

@@ -111,12 +111,10 @@ func TestSampleConfig(t *testing.T) {
 
 func TestInit(t *testing.T) {
 	plugin := &HTTP{
-		decryptionConfig: decryptionConfig{
-			Cipher: "AES128/CBC/PKCS#5",
-			Aes: aesEncryptor{
-				Key: config.NewSecret([]byte("7465737474657374657374746573740a")),
-				Vec: config.NewSecret([]byte("7465737474657374657374746573740a")),
-			},
+		Cipher: "AES128/CBC/PKCS#5",
+		Aes: aesEncryptor{
+			Key: config.NewSecret([]byte("7465737474657374657374746573740a")),
+			Vec: config.NewSecret([]byte("7465737474657374657374746573740a")),
 		},
 	}
 	require.NoError(t, plugin.Init())
@@ -126,25 +124,16 @@ func TestInitErrors(t *testing.T) {
 	plugin := &HTTP{Transformation: "{some: malformed"}
 	require.ErrorContains(t, plugin.Init(), "setting up data transformation failed")
 
-	plugin = &HTTP{decryptionConfig: decryptionConfig{Cipher: "non-existing/CBC/lala"}}
+	plugin = &HTTP{Cipher: "non-existing/CBC/lala"}
 	require.ErrorContains(t, plugin.Init(), "creating decryptor failed: unknown cipher")
-}
-
-func TestSetNotSupported(t *testing.T) {
-	plugin := &HTTP{}
-	require.NoError(t, plugin.Init())
-
-	require.ErrorContains(t, plugin.Set("key", "value"), "setting secrets not supported")
 }
 
 func TestGetErrors(t *testing.T) {
 	plugin := &HTTP{
-		decryptionConfig: decryptionConfig{
-			Cipher: "AES256/CBC/PKCS#5",
-			Aes: aesEncryptor{
-				Key: config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0a910eef95f22f55bacdddacafa06b656")),
-				Vec: config.NewSecret([]byte("61737570657273656372657469763432")),
-			},
+		Cipher: "AES256/CBC/PKCS#5",
+		Aes: aesEncryptor{
+			Key: config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0a910eef95f22f55bacdddacafa06b656")),
+			Vec: config.NewSecret([]byte("61737570657273656372657469763432")),
 		},
 	}
 	require.NoError(t, plugin.Init())
@@ -168,13 +157,11 @@ func TestResolver(t *testing.T) {
 	defer server.Close()
 
 	plugin := &HTTP{
-		URL: server.URL,
-		decryptionConfig: decryptionConfig{
-			Cipher: "AES256/CBC/PKCS#5",
-			Aes: aesEncryptor{
-				Key: config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0a910eef95f22f55bacdddacafa06b656")),
-				Vec: config.NewSecret([]byte("61737570657273656372657469763432")),
-			},
+		URL:    server.URL,
+		Cipher: "AES256/CBC/PKCS#5",
+		Aes: aesEncryptor{
+			Key: config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0a910eef95f22f55bacdddacafa06b656")),
+			Vec: config.NewSecret([]byte("61737570657273656372657469763432")),
 		},
 	}
 	plugin.Timeout = config.Duration(200 * time.Millisecond)
@@ -213,13 +200,11 @@ func TestGetResolverErrors(t *testing.T) {
 	defer server.Close()
 
 	plugin = &HTTP{
-		URL: server.URL,
-		decryptionConfig: decryptionConfig{
-			Cipher: "AES256/CBC/PKCS#5",
-			Aes: aesEncryptor{
-				Key: config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0a910eef95f22f55bacdddacafa06b656")),
-				Vec: config.NewSecret([]byte("61737570657273656372657469763432")),
-			},
+		URL:    server.URL,
+		Cipher: "AES256/CBC/PKCS#5",
+		Aes: aesEncryptor{
+			Key: config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0a910eef95f22f55bacdddacafa06b656")),
+			Vec: config.NewSecret([]byte("61737570657273656372657469763432")),
 		},
 	}
 	plugin.Timeout = config.Duration(200 * time.Millisecond)
@@ -250,13 +235,11 @@ func TestInvalidServerResponse(t *testing.T) {
 	defer server.Close()
 
 	plugin := &HTTP{
-		URL: server.URL,
-		decryptionConfig: decryptionConfig{
-			Cipher: "AES256/CBC/PKCS#5",
-			Aes: aesEncryptor{
-				Key: config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0a910eef95f22f55bacdddacafa06b656")),
-				Vec: config.NewSecret([]byte("61737570657273656372657469763432")),
-			},
+		URL:    server.URL,
+		Cipher: "AES256/CBC/PKCS#5",
+		Aes: aesEncryptor{
+			Key: config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0a910eef95f22f55bacdddacafa06b656")),
+			Vec: config.NewSecret([]byte("61737570657273656372657469763432")),
 		},
 	}
 	plugin.Timeout = config.Duration(200 * time.Millisecond)
@@ -293,12 +276,10 @@ func TestAdditionalHeaders(t *testing.T) {
 			"host": "a.host.com",
 			"foo":  "bar",
 		},
-		decryptionConfig: decryptionConfig{
-			Cipher: "AES256/CBC/PKCS#5",
-			Aes: aesEncryptor{
-				Key: config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0a910eef95f22f55bacdddacafa06b656")),
-				Vec: config.NewSecret([]byte("61737570657273656372657469763432")),
-			},
+		Cipher: "AES256/CBC/PKCS#5",
+		Aes: aesEncryptor{
+			Key: config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0a910eef95f22f55bacdddacafa06b656")),
+			Vec: config.NewSecret([]byte("61737570657273656372657469763432")),
 		},
 	}
 	plugin.Timeout = config.Duration(200 * time.Millisecond)

@@ -167,10 +167,6 @@ func (o *OAuth2) Get(key string) ([]byte, error) {
 	return []byte(token.AccessToken), nil
 }
 
-func (*OAuth2) Set(_, _ string) error {
-	return errors.New("not supported")
-}
-
 func (o *OAuth2) List() ([]string, error) {
 	keys := make([]string, 0, len(o.sources))
 	for k := range o.sources {

@@ -67,7 +67,7 @@ func TestOpenTelemetry(t *testing.T) {
 			"otel.library.name": "My Library Name",
 			"host.name":         "potato",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"gauge": 87.332,
 		},
 		time.Unix(0, 1622848686000000000),
@@ -166,7 +166,7 @@ func TestOpenTelemetryHTTPProtobuf(t *testing.T) {
 			"otel.library.name": "My Library Name",
 			"host.name":         "potato",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"gauge": 87.332,
 		},
 		time.Unix(0, 1622848686000000000),
@@ -264,7 +264,7 @@ func TestOpenTelemetryHTTPJSON(t *testing.T) {
 			"otel.library.name": "My Library Name",
 			"host.name":         "potato",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"gauge": 87.332,
 		},
 		time.Unix(0, 1622848686000000000),
@@ -282,6 +282,35 @@ func TestOpenTelemetryHTTPJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	require.JSONEq(t, string(expectJSON), string(gotJSON))
+}
+
+func TestConnectInvalidProxy(t *testing.T) {
+	tests := []struct {
+		name   string
+		plugin *OpenTelemetry
+	}{
+		{
+			name: "grpc",
+			plugin: &OpenTelemetry{
+				ServiceAddress: "localhost:4317",
+				UseProxy:       true, ProxyURL: "://invalid",
+				Log: testutil.Logger{},
+			},
+		},
+		{
+			name: "http",
+			plugin: &OpenTelemetry{
+				ServiceAddress: "http://localhost:4318",
+				HTTPProxyURL:   "://invalid",
+				Log:            testutil.Logger{},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.ErrorContains(t, tt.plugin.Connect(), "creating proxy failed:")
+		})
+	}
 }
 
 var _ pmetricotlp.GRPCServer = (*mockOtelService)(nil)

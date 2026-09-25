@@ -49,6 +49,9 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## duration. If mtime is negative, only count files that have been
   ## touched in this duration. Defaults to "0s".
   mtime = "0s"
+
+  ## Stop counting after this duration has passed (disabled by default)
+  # timeout = "0s"
 ```
 
 ## Metrics

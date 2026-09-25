@@ -55,11 +55,11 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
       ## address - node address in ctrlX Data Layer (mandatory)
       ## name    - field name to use in the output (optional, default: base name of address)
       ## tags    - extra node tags to be added to the output metric (optional)
-      ## Note: 
+      ## Note:
       ## Use either the inline notation or the bracketed notation, not both.
       ## The tags property is only supported in bracketed notation due to toml parser restrictions
       ## Examples:
-      ## Inline notation 
+      ## Inline notation
       nodes=[
          {name="available", address="framework/metrics/system/memavailable-mb"},
          {name="used", address="framework/metrics/system/memused-mb"},
@@ -76,7 +76,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
       #    name   ="used"
       #    address="framework/metrics/system/memused-mb"
 
-      ## The switch "output_json_string" enables output of the measurement as json. 
+      ## The switch "output_json_string" enables output of the measurement as json.
       ## That way it can be used in in a subsequent processor plugin, e.g. "Starlark Processor Plugin".
       # output_json_string = false
 
@@ -109,7 +109,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
       # queue_size = 10
 
       ## The behaviour of the queue if it is full. (default: "DiscardOldest")
-      ## Possible values: 
+      ## Possible values:
       ## - "DiscardOldest"
       ##   The oldest value gets deleted from the queue when it is full.
       ## - "DiscardNewest"
@@ -124,15 +124,15 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
       ## Possible values:
       ## - "Status"
       ##   Capture the value only, when the state of the node changes from or to error state. Value changes are ignored.
-      ## - "StatusValue" 
+      ## - "StatusValue"
       ##   Capture when the value changes or the node changes from or to error state.
       ##   See also 'dead_band_value' for what is considered as a value change.
-      ## - "StatusValueTimestamp": 
+      ## - "StatusValueTimestamp":
       ##   Capture even if the value is the same, but the timestamp of the value is newer.
       ##   Note: This might lead to high load on the network because every sample will be sent as a message
       ##   even if the value of the node did not change.
       # value_change = "StatusValue"
-      
+
 ```
 
 ## Metrics
@@ -309,7 +309,7 @@ Configuration:
 
 Source:
 
-```json
+```text
 "framework/metrics/system/memavailable-mb" : 365.93359375
 "framework/metrics/system/memused-mb" : 567.67578125
 ```
@@ -336,7 +336,7 @@ Configuration:
 
 Source:
 
-```json
+```text
 "alldata/dynamic/array-of-bool8" : [true, false, true]
 "alldata/dynamic/array-of-uint8" : [0, 255]
 ```
@@ -363,7 +363,7 @@ Configuration:
 
 Source:
 
-```json
+```text
 "motion/axs/Axis_1/state/values/actual" : {"actualPos":65.249329860957,"actualVel":5,"actualAcc":0,"actualTorque":0,"distLeft":0,"actualPosUnit":"mm","actualVelUnit":"mm/min","actualAccUnit":"m/s^2","actualTorqueUnit":"Nm","distLeftUnit":"mm"}
 "motion/axs/Axis_2/state/values/actual" : {"actualPos":120,"actualVel":0,"actualAcc":0,"actualTorque":0,"distLeft":0,"actualPosUnit":"deg","actualVelUnit":"rpm","actualAccUnit":"rad/s^2","actualTorqueUnit":"Nm","distLeftUnit":"deg"}
 ```

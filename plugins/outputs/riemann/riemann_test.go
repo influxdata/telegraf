@@ -80,7 +80,7 @@ func TestMetricEvents(t *testing.T) {
 	m := metric.New(
 		"test1",
 		map[string]string{"tag1": "value1", "host": "abc123"},
-		map[string]interface{}{"value": 5.6},
+		map[string]any{"value": 5.6},
 		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
@@ -105,7 +105,7 @@ func TestMetricEvents(t *testing.T) {
 	m = metric.New(
 		"test2",
 		map[string]string{"host": "xyz987"},
-		map[string]interface{}{"point": 1},
+		map[string]any{"point": 1},
 		time.Date(2012, time.November, 2, 3, 0, 0, 0, time.UTC),
 	)
 
@@ -140,7 +140,7 @@ func TestStateEvents(t *testing.T) {
 	m := metric.New(
 		"test",
 		map[string]string{"host": "host"},
-		map[string]interface{}{"value": "running"},
+		map[string]any{"value": "running"},
 		time.Date(2015, time.November, 9, 22, 0, 0, 0, time.UTC),
 	)
 

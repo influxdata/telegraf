@@ -283,7 +283,7 @@ func parseLines(r io.Reader, acc telegraf.Accumulator, addr string) {
 			"pool": pool,
 			"url":  addr,
 		}
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		for k, v := range stats[pool] {
 			fields[strings.ReplaceAll(k, " ", "_")] = v
 		}

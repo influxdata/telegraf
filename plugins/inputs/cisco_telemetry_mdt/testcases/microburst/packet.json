@@ -1,0 +1,1086 @@
+{
+    "nodeIdStr": "n9k-eor-tm4",
+    "subscriptionIdStr": "1",
+    "encodingPath": "microburst",
+    "collectionId": "19279",
+    "msgTimestamp": "1691093580105",
+    "dataGpbkv": [
+        {
+            "fields": [
+                {
+                    "name": "keys",
+                    "fields": [
+                        {
+                            "name": "microburst",
+                            "stringValue": "microburst"
+                        }
+                    ]
+                },
+                {
+                    "name": "content",
+                    "fields": [
+                        {
+                            "fields": [
+                                {
+                                    "name": "children",
+                                    "fields": [
+                                        {
+                                            "fields": [
+                                                {
+                                                    "name": "nodeName",
+                                                    "stringValue": "n9k-eor-tm4"
+                                                },
+                                                {
+                                                    "name": "timestamp",
+                                                    "stringValue": "2023-08-03T20:12:59.65530"
+                                                },
+                                                {
+                                                    "name": "statObjects",
+                                                    "fields": [
+                                                        {
+                                                            "fields": [
+                                                                {
+                                                                    "name": "source",
+                                                                    "stringValue": ""
+                                                                },
+                                                                {
+                                                                    "name": "statName",
+                                                                    "stringValue": "microburst"
+                                                                },
+                                                                {
+                                                                    "name": "counters"
+                                                                },
+                                                                {
+                                                                    "name": "microburst",
+                                                                    "fields": [
+                                                                        {
+                                                                            "fields": [
+                                                                                {
+                                                                                    "name": "interfaceName",
+                                                                                    "stringValue": "Eth0/0/0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "queue",
+                                                                                    "stringValue": "queue-255"
+                                                                                },
+                                                                                {
+                                                                                    "name": "queueType",
+                                                                                    "stringValue": "unicast"
+                                                                                },
+                                                                                {
+                                                                                    "name": "threshold",
+                                                                                    "sint64Value": "0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "peak",
+                                                                                    "sint64Value": "500"
+                                                                                },
+                                                                                {
+                                                                                    "name": "endDepth",
+                                                                                    "sint64Value": "0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "duration",
+                                                                                    "uint64Value": "1200"
+                                                                                },
+                                                                                {
+                                                                                    "name": "ts",
+                                                                                    "stringValue": "2023-08-03T20:12:59.655308Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "startTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "endTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "peakTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "sourceName",
+                                                                                    "stringValue": "node-n9k-eor-tm4/microburst/interface-[Eth0/0/0]/queue-[queue-255]"
+                                                                                },
+                                                                                {
+                                                                                    "name": "classLevel",
+                                                                                    "stringValue": "class-level5"
+                                                                                }
+                                                                            ]
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "name": "fabricName",
+                                                    "stringValue": ""
+                                                },
+                                                {
+                                                    "name": "vendor",
+                                                    "stringValue": "CISCO_NX-OS"
+                                                },
+                                                {
+                                                    "name": "version",
+                                                    "sint64Value": "2"
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "fields": [
+                                                {
+                                                    "name": "nodeName",
+                                                    "stringValue": "n9k-eor-tm4"
+                                                },
+                                                {
+                                                    "name": "timestamp",
+                                                    "stringValue": "2023-08-03T20:12:59.65538"
+                                                },
+                                                {
+                                                    "name": "statObjects",
+                                                    "fields": [
+                                                        {
+                                                            "fields": [
+                                                                {
+                                                                    "name": "source",
+                                                                    "stringValue": ""
+                                                                },
+                                                                {
+                                                                    "name": "statName",
+                                                                    "stringValue": "microburst"
+                                                                },
+                                                                {
+                                                                    "name": "counters"
+                                                                },
+                                                                {
+                                                                    "name": "microburst",
+                                                                    "fields": [
+                                                                        {
+                                                                            "fields": [
+                                                                                {
+                                                                                    "name": "interfaceName",
+                                                                                    "stringValue": "Eth1/0/0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "queue",
+                                                                                    "stringValue": "queue-255"
+                                                                                },
+                                                                                {
+                                                                                    "name": "queueType",
+                                                                                    "stringValue": "unicast"
+                                                                                },
+                                                                                {
+                                                                                    "name": "threshold",
+                                                                                    "sint64Value": "0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "peak",
+                                                                                    "sint64Value": "500"
+                                                                                },
+                                                                                {
+                                                                                    "name": "endDepth",
+                                                                                    "sint64Value": "0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "duration",
+                                                                                    "uint64Value": "1200"
+                                                                                },
+                                                                                {
+                                                                                    "name": "ts",
+                                                                                    "stringValue": "2023-08-03T20:12:59.655385Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "startTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "endTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "peakTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "sourceName",
+                                                                                    "stringValue": "node-n9k-eor-tm4/microburst/interface-[Eth1/0/0]/queue-[queue-255]"
+                                                                                },
+                                                                                {
+                                                                                    "name": "classLevel",
+                                                                                    "stringValue": "class-level5"
+                                                                                }
+                                                                            ]
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "name": "fabricName",
+                                                    "stringValue": ""
+                                                },
+                                                {
+                                                    "name": "vendor",
+                                                    "stringValue": "CISCO_NX-OS"
+                                                },
+                                                {
+                                                    "name": "version",
+                                                    "sint64Value": "2"
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "fields": [
+                                                {
+                                                    "name": "nodeName",
+                                                    "stringValue": "n9k-eor-tm4"
+                                                },
+                                                {
+                                                    "name": "timestamp",
+                                                    "stringValue": "2023-08-03T20:12:59.65540"
+                                                },
+                                                {
+                                                    "name": "statObjects",
+                                                    "fields": [
+                                                        {
+                                                            "fields": [
+                                                                {
+                                                                    "name": "source",
+                                                                    "stringValue": ""
+                                                                },
+                                                                {
+                                                                    "name": "statName",
+                                                                    "stringValue": "microburst"
+                                                                },
+                                                                {
+                                                                    "name": "counters"
+                                                                },
+                                                                {
+                                                                    "name": "microburst",
+                                                                    "fields": [
+                                                                        {
+                                                                            "fields": [
+                                                                                {
+                                                                                    "name": "interfaceName",
+                                                                                    "stringValue": "Eth2/0/0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "queue",
+                                                                                    "stringValue": "queue-255"
+                                                                                },
+                                                                                {
+                                                                                    "name": "queueType",
+                                                                                    "stringValue": "unicast"
+                                                                                },
+                                                                                {
+                                                                                    "name": "threshold",
+                                                                                    "sint64Value": "0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "peak",
+                                                                                    "sint64Value": "500"
+                                                                                },
+                                                                                {
+                                                                                    "name": "endDepth",
+                                                                                    "sint64Value": "0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "duration",
+                                                                                    "uint64Value": "1200"
+                                                                                },
+                                                                                {
+                                                                                    "name": "ts",
+                                                                                    "stringValue": "2023-08-03T20:12:59.655410Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "startTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "endTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "peakTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "sourceName",
+                                                                                    "stringValue": "node-n9k-eor-tm4/microburst/interface-[Eth2/0/0]/queue-[queue-255]"
+                                                                                },
+                                                                                {
+                                                                                    "name": "classLevel",
+                                                                                    "stringValue": "class-level5"
+                                                                                }
+                                                                            ]
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "name": "fabricName",
+                                                    "stringValue": ""
+                                                },
+                                                {
+                                                    "name": "vendor",
+                                                    "stringValue": "CISCO_NX-OS"
+                                                },
+                                                {
+                                                    "name": "version",
+                                                    "sint64Value": "2"
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "fields": [
+                                                {
+                                                    "name": "nodeName",
+                                                    "stringValue": "n9k-eor-tm4"
+                                                },
+                                                {
+                                                    "name": "timestamp",
+                                                    "stringValue": "2023-08-03T20:12:59.65542"
+                                                },
+                                                {
+                                                    "name": "statObjects",
+                                                    "fields": [
+                                                        {
+                                                            "fields": [
+                                                                {
+                                                                    "name": "source",
+                                                                    "stringValue": ""
+                                                                },
+                                                                {
+                                                                    "name": "statName",
+                                                                    "stringValue": "microburst"
+                                                                },
+                                                                {
+                                                                    "name": "counters"
+                                                                },
+                                                                {
+                                                                    "name": "microburst",
+                                                                    "fields": [
+                                                                        {
+                                                                            "fields": [
+                                                                                {
+                                                                                    "name": "interfaceName",
+                                                                                    "stringValue": "Eth3/0/0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "queue",
+                                                                                    "stringValue": "queue-255"
+                                                                                },
+                                                                                {
+                                                                                    "name": "queueType",
+                                                                                    "stringValue": "unicast"
+                                                                                },
+                                                                                {
+                                                                                    "name": "threshold",
+                                                                                    "sint64Value": "0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "peak",
+                                                                                    "sint64Value": "500"
+                                                                                },
+                                                                                {
+                                                                                    "name": "endDepth",
+                                                                                    "sint64Value": "0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "duration",
+                                                                                    "uint64Value": "1200"
+                                                                                },
+                                                                                {
+                                                                                    "name": "ts",
+                                                                                    "stringValue": "2023-08-03T20:12:59.655427Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "startTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "endTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "peakTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "sourceName",
+                                                                                    "stringValue": "node-n9k-eor-tm4/microburst/interface-[Eth3/0/0]/queue-[queue-255]"
+                                                                                },
+                                                                                {
+                                                                                    "name": "classLevel",
+                                                                                    "stringValue": "class-level5"
+                                                                                }
+                                                                            ]
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "name": "fabricName",
+                                                    "stringValue": ""
+                                                },
+                                                {
+                                                    "name": "vendor",
+                                                    "stringValue": "CISCO_NX-OS"
+                                                },
+                                                {
+                                                    "name": "version",
+                                                    "sint64Value": "2"
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "fields": [
+                                                {
+                                                    "name": "nodeName",
+                                                    "stringValue": "n9k-eor-tm4"
+                                                },
+                                                {
+                                                    "name": "timestamp",
+                                                    "stringValue": "2023-08-03T20:12:59.65544"
+                                                },
+                                                {
+                                                    "name": "statObjects",
+                                                    "fields": [
+                                                        {
+                                                            "fields": [
+                                                                {
+                                                                    "name": "source",
+                                                                    "stringValue": ""
+                                                                },
+                                                                {
+                                                                    "name": "statName",
+                                                                    "stringValue": "microburst"
+                                                                },
+                                                                {
+                                                                    "name": "counters"
+                                                                },
+                                                                {
+                                                                    "name": "microburst",
+                                                                    "fields": [
+                                                                        {
+                                                                            "fields": [
+                                                                                {
+                                                                                    "name": "interfaceName",
+                                                                                    "stringValue": "Eth4/0/0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "queue",
+                                                                                    "stringValue": "queue-255"
+                                                                                },
+                                                                                {
+                                                                                    "name": "queueType",
+                                                                                    "stringValue": "unicast"
+                                                                                },
+                                                                                {
+                                                                                    "name": "threshold",
+                                                                                    "sint64Value": "0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "peak",
+                                                                                    "sint64Value": "500"
+                                                                                },
+                                                                                {
+                                                                                    "name": "endDepth",
+                                                                                    "sint64Value": "0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "duration",
+                                                                                    "uint64Value": "1200"
+                                                                                },
+                                                                                {
+                                                                                    "name": "ts",
+                                                                                    "stringValue": "2023-08-03T20:12:59.655444Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "startTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "endTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "peakTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "sourceName",
+                                                                                    "stringValue": "node-n9k-eor-tm4/microburst/interface-[Eth4/0/0]/queue-[queue-255]"
+                                                                                },
+                                                                                {
+                                                                                    "name": "classLevel",
+                                                                                    "stringValue": "class-level5"
+                                                                                }
+                                                                            ]
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "name": "fabricName",
+                                                    "stringValue": ""
+                                                },
+                                                {
+                                                    "name": "vendor",
+                                                    "stringValue": "CISCO_NX-OS"
+                                                },
+                                                {
+                                                    "name": "version",
+                                                    "sint64Value": "2"
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "fields": [
+                                                {
+                                                    "name": "nodeName",
+                                                    "stringValue": "n9k-eor-tm4"
+                                                },
+                                                {
+                                                    "name": "timestamp",
+                                                    "stringValue": "2023-08-03T20:12:59.65545"
+                                                },
+                                                {
+                                                    "name": "statObjects",
+                                                    "fields": [
+                                                        {
+                                                            "fields": [
+                                                                {
+                                                                    "name": "source",
+                                                                    "stringValue": ""
+                                                                },
+                                                                {
+                                                                    "name": "statName",
+                                                                    "stringValue": "microburst"
+                                                                },
+                                                                {
+                                                                    "name": "counters"
+                                                                },
+                                                                {
+                                                                    "name": "microburst",
+                                                                    "fields": [
+                                                                        {
+                                                                            "fields": [
+                                                                                {
+                                                                                    "name": "interfaceName",
+                                                                                    "stringValue": "Eth5/0/0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "queue",
+                                                                                    "stringValue": "queue-255"
+                                                                                },
+                                                                                {
+                                                                                    "name": "queueType",
+                                                                                    "stringValue": "unicast"
+                                                                                },
+                                                                                {
+                                                                                    "name": "threshold",
+                                                                                    "sint64Value": "0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "peak",
+                                                                                    "sint64Value": "500"
+                                                                                },
+                                                                                {
+                                                                                    "name": "endDepth",
+                                                                                    "sint64Value": "0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "duration",
+                                                                                    "uint64Value": "1200"
+                                                                                },
+                                                                                {
+                                                                                    "name": "ts",
+                                                                                    "stringValue": "2023-08-03T20:12:59.655460Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "startTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "endTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "peakTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "sourceName",
+                                                                                    "stringValue": "node-n9k-eor-tm4/microburst/interface-[Eth5/0/0]/queue-[queue-255]"
+                                                                                },
+                                                                                {
+                                                                                    "name": "classLevel",
+                                                                                    "stringValue": "class-level5"
+                                                                                }
+                                                                            ]
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "name": "fabricName",
+                                                    "stringValue": ""
+                                                },
+                                                {
+                                                    "name": "vendor",
+                                                    "stringValue": "CISCO_NX-OS"
+                                                },
+                                                {
+                                                    "name": "version",
+                                                    "sint64Value": "2"
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "fields": [
+                                                {
+                                                    "name": "nodeName",
+                                                    "stringValue": "n9k-eor-tm4"
+                                                },
+                                                {
+                                                    "name": "timestamp",
+                                                    "stringValue": "2023-08-03T20:12:59.65548"
+                                                },
+                                                {
+                                                    "name": "statObjects",
+                                                    "fields": [
+                                                        {
+                                                            "fields": [
+                                                                {
+                                                                    "name": "source",
+                                                                    "stringValue": ""
+                                                                },
+                                                                {
+                                                                    "name": "statName",
+                                                                    "stringValue": "microburst"
+                                                                },
+                                                                {
+                                                                    "name": "counters"
+                                                                },
+                                                                {
+                                                                    "name": "microburst",
+                                                                    "fields": [
+                                                                        {
+                                                                            "fields": [
+                                                                                {
+                                                                                    "name": "interfaceName",
+                                                                                    "stringValue": "Eth6/0/0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "queue",
+                                                                                    "stringValue": "queue-255"
+                                                                                },
+                                                                                {
+                                                                                    "name": "queueType",
+                                                                                    "stringValue": "unicast"
+                                                                                },
+                                                                                {
+                                                                                    "name": "threshold",
+                                                                                    "sint64Value": "0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "peak",
+                                                                                    "sint64Value": "500"
+                                                                                },
+                                                                                {
+                                                                                    "name": "endDepth",
+                                                                                    "sint64Value": "0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "duration",
+                                                                                    "uint64Value": "1200"
+                                                                                },
+                                                                                {
+                                                                                    "name": "ts",
+                                                                                    "stringValue": "2023-08-03T20:12:59.655484Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "startTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "endTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "peakTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "sourceName",
+                                                                                    "stringValue": "node-n9k-eor-tm4/microburst/interface-[Eth6/0/0]/queue-[queue-255]"
+                                                                                },
+                                                                                {
+                                                                                    "name": "classLevel",
+                                                                                    "stringValue": "class-level5"
+                                                                                }
+                                                                            ]
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "name": "fabricName",
+                                                    "stringValue": ""
+                                                },
+                                                {
+                                                    "name": "vendor",
+                                                    "stringValue": "CISCO_NX-OS"
+                                                },
+                                                {
+                                                    "name": "version",
+                                                    "sint64Value": "2"
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "fields": [
+                                                {
+                                                    "name": "nodeName",
+                                                    "stringValue": "n9k-eor-tm4"
+                                                },
+                                                {
+                                                    "name": "timestamp",
+                                                    "stringValue": "2023-08-03T20:12:59.65549"
+                                                },
+                                                {
+                                                    "name": "statObjects",
+                                                    "fields": [
+                                                        {
+                                                            "fields": [
+                                                                {
+                                                                    "name": "source",
+                                                                    "stringValue": ""
+                                                                },
+                                                                {
+                                                                    "name": "statName",
+                                                                    "stringValue": "microburst"
+                                                                },
+                                                                {
+                                                                    "name": "counters"
+                                                                },
+                                                                {
+                                                                    "name": "microburst",
+                                                                    "fields": [
+                                                                        {
+                                                                            "fields": [
+                                                                                {
+                                                                                    "name": "interfaceName",
+                                                                                    "stringValue": "Eth7/0/0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "queue",
+                                                                                    "stringValue": "queue-255"
+                                                                                },
+                                                                                {
+                                                                                    "name": "queueType",
+                                                                                    "stringValue": "unicast"
+                                                                                },
+                                                                                {
+                                                                                    "name": "threshold",
+                                                                                    "sint64Value": "0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "peak",
+                                                                                    "sint64Value": "500"
+                                                                                },
+                                                                                {
+                                                                                    "name": "endDepth",
+                                                                                    "sint64Value": "0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "duration",
+                                                                                    "uint64Value": "1200"
+                                                                                },
+                                                                                {
+                                                                                    "name": "ts",
+                                                                                    "stringValue": "2023-08-03T20:12:59.655500Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "startTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "endTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "peakTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "sourceName",
+                                                                                    "stringValue": "node-n9k-eor-tm4/microburst/interface-[Eth7/0/0]/queue-[queue-255]"
+                                                                                },
+                                                                                {
+                                                                                    "name": "classLevel",
+                                                                                    "stringValue": "class-level5"
+                                                                                }
+                                                                            ]
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "name": "fabricName",
+                                                    "stringValue": ""
+                                                },
+                                                {
+                                                    "name": "vendor",
+                                                    "stringValue": "CISCO_NX-OS"
+                                                },
+                                                {
+                                                    "name": "version",
+                                                    "sint64Value": "2"
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "fields": [
+                                                {
+                                                    "name": "nodeName",
+                                                    "stringValue": "n9k-eor-tm4"
+                                                },
+                                                {
+                                                    "name": "timestamp",
+                                                    "stringValue": "2023-08-03T20:12:59.65551"
+                                                },
+                                                {
+                                                    "name": "statObjects",
+                                                    "fields": [
+                                                        {
+                                                            "fields": [
+                                                                {
+                                                                    "name": "source",
+                                                                    "stringValue": ""
+                                                                },
+                                                                {
+                                                                    "name": "statName",
+                                                                    "stringValue": "microburst"
+                                                                },
+                                                                {
+                                                                    "name": "counters"
+                                                                },
+                                                                {
+                                                                    "name": "microburst",
+                                                                    "fields": [
+                                                                        {
+                                                                            "fields": [
+                                                                                {
+                                                                                    "name": "interfaceName",
+                                                                                    "stringValue": "Eth8/0/0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "queue",
+                                                                                    "stringValue": "queue-255"
+                                                                                },
+                                                                                {
+                                                                                    "name": "queueType",
+                                                                                    "stringValue": "unicast"
+                                                                                },
+                                                                                {
+                                                                                    "name": "threshold",
+                                                                                    "sint64Value": "0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "peak",
+                                                                                    "sint64Value": "500"
+                                                                                },
+                                                                                {
+                                                                                    "name": "endDepth",
+                                                                                    "sint64Value": "0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "duration",
+                                                                                    "uint64Value": "1200"
+                                                                                },
+                                                                                {
+                                                                                    "name": "ts",
+                                                                                    "stringValue": "2023-08-03T20:12:59.655515Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "startTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "endTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "peakTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "sourceName",
+                                                                                    "stringValue": "node-n9k-eor-tm4/microburst/interface-[Eth8/0/0]/queue-[queue-255]"
+                                                                                },
+                                                                                {
+                                                                                    "name": "classLevel",
+                                                                                    "stringValue": "class-level5"
+                                                                                }
+                                                                            ]
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "name": "fabricName",
+                                                    "stringValue": ""
+                                                },
+                                                {
+                                                    "name": "vendor",
+                                                    "stringValue": "CISCO_NX-OS"
+                                                },
+                                                {
+                                                    "name": "version",
+                                                    "sint64Value": "2"
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "fields": [
+                                                {
+                                                    "name": "nodeName",
+                                                    "stringValue": "n9k-eor-tm4"
+                                                },
+                                                {
+                                                    "name": "timestamp",
+                                                    "stringValue": "2023-08-03T20:12:59.65553"
+                                                },
+                                                {
+                                                    "name": "statObjects",
+                                                    "fields": [
+                                                        {
+                                                            "fields": [
+                                                                {
+                                                                    "name": "source",
+                                                                    "stringValue": ""
+                                                                },
+                                                                {
+                                                                    "name": "statName",
+                                                                    "stringValue": "microburst"
+                                                                },
+                                                                {
+                                                                    "name": "counters"
+                                                                },
+                                                                {
+                                                                    "name": "microburst",
+                                                                    "fields": [
+                                                                        {
+                                                                            "fields": [
+                                                                                {
+                                                                                    "name": "interfaceName",
+                                                                                    "stringValue": "Eth9/0/0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "queue",
+                                                                                    "stringValue": "queue-255"
+                                                                                },
+                                                                                {
+                                                                                    "name": "queueType",
+                                                                                    "stringValue": "unicast"
+                                                                                },
+                                                                                {
+                                                                                    "name": "threshold",
+                                                                                    "sint64Value": "0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "peak",
+                                                                                    "sint64Value": "500"
+                                                                                },
+                                                                                {
+                                                                                    "name": "endDepth",
+                                                                                    "sint64Value": "0"
+                                                                                },
+                                                                                {
+                                                                                    "name": "duration",
+                                                                                    "uint64Value": "1200"
+                                                                                },
+                                                                                {
+                                                                                    "name": "ts",
+                                                                                    "stringValue": "2023-08-03T20:12:59.655531Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "startTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "endTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "peakTs",
+                                                                                    "stringValue": "03-08-2023 20:12:59Z"
+                                                                                },
+                                                                                {
+                                                                                    "name": "sourceName",
+                                                                                    "stringValue": "node-n9k-eor-tm4/microburst/interface-[Eth9/0/0]/queue-[queue-255]"
+                                                                                },
+                                                                                {
+                                                                                    "name": "classLevel",
+                                                                                    "stringValue": "class-level5"
+                                                                                }
+                                                                            ]
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "name": "fabricName",
+                                                    "stringValue": ""
+                                                },
+                                                {
+                                                    "name": "vendor",
+                                                    "stringValue": "CISCO_NX-OS"
+                                                },
+                                                {
+                                                    "name": "version",
+                                                    "sint64Value": "2"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

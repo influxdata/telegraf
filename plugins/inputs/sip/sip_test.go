@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -317,12 +318,11 @@ func TestSecureProtocolWithoutTLSConfig(t *testing.T) {
 }
 
 func TestSIPServerSuccess(t *testing.T) {
-	server, err := newMockServer(sip.OPTIONS, func(req *sip.Request, tx sip.ServerTransaction) {
-		res := sip.NewResponseFromRequest(req, 200, "OK", nil)
-		require.NoError(t, tx.Respond(res))
+	server, err := newMockServer(sip.OPTIONS, func(req *sip.Request) *sip.Response {
+		return sip.NewResponseFromRequest(req, 200, "OK", nil)
 	})
 	require.NoError(t, err)
-	defer server.close()
+	defer server.close(t)
 
 	plugin := &SIP{
 		Server:   "sip://" + server.addr,
@@ -348,7 +348,7 @@ func TestSIPServerSuccess(t *testing.T) {
 				"transport":   "udp",
 				"status_code": "200",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"response_time_s": float64(0),
 				"result":          "OK",
 			},
@@ -360,12 +360,11 @@ func TestSIPServerSuccess(t *testing.T) {
 }
 
 func TestSIPServerErrorResponse(t *testing.T) {
-	server, err := newMockServer(sip.OPTIONS, func(req *sip.Request, tx sip.ServerTransaction) {
-		res := sip.NewResponseFromRequest(req, 404, "Not Found", nil)
-		require.NoError(t, tx.Respond(res))
+	server, err := newMockServer(sip.OPTIONS, func(req *sip.Request) *sip.Response {
+		return sip.NewResponseFromRequest(req, 404, "Not Found", nil)
 	})
 	require.NoError(t, err)
-	defer server.close()
+	defer server.close(t)
 
 	plugin := &SIP{
 		Server:   "sip://" + server.addr,
@@ -391,7 +390,7 @@ func TestSIPServerErrorResponse(t *testing.T) {
 				"transport":   "udp",
 				"status_code": "404",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"response_time_s": float64(0),
 				"result":          "Not Found",
 			},
@@ -403,11 +402,12 @@ func TestSIPServerErrorResponse(t *testing.T) {
 }
 
 func TestSIPServerTimeout(t *testing.T) {
-	server, err := newMockServer(sip.OPTIONS, func(_ *sip.Request, _ sip.ServerTransaction) {
+	server, err := newMockServer(sip.OPTIONS, func(*sip.Request) *sip.Response {
 		// Intentionally no response to trigger timeout
+		return nil
 	})
 	require.NoError(t, err)
-	defer server.close()
+	defer server.close(t)
 
 	plugin := &SIP{
 		Server:   "sip://" + server.addr,
@@ -433,7 +433,7 @@ func TestSIPServerTimeout(t *testing.T) {
 				"method":    "options",
 				"transport": "udp",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"response_time_s": float64(0),
 				"result":          "Timeout",
 			},
@@ -451,13 +451,12 @@ func TestSIPServerTimeout(t *testing.T) {
 }
 
 func TestSIPServerDelayedResponse(t *testing.T) {
-	server, err := newMockServer(sip.OPTIONS, func(req *sip.Request, tx sip.ServerTransaction) {
+	server, err := newMockServer(sip.OPTIONS, func(req *sip.Request) *sip.Response {
 		time.Sleep(50 * time.Millisecond)
-		res := sip.NewResponseFromRequest(req, 200, "OK", nil)
-		require.NoError(t, tx.Respond(res))
+		return sip.NewResponseFromRequest(req, 200, "OK", nil)
 	})
 	require.NoError(t, err)
-	defer server.close()
+	defer server.close(t)
 
 	plugin := &SIP{
 		Server:   "sip://" + server.addr,
@@ -484,7 +483,7 @@ func TestSIPServerDelayedResponse(t *testing.T) {
 				"transport":   "udp",
 				"status_code": "200",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"response_time_s": float64(0),
 				"result":          "OK",
 			},
@@ -527,12 +526,11 @@ func TestSIPDifferentStatusCodes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			server, err := newMockServer(sip.OPTIONS, func(req *sip.Request, tx sip.ServerTransaction) {
-				res := sip.NewResponseFromRequest(req, tt.statusCode, tt.reason, nil)
-				require.NoError(t, tx.Respond(res))
+			server, err := newMockServer(sip.OPTIONS, func(req *sip.Request) *sip.Response {
+				return sip.NewResponseFromRequest(req, tt.statusCode, tt.reason, nil)
 			})
 			require.NoError(t, err)
-			defer server.close()
+			defer server.close(t)
 
 			plugin := &SIP{
 				Server:   "sip://" + server.addr,
@@ -558,7 +556,7 @@ func TestSIPDifferentStatusCodes(t *testing.T) {
 						"transport":   "udp",
 						"status_code": strconv.Itoa(tt.statusCode),
 					},
-					map[string]interface{}{
+					map[string]any{
 						"response_time_s": float64(0),
 						"result":          tt.reason,
 					},
@@ -572,15 +570,15 @@ func TestSIPDifferentStatusCodes(t *testing.T) {
 }
 
 func TestSIPAuthenticationRequired(t *testing.T) {
-	server, err := newMockServer(sip.OPTIONS, func(req *sip.Request, tx sip.ServerTransaction) {
+	server, err := newMockServer(sip.OPTIONS, func(req *sip.Request) *sip.Response {
 		// Respond with 401 Unauthorized to require authentication
 		res := sip.NewResponseFromRequest(req, 401, "Unauthorized", nil)
 		// Add WWW-Authenticate header (required for digest auth)
 		res.AppendHeader(sip.NewHeader("WWW-Authenticate", `Digest realm="test", nonce="abc123"`))
-		require.NoError(t, tx.Respond(res))
+		return res
 	})
 	require.NoError(t, err)
-	defer server.close()
+	defer server.close(t)
 
 	// Test without credentials - should get auth_required
 	plugin := &SIP{
@@ -607,7 +605,7 @@ func TestSIPAuthenticationRequired(t *testing.T) {
 				"transport":   "udp",
 				"status_code": "401",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"response_time_s": float64(0),
 				"result":          "Unauthorized",
 			},
@@ -625,26 +623,21 @@ func TestSIPAuthenticationSuccess(t *testing.T) {
 	)
 
 	var attemptCount atomic.Int32
-	server, err := newMockServer(sip.OPTIONS, func(req *sip.Request, tx sip.ServerTransaction) {
+	server, err := newMockServer(sip.OPTIONS, func(req *sip.Request) *sip.Response {
 		attemptCount.Add(1)
 
-		// Check if Authorization header is present
-		authHeader := req.GetHeader("Authorization")
-
-		if authHeader == nil {
+		if req.GetHeader("Authorization") == nil {
 			// First attempt without auth - send 401 challenge
 			res := sip.NewResponseFromRequest(req, 401, "Unauthorized", nil)
 			res.AppendHeader(sip.NewHeader("WWW-Authenticate", `Digest realm="test", nonce="abc123", algorithm=MD5`))
-			require.NoError(t, tx.Respond(res))
-			return
+			return res
 		}
 
 		// Second attempt with auth - validate it exists and respond with 200
-		res := sip.NewResponseFromRequest(req, 200, "OK", nil)
-		require.NoError(t, tx.Respond(res))
+		return sip.NewResponseFromRequest(req, 200, "OK", nil)
 	})
 	require.NoError(t, err)
-	defer server.close()
+	defer server.close(t)
 
 	// Create plugin with valid credentials
 	username := config.NewSecret([]byte(validUsername))
@@ -681,7 +674,7 @@ func TestSIPAuthenticationSuccess(t *testing.T) {
 				"transport":   "udp",
 				"status_code": "200",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"response_time_s": float64(0),
 				"result":          "OK",
 			},
@@ -706,16 +699,14 @@ func TestSIPAuthenticationSuccess(t *testing.T) {
 }
 
 func TestSIPMethodINVITE(t *testing.T) {
-	server, err := newMockServer(sip.INVITE, func(req *sip.Request, tx sip.ServerTransaction) {
-		// Verify we received an INVITE request
-		require.Equal(t, "INVITE", req.Method.String())
-
+	// The handler only runs for INVITE, so a 200 in the metric below is proof
+	// the plugin sent one
+	server, err := newMockServer(sip.INVITE, func(req *sip.Request) *sip.Response {
 		// INVITE typically gets a 200 OK or 180 Ringing
-		res := sip.NewResponseFromRequest(req, 200, "OK", nil)
-		require.NoError(t, tx.Respond(res))
+		return sip.NewResponseFromRequest(req, 200, "OK", nil)
 	})
 	require.NoError(t, err)
-	defer server.close()
+	defer server.close(t)
 
 	plugin := &SIP{
 		Server:   "sip://" + server.addr,
@@ -742,7 +733,7 @@ func TestSIPMethodINVITE(t *testing.T) {
 				"transport":   "udp",
 				"status_code": "200",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"response_time_s": float64(0),
 				"result":          "OK",
 			},
@@ -754,16 +745,14 @@ func TestSIPMethodINVITE(t *testing.T) {
 }
 
 func TestSIPMethodMESSAGE(t *testing.T) {
-	server, err := newMockServer(sip.MESSAGE, func(req *sip.Request, tx sip.ServerTransaction) {
-		// Verify we received a MESSAGE request
-		require.Equal(t, "MESSAGE", req.Method.String())
-
+	// The handler only runs for MESSAGE, so a 200 in the metric below is proof
+	// the plugin sent one
+	server, err := newMockServer(sip.MESSAGE, func(req *sip.Request) *sip.Response {
 		// MESSAGE typically gets a 200 OK or 202 Accepted
-		res := sip.NewResponseFromRequest(req, 200, "OK", nil)
-		require.NoError(t, tx.Respond(res))
+		return sip.NewResponseFromRequest(req, 200, "OK", nil)
 	})
 	require.NoError(t, err)
-	defer server.close()
+	defer server.close(t)
 
 	plugin := &SIP{
 		Server:   "sip://" + server.addr,
@@ -790,7 +779,7 @@ func TestSIPMethodMESSAGE(t *testing.T) {
 				"transport":   "udp",
 				"status_code": "200",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"response_time_s": float64(0),
 				"result":          "OK",
 			},
@@ -807,9 +796,18 @@ type mockServer struct {
 	ua     *sipgo.UserAgent
 	server *sipgo.Server
 	addr   string
+
+	// Errors collected while responding to requests
+	errs []error
+	// Flag denoting the server was closed
+	closed bool
+	sync.Mutex
 }
 
-func newMockServer(method sip.RequestMethod, handler func(*sip.Request, sip.ServerTransaction)) (*mockServer, error) {
+// newMockServer starts a SIP server answering the given method with the response
+// returned by the handler. Returning a nil response sends nothing, leaving the
+// client to time out.
+func newMockServer(method sip.RequestMethod, handler func(*sip.Request) *sip.Response) (*mockServer, error) {
 	ua, err := sipgo.NewUA(
 		sipgo.WithUserAgent("Test SIP Server"),
 	)
@@ -823,8 +821,30 @@ func newMockServer(method sip.RequestMethod, handler func(*sip.Request, sip.Serv
 		return nil, fmt.Errorf("creating server: %w", err)
 	}
 
-	// Register handler for the specified method
-	server.OnRequest(method, handler)
+	s := &mockServer{ua: ua, server: server}
+
+	// Register handler for the specified method. The library runs the handler on
+	// a goroutine that can outlive the test function, so responding and
+	// collecting the errors has to happen here instead of in the handler where
+	// reporting a failure would panic the test binary.
+	server.OnRequest(method, func(req *sip.Request, tx sip.ServerTransaction) {
+		s.Lock()
+		defer s.Unlock()
+
+		// Requests dispatched after the server was closed can never be answered,
+		// so drop them instead of collecting the inevitable error.
+		if s.closed {
+			return
+		}
+
+		res := handler(req)
+		if res == nil {
+			return
+		}
+		if err := tx.Respond(res); err != nil {
+			s.errs = append(s.errs, err)
+		}
+	})
 
 	// Create UDP listener ourselves to know the address before serving.
 	// This avoids a data race in sipgo where GetListenPort reads the
@@ -835,21 +855,25 @@ func newMockServer(method sip.RequestMethod, handler func(*sip.Request, sip.Serv
 		_ = ua.Close()
 		return nil, fmt.Errorf("listening udp: %w", err)
 	}
-	addr := udpConn.LocalAddr().String()
+	s.addr = udpConn.LocalAddr().String()
 
 	go func() {
 		//nolint:errcheck // Background server for testing, errors are not critical
 		server.ServeUDP(udpConn)
 	}()
 
-	return &mockServer{
-		ua:     ua,
-		server: server,
-		addr:   addr,
-	}, nil
+	return s, nil
 }
 
-func (s *mockServer) close() {
+func (s *mockServer) close(t *testing.T) {
+	t.Helper()
+
+	s.Lock()
+	defer s.Unlock()
+
+	s.closed = true
 	_ = s.server.Close()
 	_ = s.ua.Close()
+
+	require.Empty(t, s.errs, "responding to request failed")
 }

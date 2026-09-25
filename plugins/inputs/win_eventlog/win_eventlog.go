@@ -21,6 +21,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -105,7 +106,10 @@ func (w *WinEventLog) Init() error {
 func (w *WinEventLog) Start(telegraf.Accumulator) error {
 	subscription, err := w.evtSubscribe()
 	if err != nil {
-		return fmt.Errorf("subscription of Windows Event Log failed: %w", err)
+		return &internal.StartupError{
+			Err:   fmt.Errorf("subscription of Windows Event Log failed: %w", err),
+			Retry: errors.Is(err, windows.ERROR_EVT_CHANNEL_NOT_FOUND),
+		}
 	}
 	w.subscription = subscription
 	w.Log.Debug("Subscription handle id:", w.subscription)
@@ -113,7 +117,7 @@ func (w *WinEventLog) Start(telegraf.Accumulator) error {
 	return nil
 }
 
-func (w *WinEventLog) GetState() interface{} {
+func (w *WinEventLog) GetState() any {
 	bookmarkXML, err := w.renderBookmark()
 	if err != nil {
 		w.Log.Errorf("State-persistence failed, cannot render bookmark: %v", err)
@@ -122,7 +126,7 @@ func (w *WinEventLog) GetState() interface{} {
 	return bookmarkXML
 }
 
-func (w *WinEventLog) SetState(state interface{}) error {
+func (w *WinEventLog) SetState(state any) error {
 	bookmarkXML, ok := state.(string)
 	if !ok {
 		return fmt.Errorf("invalid type %T for state", state)
@@ -159,7 +163,7 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 			fieldsUsage := make(map[string]int)
 
 			tags := make(map[string]string)
-			fields := make(map[string]interface{})
+			fields := make(map[string]any)
 			event := events[i]
 			evt := reflect.ValueOf(&event).Elem()
 			timeStamp := time.Now()
@@ -168,7 +172,7 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 				fieldName := evt.Type().Field(i).Name
 				fieldType := evt.Field(i).Type().String()
 				fieldValue := evt.Field(i).Interface()
-				computedValues := make(map[string]interface{})
+				computedValues := make(map[string]any)
 				switch fieldName {
 				case "Source":
 					fieldValue = event.Source.Name
@@ -299,7 +303,7 @@ func (w *WinEventLog) shouldProcessField(field string) (should bool, list string
 	return false, "excluded"
 }
 
-func (w *WinEventLog) shouldExcludeEmptyField(field, fieldType string, fieldValue interface{}) (should bool) {
+func (w *WinEventLog) shouldExcludeEmptyField(field, fieldType string, fieldValue any) (should bool) {
 	if w.fieldEmptyFilter == nil || !w.fieldEmptyFilter.Match(field) {
 		return false
 	}
@@ -333,6 +337,21 @@ func (w *WinEventLog) evtSubscribe() (evtHandle, error) {
 		return 0, err
 	}
 
+	// Without an anchor the bookmark stays positionless until the first event arrives, so a state file written
+	// by a quiet run carries no position and the next start replays the whole channel. Anchoring changes
+	// nothing for the current run, as starting after the newest event collects the same events as subscribing
+	// to the future ones. A channel without a matching event has no position to anchor to, but then the empty
+	// bookmark is correct: restoring it starts at the oldest record, so the next run picks up whatever arrived
+	// while Telegraf was down. Falling back to the configured start point on failure is safe, because that is
+	// the behavior without an anchor, and the subscription below reports a broken channel anyway.
+	if w.subscriptionFlag == evtSubscribeToFutureEvents {
+		if anchored, err := w.anchorBookmark(); err != nil {
+			w.Log.Warnf("Anchoring bookmark to the newest event failed: %v", err)
+		} else if anchored {
+			w.subscriptionFlag = evtSubscribeStartAfterBookmark
+		}
+	}
+
 	var bookmark evtHandle
 	if w.subscriptionFlag == evtSubscribeStartAfterBookmark {
 		bookmark = w.bookmark
@@ -343,6 +362,51 @@ func (w *WinEventLog) evtSubscribe() (evtHandle, error) {
 	}
 
 	return subsHandle, nil
+}
+
+// anchorBookmark points the bookmark at the newest event currently matching the query and reports whether it
+// did so. A channel without any matching event leaves the bookmark untouched.
+func (w *WinEventLog) anchorBookmark() (bool, error) {
+	// EvtQuery expects a NULL channel when the query names the channels itself
+	var logNamePtr *uint16
+	if w.EventlogName != "" {
+		var err error
+		if logNamePtr, err = syscall.UTF16PtrFromString(w.EventlogName); err != nil {
+			return false, err
+		}
+	}
+
+	xqueryPtr, err := syscall.UTF16PtrFromString(w.Query)
+	if err != nil {
+		return false, err
+	}
+
+	queryHandle, err := evtQuery(0, logNamePtr, xqueryPtr, evtQueryChannelPath|evtQueryReverseDirection)
+	if err != nil {
+		return false, fmt.Errorf("querying eventlog failed: %w", err)
+	}
+	//nolint:errcheck // ending the query, error can be ignored
+	defer evtClose(queryHandle)
+
+	var eventHandle evtHandle
+	var returned uint32
+	if err := evtNext(queryHandle, 1, &eventHandle, 0, 0, &returned); err != nil {
+		if errors.Is(err, errNoMoreItems) || (errors.Is(err, errInvalidOperation) && returned == 0) {
+			return false, nil
+		}
+		return false, fmt.Errorf("getting newest event failed: %w", err)
+	}
+	if returned == 0 || eventHandle == 0 {
+		return false, nil
+	}
+	//nolint:errcheck // ending the event, error can be ignored
+	defer evtClose(eventHandle)
+
+	if err := evtUpdateBookmark(w.bookmark, eventHandle); err != nil {
+		return false, fmt.Errorf("updating bookmark failed: %w", err)
+	}
+
+	return true, nil
 }
 
 func (w *WinEventLog) fetchEventHandles(subsHandle evtHandle) ([]evtHandle, error) {

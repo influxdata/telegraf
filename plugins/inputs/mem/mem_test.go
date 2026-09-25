@@ -9,12 +9,12 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/common/psutil"
+	"github.com/influxdata/telegraf/plugins/common/psutil/psutiltest"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestMemStats(t *testing.T) {
-	var mps psutil.MockPS
+	var mps psutiltest.MockPS
 	var err error
 	defer mps.AssertExpectations(t)
 	var acc testutil.Accumulator
@@ -72,7 +72,7 @@ func TestMemStats(t *testing.T) {
 		metric.New(
 			"mem",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"total":             uint64(12400),
 				"available":         uint64(7600),
 				"used":              uint64(5000),

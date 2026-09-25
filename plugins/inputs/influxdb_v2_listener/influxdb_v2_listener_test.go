@@ -189,7 +189,7 @@ func TestWriteKeepBucket(t *testing.T) {
 
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
-		map[string]interface{}{"value": float64(12)},
+		map[string]any{"value": float64(12)},
 		map[string]string{"host": "server01", "bucketTag": "mybucket"},
 	)
 
@@ -201,7 +201,7 @@ func TestWriteKeepBucket(t *testing.T) {
 
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
-		map[string]interface{}{"value": float64(12)},
+		map[string]any{"value": float64(12)},
 		map[string]string{"host": "server01", "bucketTag": "mybucket"},
 	)
 
@@ -216,7 +216,7 @@ func TestWriteKeepBucket(t *testing.T) {
 		"server04", "server05", "server06"}
 	for _, hostTag := range hostTags {
 		acc.AssertContainsTaggedFields(t, "cpu_load_short",
-			map[string]interface{}{"value": float64(12)},
+			map[string]any{"value": float64(12)},
 			map[string]string{"host": hostTag, "bucketTag": "mybucket"},
 		)
 	}
@@ -243,7 +243,7 @@ func TestWriteNoNewline(t *testing.T) {
 
 			acc.Wait(1)
 			acc.AssertContainsTaggedFields(t, "cpu_load_short",
-				map[string]interface{}{"value": float64(12)},
+				map[string]any{"value": float64(12)},
 				map[string]string{"host": "server01"},
 			)
 		})
@@ -346,7 +346,7 @@ func TestWriteLargeLine(t *testing.T) {
 	expected := metric.New(
 		"super_long_metric",
 		map[string]string{"foo": "bar"},
-		map[string]interface{}{
+		map[string]any{
 			"clients":                     42,
 			"connected_followers":         43,
 			"evicted_keys":                44,
@@ -391,7 +391,7 @@ func TestWriteLargeLine(t *testing.T) {
 	acc.Wait(len(hostTags))
 	for _, hostTag := range hostTags {
 		acc.AssertContainsTaggedFields(t, "cpu_load_short",
-			map[string]interface{}{"value": float64(12)},
+			map[string]any{"value": float64(12)},
 			map[string]string{"host": hostTag},
 		)
 	}
@@ -425,7 +425,7 @@ func TestWriteGzippedData(t *testing.T) {
 	acc.Wait(len(hostTags))
 	for _, hostTag := range hostTags {
 		acc.AssertContainsTaggedFields(t, "cpu_load_short",
-			map[string]interface{}{"value": float64(12)},
+			map[string]any{"value": float64(12)},
 			map[string]string{"host": hostTag},
 		)
 	}
@@ -446,11 +446,11 @@ func TestWriteHighTraffic(t *testing.T) {
 
 	// post many messages to listener
 	var wg sync.WaitGroup
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		wg.Add(1)
 		go func(innerwg *sync.WaitGroup) {
 			defer innerwg.Done()
-			for i := 0; i < 500; i++ {
+			for range 500 {
 				resp, err := http.Post(createURL(listener, "http", "/api/v2/write", "bucket=mybucket"), "", bytes.NewBufferString(testMsgs))
 				if err != nil {
 					return

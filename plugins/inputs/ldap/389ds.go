@@ -79,7 +79,7 @@ func (l *LDAP) new389dsConfig() []request {
 }
 
 func (l *LDAP) convert389ds(result *ldap.SearchResult, ts time.Time) []telegraf.Metric {
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for _, entry := range result.Entries {
 		for _, attr := range entry.Attributes {
 			if len(attr.Values[0]) == 0 {

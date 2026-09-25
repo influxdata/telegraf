@@ -614,9 +614,9 @@ func TestInitNodeMetricMapping(t *testing.T) {
 func TestUpdateNodeValue(t *testing.T) {
 	type testStep struct {
 		nodeIdx  int
-		value    interface{}
+		value    any
 		status   ua.StatusCode
-		expected interface{}
+		expected any
 	}
 	tests := []struct {
 		testname string
@@ -732,7 +732,7 @@ func TestMetricForNode(t *testing.T) {
 	tests := []struct {
 		testname string
 		nmm      []NodeMetricMapping
-		v        interface{}
+		v        any
 		isArray  bool
 		dataType ua.TypeID
 		time     time.Time
@@ -758,7 +758,7 @@ func TestMetricForNode(t *testing.T) {
 			status:   ua.StatusOK,
 			expected: metric.New("testingmetric",
 				map[string]string{"t1": "v1", "id": "ns=3;s=hi"},
-				map[string]interface{}{"Quality": "The operation succeeded. StatusGood (0x0)", "fn": 16},
+				map[string]any{"Quality": "The operation succeeded. StatusGood (0x0)", "fn": 16},
 				time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{})),
 		},
 		{
@@ -780,7 +780,29 @@ func TestMetricForNode(t *testing.T) {
 			status:   ua.StatusOK,
 			expected: metric.New("testingmetric",
 				map[string]string{"t1": "v1", "id": "ns=3;s=hi"},
-				map[string]interface{}{"Quality": "The operation succeeded. StatusGood (0x0)", "fn[0]": 16, "fn[1]": 17},
+				map[string]any{"Quality": "The operation succeeded. StatusGood (0x0)", "fn[0]": 16, "fn[1]": 17},
+				time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{})),
+		},
+		{
+			testname: "byte array metric build correctly",
+			nmm: []NodeMetricMapping{
+				{
+					Tag: NodeSettings{
+						FieldName: "fn",
+					},
+					idStr:      "ns=3;s=hi",
+					metricName: "testingmetric",
+					MetricTags: map[string]string{"t1": "v1"},
+				},
+			},
+			v:        ua.ByteArray{0x01, 0x02},
+			isArray:  true,
+			dataType: ua.TypeIDByte,
+			time:     time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{}),
+			status:   ua.StatusOK,
+			expected: metric.New("testingmetric",
+				map[string]string{"t1": "v1", "id": "ns=3;s=hi"},
+				map[string]any{"Quality": "The operation succeeded. StatusGood (0x0)", "fn[0]": byte(1), "fn[1]": byte(2)},
 				time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{})),
 		},
 		{
@@ -805,7 +827,7 @@ func TestMetricForNode(t *testing.T) {
 			status:   ua.StatusOK,
 			expected: metric.New("testingmetric",
 				map[string]string{"t1": "v1", "id": "ns=3;s=hi"},
-				map[string]interface{}{
+				map[string]any{
 					"Quality": "The operation succeeded. StatusGood (0x0)",
 					"fn[0]":   "2022-03-17T08:55:00Z",
 					"fn[1]":   "2022-03-17T08:56:00Z",
@@ -834,7 +856,7 @@ func TestMetricForNode(t *testing.T) {
 			status:   ua.StatusOK,
 			expected: metric.New("testingmetric",
 				map[string]string{"t1": "v1", "id": "ns=3;s=hi"},
-				map[string]interface{}{
+				map[string]any{
 					"Quality": "The operation succeeded. StatusGood (0x0)",
 					"fn[0]":   "2022-03-17T08:55:00-05:00",
 					"fn[1]":   "2022-03-17T08:56:00-05:00",
@@ -860,7 +882,7 @@ func TestMetricForNode(t *testing.T) {
 			status:   ua.StatusOK,
 			expected: metric.New("testingmetric",
 				map[string]string{"t1": "v1", "id": "ns=3;s=hi"},
-				map[string]interface{}{"Quality": "The operation succeeded. StatusGood (0x0)"},
+				map[string]any{"Quality": "The operation succeeded. StatusGood (0x0)"},
 				time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{})),
 		},
 	}
@@ -941,7 +963,7 @@ func TestMetricForEvent(t *testing.T) {
 			},
 			expected: metric.New("opcua_event",
 				map[string]string{"node_id": "i=2253", "source": "opc.tcp://localhost:4862"},
-				map[string]interface{}{"Severity": uint16(500), "SourceName": "TestSource"},
+				map[string]any{"Severity": uint16(500), "SourceName": "TestSource"},
 				time.Time{},
 			),
 		},
@@ -967,7 +989,7 @@ func TestMetricForEvent(t *testing.T) {
 			},
 			expected: metric.New("opcua_event",
 				map[string]string{"node_id": "i=2253", "source": "opc.tcp://localhost:4862"},
-				map[string]interface{}{"Time": now.Format(time.RFC3339), "Severity": uint16(100)},
+				map[string]any{"Time": now.Format(time.RFC3339), "Severity": uint16(100)},
 				now,
 			),
 		},
@@ -993,7 +1015,7 @@ func TestMetricForEvent(t *testing.T) {
 			},
 			expected: metric.New("opcua_event",
 				map[string]string{"node_id": "i=2253", "source": "opc.tcp://localhost:4862"},
-				map[string]interface{}{"ReceiveTime": now.Format(time.RFC3339), "Severity": uint16(200)},
+				map[string]any{"ReceiveTime": now.Format(time.RFC3339), "Severity": uint16(200)},
 				now,
 			),
 		},
@@ -1018,7 +1040,7 @@ func TestMetricForEvent(t *testing.T) {
 			},
 			expected: metric.New("opcua_event",
 				map[string]string{"node_id": "i=2253", "source": "opc.tcp://localhost:4862"},
-				map[string]interface{}{"Message": "Alarm triggered"},
+				map[string]any{"Message": "Alarm triggered"},
 				time.Time{},
 			),
 		},
@@ -1043,7 +1065,7 @@ func TestMetricForEvent(t *testing.T) {
 			},
 			expected: metric.New("opcua_event",
 				map[string]string{"node_id": "i=2253", "source": "opc.tcp://localhost:4862"},
-				map[string]interface{}{"Severity": uint16(300)},
+				map[string]any{"Severity": uint16(300)},
 				time.Time{},
 			),
 		},

@@ -192,6 +192,7 @@ func TestDeletePods(t *testing.T) {
 
 func TestKeepDefaultNamespaceLabelName(t *testing.T) {
 	prom := &Prometheus{Log: testutil.Logger{}, kubernetesPods: map[podID]urlAndAddress{}}
+	require.NoError(t, prom.Init())
 
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
@@ -205,6 +206,7 @@ func TestKeepDefaultNamespaceLabelName(t *testing.T) {
 
 func TestChangeNamespaceLabelName(t *testing.T) {
 	prom := &Prometheus{Log: testutil.Logger{}, PodNamespaceLabelName: "pod_namespace", kubernetesPods: map[podID]urlAndAddress{}}
+	require.NoError(t, prom.Init())
 
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
@@ -215,6 +217,35 @@ func TestChangeNamespaceLabelName(t *testing.T) {
 	tags := prom.kubernetesPods[podID(id)].tags
 	require.Equal(t, "default", tags["pod_namespace"])
 	require.Empty(t, tags["namespace"])
+}
+
+func TestKeepDefaultPodNameLabelName(t *testing.T) {
+	prom := &Prometheus{Log: testutil.Logger{}, kubernetesPods: map[podID]urlAndAddress{}}
+	require.NoError(t, prom.Init())
+
+	p := pod()
+	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
+	registerPod(p, prom)
+
+	id, err := cache.MetaNamespaceKeyFunc(p)
+	require.NoError(t, err)
+	tags := prom.kubernetesPods[podID(id)].tags
+	require.Equal(t, "myPod", tags["pod_name"])
+}
+
+func TestChangePodNameLabelName(t *testing.T) {
+	prom := &Prometheus{Log: testutil.Logger{}, PodNameLabelName: "source_pod_name", kubernetesPods: map[podID]urlAndAddress{}}
+	require.NoError(t, prom.Init())
+
+	p := pod()
+	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
+	registerPod(p, prom)
+
+	id, err := cache.MetaNamespaceKeyFunc(p)
+	require.NoError(t, err)
+	tags := prom.kubernetesPods[podID(id)].tags
+	require.Equal(t, "myPod", tags["source_pod_name"])
+	require.Empty(t, tags["pod_name"])
 }
 
 func TestPodHasMatchingNamespace(t *testing.T) {

@@ -44,6 +44,7 @@ func newClient(config *ClientConfig) (*client, error) {
 		config: config,
 	}
 
+	//nolint:gosec // False-positive G404 as this doesn't require strong RNG
 	p := rand.Perm(len(config.brokers))
 	for _, n := range p {
 		broker := config.brokers[n]

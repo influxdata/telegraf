@@ -30,7 +30,7 @@ func (w *writeToAccumulator) EnqueuePoint(
 	_ context.Context,
 	measurement string,
 	tags map[string]string,
-	fields map[string]interface{},
+	fields map[string]any,
 	ts time.Time,
 	vType common.InfluxMetricValueType,
 ) error {

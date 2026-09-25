@@ -83,7 +83,7 @@ func initIPv4OptionMapping() error {
 	return nil
 }
 
-func decodeInt(b []byte) (interface{}, error) {
+func decodeInt(b []byte) (any, error) {
 	switch len(b) {
 	case 0:
 		return int64(0), nil
@@ -99,7 +99,7 @@ func decodeInt(b []byte) (interface{}, error) {
 	return nil, fmt.Errorf("invalid length for int buffer %v", b)
 }
 
-func decodeUint(b []byte) (interface{}, error) {
+func decodeUint(b []byte) (any, error) {
 	switch len(b) {
 	case 0:
 		return uint64(0), nil
@@ -115,18 +115,18 @@ func decodeUint(b []byte) (interface{}, error) {
 	return nil, fmt.Errorf("invalid length for uint buffer %v", b)
 }
 
-func decodeFloat32(b []byte) (interface{}, error) {
+func decodeFloat32(b []byte) (any, error) {
 	raw := binary.BigEndian.Uint32(b)
 	return math.Float32frombits(raw), nil
 }
 
-func decodeFloat64(b []byte) (interface{}, error) {
+func decodeFloat64(b []byte) (any, error) {
 	raw := binary.BigEndian.Uint64(b)
 	return math.Float64frombits(raw), nil
 }
 
 // According to https://www.rfc-editor.org/rfc/rfc5101#section-6.1.5
-func decodeBool(b []byte) (interface{}, error) {
+func decodeBool(b []byte) (any, error) {
 	if len(b) == 0 {
 		return nil, errors.New("empty data")
 	}
@@ -139,34 +139,34 @@ func decodeBool(b []byte) (interface{}, error) {
 	return b[0], nil
 }
 
-func decodeHex(b []byte) (interface{}, error) {
+func decodeHex(b []byte) (any, error) {
 	if len(b) == 0 {
 		return "", nil
 	}
 	return "0x" + hex.EncodeToString(b), nil
 }
 
-func decodeString(b []byte) (interface{}, error) {
+func decodeString(b []byte) (any, error) {
 	return strings.TrimRight(string(b), "\x00"), nil
 }
 
-func decodeMAC(b []byte) (interface{}, error) {
+func decodeMAC(b []byte) (any, error) {
 	mac := net.HardwareAddr(b)
 	return mac.String(), nil
 }
 
-func decodeIP(b []byte) (interface{}, error) {
+func decodeIP(b []byte) (any, error) {
 	ip := net.IP(b)
 	return ip.String(), nil
 }
 
-func decodeIPFromUint32(a uint32) (interface{}, error) {
+func decodeIPFromUint32(a uint32) (any, error) {
 	b := make([]byte, 4)
 	binary.BigEndian.PutUint32(b, a)
 	return decodeIP(b)
 }
 
-func decodeL4Proto(b []byte) (interface{}, error) {
+func decodeL4Proto(b []byte) (any, error) {
 	return mapL4Proto(b[0]), nil
 }
 
@@ -178,11 +178,11 @@ func mapL4Proto(id uint8) string {
 	return strconv.FormatUint(uint64(id), 10)
 }
 
-func decodeIPv4Options(b []byte) (interface{}, error) {
+func decodeIPv4Options(b []byte) (any, error) {
 	flags := binary.BigEndian.Uint32(b)
 
 	var result []string
-	for i := 0; i < 32; i++ {
+	for i := range 32 {
 		name := ipv4OptionMapping[i]
 		if name == "" {
 			name = fmt.Sprintf("UA%d", i)
@@ -195,7 +195,7 @@ func decodeIPv4Options(b []byte) (interface{}, error) {
 	return strings.Join(result, ","), nil
 }
 
-func decodeTCPFlags(b []byte) (interface{}, error) {
+func decodeTCPFlags(b []byte) (any, error) {
 	if len(b) == 0 {
 		return "", nil
 	}
@@ -244,7 +244,7 @@ func mapTCPFlags(flags uint8) string {
 	return strings.Join(result, "")
 }
 
-func decodeFragmentFlags(b []byte) (interface{}, error) {
+func decodeFragmentFlags(b []byte) (any, error) {
 	flagMapping := []string{
 		"*", // do not care
 		"*", // do not care
@@ -269,7 +269,7 @@ func decodeFragmentFlags(b []byte) (interface{}, error) {
 	return strings.Join(result, ""), nil
 }
 
-func decodeSampleAlgo(b []byte) (interface{}, error) {
+func decodeSampleAlgo(b []byte) (any, error) {
 	switch b[0] {
 	case 1:
 		return "deterministic", nil
@@ -279,7 +279,7 @@ func decodeSampleAlgo(b []byte) (interface{}, error) {
 	return strconv.FormatUint(uint64(b[0]), 10), nil
 }
 
-func decodeEngineType(b []byte) (interface{}, error) {
+func decodeEngineType(b []byte) (any, error) {
 	return mapEngineType(b[0]), nil
 }
 
@@ -295,7 +295,7 @@ func mapEngineType(b uint8) string {
 	return strconv.FormatUint(uint64(b), 10)
 }
 
-func decodeMPLSType(b []byte) (interface{}, error) {
+func decodeMPLSType(b []byte) (any, error) {
 	switch b[0] {
 	case 0:
 		return "unknown", nil
@@ -323,7 +323,7 @@ func decodeMPLSType(b []byte) (interface{}, error) {
 	return strconv.FormatUint(uint64(b[0]), 10), nil
 }
 
-func decodeIPVersion(b []byte) (interface{}, error) {
+func decodeIPVersion(b []byte) (any, error) {
 	switch b[0] {
 	case 4:
 		return "IPv4", nil
@@ -344,7 +344,7 @@ func decodePacketIPVersion(v uint8) string {
 	}
 }
 
-func decodeDirection(b []byte) (interface{}, error) {
+func decodeDirection(b []byte) (any, error) {
 	switch b[0] {
 	case 0:
 		return "ingress", nil
@@ -355,7 +355,7 @@ func decodeDirection(b []byte) (interface{}, error) {
 }
 
 // https://www.iana.org/assignments/ipfix/ipfix.xhtml#ipfix-forwarding-status
-func decodeFwdStatus(b []byte) (interface{}, error) {
+func decodeFwdStatus(b []byte) (any, error) {
 	switch b[0] >> 6 {
 	case 0:
 		return "unknown", nil
@@ -370,7 +370,7 @@ func decodeFwdStatus(b []byte) (interface{}, error) {
 }
 
 // https://www.iana.org/assignments/ipfix/ipfix.xhtml#ipfix-forwarding-status
-func decodeFwdReason(b []byte) (interface{}, error) {
+func decodeFwdReason(b []byte) (any, error) {
 	switch b[0] {
 	// unknown
 	case 0:
@@ -431,7 +431,7 @@ func decodeFwdReason(b []byte) (interface{}, error) {
 }
 
 // https://www.iana.org/assignments/ipfix/ipfix.xhtml#ipfix-firewall-event
-func decodeFWEvent(b []byte) (interface{}, error) {
+func decodeFWEvent(b []byte) (any, error) {
 	switch b[0] {
 	case 0:
 		return "ignore", nil
@@ -450,7 +450,7 @@ func decodeFWEvent(b []byte) (interface{}, error) {
 }
 
 // https://www.iana.org/assignments/ipfix/ipfix.xhtml#ipfix-flow-end-reason
-func decodeFlowEndReason(b []byte) (interface{}, error) {
+func decodeFlowEndReason(b []byte) (any, error) {
 	switch b[0] {
 	case 0:
 		return "reserved", nil
@@ -469,7 +469,7 @@ func decodeFlowEndReason(b []byte) (interface{}, error) {
 }
 
 // https://www.iana.org/assignments/ipfix/ipfix.xhtml#ipfix-biflow-direction
-func decodeBiflowDirection(b []byte) (interface{}, error) {
+func decodeBiflowDirection(b []byte) (any, error) {
 	switch b[0] {
 	case 0:
 		return "arbitrary", nil
@@ -484,7 +484,7 @@ func decodeBiflowDirection(b []byte) (interface{}, error) {
 }
 
 // https://www.iana.org/assignments/ipfix/ipfix.xhtml#ipfix-observation-point-type
-func decodeOpsPointType(b []byte) (interface{}, error) {
+func decodeOpsPointType(b []byte) (any, error) {
 	switch b[0] {
 	case 0:
 		return "invalid", nil
@@ -498,7 +498,7 @@ func decodeOpsPointType(b []byte) (interface{}, error) {
 	return "unassigned", nil
 }
 
-func decodeAnonStabilityClass(b []byte) (interface{}, error) {
+func decodeAnonStabilityClass(b []byte) (any, error) {
 	switch b[1] & 0x03 {
 	case 1:
 		return "session", nil
@@ -510,7 +510,7 @@ func decodeAnonStabilityClass(b []byte) (interface{}, error) {
 	return "undefined", nil
 }
 
-func decodeAnonFlags(b []byte) (interface{}, error) {
+func decodeAnonFlags(b []byte) (any, error) {
 	var result []string
 	if b[0]&(1<<2) != 0 {
 		result = append(result, "PmA")
@@ -524,7 +524,7 @@ func decodeAnonFlags(b []byte) (interface{}, error) {
 }
 
 // https://www.iana.org/assignments/ipfix/ipfix.xhtml#ipfix-anonymization-technique
-func decodeAnonTechnique(b []byte) (interface{}, error) {
+func decodeAnonTechnique(b []byte) (any, error) {
 	tech := binary.BigEndian.Uint16(b)
 	switch tech {
 	case 0:
@@ -551,7 +551,7 @@ func decodeAnonTechnique(b []byte) (interface{}, error) {
 	return "unassigned", nil
 }
 
-func decodeTechnology(b []byte) (interface{}, error) {
+func decodeTechnology(b []byte) (any, error) {
 	switch string(b) {
 	case "yes", "y", "1":
 		return "yes", nil
@@ -572,7 +572,7 @@ func decodeTechnology(b []byte) (interface{}, error) {
 }
 
 // https://www.iana.org/assignments/ipfix/ipfix.xhtml#ipfix-nat-type
-func decodeIPNatType(b []byte) (interface{}, error) {
+func decodeIPNatType(b []byte) (any, error) {
 	tech := binary.BigEndian.Uint16(b)
 	switch tech {
 	case 0:
@@ -594,7 +594,7 @@ func decodeIPNatType(b []byte) (interface{}, error) {
 }
 
 // https://www.iana.org/assignments/psamp-parameters/psamp-parameters.xhtml
-func decodeSelectorAlgorithm(b []byte) (interface{}, error) {
+func decodeSelectorAlgorithm(b []byte) (any, error) {
 	tech := binary.BigEndian.Uint16(b)
 	switch tech {
 	case 0:
@@ -622,7 +622,7 @@ func decodeSelectorAlgorithm(b []byte) (interface{}, error) {
 }
 
 // https://www.iana.org/assignments/ipfix/ipfix.xhtml#ipfix-value-distribution-method
-func decodeValueDistMethod(b []byte) (interface{}, error) {
+func decodeValueDistMethod(b []byte) (any, error) {
 	switch b[0] {
 	case 0:
 		return "unspecified", nil
@@ -645,7 +645,7 @@ func decodeValueDistMethod(b []byte) (interface{}, error) {
 }
 
 // https://www.iana.org/assignments/ipfix/ipfix.xhtml#ipfix-data-link-frame-type
-func decodeDataLinkFrameType(b []byte) (interface{}, error) {
+func decodeDataLinkFrameType(b []byte) (any, error) {
 	switch binary.BigEndian.Uint16(b) {
 	case 0x0001:
 		return "IEEE802.3 ethernet", nil
@@ -656,7 +656,7 @@ func decodeDataLinkFrameType(b []byte) (interface{}, error) {
 }
 
 // https://www.iana.org/assignments/ipfix/ipfix.xhtml#ipfix-mib-capture-time-semantics
-func decodeCaptureTimeSemantics(b []byte) (interface{}, error) {
+func decodeCaptureTimeSemantics(b []byte) (any, error) {
 	switch b[0] {
 	case 0:
 		return "undefined", nil
@@ -729,5 +729,5 @@ func decodeSflowHeaderProtocol(t uint32) string {
 }
 
 func decodeByteFunc(idx int) decoderFunc {
-	return func(b []byte) (interface{}, error) { return b[idx], nil }
+	return func(b []byte) (any, error) { return b[idx], nil }
 }

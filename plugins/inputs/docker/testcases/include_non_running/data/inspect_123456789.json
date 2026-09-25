@@ -1,0 +1,73 @@
+{
+    "Id": "123456789",
+    "Created": "",
+    "Path": "",
+    "Args": null,
+    "State": {
+        "Status": "exited",
+        "Running": false,
+        "Paused": false,
+        "Restarting": false,
+        "OOMKilled": false,
+        "Dead": false,
+        "Pid": 0,
+        "ExitCode": 137,
+        "Error": "",
+        "StartedAt": "2024-01-01T00:00:00Z",
+        "FinishedAt": "2024-01-01T01:00:00Z",
+        "Health": {
+            "Status": "Unhealthy",
+            "FailingStreak": 1,
+            "Log": null
+        }
+    },
+    "Image": "",
+    "ResolvConfPath": "",
+    "HostnamePath": "",
+    "HostsPath": "",
+    "LogPath": "",
+    "Name": "",
+    "RestartCount": 0,
+    "Driver": "",
+    "Platform": "",
+    "MountLabel": "",
+    "ProcessLabel": "",
+    "AppArmorProfile": "",
+    "ExecIDs": null,
+    "HostConfig": null,
+    "GraphDriver": {
+        "Data": null,
+        "Name": ""
+    },
+    "Mounts": null,
+    "Config": {
+        "Hostname": "",
+        "Domainname": "",
+        "User": "",
+        "AttachStdin": false,
+        "AttachStdout": false,
+        "AttachStderr": false,
+        "Tty": false,
+        "OpenStdin": false,
+        "StdinOnce": false,
+        "Env": [
+            "ENVVAR1=loremipsum",
+            "ENVVAR1FOO=loremipsum",
+            "ENVVAR2=dolorsitamet",
+            "ENVVAR3==ubuntu:10.04",
+            "ENVVAR4",
+            "ENVVAR5=",
+            "ENVVAR6= ",
+            "ENVVAR7=ENVVAR8=ENVVAR9",
+            "PATH=/bin:/sbin"
+        ],
+        "Cmd": null,
+        "Image": "",
+        "Volumes": null,
+        "WorkingDir": "",
+        "Entrypoint": null,
+        "OnBuild": null,
+        "Labels": null
+    },
+    "NetworkSettings": null
+}

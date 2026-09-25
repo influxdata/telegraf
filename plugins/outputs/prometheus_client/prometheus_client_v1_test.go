@@ -16,6 +16,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	inputs "github.com/influxdata/telegraf/plugins/inputs/prometheus"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
+	"github.com/influxdata/telegraf/selfstat"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -43,7 +44,7 @@ func TestMetricVersion1(t *testing.T) {
 					map[string]string{
 						"host": "example.org",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42.0,
 					},
 					time.Unix(0, 0),
@@ -70,7 +71,7 @@ cpu_time_idle{host="example.org"} 42
 					map[string]string{
 						"host": "example.org",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42.0,
 					},
 					time.Unix(0, 0),
@@ -97,7 +98,7 @@ cpu_time_idle{host="example.org"} 42
 					map[string]string{
 						"host": "example.org",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"counter": 42.0,
 					},
 					time.Unix(0, 0),
@@ -126,7 +127,7 @@ cpu_time_idle{host="example.org"} 42
 					map[string]string{
 						"host": "example.org",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"counter": 42.0,
 					},
 					time.Unix(1257894000, 0),
@@ -153,7 +154,7 @@ cpu_time_idle{host="example.org"} 42 1257894000000
 				metric.New(
 					"cpu_time_idle",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"host:name": "example.org",
 						"counter":   42.0,
 					},
@@ -183,7 +184,7 @@ cpu_time_idle{host_name="example.org"} 42
 					map[string]string{
 						"主机-名": "example.org",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"counter": 42.0,
 					},
 					time.Unix(0, 0),
@@ -212,7 +213,7 @@ cpu_time_idle{host_name="example.org"} 42
 					map[string]string{
 						"host": "example.org",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"gauge": 42.0,
 					},
 					time.Unix(0, 0),
@@ -238,7 +239,7 @@ cpu_time_idle{host="example.org"} 42
 				metric.New(
 					"http_request_duration_seconds",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"sum":   53423,
 						"0.05":  24054,
 						"0.1":   33444,
@@ -278,7 +279,7 @@ http_request_duration_seconds_count 144320
 				metric.New(
 					"rpc_duration_seconds",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"0.01":  3102,
 						"0.05":  3272,
 						"0.5":   4773,
@@ -319,7 +320,7 @@ rpc_duration_seconds_count 2693
 					map[string]string{
 						"host": "example.org",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42,
 					},
 					time.Unix(0, 0),
@@ -347,7 +348,7 @@ cpu_time_idle{host="example.org"} 42
 					map[string]string{
 						"host": "example.org",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42.0,
 					},
 					time.Unix(0, 0),
@@ -489,6 +490,7 @@ rpc_duration_seconds_count 2693
 				URLs:          []string{address},
 				URLTag:        "",
 				MetricVersion: 1,
+				Statistics:    selfstat.NewCollector(make(map[string]string)),
 			}
 			err := input.Init()
 			require.NoError(t, err)

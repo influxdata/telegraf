@@ -166,7 +166,7 @@ const kibanastatusresponse815Unavailable = `
 }
 `
 
-var kibanastatusexpected815 = map[string]interface{}{
+var kibanastatusexpected815 = map[string]any{
 	"status_code":            1, // available -> green -> 1
 	"heap_total_bytes":       int64(505769984),
 	"heap_max_bytes":         int64(505769984),
@@ -179,7 +179,7 @@ var kibanastatusexpected815 = map[string]interface{}{
 	"requests_per_sec":       float64(0.4),
 }
 
-var kibanastatusexpected815Degraded = map[string]interface{}{
+var kibanastatusexpected815Degraded = map[string]any{
 	"status_code":            2, // degraded -> yellow -> 2
 	"heap_total_bytes":       int64(505769984),
 	"heap_max_bytes":         int64(505769984),
@@ -192,7 +192,7 @@ var kibanastatusexpected815Degraded = map[string]interface{}{
 	"requests_per_sec":       float64(0.4),
 }
 
-var kibanastatusexpected815Unavailable = map[string]interface{}{
+var kibanastatusexpected815Unavailable = map[string]any{
 	"status_code":            3, // unavailable -> red -> 3
 	"heap_total_bytes":       int64(505769984),
 	"heap_max_bytes":         int64(505769984),

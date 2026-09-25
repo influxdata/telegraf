@@ -2,6 +2,7 @@
 package opcua
 
 import (
+	"context"
 	_ "embed"
 	"time"
 
@@ -34,7 +35,36 @@ func (o *OpcUA) Init() (err error) {
 	return err
 }
 
+func (*OpcUA) Start(telegraf.Accumulator) error {
+	return nil
+}
+
+func (o *OpcUA) Stop() {
+	if o.client == nil {
+		return
+	}
+	if state := o.client.State(); state == opcua.Closed || state == opcua.Disconnected {
+		return
+	}
+
+	// Bound the disconnect by the configured request timeout so a stuck server
+	// cannot hang shutdown. A zero timeout means "no limit", so fall back to a
+	// sane default to avoid an immediately-expired context.
+	timeout := time.Duration(o.client.Config.RequestTimeout)
+	if timeout <= 0 {
+		timeout = 10 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	if err := o.client.Disconnect(ctx); err != nil {
+		o.Log.Warnf("Disconnecting from OPC UA server failed: %v", err)
+	}
+}
+
 func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
+	gatherStart := time.Now()
+	o.Log.Tracef("Gather starting for %d nodes...", len(o.client.NodeIDs))
+
 	// Force reconnection every time if a threshold is 0
 	if o.client.ReconnectErrorThreshold == 0 {
 		o.client.forceReconnect = true
@@ -44,6 +74,8 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 	metrics, err := o.client.currentValues()
 	if err != nil {
 		o.consecutiveErrors++
+		o.Log.Tracef("Gather failed after %s: %v (consecutive errors: %d)",
+			time.Since(gatherStart), err, o.consecutiveErrors)
 
 		// Force reconnection based on an error threshold: if threshold > 0, reconnect after
 		// reaching the specified number of consecutive errors; if a threshold = 0, we already
@@ -57,10 +89,13 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 	// Reset error counter on success
 	o.consecutiveErrors = 0
 
+	addStart := time.Now()
 	// Parse the resulting data into metrics
 	for _, m := range metrics {
 		acc.AddMetric(m)
 	}
+	o.Log.Tracef("Gather complete: %d metrics added to accumulator in %s, total gather time %s",
+		len(metrics), time.Since(addStart), time.Since(gatherStart))
 	return nil
 }
 

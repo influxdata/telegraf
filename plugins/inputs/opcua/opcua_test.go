@@ -2,9 +2,15 @@ package opcua
 
 import (
 	"fmt"
+	"net"
+	"strconv"
 	"testing"
 	"time"
 
+	"github.com/gopcua/opcua/id"
+	"github.com/gopcua/opcua/server"
+	"github.com/gopcua/opcua/ua"
+	"github.com/gopcua/opcua/uasc"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -23,7 +29,7 @@ type opcTags struct {
 	namespace      string
 	identifierType string
 	identifier     string
-	want           interface{}
+	want           any
 }
 
 func mapOPCTag(tags opcTags) (out input.NodeSettings) {
@@ -58,20 +64,16 @@ func TestGetDataBadNodeContainerIntegration(t *testing.T) {
 	}
 
 	readConfig := readClientConfig{
-		InputClientConfig: input.InputClientConfig{
-			OpcUAClientConfig: opcua.OpcUAClientConfig{
-				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
-				SecurityPolicy: "None",
-				SecurityMode:   "None",
-				AuthMethod:     "Anonymous",
-				ConnectTimeout: config.Duration(10 * time.Second),
-				RequestTimeout: config.Duration(1 * time.Second),
-				Workarounds:    opcua.OpcUAWorkarounds{},
-			},
-			MetricName: "testing",
-			RootNodes:  make([]input.NodeSettings, 0),
-			Groups:     make([]input.NodeGroupSettings, 0),
-		},
+		Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+		SecurityPolicy: "None",
+		SecurityMode:   "None",
+		AuthMethod:     "Anonymous",
+		ConnectTimeout: config.Duration(10 * time.Second),
+		RequestTimeout: config.Duration(1 * time.Second),
+		Workarounds:    opcua.OpcUAWorkarounds{},
+		MetricName:     "testing",
+		RootNodes:      make([]input.NodeSettings, 0),
+		Groups:         make([]input.NodeGroupSettings, 0),
 	}
 
 	g := input.NodeGroupSettings{
@@ -89,6 +91,53 @@ func TestGetDataBadNodeContainerIntegration(t *testing.T) {
 	require.NoError(t, err)
 	err = readClient.connect()
 	require.NoError(t, err)
+}
+
+func TestReadClientBrowseDiscoveryIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "open62541/open62541",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(servicePort),
+			wait.ForLog("TCP network layer listening on opc.tcp://"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	readConfig := readClientConfig{
+		Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+		SecurityPolicy: "None",
+		SecurityMode:   "None",
+		AuthMethod:     "Anonymous",
+		ConnectTimeout: config.Duration(10 * time.Second),
+		RequestTimeout: config.Duration(1 * time.Second),
+		Workarounds:    opcua.OpcUAWorkarounds{},
+		MetricName:     "browse_test",
+		Browse: input.BrowseConfig{
+			Depth: 5,
+			Paths: []input.BrowsePathSettings{
+				{Pattern: "Server/**", MetricName: "server_vars"},
+			},
+		},
+	}
+
+	client, err := readConfig.createReadClient(testutil.Logger{})
+	require.NoError(t, err)
+
+	require.NoError(t, client.connect())
+	require.NotEmpty(t, client.NodeMetricMapping, "browse should discover at least one variable under Server/**")
+
+	// Reconnect re-runs discovery against an unchanged server; mapping size
+	// must stay bounded rather than grow with each reconnect.
+	mappingSize := len(client.NodeMetricMapping)
+	require.NoError(t, client.Disconnect(t.Context()))
+	require.NoError(t, client.connect())
+	require.Len(t, client.NodeMetricMapping, mappingSize, "rediscovery must not grow the mapping")
 }
 
 func TestReadClientIntegration(t *testing.T) {
@@ -118,20 +167,16 @@ func TestReadClientIntegration(t *testing.T) {
 	}
 
 	readConfig := readClientConfig{
-		InputClientConfig: input.InputClientConfig{
-			OpcUAClientConfig: opcua.OpcUAClientConfig{
-				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
-				SecurityPolicy: "None",
-				SecurityMode:   "None",
-				AuthMethod:     "Anonymous",
-				ConnectTimeout: config.Duration(10 * time.Second),
-				RequestTimeout: config.Duration(1 * time.Second),
-				Workarounds:    opcua.OpcUAWorkarounds{},
-			},
-			MetricName: "testing",
-			RootNodes:  make([]input.NodeSettings, 0),
-			Groups:     make([]input.NodeGroupSettings, 0),
-		},
+		Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+		SecurityPolicy: "None",
+		SecurityMode:   "None",
+		AuthMethod:     "Anonymous",
+		ConnectTimeout: config.Duration(10 * time.Second),
+		RequestTimeout: config.Duration(1 * time.Second),
+		Workarounds:    opcua.OpcUAWorkarounds{},
+		MetricName:     "testing",
+		RootNodes:      make([]input.NodeSettings, 0),
+		Groups:         make([]input.NodeGroupSettings, 0),
 	}
 
 	for _, tags := range testopctags {
@@ -146,6 +191,107 @@ func TestReadClientIntegration(t *testing.T) {
 
 	for i, v := range client.LastReceivedData {
 		require.Equal(t, testopctags[i].want, v.Value)
+	}
+}
+
+func TestReadClientBatchedRequests(t *testing.T) {
+	// Bind a free port up front; close the listener so the server can
+	// claim it.
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	port := l.Addr().(*net.TCPAddr).Port
+	require.NoError(t, l.Close())
+
+	// The in-process server reports a MaxNodesPerRead limit of 32, so
+	// configuring more nodes than that makes the client split the read
+	// according to the limit it discovers on connect.
+	srv := server.New(
+		server.EnableSecurity("None", ua.MessageSecurityModeNone),
+		server.EnableAuthMode(ua.UserTokenTypeAnonymous),
+		server.EndPoint("127.0.0.1", port),
+	)
+	ns := server.NewNodeNameSpace(srv, "telegraf-test")
+	srv.AddNamespace(ns)
+
+	// The server neither reports nor enforces a MaxNodesPerRegisterNodes
+	// limit on its own, so add the property and a handler rejecting
+	// register requests exceeding it to make sure the client splits them.
+	const maxNodesPerRegisterNodes = 16
+	ns0, err := srv.Namespace(0)
+	require.NoError(t, err)
+	ns0.AddNode(server.NewVariableNode(
+		ua.NewNumericNodeID(0, id.Server_ServerCapabilities_OperationLimits_MaxNodesPerRegisterNodes),
+		"MaxNodesPerRegisterNodes",
+		uint32(maxNodesPerRegisterNodes),
+	))
+	srv.RegisterHandler(id.RegisterNodesRequest_Encoding_DefaultBinary, func(_ *uasc.SecureChannel, r ua.Request, _ uint32) (ua.Response, error) {
+		req := r.(*ua.RegisterNodesRequest)
+		if len(req.NodesToRegister) > maxNodesPerRegisterNodes {
+			return nil, ua.StatusBadTooManyOperations
+		}
+		return &ua.RegisterNodesResponse{
+			// The encoder dereferences the nested header fields, so they
+			// must not be nil
+			ResponseHeader: &ua.ResponseHeader{
+				Timestamp:          time.Now(),
+				RequestHandle:      req.RequestHeader.RequestHandle,
+				ServiceDiagnostics: &ua.DiagnosticInfo{},
+				AdditionalHeader:   ua.NewExtensionObject(nil),
+			},
+			RegisteredNodeIDs: req.NodesToRegister,
+		}, nil
+	})
+
+	const nodes = 40
+	rootNodes := make([]input.NodeSettings, 0, nodes)
+	for i := range int32(nodes) {
+		name := "node" + strconv.Itoa(int(i))
+		ns.AddNode(server.NewVariableNode(ua.NewStringNodeID(ns.ID(), name), name, i))
+		rootNodes = append(rootNodes, input.NodeSettings{
+			FieldName:      name,
+			Namespace:      strconv.Itoa(int(ns.ID())),
+			IdentifierType: "s",
+			Identifier:     name,
+		})
+	}
+
+	require.NoError(t, srv.Start(t.Context()))
+	defer srv.Close()
+	require.Eventually(t, func() bool {
+		c, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), 100*time.Millisecond)
+		if err != nil {
+			return false
+		}
+		_ = c.Close()
+		return true
+	}, 5*time.Second, 50*time.Millisecond)
+
+	readConfig := readClientConfig{
+		Endpoint:       fmt.Sprintf("opc.tcp://127.0.0.1:%d", port),
+		SecurityPolicy: "None",
+		SecurityMode:   "None",
+		AuthMethod:     "Anonymous",
+		ConnectTimeout: config.Duration(10 * time.Second),
+		RequestTimeout: config.Duration(1 * time.Second),
+		MetricName:     "testing",
+		RootNodes:      rootNodes,
+	}
+	client, err := readConfig.createReadClient(testutil.Logger{})
+	require.NoError(t, err)
+	require.NoError(t, client.connect())
+	defer client.Disconnect(t.Context())
+	require.Equal(t, 32, client.maxNodesPerRead)
+	require.Equal(t, maxNodesPerRegisterNodes, client.maxNodesPerRegisterNodes)
+	require.Len(t, client.reqIDs, nodes)
+
+	// Clear the values received on connect so the assertions below prove the
+	// batched read actually updated every node
+	for i := range client.LastReceivedData {
+		client.LastReceivedData[i].Value = nil
+	}
+	require.NoError(t, client.read())
+	for i, v := range client.LastReceivedData {
+		require.EqualValues(t, i, v.Value)
 	}
 }
 
@@ -195,7 +341,7 @@ func TestReadClientIntegrationAdditionalFields(t *testing.T) {
 		tags := map[string]string{
 			"id": fmt.Sprintf("ns=%s;%s=%s", x.namespace, x.identifierType, x.identifier),
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			x.name:     x.want,
 			"Quality":  testopcquality[i],
 			"DataType": testopctypes[i],
@@ -204,21 +350,17 @@ func TestReadClientIntegrationAdditionalFields(t *testing.T) {
 	}
 
 	readConfig := readClientConfig{
-		InputClientConfig: input.InputClientConfig{
-			OpcUAClientConfig: opcua.OpcUAClientConfig{
-				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
-				SecurityPolicy: "None",
-				SecurityMode:   "None",
-				AuthMethod:     "Anonymous",
-				ConnectTimeout: config.Duration(10 * time.Second),
-				RequestTimeout: config.Duration(1 * time.Second),
-				Workarounds:    opcua.OpcUAWorkarounds{},
-				OptionalFields: []string{"DataType"},
-			},
-			MetricName: "testing",
-			RootNodes:  make([]input.NodeSettings, 0),
-			Groups:     make([]input.NodeGroupSettings, 0),
-		},
+		Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+		SecurityPolicy: "None",
+		SecurityMode:   "None",
+		AuthMethod:     "Anonymous",
+		ConnectTimeout: config.Duration(10 * time.Second),
+		RequestTimeout: config.Duration(1 * time.Second),
+		Workarounds:    opcua.OpcUAWorkarounds{},
+		OptionalFields: []string{"DataType"},
+		MetricName:     "testing",
+		RootNodes:      make([]input.NodeSettings, 0),
+		Groups:         make([]input.NodeGroupSettings, 0),
 	}
 
 	for _, tags := range testopctags {
@@ -262,22 +404,18 @@ func TestReadClientIntegrationWithPasswordAuth(t *testing.T) {
 	}
 
 	readConfig := readClientConfig{
-		InputClientConfig: input.InputClientConfig{
-			OpcUAClientConfig: opcua.OpcUAClientConfig{
-				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
-				SecurityPolicy: "None",
-				SecurityMode:   "None",
-				Username:       config.NewSecret([]byte("peter")),
-				Password:       config.NewSecret([]byte("peter123")),
-				AuthMethod:     "UserName",
-				ConnectTimeout: config.Duration(10 * time.Second),
-				RequestTimeout: config.Duration(1 * time.Second),
-				Workarounds:    opcua.OpcUAWorkarounds{},
-			},
-			MetricName: "testing",
-			RootNodes:  make([]input.NodeSettings, 0),
-			Groups:     make([]input.NodeGroupSettings, 0),
-		},
+		Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+		SecurityPolicy: "None",
+		SecurityMode:   "None",
+		Username:       config.NewSecret([]byte("peter")),
+		Password:       config.NewSecret([]byte("peter123")),
+		AuthMethod:     "UserName",
+		ConnectTimeout: config.Duration(10 * time.Second),
+		RequestTimeout: config.Duration(1 * time.Second),
+		Workarounds:    opcua.OpcUAWorkarounds{},
+		MetricName:     "testing",
+		RootNodes:      make([]input.NodeSettings, 0),
+		Groups:         make([]input.NodeGroupSettings, 0),
 	}
 
 	for _, tags := range testopctags {
@@ -460,20 +598,16 @@ func TestUnregisteredReadsAndSessionRecoveryIntegration(t *testing.T) {
 		ReadClientWorkarounds: readClientWorkarounds{
 			UseUnregisteredReads: true, // Enable unregistered reads
 		},
-		InputClientConfig: input.InputClientConfig{
-			OpcUAClientConfig: opcua.OpcUAClientConfig{
-				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
-				SecurityPolicy: "None",
-				SecurityMode:   "None",
-				AuthMethod:     "Anonymous",
-				ConnectTimeout: config.Duration(10 * time.Second),
-				RequestTimeout: config.Duration(1 * time.Second),
-				Workarounds:    opcua.OpcUAWorkarounds{},
-			},
-			MetricName: "testing",
-			RootNodes:  make([]input.NodeSettings, 0),
-			Groups:     make([]input.NodeGroupSettings, 0),
-		},
+		Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+		SecurityPolicy: "None",
+		SecurityMode:   "None",
+		AuthMethod:     "Anonymous",
+		ConnectTimeout: config.Duration(10 * time.Second),
+		RequestTimeout: config.Duration(1 * time.Second),
+		Workarounds:    opcua.OpcUAWorkarounds{},
+		MetricName:     "testing",
+		RootNodes:      make([]input.NodeSettings, 0),
+		Groups:         make([]input.NodeGroupSettings, 0),
 	}
 
 	for _, tags := range testopctags {
@@ -541,26 +675,20 @@ func TestConsecutiveSessionErrorRecoveryIntegration(t *testing.T) {
 	// Create a test OpcUA instance with threshold = 2 to test multiple errors
 	threshold := uint64(2)
 	o := &OpcUA{
-		readClientConfig: readClientConfig{
-			ReadRetries:             1,
-			ReconnectErrorThreshold: &threshold, // Set to 2 for this test
-			ReadClientWorkarounds: readClientWorkarounds{
-				UseUnregisteredReads: true,
-			},
-			InputClientConfig: input.InputClientConfig{
-				OpcUAClientConfig: opcua.OpcUAClientConfig{
-					Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
-					SecurityPolicy: "None",
-					SecurityMode:   "None",
-					AuthMethod:     "Anonymous",
-					ConnectTimeout: config.Duration(10 * time.Second),
-					RequestTimeout: config.Duration(1 * time.Second),
-				},
-				MetricName: "testing",
-				RootNodes: []input.NodeSettings{
-					mapOPCTag(opcTags{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"}),
-				},
-			},
+		ReadRetries:             1,
+		ReconnectErrorThreshold: &threshold, // Set to 2 for this test
+		ReadClientWorkarounds: readClientWorkarounds{
+			UseUnregisteredReads: true,
+		},
+		Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+		SecurityPolicy: "None",
+		SecurityMode:   "None",
+		AuthMethod:     "Anonymous",
+		ConnectTimeout: config.Duration(10 * time.Second),
+		RequestTimeout: config.Duration(1 * time.Second),
+		MetricName:     "testing",
+		RootNodes: []input.NodeSettings{
+			mapOPCTag(opcTags{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"}),
 		},
 		Log: testutil.Logger{},
 	}
@@ -612,6 +740,77 @@ func TestConsecutiveSessionErrorRecoveryIntegration(t *testing.T) {
 	require.Equal(t, uint64(0), o.consecutiveErrors, "Should reset consecutive errors after recovery")
 }
 
+func TestStopWithoutConnect(t *testing.T) {
+	o := &OpcUA{
+		Endpoint:       "opc.tcp://localhost:4840",
+		SecurityPolicy: "None",
+		SecurityMode:   "None",
+		AuthMethod:     "Anonymous",
+		ConnectTimeout: config.Duration(10 * time.Second),
+		RequestTimeout: config.Duration(1 * time.Second),
+		MetricName:     "testing",
+		RootNodes: []input.NodeSettings{
+			mapOPCTag(opcTags{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"}),
+		},
+		Log: testutil.Logger{},
+	}
+
+	require.NoError(t, o.Init())
+
+	// Stop before any successful connect must be a no-op and must not panic.
+	require.NotPanics(t, o.Stop)
+	require.Equal(t, opcua.Disconnected, o.client.State())
+}
+
+func TestStopClosesSessionIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "open62541/open62541",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(servicePort),
+			wait.ForLog("TCP network layer listening on opc.tcp://"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	o := &OpcUA{
+		Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+		SecurityPolicy: "None",
+		SecurityMode:   "None",
+		AuthMethod:     "Anonymous",
+		ConnectTimeout: config.Duration(10 * time.Second),
+		RequestTimeout: config.Duration(1 * time.Second),
+		MetricName:     "testing",
+		RootNodes: []input.NodeSettings{
+			mapOPCTag(opcTags{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"}),
+		},
+		Log: testutil.Logger{},
+	}
+
+	require.NoError(t, o.Init())
+
+	var acc testutil.Accumulator
+	// The first gather establishes the session.
+	require.NoError(t, o.Gather(&acc))
+	require.Equal(t, opcua.Connected, o.client.State())
+
+	// Stop must release the session instead of leaving it orphaned on the server.
+	o.Stop()
+	require.Equal(t, opcua.Disconnected, o.client.State())
+
+	// A subsequent gather must reconnect lazily so a stop/restart cycle (such as
+	// a config reload) keeps collecting.
+	acc.ClearMetrics()
+	require.NoError(t, o.Gather(&acc))
+	require.Equal(t, opcua.Connected, o.client.State())
+	require.Len(t, acc.Metrics, 1)
+}
+
 func TestReconnectErrorThresholdDefaultIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -630,23 +829,17 @@ func TestReconnectErrorThresholdDefaultIntegration(t *testing.T) {
 
 	// Test Case 1: Config not set - should use default of 1
 	o := &OpcUA{
-		readClientConfig: readClientConfig{
-			// ReconnectErrorThreshold not set (nil pointer)
-			ReadRetries: 1,
-			InputClientConfig: input.InputClientConfig{
-				OpcUAClientConfig: opcua.OpcUAClientConfig{
-					Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
-					SecurityPolicy: "None",
-					SecurityMode:   "None",
-					AuthMethod:     "Anonymous",
-					ConnectTimeout: config.Duration(10 * time.Second),
-					RequestTimeout: config.Duration(1 * time.Second),
-				},
-				MetricName: "testing",
-				RootNodes: []input.NodeSettings{
-					mapOPCTag(opcTags{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"}),
-				},
-			},
+		// ReconnectErrorThreshold not set (nil pointer)
+		ReadRetries:    1,
+		Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+		SecurityPolicy: "None",
+		SecurityMode:   "None",
+		AuthMethod:     "Anonymous",
+		ConnectTimeout: config.Duration(10 * time.Second),
+		RequestTimeout: config.Duration(1 * time.Second),
+		MetricName:     "testing",
+		RootNodes: []input.NodeSettings{
+			mapOPCTag(opcTags{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"}),
 		},
 		Log: testutil.Logger{},
 	}
@@ -701,23 +894,17 @@ func TestReconnectErrorThresholdZeroIntegration(t *testing.T) {
 	// Test Case 2: Config set to 0 - should force reconnection every gather
 	threshold := uint64(0)
 	o := &OpcUA{
-		readClientConfig: readClientConfig{
-			ReconnectErrorThreshold: &threshold, // Explicitly set to 0
-			ReadRetries:             1,
-			InputClientConfig: input.InputClientConfig{
-				OpcUAClientConfig: opcua.OpcUAClientConfig{
-					Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
-					SecurityPolicy: "None",
-					SecurityMode:   "None",
-					AuthMethod:     "Anonymous",
-					ConnectTimeout: config.Duration(10 * time.Second),
-					RequestTimeout: config.Duration(1 * time.Second),
-				},
-				MetricName: "testing",
-				RootNodes: []input.NodeSettings{
-					mapOPCTag(opcTags{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"}),
-				},
-			},
+		ReconnectErrorThreshold: &threshold, // Explicitly set to 0
+		ReadRetries:             1,
+		Endpoint:                fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+		SecurityPolicy:          "None",
+		SecurityMode:            "None",
+		AuthMethod:              "Anonymous",
+		ConnectTimeout:          config.Duration(10 * time.Second),
+		RequestTimeout:          config.Duration(1 * time.Second),
+		MetricName:              "testing",
+		RootNodes: []input.NodeSettings{
+			mapOPCTag(opcTags{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"}),
 		},
 		Log: testutil.Logger{},
 	}
@@ -768,23 +955,17 @@ func TestReconnectErrorThresholdThreeIntegration(t *testing.T) {
 	// Test Case 3: Config set to 3 - should reconnect after 3 consecutive errors
 	threshold := uint64(3)
 	o := &OpcUA{
-		readClientConfig: readClientConfig{
-			ReconnectErrorThreshold: &threshold, // Explicitly set to 3
-			ReadRetries:             1,
-			InputClientConfig: input.InputClientConfig{
-				OpcUAClientConfig: opcua.OpcUAClientConfig{
-					Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
-					SecurityPolicy: "None",
-					SecurityMode:   "None",
-					AuthMethod:     "Anonymous",
-					ConnectTimeout: config.Duration(10 * time.Second),
-					RequestTimeout: config.Duration(1 * time.Second),
-				},
-				MetricName: "testing",
-				RootNodes: []input.NodeSettings{
-					mapOPCTag(opcTags{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"}),
-				},
-			},
+		ReconnectErrorThreshold: &threshold, // Explicitly set to 3
+		ReadRetries:             1,
+		Endpoint:                fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+		SecurityPolicy:          "None",
+		SecurityMode:            "None",
+		AuthMethod:              "Anonymous",
+		ConnectTimeout:          config.Duration(10 * time.Second),
+		RequestTimeout:          config.Duration(1 * time.Second),
+		MetricName:              "testing",
+		RootNodes: []input.NodeSettings{
+			mapOPCTag(opcTags{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"}),
 		},
 		Log: testutil.Logger{},
 	}
