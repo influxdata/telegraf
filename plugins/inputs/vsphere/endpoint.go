@@ -1466,7 +1466,7 @@ func (e *endpoint) getExtraProperty(entity interface{}, fieldPath string) interf
 	v := reflect.ValueOf(entity)
 
 	// If it's a pointer, we dereference it.
-	if v.Kind() == reflect.Ptr {
+	if v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			// The value is a nil pointer; cannot continue.
 			return nil
@@ -1488,7 +1488,7 @@ func (e *endpoint) getExtraProperty(entity interface{}, fieldPath string) interf
 			return nil
 		}
 		// If it is a pointer, dereference it.
-		if v.Kind() == reflect.Ptr {
+		if v.Kind() == reflect.Pointer {
 			v = v.Elem()
 		}
 	}
