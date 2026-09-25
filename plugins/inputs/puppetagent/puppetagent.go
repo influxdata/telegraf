@@ -18,7 +18,8 @@ import (
 var sampleConfig string
 
 type PuppetAgent struct {
-	Location string `toml:"location"`
+	Location            string   `toml:"location"`
+	AdditionalResources []string `toml:"additional_resources"`
 }
 
 type state struct {
@@ -27,6 +28,10 @@ type state struct {
 	Changes   change
 	Time      time
 	Version   version
+}
+
+type additionalState struct {
+	Time map[string]any `yaml:"time"`
 }
 
 type event struct {
@@ -94,25 +99,35 @@ func (pa *PuppetAgent) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	fh, err := os.ReadFile(pa.Location)
+	contents, err := os.ReadFile(pa.Location)
 	if err != nil {
 		return err
 	}
 
 	var puppetState state
 
-	err = yaml.Unmarshal(fh, &puppetState)
+	err = yaml.Unmarshal(contents, &puppetState)
 	if err != nil {
 		return err
 	}
 
+	fields := structFields(&puppetState)
+
+	if len(pa.AdditionalResources) > 0 {
+		var additionalState additionalState
+		if err := yaml.Unmarshal(contents, &additionalState); err != nil {
+			return err
+		}
+		addAdditionalResources(additionalState.Time, pa.AdditionalResources, fields)
+	}
+
 	tags := map[string]string{"location": pa.Location}
-	structPrinter(&puppetState, acc, tags)
+	acc.AddFields("puppetagent", fields, tags)
 
 	return nil
 }
 
-func structPrinter(s *state, acc telegraf.Accumulator, tags map[string]string) {
+func structFields(s *state) map[string]any {
 	e := reflect.ValueOf(s).Elem()
 
 	fields := make(map[string]any)
@@ -129,7 +144,20 @@ func structPrinter(s *state, acc telegraf.Accumulator, tags map[string]string) {
 			fields[fmt.Sprintf("%s_%s", lname, lsName)] = sValue
 		}
 	}
-	acc.AddFields("puppetagent", fields, tags)
+	return fields
+}
+
+func addAdditionalResources(resources map[string]any, additional []string, fields map[string]any) {
+	for _, resource := range additional {
+		fieldName := "time_" + strings.ToLower(resource)
+		if _, exists := fields[fieldName]; exists {
+			continue
+		}
+
+		if value, exists := resources[resource]; exists {
+			fields[fieldName] = value
+		}
+	}
 }
 
 func init() {
