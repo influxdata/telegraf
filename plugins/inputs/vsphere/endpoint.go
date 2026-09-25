@@ -1438,19 +1438,6 @@ func (e *endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	}
 }
 
-func (e *endpoint) populateGlobalFields(objectRef *objectRef, resourceType, prefix string) map[string]any {
-	globalFields := make(map[string]any)
-	if resourceType == "vm" && objectRef.memorySizeMB != 0 {
-		_, fieldName := e.makeMetricIdentifier(prefix, "memorySizeMB")
-		globalFields[fieldName] = strconv.Itoa(int(objectRef.memorySizeMB))
-	}
-	if resourceType == "vm" && objectRef.memoryReservation != 0 {
-		_, fieldName := e.makeMetricIdentifier(prefix, "memoryReservation")
-		globalFields[fieldName] = strconv.Itoa(int(objectRef.memoryReservation))
-	}
-	return globalFields
-}
-
 func (e *endpoint) makeMetricIdentifier(prefix, metric string) (metricName, fieldName string) {
 	parts := strings.Split(metric, ".")
 	if len(parts) == 1 {
