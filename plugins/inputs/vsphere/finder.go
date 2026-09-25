@@ -40,7 +40,7 @@ type resourceInfo struct {
 }
 
 // findAll returns the union of resources found given the supplied resource type and paths.
-func (f *finder) findAll(ctx context.Context, resType string, paths, excludePaths []string, dst any) error {
+func (f *finder) findAll(ctx context.Context, resType string, paths, excludePaths []string, dst interface{}) error {
 	objs := make(map[string]types.ObjectContent)
 	for _, p := range paths {
 		if err := f.findResources(ctx, resource, p, objs); err != nil {
@@ -62,7 +62,7 @@ func (f *finder) findAll(ctx context.Context, resType string, paths, excludePath
 }
 
 // find returns the resources matching the specified path.
-func (f *finder) find(ctx context.Context, resType, path string, dst any) error {
+func (f *finder) find(ctx context.Context, resType, path string, dst interface{}) error {
 	objs := make(map[string]types.ObjectContent)
 	err := f.findResources(ctx, resource, path, objs)
 	if err != nil {
@@ -202,7 +202,7 @@ func (f *finder) descend(ctx context.Context, root types.ManagedObjectReference,
 	return nil
 }
 
-func objectContentToTypedArray(objs map[string]types.ObjectContent, dst any) error {
+func objectContentToTypedArray(objs map[string]types.ObjectContent, dst interface{}) error {
 	rt := reflect.TypeOf(dst)
 	if rt == nil || rt.Kind() != reflect.Pointer {
 		panic("need pointer")
@@ -234,7 +234,7 @@ func objectContentToTypedArray(objs map[string]types.ObjectContent, dst any) err
 }
 
 // findAll finds all resources matching the paths that were specified upon creation of the resourceFilter.
-func (r *resourceFilter) findAll(ctx context.Context, dst any) error {
+func (r *resourceFilter) findAll(ctx context.Context, dst interface{}) error {
 	return r.finder.findAll(ctx, r.resType, r.paths, r.excludePaths, dst)
 }
 
