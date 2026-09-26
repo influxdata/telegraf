@@ -38,6 +38,7 @@ const (
 	defaultDirectoryDurationThreshold = config.Duration(0 * time.Millisecond)
 	defaultFileQueueSize              = 100000
 	defaultParseMethod                = "line-by-line"
+	defaultFileAction                 = "move"
 )
 
 type DirectoryMonitor struct {
@@ -47,6 +48,7 @@ type DirectoryMonitor struct {
 	ErrorDirectory     string `toml:"error_directory"`
 	FileTag            string `toml:"file_tag"`
 	PreserveTimestamps bool   `toml:"preserve_timestamps"`
+	FileAction         string `toml:"file_action"`
 
 	FilesToMonitor             []string        `toml:"files_to_monitor"`
 	FilesToIgnore              []string        `toml:"files_to_ignore"`
@@ -82,8 +84,20 @@ func (monitor *DirectoryMonitor) SetParserFunc(fn telegraf.ParserFunc) {
 }
 
 func (monitor *DirectoryMonitor) Init() error {
-	if monitor.Directory == "" || monitor.FinishedDirectory == "" {
-		return errors.New("missing one of the following required config options: directory, finished_directory")
+	if monitor.Directory == "" {
+		return errors.New("missing required config option: directory")
+	}
+
+	if monitor.FileAction == "" {
+		monitor.FileAction = defaultFileAction
+	}
+
+	if err := choice.Check(monitor.FileAction, []string{"move", "delete"}); err != nil {
+		return fmt.Errorf("config option file_action: %w", err)
+	}
+
+	if monitor.FileAction == "move" && monitor.FinishedDirectory == "" {
+		return errors.New("missing required config option: finished_directory")
 	}
 
 	if monitor.FileQueueSize <= 0 {
@@ -91,10 +105,12 @@ func (monitor *DirectoryMonitor) Init() error {
 	}
 
 	// Finished directory can be created if not exists for convenience.
-	if _, err := os.Stat(monitor.FinishedDirectory); os.IsNotExist(err) {
-		err = os.Mkdir(monitor.FinishedDirectory, 0750)
-		if err != nil {
-			return err
+	if monitor.FileAction == "move" {
+		if _, err := os.Stat(monitor.FinishedDirectory); os.IsNotExist(err) {
+			err = os.Mkdir(monitor.FinishedDirectory, 0750)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -282,13 +298,18 @@ func (monitor *DirectoryMonitor) read(filePath string) {
 		monitor.filesDropped.Incr(1)
 		monitor.filesDroppedDir.Incr(1)
 		if monitor.ErrorDirectory != "" {
-			monitor.moveFile(filePath, monitor.ErrorDirectory)
+			monitor.copyFile(filePath, monitor.ErrorDirectory)
+			monitor.deleteFile(filePath)
 		}
 		return
 	}
 
-	// File is finished, move it to the 'finished' directory.
-	monitor.moveFile(filePath, monitor.FinishedDirectory)
+	// File is finished. Move mode copies it aside and then removes the original.
+	// Delete mode only removes the original so it is not scanned again.
+	if monitor.FileAction == "move" {
+		monitor.copyFile(filePath, monitor.FinishedDirectory)
+	}
+	monitor.deleteFile(filePath)
 	monitor.filesProcessed.Incr(1)
 	monitor.filesProcessedDir.Incr(1)
 }
@@ -399,7 +420,7 @@ func (monitor *DirectoryMonitor) sendMetrics(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (monitor *DirectoryMonitor) moveFile(srcPath, dstBaseDir string) {
+func (monitor *DirectoryMonitor) copyFile(srcPath, dstBaseDir string) {
 	// Appends any subdirectories in the srcPath to the dstBaseDir and
 	// creates those subdirectories.
 	basePath := strings.Replace(srcPath, monitor.Directory, "", 1)
@@ -445,7 +466,9 @@ func (monitor *DirectoryMonitor) moveFile(srcPath, dstBaseDir string) {
 			monitor.Log.Errorf("Could not preserve timestamps on %q: %v", dstPath, err)
 		}
 	}
+}
 
+func (monitor *DirectoryMonitor) deleteFile(srcPath string) {
 	if err := os.Remove(srcPath); err != nil {
 		monitor.Log.Errorf("Failed removing original file: %s", err)
 	}
@@ -484,6 +507,7 @@ func init() {
 			DirectoryDurationThreshold: defaultDirectoryDurationThreshold,
 			FileQueueSize:              defaultFileQueueSize,
 			ParseMethod:                defaultParseMethod,
+			FileAction:                 defaultFileAction,
 		}
 	})
 }
