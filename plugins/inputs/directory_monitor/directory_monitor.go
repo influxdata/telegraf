@@ -298,17 +298,18 @@ func (monitor *DirectoryMonitor) read(filePath string) {
 		monitor.filesDropped.Incr(1)
 		monitor.filesDroppedDir.Incr(1)
 		if monitor.ErrorDirectory != "" {
-			monitor.finishFile(filePath, monitor.ErrorDirectory, true)
+			monitor.copyFile(filePath, monitor.ErrorDirectory)
+			monitor.deleteFile(filePath)
 		}
 		return
 	}
 
-	// File is finished; move or delete it from the monitored directory.
-	if monitor.FileAction == "delete" {
-		monitor.finishFile(filePath, "", false)
-	} else {
-		monitor.finishFile(filePath, monitor.FinishedDirectory, true)
+	// File is finished. Move mode copies it aside and then removes the original.
+	// Delete mode only removes the original so it is not scanned again.
+	if monitor.FileAction == "move" {
+		monitor.copyFile(filePath, monitor.FinishedDirectory)
 	}
+	monitor.deleteFile(filePath)
 	monitor.filesProcessed.Incr(1)
 	monitor.filesProcessedDir.Incr(1)
 }
@@ -419,55 +420,55 @@ func (monitor *DirectoryMonitor) sendMetrics(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (monitor *DirectoryMonitor) finishFile(srcPath, dstBaseDir string, copyToDestination bool) {
-	if copyToDestination {
-		// Appends any subdirectories in the srcPath to the dstBaseDir and
-		// creates those subdirectories.
-		basePath := strings.Replace(srcPath, monitor.Directory, "", 1)
-		dstPath := filepath.Join(dstBaseDir, basePath)
-		err := os.MkdirAll(filepath.Dir(dstPath), 0750)
-		if err != nil {
-			monitor.Log.Errorf("Error creating directory hierarchy for %q: %v", srcPath, err)
-		}
-
-		inputFile, err := os.Open(srcPath)
-		if err != nil {
-			monitor.Log.Errorf("Could not open input file: %s", err)
-		}
-
-		outputFile, err := os.Create(dstPath)
-		if err != nil {
-			monitor.Log.Errorf("Could not open output file: %s", err)
-		}
-
-		_, err = io.Copy(outputFile, inputFile)
-		if err != nil {
-			monitor.Log.Errorf("Writing to output file failed: %s", err)
-		}
-
-		// We need to close the file for remove on Windows as we otherwise
-		// will run into a "being used by another process" error
-		// (see https://github.com/influxdata/telegraf/issues/12287)
-		if err := inputFile.Close(); err != nil {
-			monitor.Log.Errorf("Could not close input file: %s", err)
-		}
-
-		// Close the destination file
-		if err := outputFile.Close(); err != nil {
-			monitor.Log.Errorf("Could not close output file: %s", err)
-		}
-
-		// Restore the timestamps on the moved file to be able to keep track of the original file
-		if monitor.PreserveTimestamps {
-			srcTimes, err := times.Stat(srcPath)
-			if err != nil {
-				monitor.Log.Errorf("Could not read timestamps of %q: %v", srcPath, err)
-			} else if err := os.Chtimes(dstPath, srcTimes.AccessTime(), srcTimes.ModTime()); err != nil {
-				monitor.Log.Errorf("Could not preserve timestamps on %q: %v", dstPath, err)
-			}
-		}
+func (monitor *DirectoryMonitor) copyFile(srcPath, dstBaseDir string) {
+	// Appends any subdirectories in the srcPath to the dstBaseDir and
+	// creates those subdirectories.
+	basePath := strings.Replace(srcPath, monitor.Directory, "", 1)
+	dstPath := filepath.Join(dstBaseDir, basePath)
+	err := os.MkdirAll(filepath.Dir(dstPath), 0750)
+	if err != nil {
+		monitor.Log.Errorf("Error creating directory hierarchy for %q: %v", srcPath, err)
 	}
 
+	inputFile, err := os.Open(srcPath)
+	if err != nil {
+		monitor.Log.Errorf("Could not open input file: %s", err)
+	}
+
+	outputFile, err := os.Create(dstPath)
+	if err != nil {
+		monitor.Log.Errorf("Could not open output file: %s", err)
+	}
+
+	_, err = io.Copy(outputFile, inputFile)
+	if err != nil {
+		monitor.Log.Errorf("Writing to output file failed: %s", err)
+	}
+
+	// We need to close the file for remove on Windows as we otherwise
+	// will run into a "being used by another process" error
+	// (see https://github.com/influxdata/telegraf/issues/12287)
+	if err := inputFile.Close(); err != nil {
+		monitor.Log.Errorf("Could not close input file: %s", err)
+	}
+
+	// Close the destination file
+	if err := outputFile.Close(); err != nil {
+		monitor.Log.Errorf("Could not close output file: %s", err)
+	}
+
+	// Restore the timestamps on the moved file to be able to keep track of the original file
+	if monitor.PreserveTimestamps {
+		srcTimes, err := times.Stat(srcPath)
+		if err != nil {
+			monitor.Log.Errorf("Could not read timestamps of %q: %v", srcPath, err)
+		} else if err := os.Chtimes(dstPath, srcTimes.AccessTime(), srcTimes.ModTime()); err != nil {
+			monitor.Log.Errorf("Could not preserve timestamps on %q: %v", dstPath, err)
+		}
+	}
+}
+
+func (monitor *DirectoryMonitor) deleteFile(srcPath string) {
 	if err := os.Remove(srcPath); err != nil {
 		monitor.Log.Errorf("Failed removing original file: %s", err)
 	}
