@@ -38,6 +38,7 @@ const (
 	defaultDirectoryDurationThreshold = config.Duration(0 * time.Millisecond)
 	defaultFileQueueSize              = 100000
 	defaultParseMethod                = "line-by-line"
+	defaultFileAction                 = "move"
 )
 
 type DirectoryMonitor struct {
@@ -47,6 +48,7 @@ type DirectoryMonitor struct {
 	ErrorDirectory     string `toml:"error_directory"`
 	FileTag            string `toml:"file_tag"`
 	PreserveTimestamps bool   `toml:"preserve_timestamps"`
+	FileAction         string `toml:"file_action"`
 
 	FilesToMonitor             []string        `toml:"files_to_monitor"`
 	FilesToIgnore              []string        `toml:"files_to_ignore"`
@@ -82,8 +84,20 @@ func (monitor *DirectoryMonitor) SetParserFunc(fn telegraf.ParserFunc) {
 }
 
 func (monitor *DirectoryMonitor) Init() error {
-	if monitor.Directory == "" || monitor.FinishedDirectory == "" {
-		return errors.New("missing one of the following required config options: directory, finished_directory")
+	if monitor.Directory == "" {
+		return errors.New("missing required config option: directory")
+	}
+
+	if monitor.FileAction == "" {
+		monitor.FileAction = defaultFileAction
+	}
+
+	if err := choice.Check(monitor.FileAction, []string{"move", "delete"}); err != nil {
+		return fmt.Errorf("config option file_action: %w", err)
+	}
+
+	if monitor.FileAction == "move" && monitor.FinishedDirectory == "" {
+		return errors.New("missing required config option: finished_directory")
 	}
 
 	if monitor.FileQueueSize <= 0 {
@@ -91,10 +105,12 @@ func (monitor *DirectoryMonitor) Init() error {
 	}
 
 	// Finished directory can be created if not exists for convenience.
-	if _, err := os.Stat(monitor.FinishedDirectory); os.IsNotExist(err) {
-		err = os.Mkdir(monitor.FinishedDirectory, 0750)
-		if err != nil {
-			return err
+	if monitor.FileAction == "move" {
+		if _, err := os.Stat(monitor.FinishedDirectory); os.IsNotExist(err) {
+			err = os.Mkdir(monitor.FinishedDirectory, 0750)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -282,13 +298,17 @@ func (monitor *DirectoryMonitor) read(filePath string) {
 		monitor.filesDropped.Incr(1)
 		monitor.filesDroppedDir.Incr(1)
 		if monitor.ErrorDirectory != "" {
-			monitor.moveFile(filePath, monitor.ErrorDirectory)
+			monitor.finishFile(filePath, monitor.ErrorDirectory, true)
 		}
 		return
 	}
 
-	// File is finished, move it to the 'finished' directory.
-	monitor.moveFile(filePath, monitor.FinishedDirectory)
+	// File is finished; move or delete it from the monitored directory.
+	if monitor.FileAction == "delete" {
+		monitor.finishFile(filePath, "", false)
+	} else {
+		monitor.finishFile(filePath, monitor.FinishedDirectory, true)
+	}
 	monitor.filesProcessed.Incr(1)
 	monitor.filesProcessedDir.Incr(1)
 }
@@ -399,50 +419,52 @@ func (monitor *DirectoryMonitor) sendMetrics(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (monitor *DirectoryMonitor) moveFile(srcPath, dstBaseDir string) {
-	// Appends any subdirectories in the srcPath to the dstBaseDir and
-	// creates those subdirectories.
-	basePath := strings.Replace(srcPath, monitor.Directory, "", 1)
-	dstPath := filepath.Join(dstBaseDir, basePath)
-	err := os.MkdirAll(filepath.Dir(dstPath), 0750)
-	if err != nil {
-		monitor.Log.Errorf("Error creating directory hierarchy for %q: %v", srcPath, err)
-	}
-
-	inputFile, err := os.Open(srcPath)
-	if err != nil {
-		monitor.Log.Errorf("Could not open input file: %s", err)
-	}
-
-	outputFile, err := os.Create(dstPath)
-	if err != nil {
-		monitor.Log.Errorf("Could not open output file: %s", err)
-	}
-
-	_, err = io.Copy(outputFile, inputFile)
-	if err != nil {
-		monitor.Log.Errorf("Writing to output file failed: %s", err)
-	}
-
-	// We need to close the file for remove on Windows as we otherwise
-	// will run into a "being used by another process" error
-	// (see https://github.com/influxdata/telegraf/issues/12287)
-	if err := inputFile.Close(); err != nil {
-		monitor.Log.Errorf("Could not close input file: %s", err)
-	}
-
-	// Close the destination file
-	if err := outputFile.Close(); err != nil {
-		monitor.Log.Errorf("Could not close output file: %s", err)
-	}
-
-	// Restore the timestamps on the moved file to be able to keep track of the original file
-	if monitor.PreserveTimestamps {
-		srcTimes, err := times.Stat(srcPath)
+func (monitor *DirectoryMonitor) finishFile(srcPath, dstBaseDir string, copyToDestination bool) {
+	if copyToDestination {
+		// Appends any subdirectories in the srcPath to the dstBaseDir and
+		// creates those subdirectories.
+		basePath := strings.Replace(srcPath, monitor.Directory, "", 1)
+		dstPath := filepath.Join(dstBaseDir, basePath)
+		err := os.MkdirAll(filepath.Dir(dstPath), 0750)
 		if err != nil {
-			monitor.Log.Errorf("Could not read timestamps of %q: %v", srcPath, err)
-		} else if err := os.Chtimes(dstPath, srcTimes.AccessTime(), srcTimes.ModTime()); err != nil {
-			monitor.Log.Errorf("Could not preserve timestamps on %q: %v", dstPath, err)
+			monitor.Log.Errorf("Error creating directory hierarchy for %q: %v", srcPath, err)
+		}
+
+		inputFile, err := os.Open(srcPath)
+		if err != nil {
+			monitor.Log.Errorf("Could not open input file: %s", err)
+		}
+
+		outputFile, err := os.Create(dstPath)
+		if err != nil {
+			monitor.Log.Errorf("Could not open output file: %s", err)
+		}
+
+		_, err = io.Copy(outputFile, inputFile)
+		if err != nil {
+			monitor.Log.Errorf("Writing to output file failed: %s", err)
+		}
+
+		// We need to close the file for remove on Windows as we otherwise
+		// will run into a "being used by another process" error
+		// (see https://github.com/influxdata/telegraf/issues/12287)
+		if err := inputFile.Close(); err != nil {
+			monitor.Log.Errorf("Could not close input file: %s", err)
+		}
+
+		// Close the destination file
+		if err := outputFile.Close(); err != nil {
+			monitor.Log.Errorf("Could not close output file: %s", err)
+		}
+
+		// Restore the timestamps on the moved file to be able to keep track of the original file
+		if monitor.PreserveTimestamps {
+			srcTimes, err := times.Stat(srcPath)
+			if err != nil {
+				monitor.Log.Errorf("Could not read timestamps of %q: %v", srcPath, err)
+			} else if err := os.Chtimes(dstPath, srcTimes.AccessTime(), srcTimes.ModTime()); err != nil {
+				monitor.Log.Errorf("Could not preserve timestamps on %q: %v", dstPath, err)
+			}
 		}
 	}
 
@@ -484,6 +506,7 @@ func init() {
 			DirectoryDurationThreshold: defaultDirectoryDurationThreshold,
 			FileQueueSize:              defaultFileQueueSize,
 			ParseMethod:                defaultParseMethod,
+			FileAction:                 defaultFileAction,
 		}
 	})
 }

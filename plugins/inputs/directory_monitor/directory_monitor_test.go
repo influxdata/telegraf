@@ -27,9 +27,61 @@ func TestCreator(t *testing.T) {
 		DirectoryDurationThreshold: defaultDirectoryDurationThreshold,
 		FileQueueSize:              defaultFileQueueSize,
 		ParseMethod:                defaultParseMethod,
+		FileAction:                 defaultFileAction,
 	}
 
 	require.Equal(t, expected, creator())
+}
+
+func TestDeleteFileAfterProcessing(t *testing.T) {
+	acc := testutil.Accumulator{}
+	testCsvFile := "test.csv"
+
+	processDirectory := t.TempDir()
+	finishedDirectory := t.TempDir()
+
+	r := DirectoryMonitor{
+		Directory:          processDirectory,
+		FileAction:         "delete",
+		MaxBufferedMetrics: defaultMaxBufferedMetrics,
+		FileQueueSize:      defaultFileQueueSize,
+		ParseMethod:        defaultParseMethod,
+	}
+	err := r.Init()
+	require.NoError(t, err)
+
+	r.SetParserFunc(func() (telegraf.Parser, error) {
+		parser := csv.Parser{
+			HeaderRowCount: 1,
+		}
+		err := parser.Init()
+		return &parser, err
+	})
+	r.Log = testutil.Logger{}
+
+	f, err := os.Create(filepath.Join(processDirectory, testCsvFile))
+	require.NoError(t, err)
+	_, err = f.WriteString("thing,color\nsky,blue\ngrass,green\n")
+	require.NoError(t, err)
+	err = f.Close()
+	require.NoError(t, err)
+
+	err = r.Start(&acc)
+	require.NoError(t, err)
+	err = r.Gather(&acc)
+	require.NoError(t, err)
+	acc.Wait(2)
+	r.Stop()
+
+	require.Len(t, acc.Metrics, 2)
+
+	_, err = os.Stat(filepath.Join(processDirectory, testCsvFile))
+	require.Error(t, err)
+	require.True(t, os.IsNotExist(err))
+
+	_, err = os.Stat(filepath.Join(finishedDirectory, testCsvFile))
+	require.Error(t, err)
+	require.True(t, os.IsNotExist(err))
 }
 
 func TestCSVGZImport(t *testing.T) {

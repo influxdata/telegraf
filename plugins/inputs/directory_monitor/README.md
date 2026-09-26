@@ -40,7 +40,13 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   directory = ""
   #
   ## The directory to move finished files to (maintaining directory hierarchy from source).
+  ## Required when file_action is "move" (default); ignored when file_action is "delete".
   finished_directory = ""
+  #
+  ## Action to take on successfully processed files.
+  ## When set to "move" (default), files are copied to finished_directory and removed from the monitored directory.
+  ## When set to "delete", files are permanently removed from the monitored directory after processing.
+  # file_action = "move"
   #
   ## Setting recursive to true will make the plugin recursively walk the directory and process all sub-directories.
   # recursive = false
