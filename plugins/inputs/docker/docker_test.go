@@ -11,6 +11,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/system"
+	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -1361,4 +1362,49 @@ func TestStartupSuccess(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, model.Start(&acc))
 	model.Stop()
+}
+
+func TestStartLegacyAPIVersion(t *testing.T) {
+	server, err := mock.NewServerFromFiles("testdata")
+	require.NoError(t, err)
+	server.APIVersion = "1.39"
+
+	addr := server.Start(t)
+	defer server.Close()
+
+	plugin := &Docker{
+		Endpoint: addr,
+		Timeout:  config.Duration(time.Second * 5),
+		Log:      testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	require.Equal(t, "1.39", plugin.client.ClientVersion())
+	require.NoError(t, acc.GatherError(plugin.Gather))
+	require.NotEmpty(t, acc.GetTelegrafMetrics())
+}
+
+func TestStartCurrentAPIVersionNotPinned(t *testing.T) {
+	server, err := mock.NewServerFromFiles("testdata")
+	require.NoError(t, err)
+
+	addr := server.Start(t)
+	defer server.Close()
+
+	plugin := &Docker{
+		Endpoint: addr,
+		Timeout:  config.Duration(time.Second * 5),
+		Log:      testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	require.Equal(t, client.MaxAPIVersion, plugin.client.ClientVersion())
 }
