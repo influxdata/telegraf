@@ -11,6 +11,10 @@
   to the machine Telegraf runs on now fails on startup, so please check your
   `vsock` addresses.
 
+### Bugfixes
+
+- [#19791](https://github.com/influxdata/telegraf/pull/19791) `inputs.kinesis_consumer` Emit the final records of a closed shard
+
 ## v1.40.1 [2026-09-21]
 
 ### Bugfixes
