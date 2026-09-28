@@ -10,6 +10,7 @@ import (
 	kafkacontainer "github.com/testcontainers/testcontainers-go/modules/kafka"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/testutil"
@@ -718,6 +719,32 @@ func TestGatherOffsetFetchGroupError(t *testing.T) {
 	}
 }
 
+func TestStartControllerUnavailable(t *testing.T) {
+	cluster := newMockCluster(t)
+	defer cluster.close()
+
+	// Advertise a controller which is not part of the cluster, as brokers do
+	// during a controller election
+	metadata := sarama.NewMockMetadataResponse(t).
+		SetController(99).
+		SetBroker(cluster.broker1.Addr(), cluster.broker1.BrokerID()).
+		SetBroker(cluster.broker2.Addr(), cluster.broker2.BrokerID())
+	cluster.override(cluster.broker1, "MetadataRequest", metadata)
+	cluster.override(cluster.broker2, "MetadataRequest", metadata)
+
+	plugin := newPlugin()
+	plugin.Brokers = cluster.brokers()
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	err := plugin.Start(&acc)
+	require.ErrorIs(t, err, sarama.ErrControllerNotAvailable)
+
+	var serr *internal.StartupError
+	require.ErrorAs(t, err, &serr)
+	require.True(t, serr.Retry)
+}
+
 func TestGatherIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -738,8 +765,22 @@ func TestGatherIntegration(t *testing.T) {
 	brokers, err := container.Brokers(t.Context())
 	require.NoError(t, err)
 
-	// Install the sarama logger before any sarama goroutine starts reading it
-	kafka.SetLogger(testutil.Logger{}.Level())
+	// Run against both the per-group and the batched OffsetFetch protocol.
+	// Init replaces the global sarama logger, so initialize the plugins before
+	// any sarama goroutine starts reading it.
+	plugins := make(map[string]*KafkaConsumerLag)
+	loggers := make(map[string]*testutil.CaptureLogger)
+	for _, version := range []string{"", "3.5.0"} {
+		logger := &testutil.CaptureLogger{}
+		plugin := newPlugin()
+		plugin.Brokers = brokers
+		plugin.Version = version
+		plugin.GroupsInclude = []string{group}
+		plugin.Log = logger
+		require.NoError(t, plugin.Init())
+		plugins[version] = plugin
+		loggers[version] = logger
+	}
 
 	cfg := sarama.NewConfig()
 	cfg.Producer.Return.Successes = true
@@ -791,23 +832,19 @@ func TestGatherIntegration(t *testing.T) {
 		groupMetric(group, 6, 6, 2, 1, 0),
 	}
 
-	// Run against both the per-group and the batched OffsetFetch protocol
-	for _, version := range []string{"", "3.5.0"} {
+	for version, plugin := range plugins {
 		t.Run("version="+version, func(t *testing.T) {
-			plugin := newPlugin()
-			plugin.Brokers = brokers
-			plugin.Version = version
-			plugin.GroupsInclude = []string{group}
-			logger := &testutil.CaptureLogger{}
-			plugin.Log = logger
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
 
-			acc := gather(t, plugin)
-
+			require.NoError(t, plugin.Gather(&acc))
+			require.Empty(t, acc.Errors)
 			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
 
 			// A failed batch silently falls back to per-group requests
 			require.Equal(t, version != "", plugin.batchOffsets)
-			for _, entry := range logger.Messages() {
+			for _, entry := range loggers[version].Messages() {
 				require.NotContains(t, entry.Text, "falling back")
 			}
 		})

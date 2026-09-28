@@ -157,7 +157,12 @@ func (k *KafkaConsumerLag) Start(telegraf.Accumulator) error {
 	admin, err := sarama.NewClusterAdminFromClient(client)
 	if err != nil {
 		_ = client.Close()
-		return &internal.StartupError{Err: fmt.Errorf("creating cluster admin failed: %w", err)}
+		// This only fails if the controller cannot be resolved, e.g. during an
+		// election or a rolling restart.
+		return &internal.StartupError{
+			Err:   fmt.Errorf("creating cluster admin failed: %w", err),
+			Retry: true,
+		}
 	}
 
 	k.client = client
