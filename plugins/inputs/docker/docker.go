@@ -192,7 +192,8 @@ func (d *Docker) Start(telegraf.Accumulator) error {
 	if ping.APIVersion != "" && versions.LessThan(ping.APIVersion, client.MinAPIVersion) &&
 		versions.GreaterThan(d.client.ClientVersion(), ping.APIVersion) {
 		d.Log.Infof("Daemon supports API version %s at most, pinning client to it", ping.APIVersion)
-		c, err := client.New(append(options, client.WithAPIVersion(ping.APIVersion))...)
+		options = append(options, client.WithAPIVersion(ping.APIVersion))
+		c, err := client.New(options...)
 		if err != nil {
 			d.Stop()
 			return fmt.Errorf("creating client for API version %s failed: %w", ping.APIVersion, err)
