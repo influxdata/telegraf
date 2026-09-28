@@ -3,217 +3,261 @@ package fxmacrodata
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
-const indicatorBody = `{"data":[{"date":"2026-07-31","val":3.4,` +
-	`"announcement_datetime":1786537800,"source":"BLS"}]}`
+func TestInitFail(t *testing.T) {
+	tests := []struct {
+		name     string
+		plugin   *FXMacroData
+		expected string
+	}{
+		{
+			name:     "empty url",
+			plugin:   &FXMacroData{Indicators: []string{"inflation"}},
+			expected: "url must be set",
+		},
+		{
+			name:     "invalid scheme",
+			plugin:   &FXMacroData{URL: "ftp://example.com", Indicators: []string{"inflation"}},
+			expected: `invalid scheme "ftp"`,
+		},
+		{
+			name:     "nothing to gather",
+			plugin:   &FXMacroData{URL: "https://example.com/v1"},
+			expected: "at least one of indicators or fx_pairs must be set",
+		},
+		{
+			name: "lowercase currency",
+			plugin: &FXMacroData{
+				URL:        "https://example.com/v1",
+				Currencies: []string{"usd"},
+				Indicators: []string{"inflation"},
+			},
+			expected: `invalid currency "usd"`,
+		},
+		{
+			name: "empty indicator",
+			plugin: &FXMacroData{
+				URL:        "https://example.com/v1",
+				Indicators: []string{"inflation", ""},
+			},
+			expected: "empty entry in indicators",
+		},
+		{
+			name:     "pair without separator",
+			plugin:   &FXMacroData{URL: "https://example.com/v1", FXPairs: []string{"EURUSD"}},
+			expected: `invalid fx_pair "EURUSD"`,
+		},
+		{
+			name:     "lowercase pair",
+			plugin:   &FXMacroData{URL: "https://example.com/v1", FXPairs: []string{"eur/usd"}},
+			expected: `invalid fx_pair "eur/usd"`,
+		},
+		{
+			name: "negative timeout",
+			plugin: &FXMacroData{
+				URL:             "https://example.com/v1",
+				Indicators:      []string{"inflation"},
+				ResponseTimeout: config.Duration(-time.Second),
+			},
+			expected: "response_timeout must not be negative",
+		},
+	}
 
-func newServer(t *testing.T, handler http.HandlerFunc) *httptest.Server {
-	t.Helper()
-	server := httptest.NewServer(handler)
-	t.Cleanup(server.Close)
-	return server
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.plugin.Log = testutil.Logger{}
+			require.ErrorContains(t, tt.plugin.Init(), tt.expected)
+		})
+	}
 }
 
-func newPlugin(t *testing.T, baseURL string) *FXMacroData {
-	t.Helper()
+func TestInitZeroTimeout(t *testing.T) {
 	plugin := &FXMacroData{
-		BaseURL:    baseURL,
-		Currencies: []string{"USD"},
+		URL:        "https://example.com/v1",
 		Indicators: []string{"inflation"},
 		Log:        testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
-	return plugin
+	require.Zero(t, plugin.client.Timeout)
 }
 
-func TestGatherIndicator(t *testing.T) {
-	server := newServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		if _, err := w.Write([]byte(indicatorBody)); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			t.Error(err)
-		}
-	})
-
-	plugin := newPlugin(t, server.URL)
-
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Gather(&acc))
-
-	acc.AssertContainsTaggedFields(t,
-		"fxmacrodata_indicator",
-		map[string]interface{}{"value": 3.4, "reference_date": "2026-07-31"},
-		map[string]string{"currency": "USD", "indicator": "inflation", "source": "BLS"},
-	)
-}
-
-func TestPointIsStampedWithThePublicationInstant(t *testing.T) {
-	// A macro figure is only meaningful alongside when it became known, so the
-	// point must not be stamped with collection time when the API reports the
-	// publication instant.
-	server := newServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		if _, err := w.Write([]byte(indicatorBody)); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			t.Error(err)
-		}
-	})
-
-	plugin := newPlugin(t, server.URL)
-
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Gather(&acc))
-
-	require.Len(t, acc.Metrics, 1)
-	require.Equal(t, time.Unix(1786537800, 0).UTC(), acc.Metrics[0].Time)
-}
-
-func TestNullValueIsSkipped(t *testing.T) {
-	// A null means the period was not reported. Recording zero would be
-	// indistinguishable from a real reading of zero.
-	server := newServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		if _, err := w.Write([]byte(`{"data":[{"date":"2026-07-31","val":null}]}`)); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			t.Error(err)
-		}
-	})
-
-	plugin := newPlugin(t, server.URL)
-
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Gather(&acc))
-
-	require.Empty(t, acc.Metrics)
-}
-
-func TestEmptySeriesProducesNoMetric(t *testing.T) {
-	server := newServer(t, func(w http.ResponseWriter, _ *http.Request) {
+func TestAPIKeyHeader(t *testing.T) {
+	var header, query string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		header = r.Header.Get("X-API-Key")
+		query = r.URL.RawQuery
 		if _, err := w.Write([]byte(`{"data":[]}`)); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			t.Error(err)
 		}
-	})
-
-	plugin := newPlugin(t, server.URL)
-
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Gather(&acc))
-
-	require.Empty(t, acc.Metrics)
-}
-
-func TestAPIKeyTravelsAsAHeaderNotAQueryParameter(t *testing.T) {
-	var gotHeader, gotQuery string
-	server := newServer(t, func(w http.ResponseWriter, r *http.Request) {
-		gotHeader = r.Header.Get("X-API-Key")
-		gotQuery = r.URL.RawQuery
-		if _, err := w.Write([]byte(indicatorBody)); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			t.Error(err)
-		}
-	})
-
-	plugin := newPlugin(t, server.URL)
-	plugin.APIKey = config.NewSecret([]byte("test-key"))
-
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Gather(&acc))
-
-	require.Equal(t, "test-key", gotHeader)
-	require.NotContains(t, gotQuery, "test-key")
-}
-
-func TestNoAuthHeaderWithoutAKey(t *testing.T) {
-	// Public USD data has to work with no credential at all.
-	var hadHeader bool
-	server := newServer(t, func(w http.ResponseWriter, r *http.Request) {
-		_, hadHeader = r.Header["X-Api-Key"]
-		if _, err := w.Write([]byte(indicatorBody)); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			t.Error(err)
-		}
-	})
-
-	plugin := newPlugin(t, server.URL)
-
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Gather(&acc))
-
-	require.False(t, hadHeader)
-}
-
-func TestOneUncoveredCurrencyDoesNotLoseTheOthers(t *testing.T) {
-	server := newServer(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/v1/announcements/eur/inflation" {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		if _, err := w.Write([]byte(indicatorBody)); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			t.Error(err)
-		}
-	})
-
-	plugin := newPlugin(t, server.URL)
-	plugin.Currencies = []string{"usd", "eur"}
-
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Gather(&acc))
-
-	require.Len(t, acc.Metrics, 1)
-	require.Equal(t, "USD", acc.Metrics[0].Tags["currency"])
-	require.NotEmpty(t, acc.Errors)
-}
-
-func TestGatherFX(t *testing.T) {
-	server := newServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		if _, err := w.Write([]byte(`{"data":[{"date":"2026-09-10","val":1.1616}]}`)); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			t.Error(err)
-		}
-	})
+	}))
+	defer server.Close()
 
 	plugin := &FXMacroData{
-		BaseURL: server.URL,
-		FXPairs: []string{"EUR/USD"},
-		Log:     testutil.Logger{},
+		URL:        server.URL + "/v1",
+		APIKey:     config.NewSecret([]byte("test-key")),
+		Indicators: []string{"inflation"},
+		Log:        testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
+	require.Empty(t, acc.Errors)
 
-	acc.AssertContainsTaggedFields(t,
-		"fxmacrodata_fx",
-		map[string]interface{}{"rate": 1.1616, "reference_date": "2026-09-10"},
-		map[string]string{"base": "EUR", "quote": "USD"},
-	)
+	require.Equal(t, "test-key", header)
+	require.Equal(t, "limit=1", query)
 }
 
-func TestInitRequiresSomethingToGather(t *testing.T) {
-	plugin := &FXMacroData{Log: testutil.Logger{}}
+func TestNoAPIKeyHeader(t *testing.T) {
+	var found bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, found = r.Header["X-Api-Key"]
+		if _, err := w.Write([]byte(`{"data":[]}`)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+		}
+	}))
+	defer server.Close()
 
-	require.ErrorContains(t, plugin.Init(), "indicators or fx_pairs")
-}
-
-func TestInitRejectsAMalformedPair(t *testing.T) {
-	plugin := &FXMacroData{FXPairs: []string{"EURUSD"}, Log: testutil.Logger{}}
-
-	require.ErrorContains(t, plugin.Init(), "BASE/QUOTE")
-}
-
-func TestInitDefaults(t *testing.T) {
-	plugin := &FXMacroData{Indicators: []string{"Inflation"}, Log: testutil.Logger{}}
+	plugin := &FXMacroData{
+		URL:        server.URL + "/v1",
+		Indicators: []string{"inflation"},
+		Log:        testutil.Logger{},
+	}
 	require.NoError(t, plugin.Init())
 
-	require.Equal(t, defaultBaseURL, plugin.BaseURL)
-	require.Equal(t, []string{"usd"}, plugin.Currencies)
-	require.Equal(t, []string{"inflation"}, plugin.Indicators)
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
+	require.Empty(t, acc.Errors)
+
+	require.False(t, found)
+}
+
+func TestCases(t *testing.T) {
+	entries, err := os.ReadDir("testcases")
+	require.NoError(t, err)
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		t.Run(entry.Name(), func(t *testing.T) {
+			testcasePath := filepath.Join("testcases", entry.Name())
+			responsesPath := filepath.Join(testcasePath, "responses")
+			expectedFilename := filepath.Join(testcasePath, "expected.out")
+			expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
+			configFilename := filepath.Join(testcasePath, "telegraf.conf")
+
+			// Read the responses. The file name is the request path relative
+			// to the API version with slashes replaced by underscores. The
+			// extension is either "json" for a successful response or the
+			// HTTP status code to reply with.
+			responses, err := os.ReadDir(responsesPath)
+			require.NoError(t, err)
+
+			pathToResponse := make(map[string][]byte, len(responses))
+			pathToStatus := make(map[string]int, len(responses))
+			for _, response := range responses {
+				if response.IsDir() {
+					continue
+				}
+				fName := response.Name()
+				buf, err := os.ReadFile(filepath.Join(responsesPath, fName))
+				require.NoError(t, err)
+
+				ext := filepath.Ext(fName)
+				key := strings.TrimSuffix(fName, ext)
+				pathToResponse[key] = buf
+				pathToStatus[key] = http.StatusOK
+				if ext != ".json" {
+					status, err := strconv.Atoi(strings.TrimPrefix(ext, "."))
+					require.NoError(t, err)
+					pathToStatus[key] = status
+				}
+			}
+
+			// Prepare the influx parser for expectations
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+
+			// Read expected values, if any
+			var expected []telegraf.Metric
+			if _, err := os.Stat(expectedFilename); err == nil {
+				var err error
+				expected, err = testutil.ParseMetricsFromFile(expectedFilename, parser)
+				require.NoError(t, err)
+			}
+
+			// Read expected errors, if any
+			var expectedErrors []string
+			if _, err := os.Stat(expectedErrorFilename); err == nil {
+				var err error
+				expectedErrors, err = testutil.ParseLinesFromFile(expectedErrorFilename)
+				require.NoError(t, err)
+			}
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Query().Get("limit") != "1" {
+					w.WriteHeader(http.StatusBadRequest)
+					t.Errorf("Unexpected query %q", r.URL.RawQuery)
+					return
+				}
+
+				key := strings.ReplaceAll(strings.TrimPrefix(r.URL.Path, "/v1/"), "/", "_")
+				resp, ok := pathToResponse[key]
+				if !ok {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Errorf("Expected to have path to response: %s", r.URL.Path)
+					return
+				}
+
+				w.Header().Add("Content-Type", "application/json")
+				w.WriteHeader(pathToStatus[key])
+				if _, err := w.Write(resp); err != nil {
+					t.Error(err)
+				}
+			}))
+			defer server.Close()
+
+			// Load the test-specific configuration
+			cfg := config.NewConfig()
+			cfg.Agent.Quiet = true
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Inputs, 1)
+
+			// Instantiate the plugin and point it to the test server
+			plugin := cfg.Inputs[0].Input.(*FXMacroData)
+			plugin.URL = server.URL + "/v1"
+			plugin.Log = testutil.Logger{}
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Gather(&acc))
+
+			actualErrors := make([]string, 0, len(acc.Errors))
+			for _, err := range acc.Errors {
+				actualErrors = append(actualErrors, strings.ReplaceAll(err.Error(), server.URL, ""))
+			}
+			require.ElementsMatch(t, expectedErrors, actualErrors)
+
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
+		})
+	}
 }

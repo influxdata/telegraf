@@ -1,0 +1,16 @@
+{
+  "base": "EUR",
+  "quote": "USD",
+  "source": "ECB",
+  "data": [
+    {
+      "date": "2026-09-25",
+      "val": 1.1582,
+      "announcement_datetime": 1790344800,
+      "source": {
+        "source_pair": "EURUSD",
+        "is_derived": false
+      }
+    }
+  ]
+}

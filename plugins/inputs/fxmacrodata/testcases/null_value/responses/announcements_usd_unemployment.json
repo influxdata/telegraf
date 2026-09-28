@@ -1,0 +1,19 @@
+{
+  "currency": "USD",
+  "indicator": "unemployment",
+  "name": "Unemployment Rate",
+  "source": "BLS",
+  "data": [
+    {
+      "announcement_id": "usd_unemployment_2026-08-31",
+      "date": "2026-08-31",
+      "val": null,
+      "source": "BLS",
+      "source_url": "https://www.bls.gov/",
+      "previous_date": "2026-07-31",
+      "announcement_datetime": 1788525000,
+      "announcement_datetime_local": "2026-09-04T08:30:00-04:00",
+      "publication_time_status": "unverified"
+    }
+  ]
+}

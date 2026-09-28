@@ -1,0 +1,20 @@
+{
+  "currency": "USD",
+  "indicator": "inflation",
+  "name": "Inflation (CPI)",
+  "source": "BLS",
+  "data": [
+    {
+      "announcement_id": "usd_inflation_2026-08-31",
+      "date": "2026-08-31",
+      "val": 3.4,
+      "source": "BLS",
+      "source_url": "https://www.bls.gov/news.release/archives/cpi_09112026.htm",
+      "previous_value": 3.4,
+      "previous_date": "2026-07-31",
+      "announcement_datetime": 1789129800,
+      "announcement_datetime_local": "2026-09-11T08:30:00-04:00",
+      "publication_time_status": "unverified"
+    }
+  ]
+}
