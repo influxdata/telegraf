@@ -238,9 +238,10 @@ Using an IPv6 address with multicast, can be done by either specifying a
 zone id or using a trailing interface name. These options are mutually
 exclusive.
 
-With a `vsock` address the CID is only checked for being a number as the
-listener always binds the context ID of the machine it runs on. To reach the
-listener from another context use that machine's CID in the client address.
+With a `vsock` address the listener binds the context ID given in the address,
+so it has to be a CID of the machine Telegraf runs on. Any other CID, for
+example the host CID on a guest, is rejected on startup. Use that machine's CID
+in the client address to reach the listener from another context.
 
 ## Metrics
 

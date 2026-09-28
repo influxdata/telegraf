@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mdlayher/vsock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -920,31 +921,40 @@ func TestInterfaceNameFromServiceAddressInvalid(t *testing.T) {
 }
 
 func TestVsockAddressParsing(t *testing.T) {
-	tests := []struct {
-		name    string
-		address string
-	}{
-		{name: "valid CID and port", address: "vsock://2:8790"},
+	cid, err := vsock.ContextID()
+	if err != nil {
+		t.Skipf("vsock not available on this host: %v", err)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var cfg Config
-			s, err := cfg.NewSocket(tt.address, nil, testutil.Logger{})
-			require.NoError(t, err)
+	var cfg Config
+	s, err := cfg.NewSocket(fmt.Sprintf("vsock://%d:8790", cid), nil, testutil.Logger{})
+	require.NoError(t, err)
 
-			l := newStreamListener(s.Config, nil, testutil.Logger{})
-			err = l.setupVsock(s.url)
-			if err != nil {
-				// The address parsed correctly; the only remaining failure is the
-				// host lacking vsock support, which is not what this test covers.
-				require.NotContains(t, err.Error(), "failed to parse")
-				require.NotContains(t, err.Error(), "missing")
-				t.Skipf("vsock not available on this host: %v", err)
-			}
-			require.NoError(t, l.listener.Close())
-		})
+	l := newStreamListener(s.Config, nil, testutil.Logger{})
+	require.NoError(t, l.setupVsock(s.url))
+	defer l.listener.Close()
+
+	addr, ok := l.listener.Addr().(*vsock.Addr)
+	require.True(t, ok)
+	require.Equal(t, cid, addr.ContextID)
+	require.Equal(t, uint32(8790), addr.Port)
+}
+
+func TestVsockForeignContextID(t *testing.T) {
+	if _, err := vsock.ContextID(); err != nil {
+		t.Skipf("vsock not available on this host: %v", err)
 	}
+
+	// The highest context ID below the wildcard can never belong to this
+	// machine, so binding it has to fail instead of silently using our own.
+	var cfg Config
+	s, err := cfg.NewSocket("vsock://4294967294:8790", nil, testutil.Logger{})
+	require.NoError(t, err)
+
+	// The exact errno depends on the kernel, so only require that binding is
+	// refused and that the CID is named in the error.
+	l := newStreamListener(s.Config, nil, testutil.Logger{})
+	require.ErrorContains(t, l.setupVsock(s.url), "listening on CID 4294967294 failed")
 }
 
 func TestVsockAddressParsingInvalid(t *testing.T) {
