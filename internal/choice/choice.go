@@ -7,15 +7,10 @@ import (
 	"slices"
 )
 
-// Contains return true if the choice in the list of choices.
-func Contains(choice string, choices []string) bool {
-	return slices.Contains(choices, choice)
-}
-
 // Check returns an error if a choice is not one of
 // the available choices.
 func Check(choice string, available []string) error {
-	if !Contains(choice, available) {
+	if !slices.Contains(available, choice) {
 		return fmt.Errorf("unknown choice %s", choice)
 	}
 	return nil

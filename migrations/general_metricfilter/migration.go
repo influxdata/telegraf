@@ -2,11 +2,11 @@ package general_metricfilter
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/migrations"
 )
 
@@ -48,7 +48,7 @@ func migrate(category, name string, tbl *ast.Table) ([]byte, string, error) {
 				return nil, "", fmt.Errorf("setting '%s': %w", option, err)
 			}
 			for _, o := range old {
-				if !choice.Contains(o, fieldinclude) {
+				if !slices.Contains(fieldinclude, o) {
 					fieldinclude = append(fieldinclude, o)
 				}
 			}
@@ -79,7 +79,7 @@ func migrate(category, name string, tbl *ast.Table) ([]byte, string, error) {
 				return nil, "", fmt.Errorf("setting '%s': %w", option, err)
 			}
 			for _, o := range old {
-				if !choice.Contains(o, fieldexclude) {
+				if !slices.Contains(fieldexclude, o) {
 					fieldexclude = append(fieldexclude, o)
 				}
 			}
