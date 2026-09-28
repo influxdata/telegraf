@@ -146,11 +146,11 @@ More details about metrics can be found at the links below:
 || cpu.cache.monitor.\<num\>.bank.\<index\>.bytes | bytes | the number of bytes of last level cache that the domain is using on cache bank \<index\>, not available for kernels from 4.14 upwards|
 || cpu.energy.monitor.count | count | the number of resctrl energy monitors for this domain, available with libvirt 12.4.0 or later (exposed as `libvirt_cpu_energy_monitor_total`) |
 || cpu.energy.monitor.\<num\>.name | name | the name of energy monitor \<num\> (exposed as `libvirt_cpu_energy_monitor`) |
-|| cpu.energy.monitor.\<num\>.vcpus | vcpus | the vCPU list of energy monitor \<num\> |
+|| cpu.energy.monitor.\<num\>.vcpus | vcpus | the optional vCPU list of energy monitor \<num\>; omitted for whole-process monitors |
 || cpu.energy.monitor.\<num\>.pkg.count | pkg_count | the number of CPU packages reported by energy monitor \<num\> |
 || cpu.energy.monitor.\<num\>.pkg.\<index\>.id | id | host package ID for package \<index\> in energy monitor \<num\> (exposed as `libvirt_cpu_energy_monitor_pkg`) |
 || cpu.energy.monitor.\<num\>.pkg.\<index\>.core_energy | core_energy | cumulative core energy in Joules consumed by package \<index\> in energy monitor \<num\> |
-|| cpu.energy.monitor.\<num\>.pkg.\<index\>.activity | activity | cumulative activity counter in Farads for package \<index\> in energy monitor \<num\> |
+|| cpu.energy.monitor.\<num\>.pkg.\<index\>.activity | activity | cumulative activity counter in nanofarads (nF) for package \<index\> in energy monitor \<num\> |
 | **balloon** | balloon.current | current | the memory in KiB currently used |
 || balloon.maximum | maximum | the maximum memory in KiB allowed |
 || balloon.swap_in | swap_in | the amount of data read from swap space (in KiB) |
