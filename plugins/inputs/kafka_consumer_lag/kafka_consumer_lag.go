@@ -33,6 +33,7 @@ const (
 
 type KafkaConsumerLag struct {
 	Brokers             []string        `toml:"brokers"`
+	Cluster             string          `toml:"cluster"`
 	GroupsInclude       []string        `toml:"groups_include"`
 	GroupsExclude       []string        `toml:"groups_exclude"`
 	TopicsInclude       []string        `toml:"topics_include"`
@@ -586,6 +587,14 @@ func (k *KafkaConsumerLag) batchByLeader(
 	return batches
 }
 
+// tags adds the cluster tag to the given tags if a cluster name is configured.
+func (k *KafkaConsumerLag) tags(tags map[string]string) map[string]string {
+	if k.Cluster != "" {
+		tags["cluster"] = k.Cluster
+	}
+	return tags
+}
+
 func (k *KafkaConsumerLag) emit(
 	acc telegraf.Accumulator,
 	group string,
@@ -606,11 +615,11 @@ func (k *KafkaConsumerLag) emit(
 		lag := max(logEndOffset-committedOffset, 0)
 
 		if k.emitPartition {
-			tags := map[string]string{
+			tags := k.tags(map[string]string{
 				"group":     group,
 				"topic":     tp.topic,
 				"partition": strconv.FormatInt(int64(tp.partition), 10),
-			}
+			})
 			fields := map[string]any{
 				"committed_offset": committedOffset,
 				"log_end_offset":   logEndOffset,
@@ -630,10 +639,10 @@ func (k *KafkaConsumerLag) emit(
 
 	if k.emitTopic {
 		for topic, aggregate := range topicAggregates {
-			tags := map[string]string{
+			tags := k.tags(map[string]string{
 				"group": group,
 				"topic": topic,
-			}
+			})
 			fields := map[string]any{
 				"lag_sum":    aggregate.sum,
 				"lag_max":    aggregate.max,
@@ -644,7 +653,7 @@ func (k *KafkaConsumerLag) emit(
 	}
 
 	if k.emitGroup && groupAggregate.partitions > 0 {
-		tags := map[string]string{"group": group}
+		tags := k.tags(map[string]string{"group": group})
 		fields := map[string]any{
 			"lag_sum":    groupAggregate.sum,
 			"lag_max":    groupAggregate.max,
